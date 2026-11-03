@@ -1,0 +1,1785 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source">
+      <UniqueIdentifier>{0d0da530-a0cc-4aed-89f7-0f571c2c7c04}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Sound">
+      <UniqueIdentifier>{d0ead4d7-0583-4ab6-a2ae-16a7aa13ebf7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Sound\IO">
+      <UniqueIdentifier>{9918fdcd-b203-4291-994b-676fac699a9a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Sound\IO\WAV">
+      <UniqueIdentifier>{be7dfecd-0605-4678-9fdc-dc0b7b561217}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Sound\Module">
+      <UniqueIdentifier>{f00d80eb-913c-41ff-8ab1-49847d803f3b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Animation">
+      <UniqueIdentifier>{9f5c4181-d220-4b4a-963d-7f420de67f1c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Mesh">
+      <UniqueIdentifier>{20be076a-5432-4605-b6d8-941a0f3ef2f4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Mesh\Detail">
+      <UniqueIdentifier>{55f1299f-eb7d-42f6-bd4b-1c5afa61988a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Mesh\Detail\Connectivity">
+      <UniqueIdentifier>{2299b482-779b-4fc1-9a0c-b3182d143326}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Mesh\Detail\Cache">
+      <UniqueIdentifier>{6a8f1b63-7b54-4451-9ffc-2e464a40a58c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Mesh\Detail\Cache\Intermediate">
+      <UniqueIdentifier>{5556c625-cb6a-49f9-89df-6a8b9010da55}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Mesh\Shape">
+      <UniqueIdentifier>{540a21a9-166f-4544-9886-0772d89185fc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Mesh\Shape\Detail">
+      <UniqueIdentifier>{7cec4a73-98e0-49aa-921c-5a5495187a70}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Mesh\Modifier">
+      <UniqueIdentifier>{e6c2532c-2a32-4810-85d8-ba4b61b12df7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Mesh\Modifier\Detail">
+      <UniqueIdentifier>{5964de95-b619-476a-a2da-0f26df65ee48}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Mesh\Modifier\Detail\Normals">
+      <UniqueIdentifier>{25222e8b-2aa6-413c-b483-d414f9b42983}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Mesh\Modifier\Source">
+      <UniqueIdentifier>{d2e0f9e6-438f-414b-9cfb-bf80994d5c89}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Mesh\Modifier\Source\Shape">
+      <UniqueIdentifier>{ed4939da-6407-485f-8400-06667bfd70e9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Mesh\Modifier\Source\Shape\Basic">
+      <UniqueIdentifier>{06cde48e-6a4c-4e8e-8221-cf5cd538b6af}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Mesh\Modifier\Source\Shape\Cylindrical">
+      <UniqueIdentifier>{4779b21b-3a98-43d9-a1f3-17420a9d314c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Mesh\Modifier\Source\Shape\Spherical">
+      <UniqueIdentifier>{858e2e1f-761b-461c-837f-5e43e7386795}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Mesh\IO">
+      <UniqueIdentifier>{0f7eea82-88c9-4953-864a-cff0c9bdc1da}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Mesh\IO\Reader">
+      <UniqueIdentifier>{c70afef7-c188-4487-8104-f6b600ddb3c3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Mesh\IO\Writer">
+      <UniqueIdentifier>{5bae09ab-c62d-4bc7-b5a7-fb2dfc3622f9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Camera">
+      <UniqueIdentifier>{9eb21259-4cd3-450f-b7ed-7ddc535b7428}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Channel">
+      <UniqueIdentifier>{b6c78744-3e26-44a0-b140-08478fe34a22}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Connection">
+      <UniqueIdentifier>{b0d31fec-7e9c-4ec2-a08d-2164b66b3ea8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\CopyPaste">
+      <UniqueIdentifier>{32c45086-f007-41d2-a630-41d51a809f48}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Image">
+      <UniqueIdentifier>{9297a610-6b47-4547-a568-01d22f7ea92b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Image\Vector">
+      <UniqueIdentifier>{04fb7f50-209d-429e-868d-077658454ea6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Image\Font">
+      <UniqueIdentifier>{97a9425c-1413-48bb-b14e-c38463edfc92}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Image\Accessor">
+      <UniqueIdentifier>{05e8c69d-af60-451f-b786-e65f0a1d9083}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Image\Accessor\Types">
+      <UniqueIdentifier>{a1946f34-f84b-43fb-93cf-db5126380b05}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Compression">
+      <UniqueIdentifier>{98493074-bd19-49c5-819c-5f3f9d62f41f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Image\IO">
+      <UniqueIdentifier>{4a7e3889-ac7a-46c7-8967-ec905c9a3919}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Image\IO\Writer">
+      <UniqueIdentifier>{7627357c-da8c-4c55-a306-f78ca64fa4f4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Image\Area">
+      <UniqueIdentifier>{4f90c204-eb9c-4530-a638-7389aaf39748}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Image\Area\Packer">
+      <UniqueIdentifier>{0b5f22e1-b741-4e7a-91f6-590a619d13e7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Image\Cel">
+      <UniqueIdentifier>{d6cae3ce-712a-47a1-9de0-2041006f3c1e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Image\Cel\Combiner">
+      <UniqueIdentifier>{f63f3fda-b14b-4868-99db-5fb480ad7de4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Image\Cel\Divider">
+      <UniqueIdentifier>{d858058e-be71-46f5-b885-08e24d8ab492}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Image\Cel\Divider\Filler">
+      <UniqueIdentifier>{aeda127f-6f42-4132-8387-d73fa6f2311c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Image\Cel\Divider\Cels">
+      <UniqueIdentifier>{b85b7182-b406-47a3-a6a3-2005ad22f889}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Image\Cel\Source">
+      <UniqueIdentifier>{6c67a6d5-834f-4c68-bb7a-db02c89c0451}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Image\Modifiers">
+      <UniqueIdentifier>{76c3b9af-813c-4a68-99b4-2f6f8c0517de}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Image\Modifiers\Shape">
+      <UniqueIdentifier>{cbd4ae26-3a40-44cd-8f9b-81ac9b0ae40e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Image\Modifiers\Channels">
+      <UniqueIdentifier>{db3ec810-e8c6-40db-96f4-bd3f9977b098}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Image\Modifiers\Colour">
+      <UniqueIdentifier>{8422fd39-c8fa-4b32-953f-ca0d38efd1a3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Image\Modifiers\Bump">
+      <UniqueIdentifier>{750ba777-86c3-4314-a80c-cb3c7eca7ee9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Image\Modifiers\Resample">
+      <UniqueIdentifier>{ff45249c-009c-4613-b456-1e241a3d6985}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Image\Group">
+      <UniqueIdentifier>{8e369dcc-43be-41e6-b6b8-97df78cc6e05}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Image\Source">
+      <UniqueIdentifier>{3808f384-4543-47cb-93ca-013b18fea77d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Image\Colour">
+      <UniqueIdentifier>{56b7c56a-4932-4fc6-b70f-ad2dbc5a0f33}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Instance">
+      <UniqueIdentifier>{153a1b02-6dca-421f-8d88-40d45616dca5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Light">
+      <UniqueIdentifier>{1d8e1091-375b-4672-91f2-ff45d183266a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Material">
+      <UniqueIdentifier>{67f9d655-62fa-4d88-ba05-a312ae5ac7c3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Scene">
+      <UniqueIdentifier>{a3b6e919-f39e-4ab5-aa88-72cbf9795854}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Scene\Hack">
+      <UniqueIdentifier>{20acef2b-0b7f-4b56-8353-cd43761baee7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Vertex">
+      <UniqueIdentifier>{d4ba6af5-fe4d-4472-b2aa-a6e97ee1061d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Image\IO\Common">
+      <UniqueIdentifier>{69516bc9-34d7-4a85-8403-e4a19afc539e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Image\Draw">
+      <UniqueIdentifier>{a799085a-3d26-466c-98d2-2e92f2e52c8b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Shape">
+      <UniqueIdentifier>{0d88d093-83c9-4ffe-81ae-1fff439ed168}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Map">
+      <UniqueIdentifier>{aa081b8b-bf04-4b1a-a8f3-6d2cffa960ae}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Map\Tile">
+      <UniqueIdentifier>{f9966598-3342-4d28-8bd1-9b844f27cbcd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Map\Sprite">
+      <UniqueIdentifier>{34a16da4-f3e9-443c-b54d-85a874a225d3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Map\MovableBlock">
+      <UniqueIdentifier>{cce3c654-6e62-4c0c-a962-911a64877736}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Text">
+      <UniqueIdentifier>{555a01b8-e76b-48d0-b2d7-cdc23c2f4cc6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Text\Reader">
+      <UniqueIdentifier>{b86eda1f-a364-4531-ada1-553f31af67c4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Text\Builder">
+      <UniqueIdentifier>{911435a4-f7ea-468b-978c-7af48bee8fe5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Text\Element">
+      <UniqueIdentifier>{9de13103-1900-4b6f-b887-a6c9594e4330}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Text\Element\UTF16">
+      <UniqueIdentifier>{a74b0a24-aa44-4978-b5d3-69dc0a725ae4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Text\Layout">
+      <UniqueIdentifier>{abe22dbf-3f8a-4280-9a7a-8f286703421e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Map\Tile\Specific">
+      <UniqueIdentifier>{c1cebc11-9ee0-4f3e-85f2-4f354c0dabb8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Image\Copier">
+      <UniqueIdentifier>{7ce68e9f-e09f-4c5e-b0ad-3cc926258688}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Image\Blitter">
+      <UniqueIdentifier>{648a3684-9a53-4997-8574-f4b2fef005f0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Image\Blitter\Types">
+      <UniqueIdentifier>{31773fe5-d710-4f1b-9aed-0602c02df864}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Image\Blitter\Types\Translucent">
+      <UniqueIdentifier>{24174080-2d64-4f5d-a79f-e822042f829c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Image\Blitter\Cache">
+      <UniqueIdentifier>{8d62aeb4-f00d-416a-b945-2d7a4eceffe8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Map\Generator">
+      <UniqueIdentifier>{be27e789-f164-41fb-b790-3584f4ac6c17}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Image\IO\PNG">
+      <UniqueIdentifier>{2d71a333-3bd4-4d07-9e88-bb53868eb87c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Image\IO\TGA">
+      <UniqueIdentifier>{9478a65a-0e8c-4496-aab2-d27be0b06cd1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Image\IO\BMP">
+      <UniqueIdentifier>{94aa4a91-6d8e-4d34-bc91-e07ff9204324}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Image\IO\SFT">
+      <UniqueIdentifier>{3f7b3882-6acf-4913-8227-3352ed024ea4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Image\IO\RAD">
+      <UniqueIdentifier>{666bfa56-d452-4df8-9f8a-c866eb4b7fff}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Image\Blitter\Types\Opaque">
+      <UniqueIdentifier>{c2966182-939b-46fb-aec6-d292ca96533d}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="CopyPaste.h">
+      <Filter>Source\CopyPaste</Filter>
+    </ClInclude>
+    <ClInclude Include="ChannelTypes.h">
+      <Filter>Source\Channel</Filter>
+    </ClInclude>
+    <ClInclude Include="Scene.h">
+      <Filter>Source\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="TrackerTypes.h">
+      <Filter>Source\Scene\Hack</Filter>
+    </ClInclude>
+    <ClInclude Include="VertexArray.h">
+      <Filter>Source\Vertex</Filter>
+    </ClInclude>
+    <ClInclude Include="VertexChannel.h">
+      <Filter>Source\Vertex</Filter>
+    </ClInclude>
+    <ClInclude Include="Image.h">
+      <Filter>Source\Image</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageChannel.h">
+      <Filter>Source\Image</Filter>
+    </ClInclude>
+    <ClInclude Include="Font.h">
+      <Filter>Source\Image\Font</Filter>
+    </ClInclude>
+    <ClInclude Include="FontColours.h">
+      <Filter>Source\Image\Font</Filter>
+    </ClInclude>
+    <ClInclude Include="FontFamily.h">
+      <Filter>Source\Image\Font</Filter>
+    </ClInclude>
+    <ClInclude Include="GlyphRasteriser.h">
+      <Filter>Source\Image\Font</Filter>
+    </ClInclude>
+    <ClInclude Include="TrueTypeFace.h">
+      <Filter>Source\Image\Font</Filter>
+    </ClInclude>
+    <ClInclude Include="TrueTypeGlyphRasteriser.h">
+      <Filter>Source\Image\Font</Filter>
+    </ClInclude>
+    <ClInclude Include="FontDescription.h">
+      <Filter>Source\Image\Font</Filter>
+    </ClInclude>
+    <ClInclude Include="FontList.h">
+      <Filter>Source\Image\Font</Filter>
+    </ClInclude>
+    <ClInclude Include="Glyph.h">
+      <Filter>Source\Image\Font</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageAccessorCreator.h">
+      <Filter>Source\Image\Accessor</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageAccessor.h">
+      <Filter>Source\Image\Accessor\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageAccessorByte.h">
+      <Filter>Source\Image\Accessor\Types</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageFileType.h">
+      <Filter>Source\Image\IO</Filter>
+    </ClInclude>
+    <ClInclude Include="RLEPacketDecoder.h">
+      <Filter>Source\Compression</Filter>
+    </ClInclude>
+    <ClInclude Include="RLEPacketEncoder.h">
+      <Filter>Source\Compression</Filter>
+    </ClInclude>
+    <ClInclude Include="RLEBitmapDecoder.h">
+      <Filter>Source\Compression</Filter>
+    </ClInclude>
+    <ClInclude Include="Rectangle.h">
+      <Filter>Source\Image\Area</Filter>
+    </ClInclude>
+    <ClInclude Include="Int32Rect.h">
+      <Filter>Source\Image\Area</Filter>
+    </ClInclude>
+    <ClInclude Include="Float64Rect.h">
+      <Filter>Source\Image\Area</Filter>
+    </ClInclude>
+    <ClInclude Include="SubImage.h">
+      <Filter>Source\Image\Area</Filter>
+    </ClInclude>
+    <ClInclude Include="PackAttempt.h">
+      <Filter>Source\Image\Area\Packer</Filter>
+    </ClInclude>
+    <ClInclude Include="PackedLine.h">
+      <Filter>Source\Image\Area\Packer</Filter>
+    </ClInclude>
+    <ClInclude Include="PackedRectangle.h">
+      <Filter>Source\Image\Area\Packer</Filter>
+    </ClInclude>
+    <ClInclude Include="RectangleBestPacker.h">
+      <Filter>Source\Image\Area\Packer</Filter>
+    </ClInclude>
+    <ClInclude Include="RectangleBestPackerWithRotation.h">
+      <Filter>Source\Image\Area\Packer</Filter>
+    </ClInclude>
+    <ClInclude Include="RectangleLinePacker.h">
+      <Filter>Source\Image\Area\Packer</Filter>
+    </ClInclude>
+    <ClInclude Include="RectanglePacker.h">
+      <Filter>Source\Image\Area\Packer</Filter>
+    </ClInclude>
+    <ClInclude Include="RectanglePow2Packer.h">
+      <Filter>Source\Image\Area\Packer</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageCel.h">
+      <Filter>Source\Image\Cel</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageCelsReader.h">
+      <Filter>Source\Image\Cel</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageCelsWriter.h">
+      <Filter>Source\Image\Cel</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageCombiner.h">
+      <Filter>Source\Image\Cel\Combiner</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageDivider.h">
+      <Filter>Source\Image\Cel\Divider</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageDividerNumbers.h">
+      <Filter>Source\Image\Cel\Divider</Filter>
+    </ClInclude>
+    <ClInclude Include="FillRectangle.h">
+      <Filter>Source\Image\Cel\Divider\Filler</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageFiller.h">
+      <Filter>Source\Image\Cel\Divider\Filler</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageCelMask.h">
+      <Filter>Source\Image\Cel\Divider\Cels</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageCelMaskTransparent.h">
+      <Filter>Source\Image\Cel\Divider\Cels</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageCelTransparent.h">
+      <Filter>Source\Image\Cel\Divider\Cels</Filter>
+    </ClInclude>
+    <ClInclude Include="PixelOpacity.h">
+      <Filter>Source\Image\Cel\Divider\Cels</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageCelSource.h">
+      <Filter>Source\Image\Cel\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageCelSourceBorders.h">
+      <Filter>Source\Image\Cel\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageCelSourceGrid.h">
+      <Filter>Source\Image\Cel\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageCelSourceRectangles.h">
+      <Filter>Source\Image\Cel\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageCelSourceSingle.h">
+      <Filter>Source\Image\Cel\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageCelSourceSubImages.h">
+      <Filter>Source\Image\Cel\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageCelsSource.h">
+      <Filter>Source\Image\Cel\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageModifier.h">
+      <Filter>Source\Image\Modifiers</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageModifierStack.h">
+      <Filter>Source\Image\Modifiers</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageModifierDrawBox.h">
+      <Filter>Source\Image\Modifiers\Shape</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageChannelAdd.h">
+      <Filter>Source\Image\Modifiers\Channels</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageChannelRename.h">
+      <Filter>Source\Image\Modifiers\Channels</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageGreyToRGB.h">
+      <Filter>Source\Image\Modifiers\Colour</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageRecolour.h">
+      <Filter>Source\Image\Modifiers\Colour</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageRecolourInvertBlackAndWhite.h">
+      <Filter>Source\Image\Modifiers\Colour</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageRGBToGrey.h">
+      <Filter>Source\Image\Modifiers\Colour</Filter>
+    </ClInclude>
+    <ClInclude Include="BumpMapper.h">
+      <Filter>Source\Image\Modifiers\Bump</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageResampler.h">
+      <Filter>Source\Image\Modifiers\Resample</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageResampleChannel.h">
+      <Filter>Source\Image\Modifiers\Resample</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageResampleBilinear.h">
+      <Filter>Source\Image\Modifiers\Resample</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageResampleBicubic.h">
+      <Filter>Source\Image\Modifiers\Resample</Filter>
+    </ClInclude>
+    <ClInclude Include="CatmullRom.h">
+      <Filter>Source\Image\Modifiers\Resample</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageResampleSmart.h">
+      <Filter>Source\Image\Modifiers\Resample</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageCelGroup.h">
+      <Filter>Source\Image\Group</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageSource.h">
+      <Filter>Source\Image\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageSourceChunkedFile.h">
+      <Filter>Source\Image\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageSourceDiskFile.h">
+      <Filter>Source\Image\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageSourceMemory.h">
+      <Filter>Source\Image\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="ColourARGB32.h">
+      <Filter>Source\Image\Colour</Filter>
+    </ClInclude>
+    <ClInclude Include="ColourBlend.h">
+      <Filter>Source\Image\Colour</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageColour.h">
+      <Filter>Source\Image\Colour</Filter>
+    </ClInclude>
+    <ClInclude Include="Material.h">
+      <Filter>Source\Material</Filter>
+    </ClInclude>
+    <ClInclude Include="MaterialHelper.h">
+      <Filter>Source\Material</Filter>
+    </ClInclude>
+    <ClInclude Include="MaterialImage.h">
+      <Filter>Source\Material</Filter>
+    </ClInclude>
+    <ClInclude Include="MaterialProperties.h">
+      <Filter>Source\Material</Filter>
+    </ClInclude>
+    <ClInclude Include="ConnectionAnimation.h">
+      <Filter>Source\Animation</Filter>
+    </ClInclude>
+    <ClInclude Include="Instance.h">
+      <Filter>Source\Instance</Filter>
+    </ClInclude>
+    <ClInclude Include="Mesh.h">
+      <Filter>Source\Mesh</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshDefines.h">
+      <Filter>Source\Mesh</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshFaceReturn.h">
+      <Filter>Source\Mesh</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshColours.h">
+      <Filter>Source\Mesh\Detail</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshDetail.h">
+      <Filter>Source\Mesh\Detail</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshMaterials.h">
+      <Filter>Source\Mesh\Detail</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshNormals.h">
+      <Filter>Source\Mesh\Detail</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshPositions.h">
+      <Filter>Source\Mesh\Detail</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshSkin.h">
+      <Filter>Source\Mesh\Detail</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshUVCoords.h">
+      <Filter>Source\Mesh\Detail</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshConnectivity.h">
+      <Filter>Source\Mesh\Detail\Connectivity</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshCorner.h">
+      <Filter>Source\Mesh\Detail\Connectivity</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshEdge.h">
+      <Filter>Source\Mesh\Detail\Connectivity</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshFace.h">
+      <Filter>Source\Mesh\Detail\Connectivity</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshCache.h">
+      <Filter>Source\Mesh\Detail\Cache</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshFaceTypes.h">
+      <Filter>Source\Mesh\Detail\Cache</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshIndexArray.h">
+      <Filter>Source\Mesh\Detail\Cache</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshVertexArray.h">
+      <Filter>Source\Mesh\Detail\Cache</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshCacher.h">
+      <Filter>Source\Mesh\Detail\Cache\Intermediate</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshTypeIndices.h">
+      <Filter>Source\Mesh\Detail\Cache\Intermediate</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshShape.h">
+      <Filter>Source\Mesh\Shape</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshBoundingBox.h">
+      <Filter>Source\Mesh\Shape\Detail</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshConvexHull.h">
+      <Filter>Source\Mesh\Shape\Detail</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshLeaves.h">
+      <Filter>Source\Mesh\Shape\Detail</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshTriangles.h">
+      <Filter>Source\Mesh\Shape\Detail</Filter>
+    </ClInclude>
+    <ClInclude Include="ShapesIndexed.h">
+      <Filter>Source\Mesh\Shape\Detail</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshEdgeVisibility.h">
+      <Filter>Source\Mesh\Modifier</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshEditor.h">
+      <Filter>Source\Mesh\Modifier</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshEditorWrapper.h">
+      <Filter>Source\Mesh\Modifier</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshPolygons.h">
+      <Filter>Source\Mesh\Modifier</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshSelections.h">
+      <Filter>Source\Mesh\Modifier</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshModifier.h">
+      <Filter>Source\Mesh\Modifier\Detail</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshModifierStack.h">
+      <Filter>Source\Mesh\Modifier\Detail</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshFlatFaces.h">
+      <Filter>Source\Mesh\Modifier\Detail\Normals</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshSmoothFaces.h">
+      <Filter>Source\Mesh\Modifier\Detail\Normals</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshSmoothGroups.h">
+      <Filter>Source\Mesh\Modifier\Detail\Normals</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshSourceModifier.h">
+      <Filter>Source\Mesh\Modifier\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshBoxEditor.h">
+      <Filter>Source\Mesh\Modifier\Source\Shape</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshTorusEditor.h">
+      <Filter>Source\Mesh\Modifier\Source\Shape</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshDiscEditor.h">
+      <Filter>Source\Mesh\Modifier\Source\Shape\Basic</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshPlaneEditor.h">
+      <Filter>Source\Mesh\Modifier\Source\Shape\Basic</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshRingEditor.h">
+      <Filter>Source\Mesh\Modifier\Source\Shape\Basic</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshConeEditor.h">
+      <Filter>Source\Mesh\Modifier\Source\Shape\Cylindrical</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshCylinderEditor.h">
+      <Filter>Source\Mesh\Modifier\Source\Shape\Cylindrical</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshTubeEditor.h">
+      <Filter>Source\Mesh\Modifier\Source\Shape\Cylindrical</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshGeosphereEditor.h">
+      <Filter>Source\Mesh\Modifier\Source\Shape\Spherical</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshSphereEditor.h">
+      <Filter>Source\Mesh\Modifier\Source\Shape\Spherical</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshCornerBuilder.h">
+      <Filter>Source\Mesh\IO</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshFileType.h">
+      <Filter>Source\Mesh\IO</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshReader.h">
+      <Filter>Source\Mesh\IO\Reader</Filter>
+    </ClInclude>
+    <ClInclude Include="MTLReader.h">
+      <Filter>Source\Mesh\IO\Reader</Filter>
+    </ClInclude>
+    <ClInclude Include="OBJReader.h">
+      <Filter>Source\Mesh\IO\Reader</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshWriter.h">
+      <Filter>Source\Mesh\IO\Writer</Filter>
+    </ClInclude>
+    <ClInclude Include="OBJWriter.h">
+      <Filter>Source\Mesh\IO\Writer</Filter>
+    </ClInclude>
+    <ClInclude Include="Camera.h">
+      <Filter>Source\Camera</Filter>
+    </ClInclude>
+    <ClInclude Include="Light.h">
+      <Filter>Source\Light</Filter>
+    </ClInclude>
+    <ClInclude Include="Connection.h">
+      <Filter>Source\Connection</Filter>
+    </ClInclude>
+    <ClInclude Include="TileLayer.h">
+      <Filter>Source\Map\Tile</Filter>
+    </ClInclude>
+    <ClInclude Include="TileMap.h">
+      <Filter>Source\Map\Tile</Filter>
+    </ClInclude>
+    <ClInclude Include="Box.h">
+      <Filter>Source\Shape</Filter>
+    </ClInclude>
+    <ClInclude Include="ConvexHull.h">
+      <Filter>Source\Shape</Filter>
+    </ClInclude>
+    <ClInclude Include="HalfSpace.h">
+      <Filter>Source\Shape</Filter>
+    </ClInclude>
+    <ClInclude Include="LineInfinite.h">
+      <Filter>Source\Shape</Filter>
+    </ClInclude>
+    <ClInclude Include="LineSegment.h">
+      <Filter>Source\Shape</Filter>
+    </ClInclude>
+    <ClInclude Include="Plane.h">
+      <Filter>Source\Shape</Filter>
+    </ClInclude>
+    <ClInclude Include="Polygon.h">
+      <Filter>Source\Shape</Filter>
+    </ClInclude>
+    <ClInclude Include="Ray.h">
+      <Filter>Source\Shape</Filter>
+    </ClInclude>
+    <ClInclude Include="ShapeHelper.h">
+      <Filter>Source\Shape</Filter>
+    </ClInclude>
+    <ClInclude Include="Sphere.h">
+      <Filter>Source\Shape</Filter>
+    </ClInclude>
+    <ClInclude Include="Triangle.h">
+      <Filter>Source\Shape</Filter>
+    </ClInclude>
+    <ClInclude Include="FakeTracker.h">
+      <Filter>Source\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageToR3G3B2A.h">
+      <Filter>Source\Image\Modifiers\Colour</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageReaderCommon.h">
+      <Filter>Source\Image\IO\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="ColourFormat.h">
+      <Filter>Source\Image\Colour</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageDraw.h">
+      <Filter>Source\Image\Draw</Filter>
+    </ClInclude>
+    <ClInclude Include="SpriteMap.h">
+      <Filter>Source\Map\Sprite</Filter>
+    </ClInclude>
+    <ClInclude Include="Maps.h">
+      <Filter>Source\Map</Filter>
+    </ClInclude>
+    <ClInclude Include="BaseMap.h">
+      <Filter>Source\Map</Filter>
+    </ClInclude>
+    <ClInclude Include="GeometryMap.h">
+      <Filter>Source\Map</Filter>
+    </ClInclude>
+    <ClInclude Include="BlockMap.h">
+      <Filter>Source\Map\MovableBlock</Filter>
+    </ClInclude>
+    <ClInclude Include="TileLayerBoolean.h">
+      <Filter>Source\Map\Tile\Specific</Filter>
+    </ClInclude>
+    <ClInclude Include="TileLayerCel.h">
+      <Filter>Source\Map\Tile\Specific</Filter>
+    </ClInclude>
+    <ClInclude Include="TileTextWriter.h">
+      <Filter>Source\Map\Tile\Specific</Filter>
+    </ClInclude>
+    <ClInclude Include="FontFactory.h">
+      <Filter>Source\Image\Font</Filter>
+    </ClInclude>
+    <ClInclude Include="FontReader.h">
+      <Filter>Source\Image\Font</Filter>
+    </ClInclude>
+    <ClInclude Include="FontWriter.h">
+      <Filter>Source\Image\Font</Filter>
+    </ClInclude>
+    <ClInclude Include="FontImportParameters.h">
+      <Filter>Source\Image\Font</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageCopyDimension.h">
+      <Filter>Source\Image\Cel</Filter>
+    </ClInclude>
+    <ClInclude Include="Text.h">
+      <Filter>Source\Text</Filter>
+    </ClInclude>
+    <ClInclude Include="TextRun.h">
+      <Filter>Source\Text</Filter>
+    </ClInclude>
+    <ClInclude Include="TextUTF16Short.h">
+      <Filter>Source\Text\Element\UTF16</Filter>
+    </ClInclude>
+    <ClInclude Include="TextUTF16Long.h">
+      <Filter>Source\Text\Element\UTF16</Filter>
+    </ClInclude>
+    <ClInclude Include="TextUTF16Multi.h">
+      <Filter>Source\Text\Element\UTF16</Filter>
+    </ClInclude>
+    <ClInclude Include="SimpleTextReader.h">
+      <Filter>Source\Text\Reader</Filter>
+    </ClInclude>
+    <ClInclude Include="TextBuilder.h">
+      <Filter>Source\Text\Builder</Filter>
+    </ClInclude>
+    <ClInclude Include="TextBuilderUTF16Short.h">
+      <Filter>Source\Text\Builder</Filter>
+    </ClInclude>
+    <ClInclude Include="TextBuilderUTFCommon.h">
+      <Filter>Source\Text\Builder</Filter>
+    </ClInclude>
+    <ClInclude Include="TextBuilderUTF16Long.h">
+      <Filter>Source\Text\Builder</Filter>
+    </ClInclude>
+    <ClInclude Include="TextNewLine.h">
+      <Filter>Source\Text\Element</Filter>
+    </ClInclude>
+    <ClInclude Include="TextDrawable.h">
+      <Filter>Source\Text\Element</Filter>
+    </ClInclude>
+    <ClInclude Include="TextElement.h">
+      <Filter>Source\Text\Element</Filter>
+    </ClInclude>
+    <ClInclude Include="TextLayoutBuilder.h">
+      <Filter>Source\Text\Layout</Filter>
+    </ClInclude>
+    <ClInclude Include="MapFontDraw.h">
+      <Filter>Source\Image\Font</Filter>
+    </ClInclude>
+    <ClInclude Include="TextLayout.h">
+      <Filter>Source\Image\Font</Filter>
+    </ClInclude>
+    <ClInclude Include="TextStyle.h">
+      <Filter>Source\Image\Font</Filter>
+    </ClInclude>
+    <ClInclude Include="TextMarkupParser.h">
+      <Filter>Source\Image\Font</Filter>
+    </ClInclude>
+    <ClInclude Include="BaseFontDraw.h">
+      <Filter>Source\Image\Font</Filter>
+    </ClInclude>
+    <ClInclude Include="GlyphListFontDraw.h">
+      <Filter>Source\Image\Font</Filter>
+    </ClInclude>
+    <ClInclude Include="MapViewport.h">
+      <Filter>Source\Map</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageCopier.h">
+      <Filter>Source\Image\Copier</Filter>
+    </ClInclude>
+    <ClInclude Include="ImagePremultipliedBlend.h">
+      <Filter>Source\Image\Copier</Filter>
+    </ClInclude>
+    <ClInclude Include="MultiImageCopier.h">
+      <Filter>Source\Image\Copier</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageBlitter.h">
+      <Filter>Source\Image\Blitter</Filter>
+    </ClInclude>
+    <ClInclude Include="BaseImageRowBlitter.h">
+      <Filter>Source\Image\Blitter</Filter>
+    </ClInclude>
+    <ClInclude Include="OffsetImageRowBlitter.h">
+      <Filter>Source\Image\Blitter</Filter>
+    </ClInclude>
+    <ClInclude Include="BaseImageRowSizingBlitter.h">
+      <Filter>Source\Image\Blitter</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageRowSizingBlitterRGBByteAlphaByteTranslucent.h">
+      <Filter>Source\Image\Blitter\Types\Translucent</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageRowBlitterRGBByteAlphaByteTranslucent.h">
+      <Filter>Source\Image\Blitter\Types\Translucent</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageRowBlitterFactory.h">
+      <Filter>Source\Image\Blitter\Cache</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageBlitterFormat.h">
+      <Filter>Source\Image\Blitter</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageBlitterContext.h">
+      <Filter>Source\Image\Blitter</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageCelBlitterCache.h">
+      <Filter>Source\Image\Blitter\Cache</Filter>
+    </ClInclude>
+    <ClInclude Include="FontCreationParameters.h">
+      <Filter>Source\Image\Font</Filter>
+    </ClInclude>
+    <ClInclude Include="TileMapGenerator.h">
+      <Filter>Source\Map\Generator</Filter>
+    </ClInclude>
+    <ClInclude Include="TileMapPattern.h">
+      <Filter>Source\Map\Generator</Filter>
+    </ClInclude>
+    <ClInclude Include="TileCelBrush.h">
+      <Filter>Source\Map\Generator</Filter>
+    </ClInclude>
+    <ClInclude Include="TileCelType.h">
+      <Filter>Source\Map\Generator</Filter>
+    </ClInclude>
+    <ClInclude Include="TileCelColourSource.h">
+      <Filter>Source\Map\Generator</Filter>
+    </ClInclude>
+    <ClInclude Include="TileGridSource.h">
+      <Filter>Source\Map\Generator</Filter>
+    </ClInclude>
+    <ClInclude Include="TileCelGenerator.h">
+      <Filter>Source\Map\Generator</Filter>
+    </ClInclude>
+    <ClInclude Include="TileGridImageSource.h">
+      <Filter>Source\Map\Generator</Filter>
+    </ClInclude>
+    <ClInclude Include="TileGridStringSource.h">
+      <Filter>Source\Map\Generator</Filter>
+    </ClInclude>
+    <ClInclude Include="TileCelCharSource.h">
+      <Filter>Source\Map\Generator</Filter>
+    </ClInclude>
+    <ClInclude Include="TileCelSource.h">
+      <Filter>Source\Map\Generator</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageColourConverter.h">
+      <Filter>Source\Image\Copier</Filter>
+    </ClInclude>
+    <ClInclude Include="BMPReader.h">
+      <Filter>Source\Image\IO\BMP</Filter>
+    </ClInclude>
+    <ClInclude Include="Sound.h">
+      <Filter>Source\Sound</Filter>
+    </ClInclude>
+    <ClInclude Include="ModSong.h">
+      <Filter>Source\Sound\Module</Filter>
+    </ClInclude>
+    <ClInclude Include="MODReader.h">
+      <Filter>Source\Sound\Module</Filter>
+    </ClInclude>
+    <ClInclude Include="ModMixer.h">
+      <Filter>Source\Sound\Module</Filter>
+    </ClInclude>
+    <ClInclude Include="ModPlayer.h">
+      <Filter>Source\Sound\Module</Filter>
+    </ClInclude>
+    <ClInclude Include="SoundCel.h">
+      <Filter>Source\Sound</Filter>
+    </ClInclude>
+    <ClInclude Include="SoundCelGroup.h">
+      <Filter>Source\Sound</Filter>
+    </ClInclude>
+    <ClInclude Include="SoundChannel.h">
+      <Filter>Source\Sound</Filter>
+    </ClInclude>
+    <ClInclude Include="SoundModifier.h">
+      <Filter>Source\Sound</Filter>
+    </ClInclude>
+    <ClInclude Include="SoundModifierStack.h">
+      <Filter>Source\Sound</Filter>
+    </ClInclude>
+    <ClInclude Include="SoundResampler.h">
+      <Filter>Source\Sound</Filter>
+    </ClInclude>
+    <ClInclude Include="WAVCommon.h">
+      <Filter>Source\Sound\IO\WAV</Filter>
+    </ClInclude>
+    <ClInclude Include="WAVReader.h">
+      <Filter>Source\Sound\IO\WAV</Filter>
+    </ClInclude>
+    <ClInclude Include="WAVWriter.h">
+      <Filter>Source\Sound\IO\WAV</Filter>
+    </ClInclude>
+    <ClInclude Include="TrueTypeFont.h">
+      <Filter>Source\Image\Font</Filter>
+    </ClInclude>
+    <ClInclude Include="TrueTypeFontFactory.h">
+      <Filter>Source\Image\Font</Filter>
+    </ClInclude>
+    <ClInclude Include="TrueTypeOutline.h">
+      <Filter>Source\Image\Font</Filter>
+    </ClInclude>
+    <ClInclude Include="CoverageRasteriser.h">
+      <Filter>Source\Image\Font</Filter>
+    </ClInclude>
+    <ClInclude Include="VectorPath.h">
+      <Filter>Source\Image\Vector</Filter>
+    </ClInclude>
+    <ClInclude Include="VectorRasteriser.h">
+      <Filter>Source\Image\Vector</Filter>
+    </ClInclude>
+    <ClInclude Include="VectorShapes.h">
+      <Filter>Source\Image\Vector</Filter>
+    </ClInclude>
+    <ClInclude Include="TrueTypeRasteriser.h">
+      <Filter>Source\Image\Font</Filter>
+    </ClInclude>
+    <ClInclude Include="PNGReader.h">
+      <Filter>Source\Image\IO\PNG</Filter>
+    </ClInclude>
+    <ClInclude Include="TGAReader.h">
+      <Filter>Source\Image\IO\TGA</Filter>
+    </ClInclude>
+    <ClInclude Include="RADReader.h">
+      <Filter>Source\Image\IO\RAD</Filter>
+    </ClInclude>
+    <ClInclude Include="SFTReader.h">
+      <Filter>Source\Image\IO\SFT</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageReader.h">
+      <Filter>Source\Image\IO\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageReaderHelper.h">
+      <Filter>Source\Image\IO\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="BMPWriter.h">
+      <Filter>Source\Image\IO\BMP</Filter>
+    </ClInclude>
+    <ClInclude Include="PNGWriter.h">
+      <Filter>Source\Image\IO\PNG</Filter>
+    </ClInclude>
+    <ClInclude Include="PNGCommon.h">
+      <Filter>Source\Image\IO\PNG</Filter>
+    </ClInclude>
+    <ClInclude Include="SFTCommon.h">
+      <Filter>Source\Image\IO\SFT</Filter>
+    </ClInclude>
+    <ClInclude Include="RADWriter.h">
+      <Filter>Source\Image\IO\RAD</Filter>
+    </ClInclude>
+    <ClInclude Include="SFTWriter.h">
+      <Filter>Source\Image\IO\SFT</Filter>
+    </ClInclude>
+    <ClInclude Include="TGAWriter.h">
+      <Filter>Source\Image\IO\TGA</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageWriter.h">
+      <Filter>Source\Image\IO\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageRowBlitterByteAlignedOpaque.h">
+      <Filter>Source\Image\Blitter\Types\Opaque</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageRowBlitterContiguous.h">
+      <Filter>Source\Image\Blitter\Types\Opaque</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageRowSizingBlitterByteAlignedOpaque.h">
+      <Filter>Source\Image\Blitter\Types\Opaque</Filter>
+    </ClInclude>
+    <ClInclude Include="SizingImageBlitterSize.h">
+      <Filter>Source\Image\Blitter</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="CopyPaste_Windows.cpp">
+      <Filter>Source\CopyPaste</Filter>
+    </ClCompile>
+    <ClCompile Include="Scene.cpp">
+      <Filter>Source\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="Image.cpp">
+      <Filter>Source\Image</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageChannel.cpp">
+      <Filter>Source\Image</Filter>
+    </ClCompile>
+    <ClCompile Include="Font.cpp">
+      <Filter>Source\Image\Font</Filter>
+    </ClCompile>
+    <ClCompile Include="FontColours.cpp">
+      <Filter>Source\Image\Font</Filter>
+    </ClCompile>
+    <ClCompile Include="FontFamily.cpp">
+      <Filter>Source\Image\Font</Filter>
+    </ClCompile>
+    <ClCompile Include="GlyphRasteriser.cpp">
+      <Filter>Source\Image\Font</Filter>
+    </ClCompile>
+    <ClCompile Include="TrueTypeFace.cpp">
+      <Filter>Source\Image\Font</Filter>
+    </ClCompile>
+    <ClCompile Include="TrueTypeGlyphRasteriser.cpp">
+      <Filter>Source\Image\Font</Filter>
+    </ClCompile>
+    <ClCompile Include="FontDescription.cpp">
+      <Filter>Source\Image\Font</Filter>
+    </ClCompile>
+    <ClCompile Include="FontList.cpp">
+      <Filter>Source\Image\Font</Filter>
+    </ClCompile>
+    <ClCompile Include="Glyph.cpp">
+      <Filter>Source\Image\Font</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageAccessorCreator.cpp">
+      <Filter>Source\Image\Accessor</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageAccessor.cpp">
+      <Filter>Source\Image\Accessor\Types</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageAccessorByte.cpp">
+      <Filter>Source\Image\Accessor\Types</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageFileType.cpp">
+      <Filter>Source\Image\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="RLEPacketDecoder.cpp">
+      <Filter>Source\Compression</Filter>
+    </ClCompile>
+    <ClCompile Include="RLEPacketEncoder.cpp">
+      <Filter>Source\Compression</Filter>
+    </ClCompile>
+    <ClCompile Include="RLEBitmapDecoder.cpp">
+      <Filter>Source\Compression</Filter>
+    </ClCompile>
+    <ClCompile Include="Int32Rect.cpp">
+      <Filter>Source\Image\Area</Filter>
+    </ClCompile>
+    <ClCompile Include="SubImage.cpp">
+      <Filter>Source\Image\Area</Filter>
+    </ClCompile>
+    <ClCompile Include="PackAttempt.cpp">
+      <Filter>Source\Image\Area\Packer</Filter>
+    </ClCompile>
+    <ClCompile Include="PackedLine.cpp">
+      <Filter>Source\Image\Area\Packer</Filter>
+    </ClCompile>
+    <ClCompile Include="PackedRectangle.cpp">
+      <Filter>Source\Image\Area\Packer</Filter>
+    </ClCompile>
+    <ClCompile Include="RectangleBestPacker.cpp">
+      <Filter>Source\Image\Area\Packer</Filter>
+    </ClCompile>
+    <ClCompile Include="RectangleBestPackerWithRotation.cpp">
+      <Filter>Source\Image\Area\Packer</Filter>
+    </ClCompile>
+    <ClCompile Include="RectangleLinePacker.cpp">
+      <Filter>Source\Image\Area\Packer</Filter>
+    </ClCompile>
+    <ClCompile Include="RectanglePow2Packer.cpp">
+      <Filter>Source\Image\Area\Packer</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageCel.cpp">
+      <Filter>Source\Image\Cel</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageCelsReader.cpp">
+      <Filter>Source\Image\Cel</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageCelsWriter.cpp">
+      <Filter>Source\Image\Cel</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageCombiner.cpp">
+      <Filter>Source\Image\Cel\Combiner</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageDivider.cpp">
+      <Filter>Source\Image\Cel\Divider</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageDividerNumbers.cpp">
+      <Filter>Source\Image\Cel\Divider</Filter>
+    </ClCompile>
+    <ClCompile Include="FillRectangle.cpp">
+      <Filter>Source\Image\Cel\Divider\Filler</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageFiller.cpp">
+      <Filter>Source\Image\Cel\Divider\Filler</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageCelMask.cpp">
+      <Filter>Source\Image\Cel\Divider\Cels</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageCelMaskTransparent.cpp">
+      <Filter>Source\Image\Cel\Divider\Cels</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageCelTransparent.cpp">
+      <Filter>Source\Image\Cel\Divider\Cels</Filter>
+    </ClCompile>
+    <ClCompile Include="PixelOpacity.cpp">
+      <Filter>Source\Image\Cel\Divider\Cels</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageCelSource.cpp">
+      <Filter>Source\Image\Cel\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageCelSourceBorders.cpp">
+      <Filter>Source\Image\Cel\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageCelSourceGrid.cpp">
+      <Filter>Source\Image\Cel\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageCelSourceRectangles.cpp">
+      <Filter>Source\Image\Cel\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageCelSourceSingle.cpp">
+      <Filter>Source\Image\Cel\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageCelSourceSubImages.cpp">
+      <Filter>Source\Image\Cel\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageCelsSource.cpp">
+      <Filter>Source\Image\Cel\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageModifier.cpp">
+      <Filter>Source\Image\Modifiers</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageModifierStack.cpp">
+      <Filter>Source\Image\Modifiers</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageModifierDrawBox.cpp">
+      <Filter>Source\Image\Modifiers\Shape</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageChannelAdd.cpp">
+      <Filter>Source\Image\Modifiers\Channels</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageChannelRename.cpp">
+      <Filter>Source\Image\Modifiers\Channels</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageGreyToRGB.cpp">
+      <Filter>Source\Image\Modifiers\Colour</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageRecolour.cpp">
+      <Filter>Source\Image\Modifiers\Colour</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageRecolourInvertBlackAndWhite.cpp">
+      <Filter>Source\Image\Modifiers\Colour</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageRGBToGrey.cpp">
+      <Filter>Source\Image\Modifiers\Colour</Filter>
+    </ClCompile>
+    <ClCompile Include="BumpMapper.cpp">
+      <Filter>Source\Image\Modifiers\Bump</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageResampler.cpp">
+      <Filter>Source\Image\Modifiers\Resample</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageResampleChannel.cpp">
+      <Filter>Source\Image\Modifiers\Resample</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageResampleBilinear.cpp">
+      <Filter>Source\Image\Modifiers\Resample</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageResampleBicubic.cpp">
+      <Filter>Source\Image\Modifiers\Resample</Filter>
+    </ClCompile>
+    <ClCompile Include="CatmullRom.cpp">
+      <Filter>Source\Image\Modifiers\Resample</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageResampleSmart.cpp">
+      <Filter>Source\Image\Modifiers\Resample</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageCelGroup.cpp">
+      <Filter>Source\Image\Group</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageSource.cpp">
+      <Filter>Source\Image\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageSourceDiskFile.cpp">
+      <Filter>Source\Image\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageSourceMemory.cpp">
+      <Filter>Source\Image\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ColourARGB32.cpp">
+      <Filter>Source\Image\Colour</Filter>
+    </ClCompile>
+    <ClCompile Include="ColourBlend.cpp">
+      <Filter>Source\Image\Colour</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageColour.cpp">
+      <Filter>Source\Image\Colour</Filter>
+    </ClCompile>
+    <ClCompile Include="Material.cpp">
+      <Filter>Source\Material</Filter>
+    </ClCompile>
+    <ClCompile Include="MaterialHelper.cpp">
+      <Filter>Source\Material</Filter>
+    </ClCompile>
+    <ClCompile Include="MaterialImage.cpp">
+      <Filter>Source\Material</Filter>
+    </ClCompile>
+    <ClCompile Include="MaterialProperties.cpp">
+      <Filter>Source\Material</Filter>
+    </ClCompile>
+    <ClCompile Include="ConnectionAnimation.cpp">
+      <Filter>Source\Animation</Filter>
+    </ClCompile>
+    <ClCompile Include="Instance.cpp">
+      <Filter>Source\Instance</Filter>
+    </ClCompile>
+    <ClCompile Include="Mesh.cpp">
+      <Filter>Source\Mesh</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshFaceReturn.cpp">
+      <Filter>Source\Mesh</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshColours.cpp">
+      <Filter>Source\Mesh\Detail</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshDetail.cpp">
+      <Filter>Source\Mesh\Detail</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshMaterials.cpp">
+      <Filter>Source\Mesh\Detail</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshNormals.cpp">
+      <Filter>Source\Mesh\Detail</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshPositions.cpp">
+      <Filter>Source\Mesh\Detail</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshSkin.cpp">
+      <Filter>Source\Mesh\Detail</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshUVCoords.cpp">
+      <Filter>Source\Mesh\Detail</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshConnectivity.cpp">
+      <Filter>Source\Mesh\Detail\Connectivity</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshCorner.cpp">
+      <Filter>Source\Mesh\Detail\Connectivity</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshEdge.cpp">
+      <Filter>Source\Mesh\Detail\Connectivity</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshFace.cpp">
+      <Filter>Source\Mesh\Detail\Connectivity</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshCache.cpp">
+      <Filter>Source\Mesh\Detail\Cache</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshFaceTypes.cpp">
+      <Filter>Source\Mesh\Detail\Cache</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshVertexArray.cpp">
+      <Filter>Source\Mesh\Detail\Cache</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshCacher.cpp">
+      <Filter>Source\Mesh\Detail\Cache\Intermediate</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshTypeIndices.cpp">
+      <Filter>Source\Mesh\Detail\Cache\Intermediate</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshShape.cpp">
+      <Filter>Source\Mesh\Shape</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshBoundingBox.cpp">
+      <Filter>Source\Mesh\Shape\Detail</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshConvexHull.cpp">
+      <Filter>Source\Mesh\Shape\Detail</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshLeaves.cpp">
+      <Filter>Source\Mesh\Shape\Detail</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshTriangles.cpp">
+      <Filter>Source\Mesh\Shape\Detail</Filter>
+    </ClCompile>
+    <ClCompile Include="ShapesIndexed.cpp">
+      <Filter>Source\Mesh\Shape\Detail</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshEdgeVisibility.cpp">
+      <Filter>Source\Mesh\Modifier</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshEditor.cpp">
+      <Filter>Source\Mesh\Modifier</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshEditorWrapper.cpp">
+      <Filter>Source\Mesh\Modifier</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshPolygons.cpp">
+      <Filter>Source\Mesh\Modifier</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshSelections.cpp">
+      <Filter>Source\Mesh\Modifier</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshModifier.cpp">
+      <Filter>Source\Mesh\Modifier\Detail</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshModifierStack.cpp">
+      <Filter>Source\Mesh\Modifier\Detail</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshFlatFaces.cpp">
+      <Filter>Source\Mesh\Modifier\Detail\Normals</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshSmoothFaces.cpp">
+      <Filter>Source\Mesh\Modifier\Detail\Normals</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshSmoothGroups.cpp">
+      <Filter>Source\Mesh\Modifier\Detail\Normals</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshSourceModifier.cpp">
+      <Filter>Source\Mesh\Modifier\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshBoxEditor.cpp">
+      <Filter>Source\Mesh\Modifier\Source\Shape</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshDiscEditor.cpp">
+      <Filter>Source\Mesh\Modifier\Source\Shape\Basic</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshPlaneEditor.cpp">
+      <Filter>Source\Mesh\Modifier\Source\Shape\Basic</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshRingEditor.cpp">
+      <Filter>Source\Mesh\Modifier\Source\Shape\Basic</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshConeEditor.cpp">
+      <Filter>Source\Mesh\Modifier\Source\Shape\Cylindrical</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshCylinderEditor.cpp">
+      <Filter>Source\Mesh\Modifier\Source\Shape\Cylindrical</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshTubeEditor.cpp">
+      <Filter>Source\Mesh\Modifier\Source\Shape\Cylindrical</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshCornerBuilder.cpp">
+      <Filter>Source\Mesh\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshFileType.cpp">
+      <Filter>Source\Mesh\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshReader.cpp">
+      <Filter>Source\Mesh\IO\Reader</Filter>
+    </ClCompile>
+    <ClCompile Include="MTLReader.cpp">
+      <Filter>Source\Mesh\IO\Reader</Filter>
+    </ClCompile>
+    <ClCompile Include="OBJReader.cpp">
+      <Filter>Source\Mesh\IO\Reader</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshWriter.cpp">
+      <Filter>Source\Mesh\IO\Writer</Filter>
+    </ClCompile>
+    <ClCompile Include="OBJWriter.cpp">
+      <Filter>Source\Mesh\IO\Writer</Filter>
+    </ClCompile>
+    <ClCompile Include="Camera.cpp">
+      <Filter>Source\Camera</Filter>
+    </ClCompile>
+    <ClCompile Include="Light.cpp">
+      <Filter>Source\Light</Filter>
+    </ClCompile>
+    <ClCompile Include="Connection.cpp">
+      <Filter>Source\Connection</Filter>
+    </ClCompile>
+    <ClCompile Include="TileLayer.cpp">
+      <Filter>Source\Map\Tile</Filter>
+    </ClCompile>
+    <ClCompile Include="TileMap.cpp">
+      <Filter>Source\Map\Tile</Filter>
+    </ClCompile>
+    <ClCompile Include="Box.cpp">
+      <Filter>Source\Shape</Filter>
+    </ClCompile>
+    <ClCompile Include="ConvexHull.cpp">
+      <Filter>Source\Shape</Filter>
+    </ClCompile>
+    <ClCompile Include="HalfSpace.cpp">
+      <Filter>Source\Shape</Filter>
+    </ClCompile>
+    <ClCompile Include="LineInfinite.cpp">
+      <Filter>Source\Shape</Filter>
+    </ClCompile>
+    <ClCompile Include="LineSegment.cpp">
+      <Filter>Source\Shape</Filter>
+    </ClCompile>
+    <ClCompile Include="Plane.cpp">
+      <Filter>Source\Shape</Filter>
+    </ClCompile>
+    <ClCompile Include="Polygon.cpp">
+      <Filter>Source\Shape</Filter>
+    </ClCompile>
+    <ClCompile Include="Ray.cpp">
+      <Filter>Source\Shape</Filter>
+    </ClCompile>
+    <ClCompile Include="ShapeHelper.cpp">
+      <Filter>Source\Shape</Filter>
+    </ClCompile>
+    <ClCompile Include="Sphere.cpp">
+      <Filter>Source\Shape</Filter>
+    </ClCompile>
+    <ClCompile Include="Triangle.cpp">
+      <Filter>Source\Shape</Filter>
+    </ClCompile>
+    <ClCompile Include="FakeTracker.cpp">
+      <Filter>Source\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="ChannelTypes.cpp">
+      <Filter>Source\Channel</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageToR3G3B2A.cpp">
+      <Filter>Source\Image\Modifiers\Colour</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageReaderCommon.cpp">
+      <Filter>Source\Image\IO\Common</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageDraw.cpp">
+      <Filter>Source\Image\Draw</Filter>
+    </ClCompile>
+    <ClCompile Include="SpriteMap.cpp">
+      <Filter>Source\Map\Sprite</Filter>
+    </ClCompile>
+    <ClCompile Include="Maps.cpp">
+      <Filter>Source\Map</Filter>
+    </ClCompile>
+    <ClCompile Include="BaseMap.cpp">
+      <Filter>Source\Map</Filter>
+    </ClCompile>
+    <ClCompile Include="GeometryMap.cpp">
+      <Filter>Source\Map</Filter>
+    </ClCompile>
+    <ClCompile Include="BlockMap.cpp">
+      <Filter>Source\Map\MovableBlock</Filter>
+    </ClCompile>
+    <ClCompile Include="TileLayerBoolean.cpp">
+      <Filter>Source\Map\Tile\Specific</Filter>
+    </ClCompile>
+    <ClCompile Include="TileLayerCel.cpp">
+      <Filter>Source\Map\Tile\Specific</Filter>
+    </ClCompile>
+    <ClCompile Include="TileTextWriter.cpp">
+      <Filter>Source\Map\Tile\Specific</Filter>
+    </ClCompile>
+    <ClCompile Include="FontFactory.cpp">
+      <Filter>Source\Image\Font</Filter>
+    </ClCompile>
+    <ClCompile Include="FontReader.cpp">
+      <Filter>Source\Image\Font</Filter>
+    </ClCompile>
+    <ClCompile Include="FontWriter.cpp">
+      <Filter>Source\Image\Font</Filter>
+    </ClCompile>
+    <ClCompile Include="FontImportParameters.cpp">
+      <Filter>Source\Image\Font</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageCopyDimension.cpp">
+      <Filter>Source\Image\Cel</Filter>
+    </ClCompile>
+    <ClCompile Include="Text.cpp">
+      <Filter>Source\Text</Filter>
+    </ClCompile>
+    <ClCompile Include="TextRun.cpp">
+      <Filter>Source\Text</Filter>
+    </ClCompile>
+    <ClCompile Include="TextUTF16Short.cpp">
+      <Filter>Source\Text\Element\UTF16</Filter>
+    </ClCompile>
+    <ClCompile Include="TextUTF16Long.cpp">
+      <Filter>Source\Text\Element\UTF16</Filter>
+    </ClCompile>
+    <ClCompile Include="TextUTF16Multi.cpp">
+      <Filter>Source\Text\Element\UTF16</Filter>
+    </ClCompile>
+    <ClCompile Include="SimpleTextReader.cpp">
+      <Filter>Source\Text\Reader</Filter>
+    </ClCompile>
+    <ClCompile Include="TextBuilder.cpp">
+      <Filter>Source\Text\Builder</Filter>
+    </ClCompile>
+    <ClCompile Include="TextBuilderUTF16Short.cpp">
+      <Filter>Source\Text\Builder</Filter>
+    </ClCompile>
+    <ClCompile Include="TextBuilderUTFCommon.cpp">
+      <Filter>Source\Text\Builder</Filter>
+    </ClCompile>
+    <ClCompile Include="TextBuilderUTF16Long.cpp">
+      <Filter>Source\Text\Builder</Filter>
+    </ClCompile>
+    <ClCompile Include="TextDrawable.cpp">
+      <Filter>Source\Text\Element</Filter>
+    </ClCompile>
+    <ClCompile Include="TextElement.cpp">
+      <Filter>Source\Text\Element</Filter>
+    </ClCompile>
+    <ClCompile Include="TextNewLine.cpp">
+      <Filter>Source\Text\Element</Filter>
+    </ClCompile>
+    <ClCompile Include="TextLayoutBuilder.cpp">
+      <Filter>Source\Text\Layout</Filter>
+    </ClCompile>
+    <ClCompile Include="MapFontDraw.cpp">
+      <Filter>Source\Image\Font</Filter>
+    </ClCompile>
+    <ClCompile Include="TextLayout.cpp">
+      <Filter>Source\Image\Font</Filter>
+    </ClCompile>
+    <ClCompile Include="TextStyle.cpp">
+      <Filter>Source\Image\Font</Filter>
+    </ClCompile>
+    <ClCompile Include="TextMarkupParser.cpp">
+      <Filter>Source\Image\Font</Filter>
+    </ClCompile>
+    <ClCompile Include="BaseFontDraw.cpp">
+      <Filter>Source\Image\Font</Filter>
+    </ClCompile>
+    <ClCompile Include="GlyphListFontDraw.cpp">
+      <Filter>Source\Image\Font</Filter>
+    </ClCompile>
+    <ClCompile Include="MapViewport.cpp">
+      <Filter>Source\Map</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageCopier.cpp">
+      <Filter>Source\Image\Copier</Filter>
+    </ClCompile>
+    <ClCompile Include="ImagePremultipliedBlend.cpp">
+      <Filter>Source\Image\Copier</Filter>
+    </ClCompile>
+    <ClCompile Include="MultiImageCopier.cpp">
+      <Filter>Source\Image\Copier</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageBlitter.cpp">
+      <Filter>Source\Image\Blitter</Filter>
+    </ClCompile>
+    <ClCompile Include="OffsetImageRowBlitter.cpp">
+      <Filter>Source\Image\Blitter</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageRowSizingBlitterRGBByteAlphaByteTranslucent.cpp">
+      <Filter>Source\Image\Blitter\Types\Translucent</Filter>
+    </ClCompile>
+    <ClCompile Include="ColourFormat.cpp">
+      <Filter>Source\Image\Colour</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageRowBlitterRGBByteAlphaByteTranslucent.cpp">
+      <Filter>Source\Image\Blitter\Types\Translucent</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageRowBlitterFactory.cpp">
+      <Filter>Source\Image\Blitter\Cache</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageBlitterFormat.cpp">
+      <Filter>Source\Image\Blitter</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageBlitterContext.cpp">
+      <Filter>Source\Image\Blitter</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageCelBlitterCache.cpp">
+      <Filter>Source\Image\Blitter\Cache</Filter>
+    </ClCompile>
+    <ClCompile Include="FontCreationParameters.cpp">
+      <Filter>Source\Image\Font</Filter>
+    </ClCompile>
+    <ClCompile Include="TileMapGenerator.cpp">
+      <Filter>Source\Map\Generator</Filter>
+    </ClCompile>
+    <ClCompile Include="TileMapPattern.cpp">
+      <Filter>Source\Map\Generator</Filter>
+    </ClCompile>
+    <ClCompile Include="TileCelBrush.cpp">
+      <Filter>Source\Map\Generator</Filter>
+    </ClCompile>
+    <ClCompile Include="TileCelType.cpp">
+      <Filter>Source\Map\Generator</Filter>
+    </ClCompile>
+    <ClCompile Include="TileCelColourSource.cpp">
+      <Filter>Source\Map\Generator</Filter>
+    </ClCompile>
+    <ClCompile Include="TileGridSource.cpp">
+      <Filter>Source\Map\Generator</Filter>
+    </ClCompile>
+    <ClCompile Include="TileCelGenerator.cpp">
+      <Filter>Source\Map\Generator</Filter>
+    </ClCompile>
+    <ClCompile Include="TileGridStringSource.cpp">
+      <Filter>Source\Map\Generator</Filter>
+    </ClCompile>
+    <ClCompile Include="TileGridImageSource.cpp">
+      <Filter>Source\Map\Generator</Filter>
+    </ClCompile>
+    <ClCompile Include="TileCelCharSource.cpp">
+      <Filter>Source\Map\Generator</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageColourConverter.cpp">
+      <Filter>Source\Image\Copier</Filter>
+    </ClCompile>
+    <ClCompile Include="BMPReader.cpp">
+      <Filter>Source\Image\IO\BMP</Filter>
+    </ClCompile>
+    <ClCompile Include="Sound.cpp">
+      <Filter>Source\Sound</Filter>
+    </ClCompile>
+    <ClCompile Include="ModSong.cpp">
+      <Filter>Source\Sound\Module</Filter>
+    </ClCompile>
+    <ClCompile Include="MODReader.cpp">
+      <Filter>Source\Sound\Module</Filter>
+    </ClCompile>
+    <ClCompile Include="ModMixer.cpp">
+      <Filter>Source\Sound\Module</Filter>
+    </ClCompile>
+    <ClCompile Include="ModPlayer.cpp">
+      <Filter>Source\Sound\Module</Filter>
+    </ClCompile>
+    <ClCompile Include="SoundCel.cpp">
+      <Filter>Source\Sound</Filter>
+    </ClCompile>
+    <ClCompile Include="SoundCelGroup.cpp">
+      <Filter>Source\Sound</Filter>
+    </ClCompile>
+    <ClCompile Include="SoundChannel.cpp">
+      <Filter>Source\Sound</Filter>
+    </ClCompile>
+    <ClCompile Include="SoundModifier.cpp">
+      <Filter>Source\Sound</Filter>
+    </ClCompile>
+    <ClCompile Include="SoundModifierStack.cpp">
+      <Filter>Source\Sound</Filter>
+    </ClCompile>
+    <ClCompile Include="SoundResampler.cpp">
+      <Filter>Source\Sound</Filter>
+    </ClCompile>
+    <ClCompile Include="WAVCommon.cpp">
+      <Filter>Source\Sound\IO\WAV</Filter>
+    </ClCompile>
+    <ClCompile Include="WAVReader.cpp">
+      <Filter>Source\Sound\IO\WAV</Filter>
+    </ClCompile>
+    <ClCompile Include="WAVWriter.cpp">
+      <Filter>Source\Sound\IO\WAV</Filter>
+    </ClCompile>
+    <ClCompile Include="TrueTypeFont.cpp">
+      <Filter>Source\Image\Font</Filter>
+    </ClCompile>
+    <ClCompile Include="TrueTypeFontFactory.cpp">
+      <Filter>Source\Image\Font</Filter>
+    </ClCompile>
+    <ClCompile Include="TrueTypeOutline.cpp">
+      <Filter>Source\Image\Font</Filter>
+    </ClCompile>
+    <ClCompile Include="CoverageRasteriser.cpp">
+      <Filter>Source\Image\Font</Filter>
+    </ClCompile>
+    <ClCompile Include="VectorPath.cpp">
+      <Filter>Source\Image\Vector</Filter>
+    </ClCompile>
+    <ClCompile Include="VectorRasteriser.cpp">
+      <Filter>Source\Image\Vector</Filter>
+    </ClCompile>
+    <ClCompile Include="VectorShapes.cpp">
+      <Filter>Source\Image\Vector</Filter>
+    </ClCompile>
+    <ClCompile Include="TrueTypeRasteriser.cpp">
+      <Filter>Source\Image\Font</Filter>
+    </ClCompile>
+    <ClCompile Include="PNGReader.cpp">
+      <Filter>Source\Image\IO\PNG</Filter>
+    </ClCompile>
+    <ClCompile Include="TGAReader.cpp">
+      <Filter>Source\Image\IO\TGA</Filter>
+    </ClCompile>
+    <ClCompile Include="RADReader.cpp">
+      <Filter>Source\Image\IO\RAD</Filter>
+    </ClCompile>
+    <ClCompile Include="SFTReader.cpp">
+      <Filter>Source\Image\IO\SFT</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageReader.cpp">
+      <Filter>Source\Image\IO\Common</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageReaderHelper.cpp">
+      <Filter>Source\Image\IO\Common</Filter>
+    </ClCompile>
+    <ClCompile Include="BMPWriter.cpp">
+      <Filter>Source\Image\IO\BMP</Filter>
+    </ClCompile>
+    <ClCompile Include="PNGWriter.cpp">
+      <Filter>Source\Image\IO\PNG</Filter>
+    </ClCompile>
+    <ClCompile Include="PNGCommon.cpp">
+      <Filter>Source\Image\IO\PNG</Filter>
+    </ClCompile>
+    <ClCompile Include="SFTCommon.cpp">
+      <Filter>Source\Image\IO\SFT</Filter>
+    </ClCompile>
+    <ClCompile Include="RADWriter.cpp">
+      <Filter>Source\Image\IO\RAD</Filter>
+    </ClCompile>
+    <ClCompile Include="SFTWriter.cpp">
+      <Filter>Source\Image\IO\SFT</Filter>
+    </ClCompile>
+    <ClCompile Include="TGAWriter.cpp">
+      <Filter>Source\Image\IO\TGA</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageWriter.cpp">
+      <Filter>Source\Image\IO\Common</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageRowBlitterByteAlignedOpaque.cpp">
+      <Filter>Source\Image\Blitter\Types\Opaque</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageRowBlitterContiguous.cpp">
+      <Filter>Source\Image\Blitter\Types\Opaque</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageRowSizingBlitterByteAlignedOpaque.cpp">
+      <Filter>Source\Image\Blitter\Types\Opaque</Filter>
+    </ClCompile>
+    <ClCompile Include="SizingImageBlitterSize.cpp">
+      <Filter>Source\Image\Blitter</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>
