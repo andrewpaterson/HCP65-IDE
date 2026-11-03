@@ -31,8 +31,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDEContent.h"
 
 
-//The IDE: its window, the window's content and the input that drives it.  main makes it, adds it to the root, runs it and
-//removes it from the root.
+//The IDE: its window, the window's content and the input that drives it.  main makes it, adds it to the root, sets it up,
+//runs it and removes it from the root.
 class CIDEApp : public CObject
 {
 CONSTRUCTABLE(CIDEApp);
@@ -47,7 +47,8 @@ protected:
 	bool					mbInputs;  //The component input is initialised.
 
 public:
-	void	Init(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativeInput, const char* szInputDirectory, const char* szSolution);
+	void	Init(void);
+	bool	Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativeInput, const char* szInputDirectory, const char* szSolution);
 	void	Class(void) override;
 	void	Free(void) override;
 

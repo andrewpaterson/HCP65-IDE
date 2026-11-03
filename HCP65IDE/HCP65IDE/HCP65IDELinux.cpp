@@ -68,8 +68,9 @@ int main(int argc, char* argv[])
 			cNativeFactory.SetInput(&cX11Input);
 
 			//The app (its window, content and input) is held by the root while it runs.
-			pApp = OMalloc<CIDEApp>(&cNativeFactory, &cX11Input, "../../../commonlibraries/Libraries/WinInputLib/xml", (argc > 1) ? argv[1] : IDE_DEFAULT_PROJECT);
+			pApp = OMalloc<CIDEApp>();
 			ORoot()->Add(pApp);
+			pApp->Setup(&cNativeFactory, &cX11Input, "../../../commonlibraries/Libraries/WinInputLib/xml", (argc > 1) ? argv[1] : IDE_DEFAULT_PROJECT);
 			bResult = pApp->Run();
 			ORoot()->Remove(pApp);
 			pApp = NULL;

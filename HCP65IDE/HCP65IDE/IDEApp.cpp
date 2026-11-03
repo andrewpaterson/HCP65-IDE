@@ -28,21 +28,35 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 //////////////////////////////////////////////////////////////////////////
 //
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEApp::Init(void)
+{
+	PreInit();
+
+	mbValid = false;
+	mbInputs = false;
+
+	PostInit();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // The window and its content, with szSolution open.  The devices are
 // described by the XML in szInputDirectory; pcNativeInput (the platform's
 // keyboard and mouse) is added to them.  Run fails if anything here did.
 // HCP65_IDE_SNAPSHOT, HCP65_IDE_EXPAND and HCP65_IDE_OPEN are for checking
 // it: a snapshot of the window, every folder expanded and a file opened.
+// Call it once the app is in the root: the objects made here are only
+// held through it, and an object no root reaches is freed as soon as
+// the last stack pointer to it goes.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEApp::Init(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativeInput, const char* szInputDirectory, const char* szSolution)
+bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativeInput, const char* szInputDirectory, const char* szSolution)
 {
 	Ptr<CIDEWindowTick>	pTick;
 	int32				iNode;
-
-	PreInit();
-
-	mbInputs = false;
 
 	pTick = OMalloc<CIDEWindowTick>();
 	if (getenv("HCP65_IDE_SNAPSHOT") != NULL)
@@ -86,7 +100,7 @@ void CIDEApp::Init(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNative
 		mpWindow->SetWindowSize(1280, 800);
 	}
 
-	PostInit();
+	return mbValid;
 }
 
 

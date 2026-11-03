@@ -72,8 +72,9 @@ int PASCAL WinMain(HINSTANCE hInstance,	HINSTANCE hPrevInstance, LPTSTR lpCmdLin
 		cNativeFactory.SetRawInput(WinRawInputCallback, cWinInput.GetRaw());
 
 		//The app (its window, content and input) is held by the root while it runs.
-		pApp = OMalloc<CIDEApp>(&cNativeFactory, &cWinInput, "../../../CommonLibraries/Libraries/WinInputLib/xml", ((lpCmdLine != NULL) && (lpCmdLine[0] != '\0')) ? lpCmdLine : IDE_DEFAULT_PROJECT);
+		pApp = OMalloc<CIDEApp>();
 		ORoot()->Add(pApp);
+		pApp->Setup(&cNativeFactory, &cWinInput, "../../../CommonLibraries/Libraries/WinInputLib/xml", ((lpCmdLine != NULL) && (lpCmdLine[0] != '\0')) ? lpCmdLine : IDE_DEFAULT_PROJECT);
 		bResult = pApp->Run();
 		ORoot()->Remove(pApp);
 		pApp = NULL;
