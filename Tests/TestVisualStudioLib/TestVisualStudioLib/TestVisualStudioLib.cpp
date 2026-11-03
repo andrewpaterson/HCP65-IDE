@@ -6,6 +6,7 @@
 
 
 void TestVcxProject(void);
+void TestVcxSolution(void);
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -23,6 +24,7 @@ int __cdecl main(void)
 	MemoryInit();
 
 	TestVcxProject();
+	TestVcxSolution();
 
 	MemoryKill();
 	TypeConverterKill();

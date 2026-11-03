@@ -24,6 +24,9 @@
     <ClCompile Include="VcxConfiguration.cpp" />
     <ClCompile Include="VcxProjectReference.cpp" />
     <ClCompile Include="VcxProject.cpp" />
+    <ClCompile Include="VcxPath.cpp" />
+    <ClCompile Include="VcxSolutionProject.cpp" />
+    <ClCompile Include="VcxSolution.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="VcxItem.h" />
@@ -31,6 +34,9 @@
     <ClInclude Include="VcxConfiguration.h" />
     <ClInclude Include="VcxProjectReference.h" />
     <ClInclude Include="VcxProject.h" />
+    <ClInclude Include="VcxPath.h" />
+    <ClInclude Include="VcxSolutionProject.h" />
+    <ClInclude Include="VcxSolution.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{FC0549F1-8ED0-4949-8587-1902F6B20264}</ProjectGuid>

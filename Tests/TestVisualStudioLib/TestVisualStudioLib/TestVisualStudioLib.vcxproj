@@ -223,6 +223,7 @@
   <ItemGroup>
     <ClCompile Include="TestVisualStudioLib.cpp" />
     <ClCompile Include="TestVcxProject.cpp" />
+    <ClCompile Include="TestVcxSolution.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\CommonLibraries\Libraries\BaseLib\BaseLib.vcxproj">

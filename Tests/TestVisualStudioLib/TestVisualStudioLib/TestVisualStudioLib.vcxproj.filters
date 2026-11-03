@@ -12,5 +12,8 @@
     <ClCompile Include="TestVcxProject.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="TestVcxSolution.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

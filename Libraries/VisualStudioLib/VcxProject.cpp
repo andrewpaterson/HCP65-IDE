@@ -21,6 +21,7 @@ along with Codaphela VisualStudioLib.  If not, see <http://www.gnu.org/licenses/
 #include "BaseLib/FileUtil.h"
 #include "BaseLib/Logger.h"
 #include "BaseLib/StringHelper.h"
+#include "VcxPath.h"
 #include "VcxProject.h"
 
 
@@ -640,21 +641,12 @@ void CVcxProject::GetChildFilters(const char* szParent, CArrayInt* paiFilters)
 //////////////////////////////////////////////////////////////////////////
 //
 // The item's file: the project's directory and the item's path, with
-// this platform's separators.
+// this platform's separators and the case of the file on disk.
 //
 //////////////////////////////////////////////////////////////////////////
 void CVcxProject::GetFullPath(CVcxItem* pcItem, CChars* pszDest)
 {
-	CFileUtil	cFileUtil;
-	CChars		szPath;
-
-	szPath.Init(mszDirectory);
-	szPath.Append(FILE_SEPARATOR);
-	szPath.Append(pcItem->GetInclude());
-	szPath.Replace('\\', FILE_SEPARATOR[0]);
-	cFileUtil.CollapsePath(&szPath);
-	pszDest->Append(szPath);
-	szPath.Kill();
+	ResolveVcxPath(mszDirectory.Text(), pcItem->GetInclude(), pszDest);
 }
 
 

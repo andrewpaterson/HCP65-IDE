@@ -7,6 +7,9 @@
     <Filter Include="Source\Project">
       <UniqueIdentifier>{c152c24d-b9c9-4fc5-ac6d-9785cb317990}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Solution">
+      <UniqueIdentifier>{5d3b8e21-7c4a-4f19-9a62-0e8b1f4d7a35}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="VcxItem.cpp">
@@ -24,6 +27,15 @@
     <ClCompile Include="VcxProject.cpp">
       <Filter>Source\Project</Filter>
     </ClCompile>
+    <ClCompile Include="VcxPath.cpp">
+      <Filter>Source\Solution</Filter>
+    </ClCompile>
+    <ClCompile Include="VcxSolutionProject.cpp">
+      <Filter>Source\Solution</Filter>
+    </ClCompile>
+    <ClCompile Include="VcxSolution.cpp">
+      <Filter>Source\Solution</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="VcxItem.h">
@@ -40,6 +52,15 @@
     </ClInclude>
     <ClInclude Include="VcxProject.h">
       <Filter>Source\Project</Filter>
+    </ClInclude>
+    <ClInclude Include="VcxPath.h">
+      <Filter>Source\Solution</Filter>
+    </ClInclude>
+    <ClInclude Include="VcxSolutionProject.h">
+      <Filter>Source\Solution</Filter>
+    </ClInclude>
+    <ClInclude Include="VcxSolution.h">
+      <Filter>Source\Solution</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
