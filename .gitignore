@@ -1,0 +1,22 @@
+# Visual Studio
+.vs/
+*.VC.db
+*.VC.opendb
+*.suo
+*.sdf
+*.opensdf
+*ipch
+*.swp
+
+# MSBuild output for every project and platform (Win32: Debug/Release, x64: x64/Debug, x64/Release)
+[Dd]ebug/
+[Rr]elease/
+x64/
+
+# Logs written by the IDE and the tests
+Log.txt
+
+# Files the IDE and the tests write
+/HCP65IDE/HCP65IDE/Output/
+/Tests/*/*/Output/
+/Tests/*/*/Post/
