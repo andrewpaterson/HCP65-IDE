@@ -21,6 +21,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/Logger.h"
 #include "BaseLib/TextFile.h"
 #include "StandardLib/Objects.h"
+#include "StandardLib/ObjectReader.h"
+#include "StandardLib/ObjectWriter.h"
 #include "SupportLib/ImageColour.h"
 #include "SupportLib/ImageColourConverter.h"
 #include "SupportLib/TrueTypeFont.h"
@@ -109,7 +111,78 @@ void CSolutionExplorerListener::ItemActivated(CUnknown* pcSource, void* pvContex
 // szCodeFont the fixed width font files are edited in.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEContent::Init(Ptr<CWindow> pWindow, const char* szUIFont, const char* szCodeFont)
+void CIDEContent::Init(void)
+{
+	PreInit();
+
+	mbSolution = false;
+	mcSolution.Init();
+	mcExplorerListener.Init(this);
+
+	PostInit();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::Class(void)
+{
+	M_Pointer(mpWindow);
+	M_Pointer(mpWhite);
+	M_Pointer(mpFontColours);
+	M_Pointer(mpTheme);
+	M_Pointer(mpCodeFamily);
+	M_Pointer(mpEditor);
+	M_Pointer(mpExplorer);
+	U_Unknown(CSolutionExplorerListener, mcExplorerListener);
+	U_Unknown(CVcxSolution, mcSolution);
+	U_Bool(mbSolution);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The widgets, fonts and theme are freed with the content's pointers.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::Free(void)
+{
+	//An object's memory is freed without its destructor running so the listener takes itself off the tree.
+	mcExplorerListener.RemoveFromListenerCalls();
+	mcSolution.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The content isn't saved.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEContent::Save(CObjectWriter* pcFile)
+{
+	return false;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEContent::Load(CObjectReader* pcFile)
+{
+	return false;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The window's widgets.  Free still frees whatever was made when this
+// fails.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* szCodeFont)
 {
 	Ptr<CGridContainer>	pMain;
 	Ptr<CGridContainer>	pExplorerPanel;
@@ -117,8 +190,6 @@ bool CIDEContent::Init(Ptr<CWindow> pWindow, const char* szUIFont, const char* s
 	Ptr<CScrollPane>	pEditorPane;
 
 	mpWindow = pWindow;
-	mbProject = false;
-	mcProject.Init();
 
 	mpWhite = GenerateIDEFont(szUIFont, "Inter 13px", 13.0f, pWindow->GetColourOrder());
 	if (mpWhite.IsNull())
@@ -135,16 +206,15 @@ bool CIDEContent::Init(Ptr<CWindow> pWindow, const char* szUIFont, const char* s
 	}
 
 	//Solution Explorer: its title over the project's tree.
-	mcExplorer.Init(pWindow, mpTheme);
-	mcExplorerListener.Init(this);
-	mcExplorer.GetTree()->AddListener(&mcExplorerListener);
+	mpExplorer = OMalloc<CSolutionExplorer>(pWindow, mpTheme);
+	mpExplorer->GetTree()->AddListener(&mcExplorerListener);
 	pExplorerPanel = OMalloc<CGridContainer>(pWindow);
 	pExplorerPanel->SetDesiredSize(IDE_EXPLORER_WIDTH, -1);
 	pExplorerPanel->SetAlignment(CSH_Stretch, CSV_Stretch);
 	pExplorerTitle = OMalloc<CLabel>(pWindow, mpFontColours->GetFont(JEWEL_ICON), "Solution Explorer");
 	pExplorerTitle->SetAlignment(CSH_Left, CSV_Center);
 	pExplorerPanel->AddComponent(pExplorerTitle, 0, 0, 1, 1, 1, 0);
-	pExplorerPanel->AddComponent(mcExplorer.GetComponent(), 0, 1, 1, 1, 1, 1);
+	pExplorerPanel->AddComponent(mpExplorer->GetComponent(), 0, 1, 1, 1, 1, 1);
 
 	//The editor: a fixed width font as tiles.
 	mpEditor = OMalloc<CTextArea>(pWindow, mpCodeFamily, "");
@@ -165,40 +235,35 @@ bool CIDEContent::Init(Ptr<CWindow> pWindow, const char* szUIFont, const char* s
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Reads a .sln (and its projects) and shows it in Solution Explorer.  A
+// .vcxproj on its own is put in a solution of its own, as Visual Studio
+// does.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEContent::Kill(void)
+bool CIDEContent::OpenSolution(const char* szFileName)
 {
-	if (mcExplorer.GetTree().IsNotNull())
+	CChars	szName;
+	bool	bSolution;
+
+	szName.Init(szFileName);
+	bSolution = szName.EndsWithIgnoreCase(".sln");
+	szName.Kill();
+
+	mcSolution.Kill();
+	mcSolution.Init();
+	if (bSolution)
 	{
-		mcExplorer.GetTree()->RemoveListener(&mcExplorerListener);
+		mbSolution = mcSolution.Read(szFileName);
 	}
-	mcExplorer.Kill();
-	mcProject.Kill();
-	mpEditor = NULL;
-	mpCodeFamily = NULL;
-	mpTheme = NULL;
-	mpFontColours = NULL;
-	mpWhite = NULL;
-	mpWindow = NULL;
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// Reads a .vcxproj (and its .filters) and shows it in Solution Explorer.
-//
-//////////////////////////////////////////////////////////////////////////
-bool CIDEContent::OpenProject(const char* szProjectFile)
-{
-	mcProject.Kill();
-	mcProject.Init();
-	mbProject = mcProject.Read(szProjectFile);
-	if (!mbProject)
+	else
+	{
+		mbSolution = mcSolution.ReadProject(szFileName);
+	}
+	if (!mbSolution)
 	{
 		return false;
 	}
-	mcExplorer.ShowProject(&mcProject);
+	mpExplorer->ShowSolution(&mcSolution);
 	return true;
 }
 
@@ -231,21 +296,17 @@ bool CIDEContent::OpenFile(const char* szFileName)
 //////////////////////////////////////////////////////////////////////////
 void CIDEContent::ExplorerActivated(void)
 {
-	CVcxItem*	pcItem;
-	CChars		szPath;
+	CChars	szPath;
 
-	pcItem = mcExplorer.GetSelectedItem();
-	if (pcItem == NULL)
-	{
-		return;
-	}
 	szPath.Init();
-	mcProject.GetFullPath(pcItem, &szPath);
-	OpenFile(szPath.Text());
+	if (mpExplorer->GetSelectedFilePath(&szPath))
+	{
+		OpenFile(szPath.Text());
+	}
 	szPath.Kill();
 }
 
 
 Ptr<CTextArea> CIDEContent::GetEditor(void) { return mpEditor; }
-CSolutionExplorer* CIDEContent::GetExplorer(void) { return &mcExplorer; }
+CSolutionExplorer* CIDEContent::GetExplorer(void) { return &mpExplorer; }
 

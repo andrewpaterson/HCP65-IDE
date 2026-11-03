@@ -26,7 +26,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/WindowTheme.h"
 #include "WindowLib/TextArea.h"
 #include "WindowLib/ListListener.h"
-#include "VisualStudioLib/VcxProject.h"
+#include "VisualStudioLib/VcxSolution.h"
 #include "SolutionExplorer.h"
 
 
@@ -46,8 +46,12 @@ public:
 
 
 //The IDE's window: Solution Explorer on the left and the file being edited on the right, in a fixed width font.
-class CIDEContent
+//The IDE's window's content: Solution Explorer on the left and the editor.  It is an object; keep it in the root and
+//call Setup.
+class CIDEContent : public CObject
 {
+CONSTRUCTABLE(CIDEContent);
+DESTRUCTABLE(CIDEContent);
 protected:
 	Ptr<CWindow>				mpWindow;
 	Ptr<CFont>					mpWhite;
@@ -55,16 +59,22 @@ protected:
 	Ptr<CWindowTheme>			mpTheme;
 	Ptr<CFontFamily>			mpCodeFamily;
 	Ptr<CTextArea>				mpEditor;
-	CSolutionExplorer			mcExplorer;
+	Ptr<CSolutionExplorer>		mpExplorer;
 	CSolutionExplorerListener	mcExplorerListener;
-	CVcxProject					mcProject;
-	bool						mbProject;
+	CVcxSolution				mcSolution;
+	bool						mbSolution;
 
 public:
-	bool			Init(Ptr<CWindow> pWindow, const char* szUIFont, const char* szCodeFont);
-	void			Kill(void);
+	void			Init(void);
+	void			Class(void) override;
+	void			Free(void) override;
 
-	bool			OpenProject(const char* szProjectFile);
+	bool			Save(CObjectWriter* pcFile) override;
+	bool			Load(CObjectReader* pcFile) override;
+
+	bool			Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* szCodeFont);
+
+	bool			OpenSolution(const char* szFileName);
 	bool			OpenFile(const char* szFileName);
 	void			ExplorerActivated(void);
 

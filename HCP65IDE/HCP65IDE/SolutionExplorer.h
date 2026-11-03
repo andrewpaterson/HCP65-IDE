@@ -21,43 +21,77 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __SOLUTION_EXPLORER_H__
 #define __SOLUTION_EXPLORER_H__
 #include "BaseLib/ArrayInt.h"
+#include "BaseLib/ArrayTemplate.h"
 #include "WindowLib/TreeContainer.h"
 #include "WindowLib/ScrollPane.h"
-#include "VisualStudioLib/VcxProject.h"
+#include "VisualStudioLib/VcxSolution.h"
 
 
-//What a node of Solution Explorer is: its data is the item's index plus one for a file, minus the filter's index
-//minus one for a filter, and SOLUTION_EXPLORER_PROJECT for the project.
-#define SOLUTION_EXPLORER_PROJECT	0
-
-
-//Solution Explorer: the project, its filters as folders and its files in them, as Visual Studio shows them.  In each
-//folder the folders come first and then the files, each in alphabetical order.
-class CSolutionExplorer
+enum ESolutionExplorerNodeType
 {
+	SENT_Solution,
+	SENT_SolutionFolder,
+	SENT_SolutionItem,		//A solution folder's file; its index is the item's.
+	SENT_Project,
+	SENT_Filter,			//Its index is the filter's in its project.
+	SENT_File,				//Its index is the item's in its project.
+};
+
+
+//What a node of Solution Explorer is.  A tree node's data is the index of its SSolutionExplorerNode.
+struct SSolutionExplorerNode
+{
+	ESolutionExplorerNodeType	eType;
+	size						uiProject;	//The solution's project (or folder) the node is in; unused for the solution.
+	size						uiIndex;
+};
+
+
+typedef CArrayTemplate<SSolutionExplorerNode>	CArraySolutionExplorerNode;
+
+
+//Solution Explorer: the solution, its solution folders and projects, each project's filters as folders and its files in
+//them, as Visual Studio shows them.  In each folder the folders come first and then the projects or files, each in
+//alphabetical order.  It is an object held by the IDE's content.
+class CSolutionExplorer : public CObject
+{
+CONSTRUCTABLE(CSolutionExplorer);
+DESTRUCTABLE(CSolutionExplorer);
 protected:
-	Ptr<CTreeContainer>	mpTree;
-	Ptr<CScrollPane>	mpScrollPane;
-	Ptr<CImageCel>		mpFolderIcon;
-	Ptr<CImageCel>		mpFileIcon;
-	Ptr<CImageCel>		mpProjectIcon;
-	CVcxProject*		mpcProject;
+	Ptr<CTreeContainer>			mpTree;
+	Ptr<CScrollPane>			mpScrollPane;
+	Ptr<CImageCel>				mpFolderIcon;
+	Ptr<CImageCel>				mpFileIcon;
+	Ptr<CImageCel>				mpProjectIcon;
+	Ptr<CImageCel>				mpSolutionIcon;
+	CVcxSolution*				mpcSolution;
+	CArraySolutionExplorerNode	masNodes;
 
 public:
-	void				Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme);
-	void				Kill(void);
+	void					Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme);
+	void					Class(void) override;
+	void					Free(void) override;
 
-	void				ShowProject(CVcxProject* pcProject);
-	Ptr<CTreeContainer>	GetTree(void);
-	Ptr<CComponent>		GetComponent(void);
-	CVcxItem*			GetSelectedItem(void);
-	CVcxItem*			GetNodeItem(int32 iNode);
-	int32				FindFileNode(const char* szFileName);
+	bool					Save(CObjectWriter* pcFile) override;
+	bool					Load(CObjectReader* pcFile) override;
+
+	void					ShowSolution(CVcxSolution* pcSolution);
+	Ptr<CTreeContainer>		GetTree(void);
+	Ptr<CComponent>			GetComponent(void);
+	SSolutionExplorerNode*	GetNode(int32 iNode);
+	bool					GetNodeFilePath(int32 iNode, CChars* pszDest);
+	bool					GetSelectedFilePath(CChars* pszDest);
+	bool					GetNodeFileName(int32 iNode, CChars* pszDest);
+	int32					FindFileNode(const char* szFileName);
 
 protected:
-	void				AddFilterContents(int32 iParentNode, const char* szFilter);
-	void				SortFilters(CArrayInt* paiFilters);
-	void				SortItems(CArrayInt* paiItems);
+	int32					AddNode(int32 iParentNode, const char* szText, Ptr<CImageCel> pIcon, ESolutionExplorerNodeType eType, size uiProject, size uiIndex);
+	void					AddSolutionContents(int32 iParentNode, const char* szParentGuid);
+	void					AddProject(int32 iParentNode, size uiProject);
+	void					AddFilterContents(int32 iParentNode, size uiProject, const char* szFilter);
+	void					SortProjects(CArrayInt* paiProjects);
+	void					SortFilters(CVcxProject* pcProject, CArrayInt* paiFilters);
+	void					SortItems(CVcxProject* pcProject, CArrayInt* paiItems);
 };
 
 
