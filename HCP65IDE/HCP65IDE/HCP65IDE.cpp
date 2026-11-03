@@ -25,15 +25,9 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/GlobalMemory.h"
 #include "BaseLib/GlobalDataTypesIO.h"
 #include "StandardLib/Objects.h"
-#include "InputLib/Input.h"
-#include "WindowLib/Window.h"
-#include "WindowLib/ClearCanvasDraw.h"
-#include "WindowLib/JewelColours.h"
-#include "WindowLib/ComponentInput.h"
 #include "WinGdiLib/WinGDIWindowFactory.h"
 #include "WinInputLib/WinInput.h"
-#include "IDEWindowTick.h"
-#include "IDEContent.h"
+#include "IDEApp.h"
 
 
 #define IDE_DEFAULT_PROJECT		"../../Libraries/VisualStudioLib/VisualStudioLib.vcxproj"
@@ -61,13 +55,8 @@ int PASCAL WinMain(HINSTANCE hInstance,	HINSTANCE hPrevInstance, LPTSTR lpCmdLin
 
 	{
 		CWinGDIWindowFactory	cNativeFactory;
-		Ptr<CWindow>			pWindow;
-		Ptr<CIDEWindowTick>		pTick;
-		CIDEContent				cContent;
-		CInput					cInput;
 		CWinInput				cWinInput;
-		Ptr<CWindowInputSource>	pInputSource;
-		CComponentInput			cComponentInput;
+		Ptr<CIDEApp>			pApp;
 
 		cNativeFactory.Init(&gcMemoryAllocator,
 			hInstance,
@@ -78,50 +67,19 @@ int PASCAL WinMain(HINSTANCE hInstance,	HINSTANCE hPrevInstance, LPTSTR lpCmdLin
 		//Validating every object each time one changes is too slow for the text's glyphs.  They are validated once at the end.
 		gcObjects.DisableValidation();
 
-		//The window is in the root so that changing pointers into its components doesn't make the objects work out again which
-		//of them are still on the stack.  Its tick is allocated, not on the stack, because stack objects can't be under the root.
-		pTick = OMalloc<CIDEWindowTick>();
-		pWindow = OMalloc<CWindow>("HCP65 IDE", &cNativeFactory, pTick, OMalloc<CClearCanvasDraw>(JEWEL_PANEL), CFT_RGBX, CCO_BGR, CRGB_24bit, ARGB_8bit);
-		ORoot()->Add(pWindow);
+		//The app's input reads the devices from the XML, then adds these.
+		cWinInput.Init(NULL, false);
+		cNativeFactory.SetRawInput(WinRawInputCallback, cWinInput.GetRaw());
 
-		if (cContent.Init(pWindow, "Resources/InterVariable.ttf", "Resources/JetBrainsMonoNL-Regular.ttf"))
-		{
-			cContent.OpenProject(((lpCmdLine != NULL) && (lpCmdLine[0] != '\0')) ? lpCmdLine : IDE_DEFAULT_PROJECT);
+		//The app (its window, content and input) is held by the root while it runs.
+		pApp = OMalloc<CIDEApp>(&cNativeFactory, &cWinInput, "../../../CommonLibraries/Libraries/WinInputLib/xml", ((lpCmdLine != NULL) && (lpCmdLine[0] != '\0')) ? lpCmdLine : IDE_DEFAULT_PROJECT);
+		ORoot()->Add(pApp);
+		bResult = pApp->Run();
+		ORoot()->Remove(pApp);
+		pApp = NULL;
 
-			//The devices are described by the XML so they are added after it is read.
-			cInput.Init(NULL);
-			cInput.Read("../../../CommonLibraries/Libraries/WinInputLib/xml");
-			cWinInput.Init(NULL, false);
-			cInput.AddNativeInput(&cWinInput);
-			cNativeFactory.SetRawInput(WinRawInputCallback, cWinInput.GetRaw());
-
-			pInputSource = OMalloc<CWindowInputSource>(&cInput);
-			cComponentInput.Init(&pInputSource, &pWindow);
-			cComponentInput.AddKeyboards();
-			cComponentInput.AddMice();
-			pWindow->SetComponentInput(&cComponentInput);
-
-			pWindow->GetFocus()->SetFocus(cContent.GetExplorer()->GetTree());
-			pWindow->SetWindowSize(1280, 800);
-			pWindow->Show();
-
-			pWindow->SetComponentInput(NULL);
-			cNativeFactory.SetRawInput(NULL, NULL);
-			cComponentInput.Kill();
-			pInputSource = NULL;
-			cInput.Kill();
-			cWinInput.Kill();
-		}
-		else
-		{
-			bResult = false;
-		}
-
-		cContent.Kill();
-		ORoot()->Remove(pWindow);
-		pWindow = NULL;
-		pTick = NULL;
-		ORoot()->RemoveAll();
+		cNativeFactory.SetRawInput(NULL, NULL);
+		cWinInput.Kill();
 
 		gcObjects.EnableValidation();
 		gcObjects.ValidateObjectsConsistency();

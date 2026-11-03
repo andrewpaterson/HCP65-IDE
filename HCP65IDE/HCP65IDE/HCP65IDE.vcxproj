@@ -238,11 +238,13 @@
   <ItemGroup>
     <ClCompile Include="HCP65IDE.cpp" />
     <ClCompile Include="IDEContent.cpp" />
+    <ClCompile Include="IDEApp.cpp" />
     <ClCompile Include="IDEWindowTick.cpp" />
     <ClCompile Include="SolutionExplorer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="IDEContent.h" />
+    <ClInclude Include="IDEApp.h" />
     <ClInclude Include="IDEWindowTick.h" />
     <ClInclude Include="SolutionExplorer.h" />
   </ItemGroup>
