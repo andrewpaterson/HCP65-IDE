@@ -36,6 +36,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/TabbedContainerListener.h"
 #include "IDECodeModel.h"
 #include "IDEEditorTab.h"
+#include "IDEBuildPane.h"
 #include "IDEIcons.h"
 #include "SolutionExplorer.h"
 
@@ -105,6 +106,10 @@ protected:
 	CIDEConfigurationListener	mcConfigurationsListener;
 	CBuildConfigurations		mcConfigurations;	//The solution's, from beside it or the defaults.
 	size						muiConfiguration;	//The chosen one, MAX_SIZE if none.
+	Ptr<CTabbedContainer>		mpBottomTabs;		//Under the editor: Find All References and Build.
+	Ptr<CTabComponent>			mpReferencesTab;
+	Ptr<CTabComponent>			mpBuildTab;
+	Ptr<CIDEBuildPane>			mpBuildPane;
 	Ptr<CTreeContainer>			mpReferences;		//What Find All References found.
 	CIDEActivationListener		mcReferencesListener;
 	CArrayIDELocations			masReferences;		//The references' places; a node's data is its index plus one.
@@ -144,6 +149,8 @@ public:
 	Ptr<CTabbedContainer>	GetEditors(void);
 	CSolutionExplorer*	GetExplorer(void);
 	Ptr<CTreeContainer>	GetReferences(void);
+	Ptr<CIDEBuildPane>	GetBuildPane(void);
+	void				ShowBuildTab(void);
 
 protected:
 	void				HighlightTab(Ptr<CIDEEditorTab> pTab);

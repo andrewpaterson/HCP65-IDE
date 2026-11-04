@@ -41,7 +41,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define IDE_FONT_CHARACTERS		" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
 #define IDE_EXPLORER_WIDTH		320
 #define IDE_CODE_PIXEL_SIZE		15.0f
-#define IDE_REFERENCES_HEIGHT	180
+#define IDE_BOTTOM_HEIGHT		180
 #define IDE_TOOLBAR_HEIGHT		34		//A grid in a grid has no height of its own.
 
 
@@ -269,6 +269,10 @@ void CIDEContent::Class(void)
 	U_Unknown(CIDEConfigurationListener, mcConfigurationsListener);
 	U_Unknown(CBuildConfigurations, mcConfigurations);
 	U_Size(muiConfiguration);
+	M_Pointer(mpBottomTabs);
+	M_Pointer(mpReferencesTab);
+	M_Pointer(mpBuildTab);
+	M_Pointer(mpBuildPane);
 	M_Pointer(mpReferences);
 	U_Unknown(CIDEActivationListener, mcReferencesListener);
 	U_Unknown(CArrayIDELocations, masReferences);
@@ -329,9 +333,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	Ptr<CGridContainer>	pMain;
 	Ptr<CGridContainer>	pExplorerPanel;
 	Ptr<CLabel>			pExplorerTitle;
-	Ptr<CGridContainer>	pReferencesPanel;
 	Ptr<CScrollPane>	pReferencesPane;
-	Ptr<CLabel>			pReferencesTitle;
 	Ptr<CGridContainer>	pToolbar;
 	CColourFormatHelper	cFormat;
 	size				i;
@@ -373,20 +375,19 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 		maFileIcons.Add(CIDEIcons::CreateFileIcon((EIDEFileType)i, &cFormat));
 	}
 
-	//Find All References: its title over what it found, under the editor.
+	//Under the editor, a tab for what Find All References found and one for what the build wrote.
 	mpReferences = OMalloc<CTreeContainer>(pWindow, mpTheme);
 	mpReferences->SetAlignment(CSH_Stretch, CSV_Top);
 	mpReferences->AddListener(&mcReferencesListener);
 	pReferencesPane = OMalloc<CScrollPane>(pWindow, mpTheme);
 	pReferencesPane->SetContent(mpReferences);
 	pReferencesPane->SetAlignment(CSH_Stretch, CSV_Stretch);
-	pReferencesPanel = OMalloc<CGridContainer>(pWindow);
-	pReferencesPanel->SetDesiredSize(-1, IDE_REFERENCES_HEIGHT);
-	pReferencesPanel->SetAlignment(CSH_Stretch, CSV_Stretch);
-	pReferencesTitle = OMalloc<CLabel>(pWindow, mpFontColours->GetFont(JEWEL_ICON), "Find All References");
-	pReferencesTitle->SetAlignment(CSH_Left, CSV_Center);
-	pReferencesPanel->AddComponent(pReferencesTitle, 0, 0, 1, 1, 1, 0);
-	pReferencesPanel->AddComponent(pReferencesPane, 0, 1, 1, 1, 1, 1);
+	mpBuildPane = OMalloc<CIDEBuildPane>(pWindow, mpTheme, mpFontColours->GetFont(JEWEL_ICON), mpCodeFamily, JEWEL_TEXT);
+	mpBottomTabs = OMalloc<CTabbedContainer>(pWindow, mpTheme);
+	mpBottomTabs->SetDesiredSize(-1, IDE_BOTTOM_HEIGHT);
+	mpBottomTabs->SetAlignment(CSH_Stretch, CSV_Stretch);
+	mpReferencesTab = mpBottomTabs->AddTab("Find All References", pReferencesPane);
+	mpBuildTab = mpBottomTabs->AddTab("Build", mpBuildPane->GetComponent());
 
 	//The toolbar: the solution configuration.
 	mpConfigurations = OMalloc<CComboBox>(pWindow, mpTheme);
@@ -401,7 +402,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	pMain->AddComponent(pToolbar, 0, 0, 2, 1, 1, 0);
 	pMain->AddComponent(pExplorerPanel, 0, 1, 1, 2, 0, 1);
 	pMain->AddComponent(mpEditors, 1, 1, 1, 1, 1, 1);
-	pMain->AddComponent(pReferencesPanel, 1, 2, 1, 1, 1, 0);
+	pMain->AddComponent(mpBottomTabs, 1, 2, 1, 1, 1, 0);
 	pMain->AddInputActions(gaeIDECodeCommands, sizeof(gaeIDECodeCommands) / sizeof(EComponentInputCommand), this, &CIDEContent::CodeCommandAction);
 	pWindow->SetContainer(pMain);
 	return true;
@@ -679,6 +680,7 @@ bool CIDEContent::FindReferences(void)
 		AddReference(iRoot, masReferences.Get(i), i);
 	}
 	mpReferences->SetExpanded(iRoot, true);
+	mpBottomTabs->Select(mpReferencesTab);
 	szTitle.Kill();
 	szKey.Kill();
 	return true;
@@ -757,6 +759,18 @@ void CIDEContent::ShowReferencesStatus(const char* szText)
 {
 	mpReferences->RemoveAllNodes();
 	mpReferences->AddNode(TREE_NO_NODE, szText, NULL, 0);
+	mpBottomTabs->Select(mpReferencesTab);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The Build tab is shown under the editor.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::ShowBuildTab(void)
+{
+	mpBottomTabs->Select(mpBuildTab);
 }
 
 
@@ -1031,6 +1045,7 @@ Ptr<CScrollPane> CIDEContent::GetEditorPane(void) { return mpActive.IsNotNull() 
 Ptr<CIDEEditorTab> CIDEContent::GetActiveTab(void) { return mpActive; }
 Ptr<CTabbedContainer> CIDEContent::GetEditors(void) { return mpEditors; }
 Ptr<CTreeContainer> CIDEContent::GetReferences(void) { return mpReferences; }
+Ptr<CIDEBuildPane> CIDEContent::GetBuildPane(void) { return mpBuildPane; }
 CIDECodeModel* CIDEContent::GetCodeModel(void) { return &mcCodeModel; }
 CSolutionExplorer* CIDEContent::GetExplorer(void) { return &mpExplorer; }
 

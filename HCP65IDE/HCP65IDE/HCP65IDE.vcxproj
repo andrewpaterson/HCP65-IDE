@@ -240,6 +240,7 @@
     <ClCompile Include="IDECodeModel.cpp" />
     <ClCompile Include="IDEContent.cpp" />
     <ClCompile Include="IDEEditorTab.cpp" />
+    <ClCompile Include="IDEBuildPane.cpp" />
     <ClCompile Include="IDEIcons.cpp" />
     <ClCompile Include="IDEApp.cpp" />
     <ClCompile Include="IDEWindowTick.cpp" />
@@ -249,6 +250,7 @@
     <ClInclude Include="IDECodeModel.h" />
     <ClInclude Include="IDEContent.h" />
     <ClInclude Include="IDEEditorTab.h" />
+    <ClInclude Include="IDEBuildPane.h" />
     <ClInclude Include="IDEIcons.h" />
     <ClInclude Include="IDEApp.h" />
     <ClInclude Include="IDEWindowTick.h" />
