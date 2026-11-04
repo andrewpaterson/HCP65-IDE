@@ -115,6 +115,8 @@ set(IDE_SOURCES
 	"${IDE_DIR}/HCP65IDELinux.cpp"
 	"${IDE_DIR}/IDECodeModel.cpp"
 	"${IDE_DIR}/IDEContent.cpp"
+	"${IDE_DIR}/IDEEditorTab.cpp"
+	"${IDE_DIR}/IDEIcons.cpp"
 	"${IDE_DIR}/IDEWindowTick.cpp"
 	"${IDE_DIR}/IDEApp.cpp"
 	"${IDE_DIR}/SolutionExplorer.cpp"

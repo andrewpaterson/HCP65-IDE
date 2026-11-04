@@ -43,8 +43,6 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define IDE_CODE_PIXEL_SIZE		15.0f
 #define IDE_REFERENCES_HEIGHT	180
 #define IDE_TOOLBAR_HEIGHT		34		//A grid in a grid has no height of its own.
-#define IDE_CARET_LINES_ABOVE	4		//How many lines show above a line jumped to.
-#define IDE_RECOLOUR_DELAY		400		//Milliseconds after the last edit before the text is highlighted again.
 
 
 //Go to Definition (F12) and Find All References (Shift+F12) from anywhere in the window.
@@ -186,6 +184,36 @@ void CIDEConfigurationListener::SelectionChanged(CUnknown* pcSource, void* pvCon
 //
 //
 //////////////////////////////////////////////////////////////////////////
+void CIDETabsListener::Init(CIDEContent* pcContent)
+{
+	mpcContent = pcContent;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDETabsListener::TabSelected(CUnknown* pcSource, void* pvContext)
+{
+	mpcContent->TabSelected(pcSource);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDETabsListener::TabRemoved(CUnknown* pcSource, void* pvContext)
+{
+	mpcContent->TabRemoved(pcSource);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
 void CIDEActivationListener::ItemActivated(CUnknown* pcSource, void* pvContext)
 {
 	(mpcContent->*mfActivated)();
@@ -209,12 +237,9 @@ void CIDEContent::Init(void)
 	mcReferencesListener.Init(this, &CIDEContent::ReferenceActivated);
 	mcConfigurationsListener.Init(this);
 	masReferences.Init();
-	mszFileName.Init();
-	muiProject = SOLUTION_EXPLORER_NO_PROJECT;
-	muiSeenChanges = 0;
-	miChangedTime = 0;
-	mbRecolour = false;
-	mbEdited = false;
+	maTabs.Init();
+	maFileIcons.Init();
+	mcTabsListener.Init(this);
 
 	PostInit();
 }
@@ -231,8 +256,11 @@ void CIDEContent::Class(void)
 	M_Pointer(mpFontColours);
 	M_Pointer(mpTheme);
 	M_Pointer(mpCodeFamily);
-	M_Pointer(mpEditor);
-	M_Pointer(mpEditorPane);
+	M_Pointer(mpEditors);
+	M_Embedded(maTabs);
+	M_Pointer(mpActive);
+	U_Unknown(CIDETabsListener, mcTabsListener);
+	M_Embedded(maFileIcons);
 	M_Pointer(mpExplorer);
 	U_Unknown(CIDEActivationListener, mcExplorerListener);
 	M_Pointer(mpConfigurations);
@@ -240,12 +268,6 @@ void CIDEContent::Class(void)
 	M_Pointer(mpReferences);
 	U_Unknown(CIDEActivationListener, mcReferencesListener);
 	U_Unknown(CArrayIDELocations, masReferences);
-	U_String(mszFileName);
-	U_Data(size, muiProject);
-	U_Data(size, muiSeenChanges);
-	U_Data(int64, miChangedTime);
-	U_Bool(mbRecolour);
-	U_Bool(mbEdited);
 	U_Unknown(CVcxSolution, mcSolution);
 	U_Unknown(CIDECodeModel, mcCodeModel);
 	U_Bool(mbSolution);
@@ -263,10 +285,10 @@ void CIDEContent::Free(void)
 	mcExplorerListener.RemoveFromListenerCalls();
 	mcReferencesListener.RemoveFromListenerCalls();
 	mcConfigurationsListener.RemoveFromListenerCalls();
+	mcTabsListener.RemoveFromListenerCalls();
 	mcCodeModel.Kill();
 	mcSolution.Kill();
 	KillIDELocations(&masReferences);
-	mszFileName.Kill();
 }
 
 
@@ -306,6 +328,8 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	Ptr<CScrollPane>	pReferencesPane;
 	Ptr<CLabel>			pReferencesTitle;
 	Ptr<CGridContainer>	pToolbar;
+	CColourFormatHelper	cFormat;
+	size				i;
 
 	mpWindow = pWindow;
 
@@ -334,14 +358,15 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	pExplorerPanel->AddComponent(pExplorerTitle, 0, 0, 1, 1, 1, 0);
 	pExplorerPanel->AddComponent(mpExplorer->GetComponent(), 0, 1, 1, 1, 1, 1);
 
-	//The editor: a fixed width font as tiles.
-	mpEditor = OMalloc<CTextArea>(pWindow, mpCodeFamily, "");
-	mpEditor->SetTiledText(true);
-	mpEditor->SetColour(JEWEL_TEXT);
-	mpEditor->SetAlignment(CSH_Left, CSV_Top);
-	mpEditorPane = OMalloc<CScrollPane>(pWindow, mpTheme);
-	mpEditorPane->SetContent(mpEditor);
-	mpEditorPane->SetAlignment(CSH_Stretch, CSV_Stretch);
+	//The editor: a tab for each open file, each with an icon of its kind.
+	mpEditors = OMalloc<CTabbedContainer>(pWindow, mpTheme);
+	mpEditors->SetAlignment(CSH_Stretch, CSV_Stretch);
+	mpEditors->AddListener(&mcTabsListener);
+	pWindow->GetColourFormat(&cFormat);
+	for (i = 0; i < IFT_Count; i++)
+	{
+		maFileIcons.Add(CIDEIcons::CreateFileIcon((EIDEFileType)i, &cFormat));
+	}
 
 	//Find All References: its title over what it found, under the editor.
 	mpReferences = OMalloc<CTreeContainer>(pWindow, mpTheme);
@@ -370,7 +395,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	pMain = OMalloc<CGridContainer>(pWindow);
 	pMain->AddComponent(pToolbar, 0, 0, 2, 1, 1, 0);
 	pMain->AddComponent(pExplorerPanel, 0, 1, 1, 2, 0, 1);
-	pMain->AddComponent(mpEditorPane, 1, 1, 1, 1, 1, 1);
+	pMain->AddComponent(mpEditors, 1, 1, 1, 1, 1, 1);
 	pMain->AddComponent(pReferencesPanel, 1, 2, 1, 1, 1, 0);
 	pMain->AddInputActions(gaeIDECodeCommands, sizeof(gaeIDECodeCommands) / sizeof(EComponentInputCommand), this, &CIDEContent::CodeCommandAction);
 	pWindow->SetContainer(pMain);
@@ -429,13 +454,25 @@ bool CIDEContent::OpenSolution(const char* szFileName)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Shows szFileName in the editor.  A file of the solution's project
-// uiProject is highlighted as that project builds it.
+// Shows szFileName in its own tab, selected: the tab it is already in if
+// it is open.  A file of the solution's project uiProject is highlighted
+// as that project builds it.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEContent::OpenFile(const char* szFileName, size uiProject)
 {
-	CTextFile	cFile;
+	CTextFile			cFile;
+	CFileUtil			cFileUtil;
+	CChars				szName;
+	Ptr<CIDEEditorTab>	pTab;
+	Ptr<CTabComponent>	pTabComponent;
+
+	pTab = FindTab(szFileName);
+	if (pTab.IsNotNull())
+	{
+		mpEditors->Select(pTab->GetTab());
+		return true;
+	}
 
 	cFile.Init();
 	if (!cFile.Read(szFileName))
@@ -443,67 +480,63 @@ bool CIDEContent::OpenFile(const char* szFileName, size uiProject)
 		cFile.Kill();
 		return gcLogger.Error2(__METHOD__, " Could not read [", szFileName, "].", NULL);
 	}
-	mpEditor->SetText(cFile.Text());
-	mszFileName.Set(szFileName);
-	muiProject = uiProject;
-	mbEdited = false;
-	mbRecolour = false;
-	if (uiProject != SOLUTION_EXPLORER_NO_PROJECT)
-	{
-		HighlightFile(szFileName, cFile.Text(), uiProject, false);
-	}
-	muiSeenChanges = mpEditor->GetChangeCount();
+	pTab = OMalloc<CIDEEditorTab>(mpWindow, mpTheme, mpCodeFamily, JEWEL_TEXT, szFileName, uiProject, cFile.Text());
 	cFile.Kill();
+	maTabs.Add(pTab);
+	HighlightTab(pTab);
+
+	szName.Init();
+	cFileUtil.GetFileName(&szName, (char*)szFileName);
+	pTabComponent = mpEditors->AddTab(szName.Text(), pTab->GetPane(), maFileIcons.Get(CIDEIcons::GetFileType(szFileName)), true);
+	szName.Kill();
+	pTab->SetTab(pTabComponent);
+	mpEditors->Select(pTabComponent);
+
+	//The first tab is selected as it is added, before it is known as this file's.
+	mpActive = pTab;
 	return true;
 }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Colours the editor's text (szText, szFileName's contents, or what it
-// has been edited to if bEdited) by what the parser found each part of it
-// to be.
+// Closes szFileName's tab.  False if it isn't open.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEContent::HighlightFile(const char* szFileName, const char* szText, size uiProject, bool bEdited)
+bool CIDEContent::CloseFile(const char* szFileName)
+{
+	Ptr<CIDEEditorTab>	pTab;
+
+	pTab = FindTab(szFileName);
+	if (pTab.IsNull())
+	{
+		return false;
+	}
+	return mpEditors->RemoveTab(pTab->GetTab());
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Colours a tab's text by what the parser found each part of it to be:
+// as its file is, or as it has been edited to.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::HighlightTab(Ptr<CIDEEditorTab> pTab)
 {
 	CArrayHighlights	acHighlights;
-	CArrayInt			aiLineStarts;
 	CChars				szErrors;
-	SCPPHighlight*		psHighlight;
-	size				i;
-	size				uiStart;
-	const char*			szPosition;
-	int					iPass;
 
+	//Only C and C++ are parsed; a text file or a project file is shown as it is.
+	if ((pTab->GetProject() == SOLUTION_EXPLORER_NO_PROJECT) || (CIDEIcons::GetFileType(pTab->GetFileName()) == IFT_Other))
+	{
+		return;
+	}
 	acHighlights.Init();
 	szErrors.Init();
-	if (mcCodeModel.Highlight(uiProject, szFileName, bEdited ? szText : NULL, &acHighlights, &szErrors))
+	if (mcCodeModel.Highlight(pTab->GetProject(), pTab->GetFileName(), pTab->IsEdited() ? pTab->GetEditor()->GetText() : NULL, &acHighlights, &szErrors))
 	{
-		aiLineStarts.Init();
-		aiLineStarts.Add(0);
-		for (szPosition = szText; *szPosition != '\0'; szPosition++)
-		{
-			if (*szPosition == '\n')
-			{
-				aiLineStarts.Add((int)(szPosition - szText + 1));
-			}
-		}
-
-		//Code skipped by conditional compilation is dimmed whatever is in it, comments too, so it goes last.
-		for (iPass = 0; iPass < 2; iPass++)
-		{
-			for (i = 0; i < acHighlights.NumElements(); i++)
-			{
-				psHighlight = acHighlights.Get(i);
-				if (((psHighlight->uiKind == CPPH_Inactive) == (iPass == 1)) && (psHighlight->iLine >= 0) && ((size)psHighlight->iLine < aiLineStarts.NumElements()))
-				{
-					uiStart = (size)aiLineStarts.GetValue((size)psHighlight->iLine) + (size)psHighlight->iColumn;
-					mpEditor->AddSpan(uiStart, (size)psHighlight->iLength, GetHighlightColour((ECPPHighlight)psHighlight->uiKind));
-				}
-			}
-		}
-		aiLineStarts.Kill();
+		pTab->SetHighlights(&acHighlights);
 	}
 	szErrors.Kill();
 	acHighlights.Kill();
@@ -562,7 +595,7 @@ bool CIDEContent::GoToDefinition(void)
 	{
 		return false;
 	}
-	if (!mcCodeModel.FindDefinition(mszFileName.Text(), iLine, iColumn, &sLocation))
+	if (!mcCodeModel.FindDefinition(mpActive->GetFileName(), iLine, iColumn, &sLocation))
 	{
 		ShowReferencesStatus("No definition found at the caret.");
 		return false;
@@ -598,7 +631,7 @@ bool CIDEContent::FindReferences(void)
 	KillIDELocations(&masReferences);
 	masReferences.Init();
 	szKey.Init();
-	if (!mcCodeModel.FindReferences(mszFileName.Text(), iLine, iColumn, &masReferences, &szKey))
+	if (!mcCodeModel.FindReferences(mpActive->GetFileName(), iLine, iColumn, &masReferences, &szKey))
 	{
 		szKey.Kill();
 		ShowReferencesStatus("No references found at the caret.");
@@ -729,32 +762,29 @@ void CIDEContent::ReferenceActivated(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The file the location is in, with the caret on it.  A file that isn't
-// one of the solution's projects' items is highlighted as part of the
-// project of the file it was found from.
+// The file the location is in, in its tab, with the caret on it.  A
+// file that isn't one of the solution's projects' items is highlighted as
+// part of the project of the file it was found from.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEContent::OpenLocation(SIDELocation* psLocation)
 {
 	size	uiProject;
 
-	if (!mszFileName.Equals(psLocation->szFileName.Text()))
+	uiProject = mcCodeModel.FindProjectOfFile(psLocation->szFileName.Text());
+	if ((uiProject == MAX_SIZE) && mpActive.IsNotNull())
 	{
-		uiProject = mcCodeModel.FindProjectOfFile(psLocation->szFileName.Text());
-		if (uiProject == MAX_SIZE)
-		{
-			uiProject = muiProject;
-		}
-		if (!OpenFile(psLocation->szFileName.Text(), uiProject))
-		{
-			return false;
-		}
+		uiProject = mpActive->GetProject();
+	}
+	if (!OpenFile(psLocation->szFileName.Text(), uiProject))
+	{
+		return false;
 	}
 	if (!SetCaretPlace(psLocation->iLine, psLocation->iColumn))
 	{
 		return false;
 	}
-	mpWindow->GetFocus()->SetFocus(mpEditor);
+	mpWindow->GetFocus()->SetFocus(mpActive->GetEditor());
 	return true;
 }
 
@@ -762,80 +792,33 @@ bool CIDEContent::OpenLocation(SIDELocation* psLocation)
 //////////////////////////////////////////////////////////////////////////
 //
 // The caret's line and column (0 based, the column in bytes) in the
-// editor's text.  False if no file is open.
+// selected tab.  False if no file is open.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEContent::GetCaretPlace(int* piLine, int* piColumn)
 {
-	char*	szText;
-	size	uiCaret;
-	size	i;
-	size	uiLineStart;
-	int		iLine;
-
-	if (mszFileName.Empty())
+	if (mpActive.IsNull())
 	{
 		return false;
 	}
-	szText = mpEditor->GetText();
-	uiCaret = mpEditor->GetCaretPosition();
-	iLine = 0;
-	uiLineStart = 0;
-	for (i = 0; (i < uiCaret) && (szText[i] != '\0'); i++)
-	{
-		if (szText[i] == '\n')
-		{
-			iLine++;
-			uiLineStart = i + 1;
-		}
-	}
-	*piLine = iLine;
-	*piColumn = (int)(uiCaret - uiLineStart);
-	return true;
+	return mpActive->GetCaretPlace(piLine, piColumn);
 }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Puts the caret at a line and column (0 based, the column in bytes)
-// and scrolls the editor to show it.  False if the file hasn't that line.
+// Puts the selected tab's caret at a line and column (0 based, the
+// column in bytes) and scrolls to show it.  False if no file is open or
+// it hasn't that line.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEContent::SetCaretPlace(int iLine, int iColumn)
 {
-	char*		szText;
-	size		i;
-	int			iAtLine;
-	CInt32Rect	cCaret;
-	int32		iView;
-	int32		x;
-	int32		y;
-
-	szText = mpEditor->GetText();
-	iAtLine = 0;
-	for (i = 0; (iAtLine < iLine) && (szText[i] != '\0'); i++)
-	{
-		if (szText[i] == '\n')
-		{
-			iAtLine++;
-		}
-	}
-	if (iAtLine != iLine)
+	if (mpActive.IsNull())
 	{
 		return false;
 	}
-
-	//Laid out so the caret has a place: its line a few lines from the top, and the text only scrolled sideways if the
-	//caret is past the right of the view (a window not shown yet has no width).
-	mpWindow->Layout();
-	mpEditor->SetCaretPosition(i + (size)iColumn);
-	mpWindow->Layout();
-	mpEditor->GetCaretBounds(&cCaret);
-	iView = mpEditorPane->GetActualSize().x;
-	x = ((iView <= 0) || (cCaret.GetRight() < iView)) ? 0 : cCaret.GetRight() - iView / 2;
-	y = cCaret.GetTop() - IDE_CARET_LINES_ABOVE * cCaret.GetHeight();
-	mpEditorPane->SetScrollPosition((x > 0) ? x : 0, (y > 0) ? y : 0);
-	return true;
+	return mpActive->SetCaretPlace(iLine, iColumn);
 }
 
 
@@ -859,14 +842,13 @@ void CIDEContent::ConfigurationChosen(void)
 //////////////////////////////////////////////////////////////////////////
 //
 // The code is parsed as the solution configuration builds it: the
-// solution is indexed again and the open file is highlighted again.
+// solution is indexed again and the open files are highlighted again.
 // False if the solution hasn't the configuration.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEContent::SetConfiguration(const char* szConfiguration)
 {
 	size	i;
-	CChars	szText;
 
 	for (i = 0; i < mcSolution.NumConfigurations(); i++)
 	{
@@ -886,12 +868,9 @@ bool CIDEContent::SetConfiguration(const char* szConfiguration)
 
 	mcCodeModel.SetConfiguration(szConfiguration);
 	mcCodeModel.StartIndexing();
-	if (!mszFileName.Empty() && (muiProject != SOLUTION_EXPLORER_NO_PROJECT))
+	for (i = 0; i < maTabs.Size(); i++)
 	{
-		szText.Init(mpEditor->GetText());
-		mpEditor->ClearSpans();
-		HighlightFile(mszFileName.Text(), szText.Text(), muiProject, mbEdited);
-		szText.Kill();
+		HighlightTab(maTabs.Get(i));
 	}
 	return true;
 }
@@ -899,46 +878,119 @@ bool CIDEContent::SetConfiguration(const char* szConfiguration)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Each window tick: once the editor's text has been left alone for a
-// moment after an edit it is highlighted again, from the editor's text.
+// Each window tick: a tab whose text has been left alone for a moment
+// after an edit is highlighted again, from its text.  The window ticks
+// again when the next one might be due.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEContent::Tick(Ptr<CWindow> pWindow)
 {
-	size	uiChanges;
-	CChars	szText;
-	int64	iNow;
+	size				i;
+	Ptr<CIDEEditorTab>	pTab;
+	int64				iNow;
+	int64				iWait;
+	int64				iSoonest;
 
 	//The platform's clock: the window's total time only counts the time it spent updating.
 	iNow = GetDebugTickCount();
-	uiChanges = mpEditor->GetChangeCount();
-	if (uiChanges != muiSeenChanges)
+	iSoonest = -1;
+	for (i = 0; i < maTabs.Size(); i++)
 	{
-		muiSeenChanges = uiChanges;
-		miChangedTime = iNow;
-		mbRecolour = true;
-		mbEdited = true;
+		pTab = maTabs.Get(i);
+		if (pTab->NeedsRecolour(iNow, &iWait))
+		{
+			HighlightTab(pTab);
+		}
+		else if ((iWait >= 0) && ((iSoonest < 0) || (iWait < iSoonest)))
+		{
+			iSoonest = iWait;
+		}
 	}
-	if (!mbRecolour || mszFileName.Empty() || (muiProject == SOLUTION_EXPLORER_NO_PROJECT))
+	if (iSoonest >= 0)
 	{
-		return;
+		pWindow->RequestTick((uint32)iSoonest);
 	}
-
-	if (iNow - miChangedTime < IDE_RECOLOUR_DELAY)
-	{
-		pWindow->RequestTick((uint32)(IDE_RECOLOUR_DELAY - (iNow - miChangedTime)));
-		return;
-	}
-	mbRecolour = false;
-	szText.Init(mpEditor->GetText());
-	mpEditor->ClearSpans();
-	HighlightFile(mszFileName.Text(), szText.Text(), muiProject, true);
-	szText.Kill();
 }
 
 
-Ptr<CTextArea> CIDEContent::GetEditor(void) { return mpEditor; }
-Ptr<CScrollPane> CIDEContent::GetEditorPane(void) { return mpEditorPane; }
+//////////////////////////////////////////////////////////////////////////
+//
+// The editor's selected tab changed.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::TabSelected(CUnknown* pcTab)
+{
+	mpActive = FindTab(pcTab);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A tab was closed: its file is let go.  The tabbed container selects
+// another after.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::TabRemoved(CUnknown* pcTab)
+{
+	Ptr<CIDEEditorTab>	pTab;
+
+	pTab = FindTab(pcTab);
+	if (pTab.IsNull())
+	{
+		return;
+	}
+	if (mpActive == pTab)
+	{
+		mpActive = NULL;
+	}
+	maTabs.Remove(pTab);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The tab szFileName is open in, NULL if it isn't open.
+//
+//////////////////////////////////////////////////////////////////////////
+Ptr<CIDEEditorTab> CIDEContent::FindTab(const char* szFileName)
+{
+	size	i;
+
+	for (i = 0; i < maTabs.Size(); i++)
+	{
+		if (StringCompare(maTabs.Get(i)->GetFileName(), szFileName) == 0)
+		{
+			return maTabs.Get(i);
+		}
+	}
+	return NULL;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The file of a tab on the editor's bar, NULL if it isn't one of them.
+//
+//////////////////////////////////////////////////////////////////////////
+Ptr<CIDEEditorTab> CIDEContent::FindTab(CUnknown* pcTab)
+{
+	size	i;
+
+	for (i = 0; i < maTabs.Size(); i++)
+	{
+		if (&maTabs.Get(i)->GetTab() == pcTab)
+		{
+			return maTabs.Get(i);
+		}
+	}
+	return NULL;
+}
+
+
+Ptr<CTextArea> CIDEContent::GetEditor(void) { return mpActive.IsNotNull() ? mpActive->GetEditor() : Ptr<CTextArea>(); }
+Ptr<CScrollPane> CIDEContent::GetEditorPane(void) { return mpActive.IsNotNull() ? mpActive->GetPane() : Ptr<CScrollPane>(); }
+Ptr<CIDEEditorTab> CIDEContent::GetActiveTab(void) { return mpActive; }
+Ptr<CTabbedContainer> CIDEContent::GetEditors(void) { return mpEditors; }
 Ptr<CTreeContainer> CIDEContent::GetReferences(void) { return mpReferences; }
 CIDECodeModel* CIDEContent::GetCodeModel(void) { return &mcCodeModel; }
 CSolutionExplorer* CIDEContent::GetExplorer(void) { return &mpExplorer; }

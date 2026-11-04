@@ -18,6 +18,12 @@
     <ClCompile Include="IDEContent.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="IDEEditorTab.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="IDEIcons.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="IDEApp.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -33,6 +39,12 @@
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDEContent.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDEEditorTab.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDEIcons.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDEApp.h">

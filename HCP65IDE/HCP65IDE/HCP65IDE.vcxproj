@@ -239,6 +239,8 @@
     <ClCompile Include="HCP65IDE.cpp" />
     <ClCompile Include="IDECodeModel.cpp" />
     <ClCompile Include="IDEContent.cpp" />
+    <ClCompile Include="IDEEditorTab.cpp" />
+    <ClCompile Include="IDEIcons.cpp" />
     <ClCompile Include="IDEApp.cpp" />
     <ClCompile Include="IDEWindowTick.cpp" />
     <ClCompile Include="SolutionExplorer.cpp" />
@@ -246,6 +248,8 @@
   <ItemGroup>
     <ClInclude Include="IDECodeModel.h" />
     <ClInclude Include="IDEContent.h" />
+    <ClInclude Include="IDEEditorTab.h" />
+    <ClInclude Include="IDEIcons.h" />
     <ClInclude Include="IDEApp.h" />
     <ClInclude Include="IDEWindowTick.h" />
     <ClInclude Include="SolutionExplorer.h" />

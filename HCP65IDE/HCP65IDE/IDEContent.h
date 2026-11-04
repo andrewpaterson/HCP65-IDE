@@ -31,7 +31,11 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/ComboBox.h"
 #include "WindowLib/ComboBoxListener.h"
 #include "VisualStudioLib/VcxSolution.h"
+#include "WindowLib/TabbedContainer.h"
+#include "WindowLib/TabbedContainerListener.h"
 #include "IDECodeModel.h"
+#include "IDEEditorTab.h"
+#include "IDEIcons.h"
 #include "SolutionExplorer.h"
 
 
@@ -63,8 +67,21 @@ public:
 };
 
 
-//The IDE's window's content: Solution Explorer on the left, the editor on the right with the references found under
-//it.  F12 goes to the definition of what is at the caret and Shift+F12 finds its references.  It is an object; keep it
+//Hears the editor's tabs being selected and closed.
+class CIDETabsListener : public CTabbedContainerListener
+{
+CONSTRUCTABLE(CIDETabsListener);
+public:
+	CIDEContent*	mpcContent;
+
+	void	Init(CIDEContent* pcContent);
+	void	TabSelected(CUnknown* pcSource, void* pvContext) override;
+	void	TabRemoved(CUnknown* pcSource, void* pvContext) override;
+};
+
+
+//The IDE's window's content: Solution Explorer on the left, the editor's tabs of open files on the right with the
+//references found under them.  F12 goes to the definition of what is at the caret and Shift+F12 finds its references.  It is an object; keep it
 //in the root and call Setup.
 class CIDEContent : public CObject
 {
@@ -76,8 +93,11 @@ protected:
 	Ptr<CFontColours>			mpFontColours;
 	Ptr<CWindowTheme>			mpTheme;
 	Ptr<CFontFamily>			mpCodeFamily;
-	Ptr<CTextArea>				mpEditor;
-	Ptr<CScrollPane>			mpEditorPane;
+	Ptr<CTabbedContainer>		mpEditors;			//A tab for each open file.
+	CArray<CIDEEditorTab>		maTabs;
+	Ptr<CIDEEditorTab>			mpActive;			//The selected tab's file, NULL if none is open.
+	CIDETabsListener			mcTabsListener;
+	CArray<CImageCel>			maFileIcons;		//By EIDEFileType.
 	Ptr<CSolutionExplorer>		mpExplorer;
 	CIDEActivationListener		mcExplorerListener;
 	Ptr<CComboBox>				mpConfigurations;	//The solution configuration the code is parsed as.
@@ -88,12 +108,6 @@ protected:
 	CVcxSolution				mcSolution;
 	bool						mbSolution;
 	CIDECodeModel				mcCodeModel;		//Uses mcSolution; initialised when a solution is opened.
-	CChars						mszFileName;		//The file in the editor.
-	size						muiProject;			//The solution's project it is in, SOLUTION_EXPLORER_NO_PROJECT if none.
-	size						muiSeenChanges;		//The editor's change count when it was last looked at.
-	int64						miChangedTime;		//When the editor's text last changed (GetDebugTickCount).
-	bool						mbRecolour;			//The text changed and hasn't been highlighted since.
-	bool						mbEdited;			//The text was changed since the file was opened.
 
 public:
 	void			Init(void);
@@ -115,15 +129,22 @@ public:
 	bool			SetConfiguration(const char* szConfiguration);
 	void			ConfigurationChosen(void);
 	void			Tick(Ptr<CWindow> pWindow);
+	void			TabSelected(CUnknown* pcTab);
+	void			TabRemoved(CUnknown* pcTab);
+	bool			CloseFile(const char* szFileName);
 	CIDECodeModel*	GetCodeModel(void);
 
 	Ptr<CTextArea>		GetEditor(void);
 	Ptr<CScrollPane>	GetEditorPane(void);
+	Ptr<CIDEEditorTab>	GetActiveTab(void);
+	Ptr<CTabbedContainer>	GetEditors(void);
 	CSolutionExplorer*	GetExplorer(void);
 	Ptr<CTreeContainer>	GetReferences(void);
 
 protected:
-	void				HighlightFile(const char* szFileName, const char* szText, size uiProject, bool bEdited);
+	void				HighlightTab(Ptr<CIDEEditorTab> pTab);
+	Ptr<CIDEEditorTab>	FindTab(const char* szFileName);
+	Ptr<CIDEEditorTab>	FindTab(CUnknown* pcTab);
 	void				CodeCommandAction(SComponentInputEvent* psEvent);
 	bool				GetCaretPlace(int* piLine, int* piColumn);
 	bool				OpenLocation(SIDELocation* psLocation);
