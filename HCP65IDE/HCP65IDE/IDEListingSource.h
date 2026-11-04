@@ -47,6 +47,8 @@ public:
 
 protected:
 	bool	GetPlace(size uiLine, size uiPage, SCPP65ListingPlace* psDest);
+	void	AppendWithoutComments(const char* szLines, CChars* pszDest);
+	void	AppendCode(const char* szStart, const char* szEnd, CChars* pszDest);
 };
 
 

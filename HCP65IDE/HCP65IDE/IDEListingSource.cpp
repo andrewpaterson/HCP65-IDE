@@ -112,7 +112,8 @@ void CIDEListingSource::GetTitle(size uiLine, size uiPage, CChars* pszDest)
 //////////////////////////////////////////////////////////////////////////
 //
 // The place's pieces, "..." between them, without a line end after the
-// last.
+// last.  The comments are left out: they are mostly the C++ line, which is
+// right above.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEListingSource::GetText(size uiLine, size uiPage, CChars* pszDest)
@@ -120,6 +121,7 @@ void CIDEListingSource::GetText(size uiLine, size uiPage, CChars* pszDest)
 	SCPP65ListingPlace	sPlace;
 	SCPP65ListingRange*	psRange;
 	size				i;
+	CChars				szPiece;
 
 	if (!GetPlace(uiLine, uiPage, &sPlace))
 	{
@@ -132,11 +134,80 @@ void CIDEListingSource::GetText(size uiLine, size uiPage, CChars* pszDest)
 			pszDest->Append(IDE_LISTING_PIECES_GAP);
 		}
 		psRange = mpcListings->GetRange(sPlace.uiFirstRange + i);
-		mpcListings->AppendLines(psRange->uiListing, psRange->uiFirstLine, psRange->uiEndLine, pszDest);
+		szPiece.Init();
+		mpcListings->AppendRange(psRange, &szPiece);
+		AppendWithoutComments(szPiece.Text(), pszDest);
+		szPiece.Kill();
 	}
 	if (pszDest->EndsWith('\n'))
 	{
 		pszDest->RemoveLastCharacter();
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// szLines' lines without their ; comments (a ; in quotes isn't one) or the
+// white space before them.  A line that was only a comment, or blank, is
+// left out.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEListingSource::AppendWithoutComments(const char* szLines, CChars* pszDest)
+{
+	const char*		szLine;
+	const char*		szEnd;
+	char			cQuote;
+
+	for (szLine = szLines; *szLine != '\0'; szLine = (*szEnd == '\n') ? szEnd + 1 : szEnd)
+	{
+		//The line's code ends at its end, or at a ; outside quotes.
+		cQuote = '\0';
+		for (szEnd = szLine; (*szEnd != '\0') && (*szEnd != '\n') && ((*szEnd != ';') || (cQuote != '\0')); szEnd++)
+		{
+			if (cQuote == '\0')
+			{
+				if ((*szEnd == '"') || (*szEnd == '\''))
+				{
+					cQuote = *szEnd;
+				}
+			}
+			else if ((*szEnd == '\\') && (szEnd[1] != '\0') && (szEnd[1] != '\n'))
+			{
+				szEnd++;
+			}
+			else if (*szEnd == cQuote)
+			{
+				cQuote = '\0';
+			}
+		}
+		AppendCode(szLine, szEnd, pszDest);
+
+		//On to the line's end, past its comment.
+		while ((*szEnd != '\0') && (*szEnd != '\n'))
+		{
+			szEnd++;
+		}
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The code from szStart to szEnd as a line, without the white space after
+// it; nothing if it's all white space.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEListingSource::AppendCode(const char* szStart, const char* szEnd, CChars* pszDest)
+{
+	while ((szEnd > szStart) && ((szEnd[-1] == ' ') || (szEnd[-1] == '\t') || (szEnd[-1] == '\r')))
+	{
+		szEnd--;
+	}
+	if (szEnd > szStart)
+	{
+		pszDest->AppendSubString(szStart, szEnd);
+		pszDest->AppendNewLine();
 	}
 }
 
