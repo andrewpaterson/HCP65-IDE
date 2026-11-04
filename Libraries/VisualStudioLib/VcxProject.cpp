@@ -25,6 +25,9 @@ along with Codaphela VisualStudioLib.  If not, see <http://www.gnu.org/licenses/
 #include "VcxProject.h"
 
 
+#define VCX_MAX_MACRO_DEPTH		16
+
+
 //////////////////////////////////////////////////////////////////////////
 //
 // Reads the XML file szFileName (a path, with or without a directory).
@@ -647,6 +650,208 @@ void CVcxProject::GetChildFilters(const char* szParent, CArrayInt* paiFilters)
 void CVcxProject::GetFullPath(CVcxItem* pcItem, CChars* pszDest)
 {
 	ResolveVcxPath(mszDirectory.Text(), pcItem->GetInclude(), pszDest);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// szValue with its MSBuild macros replaced: $(ProjectDir), $(SolutionDir)
+// (both ending in a separator, as MSBuild has them), $(ProjectName),
+// $(Configuration), $(Platform) and any property the configuration sets.
+// Anything else, like $(IncludePath) (the compiler's own directories) or
+// %(PreprocessorDefinitions) (the item's inherited value), is empty.
+//
+//////////////////////////////////////////////////////////////////////////
+void CVcxProject::ExpandMacros(const char* szValue, CVcxConfiguration* pcConfiguration, const char* szSolutionDirectory, CChars* pszDest)
+{
+	ExpandMacros(szValue, pcConfiguration, szSolutionDirectory, pszDest, 0);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A property's value can use other macros ($(OutDir) is often
+// $(SolutionDir)$(Configuration)\).  Past VCX_MAX_MACRO_DEPTH, as when a
+// property uses itself, they are empty.
+//
+//////////////////////////////////////////////////////////////////////////
+void CVcxProject::ExpandMacros(const char* szValue, CVcxConfiguration* pcConfiguration, const char* szSolutionDirectory, CChars* pszDest, int iDepth)
+{
+	const char*	szPosition;
+	const char*	szEnd;
+	CChars		szName;
+
+	szPosition = szValue;
+	while (*szPosition != '\0')
+	{
+		if (((szPosition[0] == '$') || (szPosition[0] == '%')) && (szPosition[1] == '('))
+		{
+			szEnd = strchr(szPosition + 2, ')');
+			if (szEnd != NULL)
+			{
+				if (szPosition[0] == '$')
+				{
+					szName.Init();
+					szName.AppendSubString(szPosition + 2, szEnd);
+					GetMacro(szName.Text(), pcConfiguration, szSolutionDirectory, pszDest, iDepth);
+					szName.Kill();
+				}
+				szPosition = szEnd + 1;
+				continue;
+			}
+		}
+		pszDest->Append(*szPosition);
+		szPosition++;
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// $(IncludePath) is always empty: in IncludePath it is the compiler's
+// own directories, which the IDE supplies.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CVcxProject::GetMacro(const char* szName, CVcxConfiguration* pcConfiguration, const char* szSolutionDirectory, CChars* pszDest, int iDepth)
+{
+	char*	szProperty;
+
+	if (StringInsensitiveCompare(szName, "ProjectDir") == 0)
+	{
+		pszDest->Append(mszDirectory);
+		pszDest->Append(FILE_SEPARATOR[0]);
+	}
+	else if (StringInsensitiveCompare(szName, "SolutionDir") == 0)
+	{
+		pszDest->Append(szSolutionDirectory);
+		pszDest->Append(FILE_SEPARATOR[0]);
+	}
+	else if (StringInsensitiveCompare(szName, "ProjectName") == 0)
+	{
+		pszDest->Append(mszName);
+	}
+	else if ((StringInsensitiveCompare(szName, "Configuration") == 0) && (pcConfiguration != NULL))
+	{
+		pszDest->Append(pcConfiguration->GetConfiguration());
+	}
+	else if ((StringInsensitiveCompare(szName, "Platform") == 0) && (pcConfiguration != NULL))
+	{
+		pszDest->Append(pcConfiguration->GetPlatform());
+	}
+	else if ((StringInsensitiveCompare(szName, "IncludePath") != 0) && (pcConfiguration != NULL))
+	{
+		szProperty = pcConfiguration->GetProperty(szName);
+		if ((szProperty == NULL) || (iDepth >= VCX_MAX_MACRO_DEPTH))
+		{
+			return false;
+		}
+		ExpandMacros(szProperty, pcConfiguration, szSolutionDirectory, pszDest, iDepth + 1);
+	}
+	else
+	{
+		return false;
+	}
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The directories the compiler looks for includes in, in its order: the
+// compiler's AdditionalIncludeDirectories, then the project's IncludePath
+// (VC++ Directories).  Full paths with the case they have on disk, each
+// once.  The compiler's own directories ($(IncludePath)) aren't included.
+//
+//////////////////////////////////////////////////////////////////////////
+void CVcxProject::GetIncludeDirectories(CVcxConfiguration* pcConfiguration, const char* szSolutionDirectory, CArrayChars* paszDirectories)
+{
+	AddIncludeDirectories("ClCompile.AdditionalIncludeDirectories", pcConfiguration, szSolutionDirectory, paszDirectories);
+	AddIncludeDirectories("IncludePath", pcConfiguration, szSolutionDirectory, paszDirectories);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CVcxProject::AddIncludeDirectories(const char* szProperty, CVcxConfiguration* pcConfiguration, const char* szSolutionDirectory, CArrayChars* paszDirectories)
+{
+	char*		szValue;
+	CChars		szExpanded;
+	CArrayChars	aszParts;
+	CChars		szDirectory;
+	CChars*		pszPart;
+	size		i;
+
+	szValue = pcConfiguration->GetProperty(szProperty);
+	if (szValue == NULL)
+	{
+		return;
+	}
+
+	szExpanded.Init();
+	ExpandMacros(szValue, pcConfiguration, szSolutionDirectory, &szExpanded);
+	aszParts.Init();
+	szExpanded.Split(&aszParts, ';');
+	for (i = 0; i < aszParts.NumElements(); i++)
+	{
+		pszPart = aszParts.Get(i);
+		pszPart->StripWhitespace(true);
+		if (pszPart->Empty())
+		{
+			continue;
+		}
+		szDirectory.Init();
+		ResolveVcxPath(mszDirectory.Text(), pszPart->Text(), &szDirectory);
+		while ((szDirectory.Length() > 1) && szDirectory.EndsWith(FILE_SEPARATOR[0]))
+		{
+			szDirectory.RemoveFromEnd(1);
+		}
+		if (!paszDirectories->Contains(&szDirectory))
+		{
+			paszDirectories->Add(&szDirectory);
+		}
+		szDirectory.Kill();
+	}
+	aszParts.Kill();
+	szExpanded.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The compiler's PreprocessorDefinitions: NAME or NAME=VALUE each.
+//
+//////////////////////////////////////////////////////////////////////////
+void CVcxProject::GetPreprocessorDefinitions(CVcxConfiguration* pcConfiguration, const char* szSolutionDirectory, CArrayChars* paszDefines)
+{
+	char*		szValue;
+	CChars		szExpanded;
+	CArrayChars	aszParts;
+	CChars*		pszPart;
+	size		i;
+
+	szValue = pcConfiguration->GetProperty("ClCompile.PreprocessorDefinitions");
+	if (szValue == NULL)
+	{
+		return;
+	}
+
+	szExpanded.Init();
+	ExpandMacros(szValue, pcConfiguration, szSolutionDirectory, &szExpanded);
+	aszParts.Init();
+	szExpanded.Split(&aszParts, ';');
+	for (i = 0; i < aszParts.NumElements(); i++)
+	{
+		pszPart = aszParts.Get(i);
+		pszPart->StripWhitespace(true);
+		if (!pszPart->Empty())
+		{
+			paszDefines->Add(pszPart);
+		}
+	}
+	aszParts.Kill();
+	szExpanded.Kill();
 }
 
 

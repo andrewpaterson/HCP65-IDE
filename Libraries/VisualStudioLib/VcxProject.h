@@ -22,6 +22,7 @@ along with Codaphela VisualStudioLib.  If not, see <http://www.gnu.org/licenses/
 #define __VCX_PROJECT_H__
 #include "BaseLib/Chars.h"
 #include "BaseLib/ArrayInt.h"
+#include "BaseLib/ArrayChars.h"
 #include "BaseLib/XMLFile.h"
 #include "VcxItem.h"
 #include "VcxFilter.h"
@@ -76,6 +77,10 @@ public:
 	size					NumReferences(void);
 	CVcxProjectReference*	GetReference(size uiIndex);
 
+	void					ExpandMacros(const char* szValue, CVcxConfiguration* pcConfiguration, const char* szSolutionDirectory, CChars* pszDest);
+	void					GetIncludeDirectories(CVcxConfiguration* pcConfiguration, const char* szSolutionDirectory, CArrayChars* paszDirectories);
+	void					GetPreprocessorDefinitions(CVcxConfiguration* pcConfiguration, const char* szSolutionDirectory, CArrayChars* paszDefines);
+
 protected:
 	bool					ReadProject(CMarkupTag* pcProject);
 	bool					ReadFilters(CMarkupTag* pcProject);
@@ -85,6 +90,9 @@ protected:
 	void					ReadFilterItemGroup(CMarkupTag* pcItemGroup);
 	void					SetProperty(const char* szCondition, const char* szName, const char* szValue);
 	CVcxConfiguration*		AddConfiguration(const char* szName);
+	void					AddIncludeDirectories(const char* szProperty, CVcxConfiguration* pcConfiguration, const char* szSolutionDirectory, CArrayChars* paszDirectories);
+	void					ExpandMacros(const char* szValue, CVcxConfiguration* pcConfiguration, const char* szSolutionDirectory, CChars* pszDest, int iDepth);
+	bool					GetMacro(const char* szName, CVcxConfiguration* pcConfiguration, const char* szSolutionDirectory, CChars* pszDest, int iDepth);
 };
 
 

@@ -1,5 +1,6 @@
 #include "BaseLib/FileUtil.h"
 #include "BaseLib/ArrayInt.h"
+#include "BaseLib/ArrayChars.h"
 #include "VisualStudioLib/VcxProject.h"
 #include "TestLib/Assert.h"
 
@@ -209,6 +210,72 @@ void TestVcxProjectSupportLib(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// MSBuild macros, and the include directories and defines the compiler
+// is given.
+//
+//////////////////////////////////////////////////////////////////////////
+void TestVcxProjectMacros(void)
+{
+	CVcxProject			cProject;
+	CVcxConfiguration*	pcDebug;
+	CVcxConfiguration*	pcRelease;
+	CChars				szExpanded;
+	CChars				szExpected;
+	CChars				szSolution;
+	CArrayChars			aszValues;
+	CFileUtil			cFileUtil;
+
+	cProject.Init();
+	AssertTrue(cProject.Read("Input" _FS_ "MiniLib" _FS_ "MiniLib.vcxproj"));
+	pcDebug = cProject.FindConfiguration("Debug|Win32");
+	pcRelease = cProject.FindConfiguration("Release|x64");
+	szSolution.Init("Input");
+	cFileUtil.FullPath(&szSolution);
+
+	szExpanded.Init();
+	cProject.ExpandMacros("$(ProjectName)-$(Configuration)-$(Platform)-$(RootNamespace)-$(Unknown)-%(PreprocessorDefinitions).", pcRelease, szSolution.Text(), &szExpanded);
+	AssertString("MiniLib-Release-x64-MiniLib--.", szExpanded.Text());
+	szExpanded.Clear();
+	cProject.ExpandMacros("$(OutDir)", pcDebug, szSolution.Text(), &szExpanded);
+	szExpected.Init(szSolution);
+	szExpected.Append(FILE_SEPARATOR[0]);
+	szExpected.Append("Out\\");
+	AssertString(szExpected.Text(), szExpanded.Text());
+	szExpected.Kill();
+	szExpanded.Clear();
+	cProject.ExpandMacros("$(ProjectDir)", pcDebug, szSolution.Text(), &szExpanded);
+	szExpected.Init(cProject.GetDirectory());
+	szExpected.Append(FILE_SEPARATOR[0]);
+	AssertString(szExpected.Text(), szExpanded.Text());
+	szExpected.Kill();
+	szExpanded.Kill();
+
+	//..\Include\ from the project's directory; $(IncludePath) is the compiler's own.
+	aszValues.Init();
+	cProject.GetIncludeDirectories(pcDebug, szSolution.Text(), &aszValues);
+	AssertSize(1, aszValues.NumElements());
+	szExpected.Init("Input" _FS_ "Include");
+	cFileUtil.FullPath(&szExpected);
+	AssertString(szExpected.Text(), aszValues.GetText(0));
+	szExpected.Kill();
+	aszValues.ReInit();
+	cProject.GetIncludeDirectories(pcRelease, szSolution.Text(), &aszValues);
+	AssertSize(0, aszValues.NumElements());
+
+	aszValues.ReInit();
+	cProject.GetPreprocessorDefinitions(pcDebug, szSolution.Text(), &aszValues);
+	AssertSize(2, aszValues.NumElements());
+	AssertString("_DEBUG", aszValues.GetText(0));
+	AssertString("MINI", aszValues.GetText(1));
+	aszValues.Kill();
+
+	szSolution.Kill();
+	cProject.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // A project that isn't there, or a file that isn't a project.
 //
 //////////////////////////////////////////////////////////////////////////
@@ -232,6 +299,7 @@ void TestVcxProject(void)
 
 	TestVcxProjectMini();
 	TestVcxProjectSupportLib();
+	TestVcxProjectMacros();
 	TestVcxProjectBad();
 
 	TestStatistics();
