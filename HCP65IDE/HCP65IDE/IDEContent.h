@@ -118,7 +118,8 @@ protected:
 	CArray<CImageCel>			maFileIcons;		//By EIDEFileType.
 	Ptr<CSolutionExplorer>		mpExplorer;
 	CIDEActivationListener		mcExplorerListener;
-	Ptr<CComboBox>				mpConfigurations;	//The build configuration; the code is parsed as its solution configuration.
+	Ptr<CComboBox>				mpConfigurations;	//The build configuration's configuration; the code is parsed as its solution configuration.
+	Ptr<CComboBox>				mpPlatforms;		//And its platform.
 	CIDEConfigurationListener	mcConfigurationsListener;
 	CBuildConfigurations		mcConfigurations;	//The solution's, from beside it or the defaults.
 	size						muiConfiguration;	//The chosen one, MAX_SIZE if none.
@@ -158,6 +159,9 @@ public:
 	bool			SetCaretPlace(int iLine, int iColumn);
 	bool			SetConfiguration(const char* szConfiguration);
 	void			ConfigurationChosen(void);
+	void			SetComboBoxItems(Ptr<CComboBox> pComboBox, bool bPlatforms);
+	void			ShowConfiguration(void);
+	void			SelectComboBoxItem(Ptr<CComboBox> pComboBox, const char* szText);
 	void			Tick(Ptr<CWindow> pWindow);
 	void			TabSelected(CUnknown* pcTab);
 	void			TabRemoved(CUnknown* pcTab);

@@ -294,6 +294,7 @@ void CIDEContent::Class(void)
 	M_Pointer(mpExplorer);
 	U_Unknown(CIDEActivationListener, mcExplorerListener);
 	M_Pointer(mpConfigurations);
+	M_Pointer(mpPlatforms);
 	U_Unknown(CIDEConfigurationListener, mcConfigurationsListener);
 	U_Unknown(CBuildConfigurations, mcConfigurations);
 	U_Size(muiConfiguration);
@@ -429,10 +430,13 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpReferencesTab = mpBottomTabs->AddTab("Find All References", pReferencesPane);
 	mpBuildTab = mpBottomTabs->AddTab("Build", mpBuildPane->GetComponent());
 
-	//The toolbar: the build configuration and Build.
+	//The toolbar: the build configuration's configuration and platform, as Visual Studio has them, and Build.
 	mpConfigurations = OMalloc<CComboBox>(pWindow, mpTheme);
 	mpConfigurations->SetAlignment(CSH_Left, CSV_Center);
 	mpConfigurations->AddListener(&mcConfigurationsListener);
+	mpPlatforms = OMalloc<CComboBox>(pWindow, mpTheme);
+	mpPlatforms->SetAlignment(CSH_Left, CSV_Center);
+	mpPlatforms->AddListener(&mcConfigurationsListener);
 	mpBuildButton = OMalloc<CButton>(pWindow, mpTheme, "Build");
 	mpBuildButton->SetAlignment(CSH_Left, CSV_Center);
 	mpBuildButton->AddListener(&mcBuildListener);
@@ -440,7 +444,8 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	pToolbar->SetDesiredSize(-1, IDE_TOOLBAR_HEIGHT);
 	pToolbar->SetAlignment(CSH_Stretch, CSV_Stretch);
 	pToolbar->AddComponent(mpConfigurations, 0, 0, 1, 1, 0, 1);
-	pToolbar->AddComponent(mpBuildButton, 1, 0, 1, 1, 1, 1);
+	pToolbar->AddComponent(mpPlatforms, 1, 0, 1, 1, 0, 1);
+	pToolbar->AddComponent(mpBuildButton, 2, 0, 1, 1, 1, 1);
 
 	pMain = OMalloc<CGridContainer>(pWindow);
 	pMain->AddComponent(pToolbar, 0, 0, 2, 1, 1, 0);
@@ -464,7 +469,6 @@ bool CIDEContent::OpenSolution(const char* szFileName)
 {
 	CChars	szName;
 	bool	bSolution;
-	size	i;
 
 	szName.Init(szFileName);
 	bSolution = szName.EndsWithIgnoreCase(".sln");
@@ -506,17 +510,14 @@ bool CIDEContent::OpenSolution(const char* szFileName)
 	}
 	szName.Kill();
 
-	mpConfigurations->RemoveAllItems();
-	for (i = 0; i < mcConfigurations.NumConfigurations(); i++)
-	{
-		mpConfigurations->AddItem(mcConfigurations.GetConfiguration(i)->GetName());
-	}
+	SetComboBoxItems(mpConfigurations, false);
+	SetComboBoxItems(mpPlatforms, true);
 	if (mcConfigurations.NumConfigurations() > 0)
 	{
-		//Chosen before the combo box tells of it, so it isn't indexed twice.
+		//Chosen before the combo boxes tell of it, so it isn't indexed twice.
 		muiConfiguration = 0;
 		mcCodeModel.SetConfiguration(mcConfigurations.GetConfiguration(0)->GetSolutionConfiguration());
-		mpConfigurations->Select(0);
+		ShowConfiguration();
 	}
 	mcCodeModel.StartIndexing();
 	return true;
@@ -1073,17 +1074,118 @@ bool CIDEContent::SetCaretPlace(int iLine, int iColumn)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The configuration chosen in the toolbar.
+// The configuration and platform chosen in the toolbar.  If there's no
+// build configuration with both, the one changed is kept: the first with
+// it is chosen.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEContent::ConfigurationChosen(void)
 {
-	char*	szConfiguration;
+	char*					szConfiguration;
+	char*					szPlatform;
+	CBuildConfiguration*	pcCurrent;
+	CBuildConfiguration*	pcChosen;
 
 	szConfiguration = mpConfigurations->GetSelectedText();
-	if (szConfiguration && ((GetConfiguration() == NULL) || (StringCompare(szConfiguration, GetConfiguration()->GetName()) != 0)))
+	szPlatform = mpPlatforms->GetSelectedText();
+	pcCurrent = GetConfiguration();
+	if ((szConfiguration == NULL) || (szPlatform == NULL) || ((pcCurrent != NULL) && pcCurrent->Is(szConfiguration, szPlatform)))
 	{
-		SetConfiguration(szConfiguration);
+		return;
+	}
+
+	pcChosen = mcConfigurations.FindConfiguration(szConfiguration, szPlatform);
+	if (pcChosen == NULL)
+	{
+		if ((pcCurrent != NULL) && pcCurrent->Is(NULL, szPlatform))
+		{
+			pcChosen = mcConfigurations.FindConfiguration(szConfiguration, NULL);
+		}
+		else
+		{
+			pcChosen = mcConfigurations.FindConfiguration(NULL, szPlatform);
+		}
+	}
+	if (pcChosen != NULL)
+	{
+		SetConfiguration(pcChosen->GetName());
+	}
+	else
+	{
+		ShowConfiguration();
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The configurations' configuration names, or platforms, in pComboBox.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::SetComboBoxItems(Ptr<CComboBox> pComboBox, bool bPlatforms)
+{
+	CArrayChars		aszNames;
+	size			i;
+
+	aszNames.Init();
+	if (bPlatforms)
+	{
+		mcConfigurations.GetPlatformNames(&aszNames);
+	}
+	else
+	{
+		mcConfigurations.GetConfigurationNames(&aszNames);
+	}
+	pComboBox->RemoveAllItems();
+	for (i = 0; i < aszNames.NumElements(); i++)
+	{
+		pComboBox->AddItem(aszNames.GetText(i));
+	}
+	aszNames.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The chosen build configuration's configuration and platform selected in
+// the toolbar.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::ShowConfiguration(void)
+{
+	CChars	szName;
+
+	if (GetConfiguration() == NULL)
+	{
+		return;
+	}
+
+	szName.Init();
+	GetConfiguration()->GetConfigurationName(&szName);
+	SelectComboBoxItem(mpConfigurations, szName.Text());
+	szName.Clear();
+	GetConfiguration()->GetPlatformName(&szName);
+	SelectComboBoxItem(mpPlatforms, szName.Text());
+	szName.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// pComboBox's item szText selected (selecting doesn't tell the listeners).
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::SelectComboBoxItem(Ptr<CComboBox> pComboBox, const char* szText)
+{
+	size	i;
+
+	for (i = 0; i < pComboBox->NumItems(); i++)
+	{
+		if (StringCompare(pComboBox->GetItemText(i), szText) == 0)
+		{
+			pComboBox->Select((int32)i);
+			return;
+		}
 	}
 }
 
@@ -1113,10 +1215,7 @@ bool CIDEContent::SetConfiguration(const char* szConfiguration)
 		return false;
 	}
 	muiConfiguration = i;
-	if ((int32)i != mpConfigurations->GetSelected())
-	{
-		mpConfigurations->Select((int32)i);
-	}
+	ShowConfiguration();
 
 	pcConfiguration = mcConfigurations.GetConfiguration(i);
 	if (StringCompare(pcConfiguration->GetSolutionConfiguration(), mcCodeModel.GetConfiguration()) != 0)
