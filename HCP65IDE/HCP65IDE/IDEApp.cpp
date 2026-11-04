@@ -85,6 +85,9 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 	mbValid = mpContent->Setup(mpWindow, "Resources/InterVariable.ttf", "Resources/JetBrainsMonoNL-Regular.ttf");
 	if (mbValid)
 	{
+		//The HCP65 repository is beside the IDE's.
+		mpContent->SetLibc65Directory("../../../HCP65/Libraries/Libc65");
+
 		//Sized first: what the checks below scroll to depends on the size.
 		mpWindow->SetWindowSize(1280, 800);
 		if (mpContent->OpenSolution(szSolution))
@@ -157,6 +160,11 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 			if ((getenv("HCP65_IDE_SCROLL") != NULL) && mpContent->GetEditorPane().IsNotNull())
 			{
 				mpContent->GetEditorPane()->SetScrollPosition(0, atoi(getenv("HCP65_IDE_SCROLL")));
+			}
+			if (getenv("HCP65_IDE_BUILD") != NULL)
+			{
+				//As Control+Shift+B: the chosen configuration is built, its output in the Build tab.
+				mpContent->Build();
 			}
 		}
 

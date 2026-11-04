@@ -45,8 +45,11 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define IDE_TOOLBAR_HEIGHT		34		//A grid in a grid has no height of its own.
 
 
-//Go to Definition (F12) and Find All References (Shift+F12) from anywhere in the window.
-static EComponentInputCommand	gaeIDECodeCommands[] = { CIC_GoToDefinition, CIC_FindReferences };
+#define IDE_BUILD_POLL			50		//Milliseconds between looks at a running build.
+
+
+//Go to Definition (F12), Find All References (Shift+F12) and Build (Control+Shift+B) from anywhere in the window.
+static EComponentInputCommand	gaeIDECodeCommands[] = { CIC_GoToDefinition, CIC_FindReferences, CIC_Build };
 
 
 //Visual Studio's dark theme colours for C++, by ECPPHighlight.
@@ -184,6 +187,26 @@ void CIDEConfigurationListener::SelectionChanged(CUnknown* pcSource, void* pvCon
 //
 //
 //////////////////////////////////////////////////////////////////////////
+void CIDEBuildListener::Init(CIDEContent* pcContent)
+{
+	mpcContent = pcContent;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEBuildListener::ButtonClicked(CUnknown* pcSource, void* pvContext)
+{
+	mpcContent->Build();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
 void CIDETabsListener::Init(CIDEContent* pcContent)
 {
 	mpcContent = pcContent;
@@ -238,6 +261,10 @@ void CIDEContent::Init(void)
 	mcConfigurationsListener.Init(this);
 	mcConfigurations.Init();
 	muiConfiguration = MAX_SIZE;
+	mcBuildListener.Init(this);
+	mcBuild.Init();
+	mszLibc65.Init();
+	mcListings.Init();
 	masReferences.Init();
 	maTabs.Init();
 	maFileIcons.Init();
@@ -269,6 +296,11 @@ void CIDEContent::Class(void)
 	U_Unknown(CIDEConfigurationListener, mcConfigurationsListener);
 	U_Unknown(CBuildConfigurations, mcConfigurations);
 	U_Size(muiConfiguration);
+	M_Pointer(mpBuildButton);
+	U_Unknown(CIDEBuildListener, mcBuildListener);
+	U_Unknown(CSolutionBuild, mcBuild);
+	U_String(mszLibc65);
+	U_Unknown(CCPP65ListingIndex, mcListings);
 	M_Pointer(mpBottomTabs);
 	M_Pointer(mpReferencesTab);
 	M_Pointer(mpBuildTab);
@@ -293,7 +325,13 @@ void CIDEContent::Free(void)
 	mcExplorerListener.RemoveFromListenerCalls();
 	mcReferencesListener.RemoveFromListenerCalls();
 	mcConfigurationsListener.RemoveFromListenerCalls();
+	mcBuildListener.RemoveFromListenerCalls();
 	mcTabsListener.RemoveFromListenerCalls();
+
+	//A build still running is stopped (an HCP65 build is waited for) before the solution it builds goes.
+	mcBuild.Kill();
+	mcListings.Kill();
+	mszLibc65.Kill();
 	mcCodeModel.Kill();
 	mcConfigurations.Kill();
 	mcSolution.Kill();
@@ -389,14 +427,18 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpReferencesTab = mpBottomTabs->AddTab("Find All References", pReferencesPane);
 	mpBuildTab = mpBottomTabs->AddTab("Build", mpBuildPane->GetComponent());
 
-	//The toolbar: the solution configuration.
+	//The toolbar: the build configuration and Build.
 	mpConfigurations = OMalloc<CComboBox>(pWindow, mpTheme);
 	mpConfigurations->SetAlignment(CSH_Left, CSV_Center);
 	mpConfigurations->AddListener(&mcConfigurationsListener);
+	mpBuildButton = OMalloc<CButton>(pWindow, mpTheme, "Build");
+	mpBuildButton->SetAlignment(CSH_Left, CSV_Center);
+	mpBuildButton->AddListener(&mcBuildListener);
 	pToolbar = OMalloc<CGridContainer>(pWindow);
 	pToolbar->SetDesiredSize(-1, IDE_TOOLBAR_HEIGHT);
 	pToolbar->SetAlignment(CSH_Stretch, CSV_Stretch);
-	pToolbar->AddComponent(mpConfigurations, 0, 0, 1, 1, 1, 1);
+	pToolbar->AddComponent(mpConfigurations, 0, 0, 1, 1, 0, 1);
+	pToolbar->AddComponent(mpBuildButton, 1, 0, 1, 1, 1, 1);
 
 	pMain = OMalloc<CGridContainer>(pWindow);
 	pMain->AddComponent(pToolbar, 0, 0, 2, 1, 1, 0);
@@ -425,6 +467,12 @@ bool CIDEContent::OpenSolution(const char* szFileName)
 	szName.Init(szFileName);
 	bSolution = szName.EndsWithIgnoreCase(".sln");
 	szName.Kill();
+
+	//A build of the solution being let go is stopped, and its listings forgotten.
+	mcBuild.Kill();
+	mcBuild.Init();
+	mcListings.Kill();
+	mcListings.Init();
 
 	mcCodeModel.Kill();
 	mcSolution.Kill();
@@ -596,6 +644,10 @@ void CIDEContent::CodeCommandAction(SComponentInputEvent* psEvent)
 	else if (psEvent->eCommand == CIC_FindReferences)
 	{
 		FindReferences();
+	}
+	else if (psEvent->eCommand == CIC_Build)
+	{
+		Build();
 	}
 }
 
@@ -776,6 +828,122 @@ void CIDEContent::ShowBuildTab(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Where the HCP65 compiler's system headers (<stdint.h>) are: Libc65.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::SetLibc65Directory(const char* szDirectory)
+{
+	CFileUtil	cFileUtil;
+
+	mszLibc65.Set(szDirectory);
+	cFileUtil.FullPath(&mszLibc65);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Starts building the solution in the chosen build configuration, its
+// output in the Build tab.  False if there is no solution or
+// configuration, or a build is running.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEContent::Build(void)
+{
+	CArrayChars	aszLines;
+	bool		bResult;
+
+	if (!mbSolution || (GetConfiguration() == NULL) || mcBuild.IsRunning())
+	{
+		return false;
+	}
+
+	mpBuildPane->Clear();
+	ShowBuildTab();
+	aszLines.Init();
+	bResult = mcBuild.Start(&mcSolution, GetConfiguration(), NULL, mszLibc65.Text(), &aszLines);
+	mpBuildPane->AppendLines(&aszLines);
+	mpBuildPane->SetProgress(mcBuild.GetProgress());
+	aszLines.Kill();
+	if (mcBuild.IsRunning())
+	{
+		mpWindow->RequestTick(IDE_BUILD_POLL);
+	}
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A running build's new output and progress go in the Build tab.  When an
+// HCP65 build succeeds its listings are read.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::PollBuild(Ptr<CWindow> pWindow)
+{
+	CArrayChars	aszLines;
+	bool		bRunning;
+
+	if (!mcBuild.IsRunning())
+	{
+		return;
+	}
+
+	aszLines.Init();
+	bRunning = mcBuild.Poll(&aszLines);
+	if (!bRunning && (mcBuild.GetState() == BS_Succeeded) && GetConfiguration()->IsHCP65())
+	{
+		ReadListings(&aszLines);
+	}
+	mpBuildPane->AppendLines(&aszLines);
+	mpBuildPane->SetProgress(mcBuild.GetProgress());
+	aszLines.Kill();
+	if (bRunning)
+	{
+		pWindow->RequestTick(IDE_BUILD_POLL);
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The last build's listings, in place of those read before.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::ReadListings(CArrayChars* paszLines)
+{
+	CFileUtil	cFileUtil;
+	CChars		szDirectory;
+	CChars		szLine;
+	CArrayChars	aszFiles;
+	size		i;
+
+	mcListings.Kill();
+	mcListings.Init();
+	szDirectory.Init();
+	mcBuild.GetBuild()->GetListingDirectory(&szDirectory);
+	aszFiles.Init();
+	cFileUtil.FindAllFiles(szDirectory.Text(), &aszFiles);
+	for (i = 0; i < aszFiles.NumElements(); i++)
+	{
+		if (aszFiles.Get(i)->EndsWithIgnoreCase(".lst"))
+		{
+			mcListings.ReadListing(aszFiles.GetText(i));
+		}
+	}
+	szLine.Init("Read ");
+	szLine.Append((uint32)mcListings.NumListings());
+	szLine.Append((mcListings.NumListings() == 1) ? " listing from " : " listings from ");
+	szLine.Append(szDirectory);
+	szLine.Append('.');
+	paszLines->Add(szLine.Text());
+	szLine.Kill();
+	aszFiles.Kill();
+	szDirectory.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // A reference opened in the list is shown in the editor.
 //
 //////////////////////////////////////////////////////////////////////////
@@ -944,6 +1112,8 @@ void CIDEContent::Tick(Ptr<CWindow> pWindow)
 	int64				iWait;
 	int64				iSoonest;
 
+	PollBuild(pWindow);
+
 	//The platform's clock: the window's total time only counts the time it spent updating.
 	iNow = GetDebugTickCount();
 	iSoonest = -1;
@@ -1046,6 +1216,8 @@ Ptr<CIDEEditorTab> CIDEContent::GetActiveTab(void) { return mpActive; }
 Ptr<CTabbedContainer> CIDEContent::GetEditors(void) { return mpEditors; }
 Ptr<CTreeContainer> CIDEContent::GetReferences(void) { return mpReferences; }
 Ptr<CIDEBuildPane> CIDEContent::GetBuildPane(void) { return mpBuildPane; }
+bool CIDEContent::IsBuilding(void) { return mcBuild.IsRunning(); }
+CCPP65ListingIndex* CIDEContent::GetListings(void) { return &mcListings; }  //The last HCP65 build's, for showing a line's assembly.
 CIDECodeModel* CIDEContent::GetCodeModel(void) { return &mcCodeModel; }
 CSolutionExplorer* CIDEContent::GetExplorer(void) { return &mpExplorer; }
 

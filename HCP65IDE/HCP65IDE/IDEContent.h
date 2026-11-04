@@ -32,6 +32,10 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/ComboBoxListener.h"
 #include "VisualStudioLib/VcxSolution.h"
 #include "BuildLib/BuildConfigurations.h"
+#include "BuildLib/SolutionBuild.h"
+#include "CppParserLib/CPP65ListingIndex.h"
+#include "WindowLib/Button.h"
+#include "WindowLib/ButtonListener.h"
 #include "WindowLib/TabbedContainer.h"
 #include "WindowLib/TabbedContainerListener.h"
 #include "IDECodeModel.h"
@@ -66,6 +70,18 @@ public:
 
 	void	Init(CIDEContent* pcContent);
 	void	SelectionChanged(CUnknown* pcSource, void* pvContext) override;
+};
+
+
+//Hears the Build button being clicked.
+class CIDEBuildListener : public CButtonListener
+{
+CONSTRUCTABLE(CIDEBuildListener);
+public:
+	CIDEContent*	mpcContent;
+
+	void	Init(CIDEContent* pcContent);
+	void	ButtonClicked(CUnknown* pcSource, void* pvContext) override;
 };
 
 
@@ -106,6 +122,11 @@ protected:
 	CIDEConfigurationListener	mcConfigurationsListener;
 	CBuildConfigurations		mcConfigurations;	//The solution's, from beside it or the defaults.
 	size						muiConfiguration;	//The chosen one, MAX_SIZE if none.
+	Ptr<CButton>				mpBuildButton;
+	CIDEBuildListener			mcBuildListener;
+	CSolutionBuild				mcBuild;			//The build running, or the last.
+	CChars						mszLibc65;			//The HCP65 compiler's system headers.
+	CCPP65ListingIndex			mcListings;			//The last HCP65 build's listings.
 	Ptr<CTabbedContainer>		mpBottomTabs;		//Under the editor: Find All References and Build.
 	Ptr<CTabComponent>			mpReferencesTab;
 	Ptr<CTabComponent>			mpBuildTab;
@@ -151,6 +172,10 @@ public:
 	Ptr<CTreeContainer>	GetReferences(void);
 	Ptr<CIDEBuildPane>	GetBuildPane(void);
 	void				ShowBuildTab(void);
+	void				SetLibc65Directory(const char* szDirectory);
+	bool				Build(void);
+	bool				IsBuilding(void);
+	CCPP65ListingIndex*	GetListings(void);
 
 protected:
 	void				HighlightTab(Ptr<CIDEEditorTab> pTab);
@@ -161,6 +186,8 @@ protected:
 	bool				OpenLocation(SIDELocation* psLocation);
 	void				AddReference(int32 iParent, SIDELocation* psLocation, size uiIndex);
 	void				ShowReferencesStatus(const char* szText);
+	void				PollBuild(Ptr<CWindow> pWindow);
+	void				ReadListings(CArrayChars* paszLines);
 };
 
 
