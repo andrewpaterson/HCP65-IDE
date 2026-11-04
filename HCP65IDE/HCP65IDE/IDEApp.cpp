@@ -22,6 +22,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "StandardLib/Objects.h"
 #include "WindowLib/ClearCanvasDraw.h"
 #include "WindowLib/JewelColours.h"
+#include <stdio.h>
 #include "IDEWindowTick.h"
 #include "IDEApp.h"
 
@@ -46,9 +47,14 @@ void CIDEApp::Init(void)
 // The window and its content, with szSolution open.  The devices are
 // described by the XML in szInputDirectory; pcNativeInput (the platform's
 // keyboard and mouse) is added to them.  Run fails if anything here did.
-// HCP65_IDE_SNAPSHOT, HCP65_IDE_EXPAND, HCP65_IDE_OPEN and HCP65_IDE_SCROLL
-// are for checking it: a snapshot of the window, every folder expanded, a
-// file opened and the editor scrolled down that many pixels.
+// HCP65_IDE_SNAPSHOT, HCP65_IDE_CONFIGURATION, HCP65_IDE_EXPAND,
+// HCP65_IDE_OPEN, HCP65_IDE_SCROLL,
+// HCP65_IDE_WAIT_INDEX, HCP65_IDE_CARET=line:column (1 based), HCP65_IDE_TYPE,
+// HCP65_IDE_REFERENCES and HCP65_IDE_DEFINITION are for checking it: a
+// snapshot of the window, every folder expanded, a file opened, the
+// editor scrolled down that many pixels, the indexing finished, the caret
+// put somewhere, HCP65_IDE_TYPE's text typed there, then Find All
+// References and Go to Definition.
 // Call it once the app is in the root: the objects made here are only
 // held through it, and an object no root reaches is freed as soon as
 // the last stack pointer to it goes.
@@ -58,6 +64,9 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 {
 	Ptr<CIDEWindowTick>	pTick;
 	int32				iNode;
+	int					iLine;
+	int					iColumn;
+	const char*			szTyped;
 
 	pTick = OMalloc<CIDEWindowTick>();
 	if (getenv("HCP65_IDE_SNAPSHOT") != NULL)
@@ -67,11 +76,22 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 	mpWindow = OMalloc<CWindow>("HCP65 IDE", pcNativeFactory, pTick, OMalloc<CClearCanvasDraw>(JEWEL_PANEL), CFT_RGBX, CCO_BGR, CRGB_24bit, ARGB_8bit);
 
 	mpContent = OMalloc<CIDEContent>();
+	pTick->SetContent(mpContent);
 	mbValid = mpContent->Setup(mpWindow, "Resources/InterVariable.ttf", "Resources/JetBrainsMonoNL-Regular.ttf");
 	if (mbValid)
 	{
+		//Sized first: what the checks below scroll to depends on the size.
+		mpWindow->SetWindowSize(1280, 800);
 		if (mpContent->OpenSolution(szSolution))
 		{
+			if (getenv("HCP65_IDE_CONFIGURATION") != NULL)
+			{
+				mpContent->SetConfiguration(getenv("HCP65_IDE_CONFIGURATION"));
+			}
+			if (getenv("HCP65_IDE_WAIT_INDEX") != NULL)
+			{
+				mpContent->GetCodeModel()->WaitForIndexing();
+			}
 			if (getenv("HCP65_IDE_EXPAND") != NULL)
 			{
 				mpContent->GetExplorer()->GetTree()->ExpandAll();
@@ -84,6 +104,26 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 					mpContent->GetExplorer()->GetTree()->SelectNode(iNode);
 					mpContent->ExplorerActivated();
 				}
+			}
+			if ((getenv("HCP65_IDE_CARET") != NULL) && (sscanf(getenv("HCP65_IDE_CARET"), "%d:%d", &iLine, &iColumn) == 2))
+			{
+				mpContent->SetCaretPlace(iLine - 1, iColumn - 1);
+			}
+			if (getenv("HCP65_IDE_TYPE") != NULL)
+			{
+				mpWindow->GetFocus()->SetFocus(mpContent->GetEditor());
+				for (szTyped = getenv("HCP65_IDE_TYPE"); *szTyped != '\0'; szTyped++)
+				{
+					mpWindow->InputPrintable(*szTyped, true);
+				}
+			}
+			if (getenv("HCP65_IDE_REFERENCES") != NULL)
+			{
+				mpContent->FindReferences();
+			}
+			if (getenv("HCP65_IDE_DEFINITION") != NULL)
+			{
+				mpContent->GoToDefinition();
 			}
 			if (getenv("HCP65_IDE_SCROLL") != NULL)
 			{
@@ -102,7 +142,6 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 		mpWindow->SetComponentInput(&mcComponentInput);
 
 		mpWindow->GetFocus()->SetFocus(mpContent->GetExplorer()->GetTree());
-		mpWindow->SetWindowSize(1280, 800);
 	}
 
 	return mbValid;

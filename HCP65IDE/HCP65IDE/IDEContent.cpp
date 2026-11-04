@@ -18,7 +18,10 @@ You should have received a copy of the GNU Affero General Public License
 along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 ** ------------------------------------------------------------------------ **/
+#include "BaseLib/FileUtil.h"
 #include "BaseLib/Logger.h"
+#include "BaseLib/Timer.h"
+#include "BaseLib/StringHelper.h"
 #include "BaseLib/TextFile.h"
 #include "StandardLib/Objects.h"
 #include "StandardLib/ObjectReader.h"
@@ -38,6 +41,14 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define IDE_FONT_CHARACTERS		" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
 #define IDE_EXPLORER_WIDTH		320
 #define IDE_CODE_PIXEL_SIZE		15.0f
+#define IDE_REFERENCES_HEIGHT	180
+#define IDE_TOOLBAR_HEIGHT		34		//A grid in a grid has no height of its own.
+#define IDE_CARET_LINES_ABOVE	4		//How many lines show above a line jumped to.
+#define IDE_RECOLOUR_DELAY		400		//Milliseconds after the last edit before the text is highlighted again.
+
+
+//Go to Definition (F12) and Find All References (Shift+F12) from anywhere in the window.
+static EComponentInputCommand	gaeIDECodeCommands[] = { CIC_GoToDefinition, CIC_FindReferences };
 
 
 //Visual Studio's dark theme colours for C++, by ECPPHighlight.
@@ -144,7 +155,18 @@ Ptr<CFont> GenerateIDEFont(const char* szFontFilename, const char* szName, float
 //
 //
 //////////////////////////////////////////////////////////////////////////
-void CSolutionExplorerListener::Init(CIDEContent* pcContent)
+void CIDEActivationListener::Init(CIDEContent* pcContent, void (CIDEContent::*fActivated)(void))
+{
+	mpcContent = pcContent;
+	mfActivated = fActivated;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEConfigurationListener::Init(CIDEContent* pcContent)
 {
 	mpcContent = pcContent;
 }
@@ -154,9 +176,19 @@ void CSolutionExplorerListener::Init(CIDEContent* pcContent)
 //
 //
 //////////////////////////////////////////////////////////////////////////
-void CSolutionExplorerListener::ItemActivated(CUnknown* pcSource, void* pvContext)
+void CIDEConfigurationListener::SelectionChanged(CUnknown* pcSource, void* pvContext)
 {
-	mpcContent->ExplorerActivated();
+	mpcContent->ConfigurationChosen();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEActivationListener::ItemActivated(CUnknown* pcSource, void* pvContext)
+{
+	(mpcContent->*mfActivated)();
 }
 
 
@@ -173,7 +205,16 @@ void CIDEContent::Init(void)
 	mbSolution = false;
 	mcSolution.Init();
 	mcCodeModel.Init(&mcSolution);
-	mcExplorerListener.Init(this);
+	mcExplorerListener.Init(this, &CIDEContent::ExplorerActivated);
+	mcReferencesListener.Init(this, &CIDEContent::ReferenceActivated);
+	mcConfigurationsListener.Init(this);
+	masReferences.Init();
+	mszFileName.Init();
+	muiProject = SOLUTION_EXPLORER_NO_PROJECT;
+	muiSeenChanges = 0;
+	miChangedTime = 0;
+	mbRecolour = false;
+	mbEdited = false;
 
 	PostInit();
 }
@@ -193,7 +234,18 @@ void CIDEContent::Class(void)
 	M_Pointer(mpEditor);
 	M_Pointer(mpEditorPane);
 	M_Pointer(mpExplorer);
-	U_Unknown(CSolutionExplorerListener, mcExplorerListener);
+	U_Unknown(CIDEActivationListener, mcExplorerListener);
+	M_Pointer(mpConfigurations);
+	U_Unknown(CIDEConfigurationListener, mcConfigurationsListener);
+	M_Pointer(mpReferences);
+	U_Unknown(CIDEActivationListener, mcReferencesListener);
+	U_Unknown(CArrayIDELocations, masReferences);
+	U_String(mszFileName);
+	U_Data(size, muiProject);
+	U_Data(size, muiSeenChanges);
+	U_Data(int64, miChangedTime);
+	U_Bool(mbRecolour);
+	U_Bool(mbEdited);
 	U_Unknown(CVcxSolution, mcSolution);
 	U_Unknown(CIDECodeModel, mcCodeModel);
 	U_Bool(mbSolution);
@@ -209,8 +261,12 @@ void CIDEContent::Free(void)
 {
 	//An object's memory is freed without its destructor running so the listener takes itself off the tree.
 	mcExplorerListener.RemoveFromListenerCalls();
+	mcReferencesListener.RemoveFromListenerCalls();
+	mcConfigurationsListener.RemoveFromListenerCalls();
 	mcCodeModel.Kill();
 	mcSolution.Kill();
+	KillIDELocations(&masReferences);
+	mszFileName.Kill();
 }
 
 
@@ -246,6 +302,10 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	Ptr<CGridContainer>	pMain;
 	Ptr<CGridContainer>	pExplorerPanel;
 	Ptr<CLabel>			pExplorerTitle;
+	Ptr<CGridContainer>	pReferencesPanel;
+	Ptr<CScrollPane>	pReferencesPane;
+	Ptr<CLabel>			pReferencesTitle;
+	Ptr<CGridContainer>	pToolbar;
 
 	mpWindow = pWindow;
 
@@ -283,9 +343,36 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpEditorPane->SetContent(mpEditor);
 	mpEditorPane->SetAlignment(CSH_Stretch, CSV_Stretch);
 
+	//Find All References: its title over what it found, under the editor.
+	mpReferences = OMalloc<CTreeContainer>(pWindow, mpTheme);
+	mpReferences->SetAlignment(CSH_Stretch, CSV_Top);
+	mpReferences->AddListener(&mcReferencesListener);
+	pReferencesPane = OMalloc<CScrollPane>(pWindow, mpTheme);
+	pReferencesPane->SetContent(mpReferences);
+	pReferencesPane->SetAlignment(CSH_Stretch, CSV_Stretch);
+	pReferencesPanel = OMalloc<CGridContainer>(pWindow);
+	pReferencesPanel->SetDesiredSize(-1, IDE_REFERENCES_HEIGHT);
+	pReferencesPanel->SetAlignment(CSH_Stretch, CSV_Stretch);
+	pReferencesTitle = OMalloc<CLabel>(pWindow, mpFontColours->GetFont(JEWEL_ICON), "Find All References");
+	pReferencesTitle->SetAlignment(CSH_Left, CSV_Center);
+	pReferencesPanel->AddComponent(pReferencesTitle, 0, 0, 1, 1, 1, 0);
+	pReferencesPanel->AddComponent(pReferencesPane, 0, 1, 1, 1, 1, 1);
+
+	//The toolbar: the solution configuration.
+	mpConfigurations = OMalloc<CComboBox>(pWindow, mpTheme);
+	mpConfigurations->SetAlignment(CSH_Left, CSV_Center);
+	mpConfigurations->AddListener(&mcConfigurationsListener);
+	pToolbar = OMalloc<CGridContainer>(pWindow);
+	pToolbar->SetDesiredSize(-1, IDE_TOOLBAR_HEIGHT);
+	pToolbar->SetAlignment(CSH_Stretch, CSV_Stretch);
+	pToolbar->AddComponent(mpConfigurations, 0, 0, 1, 1, 1, 1);
+
 	pMain = OMalloc<CGridContainer>(pWindow);
-	pMain->AddComponent(pExplorerPanel, 0, 0, 1, 1, 0, 1);
-	pMain->AddComponent(mpEditorPane, 1, 0, 1, 1, 1, 1);
+	pMain->AddComponent(pToolbar, 0, 0, 2, 1, 1, 0);
+	pMain->AddComponent(pExplorerPanel, 0, 1, 1, 2, 0, 1);
+	pMain->AddComponent(mpEditorPane, 1, 1, 1, 1, 1, 1);
+	pMain->AddComponent(pReferencesPanel, 1, 2, 1, 1, 1, 0);
+	pMain->AddInputActions(gaeIDECodeCommands, sizeof(gaeIDECodeCommands) / sizeof(EComponentInputCommand), this, &CIDEContent::CodeCommandAction);
 	pWindow->SetContainer(pMain);
 	return true;
 }
@@ -302,6 +389,7 @@ bool CIDEContent::OpenSolution(const char* szFileName)
 {
 	CChars	szName;
 	bool	bSolution;
+	size	i;
 
 	szName.Init(szFileName);
 	bSolution = szName.EndsWithIgnoreCase(".sln");
@@ -325,6 +413,16 @@ bool CIDEContent::OpenSolution(const char* szFileName)
 		return false;
 	}
 	mpExplorer->ShowSolution(&mcSolution);
+	mpConfigurations->RemoveAllItems();
+	for (i = 0; i < mcSolution.NumConfigurations(); i++)
+	{
+		mpConfigurations->AddItem(mcSolution.GetConfiguration(i));
+	}
+	if (mcSolution.NumConfigurations() > 0)
+	{
+		mpConfigurations->Select(0);
+	}
+	mcCodeModel.StartIndexing();
 	return true;
 }
 
@@ -346,10 +444,15 @@ bool CIDEContent::OpenFile(const char* szFileName, size uiProject)
 		return gcLogger.Error2(__METHOD__, " Could not read [", szFileName, "].", NULL);
 	}
 	mpEditor->SetText(cFile.Text());
+	mszFileName.Set(szFileName);
+	muiProject = uiProject;
+	mbEdited = false;
+	mbRecolour = false;
 	if (uiProject != SOLUTION_EXPLORER_NO_PROJECT)
 	{
-		HighlightFile(szFileName, cFile.Text(), uiProject);
+		HighlightFile(szFileName, cFile.Text(), uiProject, false);
 	}
+	muiSeenChanges = mpEditor->GetChangeCount();
 	cFile.Kill();
 	return true;
 }
@@ -357,11 +460,12 @@ bool CIDEContent::OpenFile(const char* szFileName, size uiProject)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Colours the editor's text (szText, szFileName's contents) by what the
-// parser found each part of it to be.
+// Colours the editor's text (szText, szFileName's contents, or what it
+// has been edited to if bEdited) by what the parser found each part of it
+// to be.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEContent::HighlightFile(const char* szFileName, const char* szText, size uiProject)
+void CIDEContent::HighlightFile(const char* szFileName, const char* szText, size uiProject, bool bEdited)
 {
 	CArrayHighlights	acHighlights;
 	CArrayInt			aiLineStarts;
@@ -374,7 +478,7 @@ void CIDEContent::HighlightFile(const char* szFileName, const char* szText, size
 
 	acHighlights.Init();
 	szErrors.Init();
-	if (mcCodeModel.Highlight(uiProject, szFileName, &acHighlights, &szErrors))
+	if (mcCodeModel.Highlight(uiProject, szFileName, bEdited ? szText : NULL, &acHighlights, &szErrors))
 	{
 		aiLineStarts.Init();
 		aiLineStarts.Add(0);
@@ -424,7 +528,418 @@ void CIDEContent::ExplorerActivated(void)
 }
 
 
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::CodeCommandAction(SComponentInputEvent* psEvent)
+{
+	if (psEvent->eCommand == CIC_GoToDefinition)
+	{
+		GoToDefinition();
+	}
+	else if (psEvent->eCommand == CIC_FindReferences)
+	{
+		FindReferences();
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Opens where what is named at the caret is defined (or declared, if no
+// file indexed so far defines it) with the caret on its name.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEContent::GoToDefinition(void)
+{
+	int				iLine;
+	int				iColumn;
+	SIDELocation	sLocation;
+	bool			bResult;
+
+	if (!GetCaretPlace(&iLine, &iColumn))
+	{
+		return false;
+	}
+	if (!mcCodeModel.FindDefinition(mszFileName.Text(), iLine, iColumn, &sLocation))
+	{
+		ShowReferencesStatus("No definition found at the caret.");
+		return false;
+	}
+	bResult = OpenLocation(&sLocation);
+	sLocation.szFileName.Kill();
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Lists every place what is named at the caret is declared, defined and
+// used: "File.cpp(12): the line", under the symbol's name.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEContent::FindReferences(void)
+{
+	int		iLine;
+	int		iColumn;
+	CChars	szKey;
+	CChars	szTitle;
+	int32	iRoot;
+	size	i;
+	size	uiIndexed;
+	size	uiToIndex;
+
+	if (!GetCaretPlace(&iLine, &iColumn))
+	{
+		return false;
+	}
+
+	KillIDELocations(&masReferences);
+	masReferences.Init();
+	szKey.Init();
+	if (!mcCodeModel.FindReferences(mszFileName.Text(), iLine, iColumn, &masReferences, &szKey))
+	{
+		szKey.Kill();
+		ShowReferencesStatus("No references found at the caret.");
+		return false;
+	}
+
+	mcCodeModel.GetIndexingProgress(&uiIndexed, &uiToIndex);
+	szTitle.Init(szKey);
+	szTitle.Append(" - ");
+	szTitle.Append((uint32)masReferences.NumElements());
+	szTitle.Append((masReferences.NumElements() == 1) ? " reference" : " references");
+	if (uiIndexed < uiToIndex)
+	{
+		szTitle.Append(" (indexing, ");
+		szTitle.Append((uint32)uiIndexed);
+		szTitle.Append(" of ");
+		szTitle.Append((uint32)uiToIndex);
+		szTitle.Append(" files)");
+	}
+	mpReferences->RemoveAllNodes();
+	iRoot = mpReferences->AddNode(TREE_NO_NODE, szTitle.Text(), NULL, 0);
+	for (i = 0; i < masReferences.NumElements(); i++)
+	{
+		AddReference(iRoot, masReferences.Get(i), i);
+	}
+	mpReferences->SetExpanded(iRoot, true);
+	szTitle.Kill();
+	szKey.Kill();
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// File.cpp(12): the line, trimmed.  Declarations and definitions say so
+// and a call to one of several overloads says it might be this one.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::AddReference(int32 iParent, SIDELocation* psLocation, size uiIndex)
+{
+	CFileUtil	cFileUtil;
+	CTextFile	cFile;
+	CChars		szText;
+	CChars		szLine;
+	CChars		szName;
+	char*		szPosition;
+	char*		szEnd;
+	int			iLine;
+
+	szName.Init();
+	cFileUtil.GetFileName(&szName, psLocation->szFileName.Text());
+	szText.Init(szName);
+	szText.Append('(');
+	szText.Append(psLocation->iLine + 1);
+	szText.Append("): ");
+
+	cFile.Init();
+	if (cFile.Read(psLocation->szFileName.Text()))
+	{
+		szPosition = cFile.Text();
+		for (iLine = 0; (iLine < psLocation->iLine) && szPosition; iLine++)
+		{
+			szPosition = strchr(szPosition, '\n');
+			szPosition = szPosition ? szPosition + 1 : NULL;
+		}
+		if (szPosition)
+		{
+			szEnd = strchr(szPosition, '\n');
+			szLine.Init();
+			szLine.AppendSubString(szPosition, szEnd ? szEnd : szPosition + strlen(szPosition));
+			szLine.StripWhitespace(true);
+			szLine.Replace('\t', ' ');
+			szText.Append(szLine);
+			szLine.Kill();
+		}
+	}
+	cFile.Kill();
+
+	if (psLocation->uiRole == CPPIR_Definition)
+	{
+		szText.Append("  [definition]");
+	}
+	else if (psLocation->uiRole == CPPIR_Declaration)
+	{
+		szText.Append("  [declaration]");
+	}
+	if (psLocation->uiFlags & CPPIF_AMBIGUOUS)
+	{
+		szText.Append("  [one of the overloads]");
+	}
+	mpReferences->AddNode(iParent, szText.Text(), NULL, (int64)uiIndex + 1);
+	szText.Kill();
+	szName.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::ShowReferencesStatus(const char* szText)
+{
+	mpReferences->RemoveAllNodes();
+	mpReferences->AddNode(TREE_NO_NODE, szText, NULL, 0);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A reference opened in the list is shown in the editor.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::ReferenceActivated(void)
+{
+	int64	iData;
+
+	if (mpReferences->GetSelectedNode() == TREE_NO_NODE)
+	{
+		return;
+	}
+	iData = mpReferences->GetNodeData(mpReferences->GetSelectedNode());
+	if ((iData > 0) && ((size)iData <= masReferences.NumElements()))
+	{
+		OpenLocation(masReferences.Get((size)iData - 1));
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The file the location is in, with the caret on it.  A file that isn't
+// one of the solution's projects' items is highlighted as part of the
+// project of the file it was found from.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEContent::OpenLocation(SIDELocation* psLocation)
+{
+	size	uiProject;
+
+	if (!mszFileName.Equals(psLocation->szFileName.Text()))
+	{
+		uiProject = mcCodeModel.FindProjectOfFile(psLocation->szFileName.Text());
+		if (uiProject == MAX_SIZE)
+		{
+			uiProject = muiProject;
+		}
+		if (!OpenFile(psLocation->szFileName.Text(), uiProject))
+		{
+			return false;
+		}
+	}
+	if (!SetCaretPlace(psLocation->iLine, psLocation->iColumn))
+	{
+		return false;
+	}
+	mpWindow->GetFocus()->SetFocus(mpEditor);
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The caret's line and column (0 based, the column in bytes) in the
+// editor's text.  False if no file is open.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEContent::GetCaretPlace(int* piLine, int* piColumn)
+{
+	char*	szText;
+	size	uiCaret;
+	size	i;
+	size	uiLineStart;
+	int		iLine;
+
+	if (mszFileName.Empty())
+	{
+		return false;
+	}
+	szText = mpEditor->GetText();
+	uiCaret = mpEditor->GetCaretPosition();
+	iLine = 0;
+	uiLineStart = 0;
+	for (i = 0; (i < uiCaret) && (szText[i] != '\0'); i++)
+	{
+		if (szText[i] == '\n')
+		{
+			iLine++;
+			uiLineStart = i + 1;
+		}
+	}
+	*piLine = iLine;
+	*piColumn = (int)(uiCaret - uiLineStart);
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Puts the caret at a line and column (0 based, the column in bytes)
+// and scrolls the editor to show it.  False if the file hasn't that line.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEContent::SetCaretPlace(int iLine, int iColumn)
+{
+	char*		szText;
+	size		i;
+	int			iAtLine;
+	CInt32Rect	cCaret;
+	int32		iView;
+	int32		x;
+	int32		y;
+
+	szText = mpEditor->GetText();
+	iAtLine = 0;
+	for (i = 0; (iAtLine < iLine) && (szText[i] != '\0'); i++)
+	{
+		if (szText[i] == '\n')
+		{
+			iAtLine++;
+		}
+	}
+	if (iAtLine != iLine)
+	{
+		return false;
+	}
+
+	//Laid out so the caret has a place: its line a few lines from the top, and the text only scrolled sideways if the
+	//caret is past the right of the view (a window not shown yet has no width).
+	mpWindow->Layout();
+	mpEditor->SetCaretPosition(i + (size)iColumn);
+	mpWindow->Layout();
+	mpEditor->GetCaretBounds(&cCaret);
+	iView = mpEditorPane->GetActualSize().x;
+	x = ((iView <= 0) || (cCaret.GetRight() < iView)) ? 0 : cCaret.GetRight() - iView / 2;
+	y = cCaret.GetTop() - IDE_CARET_LINES_ABOVE * cCaret.GetHeight();
+	mpEditorPane->SetScrollPosition((x > 0) ? x : 0, (y > 0) ? y : 0);
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The configuration chosen in the toolbar.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::ConfigurationChosen(void)
+{
+	char*	szConfiguration;
+
+	szConfiguration = mpConfigurations->GetSelectedText();
+	if (szConfiguration && (StringCompare(szConfiguration, mcCodeModel.GetConfiguration()) != 0))
+	{
+		SetConfiguration(szConfiguration);
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The code is parsed as the solution configuration builds it: the
+// solution is indexed again and the open file is highlighted again.
+// False if the solution hasn't the configuration.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEContent::SetConfiguration(const char* szConfiguration)
+{
+	size	i;
+	CChars	szText;
+
+	for (i = 0; i < mcSolution.NumConfigurations(); i++)
+	{
+		if (StringCompare(mcSolution.GetConfiguration(i), szConfiguration) == 0)
+		{
+			break;
+		}
+	}
+	if (i == mcSolution.NumConfigurations())
+	{
+		return false;
+	}
+	if ((int32)i != mpConfigurations->GetSelected())
+	{
+		mpConfigurations->Select((int32)i);
+	}
+
+	mcCodeModel.SetConfiguration(szConfiguration);
+	mcCodeModel.StartIndexing();
+	if (!mszFileName.Empty() && (muiProject != SOLUTION_EXPLORER_NO_PROJECT))
+	{
+		szText.Init(mpEditor->GetText());
+		mpEditor->ClearSpans();
+		HighlightFile(mszFileName.Text(), szText.Text(), muiProject, mbEdited);
+		szText.Kill();
+	}
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Each window tick: once the editor's text has been left alone for a
+// moment after an edit it is highlighted again, from the editor's text.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::Tick(Ptr<CWindow> pWindow)
+{
+	size	uiChanges;
+	CChars	szText;
+	int64	iNow;
+
+	//The platform's clock: the window's total time only counts the time it spent updating.
+	iNow = GetDebugTickCount();
+	uiChanges = mpEditor->GetChangeCount();
+	if (uiChanges != muiSeenChanges)
+	{
+		muiSeenChanges = uiChanges;
+		miChangedTime = iNow;
+		mbRecolour = true;
+		mbEdited = true;
+	}
+	if (!mbRecolour || mszFileName.Empty() || (muiProject == SOLUTION_EXPLORER_NO_PROJECT))
+	{
+		return;
+	}
+
+	if (iNow - miChangedTime < IDE_RECOLOUR_DELAY)
+	{
+		pWindow->RequestTick((uint32)(IDE_RECOLOUR_DELAY - (iNow - miChangedTime)));
+		return;
+	}
+	mbRecolour = false;
+	szText.Init(mpEditor->GetText());
+	mpEditor->ClearSpans();
+	HighlightFile(mszFileName.Text(), szText.Text(), muiProject, true);
+	szText.Kill();
+}
+
+
 Ptr<CTextArea> CIDEContent::GetEditor(void) { return mpEditor; }
 Ptr<CScrollPane> CIDEContent::GetEditorPane(void) { return mpEditorPane; }
+Ptr<CTreeContainer> CIDEContent::GetReferences(void) { return mpReferences; }
+CIDECodeModel* CIDEContent::GetCodeModel(void) { return &mcCodeModel; }
 CSolutionExplorer* CIDEContent::GetExplorer(void) { return &mpExplorer; }
 

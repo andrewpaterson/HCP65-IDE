@@ -49,6 +49,7 @@ void CIDEWindowTick::Class(void)
 	CWindowTick::Class();
 	U_String(mszSnapshot);
 	U_Int32(miSnapshotTicks);
+	M_Pointer(mpContent);
 }
 
 
@@ -80,6 +81,10 @@ void CIDEWindowTick::SetSnapshot(const char* szFilename, int iTicks)
 //////////////////////////////////////////////////////////////////////////
 void CIDEWindowTick::Tick(Ptr<CWindow> pWindow, int64 iUpdateTimeInMillieconds, int64 iTotalTimeInMillieconds)
 {
+	if (mpContent.IsNotNull())
+	{
+		mpContent->Tick(pWindow);
+	}
 	if (miSnapshotTicks >= 0)
 	{
 		if (miSnapshotTicks == 0)
@@ -97,3 +102,14 @@ void CIDEWindowTick::Tick(Ptr<CWindow> pWindow, int64 iUpdateTimeInMillieconds, 
 	}
 }
 
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The content is ticked with the window.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEWindowTick::SetContent(Ptr<CIDEContent> pContent)
+{
+	mpContent = pContent;
+}

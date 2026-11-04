@@ -22,22 +22,26 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define __IDE_WINDOW_TICK_H__
 #include "BaseLib/Chars.h"
 #include "WindowLib/WindowTick.h"
+#include "IDEContent.h"
 
 
-//The IDE's window tick.  With a snapshot set it saves the window as a PNG after that many ticks and closes it.
+//The IDE's window tick: the content's (so it can colour edited text again), and with a snapshot set it saves the
+//window as a PNG after that many ticks and closes it.
 class CIDEWindowTick : public CWindowTick
 {
 CONSTRUCTABLE(CIDEWindowTick);
 DESTRUCTABLE(CIDEWindowTick);
 protected:
-	CChars	mszSnapshot;
-	int		miSnapshotTicks;
+	CChars				mszSnapshot;
+	int					miSnapshotTicks;
+	Ptr<CIDEContent>	mpContent;
 
 public:
 	void	Init(void);
 	void	Class(void) override;
 	void	Free(void) override;
 	void	SetSnapshot(const char* szFilename, int iTicks);
+	void	SetContent(Ptr<CIDEContent> pContent);
 	void	Tick(Ptr<CWindow> pWindow, int64 iUpdateTimeInMillieconds, int64 iTotalTimeInMillieconds) override;
 };
 
