@@ -12,5 +12,8 @@
     <ClCompile Include="TestBuildConfigurations.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="TestBuild.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

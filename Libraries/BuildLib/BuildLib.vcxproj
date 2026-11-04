@@ -21,10 +21,22 @@
   <ItemGroup>
     <ClCompile Include="BuildConfiguration.cpp" />
     <ClCompile Include="BuildConfigurations.cpp" />
+    <ClCompile Include="Build.cpp" />
+    <ClCompile Include="CommandBuild.cpp" />
+    <ClCompile Include="MSVCBuild.cpp" />
+    <ClCompile Include="GCCBuild.cpp" />
+    <ClCompile Include="HCP65Build.cpp" />
+    <ClCompile Include="SolutionBuild.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BuildConfiguration.h" />
     <ClInclude Include="BuildConfigurations.h" />
+    <ClInclude Include="Build.h" />
+    <ClInclude Include="CommandBuild.h" />
+    <ClInclude Include="MSVCBuild.h" />
+    <ClInclude Include="GCCBuild.h" />
+    <ClInclude Include="HCP65Build.h" />
+    <ClInclude Include="SolutionBuild.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{6B2E1C9A-4D3F-4E5B-9A21-7C8D0E4F1A63}</ProjectGuid>

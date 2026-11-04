@@ -7,6 +7,9 @@
     <Filter Include="Source\Configuration">
       <UniqueIdentifier>{8E1F4B6D-2A9C-4D73-B5E0-1C7A3F9D2B64}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Build">
+      <UniqueIdentifier>{C4A2E6F8-1B3D-4F57-9E0A-6D8B2C4E1F39}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="BuildConfiguration.cpp">
@@ -15,6 +18,24 @@
     <ClCompile Include="BuildConfigurations.cpp">
       <Filter>Source\Configuration</Filter>
     </ClCompile>
+    <ClCompile Include="Build.cpp">
+      <Filter>Source\Build</Filter>
+    </ClCompile>
+    <ClCompile Include="CommandBuild.cpp">
+      <Filter>Source\Build</Filter>
+    </ClCompile>
+    <ClCompile Include="MSVCBuild.cpp">
+      <Filter>Source\Build</Filter>
+    </ClCompile>
+    <ClCompile Include="GCCBuild.cpp">
+      <Filter>Source\Build</Filter>
+    </ClCompile>
+    <ClCompile Include="HCP65Build.cpp">
+      <Filter>Source\Build</Filter>
+    </ClCompile>
+    <ClCompile Include="SolutionBuild.cpp">
+      <Filter>Source\Build</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BuildConfiguration.h">
@@ -22,6 +43,24 @@
     </ClInclude>
     <ClInclude Include="BuildConfigurations.h">
       <Filter>Source\Configuration</Filter>
+    </ClInclude>
+    <ClInclude Include="Build.h">
+      <Filter>Source\Build</Filter>
+    </ClInclude>
+    <ClInclude Include="CommandBuild.h">
+      <Filter>Source\Build</Filter>
+    </ClInclude>
+    <ClInclude Include="MSVCBuild.h">
+      <Filter>Source\Build</Filter>
+    </ClInclude>
+    <ClInclude Include="GCCBuild.h">
+      <Filter>Source\Build</Filter>
+    </ClInclude>
+    <ClInclude Include="HCP65Build.h">
+      <Filter>Source\Build</Filter>
+    </ClInclude>
+    <ClInclude Include="SolutionBuild.h">
+      <Filter>Source\Build</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -223,6 +223,7 @@
   <ItemGroup>
     <ClCompile Include="TestBuildLib.cpp" />
     <ClCompile Include="TestBuildConfigurations.cpp" />
+    <ClCompile Include="TestBuild.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\CommonLibraries\Libraries\BaseLib\BaseLib.vcxproj">
@@ -230,6 +231,21 @@
     </ProjectReference>
     <ProjectReference Include="..\..\..\..\CommonLibraries\Libraries\TestLib\TestLib.vcxproj">
       <Project>{d06d265e-a503-42f8-a93a-a0a1c0b058ff}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\..\CommonLibraries\Libraries\StandardLib\StandardLib.vcxproj">
+      <Project>{2cfa23fa-6565-4744-8b75-9790b21cc0e5}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\..\CommonLibraries\Libraries\ThreadLib\ThreadLib.vcxproj">
+      <Project>{7269d64f-994a-4233-9add-bad415a07b64}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\..\CommonLibraries\Libraries\MicroprocessorLib\MicroprocessorLib.vcxproj">
+      <Project>{0bf6f66e-80b2-44cf-897c-0f305aaf6af0}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\..\CommonLibraries\Libraries\CppParserLib\CppParserLib.vcxproj">
+      <Project>{4d010c1e-4dce-4271-9b1c-87bbf0bc761c}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\..\HCP65\Libraries\Assembler65Lib\Assembler65Lib.vcxproj">
+      <Project>{785fc14c-ccfc-45f8-bf51-2fd3049cea4a}</Project>
     </ProjectReference>
     <ProjectReference Include="..\..\..\Libraries\BuildLib\BuildLib.vcxproj">
       <Project>{6b2e1c9a-4d3f-4e5b-9a21-7c8d0e4f1a63}</Project>

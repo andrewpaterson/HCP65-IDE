@@ -6,6 +6,7 @@
 
 
 void TestBuildConfigurations(void);
+void TestBuild(void);
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -23,6 +24,7 @@ int __cdecl main(void)
 	MemoryInit();
 
 	TestBuildConfigurations();
+	TestBuild();
 
 	MemoryKill();
 	TypeConverterKill();
