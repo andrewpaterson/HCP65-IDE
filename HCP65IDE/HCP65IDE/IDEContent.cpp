@@ -191,6 +191,7 @@ void CIDEContent::Class(void)
 	M_Pointer(mpTheme);
 	M_Pointer(mpCodeFamily);
 	M_Pointer(mpEditor);
+	M_Pointer(mpEditorPane);
 	M_Pointer(mpExplorer);
 	U_Unknown(CSolutionExplorerListener, mcExplorerListener);
 	U_Unknown(CVcxSolution, mcSolution);
@@ -245,7 +246,6 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	Ptr<CGridContainer>	pMain;
 	Ptr<CGridContainer>	pExplorerPanel;
 	Ptr<CLabel>			pExplorerTitle;
-	Ptr<CScrollPane>	pEditorPane;
 
 	mpWindow = pWindow;
 
@@ -279,13 +279,13 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpEditor->SetTiledText(true);
 	mpEditor->SetColour(JEWEL_TEXT);
 	mpEditor->SetAlignment(CSH_Left, CSV_Top);
-	pEditorPane = OMalloc<CScrollPane>(pWindow, mpTheme);
-	pEditorPane->SetContent(mpEditor);
-	pEditorPane->SetAlignment(CSH_Stretch, CSV_Stretch);
+	mpEditorPane = OMalloc<CScrollPane>(pWindow, mpTheme);
+	mpEditorPane->SetContent(mpEditor);
+	mpEditorPane->SetAlignment(CSH_Stretch, CSV_Stretch);
 
 	pMain = OMalloc<CGridContainer>(pWindow);
 	pMain->AddComponent(pExplorerPanel, 0, 0, 1, 1, 0, 1);
-	pMain->AddComponent(pEditorPane, 1, 0, 1, 1, 1, 1);
+	pMain->AddComponent(mpEditorPane, 1, 0, 1, 1, 1, 1);
 	pWindow->SetContainer(pMain);
 	return true;
 }
@@ -425,5 +425,6 @@ void CIDEContent::ExplorerActivated(void)
 
 
 Ptr<CTextArea> CIDEContent::GetEditor(void) { return mpEditor; }
+Ptr<CScrollPane> CIDEContent::GetEditorPane(void) { return mpEditorPane; }
 CSolutionExplorer* CIDEContent::GetExplorer(void) { return &mpExplorer; }
 

@@ -25,6 +25,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/Window.h"
 #include "WindowLib/WindowTheme.h"
 #include "WindowLib/TextArea.h"
+#include "WindowLib/ScrollPane.h"
 #include "WindowLib/ListListener.h"
 #include "VisualStudioLib/VcxSolution.h"
 #include "IDECodeModel.h"
@@ -60,6 +61,7 @@ protected:
 	Ptr<CWindowTheme>			mpTheme;
 	Ptr<CFontFamily>			mpCodeFamily;
 	Ptr<CTextArea>				mpEditor;
+	Ptr<CScrollPane>			mpEditorPane;
 	Ptr<CSolutionExplorer>		mpExplorer;
 	CSolutionExplorerListener	mcExplorerListener;
 	CVcxSolution				mcSolution;
@@ -81,6 +83,7 @@ public:
 	void			ExplorerActivated(void);
 
 	Ptr<CTextArea>		GetEditor(void);
+	Ptr<CScrollPane>	GetEditorPane(void);
 	CSolutionExplorer*	GetExplorer(void);
 
 protected:
