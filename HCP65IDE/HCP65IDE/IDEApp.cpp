@@ -23,6 +23,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/ClearCanvasDraw.h"
 #include "WindowLib/JewelColours.h"
 #include <stdio.h>
+#include "BaseLib/ArrayChars.h"
 #include "IDEWindowTick.h"
 #include "IDEApp.h"
 
@@ -48,10 +49,11 @@ void CIDEApp::Init(void)
 // described by the XML in szInputDirectory; pcNativeInput (the platform's
 // keyboard and mouse) is added to them.  Run fails if anything here did.
 // HCP65_IDE_SNAPSHOT, HCP65_IDE_CONFIGURATION, HCP65_IDE_EXPAND,
-// HCP65_IDE_OPEN, HCP65_IDE_SCROLL,
+// HCP65_IDE_OPEN, HCP65_IDE_CLOSE, HCP65_IDE_SCROLL,
 // HCP65_IDE_WAIT_INDEX, HCP65_IDE_CARET=line:column (1 based), HCP65_IDE_TYPE,
 // HCP65_IDE_REFERENCES and HCP65_IDE_DEFINITION are for checking it: a
-// snapshot of the window, every folder expanded, a file opened, the
+// snapshot of the window, every folder expanded, files opened (a comma
+// separated list, each in a tab), the
 // editor scrolled down that many pixels, the indexing finished, the caret
 // put somewhere, HCP65_IDE_TYPE's text typed there, then Find All
 // References and Go to Definition.
@@ -67,6 +69,9 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 	int					iLine;
 	int					iColumn;
 	const char*			szTyped;
+	CArrayChars			aszOpen;
+	CChars				szPath;
+	size				i;
 
 	pTick = OMalloc<CIDEWindowTick>();
 	if (getenv("HCP65_IDE_SNAPSHOT") != NULL)
@@ -98,18 +103,42 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 			}
 			if (getenv("HCP65_IDE_OPEN") != NULL)
 			{
-				iNode = mpContent->GetExplorer()->FindFileNode(getenv("HCP65_IDE_OPEN"));
-				if (iNode != TREE_NO_NODE)
+				//Each of a comma separated list, in its own tab; the last stays selected.
+				aszOpen.Init();
+				aszOpen.Split(getenv("HCP65_IDE_OPEN"), ',');
+				for (i = 0; i < aszOpen.NumElements(); i++)
 				{
-					mpContent->GetExplorer()->GetTree()->SelectNode(iNode);
-					mpContent->ExplorerActivated();
+					iNode = mpContent->GetExplorer()->FindFileNode(aszOpen.GetText(i));
+					if (iNode != TREE_NO_NODE)
+					{
+						mpContent->GetExplorer()->GetTree()->SelectNode(iNode);
+						mpContent->ExplorerActivated();
+					}
 				}
+				aszOpen.Kill();
+			}
+			if (getenv("HCP65_IDE_CLOSE") != NULL)
+			{
+				//Each of a comma separated list of open files' names is closed, as its tab's cross does.
+				aszOpen.Init();
+				aszOpen.Split(getenv("HCP65_IDE_CLOSE"), ',');
+				for (i = 0; i < aszOpen.NumElements(); i++)
+				{
+					iNode = mpContent->GetExplorer()->FindFileNode(aszOpen.GetText(i));
+					szPath.Init();
+					if ((iNode != TREE_NO_NODE) && mpContent->GetExplorer()->GetNodeFilePath(iNode, &szPath))
+					{
+						mpContent->CloseFile(szPath.Text());
+					}
+					szPath.Kill();
+				}
+				aszOpen.Kill();
 			}
 			if ((getenv("HCP65_IDE_CARET") != NULL) && (sscanf(getenv("HCP65_IDE_CARET"), "%d:%d", &iLine, &iColumn) == 2))
 			{
 				mpContent->SetCaretPlace(iLine - 1, iColumn - 1);
 			}
-			if (getenv("HCP65_IDE_TYPE") != NULL)
+			if ((getenv("HCP65_IDE_TYPE") != NULL) && mpContent->GetEditor().IsNotNull())
 			{
 				mpWindow->GetFocus()->SetFocus(mpContent->GetEditor());
 				for (szTyped = getenv("HCP65_IDE_TYPE"); *szTyped != '\0'; szTyped++)
@@ -125,7 +154,7 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 			{
 				mpContent->GoToDefinition();
 			}
-			if (getenv("HCP65_IDE_SCROLL") != NULL)
+			if ((getenv("HCP65_IDE_SCROLL") != NULL) && mpContent->GetEditorPane().IsNotNull())
 			{
 				mpContent->GetEditorPane()->SetScrollPosition(0, atoi(getenv("HCP65_IDE_SCROLL")));
 			}
