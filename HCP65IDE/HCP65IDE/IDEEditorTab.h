@@ -26,20 +26,22 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/Window.h"
 #include "WindowLib/WindowTheme.h"
 #include "WindowLib/TextArea.h"
+#include "WindowLib/CodeEditor.h"
 #include "WindowLib/ScrollPane.h"
 #include "WindowLib/TabComponent.h"
 #include "CppParserLib/CPPHighlighter.h"
 
 
-//A file open in the editor's tabs: its text in a fixed width font, scrolled in its page, with what is known of it for
-//highlighting it again as it is edited.
+//A file open in the editor's tabs: its text in a fixed width font with line numbers, scrolled in its page, with what
+//is known of it for highlighting it again as it is edited.
 class CIDEEditorTab : public CObject
 {
 CONSTRUCTABLE(CIDEEditorTab);
 DESTRUCTABLE(CIDEEditorTab);
 protected:
 	Ptr<CWindow>		mpWindow;
-	Ptr<CTextArea>		mpEditor;
+	Ptr<CCodeEditor>	mpCodeEditor;
+	Ptr<CTextArea>		mpEditor;		//The code editor's text area.
 	Ptr<CScrollPane>	mpPane;			//The tab's page.
 	Ptr<CTabComponent>	mpTab;
 	CChars				mszFileName;
@@ -64,6 +66,7 @@ public:
 	bool				NeedsRecolour(int64 iNow, int64* piWait);
 
 	Ptr<CTextArea>		GetEditor(void);
+	Ptr<CCodeEditor>	GetCodeEditor(void);
 	Ptr<CScrollPane>	GetPane(void);
 	Ptr<CTabComponent>	GetTab(void);
 	char*				GetFileName(void);

@@ -30,7 +30,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The file's text (szText, already read) in an editor of tiles.
+// The file's text (szText, already read) in a code editor of tiles.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEEditorTab::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CFontFamily> pFamily, ARGB32 sColour, const char* szFileName, size uiProject, const char* szText)
@@ -38,12 +38,13 @@ void CIDEEditorTab::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CFo
 	PreInit();
 
 	mpWindow = pWindow;
-	mpEditor = OMalloc<CTextArea>(pWindow, pFamily, szText);
+	mpCodeEditor = OMalloc<CCodeEditor>(pWindow, pFamily, szText);
+	mpCodeEditor->SetAlignment(CSH_Left, CSV_Top);
+	mpEditor = mpCodeEditor->GetTextArea();
 	mpEditor->SetTiledText(true);
 	mpEditor->SetColour(sColour);
-	mpEditor->SetAlignment(CSH_Left, CSV_Top);
 	mpPane = OMalloc<CScrollPane>(pWindow, pTheme);
-	mpPane->SetContent(mpEditor);
+	mpPane->SetContent(mpCodeEditor);
 	mpPane->SetAlignment(CSH_Stretch, CSV_Stretch);
 	mszFileName.Init(szFileName);
 	muiProject = uiProject;
@@ -63,6 +64,7 @@ void CIDEEditorTab::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CFo
 void CIDEEditorTab::Class(void)
 {
 	M_Pointer(mpWindow);
+	M_Pointer(mpCodeEditor);
 	M_Pointer(mpEditor);
 	M_Pointer(mpPane);
 	M_Pointer(mpTab);
@@ -115,39 +117,24 @@ bool CIDEEditorTab::Load(CObjectReader* pcFile)
 //////////////////////////////////////////////////////////////////////////
 void CIDEEditorTab::SetHighlights(CArrayHighlights* pacHighlights)
 {
-	CArrayInt		aiLineStarts;
 	SCPPHighlight*	psHighlight;
 	size			i;
 	size			uiStart;
-	const char*		szText;
-	const char*		szPosition;
 	int				iPass;
 
 	mpEditor->ClearSpans();
-	szText = mpEditor->GetText();
-	aiLineStarts.Init();
-	aiLineStarts.Add(0);
-	for (szPosition = szText; *szPosition != '\0'; szPosition++)
-	{
-		if (*szPosition == '\n')
-		{
-			aiLineStarts.Add((int)(szPosition - szText + 1));
-		}
-	}
-
 	for (iPass = 0; iPass < 2; iPass++)
 	{
 		for (i = 0; i < pacHighlights->NumElements(); i++)
 		{
 			psHighlight = pacHighlights->Get(i);
-			if (((psHighlight->uiKind == CPPH_Inactive) == (iPass == 1)) && (psHighlight->iLine >= 0) && ((size)psHighlight->iLine < aiLineStarts.NumElements()))
+			if (((psHighlight->uiKind == CPPH_Inactive) == (iPass == 1)) && (psHighlight->iLine >= 0) && ((size)psHighlight->iLine < mpEditor->NumLines()))
 			{
-				uiStart = (size)aiLineStarts.GetValue((size)psHighlight->iLine) + (size)psHighlight->iColumn;
+				uiStart = mpEditor->GetLineStart((size)psHighlight->iLine) + (size)psHighlight->iColumn;
 				mpEditor->AddSpan(uiStart, (size)psHighlight->iLength, GetHighlightColour((ECPPHighlight)psHighlight->uiKind));
 			}
 		}
 	}
-	aiLineStarts.Kill();
 }
 
 
@@ -158,26 +145,13 @@ void CIDEEditorTab::SetHighlights(CArrayHighlights* pacHighlights)
 //////////////////////////////////////////////////////////////////////////
 bool CIDEEditorTab::GetCaretPlace(int* piLine, int* piColumn)
 {
-	char*	szText;
 	size	uiCaret;
-	size	i;
-	size	uiLineStart;
-	int		iLine;
+	size	uiLine;
 
-	szText = mpEditor->GetText();
 	uiCaret = mpEditor->GetCaretPosition();
-	iLine = 0;
-	uiLineStart = 0;
-	for (i = 0; (i < uiCaret) && (szText[i] != '\0'); i++)
-	{
-		if (szText[i] == '\n')
-		{
-			iLine++;
-			uiLineStart = i + 1;
-		}
-	}
-	*piLine = iLine;
-	*piColumn = (int)(uiCaret - uiLineStart);
+	uiLine = mpEditor->FindLine(uiCaret);
+	*piLine = (int)uiLine;
+	*piColumn = (int)(uiCaret - mpEditor->GetLineStart(uiLine));
 	return true;
 }
 
@@ -190,36 +164,26 @@ bool CIDEEditorTab::GetCaretPlace(int* piLine, int* piColumn)
 //////////////////////////////////////////////////////////////////////////
 bool CIDEEditorTab::SetCaretPlace(int iLine, int iColumn)
 {
-	char*		szText;
-	size		i;
-	int			iAtLine;
 	CInt32Rect	cCaret;
 	int32		iView;
+	int32		iRight;
 	int32		x;
 	int32		y;
 
-	szText = mpEditor->GetText();
-	iAtLine = 0;
-	for (i = 0; (iAtLine < iLine) && (szText[i] != '\0'); i++)
-	{
-		if (szText[i] == '\n')
-		{
-			iAtLine++;
-		}
-	}
-	if (iAtLine != iLine)
+	if ((iLine < 0) || ((size)iLine >= mpEditor->NumLines()))
 	{
 		return false;
 	}
 
 	//Laid out so the caret has a place: its line a few lines from the top, and the text only scrolled sideways if the
-	//caret is past the right of the view (a window not shown yet has no width).
+	//caret is past the right of the view (a window not shown yet has no width).  The code is right of the gutter.
 	mpWindow->Layout();
-	mpEditor->SetCaretPosition(i + (size)iColumn);
+	mpEditor->SetCaretPosition(mpEditor->GetLineStart((size)iLine) + (size)iColumn);
 	mpWindow->Layout();
 	mpEditor->GetCaretBounds(&cCaret);
 	iView = mpPane->GetActualSize().x;
-	x = ((iView <= 0) || (cCaret.GetRight() < iView)) ? 0 : cCaret.GetRight() - iView / 2;
+	iRight = mpCodeEditor->GetGutterWidth() + cCaret.GetRight();
+	x = ((iView <= 0) || (iRight < iView)) ? 0 : iRight - iView / 2;
 	y = cCaret.GetTop() - IDE_CARET_LINES_ABOVE * cCaret.GetHeight();
 	mpPane->SetScrollPosition((x > 0) ? x : 0, (y > 0) ? y : 0);
 	return true;
@@ -262,6 +226,7 @@ bool CIDEEditorTab::NeedsRecolour(int64 iNow, int64* piWait)
 
 void CIDEEditorTab::SetTab(Ptr<CTabComponent> pTab) { mpTab = pTab; }
 Ptr<CTextArea> CIDEEditorTab::GetEditor(void) { return mpEditor; }
+Ptr<CCodeEditor> CIDEEditorTab::GetCodeEditor(void) { return mpCodeEditor; }
 Ptr<CScrollPane> CIDEEditorTab::GetPane(void) { return mpPane; }
 Ptr<CTabComponent> CIDEEditorTab::GetTab(void) { return mpTab; }
 char* CIDEEditorTab::GetFileName(void) { return mszFileName.Text(); }
