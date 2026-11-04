@@ -161,6 +161,11 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 			{
 				mpContent->GetEditorPane()->SetScrollPosition(0, atoi(getenv("HCP65_IDE_SCROLL")));
 			}
+			if (getenv("HCP65_IDE_LISTING") != NULL)
+			{
+				//The code of the line (from 1) of the selected file is shown once it is built, as clicking its mark does.
+				mpContent->ShowListingAfterBuild((size)(atoi(getenv("HCP65_IDE_LISTING")) - 1));
+			}
 			if (getenv("HCP65_IDE_BUILD") != NULL)
 			{
 				//As Control+Shift+B: the chosen configuration is built, its output in the Build tab.

@@ -126,7 +126,8 @@ protected:
 	CIDEBuildListener			mcBuildListener;
 	CSolutionBuild				mcBuild;			//The build running, or the last.
 	CChars						mszLibc65;			//The HCP65 compiler's system headers.
-	CCPP65ListingIndex			mcListings;			//The last HCP65 build's listings.
+	CCPP65ListingIndex			mcListings;			//The last HCP65 build's listings, given to the open files.
+	size						muiListingToShow;	//The line to show the code of after the next build, MAX_SIZE for none.
 	Ptr<CTabbedContainer>		mpBottomTabs;		//Under the editor: Find All References and Build.
 	Ptr<CTabComponent>			mpReferencesTab;
 	Ptr<CTabComponent>			mpBuildTab;
@@ -175,6 +176,7 @@ public:
 	void				SetLibc65Directory(const char* szDirectory);
 	bool				Build(void);
 	bool				IsBuilding(void);
+	void				ShowListingAfterBuild(size uiLine);
 	CCPP65ListingIndex*	GetListings(void);
 
 protected:
@@ -188,6 +190,7 @@ protected:
 	void				ShowReferencesStatus(const char* szText);
 	void				PollBuild(Ptr<CWindow> pWindow);
 	void				ReadListings(CArrayChars* paszLines);
+	void				SetListings(bool bListings);
 };
 
 

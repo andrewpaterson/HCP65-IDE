@@ -119,6 +119,7 @@ set(IDE_SOURCES
 	"${IDE_DIR}/IDECodeModel.cpp"
 	"${IDE_DIR}/IDEContent.cpp"
 	"${IDE_DIR}/IDEEditorTab.cpp"
+	"${IDE_DIR}/IDEListingZone.cpp"
 	"${IDE_DIR}/IDEBuildPane.cpp"
 	"${IDE_DIR}/IDEIcons.cpp"
 	"${IDE_DIR}/IDEWindowTick.cpp"

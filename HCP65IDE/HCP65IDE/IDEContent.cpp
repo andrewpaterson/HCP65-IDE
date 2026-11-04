@@ -265,6 +265,7 @@ void CIDEContent::Init(void)
 	mcBuild.Init();
 	mszLibc65.Init();
 	mcListings.Init();
+	muiListingToShow = MAX_SIZE;
 	masReferences.Init();
 	maTabs.Init();
 	maFileIcons.Init();
@@ -301,6 +302,7 @@ void CIDEContent::Class(void)
 	U_Unknown(CSolutionBuild, mcBuild);
 	U_String(mszLibc65);
 	U_Unknown(CCPP65ListingIndex, mcListings);
+	U_Size(muiListingToShow);
 	M_Pointer(mpBottomTabs);
 	M_Pointer(mpReferencesTab);
 	M_Pointer(mpBuildTab);
@@ -471,8 +473,7 @@ bool CIDEContent::OpenSolution(const char* szFileName)
 	//A build of the solution being let go is stopped, and its listings forgotten.
 	mcBuild.Kill();
 	mcBuild.Init();
-	mcListings.Kill();
-	mcListings.Init();
+	SetListings(false);
 
 	mcCodeModel.Kill();
 	mcSolution.Kill();
@@ -550,10 +551,14 @@ bool CIDEContent::OpenFile(const char* szFileName, size uiProject)
 		cFile.Kill();
 		return gcLogger.Error2(__METHOD__, " Could not read [", szFileName, "].", NULL);
 	}
-	pTab = OMalloc<CIDEEditorTab>(mpWindow, mpTheme, mpCodeFamily, JEWEL_TEXT, szFileName, uiProject, cFile.Text());
+	pTab = OMalloc<CIDEEditorTab>(mpWindow, mpTheme, mpFontColours->GetFont(JEWEL_ICON), mpCodeFamily, JEWEL_TEXT, szFileName, uiProject, cFile.Text());
 	cFile.Kill();
 	maTabs.Add(pTab);
 	HighlightTab(pTab);
+	if (mcListings.NumListings() > 0)
+	{
+		pTab->SetListings(&mcListings);
+	}
 
 	szName.Init();
 	cFileUtil.GetFileName(&szName, (char*)szFileName);
@@ -906,7 +911,8 @@ void CIDEContent::PollBuild(Ptr<CWindow> pWindow)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The last build's listings, in place of those read before.
+// The last build's listings, in place of those read before, given to the
+// open files.  A line asked for (ShowListingAfterBuild) shows its code.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEContent::ReadListings(CArrayChars* paszLines)
@@ -917,8 +923,7 @@ void CIDEContent::ReadListings(CArrayChars* paszLines)
 	CArrayChars	aszFiles;
 	size		i;
 
-	mcListings.Kill();
-	mcListings.Init();
+	SetListings(false);
 	szDirectory.Init();
 	mcBuild.GetBuild()->GetListingDirectory(&szDirectory);
 	aszFiles.Init();
@@ -939,6 +944,47 @@ void CIDEContent::ReadListings(CArrayChars* paszLines)
 	szLine.Kill();
 	aszFiles.Kill();
 	szDirectory.Kill();
+
+	SetListings(true);
+	if ((muiListingToShow != MAX_SIZE) && mpActive.IsNotNull())
+	{
+		mpActive->ToggleListing(muiListingToShow);
+		muiListingToShow = MAX_SIZE;
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The open files are given the listings (bListings), or none and the
+// listings are forgotten.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::SetListings(bool bListings)
+{
+	size	i;
+
+	if (!bListings)
+	{
+		mcListings.Kill();
+		mcListings.Init();
+	}
+	for (i = 0; i < maTabs.Size(); i++)
+	{
+		maTabs.Get(i)->SetListings(bListings ? &mcListings : NULL);
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// When the next HCP65 build has succeeded, line uiLine (from 0) of the
+// selected file shows its code, as clicking its mark does.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::ShowListingAfterBuild(size uiLine)
+{
+	muiListingToShow = uiLine;
 }
 
 
