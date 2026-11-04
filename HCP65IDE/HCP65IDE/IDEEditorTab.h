@@ -29,45 +29,21 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/CodeEditor.h"
 #include "WindowLib/ScrollPane.h"
 #include "WindowLib/TabComponent.h"
-#include "WindowLib/CodeEditorListener.h"
+#include "WindowLib/LineZones.h"
 #include "CppParserLib/CPPHighlighter.h"
 #include "CppParserLib/CPP65ListingIndex.h"
-#include "IDEListingZone.h"
-
-
-#define IDE_LISTING_MARK		'+'		//In the gutter: the line has code in the listings.
-#define IDE_LISTING_OPEN_MARK	'-'		//And its code is shown under it.
-
-
-class CIDEEditorTab;
-
-
-//Hears the gutter being clicked next to a line.
-class CIDEGutterListener : public CCodeEditorListener
-{
-CONSTRUCTABLE(CIDEGutterListener);
-public:
-	CIDEEditorTab*	mpcTab;
-
-	void	Init(CIDEEditorTab* pcTab);
-	void	GutterClicked(CUnknown* pcSource, void* pvContext) override;
-};
+#include "IDEListingSource.h"
 
 
 //A file open in the editor's tabs: its text in a fixed width font with line numbers, scrolled in its page, with what
-//is known of it for highlighting it again as it is edited.  Given an HCP65 build's listings (SetListings), each line
-//with code is marked in the gutter; clicking a mark shows the line's code under it (a CIDEListingZone), clicking again
-//hides it.  Editing the file puts the listings out of date until they are given again: the marks go and the zones are
-//greyed.
+//is known of it for highlighting it again as it is edited.  Given an HCP65 build's listings (SetListings), the lines'
+//code is shown under them as CLineZones do: clicking a line's mark in the gutter shows its code.
 class CIDEEditorTab : public CObject
 {
 CONSTRUCTABLE(CIDEEditorTab);
 DESTRUCTABLE(CIDEEditorTab);
 protected:
 	Ptr<CWindow>		mpWindow;
-	Ptr<CWindowTheme>	mpTheme;
-	Ptr<CFont>			mpTitleFont;	//The zones' headers'.
-	Ptr<CFontFamily>	mpFamily;
 	Ptr<CCodeEditor>	mpCodeEditor;
 	Ptr<CTextArea>		mpEditor;		//The code editor's text area.
 	Ptr<CScrollPane>	mpPane;			//The tab's page.
@@ -78,10 +54,8 @@ protected:
 	int64				miChangedTime;	//When the text last changed (GetDebugTickCount).
 	bool				mbRecolour;		//The text changed and hasn't been highlighted since.
 	bool				mbEdited;		//The text was changed since the file was opened.
-	CIDEGutterListener	mcGutterListener;
-	CCPP65ListingIndex*	mpcListings;	//The listings given, NULL for none; the content keeps them.
-	bool				mbListingsOutOfDate;	//The text changed since they were given.
-	CArray<CIDEListingZone>	maZones;	//Shown under their lines.
+	Ptr<CLineZones>		mpZones;		//The lines' code, from mcListings.
+	CIDEListingSource	mcListings;
 
 public:
 	void				Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CFont> pTitleFont, Ptr<CFontFamily> pFamily, ARGB32 sColour, const char* szFileName, size uiProject, const char* szText);
@@ -99,10 +73,7 @@ public:
 
 	void				SetListings(CCPP65ListingIndex* pcListings);
 	bool				ToggleListing(size uiLine);
-	size				NumZones(void);
-	Ptr<CIDEListingZone>	GetZone(size uiIndex);
-	Ptr<CIDEListingZone>	FindZone(size uiLine);
-	bool				IsListingsOutOfDate(void);
+	Ptr<CLineZones>		GetZones(void);
 
 	Ptr<CTextArea>		GetEditor(void);
 	Ptr<CCodeEditor>	GetCodeEditor(void);
@@ -111,11 +82,6 @@ public:
 	char*				GetFileName(void);
 	size				GetProject(void);
 	bool				IsEdited(void);
-
-protected:
-	void				ListingsOutOfDate(void);
-	void				RemoveZone(Ptr<CIDEListingZone> pZone);
-	void				MarkLine(size uiLine);
 };
 
 

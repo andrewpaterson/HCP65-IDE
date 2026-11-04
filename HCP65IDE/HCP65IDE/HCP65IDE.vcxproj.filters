@@ -21,7 +21,7 @@
     <ClCompile Include="IDEEditorTab.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="IDEListingZone.cpp">
+    <ClCompile Include="IDEListingSource.cpp">
       <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="IDEBuildPane.cpp">
@@ -50,7 +50,7 @@
     <ClInclude Include="IDEEditorTab.h">
       <Filter>Source</Filter>
     </ClInclude>
-    <ClInclude Include="IDEListingZone.h">
+    <ClInclude Include="IDEListingSource.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDEBuildPane.h">

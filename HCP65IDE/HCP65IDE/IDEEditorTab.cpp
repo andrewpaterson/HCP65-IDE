@@ -20,6 +20,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 ** ------------------------------------------------------------------------ **/
 #include "StandardLib/Objects.h"
 #include "StandardLib/ClassDefines.h"
+#include "WindowLib/JewelColours.h"
 #include "IDEContent.h"
 #include "IDEEditorTab.h"
 
@@ -30,28 +31,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 //////////////////////////////////////////////////////////////////////////
 //
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDEGutterListener::Init(CIDEEditorTab* pcTab)
-{
-	mpcTab = pcTab;
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDEGutterListener::GutterClicked(CUnknown* pcSource, void* pvContext)
-{
-	mpcTab->ToggleListing(*(size*)pvContext);
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
 // The file's text (szText, already read) in a code editor of tiles.  A
-// line's code is shown with pTitleFont over it.
+// line's code is shown under it with pTitleFont over it.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEEditorTab::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CFont> pTitleFont, Ptr<CFontFamily> pFamily, ARGB32 sColour, const char* szFileName, size uiProject, const char* szText)
@@ -59,16 +40,10 @@ void CIDEEditorTab::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CFo
 	PreInit();
 
 	mpWindow = pWindow;
-	mpTheme = pTheme;
-	mpTitleFont = pTitleFont;
-	mpFamily = pFamily;
-	mcGutterListener.Init(this);
-	mpcListings = NULL;
-	mbListingsOutOfDate = false;
-	maZones.Init();
+	mcListings.Init();
 	mpCodeEditor = OMalloc<CCodeEditor>(pWindow, pFamily, szText);
 	mpCodeEditor->SetAlignment(CSH_Left, CSV_Top);
-	mpCodeEditor->AddListener(&mcGutterListener);
+	mpZones = OMalloc<CLineZones>(mpCodeEditor, pTheme, pTitleFont, pFamily, JEWEL_PANEL);
 	mpEditor = mpCodeEditor->GetTextArea();
 	mpEditor->SetTiledText(true);
 	mpEditor->SetColour(sColour);
@@ -93,9 +68,6 @@ void CIDEEditorTab::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CFo
 void CIDEEditorTab::Class(void)
 {
 	M_Pointer(mpWindow);
-	M_Pointer(mpTheme);
-	M_Pointer(mpTitleFont);
-	M_Pointer(mpFamily);
 	M_Pointer(mpCodeEditor);
 	M_Pointer(mpEditor);
 	M_Pointer(mpPane);
@@ -106,10 +78,8 @@ void CIDEEditorTab::Class(void)
 	U_Data(int64, miChangedTime);
 	U_Bool(mbRecolour);
 	U_Bool(mbEdited);
-	U_Unknown(CIDEGutterListener, mcGutterListener);
-	U_Pointer(mpcListings);
-	U_Bool(mbListingsOutOfDate);
-	M_Embedded(maZones);
+	M_Pointer(mpZones);
+	U_Unknown(CIDEListingSource, mcListings);
 }
 
 
@@ -119,7 +89,7 @@ void CIDEEditorTab::Class(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDEEditorTab::Free(void)
 {
-	mcGutterListener.RemoveFromListenerCalls();
+	mcListings.Kill();
 	mszFileName.Kill();
 }
 
@@ -246,7 +216,6 @@ bool CIDEEditorTab::NeedsRecolour(int64 iNow, int64* piWait)
 		miChangedTime = iNow;
 		mbRecolour = true;
 		mbEdited = true;
-		ListingsOutOfDate();
 	}
 	if (!mbRecolour || (muiProject == MAX_SIZE))
 	{
@@ -264,182 +233,38 @@ bool CIDEEditorTab::NeedsRecolour(int64 iNow, int64* piWait)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The listings of the last HCP65 build (NULL for none), up to date with
-// the text as it is: each line with code is marked, and each zone shows
-// its line's code, or goes if its line hasn't any now.
+// The listings of the last HCP65 build (NULL for none): each line of the
+// file with code is marked, and the code shown under lines is up to date.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEEditorTab::SetListings(CCPP65ListingIndex* pcListings)
 {
-	CArrayCPP65ListingLines		auiLines;
-	CArrayCPP65ListingPlaces	asPlaces;
-	Ptr<CIDEListingZone>		pZone;
-	size						i;
-	size						uiLine;
-
-	mpcListings = pcListings;
-	mbListingsOutOfDate = false;
-	mpCodeEditor->ClearLineMarks();
-
-	asPlaces.Init();
-	i = maZones.Size();
-	while (i > 0)
+	if (pcListings)
 	{
-		i--;
-		pZone = maZones.Get(i);
-		uiLine = mpCodeEditor->GetLineOf(pZone->GetComponent());
-		if (mpcListings && (uiLine != MAX_SIZE))
-		{
-			mpcListings->GetPlaces(mszFileName.Text(), uiLine, &asPlaces);
-		}
-		if ((uiLine == MAX_SIZE) || !mpcListings || (asPlaces.NumElements() == 0))
-		{
-			RemoveZone(pZone);
-		}
-		else
-		{
-			pZone->SetPlaces(mpcListings, &asPlaces);
-		}
+		mcListings.Set(pcListings, mszFileName.Text());
+		mpZones->SetSource(&mcListings);
 	}
-	asPlaces.Kill();
-
-	if (mpcListings)
+	else
 	{
-		auiLines.Init();
-		mpcListings->GetLines(mszFileName.Text(), &auiLines);
-		for (i = 0; i < auiLines.NumElements(); i++)
-		{
-			MarkLine(*auiLines.Get(i));
-		}
-		auiLines.Kill();
+		mpZones->SetSource(NULL);
 	}
 }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Shows line uiLine's code under it, or hides it if it is shown.  False if
-// there is no code to show: no listings, out of date ones (the lines have
-// moved), or none for the line.
+// Shows line uiLine's code under it, or hides it, as clicking its mark
+// does.  False if it has no code to show.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEEditorTab::ToggleListing(size uiLine)
 {
-	CArrayCPP65ListingPlaces	asPlaces;
-	Ptr<CIDEListingZone>		pZone;
-
-	pZone = FindZone(uiLine);
-	if (pZone.IsNotNull())
-	{
-		RemoveZone(pZone);
-		MarkLine(uiLine);
-		return true;
-	}
-	if (!mpcListings || mbListingsOutOfDate)
-	{
-		return false;
-	}
-
-	asPlaces.Init();
-	mpcListings->GetPlaces(mszFileName.Text(), uiLine, &asPlaces);
-	if (asPlaces.NumElements() > 0)
-	{
-		pZone = OMalloc<CIDEListingZone>(mpWindow, mpTheme, mpTitleFont, mpFamily);
-		pZone->SetPlaces(mpcListings, &asPlaces);
-		maZones.Add(pZone);
-		mpCodeEditor->AddLineComponent(uiLine, pZone->GetComponent());
-		MarkLine(uiLine);
-	}
-	asPlaces.Kill();
-	return pZone.IsNotNull();
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// The zone under line uiLine, NULL if it has none.
-//
-//////////////////////////////////////////////////////////////////////////
-Ptr<CIDEListingZone> CIDEEditorTab::FindZone(size uiLine)
-{
-	size	i;
-
-	for (i = 0; i < maZones.Size(); i++)
-	{
-		if (mpCodeEditor->GetLineOf(maZones.Get(i)->GetComponent()) == uiLine)
-		{
-			return maZones.Get(i);
-		}
-	}
-	return NULL;
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// The text changed since the listings were given: their lines may not be
-// the text's.  The marks go and the zones say they are out of date.
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDEEditorTab::ListingsOutOfDate(void)
-{
-	size	i;
-
-	if (!mpcListings || mbListingsOutOfDate)
-	{
-		return;
-	}
-	mbListingsOutOfDate = true;
-	mpCodeEditor->ClearLineMarks();
-	for (i = 0; i < maZones.Size(); i++)
-	{
-		maZones.Get(i)->SetOutOfDate(true);
-	}
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDEEditorTab::RemoveZone(Ptr<CIDEListingZone> pZone)
-{
-	mpCodeEditor->RemoveLineComponent(pZone->GetComponent());
-	maZones.Remove(pZone);
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// Line uiLine's mark: open if its code is shown, otherwise that it has
-// code, if the listings are up to date and it has.
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDEEditorTab::MarkLine(size uiLine)
-{
-	CArrayCPP65ListingPlaces	asPlaces;
-	char						cMark;
-
-	cMark = '\0';
-	if (FindZone(uiLine).IsNotNull())
-	{
-		cMark = IDE_LISTING_OPEN_MARK;
-	}
-	else if (mpcListings && !mbListingsOutOfDate)
-	{
-		asPlaces.Init();
-		mpcListings->GetPlaces(mszFileName.Text(), uiLine, &asPlaces);
-		cMark = (asPlaces.NumElements() > 0) ? IDE_LISTING_MARK : '\0';
-		asPlaces.Kill();
-	}
-	mpCodeEditor->SetLineMark(uiLine, cMark);
+	return mpZones->Toggle(uiLine);
 }
 
 
 void CIDEEditorTab::SetTab(Ptr<CTabComponent> pTab) { mpTab = pTab; }
-size CIDEEditorTab::NumZones(void) { return maZones.Size(); }
-Ptr<CIDEListingZone> CIDEEditorTab::GetZone(size uiIndex) { return maZones.Get(uiIndex); }
-bool CIDEEditorTab::IsListingsOutOfDate(void) { return mbListingsOutOfDate; }
+Ptr<CLineZones> CIDEEditorTab::GetZones(void) { return mpZones; }
 Ptr<CTextArea> CIDEEditorTab::GetEditor(void) { return mpEditor; }
 Ptr<CCodeEditor> CIDEEditorTab::GetCodeEditor(void) { return mpCodeEditor; }
 Ptr<CScrollPane> CIDEEditorTab::GetPane(void) { return mpPane; }
