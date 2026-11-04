@@ -44,6 +44,7 @@ set(CPPPARSERLIB_DIR "${COMMON_DIR}/CppParserLib")
 set(HCP65_LIBRARIES_DIR "${CODAPHELA_ROOT}/HCP65/Libraries")
 set(ASSEMBLER65LIB_DIR "${HCP65_LIBRARIES_DIR}/Assembler65Lib")
 set(VISUALSTUDIOLIB_DIR "${IDE_ROOT}/Libraries/VisualStudioLib")
+set(BUILDLIB_DIR "${IDE_ROOT}/Libraries/BuildLib")
 set(IDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/HCP65IDE")
 
 
@@ -109,6 +110,8 @@ vcxproj_sources(ASSEMBLER65LIB_SOURCES "${ASSEMBLER65LIB_DIR}/Assembler65Lib.vcx
 vcxproj_sources(CPPPARSERLIB_SOURCES "${CPPPARSERLIB_DIR}/CppParserLib.vcxproj")
 
 vcxproj_sources(VISUALSTUDIOLIB_SOURCES "${VISUALSTUDIOLIB_DIR}/VisualStudioLib.vcxproj")
+
+vcxproj_sources(BUILDLIB_SOURCES "${BUILDLIB_DIR}/BuildLib.vcxproj")
 
 # HCP65IDE.cpp (WinMain) is Windows only.
 set(IDE_SOURCES
@@ -196,6 +199,10 @@ target_link_libraries(CppParserLib PUBLIC Assembler65Lib MicroprocessorLib Threa
 add_library(VisualStudioLib STATIC ${VISUALSTUDIOLIB_SOURCES})
 target_link_libraries(VisualStudioLib PUBLIC BaseLib)
 
+# BuildLib builds the solution's configurations: with the HCP65 compiler, MSVC or GCC.
+add_library(BuildLib STATIC ${BUILDLIB_SOURCES})
+target_link_libraries(BuildLib PUBLIC VisualStudioLib CppParserLib ThreadLib BaseLib)
+
 add_executable(HCP65IDE ${IDE_SOURCES})
 target_include_directories(HCP65IDE PRIVATE "${IDE_DIR}")
-target_link_libraries(HCP65IDE PRIVATE X11Lib WindowLib InputLib VisualStudioLib CppParserLib Assembler65Lib MicroprocessorLib ThreadLib SupportLib StandardLib BaseLib)
+target_link_libraries(HCP65IDE PRIVATE X11Lib WindowLib InputLib BuildLib VisualStudioLib CppParserLib Assembler65Lib MicroprocessorLib ThreadLib SupportLib StandardLib BaseLib)

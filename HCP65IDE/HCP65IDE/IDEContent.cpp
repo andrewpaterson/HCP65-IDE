@@ -236,6 +236,8 @@ void CIDEContent::Init(void)
 	mcExplorerListener.Init(this, &CIDEContent::ExplorerActivated);
 	mcReferencesListener.Init(this, &CIDEContent::ReferenceActivated);
 	mcConfigurationsListener.Init(this);
+	mcConfigurations.Init();
+	muiConfiguration = MAX_SIZE;
 	masReferences.Init();
 	maTabs.Init();
 	maFileIcons.Init();
@@ -265,6 +267,8 @@ void CIDEContent::Class(void)
 	U_Unknown(CIDEActivationListener, mcExplorerListener);
 	M_Pointer(mpConfigurations);
 	U_Unknown(CIDEConfigurationListener, mcConfigurationsListener);
+	U_Unknown(CBuildConfigurations, mcConfigurations);
+	U_Size(muiConfiguration);
 	M_Pointer(mpReferences);
 	U_Unknown(CIDEActivationListener, mcReferencesListener);
 	U_Unknown(CArrayIDELocations, masReferences);
@@ -287,6 +291,7 @@ void CIDEContent::Free(void)
 	mcConfigurationsListener.RemoveFromListenerCalls();
 	mcTabsListener.RemoveFromListenerCalls();
 	mcCodeModel.Kill();
+	mcConfigurations.Kill();
 	mcSolution.Kill();
 	KillIDELocations(&masReferences);
 }
@@ -438,13 +443,29 @@ bool CIDEContent::OpenSolution(const char* szFileName)
 		return false;
 	}
 	mpExplorer->ShowSolution(&mcSolution);
-	mpConfigurations->RemoveAllItems();
-	for (i = 0; i < mcSolution.NumConfigurations(); i++)
+
+	//The build configurations beside the solution, or the defaults if it hasn't any.
+	mcConfigurations.Kill();
+	mcConfigurations.Init();
+	muiConfiguration = MAX_SIZE;
+	szName.Init();
+	CBuildConfigurations::GetFileName(szFileName, &szName);
+	if (!mcConfigurations.Read(szName.Text()))
 	{
-		mpConfigurations->AddItem(mcSolution.GetConfiguration(i));
+		mcConfigurations.AddDefaults(&mcSolution);
 	}
-	if (mcSolution.NumConfigurations() > 0)
+	szName.Kill();
+
+	mpConfigurations->RemoveAllItems();
+	for (i = 0; i < mcConfigurations.NumConfigurations(); i++)
 	{
+		mpConfigurations->AddItem(mcConfigurations.GetConfiguration(i)->GetName());
+	}
+	if (mcConfigurations.NumConfigurations() > 0)
+	{
+		//Chosen before the combo box tells of it, so it isn't indexed twice.
+		muiConfiguration = 0;
+		mcCodeModel.SetConfiguration(mcConfigurations.GetConfiguration(0)->GetSolutionConfiguration());
 		mpConfigurations->Select(0);
 	}
 	mcCodeModel.StartIndexing();
@@ -832,7 +853,7 @@ void CIDEContent::ConfigurationChosen(void)
 	char*	szConfiguration;
 
 	szConfiguration = mpConfigurations->GetSelectedText();
-	if (szConfiguration && (StringCompare(szConfiguration, mcCodeModel.GetConfiguration()) != 0))
+	if (szConfiguration && ((GetConfiguration() == NULL) || (StringCompare(szConfiguration, GetConfiguration()->GetName()) != 0)))
 	{
 		SetConfiguration(szConfiguration);
 	}
@@ -841,38 +862,56 @@ void CIDEContent::ConfigurationChosen(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The code is parsed as the solution configuration builds it: the
-// solution is indexed again and the open files are highlighted again.
-// False if the solution hasn't the configuration.
+// The build configuration szConfiguration is chosen.  The code is parsed
+// as its solution configuration builds it: if that changed the solution is
+// indexed again and the open files are highlighted again.  False if there
+// is no such build configuration.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEContent::SetConfiguration(const char* szConfiguration)
 {
-	size	i;
+	size					i;
+	CBuildConfiguration*	pcConfiguration;
 
-	for (i = 0; i < mcSolution.NumConfigurations(); i++)
+	for (i = 0; i < mcConfigurations.NumConfigurations(); i++)
 	{
-		if (StringCompare(mcSolution.GetConfiguration(i), szConfiguration) == 0)
+		if (StringCompare(mcConfigurations.GetConfiguration(i)->GetName(), szConfiguration) == 0)
 		{
 			break;
 		}
 	}
-	if (i == mcSolution.NumConfigurations())
+	if (i == mcConfigurations.NumConfigurations())
 	{
 		return false;
 	}
+	muiConfiguration = i;
 	if ((int32)i != mpConfigurations->GetSelected())
 	{
 		mpConfigurations->Select((int32)i);
 	}
 
-	mcCodeModel.SetConfiguration(szConfiguration);
-	mcCodeModel.StartIndexing();
-	for (i = 0; i < maTabs.Size(); i++)
+	pcConfiguration = mcConfigurations.GetConfiguration(i);
+	if (StringCompare(pcConfiguration->GetSolutionConfiguration(), mcCodeModel.GetConfiguration()) != 0)
 	{
-		HighlightTab(maTabs.Get(i));
+		mcCodeModel.SetConfiguration(pcConfiguration->GetSolutionConfiguration());
+		mcCodeModel.StartIndexing();
+		for (i = 0; i < maTabs.Size(); i++)
+		{
+			HighlightTab(maTabs.Get(i));
+		}
 	}
 	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The chosen build configuration, NULL if none is.
+//
+//////////////////////////////////////////////////////////////////////////
+CBuildConfiguration* CIDEContent::GetConfiguration(void)
+{
+	return (muiConfiguration < mcConfigurations.NumConfigurations()) ? mcConfigurations.GetConfiguration(muiConfiguration) : NULL;
 }
 
 

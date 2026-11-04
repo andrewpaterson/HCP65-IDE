@@ -31,6 +31,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/ComboBox.h"
 #include "WindowLib/ComboBoxListener.h"
 #include "VisualStudioLib/VcxSolution.h"
+#include "BuildLib/BuildConfigurations.h"
 #include "WindowLib/TabbedContainer.h"
 #include "WindowLib/TabbedContainerListener.h"
 #include "IDECodeModel.h"
@@ -100,8 +101,10 @@ protected:
 	CArray<CImageCel>			maFileIcons;		//By EIDEFileType.
 	Ptr<CSolutionExplorer>		mpExplorer;
 	CIDEActivationListener		mcExplorerListener;
-	Ptr<CComboBox>				mpConfigurations;	//The solution configuration the code is parsed as.
+	Ptr<CComboBox>				mpConfigurations;	//The build configuration; the code is parsed as its solution configuration.
 	CIDEConfigurationListener	mcConfigurationsListener;
+	CBuildConfigurations		mcConfigurations;	//The solution's, from beside it or the defaults.
+	size						muiConfiguration;	//The chosen one, MAX_SIZE if none.
 	Ptr<CTreeContainer>			mpReferences;		//What Find All References found.
 	CIDEActivationListener		mcReferencesListener;
 	CArrayIDELocations			masReferences;		//The references' places; a node's data is its index plus one.
@@ -133,6 +136,7 @@ public:
 	void			TabRemoved(CUnknown* pcTab);
 	bool			CloseFile(const char* szFileName);
 	CIDECodeModel*	GetCodeModel(void);
+	CBuildConfiguration*	GetConfiguration(void);
 
 	Ptr<CTextArea>		GetEditor(void);
 	Ptr<CScrollPane>	GetEditorPane(void);
