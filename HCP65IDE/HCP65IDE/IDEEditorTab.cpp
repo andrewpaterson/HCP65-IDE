@@ -27,6 +27,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 #define IDE_CARET_LINES_ABOVE	4		//How many lines show above a line jumped to.
 #define IDE_RECOLOUR_DELAY		400		//Milliseconds after the last edit before the text is highlighted again.
+#define IDE_LISTING_TEXT		Set32BitColour((uint8)0xE6, (uint8)0xDF, (uint8)0xB8)	//A line's assembly: the editor's text, a little yellow.
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -43,7 +44,7 @@ void CIDEEditorTab::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CFo
 	mcListings.Init();
 	mpCodeEditor = OMalloc<CCodeEditor>(pWindow, pFamily, szText);
 	mpCodeEditor->SetAlignment(CSH_Left, CSV_Top);
-	mpZones = OMalloc<CLineZones>(mpCodeEditor, pTheme, pTitleFont, pFamily, JEWEL_PANEL);
+	mpZones = OMalloc<CLineZones>(mpCodeEditor, pTheme, pTitleFont, pFamily, JEWEL_EDITOR, IDE_LISTING_TEXT);
 	mpEditor = mpCodeEditor->GetTextArea();
 	mpEditor->SetTiledText(true);
 	mpEditor->SetColour(sColour);
