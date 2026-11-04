@@ -179,12 +179,7 @@ bool CVcxProject::Read(const char* szFileName)
 	CChars		szFilters;
 	bool		bResult;
 
-	mszFileName.Set(szFileName);
-	cFileUtil.FullPath(&mszFileName);
-	mszDirectory.Clear();
-	mszName.Clear();
-	cFileUtil.SplitPath(mszFileName.Text(), &mszName, &mszDirectory);
-	cFileUtil.RemoveExtension(&mszName);
+	SplitVcxFileName(szFileName, &mszFileName, &mszDirectory, &mszName);
 
 	cFile.Init();
 	bResult = ReadVcxXMLFile(&cFile, mszFileName.Text());
@@ -765,21 +760,53 @@ bool CVcxProject::GetMacro(const char* szName, CVcxConfiguration* pcConfiguratio
 //////////////////////////////////////////////////////////////////////////
 void CVcxProject::GetIncludeDirectories(CVcxConfiguration* pcConfiguration, const char* szSolutionDirectory, CArrayChars* paszDirectories)
 {
-	AddIncludeDirectories("ClCompile.AdditionalIncludeDirectories", pcConfiguration, szSolutionDirectory, paszDirectories);
-	AddIncludeDirectories("IncludePath", pcConfiguration, szSolutionDirectory, paszDirectories);
+	CArrayChars	aszParts;
+	CChars		szDirectory;
+	size		i;
+
+	aszParts.Init();
+	GetPropertyList("ClCompile.AdditionalIncludeDirectories", pcConfiguration, szSolutionDirectory, &aszParts);
+	GetPropertyList("IncludePath", pcConfiguration, szSolutionDirectory, &aszParts);
+	for (i = 0; i < aszParts.NumElements(); i++)
+	{
+		szDirectory.Init();
+		ResolveVcxPath(mszDirectory.Text(), aszParts.GetText(i), &szDirectory);
+		while ((szDirectory.Length() > 1) && szDirectory.EndsWith(FILE_SEPARATOR[0]))
+		{
+			szDirectory.RemoveFromEnd(1);
+		}
+		if (!paszDirectories->Contains(&szDirectory))
+		{
+			paszDirectories->Add(&szDirectory);
+		}
+		szDirectory.Kill();
+	}
+	aszParts.Kill();
 }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
+// The compiler's PreprocessorDefinitions: NAME or NAME=VALUE each.
 //
 //////////////////////////////////////////////////////////////////////////
-void CVcxProject::AddIncludeDirectories(const char* szProperty, CVcxConfiguration* pcConfiguration, const char* szSolutionDirectory, CArrayChars* paszDirectories)
+void CVcxProject::GetPreprocessorDefinitions(CVcxConfiguration* pcConfiguration, const char* szSolutionDirectory, CArrayChars* paszDefines)
+{
+	GetPropertyList("ClCompile.PreprocessorDefinitions", pcConfiguration, szSolutionDirectory, paszDefines);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A ';' separated property with its macros expanded, each part trimmed;
+// empty parts are left out.  Appended to paszDest.
+//
+//////////////////////////////////////////////////////////////////////////
+void CVcxProject::GetPropertyList(const char* szProperty, CVcxConfiguration* pcConfiguration, const char* szSolutionDirectory, CArrayChars* paszDest)
 {
 	char*		szValue;
 	CChars		szExpanded;
 	CArrayChars	aszParts;
-	CChars		szDirectory;
 	CChars*		pszPart;
 	size		i;
 
@@ -797,57 +824,9 @@ void CVcxProject::AddIncludeDirectories(const char* szProperty, CVcxConfiguratio
 	{
 		pszPart = aszParts.Get(i);
 		pszPart->StripWhitespace(true);
-		if (pszPart->Empty())
-		{
-			continue;
-		}
-		szDirectory.Init();
-		ResolveVcxPath(mszDirectory.Text(), pszPart->Text(), &szDirectory);
-		while ((szDirectory.Length() > 1) && szDirectory.EndsWith(FILE_SEPARATOR[0]))
-		{
-			szDirectory.RemoveFromEnd(1);
-		}
-		if (!paszDirectories->Contains(&szDirectory))
-		{
-			paszDirectories->Add(&szDirectory);
-		}
-		szDirectory.Kill();
-	}
-	aszParts.Kill();
-	szExpanded.Kill();
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// The compiler's PreprocessorDefinitions: NAME or NAME=VALUE each.
-//
-//////////////////////////////////////////////////////////////////////////
-void CVcxProject::GetPreprocessorDefinitions(CVcxConfiguration* pcConfiguration, const char* szSolutionDirectory, CArrayChars* paszDefines)
-{
-	char*		szValue;
-	CChars		szExpanded;
-	CArrayChars	aszParts;
-	CChars*		pszPart;
-	size		i;
-
-	szValue = pcConfiguration->GetProperty("ClCompile.PreprocessorDefinitions");
-	if (szValue == NULL)
-	{
-		return;
-	}
-
-	szExpanded.Init();
-	ExpandMacros(szValue, pcConfiguration, szSolutionDirectory, &szExpanded);
-	aszParts.Init();
-	szExpanded.Split(&aszParts, ';');
-	for (i = 0; i < aszParts.NumElements(); i++)
-	{
-		pszPart = aszParts.Get(i);
-		pszPart->StripWhitespace(true);
 		if (!pszPart->Empty())
 		{
-			paszDefines->Add(pszPart);
+			paszDest->Add(pszPart);
 		}
 	}
 	aszParts.Kill();

@@ -133,3 +133,23 @@ bool FindVcxPathCaseInsensitive(CChars* pszPath)
 	return bFound;
 }
 
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A project's or solution's file szFileName as its full path, the
+// directory it is in and its name without the extension, as Solution
+// Explorer shows it.  Each replaces what was in it.
+//
+//////////////////////////////////////////////////////////////////////////
+void SplitVcxFileName(const char* szFileName, CChars* pszFullPath, CChars* pszDirectory, CChars* pszName)
+{
+	CFileUtil	cFileUtil;
+
+	pszFullPath->Set(szFileName);
+	cFileUtil.FullPath(pszFullPath);
+	pszDirectory->Clear();
+	pszName->Clear();
+	cFileUtil.SplitPath(pszFullPath->Text(), pszName, pszDirectory);
+	cFileUtil.RemoveExtension(pszName);
+}

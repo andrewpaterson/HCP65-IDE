@@ -90,7 +90,7 @@ protected:
 	void					ReadFilterItemGroup(CMarkupTag* pcItemGroup);
 	void					SetProperty(const char* szCondition, const char* szName, const char* szValue);
 	CVcxConfiguration*		AddConfiguration(const char* szName);
-	void					AddIncludeDirectories(const char* szProperty, CVcxConfiguration* pcConfiguration, const char* szSolutionDirectory, CArrayChars* paszDirectories);
+	void					GetPropertyList(const char* szProperty, CVcxConfiguration* pcConfiguration, const char* szSolutionDirectory, CArrayChars* paszDest);
 	void					ExpandMacros(const char* szValue, CVcxConfiguration* pcConfiguration, const char* szSolutionDirectory, CChars* pszDest, int iDepth);
 	bool					GetMacro(const char* szName, CVcxConfiguration* pcConfiguration, const char* szSolutionDirectory, CChars* pszDest, int iDepth);
 };

@@ -24,6 +24,7 @@ along with Codaphela VisualStudioLib.  If not, see <http://www.gnu.org/licenses/
 #include "BaseLib/TextFile.h"
 #include "BaseLib/ConstructorCall.h"
 #include "BaseLib/PointerFunctions.h"
+#include "VcxPath.h"
 #include "VcxSolution.h"
 
 
@@ -136,17 +137,11 @@ void CVcxSolution::Kill(void)
 //////////////////////////////////////////////////////////////////////////
 bool CVcxSolution::Read(const char* szFileName, bool bLoadProjects)
 {
-	CFileUtil	cFileUtil;
 	CTextFile	cFile;
 	bool		bResult;
 	size		i;
 
-	mszFileName.Set(szFileName);
-	cFileUtil.FullPath(&mszFileName);
-	mszDirectory.Clear();
-	mszName.Clear();
-	cFileUtil.SplitPath(mszFileName.Text(), &mszName, &mszDirectory);
-	cFileUtil.RemoveExtension(&mszName);
+	SplitVcxFileName(szFileName, &mszFileName, &mszDirectory, &mszName);
 
 	cFile.Init();
 	if (!cFile.Read(mszFileName.Text()))
@@ -181,28 +176,23 @@ bool CVcxSolution::Read(const char* szFileName, bool bLoadProjects)
 //////////////////////////////////////////////////////////////////////////
 bool CVcxSolution::ReadProject(const char* szProjectFile)
 {
-	CFileUtil				cFileUtil;
-	CChars					szProjectName;
-	CChars					szFileName;
-	CVcxSolutionProject*	pcProject;
-	CVcxProject*			pcVcxProject;
-	size					i;
+	CFileUtil							cFileUtil;
+	CChars								szFileName;
+	CVcxSolutionProject*				pcProject;
+	CVcxProject*						pcVcxProject;
+	CVcxConfiguration*					pcConfiguration;
+	CVcxSolutionProjectConfiguration*	pcSolutionConfiguration;
+	size								i;
 
-	mszFileName.Set(szProjectFile);
-	cFileUtil.FullPath(&mszFileName);
-	mszDirectory.Clear();
+	SplitVcxFileName(szProjectFile, &mszFileName, &mszDirectory, &mszName);
 	szFileName.Init();
-	cFileUtil.SplitPath(mszFileName.Text(), &szFileName, &mszDirectory);
-	szProjectName.Init(szFileName);
-	cFileUtil.RemoveExtension(&szProjectName);
-	mszName.Set(szProjectName);
+	cFileUtil.GetFileName(&szFileName, mszFileName.Text());
 	cFileUtil.RemoveExtension(&mszFileName);
 	mszFileName.Append(".sln");
 
 	pcProject = NewMalloc<CVcxSolutionProject>();
-	pcProject->Init(VCX_CPP_PROJECT_TYPE, szProjectName.Text(), szFileName.Text(), "");
+	pcProject->Init(VCX_CPP_PROJECT_TYPE, mszName.Text(), szFileName.Text(), "");
 	mapcProjects.Add(pcProject);
-	szProjectName.Kill();
 	szFileName.Kill();
 
 	if (!pcProject->Load(mszDirectory.Text()))
@@ -215,9 +205,11 @@ bool CVcxSolution::ReadProject(const char* szProjectFile)
 	pcProject->SetGuid(pcVcxProject->GetGuid());
 	for (i = 0; i < pcVcxProject->NumConfigurations(); i++)
 	{
-		maszConfigurations.Add(pcVcxProject->GetConfiguration(i)->GetName());
-		pcProject->GetOrAddConfiguration(pcVcxProject->GetConfiguration(i)->GetName())->SetProjectConfiguration(pcVcxProject->GetConfiguration(i)->GetName());
-		pcProject->GetConfiguration(i)->SetBuild(true);
+		pcConfiguration = pcVcxProject->GetConfiguration(i);
+		maszConfigurations.Add(pcConfiguration->GetName());
+		pcSolutionConfiguration = pcProject->GetOrAddConfiguration(pcConfiguration->GetName());
+		pcSolutionConfiguration->SetProjectConfiguration(pcConfiguration->GetName());
+		pcSolutionConfiguration->SetBuild(true);
 	}
 	return true;
 }

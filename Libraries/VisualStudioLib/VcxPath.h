@@ -26,6 +26,7 @@ along with Codaphela VisualStudioLib.  If not, see <http://www.gnu.org/licenses/
 //Paths in Visual Studio files are relative, use '\' and aren't case sensitive: "..\..\CommonLibraries\BaseLib".
 bool ResolveVcxPath(const char* szDirectory, const char* szRelative, CChars* pszDest);
 bool FindVcxPathCaseInsensitive(CChars* pszPath);
+void SplitVcxFileName(const char* szFileName, CChars* pszFullPath, CChars* pszDirectory, CChars* pszName);
 
 
 #endif // __VCX_PATH_H__
