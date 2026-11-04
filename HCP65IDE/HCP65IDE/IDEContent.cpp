@@ -35,6 +35,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/Label.h"
 #include "WindowLib/JewelColours.h"
 #include "WindowLib/JewelTheme.h"
+#include "WindowLib/JewelImageGenerator.h"
 #include "IDEContent.h"
 
 
@@ -187,6 +188,26 @@ void CIDEConfigurationListener::SelectionChanged(CUnknown* pcSource, void* pvCon
 //
 //
 //////////////////////////////////////////////////////////////////////////
+void CIDEMenuListener::Init(CIDEContent* pcContent)
+{
+	mpcContent = pcContent;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEMenuListener::MenuItemClicked(CUnknown* pcSource, void* pvContext)
+{
+	mpcContent->MenuItemClicked((CMenuItem*)pcSource);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
 void CIDEBuildListener::Init(CIDEContent* pcContent)
 {
 	mpcContent = pcContent;
@@ -262,6 +283,9 @@ void CIDEContent::Init(void)
 	mcConfigurations.Init();
 	muiConfiguration = MAX_SIZE;
 	mcBuildListener.Init(this);
+	mcMenuListener.Init(this);
+	memset(&msDialogLook, 0, sizeof(msDialogLook));
+	mszSolutionFile.Init();
 	mcBuild.Init();
 	mszLibc65.Init();
 	mcListings.Init();
@@ -286,6 +310,18 @@ void CIDEContent::Class(void)
 	M_Pointer(mpFontColours);
 	M_Pointer(mpTheme);
 	M_Pointer(mpCodeFamily);
+	M_Pointer(mpDimFont);
+	U_Pointer(msDialogLook.pcTheme);
+	U_Pointer(msDialogLook.pcDimFont);
+	U_Data(ARGB32, msDialogLook.sBackground);
+	U_Data(ARGB32, msDialogLook.sDivider);
+	M_Pointer(mpMenuBar);
+	M_Pointer(mpOpenItem);
+	U_Unknown(CIDEMenuListener, mcMenuListener);
+	M_Pointer(mpFileChooser);
+	M_Pointer(mpFolderIcon);
+	M_Pointer(mpFileIcon);
+	U_String(mszSolutionFile);
 	M_Pointer(mpEditors);
 	M_Embedded(maTabs);
 	M_Pointer(mpActive);
@@ -329,12 +365,14 @@ void CIDEContent::Free(void)
 	mcReferencesListener.RemoveFromListenerCalls();
 	mcConfigurationsListener.RemoveFromListenerCalls();
 	mcBuildListener.RemoveFromListenerCalls();
+	mcMenuListener.RemoveFromListenerCalls();
 	mcTabsListener.RemoveFromListenerCalls();
 
 	//A build still running is stopped (an HCP65 build is waited for) before the solution it builds goes.
 	mcBuild.Kill();
 	mcListings.Kill();
 	mszLibc65.Kill();
+	mszSolutionFile.Kill();
 	mcCodeModel.Kill();
 	mcConfigurations.Kill();
 	mcSolution.Kill();
@@ -388,6 +426,16 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	}
 	mpFontColours = OMalloc<CFontColours>(mpWhite);
 	mpTheme = CJewelTheme::CreateDarkTheme(pWindow, mpFontColours->GetFont(JEWEL_TEXT));
+	pWindow->GetColourFormat(&cFormat);
+
+	//The dialogs share the window's theme: they have the same colour format.
+	mpDimFont = mpFontColours->GetFont(JEWEL_LINE_NUMBER);
+	msDialogLook.pcTheme = &mpTheme;
+	msDialogLook.pcDimFont = &mpDimFont;
+	msDialogLook.sBackground = JEWEL_PANEL;
+	msDialogLook.sDivider = JEWEL_SEPARATOR;
+	mpFolderIcon = CJewelImageGenerator::CreateFolder(JEWEL_ICON, &cFormat);
+	mpFileIcon = CJewelImageGenerator::CreateFile(JEWEL_ICON, &cFormat);
 
 	mpCodeFamily = OMalloc<CFontFamily>("JetBrains Mono", IDE_FONT_CHARACTERS, IDE_CODE_PIXEL_SIZE, pWindow->GetColourOrder());
 	if (!mpCodeFamily->SetFace(FS_Regular, szCodeFont))
@@ -410,7 +458,6 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpEditors = OMalloc<CTabbedContainer>(pWindow, mpTheme);
 	mpEditors->SetAlignment(CSH_Stretch, CSV_Stretch);
 	mpEditors->AddListener(&mcTabsListener);
-	pWindow->GetColourFormat(&cFormat);
 	for (i = 0; i < IFT_Count; i++)
 	{
 		maFileIcons.Add(CIDEIcons::CreateFileIcon((EIDEFileType)i, &cFormat));
@@ -448,13 +495,81 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	pToolbar->AddComponent(mpBuildButton, 2, 0, 1, 1, 1, 1);
 
 	pMain = OMalloc<CGridContainer>(pWindow);
-	pMain->AddComponent(pToolbar, 0, 0, 2, 1, 1, 0);
-	pMain->AddComponent(pExplorerPanel, 0, 1, 1, 2, 0, 1);
-	pMain->AddComponent(mpEditors, 1, 1, 1, 1, 1, 1);
-	pMain->AddComponent(mpBottomTabs, 1, 2, 1, 1, 1, 0);
+	pMain->AddComponent(CreateMenuBar(), 0, 0, 2, 1, 1, 0);
+	pMain->AddComponent(pToolbar, 0, 1, 2, 1, 1, 0);
+	pMain->AddComponent(pExplorerPanel, 0, 2, 1, 2, 0, 1);
+	pMain->AddComponent(mpEditors, 1, 2, 1, 1, 1, 1);
+	pMain->AddComponent(mpBottomTabs, 1, 3, 1, 1, 1, 0);
 	pMain->AddInputActions(gaeIDECodeCommands, sizeof(gaeIDECodeCommands) / sizeof(EComponentInputCommand), this, &CIDEContent::CodeCommandAction);
 	pWindow->SetContainer(pMain);
 	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// File, with Open Project/Solution.
+//
+//////////////////////////////////////////////////////////////////////////
+Ptr<CMenuBar> CIDEContent::CreateMenuBar(void)
+{
+	Ptr<CMenuContainer>	pFile;
+
+	pFile = OMalloc<CMenuContainer>(mpWindow, mpTheme);
+	mpOpenItem = pFile->AddItem("Open Project/Solution...", mpFolderIcon);
+
+	mpMenuBar = OMalloc<CMenuBar>(mpWindow, mpTheme);
+	mpMenuBar->AddMenu("File", pFile);
+	mpMenuBar->AddListener(&mcMenuListener);
+	mpMenuBar->SetAlignment(CSH_Stretch, CSV_Stretch);
+	return mpMenuBar;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::MenuItemClicked(CMenuItem* pcItem)
+{
+	if (pcItem == &mpOpenItem)
+	{
+		ShowOpenSolutionDialog();
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Asks for a solution (.sln) or project (.vcxproj) and opens it, starting
+// on the one open.  False if none is chosen or it can't be read.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEContent::ShowOpenSolutionDialog(void)
+{
+	static SFileChooserType	asTypes[] =
+	{
+		{ "Solutions (*.sln)", "sln" },
+		{ "Projects (*.vcxproj)", "vcxproj" },
+		{ "All Files", NULL },
+	};
+	CChars	szChosen;
+	bool	bResult;
+
+	bResult = false;
+	mpFileChooser = OMalloc<CFileChooser>(mpWindow, &msDialogLook, "Open Project/Solution", false, mszSolutionFile.Text(), asTypes, sizeof(asTypes) / sizeof(SFileChooserType), mpFolderIcon, mpFileIcon);
+	if (mpFileChooser->Show())
+	{
+		szChosen.Init(mpFileChooser->GetChosen());
+		bResult = OpenSolution(szChosen.Text());
+		if (!bResult)
+		{
+			gcLogger.Error2(__METHOD__, " Could not open [", szChosen.Text(), "].", NULL);
+		}
+		szChosen.Kill();
+	}
+	mpFileChooser = NULL;
+	return bResult;
 }
 
 
@@ -474,10 +589,16 @@ bool CIDEContent::OpenSolution(const char* szFileName)
 	bSolution = szName.EndsWithIgnoreCase(".sln");
 	szName.Kill();
 
-	//A build of the solution being let go is stopped, and its listings forgotten.
+	//A build of the solution being let go is stopped, and its listings forgotten.  Its files are closed and the
+	//references found in it go.
 	mcBuild.Kill();
 	mcBuild.Init();
 	SetListings(false);
+	CloseAllFiles();
+	KillIDELocations(&masReferences);
+	masReferences.Init();
+	mpReferences->RemoveAllNodes();
+	mszSolutionFile.Set(szFileName);
 
 	mcCodeModel.Kill();
 	mcSolution.Kill();
@@ -589,6 +710,24 @@ bool CIDEContent::CloseFile(const char* szFileName)
 		return false;
 	}
 	return mpEditors->RemoveTab(pTab->GetTab());
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Every open file's tab is closed.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::CloseAllFiles(void)
+{
+	while (maTabs.Size() > 0)
+	{
+		//Closing the tab lets its file go (TabRemoved).
+		if (!mpEditors->RemoveTab(maTabs.Get(maTabs.Size() - 1)->GetTab()))
+		{
+			break;
+		}
+	}
 }
 
 

@@ -51,12 +51,12 @@ void CIDEApp::Init(void)
 // HCP65_IDE_SNAPSHOT, HCP65_IDE_CONFIGURATION, HCP65_IDE_EXPAND,
 // HCP65_IDE_OPEN, HCP65_IDE_CLOSE, HCP65_IDE_SCROLL,
 // HCP65_IDE_WAIT_INDEX, HCP65_IDE_CARET=line:column (1 based), HCP65_IDE_TYPE,
-// HCP65_IDE_REFERENCES and HCP65_IDE_DEFINITION are for checking it: a
-// snapshot of the window, every folder expanded, files opened (a comma
-// separated list, each in a tab), the
+// HCP65_IDE_REFERENCES, HCP65_IDE_DEFINITION and HCP65_IDE_REOPEN are for
+// checking it: a snapshot of the window, every folder expanded, files
+// opened (a comma separated list, each in a tab), the
 // editor scrolled down that many pixels, the indexing finished, the caret
 // put somewhere, HCP65_IDE_TYPE's text typed there, then Find All
-// References and Go to Definition.
+// References, Go to Definition and another solution or project opened.
 // Call it once the app is in the root: the objects made here are only
 // held through it, and an object no root reaches is freed as soon as
 // the last stack pointer to it goes.
@@ -156,6 +156,11 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 			if (getenv("HCP65_IDE_DEFINITION") != NULL)
 			{
 				mpContent->GoToDefinition();
+			}
+			if (getenv("HCP65_IDE_REOPEN") != NULL)
+			{
+				//Another solution or project opened, as File, Open Project/Solution does: the open files are closed.
+				mpContent->OpenSolution(getenv("HCP65_IDE_REOPEN"));
 			}
 			if ((getenv("HCP65_IDE_SCROLL") != NULL) && mpContent->GetEditorPane().IsNotNull())
 			{

@@ -38,6 +38,10 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/ButtonListener.h"
 #include "WindowLib/TabbedContainer.h"
 #include "WindowLib/TabbedContainerListener.h"
+#include "WindowLib/MenuBar.h"
+#include "WindowLib/MenuListener.h"
+#include "WindowLib/Dialog.h"
+#include "WindowLib/FileChooser.h"
 #include "IDECodeModel.h"
 #include "IDEEditorTab.h"
 #include "IDEBuildPane.h"
@@ -85,6 +89,18 @@ public:
 };
 
 
+//Hears the menu bar's items being clicked.
+class CIDEMenuListener : public CMenuListener
+{
+CONSTRUCTABLE(CIDEMenuListener);
+public:
+	CIDEContent*	mpcContent;
+
+	void	Init(CIDEContent* pcContent);
+	void	MenuItemClicked(CUnknown* pcSource, void* pvContext) override;
+};
+
+
 //Hears the editor's tabs being selected and closed.
 class CIDETabsListener : public CTabbedContainerListener
 {
@@ -98,8 +114,8 @@ public:
 };
 
 
-//The IDE's window's content: Solution Explorer on the left, the editor's tabs of open files on the right with the
-//references found under them.  F12 goes to the definition of what is at the caret and Shift+F12 finds its references.  It is an object; keep it
+//The IDE's window's content: the menu bar and toolbar along the top, Solution Explorer on the left, the editor's tabs
+//of open files on the right with the references found under them.  F12 goes to the definition of what is at the caret and Shift+F12 finds its references.  It is an object; keep it
 //in the root and call Setup.
 class CIDEContent : public CObject
 {
@@ -111,6 +127,15 @@ protected:
 	Ptr<CFontColours>			mpFontColours;
 	Ptr<CWindowTheme>			mpTheme;
 	Ptr<CFontFamily>			mpCodeFamily;
+	Ptr<CFont>					mpDimFont;			//A dialog's dividers' titles.
+	SDialogLook					msDialogLook;
+	Ptr<CMenuBar>				mpMenuBar;
+	Ptr<CMenuItem>				mpOpenItem;			//File, Open Project/Solution.
+	CIDEMenuListener			mcMenuListener;
+	Ptr<CFileChooser>			mpFileChooser;		//While it's shown.
+	Ptr<CImageCel>				mpFolderIcon;		//The file chooser's.
+	Ptr<CImageCel>				mpFileIcon;
+	CChars						mszSolutionFile;	//The solution or project opened last.
 	Ptr<CTabbedContainer>		mpEditors;			//A tab for each open file.
 	CArray<CIDEEditorTab>		maTabs;
 	Ptr<CIDEEditorTab>			mpActive;			//The selected tab's file, NULL if none is open.
@@ -151,7 +176,10 @@ public:
 	bool			Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* szCodeFont);
 
 	bool			OpenSolution(const char* szFileName);
+	bool			ShowOpenSolutionDialog(void);
+	void			MenuItemClicked(CMenuItem* pcItem);
 	bool			OpenFile(const char* szFileName, size uiProject = SOLUTION_EXPLORER_NO_PROJECT);
+	void			CloseAllFiles(void);
 	void			ExplorerActivated(void);
 	void			ReferenceActivated(void);
 	bool			GoToDefinition(void);
@@ -184,6 +212,7 @@ public:
 	CCPP65ListingIndex*	GetListings(void);
 
 protected:
+	Ptr<CMenuBar>		CreateMenuBar(void);
 	void				HighlightTab(Ptr<CIDEEditorTab> pTab);
 	Ptr<CIDEEditorTab>	FindTab(const char* szFileName);
 	Ptr<CIDEEditorTab>	FindTab(CUnknown* pcTab);
