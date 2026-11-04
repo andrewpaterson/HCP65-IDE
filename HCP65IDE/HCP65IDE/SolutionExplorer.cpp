@@ -498,5 +498,25 @@ bool CSolutionExplorer::GetSelectedFilePath(CChars* pszDest)
 }
 
 
+//////////////////////////////////////////////////////////////////////////
+//
+// The solution's project a project's file node is in, or
+// SOLUTION_EXPLORER_NO_PROJECT for any other node (a solution item
+// isn't built by a project).
+//
+//////////////////////////////////////////////////////////////////////////
+size CSolutionExplorer::GetNodeProject(int32 iNode)
+{
+	SSolutionExplorerNode*	psNode;
+
+	psNode = GetNode(iNode);
+	if ((psNode == NULL) || (psNode->eType != SENT_File))
+	{
+		return SOLUTION_EXPLORER_NO_PROJECT;
+	}
+	return psNode->uiProject;
+}
+
+
 Ptr<CTreeContainer> CSolutionExplorer::GetTree(void) { return mpTree; }
 Ptr<CComponent> CSolutionExplorer::GetComponent(void) { return mpScrollPane; }

@@ -27,6 +27,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/TextArea.h"
 #include "WindowLib/ListListener.h"
 #include "VisualStudioLib/VcxSolution.h"
+#include "IDECodeModel.h"
 #include "SolutionExplorer.h"
 
 
@@ -63,6 +64,7 @@ protected:
 	CSolutionExplorerListener	mcExplorerListener;
 	CVcxSolution				mcSolution;
 	bool						mbSolution;
+	CIDECodeModel				mcCodeModel;		//Uses mcSolution; initialised when a solution is opened.
 
 public:
 	void			Init(void);
@@ -75,15 +77,19 @@ public:
 	bool			Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* szCodeFont);
 
 	bool			OpenSolution(const char* szFileName);
-	bool			OpenFile(const char* szFileName);
+	bool			OpenFile(const char* szFileName, size uiProject = SOLUTION_EXPLORER_NO_PROJECT);
 	void			ExplorerActivated(void);
 
 	Ptr<CTextArea>		GetEditor(void);
 	CSolutionExplorer*	GetExplorer(void);
+
+protected:
+	void				HighlightFile(const char* szFileName, const char* szText, size uiProject);
 };
 
 
 Ptr<CFont> GenerateIDEFont(const char* szFontFilename, const char* szName, float32 fPixelSize, EColourOrder eOrder);
+ARGB32     GetHighlightColour(ECPPHighlight eKind);
 
 
 #endif // __IDE_CONTENT_H__

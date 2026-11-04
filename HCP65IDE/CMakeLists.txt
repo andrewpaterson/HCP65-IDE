@@ -37,6 +37,12 @@ set(SUPPORTLIB_DIR "${COMMON_DIR}/SupportLib")
 set(INPUTLIB_DIR "${COMMON_DIR}/InputLib")
 set(WINDOWLIB_DIR "${COMMON_DIR}/WindowLib")
 set(X11LIB_DIR "${COMMON_DIR}/X11Lib")
+set(THREADLIB_DIR "${COMMON_DIR}/ThreadLib")
+set(MICROPROCESSORLIB_DIR "${COMMON_DIR}/MicroprocessorLib")
+set(CPPPARSERLIB_DIR "${COMMON_DIR}/CppParserLib")
+# Assembler65Lib (which CppParserLib's 65C64 generator uses) is in the HCP65 repository, beside CommonLibraries.
+set(HCP65_LIBRARIES_DIR "${CODAPHELA_ROOT}/HCP65/Libraries")
+set(ASSEMBLER65LIB_DIR "${HCP65_LIBRARIES_DIR}/Assembler65Lib")
 set(VISUALSTUDIOLIB_DIR "${IDE_ROOT}/Libraries/VisualStudioLib")
 set(IDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/HCP65IDE")
 
@@ -94,11 +100,20 @@ vcxproj_sources(INPUTLIB_SOURCES "${INPUTLIB_DIR}/InputLib.vcxproj")
 vcxproj_sources(WINDOWLIB_SOURCES "${WINDOWLIB_DIR}/WindowLib.vcxproj")
 
 vcxproj_sources(X11LIB_SOURCES "${X11LIB_DIR}/X11Lib.vcxproj")
+vcxproj_sources(THREADLIB_SOURCES "${THREADLIB_DIR}/ThreadLib.vcxproj")
+
+vcxproj_sources(MICROPROCESSORLIB_SOURCES "${MICROPROCESSORLIB_DIR}/MicroprocessorLib.vcxproj")
+
+vcxproj_sources(ASSEMBLER65LIB_SOURCES "${ASSEMBLER65LIB_DIR}/Assembler65Lib.vcxproj")
+
+vcxproj_sources(CPPPARSERLIB_SOURCES "${CPPPARSERLIB_DIR}/CppParserLib.vcxproj")
+
 vcxproj_sources(VISUALSTUDIOLIB_SOURCES "${VISUALSTUDIOLIB_DIR}/VisualStudioLib.vcxproj")
 
 # HCP65IDE.cpp (WinMain) is Windows only.
 set(IDE_SOURCES
 	"${IDE_DIR}/HCP65IDELinux.cpp"
+	"${IDE_DIR}/IDECodeModel.cpp"
 	"${IDE_DIR}/IDEContent.cpp"
 	"${IDE_DIR}/IDEWindowTick.cpp"
 	"${IDE_DIR}/IDEApp.cpp"
@@ -110,7 +125,7 @@ set(IDE_SOURCES
 # BREAK_ON_WARNING: on Linux BREAK() raises SIGTRAP, which kills the test run
 # when no debugger is attached.
 add_library(baselib_options INTERFACE)
-target_include_directories(baselib_options INTERFACE "${COMMON_DIR}" "${IDE_ROOT}/Libraries")
+target_include_directories(baselib_options INTERFACE "${COMMON_DIR}" "${HCP65_LIBRARIES_DIR}" "${IDE_ROOT}/Libraries")
 target_compile_definitions(baselib_options INTERFACE
 	LINUX_GNU
 	$<$<CONFIG:Debug>:_DEBUG>
@@ -162,10 +177,23 @@ target_link_libraries(WindowLib PUBLIC InputLib SupportLib StandardLib BaseLib)
 add_library(X11Lib STATIC ${X11LIB_SOURCES})
 target_link_libraries(X11Lib PUBLIC WindowLib InputLib SupportLib StandardLib BaseLib X11::X11)
 
+add_library(ThreadLib STATIC ${THREADLIB_SOURCES})
+target_link_libraries(ThreadLib PUBLIC BaseLib)
+
+add_library(MicroprocessorLib STATIC ${MICROPROCESSORLIB_SOURCES})
+target_link_libraries(MicroprocessorLib PUBLIC StandardLib BaseLib)
+
+add_library(Assembler65Lib STATIC ${ASSEMBLER65LIB_SOURCES})
+target_link_libraries(Assembler65Lib PUBLIC MicroprocessorLib StandardLib BaseLib)
+
+# CppParserLib preprocesses, parses and highlights the solution's C++.  Its 65C64 generator brings in the rest.
+add_library(CppParserLib STATIC ${CPPPARSERLIB_SOURCES})
+target_link_libraries(CppParserLib PUBLIC Assembler65Lib MicroprocessorLib ThreadLib StandardLib BaseLib)
+
 # VisualStudioLib reads Visual Studio's projects and solutions.  It only needs BaseLib.
 add_library(VisualStudioLib STATIC ${VISUALSTUDIOLIB_SOURCES})
 target_link_libraries(VisualStudioLib PUBLIC BaseLib)
 
 add_executable(HCP65IDE ${IDE_SOURCES})
 target_include_directories(HCP65IDE PRIVATE "${IDE_DIR}")
-target_link_libraries(HCP65IDE PRIVATE X11Lib WindowLib InputLib VisualStudioLib SupportLib StandardLib BaseLib)
+target_link_libraries(HCP65IDE PRIVATE X11Lib WindowLib InputLib VisualStudioLib CppParserLib Assembler65Lib MicroprocessorLib ThreadLib SupportLib StandardLib BaseLib)

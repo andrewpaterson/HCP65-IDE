@@ -50,6 +50,9 @@ struct SSolutionExplorerNode
 typedef CArrayTemplate<SSolutionExplorerNode>	CArraySolutionExplorerNode;
 
 
+#define SOLUTION_EXPLORER_NO_PROJECT	MAX_SIZE
+
+
 //Solution Explorer: the solution, its solution folders and projects, each project's filters as folders and its files in
 //them, as Visual Studio shows them.  In each folder the folders come first and then the projects or files, each in
 //alphabetical order.  It is an object held by the IDE's content.
@@ -81,6 +84,7 @@ public:
 	SSolutionExplorerNode*	GetNode(int32 iNode);
 	bool					GetNodeFilePath(int32 iNode, CChars* pszDest);
 	bool					GetSelectedFilePath(CChars* pszDest);
+	size					GetNodeProject(int32 iNode);
 	bool					GetNodeFileName(int32 iNode, CChars* pszDest);
 	int32					FindFileNode(const char* szFileName);
 

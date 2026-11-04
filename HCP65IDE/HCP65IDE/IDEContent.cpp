@@ -40,6 +40,61 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define IDE_CODE_PIXEL_SIZE		15.0f
 
 
+//Visual Studio's dark theme colours for C++, by ECPPHighlight.
+struct SIDEHighlightColour
+{
+	uint8	r;
+	uint8	g;
+	uint8	b;
+};
+
+
+SIDEHighlightColour gasHighlightColours[] =
+{
+	{ 0x57, 0xA6, 0x4A },	//CPPH_Comment
+	{ 0x6B, 0x6B, 0x6B },	//CPPH_Inactive
+	{ 0x9B, 0x9B, 0x9B },	//CPPH_Directive
+	{ 0xBE, 0xB7, 0xFF },	//CPPH_Macro
+	{ 0x56, 0x9C, 0xD6 },	//CPPH_Keyword
+	{ 0xB4, 0xB4, 0xB4 },	//CPPH_Operator
+	{ 0xB5, 0xCE, 0xA8 },	//CPPH_Number
+	{ 0xD6, 0x9D, 0x85 },	//CPPH_Character
+	{ 0xD6, 0x9D, 0x85 },	//CPPH_String
+	{ 0xC8, 0xC8, 0xC8 },	//CPPH_Namespace
+	{ 0x4E, 0xC9, 0xB0 },	//CPPH_Class
+	{ 0xB8, 0xD7, 0xA3 },	//CPPH_Enum
+	{ 0x4E, 0xC9, 0xB0 },	//CPPH_Typedef
+	{ 0xB8, 0xD7, 0xA3 },	//CPPH_TypeParameter
+	{ 0x56, 0x9C, 0xD6 },	//CPPH_BuiltinType
+	{ 0xDC, 0xDC, 0xAA },	//CPPH_Function
+	{ 0x9C, 0xDC, 0xFE },	//CPPH_Variable
+	{ 0xDA, 0xDA, 0xDA },	//CPPH_Field
+	{ 0x9A, 0x9A, 0x9A },	//CPPH_Parameter
+	{ 0xB8, 0xD7, 0xA3 },	//CPPH_Enumerator
+	{ 0xC8, 0xC8, 0xC8 },	//CPPH_Label
+	{ 0xDA, 0xDA, 0xDA },	//CPPH_Member
+	{ 0xDC, 0xDC, 0xDC },	//CPPH_Unresolved
+	{ 0xDC, 0xDC, 0xDC },	//CPPH_Identifier
+};
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+ARGB32 GetHighlightColour(ECPPHighlight eKind)
+{
+	SIDEHighlightColour*	psColour;
+
+	if ((size)eKind >= sizeof(gasHighlightColours) / sizeof(SIDEHighlightColour))
+	{
+		eKind = CPPH_Identifier;
+	}
+	psColour = &gasHighlightColours[eKind];
+	return Set32BitColour(psColour->r, psColour->g, psColour->b);
+}
+
+
 //////////////////////////////////////////////////////////////////////////
 //
 // A white font of szFontFilename's printable ASCII characters.
@@ -117,6 +172,7 @@ void CIDEContent::Init(void)
 
 	mbSolution = false;
 	mcSolution.Init();
+	mcCodeModel.Init(&mcSolution);
 	mcExplorerListener.Init(this);
 
 	PostInit();
@@ -138,6 +194,7 @@ void CIDEContent::Class(void)
 	M_Pointer(mpExplorer);
 	U_Unknown(CSolutionExplorerListener, mcExplorerListener);
 	U_Unknown(CVcxSolution, mcSolution);
+	U_Unknown(CIDECodeModel, mcCodeModel);
 	U_Bool(mbSolution);
 }
 
@@ -151,6 +208,7 @@ void CIDEContent::Free(void)
 {
 	//An object's memory is freed without its destructor running so the listener takes itself off the tree.
 	mcExplorerListener.RemoveFromListenerCalls();
+	mcCodeModel.Kill();
 	mcSolution.Kill();
 }
 
@@ -249,6 +307,7 @@ bool CIDEContent::OpenSolution(const char* szFileName)
 	bSolution = szName.EndsWithIgnoreCase(".sln");
 	szName.Kill();
 
+	mcCodeModel.Kill();
 	mcSolution.Kill();
 	mcSolution.Init();
 	if (bSolution)
@@ -259,6 +318,8 @@ bool CIDEContent::OpenSolution(const char* szFileName)
 	{
 		mbSolution = mcSolution.ReadProject(szFileName);
 	}
+	mcCodeModel.Init(&mcSolution);
+	mcCodeModel.AddDefaultSystemDirectories();
 	if (!mbSolution)
 	{
 		return false;
@@ -270,10 +331,11 @@ bool CIDEContent::OpenSolution(const char* szFileName)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Shows szFileName in the editor.
+// Shows szFileName in the editor.  A file of the solution's project
+// uiProject is highlighted as that project builds it.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEContent::OpenFile(const char* szFileName)
+bool CIDEContent::OpenFile(const char* szFileName, size uiProject)
 {
 	CTextFile	cFile;
 
@@ -284,8 +346,63 @@ bool CIDEContent::OpenFile(const char* szFileName)
 		return gcLogger.Error2(__METHOD__, " Could not read [", szFileName, "].", NULL);
 	}
 	mpEditor->SetText(cFile.Text());
+	if (uiProject != SOLUTION_EXPLORER_NO_PROJECT)
+	{
+		HighlightFile(szFileName, cFile.Text(), uiProject);
+	}
 	cFile.Kill();
 	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Colours the editor's text (szText, szFileName's contents) by what the
+// parser found each part of it to be.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::HighlightFile(const char* szFileName, const char* szText, size uiProject)
+{
+	CArrayHighlights	acHighlights;
+	CArrayInt			aiLineStarts;
+	CChars				szErrors;
+	SCPPHighlight*		psHighlight;
+	size				i;
+	size				uiStart;
+	const char*			szPosition;
+	int					iPass;
+
+	acHighlights.Init();
+	szErrors.Init();
+	if (mcCodeModel.Highlight(uiProject, szFileName, &acHighlights, &szErrors))
+	{
+		aiLineStarts.Init();
+		aiLineStarts.Add(0);
+		for (szPosition = szText; *szPosition != '\0'; szPosition++)
+		{
+			if (*szPosition == '\n')
+			{
+				aiLineStarts.Add((int)(szPosition - szText + 1));
+			}
+		}
+
+		//Code skipped by conditional compilation is dimmed whatever is in it, comments too, so it goes last.
+		for (iPass = 0; iPass < 2; iPass++)
+		{
+			for (i = 0; i < acHighlights.NumElements(); i++)
+			{
+				psHighlight = acHighlights.Get(i);
+				if (((psHighlight->uiKind == CPPH_Inactive) == (iPass == 1)) && (psHighlight->iLine >= 0) && ((size)psHighlight->iLine < aiLineStarts.NumElements()))
+				{
+					uiStart = (size)aiLineStarts.GetValue((size)psHighlight->iLine) + (size)psHighlight->iColumn;
+					mpEditor->AddSpan(uiStart, (size)psHighlight->iLength, GetHighlightColour((ECPPHighlight)psHighlight->uiKind));
+				}
+			}
+		}
+		aiLineStarts.Kill();
+	}
+	szErrors.Kill();
+	acHighlights.Kill();
 }
 
 
@@ -301,7 +418,7 @@ void CIDEContent::ExplorerActivated(void)
 	szPath.Init();
 	if (mpExplorer->GetSelectedFilePath(&szPath))
 	{
-		OpenFile(szPath.Text());
+		OpenFile(szPath.Text(), mpExplorer->GetNodeProject(mpExplorer->GetTree()->GetSelectedNode()));
 	}
 	szPath.Kill();
 }
