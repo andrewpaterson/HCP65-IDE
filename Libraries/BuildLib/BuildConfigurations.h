@@ -21,6 +21,7 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __BUILD_CONFIGURATIONS_H__
 #define __BUILD_CONFIGURATIONS_H__
 #include "BaseLib/ArrayTemplate.h"
+#include "BaseLib/ArrayChars.h"
 #include "VisualStudioLib/VcxSolution.h"
 #include "BuildConfiguration.h"
 
@@ -48,6 +49,9 @@ public:
 	size					NumConfigurations(void);
 	CBuildConfiguration*	GetConfiguration(size uiIndex);
 	CBuildConfiguration*	FindConfiguration(const char* szName);
+	CBuildConfiguration*	FindConfiguration(const char* szConfiguration, const char* szPlatform);
+	void					GetConfigurationNames(CArrayChars* paszDest);
+	void					GetPlatformNames(CArrayChars* paszDest);
 
 	static void				GetFileName(const char* szSolutionFile, CChars* pszDest);
 
@@ -55,6 +59,7 @@ protected:
 	void					Clear(void);
 	void					AddDefault(CVcxSolution* pcSolution, const char* szConfiguration, EBuildToolchain eToolchain, const char* szPlatform);
 	void					GetConfigurationName(const char* szSolutionConfiguration, CChars* pszDest);
+	void					GetNames(CArrayChars* paszDest, bool bPlatforms);
 };
 
 

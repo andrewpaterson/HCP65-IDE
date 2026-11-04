@@ -114,6 +114,67 @@ void TestBuildConfigurationsFile(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// A configuration is chosen by its name's configuration and platform,
+// either side of its |; a name without one is all configuration, and its
+// platform is its toolchain.
+//
+//////////////////////////////////////////////////////////////////////////
+void TestBuildConfigurationsPlatforms(void)
+{
+	CBuildConfigurations	cConfigurations;
+	CArrayChars				aszNames;
+	CChars					szName;
+
+	cConfigurations.Init();
+	cConfigurations.Add("Debug|Win32", BT_MSVC, "Debug|Win32");
+	cConfigurations.Add("Release|x64", BT_MSVC, "Release|x64");
+	cConfigurations.Add("Debug|W65C816", BT_W65C816, "Debug|Win32");
+	cConfigurations.Add("Release|W65C816", BT_W65C816, "Release|x64");
+	cConfigurations.Add("Fast GCC", BT_GCC, "Release|x64");
+
+	szName.Init();
+	cConfigurations.GetConfiguration(2)->GetConfigurationName(&szName);
+	AssertString("Debug", szName.Text());
+	szName.Clear();
+	cConfigurations.GetConfiguration(2)->GetPlatformName(&szName);
+	AssertString("W65C816", szName.Text());
+	szName.Clear();
+	cConfigurations.GetConfiguration(4)->GetConfigurationName(&szName);
+	AssertString("Fast GCC", szName.Text());
+	szName.Clear();
+	cConfigurations.GetConfiguration(4)->GetPlatformName(&szName);
+	AssertString("GCC", szName.Text());
+	szName.Kill();
+
+	//Each once, in the order they first come.
+	aszNames.Init();
+	cConfigurations.GetConfigurationNames(&aszNames);
+	AssertSize(3, aszNames.NumElements());
+	AssertString("Debug", aszNames.GetText(0));
+	AssertString("Release", aszNames.GetText(1));
+	AssertString("Fast GCC", aszNames.GetText(2));
+	aszNames.ReInit();
+	cConfigurations.GetPlatformNames(&aszNames);
+	AssertSize(4, aszNames.NumElements());
+	AssertString("Win32", aszNames.GetText(0));
+	AssertString("x64", aszNames.GetText(1));
+	AssertString("W65C816", aszNames.GetText(2));
+	AssertString("GCC", aszNames.GetText(3));
+	aszNames.Kill();
+
+	//NULL is any.
+	AssertTrue(cConfigurations.FindConfiguration("Release", "W65C816") == cConfigurations.GetConfiguration(3));
+	AssertTrue(cConfigurations.FindConfiguration("Release", "Win32") == NULL);
+	AssertTrue(cConfigurations.FindConfiguration("Release", NULL) == cConfigurations.GetConfiguration(1));
+	AssertTrue(cConfigurations.FindConfiguration(NULL, "W65C816") == cConfigurations.GetConfiguration(2));
+	AssertTrue(cConfigurations.FindConfiguration("Fast GCC", "GCC") == cConfigurations.GetConfiguration(4));
+
+	cConfigurations.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 //
 //////////////////////////////////////////////////////////////////////////
 void TestBuildConfigurations(void)
@@ -122,6 +183,7 @@ void TestBuildConfigurations(void)
 
 	TestBuildConfigurationsDefaults();
 	TestBuildConfigurationsFile();
+	TestBuildConfigurationsPlatforms();
 
 	TestStatistics();
 }

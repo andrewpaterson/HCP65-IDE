@@ -39,7 +39,7 @@ enum EBuildToolchain
 
 //A way the solution is built: a name to choose it by, its toolchain, and the solution configuration ("Debug|Win32")
 //whose projects' files, include directories and defines it builds with.  MSVC builds that configuration as Visual
-//Studio does.
+//Studio does.  The name is chosen as its configuration and platform, either side of a | ("Debug|W65C816").
 class CBuildConfiguration
 {
 protected:
@@ -59,6 +59,9 @@ public:
 	EBuildToolchain	GetToolchain(void);
 	char*			GetSolutionConfiguration(void);
 	bool			IsHCP65(void);
+	void			GetConfigurationName(CChars* pszDest);
+	void			GetPlatformName(CChars* pszDest);
+	bool			Is(const char* szConfiguration, const char* szPlatform);
 
 	static const char*	GetToolchainName(EBuildToolchain eToolchain);
 	static bool			FindToolchain(const char* szName, EBuildToolchain* peToolchain);

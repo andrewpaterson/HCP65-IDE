@@ -289,6 +289,80 @@ CBuildConfiguration* CBuildConfigurations::FindConfiguration(const char* szName)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// The first configuration whose configuration is szConfiguration and
+// platform szPlatform, NULL if there is none.  NULL matches any.
+//
+//////////////////////////////////////////////////////////////////////////
+CBuildConfiguration* CBuildConfigurations::FindConfiguration(const char* szConfiguration, const char* szPlatform)
+{
+	size	i;
+
+	for (i = 0; i < masConfigurations.NumElements(); i++)
+	{
+		if (masConfigurations.Get(i)->Is(szConfiguration, szPlatform))
+		{
+			return masConfigurations.Get(i);
+		}
+	}
+	return NULL;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The configurations' configuration names (Debug, Release), each once in
+// the order they first come.
+//
+//////////////////////////////////////////////////////////////////////////
+void CBuildConfigurations::GetConfigurationNames(CArrayChars* paszDest)
+{
+	GetNames(paszDest, false);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The configurations' platforms (Win32, x64, W65C816), each once in the
+// order they first come.
+//
+//////////////////////////////////////////////////////////////////////////
+void CBuildConfigurations::GetPlatformNames(CArrayChars* paszDest)
+{
+	GetNames(paszDest, true);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CBuildConfigurations::GetNames(CArrayChars* paszDest, bool bPlatforms)
+{
+	size	i;
+	CChars	szName;
+
+	for (i = 0; i < masConfigurations.NumElements(); i++)
+	{
+		szName.Init();
+		if (bPlatforms)
+		{
+			masConfigurations.Get(i)->GetPlatformName(&szName);
+		}
+		else
+		{
+			masConfigurations.Get(i)->GetConfigurationName(&szName);
+		}
+		if (!paszDest->Contains(&szName))
+		{
+			paszDest->Add(szName.Text());
+		}
+		szName.Kill();
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // The configurations file of the solution (or project) szSolutionFile:
 // its name with .hcp65build for its extension.
 //

@@ -18,6 +18,7 @@ You should have received a copy of the GNU Affero General Public License
 along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 
 ** ------------------------------------------------------------------------ **/
+#include <string.h>
 #include "BaseLib/StringHelper.h"
 #include "BuildConfiguration.h"
 
@@ -121,6 +122,66 @@ bool CBuildConfiguration::LoadXML(CMarkupTag* pcTag)
 bool CBuildConfiguration::IsHCP65(void)
 {
 	return (meToolchain == BT_W65C816) || (meToolchain == BT_65C64);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The name's configuration: Debug of Debug|W65C816, all of a name without
+// a |.
+//
+//////////////////////////////////////////////////////////////////////////
+void CBuildConfiguration::GetConfigurationName(CChars* pszDest)
+{
+	const char*	szBar;
+
+	szBar = strchr(mszName.Text(), '|');
+	if (szBar)
+	{
+		pszDest->Append(mszName.Text(), (size)(szBar - mszName.Text()));
+	}
+	else
+	{
+		pszDest->Append(mszName);
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The name's platform: W65C816 of Debug|W65C816, the toolchain's name for
+// a name without a |.
+//
+//////////////////////////////////////////////////////////////////////////
+void CBuildConfiguration::GetPlatformName(CChars* pszDest)
+{
+	const char*	szBar;
+
+	szBar = strchr(mszName.Text(), '|');
+	pszDest->Append(szBar ? szBar + 1 : GetToolchainName(meToolchain));
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether its configuration is szConfiguration and its platform
+// szPlatform.  NULL matches any.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CBuildConfiguration::Is(const char* szConfiguration, const char* szPlatform)
+{
+	CChars	szConfigurationName;
+	CChars	szPlatformName;
+	bool	bResult;
+
+	szConfigurationName.Init();
+	szPlatformName.Init();
+	GetConfigurationName(&szConfigurationName);
+	GetPlatformName(&szPlatformName);
+	bResult = ((szConfiguration == NULL) || szConfigurationName.Equals(szConfiguration)) && ((szPlatform == NULL) || szPlatformName.Equals(szPlatform));
+	szPlatformName.Kill();
+	szConfigurationName.Kill();
+	return bResult;
 }
 
 
