@@ -53,6 +53,18 @@ typedef CArrayTemplate<SSolutionExplorerNode>	CArraySolutionExplorerNode;
 #define SOLUTION_EXPLORER_NO_PROJECT	MAX_SIZE
 
 
+//A folder, project or file to be shown, while the ones in a folder are sorted.
+struct SSolutionExplorerEntry
+{
+	const char*	szName;
+	bool		bFolder;
+	size		uiIndex;	//The project's, filter's or item's.
+};
+
+
+typedef CArrayTemplate<SSolutionExplorerEntry>	CArraySolutionExplorerEntry;
+
+
 //Solution Explorer: the solution, its solution folders and projects, each project's filters as folders and its files in
 //them, as Visual Studio shows them.  In each folder the folders come first and then the projects or files, each in
 //alphabetical order.  It is an object held by the IDE's content.
@@ -91,12 +103,14 @@ public:
 protected:
 	int32					AddNode(int32 iParentNode, const char* szText, Ptr<CImageCel> pIcon, ESolutionExplorerNodeType eType, size uiProject, size uiIndex);
 	void					AddSolutionContents(int32 iParentNode, const char* szParentGuid);
+	void					AddSolutionItems(int32 iParentNode, size uiFolder);
 	void					AddProject(int32 iParentNode, size uiProject);
 	void					AddFilterContents(int32 iParentNode, size uiProject, const char* szFilter);
-	void					SortProjects(CArrayInt* paiProjects);
-	void					SortFilters(CVcxProject* pcProject, CArrayInt* paiFilters);
-	void					SortItems(CVcxProject* pcProject, CArrayInt* paiItems);
 };
+
+
+int  CompareSolutionExplorerEntries(const void* pv1, const void* pv2);
+void AddSolutionExplorerEntry(CArraySolutionExplorerEntry* pasEntries, const char* szName, bool bFolder, size uiIndex);
 
 
 #endif // __SOLUTION_EXPLORER_H__

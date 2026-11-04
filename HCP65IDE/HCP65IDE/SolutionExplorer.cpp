@@ -185,6 +185,52 @@ int32 CSolutionExplorer::AddNode(int32 iParentNode, const char* szText, Ptr<CIma
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Folders before everything else, then alphabetical whatever the case,
+// then in the order they were found.
+//
+//////////////////////////////////////////////////////////////////////////
+int CompareSolutionExplorerEntries(const void* pv1, const void* pv2)
+{
+	SSolutionExplorerEntry*	ps1;
+	SSolutionExplorerEntry*	ps2;
+	int						iCompare;
+
+	ps1 = (SSolutionExplorerEntry*)pv1;
+	ps2 = (SSolutionExplorerEntry*)pv2;
+	if (ps1->bFolder != ps2->bFolder)
+	{
+		return ps1->bFolder ? -1 : 1;
+	}
+	iCompare = StringInsensitiveCompare(ps1->szName, ps2->szName);
+	if (iCompare != 0)
+	{
+		return iCompare;
+	}
+	if (ps1->uiIndex == ps2->uiIndex)
+	{
+		return 0;
+	}
+	return (ps1->uiIndex < ps2->uiIndex) ? -1 : 1;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void AddSolutionExplorerEntry(CArraySolutionExplorerEntry* pasEntries, const char* szName, bool bFolder, size uiIndex)
+{
+	SSolutionExplorerEntry*	psEntry;
+
+	psEntry = pasEntries->Add();
+	psEntry->szName = szName;
+	psEntry->bFolder = bFolder;
+	psEntry->uiIndex = uiIndex;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // The solution folders and projects in the folder szParentGuid ("" is
 // the solution): folders first, then projects.  A folder's own files
 // come after what is nested in it.
@@ -192,44 +238,67 @@ int32 CSolutionExplorer::AddNode(int32 iParentNode, const char* szText, Ptr<CIma
 //////////////////////////////////////////////////////////////////////////
 void CSolutionExplorer::AddSolutionContents(int32 iParentNode, const char* szParentGuid)
 {
-	CArrayInt				aiProjects;
-	CVcxSolutionProject*	pcProject;
-	CFileUtil				cFileUtil;
-	CChars					szPath;
-	CChars					szName;
-	int32					iNode;
-	size					i;
-	size					j;
-	size					uiIndex;
+	CArrayInt					aiProjects;
+	CArraySolutionExplorerEntry	asEntries;
+	SSolutionExplorerEntry*		psEntry;
+	CVcxSolutionProject*		pcProject;
+	int32						iNode;
+	size						i;
 
 	aiProjects.Init();
 	mpcSolution->GetChildProjects(szParentGuid, &aiProjects);
-	SortProjects(&aiProjects);
+	asEntries.Init();
 	for (i = 0; i < aiProjects.NumElements(); i++)
 	{
-		uiIndex = (size)aiProjects.GetValue(i);
-		pcProject = mpcSolution->GetProject(uiIndex);
-		if (pcProject->IsFolder())
+		pcProject = mpcSolution->GetProject((size)aiProjects.GetValue(i));
+		AddSolutionExplorerEntry(&asEntries, pcProject->GetName(), pcProject->IsFolder(), (size)aiProjects.GetValue(i));
+	}
+	aiProjects.Kill();
+
+	asEntries.QuickSort(&CompareSolutionExplorerEntries);
+	for (i = 0; i < asEntries.NumElements(); i++)
+	{
+		psEntry = asEntries.Get(i);
+		if (psEntry->bFolder)
 		{
-			iNode = AddNode(iParentNode, pcProject->GetName(), mpFolderIcon, SENT_SolutionFolder, uiIndex, 0);
+			pcProject = mpcSolution->GetProject(psEntry->uiIndex);
+			iNode = AddNode(iParentNode, pcProject->GetName(), mpFolderIcon, SENT_SolutionFolder, psEntry->uiIndex, 0);
 			AddSolutionContents(iNode, pcProject->GetGuid());
-			for (j = 0; j < pcProject->NumSolutionItems(); j++)
-			{
-				szPath.Init(pcProject->GetSolutionItem(j));
-				szPath.Replace('\\', FILE_SEPARATOR[0]);
-				szName.Init();
-				cFileUtil.GetFileName(&szName, szPath.Text());
-				AddNode(iNode, szName.Text(), mpFileIcon, SENT_SolutionItem, uiIndex, j);
-				szName.Kill();
-				szPath.Kill();
-			}
+			AddSolutionItems(iNode, psEntry->uiIndex);
 		}
 		else
 		{
-			AddProject(iParentNode, uiIndex);
+			AddProject(iParentNode, psEntry->uiIndex);
 		}
 	}
-	aiProjects.Kill();
+	asEntries.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A solution folder's files, by their names without their directories.
+//
+//////////////////////////////////////////////////////////////////////////
+void CSolutionExplorer::AddSolutionItems(int32 iParentNode, size uiFolder)
+{
+	CVcxSolutionProject*	pcFolder;
+	CFileUtil				cFileUtil;
+	CChars					szPath;
+	CChars					szName;
+	size					i;
+
+	pcFolder = mpcSolution->GetProject(uiFolder);
+	for (i = 0; i < pcFolder->NumSolutionItems(); i++)
+	{
+		szPath.Init(pcFolder->GetSolutionItem(i));
+		szPath.Replace('\\', FILE_SEPARATOR[0]);
+		szName.Init();
+		cFileUtil.GetFileName(&szName, szPath.Text());
+		AddNode(iParentNode, szName.Text(), mpFileIcon, SENT_SolutionItem, uiFolder, i);
+		szName.Kill();
+		szPath.Kill();
+	}
 }
 
 
@@ -273,124 +342,46 @@ void CSolutionExplorer::AddProject(int32 iParentNode, size uiProject)
 //////////////////////////////////////////////////////////////////////////
 void CSolutionExplorer::AddFilterContents(int32 iParentNode, size uiProject, const char* szFilter)
 {
-	CVcxProject*	pcProject;
-	CArrayInt		aiFilters;
-	CArrayInt		aiItems;
-	CVcxFilter*		pcFilter;
-	CVcxItem*		pcItem;
-	int32			iNode;
-	size			i;
-	size			uiIndex;
+	CVcxProject*				pcProject;
+	CArrayInt					aiIndices;
+	CArraySolutionExplorerEntry	asEntries;
+	SSolutionExplorerEntry*		psEntry;
+	CVcxFilter*					pcFilter;
+	int32						iNode;
+	size						i;
 
 	pcProject = mpcSolution->GetProject(uiProject)->GetProject();
-	aiFilters.Init();
-	pcProject->GetChildFilters(szFilter, &aiFilters);
-	SortFilters(pcProject, &aiFilters);
-	for (i = 0; i < aiFilters.NumElements(); i++)
+	asEntries.Init();
+	aiIndices.Init();
+	pcProject->GetChildFilters(szFilter, &aiIndices);
+	for (i = 0; i < aiIndices.NumElements(); i++)
 	{
-		uiIndex = (size)aiFilters.GetValue(i);
-		pcFilter = pcProject->GetFilter(uiIndex);
-		iNode = AddNode(iParentNode, pcFilter->GetLeafName(), mpFolderIcon, SENT_Filter, uiProject, uiIndex);
-		AddFilterContents(iNode, uiProject, pcFilter->GetName());
+		AddSolutionExplorerEntry(&asEntries, pcProject->GetFilter((size)aiIndices.GetValue(i))->GetLeafName(), true, (size)aiIndices.GetValue(i));
 	}
-	aiFilters.Kill();
-
-	aiItems.Init();
-	pcProject->GetItemsInFilter(szFilter, &aiItems);
-	SortItems(pcProject, &aiItems);
-	for (i = 0; i < aiItems.NumElements(); i++)
+	aiIndices.ReInit();
+	pcProject->GetItemsInFilter(szFilter, &aiIndices);
+	for (i = 0; i < aiIndices.NumElements(); i++)
 	{
-		uiIndex = (size)aiItems.GetValue(i);
-		pcItem = pcProject->GetItem(uiIndex);
-		AddNode(iParentNode, pcItem->GetFileName(), mpFileIcon, SENT_File, uiProject, uiIndex);
+		AddSolutionExplorerEntry(&asEntries, pcProject->GetItem((size)aiIndices.GetValue(i))->GetFileName(), false, (size)aiIndices.GetValue(i));
 	}
-	aiItems.Kill();
-}
+	aiIndices.Kill();
 
-
-//////////////////////////////////////////////////////////////////////////
-//
-// Solution folders before projects, each alphabetical whatever its case.
-//
-//////////////////////////////////////////////////////////////////////////
-void CSolutionExplorer::SortProjects(CArrayInt* paiProjects)
-{
-	size					i;
-	size					j;
-	int						iProject;
-	CVcxSolutionProject*	pcProject;
-	CVcxSolutionProject*	pcBefore;
-	int						iCompare;
-
-	for (i = 1; i < paiProjects->NumElements(); i++)
+	asEntries.QuickSort(&CompareSolutionExplorerEntries);
+	for (i = 0; i < asEntries.NumElements(); i++)
 	{
-		iProject = paiProjects->GetValue(i);
-		pcProject = mpcSolution->GetProject((size)iProject);
-		for (j = i; j > 0; j--)
+		psEntry = asEntries.Get(i);
+		if (psEntry->bFolder)
 		{
-			pcBefore = mpcSolution->GetProject((size)paiProjects->GetValue(j - 1));
-			if (pcBefore->IsFolder() != pcProject->IsFolder())
-			{
-				iCompare = pcBefore->IsFolder() ? -1 : 1;
-			}
-			else
-			{
-				iCompare = StringInsensitiveCompare(pcBefore->GetName(), pcProject->GetName());
-			}
-			if (iCompare <= 0)
-			{
-				break;
-			}
-			paiProjects->SetValue(j, paiProjects->GetValue(j - 1));
+			pcFilter = pcProject->GetFilter(psEntry->uiIndex);
+			iNode = AddNode(iParentNode, psEntry->szName, mpFolderIcon, SENT_Filter, uiProject, psEntry->uiIndex);
+			AddFilterContents(iNode, uiProject, pcFilter->GetName());
 		}
-		paiProjects->SetValue(j, iProject);
-	}
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// Alphabetical by the filters' last names, whatever their case.
-//
-//////////////////////////////////////////////////////////////////////////
-void CSolutionExplorer::SortFilters(CVcxProject* pcProject, CArrayInt* paiFilters)
-{
-	size	i;
-	size	j;
-	int		iFilter;
-
-	for (i = 1; i < paiFilters->NumElements(); i++)
-	{
-		iFilter = paiFilters->GetValue(i);
-		for (j = i; (j > 0) && (StringInsensitiveCompare(pcProject->GetFilter(paiFilters->GetValue(j - 1))->GetLeafName(), pcProject->GetFilter(iFilter)->GetLeafName()) > 0); j--)
+		else
 		{
-			paiFilters->SetValue(j, paiFilters->GetValue(j - 1));
+			AddNode(iParentNode, psEntry->szName, mpFileIcon, SENT_File, uiProject, psEntry->uiIndex);
 		}
-		paiFilters->SetValue(j, iFilter);
 	}
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// Alphabetical by the files' names, whatever their case.
-//
-//////////////////////////////////////////////////////////////////////////
-void CSolutionExplorer::SortItems(CVcxProject* pcProject, CArrayInt* paiItems)
-{
-	size	i;
-	size	j;
-	int		iItem;
-
-	for (i = 1; i < paiItems->NumElements(); i++)
-	{
-		iItem = paiItems->GetValue(i);
-		for (j = i; (j > 0) && (StringInsensitiveCompare(pcProject->GetItem(paiItems->GetValue(j - 1))->GetFileName(), pcProject->GetItem(iItem)->GetFileName()) > 0); j--)
-		{
-			paiItems->SetValue(j, paiItems->GetValue(j - 1));
-		}
-		paiItems->SetValue(j, iItem);
-	}
+	asEntries.Kill();
 }
 
 
