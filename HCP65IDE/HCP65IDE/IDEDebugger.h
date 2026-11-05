@@ -118,6 +118,7 @@ protected:
 	bool					mbStarting;
 	int64					miStartTime;
 	bool					mbBreakAtStart;			//Started by stepping into: stay at the first instruction.
+	bool					mbIntoLine;				//A StepLine into a call: on to the callee's first line.
 	size					muiSeenStops;
 	size					muiSeenDisassemblies;
 	size					muiSeenErrors;
@@ -148,6 +149,7 @@ public:
 	bool					StepInto(void);
 	bool					StepOver(void);
 	bool					StepOut(void);
+	bool					StepLine(bool bOver);
 	bool					Restart(void);
 
 	bool					ToggleBreakpoint(uint32 uiAddress);
@@ -191,6 +193,7 @@ protected:
 	void					BindSourceBreakpoint(SIDESourceBreakpoint* psBreakpoint);
 	void					RemoveSourceBreakpointAt(size uiIndex);
 	bool					CanMove(void);
+	bool					IntoFirstLine(uint32 uiAddress);
 	void					End(const char* szStatus);
 };
 

@@ -270,6 +270,7 @@ public:
 	void				ShowBreakpoints(Ptr<CIDEEditorTab> pTab);
 	void				ShowAllBreakpoints(void);
 	void				ShowStoppedLine(bool bWasStopped);
+	bool				IsDisassemblyFocussed(void);
 	bool				ShowNewBreakpointDialog(void);
 	bool				ShowAttachDialog(void);
 	bool				AttachDebugger(int iPort);

@@ -535,9 +535,13 @@ bool CIDEContent::StepInto(void)
 		mpDock->Show(mpDebugTool);
 		mpWindow->RequestTick(IDE_DEBUG_POLL);
 	}
-	else
+	else if (IsDisassemblyFocussed())
 	{
 		bResult = mcDebugger.StepInto();
+	}
+	else
+	{
+		bResult = mcDebugger.StepLine(false);
 	}
 	UpdateDebugView(false);
 	return bResult;
@@ -557,9 +561,20 @@ bool CIDEContent::StepOver(void)
 	{
 		return StepInto();
 	}
-	bResult = mcDebugger.StepOver();
+	bResult = IsDisassemblyFocussed() ? mcDebugger.StepOver() : mcDebugger.StepLine(true);
 	UpdateDebugView(false);
 	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Steps are by instruction in the disassembly, by source line elsewhere.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEContent::IsDisassemblyFocussed(void)
+{
+	return mpWindow->GetFocus()->GetFocussedComponent() == mpDebugView->GetDisassembly();
 }
 
 

@@ -64,6 +64,7 @@ void CIDEDebugger::Init(void)
 	mbStarting = false;
 	miStartTime = 0;
 	mbBreakAtStart = false;
+	mbIntoLine = false;
 	muiSeenStops = 0;
 	muiSeenDisassemblies = 0;
 	muiSeenErrors = 0;
@@ -377,6 +378,51 @@ void CIDEDebugger::End(const char* szStatus)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// After a StepLine into a call: stopped on code with no line (a function's
+// entry code, before its first line's), it steps on over that to the next
+// line, as Visual Studio steps into a function's first line.  True if it
+// is stepping on.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEDebugger::IntoFirstLine(uint32 uiAddress)
+{
+	SDebugRange	sRange;
+	CChars		szFile;
+	uint32		uiLine;
+	size		ui;
+	bool		bResult;
+
+	if (!mbIntoLine)
+	{
+		return false;
+	}
+	mbIntoLine = false;
+	if (mcClient.GetStopReason() != DS_Step)
+	{
+		return false;
+	}
+	szFile.Init();
+	bResult = FindSourceLine(uiAddress, &szFile, &uiLine);
+	szFile.Kill();
+	if (bResult)
+	{
+		return false;
+	}
+	for (ui = 0; ui < muiLineTables; ui++)
+	{
+		if (macLineTables[ui].FindNextLine(uiAddress, &sRange.uiEnd))
+		{
+			sRange.uiStart = uiAddress;
+			mszStatus.Set("Stepping into the function's first line.");
+			return mcClient.StepRange(&sRange, 1, true) != 0;
+		}
+	}
+	return false;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // The emulator's answers say when it has done what was asked: nothing more
 // is asked of it until then.
 //
@@ -444,6 +490,52 @@ bool CIDEDebugger::StepOver(void)
 		return false;
 	}
 	return mcClient.StepOver() != 0;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The rest of the source line it is stopped on (DM_StepRange over the
+// line's code in every place it is): stepping over the calls in it with
+// bOver, into the first one otherwise, as Visual Studio's F10 and F11.
+// Stopped where no line table has a line, one instruction is stepped.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEDebugger::StepLine(bool bOver)
+{
+	CArrayUint32	auiRanges;
+	SDebugRange*	asRanges;
+	size			ui;
+	size			uiRanges;
+	bool			bResult;
+
+	if (!CanMove() || !mcClient.IsStopped())
+	{
+		return false;
+	}
+	auiRanges.Init();
+	for (ui = 0; (ui < muiLineTables) && (auiRanges.NumElements() == 0); ui++)
+	{
+		macLineTables[ui].FindLineRanges(GetProgramAddress(), &auiRanges);
+	}
+	uiRanges = auiRanges.NumElements() / 2;
+	if ((uiRanges == 0) || (uiRanges > DEBUG_MAX_LIST))
+	{
+		auiRanges.Kill();
+		return bOver ? StepOver() : StepInto();
+	}
+
+	asRanges = (SDebugRange*)malloc(uiRanges * sizeof(SDebugRange));
+	for (ui = 0; ui < uiRanges; ui++)
+	{
+		asRanges[ui].uiStart = auiRanges.GetValue(ui * 2);
+		asRanges[ui].uiEnd = auiRanges.GetValue(ui * 2 + 1);
+	}
+	bResult = mcClient.StepRange(asRanges, uiRanges, bOver) != 0;
+	mbIntoLine = bResult && !bOver;
+	free(asRanges);
+	auiRanges.Kill();
+	return bResult;
 }
 
 
@@ -1086,6 +1178,10 @@ void CIDEDebugger::Stopped(void)
 
 	muiSeenStops = mcClient.NumStops();
 	uiAddress = mcClient.GetStopAddress();
+	if (IntoFirstLine(uiAddress))
+	{
+		return;
+	}
 	switch (mcClient.GetStopReason())
 	{
 	case DS_Start:		mszStatus.Set("Stopped before the first instruction at ");	break;
