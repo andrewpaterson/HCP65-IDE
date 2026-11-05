@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source">
+      <UniqueIdentifier>{5E8C3A17-2B9D-4F6E-A1C4-7D0B9E3F5A28}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="JSONDocument.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ClaudeEvent.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ClaudeStream.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ClaudeCommand.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="JSONDocument.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="ClaudeEvent.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="ClaudeStream.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="ClaudeCommand.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
