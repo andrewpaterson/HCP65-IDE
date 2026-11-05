@@ -209,26 +209,6 @@ void CIDEMenuListener::MenuItemClicked(CUnknown* pcSource, void* pvContext)
 //
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEBuildListener::Init(CIDEContent* pcContent)
-{
-	mpcContent = pcContent;
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDEBuildListener::ButtonClicked(CUnknown* pcSource, void* pvContext)
-{
-	mpcContent->ToolbarButtonClicked(pcSource);
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-//
-//////////////////////////////////////////////////////////////////////////
 void CIDETabsListener::Init(CIDEContent* pcContent)
 {
 	mpcContent = pcContent;
@@ -283,7 +263,6 @@ void CIDEContent::Init(void)
 	mcConfigurationsListener.Init(this);
 	mcConfigurations.Init();
 	muiConfiguration = MAX_SIZE;
-	mcBuildListener.Init(this);
 	mcMenuListener.Init(this);
 	memset(&msDialogLook, 0, sizeof(msDialogLook));
 	mszSolutionFile.Init();
@@ -339,7 +318,6 @@ void CIDEContent::Class(void)
 	U_Unknown(CBuildConfigurations, mcConfigurations);
 	U_Size(muiConfiguration);
 	M_Pointer(mpBuildButton);
-	U_Unknown(CIDEBuildListener, mcBuildListener);
 	U_Unknown(CSolutionBuild, mcBuild);
 	U_String(mszLibc65);
 	U_Unknown(CCPP65ListingIndex, mcListings);
@@ -386,7 +364,14 @@ void CIDEContent::Free(void)
 	mcExplorerListener.RemoveFromListenerCalls();
 	mcReferencesListener.RemoveFromListenerCalls();
 	mcConfigurationsListener.RemoveFromListenerCalls();
-	mcBuildListener.RemoveFromListenerCalls();
+	if (mpBuildButton.IsNotNull())
+	{
+		mpBuildButton->GetClickEvent()->Remove(this);
+	}
+	if (mpStartButton.IsNotNull())
+	{
+		mpStartButton->GetClickEvent()->Remove(this);
+	}
 	mcMenuListener.RemoveFromListenerCalls();
 	mcTabsListener.RemoveFromListenerCalls();
 
@@ -514,10 +499,10 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpPlatforms->AddListener(&mcConfigurationsListener);
 	mpBuildButton = OMalloc<CButton>(pWindow, mpTheme, "Build");
 	mpBuildButton->SetAlignment(CSH_Left, CSV_Center);
-	mpBuildButton->AddListener(&mcBuildListener);
+	mpBuildButton->GetClickEvent()->Add(this, &CIDEContent::BuildClicked);
 	mpStartButton = OMalloc<CButton>(pWindow, mpTheme, "Start");
 	mpStartButton->SetAlignment(CSH_Left, CSV_Center);
-	mpStartButton->AddListener(&mcBuildListener);
+	mpStartButton->GetClickEvent()->Add(this, &CIDEContent::StartClicked);
 	pToolbar = OMalloc<CGridContainer>(pWindow);
 	pToolbar->SetDesiredSize(-1, IDE_TOOLBAR_HEIGHT);
 	pToolbar->SetAlignment(CSH_Stretch, CSV_Stretch);

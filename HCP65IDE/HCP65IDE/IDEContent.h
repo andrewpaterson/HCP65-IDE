@@ -35,7 +35,6 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BuildLib/SolutionBuild.h"
 #include "CppParserLib/CPP65ListingIndex.h"
 #include "WindowLib/Button.h"
-#include "WindowLib/ButtonListener.h"
 #include "WindowLib/TabbedContainer.h"
 #include "WindowLib/TabbedContainerListener.h"
 #include "WindowLib/MenuBar.h"
@@ -76,18 +75,6 @@ public:
 
 	void	Init(CIDEContent* pcContent);
 	void	SelectionChanged(CUnknown* pcSource, void* pvContext) override;
-};
-
-
-//Hears the toolbar's Build and Start buttons being clicked.
-class CIDEBuildListener : public CButtonListener
-{
-CONSTRUCTABLE(CIDEBuildListener);
-public:
-	CIDEContent*	mpcContent;
-
-	void	Init(CIDEContent* pcContent);
-	void	ButtonClicked(CUnknown* pcSource, void* pvContext) override;
 };
 
 
@@ -154,7 +141,6 @@ protected:
 	CBuildConfigurations		mcConfigurations;	//The solution's, from beside it or the defaults.
 	size						muiConfiguration;	//The chosen one, MAX_SIZE if none.
 	Ptr<CButton>				mpBuildButton;
-	CIDEBuildListener			mcBuildListener;
 	CSolutionBuild				mcBuild;			//The build running, or the last.
 	CChars						mszLibc65;			//The HCP65 compiler's system headers.
 	CCPP65ListingIndex			mcListings;			//The last HCP65 build's listings, given to the open files.
@@ -234,7 +220,8 @@ public:
 	bool				IsBuilding(void);
 	void				ShowListingAfterBuild(size uiLine);
 	CCPP65ListingIndex*	GetListings(void);
-	void				ToolbarButtonClicked(CUnknown* pcButton);
+	void				BuildClicked(void);
+	void				StartClicked(void);
 
 	void				SetEmulator(const char* szExecutable, const char* szDirectory);
 	bool				StartDebugging(void);

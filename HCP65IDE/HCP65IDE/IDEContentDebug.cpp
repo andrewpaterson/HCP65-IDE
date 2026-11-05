@@ -166,17 +166,8 @@ void CIDEContent::DebugCommandAction(EComponentInputCommand eCommand)
 //
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEContent::ToolbarButtonClicked(CUnknown* pcButton)
-{
-	if (pcButton == &mpStartButton)
-	{
-		StartDebugging();
-	}
-	else
-	{
-		Build();
-	}
-}
+void CIDEContent::BuildClicked(void) { Build(); }  //The toolbar's Build button.
+void CIDEContent::StartClicked(void) { StartDebugging(); }  //The toolbar's Start button, Continue while stopped.
 
 
 //////////////////////////////////////////////////////////////////////////
