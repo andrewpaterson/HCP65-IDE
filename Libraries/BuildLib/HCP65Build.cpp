@@ -18,6 +18,7 @@ You should have received a copy of the GNU Affero General Public License
 along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 
 ** ------------------------------------------------------------------------ **/
+#include <stdio.h>
 #include <string.h>
 #include "BaseLib/FileUtil.h"
 #include "HCP65Build.h"
@@ -96,6 +97,19 @@ bool CHCP65Build::Start(CArrayChars* paszLines)
 		mcBuilder.AddIncludeDirectory(mszLibc65.Text(), false, true);
 	}
 	AddProjects(paszLines);
+	if (mpcConfiguration->HasImage())
+	{
+		//A program: the runtime after the projects, only what is used kept.
+		mcBuilder.SetRemoveUnused(true);
+		if (mpcConfiguration->GetImage()->GetLimit() != 0)
+		{
+			mcBuilder.SetLimit(mpcConfiguration->GetImage()->GetLimit());
+		}
+		if (!mszLibc65.Empty())
+		{
+			mcBuilder.AddLibc65(mszLibc65.Text());
+		}
+	}
 	if (mcBuilder.NumUnitsToCompile() == 0)
 	{
 		paszLines->Add("Nothing to build.");
@@ -174,7 +188,8 @@ void CHCP65Build::AddProjects(CArrayChars* paszLines)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The build's thread: compiles the units.
+// The build's thread: compiles the units, and links them if there is an
+// image to make.
 //
 //////////////////////////////////////////////////////////////////////////
 void CHCP65Build::CompileThread(void* pvBuild)
@@ -182,7 +197,14 @@ void CHCP65Build::CompileThread(void* pvBuild)
 	CHCP65Build*	pcBuild;
 
 	pcBuild = (CHCP65Build*)pvBuild;
-	pcBuild->mbResult = pcBuild->mcBuilder.Compile();
+	if (pcBuild->mpcConfiguration->HasImage())
+	{
+		pcBuild->mbResult = pcBuild->mcBuilder.Link();
+	}
+	else
+	{
+		pcBuild->mbResult = pcBuild->mcBuilder.Compile();
+	}
 	pcBuild->mbCompiled = true;
 }
 
@@ -207,6 +229,11 @@ bool CHCP65Build::Poll(CArrayChars* paszLines)
 	{
 		uiUnits = mcBuilder.NumUnitsToCompile();
 		uiFinished = mcBuilder.NumUnitsFinished();
+		if ((uiFinished >= uiUnits) && mpcConfiguration->HasImage())
+		{
+			SetProgress("Linking.");
+			return true;
+		}
 		szProgress.Init("Compiling ");
 		szProgress.Append((uint32)((uiFinished < uiUnits) ? uiFinished : uiUnits));
 		szProgress.Append(" of ");
@@ -220,8 +247,65 @@ bool CHCP65Build::Poll(CArrayChars* paszLines)
 	Wait();
 	AddLines(mcBuilder.GetWarnings(), paszLines);
 	AddLines(mcBuilder.GetErrors(), paszLines);
+	if (mbResult && !mbCancel && mpcConfiguration->HasImage())
+	{
+		mbResult = WriteImage(paszLines);
+	}
 	Finish(mbCancel ? BS_Cancelled : (mbResult ? BS_Succeeded : BS_Failed), paszLines);
 	return false;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The linked program as the configuration's image, in the Output folder.
+// Says where each linked segment went and where the image was written,
+// or why it couldn't be.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CHCP65Build::WriteImage(CArrayChars* paszLines)
+{
+	CAsm65Image*	pcImage;
+	CAsm65Output*	pcOutput;
+	SAsm65Segment*	psSegment;
+	CChars			szErrors;
+	CChars			szPath;
+	CFileUtil		cFileUtil;
+	char			szLine[128];
+	size			i;
+	bool			bResult;
+
+	pcImage = mpcConfiguration->GetImage();
+	pcOutput = mcBuilder.GetOutput();
+	for (i = 0; i < pcOutput->NumSegments(); i++)
+	{
+		psSegment = pcOutput->GetSegment(i);
+		snprintf(szLine, sizeof(szLine), "Segment $%06X, %u bytes.", (unsigned int)psSegment->uiAddress, (unsigned int)psSegment->cBytes.NumElements());
+		paszLines->Add(szLine);
+	}
+
+	szErrors.Init();
+	bResult = pcImage->Make(pcOutput, &szErrors);
+	AddLines(szErrors.Text(), paszLines);
+	szErrors.Kill();
+	if (!bResult)
+	{
+		return false;
+	}
+
+	szPath.Init();
+	GetOutputDirectory(&szPath);
+	cFileUtil.TouchDir(szPath.Text());
+	GetImagePath(mszRoot.Text(), mpcConfiguration, &szPath);
+	bResult = pcImage->Write(szPath.Text());
+	snprintf(szLine, sizeof(szLine), bResult ? "Wrote %u bytes to " : "Could not write %u bytes to ", (unsigned int)pcImage->GetSize());
+	szErrors.Init(szLine);
+	szErrors.Append(szPath);
+	szErrors.Append(".");
+	paszLines->Add(szErrors.Text());
+	szErrors.Kill();
+	szPath.Kill();
+	return bResult;
 }
 
 

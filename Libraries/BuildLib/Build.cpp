@@ -60,14 +60,26 @@ void CBuild::Kill(void)
 //////////////////////////////////////////////////////////////////////////
 void CBuild::GetDirectory(const char* szKind, CChars* pszDest)
 {
+	GetDirectory(mszRoot.Text(), mpcConfiguration, szKind, pszDest);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The szKind folder (Output, Listing) of pcConfiguration's builds of the
+// solution in szRoot.
+//
+//////////////////////////////////////////////////////////////////////////
+void CBuild::GetDirectory(const char* szRoot, CBuildConfiguration* pcConfiguration, const char* szKind, CChars* pszDest)
+{
 	CFileUtil	cFileUtil;
 	CChars		szConfiguration;
 	const char*	szName;
 	const char*	szBar;
 
-	pszDest->Set(mszRoot);
+	pszDest->Set(szRoot);
 	cFileUtil.AppendToPath(pszDest, szKind);
-	szName = mpcConfiguration->GetName();
+	szName = pcConfiguration->GetName();
 	szBar = strchr(szName, '|');
 	if (szBar)
 	{
@@ -171,5 +183,25 @@ bool CBuild::IsRunning(void) { return meState == BS_Running; }
 char* CBuild::GetProgress(void) { return mszProgress.Text(); }  //How the build is going, a line.
 void CBuild::SetProgress(const char* szProgress) { mszProgress.Set(szProgress); }
 void CBuild::GetOutputDirectory(CChars* pszDest) { GetDirectory("Output", pszDest); }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Where a build of the solution in szRoot writes pcConfiguration's image.
+// False if it has none.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CBuild::GetImagePath(const char* szRoot, CBuildConfiguration* pcConfiguration, CChars* pszDest)
+{
+	CFileUtil	cFileUtil;
+
+	if (!pcConfiguration->HasImage())
+	{
+		return false;
+	}
+	GetDirectory(szRoot, pcConfiguration, "Output", pszDest);
+	cFileUtil.AppendToPath(pszDest, pcConfiguration->GetImage()->GetFile());
+	return true;
+}
 void CBuild::GetListingDirectory(CChars* pszDest) { GetDirectory("Listing", pszDest); }
 

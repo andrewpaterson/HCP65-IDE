@@ -77,6 +77,9 @@ public:
 			void		GetListingDirectory(CChars* pszDest);
 			void		GetProjects(CArrayBuildProjects* pasDest);
 
+	static	void		GetDirectory(const char* szRoot, CBuildConfiguration* pcConfiguration, const char* szKind, CChars* pszDest);
+	static	bool		GetImagePath(const char* szRoot, CBuildConfiguration* pcConfiguration, CChars* pszDest);
+
 protected:
 			void		GetDirectory(const char* szKind, CChars* pszDest);
 			void		Finish(EBuildState eState, CArrayChars* paszLines);
