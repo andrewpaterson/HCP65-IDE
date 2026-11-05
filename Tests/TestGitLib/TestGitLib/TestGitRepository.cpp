@@ -140,6 +140,7 @@ void TestGitRepositoryStatus(void)
 	CChars				szText;
 	CGitRepository		cRepository;
 	CGitStatus*			pcStatus;
+	CArrayChars			aszBranches;
 
 	szRoot.Init(TEST_GIT_REPOSITORY);
 	cFileUtil.FullPath(&szRoot);
@@ -228,6 +229,15 @@ void TestGitRepositoryStatus(void)
 	AssertTrue(cRepository.ReadRevisionText(TestGitPath(&szPath, szRoot.Text(), "Main.cpp"), "master", &szText));
 	AssertString("a\nb\nc\n", szText.Text());
 	AssertFalse(cRepository.ReadRevisionText(TestGitPath(&szPath, szRoot.Text(), "Main.cpp"), "HEAD~1", &szText));
+
+	//The branches, sorted.
+	AssertTrue(RunTestGit(szRoot.Text(), "branch", "feature", NULL));
+	aszBranches.Init();
+	AssertTrue(cRepository.ReadBranches(&aszBranches));
+	AssertSize(2, aszBranches.NumElements());
+	AssertString("feature", aszBranches.GetText(0));
+	AssertString("master", aszBranches.GetText(1));
+	aszBranches.Kill();
 
 	//Read without waiting.
 	AssertTrue(cRepository.StartStatus());

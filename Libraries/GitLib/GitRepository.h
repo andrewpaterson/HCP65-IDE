@@ -56,6 +56,7 @@ public:
 
 	bool			ReadHeadText(const char* szFullPath, CChars* pszDest);
 	bool			ReadRevisionText(const char* szFullPath, const char* szRevision, CChars* pszDest);
+	bool			ReadBranches(CArrayChars* paszDest);
 
 protected:
 	void			AddStatusArguments(CArrayChars* paszArguments);

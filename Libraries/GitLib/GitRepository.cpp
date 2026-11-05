@@ -286,6 +286,58 @@ bool CGitRepository::ReadRevisionText(const char* szFullPath, const char* szRevi
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Adds the repository's branches to paszDest: the local ones, then the
+// remote ones ("origin/master"), each sorted as git sorts them.  A
+// remote's HEAD (which only names another of its branches) is left out.
+// False if git failed.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CGitRepository::ReadBranches(CArrayChars* paszDest)
+{
+	CGitCommand	cCommand;
+	CArrayChars	aszArguments;
+	CArrayChars	aszRefs;
+	CChars*		pszRef;
+	size		i;
+	bool		bResult;
+
+	aszArguments.Init();
+	aszArguments.Add("for-each-ref");
+	aszArguments.Add("--format=%(refname)");
+	aszArguments.Add("refs/heads");
+	aszArguments.Add("refs/remotes");
+	cCommand.Init();
+	bResult = cCommand.Run(mszRoot.Text(), &aszArguments);
+	if (bResult)
+	{
+		aszRefs.Init();
+		aszRefs.Split(cCommand.GetOutput()->Text(), '\n');
+		for (i = 0; i < aszRefs.NumElements(); i++)
+		{
+			pszRef = aszRefs.Get(i);
+			if (pszRef->EndsWith("/HEAD"))
+			{
+				continue;
+			}
+			if (pszRef->StartsWith("refs/heads/"))
+			{
+				paszDest->Add(pszRef->Text(strlen("refs/heads/")));
+			}
+			else if (pszRef->StartsWith("refs/remotes/"))
+			{
+				paszDest->Add(pszRef->Text(strlen("refs/remotes/")));
+			}
+		}
+		aszRefs.Kill();
+	}
+	cCommand.Kill();
+	aszArguments.Kill();
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Finds the top folder of the repository szPath (a file or folder) is in:
 // the closest folder up from it with a .git in it (a folder, or a file in
 // a work tree or submodule).  False if it isn't in one.
