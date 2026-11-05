@@ -156,36 +156,6 @@ Ptr<CFont> GenerateIDEFont(const char* szFontFilename, const char* szName, float
 
 //////////////////////////////////////////////////////////////////////////
 //
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDETabsListener::Init(CIDEContent* pcContent)
-{
-	mpcContent = pcContent;
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDETabsListener::TabSelected(CUnknown* pcSource, void* pvContext)
-{
-	mpcContent->TabSelected(pcSource);
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDETabsListener::TabRemoved(CUnknown* pcSource, void* pvContext)
-{
-	mpcContent->TabRemoved(pcSource);
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
 // szUIFont is the font of the menus, Solution Explorer and so on, and
 // szCodeFont the fixed width font files are edited in.
 //
@@ -208,7 +178,6 @@ void CIDEContent::Init(void)
 	masReferences.Init();
 	maTabs.Init();
 	maFileIcons.Init();
-	mcTabsListener.Init(this);
 	mcDebugger.Init();
 	maszDebugScript.Init();
 	miDebugScriptTime = 0;
@@ -245,7 +214,6 @@ void CIDEContent::Class(void)
 	M_Pointer(mpEditors);
 	M_Embedded(maTabs);
 	M_Pointer(mpActive);
-	U_Unknown(CIDETabsListener, mcTabsListener);
 	M_Embedded(maFileIcons);
 	M_Pointer(mpExplorer);
 	M_Pointer(mpConfigurations);
@@ -327,7 +295,11 @@ void CIDEContent::Free(void)
 	{
 		mpMenuBar->GetItemClickEvent()->Remove(this);
 	}
-	mcTabsListener.RemoveFromListenerCalls();
+	if (mpEditors.IsNotNull())
+	{
+		mpEditors->GetSelectionEvent()->Remove(this);
+		mpEditors->GetRemovalEvent()->Remove(this);
+	}
 
 	//An emulator being debugged is quit (or detached from).
 	mcDebugger.Kill();
@@ -424,7 +396,8 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	//The editor: a tab for each open file, each with an icon of its kind.
 	mpEditors = OMalloc<CTabbedContainer>(pWindow, mpTheme);
 	mpEditors->SetAlignment(CSH_Stretch, CSV_Stretch);
-	mpEditors->AddListener(&mcTabsListener);
+	mpEditors->GetSelectionEvent()->Add(this, &CIDEContent::TabSelected);
+	mpEditors->GetRemovalEvent()->Add(this, &CIDEContent::TabRemoved);
 	for (i = 0; i < IFT_Count; i++)
 	{
 		maFileIcons.Add(CIDEIcons::CreateFileIcon((EIDEFileType)i, &cFormat));
@@ -1408,7 +1381,7 @@ void CIDEContent::Tick(Ptr<CWindow> pWindow)
 // The editor's selected tab changed.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEContent::TabSelected(CUnknown* pcTab)
+void CIDEContent::TabSelected(CTabComponent* pcTab)
 {
 	mpActive = FindTab(pcTab);
 }
@@ -1420,7 +1393,7 @@ void CIDEContent::TabSelected(CUnknown* pcTab)
 // another after.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEContent::TabRemoved(CUnknown* pcTab)
+void CIDEContent::TabRemoved(CTabComponent* pcTab)
 {
 	Ptr<CIDEEditorTab>	pTab;
 

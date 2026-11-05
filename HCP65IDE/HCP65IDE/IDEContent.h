@@ -34,7 +34,6 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "CppParserLib/CPP65ListingIndex.h"
 #include "WindowLib/Button.h"
 #include "WindowLib/TabbedContainer.h"
-#include "WindowLib/TabbedContainerListener.h"
 #include "WindowLib/MenuBar.h"
 #include "WindowLib/Dialog.h"
 #include "WindowLib/FileChooser.h"
@@ -45,23 +44,6 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDEDebugView.h"
 #include "IDEIcons.h"
 #include "SolutionExplorer.h"
-
-
-class CIDEContent;
-
-
-
-//Hears the editor's tabs being selected and closed.
-class CIDETabsListener : public CTabbedContainerListener
-{
-CONSTRUCTABLE(CIDETabsListener);
-public:
-	CIDEContent*	mpcContent;
-
-	void	Init(CIDEContent* pcContent);
-	void	TabSelected(CUnknown* pcSource, void* pvContext) override;
-	void	TabRemoved(CUnknown* pcSource, void* pvContext) override;
-};
 
 
 //The IDE's window's content: the menu bar and toolbar along the top, Solution Explorer on the left, the editor's tabs
@@ -91,7 +73,6 @@ protected:
 	Ptr<CTabbedContainer>		mpEditors;			//A tab for each open file.
 	CArray<CIDEEditorTab>		maTabs;
 	Ptr<CIDEEditorTab>			mpActive;			//The selected tab's file, NULL if none is open.
-	CIDETabsListener			mcTabsListener;
 	CArray<CImageCel>			maFileIcons;		//By EIDEFileType.
 	Ptr<CSolutionExplorer>		mpExplorer;
 	Ptr<CComboBox>				mpConfigurations;	//The build configuration's configuration; the code is parsed as its solution configuration.
@@ -161,8 +142,8 @@ public:
 	void			ShowConfiguration(void);
 	void			SelectComboBoxItem(Ptr<CComboBox> pComboBox, const char* szText);
 	void			Tick(Ptr<CWindow> pWindow);
-	void			TabSelected(CUnknown* pcTab);
-	void			TabRemoved(CUnknown* pcTab);
+	void			TabSelected(CTabComponent* pcTab);
+	void			TabRemoved(CTabComponent* pcTab);
 	bool			CloseFile(const char* szFileName);
 	CIDECodeModel*	GetCodeModel(void);
 	CBuildConfiguration*	GetConfiguration(void);
