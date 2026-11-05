@@ -57,6 +57,7 @@ void CIDEDebugger::Init(void)
 	mszBreakpointSpace.Init();
 	muiBreakpointSpace = DEBUG_SPACE_ANY;
 	mszOwnProgram.Init();
+	mszCard.Init();
 	muiSeenProcessEvents = 0;
 	maszMessages.Init();
 	mcProcess.Init();
@@ -114,6 +115,7 @@ void CIDEDebugger::Kill(void)
 	mszChannel.Kill();
 	mcProcess.Kill();
 	maszMessages.Kill();
+	mszCard.Kill();
 	mszOwnProgram.Kill();
 	mszBreakpointSpace.Kill();
 	mauiLoadAddresses.Kill();
@@ -201,6 +203,18 @@ void CIDEDebugger::SetOwnProgram(const char* szProgram)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// The disk image the next Start's emulator boots from (a full path: the
+// emulator runs in its own directory); NULL or "" for the emulator's own.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDebugger::SetCard(const char* szCard)
+{
+	mszCard.Set(szCard ? szCard : "");
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // The process the own program's breakpoints are for: every one
 // (DEBUG_PROCESS_ANY) if it isn't a program a process runs, or there is no
 // breakpoint space to keep them in; its ID while it runs.  False while
@@ -268,6 +282,11 @@ bool CIDEDebugger::Start(bool bBreakAtStart)
 	aszArguments.Add(mszChannel.Text());
 	aszArguments.Add(DEBUG_ARGUMENT_WAIT);
 	aszArguments.Add(DEBUG_ARGUMENT_EXIT_ON_DETACH);
+	if (!mszCard.Empty())
+	{
+		aszArguments.Add(DEBUG_ARGUMENT_CARD);
+		aszArguments.Add(mszCard.Text());
+	}
 	aszExtra.Init();
 	aszExtra.Split(mszEmulatorArguments.Text(), ' ');
 	for (i = 0; i < aszExtra.NumElements(); i++)

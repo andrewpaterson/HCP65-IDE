@@ -113,6 +113,7 @@ protected:
 	CArrayUint32			mauiLoadAddresses;		//Where each is loaded.
 	CChars					mszBreakpointSpace;		//The breakpoints' space by name, empty for every space.
 	CChars					mszOwnProgram;			//The program a process runs ("\\boot.exe"), empty if it isn't one.
+	CChars					mszCard;				//The disk image the emulator boots from (DEBUG_ARGUMENT_CARD), empty for its own.
 	size					muiSeenProcessEvents;
 	uint32					muiBreakpointSpace;		//Its DEBUG_SPACE_ANY or index plus one, once welcomed.
 	CArrayChars				maszMessages;			//For the Build tab: what was started, what went wrong.
@@ -150,6 +151,7 @@ public:
 	void					AddLoad(const char* szFile, uint32 uiAddress);
 	void					SetBreakpointSpace(const char* szSpace);
 	void					SetOwnProgram(const char* szProgram);
+	void					SetCard(const char* szCard);
 	bool					GetOwnProcess(uint32* puiProcess);
 	char*					GetEmulator(void);
 	void					TakeMessages(CArrayChars* paszDest);

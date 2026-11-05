@@ -219,8 +219,9 @@ void CIDEContent::ResolveEmulatorPath(const char* szPath, CChars* pszDest)
 //////////////////////////////////////////////////////////////////////////
 //
 // What debugging pcConfiguration loads into the emulator it starts: its
-// <Load>s (a kernal), then its built image; and its built executable is
-// written onto its card for the kernal to run.  What was done goes in
+// <Load>s (a kernal), then its built image; the card it boots from (its
+// Card); and its built executable is written onto that card for the
+// kernal to run.  What was done goes in
 // paszLines.  False, with why in pszMessage, if a file isn't there (it
 // must have been built) or the card can't be written.
 //
@@ -234,6 +235,14 @@ bool CIDEContent::ChooseDebugLoads(CBuildConfiguration* pcConfiguration, CChars*
 	size		i;
 	bool		bResult;
 
+	//The card the emulator boots from, if the configuration says.
+	szCard.Init();
+	if (pcConfiguration->HasCard())
+	{
+		ResolveEmulatorPath(pcConfiguration->GetCard(), &szCard);
+	}
+	mcDebugger.SetCard(szCard.Text());
+
 	szFile.Init();
 	for (i = 0; i < pcConfiguration->NumLoads(); i++)
 	{
@@ -244,6 +253,7 @@ bool CIDEContent::ChooseDebugLoads(CBuildConfiguration* pcConfiguration, CChars*
 			pszMessage->Append(szFile);
 			pszMessage->Append(" to load: build what makes it first.");
 			szFile.Kill();
+			szCard.Kill();
 			return false;
 		}
 		mcDebugger.AddLoad(szFile.Text(), pcConfiguration->GetLoadAddress(i));
@@ -257,6 +267,7 @@ bool CIDEContent::ChooseDebugLoads(CBuildConfiguration* pcConfiguration, CChars*
 		pszMessage->Append(szFile);
 		pszMessage->Append(" isn't there.");
 		szFile.Kill();
+		szCard.Kill();
 		return false;
 	}
 
@@ -268,8 +279,6 @@ bool CIDEContent::ChooseDebugLoads(CBuildConfiguration* pcConfiguration, CChars*
 	else if (pcConfiguration->HasExecutable() && pcConfiguration->HasCard())
 	{
 		//The program goes on the card the emulator boots from, where the kernal finds it.
-		szCard.Init();
-		ResolveEmulatorPath(pcConfiguration->GetCard(), &szCard);
 		bResult = FatPutDiskFileOnImage(szCard.Text(), pcConfiguration->GetCardPath(), szFile.Text());
 		if (bResult)
 		{
@@ -284,8 +293,8 @@ bool CIDEContent::ChooseDebugLoads(CBuildConfiguration* pcConfiguration, CChars*
 			pszMessage->Append(szCard);
 			pszMessage->Append(" (an SD card image with a FAT volume).");
 		}
-		szCard.Kill();
 	}
+	szCard.Kill();
 	szFile.Kill();
 
 	//What is loaded may have been built since the line tables were read.
