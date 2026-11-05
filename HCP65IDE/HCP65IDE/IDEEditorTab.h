@@ -115,6 +115,7 @@ public:
 
 
 bool UsesIDECarriageReturns(const char* szText);
+void ApplyIDEHighlights(Ptr<CTextArea> pTextArea, CArrayHighlights* pacHighlights);
 
 
 #endif // __IDE_EDITOR_TAB_H__

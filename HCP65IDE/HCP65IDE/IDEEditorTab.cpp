@@ -151,21 +151,33 @@ bool CIDEEditorTab::Load(CObjectReader* pcFile)
 //////////////////////////////////////////////////////////////////////////
 void CIDEEditorTab::SetHighlights(CArrayHighlights* pacHighlights)
 {
+	ApplyIDEHighlights(mpEditor, pacHighlights);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// pTextArea's text coloured by pacHighlights (lines and columns from 0),
+// replacing its colours, as an editor tab's is.  Inactive code goes last.
+//
+//////////////////////////////////////////////////////////////////////////
+void ApplyIDEHighlights(Ptr<CTextArea> pTextArea, CArrayHighlights* pacHighlights)
+{
 	SCPPHighlight*	psHighlight;
 	size			i;
 	size			uiStart;
 	int				iPass;
 
-	mpEditor->ClearSpans();
+	pTextArea->ClearSpans();
 	for (iPass = 0; iPass < 2; iPass++)
 	{
 		for (i = 0; i < pacHighlights->NumElements(); i++)
 		{
 			psHighlight = pacHighlights->Get(i);
-			if (((psHighlight->uiKind == CPPH_Inactive) == (iPass == 1)) && (psHighlight->iLine >= 0) && ((size)psHighlight->iLine < mpEditor->NumLines()))
+			if (((psHighlight->uiKind == CPPH_Inactive) == (iPass == 1)) && (psHighlight->iLine >= 0) && ((size)psHighlight->iLine < pTextArea->NumLines()))
 			{
-				uiStart = mpEditor->GetLineStart((size)psHighlight->iLine) + (size)psHighlight->iColumn;
-				mpEditor->AddSpan(uiStart, (size)psHighlight->iLength, GetHighlightColour((ECPPHighlight)psHighlight->uiKind));
+				uiStart = pTextArea->GetLineStart((size)psHighlight->iLine) + (size)psHighlight->iColumn;
+				pTextArea->AddSpan(uiStart, (size)psHighlight->iLength, GetHighlightColour((ECPPHighlight)psHighlight->uiKind));
 			}
 		}
 	}

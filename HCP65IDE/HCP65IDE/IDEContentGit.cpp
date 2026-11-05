@@ -267,7 +267,8 @@ void CIDEContent::UpdateChangeBars(Ptr<CIDEEditorTab> pTab)
 //////////////////////////////////////////////////////////////////////////
 //
 // The selected file's text in the last commit on the left and as it is
-// now in the editor (saved or not) on the right, in a tab of their own.
+// now in the editor (saved or not) on the right, in a tab of their own,
+// each side highlighted as the file would be with that text.
 // A file added since the last commit is all inserted.  False if no file
 // is selected, or it isn't in a repository or the last commit.
 //
@@ -316,6 +317,8 @@ bool CIDEContent::CompareWithHead(void)
 	szTitle.Append(" (HEAD)");
 	szName.Append(" (Your version)");
 	pView->ShowTexts(szTitle.Text(), szBase.Text(), szName.Text(), mpActive->GetEditor()->GetText());
+	HighlightDiffSide(pView, TDS_Left, mpActive->GetProject(), mpActive->GetFileName(), szBase.Text());
+	HighlightDiffSide(pView, TDS_Right, mpActive->GetProject(), mpActive->GetFileName(), mpActive->GetEditor()->GetText());
 	szName.Kill();
 	szBase.Kill();
 
@@ -327,6 +330,33 @@ bool CIDEContent::CompareWithHead(void)
 	szTitle.Kill();
 	mpEditors->Select(pTab);
 	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// One side of a diff coloured by what the parser finds each part of
+// szText to be, parsed as the project's file szFileName.  Only C and C++
+// files of a project are highlighted, as in the editor.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::HighlightDiffSide(Ptr<CDiffView> pView, ETextDiffSide eSide, size uiProject, const char* szFileName, const char* szText)
+{
+	CArrayHighlights	acHighlights;
+	CChars				szErrors;
+
+	if ((uiProject == SOLUTION_EXPLORER_NO_PROJECT) || (CIDEIcons::GetFileType(szFileName) == IFT_Other))
+	{
+		return;
+	}
+	acHighlights.Init();
+	szErrors.Init();
+	if (mcCodeModel.Highlight(uiProject, szFileName, szText, &acHighlights, &szErrors))
+	{
+		ApplyIDEHighlights(pView->GetEditor(eSide)->GetTextArea(), &acHighlights);
+	}
+	szErrors.Kill();
+	acHighlights.Kill();
 }
 
 

@@ -236,6 +236,7 @@ protected:
 	void				ShowBranch(void);
 	void				ReadGitBase(Ptr<CIDEEditorTab> pTab);
 	void				GitFileSaved(const char* szFileName);
+	void				HighlightDiffSide(Ptr<CDiffView> pView, ETextDiffSide eSide, size uiProject, const char* szFileName, const char* szText);
 	void				UpdateChangeBars(Ptr<CIDEEditorTab> pTab);
 };
 
