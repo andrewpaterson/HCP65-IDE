@@ -24,7 +24,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "StandardLib/Object.h"
 #include "StandardLib/Pointer.h"
 #include "WindowLib/DiffView.h"
-#include "WindowLib/TabComponent.h"
+#include "WindowLib/DockPane.h"
 
 
 #define IDE_DIFF_NO_CHANGES		MAX_SIZE
@@ -57,7 +57,7 @@ CONSTRUCTABLE(CIDEDiffTab);
 DESTRUCTABLE(CIDEDiffTab);
 protected:
 	Ptr<CDiffView>		mpView;
-	Ptr<CTabComponent>	mpTab;
+	Ptr<CDockPane>		mpDockPane;  //The document pane it is shown in.
 	CIDEDiffSide		mcLeft;
 	CIDEDiffSide		mcRight;
 	int64				miChangedTime;	//When a side's editor was last seen to change.
@@ -71,8 +71,8 @@ public:
 	bool				Save(CObjectWriter* pcFile) override;
 	bool				Load(CObjectReader* pcFile) override;
 
-	void				SetTab(Ptr<CTabComponent> pTab);
-	Ptr<CTabComponent>	GetTab(void);
+	void				SetDockPane(Ptr<CDockPane> pPane);
+	Ptr<CDockPane>		GetDockPane(void);
 	Ptr<CDiffView>		GetView(void);
 	CIDEDiffSide*		GetSide(ETextDiffSide eSide);
 

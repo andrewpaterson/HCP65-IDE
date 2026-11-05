@@ -142,7 +142,7 @@ void CIDEContent::ShowGitStatus(void)
 			ReadGitBase(pTab);
 			UpdateChangeBars(pTab);
 		}
-		pTab->GetTab()->SetTextFont(GetGitStateFont(mpFontColours, eState));
+		pTab->GetDockPane()->SetTabFont(GetGitStateFont(mpFontColours, eState));
 	}
 	RefreshMovedDiffs();
 	ShowBranch();
@@ -349,6 +349,7 @@ bool CIDEContent::ShowChange(Ptr<CIDEEditorTab> pTab, size uiLine)
 	Ptr<CTextArea>			pOld;
 	Ptr<CScrollPane>		pPane;
 	Ptr<CPopup>				pPopup;
+	Ptr<CWindow>			pWindow;
 	Ptr<CTextArea>			pEditor;
 	CChars					szOld;
 	CChars					szSummary;
@@ -390,6 +391,8 @@ bool CIDEContent::ShowChange(Ptr<CIDEEditorTab> pTab, size uiLine)
 	msChange = *psChange;
 	muiChange = i;
 	mpChangeTab = pTab;
+	//The editor may be in a floating window of its own.
+	pWindow = pTab->GetCodeEditor()->GetWindow();
 
 	//What changed, then the buttons.
 	szSummary.Init();
@@ -397,15 +400,15 @@ bool CIDEContent::ShowChange(Ptr<CIDEEditorTab> pTab, size uiLine)
 	szSummary.Append((uint32)uiLines);
 	szSummary.Append((uiLines == 1) ? " line " : " lines ");
 	szSummary.Append((msChange.eType == GLC_Added) ? "added" : ((msChange.eType == GLC_Removed) ? "removed" : "changed"));
-	pGrid = OMalloc<CGridContainer>(mpWindow);
+	pGrid = OMalloc<CGridContainer>(pWindow);
 	pGrid->SetSizedByContent(true);
-	pLabel = OMalloc<CLabel>(mpWindow, mpFontColours->GetFont(JEWEL_ICON), szSummary.Text());
+	pLabel = OMalloc<CLabel>(pWindow, mpFontColours->GetFont(JEWEL_ICON), szSummary.Text());
 	pLabel->SetAlignment(CSH_Left, CSV_Center);
 	szSummary.Kill();
-	mpShowDiffButton = OMalloc<CButton>(mpWindow, mpTheme, "Show Diff");
+	mpShowDiffButton = OMalloc<CButton>(pWindow, mpTheme, "Show Diff");
 	mpShowDiffButton->SetAlignment(CSH_Right, CSV_Center);
 	mpShowDiffButton->GetClickEvent()->Add(this, &CIDEContent::ShowDiffClicked);
-	mpRollbackButton = OMalloc<CButton>(mpWindow, mpTheme, "Rollback");
+	mpRollbackButton = OMalloc<CButton>(pWindow, mpTheme, "Rollback");
 	mpRollbackButton->SetAlignment(CSH_Right, CSV_Center);
 	mpRollbackButton->GetClickEvent()->Add(this, &CIDEContent::RollbackClicked);
 	pGrid->AddComponent(pLabel, 0, 0, 1, 1, 1, 0);
@@ -420,7 +423,7 @@ bool CIDEContent::ShowChange(Ptr<CIDEEditorTab> pTab, size uiLine)
 		szOld.Init();
 		AppendBaseLines(pTab, msChange.uiBaseStartLine, msChange.uiBaseEndLine, &szOld);
 		szOld.RemoveLastCharacter();
-		pOld = OMalloc<CTextArea>(mpWindow, mpCodeFamily, szOld.Text());
+		pOld = OMalloc<CTextArea>(pWindow, mpCodeFamily, szOld.Text());
 		szOld.Kill();
 		pOld->SetTiledText(true);
 		pOld->SetColour(JEWEL_TEXT);
@@ -429,7 +432,7 @@ bool CIDEContent::ShowChange(Ptr<CIDEEditorTab> pTab, size uiLine)
 		uiLines = msChange.uiBaseEndLine - msChange.uiBaseStartLine;
 		pOld->AddLineBackground(0, uiLines, Set32BitColour((uint8)0x48, (uint8)0x4A, (uint8)0x4A));
 		iWidth = pOld->GetDesiredSize().x;
-		pPane = OMalloc<CScrollPane>(mpWindow, mpTheme);
+		pPane = OMalloc<CScrollPane>(pWindow, mpTheme);
 		pPane->SetContent(pOld);
 		pPane->SetDesiredSize((iWidth < IDE_CHANGE_POPUP_WIDTH) ? IDE_CHANGE_POPUP_WIDTH : ((iWidth > IDE_CHANGE_POPUP_MAX_WIDTH) ? IDE_CHANGE_POPUP_MAX_WIDTH : iWidth), (uiLines > IDE_CHANGE_POPUP_ROWS ? IDE_CHANGE_POPUP_ROWS : (int32)uiLines) * iRow);
 		pPane->SetAlignment(CSH_Stretch, CSV_Stretch);
@@ -439,7 +442,7 @@ bool CIDEContent::ShowChange(Ptr<CIDEEditorTab> pTab, size uiLine)
 	//Under the change, at the left of the code.
 	sPosition.x = pEditor->GetPosition().x;
 	sPosition.y = pEditor->GetPosition().y + (int32)msChange.uiEndLine * iRow;
-	pPopup = mpWindow->OpenPopup(pGrid, sPosition, pTab->GetCodeEditor());
+	pPopup = pWindow->OpenPopup(pGrid, sPosition, pTab->GetCodeEditor());
 	sInsets.Init(6, 6);
 	pPopup->SetLook(JEWEL_PANEL, JEWEL_SEPARATOR, &sInsets);
 	mpChangePopup = pGrid;
@@ -520,7 +523,7 @@ bool CIDEContent::RollbackChange(void)
 		pEditor->Paste(szLines.Text());
 	}
 	szLines.Kill();
-	mpWindow->GetFocus()->SetFocus(pEditor);
+	pEditor->GetWindow()->GetFocus()->SetFocus(pEditor);
 	return true;
 }
 
@@ -555,7 +558,7 @@ void CIDEContent::CloseChangePopup(void)
 {
 	if (mpChangePopup.IsNotNull())
 	{
-		mpWindow->ClosePopup(mpChangePopup);
+		mpChangePopup->GetWindow()->ClosePopup(mpChangePopup);
 	}
 	if (mpRollbackButton.IsNotNull())
 	{

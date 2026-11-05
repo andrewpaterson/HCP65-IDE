@@ -28,7 +28,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/TextArea.h"
 #include "WindowLib/CodeEditor.h"
 #include "WindowLib/ScrollPane.h"
-#include "WindowLib/TabComponent.h"
+#include "WindowLib/DockPane.h"
 #include "WindowLib/LineZones.h"
 #include "CppParserLib/CPPHighlighter.h"
 #include "CppParserLib/CPP65ListingIndex.h"
@@ -53,7 +53,7 @@ protected:
 	Ptr<CCodeEditor>	mpCodeEditor;
 	Ptr<CTextArea>		mpEditor;		//The code editor's text area.
 	Ptr<CScrollPane>	mpPane;			//The tab's page.
-	Ptr<CTabComponent>	mpTab;
+	Ptr<CDockPane>		mpDockPane;  //The document pane it is shown in.
 	CChars				mszFileName;
 	size				muiProject;		//The solution's project it is in, MAX_SIZE if none.
 	size				muiSeenChanges;	//The editor's change count when it was last looked at.
@@ -79,7 +79,7 @@ public:
 	bool				Save(CObjectWriter* pcFile) override;
 	bool				Load(CObjectReader* pcFile) override;
 
-	void				SetTab(Ptr<CTabComponent> pTab);
+	void				SetDockPane(Ptr<CDockPane> pPane);
 	void				SetHighlights(CArrayHighlights* pacHighlights);
 	bool				GetCaretPlace(int* piLine, int* piColumn);
 	bool				SetCaretPlace(int iLine, int iColumn);
@@ -102,7 +102,7 @@ public:
 	Ptr<CTextArea>		GetEditor(void);
 	Ptr<CCodeEditor>	GetCodeEditor(void);
 	Ptr<CScrollPane>	GetPane(void);
-	Ptr<CTabComponent>	GetTab(void);
+	Ptr<CDockPane>		GetDockPane(void);
 	char*				GetFileName(void);
 	size				GetProject(void);
 	bool				IsEdited(void);

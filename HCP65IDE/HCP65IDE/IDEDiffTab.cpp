@@ -81,7 +81,7 @@ void CIDEDiffTab::Init(Ptr<CDiffView> pView, const char* szLeftFile, const char*
 void CIDEDiffTab::Class(void)
 {
 	M_Pointer(mpView);
-	M_Pointer(mpTab);
+	M_Pointer(mpDockPane);
 	U_Unknown(CIDEDiffSide, mcLeft);
 	U_Unknown(CIDEDiffSide, mcRight);
 	U_Int64(miChangedTime);
@@ -157,8 +157,8 @@ bool CIDEDiffTab::NeedsRefresh(int64 iNow, int64* piWait)
 
 
 void CIDEDiffTab::Refreshed(void) { mbRefresh = false; }
-void CIDEDiffTab::SetTab(Ptr<CTabComponent> pTab) { mpTab = pTab; }
-Ptr<CTabComponent> CIDEDiffTab::GetTab(void) { return mpTab; }
+void CIDEDiffTab::SetDockPane(Ptr<CDockPane> pPane) { mpDockPane = pPane; }
+Ptr<CDockPane> CIDEDiffTab::GetDockPane(void) { return mpDockPane; }
 Ptr<CDiffView> CIDEDiffTab::GetView(void) { return mpView; }
 CIDEDiffSide* CIDEDiffTab::GetSide(ETextDiffSide eSide) { return (eSide == TDS_Left) ? &mcLeft : &mcRight; }
 

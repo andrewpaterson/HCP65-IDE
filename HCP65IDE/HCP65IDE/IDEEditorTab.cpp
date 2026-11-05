@@ -88,7 +88,7 @@ void CIDEEditorTab::Class(void)
 	M_Pointer(mpCodeEditor);
 	M_Pointer(mpEditor);
 	M_Pointer(mpPane);
-	M_Pointer(mpTab);
+	M_Pointer(mpDockPane);
 	U_String(mszFileName);
 	U_Data(size, muiProject);
 	U_Data(size, muiSeenChanges);
@@ -498,7 +498,7 @@ void CIDEEditorTab::ShowModified(void)
 	bool		bModified;
 
 	bModified = IsModified();
-	if ((bModified == mbShownModified) || mpTab.IsNull())
+	if ((bModified == mbShownModified) || mpDockPane.IsNull())
 	{
 		return;
 	}
@@ -508,7 +508,7 @@ void CIDEEditorTab::ShowModified(void)
 	{
 		szName.Append('*');
 	}
-	mpTab->SetText(szName.Text());
+	mpDockPane->SetTitle(szName.Text());
 	szName.Kill();
 	mbShownModified = bModified;
 }
@@ -529,12 +529,12 @@ bool UsesIDECarriageReturns(const char* szText)
 
 
 bool CIDEEditorTab::UsesCarriageReturns(void) { return mbCarriageReturns; }
-void CIDEEditorTab::SetTab(Ptr<CTabComponent> pTab) { mpTab = pTab; }
+void CIDEEditorTab::SetDockPane(Ptr<CDockPane> pPane) { mpDockPane = pPane; }
 Ptr<CLineZones> CIDEEditorTab::GetZones(void) { return mpZones; }
 Ptr<CTextArea> CIDEEditorTab::GetEditor(void) { return mpEditor; }
 Ptr<CCodeEditor> CIDEEditorTab::GetCodeEditor(void) { return mpCodeEditor; }
 Ptr<CScrollPane> CIDEEditorTab::GetPane(void) { return mpPane; }
-Ptr<CTabComponent> CIDEEditorTab::GetTab(void) { return mpTab; }
+Ptr<CDockPane> CIDEEditorTab::GetDockPane(void) { return mpDockPane; }
 char* CIDEEditorTab::GetFileName(void) { return mszFileName.Text(); }
 size CIDEEditorTab::GetProject(void) { return muiProject; }
 bool CIDEEditorTab::IsEdited(void) { return mbEdited; }

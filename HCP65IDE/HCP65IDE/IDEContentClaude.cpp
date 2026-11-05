@@ -451,7 +451,7 @@ bool SameIDEText(const char* szText1, const char* szText2)
 //////////////////////////////////////////////////////////////////////////
 void CIDEContent::ShowClaudeTab(void)
 {
-	mpBottomTabs->Select(mpClaudeTab);
+	mpDock->Show(mpClaudeTool);
 }
 
 

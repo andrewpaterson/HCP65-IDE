@@ -20,3 +20,4 @@ Log.txt
 /HCP65IDE/HCP65IDE/Output/
 /Tests/*/*/Output/
 /Tests/*/*/Post/
+*.layout.user

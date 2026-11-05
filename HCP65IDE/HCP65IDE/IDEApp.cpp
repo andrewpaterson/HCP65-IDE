@@ -69,7 +69,7 @@ void CIDEApp::Init(void)
 // described by the XML in szInputDirectory; pcNativeInput (the platform's
 // keyboard and mouse) is added to them.  Run fails if anything here did.
 // HCP65_IDE_SNAPSHOT, HCP65_IDE_CONFIGURATION, HCP65_IDE_EXPAND,
-// HCP65_IDE_OPEN, HCP65_IDE_CLOSE, HCP65_IDE_SCROLL, HCP65_IDE_CHANGE, HCP65_IDE_SAVE, HCP65_IDE_COMPARE,
+// HCP65_IDE_OPEN, HCP65_IDE_DOCK, HCP65_IDE_CLOSE, HCP65_IDE_SCROLL, HCP65_IDE_CHANGE, HCP65_IDE_SAVE, HCP65_IDE_COMPARE,
 // HCP65_IDE_TYPE_AFTER,
 // HCP65_IDE_WAIT_INDEX, HCP65_IDE_CARET=line:column (1 based), HCP65_IDE_TYPE,
 // HCP65_IDE_REFERENCES, HCP65_IDE_DEFINITION, HCP65_IDE_REOPEN,
@@ -148,6 +148,19 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 				}
 				aszOpen.Kill();
 			}
+			if (getenv("HCP65_IDE_DOCK") != NULL)
+			{
+				//A comma separated list of moves, each as a pane's window position menu does it: float:<pane>,
+				//dock:<pane>, autohide:<pane>, hide:<pane>, document:<pane>, show:<pane>, and reset.  Panes are named
+				//by their IDs in the layout file (SolutionExplorer, FindAllReferences, Build, Debug, Claude).
+				aszOpen.Init();
+				aszOpen.Split(getenv("HCP65_IDE_DOCK"), ',');
+				for (i = 0; i < aszOpen.NumElements(); i++)
+				{
+					DockScripted(aszOpen.GetText(i));
+				}
+				aszOpen.Kill();
+			}
 			if (getenv("HCP65_IDE_CLOSE") != NULL)
 			{
 				//Each of a comma separated list of open files' names is closed, as its tab's cross does.
@@ -218,7 +231,7 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 					{
 						mpWindow->InputPrintable(*szTyped, true);
 					}
-					mpContent->GetEditors()->Select(pDiff->GetTab());
+					mpContent->GetDock()->Show(pDiff->GetDockPane());
 				}
 			}
 			if (getenv("HCP65_IDE_REFERENCES") != NULL)
@@ -343,6 +356,12 @@ bool CIDEApp::Run(void)
 	{
 		mpWindow->Show();
 
+		//The windows' layout is kept beside the solution, with the files open, for the next time it is opened.
+		if (getenv("HCP65_IDE_SNAPSHOT") == NULL)
+		{
+			mpContent->SaveLayout();
+		}
+
 		//The emulator is quit while nothing is being freed: as its window goes Windows activates this one.
 		mpContent->StopDebugging();
 	}
@@ -352,5 +371,63 @@ bool CIDEApp::Run(void)
 		mpWindow->SetComponentInput(NULL);
 	}
 	return mbValid;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// One of HCP65_IDE_DOCK's moves: "<action>:<pane ID>", or "reset".
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEApp::DockScripted(const char* szMove)
+{
+	Ptr<CDockManager>	pDock;
+	Ptr<CDockPane>		pPane;
+	const char*			szColon;
+	CChars				szAction;
+
+	pDock = mpContent->GetDock();
+	if (strcmp(szMove, "reset") == 0)
+	{
+		pDock->ResetLayout();
+		return;
+	}
+	szColon = strchr(szMove, ':');
+	if (szColon == NULL)
+	{
+		return;
+	}
+	pPane = pDock->GetPane(szColon + 1);
+	if (pPane.IsNull())
+	{
+		gcLogger.Error2(__METHOD__, " No pane [", szColon + 1, "].", NULL);
+		return;
+	}
+	szAction.Init(szMove, 0, (size)(szColon - szMove));
+	if (szAction.Equals("float"))
+	{
+		pDock->Float(pPane);
+	}
+	else if (szAction.Equals("dock"))
+	{
+		pDock->Dock(pPane);
+	}
+	else if (szAction.Equals("autohide"))
+	{
+		pDock->AutoHide(pPane);
+	}
+	else if (szAction.Equals("hide"))
+	{
+		pDock->Hide(pPane);
+	}
+	else if (szAction.Equals("document"))
+	{
+		pDock->DockAsDocument(pPane);
+	}
+	else if (szAction.Equals("show"))
+	{
+		pDock->Activate(pPane);
+	}
+	szAction.Kill();
 }
 

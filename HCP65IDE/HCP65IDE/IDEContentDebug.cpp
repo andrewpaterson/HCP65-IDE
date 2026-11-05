@@ -404,7 +404,7 @@ bool CIDEContent::ChooseEmulator(bool bLaunch)
 		mpBuildPane->AppendLines(&aszLines);
 		mpBuildPane->SetProgress(szMessage.Text());
 		aszLines.Kill();
-		mpBottomTabs->Select(mpBuildTab);
+		mpDock->Show(mpBuildTool);
 	}
 	szDirectory.Kill();
 	szExecutable.Kill();
@@ -457,7 +457,7 @@ bool CIDEContent::StartDebugging(void)
 	{
 		return false;
 	}
-	mpBottomTabs->Select(mpDebugTab);
+	mpDock->Show(mpDebugTool);
 	UpdateDebugView(false);
 	mpWindow->RequestTick(IDE_DEBUG_POLL);
 	return bResult;
@@ -523,7 +523,7 @@ bool CIDEContent::StepInto(void)
 		}
 		bResult = mcDebugger.Start(true);
 		ShowDebugMessages();
-		mpBottomTabs->Select(mpDebugTab);
+		mpDock->Show(mpDebugTool);
 		mpWindow->RequestTick(IDE_DEBUG_POLL);
 	}
 	else
@@ -677,7 +677,7 @@ bool CIDEContent::AttachDebugger(int iPort)
 	}
 	bResult = mcDebugger.Attach(iPort);
 	ShowDebugMessages();
-	mpBottomTabs->Select(mpDebugTab);
+	mpDock->Show(mpDebugTool);
 	UpdateDebugView(false);
 	mpWindow->RequestTick(IDE_DEBUG_POLL);
 	return bResult;
@@ -716,7 +716,7 @@ void CIDEContent::PollDebugger(Ptr<CWindow> pWindow)
 		UpdateDebugView(false);
 		if (!bStopped && mcDebugger.IsStopped())
 		{
-			mpBottomTabs->Select(mpDebugTab);
+			mpDock->Show(mpDebugTool);
 		}
 	}
 
@@ -811,7 +811,7 @@ void CIDEContent::RunDebugScript(void)
 	}
 	else if (strcmp(szCommand, "buildtab") == 0)
 	{
-		mpBottomTabs->Select(mpBuildTab);
+		mpDock->Show(mpBuildTool);
 		bDone = true;
 	}
 	else if (strcmp(szCommand, "break") == 0)

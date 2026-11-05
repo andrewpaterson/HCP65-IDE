@@ -242,7 +242,8 @@ bool CIDEContent::OpenDiff(const char* szLeftFile, const char* szLeftRevision, c
 {
 	Ptr<CDiffView>		pView;
 	Ptr<CIDEDiffTab>	pDiff;
-	Ptr<CTabComponent>	pTab;
+	Ptr<CDockPane>		pPane;
+	CChars				szID;
 	CIDEDiffSide*		pcLeft;
 	CIDEDiffSide*		pcRight;
 	CChars				szLeftText;
@@ -294,12 +295,16 @@ bool CIDEContent::OpenDiff(const char* szLeftFile, const char* szLeftRevision, c
 			szTabTitle.Append(szRightTitle);
 		}
 		maDiffTabs.Add(pDiff);
-		pTab = mpEditors->AddTab(szTabTitle.Text(), pView, maFileIcons.Get(CIDEIcons::GetFileType(szRightFile)), true);
-		pDiff->SetTab(pTab);
-		mpEditors->Select(pTab);
+		szID.Init(IDE_DIFF_PREFIX);
+		szID.Append((uint64)muiNextDiff);
+		muiNextDiff++;
+		pPane = mpDock->AddPane(szID.Text(), szTabTitle.Text(), maFileIcons.Get(CIDEIcons::GetFileType(szRightFile)), pView, DPK_Document);
+		szID.Kill();
+		pDiff->SetDockPane(pPane);
+		mpDock->Show(pPane);
 		mpActiveDiff = pDiff;
 		mpActive = NULL;
-		mpWindow->GetFocus()->SetFocus(pView->GetEditor(TDS_Right)->GetTextArea());
+		pView->GetWindow()->GetFocus()->SetFocus(pView->GetEditor(TDS_Right)->GetTextArea());
 		szTabTitle.Kill();
 		szRightTitle.Kill();
 		szLeftTitle.Kill();
@@ -573,16 +578,16 @@ Ptr<CIDEEditorTab> CIDEContent::GetComparedTab(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The diff shown in the tab pcTab, NULL if it shows something else.
+// The diff shown in the document pane, NULL if it shows something else.
 //
 //////////////////////////////////////////////////////////////////////////
-Ptr<CIDEDiffTab> CIDEContent::FindDiffTab(CUnknown* pcTab)
+Ptr<CIDEDiffTab> CIDEContent::FindDiffTab(CDockPane* pcPane)
 {
 	size	i;
 
 	for (i = 0; i < maDiffTabs.Size(); i++)
 	{
-		if (&maDiffTabs.Get(i)->GetTab() == pcTab)
+		if (&maDiffTabs.Get(i)->GetDockPane() == pcPane)
 		{
 			return maDiffTabs.Get(i);
 		}

@@ -38,6 +38,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/Dialog.h"
 #include "WindowLib/FileChooser.h"
 #include "WindowLib/DiffView.h"
+#include "WindowLib/DockManager.h"
+#include "WindowLib/DockArea.h"
 #include "GitLib/GitRepositories.h"
 #include "GitLib/GitLineChanges.h"
 #include "ClaudeLib/ClaudeCommand.h"
@@ -52,8 +54,25 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "SolutionExplorer.h"
 
 
-//The IDE's window's content: the menu bar and toolbar along the top, Solution Explorer on the left, the editor's tabs
-//of open files on the right with the references found under them.  F12 goes to the definition of what is at the caret and Shift+F12 finds its references.  It is an object; keep it
+//The tool windows' IDs in the layout file, and the prefixes of the documents'.
+#define IDE_EXPLORER_ID			"SolutionExplorer"
+#define IDE_REFERENCES_ID		"FindAllReferences"
+#define IDE_BUILD_ID			"Build"
+#define IDE_DEBUG_ID			"Debug"
+#define IDE_CLAUDE_ID			"Claude"
+#define IDE_DOCUMENT_PREFIX		"Document:"
+#define IDE_DIFF_PREFIX			"Diff:"
+#define IDE_LAYOUT_EXTENSION	".layout.user"
+
+
+//The IDE's window's content: the menu bar and toolbar along the top, and under them Visual Studio's docking (see
+//CDockManager): the open files and diffs are documents in the document well, and Solution Explorer, Find All
+//References, Build, Debug and Claude are tool windows docked around it, which can be moved, resized, tabbed together,
+//floated in windows of their own, auto hidden on the window's edges or closed (and shown again from the View menu).
+//The layout is kept beside the solution in <solution>.layout.user, with the files that were open, and read back when
+//the solution is opened; Window, Reset Window Layout puts the tool windows back where they start.
+//
+//F12 goes to the definition of what is at the caret and Shift+F12 finds its references.  It is an object; keep it
 //in the root and call Setup.
 //
 //Files are shown in the colours of their git status, as IntelliJ IDEA shows them, in Solution Explorer and on their
@@ -70,13 +89,15 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 //The Claude tab under the editor sends requests, such as refactorings, to Claude Code run headless in the solution's
 //folder (see CClaudeCommand), saying where the caret and selection are.  Files are saved before a request, and the
 //open files Claude changes are read again as it changes them.
-class CIDEContent : public CObject
+class CIDEContent : public CObject, public CDockManagerListener
 {
 CONSTRUCTABLE(CIDEContent);
 DESTRUCTABLE(CIDEContent);
 protected:
 	Ptr<CWindow>				mpWindow;
 	Ptr<CFont>					mpWhite;
+	Ptr<CFont>					mpTurnedWhite;		//Turned clockwise, for the auto hide strips on the window's sides.
+	Ptr<CFontColours>			mpTurnedColours;
 	Ptr<CFontColours>			mpFontColours;
 	Ptr<CWindowTheme>			mpTheme;
 	Ptr<CFontFamily>			mpCodeFamily;
@@ -90,11 +111,24 @@ protected:
 	Ptr<CMenuItem>				mpCompareBranchItem;	//Git, Compare with Branch.
 	Ptr<CMenuItem>				mpCompareRevisionItem;	//Git, Compare with Revision.
 	Ptr<CMenuItem>				mpCompareFileItem;	//File, Compare with File.
+	Ptr<CMenuItem>				mpExplorerItem;		//View's tool windows.
+	Ptr<CMenuItem>				mpReferencesItem;
+	Ptr<CMenuItem>				mpBuildItem;
+	Ptr<CMenuItem>				mpDebugItem;
+	Ptr<CMenuItem>				mpClaudeItem;
+	Ptr<CMenuItem>				mpResetLayoutItem;	//Window, Reset Window Layout.
+	Ptr<CMenuItem>				mpCloseAllItem;		//Window, Close All Documents.
+	Ptr<CDockManager>			mpDock;
+	Ptr<CDockPane>				mpExplorerTool;		//The tool windows.
+	Ptr<CDockPane>				mpReferencesTool;
+	Ptr<CDockPane>				mpBuildTool;
+	Ptr<CDockPane>				mpDebugTool;
+	Ptr<CDockPane>				mpClaudeTool;
+	size						muiNextDiff;		//Each diff's pane's ID is numbered.
 	Ptr<CFileChooser>			mpFileChooser;		//While it's shown.
 	Ptr<CImageCel>				mpFolderIcon;		//The file chooser's.
 	Ptr<CImageCel>				mpFileIcon;
 	CChars						mszSolutionFile;	//The solution or project opened last.
-	Ptr<CTabbedContainer>		mpEditors;			//A tab for each open file.
 	CArray<CIDEEditorTab>		maTabs;
 	Ptr<CIDEEditorTab>			mpActive;			//The selected tab's file, NULL if none is open.
 	CArray<CIDEDiffTab>			maDiffTabs;			//A tab for each diff shown.
@@ -110,9 +144,6 @@ protected:
 	CChars						mszLibc65;			//The HCP65 compiler's system headers.
 	CCPP65ListingIndex			mcListings;			//The last HCP65 build's listings, given to the open files.
 	size						muiListingToShow;	//The line to show the code of after the next build, MAX_SIZE for none.
-	Ptr<CTabbedContainer>		mpBottomTabs;		//Under the editor: Find All References and Build.
-	Ptr<CTabComponent>			mpReferencesTab;
-	Ptr<CTabComponent>			mpBuildTab;
 	Ptr<CIDEBuildPane>			mpBuildPane;
 	Ptr<CTreeContainer>			mpReferences;		//What Find All References found.
 	CArrayIDELocations			masReferences;		//The references' places; a node's data is its index plus one.
@@ -136,13 +167,11 @@ protected:
 
 	CClaudeCommand				mcClaude;			//The request Claude is working on, or the last.
 	Ptr<CIDEClaudePane>			mpClaudePane;
-	Ptr<CTabComponent>			mpClaudeTab;
 	size						muiClaudeReloaded;	//How many of the files Claude changed have been looked at.
 	size						muiClaudeTools;		//How many tools Claude has used on the request.
 
 	CIDEDebugger				mcDebugger;
 	Ptr<CIDEDebugView>			mpDebugView;
-	Ptr<CTabComponent>			mpDebugTab;
 	Ptr<CButton>				mpStartButton;		//Start, or Continue while stopped.
 	Ptr<CMenuItem>				mpStartItem;		//Debug's items.
 	Ptr<CMenuItem>				mpStepIntoItem;
@@ -176,6 +205,7 @@ public:
 	bool			ShowOpenSolutionDialog(void);
 	void			MenuItemClicked(CMenuItem* pcItem);
 	bool			OpenFile(const char* szFileName, size uiProject = SOLUTION_EXPLORER_NO_PROJECT);
+	Ptr<CIDEEditorTab>	OpenFileTab(const char* szFileName, size uiProject, bool bShow);
 	void			CloseAllFiles(void);
 	bool			SaveFile(Ptr<CIDEEditorTab> pTab);
 	bool			SaveActiveFile(void);
@@ -191,8 +221,19 @@ public:
 	void			ShowConfiguration(void);
 	void			SelectComboBoxItem(Ptr<CComboBox> pComboBox, const char* szText);
 	void			Tick(Ptr<CWindow> pWindow);
-	void			TabSelected(CTabComponent* pcTab);
-	void			TabRemoved(CTabComponent* pcTab);
+	bool			PaneClosing(CDockPane* pcPane) override;
+	void			PaneClosed(CDockPane* pcPane) override;
+	void			DocumentSelected(CDockPane* pcPane) override;
+	Ptr<CDockPane>	CreatePane(const char* szID) override;
+	bool			SaveLayout(void);
+	bool			LoadLayout(void);
+	bool			GetLayoutFileName(CChars* pszDest);
+	Ptr<CDockManager>	GetDock(void);
+	Ptr<CDockPane>	GetExplorerTool(void);
+	Ptr<CDockPane>	GetReferencesTool(void);
+	Ptr<CDockPane>	GetBuildTool(void);
+	Ptr<CDockPane>	GetDebugTool(void);
+	Ptr<CDockPane>	GetClaudeTool(void);
 	bool			CloseFile(const char* szFileName);
 	CIDECodeModel*	GetCodeModel(void);
 	CBuildConfiguration*	GetConfiguration(void);
@@ -200,7 +241,6 @@ public:
 	Ptr<CTextArea>		GetEditor(void);
 	Ptr<CScrollPane>	GetEditorPane(void);
 	Ptr<CIDEEditorTab>	GetActiveTab(void);
-	Ptr<CTabbedContainer>	GetEditors(void);
 	CSolutionExplorer*	GetExplorer(void);
 	Ptr<CTreeContainer>	GetReferences(void);
 	Ptr<CIDEBuildPane>	GetBuildPane(void);
@@ -275,7 +315,7 @@ protected:
 	bool				ShowAddressDialog(const char* szTitle, const char* szLabel, const char* szDefault, bool bHex, uint32* puiValue);
 	void				HighlightTab(Ptr<CIDEEditorTab> pTab);
 	Ptr<CIDEEditorTab>	FindTab(const char* szFileName);
-	Ptr<CIDEEditorTab>	FindTab(CUnknown* pcTab);
+	Ptr<CIDEEditorTab>	FindTab(CDockPane* pcPane);
 	void				CodeCommandAction(SComponentInputEvent* psEvent);
 	bool				GetCaretPlace(int* piLine, int* piColumn);
 	bool				OpenLocation(SIDELocation* psLocation);
@@ -300,7 +340,7 @@ protected:
 	void				RefreshDiff(Ptr<CIDEDiffTab> pDiff);
 	int64				PollDiffs(int64 iNow);
 	void				RefreshMovedDiffs(void);
-	Ptr<CIDEDiffTab>	FindDiffTab(CUnknown* pcTab);
+	Ptr<CIDEDiffTab>	FindDiffTab(CDockPane* pcPane);
 	void				UpdateChangeBars(Ptr<CIDEEditorTab> pTab);
 
 	bool				GetClaudeDirectory(CChars* pszDirectory);
@@ -312,7 +352,7 @@ protected:
 };
 
 
-Ptr<CFont> GenerateIDEFont(const char* szFontFilename, const char* szName, float32 fPixelSize, EColourOrder eOrder);
+Ptr<CFont> GenerateIDEFont(const char* szFontFilename, const char* szName, float32 fPixelSize, EColourOrder eOrder, EFontTurn eTurn = FT_Upright);
 ARGB32     GetHighlightColour(ECPPHighlight eKind);
 bool       SameIDEText(const char* szText1, const char* szText2);
 

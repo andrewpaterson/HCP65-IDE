@@ -56,6 +56,7 @@ public:
 	bool	Load(CObjectReader* pcFile) override;
 
 	bool	Run(void);
+	void	DockScripted(const char* szMove);
 };
 
 

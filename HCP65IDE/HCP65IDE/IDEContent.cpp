@@ -53,6 +53,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define IDE_BUILD_POLL			50		//Milliseconds between looks at a running build.
 
 
+
 //Go to Definition (F12), Find All References (Shift+F12), Build (Control+Shift+B) and the debugger's keys from anywhere in the window.
 static EComponentInputCommand	gaeIDECodeCommands[] = { CIC_Save, CIC_SaveAll, CIC_GoToDefinition, CIC_FindReferences, CIC_Build, CIC_StartDebugging, CIC_StopDebugging, CIC_RestartDebugging,
 														 CIC_BreakAll, CIC_ToggleBreakpoint, CIC_StepOver, CIC_StepInto, CIC_StepOut };
@@ -115,10 +116,11 @@ ARGB32 GetHighlightColour(ECPPHighlight eKind)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// A white font of szFontFilename's printable ASCII characters.
+// A white font of szFontFilename's printable ASCII characters, upright or
+// turned clockwise (for text read down a tool window's auto hide tab).
 //
 //////////////////////////////////////////////////////////////////////////
-Ptr<CFont> GenerateIDEFont(const char* szFontFilename, const char* szName, float32 fPixelSize, EColourOrder eOrder)
+Ptr<CFont> GenerateIDEFont(const char* szFontFilename, const char* szName, float32 fPixelSize, EColourOrder eOrder, EFontTurn eTurn)
 {
 	CTrueTypeFont			cTrueTypeFont;
 	CTrueTypeFontFactory	cFactory;
@@ -136,7 +138,7 @@ Ptr<CFont> GenerateIDEFont(const char* szFontFilename, const char* szName, float
 	}
 
 	cColour.Init(1.0f, 1.0f, 1.0f);
-	cFactory.Init(&cTrueTypeFont, fPixelSize);
+	cFactory.Init(&cTrueTypeFont, fPixelSize, eTurn);
 	pDescription = cFactory.Describe((char*)szName, (char*)IDE_FONT_CHARACTERS);
 	pImage = cFactory.Rasterise(pDescription, &cColour);
 	if (pImage.IsNotNull())
@@ -200,6 +202,7 @@ void CIDEContent::Init(void)
 	mcClaude.Init();
 	muiClaudeReloaded = 0;
 	muiClaudeTools = 0;
+	muiNextDiff = 0;
 
 	PostInit();
 }
@@ -213,6 +216,8 @@ void CIDEContent::Class(void)
 {
 	M_Pointer(mpWindow);
 	M_Pointer(mpWhite);
+	M_Pointer(mpTurnedWhite);
+	M_Pointer(mpTurnedColours);
 	M_Pointer(mpFontColours);
 	M_Pointer(mpTheme);
 	M_Pointer(mpCodeFamily);
@@ -229,11 +234,24 @@ void CIDEContent::Class(void)
 	M_Pointer(mpCompareBranchItem);
 	M_Pointer(mpCompareRevisionItem);
 	M_Pointer(mpCompareFileItem);
+	M_Pointer(mpExplorerItem);
+	M_Pointer(mpReferencesItem);
+	M_Pointer(mpBuildItem);
+	M_Pointer(mpDebugItem);
+	M_Pointer(mpClaudeItem);
+	M_Pointer(mpResetLayoutItem);
+	M_Pointer(mpCloseAllItem);
+	M_Pointer(mpDock);
+	M_Pointer(mpExplorerTool);
+	M_Pointer(mpReferencesTool);
+	M_Pointer(mpBuildTool);
+	M_Pointer(mpDebugTool);
+	M_Pointer(mpClaudeTool);
+	U_Size(muiNextDiff);
 	M_Pointer(mpFileChooser);
 	M_Pointer(mpFolderIcon);
 	M_Pointer(mpFileIcon);
 	U_String(mszSolutionFile);
-	M_Pointer(mpEditors);
 	M_Embedded(maTabs);
 	M_Pointer(mpActive);
 	M_Embedded(maDiffTabs);
@@ -249,9 +267,6 @@ void CIDEContent::Class(void)
 	U_String(mszLibc65);
 	U_Unknown(CCPP65ListingIndex, mcListings);
 	U_Size(muiListingToShow);
-	M_Pointer(mpBottomTabs);
-	M_Pointer(mpReferencesTab);
-	M_Pointer(mpBuildTab);
 	M_Pointer(mpBuildPane);
 	M_Pointer(mpReferences);
 	U_Unknown(CArrayIDELocations, masReferences);
@@ -260,7 +275,6 @@ void CIDEContent::Class(void)
 	U_Bool(mbSolution);
 	U_Unknown(CIDEDebugger, mcDebugger);
 	M_Pointer(mpDebugView);
-	M_Pointer(mpDebugTab);
 	M_Pointer(mpStartButton);
 	M_Pointer(mpStartItem);
 	M_Pointer(mpStepIntoItem);
@@ -294,7 +308,6 @@ void CIDEContent::Class(void)
 	U_Int32(miQueuedAction);
 	U_Unknown(CClaudeCommand, mcClaude);
 	M_Pointer(mpClaudePane);
-	M_Pointer(mpClaudeTab);
 	U_Size(muiClaudeReloaded);
 	U_Size(muiClaudeTools);
 }
@@ -337,10 +350,9 @@ void CIDEContent::Free(void)
 	{
 		mpMenuBar->GetItemClickEvent()->Remove(this);
 	}
-	if (mpEditors.IsNotNull())
+	if (mpDock.IsNotNull())
 	{
-		mpEditors->GetSelectionEvent()->Remove(this);
-		mpEditors->GetRemovalEvent()->Remove(this);
+		mpDock->SetListener(NULL);
 	}
 	if (mpWindow.IsNotNull())
 	{
@@ -416,9 +428,8 @@ bool CIDEContent::Load(CObjectReader* pcFile)
 bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* szCodeFont)
 {
 	Ptr<CGridContainer>	pMain;
-	Ptr<CGridContainer>	pExplorerPanel;
-	Ptr<CLabel>			pExplorerTitle;
 	Ptr<CScrollPane>	pReferencesPane;
+	SDockPlace			sPlace;
 	Ptr<CGridContainer>	pToolbar;
 	Ptr<CFillContainer>	pBranchGap;
 	CColourFormatHelper	cFormat;
@@ -450,48 +461,53 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 		return gcLogger.Error2(__METHOD__, " Could not load the code font [", szCodeFont, "].", NULL);
 	}
 
-	//Solution Explorer: its title over the project's tree.
-	mpExplorer = OMalloc<CSolutionExplorer>(pWindow, mpTheme);
-	mpExplorer->GetTree()->GetActivationEvent()->Add(this, &CIDEContent::ExplorerActivated);
-	pExplorerPanel = OMalloc<CGridContainer>(pWindow);
-	pExplorerPanel->SetDesiredSize(IDE_EXPLORER_WIDTH, -1);
-	pExplorerPanel->SetAlignment(CSH_Stretch, CSV_Stretch);
-	pExplorerTitle = OMalloc<CLabel>(pWindow, mpFontColours->GetFont(JEWEL_ICON), "Solution Explorer");
-	pExplorerTitle->SetAlignment(CSH_Left, CSV_Center);
-	pExplorerPanel->AddComponent(pExplorerTitle, 0, 0, 1, 1, 1, 0);
-	pExplorerPanel->AddComponent(mpExplorer->GetComponent(), 0, 1, 1, 1, 1, 1);
-
-	//The editor: a tab for each open file, each with an icon of its kind.
-	mpEditors = OMalloc<CTabbedContainer>(pWindow, mpTheme);
-	mpEditors->SetAlignment(CSH_Stretch, CSV_Stretch);
-	mpEditors->GetSelectionEvent()->Add(this, &CIDEContent::TabSelected);
-	mpEditors->GetRemovalEvent()->Add(this, &CIDEContent::TabRemoved);
+	//The docking: the open files in the document well, the tool windows around it, see CDockManager.
+	mpTurnedWhite = GenerateIDEFont(szUIFont, "Inter 13px Turned", 13.0f, pWindow->GetColourOrder(), FT_Clockwise);
+	if (mpTurnedWhite.IsNotNull())
+	{
+		mpTurnedColours = OMalloc<CFontColours>(mpTurnedWhite);
+		mpDock = OMalloc<CDockManager>(pWindow, mpTheme, mpTurnedColours->GetFont(JEWEL_TEXT));
+	}
+	else
+	{
+		mpDock = OMalloc<CDockManager>(pWindow, mpTheme, Ptr<CFont>());
+	}
+	mpDock->SetListener(this);
 	for (i = 0; i < IFT_Count; i++)
 	{
 		maFileIcons.Add(CIDEIcons::CreateFileIcon((EIDEFileType)i, &cFormat));
 	}
 
-	//Under the editor, a tab for what Find All References found, one for what the build wrote, the debugger's, and
-	//Claude's.
+	//Solution Explorer on the left.
+	mpExplorer = OMalloc<CSolutionExplorer>(pWindow, mpTheme);
+	mpExplorer->GetTree()->GetActivationEvent()->Add(this, &CIDEContent::ExplorerActivated);
+	sPlace.BesideWell(DS_Left, IDE_EXPLORER_WIDTH);
+	mpExplorerTool = mpDock->AddPane(IDE_EXPLORER_ID, "Solution Explorer", NULL, mpExplorer->GetComponent(), DPK_Tool, &sPlace);
+
+	//Under the well, tabbed together: what Find All References found, what the build wrote, the debugger's view and
+	//Claude.
 	mpReferences = OMalloc<CTreeContainer>(pWindow, mpTheme);
 	mpReferences->SetAlignment(CSH_Stretch, CSV_Top);
 	mpReferences->GetActivationEvent()->Add(this, &CIDEContent::ReferenceActivated);
 	pReferencesPane = OMalloc<CScrollPane>(pWindow, mpTheme);
 	pReferencesPane->SetContent(mpReferences);
 	pReferencesPane->SetAlignment(CSH_Stretch, CSV_Stretch);
+	sPlace.BesideWell(DS_Bottom, IDE_BOTTOM_HEIGHT);
+	mpReferencesTool = mpDock->AddPane(IDE_REFERENCES_ID, "Find All References", NULL, pReferencesPane, DPK_Tool, &sPlace);
+
 	mpBuildPane = OMalloc<CIDEBuildPane>(pWindow, mpTheme, mpFontColours->GetFont(JEWEL_ICON), mpCodeFamily, JEWEL_TEXT);
-	mpBottomTabs = OMalloc<CTabbedContainer>(pWindow, mpTheme);
-	mpBottomTabs->SetDesiredSize(-1, IDE_BOTTOM_HEIGHT);
-	mpBottomTabs->SetAlignment(CSH_Stretch, CSV_Stretch);
-	mpReferencesTab = mpBottomTabs->AddTab("Find All References", pReferencesPane);
-	mpBuildTab = mpBottomTabs->AddTab("Build", mpBuildPane->GetComponent());
+	sPlace.WithPane(IDE_REFERENCES_ID);
+	mpBuildTool = mpDock->AddPane(IDE_BUILD_ID, "Build", NULL, mpBuildPane->GetComponent(), DPK_Tool, &sPlace);
+
 	mpDebugView = OMalloc<CIDEDebugView>(pWindow, mpTheme, mpCodeFamily, JEWEL_TEXT);
-	mpDebugTab = mpBottomTabs->AddTab("Debug", mpDebugView->GetComponent());
+	mpDebugTool = mpDock->AddPane(IDE_DEBUG_ID, "Debug", NULL, mpDebugView->GetComponent(), DPK_Tool, &sPlace);
+
 	mpClaudePane = OMalloc<CIDEClaudePane>(pWindow, mpTheme, mpFontColours->GetFont(JEWEL_ICON), mpCodeFamily);
 	mpClaudePane->GetSendButton()->GetClickEvent()->Add(this, &CIDEContent::ClaudeSendClicked);
 	mpClaudePane->GetStopButton()->GetClickEvent()->Add(this, &CIDEContent::ClaudeStopClicked);
 	mpClaudePane->GetNewButton()->GetClickEvent()->Add(this, &CIDEContent::ClaudeNewClicked);
-	mpClaudeTab = mpBottomTabs->AddTab("Claude", mpClaudePane->GetComponent());
+	mpClaudeTool = mpDock->AddPane(IDE_CLAUDE_ID, "Claude", NULL, mpClaudePane->GetComponent(), DPK_Tool, &sPlace);
+	mpDock->Show(mpReferencesTool);
 
 	//The toolbar: the build configuration's configuration and platform, as Visual Studio has them, and Build.
 	mpConfigurations = OMalloc<CComboBox>(pWindow, mpTheme);
@@ -523,11 +539,9 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	pToolbar->AddComponent(pBranchGap, 5, 0, 1, 1, 0, 1);
 
 	pMain = OMalloc<CGridContainer>(pWindow);
-	pMain->AddComponent(CreateMenuBar(), 0, 0, 2, 1, 1, 0);
-	pMain->AddComponent(pToolbar, 0, 1, 2, 1, 1, 0);
-	pMain->AddComponent(pExplorerPanel, 0, 2, 1, 2, 0, 1);
-	pMain->AddComponent(mpEditors, 1, 2, 1, 1, 1, 1);
-	pMain->AddComponent(mpBottomTabs, 1, 3, 1, 1, 1, 0);
+	pMain->AddComponent(CreateMenuBar(), 0, 0, 1, 1, 1, 0);
+	pMain->AddComponent(pToolbar, 0, 1, 1, 1, 1, 0);
+	pMain->AddComponent(mpDock->GetArea(), 0, 2, 1, 1, 1, 1);
 	pMain->AddInputActions(gaeIDECodeCommands, this, &CIDEContent::CodeCommandAction);
 	pWindow->SetContainer(pMain);
 	pWindow->GetActivationEvent()->Add(this, &CIDEContent::WindowActivated);
@@ -538,13 +552,17 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 //////////////////////////////////////////////////////////////////////////
 //
 // File, with Open Project/Solution, Save, Save All and Compare with File;
-// Git, with Compare with HEAD, a branch or a revision; and Debug.
+// View, showing the tool windows; Git, with Compare with HEAD, a branch
+// or a revision; Debug; and Window, with Reset Window Layout and Close
+// All Documents, as in Visual Studio.
 //
 //////////////////////////////////////////////////////////////////////////
 Ptr<CMenuBar> CIDEContent::CreateMenuBar(void)
 {
 	Ptr<CMenuContainer>	pFile;
 	Ptr<CMenuContainer>	pGit;
+	Ptr<CMenuContainer>	pView;
+	Ptr<CMenuContainer>	pWindowMenu;
 
 	pFile = OMalloc<CMenuContainer>(mpWindow, mpTheme);
 	mpOpenItem = pFile->AddItem("Open Project/Solution...", mpFolderIcon);
@@ -558,9 +576,22 @@ Ptr<CMenuBar> CIDEContent::CreateMenuBar(void)
 	mpCompareBranchItem = pGit->AddItem("Compare with Branch...");
 	mpCompareRevisionItem = pGit->AddItem("Compare with Revision...");
 
+	pView = OMalloc<CMenuContainer>(mpWindow, mpTheme);
+	mpExplorerItem = pView->AddItem("Solution Explorer");
+	mpReferencesItem = pView->AddItem("Find All References");
+	mpBuildItem = pView->AddItem("Build Output");
+	mpDebugItem = pView->AddItem("Debug");
+	mpClaudeItem = pView->AddItem("Claude");
+
+	pWindowMenu = OMalloc<CMenuContainer>(mpWindow, mpTheme);
+	mpResetLayoutItem = pWindowMenu->AddItem("Reset Window Layout");
+	mpCloseAllItem = pWindowMenu->AddItem("Close All Documents");
+
 	mpMenuBar->AddMenu("File", pFile);
+	mpMenuBar->AddMenu("View", pView);
 	mpMenuBar->AddMenu("Git", pGit);
 	mpMenuBar->AddMenu("Debug", CreateDebugMenu());
+	mpMenuBar->AddMenu("Window", pWindowMenu);
 	mpMenuBar->GetItemClickEvent()->Add(this, &CIDEContent::MenuItemClicked);
 	mpMenuBar->SetAlignment(CSH_Stretch, CSV_Stretch);
 	return mpMenuBar;
@@ -600,6 +631,34 @@ void CIDEContent::MenuItemClicked(CMenuItem* pcItem)
 	else if (pcItem == &mpCompareFileItem)
 	{
 		ShowCompareWithFileDialog();
+	}
+	else if (pcItem == &mpExplorerItem)
+	{
+		mpDock->Activate(mpExplorerTool);
+	}
+	else if (pcItem == &mpReferencesItem)
+	{
+		mpDock->Activate(mpReferencesTool);
+	}
+	else if (pcItem == &mpBuildItem)
+	{
+		mpDock->Activate(mpBuildTool);
+	}
+	else if (pcItem == &mpDebugItem)
+	{
+		mpDock->Activate(mpDebugTool);
+	}
+	else if (pcItem == &mpClaudeItem)
+	{
+		mpDock->Activate(mpClaudeTool);
+	}
+	else if (pcItem == &mpResetLayoutItem)
+	{
+		mpDock->ResetLayout();
+	}
+	else if (pcItem == &mpCloseAllItem)
+	{
+		CloseAllFiles();
 	}
 	else
 	{
@@ -657,6 +716,9 @@ bool CIDEContent::OpenSolution(const char* szFileName)
 	szName.Init(szFileName);
 	bSolution = szName.EndsWithIgnoreCase(".sln");
 	szName.Kill();
+
+	//The layout of the solution being let go is kept beside it, with its open files.
+	SaveLayout();
 
 	//A build of the solution being let go is stopped, and its listings forgotten.  Its files are closed and the
 	//references found in it go.
@@ -720,37 +782,65 @@ bool CIDEContent::OpenSolution(const char* szFileName)
 		ShowConfiguration();
 	}
 	mcCodeModel.StartIndexing();
+
+	//The windows where they were left, and the files that were open opened again.
+	LoadLayout();
 	return true;
 }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Shows szFileName in its own tab, selected: the tab it is already in if
-// it is open.  A file of the solution's project uiProject is highlighted
-// as that project builds it.
+// Shows szFileName as a document of its own, active: the one it is
+// already in if it is open.  A file of the solution's project uiProject
+// is highlighted as that project builds it.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEContent::OpenFile(const char* szFileName, size uiProject)
 {
+	Ptr<CIDEEditorTab>	pTab;
+
+	pTab = OpenFileTab(szFileName, uiProject, true);
+	if (pTab.IsNull())
+	{
+		return false;
+	}
+	mpDock->Activate(pTab->GetDockPane());
+	mpActive = pTab;
+	mpActiveDiff = NULL;
+	ShowBranch();
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The editor of szFileName, read into a document pane if it isn't open.
+// Without bShow the pane isn't put anywhere, for a layout being read to
+// place.  NULL if the file can't be read.
+//
+//////////////////////////////////////////////////////////////////////////
+Ptr<CIDEEditorTab> CIDEContent::OpenFileTab(const char* szFileName, size uiProject, bool bShow)
+{
 	CTextFile			cFile;
 	CFileUtil			cFileUtil;
 	CChars				szName;
+	CChars				szID;
 	Ptr<CIDEEditorTab>	pTab;
-	Ptr<CTabComponent>	pTabComponent;
+	Ptr<CDockPane>		pPane;
 
 	pTab = FindTab(szFileName);
 	if (pTab.IsNotNull())
 	{
-		mpEditors->Select(pTab->GetTab());
-		return true;
+		return pTab;
 	}
 
 	cFile.Init();
 	if (!cFile.Read(szFileName))
 	{
 		cFile.Kill();
-		return gcLogger.Error2(__METHOD__, " Could not read [", szFileName, "].", NULL);
+		gcLogger.Error2(__METHOD__, " Could not read [", szFileName, "].", NULL);
+		return NULL;
 	}
 	pTab = OMalloc<CIDEEditorTab>(mpWindow, mpTheme, mpFontColours->GetFont(JEWEL_ICON), mpCodeFamily, JEWEL_TEXT, szFileName, uiProject, cFile.Text());
 	cFile.Kill();
@@ -763,25 +853,23 @@ bool CIDEContent::OpenFile(const char* szFileName, size uiProject)
 
 	szName.Init();
 	cFileUtil.GetFileName(&szName, (char*)szFileName);
-	pTabComponent = mpEditors->AddTab(szName.Text(), pTab->GetPane(), maFileIcons.Get(CIDEIcons::GetFileType(szFileName)), true);
+	szID.Init(IDE_DOCUMENT_PREFIX);
+	szID.Append(szFileName);
+	pPane = mpDock->AddPane(szID.Text(), szName.Text(), maFileIcons.Get(CIDEIcons::GetFileType(szFileName)), pTab->GetPane(), DPK_Document, NULL, bShow);
+	szID.Kill();
 	szName.Kill();
-	pTab->SetTab(pTabComponent);
-	mpEditors->Select(pTabComponent);
+	pTab->SetDockPane(pPane);
 	pTab->GetCodeEditor()->GetChangeBarClickEvent()->Add(this, &CIDEContent::ChangeBarClicked);
 	ReadGitBase(pTab);
 	UpdateChangeBars(pTab);
-	pTabComponent->SetTextFont(GetGitStateFont(mpFontColours, pTab->GetGitState()));
-
-	//The first tab is selected as it is added, before it is known as this file's.
-	mpActive = pTab;
-	ShowBranch();
-	return true;
+	pPane->SetTabFont(GetGitStateFont(mpFontColours, pTab->GetGitState()));
+	return pTab;
 }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Closes szFileName's tab.  False if it isn't open.
+// Closes szFileName's document.  False if it isn't open.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEContent::CloseFile(const char* szFileName)
@@ -793,28 +881,28 @@ bool CIDEContent::CloseFile(const char* szFileName)
 	{
 		return false;
 	}
-	return mpEditors->RemoveTab(pTab->GetTab());
+	return mpDock->Close(pTab->GetDockPane());
 }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Every open file's tab is closed.
+// Every open file's and diff's document is closed.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEContent::CloseAllFiles(void)
 {
 	while (maTabs.Size() > 0)
 	{
-		//Closing the tab lets its file go (TabRemoved).
-		if (!mpEditors->RemoveTab(maTabs.Get(maTabs.Size() - 1)->GetTab()))
+		//Closing the document lets its file go (PaneClosed).
+		if (!mpDock->Close(maTabs.Get(maTabs.Size() - 1)->GetDockPane()))
 		{
 			break;
 		}
 	}
 	while (maDiffTabs.Size() > 0)
 	{
-		if (!mpEditors->RemoveTab(maDiffTabs.Get(maDiffTabs.Size() - 1)->GetTab()))
+		if (!mpDock->Close(maDiffTabs.Get(maDiffTabs.Size() - 1)->GetDockPane()))
 		{
 			break;
 		}
@@ -1039,7 +1127,7 @@ bool CIDEContent::FindReferences(void)
 		AddReference(iRoot, masReferences.Get(i), i);
 	}
 	mpReferences->SetExpanded(iRoot, true);
-	mpBottomTabs->Select(mpReferencesTab);
+	mpDock->Show(mpReferencesTool);
 	szTitle.Kill();
 	szKey.Kill();
 	return true;
@@ -1118,7 +1206,7 @@ void CIDEContent::ShowReferencesStatus(const char* szText)
 {
 	mpReferences->RemoveAllNodes();
 	mpReferences->AddNode(TREE_NO_NODE, szText, NULL, 0);
-	mpBottomTabs->Select(mpReferencesTab);
+	mpDock->Show(mpReferencesTool);
 }
 
 
@@ -1129,7 +1217,7 @@ void CIDEContent::ShowReferencesStatus(const char* szText)
 //////////////////////////////////////////////////////////////////////////
 void CIDEContent::ShowBuildTab(void)
 {
-	mpBottomTabs->Select(mpBuildTab);
+	mpDock->Show(mpBuildTool);
 }
 
 
@@ -1335,7 +1423,7 @@ bool CIDEContent::OpenLocation(SIDELocation* psLocation)
 	{
 		return false;
 	}
-	mpWindow->GetFocus()->SetFocus(mpActive->GetEditor());
+	mpActive->GetEditor()->GetWindow()->GetFocus()->SetFocus(mpActive->GetEditor());
 	return true;
 }
 
@@ -1615,29 +1703,52 @@ void CIDEContent::Tick(Ptr<CWindow> pWindow)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The editor's selected tab changed.
+// The document shown in front changed: an editor's or a diff's.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEContent::TabSelected(CTabComponent* pcTab)
+void CIDEContent::DocumentSelected(CDockPane* pcPane)
 {
-	mpActive = FindTab(pcTab);
-	mpActiveDiff = FindDiffTab(pcTab);
+	Ptr<CIDEEditorTab>	pTab;
+	Ptr<CIDEDiffTab>	pDiff;
+
+	if (pcPane == NULL)
+	{
+		return;
+	}
+	pTab = FindTab(pcPane);
+	pDiff = FindDiffTab(pcPane);
+	if (pTab.IsNull() && pDiff.IsNull())
+	{
+		return;
+	}
+	mpActive = pTab;
+	mpActiveDiff = pDiff;
 	ShowBranch();
 }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// A tab was closed: its file is let go.  The tabbed container selects
-// another after.
+// Documents close without asking: their files are saved by the user.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEContent::TabRemoved(CTabComponent* pcTab)
+bool CIDEContent::PaneClosing(CDockPane* pcPane)
+{
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A document was closed: its file, or its diff, is let go.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::PaneClosed(CDockPane* pcPane)
 {
 	Ptr<CIDEEditorTab>	pTab;
 	Ptr<CIDEDiffTab>	pDiff;
 
-	pDiff = FindDiffTab(pcTab);
+	pDiff = FindDiffTab(pcPane);
 	if (pDiff.IsNotNull())
 	{
 		if (mpActiveDiff == pDiff)
@@ -1648,7 +1759,7 @@ void CIDEContent::TabRemoved(CTabComponent* pcTab)
 		return;
 	}
 
-	pTab = FindTab(pcTab);
+	pTab = FindTab(pcPane);
 	if (pTab.IsNull())
 	{
 		return;
@@ -1664,6 +1775,106 @@ void CIDEContent::TabRemoved(CTabComponent* pcTab)
 	}
 	pTab->GetCodeEditor()->GetChangeBarClickEvent()->Remove(this);
 	maTabs.Remove(pTab);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A layout read names a document that isn't open: its file is opened
+// again, if it is still there.  Diffs aren't.
+//
+//////////////////////////////////////////////////////////////////////////
+Ptr<CDockPane> CIDEContent::CreatePane(const char* szID)
+{
+	CFileUtil			cFileUtil;
+	const char*			szFileName;
+	Ptr<CIDEEditorTab>	pTab;
+
+	if (strncmp(szID, IDE_DOCUMENT_PREFIX, strlen(IDE_DOCUMENT_PREFIX)) != 0)
+	{
+		return NULL;
+	}
+	szFileName = &szID[strlen(IDE_DOCUMENT_PREFIX)];
+	if (!cFileUtil.Exists(szFileName))
+	{
+		return NULL;
+	}
+	pTab = OpenFileTab(szFileName, mpExplorer->FindFileProject(szFileName), false);
+	if (pTab.IsNull())
+	{
+		return NULL;
+	}
+	return pTab->GetDockPane();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// <solution>.layout.user beside the solution or project.  False if no
+// solution is open.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEContent::GetLayoutFileName(CChars* pszDest)
+{
+	CFileUtil	cFileUtil;
+
+	if (mszSolutionFile.Empty())
+	{
+		return false;
+	}
+	pszDest->Init(mszSolutionFile);
+	cFileUtil.RemoveExtension(pszDest);
+	pszDest->Append(IDE_LAYOUT_EXTENSION);
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Writes the windows' layout, with the files open, beside the solution.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEContent::SaveLayout(void)
+{
+	CChars	szFileName;
+	bool	bResult;
+
+	if (!mbSolution || !GetLayoutFileName(&szFileName))
+	{
+		return false;
+	}
+	bResult = mpDock->SaveLayout(szFileName.Text());
+	szFileName.Kill();
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Reads the windows' layout kept beside the solution, opening the files
+// it names.  False if there isn't one.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEContent::LoadLayout(void)
+{
+	CChars	szFileName;
+	bool	bResult;
+
+	if (!GetLayoutFileName(&szFileName))
+	{
+		return false;
+	}
+	bResult = mpDock->LoadLayout(szFileName.Text());
+	szFileName.Kill();
+	if (bResult)
+	{
+		DocumentSelected(&mpDock->GetActiveDocument());
+		if (mpActive.IsNull() && mpActiveDiff.IsNull() && (maTabs.Size() > 0))
+		{
+			mpActive = maTabs.Get(maTabs.Size() - 1);
+		}
+	}
+	return bResult;
 }
 
 
@@ -1689,16 +1900,16 @@ Ptr<CIDEEditorTab> CIDEContent::FindTab(const char* szFileName)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The file of a tab on the editor's bar, NULL if it isn't one of them.
+// The file shown in a document pane, NULL if it isn't one of them.
 //
 //////////////////////////////////////////////////////////////////////////
-Ptr<CIDEEditorTab> CIDEContent::FindTab(CUnknown* pcTab)
+Ptr<CIDEEditorTab> CIDEContent::FindTab(CDockPane* pcPane)
 {
 	size	i;
 
 	for (i = 0; i < maTabs.Size(); i++)
 	{
-		if (&maTabs.Get(i)->GetTab() == pcTab)
+		if (&maTabs.Get(i)->GetDockPane() == pcPane)
 		{
 			return maTabs.Get(i);
 		}
@@ -1710,7 +1921,12 @@ Ptr<CIDEEditorTab> CIDEContent::FindTab(CUnknown* pcTab)
 Ptr<CTextArea> CIDEContent::GetEditor(void) { return mpActive.IsNotNull() ? mpActive->GetEditor() : Ptr<CTextArea>(); }
 Ptr<CScrollPane> CIDEContent::GetEditorPane(void) { return mpActive.IsNotNull() ? mpActive->GetPane() : Ptr<CScrollPane>(); }
 Ptr<CIDEEditorTab> CIDEContent::GetActiveTab(void) { return mpActive; }
-Ptr<CTabbedContainer> CIDEContent::GetEditors(void) { return mpEditors; }
+Ptr<CDockManager> CIDEContent::GetDock(void) { return mpDock; }
+Ptr<CDockPane> CIDEContent::GetExplorerTool(void) { return mpExplorerTool; }
+Ptr<CDockPane> CIDEContent::GetReferencesTool(void) { return mpReferencesTool; }
+Ptr<CDockPane> CIDEContent::GetBuildTool(void) { return mpBuildTool; }
+Ptr<CDockPane> CIDEContent::GetDebugTool(void) { return mpDebugTool; }
+Ptr<CDockPane> CIDEContent::GetClaudeTool(void) { return mpClaudeTool; }
 Ptr<CTreeContainer> CIDEContent::GetReferences(void) { return mpReferences; }
 Ptr<CIDEBuildPane> CIDEContent::GetBuildPane(void) { return mpBuildPane; }
 bool CIDEContent::IsBuilding(void) { return mcBuild.IsRunning(); }
