@@ -85,9 +85,9 @@ void CIDEWindowTick::Tick(Ptr<CWindow> pWindow, int64 iUpdateTimeInMillieconds, 
 	{
 		mpContent->Tick(pWindow);
 	}
-	if ((miSnapshotTicks >= 0) && mpContent.IsNotNull() && mpContent->IsDebugScriptRunning())
+	if ((miSnapshotTicks >= 0) && mpContent.IsNotNull() && (mpContent->IsDebugScriptRunning() || mpContent->IsClaudeRunning()))
 	{
-		//The snapshot is of the window once the debugger has done what it was asked to.
+		//The snapshot is of the window once the debugger, or Claude, has done what it was asked to.
 		pWindow->RequestTick(20);
 	}
 	else if (miSnapshotTicks >= 0)

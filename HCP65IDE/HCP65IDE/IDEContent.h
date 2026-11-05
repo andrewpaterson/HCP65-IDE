@@ -40,10 +40,12 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/DiffView.h"
 #include "GitLib/GitRepositories.h"
 #include "GitLib/GitLineChanges.h"
+#include "ClaudeLib/ClaudeCommand.h"
 #include "IDECodeModel.h"
 #include "IDEEditorTab.h"
 #include "IDEDiffTab.h"
 #include "IDEBuildPane.h"
+#include "IDEClaudePane.h"
 #include "IDEDebugger.h"
 #include "IDEDebugView.h"
 #include "IDEIcons.h"
@@ -63,6 +65,10 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 //
 //The Debug menu (and Visual Studio's keys) debug the HCP65 emulator at the instruction level, see CIDEDebugger: the
 //Debug tab under the editor shows its disassembly and registers.
+//
+//The Claude tab under the editor sends requests, such as refactorings, to Claude Code run headless in the solution's
+//folder (see CClaudeCommand), saying where the caret and selection are.  Files are saved before a request, and the
+//open files Claude changes are read again as it changes them.
 class CIDEContent : public CObject
 {
 CONSTRUCTABLE(CIDEContent);
@@ -118,6 +124,12 @@ protected:
 	size						muiGitVersion;		//mcGit's status version when it was last shown.
 	int64						miGitStatusTime;	//When the statuses were last read, 0 to read them now.
 	Ptr<CLabel>					mpBranchLabel;		//On the toolbar.
+
+	CClaudeCommand				mcClaude;			//The request Claude is working on, or the last.
+	Ptr<CIDEClaudePane>			mpClaudePane;
+	Ptr<CTabComponent>			mpClaudeTab;
+	size						muiClaudeReloaded;	//How many of the files Claude changed have been looked at.
+	size						muiClaudeTools;		//How many tools Claude has used on the request.
 
 	CIDEDebugger				mcDebugger;
 	Ptr<CIDEDebugView>			mpDebugView;
@@ -221,6 +233,15 @@ public:
 	Ptr<CLabel>			GetBranchLabel(void);
 	void				ReadGitStatus(void);
 
+	bool				AskClaude(const char* szRequest);
+	void				ClaudeSendClicked(void);
+	void				ClaudeStopClicked(void);
+	void				ClaudeNewClicked(void);
+	void				ShowClaudeTab(void);
+	bool				IsClaudeRunning(void);
+	CClaudeCommand*		GetClaude(void);
+	Ptr<CIDEClaudePane>	GetClaudePane(void);
+
 protected:
 	Ptr<CMenuBar>		CreateMenuBar(void);
 	Ptr<CMenuContainer>	CreateDebugMenu(void);
@@ -259,11 +280,19 @@ protected:
 	void				RefreshMovedDiffs(void);
 	Ptr<CIDEDiffTab>	FindDiffTab(CUnknown* pcTab);
 	void				UpdateChangeBars(Ptr<CIDEEditorTab> pTab);
+
+	bool				GetClaudeDirectory(CChars* pszDirectory);
+	void				AppendClaudeContext(CChars* pszRequest);
+	void				PollClaude(Ptr<CWindow> pWindow);
+	void				ReloadClaudeFiles(bool bAll);
+	bool				ReloadClaudeFile(Ptr<CIDEEditorTab> pTab);
+	Ptr<CIDEEditorTab>	FindClaudeTab(const char* szFileName);
 };
 
 
 Ptr<CFont> GenerateIDEFont(const char* szFontFilename, const char* szName, float32 fPixelSize, EColourOrder eOrder);
 ARGB32     GetHighlightColour(ECPPHighlight eKind);
+bool       SameIDEText(const char* szText1, const char* szText2);
 
 
 #endif // __IDE_CONTENT_H__

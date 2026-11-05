@@ -1,5 +1,5 @@
 # Linux build of the HCP65 IDE (BaseLib + StandardLib + SupportLib + InputLib +
-# WindowLib + X11Lib + VisualStudioLib + BuildLib + GitLib + the IDE's window sources).
+# WindowLib + X11Lib + VisualStudioLib + BuildLib + GitLib + ClaudeLib + the IDE's window sources).
 #
 # 64-bit only: there is no 32-bit libX11 installed.  Needs libx11-dev.
 #
@@ -47,6 +47,7 @@ set(ASSEMBLER65LIB_DIR "${HCP65_LIBRARIES_DIR}/Assembler65Lib")
 set(VISUALSTUDIOLIB_DIR "${IDE_ROOT}/Libraries/VisualStudioLib")
 set(BUILDLIB_DIR "${IDE_ROOT}/Libraries/BuildLib")
 set(GITLIB_DIR "${IDE_ROOT}/Libraries/GitLib")
+set(CLAUDELIB_DIR "${IDE_ROOT}/Libraries/ClaudeLib")
 set(IDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/HCP65IDE")
 
 
@@ -118,6 +119,8 @@ vcxproj_sources(BUILDLIB_SOURCES "${BUILDLIB_DIR}/BuildLib.vcxproj")
 
 vcxproj_sources(GITLIB_SOURCES "${GITLIB_DIR}/GitLib.vcxproj")
 
+vcxproj_sources(CLAUDELIB_SOURCES "${CLAUDELIB_DIR}/ClaudeLib.vcxproj")
+
 # HCP65IDE.cpp (WinMain) is Windows only.
 set(IDE_SOURCES
 	"${IDE_DIR}/HCP65IDELinux.cpp"
@@ -127,12 +130,14 @@ set(IDE_SOURCES
 	"${IDE_DIR}/IDEContentGit.cpp"
 	"${IDE_DIR}/IDEContentDiff.cpp"
 	"${IDE_DIR}/IDEDiffTab.cpp"
+	"${IDE_DIR}/IDEContentClaude.cpp"
 	"${IDE_DIR}/IDEGit.cpp"
 	"${IDE_DIR}/IDEDebugger.cpp"
 	"${IDE_DIR}/IDEDebugView.cpp"
 	"${IDE_DIR}/IDEEditorTab.cpp"
 	"${IDE_DIR}/IDEListingSource.cpp"
 	"${IDE_DIR}/IDEBuildPane.cpp"
+	"${IDE_DIR}/IDEClaudePane.cpp"
 	"${IDE_DIR}/IDEIcons.cpp"
 	"${IDE_DIR}/IDEWindowTick.cpp"
 	"${IDE_DIR}/IDEApp.cpp"
@@ -224,6 +229,10 @@ target_link_libraries(BuildLib PUBLIC VisualStudioLib CppParserLib ThreadLib Bas
 add_library(GitLib STATIC ${GITLIB_SOURCES})
 target_link_libraries(GitLib PUBLIC StandardLib ThreadLib BaseLib)
 
+# ClaudeLib runs Claude Code for the Claude tab's requests.
+add_library(ClaudeLib STATIC ${CLAUDELIB_SOURCES})
+target_link_libraries(ClaudeLib PUBLIC ThreadLib BaseLib)
+
 add_executable(HCP65IDE ${IDE_SOURCES})
 target_include_directories(HCP65IDE PRIVATE "${IDE_DIR}")
-target_link_libraries(HCP65IDE PRIVATE X11Lib WindowLib InputLib BuildLib GitLib VisualStudioLib CppParserLib Assembler65Lib EmulatorDebugLib MicroprocessorLib ThreadLib SupportLib StandardLib BaseLib)
+target_link_libraries(HCP65IDE PRIVATE X11Lib WindowLib InputLib BuildLib GitLib ClaudeLib VisualStudioLib CppParserLib Assembler65Lib EmulatorDebugLib MicroprocessorLib ThreadLib SupportLib StandardLib BaseLib)

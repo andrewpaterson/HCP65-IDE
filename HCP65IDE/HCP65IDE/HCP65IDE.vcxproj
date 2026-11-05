@@ -243,12 +243,14 @@
     <ClCompile Include="IDEContentGit.cpp" />
     <ClCompile Include="IDEContentDiff.cpp" />
     <ClCompile Include="IDEDiffTab.cpp" />
+    <ClCompile Include="IDEContentClaude.cpp" />
     <ClCompile Include="IDEGit.cpp" />
     <ClCompile Include="IDEDebugger.cpp" />
     <ClCompile Include="IDEDebugView.cpp" />
     <ClCompile Include="IDEEditorTab.cpp" />
     <ClCompile Include="IDEListingSource.cpp" />
     <ClCompile Include="IDEBuildPane.cpp" />
+    <ClCompile Include="IDEClaudePane.cpp" />
     <ClCompile Include="IDEIcons.cpp" />
     <ClCompile Include="IDEApp.cpp" />
     <ClCompile Include="IDEWindowTick.cpp" />
@@ -262,6 +264,7 @@
     <ClInclude Include="IDEEditorTab.h" />
     <ClInclude Include="IDEListingSource.h" />
     <ClInclude Include="IDEBuildPane.h" />
+    <ClInclude Include="IDEClaudePane.h" />
     <ClInclude Include="IDEIcons.h" />
     <ClInclude Include="IDEGit.h" />
     <ClInclude Include="IDEDiffTab.h" />
@@ -314,6 +317,9 @@
     </ProjectReference>
     <ProjectReference Include="..\..\Libraries\GitLib\GitLib.vcxproj">
       <Project>{7eed24ec-0c65-4849-9e57-ca05799f0791}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Libraries\ClaudeLib\ClaudeLib.vcxproj">
+      <Project>{3c7a1e52-8f4b-4d6a-9e2c-5b1d7f0a4c93}</Project>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

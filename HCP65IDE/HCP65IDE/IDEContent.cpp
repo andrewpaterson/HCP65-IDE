@@ -192,6 +192,9 @@ void CIDEContent::Init(void)
 	mcLineChanges.Init();
 	muiGitVersion = 0;
 	miGitStatusTime = 0;
+	mcClaude.Init();
+	muiClaudeReloaded = 0;
+	muiClaudeTools = 0;
 
 	PostInit();
 }
@@ -276,6 +279,11 @@ void CIDEContent::Class(void)
 	U_Size(muiGitVersion);
 	U_Int64(miGitStatusTime);
 	M_Pointer(mpBranchLabel);
+	U_Unknown(CClaudeCommand, mcClaude);
+	M_Pointer(mpClaudePane);
+	M_Pointer(mpClaudeTab);
+	U_Size(muiClaudeReloaded);
+	U_Size(muiClaudeTools);
 }
 
 
@@ -321,6 +329,15 @@ void CIDEContent::Free(void)
 		mpEditors->GetSelectionEvent()->Remove(this);
 		mpEditors->GetRemovalEvent()->Remove(this);
 	}
+	if (mpClaudePane.IsNotNull() && mpClaudePane->GetSendButton().IsNotNull())
+	{
+		mpClaudePane->GetSendButton()->GetClickEvent()->Remove(this);
+		mpClaudePane->GetStopButton()->GetClickEvent()->Remove(this);
+		mpClaudePane->GetNewButton()->GetClickEvent()->Remove(this);
+	}
+
+	//A request Claude is still working on is stopped.
+	mcClaude.Kill();
 
 	//An emulator being debugged is quit (or detached from).
 	mcDebugger.Kill();
@@ -429,7 +446,8 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 		maFileIcons.Add(CIDEIcons::CreateFileIcon((EIDEFileType)i, &cFormat));
 	}
 
-	//Under the editor, a tab for what Find All References found and one for what the build wrote.
+	//Under the editor, a tab for what Find All References found, one for what the build wrote, the debugger's, and
+	//Claude's.
 	mpReferences = OMalloc<CTreeContainer>(pWindow, mpTheme);
 	mpReferences->SetAlignment(CSH_Stretch, CSV_Top);
 	mpReferences->GetActivationEvent()->Add(this, &CIDEContent::ReferenceActivated);
@@ -444,6 +462,11 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpBuildTab = mpBottomTabs->AddTab("Build", mpBuildPane->GetComponent());
 	mpDebugView = OMalloc<CIDEDebugView>(pWindow, mpTheme, mpCodeFamily, JEWEL_TEXT);
 	mpDebugTab = mpBottomTabs->AddTab("Debug", mpDebugView->GetComponent());
+	mpClaudePane = OMalloc<CIDEClaudePane>(pWindow, mpTheme, mpFontColours->GetFont(JEWEL_ICON), mpCodeFamily);
+	mpClaudePane->GetSendButton()->GetClickEvent()->Add(this, &CIDEContent::ClaudeSendClicked);
+	mpClaudePane->GetStopButton()->GetClickEvent()->Add(this, &CIDEContent::ClaudeStopClicked);
+	mpClaudePane->GetNewButton()->GetClickEvent()->Add(this, &CIDEContent::ClaudeNewClicked);
+	mpClaudeTab = mpBottomTabs->AddTab("Claude", mpClaudePane->GetComponent());
 
 	//The toolbar: the build configuration's configuration and platform, as Visual Studio has them, and Build.
 	mpConfigurations = OMalloc<CComboBox>(pWindow, mpTheme);
@@ -1510,6 +1533,11 @@ void CIDEContent::Tick(Ptr<CWindow> pWindow)
 
 	PollBuild(pWindow);
 	PollDebugger(pWindow);
+	PollClaude(pWindow);
+	if (mpClaudePane.IsNotNull())
+	{
+		mpClaudePane->ScrollToEnd();
+	}
 
 	//The platform's clock: the window's total time only counts the time it spent updating.
 	iNow = GetDebugTickCount();

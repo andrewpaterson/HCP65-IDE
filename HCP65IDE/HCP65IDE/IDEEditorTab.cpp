@@ -436,6 +436,47 @@ bool CIDEEditorTab::SaveFile(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// The file's text was changed by something else: the tab shows szText,
+// the file as it is now, unmodified.  It is an edit, so the text is
+// highlighted again and the lines' code and change bars are worked out
+// again.  The caret stays on its line if the file still has it.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEEditorTab::Reload(const char* szText)
+{
+	int		iLine;
+	int		iColumn;
+	size	uiLineEnd;
+
+	//Pasted over the whole text: line ends become line feeds, as they are typed.  SaveFile puts carriage returns back.
+	GetCaretPlace(&iLine, &iColumn);
+	mpEditor->SelectAll();
+	if (szText[0] == '\0')
+	{
+		mpEditor->Delete();
+	}
+	else
+	{
+		mpEditor->Paste((char*)szText);
+	}
+	mbCarriageReturns = UsesIDECarriageReturns(szText);
+
+	if ((size)iLine < mpEditor->NumLines())
+	{
+		uiLineEnd = ((size)iLine + 1 < mpEditor->NumLines()) ? mpEditor->GetLineStart((size)iLine + 1) - 1 : strlen(mpEditor->GetText());
+		if (mpEditor->GetLineStart((size)iLine) + (size)iColumn > uiLineEnd)
+		{
+			iColumn = (int)(uiLineEnd - mpEditor->GetLineStart((size)iLine));
+		}
+		mpEditor->SetCaretPosition(mpEditor->GetLineStart((size)iLine) + (size)iColumn);
+	}
+	muiSavedChanges = mpEditor->GetChangeCount();
+	ShowModified();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // True if the text has changed since the file was opened or saved.
 //
 //////////////////////////////////////////////////////////////////////////

@@ -108,6 +108,7 @@ public:
 	bool				IsEdited(void);
 
 	bool				SaveFile(void);
+	void				Reload(const char* szText);
 	bool				IsModified(void);
 	bool				UsesCarriageReturns(void);
 	void				ShowModified(void);

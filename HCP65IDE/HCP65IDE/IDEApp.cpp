@@ -72,8 +72,9 @@ void CIDEApp::Init(void)
 // HCP65_IDE_OPEN, HCP65_IDE_CLOSE, HCP65_IDE_SCROLL, HCP65_IDE_SAVE, HCP65_IDE_COMPARE, HCP65_IDE_TYPE_AFTER,
 // HCP65_IDE_WAIT_INDEX, HCP65_IDE_CARET=line:column (1 based), HCP65_IDE_TYPE,
 // HCP65_IDE_REFERENCES, HCP65_IDE_DEFINITION, HCP65_IDE_REOPEN,
-// HCP65_IDE_DEBUG (CIDEContent::SetDebugScript's commands) and
-// HCP65_IDE_ATTACH (a port to attach the debugger to) are for
+// HCP65_IDE_DEBUG (CIDEContent::SetDebugScript's commands),
+// HCP65_IDE_ATTACH (a port to attach the debugger to) and
+// HCP65_IDE_CLAUDE (a request sent to Claude Code) are for
 // checking it: a snapshot of the window, every folder expanded, files
 // opened (a comma separated list, each in a tab), the
 // editor scrolled down that many pixels, the indexing finished, the caret
@@ -246,6 +247,11 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 			if (getenv("HCP65_IDE_DEBUG") != NULL)
 			{
 				mpContent->SetDebugScript(getenv("HCP65_IDE_DEBUG"));
+			}
+			if (getenv("HCP65_IDE_CLAUDE") != NULL)
+			{
+				//As typed in the Claude tab and sent, from where the caret and selection are.
+				mpContent->AskClaude(getenv("HCP65_IDE_CLAUDE"));
 			}
 		}
 
