@@ -69,7 +69,8 @@ void CIDEApp::Init(void)
 // described by the XML in szInputDirectory; pcNativeInput (the platform's
 // keyboard and mouse) is added to them.  Run fails if anything here did.
 // HCP65_IDE_SNAPSHOT, HCP65_IDE_CONFIGURATION, HCP65_IDE_EXPAND,
-// HCP65_IDE_OPEN, HCP65_IDE_CLOSE, HCP65_IDE_SCROLL, HCP65_IDE_SAVE, HCP65_IDE_COMPARE, HCP65_IDE_TYPE_AFTER,
+// HCP65_IDE_OPEN, HCP65_IDE_CLOSE, HCP65_IDE_SCROLL, HCP65_IDE_CHANGE, HCP65_IDE_SAVE, HCP65_IDE_COMPARE,
+// HCP65_IDE_TYPE_AFTER,
 // HCP65_IDE_WAIT_INDEX, HCP65_IDE_CARET=line:column (1 based), HCP65_IDE_TYPE,
 // HCP65_IDE_REFERENCES, HCP65_IDE_DEFINITION, HCP65_IDE_REOPEN,
 // HCP65_IDE_DEBUG (CIDEContent::SetDebugScript's commands),
@@ -175,6 +176,13 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 				{
 					mpWindow->InputPrintable(*szTyped, true);
 				}
+			}
+			if ((getenv("HCP65_IDE_CHANGE") != NULL) && mpContent->GetActiveTab().IsNotNull())
+			{
+				//The change at the line (from 1) shown, as clicking its change bar does; ",rollback" or ",diff" then
+				//presses its button.
+				szCompare = getenv("HCP65_IDE_CHANGE");
+				mpContent->QueueChange((size)(atoi(szCompare) - 1), (strstr(szCompare, ",rollback") != NULL) ? 1 : ((strstr(szCompare, ",diff") != NULL) ? 2 : 0));
 			}
 			if (getenv("HCP65_IDE_SAVE") != NULL)
 			{

@@ -18,6 +18,7 @@ You should have received a copy of the GNU Affero General Public License
 along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 ** ------------------------------------------------------------------------ **/
+#include <string.h>
 #include "BaseLib/FileUtil.h"
 #include "BaseLib/Logger.h"
 #include "BaseLib/Timer.h"
@@ -192,6 +193,10 @@ void CIDEContent::Init(void)
 	mcLineChanges.Init();
 	muiGitVersion = 0;
 	miGitStatusTime = 0;
+	muiChange = 0;
+	muiQueuedChange = MAX_SIZE;
+	miQueuedAction = 0;
+	memset(&msChange, 0, sizeof(SGitLineChange));
 	mcClaude.Init();
 	muiClaudeReloaded = 0;
 	muiClaudeTools = 0;
@@ -279,6 +284,14 @@ void CIDEContent::Class(void)
 	U_Size(muiGitVersion);
 	U_Int64(miGitStatusTime);
 	M_Pointer(mpBranchLabel);
+	M_Pointer(mpChangePopup);
+	M_Pointer(mpRollbackButton);
+	M_Pointer(mpShowDiffButton);
+	M_Pointer(mpChangeTab);
+	U_Data(SGitLineChange, msChange);
+	U_Size(muiChange);
+	U_Size(muiQueuedChange);
+	U_Int32(miQueuedAction);
 	U_Unknown(CClaudeCommand, mcClaude);
 	M_Pointer(mpClaudePane);
 	M_Pointer(mpClaudeTab);
@@ -328,6 +341,18 @@ void CIDEContent::Free(void)
 	{
 		mpEditors->GetSelectionEvent()->Remove(this);
 		mpEditors->GetRemovalEvent()->Remove(this);
+	}
+	if (mpWindow.IsNotNull())
+	{
+		mpWindow->GetActivationEvent()->Remove(this);
+	}
+	if (mpRollbackButton.IsNotNull())
+	{
+		mpRollbackButton->GetClickEvent()->Remove(this);
+	}
+	if (mpShowDiffButton.IsNotNull())
+	{
+		mpShowDiffButton->GetClickEvent()->Remove(this);
 	}
 	if (mpClaudePane.IsNotNull() && mpClaudePane->GetSendButton().IsNotNull())
 	{
@@ -505,6 +530,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	pMain->AddComponent(mpBottomTabs, 1, 3, 1, 1, 1, 0);
 	pMain->AddInputActions(gaeIDECodeCommands, this, &CIDEContent::CodeCommandAction);
 	pWindow->SetContainer(pMain);
+	pWindow->GetActivationEvent()->Add(this, &CIDEContent::WindowActivated);
 	return true;
 }
 
@@ -741,6 +767,7 @@ bool CIDEContent::OpenFile(const char* szFileName, size uiProject)
 	szName.Kill();
 	pTab->SetTab(pTabComponent);
 	mpEditors->Select(pTabComponent);
+	pTab->GetCodeEditor()->GetChangeBarClickEvent()->Add(this, &CIDEContent::ChangeBarClicked);
 	ReadGitBase(pTab);
 	UpdateChangeBars(pTab);
 	pTabComponent->SetTextFont(GetGitStateFont(mpFontColours, pTab->GetGitState()));
@@ -1542,6 +1569,21 @@ void CIDEContent::Tick(Ptr<CWindow> pWindow)
 	//The platform's clock: the window's total time only counts the time it spent updating.
 	iNow = GetDebugTickCount();
 	iSoonest = PollGit(iNow);
+	if ((muiQueuedChange != MAX_SIZE) && mpActive.IsNotNull() && (mpActive->GetEditor()->GetActualSize().x > 0))
+	{
+		if (ShowChange(mpActive, muiQueuedChange))
+		{
+			if (miQueuedAction == 1)
+			{
+				RollbackChange();
+			}
+			else if (miQueuedAction == 2)
+			{
+				ShowChangeDiff();
+			}
+		}
+		muiQueuedChange = MAX_SIZE;
+	}
 	iWait = PollDiffs(iNow);
 	if ((iWait >= 0) && ((iSoonest < 0) || (iWait < iSoonest)))
 	{
@@ -1616,6 +1658,11 @@ void CIDEContent::TabRemoved(CTabComponent* pcTab)
 	{
 		mpActive = NULL;
 	}
+	if (mpChangeTab == pTab)
+	{
+		CloseChangePopup();
+	}
+	pTab->GetCodeEditor()->GetChangeBarClickEvent()->Remove(this);
 	maTabs.Remove(pTab);
 }
 

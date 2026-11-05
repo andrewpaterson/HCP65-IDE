@@ -59,7 +59,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 //Files are shown in the colours of their git status, as IntelliJ IDEA shows them, in Solution Explorer and on their
 //tabs, and the lines changed since the last commit are marked in the editor's gutter.  The statuses of the solution's
 //repositories are read when it is opened, when a file is saved (Control+S, or Control+Shift+S for all) and every few
-//seconds after; the toolbar shows the branch.  Git, Compare with HEAD (or a branch, or any revision) shows the selected
+//seconds after, and whenever the window is activated (git may have been used outside); the toolbar shows the branch.
+//Clicking a change bar in the gutter shows the change's old lines, with Rollback and Show Diff.  Git, Compare with HEAD (or a branch, or any revision) shows the selected
 //file's changes side by side in a tab of its own, as IntelliJ IDEA's diff viewer does, as does File, Compare with File
 //against another file.  A diff follows its files: edits in their editors, and new commits.
 //
@@ -124,6 +125,14 @@ protected:
 	size						muiGitVersion;		//mcGit's status version when it was last shown.
 	int64						miGitStatusTime;	//When the statuses were last read, 0 to read them now.
 	Ptr<CLabel>					mpBranchLabel;		//On the toolbar.
+	Ptr<CGridContainer>			mpChangePopup;		//A change's old lines and its buttons, while it is open.
+	Ptr<CButton>				mpRollbackButton;	//In the change popup.
+	Ptr<CButton>				mpShowDiffButton;
+	Ptr<CIDEEditorTab>			mpChangeTab;		//The tab of the change shown.
+	SGitLineChange				msChange;
+	size						muiChange;			//Its index in its file's changes.
+	size						muiQueuedChange;	//A change's line to show once the editor is laid out, MAX_SIZE for none.
+	int							miQueuedAction;		//Then 0 nothing, 1 Rollback or 2 Show Diff.
 
 	CClaudeCommand				mcClaude;			//The request Claude is working on, or the last.
 	Ptr<CIDEClaudePane>			mpClaudePane;
@@ -223,6 +232,15 @@ public:
 
 	CGitRepositories*	GetGit(void);
 	bool				CompareWithHead(void);
+	void				ChangeBarClicked(CCodeEditor* pcEditor, size uiLine);
+	bool				ShowChange(Ptr<CIDEEditorTab> pTab, size uiLine);
+	bool				RollbackChange(void);
+	bool				ShowChangeDiff(void);
+	void				WindowActivated(void);
+	void				QueueChange(size uiLine, int iAction);
+	void				RollbackClicked(void);
+	void				ShowDiffClicked(void);
+	Ptr<CGridContainer>	GetChangePopup(void);
 	bool				CompareWithRevision(const char* szRevision);
 	bool				CompareWithFile(const char* szPath);
 	bool				ShowCompareWithBranchDialog(void);
@@ -271,6 +289,9 @@ protected:
 	void				ShowBranch(void);
 	void				ReadGitBase(Ptr<CIDEEditorTab> pTab);
 	void				GitFileSaved(const char* szFileName);
+	void				CloseChangePopup(void);
+	void				AppendBaseLines(Ptr<CIDEEditorTab> pTab, size uiStart, size uiEnd, CChars* pszDest);
+	Ptr<CIDEEditorTab>	FindTab(CCodeEditor* pcEditor);
 	void				HighlightDiffSide(Ptr<CDiffView> pView, ETextDiffSide eSide, size uiProject, const char* szFileName, const char* szText);
 	Ptr<CIDEEditorTab>	GetComparedTab(void);
 	bool				ReadDiffSide(CIDEDiffSide* pcSide, CChars* pszDest);
