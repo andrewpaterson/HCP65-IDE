@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source">
+      <UniqueIdentifier>{1982D77C-9A2F-4C19-84CF-5F915D1964E2}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="GitCommand.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="GitStatus.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="GitRepository.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="GitRepositories.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="GitLineChanges.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="GitCommand.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="GitStatus.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="GitRepository.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="GitRepositories.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="GitLineChanges.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
