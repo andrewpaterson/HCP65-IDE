@@ -772,6 +772,12 @@ bool CIDEContent::OpenSolution(const char* szFileName)
 	}
 	szName.Kill();
 
+	//The breakpoints saved beside it, bound once its configuration's line tables are read.
+	szName.Init();
+	GetUserSettingsFileName(&szName);
+	mcDebugger.ReadSourceBreakpoints(szName.Text());
+	szName.Kill();
+
 	SetComboBoxItems(mpConfigurations, false);
 	SetComboBoxItems(mpPlatforms, true);
 	if (mcConfigurations.NumConfigurations() > 0)
@@ -860,6 +866,8 @@ Ptr<CIDEEditorTab> CIDEContent::OpenFileTab(const char* szFileName, size uiProje
 	szName.Kill();
 	pTab->SetDockPane(pPane);
 	pTab->GetCodeEditor()->GetChangeBarClickEvent()->Add(this, &CIDEContent::ChangeBarClicked);
+	pTab->GetCodeEditor()->GetGlyphClickEvent()->Add(this, &CIDEContent::GlyphClicked);
+	ShowBreakpoints(pTab);
 	ReadGitBase(pTab);
 	UpdateChangeBars(pTab);
 	pPane->SetTabFont(GetGitStateFont(mpFontColours, pTab->GetGitState()));
@@ -1288,6 +1296,9 @@ void CIDEContent::PollBuild(Ptr<CWindow> pWindow)
 	if (!bRunning && (mcBuild.GetState() == BS_Succeeded) && GetConfiguration()->IsHCP65())
 	{
 		ReadListings(&aszLines);
+
+		//The program's new line table binds the breakpoints in its source.
+		ReadLineTables();
 	}
 	mpBuildPane->AppendLines(&aszLines);
 	mpBuildPane->SetProgress(mcBuild.GetProgress());
@@ -1556,6 +1567,9 @@ void CIDEContent::ShowConfiguration(void)
 	GetConfiguration()->GetPlatformName(&szName);
 	SelectComboBoxItem(mpPlatforms, szName.Text());
 	szName.Kill();
+
+	//Its programs' line tables bind the source breakpoints.
+	ReadLineTables();
 }
 
 
@@ -1774,6 +1788,7 @@ void CIDEContent::PaneClosed(CDockPane* pcPane)
 		CloseChangePopup();
 	}
 	pTab->GetCodeEditor()->GetChangeBarClickEvent()->Remove(this);
+	pTab->GetCodeEditor()->GetGlyphClickEvent()->Remove(this);
 	maTabs.Remove(pTab);
 }
 

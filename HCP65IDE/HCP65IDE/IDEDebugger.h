@@ -28,9 +28,15 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "ThreadLib/NetworkConnection.h"
 #include "ThreadLib/SharedMemoryChannel.h"
 #include "EmulatorDebugLib/DebugClient.h"
+#include "Assembler65Lib/Asm65LineTable.h"
+
+
+#define IDE_USER_SETTINGS_TAG	"UserSettings"	//The root of the per-user file beside the solution (<solution>.hcp65user).
+#define IDE_BREAKPOINT_TAG		"Breakpoint"
 
 
 #define IDE_DEBUG_DISASSEMBLY	24		//The instructions shown from the program address.
+#define IDE_DEBUG_LINE_TABLES	8		//The most programs' line tables read (a kernal and a program).
 
 
 enum EIDEDebugState
@@ -54,6 +60,22 @@ struct SIDEBreakpoint
 typedef CArrayTemplate<SIDEBreakpoint>	CArrayIDEBreakpoints;
 
 
+//A breakpoint on a line of a source file (F9 in the editor), bound to where the line's code starts in the programs'
+//line tables: each place, or the next line's with code.  Until it is bound it has no addresses (uiBoundLine is 0).
+struct SIDESourceBreakpoint
+{
+	CChars			szFile;
+	uint32			uiLine;			//1 based, where it was set.
+	bool			bEnabled;
+	uint32			uiBoundLine;	//The line its addresses are for, 0 while it isn't bound.
+	CArrayUint32	auiAddresses;
+	CArrayUint32	auiTables;		//The line table each address is from.
+};
+
+
+typedef CArrayTemplate<SIDESourceBreakpoint>	CArrayIDESourceBreakpoints;
+
+
 //The IDE's end of debugging the HCP65 emulator, at the instruction level, over EmulatorDebugLib's protocol.  It
 //knows nothing of the processor: the emulator describes its registers and addresses, and disassembles.
 //
@@ -69,6 +91,11 @@ typedef CArrayTemplate<SIDEBreakpoint>	CArrayIDEBreakpoints;
 //
 //The breakpoints are in SetBreakpointSpace's space ("Kernel", "User"), as the emulator names its spaces; in every
 //space if it is empty or the emulator has none of that name.
+//
+//Source breakpoints are by file and line (ToggleSourceBreakpoint).  The programs' line tables (AddLineTable, the
+//<program>.lines a build writes beside it) bind them to addresses: a table of the configuration's own program puts
+//them in the breakpoint space, one of what is loaded with it (a kernal) in every space.  Both kinds of breakpoint are
+//kept when not debugging, and all of them are given to the emulator whenever one changes.
 class CIDEDebugger
 {
 protected:
@@ -95,6 +122,10 @@ protected:
 	size					muiSeenDisassemblies;
 	size					muiSeenErrors;
 	CArrayIDEBreakpoints	masBreakpoints;
+	CArrayIDESourceBreakpoints	masSourceBreakpoints;
+	CAsm65LineTable			macLineTables[IDE_DEBUG_LINE_TABLES];
+	bool					mabOwnSpace[IDE_DEBUG_LINE_TABLES];	//The table is the configuration's own program's.
+	size					muiLineTables;
 	CChars					mszStatus;
 
 public:
@@ -126,6 +157,19 @@ public:
 	SIDEBreakpoint*			GetBreakpoint(size uiIndex);
 	SIDEBreakpoint*			FindBreakpoint(uint32 uiAddress);
 
+	void					ClearLineTables(void);
+	bool					AddLineTable(const char* szProgram, bool bOwnSpace);
+	size					NumLineTables(void);
+	CAsm65LineTable*		GetLineTable(size uiIndex);
+	bool					FindSourceLine(uint32 uiAddress, CChars* pszFile, uint32* puiLine);
+	bool					ToggleSourceBreakpoint(const char* szFile, uint32 uiLine);
+	SIDESourceBreakpoint*	AddSourceBreakpoint(const char* szFile, uint32 uiLine, bool bEnabled);
+	SIDESourceBreakpoint*	FindSourceBreakpoint(const char* szFile, uint32 uiLine);
+	size					NumSourceBreakpoints(void);
+	SIDESourceBreakpoint*	GetSourceBreakpoint(size uiIndex);
+	bool					WriteSourceBreakpoints(const char* szFileName);
+	bool					ReadSourceBreakpoints(const char* szFileName);
+
 	bool					Poll(CArrayChars* paszOutput);
 
 	EIDEDebugState			GetState(void);
@@ -142,6 +186,10 @@ protected:
 	bool					LoadFile(const char* szFile, uint32 uiAddress);
 	void					Stopped(void);
 	void					SendBreakpoints(void);
+	void					BreakpointsChanged(void);
+	void					BindSourceBreakpoints(void);
+	void					BindSourceBreakpoint(SIDESourceBreakpoint* psBreakpoint);
+	void					RemoveSourceBreakpointAt(size uiIndex);
 	bool					CanMove(void);
 	void					End(const char* szStatus);
 };

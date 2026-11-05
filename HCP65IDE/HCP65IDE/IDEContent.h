@@ -262,6 +262,11 @@ public:
 	bool				StepOver(void);
 	bool				StepOut(void);
 	bool				ToggleBreakpoint(void);
+	bool				ToggleSourceBreakpoint(Ptr<CIDEEditorTab> pTab, size uiLine);
+	void				GlyphClicked(CCodeEditor* pcEditor, size uiLine);
+	void				ReadLineTables(void);
+	void				ShowBreakpoints(Ptr<CIDEEditorTab> pTab);
+	void				ShowAllBreakpoints(void);
 	bool				ShowNewBreakpointDialog(void);
 	bool				ShowAttachDialog(void);
 	bool				AttachDebugger(int iPort);
@@ -310,6 +315,8 @@ protected:
 	void				RunDebugScript(void);
 	bool				ChooseEmulator(bool bLaunch);
 	bool				ChooseDebugLoads(CBuildConfiguration* pcConfiguration, CChars* pszMessage, CArrayChars* paszLines);
+	void				GetUserSettingsFileName(CChars* pszDest);
+	void				SaveBreakpoints(void);
 	void				ShowDebugMessages(void);
 	void				ResolveEmulatorPath(const char* szPath, CChars* pszDest);
 	bool				ShowAddressDialog(const char* szTitle, const char* szLabel, const char* szDefault, bool bHex, uint32* puiValue);

@@ -51,6 +51,7 @@ void CIDEEditorTab::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CFo
 	mpWindow = pWindow;
 	mcListings.Init();
 	mpCodeEditor = OMalloc<CCodeEditor>(pWindow, pFamily, szText);
+	mpCodeEditor->SetGlyphColumn(true);
 	mpCodeEditor->SetAlignment(CSH_Left, CSV_Top);
 	mpZones = OMalloc<CLineZones>(mpCodeEditor, pTheme, pTitleFont, pFamily, JEWEL_EDITOR, IDE_LISTING_TEXT);
 	mpEditor = mpCodeEditor->GetTextArea();

@@ -24,6 +24,10 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/ListenSocket.h"
 #include "BaseLib/NativeThread.h"
 #include "BaseLib/Timer.h"
+#include "BaseLib/FileUtil.h"
+#include "BaseLib/StringHelper.h"
+#include "BaseLib/XMLFile.h"
+#include "BaseLib/XMLWriter.h"
 #include "EmulatorDebugLib/DebugLaunch.h"
 #include "IDEDebugger.h"
 
@@ -64,6 +68,13 @@ void CIDEDebugger::Init(void)
 	muiSeenDisassemblies = 0;
 	muiSeenErrors = 0;
 	masBreakpoints.Init();
+	masSourceBreakpoints.Init();
+	for (muiLineTables = 0; muiLineTables < IDE_DEBUG_LINE_TABLES; muiLineTables++)
+	{
+		macLineTables[muiLineTables].Init();
+		mabOwnSpace[muiLineTables] = false;
+	}
+	muiLineTables = 0;
 	mszStatus.Init("Not debugging.");
 }
 
@@ -75,8 +86,19 @@ void CIDEDebugger::Init(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDEDebugger::Kill(void)
 {
+	size	ui;
+
 	Stop();
 	mszStatus.Kill();
+	for (ui = 0; ui < IDE_DEBUG_LINE_TABLES; ui++)
+	{
+		macLineTables[ui].Kill();
+	}
+	while (masSourceBreakpoints.NumElements() > 0)
+	{
+		RemoveSourceBreakpointAt(masSourceBreakpoints.NumElements() - 1);
+	}
+	masSourceBreakpoints.Kill();
 	masBreakpoints.Kill();
 	mcNetwork.Kill();
 	mcShared.Kill();
@@ -473,10 +495,7 @@ bool CIDEDebugger::ToggleBreakpoint(uint32 uiAddress)
 	}
 
 	masBreakpoints.RemoveAt(masBreakpoints.GetIndex(psBreakpoint));
-	if (mbClient && (mcClient.GetState() != DCS_Connecting))
-	{
-		mcClient.RemoveBreakpoint(uiAddress, muiBreakpointSpace);
-	}
+	BreakpointsChanged();
 	return false;
 }
 
@@ -496,10 +515,7 @@ bool CIDEDebugger::AddBreakpoint(uint32 uiAddress)
 	psBreakpoint = masBreakpoints.Add();
 	psBreakpoint->uiAddress = uiAddress;
 	psBreakpoint->bEnabled = true;
-	if (mbClient && (mcClient.GetState() != DCS_Connecting))
-	{
-		mcClient.AddBreakpoint(uiAddress, true, muiBreakpointSpace);
-	}
+	BreakpointsChanged();
 	return true;
 }
 
@@ -512,10 +528,11 @@ void CIDEDebugger::DeleteAllBreakpoints(void)
 {
 	masBreakpoints.Kill();
 	masBreakpoints.Init();
-	if (mbClient && (mcClient.GetState() != DCS_Connecting))
+	while (masSourceBreakpoints.NumElements() > 0)
 	{
-		mcClient.SetBreakpoints(NULL, 0);
+		RemoveSourceBreakpointAt(masSourceBreakpoints.NumElements() - 1);
 	}
+	BreakpointsChanged();
 }
 
 
@@ -546,19 +563,293 @@ SIDEBreakpoint* CIDEDebugger::FindBreakpoint(uint32 uiAddress)
 //////////////////////////////////////////////////////////////////////////
 void CIDEDebugger::SendBreakpoints(void)
 {
-	SDebugBreakpoint*	asBreakpoints;
-	size				i;
+	CArrayTemplate<SDebugBreakpoint>	asBreakpoints;
+	SDebugBreakpoint*					psBreakpoint;
+	SIDESourceBreakpoint*				psSource;
+	size								i;
+	size								j;
+	size								k;
+	uint32								uiSpace;
 
-	asBreakpoints = (SDebugBreakpoint*)malloc((masBreakpoints.NumElements() + 1) * sizeof(SDebugBreakpoint));
+	asBreakpoints.Init();
 	for (i = 0; i < masBreakpoints.NumElements(); i++)
 	{
-		asBreakpoints[i].uiAddress = masBreakpoints.Get(i)->uiAddress;
-		asBreakpoints[i].uiEnabled = masBreakpoints.Get(i)->bEnabled;
-		asBreakpoints[i].uiSpace = muiBreakpointSpace;
+		psBreakpoint = asBreakpoints.Add();
+		psBreakpoint->uiAddress = masBreakpoints.Get(i)->uiAddress;
+		psBreakpoint->uiEnabled = masBreakpoints.Get(i)->bEnabled;
+		psBreakpoint->uiSpace = muiBreakpointSpace;
 	}
-	mcClient.SetBreakpoints(asBreakpoints, masBreakpoints.NumElements());
-	free(asBreakpoints);
+
+	//Each place a source breakpoint's line starts, once.
+	for (i = 0; i < masSourceBreakpoints.NumElements(); i++)
+	{
+		psSource = masSourceBreakpoints.Get(i);
+		for (j = 0; j < psSource->auiAddresses.NumElements(); j++)
+		{
+			uiSpace = mabOwnSpace[psSource->auiTables.GetValue(j)] ? muiBreakpointSpace : DEBUG_SPACE_ANY;
+			for (k = 0; k < asBreakpoints.NumElements(); k++)
+			{
+				psBreakpoint = asBreakpoints.Get(k);
+				if ((psBreakpoint->uiAddress == psSource->auiAddresses.GetValue(j)) && (psBreakpoint->uiSpace == uiSpace))
+				{
+					break;
+				}
+			}
+			if (k == asBreakpoints.NumElements())
+			{
+				psBreakpoint = asBreakpoints.Add();
+				psBreakpoint->uiAddress = psSource->auiAddresses.GetValue(j);
+				psBreakpoint->uiEnabled = psSource->bEnabled;
+				psBreakpoint->uiSpace = uiSpace;
+			}
+			else if (psSource->bEnabled)
+			{
+				psBreakpoint->uiEnabled = true;
+			}
+		}
+	}
+	mcClient.SetBreakpoints(asBreakpoints.GetData(), asBreakpoints.NumElements());
+	asBreakpoints.Kill();
 }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The emulator, if one is connected, is given all the breakpoints again.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDebugger::BreakpointsChanged(void)
+{
+	if (mbClient && (mcClient.GetState() != DCS_Connecting))
+	{
+		SendBreakpoints();
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The line tables the source breakpoints are bound with go; they aren't
+// bound until a table is added.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDebugger::ClearLineTables(void)
+{
+	size	ui;
+
+	for (ui = 0; ui < muiLineTables; ui++)
+	{
+		macLineTables[ui].Clear();
+		mabOwnSpace[ui] = false;
+	}
+	muiLineTables = 0;
+	BindSourceBreakpoints();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The line table a build wrote beside szProgram (<program>.lines) binds
+// the source breakpoints too.  bOwnSpace: it is the configuration's own
+// program, whose breakpoints are in the breakpoint space; otherwise
+// (what is loaded with it, a kernal) they are in every space.  False if
+// there is no such table or there are too many.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEDebugger::AddLineTable(const char* szProgram, bool bOwnSpace)
+{
+	CChars	szFile;
+	bool	bResult;
+
+	if (muiLineTables >= IDE_DEBUG_LINE_TABLES)
+	{
+		return false;
+	}
+	szFile.Init(szProgram);
+	szFile.Append(".lines");
+	bResult = macLineTables[muiLineTables].ReadFile(szFile.Text());
+	szFile.Kill();
+	if (!bResult)
+	{
+		return false;
+	}
+	mabOwnSpace[muiLineTables] = bOwnSpace;
+	muiLineTables++;
+	BindSourceBreakpoints();
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The source line of the code at uiAddress, from the first line table
+// that has one.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEDebugger::FindSourceLine(uint32 uiAddress, CChars* pszFile, uint32* puiLine)
+{
+	size				ui;
+	SAsm65LineEntry*	psLine;
+
+	for (ui = 0; ui < muiLineTables; ui++)
+	{
+		psLine = macLineTables[ui].FindLine(uiAddress);
+		if (psLine)
+		{
+			pszFile->Set(macLineTables[ui].GetFile(psLine->uiFile));
+			*puiLine = psLine->uiLine;
+			return true;
+		}
+	}
+	return false;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// F9 on line uiLine (1 based) of szFile: the breakpoint there, set on that
+// line or bound to it, goes; otherwise one is added.  True if there is
+// one there now.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEDebugger::ToggleSourceBreakpoint(const char* szFile, uint32 uiLine)
+{
+	SIDESourceBreakpoint*	psBreakpoint;
+
+	psBreakpoint = FindSourceBreakpoint(szFile, uiLine);
+	if (psBreakpoint)
+	{
+		RemoveSourceBreakpointAt(masSourceBreakpoints.GetIndex(psBreakpoint));
+		BreakpointsChanged();
+		return false;
+	}
+	AddSourceBreakpoint(szFile, uiLine, true);
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A breakpoint on line uiLine (1 based) of szFile, bound if the line
+// tables can (as saved ones are given back).
+//
+//////////////////////////////////////////////////////////////////////////
+SIDESourceBreakpoint* CIDEDebugger::AddSourceBreakpoint(const char* szFile, uint32 uiLine, bool bEnabled)
+{
+	SIDESourceBreakpoint*	psBreakpoint;
+
+	psBreakpoint = masSourceBreakpoints.Add();
+	psBreakpoint->szFile.Init(szFile);
+	psBreakpoint->uiLine = uiLine;
+	psBreakpoint->bEnabled = bEnabled;
+	psBreakpoint->uiBoundLine = 0;
+	psBreakpoint->auiAddresses.Init();
+	psBreakpoint->auiTables.Init();
+	BindSourceBreakpoint(psBreakpoint);
+	BreakpointsChanged();
+	return psBreakpoint;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The breakpoint of szFile set on line uiLine, or bound to it.
+//
+//////////////////////////////////////////////////////////////////////////
+SIDESourceBreakpoint* CIDEDebugger::FindSourceBreakpoint(const char* szFile, uint32 uiLine)
+{
+	size					ui;
+	SIDESourceBreakpoint*	psBreakpoint;
+
+	for (ui = 0; ui < masSourceBreakpoints.NumElements(); ui++)
+	{
+		psBreakpoint = masSourceBreakpoints.Get(ui);
+		if (psBreakpoint->szFile.EqualsIgnoreCase(szFile) && ((psBreakpoint->uiLine == uiLine) || (psBreakpoint->uiBoundLine == uiLine)))
+		{
+			return psBreakpoint;
+		}
+	}
+	return NULL;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDebugger::RemoveSourceBreakpointAt(size uiIndex)
+{
+	SIDESourceBreakpoint*	psBreakpoint;
+
+	psBreakpoint = masSourceBreakpoints.Get(uiIndex);
+	psBreakpoint->auiTables.Kill();
+	psBreakpoint->auiAddresses.Kill();
+	psBreakpoint->szFile.Kill();
+	masSourceBreakpoints.RemoveAt(uiIndex);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Every source breakpoint bound again with the line tables there are now,
+// and given to the emulator if one is connected.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDebugger::BindSourceBreakpoints(void)
+{
+	size	ui;
+
+	for (ui = 0; ui < masSourceBreakpoints.NumElements(); ui++)
+	{
+		BindSourceBreakpoint(masSourceBreakpoints.Get(ui));
+	}
+	BreakpointsChanged();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The breakpoint's line's code in every line table that has the file:
+// each place it starts, or the next line's with code.  The first table
+// with the file says which line that is.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDebugger::BindSourceBreakpoint(SIDESourceBreakpoint* psBreakpoint)
+{
+	size	ui;
+	size	uiAddresses;
+	size	j;
+	uint32	uiLine;
+
+	psBreakpoint->auiAddresses.ReInit();
+	psBreakpoint->auiTables.ReInit();
+	psBreakpoint->uiBoundLine = 0;
+	for (ui = 0; ui < muiLineTables; ui++)
+	{
+		uiAddresses = psBreakpoint->auiAddresses.NumElements();
+		uiLine = macLineTables[ui].FindLineAddresses(psBreakpoint->szFile.Text(), (psBreakpoint->uiBoundLine != 0) ? psBreakpoint->uiBoundLine : psBreakpoint->uiLine, &psBreakpoint->auiAddresses);
+		if ((uiLine != 0) && (psBreakpoint->uiBoundLine != 0) && (uiLine != psBreakpoint->uiBoundLine))
+		{
+			//Another table moved it to a different line: only the first table's line is the breakpoint's.
+			psBreakpoint->auiAddresses.SetUsedElements(uiAddresses);
+			continue;
+		}
+		if (uiLine != 0)
+		{
+			psBreakpoint->uiBoundLine = uiLine;
+		}
+		for (j = uiAddresses; j < psBreakpoint->auiAddresses.NumElements(); j++)
+		{
+			psBreakpoint->auiTables.Add((uint32)ui);
+		}
+	}
+}
+
+
+size CIDEDebugger::NumLineTables(void) { return muiLineTables; }
+CAsm65LineTable* CIDEDebugger::GetLineTable(size uiIndex) { return (uiIndex < muiLineTables) ? &macLineTables[uiIndex] : NULL; }
+size CIDEDebugger::NumSourceBreakpoints(void) { return masSourceBreakpoints.NumElements(); }
+SIDESourceBreakpoint* CIDEDebugger::GetSourceBreakpoint(size uiIndex) { return masSourceBreakpoints.SafeGet(uiIndex); }
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -896,3 +1187,100 @@ CDebugClient* CIDEDebugger::GetClient(void) { return mbClient ? &mcClient : NULL
 char* CIDEDebugger::GetEmulator(void) { return mszEmulator.Text(); }
 size CIDEDebugger::NumBreakpoints(void) { return masBreakpoints.NumElements(); }
 SIDEBreakpoint* CIDEDebugger::GetBreakpoint(size uiIndex) { return masBreakpoints.Get(uiIndex); }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The source breakpoints, to the per-user file beside the solution:
+//
+//	<UserSettings>
+//		<Breakpoint File="D:\...\Start.asm" Line="42" Enabled="true"/>
+//	</UserSettings>
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEDebugger::WriteSourceBreakpoints(const char* szFileName)
+{
+	CXMLWriter				cWriter;
+	SIDESourceBreakpoint*	psBreakpoint;
+	char					szLine[16];
+	size					ui;
+	bool					bResult;
+
+	cWriter.Init();
+	cWriter.Begin(IDE_USER_SETTINGS_TAG);
+	for (ui = 0; ui < masSourceBreakpoints.NumElements(); ui++)
+	{
+		psBreakpoint = masSourceBreakpoints.Get(ui);
+		snprintf(szLine, sizeof(szLine), "%u", (unsigned int)psBreakpoint->uiLine);
+		cWriter.Begin(IDE_BREAKPOINT_TAG);
+		cWriter.Attribute("File", psBreakpoint->szFile.Text());
+		cWriter.Attribute("Line", szLine);
+		cWriter.Attribute("Enabled", psBreakpoint->bEnabled ? "true" : "false");
+		cWriter.End();
+	}
+	cWriter.End();
+	bResult = cWriter.Write(szFileName);
+	cWriter.Kill();
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The source breakpoints WriteSourceBreakpoints wrote, in place of these,
+// bound with the line tables there are.  False, with none, if the file
+// isn't there or isn't one.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEDebugger::ReadSourceBreakpoints(const char* szFileName)
+{
+	CXMLFile		cFile;
+	CFileUtil		cFileUtil;
+	CChars			szName;
+	CChars			szDirectory;
+	CMarkupTag*		pcRoot;
+	CMarkupTag*		pcTag;
+	STagIterator	sIterator;
+	char*			szFile;
+	char*			szLine;
+	char*			szEnabled;
+	bool			bResult;
+
+	while (masSourceBreakpoints.NumElements() > 0)
+	{
+		RemoveSourceBreakpointAt(masSourceBreakpoints.NumElements() - 1);
+	}
+	szName.Init();
+	szDirectory.Init();
+	cFileUtil.SplitPath(szFileName, &szName, &szDirectory);
+	if (szDirectory.Empty())
+	{
+		szDirectory.Set(".");
+	}
+	cFile.Init();
+	bResult = cFileUtil.Exists(szFileName) && cFile.Read(szName.Text(), szDirectory.Text()) && cFile.mcMarkup.mpcDoc;
+	pcRoot = bResult ? cFile.mcMarkup.mpcDoc->GetRootTag() : NULL;
+	bResult = pcRoot && (StringCompare(pcRoot->GetName(), IDE_USER_SETTINGS_TAG) == 0);
+	if (bResult)
+	{
+		for (pcTag = pcRoot->GetTag(&sIterator); pcTag; pcTag = pcRoot->GetNextTag(&sIterator))
+		{
+			if (StringCompare(pcTag->GetName(), IDE_BREAKPOINT_TAG) != 0)
+			{
+				continue;
+			}
+			szFile = pcTag->GetAttribute((char*)"File");
+			szLine = pcTag->GetAttribute((char*)"Line");
+			szEnabled = pcTag->GetAttribute((char*)"Enabled");
+			if (szFile && szLine && (atoi(szLine) > 0))
+			{
+				AddSourceBreakpoint(szFile, (uint32)atoi(szLine), (szEnabled == NULL) || (StringCompare(szEnabled, "false") != 0));
+			}
+		}
+	}
+	cFile.Kill();
+	szDirectory.Kill();
+	szName.Kill();
+	BreakpointsChanged();
+	return bResult;
+}

@@ -31,6 +31,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define IDE_DEBUG_POLL				20		//Milliseconds between looks at the debugger while debugging.
 #define IDE_DEBUG_SCRIPT_BREAK		300		//Milliseconds a scripted break lets it run first.
 #define IDE_DEBUG_DIALOG_WIDTH		360
+#define IDE_USER_SETTINGS_EXTENSION	".hcp65user"	//The per-user file beside the solution: its breakpoints.
+#define IDE_BREAKPOINT_COLOUR		Set32BitColour((uint8)0xE5, (uint8)0x51, (uint8)0x4F)	//Visual Studio's breakpoint red.
 
 
 //The Debug menu's items, as Visual Studio has them.
@@ -305,6 +307,12 @@ bool CIDEContent::ChooseDebugLoads(CBuildConfiguration* pcConfiguration, CChars*
 		szCard.Kill();
 	}
 	szFile.Kill();
+
+	//What is loaded may have been built since the line tables were read.
+	if (bResult)
+	{
+		ReadLineTables();
+	}
 	return bResult;
 }
 
@@ -570,14 +578,24 @@ bool CIDEContent::StepOut(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// F9: a breakpoint at the disassembly's instruction under the caret.  The
-// editor's lines have no addresses until a build links, so only the
-// disassembly has breakpoints for now.
+// F9: in the code, a breakpoint on the caret's line; otherwise one at the
+// disassembly's instruction under the caret.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEContent::ToggleBreakpoint(void)
 {
-	uint32	uiAddress;
+	uint32				uiAddress;
+	Ptr<CIDEEditorTab>	pTab;
+	int					iLine;
+	int					iColumn;
+
+	//In the code, the caret's line: a source breakpoint, as Visual Studio's F9.
+	pTab = GetActiveTab();
+	if (pTab.IsNotNull() && (mpWindow->GetFocus()->GetFocussedComponent() == pTab->GetEditor()))
+	{
+		pTab->GetCaretPlace(&iLine, &iColumn);
+		return ToggleSourceBreakpoint(pTab, (size)iLine);
+	}
 
 	if (!mpDebugView->GetCaretAddress(&uiAddress))
 	{
@@ -745,9 +763,11 @@ void CIDEContent::UpdateDebugView(bool bKeepCaret)
 // HCP65_IDE_DEBUG's comma separated commands, for checking the debugger:
 // start (F5), into (F11), over (F10), out (Shift+F11), break (Break All,
 // once it has run a little), restart, stop, bp:<hex address> and
-// toggle (F9 at the disassembly's caret), buildtab (the Build tab shown)
-// and wait:<milliseconds>.  Each but bp, buildtab and wait waits for the
-// debugger to be stopped (or not debugging, for start).
+// toggle (F9 at the disassembly's caret), buildtab (the Build tab shown),
+// line:<line> (a source breakpoint toggled on the open file's line, 1
+// based), built (until HCP65_IDE_BUILD's build has finished) and
+// wait:<milliseconds>.  Each but bp, buildtab, line, built and wait waits
+// for the debugger to be stopped (or not debugging, for start).
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEContent::SetDebugScript(const char* szCommands)
@@ -814,6 +834,18 @@ void CIDEContent::RunDebugScript(void)
 		mpDock->Show(mpBuildTool);
 		bDone = true;
 	}
+	else if (strncmp(szCommand, "line:", 5) == 0)
+	{
+		if (GetActiveTab().IsNotNull())
+		{
+			ToggleSourceBreakpoint(GetActiveTab(), (size)(atoi(&szCommand[5]) - 1));
+		}
+		bDone = true;
+	}
+	else if (strcmp(szCommand, "built") == 0)
+	{
+		bDone = !IsBuilding();
+	}
 	else if (strcmp(szCommand, "break") == 0)
 	{
 		if ((mcDebugger.GetState() == IDS_Running) && (GetDebugTickCount() - miDebugScriptTime >= IDE_DEBUG_SCRIPT_BREAK))
@@ -871,3 +903,152 @@ void CIDEContent::RunDebugScript(void)
 
 CIDEDebugger* CIDEContent::GetDebugger(void) { return &mcDebugger; }
 Ptr<CIDEDebugView> CIDEContent::GetDebugView(void) { return mpDebugView; }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A source breakpoint on line uiLine (0 based) of pTab's file goes, or one
+// is added: shown in its glyph column and saved with the solution.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEContent::ToggleSourceBreakpoint(Ptr<CIDEEditorTab> pTab, size uiLine)
+{
+	mcDebugger.ToggleSourceBreakpoint(pTab->GetFileName(), (uint32)(uiLine + 1));
+	ShowBreakpoints(pTab);
+	SaveBreakpoints();
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A click in an editor's glyph column toggles its line's breakpoint.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::GlyphClicked(CCodeEditor* pcEditor, size uiLine)
+{
+	Ptr<CIDEEditorTab>	pTab;
+
+	pTab = FindTab(pcEditor);
+	if (pTab.IsNotNull())
+	{
+		ToggleSourceBreakpoint(pTab, uiLine);
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The line tables beside what the chosen configuration builds and loads
+// (<program>.lines) bind the source breakpoints: its own program's in its
+// breakpoint space, a load's (a kernal) in every space.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::ReadLineTables(void)
+{
+	CBuildConfiguration*	pcConfiguration;
+	CChars					szFile;
+	size					i;
+
+	mcDebugger.ClearLineTables();
+	pcConfiguration = GetConfiguration();
+	if ((pcConfiguration != NULL) && pcConfiguration->IsHCP65())
+	{
+		szFile.Init();
+		for (i = 0; i < pcConfiguration->NumLoads(); i++)
+		{
+			ResolveEmulatorPath(pcConfiguration->GetLoadFile(i), &szFile);
+			mcDebugger.AddLineTable(szFile.Text(), false);
+		}
+		if (CBuild::GetImagePath(mcSolution.GetDirectory(), pcConfiguration, &szFile))
+		{
+			mcDebugger.AddLineTable(szFile.Text(), true);
+		}
+		szFile.Kill();
+	}
+	ShowAllBreakpoints();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// pTab's file's source breakpoints in its glyph column, on the lines they
+// are bound to: a red cell, or a red 'o' while unbound (no built program
+// has the line's code yet) or disabled.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::ShowBreakpoints(Ptr<CIDEEditorTab> pTab)
+{
+	Ptr<CCodeEditor>		pEditor;
+	SIDESourceBreakpoint*	psBreakpoint;
+	size					i;
+
+	pEditor = pTab->GetCodeEditor();
+	pEditor->ClearLineGlyphs();
+	for (i = 0; i < mcDebugger.NumSourceBreakpoints(); i++)
+	{
+		psBreakpoint = mcDebugger.GetSourceBreakpoint(i);
+		if (!psBreakpoint->szFile.EqualsIgnoreCase(pTab->GetFileName()))
+		{
+			continue;
+		}
+		if ((psBreakpoint->uiBoundLine != 0) && psBreakpoint->bEnabled)
+		{
+			pEditor->SetLineGlyph(psBreakpoint->uiBoundLine - 1, ' ', IDE_BREAKPOINT_COLOUR, IDE_BREAKPOINT_COLOUR);
+		}
+		else
+		{
+			pEditor->SetLineGlyph(psBreakpoint->uiLine - 1, 'o', IDE_BREAKPOINT_COLOUR);
+		}
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::ShowAllBreakpoints(void)
+{
+	size	i;
+
+	for (i = 0; i < maTabs.NumElements(); i++)
+	{
+		ShowBreakpoints(maTabs.Get(i));
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The per-user file beside the solution: <solution>.hcp65user.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::GetUserSettingsFileName(CChars* pszDest)
+{
+	CFileUtil	cFileUtil;
+
+	pszDest->Set(mszSolutionFile.Text());
+	cFileUtil.RemoveExtension(pszDest);
+	pszDest->Append(IDE_USER_SETTINGS_EXTENSION);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The source breakpoints to the per-user file, when a solution is open.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::SaveBreakpoints(void)
+{
+	CChars	szFile;
+
+	if (!mbSolution)
+	{
+		return;
+	}
+	szFile.Init();
+	GetUserSettingsFileName(&szFile);
+	mcDebugger.WriteSourceBreakpoints(szFile.Text());
+	szFile.Kill();
+}
