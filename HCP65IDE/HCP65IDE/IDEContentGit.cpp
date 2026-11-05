@@ -20,6 +20,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 ** ------------------------------------------------------------------------ **/
 #include <string.h>
 #include "BaseLib/Timer.h"
+#include "BaseLib/FileUtil.h"
+#include "BaseLib/Logger.h"
 #include "WindowLib/JewelColours.h"
 #include "IDEGit.h"
 #include "IDEContent.h"
@@ -259,6 +261,72 @@ void CIDEContent::UpdateChangeBars(Ptr<CIDEEditorTab> pTab)
 	szText = pTab->GetEditor()->GetText();
 	mcLineChanges.Compare(pszBase->Text(), pszBase->Length(), szText, strlen(szText));
 	pTab->SetChangeBars(&mcLineChanges);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The selected file's text in the last commit on the left and as it is
+// now in the editor (saved or not) on the right, in a tab of their own.
+// A file added since the last commit is all inserted.  False if no file
+// is selected, or it isn't in a repository or the last commit.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEContent::CompareWithHead(void)
+{
+	CGitRepository*		pcRepository;
+	CChars				szBase;
+	CChars				szName;
+	CChars				szTitle;
+	CFileUtil			cFileUtil;
+	Ptr<CDiffView>		pView;
+	Ptr<CTabComponent>	pTab;
+	EGitFileState		eState;
+	bool				bBase;
+
+	if (mpActive.IsNull())
+	{
+		return false;
+	}
+	pcRepository = mcGit.FindRepository(mpActive->GetFileName());
+	if (pcRepository == NULL)
+	{
+		return gcLogger.Error2(__METHOD__, " [", mpActive->GetFileName(), "] isn't in a git repository.", NULL);
+	}
+
+	szBase.Init();
+	bBase = pcRepository->ReadHeadText(mpActive->GetFileName(), &szBase);
+	eState = pcRepository->GetFileState(mpActive->GetFileName());
+	if (!bBase && (eState != GFS_Added) && (eState != GFS_Untracked))
+	{
+		szBase.Kill();
+		return gcLogger.Error2(__METHOD__, " [", mpActive->GetFileName(), "] isn't in the last commit.", NULL);
+	}
+
+	szName.Init();
+	cFileUtil.GetFileName(&szName, mpActive->GetFileName());
+	pView = OMalloc<CDiffView>(mpWindow, mpTheme, mpFontColours->GetFont(JEWEL_ICON), mpCodeFamily);
+	pView->SetAlignment(CSH_Stretch, CSV_Stretch);
+	pView->GetEditor(TDS_Left)->GetTextArea()->SetTiledText(true);
+	pView->GetEditor(TDS_Left)->GetTextArea()->SetColour(JEWEL_TEXT);
+	pView->GetEditor(TDS_Right)->GetTextArea()->SetTiledText(true);
+	pView->GetEditor(TDS_Right)->GetTextArea()->SetColour(JEWEL_TEXT);
+
+	szTitle.Init(szName);
+	szTitle.Append(" (HEAD)");
+	szName.Append(" (Your version)");
+	pView->ShowTexts(szTitle.Text(), szBase.Text(), szName.Text(), mpActive->GetEditor()->GetText());
+	szName.Kill();
+	szBase.Kill();
+
+	//The tab is named for the file, as IntelliJ IDEA names it.
+	szTitle.Clear();
+	cFileUtil.GetFileName(&szTitle, mpActive->GetFileName());
+	szTitle.Append(" (HEAD vs. Your version)");
+	pTab = mpEditors->AddTab(szTitle.Text(), pView, maFileIcons.Get(CIDEIcons::GetFileType(mpActive->GetFileName())), true);
+	szTitle.Kill();
+	mpEditors->Select(pTab);
+	return true;
 }
 
 

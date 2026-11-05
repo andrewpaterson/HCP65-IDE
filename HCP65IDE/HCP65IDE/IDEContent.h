@@ -37,6 +37,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/MenuBar.h"
 #include "WindowLib/Dialog.h"
 #include "WindowLib/FileChooser.h"
+#include "WindowLib/DiffView.h"
 #include "GitLib/GitRepositories.h"
 #include "GitLib/GitLineChanges.h"
 #include "IDECodeModel.h"
@@ -55,7 +56,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 //Files are shown in the colours of their git status, as IntelliJ IDEA shows them, in Solution Explorer and on their
 //tabs, and the lines changed since the last commit are marked in the editor's gutter.  The statuses of the solution's
 //repositories are read when it is opened, when a file is saved (Control+S, or Control+Shift+S for all) and every few
-//seconds after; the toolbar shows the branch.
+//seconds after; the toolbar shows the branch.  Git, Compare with HEAD shows the selected file's changes since the last
+//commit side by side in a tab of its own, as IntelliJ IDEA's diff viewer does.
 //
 //The Debug menu (and Visual Studio's keys) debug the HCP65 emulator at the instruction level, see CIDEDebugger: the
 //Debug tab under the editor shows its disassembly and registers.
@@ -75,6 +77,7 @@ protected:
 	Ptr<CMenuItem>				mpOpenItem;			//File, Open Project/Solution.
 	Ptr<CMenuItem>				mpSaveItem;			//File, Save.
 	Ptr<CMenuItem>				mpSaveAllItem;		//File, Save All.
+	Ptr<CMenuItem>				mpCompareItem;		//Git, Compare with HEAD.
 	Ptr<CFileChooser>			mpFileChooser;		//While it's shown.
 	Ptr<CImageCel>				mpFolderIcon;		//The file chooser's.
 	Ptr<CImageCel>				mpFileIcon;
@@ -200,6 +203,7 @@ public:
 	Ptr<CIDEDebugView>	GetDebugView(void);
 
 	CGitRepositories*	GetGit(void);
+	bool				CompareWithHead(void);
 	Ptr<CLabel>			GetBranchLabel(void);
 	void				ReadGitStatus(void);
 

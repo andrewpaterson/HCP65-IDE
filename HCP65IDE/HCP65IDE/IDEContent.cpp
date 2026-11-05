@@ -216,6 +216,7 @@ void CIDEContent::Class(void)
 	M_Pointer(mpOpenItem);
 	M_Pointer(mpSaveItem);
 	M_Pointer(mpSaveAllItem);
+	M_Pointer(mpCompareItem);
 	M_Pointer(mpFileChooser);
 	M_Pointer(mpFolderIcon);
 	M_Pointer(mpFileIcon);
@@ -481,12 +482,14 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// File, with Open Project/Solution, Save and Save All, and Debug.
+// File, with Open Project/Solution, Save and Save All; Git, with Compare
+// with HEAD; and Debug.
 //
 //////////////////////////////////////////////////////////////////////////
 Ptr<CMenuBar> CIDEContent::CreateMenuBar(void)
 {
 	Ptr<CMenuContainer>	pFile;
+	Ptr<CMenuContainer>	pGit;
 
 	pFile = OMalloc<CMenuContainer>(mpWindow, mpTheme);
 	mpOpenItem = pFile->AddItem("Open Project/Solution...", mpFolderIcon);
@@ -494,7 +497,11 @@ Ptr<CMenuBar> CIDEContent::CreateMenuBar(void)
 	mpSaveAllItem = pFile->AddItem("Save All");
 
 	mpMenuBar = OMalloc<CMenuBar>(mpWindow, mpTheme);
+	pGit = OMalloc<CMenuContainer>(mpWindow, mpTheme);
+	mpCompareItem = pGit->AddItem("Compare with HEAD");
+
 	mpMenuBar->AddMenu("File", pFile);
+	mpMenuBar->AddMenu("Git", pGit);
 	mpMenuBar->AddMenu("Debug", CreateDebugMenu());
 	mpMenuBar->GetItemClickEvent()->Add(this, &CIDEContent::MenuItemClicked);
 	mpMenuBar->SetAlignment(CSH_Stretch, CSV_Stretch);
@@ -519,6 +526,10 @@ void CIDEContent::MenuItemClicked(CMenuItem* pcItem)
 	else if (pcItem == &mpSaveAllItem)
 	{
 		SaveAllFiles();
+	}
+	else if (pcItem == &mpCompareItem)
+	{
+		CompareWithHead();
 	}
 	else
 	{
