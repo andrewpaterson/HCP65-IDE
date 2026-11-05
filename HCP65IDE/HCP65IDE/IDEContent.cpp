@@ -158,17 +158,6 @@ Ptr<CFont> GenerateIDEFont(const char* szFontFilename, const char* szName, float
 //
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEActivationListener::Init(CIDEContent* pcContent, void (CIDEContent::*fActivated)(void))
-{
-	mpcContent = pcContent;
-	mfActivated = fActivated;
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-//
-//////////////////////////////////////////////////////////////////////////
 void CIDEConfigurationListener::Init(CIDEContent* pcContent)
 {
 	mpcContent = pcContent;
@@ -237,16 +226,6 @@ void CIDETabsListener::TabRemoved(CUnknown* pcSource, void* pvContext)
 
 //////////////////////////////////////////////////////////////////////////
 //
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDEActivationListener::ItemActivated(CUnknown* pcSource, void* pvContext)
-{
-	(mpcContent->*mfActivated)();
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
 // szUIFont is the font of the menus, Solution Explorer and so on, and
 // szCodeFont the fixed width font files are edited in.
 //
@@ -258,8 +237,6 @@ void CIDEContent::Init(void)
 	mbSolution = false;
 	mcSolution.Init();
 	mcCodeModel.Init(&mcSolution);
-	mcExplorerListener.Init(this, &CIDEContent::ExplorerActivated);
-	mcReferencesListener.Init(this, &CIDEContent::ReferenceActivated);
 	mcConfigurationsListener.Init(this);
 	mcConfigurations.Init();
 	muiConfiguration = MAX_SIZE;
@@ -311,7 +288,6 @@ void CIDEContent::Class(void)
 	U_Unknown(CIDETabsListener, mcTabsListener);
 	M_Embedded(maFileIcons);
 	M_Pointer(mpExplorer);
-	U_Unknown(CIDEActivationListener, mcExplorerListener);
 	M_Pointer(mpConfigurations);
 	M_Pointer(mpPlatforms);
 	U_Unknown(CIDEConfigurationListener, mcConfigurationsListener);
@@ -327,7 +303,6 @@ void CIDEContent::Class(void)
 	M_Pointer(mpBuildTab);
 	M_Pointer(mpBuildPane);
 	M_Pointer(mpReferences);
-	U_Unknown(CIDEActivationListener, mcReferencesListener);
 	U_Unknown(CArrayIDELocations, masReferences);
 	U_Unknown(CVcxSolution, mcSolution);
 	U_Unknown(CIDECodeModel, mcCodeModel);
@@ -360,9 +335,16 @@ void CIDEContent::Class(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDEContent::Free(void)
 {
-	//An object's memory is freed without its destructor running so the listener takes itself off the tree.
-	mcExplorerListener.RemoveFromListenerCalls();
-	mcReferencesListener.RemoveFromListenerCalls();
+	//An object's memory is freed without its destructor running so the content and its listeners take themselves off
+	//the widgets still here.
+	if (mpExplorer.IsNotNull() && mpExplorer->GetTree().IsNotNull())
+	{
+		mpExplorer->GetTree()->GetActivationEvent()->Remove(this);
+	}
+	if (mpReferences.IsNotNull())
+	{
+		mpReferences->GetActivationEvent()->Remove(this);
+	}
 	mcConfigurationsListener.RemoveFromListenerCalls();
 	if (mpBuildButton.IsNotNull())
 	{
@@ -456,7 +438,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 
 	//Solution Explorer: its title over the project's tree.
 	mpExplorer = OMalloc<CSolutionExplorer>(pWindow, mpTheme);
-	mpExplorer->GetTree()->AddListener(&mcExplorerListener);
+	mpExplorer->GetTree()->GetActivationEvent()->Add(this, &CIDEContent::ExplorerActivated);
 	pExplorerPanel = OMalloc<CGridContainer>(pWindow);
 	pExplorerPanel->SetDesiredSize(IDE_EXPLORER_WIDTH, -1);
 	pExplorerPanel->SetAlignment(CSH_Stretch, CSV_Stretch);
@@ -477,7 +459,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	//Under the editor, a tab for what Find All References found and one for what the build wrote.
 	mpReferences = OMalloc<CTreeContainer>(pWindow, mpTheme);
 	mpReferences->SetAlignment(CSH_Stretch, CSV_Top);
-	mpReferences->AddListener(&mcReferencesListener);
+	mpReferences->GetActivationEvent()->Add(this, &CIDEContent::ReferenceActivated);
 	pReferencesPane = OMalloc<CScrollPane>(pWindow, mpTheme);
 	pReferencesPane->SetContent(mpReferences);
 	pReferencesPane->SetAlignment(CSH_Stretch, CSV_Stretch);

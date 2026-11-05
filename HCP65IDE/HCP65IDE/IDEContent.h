@@ -26,7 +26,6 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/WindowTheme.h"
 #include "WindowLib/TextArea.h"
 #include "WindowLib/ScrollPane.h"
-#include "WindowLib/ListListener.h"
 #include "WindowLib/TreeContainer.h"
 #include "WindowLib/ComboBox.h"
 #include "WindowLib/ComboBoxListener.h"
@@ -51,19 +50,6 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 class CIDEContent;
-
-
-//Hears a tree's items being opened (a double click or enter) and tells the content, with one of its methods.
-class CIDEActivationListener : public CListListener
-{
-CONSTRUCTABLE(CIDEActivationListener);
-public:
-	CIDEContent*	mpcContent;
-	void			(CIDEContent::*mfActivated)(void);
-
-	void	Init(CIDEContent* pcContent, void (CIDEContent::*fActivated)(void));
-	void	ItemActivated(CUnknown* pcSource, void* pvContext) override;
-};
 
 
 //Hears the solution configuration being chosen.
@@ -134,7 +120,6 @@ protected:
 	CIDETabsListener			mcTabsListener;
 	CArray<CImageCel>			maFileIcons;		//By EIDEFileType.
 	Ptr<CSolutionExplorer>		mpExplorer;
-	CIDEActivationListener		mcExplorerListener;
 	Ptr<CComboBox>				mpConfigurations;	//The build configuration's configuration; the code is parsed as its solution configuration.
 	Ptr<CComboBox>				mpPlatforms;		//And its platform.
 	CIDEConfigurationListener	mcConfigurationsListener;
@@ -150,7 +135,6 @@ protected:
 	Ptr<CTabComponent>			mpBuildTab;
 	Ptr<CIDEBuildPane>			mpBuildPane;
 	Ptr<CTreeContainer>			mpReferences;		//What Find All References found.
-	CIDEActivationListener		mcReferencesListener;
 	CArrayIDELocations			masReferences;		//The references' places; a node's data is its index plus one.
 	CVcxSolution				mcSolution;
 	bool						mbSolution;
