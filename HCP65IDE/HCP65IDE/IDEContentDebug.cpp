@@ -33,6 +33,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define IDE_DEBUG_DIALOG_WIDTH		360
 #define IDE_USER_SETTINGS_EXTENSION	".hcp65user"	//The per-user file beside the solution: its breakpoints.
 #define IDE_BREAKPOINT_COLOUR		Set32BitColour((uint8)0xE5, (uint8)0x51, (uint8)0x4F)	//Visual Studio's breakpoint red.
+#define IDE_STOPPED_LINE_COLOUR		Set32BitColour((uint8)0xFF, (uint8)0xD8, (uint8)0x00)	//Its yellow arrow at the current line.
 
 
 //The Debug menu's items, as Visual Studio has them.
@@ -716,6 +717,7 @@ void CIDEContent::PollDebugger(Ptr<CWindow> pWindow)
 
 	if (!mcDebugger.IsDebugging())
 	{
+		ShowStoppedLine(false);
 		RunDebugScript();
 		if (maszDebugScript.NumElements() != 0)
 		{
@@ -736,6 +738,7 @@ void CIDEContent::PollDebugger(Ptr<CWindow> pWindow)
 		{
 			mpDock->Show(mpDebugTool);
 		}
+		ShowStoppedLine(bStopped);
 	}
 
 	RunDebugScript();
@@ -1001,6 +1004,19 @@ void CIDEContent::ShowBreakpoints(Ptr<CIDEEditorTab> pTab)
 			pEditor->SetLineGlyph(psBreakpoint->uiLine - 1, 'o', IDE_BREAKPOINT_COLOUR);
 		}
 	}
+
+	//Where the debugger is stopped: a yellow '>', on the breakpoint's red if it has one.
+	if ((muiStoppedLine != 0) && mszStoppedFile.EqualsIgnoreCase(pTab->GetFileName()))
+	{
+		if (pEditor->GetLineGlyph(muiStoppedLine - 1) && pEditor->GetLineGlyph(muiStoppedLine - 1)->bBackground)
+		{
+			pEditor->SetLineGlyph(muiStoppedLine - 1, '>', IDE_STOPPED_LINE_COLOUR, IDE_BREAKPOINT_COLOUR);
+		}
+		else
+		{
+			pEditor->SetLineGlyph(muiStoppedLine - 1, '>', IDE_STOPPED_LINE_COLOUR);
+		}
+	}
 }
 
 
@@ -1051,4 +1067,46 @@ void CIDEContent::SaveBreakpoints(void)
 	GetUserSettingsFileName(&szFile);
 	mcDebugger.WriteSourceBreakpoints(szFile.Text());
 	szFile.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Stopped (and not stopped before, bWasStopped) at code the line tables
+// have a line for: its file is shown, the caret on that line, and the
+// line marked.  Running, or not debugging, nothing is marked.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::ShowStoppedLine(bool bWasStopped)
+{
+	Ptr<CIDEEditorTab>	pTab;
+	uint32				uiLine;
+	bool				bShown;
+
+	if (!mcDebugger.IsStopped())
+	{
+		if (muiStoppedLine != 0)
+		{
+			muiStoppedLine = 0;
+			ShowAllBreakpoints();
+		}
+		return;
+	}
+	if (bWasStopped)
+	{
+		return;
+	}
+
+	muiStoppedLine = 0;
+	bShown = mcDebugger.FindSourceLine(mcDebugger.GetProgramAddress(), &mszStoppedFile, &uiLine);
+	if (bShown && OpenFile(mszStoppedFile.Text()))
+	{
+		muiStoppedLine = uiLine;
+		pTab = FindTab(mszStoppedFile.Text());
+		if (pTab.IsNotNull())
+		{
+			pTab->SetCaretPlace((int)(uiLine - 1), 0);
+		}
+	}
+	ShowAllBreakpoints();
 }

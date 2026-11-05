@@ -186,6 +186,8 @@ void CIDEContent::Init(void)
 	maDiffTabs.Init();
 	maFileIcons.Init();
 	mcDebugger.Init();
+	mszStoppedFile.Init();
+	muiStoppedLine = 0;
 	maszDebugScript.Init();
 	miDebugScriptTime = 0;
 	miDebugScriptWait = 0;
@@ -252,6 +254,8 @@ void CIDEContent::Class(void)
 	M_Pointer(mpFolderIcon);
 	M_Pointer(mpFileIcon);
 	U_String(mszSolutionFile);
+	U_String(mszStoppedFile);
+	U_UInt32(muiStoppedLine);
 	M_Embedded(maTabs);
 	M_Pointer(mpActive);
 	M_Embedded(maDiffTabs);
@@ -377,6 +381,7 @@ void CIDEContent::Free(void)
 	mcClaude.Kill();
 
 	//An emulator being debugged is quit (or detached from).
+	mszStoppedFile.Kill();
 	mcDebugger.Kill();
 	maszDebugScript.Kill();
 	mszDefaultEmulatorDirectory.Kill();

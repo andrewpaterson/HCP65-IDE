@@ -171,6 +171,8 @@ protected:
 	size						muiClaudeTools;		//How many tools Claude has used on the request.
 
 	CIDEDebugger				mcDebugger;
+	CChars						mszStoppedFile;		//The source file the debugger is stopped in, and its line
+	uint32						muiStoppedLine;		//(1 based), 0 if it isn't stopped in one.
 	Ptr<CIDEDebugView>			mpDebugView;
 	Ptr<CButton>				mpStartButton;		//Start, or Continue while stopped.
 	Ptr<CMenuItem>				mpStartItem;		//Debug's items.
@@ -267,6 +269,7 @@ public:
 	void				ReadLineTables(void);
 	void				ShowBreakpoints(Ptr<CIDEEditorTab> pTab);
 	void				ShowAllBreakpoints(void);
+	void				ShowStoppedLine(bool bWasStopped);
 	bool				ShowNewBreakpointDialog(void);
 	bool				ShowAttachDialog(void);
 	bool				AttachDebugger(int iPort);
