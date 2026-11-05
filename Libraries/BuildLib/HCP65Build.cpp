@@ -251,7 +251,7 @@ bool CHCP65Build::Poll(CArrayChars* paszLines)
 	AddLines(mcBuilder.GetErrors(), paszLines);
 	if (mbResult && !mbCancel && mpcConfiguration->IsLinked())
 	{
-		mbResult = WriteImage(paszLines);
+		mbResult = WriteProgram(paszLines);
 	}
 	Finish(mbCancel ? BS_Cancelled : (mbResult ? BS_Succeeded : BS_Failed), paszLines);
 	return false;
@@ -265,7 +265,7 @@ bool CHCP65Build::Poll(CArrayChars* paszLines)
 // written, or why it couldn't be.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CHCP65Build::WriteImage(CArrayChars* paszLines)
+bool CHCP65Build::WriteProgram(CArrayChars* paszLines)
 {
 	CAsm65Image*		pcImage;
 	CAsm65Executable*	pcExecutable;
@@ -300,7 +300,7 @@ bool CHCP65Build::WriteImage(CArrayChars* paszLines)
 	szPath.Init();
 	GetOutputDirectory(&szPath);
 	cFileUtil.TouchDir(szPath.Text());
-	GetImagePath(mszRoot.Text(), mpcConfiguration, &szPath);
+	GetProgramPath(mszRoot.Text(), mpcConfiguration, &szPath);
 	bResult = pcImage ? pcImage->Write(szPath.Text()) : pcExecutable->Write(szPath.Text());
 	snprintf(szLine, sizeof(szLine), bResult ? "Wrote %u bytes to " : "Could not write %u bytes to ", (unsigned int)(pcImage ? pcImage->GetSize() : pcExecutable->GetSize()));
 	szErrors.Init(szLine);

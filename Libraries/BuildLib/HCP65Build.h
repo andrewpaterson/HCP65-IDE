@@ -56,7 +56,7 @@ public:
 protected:
 	static void	CompileThread(void* pvBuild);
 	void		AddProjects(CArrayChars* paszLines);
-	bool		WriteImage(CArrayChars* paszLines);
+	bool		WriteProgram(CArrayChars* paszLines);
 	void		AddLines(const char* szText, CArrayChars* paszLines);
 	void		Wait(void);
 };

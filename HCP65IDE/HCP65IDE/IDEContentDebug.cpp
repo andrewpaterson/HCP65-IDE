@@ -253,7 +253,7 @@ bool CIDEContent::ChooseDebugLoads(CBuildConfiguration* pcConfiguration, CChars*
 		mcDebugger.AddLoad(szFile.Text(), pcConfiguration->GetLoadAddress(i));
 	}
 
-	if (CBuild::GetImagePath(mcSolution.GetDirectory(), pcConfiguration, &szFile) && !cFileUtil.Exists(szFile.Text()))
+	if (CBuild::GetProgramPath(mcSolution.GetDirectory(), pcConfiguration, &szFile) && !cFileUtil.Exists(szFile.Text()))
 	{
 		pszMessage->Set("Build ");
 		pszMessage->Append(pcConfiguration->GetName());
@@ -978,7 +978,7 @@ void CIDEContent::ReadLineTables(void)
 			ResolveEmulatorPath(pcConfiguration->GetLoadFile(i), &szFile);
 			mcDebugger.AddLineTable(szFile.Text(), false);
 		}
-		if (CBuild::GetImagePath(mcSolution.GetDirectory(), pcConfiguration, &szFile))
+		if (CBuild::GetProgramPath(mcSolution.GetDirectory(), pcConfiguration, &szFile))
 		{
 			mcDebugger.AddLineTable(szFile.Text(), true);
 		}

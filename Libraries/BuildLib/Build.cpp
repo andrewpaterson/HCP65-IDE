@@ -191,7 +191,7 @@ void CBuild::GetOutputDirectory(CChars* pszDest) { GetDirectory("Output", pszDes
 // or its executable.  False if it has neither.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CBuild::GetImagePath(const char* szRoot, CBuildConfiguration* pcConfiguration, CChars* pszDest)
+bool CBuild::GetProgramPath(const char* szRoot, CBuildConfiguration* pcConfiguration, CChars* pszDest)
 {
 	CFileUtil	cFileUtil;
 
@@ -207,14 +207,14 @@ bool CBuild::GetImagePath(const char* szRoot, CBuildConfiguration* pcConfigurati
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Where the build writes its image's line table (CAsm65LineTable, which
-// source line each address is for): beside the image, as <image>.lines.
-// False if there is no image.
+// Where the build writes its program's line table (CAsm65LineTable, which
+// source line each address is for): beside the image or executable, as
+// <program>.lines.  False if it builds neither.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CBuild::GetLineTablePath(const char* szRoot, CBuildConfiguration* pcConfiguration, CChars* pszDest)
 {
-	if (!GetImagePath(szRoot, pcConfiguration, pszDest))
+	if (!GetProgramPath(szRoot, pcConfiguration, pszDest))
 	{
 		return false;
 	}
