@@ -532,7 +532,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	pMain->AddComponent(pExplorerPanel, 0, 2, 1, 2, 0, 1);
 	pMain->AddComponent(mpEditors, 1, 2, 1, 1, 1, 1);
 	pMain->AddComponent(mpBottomTabs, 1, 3, 1, 1, 1, 0);
-	pMain->AddInputActions(gaeIDECodeCommands, sizeof(gaeIDECodeCommands) / sizeof(EComponentInputCommand), this, &CIDEContent::CodeCommandAction);
+	pMain->AddInputActions(gaeIDECodeCommands, this, &CIDEContent::CodeCommandAction);
 	pWindow->SetContainer(pMain);
 	return true;
 }
