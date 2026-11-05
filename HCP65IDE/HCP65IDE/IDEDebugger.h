@@ -96,6 +96,12 @@ typedef CArrayTemplate<SIDESourceBreakpoint>	CArrayIDESourceBreakpoints;
 //<program>.lines a build writes beside it) bind them to addresses: a table of the configuration's own program puts
 //them in the breakpoint space, one of what is loaded with it (a kernal) in every space.  Both kinds of breakpoint are
 //kept when not debugging, and all of them are given to the emulator whenever one changes.
+//
+//A configuration's own program can be one the emulator's kernal runs as a process (SetOwnProgram: its file there,
+//"\\boot.exe").  The emulator tells of each process started and ended; the program's ID is the process of that name.
+//The own program's breakpoints (the disassembly's, and its line table's) stop only in its process, and wait unbound
+//while it isn't running.  A process started stops the emulator before it runs: its breakpoints are given and it goes
+//on (the stop isn't shown).
 class CIDEDebugger
 {
 protected:
@@ -106,6 +112,8 @@ protected:
 	CArrayChars				maszLoads;				//What is loaded into the emulator Start runs, in order.
 	CArrayUint32			mauiLoadAddresses;		//Where each is loaded.
 	CChars					mszBreakpointSpace;		//The breakpoints' space by name, empty for every space.
+	CChars					mszOwnProgram;			//The program a process runs ("\\boot.exe"), empty if it isn't one.
+	size					muiSeenProcessEvents;
 	uint32					muiBreakpointSpace;		//Its DEBUG_SPACE_ANY or index plus one, once welcomed.
 	CArrayChars				maszMessages;			//For the Build tab: what was started, what went wrong.
 	CProcess				mcProcess;
@@ -141,6 +149,8 @@ public:
 	void					ClearLoads(void);
 	void					AddLoad(const char* szFile, uint32 uiAddress);
 	void					SetBreakpointSpace(const char* szSpace);
+	void					SetOwnProgram(const char* szProgram);
+	bool					GetOwnProcess(uint32* puiProcess);
 	char*					GetEmulator(void);
 	void					TakeMessages(CArrayChars* paszDest);
 
@@ -191,6 +201,7 @@ protected:
 	bool					LoadFile(const char* szFile, uint32 uiAddress);
 	void					Stopped(void);
 	void					SendBreakpoints(void);
+	void					TellProcesses(CArrayChars* paszOutput);
 	void					BreakpointsChanged(void);
 	void					BindSourceBreakpoints(void);
 	void					BindSourceBreakpoint(SIDESourceBreakpoint* psBreakpoint);

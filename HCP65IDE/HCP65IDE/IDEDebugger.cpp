@@ -56,6 +56,8 @@ void CIDEDebugger::Init(void)
 	mauiLoadAddresses.Init();
 	mszBreakpointSpace.Init();
 	muiBreakpointSpace = DEBUG_SPACE_ANY;
+	mszOwnProgram.Init();
+	muiSeenProcessEvents = 0;
 	maszMessages.Init();
 	mcProcess.Init();
 	mbLaunched = false;
@@ -112,6 +114,7 @@ void CIDEDebugger::Kill(void)
 	mszChannel.Kill();
 	mcProcess.Kill();
 	maszMessages.Kill();
+	mszOwnProgram.Kill();
 	mszBreakpointSpace.Kill();
 	mauiLoadAddresses.Kill();
 	maszLoads.Kill();
@@ -181,6 +184,37 @@ void CIDEDebugger::AddLoad(const char* szFile, uint32 uiAddress)
 void CIDEDebugger::SetBreakpointSpace(const char* szSpace)
 {
 	mszBreakpointSpace.Set(szSpace ? szSpace : "");
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The configuration's own program, as the emulator's kernal names the
+// process running it ("\\boot.exe"); NULL or "" if it isn't one.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDebugger::SetOwnProgram(const char* szProgram)
+{
+	mszOwnProgram.Set(szProgram ? szProgram : "");
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The process the own program's breakpoints are for: every one
+// (DEBUG_PROCESS_ANY) if it isn't a program a process runs, or there is no
+// breakpoint space to keep them in; its ID while it runs.  False while
+// it isn't running: its breakpoints wait unbound.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEDebugger::GetOwnProcess(uint32* puiProcess)
+{
+	*puiProcess = DEBUG_PROCESS_ANY;
+	if (mszOwnProgram.Empty() || (muiBreakpointSpace == DEBUG_SPACE_ANY) || !mcClient.HasProcesses())
+	{
+		return true;
+	}
+	return mcClient.FindProcess(mszOwnProgram.Text(), puiProcess);
 }
 
 
@@ -316,6 +350,7 @@ bool CIDEDebugger::Connect(CProcessChannel* pcChannel)
 	mbClient = true;
 	mbStarting = false;
 	muiSeenStops = 0;
+	muiSeenProcessEvents = 0;
 	muiSeenDisassemblies = 0;
 	muiSeenErrors = 0;
 	mszStatus.Set("Connecting to the emulator.");
@@ -703,14 +738,21 @@ void CIDEDebugger::SendBreakpoints(void)
 	size								j;
 	size								k;
 	uint32								uiSpace;
+	uint32								uiProcess;
+	uint32								uiOwnProcess;
+	bool								bOwnRunning;
+	bool								bOwn;
 
+	//The own program's breakpoints are its process's, and wait while it isn't running.
+	bOwnRunning = GetOwnProcess(&uiOwnProcess);
 	asBreakpoints.Init();
-	for (i = 0; i < masBreakpoints.NumElements(); i++)
+	for (i = 0; bOwnRunning && (i < masBreakpoints.NumElements()); i++)
 	{
 		psBreakpoint = asBreakpoints.Add();
 		psBreakpoint->uiAddress = masBreakpoints.Get(i)->uiAddress;
 		psBreakpoint->uiEnabled = masBreakpoints.Get(i)->bEnabled;
 		psBreakpoint->uiSpace = muiBreakpointSpace;
+		psBreakpoint->uiProcess = uiOwnProcess;
 	}
 
 	//Each place a source breakpoint's line starts, once.
@@ -719,11 +761,17 @@ void CIDEDebugger::SendBreakpoints(void)
 		psSource = masSourceBreakpoints.Get(i);
 		for (j = 0; j < psSource->auiAddresses.NumElements(); j++)
 		{
-			uiSpace = mabOwnSpace[psSource->auiTables.GetValue(j)] ? muiBreakpointSpace : DEBUG_SPACE_ANY;
+			bOwn = mabOwnSpace[psSource->auiTables.GetValue(j)];
+			if (bOwn && !bOwnRunning)
+			{
+				continue;
+			}
+			uiSpace = bOwn ? muiBreakpointSpace : DEBUG_SPACE_ANY;
+			uiProcess = bOwn ? uiOwnProcess : DEBUG_PROCESS_ANY;
 			for (k = 0; k < asBreakpoints.NumElements(); k++)
 			{
 				psBreakpoint = asBreakpoints.Get(k);
-				if ((psBreakpoint->uiAddress == psSource->auiAddresses.GetValue(j)) && (psBreakpoint->uiSpace == uiSpace))
+				if ((psBreakpoint->uiAddress == psSource->auiAddresses.GetValue(j)) && (psBreakpoint->uiSpace == uiSpace) && (psBreakpoint->uiProcess == uiProcess))
 				{
 					break;
 				}
@@ -734,6 +782,7 @@ void CIDEDebugger::SendBreakpoints(void)
 				psBreakpoint->uiAddress = psSource->auiAddresses.GetValue(j);
 				psBreakpoint->uiEnabled = psSource->bEnabled;
 				psBreakpoint->uiSpace = uiSpace;
+				psBreakpoint->uiProcess = uiProcess;
 			}
 			else if (psSource->bEnabled)
 			{
@@ -1058,9 +1107,22 @@ bool CIDEDebugger::Poll(CArrayChars* paszOutput)
 			return true;
 		}
 	}
-	else if (mcClient.NumStops() != muiSeenStops)
+	else
 	{
-		Stopped();
+		TellProcesses(paszOutput);
+		if (mcClient.NumStops() != muiSeenStops)
+		{
+			if (mcClient.GetStopReason() == DS_Process)
+			{
+				//A process started: it has its breakpoints now, and goes on.
+				muiSeenStops = mcClient.NumStops();
+				Continue();
+			}
+			else
+			{
+				Stopped();
+			}
+		}
 	}
 	if (mcClient.IsRunning())
 	{
@@ -1078,6 +1140,42 @@ bool CIDEDebugger::Poll(CArrayChars* paszOutput)
 	}
 
 	return (GetState() != eOldState) || (muiSeenDisassemblies != uiOldDisassemblies);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Each process the emulator has said started or ended since the last
+// time, in the Build tab; the own program's breakpoints are given again
+// (to its new process, or unbound) when its process starts or ends.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDebugger::TellProcesses(CArrayChars* paszOutput)
+{
+	SDebugProcessEvent*	psEvent;
+	CChars*				pszLine;
+	bool				bOwn;
+	char				szID[16];
+
+	bOwn = false;
+	while (muiSeenProcessEvents < mcClient.NumProcessEvents())
+	{
+		psEvent = mcClient.GetProcessEvent(muiSeenProcessEvents);
+		muiSeenProcessEvents++;
+		snprintf(szID, sizeof(szID), "Process $%02X ", (unsigned int)psEvent->sProcess.uiProcess);
+		pszLine = paszOutput->Add(szID);
+		pszLine->Append(psEvent->bStarted ? "started: " : "ended: ")->Append(psEvent->sProcess.szName);
+		if (!psEvent->bStarted)
+		{
+			pszLine->Append(" (exit code ")->Append((int32)psEvent->sProcess.iExitCode)->Append(')');
+		}
+		pszLine->Append('.');
+		bOwn |= !mszOwnProgram.Empty() && (StringInsensitiveCompare(psEvent->sProcess.szName, mszOwnProgram.Text()) == 0);
+	}
+	if (bOwn)
+	{
+		SendBreakpoints();
+	}
 }
 
 

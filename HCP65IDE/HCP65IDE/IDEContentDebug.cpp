@@ -338,6 +338,7 @@ bool CIDEContent::ChooseEmulator(bool bLaunch)
 		mcDebugger.SetProcessor(szProcessor);
 		mcDebugger.ClearLoads();
 		mcDebugger.SetBreakpointSpace(pcConfiguration->GetBreakpointSpace());
+		mcDebugger.SetOwnProgram((pcConfiguration->HasExecutable() && pcConfiguration->HasCard()) ? pcConfiguration->GetCardPath() : NULL);
 		bResult = true;
 		if (!bLaunch)
 		{
