@@ -74,7 +74,7 @@ void TestBuildConfigurationsFile(void)
 
 	cFileUtil.MakeDir("Output");
 	cConfigurations.Init();
-	cConfigurations.Add("Debug|W65C816", BT_W65C816, "Debug|Win32");
+	cConfigurations.Add("Debug|W65C816", BT_W65C816, "Debug|Win32")->SetEmulator("Emulators" _FS_ "HCP65.exe", "Emulators", "--fast --mute");
 	cConfigurations.Add("Fast GCC", BT_GCC, "Release|x64");
 	AssertTrue(cConfigurations.Write("Output" _FS_ "Test.hcp65build"));
 
@@ -83,6 +83,15 @@ void TestBuildConfigurationsFile(void)
 	AssertSize(2, cRead.NumConfigurations());
 	AssertBuildConfiguration("Debug|W65C816", BT_W65C816, "Debug|Win32", cRead.GetConfiguration(0));
 	AssertBuildConfiguration("Fast GCC", BT_GCC, "Release|x64", cRead.GetConfiguration(1));
+
+	//The emulator is kept, and only where it was set.
+	AssertTrue(cRead.GetConfiguration(0)->HasEmulator());
+	AssertString("Emulators" _FS_ "HCP65.exe", cRead.GetConfiguration(0)->GetEmulator());
+	AssertString("Emulators", cRead.GetConfiguration(0)->GetEmulatorDirectory());
+	AssertString("--fast --mute", cRead.GetConfiguration(0)->GetEmulatorArguments());
+	AssertFalse(cRead.GetConfiguration(1)->HasEmulator());
+	AssertString("W65C816", cRead.GetConfiguration(0)->GetProcessorName());
+	AssertTrue(cRead.GetConfiguration(1)->GetProcessorName() == NULL);
 
 	AssertFalse(cRead.Read("Output" _FS_ "Missing.hcp65build"));
 	AssertSize(0, cRead.NumConfigurations());

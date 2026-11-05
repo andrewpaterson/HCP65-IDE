@@ -27,6 +27,9 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 #define BUILD_CONFIGURATION_NAME		"Name"
 #define BUILD_CONFIGURATION_TOOLCHAIN	"Toolchain"
 #define BUILD_CONFIGURATION_SOLUTION	"Solution"
+#define BUILD_CONFIGURATION_EMULATOR	"Emulator"
+#define BUILD_CONFIGURATION_EMULATOR_DIRECTORY	"EmulatorDirectory"
+#define BUILD_CONFIGURATION_EMULATOR_ARGUMENTS	"EmulatorArguments"
 
 
 //The toolchains' names, as saved, by EBuildToolchain.
@@ -42,6 +45,9 @@ void CBuildConfiguration::Init(const char* szName, EBuildToolchain eToolchain, c
 	mszName.Init(szName);
 	meToolchain = eToolchain;
 	mszSolutionConfiguration.Init(szSolutionConfiguration);
+	mszEmulator.Init();
+	mszEmulatorDirectory.Init();
+	mszEmulatorArguments.Init();
 }
 
 
@@ -62,6 +68,9 @@ void CBuildConfiguration::Init(void)
 //////////////////////////////////////////////////////////////////////////
 void CBuildConfiguration::Kill(void)
 {
+	mszEmulatorArguments.Kill();
+	mszEmulatorDirectory.Kill();
+	mszEmulator.Kill();
 	mszSolutionConfiguration.Kill();
 	mszName.Kill();
 }
@@ -69,7 +78,8 @@ void CBuildConfiguration::Kill(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// <Configuration Name="Debug|W65C816" Toolchain="W65C816" Solution="Debug|Win32"/>
+// <Configuration Name="Debug|W65C816" Toolchain="W65C816" Solution="Debug|Win32"/>, with Emulator,
+// EmulatorDirectory and EmulatorArguments only where they are set.
 //
 //////////////////////////////////////////////////////////////////////////
 void CBuildConfiguration::SaveXML(CXMLWriter* pcWriter)
@@ -78,6 +88,18 @@ void CBuildConfiguration::SaveXML(CXMLWriter* pcWriter)
 	pcWriter->Attribute(BUILD_CONFIGURATION_NAME, mszName.Text());
 	pcWriter->Attribute(BUILD_CONFIGURATION_TOOLCHAIN, GetToolchainName(meToolchain));
 	pcWriter->Attribute(BUILD_CONFIGURATION_SOLUTION, mszSolutionConfiguration.Text());
+	if (!mszEmulator.Empty())
+	{
+		pcWriter->Attribute(BUILD_CONFIGURATION_EMULATOR, mszEmulator.Text());
+	}
+	if (!mszEmulatorDirectory.Empty())
+	{
+		pcWriter->Attribute(BUILD_CONFIGURATION_EMULATOR_DIRECTORY, mszEmulatorDirectory.Text());
+	}
+	if (!mszEmulatorArguments.Empty())
+	{
+		pcWriter->Attribute(BUILD_CONFIGURATION_EMULATOR_ARGUMENTS, mszEmulatorArguments.Text());
+	}
 	pcWriter->End();
 }
 
@@ -110,6 +132,7 @@ bool CBuildConfiguration::LoadXML(CMarkupTag* pcTag)
 	mszName.Set(szName);
 	meToolchain = eToolchain;
 	mszSolutionConfiguration.Set(szSolution);
+	SetEmulator(pcTag->GetAttribute((char*)BUILD_CONFIGURATION_EMULATOR), pcTag->GetAttribute((char*)BUILD_CONFIGURATION_EMULATOR_DIRECTORY), pcTag->GetAttribute((char*)BUILD_CONFIGURATION_EMULATOR_ARGUMENTS));
 	return true;
 }
 
@@ -122,6 +145,31 @@ bool CBuildConfiguration::LoadXML(CMarkupTag* pcTag)
 bool CBuildConfiguration::IsHCP65(void)
 {
 	return (meToolchain == BT_W65C816) || (meToolchain == BT_65C64);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The processor what it builds runs on, as an emulator names it ("W65C816",
+// "65C64"); NULL for this computer's (MSVC, GCC).
+//
+//////////////////////////////////////////////////////////////////////////
+const char* CBuildConfiguration::GetProcessorName(void)
+{
+	return IsHCP65() ? GetToolchainName(meToolchain) : NULL;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// NULL or empty for none.
+//
+//////////////////////////////////////////////////////////////////////////
+void CBuildConfiguration::SetEmulator(const char* szExecutable, const char* szDirectory, const char* szArguments)
+{
+	mszEmulator.Set(szExecutable ? szExecutable : "");
+	mszEmulatorDirectory.Set(szDirectory ? szDirectory : "");
+	mszEmulatorArguments.Set(szArguments ? szArguments : "");
 }
 
 
@@ -219,4 +267,8 @@ bool CBuildConfiguration::FindToolchain(const char* szName, EBuildToolchain* peT
 char* CBuildConfiguration::GetName(void) { return mszName.Text(); }
 EBuildToolchain CBuildConfiguration::GetToolchain(void) { return meToolchain; }
 char* CBuildConfiguration::GetSolutionConfiguration(void) { return mszSolutionConfiguration.Text(); }
+bool CBuildConfiguration::HasEmulator(void) { return !mszEmulator.Empty(); }
+char* CBuildConfiguration::GetEmulator(void) { return mszEmulator.Text(); }
+char* CBuildConfiguration::GetEmulatorDirectory(void) { return mszEmulatorDirectory.Text(); }
+char* CBuildConfiguration::GetEmulatorArguments(void) { return mszEmulatorArguments.Text(); }
 

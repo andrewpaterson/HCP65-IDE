@@ -40,12 +40,20 @@ enum EBuildToolchain
 //A way the solution is built: a name to choose it by, its toolchain, and the solution configuration ("Debug|Win32")
 //whose projects' files, include directories and defines it builds with.  MSVC builds that configuration as Visual
 //Studio does.  The name is chosen as its configuration and platform, either side of a | ("Debug|W65C816").
+//
+//An HCP65 configuration can say which emulator debugs what it builds: the executable, the folder it runs in and
+//arguments to give it after the debugging ones (split at spaces).  Paths may be relative to the configurations'
+//file.  Without one whatever debugs it chooses.  The emulator must be the configuration's processor
+//(GetProcessorName).
 class CBuildConfiguration
 {
 protected:
 	CChars			mszName;
 	EBuildToolchain	meToolchain;
 	CChars			mszSolutionConfiguration;
+	CChars			mszEmulator;
+	CChars			mszEmulatorDirectory;
+	CChars			mszEmulatorArguments;
 
 public:
 	void			Init(const char* szName, EBuildToolchain eToolchain, const char* szSolutionConfiguration);
@@ -59,6 +67,13 @@ public:
 	EBuildToolchain	GetToolchain(void);
 	char*			GetSolutionConfiguration(void);
 	bool			IsHCP65(void);
+	const char*		GetProcessorName(void);
+
+	void			SetEmulator(const char* szExecutable, const char* szDirectory, const char* szArguments);
+	bool			HasEmulator(void);
+	char*			GetEmulator(void);
+	char*			GetEmulatorDirectory(void);
+	char*			GetEmulatorArguments(void);
 	void			GetConfigurationName(CChars* pszDest);
 	void			GetPlatformName(CChars* pszDest);
 	bool			Is(const char* szConfiguration, const char* szPlatform);
