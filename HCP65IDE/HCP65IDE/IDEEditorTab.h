@@ -32,12 +32,15 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/LineZones.h"
 #include "CppParserLib/CPPHighlighter.h"
 #include "CppParserLib/CPP65ListingIndex.h"
+#include "GitLib/GitStatus.h"
+#include "GitLib/GitLineChanges.h"
 #include "IDEListingSource.h"
 
 
 //A file open in the editor's tabs: its text in a fixed width font with line numbers, scrolled in its page, with what
 //is known of it for highlighting it again as it is edited.  Given an HCP65 build's listings (SetListings), the lines'
-//code is shown under them as CLineZones do: clicking a line's mark in the gutter shows its code.
+//code is shown under them as CLineZones do: clicking a line's mark in the gutter shows its code.  Given the file's text
+//in the last commit (SetBaseText), the lines changed since are marked in the gutter as IntelliJ IDEA marks them.
 class CIDEEditorTab : public CObject
 {
 CONSTRUCTABLE(CIDEEditorTab);
@@ -56,6 +59,11 @@ protected:
 	bool				mbEdited;		//The text was changed since the file was opened.
 	Ptr<CLineZones>		mpZones;		//The lines' code, from mcListings.
 	CIDEListingSource	mcListings;
+	EGitFileState		meGitState;		//As of the last git status read.
+	bool				mbBase;			//The file has a text in the last commit to mark changes from.
+	CChars				mszBaseText;	//That text.
+	CChars				mszBaseHead;	//The commit it is from.
+	size				muiBarChanges;	//The editor's change count when the change bars were worked out, MAX_SIZE for again.
 
 public:
 	void				Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CFont> pTitleFont, Ptr<CFontFamily> pFamily, ARGB32 sColour, const char* szFileName, size uiProject, const char* szText);
@@ -74,6 +82,16 @@ public:
 	void				SetListings(CCPP65ListingIndex* pcListings);
 	bool				ToggleListing(size uiLine);
 	Ptr<CLineZones>		GetZones(void);
+
+	void				SetBaseText(const char* szText, size uiLength, const char* szHead);
+	void				ClearBaseText(void);
+	bool				HasBaseText(void);
+	CChars*				GetBaseText(void);
+	char*				GetBaseHead(void);
+	void				SetGitState(EGitFileState eState);
+	EGitFileState		GetGitState(void);
+	bool				NeedsChangeBars(void);
+	void				SetChangeBars(CGitLineChanges* pcChanges);
 
 	Ptr<CTextArea>		GetEditor(void);
 	Ptr<CCodeEditor>	GetCodeEditor(void);

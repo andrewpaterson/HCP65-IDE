@@ -1,5 +1,5 @@
 # Linux build of the HCP65 IDE (BaseLib + StandardLib + SupportLib + InputLib +
-# WindowLib + X11Lib + VisualStudioLib + the IDE's window sources).
+# WindowLib + X11Lib + VisualStudioLib + BuildLib + GitLib + the IDE's window sources).
 #
 # 64-bit only: there is no 32-bit libX11 installed.  Needs libx11-dev.
 #
@@ -46,6 +46,7 @@ set(HCP65_LIBRARIES_DIR "${CODAPHELA_ROOT}/HCP65/Libraries")
 set(ASSEMBLER65LIB_DIR "${HCP65_LIBRARIES_DIR}/Assembler65Lib")
 set(VISUALSTUDIOLIB_DIR "${IDE_ROOT}/Libraries/VisualStudioLib")
 set(BUILDLIB_DIR "${IDE_ROOT}/Libraries/BuildLib")
+set(GITLIB_DIR "${IDE_ROOT}/Libraries/GitLib")
 set(IDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/HCP65IDE")
 
 
@@ -115,12 +116,16 @@ vcxproj_sources(VISUALSTUDIOLIB_SOURCES "${VISUALSTUDIOLIB_DIR}/VisualStudioLib.
 
 vcxproj_sources(BUILDLIB_SOURCES "${BUILDLIB_DIR}/BuildLib.vcxproj")
 
+vcxproj_sources(GITLIB_SOURCES "${GITLIB_DIR}/GitLib.vcxproj")
+
 # HCP65IDE.cpp (WinMain) is Windows only.
 set(IDE_SOURCES
 	"${IDE_DIR}/HCP65IDELinux.cpp"
 	"${IDE_DIR}/IDECodeModel.cpp"
 	"${IDE_DIR}/IDEContent.cpp"
 	"${IDE_DIR}/IDEContentDebug.cpp"
+	"${IDE_DIR}/IDEContentGit.cpp"
+	"${IDE_DIR}/IDEGit.cpp"
 	"${IDE_DIR}/IDEDebugger.cpp"
 	"${IDE_DIR}/IDEDebugView.cpp"
 	"${IDE_DIR}/IDEEditorTab.cpp"
@@ -213,6 +218,10 @@ target_link_libraries(VisualStudioLib PUBLIC BaseLib)
 add_library(BuildLib STATIC ${BUILDLIB_SOURCES})
 target_link_libraries(BuildLib PUBLIC VisualStudioLib CppParserLib ThreadLib BaseLib)
 
+# GitLib runs git for the files' statuses and their text in the last commit.
+add_library(GitLib STATIC ${GITLIB_SOURCES})
+target_link_libraries(GitLib PUBLIC StandardLib ThreadLib BaseLib)
+
 add_executable(HCP65IDE ${IDE_SOURCES})
 target_include_directories(HCP65IDE PRIVATE "${IDE_DIR}")
-target_link_libraries(HCP65IDE PRIVATE X11Lib WindowLib InputLib BuildLib VisualStudioLib CppParserLib Assembler65Lib EmulatorDebugLib MicroprocessorLib ThreadLib SupportLib StandardLib BaseLib)
+target_link_libraries(HCP65IDE PRIVATE X11Lib WindowLib InputLib BuildLib GitLib VisualStudioLib CppParserLib Assembler65Lib EmulatorDebugLib MicroprocessorLib ThreadLib SupportLib StandardLib BaseLib)

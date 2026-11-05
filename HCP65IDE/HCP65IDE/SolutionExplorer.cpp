@@ -28,6 +28,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/Window.h"
 #include "WindowLib/JewelColours.h"
 #include "WindowLib/JewelImageGenerator.h"
+#include "IDEGit.h"
 #include "SolutionExplorer.h"
 
 
@@ -430,6 +431,30 @@ bool CSolutionExplorer::GetNodeFilePath(int32 iNode, CChars* pszDest)
 		return true;
 	}
 	return false;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Each file's name is in the colour of its state in its repository's last
+// git status, or the theme's colour if it is unmodified or in none.
+//
+//////////////////////////////////////////////////////////////////////////
+void CSolutionExplorer::ColourFiles(CGitRepositories* pcGit, Ptr<CFontColours> pColours)
+{
+	int32	iNode;
+	CChars	szPath;
+
+	szPath.Init();
+	for (iNode = 0; iNode < mpTree->NumNodes(); iNode++)
+	{
+		szPath.Clear();
+		if (GetNodeFilePath(iNode, &szPath))
+		{
+			mpTree->SetNodeFont(iNode, GetGitStateFont(pColours, pcGit->GetFileState(szPath.Text())));
+		}
+	}
+	szPath.Kill();
 }
 
 

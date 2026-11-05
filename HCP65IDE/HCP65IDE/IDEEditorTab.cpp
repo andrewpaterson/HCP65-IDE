@@ -29,6 +29,11 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define IDE_RECOLOUR_DELAY		400		//Milliseconds after the last edit before the text is highlighted again.
 #define IDE_LISTING_TEXT		Set32BitColour((uint8)0xE6, (uint8)0xDF, (uint8)0xB8)	//A line's assembly: the editor's text, a little yellow.
 
+//IntelliJ IDEA's (dark theme) change bars in the gutter.
+#define IDE_CHANGE_ADDED		Set32BitColour((uint8)0x54, (uint8)0x91, (uint8)0x59)
+#define IDE_CHANGE_MODIFIED		Set32BitColour((uint8)0x37, (uint8)0x5F, (uint8)0xAD)
+#define IDE_CHANGE_REMOVED		Set32BitColour((uint8)0x86, (uint8)0x8A, (uint8)0x91)
+
 
 //////////////////////////////////////////////////////////////////////////
 //
@@ -57,6 +62,11 @@ void CIDEEditorTab::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CFo
 	miChangedTime = 0;
 	mbRecolour = false;
 	mbEdited = false;
+	meGitState = GFS_Unmodified;
+	mbBase = false;
+	mszBaseText.Init();
+	mszBaseHead.Init();
+	muiBarChanges = MAX_SIZE;
 
 	PostInit();
 }
@@ -81,6 +91,11 @@ void CIDEEditorTab::Class(void)
 	U_Bool(mbEdited);
 	M_Pointer(mpZones);
 	U_Unknown(CIDEListingSource, mcListings);
+	U_Enum(meGitState);
+	U_Bool(mbBase);
+	U_String(mszBaseText);
+	U_String(mszBaseHead);
+	U_Size(muiBarChanges);
 }
 
 
@@ -90,6 +105,8 @@ void CIDEEditorTab::Class(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDEEditorTab::Free(void)
 {
+	mszBaseHead.Kill();
+	mszBaseText.Kill();
 	mcListings.Kill();
 	mszFileName.Kill();
 }
@@ -264,6 +281,92 @@ bool CIDEEditorTab::ToggleListing(size uiLine)
 }
 
 
+//////////////////////////////////////////////////////////////////////////
+//
+// szText (uiLength bytes) is the file's text in the last commit, szHead.
+// The change bars are worked out again.  An empty text marks every line
+// added, as for a file added since.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEEditorTab::SetBaseText(const char* szText, size uiLength, const char* szHead)
+{
+	mbBase = true;
+	mszBaseText.Clear();
+	mszBaseText.Append(szText, uiLength);
+	mszBaseHead.Clear();
+	mszBaseHead.Append(szHead);
+	muiBarChanges = MAX_SIZE;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The file has no last commit's text (it isn't in a repository, or isn't
+// tracked), so no lines are marked.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEEditorTab::ClearBaseText(void)
+{
+	mbBase = false;
+	mszBaseText.Clear();
+	mszBaseHead.Clear();
+	muiBarChanges = MAX_SIZE;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// True if the change bars aren't of the text as it is now.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEEditorTab::NeedsChangeBars(void)
+{
+	return muiBarChanges != mpEditor->GetChangeCount();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The gutter marks pcChanges (of the text now from the base text), or
+// nothing if it is NULL, in IntelliJ IDEA's colours.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEEditorTab::SetChangeBars(CGitLineChanges* pcChanges)
+{
+	size			i;
+	SGitLineChange*	psChange;
+	ARGB32			sColour;
+
+	mpCodeEditor->ClearChangeBars();
+	if (pcChanges)
+	{
+		for (i = 0; i < pcChanges->NumChanges(); i++)
+		{
+			psChange = pcChanges->GetChange(i);
+			switch (psChange->eType)
+			{
+			case GLC_Added:
+				sColour = IDE_CHANGE_ADDED;
+				break;
+			case GLC_Removed:
+				sColour = IDE_CHANGE_REMOVED;
+				break;
+			default:
+				sColour = IDE_CHANGE_MODIFIED;
+				break;
+			}
+			mpCodeEditor->AddChangeBar(psChange->uiStartLine, psChange->uiEndLine, sColour);
+		}
+	}
+	muiBarChanges = mpEditor->GetChangeCount();
+}
+
+
+bool CIDEEditorTab::HasBaseText(void) { return mbBase; }
+CChars* CIDEEditorTab::GetBaseText(void) { return &mszBaseText; }
+char* CIDEEditorTab::GetBaseHead(void) { return mszBaseHead.Text(); }
+void CIDEEditorTab::SetGitState(EGitFileState eState) { meGitState = eState; }
+EGitFileState CIDEEditorTab::GetGitState(void) { return meGitState; }
 void CIDEEditorTab::SetTab(Ptr<CTabComponent> pTab) { mpTab = pTab; }
 Ptr<CLineZones> CIDEEditorTab::GetZones(void) { return mpZones; }
 Ptr<CTextArea> CIDEEditorTab::GetEditor(void) { return mpEditor; }

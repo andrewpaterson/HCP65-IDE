@@ -240,6 +240,8 @@
     <ClCompile Include="IDECodeModel.cpp" />
     <ClCompile Include="IDEContent.cpp" />
     <ClCompile Include="IDEContentDebug.cpp" />
+    <ClCompile Include="IDEContentGit.cpp" />
+    <ClCompile Include="IDEGit.cpp" />
     <ClCompile Include="IDEDebugger.cpp" />
     <ClCompile Include="IDEDebugView.cpp" />
     <ClCompile Include="IDEEditorTab.cpp" />
@@ -259,6 +261,7 @@
     <ClInclude Include="IDEListingSource.h" />
     <ClInclude Include="IDEBuildPane.h" />
     <ClInclude Include="IDEIcons.h" />
+    <ClInclude Include="IDEGit.h" />
     <ClInclude Include="IDEApp.h" />
     <ClInclude Include="IDEWindowTick.h" />
     <ClInclude Include="SolutionExplorer.h" />
@@ -305,6 +308,9 @@
     </ProjectReference>
     <ProjectReference Include="..\..\Libraries\BuildLib\BuildLib.vcxproj">
       <Project>{6b2e1c9a-4d3f-4e5b-9a21-7c8d0e4f1a63}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Libraries\GitLib\GitLib.vcxproj">
+      <Project>{7eed24ec-0c65-4849-9e57-ca05799f0791}</Project>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

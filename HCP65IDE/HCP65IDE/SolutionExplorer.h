@@ -25,6 +25,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/TreeContainer.h"
 #include "WindowLib/ScrollPane.h"
 #include "VisualStudioLib/VcxSolution.h"
+#include "SupportLib/FontColours.h"
+#include "GitLib/GitRepositories.h"
 
 
 enum ESolutionExplorerNodeType
@@ -67,7 +69,8 @@ typedef CArrayTemplate<SSolutionExplorerEntry>	CArraySolutionExplorerEntry;
 
 //Solution Explorer: the solution, its solution folders and projects, each project's filters as folders and its files in
 //them, as Visual Studio shows them.  In each folder the folders come first and then the projects or files, each in
-//alphabetical order.  It is an object held by the IDE's content.
+//alphabetical order.  Files can be coloured by what git says has happened to them (ColourFiles).  It is an object held by
+//the IDE's content.
 class CSolutionExplorer : public CObject
 {
 CONSTRUCTABLE(CSolutionExplorer);
@@ -99,6 +102,7 @@ public:
 	size					GetNodeProject(int32 iNode);
 	bool					GetNodeFileName(int32 iNode, CChars* pszDest);
 	int32					FindFileNode(const char* szFileName);
+	void					ColourFiles(CGitRepositories* pcGit, Ptr<CFontColours> pColours);
 
 protected:
 	int32					AddNode(int32 iParentNode, const char* szText, Ptr<CImageCel> pIcon, ESolutionExplorerNodeType eType, size uiProject, size uiIndex);

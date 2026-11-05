@@ -21,6 +21,12 @@
     <ClCompile Include="IDEContentDebug.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="IDEContentGit.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="IDEGit.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="IDEDebugger.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -72,6 +78,9 @@
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDEIcons.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDEGit.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDEApp.h">

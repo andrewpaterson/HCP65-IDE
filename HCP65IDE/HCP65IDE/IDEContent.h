@@ -37,6 +37,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/MenuBar.h"
 #include "WindowLib/Dialog.h"
 #include "WindowLib/FileChooser.h"
+#include "GitLib/GitRepositories.h"
+#include "GitLib/GitLineChanges.h"
 #include "IDECodeModel.h"
 #include "IDEEditorTab.h"
 #include "IDEBuildPane.h"
@@ -49,6 +51,10 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 //The IDE's window's content: the menu bar and toolbar along the top, Solution Explorer on the left, the editor's tabs
 //of open files on the right with the references found under them.  F12 goes to the definition of what is at the caret and Shift+F12 finds its references.  It is an object; keep it
 //in the root and call Setup.
+//
+//Files are shown in the colours of their git status, as IntelliJ IDEA shows them, in Solution Explorer and on their
+//tabs, and the lines changed since the last commit are marked in the editor's gutter.  The statuses of the solution's
+//repositories are read when it is opened and every few seconds after; the toolbar shows the branch.
 //
 //The Debug menu (and Visual Studio's keys) debug the HCP65 emulator at the instruction level, see CIDEDebugger: the
 //Debug tab under the editor shows its disassembly and registers.
@@ -93,6 +99,12 @@ protected:
 	CVcxSolution				mcSolution;
 	bool						mbSolution;
 	CIDECodeModel				mcCodeModel;		//Uses mcSolution; initialised when a solution is opened.
+
+	CGitRepositories			mcGit;				//The repositories the solution's files are in.
+	CGitLineChanges				mcLineChanges;		//Worked out for one tab at a time.
+	size						muiGitVersion;		//mcGit's status version when it was last shown.
+	int64						miGitStatusTime;	//When the statuses were last read, 0 to read them now.
+	Ptr<CLabel>					mpBranchLabel;		//On the toolbar.
 
 	CIDEDebugger				mcDebugger;
 	Ptr<CIDEDebugView>			mpDebugView;
@@ -181,6 +193,10 @@ public:
 	CIDEDebugger*		GetDebugger(void);
 	Ptr<CIDEDebugView>	GetDebugView(void);
 
+	CGitRepositories*	GetGit(void);
+	Ptr<CLabel>			GetBranchLabel(void);
+	void				ReadGitStatus(void);
+
 protected:
 	Ptr<CMenuBar>		CreateMenuBar(void);
 	Ptr<CMenuContainer>	CreateDebugMenu(void);
@@ -204,6 +220,12 @@ protected:
 	void				PollBuild(Ptr<CWindow> pWindow);
 	void				ReadListings(CArrayChars* paszLines);
 	void				SetListings(bool bListings);
+
+	int64				PollGit(int64 iNow);
+	void				ShowGitStatus(void);
+	void				ShowBranch(void);
+	void				ReadGitBase(Ptr<CIDEEditorTab> pTab);
+	void				UpdateChangeBars(Ptr<CIDEEditorTab> pTab);
 };
 
 

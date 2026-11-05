@@ -31,11 +31,13 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "SupportLib/TrueTypeFont.h"
 #include "SupportLib/TrueTypeFontFactory.h"
 #include "WindowLib/GridContainer.h"
+#include "WindowLib/FillContainer.h"
 #include "WindowLib/ScrollPane.h"
 #include "WindowLib/Label.h"
 #include "WindowLib/JewelColours.h"
 #include "WindowLib/JewelTheme.h"
 #include "WindowLib/JewelImageGenerator.h"
+#include "IDEGit.h"
 #include "IDEContent.h"
 
 
@@ -44,6 +46,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define IDE_CODE_PIXEL_SIZE		15.0f
 #define IDE_BOTTOM_HEIGHT		180
 #define IDE_TOOLBAR_HEIGHT		34		//A grid in a grid has no height of its own.
+#define IDE_TOOLBAR_GAP			8		//Right of the branch.
 
 
 #define IDE_BUILD_POLL			50		//Milliseconds between looks at a running build.
@@ -184,6 +187,10 @@ void CIDEContent::Init(void)
 	miDebugScriptWait = 0;
 	mszDefaultEmulator.Init();
 	mszDefaultEmulatorDirectory.Init();
+	mcGit.Init();
+	mcLineChanges.Init();
+	muiGitVersion = 0;
+	miGitStatusTime = 0;
 
 	PostInit();
 }
@@ -255,6 +262,11 @@ void CIDEContent::Class(void)
 	U_String(mszDefaultEmulatorDirectory);
 	U_Int64(miDebugScriptTime);
 	U_Int64(miDebugScriptWait);
+	U_Unknown(CGitRepositories, mcGit);
+	U_Unknown(CGitLineChanges, mcLineChanges);
+	U_Size(muiGitVersion);
+	U_Int64(miGitStatusTime);
+	M_Pointer(mpBranchLabel);
 }
 
 
@@ -307,6 +319,10 @@ void CIDEContent::Free(void)
 	mszDefaultEmulatorDirectory.Kill();
 	mszDefaultEmulator.Kill();
 
+	//A git status still being read is stopped.
+	mcLineChanges.Kill();
+	mcGit.Kill();
+
 	//A build still running is stopped (an HCP65 build is waited for) before the solution it builds goes.
 	mcBuild.Kill();
 	mcListings.Kill();
@@ -353,6 +369,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	Ptr<CLabel>			pExplorerTitle;
 	Ptr<CScrollPane>	pReferencesPane;
 	Ptr<CGridContainer>	pToolbar;
+	Ptr<CFillContainer>	pBranchGap;
 	CColourFormatHelper	cFormat;
 	size				i;
 
@@ -439,6 +456,14 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	pToolbar->AddComponent(mpPlatforms, 1, 0, 1, 1, 0, 1);
 	pToolbar->AddComponent(mpBuildButton, 2, 0, 1, 1, 0, 1);
 	pToolbar->AddComponent(mpStartButton, 3, 0, 1, 1, 1, 1);
+
+	//The branch checked out, at the toolbar's right, as IntelliJ IDEA shows it.
+	mpBranchLabel = OMalloc<CLabel>(pWindow, mpFontColours->GetFont(JEWEL_ICON), "");
+	mpBranchLabel->SetAlignment(CSH_Right, CSV_Center);
+	pToolbar->AddComponent(mpBranchLabel, 4, 0, 1, 1, 0, 1);
+	pBranchGap = OMalloc<CFillContainer>(pWindow);
+	pBranchGap->SetDesiredSize(IDE_TOOLBAR_GAP, 1);
+	pToolbar->AddComponent(pBranchGap, 5, 0, 1, 1, 0, 1);
 
 	pMain = OMalloc<CGridContainer>(pWindow);
 	pMain->AddComponent(CreateMenuBar(), 0, 0, 2, 1, 1, 0);
@@ -554,6 +579,10 @@ bool CIDEContent::OpenSolution(const char* szFileName)
 	mcCodeModel.Kill();
 	mcSolution.Kill();
 	mcSolution.Init();
+
+	//The repositories are found again from the new solution's files, and read at the next tick.
+	mcGit.RemoveAll();
+	miGitStatusTime = 0;
 	if (bSolution)
 	{
 		mbSolution = mcSolution.Read(szFileName);
@@ -569,6 +598,12 @@ bool CIDEContent::OpenSolution(const char* szFileName)
 		return false;
 	}
 	mpExplorer->ShowSolution(&mcSolution);
+
+	//Colouring the files finds the repositories they are in; their statuses are read before the solution is shown.
+	mcGit.FindRepository(szFileName);
+	mpExplorer->ColourFiles(&mcGit, mpFontColours);
+	ReadGitStatus();
+	miGitStatusTime = GetDebugTickCount();
 
 	//The build configurations beside the solution, or the defaults if it hasn't any.
 	mcConfigurations.Kill();
@@ -639,9 +674,13 @@ bool CIDEContent::OpenFile(const char* szFileName, size uiProject)
 	szName.Kill();
 	pTab->SetTab(pTabComponent);
 	mpEditors->Select(pTabComponent);
+	ReadGitBase(pTab);
+	UpdateChangeBars(pTab);
+	pTabComponent->SetTextFont(GetGitStateFont(mpFontColours, pTab->GetGitState()));
 
 	//The first tab is selected as it is added, before it is known as this file's.
 	mpActive = pTab;
+	ShowBranch();
 	return true;
 }
 
@@ -1356,10 +1395,14 @@ void CIDEContent::Tick(Ptr<CWindow> pWindow)
 
 	//The platform's clock: the window's total time only counts the time it spent updating.
 	iNow = GetDebugTickCount();
-	iSoonest = -1;
+	iSoonest = PollGit(iNow);
 	for (i = 0; i < maTabs.Size(); i++)
 	{
 		pTab = maTabs.Get(i);
+		if (pTab->NeedsChangeBars())
+		{
+			UpdateChangeBars(pTab);
+		}
 		if (pTab->NeedsRecolour(iNow, &iWait))
 		{
 			HighlightTab(pTab);
@@ -1384,6 +1427,7 @@ void CIDEContent::Tick(Ptr<CWindow> pWindow)
 void CIDEContent::TabSelected(CTabComponent* pcTab)
 {
 	mpActive = FindTab(pcTab);
+	ShowBranch();
 }
 
 
