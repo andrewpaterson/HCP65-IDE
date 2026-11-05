@@ -223,6 +223,12 @@ void TestGitRepositoryStatus(void)
 	AssertFalse(cRepository.ReadHeadText(TestGitPath(&szPath, szRoot.Text(), "Added.h"), &szText));
 	AssertFalse(cRepository.ReadHeadText("/no-such-folder-for-git/Main.cpp", &szText));
 
+	//Any revision: a branch, or the first commit's parent, which there isn't.
+	szText.Clear();
+	AssertTrue(cRepository.ReadRevisionText(TestGitPath(&szPath, szRoot.Text(), "Main.cpp"), "master", &szText));
+	AssertString("a\nb\nc\n", szText.Text());
+	AssertFalse(cRepository.ReadRevisionText(TestGitPath(&szPath, szRoot.Text(), "Main.cpp"), "HEAD~1", &szText));
+
 	//Read without waiting.
 	AssertTrue(cRepository.StartStatus());
 	AssertTrue(cRepository.IsReadingStatus());

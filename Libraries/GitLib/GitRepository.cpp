@@ -241,12 +241,25 @@ EGitFileState CGitRepository::GetFileState(const char* szFullPath)
 //////////////////////////////////////////////////////////////////////////
 bool CGitRepository::ReadHeadText(const char* szFullPath, CChars* pszDest)
 {
+	return ReadRevisionText(szFullPath, "HEAD", pszDest);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// As ReadHeadText, for any revision git knows: a commit, a branch, a tag,
+// "HEAD~2".  False if the file isn't in it or there is no such revision.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CGitRepository::ReadRevisionText(const char* szFullPath, const char* szRevision, CChars* pszDest)
+{
 	CGitCommand	cCommand;
 	CArrayChars	aszArguments;
 	CChars		szObject;
 	bool		bResult;
 
-	szObject.Init("HEAD:");
+	szObject.Init(szRevision);
+	szObject.Append(':');
 	if (!GetRelativePath(szFullPath, &szObject))
 	{
 		szObject.Kill();

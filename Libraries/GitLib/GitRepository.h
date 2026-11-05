@@ -55,6 +55,7 @@ public:
 	EGitFileState	GetFileState(const char* szFullPath);
 
 	bool			ReadHeadText(const char* szFullPath, CChars* pszDest);
+	bool			ReadRevisionText(const char* szFullPath, const char* szRevision, CChars* pszDest);
 
 protected:
 	void			AddStatusArguments(CArrayChars* paszArguments);
