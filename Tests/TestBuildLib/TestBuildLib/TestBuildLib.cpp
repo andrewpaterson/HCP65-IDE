@@ -6,6 +6,7 @@
 
 
 void TestBuildConfigurations(void);
+void TestBuildWorkspace(void);
 void TestBuild(void);
 
 
@@ -24,6 +25,7 @@ int __cdecl main(void)
 	MemoryInit();
 
 	TestBuildConfigurations();
+	TestBuildWorkspace();
 	TestBuild();
 
 	MemoryKill();

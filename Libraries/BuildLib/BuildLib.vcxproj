@@ -21,6 +21,7 @@
   <ItemGroup>
     <ClCompile Include="BuildConfiguration.cpp" />
     <ClCompile Include="BuildConfigurations.cpp" />
+    <ClCompile Include="BuildWorkspace.cpp" />
     <ClCompile Include="Build.cpp" />
     <ClCompile Include="CommandBuild.cpp" />
     <ClCompile Include="MSVCBuild.cpp" />
@@ -31,6 +32,7 @@
   <ItemGroup>
     <ClInclude Include="BuildConfiguration.h" />
     <ClInclude Include="BuildConfigurations.h" />
+    <ClInclude Include="BuildWorkspace.h" />
     <ClInclude Include="Build.h" />
     <ClInclude Include="CommandBuild.h" />
     <ClInclude Include="MSVCBuild.h" />

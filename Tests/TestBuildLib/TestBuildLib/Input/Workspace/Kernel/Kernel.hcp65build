@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<BuildConfigurations>
+	<Configuration Name="Release|W65C816" Toolchain="W65C816" Solution="Release|Win32" BreakpointSpace="Kernel">
+		<Image File="k.rom" Size="0x100">
+			<Region Start="0x0" End="0x100" Offset="0x0"/>
+		</Image>
+	</Configuration>
+</BuildConfigurations>

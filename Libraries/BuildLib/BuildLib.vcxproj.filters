@@ -18,6 +18,9 @@
     <ClCompile Include="BuildConfigurations.cpp">
       <Filter>Source\Configuration</Filter>
     </ClCompile>
+    <ClCompile Include="BuildWorkspace.cpp">
+      <Filter>Source\Build</Filter>
+    </ClCompile>
     <ClCompile Include="Build.cpp">
       <Filter>Source\Build</Filter>
     </ClCompile>
@@ -43,6 +46,9 @@
     </ClInclude>
     <ClInclude Include="BuildConfigurations.h">
       <Filter>Source\Configuration</Filter>
+    </ClInclude>
+    <ClInclude Include="BuildWorkspace.h">
+      <Filter>Source\Build</Filter>
     </ClInclude>
     <ClInclude Include="Build.h">
       <Filter>Source\Build</Filter>
