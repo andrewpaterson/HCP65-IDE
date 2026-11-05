@@ -62,6 +62,9 @@ typedef CArrayTemplate<SIDEBreakpoint>	CArrayIDEBreakpoints;
 //running with a port.  The breakpoints are the IDE's, by address: they are kept when not debugging and given to
 //the emulator when it is connected.  Poll (each tick while debugging) reads what the emulator has sent and its
 //output.  When it stops the instructions there are asked for.
+//
+//A Start with an image (SetImage, the configuration's built program) loads it into the emulator while it waits at
+//its first instruction (DM_Load at the image's load address), then resets it so it starts from what was loaded.
 class CIDEDebugger
 {
 protected:
@@ -69,6 +72,8 @@ protected:
 	CChars					mszEmulatorDirectory;	//Where it runs (its resources are found from there).
 	CChars					mszEmulatorArguments;	//Given after the debugging ones, split at spaces.
 	CChars					mszProcessor;			//The processor the emulator must be, empty for any.
+	CChars					mszImage;				//The program loaded into the emulator Start runs, empty for none.
+	uint32					muiImageLoad;			//Where it is loaded.
 	CArrayChars				maszMessages;			//For the Build tab: what was started, what went wrong.
 	CProcess				mcProcess;
 	bool					mbLaunched;				//Start ran the emulator; Stop quits it.
@@ -92,6 +97,7 @@ public:
 
 	void					SetEmulator(const char* szExecutable, const char* szDirectory, const char* szArguments);
 	void					SetProcessor(const char* szProcessor);
+	void					SetImage(const char* szFile, uint32 uiLoad);
 	char*					GetEmulator(void);
 	void					TakeMessages(CArrayChars* paszDest);
 
@@ -125,6 +131,7 @@ public:
 protected:
 	bool					Connect(CProcessChannel* pcChannel);
 	void					Welcomed(void);
+	bool					LoadImage(void);
 	void					Stopped(void);
 	void					SendBreakpoints(void);
 	bool					CanMove(void);

@@ -251,6 +251,7 @@ bool CIDEContent::ChooseEmulator(bool bLaunch)
 	else
 	{
 		mcDebugger.SetProcessor(szProcessor);
+		mcDebugger.SetImage(NULL, 0);
 		bResult = true;
 		if (!bLaunch)
 		{
@@ -287,6 +288,26 @@ bool CIDEContent::ChooseEmulator(bool bLaunch)
 			szFile.Kill();
 			bResult = false;
 		}
+
+		//What the configuration builds is loaded into the emulator it starts; it must have been built.
+		szFile.Init();
+		if (bResult && bLaunch && CBuild::GetImagePath(mcSolution.GetDirectory(), pcConfiguration, &szFile))
+		{
+			if (cFileUtil.Exists(szFile.Text()))
+			{
+				mcDebugger.SetImage(szFile.Text(), pcConfiguration->GetImage()->GetLoad());
+			}
+			else
+			{
+				szMessage.Set("Build ");
+				szMessage.Append(pcConfiguration->GetName());
+				szMessage.Append(" first: ");
+				szMessage.Append(szFile);
+				szMessage.Append(" isn't there.");
+				bResult = false;
+			}
+		}
+		szFile.Kill();
 	}
 
 	if (!bResult)
