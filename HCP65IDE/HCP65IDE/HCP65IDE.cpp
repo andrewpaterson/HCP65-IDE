@@ -36,8 +36,10 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The IDE's window on Windows, showing the .vcxproj on the command line
-// (or VisualStudioLib's).
+// The IDE's window on Windows, showing the .sln or .vcxproj on the
+// command line (or VisualStudioLib's).  The command line is taken whole,
+// without the spaces around it or quotes around it (a path may have
+// spaces).
 //
 //////////////////////////////////////////////////////////////////////////
 int PASCAL WinMain(HINSTANCE hInstance,	HINSTANCE hPrevInstance, LPTSTR lpCmdLine, int nCmdShow)
@@ -51,9 +53,22 @@ int PASCAL WinMain(HINSTANCE hInstance,	HINSTANCE hPrevInstance, LPTSTR lpCmdLin
 	ObjectsInit();
 	SocketsInit();  //The debugger's connection to the emulator.
 
-	bool bResult;
+	bool	bResult;
+	CChars	szSolution;
 
 	bResult = true;
+
+	szSolution.Init((lpCmdLine != NULL) ? lpCmdLine : "");
+	szSolution.StripWhitespace(true);
+	if ((szSolution.Length() >= 2) && szSolution.StartsWith("\"") && szSolution.EndsWith('"'))
+	{
+		szSolution.RemoveFromStart(1);
+		szSolution.RemoveFromEnd(1);
+	}
+	if (szSolution.Empty())
+	{
+		szSolution.Set(IDE_DEFAULT_PROJECT);
+	}
 
 	{
 		CWinGDIWindowFactory	cNativeFactory;
@@ -76,7 +91,7 @@ int PASCAL WinMain(HINSTANCE hInstance,	HINSTANCE hPrevInstance, LPTSTR lpCmdLin
 		//The app (its window, content and input) is held by the root while it runs.
 		pApp = OMalloc<CIDEApp>();
 		ORoot()->Add(pApp);
-		pApp->Setup(&cNativeFactory, &cWinInput, "../../../CommonLibraries/Libraries/WinInputLib/xml", ((lpCmdLine != NULL) && (lpCmdLine[0] != '\0')) ? lpCmdLine : IDE_DEFAULT_PROJECT);
+		pApp->Setup(&cNativeFactory, &cWinInput, "../../../CommonLibraries/Libraries/WinInputLib/xml", szSolution.Text());
 		bResult = pApp->Run();
 		ORoot()->Remove(pApp);
 		pApp = NULL;
@@ -90,6 +105,7 @@ int PASCAL WinMain(HINSTANCE hInstance,	HINSTANCE hPrevInstance, LPTSTR lpCmdLin
 		cNativeFactory.Kill();
 	}
 
+	szSolution.Kill();
 	ObjectsFlush();
 	SocketsKill();
 	ObjectsKill();
