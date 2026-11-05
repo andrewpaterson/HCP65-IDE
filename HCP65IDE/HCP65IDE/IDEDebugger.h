@@ -21,6 +21,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __IDE_DEBUGGER_H__
 #define __IDE_DEBUGGER_H__
 #include "BaseLib/ArrayChars.h"
+#include "BaseLib/ArrayUint32.h"
 #include "BaseLib/ArrayTemplate.h"
 #include "BaseLib/Chars.h"
 #include "ThreadLib/Process.h"
@@ -63,8 +64,8 @@ typedef CArrayTemplate<SIDEBreakpoint>	CArrayIDEBreakpoints;
 //the emulator when it is connected.  Poll (each tick while debugging) reads what the emulator has sent and its
 //output.  When it stops the instructions there are asked for.
 //
-//A Start with an image (SetImage, the configuration's built program) loads it into the emulator while it waits at
-//its first instruction (DM_Load at the image's load address), then resets it so it starts from what was loaded.
+//A Start with files to load (AddLoad: a kernal, the configuration's built image) loads them into the emulator while
+//it waits at its first instruction (DM_Load at each one's address), then resets it so it starts from what was loaded.
 //
 //The breakpoints are in SetBreakpointSpace's space ("Kernel", "User"), as the emulator names its spaces; in every
 //space if it is empty or the emulator has none of that name.
@@ -75,10 +76,10 @@ protected:
 	CChars					mszEmulatorDirectory;	//Where it runs (its resources are found from there).
 	CChars					mszEmulatorArguments;	//Given after the debugging ones, split at spaces.
 	CChars					mszProcessor;			//The processor the emulator must be, empty for any.
-	CChars					mszImage;				//The program loaded into the emulator Start runs, empty for none.
+	CArrayChars				maszLoads;				//What is loaded into the emulator Start runs, in order.
+	CArrayUint32			mauiLoadAddresses;		//Where each is loaded.
 	CChars					mszBreakpointSpace;		//The breakpoints' space by name, empty for every space.
 	uint32					muiBreakpointSpace;		//Its DEBUG_SPACE_ANY or index plus one, once welcomed.
-	uint32					muiImageLoad;			//Where it is loaded.
 	CArrayChars				maszMessages;			//For the Build tab: what was started, what went wrong.
 	CProcess				mcProcess;
 	bool					mbLaunched;				//Start ran the emulator; Stop quits it.
@@ -102,7 +103,8 @@ public:
 
 	void					SetEmulator(const char* szExecutable, const char* szDirectory, const char* szArguments);
 	void					SetProcessor(const char* szProcessor);
-	void					SetImage(const char* szFile, uint32 uiLoad);
+	void					ClearLoads(void);
+	void					AddLoad(const char* szFile, uint32 uiAddress);
 	void					SetBreakpointSpace(const char* szSpace);
 	char*					GetEmulator(void);
 	void					TakeMessages(CArrayChars* paszDest);
@@ -137,7 +139,7 @@ public:
 protected:
 	bool					Connect(CProcessChannel* pcChannel);
 	void					Welcomed(void);
-	bool					LoadImage(void);
+	bool					LoadFile(const char* szFile, uint32 uiAddress);
 	void					Stopped(void);
 	void					SendBreakpoints(void);
 	bool					CanMove(void);

@@ -18,6 +18,8 @@ You should have received a copy of the GNU Affero General Public License
 along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 
 ** ------------------------------------------------------------------------ **/
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "BaseLib/StringHelper.h"
 #include "BuildConfiguration.h"
@@ -31,6 +33,12 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 #define BUILD_CONFIGURATION_EMULATOR_DIRECTORY	"EmulatorDirectory"
 #define BUILD_CONFIGURATION_EMULATOR_ARGUMENTS	"EmulatorArguments"
 #define BUILD_CONFIGURATION_IMAGE		"Image"
+#define BUILD_CONFIGURATION_EXECUTABLE	"Executable"
+#define BUILD_CONFIGURATION_LOAD		"Load"
+#define BUILD_CONFIGURATION_LOAD_FILE	"File"
+#define BUILD_CONFIGURATION_LOAD_ADDRESS	"Address"
+#define BUILD_CONFIGURATION_CARD		"Card"
+#define BUILD_CONFIGURATION_CARD_PATH	"CardPath"
 #define BUILD_CONFIGURATION_BREAKPOINT_SPACE	"BreakpointSpace"
 
 
@@ -53,6 +61,12 @@ void CBuildConfiguration::Init(const char* szName, EBuildToolchain eToolchain, c
 	mszBreakpointSpace.Init();
 	mbImage = false;
 	mcImage.Init();
+	mbExecutable = false;
+	mcExecutable.Init();
+	maszLoadFiles.Init();
+	mauiLoadAddresses.Init();
+	mszCard.Init();
+	mszCardPath.Init();
 }
 
 
@@ -73,6 +87,11 @@ void CBuildConfiguration::Init(void)
 //////////////////////////////////////////////////////////////////////////
 void CBuildConfiguration::Kill(void)
 {
+	mszCardPath.Kill();
+	mszCard.Kill();
+	mauiLoadAddresses.Kill();
+	maszLoadFiles.Kill();
+	mcExecutable.Kill();
 	mcImage.Kill();
 	mszBreakpointSpace.Kill();
 	mszEmulatorArguments.Kill();
@@ -91,6 +110,9 @@ void CBuildConfiguration::Kill(void)
 //////////////////////////////////////////////////////////////////////////
 void CBuildConfiguration::SaveXML(CXMLWriter* pcWriter)
 {
+	size	i;
+	char	szAddress[16];
+
 	pcWriter->Begin(BUILD_CONFIGURATION_TAG);
 	pcWriter->Attribute(BUILD_CONFIGURATION_NAME, mszName.Text());
 	pcWriter->Attribute(BUILD_CONFIGURATION_TOOLCHAIN, GetToolchainName(meToolchain));
@@ -111,9 +133,26 @@ void CBuildConfiguration::SaveXML(CXMLWriter* pcWriter)
 	{
 		pcWriter->Attribute(BUILD_CONFIGURATION_BREAKPOINT_SPACE, mszBreakpointSpace.Text());
 	}
+	if (HasCard())
+	{
+		pcWriter->Attribute(BUILD_CONFIGURATION_CARD, mszCard.Text());
+		pcWriter->Attribute(BUILD_CONFIGURATION_CARD_PATH, mszCardPath.Text());
+	}
 	if (mbImage)
 	{
 		mcImage.SaveXML(pcWriter);
+	}
+	if (mbExecutable)
+	{
+		mcExecutable.SaveXML(pcWriter);
+	}
+	for (i = 0; i < maszLoadFiles.NumElements(); i++)
+	{
+		pcWriter->Begin(BUILD_CONFIGURATION_LOAD);
+		pcWriter->Attribute(BUILD_CONFIGURATION_LOAD_FILE, maszLoadFiles.GetText(i));
+		snprintf(szAddress, sizeof(szAddress), "0x%X", (unsigned int)*mauiLoadAddresses.Get(i));
+		pcWriter->Attribute(BUILD_CONFIGURATION_LOAD_ADDRESS, szAddress);
+		pcWriter->End();
 	}
 	pcWriter->End();
 }
@@ -122,8 +161,9 @@ void CBuildConfiguration::SaveXML(CXMLWriter* pcWriter)
 //////////////////////////////////////////////////////////////////////////
 //
 // False if pcTag isn't a configuration with a name, a toolchain there is
-// and a solution configuration, or if its <Image> isn't one (an image
-// is only for an HCP65 toolchain).
+// and a solution configuration, or if its <Image>, <Executable> or a
+// <Load> isn't one (they are only for an HCP65 toolchain, which has one
+// of an image and an executable at most), or Card is without CardPath.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CBuildConfiguration::LoadXML(CMarkupTag* pcTag)
@@ -133,6 +173,13 @@ bool CBuildConfiguration::LoadXML(CMarkupTag* pcTag)
 	char*			szSolution;
 	EBuildToolchain	eToolchain;
 	CMarkupTag*		pcImage;
+	CMarkupTag*		pcExecutable;
+	CMarkupTag*		pcLoad;
+	STagIterator	sIterator;
+	char*			szFile;
+	char*			szAddress;
+	char*			szEnd;
+	unsigned long	ulAddress;
 
 	if (StringCompare(pcTag->GetName(), BUILD_CONFIGURATION_TAG) != 0)
 	{
@@ -160,6 +207,37 @@ bool CBuildConfiguration::LoadXML(CMarkupTag* pcTag)
 			return false;
 		}
 		mbImage = true;
+	}
+	pcExecutable = pcTag->GetTag(BUILD_CONFIGURATION_EXECUTABLE);
+	if (pcExecutable)
+	{
+		if (!IsHCP65() || mbImage || !mcExecutable.LoadXML(pcExecutable))
+		{
+			return false;
+		}
+		mbExecutable = true;
+	}
+
+	for (pcLoad = pcTag->GetTag(BUILD_CONFIGURATION_LOAD, &sIterator); pcLoad; pcLoad = pcTag->GetNextTag(&sIterator))
+	{
+		szFile = pcLoad->GetStringAttribute(BUILD_CONFIGURATION_LOAD_FILE);
+		szAddress = pcLoad->GetStringAttribute(BUILD_CONFIGURATION_LOAD_ADDRESS);
+		if (!IsHCP65() || !szFile || (szFile[0] == '\0') || !szAddress || (szAddress[0] == '\0') || (szAddress[0] == '-'))
+		{
+			return false;
+		}
+		ulAddress = strtoul(szAddress, &szEnd, 0);
+		if (*szEnd != '\0')
+		{
+			return false;
+		}
+		AddLoad(szFile, (uint32)ulAddress);
+	}
+
+	SetCard(pcTag->GetAttribute((char*)BUILD_CONFIGURATION_CARD), pcTag->GetAttribute((char*)BUILD_CONFIGURATION_CARD_PATH));
+	if ((mszCard.Empty() != mszCardPath.Empty()) || (HasCard() && !IsHCP65()))
+	{
+		return false;
 	}
 	return true;
 }
@@ -342,4 +420,75 @@ char* CBuildConfiguration::GetBreakpointSpace(void)
 {
 	return mszBreakpointSpace.Text();
 }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether a build links what it compiles into an executable, a program a
+// kernal loads (GetExecutable).
+//
+//////////////////////////////////////////////////////////////////////////
+bool CBuildConfiguration::HasExecutable(void)
+{
+	return mbExecutable;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+CAsm65Executable* CBuildConfiguration::GetExecutable(void)
+{
+	return &mcExecutable;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether a build links (an image or an executable) or only compiles.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CBuildConfiguration::IsLinked(void)
+{
+	return mbImage || mbExecutable;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A file debugging loads into the waiting emulator at uiAddress before
+// anything runs (a kernal ROM for a program).  Relative to the
+// configurations' file.
+//
+//////////////////////////////////////////////////////////////////////////
+void CBuildConfiguration::AddLoad(const char* szFile, uint32 uiAddress)
+{
+	maszLoadFiles.Add(szFile);
+	mauiLoadAddresses.Add(uiAddress);
+}
+
+
+size CBuildConfiguration::NumLoads(void)						{ return maszLoadFiles.NumElements(); }
+char* CBuildConfiguration::GetLoadFile(size uiIndex)			{ return maszLoadFiles.GetText(uiIndex); }
+uint32 CBuildConfiguration::GetLoadAddress(size uiIndex)		{ return *mauiLoadAddresses.Get(uiIndex); }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The SD card image (relative to the configurations' file) debugging
+// writes the executable onto, as szPath on its FAT volume; NULL or "" for
+// none.
+//
+//////////////////////////////////////////////////////////////////////////
+void CBuildConfiguration::SetCard(const char* szCard, const char* szPath)
+{
+	mszCard.Set(szCard ? szCard : "");
+	mszCardPath.Set(szPath ? szPath : "");
+}
+
+
+bool CBuildConfiguration::HasCard(void)		{ return !mszCard.Empty() && !mszCardPath.Empty(); }
+char* CBuildConfiguration::GetCard(void)	{ return mszCard.Text(); }
+char* CBuildConfiguration::GetCardPath(void)	{ return mszCardPath.Text(); }
 

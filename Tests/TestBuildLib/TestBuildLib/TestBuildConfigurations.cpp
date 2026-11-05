@@ -207,6 +207,79 @@ void TestBuildConfigurationsImage(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// An HCP65 program's configuration: its executable (with the symbols it
+// is given), the files debugging loads first and the card the program
+// goes on, written and read back the same.  An image and an executable
+// together, a card without its path, or a load for MSVC aren't read.
+//
+//////////////////////////////////////////////////////////////////////////
+void TestBuildConfigurationsExecutable(void)
+{
+	CBuildConfigurations	cRead;
+	CBuildConfigurations	cAgain;
+	CBuildConfiguration*	pcConfiguration;
+	CAsm65Executable*		pcExecutable;
+	CTextFile				cFile;
+	CFileUtil				cFileUtil;
+
+	cFileUtil.MakeDir("Output");
+	cFile.Init("<BuildConfigurations>\n\t<Configuration Name=\"Debug|W65C816\" Toolchain=\"W65C816\" Solution=\"Debug|Win32\" BreakpointSpace=\"User\" Card=\"Card.img\" CardPath=\"\\boot.exe\">\n\t\t<Executable File=\"boot.exe\" Entry=\"UserStart\" Limit=\"0x200000\">\n\t\t\t<Symbol Name=\"UserMemorySize\" Value=\"0x220000\"/>\n\t\t</Executable>\n\t\t<Load File=\"Kernal.rom\" Address=\"0x0\"/>\n\t\t<Load File=\"Tables.bin\" Address=\"4194304\"/>\n\t</Configuration>\n</BuildConfigurations>\n");
+	AssertTrue(cFile.Write("Output" _FS_ "Program.hcp65build"));
+	cFile.Kill();
+
+	cRead.Init();
+	AssertTrue(cRead.Read("Output" _FS_ "Program.hcp65build"));
+	pcConfiguration = cRead.GetConfiguration(0);
+	AssertFalse(pcConfiguration->HasImage());
+	AssertTrue(pcConfiguration->HasExecutable());
+	AssertTrue(pcConfiguration->IsLinked());
+	pcExecutable = pcConfiguration->GetExecutable();
+	AssertString("boot.exe", pcExecutable->GetFile());
+	AssertString("UserStart", pcExecutable->GetEntry());
+	AssertIntHex(0x200000, pcExecutable->GetLimit());
+	AssertSize(1, pcExecutable->NumSymbols());
+	AssertString("UserMemorySize", pcExecutable->GetSymbolName(0));
+	AssertLongLongIntHex(0x220000, pcExecutable->GetSymbolValue(0));
+	AssertSize(2, pcConfiguration->NumLoads());
+	AssertString("Kernal.rom", pcConfiguration->GetLoadFile(0));
+	AssertIntHex(0, pcConfiguration->GetLoadAddress(0));
+	AssertIntHex(0x400000, pcConfiguration->GetLoadAddress(1));
+	AssertTrue(pcConfiguration->HasCard());
+	AssertString("Card.img", pcConfiguration->GetCard());
+	AssertString("\\boot.exe", pcConfiguration->GetCardPath());
+	AssertString("User", pcConfiguration->GetBreakpointSpace());
+
+	//Written back and read the same.
+	AssertTrue(cRead.Write("Output" _FS_ "ProgramAgain.hcp65build"));
+	cAgain.Init();
+	AssertTrue(cAgain.Read("Output" _FS_ "ProgramAgain.hcp65build"));
+	pcConfiguration = cAgain.GetConfiguration(0);
+	AssertTrue(pcConfiguration->HasExecutable());
+	AssertLongLongIntHex(0x220000, pcConfiguration->GetExecutable()->GetSymbolValue(0));
+	AssertSize(2, pcConfiguration->NumLoads());
+	AssertIntHex(0x400000, pcConfiguration->GetLoadAddress(1));
+	AssertString("\\boot.exe", pcConfiguration->GetCardPath());
+	cAgain.Kill();
+
+	cFile.Init("<BuildConfigurations>\n\t<Configuration Name=\"Debug|W65C816\" Toolchain=\"W65C816\" Solution=\"Debug|Win32\">\n\t\t<Image File=\"A.rom\" Size=\"0x100\">\n\t\t\t<Region Start=\"0x0\" End=\"0x100\" Offset=\"0x0\"/>\n\t\t</Image>\n\t\t<Executable File=\"boot.exe\" Entry=\"UserStart\"/>\n\t</Configuration>\n</BuildConfigurations>\n");
+	AssertTrue(cFile.Write("Output" _FS_ "BadProgram.hcp65build"));
+	cFile.Kill();
+	AssertFalse(cRead.Read("Output" _FS_ "BadProgram.hcp65build"));
+	cFile.Init("<BuildConfigurations>\n\t<Configuration Name=\"Debug|W65C816\" Toolchain=\"W65C816\" Solution=\"Debug|Win32\" Card=\"Card.img\">\n\t\t<Executable File=\"boot.exe\" Entry=\"UserStart\"/>\n\t</Configuration>\n</BuildConfigurations>\n");
+	AssertTrue(cFile.Write("Output" _FS_ "BadProgram.hcp65build"));
+	cFile.Kill();
+	AssertFalse(cRead.Read("Output" _FS_ "BadProgram.hcp65build"));
+	cFile.Init("<BuildConfigurations>\n\t<Configuration Name=\"Debug|Win32\" Toolchain=\"MSVC\" Solution=\"Debug|Win32\">\n\t\t<Load File=\"Kernal.rom\" Address=\"0x0\"/>\n\t</Configuration>\n</BuildConfigurations>\n");
+	AssertTrue(cFile.Write("Output" _FS_ "BadProgram.hcp65build"));
+	cFile.Kill();
+	AssertFalse(cRead.Read("Output" _FS_ "BadProgram.hcp65build"));
+
+	cRead.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // A configuration is chosen by its name's configuration and platform,
 // either side of its |; a name without one is all configuration, and its
 // platform is its toolchain.
@@ -277,6 +350,7 @@ void TestBuildConfigurations(void)
 	TestBuildConfigurationsDefaults();
 	TestBuildConfigurationsFile();
 	TestBuildConfigurationsImage();
+	TestBuildConfigurationsExecutable();
 	TestBuildConfigurationsPlatforms();
 
 	TestStatistics();

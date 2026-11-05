@@ -269,6 +269,7 @@ protected:
 	void				UpdateDebugView(bool bKeepCaret);
 	void				RunDebugScript(void);
 	bool				ChooseEmulator(bool bLaunch);
+	bool				ChooseDebugLoads(CBuildConfiguration* pcConfiguration, CChars* pszMessage, CArrayChars* paszLines);
 	void				ShowDebugMessages(void);
 	void				ResolveEmulatorPath(const char* szPath, CChars* pszDest);
 	bool				ShowAddressDialog(const char* szTitle, const char* szLabel, const char* szDefault, bool bHex, uint32* puiValue);

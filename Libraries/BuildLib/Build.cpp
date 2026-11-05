@@ -187,20 +187,20 @@ void CBuild::GetOutputDirectory(CChars* pszDest) { GetDirectory("Output", pszDes
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Where a build of the solution in szRoot writes pcConfiguration's image.
-// False if it has none.
+// Where a build of the solution in szRoot writes pcConfiguration's image,
+// or its executable.  False if it has neither.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CBuild::GetImagePath(const char* szRoot, CBuildConfiguration* pcConfiguration, CChars* pszDest)
 {
 	CFileUtil	cFileUtil;
 
-	if (!pcConfiguration->HasImage())
+	if (!pcConfiguration->IsLinked())
 	{
 		return false;
 	}
 	GetDirectory(szRoot, pcConfiguration, "Output", pszDest);
-	cFileUtil.AppendToPath(pszDest, pcConfiguration->GetImage()->GetFile());
+	cFileUtil.AppendToPath(pszDest, pcConfiguration->HasImage() ? pcConfiguration->GetImage()->GetFile() : pcConfiguration->GetExecutable()->GetFile());
 	return true;
 }
 

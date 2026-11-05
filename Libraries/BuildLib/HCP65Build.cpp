@@ -78,6 +78,7 @@ bool CHCP65Build::Start(CArrayChars* paszLines)
 {
 	CChars		szListings;
 	CFileUtil	cFileUtil;
+	uint32		uiLimit;
 
 	meState = BS_Running;
 	mbCompiled = false;
@@ -97,13 +98,14 @@ bool CHCP65Build::Start(CArrayChars* paszLines)
 		mcBuilder.AddIncludeDirectory(mszLibc65.Text(), false, true);
 	}
 	AddProjects(paszLines);
-	if (mpcConfiguration->HasImage())
+	if (mpcConfiguration->IsLinked())
 	{
 		//A program: the runtime after the projects, only what is used kept.
 		mcBuilder.SetRemoveUnused(true);
-		if (mpcConfiguration->GetImage()->GetLimit() != 0)
+		uiLimit = mpcConfiguration->HasImage() ? mpcConfiguration->GetImage()->GetLimit() : mpcConfiguration->GetExecutable()->GetLimit();
+		if (uiLimit != 0)
 		{
-			mcBuilder.SetLimit(mpcConfiguration->GetImage()->GetLimit());
+			mcBuilder.SetLimit(uiLimit);
 		}
 		if (!mszLibc65.Empty())
 		{
@@ -197,7 +199,7 @@ void CHCP65Build::CompileThread(void* pvBuild)
 	CHCP65Build*	pcBuild;
 
 	pcBuild = (CHCP65Build*)pvBuild;
-	if (pcBuild->mpcConfiguration->HasImage())
+	if (pcBuild->mpcConfiguration->IsLinked())
 	{
 		pcBuild->mbResult = pcBuild->mcBuilder.Link();
 	}
@@ -229,7 +231,7 @@ bool CHCP65Build::Poll(CArrayChars* paszLines)
 	{
 		uiUnits = mcBuilder.NumUnitsToCompile();
 		uiFinished = mcBuilder.NumUnitsFinished();
-		if ((uiFinished >= uiUnits) && mpcConfiguration->HasImage())
+		if ((uiFinished >= uiUnits) && mpcConfiguration->IsLinked())
 		{
 			SetProgress("Linking.");
 			return true;
@@ -247,7 +249,7 @@ bool CHCP65Build::Poll(CArrayChars* paszLines)
 	Wait();
 	AddLines(mcBuilder.GetWarnings(), paszLines);
 	AddLines(mcBuilder.GetErrors(), paszLines);
-	if (mbResult && !mbCancel && mpcConfiguration->HasImage())
+	if (mbResult && !mbCancel && mpcConfiguration->IsLinked())
 	{
 		mbResult = WriteImage(paszLines);
 	}
@@ -258,14 +260,15 @@ bool CHCP65Build::Poll(CArrayChars* paszLines)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The linked program as the configuration's image, in the Output folder.
-// Says where each linked segment went and where the image was written,
-// or why it couldn't be.
+// The linked program as the configuration's image or executable, in the
+// Output folder.  Says where each linked segment went and where it was
+// written, or why it couldn't be.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CHCP65Build::WriteImage(CArrayChars* paszLines)
 {
-	CAsm65Image*	pcImage;
+	CAsm65Image*		pcImage;
+	CAsm65Executable*	pcExecutable;
 	CAsm65Output*	pcOutput;
 	SAsm65Segment*	psSegment;
 	CChars			szErrors;
@@ -275,7 +278,8 @@ bool CHCP65Build::WriteImage(CArrayChars* paszLines)
 	size			i;
 	bool			bResult;
 
-	pcImage = mpcConfiguration->GetImage();
+	pcImage = mpcConfiguration->HasImage() ? mpcConfiguration->GetImage() : NULL;
+	pcExecutable = mpcConfiguration->HasExecutable() ? mpcConfiguration->GetExecutable() : NULL;
 	pcOutput = mcBuilder.GetOutput();
 	for (i = 0; i < pcOutput->NumSegments(); i++)
 	{
@@ -285,7 +289,7 @@ bool CHCP65Build::WriteImage(CArrayChars* paszLines)
 	}
 
 	szErrors.Init();
-	bResult = pcImage->Make(pcOutput, &szErrors);
+	bResult = pcImage ? pcImage->Make(pcOutput, &szErrors) : pcExecutable->Make(pcOutput, mcBuilder.GetLinker(), &szErrors);
 	AddLines(szErrors.Text(), paszLines);
 	szErrors.Kill();
 	if (!bResult)
@@ -297,8 +301,8 @@ bool CHCP65Build::WriteImage(CArrayChars* paszLines)
 	GetOutputDirectory(&szPath);
 	cFileUtil.TouchDir(szPath.Text());
 	GetImagePath(mszRoot.Text(), mpcConfiguration, &szPath);
-	bResult = pcImage->Write(szPath.Text());
-	snprintf(szLine, sizeof(szLine), bResult ? "Wrote %u bytes to " : "Could not write %u bytes to ", (unsigned int)pcImage->GetSize());
+	bResult = pcImage ? pcImage->Write(szPath.Text()) : pcExecutable->Write(szPath.Text());
+	snprintf(szLine, sizeof(szLine), bResult ? "Wrote %u bytes to " : "Could not write %u bytes to ", (unsigned int)(pcImage ? pcImage->GetSize() : pcExecutable->GetSize()));
 	szErrors.Init(szLine);
 	szErrors.Append(szPath);
 	szErrors.Append(".");

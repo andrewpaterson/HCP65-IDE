@@ -29,7 +29,7 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 //Compiles the solution's projects for the W65C816 or the 65C64 with the HCP65 compiler (CCPP65Builder), on a thread of
 //its own with the units compiled on the jobs' threads, each unit's listing written with its source lines (.line) in
 //Listing\<toolchain>\<configuration>.  <stdint.h> and the other system headers are Libc65's.  A configuration with an
-//image (CBuildConfiguration::GetImage) is linked with Libc65's runtime, unused code removed, and the image written to
+//image or an executable (CBuildConfiguration::IsLinked) is linked with Libc65's runtime, unused code removed, and the image written to
 //Output\<toolchain>\<configuration>; one without is only compiled.  A build can't be stopped part way; cancelling it
 //says so once the compile (or link) it was in has finished.
 class CHCP65Build : public CBuild

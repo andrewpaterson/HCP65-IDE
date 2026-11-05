@@ -18,10 +18,12 @@ You should have received a copy of the GNU Affero General Public License
 along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 ** ------------------------------------------------------------------------ **/
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "BaseLib/Timer.h"
 #include "BaseLib/FileUtil.h"
+#include "BaseLib/FatImageFile.h"
 #include "StandardLib/Objects.h"
 #include "IDEContent.h"
 
@@ -214,6 +216,101 @@ void CIDEContent::ResolveEmulatorPath(const char* szPath, CChars* pszDest)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// What debugging pcConfiguration loads into the emulator it starts: its
+// <Load>s (a kernal), then its built image; and its built executable is
+// written onto its card for the kernal to run.  What was done goes in
+// paszLines.  False, with why in pszMessage, if a file isn't there (it
+// must have been built) or the card can't be written.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEContent::ChooseDebugLoads(CBuildConfiguration* pcConfiguration, CChars* pszMessage, CArrayChars* paszLines)
+{
+	CFileUtil	cFileUtil;
+	CChars		szFile;
+	CChars		szCard;
+	CChars*		pszLine;
+	FILE*		pcFile;
+	uint8*		puiData;
+	long		iSize;
+	size		i;
+	bool		bResult;
+
+	szFile.Init();
+	for (i = 0; i < pcConfiguration->NumLoads(); i++)
+	{
+		ResolveEmulatorPath(pcConfiguration->GetLoadFile(i), &szFile);
+		if (!cFileUtil.Exists(szFile.Text()))
+		{
+			pszMessage->Set("Could not find ");
+			pszMessage->Append(szFile);
+			pszMessage->Append(" to load: build what makes it first.");
+			szFile.Kill();
+			return false;
+		}
+		mcDebugger.AddLoad(szFile.Text(), pcConfiguration->GetLoadAddress(i));
+	}
+
+	if (CBuild::GetImagePath(mcSolution.GetDirectory(), pcConfiguration, &szFile) && !cFileUtil.Exists(szFile.Text()))
+	{
+		pszMessage->Set("Build ");
+		pszMessage->Append(pcConfiguration->GetName());
+		pszMessage->Append(" first: ");
+		pszMessage->Append(szFile);
+		pszMessage->Append(" isn't there.");
+		szFile.Kill();
+		return false;
+	}
+
+	bResult = true;
+	if (pcConfiguration->HasImage())
+	{
+		mcDebugger.AddLoad(szFile.Text(), pcConfiguration->GetImage()->GetLoad());
+	}
+	else if (pcConfiguration->HasExecutable() && pcConfiguration->HasCard())
+	{
+		//The program goes on the card the emulator boots from, where the kernal finds it.
+		szCard.Init();
+		ResolveEmulatorPath(pcConfiguration->GetCard(), &szCard);
+		pcFile = fopen(szFile.Text(), "rb");
+		bResult = pcFile != NULL;
+		iSize = 0;
+		puiData = NULL;
+		if (pcFile)
+		{
+			fseek(pcFile, 0, SEEK_END);
+			iSize = ftell(pcFile);
+			fseek(pcFile, 0, SEEK_SET);
+			puiData = (uint8*)malloc((size)iSize + 1);
+			bResult = fread(puiData, 1, (size)iSize, pcFile) == (size)iSize;
+			fclose(pcFile);
+		}
+		bResult = bResult && FatPutFileOnImage(szCard.Text(), pcConfiguration->GetCardPath(), puiData, (size)iSize);
+		if (puiData)
+		{
+			free(puiData);
+		}
+		if (bResult)
+		{
+			pszLine = paszLines->Add("Wrote ");
+			pszLine->Append(szFile)->Append(" onto ")->Append(szCard)->Append(" as ")->Append(pcConfiguration->GetCardPath())->Append('.');
+		}
+		else
+		{
+			pszMessage->Set("Could not write ");
+			pszMessage->Append(szFile);
+			pszMessage->Append(" onto the card ");
+			pszMessage->Append(szCard);
+			pszMessage->Append(" (an SD card image with a FAT volume).");
+		}
+		szCard.Kill();
+	}
+	szFile.Kill();
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Gives the debugger the chosen configuration's processor and (bLaunch)
 // emulator: the one its configuration names, or for a W65C816 the default.
 // False, told in the Build tab, if it has no processor (MSVC, GCC) or no
@@ -251,7 +348,7 @@ bool CIDEContent::ChooseEmulator(bool bLaunch)
 	else
 	{
 		mcDebugger.SetProcessor(szProcessor);
-		mcDebugger.SetImage(NULL, 0);
+		mcDebugger.ClearLoads();
 		mcDebugger.SetBreakpointSpace(pcConfiguration->GetBreakpointSpace());
 		bResult = true;
 		if (!bLaunch)
@@ -290,25 +387,14 @@ bool CIDEContent::ChooseEmulator(bool bLaunch)
 			bResult = false;
 		}
 
-		//What the configuration builds is loaded into the emulator it starts; it must have been built.
-		szFile.Init();
-		if (bResult && bLaunch && CBuild::GetImagePath(mcSolution.GetDirectory(), pcConfiguration, &szFile))
+		//What the configuration builds goes into the emulator it starts (or onto its card); it must have been built.
+		aszLines.Init();
+		if (bResult && bLaunch)
 		{
-			if (cFileUtil.Exists(szFile.Text()))
-			{
-				mcDebugger.SetImage(szFile.Text(), pcConfiguration->GetImage()->GetLoad());
-			}
-			else
-			{
-				szMessage.Set("Build ");
-				szMessage.Append(pcConfiguration->GetName());
-				szMessage.Append(" first: ");
-				szMessage.Append(szFile);
-				szMessage.Append(" isn't there.");
-				bResult = false;
-			}
+			bResult = ChooseDebugLoads(pcConfiguration, &szMessage, &aszLines);
 		}
-		szFile.Kill();
+		mpBuildPane->AppendLines(&aszLines);
+		aszLines.Kill();
 	}
 
 	if (!bResult)

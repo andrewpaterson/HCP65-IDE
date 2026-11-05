@@ -24,6 +24,9 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/XMLWriter.h"
 #include "BaseLib/MarkupTag.h"
 #include "Assembler65Lib/Asm65Image.h"
+#include "Assembler65Lib/Asm65Executable.h"
+#include "BaseLib/ArrayChars.h"
+#include "BaseLib/ArrayUint32.h"
 
 
 //What a configuration is built with: the HCP65 compiler for one of its processors, or a compiler for this computer.
@@ -47,9 +50,14 @@ enum EBuildToolchain
 //file.  Without one whatever debugs it chooses.  The emulator must be the configuration's processor
 //(GetProcessorName).
 //
-//An HCP65 configuration with an image (<Image>, CAsm65Image) links what it builds into that file, in the build's
-//Output folder; one without only compiles.  Its BreakpointSpace is the emulator's space ("Kernel", "User") that
-//debugging puts breakpoints in; without one they stop in every space.
+//An HCP65 configuration with an image (<Image>, CAsm65Image) or an executable (<Executable>, CAsm65Executable, a
+//program a kernal loads) links what it builds into that file, in the build's Output folder; one without only
+//compiles.  Its BreakpointSpace is the emulator's space ("Kernel", "User") that debugging puts breakpoints in;
+//without one they stop in every space.
+//
+//Debugging loads each <Load File Address/> into the waiting emulator first (a kernal for a program to run on), and
+//its own image.  A program is written onto the emulator's SD card image, Card, as CardPath ("\boot.exe") on its FAT
+//volume, for the kernal to run.  Paths are relative to the configurations' file.
 class CBuildConfiguration
 {
 protected:
@@ -62,6 +70,12 @@ protected:
 	CChars			mszBreakpointSpace;
 	bool			mbImage;
 	CAsm65Image		mcImage;
+	bool			mbExecutable;
+	CAsm65Executable	mcExecutable;
+	CArrayChars		maszLoadFiles;
+	CArrayUint32	mauiLoadAddresses;
+	CChars			mszCard;
+	CChars			mszCardPath;
 
 public:
 	void			Init(const char* szName, EBuildToolchain eToolchain, const char* szSolutionConfiguration);
@@ -87,6 +101,18 @@ public:
 
 	bool			HasImage(void);
 	CAsm65Image*	GetImage(void);
+	bool			HasExecutable(void);
+	CAsm65Executable*	GetExecutable(void);
+	bool			IsLinked(void);
+
+	void			AddLoad(const char* szFile, uint32 uiAddress);
+	size			NumLoads(void);
+	char*			GetLoadFile(size uiIndex);
+	uint32			GetLoadAddress(size uiIndex);
+	void			SetCard(const char* szCard, const char* szPath);
+	bool			HasCard(void);
+	char*			GetCard(void);
+	char*			GetCardPath(void);
 	void			GetConfigurationName(CChars* pszDest);
 	void			GetPlatformName(CChars* pszDest);
 	bool			Is(const char* szConfiguration, const char* szPlatform);

@@ -46,8 +46,8 @@ void CIDEDebugger::Init(void)
 	mszEmulatorDirectory.Init();
 	mszEmulatorArguments.Init();
 	mszProcessor.Init();
-	mszImage.Init();
-	muiImageLoad = 0;
+	maszLoads.Init();
+	mauiLoadAddresses.Init();
 	mszBreakpointSpace.Init();
 	muiBreakpointSpace = DEBUG_SPACE_ANY;
 	maszMessages.Init();
@@ -84,7 +84,8 @@ void CIDEDebugger::Kill(void)
 	mcProcess.Kill();
 	maszMessages.Kill();
 	mszBreakpointSpace.Kill();
-	mszImage.Kill();
+	mauiLoadAddresses.Kill();
+	maszLoads.Kill();
 	mszProcessor.Kill();
 	mszEmulatorArguments.Kill();
 	mszEmulatorDirectory.Kill();
@@ -117,14 +118,28 @@ void CIDEDebugger::SetProcessor(const char* szProcessor)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The file the next Start loads into the emulator at uiLoad; NULL or ""
-// for none (the emulator runs what it has).
+// Nothing for the next Start to load: the emulator runs what it has.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEDebugger::SetImage(const char* szFile, uint32 uiLoad)
+void CIDEDebugger::ClearLoads(void)
 {
-	mszImage.Set(szFile ? szFile : "");
-	muiImageLoad = uiLoad;
+	maszLoads.Kill();
+	maszLoads.Init();
+	mauiLoadAddresses.Kill();
+	mauiLoadAddresses.Init();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A file the next Start loads into the emulator at uiAddress, after those
+// added before it.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDebugger::AddLoad(const char* szFile, uint32 uiAddress)
+{
+	maszLoads.Add(szFile);
+	mauiLoadAddresses.Add(uiAddress);
 }
 
 
@@ -652,6 +667,7 @@ bool CIDEDebugger::Poll(CArrayChars* paszOutput)
 void CIDEDebugger::Welcomed(void)
 {
 	CChars	sz;
+	size	i;
 
 	if (!mszProcessor.Empty() && !mszProcessor.Equals(mcClient.GetProcessorName()))
 	{
@@ -683,11 +699,19 @@ void CIDEDebugger::Welcomed(void)
 		}
 	}
 	SendBreakpoints();
-	if (mbLaunched && !mszImage.Empty() && !mcClient.IsRunning() && (mcClient.GetStopReason() == DS_Start))
+	if (mbLaunched && (maszLoads.NumElements() != 0) && !mcClient.IsRunning() && (mcClient.GetStopReason() == DS_Start))
 	{
-		//The built program goes in before anything runs, and the reset starts it (or stops at its first instruction).
+		//What is loaded goes in before anything runs, and the reset starts it (or stops at its first instruction).
 		muiSeenStops = mcClient.NumStops();
-		if (!LoadImage() || (mcClient.Reset(!mbBreakAtStart) == 0))
+		for (i = 0; i < maszLoads.NumElements(); i++)
+		{
+			if (!LoadFile(maszLoads.GetText(i), *mauiLoadAddresses.Get(i)))
+			{
+				Stop();
+				return;
+			}
+		}
+		if (mcClient.Reset(!mbBreakAtStart) == 0)
 		{
 			Stop();
 			return;
@@ -712,11 +736,11 @@ void CIDEDebugger::Welcomed(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The image (SetImage) sent to the emulator.  False, said in the
+// szFile sent to the emulator to load at uiAddress.  False, said in the
 // messages, if it can't be read or sent.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEDebugger::LoadImage(void)
+bool CIDEDebugger::LoadFile(const char* szFile, uint32 uiAddress)
 {
 	FILE*	pcFile;
 	uint8*	puiData;
@@ -724,10 +748,10 @@ bool CIDEDebugger::LoadImage(void)
 	bool	bResult;
 	char	szLine[64];
 
-	pcFile = fopen(mszImage.Text(), "rb");
+	pcFile = fopen(szFile, "rb");
 	if (!pcFile)
 	{
-		maszMessages.Add("Could not read ")->Append(mszImage)->Append('.');
+		maszMessages.Add("Could not read ")->Append(szFile)->Append('.');
 		mszStatus.Set("Could not read the program to load.");
 		return false;
 	}
@@ -738,20 +762,20 @@ bool CIDEDebugger::LoadImage(void)
 	puiData = bResult ? (uint8*)malloc((size)iSize) : NULL;
 	bResult = bResult && (fread(puiData, 1, (size)iSize, pcFile) == (size)iSize);
 	fclose(pcFile);
-	bResult = bResult && (mcClient.Load(muiImageLoad, puiData, (size)iSize) != 0);
+	bResult = bResult && (mcClient.Load(uiAddress, puiData, (size)iSize) != 0);
 	if (puiData)
 	{
 		free(puiData);
 	}
 	if (!bResult)
 	{
-		maszMessages.Add("Could not load ")->Append(mszImage)->Append(" into the emulator.");
+		maszMessages.Add("Could not load ")->Append(szFile)->Append(" into the emulator.");
 		mszStatus.Set("Could not load the program.");
 		return false;
 	}
 
-	snprintf(szLine, sizeof(szLine), "Loaded %ld bytes at $%06X from ", iSize, (unsigned int)muiImageLoad);
-	maszMessages.Add(szLine)->Append(mszImage)->Append('.');
+	snprintf(szLine, sizeof(szLine), "Loaded %ld bytes at $%06X from ", iSize, (unsigned int)uiAddress);
+	maszMessages.Add(szLine)->Append(szFile)->Append('.');
 	return true;
 }
 
