@@ -65,6 +65,9 @@ typedef CArrayTemplate<SIDEBreakpoint>	CArrayIDEBreakpoints;
 //
 //A Start with an image (SetImage, the configuration's built program) loads it into the emulator while it waits at
 //its first instruction (DM_Load at the image's load address), then resets it so it starts from what was loaded.
+//
+//The breakpoints are in SetBreakpointSpace's space ("Kernel", "User"), as the emulator names its spaces; in every
+//space if it is empty or the emulator has none of that name.
 class CIDEDebugger
 {
 protected:
@@ -73,6 +76,8 @@ protected:
 	CChars					mszEmulatorArguments;	//Given after the debugging ones, split at spaces.
 	CChars					mszProcessor;			//The processor the emulator must be, empty for any.
 	CChars					mszImage;				//The program loaded into the emulator Start runs, empty for none.
+	CChars					mszBreakpointSpace;		//The breakpoints' space by name, empty for every space.
+	uint32					muiBreakpointSpace;		//Its DEBUG_SPACE_ANY or index plus one, once welcomed.
 	uint32					muiImageLoad;			//Where it is loaded.
 	CArrayChars				maszMessages;			//For the Build tab: what was started, what went wrong.
 	CProcess				mcProcess;
@@ -98,6 +103,7 @@ public:
 	void					SetEmulator(const char* szExecutable, const char* szDirectory, const char* szArguments);
 	void					SetProcessor(const char* szProcessor);
 	void					SetImage(const char* szFile, uint32 uiLoad);
+	void					SetBreakpointSpace(const char* szSpace);
 	char*					GetEmulator(void);
 	void					TakeMessages(CArrayChars* paszDest);
 

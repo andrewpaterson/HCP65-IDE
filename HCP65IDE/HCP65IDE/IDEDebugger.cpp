@@ -48,6 +48,8 @@ void CIDEDebugger::Init(void)
 	mszProcessor.Init();
 	mszImage.Init();
 	muiImageLoad = 0;
+	mszBreakpointSpace.Init();
+	muiBreakpointSpace = DEBUG_SPACE_ANY;
 	maszMessages.Init();
 	mcProcess.Init();
 	mbLaunched = false;
@@ -81,6 +83,7 @@ void CIDEDebugger::Kill(void)
 	mszChannel.Kill();
 	mcProcess.Kill();
 	maszMessages.Kill();
+	mszBreakpointSpace.Kill();
 	mszImage.Kill();
 	mszProcessor.Kill();
 	mszEmulatorArguments.Kill();
@@ -122,6 +125,18 @@ void CIDEDebugger::SetImage(const char* szFile, uint32 uiLoad)
 {
 	mszImage.Set(szFile ? szFile : "");
 	muiImageLoad = uiLoad;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The breakpoint space ("Kernel", "User") the breakpoints are in when the
+// emulator is next connected to; NULL or "" for every space.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDebugger::SetBreakpointSpace(const char* szSpace)
+{
+	mszBreakpointSpace.Set(szSpace ? szSpace : "");
 }
 
 
@@ -445,7 +460,7 @@ bool CIDEDebugger::ToggleBreakpoint(uint32 uiAddress)
 	masBreakpoints.RemoveAt(masBreakpoints.GetIndex(psBreakpoint));
 	if (mbClient && (mcClient.GetState() != DCS_Connecting))
 	{
-		mcClient.RemoveBreakpoint(uiAddress);
+		mcClient.RemoveBreakpoint(uiAddress, muiBreakpointSpace);
 	}
 	return false;
 }
@@ -468,7 +483,7 @@ bool CIDEDebugger::AddBreakpoint(uint32 uiAddress)
 	psBreakpoint->bEnabled = true;
 	if (mbClient && (mcClient.GetState() != DCS_Connecting))
 	{
-		mcClient.AddBreakpoint(uiAddress, true);
+		mcClient.AddBreakpoint(uiAddress, true, muiBreakpointSpace);
 	}
 	return true;
 }
@@ -524,6 +539,7 @@ void CIDEDebugger::SendBreakpoints(void)
 	{
 		asBreakpoints[i].uiAddress = masBreakpoints.Get(i)->uiAddress;
 		asBreakpoints[i].uiEnabled = masBreakpoints.Get(i)->bEnabled;
+		asBreakpoints[i].uiSpace = muiBreakpointSpace;
 	}
 	mcClient.SetBreakpoints(asBreakpoints, masBreakpoints.NumElements());
 	free(asBreakpoints);
@@ -653,6 +669,19 @@ void CIDEDebugger::Welcomed(void)
 	}
 
 	maszMessages.Add("Debugging a ")->Append(mcClient.GetProcessorName());
+	muiBreakpointSpace = DEBUG_SPACE_ANY;
+	if (!mszBreakpointSpace.Empty())
+	{
+		if (mcClient.FindBreakpointSpace(mszBreakpointSpace.Text(), &muiBreakpointSpace))
+		{
+			maszMessages.Add("Breakpoints are in ")->Append(mcClient.GetBreakpointSpaceName(muiBreakpointSpace - 1))->Append(" mode.");
+		}
+		else
+		{
+			muiBreakpointSpace = DEBUG_SPACE_ANY;
+			maszMessages.Add("The emulator has no breakpoint space ")->Append(mszBreakpointSpace)->Append(": breakpoints stop in every one.");
+		}
+	}
 	SendBreakpoints();
 	if (mbLaunched && !mszImage.Empty() && !mcClient.IsRunning() && (mcClient.GetStopReason() == DS_Start))
 	{

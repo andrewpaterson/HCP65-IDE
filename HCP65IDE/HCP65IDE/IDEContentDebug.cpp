@@ -252,6 +252,7 @@ bool CIDEContent::ChooseEmulator(bool bLaunch)
 	{
 		mcDebugger.SetProcessor(szProcessor);
 		mcDebugger.SetImage(NULL, 0);
+		mcDebugger.SetBreakpointSpace(pcConfiguration->GetBreakpointSpace());
 		bResult = true;
 		if (!bLaunch)
 		{

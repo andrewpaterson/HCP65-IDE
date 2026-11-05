@@ -48,7 +48,8 @@ enum EBuildToolchain
 //(GetProcessorName).
 //
 //An HCP65 configuration with an image (<Image>, CAsm65Image) links what it builds into that file, in the build's
-//Output folder; one without only compiles.
+//Output folder; one without only compiles.  Its BreakpointSpace is the emulator's space ("Kernel", "User") that
+//debugging puts breakpoints in; without one they stop in every space.
 class CBuildConfiguration
 {
 protected:
@@ -58,6 +59,7 @@ protected:
 	CChars			mszEmulator;
 	CChars			mszEmulatorDirectory;
 	CChars			mszEmulatorArguments;
+	CChars			mszBreakpointSpace;
 	bool			mbImage;
 	CAsm65Image		mcImage;
 
@@ -80,6 +82,8 @@ public:
 	char*			GetEmulator(void);
 	char*			GetEmulatorDirectory(void);
 	char*			GetEmulatorArguments(void);
+	void			SetBreakpointSpace(const char* szSpace);
+	char*			GetBreakpointSpace(void);
 
 	bool			HasImage(void);
 	CAsm65Image*	GetImage(void);

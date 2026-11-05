@@ -76,6 +76,7 @@ void TestBuildConfigurationsFile(void)
 	cFileUtil.MakeDir("Output");
 	cConfigurations.Init();
 	cConfigurations.Add("Debug|W65C816", BT_W65C816, "Debug|Win32")->SetEmulator("Emulators" _FS_ "HCP65.exe", "Emulators", "--fast --mute");
+	cConfigurations.GetConfiguration(0)->SetBreakpointSpace("User");
 	cConfigurations.Add("Fast GCC", BT_GCC, "Release|x64");
 	AssertTrue(cConfigurations.Write("Output" _FS_ "Test.hcp65build"));
 
@@ -91,6 +92,8 @@ void TestBuildConfigurationsFile(void)
 	AssertString("Emulators", cRead.GetConfiguration(0)->GetEmulatorDirectory());
 	AssertString("--fast --mute", cRead.GetConfiguration(0)->GetEmulatorArguments());
 	AssertFalse(cRead.GetConfiguration(1)->HasEmulator());
+	AssertString("User", cRead.GetConfiguration(0)->GetBreakpointSpace());
+	AssertString("", cRead.GetConfiguration(1)->GetBreakpointSpace());
 	AssertString("W65C816", cRead.GetConfiguration(0)->GetProcessorName());
 	AssertTrue(cRead.GetConfiguration(1)->GetProcessorName() == NULL);
 

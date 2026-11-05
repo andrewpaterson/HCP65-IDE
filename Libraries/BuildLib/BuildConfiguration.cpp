@@ -31,6 +31,7 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 #define BUILD_CONFIGURATION_EMULATOR_DIRECTORY	"EmulatorDirectory"
 #define BUILD_CONFIGURATION_EMULATOR_ARGUMENTS	"EmulatorArguments"
 #define BUILD_CONFIGURATION_IMAGE		"Image"
+#define BUILD_CONFIGURATION_BREAKPOINT_SPACE	"BreakpointSpace"
 
 
 //The toolchains' names, as saved, by EBuildToolchain.
@@ -49,6 +50,7 @@ void CBuildConfiguration::Init(const char* szName, EBuildToolchain eToolchain, c
 	mszEmulator.Init();
 	mszEmulatorDirectory.Init();
 	mszEmulatorArguments.Init();
+	mszBreakpointSpace.Init();
 	mbImage = false;
 	mcImage.Init();
 }
@@ -72,6 +74,7 @@ void CBuildConfiguration::Init(void)
 void CBuildConfiguration::Kill(void)
 {
 	mcImage.Kill();
+	mszBreakpointSpace.Kill();
 	mszEmulatorArguments.Kill();
 	mszEmulatorDirectory.Kill();
 	mszEmulator.Kill();
@@ -103,6 +106,10 @@ void CBuildConfiguration::SaveXML(CXMLWriter* pcWriter)
 	if (!mszEmulatorArguments.Empty())
 	{
 		pcWriter->Attribute(BUILD_CONFIGURATION_EMULATOR_ARGUMENTS, mszEmulatorArguments.Text());
+	}
+	if (!mszBreakpointSpace.Empty())
+	{
+		pcWriter->Attribute(BUILD_CONFIGURATION_BREAKPOINT_SPACE, mszBreakpointSpace.Text());
 	}
 	if (mbImage)
 	{
@@ -143,6 +150,7 @@ bool CBuildConfiguration::LoadXML(CMarkupTag* pcTag)
 	meToolchain = eToolchain;
 	mszSolutionConfiguration.Set(szSolution);
 	SetEmulator(pcTag->GetAttribute((char*)BUILD_CONFIGURATION_EMULATOR), pcTag->GetAttribute((char*)BUILD_CONFIGURATION_EMULATOR_DIRECTORY), pcTag->GetAttribute((char*)BUILD_CONFIGURATION_EMULATOR_ARGUMENTS));
+	SetBreakpointSpace(pcTag->GetAttribute((char*)BUILD_CONFIGURATION_BREAKPOINT_SPACE));
 
 	pcImage = pcTag->GetTag(BUILD_CONFIGURATION_IMAGE);
 	if (pcImage)
@@ -311,5 +319,27 @@ bool CBuildConfiguration::HasImage(void)
 CAsm65Image* CBuildConfiguration::GetImage(void)
 {
 	return &mcImage;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The emulator's breakpoint space ("Kernel", "User") debugging puts the
+// breakpoints in; NULL or "" for every space.
+//
+//////////////////////////////////////////////////////////////////////////
+void CBuildConfiguration::SetBreakpointSpace(const char* szSpace)
+{
+	mszBreakpointSpace.Set(szSpace ? szSpace : "");
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+char* CBuildConfiguration::GetBreakpointSpace(void)
+{
+	return mszBreakpointSpace.Text();
 }
 
