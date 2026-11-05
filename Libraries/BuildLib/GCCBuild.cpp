@@ -59,8 +59,10 @@ bool CGCCBuild::AddCommands(CArrayChars* paszLines)
 
 	asProjects.Init();
 	GetProjects(&asProjects);
+	//Full paths: the commands run in the project's (or solution's) directory, not this program's.
 	szOutput.Init();
 	GetOutputDirectory(&szOutput);
+	cFileUtil.FullPath(&szOutput);
 	aszLibraries.Init();
 	for (iPass = 0; iPass < 3; iPass++)
 	{
@@ -77,6 +79,10 @@ bool CGCCBuild::AddCommands(CArrayChars* paszLines)
 				aszDefines.Init();
 				psProject->pcProject->GetIncludeDirectories(psProject->pcConfiguration, mpcSolution->GetDirectory(), &aszIncludes);
 				psProject->pcProject->GetPreprocessorDefinitions(psProject->pcConfiguration, mpcSolution->GetDirectory(), &aszDefines);
+				for (j = 0; j < aszIncludes.NumElements(); j++)
+				{
+					cFileUtil.FullPath(aszIncludes.Get(j));
+				}
 				for (j = 0; j < psProject->pcProject->NumItems(); j++)
 				{
 					pcItem = psProject->pcProject->GetItem(j);
@@ -84,6 +90,7 @@ bool CGCCBuild::AddCommands(CArrayChars* paszLines)
 					{
 						szSource.Init();
 						psProject->pcProject->GetFullPath(pcItem, &szSource);
+						cFileUtil.FullPath(&szSource);
 						szObject.Init();
 						GetObjectName(szProjectOutput.Text(), szSource.Text(), &szObject);
 						AddCompile(psProject, szSource.Text(), szObject.Text(), &aszIncludes, &aszDefines);
