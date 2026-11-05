@@ -203,5 +203,23 @@ bool CBuild::GetImagePath(const char* szRoot, CBuildConfiguration* pcConfigurati
 	cFileUtil.AppendToPath(pszDest, pcConfiguration->GetImage()->GetFile());
 	return true;
 }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Where the build writes its image's line table (CAsm65LineTable, which
+// source line each address is for): beside the image, as <image>.lines.
+// False if there is no image.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CBuild::GetLineTablePath(const char* szRoot, CBuildConfiguration* pcConfiguration, CChars* pszDest)
+{
+	if (!GetImagePath(szRoot, pcConfiguration, pszDest))
+	{
+		return false;
+	}
+	pszDest->Append(".lines");
+	return true;
+}
 void CBuild::GetListingDirectory(CChars* pszDest) { GetDirectory("Listing", pszDest); }
 

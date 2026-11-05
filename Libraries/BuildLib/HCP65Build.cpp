@@ -304,6 +304,18 @@ bool CHCP65Build::WriteImage(CArrayChars* paszLines)
 	szErrors.Append(".");
 	paszLines->Add(szErrors.Text());
 	szErrors.Kill();
+
+	//Beside it, which source line each address is for, so a debugger can stop at a line.
+	if (bResult)
+	{
+		GetLineTablePath(mszRoot.Text(), mpcConfiguration, &szPath);
+		bResult = mcBuilder.GetLineTable()->WriteFile(szPath.Text());
+		szErrors.Init(bResult ? "Wrote its line table to " : "Could not write its line table to ");
+		szErrors.Append(szPath);
+		szErrors.Append(".");
+		paszLines->Add(szErrors.Text());
+		szErrors.Kill();
+	}
 	szPath.Kill();
 	return bResult;
 }
