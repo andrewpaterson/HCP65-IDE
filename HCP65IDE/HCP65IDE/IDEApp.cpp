@@ -68,7 +68,7 @@ void CIDEApp::Init(void)
 // described by the XML in szInputDirectory; pcNativeInput (the platform's
 // keyboard and mouse) is added to them.  Run fails if anything here did.
 // HCP65_IDE_SNAPSHOT, HCP65_IDE_CONFIGURATION, HCP65_IDE_EXPAND,
-// HCP65_IDE_OPEN, HCP65_IDE_CLOSE, HCP65_IDE_SCROLL,
+// HCP65_IDE_OPEN, HCP65_IDE_CLOSE, HCP65_IDE_SCROLL, HCP65_IDE_SAVE,
 // HCP65_IDE_WAIT_INDEX, HCP65_IDE_CARET=line:column (1 based), HCP65_IDE_TYPE,
 // HCP65_IDE_REFERENCES, HCP65_IDE_DEFINITION, HCP65_IDE_REOPEN,
 // HCP65_IDE_DEBUG (CIDEContent::SetDebugScript's commands) and
@@ -76,7 +76,7 @@ void CIDEApp::Init(void)
 // checking it: a snapshot of the window, every folder expanded, files
 // opened (a comma separated list, each in a tab), the
 // editor scrolled down that many pixels, the indexing finished, the caret
-// put somewhere, HCP65_IDE_TYPE's text typed there, then Find All
+// put somewhere, HCP65_IDE_TYPE's text typed there, every file saved, then Find All
 // References, Go to Definition and another solution or project opened.
 // Call it once the app is in the root: the objects made here are only
 // held through it, and an object no root reaches is freed as soon as
@@ -170,6 +170,11 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 				{
 					mpWindow->InputPrintable(*szTyped, true);
 				}
+			}
+			if (getenv("HCP65_IDE_SAVE") != NULL)
+			{
+				//As Control+Shift+S: every changed file is saved.
+				mpContent->SaveAllFiles();
 			}
 			if (getenv("HCP65_IDE_REFERENCES") != NULL)
 			{

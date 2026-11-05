@@ -41,6 +41,9 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 //is known of it for highlighting it again as it is edited.  Given an HCP65 build's listings (SetListings), the lines'
 //code is shown under them as CLineZones do: clicking a line's mark in the gutter shows its code.  Given the file's text
 //in the last commit (SetBaseText), the lines changed since are marked in the gutter as IntelliJ IDEA marks them.
+//
+//SaveFile writes the text back with the file's line ends: lines typed into a file whose lines end with carriage returns
+//and line feeds get them too.  The tab's name ends with a '*' while the text has changed since it was opened or saved.
 class CIDEEditorTab : public CObject
 {
 CONSTRUCTABLE(CIDEEditorTab);
@@ -57,6 +60,9 @@ protected:
 	int64				miChangedTime;	//When the text last changed (GetDebugTickCount).
 	bool				mbRecolour;		//The text changed and hasn't been highlighted since.
 	bool				mbEdited;		//The text was changed since the file was opened.
+	bool				mbCarriageReturns;	//The file's lines end with carriage returns and line feeds.
+	size				muiSavedChanges;	//The editor's change count when the file was opened or last saved.
+	bool				mbShownModified;	//The tab's name ends with a '*'.
 	Ptr<CLineZones>		mpZones;		//The lines' code, from mcListings.
 	CIDEListingSource	mcListings;
 	EGitFileState		meGitState;		//As of the last git status read.
@@ -100,7 +106,15 @@ public:
 	char*				GetFileName(void);
 	size				GetProject(void);
 	bool				IsEdited(void);
+
+	bool				SaveFile(void);
+	bool				IsModified(void);
+	bool				UsesCarriageReturns(void);
+	void				ShowModified(void);
 };
+
+
+bool UsesIDECarriageReturns(const char* szText);
 
 
 #endif // __IDE_EDITOR_TAB_H__

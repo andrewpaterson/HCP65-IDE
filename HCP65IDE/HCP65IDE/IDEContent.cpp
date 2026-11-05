@@ -53,7 +53,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 //Go to Definition (F12), Find All References (Shift+F12), Build (Control+Shift+B) and the debugger's keys from anywhere in the window.
-static EComponentInputCommand	gaeIDECodeCommands[] = { CIC_GoToDefinition, CIC_FindReferences, CIC_Build, CIC_StartDebugging, CIC_StopDebugging, CIC_RestartDebugging,
+static EComponentInputCommand	gaeIDECodeCommands[] = { CIC_Save, CIC_SaveAll, CIC_GoToDefinition, CIC_FindReferences, CIC_Build, CIC_StartDebugging, CIC_StopDebugging, CIC_RestartDebugging,
 														 CIC_BreakAll, CIC_ToggleBreakpoint, CIC_StepOver, CIC_StepInto, CIC_StepOut };
 
 
@@ -214,6 +214,8 @@ void CIDEContent::Class(void)
 	U_Data(ARGB32, msDialogLook.sDivider);
 	M_Pointer(mpMenuBar);
 	M_Pointer(mpOpenItem);
+	M_Pointer(mpSaveItem);
+	M_Pointer(mpSaveAllItem);
 	M_Pointer(mpFileChooser);
 	M_Pointer(mpFolderIcon);
 	M_Pointer(mpFileIcon);
@@ -479,7 +481,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// File, with Open Project/Solution, and Debug.
+// File, with Open Project/Solution, Save and Save All, and Debug.
 //
 //////////////////////////////////////////////////////////////////////////
 Ptr<CMenuBar> CIDEContent::CreateMenuBar(void)
@@ -488,6 +490,8 @@ Ptr<CMenuBar> CIDEContent::CreateMenuBar(void)
 
 	pFile = OMalloc<CMenuContainer>(mpWindow, mpTheme);
 	mpOpenItem = pFile->AddItem("Open Project/Solution...", mpFolderIcon);
+	mpSaveItem = pFile->AddItem("Save");
+	mpSaveAllItem = pFile->AddItem("Save All");
 
 	mpMenuBar = OMalloc<CMenuBar>(mpWindow, mpTheme);
 	mpMenuBar->AddMenu("File", pFile);
@@ -507,6 +511,14 @@ void CIDEContent::MenuItemClicked(CMenuItem* pcItem)
 	if (pcItem == &mpOpenItem)
 	{
 		ShowOpenSolutionDialog();
+	}
+	else if (pcItem == &mpSaveItem)
+	{
+		SaveActiveFile();
+	}
+	else if (pcItem == &mpSaveAllItem)
+	{
+		SaveAllFiles();
 	}
 	else
 	{
@@ -723,6 +735,65 @@ void CIDEContent::CloseAllFiles(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Writes the tab's text to its file if it has changed since it was opened
+// or saved, then reads its repository's status again.  False if it
+// couldn't be written.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEContent::SaveFile(Ptr<CIDEEditorTab> pTab)
+{
+	if (!pTab->IsModified())
+	{
+		return true;
+	}
+	if (!pTab->SaveFile())
+	{
+		return gcLogger.Error2(__METHOD__, " Could not save [", pTab->GetFileName(), "].", NULL);
+	}
+	GitFileSaved(pTab->GetFileName());
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Saves the selected tab's file.  True if there is none.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEContent::SaveActiveFile(void)
+{
+	if (mpActive.IsNull())
+	{
+		return true;
+	}
+	return SaveFile(mpActive);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Saves every open file that has changed.  False if any couldn't be.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEContent::SaveAllFiles(void)
+{
+	size	i;
+	bool	bResult;
+
+	bResult = true;
+	for (i = 0; i < maTabs.Size(); i++)
+	{
+		if (!SaveFile(maTabs.Get(i)))
+		{
+			bResult = false;
+		}
+	}
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Colours a tab's text by what the parser found each part of it to be:
 // as its file is, or as it has been edited to.
 //
@@ -772,7 +843,15 @@ void CIDEContent::ExplorerActivated(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDEContent::CodeCommandAction(SComponentInputEvent* psEvent)
 {
-	if (psEvent->eCommand == CIC_GoToDefinition)
+	if (psEvent->eCommand == CIC_Save)
+	{
+		SaveActiveFile();
+	}
+	else if (psEvent->eCommand == CIC_SaveAll)
+	{
+		SaveAllFiles();
+	}
+	else if (psEvent->eCommand == CIC_GoToDefinition)
 	{
 		GoToDefinition();
 	}
@@ -1403,6 +1482,7 @@ void CIDEContent::Tick(Ptr<CWindow> pWindow)
 		{
 			UpdateChangeBars(pTab);
 		}
+		pTab->ShowModified();
 		if (pTab->NeedsRecolour(iNow, &iWait))
 		{
 			HighlightTab(pTab);

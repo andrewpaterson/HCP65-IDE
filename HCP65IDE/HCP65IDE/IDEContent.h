@@ -54,7 +54,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 //
 //Files are shown in the colours of their git status, as IntelliJ IDEA shows them, in Solution Explorer and on their
 //tabs, and the lines changed since the last commit are marked in the editor's gutter.  The statuses of the solution's
-//repositories are read when it is opened and every few seconds after; the toolbar shows the branch.
+//repositories are read when it is opened, when a file is saved (Control+S, or Control+Shift+S for all) and every few
+//seconds after; the toolbar shows the branch.
 //
 //The Debug menu (and Visual Studio's keys) debug the HCP65 emulator at the instruction level, see CIDEDebugger: the
 //Debug tab under the editor shows its disassembly and registers.
@@ -72,6 +73,8 @@ protected:
 	SDialogLook					msDialogLook;
 	Ptr<CMenuBar>				mpMenuBar;
 	Ptr<CMenuItem>				mpOpenItem;			//File, Open Project/Solution.
+	Ptr<CMenuItem>				mpSaveItem;			//File, Save.
+	Ptr<CMenuItem>				mpSaveAllItem;		//File, Save All.
 	Ptr<CFileChooser>			mpFileChooser;		//While it's shown.
 	Ptr<CImageCel>				mpFolderIcon;		//The file chooser's.
 	Ptr<CImageCel>				mpFileIcon;
@@ -143,6 +146,9 @@ public:
 	void			MenuItemClicked(CMenuItem* pcItem);
 	bool			OpenFile(const char* szFileName, size uiProject = SOLUTION_EXPLORER_NO_PROJECT);
 	void			CloseAllFiles(void);
+	bool			SaveFile(Ptr<CIDEEditorTab> pTab);
+	bool			SaveActiveFile(void);
+	bool			SaveAllFiles(void);
 	void			ExplorerActivated(void);
 	void			ReferenceActivated(void);
 	bool			GoToDefinition(void);
@@ -225,6 +231,7 @@ protected:
 	void				ShowGitStatus(void);
 	void				ShowBranch(void);
 	void				ReadGitBase(Ptr<CIDEEditorTab> pTab);
+	void				GitFileSaved(const char* szFileName);
 	void				UpdateChangeBars(Ptr<CIDEEditorTab> pTab);
 };
 

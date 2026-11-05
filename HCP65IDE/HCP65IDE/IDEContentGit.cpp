@@ -19,6 +19,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 ** ------------------------------------------------------------------------ **/
 #include <string.h>
+#include "BaseLib/Timer.h"
 #include "WindowLib/JewelColours.h"
 #include "IDEGit.h"
 #include "IDEContent.h"
@@ -64,6 +65,25 @@ int64 CIDEContent::PollGit(int64 iNow)
 		ShowGitStatus();
 	}
 	return iWait;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// szFileName was saved: its repository's status is read again at once,
+// and the next reading of them all waits its usual time from now.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::GitFileSaved(const char* szFileName)
+{
+	if (mcGit.RefreshStatus(szFileName))
+	{
+		miGitStatusTime = GetDebugTickCount();
+		if (mpWindow.IsNotNull())
+		{
+			mpWindow->RequestTick(IDE_GIT_POLL);
+		}
+	}
 }
 
 

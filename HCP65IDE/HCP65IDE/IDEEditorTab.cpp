@@ -18,6 +18,9 @@ You should have received a copy of the GNU Affero General Public License
 along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 ** ------------------------------------------------------------------------ **/
+#include <string.h>
+#include "BaseLib/FileUtil.h"
+#include "BaseLib/TextFile.h"
 #include "StandardLib/Objects.h"
 #include "StandardLib/ClassDefines.h"
 #include "WindowLib/JewelColours.h"
@@ -62,6 +65,9 @@ void CIDEEditorTab::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CFo
 	miChangedTime = 0;
 	mbRecolour = false;
 	mbEdited = false;
+	mbCarriageReturns = UsesIDECarriageReturns(szText);
+	muiSavedChanges = mpEditor->GetChangeCount();
+	mbShownModified = false;
 	meGitState = GFS_Unmodified;
 	mbBase = false;
 	mszBaseText.Init();
@@ -91,6 +97,9 @@ void CIDEEditorTab::Class(void)
 	U_Bool(mbEdited);
 	M_Pointer(mpZones);
 	U_Unknown(CIDEListingSource, mcListings);
+	U_Bool(mbCarriageReturns);
+	U_Size(muiSavedChanges);
+	U_Bool(mbShownModified);
 	U_Enum(meGitState);
 	U_Bool(mbBase);
 	U_String(mszBaseText);
@@ -367,6 +376,106 @@ CChars* CIDEEditorTab::GetBaseText(void) { return &mszBaseText; }
 char* CIDEEditorTab::GetBaseHead(void) { return mszBaseHead.Text(); }
 void CIDEEditorTab::SetGitState(EGitFileState eState) { meGitState = eState; }
 EGitFileState CIDEEditorTab::GetGitState(void) { return meGitState; }
+//////////////////////////////////////////////////////////////////////////
+//
+// Writes the text to the file.  In a file whose lines ended with carriage
+// returns and line feeds, line feeds on their own (typed lines) get a
+// carriage return.  False if the file couldn't be written.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEEditorTab::SaveFile(void)
+{
+	CTextFile	cFile;
+	CChars		szText;
+	char*		szSource;
+	size		i;
+	bool		bResult;
+
+	szSource = mpEditor->GetText();
+	szText.Init();
+	if (mbCarriageReturns)
+	{
+		for (i = 0; szSource[i] != '\0'; i++)
+		{
+			if ((szSource[i] == '\n') && ((i == 0) || (szSource[i - 1] != '\r')))
+			{
+				szText.Append('\r');
+			}
+			szText.Append(szSource[i]);
+		}
+	}
+	else
+	{
+		szText.Append(szSource);
+	}
+
+	cFile.Init(szText.Text());
+	bResult = cFile.Write(mszFileName.Text());
+	cFile.Kill();
+	szText.Kill();
+	if (bResult)
+	{
+		muiSavedChanges = mpEditor->GetChangeCount();
+		ShowModified();
+	}
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// True if the text has changed since the file was opened or saved.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEEditorTab::IsModified(void)
+{
+	return mpEditor->GetChangeCount() != muiSavedChanges;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The tab's name ends with a '*' if the text is modified.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEEditorTab::ShowModified(void)
+{
+	CFileUtil	cFileUtil;
+	CChars		szName;
+	bool		bModified;
+
+	bModified = IsModified();
+	if ((bModified == mbShownModified) || mpTab.IsNull())
+	{
+		return;
+	}
+	szName.Init();
+	cFileUtil.GetFileName(&szName, mszFileName.Text());
+	if (bModified)
+	{
+		szName.Append('*');
+	}
+	mpTab->SetText(szName.Text());
+	szName.Kill();
+	mbShownModified = bModified;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// True if szText's first line ends with a carriage return and line feed.
+//
+//////////////////////////////////////////////////////////////////////////
+bool UsesIDECarriageReturns(const char* szText)
+{
+	const char*	szLineFeed;
+
+	szLineFeed = strchr(szText, '\n');
+	return (szLineFeed != NULL) && (szLineFeed > szText) && (szLineFeed[-1] == '\r');
+}
+
+
+bool CIDEEditorTab::UsesCarriageReturns(void) { return mbCarriageReturns; }
 void CIDEEditorTab::SetTab(Ptr<CTabComponent> pTab) { mpTab = pTab; }
 Ptr<CLineZones> CIDEEditorTab::GetZones(void) { return mpZones; }
 Ptr<CTextArea> CIDEEditorTab::GetEditor(void) { return mpEditor; }
