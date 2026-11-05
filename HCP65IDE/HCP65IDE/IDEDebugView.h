@@ -34,9 +34,10 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 typedef CArrayTemplate<uint32>	CArrayIDEAddresses;
 
 
-//The debugger's tab under the editor: the disassembly (the instructions from the program address, "=>" at it and "*"
-//at a breakpoint) beside the registers (the state, the registers at the last stop and the breakpoints).  F9 in the
-//disassembly toggles a breakpoint at the caret's instruction.  Update shows the debugger as it is now.
+//The debugger's tab under the editor: the disassembly (the instructions the emulator decoded from the program
+//address, "=>" at it and "*" at a breakpoint) beside the registers (the state, the registers at the last stop and the
+//breakpoints).  It shows what the emulator described and knows nothing of the processor.  F9 in the disassembly
+//toggles a breakpoint at the caret's instruction.  Update shows the debugger as it is now.
 class CIDEDebugView : public CObject
 {
 CONSTRUCTABLE(CIDEDebugView);
@@ -70,8 +71,6 @@ public:
 protected:
 	void				UpdateRegisters(CIDEDebugger* pcDebugger);
 	void				UpdateDisassembly(CIDEDebugger* pcDebugger);
-	void				Disassemble(CIDEDebugger* pcDebugger, uint8* puiMemory, uint32 uiMemoryAddress, size uiMemorySize, uint32 uiStart, CArrayIDEAddresses* pauiAddresses, CArrayChars* paszLines);
-	size				FindRegister(CDebugClient* pcClient, const char* szName);
 };
 
 

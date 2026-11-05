@@ -24,11 +24,16 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/ListenSocket.h"
 #include "BaseLib/NativeThread.h"
 #include "BaseLib/Timer.h"
+#include "EmulatorDebugLib/DebugLaunch.h"
 #include "IDEDebugger.h"
 
 
-#define IDE_DEBUG_PORT_LINE		"HCP65 debug port "		//What the emulator prints when it listens (HCP65_DEBUG_PORT_LINE).
-#define IDE_DEBUG_QUIT_WAIT		2000					//Milliseconds the emulator has to quit before it is ended.
+#define IDE_DEBUG_QUIT_WAIT		2000		//Milliseconds the emulator has to quit before it is ended.
+#define IDE_DEBUG_START_WAIT	20000		//Milliseconds the emulator has to make its channel.
+#define IDE_DEBUG_CHANNEL		"HCP65IDE"	//The start of the shared memory channel's name.
+
+
+static size	guiIDEDebugChannels = 0;
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -41,20 +46,18 @@ void CIDEDebugger::Init(void)
 	mszEmulatorDirectory.Init();
 	mcProcess.Init();
 	mbLaunched = false;
-	mcConnection.Init();
+	mszChannel.Init();
+	mcShared.Init();
+	mcNetwork.Init();
 	mbClient = false;
-	meState = IDS_Idle;
+	mbStarting = false;
+	miStartTime = 0;
 	mbBreakAtStart = false;
-	mbRestarting = false;
 	muiSeenStops = 0;
-	muiSeenMemory = 0;
+	muiSeenDisassemblies = 0;
 	muiSeenErrors = 0;
 	masBreakpoints.Init();
-	mszStatus.Init();
-	muiMemoryAddress = 0;
-	muiMemorySize = 0;
-	muiViewStart = 0;
-	muiViewSize = 0;
+	mszStatus.Init("Not debugging.");
 }
 
 
@@ -68,7 +71,9 @@ void CIDEDebugger::Kill(void)
 	Stop();
 	mszStatus.Kill();
 	masBreakpoints.Kill();
-	mcConnection.Kill();
+	mcNetwork.Kill();
+	mcShared.Kill();
+	mszChannel.Kill();
 	mcProcess.Kill();
 	mszEmulatorDirectory.Kill();
 	mszEmulator.Kill();
@@ -88,9 +93,10 @@ void CIDEDebugger::SetEmulator(const char* szExecutable, const char* szDirectory
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Runs the emulator, holding before its first instruction until it is
-// connected to.  It then runs to the first breakpoint, or (bBreakAtStart,
-// as Step Into does when not debugging) stays at the first instruction.
+// Runs the emulator on a shared memory channel of its own, holding before
+// its first instruction until it is connected to.  It then runs to the
+// first breakpoint, or (bBreakAtStart, as Step Into does when not
+// debugging) stays at the first instruction.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEDebugger::Start(bool bBreakAtStart)
@@ -98,52 +104,61 @@ bool CIDEDebugger::Start(bool bBreakAtStart)
 	CArrayChars	aszArguments;
 	bool		bResult;
 
-	if (meState != IDS_Idle)
+	if (IsDebugging())
 	{
 		return false;
 	}
 
+	guiIDEDebugChannels++;
+	mszChannel.Set(IDE_DEBUG_CHANNEL);
+	mszChannel.Append((int)(GetDebugTickCount() % 1000000000));
+	mszChannel.Append('-');
+	mszChannel.Append((int)guiIDEDebugChannels);
+
 	aszArguments.Init();
-	aszArguments.Add("--debug-tcp");
-	aszArguments.Add("0");
-	aszArguments.Add("--debug-wait");
-	aszArguments.Add("--exit-on-detach");
+	aszArguments.Add(DEBUG_ARGUMENT_SHARED_MEMORY);
+	aszArguments.Add(mszChannel.Text());
+	aszArguments.Add(DEBUG_ARGUMENT_WAIT);
+	aszArguments.Add(DEBUG_ARGUMENT_EXIT_ON_DETACH);
 	mcProcess.Kill();
 	mcProcess.Init();
 	bResult = mcProcess.Start(mszEmulator.Text(), &aszArguments, mszEmulatorDirectory.Text());
 	aszArguments.Kill();
 	if (!bResult)
 	{
-		SetStatus("Could not start the emulator.", 0, false);
+		mszStatus.Set("Could not start the emulator.");
 		return false;
 	}
 
 	mbLaunched = true;
+	mbStarting = true;
+	miStartTime = GetDebugTickCount();
 	mbBreakAtStart = bBreakAtStart;
-	meState = IDS_Starting;
-	SetStatus("Starting the emulator.", 0, false);
+	mszStatus.Set("Starting the emulator.");
 	return true;
 }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// To an emulator already running with --debug-tcp iPort.  It goes on as it
+// To an emulator already running with a network port.  It goes on as it
 // was, running or stopped.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEDebugger::Attach(int iPort)
 {
-	if (meState != IDS_Idle)
+	if (IsDebugging())
 	{
 		return false;
 	}
 
 	mbLaunched = false;
 	mbBreakAtStart = true;
-	if (!Connect(iPort))
+	mcNetwork.Kill();
+	mcNetwork.Init();
+	if (!mcNetwork.Connect(NETWORK_LOOPBACK_ADDRESS, iPort) || !Connect(&mcNetwork))
 	{
-		SetStatus("Could not attach to the emulator.", 0, false);
+		mszStatus.Set("Could not attach to the emulator.");
 		return false;
 	}
 	return true;
@@ -154,25 +169,16 @@ bool CIDEDebugger::Attach(int iPort)
 //
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEDebugger::Connect(int iPort)
+bool CIDEDebugger::Connect(CProcessChannel* pcChannel)
 {
-	mcConnection.Kill();
-	mcConnection.Init();
-	if (!mcConnection.Connect(NETWORK_LOOPBACK_ADDRESS, iPort))
-	{
-		return false;
-	}
-
-	mcClient.Init(&mcConnection);
+	mcClient.Init(pcChannel);
 	mbClient = true;
+	mbStarting = false;
 	muiSeenStops = 0;
-	muiSeenMemory = 0;
+	muiSeenDisassemblies = 0;
 	muiSeenErrors = 0;
-	muiMemorySize = 0;
-	muiViewSize = 0;
-	meState = IDS_Connecting;
-	SetStatus("Connecting to the emulator.", 0, false);
-	return mcClient.Hello();
+	mszStatus.Set("Connecting to the emulator.");
+	return mcClient.Hello() != 0;
 }
 
 
@@ -225,14 +231,25 @@ void CIDEDebugger::End(const char* szStatus)
 		mcClient.Kill();
 		mbClient = false;
 	}
-	mcConnection.Kill();
-	mcConnection.Init();
+	mcShared.Kill();
+	mcShared.Init();
+	mcNetwork.Kill();
+	mcNetwork.Init();
 	mbLaunched = false;
-	mbRestarting = false;
-	meState = IDS_Idle;
-	muiMemorySize = 0;
-	muiViewSize = 0;
-	SetStatus(szStatus, 0, false);
+	mbStarting = false;
+	mszStatus.Set(szStatus);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The emulator's answers say when it has done what was asked: nothing more
+// is asked of it until then.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEDebugger::CanMove(void)
+{
+	return mbClient && !mcClient.IsBusy() && (mcClient.GetState() != DCS_Connecting) && (mcClient.GetState() != DCS_Closed);
 }
 
 
@@ -242,28 +259,27 @@ void CIDEDebugger::End(const char* szStatus)
 //////////////////////////////////////////////////////////////////////////
 bool CIDEDebugger::Continue(void)
 {
-	if (!CanStep())
+	if (!CanMove() || !mcClient.IsStopped())
 	{
 		return false;
 	}
-	meState = IDS_Running;
-	SetStatus("Running.", 0, false);
-	return mcClient.Continue();
+	mszStatus.Set("Running.");
+	return mcClient.Continue() != 0;
 }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Break All: the emulator stops where it is.
+// Break All: the emulator stops where it is, even part way through a step.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEDebugger::Break(void)
 {
-	if ((meState != IDS_Running) && (meState != IDS_Stepping))
+	if (!mbClient || !mcClient.IsRunning())
 	{
 		return false;
 	}
-	return mcClient.Pause();
+	return mcClient.Pause() != 0;
 }
 
 
@@ -274,28 +290,26 @@ bool CIDEDebugger::Break(void)
 //////////////////////////////////////////////////////////////////////////
 bool CIDEDebugger::StepInto(void)
 {
-	if (!CanStep())
+	if (!CanMove() || !mcClient.IsStopped())
 	{
 		return false;
 	}
-	meState = IDS_Stepping;
-	return mcClient.Step(1);
+	return mcClient.Step(1) != 0;
 }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// One instruction, or the whole of a call.
+// One instruction, or the whole of a call (the emulator decides which).
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEDebugger::StepOver(void)
 {
-	if (!CanStep())
+	if (!CanMove() || !mcClient.IsStopped())
 	{
 		return false;
 	}
-	meState = IDS_Stepping;
-	return mcClient.StepOver();
+	return mcClient.StepOver() != 0;
 }
 
 
@@ -306,12 +320,11 @@ bool CIDEDebugger::StepOver(void)
 //////////////////////////////////////////////////////////////////////////
 bool CIDEDebugger::StepOut(void)
 {
-	if (!CanStep())
+	if (!CanMove() || !mcClient.IsStopped())
 	{
 		return false;
 	}
-	meState = IDS_Stepping;
-	return mcClient.StepOut();
+	return mcClient.StepOut() != 0;
 }
 
 
@@ -323,23 +336,11 @@ bool CIDEDebugger::StepOut(void)
 //////////////////////////////////////////////////////////////////////////
 bool CIDEDebugger::Restart(void)
 {
-	if ((meState != IDS_Stopped) && (meState != IDS_Running))
+	if (!CanMove())
 	{
 		return false;
 	}
-	meState = IDS_Stepping;
-	mbRestarting = true;
-	return mcClient.Reset();
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-//
-//////////////////////////////////////////////////////////////////////////
-bool CIDEDebugger::CanStep(void)
-{
-	return meState == IDS_Stopped;
+	return mcClient.Reset(!mbBreakAtStart) != 0;
 }
 
 
@@ -360,7 +361,7 @@ bool CIDEDebugger::ToggleBreakpoint(uint32 uiAddress)
 	}
 
 	masBreakpoints.RemoveAt(masBreakpoints.GetIndex(psBreakpoint));
-	if (mbClient && (meState != IDS_Connecting))
+	if (mbClient && (mcClient.GetState() != DCS_Connecting))
 	{
 		mcClient.RemoveBreakpoint(uiAddress);
 	}
@@ -383,7 +384,7 @@ bool CIDEDebugger::AddBreakpoint(uint32 uiAddress)
 	psBreakpoint = masBreakpoints.Add();
 	psBreakpoint->uiAddress = uiAddress;
 	psBreakpoint->bEnabled = true;
-	if (mbClient && (meState != IDS_Connecting))
+	if (mbClient && (mcClient.GetState() != DCS_Connecting))
 	{
 		mcClient.AddBreakpoint(uiAddress, true);
 	}
@@ -399,7 +400,7 @@ void CIDEDebugger::DeleteAllBreakpoints(void)
 {
 	masBreakpoints.Kill();
 	masBreakpoints.Init();
-	if (mbClient && (meState != IDS_Connecting))
+	if (mbClient && (mcClient.GetState() != DCS_Connecting))
 	{
 		mcClient.SetBreakpoints(NULL, 0);
 	}
@@ -450,41 +451,21 @@ void CIDEDebugger::SendBreakpoints(void)
 //////////////////////////////////////////////////////////////////////////
 //
 // The emulator's output lines go in paszOutput.  True if anything shown
-// changed: the state, a stop or the memory read at it.
+// changed: the state, a stop, the instructions or the status.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEDebugger::Poll(CArrayChars* paszOutput)
 {
 	EIDEDebugState	eOldState;
-	size			uiOldMemory;
-	size			i;
-	char*			szLine;
+	size			uiOldDisassemblies;
 	bool			bRunning;
 
-	eOldState = meState;
-	uiOldMemory = muiSeenMemory;
+	eOldState = GetState();
+	uiOldDisassemblies = muiSeenDisassemblies;
 
 	if (mbLaunched)
 	{
-		i = paszOutput->NumElements();
 		bRunning = mcProcess.Poll(paszOutput);
-		if (meState == IDS_Starting)
-		{
-			for (; i < paszOutput->NumElements(); i++)
-			{
-				szLine = paszOutput->GetText(i);
-				if (strncmp(szLine, IDE_DEBUG_PORT_LINE, strlen(IDE_DEBUG_PORT_LINE)) == 0)
-				{
-					if (!Connect(atoi(&szLine[strlen(IDE_DEBUG_PORT_LINE)])))
-					{
-						Stop();
-						SetStatus("Could not connect to the emulator.", 0, false);
-						return true;
-					}
-					break;
-				}
-			}
-		}
 		if (!bRunning)
 		{
 			End("The emulator exited.");
@@ -492,9 +473,34 @@ bool CIDEDebugger::Poll(CArrayChars* paszOutput)
 		}
 	}
 
+	if (mbStarting)
+	{
+		//The emulator makes the channel once it has started.
+		if (CSharedMemoryChannel::Exists(mszChannel.Text()))
+		{
+			if (mcShared.Connect(mszChannel.Text()))
+			{
+				Connect(&mcShared);
+			}
+			else
+			{
+				//Made but not finished: tried again next time.
+				mcShared.Kill();
+				mcShared.Init();
+			}
+		}
+		else if (GetDebugTickCount() - miStartTime > IDE_DEBUG_START_WAIT)
+		{
+			Stop();
+			mszStatus.Set("The emulator didn't make its debug channel.");
+			return true;
+		}
+		return GetState() != eOldState;
+	}
+
 	if (!mbClient)
 	{
-		return meState != eOldState;
+		return GetState() != eOldState;
 	}
 
 	mcClient.Poll(0);
@@ -504,38 +510,22 @@ bool CIDEDebugger::Poll(CArrayChars* paszOutput)
 		return true;
 	}
 
-	if (meState == IDS_Connecting)
+	if ((eOldState == IDS_Connecting) && (mcClient.GetState() != DCS_Connecting))
 	{
-		if (mcClient.GetState() != DCS_Connecting)
-		{
-			Welcomed();
-		}
+		Welcomed();
 	}
 	else if (mcClient.NumStops() != muiSeenStops)
 	{
-		muiSeenStops = mcClient.NumStops();
 		Stopped();
-		if (mbRestarting && (mcClient.GetStopReason() == DS_Reset))
-		{
-			//Restarted: it runs again from the reset, unless it was stepped into from the start.
-			mbRestarting = false;
-			if (!mbBreakAtStart)
-			{
-				Continue();
-			}
-		}
+	}
+	if (mcClient.IsRunning())
+	{
+		mszStatus.Set(mcClient.IsStepping() ? "Stepping." : "Running.");
 	}
 
-	if (mcClient.NumMemoryReplies() != muiSeenMemory)
+	if (mcClient.NumDisassemblies() != muiSeenDisassemblies)
 	{
-		muiSeenMemory = mcClient.NumMemoryReplies();
-		muiMemoryAddress = mcClient.GetMemoryAddress();
-		muiMemorySize = mcClient.GetMemorySize();
-		if (muiMemorySize > IDE_DEBUG_MEMORY_VIEW)
-		{
-			muiMemorySize = IDE_DEBUG_MEMORY_VIEW;
-		}
-		memcpy(mauiMemory, mcClient.GetMemory(), muiMemorySize);
+		muiSeenDisassemblies = mcClient.NumDisassemblies();
 	}
 	if (mcClient.NumErrors() != muiSeenErrors)
 	{
@@ -543,7 +533,7 @@ bool CIDEDebugger::Poll(CArrayChars* paszOutput)
 		paszOutput->Add("Debugger: ")->Append(mcClient.GetError());
 	}
 
-	return (meState != eOldState) || (muiSeenMemory != uiOldMemory);
+	return (GetState() != eOldState) || (muiSeenDisassemblies != uiOldDisassemblies);
 }
 
 
@@ -556,11 +546,10 @@ bool CIDEDebugger::Poll(CArrayChars* paszOutput)
 void CIDEDebugger::Welcomed(void)
 {
 	SendBreakpoints();
-	muiSeenStops = mcClient.NumStops();
 	if (mcClient.IsRunning())
 	{
-		meState = IDS_Running;
-		SetStatus("Running.", 0, false);
+		muiSeenStops = mcClient.NumStops();
+		mszStatus.Set("Running.");
 		return;
 	}
 
@@ -574,60 +563,99 @@ void CIDEDebugger::Welcomed(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// A new stop: why, and the memory there is read to show.  The view stays
-// where it was while the program address is inside it.
+// A new stop: why, and the instructions there are asked for.  They start
+// where the ones shown do while the program address is among them (the
+// emulator starts them at it if it isn't).
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEDebugger::Stopped(void)
 {
-	uint32	uiAddress;
+	uint32				uiAddress;
+	uint32				uiStart;
+	SDebugInstruction*	psLast;
 
-	meState = IDS_Stopped;
+	muiSeenStops = mcClient.NumStops();
 	uiAddress = mcClient.GetStopAddress();
 	switch (mcClient.GetStopReason())
 	{
-	case DS_Start:
-		SetStatus("Stopped before the first instruction at ", uiAddress, true);
-		break;
-	case DS_Breakpoint:
-		SetStatus("Stopped at a breakpoint at ", uiAddress, true);
-		break;
-	case DS_Step:
-		SetStatus("Stepped to ", uiAddress, true);
-		break;
-	case DS_Pause:
-		SetStatus("Broke in at ", uiAddress, true);
-		break;
-	case DS_Stopped:
-		SetStatus("The processor stopped itself at ", uiAddress, true);
-		break;
-	case DS_Reset:
-		SetStatus("Reset, stopped at ", uiAddress, true);
-		break;
+	case DS_Start:		mszStatus.Set("Stopped before the first instruction at ");	break;
+	case DS_Breakpoint:	mszStatus.Set("Stopped at a breakpoint at ");				break;
+	case DS_Step:		mszStatus.Set("Stepped to ");								break;
+	case DS_Pause:		mszStatus.Set("Broke in at ");								break;
+	case DS_Stopped:	mszStatus.Set("The processor stopped itself at ");			break;
+	case DS_Reset:		mszStatus.Set("Reset, stopped at ");						break;
 	}
+	mcClient.AppendAddress(&mszStatus, uiAddress);
+	mszStatus.Append('.');
 
-	if ((muiViewSize == 0) || (uiAddress < muiViewStart) || (uiAddress >= muiViewStart + muiViewSize / 2))
+	if (!mcClient.CanDecode())
 	{
-		muiViewStart = uiAddress;
+		return;
 	}
-	muiViewSize = IDE_DEBUG_MEMORY_VIEW;
-	mcClient.ReadMemory(muiViewStart, IDE_DEBUG_MEMORY_VIEW);
+	uiStart = uiAddress;
+	if (mcClient.NumInstructions() != 0)
+	{
+		//Not the last few, so the instructions after it are shown.
+		psLast = mcClient.GetInstruction(mcClient.NumInstructions() - 1);
+		if ((uiAddress >= mcClient.GetInstruction(0)->uiAddress) && (uiAddress + IDE_DEBUG_DISASSEMBLY < psLast->uiAddress))
+		{
+			uiStart = mcClient.GetInstruction(0)->uiAddress;
+		}
+	}
+	mcClient.Disassemble(uiStart, IDE_DEBUG_DISASSEMBLY, uiAddress);
 }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Idle, starting and connecting are the IDE's; the rest are what the
+// emulator has said (stepping while a step it was asked for isn't done).
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEDebugger::SetStatus(const char* szText, uint32 uiAddress, bool bAddress)
+EIDEDebugState CIDEDebugger::GetState(void)
 {
-	char	sz[32];
-
-	mszStatus.Set(szText);
-	if (bAddress)
+	if (mbStarting)
 	{
-		sprintf(sz, "$%02X:%04X.", (uiAddress >> 16) & 0xFF, uiAddress & 0xFFFF);
-		mszStatus.Append(sz);
+		return IDS_Starting;
+	}
+	if (!mbClient)
+	{
+		return IDS_Idle;
+	}
+	if (mcClient.GetState() == DCS_Connecting)
+	{
+		return IDS_Connecting;
+	}
+	if (mcClient.IsRunning() && !mcClient.IsStepping())
+	{
+		return IDS_Running;
+	}
+	if (mcClient.IsBusy() || mcClient.IsStepping())
+	{
+		return IDS_Stepping;
+	}
+	return IDS_Stopped;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// An address as the emulator says to write it, or plain hexadecimal when
+// there is no emulator.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDebugger::AppendAddress(CChars* psz, uint32 uiAddress)
+{
+	char	sz[16];
+
+	if (mbClient && (mcClient.GetState() != DCS_Connecting))
+	{
+		mcClient.AppendAddress(psz, uiAddress);
+	}
+	else
+	{
+		sprintf(sz, "$%X", uiAddress);
+		psz->Append(sz);
 	}
 }
 
@@ -642,22 +670,8 @@ uint32 CIDEDebugger::GetProgramAddress(void)
 }
 
 
-//////////////////////////////////////////////////////////////////////////
-//
-// The memory last read to disassemble, NULL if there is none.
-//
-//////////////////////////////////////////////////////////////////////////
-uint8* CIDEDebugger::GetMemory(uint32* puiAddress, size* puiSize)
-{
-	*puiAddress = muiMemoryAddress;
-	*puiSize = muiMemorySize;
-	return (muiMemorySize != 0) ? mauiMemory : NULL;
-}
-
-
-EIDEDebugState CIDEDebugger::GetState(void) { return meState; }
-bool CIDEDebugger::IsDebugging(void) { return meState != IDS_Idle; }
-bool CIDEDebugger::IsStopped(void) { return meState == IDS_Stopped; }
+bool CIDEDebugger::IsDebugging(void) { return mbStarting || mbClient; }
+bool CIDEDebugger::IsStopped(void) { return GetState() == IDS_Stopped; }
 char* CIDEDebugger::GetStatus(void) { return mszStatus.Text(); }
 CDebugClient* CIDEDebugger::GetClient(void) { return mbClient ? &mcClient : NULL; }
 char* CIDEDebugger::GetEmulator(void) { return mszEmulator.Text(); }

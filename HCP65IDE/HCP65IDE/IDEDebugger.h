@@ -25,20 +25,21 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/Chars.h"
 #include "ThreadLib/Process.h"
 #include "ThreadLib/NetworkConnection.h"
+#include "ThreadLib/SharedMemoryChannel.h"
 #include "EmulatorDebugLib/DebugClient.h"
 
 
-#define IDE_DEBUG_MEMORY_VIEW	96		//The bytes read at the program address to disassemble.
+#define IDE_DEBUG_DISASSEMBLY	24		//The instructions shown from the program address.
 
 
 enum EIDEDebugState
 {
 	IDS_Idle,			//Not debugging.
-	IDS_Starting,		//The emulator was started; waiting for the port it listens on.
+	IDS_Starting,		//The emulator was started; waiting for it to make its channel.
 	IDS_Connecting,		//Connected, waiting for the emulator's welcome.
 	IDS_Stopped,
 	IDS_Running,
-	IDS_Stepping,		//A step was asked for and hasn't stopped yet.
+	IDS_Stepping,		//A step was asked for and isn't finished.
 };
 
 
@@ -52,11 +53,14 @@ struct SIDEBreakpoint
 typedef CArrayTemplate<SIDEBreakpoint>	CArrayIDEBreakpoints;
 
 
-//The IDE's end of debugging the HCP65 emulator, at the instruction level, over EmulatorDebugLib's protocol on TCP.
-//Start runs the emulator, waiting for the debugger (--debug-wait), and connects to the port it prints; Attach
-//connects to an emulator that is already running.  The breakpoints are the IDE's, by address: they are kept when
-//not debugging and given to the emulator when it is connected.  Poll (each tick while debugging) reads what the
-//emulator has sent and its output.  When it stops the memory at the program address is read, to disassemble.
+//The IDE's end of debugging the HCP65 emulator, at the instruction level, over EmulatorDebugLib's protocol.  It
+//knows nothing of the processor: the emulator describes its registers and addresses, and disassembles.
+//
+//Start runs the emulator (DebugLaunch.h's arguments) on a shared memory channel named for this IDE, waiting for the
+//debugger, and connects once the emulator has made it.  Attach connects over the network to an emulator already
+//running with a port.  The breakpoints are the IDE's, by address: they are kept when not debugging and given to
+//the emulator when it is connected.  Poll (each tick while debugging) reads what the emulator has sent and its
+//output.  When it stops the instructions there are asked for.
 class CIDEDebugger
 {
 protected:
@@ -64,23 +68,19 @@ protected:
 	CChars					mszEmulatorDirectory;	//Where it runs (its resources are found from there).
 	CProcess				mcProcess;
 	bool					mbLaunched;				//Start ran the emulator; Stop quits it.
-	CNetworkConnection		mcConnection;
+	CChars					mszChannel;				//The shared memory channel's name, while starting.
+	CSharedMemoryChannel	mcShared;
+	CNetworkConnection		mcNetwork;
 	CDebugClient			mcClient;
-	bool					mbClient;				//mcClient is initialised on mcConnection.
-	EIDEDebugState			meState;
+	bool					mbClient;				//mcClient is initialised on one of the channels.
+	bool					mbStarting;
+	int64					miStartTime;
 	bool					mbBreakAtStart;			//Started by stepping into: stay at the first instruction.
-	bool					mbRestarting;			//Reset was sent: it continues when it stops there.
 	size					muiSeenStops;
-	size					muiSeenMemory;
+	size					muiSeenDisassemblies;
 	size					muiSeenErrors;
 	CArrayIDEBreakpoints	masBreakpoints;
 	CChars					mszStatus;
-
-	uint8					mauiMemory[IDE_DEBUG_MEMORY_VIEW];
-	uint32					muiMemoryAddress;
-	size					muiMemorySize;
-	uint32					muiViewStart;			//Where the disassembly starts: kept while the program address is in it.
-	size					muiViewSize;
 
 public:
 	void					Init(void);
@@ -114,16 +114,15 @@ public:
 	char*					GetStatus(void);
 	CDebugClient*			GetClient(void);
 	uint32					GetProgramAddress(void);
-	uint8*					GetMemory(uint32* puiAddress, size* puiSize);
+	void					AppendAddress(CChars* psz, uint32 uiAddress);
 
 protected:
-	bool					Connect(int iPort);
+	bool					Connect(CProcessChannel* pcChannel);
 	void					Welcomed(void);
 	void					Stopped(void);
 	void					SendBreakpoints(void);
-	bool					CanStep(void);
+	bool					CanMove(void);
 	void					End(const char* szStatus);
-	void					SetStatus(const char* szText, uint32 uiAddress, bool bAddress);
 };
 
 

@@ -22,14 +22,13 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include <string.h>
 #include "StandardLib/Objects.h"
 #include "StandardLib/ClassDefines.h"
-#include "Assembler65Lib/Asm65816Disassembler.h"
+#include "EmulatorDebugLib/DebugFormat.h"
 #include "IDEDebugView.h"
 
 
 #define IDE_DEBUG_REGISTERS_PER_ROW		3
 #define IDE_DEBUG_REGISTERS_WIDTH		420
-#define IDE_DEBUG_W65C816				"W65C816"
-#define IDE_DEBUG_W65C816_FLAGS			"NVMXDIZC"
+#define IDE_DEBUG_BYTES_SHOWN			4		//An instruction's bytes shown; more are left out.
 #define IDE_DEBUG_PROGRAM_COLOUR		Set32BitColour((uint8)0xFF, (uint8)0xE0, (uint8)0x60)	//The instruction at the program address.
 #define IDE_DEBUG_BREAKPOINT_COLOUR		Set32BitColour((uint8)0xF0, (uint8)0x70, (uint8)0x70)	//An instruction with a breakpoint.
 
@@ -156,21 +155,8 @@ void CIDEDebugView::Update(CIDEDebugger* pcDebugger, bool bKeepCaret)
 
 //////////////////////////////////////////////////////////////////////////
 //
-//
-//////////////////////////////////////////////////////////////////////////
-static void AppendIDEDebugAddress(CChars* psz, uint32 uiAddress)
-{
-	char	sz[16];
-
-	sprintf(sz, "$%02X:%04X", (uiAddress >> 16) & 0xFF, uiAddress & 0xFFFF);
-	psz->Append(sz);
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// The state, then the registers at the last stop (a W65C816's P as
-// letters too, upper case when set), then the breakpoints.
+// The state, then the registers at the last stop as the emulator
+// describes them (a flags register's letters too), then the breakpoints.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEDebugView::UpdateRegisters(CIDEDebugger* pcDebugger)
@@ -178,36 +164,28 @@ void CIDEDebugView::UpdateRegisters(CIDEDebugger* pcDebugger)
 	CChars			sz;
 	CDebugClient*	pcClient;
 	SDebugRegister*	psRegister;
-	uint64			uiValue;
 	size			i;
-	int				iBit;
-	char			szValue[64];
-	bool			b65C816;
+	size			uiNameLength;
+	EIDEDebugState	eState;
 
 	sz.Init(pcDebugger->GetStatus());
 	sz.AppendNewLine();
 
 	pcClient = pcDebugger->GetClient();
-	if ((pcClient != NULL) && (pcDebugger->GetState() != IDS_Connecting) && (pcDebugger->GetState() != IDS_Starting))
+	eState = pcDebugger->GetState();
+	if ((pcClient != NULL) && (eState != IDS_Connecting) && (eState != IDS_Starting))
 	{
-		b65C816 = strcmp(pcClient->GetProcessorName(), IDE_DEBUG_W65C816) == 0;
 		sz.Append(pcClient->GetProcessorName());
 		sz.Append(pcDebugger->IsStopped() ? "" : " (the values at the last stop)");
 		sz.AppendNewLine();
 		for (i = 0; i < pcClient->NumRegisters(); i++)
 		{
 			psRegister = pcClient->GetRegister(i);
-			uiValue = pcClient->GetRegisterValue(i);
-			sprintf(szValue, "%-3s= $%0*llX", psRegister->szName, (int)((psRegister->uiBits + 3) / 4), (unsigned long long)uiValue);
-			sz.Append(szValue);
-			if ((psRegister->uiKind == DRK_Flags) && b65C816 && (strcmp(psRegister->szName, "P") == 0))
-			{
-				sz.Append(' ');
-				for (iBit = 7; iBit >= 0; iBit--)
-				{
-					sz.Append((char)(((uiValue >> iBit) & 1) ? IDE_DEBUG_W65C816_FLAGS[7 - iBit] : (IDE_DEBUG_W65C816_FLAGS[7 - iBit] - 'A' + 'a')));
-				}
-			}
+			uiNameLength = strlen(psRegister->szName);
+			sz.Append(psRegister->szName);
+			sz.Append(' ', (uiNameLength < 3) ? 3 - uiNameLength : 0);
+			sz.Append("= ");
+			AppendDebugRegisterValue(&sz, psRegister, pcClient->GetRegisterValue(i));
 			if (((i + 1) % IDE_DEBUG_REGISTERS_PER_ROW == 0) || (i + 1 == pcClient->NumRegisters()))
 			{
 				sz.AppendNewLine();
@@ -227,7 +205,7 @@ void CIDEDebugView::UpdateRegisters(CIDEDebugger* pcDebugger)
 	for (i = 0; i < pcDebugger->NumBreakpoints(); i++)
 	{
 		sz.Append(' ');
-		AppendIDEDebugAddress(&sz, pcDebugger->GetBreakpoint(i)->uiAddress);
+		pcDebugger->AppendAddress(&sz, pcDebugger->GetBreakpoint(i)->uiAddress);
 	}
 
 	mpRegisters->SetText(sz.Text());
@@ -237,185 +215,74 @@ void CIDEDebugView::UpdateRegisters(CIDEDebugger* pcDebugger)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The memory read at the last stop.  If the view's instructions don't
-// land on the program address it is disassembled from there instead.
+// The instructions the emulator last decoded, a line each:
+// "=> * $00:8002  E8           inx".
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEDebugView::UpdateDisassembly(CIDEDebugger* pcDebugger)
 {
-	CArrayChars		aszLines;
-	uint8*			puiMemory;
-	uint32			uiMemoryAddress;
-	size			uiMemorySize;
-	uint32			uiProgram;
-	size			i;
-	bool			bFound;
-	uint32			uiAddress;
-	ARGB32			sColour;
-	CChars			sz;
+	CDebugClient*		pcClient;
+	SDebugInstruction*	psInstruction;
+	uint32				uiProgram;
+	bool				bAtProgram;
+	bool				bBreakpoint;
+	ARGB32				sColour;
+	size				i;
+	size				j;
+	char				szByte[8];
+	CChars				sz;
 
 	mauiLineAddresses.Kill();
 	mauiLineAddresses.Init();
 	mpDisassembly->SetText("");
 
-	puiMemory = pcDebugger->GetMemory(&uiMemoryAddress, &uiMemorySize);
-	if (puiMemory == NULL)
-	{
-		return;
-	}
-
-	uiProgram = pcDebugger->GetProgramAddress();
-	aszLines.Init();
-	Disassemble(pcDebugger, puiMemory, uiMemoryAddress, uiMemorySize, uiMemoryAddress, &mauiLineAddresses, &aszLines);
-	bFound = false;
-	for (i = 0; i < mauiLineAddresses.NumElements(); i++)
-	{
-		bFound |= *mauiLineAddresses.Get(i) == uiProgram;
-	}
-	if (!bFound && (uiProgram >= uiMemoryAddress) && (uiProgram < uiMemoryAddress + uiMemorySize))
-	{
-		mauiLineAddresses.Kill();
-		mauiLineAddresses.Init();
-		aszLines.Kill();
-		aszLines.Init();
-		Disassemble(pcDebugger, puiMemory, uiMemoryAddress, uiMemorySize, uiProgram, &mauiLineAddresses, &aszLines);
-	}
-
-	sz.Init();
-	for (i = 0; i < aszLines.NumElements(); i++)
-	{
-		uiAddress = *mauiLineAddresses.Get(i);
-		sColour = msColour;
-		if (pcDebugger->FindBreakpoint(uiAddress) != NULL)
-		{
-			sColour = IDE_DEBUG_BREAKPOINT_COLOUR;
-		}
-		if ((uiAddress == uiProgram) && pcDebugger->IsStopped())
-		{
-			sColour = IDE_DEBUG_PROGRAM_COLOUR;
-		}
-		sz.Set(aszLines.GetText(i));
-		if (i + 1 < aszLines.NumElements())
-		{
-			sz.AppendNewLine();
-		}
-		mpDisassembly->AppendText(sz.Text(), sColour);
-	}
-	sz.Kill();
-	aszLines.Kill();
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// The instructions from uiStart to the end of the memory: a W65C816's
-// with the widths at the stop, anything else's as words.  Each line is
-// "=> * $00:8002  E8           inx".
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDEDebugView::Disassemble(CIDEDebugger* pcDebugger, uint8* puiMemory, uint32 uiMemoryAddress, size uiMemorySize, uint32 uiStart, CArrayIDEAddresses* pauiAddresses, CArrayChars* paszLines)
-{
-	CDebugClient*	pcClient;
-	SAsm65816Widths	sWidths;
-	size			uiOffset;
-	size			uiLength;
-	size			uiP;
-	size			uiE;
-	uint32			uiAddress;
-	uint32			uiProgram;
-	CChars*			psz;
-	CChars			szInstruction;
-	char			szByte[8];
-	size			i;
-	bool			b65C816;
-	uint64			uiPValue;
-
 	pcClient = pcDebugger->GetClient();
-	if (pcClient == NULL)
+	if ((pcClient == NULL) || (pcDebugger->GetState() == IDS_Connecting))
 	{
 		return;
 	}
-	b65C816 = strcmp(pcClient->GetProcessorName(), IDE_DEBUG_W65C816) == 0;
-	uiP = FindRegister(pcClient, "P");
-	uiE = FindRegister(pcClient, "E");
-	uiPValue = (uiP != MAX_SIZE) ? pcClient->GetRegisterValue(uiP) : 0x30;
-	sWidths.bMemory8 = (uiPValue & 0x20) != 0;
-	sWidths.bIndex8 = (uiPValue & 0x10) != 0;
-	if ((uiE != MAX_SIZE) && (pcClient->GetRegisterValue(uiE) != 0))
+	if (!pcClient->CanDecode())
 	{
-		sWidths.bMemory8 = true;
-		sWidths.bIndex8 = true;
+		mpDisassembly->SetText("The emulator can't disassemble its processor's instructions.");
+		return;
 	}
+
 	uiProgram = pcDebugger->GetProgramAddress();
-
-	uiOffset = uiStart - uiMemoryAddress;
-	while (uiOffset < uiMemorySize)
+	sz.Init();
+	for (i = 0; i < pcClient->NumInstructions(); i++)
 	{
-		uiAddress = uiMemoryAddress + (uint32)uiOffset;
-		szInstruction.Init();
-		if (b65C816)
-		{
-			uiLength = Asm65816Disassemble(uiAddress, &puiMemory[uiOffset], uiMemorySize - uiOffset, &sWidths, &szInstruction);
-		}
-		else
-		{
-			uiLength = (uiMemorySize - uiOffset >= 2) ? 2 : 0;
-			if (uiLength != 0)
-			{
-				sprintf(szByte, "$%02X%02X", puiMemory[uiOffset + 1], puiMemory[uiOffset]);
-				szInstruction.Append(".word ");
-				szInstruction.Append(szByte);
-			}
-		}
-		if (uiLength == 0)
-		{
-			szInstruction.Kill();
-			break;
-		}
+		psInstruction = pcClient->GetInstruction(i);
+		mauiLineAddresses.Add(&psInstruction->uiAddress);
+		bAtProgram = (psInstruction->uiAddress == uiProgram) && pcDebugger->IsStopped();
+		bBreakpoint = pcDebugger->FindBreakpoint(psInstruction->uiAddress) != NULL;
 
-		pauiAddresses->Add(&uiAddress);
-		psz = paszLines->Add();
-		psz->Append(((uiAddress == uiProgram) && pcDebugger->IsStopped()) ? "=> " : "   ");
-		psz->Append((pcDebugger->FindBreakpoint(uiAddress) != NULL) ? "* " : "  ");
-		AppendIDEDebugAddress(psz, uiAddress);
-		psz->Append("  ");
-		for (i = 0; i < 4; i++)
+		sz.Set(bAtProgram ? "=> " : "   ");
+		sz.Append(bBreakpoint ? "* " : "  ");
+		pcClient->AppendAddress(&sz, psInstruction->uiAddress);
+		sz.Append("  ");
+		for (j = 0; j < IDE_DEBUG_BYTES_SHOWN; j++)
 		{
-			if (i < uiLength)
+			if (j < psInstruction->uiLength)
 			{
-				sprintf(szByte, "%02X ", puiMemory[uiOffset + i]);
-				psz->Append(szByte);
+				sprintf(szByte, "%02X ", psInstruction->auiBytes[j]);
+				sz.Append(szByte);
 			}
 			else
 			{
-				psz->Append("   ");
+				sz.Append("   ");
 			}
 		}
-		psz->Append(' ');
-		psz->Append(szInstruction.Text());
-		szInstruction.Kill();
-		uiOffset += uiLength;
-	}
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// The register named szName, MAX_SIZE if there is none.
-//
-//////////////////////////////////////////////////////////////////////////
-size CIDEDebugView::FindRegister(CDebugClient* pcClient, const char* szName)
-{
-	size	i;
-
-	for (i = 0; i < pcClient->NumRegisters(); i++)
-	{
-		if (strcmp(pcClient->GetRegister(i)->szName, szName) == 0)
+		sz.Append((psInstruction->uiLength > IDE_DEBUG_BYTES_SHOWN) ? "+ " : "  ");
+		sz.Append(psInstruction->szText);
+		if (i + 1 < pcClient->NumInstructions())
 		{
-			return i;
+			sz.AppendNewLine();
 		}
+
+		sColour = bAtProgram ? IDE_DEBUG_PROGRAM_COLOUR : (bBreakpoint ? IDE_DEBUG_BREAKPOINT_COLOUR : msColour);
+		mpDisassembly->AppendText(sz.Text(), sColour);
 	}
-	return MAX_SIZE;
+	sz.Kill();
 }
 
 
