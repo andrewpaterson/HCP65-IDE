@@ -506,6 +506,42 @@ int32 CSolutionExplorer::FindFileNode(const char* szFileName)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// The project of the file at szPath (any path to it), the first if more
+// than one has it.  SOLUTION_EXPLORER_NO_PROJECT if none has.
+//
+//////////////////////////////////////////////////////////////////////////
+size CSolutionExplorer::FindFileProject(const char* szPath)
+{
+	int32	iNode;
+	CChars	szWanted;
+	CChars	szNodePath;
+	size	uiProject;
+
+	szWanted.Init(szPath);
+	MakeFullGitPath(&szWanted);
+	uiProject = SOLUTION_EXPLORER_NO_PROJECT;
+	szNodePath.Init();
+	for (iNode = 0; iNode < mpTree->NumNodes(); iNode++)
+	{
+		szNodePath.Clear();
+		if ((GetNode(iNode)->eType == SENT_File) && GetNodeFilePath(iNode, &szNodePath))
+		{
+			MakeFullGitPath(&szNodePath);
+			if (IsGitPathIn(szNodePath.Text(), szWanted.Text()) && (szNodePath.Length() == szWanted.Length()))
+			{
+				uiProject = GetNodeProject(iNode);
+				break;
+			}
+		}
+	}
+	szNodePath.Kill();
+	szWanted.Kill();
+	return uiProject;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 //
 //////////////////////////////////////////////////////////////////////////
 bool CSolutionExplorer::GetSelectedFilePath(CChars* pszDest)

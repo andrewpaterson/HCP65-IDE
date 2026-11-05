@@ -102,6 +102,7 @@ public:
 	size					GetNodeProject(int32 iNode);
 	bool					GetNodeFileName(int32 iNode, CChars* pszDest);
 	int32					FindFileNode(const char* szFileName);
+	size					FindFileProject(const char* szPath);
 	void					ColourFiles(CGitRepositories* pcGit, Ptr<CFontColours> pColours);
 
 protected:

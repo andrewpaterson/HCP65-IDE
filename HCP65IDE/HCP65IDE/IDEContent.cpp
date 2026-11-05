@@ -180,6 +180,7 @@ void CIDEContent::Init(void)
 	muiListingToShow = MAX_SIZE;
 	masReferences.Init();
 	maTabs.Init();
+	maDiffTabs.Init();
 	maFileIcons.Init();
 	mcDebugger.Init();
 	maszDebugScript.Init();
@@ -217,6 +218,9 @@ void CIDEContent::Class(void)
 	M_Pointer(mpSaveItem);
 	M_Pointer(mpSaveAllItem);
 	M_Pointer(mpCompareItem);
+	M_Pointer(mpCompareBranchItem);
+	M_Pointer(mpCompareRevisionItem);
+	M_Pointer(mpCompareFileItem);
 	M_Pointer(mpFileChooser);
 	M_Pointer(mpFolderIcon);
 	M_Pointer(mpFileIcon);
@@ -224,6 +228,8 @@ void CIDEContent::Class(void)
 	M_Pointer(mpEditors);
 	M_Embedded(maTabs);
 	M_Pointer(mpActive);
+	M_Embedded(maDiffTabs);
+	M_Pointer(mpActiveDiff);
 	M_Embedded(maFileIcons);
 	M_Pointer(mpExplorer);
 	M_Pointer(mpConfigurations);
@@ -482,8 +488,8 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// File, with Open Project/Solution, Save and Save All; Git, with Compare
-// with HEAD; and Debug.
+// File, with Open Project/Solution, Save, Save All and Compare with File;
+// Git, with Compare with HEAD, a branch or a revision; and Debug.
 //
 //////////////////////////////////////////////////////////////////////////
 Ptr<CMenuBar> CIDEContent::CreateMenuBar(void)
@@ -495,10 +501,13 @@ Ptr<CMenuBar> CIDEContent::CreateMenuBar(void)
 	mpOpenItem = pFile->AddItem("Open Project/Solution...", mpFolderIcon);
 	mpSaveItem = pFile->AddItem("Save");
 	mpSaveAllItem = pFile->AddItem("Save All");
+	mpCompareFileItem = pFile->AddItem("Compare with File...");
 
 	mpMenuBar = OMalloc<CMenuBar>(mpWindow, mpTheme);
 	pGit = OMalloc<CMenuContainer>(mpWindow, mpTheme);
 	mpCompareItem = pGit->AddItem("Compare with HEAD");
+	mpCompareBranchItem = pGit->AddItem("Compare with Branch...");
+	mpCompareRevisionItem = pGit->AddItem("Compare with Revision...");
 
 	mpMenuBar->AddMenu("File", pFile);
 	mpMenuBar->AddMenu("Git", pGit);
@@ -530,6 +539,18 @@ void CIDEContent::MenuItemClicked(CMenuItem* pcItem)
 	else if (pcItem == &mpCompareItem)
 	{
 		CompareWithHead();
+	}
+	else if (pcItem == &mpCompareBranchItem)
+	{
+		ShowCompareWithBranchDialog();
+	}
+	else if (pcItem == &mpCompareRevisionItem)
+	{
+		ShowCompareWithRevisionDialog();
+	}
+	else if (pcItem == &mpCompareFileItem)
+	{
+		ShowCompareWithFileDialog();
 	}
 	else
 	{
@@ -737,6 +758,13 @@ void CIDEContent::CloseAllFiles(void)
 	{
 		//Closing the tab lets its file go (TabRemoved).
 		if (!mpEditors->RemoveTab(maTabs.Get(maTabs.Size() - 1)->GetTab()))
+		{
+			break;
+		}
+	}
+	while (maDiffTabs.Size() > 0)
+	{
+		if (!mpEditors->RemoveTab(maDiffTabs.Get(maDiffTabs.Size() - 1)->GetTab()))
 		{
 			break;
 		}
@@ -1486,6 +1514,11 @@ void CIDEContent::Tick(Ptr<CWindow> pWindow)
 	//The platform's clock: the window's total time only counts the time it spent updating.
 	iNow = GetDebugTickCount();
 	iSoonest = PollGit(iNow);
+	iWait = PollDiffs(iNow);
+	if ((iWait >= 0) && ((iSoonest < 0) || (iWait < iSoonest)))
+	{
+		iSoonest = iWait;
+	}
 	for (i = 0; i < maTabs.Size(); i++)
 	{
 		pTab = maTabs.Get(i);
@@ -1518,6 +1551,7 @@ void CIDEContent::Tick(Ptr<CWindow> pWindow)
 void CIDEContent::TabSelected(CTabComponent* pcTab)
 {
 	mpActive = FindTab(pcTab);
+	mpActiveDiff = FindDiffTab(pcTab);
 	ShowBranch();
 }
 
@@ -1531,12 +1565,25 @@ void CIDEContent::TabSelected(CTabComponent* pcTab)
 void CIDEContent::TabRemoved(CTabComponent* pcTab)
 {
 	Ptr<CIDEEditorTab>	pTab;
+	Ptr<CIDEDiffTab>	pDiff;
+
+	pDiff = FindDiffTab(pcTab);
+	if (pDiff.IsNotNull())
+	{
+		if (mpActiveDiff == pDiff)
+		{
+			mpActiveDiff = NULL;
+		}
+		maDiffTabs.Remove(pDiff);
+		return;
+	}
 
 	pTab = FindTab(pcTab);
 	if (pTab.IsNull())
 	{
 		return;
 	}
+
 	if (mpActive == pTab)
 	{
 		mpActive = NULL;

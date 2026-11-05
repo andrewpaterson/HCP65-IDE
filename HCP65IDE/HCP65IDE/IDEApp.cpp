@@ -19,6 +19,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 ** ------------------------------------------------------------------------ **/
 #include <stdlib.h>
+#include <string.h>
 #include "StandardLib/Objects.h"
 #include "WindowLib/ClearCanvasDraw.h"
 #include "WindowLib/JewelColours.h"
@@ -68,7 +69,7 @@ void CIDEApp::Init(void)
 // described by the XML in szInputDirectory; pcNativeInput (the platform's
 // keyboard and mouse) is added to them.  Run fails if anything here did.
 // HCP65_IDE_SNAPSHOT, HCP65_IDE_CONFIGURATION, HCP65_IDE_EXPAND,
-// HCP65_IDE_OPEN, HCP65_IDE_CLOSE, HCP65_IDE_SCROLL, HCP65_IDE_SAVE, HCP65_IDE_COMPARE,
+// HCP65_IDE_OPEN, HCP65_IDE_CLOSE, HCP65_IDE_SCROLL, HCP65_IDE_SAVE, HCP65_IDE_COMPARE, HCP65_IDE_TYPE_AFTER,
 // HCP65_IDE_WAIT_INDEX, HCP65_IDE_CARET=line:column (1 based), HCP65_IDE_TYPE,
 // HCP65_IDE_REFERENCES, HCP65_IDE_DEFINITION, HCP65_IDE_REOPEN,
 // HCP65_IDE_DEBUG (CIDEContent::SetDebugScript's commands) and
@@ -91,6 +92,8 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 	int					iLine;
 	int					iColumn;
 	const char*			szTyped;
+	const char*			szCompare;
+	Ptr<CIDEDiffTab>	pDiff;
 	CArrayChars			aszOpen;
 	CChars				szPath;
 	size				i;
@@ -179,8 +182,35 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 			}
 			if (getenv("HCP65_IDE_COMPARE") != NULL)
 			{
-				//As Git, Compare with HEAD: the selected file's changes in a tab of their own.
-				mpContent->CompareWithHead();
+				//As Git, Compare with HEAD (or "revision:<revision>", or "file:<path>" as File, Compare with File): the
+				//selected file's changes in a tab of their own.
+				szCompare = getenv("HCP65_IDE_COMPARE");
+				if (strncmp(szCompare, "revision:", 9) == 0)
+				{
+					mpContent->CompareWithRevision(&szCompare[9]);
+				}
+				else if (strncmp(szCompare, "file:", 5) == 0)
+				{
+					mpContent->CompareWithFile(&szCompare[5]);
+				}
+				else
+				{
+					mpContent->CompareWithHead();
+				}
+
+				//HCP65_IDE_TYPE_AFTER's text typed into the compared file's editor, then the diff selected again: the
+				//diff follows the edit.
+				pDiff = mpContent->GetActiveDiff();
+				if ((getenv("HCP65_IDE_TYPE_AFTER") != NULL) && pDiff.IsNotNull())
+				{
+					mpContent->OpenFile(pDiff->GetSide(TDS_Right)->mszFile.Text());
+					mpWindow->GetFocus()->SetFocus(mpContent->GetEditor());
+					for (szTyped = getenv("HCP65_IDE_TYPE_AFTER"); *szTyped != '\0'; szTyped++)
+					{
+						mpWindow->InputPrintable(*szTyped, true);
+					}
+					mpContent->GetEditors()->Select(pDiff->GetTab());
+				}
 			}
 			if (getenv("HCP65_IDE_REFERENCES") != NULL)
 			{

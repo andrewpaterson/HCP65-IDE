@@ -241,6 +241,8 @@
     <ClCompile Include="IDEContent.cpp" />
     <ClCompile Include="IDEContentDebug.cpp" />
     <ClCompile Include="IDEContentGit.cpp" />
+    <ClCompile Include="IDEContentDiff.cpp" />
+    <ClCompile Include="IDEDiffTab.cpp" />
     <ClCompile Include="IDEGit.cpp" />
     <ClCompile Include="IDEDebugger.cpp" />
     <ClCompile Include="IDEDebugView.cpp" />
@@ -262,6 +264,7 @@
     <ClInclude Include="IDEBuildPane.h" />
     <ClInclude Include="IDEIcons.h" />
     <ClInclude Include="IDEGit.h" />
+    <ClInclude Include="IDEDiffTab.h" />
     <ClInclude Include="IDEApp.h" />
     <ClInclude Include="IDEWindowTick.h" />
     <ClInclude Include="SolutionExplorer.h" />

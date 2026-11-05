@@ -42,6 +42,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "GitLib/GitLineChanges.h"
 #include "IDECodeModel.h"
 #include "IDEEditorTab.h"
+#include "IDEDiffTab.h"
 #include "IDEBuildPane.h"
 #include "IDEDebugger.h"
 #include "IDEDebugView.h"
@@ -56,8 +57,9 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 //Files are shown in the colours of their git status, as IntelliJ IDEA shows them, in Solution Explorer and on their
 //tabs, and the lines changed since the last commit are marked in the editor's gutter.  The statuses of the solution's
 //repositories are read when it is opened, when a file is saved (Control+S, or Control+Shift+S for all) and every few
-//seconds after; the toolbar shows the branch.  Git, Compare with HEAD shows the selected file's changes since the last
-//commit side by side in a tab of its own, as IntelliJ IDEA's diff viewer does.
+//seconds after; the toolbar shows the branch.  Git, Compare with HEAD (or a branch, or any revision) shows the selected
+//file's changes side by side in a tab of its own, as IntelliJ IDEA's diff viewer does, as does File, Compare with File
+//against another file.  A diff follows its files: edits in their editors, and new commits.
 //
 //The Debug menu (and Visual Studio's keys) debug the HCP65 emulator at the instruction level, see CIDEDebugger: the
 //Debug tab under the editor shows its disassembly and registers.
@@ -78,6 +80,9 @@ protected:
 	Ptr<CMenuItem>				mpSaveItem;			//File, Save.
 	Ptr<CMenuItem>				mpSaveAllItem;		//File, Save All.
 	Ptr<CMenuItem>				mpCompareItem;		//Git, Compare with HEAD.
+	Ptr<CMenuItem>				mpCompareBranchItem;	//Git, Compare with Branch.
+	Ptr<CMenuItem>				mpCompareRevisionItem;	//Git, Compare with Revision.
+	Ptr<CMenuItem>				mpCompareFileItem;	//File, Compare with File.
 	Ptr<CFileChooser>			mpFileChooser;		//While it's shown.
 	Ptr<CImageCel>				mpFolderIcon;		//The file chooser's.
 	Ptr<CImageCel>				mpFileIcon;
@@ -85,6 +90,8 @@ protected:
 	Ptr<CTabbedContainer>		mpEditors;			//A tab for each open file.
 	CArray<CIDEEditorTab>		maTabs;
 	Ptr<CIDEEditorTab>			mpActive;			//The selected tab's file, NULL if none is open.
+	CArray<CIDEDiffTab>			maDiffTabs;			//A tab for each diff shown.
+	Ptr<CIDEDiffTab>			mpActiveDiff;		//The selected tab's diff, NULL if it isn't one.
 	CArray<CImageCel>			maFileIcons;		//By EIDEFileType.
 	Ptr<CSolutionExplorer>		mpExplorer;
 	Ptr<CComboBox>				mpConfigurations;	//The build configuration's configuration; the code is parsed as its solution configuration.
@@ -204,6 +211,13 @@ public:
 
 	CGitRepositories*	GetGit(void);
 	bool				CompareWithHead(void);
+	bool				CompareWithRevision(const char* szRevision);
+	bool				CompareWithFile(const char* szPath);
+	bool				ShowCompareWithBranchDialog(void);
+	bool				ShowCompareWithRevisionDialog(void);
+	bool				ShowCompareWithFileDialog(void);
+	bool				OpenDiff(const char* szLeftFile, const char* szLeftRevision, const char* szRightFile, const char* szRightRevision);
+	Ptr<CIDEDiffTab>	GetActiveDiff(void);
 	Ptr<CLabel>			GetBranchLabel(void);
 	void				ReadGitStatus(void);
 
@@ -237,6 +251,13 @@ protected:
 	void				ReadGitBase(Ptr<CIDEEditorTab> pTab);
 	void				GitFileSaved(const char* szFileName);
 	void				HighlightDiffSide(Ptr<CDiffView> pView, ETextDiffSide eSide, size uiProject, const char* szFileName, const char* szText);
+	Ptr<CIDEEditorTab>	GetComparedTab(void);
+	bool				ReadDiffSide(CIDEDiffSide* pcSide, CChars* pszDest);
+	void				MakeDiffTitle(CIDEDiffSide* pcSide, CIDEDiffSide* pcOther, CChars* pszDest);
+	void				RefreshDiff(Ptr<CIDEDiffTab> pDiff);
+	int64				PollDiffs(int64 iNow);
+	void				RefreshMovedDiffs(void);
+	Ptr<CIDEDiffTab>	FindDiffTab(CUnknown* pcTab);
 	void				UpdateChangeBars(Ptr<CIDEEditorTab> pTab);
 };
 
