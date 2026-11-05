@@ -48,6 +48,7 @@ public:
 	CGitRepository*	GetRepository(size uiIndex);
 
 	void			StartStatus(void);
+	bool			RefreshStatus(const char* szFileName);
 	bool			PollStatus(void);
 	bool			IsReadingStatus(void);
 	size			GetStatusVersion(void);

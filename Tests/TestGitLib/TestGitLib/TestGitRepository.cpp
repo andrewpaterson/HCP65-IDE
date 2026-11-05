@@ -235,6 +235,28 @@ void TestGitRepositoryStatus(void)
 	AssertSize(2, cRepository.GetStatusVersion());
 	AssertInt(GFS_Modified, cRepository.GetFileState(TestGitPath(&szPath, szRoot.Text(), "Main.cpp")));
 
+	//A file changed while the status is read: it is read again after.
+	AssertTrue(cRepository.StartStatus());
+	WriteTestGitFile(szRoot.Text(), "Sub/Util.h", "y\n");
+	cRepository.RefreshStatus();
+	while (cRepository.PollStatus())
+	{
+		ThreadSleep(2);
+	}
+	AssertSize(4, cRepository.GetStatusVersion());
+	AssertInt(GFS_Modified, cRepository.GetFileState(TestGitPath(&szPath, szRoot.Text(), "Sub/Util.h")));
+
+	//Not being read, it is read at once.
+	WriteTestGitFile(szRoot.Text(), "Sub/Util.h", "x\n");
+	cRepository.RefreshStatus();
+	AssertTrue(cRepository.IsReadingStatus());
+	while (cRepository.PollStatus())
+	{
+		ThreadSleep(2);
+	}
+	AssertSize(5, cRepository.GetStatusVersion());
+	AssertInt(GFS_Unmodified, cRepository.GetFileState(TestGitPath(&szPath, szRoot.Text(), "Sub/Util.h")));
+
 	cRepository.Kill();
 	szText.Kill();
 	szPath.Kill();
@@ -294,6 +316,16 @@ void TestGitRepositories(void)
 	AssertTrue(cRepositories.GetStatusVersion() != uiVersion);
 	AssertInt(GFS_Modified, cRepositories.GetFileState(TestGitPath(&szPath, szRoot.Text(), "Main.cpp")));
 	AssertInt(GFS_Unmodified, cRepositories.GetFileState("/no-such-folder-for-git/Main.cpp"));
+
+	//Saving a file reads its repository's status again.
+	WriteTestGitFile(szRoot.Text(), "Main.cpp", "a\n");
+	AssertTrue(cRepositories.RefreshStatus(TestGitPath(&szPath, szRoot.Text(), "Main.cpp")));
+	AssertFalse(cRepositories.RefreshStatus("/no-such-folder-for-git/Main.cpp"));
+	while (cRepositories.PollStatus())
+	{
+		ThreadSleep(2);
+	}
+	AssertInt(GFS_Unmodified, cRepositories.GetFileState(TestGitPath(&szPath, szRoot.Text(), "Main.cpp")));
 
 	cRepositories.RemoveAll();
 	AssertSize(0, cRepositories.NumRepositories());

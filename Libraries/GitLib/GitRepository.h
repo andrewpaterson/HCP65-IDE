@@ -34,6 +34,7 @@ protected:
 	CChars		mszRoot;			//The top folder, full, without a separator at the end.
 	CGitCommand	mcStatusCommand;	//Reading the status, while IsReadingStatus.
 	bool		mbReadingStatus;
+	bool		mbStatusAgain;		//Read it again when it has been: the files changed while it was read.
 	CGitStatus	mcStatus;
 	size		muiStatusVersion;	//Counts the statuses read, 0 before the first.
 
@@ -47,6 +48,7 @@ public:
 	bool			StartStatus(void);
 	bool			PollStatus(void);
 	bool			ReadStatus(void);
+	void			RefreshStatus(void);
 	bool			IsReadingStatus(void);
 	CGitStatus*		GetStatus(void);
 	size			GetStatusVersion(void);

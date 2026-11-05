@@ -35,6 +35,7 @@ void CGitRepository::Init(const char* szRoot)
 	MakeFullGitPath(&mszRoot);
 	mcStatusCommand.Init();
 	mbReadingStatus = false;
+	mbStatusAgain = false;
 	mcStatus.Init();
 	muiStatusVersion = 0;
 }
@@ -106,7 +107,7 @@ bool CGitRepository::StartStatus(void)
 //
 // True while the status is being read.  When it has been, it replaces the
 // last one and the status version goes up; if git failed the last status
-// is kept.
+// is kept.  A refresh asked for while it was read starts it again.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CGitRepository::PollStatus(void)
@@ -120,7 +121,32 @@ bool CGitRepository::PollStatus(void)
 		return true;
 	}
 	FinishStatus();
+	if (mbStatusAgain)
+	{
+		mbStatusAgain = false;
+		return StartStatus();
+	}
 	return false;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The files have changed (one was saved): the status is read again.  If
+// it is being read already it is read again after, as what is being read
+// may be from before the change.
+//
+//////////////////////////////////////////////////////////////////////////
+void CGitRepository::RefreshStatus(void)
+{
+	if (mbReadingStatus)
+	{
+		mbStatusAgain = true;
+	}
+	else
+	{
+		StartStatus();
+	}
 }
 
 

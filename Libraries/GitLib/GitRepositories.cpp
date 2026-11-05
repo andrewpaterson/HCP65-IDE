@@ -159,6 +159,27 @@ void CGitRepositories::StartStatus(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// The file szFileName changed (it was saved): its repository's status is
+// read again (see CGitRepository::RefreshStatus).  False if it isn't in a
+// repository.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CGitRepositories::RefreshStatus(const char* szFileName)
+{
+	CGitRepository*	pcRepository;
+
+	pcRepository = FindRepository(szFileName);
+	if (pcRepository == NULL)
+	{
+		return false;
+	}
+	pcRepository->RefreshStatus();
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Polls each status being read.  True while any is.
 //
 //////////////////////////////////////////////////////////////////////////
