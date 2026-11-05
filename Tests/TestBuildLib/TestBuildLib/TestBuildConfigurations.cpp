@@ -1,3 +1,4 @@
+#include <string.h>
 #include "BaseLib/FileUtil.h"
 #include "BaseLib/TextFile.h"
 #include "BuildLib/BuildConfigurations.h"
@@ -123,6 +124,86 @@ void TestBuildConfigurationsFile(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// An HCP65 configuration's image is written inside it and read back the
+// same, numbers in hexadecimal or decimal; one that isn't right, or on a
+// toolchain that isn't HCP65's, isn't read.
+//
+//////////////////////////////////////////////////////////////////////////
+void TestBuildConfigurationsImage(void)
+{
+	CBuildConfigurations	cConfigurations;
+	CBuildConfigurations	cRead;
+	CBuildConfiguration*	pcConfiguration;
+	CAsm65Image*			pcImage;
+	CTextFile				cFile;
+	CFileUtil				cFileUtil;
+
+	cFileUtil.MakeDir("Output");
+	cConfigurations.Init();
+	cConfigurations.Add("Debug|W65C816", BT_W65C816, "Debug|Win32");
+	AssertFalse(cConfigurations.GetConfiguration(0)->HasImage());
+	AssertTrue(cConfigurations.Write("Output" _FS_ "NoImage.hcp65build"));
+	cRead.Init();
+	AssertTrue(cRead.Read("Output" _FS_ "NoImage.hcp65build"));
+	AssertFalse(cRead.GetConfiguration(0)->HasImage());
+
+	cFile.Init("<BuildConfigurations>\n\t<Configuration Name=\"Release|W65C816\" Toolchain=\"W65C816\" Solution=\"Release|Win32\">\n\t\t<Image File=\"Kernal.rom\" Size=\"0x80000\" Limit=\"523264\">\n\t\t\t<Region Start=\"0x0\" End=\"0x40000\" Offset=\"0x0\"/>\n\t\t\t<Region Start=\"0x400000\" End=\"0x440000\" Offset=\"0x40000\"/>\n\t\t</Image>\n\t</Configuration>\n</BuildConfigurations>\n");
+	AssertTrue(cFile.Write("Output" _FS_ "Image.hcp65build"));
+	cFile.Kill();
+	AssertTrue(cRead.Read("Output" _FS_ "Image.hcp65build"));
+	pcConfiguration = cRead.GetConfiguration(0);
+	AssertTrue(pcConfiguration->HasImage());
+	pcImage = pcConfiguration->GetImage();
+	AssertString("Kernal.rom", pcImage->GetFile());
+	AssertIntHex(0x80000, pcImage->GetSize());
+	AssertIntHex(0xFF, pcImage->GetFill());
+	AssertIntHex(0x7FC00, pcImage->GetLimit());
+	AssertIntHex(0, pcImage->GetLoad());
+	AssertSize(2, pcImage->NumRegions());
+	AssertIntHex(0x400000, pcImage->GetRegion(1)->uiStart);
+	AssertIntHex(0x440000, pcImage->GetRegion(1)->uiEnd);
+	AssertIntHex(0x40000, pcImage->GetRegion(1)->uiOffset);
+
+	//Written back, in hexadecimal, and read the same.
+	AssertTrue(cRead.Write("Output" _FS_ "ImageAgain.hcp65build"));
+	cFile.Init();
+	AssertTrue(cFile.Read("Output" _FS_ "ImageAgain.hcp65build"));
+	AssertTrue(strstr(cFile.Text(), "<Image File=\"Kernal.rom\" Size=\"0x80000\" Fill=\"0xFF\" Limit=\"0x7FC00\" Load=\"0x0\">") != NULL);
+	AssertTrue(strstr(cFile.Text(), "<Region Start=\"0x400000\" End=\"0x440000\" Offset=\"0x40000\"/>") != NULL);
+	cFile.Kill();
+	cConfigurations.Kill();
+	cConfigurations.Init();
+	AssertTrue(cConfigurations.Read("Output" _FS_ "ImageAgain.hcp65build"));
+	pcImage = cConfigurations.GetConfiguration(0)->GetImage();
+	AssertTrue(cConfigurations.GetConfiguration(0)->HasImage());
+	AssertIntHex(0x7FC00, pcImage->GetLimit());
+	AssertSize(2, pcImage->NumRegions());
+
+	//No regions; a region past the image's end; not a number; MSVC.
+	cFile.Init("<BuildConfigurations>\n\t<Configuration Name=\"Debug|W65C816\" Toolchain=\"W65C816\" Solution=\"Debug|Win32\">\n\t\t<Image File=\"A.rom\" Size=\"0x100\"/>\n\t</Configuration>\n</BuildConfigurations>\n");
+	AssertTrue(cFile.Write("Output" _FS_ "BadImage.hcp65build"));
+	cFile.Kill();
+	AssertFalse(cRead.Read("Output" _FS_ "BadImage.hcp65build"));
+	cFile.Init("<BuildConfigurations>\n\t<Configuration Name=\"Debug|W65C816\" Toolchain=\"W65C816\" Solution=\"Debug|Win32\">\n\t\t<Image File=\"A.rom\" Size=\"0x100\">\n\t\t\t<Region Start=\"0x0\" End=\"0x100\" Offset=\"0x10\"/>\n\t\t</Image>\n\t</Configuration>\n</BuildConfigurations>\n");
+	AssertTrue(cFile.Write("Output" _FS_ "BadImage.hcp65build"));
+	cFile.Kill();
+	AssertFalse(cRead.Read("Output" _FS_ "BadImage.hcp65build"));
+	cFile.Init("<BuildConfigurations>\n\t<Configuration Name=\"Debug|W65C816\" Toolchain=\"W65C816\" Solution=\"Debug|Win32\">\n\t\t<Image File=\"A.rom\" Size=\"big\">\n\t\t\t<Region Start=\"0x0\" End=\"0x100\" Offset=\"0x0\"/>\n\t\t</Image>\n\t</Configuration>\n</BuildConfigurations>\n");
+	AssertTrue(cFile.Write("Output" _FS_ "BadImage.hcp65build"));
+	cFile.Kill();
+	AssertFalse(cRead.Read("Output" _FS_ "BadImage.hcp65build"));
+	cFile.Init("<BuildConfigurations>\n\t<Configuration Name=\"Debug|Win32\" Toolchain=\"MSVC\" Solution=\"Debug|Win32\">\n\t\t<Image File=\"A.rom\" Size=\"0x100\">\n\t\t\t<Region Start=\"0x0\" End=\"0x100\" Offset=\"0x0\"/>\n\t\t</Image>\n\t</Configuration>\n</BuildConfigurations>\n");
+	AssertTrue(cFile.Write("Output" _FS_ "BadImage.hcp65build"));
+	cFile.Kill();
+	AssertFalse(cRead.Read("Output" _FS_ "BadImage.hcp65build"));
+
+	cRead.Kill();
+	cConfigurations.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // A configuration is chosen by its name's configuration and platform,
 // either side of its |; a name without one is all configuration, and its
 // platform is its toolchain.
@@ -192,6 +273,7 @@ void TestBuildConfigurations(void)
 
 	TestBuildConfigurationsDefaults();
 	TestBuildConfigurationsFile();
+	TestBuildConfigurationsImage();
 	TestBuildConfigurationsPlatforms();
 
 	TestStatistics();

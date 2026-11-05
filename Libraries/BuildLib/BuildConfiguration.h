@@ -23,6 +23,7 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/Chars.h"
 #include "BaseLib/XMLWriter.h"
 #include "BaseLib/MarkupTag.h"
+#include "Assembler65Lib/Asm65Image.h"
 
 
 //What a configuration is built with: the HCP65 compiler for one of its processors, or a compiler for this computer.
@@ -45,6 +46,9 @@ enum EBuildToolchain
 //arguments to give it after the debugging ones (split at spaces).  Paths may be relative to the configurations'
 //file.  Without one whatever debugs it chooses.  The emulator must be the configuration's processor
 //(GetProcessorName).
+//
+//An HCP65 configuration with an image (<Image>, CAsm65Image) links what it builds into that file, in the build's
+//Output folder; one without only compiles.
 class CBuildConfiguration
 {
 protected:
@@ -54,6 +58,8 @@ protected:
 	CChars			mszEmulator;
 	CChars			mszEmulatorDirectory;
 	CChars			mszEmulatorArguments;
+	bool			mbImage;
+	CAsm65Image		mcImage;
 
 public:
 	void			Init(const char* szName, EBuildToolchain eToolchain, const char* szSolutionConfiguration);
@@ -74,6 +80,9 @@ public:
 	char*			GetEmulator(void);
 	char*			GetEmulatorDirectory(void);
 	char*			GetEmulatorArguments(void);
+
+	bool			HasImage(void);
+	CAsm65Image*	GetImage(void);
 	void			GetConfigurationName(CChars* pszDest);
 	void			GetPlatformName(CChars* pszDest);
 	bool			Is(const char* szConfiguration, const char* szPlatform);

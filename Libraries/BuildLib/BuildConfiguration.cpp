@@ -30,6 +30,7 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 #define BUILD_CONFIGURATION_EMULATOR	"Emulator"
 #define BUILD_CONFIGURATION_EMULATOR_DIRECTORY	"EmulatorDirectory"
 #define BUILD_CONFIGURATION_EMULATOR_ARGUMENTS	"EmulatorArguments"
+#define BUILD_CONFIGURATION_IMAGE		"Image"
 
 
 //The toolchains' names, as saved, by EBuildToolchain.
@@ -48,6 +49,8 @@ void CBuildConfiguration::Init(const char* szName, EBuildToolchain eToolchain, c
 	mszEmulator.Init();
 	mszEmulatorDirectory.Init();
 	mszEmulatorArguments.Init();
+	mbImage = false;
+	mcImage.Init();
 }
 
 
@@ -68,6 +71,7 @@ void CBuildConfiguration::Init(void)
 //////////////////////////////////////////////////////////////////////////
 void CBuildConfiguration::Kill(void)
 {
+	mcImage.Kill();
 	mszEmulatorArguments.Kill();
 	mszEmulatorDirectory.Kill();
 	mszEmulator.Kill();
@@ -79,7 +83,7 @@ void CBuildConfiguration::Kill(void)
 //////////////////////////////////////////////////////////////////////////
 //
 // <Configuration Name="Debug|W65C816" Toolchain="W65C816" Solution="Debug|Win32"/>, with Emulator,
-// EmulatorDirectory and EmulatorArguments only where they are set.
+// EmulatorDirectory and EmulatorArguments only where they are set, and its <Image> inside it if it has one.
 //
 //////////////////////////////////////////////////////////////////////////
 void CBuildConfiguration::SaveXML(CXMLWriter* pcWriter)
@@ -100,6 +104,10 @@ void CBuildConfiguration::SaveXML(CXMLWriter* pcWriter)
 	{
 		pcWriter->Attribute(BUILD_CONFIGURATION_EMULATOR_ARGUMENTS, mszEmulatorArguments.Text());
 	}
+	if (mbImage)
+	{
+		mcImage.SaveXML(pcWriter);
+	}
 	pcWriter->End();
 }
 
@@ -107,7 +115,8 @@ void CBuildConfiguration::SaveXML(CXMLWriter* pcWriter)
 //////////////////////////////////////////////////////////////////////////
 //
 // False if pcTag isn't a configuration with a name, a toolchain there is
-// and a solution configuration.
+// and a solution configuration, or if its <Image> isn't one (an image
+// is only for an HCP65 toolchain).
 //
 //////////////////////////////////////////////////////////////////////////
 bool CBuildConfiguration::LoadXML(CMarkupTag* pcTag)
@@ -116,6 +125,7 @@ bool CBuildConfiguration::LoadXML(CMarkupTag* pcTag)
 	char*			szToolchain;
 	char*			szSolution;
 	EBuildToolchain	eToolchain;
+	CMarkupTag*		pcImage;
 
 	if (StringCompare(pcTag->GetName(), BUILD_CONFIGURATION_TAG) != 0)
 	{
@@ -133,6 +143,16 @@ bool CBuildConfiguration::LoadXML(CMarkupTag* pcTag)
 	meToolchain = eToolchain;
 	mszSolutionConfiguration.Set(szSolution);
 	SetEmulator(pcTag->GetAttribute((char*)BUILD_CONFIGURATION_EMULATOR), pcTag->GetAttribute((char*)BUILD_CONFIGURATION_EMULATOR_DIRECTORY), pcTag->GetAttribute((char*)BUILD_CONFIGURATION_EMULATOR_ARGUMENTS));
+
+	pcImage = pcTag->GetTag(BUILD_CONFIGURATION_IMAGE);
+	if (pcImage)
+	{
+		if (!IsHCP65() || !mcImage.LoadXML(pcImage))
+		{
+			return false;
+		}
+		mbImage = true;
+	}
 	return true;
 }
 
@@ -271,4 +291,25 @@ bool CBuildConfiguration::HasEmulator(void) { return !mszEmulator.Empty(); }
 char* CBuildConfiguration::GetEmulator(void) { return mszEmulator.Text(); }
 char* CBuildConfiguration::GetEmulatorDirectory(void) { return mszEmulatorDirectory.Text(); }
 char* CBuildConfiguration::GetEmulatorArguments(void) { return mszEmulatorArguments.Text(); }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether a build links what it compiles into an image (GetImage).
+//
+//////////////////////////////////////////////////////////////////////////
+bool CBuildConfiguration::HasImage(void)
+{
+	return mbImage;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+CAsm65Image* CBuildConfiguration::GetImage(void)
+{
+	return &mcImage;
+}
 
