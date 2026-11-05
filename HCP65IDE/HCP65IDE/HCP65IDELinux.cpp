@@ -52,7 +52,20 @@ int main(int argc, char* argv[])
 	ObjectsInit();
 	SocketsInit();  //The debugger's connection to the emulator.
 
-	bool bResult;
+	bool		bResult;
+	CArrayChars	aszSolutions;
+	int			i;
+
+	//One or more solutions, or a workspace, opened together.
+	aszSolutions.Init();
+	for (i = 1; i < argc; i++)
+	{
+		aszSolutions.Add(argv[i]);
+	}
+	if (aszSolutions.NumElements() == 0)
+	{
+		aszSolutions.Add(IDE_DEFAULT_PROJECT);
+	}
 
 	{
 		CX11WindowFactory		cNativeFactory;
@@ -72,7 +85,7 @@ int main(int argc, char* argv[])
 			//The app (its window, content and input) is held by the root while it runs.
 			pApp = OMalloc<CIDEApp>();
 			ORoot()->Add(pApp);
-			pApp->Setup(&cNativeFactory, &cX11Input, "../../../commonlibraries/Libraries/WinInputLib/xml", (argc > 1) ? argv[1] : IDE_DEFAULT_PROJECT);
+			pApp->Setup(&cNativeFactory, &cX11Input, "../../../commonlibraries/Libraries/WinInputLib/xml", &aszSolutions);
 			bResult = pApp->Run();
 			ORoot()->Remove(pApp);
 			pApp = NULL;
@@ -87,6 +100,7 @@ int main(int argc, char* argv[])
 		cNativeFactory.Kill();
 	}
 
+	aszSolutions.Kill();
 	ObjectsFlush();
 	SocketsKill();
 	ObjectsKill();

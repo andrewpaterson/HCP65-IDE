@@ -172,9 +172,9 @@ void CIDEContent::ShowBranch(void)
 	{
 		pcRepository = mcGit.FindRepository(mpActive->GetFileName());
 	}
-	if ((pcRepository == NULL) && !mszSolutionFile.Empty())
+	if ((pcRepository == NULL) && IsSolutionOpen())
 	{
-		pcRepository = mcGit.FindRepository(mszSolutionFile.Text());
+		pcRepository = mcGit.FindRepository(GetStartupFile());
 	}
 
 	szText.Init();

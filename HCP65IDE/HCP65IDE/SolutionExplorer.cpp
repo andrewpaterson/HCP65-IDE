@@ -47,7 +47,7 @@ void CSolutionExplorer::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme)
 
 	PreInit();
 
-	mpcSolution = NULL;
+	mpcWorkspace = NULL;
 	masNodes.Init();
 	pWindow->GetColourFormat(&cFormat);
 	mpFolderIcon = CJewelImageGenerator::CreateFolder(JEWEL_ICON, &cFormat);
@@ -77,7 +77,7 @@ void CSolutionExplorer::Class(void)
 	M_Pointer(mpFileIcon);
 	M_Pointer(mpProjectIcon);
 	M_Pointer(mpSolutionIcon);
-	U_Pointer(mpcSolution);
+	U_Pointer(mpcWorkspace);
 	U_Unknown(CArraySolutionExplorerNode, masNodes);
 }
 
@@ -110,27 +110,66 @@ bool CSolutionExplorer::Load(CObjectReader* pcFile)
 void CSolutionExplorer::Free(void)
 {
 	masNodes.Kill();
-	mpcSolution = NULL;
+	mpcWorkspace = NULL;
 }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The solution at the top, open: "Solution 'Name' (2 of 3 projects)".  A
-// solution of one project has it open too.
+// Each solution at the top, in the workspace's order.  The startup
+// solution is selected.
 //
 //////////////////////////////////////////////////////////////////////////
-void CSolutionExplorer::ShowSolution(CVcxSolution* pcSolution)
+void CSolutionExplorer::ShowWorkspace(CBuildWorkspace* pcWorkspace)
 {
-	CChars	szText;
-	int32	iSolution;
-	int32	iChild;
-	size	uiProjects;
 	size	i;
+	int32	iStartup;
 
-	mpcSolution = pcSolution;
+	mpcWorkspace = pcWorkspace;
 	mpTree->RemoveAllNodes();
 	masNodes.ReInit();
+
+	for (i = 0; i < pcWorkspace->NumSolutions(); i++)
+	{
+		AddSolution(i);
+	}
+	iStartup = FindSolutionNode(pcWorkspace->GetStartup());
+	if (iStartup != TREE_NO_NODE)
+	{
+		mpTree->SelectNode(iStartup);
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A solution open: "Solution 'Name' (2 of 3 projects)", or "(startup, 2
+// of 3 projects)" if there's more than one.  A solution of one project has it
+// open too.  One that couldn't be read is "(load failed)".
+//
+//////////////////////////////////////////////////////////////////////////
+void CSolutionExplorer::AddSolution(size uiSolution)
+{
+	CBuildWorkspaceSolution*	pcWorkspaceSolution;
+	CVcxSolution*				pcSolution;
+	CFileUtil					cFileUtil;
+	CChars						szText;
+	int32						iSolution;
+	int32						iChild;
+	size						uiProjects;
+	size						i;
+
+	pcWorkspaceSolution = mpcWorkspace->GetSolution(uiSolution);
+	pcSolution = &pcWorkspaceSolution->mcSolution;
+	if (!pcWorkspaceSolution->mbRead)
+	{
+		szText.Init("Solution '");
+		cFileUtil.GetFileName(&szText, pcWorkspaceSolution->mszFile.Text());
+		szText.Append("' (load failed)");
+		AddNode(TREE_NO_NODE, szText.Text(), mpSolutionIcon, SENT_Solution, uiSolution, 0, 0);
+		szText.Kill();
+		return;
+	}
 
 	uiProjects = 0;
 	for (i = 0; i < pcSolution->NumProjects(); i++)
@@ -144,14 +183,18 @@ void CSolutionExplorer::ShowSolution(CVcxSolution* pcSolution)
 	szText.Init("Solution '");
 	szText.Append(pcSolution->GetName());
 	szText.Append("' (");
+	if ((mpcWorkspace->NumSolutions() > 1) && (uiSolution == mpcWorkspace->GetStartup()))
+	{
+		szText.Append("startup, ");
+	}
 	szText.Append((uint32)pcSolution->NumLoadedProjects());
 	szText.Append(" of ");
 	szText.Append((uint32)uiProjects);
 	szText.Append((uiProjects == 1) ? " project)" : " projects)");
-	iSolution = AddNode(TREE_NO_NODE, szText.Text(), mpSolutionIcon, SENT_Solution, 0, 0);
+	iSolution = AddNode(TREE_NO_NODE, szText.Text(), mpSolutionIcon, SENT_Solution, uiSolution, 0, 0);
 	szText.Kill();
 
-	AddSolutionContents(iSolution, "");
+	AddSolutionContents(iSolution, uiSolution, "");
 	mpTree->SetExpanded(iSolution, true);
 	if (uiProjects == 1)
 	{
@@ -163,7 +206,6 @@ void CSolutionExplorer::ShowSolution(CVcxSolution* pcSolution)
 			}
 		}
 	}
-	mpTree->SelectNode(iSolution);
 }
 
 
@@ -171,7 +213,17 @@ void CSolutionExplorer::ShowSolution(CVcxSolution* pcSolution)
 //
 //
 //////////////////////////////////////////////////////////////////////////
-int32 CSolutionExplorer::AddNode(int32 iParentNode, const char* szText, Ptr<CImageCel> pIcon, ESolutionExplorerNodeType eType, size uiProject, size uiIndex)
+CVcxSolution* CSolutionExplorer::GetSolution(size uiSolution)
+{
+	return &mpcWorkspace->GetSolution(uiSolution)->mcSolution;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+int32 CSolutionExplorer::AddNode(int32 iParentNode, const char* szText, Ptr<CImageCel> pIcon, ESolutionExplorerNodeType eType, size uiSolution, size uiProject, size uiIndex)
 {
 	SSolutionExplorerNode*	psNode;
 	int64					iData;
@@ -179,6 +231,7 @@ int32 CSolutionExplorer::AddNode(int32 iParentNode, const char* szText, Ptr<CIma
 	iData = (int64)masNodes.NumElements();
 	psNode = masNodes.Add();
 	psNode->eType = eType;
+	psNode->uiSolution = uiSolution;
 	psNode->uiProject = uiProject;
 	psNode->uiIndex = uiIndex;
 	return mpTree->AddNode(iParentNode, szText, pIcon, iData);
@@ -238,8 +291,9 @@ void AddSolutionExplorerEntry(CArraySolutionExplorerEntry* pasEntries, const cha
 // come after what is nested in it.
 //
 //////////////////////////////////////////////////////////////////////////
-void CSolutionExplorer::AddSolutionContents(int32 iParentNode, const char* szParentGuid)
+void CSolutionExplorer::AddSolutionContents(int32 iParentNode, size uiSolution, const char* szParentGuid)
 {
+	CVcxSolution*				pcSolution;
 	CArrayInt					aiProjects;
 	CArraySolutionExplorerEntry	asEntries;
 	SSolutionExplorerEntry*		psEntry;
@@ -247,12 +301,13 @@ void CSolutionExplorer::AddSolutionContents(int32 iParentNode, const char* szPar
 	int32						iNode;
 	size						i;
 
+	pcSolution = GetSolution(uiSolution);
 	aiProjects.Init();
-	mpcSolution->GetChildProjects(szParentGuid, &aiProjects);
+	pcSolution->GetChildProjects(szParentGuid, &aiProjects);
 	asEntries.Init();
 	for (i = 0; i < aiProjects.NumElements(); i++)
 	{
-		pcProject = mpcSolution->GetProject((size)aiProjects.GetValue(i));
+		pcProject = pcSolution->GetProject((size)aiProjects.GetValue(i));
 		AddSolutionExplorerEntry(&asEntries, pcProject->GetName(), pcProject->IsFolder(), (size)aiProjects.GetValue(i));
 	}
 	aiProjects.Kill();
@@ -263,14 +318,14 @@ void CSolutionExplorer::AddSolutionContents(int32 iParentNode, const char* szPar
 		psEntry = asEntries.Get(i);
 		if (psEntry->bFolder)
 		{
-			pcProject = mpcSolution->GetProject(psEntry->uiIndex);
-			iNode = AddNode(iParentNode, pcProject->GetName(), mpFolderIcon, SENT_SolutionFolder, psEntry->uiIndex, 0);
-			AddSolutionContents(iNode, pcProject->GetGuid());
-			AddSolutionItems(iNode, psEntry->uiIndex);
+			pcProject = pcSolution->GetProject(psEntry->uiIndex);
+			iNode = AddNode(iParentNode, pcProject->GetName(), mpFolderIcon, SENT_SolutionFolder, uiSolution, psEntry->uiIndex, 0);
+			AddSolutionContents(iNode, uiSolution, pcProject->GetGuid());
+			AddSolutionItems(iNode, uiSolution, psEntry->uiIndex);
 		}
 		else
 		{
-			AddProject(iParentNode, psEntry->uiIndex);
+			AddProject(iParentNode, uiSolution, psEntry->uiIndex);
 		}
 	}
 	asEntries.Kill();
@@ -282,7 +337,7 @@ void CSolutionExplorer::AddSolutionContents(int32 iParentNode, const char* szPar
 // A solution folder's files, by their names without their directories.
 //
 //////////////////////////////////////////////////////////////////////////
-void CSolutionExplorer::AddSolutionItems(int32 iParentNode, size uiFolder)
+void CSolutionExplorer::AddSolutionItems(int32 iParentNode, size uiSolution, size uiFolder)
 {
 	CVcxSolutionProject*	pcFolder;
 	CFileUtil				cFileUtil;
@@ -290,14 +345,14 @@ void CSolutionExplorer::AddSolutionItems(int32 iParentNode, size uiFolder)
 	CChars					szName;
 	size					i;
 
-	pcFolder = mpcSolution->GetProject(uiFolder);
+	pcFolder = GetSolution(uiSolution)->GetProject(uiFolder);
 	for (i = 0; i < pcFolder->NumSolutionItems(); i++)
 	{
 		szPath.Init(pcFolder->GetSolutionItem(i));
 		szPath.Replace('\\', FILE_SEPARATOR[0]);
 		szName.Init();
 		cFileUtil.GetFileName(&szName, szPath.Text());
-		AddNode(iParentNode, szName.Text(), mpFileIcon, SENT_SolutionItem, uiFolder, i);
+		AddNode(iParentNode, szName.Text(), mpFileIcon, SENT_SolutionItem, uiSolution, uiFolder, i);
 		szName.Kill();
 		szPath.Kill();
 	}
@@ -310,13 +365,13 @@ void CSolutionExplorer::AddSolutionItems(int32 iParentNode, size uiFolder)
 // load: "Name (load failed)", or "(incompatible)" if it isn't C++.
 //
 //////////////////////////////////////////////////////////////////////////
-void CSolutionExplorer::AddProject(int32 iParentNode, size uiProject)
+void CSolutionExplorer::AddProject(int32 iParentNode, size uiSolution, size uiProject)
 {
 	CVcxSolutionProject*	pcProject;
 	CChars					szText;
 	int32					iNode;
 
-	pcProject = mpcSolution->GetProject(uiProject);
+	pcProject = GetSolution(uiSolution)->GetProject(uiProject);
 	szText.Init(pcProject->GetName());
 	if (!pcProject->IsVcxProject())
 	{
@@ -326,12 +381,12 @@ void CSolutionExplorer::AddProject(int32 iParentNode, size uiProject)
 	{
 		szText.Append(" (load failed)");
 	}
-	iNode = AddNode(iParentNode, szText.Text(), mpProjectIcon, SENT_Project, uiProject, 0);
+	iNode = AddNode(iParentNode, szText.Text(), mpProjectIcon, SENT_Project, uiSolution, uiProject, 0);
 	szText.Kill();
 
 	if (pcProject->IsLoaded())
 	{
-		AddFilterContents(iNode, uiProject, "");
+		AddFilterContents(iNode, uiSolution, uiProject, "");
 	}
 }
 
@@ -342,7 +397,7 @@ void CSolutionExplorer::AddProject(int32 iParentNode, size uiProject)
 // then its files.  "" is the project.
 //
 //////////////////////////////////////////////////////////////////////////
-void CSolutionExplorer::AddFilterContents(int32 iParentNode, size uiProject, const char* szFilter)
+void CSolutionExplorer::AddFilterContents(int32 iParentNode, size uiSolution, size uiProject, const char* szFilter)
 {
 	CVcxProject*				pcProject;
 	CArrayInt					aiIndices;
@@ -352,7 +407,7 @@ void CSolutionExplorer::AddFilterContents(int32 iParentNode, size uiProject, con
 	int32						iNode;
 	size						i;
 
-	pcProject = mpcSolution->GetProject(uiProject)->GetProject();
+	pcProject = GetSolution(uiSolution)->GetProject(uiProject)->GetProject();
 	asEntries.Init();
 	aiIndices.Init();
 	pcProject->GetChildFilters(szFilter, &aiIndices);
@@ -375,12 +430,12 @@ void CSolutionExplorer::AddFilterContents(int32 iParentNode, size uiProject, con
 		if (psEntry->bFolder)
 		{
 			pcFilter = pcProject->GetFilter(psEntry->uiIndex);
-			iNode = AddNode(iParentNode, psEntry->szName, mpFolderIcon, SENT_Filter, uiProject, psEntry->uiIndex);
-			AddFilterContents(iNode, uiProject, pcFilter->GetName());
+			iNode = AddNode(iParentNode, psEntry->szName, mpFolderIcon, SENT_Filter, uiSolution, uiProject, psEntry->uiIndex);
+			AddFilterContents(iNode, uiSolution, uiProject, pcFilter->GetName());
 		}
 		else
 		{
-			AddNode(iParentNode, psEntry->szName, mpFileIcon, SENT_File, uiProject, psEntry->uiIndex);
+			AddNode(iParentNode, psEntry->szName, mpFileIcon, SENT_File, uiSolution, uiProject, psEntry->uiIndex);
 		}
 	}
 	asEntries.Kill();
@@ -394,7 +449,7 @@ void CSolutionExplorer::AddFilterContents(int32 iParentNode, size uiProject, con
 //////////////////////////////////////////////////////////////////////////
 SSolutionExplorerNode* CSolutionExplorer::GetNode(int32 iNode)
 {
-	if ((iNode == TREE_NO_NODE) || (mpcSolution == NULL))
+	if ((iNode == TREE_NO_NODE) || (mpcWorkspace == NULL))
 	{
 		return NULL;
 	}
@@ -421,14 +476,14 @@ bool CSolutionExplorer::GetNodeFilePath(int32 iNode, CChars* pszDest)
 	}
 	if (psNode->eType == SENT_File)
 	{
-		pcVcxProject = mpcSolution->GetProject(psNode->uiProject)->GetProject();
+		pcVcxProject = GetSolution(psNode->uiSolution)->GetProject(psNode->uiProject)->GetProject();
 		pcVcxProject->GetFullPath(pcVcxProject->GetItem(psNode->uiIndex), pszDest);
 		return true;
 	}
 	else if (psNode->eType == SENT_SolutionItem)
 	{
-		pcProject = mpcSolution->GetProject(psNode->uiProject);
-		ResolveVcxPath(mpcSolution->GetDirectory(), pcProject->GetSolutionItem(psNode->uiIndex), pszDest);
+		pcProject = GetSolution(psNode->uiSolution)->GetProject(psNode->uiProject);
+		ResolveVcxPath(GetSolution(psNode->uiSolution)->GetDirectory(), pcProject->GetSolutionItem(psNode->uiIndex), pszDest);
 		return true;
 	}
 	return false;
@@ -582,9 +637,9 @@ bool CSolutionExplorer::GetSelectedFilePath(CChars* pszDest)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The solution's project a project's file node is in, or
-// SOLUTION_EXPLORER_NO_PROJECT for any other node (a solution item
-// isn't built by a project).
+// The workspace's project a project's file node is in (the code
+// model's), or SOLUTION_EXPLORER_NO_PROJECT for any other node (a
+// solution item isn't built by a project).
 //
 //////////////////////////////////////////////////////////////////////////
 size CSolutionExplorer::GetNodeProject(int32 iNode)
@@ -596,7 +651,43 @@ size CSolutionExplorer::GetNodeProject(int32 iNode)
 	{
 		return SOLUTION_EXPLORER_NO_PROJECT;
 	}
-	return psNode->uiProject;
+	return mpcWorkspace->FindProject(psNode->uiSolution, psNode->uiProject);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The workspace's solution any node is in, SOLUTION_EXPLORER_NO_SOLUTION
+// for no node.
+//
+//////////////////////////////////////////////////////////////////////////
+size CSolutionExplorer::GetNodeSolution(int32 iNode)
+{
+	SSolutionExplorerNode*	psNode;
+
+	psNode = GetNode(iNode);
+	return (psNode != NULL) ? psNode->uiSolution : SOLUTION_EXPLORER_NO_SOLUTION;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The top node of the workspace's solution uiSolution, TREE_NO_NODE if
+// it isn't shown.
+//
+//////////////////////////////////////////////////////////////////////////
+int32 CSolutionExplorer::FindSolutionNode(size uiSolution)
+{
+	int32	iNode;
+
+	for (iNode = 0; iNode < mpTree->NumNodes(); iNode++)
+	{
+		if ((mpTree->GetNodeParent(iNode) == TREE_NO_NODE) && (GetNodeSolution(iNode) == uiSolution))
+		{
+			return iNode;
+		}
+	}
+	return TREE_NO_NODE;
 }
 
 

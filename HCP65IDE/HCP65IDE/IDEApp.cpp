@@ -65,9 +65,12 @@ void CIDEApp::Init(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The window and its content, with szSolution open.  The devices are
+// The window and its content, with paszSolutions open (a workspace, or
+// solutions opened together, the first the startup one).  The devices are
 // described by the XML in szInputDirectory; pcNativeInput (the platform's
 // keyboard and mouse) is added to them.  Run fails if anything here did.
+// HCP65_IDE_ADD (a solution added), HCP65_IDE_STARTUP and HCP65_IDE_REMOVE
+// (a solution made the startup one, or removed, by its place),
 // HCP65_IDE_SNAPSHOT, HCP65_IDE_CONFIGURATION, HCP65_IDE_EXPAND,
 // HCP65_IDE_OPEN, HCP65_IDE_DOCK, HCP65_IDE_CLOSE, HCP65_IDE_SCROLL, HCP65_IDE_CHANGE, HCP65_IDE_SAVE, HCP65_IDE_COMPARE,
 // HCP65_IDE_TYPE_AFTER,
@@ -87,7 +90,7 @@ void CIDEApp::Init(void)
 // the last stack pointer to it goes.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativeInput, const char* szInputDirectory, const char* szSolution)
+bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativeInput, const char* szInputDirectory, CArrayChars* paszSolutions)
 {
 	Ptr<CIDEWindowTick>	pTick;
 	int32				iNode;
@@ -118,8 +121,23 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 
 		//Sized first: what the checks below scroll to depends on the size.
 		mpWindow->SetWindowSize(1280, 800);
-		if (mpContent->OpenSolution(szSolution))
+		if (mpContent->OpenSolutions(paszSolutions))
 		{
+			if (getenv("HCP65_IDE_ADD") != NULL)
+			{
+				//As File, Add Solution: another solution opened with those open.
+				mpContent->AddSolution(getenv("HCP65_IDE_ADD"));
+			}
+			if (getenv("HCP65_IDE_STARTUP") != NULL)
+			{
+				//As a solution's Set as Startup Solution, by its place in Solution Explorer (0 based).
+				mpContent->SetStartupSolution((size)atoi(getenv("HCP65_IDE_STARTUP")));
+			}
+			if (getenv("HCP65_IDE_REMOVE") != NULL)
+			{
+				//As a solution's Remove Solution.
+				mpContent->RemoveSolution((size)atoi(getenv("HCP65_IDE_REMOVE")));
+			}
 			if (getenv("HCP65_IDE_CONFIGURATION") != NULL)
 			{
 				mpContent->SetConfiguration(getenv("HCP65_IDE_CONFIGURATION"));

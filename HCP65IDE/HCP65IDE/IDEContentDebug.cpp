@@ -206,7 +206,7 @@ void CIDEContent::ResolveEmulatorPath(const char* szPath, CChars* pszDest)
 	}
 	szFile.Init();
 	szName.Init();
-	CBuildConfigurations::GetFileName(mszSolutionFile.Text(), &szFile);
+	CBuildConfigurations::GetFileName(GetStartupFile(), &szFile);
 	pszDest->Set("");
 	cFileUtil.SplitPath(szFile.Text(), &szName, pszDest);
 	cFileUtil.AppendToPath(pszDest, szPath);
@@ -259,7 +259,7 @@ bool CIDEContent::ChooseDebugLoads(CBuildConfiguration* pcConfiguration, CChars*
 		mcDebugger.AddLoad(szFile.Text(), pcConfiguration->GetLoadAddress(i));
 	}
 
-	if (CBuild::GetProgramPath(mcSolution.GetDirectory(), pcConfiguration, &szFile) && !cFileUtil.Exists(szFile.Text()))
+	if (CBuild::GetProgramPath(mcWorkspace.GetStartupSolution()->mcSolution.GetDirectory(), pcConfiguration, &szFile) && !cFileUtil.Exists(szFile.Text()))
 	{
 		pszMessage->Set("Build ");
 		pszMessage->Append(pcConfiguration->GetName());
@@ -375,7 +375,7 @@ bool CIDEContent::ChooseEmulator(bool bLaunch)
 		else
 		{
 			szFile.Init();
-			CBuildConfigurations::GetFileName(mszSolutionFile.Text(), &szFile);
+			CBuildConfigurations::GetFileName(GetStartupFile(), &szFile);
 			szMessage.Set("No emulator is set for ");
 			szMessage.Append(pcConfiguration->GetName());
 			szMessage.Append(": give its configuration an Emulator in ");
@@ -967,7 +967,7 @@ void CIDEContent::ReadLineTables(void)
 			ResolveEmulatorPath(pcConfiguration->GetLoadFile(i), &szFile);
 			mcDebugger.AddLineTable(szFile.Text(), false);
 		}
-		if (CBuild::GetProgramPath(mcSolution.GetDirectory(), pcConfiguration, &szFile))
+		if (CBuild::GetProgramPath(mcWorkspace.GetStartupSolution()->mcSolution.GetDirectory(), pcConfiguration, &szFile))
 		{
 			mcDebugger.AddLineTable(szFile.Text(), true);
 		}
@@ -1041,14 +1041,19 @@ void CIDEContent::ShowAllBreakpoints(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The per-user file beside the solution: <solution>.hcp65user.
+// The per-user file beside the workspace file (or the solution if there
+// isn't one): <workspace>.hcp65user.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEContent::GetUserSettingsFileName(CChars* pszDest)
 {
 	CFileUtil	cFileUtil;
 
-	pszDest->Set(mszSolutionFile.Text());
+	if (!GetSettingsBaseFile(pszDest))
+	{
+		pszDest->Set("");
+		return;
+	}
 	cFileUtil.RemoveExtension(pszDest);
 	pszDest->Append(IDE_USER_SETTINGS_EXTENSION);
 }
@@ -1063,7 +1068,7 @@ void CIDEContent::SaveBreakpoints(void)
 {
 	CChars	szFile;
 
-	if (!mbSolution)
+	if (!IsSolutionOpen())
 	{
 		return;
 	}

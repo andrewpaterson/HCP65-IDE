@@ -140,17 +140,17 @@ bool CIDEContent::AskClaude(const char* szRequest)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The folder Claude works in: the solution's, or the open file's if no
-// solution is open.  False if neither is.
+// The folder Claude works in: the startup solution's, or the open file's
+// if no solution is open.  False if neither is.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEContent::GetClaudeDirectory(CChars* pszDirectory)
 {
 	CFileUtil	cFileUtil;
 
-	if (mbSolution && !mszSolutionFile.Empty())
+	if (IsSolutionOpen())
 	{
-		pszDirectory->Append(mszSolutionFile);
+		pszDirectory->Append(GetStartupFile());
 	}
 	else if (mpActive.IsNotNull())
 	{

@@ -115,18 +115,14 @@ void IDEIndexJob(void* pvData)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The first of the solution's configurations is used until another is
-// chosen, as Visual Studio does with a solution it hasn't opened before.
+// Until a configuration is chosen each solution's first is used, as
+// Visual Studio does with a solution it hasn't opened before.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDECodeModel::Init(CVcxSolution* pcSolution)
+void CIDECodeModel::Init(CBuildWorkspace* pcWorkspace)
 {
-	mpcSolution = pcSolution;
+	mpcWorkspace = pcWorkspace;
 	mszConfiguration.Init();
-	if (pcSolution->NumConfigurations() > 0)
-	{
-		mszConfiguration.Set(pcSolution->GetConfiguration(0));
-	}
 	maszSystemDirectories.Init();
 
 	mapcProjects.Init();
@@ -162,7 +158,7 @@ void CIDECodeModel::Kill(void)
 
 	maszSystemDirectories.Kill();
 	mszConfiguration.Kill();
-	mpcSolution = NULL;
+	mpcWorkspace = NULL;
 }
 
 
@@ -398,11 +394,11 @@ CTranslationUnit* CIDECodeModel::AddUnit(size uiProject, const char* szFileName)
 	CChars					szDirectory;
 	size					i;
 
-	if (uiProject >= mpcSolution->NumProjects())
+	pcSolutionProject = mpcWorkspace->GetSolutionProject(uiProject);
+	if (pcSolutionProject == NULL)
 	{
 		return NULL;
 	}
-	pcSolutionProject = mpcSolution->GetProject(uiProject);
 	pcVcxProject = pcSolutionProject->GetProject();
 	if (pcVcxProject == NULL)
 	{
@@ -422,12 +418,12 @@ CTranslationUnit* CIDECodeModel::AddUnit(size uiProject, const char* szFileName)
 		pcLibrary = pcProject->AddLibrary(szDirectory.Text(), szDirectory.Text(), false);
 		pcConfig = pcLibrary->AddConfiguration(mszConfiguration.Text());
 		pcConfig->mbHostDefines = false;
-		pcConfiguration = GetProjectConfiguration(pcSolutionProject);
+		pcConfiguration = GetProjectConfiguration(uiProject);
 		AddCompilerDefines(pcConfiguration, pcConfig);
 		aszDefines.Init();
 		if (pcConfiguration != NULL)
 		{
-			pcVcxProject->GetPreprocessorDefinitions(pcConfiguration, mpcSolution->GetDirectory(), &aszDefines);
+			pcVcxProject->GetPreprocessorDefinitions(pcConfiguration, mpcWorkspace->GetProjectSolution(uiProject)->GetDirectory(), &aszDefines);
 		}
 		for (i = 0; i < aszDefines.NumElements(); i++)
 		{
@@ -446,7 +442,7 @@ CTranslationUnit* CIDECodeModel::AddUnit(size uiProject, const char* szFileName)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The CppParserLib project for the solution's project uiProject, made
+// The CppParserLib project for the workspace's project uiProject, made
 // the first time: the project's include directories, then the
 // compiler's.  Call it with the projects' mutex held.
 //
@@ -473,12 +469,12 @@ CProject* CIDECodeModel::GetProject(size uiProject)
 	pcProject = NewMalloc<CProject>();
 	pcProject->Init();
 	pcProject->SetHeaderCache(&mcHeaderCache);
-	pcSolutionProject = mpcSolution->GetProject(uiProject);
-	pcConfiguration = GetProjectConfiguration(pcSolutionProject);
+	pcSolutionProject = mpcWorkspace->GetSolutionProject(uiProject);
+	pcConfiguration = GetProjectConfiguration(uiProject);
 	aszDirectories.Init();
 	if (pcConfiguration != NULL)
 	{
-		pcSolutionProject->GetProject()->GetIncludeDirectories(pcConfiguration, mpcSolution->GetDirectory(), &aszDirectories);
+		pcSolutionProject->GetProject()->GetIncludeDirectories(pcConfiguration, mpcWorkspace->GetProjectSolution(uiProject)->GetDirectory(), &aszDirectories);
 	}
 	for (i = 0; i < aszDirectories.NumElements(); i++)
 	{
@@ -521,9 +517,9 @@ void CIDECodeModel::StartIndexing(void)
 	muiIndexed = 0;
 	mcIndexMutex.Unlock();
 
-	for (i = 0; i < mpcSolution->NumProjects(); i++)
+	for (i = 0; i < mpcWorkspace->NumProjects(); i++)
 	{
-		pcProject = mpcSolution->GetProject(i)->GetProject();
+		pcProject = mpcWorkspace->GetSolutionProject(i)->GetProject();
 		if (pcProject == NULL)
 		{
 			continue;
@@ -709,7 +705,7 @@ void CIDECodeModel::CopyLocation(SCPPIndexLocation* psLocation, SIDELocation* ps
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The first of the solution's projects that has szFileName (a full
+// The first of the workspace's projects that has szFileName (a full
 // path, whatever its case) as an item, MAX_SIZE if none has.
 //
 //////////////////////////////////////////////////////////////////////////
@@ -721,9 +717,9 @@ size CIDECodeModel::FindProjectOfFile(const char* szFileName)
 	CChars			szPath;
 	bool			bFound;
 
-	for (i = 0; i < mpcSolution->NumProjects(); i++)
+	for (i = 0; i < mpcWorkspace->NumProjects(); i++)
 	{
-		pcProject = mpcSolution->GetProject(i)->GetProject();
+		pcProject = mpcWorkspace->GetSolutionProject(i)->GetProject();
 		if (pcProject == NULL)
 		{
 			continue;
@@ -746,18 +742,22 @@ size CIDECodeModel::FindProjectOfFile(const char* szFileName)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The project configuration the solution configuration builds, or the
+// The project configuration its solution's configuration builds, or the
 // project's first if the solution doesn't say.
 //
 //////////////////////////////////////////////////////////////////////////
-CVcxConfiguration* CIDECodeModel::GetProjectConfiguration(CVcxSolutionProject* pcProject)
+CVcxConfiguration* CIDECodeModel::GetProjectConfiguration(size uiProject)
 {
 	CVcxSolutionProjectConfiguration*	pcSolutionConfiguration;
 	CVcxConfiguration*					pcConfiguration;
+	CVcxSolutionProject*				pcProject;
 	CVcxProject*						pcVcxProject;
+	const char*							szSolutionConfiguration;
 
+	pcProject = mpcWorkspace->GetSolutionProject(uiProject);
 	pcVcxProject = pcProject->GetProject();
-	pcSolutionConfiguration = pcProject->FindConfiguration(mszConfiguration.Text());
+	szSolutionConfiguration = GetSolutionConfiguration(mpcWorkspace->GetProject(uiProject)->uiSolution);
+	pcSolutionConfiguration = (szSolutionConfiguration != NULL) ? pcProject->FindConfiguration(szSolutionConfiguration) : NULL;
 	if (pcSolutionConfiguration != NULL)
 	{
 		pcConfiguration = pcVcxProject->FindConfiguration(pcSolutionConfiguration->GetProjectConfiguration());
@@ -771,6 +771,33 @@ CVcxConfiguration* CIDECodeModel::GetProjectConfiguration(CVcxSolutionProject* p
 		return pcVcxProject->GetConfiguration(0);
 	}
 	return NULL;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The solution configuration ("Release|Win32") a solution builds for the
+// build configuration: its build configuration of that name's, or its
+// first's if it hasn't one, or the solution's own first.  NULL if it has
+// none.
+//
+//////////////////////////////////////////////////////////////////////////
+const char* CIDECodeModel::GetSolutionConfiguration(size uiSolution)
+{
+	CBuildWorkspaceSolution*	pcSolution;
+	CBuildConfiguration*		pcConfiguration;
+
+	pcSolution = mpcWorkspace->GetSolution(uiSolution);
+	pcConfiguration = mpcWorkspace->FindConfiguration(uiSolution, mszConfiguration.Text());
+	if ((pcConfiguration == NULL) && (pcSolution->mcConfigurations.NumConfigurations() > 0))
+	{
+		pcConfiguration = pcSolution->mcConfigurations.GetConfiguration(0);
+	}
+	if (pcConfiguration != NULL)
+	{
+		return pcConfiguration->GetSolutionConfiguration();
+	}
+	return (pcSolution->mcSolution.NumConfigurations() > 0) ? pcSolution->mcSolution.GetConfiguration(0) : NULL;
 }
 
 
@@ -816,10 +843,23 @@ void CIDECodeModel::AddCompilerDefines(CVcxConfiguration* pcConfiguration, CConf
 //////////////////////////////////////////////////////////////////////////
 void CIDECodeModel::SetConfiguration(const char* szConfiguration)
 {
+	Reset();
+	mszConfiguration.Set(szConfiguration);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Nothing is being indexed and the projects will be made again: before
+// the workspace's solutions change, as the jobs use them.  StartIndexing
+// indexes them again.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDECodeModel::Reset(void)
+{
 	KillJobs();
 	mcProjectsMutex.Lock();
 	KillProjects();
-	mszConfiguration.Set(szConfiguration);
 	mcProjectsMutex.Unlock();
 }
 

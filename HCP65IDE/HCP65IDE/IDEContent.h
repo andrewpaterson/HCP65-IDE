@@ -30,6 +30,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/ComboBox.h"
 #include "VisualStudioLib/VcxSolution.h"
 #include "BuildLib/BuildConfigurations.h"
+#include "BuildLib/BuildWorkspace.h"
 #include "BuildLib/SolutionBuild.h"
 #include "CppParserLib/CPP65ListingIndex.h"
 #include "WindowLib/Button.h"
@@ -105,6 +106,7 @@ protected:
 	SDialogLook					msDialogLook;
 	Ptr<CMenuBar>				mpMenuBar;
 	Ptr<CMenuItem>				mpOpenItem;			//File, Open Project/Solution.
+	Ptr<CMenuItem>				mpAddSolutionItem;	//File, Add Solution.
 	Ptr<CMenuItem>				mpSaveItem;			//File, Save.
 	Ptr<CMenuItem>				mpSaveAllItem;		//File, Save All.
 	Ptr<CMenuItem>				mpCompareItem;		//Git, Compare with HEAD.
@@ -128,28 +130,30 @@ protected:
 	Ptr<CFileChooser>			mpFileChooser;		//While it's shown.
 	Ptr<CImageCel>				mpFolderIcon;		//The file chooser's.
 	Ptr<CImageCel>				mpFileIcon;
-	CChars						mszSolutionFile;	//The solution or project opened last.
 	CArray<CIDEEditorTab>		maTabs;
 	Ptr<CIDEEditorTab>			mpActive;			//The selected tab's file, NULL if none is open.
 	CArray<CIDEDiffTab>			maDiffTabs;			//A tab for each diff shown.
 	Ptr<CIDEDiffTab>			mpActiveDiff;		//The selected tab's diff, NULL if it isn't one.
 	CArray<CImageCel>			maFileIcons;		//By EIDEFileType.
 	Ptr<CSolutionExplorer>		mpExplorer;
+	Ptr<CMenuContainer>			mpExplorerMenu;		//A solution's: Set as Startup Solution and Remove.
+	Ptr<CMenuItem>				mpStartupItem;
+	Ptr<CMenuItem>				mpRemoveSolutionItem;
 	Ptr<CComboBox>				mpConfigurations;	//The build configuration's configuration; the code is parsed as its solution configuration.
 	Ptr<CComboBox>				mpPlatforms;		//And its platform.
-	CBuildConfigurations		mcConfigurations;	//The solution's, from beside it or the defaults.
-	size						muiConfiguration;	//The chosen one, MAX_SIZE if none.
+	CChars						mszConfiguration;	//The chosen build configuration's name, each solution's of that name; empty if none.
 	Ptr<CButton>				mpBuildButton;
 	CSolutionBuild				mcBuild;			//The build running, or the last.
+	CArrayInt					maiBuildOrder;		//The solutions a build builds, in order.
+	size						muiBuildStep;		//The one being built.
 	CChars						mszLibc65;			//The HCP65 compiler's system headers.
 	CCPP65ListingIndex			mcListings;			//The last HCP65 build's listings, given to the open files.
 	size						muiListingToShow;	//The line to show the code of after the next build, MAX_SIZE for none.
 	Ptr<CIDEBuildPane>			mpBuildPane;
 	Ptr<CTreeContainer>			mpReferences;		//What Find All References found.
 	CArrayIDELocations			masReferences;		//The references' places; a node's data is its index plus one.
-	CVcxSolution				mcSolution;
-	bool						mbSolution;
-	CIDECodeModel				mcCodeModel;		//Uses mcSolution; initialised when a solution is opened.
+	CBuildWorkspace				mcWorkspace;		//The solutions open, one the startup solution.
+	CIDECodeModel				mcCodeModel;		//Uses mcWorkspace; initialised when a solution is opened.
 
 	CGitRepositories			mcGit;				//The repositories the solution's files are in.
 	CGitLineChanges				mcLineChanges;		//Worked out for one tab at a time.
@@ -204,7 +208,13 @@ public:
 	bool			Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* szCodeFont);
 
 	bool			OpenSolution(const char* szFileName);
+	bool			OpenSolutions(CArrayChars* paszFileNames);
+	bool			AddSolution(const char* szFileName);
+	bool			RemoveSolution(size uiSolution);
+	bool			SetStartupSolution(size uiSolution);
 	bool			ShowOpenSolutionDialog(void);
+	bool			ShowAddSolutionDialog(void);
+	CBuildWorkspace*	GetWorkspace(void);
 	void			MenuItemClicked(CMenuItem* pcItem);
 	bool			OpenFile(const char* szFileName, size uiProject = SOLUTION_EXPLORER_NO_PROJECT);
 	Ptr<CIDEEditorTab>	OpenFileTab(const char* szFileName, size uiProject, bool bShow);
@@ -239,6 +249,7 @@ public:
 	bool			CloseFile(const char* szFileName);
 	CIDECodeModel*	GetCodeModel(void);
 	CBuildConfiguration*	GetConfiguration(void);
+	char*			GetConfigurationName(void);
 
 	Ptr<CTextArea>		GetEditor(void);
 	Ptr<CScrollPane>	GetEditorPane(void);
@@ -311,6 +322,18 @@ public:
 
 protected:
 	Ptr<CMenuBar>		CreateMenuBar(void);
+	Ptr<CMenuContainer>	CreateExplorerMenu(void);
+	bool				IsSolutionOpen(void);
+	char*				GetStartupFile(void);
+	bool				GetSettingsBaseFile(CChars* pszDest);
+	void				LetGoOfWorkspace(void);
+	void				WorkspaceChanged(bool bReindex);
+	bool				WriteWorkspace(void);
+	void				FindRepositories(void);
+	void				ShowConfigurations(void);
+	CBuildConfiguration*	GetChosenConfiguration(void);
+	bool				StartBuildStep(CArrayChars* paszLines);
+	void				FinishBuildSteps(CArrayChars* paszLines);
 	Ptr<CMenuContainer>	CreateDebugMenu(void);
 	bool				DebugMenuItemClicked(CMenuItem* pcItem);
 	void				DebugCommandAction(EComponentInputCommand eCommand);

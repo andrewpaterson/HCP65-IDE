@@ -36,10 +36,52 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The IDE's window on Windows, showing the .sln or .vcxproj on the
-// command line (or VisualStudioLib's).  The command line is taken whole,
-// without the spaces around it or quotes around it (a path may have
-// spaces).
+// The command line's files: separated by spaces, a path with spaces in it
+// in quotes.
+//
+//////////////////////////////////////////////////////////////////////////
+void SplitIDECommandLine(const char* szCommandLine, CArrayChars* paszDest)
+{
+	const char*	sz;
+	CChars		szFile;
+	bool		bQuoted;
+
+	sz = szCommandLine;
+	for (;;)
+	{
+		while ((*sz == ' ') || (*sz == '\t'))
+		{
+			sz++;
+		}
+		if (*sz == '\0')
+		{
+			return;
+		}
+		szFile.Init();
+		bQuoted = false;
+		while ((*sz != '\0') && (bQuoted || ((*sz != ' ') && (*sz != '\t'))))
+		{
+			if (*sz == '"')
+			{
+				bQuoted = !bQuoted;
+			}
+			else
+			{
+				szFile.Append(*sz);
+			}
+			sz++;
+		}
+		paszDest->Add(szFile.Text());
+		szFile.Kill();
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The IDE's window on Windows, showing the .sln, .vcxproj or
+// .hcp65workspace on the command line (or VisualStudioLib's).  More than
+// one solution are opened together, the first the startup solution.
 //
 //////////////////////////////////////////////////////////////////////////
 int PASCAL WinMain(HINSTANCE hInstance,	HINSTANCE hPrevInstance, LPTSTR lpCmdLine, int nCmdShow)
@@ -53,21 +95,17 @@ int PASCAL WinMain(HINSTANCE hInstance,	HINSTANCE hPrevInstance, LPTSTR lpCmdLin
 	ObjectsInit();
 	SocketsInit();  //The debugger's connection to the emulator.
 
-	bool	bResult;
-	CChars	szSolution;
+	bool		bResult;
+	CArrayChars	aszSolutions;
 
 	bResult = true;
 
-	szSolution.Init((lpCmdLine != NULL) ? lpCmdLine : "");
-	szSolution.StripWhitespace(true);
-	if ((szSolution.Length() >= 2) && szSolution.StartsWith("\"") && szSolution.EndsWith('"'))
+	//One or more solutions, or a workspace, opened together.
+	aszSolutions.Init();
+	SplitIDECommandLine((lpCmdLine != NULL) ? lpCmdLine : "", &aszSolutions);
+	if (aszSolutions.NumElements() == 0)
 	{
-		szSolution.RemoveFromStart(1);
-		szSolution.RemoveFromEnd(1);
-	}
-	if (szSolution.Empty())
-	{
-		szSolution.Set(IDE_DEFAULT_PROJECT);
+		aszSolutions.Add(IDE_DEFAULT_PROJECT);
 	}
 
 	{
@@ -91,7 +129,7 @@ int PASCAL WinMain(HINSTANCE hInstance,	HINSTANCE hPrevInstance, LPTSTR lpCmdLin
 		//The app (its window, content and input) is held by the root while it runs.
 		pApp = OMalloc<CIDEApp>();
 		ORoot()->Add(pApp);
-		pApp->Setup(&cNativeFactory, &cWinInput, "../../../CommonLibraries/Libraries/WinInputLib/xml", szSolution.Text());
+		pApp->Setup(&cNativeFactory, &cWinInput, "../../../CommonLibraries/Libraries/WinInputLib/xml", &aszSolutions);
 		bResult = pApp->Run();
 		ORoot()->Remove(pApp);
 		pApp = NULL;
@@ -105,7 +143,7 @@ int PASCAL WinMain(HINSTANCE hInstance,	HINSTANCE hPrevInstance, LPTSTR lpCmdLin
 		cNativeFactory.Kill();
 	}
 
-	szSolution.Kill();
+	aszSolutions.Kill();
 	ObjectsFlush();
 	SocketsKill();
 	ObjectsKill();

@@ -170,14 +170,13 @@ void CIDEContent::Init(void)
 {
 	PreInit();
 
-	mbSolution = false;
-	mcSolution.Init();
-	mcCodeModel.Init(&mcSolution);
-	mcConfigurations.Init();
-	muiConfiguration = MAX_SIZE;
+	mcWorkspace.Init();
+	mcCodeModel.Init(&mcWorkspace);
+	mszConfiguration.Init();
 	memset(&msDialogLook, 0, sizeof(msDialogLook));
-	mszSolutionFile.Init();
 	mcBuild.Init();
+	maiBuildOrder.Init();
+	muiBuildStep = 0;
 	mszLibc65.Init();
 	mcListings.Init();
 	muiListingToShow = MAX_SIZE;
@@ -230,6 +229,7 @@ void CIDEContent::Class(void)
 	U_Data(ARGB32, msDialogLook.sDivider);
 	M_Pointer(mpMenuBar);
 	M_Pointer(mpOpenItem);
+	M_Pointer(mpAddSolutionItem);
 	M_Pointer(mpSaveItem);
 	M_Pointer(mpSaveAllItem);
 	M_Pointer(mpCompareItem);
@@ -253,7 +253,6 @@ void CIDEContent::Class(void)
 	M_Pointer(mpFileChooser);
 	M_Pointer(mpFolderIcon);
 	M_Pointer(mpFileIcon);
-	U_String(mszSolutionFile);
 	U_String(mszStoppedFile);
 	U_UInt32(muiStoppedLine);
 	M_Embedded(maTabs);
@@ -262,21 +261,24 @@ void CIDEContent::Class(void)
 	M_Pointer(mpActiveDiff);
 	M_Embedded(maFileIcons);
 	M_Pointer(mpExplorer);
+	M_Pointer(mpExplorerMenu);
+	M_Pointer(mpStartupItem);
+	M_Pointer(mpRemoveSolutionItem);
 	M_Pointer(mpConfigurations);
 	M_Pointer(mpPlatforms);
-	U_Unknown(CBuildConfigurations, mcConfigurations);
-	U_Size(muiConfiguration);
+	U_String(mszConfiguration);
 	M_Pointer(mpBuildButton);
 	U_Unknown(CSolutionBuild, mcBuild);
+	U_Unknown(CArrayInt, maiBuildOrder);
+	U_Size(muiBuildStep);
 	U_String(mszLibc65);
 	U_Unknown(CCPP65ListingIndex, mcListings);
 	U_Size(muiListingToShow);
 	M_Pointer(mpBuildPane);
 	M_Pointer(mpReferences);
 	U_Unknown(CArrayIDELocations, masReferences);
-	U_Unknown(CVcxSolution, mcSolution);
+	U_Unknown(CBuildWorkspace, mcWorkspace);
 	U_Unknown(CIDECodeModel, mcCodeModel);
-	U_Bool(mbSolution);
 	U_Unknown(CIDEDebugger, mcDebugger);
 	M_Pointer(mpDebugView);
 	M_Pointer(mpStartButton);
@@ -354,6 +356,10 @@ void CIDEContent::Free(void)
 	{
 		mpMenuBar->GetItemClickEvent()->Remove(this);
 	}
+	if (mpExplorerMenu.IsNotNull())
+	{
+		mpExplorerMenu->GetItemClickEvent()->Remove(this);
+	}
 	if (mpDock.IsNotNull())
 	{
 		mpDock->SetListener(NULL);
@@ -393,12 +399,12 @@ void CIDEContent::Free(void)
 
 	//A build still running is stopped (an HCP65 build is waited for) before the solution it builds goes.
 	mcBuild.Kill();
+	maiBuildOrder.Kill();
 	mcListings.Kill();
 	mszLibc65.Kill();
-	mszSolutionFile.Kill();
 	mcCodeModel.Kill();
-	mcConfigurations.Kill();
-	mcSolution.Kill();
+	mszConfiguration.Kill();
+	mcWorkspace.Kill();
 	KillIDELocations(&masReferences);
 }
 
@@ -486,6 +492,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	//Solution Explorer on the left.
 	mpExplorer = OMalloc<CSolutionExplorer>(pWindow, mpTheme);
 	mpExplorer->GetTree()->GetActivationEvent()->Add(this, &CIDEContent::ExplorerActivated);
+	mpExplorer->GetTree()->SetContextMenu(CreateExplorerMenu());
 	sPlace.BesideWell(DS_Left, IDE_EXPLORER_WIDTH);
 	mpExplorerTool = mpDock->AddPane(IDE_EXPLORER_ID, "Solution Explorer", NULL, mpExplorer->GetComponent(), DPK_Tool, &sPlace);
 
@@ -556,7 +563,8 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// File, with Open Project/Solution, Save, Save All and Compare with File;
+// File, with Open Project/Solution, Add Solution, Save, Save All and
+// Compare with File;
 // View, showing the tool windows; Git, with Compare with HEAD, a branch
 // or a revision; Debug; and Window, with Reset Window Layout and Close
 // All Documents, as in Visual Studio.
@@ -571,6 +579,7 @@ Ptr<CMenuBar> CIDEContent::CreateMenuBar(void)
 
 	pFile = OMalloc<CMenuContainer>(mpWindow, mpTheme);
 	mpOpenItem = pFile->AddItem("Open Project/Solution...", mpFolderIcon);
+	mpAddSolutionItem = pFile->AddItem("Add Solution...");
 	mpSaveItem = pFile->AddItem("Save");
 	mpSaveAllItem = pFile->AddItem("Save All");
 	mpCompareFileItem = pFile->AddItem("Compare with File...");
@@ -605,6 +614,22 @@ Ptr<CMenuBar> CIDEContent::CreateMenuBar(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Solution Explorer's menu, for the solution of the node selected: Set as
+// Startup Solution and Remove.
+//
+//////////////////////////////////////////////////////////////////////////
+Ptr<CMenuContainer> CIDEContent::CreateExplorerMenu(void)
+{
+	mpExplorerMenu = OMalloc<CMenuContainer>(mpWindow, mpTheme);
+	mpStartupItem = mpExplorerMenu->AddItem("Set as Startup Solution");
+	mpRemoveSolutionItem = mpExplorerMenu->AddItem("Remove Solution");
+	mpExplorerMenu->GetItemClickEvent()->Add(this, &CIDEContent::MenuItemClicked);
+	return mpExplorerMenu;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEContent::MenuItemClicked(CMenuItem* pcItem)
@@ -612,6 +637,18 @@ void CIDEContent::MenuItemClicked(CMenuItem* pcItem)
 	if (pcItem == &mpOpenItem)
 	{
 		ShowOpenSolutionDialog();
+	}
+	else if (pcItem == &mpAddSolutionItem)
+	{
+		ShowAddSolutionDialog();
+	}
+	else if (pcItem == &mpStartupItem)
+	{
+		SetStartupSolution(mpExplorer->GetNodeSolution(mpExplorer->GetTree()->GetSelectedNode()));
+	}
+	else if (pcItem == &mpRemoveSolutionItem)
+	{
+		RemoveSolution(mpExplorer->GetNodeSolution(mpExplorer->GetTree()->GetSelectedNode()));
 	}
 	else if (pcItem == &mpSaveItem)
 	{
@@ -674,8 +711,9 @@ void CIDEContent::MenuItemClicked(CMenuItem* pcItem)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Asks for a solution (.sln) or project (.vcxproj) and opens it, starting
-// on the one open.  False if none is chosen or it can't be read.
+// Asks for a workspace (.hcp65workspace), solution (.sln) or project
+// (.vcxproj) and opens it, starting on the one open.  False if none is
+// chosen or it can't be read.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEContent::ShowOpenSolutionDialog(void)
@@ -683,6 +721,7 @@ bool CIDEContent::ShowOpenSolutionDialog(void)
 	static SFileChooserType	asTypes[] =
 	{
 		{ "Solutions (*.sln)", "sln" },
+		{ "Workspaces (*.hcp65workspace)", "hcp65workspace" },
 		{ "Projects (*.vcxproj)", "vcxproj" },
 		{ "All Files", NULL },
 	};
@@ -690,7 +729,7 @@ bool CIDEContent::ShowOpenSolutionDialog(void)
 	bool	bResult;
 
 	bResult = false;
-	mpFileChooser = OMalloc<CFileChooser>(mpWindow, &msDialogLook, "Open Project/Solution", false, mszSolutionFile.Text(), asTypes, sizeof(asTypes) / sizeof(SFileChooserType), mpFolderIcon, mpFileIcon);
+	mpFileChooser = OMalloc<CFileChooser>(mpWindow, &msDialogLook, "Open Project/Solution", false, GetStartupFile(), asTypes, sizeof(asTypes) / sizeof(SFileChooserType), mpFolderIcon, mpFileIcon);
 	if (mpFileChooser->Show())
 	{
 		szChosen.Init(mpFileChooser->GetChosen());
@@ -708,74 +747,79 @@ bool CIDEContent::ShowOpenSolutionDialog(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Reads a .sln (and its projects) and shows it in Solution Explorer.  A
-// .vcxproj on its own is put in a solution of its own, as Visual Studio
-// does.
+// Asks for a solution (.sln) or project (.vcxproj) to open with those
+// open.  False if none is chosen or it can't be added.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEContent::ShowAddSolutionDialog(void)
+{
+	static SFileChooserType	asTypes[] =
+	{
+		{ "Solutions (*.sln)", "sln" },
+		{ "Projects (*.vcxproj)", "vcxproj" },
+		{ "All Files", NULL },
+	};
+	CChars	szChosen;
+	bool	bResult;
+
+	bResult = false;
+	mpFileChooser = OMalloc<CFileChooser>(mpWindow, &msDialogLook, "Add Solution", false, GetStartupFile(), asTypes, sizeof(asTypes) / sizeof(SFileChooserType), mpFolderIcon, mpFileIcon);
+	if (mpFileChooser->Show())
+	{
+		szChosen.Init(mpFileChooser->GetChosen());
+		bResult = AddSolution(szChosen.Text());
+		szChosen.Kill();
+	}
+	mpFileChooser = NULL;
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Reads a workspace (.hcp65workspace) and its solutions, or a .sln (and
+// its projects), and shows them in Solution Explorer.  A .vcxproj on its
+// own is put in a solution of its own, as Visual Studio does.  A solution
+// with a workspace of its name beside it that has it opens the workspace:
+// the solutions it was open with last time.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEContent::OpenSolution(const char* szFileName)
 {
-	CChars	szName;
-	bool	bSolution;
+	CFileUtil	cFileUtil;
+	CChars		szFile;
+	CChars		szName;
+	bool		bResult;
 
-	szName.Init(szFileName);
-	bSolution = szName.EndsWithIgnoreCase(".sln");
-	szName.Kill();
-
-	//The layout of the solution being let go is kept beside it, with its open files.
-	SaveLayout();
-
-	//A build of the solution being let go is stopped, and its listings forgotten.  Its files are closed and the
-	//references found in it go.
-	mcBuild.Kill();
-	mcBuild.Init();
-	SetListings(false);
-	CloseAllFiles();
-	KillIDELocations(&masReferences);
-	masReferences.Init();
-	mpReferences->RemoveAllNodes();
-	mszSolutionFile.Set(szFileName);
-
-	mcCodeModel.Kill();
-	mcSolution.Kill();
-	mcSolution.Init();
-
-	//The repositories are found again from the new solution's files, and read at the next tick.
-	mcGit.RemoveAll();
-	miGitStatusTime = 0;
-	if (bSolution)
+	szFile.Init(szFileName);
+	if (!szFile.EndsWithIgnoreCase(BUILD_WORKSPACE_EXTENSION))
 	{
-		mbSolution = mcSolution.Read(szFileName);
+		cFileUtil.RemoveExtension(&szFile);
+		szFile.Append(BUILD_WORKSPACE_EXTENSION);
+		if (!cFileUtil.Exists(szFile.Text()))
+		{
+			szFile.Set(szFileName);
+		}
 	}
-	else
+
+	//The solutions being let go of are kept as they were left, and their files closed.
+	LetGoOfWorkspace();
+	bResult = mcWorkspace.Open(szFile.Text());
+	if (!szFile.Equals(szFileName) && (!bResult || (mcWorkspace.FindSolution(szFileName) == MAX_SIZE)))
 	{
-		mbSolution = mcSolution.ReadProject(szFileName);
+		//The workspace beside it no longer has it (it was removed): it is opened on its own.
+		bResult = mcWorkspace.Open(szFileName);
 	}
-	mcCodeModel.Init(&mcSolution);
+	szFile.Kill();
+	mcCodeModel.Init(&mcWorkspace);
 	mcCodeModel.AddDefaultSystemDirectories();
-	if (!mbSolution)
+	mpExplorer->ShowWorkspace(&mcWorkspace);
+	if (!bResult || !IsSolutionOpen())
 	{
 		return false;
 	}
-	mpExplorer->ShowSolution(&mcSolution);
 
-	//Colouring the files finds the repositories they are in; their statuses are read before the solution is shown.
-	mcGit.FindRepository(szFileName);
-	mpExplorer->ColourFiles(&mcGit, mpFontColours);
-	ReadGitStatus();
-	miGitStatusTime = GetDebugTickCount();
-
-	//The build configurations beside the solution, or the defaults if it hasn't any.
-	mcConfigurations.Kill();
-	mcConfigurations.Init();
-	muiConfiguration = MAX_SIZE;
-	szName.Init();
-	CBuildConfigurations::GetFileName(szFileName, &szName);
-	if (!mcConfigurations.Read(szName.Text()))
-	{
-		mcConfigurations.AddDefaults(&mcSolution);
-	}
-	szName.Kill();
+	FindRepositories();
 
 	//The breakpoints saved beside it, bound once its configuration's line tables are read.
 	szName.Init();
@@ -783,20 +827,311 @@ bool CIDEContent::OpenSolution(const char* szFileName)
 	mcDebugger.ReadSourceBreakpoints(szName.Text());
 	szName.Kill();
 
-	SetComboBoxItems(mpConfigurations, false);
-	SetComboBoxItems(mpPlatforms, true);
-	if (mcConfigurations.NumConfigurations() > 0)
-	{
-		//Chosen before the combo boxes tell of it, so it isn't indexed twice.
-		muiConfiguration = 0;
-		mcCodeModel.SetConfiguration(mcConfigurations.GetConfiguration(0)->GetSolutionConfiguration());
-		ShowConfiguration();
-	}
+	//Chosen before the combo boxes tell of it, so it isn't indexed twice.
+	ShowConfigurations();
 	mcCodeModel.StartIndexing();
 
 	//The windows where they were left, and the files that were open opened again.
 	LoadLayout();
 	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The first file opened (OpenSolution) and the rest added to it, as the
+// command line names them.  False if any couldn't be.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEContent::OpenSolutions(CArrayChars* paszFileNames)
+{
+	bool	bResult;
+	size	i;
+
+	if (paszFileNames->NumElements() == 0)
+	{
+		return false;
+	}
+	bResult = OpenSolution(paszFileNames->GetText(0));
+	for (i = 1; i < paszFileNames->NumElements(); i++)
+	{
+		bResult &= AddSolution(paszFileNames->GetText(i));
+	}
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Another solution opened with those open (File, Add Solution), its
+// projects indexed with theirs.  The workspace file is written.  With
+// none open it is opened.  False if it is already open or can't be read.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEContent::AddSolution(const char* szFileName)
+{
+	size	uiSolution;
+
+	if (!IsSolutionOpen())
+	{
+		return OpenSolution(szFileName);
+	}
+
+	//The indexing uses the solutions, so it stops while they change.
+	mcCodeModel.Reset();
+	uiSolution = mcWorkspace.AddSolution(szFileName);
+	if (uiSolution == MAX_SIZE)
+	{
+		mcCodeModel.StartIndexing();
+		return gcLogger.Error2(__METHOD__, " [", szFileName, "] is already open.", NULL);
+	}
+	if (!mcWorkspace.GetSolution(uiSolution)->mbRead)
+	{
+		mcWorkspace.RemoveSolution(uiSolution);
+		mcCodeModel.StartIndexing();
+		return gcLogger.Error2(__METHOD__, " Could not read [", szFileName, "].", NULL);
+	}
+	WorkspaceChanged(true);
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A solution taken out of those open (its node's Remove).  Its files stay
+// open.  The last one, or one while a build is running, isn't.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEContent::RemoveSolution(size uiSolution)
+{
+	if ((mcWorkspace.NumSolutions() < 2) || (uiSolution >= mcWorkspace.NumSolutions()))
+	{
+		return false;
+	}
+	if (mcBuild.IsRunning())
+	{
+		return gcLogger.Error2(__METHOD__, " A solution can't be removed while a build is running.", NULL);
+	}
+
+	mcCodeModel.Reset();
+	mcWorkspace.RemoveSolution(uiSolution);
+	WorkspaceChanged(true);
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The solution debugged (F5), and whose configuration the toolbar shows
+// first.  The workspace file is written.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEContent::SetStartupSolution(size uiSolution)
+{
+	if (uiSolution >= mcWorkspace.NumSolutions())
+	{
+		return false;
+	}
+	if (uiSolution == mcWorkspace.GetStartup())
+	{
+		return true;
+	}
+	mcWorkspace.SetStartup(uiSolution);
+	WorkspaceChanged(false);
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// What is open is let go of: its layout saved, a build of it stopped, its
+// files closed and the references found in it forgotten.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::LetGoOfWorkspace(void)
+{
+	SaveLayout();
+
+	mcBuild.Kill();
+	mcBuild.Init();
+	maiBuildOrder.ReInit();
+	SetListings(false);
+	CloseAllFiles();
+	KillIDELocations(&masReferences);
+	masReferences.Init();
+	mpReferences->RemoveAllNodes();
+
+	mcCodeModel.Kill();
+	mcWorkspace.Clear();
+	mszConfiguration.Clear();
+
+	//The repositories are found again from the new solutions' files, and read at the next tick.
+	mcGit.RemoveAll();
+	miGitStatusTime = 0;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// After a solution is added, removed or made the startup one: Solution
+// Explorer and the toolbar show it, the open files are given their
+// projects again and (bReindex) the code is indexed again; and the
+// workspace file is written.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::WorkspaceChanged(bool bReindex)
+{
+	size	i;
+
+	mpExplorer->ShowWorkspace(&mcWorkspace);
+	FindRepositories();
+	ShowConfigurations();
+	if (bReindex)
+	{
+		for (i = 0; i < maTabs.Size(); i++)
+		{
+			maTabs.Get(i)->SetProject(mpExplorer->FindFileProject(maTabs.Get(i)->GetFileName()));
+		}
+		for (i = 0; i < maDiffTabs.Size(); i++)
+		{
+			maDiffTabs.Get(i)->GetSide(TDS_Left)->muiProject = mpExplorer->FindFileProject(maDiffTabs.Get(i)->GetSide(TDS_Left)->mszFile.Text());
+			maDiffTabs.Get(i)->GetSide(TDS_Right)->muiProject = mpExplorer->FindFileProject(maDiffTabs.Get(i)->GetSide(TDS_Right)->mszFile.Text());
+		}
+		mcCodeModel.StartIndexing();
+		for (i = 0; i < maTabs.Size(); i++)
+		{
+			HighlightTab(maTabs.Get(i));
+		}
+	}
+	WriteWorkspace();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The workspace file: where it was read from, or beside the first
+// solution with its name (so its layout and breakpoints are still the
+// solution's).
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEContent::WriteWorkspace(void)
+{
+	CFileUtil	cFileUtil;
+	CChars		szFile;
+	bool		bResult;
+
+	if (mcWorkspace.NumSolutions() == 0)
+	{
+		return false;
+	}
+	szFile.Init(mcWorkspace.GetFile());
+	if (szFile.Empty())
+	{
+		szFile.Set(mcWorkspace.GetSolution(0)->mszFile);
+		cFileUtil.RemoveExtension(&szFile);
+		szFile.Append(BUILD_WORKSPACE_EXTENSION);
+	}
+	bResult = mcWorkspace.Write(szFile.Text());
+	if (!bResult)
+	{
+		gcLogger.Error2(__METHOD__, " Could not write [", szFile.Text(), "].", NULL);
+	}
+	szFile.Kill();
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The repositories each solution's files are in, their files coloured by
+// their statuses, read before they are shown.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::FindRepositories(void)
+{
+	size	i;
+
+	for (i = 0; i < mcWorkspace.NumSolutions(); i++)
+	{
+		mcGit.FindRepository(mcWorkspace.GetSolution(i)->mszFile.Text());
+	}
+	mpExplorer->ColourFiles(&mcGit, mpFontColours);
+	ReadGitStatus();
+	miGitStatusTime = GetDebugTickCount();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The names of every solution's configurations in the toolbar.  The one
+// chosen stays chosen if a solution still has it, or the startup
+// solution's first is.  The code model is told but not indexed again.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::ShowConfigurations(void)
+{
+	CArrayChars	aszNames;
+
+	aszNames.Init();
+	mcWorkspace.GetConfigurationNames(&aszNames);
+	if (!aszNames.Contains(mszConfiguration.Text()))
+	{
+		mszConfiguration.Set((aszNames.NumElements() > 0) ? aszNames.GetText(0) : "");
+	}
+	aszNames.Kill();
+
+	SetComboBoxItems(mpConfigurations, false);
+	SetComboBoxItems(mpPlatforms, true);
+	if (StringCompare(mszConfiguration.Text(), mcCodeModel.GetConfiguration()) != 0)
+	{
+		mcCodeModel.SetConfiguration(mszConfiguration.Text());
+	}
+	ShowConfiguration();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The startup solution is there and could be read.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEContent::IsSolutionOpen(void)
+{
+	return (mcWorkspace.GetStartupSolution() != NULL) && mcWorkspace.GetStartupSolution()->mbRead;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The startup solution's file (a .sln or .vcxproj), "" if none is open.
+//
+//////////////////////////////////////////////////////////////////////////
+char* CIDEContent::GetStartupFile(void)
+{
+	return (mcWorkspace.GetStartupSolution() != NULL) ? mcWorkspace.GetStartupSolution()->mszFile.Text() : (char*)"";
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The file the per-user files (the layout, the breakpoints) are named
+// after: the workspace file, or the solution if there isn't one.  False
+// if nothing is open.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEContent::GetSettingsBaseFile(CChars* pszDest)
+{
+	if (mcWorkspace.GetFile()[0] != '\0')
+	{
+		pszDest->Set(mcWorkspace.GetFile());
+		return true;
+	}
+	if (GetStartupFile()[0] != '\0')
+	{
+		pszDest->Set(GetStartupFile());
+		return true;
+	}
+	return false;
 }
 
 
@@ -1260,15 +1595,28 @@ bool CIDEContent::Build(void)
 	CArrayChars	aszLines;
 	bool		bResult;
 
-	if (!mbSolution || (GetConfiguration() == NULL) || mcBuild.IsRunning())
+	if (!IsSolutionOpen() || mszConfiguration.Empty() || mcBuild.IsRunning())
+	{
+		return false;
+	}
+	maiBuildOrder.ReInit();
+	mcWorkspace.GetBuildOrder(mszConfiguration.Text(), &maiBuildOrder);
+	if (maiBuildOrder.NumElements() == 0)
 	{
 		return false;
 	}
 
+	//The listings of every solution built are read, in place of the last build's.
+	SetListings(false);
+	muiBuildStep = 0;
 	mpBuildPane->Clear();
 	ShowBuildTab();
 	aszLines.Init();
-	bResult = mcBuild.Start(&mcSolution, GetConfiguration(), NULL, mszLibc65.Text(), &aszLines);
+	bResult = StartBuildStep(&aszLines);
+	if (bResult)
+	{
+		FinishBuildSteps(&aszLines);
+	}
 	mpBuildPane->AppendLines(&aszLines);
 	mpBuildPane->SetProgress(mcBuild.GetProgress());
 	aszLines.Kill();
@@ -1298,17 +1646,14 @@ void CIDEContent::PollBuild(Ptr<CWindow> pWindow)
 
 	aszLines.Init();
 	bRunning = mcBuild.Poll(&aszLines);
-	if (!bRunning && (mcBuild.GetState() == BS_Succeeded) && GetConfiguration()->IsHCP65())
+	if (!bRunning)
 	{
-		ReadListings(&aszLines);
-
-		//The program's new line table binds the breakpoints in its source.
-		ReadLineTables();
+		FinishBuildSteps(&aszLines);
 	}
 	mpBuildPane->AppendLines(&aszLines);
 	mpBuildPane->SetProgress(mcBuild.GetProgress());
 	aszLines.Kill();
-	if (bRunning)
+	if (mcBuild.IsRunning())
 	{
 		pWindow->RequestTick(IDE_BUILD_POLL);
 	}
@@ -1317,8 +1662,69 @@ void CIDEContent::PollBuild(Ptr<CWindow> pWindow)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The last build's listings, in place of those read before, given to the
-// open files.  A line asked for (ShowListingAfterBuild) shows its code.
+// The build of the solution the build is up to (muiBuildStep), with a line
+// saying which when more than one is built.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEContent::StartBuildStep(CArrayChars* paszLines)
+{
+	size						uiSolution;
+	CBuildWorkspaceSolution*	pcSolution;
+	CChars						szLine;
+
+	uiSolution = (size)maiBuildOrder.GetValue(muiBuildStep);
+	pcSolution = mcWorkspace.GetSolution(uiSolution);
+	if (maiBuildOrder.NumElements() > 1)
+	{
+		szLine.Init("------ ");
+		szLine.Append(pcSolution->mcSolution.GetName());
+		szLine.Append(": ");
+		szLine.Append(mszConfiguration);
+		szLine.Append(" ------");
+		paszLines->Add(szLine.Text());
+		szLine.Kill();
+	}
+	return mcBuild.Start(&pcSolution->mcSolution, mcWorkspace.FindConfiguration(uiSolution, mszConfiguration.Text()), NULL, mszLibc65.Text(), paszLines);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// When a solution's build has finished: an HCP65 build that succeeded has
+// its listings read, and the next solution's is started.  A build that
+// failed builds no more.  When the last succeeds the programs' new line
+// tables bind the breakpoints in their source.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::FinishBuildSteps(CArrayChars* paszLines)
+{
+	CBuildConfiguration*	pcConfiguration;
+
+	while (!mcBuild.IsRunning() && (mcBuild.GetState() == BS_Succeeded) && (muiBuildStep < maiBuildOrder.NumElements()))
+	{
+		pcConfiguration = mcWorkspace.FindConfiguration((size)maiBuildOrder.GetValue(muiBuildStep), mszConfiguration.Text());
+		if (pcConfiguration->IsHCP65())
+		{
+			ReadListings(paszLines);
+		}
+		muiBuildStep++;
+		if (muiBuildStep == maiBuildOrder.NumElements())
+		{
+			ReadLineTables();
+		}
+		else if (!StartBuildStep(paszLines))
+		{
+			break;
+		}
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The last solution build's listings, added to those of the solutions
+// built before it, given to the open files.  A line asked for
+// (ShowListingAfterBuild) shows its code.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEContent::ReadListings(CArrayChars* paszLines)
@@ -1328,8 +1734,9 @@ void CIDEContent::ReadListings(CArrayChars* paszLines)
 	CChars		szLine;
 	CArrayChars	aszFiles;
 	size		i;
+	size		uiRead;
 
-	SetListings(false);
+	uiRead = mcListings.NumListings();
 	szDirectory.Init();
 	mcBuild.GetBuild()->GetListingDirectory(&szDirectory);
 	aszFiles.Init();
@@ -1341,9 +1748,10 @@ void CIDEContent::ReadListings(CArrayChars* paszLines)
 			mcListings.ReadListing(aszFiles.GetText(i));
 		}
 	}
+	uiRead = mcListings.NumListings() - uiRead;
 	szLine.Init("Read ");
-	szLine.Append((uint32)mcListings.NumListings());
-	szLine.Append((mcListings.NumListings() == 1) ? " listing from " : " listings from ");
+	szLine.Append((uint32)uiRead);
+	szLine.Append((uiRead == 1) ? " listing from " : " listings from ");
 	szLine.Append(szDirectory);
 	szLine.Append('.');
 	paszLines->Add(szLine.Text());
@@ -1493,22 +1901,22 @@ void CIDEContent::ConfigurationChosen(void)
 
 	szConfiguration = mpConfigurations->GetSelectedText();
 	szPlatform = mpPlatforms->GetSelectedText();
-	pcCurrent = GetConfiguration();
+	pcCurrent = GetChosenConfiguration();
 	if ((szConfiguration == NULL) || (szPlatform == NULL) || ((pcCurrent != NULL) && pcCurrent->Is(szConfiguration, szPlatform)))
 	{
 		return;
 	}
 
-	pcChosen = mcConfigurations.FindConfiguration(szConfiguration, szPlatform);
+	pcChosen = mcWorkspace.FindAnyConfiguration(szConfiguration, szPlatform);
 	if (pcChosen == NULL)
 	{
 		if ((pcCurrent != NULL) && pcCurrent->Is(NULL, szPlatform))
 		{
-			pcChosen = mcConfigurations.FindConfiguration(szConfiguration, NULL);
+			pcChosen = mcWorkspace.FindAnyConfiguration(szConfiguration, NULL);
 		}
 		else
 		{
-			pcChosen = mcConfigurations.FindConfiguration(NULL, szPlatform);
+			pcChosen = mcWorkspace.FindAnyConfiguration(NULL, szPlatform);
 		}
 	}
 	if (pcChosen != NULL)
@@ -1524,7 +1932,8 @@ void CIDEContent::ConfigurationChosen(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The configurations' configuration names, or platforms, in pComboBox.
+// Every solution's configurations' configuration names, or platforms, in
+// pComboBox.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEContent::SetComboBoxItems(Ptr<CComboBox> pComboBox, bool bPlatforms)
@@ -1533,14 +1942,7 @@ void CIDEContent::SetComboBoxItems(Ptr<CComboBox> pComboBox, bool bPlatforms)
 	size			i;
 
 	aszNames.Init();
-	if (bPlatforms)
-	{
-		mcConfigurations.GetPlatformNames(&aszNames);
-	}
-	else
-	{
-		mcConfigurations.GetConfigurationNames(&aszNames);
-	}
+	mcWorkspace.GetConfigurationNames(&aszNames, bPlatforms);
 	pComboBox->RemoveAllItems();
 	for (i = 0; i < aszNames.NumElements(); i++)
 	{
@@ -1558,18 +1960,20 @@ void CIDEContent::SetComboBoxItems(Ptr<CComboBox> pComboBox, bool bPlatforms)
 //////////////////////////////////////////////////////////////////////////
 void CIDEContent::ShowConfiguration(void)
 {
-	CChars	szName;
+	CChars					szName;
+	CBuildConfiguration*	pcConfiguration;
 
-	if (GetConfiguration() == NULL)
+	pcConfiguration = GetChosenConfiguration();
+	if (pcConfiguration == NULL)
 	{
 		return;
 	}
 
 	szName.Init();
-	GetConfiguration()->GetConfigurationName(&szName);
+	pcConfiguration->GetConfigurationName(&szName);
 	SelectComboBoxItem(mpConfigurations, szName.Text());
 	szName.Clear();
-	GetConfiguration()->GetPlatformName(&szName);
+	pcConfiguration->GetPlatformName(&szName);
 	SelectComboBoxItem(mpPlatforms, szName.Text());
 	szName.Kill();
 
@@ -1600,35 +2004,26 @@ void CIDEContent::SelectComboBoxItem(Ptr<CComboBox> pComboBox, const char* szTex
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The build configuration szConfiguration is chosen.  The code is parsed
-// as its solution configuration builds it: if that changed the solution is
-// indexed again and the open files are highlighted again.  False if there
-// is no such build configuration.
+// The build configuration szConfiguration is chosen: each solution's of
+// that name.  The code is parsed as their solution configurations build
+// it: if it changed the solutions are indexed again and the open files are
+// highlighted again.  False if no solution has such a build configuration.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEContent::SetConfiguration(const char* szConfiguration)
 {
-	size					i;
-	CBuildConfiguration*	pcConfiguration;
+	size	i;
 
-	for (i = 0; i < mcConfigurations.NumConfigurations(); i++)
-	{
-		if (StringCompare(mcConfigurations.GetConfiguration(i)->GetName(), szConfiguration) == 0)
-		{
-			break;
-		}
-	}
-	if (i == mcConfigurations.NumConfigurations())
+	if (mcWorkspace.FindAnyConfiguration(szConfiguration) == NULL)
 	{
 		return false;
 	}
-	muiConfiguration = i;
+	mszConfiguration.Set(szConfiguration);
 	ShowConfiguration();
 
-	pcConfiguration = mcConfigurations.GetConfiguration(i);
-	if (StringCompare(pcConfiguration->GetSolutionConfiguration(), mcCodeModel.GetConfiguration()) != 0)
+	if (StringCompare(mszConfiguration.Text(), mcCodeModel.GetConfiguration()) != 0)
 	{
-		mcCodeModel.SetConfiguration(pcConfiguration->GetSolutionConfiguration());
+		mcCodeModel.SetConfiguration(mszConfiguration.Text());
 		mcCodeModel.StartIndexing();
 		for (i = 0; i < maTabs.Size(); i++)
 		{
@@ -1641,12 +2036,36 @@ bool CIDEContent::SetConfiguration(const char* szConfiguration)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The chosen build configuration, NULL if none is.
+// The startup solution's chosen build configuration: what is debugged.
+// NULL if none is chosen or the startup solution hasn't it.
 //
 //////////////////////////////////////////////////////////////////////////
 CBuildConfiguration* CIDEContent::GetConfiguration(void)
 {
-	return (muiConfiguration < mcConfigurations.NumConfigurations()) ? mcConfigurations.GetConfiguration(muiConfiguration) : NULL;
+	return mcWorkspace.FindConfiguration(mcWorkspace.GetStartup(), mszConfiguration.Text());
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The chosen build configuration's name, "" if none is chosen.
+//
+//////////////////////////////////////////////////////////////////////////
+char* CIDEContent::GetConfigurationName(void)
+{
+	return mszConfiguration.Text();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A configuration with the chosen name, the startup solution's if it has
+// one: what the toolbar shows.
+//
+//////////////////////////////////////////////////////////////////////////
+CBuildConfiguration* CIDEContent::GetChosenConfiguration(void)
+{
+	return mcWorkspace.FindAnyConfiguration(mszConfiguration.Text());
 }
 
 
@@ -1830,19 +2249,20 @@ Ptr<CDockPane> CIDEContent::CreatePane(const char* szID)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// <solution>.layout.user beside the solution or project.  False if no
-// solution is open.
+// <workspace>.layout.user beside the workspace file, or the solution or
+// project if there isn't one.  False if no solution is open.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEContent::GetLayoutFileName(CChars* pszDest)
 {
 	CFileUtil	cFileUtil;
 
-	if (mszSolutionFile.Empty())
+	pszDest->Init();
+	if (!GetSettingsBaseFile(pszDest))
 	{
+		pszDest->Kill();
 		return false;
 	}
-	pszDest->Init(mszSolutionFile);
 	cFileUtil.RemoveExtension(pszDest);
 	pszDest->Append(IDE_LAYOUT_EXTENSION);
 	return true;
@@ -1859,7 +2279,7 @@ bool CIDEContent::SaveLayout(void)
 	CChars	szFileName;
 	bool	bResult;
 
-	if (!mbSolution || !GetLayoutFileName(&szFileName))
+	if (!IsSolutionOpen() || !GetLayoutFileName(&szFileName))
 	{
 		return false;
 	}
@@ -1951,6 +2371,7 @@ Ptr<CTreeContainer> CIDEContent::GetReferences(void) { return mpReferences; }
 Ptr<CIDEBuildPane> CIDEContent::GetBuildPane(void) { return mpBuildPane; }
 bool CIDEContent::IsBuilding(void) { return mcBuild.IsRunning(); }
 CCPP65ListingIndex* CIDEContent::GetListings(void) { return &mcListings; }  //The last HCP65 build's, for showing a line's assembly.
+CBuildWorkspace* CIDEContent::GetWorkspace(void) { return &mcWorkspace; }
 CIDECodeModel* CIDEContent::GetCodeModel(void) { return &mcCodeModel; }
 CSolutionExplorer* CIDEContent::GetExplorer(void) { return &mpExplorer; }
 

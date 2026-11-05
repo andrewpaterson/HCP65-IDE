@@ -538,5 +538,6 @@ Ptr<CScrollPane> CIDEEditorTab::GetPane(void) { return mpPane; }
 Ptr<CDockPane> CIDEEditorTab::GetDockPane(void) { return mpDockPane; }
 char* CIDEEditorTab::GetFileName(void) { return mszFileName.Text(); }
 size CIDEEditorTab::GetProject(void) { return muiProject; }
+void CIDEEditorTab::SetProject(size uiProject) { muiProject = uiProject; }
 bool CIDEEditorTab::IsEdited(void) { return mbEdited; }
 

@@ -55,7 +55,7 @@ protected:
 	Ptr<CScrollPane>	mpPane;			//The tab's page.
 	Ptr<CDockPane>		mpDockPane;  //The document pane it is shown in.
 	CChars				mszFileName;
-	size				muiProject;		//The solution's project it is in, MAX_SIZE if none.
+	size				muiProject;		//The workspace's project it is in, MAX_SIZE if none.
 	size				muiSeenChanges;	//The editor's change count when it was last looked at.
 	int64				miChangedTime;	//When the text last changed (GetDebugTickCount).
 	bool				mbRecolour;		//The text changed and hasn't been highlighted since.
@@ -105,6 +105,7 @@ public:
 	Ptr<CDockPane>		GetDockPane(void);
 	char*				GetFileName(void);
 	size				GetProject(void);
+	void				SetProject(size uiProject);
 	bool				IsEdited(void);
 
 	bool				SaveFile(void);

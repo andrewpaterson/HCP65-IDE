@@ -38,7 +38,7 @@ public:
 	CChars	mszFile;			//Its full path.
 	CChars	mszRevision;		//Empty for the file as it is.
 	CChars	mszHead;			//The repository's last commit when the revision's text was read.
-	size	muiProject;			//The solution's project it is in, SOLUTION_EXPLORER_NO_PROJECT if none.
+	size	muiProject;			//The workspace's project it is in, SOLUTION_EXPLORER_NO_PROJECT if none.
 	size	muiSeenChanges;		//Its editor's change count when its text was read, IDE_DIFF_NO_CHANGES if not from one.
 
 	void	Init(const char* szFile, const char* szRevision, size uiProject);

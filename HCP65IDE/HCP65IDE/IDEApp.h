@@ -48,7 +48,7 @@ protected:
 
 public:
 	void	Init(void);
-	bool	Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativeInput, const char* szInputDirectory, const char* szSolution);
+	bool	Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativeInput, const char* szInputDirectory, CArrayChars* paszSolutions);
 	void	Class(void) override;
 	void	Free(void) override;
 

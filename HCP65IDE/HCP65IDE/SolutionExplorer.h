@@ -25,6 +25,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/TreeContainer.h"
 #include "WindowLib/ScrollPane.h"
 #include "VisualStudioLib/VcxSolution.h"
+#include "BuildLib/BuildWorkspace.h"
 #include "SupportLib/FontColours.h"
 #include "GitLib/GitRepositories.h"
 
@@ -44,6 +45,7 @@ enum ESolutionExplorerNodeType
 struct SSolutionExplorerNode
 {
 	ESolutionExplorerNodeType	eType;
+	size						uiSolution;	//The workspace's solution the node is in.
 	size						uiProject;	//The solution's project (or folder) the node is in; unused for the solution.
 	size						uiIndex;
 };
@@ -53,6 +55,7 @@ typedef CArrayTemplate<SSolutionExplorerNode>	CArraySolutionExplorerNode;
 
 
 #define SOLUTION_EXPLORER_NO_PROJECT	MAX_SIZE
+#define SOLUTION_EXPLORER_NO_SOLUTION	MAX_SIZE
 
 
 //A folder, project or file to be shown, while the ones in a folder are sorted.
@@ -67,8 +70,8 @@ struct SSolutionExplorerEntry
 typedef CArrayTemplate<SSolutionExplorerEntry>	CArraySolutionExplorerEntry;
 
 
-//Solution Explorer: the solution, its solution folders and projects, each project's filters as folders and its files in
-//them, as Visual Studio shows them.  In each folder the folders come first and then the projects or files, each in
+//Solution Explorer: each of the workspace's solutions, its solution folders and projects, each project's filters as
+//folders and its files in them, as Visual Studio shows them.  With more than one solution the startup one is marked.  In each folder the folders come first and then the projects or files, each in
 //alphabetical order.  Files can be coloured by what git says has happened to them (ColourFiles).  It is an object held by
 //the IDE's content.
 class CSolutionExplorer : public CObject
@@ -82,7 +85,7 @@ protected:
 	Ptr<CImageCel>				mpFileIcon;
 	Ptr<CImageCel>				mpProjectIcon;
 	Ptr<CImageCel>				mpSolutionIcon;
-	CVcxSolution*				mpcSolution;
+	CBuildWorkspace*			mpcWorkspace;
 	CArraySolutionExplorerNode	masNodes;
 
 public:
@@ -93,24 +96,28 @@ public:
 	bool					Save(CObjectWriter* pcFile) override;
 	bool					Load(CObjectReader* pcFile) override;
 
-	void					ShowSolution(CVcxSolution* pcSolution);
+	void					ShowWorkspace(CBuildWorkspace* pcWorkspace);
 	Ptr<CTreeContainer>		GetTree(void);
 	Ptr<CComponent>			GetComponent(void);
 	SSolutionExplorerNode*	GetNode(int32 iNode);
 	bool					GetNodeFilePath(int32 iNode, CChars* pszDest);
 	bool					GetSelectedFilePath(CChars* pszDest);
 	size					GetNodeProject(int32 iNode);
+	size					GetNodeSolution(int32 iNode);
+	int32					FindSolutionNode(size uiSolution);
 	bool					GetNodeFileName(int32 iNode, CChars* pszDest);
 	int32					FindFileNode(const char* szFileName);
 	size					FindFileProject(const char* szPath);
 	void					ColourFiles(CGitRepositories* pcGit, Ptr<CFontColours> pColours);
 
 protected:
-	int32					AddNode(int32 iParentNode, const char* szText, Ptr<CImageCel> pIcon, ESolutionExplorerNodeType eType, size uiProject, size uiIndex);
-	void					AddSolutionContents(int32 iParentNode, const char* szParentGuid);
-	void					AddSolutionItems(int32 iParentNode, size uiFolder);
-	void					AddProject(int32 iParentNode, size uiProject);
-	void					AddFilterContents(int32 iParentNode, size uiProject, const char* szFilter);
+	int32					AddNode(int32 iParentNode, const char* szText, Ptr<CImageCel> pIcon, ESolutionExplorerNodeType eType, size uiSolution, size uiProject, size uiIndex);
+	void					AddSolution(size uiSolution);
+	void					AddSolutionContents(int32 iParentNode, size uiSolution, const char* szParentGuid);
+	void					AddSolutionItems(int32 iParentNode, size uiSolution, size uiFolder);
+	void					AddProject(int32 iParentNode, size uiSolution, size uiProject);
+	void					AddFilterContents(int32 iParentNode, size uiSolution, size uiProject, const char* szFilter);
+	CVcxSolution*			GetSolution(size uiSolution);
 };
 
 
