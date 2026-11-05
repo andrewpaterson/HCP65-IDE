@@ -18,10 +18,9 @@ You should have received a copy of the GNU Affero General Public License
 along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 
 ** ------------------------------------------------------------------------ **/
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include "BaseLib/StringHelper.h"
+#include "Assembler65Lib/Asm65Attributes.h"
 #include "BuildConfiguration.h"
 
 
@@ -111,7 +110,6 @@ void CBuildConfiguration::Kill(void)
 void CBuildConfiguration::SaveXML(CXMLWriter* pcWriter)
 {
 	size	i;
-	char	szAddress[16];
 
 	pcWriter->Begin(BUILD_CONFIGURATION_TAG);
 	pcWriter->Attribute(BUILD_CONFIGURATION_NAME, mszName.Text());
@@ -150,8 +148,7 @@ void CBuildConfiguration::SaveXML(CXMLWriter* pcWriter)
 	{
 		pcWriter->Begin(BUILD_CONFIGURATION_LOAD);
 		pcWriter->Attribute(BUILD_CONFIGURATION_LOAD_FILE, maszLoadFiles.GetText(i));
-		snprintf(szAddress, sizeof(szAddress), "0x%X", (unsigned int)*mauiLoadAddresses.Get(i));
-		pcWriter->Attribute(BUILD_CONFIGURATION_LOAD_ADDRESS, szAddress);
+		Asm65WriteHexAttribute(pcWriter, BUILD_CONFIGURATION_LOAD_ADDRESS, *mauiLoadAddresses.Get(i));
 		pcWriter->End();
 	}
 	pcWriter->End();
@@ -177,9 +174,7 @@ bool CBuildConfiguration::LoadXML(CMarkupTag* pcTag)
 	CMarkupTag*		pcLoad;
 	STagIterator	sIterator;
 	char*			szFile;
-	char*			szAddress;
-	char*			szEnd;
-	unsigned long	ulAddress;
+	uint32			uiAddress;
 
 	if (StringCompare(pcTag->GetName(), BUILD_CONFIGURATION_TAG) != 0)
 	{
@@ -221,17 +216,11 @@ bool CBuildConfiguration::LoadXML(CMarkupTag* pcTag)
 	for (pcLoad = pcTag->GetTag(BUILD_CONFIGURATION_LOAD, &sIterator); pcLoad; pcLoad = pcTag->GetNextTag(&sIterator))
 	{
 		szFile = pcLoad->GetStringAttribute(BUILD_CONFIGURATION_LOAD_FILE);
-		szAddress = pcLoad->GetStringAttribute(BUILD_CONFIGURATION_LOAD_ADDRESS);
-		if (!IsHCP65() || !szFile || (szFile[0] == '\0') || !szAddress || (szAddress[0] == '\0') || (szAddress[0] == '-'))
+		if (!IsHCP65() || !szFile || (szFile[0] == '\0') || !Asm65ReadUint32Attribute(pcLoad, BUILD_CONFIGURATION_LOAD_ADDRESS, &uiAddress))
 		{
 			return false;
 		}
-		ulAddress = strtoul(szAddress, &szEnd, 0);
-		if (*szEnd != '\0')
-		{
-			return false;
-		}
-		AddLoad(szFile, (uint32)ulAddress);
+		AddLoad(szFile, uiAddress);
 	}
 
 	SetCard(pcTag->GetAttribute((char*)BUILD_CONFIGURATION_CARD), pcTag->GetAttribute((char*)BUILD_CONFIGURATION_CARD_PATH));
