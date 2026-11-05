@@ -3,6 +3,7 @@
 *.VC.db
 *.VC.opendb
 *.suo
+*.hcp65user
 *.sdf
 *.opensdf
 *ipch
