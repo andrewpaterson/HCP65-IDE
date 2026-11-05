@@ -100,7 +100,9 @@ void CIDEClaudePane::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CF
 	mpNewButton = OMalloc<CButton>(pWindow, pTheme, "New Conversation");
 	mpNewButton->SetAlignment(CSH_Left, CSV_Top);
 
+	//A grid in a grid has no height of its own.
 	pRequestRow = OMalloc<CGridContainer>(pWindow);
+	pRequestRow->SetDesiredSize(-1, IDE_CLAUDE_REQUEST_HEIGHT);
 	pRequestRow->SetAlignment(CSH_Stretch, CSV_Stretch);
 	pRequestRow->AddComponent(mpRequestPane, 0, 0, 1, 1, 1, 1);
 	pRequestRow->AddComponent(mpSendButton, 1, 0, 1, 1, 0, 1);
