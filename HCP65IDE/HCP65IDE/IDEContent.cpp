@@ -158,26 +158,6 @@ Ptr<CFont> GenerateIDEFont(const char* szFontFilename, const char* szName, float
 //
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEMenuListener::Init(CIDEContent* pcContent)
-{
-	mpcContent = pcContent;
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDEMenuListener::MenuItemClicked(CUnknown* pcSource, void* pvContext)
-{
-	mpcContent->MenuItemClicked((CMenuItem*)pcSource);
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-//
-//////////////////////////////////////////////////////////////////////////
 void CIDETabsListener::Init(CIDEContent* pcContent)
 {
 	mpcContent = pcContent;
@@ -219,7 +199,6 @@ void CIDEContent::Init(void)
 	mcCodeModel.Init(&mcSolution);
 	mcConfigurations.Init();
 	muiConfiguration = MAX_SIZE;
-	mcMenuListener.Init(this);
 	memset(&msDialogLook, 0, sizeof(msDialogLook));
 	mszSolutionFile.Init();
 	mcBuild.Init();
@@ -259,7 +238,6 @@ void CIDEContent::Class(void)
 	U_Data(ARGB32, msDialogLook.sDivider);
 	M_Pointer(mpMenuBar);
 	M_Pointer(mpOpenItem);
-	U_Unknown(CIDEMenuListener, mcMenuListener);
 	M_Pointer(mpFileChooser);
 	M_Pointer(mpFolderIcon);
 	M_Pointer(mpFileIcon);
@@ -345,7 +323,10 @@ void CIDEContent::Free(void)
 	{
 		mpStartButton->GetClickEvent()->Remove(this);
 	}
-	mcMenuListener.RemoveFromListenerCalls();
+	if (mpMenuBar.IsNotNull())
+	{
+		mpMenuBar->GetItemClickEvent()->Remove(this);
+	}
 	mcTabsListener.RemoveFromListenerCalls();
 
 	//An emulator being debugged is quit (or detached from).
@@ -513,7 +494,7 @@ Ptr<CMenuBar> CIDEContent::CreateMenuBar(void)
 	mpMenuBar = OMalloc<CMenuBar>(mpWindow, mpTheme);
 	mpMenuBar->AddMenu("File", pFile);
 	mpMenuBar->AddMenu("Debug", CreateDebugMenu());
-	mpMenuBar->AddListener(&mcMenuListener);
+	mpMenuBar->GetItemClickEvent()->Add(this, &CIDEContent::MenuItemClicked);
 	mpMenuBar->SetAlignment(CSH_Stretch, CSV_Stretch);
 	return mpMenuBar;
 }

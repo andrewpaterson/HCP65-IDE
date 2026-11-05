@@ -36,7 +36,6 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/TabbedContainer.h"
 #include "WindowLib/TabbedContainerListener.h"
 #include "WindowLib/MenuBar.h"
-#include "WindowLib/MenuListener.h"
 #include "WindowLib/Dialog.h"
 #include "WindowLib/FileChooser.h"
 #include "IDECodeModel.h"
@@ -50,18 +49,6 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 class CIDEContent;
 
-
-
-//Hears the menu bar's items being clicked.
-class CIDEMenuListener : public CMenuListener
-{
-CONSTRUCTABLE(CIDEMenuListener);
-public:
-	CIDEContent*	mpcContent;
-
-	void	Init(CIDEContent* pcContent);
-	void	MenuItemClicked(CUnknown* pcSource, void* pvContext) override;
-};
 
 
 //Hears the editor's tabs being selected and closed.
@@ -97,7 +84,6 @@ protected:
 	SDialogLook					msDialogLook;
 	Ptr<CMenuBar>				mpMenuBar;
 	Ptr<CMenuItem>				mpOpenItem;			//File, Open Project/Solution.
-	CIDEMenuListener			mcMenuListener;
 	Ptr<CFileChooser>			mpFileChooser;		//While it's shown.
 	Ptr<CImageCel>				mpFolderIcon;		//The file chooser's.
 	Ptr<CImageCel>				mpFileIcon;
