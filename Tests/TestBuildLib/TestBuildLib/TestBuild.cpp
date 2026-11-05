@@ -132,9 +132,11 @@ void TestBuildHCP65(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Tiny built by MSBuild, as Visual Studio does; Broken fails.
+// Tiny built by MSBuild, as Visual Studio does; Broken fails.  MSBuild is
+// only on Windows.
 //
 //////////////////////////////////////////////////////////////////////////
+#ifdef _WIN32
 void TestBuildMSVC(void)
 {
 	CVcxSolution			cSolution;
@@ -171,6 +173,7 @@ void TestBuildMSVC(void)
 	cBuild.Kill();
 	cConfiguration.Kill();
 }
+#endif // _WIN32
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -233,7 +236,9 @@ void TestBuild(void)
 	BeginTests();
 
 	TestBuildHCP65();
+#ifdef _WIN32
 	TestBuildMSVC();
+#endif // _WIN32
 	TestBuildGCC();
 
 	TestStatistics();
