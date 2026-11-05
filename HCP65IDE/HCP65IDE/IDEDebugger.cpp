@@ -35,6 +35,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define IDE_DEBUG_QUIT_WAIT		2000		//Milliseconds the emulator has to quit before it is ended.
 #define IDE_DEBUG_START_WAIT	20000		//Milliseconds the emulator has to make its channel.
 #define IDE_DEBUG_CHANNEL		"HCP65IDE"	//The start of the shared memory channel's name.
+#define IDE_DEBUG_ENTRY_CODE	64			//The most bytes of a function's entry code before its first line.
+#define IDE_DEBUG_AUTO_STEPS	64			//The most steps one F11 takes on its own (StepOnInto).
 
 
 static size	guiIDEDebugChannels = 0;
@@ -65,6 +67,9 @@ void CIDEDebugger::Init(void)
 	miStartTime = 0;
 	mbBreakAtStart = false;
 	mbIntoLine = false;
+	mszStepFile.Init();
+	muiStepLine = 0;
+	muiAutoSteps = 0;
 	muiSeenStops = 0;
 	muiSeenDisassemblies = 0;
 	muiSeenErrors = 0;
@@ -90,6 +95,7 @@ void CIDEDebugger::Kill(void)
 	size	ui;
 
 	Stop();
+	mszStepFile.Kill();
 	mszStatus.Kill();
 	for (ui = 0; ui < IDE_DEBUG_LINE_TABLES; ui++)
 	{
@@ -378,46 +384,64 @@ void CIDEDebugger::End(const char* szStatus)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// After a StepLine into a call: stopped on code with no line (a function's
-// entry code, before its first line's), it steps on over that to the next
-// line, as Visual Studio steps into a function's first line.  True if it
-// is stepping on.
+// After a step into from a source line, stopped at uiAddress: stepping
+// goes on, as Visual Studio's F11 does, until it is on a new line.  Code
+// with no line just before a line (a function's entry code) is stepped
+// over to the line; a function with no lines (a runtime routine) is
+// stepped out of; back in the line it stepped from (a call it went over
+// returned into it), the rest of the line is stepped.  True if it is
+// stepping on.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEDebugger::IntoFirstLine(uint32 uiAddress)
+bool CIDEDebugger::StepOnInto(uint32 uiAddress)
 {
 	SDebugRange	sRange;
 	CChars		szFile;
 	uint32		uiLine;
+	uint32		uiNext;
 	size		ui;
-	bool		bResult;
+	bool		bLine;
+	bool		bSameLine;
 
 	if (!mbIntoLine)
 	{
 		return false;
 	}
 	mbIntoLine = false;
-	if (mcClient.GetStopReason() != DS_Step)
+	muiAutoSteps++;
+	if ((mcClient.GetStopReason() != DS_Step) || (muiAutoSteps > IDE_DEBUG_AUTO_STEPS))
 	{
 		return false;
 	}
+
 	szFile.Init();
-	bResult = FindSourceLine(uiAddress, &szFile, &uiLine);
+	bLine = FindSourceLine(uiAddress, &szFile, &uiLine);
+	bSameLine = bLine && (uiLine == muiStepLine) && szFile.EqualsIgnoreCase(mszStepFile.Text());
 	szFile.Kill();
-	if (bResult)
+	if (bSameLine)
+	{
+		mszStatus.Set("Stepping the rest of the line.");
+		return StepLineRanges(false);
+	}
+	if (bLine)
 	{
 		return false;
 	}
+
 	for (ui = 0; ui < muiLineTables; ui++)
 	{
-		if (macLineTables[ui].FindNextLine(uiAddress, &sRange.uiEnd))
+		if (macLineTables[ui].FindNextLine(uiAddress, &uiNext) && (uiNext - uiAddress <= IDE_DEBUG_ENTRY_CODE))
 		{
 			sRange.uiStart = uiAddress;
+			sRange.uiEnd = uiNext;
 			mszStatus.Set("Stepping into the function's first line.");
-			return mcClient.StepRange(&sRange, 1, true) != 0;
+			mbIntoLine = mcClient.StepRange(&sRange, 1, true) != 0;
+			return mbIntoLine;
 		}
 	}
-	return false;
+	mszStatus.Set("Stepping over a function with no source lines.");
+	mbIntoLine = mcClient.StepOut() != 0;
+	return mbIntoLine;
 }
 
 
@@ -498,10 +522,31 @@ bool CIDEDebugger::StepOver(void)
 // The rest of the source line it is stopped on (DM_StepRange over the
 // line's code in every place it is): stepping over the calls in it with
 // bOver, into the first one otherwise, as Visual Studio's F10 and F11.
+// Stepping in, a function with no lines is stepped over (StepOnInto).
 // Stopped where no line table has a line, one instruction is stepped.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEDebugger::StepLine(bool bOver)
+{
+	if (!CanMove() || !mcClient.IsStopped())
+	{
+		return false;
+	}
+	muiAutoSteps = 0;
+	if (!FindSourceLine(GetProgramAddress(), &mszStepFile, &muiStepLine))
+	{
+		return bOver ? StepOver() : StepInto();
+	}
+	return StepLineRanges(bOver);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// DM_StepRange over the code of the line the program address is on.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEDebugger::StepLineRanges(bool bOver)
 {
 	CArrayUint32	auiRanges;
 	SDebugRange*	asRanges;
@@ -509,10 +554,6 @@ bool CIDEDebugger::StepLine(bool bOver)
 	size			uiRanges;
 	bool			bResult;
 
-	if (!CanMove() || !mcClient.IsStopped())
-	{
-		return false;
-	}
 	auiRanges.Init();
 	for (ui = 0; (ui < muiLineTables) && (auiRanges.NumElements() == 0); ui++)
 	{
@@ -1178,7 +1219,7 @@ void CIDEDebugger::Stopped(void)
 
 	muiSeenStops = mcClient.NumStops();
 	uiAddress = mcClient.GetStopAddress();
-	if (IntoFirstLine(uiAddress))
+	if (StepOnInto(uiAddress))
 	{
 		return;
 	}
