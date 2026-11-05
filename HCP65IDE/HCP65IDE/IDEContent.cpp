@@ -158,26 +158,6 @@ Ptr<CFont> GenerateIDEFont(const char* szFontFilename, const char* szName, float
 //
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEConfigurationListener::Init(CIDEContent* pcContent)
-{
-	mpcContent = pcContent;
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDEConfigurationListener::SelectionChanged(CUnknown* pcSource, void* pvContext)
-{
-	mpcContent->ConfigurationChosen();
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-//
-//////////////////////////////////////////////////////////////////////////
 void CIDEMenuListener::Init(CIDEContent* pcContent)
 {
 	mpcContent = pcContent;
@@ -237,7 +217,6 @@ void CIDEContent::Init(void)
 	mbSolution = false;
 	mcSolution.Init();
 	mcCodeModel.Init(&mcSolution);
-	mcConfigurationsListener.Init(this);
 	mcConfigurations.Init();
 	muiConfiguration = MAX_SIZE;
 	mcMenuListener.Init(this);
@@ -290,7 +269,6 @@ void CIDEContent::Class(void)
 	M_Pointer(mpExplorer);
 	M_Pointer(mpConfigurations);
 	M_Pointer(mpPlatforms);
-	U_Unknown(CIDEConfigurationListener, mcConfigurationsListener);
 	U_Unknown(CBuildConfigurations, mcConfigurations);
 	U_Size(muiConfiguration);
 	M_Pointer(mpBuildButton);
@@ -345,7 +323,14 @@ void CIDEContent::Free(void)
 	{
 		mpReferences->GetActivationEvent()->Remove(this);
 	}
-	mcConfigurationsListener.RemoveFromListenerCalls();
+	if (mpConfigurations.IsNotNull())
+	{
+		mpConfigurations->GetSelectionEvent()->Remove(this);
+	}
+	if (mpPlatforms.IsNotNull())
+	{
+		mpPlatforms->GetSelectionEvent()->Remove(this);
+	}
 	if (mpBuildButton.IsNotNull())
 	{
 		mpBuildButton->GetClickEvent()->Remove(this);
@@ -475,10 +460,10 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	//The toolbar: the build configuration's configuration and platform, as Visual Studio has them, and Build.
 	mpConfigurations = OMalloc<CComboBox>(pWindow, mpTheme);
 	mpConfigurations->SetAlignment(CSH_Left, CSV_Center);
-	mpConfigurations->AddListener(&mcConfigurationsListener);
+	mpConfigurations->GetSelectionEvent()->Add(this, &CIDEContent::ConfigurationChosen);
 	mpPlatforms = OMalloc<CComboBox>(pWindow, mpTheme);
 	mpPlatforms->SetAlignment(CSH_Left, CSV_Center);
-	mpPlatforms->AddListener(&mcConfigurationsListener);
+	mpPlatforms->GetSelectionEvent()->Add(this, &CIDEContent::ConfigurationChosen);
 	mpBuildButton = OMalloc<CButton>(pWindow, mpTheme, "Build");
 	mpBuildButton->SetAlignment(CSH_Left, CSV_Center);
 	mpBuildButton->GetClickEvent()->Add(this, &CIDEContent::BuildClicked);

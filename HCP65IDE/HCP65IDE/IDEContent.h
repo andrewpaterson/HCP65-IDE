@@ -28,7 +28,6 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/ScrollPane.h"
 #include "WindowLib/TreeContainer.h"
 #include "WindowLib/ComboBox.h"
-#include "WindowLib/ComboBoxListener.h"
 #include "VisualStudioLib/VcxSolution.h"
 #include "BuildLib/BuildConfigurations.h"
 #include "BuildLib/SolutionBuild.h"
@@ -51,17 +50,6 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 class CIDEContent;
 
-
-//Hears the solution configuration being chosen.
-class CIDEConfigurationListener : public CComboBoxListener
-{
-CONSTRUCTABLE(CIDEConfigurationListener);
-public:
-	CIDEContent*	mpcContent;
-
-	void	Init(CIDEContent* pcContent);
-	void	SelectionChanged(CUnknown* pcSource, void* pvContext) override;
-};
 
 
 //Hears the menu bar's items being clicked.
@@ -122,7 +110,6 @@ protected:
 	Ptr<CSolutionExplorer>		mpExplorer;
 	Ptr<CComboBox>				mpConfigurations;	//The build configuration's configuration; the code is parsed as its solution configuration.
 	Ptr<CComboBox>				mpPlatforms;		//And its platform.
-	CIDEConfigurationListener	mcConfigurationsListener;
 	CBuildConfigurations		mcConfigurations;	//The solution's, from beside it or the defaults.
 	size						muiConfiguration;	//The chosen one, MAX_SIZE if none.
 	Ptr<CButton>				mpBuildButton;
