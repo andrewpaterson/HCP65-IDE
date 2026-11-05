@@ -18,7 +18,6 @@ You should have received a copy of the GNU Affero General Public License
 along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 ** ------------------------------------------------------------------------ **/
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "BaseLib/Timer.h"
@@ -232,9 +231,6 @@ bool CIDEContent::ChooseDebugLoads(CBuildConfiguration* pcConfiguration, CChars*
 	CChars		szFile;
 	CChars		szCard;
 	CChars*		pszLine;
-	FILE*		pcFile;
-	uint8*		puiData;
-	long		iSize;
 	size		i;
 	bool		bResult;
 
@@ -274,24 +270,7 @@ bool CIDEContent::ChooseDebugLoads(CBuildConfiguration* pcConfiguration, CChars*
 		//The program goes on the card the emulator boots from, where the kernal finds it.
 		szCard.Init();
 		ResolveEmulatorPath(pcConfiguration->GetCard(), &szCard);
-		pcFile = fopen(szFile.Text(), "rb");
-		bResult = pcFile != NULL;
-		iSize = 0;
-		puiData = NULL;
-		if (pcFile)
-		{
-			fseek(pcFile, 0, SEEK_END);
-			iSize = ftell(pcFile);
-			fseek(pcFile, 0, SEEK_SET);
-			puiData = (uint8*)malloc((size)iSize + 1);
-			bResult = fread(puiData, 1, (size)iSize, pcFile) == (size)iSize;
-			fclose(pcFile);
-		}
-		bResult = bResult && FatPutFileOnImage(szCard.Text(), pcConfiguration->GetCardPath(), puiData, (size)iSize);
-		if (puiData)
-		{
-			free(puiData);
-		}
+		bResult = FatPutDiskFileOnImage(szCard.Text(), pcConfiguration->GetCardPath(), szFile.Text());
 		if (bResult)
 		{
 			pszLine = paszLines->Add("Wrote ");
