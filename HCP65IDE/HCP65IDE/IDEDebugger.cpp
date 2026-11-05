@@ -44,6 +44,9 @@ void CIDEDebugger::Init(void)
 {
 	mszEmulator.Init();
 	mszEmulatorDirectory.Init();
+	mszEmulatorArguments.Init();
+	mszProcessor.Init();
+	maszMessages.Init();
 	mcProcess.Init();
 	mbLaunched = false;
 	mszChannel.Init();
@@ -75,6 +78,9 @@ void CIDEDebugger::Kill(void)
 	mcShared.Kill();
 	mszChannel.Kill();
 	mcProcess.Kill();
+	maszMessages.Kill();
+	mszProcessor.Kill();
+	mszEmulatorArguments.Kill();
 	mszEmulatorDirectory.Kill();
 	mszEmulator.Kill();
 }
@@ -84,10 +90,40 @@ void CIDEDebugger::Kill(void)
 //
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEDebugger::SetEmulator(const char* szExecutable, const char* szDirectory)
+void CIDEDebugger::SetEmulator(const char* szExecutable, const char* szDirectory, const char* szArguments)
 {
 	mszEmulator.Set(szExecutable);
 	mszEmulatorDirectory.Set(szDirectory);
+	mszEmulatorArguments.Set(szArguments ? szArguments : "");
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The processor the emulator must say it is ("W65C816"); NULL for any.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDebugger::SetProcessor(const char* szProcessor)
+{
+	mszProcessor.Set(szProcessor ? szProcessor : "");
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The lines told since the last call, for the Build tab.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDebugger::TakeMessages(CArrayChars* paszDest)
+{
+	size	i;
+
+	for (i = 0; i < maszMessages.NumElements(); i++)
+	{
+		paszDest->Add(maszMessages.GetText(i));
+	}
+	maszMessages.Kill();
+	maszMessages.Init();
 }
 
 
@@ -102,6 +138,9 @@ void CIDEDebugger::SetEmulator(const char* szExecutable, const char* szDirectory
 bool CIDEDebugger::Start(bool bBreakAtStart)
 {
 	CArrayChars	aszArguments;
+	CArrayChars	aszExtra;
+	CChars*		pszLine;
+	size		i;
 	bool		bResult;
 
 	if (IsDebugging())
@@ -120,6 +159,31 @@ bool CIDEDebugger::Start(bool bBreakAtStart)
 	aszArguments.Add(mszChannel.Text());
 	aszArguments.Add(DEBUG_ARGUMENT_WAIT);
 	aszArguments.Add(DEBUG_ARGUMENT_EXIT_ON_DETACH);
+	aszExtra.Init();
+	aszExtra.Split(mszEmulatorArguments.Text(), ' ');
+	for (i = 0; i < aszExtra.NumElements(); i++)
+	{
+		if (aszExtra.GetText(i)[0] != '\0')
+		{
+			aszArguments.Add(aszExtra.GetText(i));
+		}
+	}
+	aszExtra.Kill();
+
+	//What is run, as a command line: an argument with a space is quoted.
+	pszLine = maszMessages.Add("Debugging: ");
+	pszLine->Append(mszEmulator);
+	for (i = 0; i < aszArguments.NumElements(); i++)
+	{
+		pszLine->Append(strchr(aszArguments.GetText(i), ' ') ? " \"" : " ");
+		pszLine->Append(aszArguments.GetText(i));
+		if (strchr(aszArguments.GetText(i), ' '))
+		{
+			pszLine->Append('"');
+		}
+	}
+	maszMessages.Add("In: ")->Append(mszEmulatorDirectory);
+
 	mcProcess.Kill();
 	mcProcess.Init();
 	bResult = mcProcess.Start(mszEmulator.Text(), &aszArguments, mszEmulatorDirectory.Text());
@@ -127,6 +191,7 @@ bool CIDEDebugger::Start(bool bBreakAtStart)
 	if (!bResult)
 	{
 		mszStatus.Set("Could not start the emulator.");
+		maszMessages.Add("Could not start the emulator.");
 		return false;
 	}
 
@@ -154,6 +219,7 @@ bool CIDEDebugger::Attach(int iPort)
 
 	mbLaunched = false;
 	mbBreakAtStart = true;
+	maszMessages.Add("Attaching to the emulator on port ")->Append((int32)iPort);
 	mcNetwork.Kill();
 	mcNetwork.Init();
 	if (!mcNetwork.Connect(NETWORK_LOOPBACK_ADDRESS, iPort) || !Connect(&mcNetwork))
@@ -462,6 +528,7 @@ bool CIDEDebugger::Poll(CArrayChars* paszOutput)
 
 	eOldState = GetState();
 	uiOldDisassemblies = muiSeenDisassemblies;
+	TakeMessages(paszOutput);
 
 	if (mbLaunched)
 	{
@@ -513,6 +580,12 @@ bool CIDEDebugger::Poll(CArrayChars* paszOutput)
 	if ((eOldState == IDS_Connecting) && (mcClient.GetState() != DCS_Connecting))
 	{
 		Welcomed();
+		if (!mbClient)
+		{
+			//The wrong processor: it was let go.
+			TakeMessages(paszOutput);
+			return true;
+		}
 	}
 	else if (mcClient.NumStops() != muiSeenStops)
 	{
@@ -539,12 +612,31 @@ bool CIDEDebugger::Poll(CArrayChars* paszOutput)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The emulator's welcome and state have arrived: it is given the
-// breakpoints, and if it waited for the debugger it is continued.
+// The emulator's welcome and state have arrived.  If it is the processor
+// wanted it is given the breakpoints, and if it waited for the debugger it
+// is continued.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEDebugger::Welcomed(void)
 {
+	CChars	sz;
+
+	if (!mszProcessor.Empty() && !mszProcessor.Equals(mcClient.GetProcessorName()))
+	{
+		//The wrong emulator for what is being debugged.
+		sz.Init("The emulator is a ");
+		sz.Append(mcClient.GetProcessorName());
+		sz.Append(" but the configuration is built for a ");
+		sz.Append(mszProcessor);
+		sz.Append('.');
+		maszMessages.Add(sz.Text());
+		Stop();
+		mszStatus.Set(sz.Text());
+		sz.Kill();
+		return;
+	}
+
+	maszMessages.Add("Debugging a ")->Append(mcClient.GetProcessorName());
 	SendBreakpoints();
 	if (mcClient.IsRunning())
 	{

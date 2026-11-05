@@ -21,6 +21,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdlib.h>
 #include <string.h>
 #include "BaseLib/Timer.h"
+#include "BaseLib/FileUtil.h"
 #include "StandardLib/Objects.h"
 #include "IDEContent.h"
 
@@ -172,12 +173,151 @@ void CIDEContent::StartClicked(void) { StartDebugging(); }  //The toolbar's Star
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The HCP65 emulator Start Debugging runs, and the folder it runs in.
+// The emulator a W65C816 configuration is debugged in when it doesn't say
+// (its Emulator in the .hcp65build), and the folder it runs in.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEContent::SetEmulator(const char* szExecutable, const char* szDirectory)
+void CIDEContent::SetDefaultEmulator(const char* szExecutable, const char* szDirectory)
 {
-	mcDebugger.SetEmulator(szExecutable, szDirectory);
+	mszDefaultEmulator.Set(szExecutable);
+	mszDefaultEmulatorDirectory.Set(szDirectory);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A path from the configurations' file, relative to that file's folder.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::ResolveEmulatorPath(const char* szPath, CChars* pszDest)
+{
+	CFileUtil	cFileUtil;
+	CChars		szFile;
+	CChars		szName;
+
+	if (cFileUtil.IsAbsolutePath(szPath))
+	{
+		pszDest->Set(szPath);
+		return;
+	}
+	szFile.Init();
+	szName.Init();
+	CBuildConfigurations::GetFileName(mszSolutionFile.Text(), &szFile);
+	pszDest->Set("");
+	cFileUtil.SplitPath(szFile.Text(), &szName, pszDest);
+	cFileUtil.AppendToPath(pszDest, szPath);
+	cFileUtil.FullPath(pszDest);
+	szName.Kill();
+	szFile.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Gives the debugger the chosen configuration's processor and (bLaunch)
+// emulator: the one its configuration names, or for a W65C816 the default.
+// False, told in the Build tab, if it has no processor (MSVC, GCC) or no
+// emulator.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEContent::ChooseEmulator(bool bLaunch)
+{
+	CBuildConfiguration*	pcConfiguration;
+	const char*				szProcessor;
+	CChars					szExecutable;
+	CChars					szDirectory;
+	CChars					szFile;
+	CChars					szMessage;
+	CArrayChars				aszLines;
+	CFileUtil				cFileUtil;
+	bool					bResult;
+
+	pcConfiguration = GetConfiguration();
+	szMessage.Init();
+	szExecutable.Init();
+	szDirectory.Init();
+	bResult = false;
+	if (pcConfiguration == NULL)
+	{
+		szMessage.Set("Choose a configuration to debug.");
+	}
+	else if ((szProcessor = pcConfiguration->GetProcessorName()) == NULL)
+	{
+		szMessage.Set(pcConfiguration->GetName());
+		szMessage.Append(" is built for this computer (");
+		szMessage.Append(CBuildConfiguration::GetToolchainName(pcConfiguration->GetToolchain()));
+		szMessage.Append("): there is no emulator to debug it in.");
+	}
+	else
+	{
+		mcDebugger.SetProcessor(szProcessor);
+		bResult = true;
+		if (!bLaunch)
+		{
+			//Attached to: the emulator is whatever is running, checked when it says what it is.
+		}
+		else if (pcConfiguration->HasEmulator())
+		{
+			ResolveEmulatorPath(pcConfiguration->GetEmulator(), &szExecutable);
+			if (pcConfiguration->GetEmulatorDirectory()[0] != '\0')
+			{
+				ResolveEmulatorPath(pcConfiguration->GetEmulatorDirectory(), &szDirectory);
+			}
+			else
+			{
+				szFile.Init();
+				cFileUtil.SplitPath(szExecutable.Text(), &szFile, &szDirectory);
+				szFile.Kill();
+			}
+			mcDebugger.SetEmulator(szExecutable.Text(), szDirectory.Text(), pcConfiguration->GetEmulatorArguments());
+		}
+		else if ((pcConfiguration->GetToolchain() == BT_W65C816) && !mszDefaultEmulator.Empty())
+		{
+			mcDebugger.SetEmulator(mszDefaultEmulator.Text(), mszDefaultEmulatorDirectory.Text(), pcConfiguration->GetEmulatorArguments());
+		}
+		else
+		{
+			szFile.Init();
+			CBuildConfigurations::GetFileName(mszSolutionFile.Text(), &szFile);
+			szMessage.Set("No emulator is set for ");
+			szMessage.Append(pcConfiguration->GetName());
+			szMessage.Append(": give its configuration an Emulator in ");
+			szMessage.Append(szFile);
+			szMessage.Append('.');
+			szFile.Kill();
+			bResult = false;
+		}
+	}
+
+	if (!bResult)
+	{
+		aszLines.Init();
+		aszLines.Add(szMessage.Text());
+		mpBuildPane->AppendLines(&aszLines);
+		mpBuildPane->SetProgress(szMessage.Text());
+		aszLines.Kill();
+		mpBottomTabs->Select(mpBuildTab);
+	}
+	szDirectory.Kill();
+	szExecutable.Kill();
+	szMessage.Kill();
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// What the debugger has told since (what it started), in the Build tab.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::ShowDebugMessages(void)
+{
+	CArrayChars	aszLines;
+
+	aszLines.Init();
+	mcDebugger.TakeMessages(&aszLines);
+	mpBuildPane->AppendLines(&aszLines);
+	aszLines.Kill();
 }
 
 
@@ -198,7 +338,12 @@ bool CIDEContent::StartDebugging(void)
 	else if (!mcDebugger.IsDebugging())
 	{
 		mpBuildPane->Clear();
+		if (!ChooseEmulator(true))
+		{
+			return false;
+		}
 		bResult = mcDebugger.Start(false);
+		ShowDebugMessages();
 	}
 	else
 	{
@@ -264,7 +409,12 @@ bool CIDEContent::StepInto(void)
 	if (!mcDebugger.IsDebugging())
 	{
 		mpBuildPane->Clear();
+		if (!ChooseEmulator(true))
+		{
+			return false;
+		}
 		bResult = mcDebugger.Start(true);
+		ShowDebugMessages();
 		mpBottomTabs->Select(mpDebugTab);
 		mpWindow->RequestTick(IDE_DEBUG_POLL);
 	}
@@ -412,7 +562,13 @@ bool CIDEContent::AttachDebugger(int iPort)
 {
 	bool	bResult;
 
+	mpBuildPane->Clear();
+	if (!ChooseEmulator(false))
+	{
+		return false;
+	}
 	bResult = mcDebugger.Attach(iPort);
+	ShowDebugMessages();
 	mpBottomTabs->Select(mpDebugTab);
 	UpdateDebugView(false);
 	mpWindow->RequestTick(IDE_DEBUG_POLL);
@@ -481,7 +637,8 @@ void CIDEContent::UpdateDebugView(bool bKeepCaret)
 // HCP65_IDE_DEBUG's comma separated commands, for checking the debugger:
 // start (F5), into (F11), over (F10), out (Shift+F11), break (Break All,
 // once it has run a little), restart, stop, bp:<hex address> and
-// toggle (F9 at the disassembly's caret).  Each but bp waits for the
+// toggle (F9 at the disassembly's caret), buildtab (the Build tab shown)
+// and wait:<milliseconds>.  Each but bp, buildtab and wait waits for the
 // debugger to be stopped (or not debugging, for start).
 //
 //////////////////////////////////////////////////////////////////////////
@@ -529,6 +686,24 @@ void CIDEContent::RunDebugScript(void)
 	{
 		mcDebugger.AddBreakpoint((uint32)strtoul(&szCommand[3], NULL, 16));
 		UpdateDebugView(true);
+		bDone = true;
+	}
+	else if (strncmp(szCommand, "wait:", 5) == 0)
+	{
+		//The debugger is polled meanwhile.
+		if (miDebugScriptWait == 0)
+		{
+			miDebugScriptWait = GetDebugTickCount();
+		}
+		if (GetDebugTickCount() - miDebugScriptWait >= atoi(&szCommand[5]))
+		{
+			miDebugScriptWait = 0;
+			bDone = true;
+		}
+	}
+	else if (strcmp(szCommand, "buildtab") == 0)
+	{
+		mpBottomTabs->Select(mpBuildTab);
 		bDone = true;
 	}
 	else if (strcmp(szCommand, "break") == 0)

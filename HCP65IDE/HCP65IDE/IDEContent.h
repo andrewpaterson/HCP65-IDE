@@ -144,7 +144,10 @@ protected:
 	Ptr<CMenuItem>				mpAttachItem;
 	Ptr<CDialog>				mpDialog;			//The address or port asked for, while it's shown.
 	CArrayChars					maszDebugScript;	//HCP65_IDE_DEBUG's commands still to do, for checking.
+	CChars						mszDefaultEmulator;	//A W65C816 configuration's emulator when it doesn't say.
+	CChars						mszDefaultEmulatorDirectory;
 	int64						miDebugScriptTime;	//When the debugger was last seen not running, for a scripted break.
+	int64						miDebugScriptWait;	//When a scripted wait started, 0 if none is.
 
 public:
 	void			Init(void);
@@ -194,7 +197,7 @@ public:
 	void				BuildClicked(void);
 	void				StartClicked(void);
 
-	void				SetEmulator(const char* szExecutable, const char* szDirectory);
+	void				SetDefaultEmulator(const char* szExecutable, const char* szDirectory);
 	bool				StartDebugging(void);
 	bool				StopDebugging(void);
 	bool				RestartDebugging(void);
@@ -219,6 +222,9 @@ protected:
 	void				PollDebugger(Ptr<CWindow> pWindow);
 	void				UpdateDebugView(bool bKeepCaret);
 	void				RunDebugScript(void);
+	bool				ChooseEmulator(bool bLaunch);
+	void				ShowDebugMessages(void);
+	void				ResolveEmulatorPath(const char* szPath, CChars* pszDest);
 	bool				ShowAddressDialog(const char* szTitle, const char* szLabel, const char* szDefault, bool bHex, uint32* puiValue);
 	void				HighlightTab(Ptr<CIDEEditorTab> pTab);
 	Ptr<CIDEEditorTab>	FindTab(const char* szFileName);

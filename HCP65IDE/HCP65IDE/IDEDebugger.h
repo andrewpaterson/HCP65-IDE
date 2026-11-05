@@ -56,8 +56,9 @@ typedef CArrayTemplate<SIDEBreakpoint>	CArrayIDEBreakpoints;
 //The IDE's end of debugging the HCP65 emulator, at the instruction level, over EmulatorDebugLib's protocol.  It
 //knows nothing of the processor: the emulator describes its registers and addresses, and disassembles.
 //
-//Start runs the emulator (DebugLaunch.h's arguments) on a shared memory channel named for this IDE, waiting for the
-//debugger, and connects once the emulator has made it.  Attach connects over the network to an emulator already
+//Start runs the emulator (DebugLaunch.h's arguments, then SetEmulator's) on a shared memory channel named for this
+//IDE, waiting for the debugger, and connects once the emulator has made it.  What it ran is told (TakeMessages), and
+//an emulator that isn't SetProcessor's processor is quit (or detached from) as soon as it says what it is.  Attach connects over the network to an emulator already
 //running with a port.  The breakpoints are the IDE's, by address: they are kept when not debugging and given to
 //the emulator when it is connected.  Poll (each tick while debugging) reads what the emulator has sent and its
 //output.  When it stops the instructions there are asked for.
@@ -66,6 +67,9 @@ class CIDEDebugger
 protected:
 	CChars					mszEmulator;			//The emulator's executable.
 	CChars					mszEmulatorDirectory;	//Where it runs (its resources are found from there).
+	CChars					mszEmulatorArguments;	//Given after the debugging ones, split at spaces.
+	CChars					mszProcessor;			//The processor the emulator must be, empty for any.
+	CArrayChars				maszMessages;			//For the Build tab: what was started, what went wrong.
 	CProcess				mcProcess;
 	bool					mbLaunched;				//Start ran the emulator; Stop quits it.
 	CChars					mszChannel;				//The shared memory channel's name, while starting.
@@ -86,8 +90,10 @@ public:
 	void					Init(void);
 	void					Kill(void);
 
-	void					SetEmulator(const char* szExecutable, const char* szDirectory);
+	void					SetEmulator(const char* szExecutable, const char* szDirectory, const char* szArguments);
+	void					SetProcessor(const char* szProcessor);
 	char*					GetEmulator(void);
+	void					TakeMessages(CArrayChars* paszDest);
 
 	bool					Start(bool bBreakAtStart);
 	bool					Attach(int iPort);

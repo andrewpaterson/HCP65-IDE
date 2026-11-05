@@ -233,6 +233,9 @@ void CIDEContent::Init(void)
 	mcDebugger.Init();
 	maszDebugScript.Init();
 	miDebugScriptTime = 0;
+	miDebugScriptWait = 0;
+	mszDefaultEmulator.Init();
+	mszDefaultEmulatorDirectory.Init();
 
 	PostInit();
 }
@@ -302,7 +305,10 @@ void CIDEContent::Class(void)
 	M_Pointer(mpAttachItem);
 	M_Pointer(mpDialog);
 	U_Unknown(CArrayChars, maszDebugScript);
+	U_String(mszDefaultEmulator);
+	U_String(mszDefaultEmulatorDirectory);
 	U_Int64(miDebugScriptTime);
+	U_Int64(miDebugScriptWait);
 }
 
 
@@ -345,6 +351,8 @@ void CIDEContent::Free(void)
 	//An emulator being debugged is quit (or detached from).
 	mcDebugger.Kill();
 	maszDebugScript.Kill();
+	mszDefaultEmulatorDirectory.Kill();
+	mszDefaultEmulator.Kill();
 
 	//A build still running is stopped (an HCP65 build is waited for) before the solution it builds goes.
 	mcBuild.Kill();

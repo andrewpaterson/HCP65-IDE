@@ -28,9 +28,19 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDEApp.h"
 
 
-//The HCP65 emulator Start Debugging runs, in the HCP65 repository beside the IDE's (HCP65_IDE_EMULATOR is another).
+//The HCP65 emulator a W65C816 configuration is debugged in when its configuration doesn't name one, in the HCP65
+//repository beside the IDE's, built as the IDE is (HCP65_IDE_EMULATOR is another).
 #ifdef _WIN32
-#define IDE_EMULATOR				"../../../HCP65/HCP65-Emulator/Debug/HCP65Emulator.exe"
+#ifdef _WIN64
+#define IDE_EMULATOR_PLATFORM		"x64/"
+#else
+#define IDE_EMULATOR_PLATFORM		""
+#endif
+#ifdef _DEBUG
+#define IDE_EMULATOR				"../../../HCP65/HCP65-Emulator/" IDE_EMULATOR_PLATFORM "Debug/HCP65Emulator.exe"
+#else
+#define IDE_EMULATOR				"../../../HCP65/HCP65-Emulator/" IDE_EMULATOR_PLATFORM "Release/HCP65Emulator.exe"
+#endif
 #else
 #define IDE_EMULATOR				"../../../HCP65/HCP65-Emulator/HCP65Emulator/build/HCP65Emulator"
 #endif
@@ -98,7 +108,7 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 	{
 		//The HCP65 repository is beside the IDE's.
 		mpContent->SetLibc65Directory("../../../HCP65/Libraries/Libc65");
-		mpContent->SetEmulator((getenv("HCP65_IDE_EMULATOR") != NULL) ? getenv("HCP65_IDE_EMULATOR") : IDE_EMULATOR, IDE_EMULATOR_DIRECTORY);
+		mpContent->SetDefaultEmulator((getenv("HCP65_IDE_EMULATOR") != NULL) ? getenv("HCP65_IDE_EMULATOR") : IDE_EMULATOR, IDE_EMULATOR_DIRECTORY);
 
 		//Sized first: what the checks below scroll to depends on the size.
 		mpWindow->SetWindowSize(1280, 800);
