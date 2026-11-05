@@ -20,6 +20,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 ** ------------------------------------------------------------------------ **/
 #include "BaseLib/StringHelper.h"
 #include "BaseLib/FileUtil.h"
+#include "BaseLib/ArrayBit.h"
 #include "VisualStudioLib/VcxPath.h"
 #include "StandardLib/Objects.h"
 #include "StandardLib/ObjectReader.h"
@@ -437,13 +438,25 @@ bool CSolutionExplorer::GetNodeFilePath(int32 iNode, CChars* pszDest)
 //////////////////////////////////////////////////////////////////////////
 //
 // Each file's name is in the colour of its state in its repository's last
-// git status, or the theme's colour if it is unmodified or in none.
+// git status, or the theme's colour if it is unmodified or in none.  A
+// folder, project or the solution with a changed file somewhere in it
+// (not just untracked or ignored ones) is in the modified colour, as
+// IntelliJ IDEA shows directories with changed descendants.
 //
 //////////////////////////////////////////////////////////////////////////
 void CSolutionExplorer::ColourFiles(CGitRepositories* pcGit, Ptr<CFontColours> pColours)
 {
-	int32	iNode;
-	CChars	szPath;
+	int32			iNode;
+	int32			iParent;
+	CChars			szPath;
+	EGitFileState	eState;
+	CArrayBit		abChanged;
+
+	abChanged.Init();
+	for (iNode = 0; iNode < mpTree->NumNodes(); iNode++)
+	{
+		abChanged.Add(false);
+	}
 
 	szPath.Init();
 	for (iNode = 0; iNode < mpTree->NumNodes(); iNode++)
@@ -451,10 +464,27 @@ void CSolutionExplorer::ColourFiles(CGitRepositories* pcGit, Ptr<CFontColours> p
 		szPath.Clear();
 		if (GetNodeFilePath(iNode, &szPath))
 		{
-			mpTree->SetNodeFont(iNode, GetGitStateFont(pColours, pcGit->GetFileState(szPath.Text())));
+			eState = pcGit->GetFileState(szPath.Text());
+			mpTree->SetNodeFont(iNode, GetGitStateFont(pColours, eState));
+			if ((eState != GFS_Unmodified) && (eState != GFS_Untracked) && (eState != GFS_Ignored))
+			{
+				for (iParent = mpTree->GetNodeParent(iNode); (iParent != TREE_NO_NODE) && !abChanged.Get(iParent); iParent = mpTree->GetNodeParent(iParent))
+				{
+					abChanged.Set(iParent, true);
+				}
+			}
 		}
 	}
 	szPath.Kill();
+
+	for (iNode = 0; iNode < mpTree->NumNodes(); iNode++)
+	{
+		if (GetNode(iNode)->eType != SENT_File && GetNode(iNode)->eType != SENT_SolutionItem)
+		{
+			mpTree->SetNodeFont(iNode, abChanged.Get(iNode) ? GetGitStateFont(pColours, GFS_Modified) : Ptr<CFont>());
+		}
+	}
+	abChanged.Kill();
 }
 
 
