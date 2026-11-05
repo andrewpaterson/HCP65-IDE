@@ -45,6 +45,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDECodeModel.h"
 #include "IDEEditorTab.h"
 #include "IDEBuildPane.h"
+#include "IDEDebugger.h"
+#include "IDEDebugView.h"
 #include "IDEIcons.h"
 #include "SolutionExplorer.h"
 
@@ -77,7 +79,7 @@ public:
 };
 
 
-//Hears the Build button being clicked.
+//Hears the toolbar's Build and Start buttons being clicked.
 class CIDEBuildListener : public CButtonListener
 {
 CONSTRUCTABLE(CIDEBuildListener);
@@ -117,6 +119,9 @@ public:
 //The IDE's window's content: the menu bar and toolbar along the top, Solution Explorer on the left, the editor's tabs
 //of open files on the right with the references found under them.  F12 goes to the definition of what is at the caret and Shift+F12 finds its references.  It is an object; keep it
 //in the root and call Setup.
+//
+//The Debug menu (and Visual Studio's keys) debug the HCP65 emulator at the instruction level, see CIDEDebugger: the
+//Debug tab under the editor shows its disassembly and registers.
 class CIDEContent : public CObject
 {
 CONSTRUCTABLE(CIDEContent);
@@ -165,6 +170,25 @@ protected:
 	bool						mbSolution;
 	CIDECodeModel				mcCodeModel;		//Uses mcSolution; initialised when a solution is opened.
 
+	CIDEDebugger				mcDebugger;
+	Ptr<CIDEDebugView>			mpDebugView;
+	Ptr<CTabComponent>			mpDebugTab;
+	Ptr<CButton>				mpStartButton;		//Start, or Continue while stopped.
+	Ptr<CMenuItem>				mpStartItem;		//Debug's items.
+	Ptr<CMenuItem>				mpStepIntoItem;
+	Ptr<CMenuItem>				mpStepOverItem;
+	Ptr<CMenuItem>				mpStepOutItem;
+	Ptr<CMenuItem>				mpBreakItem;
+	Ptr<CMenuItem>				mpStopItem;
+	Ptr<CMenuItem>				mpRestartItem;
+	Ptr<CMenuItem>				mpToggleItem;
+	Ptr<CMenuItem>				mpNewBreakpointItem;
+	Ptr<CMenuItem>				mpDeleteBreakpointsItem;
+	Ptr<CMenuItem>				mpAttachItem;
+	Ptr<CDialog>				mpDialog;			//The address or port asked for, while it's shown.
+	CArrayChars					maszDebugScript;	//HCP65_IDE_DEBUG's commands still to do, for checking.
+	int64						miDebugScriptTime;	//When the debugger was last seen not running, for a scripted break.
+
 public:
 	void			Init(void);
 	void			Class(void) override;
@@ -210,9 +234,34 @@ public:
 	bool				IsBuilding(void);
 	void				ShowListingAfterBuild(size uiLine);
 	CCPP65ListingIndex*	GetListings(void);
+	void				ToolbarButtonClicked(CUnknown* pcButton);
+
+	void				SetEmulator(const char* szExecutable, const char* szDirectory);
+	bool				StartDebugging(void);
+	bool				StopDebugging(void);
+	bool				RestartDebugging(void);
+	bool				BreakAll(void);
+	bool				StepInto(void);
+	bool				StepOver(void);
+	bool				StepOut(void);
+	bool				ToggleBreakpoint(void);
+	bool				ShowNewBreakpointDialog(void);
+	bool				ShowAttachDialog(void);
+	bool				AttachDebugger(int iPort);
+	void				SetDebugScript(const char* szCommands);
+	bool				IsDebugScriptRunning(void);
+	CIDEDebugger*		GetDebugger(void);
+	Ptr<CIDEDebugView>	GetDebugView(void);
 
 protected:
 	Ptr<CMenuBar>		CreateMenuBar(void);
+	Ptr<CMenuContainer>	CreateDebugMenu(void);
+	bool				DebugMenuItemClicked(CMenuItem* pcItem);
+	void				DebugCommandAction(EComponentInputCommand eCommand);
+	void				PollDebugger(Ptr<CWindow> pWindow);
+	void				UpdateDebugView(bool bKeepCaret);
+	void				RunDebugScript(void);
+	bool				ShowAddressDialog(const char* szTitle, const char* szLabel, const char* szDefault, bool bHex, uint32* puiValue);
 	void				HighlightTab(Ptr<CIDEEditorTab> pTab);
 	Ptr<CIDEEditorTab>	FindTab(const char* szFileName);
 	Ptr<CIDEEditorTab>	FindTab(CUnknown* pcTab);

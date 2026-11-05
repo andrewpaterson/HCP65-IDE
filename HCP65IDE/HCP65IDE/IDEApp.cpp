@@ -28,6 +28,15 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDEApp.h"
 
 
+//The HCP65 emulator Start Debugging runs, in the HCP65 repository beside the IDE's (HCP65_IDE_EMULATOR is another).
+#ifdef _WIN32
+#define IDE_EMULATOR				"../../../HCP65/HCP65-Emulator/Debug/HCP65Emulator.exe"
+#else
+#define IDE_EMULATOR				"../../../HCP65/HCP65-Emulator/HCP65Emulator/build/HCP65Emulator"
+#endif
+#define IDE_EMULATOR_DIRECTORY		"../../../HCP65/HCP65-Emulator/HCP65Emulator"
+
+
 //////////////////////////////////////////////////////////////////////////
 //
 //
@@ -51,7 +60,9 @@ void CIDEApp::Init(void)
 // HCP65_IDE_SNAPSHOT, HCP65_IDE_CONFIGURATION, HCP65_IDE_EXPAND,
 // HCP65_IDE_OPEN, HCP65_IDE_CLOSE, HCP65_IDE_SCROLL,
 // HCP65_IDE_WAIT_INDEX, HCP65_IDE_CARET=line:column (1 based), HCP65_IDE_TYPE,
-// HCP65_IDE_REFERENCES, HCP65_IDE_DEFINITION and HCP65_IDE_REOPEN are for
+// HCP65_IDE_REFERENCES, HCP65_IDE_DEFINITION, HCP65_IDE_REOPEN,
+// HCP65_IDE_DEBUG (CIDEContent::SetDebugScript's commands) and
+// HCP65_IDE_ATTACH (a port to attach the debugger to) are for
 // checking it: a snapshot of the window, every folder expanded, files
 // opened (a comma separated list, each in a tab), the
 // editor scrolled down that many pixels, the indexing finished, the caret
@@ -87,6 +98,7 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 	{
 		//The HCP65 repository is beside the IDE's.
 		mpContent->SetLibc65Directory("../../../HCP65/Libraries/Libc65");
+		mpContent->SetEmulator((getenv("HCP65_IDE_EMULATOR") != NULL) ? getenv("HCP65_IDE_EMULATOR") : IDE_EMULATOR, IDE_EMULATOR_DIRECTORY);
 
 		//Sized first: what the checks below scroll to depends on the size.
 		mpWindow->SetWindowSize(1280, 800);
@@ -176,6 +188,14 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 				//As Control+Shift+B: the chosen configuration is built, its output in the Build tab.
 				mpContent->Build();
 			}
+			if (getenv("HCP65_IDE_ATTACH") != NULL)
+			{
+				mpContent->AttachDebugger(atoi(getenv("HCP65_IDE_ATTACH")));
+			}
+			if (getenv("HCP65_IDE_DEBUG") != NULL)
+			{
+				mpContent->SetDebugScript(getenv("HCP65_IDE_DEBUG"));
+			}
 		}
 
 		mpInput = OMalloc<CInput>((CNativeInput*)NULL);
@@ -257,6 +277,9 @@ bool CIDEApp::Run(void)
 	if (mbValid)
 	{
 		mpWindow->Show();
+
+		//The emulator is quit while nothing is being freed: as its window goes Windows activates this one.
+		mpContent->StopDebugging();
 	}
 
 	if (mbInputs)

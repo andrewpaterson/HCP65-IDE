@@ -39,6 +39,7 @@ set(WINDOWLIB_DIR "${COMMON_DIR}/WindowLib")
 set(X11LIB_DIR "${COMMON_DIR}/X11Lib")
 set(THREADLIB_DIR "${COMMON_DIR}/ThreadLib")
 set(MICROPROCESSORLIB_DIR "${COMMON_DIR}/MicroprocessorLib")
+set(EMULATORDEBUGLIB_DIR "${COMMON_DIR}/EmulatorDebugLib")
 set(CPPPARSERLIB_DIR "${COMMON_DIR}/CppParserLib")
 # Assembler65Lib (which CppParserLib's 65C64 generator uses) is in the HCP65 repository, beside CommonLibraries.
 set(HCP65_LIBRARIES_DIR "${CODAPHELA_ROOT}/HCP65/Libraries")
@@ -104,6 +105,7 @@ vcxproj_sources(X11LIB_SOURCES "${X11LIB_DIR}/X11Lib.vcxproj")
 vcxproj_sources(THREADLIB_SOURCES "${THREADLIB_DIR}/ThreadLib.vcxproj")
 
 vcxproj_sources(MICROPROCESSORLIB_SOURCES "${MICROPROCESSORLIB_DIR}/MicroprocessorLib.vcxproj")
+vcxproj_sources(EMULATORDEBUGLIB_SOURCES "${EMULATORDEBUGLIB_DIR}/EmulatorDebugLib.vcxproj")
 
 vcxproj_sources(ASSEMBLER65LIB_SOURCES "${ASSEMBLER65LIB_DIR}/Assembler65Lib.vcxproj")
 
@@ -190,6 +192,9 @@ target_link_libraries(ThreadLib PUBLIC BaseLib)
 add_library(MicroprocessorLib STATIC ${MICROPROCESSORLIB_SOURCES})
 target_link_libraries(MicroprocessorLib PUBLIC StandardLib BaseLib)
 
+add_library(EmulatorDebugLib STATIC ${EMULATORDEBUGLIB_SOURCES})
+target_link_libraries(EmulatorDebugLib PUBLIC ThreadLib MicroprocessorLib StandardLib BaseLib)
+
 add_library(Assembler65Lib STATIC ${ASSEMBLER65LIB_SOURCES})
 target_link_libraries(Assembler65Lib PUBLIC MicroprocessorLib StandardLib BaseLib)
 
@@ -207,4 +212,4 @@ target_link_libraries(BuildLib PUBLIC VisualStudioLib CppParserLib ThreadLib Bas
 
 add_executable(HCP65IDE ${IDE_SOURCES})
 target_include_directories(HCP65IDE PRIVATE "${IDE_DIR}")
-target_link_libraries(HCP65IDE PRIVATE X11Lib WindowLib InputLib BuildLib VisualStudioLib CppParserLib Assembler65Lib MicroprocessorLib ThreadLib SupportLib StandardLib BaseLib)
+target_link_libraries(HCP65IDE PRIVATE X11Lib WindowLib InputLib BuildLib VisualStudioLib CppParserLib Assembler65Lib EmulatorDebugLib MicroprocessorLib ThreadLib SupportLib StandardLib BaseLib)

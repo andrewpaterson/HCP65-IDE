@@ -23,6 +23,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/TypeConverter.h"
 #include "BaseLib/GlobalMemory.h"
 #include "BaseLib/GlobalDataTypesIO.h"
+#include "BaseLib/Socket.h"
 #include "StandardLib/Objects.h"
 #include "X11Lib/X11WindowFactory.h"
 #include "X11Lib/X11Input.h"
@@ -49,6 +50,7 @@ int main(int argc, char* argv[])
 	MemoryInit();
 	DataIOInit();
 	ObjectsInit();
+	SocketsInit();  //The debugger's connection to the emulator.
 
 	bool bResult;
 
@@ -86,6 +88,7 @@ int main(int argc, char* argv[])
 	}
 
 	ObjectsFlush();
+	SocketsKill();
 	ObjectsKill();
 	DataIOKill();
 	MemoryKill();

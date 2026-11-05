@@ -49,8 +49,9 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define IDE_BUILD_POLL			50		//Milliseconds between looks at a running build.
 
 
-//Go to Definition (F12), Find All References (Shift+F12) and Build (Control+Shift+B) from anywhere in the window.
-static EComponentInputCommand	gaeIDECodeCommands[] = { CIC_GoToDefinition, CIC_FindReferences, CIC_Build };
+//Go to Definition (F12), Find All References (Shift+F12), Build (Control+Shift+B) and the debugger's keys from anywhere in the window.
+static EComponentInputCommand	gaeIDECodeCommands[] = { CIC_GoToDefinition, CIC_FindReferences, CIC_Build, CIC_StartDebugging, CIC_StopDebugging, CIC_RestartDebugging,
+														 CIC_BreakAll, CIC_ToggleBreakpoint, CIC_StepOver, CIC_StepInto, CIC_StepOut };
 
 
 //Visual Studio's dark theme colours for C++, by ECPPHighlight.
@@ -220,7 +221,7 @@ void CIDEBuildListener::Init(CIDEContent* pcContent)
 //////////////////////////////////////////////////////////////////////////
 void CIDEBuildListener::ButtonClicked(CUnknown* pcSource, void* pvContext)
 {
-	mpcContent->Build();
+	mpcContent->ToolbarButtonClicked(pcSource);
 }
 
 
@@ -294,6 +295,9 @@ void CIDEContent::Init(void)
 	maTabs.Init();
 	maFileIcons.Init();
 	mcTabsListener.Init(this);
+	mcDebugger.Init();
+	maszDebugScript.Init();
+	miDebugScriptTime = 0;
 
 	PostInit();
 }
@@ -350,6 +354,24 @@ void CIDEContent::Class(void)
 	U_Unknown(CVcxSolution, mcSolution);
 	U_Unknown(CIDECodeModel, mcCodeModel);
 	U_Bool(mbSolution);
+	U_Unknown(CIDEDebugger, mcDebugger);
+	M_Pointer(mpDebugView);
+	M_Pointer(mpDebugTab);
+	M_Pointer(mpStartButton);
+	M_Pointer(mpStartItem);
+	M_Pointer(mpStepIntoItem);
+	M_Pointer(mpStepOverItem);
+	M_Pointer(mpStepOutItem);
+	M_Pointer(mpBreakItem);
+	M_Pointer(mpStopItem);
+	M_Pointer(mpRestartItem);
+	M_Pointer(mpToggleItem);
+	M_Pointer(mpNewBreakpointItem);
+	M_Pointer(mpDeleteBreakpointsItem);
+	M_Pointer(mpAttachItem);
+	M_Pointer(mpDialog);
+	U_Unknown(CArrayChars, maszDebugScript);
+	U_Int64(miDebugScriptTime);
 }
 
 
@@ -367,6 +389,10 @@ void CIDEContent::Free(void)
 	mcBuildListener.RemoveFromListenerCalls();
 	mcMenuListener.RemoveFromListenerCalls();
 	mcTabsListener.RemoveFromListenerCalls();
+
+	//An emulator being debugged is quit (or detached from).
+	mcDebugger.Kill();
+	maszDebugScript.Kill();
 
 	//A build still running is stopped (an HCP65 build is waited for) before the solution it builds goes.
 	mcBuild.Kill();
@@ -476,6 +502,8 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpBottomTabs->SetAlignment(CSH_Stretch, CSV_Stretch);
 	mpReferencesTab = mpBottomTabs->AddTab("Find All References", pReferencesPane);
 	mpBuildTab = mpBottomTabs->AddTab("Build", mpBuildPane->GetComponent());
+	mpDebugView = OMalloc<CIDEDebugView>(pWindow, mpTheme, mpCodeFamily, JEWEL_TEXT);
+	mpDebugTab = mpBottomTabs->AddTab("Debug", mpDebugView->GetComponent());
 
 	//The toolbar: the build configuration's configuration and platform, as Visual Studio has them, and Build.
 	mpConfigurations = OMalloc<CComboBox>(pWindow, mpTheme);
@@ -487,12 +515,16 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpBuildButton = OMalloc<CButton>(pWindow, mpTheme, "Build");
 	mpBuildButton->SetAlignment(CSH_Left, CSV_Center);
 	mpBuildButton->AddListener(&mcBuildListener);
+	mpStartButton = OMalloc<CButton>(pWindow, mpTheme, "Start");
+	mpStartButton->SetAlignment(CSH_Left, CSV_Center);
+	mpStartButton->AddListener(&mcBuildListener);
 	pToolbar = OMalloc<CGridContainer>(pWindow);
 	pToolbar->SetDesiredSize(-1, IDE_TOOLBAR_HEIGHT);
 	pToolbar->SetAlignment(CSH_Stretch, CSV_Stretch);
 	pToolbar->AddComponent(mpConfigurations, 0, 0, 1, 1, 0, 1);
 	pToolbar->AddComponent(mpPlatforms, 1, 0, 1, 1, 0, 1);
-	pToolbar->AddComponent(mpBuildButton, 2, 0, 1, 1, 1, 1);
+	pToolbar->AddComponent(mpBuildButton, 2, 0, 1, 1, 0, 1);
+	pToolbar->AddComponent(mpStartButton, 3, 0, 1, 1, 1, 1);
 
 	pMain = OMalloc<CGridContainer>(pWindow);
 	pMain->AddComponent(CreateMenuBar(), 0, 0, 2, 1, 1, 0);
@@ -508,7 +540,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// File, with Open Project/Solution.
+// File, with Open Project/Solution, and Debug.
 //
 //////////////////////////////////////////////////////////////////////////
 Ptr<CMenuBar> CIDEContent::CreateMenuBar(void)
@@ -520,6 +552,7 @@ Ptr<CMenuBar> CIDEContent::CreateMenuBar(void)
 
 	mpMenuBar = OMalloc<CMenuBar>(mpWindow, mpTheme);
 	mpMenuBar->AddMenu("File", pFile);
+	mpMenuBar->AddMenu("Debug", CreateDebugMenu());
 	mpMenuBar->AddListener(&mcMenuListener);
 	mpMenuBar->SetAlignment(CSH_Stretch, CSV_Stretch);
 	return mpMenuBar;
@@ -535,6 +568,10 @@ void CIDEContent::MenuItemClicked(CMenuItem* pcItem)
 	if (pcItem == &mpOpenItem)
 	{
 		ShowOpenSolutionDialog();
+	}
+	else
+	{
+		DebugMenuItemClicked(pcItem);
 	}
 }
 
@@ -793,6 +830,10 @@ void CIDEContent::CodeCommandAction(SComponentInputEvent* psEvent)
 	else if (psEvent->eCommand == CIC_Build)
 	{
 		Build();
+	}
+	else
+	{
+		DebugCommandAction(psEvent->eCommand);
 	}
 }
 
@@ -1397,6 +1438,7 @@ void CIDEContent::Tick(Ptr<CWindow> pWindow)
 	int64				iSoonest;
 
 	PollBuild(pWindow);
+	PollDebugger(pWindow);
 
 	//The platform's clock: the window's total time only counts the time it spent updating.
 	iNow = GetDebugTickCount();

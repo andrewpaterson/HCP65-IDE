@@ -110,7 +110,7 @@
       <TargetMachine>MachineX86</TargetMachine>
       <AdditionalLibraryDirectories>
       </AdditionalLibraryDirectories>
-      <AdditionalDependencies>shlwapi.lib;dinput8.lib;dxguid.lib;xinput.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>shlwapi.lib;ws2_32.lib;dinput8.lib;dxguid.lib;xinput.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
       <OptimizeReferences>false</OptimizeReferences>
       <EnableCOMDATFolding>false</EnableCOMDATFolding>
@@ -151,7 +151,7 @@
       <TargetMachine>MachineX86</TargetMachine>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
-      <AdditionalDependencies>shlwapi.lib;dinput8.lib;dxguid.lib;xinput.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>shlwapi.lib;ws2_32.lib;dinput8.lib;dxguid.lib;xinput.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
     </Link>
@@ -189,7 +189,7 @@
       <TargetMachine>MachineX64</TargetMachine>
       <AdditionalLibraryDirectories>
       </AdditionalLibraryDirectories>
-      <AdditionalDependencies>shlwapi.lib;dinput8.lib;dxguid.lib;xinput.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>shlwapi.lib;ws2_32.lib;dinput8.lib;dxguid.lib;xinput.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
       <OptimizeReferences>false</OptimizeReferences>
       <EnableCOMDATFolding>false</EnableCOMDATFolding>
@@ -230,7 +230,7 @@
       <TargetMachine>MachineX64</TargetMachine>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
-      <AdditionalDependencies>shlwapi.lib;dinput8.lib;dxguid.lib;xinput.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>shlwapi.lib;ws2_32.lib;dinput8.lib;dxguid.lib;xinput.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
     </Link>
@@ -239,6 +239,9 @@
     <ClCompile Include="HCP65IDE.cpp" />
     <ClCompile Include="IDECodeModel.cpp" />
     <ClCompile Include="IDEContent.cpp" />
+    <ClCompile Include="IDEContentDebug.cpp" />
+    <ClCompile Include="IDEDebugger.cpp" />
+    <ClCompile Include="IDEDebugView.cpp" />
     <ClCompile Include="IDEEditorTab.cpp" />
     <ClCompile Include="IDEListingSource.cpp" />
     <ClCompile Include="IDEBuildPane.cpp" />
@@ -250,6 +253,8 @@
   <ItemGroup>
     <ClInclude Include="IDECodeModel.h" />
     <ClInclude Include="IDEContent.h" />
+    <ClInclude Include="IDEDebugger.h" />
+    <ClInclude Include="IDEDebugView.h" />
     <ClInclude Include="IDEEditorTab.h" />
     <ClInclude Include="IDEListingSource.h" />
     <ClInclude Include="IDEBuildPane.h" />
@@ -282,6 +287,9 @@
     </ProjectReference>
     <ProjectReference Include="..\..\..\CommonLibraries\Libraries\CppParserLib\CppParserLib.vcxproj">
       <Project>{4d010c1e-4dce-4271-9b1c-87bbf0bc761c}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\CommonLibraries\Libraries\EmulatorDebugLib\EmulatorDebugLib.vcxproj">
+      <Project>{f13e4923-1574-4f23-984b-ae4b0b4e7d24}</Project>
     </ProjectReference>
     <ProjectReference Include="..\..\..\CommonLibraries\Libraries\ThreadLib\ThreadLib.vcxproj">
       <Project>{7269d64f-994a-4233-9add-bad415a07b64}</Project>
