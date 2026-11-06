@@ -253,8 +253,6 @@ void CIDEContent::Class(void)
 	M_Pointer(mpDock);
 	M_Pointer(mpExplorerTool);
 	M_Pointer(mpBuildTool);
-	M_Pointer(mpDebugTool);
-	M_Pointer(mpClaudeTool);
 	M_Pointer(mpFileChooser);
 	M_Pointer(mpFolderIcon);
 	M_Pointer(mpFileIcon);
@@ -300,8 +298,6 @@ void CIDEContent::Class(void)
 	U_String(mszRecentFile);
 	U_String(mszQueuedOpen);
 	U_Unknown(CIDECodeModel, mcCodeModel);
-	M_Pointer(mpDebugView);
-	M_Pointer(mpStartButton);
 	M_Pointer(mpDialog);
 	U_Unknown(CGitRepositories, mcGit);
 	U_Int64(miGitStatusTime);
@@ -313,7 +309,6 @@ void CIDEContent::Class(void)
 	U_Size(muiQueuedChange);
 	U_Int32(miQueuedAction);
 	U_Bool(mbKeepSettings);
-	M_Pointer(mpClaudePane);
 }
 
 
@@ -343,10 +338,6 @@ void CIDEContent::Free(void)
 	if (mpBuildButton.IsNotNull())
 	{
 		mpBuildButton->GetClickEvent()->Remove(this);
-	}
-	if (mpStartButton.IsNotNull())
-	{
-		mpStartButton->GetClickEvent()->Remove(&mpDebugging);
 	}
 	if (mpMenuBar.IsNotNull())
 	{
@@ -381,12 +372,6 @@ void CIDEContent::Free(void)
 		mpWindow->CancelPosted(&mpCloseGuard);  //The modules' posted calls too.
 		mpWindow->CancelPosted(&mpNavigator);
 		mpWindow->CancelPosted(&mpRename);
-	}
-	if (mpClaudePane.IsNotNull() && mpClaudePane->GetSendButton().IsNotNull())
-	{
-		mpClaudePane->GetSendButton()->GetClickEvent()->Remove(&mpAskClaude);
-		mpClaudePane->GetStopButton()->GetClickEvent()->Remove(&mpAskClaude);
-		mpClaudePane->GetNewButton()->GetClickEvent()->Remove(&mpAskClaude);
 	}
 
 	//A request Claude is still working on is stopped.
@@ -529,14 +514,8 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	sPlace.WithPane(IDE_USAGES_ID);
 	mpBuildTool = mpDock->AddPane(IDE_BUILD_ID, "Build", NULL, mpBuildPane->GetComponent(), DPK_Tool, &sPlace);
 
-	mpDebugView = OMalloc<CIDEDebugView>(pWindow, mpTheme, mpCodeFamily, JEWEL_TEXT);
-	mpDebugTool = mpDock->AddPane(IDE_DEBUG_ID, "Debug", NULL, mpDebugView->GetComponent(), DPK_Tool, &sPlace);
-
-	mpClaudePane = OMalloc<CIDEClaudePane>(pWindow, mpTheme, mpFontColours->GetFont(JEWEL_ICON), mpCodeFamily);
-	mpClaudePane->GetSendButton()->GetClickEvent()->Add(&mpAskClaude, &CIDEAskClaude::ClaudeSendClicked);
-	mpClaudePane->GetStopButton()->GetClickEvent()->Add(&mpAskClaude, &CIDEAskClaude::ClaudeStopClicked);
-	mpClaudePane->GetNewButton()->GetClickEvent()->Add(&mpAskClaude, &CIDEAskClaude::ClaudeNewClicked);
-	mpClaudeTool = mpDock->AddPane(IDE_CLAUDE_ID, "Claude", NULL, mpClaudePane->GetComponent(), DPK_Tool, &sPlace);
+	mpDebugging->CreatePane(&sPlace);
+	mpAskClaude->CreatePane(&sPlace);
 	mpDock->Show(mpUsages->GetTool());
 
 	//The toolbar: the build configuration's configuration and platform, as Visual Studio has them, and Build.
@@ -549,16 +528,13 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpBuildButton = OMalloc<CButton>(pWindow, mpTheme, "Build");
 	mpBuildButton->SetAlignment(CSH_Left, CSV_Center);
 	mpBuildButton->GetClickEvent()->Add(this, &CIDEContent::BuildClicked);
-	mpStartButton = OMalloc<CButton>(pWindow, mpTheme, "Start");
-	mpStartButton->SetAlignment(CSH_Left, CSV_Center);
-	mpStartButton->GetClickEvent()->Add(&mpDebugging, &CIDEDebugging::StartClicked);
 	pToolbar = OMalloc<CGridContainer>(pWindow);
 	pToolbar->SetDesiredSize(-1, IDE_TOOLBAR_HEIGHT);
 	pToolbar->SetAlignment(CSH_Stretch, CSV_Stretch);
 	pToolbar->AddComponent(mpConfigurations, 0, 0, 1, 1, 0, 1);
 	pToolbar->AddComponent(mpPlatforms, 1, 0, 1, 1, 0, 1);
 	pToolbar->AddComponent(mpBuildButton, 2, 0, 1, 1, 0, 1);
-	pToolbar->AddComponent(mpStartButton, 3, 0, 1, 1, 1, 1);
+	pToolbar->AddComponent(mpDebugging->CreateStartButton(), 3, 0, 1, 1, 1, 1);
 
 	//The branch checked out, at the toolbar's right, as IntelliJ IDEA shows it.
 	mpBranchLabel = OMalloc<CLabel>(pWindow, mpFontColours->GetFont(JEWEL_ICON), "");
@@ -758,11 +734,11 @@ void CIDEContent::MenuItemClicked(CMenuItem* pcItem)
 	}
 	else if (pcItem == &mpDebugItem)
 	{
-		mpDock->Activate(mpDebugTool);
+		mpDock->Activate(mpDebugging->GetTool());
 	}
 	else if (pcItem == &mpClaudeItem)
 	{
-		mpDock->Activate(mpClaudeTool);
+		mpDock->Activate(mpAskClaude->GetTool());
 	}
 	else if (pcItem == &mpResetLayoutItem)
 	{
@@ -2495,10 +2471,7 @@ void CIDEContent::Tick(Ptr<CWindow> pWindow)
 	PollBuild(pWindow);
 	mpDebugging->PollDebugger(pWindow);
 	mpAskClaude->PollClaude(pWindow);
-	if (mpClaudePane.IsNotNull())
-	{
-		mpClaudePane->ScrollToEnd();
-	}
+	mpAskClaude->ScrollToEnd();
 
 	//The platform's clock: the window's total time only counts the time it spent updating.
 	iNow = GetDebugTickCount();
@@ -2809,8 +2782,8 @@ Ptr<CIDEEditorTab> CIDEContent::GetActiveTab(void) { return mpActive; }
 Ptr<CDockManager> CIDEContent::GetDock(void) { return mpDock; }
 Ptr<CDockPane> CIDEContent::GetExplorerTool(void) { return mpExplorerTool; }
 Ptr<CDockPane> CIDEContent::GetBuildTool(void) { return mpBuildTool; }
-Ptr<CDockPane> CIDEContent::GetDebugTool(void) { return mpDebugTool; }
-Ptr<CDockPane> CIDEContent::GetClaudeTool(void) { return mpClaudeTool; }
+Ptr<CDockPane> CIDEContent::GetDebugTool(void) { return mpDebugging->GetTool(); }
+Ptr<CDockPane> CIDEContent::GetClaudeTool(void) { return mpAskClaude->GetTool(); }
 Ptr<CIDEBuildPane> CIDEContent::GetBuildPane(void) { return mpBuildPane; }
 bool CIDEContent::IsBuilding(void) { return mcBuild.IsRunning(); }
 CCPP65ListingIndex* CIDEContent::GetListings(void) { return &mcListings; }  //The last HCP65 build's, for showing a line's assembly.

@@ -364,8 +364,8 @@ void CIDEScript::RunEditStep(const char* szStep)
 		}
 		else if (strcmp(&szStep[6], "claude") == 0)
 		{
-			mpcContent->mpDock->Show(mpcContent->mpClaudeTool);
-			mpcContent->mpWindow->GetFocus()->SetFocus(mpcContent->mpClaudePane->GetRequestArea());
+			mpcContent->mpDock->Show(mpcContent->mpAskClaude->GetTool());
+			mpcContent->mpWindow->GetFocus()->SetFocus(mpcContent->mpAskClaude->GetClaudePane()->GetRequestArea());
 		}
 		else if (pTab.IsNotNull())
 		{

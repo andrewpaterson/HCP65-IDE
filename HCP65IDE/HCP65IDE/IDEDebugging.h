@@ -28,6 +28,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BuildLib/BuildConfiguration.h"
 #include "IDEDebugger.h"
 #include "IDEDebugView.h"
+#include "WindowLib/Button.h"
+#include "WindowLib/DockManager.h"
 #include "IDEEditorTab.h"
 
 
@@ -45,6 +47,9 @@ CONSTRUCTABLE(CIDEDebugging);
 DESTRUCTABLE(CIDEDebugging);
 protected:
 	CIDEContent*	mpcContent;  //Not held: the content holds it.
+	Ptr<CIDEDebugView>	mpDebugView;  //The Debug tab,
+	Ptr<CDockPane>		mpDebugTool;  //its tool window,
+	Ptr<CButton>		mpStartButton;  //and the toolbar's Start, or Continue while stopped.
 	CIDEDebugger				mcDebugger;
 	CChars						mszDefaultEmulator;	//A W65C816 configuration's emulator when it doesn't say.
 	CChars						mszDefaultEmulatorDirectory;
@@ -95,6 +100,9 @@ public:
 	bool				IsDebugScriptRunning(void);
 	CIDEDebugger*		GetDebugger(void);
 	Ptr<CIDEDebugView>	GetDebugView(void);
+	Ptr<CDockPane>		GetTool(void);
+	void				CreatePane(SDockPlace* psPlace);
+	Ptr<CButton>		CreateStartButton(void);
 
 protected:
 	Ptr<CMenuContainer>	CreateDebugMenu(void);

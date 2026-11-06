@@ -26,6 +26,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/FatImageFile.h"
 #include "StandardLib/Objects.h"
 #include "StandardLib/ClassDefines.h"
+#include "WindowLib/JewelColours.h"
 #include "IDEContent.h"
 #include "IDEDebugging.h"
 
@@ -75,6 +76,9 @@ void CIDEDebugging::Init(CIDEContent* pcContent)
 void CIDEDebugging::Class(void)
 {
 	U_Pointer(mpcContent);
+	M_Pointer(mpDebugView);
+	M_Pointer(mpDebugTool);
+	M_Pointer(mpStartButton);
 	U_Unknown(CIDEDebugger, mcDebugger);
 	U_String(mszDefaultEmulator);
 	U_String(mszDefaultEmulatorDirectory);
@@ -105,6 +109,10 @@ void CIDEDebugging::Class(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDEDebugging::Free(void)
 {
+	if (mpStartButton.IsNotNull())
+	{
+		mpStartButton->GetClickEvent()->Remove(this);
+	}
 	//An emulator being debugged is quit (or detached from).
 	mszStoppedFile.Kill();
 	mcDebugger.Kill();
@@ -510,7 +518,7 @@ bool CIDEDebugging::StartDebugging(void)
 	{
 		return false;
 	}
-	mpcContent->mpDock->Show(mpcContent->mpDebugTool);
+	mpcContent->mpDock->Show(mpDebugTool);
 	UpdateDebugView(false);
 	mpcContent->mpWindow->RequestTick(IDE_DEBUG_POLL);
 	return bResult;
@@ -576,7 +584,7 @@ bool CIDEDebugging::StepInto(void)
 		}
 		bResult = mcDebugger.Start(true);
 		ShowDebugMessages();
-		mpcContent->mpDock->Show(mpcContent->mpDebugTool);
+		mpcContent->mpDock->Show(mpDebugTool);
 		mpcContent->mpWindow->RequestTick(IDE_DEBUG_POLL);
 	}
 	else if (IsDisassemblyFocussed())
@@ -618,7 +626,7 @@ bool CIDEDebugging::StepOver(void)
 //////////////////////////////////////////////////////////////////////////
 bool CIDEDebugging::IsDisassemblyFocussed(void)
 {
-	return mpcContent->mpWindow->GetFocus()->GetFocussedComponent() == mpcContent->mpDebugView->GetDisassembly();
+	return mpcContent->mpWindow->GetFocus()->GetFocussedComponent() == mpDebugView->GetDisassembly();
 }
 
 
@@ -657,7 +665,7 @@ bool CIDEDebugging::ToggleBreakpoint(void)
 		return ToggleSourceBreakpoint(pTab, (size)iLine);
 	}
 
-	if (!mpcContent->mpDebugView->GetCaretAddress(&uiAddress))
+	if (!mpDebugView->GetCaretAddress(&uiAddress))
 	{
 		return false;
 	}
@@ -755,7 +763,7 @@ bool CIDEDebugging::AttachDebugger(int iPort)
 	}
 	bResult = mcDebugger.Attach(iPort);
 	ShowDebugMessages();
-	mpcContent->mpDock->Show(mpcContent->mpDebugTool);
+	mpcContent->mpDock->Show(mpDebugTool);
 	UpdateDebugView(false);
 	mpcContent->mpWindow->RequestTick(IDE_DEBUG_POLL);
 	return bResult;
@@ -795,7 +803,7 @@ void CIDEDebugging::PollDebugger(Ptr<CWindow> pWindow)
 		UpdateDebugView(false);
 		if (!bStopped && mcDebugger.IsStopped())
 		{
-			mpcContent->mpDock->Show(mpcContent->mpDebugTool);
+			mpcContent->mpDock->Show(mpDebugTool);
 		}
 		ShowStoppedLine(bStopped);
 	}
@@ -815,8 +823,8 @@ void CIDEDebugging::PollDebugger(Ptr<CWindow> pWindow)
 //////////////////////////////////////////////////////////////////////////
 void CIDEDebugging::UpdateDebugView(bool bKeepCaret)
 {
-	mpcContent->mpDebugView->Update(&mcDebugger, bKeepCaret);
-	mpcContent->mpStartButton->SetCaption(mcDebugger.IsStopped() ? "Continue" : "Start");
+	mpDebugView->Update(&mcDebugger, bKeepCaret);
+	mpStartButton->SetCaption(mcDebugger.IsStopped() ? "Continue" : "Start");
 }
 
 
@@ -976,7 +984,35 @@ void CIDEDebugging::RunDebugScript(void)
 
 
 CIDEDebugger* CIDEDebugging::GetDebugger(void) { return &mcDebugger; }
-Ptr<CIDEDebugView> CIDEDebugging::GetDebugView(void) { return mpcContent->mpDebugView; }
+Ptr<CIDEDebugView> CIDEDebugging::GetDebugView(void) { return mpDebugView; }
+Ptr<CDockPane> CIDEDebugging::GetTool(void) { return mpDebugTool; }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The Debug tab, the emulator's disassembly and registers, put at
+// psPlace.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDebugging::CreatePane(SDockPlace* psPlace)
+{
+	mpDebugView = OMalloc<CIDEDebugView>(mpcContent->mpWindow, mpcContent->mpTheme, mpcContent->mpCodeFamily, JEWEL_TEXT);
+	mpDebugTool = mpcContent->mpDock->AddPane(IDE_DEBUG_ID, "Debug", NULL, mpDebugView->GetComponent(), DPK_Tool, psPlace);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The toolbar's Start button: Continue while stopped.
+//
+//////////////////////////////////////////////////////////////////////////
+Ptr<CButton> CIDEDebugging::CreateStartButton(void)
+{
+	mpStartButton = OMalloc<CButton>(mpcContent->mpWindow, mpcContent->mpTheme, "Start");
+	mpStartButton->SetAlignment(CSH_Left, CSV_Center);
+	mpStartButton->GetClickEvent()->Add(this, &CIDEDebugging::StartClicked);
+	return mpStartButton;
+}
 
 
 //////////////////////////////////////////////////////////////////////////

@@ -159,8 +159,6 @@ protected:
 	Ptr<CDockManager>			mpDock;
 	Ptr<CDockPane>				mpExplorerTool;		//The tool windows.
 	Ptr<CDockPane>				mpBuildTool;
-	Ptr<CDockPane>				mpDebugTool;
-	Ptr<CDockPane>				mpClaudeTool;
 	Ptr<CFileChooser>			mpFileChooser;		//While it's shown.
 	Ptr<CImageCel>				mpFolderIcon;		//The file chooser's.
 	Ptr<CImageCel>				mpFileIcon;
@@ -221,11 +219,8 @@ protected:
 	int							miQueuedAction;		//Then 0 nothing, 1 Rollback or 2 Show Diff.
 	bool						mbKeepSettings;		//The layout and the open solution are saved for next time; not while being checked.
 
-	Ptr<CIDEClaudePane>			mpClaudePane;
 
 
-	Ptr<CIDEDebugView>			mpDebugView;
-	Ptr<CButton>				mpStartButton;		//Start, or Continue while stopped.
 	Ptr<CDialog>				mpDialog;			//The address or port asked for, while it's shown.
 
 public:

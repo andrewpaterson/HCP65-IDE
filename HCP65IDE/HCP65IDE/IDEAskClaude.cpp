@@ -22,6 +22,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/TextFile.h"
 #include "BaseLib/StringHelper.h"
 #include "StandardLib/ClassDefines.h"
+#include "WindowLib/JewelColours.h"
 #include "IDEContent.h"
 #include "IDEAskClaude.h"
 
@@ -51,6 +52,8 @@ void CIDEAskClaude::Init(CIDEContent* pcContent)
 void CIDEAskClaude::Class(void)
 {
 	U_Pointer(mpcContent);
+	M_Pointer(mpClaudePane);
+	M_Pointer(mpClaudeTool);
 	U_Unknown(CClaudeCommand, mcClaude);
 	U_Size(muiClaudeReloaded);
 	U_Size(muiClaudeTools);
@@ -65,6 +68,12 @@ void CIDEAskClaude::Class(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDEAskClaude::Free(void)
 {
+	if (mpClaudePane.IsNotNull() && mpClaudePane->GetSendButton().IsNotNull())
+	{
+		mpClaudePane->GetSendButton()->GetClickEvent()->Remove(this);
+		mpClaudePane->GetStopButton()->GetClickEvent()->Remove(this);
+		mpClaudePane->GetNewButton()->GetClickEvent()->Remove(this);
+	}
 	mcClaude.Kill();
 }
 
@@ -86,11 +95,11 @@ void CIDEAskClaude::ClaudeSendClicked(void)
 {
 	CChars	szRequest;
 
-	szRequest.Init(mpcContent->mpClaudePane->GetRequest());
+	szRequest.Init(mpClaudePane->GetRequest());
 	szRequest.StripWhitespace(true);
 	if (!szRequest.Empty() && AskClaude(szRequest.Text()))
 	{
-		mpcContent->mpClaudePane->SetRequest("");
+		mpClaudePane->SetRequest("");
 	}
 	szRequest.Kill();
 }
@@ -106,7 +115,7 @@ void CIDEAskClaude::ClaudeStopClicked(void)
 	if (mcClaude.IsRunning())
 	{
 		mcClaude.Terminate();
-		mpcContent->mpClaudePane->AppendNote("Stopped.", true);
+		mpClaudePane->AppendNote("Stopped.", true);
 	}
 }
 
@@ -121,12 +130,12 @@ void CIDEAskClaude::ClaudeNewClicked(void)
 {
 	if (mcClaude.IsRunning())
 	{
-		mpcContent->mpClaudePane->SetStatus("Claude is still working: stop it first.");
+		mpClaudePane->SetStatus("Claude is still working: stop it first.");
 		return;
 	}
 	mcClaude.Forget();
-	mpcContent->mpClaudePane->Clear();
-	mpcContent->mpClaudePane->SetStatus("New conversation.");
+	mpClaudePane->Clear();
+	mpClaudePane->SetStatus("New conversation.");
 }
 
 
@@ -148,7 +157,7 @@ bool CIDEAskClaude::AskClaude(const char* szRequest)
 	ShowClaudeTab();
 	if (mcClaude.IsRunning())
 	{
-		mpcContent->mpClaudePane->SetStatus("Claude is still working on the last request.");
+		mpClaudePane->SetStatus("Claude is still working on the last request.");
 		return false;
 	}
 
@@ -156,20 +165,20 @@ bool CIDEAskClaude::AskClaude(const char* szRequest)
 	if (!GetClaudeDirectory(&szDirectory))
 	{
 		szDirectory.Kill();
-		mpcContent->mpClaudePane->SetStatus("Open a solution or a file first: Claude works in its folder.");
+		mpClaudePane->SetStatus("Open a solution or a file first: Claude works in its folder.");
 		return false;
 	}
 	if (!mpcContent->SaveAllFiles())
 	{
 		szDirectory.Kill();
-		mpcContent->mpClaudePane->SetStatus("Claude wasn't asked: a file couldn't be saved.");
+		mpClaudePane->SetStatus("Claude wasn't asked: a file couldn't be saved.");
 		return false;
 	}
 
 	szFull.Init(szRequest);
 	AppendClaudeContext(&szFull);
-	mpcContent->mpClaudePane->SetDirectory(szDirectory.Text());
-	mpcContent->mpClaudePane->AppendRequest(szRequest);
+	mpClaudePane->SetDirectory(szDirectory.Text());
+	mpClaudePane->AppendRequest(szRequest);
 	muiClaudeReloaded = 0;
 	muiClaudeTools = 0;
 	bResult = mcClaude.Start(szDirectory.Text(), szFull.Text());
@@ -178,11 +187,11 @@ bool CIDEAskClaude::AskClaude(const char* szRequest)
 
 	if (!bResult)
 	{
-		mpcContent->mpClaudePane->AppendNote("Claude Code couldn't be started: is claude on the path?", true);
-		mpcContent->mpClaudePane->SetStatus("");
+		mpClaudePane->AppendNote("Claude Code couldn't be started: is claude on the path?", true);
+		mpClaudePane->SetStatus("");
 		return false;
 	}
-	mpcContent->mpClaudePane->SetStatus("Claude is working.");
+	mpClaudePane->SetStatus("Claude is working.");
 	mpcContent->mpWindow->RequestTick(IDE_CLAUDE_POLL);
 	return true;
 }
@@ -292,7 +301,7 @@ void CIDEAskClaude::PollClaude(Ptr<CWindow> pWindow)
 	for (i = 0; i < aEvents.NumElements(); i++)
 	{
 		pcEvent = aEvents.Get(i);
-		mpcContent->mpClaudePane->AppendEvent(pcEvent);
+		mpClaudePane->AppendEvent(pcEvent);
 		if (pcEvent->GetType() == CET_ToolUse)
 		{
 			muiClaudeTools++;
@@ -317,14 +326,14 @@ void CIDEAskClaude::PollClaude(Ptr<CWindow> pWindow)
 		//Claude finishes a moment before it exits: the finished status stays until it does.
 		if (!szStatus.Empty())
 		{
-			mpcContent->mpClaudePane->SetStatus(szStatus.Text());
+			mpClaudePane->SetStatus(szStatus.Text());
 		}
 		else if ((muiClaudeTools > 0) && !mcClaude.IsFinished())
 		{
 			szStatus.Append("Claude is working: ");
 			szStatus.Append((uint64)muiClaudeTools);
 			szStatus.Append((muiClaudeTools == 1) ? " tool used." : " tools used.");
-			mpcContent->mpClaudePane->SetStatus(szStatus.Text());
+			mpClaudePane->SetStatus(szStatus.Text());
 		}
 		pWindow->RequestTick(IDE_CLAUDE_POLL);
 	}
@@ -335,7 +344,7 @@ void CIDEAskClaude::PollClaude(Ptr<CWindow> pWindow)
 			//It exited without saying it had finished: stopped, or it failed before it started.
 			if (!mcClaude.GetErrors()->Empty())
 			{
-				mpcContent->mpClaudePane->AppendNote(mcClaude.GetErrors()->Text(), true);
+				mpClaudePane->AppendNote(mcClaude.GetErrors()->Text(), true);
 			}
 			szStatus.Append("Claude stopped (exit code ");
 			szStatus.Append((int32)mcClaude.GetExitCode());
@@ -343,7 +352,7 @@ void CIDEAskClaude::PollClaude(Ptr<CWindow> pWindow)
 		}
 		if (!szStatus.Empty())
 		{
-			mpcContent->mpClaudePane->SetStatus(szStatus.Text());
+			mpClaudePane->SetStatus(szStatus.Text());
 		}
 	}
 	szStatus.Kill();
@@ -417,7 +426,7 @@ bool CIDEAskClaude::ReloadClaudeFile(Ptr<CIDEEditorTab> pTab)
 	if (pTab->IsModified())
 	{
 		szNote.Append(" changed, but it has unsaved changes so it wasn't read again.");
-		mpcContent->mpClaudePane->AppendNote(szNote.Text(), true);
+		mpClaudePane->AppendNote(szNote.Text(), true);
 		szNote.Kill();
 		cFile.Kill();
 		return false;
@@ -427,7 +436,7 @@ bool CIDEAskClaude::ReloadClaudeFile(Ptr<CIDEEditorTab> pTab)
 	cFile.Kill();
 	mpcContent->mpGitStatus->GitFileSaved(pTab->GetFileName());
 	szNote.Append(" read again.");
-	mpcContent->mpClaudePane->AppendNote(szNote.Text(), false);
+	mpClaudePane->AppendNote(szNote.Text(), false);
 	szNote.Kill();
 	return true;
 }
@@ -504,11 +513,42 @@ bool SameIDEText(const char* szText1, const char* szText2)
 //////////////////////////////////////////////////////////////////////////
 void CIDEAskClaude::ShowClaudeTab(void)
 {
-	mpcContent->mpDock->Show(mpcContent->mpClaudeTool);
+	mpcContent->mpDock->Show(mpClaudeTool);
 }
 
 
 CClaudeCommand* CIDEAskClaude::GetClaude(void) { return &mcClaude; }
-Ptr<CIDEClaudePane> CIDEAskClaude::GetClaudePane(void) { return mpcContent->mpClaudePane; }
+Ptr<CIDEClaudePane> CIDEAskClaude::GetClaudePane(void) { return mpClaudePane; }
+Ptr<CDockPane> CIDEAskClaude::GetTool(void) { return mpClaudeTool; }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The Claude tab, with its Send, Stop and New Conversation buttons, put
+// at psPlace.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEAskClaude::CreatePane(SDockPlace* psPlace)
+{
+	mpClaudePane = OMalloc<CIDEClaudePane>(mpcContent->mpWindow, mpcContent->mpTheme, mpcContent->mpFontColours->GetFont(JEWEL_ICON), mpcContent->mpCodeFamily);
+	mpClaudePane->GetSendButton()->GetClickEvent()->Add(this, &CIDEAskClaude::ClaudeSendClicked);
+	mpClaudePane->GetStopButton()->GetClickEvent()->Add(this, &CIDEAskClaude::ClaudeStopClicked);
+	mpClaudePane->GetNewButton()->GetClickEvent()->Add(this, &CIDEAskClaude::ClaudeNewClicked);
+	mpClaudeTool = mpcContent->mpDock->AddPane(IDE_CLAUDE_ID, "Claude", NULL, mpClaudePane->GetComponent(), DPK_Tool, psPlace);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// What Claude is writing is kept in view.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEAskClaude::ScrollToEnd(void)
+{
+	if (mpClaudePane.IsNotNull())
+	{
+		mpClaudePane->ScrollToEnd();
+	}
+}
 bool CIDEAskClaude::IsClaudeRunning(void) { return mcClaude.IsRunning(); }
 
