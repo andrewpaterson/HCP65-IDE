@@ -42,7 +42,7 @@ struct SIDEUsage
 // Projects, then classes, then files, then lines, alphabetically.
 //
 //////////////////////////////////////////////////////////////////////////
-static int CompareIDEUsages(const void* pv1, const void* pv2)
+static int __cdecl CompareIDEUsages(const void* pv1, const void* pv2)
 {
 	SIDEUsage*	ps1;
 	SIDEUsage*	ps2;
