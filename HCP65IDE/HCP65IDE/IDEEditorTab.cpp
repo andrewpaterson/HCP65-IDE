@@ -244,26 +244,51 @@ bool CIDEEditorTab::SetCaretPlace(int iLine, int iColumn)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// True once the text has been left alone for a moment after an edit, so
-// it should be highlighted again (from the editor's text; then
-// SetRecolourPending(false)).  Otherwise piWait is how many milliseconds
-// until it might be, or -1 for never.
+// What the tab wants worked out now from its text, both cleared as they
+// are taken: pbHighlight, if it changed since it was last highlighted,
+// and pbIndex, if it changed since it was last indexed and bCanIndex.
+// Only once the text has been left alone for a moment after an edit, or
+// with bNow at once; until then piWait is how many milliseconds until it
+// might be, -1 for never.  False if there is nothing.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEEditorTab::IsRecolourDue(int64 iNow, int64* piWait)
+bool CIDEEditorTab::TakeEdits(int64 iNow, bool bNow, bool bCanIndex, bool* pbHighlight, bool* pbIndex, int64* piWait)
 {
+	*pbHighlight = false;
+	*pbIndex = false;
 	*piWait = -1;
 	SeeChanges(iNow);
-	if (!mbRecolour || (muiProject == MAX_SIZE))
+	if ((muiProject == MAX_SIZE) || (!mbRecolour && !mbIndexStale))
 	{
 		return false;
 	}
-	if (iNow - miChangedTime < IDE_RECOLOUR_DELAY)
+	if (!bNow && (iNow - miChangedTime < IDE_RECOLOUR_DELAY))
 	{
 		*piWait = IDE_RECOLOUR_DELAY - (iNow - miChangedTime);
 		return false;
 	}
-	return true;
+
+	*pbHighlight = mbRecolour;
+	*pbIndex = mbIndexStale && bCanIndex;
+	mbRecolour = false;
+	mbIndexStale = mbIndexStale && !bCanIndex;
+	return *pbHighlight || *pbIndex;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The index was built again from the files: an edited tab is indexed
+// (and highlighted) again from its text.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEEditorTab::IndexRestarted(void)
+{
+	if (mbEdited)
+	{
+		mbIndexStale = true;
+		mbRecolour = true;
+	}
 }
 
 
@@ -537,8 +562,6 @@ char* CIDEEditorTab::GetFileName(void) { return mszFileName.Text(); }
 size CIDEEditorTab::GetProject(void) { return muiProject; }
 void CIDEEditorTab::SetProject(size uiProject) { muiProject = uiProject; }
 bool CIDEEditorTab::IsEdited(void) { return mbEdited; }
-void CIDEEditorTab::SetIndexStale(bool bStale) { mbIndexStale = bStale; }
-bool CIDEEditorTab::IsIndexStale(void) { return mbIndexStale; }
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -561,6 +584,5 @@ void CIDEEditorTab::SeeChanges(int64 iNow)
 		mbIndexStale = true;
 	}
 }
-bool CIDEEditorTab::IsRecolourPending(void) { return mbRecolour; }
-void CIDEEditorTab::SetRecolourPending(bool bPending) { mbRecolour = bPending; }
+
 

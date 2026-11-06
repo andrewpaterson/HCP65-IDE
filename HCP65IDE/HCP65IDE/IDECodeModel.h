@@ -154,6 +154,7 @@ protected:
 	bool				mbJobs;
 	CArrayIDEIndexJobs	mapsJobs;
 	size				muiIndexed;
+	size				muiIndexings;			//How many times the index has been started (StartIndexing).
 	bool				mbCancelled;			//The jobs not started yet do nothing (KillJobs).
 	CMapStringInt		mcIncluders;			//A file to the first indexed unit that included it (the job's index).
 
@@ -179,6 +180,7 @@ public:
 	void	WaitForIndexing(void);
 	void	GetIndexingProgress(size* puiIndexed, size* puiToIndex);
 	bool	IsIndexing(void);
+	size	NumIndexings(void);
 	void	SetHeaderText(const char* szFileName, const char* szText);
 	bool	GetIncluder(const char* szFileName, size* puiProject, CChars* pszUnit);
 	void	ReindexAll(void);

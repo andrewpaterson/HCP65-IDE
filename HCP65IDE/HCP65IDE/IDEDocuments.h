@@ -47,6 +47,7 @@ protected:
 	Ptr<CMenuItem>		mpCloseAllItem;  //Window, Close All Documents.
 	CArray<CIDEEditorTab>		maTabs;
 	Ptr<CIDEEditorTab>			mpActive;			//The selected tab's file, NULL if none is open.
+	size						muiIndexings;		//The code model's indexings the tabs have seen (NumIndexings).
 
 public:
 	void	Init(CIDEContent* pcContent);

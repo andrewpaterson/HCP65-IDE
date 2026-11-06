@@ -61,6 +61,7 @@ void CIDEDocuments::Init(CIDEContent* pcContent)
 	mpCloseAllItem = NULL;
 	maTabs.Init();
 	mpActive = NULL;
+	muiIndexings = 0;
 	PostInit();
 }
 
@@ -77,6 +78,7 @@ void CIDEDocuments::Class(void)
 	M_Pointer(mpCloseAllItem);
 	M_Embedded(maTabs);
 	M_Pointer(mpActive);
+	U_Size(muiIndexings);
 }
 
 
@@ -325,24 +327,15 @@ void CIDEDocuments::HighlightTab(Ptr<CIDEEditorTab> pTab)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Everything is indexed again, from the files; the open .cpp files with
-// edits are indexed again from their editors once that has finished.
-// What the edits thread made is shown first: the model forgets it.
+// Everything is indexed again, from the files; the open files with edits
+// are indexed again from their editors once that has finished.  What the
+// edits thread made is shown first: the model forgets it.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEDocuments::ReindexAll(void)
 {
-	size	i;
-
 	TakeEditedFiles(true);
 	mpcContent->GetCodeModel()->ReindexAll();
-	for (i = 0; i < maTabs.Size(); i++)
-	{
-		if (maTabs.Get(i)->IsEdited())
-		{
-			maTabs.Get(i)->SetIndexStale(true);
-		}
-	}
 }
 
 
@@ -379,16 +372,17 @@ void CIDEDocuments::UpdateEditedTabsNow(void)
 //
 // The edited tabs given to the code model's edits thread, or with bNow
 // worked out on this thread.  A tab is indexed again only once the whole
-// solution has been (IsIndexing).  Without bNow, nothing is given while
-// the thread is busy: the tabs stay pending and are given once it has
-// finished.  See UpdateEditedTabs for what is returned.
+// solution has been (IsIndexing), and again after the index is built
+// again from the files.  Without bNow, nothing is given while the thread
+// is busy: the tabs keep their edits and are given once it has finished.
+// See UpdateEditedTabs for what is returned.
 //
 //////////////////////////////////////////////////////////////////////////
 int64 CIDEDocuments::GiveEditedTabs(int64 iNow, bool bNow)
 {
 	size					i;
 	Ptr<CIDEEditorTab>		pTab;
-	bool					bIndexing;
+	bool					bCanIndex;
 	bool					bHighlight;
 	bool					bIndex;
 	int64					iWait;
@@ -399,40 +393,28 @@ int64 CIDEDocuments::GiveEditedTabs(int64 iNow, bool bNow)
 	{
 		return IDE_EDITS_POLL;
 	}
+	if (muiIndexings != mpcContent->GetCodeModel()->NumIndexings())
+	{
+		muiIndexings = mpcContent->GetCodeModel()->NumIndexings();
+		for (i = 0; i < maTabs.Size(); i++)
+		{
+			maTabs.Get(i)->IndexRestarted();
+		}
+	}
 
-	bIndexing = mpcContent->GetCodeModel()->IsIndexing();
+	bCanIndex = !mpcContent->GetCodeModel()->IsIndexing();
 	iSoonest = -1;
 	apsFiles.Init();
 	for (i = 0; i < maTabs.Size(); i++)
 	{
 		pTab = maTabs.Get(i);
-		if (bNow)
-		{
-			pTab->SeeChanges(iNow);
-			bHighlight = pTab->IsRecolourPending() && (pTab->GetProject() != MAX_SIZE);
-		}
-		else
-		{
-			bHighlight = pTab->IsRecolourDue(iNow, &iWait);
-			if ((iWait >= 0) && ((iSoonest < 0) || (iWait < iSoonest)))
-			{
-				iSoonest = iWait;
-			}
-		}
-
-		//A tab is indexed with its highlights, or after them (once the solution has been indexed).
-		bIndex = pTab->IsIndexStale() && !bIndexing && (pTab->GetProject() != MAX_SIZE) && (bNow || bHighlight || !pTab->IsRecolourPending());
-		if (bHighlight)
-		{
-			pTab->SetRecolourPending(false);
-		}
-		if (bIndex)
-		{
-			pTab->SetIndexStale(false);
-		}
-		if (bHighlight || bIndex)
+		if (pTab->TakeEdits(iNow, bNow, bCanIndex, &bHighlight, &bIndex, &iWait))
 		{
 			AddEditedFile(pTab->GetProject(), pTab->GetFileName(), pTab->GetEditor()->GetText(), pTab->GetEditor()->GetChangeCount(), bHighlight, bIndex, &apsFiles);
+		}
+		else if ((iWait >= 0) && ((iSoonest < 0) || (iWait < iSoonest)))
+		{
+			iSoonest = iWait;
 		}
 	}
 

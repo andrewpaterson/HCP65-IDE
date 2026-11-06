@@ -29,7 +29,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 //The debug script's commands that are the IDE's (RunCommand); "goto:" takes what follows it.
-static const char*	gaszIDEScriptCommands[] = { "goto:", "rename", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "printdiffs", "printgit", "printconfig", "printexplorer", "printedits", "printspans" };
+static const char*	gaszIDEScriptCommands[] = { "goto:", "rename", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "printdiffs", "printgit", "printconfig", "printexplorer", "printedits", "printspans", "configuration:", "waitindex" };
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -229,6 +229,15 @@ void CIDEScript::RunCommand(const char* szCommand)
 			muiSpans = uiSpans;
 			fflush(stdout);
 		}
+	}
+	else if (strncmp(szCommand, "configuration:", 14) == 0)
+	{
+		//As a build configuration chosen in the toolbar: the solutions are indexed again with it.
+		mpcContent->GetBuildConfigurations()->SetConfiguration(&szCommand[14]);
+	}
+	else if (strcmp(szCommand, "waitindex") == 0)
+	{
+		mpcContent->GetCodeModel()->WaitForIndexing();
 	}
 	else if (strcmp(szCommand, "printconfig") == 0)
 	{

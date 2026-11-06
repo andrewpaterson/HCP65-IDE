@@ -56,6 +56,11 @@ CHECKS = [
 		'DEBUG': 'printspans,wait:1500,printedits,printspans,edit:caret:38:7,edit:renamable'},
 		[r'^Spans: changed$', r'^Edits thread: idle$', r'^Spans: changed$',
 		 r'^Rename: miTypedMember \[CCalcParentheses::miTypedMember\] at 1 places, 0 overrides$'], []),
+	('edits-kept-after-configuration', {
+		#The index built again for another configuration has the open files' edits, not just their files.
+		'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'CARET': '36:2', 'TYPE': 'int iTypedName; ',
+		'DEBUG': 'wait:1500,configuration:Debug|W65C816,waitindex,edit:caret:36:7,edit:renamable'},
+		[r'^Rename: iTypedName \[.*CalculatorParser\.cpp:36:6:iTypedName\] at 1 places'], []),
 	('nothing-at-caret', {
 		'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'CARET': '1:1', 'EDIT': 'usages,renamable'},
 		[r'^Status: No usages found at the caret\.$', r'^Rename: nothing at the caret$'], []),

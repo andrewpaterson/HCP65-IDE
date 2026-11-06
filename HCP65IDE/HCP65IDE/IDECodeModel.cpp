@@ -134,6 +134,7 @@ void CIDECodeModel::Init(CBuildWorkspace* pcWorkspace)
 	mbJobs = false;
 	mapsJobs.Init();
 	muiIndexed = 0;
+	muiIndexings = 0;
 	mbCancelled = false;
 	mcIncluders.Init();
 
@@ -544,6 +545,7 @@ void CIDECodeModel::StartIndexing(void)
 	mcIncluders.Kill();
 	mcIncluders.Init();
 	muiIndexed = 0;
+	muiIndexings++;
 	mcIndexMutex.Unlock();
 
 	for (i = 0; i < mpcWorkspace->NumProjects(); i++)
@@ -1081,6 +1083,7 @@ void CIDECodeModel::Reset(void)
 
 char* CIDECodeModel::GetConfiguration(void) { return mszConfiguration.Text(); }
 void CIDECodeModel::SetEditsDelay(int iMilliseconds) { miEditsDelay = iMilliseconds; }
+size CIDECodeModel::NumIndexings(void) { return muiIndexings; }
 void CIDECodeModel::AddSystemDirectory(const char* szDirectory) { maszSystemDirectories.Add(szDirectory); }
 
 
