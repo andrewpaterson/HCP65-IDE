@@ -2636,7 +2636,8 @@ bool CIDEContent::SaveLayout(void)
 //////////////////////////////////////////////////////////////////////////
 //
 // Reads the windows' layout kept beside the solution, opening the files
-// it names.  False if there isn't one.
+// it names; the active one's editor has the focus.  False if there isn't
+// one.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEContent::LoadLayout(void)
@@ -2656,6 +2657,12 @@ bool CIDEContent::LoadLayout(void)
 		if (mpActive.IsNull() && mpActiveDiff.IsNull() && (maTabs.Size() > 0))
 		{
 			mpActive = maTabs.Get(maTabs.Size() - 1);
+		}
+
+		//As IntelliJ's, the open editor has the keys, its caret shown.
+		if (mpActive.IsNotNull())
+		{
+			mpWindow->GetFocus()->SetFocus(mpActive->GetEditor());
 		}
 	}
 	return bResult;

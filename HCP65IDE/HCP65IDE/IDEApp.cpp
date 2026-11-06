@@ -396,7 +396,15 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 		mcComponentInput.AddMice();
 		mpWindow->SetComponentInput(&mcComponentInput);
 
-		mpWindow->GetFocus()->SetFocus(mpContent->GetExplorer()->GetTree());
+		//The open editor has the keys, as IntelliJ's; Solution Explorer does with no file open.
+		if (mpContent->GetActiveTab().IsNotNull())
+		{
+			mpWindow->GetFocus()->SetFocus(mpContent->GetActiveTab()->GetEditor());
+		}
+		else
+		{
+			mpWindow->GetFocus()->SetFocus(mpContent->GetExplorer()->GetTree());
+		}
 	}
 
 	return mbValid;
