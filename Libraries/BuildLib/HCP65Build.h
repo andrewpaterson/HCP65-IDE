@@ -24,6 +24,7 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 #include "ThreadLib/WorkerThreadJobs.h"
 #include "CppParserLib/CPP65Builder.h"
 #include "Build.h"
+#include "HCP65BuildDescription.h"
 
 
 //Compiles the solution's projects for the W65C816 or the 65C64 with the HCP65 compiler (CCPP65Builder), on a thread of
@@ -31,7 +32,9 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 //Listing\<toolchain>\<configuration>.  <stdint.h> and the other system headers are Libc65's.  A configuration with an
 //image or an executable (CBuildConfiguration::IsLinked) is linked with Libc65's runtime, unused code removed, and the image written to
 //Output\<toolchain>\<configuration>; one without is only compiled.  A build can't be stopped part way; cancelling it
-//says so once the compile (or link) it was in has finished.
+//says so once the compile (or link) it was in has finished.  What is compiled is the build's description: the
+//solution's projects (Describe), unless the description was filled before Start (hcp65build's plain command line,
+//with no solution).
 class CHCP65Build : public CBuild
 {
 protected:
@@ -43,12 +46,15 @@ protected:
 	bool					mbResult;
 	bool					mbCancel;
 	size					muiReported;	//Units reported (each a line, its name and how many have compiled).
+	CHCP65BuildDescription	mcDescription;
 
 public:
 	void		Init(CVcxSolution* pcSolution, CBuildConfiguration* pcConfiguration, const char* szRoot) override;
 	void		Kill(void) override;
 
 	void		SetLibc65Directory(const char* szDirectory);
+	void		Describe(void);
+	CHCP65BuildDescription*	GetDescription(void);
 
 	bool		Start(CArrayChars* paszLines) override;
 	bool		Poll(CArrayChars* paszLines) override;
@@ -56,7 +62,7 @@ public:
 
 protected:
 	static void	CompileThread(void* pvBuild);
-	void		AddProjects(CArrayChars* paszLines);
+	void		AddDescription(CArrayChars* paszLines);
 	bool		WriteProgram(CArrayChars* paszLines);
 	void		AddLines(const char* szText, CArrayChars* paszLines);
 	void		AddUnitReports(CArrayChars* paszLines);

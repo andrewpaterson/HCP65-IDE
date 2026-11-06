@@ -59,6 +59,8 @@ protected:
 	CVcxSolution*			mpcSolution;
 	CBuildConfiguration*	mpcConfiguration;
 	CChars					mszRoot;
+	CChars					mszOutputDirectory;		//In place of Root\Output\<toolchain>\<configuration>, if not empty.
+	CChars					mszListingDirectory;	//In place of Root\Listing\<toolchain>\<configuration>, if not empty.
 	EBuildState				meState;
 	CChars					mszProgress;
 	size					muiDone;	//How many of the build's steps (units compiled, commands run) are done,
@@ -76,8 +78,11 @@ public:
 			bool		IsRunning(void);
 			char*		GetProgress(void);
 			float		GetFraction(void);
+			void		SetOutputDirectory(const char* szDirectory);
+			void		SetListingDirectory(const char* szDirectory);
 			void		GetOutputDirectory(CChars* pszDest);
 			void		GetListingDirectory(CChars* pszDest);
+			bool		GetProgramPath(CChars* pszDest);
 			void		GetProjects(CArrayBuildProjects* pasDest);
 
 	static	void		GetDirectory(const char* szRoot, CBuildConfiguration* pcConfiguration, const char* szKind, CChars* pszDest);

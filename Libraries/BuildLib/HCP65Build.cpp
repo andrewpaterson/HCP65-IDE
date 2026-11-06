@@ -21,6 +21,7 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdio.h>
 #include <string.h>
 #include "BaseLib/FileUtil.h"
+#include "CppParserLib/VisualStudioProject.h"
 #include "HCP65Build.h"
 
 
@@ -39,6 +40,7 @@ void CHCP65Build::Init(CVcxSolution* pcSolution, CBuildConfiguration* pcConfigur
 	mbResult = false;
 	mbCancel = false;
 	muiReported = 0;
+	mcDescription.Init();
 }
 
 
@@ -50,6 +52,7 @@ void CHCP65Build::Init(CVcxSolution* pcSolution, CBuildConfiguration* pcConfigur
 void CHCP65Build::Kill(void)
 {
 	Wait();
+	mcDescription.Kill();
 	mcThread.Kill();
 	mcJobs.Kill();
 	mcBuilder.Kill();
@@ -100,7 +103,11 @@ bool CHCP65Build::Start(CArrayChars* paszLines)
 	{
 		mcBuilder.AddIncludeDirectory(mszLibc65.Text(), false, true);
 	}
-	AddProjects(paszLines);
+	if (mcDescription.NumProjects() == 0)
+	{
+		Describe();
+	}
+	AddDescription(paszLines);
 	if (mpcConfiguration->IsLinked())
 	{
 		//A program: the runtime after the projects, only what is used kept.
@@ -137,59 +144,129 @@ bool CHCP65Build::Start(CArrayChars* paszLines)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Each project's sources as a library of the builder, with the project's
-// include directories (and its own directory) and defines.
+// The solution's projects that the configuration builds, in order, as the
+// build's description: each project's own directory and its include
+// directories that are there (with their sub directories, which includes
+// like "BaseLib/Chars.h" are in), its sources as its Visual Studio project
+// lists them, and its defines.  A project that can't be read is kept with
+// no sources, to say so when it is added.
 //
 //////////////////////////////////////////////////////////////////////////
-void CHCP65Build::AddProjects(CArrayChars* paszLines)
+void CHCP65Build::Describe(void)
 {
-	CArrayBuildProjects	asProjects;
-	SBuildProject*		psProject;
-	CArrayChars			aszIncludes;
-	CArrayChars			aszDefines;
-	CChars				szLine;
-	CFileUtil			cFileUtil;
-	size				i;
-	size				j;
+	CArrayBuildProjects		asProjects;
+	SBuildProject*			psProject;
+	CHCP65BuildProject*		pcProject;
+	CVisualStudioProject	cProject;
+	CArrayChars				aszIncludes;
+	CFileUtil				cFileUtil;
+	size					i;
+	size					j;
 
+	mcDescription.Clear();
 	asProjects.Init();
 	GetProjects(&asProjects);
 	for (i = 0; i < asProjects.NumElements(); i++)
 	{
 		psProject = asProjects.Get(i);
+		cProject.Init();
+		if (!cProject.Read(psProject->pcProject->GetFileName()))
+		{
+			pcProject = mcDescription.AddProject(psProject->pcProject->GetName(), psProject->pcProject->GetDirectory(), psProject->pcConfiguration->GetName(), psProject->bLibrary);
+			pcProject->mszUnreadable.Set(psProject->pcProject->GetFileName());
+		}
+		else
+		{
+			pcProject = mcDescription.AddProject(psProject->pcProject->GetName(), cProject.GetDirectory(), psProject->pcConfiguration->GetName(), psProject->bLibrary);
+			for (j = 0; j < cProject.NumSources(); j++)
+			{
+				pcProject->maszSources.Add(cProject.GetSource(j));
+			}
+		}
+		cProject.Kill();
+
+		pcProject->mcIncludes.Add(psProject->pcProject->GetDirectory(), true);
 		aszIncludes.Init();
 		psProject->pcProject->GetIncludeDirectories(psProject->pcConfiguration, mpcSolution->GetDirectory(), &aszIncludes);
-		//With their sub directories, which includes like "BaseLib/Chars.h" are in.
-		mcBuilder.AddIncludeDirectory(psProject->pcProject->GetDirectory(), true, false);
 		for (j = 0; j < aszIncludes.NumElements(); j++)
 		{
 			//A directory that isn't there has nothing to include, as Visual Studio has it.
 			if (cFileUtil.IsDirectory(aszIncludes.GetText(j)))
 			{
-				mcBuilder.AddIncludeDirectory(aszIncludes.GetText(j), true, false);
+				pcProject->mcIncludes.Add(aszIncludes.GetText(j), true);
 			}
 		}
 		aszIncludes.Kill();
 
-		szLine.Init(psProject->pcProject->GetName());
-		szLine.Append(": ");
-		szLine.Append(psProject->pcConfiguration->GetName());
-		paszLines->Add(szLine.Text());
-		szLine.Kill();
-		if (!mcBuilder.AddVisualStudioProject(psProject->pcProject->GetName(), psProject->pcProject->GetFileName(), psProject->bLibrary))
-		{
-			AddLines(mcBuilder.GetErrors(), paszLines);
-		}
-
-		aszDefines.Init();
-		psProject->pcProject->GetPreprocessorDefinitions(psProject->pcConfiguration, mpcSolution->GetDirectory(), &aszDefines);
-		for (j = 0; j < aszDefines.NumElements(); j++)
-		{
-			mcBuilder.AddDefine(psProject->pcProject->GetName(), aszDefines.GetText(j));
-		}
-		aszDefines.Kill();
+		psProject->pcProject->GetPreprocessorDefinitions(psProject->pcConfiguration, mpcSolution->GetDirectory(), &pcProject->maszDefines);
 	}
 	asProjects.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The build's description added to the builder: its include directories,
+// then each project's include directories, a line saying which project
+// ("Tiny: Debug|Win32"), its sources as a library of the builder
+// (CCPP65Builder::AddProjectSources) and its defines.
+//
+//////////////////////////////////////////////////////////////////////////
+void CHCP65Build::AddDescription(CArrayChars* paszLines)
+{
+	CHCP65BuildProject*	pcProject;
+	CChars				szLine;
+	size				i;
+	size				j;
+
+	for (i = 0; i < mcDescription.mcIncludes.NumIncludes(); i++)
+	{
+		mcBuilder.AddIncludeDirectory(mcDescription.mcIncludes.GetDirectory(i), mcDescription.mcIncludes.HasSubDirectories(i), false);
+	}
+	for (i = 0; i < mcDescription.NumProjects(); i++)
+	{
+		pcProject = mcDescription.GetProject(i);
+		for (j = 0; j < pcProject->mcIncludes.NumIncludes(); j++)
+		{
+			mcBuilder.AddIncludeDirectory(pcProject->mcIncludes.GetDirectory(j), pcProject->mcIncludes.HasSubDirectories(j), false);
+		}
+
+		szLine.Init(pcProject->mszName);
+		if (!pcProject->mszLabel.Empty())
+		{
+			szLine.Append(": ");
+			szLine.Append(pcProject->mszLabel);
+		}
+		paszLines->Add(szLine.Text());
+		szLine.Kill();
+		if (!pcProject->mszUnreadable.Empty())
+		{
+			//Says it couldn't be read, as the builder does.
+			mcBuilder.AddVisualStudioProject(pcProject->mszName.Text(), pcProject->mszUnreadable.Text(), pcProject->mbLibrary);
+			AddLines(mcBuilder.GetErrors(), paszLines);
+		}
+		else
+		{
+			mcBuilder.AddProjectSources(pcProject->mszName.Text(), pcProject->mszDirectory.Text(), &pcProject->maszSources, pcProject->mbLibrary);
+		}
+
+		for (j = 0; j < pcProject->maszDefines.NumElements(); j++)
+		{
+			mcBuilder.AddDefine(pcProject->mszName.Text(), pcProject->maszDefines.GetText(j));
+		}
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// What the build compiles: the solution's projects (Describe) unless it
+// was given before Start.
+//
+//////////////////////////////////////////////////////////////////////////
+CHCP65BuildDescription* CHCP65Build::GetDescription(void)
+{
+	return &mcDescription;
 }
 
 
@@ -310,7 +387,7 @@ bool CHCP65Build::WriteProgram(CArrayChars* paszLines)
 	szPath.Init();
 	GetOutputDirectory(&szPath);
 	cFileUtil.TouchDir(szPath.Text());
-	GetProgramPath(mszRoot.Text(), mpcConfiguration, &szPath);
+	GetProgramPath(&szPath);
 	bResult = pcImage ? pcImage->Write(szPath.Text()) : pcExecutable->Write(szPath.Text());
 	snprintf(szLine, sizeof(szLine), bResult ? "Wrote %u bytes to " : "Could not write %u bytes to ", (unsigned int)(pcImage ? pcImage->GetSize() : pcExecutable->GetSize()));
 	szErrors.Init(szLine);
@@ -322,7 +399,8 @@ bool CHCP65Build::WriteProgram(CArrayChars* paszLines)
 	//Beside it, which source line each address is for, so a debugger can stop at a line.
 	if (bResult)
 	{
-		GetLineTablePath(mszRoot.Text(), mpcConfiguration, &szPath);
+		GetProgramPath(&szPath);
+		szPath.Append(".lines");
 		bResult = mcBuilder.GetLineTable()->WriteFile(szPath.Text());
 		szErrors.Init(bResult ? "Wrote its line table to " : "Could not write its line table to ");
 		szErrors.Append(szPath);

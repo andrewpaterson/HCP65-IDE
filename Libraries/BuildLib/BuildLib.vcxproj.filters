@@ -39,6 +39,9 @@
     <ClCompile Include="HCP65Build.cpp">
       <Filter>Source\Build</Filter>
     </ClCompile>
+    <ClCompile Include="HCP65BuildDescription.cpp">
+      <Filter>Source\Build</Filter>
+    </ClCompile>
     <ClCompile Include="SolutionBuild.cpp">
       <Filter>Source\Build</Filter>
     </ClCompile>
@@ -72,6 +75,9 @@
       <Filter>Source\Build</Filter>
     </ClInclude>
     <ClInclude Include="HCP65Build.h">
+      <Filter>Source\Build</Filter>
+    </ClInclude>
+    <ClInclude Include="HCP65BuildDescription.h">
       <Filter>Source\Build</Filter>
     </ClInclude>
     <ClInclude Include="SolutionBuild.h">

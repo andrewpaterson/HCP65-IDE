@@ -28,7 +28,8 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 //////////////////////////////////////////////////////////////////////////
 //
 // szRoot is where Output\ and Listing\ go, NULL for beside the solution.
-// pcSolution and pcConfiguration must last as long as the build.
+// pcSolution and pcConfiguration must last as long as the build.  A build
+// of no solution (an HCP65 build given what to compile) must have a root.
 //
 //////////////////////////////////////////////////////////////////////////
 void CBuild::Init(CVcxSolution* pcSolution, CBuildConfiguration* pcConfiguration, const char* szRoot)
@@ -36,6 +37,8 @@ void CBuild::Init(CVcxSolution* pcSolution, CBuildConfiguration* pcConfiguration
 	mpcSolution = pcSolution;
 	mpcConfiguration = pcConfiguration;
 	mszRoot.Init(szRoot ? szRoot : pcSolution->GetDirectory());
+	mszOutputDirectory.Init();
+	mszListingDirectory.Init();
 	meState = BS_NotStarted;
 	mszProgress.Init();
 	muiDone = 0;
@@ -50,6 +53,8 @@ void CBuild::Init(CVcxSolution* pcSolution, CBuildConfiguration* pcConfiguration
 void CBuild::Kill(void)
 {
 	mszProgress.Kill();
+	mszListingDirectory.Kill();
+	mszOutputDirectory.Kill();
 	mszRoot.Kill();
 }
 
@@ -116,7 +121,7 @@ void CBuild::GetProjects(CArrayBuildProjects* pasDest)
 	char*								szType;
 
 	pasDest->ReInit();
-	for (i = 0; i < mpcSolution->NumProjects(); i++)
+	for (i = 0; mpcSolution && (i < mpcSolution->NumProjects()); i++)
 	{
 		pcSolutionProject = mpcSolution->GetProject(i);
 		if (!pcSolutionProject->IsVcxProject() || !pcSolutionProject->IsLoaded())
@@ -205,7 +210,51 @@ float CBuild::GetFraction(void)
 	}
 	return (float)((double)muiDone / (double)muiSteps);
 }
-void CBuild::GetOutputDirectory(CChars* pszDest) { GetDirectory("Output", pszDest); }
+//////////////////////////////////////////////////////////////////////////
+//
+// Where the build writes its program (and line table) and its listings,
+// in place of Root\Output\... and Root\Listing\...; empty for those.
+//
+//////////////////////////////////////////////////////////////////////////
+void CBuild::SetOutputDirectory(const char* szDirectory) { mszOutputDirectory.Set(szDirectory ? szDirectory : ""); }
+void CBuild::SetListingDirectory(const char* szDirectory) { mszListingDirectory.Set(szDirectory ? szDirectory : ""); }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CBuild::GetOutputDirectory(CChars* pszDest)
+{
+	if (mszOutputDirectory.Empty())
+	{
+		GetDirectory("Output", pszDest);
+	}
+	else
+	{
+		pszDest->Set(mszOutputDirectory);
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Where this build writes its image or executable: in its output
+// directory.  False if it makes neither.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CBuild::GetProgramPath(CChars* pszDest)
+{
+	CFileUtil	cFileUtil;
+
+	if (!mpcConfiguration->IsLinked())
+	{
+		return false;
+	}
+	GetOutputDirectory(pszDest);
+	cFileUtil.AppendToPath(pszDest, mpcConfiguration->HasImage() ? mpcConfiguration->GetImage()->GetFile() : mpcConfiguration->GetExecutable()->GetFile());
+	return true;
+}
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -244,5 +293,21 @@ bool CBuild::GetLineTablePath(const char* szRoot, CBuildConfiguration* pcConfigu
 	pszDest->Append(".lines");
 	return true;
 }
-void CBuild::GetListingDirectory(CChars* pszDest) { GetDirectory("Listing", pszDest); }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CBuild::GetListingDirectory(CChars* pszDest)
+{
+	if (mszListingDirectory.Empty())
+	{
+		GetDirectory("Listing", pszDest);
+	}
+	else
+	{
+		pszDest->Set(mszListingDirectory);
+	}
+}
 

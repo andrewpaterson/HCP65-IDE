@@ -28,6 +28,7 @@
     <ClCompile Include="MSVCBuild.cpp" />
     <ClCompile Include="GCCBuild.cpp" />
     <ClCompile Include="HCP65Build.cpp" />
+    <ClCompile Include="HCP65BuildDescription.cpp" />
     <ClCompile Include="SolutionBuild.cpp" />
     <ClCompile Include="BuildCommandLine.cpp" />
   </ItemGroup>
@@ -41,6 +42,7 @@
     <ClInclude Include="MSVCBuild.h" />
     <ClInclude Include="GCCBuild.h" />
     <ClInclude Include="HCP65Build.h" />
+    <ClInclude Include="HCP65BuildDescription.h" />
     <ClInclude Include="SolutionBuild.h" />
     <ClInclude Include="BuildCommandLine.h" />
   </ItemGroup>
