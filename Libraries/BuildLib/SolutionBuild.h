@@ -46,6 +46,7 @@ public:
 	EBuildState		GetState(void);
 	bool			IsRunning(void);
 	char*			GetProgress(void);
+	float			GetFraction(void);
 	CBuild*			GetBuild(void);
 
 protected:

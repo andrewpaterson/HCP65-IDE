@@ -135,6 +135,7 @@ bool CCommandBuild::StartCommand(CArrayChars* paszLines)
 	szProgress.Append(": ");
 	szProgress.Append(psCommand->szDescription);
 	SetProgress(szProgress.Text());
+	SetSteps(muiCommand, masCommands.NumElements());
 	szProgress.Kill();
 	paszLines->Add(psCommand->szDescription.Text());
 

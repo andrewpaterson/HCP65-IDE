@@ -231,6 +231,7 @@ bool CHCP65Build::Poll(CArrayChars* paszLines)
 	{
 		uiUnits = mcBuilder.NumUnitsToCompile();
 		uiFinished = mcBuilder.NumUnitsFinished();
+		SetSteps(uiFinished, uiUnits);
 		if ((uiFinished >= uiUnits) && mpcConfiguration->IsLinked())
 		{
 			SetProgress("Linking.");

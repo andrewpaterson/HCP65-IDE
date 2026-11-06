@@ -61,6 +61,8 @@ protected:
 	CChars					mszRoot;
 	EBuildState				meState;
 	CChars					mszProgress;
+	size					muiDone;	//How many of the build's steps (units compiled, commands run) are done,
+	size					muiSteps;	//of how many.  0 of 0 until it says.
 
 public:
 	virtual	void		Init(CVcxSolution* pcSolution, CBuildConfiguration* pcConfiguration, const char* szRoot);
@@ -73,6 +75,7 @@ public:
 			EBuildState	GetState(void);
 			bool		IsRunning(void);
 			char*		GetProgress(void);
+			float		GetFraction(void);
 			void		GetOutputDirectory(CChars* pszDest);
 			void		GetListingDirectory(CChars* pszDest);
 			void		GetProjects(CArrayBuildProjects* pasDest);
@@ -85,6 +88,7 @@ protected:
 			void		GetDirectory(const char* szKind, CChars* pszDest);
 			void		Finish(EBuildState eState, CArrayChars* paszLines);
 			void		SetProgress(const char* szProgress);
+			void		SetSteps(size uiDone, size uiSteps);
 };
 
 

@@ -38,6 +38,8 @@ void CBuild::Init(CVcxSolution* pcSolution, CBuildConfiguration* pcConfiguration
 	mszRoot.Init(szRoot ? szRoot : pcSolution->GetDirectory());
 	meState = BS_NotStarted;
 	mszProgress.Init();
+	muiDone = 0;
+	muiSteps = 0;
 }
 
 
@@ -182,6 +184,27 @@ EBuildState CBuild::GetState(void) { return meState; }
 bool CBuild::IsRunning(void) { return meState == BS_Running; }
 char* CBuild::GetProgress(void) { return mszProgress.Text(); }  //How the build is going, a line.
 void CBuild::SetProgress(const char* szProgress) { mszProgress.Set(szProgress); }
+void CBuild::SetSteps(size uiDone, size uiSteps) { muiDone = uiDone; muiSteps = uiSteps; }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// How much of the build is done, 0 to 1, by its steps (SetSteps): 0 until
+// it has said how many it has.
+//
+//////////////////////////////////////////////////////////////////////////
+float CBuild::GetFraction(void)
+{
+	if (muiSteps == 0)
+	{
+		return 0.0f;
+	}
+	if (muiDone >= muiSteps)
+	{
+		return 1.0f;
+	}
+	return (float)((double)muiDone / (double)muiSteps);
+}
 void CBuild::GetOutputDirectory(CChars* pszDest) { GetDirectory("Output", pszDest); }
 
 
