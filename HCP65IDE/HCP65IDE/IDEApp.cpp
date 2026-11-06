@@ -619,7 +619,7 @@ void CIDEApp::EditScripted(const char* szStep)
 			uiEnd = (uiLine + 1 < pEditor->NumLines()) ? pEditor->GetLineStart(uiLine + 1) - 1 : strlen(pEditor->GetText());
 			szLine.Init();
 			szLine.AppendSubString(pEditor->GetText(), pEditor->GetLineStart(uiLine), uiEnd);
-			printf("%s%s line %d: [%s]\n", mpContent->GetTab(i)->GetFileName(), mpContent->GetTab(i)->IsModified() ? " *" : "", (int)uiLine + 1, szLine.Text());
+			printf("%s%s%s line %d: [%s]\n", mpContent->GetTab(i)->GetFileName(), mpContent->GetTab(i)->IsModified() ? " *" : "", (mpWindow->GetFocus()->GetFocussedComponent() == pEditor) ? " (focus)" : "", (int)uiLine + 1, szLine.Text());
 			szLine.Kill();
 		}
 		fflush(stdout);

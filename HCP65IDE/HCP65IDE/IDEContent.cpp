@@ -1480,6 +1480,9 @@ Ptr<CIDEEditorTab> CIDEContent::OpenFileTab(const char* szFileName, size uiProje
 	szID.Kill();
 	szName.Kill();
 	pTab->SetDockPane(pPane);
+
+	//Activating the document, or clicking its tab, gives its editor the keys with its caret where it was.
+	pPane->SetFocusTarget(pTab->GetEditor());
 	pTab->GetCodeEditor()->GetChangeBarClickEvent()->Add(this, &CIDEContent::ChangeBarClicked);
 	pTab->GetCodeEditor()->GetGlyphClickEvent()->Add(this, &CIDEContent::GlyphClicked);
 	pTab->GetEditor()->GetUndoEvent()->Add(this, &CIDEContent::EditorUndoChanged);
@@ -1689,10 +1692,9 @@ void CIDEContent::CodeCommandAction(SComponentInputEvent* psEvent)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Alt+1, as IntelliJ's: Solution Explorer is shown with the active file
-// selected, its folders opened and the row scrolled into view, and has
-// the keys.  From Solution Explorer it gives the keys back to the editor.
-// False if there is no file to show.
+// Alt+1: Solution Explorer is shown with the active file selected, its
+// folders opened and the row scrolled into view.  The editor keeps the
+// keys, its caret where it was.  False if there is no file to show.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEContent::ShowActiveFileInExplorer(void)
@@ -1701,15 +1703,6 @@ bool CIDEContent::ShowActiveFileInExplorer(void)
 	int32				iNode;
 
 	pTree = mpExplorer->GetTree();
-	if (mpWindow->GetFocus()->GetFocussedComponent() == pTree)
-	{
-		if (mpActive.IsNotNull())
-		{
-			mpWindow->GetFocus()->SetFocus(mpActive->GetEditor());
-		}
-		return true;
-	}
-
 	mpDock->Activate(mpExplorerTool);
 	if (mpActive.IsNull())
 	{
@@ -1723,7 +1716,7 @@ bool CIDEContent::ShowActiveFileInExplorer(void)
 		mpWindow->Layout();
 		pTree->ShowRow(pTree->FindNodeRow(iNode));
 	}
-	mpWindow->GetFocus()->SetFocus(pTree);
+	mpDock->Activate(mpActive->GetDockPane());
 	return iNode != TREE_NO_NODE;
 }
 
