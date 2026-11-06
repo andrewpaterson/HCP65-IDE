@@ -23,6 +23,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/ConstructorCall.h"
 #include "BaseLib/PointerFunctions.h"
 #include "BaseLib/StringHelper.h"
+#include "BaseLib/NativeThread.h"
 #include "CppParserLib/CppParser.h"
 #include "IDECodeModel.h"
 
@@ -154,7 +155,14 @@ void KillIDEReindexFiles(CArrayIDEReindexFiles* papsFiles)
 //////////////////////////////////////////////////////////////////////////
 void IDEReindexJob(void* pvData)
 {
-	((CIDECodeModel*)pvData)->ReindexFiles();
+	CIDECodeModel*	pcModel;
+
+	pcModel = (CIDECodeModel*)pvData;
+	if (pcModel->GetReindexDelay() > 0)
+	{
+		ThreadSleep(pcModel->GetReindexDelay());
+	}
+	pcModel->ReindexFiles();
 }
 
 
@@ -199,6 +207,7 @@ void CIDECodeModel::Init(CBuildWorkspace* pcWorkspace)
 	mbReindexJobs = false;
 	mapsReindexing.Init();
 	mbReindexing = false;
+	miReindexDelay = 0;
 }
 
 
@@ -1249,6 +1258,8 @@ void CIDECodeModel::Reset(void)
 
 
 char* CIDECodeModel::GetConfiguration(void) { return mszConfiguration.Text(); }
+void CIDECodeModel::SetReindexDelay(int iMilliseconds) { miReindexDelay = iMilliseconds; }
+int CIDECodeModel::GetReindexDelay(void) { return miReindexDelay; }
 void CIDECodeModel::AddSystemDirectory(const char* szDirectory) { maszSystemDirectories.Add(szDirectory); }
 
 

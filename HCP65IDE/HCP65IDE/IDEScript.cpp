@@ -29,7 +29,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 //The debug script's commands that are the IDE's (RunCommand); "goto:" takes what follows it.
-static const char*	gaszIDEScriptCommands[] = { "goto:", "rename", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "printdiffs", "printgit", "printconfig", "printexplorer" };
+static const char*	gaszIDEScriptCommands[] = { "goto:", "rename", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "printdiffs", "printgit", "printconfig", "printexplorer", "printindexing" };
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -207,6 +207,12 @@ void CIDEScript::RunCommand(const char* szCommand)
 	else if (strcmp(szCommand, "printgit") == 0)
 	{
 		printf("Git: branch [%s] change popup %s\n", mpcContent->mpGitStatus->GetBranchLabel()->GetText(), mpcContent->mpGitStatus->GetChangePopup().IsNotNull() ? "open" : "closed");
+		fflush(stdout);
+	}
+	else if (strcmp(szCommand, "printindexing") == 0)
+	{
+		//Whether edited files are being indexed again on the code model's thread.
+		printf("Indexing edits: %s\n", mpcContent->mcCodeModel.IsReindexing() ? "busy" : "idle");
 		fflush(stdout);
 	}
 	else if (strcmp(szCommand, "printconfig") == 0)

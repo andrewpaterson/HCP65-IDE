@@ -149,6 +149,7 @@ protected:
 	bool				mbReindexJobs;
 	CArrayIDEReindexFiles	mapsReindexing;		//The files it is indexing, until it is waited for.
 	bool				mbReindexing;			//Under the index mutex.
+	int					miReindexDelay;			//Milliseconds the reindexing thread waits before it starts, for checking.
 
 public:
 	void	Init(CBuildWorkspace* pcWorkspace);
@@ -174,6 +175,8 @@ public:
 	bool	IsReindexing(void);
 	void	WaitForReindexing(void);
 	void	ReindexFiles(void);
+	void	SetReindexDelay(int iMilliseconds);
+	int		GetReindexDelay(void);
 	bool	FindDefinition(const char* szFileName, int iLine, int iColumn, SIDELocation* psDest);
 	bool	FindReferences(const char* szFileName, int iLine, int iColumn, CArrayIDELocations* pasDest, CChars* pszKey);
 	size	FindProjectOfFile(const char* szFileName);

@@ -58,6 +58,7 @@ static const char*	gaszIDEScriptVariables[] =
 	"HCP65_IDE_RECENT",
 	"HCP65_IDE_RECENT_OPEN",
 	"HCP65_IDE_REFERENCES",
+	"HCP65_IDE_REINDEX_DELAY",
 	"HCP65_IDE_REMOVE",
 	"HCP65_IDE_REOPEN",
 	"HCP65_IDE_SAVE",
@@ -191,7 +192,9 @@ void GetIDERecentFile(CChars* pszDest)
 // HCP65_IDE_SNAPSHOT, HCP65_IDE_CONFIGURATION, HCP65_IDE_EXPAND,
 // HCP65_IDE_OPEN, HCP65_IDE_DOCK, HCP65_IDE_CLOSE, HCP65_IDE_SCROLL, HCP65_IDE_CHANGE, HCP65_IDE_SAVE, HCP65_IDE_COMPARE,
 // HCP65_IDE_TYPE_AFTER,
-// HCP65_IDE_WAIT_INDEX, HCP65_IDE_CARET=line:column (1 based), HCP65_IDE_TYPE,
+// HCP65_IDE_WAIT_INDEX, HCP65_IDE_REINDEX_DELAY (milliseconds the thread
+// indexing edits waits before each start, to check what waits for it),
+// HCP65_IDE_CARET=line:column (1 based), HCP65_IDE_TYPE,
 // HCP65_IDE_REFERENCES, HCP65_IDE_DEFINITION, HCP65_IDE_REOPEN,
 // HCP65_IDE_DEBUG (CIDEContent::SetDebugScript's commands),
 // HCP65_IDE_ATTACH (a port to attach the debugger to) and
@@ -268,6 +271,10 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 			if (getenv("HCP65_IDE_CONFIGURATION") != NULL)
 			{
 				mpContent->GetBuildConfigurations()->SetConfiguration(getenv("HCP65_IDE_CONFIGURATION"));
+			}
+			if (getenv("HCP65_IDE_REINDEX_DELAY") != NULL)
+			{
+				mpContent->GetCodeModel()->SetReindexDelay(atoi(getenv("HCP65_IDE_REINDEX_DELAY")));
 			}
 			if (getenv("HCP65_IDE_WAIT_INDEX") != NULL)
 			{

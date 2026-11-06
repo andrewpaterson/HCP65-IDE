@@ -36,6 +36,12 @@ CHECKS = [
 		[r'^Status: Renamed mpcCalculator to mpcCalc2: 19 places in 2 files\.$',
 		 r'^Status: Renamed mpcCalc2 to mpcCalc3: 19 places in 2 files\.$',
 		 r'^Rename: mpcCalc3 \[CCalculatorParser::mpcCalc3\] at 19 places, 0 overrides$'], [r'Rename stopped']),
+	('rename-while-reindexing', {
+		'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'CARET': '36:2', 'TYPE': 'int iTypedName; ', 'REINDEX_DELAY': '1500',
+		'DEBUG': 'wait:700,printindexing,edit:caret:36:7,edit:renamable,printindexing'},
+		[r'^Indexing edits: busy$',
+		 r'^Rename: iTypedName \[.*CalculatorParser\.cpp:36:6:iTypedName\] at 1 places, 0 overrides$',
+		 r'^Indexing edits: idle$'], []),
 	('nothing-at-caret', {
 		'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'CARET': '1:1', 'EDIT': 'usages,renamable'},
 		[r'^Status: No usages found at the caret\.$', r'^Rename: nothing at the caret$'], []),
