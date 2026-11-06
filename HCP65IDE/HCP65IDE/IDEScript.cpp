@@ -348,6 +348,24 @@ void CIDEScript::RunEditStep(const char* szStep)
 			szNode.Kill();
 		}
 	}
+	else if (strncmp(szStep, "focus:", 6) == 0)
+	{
+		//The keys given to the Build output, Claude's request or the active document.
+		if (strcmp(&szStep[6], "build") == 0)
+		{
+			mpcContent->mpDock->Show(mpcContent->mpBuildTool);
+			mpcContent->mpWindow->GetFocus()->SetFocus(mpcContent->mpBuildPane->GetOutputArea());
+		}
+		else if (strcmp(&szStep[6], "claude") == 0)
+		{
+			mpcContent->mpDock->Show(mpcContent->mpClaudeTool);
+			mpcContent->mpWindow->GetFocus()->SetFocus(mpcContent->mpClaudePane->GetRequestArea());
+		}
+		else if (pTab.IsNotNull())
+		{
+			mpcContent->mpWindow->GetFocus()->SetFocus(pTab->GetEditor());
+		}
+	}
 	else if (strcmp(szStep, "explorer") == 0)
 	{
 		mpcContent->ShowActiveFileInExplorer();

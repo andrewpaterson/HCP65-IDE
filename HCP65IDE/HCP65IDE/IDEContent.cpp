@@ -418,6 +418,7 @@ void CIDEContent::Free(void)
 		mpWindow->GetActivationEvent()->Remove(this);
 		mpWindow->ClearCloseApprover();
 		mpWindow->CancelPosted(this);
+		mpWindow->GetFocus()->GetFocusChangeEvent()->Remove(&mpEdit);
 		mpWindow->CancelPosted(&mpCloseGuard);  //The modules' posted calls too.
 		mpWindow->CancelPosted(&mpNavigator);
 		mpWindow->CancelPosted(&mpRename);

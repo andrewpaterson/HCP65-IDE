@@ -57,6 +57,7 @@ public:
 
 	Ptr<CComponent>		GetComponent(void);
 	char*				GetOutput(void);
+	Ptr<CTextArea>		GetOutputArea(void);
 	Ptr<CProgressBar>	GetProgressBar(void);
 };
 

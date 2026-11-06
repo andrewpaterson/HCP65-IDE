@@ -25,14 +25,17 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/UndoLog.h"
 #include "WindowLib/MenuContainer.h"
 #include "WindowLib/TextArea.h"
+#include "WindowLib/TextField.h"
+#include "WindowLib/Focus.h"
 
 
 class CIDEContent;
 
 
-//The Edit menu, as IntelliJ's: Undo, Redo, Cut, Copy, Paste and Select All of the active document, and Undo
-//and Redo Across Files, which go back and forward through the edits of every open file in the order they were
-//made (the undo log, fed by the editors' undo events).
+//The Edit menu, as IntelliJ's: Undo, Redo, Cut, Copy, Paste and Select All of the text the keys last went to (a
+//document, the Build output, Claude's request, a text field; the active document if that has gone), and Undo and
+//Redo Across Files, which go back and forward through the edits of every open file in the order they were made
+//(the undo log, fed by the editors' undo events).
 class CIDEEdit : public CObject
 {
 CONSTRUCTABLE(CIDEEdit);
@@ -50,6 +53,7 @@ protected:
 	Ptr<CMenuItem>		mpRedoAllItem;
 	CUndoLog			mcUndoLog;  //Every open file's edits in the order they were made, by file name.
 	bool				mbLogUndoing;  //The undo log is undoing or redoing: the editors' undo events are its own.
+	Ptr<CComponent>		mpEditTarget;  //The text area or text field the keys last went to: what Edit acts on.
 
 public:
 	void	Init(CIDEContent* pcContent);
@@ -68,8 +72,12 @@ public:
 	bool				RedoAcrossFiles(void);
 	void				BeginUndoGroup(void);
 	void				EndUndoGroup(void);
+	void				FocusChanged(CFocus* pcFocus);
 
 protected:
+	bool				IsEditTargetShown(void);
+	Ptr<CTextField>		GetEditField(void);
+	Ptr<CTextArea>		GetEditArea(void);
 	bool				UndoLogGroup(size uiGroup, bool bShow);
 	bool				RedoLogGroup(size uiGroup, bool bShow);
 };

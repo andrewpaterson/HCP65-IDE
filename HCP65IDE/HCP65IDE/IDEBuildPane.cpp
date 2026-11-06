@@ -167,4 +167,4 @@ void CIDEBuildPane::AppendLines(CArrayChars* paszLines)
 Ptr<CComponent> CIDEBuildPane::GetComponent(void) { return mpPanel; }
 Ptr<CProgressBar> CIDEBuildPane::GetProgressBar(void) { return mpProgress; }
 char* CIDEBuildPane::GetOutput(void) { return mpOutput->GetText(); }
-
+Ptr<CTextArea> CIDEBuildPane::GetOutputArea(void) { return mpOutput; }

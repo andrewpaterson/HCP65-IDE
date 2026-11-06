@@ -55,6 +55,7 @@ void CIDEEdit::Class(void)
 	M_Pointer(mpSelectAllItem);
 	M_Pointer(mpUndoAllItem);
 	M_Pointer(mpRedoAllItem);
+	M_Pointer(mpEditTarget);
 }
 
 
@@ -113,32 +114,35 @@ Ptr<CMenuContainer> CIDEEdit::CreateEditMenu(void)
 	mpUndoAllItem = mpEditMenu->AddItem("Undo Across Files");
 	mpRedoAllItem = mpEditMenu->AddItem("Redo Across Files");
 	mpEditMenu->GetOpeningEvent()->Add(this, &CIDEEdit::EditMenuOpening);
+	mpcContent->mpWindow->GetFocus()->GetFocusChangeEvent()->Add(this, &CIDEEdit::FocusChanged);
 	return mpEditMenu;
 }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Without a document only the across files items can be done, if there
-// are edits to go through.
+// What can't be done to the text Edit acts on is disabled: Cut and Paste
+// in text that can't be edited (the Build output).  With no text only the
+// across files items can be done, if there are edits to go through.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEEdit::EditMenuOpening(CMenuContainer* pcMenu)
 {
-	Ptr<CTextArea>	pEditor;
-	bool			bDocument;
+	Ptr<CTextArea>	pArea;
+	Ptr<CTextField>	pField;
+	bool			bText;
+	bool			bEditable;
 
-	bDocument = mpcContent->mpActive.IsNotNull();
-	if (bDocument)
-	{
-		pEditor = mpcContent->mpActive->GetEditor();
-	}
-	mpUndoItem->SetEnabled(bDocument && pEditor->CanUndo());
-	mpRedoItem->SetEnabled(bDocument && pEditor->CanRedo());
-	mpCutItem->SetEnabled(bDocument);
-	mpCopyItem->SetEnabled(bDocument);
-	mpPasteItem->SetEnabled(bDocument);
-	mpSelectAllItem->SetEnabled(bDocument);
+	pField = GetEditField();
+	pArea = GetEditArea();
+	bText = pField.IsNotNull() || pArea.IsNotNull();
+	bEditable = bText && (pField.IsNotNull() || pArea->IsEditable());
+	mpUndoItem->SetEnabled(bText && (pField.IsNotNull() ? pField->CanUndo() : pArea->CanUndo()));
+	mpRedoItem->SetEnabled(bText && (pField.IsNotNull() ? pField->CanRedo() : pArea->CanRedo()));
+	mpCutItem->SetEnabled(bEditable);
+	mpCopyItem->SetEnabled(bText);
+	mpPasteItem->SetEnabled(bEditable);
+	mpSelectAllItem->SetEnabled(bText);
 	mpUndoAllItem->SetEnabled(mcUndoLog.FindUndoGroup() != MAX_SIZE);
 	mpRedoAllItem->SetEnabled(mcUndoLog.FindRedoGroup() != MAX_SIZE);
 }
@@ -151,7 +155,8 @@ void CIDEEdit::EditMenuOpening(CMenuContainer* pcMenu)
 //////////////////////////////////////////////////////////////////////////
 bool CIDEEdit::EditMenuItemClicked(CMenuItem* pcItem)
 {
-	Ptr<CTextArea>	pEditor;
+	Ptr<CTextArea>	pArea;
+	Ptr<CTextField>	pField;
 
 	if (pcItem == &mpUndoAllItem)
 	{
@@ -167,40 +172,154 @@ bool CIDEEdit::EditMenuItemClicked(CMenuItem* pcItem)
 	{
 		return false;
 	}
-	if (mpcContent->mpActive.IsNull())
+	pField = GetEditField();
+	pArea = GetEditArea();
+	if (pField.IsNull() && pArea.IsNull())
 	{
 		return true;
 	}
 
-	pEditor = mpcContent->mpActive->GetEditor();
+	if (pField.IsNotNull())
+	{
+		if (pcItem == &mpUndoItem)
+		{
+			pField->Undo();
+		}
+		else if (pcItem == &mpRedoItem)
+		{
+			pField->Redo();
+		}
+		else if (pcItem == &mpCutItem)
+		{
+			pField->CutToClipboard();
+		}
+		else if (pcItem == &mpCopyItem)
+		{
+			pField->CopyToClipboard();
+		}
+		else if (pcItem == &mpPasteItem)
+		{
+			pField->PasteFromClipboard();
+		}
+		else if (pcItem == &mpSelectAllItem)
+		{
+			pField->SelectAll();
+		}
+		mpcContent->mpWindow->GetFocus()->SetFocus(pField);
+		return true;
+	}
+
 	if (pcItem == &mpUndoItem)
 	{
-		pEditor->Undo();
+		pArea->Undo();
 	}
 	else if (pcItem == &mpRedoItem)
 	{
-		pEditor->Redo();
+		pArea->Redo();
 	}
-	else if (pcItem == &mpCutItem)
+	else if ((pcItem == &mpCutItem) && pArea->IsEditable())
 	{
-		pEditor->CutToClipboard();
+		pArea->CutToClipboard();
 	}
 	else if (pcItem == &mpCopyItem)
 	{
-		pEditor->CopyToClipboard();
+		pArea->CopyToClipboard();
 	}
-	else if (pcItem == &mpPasteItem)
+	else if ((pcItem == &mpPasteItem) && pArea->IsEditable())
 	{
-		pEditor->PasteFromClipboard();
+		pArea->PasteFromClipboard();
 	}
 	else if (pcItem == &mpSelectAllItem)
 	{
-		pEditor->SelectAll();
+		pArea->SelectAll();
 	}
 
-	//The keys go back to the document.
-	mpcContent->mpWindow->GetFocus()->SetFocus(pEditor);
+	//The keys go back to the text.
+	mpcContent->mpWindow->GetFocus()->SetFocus(pArea);
 	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The keys going to a text area or text field make it what Edit acts on.
+// The menu taking them doesn't.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEEdit::FocusChanged(CFocus* pcFocus)
+{
+	Ptr<CComponent>	pFocussed;
+
+	pFocussed = pcFocus->GetFocussedComponent();
+	if (pFocussed.IsNotNull() && ((dynamic_cast<CTextArea*>(&pFocussed) != NULL) || (dynamic_cast<CTextField*>(&pFocussed) != NULL)))
+	{
+		mpEditTarget = pFocussed;
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether the text area or text field the keys last went to is still in
+// the window: its tab or tool window may have been closed or hidden.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEEdit::IsEditTargetShown(void)
+{
+	Ptr<CComponent>	pTop;
+
+	if (mpEditTarget.IsNull())
+	{
+		return false;
+	}
+	for (pTop = mpEditTarget; pTop->GetParent().IsNotNull(); pTop = pTop->GetParent())
+	{
+	}
+	return &pTop == &mpcContent->mpWindow;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The text field Edit acts on: the one the keys last went to, if they
+// last went to one still shown.  NULL if not.
+//
+//////////////////////////////////////////////////////////////////////////
+Ptr<CTextField> CIDEEdit::GetEditField(void)
+{
+	if (IsEditTargetShown())
+	{
+		return dynamic_cast<CTextField*>(&mpEditTarget);
+	}
+	return NULL;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The text area Edit acts on: the one the keys last went to if it is
+// still shown, else the active document if a text field isn't (see
+// GetEditField).  NULL if none.
+//
+//////////////////////////////////////////////////////////////////////////
+Ptr<CTextArea> CIDEEdit::GetEditArea(void)
+{
+	CTextArea*	pcArea;
+
+	if (IsEditTargetShown())
+	{
+		pcArea = dynamic_cast<CTextArea*>(&mpEditTarget);
+		if (pcArea)
+		{
+			return pcArea;
+		}
+		return NULL;
+	}
+	if (mpcContent->mpActive.IsNull())
+	{
+		return NULL;
+	}
+	return mpcContent->mpActive->GetEditor();
 }
 
 
