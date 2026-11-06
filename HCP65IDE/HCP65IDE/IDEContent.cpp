@@ -204,6 +204,7 @@ void CIDEContent::Init(void)
 	mcGoToFileSet.Init();
 	miGoToFileIcon = -1;
 	miGoToTicks = 0;
+	miQueuedGoTo = -1;
 	memset(maiGoToSymbolIcons, 0, sizeof(maiGoToSymbolIcons));
 	mcDebugger.Init();
 	mszStoppedFile.Init();
@@ -298,6 +299,7 @@ void CIDEContent::Class(void)
 	U_Unknown(CMapStringInt, mcGoToFileSet);
 	U_Int32(miGoToFileIcon);
 	U_Int32(miGoToTicks);
+	U_Int32(miQueuedGoTo);
 	U_Int32Array(maiGoToSymbolIcons, IST_Count);
 	M_Pointer(mpGoToClassItem);
 	M_Pointer(mpGoToFileItem);
@@ -822,15 +824,15 @@ void CIDEContent::MenuItemClicked(CMenuItem* pcItem)
 	}
 	else if (pcItem == &mpGoToClassItem)
 	{
-		ShowGoTo(IDE_GO_TO_CLASS);
+		QueueGoTo(IDE_GO_TO_CLASS);
 	}
 	else if (pcItem == &mpGoToFileItem)
 	{
-		ShowGoTo(IDE_GO_TO_FILE);
+		QueueGoTo(IDE_GO_TO_FILE);
 	}
 	else if (pcItem == &mpGoToSymbolItem)
 	{
-		ShowGoTo(IDE_GO_TO_SYMBOL);
+		QueueGoTo(IDE_GO_TO_SYMBOL);
 	}
 	else
 	{
@@ -1652,15 +1654,15 @@ void CIDEContent::CodeCommandAction(SComponentInputEvent* psEvent)
 	}
 	else if (psEvent->eCommand == CIC_GoToClass)
 	{
-		ShowGoTo(IDE_GO_TO_CLASS);
+		QueueGoTo(IDE_GO_TO_CLASS);
 	}
 	else if (psEvent->eCommand == CIC_GoToFile)
 	{
-		ShowGoTo(IDE_GO_TO_FILE);
+		QueueGoTo(IDE_GO_TO_FILE);
 	}
 	else if (psEvent->eCommand == CIC_GoToSymbol)
 	{
-		ShowGoTo(IDE_GO_TO_SYMBOL);
+		QueueGoTo(IDE_GO_TO_SYMBOL);
 	}
 	else if (psEvent->eCommand == CIC_GoToDefinition)
 	{
@@ -2404,6 +2406,7 @@ void CIDEContent::Tick(Ptr<CWindow> pWindow)
 	int64				iWait;
 	int64				iSoonest;
 	char*				pszOpen;
+	int32				iTab;
 
 	if (!mszQueuedOpen.Empty())
 	{
@@ -2415,6 +2418,13 @@ void CIDEContent::Tick(Ptr<CWindow> pWindow)
 			gcLogger.Error2(__METHOD__, " Could not open [", pszOpen, "].", NULL);
 		}
 		free(pszOpen);
+	}
+	if (miQueuedGoTo >= 0)
+	{
+		//A dialog is shown from a tick, not from the key or menu click that asked for it.
+		iTab = miQueuedGoTo;
+		miQueuedGoTo = -1;
+		ShowGoTo((size)iTab);
 	}
 	PollBuild(pWindow);
 	PollDebugger(pWindow);

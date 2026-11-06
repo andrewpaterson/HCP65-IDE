@@ -172,6 +172,7 @@ protected:
 	int32						miGoToFileIcon;		//The dialog's first file icon, by EIDEFileType from it.
 	int32						maiGoToSymbolIcons[IST_Count];
 	int32						miGoToTicks;		//For checking: ticks the dialog has been shown for.
+	int32						miQueuedGoTo;		//The Go to tab asked for, shown at the next tick, -1 for none.
 	Ptr<CSolutionExplorer>		mpExplorer;
 	Ptr<CMenuContainer>			mpExplorerMenu;		//A solution's: Set as Startup Solution and Remove.
 	Ptr<CMenuItem>				mpStartupItem;
@@ -374,6 +375,7 @@ public:
 
 	void				GoToSearch(size uiTab, CNameMatcher* pcMatcher, CGoToItems* pcDest) override;
 	bool				ShowGoTo(size uiTab);
+	void				QueueGoTo(size uiTab);
 	bool				CreateGoTo(size uiTab);
 	bool				OpenGoToChoice(void);
 	Ptr<CGoToDialog>	GetGoTo(void);
