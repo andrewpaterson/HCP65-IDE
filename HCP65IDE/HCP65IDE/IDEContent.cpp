@@ -212,6 +212,7 @@ void CIDEContent::Init(void)
 	muiChange = 0;
 	muiQueuedChange = MAX_SIZE;
 	miQueuedAction = 0;
+	mbKeepSettings = true;
 	memset(&msChange, 0, sizeof(SGitLineChange));
 	mcClaude.Init();
 	muiClaudeReloaded = 0;
@@ -347,6 +348,7 @@ void CIDEContent::Class(void)
 	U_Size(muiChange);
 	U_Size(muiQueuedChange);
 	U_Int32(miQueuedAction);
+	U_Bool(mbKeepSettings);
 	U_Unknown(CClaudeCommand, mcClaude);
 	M_Pointer(mpClaudePane);
 	U_Size(muiClaudeReloaded);
@@ -1099,6 +1101,10 @@ void CIDEContent::RememberOpenSolution(void)
 	CFileUtil	cFileUtil;
 	CChars		szFile;
 
+	if (!mbKeepSettings)
+	{
+		return;
+	}
 	szFile.Init();
 	if (IsSolutionOpen() && GetSettingsBaseFile(&szFile))
 	{
@@ -2691,7 +2697,7 @@ bool CIDEContent::SaveLayout(void)
 	CChars	szFileName;
 	bool	bResult;
 
-	if (!IsSolutionOpen() || !GetLayoutFileName(&szFileName))
+	if (!mbKeepSettings || !IsSolutionOpen() || !GetLayoutFileName(&szFileName))
 	{
 		return false;
 	}
@@ -3111,3 +3117,12 @@ void CIDEContent::EditorMenuOpening(CMenuContainer* pcMenu)
 	szKey.Kill();
 	KillIDELocations(&asLocations);
 }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Without bKeep the window layout and the open solution aren't saved for
+// the next time: the IDE is being scripted to check it.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::SetKeepSettings(bool bKeep) { mbKeepSettings = bKeep; }

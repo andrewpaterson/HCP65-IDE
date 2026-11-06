@@ -216,6 +216,7 @@ protected:
 	size						muiChange;			//Its index in its file's changes.
 	size						muiQueuedChange;	//A change's line to show once the editor is laid out, MAX_SIZE for none.
 	int							miQueuedAction;		//Then 0 nothing, 1 Rollback or 2 Show Diff.
+	bool						mbKeepSettings;		//The layout and the open solution are saved for next time; not while being checked.
 
 	CClaudeCommand				mcClaude;			//The request Claude is working on, or the last.
 	Ptr<CIDEClaudePane>			mpClaudePane;
@@ -264,6 +265,7 @@ public:
 	bool			CloseSelectedSolution(void);
 	bool			OpenLastSolution(void);
 	void			RememberOpenSolution(void);
+	void			SetKeepSettings(bool bKeep);
 	bool			IsSolutionFile(size uiSolution, size uiProject);
 	bool			SetStartupSolution(size uiSolution);
 	bool			ShowOpenSolutionDialog(void);

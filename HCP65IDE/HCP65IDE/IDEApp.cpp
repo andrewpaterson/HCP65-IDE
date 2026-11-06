@@ -31,6 +31,70 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDEApp.h"
 
 
+//The environment variables that script the IDE for checking it (see CIDEApp::Setup).  HCP65_IDE_EMULATOR isn't one: it
+//only says which emulator to run.
+static const char*	gaszIDEScriptVariables[] =
+{
+	"HCP65_IDE_ADD",
+	"HCP65_IDE_ATTACH",
+	"HCP65_IDE_BUILD",
+	"HCP65_IDE_CARET",
+	"HCP65_IDE_CHANGE",
+	"HCP65_IDE_CLAUDE",
+	"HCP65_IDE_CLOSE",
+	"HCP65_IDE_CLOSE_SOLUTION",
+	"HCP65_IDE_COMPARE",
+	"HCP65_IDE_CONFIGURATION",
+	"HCP65_IDE_DEBUG",
+	"HCP65_IDE_DEFINITION",
+	"HCP65_IDE_DIALOG_ANSWER",
+	"HCP65_IDE_DIALOG_SNAPSHOT",
+	"HCP65_IDE_DOCK",
+	"HCP65_IDE_EDIT",
+	"HCP65_IDE_EXPAND",
+	"HCP65_IDE_GOTO",
+	"HCP65_IDE_LISTING",
+	"HCP65_IDE_OPEN",
+	"HCP65_IDE_RECENT",
+	"HCP65_IDE_RECENT_OPEN",
+	"HCP65_IDE_REFERENCES",
+	"HCP65_IDE_REMOVE",
+	"HCP65_IDE_REOPEN",
+	"HCP65_IDE_SAVE",
+	"HCP65_IDE_SCROLL",
+	"HCP65_IDE_SNAPSHOT",
+	"HCP65_IDE_SNAPSHOT_TICKS",
+	"HCP65_IDE_STARTUP",
+	"HCP65_IDE_TYPE",
+	"HCP65_IDE_TYPE_AFTER",
+	"HCP65_IDE_WAIT_INDEX",
+	NULL
+};
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether the IDE is being scripted for checking.  A scripted run doesn't
+// save the window layout (or the open solution) for the next time,
+// unless HCP65_IDE_SAVE_LAYOUT says to: a check that saves it is checking
+// that.
+//
+//////////////////////////////////////////////////////////////////////////
+static bool IsIDEScripted(void)
+{
+	size	i;
+
+	for (i = 0; gaszIDEScriptVariables[i] != NULL; i++)
+	{
+		if (getenv(gaszIDEScriptVariables[i]) != NULL)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+
 //The HCP65 emulator a W65C816 configuration is debugged in when its configuration doesn't name one, in the HCP65
 //repository beside the IDE's, built as the IDE is (HCP65_IDE_EMULATOR is another).
 #ifdef _WIN32
@@ -164,6 +228,7 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 	mpWindow = OMalloc<CWindow>("HCP65 IDE", pcNativeFactory, pTick, OMalloc<CClearCanvasDraw>(JEWEL_PANEL), CFT_RGBX, CCO_BGR, CRGB_24bit, ARGB_8bit);
 
 	mpContent = OMalloc<CIDEContent>();
+	mpContent->SetKeepSettings(!IsIDEScripted() || (getenv("HCP65_IDE_SAVE_LAYOUT") != NULL));
 	pTick->SetContent(mpContent);
 	mbValid = mpContent->Setup(mpWindow, "Resources/InterVariable.ttf", "Resources/JetBrainsMonoNL-Regular.ttf");
 	if (mbValid)
@@ -477,11 +542,8 @@ bool CIDEApp::Run(void)
 		mpWindow->Show();
 
 		//The windows' layout is kept beside the solution, with the files open, for the next time it is opened.
-		if (getenv("HCP65_IDE_SNAPSHOT") == NULL)
-		{
-			mpContent->SaveLayout();
-			mpContent->RememberOpenSolution();
-		}
+		mpContent->SaveLayout();
+		mpContent->RememberOpenSolution();
 
 		//The emulator is quit while nothing is being freed: as its window goes Windows activates this one.
 		mpContent->StopDebugging();
