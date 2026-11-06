@@ -532,11 +532,19 @@ void CIDECodeModel::StartIndexing(void)
 				continue;
 			}
 			psJob = NewMalloc<SIDEIndexJob>();
+			psJob->szFileName.Init();
+			pcProject->GetFullPath(pcItem, &psJob->szFileName);
+
+			//Only C and C++ are indexed: an HCP65 project compiles its .asm files too.
+			if ((CIDEIcons::GetFileType(psJob->szFileName.Text()) != IFT_CPP) && (CIDEIcons::GetFileType(psJob->szFileName.Text()) != IFT_C))
+			{
+				psJob->szFileName.Kill();
+				SafeFree(psJob);
+				continue;
+			}
 			psJob->pcModel = this;
 			psJob->uiIndex = mapsJobs.NumElements();
 			psJob->uiProject = i;
-			psJob->szFileName.Init();
-			pcProject->GetFullPath(pcItem, &psJob->szFileName);
 			mapsJobs.Add(psJob);
 		}
 	}
