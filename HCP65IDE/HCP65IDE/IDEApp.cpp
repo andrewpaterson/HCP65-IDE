@@ -121,6 +121,8 @@ void GetIDERecentFile(CChars* pszDest)
 // keyboard and mouse) is added to them.  Run fails if anything here did.
 // HCP65_IDE_ADD (a solution added), HCP65_IDE_STARTUP and HCP65_IDE_REMOVE
 // (a solution made the startup one, or removed, by its place),
+// HCP65_IDE_CLOSE_SOLUTION (the solution of the file named closed, as File,
+// Close Solution with it selected),
 // HCP65_IDE_SNAPSHOT, HCP65_IDE_CONFIGURATION, HCP65_IDE_EXPAND,
 // HCP65_IDE_OPEN, HCP65_IDE_DOCK, HCP65_IDE_CLOSE, HCP65_IDE_SCROLL, HCP65_IDE_CHANGE, HCP65_IDE_SAVE, HCP65_IDE_COMPARE,
 // HCP65_IDE_TYPE_AFTER,
@@ -253,6 +255,16 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 					szPath.Kill();
 				}
 				aszOpen.Kill();
+			}
+			if (getenv("HCP65_IDE_CLOSE_SOLUTION") != NULL)
+			{
+				//As File, Close Solution with a file's node selected in Solution Explorer: its solution is closed.
+				iNode = mpContent->GetExplorer()->FindFileNode(getenv("HCP65_IDE_CLOSE_SOLUTION"));
+				if (iNode != TREE_NO_NODE)
+				{
+					mpContent->GetExplorer()->GetTree()->SelectNode(iNode);
+					mpContent->CloseSelectedSolution();
+				}
 			}
 			if ((getenv("HCP65_IDE_CARET") != NULL) && (sscanf(getenv("HCP65_IDE_CARET"), "%d:%d", &iLine, &iColumn) == 2))
 			{

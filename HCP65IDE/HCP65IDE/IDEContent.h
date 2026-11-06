@@ -108,6 +108,7 @@ protected:
 	Ptr<CMenuBar>				mpMenuBar;
 	Ptr<CMenuItem>				mpOpenItem;			//File, Open Project/Solution.
 	Ptr<CMenuItem>				mpAddSolutionItem;	//File, Add Solution.
+	Ptr<CMenuItem>				mpCloseSolutionItem;	//File, Close Solution.
 	Ptr<CMenuContainer>			mpRecentMenu;		//File, Recent Solutions: an item for each, or one saying there are none.
 	Ptr<CMenuItem>				mpClearRecentItem;	//File, Clear Recent Solutions.
 	Ptr<CMenuItem>				mpSaveItem;			//File, Save.
@@ -217,6 +218,9 @@ public:
 	bool			OpenSolutions(CArrayChars* paszFileNames);
 	bool			AddSolution(const char* szFileName);
 	bool			RemoveSolution(size uiSolution);
+	bool			CloseSolution(size uiSolution);
+	bool			CloseSelectedSolution(void);
+	bool			IsSolutionFile(size uiSolution, size uiProject);
 	bool			SetStartupSolution(size uiSolution);
 	bool			ShowOpenSolutionDialog(void);
 	bool			ShowAddSolutionDialog(void);

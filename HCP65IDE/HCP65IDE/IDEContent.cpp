@@ -233,6 +233,7 @@ void CIDEContent::Class(void)
 	M_Pointer(mpMenuBar);
 	M_Pointer(mpOpenItem);
 	M_Pointer(mpAddSolutionItem);
+	M_Pointer(mpCloseSolutionItem);
 	M_Pointer(mpRecentMenu);
 	M_Pointer(mpClearRecentItem);
 	M_Pointer(mpSaveItem);
@@ -574,8 +575,8 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// File, with Open Project/Solution, Add Solution, Recent Solutions, Clear
-// Recent Solutions, Save, Save All and Compare with File;
+// File, with Open Project/Solution, Add Solution, Close Solution, Recent
+// Solutions, Clear Recent Solutions, Save, Save All and Compare with File;
 // View, showing the tool windows; Git, with Compare with HEAD, a branch
 // or a revision; Debug; and Window, with Reset Window Layout and Close
 // All Documents, as in Visual Studio.
@@ -591,6 +592,7 @@ Ptr<CMenuBar> CIDEContent::CreateMenuBar(void)
 	pFile = OMalloc<CMenuContainer>(mpWindow, mpTheme);
 	mpOpenItem = pFile->AddItem("Open Project/Solution...", mpFolderIcon);
 	mpAddSolutionItem = pFile->AddItem("Add Solution...");
+	mpCloseSolutionItem = pFile->AddItem("Close Solution");
 	mpRecentMenu = OMalloc<CMenuContainer>(mpWindow, mpTheme);
 	pFile->AddItem("Recent Solutions", NULL, mpRecentMenu);
 	mpClearRecentItem = pFile->AddItem("Clear Recent Solutions");
@@ -656,6 +658,10 @@ void CIDEContent::MenuItemClicked(CMenuItem* pcItem)
 	else if (pcItem == &mpAddSolutionItem)
 	{
 		ShowAddSolutionDialog();
+	}
+	else if (pcItem == &mpCloseSolutionItem)
+	{
+		CloseSelectedSolution();
 	}
 	else if (pcItem == &mpClearRecentItem)
 	{
@@ -948,6 +954,92 @@ bool CIDEContent::RemoveSolution(size uiSolution)
 	mcWorkspace.RemoveSolution(uiSolution);
 	WorkspaceChanged(true);
 	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// File, Close Solution: the solution Solution Explorer's selection is in
+// (the solution, a project, a filter or a file of it), or the only one if
+// nothing is selected.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEContent::CloseSelectedSolution(void)
+{
+	size	uiSolution;
+
+	uiSolution = mpExplorer->GetNodeSolution(mpExplorer->GetTree()->GetSelectedNode());
+	if ((uiSolution == SOLUTION_EXPLORER_NO_SOLUTION) && (mcWorkspace.NumSolutions() == 1))
+	{
+		uiSolution = 0;
+	}
+	return CloseSolution(uiSolution);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A solution closed: its files' documents are closed and it is taken out
+// of those open.  The last one closes everything, as Visual Studio's Close
+// Solution does: the layout is kept beside it for the next time, and
+// Solution Explorer is left empty.  Not while a build is running.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEContent::CloseSolution(size uiSolution)
+{
+	size				i;
+	Ptr<CIDEEditorTab>	pTab;
+	Ptr<CIDEDiffTab>	pDiff;
+
+	if (uiSolution >= mcWorkspace.NumSolutions())
+	{
+		return false;
+	}
+	if (mcBuild.IsRunning())
+	{
+		return gcLogger.Error2(__METHOD__, " A solution can't be closed while a build is running.", NULL);
+	}
+
+	if (mcWorkspace.NumSolutions() == 1)
+	{
+		LetGoOfWorkspace();
+		mcCodeModel.Init(&mcWorkspace);
+		mcCodeModel.AddDefaultSystemDirectories();
+		mpExplorer->ShowWorkspace(&mcWorkspace);
+		ShowConfigurations();
+		return true;
+	}
+
+	//Its files' documents, and diffs of them, are closed (closing a document lets its tab go, see PaneClosed).
+	for (i = maTabs.Size(); i > 0; i--)
+	{
+		pTab = maTabs.Get(i - 1);
+		if (IsSolutionFile(uiSolution, pTab->GetProject()))
+		{
+			mpDock->Close(pTab->GetDockPane());
+		}
+	}
+	for (i = maDiffTabs.Size(); i > 0; i--)
+	{
+		pDiff = maDiffTabs.Get(i - 1);
+		if (IsSolutionFile(uiSolution, pDiff->GetSide(TDS_Left)->muiProject) || IsSolutionFile(uiSolution, pDiff->GetSide(TDS_Right)->muiProject))
+		{
+			mpDock->Close(pDiff->GetDockPane());
+		}
+	}
+	return RemoveSolution(uiSolution);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether the workspace's project uiProject (MAX_SIZE for a file in none)
+// is one of solution uiSolution's.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEContent::IsSolutionFile(size uiSolution, size uiProject)
+{
+	return (uiProject < mcWorkspace.NumProjects()) && (mcWorkspace.GetProject(uiProject)->uiSolution == uiSolution);
 }
 
 
