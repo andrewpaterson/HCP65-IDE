@@ -109,8 +109,10 @@ public:
 
 	bool			HasImage(void);
 	CAsm65Image*	GetImage(void);
+	CAsm65Image*	SetImage(const char* szFile, uint32 uiSize, uint8 uiFill, uint32 uiLimit, uint32 uiLoad);
 	bool			HasExecutable(void);
 	CAsm65Executable*	GetExecutable(void);
+	CAsm65Executable*	SetExecutable(const char* szFile, const char* szEntry, uint32 uiLimit);
 	bool			IsLinked(void);
 
 	void			AddLoad(const char* szFile, uint32 uiAddress);

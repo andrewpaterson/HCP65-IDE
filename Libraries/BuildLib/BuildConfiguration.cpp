@@ -498,6 +498,44 @@ CAsm65Executable* CBuildConfiguration::GetExecutable(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// The build links an executable (in place of an image or another
+// executable), as an <Executable> in the configurations' file says: its
+// symbols are added to what is returned.  A configuration made other than
+// from a file (hcp65build's plain command line) is given one this way.
+//
+//////////////////////////////////////////////////////////////////////////
+CAsm65Executable* CBuildConfiguration::SetExecutable(const char* szFile, const char* szEntry, uint32 uiLimit)
+{
+	mcImage.Kill();
+	mcImage.Init();
+	mbImage = false;
+	mcExecutable.Kill();
+	mcExecutable.Init(szFile, szEntry, uiLimit);
+	mbExecutable = true;
+	return &mcExecutable;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The build links an image (in place of an executable or another image),
+// as an <Image> says: its regions are added to what is returned.
+//
+//////////////////////////////////////////////////////////////////////////
+CAsm65Image* CBuildConfiguration::SetImage(const char* szFile, uint32 uiSize, uint8 uiFill, uint32 uiLimit, uint32 uiLoad)
+{
+	mcExecutable.Kill();
+	mcExecutable.Init();
+	mbExecutable = false;
+	mcImage.Kill();
+	mcImage.Init(szFile, uiSize, uiFill, uiLimit, uiLoad);
+	mbImage = true;
+	return &mcImage;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Whether a build links (an image or an executable) or only compiles.
 //
 //////////////////////////////////////////////////////////////////////////
