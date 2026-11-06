@@ -1,6 +1,7 @@
 #include <string.h>
 #include "BaseLib/FileUtil.h"
 #include "BaseLib/TextFile.h"
+#include "BaseLib/Logger.h"
 #include "BuildLib/BuildWorkspace.h"
 #include "TestLib/Assert.h"
 
@@ -172,6 +173,7 @@ void TestBuildWorkspaceFile(void)
 	CFileUtil		cFileUtil;
 	CTextFile		cFile;
 	CChars			szFull;
+	SLogConfig		sLogConfig;
 
 	cFileUtil.MakeDir("Output");
 	cWorkspace.Init();
@@ -204,9 +206,12 @@ void TestBuildWorkspaceFile(void)
 	cFile.Init("<Workspace>\n\t<Solution File=\"Missing.sln\"/>\n</Workspace>\n");
 	AssertTrue(cFile.Write("Output" _FS_ "Bad" BUILD_WORKSPACE_EXTENSION));
 	cFile.Kill();
+	//The missing solution is logged as an error, which a Debug build would break on.
+	sLogConfig = gcLogger.SetSilent();
 	AssertFalse(cRead.Open("Output" _FS_ "Bad" BUILD_WORKSPACE_EXTENSION));
 	AssertString("", cRead.GetConfiguration());
 	AssertFalse(cRead.Open("Output" _FS_ "Missing" BUILD_WORKSPACE_EXTENSION));
+	gcLogger.SetConfig(&sLogConfig);
 
 	cRead.Kill();
 	cWorkspace.Kill();
