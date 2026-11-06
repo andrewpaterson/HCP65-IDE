@@ -45,6 +45,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "GitLib/GitRepositories.h"
 #include "GitLib/GitLineChanges.h"
 #include "ClaudeLib/ClaudeCommand.h"
+#include "BaseLib/UndoLog.h"
 #include "IDECodeModel.h"
 #include "IDEEditorTab.h"
 #include "IDEDiffTab.h"
@@ -120,6 +121,15 @@ protected:
 	Ptr<CMenuItem>				mpCompareRevisionItem;	//Git, Compare with Revision.
 	Ptr<CMenuItem>				mpCompareFileItem;	//File, Compare with File.
 	Ptr<CMenuItem>				mpExitItem;			//File, Exit.
+	Ptr<CMenuContainer>			mpEditMenu;
+	Ptr<CMenuItem>				mpUndoItem;			//Edit, as IntelliJ's: Undo, Redo, Cut, Copy, Paste and Select All of the
+	Ptr<CMenuItem>				mpRedoItem;			//active document,
+	Ptr<CMenuItem>				mpCutItem;
+	Ptr<CMenuItem>				mpCopyItem;
+	Ptr<CMenuItem>				mpPasteItem;
+	Ptr<CMenuItem>				mpSelectAllItem;
+	Ptr<CMenuItem>				mpUndoAllItem;		//and Undo and Redo Across Files, in the order the edits were made.
+	Ptr<CMenuItem>				mpRedoAllItem;
 	Ptr<CMenuItem>				mpExplorerItem;		//View's tool windows.
 	Ptr<CMenuItem>				mpReferencesItem;
 	Ptr<CMenuItem>				mpBuildItem;
@@ -183,6 +193,9 @@ protected:
 	Ptr<CIDEClaudePane>			mpClaudePane;
 	size						muiClaudeReloaded;	//How many of the files Claude changed have been looked at.
 	size						muiClaudeTools;		//How many tools Claude has used on the request.
+
+	CUndoLog					mcUndoLog;			//Every open file's edits in the order they were made, by file name.
+	bool						mbLogUndoing;		//The undo log is undoing or redoing: the editors' undo events are its own.
 
 	CIDEDebugger				mcDebugger;
 	CChars						mszStoppedFile;		//The source file the debugger is stopped in, and its line
@@ -339,6 +352,16 @@ public:
 	CClaudeCommand*		GetClaude(void);
 	Ptr<CIDEClaudePane>	GetClaudePane(void);
 
+	bool				UndoAcrossFiles(void);
+	bool				RedoAcrossFiles(void);
+	void				BeginUndoGroup(void);
+	void				EndUndoGroup(void);
+	Ptr<CMenuContainer>	GetEditMenu(void);
+	size				NumTabs(void);
+	Ptr<CIDEEditorTab>	GetTab(size uiIndex);
+	void				EditMenuOpening(CMenuContainer* pcMenu);
+	void				EditorUndoChanged(CTextArea* pcEditor, STextAreaUndo* psUndo);
+
 protected:
 	Ptr<CMenuBar>		CreateMenuBar(void);
 	Ptr<CMenuContainer>	CreateExplorerMenu(void);
@@ -405,7 +428,14 @@ protected:
 	void				PollClaude(Ptr<CWindow> pWindow);
 	void				ReloadClaudeFiles(bool bAll);
 	bool				ReloadClaudeFile(Ptr<CIDEEditorTab> pTab);
+
 	Ptr<CIDEEditorTab>	FindClaudeTab(const char* szFileName);
+
+	Ptr<CMenuContainer>	CreateEditMenu(void);
+	bool				EditMenuItemClicked(CMenuItem* pcItem);
+	Ptr<CIDEEditorTab>	FindTab(CTextArea* pcEditor);
+	bool				UndoLogGroup(size uiGroup, bool bShow);
+	bool				RedoLogGroup(size uiGroup, bool bShow);
 };
 
 

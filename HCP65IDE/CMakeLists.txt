@@ -131,6 +131,7 @@ set(IDE_SOURCES
 	"${IDE_DIR}/IDEContentDiff.cpp"
 	"${IDE_DIR}/IDEDiffTab.cpp"
 	"${IDE_DIR}/IDEContentClaude.cpp"
+	"${IDE_DIR}/IDEContentEdit.cpp"
 	"${IDE_DIR}/IDEGit.cpp"
 	"${IDE_DIR}/IDEDebugger.cpp"
 	"${IDE_DIR}/IDEDebugView.cpp"

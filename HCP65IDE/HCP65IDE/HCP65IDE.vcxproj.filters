@@ -33,6 +33,12 @@
     <ClCompile Include="IDEContentClaude.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="IDEDiffTab.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="IDEContentEdit.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="IDEClaudePane.cpp">
       <Filter>Source</Filter>
     </ClCompile>

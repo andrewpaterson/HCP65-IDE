@@ -313,6 +313,8 @@ void CIDEContent::ReloadClaudeFiles(bool bAll)
 	Ptr<CIDEEditorTab>	pTab;
 	size				i;
 
+	//Every file read again is one edit for undo: undoing any of them undoes them all.
+	BeginUndoGroup();
 	paszChanged = mcClaude.GetChangedFiles();
 	for (; muiClaudeReloaded < paszChanged->NumElements(); muiClaudeReloaded++)
 	{
@@ -330,6 +332,7 @@ void CIDEContent::ReloadClaudeFiles(bool bAll)
 			ReloadClaudeFile(maTabs.Get(i));
 		}
 	}
+	EndUndoGroup();
 }
 
 

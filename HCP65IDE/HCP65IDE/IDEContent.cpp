@@ -214,6 +214,8 @@ void CIDEContent::Init(void)
 	mcClaude.Init();
 	muiClaudeReloaded = 0;
 	muiClaudeTools = 0;
+	mcUndoLog.Init();
+	mbLogUndoing = false;
 	muiNextDiff = 0;
 
 	PostInit();
@@ -336,6 +338,17 @@ void CIDEContent::Class(void)
 	M_Pointer(mpClaudePane);
 	U_Size(muiClaudeReloaded);
 	U_Size(muiClaudeTools);
+	U_Unknown(CUndoLog, mcUndoLog);
+	U_Bool(mbLogUndoing);
+	M_Pointer(mpEditMenu);
+	M_Pointer(mpUndoItem);
+	M_Pointer(mpRedoItem);
+	M_Pointer(mpCutItem);
+	M_Pointer(mpCopyItem);
+	M_Pointer(mpPasteItem);
+	M_Pointer(mpSelectAllItem);
+	M_Pointer(mpUndoAllItem);
+	M_Pointer(mpRedoAllItem);
 }
 
 
@@ -346,6 +359,8 @@ void CIDEContent::Class(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDEContent::Free(void)
 {
+	size	i;
+
 	//An object's memory is freed without its destructor running so the content and its listeners take themselves off
 	//the widgets still here.
 	if (mpExplorer.IsNotNull() && mpExplorer->GetTree().IsNotNull())
@@ -379,6 +394,17 @@ void CIDEContent::Free(void)
 	if (mpExplorerMenu.IsNotNull())
 	{
 		mpExplorerMenu->GetItemClickEvent()->Remove(this);
+	}
+	if (mpEditMenu.IsNotNull())
+	{
+		mpEditMenu->GetOpeningEvent()->Remove(this);
+	}
+	for (i = 0; i < maTabs.Size(); i++)
+	{
+		if (maTabs.Get(i).IsNotNull() && maTabs.Get(i)->GetEditor().IsNotNull())
+		{
+			maTabs.Get(i)->GetEditor()->GetUndoEvent()->Remove(this);
+		}
 	}
 	if (mpDock.IsNotNull())
 	{
@@ -416,6 +442,7 @@ void CIDEContent::Free(void)
 	//A git status still being read is stopped.
 	mcLineChanges.Kill();
 	mcGit.Kill();
+	mcUndoLog.Kill();
 
 	//A build still running is stopped (an HCP65 build is waited for) before the solution it builds goes.
 	mcBuild.Kill();
@@ -639,6 +666,7 @@ Ptr<CMenuBar> CIDEContent::CreateMenuBar(void)
 	mpCloseAllItem = pWindowMenu->AddItem("Close All Documents");
 
 	mpMenuBar->AddMenu("File", pFile);
+	mpMenuBar->AddMenu("Edit", CreateEditMenu());
 	mpMenuBar->AddMenu("View", pView);
 	mpMenuBar->AddMenu("Git", pGit);
 	mpMenuBar->AddMenu("Debug", CreateDebugMenu());
@@ -754,6 +782,9 @@ void CIDEContent::MenuItemClicked(CMenuItem* pcItem)
 	else if (pcItem == &mpCloseAllItem)
 	{
 		CloseAllFiles();
+	}
+	else if (EditMenuItemClicked(pcItem))
+	{
 	}
 	else
 	{
@@ -1403,6 +1434,7 @@ Ptr<CIDEEditorTab> CIDEContent::OpenFileTab(const char* szFileName, size uiProje
 	pTab->SetDockPane(pPane);
 	pTab->GetCodeEditor()->GetChangeBarClickEvent()->Add(this, &CIDEContent::ChangeBarClicked);
 	pTab->GetCodeEditor()->GetGlyphClickEvent()->Add(this, &CIDEContent::GlyphClicked);
+	pTab->GetEditor()->GetUndoEvent()->Add(this, &CIDEContent::EditorUndoChanged);
 	ShowBreakpoints(pTab);
 	ReadGitBase(pTab);
 	UpdateChangeBars(pTab);
@@ -2455,6 +2487,8 @@ void CIDEContent::PaneClosed(CDockPane* pcPane)
 	}
 	pTab->GetCodeEditor()->GetChangeBarClickEvent()->Remove(this);
 	pTab->GetCodeEditor()->GetGlyphClickEvent()->Remove(this);
+	pTab->GetEditor()->GetUndoEvent()->Remove(this);
+	mcUndoLog.RemoveDocument(pTab->GetFileName());
 	maTabs.Remove(pTab);
 }
 

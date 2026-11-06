@@ -244,6 +244,7 @@
     <ClCompile Include="IDEContentDiff.cpp" />
     <ClCompile Include="IDEDiffTab.cpp" />
     <ClCompile Include="IDEContentClaude.cpp" />
+    <ClCompile Include="IDEContentEdit.cpp" />
     <ClCompile Include="IDEGit.cpp" />
     <ClCompile Include="IDEDebugger.cpp" />
     <ClCompile Include="IDEDebugView.cpp" />

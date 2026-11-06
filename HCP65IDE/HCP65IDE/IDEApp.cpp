@@ -279,6 +279,20 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 					mpWindow->InputPrintable(*szTyped, true);
 				}
 			}
+			if (getenv("HCP65_IDE_EDIT") != NULL)
+			{
+				//A comma separated list of edits: open:<file>, type:<text>, undo, redo (Edit, Undo and Redo),
+				//undoall, redoall (Edit, Undo and Redo Across Files), group and endgroup (the edits between as one)
+				//and menu (Edit opened).  What each open file's caret line then is is printed.
+				aszOpen.Init();
+				aszOpen.Split(getenv("HCP65_IDE_EDIT"), ',');
+				for (i = 0; i < aszOpen.NumElements(); i++)
+				{
+					EditScripted(aszOpen.GetText(i));
+				}
+				aszOpen.Kill();
+				EditScripted("print");
+			}
 			if ((getenv("HCP65_IDE_CHANGE") != NULL) && mpContent->GetActiveTab().IsNotNull())
 			{
 				//The change at the line (from 1) shown, as clicking its change bar does; ",rollback" or ",diff" then
@@ -461,6 +475,95 @@ bool CIDEApp::Run(void)
 		mpWindow->SetComponentInput(NULL);
 	}
 	return mbValid;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// One of HCP65_IDE_EDIT's steps.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEApp::EditScripted(const char* szStep)
+{
+	int32					iNode;
+	const char*				szTyped;
+	Ptr<CIDEEditorTab>		pTab;
+	Ptr<CMenuContainer>		pMenu;
+	Ptr<CTextArea>			pEditor;
+	CChars					szLine;
+	size					uiLine;
+	size					uiEnd;
+	size					i;
+
+	pTab = mpContent->GetActiveTab();
+	if (strncmp(szStep, "open:", 5) == 0)
+	{
+		iNode = mpContent->GetExplorer()->FindFileNode(&szStep[5]);
+		if (iNode != TREE_NO_NODE)
+		{
+			mpContent->GetExplorer()->GetTree()->SelectNode(iNode);
+			mpContent->ExplorerActivated();
+		}
+	}
+	else if ((strncmp(szStep, "type:", 5) == 0) && pTab.IsNotNull())
+	{
+		mpWindow->GetFocus()->SetFocus(pTab->GetEditor());
+		for (szTyped = &szStep[5]; *szTyped != '\0'; szTyped++)
+		{
+			mpWindow->InputPrintable(*szTyped, true);
+		}
+	}
+	else if ((strcmp(szStep, "undo") == 0) && pTab.IsNotNull())
+	{
+		pTab->GetEditor()->Undo();
+	}
+	else if ((strcmp(szStep, "redo") == 0) && pTab.IsNotNull())
+	{
+		pTab->GetEditor()->Redo();
+	}
+	else if (strcmp(szStep, "undoall") == 0)
+	{
+		mpContent->UndoAcrossFiles();
+	}
+	else if (strcmp(szStep, "redoall") == 0)
+	{
+		mpContent->RedoAcrossFiles();
+	}
+	else if (strcmp(szStep, "group") == 0)
+	{
+		mpContent->BeginUndoGroup();
+	}
+	else if (strcmp(szStep, "endgroup") == 0)
+	{
+		mpContent->EndUndoGroup();
+	}
+	else if (strcmp(szStep, "menu") == 0)
+	{
+		mpWindow->Layout();
+		mpContent->GetEditMenu()->Open(SInt32Vec2(40, 24), NULL, true);
+	}
+	else if (strcmp(szStep, "print") == 0)
+	{
+		pMenu = mpContent->GetEditMenu();
+		mpContent->EditMenuOpening(&pMenu);
+		printf("Edit menu:");
+		for (i = 0; i < pMenu->NumItems(); i++)
+		{
+			printf(" %s%s", pMenu->GetItem(i)->GetText(), pMenu->GetItem(i)->IsEnabled() ? "" : "(disabled)");
+		}
+		printf("\n");
+		for (i = 0; i < mpContent->NumTabs(); i++)
+		{
+			pEditor = mpContent->GetTab(i)->GetEditor();
+			uiLine = pEditor->FindLine(pEditor->GetCaretPosition());
+			uiEnd = (uiLine + 1 < pEditor->NumLines()) ? pEditor->GetLineStart(uiLine + 1) - 1 : strlen(pEditor->GetText());
+			szLine.Init();
+			szLine.AppendSubString(pEditor->GetText(), pEditor->GetLineStart(uiLine), uiEnd);
+			printf("%s%s line %d: [%s]\n", mpContent->GetTab(i)->GetFileName(), mpContent->GetTab(i)->IsModified() ? " *" : "", (int)uiLine + 1, szLine.Text());
+			szLine.Kill();
+		}
+		fflush(stdout);
+	}
 }
 
 
