@@ -158,6 +158,7 @@ public:
 	bool	FindIncludeFile(size uiProject, const char* szIncluder, const char* szName, bool bSystem, CChars* pszDest);
 
 	void	IndexUnit(SIDEIndexJob* psJob);
+	bool	IsIndexedByAnother(const char* szFileName, size uiJob);
 
 protected:
 	bool				ParseUnit(size uiProject, const char* szFileName, const char* szContents, CIDEParsedUnit* pcDest, CChars* pszErrors);

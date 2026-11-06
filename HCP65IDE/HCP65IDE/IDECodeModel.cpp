@@ -558,6 +558,48 @@ void CIDECodeModel::StartIndexing(void)
 }
 
 
+//The files other units indexed (in mcIncluders) while a unit is indexed: their names are skipped (CCPPIndex::Gather).
+//Asked once per file and unit.
+class CIDEIndexedFiles : public CCPPIndexedFiles
+{
+public:
+	CIDECodeModel*			mpcModel;
+	size					muiJob;
+	CMapLongTemplate<bool>	mcAsked;
+
+	bool	IsIndexed(CSourceFile* pcFile) override
+	{
+		bool*	pbAsked;
+		bool	bIndexed;
+
+		pbAsked = mcAsked.Get((int64)(size)pcFile);
+		if (pbAsked)
+		{
+			return *pbAsked;
+		}
+		bIndexed = mpcModel->IsIndexedByAnother(pcFile->FullName(), muiJob);
+		mcAsked.Put((int64)(size)pcFile, &bIndexed);
+		return bIndexed;
+	}
+};
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether a unit other than job uiJob has indexed szFileName.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDECodeModel::IsIndexedByAnother(const char* szFileName, size uiJob)
+{
+	int	iJob;
+
+	mcIndexMutex.Lock();
+	iJob = mcIncluders.Get(szFileName, -1);
+	mcIndexMutex.Unlock();
+	return (iJob >= 0) && ((size)iJob != uiJob);
+}
+
+
 //////////////////////////////////////////////////////////////////////////
 //
 // On a worker thread: one file parsed, its expressions typed (so names
@@ -569,6 +611,7 @@ void CIDECodeModel::IndexUnit(SIDEIndexJob* psJob)
 	CIDEParsedUnit		cUnit;
 	CCPPIndexUnit		cGathered;
 	CCPPSemanticPass	cPass;
+	CIDEIndexedFiles	cIndexed;
 	CChars			szErrors;
 	bool			bParsed;
 	bool			bCancelled;
@@ -590,8 +633,13 @@ void CIDECodeModel::IndexUnit(SIDEIndexJob* psJob)
 	bParsed = ParseUnit(psJob->uiProject, psJob->szFileName.Text(), NULL, &cUnit, &szErrors);
 	if (bParsed)
 	{
+		//A header another unit indexed first isn't gathered again.
+		cIndexed.mpcModel = this;
+		cIndexed.muiJob = psJob->uiIndex;
+		cIndexed.mcAsked.Init(true);
 		cPass.Check(&cUnit.mcTree);
-		CCPPIndex::Gather(&cUnit.mcTokeniser, &cUnit.mcTree, &cGathered, &cPass);
+		CCPPIndex::Gather(&cUnit.mcTokeniser, &cUnit.mcTree, &cGathered, &cPass, &cIndexed);
+		cIndexed.mcAsked.Kill();
 	}
 	cPass.Kill();
 	cUnit.Kill();
