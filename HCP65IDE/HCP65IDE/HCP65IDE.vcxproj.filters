@@ -33,9 +33,6 @@
     <ClCompile Include="IDEAskClaude.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="IDEDiffTab.cpp">
-      <Filter>Source</Filter>
-    </ClCompile>
     <ClCompile Include="IDEEdit.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -52,9 +49,6 @@
       <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="IDEScript.cpp">
-      <Filter>Source</Filter>
-    </ClCompile>
-    <ClCompile Include="IDERename.cpp">
       <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="IDEClaudePane.cpp">

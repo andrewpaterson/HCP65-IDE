@@ -250,10 +250,6 @@
     <ClCompile Include="IDEUsages.cpp" />
     <ClCompile Include="IDECloseGuard.cpp" />
     <ClCompile Include="IDEScript.cpp" />
-    <ClCompile Include="IDERename.cpp" />
-    <ClCompile Include="IDEUsages.cpp" />
-    <ClCompile Include="IDECloseGuard.cpp" />
-    <ClCompile Include="IDEScript.cpp" />
     <ClCompile Include="IDEGit.cpp" />
     <ClCompile Include="IDEDebugger.cpp" />
     <ClCompile Include="IDEDebugView.cpp" />
