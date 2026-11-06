@@ -239,11 +239,11 @@
     <ClCompile Include="HCP65IDE.cpp" />
     <ClCompile Include="IDECodeModel.cpp" />
     <ClCompile Include="IDEContent.cpp" />
-    <ClCompile Include="IDEContentDebug.cpp" />
-    <ClCompile Include="IDEContentGit.cpp" />
-    <ClCompile Include="IDEContentDiff.cpp" />
+    <ClCompile Include="IDEDebugging.cpp" />
+    <ClCompile Include="IDEGitStatus.cpp" />
+    <ClCompile Include="IDEDiffs.cpp" />
     <ClCompile Include="IDEDiffTab.cpp" />
-    <ClCompile Include="IDEContentClaude.cpp" />
+    <ClCompile Include="IDEAskClaude.cpp" />
     <ClCompile Include="IDEEdit.cpp" />
     <ClCompile Include="IDENavigator.cpp" />
     <ClCompile Include="IDERename.cpp" />
@@ -271,6 +271,10 @@
     <ClInclude Include="IDEContent.h" />
     <ClInclude Include="IDEScript.h" />
     <ClInclude Include="IDECloseGuard.h" />
+    <ClInclude Include="IDEDebugging.h" />
+    <ClInclude Include="IDEGitStatus.h" />
+    <ClInclude Include="IDEDiffs.h" />
+    <ClInclude Include="IDEAskClaude.h" />
     <ClInclude Include="IDEEdit.h" />
     <ClInclude Include="IDENavigator.h" />
     <ClInclude Include="IDERename.h" />

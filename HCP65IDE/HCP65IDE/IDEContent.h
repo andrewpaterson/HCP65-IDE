@@ -61,6 +61,10 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDENavigator.h"
 #include "IDERename.h"
 #include "IDEUsages.h"
+#include "IDEDebugging.h"
+#include "IDEGitStatus.h"
+#include "IDEDiffs.h"
+#include "IDEAskClaude.h"
 #include "SolutionExplorer.h"
 
 
@@ -114,6 +118,10 @@ friend class CIDEEdit;
 friend class CIDENavigator;
 friend class CIDERename;
 friend class CIDEUsages;
+friend class CIDEDebugging;
+friend class CIDEGitStatus;
+friend class CIDEDiffs;
+friend class CIDEAskClaude;
 CONSTRUCTABLE(CIDEContent);
 DESTRUCTABLE(CIDEContent);
 protected:
@@ -153,7 +161,6 @@ protected:
 	Ptr<CDockPane>				mpBuildTool;
 	Ptr<CDockPane>				mpDebugTool;
 	Ptr<CDockPane>				mpClaudeTool;
-	size						muiNextDiff;		//Each diff's pane's ID is numbered.
 	Ptr<CFileChooser>			mpFileChooser;		//While it's shown.
 	Ptr<CImageCel>				mpFolderIcon;		//The file chooser's.
 	Ptr<CImageCel>				mpFileIcon;
@@ -176,6 +183,10 @@ protected:
 	Ptr<CIDENavigator>			mpNavigator;		//Go to, Go to Source and Alt+O.
 	Ptr<CIDERename>				mpRename;			//Rename.
 	Ptr<CIDEUsages>				mpUsages;			//Find Usages.
+	Ptr<CIDEDebugging>			mpDebugging;		//The Debug menu, the debugger and breakpoints.
+	Ptr<CIDEGitStatus>			mpGitStatus;		//Git statuses, the branch and change bars.
+	Ptr<CIDEDiffs>				mpDiffs;			//Compare with HEAD, a branch, a revision or a file.
+	Ptr<CIDEAskClaude>			mpAskClaude;		//The Claude tab's requests.
 	Ptr<CMenuItem>				mpRenameItem;
 	Ptr<CMenuItem>				mpExtractMethodItem;
 	Ptr<CSolutionExplorer>		mpExplorer;
@@ -200,49 +211,20 @@ protected:
 	CIDECodeModel				mcCodeModel;		//Uses mcWorkspace; initialised when a solution is opened.
 
 	CGitRepositories			mcGit;				//The repositories the solution's files are in.
-	CGitLineChanges				mcLineChanges;		//Worked out for one tab at a time.
-	size						muiGitVersion;		//mcGit's status version when it was last shown.
 	int64						miGitStatusTime;	//When the statuses were last read, 0 to read them now.
 	Ptr<CLabel>					mpBranchLabel;		//On the toolbar.
 	Ptr<CLabel>					mpStatusLabel;		//The status line along the bottom: what last went wrong, or was done.
-	Ptr<CGridContainer>			mpChangePopup;		//A change's old lines and its buttons, while it is open.
-	Ptr<CButton>				mpRollbackButton;	//In the change popup.
-	Ptr<CButton>				mpShowDiffButton;
 	Ptr<CIDEEditorTab>			mpChangeTab;		//The tab of the change shown.
-	SGitLineChange				msChange;
-	size						muiChange;			//Its index in its file's changes.
 	size						muiQueuedChange;	//A change's line to show once the editor is laid out, MAX_SIZE for none.
 	int							miQueuedAction;		//Then 0 nothing, 1 Rollback or 2 Show Diff.
 	bool						mbKeepSettings;		//The layout and the open solution are saved for next time; not while being checked.
 
-	CClaudeCommand				mcClaude;			//The request Claude is working on, or the last.
 	Ptr<CIDEClaudePane>			mpClaudePane;
-	size						muiClaudeReloaded;	//How many of the files Claude changed have been looked at.
-	size						muiClaudeTools;		//How many tools Claude has used on the request.
 
 
-	CIDEDebugger				mcDebugger;
-	CChars						mszStoppedFile;		//The source file the debugger is stopped in, and its line
-	uint32						muiStoppedLine;		//(1 based), 0 if it isn't stopped in one.
 	Ptr<CIDEDebugView>			mpDebugView;
 	Ptr<CButton>				mpStartButton;		//Start, or Continue while stopped.
-	Ptr<CMenuItem>				mpStartItem;		//Debug's items.
-	Ptr<CMenuItem>				mpStepIntoItem;
-	Ptr<CMenuItem>				mpStepOverItem;
-	Ptr<CMenuItem>				mpStepOutItem;
-	Ptr<CMenuItem>				mpBreakItem;
-	Ptr<CMenuItem>				mpStopItem;
-	Ptr<CMenuItem>				mpRestartItem;
-	Ptr<CMenuItem>				mpToggleItem;
-	Ptr<CMenuItem>				mpNewBreakpointItem;
-	Ptr<CMenuItem>				mpDeleteBreakpointsItem;
-	Ptr<CMenuItem>				mpAttachItem;
 	Ptr<CDialog>				mpDialog;			//The address or port asked for, while it's shown.
-	CArrayChars					maszDebugScript;	//HCP65_IDE_DEBUG's commands still to do, for checking.
-	CChars						mszDefaultEmulator;	//A W65C816 configuration's emulator when it doesn't say.
-	CChars						mszDefaultEmulatorDirectory;
-	int64						miDebugScriptTime;	//When the debugger was last seen not running, for a scripted break.
-	int64						miDebugScriptWait;	//When a scripted wait started, 0 if none is.
 
 public:
 	void			Init(void);
@@ -321,61 +303,9 @@ public:
 	void				ShowListingAfterBuild(size uiLine);
 	CCPP65ListingIndex*	GetListings(void);
 	void				BuildClicked(void);
-	void				StartClicked(void);
 
-	void				SetDefaultEmulator(const char* szExecutable, const char* szDirectory);
-	bool				StartDebugging(void);
-	bool				StopDebugging(void);
-	bool				RestartDebugging(void);
-	bool				BreakAll(void);
-	bool				StepInto(void);
-	bool				StepOver(void);
-	bool				StepOut(void);
-	bool				ToggleBreakpoint(void);
-	bool				ToggleSourceBreakpoint(Ptr<CIDEEditorTab> pTab, size uiLine);
-	void				GlyphClicked(CCodeEditor* pcEditor, size uiLine);
-	void				ReadLineTables(void);
-	void				ShowBreakpoints(Ptr<CIDEEditorTab> pTab);
-	void				ShowAllBreakpoints(void);
-	void				ShowStoppedLine(bool bWasStopped);
-	bool				IsDisassemblyFocussed(void);
-	bool				ShowNewBreakpointDialog(void);
-	bool				ShowAttachDialog(void);
-	bool				AttachDebugger(int iPort);
-	void				SetDebugScript(const char* szCommands);
-	bool				IsDebugScriptRunning(void);
-	CIDEDebugger*		GetDebugger(void);
-	Ptr<CIDEDebugView>	GetDebugView(void);
 
-	CGitRepositories*	GetGit(void);
-	bool				CompareWithHead(void);
-	void				ChangeBarClicked(CCodeEditor* pcEditor, size uiLine);
-	bool				ShowChange(Ptr<CIDEEditorTab> pTab, size uiLine);
-	bool				RollbackChange(void);
-	bool				ShowChangeDiff(void);
-	void				WindowActivated(void);
-	void				QueueChange(size uiLine, int iAction);
-	void				RollbackClicked(void);
-	void				ShowDiffClicked(void);
-	Ptr<CGridContainer>	GetChangePopup(void);
-	bool				CompareWithRevision(const char* szRevision);
-	bool				CompareWithFile(const char* szPath);
-	bool				ShowCompareWithBranchDialog(void);
-	bool				ShowCompareWithRevisionDialog(void);
-	bool				ShowCompareWithFileDialog(void);
-	bool				OpenDiff(const char* szLeftFile, const char* szLeftRevision, const char* szRightFile, const char* szRightRevision);
-	Ptr<CIDEDiffTab>	GetActiveDiff(void);
-	Ptr<CLabel>			GetBranchLabel(void);
-	void				ReadGitStatus(void);
 
-	bool				AskClaude(const char* szRequest);
-	void				ClaudeSendClicked(void);
-	void				ClaudeStopClicked(void);
-	void				ClaudeNewClicked(void);
-	void				ShowClaudeTab(void);
-	bool				IsClaudeRunning(void);
-	CClaudeCommand*		GetClaude(void);
-	Ptr<CIDEClaudePane>	GetClaudePane(void);
 
 	void				OpenQueuedSolution(void);
 	bool				ShowActiveFileInExplorer(void);
@@ -383,6 +313,10 @@ public:
 	bool				FindSymbolAtCaret(CArrayIDELocations* pasDest, CChars* pszKey);
 	void				GetFileLine(const char* szFileName, int iLine, CChars* pszDest);
 	Ptr<CIDEScript>		GetScript(void);
+	Ptr<CIDEDebugging>	GetDebugging(void);
+	Ptr<CIDEGitStatus>	GetGitStatus(void);
+	Ptr<CIDEDiffs>	GetDiffs(void);
+	Ptr<CIDEAskClaude>	GetAskClaude(void);
 	void				EditorMenuOpening(CMenuContainer* pcMenu);
 	size				NumTabs(void);
 	Ptr<CIDEEditorTab>	GetTab(size uiIndex);
@@ -405,19 +339,6 @@ protected:
 	bool				StartBuildStep(CArrayChars* paszLines);
 	void				ShowBuildProgress(void);
 	void				FinishBuildSteps(CArrayChars* paszLines);
-	Ptr<CMenuContainer>	CreateDebugMenu(void);
-	bool				DebugMenuItemClicked(CMenuItem* pcItem);
-	void				DebugCommandAction(EComponentInputCommand eCommand);
-	void				PollDebugger(Ptr<CWindow> pWindow);
-	void				UpdateDebugView(bool bKeepCaret);
-	void				RunDebugScript(void);
-	bool				ChooseEmulator(bool bLaunch);
-	bool				ChooseDebugLoads(CBuildConfiguration* pcConfiguration, CChars* pszMessage, CArrayChars* paszLines);
-	void				GetUserSettingsFileName(CChars* pszDest);
-	void				SaveBreakpoints(void);
-	void				ShowDebugMessages(void);
-	void				ResolveEmulatorPath(const char* szPath, CChars* pszDest);
-	bool				ShowAddressDialog(const char* szTitle, const char* szLabel, const char* szDefault, bool bHex, uint32* puiValue);
 	void				HighlightTab(Ptr<CIDEEditorTab> pTab);
 	Ptr<CIDEEditorTab>	FindTab(const char* szFileName);
 	Ptr<CIDEEditorTab>	FindTab(CDockPane* pcPane);
@@ -428,31 +349,9 @@ protected:
 	void				ReadListings(CArrayChars* paszLines);
 	void				SetListings(bool bListings);
 
-	int64				PollGit(int64 iNow);
-	void				ShowGitStatus(void);
-	void				ShowBranch(void);
-	void				ReadGitBase(Ptr<CIDEEditorTab> pTab);
-	void				GitFileSaved(const char* szFileName);
-	void				CloseChangePopup(void);
-	void				AppendBaseLines(Ptr<CIDEEditorTab> pTab, size uiStart, size uiEnd, CChars* pszDest);
 	Ptr<CIDEEditorTab>	FindTab(CCodeEditor* pcEditor);
-	void				HighlightDiffSide(Ptr<CDiffView> pView, ETextDiffSide eSide, size uiProject, const char* szFileName, const char* szText);
-	Ptr<CIDEEditorTab>	GetComparedTab(void);
-	bool				ReadDiffSide(CIDEDiffSide* pcSide, CChars* pszDest);
-	void				MakeDiffTitle(CIDEDiffSide* pcSide, CIDEDiffSide* pcOther, CChars* pszDest);
-	void				RefreshDiff(Ptr<CIDEDiffTab> pDiff);
-	int64				PollDiffs(int64 iNow);
-	void				RefreshMovedDiffs(void);
-	Ptr<CIDEDiffTab>	FindDiffTab(CDockPane* pcPane);
-	void				UpdateChangeBars(Ptr<CIDEEditorTab> pTab);
 
-	bool				GetClaudeDirectory(CChars* pszDirectory);
-	void				AppendClaudeContext(CChars* pszRequest);
-	void				PollClaude(Ptr<CWindow> pWindow);
-	void				ReloadClaudeFiles(bool bAll);
-	bool				ReloadClaudeFile(Ptr<CIDEEditorTab> pTab);
 
-	Ptr<CIDEEditorTab>	FindClaudeTab(const char* szFileName);
 
 	Ptr<CIDEEditorTab>	FindTab(CTextArea* pcEditor);
 };

@@ -25,7 +25,9 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/JewelColours.h"
 #include "StandardLib/TextContent.h"
 #include "IDEGit.h"
+#include "StandardLib/ClassDefines.h"
 #include "IDEContent.h"
+#include "IDEGitStatus.h"
 
 
 #define IDE_GIT_REFRESH			5000	//Milliseconds between reading the statuses.
@@ -38,35 +40,96 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 //////////////////////////////////////////////////////////////////////////
 //
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEGitStatus::Init(CIDEContent* pcContent)
+{
+	PreInit();
+	mpcContent = pcContent;
+	mcLineChanges.Init();
+	muiGitVersion = 0;
+	muiChange = 0;
+	memset(&msChange, 0, sizeof(SGitLineChange));
+	PostInit();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEGitStatus::Class(void)
+{
+	U_Pointer(mpcContent);
+	U_Unknown(CGitLineChanges, mcLineChanges);
+	U_Size(muiGitVersion);
+	M_Pointer(mpChangePopup);
+	M_Pointer(mpRollbackButton);
+	M_Pointer(mpShowDiffButton);
+	U_Data(SGitLineChange, msChange);
+	U_Size(muiChange);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// An object's memory is freed without its destructor running, so it
+// takes itself off what it listens to.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEGitStatus::Free(void)
+{
+	if (mpRollbackButton.IsNotNull())
+	{
+		mpRollbackButton->GetClickEvent()->Remove(this);
+	}
+	if (mpShowDiffButton.IsNotNull())
+	{
+		mpShowDiffButton->GetClickEvent()->Remove(this);
+	}
+	mcLineChanges.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEGitStatus::Save(CObjectWriter* pcFile) { return false; }
+bool CIDEGitStatus::Load(CObjectReader* pcFile) { return false; }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Reads the statuses every so often and shows them when they have been
 // read.  Returns the milliseconds until it next needs a tick.
 //
 //////////////////////////////////////////////////////////////////////////
-int64 CIDEContent::PollGit(int64 iNow)
+int64 CIDEGitStatus::PollGit(int64 iNow)
 {
 	int64	iWait;
 
-	if (mcGit.NumRepositories() == 0)
+	if (mpcContent->mcGit.NumRepositories() == 0)
 	{
 		return -1;
 	}
 
-	if (mcGit.PollStatus())
+	if (mpcContent->mcGit.PollStatus())
 	{
 		iWait = IDE_GIT_POLL;
 	}
-	else if ((miGitStatusTime == 0) || (iNow - miGitStatusTime >= IDE_GIT_REFRESH))
+	else if ((mpcContent->miGitStatusTime == 0) || (iNow - mpcContent->miGitStatusTime >= IDE_GIT_REFRESH))
 	{
-		mcGit.StartStatus();
-		miGitStatusTime = iNow;
+		mpcContent->mcGit.StartStatus();
+		mpcContent->miGitStatusTime = iNow;
 		iWait = IDE_GIT_POLL;
 	}
 	else
 	{
-		iWait = IDE_GIT_REFRESH - (iNow - miGitStatusTime);
+		iWait = IDE_GIT_REFRESH - (iNow - mpcContent->miGitStatusTime);
 	}
 
-	if (mcGit.GetStatusVersion() != muiGitVersion)
+	if (mpcContent->mcGit.GetStatusVersion() != muiGitVersion)
 	{
 		ShowGitStatus();
 	}
@@ -80,14 +143,14 @@ int64 CIDEContent::PollGit(int64 iNow)
 // and the next reading of them all waits its usual time from now.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEContent::GitFileSaved(const char* szFileName)
+void CIDEGitStatus::GitFileSaved(const char* szFileName)
 {
-	if (mcGit.RefreshStatus(szFileName))
+	if (mpcContent->mcGit.RefreshStatus(szFileName))
 	{
-		miGitStatusTime = GetDebugTickCount();
-		if (mpWindow.IsNotNull())
+		mpcContent->miGitStatusTime = GetDebugTickCount();
+		if (mpcContent->mpWindow.IsNotNull())
 		{
-			mpWindow->RequestTick(IDE_GIT_POLL);
+			mpcContent->mpWindow->RequestTick(IDE_GIT_POLL);
 		}
 	}
 }
@@ -98,13 +161,13 @@ void CIDEContent::GitFileSaved(const char* szFileName)
 // Reads every repository's status now, waiting for them, and shows them.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEContent::ReadGitStatus(void)
+void CIDEGitStatus::ReadGitStatus(void)
 {
 	size	i;
 
-	for (i = 0; i < mcGit.NumRepositories(); i++)
+	for (i = 0; i < mpcContent->mcGit.NumRepositories(); i++)
 	{
-		mcGit.GetRepository(i)->ReadStatus();
+		mpcContent->mcGit.GetRepository(i)->ReadStatus();
 	}
 	ShowGitStatus();
 }
@@ -117,7 +180,7 @@ void CIDEContent::ReadGitStatus(void)
 // since its text in the last commit was read reads it again.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEContent::ShowGitStatus(void)
+void CIDEGitStatus::ShowGitStatus(void)
 {
 	size				i;
 	Ptr<CIDEEditorTab>	pTab;
@@ -125,16 +188,16 @@ void CIDEContent::ShowGitStatus(void)
 	EGitFileState		eState;
 	bool				bHeadMoved;
 
-	muiGitVersion = mcGit.GetStatusVersion();
-	if (mpExplorer.IsNotNull())
+	muiGitVersion = mpcContent->mcGit.GetStatusVersion();
+	if (mpcContent->mpExplorer.IsNotNull())
 	{
-		mpExplorer->ColourFiles(&mcGit, mpFontColours);
+		mpcContent->mpExplorer->ColourFiles(&mpcContent->mcGit, mpcContent->mpFontColours);
 	}
 
-	for (i = 0; i < maTabs.Size(); i++)
+	for (i = 0; i < mpcContent->maTabs.Size(); i++)
 	{
-		pTab = maTabs.Get(i);
-		pcRepository = mcGit.FindRepository(pTab->GetFileName());
+		pTab = mpcContent->maTabs.Get(i);
+		pcRepository = mpcContent->mcGit.FindRepository(pTab->GetFileName());
 		eState = pcRepository ? pcRepository->GetFileState(pTab->GetFileName()) : GFS_Unmodified;
 		bHeadMoved = pcRepository && pTab->HasBaseText() && (strcmp(pTab->GetBaseHead(), pcRepository->GetStatus()->GetHead()) != 0);
 		if ((eState != pTab->GetGitState()) || bHeadMoved)
@@ -142,9 +205,9 @@ void CIDEContent::ShowGitStatus(void)
 			ReadGitBase(pTab);
 			UpdateChangeBars(pTab);
 		}
-		pTab->GetDockPane()->SetTabFont(GetGitStateFont(mpFontColours, eState));
+		pTab->GetDockPane()->SetTabFont(GetGitStateFont(mpcContent->mpFontColours, eState));
 	}
-	RefreshMovedDiffs();
+	mpcContent->mpDiffs->RefreshMovedDiffs();
 	ShowBranch();
 }
 
@@ -156,25 +219,25 @@ void CIDEContent::ShowGitStatus(void)
 // Nothing if neither is in a repository or its status hasn't been read.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEContent::ShowBranch(void)
+void CIDEGitStatus::ShowBranch(void)
 {
 	CGitRepository*	pcRepository;
 	CGitStatus*		pcStatus;
 	CChars			szText;
 
-	if (mpBranchLabel.IsNull())
+	if (mpcContent->mpBranchLabel.IsNull())
 	{
 		return;
 	}
 
 	pcRepository = NULL;
-	if (mpActive.IsNotNull())
+	if (mpcContent->mpActive.IsNotNull())
 	{
-		pcRepository = mcGit.FindRepository(mpActive->GetFileName());
+		pcRepository = mpcContent->mcGit.FindRepository(mpcContent->mpActive->GetFileName());
 	}
-	if ((pcRepository == NULL) && IsSolutionOpen())
+	if ((pcRepository == NULL) && mpcContent->IsSolutionOpen())
 	{
-		pcRepository = mcGit.FindRepository(GetStartupFile());
+		pcRepository = mpcContent->mcGit.FindRepository(mpcContent->GetStartupFile());
 	}
 
 	szText.Init();
@@ -191,9 +254,9 @@ void CIDEContent::ShowBranch(void)
 			szText.Append(pcStatus->GetBranch());
 		}
 	}
-	if (!szText.Equals(mpBranchLabel->GetText()))
+	if (!szText.Equals(mpcContent->mpBranchLabel->GetText()))
 	{
-		mpBranchLabel->SetText(szText.Text());
+		mpcContent->mpBranchLabel->SetText(szText.Text());
 	}
 	szText.Kill();
 }
@@ -207,13 +270,13 @@ void CIDEContent::ShowBranch(void)
 // marked added.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEContent::ReadGitBase(Ptr<CIDEEditorTab> pTab)
+void CIDEGitStatus::ReadGitBase(Ptr<CIDEEditorTab> pTab)
 {
 	CGitRepository*	pcRepository;
 	EGitFileState	eState;
 	CChars			szText;
 
-	pcRepository = mcGit.FindRepository(pTab->GetFileName());
+	pcRepository = mpcContent->mcGit.FindRepository(pTab->GetFileName());
 	if (pcRepository == NULL)
 	{
 		pTab->SetGitState(GFS_Unmodified);
@@ -252,7 +315,7 @@ void CIDEContent::ReadGitBase(Ptr<CIDEEditorTab> pTab)
 // or nothing if it has no last commit's text.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEContent::UpdateChangeBars(Ptr<CIDEEditorTab> pTab)
+void CIDEGitStatus::UpdateChangeBars(Ptr<CIDEEditorTab> pTab)
 {
 	CChars*	pszBase;
 	char*	szText;
@@ -276,26 +339,26 @@ void CIDEContent::UpdateChangeBars(Ptr<CIDEEditorTab> pTab)
 // aren't open (shown from disk) are made again.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEContent::WindowActivated(void)
+void CIDEGitStatus::WindowActivated(void)
 {
 	size				i;
 	int					iSide;
 	Ptr<CIDEDiffTab>	pDiff;
 	bool				bFromDisk;
 
-	if (mcGit.NumRepositories() > 0)
+	if (mpcContent->mcGit.NumRepositories() > 0)
 	{
-		for (i = 0; i < mcGit.NumRepositories(); i++)
+		for (i = 0; i < mpcContent->mcGit.NumRepositories(); i++)
 		{
-			mcGit.GetRepository(i)->RefreshStatus();
+			mpcContent->mcGit.GetRepository(i)->RefreshStatus();
 		}
-		miGitStatusTime = GetDebugTickCount();
-		mpWindow->RequestTick(IDE_GIT_POLL);
+		mpcContent->miGitStatusTime = GetDebugTickCount();
+		mpcContent->mpWindow->RequestTick(IDE_GIT_POLL);
 	}
 
-	for (i = 0; i < maDiffTabs.Size(); i++)
+	for (i = 0; i < mpcContent->maDiffTabs.Size(); i++)
 	{
-		pDiff = maDiffTabs.Get(i);
+		pDiff = mpcContent->maDiffTabs.Get(i);
 		bFromDisk = false;
 		for (iSide = 0; iSide < 2; iSide++)
 		{
@@ -306,7 +369,7 @@ void CIDEContent::WindowActivated(void)
 		}
 		if (bFromDisk)
 		{
-			RefreshDiff(pDiff);
+			mpcContent->mpDiffs->RefreshDiff(pDiff);
 		}
 	}
 }
@@ -317,11 +380,11 @@ void CIDEContent::WindowActivated(void)
 // A change bar in a file's gutter was clicked: its change is shown.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEContent::ChangeBarClicked(CCodeEditor* pcEditor, size uiLine)
+void CIDEGitStatus::ChangeBarClicked(CCodeEditor* pcEditor, size uiLine)
 {
 	Ptr<CIDEEditorTab>	pTab;
 
-	pTab = FindTab(pcEditor);
+	pTab = mpcContent->FindTab(pcEditor);
 	if (pTab.IsNotNull())
 	{
 		ShowChange(pTab, uiLine);
@@ -337,7 +400,7 @@ void CIDEContent::ChangeBarClicked(CCodeEditor* pcEditor, size uiLine)
 // there is no change there.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEContent::ShowChange(Ptr<CIDEEditorTab> pTab, size uiLine)
+bool CIDEGitStatus::ShowChange(Ptr<CIDEEditorTab> pTab, size uiLine)
 {
 	CChars*					pszBase;
 	char*					szText;
@@ -390,7 +453,7 @@ bool CIDEContent::ShowChange(Ptr<CIDEEditorTab> pTab, size uiLine)
 	CloseChangePopup();
 	msChange = *psChange;
 	muiChange = i;
-	mpChangeTab = pTab;
+	mpcContent->mpChangeTab = pTab;
 	//The editor may be in a floating window of its own.
 	pWindow = pTab->GetCodeEditor()->GetWindow();
 
@@ -402,15 +465,15 @@ bool CIDEContent::ShowChange(Ptr<CIDEEditorTab> pTab, size uiLine)
 	szSummary.Append((msChange.eType == GLC_Added) ? "added" : ((msChange.eType == GLC_Removed) ? "removed" : "changed"));
 	pGrid = OMalloc<CGridContainer>(pWindow);
 	pGrid->SetSizedByContent(true);
-	pLabel = OMalloc<CLabel>(pWindow, mpFontColours->GetFont(JEWEL_ICON), szSummary.Text());
+	pLabel = OMalloc<CLabel>(pWindow, mpcContent->mpFontColours->GetFont(JEWEL_ICON), szSummary.Text());
 	pLabel->SetAlignment(CSH_Left, CSV_Center);
 	szSummary.Kill();
-	mpShowDiffButton = OMalloc<CButton>(pWindow, mpTheme, "Show Diff");
+	mpShowDiffButton = OMalloc<CButton>(pWindow, mpcContent->mpTheme, "Show Diff");
 	mpShowDiffButton->SetAlignment(CSH_Right, CSV_Center);
-	mpShowDiffButton->GetClickEvent()->Add(this, &CIDEContent::ShowDiffClicked);
-	mpRollbackButton = OMalloc<CButton>(pWindow, mpTheme, "Rollback");
+	mpShowDiffButton->GetClickEvent()->Add(this, &CIDEGitStatus::ShowDiffClicked);
+	mpRollbackButton = OMalloc<CButton>(pWindow, mpcContent->mpTheme, "Rollback");
 	mpRollbackButton->SetAlignment(CSH_Right, CSV_Center);
-	mpRollbackButton->GetClickEvent()->Add(this, &CIDEContent::RollbackClicked);
+	mpRollbackButton->GetClickEvent()->Add(this, &CIDEGitStatus::RollbackClicked);
 	pGrid->AddComponent(pLabel, 0, 0, 1, 1, 1, 0);
 	pGrid->AddComponent(mpShowDiffButton, 1, 0);
 	pGrid->AddComponent(mpRollbackButton, 2, 0);
@@ -423,7 +486,7 @@ bool CIDEContent::ShowChange(Ptr<CIDEEditorTab> pTab, size uiLine)
 		szOld.Init();
 		AppendBaseLines(pTab, msChange.uiBaseStartLine, msChange.uiBaseEndLine, &szOld);
 		szOld.RemoveLastCharacter();
-		pOld = OMalloc<CTextArea>(pWindow, mpCodeFamily, szOld.Text());
+		pOld = OMalloc<CTextArea>(pWindow, mpcContent->mpCodeFamily, szOld.Text());
 		szOld.Kill();
 		pOld->SetTiledText(true);
 		pOld->SetColour(JEWEL_TEXT);
@@ -432,7 +495,7 @@ bool CIDEContent::ShowChange(Ptr<CIDEEditorTab> pTab, size uiLine)
 		uiLines = msChange.uiBaseEndLine - msChange.uiBaseStartLine;
 		pOld->AddLineBackground(0, uiLines, Set32BitColour((uint8)0x48, (uint8)0x4A, (uint8)0x4A));
 		iWidth = pOld->GetDesiredSize().x;
-		pPane = OMalloc<CScrollPane>(pWindow, mpTheme);
+		pPane = OMalloc<CScrollPane>(pWindow, mpcContent->mpTheme);
 		pPane->SetContent(pOld);
 		pPane->SetDesiredSize((iWidth < IDE_CHANGE_POPUP_WIDTH) ? IDE_CHANGE_POPUP_WIDTH : ((iWidth > IDE_CHANGE_POPUP_MAX_WIDTH) ? IDE_CHANGE_POPUP_MAX_WIDTH : iWidth), (uiLines > IDE_CHANGE_POPUP_ROWS ? IDE_CHANGE_POPUP_ROWS : (int32)uiLines) * iRow);
 		pPane->SetAlignment(CSH_Stretch, CSV_Stretch);
@@ -456,7 +519,7 @@ bool CIDEContent::ShowChange(Ptr<CIDEEditorTab> pTab, size uiLine)
 // commit's.  The editor can undo it.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEContent::RollbackChange(void)
+bool CIDEGitStatus::RollbackChange(void)
 {
 	Ptr<CIDEEditorTab>	pTab;
 	Ptr<CTextArea>		pEditor;
@@ -468,7 +531,7 @@ bool CIDEContent::RollbackChange(void)
 	CTextContent		cBase;
 	bool				bBaseEnds;
 
-	pTab = mpChangeTab;
+	pTab = mpcContent->mpChangeTab;
 	CloseChangePopup();
 	if (pTab.IsNull())
 	{
@@ -533,19 +596,19 @@ bool CIDEContent::RollbackChange(void)
 // The change shown, in a diff of its file with its last commit.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEContent::ShowChangeDiff(void)
+bool CIDEGitStatus::ShowChangeDiff(void)
 {
 	Ptr<CIDEEditorTab>	pTab;
 	size				uiChange;
 
-	pTab = mpChangeTab;
+	pTab = mpcContent->mpChangeTab;
 	uiChange = muiChange;
 	CloseChangePopup();
-	if (pTab.IsNull() || !OpenDiff(pTab->GetFileName(), "HEAD", pTab->GetFileName(), ""))
+	if (pTab.IsNull() || !mpcContent->mpDiffs->OpenDiff(pTab->GetFileName(), "HEAD", pTab->GetFileName(), ""))
 	{
 		return false;
 	}
-	mpActiveDiff->GetView()->ScrollToBlock(uiChange);
+	mpcContent->mpActiveDiff->GetView()->ScrollToBlock(uiChange);
 	return true;
 }
 
@@ -554,7 +617,7 @@ bool CIDEContent::ShowChangeDiff(void)
 //
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEContent::CloseChangePopup(void)
+void CIDEGitStatus::CloseChangePopup(void)
 {
 	if (mpChangePopup.IsNotNull())
 	{
@@ -571,7 +634,7 @@ void CIDEContent::CloseChangePopup(void)
 	mpChangePopup = NULL;
 	mpRollbackButton = NULL;
 	mpShowDiffButton = NULL;
-	mpChangeTab = NULL;
+	mpcContent->mpChangeTab = NULL;
 }
 
 
@@ -581,7 +644,7 @@ void CIDEContent::CloseChangePopup(void)
 // with a line feed (whatever ended it).
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEContent::AppendBaseLines(Ptr<CIDEEditorTab> pTab, size uiStart, size uiEnd, CChars* pszDest)
+void CIDEGitStatus::AppendBaseLines(Ptr<CIDEEditorTab> pTab, size uiStart, size uiEnd, CChars* pszDest)
 {
 	CTextContent	cBase;
 	size			i;
@@ -598,42 +661,22 @@ void CIDEContent::AppendBaseLines(Ptr<CIDEEditorTab> pTab, size uiStart, size ui
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The tab whose code editor is pcEditor, NULL if none.
-//
-//////////////////////////////////////////////////////////////////////////
-Ptr<CIDEEditorTab> CIDEContent::FindTab(CCodeEditor* pcEditor)
-{
-	size	i;
-
-	for (i = 0; i < maTabs.Size(); i++)
-	{
-		if (&maTabs.Get(i)->GetCodeEditor() == pcEditor)
-		{
-			return maTabs.Get(i);
-		}
-	}
-	return NULL;
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
 // The change at uiLine of the selected file is shown (and with iAction 1
 // rolled back, or 2 shown in a diff) at the next tick once the editor has
 // been laid out, as clicking its change bar would: for scripted runs.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEContent::QueueChange(size uiLine, int iAction)
+void CIDEGitStatus::QueueChange(size uiLine, int iAction)
 {
-	muiQueuedChange = uiLine;
-	miQueuedAction = iAction;
-	mpWindow->RequestTick(0);
+	mpcContent->muiQueuedChange = uiLine;
+	mpcContent->miQueuedAction = iAction;
+	mpcContent->mpWindow->RequestTick(0);
 }
 
 
-void CIDEContent::RollbackClicked(void) { RollbackChange(); }
-void CIDEContent::ShowDiffClicked(void) { ShowChangeDiff(); }
-Ptr<CGridContainer> CIDEContent::GetChangePopup(void) { return mpChangePopup; }
-CGitRepositories* CIDEContent::GetGit(void) { return &mcGit; }
-Ptr<CLabel> CIDEContent::GetBranchLabel(void) { return mpBranchLabel; }
+void CIDEGitStatus::RollbackClicked(void) { RollbackChange(); }
+void CIDEGitStatus::ShowDiffClicked(void) { ShowChangeDiff(); }
+Ptr<CGridContainer> CIDEGitStatus::GetChangePopup(void) { return mpChangePopup; }
+CGitRepositories* CIDEGitStatus::GetGit(void) { return &mpcContent->mcGit; }
+Ptr<CLabel> CIDEGitStatus::GetBranchLabel(void) { return mpcContent->mpBranchLabel; }
 

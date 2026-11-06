@@ -18,19 +18,19 @@
     <ClCompile Include="IDEContent.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="IDEContentDebug.cpp">
+    <ClCompile Include="IDEDebugging.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="IDEContentGit.cpp">
+    <ClCompile Include="IDEGitStatus.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="IDEContentDiff.cpp">
+    <ClCompile Include="IDEDiffs.cpp">
       <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="IDEDiffTab.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="IDEContentClaude.cpp">
+    <ClCompile Include="IDEAskClaude.cpp">
       <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="IDEDiffTab.cpp">
@@ -102,6 +102,18 @@
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDECloseGuard.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDEDebugging.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDEGitStatus.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDEDiffs.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDEAskClaude.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDEEdit.h">

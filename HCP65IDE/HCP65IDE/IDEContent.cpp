@@ -197,27 +197,11 @@ void CIDEContent::Init(void)
 	maFileIcons.Init();
 	maSymbolIcons.Init();
 	mpMatchFont = NULL;
-	mcDebugger.Init();
-	mszStoppedFile.Init();
-	muiStoppedLine = 0;
-	maszDebugScript.Init();
-	miDebugScriptTime = 0;
-	miDebugScriptWait = 0;
-	mszDefaultEmulator.Init();
-	mszDefaultEmulatorDirectory.Init();
 	mcGit.Init();
-	mcLineChanges.Init();
-	muiGitVersion = 0;
 	miGitStatusTime = 0;
-	muiChange = 0;
 	muiQueuedChange = MAX_SIZE;
 	miQueuedAction = 0;
 	mbKeepSettings = true;
-	memset(&msChange, 0, sizeof(SGitLineChange));
-	mcClaude.Init();
-	muiClaudeReloaded = 0;
-	muiClaudeTools = 0;
-	muiNextDiff = 0;
 
 	PostInit();
 }
@@ -268,12 +252,9 @@ void CIDEContent::Class(void)
 	M_Pointer(mpBuildTool);
 	M_Pointer(mpDebugTool);
 	M_Pointer(mpClaudeTool);
-	U_Size(muiNextDiff);
 	M_Pointer(mpFileChooser);
 	M_Pointer(mpFolderIcon);
 	M_Pointer(mpFileIcon);
-	U_String(mszStoppedFile);
-	U_UInt32(muiStoppedLine);
 	M_Embedded(maTabs);
 	M_Pointer(mpActive);
 	M_Embedded(maDiffTabs);
@@ -287,6 +268,10 @@ void CIDEContent::Class(void)
 	M_Pointer(mpNavigator);
 	M_Pointer(mpRename);
 	M_Pointer(mpUsages);
+	M_Pointer(mpDebugging);
+	M_Pointer(mpGitStatus);
+	M_Pointer(mpDiffs);
+	M_Pointer(mpAskClaude);
 	M_Pointer(mpEditorMenu);
 	M_Pointer(mpFindUsagesItem);
 	M_Pointer(mpGoToSourceItem);
@@ -312,45 +297,18 @@ void CIDEContent::Class(void)
 	U_String(mszRecentFile);
 	U_String(mszQueuedOpen);
 	U_Unknown(CIDECodeModel, mcCodeModel);
-	U_Unknown(CIDEDebugger, mcDebugger);
 	M_Pointer(mpDebugView);
 	M_Pointer(mpStartButton);
-	M_Pointer(mpStartItem);
-	M_Pointer(mpStepIntoItem);
-	M_Pointer(mpStepOverItem);
-	M_Pointer(mpStepOutItem);
-	M_Pointer(mpBreakItem);
-	M_Pointer(mpStopItem);
-	M_Pointer(mpRestartItem);
-	M_Pointer(mpToggleItem);
-	M_Pointer(mpNewBreakpointItem);
-	M_Pointer(mpDeleteBreakpointsItem);
-	M_Pointer(mpAttachItem);
 	M_Pointer(mpDialog);
-	U_Unknown(CArrayChars, maszDebugScript);
-	U_String(mszDefaultEmulator);
-	U_String(mszDefaultEmulatorDirectory);
-	U_Int64(miDebugScriptTime);
-	U_Int64(miDebugScriptWait);
 	U_Unknown(CGitRepositories, mcGit);
-	U_Unknown(CGitLineChanges, mcLineChanges);
-	U_Size(muiGitVersion);
 	U_Int64(miGitStatusTime);
 	M_Pointer(mpBranchLabel);
 	M_Pointer(mpStatusLabel);
-	M_Pointer(mpChangePopup);
-	M_Pointer(mpRollbackButton);
-	M_Pointer(mpShowDiffButton);
 	M_Pointer(mpChangeTab);
-	U_Data(SGitLineChange, msChange);
-	U_Size(muiChange);
 	U_Size(muiQueuedChange);
 	U_Int32(miQueuedAction);
 	U_Bool(mbKeepSettings);
-	U_Unknown(CClaudeCommand, mcClaude);
 	M_Pointer(mpClaudePane);
-	U_Size(muiClaudeReloaded);
-	U_Size(muiClaudeTools);
 }
 
 
@@ -383,7 +341,7 @@ void CIDEContent::Free(void)
 	}
 	if (mpStartButton.IsNotNull())
 	{
-		mpStartButton->GetClickEvent()->Remove(this);
+		mpStartButton->GetClickEvent()->Remove(&mpDebugging);
 	}
 	if (mpMenuBar.IsNotNull())
 	{
@@ -411,7 +369,7 @@ void CIDEContent::Free(void)
 	}
 	if (mpWindow.IsNotNull())
 	{
-		mpWindow->GetActivationEvent()->Remove(this);
+		mpWindow->GetActivationEvent()->Remove(&mpGitStatus);
 		mpWindow->ClearCloseApprover();
 		mpWindow->CancelPosted(this);
 		mpWindow->GetFocus()->GetFocusChangeEvent()->Remove(&mpEdit);
@@ -419,33 +377,16 @@ void CIDEContent::Free(void)
 		mpWindow->CancelPosted(&mpNavigator);
 		mpWindow->CancelPosted(&mpRename);
 	}
-	if (mpRollbackButton.IsNotNull())
-	{
-		mpRollbackButton->GetClickEvent()->Remove(this);
-	}
-	if (mpShowDiffButton.IsNotNull())
-	{
-		mpShowDiffButton->GetClickEvent()->Remove(this);
-	}
 	if (mpClaudePane.IsNotNull() && mpClaudePane->GetSendButton().IsNotNull())
 	{
-		mpClaudePane->GetSendButton()->GetClickEvent()->Remove(this);
-		mpClaudePane->GetStopButton()->GetClickEvent()->Remove(this);
-		mpClaudePane->GetNewButton()->GetClickEvent()->Remove(this);
+		mpClaudePane->GetSendButton()->GetClickEvent()->Remove(&mpAskClaude);
+		mpClaudePane->GetStopButton()->GetClickEvent()->Remove(&mpAskClaude);
+		mpClaudePane->GetNewButton()->GetClickEvent()->Remove(&mpAskClaude);
 	}
 
 	//A request Claude is still working on is stopped.
-	mcClaude.Kill();
-
-	//An emulator being debugged is quit (or detached from).
-	mszStoppedFile.Kill();
-	mcDebugger.Kill();
-	maszDebugScript.Kill();
-	mszDefaultEmulatorDirectory.Kill();
-	mszDefaultEmulator.Kill();
 
 	//A git status still being read is stopped.
-	mcLineChanges.Kill();
 	mcGit.Kill();
 
 	//A build still running is stopped (an HCP65 build is waited for) before the solution it builds goes.
@@ -561,6 +502,10 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpNavigator = OMalloc<CIDENavigator>(this);
 	mpRename = OMalloc<CIDERename>(this);
 	mpUsages = OMalloc<CIDEUsages>(this);
+	mpDebugging = OMalloc<CIDEDebugging>(this);
+	mpGitStatus = OMalloc<CIDEGitStatus>(this);
+	mpDiffs = OMalloc<CIDEDiffs>(this);
+	mpAskClaude = OMalloc<CIDEAskClaude>(this);
 
 	//Solution Explorer on the left.
 	mpExplorer = OMalloc<CSolutionExplorer>(pWindow, mpTheme);
@@ -583,9 +528,9 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpDebugTool = mpDock->AddPane(IDE_DEBUG_ID, "Debug", NULL, mpDebugView->GetComponent(), DPK_Tool, &sPlace);
 
 	mpClaudePane = OMalloc<CIDEClaudePane>(pWindow, mpTheme, mpFontColours->GetFont(JEWEL_ICON), mpCodeFamily);
-	mpClaudePane->GetSendButton()->GetClickEvent()->Add(this, &CIDEContent::ClaudeSendClicked);
-	mpClaudePane->GetStopButton()->GetClickEvent()->Add(this, &CIDEContent::ClaudeStopClicked);
-	mpClaudePane->GetNewButton()->GetClickEvent()->Add(this, &CIDEContent::ClaudeNewClicked);
+	mpClaudePane->GetSendButton()->GetClickEvent()->Add(&mpAskClaude, &CIDEAskClaude::ClaudeSendClicked);
+	mpClaudePane->GetStopButton()->GetClickEvent()->Add(&mpAskClaude, &CIDEAskClaude::ClaudeStopClicked);
+	mpClaudePane->GetNewButton()->GetClickEvent()->Add(&mpAskClaude, &CIDEAskClaude::ClaudeNewClicked);
 	mpClaudeTool = mpDock->AddPane(IDE_CLAUDE_ID, "Claude", NULL, mpClaudePane->GetComponent(), DPK_Tool, &sPlace);
 	mpDock->Show(mpUsages->GetTool());
 
@@ -601,7 +546,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpBuildButton->GetClickEvent()->Add(this, &CIDEContent::BuildClicked);
 	mpStartButton = OMalloc<CButton>(pWindow, mpTheme, "Start");
 	mpStartButton->SetAlignment(CSH_Left, CSV_Center);
-	mpStartButton->GetClickEvent()->Add(this, &CIDEContent::StartClicked);
+	mpStartButton->GetClickEvent()->Add(&mpDebugging, &CIDEDebugging::StartClicked);
 	pToolbar = OMalloc<CGridContainer>(pWindow);
 	pToolbar->SetDesiredSize(-1, IDE_TOOLBAR_HEIGHT);
 	pToolbar->SetAlignment(CSH_Stretch, CSV_Stretch);
@@ -637,7 +582,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	pMain->AddComponent(pStatusBar, 0, 3, 1, 1, 1, 0);
 	pMain->AddInputActions(gaeIDECodeCommands, this, &CIDEContent::CodeCommandAction);
 	pWindow->SetContainer(pMain);
-	pWindow->GetActivationEvent()->Add(this, &CIDEContent::WindowActivated);
+	pWindow->GetActivationEvent()->Add(&mpGitStatus, &CIDEGitStatus::WindowActivated);
 
 	//The close button asks to save changes first.
 	pWindow->SetCloseApprover(&mpCloseGuard, &CIDECloseGuard::RequestExit);
@@ -698,7 +643,7 @@ Ptr<CMenuBar> CIDEContent::CreateMenuBar(void)
 	mpMenuBar->AddMenu("Navigate", mpNavigator->CreateNavigateMenu());
 	mpMenuBar->AddMenu("View", pView);
 	mpMenuBar->AddMenu("Git", pGit);
-	mpMenuBar->AddMenu("Debug", CreateDebugMenu());
+	mpMenuBar->AddMenu("Debug", mpDebugging->CreateDebugMenu());
 	mpMenuBar->AddMenu("Window", pWindowMenu);
 	mpMenuBar->GetItemClickEvent()->Add(this, &CIDEContent::MenuItemClicked);
 	mpMenuBar->SetAlignment(CSH_Stretch, CSV_Stretch);
@@ -765,19 +710,19 @@ void CIDEContent::MenuItemClicked(CMenuItem* pcItem)
 	}
 	else if (pcItem == &mpCompareItem)
 	{
-		CompareWithHead();
+		mpDiffs->CompareWithHead();
 	}
 	else if (pcItem == &mpCompareBranchItem)
 	{
-		ShowCompareWithBranchDialog();
+		mpDiffs->ShowCompareWithBranchDialog();
 	}
 	else if (pcItem == &mpCompareRevisionItem)
 	{
-		ShowCompareWithRevisionDialog();
+		mpDiffs->ShowCompareWithRevisionDialog();
 	}
 	else if (pcItem == &mpCompareFileItem)
 	{
-		ShowCompareWithFileDialog();
+		mpDiffs->ShowCompareWithFileDialog();
 	}
 	else if (pcItem == &mpExitItem)
 	{
@@ -836,7 +781,7 @@ void CIDEContent::MenuItemClicked(CMenuItem* pcItem)
 	}
 	else
 	{
-		DebugMenuItemClicked(pcItem);
+		mpDebugging->DebugMenuItemClicked(pcItem);
 	}
 }
 
@@ -969,8 +914,8 @@ bool CIDEContent::OpenSolution(const char* szFileName)
 
 	//The breakpoints saved beside it, bound once its configuration's line tables are read.
 	szName.Init();
-	GetUserSettingsFileName(&szName);
-	mcDebugger.ReadSourceBreakpoints(szName.Text());
+	mpDebugging->GetUserSettingsFileName(&szName);
+	mpDebugging->mcDebugger.ReadSourceBreakpoints(szName.Text());
 	szName.Kill();
 
 	//The configuration chosen last time, if a solution still has it; chosen before the combo boxes tell of it, so it
@@ -1349,7 +1294,7 @@ void CIDEContent::FindRepositories(void)
 		mcGit.FindRepository(mcWorkspace.GetSolution(i)->mszFile.Text());
 	}
 	mpExplorer->ColourFiles(&mcGit, mpFontColours);
-	ReadGitStatus();
+	mpGitStatus->ReadGitStatus();
 	miGitStatusTime = GetDebugTickCount();
 }
 
@@ -1447,7 +1392,7 @@ bool CIDEContent::OpenFile(const char* szFileName, size uiProject)
 	mpDock->Activate(pTab->GetDockPane());
 	mpActive = pTab;
 	mpActiveDiff = NULL;
-	ShowBranch();
+	mpGitStatus->ShowBranch();
 	return true;
 }
 
@@ -1504,12 +1449,12 @@ Ptr<CIDEEditorTab> CIDEContent::OpenFileTab(const char* szFileName, size uiProje
 
 	//The right button: Rename and Refactor.
 	pTab->GetEditor()->SetContextMenu(mpEditorMenu);
-	pTab->GetCodeEditor()->GetChangeBarClickEvent()->Add(this, &CIDEContent::ChangeBarClicked);
-	pTab->GetCodeEditor()->GetGlyphClickEvent()->Add(this, &CIDEContent::GlyphClicked);
+	pTab->GetCodeEditor()->GetChangeBarClickEvent()->Add(&mpGitStatus, &CIDEGitStatus::ChangeBarClicked);
+	pTab->GetCodeEditor()->GetGlyphClickEvent()->Add(&mpDebugging, &CIDEDebugging::GlyphClicked);
 	pTab->GetEditor()->GetUndoEvent()->Add(&mpEdit, &CIDEEdit::EditorUndoChanged);
-	ShowBreakpoints(pTab);
-	ReadGitBase(pTab);
-	UpdateChangeBars(pTab);
+	mpDebugging->ShowBreakpoints(pTab);
+	mpGitStatus->ReadGitBase(pTab);
+	mpGitStatus->UpdateChangeBars(pTab);
 	pPane->SetTabFont(GetGitStateFont(mpFontColours, pTab->GetGitState()));
 	return pTab;
 }
@@ -1577,7 +1522,7 @@ bool CIDEContent::SaveFile(Ptr<CIDEEditorTab> pTab)
 	{
 		return gcLogger.Error2(__METHOD__, " Could not save [", pTab->GetFileName(), "].", NULL);
 	}
-	GitFileSaved(pTab->GetFileName());
+	mpGitStatus->GitFileSaved(pTab->GetFileName());
 	return true;
 }
 
@@ -1724,7 +1669,7 @@ void CIDEContent::CodeCommandAction(SComponentInputEvent* psEvent)
 	}
 	else
 	{
-		DebugCommandAction(psEvent->eCommand);
+		mpDebugging->DebugCommandAction(psEvent->eCommand);
 	}
 }
 
@@ -2005,7 +1950,7 @@ void CIDEContent::FinishBuildSteps(CArrayChars* paszLines)
 		muiBuildStep++;
 		if (muiBuildStep == maiBuildOrder.NumElements())
 		{
-			ReadLineTables();
+			mpDebugging->ReadLineTables();
 		}
 		else if (!StartBuildStep(paszLines))
 		{
@@ -2252,7 +2197,7 @@ void CIDEContent::ShowConfiguration(void)
 	szName.Kill();
 
 	//Its programs' line tables bind the source breakpoints.
-	ReadLineTables();
+	mpDebugging->ReadLineTables();
 }
 
 
@@ -2364,8 +2309,8 @@ void CIDEContent::Tick(Ptr<CWindow> pWindow)
 	int64				iSoonest;
 
 	PollBuild(pWindow);
-	PollDebugger(pWindow);
-	PollClaude(pWindow);
+	mpDebugging->PollDebugger(pWindow);
+	mpAskClaude->PollClaude(pWindow);
 	if (mpClaudePane.IsNotNull())
 	{
 		mpClaudePane->ScrollToEnd();
@@ -2373,23 +2318,23 @@ void CIDEContent::Tick(Ptr<CWindow> pWindow)
 
 	//The platform's clock: the window's total time only counts the time it spent updating.
 	iNow = GetDebugTickCount();
-	iSoonest = PollGit(iNow);
+	iSoonest = mpGitStatus->PollGit(iNow);
 	if ((muiQueuedChange != MAX_SIZE) && mpActive.IsNotNull() && (mpActive->GetEditor()->GetActualSize().x > 0))
 	{
-		if (ShowChange(mpActive, muiQueuedChange))
+		if (mpGitStatus->ShowChange(mpActive, muiQueuedChange))
 		{
 			if (miQueuedAction == 1)
 			{
-				RollbackChange();
+				mpGitStatus->RollbackChange();
 			}
 			else if (miQueuedAction == 2)
 			{
-				ShowChangeDiff();
+				mpGitStatus->ShowChangeDiff();
 			}
 		}
 		muiQueuedChange = MAX_SIZE;
 	}
-	iWait = PollDiffs(iNow);
+	iWait = mpDiffs->PollDiffs(iNow);
 	if ((iWait >= 0) && ((iSoonest < 0) || (iWait < iSoonest)))
 	{
 		iSoonest = iWait;
@@ -2399,7 +2344,7 @@ void CIDEContent::Tick(Ptr<CWindow> pWindow)
 		pTab = maTabs.Get(i);
 		if (pTab->NeedsChangeBars())
 		{
-			UpdateChangeBars(pTab);
+			mpGitStatus->UpdateChangeBars(pTab);
 		}
 		pTab->ShowModified();
 		if (pTab->NeedsRecolour(iNow, &iWait))
@@ -2433,14 +2378,14 @@ void CIDEContent::DocumentSelected(CDockPane* pcPane)
 		return;
 	}
 	pTab = FindTab(pcPane);
-	pDiff = FindDiffTab(pcPane);
+	pDiff = mpDiffs->FindDiffTab(pcPane);
 	if (pTab.IsNull() && pDiff.IsNull())
 	{
 		return;
 	}
 	mpActive = pTab;
 	mpActiveDiff = pDiff;
-	ShowBranch();
+	mpGitStatus->ShowBranch();
 }
 
 
@@ -2480,7 +2425,7 @@ void CIDEContent::PaneClosed(CDockPane* pcPane)
 	Ptr<CIDEEditorTab>	pTab;
 	Ptr<CIDEDiffTab>	pDiff;
 
-	pDiff = FindDiffTab(pcPane);
+	pDiff = mpDiffs->FindDiffTab(pcPane);
 	if (pDiff.IsNotNull())
 	{
 		if (mpActiveDiff == pDiff)
@@ -2503,10 +2448,10 @@ void CIDEContent::PaneClosed(CDockPane* pcPane)
 	}
 	if (mpChangeTab == pTab)
 	{
-		CloseChangePopup();
+		mpGitStatus->CloseChangePopup();
 	}
-	pTab->GetCodeEditor()->GetChangeBarClickEvent()->Remove(this);
-	pTab->GetCodeEditor()->GetGlyphClickEvent()->Remove(this);
+	pTab->GetCodeEditor()->GetChangeBarClickEvent()->Remove(&mpGitStatus);
+	pTab->GetCodeEditor()->GetGlyphClickEvent()->Remove(&mpDebugging);
 	pTab->GetEditor()->GetUndoEvent()->Remove(&mpEdit);
 	mpEdit->FileClosed(pTab->GetFileName());
 	maTabs.Remove(pTab);
@@ -3002,3 +2947,34 @@ void CIDEContent::EditorMenuOpening(CMenuContainer* pcMenu)
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEContent::SetKeepSettings(bool bKeep) { mbKeepSettings = bKeep; }
+Ptr<CIDEAskClaude> CIDEContent::GetAskClaude(void) { return mpAskClaude; }
+Ptr<CIDEDiffs> CIDEContent::GetDiffs(void) { return mpDiffs; }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The tab whose code editor is pcEditor, NULL if none.
+//
+//////////////////////////////////////////////////////////////////////////
+Ptr<CIDEEditorTab> CIDEContent::FindTab(CCodeEditor* pcEditor)
+{
+	size	i;
+
+	for (i = 0; i < maTabs.Size(); i++)
+	{
+		if (&maTabs.Get(i)->GetCodeEditor() == pcEditor)
+		{
+			return maTabs.Get(i);
+		}
+	}
+	return NULL;
+}
+Ptr<CIDEGitStatus> CIDEContent::GetGitStatus(void) { return mpGitStatus; }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::BuildClicked(void) { Build(); }  //The toolbar's Build button.
+Ptr<CIDEDebugging> CIDEContent::GetDebugging(void) { return mpDebugging; }

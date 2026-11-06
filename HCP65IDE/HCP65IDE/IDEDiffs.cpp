@@ -27,10 +27,55 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "StandardLib/Objects.h"
 #include "WindowLib/JewelColours.h"
 #include "IDEIcons.h"
+#include "StandardLib/ClassDefines.h"
 #include "IDEContent.h"
+#include "IDEDiffs.h"
 
 
 #define IDE_DIFF_DIALOG_WIDTH	360
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDiffs::Init(CIDEContent* pcContent)
+{
+	PreInit();
+	mpcContent = pcContent;
+	muiNextDiff = 0;
+	PostInit();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDiffs::Class(void)
+{
+	U_Pointer(mpcContent);
+	U_Size(muiNextDiff);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// An object's memory is freed without its destructor running, so it
+// takes itself off what it listens to.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDiffs::Free(void)
+{
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEDiffs::Save(CObjectWriter* pcFile) { return false; }
+bool CIDEDiffs::Load(CObjectReader* pcFile) { return false; }
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -40,7 +85,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 // last commit is all inserted.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEContent::CompareWithHead(void)
+bool CIDEDiffs::CompareWithHead(void)
 {
 	return CompareWithRevision("HEAD");
 }
@@ -53,7 +98,7 @@ bool CIDEContent::CompareWithHead(void)
 // right side's file.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEContent::CompareWithRevision(const char* szRevision)
+bool CIDEDiffs::CompareWithRevision(const char* szRevision)
 {
 	Ptr<CIDEEditorTab>	pTab;
 
@@ -72,7 +117,7 @@ bool CIDEContent::CompareWithRevision(const char* szRevision)
 // the right.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEContent::CompareWithFile(const char* szPath)
+bool CIDEDiffs::CompareWithFile(const char* szPath)
 {
 	Ptr<CIDEEditorTab>	pTab;
 	CChars				szFull;
@@ -97,7 +142,7 @@ bool CIDEContent::CompareWithFile(const char* szPath)
 // with, the branch checked out first.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEContent::ShowCompareWithBranchDialog(void)
+bool CIDEDiffs::ShowCompareWithBranchDialog(void)
 {
 	Ptr<CIDEEditorTab>	pTab;
 	CGitRepository*		pcRepository;
@@ -114,7 +159,7 @@ bool CIDEContent::ShowCompareWithBranchDialog(void)
 	{
 		return false;
 	}
-	pcRepository = mcGit.FindRepository(pTab->GetFileName());
+	pcRepository = mpcContent->mcGit.FindRepository(pTab->GetFileName());
 	if (pcRepository == NULL)
 	{
 		return gcLogger.Error2(__METHOD__, " [", pTab->GetFileName(), "] isn't in a git repository.", NULL);
@@ -139,13 +184,13 @@ bool CIDEContent::ShowCompareWithBranchDialog(void)
 
 	bResult = false;
 	szChosen.Init();
-	mpDialog = OMalloc<CDialog>(mpWindow, &msDialogLook, "Compare with Branch");
-	pcBox = &mpDialog->AddComboBox("Branch", aszItems, aszBranches.NumElements(), iSelected);
-	if (mpDialog->Show(IDE_DIFF_DIALOG_WIDTH) && (pcBox->GetSelectedText() != NULL))
+	mpcContent->mpDialog = OMalloc<CDialog>(mpcContent->mpWindow, &mpcContent->msDialogLook, "Compare with Branch");
+	pcBox = &mpcContent->mpDialog->AddComboBox("Branch", aszItems, aszBranches.NumElements(), iSelected);
+	if (mpcContent->mpDialog->Show(IDE_DIFF_DIALOG_WIDTH) && (pcBox->GetSelectedText() != NULL))
 	{
 		szChosen.Append(pcBox->GetSelectedText());
 	}
-	mpDialog = NULL;
+	mpcContent->mpDialog = NULL;
 	free(aszItems);
 	aszBranches.Kill();
 
@@ -163,7 +208,7 @@ bool CIDEContent::ShowCompareWithBranchDialog(void)
 // Asks for any revision git knows to compare the selected file with.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEContent::ShowCompareWithRevisionDialog(void)
+bool CIDEDiffs::ShowCompareWithRevisionDialog(void)
 {
 	CTextField*	pcField;
 	CChars		szChosen;
@@ -174,14 +219,14 @@ bool CIDEContent::ShowCompareWithRevisionDialog(void)
 		return false;
 	}
 	szChosen.Init();
-	mpDialog = OMalloc<CDialog>(mpWindow, &msDialogLook, "Compare with Revision");
-	pcField = &mpDialog->AddTextField("Revision", "HEAD~1");
-	if (mpDialog->Show(IDE_DIFF_DIALOG_WIDTH))
+	mpcContent->mpDialog = OMalloc<CDialog>(mpcContent->mpWindow, &mpcContent->msDialogLook, "Compare with Revision");
+	pcField = &mpcContent->mpDialog->AddTextField("Revision", "HEAD~1");
+	if (mpcContent->mpDialog->Show(IDE_DIFF_DIALOG_WIDTH))
 	{
 		szChosen.Append(pcField->GetText());
 		szChosen.StripWhitespace();
 	}
-	mpDialog = NULL;
+	mpcContent->mpDialog = NULL;
 
 	bResult = false;
 	if (!szChosen.Empty())
@@ -199,7 +244,7 @@ bool CIDEContent::ShowCompareWithRevisionDialog(void)
 // the selected file's folder.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEContent::ShowCompareWithFileDialog(void)
+bool CIDEDiffs::ShowCompareWithFileDialog(void)
 {
 	static SFileChooserType	asTypes[] =
 	{
@@ -216,12 +261,12 @@ bool CIDEContent::ShowCompareWithFileDialog(void)
 	}
 	bResult = false;
 	szChosen.Init();
-	mpFileChooser = OMalloc<CFileChooser>(mpWindow, &msDialogLook, "Compare with File", false, pTab->GetFileName(), asTypes, sizeof(asTypes) / sizeof(SFileChooserType), mpFolderIcon, mpFileIcon);
-	if (mpFileChooser->Show())
+	mpcContent->mpFileChooser = OMalloc<CFileChooser>(mpcContent->mpWindow, &mpcContent->msDialogLook, "Compare with File", false, pTab->GetFileName(), asTypes, sizeof(asTypes) / sizeof(SFileChooserType), mpcContent->mpFolderIcon, mpcContent->mpFileIcon);
+	if (mpcContent->mpFileChooser->Show())
 	{
-		szChosen.Append(mpFileChooser->GetChosen());
+		szChosen.Append(mpcContent->mpFileChooser->GetChosen());
 	}
-	mpFileChooser = NULL;
+	mpcContent->mpFileChooser = NULL;
 	if (!szChosen.Empty())
 	{
 		bResult = CompareWithFile(szChosen.Text());
@@ -238,7 +283,7 @@ bool CIDEContent::ShowCompareWithFileDialog(void)
 // highlighted as its file would be.  False if a side couldn't be read.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEContent::OpenDiff(const char* szLeftFile, const char* szLeftRevision, const char* szRightFile, const char* szRightRevision)
+bool CIDEDiffs::OpenDiff(const char* szLeftFile, const char* szLeftRevision, const char* szRightFile, const char* szRightRevision)
 {
 	Ptr<CDiffView>		pView;
 	Ptr<CIDEDiffTab>	pDiff;
@@ -254,13 +299,13 @@ bool CIDEContent::OpenDiff(const char* szLeftFile, const char* szLeftRevision, c
 	CFileUtil			cFileUtil;
 	bool				bResult;
 
-	pView = OMalloc<CDiffView>(mpWindow, mpTheme, mpFontColours->GetFont(JEWEL_ICON), mpCodeFamily);
+	pView = OMalloc<CDiffView>(mpcContent->mpWindow, mpcContent->mpTheme, mpcContent->mpFontColours->GetFont(JEWEL_ICON), mpcContent->mpCodeFamily);
 	pView->SetAlignment(CSH_Stretch, CSV_Stretch);
 	pView->GetEditor(TDS_Left)->GetTextArea()->SetTiledText(true);
 	pView->GetEditor(TDS_Left)->GetTextArea()->SetColour(JEWEL_TEXT);
 	pView->GetEditor(TDS_Right)->GetTextArea()->SetTiledText(true);
 	pView->GetEditor(TDS_Right)->GetTextArea()->SetColour(JEWEL_TEXT);
-	pDiff = OMalloc<CIDEDiffTab>(pView, szLeftFile, szLeftRevision, mpExplorer->FindFileProject(szLeftFile), szRightFile, szRightRevision, mpExplorer->FindFileProject(szRightFile));
+	pDiff = OMalloc<CIDEDiffTab>(pView, szLeftFile, szLeftRevision, mpcContent->mpExplorer->FindFileProject(szLeftFile), szRightFile, szRightRevision, mpcContent->mpExplorer->FindFileProject(szRightFile));
 	pcLeft = pDiff->GetSide(TDS_Left);
 	pcRight = pDiff->GetSide(TDS_Right);
 
@@ -294,16 +339,16 @@ bool CIDEContent::OpenDiff(const char* szLeftFile, const char* szLeftRevision, c
 			szTabTitle.Append(" vs. ");
 			szTabTitle.Append(szRightTitle);
 		}
-		maDiffTabs.Add(pDiff);
+		mpcContent->maDiffTabs.Add(pDiff);
 		szID.Init(IDE_DIFF_PREFIX);
 		szID.Append((uint64)muiNextDiff);
 		muiNextDiff++;
-		pPane = mpDock->AddPane(szID.Text(), szTabTitle.Text(), maFileIcons.Get(CIDEIcons::GetFileType(szRightFile)), pView, DPK_Document);
+		pPane = mpcContent->mpDock->AddPane(szID.Text(), szTabTitle.Text(), mpcContent->maFileIcons.Get(CIDEIcons::GetFileType(szRightFile)), pView, DPK_Document);
 		szID.Kill();
 		pDiff->SetDockPane(pPane);
-		mpDock->Show(pPane);
-		mpActiveDiff = pDiff;
-		mpActive = NULL;
+		mpcContent->mpDock->Show(pPane);
+		mpcContent->mpActiveDiff = pDiff;
+		mpcContent->mpActive = NULL;
 		pView->GetWindow()->GetFocus()->SetFocus(pView->GetEditor(TDS_Right)->GetTextArea());
 		szTabTitle.Kill();
 		szRightTitle.Kill();
@@ -323,7 +368,7 @@ bool CIDEContent::OpenDiff(const char* szLeftFile, const char* szLeftRevision, c
 // the text couldn't be read.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEContent::ReadDiffSide(CIDEDiffSide* pcSide, CChars* pszDest)
+bool CIDEDiffs::ReadDiffSide(CIDEDiffSide* pcSide, CChars* pszDest)
 {
 	CGitRepository*		pcRepository;
 	Ptr<CIDEEditorTab>	pTab;
@@ -334,7 +379,7 @@ bool CIDEContent::ReadDiffSide(CIDEDiffSide* pcSide, CChars* pszDest)
 	pszDest->Clear();
 	if (!pcSide->IsWorkingCopy())
 	{
-		pcRepository = mcGit.FindRepository(pcSide->mszFile.Text());
+		pcRepository = mpcContent->mcGit.FindRepository(pcSide->mszFile.Text());
 		if (pcRepository == NULL)
 		{
 			return gcLogger.Error2(__METHOD__, " [", pcSide->mszFile.Text(), "] isn't in a git repository.", NULL);
@@ -352,7 +397,7 @@ bool CIDEContent::ReadDiffSide(CIDEDiffSide* pcSide, CChars* pszDest)
 		return gcLogger.Error2(__METHOD__, " [", pcSide->mszFile.Text(), "] isn't in [", pcSide->mszRevision.Text(), "].", NULL);
 	}
 
-	pTab = FindTab(pcSide->mszFile.Text());
+	pTab = mpcContent->FindTab(pcSide->mszFile.Text());
 	if (pTab.IsNotNull())
 	{
 		pszDest->Append(pTab->GetEditor()->GetText());
@@ -381,7 +426,7 @@ bool CIDEContent::ReadDiffSide(CIDEDiffSide* pcSide, CChars* pszDest)
 // when the other side is the same file at a revision.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEContent::MakeDiffTitle(CIDEDiffSide* pcSide, CIDEDiffSide* pcOther, CChars* pszDest)
+void CIDEDiffs::MakeDiffTitle(CIDEDiffSide* pcSide, CIDEDiffSide* pcOther, CChars* pszDest)
 {
 	CFileUtil	cFileUtil;
 
@@ -405,7 +450,7 @@ void CIDEContent::MakeDiffTitle(CIDEDiffSide* pcSide, CIDEDiffSide* pcOther, CCh
 // scrolled.  A side whose text changed is highlighted again.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEContent::RefreshDiff(Ptr<CIDEDiffTab> pDiff)
+void CIDEDiffs::RefreshDiff(Ptr<CIDEDiffTab> pDiff)
 {
 	Ptr<CDiffView>	pView;
 	CIDEDiffSide*	pcLeft;
@@ -450,7 +495,7 @@ void CIDEContent::RefreshDiff(Ptr<CIDEDiffTab> pDiff)
 // for none.
 //
 //////////////////////////////////////////////////////////////////////////
-int64 CIDEContent::PollDiffs(int64 iNow)
+int64 CIDEDiffs::PollDiffs(int64 iNow)
 {
 	size				i;
 	int					iSide;
@@ -461,15 +506,15 @@ int64 CIDEContent::PollDiffs(int64 iNow)
 	int64				iSoonest;
 
 	iSoonest = -1;
-	for (i = 0; i < maDiffTabs.Size(); i++)
+	for (i = 0; i < mpcContent->maDiffTabs.Size(); i++)
 	{
-		pDiff = maDiffTabs.Get(i);
+		pDiff = mpcContent->maDiffTabs.Get(i);
 		for (iSide = 0; iSide < 2; iSide++)
 		{
 			pcSide = pDiff->GetSide((ETextDiffSide)iSide);
 			if (pcSide->IsWorkingCopy())
 			{
-				pTab = FindTab(pcSide->mszFile.Text());
+				pTab = mpcContent->FindTab(pcSide->mszFile.Text());
 				if (pTab.IsNotNull() && (pTab->GetEditor()->GetChangeCount() != pcSide->muiSeenChanges))
 				{
 					pcSide->muiSeenChanges = pTab->GetEditor()->GetChangeCount();
@@ -496,7 +541,7 @@ int64 CIDEContent::PollDiffs(int64 iNow)
 // last commit has changed since (a commit, a checkout).
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEContent::RefreshMovedDiffs(void)
+void CIDEDiffs::RefreshMovedDiffs(void)
 {
 	size				i;
 	int					iSide;
@@ -505,16 +550,16 @@ void CIDEContent::RefreshMovedDiffs(void)
 	CGitRepository*		pcRepository;
 	bool				bMoved;
 
-	for (i = 0; i < maDiffTabs.Size(); i++)
+	for (i = 0; i < mpcContent->maDiffTabs.Size(); i++)
 	{
-		pDiff = maDiffTabs.Get(i);
+		pDiff = mpcContent->maDiffTabs.Get(i);
 		bMoved = false;
 		for (iSide = 0; iSide < 2; iSide++)
 		{
 			pcSide = pDiff->GetSide((ETextDiffSide)iSide);
 			if (!pcSide->IsWorkingCopy())
 			{
-				pcRepository = mcGit.FindRepository(pcSide->mszFile.Text());
+				pcRepository = mpcContent->mcGit.FindRepository(pcSide->mszFile.Text());
 				if (pcRepository && !pcSide->mszHead.Equals(pcRepository->GetStatus()->GetHead()))
 				{
 					bMoved = true;
@@ -536,7 +581,7 @@ void CIDEContent::RefreshMovedDiffs(void)
 // files of a project are highlighted, as in the editor.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEContent::HighlightDiffSide(Ptr<CDiffView> pView, ETextDiffSide eSide, size uiProject, const char* szFileName, const char* szText)
+void CIDEDiffs::HighlightDiffSide(Ptr<CDiffView> pView, ETextDiffSide eSide, size uiProject, const char* szFileName, const char* szText)
 {
 	CArrayHighlights	acHighlights;
 	CChars				szErrors;
@@ -547,7 +592,7 @@ void CIDEContent::HighlightDiffSide(Ptr<CDiffView> pView, ETextDiffSide eSide, s
 	}
 	acHighlights.Init();
 	szErrors.Init();
-	if (mcCodeModel.Highlight(uiProject, szFileName, szText, &acHighlights, &szErrors))
+	if (mpcContent->mcCodeModel.Highlight(uiProject, szFileName, szText, &acHighlights, &szErrors))
 	{
 		ApplyIDEHighlights(pView->GetEditor(eSide)->GetTextArea(), &acHighlights);
 	}
@@ -562,15 +607,15 @@ void CIDEContent::HighlightDiffSide(Ptr<CDiffView> pView, ETextDiffSide eSide, s
 // of the selected diff if it is open.
 //
 //////////////////////////////////////////////////////////////////////////
-Ptr<CIDEEditorTab> CIDEContent::GetComparedTab(void)
+Ptr<CIDEEditorTab> CIDEDiffs::GetComparedTab(void)
 {
-	if (mpActive.IsNotNull())
+	if (mpcContent->mpActive.IsNotNull())
 	{
-		return mpActive;
+		return mpcContent->mpActive;
 	}
-	if (mpActiveDiff.IsNotNull())
+	if (mpcContent->mpActiveDiff.IsNotNull())
 	{
-		return FindTab(mpActiveDiff->GetSide(TDS_Right)->mszFile.Text());
+		return mpcContent->FindTab(mpcContent->mpActiveDiff->GetSide(TDS_Right)->mszFile.Text());
 	}
 	return NULL;
 }
@@ -581,20 +626,20 @@ Ptr<CIDEEditorTab> CIDEContent::GetComparedTab(void)
 // The diff shown in the document pane, NULL if it shows something else.
 //
 //////////////////////////////////////////////////////////////////////////
-Ptr<CIDEDiffTab> CIDEContent::FindDiffTab(CDockPane* pcPane)
+Ptr<CIDEDiffTab> CIDEDiffs::FindDiffTab(CDockPane* pcPane)
 {
 	size	i;
 
-	for (i = 0; i < maDiffTabs.Size(); i++)
+	for (i = 0; i < mpcContent->maDiffTabs.Size(); i++)
 	{
-		if (&maDiffTabs.Get(i)->GetDockPane() == pcPane)
+		if (&mpcContent->maDiffTabs.Get(i)->GetDockPane() == pcPane)
 		{
-			return maDiffTabs.Get(i);
+			return mpcContent->maDiffTabs.Get(i);
 		}
 	}
 	return NULL;
 }
 
 
-Ptr<CIDEDiffTab> CIDEContent::GetActiveDiff(void) { return mpActiveDiff; }
+Ptr<CIDEDiffTab> CIDEDiffs::GetActiveDiff(void) { return mpcContent->mpActiveDiff; }
 

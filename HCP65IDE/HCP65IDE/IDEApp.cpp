@@ -235,7 +235,7 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 	{
 		//The HCP65 repository is beside the IDE's.
 		mpContent->SetLibc65Directory("../../../HCP65/Libraries/Libc65");
-		mpContent->SetDefaultEmulator((getenv("HCP65_IDE_EMULATOR") != NULL) ? getenv("HCP65_IDE_EMULATOR") : IDE_EMULATOR, IDE_EMULATOR_DIRECTORY);
+		mpContent->GetDebugging()->SetDefaultEmulator((getenv("HCP65_IDE_EMULATOR") != NULL) ? getenv("HCP65_IDE_EMULATOR") : IDE_EMULATOR, IDE_EMULATOR_DIRECTORY);
 		GetIDERecentFile(&szPath);
 		mpContent->SetRecentFile(szPath.Text());
 		szPath.Kill();
@@ -372,7 +372,7 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 				//The change at the line (from 1) shown, as clicking its change bar does; ",rollback" or ",diff" then
 				//presses its button.
 				szCompare = getenv("HCP65_IDE_CHANGE");
-				mpContent->QueueChange((size)(atoi(szCompare) - 1), (strstr(szCompare, ",rollback") != NULL) ? 1 : ((strstr(szCompare, ",diff") != NULL) ? 2 : 0));
+				mpContent->GetGitStatus()->QueueChange((size)(atoi(szCompare) - 1), (strstr(szCompare, ",rollback") != NULL) ? 1 : ((strstr(szCompare, ",diff") != NULL) ? 2 : 0));
 			}
 			if (getenv("HCP65_IDE_SAVE") != NULL)
 			{
@@ -386,20 +386,20 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 				szCompare = getenv("HCP65_IDE_COMPARE");
 				if (strncmp(szCompare, "revision:", 9) == 0)
 				{
-					mpContent->CompareWithRevision(&szCompare[9]);
+					mpContent->GetDiffs()->CompareWithRevision(&szCompare[9]);
 				}
 				else if (strncmp(szCompare, "file:", 5) == 0)
 				{
-					mpContent->CompareWithFile(&szCompare[5]);
+					mpContent->GetDiffs()->CompareWithFile(&szCompare[5]);
 				}
 				else
 				{
-					mpContent->CompareWithHead();
+					mpContent->GetDiffs()->CompareWithHead();
 				}
 
 				//HCP65_IDE_TYPE_AFTER's text typed into the compared file's editor, then the diff selected again: the
 				//diff follows the edit.
-				pDiff = mpContent->GetActiveDiff();
+				pDiff = mpContent->GetDiffs()->GetActiveDiff();
 				if ((getenv("HCP65_IDE_TYPE_AFTER") != NULL) && pDiff.IsNotNull())
 				{
 					mpContent->OpenFile(pDiff->GetSide(TDS_Right)->mszFile.Text());
@@ -440,16 +440,16 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 			}
 			if (getenv("HCP65_IDE_ATTACH") != NULL)
 			{
-				mpContent->AttachDebugger(atoi(getenv("HCP65_IDE_ATTACH")));
+				mpContent->GetDebugging()->AttachDebugger(atoi(getenv("HCP65_IDE_ATTACH")));
 			}
 			if (getenv("HCP65_IDE_DEBUG") != NULL)
 			{
-				mpContent->SetDebugScript(getenv("HCP65_IDE_DEBUG"));
+				mpContent->GetDebugging()->SetDebugScript(getenv("HCP65_IDE_DEBUG"));
 			}
 			if (getenv("HCP65_IDE_CLAUDE") != NULL)
 			{
 				//As typed in the Claude tab and sent, from where the caret and selection are.
-				mpContent->AskClaude(getenv("HCP65_IDE_CLAUDE"));
+				mpContent->GetAskClaude()->AskClaude(getenv("HCP65_IDE_CLAUDE"));
 			}
 		}
 
@@ -546,7 +546,7 @@ bool CIDEApp::Run(void)
 		mpContent->RememberOpenSolution();
 
 		//The emulator is quit while nothing is being freed: as its window goes Windows activates this one.
-		mpContent->StopDebugging();
+		mpContent->GetDebugging()->StopDebugging();
 	}
 
 	if (mbInputs)
