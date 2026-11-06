@@ -138,7 +138,10 @@ void MakeRelativePath(const char* szDirectory, const char* szPath, CChars* pszDe
 
 //////////////////////////////////////////////////////////////////////////
 //
-// szPath made full: relative to szDirectory unless it is absolute.
+// szPath made full: relative to szDirectory unless it is absolute.  Its
+// separators are made this OS's first: the files are written on either
+// (a <Load> is "..\Kernel\k.rom"), and FullPath doesn't change an
+// absolute path's.
 //
 //////////////////////////////////////////////////////////////////////////
 static void FullPathFrom(const char* szDirectory, const char* szPath, CChars* pszDest)
@@ -154,6 +157,7 @@ static void FullPathFrom(const char* szDirectory, const char* szPath, CChars* ps
 		pszDest->Set(szDirectory);
 		cFileUtil.AppendToPath(pszDest, szPath);
 	}
+	cFileUtil.FixSeparators(pszDest);
 	cFileUtil.FullPath(pszDest);
 }
 
