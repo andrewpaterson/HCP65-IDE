@@ -22,3 +22,4 @@ Log.txt
 /Tests/*/*/Output/
 /Tests/*/*/Post/
 *.layout.user
+*.hcp65workspace
