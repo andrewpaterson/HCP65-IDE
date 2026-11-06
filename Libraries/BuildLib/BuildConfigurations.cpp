@@ -26,7 +26,6 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 
 
 #define BUILD_CONFIGURATIONS_TAG		"BuildConfigurations"
-#define BUILD_CONFIGURATIONS_EXTENSION	".hcp65build"
 
 
 //////////////////////////////////////////////////////////////////////////

@@ -26,6 +26,9 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 #include "BuildConfiguration.h"
 
 
+#define BUILD_CONFIGURATIONS_EXTENSION	".hcp65build"
+
+
 typedef CArrayTemplate<CBuildConfiguration>	CArrayBuildConfigurations;
 
 
