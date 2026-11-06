@@ -18,6 +18,8 @@ You should have received a copy of the GNU Affero General Public License
 along with Codaphela VisualStudioLib.  If not, see <http://www.gnu.org/licenses/>.
 
 ** ------------------------------------------------------------------------ **/
+#include <string.h>
+#include "BaseLib/WindowsHeaders.h"
 #include "BaseLib/FileUtil.h"
 #include "BaseLib/ArrayChars.h"
 #include "VcxPath.h"
@@ -52,12 +54,68 @@ bool ResolveVcxPath(const char* szDirectory, const char* szRelative, CChars* psz
 }
 
 
+#ifdef _WIN32
+//////////////////////////////////////////////////////////////////////////
+//
+// The existing full path pszPath changed to the case of its files and
+// directories on disk (Windows finds them in any case, but shows them in
+// theirs).  The drive is left as it is.
+//
+//////////////////////////////////////////////////////////////////////////
+static void VcxPathDiskCase(CChars* pszPath)
+{
+	CFileUtil			cFileUtil;
+	CArrayChars			aszComponents;
+	CChars				szFound;
+	CChars				szName;
+	WIN32_FIND_DATA		sFindData;
+	HANDLE				hFind;
+	const char*			szComponent;
+	size				i;
+
+	aszComponents.Init();
+	cFileUtil.SplitPath(pszPath->Text(), &aszComponents);
+	if (aszComponents.NumElements() == 0)
+	{
+		aszComponents.Kill();
+		return;
+	}
+
+	szFound.Init(aszComponents.GetText(0));
+	for (i = 1; i < aszComponents.NumElements(); i++)
+	{
+		szComponent = aszComponents.GetText(i);
+		szName.Init(szFound);
+		cFileUtil.AppendToPath(&szName, szComponent);
+		hFind = INVALID_HANDLE_VALUE;
+		if ((strchr(szComponent, '*') == NULL) && (strchr(szComponent, '?') == NULL))
+		{
+			hFind = FindFirstFile(szName.Text(), &sFindData);
+		}
+		if (hFind != INVALID_HANDLE_VALUE)
+		{
+			FindClose(hFind);
+			cFileUtil.AppendToPath(&szFound, sFindData.cFileName);
+		}
+		else
+		{
+			szFound.Set(szName);
+		}
+		szName.Kill();
+	}
+	pszPath->Set(szFound);
+	szFound.Kill();
+	aszComponents.Kill();
+}
+#endif // _WIN32
+
+
 //////////////////////////////////////////////////////////////////////////
 //
 // Changes the full path pszPath to the case of the file or directory on
-// disk when it only exists in another case.  Windows doesn't need it;
-// Linux file names are case sensitive.  False (and pszPath unchanged) if
-// there is no such file in any case.
+// disk when it only exists in another case.  Windows finds it in any case
+// (its case on disk is looked up); Linux file names are case sensitive.
+// False (and pszPath unchanged) if there is no such file in any case.
 //
 //////////////////////////////////////////////////////////////////////////
 bool FindVcxPathCaseInsensitive(CChars* pszPath)
@@ -75,6 +133,9 @@ bool FindVcxPathCaseInsensitive(CChars* pszPath)
 
 	if (cFileUtil.Exists(pszPath->Text()))
 	{
+#ifdef _WIN32
+		VcxPathDiskCase(pszPath);
+#endif // _WIN32
 		return true;
 	}
 
