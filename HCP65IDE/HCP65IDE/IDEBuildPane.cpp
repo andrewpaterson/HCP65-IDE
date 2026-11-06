@@ -18,6 +18,7 @@ You should have received a copy of the GNU Affero General Public License
 along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 ** ------------------------------------------------------------------------ **/
+#include <string.h>
 #include "StandardLib/Objects.h"
 #include "StandardLib/ClassDefines.h"
 #include "WindowLib/JewelColours.h"
@@ -126,18 +127,24 @@ void CIDEBuildPane::SetProgress(float fFraction, ARGB32 sColour)
 //////////////////////////////////////////////////////////////////////////
 //
 // The lines go after the output there is, together so the text is laid
-// out once, and the end of the output is scrolled into view.
+// out once.  A caret at the end of the output (with nothing selected)
+// follows it, scrolling the end into view; one put anywhere else stays
+// where it is, so the output can be read while the build goes on.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEBuildPane::AppendLines(CArrayChars* paszLines)
 {
 	CChars	szText;
 	size	i;
+	size	uiStart;
+	size	uiEnd;
+	bool	bFollow;
 
 	if (paszLines->NumElements() == 0)
 	{
 		return;
 	}
+	bFollow = (mpOutput->GetCaretPosition() == strlen(mpOutput->GetText())) && !mpOutput->GetSelection(&uiStart, &uiEnd);
 
 	szText.Init();
 	for (i = 0; i < paszLines->NumElements(); i++)
@@ -150,7 +157,10 @@ void CIDEBuildPane::AppendLines(CArrayChars* paszLines)
 	}
 	mpOutput->AppendText(szText.Text(), mpOutput->GetColour());
 	szText.Kill();
-	mpOutput->DocumentEnd();
+	if (bFollow)
+	{
+		mpOutput->DocumentEnd();
+	}
 }
 
 
