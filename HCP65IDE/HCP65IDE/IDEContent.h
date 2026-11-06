@@ -376,6 +376,7 @@ public:
 	void				GoToSearch(size uiTab, CNameMatcher* pcMatcher, CGoToItems* pcDest) override;
 	bool				ShowGoTo(size uiTab);
 	void				QueueGoTo(size uiTab);
+	bool				ShowActiveFileInExplorer(void);
 	bool				CreateGoTo(size uiTab);
 	bool				OpenGoToChoice(void);
 	Ptr<CGoToDialog>	GetGoTo(void);

@@ -628,6 +628,50 @@ size CSolutionExplorer::FindFileProject(const char* szPath)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// The node of the file at szPath (any path to it): the one in project
+// uiProject if it has it, as a file shared by solutions is in each, else
+// the first.  TREE_NO_NODE if none is.
+//
+//////////////////////////////////////////////////////////////////////////
+int32 CSolutionExplorer::FindFilePathNode(const char* szPath, size uiProject)
+{
+	int32	iNode;
+	int32	iFound;
+	CChars	szWanted;
+	CChars	szNodePath;
+
+	szWanted.Init(szPath);
+	MakeFullGitPath(&szWanted);
+	iFound = TREE_NO_NODE;
+	szNodePath.Init();
+	for (iNode = 0; iNode < mpTree->NumNodes(); iNode++)
+	{
+		szNodePath.Clear();
+		if ((GetNode(iNode)->eType == SENT_File) && GetNodeFilePath(iNode, &szNodePath))
+		{
+			MakeFullGitPath(&szNodePath);
+			if (IsGitPathIn(szNodePath.Text(), szWanted.Text()) && (szNodePath.Length() == szWanted.Length()))
+			{
+				if (GetNodeProject(iNode) == uiProject)
+				{
+					iFound = iNode;
+					break;
+				}
+				if (iFound == TREE_NO_NODE)
+				{
+					iFound = iNode;
+				}
+			}
+		}
+	}
+	szNodePath.Kill();
+	szWanted.Kill();
+	return iFound;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 //
 //////////////////////////////////////////////////////////////////////////
 bool CSolutionExplorer::GetSelectedFilePath(CChars* pszDest)

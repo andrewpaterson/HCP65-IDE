@@ -283,8 +283,8 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 			if (getenv("HCP65_IDE_EDIT") != NULL)
 			{
 				//A comma separated list of edits: open:<file>, type:<text>, undo, redo (Edit, Undo and Redo),
-				//undoall, redoall (Edit, Undo and Redo Across Files), group and endgroup (the edits between as one)
-				//and menu (Edit opened).  What each open file's caret line then is is printed.
+				//undoall, redoall (Edit, Undo and Redo Across Files), group and endgroup (the edits between as one),
+				//menu (Edit opened) and explorer (Alt+1, the active file selected in Solution Explorer).  What each open file's caret line then is is printed.
 				aszOpen.Init();
 				aszOpen.Split(getenv("HCP65_IDE_EDIT"), ',');
 				for (i = 0; i < aszOpen.NumElements(); i++)
@@ -576,6 +576,10 @@ void CIDEApp::EditScripted(const char* szStep)
 	else if ((strcmp(szStep, "redo") == 0) && pTab.IsNotNull())
 	{
 		pTab->GetEditor()->Redo();
+	}
+	else if (strcmp(szStep, "explorer") == 0)
+	{
+		mpContent->ShowActiveFileInExplorer();
 	}
 	else if (strcmp(szStep, "undoall") == 0)
 	{

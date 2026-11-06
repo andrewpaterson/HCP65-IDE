@@ -56,7 +56,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 //Go to Definition (F12), Find All References (Shift+F12), Build (Control+Shift+B) and the debugger's keys from anywhere in the window.
-static EComponentInputCommand	gaeIDECodeCommands[] = { CIC_Save, CIC_SaveAll, CIC_GoToDefinition, CIC_FindReferences, CIC_GoToClass, CIC_GoToFile, CIC_GoToSymbol, CIC_Build, CIC_StartDebugging, CIC_StopDebugging, CIC_RestartDebugging,
+static EComponentInputCommand	gaeIDECodeCommands[] = { CIC_Save, CIC_SaveAll, CIC_GoToDefinition, CIC_FindReferences, CIC_GoToClass, CIC_GoToFile, CIC_GoToSymbol, CIC_ShowProjectView, CIC_Build, CIC_StartDebugging, CIC_StopDebugging, CIC_RestartDebugging,
 														 CIC_BreakAll, CIC_ToggleBreakpoint, CIC_StepOver, CIC_StepInto, CIC_StepOut };
 
 
@@ -1660,6 +1660,10 @@ void CIDEContent::CodeCommandAction(SComponentInputEvent* psEvent)
 	{
 		QueueGoTo(IDE_GO_TO_FILE);
 	}
+	else if (psEvent->eCommand == CIC_ShowProjectView)
+	{
+		ShowActiveFileInExplorer();
+	}
 	else if (psEvent->eCommand == CIC_GoToSymbol)
 	{
 		QueueGoTo(IDE_GO_TO_SYMBOL);
@@ -1680,6 +1684,47 @@ void CIDEContent::CodeCommandAction(SComponentInputEvent* psEvent)
 	{
 		DebugCommandAction(psEvent->eCommand);
 	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Alt+1, as IntelliJ's: Solution Explorer is shown with the active file
+// selected, its folders opened and the row scrolled into view, and has
+// the keys.  From Solution Explorer it gives the keys back to the editor.
+// False if there is no file to show.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEContent::ShowActiveFileInExplorer(void)
+{
+	Ptr<CTreeContainer>	pTree;
+	int32				iNode;
+
+	pTree = mpExplorer->GetTree();
+	if (mpWindow->GetFocus()->GetFocussedComponent() == pTree)
+	{
+		if (mpActive.IsNotNull())
+		{
+			mpWindow->GetFocus()->SetFocus(mpActive->GetEditor());
+		}
+		return true;
+	}
+
+	mpDock->Activate(mpExplorerTool);
+	if (mpActive.IsNull())
+	{
+		mpWindow->GetFocus()->SetFocus(pTree);
+		return false;
+	}
+	iNode = mpExplorer->FindFilePathNode(mpActive->GetFileName(), mpActive->GetProject());
+	if (iNode != TREE_NO_NODE)
+	{
+		pTree->SelectNode(iNode);
+		mpWindow->Layout();
+		pTree->ShowRow(pTree->FindNodeRow(iNode));
+	}
+	mpWindow->GetFocus()->SetFocus(pTree);
+	return iNode != TREE_NO_NODE;
 }
 
 
