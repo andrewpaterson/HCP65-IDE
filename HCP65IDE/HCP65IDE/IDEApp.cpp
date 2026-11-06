@@ -181,7 +181,8 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 			//As File, Recent Solutions: the one of that number (0 the latest), opened at the first tick.
 			mpContent->OpenRecentSolution((size)atoi(getenv("HCP65_IDE_RECENT_OPEN")));
 		}
-		if (mpContent->OpenSolutions(paszSolutions))
+		//With no solution named, the one open when the IDE was last closed.
+		if (mpContent->OpenSolutions(paszSolutions) || ((paszSolutions->NumElements() == 0) && (getenv("HCP65_IDE_RECENT_OPEN") == NULL) && mpContent->OpenLastSolution()))
 		{
 			if (getenv("HCP65_IDE_ADD") != NULL)
 			{
@@ -448,6 +449,7 @@ bool CIDEApp::Run(void)
 		if (getenv("HCP65_IDE_SNAPSHOT") == NULL)
 		{
 			mpContent->SaveLayout();
+			mpContent->RememberOpenSolution();
 		}
 
 		//The emulator is quit while nothing is being freed: as its window goes Windows activates this one.

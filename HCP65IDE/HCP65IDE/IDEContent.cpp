@@ -242,6 +242,7 @@ void CIDEContent::Class(void)
 	M_Pointer(mpCompareBranchItem);
 	M_Pointer(mpCompareRevisionItem);
 	M_Pointer(mpCompareFileItem);
+	M_Pointer(mpExitItem);
 	M_Pointer(mpExplorerItem);
 	M_Pointer(mpReferencesItem);
 	M_Pointer(mpBuildItem);
@@ -576,7 +577,8 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 //////////////////////////////////////////////////////////////////////////
 //
 // File, with Open Project/Solution, Add Solution, Close Solution, Recent
-// Solutions, Clear Recent Solutions, Save, Save All and Compare with File;
+// Solutions, Clear Recent Solutions, Save, Save All, Compare with File and
+// Exit;
 // View, showing the tool windows; Git, with Compare with HEAD, a branch
 // or a revision; Debug; and Window, with Reset Window Layout and Close
 // All Documents, as in Visual Studio.
@@ -600,6 +602,8 @@ Ptr<CMenuBar> CIDEContent::CreateMenuBar(void)
 	mpSaveItem = pFile->AddItem("Save");
 	mpSaveAllItem = pFile->AddItem("Save All");
 	mpCompareFileItem = pFile->AddItem("Compare with File...");
+	pFile->AddSeparator();
+	mpExitItem = pFile->AddItem("Exit");
 
 	mpMenuBar = OMalloc<CMenuBar>(mpWindow, mpTheme);
 	pGit = OMalloc<CMenuContainer>(mpWindow, mpTheme);
@@ -701,6 +705,11 @@ void CIDEContent::MenuItemClicked(CMenuItem* pcItem)
 	else if (pcItem == &mpCompareFileItem)
 	{
 		ShowCompareWithFileDialog();
+	}
+	else if (pcItem == &mpExitItem)
+	{
+		//As the window's close button: the window stops, and the application saves what it keeps as it ends.
+		mpWindow->Stop();
 	}
 	else if (pcItem == &mpExplorerItem)
 	{
@@ -954,6 +963,53 @@ bool CIDEContent::RemoveSolution(size uiSolution)
 	mcWorkspace.RemoveSolution(uiSolution);
 	WorkspaceChanged(true);
 	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Opens the solution (or workspace) that was open when the IDE was last
+// closed, as the IDE starts with none named.  False if none was, or it
+// isn't there any more.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEContent::OpenLastSolution(void)
+{
+	CFileUtil	cFileUtil;
+	CChars		szFile;
+	bool		bResult;
+
+	szFile.Init(mcRecent.GetOpen());
+	bResult = !szFile.Empty() && cFileUtil.Exists(szFile.Text()) && OpenSolution(szFile.Text());
+	szFile.Kill();
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// As the IDE closes: the workspace (or the solution) open is kept with the
+// recent solutions, to be opened again next time (OpenLastSolution), or
+// that none was.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::RememberOpenSolution(void)
+{
+	CFileUtil	cFileUtil;
+	CChars		szFile;
+
+	szFile.Init();
+	if (IsSolutionOpen() && GetSettingsBaseFile(&szFile))
+	{
+		cFileUtil.FullPath(&szFile);
+	}
+	else
+	{
+		szFile.Clear();
+	}
+	mcRecent.SetOpen(szFile.Text());
+	szFile.Kill();
+	WriteRecent();
 }
 
 

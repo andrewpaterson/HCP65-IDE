@@ -117,6 +117,7 @@ protected:
 	Ptr<CMenuItem>				mpCompareBranchItem;	//Git, Compare with Branch.
 	Ptr<CMenuItem>				mpCompareRevisionItem;	//Git, Compare with Revision.
 	Ptr<CMenuItem>				mpCompareFileItem;	//File, Compare with File.
+	Ptr<CMenuItem>				mpExitItem;			//File, Exit.
 	Ptr<CMenuItem>				mpExplorerItem;		//View's tool windows.
 	Ptr<CMenuItem>				mpReferencesItem;
 	Ptr<CMenuItem>				mpBuildItem;
@@ -220,6 +221,8 @@ public:
 	bool			RemoveSolution(size uiSolution);
 	bool			CloseSolution(size uiSolution);
 	bool			CloseSelectedSolution(void);
+	bool			OpenLastSolution(void);
+	void			RememberOpenSolution(void);
 	bool			IsSolutionFile(size uiSolution, size uiProject);
 	bool			SetStartupSolution(size uiSolution);
 	bool			ShowOpenSolutionDialog(void);
