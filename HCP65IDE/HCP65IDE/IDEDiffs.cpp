@@ -43,6 +43,8 @@ void CIDEDiffs::Init(CIDEContent* pcContent)
 {
 	PreInit();
 	mpcContent = pcContent;
+	maDiffTabs.Init();
+	mpActiveDiff = NULL;
 	muiNextDiff = 0;
 	PostInit();
 }
@@ -55,6 +57,8 @@ void CIDEDiffs::Init(CIDEContent* pcContent)
 void CIDEDiffs::Class(void)
 {
 	U_Pointer(mpcContent);
+	M_Embedded(maDiffTabs);
+	M_Pointer(mpActiveDiff);
 	U_Size(muiNextDiff);
 }
 
@@ -339,7 +343,7 @@ bool CIDEDiffs::OpenDiff(const char* szLeftFile, const char* szLeftRevision, con
 			szTabTitle.Append(" vs. ");
 			szTabTitle.Append(szRightTitle);
 		}
-		mpcContent->maDiffTabs.Add(pDiff);
+		maDiffTabs.Add(pDiff);
 		szID.Init(IDE_DIFF_PREFIX);
 		szID.Append((uint64)muiNextDiff);
 		muiNextDiff++;
@@ -347,7 +351,7 @@ bool CIDEDiffs::OpenDiff(const char* szLeftFile, const char* szLeftRevision, con
 		szID.Kill();
 		pDiff->SetDockPane(pPane);
 		mpcContent->mpDock->Show(pPane);
-		mpcContent->mpActiveDiff = pDiff;
+		mpActiveDiff = pDiff;
 		mpcContent->mpDocuments->SetActiveTab(NULL);
 		pView->GetWindow()->GetFocus()->SetFocus(pView->GetEditor(TDS_Right)->GetTextArea());
 		szTabTitle.Kill();
@@ -506,9 +510,9 @@ int64 CIDEDiffs::PollDiffs(int64 iNow)
 	int64				iSoonest;
 
 	iSoonest = -1;
-	for (i = 0; i < mpcContent->maDiffTabs.Size(); i++)
+	for (i = 0; i < maDiffTabs.Size(); i++)
 	{
-		pDiff = mpcContent->maDiffTabs.Get(i);
+		pDiff = maDiffTabs.Get(i);
 		for (iSide = 0; iSide < 2; iSide++)
 		{
 			pcSide = pDiff->GetSide((ETextDiffSide)iSide);
@@ -550,9 +554,9 @@ void CIDEDiffs::RefreshMovedDiffs(void)
 	CGitRepository*		pcRepository;
 	bool				bMoved;
 
-	for (i = 0; i < mpcContent->maDiffTabs.Size(); i++)
+	for (i = 0; i < maDiffTabs.Size(); i++)
 	{
-		pDiff = mpcContent->maDiffTabs.Get(i);
+		pDiff = maDiffTabs.Get(i);
 		bMoved = false;
 		for (iSide = 0; iSide < 2; iSide++)
 		{
@@ -613,9 +617,9 @@ Ptr<CIDEEditorTab> CIDEDiffs::GetComparedTab(void)
 	{
 		return mpcContent->mpDocuments->GetActiveTab();
 	}
-	if (mpcContent->mpActiveDiff.IsNotNull())
+	if (mpActiveDiff.IsNotNull())
 	{
-		return mpcContent->mpDocuments->FindTab(mpcContent->mpActiveDiff->GetSide(TDS_Right)->mszFile.Text());
+		return mpcContent->mpDocuments->FindTab(mpActiveDiff->GetSide(TDS_Right)->mszFile.Text());
 	}
 	return NULL;
 }
@@ -630,16 +634,86 @@ Ptr<CIDEDiffTab> CIDEDiffs::FindDiffTab(CDockPane* pcPane)
 {
 	size	i;
 
-	for (i = 0; i < mpcContent->maDiffTabs.Size(); i++)
+	for (i = 0; i < maDiffTabs.Size(); i++)
 	{
-		if (&mpcContent->maDiffTabs.Get(i)->GetDockPane() == pcPane)
+		if (&maDiffTabs.Get(i)->GetDockPane() == pcPane)
 		{
-			return mpcContent->maDiffTabs.Get(i);
+			return maDiffTabs.Get(i);
 		}
 	}
 	return NULL;
 }
 
 
-Ptr<CIDEDiffTab> CIDEDiffs::GetActiveDiff(void) { return mpcContent->mpActiveDiff; }
+Ptr<CIDEDiffTab> CIDEDiffs::GetActiveDiff(void) { return mpActiveDiff; }
 
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The diffs' tabs.
+//
+//////////////////////////////////////////////////////////////////////////
+size CIDEDiffs::NumDiffs(void) { return maDiffTabs.Size(); }
+Ptr<CIDEDiffTab> CIDEDiffs::GetDiff(size uiIndex) { return maDiffTabs.Get(uiIndex); }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The diff whose tab was selected last, NULL if a file's was.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDiffs::SetActiveDiff(Ptr<CIDEDiffTab> pDiff) { mpActiveDiff = pDiff; }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// pDiff's pane has closed: it is forgotten.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDiffs::RemoveDiff(Ptr<CIDEDiffTab> pDiff)
+{
+	if (mpActiveDiff == pDiff)
+	{
+		mpActiveDiff = NULL;
+	}
+	maDiffTabs.Remove(pDiff);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Every diff's tab is closed.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDiffs::CloseAllDiffs(void)
+{
+	size	i;
+
+	for (i = maDiffTabs.Size(); i > 0; i--)
+	{
+		if (i <= maDiffTabs.Size())
+		{
+			mpcContent->mpDock->Close(maDiffTabs.Get(i - 1)->GetDockPane());
+		}
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The solutions changed: each diff's sides are coloured as their files'
+// projects now.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDiffs::FindProjects(void)
+{
+	size				i;
+	Ptr<CIDEDiffTab>	pDiff;
+
+	for (i = 0; i < maDiffTabs.Size(); i++)
+	{
+		pDiff = maDiffTabs.Get(i);
+		pDiff->GetSide(TDS_Left)->muiProject = mpcContent->mpExplorer->FindFileProject(pDiff->GetSide(TDS_Left)->mszFile.Text());
+		pDiff->GetSide(TDS_Right)->muiProject = mpcContent->mpExplorer->FindFileProject(pDiff->GetSide(TDS_Right)->mszFile.Text());
+	}
+}

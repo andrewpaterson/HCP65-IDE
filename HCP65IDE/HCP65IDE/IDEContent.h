@@ -169,8 +169,6 @@ protected:
 	Ptr<CFileChooser>			mpFileChooser;		//While it's shown.
 	Ptr<CImageCel>				mpFolderIcon;		//The file chooser's.
 	Ptr<CImageCel>				mpFileIcon;
-	CArray<CIDEDiffTab>			maDiffTabs;			//A tab for each diff shown.
-	Ptr<CIDEDiffTab>			mpActiveDiff;		//The selected tab's diff, NULL if it isn't one.
 	CArray<CImageCel>			maFileIcons;		//By EIDEFileType.
 	CArray<CImageCel>			maSymbolIcons;		//By EIDESymbolType.
 

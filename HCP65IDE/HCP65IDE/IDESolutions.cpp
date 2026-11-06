@@ -441,9 +441,9 @@ bool CIDESolutions::CloseSolution(size uiSolution)
 			mpcContent->mpDock->Close(pTab->GetDockPane());
 		}
 	}
-	for (i = mpcContent->maDiffTabs.Size(); i > 0; i--)
+	for (i = mpcContent->mpDiffs->NumDiffs(); i > 0; i--)
 	{
-		pDiff = mpcContent->maDiffTabs.Get(i - 1);
+		pDiff = mpcContent->mpDiffs->GetDiff(i - 1);
 		if (IsSolutionFile(uiSolution, pDiff->GetSide(TDS_Left)->muiProject) || IsSolutionFile(uiSolution, pDiff->GetSide(TDS_Right)->muiProject))
 		{
 			mpcContent->mpDock->Close(pDiff->GetDockPane());
@@ -534,11 +534,7 @@ void CIDESolutions::WorkspaceChanged(bool bReindex)
 		{
 			mpcContent->mpDocuments->GetTab(i)->SetProject(mpcContent->mpExplorer->FindFileProject(mpcContent->mpDocuments->GetTab(i)->GetFileName()));
 		}
-		for (i = 0; i < mpcContent->maDiffTabs.Size(); i++)
-		{
-			mpcContent->maDiffTabs.Get(i)->GetSide(TDS_Left)->muiProject = mpcContent->mpExplorer->FindFileProject(mpcContent->maDiffTabs.Get(i)->GetSide(TDS_Left)->mszFile.Text());
-			mpcContent->maDiffTabs.Get(i)->GetSide(TDS_Right)->muiProject = mpcContent->mpExplorer->FindFileProject(mpcContent->maDiffTabs.Get(i)->GetSide(TDS_Right)->mszFile.Text());
-		}
+		mpcContent->mpDiffs->FindProjects();
 		mpcContent->mcCodeModel.StartIndexing();
 		for (i = 0; i < mpcContent->mpDocuments->NumTabs(); i++)
 		{

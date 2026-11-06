@@ -23,6 +23,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "StandardLib/Object.h"
 #include "StandardLib/Pointer.h"
 #include "WindowLib/DiffView.h"
+#include "StandardLib/Array.h"
 #include "IDEDiffTab.h"
 #include "IDEEditorTab.h"
 
@@ -41,6 +42,8 @@ CONSTRUCTABLE(CIDEDiffs);
 DESTRUCTABLE(CIDEDiffs);
 protected:
 	CIDEContent*	mpcContent;  //Not held: the content holds it.
+	CArray<CIDEDiffTab>			maDiffTabs;			//A tab for each diff shown.
+	Ptr<CIDEDiffTab>			mpActiveDiff;		//The selected tab's diff, NULL if it isn't one.
 	size						muiNextDiff;		//Each diff's pane's ID is numbered.
 public:
 	void	Init(CIDEContent* pcContent);
@@ -57,6 +60,12 @@ public:
 	bool				ShowCompareWithFileDialog(void);
 	bool				OpenDiff(const char* szLeftFile, const char* szLeftRevision, const char* szRightFile, const char* szRightRevision);
 	Ptr<CIDEDiffTab>	GetActiveDiff(void);
+	void				SetActiveDiff(Ptr<CIDEDiffTab> pDiff);
+	size				NumDiffs(void);
+	Ptr<CIDEDiffTab>	GetDiff(size uiIndex);
+	void				RemoveDiff(Ptr<CIDEDiffTab> pDiff);
+	void				CloseAllDiffs(void);
+	void				FindProjects(void);
 	void				RefreshDiff(Ptr<CIDEDiffTab> pDiff);
 	void				RefreshMovedDiffs(void);
 

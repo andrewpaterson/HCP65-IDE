@@ -107,7 +107,7 @@ bool CIDEDocuments::OpenFile(const char* szFileName, size uiProject)
 	}
 	mpcContent->mpDock->Activate(pTab->GetDockPane());
 	mpActive = pTab;
-	mpcContent->mpActiveDiff = NULL;
+	mpcContent->mpDiffs->SetActiveDiff(NULL);
 	mpcContent->mpGitStatus->ShowBranch();
 	return true;
 }
@@ -211,13 +211,7 @@ void CIDEDocuments::CloseAllFiles(void)
 			mpcContent->mpDock->Close(maTabs.Get(i - 1)->GetDockPane());
 		}
 	}
-	for (i = mpcContent->maDiffTabs.Size(); i > 0; i--)
-	{
-		if (i <= mpcContent->maDiffTabs.Size())
-		{
-			mpcContent->mpDock->Close(mpcContent->maDiffTabs.Get(i - 1)->GetDockPane());
-		}
-	}
+	mpcContent->mpDiffs->CloseAllDiffs();
 }
 
 

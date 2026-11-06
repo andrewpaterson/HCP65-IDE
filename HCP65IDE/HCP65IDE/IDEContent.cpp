@@ -181,7 +181,6 @@ void CIDEContent::Init(void)
 	mcCodeModel.Init(&mcWorkspace);
 	mszConfiguration.Init();
 	memset(&msDialogLook, 0, sizeof(msDialogLook));
-	maDiffTabs.Init();
 	maFileIcons.Init();
 	maSymbolIcons.Init();
 	mpMatchFont = NULL;
@@ -237,8 +236,6 @@ void CIDEContent::Class(void)
 	M_Pointer(mpFileChooser);
 	M_Pointer(mpFolderIcon);
 	M_Pointer(mpFileIcon);
-	M_Embedded(maDiffTabs);
-	M_Pointer(mpActiveDiff);
 	M_Embedded(maFileIcons);
 	M_Embedded(maSymbolIcons);
 	M_Pointer(mpMatchFont);
@@ -1023,7 +1020,7 @@ void CIDEContent::DocumentSelected(CDockPane* pcPane)
 		return;
 	}
 	mpDocuments->SetActiveTab(pTab);
-	mpActiveDiff = pDiff;
+	mpDiffs->SetActiveDiff(pDiff);
 	mpGitStatus->ShowBranch();
 }
 
@@ -1069,11 +1066,7 @@ void CIDEContent::PaneClosed(CDockPane* pcPane)
 	pDiff = mpDiffs->FindDiffTab(pcPane);
 	if (pDiff.IsNotNull())
 	{
-		if (mpActiveDiff == pDiff)
-		{
-			mpActiveDiff = NULL;
-		}
-		maDiffTabs.Remove(pDiff);
+		mpDiffs->RemoveDiff(pDiff);
 		return;
 	}
 
@@ -1193,7 +1186,7 @@ bool CIDEContent::LoadLayout(void)
 	if (bResult)
 	{
 		DocumentSelected(&mpDock->GetActiveDocument());
-		if (mpDocuments->GetActiveTab().IsNull() && mpActiveDiff.IsNull() && (mpDocuments->NumTabs() > 0))
+		if (mpDocuments->GetActiveTab().IsNull() && mpDiffs->GetActiveDiff().IsNull() && (mpDocuments->NumTabs() > 0))
 		{
 			mpDocuments->SetActiveTab(mpDocuments->GetTab(mpDocuments->NumTabs() - 1));
 		}

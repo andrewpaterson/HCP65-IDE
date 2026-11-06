@@ -370,9 +370,9 @@ void CIDEGitStatus::WindowActivated(void)
 		mpcContent->mpWindow->RequestTick(IDE_GIT_POLL);
 	}
 
-	for (i = 0; i < mpcContent->maDiffTabs.Size(); i++)
+	for (i = 0; i < mpcContent->mpDiffs->NumDiffs(); i++)
 	{
-		pDiff = mpcContent->maDiffTabs.Get(i);
+		pDiff = mpcContent->mpDiffs->GetDiff(i);
 		bFromDisk = false;
 		for (iSide = 0; iSide < 2; iSide++)
 		{
@@ -622,7 +622,7 @@ bool CIDEGitStatus::ShowChangeDiff(void)
 	{
 		return false;
 	}
-	mpcContent->mpActiveDiff->GetView()->ScrollToBlock(uiChange);
+	mpcContent->mpDiffs->GetActiveDiff()->GetView()->ScrollToBlock(uiChange);
 	return true;
 }
 

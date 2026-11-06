@@ -197,9 +197,9 @@ void CIDEScript::RunCommand(const char* szCommand)
 		size	i;
 
 		printf("Diffs:");
-		for (i = 0; i < mpcContent->maDiffTabs.Size(); i++)
+		for (i = 0; i < mpcContent->mpDiffs->NumDiffs(); i++)
 		{
-			printf(" [%s%s]", (mpcContent->maDiffTabs.Get(i) == mpcContent->mpActiveDiff) ? ">" : "", mpcContent->maDiffTabs.Get(i)->GetDockPane()->GetTitle());
+			printf(" [%s%s]", (mpcContent->mpDiffs->GetDiff(i) == mpcContent->mpDiffs->GetActiveDiff()) ? ">" : "", mpcContent->mpDiffs->GetDiff(i)->GetDockPane()->GetTitle());
 		}
 		printf("\n");
 		fflush(stdout);
