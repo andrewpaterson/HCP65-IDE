@@ -46,6 +46,10 @@ void CIDEGitStatus::Init(CIDEContent* pcContent)
 {
 	PreInit();
 	mpcContent = pcContent;
+	mcGit.Init();
+	miGitStatusTime = 0;
+	muiQueuedChange = MAX_SIZE;
+	miQueuedAction = 0;
 	mcLineChanges.Init();
 	muiGitVersion = 0;
 	muiChange = 0;
@@ -61,6 +65,12 @@ void CIDEGitStatus::Init(CIDEContent* pcContent)
 void CIDEGitStatus::Class(void)
 {
 	U_Pointer(mpcContent);
+	U_Unknown(CGitRepositories, mcGit);
+	U_Int64(miGitStatusTime);
+	M_Pointer(mpBranchLabel);
+	M_Pointer(mpChangeTab);
+	U_Size(muiQueuedChange);
+	U_Int32(miQueuedAction);
 	U_Unknown(CGitLineChanges, mcLineChanges);
 	U_Size(muiGitVersion);
 	M_Pointer(mpChangePopup);
@@ -88,6 +98,9 @@ void CIDEGitStatus::Free(void)
 		mpShowDiffButton->GetClickEvent()->Remove(this);
 	}
 	mcLineChanges.Kill();
+
+	//A git status still being read is stopped.
+	mcGit.Kill();
 }
 
 
@@ -109,27 +122,28 @@ int64 CIDEGitStatus::PollGit(int64 iNow)
 {
 	int64	iWait;
 
-	if (mpcContent->mcGit.NumRepositories() == 0)
+	ShowQueuedChange();
+	if (mcGit.NumRepositories() == 0)
 	{
 		return -1;
 	}
 
-	if (mpcContent->mcGit.PollStatus())
+	if (mcGit.PollStatus())
 	{
 		iWait = IDE_GIT_POLL;
 	}
-	else if ((mpcContent->miGitStatusTime == 0) || (iNow - mpcContent->miGitStatusTime >= IDE_GIT_REFRESH))
+	else if ((miGitStatusTime == 0) || (iNow - miGitStatusTime >= IDE_GIT_REFRESH))
 	{
-		mpcContent->mcGit.StartStatus();
-		mpcContent->miGitStatusTime = iNow;
+		mcGit.StartStatus();
+		miGitStatusTime = iNow;
 		iWait = IDE_GIT_POLL;
 	}
 	else
 	{
-		iWait = IDE_GIT_REFRESH - (iNow - mpcContent->miGitStatusTime);
+		iWait = IDE_GIT_REFRESH - (iNow - miGitStatusTime);
 	}
 
-	if (mpcContent->mcGit.GetStatusVersion() != muiGitVersion)
+	if (mcGit.GetStatusVersion() != muiGitVersion)
 	{
 		ShowGitStatus();
 	}
@@ -145,9 +159,9 @@ int64 CIDEGitStatus::PollGit(int64 iNow)
 //////////////////////////////////////////////////////////////////////////
 void CIDEGitStatus::GitFileSaved(const char* szFileName)
 {
-	if (mpcContent->mcGit.RefreshStatus(szFileName))
+	if (mcGit.RefreshStatus(szFileName))
 	{
-		mpcContent->miGitStatusTime = GetDebugTickCount();
+		miGitStatusTime = GetDebugTickCount();
 		if (mpcContent->mpWindow.IsNotNull())
 		{
 			mpcContent->mpWindow->RequestTick(IDE_GIT_POLL);
@@ -165,9 +179,9 @@ void CIDEGitStatus::ReadGitStatus(void)
 {
 	size	i;
 
-	for (i = 0; i < mpcContent->mcGit.NumRepositories(); i++)
+	for (i = 0; i < mcGit.NumRepositories(); i++)
 	{
-		mpcContent->mcGit.GetRepository(i)->ReadStatus();
+		mcGit.GetRepository(i)->ReadStatus();
 	}
 	ShowGitStatus();
 }
@@ -188,16 +202,16 @@ void CIDEGitStatus::ShowGitStatus(void)
 	EGitFileState		eState;
 	bool				bHeadMoved;
 
-	muiGitVersion = mpcContent->mcGit.GetStatusVersion();
+	muiGitVersion = mcGit.GetStatusVersion();
 	if (mpcContent->mpExplorer.IsNotNull())
 	{
-		mpcContent->mpExplorer->ColourFiles(&mpcContent->mcGit, mpcContent->mpFontColours);
+		mpcContent->mpExplorer->ColourFiles(&mcGit, mpcContent->mpFontColours);
 	}
 
 	for (i = 0; i < mpcContent->mpDocuments->NumTabs(); i++)
 	{
 		pTab = mpcContent->mpDocuments->GetTab(i);
-		pcRepository = mpcContent->mcGit.FindRepository(pTab->GetFileName());
+		pcRepository = mcGit.FindRepository(pTab->GetFileName());
 		eState = pcRepository ? pcRepository->GetFileState(pTab->GetFileName()) : GFS_Unmodified;
 		bHeadMoved = pcRepository && pTab->HasBaseText() && (strcmp(pTab->GetBaseHead(), pcRepository->GetStatus()->GetHead()) != 0);
 		if ((eState != pTab->GetGitState()) || bHeadMoved)
@@ -225,7 +239,7 @@ void CIDEGitStatus::ShowBranch(void)
 	CGitStatus*		pcStatus;
 	CChars			szText;
 
-	if (mpcContent->mpBranchLabel.IsNull())
+	if (mpBranchLabel.IsNull())
 	{
 		return;
 	}
@@ -233,11 +247,11 @@ void CIDEGitStatus::ShowBranch(void)
 	pcRepository = NULL;
 	if (mpcContent->mpDocuments->GetActiveTab().IsNotNull())
 	{
-		pcRepository = mpcContent->mcGit.FindRepository(mpcContent->mpDocuments->GetActiveTab()->GetFileName());
+		pcRepository = mcGit.FindRepository(mpcContent->mpDocuments->GetActiveTab()->GetFileName());
 	}
 	if ((pcRepository == NULL) && mpcContent->mpSolutions->IsSolutionOpen())
 	{
-		pcRepository = mpcContent->mcGit.FindRepository(mpcContent->mpSolutions->GetStartupFile());
+		pcRepository = mcGit.FindRepository(mpcContent->mpSolutions->GetStartupFile());
 	}
 
 	szText.Init();
@@ -254,9 +268,9 @@ void CIDEGitStatus::ShowBranch(void)
 			szText.Append(pcStatus->GetBranch());
 		}
 	}
-	if (!szText.Equals(mpcContent->mpBranchLabel->GetText()))
+	if (!szText.Equals(mpBranchLabel->GetText()))
 	{
-		mpcContent->mpBranchLabel->SetText(szText.Text());
+		mpBranchLabel->SetText(szText.Text());
 	}
 	szText.Kill();
 }
@@ -276,7 +290,7 @@ void CIDEGitStatus::ReadGitBase(Ptr<CIDEEditorTab> pTab)
 	EGitFileState	eState;
 	CChars			szText;
 
-	pcRepository = mpcContent->mcGit.FindRepository(pTab->GetFileName());
+	pcRepository = mcGit.FindRepository(pTab->GetFileName());
 	if (pcRepository == NULL)
 	{
 		pTab->SetGitState(GFS_Unmodified);
@@ -346,13 +360,13 @@ void CIDEGitStatus::WindowActivated(void)
 	Ptr<CIDEDiffTab>	pDiff;
 	bool				bFromDisk;
 
-	if (mpcContent->mcGit.NumRepositories() > 0)
+	if (mcGit.NumRepositories() > 0)
 	{
-		for (i = 0; i < mpcContent->mcGit.NumRepositories(); i++)
+		for (i = 0; i < mcGit.NumRepositories(); i++)
 		{
-			mpcContent->mcGit.GetRepository(i)->RefreshStatus();
+			mcGit.GetRepository(i)->RefreshStatus();
 		}
-		mpcContent->miGitStatusTime = GetDebugTickCount();
+		miGitStatusTime = GetDebugTickCount();
 		mpcContent->mpWindow->RequestTick(IDE_GIT_POLL);
 	}
 
@@ -453,7 +467,7 @@ bool CIDEGitStatus::ShowChange(Ptr<CIDEEditorTab> pTab, size uiLine)
 	CloseChangePopup();
 	msChange = *psChange;
 	muiChange = i;
-	mpcContent->mpChangeTab = pTab;
+	mpChangeTab = pTab;
 	//The editor may be in a floating window of its own.
 	pWindow = pTab->GetCodeEditor()->GetWindow();
 
@@ -531,7 +545,7 @@ bool CIDEGitStatus::RollbackChange(void)
 	CTextContent		cBase;
 	bool				bBaseEnds;
 
-	pTab = mpcContent->mpChangeTab;
+	pTab = mpChangeTab;
 	CloseChangePopup();
 	if (pTab.IsNull())
 	{
@@ -601,7 +615,7 @@ bool CIDEGitStatus::ShowChangeDiff(void)
 	Ptr<CIDEEditorTab>	pTab;
 	size				uiChange;
 
-	pTab = mpcContent->mpChangeTab;
+	pTab = mpChangeTab;
 	uiChange = muiChange;
 	CloseChangePopup();
 	if (pTab.IsNull() || !mpcContent->mpDiffs->OpenDiff(pTab->GetFileName(), "HEAD", pTab->GetFileName(), ""))
@@ -634,7 +648,7 @@ void CIDEGitStatus::CloseChangePopup(void)
 	mpChangePopup = NULL;
 	mpRollbackButton = NULL;
 	mpShowDiffButton = NULL;
-	mpcContent->mpChangeTab = NULL;
+	mpChangeTab = NULL;
 }
 
 
@@ -668,8 +682,8 @@ void CIDEGitStatus::AppendBaseLines(Ptr<CIDEEditorTab> pTab, size uiStart, size 
 //////////////////////////////////////////////////////////////////////////
 void CIDEGitStatus::QueueChange(size uiLine, int iAction)
 {
-	mpcContent->muiQueuedChange = uiLine;
-	mpcContent->miQueuedAction = iAction;
+	muiQueuedChange = uiLine;
+	miQueuedAction = iAction;
 	mpcContent->mpWindow->RequestTick(0);
 }
 
@@ -677,6 +691,97 @@ void CIDEGitStatus::QueueChange(size uiLine, int iAction)
 void CIDEGitStatus::RollbackClicked(void) { RollbackChange(); }
 void CIDEGitStatus::ShowDiffClicked(void) { ShowChangeDiff(); }
 Ptr<CGridContainer> CIDEGitStatus::GetChangePopup(void) { return mpChangePopup; }
-CGitRepositories* CIDEGitStatus::GetGit(void) { return &mpcContent->mcGit; }
-Ptr<CLabel> CIDEGitStatus::GetBranchLabel(void) { return mpcContent->mpBranchLabel; }
+CGitRepositories* CIDEGitStatus::GetGit(void) { return &mcGit; }
+Ptr<CLabel> CIDEGitStatus::GetBranchLabel(void) { return mpBranchLabel; }
 
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The change queued (QueueChange) is shown, and rolled back or diffed,
+// once the selected file's editor has been laid out.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEGitStatus::ShowQueuedChange(void)
+{
+	Ptr<CIDEEditorTab>	pTab;
+
+	pTab = mpcContent->mpDocuments->GetActiveTab();
+	if ((muiQueuedChange == MAX_SIZE) || pTab.IsNull() || (pTab->GetEditor()->GetActualSize().x <= 0))
+	{
+		return;
+	}
+	if (ShowChange(pTab, muiQueuedChange))
+	{
+		if (miQueuedAction == 1)
+		{
+			RollbackChange();
+		}
+		else if (miQueuedAction == 2)
+		{
+			ShowChangeDiff();
+		}
+	}
+	muiQueuedChange = MAX_SIZE;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The toolbar's label with the branch checked out, as IntelliJ IDEA shows
+// it.
+//
+//////////////////////////////////////////////////////////////////////////
+Ptr<CLabel> CIDEGitStatus::CreateBranchLabel(void)
+{
+	mpBranchLabel = OMalloc<CLabel>(mpcContent->mpWindow, mpcContent->mpFontColours->GetFont(JEWEL_ICON), "");
+	mpBranchLabel->SetAlignment(CSH_Right, CSV_Center);
+	return mpBranchLabel;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// pTab is closing: the change shown from it goes.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEGitStatus::TabClosing(Ptr<CIDEEditorTab> pTab)
+{
+	if (mpChangeTab == pTab)
+	{
+		CloseChangePopup();
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The repositories the open solutions' files are in, found from their
+// solution files; their files are coloured in Solution Explorer once
+// their statuses are read.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEGitStatus::FindRepositories(void)
+{
+	size	i;
+
+	for (i = 0; i < mpcContent->mcWorkspace.NumSolutions(); i++)
+	{
+		mcGit.FindRepository(mpcContent->mcWorkspace.GetSolution(i)->mszFile.Text());
+	}
+	mpcContent->mpExplorer->ColourFiles(&mcGit, mpcContent->mpFontColours);
+	ReadGitStatus();
+	miGitStatusTime = GetDebugTickCount();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The solutions are going: their repositories are found again from the
+// next ones' files, and read at the next tick.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEGitStatus::ForgetRepositories(void)
+{
+	mcGit.RemoveAll();
+	miGitStatusTime = 0;
+}

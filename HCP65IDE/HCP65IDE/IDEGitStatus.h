@@ -44,6 +44,12 @@ CONSTRUCTABLE(CIDEGitStatus);
 DESTRUCTABLE(CIDEGitStatus);
 protected:
 	CIDEContent*	mpcContent;  //Not held: the content holds it.
+	CGitRepositories			mcGit;				//The repositories the solution's files are in.
+	int64						miGitStatusTime;	//When the statuses were last read, 0 to read them now.
+	Ptr<CLabel>					mpBranchLabel;		//On the toolbar.
+	Ptr<CIDEEditorTab>			mpChangeTab;		//The tab of the change shown.
+	size						muiQueuedChange;	//A change's line to show once the editor is laid out, MAX_SIZE for none.
+	int							miQueuedAction;		//Then 0 nothing, 1 Rollback or 2 Show Diff.
 	CGitLineChanges				mcLineChanges;		//Worked out for one tab at a time.
 	size						muiGitVersion;		//mcGit's status version when it was last shown.
 	Ptr<CGridContainer>			mpChangePopup;		//A change's old lines and its buttons, while it is open.
@@ -59,6 +65,10 @@ public:
 	bool	Load(CObjectReader* pcFile) override;
 
 	CGitRepositories*	GetGit(void);
+	Ptr<CLabel>			CreateBranchLabel(void);
+	void				TabClosing(Ptr<CIDEEditorTab> pTab);
+	void				FindRepositories(void);
+	void				ForgetRepositories(void);
 	void				ChangeBarClicked(CCodeEditor* pcEditor, size uiLine);
 	bool				ShowChange(Ptr<CIDEEditorTab> pTab, size uiLine);
 	bool				RollbackChange(void);
@@ -77,6 +87,7 @@ public:
 
 protected:
 	int64				PollGit(int64 iNow);
+	void				ShowQueuedChange(void);
 	void				ShowGitStatus(void);
 	void				CloseChangePopup(void);
 	void				AppendBaseLines(Ptr<CIDEEditorTab> pTab, size uiStart, size uiEnd, CChars* pszDest);

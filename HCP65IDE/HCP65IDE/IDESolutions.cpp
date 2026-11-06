@@ -218,7 +218,7 @@ bool CIDESolutions::OpenSolution(const char* szFileName)
 	mcRecent.Add(szFileName);
 	WriteRecent();
 
-	FindRepositories();
+	mpcContent->mpGitStatus->FindRepositories();
 
 	//The breakpoints saved beside it, bound once its configuration's line tables are read.
 	szName.Init();
@@ -508,8 +508,7 @@ void CIDESolutions::LetGoOfWorkspace(void)
 	mpcContent->mszConfiguration.Clear();
 
 	//The repositories are found again from the new solutions' files, and read at the next tick.
-	mpcContent->mcGit.RemoveAll();
-	mpcContent->miGitStatusTime = 0;
+	mpcContent->mpGitStatus->ForgetRepositories();
 }
 
 
@@ -527,7 +526,7 @@ void CIDESolutions::WorkspaceChanged(bool bReindex)
 
 	mpcContent->mpExplorer->ShowWorkspace(&mpcContent->mcWorkspace);
 	mpcContent->mpNavigator->ForgetGoToFiles();
-	FindRepositories();
+	mpcContent->mpGitStatus->FindRepositories();
 	mpcContent->mpBuildConfigurations->ShowConfigurations();
 	if (bReindex)
 	{
@@ -592,20 +591,6 @@ bool CIDESolutions::WriteWorkspace(void)
 // their statuses, read before they are shown.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDESolutions::FindRepositories(void)
-{
-	size	i;
-
-	for (i = 0; i < mpcContent->mcWorkspace.NumSolutions(); i++)
-	{
-		mpcContent->mcGit.FindRepository(mpcContent->mcWorkspace.GetSolution(i)->mszFile.Text());
-	}
-	mpcContent->mpExplorer->ColourFiles(&mpcContent->mcGit, mpcContent->mpFontColours);
-	mpcContent->mpGitStatus->ReadGitStatus();
-	mpcContent->miGitStatusTime = GetDebugTickCount();
-}
-
-
 //////////////////////////////////////////////////////////////////////////
 //
 // The startup solution is there and could be read.

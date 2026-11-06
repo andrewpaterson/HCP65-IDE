@@ -185,10 +185,6 @@ void CIDEContent::Init(void)
 	maFileIcons.Init();
 	maSymbolIcons.Init();
 	mpMatchFont = NULL;
-	mcGit.Init();
-	miGitStatusTime = 0;
-	muiQueuedChange = MAX_SIZE;
-	miQueuedAction = 0;
 	mbKeepSettings = true;
 	miStatusTime = 0;
 
@@ -273,15 +269,9 @@ void CIDEContent::Class(void)
 	U_Unknown(CBuildWorkspace, mcWorkspace);
 	U_Unknown(CIDECodeModel, mcCodeModel);
 	M_Pointer(mpDialog);
-	U_Unknown(CGitRepositories, mcGit);
-	U_Int64(miGitStatusTime);
-	M_Pointer(mpBranchLabel);
 	M_Pointer(mpStatusLabel);
 	U_Int64(miStatusTime);
 	M_Pointer(mpProgressLabel);
-	M_Pointer(mpChangeTab);
-	U_Size(muiQueuedChange);
-	U_Int32(miQueuedAction);
 	U_Bool(mbKeepSettings);
 }
 
@@ -336,9 +326,6 @@ void CIDEContent::Free(void)
 		mpWindow->CancelPosted(&mpRename);
 		mpWindow->CancelPosted(&mpSolutions);
 	}
-
-	//A git status still being read is stopped.
-	mcGit.Kill();
 
 	//A build still running is stopped (an HCP65 build is waited for) before the solution it builds goes.
 	if (mpBuilding.IsNotNull())
@@ -490,9 +477,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	pToolbar->AddComponent(mpDebugging->CreateStartButton(), 3, 0, 1, 1, 1, 1);
 
 	//The branch checked out, at the toolbar's right, as IntelliJ IDEA shows it.
-	mpBranchLabel = OMalloc<CLabel>(pWindow, mpFontColours->GetFont(JEWEL_ICON), "");
-	mpBranchLabel->SetAlignment(CSH_Right, CSV_Center);
-	pToolbar->AddComponent(mpBranchLabel, 4, 0, 1, 1, 0, 1);
+	pToolbar->AddComponent(mpGitStatus->CreateBranchLabel(), 4, 0, 1, 1, 0, 1);
 	pBranchGap = OMalloc<CFillContainer>(pWindow);
 	pBranchGap->SetDesiredSize(IDE_TOOLBAR_GAP, 1);
 	pToolbar->AddComponent(pBranchGap, 5, 0, 1, 1, 0, 1);
@@ -982,21 +967,6 @@ void CIDEContent::Tick(Ptr<CWindow> pWindow)
 	//The platform's clock: the window's total time only counts the time it spent updating.
 	iNow = GetDebugTickCount();
 	iSoonest = mpGitStatus->PollGit(iNow);
-	if ((muiQueuedChange != MAX_SIZE) && mpDocuments->GetActiveTab().IsNotNull() && (mpDocuments->GetActiveTab()->GetEditor()->GetActualSize().x > 0))
-	{
-		if (mpGitStatus->ShowChange(mpDocuments->GetActiveTab(), muiQueuedChange))
-		{
-			if (miQueuedAction == 1)
-			{
-				mpGitStatus->RollbackChange();
-			}
-			else if (miQueuedAction == 2)
-			{
-				mpGitStatus->ShowChangeDiff();
-			}
-		}
-		muiQueuedChange = MAX_SIZE;
-	}
 	iWait = mpDiffs->PollDiffs(iNow);
 	if ((iWait >= 0) && ((iSoonest < 0) || (iWait < iSoonest)))
 	{
@@ -1117,10 +1087,7 @@ void CIDEContent::PaneClosed(CDockPane* pcPane)
 	{
 		mpDocuments->SetActiveTab(NULL);
 	}
-	if (mpChangeTab == pTab)
-	{
-		mpGitStatus->CloseChangePopup();
-	}
+	mpGitStatus->TabClosing(pTab);
 	pTab->GetCodeEditor()->GetChangeBarClickEvent()->Remove(&mpGitStatus);
 	pTab->GetCodeEditor()->GetGlyphClickEvent()->Remove(&mpDebugging);
 	pTab->GetEditor()->GetUndoEvent()->Remove(&mpEdit);

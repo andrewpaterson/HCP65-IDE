@@ -81,7 +81,6 @@ protected:
 	bool				RecentItemClicked(CMenuItem* pcItem);
 	void				LetGoOfWorkspace(void);
 	void				WorkspaceChanged(bool bReindex);
-	void				FindRepositories(void);
 };
 
 

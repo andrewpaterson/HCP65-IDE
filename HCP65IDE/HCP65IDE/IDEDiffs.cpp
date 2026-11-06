@@ -159,7 +159,7 @@ bool CIDEDiffs::ShowCompareWithBranchDialog(void)
 	{
 		return false;
 	}
-	pcRepository = mpcContent->mcGit.FindRepository(pTab->GetFileName());
+	pcRepository = mpcContent->mpGitStatus->GetGit()->FindRepository(pTab->GetFileName());
 	if (pcRepository == NULL)
 	{
 		return gcLogger.Error2(__METHOD__, " [", pTab->GetFileName(), "] isn't in a git repository.", NULL);
@@ -379,7 +379,7 @@ bool CIDEDiffs::ReadDiffSide(CIDEDiffSide* pcSide, CChars* pszDest)
 	pszDest->Clear();
 	if (!pcSide->IsWorkingCopy())
 	{
-		pcRepository = mpcContent->mcGit.FindRepository(pcSide->mszFile.Text());
+		pcRepository = mpcContent->mpGitStatus->GetGit()->FindRepository(pcSide->mszFile.Text());
 		if (pcRepository == NULL)
 		{
 			return gcLogger.Error2(__METHOD__, " [", pcSide->mszFile.Text(), "] isn't in a git repository.", NULL);
@@ -559,7 +559,7 @@ void CIDEDiffs::RefreshMovedDiffs(void)
 			pcSide = pDiff->GetSide((ETextDiffSide)iSide);
 			if (!pcSide->IsWorkingCopy())
 			{
-				pcRepository = mpcContent->mcGit.FindRepository(pcSide->mszFile.Text());
+				pcRepository = mpcContent->mpGitStatus->GetGit()->FindRepository(pcSide->mszFile.Text());
 				if (pcRepository && !pcSide->mszHead.Equals(pcRepository->GetStatus()->GetHead()))
 				{
 					bMoved = true;
