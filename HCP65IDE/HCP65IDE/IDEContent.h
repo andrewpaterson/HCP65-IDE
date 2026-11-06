@@ -279,6 +279,10 @@ public:
 	void			DocumentSelected(CDockPane* pcPane) override;
 	Ptr<CDockPane>	CreatePane(const char* szID) override;
 	bool			SaveLayout(void);
+	void			ReindexStaleTabs(bool bNow);
+	void			ReindexAll(void);
+	void			ReindexHeader(const char* szFileName);
+	void			ReindexDiscarded(Ptr<CIDEEditorTab> pTab);
 	bool			LoadLayout(void);
 	bool			GetLayoutFileName(CChars* pszDest);
 	Ptr<CDockManager>	GetDock(void);

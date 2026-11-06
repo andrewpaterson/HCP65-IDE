@@ -69,6 +69,7 @@ void CIDEEditorTab::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CFo
 	miChangedTime = 0;
 	mbRecolour = false;
 	mbEdited = false;
+	mbIndexStale = false;
 	mbCarriageReturns = UsesIDECarriageReturns(szText);
 	muiSavedUndo = mpEditor->GetUndoId();
 	mbShownModified = false;
@@ -99,6 +100,7 @@ void CIDEEditorTab::Class(void)
 	U_Data(int64, miChangedTime);
 	U_Bool(mbRecolour);
 	U_Bool(mbEdited);
+	U_Bool(mbIndexStale);
 	M_Pointer(mpZones);
 	U_Unknown(CIDEListingSource, mcListings);
 	U_Bool(mbCarriageReturns);
@@ -249,17 +251,8 @@ bool CIDEEditorTab::SetCaretPlace(int iLine, int iColumn)
 //////////////////////////////////////////////////////////////////////////
 bool CIDEEditorTab::NeedsRecolour(int64 iNow, int64* piWait)
 {
-	size	uiChanges;
-
 	*piWait = -1;
-	uiChanges = mpEditor->GetChangeCount();
-	if (uiChanges != muiSeenChanges)
-	{
-		muiSeenChanges = uiChanges;
-		miChangedTime = iNow;
-		mbRecolour = true;
-		mbEdited = true;
-	}
+	SeeChanges(iNow);
 	if (!mbRecolour || (muiProject == MAX_SIZE))
 	{
 		return false;
@@ -544,4 +537,29 @@ char* CIDEEditorTab::GetFileName(void) { return mszFileName.Text(); }
 size CIDEEditorTab::GetProject(void) { return muiProject; }
 void CIDEEditorTab::SetProject(size uiProject) { muiProject = uiProject; }
 bool CIDEEditorTab::IsEdited(void) { return mbEdited; }
+void CIDEEditorTab::SetIndexStale(bool bStale) { mbIndexStale = bStale; }
+bool CIDEEditorTab::IsIndexStale(void) { return mbIndexStale; }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Notes whether the text has changed since it was last looked at: it is
+// to be highlighted and indexed again.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEEditorTab::SeeChanges(int64 iNow)
+{
+	size	uiChanges;
+
+	uiChanges = mpEditor->GetChangeCount();
+	if (uiChanges != muiSeenChanges)
+	{
+		muiSeenChanges = uiChanges;
+		miChangedTime = iNow;
+		mbRecolour = true;
+		mbEdited = true;
+		mbIndexStale = true;
+	}
+}
+bool CIDEEditorTab::IsRecolourPending(void) { return mbRecolour; }
 

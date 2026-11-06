@@ -141,6 +141,11 @@ public:
 	void	StartIndexing(void);
 	void	WaitForIndexing(void);
 	void	GetIndexingProgress(size* puiIndexed, size* puiToIndex);
+	bool	IsIndexing(void);
+	bool	ReindexUnit(size uiProject, const char* szFileName, const char* szContents, const char* szHeader = NULL);
+	void	SetHeaderText(const char* szFileName, const char* szText);
+	bool	GetIncluder(const char* szFileName, size* puiProject, CChars* pszUnit);
+	void	ReindexAll(void);
 	bool	FindDefinition(const char* szFileName, int iLine, int iColumn, SIDELocation* psDest);
 	bool	FindReferences(const char* szFileName, int iLine, int iColumn, CArrayIDELocations* pasDest, CChars* pszKey);
 	size	FindProjectOfFile(const char* szFileName);

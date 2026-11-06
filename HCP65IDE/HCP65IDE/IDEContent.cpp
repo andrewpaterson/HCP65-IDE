@@ -1529,6 +1529,124 @@ bool CIDEContent::SaveFile(Ptr<CIDEEditorTab> pTab)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Everything is indexed again, from the files; the open .cpp files with
+// edits are indexed again from their editors once that has finished.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::ReindexAll(void)
+{
+	size	i;
+
+	mcCodeModel.ReindexAll();
+	for (i = 0; i < maTabs.Size(); i++)
+	{
+		if (maTabs.Get(i)->IsEdited())
+		{
+			maTabs.Get(i)->SetIndexStale(true);
+		}
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The open files changed since they were indexed are indexed again from
+// their editors' text: after a pause in the typing, or with bNow straight
+// away (before Rename, Find Usages or Go to is worked out).  A header is
+// preprocessed from its editor from then on, and indexed again with the
+// first unit that included it; then the .cpp (and .c) files.  Not while
+// everything is being indexed: they are indexed after.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::ReindexStaleTabs(bool bNow)
+{
+	size				i;
+	size				iPass;
+	Ptr<CIDEEditorTab>	pTab;
+	EIDEFileType		eType;
+
+	if (mcCodeModel.IsIndexing())
+	{
+		return;
+	}
+	for (iPass = 0; iPass < 2; iPass++)
+	{
+		for (i = 0; i < maTabs.Size(); i++)
+		{
+			pTab = maTabs.Get(i);
+			pTab->SeeChanges(GetDebugTickCount());
+			if (!pTab->IsIndexStale() || (pTab->GetProject() == MAX_SIZE) || (!bNow && pTab->IsRecolourPending()))
+			{
+				continue;
+			}
+			eType = CIDEIcons::GetFileType(pTab->GetFileName());
+			if ((iPass == 0) && (eType == IFT_Header))
+			{
+				mcCodeModel.SetHeaderText(pTab->GetFileName(), pTab->GetEditor()->GetText());
+				ReindexHeader(pTab->GetFileName());
+				pTab->SetIndexStale(false);
+			}
+			else if ((iPass == 1) && ((eType == IFT_CPP) || (eType == IFT_C)))
+			{
+				mcCodeModel.ReindexUnit(pTab->GetProject(), pTab->GetFileName(), pTab->GetEditor()->GetText());
+				pTab->SetIndexStale(false);
+			}
+		}
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The header szFileName indexed again (after its text changed) with the
+// first unit that included it, from that unit's editor if it is open.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::ReindexHeader(const char* szFileName)
+{
+	size				uiProject;
+	CChars				szUnit;
+	Ptr<CIDEEditorTab>	pUnitTab;
+
+	szUnit.Init();
+	if (mcCodeModel.GetIncluder(szFileName, &uiProject, &szUnit))
+	{
+		pUnitTab = FindTab(szUnit.Text());
+		mcCodeModel.ReindexUnit(uiProject, szUnit.Text(), pUnitTab.IsNotNull() ? pUnitTab->GetEditor()->GetText() : NULL, szFileName);
+	}
+	szUnit.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A file closed without saving its edits is indexed again as it is on
+// disk: the index had its editor's text.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::ReindexDiscarded(Ptr<CIDEEditorTab> pTab)
+{
+	EIDEFileType	eType;
+
+	if ((pTab->GetProject() == MAX_SIZE) || mcCodeModel.IsIndexing())
+	{
+		return;
+	}
+	eType = CIDEIcons::GetFileType(pTab->GetFileName());
+	if (eType == IFT_Header)
+	{
+		mcCodeModel.SetHeaderText(pTab->GetFileName(), NULL);
+		ReindexHeader(pTab->GetFileName());
+	}
+	else if ((eType == IFT_CPP) || (eType == IFT_C))
+	{
+		mcCodeModel.ReindexUnit(pTab->GetProject(), pTab->GetFileName(), NULL);
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Saves the selected tab's file.  True if there is none.
 //
 //////////////////////////////////////////////////////////////////////////
@@ -1722,6 +1840,7 @@ bool CIDEContent::GoToDefinition(void)
 	{
 		return false;
 	}
+	ReindexStaleTabs(true);
 	if (!mcCodeModel.FindDefinition(mpActive->GetFileName(), iLine, iColumn, &sLocation))
 	{
 		ShowStatus("No definition found at the caret.");
@@ -2356,6 +2475,7 @@ void CIDEContent::Tick(Ptr<CWindow> pWindow)
 			iSoonest = iWait;
 		}
 	}
+	ReindexStaleTabs(false);
 	if (iSoonest >= 0)
 	{
 		pWindow->RequestTick((uint32)iSoonest);
@@ -2454,6 +2574,10 @@ void CIDEContent::PaneClosed(CDockPane* pcPane)
 	pTab->GetCodeEditor()->GetGlyphClickEvent()->Remove(&mpDebugging);
 	pTab->GetEditor()->GetUndoEvent()->Remove(&mpEdit);
 	mpEdit->FileClosed(pTab->GetFileName());
+	if (pTab->IsModified())
+	{
+		ReindexDiscarded(pTab);
+	}
 	maTabs.Remove(pTab);
 }
 

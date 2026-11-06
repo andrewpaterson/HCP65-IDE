@@ -171,6 +171,7 @@ void CIDENavigator::GoToSearch(size uiTab, CNameMatcher* pcMatcher, CGoToItems* 
 
 	if (uiTab != IDE_GO_TO_FILE)
 	{
+		mpcContent->ReindexStaleTabs(true);
 		mpcContent->mcCodeModel.FindGoToSymbols(pcMatcher, uiTab == IDE_GO_TO_CLASS, &mcGoToFileSet, maiGoToSymbolIcons, pcDest);
 		return;
 	}

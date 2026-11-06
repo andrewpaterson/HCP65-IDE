@@ -173,6 +173,7 @@ bool CIDEUsages::FindUsages(bool bDeclarations)
 	size				uiToIndex;
 	const char*			szWhat;
 
+	mpcContent->ReindexStaleTabs(true);
 	asLocations.Init();
 	szKey.Init();
 	if (!mpcContent->FindSymbolAtCaret(&asLocations, &szKey))

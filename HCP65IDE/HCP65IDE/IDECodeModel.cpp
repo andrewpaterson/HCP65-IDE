@@ -615,6 +615,144 @@ void CIDECodeModel::IndexUnit(SIDEIndexJob* psJob)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// A .cpp (or .c) indexed again from szContents (its editor's text, or
+// the file if NULL) after it changed: its old places are forgotten first,
+// and szHeader's too if it isn't NULL (a header that changed, indexed
+// again with a unit that includes it; see SetHeaderText).  Call it once
+// the indexing has finished (IsIndexing).  False if the file couldn't be
+// parsed.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDECodeModel::ReindexUnit(size uiProject, const char* szFileName, const char* szContents, const char* szHeader)
+{
+	CIDEParsedUnit		cUnit;
+	CCPPIndexUnit		cGathered;
+	CCPPSemanticPass	cPass;
+	CChars				szErrors;
+	bool				bParsed;
+
+	szErrors.Init();
+	cUnit.Init();
+	cGathered.Init();
+	cPass.Init();
+	bParsed = ParseUnit(uiProject, szFileName, szContents, &cUnit, &szErrors);
+	if (bParsed)
+	{
+		cPass.Check(&cUnit.mcTree);
+		CCPPIndex::Gather(&cUnit.mcTokeniser, &cUnit.mcTree, &cGathered, &cPass);
+	}
+	cPass.Kill();
+	cUnit.Kill();
+
+	if (bParsed)
+	{
+		mcIndexMutex.Lock();
+		mcIndex.RemoveFile(szFileName);
+		if (szHeader)
+		{
+			mcIndex.RemoveFile(szHeader);
+		}
+		mcIndex.Merge(&cGathered);
+		mcIndexMutex.Unlock();
+	}
+	cGathered.Kill();
+	szErrors.Kill();
+	return bParsed;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The header szFileName is preprocessed from szText (its editor's text)
+// from now on, or from the file again if szText is NULL.  The headers'
+// output kept for all the units is forgotten: it may be what the header
+// was.  Call it once the indexing has finished (IsIndexing).
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDECodeModel::SetHeaderText(const char* szFileName, const char* szText)
+{
+	size			i;
+	CProject*		pcProject;
+	CHeaderFile*	pcHeader;
+
+	mcProjectsMutex.Lock();
+	for (i = 0; i < mapcProjects.NumElements(); i++)
+	{
+		pcProject = mapcProjects.GetPtr(i);
+		pcHeader = pcProject ? pcProject->GetIncludeFile((char*)szFileName) : NULL;
+		if (pcHeader)
+		{
+			pcHeader->Unload();
+			if (szText)
+			{
+				pcHeader->SetContents(szText);
+			}
+			else
+			{
+				pcHeader->ClearContents();
+			}
+		}
+	}
+	mcHeaderCache.Kill();
+	mcHeaderCache.Init();
+	mcProjectsMutex.Unlock();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The project and file of the first unit indexed that included the
+// header szFileName (or is szFileName).  False if none has.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDECodeModel::GetIncluder(const char* szFileName, size* puiProject, CChars* pszUnit)
+{
+	SIDEIndexJob*	psJob;
+
+	psJob = FindIncluder(szFileName);
+	if (psJob == NULL)
+	{
+		return false;
+	}
+	*puiProject = psJob->uiProject;
+	pszUnit->Set(psJob->szFileName);
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Everything indexed again, a header having changed: its projects are
+// made again (so their files are read again) and the headers'
+// preprocessed output, kept for all the units, is forgotten.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDECodeModel::ReindexAll(void)
+{
+	Reset();
+	mcHeaderCache.Kill();
+	mcHeaderCache.Init();
+	StartIndexing();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether the index is still being built (StartIndexing).
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDECodeModel::IsIndexing(void)
+{
+	size	uiIndexed;
+	size	uiToIndex;
+
+	GetIndexingProgress(&uiIndexed, &uiToIndex);
+	return uiIndexed < uiToIndex;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDECodeModel::WaitForIndexing(void)
@@ -1295,10 +1433,12 @@ bool CIDECodeModel::FindRenameTarget(const char* szFileName, int iLine, int iCol
 //////////////////////////////////////////////////////////////////////////
 bool CIDECodeModel::HasSymbol(const char* szKey)
 {
-	bool	bFound;
+	bool				bFound;
+	CCPPIndexSymbol*	pcSymbol;
 
 	mcIndexMutex.Lock();
-	bFound = mcIndex.FindSymbol(szKey) != NULL;
+	pcSymbol = mcIndex.FindSymbol(szKey);
+	bFound = (pcSymbol != NULL) && (pcSymbol->NumLocations() > 0);
 	mcIndexMutex.Unlock();
 	return bFound;
 }

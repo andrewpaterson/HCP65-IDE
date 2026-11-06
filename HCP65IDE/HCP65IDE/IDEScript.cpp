@@ -29,7 +29,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 //The debug script's commands that are the IDE's (RunCommand); "goto:" takes what follows it.
-static const char*	gaszIDEScriptCommands[] = { "goto:", "rename", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu" };
+static const char*	gaszIDEScriptCommands[] = { "goto:", "rename", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:" };
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -120,7 +120,13 @@ void CIDEScript::RunCommand(const char* szCommand)
 {
 	size	uiTab;
 
-	if (strncmp(szCommand, "goto:", 5) == 0)
+	if (strncmp(szCommand, "edit:", 5) == 0)
+	{
+		//One of HCP65_IDE_EDIT's steps, after the commands before it (a file closed, say).
+		RunEditStep(&szCommand[5]);
+		fflush(stdout);
+	}
+	else if (strncmp(szCommand, "goto:", 5) == 0)
 	{
 		//Navigate's Go to dialog shown on that tab, from a tick as it must be.
 		//goto:<tab>:<pattern> types the pattern too.
@@ -369,6 +375,21 @@ void CIDEScript::RunEditStep(const char* szStep)
 	else if (strcmp(szStep, "explorer") == 0)
 	{
 		mpcContent->ShowActiveFileInExplorer();
+	}
+	else if (strncmp(szStep, "caret:", 6) == 0)
+	{
+		//caret:<line>:<column>, from 1, as HCP65_IDE_CARET.
+		if (strchr(&szStep[6], ':') != NULL)
+		{
+			mpcContent->SetCaretPlace(atoi(&szStep[6]) - 1, atoi(strchr(&szStep[6], ':') + 1) - 1);
+		}
+	}
+	else if (strcmp(szStep, "reindexall") == 0)
+	{
+		//As saving a header does: everything indexed again, waited for, then the open files' edits.
+		mpcContent->ReindexAll();
+		mpcContent->mcCodeModel.WaitForIndexing();
+		mpcContent->ReindexStaleTabs(true);
 	}
 	else if (strcmp(szStep, "undoall") == 0)
 	{
