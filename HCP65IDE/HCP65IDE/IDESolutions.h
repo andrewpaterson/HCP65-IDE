@@ -25,6 +25,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/FileChooser.h"
 #include "BaseLib/ArrayChars.h"
 #include "WindowLib/MenuContainer.h"
+#include "WindowLib/DockManager.h"
+#include "SolutionExplorer.h"
 #include "BuildLib/BuildWorkspace.h"
 #include "BuildLib/BuildRecentFiles.h"
 
@@ -43,6 +45,11 @@ CONSTRUCTABLE(CIDESolutions);
 DESTRUCTABLE(CIDESolutions);
 protected:
 	CIDEContent*	mpcContent;  //Not held: the content holds it.
+	Ptr<CSolutionExplorer>	mpExplorer;  //The solutions' projects, folders and files.
+	Ptr<CDockPane>		mpExplorerTool;
+	Ptr<CMenuContainer>	mpExplorerMenu;  //A solution's: Set as Startup Solution and Remove.
+	Ptr<CMenuItem>		mpStartupItem;
+	Ptr<CMenuItem>		mpRemoveSolutionItem;
 	Ptr<CFileChooser>	mpFileChooser;  //The solution to open or add, while it's shown.
 	CBuildRecentFiles			mcRecent;			//The solutions and workspaces opened last.
 	CChars						mszRecentFile;		//Where they are kept, empty if they aren't.
@@ -54,6 +61,12 @@ public:
 	bool	Save(CObjectWriter* pcFile) override;
 	bool	Load(CObjectReader* pcFile) override;
 
+	void				CreateExplorerPane(SDockPlace* psPlace);
+	void				ExplorerActivated(void);
+	bool				ShowActiveFileInExplorer(void);
+	Ptr<CSolutionExplorer>	GetExplorer(void);
+	Ptr<CDockPane>		GetExplorerTool(void);
+	Ptr<CMenuContainer>	GetExplorerMenu(void);
 	bool			OpenSolution(const char* szFileName);
 	bool			OpenSolutions(CArrayChars* paszFileNames);
 	bool			AddSolution(const char* szFileName);
@@ -79,6 +92,8 @@ public:
 
 protected:
 	void				ShowRecentMenu(void);
+	Ptr<CMenuContainer>	CreateExplorerMenu(void);
+	void				ExplorerMenuItemClicked(CMenuItem* pcItem);
 	void				WriteRecent(void);
 	bool				RecentItemClicked(CMenuItem* pcItem);
 	void				LetGoOfWorkspace(void);

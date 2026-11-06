@@ -315,7 +315,7 @@ bool CIDEDiffs::OpenDiff(const char* szLeftFile, const char* szLeftRevision, con
 	pView->GetEditor(TDS_Left)->GetTextArea()->SetColour(JEWEL_TEXT);
 	pView->GetEditor(TDS_Right)->GetTextArea()->SetTiledText(true);
 	pView->GetEditor(TDS_Right)->GetTextArea()->SetColour(JEWEL_TEXT);
-	pDiff = OMalloc<CIDEDiffTab>(pView, szLeftFile, szLeftRevision, mpcContent->mpExplorer->FindFileProject(szLeftFile), szRightFile, szRightRevision, mpcContent->mpExplorer->FindFileProject(szRightFile));
+	pDiff = OMalloc<CIDEDiffTab>(pView, szLeftFile, szLeftRevision, mpcContent->mpSolutions->GetExplorer()->FindFileProject(szLeftFile), szRightFile, szRightRevision, mpcContent->mpSolutions->GetExplorer()->FindFileProject(szRightFile));
 	pcLeft = pDiff->GetSide(TDS_Left);
 	pcRight = pDiff->GetSide(TDS_Right);
 
@@ -719,7 +719,7 @@ void CIDEDiffs::FindProjects(void)
 	for (i = 0; i < maDiffTabs.Size(); i++)
 	{
 		pDiff = maDiffTabs.Get(i);
-		pDiff->GetSide(TDS_Left)->muiProject = mpcContent->mpExplorer->FindFileProject(pDiff->GetSide(TDS_Left)->mszFile.Text());
-		pDiff->GetSide(TDS_Right)->muiProject = mpcContent->mpExplorer->FindFileProject(pDiff->GetSide(TDS_Right)->mszFile.Text());
+		pDiff->GetSide(TDS_Left)->muiProject = mpcContent->mpSolutions->GetExplorer()->FindFileProject(pDiff->GetSide(TDS_Left)->mszFile.Text());
+		pDiff->GetSide(TDS_Right)->muiProject = mpcContent->mpSolutions->GetExplorer()->FindFileProject(pDiff->GetSide(TDS_Right)->mszFile.Text());
 	}
 }

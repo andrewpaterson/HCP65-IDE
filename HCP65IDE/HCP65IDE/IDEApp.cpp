@@ -295,7 +295,7 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 					if (iNode != TREE_NO_NODE)
 					{
 						mpContent->GetExplorer()->GetTree()->SelectNode(iNode);
-						mpContent->ExplorerActivated();
+						mpContent->GetSolutions()->ExplorerActivated();
 					}
 				}
 				aszOpen.Kill();

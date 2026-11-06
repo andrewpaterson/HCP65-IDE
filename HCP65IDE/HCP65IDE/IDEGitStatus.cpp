@@ -203,9 +203,9 @@ void CIDEGitStatus::ShowGitStatus(void)
 	bool				bHeadMoved;
 
 	muiGitVersion = mcGit.GetStatusVersion();
-	if (mpcContent->mpExplorer.IsNotNull())
+	if (mpcContent->mpSolutions->GetExplorer().IsNotNull())
 	{
-		mpcContent->mpExplorer->ColourFiles(&mcGit, mpcContent->mpFontColours);
+		mpcContent->mpSolutions->GetExplorer()->ColourFiles(&mcGit, mpcContent->mpFontColours);
 	}
 
 	for (i = 0; i < mpcContent->mpDocuments->NumTabs(); i++)
@@ -768,7 +768,7 @@ void CIDEGitStatus::FindRepositories(void)
 	{
 		mcGit.FindRepository(mpcContent->mcWorkspace.GetSolution(i)->mszFile.Text());
 	}
-	mpcContent->mpExplorer->ColourFiles(&mcGit, mpcContent->mpFontColours);
+	mpcContent->mpSolutions->GetExplorer()->ColourFiles(&mcGit, mpcContent->mpFontColours);
 	ReadGitStatus();
 	miGitStatusTime = GetDebugTickCount();
 }

@@ -52,6 +52,11 @@ void CIDESolutions::Init(CIDEContent* pcContent)
 {
 	PreInit();
 	mpcContent = pcContent;
+	mpExplorer = NULL;
+	mpExplorerTool = NULL;
+	mpExplorerMenu = NULL;
+	mpStartupItem = NULL;
+	mpRemoveSolutionItem = NULL;
 	mpFileChooser = NULL;
 	mcRecent.Init();
 	mszRecentFile.Init();
@@ -67,6 +72,11 @@ void CIDESolutions::Init(CIDEContent* pcContent)
 void CIDESolutions::Class(void)
 {
 	U_Pointer(mpcContent);
+	M_Pointer(mpExplorer);
+	M_Pointer(mpExplorerTool);
+	M_Pointer(mpExplorerMenu);
+	M_Pointer(mpStartupItem);
+	M_Pointer(mpRemoveSolutionItem);
 	M_Pointer(mpFileChooser);
 	U_Unknown(CBuildRecentFiles, mcRecent);
 	U_String(mszRecentFile);
@@ -82,6 +92,14 @@ void CIDESolutions::Class(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDESolutions::Free(void)
 {
+	if (mpExplorer.IsNotNull() && mpExplorer->GetTree().IsNotNull())
+	{
+		mpExplorer->GetTree()->GetActivationEvent()->Remove(this);
+	}
+	if (mpExplorerMenu.IsNotNull())
+	{
+		mpExplorerMenu->GetItemClickEvent()->Remove(this);
+	}
 	mszQueuedOpen.Kill();
 	mszRecentFile.Kill();
 	mcRecent.Kill();
@@ -206,7 +224,7 @@ bool CIDESolutions::OpenSolution(const char* szFileName)
 	szFile.Kill();
 	mpcContent->mcCodeModel.Init(&mpcContent->mcWorkspace);
 	mpcContent->mcCodeModel.AddDefaultSystemDirectories();
-	mpcContent->mpExplorer->ShowWorkspace(&mpcContent->mcWorkspace);
+	mpExplorer->ShowWorkspace(&mpcContent->mcWorkspace);
 	mpcContent->mpNavigator->ForgetGoToFiles();
 	if (!bResult || !IsSolutionOpen())
 	{
@@ -385,7 +403,7 @@ bool CIDESolutions::CloseSelectedSolution(void)
 {
 	size	uiSolution;
 
-	uiSolution = mpcContent->mpExplorer->GetNodeSolution(mpcContent->mpExplorer->GetTree()->GetSelectedNode());
+	uiSolution = mpExplorer->GetNodeSolution(mpExplorer->GetTree()->GetSelectedNode());
 	if ((uiSolution == SOLUTION_EXPLORER_NO_SOLUTION) && (mpcContent->mcWorkspace.NumSolutions() == 1))
 	{
 		uiSolution = 0;
@@ -428,7 +446,7 @@ bool CIDESolutions::CloseSolution(size uiSolution)
 		LetGoOfWorkspace();
 		mpcContent->mcCodeModel.Init(&mpcContent->mcWorkspace);
 		mpcContent->mcCodeModel.AddDefaultSystemDirectories();
-		mpcContent->mpExplorer->ShowWorkspace(&mpcContent->mcWorkspace);
+		mpExplorer->ShowWorkspace(&mpcContent->mcWorkspace);
 		mpcContent->mpNavigator->ForgetGoToFiles();
 		mpcContent->mpBuildConfigurations->ShowConfigurations();
 		return true;
@@ -526,7 +544,7 @@ void CIDESolutions::WorkspaceChanged(bool bReindex)
 {
 	size	i;
 
-	mpcContent->mpExplorer->ShowWorkspace(&mpcContent->mcWorkspace);
+	mpExplorer->ShowWorkspace(&mpcContent->mcWorkspace);
 	mpcContent->mpNavigator->ForgetGoToFiles();
 	mpcContent->mpGitStatus->FindRepositories();
 	mpcContent->mpBuildConfigurations->ShowConfigurations();
@@ -534,7 +552,7 @@ void CIDESolutions::WorkspaceChanged(bool bReindex)
 	{
 		for (i = 0; i < mpcContent->mpDocuments->NumTabs(); i++)
 		{
-			mpcContent->mpDocuments->GetTab(i)->SetProject(mpcContent->mpExplorer->FindFileProject(mpcContent->mpDocuments->GetTab(i)->GetFileName()));
+			mpcContent->mpDocuments->GetTab(i)->SetProject(mpExplorer->FindFileProject(mpcContent->mpDocuments->GetTab(i)->GetFileName()));
 		}
 		mpcContent->mpDiffs->FindProjects();
 		mpcContent->mcCodeModel.StartIndexing();
@@ -784,3 +802,107 @@ void CIDESolutions::OpenQueuedSolution(void)
 	}
 	szOpen.Kill();
 }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Solution Explorer, at psPlace: a file's node opens it, and a solution's
+// menu (CreateExplorerMenu) sets it as the startup one or removes it.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDESolutions::CreateExplorerPane(SDockPlace* psPlace)
+{
+	mpExplorer = OMalloc<CSolutionExplorer>(mpcContent->mpWindow, mpcContent->mpTheme);
+	mpExplorer->SetBoldColours(mpcContent->mpBoldColours);
+	mpExplorer->GetTree()->GetActivationEvent()->Add(this, &CIDESolutions::ExplorerActivated);
+	mpExplorer->GetTree()->SetContextMenu(CreateExplorerMenu());
+	mpExplorerTool = mpcContent->mpDock->AddPane(IDE_EXPLORER_ID, "Solution Explorer", NULL, mpExplorer->GetComponent(), DPK_Tool, psPlace);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Solution Explorer's menu, for the solution of the node selected: Set as
+// Startup Solution and Remove.
+//
+//////////////////////////////////////////////////////////////////////////
+Ptr<CMenuContainer> CIDESolutions::CreateExplorerMenu(void)
+{
+	mpExplorerMenu = OMalloc<CMenuContainer>(mpcContent->mpWindow, mpcContent->mpTheme);
+	mpStartupItem = mpExplorerMenu->AddItem("Set as Startup Solution");
+	mpRemoveSolutionItem = mpExplorerMenu->AddItem("Remove Solution");
+	mpExplorerMenu->GetItemClickEvent()->Add(this, &CIDESolutions::ExplorerMenuItemClicked);
+	return mpExplorerMenu;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Solution Explorer's menu's items.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDESolutions::ExplorerMenuItemClicked(CMenuItem* pcItem)
+{
+	if (pcItem == &mpStartupItem)
+	{
+		SetStartupSolution(mpExplorer->GetNodeSolution(mpExplorer->GetTree()->GetSelectedNode()));
+	}
+	else if (pcItem == &mpRemoveSolutionItem)
+	{
+		RemoveSolution(mpExplorer->GetNodeSolution(mpExplorer->GetTree()->GetSelectedNode()));
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A file opened in Solution Explorer is shown in the editor.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDESolutions::ExplorerActivated(void)
+{
+	CChars	szPath;
+
+	szPath.Init();
+	if (mpExplorer->GetSelectedFilePath(&szPath))
+	{
+		mpcContent->mpDocuments->OpenFile(szPath.Text(), mpExplorer->GetNodeProject(mpExplorer->GetTree()->GetSelectedNode()));
+	}
+	szPath.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Alt+1: Solution Explorer is shown with the active file selected, its
+// folders opened and the row scrolled into view.  The editor keeps the
+// keys, its caret where it was.  False if there is no file to show.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDESolutions::ShowActiveFileInExplorer(void)
+{
+	Ptr<CTreeContainer>	pTree;
+	int32				iNode;
+
+	pTree = mpExplorer->GetTree();
+	mpcContent->mpDock->Activate(mpExplorerTool);
+	if (mpcContent->mpDocuments->GetActiveTab().IsNull())
+	{
+		mpcContent->mpWindow->GetFocus()->SetFocus(pTree);
+		return false;
+	}
+	iNode = mpExplorer->FindFilePathNode(mpcContent->mpDocuments->GetActiveTab()->GetFileName(), mpcContent->mpDocuments->GetActiveTab()->GetProject());
+	if (iNode != TREE_NO_NODE)
+	{
+		pTree->SelectNode(iNode);
+		mpcContent->mpWindow->Layout();
+		pTree->ShowRow(pTree->FindNodeRow(iNode));
+	}
+	mpcContent->mpDock->Activate(mpcContent->mpDocuments->GetActiveTab()->GetDockPane());
+	return iNode != TREE_NO_NODE;
+}
+
+
+Ptr<CSolutionExplorer> CIDESolutions::GetExplorer(void) { return mpExplorer; }
+Ptr<CDockPane> CIDESolutions::GetExplorerTool(void) { return mpExplorerTool; }
+Ptr<CMenuContainer> CIDESolutions::GetExplorerMenu(void) { return mpExplorerMenu; }

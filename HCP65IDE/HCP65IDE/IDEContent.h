@@ -165,7 +165,6 @@ protected:
 	Ptr<CMenuItem>				mpResetLayoutItem;	//Window, Reset Window Layout.
 	Ptr<CMenuItem>				mpCloseAllItem;		//Window, Close All Documents.
 	Ptr<CDockManager>			mpDock;
-	Ptr<CDockPane>				mpExplorerTool;		//The tool windows.
 	Ptr<CImageCel>				mpFolderIcon;		//The file chooser's.
 	Ptr<CImageCel>				mpFileIcon;
 	CArray<CImageCel>			maFileIcons;		//By EIDEFileType.
@@ -193,10 +192,6 @@ protected:
 	Ptr<CIDEAskClaude>			mpAskClaude;		//The Claude tab's requests.
 	Ptr<CMenuItem>				mpRenameItem;
 	Ptr<CMenuItem>				mpExtractMethodItem;
-	Ptr<CSolutionExplorer>		mpExplorer;
-	Ptr<CMenuContainer>			mpExplorerMenu;		//A solution's: Set as Startup Solution and Remove.
-	Ptr<CMenuItem>				mpStartupItem;
-	Ptr<CMenuItem>				mpRemoveSolutionItem;
 	CBuildWorkspace				mcWorkspace;		//The solutions open, one the startup solution.
 	CIDECodeModel				mcCodeModel;		//Uses mcWorkspace; initialised when a solution is opened.
 
@@ -220,7 +215,6 @@ public:
 
 	void			SetKeepSettings(bool bKeep);
 	void			MenuItemClicked(CMenuItem* pcItem);
-	void			ExplorerActivated(void);
 	bool			GoToDefinition(void);
 	bool			FindReferences(void);
 	void			ShowStatus(const char* szText);
@@ -246,7 +240,6 @@ public:
 
 
 
-	bool				ShowActiveFileInExplorer(void);
 	Ptr<CMenuContainer>	CreateEditorMenu(void);
 	Ptr<CIDEScript>		GetScript(void);
 	Ptr<CIDEDocuments>	GetDocuments(void);
@@ -261,7 +254,6 @@ public:
 
 protected:
 	Ptr<CMenuBar>		CreateMenuBar(void);
-	Ptr<CMenuContainer>	CreateExplorerMenu(void);
 	void				CodeCommandAction(SComponentInputEvent* psEvent);
 
 

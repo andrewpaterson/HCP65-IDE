@@ -231,7 +231,6 @@ void CIDEContent::Class(void)
 	M_Pointer(mpResetLayoutItem);
 	M_Pointer(mpCloseAllItem);
 	M_Pointer(mpDock);
-	M_Pointer(mpExplorerTool);
 	M_Pointer(mpFolderIcon);
 	M_Pointer(mpFileIcon);
 	M_Embedded(maFileIcons);
@@ -256,10 +255,6 @@ void CIDEContent::Class(void)
 	M_Pointer(mpGoToSourceItem);
 	M_Pointer(mpRenameItem);
 	M_Pointer(mpExtractMethodItem);
-	M_Pointer(mpExplorer);
-	M_Pointer(mpExplorerMenu);
-	M_Pointer(mpStartupItem);
-	M_Pointer(mpRemoveSolutionItem);
 	U_Unknown(CBuildWorkspace, mcWorkspace);
 	U_Unknown(CIDECodeModel, mcCodeModel);
 	M_Pointer(mpStatusLabel);
@@ -280,17 +275,9 @@ void CIDEContent::Free(void)
 
 	//An object's memory is freed without its destructor running so the content and its listeners take themselves off
 	//the widgets still here.
-	if (mpExplorer.IsNotNull() && mpExplorer->GetTree().IsNotNull())
-	{
-		mpExplorer->GetTree()->GetActivationEvent()->Remove(this);
-	}
 	if (mpMenuBar.IsNotNull())
 	{
 		mpMenuBar->GetItemClickEvent()->Remove(this);
-	}
-	if (mpExplorerMenu.IsNotNull())
-	{
-		mpExplorerMenu->GetItemClickEvent()->Remove(this);
 	}
 	if (mpEditorMenu.IsNotNull())
 	{
@@ -439,12 +426,8 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpAskClaude = OMalloc<CIDEAskClaude>(this);
 
 	//Solution Explorer on the left.
-	mpExplorer = OMalloc<CSolutionExplorer>(pWindow, mpTheme);
-	mpExplorer->SetBoldColours(mpBoldColours);
-	mpExplorer->GetTree()->GetActivationEvent()->Add(this, &CIDEContent::ExplorerActivated);
-	mpExplorer->GetTree()->SetContextMenu(CreateExplorerMenu());
 	sPlace.BesideWell(DS_Left, IDE_EXPLORER_WIDTH);
-	mpExplorerTool = mpDock->AddPane(IDE_EXPLORER_ID, "Solution Explorer", NULL, mpExplorer->GetComponent(), DPK_Tool, &sPlace);
+	mpSolutions->CreateExplorerPane(&sPlace);
 
 	//Under the well, tabbed together: what Find Usages (and Find All References) found, what the build wrote, the
 	//debugger's view and Claude.
@@ -570,22 +553,6 @@ Ptr<CMenuBar> CIDEContent::CreateMenuBar(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Solution Explorer's menu, for the solution of the node selected: Set as
-// Startup Solution and Remove.
-//
-//////////////////////////////////////////////////////////////////////////
-Ptr<CMenuContainer> CIDEContent::CreateExplorerMenu(void)
-{
-	mpExplorerMenu = OMalloc<CMenuContainer>(mpWindow, mpTheme);
-	mpStartupItem = mpExplorerMenu->AddItem("Set as Startup Solution");
-	mpRemoveSolutionItem = mpExplorerMenu->AddItem("Remove Solution");
-	mpExplorerMenu->GetItemClickEvent()->Add(this, &CIDEContent::MenuItemClicked);
-	return mpExplorerMenu;
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEContent::MenuItemClicked(CMenuItem* pcItem)
@@ -608,14 +575,6 @@ void CIDEContent::MenuItemClicked(CMenuItem* pcItem)
 	}
 	else if (mpSolutions->RecentItemClicked(pcItem))
 	{
-	}
-	else if (pcItem == &mpStartupItem)
-	{
-		mpSolutions->SetStartupSolution(mpExplorer->GetNodeSolution(mpExplorer->GetTree()->GetSelectedNode()));
-	}
-	else if (pcItem == &mpRemoveSolutionItem)
-	{
-		mpSolutions->RemoveSolution(mpExplorer->GetNodeSolution(mpExplorer->GetTree()->GetSelectedNode()));
 	}
 	else if (pcItem == &mpSaveItem)
 	{
@@ -652,7 +611,7 @@ void CIDEContent::MenuItemClicked(CMenuItem* pcItem)
 	}
 	else if (pcItem == &mpExplorerItem)
 	{
-		mpDock->Activate(mpExplorerTool);
+		mpDock->Activate(mpSolutions->GetExplorerTool());
 	}
 	else if (pcItem == &mpUsagesItem)
 	{
@@ -705,24 +664,6 @@ void CIDEContent::MenuItemClicked(CMenuItem* pcItem)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// A file opened in Solution Explorer is shown in the editor.
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDEContent::ExplorerActivated(void)
-{
-	CChars	szPath;
-
-	szPath.Init();
-	if (mpExplorer->GetSelectedFilePath(&szPath))
-	{
-		mpDocuments->OpenFile(szPath.Text(), mpExplorer->GetNodeProject(mpExplorer->GetTree()->GetSelectedNode()));
-	}
-	szPath.Kill();
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEContent::CodeCommandAction(SComponentInputEvent* psEvent)
@@ -761,7 +702,7 @@ void CIDEContent::CodeCommandAction(SComponentInputEvent* psEvent)
 	}
 	else if (psEvent->eCommand == CIC_ShowProjectView)
 	{
-		ShowActiveFileInExplorer();
+		mpSolutions->ShowActiveFileInExplorer();
 	}
 	else if (psEvent->eCommand == CIC_GoToSymbol)
 	{
@@ -783,37 +724,6 @@ void CIDEContent::CodeCommandAction(SComponentInputEvent* psEvent)
 	{
 		mpDebugging->DebugCommandAction(psEvent->eCommand);
 	}
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// Alt+1: Solution Explorer is shown with the active file selected, its
-// folders opened and the row scrolled into view.  The editor keeps the
-// keys, its caret where it was.  False if there is no file to show.
-//
-//////////////////////////////////////////////////////////////////////////
-bool CIDEContent::ShowActiveFileInExplorer(void)
-{
-	Ptr<CTreeContainer>	pTree;
-	int32				iNode;
-
-	pTree = mpExplorer->GetTree();
-	mpDock->Activate(mpExplorerTool);
-	if (mpDocuments->GetActiveTab().IsNull())
-	{
-		mpWindow->GetFocus()->SetFocus(pTree);
-		return false;
-	}
-	iNode = mpExplorer->FindFilePathNode(mpDocuments->GetActiveTab()->GetFileName(), mpDocuments->GetActiveTab()->GetProject());
-	if (iNode != TREE_NO_NODE)
-	{
-		pTree->SelectNode(iNode);
-		mpWindow->Layout();
-		pTree->ShowRow(pTree->FindNodeRow(iNode));
-	}
-	mpDock->Activate(mpDocuments->GetActiveTab()->GetDockPane());
-	return iNode != TREE_NO_NODE;
 }
 
 
@@ -1109,7 +1019,7 @@ Ptr<CDockPane> CIDEContent::CreatePane(const char* szID)
 	{
 		return NULL;
 	}
-	pTab = mpDocuments->OpenFileTab(szFileName, mpExplorer->FindFileProject(szFileName), false);
+	pTab = mpDocuments->OpenFileTab(szFileName, mpSolutions->GetExplorer()->FindFileProject(szFileName), false);
 	if (pTab.IsNull())
 	{
 		return NULL;
@@ -1197,14 +1107,14 @@ bool CIDEContent::LoadLayout(void)
 
 
 Ptr<CDockManager> CIDEContent::GetDock(void) { return mpDock; }
-Ptr<CDockPane> CIDEContent::GetExplorerTool(void) { return mpExplorerTool; }
+Ptr<CDockPane> CIDEContent::GetExplorerTool(void) { return mpSolutions->GetExplorerTool(); }
 Ptr<CDockPane> CIDEContent::GetDebugTool(void) { return mpDebugging->GetTool(); }
 Ptr<CDockPane> CIDEContent::GetClaudeTool(void) { return mpAskClaude->GetTool(); }
 
 
 CIDECodeModel* CIDEContent::GetCodeModel(void) { return &mcCodeModel; }
 Ptr<CIDEScript> CIDEContent::GetScript(void) { return mpScript; }
-CSolutionExplorer* CIDEContent::GetExplorer(void) { return &mpExplorer; }
+CSolutionExplorer* CIDEContent::GetExplorer(void) { return &mpSolutions->GetExplorer(); }
 
 
 //////////////////////////////////////////////////////////////////////////

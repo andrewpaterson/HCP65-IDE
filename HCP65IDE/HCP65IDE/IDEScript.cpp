@@ -183,7 +183,7 @@ void CIDEScript::RunCommand(const char* szCommand)
 			PrintMenu(mpcContent->mpMenuBar->GetItem(i)->GetCaption(), mpcContent->mpMenuBar->GetItem(i)->GetMenu());
 		}
 		PrintMenu("Editor", mpcContent->mpEditorMenu);
-		PrintMenu("Explorer", mpcContent->mpExplorerMenu);
+		PrintMenu("Explorer", mpcContent->mpSolutions->GetExplorerMenu());
 		fflush(stdout);
 	}
 	else if (strncmp(szCommand, "clickmenu:", 10) == 0)
@@ -225,7 +225,7 @@ void CIDEScript::RunCommand(const char* szCommand)
 		CChars	szPath;
 
 		szPath.Init();
-		mpcContent->mpExplorer->GetSelectedFilePath(&szPath);
+		mpcContent->mpSolutions->GetExplorer()->GetSelectedFilePath(&szPath);
 		printf("Explorer: [%s]\n", szPath.Text());
 		szPath.Kill();
 		fflush(stdout);
@@ -346,7 +346,7 @@ void CIDEScript::ClickMenu(const char* szPath)
 	}
 	else if (strcmp(aszParts.GetText(0), "Explorer") == 0)
 	{
-		pMenu = mpcContent->mpExplorerMenu;
+		pMenu = mpcContent->mpSolutions->GetExplorerMenu();
 	}
 	for (i = 0; pMenu.IsNull() && (i < mpcContent->mpMenuBar->NumMenus()); i++)
 	{
@@ -458,7 +458,7 @@ void CIDEScript::RunEditStep(const char* szStep)
 		if (iNode != TREE_NO_NODE)
 		{
 			mpcContent->GetExplorer()->GetTree()->SelectNode(iNode);
-			mpcContent->ExplorerActivated();
+			mpcContent->mpSolutions->ExplorerActivated();
 		}
 	}
 	else if ((strncmp(szStep, "type:", 5) == 0) && pTab.IsNotNull())
@@ -544,7 +544,7 @@ void CIDEScript::RunEditStep(const char* szStep)
 	}
 	else if (strcmp(szStep, "explorer") == 0)
 	{
-		mpcContent->ShowActiveFileInExplorer();
+		mpcContent->mpSolutions->ShowActiveFileInExplorer();
 	}
 	else if (strncmp(szStep, "caret:", 6) == 0)
 	{
