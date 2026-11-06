@@ -331,24 +331,38 @@ void CIDEDocuments::ReindexAll(void)
 //////////////////////////////////////////////////////////////////////////
 //
 // The open files changed since they were indexed are indexed again from
-// their editors' text: after a pause in the typing, or with bNow straight
-// away (before Rename, Find Usages or Go to is worked out).  A header is
-// preprocessed from its editor from then on, and indexed again with the
-// first unit that included it; then the .cpp (and .c) files.  Not while
-// everything is being indexed: they are indexed after.
+// their editors' text: after a pause in the typing on the code model's
+// reindexing thread, or with bNow straight away on this thread (before
+// Rename, Find Usages or Go to is worked out; it waits for the reindexing
+// thread first).  A header is preprocessed from its editor from then on,
+// and indexed again with the first unit that included it; then the .cpp
+// (and .c) files.  Not while everything is being indexed: they are
+// indexed after.  Not while the reindexing thread is busy without bNow:
+// the tabs stay stale and are given to it once it has finished.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEDocuments::ReindexStaleTabs(bool bNow)
 {
-	size				i;
-	size				iPass;
-	Ptr<CIDEEditorTab>	pTab;
-	EIDEFileType		eType;
+	size					i;
+	size					iPass;
+	Ptr<CIDEEditorTab>		pTab;
+	EIDEFileType			eType;
+	CArrayIDEReindexFiles	apsFiles;
 
 	if (mpcContent->mcCodeModel.IsIndexing())
 	{
 		return;
 	}
+	if (bNow)
+	{
+		mpcContent->mcCodeModel.WaitForReindexing();
+	}
+	else if (mpcContent->mcCodeModel.IsReindexing())
+	{
+		return;
+	}
+
+	apsFiles.Init();
 	for (iPass = 0; iPass < 2; iPass++)
 	{
 		for (i = 0; i < maTabs.Size(); i++)
@@ -363,26 +377,45 @@ void CIDEDocuments::ReindexStaleTabs(bool bNow)
 			if ((iPass == 0) && (eType == IFT_Header))
 			{
 				mpcContent->mcCodeModel.SetHeaderText(pTab->GetFileName(), pTab->GetEditor()->GetText());
-				ReindexHeader(pTab->GetFileName());
+				AddReindexHeader(pTab->GetFileName(), &apsFiles);
 				pTab->SetIndexStale(false);
 			}
 			else if ((iPass == 1) && ((eType == IFT_CPP) || (eType == IFT_C)))
 			{
-				mpcContent->mcCodeModel.ReindexUnit(pTab->GetProject(), pTab->GetFileName(), pTab->GetEditor()->GetText());
+				AddReindexFile(pTab->GetProject(), pTab->GetFileName(), pTab->GetEditor()->GetText(), NULL, &apsFiles);
 				pTab->SetIndexStale(false);
 			}
 		}
 	}
+	mpcContent->mcCodeModel.Reindex(&apsFiles, bNow);
+	apsFiles.Kill();
 }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The header szFileName indexed again (after its text changed) with the
-// first unit that included it, from that unit's editor if it is open.
+// A file to index again added to papsFiles, its text copied from
+// szContents (NULL: the file is read).
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEDocuments::ReindexHeader(const char* szFileName)
+void CIDEDocuments::AddReindexFile(size uiProject, const char* szFileName, const char* szContents, const char* szHeader, CArrayIDEReindexFiles* papsFiles)
+{
+	SIDEReindexFile*	psFile;
+
+	psFile = NewMalloc<SIDEReindexFile>();
+	psFile->Init(uiProject, szFileName, szContents, szHeader);
+	papsFiles->Add(psFile);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The header szFileName to index again (after its text changed) with the
+// first unit that included it, from that unit's editor if it is open,
+// added to papsFiles.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDocuments::AddReindexHeader(const char* szFileName, CArrayIDEReindexFiles* papsFiles)
 {
 	size				uiProject;
 	CChars				szUnit;
@@ -392,7 +425,7 @@ void CIDEDocuments::ReindexHeader(const char* szFileName)
 	if (mpcContent->mcCodeModel.GetIncluder(szFileName, &uiProject, &szUnit))
 	{
 		pUnitTab = FindTab(szUnit.Text());
-		mpcContent->mcCodeModel.ReindexUnit(uiProject, szUnit.Text(), pUnitTab.IsNotNull() ? pUnitTab->GetEditor()->GetText() : NULL, szFileName);
+		AddReindexFile(uiProject, szUnit.Text(), pUnitTab.IsNotNull() ? pUnitTab->GetEditor()->GetText() : NULL, szFileName, papsFiles);
 	}
 	szUnit.Kill();
 }
@@ -401,27 +434,31 @@ void CIDEDocuments::ReindexHeader(const char* szFileName)
 //////////////////////////////////////////////////////////////////////////
 //
 // A file closed without saving its edits is indexed again as it is on
-// disk: the index had its editor's text.
+// disk, on the reindexing thread: the index had its editor's text.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEDocuments::ReindexDiscarded(Ptr<CIDEEditorTab> pTab)
 {
-	EIDEFileType	eType;
+	EIDEFileType			eType;
+	CArrayIDEReindexFiles	apsFiles;
 
 	if ((pTab->GetProject() == MAX_SIZE) || mpcContent->mcCodeModel.IsIndexing())
 	{
 		return;
 	}
+	apsFiles.Init();
 	eType = CIDEIcons::GetFileType(pTab->GetFileName());
 	if (eType == IFT_Header)
 	{
 		mpcContent->mcCodeModel.SetHeaderText(pTab->GetFileName(), NULL);
-		ReindexHeader(pTab->GetFileName());
+		AddReindexHeader(pTab->GetFileName(), &apsFiles);
 	}
 	else if ((eType == IFT_CPP) || (eType == IFT_C))
 	{
-		mpcContent->mcCodeModel.ReindexUnit(pTab->GetProject(), pTab->GetFileName(), NULL);
+		AddReindexFile(pTab->GetProject(), pTab->GetFileName(), NULL, NULL, &apsFiles);
 	}
+	mpcContent->mcCodeModel.Reindex(&apsFiles, false);
+	apsFiles.Kill();
 }
 
 

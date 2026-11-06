@@ -64,7 +64,8 @@ public:
 	bool			SetCaretPlace(int iLine, int iColumn);
 	void			ReindexStaleTabs(bool bNow);
 	void			ReindexAll(void);
-	void			ReindexHeader(const char* szFileName);
+	void			AddReindexFile(size uiProject, const char* szFileName, const char* szContents, const char* szHeader, CArrayIDEReindexFiles* papsFiles);
+	void			AddReindexHeader(const char* szFileName, CArrayIDEReindexFiles* papsFiles);
 	void			ReindexDiscarded(Ptr<CIDEEditorTab> pTab);
 	bool			CloseFile(const char* szFileName);
 	Ptr<CTextArea>		GetEditor(void);
