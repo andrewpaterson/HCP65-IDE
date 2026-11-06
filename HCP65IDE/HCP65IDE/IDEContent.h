@@ -346,6 +346,7 @@ protected:
 	void				ShowConfigurations(void);
 	CBuildConfiguration*	GetChosenConfiguration(void);
 	bool				StartBuildStep(CArrayChars* paszLines);
+	void				ShowBuildProgress(void);
 	void				FinishBuildSteps(CArrayChars* paszLines);
 	Ptr<CMenuContainer>	CreateDebugMenu(void);
 	bool				DebugMenuItemClicked(CMenuItem* pcItem);

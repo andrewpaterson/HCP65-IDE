@@ -26,25 +26,25 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/Window.h"
 #include "WindowLib/WindowTheme.h"
 #include "WindowLib/GridContainer.h"
-#include "WindowLib/Label.h"
+#include "WindowLib/ProgressBar.h"
 #include "WindowLib/TextArea.h"
 #include "WindowLib/ScrollPane.h"
 
 
-//The Build tab under the editor: a line saying how the build is going over what the build wrote, which is kept
-//scrolled to its end as lines are added.
+//The Build tab under the editor: what the build wrote, which is kept scrolled to its end as lines are added, over a
+//bar showing how far the build has got: blue while it runs, green when it has succeeded and red when it hasn't.
 class CIDEBuildPane : public CObject
 {
 CONSTRUCTABLE(CIDEBuildPane);
 DESTRUCTABLE(CIDEBuildPane);
 protected:
 	Ptr<CGridContainer>	mpPanel;
-	Ptr<CLabel>			mpProgress;
 	Ptr<CTextArea>		mpOutput;
+	Ptr<CProgressBar>	mpProgress;
 	Ptr<CScrollPane>	mpPane;
 
 public:
-	void				Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CFont> pProgressFont, Ptr<CFontFamily> pOutputFamily, ARGB32 sOutputColour);
+	void				Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CFontFamily> pOutputFamily, ARGB32 sOutputColour);
 	void				Class(void) override;
 	void				Free(void) override;
 
@@ -53,11 +53,11 @@ public:
 
 	void				Clear(void);
 	void				AppendLines(CArrayChars* paszLines);
-	void				SetProgress(const char* szProgress);
+	void				SetProgress(float fFraction, ARGB32 sColour);
 
 	Ptr<CComponent>		GetComponent(void);
 	char*				GetOutput(void);
-	char*				GetProgress(void);
+	Ptr<CProgressBar>	GetProgressBar(void);
 };
 
 

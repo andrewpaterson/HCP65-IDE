@@ -400,7 +400,6 @@ bool CIDEContent::ChooseEmulator(bool bLaunch)
 		aszLines.Init();
 		aszLines.Add(szMessage.Text());
 		mpBuildPane->AppendLines(&aszLines);
-		mpBuildPane->SetProgress(szMessage.Text());
 		aszLines.Kill();
 		mpDock->Show(mpBuildTool);
 	}

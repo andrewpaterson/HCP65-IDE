@@ -20,7 +20,11 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 ** ------------------------------------------------------------------------ **/
 #include "StandardLib/Objects.h"
 #include "StandardLib/ClassDefines.h"
+#include "WindowLib/JewelColours.h"
 #include "IDEBuildPane.h"
+
+
+#define IDE_BUILD_PROGRESS_HEIGHT	6
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -28,12 +32,10 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 // The output is in pOutputFamily's fixed width font, as tiles.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEBuildPane::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CFont> pProgressFont, Ptr<CFontFamily> pOutputFamily, ARGB32 sOutputColour)
+void CIDEBuildPane::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CFontFamily> pOutputFamily, ARGB32 sOutputColour)
 {
 	PreInit();
 
-	mpProgress = OMalloc<CLabel>(pWindow, pProgressFont, "");
-	mpProgress->SetAlignment(CSH_Left, CSV_Center);
 	mpOutput = OMalloc<CTextArea>(pWindow, pOutputFamily, "");
 	mpOutput->SetEditable(false);
 	mpOutput->SetTiledText(true);
@@ -42,10 +44,12 @@ void CIDEBuildPane::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CFo
 	mpPane = OMalloc<CScrollPane>(pWindow, pTheme);
 	mpPane->SetContent(mpOutput);
 	mpPane->SetAlignment(CSH_Stretch, CSV_Stretch);
+	mpProgress = OMalloc<CProgressBar>(pWindow, JEWEL_SEPARATOR, JEWEL_BLUE, IDE_BUILD_PROGRESS_HEIGHT);
+	mpProgress->SetAlignment(CSH_Stretch, CSV_Bottom);
 	mpPanel = OMalloc<CGridContainer>(pWindow);
 	mpPanel->SetAlignment(CSH_Stretch, CSV_Stretch);
-	mpPanel->AddComponent(mpProgress, 0, 0, 1, 1, 1, 0);
-	mpPanel->AddComponent(mpPane, 0, 1, 1, 1, 1, 1);
+	mpPanel->AddComponent(mpPane, 0, 0, 1, 1, 1, 1);
+	mpPanel->AddComponent(mpProgress, 0, 1, 1, 1, 1, 0);
 
 	PostInit();
 }
@@ -58,8 +62,8 @@ void CIDEBuildPane::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CFo
 void CIDEBuildPane::Class(void)
 {
 	M_Pointer(mpPanel);
-	M_Pointer(mpProgress);
 	M_Pointer(mpOutput);
+	M_Pointer(mpProgress);
 	M_Pointer(mpPane);
 }
 
@@ -96,13 +100,26 @@ bool CIDEBuildPane::Load(CObjectReader* pcFile)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// No output and no progress, for a new build.
+// No output and nothing done, for a new build.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEBuildPane::Clear(void)
 {
 	mpOutput->SetText("");
-	mpProgress->SetText("");
+	SetProgress(0.0f, JEWEL_BLUE);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// How far the build has got, 0 to 1, in the colour that says how it is
+// going.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEBuildPane::SetProgress(float fFraction, ARGB32 sColour)
+{
+	mpProgress->SetFraction(fFraction);
+	mpProgress->SetBarColour(sColour);
 }
 
 
@@ -137,18 +154,7 @@ void CIDEBuildPane::AppendLines(CArrayChars* paszLines)
 }
 
 
-//////////////////////////////////////////////////////////////////////////
-//
-// How the build is going, such as "Compiling 12 of 40: Main.cpp".
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDEBuildPane::SetProgress(const char* szProgress)
-{
-	mpProgress->SetText(szProgress);
-}
-
-
 Ptr<CComponent> CIDEBuildPane::GetComponent(void) { return mpPanel; }
+Ptr<CProgressBar> CIDEBuildPane::GetProgressBar(void) { return mpProgress; }
 char* CIDEBuildPane::GetOutput(void) { return mpOutput->GetText(); }
-char* CIDEBuildPane::GetProgress(void) { return mpProgress->GetText(); }
 

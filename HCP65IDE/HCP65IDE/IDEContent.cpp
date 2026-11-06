@@ -518,7 +518,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	sPlace.BesideWell(DS_Bottom, IDE_BOTTOM_HEIGHT);
 	mpReferencesTool = mpDock->AddPane(IDE_REFERENCES_ID, "Find All References", NULL, pReferencesPane, DPK_Tool, &sPlace);
 
-	mpBuildPane = OMalloc<CIDEBuildPane>(pWindow, mpTheme, mpFontColours->GetFont(JEWEL_ICON), mpCodeFamily, JEWEL_TEXT);
+	mpBuildPane = OMalloc<CIDEBuildPane>(pWindow, mpTheme, mpCodeFamily, JEWEL_TEXT);
 	sPlace.WithPane(IDE_REFERENCES_ID);
 	mpBuildTool = mpDock->AddPane(IDE_BUILD_ID, "Build", NULL, mpBuildPane->GetComponent(), DPK_Tool, &sPlace);
 
@@ -1650,7 +1650,7 @@ bool CIDEContent::Build(void)
 		FinishBuildSteps(&aszLines);
 	}
 	mpBuildPane->AppendLines(&aszLines);
-	mpBuildPane->SetProgress(mcBuild.GetProgress());
+	ShowBuildProgress();
 	aszLines.Kill();
 	if (mcBuild.IsRunning())
 	{
@@ -1662,7 +1662,7 @@ bool CIDEContent::Build(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// A running build's new output and progress go in the Build tab.  When an
+// A running build's new output goes in the Build tab.  When an
 // HCP65 build succeeds its listings are read.
 //
 //////////////////////////////////////////////////////////////////////////
@@ -1683,7 +1683,7 @@ void CIDEContent::PollBuild(Ptr<CWindow> pWindow)
 		FinishBuildSteps(&aszLines);
 	}
 	mpBuildPane->AppendLines(&aszLines);
-	mpBuildPane->SetProgress(mcBuild.GetProgress());
+	ShowBuildProgress();
 	aszLines.Kill();
 	if (mcBuild.IsRunning())
 	{
@@ -1717,6 +1717,35 @@ bool CIDEContent::StartBuildStep(CArrayChars* paszLines)
 		szLine.Kill();
 	}
 	return mcBuild.Start(&pcSolution->mcSolution, mcWorkspace.FindConfiguration(uiSolution, mszConfiguration.Text()), NULL, mszLibc65.Text(), paszLines);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The build pane's bar: blue while the build runs, as far as it has got
+// over the solutions it builds (each an equal part); then all green if
+// every solution built, else all red.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::ShowBuildProgress(void)
+{
+	size	uiSteps;
+	float	fFraction;
+
+	uiSteps = maiBuildOrder.NumElements();
+	if (mcBuild.IsRunning() && (uiSteps > 0))
+	{
+		fFraction = ((float)muiBuildStep + mcBuild.GetFraction()) / (float)uiSteps;
+		mpBuildPane->SetProgress(fFraction, JEWEL_BLUE);
+	}
+	else if (mcBuild.GetState() == BS_Succeeded)
+	{
+		mpBuildPane->SetProgress(1.0f, JEWEL_GREEN);
+	}
+	else if ((mcBuild.GetState() == BS_Failed) || (mcBuild.GetState() == BS_Cancelled))
+	{
+		mpBuildPane->SetProgress(1.0f, JEWEL_RED);
+	}
 }
 
 
