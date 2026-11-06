@@ -101,6 +101,65 @@ void KillIDELocations(CArrayIDELocations* pasLocations)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// szContents and szHeader may be NULL.
+//
+//////////////////////////////////////////////////////////////////////////
+void SIDEReindexFile::Init(size uiProject, const char* szFileName, const char* szContents, const char* szHeader)
+{
+	this->uiProject = uiProject;
+	this->szFileName.Init(szFileName);
+	bContents = szContents != NULL;
+	this->szContents.Init(szContents ? szContents : "");
+	bHeader = szHeader != NULL;
+	this->szHeader.Init(szHeader ? szHeader : "");
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void SIDEReindexFile::Kill(void)
+{
+	szHeader.Kill();
+	szContents.Kill();
+	szFileName.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The files are freed and the array emptied; it can be used again.
+//
+//////////////////////////////////////////////////////////////////////////
+void KillIDEReindexFiles(CArrayIDEReindexFiles* papsFiles)
+{
+	size				i;
+	SIDEReindexFile*	psFile;
+
+	for (i = 0; i < papsFiles->NumElements(); i++)
+	{
+		psFile = papsFiles->GetPtr(i);
+		psFile->Kill();
+		free(psFile);
+	}
+	papsFiles->ReInit();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The reindexing thread indexing the edited files again.
+//
+//////////////////////////////////////////////////////////////////////////
+void IDEReindexJob(void* pvData)
+{
+	((CIDECodeModel*)pvData)->ReindexFiles();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // A worker thread indexing one file.
 //
 //////////////////////////////////////////////////////////////////////////
@@ -136,6 +195,10 @@ void CIDECodeModel::Init(CBuildWorkspace* pcWorkspace)
 	muiIndexed = 0;
 	mbCancelled = false;
 	mcIncluders.Init();
+
+	mbReindexJobs = false;
+	mapsReindexing.Init();
+	mbReindexing = false;
 }
 
 
@@ -147,6 +210,12 @@ void CIDECodeModel::Init(CBuildWorkspace* pcWorkspace)
 void CIDECodeModel::Kill(void)
 {
 	KillJobs();
+	if (mbReindexJobs)
+	{
+		mcReindexJobs.Kill();
+		mbReindexJobs = false;
+	}
+	mapsReindexing.Kill();
 	mcIncluders.Kill();
 	mcIndexMutex.Kill();
 	mcIndex.Kill();
@@ -188,6 +257,9 @@ void CIDECodeModel::KillJobs(void)
 {
 	size			i;
 	SIDEIndexJob*	psJob;
+
+	//The edited files being indexed again use the projects and the jobs (GetIncluder) too.
+	WaitForReindexing();
 
 	//The jobs that haven't started find they are cancelled, so only those being parsed are waited for.
 	if (mbJobs)
@@ -667,8 +739,9 @@ void CIDECodeModel::IndexUnit(SIDEIndexJob* psJob)
 // the file if NULL) after it changed: its old places are forgotten first,
 // and szHeader's too if it isn't NULL (a header that changed, indexed
 // again with a unit that includes it; see SetHeaderText).  Call it once
-// the indexing has finished (IsIndexing).  False if the file couldn't be
-// parsed.
+// the indexing has finished (IsIndexing), on one thread at a time (the
+// UI thread while nothing is being indexed again, or the reindexing
+// thread; see Reindex).  False if the file couldn't be parsed.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDECodeModel::ReindexUnit(size uiProject, const char* szFileName, const char* szContents, const char* szHeader)
@@ -723,6 +796,8 @@ void CIDECodeModel::SetHeaderText(const char* szFileName, const char* szText)
 	CProject*		pcProject;
 	CHeaderFile*	pcHeader;
 
+	//The reindexing thread may be preprocessing the header.
+	WaitForReindexing();
 	mcProjectsMutex.Lock();
 	for (i = 0; i < mapcProjects.NumElements(); i++)
 	{
@@ -781,6 +856,115 @@ void CIDECodeModel::ReindexAll(void)
 	mcHeaderCache.Kill();
 	mcHeaderCache.Init();
 	StartIndexing();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The edited files in papsFiles (which is emptied; the model frees them)
+// indexed again, in order: with bNow on this thread, otherwise on the
+// reindexing thread, so the UI isn't held up while the user types.  The
+// index can be asked while they are; it has the files' old places until
+// each file is merged.  Waits for the files given before first.  Call it
+// once the indexing has finished (IsIndexing), and with each changed
+// header's text already set (SetHeaderText).
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDECodeModel::Reindex(CArrayIDEReindexFiles* papsFiles, bool bNow)
+{
+	size	i;
+
+	WaitForReindexing();
+	if (papsFiles->NumElements() == 0)
+	{
+		return;
+	}
+	for (i = 0; i < papsFiles->NumElements(); i++)
+	{
+		mapsReindexing.Add(papsFiles->GetPtr(i));
+	}
+	papsFiles->ReInit();
+
+	if (bNow)
+	{
+		ReindexFiles();
+		KillReindexFiles();
+		return;
+	}
+
+	if (!mbReindexJobs)
+	{
+		mcReindexJobs.Init(1);
+		mbReindexJobs = true;
+	}
+	mcIndexMutex.Lock();
+	mbReindexing = true;
+	mcIndexMutex.Unlock();
+	mcReindexJobs.Run(&IDEReindexJob, this);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// On the reindexing thread (or the UI thread with Reindex's bNow): each
+// file given to Reindex indexed again.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDECodeModel::ReindexFiles(void)
+{
+	size				i;
+	SIDEReindexFile*	psFile;
+
+	for (i = 0; i < mapsReindexing.NumElements(); i++)
+	{
+		psFile = mapsReindexing.GetPtr(i);
+		ReindexUnit(psFile->uiProject, psFile->szFileName.Text(), psFile->bContents ? psFile->szContents.Text() : NULL, psFile->bHeader ? psFile->szHeader.Text() : NULL);
+	}
+	mcIndexMutex.Lock();
+	mbReindexing = false;
+	mcIndexMutex.Unlock();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether edited files are being indexed again on the reindexing thread.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDECodeModel::IsReindexing(void)
+{
+	bool	bReindexing;
+
+	mcIndexMutex.Lock();
+	bReindexing = mbReindexing;
+	mcIndexMutex.Unlock();
+	return bReindexing;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Returns once the edited files given to Reindex have been indexed
+// again; they are freed.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDECodeModel::WaitForReindexing(void)
+{
+	if (mbReindexJobs)
+	{
+		mcReindexJobs.Wait();
+	}
+	KillReindexFiles();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDECodeModel::KillReindexFiles(void)
+{
+	KillIDEReindexFiles(&mapsReindexing);
 }
 
 

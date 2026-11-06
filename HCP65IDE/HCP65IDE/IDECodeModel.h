@@ -99,6 +99,25 @@ struct SIDEIndexJob
 
 
 typedef CArrayTemplatePtr<SIDEIndexJob>	CArrayIDEIndexJobs;
+
+
+//A file indexed again after it was edited (CIDECodeModel::Reindex): the text is copied so the editor can change while
+//it is indexed on the reindexing thread.
+struct SIDEReindexFile
+{
+	size	uiProject;		//The workspace's.
+	CChars	szFileName;		//The .cpp (or .c).
+	CChars	szContents;		//Its editor's text.
+	bool	bContents;		//False: the file is read.
+	CChars	szHeader;		//The header that changed, indexed again with it.
+	bool	bHeader;
+
+	void	Init(size uiProject, const char* szFileName, const char* szContents, const char* szHeader);
+	void	Kill(void);
+};
+
+
+typedef CArrayTemplatePtr<SIDEReindexFile>	CArrayIDEReindexFiles;
 typedef CArrayTemplatePtr<CProject>		CArrayIDEProjects;
 
 
@@ -126,6 +145,11 @@ protected:
 	bool				mbCancelled;			//The jobs not started yet do nothing (KillJobs).
 	CMapStringInt		mcIncluders;			//A file to the first indexed unit that included it (the job's index).
 
+	CWorkerThreadJobs	mcReindexJobs;			//One thread indexing the edited files again, away from the UI thread.
+	bool				mbReindexJobs;
+	CArrayIDEReindexFiles	mapsReindexing;		//The files it is indexing, until it is waited for.
+	bool				mbReindexing;			//Under the index mutex.
+
 public:
 	void	Init(CBuildWorkspace* pcWorkspace);
 	void	Kill(void);
@@ -146,6 +170,10 @@ public:
 	void	SetHeaderText(const char* szFileName, const char* szText);
 	bool	GetIncluder(const char* szFileName, size* puiProject, CChars* pszUnit);
 	void	ReindexAll(void);
+	void	Reindex(CArrayIDEReindexFiles* papsFiles, bool bNow);
+	bool	IsReindexing(void);
+	void	WaitForReindexing(void);
+	void	ReindexFiles(void);
 	bool	FindDefinition(const char* szFileName, int iLine, int iColumn, SIDELocation* psDest);
 	bool	FindReferences(const char* szFileName, int iLine, int iColumn, CArrayIDELocations* pasDest, CChars* pszKey);
 	size	FindProjectOfFile(const char* szFileName);
@@ -171,11 +199,13 @@ protected:
 	void				AddCompilerDefines(CVcxConfiguration* pcConfiguration, CConfig* pcConfig);
 	void				KillProjects(void);
 	void				KillJobs(void);
+	void				KillReindexFiles(void);
 	void				CopyLocation(SCPPIndexLocation* psLocation, SIDELocation* psDest);
 };
 
 
 void KillIDELocations(CArrayIDELocations* pasLocations);
+void KillIDEReindexFiles(CArrayIDEReindexFiles* papsFiles);
 void GetIDESymbolName(const char* szKey, CChars* pszDest);
 
 
