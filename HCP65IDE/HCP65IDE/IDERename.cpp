@@ -117,16 +117,16 @@ bool CIDERename::FindRenameTarget(SIDERenameTarget* psDest)
 	SIDELocation*	psLocation;
 	size			i;
 
-	if (mpcContent->mpActive.IsNull())
+	if (mpcContent->mpDocuments->GetActiveTab().IsNull())
 	{
 		return false;
 	}
 
 	//What can be edited: the solutions' files.  The index is brought up to date with the editors first.
 	mpcContent->mpNavigator->FindGoToFiles();
-	mpcContent->ReindexStaleTabs(true);
+	mpcContent->mpDocuments->ReindexStaleTabs(true);
 
-	pEditor = mpcContent->mpActive->GetEditor();
+	pEditor = mpcContent->mpDocuments->GetActiveTab()->GetEditor();
 	bSelected = pEditor->GetSelection(&uiStart, &uiEnd);
 	if (!bSelected)
 	{
@@ -135,10 +135,10 @@ bool CIDERename::FindRenameTarget(SIDERenameTarget* psDest)
 	}
 	uiLine = pEditor->FindLine(uiStart);
 	iStartColumn = (int)(uiStart - pEditor->GetLineStart(uiLine));
-	if (!mpcContent->mcCodeModel.FindRenameTarget(mpcContent->mpActive->GetFileName(), (int)uiLine, iStartColumn, mpcContent->mpNavigator->GetSolutionFileSet(), psDest))
+	if (!mpcContent->mcCodeModel.FindRenameTarget(mpcContent->mpDocuments->GetActiveTab()->GetFileName(), (int)uiLine, iStartColumn, mpcContent->mpNavigator->GetSolutionFileSet(), psDest))
 	{
 		//The caret just after a name, as after it's typed, names it too.
-		if (bSelected || (iStartColumn == 0) || !mpcContent->mcCodeModel.FindRenameTarget(mpcContent->mpActive->GetFileName(), (int)uiLine, iStartColumn - 1, mpcContent->mpNavigator->GetSolutionFileSet(), psDest))
+		if (bSelected || (iStartColumn == 0) || !mpcContent->mcCodeModel.FindRenameTarget(mpcContent->mpDocuments->GetActiveTab()->GetFileName(), (int)uiLine, iStartColumn - 1, mpcContent->mpNavigator->GetSolutionFileSet(), psDest))
 		{
 			return false;
 		}
@@ -156,7 +156,7 @@ bool CIDERename::FindRenameTarget(SIDERenameTarget* psDest)
 		for (i = 0; i < psDest->asLocations.NumElements(); i++)
 		{
 			psLocation = psDest->asLocations.Get(i);
-			if ((psLocation->iLine == (int32)uiLine) && psLocation->szFileName.Equals(mpcContent->mpActive->GetFileName()) &&
+			if ((psLocation->iLine == (int32)uiLine) && psLocation->szFileName.Equals(mpcContent->mpDocuments->GetActiveTab()->GetFileName()) &&
 				(psLocation->iColumn <= iStartColumn) && (iEndColumn <= psLocation->iColumn + psLocation->iLength))
 			{
 				bInName = true;
@@ -374,10 +374,10 @@ bool CIDERename::RenameSymbol(SIDERenameTarget* psTarget, const char* szNewName)
 		}
 		if (uiFile == aszFiles.NumElements())
 		{
-			pTab = mpcContent->FindTab(psLocation->szFileName.Text());
+			pTab = mpcContent->mpDocuments->FindTab(psLocation->szFileName.Text());
 			if (pTab.IsNull())
 			{
-				pTab = mpcContent->OpenFileTab(psLocation->szFileName.Text(), mpcContent->mcCodeModel.FindProjectOfFile(psLocation->szFileName.Text()), false);
+				pTab = mpcContent->mpDocuments->OpenFileTab(psLocation->szFileName.Text(), mpcContent->mcCodeModel.FindProjectOfFile(psLocation->szFileName.Text()), false);
 			}
 			if (pTab.IsNull())
 			{
@@ -388,7 +388,7 @@ bool CIDERename::RenameSymbol(SIDERenameTarget* psTarget, const char* szNewName)
 		}
 
 		//The old name must still be there; a destructor's place may include its ~.
-		pEditor = mpcContent->FindTab(aszFiles.GetText(uiFile))->GetEditor();
+		pEditor = mpcContent->mpDocuments->FindTab(aszFiles.GetText(uiFile))->GetEditor();
 		if ((size)psLocation->iLine >= pEditor->NumLines())
 		{
 			bChanged = false;
@@ -454,7 +454,7 @@ bool CIDERename::RenameSymbol(SIDERenameTarget* psTarget, const char* szNewName)
 			{
 				*auiEnds.Add() = *auiStarts.Get(i) + psTarget->szName.Length();
 			}
-			if (mpcContent->FindTab(aszFiles.GetText(uiFile))->GetEditor()->ReplaceRanges(auiStarts.GetData(), auiEnds.GetData(), auiStarts.NumElements(), szNewName))
+			if (mpcContent->mpDocuments->FindTab(aszFiles.GetText(uiFile))->GetEditor()->ReplaceRanges(auiStarts.GetData(), auiEnds.GetData(), auiStarts.NumElements(), szNewName))
 			{
 				uiPlaces += auiStarts.NumElements();
 			}

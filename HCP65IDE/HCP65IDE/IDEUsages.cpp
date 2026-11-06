@@ -175,10 +175,10 @@ bool CIDEUsages::FindUsages(bool bDeclarations)
 	const char*			szWhat;
 	size				uiOverrides;
 
-	mpcContent->ReindexStaleTabs(true);
+	mpcContent->mpDocuments->ReindexStaleTabs(true);
 	asLocations.Init();
 	szKey.Init();
-	if (!mpcContent->FindSymbolAtCaret(&asLocations, &szKey))
+	if (!mpcContent->mpDocuments->FindSymbolAtCaret(&asLocations, &szKey))
 	{
 		KillIDELocations(&asLocations);
 		szKey.Kill();
@@ -293,7 +293,7 @@ bool CIDEUsages::FindUsages(bool bDeclarations)
 		szText.Append(' ');
 		szText.Append(psUsage->psLocation->iLine + 1);
 		szText.Append(": ");
-		mpcContent->GetFileLine(psUsage->psLocation->szFileName.Text(), psUsage->psLocation->iLine, &szText);
+		mpcContent->mpDocuments->GetFileLine(psUsage->psLocation->szFileName.Text(), psUsage->psLocation->iLine, &szText);
 		if (psUsage->psLocation->uiRole == CPPIR_Definition)
 		{
 			szText.Append("  [definition]");
@@ -340,7 +340,7 @@ void CIDEUsages::UsageActivated(void)
 	iData = mpUsages->GetNodeData(mpUsages->GetSelectedNode());
 	if ((iData > 0) && ((size)iData <= masUsages.NumElements()))
 	{
-		mpcContent->OpenLocation(masUsages.Get((size)iData - 1));
+		mpcContent->mpDocuments->OpenLocation(masUsages.Get((size)iData - 1));
 	}
 }
 

@@ -145,15 +145,15 @@ void CIDEScript::RunCommand(const char* szCommand)
 	else if (strcmp(szCommand, "closetab") == 0)
 	{
 		//The active document closed, as its tab's cross does.
-		if (mpcContent->GetActiveTab().IsNotNull())
+		if (mpcContent->mpDocuments->GetActiveTab().IsNotNull())
 		{
-			mpcContent->mpDock->Close(mpcContent->GetActiveTab()->GetDockPane());
+			mpcContent->mpDock->Close(mpcContent->mpDocuments->GetActiveTab()->GetDockPane());
 		}
 	}
 	else if (strcmp(szCommand, "closeall") == 0)
 	{
 		//Window, Close All Documents.
-		mpcContent->CloseAllFiles();
+		mpcContent->mpDocuments->CloseAllFiles();
 	}
 	else if (strcmp(szCommand, "exit") == 0)
 	{
@@ -179,9 +179,9 @@ void CIDEScript::RunCommand(const char* szCommand)
 		size	i;
 
 		printf("Tabs:");
-		for (i = 0; i < mpcContent->maTabs.Size(); i++)
+		for (i = 0; i < mpcContent->mpDocuments->NumTabs(); i++)
 		{
-			printf(" %s%s%s", (mpcContent->maTabs.Get(i) == mpcContent->mpActive) ? ">" : "", strrchr(mpcContent->maTabs.Get(i)->GetFileName(), '/') + 1, mpcContent->maTabs.Get(i)->IsModified() ? "*" : "");
+			printf(" %s%s%s", (mpcContent->mpDocuments->GetTab(i) == mpcContent->mpDocuments->GetActiveTab()) ? ">" : "", strrchr(mpcContent->mpDocuments->GetTab(i)->GetFileName(), '/') + 1, mpcContent->mpDocuments->GetTab(i)->IsModified() ? "*" : "");
 		}
 		printf("\n");
 		fflush(stdout);
@@ -189,17 +189,17 @@ void CIDEScript::RunCommand(const char* szCommand)
 	else if (strcmp(szCommand, "tabmenu") == 0)
 	{
 		//The active document tab's menu opened under the tab, with Close Multiple's sub menu.
-		if (mpcContent->GetActiveTab().IsNotNull() && mpcContent->GetActiveTab()->GetDockPane()->GetGroup().IsNotNull())
+		if (mpcContent->mpDocuments->GetActiveTab().IsNotNull() && mpcContent->mpDocuments->GetActiveTab()->GetDockPane()->GetGroup().IsNotNull())
 		{
 			Ptr<CDockGroup>		pGroup;
 			Ptr<CTabComponent>	pTab;
 			Ptr<CMenuContainer>	pMenu;
 			size				i;
 
-			pGroup = mpcContent->GetActiveTab()->GetDockPane()->GetGroup();
-			pTab = pGroup->GetTab(mpcContent->GetActiveTab()->GetDockPane());
-			pGroup->OpenMenu(mpcContent->GetActiveTab()->GetDockPane(), SInt32Vec2(pTab->GetPosition().x + 10, pTab->GetPosition().y + pTab->GetActualSize().y));
-			pMenu = pGroup->GetMenu(mpcContent->GetActiveTab()->GetDockPane());
+			pGroup = mpcContent->mpDocuments->GetActiveTab()->GetDockPane()->GetGroup();
+			pTab = pGroup->GetTab(mpcContent->mpDocuments->GetActiveTab()->GetDockPane());
+			pGroup->OpenMenu(mpcContent->mpDocuments->GetActiveTab()->GetDockPane(), SInt32Vec2(pTab->GetPosition().x + 10, pTab->GetPosition().y + pTab->GetActualSize().y));
+			pMenu = pGroup->GetMenu(mpcContent->mpDocuments->GetActiveTab()->GetDockPane());
 			for (i = 0; i < pMenu->NumItems(); i++)
 			{
 				if (pMenu->GetItem(i)->HasSubMenu())
@@ -213,9 +213,9 @@ void CIDEScript::RunCommand(const char* szCommand)
 	else if (strcmp(szCommand, "contextmenu") == 0)
 	{
 		//The active editor's context menu opened at its caret, as the Menu key does.
-		if (mpcContent->GetActiveTab().IsNotNull())
+		if (mpcContent->mpDocuments->GetActiveTab().IsNotNull())
 		{
-			mpcContent->GetActiveTab()->GetEditor()->OpenContextMenu(mpcContent->GetActiveTab()->GetEditor()->GetContextMenuPosition());
+			mpcContent->mpDocuments->GetActiveTab()->GetEditor()->OpenContextMenu(mpcContent->mpDocuments->GetActiveTab()->GetEditor()->GetContextMenuPosition());
 		}
 	}
 }
@@ -254,9 +254,9 @@ void CIDEScript::RunGoTo(const char* szGoTo)
 	if (pGoTo->Approve())
 	{
 		mpcContent->mpNavigator->OpenGoToChoice();
-		if (mpcContent->GetActiveTab().IsNotNull())
+		if (mpcContent->mpDocuments->GetActiveTab().IsNotNull())
 		{
-			printf("Opened %s\n", mpcContent->GetActiveTab()->GetFileName());
+			printf("Opened %s\n", mpcContent->mpDocuments->GetActiveTab()->GetFileName());
 		}
 	}
 	fflush(stdout);
@@ -281,7 +281,7 @@ void CIDEScript::RunEditStep(const char* szStep)
 	size					uiEnd;
 	size					i;
 
-	pTab = mpcContent->GetActiveTab();
+	pTab = mpcContent->mpDocuments->GetActiveTab();
 	if (strncmp(szStep, "open:", 5) == 0)
 	{
 		iNode = mpcContent->GetExplorer()->FindFileNode(&szStep[5]);
@@ -359,8 +359,8 @@ void CIDEScript::RunEditStep(const char* szStep)
 		//The keys given to the Build output, Claude's request or the active document.
 		if (strcmp(&szStep[6], "build") == 0)
 		{
-			mpcContent->mpDock->Show(mpcContent->mpBuildTool);
-			mpcContent->mpWindow->GetFocus()->SetFocus(mpcContent->mpBuildPane->GetOutputArea());
+			mpcContent->mpDock->Show(mpcContent->mpBuilding->GetBuildTool());
+			mpcContent->mpWindow->GetFocus()->SetFocus(mpcContent->mpBuilding->GetBuildPane()->GetOutputArea());
 		}
 		else if (strcmp(&szStep[6], "claude") == 0)
 		{
@@ -381,15 +381,15 @@ void CIDEScript::RunEditStep(const char* szStep)
 		//caret:<line>:<column>, from 1, as HCP65_IDE_CARET.
 		if (strchr(&szStep[6], ':') != NULL)
 		{
-			mpcContent->SetCaretPlace(atoi(&szStep[6]) - 1, atoi(strchr(&szStep[6], ':') + 1) - 1);
+			mpcContent->mpDocuments->SetCaretPlace(atoi(&szStep[6]) - 1, atoi(strchr(&szStep[6], ':') + 1) - 1);
 		}
 	}
 	else if (strcmp(szStep, "reindexall") == 0)
 	{
 		//As saving a header does: everything indexed again, waited for, then the open files' edits.
-		mpcContent->ReindexAll();
+		mpcContent->mpDocuments->ReindexAll();
 		mpcContent->mcCodeModel.WaitForIndexing();
-		mpcContent->ReindexStaleTabs(true);
+		mpcContent->mpDocuments->ReindexStaleTabs(true);
 	}
 	else if (strcmp(szStep, "undoall") == 0)
 	{
@@ -422,14 +422,14 @@ void CIDEScript::RunEditStep(const char* szStep)
 			printf(" %s%s", pMenu->GetItem(i)->GetText(), pMenu->GetItem(i)->IsEnabled() ? "" : "(disabled)");
 		}
 		printf("\n");
-		for (i = 0; i < mpcContent->NumTabs(); i++)
+		for (i = 0; i < mpcContent->mpDocuments->NumTabs(); i++)
 		{
-			pEditor = mpcContent->GetTab(i)->GetEditor();
+			pEditor = mpcContent->mpDocuments->GetTab(i)->GetEditor();
 			uiLine = pEditor->FindLine(pEditor->GetCaretPosition());
 			uiEnd = (uiLine + 1 < pEditor->NumLines()) ? pEditor->GetLineStart(uiLine + 1) - 1 : strlen(pEditor->GetText());
 			szLine.Init();
 			szLine.AppendSubString(pEditor->GetText(), pEditor->GetLineStart(uiLine), uiEnd);
-			printf("%s%s%s line %d: [%s]\n", mpcContent->GetTab(i)->GetFileName(), mpcContent->GetTab(i)->IsModified() ? " *" : "", (mpcContent->mpWindow->GetFocus()->GetFocussedComponent() == pEditor) ? " (focus)" : "", (int)uiLine + 1, szLine.Text());
+			printf("%s%s%s line %d: [%s]\n", mpcContent->mpDocuments->GetTab(i)->GetFileName(), mpcContent->mpDocuments->GetTab(i)->IsModified() ? " *" : "", (mpcContent->mpWindow->GetFocus()->GetFocussedComponent() == pEditor) ? " (focus)" : "", (int)uiLine + 1, szLine.Text());
 			szLine.Kill();
 		}
 		fflush(stdout);

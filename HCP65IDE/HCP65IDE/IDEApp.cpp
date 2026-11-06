@@ -234,10 +234,10 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 	if (mbValid)
 	{
 		//The HCP65 repository is beside the IDE's.
-		mpContent->SetLibc65Directory("../../../HCP65/Libraries/Libc65");
+		mpContent->GetBuilding()->SetLibc65Directory("../../../HCP65/Libraries/Libc65");
 		mpContent->GetDebugging()->SetDefaultEmulator((getenv("HCP65_IDE_EMULATOR") != NULL) ? getenv("HCP65_IDE_EMULATOR") : IDE_EMULATOR, IDE_EMULATOR_DIRECTORY);
 		GetIDERecentFile(&szPath);
-		mpContent->SetRecentFile(szPath.Text());
+		mpContent->GetSolutions()->SetRecentFile(szPath.Text());
 		szPath.Kill();
 
 		//Sized first: what the checks below scroll to depends on the size.
@@ -245,29 +245,29 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 		if (getenv("HCP65_IDE_RECENT_OPEN") != NULL)
 		{
 			//As File, Recent Solutions: the one of that number (0 the latest), opened at the first tick.
-			mpContent->OpenRecentSolution((size)atoi(getenv("HCP65_IDE_RECENT_OPEN")));
+			mpContent->GetSolutions()->OpenRecentSolution((size)atoi(getenv("HCP65_IDE_RECENT_OPEN")));
 		}
 		//With no solution named, the one open when the IDE was last closed.
-		if (mpContent->OpenSolutions(paszSolutions) || ((paszSolutions->NumElements() == 0) && (getenv("HCP65_IDE_RECENT_OPEN") == NULL) && mpContent->OpenLastSolution()))
+		if (mpContent->GetSolutions()->OpenSolutions(paszSolutions) || ((paszSolutions->NumElements() == 0) && (getenv("HCP65_IDE_RECENT_OPEN") == NULL) && mpContent->GetSolutions()->OpenLastSolution()))
 		{
 			if (getenv("HCP65_IDE_ADD") != NULL)
 			{
 				//As File, Add Solution: another solution opened with those open.
-				mpContent->AddSolution(getenv("HCP65_IDE_ADD"));
+				mpContent->GetSolutions()->AddSolution(getenv("HCP65_IDE_ADD"));
 			}
 			if (getenv("HCP65_IDE_STARTUP") != NULL)
 			{
 				//As a solution's Set as Startup Solution, by its place in Solution Explorer (0 based).
-				mpContent->SetStartupSolution((size)atoi(getenv("HCP65_IDE_STARTUP")));
+				mpContent->GetSolutions()->SetStartupSolution((size)atoi(getenv("HCP65_IDE_STARTUP")));
 			}
 			if (getenv("HCP65_IDE_REMOVE") != NULL)
 			{
 				//As a solution's Remove Solution.
-				mpContent->RemoveSolution((size)atoi(getenv("HCP65_IDE_REMOVE")));
+				mpContent->GetSolutions()->RemoveSolution((size)atoi(getenv("HCP65_IDE_REMOVE")));
 			}
 			if (getenv("HCP65_IDE_CONFIGURATION") != NULL)
 			{
-				mpContent->SetConfiguration(getenv("HCP65_IDE_CONFIGURATION"));
+				mpContent->GetBuildConfigurations()->SetConfiguration(getenv("HCP65_IDE_CONFIGURATION"));
 			}
 			if (getenv("HCP65_IDE_WAIT_INDEX") != NULL)
 			{
@@ -317,7 +317,7 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 					szPath.Init();
 					if ((iNode != TREE_NO_NODE) && mpContent->GetExplorer()->GetNodeFilePath(iNode, &szPath))
 					{
-						mpContent->CloseFile(szPath.Text());
+						mpContent->GetDocuments()->CloseFile(szPath.Text());
 					}
 					szPath.Kill();
 				}
@@ -330,16 +330,16 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 				if (iNode != TREE_NO_NODE)
 				{
 					mpContent->GetExplorer()->GetTree()->SelectNode(iNode);
-					mpContent->CloseSelectedSolution();
+					mpContent->GetSolutions()->CloseSelectedSolution();
 				}
 			}
 			if ((getenv("HCP65_IDE_CARET") != NULL) && (sscanf(getenv("HCP65_IDE_CARET"), "%d:%d", &iLine, &iColumn) == 2))
 			{
-				mpContent->SetCaretPlace(iLine - 1, iColumn - 1);
+				mpContent->GetDocuments()->SetCaretPlace(iLine - 1, iColumn - 1);
 			}
-			if ((getenv("HCP65_IDE_TYPE") != NULL) && mpContent->GetEditor().IsNotNull())
+			if ((getenv("HCP65_IDE_TYPE") != NULL) && mpContent->GetDocuments()->GetEditor().IsNotNull())
 			{
-				mpWindow->GetFocus()->SetFocus(mpContent->GetEditor());
+				mpWindow->GetFocus()->SetFocus(mpContent->GetDocuments()->GetEditor());
 				for (szTyped = getenv("HCP65_IDE_TYPE"); *szTyped != '\0'; szTyped++)
 				{
 					mpWindow->InputPrintable(*szTyped, true);
@@ -367,7 +367,7 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 				//results are printed and the first opened.
 				mpContent->GetScript()->RunGoTo(getenv("HCP65_IDE_GOTO"));
 			}
-			if ((getenv("HCP65_IDE_CHANGE") != NULL) && mpContent->GetActiveTab().IsNotNull())
+			if ((getenv("HCP65_IDE_CHANGE") != NULL) && mpContent->GetDocuments()->GetActiveTab().IsNotNull())
 			{
 				//The change at the line (from 1) shown, as clicking its change bar does; ",rollback" or ",diff" then
 				//presses its button.
@@ -377,7 +377,7 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 			if (getenv("HCP65_IDE_SAVE") != NULL)
 			{
 				//As Control+Shift+S: every changed file is saved.
-				mpContent->SaveAllFiles();
+				mpContent->GetDocuments()->SaveAllFiles();
 			}
 			if (getenv("HCP65_IDE_COMPARE") != NULL)
 			{
@@ -402,8 +402,8 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 				pDiff = mpContent->GetDiffs()->GetActiveDiff();
 				if ((getenv("HCP65_IDE_TYPE_AFTER") != NULL) && pDiff.IsNotNull())
 				{
-					mpContent->OpenFile(pDiff->GetSide(TDS_Right)->mszFile.Text());
-					mpWindow->GetFocus()->SetFocus(mpContent->GetEditor());
+					mpContent->GetDocuments()->OpenFile(pDiff->GetSide(TDS_Right)->mszFile.Text());
+					mpWindow->GetFocus()->SetFocus(mpContent->GetDocuments()->GetEditor());
 					for (szTyped = getenv("HCP65_IDE_TYPE_AFTER"); *szTyped != '\0'; szTyped++)
 					{
 						mpWindow->InputPrintable(*szTyped, true);
@@ -422,21 +422,21 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 			if (getenv("HCP65_IDE_REOPEN") != NULL)
 			{
 				//Another solution or project opened, as File, Open Project/Solution does: the open files are closed.
-				mpContent->OpenSolution(getenv("HCP65_IDE_REOPEN"));
+				mpContent->GetSolutions()->OpenSolution(getenv("HCP65_IDE_REOPEN"));
 			}
-			if ((getenv("HCP65_IDE_SCROLL") != NULL) && mpContent->GetEditorPane().IsNotNull())
+			if ((getenv("HCP65_IDE_SCROLL") != NULL) && mpContent->GetDocuments()->GetEditorPane().IsNotNull())
 			{
-				mpContent->GetEditorPane()->SetScrollPosition(0, atoi(getenv("HCP65_IDE_SCROLL")));
+				mpContent->GetDocuments()->GetEditorPane()->SetScrollPosition(0, atoi(getenv("HCP65_IDE_SCROLL")));
 			}
 			if (getenv("HCP65_IDE_LISTING") != NULL)
 			{
 				//The code of the line (from 1) of the selected file is shown once it is built, as clicking its mark does.
-				mpContent->ShowListingAfterBuild((size)(atoi(getenv("HCP65_IDE_LISTING")) - 1));
+				mpContent->GetBuilding()->ShowListingAfterBuild((size)(atoi(getenv("HCP65_IDE_LISTING")) - 1));
 			}
 			if (getenv("HCP65_IDE_BUILD") != NULL)
 			{
 				//As Control+Shift+B: the chosen configuration is built, its output in the Build tab.
-				mpContent->Build();
+				mpContent->GetBuilding()->Build();
 			}
 			if (getenv("HCP65_IDE_ATTACH") != NULL)
 			{
@@ -464,9 +464,9 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 		mpWindow->SetComponentInput(&mcComponentInput);
 
 		//The open editor has the keys, as IntelliJ's; Solution Explorer does with no file open.
-		if (mpContent->GetActiveTab().IsNotNull())
+		if (mpContent->GetDocuments()->GetActiveTab().IsNotNull())
 		{
-			mpWindow->GetFocus()->SetFocus(mpContent->GetActiveTab()->GetEditor());
+			mpWindow->GetFocus()->SetFocus(mpContent->GetDocuments()->GetActiveTab()->GetEditor());
 		}
 		else
 		{
@@ -543,7 +543,7 @@ bool CIDEApp::Run(void)
 
 		//The windows' layout is kept beside the solution, with the files open, for the next time it is opened.
 		mpContent->SaveLayout();
-		mpContent->RememberOpenSolution();
+		mpContent->GetSolutions()->RememberOpenSolution();
 
 		//The emulator is quit while nothing is being freed: as its window goes Windows activates this one.
 		mpContent->GetDebugging()->StopDebugging();

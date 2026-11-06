@@ -270,7 +270,7 @@ void CIDEDebugging::ResolveEmulatorPath(const char* szPath, CChars* pszDest)
 	}
 	szFile.Init();
 	szName.Init();
-	CBuildConfigurations::GetFileName(mpcContent->GetStartupFile(), &szFile);
+	CBuildConfigurations::GetFileName(mpcContent->mpSolutions->GetStartupFile(), &szFile);
 	pszDest->Set("");
 	cFileUtil.SplitPath(szFile.Text(), &szName, pszDest);
 	cFileUtil.AppendToPath(pszDest, szPath);
@@ -390,7 +390,7 @@ bool CIDEDebugging::ChooseEmulator(bool bLaunch)
 	CFileUtil				cFileUtil;
 	bool					bResult;
 
-	pcConfiguration = mpcContent->GetConfiguration();
+	pcConfiguration = mpcContent->mpBuildConfigurations->GetConfiguration();
 	szMessage.Init();
 	szExecutable.Init();
 	szDirectory.Init();
@@ -439,7 +439,7 @@ bool CIDEDebugging::ChooseEmulator(bool bLaunch)
 		else
 		{
 			szFile.Init();
-			CBuildConfigurations::GetFileName(mpcContent->GetStartupFile(), &szFile);
+			CBuildConfigurations::GetFileName(mpcContent->mpSolutions->GetStartupFile(), &szFile);
 			szMessage.Set("No emulator is set for ");
 			szMessage.Append(pcConfiguration->GetName());
 			szMessage.Append(": give its configuration an Emulator in ");
@@ -455,7 +455,7 @@ bool CIDEDebugging::ChooseEmulator(bool bLaunch)
 		{
 			bResult = ChooseDebugLoads(pcConfiguration, &szMessage, &aszLines);
 		}
-		mpcContent->mpBuildPane->AppendLines(&aszLines);
+		mpcContent->mpBuilding->GetBuildPane()->AppendLines(&aszLines);
 		aszLines.Kill();
 	}
 
@@ -463,9 +463,9 @@ bool CIDEDebugging::ChooseEmulator(bool bLaunch)
 	{
 		aszLines.Init();
 		aszLines.Add(szMessage.Text());
-		mpcContent->mpBuildPane->AppendLines(&aszLines);
+		mpcContent->mpBuilding->GetBuildPane()->AppendLines(&aszLines);
 		aszLines.Kill();
-		mpcContent->mpDock->Show(mpcContent->mpBuildTool);
+		mpcContent->mpDock->Show(mpcContent->mpBuilding->GetBuildTool());
 	}
 	szDirectory.Kill();
 	szExecutable.Kill();
@@ -485,7 +485,7 @@ void CIDEDebugging::ShowDebugMessages(void)
 
 	aszLines.Init();
 	mcDebugger.TakeMessages(&aszLines);
-	mpcContent->mpBuildPane->AppendLines(&aszLines);
+	mpcContent->mpBuilding->GetBuildPane()->AppendLines(&aszLines);
 	aszLines.Kill();
 }
 
@@ -506,7 +506,7 @@ bool CIDEDebugging::StartDebugging(void)
 	}
 	else if (!mcDebugger.IsDebugging())
 	{
-		mpcContent->mpBuildPane->Clear();
+		mpcContent->mpBuilding->GetBuildPane()->Clear();
 		if (!ChooseEmulator(true))
 		{
 			return false;
@@ -577,7 +577,7 @@ bool CIDEDebugging::StepInto(void)
 
 	if (!mcDebugger.IsDebugging())
 	{
-		mpcContent->mpBuildPane->Clear();
+		mpcContent->mpBuilding->GetBuildPane()->Clear();
 		if (!ChooseEmulator(true))
 		{
 			return false;
@@ -658,7 +658,7 @@ bool CIDEDebugging::ToggleBreakpoint(void)
 	int					iColumn;
 
 	//In the code, the caret's line: a source breakpoint, as Visual Studio's F9.
-	pTab = mpcContent->GetActiveTab();
+	pTab = mpcContent->mpDocuments->GetActiveTab();
 	if (pTab.IsNotNull() && (mpcContent->mpWindow->GetFocus()->GetFocussedComponent() == pTab->GetEditor()))
 	{
 		pTab->GetCaretPlace(&iLine, &iColumn);
@@ -756,7 +756,7 @@ bool CIDEDebugging::AttachDebugger(int iPort)
 {
 	bool	bResult;
 
-	mpcContent->mpBuildPane->Clear();
+	mpcContent->mpBuilding->GetBuildPane()->Clear();
 	if (!ChooseEmulator(false))
 	{
 		return false;
@@ -796,7 +796,7 @@ void CIDEDebugging::PollDebugger(Ptr<CWindow> pWindow)
 	bStopped = mcDebugger.IsStopped();
 	aszOutput.Init();
 	bChanged = mcDebugger.Poll(&aszOutput);
-	mpcContent->mpBuildPane->AppendLines(&aszOutput);
+	mpcContent->mpBuilding->GetBuildPane()->AppendLines(&aszOutput);
 	aszOutput.Kill();
 	if (bChanged)
 	{
@@ -913,20 +913,20 @@ void CIDEDebugging::RunDebugScript(void)
 	}
 	else if (strcmp(szCommand, "buildtab") == 0)
 	{
-		mpcContent->mpDock->Show(mpcContent->mpBuildTool);
+		mpcContent->mpDock->Show(mpcContent->mpBuilding->GetBuildTool());
 		bDone = true;
 	}
 	else if (strncmp(szCommand, "line:", 5) == 0)
 	{
-		if (mpcContent->GetActiveTab().IsNotNull())
+		if (mpcContent->mpDocuments->GetActiveTab().IsNotNull())
 		{
-			ToggleSourceBreakpoint(mpcContent->GetActiveTab(), (size)(atoi(&szCommand[5]) - 1));
+			ToggleSourceBreakpoint(mpcContent->mpDocuments->GetActiveTab(), (size)(atoi(&szCommand[5]) - 1));
 		}
 		bDone = true;
 	}
 	else if (strcmp(szCommand, "built") == 0)
 	{
-		bDone = !mpcContent->IsBuilding();
+		bDone = !mpcContent->mpBuilding->IsBuilding();
 	}
 	else if (strcmp(szCommand, "break") == 0)
 	{
@@ -1039,7 +1039,7 @@ void CIDEDebugging::GlyphClicked(CCodeEditor* pcEditor, size uiLine)
 {
 	Ptr<CIDEEditorTab>	pTab;
 
-	pTab = mpcContent->FindTab(pcEditor);
+	pTab = mpcContent->mpDocuments->FindTab(pcEditor);
 	if (pTab.IsNotNull())
 	{
 		ToggleSourceBreakpoint(pTab, uiLine);
@@ -1066,7 +1066,7 @@ void CIDEDebugging::ReadLineTables(void)
 	size					i;
 
 	mcDebugger.ClearLineTables();
-	pcConfiguration = mpcContent->GetConfiguration();
+	pcConfiguration = mpcContent->mpBuildConfigurations->GetConfiguration();
 	if ((pcConfiguration != NULL) && pcConfiguration->IsHCP65())
 	{
 		szFile.Init();
@@ -1153,9 +1153,9 @@ void CIDEDebugging::ShowAllBreakpoints(void)
 {
 	size	i;
 
-	for (i = 0; i < mpcContent->maTabs.NumElements(); i++)
+	for (i = 0; i < mpcContent->mpDocuments->NumTabs(); i++)
 	{
-		ShowBreakpoints(mpcContent->maTabs.Get(i));
+		ShowBreakpoints(mpcContent->mpDocuments->GetTab(i));
 	}
 }
 
@@ -1170,7 +1170,7 @@ void CIDEDebugging::GetUserSettingsFileName(CChars* pszDest)
 {
 	CFileUtil	cFileUtil;
 
-	if (!mpcContent->GetSettingsBaseFile(pszDest))
+	if (!mpcContent->mpSolutions->GetSettingsBaseFile(pszDest))
 	{
 		pszDest->Set("");
 		return;
@@ -1189,7 +1189,7 @@ void CIDEDebugging::SaveBreakpoints(void)
 {
 	CChars	szFile;
 
-	if (!mpcContent->IsSolutionOpen())
+	if (!mpcContent->mpSolutions->IsSolutionOpen())
 	{
 		return;
 	}
@@ -1229,10 +1229,10 @@ void CIDEDebugging::ShowStoppedLine(bool bWasStopped)
 
 	muiStoppedLine = 0;
 	bShown = mcDebugger.FindSourceLine(mcDebugger.GetProgramAddress(), &mszStoppedFile, &uiLine);
-	if (bShown && mpcContent->OpenFile(mszStoppedFile.Text()))
+	if (bShown && mpcContent->mpDocuments->OpenFile(mszStoppedFile.Text()))
 	{
 		muiStoppedLine = uiLine;
-		pTab = mpcContent->FindTab(mszStoppedFile.Text());
+		pTab = mpcContent->mpDocuments->FindTab(mszStoppedFile.Text());
 		if (pTab.IsNotNull())
 		{
 			pTab->SetCaretPlace((int)(uiLine - 1), 0);

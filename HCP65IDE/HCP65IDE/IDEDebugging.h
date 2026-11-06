@@ -103,6 +103,7 @@ public:
 	Ptr<CDockPane>		GetTool(void);
 	void				CreatePane(SDockPlace* psPlace);
 	Ptr<CButton>		CreateStartButton(void);
+	void				GetUserSettingsFileName(CChars* pszDest);
 
 protected:
 	Ptr<CMenuContainer>	CreateDebugMenu(void);
@@ -113,7 +114,6 @@ protected:
 	void				RunDebugScript(void);
 	bool				ChooseEmulator(bool bLaunch);
 	bool				ChooseDebugLoads(CBuildConfiguration* pcConfiguration, CChars* pszMessage, CArrayChars* paszLines);
-	void				GetUserSettingsFileName(CChars* pszDest);
 	void				SaveBreakpoints(void);
 	void				ShowDebugMessages(void);
 	void				ResolveEmulatorPath(const char* szPath, CChars* pszDest);

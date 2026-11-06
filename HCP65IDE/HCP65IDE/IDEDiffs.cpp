@@ -348,7 +348,7 @@ bool CIDEDiffs::OpenDiff(const char* szLeftFile, const char* szLeftRevision, con
 		pDiff->SetDockPane(pPane);
 		mpcContent->mpDock->Show(pPane);
 		mpcContent->mpActiveDiff = pDiff;
-		mpcContent->mpActive = NULL;
+		mpcContent->mpDocuments->SetActiveTab(NULL);
 		pView->GetWindow()->GetFocus()->SetFocus(pView->GetEditor(TDS_Right)->GetTextArea());
 		szTabTitle.Kill();
 		szRightTitle.Kill();
@@ -397,7 +397,7 @@ bool CIDEDiffs::ReadDiffSide(CIDEDiffSide* pcSide, CChars* pszDest)
 		return gcLogger.Error2(__METHOD__, " [", pcSide->mszFile.Text(), "] isn't in [", pcSide->mszRevision.Text(), "].", NULL);
 	}
 
-	pTab = mpcContent->FindTab(pcSide->mszFile.Text());
+	pTab = mpcContent->mpDocuments->FindTab(pcSide->mszFile.Text());
 	if (pTab.IsNotNull())
 	{
 		pszDest->Append(pTab->GetEditor()->GetText());
@@ -514,7 +514,7 @@ int64 CIDEDiffs::PollDiffs(int64 iNow)
 			pcSide = pDiff->GetSide((ETextDiffSide)iSide);
 			if (pcSide->IsWorkingCopy())
 			{
-				pTab = mpcContent->FindTab(pcSide->mszFile.Text());
+				pTab = mpcContent->mpDocuments->FindTab(pcSide->mszFile.Text());
 				if (pTab.IsNotNull() && (pTab->GetEditor()->GetChangeCount() != pcSide->muiSeenChanges))
 				{
 					pcSide->muiSeenChanges = pTab->GetEditor()->GetChangeCount();
@@ -609,13 +609,13 @@ void CIDEDiffs::HighlightDiffSide(Ptr<CDiffView> pView, ETextDiffSide eSide, siz
 //////////////////////////////////////////////////////////////////////////
 Ptr<CIDEEditorTab> CIDEDiffs::GetComparedTab(void)
 {
-	if (mpcContent->mpActive.IsNotNull())
+	if (mpcContent->mpDocuments->GetActiveTab().IsNotNull())
 	{
-		return mpcContent->mpActive;
+		return mpcContent->mpDocuments->GetActiveTab();
 	}
 	if (mpcContent->mpActiveDiff.IsNotNull())
 	{
-		return mpcContent->FindTab(mpcContent->mpActiveDiff->GetSide(TDS_Right)->mszFile.Text());
+		return mpcContent->mpDocuments->FindTab(mpcContent->mpActiveDiff->GetSide(TDS_Right)->mszFile.Text());
 	}
 	return NULL;
 }

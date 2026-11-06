@@ -48,6 +48,18 @@
     <ClCompile Include="IDECloseGuard.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="IDEDocuments.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="IDESolutions.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="IDEBuilding.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="IDEConfigurations.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="IDEScript.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -96,6 +108,18 @@
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDECloseGuard.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDEDocuments.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDESolutions.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDEBuilding.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDEConfigurations.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDEDebugging.h">

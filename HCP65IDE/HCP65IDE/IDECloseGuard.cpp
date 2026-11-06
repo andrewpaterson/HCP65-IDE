@@ -94,10 +94,10 @@ bool CIDECloseGuard::FindUnsavedFiles(size uiSolution, CArrayChars* paszDest)
 	bool				bFound;
 
 	bFound = false;
-	for (i = 0; i < mpcContent->maTabs.Size(); i++)
+	for (i = 0; i < mpcContent->mpDocuments->NumTabs(); i++)
 	{
-		pTab = mpcContent->maTabs.Get(i);
-		if (pTab->IsModified() && ((uiSolution == MAX_SIZE) || mpcContent->IsSolutionFile(uiSolution, pTab->GetProject())))
+		pTab = mpcContent->mpDocuments->GetTab(i);
+		if (pTab->IsModified() && ((uiSolution == MAX_SIZE) || mpcContent->mpSolutions->IsSolutionFile(uiSolution, pTab->GetProject())))
 		{
 			paszDest->Add(pTab->GetFileName());
 			bFound = true;
@@ -136,7 +136,7 @@ bool CIDECloseGuard::PaneClosing(CDockPane* pcPane)
 	{
 		return true;
 	}
-	pTab = mpcContent->FindTab(pcPane);
+	pTab = mpcContent->mpDocuments->FindTab(pcPane);
 	if (pTab.IsNull() || !pTab->IsModified())
 	{
 		return true;
@@ -254,8 +254,8 @@ void CIDECloseGuard::AskToSave(void)
 		bSaved = true;
 		for (i = 0; bSave && (i < maszSaveFiles.NumElements()); i++)
 		{
-			pTab = mpcContent->FindTab(maszSaveFiles.GetText(i));
-			if (pTab.IsNotNull() && !mpcContent->SaveFile(pTab))
+			pTab = mpcContent->mpDocuments->FindTab(maszSaveFiles.GetText(i));
+			if (pTab.IsNotNull() && !mpcContent->mpDocuments->SaveFile(pTab))
 			{
 				bSaved = false;
 			}
@@ -278,10 +278,10 @@ void CIDECloseGuard::AskToSave(void)
 				}
 				break;
 			case IAS_CloseSolution:
-				mpcContent->CloseSolution(muiAfterSolution);
+				mpcContent->mpSolutions->CloseSolution(muiAfterSolution);
 				break;
 			case IAS_OpenSolution:
-				if (!mpcContent->OpenSolution(mszAfterFile.Text()))
+				if (!mpcContent->mpSolutions->OpenSolution(mszAfterFile.Text()))
 				{
 					gcLogger.Error2(__METHOD__, " Could not open [", mszAfterFile.Text(), "].", NULL);
 				}

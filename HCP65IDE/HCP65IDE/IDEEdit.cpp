@@ -330,11 +330,11 @@ Ptr<CTextArea> CIDEEdit::GetEditArea(void)
 		}
 		return NULL;
 	}
-	if (mpcContent->mpActive.IsNull())
+	if (mpcContent->mpDocuments->GetActiveTab().IsNull())
 	{
 		return NULL;
 	}
-	return mpcContent->mpActive->GetEditor();
+	return mpcContent->mpDocuments->GetActiveTab()->GetEditor();
 }
 
 
@@ -355,7 +355,7 @@ void CIDEEdit::EditorUndoChanged(CTextArea* pcEditor, STextAreaUndo* psUndo)
 	{
 		return;
 	}
-	pTab = mpcContent->FindTab(pcEditor);
+	pTab = mpcContent->mpDocuments->FindTab(pcEditor);
 	if (pTab.IsNull())
 	{
 		return;
@@ -431,7 +431,7 @@ bool CIDEEdit::UndoLogGroup(size uiGroup, bool bShow)
 		psStep = mcUndoLog.Get(i - 1);
 		if ((psStep->uiGroup == uiGroup) && !mcUndoLog.IsUndone(i - 1))
 		{
-			pTab = mpcContent->FindTab(psStep->szDocument.Text());
+			pTab = mpcContent->mpDocuments->FindTab(psStep->szDocument.Text());
 			if (pTab.IsNotNull() && (pTab->GetEditor()->GetUndoId() == psStep->uiIdAfter))
 			{
 				pTab->GetEditor()->UndoTo(psStep->uiIdBefore);
@@ -444,7 +444,7 @@ bool CIDEEdit::UndoLogGroup(size uiGroup, bool bShow)
 
 	if (bShow && pShown.IsNotNull())
 	{
-		mpcContent->OpenFile(pShown->GetFileName(), pShown->GetProject());
+		mpcContent->mpDocuments->OpenFile(pShown->GetFileName(), pShown->GetProject());
 	}
 	return true;
 }
@@ -473,7 +473,7 @@ bool CIDEEdit::RedoLogGroup(size uiGroup, bool bShow)
 		psStep = mcUndoLog.Get(i);
 		if ((psStep->uiGroup == uiGroup) && mcUndoLog.IsUndone(i))
 		{
-			pTab = mpcContent->FindTab(psStep->szDocument.Text());
+			pTab = mpcContent->mpDocuments->FindTab(psStep->szDocument.Text());
 			if (pTab.IsNotNull() && (pTab->GetEditor()->GetUndoId() == psStep->uiIdBefore))
 			{
 				pTab->GetEditor()->UndoTo(psStep->uiIdAfter);
@@ -486,7 +486,7 @@ bool CIDEEdit::RedoLogGroup(size uiGroup, bool bShow)
 
 	if (bShow && pShown.IsNotNull())
 	{
-		mpcContent->OpenFile(pShown->GetFileName(), pShown->GetProject());
+		mpcContent->mpDocuments->OpenFile(pShown->GetFileName(), pShown->GetProject());
 	}
 	return true;
 }

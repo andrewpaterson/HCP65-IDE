@@ -61,6 +61,10 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDENavigator.h"
 #include "IDERename.h"
 #include "IDEUsages.h"
+#include "IDEDocuments.h"
+#include "IDESolutions.h"
+#include "IDEBuilding.h"
+#include "IDEConfigurations.h"
 #include "IDEDebugging.h"
 #include "IDEGitStatus.h"
 #include "IDEDiffs.h"
@@ -118,6 +122,10 @@ friend class CIDEEdit;
 friend class CIDENavigator;
 friend class CIDERename;
 friend class CIDEUsages;
+friend class CIDEDocuments;
+friend class CIDESolutions;
+friend class CIDEBuilding;
+friend class CIDEConfigurations;
 friend class CIDEDebugging;
 friend class CIDEGitStatus;
 friend class CIDEDiffs;
@@ -158,12 +166,9 @@ protected:
 	Ptr<CMenuItem>				mpCloseAllItem;		//Window, Close All Documents.
 	Ptr<CDockManager>			mpDock;
 	Ptr<CDockPane>				mpExplorerTool;		//The tool windows.
-	Ptr<CDockPane>				mpBuildTool;
 	Ptr<CFileChooser>			mpFileChooser;		//While it's shown.
 	Ptr<CImageCel>				mpFolderIcon;		//The file chooser's.
 	Ptr<CImageCel>				mpFileIcon;
-	CArray<CIDEEditorTab>		maTabs;
-	Ptr<CIDEEditorTab>			mpActive;			//The selected tab's file, NULL if none is open.
 	CArray<CIDEDiffTab>			maDiffTabs;			//A tab for each diff shown.
 	Ptr<CIDEDiffTab>			mpActiveDiff;		//The selected tab's diff, NULL if it isn't one.
 	CArray<CImageCel>			maFileIcons;		//By EIDEFileType.
@@ -181,6 +186,10 @@ protected:
 	Ptr<CIDENavigator>			mpNavigator;		//Go to, Go to Source and Alt+O.
 	Ptr<CIDERename>				mpRename;			//Rename.
 	Ptr<CIDEUsages>				mpUsages;			//Find Usages.
+	Ptr<CIDEDocuments>			mpDocuments;		//The open files' tabs.
+	Ptr<CIDESolutions>			mpSolutions;		//Opening, adding and removing solutions, and the recent ones.
+	Ptr<CIDEBuilding>			mpBuilding;			//Build, its tab and button, and the listings.
+	Ptr<CIDEConfigurations>		mpBuildConfigurations;	//The toolbar's configuration and platform.
 	Ptr<CIDEDebugging>			mpDebugging;		//The Debug menu, the debugger and breakpoints.
 	Ptr<CIDEGitStatus>			mpGitStatus;		//Git statuses, the branch and change bars.
 	Ptr<CIDEDiffs>				mpDiffs;			//Compare with HEAD, a branch, a revision or a file.
@@ -191,21 +200,11 @@ protected:
 	Ptr<CMenuContainer>			mpExplorerMenu;		//A solution's: Set as Startup Solution and Remove.
 	Ptr<CMenuItem>				mpStartupItem;
 	Ptr<CMenuItem>				mpRemoveSolutionItem;
-	Ptr<CComboBox>				mpConfigurations;	//The build configuration's configuration; the code is parsed as its solution configuration.
-	Ptr<CComboBox>				mpPlatforms;		//And its platform.
 	CChars						mszConfiguration;	//The chosen build configuration's name, each solution's of that name; empty if none.
-	Ptr<CButton>				mpBuildButton;
 	CSolutionBuild				mcBuild;			//The build running, or the last.
 	CArrayInt					maiBuildOrder;		//The solutions a build builds, in order.
-	size						muiBuildStep;		//The one being built.
-	CChars						mszLibc65;			//The HCP65 compiler's system headers.
 	CCPP65ListingIndex			mcListings;			//The last HCP65 build's listings, given to the open files.
-	size						muiListingToShow;	//The line to show the code of after the next build, MAX_SIZE for none.
-	Ptr<CIDEBuildPane>			mpBuildPane;
 	CBuildWorkspace				mcWorkspace;		//The solutions open, one the startup solution.
-	CBuildRecentFiles			mcRecent;			//The solutions and workspaces opened last.
-	CChars						mszRecentFile;		//Where they are kept, empty if they aren't.
-	CChars						mszQueuedOpen;		//A recent one chosen, opened at the next tick (OpenQueuedSolution).
 	CIDECodeModel				mcCodeModel;		//Uses mcWorkspace; initialised when a solution is opened.
 
 	CGitRepositories			mcGit;				//The repositories the solution's files are in.
@@ -233,43 +232,14 @@ public:
 
 	bool			Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* szCodeFont);
 
-	bool			OpenSolution(const char* szFileName);
-	bool			OpenSolutions(CArrayChars* paszFileNames);
-	bool			AddSolution(const char* szFileName);
-	bool			RemoveSolution(size uiSolution);
-	bool			CloseSolution(size uiSolution);
-	bool			CloseSelectedSolution(void);
-	bool			OpenLastSolution(void);
-	void			RememberOpenSolution(void);
 	void			SetKeepSettings(bool bKeep);
-	bool			IsSolutionFile(size uiSolution, size uiProject);
-	bool			SetStartupSolution(size uiSolution);
-	bool			ShowOpenSolutionDialog(void);
-	bool			ShowAddSolutionDialog(void);
-	CBuildWorkspace*	GetWorkspace(void);
-	void			SetRecentFile(const char* szFile);
-	void			ClearRecentSolutions(void);
-	bool			OpenRecentSolution(size uiIndex);
-	CBuildRecentFiles*	GetRecent(void);
 	void			MenuItemClicked(CMenuItem* pcItem);
-	bool			OpenFile(const char* szFileName, size uiProject = SOLUTION_EXPLORER_NO_PROJECT);
-	Ptr<CIDEEditorTab>	OpenFileTab(const char* szFileName, size uiProject, bool bShow);
-	void			CloseAllFiles(void);
-	bool			SaveFile(Ptr<CIDEEditorTab> pTab);
-	bool			SaveActiveFile(void);
-	bool			SaveAllFiles(void);
 	void			ExplorerActivated(void);
 	bool			GoToDefinition(void);
 	bool			FindReferences(void);
 	void			ShowStatus(const char* szText);
 	char*			GetStatus(void);
 	int64			UpdateStatusLine(int64 iNow);
-	bool			SetCaretPlace(int iLine, int iColumn);
-	bool			SetConfiguration(const char* szConfiguration);
-	void			ConfigurationChosen(void);
-	void			SetComboBoxItems(Ptr<CComboBox> pComboBox, bool bPlatforms);
-	void			ShowConfiguration(void);
-	void			SelectComboBoxItem(Ptr<CComboBox> pComboBox, const char* szText);
 	void			Tick(Ptr<CWindow> pWindow);
 	bool			PaneClosing(CDockPane* pcPane) override;
 	bool			IsPaneModified(CDockPane* pcPane) override;
@@ -277,85 +247,40 @@ public:
 	void			DocumentSelected(CDockPane* pcPane) override;
 	Ptr<CDockPane>	CreatePane(const char* szID) override;
 	bool			SaveLayout(void);
-	void			ReindexStaleTabs(bool bNow);
-	void			ReindexAll(void);
-	void			ReindexHeader(const char* szFileName);
-	void			ReindexDiscarded(Ptr<CIDEEditorTab> pTab);
 	bool			LoadLayout(void);
 	bool			GetLayoutFileName(CChars* pszDest);
 	Ptr<CDockManager>	GetDock(void);
 	Ptr<CDockPane>	GetExplorerTool(void);
-	Ptr<CDockPane>	GetBuildTool(void);
 	Ptr<CDockPane>	GetDebugTool(void);
 	Ptr<CDockPane>	GetClaudeTool(void);
-	bool			CloseFile(const char* szFileName);
 	CIDECodeModel*	GetCodeModel(void);
-	CBuildConfiguration*	GetConfiguration(void);
-	char*			GetConfigurationName(void);
 
-	Ptr<CTextArea>		GetEditor(void);
-	Ptr<CScrollPane>	GetEditorPane(void);
-	Ptr<CIDEEditorTab>	GetActiveTab(void);
 	CSolutionExplorer*	GetExplorer(void);
-	Ptr<CIDEBuildPane>	GetBuildPane(void);
-	void				ShowBuildTab(void);
-	void				SetLibc65Directory(const char* szDirectory);
-	bool				Build(void);
-	bool				IsBuilding(void);
-	void				ShowListingAfterBuild(size uiLine);
-	CCPP65ListingIndex*	GetListings(void);
-	void				BuildClicked(void);
 
 
 
 
-	void				OpenQueuedSolution(void);
 	bool				ShowActiveFileInExplorer(void);
 	Ptr<CMenuContainer>	CreateEditorMenu(void);
-	bool				FindSymbolAtCaret(CArrayIDELocations* pasDest, CChars* pszKey);
-	void				GetFileLine(const char* szFileName, int iLine, CChars* pszDest);
 	Ptr<CIDEScript>		GetScript(void);
+	Ptr<CIDEDocuments>	GetDocuments(void);
+	Ptr<CIDESolutions>	GetSolutions(void);
+	Ptr<CIDEBuilding>	GetBuilding(void);
+	Ptr<CIDEConfigurations>	GetBuildConfigurations(void);
 	Ptr<CIDEDebugging>	GetDebugging(void);
 	Ptr<CIDEGitStatus>	GetGitStatus(void);
 	Ptr<CIDEDiffs>	GetDiffs(void);
 	Ptr<CIDEAskClaude>	GetAskClaude(void);
 	void				EditorMenuOpening(CMenuContainer* pcMenu);
-	size				NumTabs(void);
-	Ptr<CIDEEditorTab>	GetTab(size uiIndex);
 
 protected:
 	Ptr<CMenuBar>		CreateMenuBar(void);
 	Ptr<CMenuContainer>	CreateExplorerMenu(void);
-	void				ShowRecentMenu(void);
-	void				WriteRecent(void);
-	bool				RecentItemClicked(CMenuItem* pcItem);
-	bool				IsSolutionOpen(void);
-	char*				GetStartupFile(void);
-	bool				GetSettingsBaseFile(CChars* pszDest);
-	void				LetGoOfWorkspace(void);
-	void				WorkspaceChanged(bool bReindex);
-	bool				WriteWorkspace(void);
-	void				FindRepositories(void);
-	void				ShowConfigurations(void);
-	CBuildConfiguration*	GetChosenConfiguration(void);
-	bool				StartBuildStep(CArrayChars* paszLines);
-	void				ShowBuildProgress(void);
-	void				FinishBuildSteps(CArrayChars* paszLines);
-	void				HighlightTab(Ptr<CIDEEditorTab> pTab);
-	Ptr<CIDEEditorTab>	FindTab(const char* szFileName);
-	Ptr<CIDEEditorTab>	FindTab(CDockPane* pcPane);
 	void				CodeCommandAction(SComponentInputEvent* psEvent);
-	bool				GetCaretPlace(int* piLine, int* piColumn);
-	bool				OpenLocation(SIDELocation* psLocation);
-	void				PollBuild(Ptr<CWindow> pWindow);
-	void				ReadListings(CArrayChars* paszLines);
-	void				SetListings(bool bListings);
-
-	Ptr<CIDEEditorTab>	FindTab(CCodeEditor* pcEditor);
 
 
 
-	Ptr<CIDEEditorTab>	FindTab(CTextArea* pcEditor);
+
 };
 
 

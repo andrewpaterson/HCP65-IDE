@@ -194,9 +194,9 @@ void CIDEGitStatus::ShowGitStatus(void)
 		mpcContent->mpExplorer->ColourFiles(&mpcContent->mcGit, mpcContent->mpFontColours);
 	}
 
-	for (i = 0; i < mpcContent->maTabs.Size(); i++)
+	for (i = 0; i < mpcContent->mpDocuments->NumTabs(); i++)
 	{
-		pTab = mpcContent->maTabs.Get(i);
+		pTab = mpcContent->mpDocuments->GetTab(i);
 		pcRepository = mpcContent->mcGit.FindRepository(pTab->GetFileName());
 		eState = pcRepository ? pcRepository->GetFileState(pTab->GetFileName()) : GFS_Unmodified;
 		bHeadMoved = pcRepository && pTab->HasBaseText() && (strcmp(pTab->GetBaseHead(), pcRepository->GetStatus()->GetHead()) != 0);
@@ -231,13 +231,13 @@ void CIDEGitStatus::ShowBranch(void)
 	}
 
 	pcRepository = NULL;
-	if (mpcContent->mpActive.IsNotNull())
+	if (mpcContent->mpDocuments->GetActiveTab().IsNotNull())
 	{
-		pcRepository = mpcContent->mcGit.FindRepository(mpcContent->mpActive->GetFileName());
+		pcRepository = mpcContent->mcGit.FindRepository(mpcContent->mpDocuments->GetActiveTab()->GetFileName());
 	}
-	if ((pcRepository == NULL) && mpcContent->IsSolutionOpen())
+	if ((pcRepository == NULL) && mpcContent->mpSolutions->IsSolutionOpen())
 	{
-		pcRepository = mpcContent->mcGit.FindRepository(mpcContent->GetStartupFile());
+		pcRepository = mpcContent->mcGit.FindRepository(mpcContent->mpSolutions->GetStartupFile());
 	}
 
 	szText.Init();
@@ -384,7 +384,7 @@ void CIDEGitStatus::ChangeBarClicked(CCodeEditor* pcEditor, size uiLine)
 {
 	Ptr<CIDEEditorTab>	pTab;
 
-	pTab = mpcContent->FindTab(pcEditor);
+	pTab = mpcContent->mpDocuments->FindTab(pcEditor);
 	if (pTab.IsNotNull())
 	{
 		ShowChange(pTab, uiLine);

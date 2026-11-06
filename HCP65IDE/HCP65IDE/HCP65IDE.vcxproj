@@ -249,6 +249,10 @@
     <ClCompile Include="IDERename.cpp" />
     <ClCompile Include="IDEUsages.cpp" />
     <ClCompile Include="IDECloseGuard.cpp" />
+    <ClCompile Include="IDEDocuments.cpp" />
+    <ClCompile Include="IDESolutions.cpp" />
+    <ClCompile Include="IDEBuilding.cpp" />
+    <ClCompile Include="IDEConfigurations.cpp" />
     <ClCompile Include="IDEScript.cpp" />
     <ClCompile Include="IDEGit.cpp" />
     <ClCompile Include="IDEDebugger.cpp" />
@@ -267,6 +271,10 @@
     <ClInclude Include="IDEContent.h" />
     <ClInclude Include="IDEScript.h" />
     <ClInclude Include="IDECloseGuard.h" />
+    <ClInclude Include="IDEDocuments.h" />
+    <ClInclude Include="IDESolutions.h" />
+    <ClInclude Include="IDEBuilding.h" />
+    <ClInclude Include="IDEConfigurations.h" />
     <ClInclude Include="IDEDebugging.h" />
     <ClInclude Include="IDEGitStatus.h" />
     <ClInclude Include="IDEDiffs.h" />

@@ -168,7 +168,7 @@ bool CIDEAskClaude::AskClaude(const char* szRequest)
 		mpClaudePane->SetStatus("Open a solution or a file first: Claude works in its folder.");
 		return false;
 	}
-	if (!mpcContent->SaveAllFiles())
+	if (!mpcContent->mpDocuments->SaveAllFiles())
 	{
 		szDirectory.Kill();
 		mpClaudePane->SetStatus("Claude wasn't asked: a file couldn't be saved.");
@@ -207,13 +207,13 @@ bool CIDEAskClaude::GetClaudeDirectory(CChars* pszDirectory)
 {
 	CFileUtil	cFileUtil;
 
-	if (mpcContent->IsSolutionOpen())
+	if (mpcContent->mpSolutions->IsSolutionOpen())
 	{
-		pszDirectory->Append(mpcContent->GetStartupFile());
+		pszDirectory->Append(mpcContent->mpSolutions->GetStartupFile());
 	}
-	else if (mpcContent->mpActive.IsNotNull())
+	else if (mpcContent->mpDocuments->GetActiveTab().IsNotNull())
 	{
-		pszDirectory->Append(mpcContent->mpActive->GetFileName());
+		pszDirectory->Append(mpcContent->mpDocuments->GetActiveTab()->GetFileName());
 	}
 	else
 	{
@@ -241,13 +241,13 @@ void CIDEAskClaude::AppendClaudeContext(CChars* pszRequest)
 	size			uiFirst;
 	size			uiLast;
 
-	if (mpcContent->mpActive.IsNull())
+	if (mpcContent->mpDocuments->GetActiveTab().IsNull())
 	{
 		return;
 	}
-	pEditor = mpcContent->mpActive->GetEditor();
+	pEditor = mpcContent->mpDocuments->GetActiveTab()->GetEditor();
 
-	szFile.Init(mpcContent->mpActive->GetFileName());
+	szFile.Init(mpcContent->mpDocuments->GetActiveTab()->GetFileName());
 	cFileUtil.FullPath(&szFile);
 	pszRequest->Append("\n\n(From the HCP65 IDE: the file open in the editor is ");
 	pszRequest->Append(szFile);
@@ -386,9 +386,9 @@ void CIDEAskClaude::ReloadClaudeFiles(bool bAll)
 
 	if (bAll)
 	{
-		for (i = 0; i < mpcContent->maTabs.Size(); i++)
+		for (i = 0; i < mpcContent->mpDocuments->NumTabs(); i++)
 		{
-			ReloadClaudeFile(mpcContent->maTabs.Get(i));
+			ReloadClaudeFile(mpcContent->mpDocuments->GetTab(i));
 		}
 	}
 	mpcContent->mpEdit->EndUndoGroup();
@@ -459,9 +459,9 @@ Ptr<CIDEEditorTab> CIDEAskClaude::FindClaudeTab(const char* szFileName)
 	szWanted.Init(szFileName);
 	szWanted.Replace('/', '\\');
 	bFound = false;
-	for (i = 0; i < mpcContent->maTabs.Size(); i++)
+	for (i = 0; i < mpcContent->mpDocuments->NumTabs(); i++)
 	{
-		szTab.Init(mpcContent->maTabs.Get(i)->GetFileName());
+		szTab.Init(mpcContent->mpDocuments->GetTab(i)->GetFileName());
 		cFileUtil.FullPath(&szTab);
 		szTab.Replace('/', '\\');
 		bFound = StringInsensitiveCompare(szTab.Text(), szWanted.Text()) == 0;
@@ -472,7 +472,7 @@ Ptr<CIDEEditorTab> CIDEAskClaude::FindClaudeTab(const char* szFileName)
 		}
 	}
 	szWanted.Kill();
-	return bFound ? mpcContent->maTabs.Get(i) : Ptr<CIDEEditorTab>();
+	return bFound ? mpcContent->mpDocuments->GetTab(i) : Ptr<CIDEEditorTab>();
 }
 
 

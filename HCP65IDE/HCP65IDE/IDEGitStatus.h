@@ -71,15 +71,15 @@ public:
 	Ptr<CLabel>			GetBranchLabel(void);
 	void				ReadGitStatus(void);
 	void				GitFileSaved(const char* szFileName);
+	void				ReadGitBase(Ptr<CIDEEditorTab> pTab);
+	void				ShowBranch(void);
+	void				UpdateChangeBars(Ptr<CIDEEditorTab> pTab);
 
 protected:
 	int64				PollGit(int64 iNow);
 	void				ShowGitStatus(void);
-	void				ShowBranch(void);
-	void				ReadGitBase(Ptr<CIDEEditorTab> pTab);
 	void				CloseChangePopup(void);
 	void				AppendBaseLines(Ptr<CIDEEditorTab> pTab, size uiStart, size uiEnd, CChars* pszDest);
-	void				UpdateChangeBars(Ptr<CIDEEditorTab> pTab);
 };
 
 
