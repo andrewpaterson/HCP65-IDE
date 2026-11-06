@@ -21,5 +21,8 @@
     <ClCompile Include="TestBuild.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="TestBuildCommandLine.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

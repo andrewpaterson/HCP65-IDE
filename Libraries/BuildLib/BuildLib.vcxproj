@@ -29,6 +29,7 @@
     <ClCompile Include="GCCBuild.cpp" />
     <ClCompile Include="HCP65Build.cpp" />
     <ClCompile Include="SolutionBuild.cpp" />
+    <ClCompile Include="BuildCommandLine.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BuildConfiguration.h" />
@@ -41,6 +42,7 @@
     <ClInclude Include="GCCBuild.h" />
     <ClInclude Include="HCP65Build.h" />
     <ClInclude Include="SolutionBuild.h" />
+    <ClInclude Include="BuildCommandLine.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{6B2E1C9A-4D3F-4E5B-9A21-7C8D0E4F1A63}</ProjectGuid>

@@ -42,6 +42,9 @@
     <ClCompile Include="SolutionBuild.cpp">
       <Filter>Source\Build</Filter>
     </ClCompile>
+    <ClCompile Include="BuildCommandLine.cpp">
+      <Filter>Source\Build</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BuildConfiguration.h">
@@ -72,6 +75,9 @@
       <Filter>Source\Build</Filter>
     </ClInclude>
     <ClInclude Include="SolutionBuild.h">
+      <Filter>Source\Build</Filter>
+    </ClInclude>
+    <ClInclude Include="BuildCommandLine.h">
       <Filter>Source\Build</Filter>
     </ClInclude>
   </ItemGroup>

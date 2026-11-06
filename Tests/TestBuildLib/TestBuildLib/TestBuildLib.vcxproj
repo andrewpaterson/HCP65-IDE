@@ -226,6 +226,7 @@
     <ClCompile Include="TestBuildWorkspace.cpp" />
     <ClCompile Include="TestBuildRecentFiles.cpp" />
     <ClCompile Include="TestBuild.cpp" />
+    <ClCompile Include="TestBuildCommandLine.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\CommonLibraries\Libraries\BaseLib\BaseLib.vcxproj">

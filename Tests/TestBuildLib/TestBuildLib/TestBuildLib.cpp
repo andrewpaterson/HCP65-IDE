@@ -9,6 +9,7 @@ void TestBuildConfigurations(void);
 void TestBuildWorkspace(void);
 void TestBuildRecentFiles(void);
 void TestBuild(void);
+void TestBuildCommandLine(void);
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -29,6 +30,7 @@ int __cdecl main(void)
 	TestBuildWorkspace();
 	TestBuildRecentFiles();
 	TestBuild();
+	TestBuildCommandLine();
 
 	MemoryKill();
 	TypeConverterKill();
