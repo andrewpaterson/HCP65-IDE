@@ -50,7 +50,8 @@ static const char* gaszIDEKeywords[] =
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The editor's context menu, as IntelliJ's: Find Usages (Alt+F7), Rename
+// The editor's context menu, as IntelliJ's: Go to Source (Control+B, an
+// #include's file or a definition), Find Usages (Alt+F7), Rename
 // (Shift+F6) and Refactor, Extract Method (not done yet, so always
 // disabled).  What can't
 // be done is disabled as it opens.
@@ -66,6 +67,8 @@ Ptr<CMenuContainer> CIDEContent::CreateEditorMenu(void)
 	mpExtractMethodItem->SetEnabled(false);
 
 	mpEditorMenu = OMalloc<CMenuContainer>(mpWindow, mpTheme);
+	mpGoToSourceItem = mpEditorMenu->AddItem("Go to Source");
+	mpGoToSourceItem->SetShortcut("Ctrl+B");
 	mpFindUsagesItem = mpEditorMenu->AddItem("Find Usages");
 	mpFindUsagesItem->SetShortcut("Alt+F7");
 	mpEditorMenu->AddSeparator();
@@ -97,6 +100,7 @@ void CIDEContent::EditorMenuOpening(CMenuContainer* pcMenu)
 	asLocations.Init();
 	szKey.Init();
 	mpFindUsagesItem->SetEnabled(FindSymbolAtCaret(&asLocations, &szKey));
+	mpGoToSourceItem->SetEnabled(CanGoToSource());
 	szKey.Kill();
 	KillIDELocations(&asLocations);
 }

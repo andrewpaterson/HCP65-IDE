@@ -1324,3 +1324,63 @@ void CIDECodeModel::GetUsageGroup(SIDELocation* psLocation, CChars* pszProject, 
 		pszClass->Append(szFile ? szFile + 1 : psLocation->szFileName.Text());
 	}
 }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The file an #include names, as the compiler would find it: "" includes
+// next to the file that includes them first, then each in project
+// uiProject's include directories, then the compiler's.  False if it
+// isn't found.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDECodeModel::FindIncludeFile(size uiProject, const char* szIncluder, const char* szName, bool bSystem, CChars* pszDest)
+{
+	CFileUtil			cFileUtil;
+	CArrayChars			aszDirectories;
+	CChars				szDirectory;
+	CChars				szFileName;
+	CChars				szPath;
+	CVcxConfiguration*	pcConfiguration;
+	size				i;
+	bool				bFound;
+
+	aszDirectories.Init();
+	if (!bSystem && szIncluder)
+	{
+		szFileName.Init();
+		szDirectory.Init();
+		cFileUtil.SplitPath(szIncluder, &szFileName, &szDirectory);
+		aszDirectories.Add(szDirectory.Text());
+		szDirectory.Kill();
+		szFileName.Kill();
+	}
+	if (uiProject < mpcWorkspace->NumProjects())
+	{
+		pcConfiguration = GetProjectConfiguration(uiProject);
+		if (pcConfiguration && mpcWorkspace->GetSolutionProject(uiProject)->GetProject())
+		{
+			mpcWorkspace->GetSolutionProject(uiProject)->GetProject()->GetIncludeDirectories(pcConfiguration, mpcWorkspace->GetProjectSolution(uiProject)->GetDirectory(), &aszDirectories);
+		}
+	}
+	for (i = 0; i < maszSystemDirectories.NumElements(); i++)
+	{
+		aszDirectories.Add(maszSystemDirectories.GetText(i));
+	}
+
+	bFound = false;
+	for (i = 0; (i < aszDirectories.NumElements()) && !bFound; i++)
+	{
+		szPath.Init(aszDirectories.GetText(i));
+		cFileUtil.AppendToPath(&szPath, szName);
+		if (cFileUtil.Exists(szPath.Text()))
+		{
+			cFileUtil.FullPath(&szPath);
+			pszDest->Set(szPath);
+			bFound = true;
+		}
+		szPath.Kill();
+	}
+	aszDirectories.Kill();
+	return bFound;
+}

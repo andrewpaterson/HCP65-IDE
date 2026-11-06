@@ -881,15 +881,27 @@ void CIDEContent::RunDebugScript(void)
 		}
 		bDone = true;
 	}
+	else if (strcmp(szCommand, "gotosource") == 0)
+	{
+		//Control+B.
+		GoToSource();
+		bDone = true;
+	}
+	else if (strcmp(szCommand, "switchfile") == 0)
+	{
+		//Alt+O.
+		SwitchHeaderSource();
+		bDone = true;
+	}
 	else if (strcmp(szCommand, "printtabs") == 0)
 	{
-		//Each open file, '*' if it has changes.
+		//Each open file, '>' before the active one, '*' after one with changes.
 		size	i;
 
 		printf("Tabs:");
 		for (i = 0; i < maTabs.Size(); i++)
 		{
-			printf(" %s%s", strrchr(maTabs.Get(i)->GetFileName(), '/') + 1, maTabs.Get(i)->IsModified() ? "*" : "");
+			printf(" %s%s%s", (maTabs.Get(i) == mpActive) ? ">" : "", strrchr(maTabs.Get(i)->GetFileName(), '/') + 1, maTabs.Get(i)->IsModified() ? "*" : "");
 		}
 		printf("\n");
 		fflush(stdout);

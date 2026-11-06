@@ -295,3 +295,285 @@ void CIDEContent::GoToSnapshotTick(void)
 	SavePNG(pWindow->GetCanvas()->GetImageOrNull(), getenv("HCP65_IDE_GOTO_SNAPSHOT"));
 	mpGoTo->GetDialog()->Close("Cancel");
 }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether szPath ends with szEnd.
+//
+//////////////////////////////////////////////////////////////////////////
+static bool EndsWithIDEPath(const char* szPath, const char* szEnd)
+{
+	size	uiPath;
+	size	uiEnd;
+
+	uiPath = strlen(szPath);
+	uiEnd = strlen(szEnd);
+	return (uiPath >= uiEnd) && (strcmp(&szPath[uiPath - uiEnd], szEnd) == 0);
+}
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The file an #include on the active editor's caret line names, and
+// whether it's a <system> one.  False if the line isn't an #include.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEContent::GetIncludeAtCaret(CChars* pszName, bool* pbSystem)
+{
+	CChars		szLine;
+	char*		szText;
+	char*		szEnd;
+	char		cClose;
+	bool		bResult;
+	int			iLine;
+	int			iColumn;
+
+	if (!GetCaretPlace(&iLine, &iColumn))
+	{
+		return false;
+	}
+	szLine.Init();
+	GetFileLine(mpActive->GetFileName(), iLine, &szLine);
+	szText = szLine.Text();
+	bResult = false;
+	if (szText[0] == '#')
+	{
+		szText++;
+		while ((*szText == ' ') || (*szText == '\t'))
+		{
+			szText++;
+		}
+		if (strncmp(szText, "include", 7) == 0)
+		{
+			szText += 7;
+			while ((*szText == ' ') || (*szText == '\t'))
+			{
+				szText++;
+			}
+			if ((*szText == '"') || (*szText == '<'))
+			{
+				cClose = (*szText == '"') ? '"' : '>';
+				*pbSystem = (cClose == '>');
+				szEnd = strchr(szText + 1, cClose);
+				if (szEnd && (szEnd > szText + 1))
+				{
+					pszName->Init();
+					pszName->AppendSubString(szText + 1, szEnd);
+					bResult = true;
+				}
+			}
+		}
+	}
+	szLine.Kill();
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The file the active editor's #include names, found as the compiler
+// would (see CIDECodeModel::FindIncludeFile), or else a solution file
+// with that path.  False if the caret line isn't an #include or the file
+// isn't found.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEContent::FindIncludedFile(CChars* pszDest)
+{
+	CChars	szName;
+	CChars	szEnd;
+	bool	bSystem;
+	bool	bFound;
+	size	i;
+
+	if (!GetIncludeAtCaret(&szName, &bSystem))
+	{
+		return false;
+	}
+	bFound = mcCodeModel.FindIncludeFile(mpActive->GetProject(), mpActive->GetFileName(), szName.Text(), bSystem, pszDest);
+	if (!bFound)
+	{
+		//A solution file whose path ends with it.
+		szEnd.Init("/");
+		szEnd.Append(szName);
+		szEnd.Replace('\\', '/');
+		FindGoToFiles();
+		for (i = 0; (i < maszGoToFiles.NumElements()) && !bFound; i++)
+		{
+			if (EndsWithIDEPath(maszGoToFiles.GetText(i), szEnd.Text()))
+			{
+				pszDest->Set(maszGoToFiles.GetText(i));
+				bFound = true;
+			}
+		}
+		szEnd.Kill();
+	}
+	szName.Kill();
+	return bFound;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Control+B, as IntelliJ's: on an #include the file it names is opened;
+// anywhere else, the definition of what is at the caret (as F12).  False
+// if there's nothing to go to.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEContent::GoToSource(void)
+{
+	CChars	szFile;
+	bool	bResult;
+
+	if (mpActive.IsNull())
+	{
+		return false;
+	}
+	szFile.Init();
+	if (FindIncludedFile(&szFile))
+	{
+		bResult = OpenFile(szFile.Text(), mcCodeModel.FindProjectOfFile(szFile.Text()) != MAX_SIZE ? mcCodeModel.FindProjectOfFile(szFile.Text()) : mpActive->GetProject());
+		if (bResult)
+		{
+			mpWindow->GetFocus()->SetFocus(mpActive->GetEditor());
+		}
+		szFile.Kill();
+		return bResult;
+	}
+	szFile.Kill();
+	return GoToDefinition();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether Go to Source has somewhere to go: an #include's file, or a
+// symbol at the caret.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEContent::CanGoToSource(void)
+{
+	CChars				szFile;
+	CArrayIDELocations	asLocations;
+	CChars				szKey;
+	bool				bResult;
+
+	if (mpActive.IsNull())
+	{
+		return false;
+	}
+	szFile.Init();
+	bResult = FindIncludedFile(&szFile);
+	szFile.Kill();
+	if (!bResult)
+	{
+		asLocations.Init();
+		szKey.Init();
+		bResult = FindSymbolAtCaret(&asLocations, &szKey);
+		szKey.Kill();
+		KillIDELocations(&asLocations);
+	}
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Alt+O, as Visual Assist's: a .cpp (.c, .cc, .cxx) opens its header
+// (.h, .hpp, .hxx, .inl) of the same name, and a header its .cpp: the one
+// in the same folder, else a solution file of that name.  False if there
+// isn't one.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEContent::SwitchHeaderSource(void)
+{
+	static const char*	aszSources[] = { "cpp", "c", "cc", "cxx" };
+	static const char*	aszHeaders[] = { "h", "hpp", "hxx", "inl" };
+	const char**		aszWanted;
+	size				uiWanted;
+	CFileUtil			cFileUtil;
+	CChars				szBase;
+	CChars				szPath;
+	CChars				szName;
+	CChars				szFound;
+	EIDEFileType		eType;
+	size				i;
+	size				j;
+	bool				bFound;
+	size				uiProject;
+
+	if (mpActive.IsNull())
+	{
+		return false;
+	}
+	eType = CIDEIcons::GetFileType(mpActive->GetFileName());
+	if (eType == IFT_Header)
+	{
+		aszWanted = aszSources;
+		uiWanted = sizeof(aszSources) / sizeof(char*);
+	}
+	else if ((eType == IFT_CPP) || (eType == IFT_C))
+	{
+		aszWanted = aszHeaders;
+		uiWanted = sizeof(aszHeaders) / sizeof(char*);
+	}
+	else
+	{
+		return false;
+	}
+
+	//The same name, beside it.
+	szBase.Init(mpActive->GetFileName());
+	cFileUtil.RemoveExtension(&szBase);
+	szFound.Init();
+	bFound = false;
+	for (i = 0; (i < uiWanted) && !bFound; i++)
+	{
+		szPath.Init(szBase);
+		szPath.Append('.');
+		szPath.Append(aszWanted[i]);
+		if (cFileUtil.Exists(szPath.Text()))
+		{
+			szFound.Set(szPath);
+			bFound = true;
+		}
+		szPath.Kill();
+	}
+
+	//Else a solution file of that name.
+	if (!bFound)
+	{
+		szName.Init();
+		cFileUtil.GetFileName(&szName, szBase.Text());
+		FindGoToFiles();
+		for (j = 0; (j < maszGoToFiles.NumElements()) && !bFound; j++)
+		{
+			for (i = 0; (i < uiWanted) && !bFound; i++)
+			{
+				szPath.Init("/");
+				szPath.Append(szName);
+				szPath.Append('.');
+				szPath.Append(aszWanted[i]);
+				if (EndsWithIDEPath(maszGoToFiles.GetText(j), szPath.Text()))
+				{
+					szFound.Set(maszGoToFiles.GetText(j));
+					bFound = true;
+				}
+				szPath.Kill();
+			}
+		}
+		szName.Kill();
+	}
+	szBase.Kill();
+
+	if (bFound)
+	{
+		uiProject = mcCodeModel.FindProjectOfFile(szFound.Text());
+		bFound = OpenFile(szFound.Text(), (uiProject != MAX_SIZE) ? uiProject : mpActive->GetProject());
+		if (bFound)
+		{
+			mpWindow->GetFocus()->SetFocus(mpActive->GetEditor());
+		}
+	}
+	szFound.Kill();
+	return bFound;
+}

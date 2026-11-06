@@ -56,7 +56,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 //Go to Definition (F12), Find All References (Shift+F12), Build (Control+Shift+B) and the debugger's keys from anywhere in the window.
-static EComponentInputCommand	gaeIDECodeCommands[] = { CIC_Save, CIC_SaveAll, CIC_GoToDefinition, CIC_FindReferences, CIC_GoToClass, CIC_GoToFile, CIC_GoToSymbol, CIC_ShowProjectView, CIC_Rename, CIC_FindUsages, CIC_Build, CIC_StartDebugging, CIC_StopDebugging, CIC_RestartDebugging,
+static EComponentInputCommand	gaeIDECodeCommands[] = { CIC_Save, CIC_SaveAll, CIC_GoToDefinition, CIC_FindReferences, CIC_GoToClass, CIC_GoToFile, CIC_GoToSymbol, CIC_ShowProjectView, CIC_Rename, CIC_FindUsages, CIC_GoToSource, CIC_SwitchHeaderSource, CIC_Build, CIC_StartDebugging, CIC_StopDebugging, CIC_RestartDebugging,
 														 CIC_BreakAll, CIC_ToggleBreakpoint, CIC_StepOver, CIC_StepInto, CIC_StepOut };
 
 
@@ -312,6 +312,7 @@ void CIDEContent::Class(void)
 	U_Int32(miQueuedGoTo);
 	M_Pointer(mpEditorMenu);
 	M_Pointer(mpFindUsagesItem);
+	M_Pointer(mpGoToSourceItem);
 	M_Pointer(mpUsages);
 	M_Pointer(mpUsagesTool);
 	U_Unknown(CArrayIDELocations, masUsages);
@@ -875,6 +876,10 @@ void CIDEContent::MenuItemClicked(CMenuItem* pcItem)
 	}
 	else if (EditMenuItemClicked(pcItem))
 	{
+	}
+	else if (pcItem == &mpGoToSourceItem)
+	{
+		GoToSource();
 	}
 	else if (pcItem == &mpFindUsagesItem)
 	{
@@ -1741,6 +1746,14 @@ void CIDEContent::CodeCommandAction(SComponentInputEvent* psEvent)
 	else if (psEvent->eCommand == CIC_GoToFile)
 	{
 		QueueGoTo(IDE_GO_TO_FILE);
+	}
+	else if (psEvent->eCommand == CIC_GoToSource)
+	{
+		GoToSource();
+	}
+	else if (psEvent->eCommand == CIC_SwitchHeaderSource)
+	{
+		SwitchHeaderSource();
 	}
 	else if (psEvent->eCommand == CIC_FindUsages)
 	{

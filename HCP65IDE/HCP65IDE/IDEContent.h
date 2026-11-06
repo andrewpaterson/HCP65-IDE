@@ -187,6 +187,7 @@ protected:
 
 	Ptr<CMenuContainer>			mpEditorMenu;		//The editors' context menu: Find Usages, Rename and Refactor.
 	Ptr<CMenuItem>				mpFindUsagesItem;
+	Ptr<CMenuItem>				mpGoToSourceItem;
 	Ptr<CTreeContainer>			mpUsages;			//What Find Usages found: projects, classes, lines.
 	Ptr<CDockPane>				mpUsagesTool;
 	CArrayIDELocations			masUsages;			//Each line's place, by its node's data less one.
@@ -435,6 +436,11 @@ public:
 	bool				OpenGoToChoice(void);
 	Ptr<CGoToDialog>	GetGoTo(void);
 	void				FindGoToFiles(void);
+	bool				GetIncludeAtCaret(CChars* pszName, bool* pbSystem);
+	bool				FindIncludedFile(CChars* pszDest);
+	bool				GoToSource(void);
+	bool				CanGoToSource(void);
+	bool				SwitchHeaderSource(void);
 	void				GoToSnapshotTick(void);
 	bool				UndoAcrossFiles(void);
 	bool				RedoAcrossFiles(void);
