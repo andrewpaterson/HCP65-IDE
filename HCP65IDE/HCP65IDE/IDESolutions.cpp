@@ -309,7 +309,7 @@ bool CIDESolutions::RemoveSolution(size uiSolution)
 	{
 		return false;
 	}
-	if (mpcContent->mcBuild.IsRunning())
+	if (mpcContent->mpBuilding->IsBuilding())
 	{
 		return gcLogger.Error2(__METHOD__, " A solution can't be removed while a build is running.", NULL);
 	}
@@ -410,7 +410,7 @@ bool CIDESolutions::CloseSolution(size uiSolution)
 	{
 		return false;
 	}
-	if (mpcContent->mcBuild.IsRunning())
+	if (mpcContent->mpBuilding->IsBuilding())
 	{
 		return gcLogger.Error2(__METHOD__, " A solution can't be closed while a build is running.", NULL);
 	}
@@ -497,9 +497,7 @@ void CIDESolutions::LetGoOfWorkspace(void)
 {
 	mpcContent->SaveLayout();
 
-	mpcContent->mcBuild.Kill();
-	mpcContent->mcBuild.Init();
-	mpcContent->maiBuildOrder.ReInit();
+	mpcContent->mpBuilding->StopBuild();
 	mpcContent->mpBuilding->SetListings(false);
 	mpcContent->mpDocuments->CloseAllFiles();
 	mpcContent->mpUsages->Clear();

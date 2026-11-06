@@ -56,6 +56,9 @@ void CIDEBuilding::Init(CIDEContent* pcContent)
 {
 	PreInit();
 	mpcContent = pcContent;
+	mcBuild.Init();
+	maiBuildOrder.Init();
+	mcListings.Init();
 	muiBuildStep = 0;
 	mszLibc65.Init();
 	muiListingToShow = MAX_SIZE;
@@ -70,6 +73,9 @@ void CIDEBuilding::Init(CIDEContent* pcContent)
 void CIDEBuilding::Class(void)
 {
 	U_Pointer(mpcContent);
+	U_Unknown(CSolutionBuild, mcBuild);
+	U_Unknown(CArrayInt, maiBuildOrder);
+	U_Unknown(CCPP65ListingIndex, mcListings);
 	M_Pointer(mpBuildPane);
 	M_Pointer(mpBuildTool);
 	M_Pointer(mpBuildButton);
@@ -92,6 +98,9 @@ void CIDEBuilding::Free(void)
 		mpBuildButton->GetClickEvent()->Remove(this);
 	}
 	mszLibc65.Kill();
+	mcBuild.Kill();
+	maiBuildOrder.Kill();
+	mcListings.Kill();
 }
 
 
@@ -140,13 +149,13 @@ bool CIDEBuilding::Build(void)
 	CArrayChars	aszLines;
 	bool		bResult;
 
-	if (!mpcContent->mpSolutions->IsSolutionOpen() || mpcContent->mszConfiguration.Empty() || mpcContent->mcBuild.IsRunning())
+	if (!mpcContent->mpSolutions->IsSolutionOpen() || mpcContent->mszConfiguration.Empty() || mcBuild.IsRunning())
 	{
 		return false;
 	}
-	mpcContent->maiBuildOrder.ReInit();
-	mpcContent->mcWorkspace.GetBuildOrder(mpcContent->mszConfiguration.Text(), &mpcContent->maiBuildOrder);
-	if (mpcContent->maiBuildOrder.NumElements() == 0)
+	maiBuildOrder.ReInit();
+	mpcContent->mcWorkspace.GetBuildOrder(mpcContent->mszConfiguration.Text(), &maiBuildOrder);
+	if (maiBuildOrder.NumElements() == 0)
 	{
 		return false;
 	}
@@ -165,7 +174,7 @@ bool CIDEBuilding::Build(void)
 	mpBuildPane->AppendLines(&aszLines);
 	ShowBuildProgress();
 	aszLines.Kill();
-	if (mpcContent->mcBuild.IsRunning())
+	if (mcBuild.IsRunning())
 	{
 		mpcContent->mpWindow->RequestTick(IDE_BUILD_POLL);
 	}
@@ -184,13 +193,13 @@ void CIDEBuilding::PollBuild(Ptr<CWindow> pWindow)
 	CArrayChars	aszLines;
 	bool		bRunning;
 
-	if (!mpcContent->mcBuild.IsRunning())
+	if (!mcBuild.IsRunning())
 	{
 		return;
 	}
 
 	aszLines.Init();
-	bRunning = mpcContent->mcBuild.Poll(&aszLines);
+	bRunning = mcBuild.Poll(&aszLines);
 	if (!bRunning)
 	{
 		FinishBuildSteps(&aszLines);
@@ -198,7 +207,7 @@ void CIDEBuilding::PollBuild(Ptr<CWindow> pWindow)
 	mpBuildPane->AppendLines(&aszLines);
 	ShowBuildProgress();
 	aszLines.Kill();
-	if (mpcContent->mcBuild.IsRunning())
+	if (mcBuild.IsRunning())
 	{
 		pWindow->RequestTick(IDE_BUILD_POLL);
 	}
@@ -217,9 +226,9 @@ bool CIDEBuilding::StartBuildStep(CArrayChars* paszLines)
 	CBuildWorkspaceSolution*	pcSolution;
 	CChars						szLine;
 
-	uiSolution = (size)mpcContent->maiBuildOrder.GetValue(muiBuildStep);
+	uiSolution = (size)maiBuildOrder.GetValue(muiBuildStep);
 	pcSolution = mpcContent->mcWorkspace.GetSolution(uiSolution);
-	if (mpcContent->maiBuildOrder.NumElements() > 1)
+	if (maiBuildOrder.NumElements() > 1)
 	{
 		szLine.Init("------ ");
 		szLine.Append(pcSolution->mcSolution.GetName());
@@ -229,7 +238,7 @@ bool CIDEBuilding::StartBuildStep(CArrayChars* paszLines)
 		paszLines->Add(szLine.Text());
 		szLine.Kill();
 	}
-	return mpcContent->mcBuild.Start(&pcSolution->mcSolution, mpcContent->mcWorkspace.FindConfiguration(uiSolution, mpcContent->mszConfiguration.Text()), NULL, mszLibc65.Text(), paszLines);
+	return mcBuild.Start(&pcSolution->mcSolution, mpcContent->mcWorkspace.FindConfiguration(uiSolution, mpcContent->mszConfiguration.Text()), NULL, mszLibc65.Text(), paszLines);
 }
 
 
@@ -245,17 +254,17 @@ void CIDEBuilding::ShowBuildProgress(void)
 	size	uiSteps;
 	float	fFraction;
 
-	uiSteps = mpcContent->maiBuildOrder.NumElements();
-	if (mpcContent->mcBuild.IsRunning() && (uiSteps > 0))
+	uiSteps = maiBuildOrder.NumElements();
+	if (mcBuild.IsRunning() && (uiSteps > 0))
 	{
-		fFraction = ((float)muiBuildStep + mpcContent->mcBuild.GetFraction()) / (float)uiSteps;
+		fFraction = ((float)muiBuildStep + mcBuild.GetFraction()) / (float)uiSteps;
 		mpBuildPane->SetProgress(fFraction, JEWEL_BLUE);
 	}
-	else if (mpcContent->mcBuild.GetState() == BS_Succeeded)
+	else if (mcBuild.GetState() == BS_Succeeded)
 	{
 		mpBuildPane->SetProgress(1.0f, JEWEL_GREEN);
 	}
-	else if ((mpcContent->mcBuild.GetState() == BS_Failed) || (mpcContent->mcBuild.GetState() == BS_Cancelled))
+	else if ((mcBuild.GetState() == BS_Failed) || (mcBuild.GetState() == BS_Cancelled))
 	{
 		mpBuildPane->SetProgress(1.0f, JEWEL_RED);
 	}
@@ -274,15 +283,15 @@ void CIDEBuilding::FinishBuildSteps(CArrayChars* paszLines)
 {
 	CBuildConfiguration*	pcConfiguration;
 
-	while (!mpcContent->mcBuild.IsRunning() && (mpcContent->mcBuild.GetState() == BS_Succeeded) && (muiBuildStep < mpcContent->maiBuildOrder.NumElements()))
+	while (!mcBuild.IsRunning() && (mcBuild.GetState() == BS_Succeeded) && (muiBuildStep < maiBuildOrder.NumElements()))
 	{
-		pcConfiguration = mpcContent->mcWorkspace.FindConfiguration((size)mpcContent->maiBuildOrder.GetValue(muiBuildStep), mpcContent->mszConfiguration.Text());
+		pcConfiguration = mpcContent->mcWorkspace.FindConfiguration((size)maiBuildOrder.GetValue(muiBuildStep), mpcContent->mszConfiguration.Text());
 		if (pcConfiguration->IsHCP65())
 		{
 			ReadListings(paszLines);
 		}
 		muiBuildStep++;
-		if (muiBuildStep == mpcContent->maiBuildOrder.NumElements())
+		if (muiBuildStep == maiBuildOrder.NumElements())
 		{
 			mpcContent->mpDebugging->ReadLineTables();
 		}
@@ -310,19 +319,19 @@ void CIDEBuilding::ReadListings(CArrayChars* paszLines)
 	size		i;
 	size		uiRead;
 
-	uiRead = mpcContent->mcListings.NumListings();
+	uiRead = mcListings.NumListings();
 	szDirectory.Init();
-	mpcContent->mcBuild.GetBuild()->GetListingDirectory(&szDirectory);
+	mcBuild.GetBuild()->GetListingDirectory(&szDirectory);
 	aszFiles.Init();
 	cFileUtil.FindAllFiles(szDirectory.Text(), &aszFiles);
 	for (i = 0; i < aszFiles.NumElements(); i++)
 	{
 		if (aszFiles.Get(i)->EndsWithIgnoreCase(".lst"))
 		{
-			mpcContent->mcListings.ReadListing(aszFiles.GetText(i));
+			mcListings.ReadListing(aszFiles.GetText(i));
 		}
 	}
-	uiRead = mpcContent->mcListings.NumListings() - uiRead;
+	uiRead = mcListings.NumListings() - uiRead;
 	szLine.Init("Read ");
 	szLine.Append((uint32)uiRead);
 	szLine.Append((uiRead == 1) ? " listing from " : " listings from ");
@@ -354,12 +363,12 @@ void CIDEBuilding::SetListings(bool bListings)
 
 	if (!bListings)
 	{
-		mpcContent->mcListings.Kill();
-		mpcContent->mcListings.Init();
+		mcListings.Kill();
+		mcListings.Init();
 	}
 	for (i = 0; i < mpcContent->mpDocuments->NumTabs(); i++)
 	{
-		mpcContent->mpDocuments->GetTab(i)->SetListings(bListings ? &mpcContent->mcListings : NULL);
+		mpcContent->mpDocuments->GetTab(i)->SetListings(bListings ? &mcListings : NULL);
 	}
 }
 
@@ -376,10 +385,10 @@ void CIDEBuilding::ShowListingAfterBuild(size uiLine)
 }
 
 
-bool CIDEBuilding::IsBuilding(void) { return mpcContent->mcBuild.IsRunning(); }
+bool CIDEBuilding::IsBuilding(void) { return mcBuild.IsRunning(); }
 
 
-CCPP65ListingIndex* CIDEBuilding::GetListings(void) { return &mpcContent->mcListings; }  //The last HCP65 build's, for showing a line's assembly.
+CCPP65ListingIndex* CIDEBuilding::GetListings(void) { return &mcListings; }  //The last HCP65 build's, for showing a line's assembly.
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -418,4 +427,18 @@ Ptr<CButton> CIDEBuilding::CreateBuildButton(void)
 	mpBuildButton->SetAlignment(CSH_Left, CSV_Center);
 	mpBuildButton->GetClickEvent()->Add(this, &CIDEBuilding::BuildClicked);
 	return mpBuildButton;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A build still running is stopped (an HCP65 build is waited for): the
+// solutions it builds are going.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEBuilding::StopBuild(void)
+{
+	mcBuild.Kill();
+	mcBuild.Init();
+	maiBuildOrder.ReInit();
 }

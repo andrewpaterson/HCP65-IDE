@@ -201,9 +201,6 @@ protected:
 	Ptr<CMenuItem>				mpStartupItem;
 	Ptr<CMenuItem>				mpRemoveSolutionItem;
 	CChars						mszConfiguration;	//The chosen build configuration's name, each solution's of that name; empty if none.
-	CSolutionBuild				mcBuild;			//The build running, or the last.
-	CArrayInt					maiBuildOrder;		//The solutions a build builds, in order.
-	CCPP65ListingIndex			mcListings;			//The last HCP65 build's listings, given to the open files.
 	CBuildWorkspace				mcWorkspace;		//The solutions open, one the startup solution.
 	CIDECodeModel				mcCodeModel;		//Uses mcWorkspace; initialised when a solution is opened.
 

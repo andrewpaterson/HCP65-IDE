@@ -146,9 +146,9 @@ Ptr<CIDEEditorTab> CIDEDocuments::OpenFileTab(const char* szFileName, size uiPro
 	cFile.Kill();
 	maTabs.Add(pTab);
 	HighlightTab(pTab);
-	if (mpcContent->mcListings.NumListings() > 0)
+	if (mpcContent->mpBuilding->GetListings()->NumListings() > 0)
 	{
-		pTab->SetListings(&mpcContent->mcListings);
+		pTab->SetListings(mpcContent->mpBuilding->GetListings());
 	}
 
 	szName.Init();

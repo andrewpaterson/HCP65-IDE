@@ -181,9 +181,6 @@ void CIDEContent::Init(void)
 	mcCodeModel.Init(&mcWorkspace);
 	mszConfiguration.Init();
 	memset(&msDialogLook, 0, sizeof(msDialogLook));
-	mcBuild.Init();
-	maiBuildOrder.Init();
-	mcListings.Init();
 	maDiffTabs.Init();
 	maFileIcons.Init();
 	maSymbolIcons.Init();
@@ -273,9 +270,6 @@ void CIDEContent::Class(void)
 	M_Pointer(mpStartupItem);
 	M_Pointer(mpRemoveSolutionItem);
 	U_String(mszConfiguration);
-	U_Unknown(CSolutionBuild, mcBuild);
-	U_Unknown(CArrayInt, maiBuildOrder);
-	U_Unknown(CCPP65ListingIndex, mcListings);
 	U_Unknown(CBuildWorkspace, mcWorkspace);
 	U_Unknown(CIDECodeModel, mcCodeModel);
 	M_Pointer(mpDialog);
@@ -343,15 +337,14 @@ void CIDEContent::Free(void)
 		mpWindow->CancelPosted(&mpSolutions);
 	}
 
-	//A request Claude is still working on is stopped.
-
 	//A git status still being read is stopped.
 	mcGit.Kill();
 
 	//A build still running is stopped (an HCP65 build is waited for) before the solution it builds goes.
-	mcBuild.Kill();
-	maiBuildOrder.Kill();
-	mcListings.Kill();
+	if (mpBuilding.IsNotNull())
+	{
+		mpBuilding->StopBuild();
+	}
 	mcCodeModel.Kill();
 	mszConfiguration.Kill();
 	mcWorkspace.Kill();

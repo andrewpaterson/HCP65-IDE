@@ -74,6 +74,7 @@ void CIDEAskClaude::Free(void)
 		mpClaudePane->GetStopButton()->GetClickEvent()->Remove(this);
 		mpClaudePane->GetNewButton()->GetClickEvent()->Remove(this);
 	}
+	//A request Claude is still working on is stopped.
 	mcClaude.Kill();
 }
 

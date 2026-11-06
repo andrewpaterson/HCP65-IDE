@@ -28,6 +28,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/DockManager.h"
 #include "CppParserLib/CPP65ListingIndex.h"
 #include "IDEBuildPane.h"
+#include "BaseLib/ArrayInt.h"
+#include "BuildLib/SolutionBuild.h"
 
 
 class CIDEContent;
@@ -44,6 +46,9 @@ CONSTRUCTABLE(CIDEBuilding);
 DESTRUCTABLE(CIDEBuilding);
 protected:
 	CIDEContent*	mpcContent;  //Not held: the content holds it.
+	CSolutionBuild				mcBuild;			//The build running, or the last.
+	CArrayInt					maiBuildOrder;		//The solutions a build builds, in order.
+	CCPP65ListingIndex			mcListings;			//The last HCP65 build's listings, given to the open files.
 	Ptr<CDockPane>				mpBuildTool;
 	Ptr<CButton>				mpBuildButton;
 	Ptr<CIDEBuildPane>			mpBuildPane;
@@ -64,6 +69,7 @@ public:
 	void				ShowBuildTab(void);
 	void				SetLibc65Directory(const char* szDirectory);
 	bool				Build(void);
+	void				StopBuild(void);
 	bool				IsBuilding(void);
 	void				ShowListingAfterBuild(size uiLine);
 	CCPP65ListingIndex*	GetListings(void);
