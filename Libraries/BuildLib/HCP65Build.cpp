@@ -38,6 +38,7 @@ void CHCP65Build::Init(CVcxSolution* pcSolution, CBuildConfiguration* pcConfigur
 	mbCompiled = false;
 	mbResult = false;
 	mbCancel = false;
+	muiReported = 0;
 }
 
 
@@ -87,6 +88,8 @@ bool CHCP65Build::Start(CArrayChars* paszLines)
 	mcBuilder.SetJobs(&mcJobs);
 	mcBuilder.SetHeaderCache(true);
 	mcBuilder.SetLineTable(true);
+	mcBuilder.SetUnitReports(true);
+	muiReported = 0;
 	szListings.Init();
 	GetListingDirectory(&szListings);
 	cFileUtil.RemoveDir(szListings.Text());
@@ -214,8 +217,10 @@ void CHCP65Build::CompileThread(void* pvBuild)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Says how many units have compiled.  Once they all have, adds the errors
-// and warnings.  Returns true while the build is running.
+// Each unit that has compiled since the last poll is a line, its name and
+// how many have compiled, followed by its warnings and errors.  Once they
+// all have, adds the errors and warnings that aren't a unit's (the
+// link's).  Returns true while the build is running.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CHCP65Build::Poll(CArrayChars* paszLines)
@@ -230,6 +235,7 @@ bool CHCP65Build::Poll(CArrayChars* paszLines)
 	}
 	if (!mbCompiled)
 	{
+		AddUnitReports(paszLines);
 		uiUnits = mcBuilder.NumUnitsToCompile();
 		uiFinished = mcBuilder.NumUnitsFinished();
 		SetSteps(uiFinished, uiUnits);
@@ -249,6 +255,7 @@ bool CHCP65Build::Poll(CArrayChars* paszLines)
 	}
 
 	Wait();
+	AddUnitReports(paszLines);
 	AddLines(mcBuilder.GetWarnings(), paszLines);
 	AddLines(mcBuilder.GetErrors(), paszLines);
 	if (mbResult && !mbCancel && mpcConfiguration->IsLinked())
@@ -354,6 +361,49 @@ void CHCP65Build::Wait(void)
 	{
 		mcThread.Join();
 	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The units that have compiled since the last time: each a line, its name
+// and how many of the units have compiled ("Main.cpp (12/40)"), or that
+// it was compiled again (a W65C816 unit that calls a function exported
+// after it compiled), then its warnings and errors.
+//
+//////////////////////////////////////////////////////////////////////////
+void CHCP65Build::AddUnitReports(CArrayChars* paszLines)
+{
+	CArrayCPP65UnitReports	asReports;
+	SCPP65UnitReport*		psReport;
+	CChars					szLine;
+	size					i;
+
+	asReports.Init();
+	mcBuilder.TakeUnitReports(&asReports);
+	for (i = 0; i < asReports.NumElements(); i++)
+	{
+		psReport = asReports.Get(i);
+		szLine.Init(psReport->szName);
+		if (psReport->bAgain)
+		{
+			szLine.Append(" (compiled again)");
+		}
+		else
+		{
+			muiReported++;
+			szLine.Append(" (");
+			szLine.Append((uint32)muiReported);
+			szLine.Append('/');
+			szLine.Append((uint32)mcBuilder.NumUnitsToCompile());
+			szLine.Append(')');
+		}
+		paszLines->Add(szLine.Text());
+		szLine.Kill();
+		AddLines(psReport->szWarnings.Text(), paszLines);
+		AddLines(psReport->szErrors.Text(), paszLines);
+	}
+	CCPP65Builder::KillUnitReports(&asReports);
 }
 
 

@@ -42,6 +42,7 @@ protected:
 	volatile bool			mbCompiled;		//Set by the thread when it has finished.
 	bool					mbResult;
 	bool					mbCancel;
+	size					muiReported;	//Units reported (each a line, its name and how many have compiled).
 
 public:
 	void		Init(CVcxSolution* pcSolution, CBuildConfiguration* pcConfiguration, const char* szRoot) override;
@@ -58,6 +59,7 @@ protected:
 	void		AddProjects(CArrayChars* paszLines);
 	bool		WriteProgram(CArrayChars* paszLines);
 	void		AddLines(const char* szText, CArrayChars* paszLines);
+	void		AddUnitReports(CArrayChars* paszLines);
 	void		Wait(void);
 };
 
