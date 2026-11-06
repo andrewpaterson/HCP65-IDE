@@ -34,7 +34,9 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 //hcp65build: builds a solution (.sln), a project (.vcxproj) or a workspace (.hcp65workspace) in one of its build
 //configurations (its .hcp65build) without the IDE, as the IDE's Build does: every solution of a workspace in
 //dependency order, each compiled and linked whole by CSolutionBuild, its output in Output\<toolchain>\<configuration>
-//beside it.  Optionally each program the kernal runs is put on the configuration's card as the debugger does.
+//beside it.  Optionally each program the kernal runs is put on the configuration's card as the debugger does.  Given
+//a solution's configurations (.hcp65build) it builds the solution they are for: the .sln of the same name beside
+//them, else the .vcxproj.
 //
 //	hcp65build <file> [-config "Release|W65C816"] [-card] [-libc65 <directory>] [-quiet]
 //
@@ -68,6 +70,7 @@ public:
 			bool	IsHelp(void);
 
 	static	bool	FindLibc65(const char* szDirectory, CChars* pszDest);
+	static	bool	FindSolutionFile(const char* szConfigurations, CChars* pszDest);
 	static	bool	IsProgressLine(const char* szLine);
 
 protected:

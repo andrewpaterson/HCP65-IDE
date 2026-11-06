@@ -176,7 +176,7 @@ bool CBuildCommandLine::Parse(int iArgc, const char* const* aszArgv)
 	}
 	if (mszFile.Empty())
 	{
-		WriteLine("No solution, project or workspace to build.");
+		WriteLine("No solution, project, configurations or workspace to build.");
 		return false;
 	}
 	return true;
@@ -216,11 +216,29 @@ int CBuildCommandLine::Run(const char* szToolDirectory)
 		return BUILD_EXIT_USAGE;
 	}
 	cFileUtil.FullPath(&mszFile);
+	if (mszFile.EndsWithIgnoreCase(BUILD_CONFIGURATIONS_EXTENSION))
+	{
+		//A solution's configurations: the solution (or project) beside them is built.
+		szLine.Init();
+		if (!FindSolutionFile(mszFile.Text(), &szLine))
+		{
+			szLine.Set("Could not find the .sln or .vcxproj that ");
+			szLine.Append(mszFile);
+			szLine.Append(" is for (the same name beside it).");
+			WriteLine(szLine.Text());
+			szLine.Kill();
+			return BUILD_EXIT_USAGE;
+		}
+		mszFile.Set(szLine);
+		szLine.Kill();
+	}
 	if (!mcWorkspace.Open(mszFile.Text()) || (mcWorkspace.NumSolutions() == 0))
 	{
 		szLine.Init("Could not read ");
 		szLine.Append(mszFile);
-		szLine.Append(" (a .sln, .vcxproj or ");
+		szLine.Append(" (a .sln, .vcxproj, ");
+		szLine.Append(BUILD_CONFIGURATIONS_EXTENSION);
+		szLine.Append(" or ");
 		szLine.Append(BUILD_WORKSPACE_EXTENSION);
 		szLine.Append(").");
 		WriteLine(szLine.Text());
@@ -576,7 +594,9 @@ void CBuildCommandLine::WriteUsage(void)
 {
 	WriteLine("hcp65build: builds an HCP65-IDE solution, project or workspace from the command line.");
 	WriteLine("");
-	WriteLine("  hcp65build <file.sln | file.vcxproj | file.hcp65workspace> [options]");
+	WriteLine("  hcp65build <file.sln | file.vcxproj | file.hcp65build | file.hcp65workspace> [options]");
+	WriteLine("");
+	WriteLine("A .hcp65build builds the .sln of the same name beside it (else the .vcxproj).");
 	WriteLine("");
 	WriteLine("  -config \"Release|W65C816\"  The build configuration (from the .hcp65build beside the solution).");
 	WriteLine("                             Default: the workspace's last one, else the first HCP65 one.");
@@ -628,6 +648,36 @@ bool CBuildCommandLine::FindLibc65(const char* szDirectory, CChars* pszDest)
 			return false;
 		}
 	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The solution a configurations file (szConfigurations, .hcp65build) is
+// for: the .sln of the same name beside it, else the .vcxproj (a project
+// opened as its own solution), as CBuildConfigurations::GetFileName names
+// them.  False if neither is there.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CBuildCommandLine::FindSolutionFile(const char* szConfigurations, CChars* pszDest)
+{
+	CFileUtil	cFileUtil;
+
+	pszDest->Set(szConfigurations);
+	cFileUtil.RemoveExtension(pszDest);
+	pszDest->Append(".sln");
+	if (cFileUtil.Exists(pszDest->Text()))
+	{
+		return true;
+	}
+	cFileUtil.RemoveExtension(pszDest);
+	pszDest->Append(".vcxproj");
+	if (cFileUtil.Exists(pszDest->Text()))
+	{
+		return true;
+	}
+	pszDest->Set("");
+	return false;
 }
 
 

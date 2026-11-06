@@ -1,7 +1,11 @@
 #include <string.h>
 #include "BaseLib/FileUtil.h"
+#include "BaseLib/TextFile.h"
 #include "BuildLib/BuildCommandLine.h"
 #include "TestLib/Assert.h"
+
+
+bool TestBuildEndsWith(const char* szText, const char* szEnd);
 
 
 #define TEST_COMMAND_LINE_LIBC65	".." _FS_ ".." _FS_ ".." _FS_ ".." _FS_ "HCP65" _FS_ "Libraries" _FS_ "Libc65"
@@ -95,7 +99,7 @@ void TestBuildCommandLineParse(void)
 	const char* aszNone[] = { "hcp65build" };
 	cCommandLine.Init();
 	AssertFalse(cCommandLine.Parse(1, aszNone));
-	AssertString("No solution, project or workspace to build.", cCommandLine.GetLastLine());
+	AssertString("No solution, project, configurations or workspace to build.", cCommandLine.GetLastLine());
 	cCommandLine.Kill();
 
 	const char* aszTwo[] = { "hcp65build", "A.sln", "B.sln" };
@@ -247,6 +251,53 @@ void TestBuildCommandLineRun(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// A .hcp65build is for the .sln of the same name beside it, else the
+// .vcxproj.  Tiny (copied by TestBuildCommandLineRun) given one with a
+// configuration only it has is built from it; one with neither beside it
+// is a usage error.
+//
+//////////////////////////////////////////////////////////////////////////
+void TestBuildCommandLineConfigurationsFile(void)
+{
+	CTestBuildCommandLine	cCommandLine;
+	CTextFile				cFile;
+	CChars					szFound;
+
+	szFound.Init();
+	AssertTrue(CBuildCommandLine::FindSolutionFile("Input" _FS_ "Workspace" _FS_ "Program" _FS_ "Program.hcp65build", &szFound));
+	AssertString("Input" _FS_ "Workspace" _FS_ "Program" _FS_ "Program.sln", szFound.Text());
+	AssertTrue(CBuildCommandLine::FindSolutionFile(TEST_COMMAND_LINE_OUTPUT _FS_ "Tiny" _FS_ "Tiny.hcp65build", &szFound));
+	AssertString(TEST_COMMAND_LINE_OUTPUT _FS_ "Tiny" _FS_ "Tiny.vcxproj", szFound.Text());
+	AssertFalse(CBuildCommandLine::FindSolutionFile(TEST_COMMAND_LINE_OUTPUT _FS_ "Alone.hcp65build", &szFound));
+	AssertString("", szFound.Text());
+	szFound.Kill();
+
+	cFile.Init("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<BuildConfigurations>\n\t<Configuration Name=\"Lean|W65C816\" Toolchain=\"W65C816\" Solution=\"Debug|Win32\"/>\n</BuildConfigurations>\n");
+	AssertTrue(cFile.Write(TEST_COMMAND_LINE_OUTPUT _FS_ "Tiny" _FS_ "Tiny.hcp65build"));
+	AssertTrue(cFile.Write(TEST_COMMAND_LINE_OUTPUT _FS_ "Alone.hcp65build"));
+	cFile.Kill();
+
+	const char* aszTiny[] = { "hcp65build", TEST_COMMAND_LINE_OUTPUT _FS_ "Tiny" _FS_ "Tiny.hcp65build", "-libc65", TEST_COMMAND_LINE_LIBC65 };
+	cCommandLine.Init();
+	AssertTrue(cCommandLine.Parse(4, aszTiny));
+	AssertInt(BUILD_EXIT_SUCCEEDED, cCommandLine.Run(NULL));
+	AssertTrue(TestBuildEndsWith(cCommandLine.GetFile(), "Tiny" _FS_ "Tiny.vcxproj"));
+	AssertString("Lean|W65C816", cCommandLine.GetConfiguration());
+	AssertString("Lean|W65C816 build succeeded.", cCommandLine.GetLastLine());
+	cCommandLine.Kill();
+
+	const char* aszAlone[] = { "hcp65build", TEST_COMMAND_LINE_OUTPUT _FS_ "Alone.hcp65build" };
+	cCommandLine.Init();
+	AssertTrue(cCommandLine.Parse(2, aszAlone));
+	AssertInt(BUILD_EXIT_USAGE, cCommandLine.Run(NULL));
+	AssertTrue(cCommandLine.HasLine("Could not find the .sln or .vcxproj that "));
+	AssertTrue(cCommandLine.HasLine("Alone.hcp65build is for (the same name beside it)."));
+	cCommandLine.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 //
 //////////////////////////////////////////////////////////////////////////
 void TestBuildCommandLine(void)
@@ -257,6 +308,7 @@ void TestBuildCommandLine(void)
 	TestBuildCommandLineProgress();
 	TestBuildCommandLineFindLibc65();
 	TestBuildCommandLineRun();
+	TestBuildCommandLineConfigurationsFile();
 
 	TestStatistics();
 }
