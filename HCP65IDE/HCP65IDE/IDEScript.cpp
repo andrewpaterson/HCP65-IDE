@@ -29,7 +29,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 //The debug script's commands that are the IDE's (RunCommand); "goto:" takes what follows it.
-static const char*	gaszIDEScriptCommands[] = { "goto:", "rename", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:" };
+static const char*	gaszIDEScriptCommands[] = { "goto:", "rename", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "printdiffs", "printgit", "printconfig", "printexplorer" };
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -173,6 +173,57 @@ void CIDEScript::RunCommand(const char* szCommand)
 		//Alt+O.
 		mpcContent->mpNavigator->SwitchHeaderSource();
 	}
+	else if (strcmp(szCommand, "printmenus") == 0)
+	{
+		//Every menu, as it is when it opens: the menu bar's, the editors' and Solution Explorer's.
+		size	i;
+
+		for (i = 0; i < mpcContent->mpMenuBar->NumMenus(); i++)
+		{
+			PrintMenu(mpcContent->mpMenuBar->GetItem(i)->GetCaption(), mpcContent->mpMenuBar->GetItem(i)->GetMenu());
+		}
+		PrintMenu("Editor", mpcContent->mpEditorMenu);
+		PrintMenu("Explorer", mpcContent->mpExplorerMenu);
+		fflush(stdout);
+	}
+	else if (strncmp(szCommand, "clickmenu:", 10) == 0)
+	{
+		//clickmenu:<menu>/<item>[/<item>], a menu bar menu's (or Editor's or Explorer's) item clicked.
+		ClickMenu(&szCommand[10]);
+	}
+	else if (strcmp(szCommand, "printdiffs") == 0)
+	{
+		//Each diff's tab, '>' before the active one.
+		size	i;
+
+		printf("Diffs:");
+		for (i = 0; i < mpcContent->maDiffTabs.Size(); i++)
+		{
+			printf(" [%s%s]", (mpcContent->maDiffTabs.Get(i) == mpcContent->mpActiveDiff) ? ">" : "", mpcContent->maDiffTabs.Get(i)->GetDockPane()->GetTitle());
+		}
+		printf("\n");
+		fflush(stdout);
+	}
+	else if (strcmp(szCommand, "printgit") == 0)
+	{
+		printf("Git: branch [%s] change popup %s\n", mpcContent->mpGitStatus->GetBranchLabel()->GetText(), mpcContent->mpGitStatus->GetChangePopup().IsNotNull() ? "open" : "closed");
+		fflush(stdout);
+	}
+	else if (strcmp(szCommand, "printconfig") == 0)
+	{
+		printf("Configuration: [%s] [%s]\n", mpcContent->mpBuildConfigurations->GetConfigurationBox()->GetSelectedText(), mpcContent->mpBuildConfigurations->GetPlatformBox()->GetSelectedText());
+		fflush(stdout);
+	}
+	else if (strcmp(szCommand, "printexplorer") == 0)
+	{
+		CChars	szPath;
+
+		szPath.Init();
+		mpcContent->mpExplorer->GetSelectedFilePath(&szPath);
+		printf("Explorer: [%s]\n", szPath.Text());
+		szPath.Kill();
+		fflush(stdout);
+	}
 	else if (strcmp(szCommand, "printtabs") == 0)
 	{
 		//Each open file, '>' before the active one, '*' after one with changes.
@@ -220,6 +271,119 @@ void CIDEScript::RunCommand(const char* szCommand)
 	}
 }
 
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// "<szName>: item, item(disabled), item>" for the menu as it is when it
+// opens, then each of its sub menus as "<szName>/<item>: ...".
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEScript::PrintMenu(const char* szName, Ptr<CMenuContainer> pMenu)
+{
+	size			i;
+	Ptr<CMenuItem>	pItem;
+	CChars			szSub;
+
+	if (pMenu.IsNull())
+	{
+		return;
+	}
+	pMenu->GetOpeningEvent()->Call(&pMenu);
+	printf("Menu %s:", szName);
+	for (i = 0; i < pMenu->NumItems(); i++)
+	{
+		pItem = pMenu->GetItem(i);
+		printf("%s %s%s%s", (i == 0) ? "" : ",", pItem->GetText(), pItem->IsEnabled() ? "" : "(disabled)", pItem->HasSubMenu() ? ">" : "");
+	}
+	printf("\n");
+	for (i = 0; i < pMenu->NumItems(); i++)
+	{
+		pItem = pMenu->GetItem(i);
+		if (pItem->HasSubMenu())
+		{
+			szSub.Init(szName);
+			szSub.Append('/');
+			szSub.Append(pItem->GetText());
+			PrintMenu(szSub.Text(), pItem->GetSubMenu());
+			szSub.Kill();
+		}
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The menu named by szPath's first part (a menu bar menu's, or Editor or
+// Explorer), its sub menus by the next parts, and the item last.  Not
+// found, it says so.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEScript::ClickMenu(const char* szPath)
+{
+	CArrayChars			aszParts;
+	Ptr<CMenuContainer>	pMenu;
+	Ptr<CMenuItem>		pItem;
+	size				i;
+	size				j;
+
+	aszParts.Init();
+	aszParts.Split(szPath, '/');
+	if (aszParts.NumElements() < 2)
+	{
+		aszParts.Kill();
+		return;
+	}
+	if (strcmp(aszParts.GetText(0), "Editor") == 0)
+	{
+		pMenu = mpcContent->mpEditorMenu;
+	}
+	else if (strcmp(aszParts.GetText(0), "Explorer") == 0)
+	{
+		pMenu = mpcContent->mpExplorerMenu;
+	}
+	for (i = 0; pMenu.IsNull() && (i < mpcContent->mpMenuBar->NumMenus()); i++)
+	{
+		if (strcmp(mpcContent->mpMenuBar->GetItem(i)->GetCaption(), aszParts.GetText(0)) == 0)
+		{
+			pMenu = mpcContent->mpMenuBar->GetItem(i)->GetMenu();
+		}
+	}
+	for (j = 1; pMenu.IsNotNull() && (j < aszParts.NumElements()); j++)
+	{
+		pMenu->GetOpeningEvent()->Call(&pMenu);
+		pItem = NULL;
+		for (i = 0; i < pMenu->NumItems(); i++)
+		{
+			if (strcmp(pMenu->GetItem(i)->GetText(), aszParts.GetText(j)) == 0)
+			{
+				pItem = pMenu->GetItem(i);
+			}
+		}
+		if (pItem.IsNull())
+		{
+			pMenu = NULL;
+		}
+		else if (j + 1 < aszParts.NumElements())
+		{
+			pMenu = pItem->GetSubMenu();
+		}
+	}
+	if (pMenu.IsNull() || pItem.IsNull())
+	{
+		printf("Menu item [%s] not found\n", szPath);
+	}
+	else if (!pItem->IsEnabled())
+	{
+		printf("Menu item [%s] is disabled\n", szPath);
+	}
+	else
+	{
+		mpcContent->MenuItemClicked(&pItem);
+	}
+	fflush(stdout);
+	aszParts.Kill();
+}
 
 
 //////////////////////////////////////////////////////////////////////////

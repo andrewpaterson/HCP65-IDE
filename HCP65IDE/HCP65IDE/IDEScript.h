@@ -59,6 +59,8 @@ public:
 
 	bool	IsCommand(const char* szCommand);
 	void	RunCommand(const char* szCommand);
+	void	PrintMenu(const char* szName, Ptr<CMenuContainer> pMenu);
+	void	ClickMenu(const char* szPath);
 	void	RunEditStep(const char* szStep);
 	void	RunGoTo(const char* szGoTo);
 	void	RunDockMove(const char* szMove);
