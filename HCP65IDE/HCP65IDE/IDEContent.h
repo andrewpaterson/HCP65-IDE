@@ -65,6 +65,16 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define IDE_DEBUG_ID			"Debug"
 #define IDE_CLAUDE_ID			"Claude"
 #define IDE_USAGES_ID			"FindUsages"
+
+
+//What is done once the files with changes have been saved, or their changes dropped (CIDEContent::AskToSave).
+enum EIDEAfterSave
+{
+	IAS_ClosePanes,		//The documents asked to close.
+	IAS_CloseSolution,	//muiAfterSolution closed.
+	IAS_OpenSolution,	//mszAfterFile opened instead.
+	IAS_Exit,
+};
 #define IDE_DOCUMENT_PREFIX		"Document:"
 #define IDE_DIFF_PREFIX			"Diff:"
 #define IDE_LAYOUT_EXTENSION	".layout.user"
@@ -180,6 +190,15 @@ protected:
 	Ptr<CTreeContainer>			mpUsages;			//What Find Usages found: projects, classes, lines.
 	Ptr<CDockPane>				mpUsagesTool;
 	CArrayIDELocations			masUsages;			//Each line's place, by its node's data less one.
+
+	int32						miAfterSave;		//EIDEAfterSave asked to save before, -1 for nothing.
+	bool						mbAskToSave;		//Asked for, at the next tick.
+	bool						mbCloseConfirmed;	//Saved or dropped: closing doesn't ask (for good while exiting).
+	CArrayChars					maszSaveFiles;		//The files with changes asked about.
+	CArrayChars					maszCloseIDs;		//The panes to close then (IAS_ClosePanes).
+	size						muiAfterSolution;
+	CChars						mszAfterFile;
+	Ptr<CDialog>				mpSaveDialog;		//While it's shown.
 	Ptr<CMenuItem>				mpRenameItem;
 	Ptr<CMenuItem>				mpExtractMethodItem;
 	Ptr<CDialog>				mpRenameDialog;		//While Rename is shown.
@@ -397,6 +416,12 @@ public:
 	bool				FindSymbolAtCaret(CArrayIDELocations* pasDest, CChars* pszKey);
 	void				GetFileLine(const char* szFileName, int iLine, CChars* pszDest);
 	bool				FindUsages(void);
+	bool				FindUnsavedFiles(size uiSolution, CArrayChars* paszDest);
+	void				QueueAskToSave(EIDEAfterSave eAfter);
+	bool				RequestExit(void);
+	bool				ApproveLettingGo(size uiSolution, const char* szFile);
+	void				AskToSave(void);
+	void				SaveAnswerTick(void);
 	void				UsageActivated(void);
 	Ptr<CTreeContainer>	GetUsagesTree(void);
 	void				EditorMenuOpening(CMenuContainer* pcMenu);

@@ -208,6 +208,13 @@ void CIDEContent::Init(void)
 	mbQueuedRename = false;
 	msRenameTarget.Init();
 	masUsages.Init();
+	miAfterSave = -1;
+	mbAskToSave = false;
+	mbCloseConfirmed = false;
+	maszSaveFiles.Init();
+	maszCloseIDs.Init();
+	muiAfterSolution = 0;
+	mszAfterFile.Init();
 	memset(maiGoToSymbolIcons, 0, sizeof(maiGoToSymbolIcons));
 	mcDebugger.Init();
 	mszStoppedFile.Init();
@@ -308,6 +315,14 @@ void CIDEContent::Class(void)
 	M_Pointer(mpUsages);
 	M_Pointer(mpUsagesTool);
 	U_Unknown(CArrayIDELocations, masUsages);
+	U_Int32(miAfterSave);
+	U_Bool(mbAskToSave);
+	U_Bool(mbCloseConfirmed);
+	U_Unknown(CArrayChars, maszSaveFiles);
+	U_Unknown(CArrayChars, maszCloseIDs);
+	U_Size(muiAfterSolution);
+	U_String(mszAfterFile);
+	M_Pointer(mpSaveDialog);
 	M_Pointer(mpRenameItem);
 	M_Pointer(mpExtractMethodItem);
 	M_Pointer(mpRenameDialog);
@@ -462,6 +477,7 @@ void CIDEContent::Free(void)
 	if (mpWindow.IsNotNull())
 	{
 		mpWindow->GetActivationEvent()->Remove(this);
+		mpWindow->ClearCloseApprover();
 	}
 	if (mpRollbackButton.IsNotNull())
 	{
@@ -488,6 +504,9 @@ void CIDEContent::Free(void)
 	mszDefaultEmulatorDirectory.Kill();
 	mszDefaultEmulator.Kill();
 	KillIDELocations(&masUsages);
+	mszAfterFile.Kill();
+	maszCloseIDs.Kill();
+	maszSaveFiles.Kill();
 	msRenameTarget.Kill();
 	mcGoToFileSet.Kill();
 	maiGoToProjects.Kill();
@@ -676,6 +695,9 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	pMain->AddInputActions(gaeIDECodeCommands, this, &CIDEContent::CodeCommandAction);
 	pWindow->SetContainer(pMain);
 	pWindow->GetActivationEvent()->Add(this, &CIDEContent::WindowActivated);
+
+	//The close button asks to save changes first.
+	pWindow->SetCloseApprover(this, &CIDEContent::RequestExit);
 	return true;
 }
 
@@ -816,8 +838,12 @@ void CIDEContent::MenuItemClicked(CMenuItem* pcItem)
 	}
 	else if (pcItem == &mpExitItem)
 	{
-		//As the window's close button: the window stops, and the application saves what it keeps as it ends.
-		mpWindow->Stop();
+		//As the window's close button: the window stops, and the application saves what it keeps as it ends.  Files
+		//with changes are asked about first.
+		if (RequestExit())
+		{
+			mpWindow->Stop();
+		}
 	}
 	else if (pcItem == &mpExplorerItem)
 	{
@@ -958,6 +984,12 @@ bool CIDEContent::OpenSolution(const char* szFileName)
 	CChars		szFile;
 	CChars		szName;
 	bool		bResult;
+
+	//The files with changes of what is open are asked about first; it opens afterwards.
+	if (IsSolutionOpen() && !ApproveLettingGo(MAX_SIZE, szFileName))
+	{
+		return true;
+	}
 
 	szFile.Init(szFileName);
 	if (!szFile.EndsWithIgnoreCase(BUILD_WORKSPACE_EXTENSION))
@@ -1185,6 +1217,12 @@ bool CIDEContent::CloseSolution(size uiSolution)
 	if (mcBuild.IsRunning())
 	{
 		return gcLogger.Error2(__METHOD__, " A solution can't be closed while a build is running.", NULL);
+	}
+
+	//Its files with changes are asked about first; it closes afterwards.
+	if (!ApproveLettingGo(uiSolution, NULL))
+	{
+		return true;
 	}
 
 	if (mcWorkspace.NumSolutions() == 1)
@@ -1558,19 +1596,21 @@ bool CIDEContent::CloseFile(const char* szFileName)
 //////////////////////////////////////////////////////////////////////////
 void CIDEContent::CloseAllFiles(void)
 {
-	while (maTabs.Size() > 0)
+	size	i;
+
+	//Closing the document lets its file go (PaneClosed); one with changes is asked about first (PaneClosing).
+	for (i = maTabs.Size(); i > 0; i--)
 	{
-		//Closing the document lets its file go (PaneClosed).
-		if (!mpDock->Close(maTabs.Get(maTabs.Size() - 1)->GetDockPane()))
+		if (i <= maTabs.Size())
 		{
-			break;
+			mpDock->Close(maTabs.Get(i - 1)->GetDockPane());
 		}
 	}
-	while (maDiffTabs.Size() > 0)
+	for (i = maDiffTabs.Size(); i > 0; i--)
 	{
-		if (!mpDock->Close(maDiffTabs.Get(maDiffTabs.Size() - 1)->GetDockPane()))
+		if (i <= maDiffTabs.Size())
 		{
-			break;
+			mpDock->Close(maDiffTabs.Get(i - 1)->GetDockPane());
 		}
 	}
 }
@@ -2516,6 +2556,11 @@ void CIDEContent::Tick(Ptr<CWindow> pWindow)
 		mbQueuedRename = false;
 		ShowRename();
 	}
+	if (mbAskToSave)
+	{
+		mbAskToSave = false;
+		AskToSave();
+	}
 	PollBuild(pWindow);
 	PollDebugger(pWindow);
 	PollClaude(pWindow);
@@ -2596,16 +2641,6 @@ void CIDEContent::DocumentSelected(CDockPane* pcPane)
 	ShowBranch();
 }
 
-
-//////////////////////////////////////////////////////////////////////////
-//
-// Documents close without asking: their files are saved by the user.
-//
-//////////////////////////////////////////////////////////////////////////
-bool CIDEContent::PaneClosing(CDockPane* pcPane)
-{
-	return true;
-}
 
 
 //////////////////////////////////////////////////////////////////////////

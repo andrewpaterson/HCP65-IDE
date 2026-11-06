@@ -248,8 +248,10 @@
     <ClCompile Include="IDEContentGoTo.cpp" />
     <ClCompile Include="IDEContentRename.cpp" />
     <ClCompile Include="IDEContentUsages.cpp" />
+    <ClCompile Include="IDEContentClose.cpp" />
     <ClCompile Include="IDEContentRename.cpp" />
     <ClCompile Include="IDEContentUsages.cpp" />
+    <ClCompile Include="IDEContentClose.cpp" />
     <ClCompile Include="IDEGit.cpp" />
     <ClCompile Include="IDEDebugger.cpp" />
     <ClCompile Include="IDEDebugView.cpp" />

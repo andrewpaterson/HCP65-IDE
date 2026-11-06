@@ -48,6 +48,9 @@
     <ClCompile Include="IDEContentUsages.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="IDEContentClose.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="IDEContentRename.cpp">
       <Filter>Source</Filter>
     </ClCompile>

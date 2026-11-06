@@ -18,6 +18,7 @@ You should have received a copy of the GNU Affero General Public License
 along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 ** ------------------------------------------------------------------------ **/
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "BaseLib/Timer.h"
@@ -855,6 +856,44 @@ void CIDEContent::RunDebugScript(void)
 		maszDebugScript.Remove((size)0);
 		ShowRename();
 		return;
+	}
+	else if (strcmp(szCommand, "closetab") == 0)
+	{
+		//The active document closed, as its tab's cross does.
+		if (GetActiveTab().IsNotNull())
+		{
+			mpDock->Close(GetActiveTab()->GetDockPane());
+		}
+		bDone = true;
+	}
+	else if (strcmp(szCommand, "closeall") == 0)
+	{
+		//Window, Close All Documents.
+		CloseAllFiles();
+		bDone = true;
+	}
+	else if (strcmp(szCommand, "exit") == 0)
+	{
+		//File, Exit.
+		if (RequestExit())
+		{
+			mpWindow->Stop();
+		}
+		bDone = true;
+	}
+	else if (strcmp(szCommand, "printtabs") == 0)
+	{
+		//Each open file, '*' if it has changes.
+		size	i;
+
+		printf("Tabs:");
+		for (i = 0; i < maTabs.Size(); i++)
+		{
+			printf(" %s%s", strrchr(maTabs.Get(i)->GetFileName(), '/') + 1, maTabs.Get(i)->IsModified() ? "*" : "");
+		}
+		printf("\n");
+		fflush(stdout);
+		bDone = true;
 	}
 	else if (strcmp(szCommand, "tabmenu") == 0)
 	{
