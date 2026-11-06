@@ -552,13 +552,15 @@ void CIDECodeModel::StartIndexing(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// On a worker thread: one file parsed and added to the index.
+// On a worker thread: one file parsed, its expressions typed (so names
+// like pc->Init are resolved) and added to the index.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDECodeModel::IndexUnit(SIDEIndexJob* psJob)
 {
-	CIDEParsedUnit	cUnit;
-	CCPPIndexUnit	cGathered;
+	CIDEParsedUnit		cUnit;
+	CCPPIndexUnit		cGathered;
+	CCPPSemanticPass	cPass;
 	CChars			szErrors;
 	bool			bParsed;
 	bool			bCancelled;
@@ -576,11 +578,14 @@ void CIDECodeModel::IndexUnit(SIDEIndexJob* psJob)
 	szErrors.Init();
 	cUnit.Init();
 	cGathered.Init();
+	cPass.Init();
 	bParsed = ParseUnit(psJob->uiProject, psJob->szFileName.Text(), NULL, &cUnit, &szErrors);
 	if (bParsed)
 	{
-		CCPPIndex::Gather(&cUnit.mcTokeniser, &cUnit.mcTree, &cGathered);
+		cPass.Check(&cUnit.mcTree);
+		CCPPIndex::Gather(&cUnit.mcTokeniser, &cUnit.mcTree, &cGathered, &cPass);
 	}
+	cPass.Kill();
 	cUnit.Kill();
 
 	mcIndexMutex.Lock();
