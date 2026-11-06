@@ -53,7 +53,7 @@ protected:
 	Ptr<CMenuItem>		mpRedoAllItem;
 	CUndoLog			mcUndoLog;  //Every open file's edits in the order they were made, by file name.
 	bool				mbLogUndoing;  //The undo log is undoing or redoing: the editors' undo events are its own.
-	Ptr<CComponent>		mpEditTarget;  //The text area or text field the keys last went to: what Edit acts on.
+	Ptr<CComponent>		mpEditTarget;  //The text area or text field the keys last went to: what Edit acts on.  NULL once its pane closes.
 
 public:
 	void	Init(CIDEContent* pcContent);
@@ -73,6 +73,7 @@ public:
 	void				BeginUndoGroup(void);
 	void				EndUndoGroup(void);
 	void				FocusChanged(CFocus* pcFocus);
+	void				PaneClosed(Ptr<CComponent> pContent);
 
 protected:
 	bool				IsEditTargetShown(void);

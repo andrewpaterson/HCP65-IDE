@@ -260,6 +260,21 @@ void CIDEEdit::FocusChanged(CFocus* pcFocus)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// A pane closing: the text the keys last went to is let go of if it is
+// in pContent (a closed document's editor, say), so it can be freed.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEEdit::PaneClosed(Ptr<CComponent> pContent)
+{
+	if (mpEditTarget.IsNotNull() && pContent.IsNotNull() && ((&mpEditTarget == &pContent) || mpEditTarget->IsWithin(pContent)))
+	{
+		mpEditTarget = NULL;
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Whether the text area or text field the keys last went to is still in
 // the window: its tab or tool window may have been closed or hidden.
 //

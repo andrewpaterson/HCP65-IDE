@@ -2615,6 +2615,9 @@ void CIDEContent::PaneClosed(CDockPane* pcPane)
 	Ptr<CIDEEditorTab>	pTab;
 	Ptr<CIDEDiffTab>	pDiff;
 
+	//The Edit menu lets go of text in it.
+	mpEdit->PaneClosed(pcPane->GetContent());
+
 	pDiff = mpDiffs->FindDiffTab(pcPane);
 	if (pDiff.IsNotNull())
 	{
