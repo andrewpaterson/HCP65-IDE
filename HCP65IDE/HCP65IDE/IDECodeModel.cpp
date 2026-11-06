@@ -713,6 +713,7 @@ void CIDECodeModel::CopyLocation(SCPPIndexLocation* psLocation, SIDELocation* ps
 	psDest->iLength = psLocation->iLength;
 	psDest->uiRole = psLocation->uiRole;
 	psDest->uiFlags = psLocation->uiFlags;
+	psDest->iContainer = psLocation->iContainer;
 }
 
 
@@ -1118,7 +1119,7 @@ void SIDERenameTarget::Kill(void)
 // ("@A.cpp:6:12:iCount"), anything else's is after its scope.
 //
 //////////////////////////////////////////////////////////////////////////
-static void GetIDESymbolName(const char* szKey, CChars* pszDest)
+void GetIDESymbolName(const char* szKey, CChars* pszDest)
 {
 	CChars		szScope;
 	CChars		szParameters;
@@ -1271,4 +1272,55 @@ bool CIDECodeModel::HasSymbol(const char* szKey)
 	bFound = mcIndex.FindSymbol(szKey) != NULL;
 	mcIndexMutex.Unlock();
 	return bFound;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Where Find Usages puts a usage: the project of its file (the first that
+// has it, "Other files" if none does) and the class it is in: the class
+// it is written in, or the class of the member function it is in, or its
+// file's name for a free function or anything outside a definition.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDECodeModel::GetUsageGroup(SIDELocation* psLocation, CChars* pszProject, CChars* pszClass)
+{
+	size				uiProject;
+	CVcxProject*		pcProject;
+	CCPPIndexSymbol*	pcContainer;
+	CChars				szScope;
+	CChars				szName;
+	CChars				szParameters;
+	const char*			szFile;
+
+	uiProject = FindProjectOfFile(psLocation->szFileName.Text());
+	pcProject = (uiProject != MAX_SIZE) ? mpcWorkspace->GetSolutionProject(uiProject)->GetProject() : NULL;
+	pszProject->Init(pcProject ? pcProject->GetName() : "Other files");
+
+	pszClass->Init();
+	mcIndexMutex.Lock();
+	if ((psLocation->iContainer >= 0) && ((size)psLocation->iContainer < mcIndex.NumSymbols()))
+	{
+		pcContainer = mcIndex.GetSymbol((size)psLocation->iContainer);
+		if ((pcContainer->meKind == CPPSK_Class) || (pcContainer->meKind == CPPSK_ClassTemplate))
+		{
+			pszClass->Append(pcContainer->mszKey);
+		}
+		else
+		{
+			//A member function's class is its scope.
+			SplitIDESymbolKey(pcContainer->mszKey.Text(), &szScope, &szName, &szParameters);
+			pszClass->Append(szScope);
+			szParameters.Kill();
+			szName.Kill();
+			szScope.Kill();
+		}
+	}
+	mcIndexMutex.Unlock();
+
+	if (pszClass->Empty())
+	{
+		szFile = strrchr(psLocation->szFileName.Text(), '/');
+		pszClass->Append(szFile ? szFile + 1 : psLocation->szFileName.Text());
+	}
 }

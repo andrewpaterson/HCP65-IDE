@@ -64,6 +64,7 @@ struct SIDELocation
 	int32	iLength;
 	uint8	uiRole;		//ECPPIndexRole.
 	uint8	uiFlags;	//CPPIF_AMBIGUOUS.
+	int32	iContainer;	//The index's symbol of the class or function it is in, -1 if neither.
 };
 
 
@@ -146,6 +147,7 @@ public:
 	bool	GetSymbolLocation(size uiSymbol, SIDELocation* psDest);
 	bool	FindRenameTarget(const char* szFileName, int iLine, int iColumn, CMapStringInt* pcFiles, SIDERenameTarget* psDest);
 	bool	HasSymbol(const char* szKey);
+	void	GetUsageGroup(SIDELocation* psLocation, CChars* pszProject, CChars* pszClass);
 
 	void	IndexUnit(SIDEIndexJob* psJob);
 
@@ -165,6 +167,7 @@ protected:
 
 
 void KillIDELocations(CArrayIDELocations* pasLocations);
+void GetIDESymbolName(const char* szKey, CChars* pszDest);
 
 
 #endif // __IDE_CODE_MODEL_H__

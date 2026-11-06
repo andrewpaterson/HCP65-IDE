@@ -64,6 +64,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define IDE_BUILD_ID			"Build"
 #define IDE_DEBUG_ID			"Debug"
 #define IDE_CLAUDE_ID			"Claude"
+#define IDE_USAGES_ID			"FindUsages"
 #define IDE_DOCUMENT_PREFIX		"Document:"
 #define IDE_DIFF_PREFIX			"Diff:"
 #define IDE_LAYOUT_EXTENSION	".layout.user"
@@ -174,7 +175,11 @@ protected:
 	int32						miGoToTicks;		//For checking: ticks the dialog has been shown for.
 	int32						miQueuedGoTo;		//The Go to tab asked for, shown at the next tick, -1 for none.
 
-	Ptr<CMenuContainer>			mpEditorMenu;		//The editors' context menu: Rename and Refactor.
+	Ptr<CMenuContainer>			mpEditorMenu;		//The editors' context menu: Find Usages, Rename and Refactor.
+	Ptr<CMenuItem>				mpFindUsagesItem;
+	Ptr<CTreeContainer>			mpUsages;			//What Find Usages found: projects, classes, lines.
+	Ptr<CDockPane>				mpUsagesTool;
+	CArrayIDELocations			masUsages;			//Each line's place, by its node's data less one.
 	Ptr<CMenuItem>				mpRenameItem;
 	Ptr<CMenuItem>				mpExtractMethodItem;
 	Ptr<CDialog>				mpRenameDialog;		//While Rename is shown.
@@ -387,6 +392,12 @@ public:
 	void				QueueGoTo(size uiTab);
 	bool				ShowActiveFileInExplorer(void);
 	Ptr<CMenuContainer>	CreateEditorMenu(void);
+	void				CreateUsagesPane(SDockPlace* psPlace);
+	bool				FindSymbolAtCaret(CArrayIDELocations* pasDest, CChars* pszKey);
+	void				GetFileLine(const char* szFileName, int iLine, CChars* pszDest);
+	bool				FindUsages(void);
+	void				UsageActivated(void);
+	Ptr<CTreeContainer>	GetUsagesTree(void);
 	void				EditorMenuOpening(CMenuContainer* pcMenu);
 	bool				FindRenameTarget(SIDERenameTarget* psDest);
 	void				QueueRename(void);

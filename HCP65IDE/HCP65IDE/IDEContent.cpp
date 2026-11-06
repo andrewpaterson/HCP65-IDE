@@ -56,7 +56,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 //Go to Definition (F12), Find All References (Shift+F12), Build (Control+Shift+B) and the debugger's keys from anywhere in the window.
-static EComponentInputCommand	gaeIDECodeCommands[] = { CIC_Save, CIC_SaveAll, CIC_GoToDefinition, CIC_FindReferences, CIC_GoToClass, CIC_GoToFile, CIC_GoToSymbol, CIC_ShowProjectView, CIC_Rename, CIC_Build, CIC_StartDebugging, CIC_StopDebugging, CIC_RestartDebugging,
+static EComponentInputCommand	gaeIDECodeCommands[] = { CIC_Save, CIC_SaveAll, CIC_GoToDefinition, CIC_FindReferences, CIC_GoToClass, CIC_GoToFile, CIC_GoToSymbol, CIC_ShowProjectView, CIC_Rename, CIC_FindUsages, CIC_Build, CIC_StartDebugging, CIC_StopDebugging, CIC_RestartDebugging,
 														 CIC_BreakAll, CIC_ToggleBreakpoint, CIC_StepOver, CIC_StepInto, CIC_StepOut };
 
 
@@ -207,6 +207,7 @@ void CIDEContent::Init(void)
 	miQueuedGoTo = -1;
 	mbQueuedRename = false;
 	msRenameTarget.Init();
+	masUsages.Init();
 	memset(maiGoToSymbolIcons, 0, sizeof(maiGoToSymbolIcons));
 	mcDebugger.Init();
 	mszStoppedFile.Init();
@@ -303,6 +304,10 @@ void CIDEContent::Class(void)
 	U_Int32(miGoToTicks);
 	U_Int32(miQueuedGoTo);
 	M_Pointer(mpEditorMenu);
+	M_Pointer(mpFindUsagesItem);
+	M_Pointer(mpUsages);
+	M_Pointer(mpUsagesTool);
+	U_Unknown(CArrayIDELocations, masUsages);
 	M_Pointer(mpRenameItem);
 	M_Pointer(mpExtractMethodItem);
 	M_Pointer(mpRenameDialog);
@@ -434,6 +439,10 @@ void CIDEContent::Free(void)
 	{
 		mpEditMenu->GetOpeningEvent()->Remove(this);
 	}
+	if (mpUsages.IsNotNull())
+	{
+		mpUsages->GetActivationEvent()->Remove(this);
+	}
 	if (mpEditorMenu.IsNotNull())
 	{
 		mpEditorMenu->GetOpeningEvent()->Remove(this);
@@ -478,6 +487,7 @@ void CIDEContent::Free(void)
 	maszDebugScript.Kill();
 	mszDefaultEmulatorDirectory.Kill();
 	mszDefaultEmulator.Kill();
+	KillIDELocations(&masUsages);
 	msRenameTarget.Kill();
 	mcGoToFileSet.Kill();
 	maiGoToProjects.Kill();
@@ -626,6 +636,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpClaudePane->GetStopButton()->GetClickEvent()->Add(this, &CIDEContent::ClaudeStopClicked);
 	mpClaudePane->GetNewButton()->GetClickEvent()->Add(this, &CIDEContent::ClaudeNewClicked);
 	mpClaudeTool = mpDock->AddPane(IDE_CLAUDE_ID, "Claude", NULL, mpClaudePane->GetComponent(), DPK_Tool, &sPlace);
+	CreateUsagesPane(&sPlace);
 	mpDock->Show(mpReferencesTool);
 
 	//The toolbar: the build configuration's configuration and platform, as Visual Studio has them, and Build.
@@ -838,6 +849,10 @@ void CIDEContent::MenuItemClicked(CMenuItem* pcItem)
 	}
 	else if (EditMenuItemClicked(pcItem))
 	{
+	}
+	else if (pcItem == &mpFindUsagesItem)
+	{
+		FindUsages();
 	}
 	else if (pcItem == &mpRenameItem)
 	{
@@ -1686,6 +1701,10 @@ void CIDEContent::CodeCommandAction(SComponentInputEvent* psEvent)
 	else if (psEvent->eCommand == CIC_GoToFile)
 	{
 		QueueGoTo(IDE_GO_TO_FILE);
+	}
+	else if (psEvent->eCommand == CIC_FindUsages)
+	{
+		FindUsages();
 	}
 	else if (psEvent->eCommand == CIC_Rename)
 	{

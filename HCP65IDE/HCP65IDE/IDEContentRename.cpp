@@ -50,8 +50,9 @@ static const char* gaszIDEKeywords[] =
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The editor's context menu, as IntelliJ's: Rename (Shift+F6) and
-// Refactor, Extract Method (not done yet, so always disabled).  What can't
+// The editor's context menu, as IntelliJ's: Find Usages (Alt+F7), Rename
+// (Shift+F6) and Refactor, Extract Method (not done yet, so always
+// disabled).  What can't
 // be done is disabled as it opens.
 //
 //////////////////////////////////////////////////////////////////////////
@@ -65,6 +66,9 @@ Ptr<CMenuContainer> CIDEContent::CreateEditorMenu(void)
 	mpExtractMethodItem->SetEnabled(false);
 
 	mpEditorMenu = OMalloc<CMenuContainer>(mpWindow, mpTheme);
+	mpFindUsagesItem = mpEditorMenu->AddItem("Find Usages");
+	mpFindUsagesItem->SetShortcut("Alt+F7");
+	mpEditorMenu->AddSeparator();
 	mpRenameItem = mpEditorMenu->AddItem("Rename...");
 	mpRenameItem->SetShortcut("Shift+F6");
 	mpEditorMenu->AddItem("Refactor", NULL, pRefactor);
@@ -83,10 +87,18 @@ Ptr<CMenuContainer> CIDEContent::CreateEditorMenu(void)
 void CIDEContent::EditorMenuOpening(CMenuContainer* pcMenu)
 {
 	SIDERenameTarget	sTarget;
+	CArrayIDELocations	asLocations;
+	CChars				szKey;
 
 	sTarget.Init();
 	mpRenameItem->SetEnabled(FindRenameTarget(&sTarget) && sTarget.bRenamable);
 	sTarget.Kill();
+
+	asLocations.Init();
+	szKey.Init();
+	mpFindUsagesItem->SetEnabled(FindSymbolAtCaret(&asLocations, &szKey));
+	szKey.Kill();
+	KillIDELocations(&asLocations);
 }
 
 
