@@ -53,7 +53,9 @@ void CIDEEditorTab::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CFo
 	mcListings.Init();
 	mpCodeEditor = OMalloc<CCodeEditor>(pWindow, pFamily, szText);
 	mpCodeEditor->SetGlyphColumn(true);
-	mpCodeEditor->SetAlignment(CSH_Left, CSV_Top);
+	//The editor fills the view so a press right of the text, or below it, is in the editor: the caret goes to the
+	//nearest text, the end of the line or of the last line, as IntelliJ's.
+	mpCodeEditor->SetAlignment(CSH_Stretch, CSV_Stretch);
 	mpZones = OMalloc<CLineZones>(mpCodeEditor, pTheme, pTitleFont, pFamily, IDE_LISTING_BACKGROUND, IDE_LISTING_TEXT);
 	mpEditor = mpCodeEditor->GetTextArea();
 	mpEditor->SetTiledText(true);
