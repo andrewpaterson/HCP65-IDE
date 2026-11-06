@@ -20,7 +20,65 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 ** ------------------------------------------------------------------------ **/
 #include "BaseLib/FileUtil.h"
 #include "SupportLib/PNGWriter.h"
+#include "StandardLib/ClassDefines.h"
 #include "IDEContent.h"
+#include "IDECloseGuard.h"
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDECloseGuard::Init(CIDEContent* pcContent)
+{
+	PreInit();
+	mpcContent = pcContent;
+	miAfterSave = -1;
+	mbCloseConfirmed = false;
+	maszSaveFiles.Init();
+	maszCloseIDs.Init();
+	muiAfterSolution = 0;
+	mszAfterFile.Init();
+	mpSaveDialog = NULL;
+	PostInit();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDECloseGuard::Class(void)
+{
+	U_Pointer(mpcContent);
+	U_Int32(miAfterSave);
+	U_Bool(mbCloseConfirmed);
+	U_Unknown(CArrayChars, maszSaveFiles);
+	U_Unknown(CArrayChars, maszCloseIDs);
+	U_Size(muiAfterSolution);
+	U_String(mszAfterFile);
+	M_Pointer(mpSaveDialog);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDECloseGuard::Free(void)
+{
+	mszAfterFile.Kill();
+	maszCloseIDs.Kill();
+	maszSaveFiles.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDECloseGuard::Save(CObjectWriter* pcFile) { return false; }
+bool CIDECloseGuard::Load(CObjectReader* pcFile) { return false; }
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -29,17 +87,17 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 // MAX_SIZE, of all of them.  False if none is modified.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEContent::FindUnsavedFiles(size uiSolution, CArrayChars* paszDest)
+bool CIDECloseGuard::FindUnsavedFiles(size uiSolution, CArrayChars* paszDest)
 {
 	size				i;
 	Ptr<CIDEEditorTab>	pTab;
 	bool				bFound;
 
 	bFound = false;
-	for (i = 0; i < maTabs.Size(); i++)
+	for (i = 0; i < mpcContent->maTabs.Size(); i++)
 	{
-		pTab = maTabs.Get(i);
-		if (pTab->IsModified() && ((uiSolution == MAX_SIZE) || IsSolutionFile(uiSolution, pTab->GetProject())))
+		pTab = mpcContent->maTabs.Get(i);
+		if (pTab->IsModified() && ((uiSolution == MAX_SIZE) || mpcContent->IsSolutionFile(uiSolution, pTab->GetProject())))
 		{
 			paszDest->Add(pTab->GetFileName());
 			bFound = true;
@@ -56,11 +114,10 @@ bool CIDEContent::FindUnsavedFiles(size uiSolution, CArrayChars* paszDest)
 // the panes, closing a solution, opening another or exiting.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEContent::QueueAskToSave(EIDEAfterSave eAfter)
+void CIDECloseGuard::QueueAskToSave(EIDEAfterSave eAfter)
 {
 	miAfterSave = eAfter;
-	mbAskToSave = true;
-	mpWindow->RequestTick(0);
+	mpcContent->mpWindow->Post(this, &CIDECloseGuard::AskToSave);
 }
 
 
@@ -71,7 +128,7 @@ void CIDEContent::QueueAskToSave(EIDEAfterSave eAfter)
 // All say).  Anything else closes.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEContent::PaneClosing(CDockPane* pcPane)
+bool CIDECloseGuard::PaneClosing(CDockPane* pcPane)
 {
 	Ptr<CIDEEditorTab>	pTab;
 
@@ -79,7 +136,7 @@ bool CIDEContent::PaneClosing(CDockPane* pcPane)
 	{
 		return true;
 	}
-	pTab = FindTab(pcPane);
+	pTab = mpcContent->FindTab(pcPane);
 	if (pTab.IsNull() || !pTab->IsModified())
 	{
 		return true;
@@ -102,7 +159,7 @@ bool CIDEContent::PaneClosing(CDockPane* pcPane)
 // now; with changes it asks first and closes itself.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEContent::RequestExit(void)
+bool CIDECloseGuard::RequestExit(void)
 {
 	if (mbCloseConfirmed)
 	{
@@ -125,14 +182,14 @@ bool CIDEContent::RequestExit(void)
 // and done afterwards.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEContent::ApproveLettingGo(size uiSolution, const char* szFile)
+bool CIDECloseGuard::ApproveLettingGo(size uiSolution, const char* szFile)
 {
 	if (mbCloseConfirmed)
 	{
 		return true;
 	}
 	maszSaveFiles.ReInit();
-	if (!FindUnsavedFiles(((uiSolution == MAX_SIZE) || (mcWorkspace.NumSolutions() == 1)) ? MAX_SIZE : uiSolution, &maszSaveFiles))
+	if (!FindUnsavedFiles(((uiSolution == MAX_SIZE) || (mpcContent->mcWorkspace.NumSolutions() == 1)) ? MAX_SIZE : uiSolution, &maszSaveFiles))
 	{
 		return true;
 	}
@@ -150,7 +207,7 @@ bool CIDEContent::ApproveLettingGo(size uiSolution, const char* szFile)
 // asked for (closes them, the solution or the IDE); Cancel does nothing.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEContent::AskToSave(void)
+void CIDECloseGuard::AskToSave(void)
 {
 	Ptr<CGridContainer>	pBody;
 	Ptr<CLabel>			pLabel;
@@ -168,9 +225,9 @@ void CIDEContent::AskToSave(void)
 		return;
 	}
 
-	mpSaveDialog = OMalloc<CDialog>(mpWindow, &msDialogLook, "Save Changes");
+	mpSaveDialog = OMalloc<CDialog>(mpcContent->mpWindow, &mpcContent->msDialogLook, "Save Changes");
 	pBody = OMalloc<CGridContainer>(mpSaveDialog->GetWindow());
-	pLabel = OMalloc<CLabel>(mpSaveDialog->GetWindow(), mpTheme->GetFont(), "Save changes to the following files?");
+	pLabel = OMalloc<CLabel>(mpSaveDialog->GetWindow(), mpcContent->mpTheme->GetFont(), "Save changes to the following files?");
 	pLabel->SetAlignment(CSH_Left, CSV_Top);
 	pBody->AddComponent(pLabel, 0, 0, 1, 1, 1, 0);
 	for (i = 0; i < maszSaveFiles.NumElements(); i++)
@@ -178,7 +235,7 @@ void CIDEContent::AskToSave(void)
 		szName.Init();
 		cFileUtil.GetFileName(&szName, maszSaveFiles.GetText(i));
 		szName.Insert(0, "    ");
-		pLabel = OMalloc<CLabel>(mpSaveDialog->GetWindow(), mpTheme->GetFont(), szName.Text());
+		pLabel = OMalloc<CLabel>(mpSaveDialog->GetWindow(), mpcContent->mpTheme->GetFont(), szName.Text());
 		pLabel->SetAlignment(CSH_Left, CSV_Top);
 		pBody->AddComponent(pLabel, 0, (int)i + 1, 1, 1, 1, 0);
 		szName.Kill();
@@ -186,14 +243,10 @@ void CIDEContent::AskToSave(void)
 	mpSaveDialog->SetBody(pBody, NULL);
 	mpSaveDialog->SetOKCaption("Save");
 	mpSaveDialog->AddExtraButton("Don't Save");
-	miGoToTicks = 0;
-	if (getenv("HCP65_IDE_SAVE_ANSWER") != NULL)
-	{
-		mpSaveDialog->SetTicker(this, &CIDEContent::SaveAnswerTick);
-	}
+	mpcContent->mpScript->WatchDialog(mpSaveDialog);
 	bSave = mpSaveDialog->Show(440, 150 + 22 * (int)maszSaveFiles.NumElements());
 	szClicked.Init(mpSaveDialog->GetClicked());
-	mpSaveDialog->ClearTicker();
+	mpcContent->mpScript->StopWatchingDialog();
 	mpSaveDialog = NULL;
 
 	if (bSave || szClicked.Equals("Don't Save"))
@@ -201,8 +254,8 @@ void CIDEContent::AskToSave(void)
 		bSaved = true;
 		for (i = 0; bSave && (i < maszSaveFiles.NumElements()); i++)
 		{
-			pTab = FindTab(maszSaveFiles.GetText(i));
-			if (pTab.IsNotNull() && !SaveFile(pTab))
+			pTab = mpcContent->FindTab(maszSaveFiles.GetText(i));
+			if (pTab.IsNotNull() && !mpcContent->SaveFile(pTab))
 			{
 				bSaved = false;
 			}
@@ -217,24 +270,24 @@ void CIDEContent::AskToSave(void)
 			case IAS_ClosePanes:
 				for (i = 0; i < maszCloseIDs.NumElements(); i++)
 				{
-					pPane = mpDock->GetPane(maszCloseIDs.GetText(i));
+					pPane = mpcContent->mpDock->GetPane(maszCloseIDs.GetText(i));
 					if (pPane.IsNotNull())
 					{
-						mpDock->Close(pPane);
+						mpcContent->mpDock->Close(pPane);
 					}
 				}
 				break;
 			case IAS_CloseSolution:
-				CloseSolution(muiAfterSolution);
+				mpcContent->CloseSolution(muiAfterSolution);
 				break;
 			case IAS_OpenSolution:
-				if (!OpenSolution(mszAfterFile.Text()))
+				if (!mpcContent->OpenSolution(mszAfterFile.Text()))
 				{
 					gcLogger.Error2(__METHOD__, " Could not open [", mszAfterFile.Text(), "].", NULL);
 				}
 				break;
 			case IAS_Exit:
-				mpWindow->Stop();
+				mpcContent->mpWindow->Stop();
 				break;
 			}
 
@@ -243,40 +296,11 @@ void CIDEContent::AskToSave(void)
 		}
 		else
 		{
-			ShowReferencesStatus("A file couldn't be saved: nothing was closed.");
+			mpcContent->ShowReferencesStatus("A file couldn't be saved: nothing was closed.");
 		}
 	}
 	szClicked.Kill();
 	miAfterSave = -1;
 	maszSaveFiles.ReInit();
 	maszCloseIDs.ReInit();
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// For checking: the dialog is saved to HCP65_IDE_GOTO_SNAPSHOT's PNG (if
-// set) once drawn and answered with HCP65_IDE_SAVE_ANSWER's button (Save,
-// Don't Save or Cancel).
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDEContent::SaveAnswerTick(void)
-{
-	Ptr<CWindow>	pWindow;
-	const char*		szAnswer;
-
-	pWindow = mpSaveDialog->GetWindow();
-	miGoToTicks++;
-	if (miGoToTicks < 5)
-	{
-		pWindow->Invalidate();
-		pWindow->RequestTick(0);
-		return;
-	}
-	if (getenv("HCP65_IDE_GOTO_SNAPSHOT") != NULL)
-	{
-		SavePNG(pWindow->GetCanvas()->GetImageOrNull(), getenv("HCP65_IDE_GOTO_SNAPSHOT"));
-	}
-	szAnswer = getenv("HCP65_IDE_SAVE_ANSWER");
-	mpSaveDialog->Close((strcmp(szAnswer, "Save") == 0) ? "OK" : szAnswer);
 }

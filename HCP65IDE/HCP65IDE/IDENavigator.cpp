@@ -20,7 +20,73 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 ** ------------------------------------------------------------------------ **/
 #include "BaseLib/FileUtil.h"
 #include "SupportLib/PNGWriter.h"
+#include "StandardLib/ClassDefines.h"
 #include "IDEContent.h"
+#include "IDENavigator.h"
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDENavigator::Init(CIDEContent* pcContent)
+{
+	PreInit();
+	mpcContent = pcContent;
+	mpGoTo = NULL;
+	mszGoToPattern.Init();
+	maszGoToFiles.Init();
+	maiGoToProjects.Init();
+	mcGoToFileSet.Init();
+	miGoToFileIcon = -1;
+	miQueuedGoTo = -1;
+	memset(maiGoToSymbolIcons, 0, sizeof(maiGoToSymbolIcons));
+	PostInit();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDENavigator::Class(void)
+{
+	U_Pointer(mpcContent);
+	M_Pointer(mpGoTo);
+	U_String(mszGoToPattern);
+	U_Unknown(CArrayChars, maszGoToFiles);
+	U_Unknown(CArrayInt, maiGoToProjects);
+	U_Unknown(CMapStringInt, mcGoToFileSet);
+	U_Int32(miGoToFileIcon);
+	U_Int32(miQueuedGoTo);
+	U_Int32Array(maiGoToSymbolIcons, IST_Count);
+	M_Pointer(mpGoToClassItem);
+	M_Pointer(mpGoToFileItem);
+	M_Pointer(mpGoToSymbolItem);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// An object's memory is freed without its destructor running, so it
+// takes itself off what it listens to.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDENavigator::Free(void)
+{
+	mcGoToFileSet.Kill();
+	maiGoToProjects.Kill();
+	maszGoToFiles.Kill();
+	mszGoToPattern.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDENavigator::Save(CObjectWriter* pcFile) { return false; }
+bool CIDENavigator::Load(CObjectReader* pcFile) { return false; }
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -30,7 +96,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 // show symbols from.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEContent::FindGoToFiles(void)
+void CIDENavigator::FindGoToFiles(void)
 {
 	size			i;
 	size			j;
@@ -41,9 +107,9 @@ void CIDEContent::FindGoToFiles(void)
 	maiGoToProjects.ReInit();
 	mcGoToFileSet.Kill();
 	mcGoToFileSet.Init();
-	for (i = 0; i < mcWorkspace.NumProjects(); i++)
+	for (i = 0; i < mpcContent->mcWorkspace.NumProjects(); i++)
 	{
-		pcProject = mcWorkspace.GetSolutionProject(i)->GetProject();
+		pcProject = mpcContent->mcWorkspace.GetSolutionProject(i)->GetProject();
 		if (pcProject == NULL)
 		{
 			continue;
@@ -72,7 +138,7 @@ void CIDEContent::FindGoToFiles(void)
 // The content is its Go to dialog's searcher.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEContent::GoToSearch(size uiTab, CNameMatcher* pcMatcher, CGoToItems* pcDest)
+void CIDENavigator::GoToSearch(size uiTab, CNameMatcher* pcMatcher, CGoToItems* pcDest)
 {
 	size		i;
 	SNameMatch	sMatch;
@@ -85,7 +151,7 @@ void CIDEContent::GoToSearch(size uiTab, CNameMatcher* pcMatcher, CGoToItems* pc
 
 	if (uiTab != IDE_GO_TO_FILE)
 	{
-		mcCodeModel.FindGoToSymbols(pcMatcher, uiTab == IDE_GO_TO_CLASS, &mcGoToFileSet, maiGoToSymbolIcons, pcDest);
+		mpcContent->mcCodeModel.FindGoToSymbols(pcMatcher, uiTab == IDE_GO_TO_CLASS, &mcGoToFileSet, maiGoToSymbolIcons, pcDest);
 		return;
 	}
 
@@ -118,11 +184,11 @@ void CIDEContent::GoToSearch(size uiTab, CNameMatcher* pcMatcher, CGoToItems* pc
 // shown.
 //
 //////////////////////////////////////////////////////////////////////////
-Ptr<CMenuContainer> CIDEContent::CreateNavigateMenu(void)
+Ptr<CMenuContainer> CIDENavigator::CreateNavigateMenu(void)
 {
 	Ptr<CMenuContainer>	pMenu;
 
-	pMenu = OMalloc<CMenuContainer>(mpWindow, mpTheme);
+	pMenu = OMalloc<CMenuContainer>(mpcContent->mpWindow, mpcContent->mpTheme);
 	mpGoToClassItem = pMenu->AddItem("Class...");
 	mpGoToClassItem->SetShortcut("Ctrl+N");
 	mpGoToFileItem = pMenu->AddItem("File...");
@@ -142,7 +208,7 @@ Ptr<CMenuContainer> CIDEContent::CreateNavigateMenu(void)
 // False if nothing was chosen.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEContent::ShowGoTo(size uiTab)
+bool CIDENavigator::ShowGoTo(size uiTab)
 {
 	bool	bResult;
 
@@ -151,17 +217,13 @@ bool CIDEContent::ShowGoTo(size uiTab)
 		return false;
 	}
 	bResult = false;
-	miGoToTicks = 0;
-	if (getenv("HCP65_IDE_GOTO_SNAPSHOT") != NULL)
-	{
-		mpGoTo->GetDialog()->SetTicker(this, &CIDEContent::GoToSnapshotTick);
-	}
+	mpcContent->mpScript->WatchDialog(mpGoTo->GetDialog());
 	if (mpGoTo->Show())
 	{
 		bResult = OpenGoToChoice();
 	}
 	mszGoToPattern.Set(mpGoTo->GetPattern());
-	mpGoTo->GetDialog()->ClearTicker();
+	mpcContent->mpScript->StopWatchingDialog();
 	mpGoTo = NULL;
 	return bResult;
 }
@@ -173,10 +235,20 @@ bool CIDEContent::ShowGoTo(size uiTab)
 // input (a key or a menu click) that asks for it.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEContent::QueueGoTo(size uiTab)
+void CIDENavigator::QueueGoTo(size uiTab)
 {
 	miQueuedGoTo = (int32)uiTab;
-	mpWindow->RequestTick(0);
+	mpcContent->mpWindow->Post(this, &CIDENavigator::ShowQueuedGoTo);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDENavigator::ShowQueuedGoTo(void)
+{
+	ShowGoTo((size)miQueuedGoTo);
 }
 
 
@@ -185,30 +257,30 @@ void CIDEContent::QueueGoTo(size uiTab)
 // The dialog, started on uiTab, not shown.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEContent::CreateGoTo(size uiTab)
+bool CIDENavigator::CreateGoTo(size uiTab)
 {
 	size	i;
 
 	FindGoToFiles();
-	mpGoTo = OMalloc<CGoToDialog>(mpWindow, &msDialogLook, "Go To", this, mpMatchFont);
+	mpGoTo = OMalloc<CGoToDialog>(mpcContent->mpWindow, &mpcContent->msDialogLook, "Go To", this, mpcContent->mpMatchFont);
 	mpGoTo->AddTab("Classes");
 	mpGoTo->AddTab("Files");
 	mpGoTo->AddTab("Symbols");
 	miGoToFileIcon = -1;
-	for (i = 0; i < maFileIcons.Size(); i++)
+	for (i = 0; i < mpcContent->maFileIcons.Size(); i++)
 	{
 		if (i == 0)
 		{
-			miGoToFileIcon = mpGoTo->AddIcon(maFileIcons.Get(i));
+			miGoToFileIcon = mpGoTo->AddIcon(mpcContent->maFileIcons.Get(i));
 		}
 		else
 		{
-			mpGoTo->AddIcon(maFileIcons.Get(i));
+			mpGoTo->AddIcon(mpcContent->maFileIcons.Get(i));
 		}
 	}
 	for (i = 0; i < IST_Count; i++)
 	{
-		maiGoToSymbolIcons[i] = mpGoTo->AddIcon(maSymbolIcons.Get(i));
+		maiGoToSymbolIcons[i] = mpGoTo->AddIcon(mpcContent->maSymbolIcons.Get(i));
 	}
 	mpGoTo->Start(uiTab, mszGoToPattern.Text());
 	return true;
@@ -220,7 +292,7 @@ bool CIDEContent::CreateGoTo(size uiTab)
 // Opens what the dialog chose.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEContent::OpenGoToChoice(void)
+bool CIDENavigator::OpenGoToChoice(void)
 {
 	SGoToItem*		psItem;
 	SIDELocation	sLocation;
@@ -239,19 +311,19 @@ bool CIDEContent::OpenGoToChoice(void)
 		{
 			return false;
 		}
-		bResult = OpenFile(maszGoToFiles.GetText(psItem->uiData), (size)maiGoToProjects.GetValue(psItem->uiData));
+		bResult = mpcContent->OpenFile(maszGoToFiles.GetText(psItem->uiData), (size)maiGoToProjects.GetValue(psItem->uiData));
 		if (bResult)
 		{
 			if (iLine > 0)
 			{
-				SetCaretPlace(iLine - 1, 0);
+				mpcContent->SetCaretPlace(iLine - 1, 0);
 			}
-			mpActive->GetEditor()->GetWindow()->GetFocus()->SetFocus(mpActive->GetEditor());
+			mpcContent->mpActive->GetEditor()->GetWindow()->GetFocus()->SetFocus(mpcContent->mpActive->GetEditor());
 		}
 		return bResult;
 	}
 
-	if (!mcCodeModel.GetSymbolLocation(psItem->uiData, &sLocation))
+	if (!mpcContent->mcCodeModel.GetSymbolLocation(psItem->uiData, &sLocation))
 	{
 		return false;
 	}
@@ -260,7 +332,7 @@ bool CIDEContent::OpenGoToChoice(void)
 		sLocation.iLine = iLine - 1;
 		sLocation.iColumn = 0;
 	}
-	bResult = OpenLocation(&sLocation);
+	bResult = mpcContent->OpenLocation(&sLocation);
 	sLocation.szFileName.Kill();
 	return bResult;
 }
@@ -270,31 +342,8 @@ bool CIDEContent::OpenGoToChoice(void)
 //
 //
 //////////////////////////////////////////////////////////////////////////
-Ptr<CGoToDialog> CIDEContent::GetGoTo(void) { return mpGoTo; }
+Ptr<CGoToDialog> CIDENavigator::GetGoTo(void) { return mpGoTo; }
 
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// For checking: the shown dialog is saved to HCP65_IDE_GOTO_SNAPSHOT's
-// PNG once it has been drawn, then closed.
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDEContent::GoToSnapshotTick(void)
-{
-	Ptr<CWindow>	pWindow;
-
-	pWindow = mpGoTo->GetDialog()->GetWindow();
-	miGoToTicks++;
-	if (miGoToTicks < 5)
-	{
-		pWindow->Invalidate();
-		pWindow->RequestTick(0);
-		return;
-	}
-	SavePNG(pWindow->GetCanvas()->GetImageOrNull(), getenv("HCP65_IDE_GOTO_SNAPSHOT"));
-	mpGoTo->GetDialog()->Close("Cancel");
-}
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -318,7 +367,7 @@ static bool EndsWithIDEPath(const char* szPath, const char* szEnd)
 // whether it's a <system> one.  False if the line isn't an #include.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEContent::GetIncludeAtCaret(CChars* pszName, bool* pbSystem)
+bool CIDENavigator::GetIncludeAtCaret(CChars* pszName, bool* pbSystem)
 {
 	CChars		szLine;
 	char*		szText;
@@ -328,12 +377,12 @@ bool CIDEContent::GetIncludeAtCaret(CChars* pszName, bool* pbSystem)
 	int			iLine;
 	int			iColumn;
 
-	if (!GetCaretPlace(&iLine, &iColumn))
+	if (!mpcContent->GetCaretPlace(&iLine, &iColumn))
 	{
 		return false;
 	}
 	szLine.Init();
-	GetFileLine(mpActive->GetFileName(), iLine, &szLine);
+	mpcContent->GetFileLine(mpcContent->mpActive->GetFileName(), iLine, &szLine);
 	szText = szLine.Text();
 	bResult = false;
 	if (szText[0] == '#')
@@ -377,7 +426,7 @@ bool CIDEContent::GetIncludeAtCaret(CChars* pszName, bool* pbSystem)
 // isn't found.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEContent::FindIncludedFile(CChars* pszDest)
+bool CIDENavigator::FindIncludedFile(CChars* pszDest)
 {
 	CChars	szName;
 	CChars	szEnd;
@@ -389,7 +438,7 @@ bool CIDEContent::FindIncludedFile(CChars* pszDest)
 	{
 		return false;
 	}
-	bFound = mcCodeModel.FindIncludeFile(mpActive->GetProject(), mpActive->GetFileName(), szName.Text(), bSystem, pszDest);
+	bFound = mpcContent->mcCodeModel.FindIncludeFile(mpcContent->mpActive->GetProject(), mpcContent->mpActive->GetFileName(), szName.Text(), bSystem, pszDest);
 	if (!bFound)
 	{
 		//A solution file whose path ends with it.
@@ -419,28 +468,28 @@ bool CIDEContent::FindIncludedFile(CChars* pszDest)
 // if there's nothing to go to.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEContent::GoToSource(void)
+bool CIDENavigator::GoToSource(void)
 {
 	CChars	szFile;
 	bool	bResult;
 
-	if (mpActive.IsNull())
+	if (mpcContent->mpActive.IsNull())
 	{
 		return false;
 	}
 	szFile.Init();
 	if (FindIncludedFile(&szFile))
 	{
-		bResult = OpenFile(szFile.Text(), mcCodeModel.FindProjectOfFile(szFile.Text()) != MAX_SIZE ? mcCodeModel.FindProjectOfFile(szFile.Text()) : mpActive->GetProject());
+		bResult = mpcContent->OpenFile(szFile.Text(), mpcContent->mcCodeModel.FindProjectOfFile(szFile.Text()) != MAX_SIZE ? mpcContent->mcCodeModel.FindProjectOfFile(szFile.Text()) : mpcContent->mpActive->GetProject());
 		if (bResult)
 		{
-			mpWindow->GetFocus()->SetFocus(mpActive->GetEditor());
+			mpcContent->mpWindow->GetFocus()->SetFocus(mpcContent->mpActive->GetEditor());
 		}
 		szFile.Kill();
 		return bResult;
 	}
 	szFile.Kill();
-	return GoToDefinition();
+	return mpcContent->GoToDefinition();
 }
 
 
@@ -450,14 +499,14 @@ bool CIDEContent::GoToSource(void)
 // symbol at the caret.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEContent::CanGoToSource(void)
+bool CIDENavigator::CanGoToSource(void)
 {
 	CChars				szFile;
 	CArrayIDELocations	asLocations;
 	CChars				szKey;
 	bool				bResult;
 
-	if (mpActive.IsNull())
+	if (mpcContent->mpActive.IsNull())
 	{
 		return false;
 	}
@@ -468,7 +517,7 @@ bool CIDEContent::CanGoToSource(void)
 	{
 		asLocations.Init();
 		szKey.Init();
-		bResult = FindSymbolAtCaret(&asLocations, &szKey);
+		bResult = mpcContent->FindSymbolAtCaret(&asLocations, &szKey);
 		szKey.Kill();
 		KillIDELocations(&asLocations);
 	}
@@ -484,7 +533,7 @@ bool CIDEContent::CanGoToSource(void)
 // isn't one.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEContent::SwitchHeaderSource(void)
+bool CIDENavigator::SwitchHeaderSource(void)
 {
 	static const char*	aszSources[] = { "cpp", "c", "cc", "cxx" };
 	static const char*	aszHeaders[] = { "h", "hpp", "hxx", "inl" };
@@ -501,11 +550,11 @@ bool CIDEContent::SwitchHeaderSource(void)
 	bool				bFound;
 	size				uiProject;
 
-	if (mpActive.IsNull())
+	if (mpcContent->mpActive.IsNull())
 	{
 		return false;
 	}
-	eType = CIDEIcons::GetFileType(mpActive->GetFileName());
+	eType = CIDEIcons::GetFileType(mpcContent->mpActive->GetFileName());
 	if (eType == IFT_Header)
 	{
 		aszWanted = aszSources;
@@ -522,7 +571,7 @@ bool CIDEContent::SwitchHeaderSource(void)
 	}
 
 	//The same name, beside it.
-	szBase.Init(mpActive->GetFileName());
+	szBase.Init(mpcContent->mpActive->GetFileName());
 	cFileUtil.RemoveExtension(&szBase);
 	szFound.Init();
 	bFound = false;
@@ -567,13 +616,51 @@ bool CIDEContent::SwitchHeaderSource(void)
 
 	if (bFound)
 	{
-		uiProject = mcCodeModel.FindProjectOfFile(szFound.Text());
-		bFound = OpenFile(szFound.Text(), (uiProject != MAX_SIZE) ? uiProject : mpActive->GetProject());
+		uiProject = mpcContent->mcCodeModel.FindProjectOfFile(szFound.Text());
+		bFound = mpcContent->OpenFile(szFound.Text(), (uiProject != MAX_SIZE) ? uiProject : mpcContent->mpActive->GetProject());
 		if (bFound)
 		{
-			mpWindow->GetFocus()->SetFocus(mpActive->GetEditor());
+			mpcContent->mpWindow->GetFocus()->SetFocus(mpcContent->mpActive->GetEditor());
 		}
 	}
 	szFound.Kill();
 	return bFound;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The solutions' files by path (FindGoToFiles), what Rename can edit.
+//
+//////////////////////////////////////////////////////////////////////////
+CMapStringInt* CIDENavigator::GetSolutionFileSet(void)
+{
+	return &mcGoToFileSet;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Navigate's items.  False if pcItem isn't one of them.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDENavigator::MenuItemClicked(CMenuItem* pcItem)
+{
+	if (pcItem == &mpGoToClassItem)
+	{
+		QueueGoTo(IDE_GO_TO_CLASS);
+	}
+	else if (pcItem == &mpGoToFileItem)
+	{
+		QueueGoTo(IDE_GO_TO_FILE);
+	}
+	else if (pcItem == &mpGoToSymbolItem)
+	{
+		QueueGoTo(IDE_GO_TO_SYMBOL);
+	}
+	else
+	{
+		return false;
+	}
+	return true;
 }

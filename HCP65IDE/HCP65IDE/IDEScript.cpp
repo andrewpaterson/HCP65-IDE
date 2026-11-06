@@ -1,0 +1,525 @@
+/** ---------------- COPYRIGHT NOTICE, DISCLAIMER, and LICENSE ------------- **
+
+Copyright (c) 2026 Andrew Paterson
+
+This file is part of The Codaphela Project: Codaphela HCP65IDE
+
+Codaphela HCP65IDE is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+Codaphela HCP65IDE is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
+
+** ------------------------------------------------------------------------ **/
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "BaseLib/Timer.h"
+#include "StandardLib/ClassDefines.h"
+#include "SupportLib/PNGWriter.h"
+#include "IDEContent.h"
+#include "IDEScript.h"
+
+
+//The debug script's commands that are the IDE's (RunCommand); "goto:" takes what follows it.
+static const char*	gaszIDEScriptCommands[] = { "goto:", "rename", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu" };
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEScript::Init(CIDEContent* pcContent)
+{
+	PreInit();
+	mpcContent = pcContent;
+	mpDialog = NULL;
+	miDialogTicks = 0;
+	PostInit();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEScript::Class(void)
+{
+	U_Pointer(mpcContent);
+	M_Pointer(mpDialog);
+	U_Int32(miDialogTicks);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEScript::Free(void)
+{
+	StopWatchingDialog();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEScript::Save(CObjectWriter* pcFile)
+{
+	return false;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEScript::Load(CObjectReader* pcFile)
+{
+	return false;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether a debug script command is one of the IDE's (RunCommand).
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEScript::IsCommand(const char* szCommand)
+{
+	size	i;
+	size	uiLength;
+
+	for (i = 0; i < sizeof(gaszIDEScriptCommands) / sizeof(char*); i++)
+	{
+		uiLength = strlen(gaszIDEScriptCommands[i]);
+		if ((gaszIDEScriptCommands[i][uiLength - 1] == ':') ? (strncmp(szCommand, gaszIDEScriptCommands[i], uiLength) == 0) : (strcmp(szCommand, gaszIDEScriptCommands[i]) == 0))
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// One of the IDE's debug script commands, done at once.  A dialog it
+// shows is shown here, from the tick the script is run in.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEScript::RunCommand(const char* szCommand)
+{
+	size	uiTab;
+
+	if (strncmp(szCommand, "goto:", 5) == 0)
+	{
+		//Navigate's Go to dialog shown on that tab, from a tick as it must be.
+		//goto:<tab>:<pattern> types the pattern too.
+		uiTab = (size)atoi(&szCommand[5]);
+		if (strchr(&szCommand[5], ':') != NULL)
+		{
+			mpcContent->mpNavigator->mszGoToPattern.Set(strchr(&szCommand[5], ':') + 1);
+		}
+		mpcContent->mpNavigator->ShowGoTo(uiTab);
+	}
+	else if (strcmp(szCommand, "rename") == 0)
+	{
+		//Rename's dialog for what is at the caret, from a tick as it must be.
+		mpcContent->mpRename->ShowRename();
+	}
+	else if (strcmp(szCommand, "closetab") == 0)
+	{
+		//The active document closed, as its tab's cross does.
+		if (mpcContent->GetActiveTab().IsNotNull())
+		{
+			mpcContent->mpDock->Close(mpcContent->GetActiveTab()->GetDockPane());
+		}
+	}
+	else if (strcmp(szCommand, "closeall") == 0)
+	{
+		//Window, Close All Documents.
+		mpcContent->CloseAllFiles();
+	}
+	else if (strcmp(szCommand, "exit") == 0)
+	{
+		//File, Exit.
+		if (mpcContent->mpCloseGuard->RequestExit())
+		{
+			mpcContent->mpWindow->Stop();
+		}
+	}
+	else if (strcmp(szCommand, "gotosource") == 0)
+	{
+		//Control+B.
+		mpcContent->mpNavigator->GoToSource();
+	}
+	else if (strcmp(szCommand, "switchfile") == 0)
+	{
+		//Alt+O.
+		mpcContent->mpNavigator->SwitchHeaderSource();
+	}
+	else if (strcmp(szCommand, "printtabs") == 0)
+	{
+		//Each open file, '>' before the active one, '*' after one with changes.
+		size	i;
+
+		printf("Tabs:");
+		for (i = 0; i < mpcContent->maTabs.Size(); i++)
+		{
+			printf(" %s%s%s", (mpcContent->maTabs.Get(i) == mpcContent->mpActive) ? ">" : "", strrchr(mpcContent->maTabs.Get(i)->GetFileName(), '/') + 1, mpcContent->maTabs.Get(i)->IsModified() ? "*" : "");
+		}
+		printf("\n");
+		fflush(stdout);
+	}
+	else if (strcmp(szCommand, "tabmenu") == 0)
+	{
+		//The active document tab's menu opened under the tab, with Close Multiple's sub menu.
+		if (mpcContent->GetActiveTab().IsNotNull() && mpcContent->GetActiveTab()->GetDockPane()->GetGroup().IsNotNull())
+		{
+			Ptr<CDockGroup>		pGroup;
+			Ptr<CTabComponent>	pTab;
+			Ptr<CMenuContainer>	pMenu;
+			size				i;
+
+			pGroup = mpcContent->GetActiveTab()->GetDockPane()->GetGroup();
+			pTab = pGroup->GetTab(mpcContent->GetActiveTab()->GetDockPane());
+			pGroup->OpenMenu(mpcContent->GetActiveTab()->GetDockPane(), SInt32Vec2(pTab->GetPosition().x + 10, pTab->GetPosition().y + pTab->GetActualSize().y));
+			pMenu = pGroup->GetMenu(mpcContent->GetActiveTab()->GetDockPane());
+			for (i = 0; i < pMenu->NumItems(); i++)
+			{
+				if (pMenu->GetItem(i)->HasSubMenu())
+				{
+					mpcContent->mpWindow->Layout();
+					pMenu->OpenSubMenu(pMenu->GetItemRow(pMenu->GetItem(i)), false);
+				}
+			}
+		}
+	}
+	else if (strcmp(szCommand, "contextmenu") == 0)
+	{
+		//The active editor's context menu opened at its caret, as the Menu key does.
+		if (mpcContent->GetActiveTab().IsNotNull())
+		{
+			mpcContent->GetActiveTab()->GetEditor()->OpenContextMenu(mpcContent->GetActiveTab()->GetEditor()->GetContextMenuPosition());
+		}
+	}
+}
+
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// HCP65_IDE_GOTO's search.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEScript::RunGoTo(const char* szGoTo)
+{
+	Ptr<CGoToDialog>	pGoTo;
+	SGoToItem*			psItem;
+	size				i;
+	size				uiTab;
+	int64				iStart;
+
+	uiTab = (size)atoi(szGoTo);
+	szGoTo = strchr(szGoTo, ':');
+	if (szGoTo == NULL)
+	{
+		return;
+	}
+	mpcContent->mpNavigator->CreateGoTo(uiTab);
+	pGoTo = mpcContent->mpNavigator->GetGoTo();
+	iStart = GetDebugTickCount();
+	pGoTo->SetText(&szGoTo[1]);
+	printf("Go to [%s]: %d results in %d ms\n", &szGoTo[1], (int)pGoTo->NumResults(), (int)(GetDebugTickCount() - iStart));
+	for (i = 0; (i < pGoTo->NumResults()) && (i < 10); i++)
+	{
+		psItem = pGoTo->GetResult(i);
+		printf("  %s  [%s]  score %d\n", psItem->szName.Text(), psItem->szLocation.Text(), psItem->sMatch.iScore);
+	}
+	if (pGoTo->Approve())
+	{
+		mpcContent->mpNavigator->OpenGoToChoice();
+		if (mpcContent->GetActiveTab().IsNotNull())
+		{
+			printf("Opened %s\n", mpcContent->GetActiveTab()->GetFileName());
+		}
+	}
+	fflush(stdout);
+}
+
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// One of HCP65_IDE_EDIT's steps.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEScript::RunEditStep(const char* szStep)
+{
+	int32					iNode;
+	const char*				szTyped;
+	Ptr<CIDEEditorTab>		pTab;
+	Ptr<CMenuContainer>		pMenu;
+	Ptr<CTextArea>			pEditor;
+	CChars					szLine;
+	size					uiLine;
+	size					uiEnd;
+	size					i;
+
+	pTab = mpcContent->GetActiveTab();
+	if (strncmp(szStep, "open:", 5) == 0)
+	{
+		iNode = mpcContent->GetExplorer()->FindFileNode(&szStep[5]);
+		if (iNode != TREE_NO_NODE)
+		{
+			mpcContent->GetExplorer()->GetTree()->SelectNode(iNode);
+			mpcContent->ExplorerActivated();
+		}
+	}
+	else if ((strncmp(szStep, "type:", 5) == 0) && pTab.IsNotNull())
+	{
+		mpcContent->mpWindow->GetFocus()->SetFocus(pTab->GetEditor());
+		for (szTyped = &szStep[5]; *szTyped != '\0'; szTyped++)
+		{
+			mpcContent->mpWindow->InputPrintable(*szTyped, true);
+		}
+	}
+	else if ((strcmp(szStep, "undo") == 0) && pTab.IsNotNull())
+	{
+		pTab->GetEditor()->Undo();
+	}
+	else if ((strcmp(szStep, "redo") == 0) && pTab.IsNotNull())
+	{
+		pTab->GetEditor()->Redo();
+	}
+	else if ((strcmp(szStep, "renamable") == 0) || (strncmp(szStep, "rename:", 7) == 0))
+	{
+		//What Rename would rename at the caret, or renames it.
+		SIDERenameTarget	sTarget;
+
+		sTarget.Init();
+		if (!mpcContent->mpRename->FindRenameTarget(&sTarget))
+		{
+			printf("Rename: nothing at the caret\n");
+		}
+		else if (!sTarget.bRenamable)
+		{
+			printf("Rename: %s [%s] can't be renamed: %s\n", sTarget.szName.Text(), sTarget.szKey.Text(), sTarget.szWhyNot.Text());
+		}
+		else if (szStep[6] == ':')
+		{
+			mpcContent->mpRename->RenameSymbol(&sTarget, &szStep[7]);
+			printf("Rename: %s [%s] to %s\n", sTarget.szName.Text(), sTarget.szKey.Text(), &szStep[7]);
+		}
+		else
+		{
+			printf("Rename: %s [%s] at %d places\n", sTarget.szName.Text(), sTarget.szKey.Text(), (int)sTarget.asLocations.NumElements());
+		}
+		sTarget.Kill();
+	}
+	else if (strcmp(szStep, "usages") == 0)
+	{
+		//Alt+F7, the Find Usages tree printed.
+		Ptr<CTreeContainer>	pTree;
+		int32				iNode;
+		int32				iDepth;
+		CChars				szNode;
+
+		mpcContent->mpUsages->FindUsages();
+		pTree = mpcContent->mpUsages->GetUsagesTree();
+		for (iNode = 0; iNode < pTree->NumNodes(); iNode++)
+		{
+			szNode.Init();
+			pTree->GetNodeText(iNode, &szNode);
+			for (iDepth = pTree->GetNodeDepth(iNode); iDepth > 0; iDepth--)
+			{
+				printf("  ");
+			}
+			printf("%s\n", szNode.Text());
+			szNode.Kill();
+		}
+	}
+	else if (strcmp(szStep, "explorer") == 0)
+	{
+		mpcContent->ShowActiveFileInExplorer();
+	}
+	else if (strcmp(szStep, "undoall") == 0)
+	{
+		mpcContent->mpEdit->UndoAcrossFiles();
+	}
+	else if (strcmp(szStep, "redoall") == 0)
+	{
+		mpcContent->mpEdit->RedoAcrossFiles();
+	}
+	else if (strcmp(szStep, "group") == 0)
+	{
+		mpcContent->mpEdit->BeginUndoGroup();
+	}
+	else if (strcmp(szStep, "endgroup") == 0)
+	{
+		mpcContent->mpEdit->EndUndoGroup();
+	}
+	else if (strcmp(szStep, "menu") == 0)
+	{
+		mpcContent->mpWindow->Layout();
+		mpcContent->mpEdit->GetEditMenu()->Open(SInt32Vec2(40, 24), NULL, true);
+	}
+	else if (strcmp(szStep, "print") == 0)
+	{
+		pMenu = mpcContent->mpEdit->GetEditMenu();
+		mpcContent->mpEdit->EditMenuOpening(&pMenu);
+		printf("Edit menu:");
+		for (i = 0; i < pMenu->NumItems(); i++)
+		{
+			printf(" %s%s", pMenu->GetItem(i)->GetText(), pMenu->GetItem(i)->IsEnabled() ? "" : "(disabled)");
+		}
+		printf("\n");
+		for (i = 0; i < mpcContent->NumTabs(); i++)
+		{
+			pEditor = mpcContent->GetTab(i)->GetEditor();
+			uiLine = pEditor->FindLine(pEditor->GetCaretPosition());
+			uiEnd = (uiLine + 1 < pEditor->NumLines()) ? pEditor->GetLineStart(uiLine + 1) - 1 : strlen(pEditor->GetText());
+			szLine.Init();
+			szLine.AppendSubString(pEditor->GetText(), pEditor->GetLineStart(uiLine), uiEnd);
+			printf("%s%s%s line %d: [%s]\n", mpcContent->GetTab(i)->GetFileName(), mpcContent->GetTab(i)->IsModified() ? " *" : "", (mpcContent->mpWindow->GetFocus()->GetFocussedComponent() == pEditor) ? " (focus)" : "", (int)uiLine + 1, szLine.Text());
+			szLine.Kill();
+		}
+		fflush(stdout);
+	}
+}
+
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// One of HCP65_IDE_DOCK's moves: "<action>:<pane ID>", or "reset".
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEScript::RunDockMove(const char* szMove)
+{
+	Ptr<CDockManager>	pDock;
+	Ptr<CDockPane>		pPane;
+	const char*			szColon;
+	CChars				szAction;
+
+	pDock = mpcContent->GetDock();
+	if (strcmp(szMove, "reset") == 0)
+	{
+		pDock->ResetLayout();
+		return;
+	}
+	szColon = strchr(szMove, ':');
+	if (szColon == NULL)
+	{
+		return;
+	}
+	pPane = pDock->GetPane(szColon + 1);
+	if (pPane.IsNull())
+	{
+		gcLogger.Error2(__METHOD__, " No pane [", szColon + 1, "].", NULL);
+		return;
+	}
+	szAction.Init(szMove, 0, (size)(szColon - szMove));
+	if (szAction.Equals("float"))
+	{
+		pDock->Float(pPane);
+	}
+	else if (szAction.Equals("dock"))
+	{
+		pDock->Dock(pPane);
+	}
+	else if (szAction.Equals("autohide"))
+	{
+		pDock->AutoHide(pPane);
+	}
+	else if (szAction.Equals("hide"))
+	{
+		pDock->Hide(pPane);
+	}
+	else if (szAction.Equals("document"))
+	{
+		pDock->DockAsDocument(pPane);
+	}
+	else if (szAction.Equals("show"))
+	{
+		pDock->Activate(pPane);
+	}
+	szAction.Kill();
+}
+
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// For checking, pDialog is snapshot (HCP65_IDE_DIALOG_SNAPSHOT) and
+// answered (HCP65_IDE_DIALOG_ANSWER) once it has been drawn, see the
+// class's comment.  Nothing is done if neither is set.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEScript::WatchDialog(Ptr<CDialog> pDialog)
+{
+	if ((getenv("HCP65_IDE_DIALOG_SNAPSHOT") == NULL) && (getenv("HCP65_IDE_DIALOG_ANSWER") == NULL))
+	{
+		return;
+	}
+	mpDialog = pDialog;
+	miDialogTicks = 0;
+	mpDialog->SetTicker(this, &CIDEScript::DialogTick);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The dialog shown has gone.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEScript::StopWatchingDialog(void)
+{
+	if (mpDialog.IsNotNull())
+	{
+		mpDialog->ClearTicker();
+		mpDialog = NULL;
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A few ticks in, so it has been drawn, the watched dialog is saved and
+// answered: Save or OK click OK, any other caption closes it as that
+// button does.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEScript::DialogTick(void)
+{
+	Ptr<CWindow>	pWindow;
+	const char*		szAnswer;
+
+	pWindow = mpDialog->GetWindow();
+	miDialogTicks++;
+	if (miDialogTicks < 5)
+	{
+		pWindow->Invalidate();
+		pWindow->RequestTick(0);
+		return;
+	}
+	if (getenv("HCP65_IDE_DIALOG_SNAPSHOT") != NULL)
+	{
+		SavePNG(pWindow->GetCanvas()->GetImageOrNull(), getenv("HCP65_IDE_DIALOG_SNAPSHOT"));
+	}
+	szAnswer = getenv("HCP65_IDE_DIALOG_ANSWER");
+	if (szAnswer == NULL)
+	{
+		szAnswer = "Cancel";
+	}
+	mpDialog->Close(((strcmp(szAnswer, "Save") == 0) || (strcmp(szAnswer, "OK") == 0)) ? "OK" : szAnswer);
+}

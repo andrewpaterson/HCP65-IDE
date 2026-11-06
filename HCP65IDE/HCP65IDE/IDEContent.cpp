@@ -196,26 +196,7 @@ void CIDEContent::Init(void)
 	maDiffTabs.Init();
 	maFileIcons.Init();
 	maSymbolIcons.Init();
-	mpGoTo = NULL;
 	mpMatchFont = NULL;
-	mszGoToPattern.Init();
-	maszGoToFiles.Init();
-	maiGoToProjects.Init();
-	mcGoToFileSet.Init();
-	miGoToFileIcon = -1;
-	miGoToTicks = 0;
-	miQueuedGoTo = -1;
-	mbQueuedRename = false;
-	msRenameTarget.Init();
-	masUsages.Init();
-	miAfterSave = -1;
-	mbAskToSave = false;
-	mbCloseConfirmed = false;
-	maszSaveFiles.Init();
-	maszCloseIDs.Init();
-	muiAfterSolution = 0;
-	mszAfterFile.Init();
-	memset(maiGoToSymbolIcons, 0, sizeof(maiGoToSymbolIcons));
 	mcDebugger.Init();
 	mszStoppedFile.Init();
 	muiStoppedLine = 0;
@@ -235,8 +216,6 @@ void CIDEContent::Init(void)
 	mcClaude.Init();
 	muiClaudeReloaded = 0;
 	muiClaudeTools = 0;
-	mcUndoLog.Init();
-	mbLogUndoing = false;
 	muiNextDiff = 0;
 
 	PostInit();
@@ -301,40 +280,18 @@ void CIDEContent::Class(void)
 	M_Pointer(mpActiveDiff);
 	M_Embedded(maFileIcons);
 	M_Embedded(maSymbolIcons);
-	M_Pointer(mpGoTo);
 	M_Pointer(mpMatchFont);
-	U_String(mszGoToPattern);
-	U_Unknown(CArrayChars, maszGoToFiles);
-	U_Unknown(CArrayInt, maiGoToProjects);
-	U_Unknown(CMapStringInt, mcGoToFileSet);
-	U_Int32(miGoToFileIcon);
-	U_Int32(miGoToTicks);
-	U_Int32(miQueuedGoTo);
+	M_Pointer(mpScript);
+	M_Pointer(mpCloseGuard);
+	M_Pointer(mpEdit);
+	M_Pointer(mpNavigator);
+	M_Pointer(mpRename);
+	M_Pointer(mpUsages);
 	M_Pointer(mpEditorMenu);
 	M_Pointer(mpFindUsagesItem);
 	M_Pointer(mpGoToSourceItem);
-	M_Pointer(mpUsages);
-	M_Pointer(mpUsagesTool);
-	U_Unknown(CArrayIDELocations, masUsages);
-	U_Int32(miAfterSave);
-	U_Bool(mbAskToSave);
-	U_Bool(mbCloseConfirmed);
-	U_Unknown(CArrayChars, maszSaveFiles);
-	U_Unknown(CArrayChars, maszCloseIDs);
-	U_Size(muiAfterSolution);
-	U_String(mszAfterFile);
-	M_Pointer(mpSaveDialog);
 	M_Pointer(mpRenameItem);
 	M_Pointer(mpExtractMethodItem);
-	M_Pointer(mpRenameDialog);
-	M_Pointer(mpRenameField);
-	M_Pointer(mpRenameError);
-	U_Bool(mbQueuedRename);
-	U_Data(SIDERenameTarget, msRenameTarget);
-	U_Int32Array(maiGoToSymbolIcons, IST_Count);
-	M_Pointer(mpGoToClassItem);
-	M_Pointer(mpGoToFileItem);
-	M_Pointer(mpGoToSymbolItem);
 	M_Pointer(mpExplorer);
 	M_Pointer(mpExplorerMenu);
 	M_Pointer(mpStartupItem);
@@ -394,17 +351,6 @@ void CIDEContent::Class(void)
 	M_Pointer(mpClaudePane);
 	U_Size(muiClaudeReloaded);
 	U_Size(muiClaudeTools);
-	U_Unknown(CUndoLog, mcUndoLog);
-	U_Bool(mbLogUndoing);
-	M_Pointer(mpEditMenu);
-	M_Pointer(mpUndoItem);
-	M_Pointer(mpRedoItem);
-	M_Pointer(mpCutItem);
-	M_Pointer(mpCopyItem);
-	M_Pointer(mpPasteItem);
-	M_Pointer(mpSelectAllItem);
-	M_Pointer(mpUndoAllItem);
-	M_Pointer(mpRedoAllItem);
 }
 
 
@@ -451,14 +397,6 @@ void CIDEContent::Free(void)
 	{
 		mpExplorerMenu->GetItemClickEvent()->Remove(this);
 	}
-	if (mpEditMenu.IsNotNull())
-	{
-		mpEditMenu->GetOpeningEvent()->Remove(this);
-	}
-	if (mpUsages.IsNotNull())
-	{
-		mpUsages->GetActivationEvent()->Remove(this);
-	}
 	if (mpEditorMenu.IsNotNull())
 	{
 		mpEditorMenu->GetOpeningEvent()->Remove(this);
@@ -468,7 +406,7 @@ void CIDEContent::Free(void)
 	{
 		if (maTabs.Get(i).IsNotNull() && maTabs.Get(i)->GetEditor().IsNotNull())
 		{
-			maTabs.Get(i)->GetEditor()->GetUndoEvent()->Remove(this);
+			maTabs.Get(i)->GetEditor()->GetUndoEvent()->Remove(&mpEdit);
 		}
 	}
 	if (mpDock.IsNotNull())
@@ -479,6 +417,10 @@ void CIDEContent::Free(void)
 	{
 		mpWindow->GetActivationEvent()->Remove(this);
 		mpWindow->ClearCloseApprover();
+		mpWindow->CancelPosted(this);
+		mpWindow->CancelPosted(&mpCloseGuard);  //The modules' posted calls too.
+		mpWindow->CancelPosted(&mpNavigator);
+		mpWindow->CancelPosted(&mpRename);
 	}
 	if (mpRollbackButton.IsNotNull())
 	{
@@ -504,20 +446,10 @@ void CIDEContent::Free(void)
 	maszDebugScript.Kill();
 	mszDefaultEmulatorDirectory.Kill();
 	mszDefaultEmulator.Kill();
-	KillIDELocations(&masUsages);
-	mszAfterFile.Kill();
-	maszCloseIDs.Kill();
-	maszSaveFiles.Kill();
-	msRenameTarget.Kill();
-	mcGoToFileSet.Kill();
-	maiGoToProjects.Kill();
-	maszGoToFiles.Kill();
-	mszGoToPattern.Kill();
 
 	//A git status still being read is stopped.
 	mcLineChanges.Kill();
 	mcGit.Kill();
-	mcUndoLog.Kill();
 
 	//A build still running is stopped (an HCP65 build is waited for) before the solution it builds goes.
 	mcBuild.Kill();
@@ -625,6 +557,14 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	//Go to's matched characters are bold, if there's a bold font.
 	mpMatchFont = mpBoldColours.IsNotNull() ? mpBoldColours->GetFont(JEWEL_WHITE) : mpFontColours->GetFont(JEWEL_WHITE);
 
+	//The features split out of the content, before the panes and menus they make.
+	mpScript = OMalloc<CIDEScript>(this);
+	mpCloseGuard = OMalloc<CIDECloseGuard>(this);
+	mpEdit = OMalloc<CIDEEdit>(this);
+	mpNavigator = OMalloc<CIDENavigator>(this);
+	mpRename = OMalloc<CIDERename>(this);
+	mpUsages = OMalloc<CIDEUsages>(this);
+
 	//Solution Explorer on the left.
 	mpExplorer = OMalloc<CSolutionExplorer>(pWindow, mpTheme);
 	mpExplorer->SetBoldColours(mpBoldColours);
@@ -656,7 +596,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpClaudePane->GetStopButton()->GetClickEvent()->Add(this, &CIDEContent::ClaudeStopClicked);
 	mpClaudePane->GetNewButton()->GetClickEvent()->Add(this, &CIDEContent::ClaudeNewClicked);
 	mpClaudeTool = mpDock->AddPane(IDE_CLAUDE_ID, "Claude", NULL, mpClaudePane->GetComponent(), DPK_Tool, &sPlace);
-	CreateUsagesPane(&sPlace);
+	mpUsages->CreatePane(&sPlace);
 	mpDock->Show(mpReferencesTool);
 
 	//The toolbar: the build configuration's configuration and platform, as Visual Studio has them, and Build.
@@ -698,7 +638,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	pWindow->GetActivationEvent()->Add(this, &CIDEContent::WindowActivated);
 
 	//The close button asks to save changes first.
-	pWindow->SetCloseApprover(this, &CIDEContent::RequestExit);
+	pWindow->SetCloseApprover(&mpCloseGuard, &CIDECloseGuard::RequestExit);
 	return true;
 }
 
@@ -752,8 +692,8 @@ Ptr<CMenuBar> CIDEContent::CreateMenuBar(void)
 	mpCloseAllItem = pWindowMenu->AddItem("Close All Documents");
 
 	mpMenuBar->AddMenu("File", pFile);
-	mpMenuBar->AddMenu("Edit", CreateEditMenu());
-	mpMenuBar->AddMenu("Navigate", CreateNavigateMenu());
+	mpMenuBar->AddMenu("Edit", mpEdit->CreateEditMenu());
+	mpMenuBar->AddMenu("Navigate", mpNavigator->CreateNavigateMenu());
 	mpMenuBar->AddMenu("View", pView);
 	mpMenuBar->AddMenu("Git", pGit);
 	mpMenuBar->AddMenu("Debug", CreateDebugMenu());
@@ -841,7 +781,7 @@ void CIDEContent::MenuItemClicked(CMenuItem* pcItem)
 	{
 		//As the window's close button: the window stops, and the application saves what it keeps as it ends.  Files
 		//with changes are asked about first.
-		if (RequestExit())
+		if (mpCloseGuard->RequestExit())
 		{
 			mpWindow->Stop();
 		}
@@ -874,32 +814,23 @@ void CIDEContent::MenuItemClicked(CMenuItem* pcItem)
 	{
 		CloseAllFiles();
 	}
-	else if (EditMenuItemClicked(pcItem))
+	else if (mpEdit->EditMenuItemClicked(pcItem))
 	{
 	}
 	else if (pcItem == &mpGoToSourceItem)
 	{
-		GoToSource();
+		mpNavigator->GoToSource();
 	}
 	else if (pcItem == &mpFindUsagesItem)
 	{
-		FindUsages();
+		mpUsages->FindUsages();
 	}
 	else if (pcItem == &mpRenameItem)
 	{
-		QueueRename();
+		mpRename->QueueRename();
 	}
-	else if (pcItem == &mpGoToClassItem)
+	else if (mpNavigator->MenuItemClicked(pcItem))
 	{
-		QueueGoTo(IDE_GO_TO_CLASS);
-	}
-	else if (pcItem == &mpGoToFileItem)
-	{
-		QueueGoTo(IDE_GO_TO_FILE);
-	}
-	else if (pcItem == &mpGoToSymbolItem)
-	{
-		QueueGoTo(IDE_GO_TO_SYMBOL);
 	}
 	else
 	{
@@ -991,7 +922,7 @@ bool CIDEContent::OpenSolution(const char* szFileName)
 	bool		bResult;
 
 	//The files with changes of what is open are asked about first; it opens afterwards.
-	if (IsSolutionOpen() && !ApproveLettingGo(MAX_SIZE, szFileName))
+	if (IsSolutionOpen() && !mpCloseGuard->ApproveLettingGo(MAX_SIZE, szFileName))
 	{
 		return true;
 	}
@@ -1225,7 +1156,7 @@ bool CIDEContent::CloseSolution(size uiSolution)
 	}
 
 	//Its files with changes are asked about first; it closes afterwards.
-	if (!ApproveLettingGo(uiSolution, NULL))
+	if (!mpCloseGuard->ApproveLettingGo(uiSolution, NULL))
 	{
 		return true;
 	}
@@ -1567,7 +1498,7 @@ Ptr<CIDEEditorTab> CIDEContent::OpenFileTab(const char* szFileName, size uiProje
 	pTab->GetEditor()->SetContextMenu(mpEditorMenu);
 	pTab->GetCodeEditor()->GetChangeBarClickEvent()->Add(this, &CIDEContent::ChangeBarClicked);
 	pTab->GetCodeEditor()->GetGlyphClickEvent()->Add(this, &CIDEContent::GlyphClicked);
-	pTab->GetEditor()->GetUndoEvent()->Add(this, &CIDEContent::EditorUndoChanged);
+	pTab->GetEditor()->GetUndoEvent()->Add(&mpEdit, &CIDEEdit::EditorUndoChanged);
 	ShowBreakpoints(pTab);
 	ReadGitBase(pTab);
 	UpdateChangeBars(pTab);
@@ -1741,27 +1672,27 @@ void CIDEContent::CodeCommandAction(SComponentInputEvent* psEvent)
 	}
 	else if (psEvent->eCommand == CIC_GoToClass)
 	{
-		QueueGoTo(IDE_GO_TO_CLASS);
+		mpNavigator->QueueGoTo(IDE_GO_TO_CLASS);
 	}
 	else if (psEvent->eCommand == CIC_GoToFile)
 	{
-		QueueGoTo(IDE_GO_TO_FILE);
+		mpNavigator->QueueGoTo(IDE_GO_TO_FILE);
 	}
 	else if (psEvent->eCommand == CIC_GoToSource)
 	{
-		GoToSource();
+		mpNavigator->GoToSource();
 	}
 	else if (psEvent->eCommand == CIC_SwitchHeaderSource)
 	{
-		SwitchHeaderSource();
+		mpNavigator->SwitchHeaderSource();
 	}
 	else if (psEvent->eCommand == CIC_FindUsages)
 	{
-		FindUsages();
+		mpUsages->FindUsages();
 	}
 	else if (psEvent->eCommand == CIC_Rename)
 	{
-		QueueRename();
+		mpRename->QueueRename();
 	}
 	else if (psEvent->eCommand == CIC_ShowProjectView)
 	{
@@ -1769,7 +1700,7 @@ void CIDEContent::CodeCommandAction(SComponentInputEvent* psEvent)
 	}
 	else if (psEvent->eCommand == CIC_GoToSymbol)
 	{
-		QueueGoTo(IDE_GO_TO_SYMBOL);
+		mpNavigator->QueueGoTo(IDE_GO_TO_SYMBOL);
 	}
 	else if (psEvent->eCommand == CIC_GoToDefinition)
 	{
@@ -2543,37 +2474,7 @@ void CIDEContent::Tick(Ptr<CWindow> pWindow)
 	int64				iNow;
 	int64				iWait;
 	int64				iSoonest;
-	char*				pszOpen;
-	int32				iTab;
 
-	if (!mszQueuedOpen.Empty())
-	{
-		pszOpen = (char*)malloc(mszQueuedOpen.Length() + 1);
-		strcpy(pszOpen, mszQueuedOpen.Text());
-		mszQueuedOpen.Clear();
-		if (!OpenSolution(pszOpen))
-		{
-			gcLogger.Error2(__METHOD__, " Could not open [", pszOpen, "].", NULL);
-		}
-		free(pszOpen);
-	}
-	if (miQueuedGoTo >= 0)
-	{
-		//A dialog is shown from a tick, not from the key or menu click that asked for it.
-		iTab = miQueuedGoTo;
-		miQueuedGoTo = -1;
-		ShowGoTo((size)iTab);
-	}
-	if (mbQueuedRename)
-	{
-		mbQueuedRename = false;
-		ShowRename();
-	}
-	if (mbAskToSave)
-	{
-		mbAskToSave = false;
-		AskToSave();
-	}
 	PollBuild(pWindow);
 	PollDebugger(pWindow);
 	PollClaude(pWindow);
@@ -2661,6 +2562,17 @@ void CIDEContent::DocumentSelected(CDockPane* pcPane)
 // A file's tab with changes not saved ('*'), kept by Close Unmodified.
 //
 //////////////////////////////////////////////////////////////////////////
+bool CIDEContent::PaneClosing(CDockPane* pcPane)
+{
+	return mpCloseGuard->PaneClosing(pcPane);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A file's tab with changes not saved ('*'), kept by Close Unmodified.
+//
+//////////////////////////////////////////////////////////////////////////
 bool CIDEContent::IsPaneModified(CDockPane* pcPane)
 {
 	Ptr<CIDEEditorTab>	pTab;
@@ -2707,8 +2619,8 @@ void CIDEContent::PaneClosed(CDockPane* pcPane)
 	}
 	pTab->GetCodeEditor()->GetChangeBarClickEvent()->Remove(this);
 	pTab->GetCodeEditor()->GetGlyphClickEvent()->Remove(this);
-	pTab->GetEditor()->GetUndoEvent()->Remove(this);
-	mcUndoLog.RemoveDocument(pTab->GetFileName());
+	pTab->GetEditor()->GetUndoEvent()->Remove(&mpEdit);
+	mpEdit->FileClosed(pTab->GetFileName());
 	maTabs.Remove(pTab);
 }
 
@@ -2999,9 +2911,199 @@ bool CIDEContent::OpenRecentSolution(size uiIndex)
 		return false;
 	}
 	mszQueuedOpen.Set(mcRecent.GetFile(uiIndex));
-	mpWindow->RequestTick(0);
+	mpWindow->Post(this, &CIDEContent::OpenQueuedSolution);
 	return true;
 }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The recent solution chosen, opened after its menu's click.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::OpenQueuedSolution(void)
+{
+	CChars	szOpen;
+
+	szOpen.Init(mszQueuedOpen);
+	mszQueuedOpen.Clear();
+	if (!OpenSolution(szOpen.Text()))
+	{
+		gcLogger.Error2(__METHOD__, " Could not open [", szOpen.Text(), "].", NULL);
+	}
+	szOpen.Kill();
+}
 CIDECodeModel* CIDEContent::GetCodeModel(void) { return &mcCodeModel; }
+Ptr<CIDEScript> CIDEContent::GetScript(void) { return mpScript; }
 CSolutionExplorer* CIDEContent::GetExplorer(void) { return &mpExplorer; }
 
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The symbol named at the active editor's caret (or just before it, as
+// after it's typed), or where its selection starts: its key and every
+// place it is named.  False if there is none.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEContent::FindSymbolAtCaret(CArrayIDELocations* pasDest, CChars* pszKey)
+{
+	Ptr<CTextArea>	pEditor;
+	size			uiStart;
+	size			uiEnd;
+	size			uiLine;
+	int				iColumn;
+	bool			bSelected;
+
+	if (mpActive.IsNull())
+	{
+		return false;
+	}
+	pEditor = mpActive->GetEditor();
+	bSelected = pEditor->GetSelection(&uiStart, &uiEnd);
+	if (!bSelected)
+	{
+		uiStart = pEditor->GetCaretPosition();
+	}
+	uiLine = pEditor->FindLine(uiStart);
+	iColumn = (int)(uiStart - pEditor->GetLineStart(uiLine));
+	if (mcCodeModel.FindReferences(mpActive->GetFileName(), (int)uiLine, iColumn, pasDest, pszKey))
+	{
+		return true;
+	}
+	return !bSelected && (iColumn > 0) && mcCodeModel.FindReferences(mpActive->GetFileName(), (int)uiLine, iColumn - 1, pasDest, pszKey);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The text of a file's line (0 based), as its editor has it if it is
+// open, else as it is on the disk; trimmed, tabs as spaces.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::GetFileLine(const char* szFileName, int iLine, CChars* pszDest)
+{
+	Ptr<CIDEEditorTab>	pTab;
+	Ptr<CTextArea>		pEditor;
+	CTextFile			cFile;
+	char*				szPosition;
+	char*				szEnd;
+	int					i;
+
+	pTab = FindTab(szFileName);
+	szPosition = NULL;
+	cFile.Init();
+	if (pTab.IsNotNull())
+	{
+		pEditor = pTab->GetEditor();
+		if ((size)iLine < pEditor->NumLines())
+		{
+			szPosition = &pEditor->GetText()[pEditor->GetLineStart((size)iLine)];
+		}
+	}
+	else if (cFile.Read((char*)szFileName))
+	{
+		szPosition = cFile.Text();
+		for (i = 0; (i < iLine) && szPosition; i++)
+		{
+			szPosition = strchr(szPosition, '\n');
+			szPosition = szPosition ? szPosition + 1 : NULL;
+		}
+	}
+	if (szPosition)
+	{
+		szEnd = strchr(szPosition, '\n');
+		pszDest->AppendSubString(szPosition, szEnd ? szEnd : szPosition + strlen(szPosition));
+		pszDest->Replace('\r', ' ');
+		pszDest->Replace('\t', ' ');
+		pszDest->StripWhitespace(true);
+	}
+	cFile.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The tab whose editor pcEditor is, NULL if none.
+//
+//////////////////////////////////////////////////////////////////////////
+Ptr<CIDEEditorTab> CIDEContent::FindTab(CTextArea* pcEditor)
+{
+	size	i;
+
+	for (i = 0; i < maTabs.Size(); i++)
+	{
+		if (&maTabs.Get(i)->GetEditor() == pcEditor)
+		{
+			return maTabs.Get(i);
+		}
+	}
+	return NULL;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The open documents' tabs.
+//
+//////////////////////////////////////////////////////////////////////////
+size CIDEContent::NumTabs(void) { return maTabs.Size(); }
+Ptr<CIDEEditorTab> CIDEContent::GetTab(size uiIndex) { return maTabs.Get(uiIndex); }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The editor's context menu, as IntelliJ's: Go to Source (Control+B, an
+// #include's file or a definition), Find Usages (Alt+F7), Rename
+// (Shift+F6) and Refactor, Extract Method (not done yet, so always
+// disabled).  What can't
+// be done is disabled as it opens.
+//
+//////////////////////////////////////////////////////////////////////////
+Ptr<CMenuContainer> CIDEContent::CreateEditorMenu(void)
+{
+	Ptr<CMenuContainer>	pRefactor;
+
+	pRefactor = OMalloc<CMenuContainer>(mpWindow, mpTheme);
+	mpExtractMethodItem = pRefactor->AddItem("Extract Method...");
+	mpExtractMethodItem->SetShortcut("Ctrl+Alt+M");
+	mpExtractMethodItem->SetEnabled(false);
+
+	mpEditorMenu = OMalloc<CMenuContainer>(mpWindow, mpTheme);
+	mpGoToSourceItem = mpEditorMenu->AddItem("Go to Source");
+	mpGoToSourceItem->SetShortcut("Ctrl+B");
+	mpFindUsagesItem = mpEditorMenu->AddItem("Find Usages");
+	mpFindUsagesItem->SetShortcut("Alt+F7");
+	mpEditorMenu->AddSeparator();
+	mpRenameItem = mpEditorMenu->AddItem("Rename...");
+	mpRenameItem->SetShortcut("Shift+F6");
+	mpEditorMenu->AddItem("Refactor", NULL, pRefactor);
+	mpEditorMenu->GetItemClickEvent()->Add(this, &CIDEContent::MenuItemClicked);
+	mpEditorMenu->GetOpeningEvent()->Add(this, &CIDEContent::EditorMenuOpening);
+	return mpEditorMenu;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The right button has put the caret under the pointer, or kept the
+// selection it was pressed in.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::EditorMenuOpening(CMenuContainer* pcMenu)
+{
+	SIDERenameTarget	sTarget;
+	CArrayIDELocations	asLocations;
+	CChars				szKey;
+
+	sTarget.Init();
+	mpRenameItem->SetEnabled(mpRename->FindRenameTarget(&sTarget) && sTarget.bRenamable);
+	sTarget.Kill();
+
+	asLocations.Init();
+	szKey.Init();
+	mpFindUsagesItem->SetEnabled(FindSymbolAtCaret(&asLocations, &szKey));
+	mpGoToSourceItem->SetEnabled(mpNavigator->CanGoToSource());
+	szKey.Kill();
+	KillIDELocations(&asLocations);
+}

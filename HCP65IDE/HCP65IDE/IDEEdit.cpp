@@ -18,7 +18,68 @@ You should have received a copy of the GNU Affero General Public License
 along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 ** ------------------------------------------------------------------------ **/
+#include "StandardLib/ClassDefines.h"
 #include "IDEContent.h"
+#include "IDEEdit.h"
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEEdit::Init(CIDEContent* pcContent)
+{
+	PreInit();
+	mpcContent = pcContent;
+	mcUndoLog.Init();
+	mbLogUndoing = false;
+	PostInit();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEEdit::Class(void)
+{
+	U_Pointer(mpcContent);
+	U_Unknown(CUndoLog, mcUndoLog);
+	U_Bool(mbLogUndoing);
+	M_Pointer(mpEditMenu);
+	M_Pointer(mpUndoItem);
+	M_Pointer(mpRedoItem);
+	M_Pointer(mpCutItem);
+	M_Pointer(mpCopyItem);
+	M_Pointer(mpPasteItem);
+	M_Pointer(mpSelectAllItem);
+	M_Pointer(mpUndoAllItem);
+	M_Pointer(mpRedoAllItem);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// An object's memory is freed without its destructor running, so it
+// takes itself off what it listens to.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEEdit::Free(void)
+{
+	if (mpEditMenu.IsNotNull())
+	{
+		mpEditMenu->GetOpeningEvent()->Remove(this);
+	}
+	mcUndoLog.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEEdit::Save(CObjectWriter* pcFile) { return false; }
+bool CIDEEdit::Load(CObjectReader* pcFile) { return false; }
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -30,10 +91,10 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 // What can't be done is disabled as the menu opens.
 //
 //////////////////////////////////////////////////////////////////////////
-Ptr<CMenuContainer> CIDEContent::CreateEditMenu(void)
+Ptr<CMenuContainer> CIDEEdit::CreateEditMenu(void)
 {
-	mpTheme->GetMenuStyle()->SetDimFont(mpDimFont);
-	mpEditMenu = OMalloc<CMenuContainer>(mpWindow, mpTheme);
+	mpcContent->mpTheme->GetMenuStyle()->SetDimFont(mpcContent->mpDimFont);
+	mpEditMenu = OMalloc<CMenuContainer>(mpcContent->mpWindow, mpcContent->mpTheme);
 	mpUndoItem = mpEditMenu->AddItem("Undo");
 	mpUndoItem->SetShortcut("Ctrl+Z");
 	mpRedoItem = mpEditMenu->AddItem("Redo");
@@ -51,7 +112,7 @@ Ptr<CMenuContainer> CIDEContent::CreateEditMenu(void)
 	mpEditMenu->AddSeparator();
 	mpUndoAllItem = mpEditMenu->AddItem("Undo Across Files");
 	mpRedoAllItem = mpEditMenu->AddItem("Redo Across Files");
-	mpEditMenu->GetOpeningEvent()->Add(this, &CIDEContent::EditMenuOpening);
+	mpEditMenu->GetOpeningEvent()->Add(this, &CIDEEdit::EditMenuOpening);
 	return mpEditMenu;
 }
 
@@ -62,15 +123,15 @@ Ptr<CMenuContainer> CIDEContent::CreateEditMenu(void)
 // are edits to go through.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEContent::EditMenuOpening(CMenuContainer* pcMenu)
+void CIDEEdit::EditMenuOpening(CMenuContainer* pcMenu)
 {
 	Ptr<CTextArea>	pEditor;
 	bool			bDocument;
 
-	bDocument = mpActive.IsNotNull();
+	bDocument = mpcContent->mpActive.IsNotNull();
 	if (bDocument)
 	{
-		pEditor = mpActive->GetEditor();
+		pEditor = mpcContent->mpActive->GetEditor();
 	}
 	mpUndoItem->SetEnabled(bDocument && pEditor->CanUndo());
 	mpRedoItem->SetEnabled(bDocument && pEditor->CanRedo());
@@ -88,7 +149,7 @@ void CIDEContent::EditMenuOpening(CMenuContainer* pcMenu)
 // False if pcItem isn't one of Edit's.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEContent::EditMenuItemClicked(CMenuItem* pcItem)
+bool CIDEEdit::EditMenuItemClicked(CMenuItem* pcItem)
 {
 	Ptr<CTextArea>	pEditor;
 
@@ -106,12 +167,12 @@ bool CIDEContent::EditMenuItemClicked(CMenuItem* pcItem)
 	{
 		return false;
 	}
-	if (mpActive.IsNull())
+	if (mpcContent->mpActive.IsNull())
 	{
 		return true;
 	}
 
-	pEditor = mpActive->GetEditor();
+	pEditor = mpcContent->mpActive->GetEditor();
 	if (pcItem == &mpUndoItem)
 	{
 		pEditor->Undo();
@@ -138,28 +199,8 @@ bool CIDEContent::EditMenuItemClicked(CMenuItem* pcItem)
 	}
 
 	//The keys go back to the document.
-	mpWindow->GetFocus()->SetFocus(pEditor);
+	mpcContent->mpWindow->GetFocus()->SetFocus(pEditor);
 	return true;
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// The tab whose editor pcEditor is, NULL if none.
-//
-//////////////////////////////////////////////////////////////////////////
-Ptr<CIDEEditorTab> CIDEContent::FindTab(CTextArea* pcEditor)
-{
-	size	i;
-
-	for (i = 0; i < maTabs.Size(); i++)
-	{
-		if (&maTabs.Get(i)->GetEditor() == pcEditor)
-		{
-			return maTabs.Get(i);
-		}
-	}
-	return NULL;
 }
 
 
@@ -171,7 +212,7 @@ Ptr<CIDEEditorTab> CIDEContent::FindTab(CTextArea* pcEditor)
 // and redoing from the log is told here too; it is the log's own doing.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEContent::EditorUndoChanged(CTextArea* pcEditor, STextAreaUndo* psUndo)
+void CIDEEdit::EditorUndoChanged(CTextArea* pcEditor, STextAreaUndo* psUndo)
 {
 	Ptr<CIDEEditorTab>	pTab;
 	size				uiGroup;
@@ -180,7 +221,7 @@ void CIDEContent::EditorUndoChanged(CTextArea* pcEditor, STextAreaUndo* psUndo)
 	{
 		return;
 	}
-	pTab = FindTab(pcEditor);
+	pTab = mpcContent->FindTab(pcEditor);
 	if (pTab.IsNull())
 	{
 		return;
@@ -213,7 +254,7 @@ void CIDEContent::EditorUndoChanged(CTextArea* pcEditor, STextAreaUndo* psUndo)
 // is shown.  False if there is nothing to undo.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEContent::UndoAcrossFiles(void)
+bool CIDEEdit::UndoAcrossFiles(void)
 {
 	return UndoLogGroup(mcUndoLog.FindUndoGroup(), true);
 }
@@ -225,7 +266,7 @@ bool CIDEContent::UndoAcrossFiles(void)
 // nothing to redo.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEContent::RedoAcrossFiles(void)
+bool CIDEEdit::RedoAcrossFiles(void)
 {
 	return RedoLogGroup(mcUndoLog.FindRedoGroup(), true);
 }
@@ -239,7 +280,7 @@ bool CIDEContent::RedoAcrossFiles(void)
 // undone is shown.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEContent::UndoLogGroup(size uiGroup, bool bShow)
+bool CIDEEdit::UndoLogGroup(size uiGroup, bool bShow)
 {
 	size				i;
 	SUndoLogStep*		psStep;
@@ -256,7 +297,7 @@ bool CIDEContent::UndoLogGroup(size uiGroup, bool bShow)
 		psStep = mcUndoLog.Get(i - 1);
 		if ((psStep->uiGroup == uiGroup) && !mcUndoLog.IsUndone(i - 1))
 		{
-			pTab = FindTab(psStep->szDocument.Text());
+			pTab = mpcContent->FindTab(psStep->szDocument.Text());
 			if (pTab.IsNotNull() && (pTab->GetEditor()->GetUndoId() == psStep->uiIdAfter))
 			{
 				pTab->GetEditor()->UndoTo(psStep->uiIdBefore);
@@ -269,7 +310,7 @@ bool CIDEContent::UndoLogGroup(size uiGroup, bool bShow)
 
 	if (bShow && pShown.IsNotNull())
 	{
-		OpenFile(pShown->GetFileName(), pShown->GetProject());
+		mpcContent->OpenFile(pShown->GetFileName(), pShown->GetProject());
 	}
 	return true;
 }
@@ -281,7 +322,7 @@ bool CIDEContent::UndoLogGroup(size uiGroup, bool bShow)
 // file redone is shown.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEContent::RedoLogGroup(size uiGroup, bool bShow)
+bool CIDEEdit::RedoLogGroup(size uiGroup, bool bShow)
 {
 	size				i;
 	SUndoLogStep*		psStep;
@@ -298,7 +339,7 @@ bool CIDEContent::RedoLogGroup(size uiGroup, bool bShow)
 		psStep = mcUndoLog.Get(i);
 		if ((psStep->uiGroup == uiGroup) && mcUndoLog.IsUndone(i))
 		{
-			pTab = FindTab(psStep->szDocument.Text());
+			pTab = mpcContent->FindTab(psStep->szDocument.Text());
 			if (pTab.IsNotNull() && (pTab->GetEditor()->GetUndoId() == psStep->uiIdBefore))
 			{
 				pTab->GetEditor()->UndoTo(psStep->uiIdAfter);
@@ -311,7 +352,7 @@ bool CIDEContent::RedoLogGroup(size uiGroup, bool bShow)
 
 	if (bShow && pShown.IsNotNull())
 	{
-		OpenFile(pShown->GetFileName(), pShown->GetProject());
+		mpcContent->OpenFile(pShown->GetFileName(), pShown->GetProject());
 	}
 	return true;
 }
@@ -322,9 +363,14 @@ bool CIDEContent::RedoLogGroup(size uiGroup, bool bShow)
 // The edits until EndUndoGroup, of any open files, are one for undo.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEContent::BeginUndoGroup(void) { mcUndoLog.BeginGroup(); }
-Ptr<CMenuContainer> CIDEContent::GetEditMenu(void) { return mpEditMenu; }
-size CIDEContent::NumTabs(void) { return maTabs.Size(); }
-Ptr<CIDEEditorTab> CIDEContent::GetTab(size uiIndex) { return maTabs.Get(uiIndex); }
-void CIDEContent::EndUndoGroup(void) { mcUndoLog.EndGroup(); }
+void CIDEEdit::BeginUndoGroup(void) { mcUndoLog.BeginGroup(); }
+Ptr<CMenuContainer> CIDEEdit::GetEditMenu(void) { return mpEditMenu; }
+void CIDEEdit::EndUndoGroup(void) { mcUndoLog.EndGroup(); }
 
+
+//////////////////////////////////////////////////////////////////////////
+//
+// szFileName has closed: its edits are forgotten.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEEdit::FileClosed(char* szFileName) { mcUndoLog.RemoveDocument(szFileName); }

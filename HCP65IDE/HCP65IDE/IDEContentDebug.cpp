@@ -805,7 +805,7 @@ void CIDEContent::RunDebugScript(void)
 {
 	char*	szCommand;
 	bool	bDone;
-	size	uiTab;
+	CChars	szScriptCommand;
 
 	if (maszDebugScript.NumElements() == 0)
 	{
@@ -818,6 +818,17 @@ void CIDEContent::RunDebugScript(void)
 
 	szCommand = maszDebugScript.GetText(0);
 	bDone = false;
+
+	//The IDE's own commands (not the debugger's) are the script's; they're done at once, and may show a dialog, so
+	//they're taken off the list first.
+	if (mpScript->IsCommand(szCommand))
+	{
+		szScriptCommand.Init(szCommand);
+		maszDebugScript.Remove((size)0);
+		mpScript->RunCommand(szScriptCommand.Text());
+		szScriptCommand.Kill();
+		return;
+	}
 	if (strncmp(szCommand, "bp:", 3) == 0)
 	{
 		mcDebugger.AddBreakpoint((uint32)strtoul(&szCommand[3], NULL, 16));
@@ -836,110 +847,6 @@ void CIDEContent::RunDebugScript(void)
 			miDebugScriptWait = 0;
 			bDone = true;
 		}
-	}
-	else if (strncmp(szCommand, "goto:", 5) == 0)
-	{
-		//Navigate's Go to dialog shown on that tab, from a tick as it must be.
-		//goto:<tab>:<pattern> types the pattern too.
-		uiTab = (size)atoi(&szCommand[5]);
-		if (strchr(&szCommand[5], ':') != NULL)
-		{
-			mszGoToPattern.Set(strchr(&szCommand[5], ':') + 1);
-		}
-		maszDebugScript.Remove((size)0);
-		ShowGoTo(uiTab);
-		return;
-	}
-	else if (strcmp(szCommand, "rename") == 0)
-	{
-		//Rename's dialog for what is at the caret, from a tick as it must be.
-		maszDebugScript.Remove((size)0);
-		ShowRename();
-		return;
-	}
-	else if (strcmp(szCommand, "closetab") == 0)
-	{
-		//The active document closed, as its tab's cross does.
-		if (GetActiveTab().IsNotNull())
-		{
-			mpDock->Close(GetActiveTab()->GetDockPane());
-		}
-		bDone = true;
-	}
-	else if (strcmp(szCommand, "closeall") == 0)
-	{
-		//Window, Close All Documents.
-		CloseAllFiles();
-		bDone = true;
-	}
-	else if (strcmp(szCommand, "exit") == 0)
-	{
-		//File, Exit.
-		if (RequestExit())
-		{
-			mpWindow->Stop();
-		}
-		bDone = true;
-	}
-	else if (strcmp(szCommand, "gotosource") == 0)
-	{
-		//Control+B.
-		GoToSource();
-		bDone = true;
-	}
-	else if (strcmp(szCommand, "switchfile") == 0)
-	{
-		//Alt+O.
-		SwitchHeaderSource();
-		bDone = true;
-	}
-	else if (strcmp(szCommand, "printtabs") == 0)
-	{
-		//Each open file, '>' before the active one, '*' after one with changes.
-		size	i;
-
-		printf("Tabs:");
-		for (i = 0; i < maTabs.Size(); i++)
-		{
-			printf(" %s%s%s", (maTabs.Get(i) == mpActive) ? ">" : "", strrchr(maTabs.Get(i)->GetFileName(), '/') + 1, maTabs.Get(i)->IsModified() ? "*" : "");
-		}
-		printf("\n");
-		fflush(stdout);
-		bDone = true;
-	}
-	else if (strcmp(szCommand, "tabmenu") == 0)
-	{
-		//The active document tab's menu opened under the tab, with Close Multiple's sub menu.
-		if (GetActiveTab().IsNotNull() && GetActiveTab()->GetDockPane()->GetGroup().IsNotNull())
-		{
-			Ptr<CDockGroup>		pGroup;
-			Ptr<CTabComponent>	pTab;
-			Ptr<CMenuContainer>	pMenu;
-			size				i;
-
-			pGroup = GetActiveTab()->GetDockPane()->GetGroup();
-			pTab = pGroup->GetTab(GetActiveTab()->GetDockPane());
-			pGroup->OpenMenu(GetActiveTab()->GetDockPane(), SInt32Vec2(pTab->GetPosition().x + 10, pTab->GetPosition().y + pTab->GetActualSize().y));
-			pMenu = pGroup->GetMenu(GetActiveTab()->GetDockPane());
-			for (i = 0; i < pMenu->NumItems(); i++)
-			{
-				if (pMenu->GetItem(i)->HasSubMenu())
-				{
-					mpWindow->Layout();
-					pMenu->OpenSubMenu(pMenu->GetItemRow(pMenu->GetItem(i)), false);
-				}
-			}
-		}
-		bDone = true;
-	}
-	else if (strcmp(szCommand, "contextmenu") == 0)
-	{
-		//The active editor's context menu opened at its caret, as the Menu key does.
-		if (GetActiveTab().IsNotNull())
-		{
-			GetActiveTab()->GetEditor()->OpenContextMenu(GetActiveTab()->GetEditor()->GetContextMenuPosition());
-		}
-		bDone = true;
 	}
 	else if (strcmp(szCommand, "buildtab") == 0)
 	{

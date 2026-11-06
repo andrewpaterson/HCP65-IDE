@@ -244,14 +244,16 @@
     <ClCompile Include="IDEContentDiff.cpp" />
     <ClCompile Include="IDEDiffTab.cpp" />
     <ClCompile Include="IDEContentClaude.cpp" />
-    <ClCompile Include="IDEContentEdit.cpp" />
-    <ClCompile Include="IDEContentGoTo.cpp" />
-    <ClCompile Include="IDEContentRename.cpp" />
-    <ClCompile Include="IDEContentUsages.cpp" />
-    <ClCompile Include="IDEContentClose.cpp" />
-    <ClCompile Include="IDEContentRename.cpp" />
-    <ClCompile Include="IDEContentUsages.cpp" />
-    <ClCompile Include="IDEContentClose.cpp" />
+    <ClCompile Include="IDEEdit.cpp" />
+    <ClCompile Include="IDENavigator.cpp" />
+    <ClCompile Include="IDERename.cpp" />
+    <ClCompile Include="IDEUsages.cpp" />
+    <ClCompile Include="IDECloseGuard.cpp" />
+    <ClCompile Include="IDEScript.cpp" />
+    <ClCompile Include="IDERename.cpp" />
+    <ClCompile Include="IDEUsages.cpp" />
+    <ClCompile Include="IDECloseGuard.cpp" />
+    <ClCompile Include="IDEScript.cpp" />
     <ClCompile Include="IDEGit.cpp" />
     <ClCompile Include="IDEDebugger.cpp" />
     <ClCompile Include="IDEDebugView.cpp" />
@@ -267,6 +269,12 @@
   <ItemGroup>
     <ClInclude Include="IDECodeModel.h" />
     <ClInclude Include="IDEContent.h" />
+    <ClInclude Include="IDEScript.h" />
+    <ClInclude Include="IDECloseGuard.h" />
+    <ClInclude Include="IDEEdit.h" />
+    <ClInclude Include="IDENavigator.h" />
+    <ClInclude Include="IDERename.h" />
+    <ClInclude Include="IDEUsages.h" />
     <ClInclude Include="IDEDebugger.h" />
     <ClInclude Include="IDEDebugView.h" />
     <ClInclude Include="IDEEditorTab.h" />

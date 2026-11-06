@@ -20,7 +20,9 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 ** ------------------------------------------------------------------------ **/
 #include "BaseLib/StringHelper.h"
 #include "SupportLib/PNGWriter.h"
+#include "StandardLib/ClassDefines.h"
 #include "IDEContent.h"
+#include "IDERename.h"
 
 
 //A place Rename changes: the file (its index in the rename's files) and where the old name starts in its text.
@@ -50,60 +52,49 @@ static const char* gaszIDEKeywords[] =
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The editor's context menu, as IntelliJ's: Go to Source (Control+B, an
-// #include's file or a definition), Find Usages (Alt+F7), Rename
-// (Shift+F6) and Refactor, Extract Method (not done yet, so always
-// disabled).  What can't
-// be done is disabled as it opens.
 //
 //////////////////////////////////////////////////////////////////////////
-Ptr<CMenuContainer> CIDEContent::CreateEditorMenu(void)
+void CIDERename::Init(CIDEContent* pcContent)
 {
-	Ptr<CMenuContainer>	pRefactor;
-
-	pRefactor = OMalloc<CMenuContainer>(mpWindow, mpTheme);
-	mpExtractMethodItem = pRefactor->AddItem("Extract Method...");
-	mpExtractMethodItem->SetShortcut("Ctrl+Alt+M");
-	mpExtractMethodItem->SetEnabled(false);
-
-	mpEditorMenu = OMalloc<CMenuContainer>(mpWindow, mpTheme);
-	mpGoToSourceItem = mpEditorMenu->AddItem("Go to Source");
-	mpGoToSourceItem->SetShortcut("Ctrl+B");
-	mpFindUsagesItem = mpEditorMenu->AddItem("Find Usages");
-	mpFindUsagesItem->SetShortcut("Alt+F7");
-	mpEditorMenu->AddSeparator();
-	mpRenameItem = mpEditorMenu->AddItem("Rename...");
-	mpRenameItem->SetShortcut("Shift+F6");
-	mpEditorMenu->AddItem("Refactor", NULL, pRefactor);
-	mpEditorMenu->GetItemClickEvent()->Add(this, &CIDEContent::MenuItemClicked);
-	mpEditorMenu->GetOpeningEvent()->Add(this, &CIDEContent::EditorMenuOpening);
-	return mpEditorMenu;
+	PreInit();
+	mpcContent = pcContent;
+	msRenameTarget.Init();
+	PostInit();
 }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The right button has put the caret under the pointer, or kept the
-// selection it was pressed in.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEContent::EditorMenuOpening(CMenuContainer* pcMenu)
+void CIDERename::Class(void)
 {
-	SIDERenameTarget	sTarget;
-	CArrayIDELocations	asLocations;
-	CChars				szKey;
-
-	sTarget.Init();
-	mpRenameItem->SetEnabled(FindRenameTarget(&sTarget) && sTarget.bRenamable);
-	sTarget.Kill();
-
-	asLocations.Init();
-	szKey.Init();
-	mpFindUsagesItem->SetEnabled(FindSymbolAtCaret(&asLocations, &szKey));
-	mpGoToSourceItem->SetEnabled(CanGoToSource());
-	szKey.Kill();
-	KillIDELocations(&asLocations);
+	U_Pointer(mpcContent);
+	M_Pointer(mpRenameDialog);
+	M_Pointer(mpRenameField);
+	M_Pointer(mpRenameError);
+	U_Data(SIDERenameTarget, msRenameTarget);
 }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// An object's memory is freed without its destructor running, so it
+// takes itself off what it listens to.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDERename::Free(void)
+{
+	msRenameTarget.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDERename::Save(CObjectWriter* pcFile) { return false; }
+bool CIDERename::Load(CObjectReader* pcFile) { return false; }
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -113,7 +104,7 @@ void CIDEContent::EditorMenuOpening(CMenuContainer* pcMenu)
 // False if no symbol is named there.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEContent::FindRenameTarget(SIDERenameTarget* psDest)
+bool CIDERename::FindRenameTarget(SIDERenameTarget* psDest)
 {
 	Ptr<CTextArea>	pEditor;
 	size			uiStart;
@@ -126,15 +117,15 @@ bool CIDEContent::FindRenameTarget(SIDERenameTarget* psDest)
 	SIDELocation*	psLocation;
 	size			i;
 
-	if (mpActive.IsNull())
+	if (mpcContent->mpActive.IsNull())
 	{
 		return false;
 	}
 
 	//What can be edited: the solutions' files.
-	FindGoToFiles();
+	mpcContent->mpNavigator->FindGoToFiles();
 
-	pEditor = mpActive->GetEditor();
+	pEditor = mpcContent->mpActive->GetEditor();
 	bSelected = pEditor->GetSelection(&uiStart, &uiEnd);
 	if (!bSelected)
 	{
@@ -143,10 +134,10 @@ bool CIDEContent::FindRenameTarget(SIDERenameTarget* psDest)
 	}
 	uiLine = pEditor->FindLine(uiStart);
 	iStartColumn = (int)(uiStart - pEditor->GetLineStart(uiLine));
-	if (!mcCodeModel.FindRenameTarget(mpActive->GetFileName(), (int)uiLine, iStartColumn, &mcGoToFileSet, psDest))
+	if (!mpcContent->mcCodeModel.FindRenameTarget(mpcContent->mpActive->GetFileName(), (int)uiLine, iStartColumn, mpcContent->mpNavigator->GetSolutionFileSet(), psDest))
 	{
 		//The caret just after a name, as after it's typed, names it too.
-		if (bSelected || (iStartColumn == 0) || !mcCodeModel.FindRenameTarget(mpActive->GetFileName(), (int)uiLine, iStartColumn - 1, &mcGoToFileSet, psDest))
+		if (bSelected || (iStartColumn == 0) || !mpcContent->mcCodeModel.FindRenameTarget(mpcContent->mpActive->GetFileName(), (int)uiLine, iStartColumn - 1, mpcContent->mpNavigator->GetSolutionFileSet(), psDest))
 		{
 			return false;
 		}
@@ -164,7 +155,7 @@ bool CIDEContent::FindRenameTarget(SIDERenameTarget* psDest)
 		for (i = 0; i < psDest->asLocations.NumElements(); i++)
 		{
 			psLocation = psDest->asLocations.Get(i);
-			if ((psLocation->iLine == (int32)uiLine) && psLocation->szFileName.Equals(mpActive->GetFileName()) &&
+			if ((psLocation->iLine == (int32)uiLine) && psLocation->szFileName.Equals(mpcContent->mpActive->GetFileName()) &&
 				(psLocation->iColumn <= iStartColumn) && (iEndColumn <= psLocation->iColumn + psLocation->iLength))
 			{
 				bInName = true;
@@ -187,10 +178,19 @@ bool CIDEContent::FindRenameTarget(SIDERenameTarget* psDest)
 // input (Shift+F6 or a menu click) that asks for it.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEContent::QueueRename(void)
+void CIDERename::QueueRename(void)
 {
-	mbQueuedRename = true;
-	mpWindow->RequestTick(0);
+	mpcContent->mpWindow->Post(this, &CIDERename::ShowQueuedRename);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDERename::ShowQueuedRename(void)
+{
+	ShowRename();
 }
 
 
@@ -201,7 +201,7 @@ void CIDEContent::QueueRename(void)
 // nothing was renamed.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEContent::ShowRename(void)
+bool CIDERename::ShowRename(void)
 {
 	SIDERenameTarget	sTarget;
 	CChars				szPrompt;
@@ -211,7 +211,7 @@ bool CIDEContent::ShowRename(void)
 	sTarget.Init();
 	if (!FindRenameTarget(&sTarget))
 	{
-		ShowReferencesStatus("Nothing to rename at the caret.");
+		mpcContent->ShowReferencesStatus("Nothing to rename at the caret.");
 		sTarget.Kill();
 		return false;
 	}
@@ -222,7 +222,7 @@ bool CIDEContent::ShowRename(void)
 		szPrompt.Append(": ");
 		szPrompt.Append(sTarget.szWhyNot);
 		szPrompt.Append(".");
-		ShowReferencesStatus(szPrompt.Text());
+		mpcContent->ShowReferencesStatus(szPrompt.Text());
 		szPrompt.Kill();
 		sTarget.Kill();
 		return false;
@@ -236,21 +236,17 @@ bool CIDEContent::ShowRename(void)
 	szPrompt.Init("Rename '");
 	szPrompt.Append(sTarget.szName);
 	szPrompt.Append("' to:");
-	mpRenameDialog = OMalloc<CDialog>(mpWindow, &msDialogLook, "Rename");
+	mpRenameDialog = OMalloc<CDialog>(mpcContent->mpWindow, &mpcContent->msDialogLook, "Rename");
 	mpRenameField = mpRenameDialog->AddTextField(szPrompt.Text(), sTarget.szName.Text());
 	mpRenameField->SelectAll();
-	mpRenameError = OMalloc<CLabel>(mpRenameDialog->GetWindow(), mpDimFont, "");
+	mpRenameError = OMalloc<CLabel>(mpRenameDialog->GetWindow(), mpcContent->mpDimFont, "");
 	mpRenameDialog->AddEditor("", mpRenameError);
 	mpRenameDialog->SetOKCaption("Refactor");
-	mpRenameDialog->SetApprover(this, &CIDEContent::ApproveRename);
+	mpRenameDialog->SetApprover(this, &CIDERename::ApproveRename);
 	szPrompt.Kill();
 
 	bResult = false;
-	miGoToTicks = 0;
-	if (getenv("HCP65_IDE_GOTO_SNAPSHOT") != NULL)
-	{
-		mpRenameDialog->SetTicker(this, &CIDEContent::RenameSnapshotTick);
-	}
+	mpcContent->mpScript->WatchDialog(mpRenameDialog);
 	if (mpRenameDialog->Show(480))
 	{
 		szNewName.Init(mpRenameField->GetText());
@@ -258,7 +254,7 @@ bool CIDEContent::ShowRename(void)
 		szNewName.Kill();
 	}
 	mpRenameDialog->ClearApprover();
-	mpRenameDialog->ClearTicker();
+	mpcContent->mpScript->StopWatchingDialog();
 	mpRenameField = NULL;
 	mpRenameError = NULL;
 	mpRenameDialog = NULL;
@@ -269,35 +265,12 @@ bool CIDEContent::ShowRename(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// For checking: the shown dialog is saved to HCP65_IDE_GOTO_SNAPSHOT's
-// PNG once it has been drawn, then cancelled.
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDEContent::RenameSnapshotTick(void)
-{
-	Ptr<CWindow>	pWindow;
-
-	pWindow = mpRenameDialog->GetWindow();
-	miGoToTicks++;
-	if (miGoToTicks < 5)
-	{
-		pWindow->Invalidate();
-		pWindow->RequestTick(0);
-		return;
-	}
-	SavePNG(pWindow->GetCanvas()->GetImageOrNull(), getenv("HCP65_IDE_GOTO_SNAPSHOT"));
-	mpRenameDialog->Close("Cancel");
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
 // The new name must be a C++ identifier, not a keyword, not the old name
 // and not a name the symbol's scope already has.  The dialog says why
 // not.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEContent::ApproveRename(void)
+bool CIDERename::ApproveRename(void)
 {
 	char*		szName;
 	size		i;
@@ -333,7 +306,7 @@ bool CIDEContent::ApproveRename(void)
 			szNewKey.AppendSubString(msRenameTarget.szKey.Text(), 0, uiNameStart);
 			szNewKey.Append(szName);
 			szNewKey.Append(&msRenameTarget.szKey.Text()[uiNameStart + msRenameTarget.szName.Length()]);
-			if (mcCodeModel.HasSymbol(szNewKey.Text()))
+			if (mpcContent->mcCodeModel.HasSymbol(szNewKey.Text()))
 			{
 				szProblem = "Something here already has that name.";
 			}
@@ -355,7 +328,7 @@ bool CIDEContent::ApproveRename(void)
 // the file was edited since it was indexed.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEContent::RenameSymbol(SIDERenameTarget* psTarget, const char* szNewName)
+bool CIDERename::RenameSymbol(SIDERenameTarget* psTarget, const char* szNewName)
 {
 	CArrayChars			aszFiles;
 	CArrayIDEPlaces		asPlaces;
@@ -392,10 +365,10 @@ bool CIDEContent::RenameSymbol(SIDERenameTarget* psTarget, const char* szNewName
 		}
 		if (uiFile == aszFiles.NumElements())
 		{
-			pTab = FindTab(psLocation->szFileName.Text());
+			pTab = mpcContent->FindTab(psLocation->szFileName.Text());
 			if (pTab.IsNull())
 			{
-				pTab = OpenFileTab(psLocation->szFileName.Text(), mcCodeModel.FindProjectOfFile(psLocation->szFileName.Text()), false);
+				pTab = mpcContent->OpenFileTab(psLocation->szFileName.Text(), mpcContent->mcCodeModel.FindProjectOfFile(psLocation->szFileName.Text()), false);
 			}
 			if (pTab.IsNull())
 			{
@@ -406,7 +379,7 @@ bool CIDEContent::RenameSymbol(SIDERenameTarget* psTarget, const char* szNewName
 		}
 
 		//The old name must still be there; a destructor's place may include its ~.
-		pEditor = FindTab(aszFiles.GetText(uiFile))->GetEditor();
+		pEditor = mpcContent->FindTab(aszFiles.GetText(uiFile))->GetEditor();
 		if ((size)psLocation->iLine >= pEditor->NumLines())
 		{
 			bChanged = false;
@@ -435,14 +408,14 @@ bool CIDEContent::RenameSymbol(SIDERenameTarget* psTarget, const char* szNewName
 		szMessage.Init("Rename stopped: ");
 		szMessage.Append(psLocation->szFileName.Text());
 		szMessage.Append(" has changed since it was indexed.  Save it and try again once it has been indexed.");
-		ShowReferencesStatus(szMessage.Text());
+		mpcContent->ShowReferencesStatus(szMessage.Text());
 		szMessage.Kill();
 	}
 	else
 	{
 		//One edit per file, its places in order, the same place once.
 		uiPlaces = 0;
-		BeginUndoGroup();
+		mpcContent->mpEdit->BeginUndoGroup();
 		for (uiFile = 0; uiFile < aszFiles.NumElements(); uiFile++)
 		{
 			auiStarts.Init();
@@ -472,14 +445,14 @@ bool CIDEContent::RenameSymbol(SIDERenameTarget* psTarget, const char* szNewName
 			{
 				*auiEnds.Add() = *auiStarts.Get(i) + psTarget->szName.Length();
 			}
-			if (FindTab(aszFiles.GetText(uiFile))->GetEditor()->ReplaceRanges(auiStarts.GetData(), auiEnds.GetData(), auiStarts.NumElements(), szNewName))
+			if (mpcContent->FindTab(aszFiles.GetText(uiFile))->GetEditor()->ReplaceRanges(auiStarts.GetData(), auiEnds.GetData(), auiStarts.NumElements(), szNewName))
 			{
 				uiPlaces += auiStarts.NumElements();
 			}
 			auiEnds.Kill();
 			auiStarts.Kill();
 		}
-		EndUndoGroup();
+		mpcContent->mpEdit->EndUndoGroup();
 
 		szMessage.Init("Renamed ");
 		szMessage.Append(psTarget->szName);
@@ -490,7 +463,7 @@ bool CIDEContent::RenameSymbol(SIDERenameTarget* psTarget, const char* szNewName
 		szMessage.Append(uiPlaces == 1 ? " place in " : " places in ");
 		szMessage.Append((int)aszFiles.NumElements());
 		szMessage.Append(aszFiles.NumElements() == 1 ? " file." : " files.");
-		ShowReferencesStatus(szMessage.Text());
+		mpcContent->ShowReferencesStatus(szMessage.Text());
 		szMessage.Kill();
 	}
 

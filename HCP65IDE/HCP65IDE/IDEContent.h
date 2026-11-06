@@ -55,6 +55,12 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDEDebugView.h"
 #include "IDEIcons.h"
 #include "WindowLib/GoToDialog.h"
+#include "IDEScript.h"
+#include "IDECloseGuard.h"
+#include "IDEEdit.h"
+#include "IDENavigator.h"
+#include "IDERename.h"
+#include "IDEUsages.h"
 #include "SolutionExplorer.h"
 
 
@@ -67,14 +73,6 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define IDE_USAGES_ID			"FindUsages"
 
 
-//What is done once the files with changes have been saved, or their changes dropped (CIDEContent::AskToSave).
-enum EIDEAfterSave
-{
-	IAS_ClosePanes,		//The documents asked to close.
-	IAS_CloseSolution,	//muiAfterSolution closed.
-	IAS_OpenSolution,	//mszAfterFile opened instead.
-	IAS_Exit,
-};
 #define IDE_DOCUMENT_PREFIX		"Document:"
 #define IDE_DIFF_PREFIX			"Diff:"
 #define IDE_LAYOUT_EXTENSION	".layout.user"
@@ -109,8 +107,14 @@ enum EIDEAfterSave
 //The Claude tab under the editor sends requests, such as refactorings, to Claude Code run headless in the solution's
 //folder (see CClaudeCommand), saying where the caret and selection are.  Files are saved before a request, and the
 //open files Claude changes are read again as it changes them.
-class CIDEContent : public CObject, public CDockManagerListener, public CGoToSearcher
+class CIDEContent : public CObject, public CDockManagerListener
 {
+friend class CIDEScript;
+friend class CIDECloseGuard;
+friend class CIDEEdit;
+friend class CIDENavigator;
+friend class CIDERename;
+friend class CIDEUsages;
 CONSTRUCTABLE(CIDEContent);
 DESTRUCTABLE(CIDEContent);
 protected:
@@ -138,18 +142,6 @@ protected:
 	Ptr<CMenuItem>				mpCompareRevisionItem;	//Git, Compare with Revision.
 	Ptr<CMenuItem>				mpCompareFileItem;	//File, Compare with File.
 	Ptr<CMenuItem>				mpExitItem;			//File, Exit.
-	Ptr<CMenuItem>				mpGoToClassItem;	//Navigate, Class, File and Symbol.
-	Ptr<CMenuItem>				mpGoToFileItem;
-	Ptr<CMenuItem>				mpGoToSymbolItem;
-	Ptr<CMenuContainer>			mpEditMenu;
-	Ptr<CMenuItem>				mpUndoItem;			//Edit, as IntelliJ's: Undo, Redo, Cut, Copy, Paste and Select All of the
-	Ptr<CMenuItem>				mpRedoItem;			//active document,
-	Ptr<CMenuItem>				mpCutItem;
-	Ptr<CMenuItem>				mpCopyItem;
-	Ptr<CMenuItem>				mpPasteItem;
-	Ptr<CMenuItem>				mpSelectAllItem;
-	Ptr<CMenuItem>				mpUndoAllItem;		//and Undo and Redo Across Files, in the order the edits were made.
-	Ptr<CMenuItem>				mpRedoAllItem;
 	Ptr<CMenuItem>				mpExplorerItem;		//View's tool windows.
 	Ptr<CMenuItem>				mpReferencesItem;
 	Ptr<CMenuItem>				mpBuildItem;
@@ -174,39 +166,20 @@ protected:
 	CArray<CImageCel>			maFileIcons;		//By EIDEFileType.
 	CArray<CImageCel>			maSymbolIcons;		//By EIDESymbolType.
 
-	Ptr<CGoToDialog>			mpGoTo;				//While Go to Class, File or Symbol is shown.
 	Ptr<CFont>					mpMatchFont;		//What Go to's pattern matched.
-	CChars						mszGoToPattern;		//What was typed in Go to last.
-	CArrayChars					maszGoToFiles;		//The solutions' files while Go to is shown,
-	CArrayInt					maiGoToProjects;	//their projects,
-	CMapStringInt				mcGoToFileSet;		//and their indices by path.
-	int32						miGoToFileIcon;		//The dialog's first file icon, by EIDEFileType from it.
-	int32						maiGoToSymbolIcons[IST_Count];
-	int32						miGoToTicks;		//For checking: ticks the dialog has been shown for.
-	int32						miQueuedGoTo;		//The Go to tab asked for, shown at the next tick, -1 for none.
 
 	Ptr<CMenuContainer>			mpEditorMenu;		//The editors' context menu: Find Usages, Rename and Refactor.
 	Ptr<CMenuItem>				mpFindUsagesItem;
 	Ptr<CMenuItem>				mpGoToSourceItem;
-	Ptr<CTreeContainer>			mpUsages;			//What Find Usages found: projects, classes, lines.
-	Ptr<CDockPane>				mpUsagesTool;
-	CArrayIDELocations			masUsages;			//Each line's place, by its node's data less one.
+	Ptr<CIDEScript>				mpScript;			//How the IDE is driven to check it.
 
-	int32						miAfterSave;		//EIDEAfterSave asked to save before, -1 for nothing.
-	bool						mbAskToSave;		//Asked for, at the next tick.
-	bool						mbCloseConfirmed;	//Saved or dropped: closing doesn't ask (for good while exiting).
-	CArrayChars					maszSaveFiles;		//The files with changes asked about.
-	CArrayChars					maszCloseIDs;		//The panes to close then (IAS_ClosePanes).
-	size						muiAfterSolution;
-	CChars						mszAfterFile;
-	Ptr<CDialog>				mpSaveDialog;		//While it's shown.
+	Ptr<CIDECloseGuard>			mpCloseGuard;		//Asks to save files with changes before they close.
+	Ptr<CIDEEdit>				mpEdit;				//The Edit menu and undo across files.
+	Ptr<CIDENavigator>			mpNavigator;		//Go to, Go to Source and Alt+O.
+	Ptr<CIDERename>				mpRename;			//Rename.
+	Ptr<CIDEUsages>				mpUsages;			//Find Usages.
 	Ptr<CMenuItem>				mpRenameItem;
 	Ptr<CMenuItem>				mpExtractMethodItem;
-	Ptr<CDialog>				mpRenameDialog;		//While Rename is shown.
-	Ptr<CTextField>				mpRenameField;
-	Ptr<CLabel>					mpRenameError;
-	bool						mbQueuedRename;		//Rename asked for, shown at the next tick.
-	SIDERenameTarget			msRenameTarget;		//What Rename's dialog is renaming: its key and name.
 	Ptr<CSolutionExplorer>		mpExplorer;
 	Ptr<CMenuContainer>			mpExplorerMenu;		//A solution's: Set as Startup Solution and Remove.
 	Ptr<CMenuItem>				mpStartupItem;
@@ -227,7 +200,7 @@ protected:
 	CBuildWorkspace				mcWorkspace;		//The solutions open, one the startup solution.
 	CBuildRecentFiles			mcRecent;			//The solutions and workspaces opened last.
 	CChars						mszRecentFile;		//Where they are kept, empty if they aren't.
-	CChars						mszQueuedOpen;		//A recent one chosen, opened at the next tick (after its menu's click).
+	CChars						mszQueuedOpen;		//A recent one chosen, opened at the next tick (OpenQueuedSolution).
 	CIDECodeModel				mcCodeModel;		//Uses mcWorkspace; initialised when a solution is opened.
 
 	CGitRepositories			mcGit;				//The repositories the solution's files are in.
@@ -249,8 +222,6 @@ protected:
 	size						muiClaudeReloaded;	//How many of the files Claude changed have been looked at.
 	size						muiClaudeTools;		//How many tools Claude has used on the request.
 
-	CUndoLog					mcUndoLog;			//Every open file's edits in the order they were made, by file name.
-	bool						mbLogUndoing;		//The undo log is undoing or redoing: the editors' undo events are its own.
 
 	CIDEDebugger				mcDebugger;
 	CChars						mszStoppedFile;		//The source file the debugger is stopped in, and its line
@@ -408,49 +379,15 @@ public:
 	CClaudeCommand*		GetClaude(void);
 	Ptr<CIDEClaudePane>	GetClaudePane(void);
 
-	void				GoToSearch(size uiTab, CNameMatcher* pcMatcher, CGoToItems* pcDest) override;
-	bool				ShowGoTo(size uiTab);
-	void				QueueGoTo(size uiTab);
+	void				OpenQueuedSolution(void);
 	bool				ShowActiveFileInExplorer(void);
 	Ptr<CMenuContainer>	CreateEditorMenu(void);
-	void				CreateUsagesPane(SDockPlace* psPlace);
 	bool				FindSymbolAtCaret(CArrayIDELocations* pasDest, CChars* pszKey);
 	void				GetFileLine(const char* szFileName, int iLine, CChars* pszDest);
-	bool				FindUsages(void);
-	bool				FindUnsavedFiles(size uiSolution, CArrayChars* paszDest);
-	void				QueueAskToSave(EIDEAfterSave eAfter);
-	bool				RequestExit(void);
-	bool				ApproveLettingGo(size uiSolution, const char* szFile);
-	void				AskToSave(void);
-	void				SaveAnswerTick(void);
-	void				UsageActivated(void);
-	Ptr<CTreeContainer>	GetUsagesTree(void);
+	Ptr<CIDEScript>		GetScript(void);
 	void				EditorMenuOpening(CMenuContainer* pcMenu);
-	bool				FindRenameTarget(SIDERenameTarget* psDest);
-	void				QueueRename(void);
-	bool				ShowRename(void);
-	bool				ApproveRename(void);
-	void				RenameSnapshotTick(void);
-	bool				RenameSymbol(SIDERenameTarget* psTarget, const char* szNewName);
-	bool				CreateGoTo(size uiTab);
-	bool				OpenGoToChoice(void);
-	Ptr<CGoToDialog>	GetGoTo(void);
-	void				FindGoToFiles(void);
-	bool				GetIncludeAtCaret(CChars* pszName, bool* pbSystem);
-	bool				FindIncludedFile(CChars* pszDest);
-	bool				GoToSource(void);
-	bool				CanGoToSource(void);
-	bool				SwitchHeaderSource(void);
-	void				GoToSnapshotTick(void);
-	bool				UndoAcrossFiles(void);
-	bool				RedoAcrossFiles(void);
-	void				BeginUndoGroup(void);
-	void				EndUndoGroup(void);
-	Ptr<CMenuContainer>	GetEditMenu(void);
 	size				NumTabs(void);
 	Ptr<CIDEEditorTab>	GetTab(size uiIndex);
-	void				EditMenuOpening(CMenuContainer* pcMenu);
-	void				EditorUndoChanged(CTextArea* pcEditor, STextAreaUndo* psUndo);
 
 protected:
 	Ptr<CMenuBar>		CreateMenuBar(void);
@@ -521,17 +458,10 @@ protected:
 
 	Ptr<CIDEEditorTab>	FindClaudeTab(const char* szFileName);
 
-	Ptr<CMenuContainer>	CreateEditMenu(void);
-	Ptr<CMenuContainer>	CreateNavigateMenu(void);
-	bool				EditMenuItemClicked(CMenuItem* pcItem);
 	Ptr<CIDEEditorTab>	FindTab(CTextArea* pcEditor);
-	bool				UndoLogGroup(size uiGroup, bool bShow);
-	bool				RedoLogGroup(size uiGroup, bool bShow);
 };
 
 
-bool IsIDEIdentifier(const char* szName);
-size FindIDENameInKey(const char* szKey, const char* szName);
 Ptr<CFont> GenerateIDEFont(const char* szFontFilename, const char* szName, float32 fPixelSize, EColourOrder eOrder, EFontTurn eTurn = FT_Upright, float32 fWeight = 0.0f);
 ARGB32     GetHighlightColour(ECPPHighlight eKind);
 bool       SameIDEText(const char* szText1, const char* szText2);

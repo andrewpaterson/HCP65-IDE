@@ -36,22 +36,25 @@
     <ClCompile Include="IDEDiffTab.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="IDEContentEdit.cpp">
+    <ClCompile Include="IDEEdit.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="IDEContentGoTo.cpp">
+    <ClCompile Include="IDENavigator.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="IDEContentRename.cpp">
+    <ClCompile Include="IDERename.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="IDEContentUsages.cpp">
+    <ClCompile Include="IDEUsages.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="IDEContentClose.cpp">
+    <ClCompile Include="IDECloseGuard.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="IDEContentRename.cpp">
+    <ClCompile Include="IDEScript.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="IDERename.cpp">
       <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="IDEClaudePane.cpp">
@@ -93,6 +96,24 @@
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDEContent.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDEScript.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDECloseGuard.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDEEdit.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDENavigator.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDERename.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDEUsages.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDEDebugger.h">

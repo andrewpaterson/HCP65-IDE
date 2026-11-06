@@ -22,7 +22,9 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/FileUtil.h"
 #include "BaseLib/TextFile.h"
 #include "BaseLib/StringHelper.h"
+#include "StandardLib/ClassDefines.h"
 #include "IDEContent.h"
+#include "IDEUsages.h"
 
 
 //A usage, where Find Usages puts it: its project and class (or file), for sorting the tree.
@@ -71,104 +73,71 @@ static int CompareIDEUsages(const void* pv1, const void* pv2)
 
 //////////////////////////////////////////////////////////////////////////
 //
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEUsages::Init(CIDEContent* pcContent)
+{
+	PreInit();
+	mpcContent = pcContent;
+	masUsages.Init();
+	PostInit();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEUsages::Class(void)
+{
+	U_Pointer(mpcContent);
+	M_Pointer(mpUsages);
+	M_Pointer(mpUsagesTool);
+	U_Unknown(CArrayIDELocations, masUsages);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// An object's memory is freed without its destructor running, so it
+// takes itself off what it listens to.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEUsages::Free(void)
+{
+	if (mpUsages.IsNotNull())
+	{
+		mpUsages->GetActivationEvent()->Remove(this);
+	}
+	KillIDELocations(&masUsages);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEUsages::Save(CObjectWriter* pcFile) { return false; }
+bool CIDEUsages::Load(CObjectReader* pcFile) { return false; }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // The Find Usages tool window: a tree beside Build, as IntelliJ's Find
 // window.  A line's node opens its place.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEContent::CreateUsagesPane(SDockPlace* psPlace)
+void CIDEUsages::CreatePane(SDockPlace* psPlace)
 {
 	Ptr<CScrollPane>	pPane;
 
-	mpUsages = OMalloc<CTreeContainer>(mpWindow, mpTheme);
+	mpUsages = OMalloc<CTreeContainer>(mpcContent->mpWindow, mpcContent->mpTheme);
 	mpUsages->SetAlignment(CSH_Stretch, CSV_Top);
-	mpUsages->GetActivationEvent()->Add(this, &CIDEContent::UsageActivated);
-	pPane = OMalloc<CScrollPane>(mpWindow, mpTheme);
+	mpUsages->GetActivationEvent()->Add(this, &CIDEUsages::UsageActivated);
+	pPane = OMalloc<CScrollPane>(mpcContent->mpWindow, mpcContent->mpTheme);
 	pPane->SetContent(mpUsages);
 	pPane->SetAlignment(CSH_Stretch, CSV_Stretch);
-	mpUsagesTool = mpDock->AddPane(IDE_USAGES_ID, "Find Usages", NULL, pPane, DPK_Tool, psPlace);
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// The symbol named at the active editor's caret (or just before it, as
-// after it's typed), or where its selection starts: its key and every
-// place it is named.  False if there is none.
-//
-//////////////////////////////////////////////////////////////////////////
-bool CIDEContent::FindSymbolAtCaret(CArrayIDELocations* pasDest, CChars* pszKey)
-{
-	Ptr<CTextArea>	pEditor;
-	size			uiStart;
-	size			uiEnd;
-	size			uiLine;
-	int				iColumn;
-	bool			bSelected;
-
-	if (mpActive.IsNull())
-	{
-		return false;
-	}
-	pEditor = mpActive->GetEditor();
-	bSelected = pEditor->GetSelection(&uiStart, &uiEnd);
-	if (!bSelected)
-	{
-		uiStart = pEditor->GetCaretPosition();
-	}
-	uiLine = pEditor->FindLine(uiStart);
-	iColumn = (int)(uiStart - pEditor->GetLineStart(uiLine));
-	if (mcCodeModel.FindReferences(mpActive->GetFileName(), (int)uiLine, iColumn, pasDest, pszKey))
-	{
-		return true;
-	}
-	return !bSelected && (iColumn > 0) && mcCodeModel.FindReferences(mpActive->GetFileName(), (int)uiLine, iColumn - 1, pasDest, pszKey);
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// The text of a file's line (0 based), as its editor has it if it is
-// open, else as it is on the disk; trimmed, tabs as spaces.
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDEContent::GetFileLine(const char* szFileName, int iLine, CChars* pszDest)
-{
-	Ptr<CIDEEditorTab>	pTab;
-	Ptr<CTextArea>		pEditor;
-	CTextFile			cFile;
-	char*				szPosition;
-	char*				szEnd;
-	int					i;
-
-	pTab = FindTab(szFileName);
-	szPosition = NULL;
-	cFile.Init();
-	if (pTab.IsNotNull())
-	{
-		pEditor = pTab->GetEditor();
-		if ((size)iLine < pEditor->NumLines())
-		{
-			szPosition = &pEditor->GetText()[pEditor->GetLineStart((size)iLine)];
-		}
-	}
-	else if (cFile.Read((char*)szFileName))
-	{
-		szPosition = cFile.Text();
-		for (i = 0; (i < iLine) && szPosition; i++)
-		{
-			szPosition = strchr(szPosition, '\n');
-			szPosition = szPosition ? szPosition + 1 : NULL;
-		}
-	}
-	if (szPosition)
-	{
-		szEnd = strchr(szPosition, '\n');
-		pszDest->AppendSubString(szPosition, szEnd ? szEnd : szPosition + strlen(szPosition));
-		pszDest->Replace('\r', ' ');
-		pszDest->Replace('\t', ' ');
-		pszDest->StripWhitespace(true);
-	}
-	cFile.Kill();
+	mpUsagesTool = mpcContent->mpDock->AddPane(IDE_USAGES_ID, "Find Usages", NULL, pPane, DPK_Tool, psPlace);
 }
 
 
@@ -180,7 +149,7 @@ void CIDEContent::GetFileLine(const char* szFileName, int iLine, CChars* pszDest
 // its line.  False if there is no symbol at the caret.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEContent::FindUsages(void)
+bool CIDEUsages::FindUsages(void)
 {
 	CArrayIDELocations	asLocations;
 	CChars				szKey;
@@ -201,7 +170,7 @@ bool CIDEContent::FindUsages(void)
 
 	asLocations.Init();
 	szKey.Init();
-	if (!FindSymbolAtCaret(&asLocations, &szKey))
+	if (!mpcContent->FindSymbolAtCaret(&asLocations, &szKey))
 	{
 		KillIDELocations(&asLocations);
 		szKey.Kill();
@@ -229,7 +198,7 @@ bool CIDEContent::FindUsages(void)
 		psUsage = &asUsages[i];
 		psUsage->psLocation = masUsages.Get(i);
 		psUsage->uiIndex = i;
-		mcCodeModel.GetUsageGroup(psUsage->psLocation, &psUsage->szProject, &psUsage->szClass);
+		mpcContent->mcCodeModel.GetUsageGroup(psUsage->psLocation, &psUsage->szProject, &psUsage->szClass);
 	}
 	qsort(asUsages, uiUsages, sizeof(SIDEUsage), CompareIDEUsages);
 
@@ -285,7 +254,7 @@ bool CIDEContent::FindUsages(void)
 		szText.Append(' ');
 		szText.Append(psUsage->psLocation->iLine + 1);
 		szText.Append(": ");
-		GetFileLine(psUsage->psLocation->szFileName.Text(), psUsage->psLocation->iLine, &szText);
+		mpcContent->GetFileLine(psUsage->psLocation->szFileName.Text(), psUsage->psLocation->iLine, &szText);
 		mpUsages->AddNode(iClass, szText.Text(), NULL, (int64)psUsage->uiIndex + 1);
 		szText.Kill();
 		szFile.Kill();
@@ -299,7 +268,7 @@ bool CIDEContent::FindUsages(void)
 	szKey.Kill();
 
 	mpUsages->ExpandAll();
-	mpDock->Show(mpUsagesTool);
+	mpcContent->mpDock->Show(mpUsagesTool);
 	return true;
 }
 
@@ -309,7 +278,7 @@ bool CIDEContent::FindUsages(void)
 // A line's node, double clicked or entered, opens its place.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEContent::UsageActivated(void)
+void CIDEUsages::UsageActivated(void)
 {
 	int64	iData;
 
@@ -320,7 +289,7 @@ void CIDEContent::UsageActivated(void)
 	iData = mpUsages->GetNodeData(mpUsages->GetSelectedNode());
 	if ((iData > 0) && ((size)iData <= masUsages.NumElements()))
 	{
-		OpenLocation(masUsages.Get((size)iData - 1));
+		mpcContent->OpenLocation(masUsages.Get((size)iData - 1));
 	}
 }
 
@@ -329,4 +298,4 @@ void CIDEContent::UsageActivated(void)
 //
 //
 //////////////////////////////////////////////////////////////////////////
-Ptr<CTreeContainer> CIDEContent::GetUsagesTree(void) { return mpUsages; }
+Ptr<CTreeContainer> CIDEUsages::GetUsagesTree(void) { return mpUsages; }
