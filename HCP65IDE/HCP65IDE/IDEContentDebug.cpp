@@ -856,6 +856,31 @@ void CIDEContent::RunDebugScript(void)
 		ShowRename();
 		return;
 	}
+	else if (strcmp(szCommand, "tabmenu") == 0)
+	{
+		//The active document tab's menu opened under the tab, with Close Multiple's sub menu.
+		if (GetActiveTab().IsNotNull() && GetActiveTab()->GetDockPane()->GetGroup().IsNotNull())
+		{
+			Ptr<CDockGroup>		pGroup;
+			Ptr<CTabComponent>	pTab;
+			Ptr<CMenuContainer>	pMenu;
+			size				i;
+
+			pGroup = GetActiveTab()->GetDockPane()->GetGroup();
+			pTab = pGroup->GetTab(GetActiveTab()->GetDockPane());
+			pGroup->OpenMenu(GetActiveTab()->GetDockPane(), SInt32Vec2(pTab->GetPosition().x + 10, pTab->GetPosition().y + pTab->GetActualSize().y));
+			pMenu = pGroup->GetMenu(GetActiveTab()->GetDockPane());
+			for (i = 0; i < pMenu->NumItems(); i++)
+			{
+				if (pMenu->GetItem(i)->HasSubMenu())
+				{
+					mpWindow->Layout();
+					pMenu->OpenSubMenu(pMenu->GetItemRow(pMenu->GetItem(i)), false);
+				}
+			}
+		}
+		bDone = true;
+	}
 	else if (strcmp(szCommand, "contextmenu") == 0)
 	{
 		//The active editor's context menu opened at its caret, as the Menu key does.

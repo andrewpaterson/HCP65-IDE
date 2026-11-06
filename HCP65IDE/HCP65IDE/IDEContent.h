@@ -301,6 +301,7 @@ public:
 	void			SelectComboBoxItem(Ptr<CComboBox> pComboBox, const char* szText);
 	void			Tick(Ptr<CWindow> pWindow);
 	bool			PaneClosing(CDockPane* pcPane) override;
+	bool			IsPaneModified(CDockPane* pcPane) override;
 	void			PaneClosed(CDockPane* pcPane) override;
 	void			DocumentSelected(CDockPane* pcPane) override;
 	Ptr<CDockPane>	CreatePane(const char* szID) override;
