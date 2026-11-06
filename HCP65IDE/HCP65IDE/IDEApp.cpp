@@ -297,7 +297,7 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 			{
 				//A comma separated list of moves, each as a pane's window position menu does it: float:<pane>,
 				//dock:<pane>, autohide:<pane>, hide:<pane>, document:<pane>, show:<pane>, and reset.  Panes are named
-				//by their IDs in the layout file (SolutionExplorer, FindAllReferences, Build, Debug, Claude).
+				//by their IDs in the layout file (SolutionExplorer, FindUsages, Build, Debug, Claude).
 				aszOpen.Init();
 				aszOpen.Split(getenv("HCP65_IDE_DOCK"), ',');
 				for (i = 0; i < aszOpen.NumElements(); i++)

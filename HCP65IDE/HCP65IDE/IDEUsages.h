@@ -32,7 +32,7 @@ class CIDEContent;
 
 //IntelliJ's Find Usages (Alt+F7): every use of the symbol at the caret, not its declarations, in the Find Usages tool
 //window beside Build, a tree of the project each is in, then the class it is in (or the file), then its line, which
-//opens the place.
+//opens the place.  Find All References (Shift+F12) shows its declarations and definition there too.
 class CIDEUsages : public CObject
 {
 CONSTRUCTABLE(CIDEUsages);
@@ -51,9 +51,11 @@ public:
 	bool	Load(CObjectReader* pcFile) override;
 
 	void				CreatePane(SDockPlace* psPlace);
-	bool				FindUsages(void);
+	bool				FindUsages(bool bDeclarations);
 	void				UsageActivated(void);
+	void				Clear(void);
 	Ptr<CTreeContainer>	GetUsagesTree(void);
+	Ptr<CDockPane>		GetTool(void);
 
 protected:
 };

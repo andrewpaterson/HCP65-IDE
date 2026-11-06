@@ -322,19 +322,19 @@ void CIDEScript::RunEditStep(const char* szStep)
 		}
 		else
 		{
-			printf("Rename: %s [%s] at %d places\n", sTarget.szName.Text(), sTarget.szKey.Text(), (int)sTarget.asLocations.NumElements());
+			printf("Rename: %s [%s] at %d places, %d overrides\n", sTarget.szName.Text(), sTarget.szKey.Text(), (int)sTarget.asLocations.NumElements(), (int)sTarget.uiOverrides);
 		}
 		sTarget.Kill();
 	}
-	else if (strcmp(szStep, "usages") == 0)
+	else if ((strcmp(szStep, "usages") == 0) || (strcmp(szStep, "references") == 0))
 	{
-		//Alt+F7, the Find Usages tree printed.
+		//Alt+F7 (or Shift+F12, with the declarations), the Find Usages tree printed.
 		Ptr<CTreeContainer>	pTree;
 		int32				iNode;
 		int32				iDepth;
 		CChars				szNode;
 
-		mpcContent->mpUsages->FindUsages();
+		mpcContent->mpUsages->FindUsages(szStep[0] == 'r');
 		pTree = mpcContent->mpUsages->GetUsagesTree();
 		for (iNode = 0; iNode < pTree->NumNodes(); iNode++)
 		{

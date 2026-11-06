@@ -48,7 +48,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define IDE_BOLD_WEIGHT			700.0f	//Inter's bold.
 #define IDE_BOTTOM_HEIGHT		180
 #define IDE_TOOLBAR_HEIGHT		34		//A grid in a grid has no height of its own.
-#define IDE_TOOLBAR_GAP			8		//Right of the branch.
+#define IDE_TOOLBAR_GAP			8		//Right of the branch, and left of the status.
+#define IDE_STATUS_HEIGHT		24		//The status line along the bottom.
 
 
 #define IDE_BUILD_POLL			50		//Milliseconds between looks at a running build.
@@ -191,7 +192,6 @@ void CIDEContent::Init(void)
 	mszLibc65.Init();
 	mcListings.Init();
 	muiListingToShow = MAX_SIZE;
-	masReferences.Init();
 	maTabs.Init();
 	maDiffTabs.Init();
 	maFileIcons.Init();
@@ -257,7 +257,7 @@ void CIDEContent::Class(void)
 	M_Pointer(mpCompareFileItem);
 	M_Pointer(mpExitItem);
 	M_Pointer(mpExplorerItem);
-	M_Pointer(mpReferencesItem);
+	M_Pointer(mpUsagesItem);
 	M_Pointer(mpBuildItem);
 	M_Pointer(mpDebugItem);
 	M_Pointer(mpClaudeItem);
@@ -265,7 +265,6 @@ void CIDEContent::Class(void)
 	M_Pointer(mpCloseAllItem);
 	M_Pointer(mpDock);
 	M_Pointer(mpExplorerTool);
-	M_Pointer(mpReferencesTool);
 	M_Pointer(mpBuildTool);
 	M_Pointer(mpDebugTool);
 	M_Pointer(mpClaudeTool);
@@ -308,8 +307,6 @@ void CIDEContent::Class(void)
 	U_Unknown(CCPP65ListingIndex, mcListings);
 	U_Size(muiListingToShow);
 	M_Pointer(mpBuildPane);
-	M_Pointer(mpReferences);
-	U_Unknown(CArrayIDELocations, masReferences);
 	U_Unknown(CBuildWorkspace, mcWorkspace);
 	U_Unknown(CBuildRecentFiles, mcRecent);
 	U_String(mszRecentFile);
@@ -340,6 +337,7 @@ void CIDEContent::Class(void)
 	U_Size(muiGitVersion);
 	U_Int64(miGitStatusTime);
 	M_Pointer(mpBranchLabel);
+	M_Pointer(mpStatusLabel);
 	M_Pointer(mpChangePopup);
 	M_Pointer(mpRollbackButton);
 	M_Pointer(mpShowDiffButton);
@@ -370,10 +368,6 @@ void CIDEContent::Free(void)
 	if (mpExplorer.IsNotNull() && mpExplorer->GetTree().IsNotNull())
 	{
 		mpExplorer->GetTree()->GetActivationEvent()->Remove(this);
-	}
-	if (mpReferences.IsNotNull())
-	{
-		mpReferences->GetActivationEvent()->Remove(this);
 	}
 	if (mpConfigurations.IsNotNull())
 	{
@@ -465,7 +459,6 @@ void CIDEContent::Free(void)
 	mszQueuedOpen.Kill();
 	mszRecentFile.Kill();
 	mcRecent.Kill();
-	KillIDELocations(&masReferences);
 }
 
 
@@ -499,7 +492,8 @@ bool CIDEContent::Load(CObjectReader* pcFile)
 bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* szCodeFont)
 {
 	Ptr<CGridContainer>	pMain;
-	Ptr<CScrollPane>	pReferencesPane;
+	Ptr<CGridContainer>	pStatusBar;
+	Ptr<CFillContainer>	pStatusGap;
 	SDockPlace			sPlace;
 	Ptr<CGridContainer>	pToolbar;
 	Ptr<CFillContainer>	pBranchGap;
@@ -576,19 +570,13 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	sPlace.BesideWell(DS_Left, IDE_EXPLORER_WIDTH);
 	mpExplorerTool = mpDock->AddPane(IDE_EXPLORER_ID, "Solution Explorer", NULL, mpExplorer->GetComponent(), DPK_Tool, &sPlace);
 
-	//Under the well, tabbed together: what Find All References found, what the build wrote, the debugger's view and
-	//Claude.
-	mpReferences = OMalloc<CTreeContainer>(pWindow, mpTheme);
-	mpReferences->SetAlignment(CSH_Stretch, CSV_Top);
-	mpReferences->GetActivationEvent()->Add(this, &CIDEContent::ReferenceActivated);
-	pReferencesPane = OMalloc<CScrollPane>(pWindow, mpTheme);
-	pReferencesPane->SetContent(mpReferences);
-	pReferencesPane->SetAlignment(CSH_Stretch, CSV_Stretch);
+	//Under the well, tabbed together: what Find Usages (and Find All References) found, what the build wrote, the
+	//debugger's view and Claude.
 	sPlace.BesideWell(DS_Bottom, IDE_BOTTOM_HEIGHT);
-	mpReferencesTool = mpDock->AddPane(IDE_REFERENCES_ID, "Find All References", NULL, pReferencesPane, DPK_Tool, &sPlace);
+	mpUsages->CreatePane(&sPlace);
 
 	mpBuildPane = OMalloc<CIDEBuildPane>(pWindow, mpTheme, mpCodeFamily, JEWEL_TEXT);
-	sPlace.WithPane(IDE_REFERENCES_ID);
+	sPlace.WithPane(IDE_USAGES_ID);
 	mpBuildTool = mpDock->AddPane(IDE_BUILD_ID, "Build", NULL, mpBuildPane->GetComponent(), DPK_Tool, &sPlace);
 
 	mpDebugView = OMalloc<CIDEDebugView>(pWindow, mpTheme, mpCodeFamily, JEWEL_TEXT);
@@ -599,8 +587,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpClaudePane->GetStopButton()->GetClickEvent()->Add(this, &CIDEContent::ClaudeStopClicked);
 	mpClaudePane->GetNewButton()->GetClickEvent()->Add(this, &CIDEContent::ClaudeNewClicked);
 	mpClaudeTool = mpDock->AddPane(IDE_CLAUDE_ID, "Claude", NULL, mpClaudePane->GetComponent(), DPK_Tool, &sPlace);
-	mpUsages->CreatePane(&sPlace);
-	mpDock->Show(mpReferencesTool);
+	mpDock->Show(mpUsages->GetTool());
 
 	//The toolbar: the build configuration's configuration and platform, as Visual Studio has them, and Build.
 	mpConfigurations = OMalloc<CComboBox>(pWindow, mpTheme);
@@ -636,6 +623,18 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	CreateEditorMenu();
 	pMain->AddComponent(pToolbar, 0, 1, 1, 1, 1, 0);
 	pMain->AddComponent(mpDock->GetArea(), 0, 2, 1, 1, 1, 1);
+
+	//The status line along the bottom, as IntelliJ IDEA's.
+	mpStatusLabel = OMalloc<CLabel>(pWindow, mpFontColours->GetFont(JEWEL_ICON), "");
+	mpStatusLabel->SetAlignment(CSH_Left, CSV_Center);
+	pStatusGap = OMalloc<CFillContainer>(pWindow);
+	pStatusGap->SetDesiredSize(IDE_TOOLBAR_GAP, 1);
+	pStatusBar = OMalloc<CGridContainer>(pWindow);
+	pStatusBar->SetDesiredSize(-1, IDE_STATUS_HEIGHT);
+	pStatusBar->SetAlignment(CSH_Stretch, CSV_Stretch);
+	pStatusBar->AddComponent(pStatusGap, 0, 0, 1, 1, 0, 1);
+	pStatusBar->AddComponent(mpStatusLabel, 1, 0, 1, 1, 1, 1);
+	pMain->AddComponent(pStatusBar, 0, 3, 1, 1, 1, 0);
 	pMain->AddInputActions(gaeIDECodeCommands, this, &CIDEContent::CodeCommandAction);
 	pWindow->SetContainer(pMain);
 	pWindow->GetActivationEvent()->Add(this, &CIDEContent::WindowActivated);
@@ -685,7 +684,7 @@ Ptr<CMenuBar> CIDEContent::CreateMenuBar(void)
 
 	pView = OMalloc<CMenuContainer>(mpWindow, mpTheme);
 	mpExplorerItem = pView->AddItem("Solution Explorer");
-	mpReferencesItem = pView->AddItem("Find All References");
+	mpUsagesItem = pView->AddItem("Find Usages");
 	mpBuildItem = pView->AddItem("Build Output");
 	mpDebugItem = pView->AddItem("Debug");
 	mpClaudeItem = pView->AddItem("Claude");
@@ -793,9 +792,9 @@ void CIDEContent::MenuItemClicked(CMenuItem* pcItem)
 	{
 		mpDock->Activate(mpExplorerTool);
 	}
-	else if (pcItem == &mpReferencesItem)
+	else if (pcItem == &mpUsagesItem)
 	{
-		mpDock->Activate(mpReferencesTool);
+		mpDock->Activate(mpUsages->GetTool());
 	}
 	else if (pcItem == &mpBuildItem)
 	{
@@ -826,7 +825,7 @@ void CIDEContent::MenuItemClicked(CMenuItem* pcItem)
 	}
 	else if (pcItem == &mpFindUsagesItem)
 	{
-		mpUsages->FindUsages();
+		mpUsages->FindUsages(false);
 	}
 	else if (pcItem == &mpRenameItem)
 	{
@@ -1250,12 +1249,11 @@ void CIDEContent::LetGoOfWorkspace(void)
 	maiBuildOrder.ReInit();
 	SetListings(false);
 	CloseAllFiles();
-	KillIDELocations(&masReferences);
-	masReferences.Init();
-	mpReferences->RemoveAllNodes();
+	mpUsages->Clear();
 
 	mcCodeModel.Kill();
 	mcWorkspace.Clear();
+	mpNavigator->ForgetGoToFiles();
 	mszConfiguration.Clear();
 
 	//The repositories are found again from the new solutions' files, and read at the next tick.
@@ -1698,7 +1696,7 @@ void CIDEContent::CodeCommandAction(SComponentInputEvent* psEvent)
 	}
 	else if (psEvent->eCommand == CIC_FindUsages)
 	{
-		mpUsages->FindUsages();
+		mpUsages->FindUsages(false);
 	}
 	else if (psEvent->eCommand == CIC_Rename)
 	{
@@ -1781,7 +1779,7 @@ bool CIDEContent::GoToDefinition(void)
 	}
 	if (!mcCodeModel.FindDefinition(mpActive->GetFileName(), iLine, iColumn, &sLocation))
 	{
-		ShowReferencesStatus("No definition found at the caret.");
+		ShowStatus("No definition found at the caret.");
 		return false;
 	}
 	bResult = OpenLocation(&sLocation);
@@ -1792,124 +1790,30 @@ bool CIDEContent::GoToDefinition(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Lists every place what is named at the caret is declared, defined and
-// used: "File.cpp(12): the line", under the symbol's name.
+// Visual Studio's Find All References (Shift+F12): Find Usages with the
+// declarations and definition of what is named at the caret.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEContent::FindReferences(void)
 {
-	int		iLine;
-	int		iColumn;
-	CChars	szKey;
-	CChars	szTitle;
-	int32	iRoot;
-	size	i;
-	size	uiIndexed;
-	size	uiToIndex;
-
-	if (!GetCaretPlace(&iLine, &iColumn))
-	{
-		return false;
-	}
-
-	KillIDELocations(&masReferences);
-	masReferences.Init();
-	szKey.Init();
-	if (!mcCodeModel.FindReferences(mpActive->GetFileName(), iLine, iColumn, &masReferences, &szKey))
-	{
-		szKey.Kill();
-		ShowReferencesStatus("No references found at the caret.");
-		return false;
-	}
-
-	mcCodeModel.GetIndexingProgress(&uiIndexed, &uiToIndex);
-	szTitle.Init(szKey);
-	szTitle.Append(" - ");
-	szTitle.Append((uint32)masReferences.NumElements());
-	szTitle.Append((masReferences.NumElements() == 1) ? " reference" : " references");
-	if (uiIndexed < uiToIndex)
-	{
-		szTitle.Append(" (indexing, ");
-		szTitle.Append((uint32)uiIndexed);
-		szTitle.Append(" of ");
-		szTitle.Append((uint32)uiToIndex);
-		szTitle.Append(" files)");
-	}
-	mpReferences->RemoveAllNodes();
-	iRoot = mpReferences->AddNode(TREE_NO_NODE, szTitle.Text(), NULL, 0);
-	for (i = 0; i < masReferences.NumElements(); i++)
-	{
-		AddReference(iRoot, masReferences.Get(i), i);
-	}
-	mpReferences->SetExpanded(iRoot, true);
-	mpDock->Show(mpReferencesTool);
-	szTitle.Kill();
-	szKey.Kill();
-	return true;
+	return mpUsages->FindUsages(true);
 }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// File.cpp(12): the line, trimmed.  Declarations and definitions say so
-// and a call to one of several overloads says it might be this one.
+// The status line says szText until something else is said.  A scripted
+// run (checking the IDE) prints it too.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEContent::AddReference(int32 iParent, SIDELocation* psLocation, size uiIndex)
+void CIDEContent::ShowStatus(const char* szText)
 {
-	CFileUtil	cFileUtil;
-	CTextFile	cFile;
-	CChars		szText;
-	CChars		szLine;
-	CChars		szName;
-	char*		szPosition;
-	char*		szEnd;
-	int			iLine;
-
-	szName.Init();
-	cFileUtil.GetFileName(&szName, psLocation->szFileName.Text());
-	szText.Init(szName);
-	szText.Append('(');
-	szText.Append(psLocation->iLine + 1);
-	szText.Append("): ");
-
-	cFile.Init();
-	if (cFile.Read(psLocation->szFileName.Text()))
+	mpStatusLabel->SetText(szText);
+	if (!mbKeepSettings)
 	{
-		szPosition = cFile.Text();
-		for (iLine = 0; (iLine < psLocation->iLine) && szPosition; iLine++)
-		{
-			szPosition = strchr(szPosition, '\n');
-			szPosition = szPosition ? szPosition + 1 : NULL;
-		}
-		if (szPosition)
-		{
-			szEnd = strchr(szPosition, '\n');
-			szLine.Init();
-			szLine.AppendSubString(szPosition, szEnd ? szEnd : szPosition + strlen(szPosition));
-			szLine.StripWhitespace(true);
-			szLine.Replace('\t', ' ');
-			szText.Append(szLine);
-			szLine.Kill();
-		}
+		printf("Status: %s\n", szText);
+		fflush(stdout);
 	}
-	cFile.Kill();
-
-	if (psLocation->uiRole == CPPIR_Definition)
-	{
-		szText.Append("  [definition]");
-	}
-	else if (psLocation->uiRole == CPPIR_Declaration)
-	{
-		szText.Append("  [declaration]");
-	}
-	if (psLocation->uiFlags & CPPIF_AMBIGUOUS)
-	{
-		szText.Append("  [one of the overloads]");
-	}
-	mpReferences->AddNode(iParent, szText.Text(), NULL, (int64)uiIndex + 1);
-	szText.Kill();
-	szName.Kill();
 }
 
 
@@ -1917,12 +1821,7 @@ void CIDEContent::AddReference(int32 iParent, SIDELocation* psLocation, size uiI
 //
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEContent::ShowReferencesStatus(const char* szText)
-{
-	mpReferences->RemoveAllNodes();
-	mpReferences->AddNode(TREE_NO_NODE, szText, NULL, 0);
-	mpDock->Show(mpReferencesTool);
-}
+char* CIDEContent::GetStatus(void) { return mpStatusLabel->GetText(); }
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -2195,27 +2094,6 @@ void CIDEContent::SetListings(bool bListings)
 void CIDEContent::ShowListingAfterBuild(size uiLine)
 {
 	muiListingToShow = uiLine;
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// A reference opened in the list is shown in the editor.
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDEContent::ReferenceActivated(void)
-{
-	int64	iData;
-
-	if (mpReferences->GetSelectedNode() == TREE_NO_NODE)
-	{
-		return;
-	}
-	iData = mpReferences->GetNodeData(mpReferences->GetSelectedNode());
-	if ((iData > 0) && ((size)iData <= masReferences.NumElements()))
-	{
-		OpenLocation(masReferences.Get((size)iData - 1));
-	}
 }
 
 
@@ -2788,11 +2666,9 @@ Ptr<CScrollPane> CIDEContent::GetEditorPane(void) { return mpActive.IsNotNull() 
 Ptr<CIDEEditorTab> CIDEContent::GetActiveTab(void) { return mpActive; }
 Ptr<CDockManager> CIDEContent::GetDock(void) { return mpDock; }
 Ptr<CDockPane> CIDEContent::GetExplorerTool(void) { return mpExplorerTool; }
-Ptr<CDockPane> CIDEContent::GetReferencesTool(void) { return mpReferencesTool; }
 Ptr<CDockPane> CIDEContent::GetBuildTool(void) { return mpBuildTool; }
 Ptr<CDockPane> CIDEContent::GetDebugTool(void) { return mpDebugTool; }
 Ptr<CDockPane> CIDEContent::GetClaudeTool(void) { return mpClaudeTool; }
-Ptr<CTreeContainer> CIDEContent::GetReferences(void) { return mpReferences; }
 Ptr<CIDEBuildPane> CIDEContent::GetBuildPane(void) { return mpBuildPane; }
 bool CIDEContent::IsBuilding(void) { return mcBuild.IsRunning(); }
 CCPP65ListingIndex* CIDEContent::GetListings(void) { return &mcListings; }  //The last HCP65 build's, for showing a line's assembly.

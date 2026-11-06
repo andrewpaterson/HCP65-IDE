@@ -296,7 +296,7 @@ void CIDECloseGuard::AskToSave(void)
 		}
 		else
 		{
-			mpcContent->ShowReferencesStatus("A file couldn't be saved: nothing was closed.");
+			mpcContent->ShowStatus("A file couldn't be saved: nothing was closed.");
 		}
 	}
 	szClicked.Kill();

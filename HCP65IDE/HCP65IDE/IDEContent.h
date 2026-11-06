@@ -66,7 +66,6 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 //The tool windows' IDs in the layout file, and the prefixes of the documents'.
 #define IDE_EXPLORER_ID			"SolutionExplorer"
-#define IDE_REFERENCES_ID		"FindAllReferences"
 #define IDE_BUILD_ID			"Build"
 #define IDE_DEBUG_ID			"Debug"
 #define IDE_CLAUDE_ID			"Claude"
@@ -84,8 +83,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 //The IDE's window's content: the menu bar and toolbar along the top, and under them Visual Studio's docking (see
-//CDockManager): the open files and diffs are documents in the document well, and Solution Explorer, Find All
-//References, Build, Debug and Claude are tool windows docked around it, which can be moved, resized, tabbed together,
+//CDockManager): the open files and diffs are documents in the document well, and Solution Explorer, Find Usages
+//(with Find All References), Build, Debug and Claude are tool windows docked around it, which can be moved, resized, tabbed together,
 //floated in windows of their own, auto hidden on the window's edges or closed (and shown again from the View menu).
 //The layout is kept beside the solution in <solution>.layout.user, with the files that were open, and read back when
 //the solution is opened; Window, Reset Window Layout puts the tool windows back where they start.
@@ -143,7 +142,7 @@ protected:
 	Ptr<CMenuItem>				mpCompareFileItem;	//File, Compare with File.
 	Ptr<CMenuItem>				mpExitItem;			//File, Exit.
 	Ptr<CMenuItem>				mpExplorerItem;		//View's tool windows.
-	Ptr<CMenuItem>				mpReferencesItem;
+	Ptr<CMenuItem>				mpUsagesItem;
 	Ptr<CMenuItem>				mpBuildItem;
 	Ptr<CMenuItem>				mpDebugItem;
 	Ptr<CMenuItem>				mpClaudeItem;
@@ -151,7 +150,6 @@ protected:
 	Ptr<CMenuItem>				mpCloseAllItem;		//Window, Close All Documents.
 	Ptr<CDockManager>			mpDock;
 	Ptr<CDockPane>				mpExplorerTool;		//The tool windows.
-	Ptr<CDockPane>				mpReferencesTool;
 	Ptr<CDockPane>				mpBuildTool;
 	Ptr<CDockPane>				mpDebugTool;
 	Ptr<CDockPane>				mpClaudeTool;
@@ -195,8 +193,6 @@ protected:
 	CCPP65ListingIndex			mcListings;			//The last HCP65 build's listings, given to the open files.
 	size						muiListingToShow;	//The line to show the code of after the next build, MAX_SIZE for none.
 	Ptr<CIDEBuildPane>			mpBuildPane;
-	Ptr<CTreeContainer>			mpReferences;		//What Find All References found.
-	CArrayIDELocations			masReferences;		//The references' places; a node's data is its index plus one.
 	CBuildWorkspace				mcWorkspace;		//The solutions open, one the startup solution.
 	CBuildRecentFiles			mcRecent;			//The solutions and workspaces opened last.
 	CChars						mszRecentFile;		//Where they are kept, empty if they aren't.
@@ -208,6 +204,7 @@ protected:
 	size						muiGitVersion;		//mcGit's status version when it was last shown.
 	int64						miGitStatusTime;	//When the statuses were last read, 0 to read them now.
 	Ptr<CLabel>					mpBranchLabel;		//On the toolbar.
+	Ptr<CLabel>					mpStatusLabel;		//The status line along the bottom: what last went wrong, or was done.
 	Ptr<CGridContainer>			mpChangePopup;		//A change's old lines and its buttons, while it is open.
 	Ptr<CButton>				mpRollbackButton;	//In the change popup.
 	Ptr<CButton>				mpShowDiffButton;
@@ -283,9 +280,10 @@ public:
 	bool			SaveActiveFile(void);
 	bool			SaveAllFiles(void);
 	void			ExplorerActivated(void);
-	void			ReferenceActivated(void);
 	bool			GoToDefinition(void);
 	bool			FindReferences(void);
+	void			ShowStatus(const char* szText);
+	char*			GetStatus(void);
 	bool			SetCaretPlace(int iLine, int iColumn);
 	bool			SetConfiguration(const char* szConfiguration);
 	void			ConfigurationChosen(void);
@@ -303,7 +301,6 @@ public:
 	bool			GetLayoutFileName(CChars* pszDest);
 	Ptr<CDockManager>	GetDock(void);
 	Ptr<CDockPane>	GetExplorerTool(void);
-	Ptr<CDockPane>	GetReferencesTool(void);
 	Ptr<CDockPane>	GetBuildTool(void);
 	Ptr<CDockPane>	GetDebugTool(void);
 	Ptr<CDockPane>	GetClaudeTool(void);
@@ -316,7 +313,6 @@ public:
 	Ptr<CScrollPane>	GetEditorPane(void);
 	Ptr<CIDEEditorTab>	GetActiveTab(void);
 	CSolutionExplorer*	GetExplorer(void);
-	Ptr<CTreeContainer>	GetReferences(void);
 	Ptr<CIDEBuildPane>	GetBuildPane(void);
 	void				ShowBuildTab(void);
 	void				SetLibc65Directory(const char* szDirectory);
@@ -428,8 +424,6 @@ protected:
 	void				CodeCommandAction(SComponentInputEvent* psEvent);
 	bool				GetCaretPlace(int* piLine, int* piColumn);
 	bool				OpenLocation(SIDELocation* psLocation);
-	void				AddReference(int32 iParent, SIDELocation* psLocation, size uiIndex);
-	void				ShowReferencesStatus(const char* szText);
 	void				PollBuild(Ptr<CWindow> pWindow);
 	void				ReadListings(CArrayChars* paszLines);
 	void				SetListings(bool bListings);

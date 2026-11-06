@@ -146,10 +146,12 @@ void CIDEUsages::CreatePane(SDockPlace* psPlace)
 // Alt+F7, IntelliJ's Find Usages: every use of the symbol at the caret
 // (not its declarations and definition), in the Find Usages tree under
 // the project its file is in, then the class (or file) it is in, then
-// its line.  False if there is no symbol at the caret.
+// its line.  With bDeclarations (Shift+F12, Visual Studio's Find All
+// References) its declarations and definition too, each saying so.
+// False if there is no symbol at the caret.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEUsages::FindUsages(void)
+bool CIDEUsages::FindUsages(bool bDeclarations)
 {
 	CArrayIDELocations	asLocations;
 	CChars				szKey;
@@ -167,6 +169,9 @@ bool CIDEUsages::FindUsages(void)
 	int32				iClass;
 	CFileUtil			cFileUtil;
 	SIDELocation*		psLocation;
+	size				uiIndexed;
+	size				uiToIndex;
+	const char*			szWhat;
 
 	asLocations.Init();
 	szKey.Init();
@@ -174,16 +179,17 @@ bool CIDEUsages::FindUsages(void)
 	{
 		KillIDELocations(&asLocations);
 		szKey.Kill();
+		mpcContent->ShowStatus(bDeclarations ? "No references found at the caret." : "No usages found at the caret.");
 		return false;
 	}
 
-	//The usages are kept for opening; the declarations and definitions aren't usages.
+	//The usages are kept for opening; the declarations and definitions are only kept if asked for.
 	KillIDELocations(&masUsages);
 	masUsages.Init();
 	for (i = 0; i < asLocations.NumElements(); i++)
 	{
 		psLocation = asLocations.Get(i);
-		if (psLocation->uiRole == CPPIR_Reference)
+		if (bDeclarations || (psLocation->uiRole == CPPIR_Reference))
 		{
 			memcpy(masUsages.Add(), psLocation, sizeof(SIDELocation));
 			psLocation->szFileName.Init();
@@ -204,13 +210,33 @@ bool CIDEUsages::FindUsages(void)
 
 	szName.Init();
 	GetIDESymbolName(szKey.Text(), &szName);
-	szText.Init(uiUsages == 0 ? "No usages of " : "Usages of ");
+	szWhat = bDeclarations ? " reference" : " usage";
+	if (bDeclarations)
+	{
+		szText.Init(uiUsages == 0 ? "No references to " : "References to ");
+	}
+	else
+	{
+		szText.Init(uiUsages == 0 ? "No usages of " : "Usages of ");
+	}
 	szText.Append(szName);
 	if (uiUsages > 0)
 	{
 		szText.Append("  ");
 		szText.Append((int)uiUsages);
-		szText.Append(uiUsages == 1 ? " usage" : " usages");
+		szText.Append(szWhat);
+		szText.Append(uiUsages == 1 ? "" : "s");
+	}
+
+	//Until every file is indexed some may be missing.
+	mpcContent->mcCodeModel.GetIndexingProgress(&uiIndexed, &uiToIndex);
+	if (uiIndexed < uiToIndex)
+	{
+		szText.Append("  (indexing, ");
+		szText.Append((uint32)uiIndexed);
+		szText.Append(" of ");
+		szText.Append((uint32)uiToIndex);
+		szText.Append(" files)");
 	}
 	mpUsages->RemoveAllNodes();
 	iRoot = mpUsages->AddNode(TREE_NO_NODE, szText.Text(), NULL, 0);
@@ -230,7 +256,8 @@ bool CIDEUsages::FindUsages(void)
 			szText.Init(psUsage->szProject);
 			szText.Append("  ");
 			szText.Append((int)uiCount);
-			szText.Append(uiCount == 1 ? " usage" : " usages");
+			szText.Append(szWhat);
+			szText.Append(uiCount == 1 ? "" : "s");
 			iProject = mpUsages->AddNode(iRoot, szText.Text(), NULL, 0);
 			szText.Kill();
 			iClass = TREE_NO_NODE;
@@ -255,6 +282,18 @@ bool CIDEUsages::FindUsages(void)
 		szText.Append(psUsage->psLocation->iLine + 1);
 		szText.Append(": ");
 		mpcContent->GetFileLine(psUsage->psLocation->szFileName.Text(), psUsage->psLocation->iLine, &szText);
+		if (psUsage->psLocation->uiRole == CPPIR_Definition)
+		{
+			szText.Append("  [definition]");
+		}
+		else if (psUsage->psLocation->uiRole == CPPIR_Declaration)
+		{
+			szText.Append("  [declaration]");
+		}
+		if (psUsage->psLocation->uiFlags & CPPIF_AMBIGUOUS)
+		{
+			szText.Append("  [one of the overloads]");
+		}
 		mpUsages->AddNode(iClass, szText.Text(), NULL, (int64)psUsage->uiIndex + 1);
 		szText.Kill();
 		szFile.Kill();
@@ -299,3 +338,17 @@ void CIDEUsages::UsageActivated(void)
 //
 //////////////////////////////////////////////////////////////////////////
 Ptr<CTreeContainer> CIDEUsages::GetUsagesTree(void) { return mpUsages; }
+Ptr<CDockPane> CIDEUsages::GetTool(void) { return mpUsagesTool; }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The solutions have gone: so have the places found in them.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEUsages::Clear(void)
+{
+	KillIDELocations(&masUsages);
+	masUsages.Init();
+	mpUsages->RemoveAllNodes();
+}

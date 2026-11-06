@@ -211,7 +211,7 @@ bool CIDERename::ShowRename(void)
 	sTarget.Init();
 	if (!FindRenameTarget(&sTarget))
 	{
-		mpcContent->ShowReferencesStatus("Nothing to rename at the caret.");
+		mpcContent->ShowStatus("Nothing to rename at the caret.");
 		sTarget.Kill();
 		return false;
 	}
@@ -222,7 +222,7 @@ bool CIDERename::ShowRename(void)
 		szPrompt.Append(": ");
 		szPrompt.Append(sTarget.szWhyNot);
 		szPrompt.Append(".");
-		mpcContent->ShowReferencesStatus(szPrompt.Text());
+		mpcContent->ShowStatus(szPrompt.Text());
 		szPrompt.Kill();
 		sTarget.Kill();
 		return false;
@@ -416,7 +416,7 @@ bool CIDERename::RenameSymbol(SIDERenameTarget* psTarget, const char* szNewName)
 		szMessage.Init("Rename stopped: ");
 		szMessage.Append(psLocation->szFileName.Text());
 		szMessage.Append(" has changed since it was indexed.  Save it and try again once it has been indexed.");
-		mpcContent->ShowReferencesStatus(szMessage.Text());
+		mpcContent->ShowStatus(szMessage.Text());
 		szMessage.Kill();
 	}
 	else
@@ -471,7 +471,7 @@ bool CIDERename::RenameSymbol(SIDERenameTarget* psTarget, const char* szNewName)
 		szMessage.Append(uiPlaces == 1 ? " place in " : " places in ");
 		szMessage.Append((int)aszFiles.NumElements());
 		szMessage.Append(aszFiles.NumElements() == 1 ? " file." : " files.");
-		mpcContent->ShowReferencesStatus(szMessage.Text());
+		mpcContent->ShowStatus(szMessage.Text());
 		szMessage.Kill();
 	}
 
