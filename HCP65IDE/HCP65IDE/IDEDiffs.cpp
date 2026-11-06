@@ -43,6 +43,8 @@ void CIDEDiffs::Init(CIDEContent* pcContent)
 {
 	PreInit();
 	mpcContent = pcContent;
+	mpDialog = NULL;
+	mpFileChooser = NULL;
 	maDiffTabs.Init();
 	mpActiveDiff = NULL;
 	muiNextDiff = 0;
@@ -57,6 +59,8 @@ void CIDEDiffs::Init(CIDEContent* pcContent)
 void CIDEDiffs::Class(void)
 {
 	U_Pointer(mpcContent);
+	M_Pointer(mpDialog);
+	M_Pointer(mpFileChooser);
 	M_Embedded(maDiffTabs);
 	M_Pointer(mpActiveDiff);
 	U_Size(muiNextDiff);
@@ -188,13 +192,14 @@ bool CIDEDiffs::ShowCompareWithBranchDialog(void)
 
 	bResult = false;
 	szChosen.Init();
-	mpcContent->mpDialog = OMalloc<CDialog>(mpcContent->mpWindow, &mpcContent->msDialogLook, "Compare with Branch");
-	pcBox = &mpcContent->mpDialog->AddComboBox("Branch", aszItems, aszBranches.NumElements(), iSelected);
-	if (mpcContent->mpDialog->Show(IDE_DIFF_DIALOG_WIDTH) && (pcBox->GetSelectedText() != NULL))
+	mpDialog = OMalloc<CDialog>(mpcContent->mpWindow, &mpcContent->msDialogLook, "Compare with Branch");
+	pcBox = &mpDialog->AddComboBox("Branch", aszItems, aszBranches.NumElements(), iSelected);
+	mpcContent->mpScript->WatchDialog(mpDialog);
+	if (mpDialog->Show(IDE_DIFF_DIALOG_WIDTH) && (pcBox->GetSelectedText() != NULL))
 	{
 		szChosen.Append(pcBox->GetSelectedText());
 	}
-	mpcContent->mpDialog = NULL;
+	mpDialog = NULL;
 	free(aszItems);
 	aszBranches.Kill();
 
@@ -223,14 +228,15 @@ bool CIDEDiffs::ShowCompareWithRevisionDialog(void)
 		return false;
 	}
 	szChosen.Init();
-	mpcContent->mpDialog = OMalloc<CDialog>(mpcContent->mpWindow, &mpcContent->msDialogLook, "Compare with Revision");
-	pcField = &mpcContent->mpDialog->AddTextField("Revision", "HEAD~1");
-	if (mpcContent->mpDialog->Show(IDE_DIFF_DIALOG_WIDTH))
+	mpDialog = OMalloc<CDialog>(mpcContent->mpWindow, &mpcContent->msDialogLook, "Compare with Revision");
+	pcField = &mpDialog->AddTextField("Revision", "HEAD~1");
+	mpcContent->mpScript->WatchDialog(mpDialog);
+	if (mpDialog->Show(IDE_DIFF_DIALOG_WIDTH))
 	{
 		szChosen.Append(pcField->GetText());
 		szChosen.StripWhitespace();
 	}
-	mpcContent->mpDialog = NULL;
+	mpDialog = NULL;
 
 	bResult = false;
 	if (!szChosen.Empty())
@@ -265,12 +271,12 @@ bool CIDEDiffs::ShowCompareWithFileDialog(void)
 	}
 	bResult = false;
 	szChosen.Init();
-	mpcContent->mpFileChooser = OMalloc<CFileChooser>(mpcContent->mpWindow, &mpcContent->msDialogLook, "Compare with File", false, pTab->GetFileName(), asTypes, sizeof(asTypes) / sizeof(SFileChooserType), mpcContent->mpFolderIcon, mpcContent->mpFileIcon);
-	if (mpcContent->mpFileChooser->Show())
+	mpFileChooser = OMalloc<CFileChooser>(mpcContent->mpWindow, &mpcContent->msDialogLook, "Compare with File", false, pTab->GetFileName(), asTypes, sizeof(asTypes) / sizeof(SFileChooserType), mpcContent->mpFolderIcon, mpcContent->mpFileIcon);
+	if (mpFileChooser->Show())
 	{
-		szChosen.Append(mpcContent->mpFileChooser->GetChosen());
+		szChosen.Append(mpFileChooser->GetChosen());
 	}
-	mpcContent->mpFileChooser = NULL;
+	mpFileChooser = NULL;
 	if (!szChosen.Empty())
 	{
 		bResult = CompareWithFile(szChosen.Text());

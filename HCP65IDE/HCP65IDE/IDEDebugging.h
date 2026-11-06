@@ -22,6 +22,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define __IDE_DEBUGGING_H__
 #include "StandardLib/Object.h"
 #include "StandardLib/Pointer.h"
+#include "WindowLib/Dialog.h"
 #include "BaseLib/ArrayChars.h"
 #include "WindowLib/Window.h"
 #include "WindowLib/MenuContainer.h"
@@ -47,6 +48,7 @@ CONSTRUCTABLE(CIDEDebugging);
 DESTRUCTABLE(CIDEDebugging);
 protected:
 	CIDEContent*	mpcContent;  //Not held: the content holds it.
+	Ptr<CDialog>	mpDialog;  //The address or port asked for, while it's shown.
 	Ptr<CIDEDebugView>	mpDebugView;  //The Debug tab,
 	Ptr<CDockPane>		mpDebugTool;  //its tool window,
 	Ptr<CButton>		mpStartButton;  //and the toolbar's Start, or Continue while stopped.

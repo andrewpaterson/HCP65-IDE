@@ -22,6 +22,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define __IDE_SOLUTIONS_H__
 #include "StandardLib/Object.h"
 #include "StandardLib/Pointer.h"
+#include "WindowLib/FileChooser.h"
 #include "BaseLib/ArrayChars.h"
 #include "WindowLib/MenuContainer.h"
 #include "BuildLib/BuildWorkspace.h"
@@ -42,6 +43,7 @@ CONSTRUCTABLE(CIDESolutions);
 DESTRUCTABLE(CIDESolutions);
 protected:
 	CIDEContent*	mpcContent;  //Not held: the content holds it.
+	Ptr<CFileChooser>	mpFileChooser;  //The solution to open or add, while it's shown.
 	CBuildRecentFiles			mcRecent;			//The solutions and workspaces opened last.
 	CChars						mszRecentFile;		//Where they are kept, empty if they aren't.
 	CChars						mszQueuedOpen;		//A recent one chosen, opened at the next tick (OpenQueuedSolution).

@@ -166,7 +166,6 @@ protected:
 	Ptr<CMenuItem>				mpCloseAllItem;		//Window, Close All Documents.
 	Ptr<CDockManager>			mpDock;
 	Ptr<CDockPane>				mpExplorerTool;		//The tool windows.
-	Ptr<CFileChooser>			mpFileChooser;		//While it's shown.
 	Ptr<CImageCel>				mpFolderIcon;		//The file chooser's.
 	Ptr<CImageCel>				mpFileIcon;
 	CArray<CImageCel>			maFileIcons;		//By EIDEFileType.
@@ -208,7 +207,6 @@ protected:
 
 
 
-	Ptr<CDialog>				mpDialog;			//The address or port asked for, while it's shown.
 
 public:
 	void			Init(void);

@@ -75,6 +75,14 @@ CHECKS = [
 		'DEBUG': 'wait:300,printgit,clickmenu:Git/Compare with HEAD,printdiffs,closeall,printdiffs'},
 		[r'^Git: branch \[Git: \w+\] change popup open$',
 		 r'^Diffs: \[>CalculatorParser\.cpp \(HEAD vs\. Your version\)\]$', r'^Diffs:$'], []),
+	('git-dialogs', {
+		'OPEN': 'CalculatorParser.cpp', 'DIALOG_ANSWER': 'OK',
+		'DEBUG': 'clickmenu:Git/Compare with Revision...,wait:300,printdiffs,clickmenu:Git/Compare with Branch...,wait:300,printdiffs'},
+		[r'^Diffs: \[>CalculatorParser\.cpp \(HEAD~1 vs\. Your version\)\]$',
+		 r'^Diffs: \[CalculatorParser\.cpp \(HEAD~1 vs\. Your version\)\] \[>CalculatorParser\.cpp \(\w+ vs\. Your version\)\]$'], []),
+	('debug-dialog', {
+		'OPEN': 'Kernal.cpp', 'DIALOG_ANSWER': 'Cancel', 'DEBUG': 'clickmenu:Debug/New Breakpoint at Address...,wait:300,printtabs'},
+		[r'^Tabs: >Kernal\.cpp'], [r'not found', r'disabled']),
 	('configuration', {
 		'CONFIGURATION': 'Debug|W65C816', 'DEBUG': 'printconfig'},
 		[r'^Configuration: \[Debug\] \[W65C816\]$'], []),

@@ -22,6 +22,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define __IDE_DIFFS_H__
 #include "StandardLib/Object.h"
 #include "StandardLib/Pointer.h"
+#include "WindowLib/FileChooser.h"
+#include "WindowLib/Dialog.h"
 #include "WindowLib/DiffView.h"
 #include "StandardLib/Array.h"
 #include "IDEDiffTab.h"
@@ -42,6 +44,8 @@ CONSTRUCTABLE(CIDEDiffs);
 DESTRUCTABLE(CIDEDiffs);
 protected:
 	CIDEContent*	mpcContent;  //Not held: the content holds it.
+	Ptr<CDialog>	mpDialog;  //The branch or revision asked for, while it's shown.
+	Ptr<CFileChooser>	mpFileChooser;  //The file to compare with, while it's shown.
 	CArray<CIDEDiffTab>			maDiffTabs;			//A tab for each diff shown.
 	Ptr<CIDEDiffTab>			mpActiveDiff;		//The selected tab's diff, NULL if it isn't one.
 	size						muiNextDiff;		//Each diff's pane's ID is numbered.

@@ -52,6 +52,7 @@ void CIDESolutions::Init(CIDEContent* pcContent)
 {
 	PreInit();
 	mpcContent = pcContent;
+	mpFileChooser = NULL;
 	mcRecent.Init();
 	mszRecentFile.Init();
 	mszQueuedOpen.Init();
@@ -66,6 +67,7 @@ void CIDESolutions::Init(CIDEContent* pcContent)
 void CIDESolutions::Class(void)
 {
 	U_Pointer(mpcContent);
+	M_Pointer(mpFileChooser);
 	U_Unknown(CBuildRecentFiles, mcRecent);
 	U_String(mszRecentFile);
 	U_String(mszQueuedOpen);
@@ -114,10 +116,10 @@ bool CIDESolutions::ShowOpenSolutionDialog(void)
 	bool	bResult;
 
 	bResult = false;
-	mpcContent->mpFileChooser = OMalloc<CFileChooser>(mpcContent->mpWindow, &mpcContent->msDialogLook, "Open Project/Solution", false, GetStartupFile(), asTypes, sizeof(asTypes) / sizeof(SFileChooserType), mpcContent->mpFolderIcon, mpcContent->mpFileIcon);
-	if (mpcContent->mpFileChooser->Show())
+	mpFileChooser = OMalloc<CFileChooser>(mpcContent->mpWindow, &mpcContent->msDialogLook, "Open Project/Solution", false, GetStartupFile(), asTypes, sizeof(asTypes) / sizeof(SFileChooserType), mpcContent->mpFolderIcon, mpcContent->mpFileIcon);
+	if (mpFileChooser->Show())
 	{
-		szChosen.Init(mpcContent->mpFileChooser->GetChosen());
+		szChosen.Init(mpFileChooser->GetChosen());
 		bResult = OpenSolution(szChosen.Text());
 		if (!bResult)
 		{
@@ -125,7 +127,7 @@ bool CIDESolutions::ShowOpenSolutionDialog(void)
 		}
 		szChosen.Kill();
 	}
-	mpcContent->mpFileChooser = NULL;
+	mpFileChooser = NULL;
 	return bResult;
 }
 
@@ -148,14 +150,14 @@ bool CIDESolutions::ShowAddSolutionDialog(void)
 	bool	bResult;
 
 	bResult = false;
-	mpcContent->mpFileChooser = OMalloc<CFileChooser>(mpcContent->mpWindow, &mpcContent->msDialogLook, "Add Solution", false, GetStartupFile(), asTypes, sizeof(asTypes) / sizeof(SFileChooserType), mpcContent->mpFolderIcon, mpcContent->mpFileIcon);
-	if (mpcContent->mpFileChooser->Show())
+	mpFileChooser = OMalloc<CFileChooser>(mpcContent->mpWindow, &mpcContent->msDialogLook, "Add Solution", false, GetStartupFile(), asTypes, sizeof(asTypes) / sizeof(SFileChooserType), mpcContent->mpFolderIcon, mpcContent->mpFileIcon);
+	if (mpFileChooser->Show())
 	{
-		szChosen.Init(mpcContent->mpFileChooser->GetChosen());
+		szChosen.Init(mpFileChooser->GetChosen());
 		bResult = AddSolution(szChosen.Text());
 		szChosen.Kill();
 	}
-	mpcContent->mpFileChooser = NULL;
+	mpFileChooser = NULL;
 	return bResult;
 }
 

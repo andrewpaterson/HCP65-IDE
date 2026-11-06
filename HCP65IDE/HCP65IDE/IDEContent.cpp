@@ -232,7 +232,6 @@ void CIDEContent::Class(void)
 	M_Pointer(mpCloseAllItem);
 	M_Pointer(mpDock);
 	M_Pointer(mpExplorerTool);
-	M_Pointer(mpFileChooser);
 	M_Pointer(mpFolderIcon);
 	M_Pointer(mpFileIcon);
 	M_Embedded(maFileIcons);
@@ -263,7 +262,6 @@ void CIDEContent::Class(void)
 	M_Pointer(mpRemoveSolutionItem);
 	U_Unknown(CBuildWorkspace, mcWorkspace);
 	U_Unknown(CIDECodeModel, mcCodeModel);
-	M_Pointer(mpDialog);
 	M_Pointer(mpStatusLabel);
 	U_Int64(miStatusTime);
 	M_Pointer(mpProgressLabel);

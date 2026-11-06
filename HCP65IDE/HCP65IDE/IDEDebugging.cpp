@@ -57,6 +57,7 @@ void CIDEDebugging::Init(CIDEContent* pcContent)
 {
 	PreInit();
 	mpcContent = pcContent;
+	mpDialog = NULL;
 	mcDebugger.Init();
 	mszDefaultEmulator.Init();
 	mszDefaultEmulatorDirectory.Init();
@@ -76,6 +77,7 @@ void CIDEDebugging::Init(CIDEContent* pcContent)
 void CIDEDebugging::Class(void)
 {
 	U_Pointer(mpcContent);
+	M_Pointer(mpDialog);
 	M_Pointer(mpDebugView);
 	M_Pointer(mpDebugTool);
 	M_Pointer(mpStartButton);
@@ -689,9 +691,10 @@ bool CIDEDebugging::ShowAddressDialog(const char* szTitle, const char* szLabel, 
 	bool		bResult;
 
 	bResult = false;
-	mpcContent->mpDialog = OMalloc<CDialog>(mpcContent->mpWindow, &mpcContent->msDialogLook, szTitle);
-	pcField = &mpcContent->mpDialog->AddTextField(szLabel, szDefault);
-	if (mpcContent->mpDialog->Show(IDE_DEBUG_DIALOG_WIDTH))
+	mpDialog = OMalloc<CDialog>(mpcContent->mpWindow, &mpcContent->msDialogLook, szTitle);
+	pcField = &mpDialog->AddTextField(szLabel, szDefault);
+	mpcContent->mpScript->WatchDialog(mpDialog);
+	if (mpDialog->Show(IDE_DEBUG_DIALOG_WIDTH))
 	{
 		szText = pcField->GetText();
 		while (*szText == ' ')
@@ -708,7 +711,7 @@ bool CIDEDebugging::ShowAddressDialog(const char* szTitle, const char* szLabel, 
 			bResult = (*szEnd == '\0') || (*szEnd == ' ');
 		}
 	}
-	mpcContent->mpDialog = NULL;
+	mpDialog = NULL;
 	return bResult;
 }
 
