@@ -235,7 +235,15 @@ bool CIDERename::ShowRename(void)
 
 	szPrompt.Init("Rename '");
 	szPrompt.Append(sTarget.szName);
-	szPrompt.Append("' to:");
+	szPrompt.Append("'");
+	if (sTarget.uiOverrides > 0)
+	{
+		//IntelliJ renames a method's whole hierarchy with it.
+		szPrompt.Append(" and ");
+		szPrompt.Append((uint32)sTarget.uiOverrides);
+		szPrompt.Append(sTarget.uiOverrides == 1 ? " override" : " overrides");
+	}
+	szPrompt.Append(" to:");
 	mpRenameDialog = OMalloc<CDialog>(mpcContent->mpWindow, &mpcContent->msDialogLook, "Rename");
 	mpRenameField = mpRenameDialog->AddTextField(szPrompt.Text(), sTarget.szName.Text());
 	mpRenameField->SelectAll();

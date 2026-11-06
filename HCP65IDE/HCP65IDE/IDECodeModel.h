@@ -80,6 +80,7 @@ struct SIDERenameTarget
 	CArrayIDELocations	asLocations;
 	bool				bRenamable;
 	CChars				szWhyNot;
+	size				uiOverrides;	//The virtual member functions renamed with it: what overrides it and what it overrides.
 
 	void	Init(void);
 	void	Kill(void);

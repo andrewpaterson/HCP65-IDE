@@ -1097,6 +1097,7 @@ void SIDERenameTarget::Init(void)
 	asLocations.Init();
 	bRenamable = false;
 	szWhyNot.Init();
+	uiOverrides = 0;
 }
 
 
@@ -1189,6 +1190,7 @@ bool CIDECodeModel::FindRenameTarget(const char* szFileName, int iLine, int iCol
 	CChars				szDestructor;
 	size				i;
 	size				j;
+	CArrayInt			aiOverrides;
 
 	mcIndexMutex.Lock();
 	pcSymbol = mcIndex.FindSymbolAt(szFileName, iLine, iColumn);
@@ -1247,6 +1249,33 @@ bool CIDECodeModel::FindRenameTarget(const char* szFileName, int iLine, int iCol
 		}
 		szDestructor.Kill();
 		szConstructor.Kill();
+	}
+
+	//A virtual member function is renamed with what overrides it and what it overrides.
+	if ((szProblem == NULL) && (pcSymbol->meKind == CPPSK_Function))
+	{
+		aiOverrides.Init();
+		if (mcIndex.FindOverrides(pcSymbol, &aiOverrides))
+		{
+			for (i = 0; i < aiOverrides.NumElements(); i++)
+			{
+				pcMember = mcIndex.GetSymbol((size)aiOverrides.GetValue(i));
+				if (pcMember == pcSymbol)
+				{
+					continue;
+				}
+				psDest->uiOverrides++;
+				if (szProblem == NULL)
+				{
+					szProblem = GetIDERenameProblem(&mcIndex, pcMember, pcFiles);
+				}
+				for (j = 0; j < pcMember->NumLocations(); j++)
+				{
+					CopyLocation(pcMember->GetLocation(j), psDest->asLocations.Add());
+				}
+			}
+		}
+		aiOverrides.Kill();
 	}
 	mcIndexMutex.Unlock();
 
