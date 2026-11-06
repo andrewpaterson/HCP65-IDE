@@ -36,6 +36,12 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 #define IDE_DEBUG_DISASSEMBLY	24		//The instructions shown from the program address.
+//How closely a line table is of where the emulator stopped (GetTableRank), the closest first.
+#define IDE_TABLE_RANK_PROCESS	0
+#define IDE_TABLE_RANK_SPACE	1
+#define IDE_TABLE_RANK_ANY		2
+#define IDE_TABLE_RANK_NONE		3
+
 #define IDE_DEBUG_LINE_TABLES	8		//The most programs' line tables read (a kernal and a program).
 
 
@@ -76,6 +82,17 @@ struct SIDESourceBreakpoint
 typedef CArrayTemplate<SIDESourceBreakpoint>	CArrayIDESourceBreakpoints;
 
 
+//Whose a line table's breakpoints are: the configuration's own program's (bOwn); or another program's, in its
+//breakpoint space and only in the process running it (szProcess, "\\boot.exe"); or, with neither, every space and
+//process (a kernal loaded with the program).
+struct SIDELineTableTarget
+{
+	bool	bOwn;
+	CChars	szSpace;
+	CChars	szProcess;
+};
+
+
 //The IDE's end of debugging the HCP65 emulator, at the instruction level, over EmulatorDebugLib's protocol.  It
 //knows nothing of the processor: the emulator describes its registers and addresses, and disassembles.
 //
@@ -94,8 +111,10 @@ typedef CArrayTemplate<SIDESourceBreakpoint>	CArrayIDESourceBreakpoints;
 //
 //Source breakpoints are by file and line (ToggleSourceBreakpoint).  The programs' line tables (AddLineTable, the
 //<program>.lines a build writes beside it) bind them to addresses: a table of the configuration's own program puts
-//them in the breakpoint space, one of what is loaded with it (a kernal) in every space.  Both kinds of breakpoint are
-//kept when not debugging, and all of them are given to the emulator whenever one changes.
+//them in the breakpoint space, one of what is loaded with it (a kernal) in every space.  Another program's table (one
+//of the workspace's other solutions, AddProcessLineTable) puts them in its own space and process, waiting while it
+//isn't running, as the own program's do.  Both kinds of breakpoint are kept when not debugging, and all of them are
+//given to the emulator whenever one changes.
 //
 //A configuration's own program can be one the emulator's kernal runs as a process (SetOwnProgram: its file there,
 //"\\boot.exe").  The emulator tells of each process started and ended; the program's ID is the process of that name.
@@ -137,7 +156,7 @@ protected:
 	CArrayIDEBreakpoints	masBreakpoints;
 	CArrayIDESourceBreakpoints	masSourceBreakpoints;
 	CAsm65LineTable			macLineTables[IDE_DEBUG_LINE_TABLES];
-	bool					mabOwnSpace[IDE_DEBUG_LINE_TABLES];	//The table is the configuration's own program's.
+	SIDELineTableTarget		masTableTargets[IDE_DEBUG_LINE_TABLES];	//Whose each table's breakpoints are.
 	size					muiLineTables;
 	CChars					mszStatus;
 
@@ -176,6 +195,7 @@ public:
 
 	void					ClearLineTables(void);
 	bool					AddLineTable(const char* szProgram, bool bOwnSpace);
+	bool					AddProcessLineTable(const char* szProgram, const char* szSpace, const char* szProcess);
 	size					NumLineTables(void);
 	CAsm65LineTable*		GetLineTable(size uiIndex);
 	bool					FindSourceLine(uint32 uiAddress, CChars* pszFile, uint32* puiLine);
@@ -199,6 +219,10 @@ public:
 
 protected:
 	bool					Connect(CProcessChannel* pcChannel);
+	bool					ReadLineTable(const char* szProgram);
+	bool					GetTableTarget(size uiTable, bool bOwnRunning, uint32 uiOwnProcess, uint32* puiSpace, uint32* puiProcess);
+	bool					IsTableProcess(const char* szProcess);
+	size					GetTableRank(size uiTable);
 	void					Welcomed(void);
 	bool					LoadFile(const char* szFile, uint32 uiAddress);
 	void					Stopped(void);

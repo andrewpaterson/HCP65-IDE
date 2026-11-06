@@ -7,6 +7,7 @@
 
 void TestBuildConfigurations(void);
 void TestBuildWorkspace(void);
+void TestBuildRecentFiles(void);
 void TestBuild(void);
 
 
@@ -26,6 +27,7 @@ int __cdecl main(void)
 
 	TestBuildConfigurations();
 	TestBuildWorkspace();
+	TestBuildRecentFiles();
 	TestBuild();
 
 	MemoryKill();

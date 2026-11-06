@@ -81,7 +81,9 @@ void CIDEDebugger::Init(void)
 	for (muiLineTables = 0; muiLineTables < IDE_DEBUG_LINE_TABLES; muiLineTables++)
 	{
 		macLineTables[muiLineTables].Init();
-		mabOwnSpace[muiLineTables] = false;
+		masTableTargets[muiLineTables].bOwn = false;
+		masTableTargets[muiLineTables].szSpace.Init();
+		masTableTargets[muiLineTables].szProcess.Init();
 	}
 	muiLineTables = 0;
 	mszStatus.Init("Not debugging.");
@@ -109,6 +111,11 @@ void CIDEDebugger::Kill(void)
 		RemoveSourceBreakpointAt(masSourceBreakpoints.NumElements() - 1);
 	}
 	masSourceBreakpoints.Kill();
+	for (ui = 0; ui < IDE_DEBUG_LINE_TABLES; ui++)
+	{
+		masTableTargets[ui].szProcess.Kill();
+		masTableTargets[ui].szSpace.Kill();
+	}
 	masBreakpoints.Kill();
 	mcNetwork.Kill();
 	mcShared.Kill();
@@ -760,7 +767,6 @@ void CIDEDebugger::SendBreakpoints(void)
 	uint32								uiProcess;
 	uint32								uiOwnProcess;
 	bool								bOwnRunning;
-	bool								bOwn;
 
 	//The own program's breakpoints are its process's, and wait while it isn't running.
 	bOwnRunning = GetOwnProcess(&uiOwnProcess);
@@ -780,13 +786,10 @@ void CIDEDebugger::SendBreakpoints(void)
 		psSource = masSourceBreakpoints.Get(i);
 		for (j = 0; j < psSource->auiAddresses.NumElements(); j++)
 		{
-			bOwn = mabOwnSpace[psSource->auiTables.GetValue(j)];
-			if (bOwn && !bOwnRunning)
+			if (!GetTableTarget(psSource->auiTables.GetValue(j), bOwnRunning, uiOwnProcess, &uiSpace, &uiProcess))
 			{
 				continue;
 			}
-			uiSpace = bOwn ? muiBreakpointSpace : DEBUG_SPACE_ANY;
-			uiProcess = bOwn ? uiOwnProcess : DEBUG_PROCESS_ANY;
 			for (k = 0; k < asBreakpoints.NumElements(); k++)
 			{
 				psBreakpoint = asBreakpoints.Get(k);
@@ -841,7 +844,9 @@ void CIDEDebugger::ClearLineTables(void)
 	for (ui = 0; ui < muiLineTables; ui++)
 	{
 		macLineTables[ui].Clear();
-		mabOwnSpace[ui] = false;
+		masTableTargets[ui].bOwn = false;
+		masTableTargets[ui].szSpace.Clear();
+		masTableTargets[ui].szProcess.Clear();
 	}
 	muiLineTables = 0;
 	BindSourceBreakpoints();
@@ -859,6 +864,49 @@ void CIDEDebugger::ClearLineTables(void)
 //////////////////////////////////////////////////////////////////////////
 bool CIDEDebugger::AddLineTable(const char* szProgram, bool bOwnSpace)
 {
+	if (!ReadLineTable(szProgram))
+	{
+		return false;
+	}
+	masTableTargets[muiLineTables].bOwn = bOwnSpace;
+	muiLineTables++;
+	BindSourceBreakpoints();
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The line table of another program than the configuration's own (one of
+// the workspace's other solutions'), which the kernal runs as the process
+// szProcess ("\\modplay.exe"): its source breakpoints are in the space
+// szSpace ("User"; every space if empty or the emulator hasn't it) and
+// stop only in its process, waiting while it isn't running.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEDebugger::AddProcessLineTable(const char* szProgram, const char* szSpace, const char* szProcess)
+{
+	if (!ReadLineTable(szProgram))
+	{
+		return false;
+	}
+	masTableTargets[muiLineTables].bOwn = false;
+	masTableTargets[muiLineTables].szSpace.Set(szSpace ? szSpace : "");
+	masTableTargets[muiLineTables].szProcess.Set(szProcess ? szProcess : "");
+	muiLineTables++;
+	BindSourceBreakpoints();
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The next table read from beside szProgram (<program>.lines), not yet
+// counted.  False if there is none or there are too many.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEDebugger::ReadLineTable(const char* szProgram)
+{
 	CChars	szFile;
 	bool	bResult;
 
@@ -870,14 +918,60 @@ bool CIDEDebugger::AddLineTable(const char* szProgram, bool bOwnSpace)
 	szFile.Append(".lines");
 	bResult = macLineTables[muiLineTables].ReadFile(szFile.Text());
 	szFile.Kill();
-	if (!bResult)
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The space and process a line table's breakpoints are given in.  False
+// while its program isn't running: they wait.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEDebugger::GetTableTarget(size uiTable, bool bOwnRunning, uint32 uiOwnProcess, uint32* puiSpace, uint32* puiProcess)
+{
+	SIDELineTableTarget*	psTarget;
+
+	psTarget = &masTableTargets[uiTable];
+	if (psTarget->bOwn)
 	{
-		return false;
+		*puiSpace = muiBreakpointSpace;
+		*puiProcess = uiOwnProcess;
+		return bOwnRunning;
 	}
-	mabOwnSpace[muiLineTables] = bOwnSpace;
-	muiLineTables++;
-	BindSourceBreakpoints();
-	return true;
+
+	*puiSpace = DEBUG_SPACE_ANY;
+	*puiProcess = DEBUG_PROCESS_ANY;
+	if (psTarget->szSpace.Empty() || !mcClient.FindBreakpointSpace(psTarget->szSpace.Text(), puiSpace))
+	{
+		*puiSpace = DEBUG_SPACE_ANY;
+		return true;
+	}
+	if (psTarget->szProcess.Empty() || !mcClient.HasProcesses())
+	{
+		return true;
+	}
+	return mcClient.FindProcess(psTarget->szProcess.Text(), puiProcess);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A line table is of the program szProcess runs.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEDebugger::IsTableProcess(const char* szProcess)
+{
+	size	i;
+
+	for (i = 0; i < muiLineTables; i++)
+	{
+		if (!masTableTargets[i].bOwn && !masTableTargets[i].szProcess.Empty() && (StringInsensitiveCompare(masTableTargets[i].szProcess.Text(), szProcess) == 0))
+		{
+			return true;
+		}
+	}
+	return false;
 }
 
 
@@ -890,19 +984,77 @@ bool CIDEDebugger::AddLineTable(const char* szProgram, bool bOwnSpace)
 bool CIDEDebugger::FindSourceLine(uint32 uiAddress, CChars* pszFile, uint32* puiLine)
 {
 	size				ui;
+	size				uiRank;
 	SAsm65LineEntry*	psLine;
 
-	for (ui = 0; ui < muiLineTables; ui++)
+	//Programs in different spaces have code at the same addresses: the tables of where it stopped are looked in, the
+	//most particular first.
+	for (uiRank = 0; uiRank < IDE_TABLE_RANK_NONE; uiRank++)
 	{
-		psLine = macLineTables[ui].FindLine(uiAddress);
-		if (psLine)
+		for (ui = 0; ui < muiLineTables; ui++)
 		{
-			pszFile->Set(macLineTables[ui].GetFile(psLine->uiFile));
-			*puiLine = psLine->uiLine;
-			return true;
+			if (GetTableRank(ui) != uiRank)
+			{
+				continue;
+			}
+			psLine = macLineTables[ui].FindLine(uiAddress);
+			if (psLine)
+			{
+				pszFile->Set(macLineTables[ui].GetFile(psLine->uiFile));
+				*puiLine = psLine->uiLine;
+				return true;
+			}
 		}
 	}
 	return false;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// How closely a line table is of where the emulator last stopped (the
+// space and process it said): IDE_TABLE_RANK_PROCESS, a program of the
+// process it stopped in; IDE_TABLE_RANK_SPACE, of its space;
+// IDE_TABLE_RANK_ANY, of every space (a kernal), or when not debugging or
+// the emulator doesn't say; IDE_TABLE_RANK_NONE, of another space or
+// process (or of a program that isn't running).
+//
+//////////////////////////////////////////////////////////////////////////
+size CIDEDebugger::GetTableRank(size uiTable)
+{
+	uint32	uiStopSpace;
+	uint32	uiStopProcess;
+	uint32	uiOwnProcess;
+	uint32	uiSpace;
+	uint32	uiProcess;
+	bool	bOwnRunning;
+	bool	bRunning;
+
+	if (!mbClient || (mcClient.NumStops() == 0))
+	{
+		return IDE_TABLE_RANK_ANY;
+	}
+	uiStopSpace = mcClient.GetStopSpace();
+	uiStopProcess = mcClient.GetStopProcess();
+	bOwnRunning = GetOwnProcess(&uiOwnProcess);
+	bRunning = GetTableTarget(uiTable, bOwnRunning, uiOwnProcess, &uiSpace, &uiProcess);
+	if ((uiStopSpace == DEBUG_SPACE_ANY) || (uiSpace == DEBUG_SPACE_ANY))
+	{
+		return IDE_TABLE_RANK_ANY;
+	}
+	if (uiSpace != uiStopSpace)
+	{
+		return IDE_TABLE_RANK_NONE;
+	}
+	if (!bRunning)
+	{
+		return (uiStopProcess == DEBUG_PROCESS_ANY) ? IDE_TABLE_RANK_SPACE : IDE_TABLE_RANK_NONE;
+	}
+	if ((uiProcess == DEBUG_PROCESS_ANY) || (uiStopProcess == DEBUG_PROCESS_ANY))
+	{
+		return IDE_TABLE_RANK_SPACE;
+	}
+	return (uiProcess == uiStopProcess) ? IDE_TABLE_RANK_PROCESS : IDE_TABLE_RANK_NONE;
 }
 
 
@@ -1190,6 +1342,7 @@ void CIDEDebugger::TellProcesses(CArrayChars* paszOutput)
 		}
 		pszLine->Append('.');
 		bOwn |= !mszOwnProgram.Empty() && (StringInsensitiveCompare(psEvent->sProcess.szName, mszOwnProgram.Text()) == 0);
+		bOwn |= IsTableProcess(psEvent->sProcess.szName);
 	}
 	if (bOwn)
 	{
@@ -1283,31 +1436,21 @@ void CIDEDebugger::Welcomed(void)
 //////////////////////////////////////////////////////////////////////////
 bool CIDEDebugger::LoadFile(const char* szFile, uint32 uiAddress)
 {
-	FILE*	pcFile;
-	uint8*	puiData;
-	long	iSize;
-	bool	bResult;
-	char	szLine[64];
+	CFileUtil	cFileUtil;
+	void*		pvData;
+	size		uiSize;
+	bool		bResult;
+	char		szLine[64];
 
-	pcFile = fopen(szFile, "rb");
-	if (!pcFile)
+	pvData = cFileUtil.ReadAll(szFile, &uiSize);
+	if (!pvData)
 	{
 		maszMessages.Add("Could not read ")->Append(szFile)->Append('.');
 		mszStatus.Set("Could not read the program to load.");
 		return false;
 	}
-	fseek(pcFile, 0, SEEK_END);
-	iSize = ftell(pcFile);
-	fseek(pcFile, 0, SEEK_SET);
-	bResult = iSize > 0;
-	puiData = bResult ? (uint8*)malloc((size)iSize) : NULL;
-	bResult = bResult && (fread(puiData, 1, (size)iSize, pcFile) == (size)iSize);
-	fclose(pcFile);
-	bResult = bResult && (mcClient.Load(uiAddress, puiData, (size)iSize) != 0);
-	if (puiData)
-	{
-		free(puiData);
-	}
+	bResult = (uiSize > 0) && (mcClient.Load(uiAddress, pvData, uiSize) != 0);
+	free(pvData);
 	if (!bResult)
 	{
 		maszMessages.Add("Could not load ")->Append(szFile)->Append(" into the emulator.");
@@ -1315,7 +1458,7 @@ bool CIDEDebugger::LoadFile(const char* szFile, uint32 uiAddress)
 		return false;
 	}
 
-	snprintf(szLine, sizeof(szLine), "Loaded %ld bytes at $%06X from ", iSize, (unsigned int)uiAddress);
+	snprintf(szLine, sizeof(szLine), "Loaded %u bytes at $%06X from ", (unsigned int)uiSize, (unsigned int)uiAddress);
 	maszMessages.Add(szLine)->Append(szFile)->Append('.');
 	return true;
 }

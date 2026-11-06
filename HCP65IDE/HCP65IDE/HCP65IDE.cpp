@@ -31,7 +31,6 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDEApp.h"
 
 
-#define IDE_DEFAULT_PROJECT		"../../Libraries/VisualStudioLib/VisualStudioLib.vcxproj"
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -80,7 +79,7 @@ void SplitIDECommandLine(const char* szCommandLine, CArrayChars* paszDest)
 //////////////////////////////////////////////////////////////////////////
 //
 // The IDE's window on Windows, showing the .sln, .vcxproj or
-// .hcp65workspace on the command line (or VisualStudioLib's).  More than
+// .hcp65workspace on the command line (or nothing).  More than
 // one solution are opened together, the first the startup solution.
 //
 //////////////////////////////////////////////////////////////////////////
@@ -100,13 +99,9 @@ int PASCAL WinMain(HINSTANCE hInstance,	HINSTANCE hPrevInstance, LPTSTR lpCmdLin
 
 	bResult = true;
 
-	//One or more solutions, or a workspace, opened together.
+	//One or more solutions, or a workspace, opened together; none, the IDE starts with nothing open.
 	aszSolutions.Init();
 	SplitIDECommandLine((lpCmdLine != NULL) ? lpCmdLine : "", &aszSolutions);
-	if (aszSolutions.NumElements() == 0)
-	{
-		aszSolutions.Add(IDE_DEFAULT_PROJECT);
-	}
 
 	{
 		CWinGDIWindowFactory	cNativeFactory;

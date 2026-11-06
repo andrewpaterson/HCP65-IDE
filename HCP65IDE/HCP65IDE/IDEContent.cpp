@@ -171,6 +171,9 @@ void CIDEContent::Init(void)
 	PreInit();
 
 	mcWorkspace.Init();
+	mcRecent.Init();
+	mszRecentFile.Init();
+	mszQueuedOpen.Init();
 	mcCodeModel.Init(&mcWorkspace);
 	mszConfiguration.Init();
 	memset(&msDialogLook, 0, sizeof(msDialogLook));
@@ -230,6 +233,8 @@ void CIDEContent::Class(void)
 	M_Pointer(mpMenuBar);
 	M_Pointer(mpOpenItem);
 	M_Pointer(mpAddSolutionItem);
+	M_Pointer(mpRecentMenu);
+	M_Pointer(mpClearRecentItem);
 	M_Pointer(mpSaveItem);
 	M_Pointer(mpSaveAllItem);
 	M_Pointer(mpCompareItem);
@@ -278,6 +283,9 @@ void CIDEContent::Class(void)
 	M_Pointer(mpReferences);
 	U_Unknown(CArrayIDELocations, masReferences);
 	U_Unknown(CBuildWorkspace, mcWorkspace);
+	U_Unknown(CBuildRecentFiles, mcRecent);
+	U_String(mszRecentFile);
+	U_String(mszQueuedOpen);
 	U_Unknown(CIDECodeModel, mcCodeModel);
 	U_Unknown(CIDEDebugger, mcDebugger);
 	M_Pointer(mpDebugView);
@@ -405,6 +413,9 @@ void CIDEContent::Free(void)
 	mcCodeModel.Kill();
 	mszConfiguration.Kill();
 	mcWorkspace.Kill();
+	mszQueuedOpen.Kill();
+	mszRecentFile.Kill();
+	mcRecent.Kill();
 	KillIDELocations(&masReferences);
 }
 
@@ -563,8 +574,8 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// File, with Open Project/Solution, Add Solution, Save, Save All and
-// Compare with File;
+// File, with Open Project/Solution, Add Solution, Recent Solutions, Clear
+// Recent Solutions, Save, Save All and Compare with File;
 // View, showing the tool windows; Git, with Compare with HEAD, a branch
 // or a revision; Debug; and Window, with Reset Window Layout and Close
 // All Documents, as in Visual Studio.
@@ -580,6 +591,10 @@ Ptr<CMenuBar> CIDEContent::CreateMenuBar(void)
 	pFile = OMalloc<CMenuContainer>(mpWindow, mpTheme);
 	mpOpenItem = pFile->AddItem("Open Project/Solution...", mpFolderIcon);
 	mpAddSolutionItem = pFile->AddItem("Add Solution...");
+	mpRecentMenu = OMalloc<CMenuContainer>(mpWindow, mpTheme);
+	pFile->AddItem("Recent Solutions", NULL, mpRecentMenu);
+	mpClearRecentItem = pFile->AddItem("Clear Recent Solutions");
+	ShowRecentMenu();
 	mpSaveItem = pFile->AddItem("Save");
 	mpSaveAllItem = pFile->AddItem("Save All");
 	mpCompareFileItem = pFile->AddItem("Compare with File...");
@@ -641,6 +656,13 @@ void CIDEContent::MenuItemClicked(CMenuItem* pcItem)
 	else if (pcItem == &mpAddSolutionItem)
 	{
 		ShowAddSolutionDialog();
+	}
+	else if (pcItem == &mpClearRecentItem)
+	{
+		ClearRecentSolutions();
+	}
+	else if (RecentItemClicked(pcItem))
+	{
 	}
 	else if (pcItem == &mpStartupItem)
 	{
@@ -816,8 +838,15 @@ bool CIDEContent::OpenSolution(const char* szFileName)
 	mpExplorer->ShowWorkspace(&mcWorkspace);
 	if (!bResult || !IsSolutionOpen())
 	{
+		//One that isn't there any more isn't recent.
+		if (!cFileUtil.Exists(szFileName) && mcRecent.Remove(szFileName))
+		{
+			WriteRecent();
+		}
 		return false;
 	}
+	mcRecent.Add(szFileName);
+	WriteRecent();
 
 	FindRepositories();
 
@@ -827,7 +856,9 @@ bool CIDEContent::OpenSolution(const char* szFileName)
 	mcDebugger.ReadSourceBreakpoints(szName.Text());
 	szName.Kill();
 
-	//Chosen before the combo boxes tell of it, so it isn't indexed twice.
+	//The configuration chosen last time, if a solution still has it; chosen before the combo boxes tell of it, so it
+	//isn't indexed twice.
+	mszConfiguration.Set(mcWorkspace.GetConfiguration());
 	ShowConfigurations();
 	mcCodeModel.StartIndexing();
 
@@ -1009,9 +1040,9 @@ void CIDEContent::WorkspaceChanged(bool bReindex)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The workspace file: where it was read from, or beside the first
-// solution with its name (so its layout and breakpoints are still the
-// solution's).
+// The workspace file, with the configuration chosen: where it was read
+// from, or beside the first solution with its name (so its layout and
+// breakpoints are still the solution's).
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEContent::WriteWorkspace(void)
@@ -1024,6 +1055,7 @@ bool CIDEContent::WriteWorkspace(void)
 	{
 		return false;
 	}
+	mcWorkspace.SetConfiguration(mszConfiguration.Text());
 	szFile.Init(mcWorkspace.GetFile());
 	if (szFile.Empty())
 	{
@@ -2019,6 +2051,11 @@ bool CIDEContent::SetConfiguration(const char* szConfiguration)
 		return false;
 	}
 	mszConfiguration.Set(szConfiguration);
+	if (StringCompare(mcWorkspace.GetConfiguration(), szConfiguration) != 0)
+	{
+		//Remembered in the workspace file for next time.
+		WriteWorkspace();
+	}
 	ShowConfiguration();
 
 	if (StringCompare(mszConfiguration.Text(), mcCodeModel.GetConfiguration()) != 0)
@@ -2083,7 +2120,19 @@ void CIDEContent::Tick(Ptr<CWindow> pWindow)
 	int64				iNow;
 	int64				iWait;
 	int64				iSoonest;
+	char*				pszOpen;
 
+	if (!mszQueuedOpen.Empty())
+	{
+		pszOpen = (char*)malloc(mszQueuedOpen.Length() + 1);
+		strcpy(pszOpen, mszQueuedOpen.Text());
+		mszQueuedOpen.Clear();
+		if (!OpenSolution(pszOpen))
+		{
+			gcLogger.Error2(__METHOD__, " Could not open [", pszOpen, "].", NULL);
+		}
+		free(pszOpen);
+	}
 	PollBuild(pWindow);
 	PollDebugger(pWindow);
 	PollClaude(pWindow);
@@ -2372,6 +2421,133 @@ Ptr<CIDEBuildPane> CIDEContent::GetBuildPane(void) { return mpBuildPane; }
 bool CIDEContent::IsBuilding(void) { return mcBuild.IsRunning(); }
 CCPP65ListingIndex* CIDEContent::GetListings(void) { return &mcListings; }  //The last HCP65 build's, for showing a line's assembly.
 CBuildWorkspace* CIDEContent::GetWorkspace(void) { return &mcWorkspace; }
+CBuildRecentFiles* CIDEContent::GetRecent(void) { return &mcRecent; }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The user's file the recent solutions are kept in, read now.  Empty,
+// they aren't kept.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::SetRecentFile(const char* szFile)
+{
+	mszRecentFile.Set(szFile ? szFile : "");
+	mcRecent.Clear();
+	if (!mszRecentFile.Empty())
+	{
+		mcRecent.Read(mszRecentFile.Text());
+	}
+	ShowRecentMenu();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// File, Clear Recent Solutions.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::ClearRecentSolutions(void)
+{
+	mcRecent.Clear();
+	WriteRecent();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The recent solutions to the user's file, and shown in File, Recent
+// Solutions.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::WriteRecent(void)
+{
+	if (!mszRecentFile.Empty() && !mcRecent.Write(mszRecentFile.Text()))
+	{
+		gcLogger.Error2(__METHOD__, " Could not write [", mszRecentFile.Text(), "].", NULL);
+	}
+	ShowRecentMenu();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// An item for each recent solution, the latest first, as Visual Studio
+// numbers them: "1 D:\...\HCP65ModPlay.sln".  With none, one that says so.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::ShowRecentMenu(void)
+{
+	CChars	szText;
+	size	i;
+
+	if (mpRecentMenu.IsNull())
+	{
+		return;
+	}
+	mpRecentMenu->RemoveAllItems();
+	if (mcRecent.NumFiles() == 0)
+	{
+		mpRecentMenu->AddItem("(No recent solutions)");
+		return;
+	}
+	szText.Init();
+	for (i = 0; i < mcRecent.NumFiles(); i++)
+	{
+		szText.Clear();
+		szText.Append((uint32)(i + 1));
+		szText.Append(' ');
+		szText.Append(mcRecent.GetFile(i));
+		mpRecentMenu->AddItem(szText.Text());
+	}
+	szText.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A recent solution's item: it is opened at the next tick, once its menu
+// is done with the click.  False if pcItem isn't one.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEContent::RecentItemClicked(CMenuItem* pcItem)
+{
+	Ptr<CMenuItem>	pItem;
+	size			i;
+
+	if (mpRecentMenu.IsNull())
+	{
+		return false;
+	}
+	for (i = 0; (i < mpRecentMenu->NumItems()) && (i < mcRecent.NumFiles()); i++)
+	{
+		pItem = mpRecentMenu->GetItem(i);
+		if (pcItem == &pItem)
+		{
+			OpenRecentSolution(i);
+			return true;
+		}
+	}
+	return false;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The recent solution uiIndex (0 the latest) is opened at the next tick.
+// False if there isn't one.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEContent::OpenRecentSolution(size uiIndex)
+{
+	if (uiIndex >= mcRecent.NumFiles())
+	{
+		return false;
+	}
+	mszQueuedOpen.Set(mcRecent.GetFile(uiIndex));
+	mpWindow->RequestTick(0);
+	return true;
+}
 CIDECodeModel* CIDEContent::GetCodeModel(void) { return &mcCodeModel; }
 CSolutionExplorer* CIDEContent::GetExplorer(void) { return &mpExplorer; }
 

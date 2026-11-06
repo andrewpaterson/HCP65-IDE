@@ -224,6 +224,7 @@
     <ClCompile Include="TestBuildLib.cpp" />
     <ClCompile Include="TestBuildConfigurations.cpp" />
     <ClCompile Include="TestBuildWorkspace.cpp" />
+    <ClCompile Include="TestBuildRecentFiles.cpp" />
     <ClCompile Include="TestBuild.cpp" />
   </ItemGroup>
   <ItemGroup>

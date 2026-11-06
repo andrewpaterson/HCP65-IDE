@@ -31,6 +31,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "VisualStudioLib/VcxSolution.h"
 #include "BuildLib/BuildConfigurations.h"
 #include "BuildLib/BuildWorkspace.h"
+#include "BuildLib/BuildRecentFiles.h"
 #include "BuildLib/SolutionBuild.h"
 #include "CppParserLib/CPP65ListingIndex.h"
 #include "WindowLib/Button.h"
@@ -107,6 +108,8 @@ protected:
 	Ptr<CMenuBar>				mpMenuBar;
 	Ptr<CMenuItem>				mpOpenItem;			//File, Open Project/Solution.
 	Ptr<CMenuItem>				mpAddSolutionItem;	//File, Add Solution.
+	Ptr<CMenuContainer>			mpRecentMenu;		//File, Recent Solutions: an item for each, or one saying there are none.
+	Ptr<CMenuItem>				mpClearRecentItem;	//File, Clear Recent Solutions.
 	Ptr<CMenuItem>				mpSaveItem;			//File, Save.
 	Ptr<CMenuItem>				mpSaveAllItem;		//File, Save All.
 	Ptr<CMenuItem>				mpCompareItem;		//Git, Compare with HEAD.
@@ -153,6 +156,9 @@ protected:
 	Ptr<CTreeContainer>			mpReferences;		//What Find All References found.
 	CArrayIDELocations			masReferences;		//The references' places; a node's data is its index plus one.
 	CBuildWorkspace				mcWorkspace;		//The solutions open, one the startup solution.
+	CBuildRecentFiles			mcRecent;			//The solutions and workspaces opened last.
+	CChars						mszRecentFile;		//Where they are kept, empty if they aren't.
+	CChars						mszQueuedOpen;		//A recent one chosen, opened at the next tick (after its menu's click).
 	CIDECodeModel				mcCodeModel;		//Uses mcWorkspace; initialised when a solution is opened.
 
 	CGitRepositories			mcGit;				//The repositories the solution's files are in.
@@ -215,6 +221,10 @@ public:
 	bool			ShowOpenSolutionDialog(void);
 	bool			ShowAddSolutionDialog(void);
 	CBuildWorkspace*	GetWorkspace(void);
+	void			SetRecentFile(const char* szFile);
+	void			ClearRecentSolutions(void);
+	bool			OpenRecentSolution(size uiIndex);
+	CBuildRecentFiles*	GetRecent(void);
 	void			MenuItemClicked(CMenuItem* pcItem);
 	bool			OpenFile(const char* szFileName, size uiProject = SOLUTION_EXPLORER_NO_PROJECT);
 	Ptr<CIDEEditorTab>	OpenFileTab(const char* szFileName, size uiProject, bool bShow);
@@ -323,6 +333,9 @@ public:
 protected:
 	Ptr<CMenuBar>		CreateMenuBar(void);
 	Ptr<CMenuContainer>	CreateExplorerMenu(void);
+	void				ShowRecentMenu(void);
+	void				WriteRecent(void);
+	bool				RecentItemClicked(CMenuItem* pcItem);
 	bool				IsSolutionOpen(void);
 	char*				GetStartupFile(void);
 	bool				GetSettingsBaseFile(CChars* pszDest);

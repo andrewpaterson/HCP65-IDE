@@ -128,6 +128,22 @@ void TestBuildWorkspaceSolutions(void)
 	cWorkspace.GetBuildOrder("Debug|W65C816", &aiOrder);
 	AssertSize(1, aiOrder.NumElements());
 	AssertInt(0, aiOrder.GetValue(0));
+
+	//Debugging the program, the kernal is what it loads, not a process.  Debugging the kernal, the program on its
+	//card is one; without a card (Debug) it isn't.
+	aiOrder.ReInit();
+	cWorkspace.GetProcessPrograms("Release|W65C816", &aiOrder);
+	AssertSize(0, aiOrder.NumElements());
+	cWorkspace.SetStartup(uiKernel);
+	cWorkspace.GetProcessPrograms("Release|W65C816", &aiOrder);
+	AssertSize(1, aiOrder.NumElements());
+	AssertInt(0, aiOrder.GetValue(0));
+	AssertString("\\p.exe", cWorkspace.FindConfiguration(0, "Release|W65C816")->GetCardPath());
+	AssertString("User", cWorkspace.FindConfiguration(0, "Release|W65C816")->GetBreakpointSpace());
+	aiOrder.ReInit();
+	cWorkspace.GetProcessPrograms("Debug|W65C816", &aiOrder);
+	AssertSize(0, aiOrder.NumElements());
+	cWorkspace.SetStartup(0);
 	aiOrder.Kill();
 
 	//Removing the startup solution makes the next one it.
@@ -162,6 +178,8 @@ void TestBuildWorkspaceFile(void)
 	AssertTrue(cWorkspace.Open(TEST_WORKSPACE_PROGRAM));
 	AssertSize(1, cWorkspace.AddSolution(TEST_WORKSPACE_KERNEL));
 	cWorkspace.SetStartup(1);
+	AssertString("", cWorkspace.GetConfiguration());
+	cWorkspace.SetConfiguration("Debug|W65C816");
 	AssertTrue(cWorkspace.Write(TEST_WORKSPACE_FILE));
 	szFull.Init(TEST_WORKSPACE_FILE);
 	cFileUtil.FullPath(&szFull);
@@ -170,6 +188,7 @@ void TestBuildWorkspaceFile(void)
 
 	cFile.Init();
 	AssertTrue(cFile.Read(TEST_WORKSPACE_FILE));
+	AssertTrue(strstr(cFile.Text(), "<Workspace Configuration=\"Debug|W65C816\">") != NULL);
 	AssertTrue(strstr(cFile.Text(), "File=\"..\\Input\\Workspace\\Program\\Program.sln\"") != NULL);
 	AssertTrue(strstr(cFile.Text(), "File=\"..\\Input\\Workspace\\Kernel\\Kernel.sln\" Startup=\"true\"") != NULL);
 	cFile.Kill();
@@ -178,6 +197,7 @@ void TestBuildWorkspaceFile(void)
 	AssertTrue(cRead.Open(TEST_WORKSPACE_FILE));
 	AssertSize(2, cRead.NumSolutions());
 	AssertSize(1, cRead.GetStartup());
+	AssertString("Debug|W65C816", cRead.GetConfiguration());
 	AssertTrue(cRead.GetStartupSolution()->mszFile.EndsWith("Kernel.sln"));
 	AssertSize(3, cRead.NumProjects());
 
@@ -185,6 +205,7 @@ void TestBuildWorkspaceFile(void)
 	AssertTrue(cFile.Write("Output" _FS_ "Bad" BUILD_WORKSPACE_EXTENSION));
 	cFile.Kill();
 	AssertFalse(cRead.Open("Output" _FS_ "Bad" BUILD_WORKSPACE_EXTENSION));
+	AssertString("", cRead.GetConfiguration());
 	AssertFalse(cRead.Open("Output" _FS_ "Missing" BUILD_WORKSPACE_EXTENSION));
 
 	cRead.Kill();

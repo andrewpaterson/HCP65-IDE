@@ -30,12 +30,9 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDEApp.h"
 
 
-#define IDE_DEFAULT_PROJECT		"../../Libraries/VisualStudioLib/VisualStudioLib.vcxproj"
-
-
 //////////////////////////////////////////////////////////////////////////
 //
-// The IDE's window on Linux, showing the .vcxproj given (or VisualStudioLib's).  Run from the HCP65IDE directory the
+// The IDE's window on Linux, showing the solutions or workspace given (or nothing).  Run from the HCP65IDE directory the
 // resources and WinInputLib's XML are found relative to it.
 //
 // HCP65_IDE_SNAPSHOT=file.png (and HCP65_IDE_SNAPSHOT_TICKS) saves the window and closes it.  HCP65_IDE_EXPAND opens
@@ -56,15 +53,11 @@ int main(int argc, char* argv[])
 	CArrayChars	aszSolutions;
 	int			i;
 
-	//One or more solutions, or a workspace, opened together.
+	//One or more solutions, or a workspace, opened together; none, the IDE starts with nothing open.
 	aszSolutions.Init();
 	for (i = 1; i < argc; i++)
 	{
 		aszSolutions.Add(argv[i]);
-	}
-	if (aszSolutions.NumElements() == 0)
-	{
-		aszSolutions.Add(IDE_DEFAULT_PROJECT);
 	}
 
 	{

@@ -25,6 +25,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/JewelColours.h"
 #include <stdio.h>
 #include "BaseLib/ArrayChars.h"
+#include "BaseLib/FileUtil.h"
 #include "IDEWindowTick.h"
 #include "IDEApp.h"
 
@@ -48,6 +49,11 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define IDE_EMULATOR_DIRECTORY		"../../../HCP65/HCP65-Emulator/HCP65Emulator"
 
 
+//The user's recent solutions (GetIDERecentFile).
+#define IDE_RECENT_DIRECTORY		"HCP65IDE"
+#define IDE_RECENT_FILE				"RecentSolutions.xml"
+
+
 //////////////////////////////////////////////////////////////////////////
 //
 //
@@ -65,8 +71,52 @@ void CIDEApp::Init(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// The user's file the recent solutions are kept in:
+// %APPDATA%\HCP65IDE\RecentSolutions.xml, or ~/.config/HCP65IDE/ on
+// Linux; HCP65_IDE_RECENT if it is set.  Empty if there's no such place.
+//
+//////////////////////////////////////////////////////////////////////////
+void GetIDERecentFile(CChars* pszDest)
+{
+	CFileUtil	cFileUtil;
+	const char*	szBase;
+
+	pszDest->Init();
+	if (getenv("HCP65_IDE_RECENT") != NULL)
+	{
+		pszDest->Set(getenv("HCP65_IDE_RECENT"));
+		return;
+	}
+#ifdef _WIN32
+	szBase = getenv("APPDATA");
+	if (szBase != NULL)
+	{
+		pszDest->Set(szBase);
+	}
+#else
+	szBase = getenv("HOME");
+	if (szBase != NULL)
+	{
+		pszDest->Set(szBase);
+		cFileUtil.AppendToPath(pszDest, ".config");
+	}
+#endif
+	if (pszDest->Empty())
+	{
+		return;
+	}
+	cFileUtil.AppendToPath(pszDest, IDE_RECENT_DIRECTORY);
+	cFileUtil.AppendToPath(pszDest, IDE_RECENT_FILE);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // The window and its content, with paszSolutions open (a workspace, or
-// solutions opened together, the first the startup one).  The devices are
+// solutions opened together, the first the startup one), or nothing if it
+// is empty.  The recent solutions are read (HCP65_IDE_RECENT, the file
+// they're in, and HCP65_IDE_RECENT_OPEN, one opened, for checking).  The
+// devices are
 // described by the XML in szInputDirectory; pcNativeInput (the platform's
 // keyboard and mouse) is added to them.  Run fails if anything here did.
 // HCP65_IDE_ADD (a solution added), HCP65_IDE_STARTUP and HCP65_IDE_REMOVE
@@ -118,9 +168,17 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 		//The HCP65 repository is beside the IDE's.
 		mpContent->SetLibc65Directory("../../../HCP65/Libraries/Libc65");
 		mpContent->SetDefaultEmulator((getenv("HCP65_IDE_EMULATOR") != NULL) ? getenv("HCP65_IDE_EMULATOR") : IDE_EMULATOR, IDE_EMULATOR_DIRECTORY);
+		GetIDERecentFile(&szPath);
+		mpContent->SetRecentFile(szPath.Text());
+		szPath.Kill();
 
 		//Sized first: what the checks below scroll to depends on the size.
 		mpWindow->SetWindowSize(1280, 800);
+		if (getenv("HCP65_IDE_RECENT_OPEN") != NULL)
+		{
+			//As File, Recent Solutions: the one of that number (0 the latest), opened at the first tick.
+			mpContent->OpenRecentSolution((size)atoi(getenv("HCP65_IDE_RECENT_OPEN")));
+		}
 		if (mpContent->OpenSolutions(paszSolutions))
 		{
 			if (getenv("HCP65_IDE_ADD") != NULL)

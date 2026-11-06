@@ -948,13 +948,18 @@ void CIDEContent::GlyphClicked(CCodeEditor* pcEditor, size uiLine)
 //
 // The line tables beside what the chosen configuration builds and loads
 // (<program>.lines) bind the source breakpoints: its own program's in its
-// breakpoint space, a load's (a kernal) in every space.
+// breakpoint space, a load's (a kernal) in every space.  The programs of
+// the workspace's other solutions that the kernal runs (on a card) bind
+// theirs too, each in its own space and process.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEContent::ReadLineTables(void)
 {
 	CBuildConfiguration*	pcConfiguration;
+	CBuildConfiguration*	pcOther;
 	CChars					szFile;
+	CArrayInt				aiOthers;
+	size					uiOther;
 	size					i;
 
 	mcDebugger.ClearLineTables();
@@ -971,6 +976,19 @@ void CIDEContent::ReadLineTables(void)
 		{
 			mcDebugger.AddLineTable(szFile.Text(), true);
 		}
+
+		aiOthers.Init();
+		mcWorkspace.GetProcessPrograms(mszConfiguration.Text(), &aiOthers);
+		for (i = 0; i < aiOthers.NumElements(); i++)
+		{
+			uiOther = (size)aiOthers.GetValue(i);
+			pcOther = mcWorkspace.FindConfiguration(uiOther, mszConfiguration.Text());
+			if (pcOther->IsHCP65() && CBuild::GetProgramPath(mcWorkspace.GetSolution(uiOther)->mcSolution.GetDirectory(), pcOther, &szFile))
+			{
+				mcDebugger.AddProcessLineTable(szFile.Text(), pcOther->GetBreakpointSpace(), pcOther->GetCardPath());
+			}
+		}
+		aiOthers.Kill();
 		szFile.Kill();
 	}
 	ShowAllBreakpoints();

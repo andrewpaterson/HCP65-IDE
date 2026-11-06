@@ -60,9 +60,9 @@ typedef CArrayTemplate<SBuildWorkspaceProject>		CArrayBuildWorkspaceProjects;
 
 //The solutions open together (a program's and the kernal it runs on), one of them the startup solution: the one
 //debugged.  The workspace file (.hcp65workspace) lists them and which is the startup one, their paths relative to
-//it:
+//it, and the configuration chosen last:
 //
-//	<Workspace>
+//	<Workspace Configuration="Release|W65C816">
 //		<Solution File="ModPlay\HCP65ModPlay.sln" Startup="true"/>
 //		<Solution File="..\HCP65Lib\Kernal\HCP65Kernal.sln"/>
 //	</Workspace>
@@ -76,6 +76,7 @@ protected:
 	CChars							mszFile;		//The workspace file, empty if none has been read or written.
 	CArrayBuildWorkspaceSolutions	mapcSolutions;
 	size							muiStartup;		//MAX_SIZE with no solutions.
+	CChars							mszConfiguration;	//The configuration chosen last, empty if none.
 	CArrayBuildWorkspaceProjects	masProjects;
 
 public:
@@ -93,6 +94,8 @@ public:
 	size					FindSolution(const char* szFile);
 	void					SetStartup(size uiSolution);
 	size					GetStartup(void);
+	void					SetConfiguration(const char* szConfiguration);
+	char*					GetConfiguration(void);
 
 	size					NumSolutions(void);
 	CBuildWorkspaceSolution*	GetSolution(size uiSolution);
@@ -111,6 +114,7 @@ public:
 	CBuildConfiguration*	FindAnyConfiguration(const char* szConfiguration, const char* szPlatform);
 	void					GetBuildOrder(const char* szConfiguration, CArrayInt* paiDest);
 	bool					Loads(size uiSolution, size uiOther, const char* szConfiguration);
+	void					GetProcessPrograms(const char* szConfiguration, CArrayInt* paiDest);
 
 protected:
 	void					IndexProjects(void);

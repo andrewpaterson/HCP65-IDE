@@ -33,6 +33,7 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 #define BUILD_WORKSPACE_SOLUTION		"Solution"
 #define BUILD_WORKSPACE_FILE			"File"
 #define BUILD_WORKSPACE_STARTUP			"Startup"
+#define BUILD_WORKSPACE_CONFIGURATION	"Configuration"
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -166,6 +167,7 @@ void CBuildWorkspace::Init(void)
 	mszFile.Init();
 	mapcSolutions.Init();
 	muiStartup = MAX_SIZE;
+	mszConfiguration.Init();
 	masProjects.Init();
 }
 
@@ -178,6 +180,7 @@ void CBuildWorkspace::Kill(void)
 {
 	Clear();
 	masProjects.Kill();
+	mszConfiguration.Kill();
 	mapcSolutions.Kill();
 	mszFile.Kill();
 }
@@ -200,6 +203,7 @@ void CBuildWorkspace::Clear(void)
 	mapcSolutions.ReInit();
 	masProjects.ReInit();
 	muiStartup = MAX_SIZE;
+	mszConfiguration.Set("");
 	mszFile.Set("");
 }
 
@@ -250,6 +254,7 @@ bool CBuildWorkspace::Read(const char* szFile)
 	STagIterator	sIterator;
 	char*			szPath;
 	char*			szStartup;
+	char*			szConfiguration;
 	size			uiSolution;
 	bool			bResult;
 
@@ -269,6 +274,8 @@ bool CBuildWorkspace::Read(const char* szFile)
 	szSolution.Init();
 	if (bResult)
 	{
+		szConfiguration = pcRoot->GetStringAttribute(BUILD_WORKSPACE_CONFIGURATION);
+		mszConfiguration.Set(szConfiguration ? szConfiguration : "");
 		for (pcTag = pcRoot->GetTag(BUILD_WORKSPACE_SOLUTION, &sIterator); pcTag; pcTag = pcRoot->GetNextTag(&sIterator))
 		{
 			szPath = pcTag->GetStringAttribute(BUILD_WORKSPACE_FILE);
@@ -324,6 +331,10 @@ bool CBuildWorkspace::Write(const char* szFile)
 
 	cWriter.Init();
 	cWriter.Begin(BUILD_WORKSPACE_TAG);
+	if (!mszConfiguration.Empty())
+	{
+		cWriter.Attribute(BUILD_WORKSPACE_CONFIGURATION, mszConfiguration.Text());
+	}
 	for (i = 0; i < mapcSolutions.NumElements(); i++)
 	{
 		MakeRelativePath(szDirectory.Text(), GetSolution(i)->mszFile.Text(), &szRelative);
@@ -469,6 +480,8 @@ void CBuildWorkspace::SetStartup(size uiSolution)
 
 
 size CBuildWorkspace::GetStartup(void)										{ return muiStartup; }
+void CBuildWorkspace::SetConfiguration(const char* szConfiguration)		{ mszConfiguration.Set(szConfiguration ? szConfiguration : ""); }
+char* CBuildWorkspace::GetConfiguration(void)								{ return mszConfiguration.Text(); }
 size CBuildWorkspace::NumSolutions(void)									{ return mapcSolutions.NumElements(); }
 CBuildWorkspaceSolution* CBuildWorkspace::GetSolution(size uiSolution)		{ return (uiSolution < mapcSolutions.NumElements()) ? *mapcSolutions.Get(uiSolution) : NULL; }
 CBuildWorkspaceSolution* CBuildWorkspace::GetStartupSolution(void)			{ return GetSolution(muiStartup); }
@@ -701,6 +714,36 @@ CBuildConfiguration* CBuildWorkspace::FindConfiguration(size uiSolution, const c
 
 	pcSolution = GetSolution(uiSolution);
 	return pcSolution ? pcSolution->mcConfigurations.FindConfiguration(szName) : NULL;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The solutions other than the startup one whose configuration
+// szConfiguration builds a program the kernal runs as a process (an
+// executable put on a card, CardPath), and that the startup solution's
+// doesn't load: debugging the startup solution, their source breakpoints
+// are bound by their own line tables, in their own breakpoint space and
+// process.
+//
+//////////////////////////////////////////////////////////////////////////
+void CBuildWorkspace::GetProcessPrograms(const char* szConfiguration, CArrayInt* paiDest)
+{
+	CBuildConfiguration*	pcConfiguration;
+	size					i;
+
+	for (i = 0; i < mapcSolutions.NumElements(); i++)
+	{
+		if (i == muiStartup)
+		{
+			continue;
+		}
+		pcConfiguration = FindConfiguration(i, szConfiguration);
+		if ((pcConfiguration != NULL) && pcConfiguration->HasExecutable() && pcConfiguration->HasCard() && !Loads(muiStartup, i, szConfiguration))
+		{
+			paiDest->Add((int)i);
+		}
+	}
 }
 
 

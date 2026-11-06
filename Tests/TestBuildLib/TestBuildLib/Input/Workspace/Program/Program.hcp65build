@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <BuildConfigurations>
-	<Configuration Name="Release|W65C816" Toolchain="W65C816" Solution="Release|Win32" BreakpointSpace="User">
+	<Configuration Name="Release|W65C816" Toolchain="W65C816" Solution="Release|Win32" BreakpointSpace="User" Card="..\Output\Card.img" CardPath="\p.exe">
 		<Executable File="p.exe" Entry="UserStart"/>
 		<Load File="..\Kernel\Output\W65C816\Release\k.rom" Address="0x0"/>
 	</Configuration>
