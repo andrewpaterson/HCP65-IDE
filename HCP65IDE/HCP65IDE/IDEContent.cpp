@@ -744,7 +744,7 @@ bool CIDEContent::GoToDefinition(void)
 	{
 		return false;
 	}
-	mpDocuments->ReindexStaleTabs(true);
+	mpDocuments->UpdateEditedTabsNow();
 	if (!mcCodeModel.FindDefinition(mpDocuments->GetActiveTab()->GetFileName(), iLine, iColumn, &sLocation))
 	{
 		ShowStatus("No definition found at the caret.");
@@ -849,8 +849,9 @@ int64 CIDEContent::UpdateStatusLine(int64 iNow)
 //////////////////////////////////////////////////////////////////////////
 //
 // Each window tick: a tab whose text has been left alone for a moment
-// after an edit is highlighted again, from its text.  The window ticks
-// again when the next one might be due.
+// after an edit is highlighted and indexed again, from its text, on the
+// code model's edits thread.  The window ticks again when the next one
+// might be due.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEContent::Tick(Ptr<CWindow> pWindow)
@@ -882,16 +883,12 @@ void CIDEContent::Tick(Ptr<CWindow> pWindow)
 			mpGitStatus->UpdateChangeBars(pTab);
 		}
 		pTab->ShowModified();
-		if (pTab->NeedsRecolour(iNow, &iWait))
-		{
-			mpDocuments->HighlightTab(pTab);
-		}
-		else if ((iWait >= 0) && ((iSoonest < 0) || (iWait < iSoonest)))
-		{
-			iSoonest = iWait;
-		}
 	}
-	mpDocuments->ReindexStaleTabs(false);
+	iWait = mpDocuments->UpdateEditedTabs(iNow);
+	if ((iWait >= 0) && ((iSoonest < 0) || (iWait < iSoonest)))
+	{
+		iSoonest = iWait;
+	}
 	iWait = UpdateStatusLine(iNow);
 	if ((iWait >= 0) && ((iSoonest < 0) || (iWait < iSoonest)))
 	{

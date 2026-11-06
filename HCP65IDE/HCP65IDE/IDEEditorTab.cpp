@@ -245,11 +245,12 @@ bool CIDEEditorTab::SetCaretPlace(int iLine, int iColumn)
 //////////////////////////////////////////////////////////////////////////
 //
 // True once the text has been left alone for a moment after an edit, so
-// it should be highlighted again (from the editor's text).  Otherwise
-// piWait is how many milliseconds until it might be, or -1 for never.
+// it should be highlighted again (from the editor's text; then
+// SetRecolourPending(false)).  Otherwise piWait is how many milliseconds
+// until it might be, or -1 for never.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEEditorTab::NeedsRecolour(int64 iNow, int64* piWait)
+bool CIDEEditorTab::IsRecolourDue(int64 iNow, int64* piWait)
 {
 	*piWait = -1;
 	SeeChanges(iNow);
@@ -262,7 +263,6 @@ bool CIDEEditorTab::NeedsRecolour(int64 iNow, int64* piWait)
 		*piWait = IDE_RECOLOUR_DELAY - (iNow - miChangedTime);
 		return false;
 	}
-	mbRecolour = false;
 	return true;
 }
 
@@ -562,4 +562,5 @@ void CIDEEditorTab::SeeChanges(int64 iNow)
 	}
 }
 bool CIDEEditorTab::IsRecolourPending(void) { return mbRecolour; }
+void CIDEEditorTab::SetRecolourPending(bool bPending) { mbRecolour = bPending; }
 

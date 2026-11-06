@@ -37,11 +37,25 @@ CHECKS = [
 		 r'^Status: Renamed mpcCalc2 to mpcCalc3: 19 places in 2 files\.$',
 		 r'^Rename: mpcCalc3 \[CCalculatorParser::mpcCalc3\] at 19 places, 0 overrides$'], [r'Rename stopped']),
 	('rename-while-reindexing', {
-		'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'CARET': '36:2', 'TYPE': 'int iTypedName; ', 'REINDEX_DELAY': '1500',
-		'DEBUG': 'wait:700,printindexing,edit:caret:36:7,edit:renamable,printindexing'},
-		[r'^Indexing edits: busy$',
+		'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'CARET': '36:2', 'TYPE': 'int iTypedName; ', 'EDITS_DELAY': '1500',
+		'DEBUG': 'wait:700,printedits,edit:caret:36:7,edit:renamable,printedits'},
+		[r'^Edits thread: busy$',
 		 r'^Rename: iTypedName \[.*CalculatorParser\.cpp:36:6:iTypedName\] at 1 places, 0 overrides$',
-		 r'^Indexing edits: idle$'], []),
+		 r'^Edits thread: idle$'], []),
+	('recolour-off-ui-thread', {
+		#Typed, given to the edits thread (held back), typed again while it is busy: what it made is of the old text,
+		#so it isn't shown; the new text is given to it once it has finished, and shown.
+		'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'CARET': '36:2', 'TYPE': 'int iTypedName; ', 'EDITS_DELAY': '5000',
+		'DEBUG': 'printspans,wait:1500,printedits,edit:type:x,wait:5500,printedits,printspans,wait:5500,printedits,printspans,'
+		         'edit:caret:36:7,edit:renamable'},
+		[r'^Spans: changed$', r'^Edits thread: busy$', r'^Edits thread: busy$', r'^Spans: same$', r'^Edits thread: idle$',
+		 r'^Spans: changed$', r'^Rename: iTypedName \[.*CalculatorParser\.cpp:36:6:iTypedName\] at 1 places'], []),
+	('header-edit-in-unit', {
+		#A header's edits are worked out in the unit that includes it: its new member is indexed as the class's.
+		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:2', 'TYPE': 'int miTypedMember; ',
+		'DEBUG': 'printspans,wait:1500,printedits,printspans,edit:caret:38:7,edit:renamable'},
+		[r'^Spans: changed$', r'^Edits thread: idle$', r'^Spans: changed$',
+		 r'^Rename: miTypedMember \[CCalcParentheses::miTypedMember\] at 1 places, 0 overrides$'], []),
 	('nothing-at-caret', {
 		'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'CARET': '1:1', 'EDIT': 'usages,renamable'},
 		[r'^Status: No usages found at the caret\.$', r'^Rename: nothing at the caret$'], []),

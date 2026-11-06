@@ -29,7 +29,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 //The debug script's commands that are the IDE's (RunCommand); "goto:" takes what follows it.
-static const char*	gaszIDEScriptCommands[] = { "goto:", "rename", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "printdiffs", "printgit", "printconfig", "printexplorer", "printindexing" };
+static const char*	gaszIDEScriptCommands[] = { "goto:", "rename", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "printdiffs", "printgit", "printconfig", "printexplorer", "printedits", "printspans" };
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -42,6 +42,7 @@ void CIDEScript::Init(CIDEContent* pcContent)
 	mpcContent = pcContent;
 	mpDialog = NULL;
 	miDialogTicks = 0;
+	muiSpans = 0;
 	PostInit();
 }
 
@@ -55,6 +56,7 @@ void CIDEScript::Class(void)
 	U_Pointer(mpcContent);
 	M_Pointer(mpDialog);
 	U_Int32(miDialogTicks);
+	U_Size(muiSpans);
 }
 
 
@@ -209,11 +211,24 @@ void CIDEScript::RunCommand(const char* szCommand)
 		printf("Git: branch [%s] change popup %s\n", mpcContent->mpGitStatus->GetBranchLabel()->GetText(), mpcContent->mpGitStatus->GetChangePopup().IsNotNull() ? "open" : "closed");
 		fflush(stdout);
 	}
-	else if (strcmp(szCommand, "printindexing") == 0)
+	else if (strcmp(szCommand, "printedits") == 0)
 	{
-		//Whether edited files are being indexed again on the code model's thread.
-		printf("Indexing edits: %s\n", mpcContent->mcCodeModel.IsReindexing() ? "busy" : "idle");
+		//Whether the code model's edits thread is working out edited files.
+		printf("Edits thread: %s\n", mpcContent->mcCodeModel.IsProcessingEditedFiles() ? "busy" : "idle");
 		fflush(stdout);
+	}
+	else if (strcmp(szCommand, "printspans") == 0)
+	{
+		//Whether the active editor's coloured spans changed since printspans last looked: when highlights are shown.
+		size	uiSpans;
+
+		if (mpcContent->mpDocuments->GetActiveTab().IsNotNull())
+		{
+			uiSpans = mpcContent->mpDocuments->GetActiveTab()->GetEditor()->NumSpans();
+			printf("Spans: %s\n", (uiSpans == muiSpans) ? "same" : "changed");
+			muiSpans = uiSpans;
+			fflush(stdout);
+		}
 	}
 	else if (strcmp(szCommand, "printconfig") == 0)
 	{
@@ -559,7 +574,7 @@ void CIDEScript::RunEditStep(const char* szStep)
 		//As saving a header does: everything indexed again, waited for, then the open files' edits.
 		mpcContent->mpDocuments->ReindexAll();
 		mpcContent->mcCodeModel.WaitForIndexing();
-		mpcContent->mpDocuments->ReindexStaleTabs(true);
+		mpcContent->mpDocuments->UpdateEditedTabsNow();
 	}
 	else if (strcmp(szStep, "undoall") == 0)
 	{

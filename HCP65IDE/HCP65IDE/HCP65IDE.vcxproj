@@ -238,6 +238,7 @@
   <ItemGroup>
     <ClCompile Include="HCP65IDE.cpp" />
     <ClCompile Include="IDECodeModel.cpp" />
+    <ClCompile Include="IDECodeModelEdits.cpp" />
     <ClCompile Include="IDEContent.cpp" />
     <ClCompile Include="IDEDebugging.cpp" />
     <ClCompile Include="IDEGitStatus.cpp" />

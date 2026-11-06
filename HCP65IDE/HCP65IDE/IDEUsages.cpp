@@ -175,7 +175,7 @@ bool CIDEUsages::FindUsages(bool bDeclarations)
 	const char*			szWhat;
 	size				uiOverrides;
 
-	mpcContent->mpDocuments->ReindexStaleTabs(true);
+	mpcContent->mpDocuments->UpdateEditedTabsNow();
 	asLocations.Init();
 	szKey.Init();
 	if (!mpcContent->mpDocuments->FindSymbolAtCaret(&asLocations, &szKey))

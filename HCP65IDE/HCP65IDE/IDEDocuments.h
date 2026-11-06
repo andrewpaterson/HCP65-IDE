@@ -62,10 +62,9 @@ public:
 	bool			SaveActiveFile(void);
 	bool			SaveAllFiles(void);
 	bool			SetCaretPlace(int iLine, int iColumn);
-	void			ReindexStaleTabs(bool bNow);
+	int64			UpdateEditedTabs(int64 iNow);
+	void			UpdateEditedTabsNow(void);
 	void			ReindexAll(void);
-	void			AddReindexFile(size uiProject, const char* szFileName, const char* szContents, const char* szHeader, CArrayIDEReindexFiles* papsFiles);
-	void			AddReindexHeader(const char* szFileName, CArrayIDEReindexFiles* papsFiles);
 	void			ReindexDiscarded(Ptr<CIDEEditorTab> pTab);
 	bool			CloseFile(const char* szFileName);
 	Ptr<CTextArea>		GetEditor(void);
@@ -84,6 +83,9 @@ public:
 	void				HighlightTab(Ptr<CIDEEditorTab> pTab);
 
 protected:
+	int64				GiveEditedTabs(int64 iNow, bool bNow);
+	void				AddEditedFile(size uiProject, const char* szFileName, const char* szText, size uiChanges, bool bHighlight, bool bIndex, CArrayIDEEditedFiles* papsFiles);
+	bool				TakeEditedFiles(bool bWait);
 };
 
 

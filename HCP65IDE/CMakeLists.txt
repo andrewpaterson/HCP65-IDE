@@ -125,6 +125,7 @@ vcxproj_sources(CLAUDELIB_SOURCES "${CLAUDELIB_DIR}/ClaudeLib.vcxproj")
 set(IDE_SOURCES
 	"${IDE_DIR}/HCP65IDELinux.cpp"
 	"${IDE_DIR}/IDECodeModel.cpp"
+	"${IDE_DIR}/IDECodeModelEdits.cpp"
 	"${IDE_DIR}/IDEContent.cpp"
 	"${IDE_DIR}/IDEDocuments.cpp"
 	"${IDE_DIR}/IDESolutions.cpp"

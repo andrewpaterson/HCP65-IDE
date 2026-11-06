@@ -23,7 +23,6 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/ConstructorCall.h"
 #include "BaseLib/PointerFunctions.h"
 #include "BaseLib/StringHelper.h"
-#include "BaseLib/NativeThread.h"
 #include "CppParserLib/CppParser.h"
 #include "IDECodeModel.h"
 
@@ -102,72 +101,6 @@ void KillIDELocations(CArrayIDELocations* pasLocations)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// szContents and szHeader may be NULL.
-//
-//////////////////////////////////////////////////////////////////////////
-void SIDEReindexFile::Init(size uiProject, const char* szFileName, const char* szContents, const char* szHeader)
-{
-	this->uiProject = uiProject;
-	this->szFileName.Init(szFileName);
-	bContents = szContents != NULL;
-	this->szContents.Init(szContents ? szContents : "");
-	bHeader = szHeader != NULL;
-	this->szHeader.Init(szHeader ? szHeader : "");
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-//
-//////////////////////////////////////////////////////////////////////////
-void SIDEReindexFile::Kill(void)
-{
-	szHeader.Kill();
-	szContents.Kill();
-	szFileName.Kill();
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// The files are freed and the array emptied; it can be used again.
-//
-//////////////////////////////////////////////////////////////////////////
-void KillIDEReindexFiles(CArrayIDEReindexFiles* papsFiles)
-{
-	size				i;
-	SIDEReindexFile*	psFile;
-
-	for (i = 0; i < papsFiles->NumElements(); i++)
-	{
-		psFile = papsFiles->GetPtr(i);
-		psFile->Kill();
-		free(psFile);
-	}
-	papsFiles->ReInit();
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// The reindexing thread indexing the edited files again.
-//
-//////////////////////////////////////////////////////////////////////////
-void IDEReindexJob(void* pvData)
-{
-	CIDECodeModel*	pcModel;
-
-	pcModel = (CIDECodeModel*)pvData;
-	if (pcModel->GetReindexDelay() > 0)
-	{
-		ThreadSleep(pcModel->GetReindexDelay());
-	}
-	pcModel->ReindexFiles();
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
 // A worker thread indexing one file.
 //
 //////////////////////////////////////////////////////////////////////////
@@ -204,10 +137,10 @@ void CIDECodeModel::Init(CBuildWorkspace* pcWorkspace)
 	mbCancelled = false;
 	mcIncluders.Init();
 
-	mbReindexJobs = false;
-	mapsReindexing.Init();
-	mbReindexing = false;
-	miReindexDelay = 0;
+	mbEdits = false;
+	mapsEdited.Init();
+	mbEditsBusy = false;
+	miEditsDelay = 0;
 }
 
 
@@ -219,12 +152,12 @@ void CIDECodeModel::Init(CBuildWorkspace* pcWorkspace)
 void CIDECodeModel::Kill(void)
 {
 	KillJobs();
-	if (mbReindexJobs)
+	if (mbEdits)
 	{
-		mcReindexJobs.Kill();
-		mbReindexJobs = false;
+		mcEdits.Kill();
+		mbEdits = false;
 	}
-	mapsReindexing.Kill();
+	mapsEdited.Kill();
 	mcIncluders.Kill();
 	mcIndexMutex.Kill();
 	mcIndex.Kill();
@@ -267,8 +200,10 @@ void CIDECodeModel::KillJobs(void)
 	size			i;
 	SIDEIndexJob*	psJob;
 
-	//The edited files being indexed again use the projects and the jobs (GetIncluder) too.
-	WaitForReindexing();
+	//The edits thread uses the projects and the jobs (GetIncluder) too.  What it made is forgotten: it is of the
+	//projects and the index as they were.
+	WaitForEditedFiles();
+	KillIDEEditedFiles(&mapsEdited);
 
 	//The jobs that haven't started find they are cancelled, so only those being parsed are waited for.
 	if (mbJobs)
@@ -327,8 +262,6 @@ void CIDECodeModel::AddDefaultSystemDirectories(void)
 bool CIDECodeModel::Highlight(size uiProject, const char* szFileName, const char* szContents, CArrayHighlights* pacDest, CChars* pszErrors)
 {
 	CIDEParsedUnit	cUnit;
-	CCPPHighlighter	cHighlighter;
-	size			i;
 	SIDEIndexJob*	psIncluder;
 	CSourceFile*	pcFile;
 
@@ -357,15 +290,30 @@ bool CIDECodeModel::Highlight(size uiProject, const char* szFileName, const char
 		pcFile = cUnit.mpcUnit;
 	}
 
+	HighlightFile(&cUnit, pcFile, pacDest);
+	cUnit.Kill();
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The highlights of pcFile (the unit's own file or a header it included)
+// added to pacDest.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDECodeModel::HighlightFile(CIDEParsedUnit* pcUnit, CSourceFile* pcFile, CArrayHighlights* pacDest)
+{
+	CCPPHighlighter	cHighlighter;
+	size			i;
+
 	cHighlighter.Init();
-	cHighlighter.Highlight(pcFile, cUnit.mpcUnit->GetTokens(), &cUnit.mcTokeniser, &cUnit.mcTree);
+	cHighlighter.Highlight(pcFile, pcUnit->mpcUnit->GetTokens(), &pcUnit->mcTokeniser, &pcUnit->mcTree);
 	for (i = 0; i < cHighlighter.NumHighlights(); i++)
 	{
 		pacDest->Add(cHighlighter.Get(i));
 	}
 	cHighlighter.Kill();
-	cUnit.Kill();
-	return true;
 }
 
 
@@ -648,6 +596,18 @@ public:
 	size					muiJob;
 	CMapLongTemplate<bool>	mcAsked;
 
+	void	Init(CIDECodeModel* pcModel, size uiJob)
+	{
+		mpcModel = pcModel;
+		muiJob = uiJob;
+		mcAsked.Init(true);
+	}
+
+	void	Kill(void)
+	{
+		mcAsked.Kill();
+	}
+
 	bool	IsIndexed(CSourceFile* pcFile) override
 	{
 		bool*	pbAsked;
@@ -691,12 +651,10 @@ void CIDECodeModel::IndexUnit(SIDEIndexJob* psJob)
 {
 	CIDEParsedUnit		cUnit;
 	CCPPIndexUnit		cGathered;
-	CCPPSemanticPass	cPass;
 	CIDEIndexedFiles	cIndexed;
-	CChars			szErrors;
-	bool			bParsed;
-	bool			bCancelled;
-	size			i;
+	CChars				szErrors;
+	bool				bCancelled;
+	size				i;
 
 	mcIndexMutex.Lock();
 	bCancelled = mbCancelled;
@@ -710,19 +668,13 @@ void CIDECodeModel::IndexUnit(SIDEIndexJob* psJob)
 	szErrors.Init();
 	cUnit.Init();
 	cGathered.Init();
-	cPass.Init();
-	bParsed = ParseUnit(psJob->uiProject, psJob->szFileName.Text(), NULL, &cUnit, &szErrors);
-	if (bParsed)
+	if (ParseUnit(psJob->uiProject, psJob->szFileName.Text(), NULL, &cUnit, &szErrors))
 	{
 		//A header another unit indexed first isn't gathered again.
-		cIndexed.mpcModel = this;
-		cIndexed.muiJob = psJob->uiIndex;
-		cIndexed.mcAsked.Init(true);
-		cPass.Check(&cUnit.mcTree);
-		CCPPIndex::Gather(&cUnit.mcTokeniser, &cUnit.mcTree, &cGathered, &cPass, &cIndexed);
-		cIndexed.mcAsked.Kill();
+		cIndexed.Init(this, psJob->uiIndex);
+		GatherUnit(&cUnit, &cGathered, &cIndexed);
+		cIndexed.Kill();
 	}
-	cPass.Kill();
 	cUnit.Kill();
 
 	mcIndexMutex.Lock();
@@ -744,50 +696,19 @@ void CIDECodeModel::IndexUnit(SIDEIndexJob* psJob)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// A .cpp (or .c) indexed again from szContents (its editor's text, or
-// the file if NULL) after it changed: its old places are forgotten first,
-// and szHeader's too if it isn't NULL (a header that changed, indexed
-// again with a unit that includes it; see SetHeaderText).  Call it once
-// the indexing has finished (IsIndexing), on one thread at a time (the
-// UI thread while nothing is being indexed again, or the reindexing
-// thread; see Reindex).  False if the file couldn't be parsed.
+// A parsed unit's expressions typed (so names like pc->Init are
+// resolved) and its names gathered into pcDest, but for those in the
+// files pcIndexed says are indexed already (NULL: all of them).
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDECodeModel::ReindexUnit(size uiProject, const char* szFileName, const char* szContents, const char* szHeader)
+void CIDECodeModel::GatherUnit(CIDEParsedUnit* pcUnit, CCPPIndexUnit* pcDest, CCPPIndexedFiles* pcIndexed)
 {
-	CIDEParsedUnit		cUnit;
-	CCPPIndexUnit		cGathered;
 	CCPPSemanticPass	cPass;
-	CChars				szErrors;
-	bool				bParsed;
 
-	szErrors.Init();
-	cUnit.Init();
-	cGathered.Init();
 	cPass.Init();
-	bParsed = ParseUnit(uiProject, szFileName, szContents, &cUnit, &szErrors);
-	if (bParsed)
-	{
-		cPass.Check(&cUnit.mcTree);
-		CCPPIndex::Gather(&cUnit.mcTokeniser, &cUnit.mcTree, &cGathered, &cPass);
-	}
+	cPass.Check(&pcUnit->mcTree);
+	CCPPIndex::Gather(&pcUnit->mcTokeniser, &pcUnit->mcTree, pcDest, &cPass, pcIndexed);
 	cPass.Kill();
-	cUnit.Kill();
-
-	if (bParsed)
-	{
-		mcIndexMutex.Lock();
-		mcIndex.RemoveFile(szFileName);
-		if (szHeader)
-		{
-			mcIndex.RemoveFile(szHeader);
-		}
-		mcIndex.Merge(&cGathered);
-		mcIndexMutex.Unlock();
-	}
-	cGathered.Kill();
-	szErrors.Kill();
-	return bParsed;
 }
 
 
@@ -805,8 +726,8 @@ void CIDECodeModel::SetHeaderText(const char* szFileName, const char* szText)
 	CProject*		pcProject;
 	CHeaderFile*	pcHeader;
 
-	//The reindexing thread may be preprocessing the header.
-	WaitForReindexing();
+	//The edits thread may be preprocessing the header.
+	WaitForEditedFiles();
 	mcProjectsMutex.Lock();
 	for (i = 0; i < mapcProjects.NumElements(); i++)
 	{
@@ -865,115 +786,6 @@ void CIDECodeModel::ReindexAll(void)
 	mcHeaderCache.Kill();
 	mcHeaderCache.Init();
 	StartIndexing();
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// The edited files in papsFiles (which is emptied; the model frees them)
-// indexed again, in order: with bNow on this thread, otherwise on the
-// reindexing thread, so the UI isn't held up while the user types.  The
-// index can be asked while they are; it has the files' old places until
-// each file is merged.  Waits for the files given before first.  Call it
-// once the indexing has finished (IsIndexing), and with each changed
-// header's text already set (SetHeaderText).
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDECodeModel::Reindex(CArrayIDEReindexFiles* papsFiles, bool bNow)
-{
-	size	i;
-
-	WaitForReindexing();
-	if (papsFiles->NumElements() == 0)
-	{
-		return;
-	}
-	for (i = 0; i < papsFiles->NumElements(); i++)
-	{
-		mapsReindexing.Add(papsFiles->GetPtr(i));
-	}
-	papsFiles->ReInit();
-
-	if (bNow)
-	{
-		ReindexFiles();
-		KillReindexFiles();
-		return;
-	}
-
-	if (!mbReindexJobs)
-	{
-		mcReindexJobs.Init(1);
-		mbReindexJobs = true;
-	}
-	mcIndexMutex.Lock();
-	mbReindexing = true;
-	mcIndexMutex.Unlock();
-	mcReindexJobs.Run(&IDEReindexJob, this);
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// On the reindexing thread (or the UI thread with Reindex's bNow): each
-// file given to Reindex indexed again.
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDECodeModel::ReindexFiles(void)
-{
-	size				i;
-	SIDEReindexFile*	psFile;
-
-	for (i = 0; i < mapsReindexing.NumElements(); i++)
-	{
-		psFile = mapsReindexing.GetPtr(i);
-		ReindexUnit(psFile->uiProject, psFile->szFileName.Text(), psFile->bContents ? psFile->szContents.Text() : NULL, psFile->bHeader ? psFile->szHeader.Text() : NULL);
-	}
-	mcIndexMutex.Lock();
-	mbReindexing = false;
-	mcIndexMutex.Unlock();
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// Whether edited files are being indexed again on the reindexing thread.
-//
-//////////////////////////////////////////////////////////////////////////
-bool CIDECodeModel::IsReindexing(void)
-{
-	bool	bReindexing;
-
-	mcIndexMutex.Lock();
-	bReindexing = mbReindexing;
-	mcIndexMutex.Unlock();
-	return bReindexing;
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// Returns once the edited files given to Reindex have been indexed
-// again; they are freed.
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDECodeModel::WaitForReindexing(void)
-{
-	if (mbReindexJobs)
-	{
-		mcReindexJobs.Wait();
-	}
-	KillReindexFiles();
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDECodeModel::KillReindexFiles(void)
-{
-	KillIDEReindexFiles(&mapsReindexing);
 }
 
 
@@ -1258,8 +1070,7 @@ void CIDECodeModel::Reset(void)
 
 
 char* CIDECodeModel::GetConfiguration(void) { return mszConfiguration.Text(); }
-void CIDECodeModel::SetReindexDelay(int iMilliseconds) { miReindexDelay = iMilliseconds; }
-int CIDECodeModel::GetReindexDelay(void) { return miReindexDelay; }
+void CIDECodeModel::SetEditsDelay(int iMilliseconds) { miEditsDelay = iMilliseconds; }
 void CIDECodeModel::AddSystemDirectory(const char* szDirectory) { maszSystemDirectories.Add(szDirectory); }
 
 

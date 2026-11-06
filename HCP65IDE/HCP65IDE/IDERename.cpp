@@ -124,7 +124,7 @@ bool CIDERename::FindRenameTarget(SIDERenameTarget* psDest)
 
 	//What can be edited: the solutions' files.  The index is brought up to date with the editors first.
 	mpcContent->mpNavigator->FindGoToFiles();
-	mpcContent->mpDocuments->ReindexStaleTabs(true);
+	mpcContent->mpDocuments->UpdateEditedTabsNow();
 
 	pEditor = mpcContent->mpDocuments->GetActiveTab()->GetEditor();
 	bSelected = pEditor->GetSelection(&uiStart, &uiEnd);

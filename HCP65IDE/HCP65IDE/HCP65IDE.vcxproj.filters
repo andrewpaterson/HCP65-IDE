@@ -15,6 +15,9 @@
     <ClCompile Include="IDECodeModel.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="IDECodeModelEdits.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="IDEContent.cpp">
       <Filter>Source</Filter>
     </ClCompile>

@@ -44,6 +44,10 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDEDocuments.h"
 
 
+//Milliseconds between looks at the edits thread while it is busy.
+#define IDE_EDITS_POLL	20
+
+
 //////////////////////////////////////////////////////////////////////////
 //
 //
@@ -305,12 +309,14 @@ void CIDEDocuments::HighlightTab(Ptr<CIDEEditorTab> pTab)
 //
 // Everything is indexed again, from the files; the open .cpp files with
 // edits are indexed again from their editors once that has finished.
+// What the edits thread made is shown first: the model forgets it.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEDocuments::ReindexAll(void)
 {
 	size	i;
 
+	TakeEditedFiles(true);
 	mpcContent->mcCodeModel.ReindexAll();
 	for (i = 0; i < maTabs.Size(); i++)
 	{
@@ -324,135 +330,209 @@ void CIDEDocuments::ReindexAll(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The open files changed since they were indexed are indexed again from
-// their editors' text: after a pause in the typing on the code model's
-// reindexing thread, or with bNow straight away on this thread (before
-// Rename, Find Usages or Go to is worked out; it waits for the reindexing
-// thread first).  A header is preprocessed from its editor from then on,
-// and indexed again with the first unit that included it; then the .cpp
-// (and .c) files.  Not while everything is being indexed: they are
-// indexed after.  Not while the reindexing thread is busy without bNow:
-// the tabs stay stale and are given to it once it has finished.
+// Each tick: what the edits thread made is shown, then the tabs whose
+// text has been left alone for a moment since an edit are given to it,
+// to be highlighted and indexed again (from one parse).  Returns how many
+// milliseconds until a tab might be due or the thread is to be looked at
+// again, -1 for never.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEDocuments::ReindexStaleTabs(bool bNow)
+int64 CIDEDocuments::UpdateEditedTabs(int64 iNow)
+{
+	return GiveEditedTabs(iNow, false);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The tabs changed since they were indexed are indexed again (and
+// highlighted, if that is pending) straight away, on this thread, after
+// waiting for the edits thread: before Rename, Find Usages or Go to is
+// worked out.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDocuments::UpdateEditedTabsNow(void)
+{
+	GiveEditedTabs(GetDebugTickCount(), true);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The edited tabs given to the code model's edits thread, or with bNow
+// worked out on this thread.  A tab is indexed again only once the whole
+// solution has been (IsIndexing).  Without bNow, nothing is given while
+// the thread is busy: the tabs stay pending and are given once it has
+// finished.  See UpdateEditedTabs for what is returned.
+//
+//////////////////////////////////////////////////////////////////////////
+int64 CIDEDocuments::GiveEditedTabs(int64 iNow, bool bNow)
 {
 	size					i;
-	size					iPass;
 	Ptr<CIDEEditorTab>		pTab;
-	EIDEFileType			eType;
-	CArrayIDEReindexFiles	apsFiles;
+	bool					bIndexing;
+	bool					bHighlight;
+	bool					bIndex;
+	int64					iWait;
+	int64					iSoonest;
+	CArrayIDEEditedFiles	apsFiles;
 
-	if (mpcContent->mcCodeModel.IsIndexing())
+	if (!TakeEditedFiles(bNow))
 	{
-		return;
-	}
-	if (bNow)
-	{
-		mpcContent->mcCodeModel.WaitForReindexing();
-	}
-	else if (mpcContent->mcCodeModel.IsReindexing())
-	{
-		return;
+		return IDE_EDITS_POLL;
 	}
 
+	bIndexing = mpcContent->mcCodeModel.IsIndexing();
+	iSoonest = -1;
 	apsFiles.Init();
-	for (iPass = 0; iPass < 2; iPass++)
+	for (i = 0; i < maTabs.Size(); i++)
 	{
-		for (i = 0; i < maTabs.Size(); i++)
+		pTab = maTabs.Get(i);
+		if (bNow)
 		{
-			pTab = maTabs.Get(i);
-			pTab->SeeChanges(GetDebugTickCount());
-			if (!pTab->IsIndexStale() || (pTab->GetProject() == MAX_SIZE) || (!bNow && pTab->IsRecolourPending()))
+			pTab->SeeChanges(iNow);
+			bHighlight = pTab->IsRecolourPending() && (pTab->GetProject() != MAX_SIZE);
+		}
+		else
+		{
+			bHighlight = pTab->IsRecolourDue(iNow, &iWait);
+			if ((iWait >= 0) && ((iSoonest < 0) || (iWait < iSoonest)))
 			{
-				continue;
-			}
-			eType = CIDEIcons::GetFileType(pTab->GetFileName());
-			if ((iPass == 0) && (eType == IFT_Header))
-			{
-				mpcContent->mcCodeModel.SetHeaderText(pTab->GetFileName(), pTab->GetEditor()->GetText());
-				AddReindexHeader(pTab->GetFileName(), &apsFiles);
-				pTab->SetIndexStale(false);
-			}
-			else if ((iPass == 1) && ((eType == IFT_CPP) || (eType == IFT_C)))
-			{
-				AddReindexFile(pTab->GetProject(), pTab->GetFileName(), pTab->GetEditor()->GetText(), NULL, &apsFiles);
-				pTab->SetIndexStale(false);
+				iSoonest = iWait;
 			}
 		}
+
+		//A tab is indexed with its highlights, or after them (once the solution has been indexed).
+		bIndex = pTab->IsIndexStale() && !bIndexing && (pTab->GetProject() != MAX_SIZE) && (bNow || bHighlight || !pTab->IsRecolourPending());
+		if (bHighlight)
+		{
+			pTab->SetRecolourPending(false);
+		}
+		if (bIndex)
+		{
+			pTab->SetIndexStale(false);
+		}
+		if (bHighlight || bIndex)
+		{
+			AddEditedFile(pTab->GetProject(), pTab->GetFileName(), pTab->GetEditor()->GetText(), pTab->GetEditor()->GetChangeCount(), bHighlight, bIndex, &apsFiles);
+		}
 	}
-	mpcContent->mcCodeModel.Reindex(&apsFiles, bNow);
-	apsFiles.Kill();
-}
 
-
-//////////////////////////////////////////////////////////////////////////
-//
-// A file to index again added to papsFiles, its text copied from
-// szContents (NULL: the file is read).
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDEDocuments::AddReindexFile(size uiProject, const char* szFileName, const char* szContents, const char* szHeader, CArrayIDEReindexFiles* papsFiles)
-{
-	SIDEReindexFile*	psFile;
-
-	psFile = NewMalloc<SIDEReindexFile>();
-	psFile->Init(uiProject, szFileName, szContents, szHeader);
-	papsFiles->Add(psFile);
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// The header szFileName to index again (after its text changed) with the
-// first unit that included it, from that unit's editor if it is open,
-// added to papsFiles.
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDEDocuments::AddReindexHeader(const char* szFileName, CArrayIDEReindexFiles* papsFiles)
-{
-	size				uiProject;
-	CChars				szUnit;
-	Ptr<CIDEEditorTab>	pUnitTab;
-
-	szUnit.Init();
-	if (mpcContent->mcCodeModel.GetIncluder(szFileName, &uiProject, &szUnit))
+	if (apsFiles.NumElements() > 0)
 	{
-		pUnitTab = FindTab(szUnit.Text());
-		AddReindexFile(uiProject, szUnit.Text(), pUnitTab.IsNotNull() ? pUnitTab->GetEditor()->GetText() : NULL, szFileName, papsFiles);
+		mpcContent->mcCodeModel.ProcessEditedFiles(&apsFiles, bNow);
+		if (bNow)
+		{
+			TakeEditedFiles(true);
+		}
+		else
+		{
+			iSoonest = IDE_EDITS_POLL;
+		}
 	}
-	szUnit.Kill();
+	apsFiles.Kill();
+	return iSoonest;
 }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
 // A file closed without saving its edits is indexed again as it is on
-// disk, on the reindexing thread: the index had its editor's text.
+// disk, on the edits thread: the index had its editor's text.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEDocuments::ReindexDiscarded(Ptr<CIDEEditorTab> pTab)
 {
-	EIDEFileType			eType;
-	CArrayIDEReindexFiles	apsFiles;
+	CArrayIDEEditedFiles	apsFiles;
 
 	if ((pTab->GetProject() == MAX_SIZE) || mpcContent->mcCodeModel.IsIndexing())
 	{
 		return;
 	}
+	TakeEditedFiles(true);
 	apsFiles.Init();
-	eType = CIDEIcons::GetFileType(pTab->GetFileName());
-	if (eType == IFT_Header)
-	{
-		mpcContent->mcCodeModel.SetHeaderText(pTab->GetFileName(), NULL);
-		AddReindexHeader(pTab->GetFileName(), &apsFiles);
-	}
-	else if ((eType == IFT_CPP) || (eType == IFT_C))
-	{
-		AddReindexFile(pTab->GetProject(), pTab->GetFileName(), NULL, NULL, &apsFiles);
-	}
-	mpcContent->mcCodeModel.Reindex(&apsFiles, false);
+	AddEditedFile(pTab->GetProject(), pTab->GetFileName(), NULL, 0, false, true, &apsFiles);
+	mpcContent->mcCodeModel.ProcessEditedFiles(&apsFiles, false);
 	apsFiles.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// An edited file added to papsFiles, its text copied from szText (NULL:
+// the file is read).  Only C and C++ files are worked out.  A header to
+// index is preprocessed from szText from now on and parsed in the first
+// unit that included it, from that unit's editor if it is open; one that
+// isn't indexed, or no unit has included, is parsed on its own.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDocuments::AddEditedFile(size uiProject, const char* szFileName, const char* szText, size uiChanges, bool bHighlight, bool bIndex, CArrayIDEEditedFiles* papsFiles)
+{
+	SIDEEditedFile*		psFile;
+	EIDEFileType		eType;
+	size				uiUnitProject;
+	CChars				szUnit;
+	Ptr<CIDEEditorTab>	pUnitTab;
+
+	eType = CIDEIcons::GetFileType(szFileName);
+	if (eType == IFT_Other)
+	{
+		return;
+	}
+
+	psFile = NewMalloc<SIDEEditedFile>();
+	psFile->Init(uiProject, szFileName, szText, uiChanges, bHighlight, bIndex);
+	if ((eType == IFT_Header) && bIndex)
+	{
+		mpcContent->mcCodeModel.SetHeaderText(szFileName, szText);
+		szUnit.Init();
+		if (mpcContent->mcCodeModel.GetIncluder(szFileName, &uiUnitProject, &szUnit))
+		{
+			pUnitTab = FindTab(szUnit.Text());
+			psFile->SetUnit(uiUnitProject, szUnit.Text(), pUnitTab.IsNotNull() ? pUnitTab->GetEditor()->GetText() : NULL);
+		}
+		else
+		{
+			psFile->bIndex = false;
+		}
+		szUnit.Kill();
+	}
+	papsFiles->Add(psFile);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// What the edits thread made shown: the highlights of each file whose
+// editor hasn't changed since its text was given (one that has is given
+// again).  Without bWait, false if the thread hasn't finished.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEDocuments::TakeEditedFiles(bool bWait)
+{
+	CArrayIDEEditedFiles	apsFiles;
+	SIDEEditedFile*			psFile;
+	Ptr<CIDEEditorTab>		pTab;
+	size					i;
+
+	apsFiles.Init();
+	if (!mpcContent->mcCodeModel.TakeEditedFiles(&apsFiles, bWait))
+	{
+		apsFiles.Kill();
+		return false;
+	}
+	for (i = 0; i < apsFiles.NumElements(); i++)
+	{
+		psFile = apsFiles.GetPtr(i);
+		pTab = psFile->bHighlighted ? FindTab(psFile->szFileName.Text()) : Ptr<CIDEEditorTab>();
+		if (pTab.IsNotNull() && (pTab->GetEditor()->GetChangeCount() == psFile->uiChanges))
+		{
+			pTab->SetHighlights(&psFile->acHighlights);
+		}
+	}
+	KillIDEEditedFiles(&apsFiles);
+	apsFiles.Kill();
+	return true;
 }
 
 

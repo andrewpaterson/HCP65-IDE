@@ -60,7 +60,7 @@ protected:
 	int64				miChangedTime;	//When the text last changed (GetDebugTickCount).
 	bool				mbRecolour;		//The text changed and hasn't been highlighted since.
 	bool				mbEdited;		//The text was changed since the file was opened.
-	bool				mbIndexStale;	//The text changed since the index was given it (CIDEContent::ReindexStaleTabs).
+	bool				mbIndexStale;	//The text changed since the index was given it (CIDEDocuments::UpdateEditedTabs).
 	bool				mbCarriageReturns;	//The file's lines end with carriage returns and line feeds.
 	size				muiSavedUndo;	//The editor's undo id when the file was opened or last saved: undone back to it, it isn't modified.
 	bool				mbShownModified;	//The tab's name ends with a '*'.
@@ -84,7 +84,7 @@ public:
 	void				SetHighlights(CArrayHighlights* pacHighlights);
 	bool				GetCaretPlace(int* piLine, int* piColumn);
 	bool				SetCaretPlace(int iLine, int iColumn);
-	bool				NeedsRecolour(int64 iNow, int64* piWait);
+	bool				IsRecolourDue(int64 iNow, int64* piWait);
 
 	void				SetListings(CCPP65ListingIndex* pcListings);
 	bool				ToggleListing(size uiLine);
@@ -112,6 +112,7 @@ public:
 	bool				IsIndexStale(void);
 	void				SeeChanges(int64 iNow);
 	bool				IsRecolourPending(void);
+	void				SetRecolourPending(bool bPending);
 
 	bool				SaveFile(void);
 	void				Reload(const char* szText);
