@@ -28,6 +28,7 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 #define BUILD_RECENT_TAG		"RecentFiles"
 #define BUILD_RECENT_FILE		"File"
 #define BUILD_RECENT_PATH		"Path"
+#define BUILD_RECENT_OPEN		"Open"
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -38,6 +39,7 @@ void CBuildRecentFiles::Init(size uiMaxFiles)
 {
 	maszFiles.Init();
 	muiMaxFiles = uiMaxFiles;
+	mszOpen.Init();
 }
 
 
@@ -47,6 +49,7 @@ void CBuildRecentFiles::Init(size uiMaxFiles)
 //////////////////////////////////////////////////////////////////////////
 void CBuildRecentFiles::Kill(void)
 {
+	mszOpen.Kill();
 	maszFiles.Kill();
 }
 
@@ -152,6 +155,7 @@ bool CBuildRecentFiles::Read(const char* szFile)
 	bool			bResult;
 
 	Clear();
+	mszOpen.Clear();
 	szName.Init();
 	szDirectory.Init();
 	cFileUtil.SplitPath(szFile, &szName, &szDirectory);
@@ -165,6 +169,11 @@ bool CBuildRecentFiles::Read(const char* szFile)
 	bResult = pcRoot && (StringCompare(pcRoot->GetName(), BUILD_RECENT_TAG) == 0);
 	if (bResult)
 	{
+		szPath = pcRoot->GetStringAttribute(BUILD_RECENT_OPEN);
+		if (szPath)
+		{
+			mszOpen.Set(szPath);
+		}
 		for (pcTag = pcRoot->GetTag(BUILD_RECENT_FILE, &sIterator); pcTag && (maszFiles.NumElements() < muiMaxFiles); pcTag = pcRoot->GetNextTag(&sIterator))
 		{
 			szPath = pcTag->GetStringAttribute(BUILD_RECENT_PATH);
@@ -196,6 +205,10 @@ bool CBuildRecentFiles::Write(const char* szFile)
 	cFileUtil.TouchDir(szFile, true);
 	cWriter.Init();
 	cWriter.Begin(BUILD_RECENT_TAG);
+	if (!mszOpen.Empty())
+	{
+		cWriter.Attribute(BUILD_RECENT_OPEN, mszOpen.Text());
+	}
 	for (i = 0; i < maszFiles.NumElements(); i++)
 	{
 		cWriter.Begin(BUILD_RECENT_FILE);
@@ -212,4 +225,6 @@ bool CBuildRecentFiles::Write(const char* szFile)
 void CBuildRecentFiles::Clear(void)				{ maszFiles.ReInit(); }
 size CBuildRecentFiles::NumFiles(void)			{ return maszFiles.NumElements(); }
 char* CBuildRecentFiles::GetFile(size uiIndex)	{ return maszFiles.GetText(uiIndex); }
+void CBuildRecentFiles::SetOpen(const char* szFile)	{ mszOpen.Set(szFile ? szFile : ""); }  //The file open when the IDE was closed, "" for none.
+char* CBuildRecentFiles::GetOpen(void)			{ return mszOpen.Text(); }
 

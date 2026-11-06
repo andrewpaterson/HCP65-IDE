@@ -27,9 +27,10 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 
 
 //The files opened last (File, Recent Solutions), the latest first, each once (whatever its case), at most a number
-//of them.  They are kept in a file of the user's:
+//of them, and the one that was open when the IDE was closed (opened again when it starts), if one was.  They are kept
+//in a file of the user's:
 //
-//	<RecentFiles>
+//	<RecentFiles Open="D:\gameengine\HCP65\...\HCP65Kernal.hcp65workspace">
 //		<File Path="D:\gameengine\HCP65\...\HCP65ModPlay.sln"/>
 //	</RecentFiles>
 class CBuildRecentFiles
@@ -37,6 +38,7 @@ class CBuildRecentFiles
 protected:
 	CArrayChars	maszFiles;
 	size		muiMaxFiles;
+	CChars		mszOpen;
 
 public:
 	void	Init(size uiMaxFiles = BUILD_RECENT_FILES_DEFAULT);
@@ -48,6 +50,8 @@ public:
 	size	Find(const char* szFile);
 	size	NumFiles(void);
 	char*	GetFile(size uiIndex);
+	void	SetOpen(const char* szFile);
+	char*	GetOpen(void);
 
 	bool	Read(const char* szFile);
 	bool	Write(const char* szFile);

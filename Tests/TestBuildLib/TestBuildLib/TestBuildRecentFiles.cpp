@@ -61,6 +61,18 @@ void TestBuildRecentFilesList(void)
 	AssertString(cRecent.GetFile(0), cRead.GetFile(0));
 	AssertString(cRecent.GetFile(1), cRead.GetFile(1));
 
+	//The file open when the IDE was closed is kept with them, and none is none.
+	AssertString("", cRead.GetOpen());
+	cRecent.SetOpen("Output/Kernal.hcp65workspace");
+	AssertTrue(cRecent.Write(TEST_RECENT_FILE));
+	AssertTrue(cRead.Read(TEST_RECENT_FILE));
+	AssertString("Output/Kernal.hcp65workspace", cRead.GetOpen());
+	AssertSize(2, cRead.NumFiles());
+	cRecent.SetOpen(NULL);
+	AssertTrue(cRecent.Write(TEST_RECENT_FILE));
+	AssertTrue(cRead.Read(TEST_RECENT_FILE));
+	AssertString("", cRead.GetOpen());
+
 	//Cleared and written, there are none.
 	cRecent.Clear();
 	AssertSize(0, cRecent.NumFiles());
