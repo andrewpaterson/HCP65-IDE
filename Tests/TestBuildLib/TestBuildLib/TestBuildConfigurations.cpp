@@ -231,7 +231,7 @@ void TestBuildConfigurationsExecutable(void)
 	CFileUtil				cFileUtil;
 
 	cFileUtil.MakeDir("Output");
-	cFile.Init("<BuildConfigurations>\n\t<Configuration Name=\"Debug|W65C816\" Toolchain=\"W65C816\" Solution=\"Debug|Win32\" BreakpointSpace=\"User\" Card=\"Card.img\" CardPath=\"\\boot.exe\">\n\t\t<Executable File=\"boot.exe\" Entry=\"UserStart\" Limit=\"0x200000\">\n\t\t\t<Symbol Name=\"UserMemorySize\" Value=\"0x220000\"/>\n\t\t</Executable>\n\t\t<Load File=\"Kernal.rom\" Address=\"0x0\"/>\n\t\t<Load File=\"Tables.bin\" Address=\"4194304\"/>\n\t</Configuration>\n</BuildConfigurations>\n");
+	cFile.Init("<BuildConfigurations>\n\t<Configuration Name=\"Debug|W65C816\" Toolchain=\"W65C816\" Solution=\"Debug|Win32\" BreakpointSpace=\"User\" Card=\"Card.img\" CardPath=\"\\boot.exe\">\n\t\t<Executable File=\"boot.exe\" Entry=\"UserStart\" Limit=\"0x200000\">\n\t\t\t<Symbol Name=\"UserHeapSize\" Value=\"0x20000\"/>\n\t\t</Executable>\n\t\t<Load File=\"Kernal.rom\" Address=\"0x0\"/>\n\t\t<Load File=\"Tables.bin\" Address=\"4194304\"/>\n\t</Configuration>\n</BuildConfigurations>\n");
 	AssertTrue(cFile.Write("Output" _FS_ "Program.hcp65build"));
 	cFile.Kill();
 
@@ -246,8 +246,8 @@ void TestBuildConfigurationsExecutable(void)
 	AssertString("UserStart", pcExecutable->GetEntry());
 	AssertIntHex(0x200000, pcExecutable->GetLimit());
 	AssertSize(1, pcExecutable->NumSymbols());
-	AssertString("UserMemorySize", pcExecutable->GetSymbolName(0));
-	AssertLongLongIntHex(0x220000, pcExecutable->GetSymbolValue(0));
+	AssertString("UserHeapSize", pcExecutable->GetSymbolName(0));
+	AssertLongLongIntHex(0x20000, pcExecutable->GetSymbolValue(0));
 	AssertSize(2, pcConfiguration->NumLoads());
 	AssertString("Kernal.rom", pcConfiguration->GetLoadFile(0));
 	AssertIntHex(0, pcConfiguration->GetLoadAddress(0));
@@ -263,7 +263,7 @@ void TestBuildConfigurationsExecutable(void)
 	AssertTrue(cAgain.Read("Output" _FS_ "ProgramAgain.hcp65build"));
 	pcConfiguration = cAgain.GetConfiguration(0);
 	AssertTrue(pcConfiguration->HasExecutable());
-	AssertLongLongIntHex(0x220000, pcConfiguration->GetExecutable()->GetSymbolValue(0));
+	AssertLongLongIntHex(0x20000, pcConfiguration->GetExecutable()->GetSymbolValue(0));
 	AssertSize(2, pcConfiguration->NumLoads());
 	AssertIntHex(0x400000, pcConfiguration->GetLoadAddress(1));
 	AssertString("\\boot.exe", pcConfiguration->GetCardPath());
