@@ -244,3 +244,8 @@ target_link_libraries(ClaudeLib PUBLIC ThreadLib BaseLib)
 add_executable(HCP65IDE ${IDE_SOURCES})
 target_include_directories(HCP65IDE PRIVATE "${IDE_DIR}")
 target_link_libraries(HCP65IDE PRIVATE X11Lib WindowLib InputLib BuildLib GitLib ClaudeLib VisualStudioLib CppParserLib Assembler65Lib EmulatorDebugLib MicroprocessorLib ThreadLib SupportLib StandardLib BaseLib)
+
+# hcp65build, the command-line build (BuildCommandLine.h): no window, so no X11.  Build only it with
+#   cmake --build build/HCP65IDE --target hcp65build
+add_executable(hcp65build "${IDE_ROOT}/HCP65Build/HCP65Build.cpp")
+target_link_libraries(hcp65build PRIVATE BuildLib VisualStudioLib CppParserLib Assembler65Lib MicroprocessorLib ThreadLib StandardLib BaseLib)

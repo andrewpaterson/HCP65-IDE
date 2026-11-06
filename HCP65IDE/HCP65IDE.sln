@@ -46,6 +46,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TestLib", "..\..\CommonLibr
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TestVisualStudioLib", "..\Tests\TestVisualStudioLib\TestVisualStudioLib\TestVisualStudioLib.vcxproj", "{80A51035-C705-4B25-940F-2D77B7BC67D8}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "HCP65Build", "..\HCP65Build\HCP65Build.vcxproj", "{96060CAE-FE62-47EF-A366-C9354F9C4732}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -230,6 +232,14 @@ Global
 		{80A51035-C705-4B25-940F-2D77B7BC67D8}.Release|Win32.Build.0 = Release|Win32
 		{80A51035-C705-4B25-940F-2D77B7BC67D8}.Release|x64.ActiveCfg = Release|x64
 		{80A51035-C705-4B25-940F-2D77B7BC67D8}.Release|x64.Build.0 = Release|x64
+		{96060CAE-FE62-47EF-A366-C9354F9C4732}.Debug|Win32.ActiveCfg = Debug|Win32
+		{96060CAE-FE62-47EF-A366-C9354F9C4732}.Debug|Win32.Build.0 = Debug|Win32
+		{96060CAE-FE62-47EF-A366-C9354F9C4732}.Debug|x64.ActiveCfg = Debug|x64
+		{96060CAE-FE62-47EF-A366-C9354F9C4732}.Debug|x64.Build.0 = Debug|x64
+		{96060CAE-FE62-47EF-A366-C9354F9C4732}.Release|Win32.ActiveCfg = Release|Win32
+		{96060CAE-FE62-47EF-A366-C9354F9C4732}.Release|Win32.Build.0 = Release|Win32
+		{96060CAE-FE62-47EF-A366-C9354F9C4732}.Release|x64.ActiveCfg = Release|x64
+		{96060CAE-FE62-47EF-A366-C9354F9C4732}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
