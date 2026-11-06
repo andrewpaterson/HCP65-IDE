@@ -604,25 +604,22 @@ void CBuildPlain::MakeDescription(CHCP65BuildDescription* pcDest)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Writes the plain command line a solution's build is the same as into
-// szFile, an argument a line (hcp65build @szFile reads it): its options,
-// then each project's with its sources in a list of their own beside
-// szFile (<Project>.units, read with @).  Paths are relative to the
-// current directory, where hcp65build @szFile must be run.  szComment is
-// written first.  The files written are added to paszWritten.  False if
-// one couldn't be.
+// The plain command line a solution's build is the same as, an argument
+// at a time, added to paszArguments: its options, then each project's with
+// its sources in a list of their own in szUnitsDirectory
+// (<Project>.units, read with @), which are written.  Paths are relative
+// to the current directory, where the command line must be run.  The
+// lists written are added to paszWritten.  False if one couldn't be.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CBuildPlain::Write(const char* szFile, CHCP65BuildDescription* pcDescription, CBuildConfiguration* pcConfiguration, const char* szLibc65, const char* szComment, CArrayChars* paszWritten)
+bool CBuildPlain::Describe(CArrayChars* paszArguments, const char* szUnitsDirectory, CHCP65BuildDescription* pcDescription, CBuildConfiguration* pcConfiguration, const char* szLibc65, CArrayChars* paszWritten)
 {
 	CFileUtil				cFileUtil;
 	CTextFile				cFile;
-	CChars					szText;
 	CChars					szUnits;
 	CChars					szUnitsText;
 	CChars					szPath;
-	CChars					szName;
-	CChars					szDirectory;
+	CChars					szArgument;
 	CHCP65BuildProject*		pcProject;
 	CAsm65Executable*		pcExecutable;
 	CAsm65Image*			pcImage;
@@ -632,52 +629,49 @@ bool CBuildPlain::Write(const char* szFile, CHCP65BuildDescription* pcDescriptio
 	size					j;
 	bool					bResult;
 
-	szName.Init();
-	szDirectory.Init();
-	cFileUtil.SplitPath(szFile, &szName, &szDirectory);
-	szName.Kill();
-
-	szText.Init();
 	szPath.Init();
-	if (szComment)
-	{
-		szText.Append("# ")->Append(szComment)->Append('\n');
-	}
-	szText.Append("-target\n")->Append(CBuildConfiguration::GetToolchainName(pcConfiguration->GetToolchain()))->Append('\n');
+	paszArguments->Add("-target");
+	paszArguments->Add(CBuildConfiguration::GetToolchainName(pcConfiguration->GetToolchain()));
 	MakeWrittenPath(szLibc65, &szPath);
-	szText.Append("-libc65\n")->Append(szPath)->Append('\n');
+	paszArguments->Add("-libc65");
+	paszArguments->Add(szPath.Text());
 	if (pcConfiguration->IsNoFloats())
 	{
-		szText.Append("-nofloats\n");
+		paszArguments->Add("-nofloats");
 	}
 	if (!pcConfiguration->IsMathTables())
 	{
-		szText.Append("-no-mathtables\n");
+		paszArguments->Add("-no-mathtables");
 	}
 	for (i = 0; i < pcDescription->mcIncludes.NumIncludes(); i++)
 	{
 		MakeWrittenPath(pcDescription->mcIncludes.GetDirectory(i), &szPath);
-		szText.Append(pcDescription->mcIncludes.HasSubDirectories(i) ? "-I+\n" : "-I\n")->Append(szPath)->Append('\n');
+		paszArguments->Add(pcDescription->mcIncludes.HasSubDirectories(i) ? "-I+" : "-I");
+		paszArguments->Add(szPath.Text());
 	}
 
 	bResult = true;
 	for (i = 0; i < pcDescription->NumProjects(); i++)
 	{
 		pcProject = pcDescription->GetProject(i);
-		szText.Append(pcProject->mbLibrary ? "-lib\n" : "-program\n")->Append(pcProject->mszName)->Append('\n');
+		paszArguments->Add(pcProject->mbLibrary ? "-lib" : "-program");
+		paszArguments->Add(pcProject->mszName.Text());
 		MakeWrittenPath(pcProject->mszDirectory.Text(), &szPath);
-		szText.Append("-dir\n")->Append(szPath)->Append('\n');
+		paszArguments->Add("-dir");
+		paszArguments->Add(szPath.Text());
 		for (j = 0; j < pcProject->mcIncludes.NumIncludes(); j++)
 		{
 			MakeWrittenPath(pcProject->mcIncludes.GetDirectory(j), &szPath);
-			szText.Append(pcProject->mcIncludes.HasSubDirectories(j) ? "-I+\n" : "-I\n")->Append(szPath)->Append('\n');
+			paszArguments->Add(pcProject->mcIncludes.HasSubDirectories(j) ? "-I+" : "-I");
+			paszArguments->Add(szPath.Text());
 		}
 		for (j = 0; j < pcProject->maszDefines.NumElements(); j++)
 		{
-			szText.Append("-D\n")->Append(pcProject->maszDefines.GetText(j))->Append('\n');
+			paszArguments->Add("-D");
+			paszArguments->Add(pcProject->maszDefines.GetText(j));
 		}
 
-		szUnits.Init(szDirectory);
+		szUnits.Init(szUnitsDirectory);
 		cFileUtil.AppendToPath(&szUnits, pcProject->mszName.Text());
 		szUnits.Append(BUILD_PLAIN_UNITS_EXTENSION);
 		szUnitsText.Init();
@@ -691,57 +685,173 @@ bool CBuildPlain::Write(const char* szFile, CHCP65BuildDescription* pcDescriptio
 		paszWritten->Add(szUnits.Text());
 		szUnitsText.Kill();
 		MakeWrittenPath(szUnits.Text(), &szPath);
-		szText.Append('@')->Append(szPath)->Append('\n');
+		szArgument.Init("@");
+		szArgument.Append(szPath);
+		paszArguments->Add(szArgument.Text());
+		szArgument.Kill();
 		szUnits.Kill();
 	}
 
 	if (pcConfiguration->HasExecutable())
 	{
 		pcExecutable = pcConfiguration->GetExecutable();
-		szText.Append("-exe\n")->Append(pcExecutable->GetFile())->Append('\n');
-		szText.Append("-entry\n")->Append(pcExecutable->GetEntry())->Append('\n');
+		paszArguments->Add("-exe");
+		paszArguments->Add(pcExecutable->GetFile());
+		paszArguments->Add("-entry");
+		paszArguments->Add(pcExecutable->GetEntry());
 		if (pcExecutable->GetLimit() != 0)
 		{
 			snprintf(szNumber, sizeof(szNumber), "0x%X", (unsigned int)pcExecutable->GetLimit());
-			szText.Append("-limit\n")->Append(szNumber)->Append('\n');
+			paszArguments->Add("-limit");
+			paszArguments->Add(szNumber);
 		}
 		for (i = 0; i < pcExecutable->NumSymbols(); i++)
 		{
 			snprintf(szNumber, sizeof(szNumber), "=0x%llX", (unsigned long long)pcExecutable->GetSymbolValue(i));
-			szText.Append("-symbol\n")->Append(pcExecutable->GetSymbolName(i))->Append(szNumber)->Append('\n');
+			szArgument.Init(pcExecutable->GetSymbolName(i));
+			szArgument.Append(szNumber);
+			paszArguments->Add("-symbol");
+			paszArguments->Add(szArgument.Text());
+			szArgument.Kill();
 		}
 	}
 	else if (pcConfiguration->HasImage())
 	{
 		pcImage = pcConfiguration->GetImage();
-		szText.Append("-image\n")->Append(pcImage->GetFile())->Append('\n');
+		paszArguments->Add("-image");
+		paszArguments->Add(pcImage->GetFile());
 		snprintf(szNumber, sizeof(szNumber), "0x%X", (unsigned int)pcImage->GetSize());
-		szText.Append("-size\n")->Append(szNumber)->Append('\n');
+		paszArguments->Add("-size");
+		paszArguments->Add(szNumber);
 		snprintf(szNumber, sizeof(szNumber), "0x%X", (unsigned int)pcImage->GetFill());
-		szText.Append("-fill\n")->Append(szNumber)->Append('\n');
+		paszArguments->Add("-fill");
+		paszArguments->Add(szNumber);
 		if (pcImage->GetLimit() != 0)
 		{
 			snprintf(szNumber, sizeof(szNumber), "0x%X", (unsigned int)pcImage->GetLimit());
-			szText.Append("-limit\n")->Append(szNumber)->Append('\n');
+			paszArguments->Add("-limit");
+			paszArguments->Add(szNumber);
 		}
 		snprintf(szNumber, sizeof(szNumber), "0x%X", (unsigned int)pcImage->GetLoad());
-		szText.Append("-load\n")->Append(szNumber)->Append('\n');
+		paszArguments->Add("-load");
+		paszArguments->Add(szNumber);
 		for (i = 0; i < pcImage->NumRegions(); i++)
 		{
 			psRegion = pcImage->GetRegion(i);
 			snprintf(szNumber, sizeof(szNumber), "0x%X,0x%X,0x%X", (unsigned int)psRegion->uiStart, (unsigned int)psRegion->uiEnd, (unsigned int)psRegion->uiOffset);
-			szText.Append("-region\n")->Append(szNumber)->Append('\n');
+			paszArguments->Add("-region");
+			paszArguments->Add(szNumber);
 		}
 	}
+	szPath.Kill();
+	return bResult;
+}
 
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Writes the plain command line a solution's build is the same as
+// (Describe) into szFile, an argument a line (hcp65build @szFile reads
+// it), with each project's sources in <Project>.units beside it.
+// szComment is written first.  The arguments are added to paszArguments
+// and the files written to paszWritten.  False if one couldn't be.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CBuildPlain::Write(const char* szFile, CHCP65BuildDescription* pcDescription, CBuildConfiguration* pcConfiguration, const char* szLibc65, const char* szComment, CArrayChars* paszArguments, CArrayChars* paszWritten)
+{
+	CFileUtil	cFileUtil;
+	CTextFile	cFile;
+	CChars		szText;
+	CChars		szName;
+	CChars		szDirectory;
+	size		uiFirst;
+	size		i;
+	bool		bResult;
+
+	szName.Init();
+	szDirectory.Init();
+	cFileUtil.SplitPath(szFile, &szName, &szDirectory);
+	szName.Kill();
+
+	uiFirst = paszArguments->NumElements();
+	bResult = Describe(paszArguments, szDirectory.Text(), pcDescription, pcConfiguration, szLibc65, paszWritten);
+
+	szText.Init();
+	if (szComment)
+	{
+		szText.Append("# ")->Append(szComment)->Append('\n');
+	}
+	for (i = uiFirst; i < paszArguments->NumElements(); i++)
+	{
+		szText.Append(paszArguments->GetText(i))->Append('\n');
+	}
 	cFile.Init(szText.Text());
 	bResult &= cFile.Write(szFile);
 	cFile.Kill();
 	paszWritten->Add(szFile);
-	szPath.Kill();
 	szText.Kill();
 	szDirectory.Kill();
 	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// szProgram run with paszArguments as one PowerShell command line:
+// & <program> <arguments>, each argument PowerShell would read as
+// something else (@BaseLib.units is splatting) in single quotes.
+//
+//////////////////////////////////////////////////////////////////////////
+void CBuildPlain::MakePowerShellLine(const char* szProgram, CArrayChars* paszArguments, CChars* pszDest)
+{
+	size	i;
+
+	pszDest->Set("& ");
+	AppendPowerShellArgument(szProgram, pszDest);
+	for (i = 0; i < paszArguments->NumElements(); i++)
+	{
+		pszDest->Append(' ');
+		AppendPowerShellArgument(paszArguments->GetText(i), pszDest);
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// szArgument as PowerShell is given it: as it is if it is only letters,
+// digits and characters PowerShell passes on unchanged, else in single
+// quotes (with a single quote in it doubled).
+//
+//////////////////////////////////////////////////////////////////////////
+void CBuildPlain::AppendPowerShellArgument(const char* szArgument, CChars* pszDest)
+{
+	const char*	sz;
+	bool		bPlain;
+
+	bPlain = (*szArgument != '\0');
+	for (sz = szArgument; *sz != '\0'; sz++)
+	{
+		if (!(((*sz >= 'a') && (*sz <= 'z')) || ((*sz >= 'A') && (*sz <= 'Z')) || ((*sz >= '0') && (*sz <= '9')) || (strchr("-+_.\\/:=", *sz) != NULL)))
+		{
+			bPlain = false;
+			break;
+		}
+	}
+	if (bPlain)
+	{
+		pszDest->Append(szArgument);
+		return;
+	}
+	pszDest->Append('\'');
+	for (sz = szArgument; *sz != '\0'; sz++)
+	{
+		if (*sz == '\'')
+		{
+			pszDest->Append('\'');
+		}
+		pszDest->Append(*sz);
+	}
+	pszDest->Append('\'');
 }
 
 

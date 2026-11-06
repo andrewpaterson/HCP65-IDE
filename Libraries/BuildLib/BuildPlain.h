@@ -101,13 +101,16 @@ public:
 	EBuildToolchain	GetToolchain(void);
 	CHCP65BuildDescription*	GetDescription(void);
 
-	static bool	Write(const char* szFile, CHCP65BuildDescription* pcDescription, CBuildConfiguration* pcConfiguration, const char* szLibc65, const char* szComment, CArrayChars* paszWritten);
+	static bool	Describe(CArrayChars* paszArguments, const char* szUnitsDirectory, CHCP65BuildDescription* pcDescription, CBuildConfiguration* pcConfiguration, const char* szLibc65, CArrayChars* paszWritten);
+	static bool	Write(const char* szFile, CHCP65BuildDescription* pcDescription, CBuildConfiguration* pcConfiguration, const char* szLibc65, const char* szComment, CArrayChars* paszArguments, CArrayChars* paszWritten);
+	static void	MakePowerShellLine(const char* szProgram, CArrayChars* paszArguments, CChars* pszDest);
 
 protected:
 	bool		NeedValue(CArrayChars* paszArguments, size* puiIndex, const char* szOption, CChars* pszError);
 	static bool	ParseRegion(const char* szRegion, uint32* puiStart, uint32* puiEnd, uint32* puiOffset);
 	static void	MakeFullPath(const char* szPath, CChars* pszDest);
 	static void	MakeWrittenPath(const char* szPath, CChars* pszDest);
+	static void	AppendPowerShellArgument(const char* szArgument, CChars* pszDest);
 };
 
 

@@ -402,6 +402,36 @@ void TestBuildCommandLinePlainNumbers(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// A plain command line as one PowerShell command: what PowerShell would
+// read as something else (@ splatting, a comma's array, a space) is in
+// single quotes, a single quote in it doubled.
+//
+//////////////////////////////////////////////////////////////////////////
+void TestBuildCommandLinePlainPowerShell(void)
+{
+	CArrayChars	aszArguments;
+	CChars		szLine;
+
+	aszArguments.Init();
+	aszArguments.Add("-D");
+	aszArguments.Add("A=1");
+	aszArguments.Add("-I+");
+	aszArguments.Add("..\\Libraries");
+	aszArguments.Add("@Base Lib.units");
+	aszArguments.Add("0,0x80,0");
+	aszArguments.Add("it's");
+	szLine.Init();
+	CBuildPlain::MakePowerShellLine("D:\\Tools\\hcp65build.exe", &aszArguments, &szLine);
+	AssertString("& D:\\Tools\\hcp65build.exe -D A=1 -I+ ..\\Libraries '@Base Lib.units' '0,0x80,0' 'it''s'", szLine.Text());
+	CBuildPlain::MakePowerShellLine("C:\\Program Files\\hcp65build.exe", &aszArguments, &szLine);
+	AssertTrue(szLine.StartsWith("& 'C:\\Program Files\\hcp65build.exe' -D"));
+	szLine.Kill();
+	aszArguments.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // A plain command line: projects and their sources, include directories
 // for every unit or for a project, defines, the program and @files.
 // What doesn't go together is refused, saying why.
@@ -616,6 +646,9 @@ void TestBuildCommandLinePlainSameAsProject(void)
 	AssertTrue(cCommandLine.Parse(6, aszShow));
 	AssertInt(BUILD_EXIT_SUCCEEDED, cCommandLine.Run(NULL));
 	AssertTrue(cCommandLine.HasLine("Tiny.units."));
+	AssertTrue(cCommandLine.HasLine("PowerShell, in "));
+	AssertTrue(TestBuildEndsWith(cCommandLine.GetLastLine(), "'@" TEST_COMMAND_LINE_OUTPUT _FS_ "Tiny.units'"));
+	AssertTrue(strstr(cCommandLine.GetLastLine(), " -lib Tiny -dir ") != NULL);
 	AssertTrue(cFileUtil.Exists(TEST_COMMAND_LINE_OUTPUT _FS_ "Split.plain"));
 	AssertTrue(cFileUtil.Exists(TEST_COMMAND_LINE_OUTPUT _FS_ "Tiny.units"));
 	cCommandLine.Kill();
@@ -654,6 +687,7 @@ void TestBuildCommandLine(void)
 	TestBuildCommandLineRun();
 	TestBuildCommandLineConfigurationsFile();
 	TestBuildCommandLinePlainNumbers();
+	TestBuildCommandLinePlainPowerShell();
 	TestBuildCommandLinePlainParse();
 	TestBuildCommandLinePlainSameAsProject();
 

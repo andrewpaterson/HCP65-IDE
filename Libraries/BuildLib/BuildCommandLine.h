@@ -43,7 +43,8 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 //	hcp65build -program <name> [-dir <dir>] [-D <define>]... <source>... [-lib ...]... [options]
 //
 //The second is a plain command line (CBuildPlain): what to compile and link given as options, with no solution.  It
-//is chosen by a -program or -lib.  -show-plain writes a solution's build as one, instead of building it.  @file reads
+//is chosen by a -program or -lib.  -show-plain writes a solution's build as one, instead of building it, and prints it
+//as one PowerShell command line.  @file reads
 //arguments from a file, one a line (blank lines and lines starting with # are skipped); files can read others.
 //
 //Options start with - or -- (or / on Windows).  Without -config the workspace's last chosen configuration is built,
@@ -95,7 +96,7 @@ protected:
 			bool	BuildSolution(size uiSolution, bool bHeading);
 			bool	PutOnCard(size uiSolution, CBuildConfiguration* pcConfiguration);
 			int		RunPlain(const char* szToolDirectory);
-			int		ShowPlain(CArrayInt* paiOrder);
+			int		ShowPlain(CArrayInt* paiOrder, const char* szToolDirectory);
 			bool	IsOption(const char* szArgument, const char* szName);
 };
 

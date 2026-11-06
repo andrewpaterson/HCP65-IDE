@@ -30,6 +30,11 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 
 #define BUILD_POLL_MILLISECONDS		10
 #define BUILD_MAX_ARGUMENT_FILES	8		//How deep @files can read others.
+#ifdef _WIN32
+#define BUILD_TOOL_NAME				"hcp65build.exe"
+#else
+#define BUILD_TOOL_NAME				"hcp65build"
+#endif
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -460,7 +465,7 @@ int CBuildCommandLine::Run(const char* szToolDirectory)
 
 	if (!mszShowPlain.Empty())
 	{
-		iResult = ShowPlain(&aiOrder);
+		iResult = ShowPlain(&aiOrder, szToolDirectory);
 		aiOrder.Kill();
 		return iResult;
 	}
@@ -545,16 +550,20 @@ int CBuildCommandLine::RunPlain(const char* szToolDirectory)
 //
 // Writes the one solution of paiOrder's build in the configuration as a
 // plain command line (CBuildPlain::Write) to -show-plain's file, instead
-// of building it.  Returns the exit code.
+// of building it, and prints it as one PowerShell command line: the tool
+// (in szToolDirectory, if known) with the file's arguments, its @ lists
+// quoted.  Returns the exit code.
 //
 //////////////////////////////////////////////////////////////////////////
-int CBuildCommandLine::ShowPlain(CArrayInt* paiOrder)
+int CBuildCommandLine::ShowPlain(CArrayInt* paiOrder, const char* szToolDirectory)
 {
 	CBuildWorkspaceSolution*	pcSolution;
 	CBuildConfiguration*		pcConfiguration;
 	CHCP65Build					cBuild;
 	CHCP65BuildDescription*		pcDescription;
 	CArrayChars					aszWritten;
+	CArrayChars					aszArguments;
+	CChars						szProgram;
 	CFileUtil					cFileUtil;
 	CChars						szLine;
 	CChars						szCurrent;
@@ -617,7 +626,8 @@ int CBuildCommandLine::ShowPlain(CArrayInt* paiOrder)
 	szLine.Append(mszShowPlain);
 	szCurrent.Kill();
 	aszWritten.Init();
-	bResult = CBuildPlain::Write(mszShowPlain.Text(), pcDescription, pcConfiguration, mszLibc65.Text(), szLine.Text(), &aszWritten);
+	aszArguments.Init();
+	bResult = CBuildPlain::Write(mszShowPlain.Text(), pcDescription, pcConfiguration, mszLibc65.Text(), szLine.Text(), &aszArguments, &aszWritten);
 	for (i = 0; i < aszWritten.NumElements(); i++)
 	{
 		szLine.Set(bResult ? "Wrote " : "Writing ");
@@ -629,6 +639,32 @@ int CBuildCommandLine::ShowPlain(CArrayInt* paiOrder)
 	{
 		WriteLine("Could not write them all.");
 	}
+	else
+	{
+		//The same as one PowerShell command line, run where -show-plain was.
+		szProgram.Init();
+		if (szToolDirectory)
+		{
+			szProgram.Set(szToolDirectory);
+			cFileUtil.AppendToPath(&szProgram, BUILD_TOOL_NAME);
+		}
+		else
+		{
+			szProgram.Set(BUILD_TOOL_NAME);
+		}
+		szCurrent.Init();
+		cFileUtil.CurrentDirectory(&szCurrent);
+		szLine.Set("PowerShell, in ");
+		szLine.Append(szCurrent);
+		szLine.Append(':');
+		szCurrent.Kill();
+		WriteLine("");
+		WriteLine(szLine.Text());
+		CBuildPlain::MakePowerShellLine(szProgram.Text(), &aszArguments, &szLine);
+		WriteLine(szLine.Text());
+		szProgram.Kill();
+	}
+	aszArguments.Kill();
 	aszWritten.Kill();
 	cBuild.Kill();
 	szLine.Kill();
