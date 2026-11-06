@@ -68,7 +68,7 @@ void CIDEEditorTab::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CFo
 	mbRecolour = false;
 	mbEdited = false;
 	mbCarriageReturns = UsesIDECarriageReturns(szText);
-	muiSavedChanges = mpEditor->GetChangeCount();
+	muiSavedUndo = mpEditor->GetUndoId();
 	mbShownModified = false;
 	meGitState = GFS_Unmodified;
 	mbBase = false;
@@ -100,7 +100,7 @@ void CIDEEditorTab::Class(void)
 	M_Pointer(mpZones);
 	U_Unknown(CIDEListingSource, mcListings);
 	U_Bool(mbCarriageReturns);
-	U_Size(muiSavedChanges);
+	U_Size(muiSavedUndo);
 	U_Bool(mbShownModified);
 	U_Enum(meGitState);
 	U_Bool(mbBase);
@@ -429,7 +429,7 @@ bool CIDEEditorTab::SaveFile(void)
 	szText.Kill();
 	if (bResult)
 	{
-		muiSavedChanges = mpEditor->GetChangeCount();
+		muiSavedUndo = mpEditor->GetUndoId();
 		ShowModified();
 	}
 	return bResult;
@@ -472,19 +472,20 @@ void CIDEEditorTab::Reload(const char* szText)
 		}
 		mpEditor->SetCaretPosition(mpEditor->GetLineStart((size)iLine) + (size)iColumn);
 	}
-	muiSavedChanges = mpEditor->GetChangeCount();
+	muiSavedUndo = mpEditor->GetUndoId();
 	ShowModified();
 }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// True if the text has changed since the file was opened or saved.
+// True if the text has changed since the file was opened or saved, and
+// hasn't been undone back to how it was.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEEditorTab::IsModified(void)
 {
-	return mpEditor->GetChangeCount() != muiSavedChanges;
+	return mpEditor->GetUndoId() != muiSavedUndo;
 }
 
 

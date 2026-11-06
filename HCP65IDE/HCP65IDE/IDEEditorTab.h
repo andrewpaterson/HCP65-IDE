@@ -61,7 +61,7 @@ protected:
 	bool				mbRecolour;		//The text changed and hasn't been highlighted since.
 	bool				mbEdited;		//The text was changed since the file was opened.
 	bool				mbCarriageReturns;	//The file's lines end with carriage returns and line feeds.
-	size				muiSavedChanges;	//The editor's change count when the file was opened or last saved.
+	size				muiSavedUndo;	//The editor's undo id when the file was opened or last saved: undone back to it, it isn't modified.
 	bool				mbShownModified;	//The tab's name ends with a '*'.
 	Ptr<CLineZones>		mpZones;		//The lines' code, from mcListings.
 	CIDEListingSource	mcListings;
