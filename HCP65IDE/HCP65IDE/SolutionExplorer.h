@@ -71,7 +71,7 @@ typedef CArrayTemplate<SSolutionExplorerEntry>	CArraySolutionExplorerEntry;
 
 
 //Solution Explorer: each of the workspace's solutions, its solution folders and projects, each project's filters as
-//folders and its files in them, as Visual Studio shows them.  With more than one solution the startup one is marked.  In each folder the folders come first and then the projects or files, each in
+//folders and its files in them, as Visual Studio shows them.  With more than one solution the startup one's name is bold.  In each folder the folders come first and then the projects or files, each in
 //alphabetical order.  Files can be coloured by what git says has happened to them (ColourFiles).  It is an object held by
 //the IDE's content.
 class CSolutionExplorer : public CObject
@@ -87,6 +87,7 @@ protected:
 	Ptr<CImageCel>				mpSolutionIcon;
 	CBuildWorkspace*			mpcWorkspace;
 	CArraySolutionExplorerNode	masNodes;
+	Ptr<CFontColours>			mpBoldColours;	//The startup solution's name, NULL to not show it.
 
 public:
 	void					Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme);
@@ -96,6 +97,7 @@ public:
 	bool					Save(CObjectWriter* pcFile) override;
 	bool					Load(CObjectReader* pcFile) override;
 
+	void					SetBoldColours(Ptr<CFontColours> pBoldColours);
 	void					ShowWorkspace(CBuildWorkspace* pcWorkspace);
 	Ptr<CTreeContainer>		GetTree(void);
 	Ptr<CComponent>			GetComponent(void);
@@ -118,6 +120,8 @@ protected:
 	void					AddProject(int32 iParentNode, size uiSolution, size uiProject);
 	void					AddFilterContents(int32 iParentNode, size uiSolution, size uiProject, const char* szFilter);
 	CVcxSolution*			GetSolution(size uiSolution);
+	bool					IsStartupNode(int32 iNode);
+	Ptr<CFont>				GetFolderFont(int32 iNode, bool bChanged, Ptr<CFontColours> pColours);
 };
 
 

@@ -45,6 +45,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define IDE_FONT_CHARACTERS		" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
 #define IDE_EXPLORER_WIDTH		320
 #define IDE_CODE_PIXEL_SIZE		15.0f
+#define IDE_BOLD_WEIGHT			700.0f	//Inter's bold.
 #define IDE_BOTTOM_HEIGHT		180
 #define IDE_TOOLBAR_HEIGHT		34		//A grid in a grid has no height of its own.
 #define IDE_TOOLBAR_GAP			8		//Right of the branch.
@@ -117,10 +118,11 @@ ARGB32 GetHighlightColour(ECPPHighlight eKind)
 //////////////////////////////////////////////////////////////////////////
 //
 // A white font of szFontFilename's printable ASCII characters, upright or
-// turned clockwise (for text read down a tool window's auto hide tab).
+// turned clockwise (for text read down a tool window's auto hide tab).  A
+// variable font is fWeight (700 is bold), its default weight if 0.
 //
 //////////////////////////////////////////////////////////////////////////
-Ptr<CFont> GenerateIDEFont(const char* szFontFilename, const char* szName, float32 fPixelSize, EColourOrder eOrder, EFontTurn eTurn)
+Ptr<CFont> GenerateIDEFont(const char* szFontFilename, const char* szName, float32 fPixelSize, EColourOrder eOrder, EFontTurn eTurn, float32 fWeight)
 {
 	CTrueTypeFont			cTrueTypeFont;
 	CTrueTypeFontFactory	cFactory;
@@ -134,6 +136,12 @@ Ptr<CFont> GenerateIDEFont(const char* szFontFilename, const char* szName, float
 	{
 		cTrueTypeFont.Kill();
 		gcLogger.Error2(__METHOD__, " Could not load font [", szFontFilename, "].", NULL);
+		return NULL;
+	}
+	if ((fWeight > 0.0f) && !cTrueTypeFont.SetAxis("wght", fWeight))
+	{
+		cTrueTypeFont.Kill();
+		gcLogger.Error2(__METHOD__, " Font [", szFontFilename, "] has no weight axis.", NULL);
 		return NULL;
 	}
 
@@ -223,6 +231,8 @@ void CIDEContent::Class(void)
 	M_Pointer(mpTurnedWhite);
 	M_Pointer(mpTurnedColours);
 	M_Pointer(mpFontColours);
+	M_Pointer(mpBoldWhite);
+	M_Pointer(mpBoldColours);
 	M_Pointer(mpTheme);
 	M_Pointer(mpCodeFamily);
 	M_Pointer(mpDimFont);
@@ -467,6 +477,11 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 		return false;
 	}
 	mpFontColours = OMalloc<CFontColours>(mpWhite);
+	mpBoldWhite = GenerateIDEFont(szUIFont, "Inter 13px Bold", 13.0f, pWindow->GetColourOrder(), FT_Upright, IDE_BOLD_WEIGHT);
+	if (mpBoldWhite.IsNotNull())
+	{
+		mpBoldColours = OMalloc<CFontColours>(mpBoldWhite);
+	}
 	mpTheme = CJewelTheme::CreateDarkTheme(pWindow, mpFontColours->GetFont(JEWEL_TEXT));
 	pWindow->GetColourFormat(&cFormat);
 
@@ -504,6 +519,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 
 	//Solution Explorer on the left.
 	mpExplorer = OMalloc<CSolutionExplorer>(pWindow, mpTheme);
+	mpExplorer->SetBoldColours(mpBoldColours);
 	mpExplorer->GetTree()->GetActivationEvent()->Add(this, &CIDEContent::ExplorerActivated);
 	mpExplorer->GetTree()->SetContextMenu(CreateExplorerMenu());
 	sPlace.BesideWell(DS_Left, IDE_EXPLORER_WIDTH);

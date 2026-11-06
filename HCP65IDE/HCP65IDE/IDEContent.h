@@ -101,6 +101,8 @@ protected:
 	Ptr<CFont>					mpTurnedWhite;		//Turned clockwise, for the auto hide strips on the window's sides.
 	Ptr<CFontColours>			mpTurnedColours;
 	Ptr<CFontColours>			mpFontColours;
+	Ptr<CFont>					mpBoldWhite;		//The interface's font, bold (the startup solution's name).
+	Ptr<CFontColours>			mpBoldColours;
 	Ptr<CWindowTheme>			mpTheme;
 	Ptr<CFontFamily>			mpCodeFamily;
 	Ptr<CFont>					mpDimFont;			//A dialog's dividers' titles.
@@ -407,7 +409,7 @@ protected:
 };
 
 
-Ptr<CFont> GenerateIDEFont(const char* szFontFilename, const char* szName, float32 fPixelSize, EColourOrder eOrder, EFontTurn eTurn = FT_Upright);
+Ptr<CFont> GenerateIDEFont(const char* szFontFilename, const char* szName, float32 fPixelSize, EColourOrder eOrder, EFontTurn eTurn = FT_Upright, float32 fWeight = 0.0f);
 ARGB32     GetHighlightColour(ECPPHighlight eKind);
 bool       SameIDEText(const char* szText1, const char* szText2);
 

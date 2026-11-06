@@ -77,6 +77,7 @@ void CSolutionExplorer::Class(void)
 	M_Pointer(mpFileIcon);
 	M_Pointer(mpProjectIcon);
 	M_Pointer(mpSolutionIcon);
+	M_Pointer(mpBoldColours);
 	U_Pointer(mpcWorkspace);
 	U_Unknown(CArraySolutionExplorerNode, masNodes);
 }
@@ -183,16 +184,16 @@ void CSolutionExplorer::AddSolution(size uiSolution)
 	szText.Init("Solution '");
 	szText.Append(pcSolution->GetName());
 	szText.Append("' (");
-	if ((mpcWorkspace->NumSolutions() > 1) && (uiSolution == mpcWorkspace->GetStartup()))
-	{
-		szText.Append("startup, ");
-	}
 	szText.Append((uint32)pcSolution->NumLoadedProjects());
 	szText.Append(" of ");
 	szText.Append((uint32)uiProjects);
 	szText.Append((uiProjects == 1) ? " project)" : " projects)");
 	iSolution = AddNode(TREE_NO_NODE, szText.Text(), mpSolutionIcon, SENT_Solution, uiSolution, 0, 0);
 	szText.Kill();
+	if (IsStartupNode(iSolution))
+	{
+		mpTree->SetNodeFont(iSolution, GetFolderFont(iSolution, false, Ptr<CFontColours>()));
+	}
 
 	AddSolutionContents(iSolution, uiSolution, "");
 	mpTree->SetExpanded(iSolution, true);
@@ -536,7 +537,7 @@ void CSolutionExplorer::ColourFiles(CGitRepositories* pcGit, Ptr<CFontColours> p
 	{
 		if (GetNode(iNode)->eType != SENT_File && GetNode(iNode)->eType != SENT_SolutionItem)
 		{
-			mpTree->SetNodeFont(iNode, abChanged.Get(iNode) ? GetGitStateFont(pColours, GFS_Modified) : Ptr<CFont>());
+			mpTree->SetNodeFont(iNode, GetFolderFont(iNode, abChanged.Get(iNode), pColours));
 		}
 	}
 	abChanged.Kill();
@@ -688,6 +689,53 @@ int32 CSolutionExplorer::FindSolutionNode(size uiSolution)
 		}
 	}
 	return TREE_NO_NODE;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The startup solution's name is drawn in pBoldColours' font (NULL for
+// the theme's).
+//
+//////////////////////////////////////////////////////////////////////////
+void CSolutionExplorer::SetBoldColours(Ptr<CFontColours> pBoldColours)
+{
+	mpBoldColours = pBoldColours;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The startup solution's node, when there is more than one solution.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CSolutionExplorer::IsStartupNode(int32 iNode)
+{
+	SSolutionExplorerNode*	psNode;
+
+	psNode = GetNode(iNode);
+	if ((psNode == NULL) || (psNode->eType != SENT_Solution) || (mpcWorkspace == NULL))
+	{
+		return false;
+	}
+	return (mpcWorkspace->NumSolutions() > 1) && (psNode->uiSolution == mpcWorkspace->GetStartup());
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The font of a node that isn't a file: coloured as modified if bChanged
+// (a file in it has changed), bold for the startup solution.  NULL for the
+// theme's.
+//
+//////////////////////////////////////////////////////////////////////////
+Ptr<CFont> CSolutionExplorer::GetFolderFont(int32 iNode, bool bChanged, Ptr<CFontColours> pColours)
+{
+	if (IsStartupNode(iNode) && mpBoldColours.IsNotNull())
+	{
+		return mpBoldColours->GetFont(bChanged ? GetGitStateColour(GFS_Modified) : JEWEL_TEXT);
+	}
+	return bChanged ? GetGitStateFont(pColours, GFS_Modified) : Ptr<CFont>();
 }
 
 
