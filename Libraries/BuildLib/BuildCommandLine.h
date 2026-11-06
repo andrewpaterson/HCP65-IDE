@@ -24,6 +24,7 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/ArrayChars.h"
 #include "BuildWorkspace.h"
 #include "SolutionBuild.h"
+#include "BuildPlain.h"
 
 
 #define BUILD_EXIT_SUCCEEDED	0		//Every solution built.
@@ -38,20 +39,29 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 //a solution's configurations (.hcp65build) it builds the solution they are for: the .sln of the same name beside
 //them, else the .vcxproj.
 //
-//	hcp65build <file> [-config "Release|W65C816"] [-card] [-libc65 <directory>] [-quiet]
+//	hcp65build <file> [-config "Release|W65C816"] [-card] [-libc65 <directory>] [-quiet] [-show-plain <file>]
+//	hcp65build -program <name> [-dir <dir>] [-D <define>]... <source>... [-lib ...]... [options]
+//
+//The second is a plain command line (CBuildPlain): what to compile and link given as options, with no solution.  It
+//is chosen by a -program or -lib.  -show-plain writes a solution's build as one, instead of building it.  @file reads
+//arguments from a file, one a line (blank lines and lines starting with # are skipped); files can read others.
 //
 //Options start with - or -- (or / on Windows).  Without -config the workspace's last chosen configuration is built,
 //else the first HCP65 one.  Without -libc65 Libc65 is HCP65\Libraries\Libc65 in a directory above the one given
-//to Run (the tool's own), or else above the file.  Each line is written by WriteLine (to stdout unless overridden).
+//to Run (the tool's own), or else above the file (the current directory for a plain command line).  Each line is
+//written by WriteLine (to stdout unless overridden).
 class CBuildCommandLine
 {
 protected:
 	CChars				mszFile;
 	CChars				mszConfiguration;
 	CChars				mszLibc65;
+	CChars				mszShowPlain;
 	bool				mbCard;
 	bool				mbQuiet;
 	bool				mbHelp;
+	bool				mbPlain;
+	CBuildPlain			mcPlain;
 	CBuildWorkspace		mcWorkspace;
 	CSolutionBuild		mcBuild;
 
@@ -68,6 +78,8 @@ public:
 			bool	IsCard(void);
 			bool	IsQuiet(void);
 			bool	IsHelp(void);
+			bool	IsPlain(void);
+			CBuildPlain*	GetPlain(void);
 
 	static	bool	FindLibc65(const char* szDirectory, CChars* pszDest);
 	static	bool	FindSolutionFile(const char* szConfigurations, CChars* pszDest);
@@ -77,9 +89,13 @@ protected:
 	virtual	void	WriteLine(const char* szLine);
 			void	WriteLines(CArrayChars* paszLines);
 			void	WriteUsage(void);
+			bool	ExpandArguments(const char* szArgument, CArrayChars* paszDest, size uiDepth);
+			bool	ResolveLibc65(const char* szToolDirectory, const char* szFile);
 			bool	ChooseConfiguration(void);
 			bool	BuildSolution(size uiSolution, bool bHeading);
 			bool	PutOnCard(size uiSolution, CBuildConfiguration* pcConfiguration);
+			int		RunPlain(const char* szToolDirectory);
+			int		ShowPlain(CArrayInt* paiOrder);
 			bool	IsOption(const char* szArgument, const char* szName);
 };
 

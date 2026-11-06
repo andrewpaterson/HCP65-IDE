@@ -24,10 +24,12 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/StringHelper.h"
 #include "BaseLib/NativeThread.h"
 #include "BaseLib/FatImageFile.h"
+#include "BaseLib/TextFile.h"
 #include "BuildCommandLine.h"
 
 
 #define BUILD_POLL_MILLISECONDS		10
+#define BUILD_MAX_ARGUMENT_FILES	8		//How deep @files can read others.
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -39,9 +41,12 @@ void CBuildCommandLine::Init(void)
 	mszFile.Init();
 	mszConfiguration.Init();
 	mszLibc65.Init();
+	mszShowPlain.Init();
 	mbCard = false;
 	mbQuiet = false;
 	mbHelp = false;
+	mbPlain = false;
+	mcPlain.Init();
 	mcWorkspace.Init();
 	mcBuild.Init();
 }
@@ -55,6 +60,8 @@ void CBuildCommandLine::Kill(void)
 {
 	mcBuild.Kill();
 	mcWorkspace.Kill();
+	mcPlain.Kill();
+	mszShowPlain.Kill();
 	mszLibc65.Kill();
 	mszConfiguration.Kill();
 	mszFile.Kill();
@@ -63,31 +70,79 @@ void CBuildCommandLine::Kill(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Whether szArgument is the option szName: -name, --name or (on Windows)
-// /name, any case.  A path on Linux starts with / so isn't an option.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CBuildCommandLine::IsOption(const char* szArgument, const char* szName)
 {
-	if ((szArgument[0] == '-') && (szArgument[1] == '-'))
+	return BuildIsOption(szArgument, szName);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// szArgument added to paszDest, or if it is @file the arguments in the
+// file: one a line, without blank lines and lines starting with #, and
+// each that is itself @file read the same way (to a depth of
+// BUILD_MAX_ARGUMENT_FILES).  False, with why written, if a file can't be
+// read.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CBuildCommandLine::ExpandArguments(const char* szArgument, CArrayChars* paszDest, size uiDepth)
+{
+	CTextFile	cFile;
+	CChars		szText;
+	CArrayChars	aszLines;
+	CChars		szLine;
+	CChars*		pszLine;
+	size		i;
+	bool		bResult;
+
+	if ((szArgument[0] != '@') || (szArgument[1] == '\0'))
 	{
-		szArgument += 2;
+		paszDest->Add(szArgument);
+		return true;
 	}
-	else if (szArgument[0] == '-')
+	if (uiDepth >= BUILD_MAX_ARGUMENT_FILES)
 	{
-		szArgument++;
-	}
-#ifdef _WIN32
-	else if (szArgument[0] == '/')
-	{
-		szArgument++;
-	}
-#endif
-	else
-	{
+		szLine.Init("Argument files read each other too deeply at ");
+		szLine.Append(szArgument);
+		szLine.Append('.');
+		WriteLine(szLine.Text());
+		szLine.Kill();
 		return false;
 	}
-	return StringInsensitiveCompare(szArgument, szName) == 0;
+
+	cFile.Init();
+	if (!cFile.Read(szArgument + 1))
+	{
+		cFile.Kill();
+		szLine.Init("Could not read the argument file ");
+		szLine.Append(szArgument + 1);
+		szLine.Append('.');
+		WriteLine(szLine.Text());
+		szLine.Kill();
+		return false;
+	}
+	szText.Init(cFile.Text());
+	cFile.Kill();
+	aszLines.Init();
+	szText.Replace('\r', '\n');
+	szText.Split(&aszLines, '\n');
+	szText.Kill();
+
+	bResult = true;
+	for (i = 0; bResult && (i < aszLines.NumElements()); i++)
+	{
+		pszLine = aszLines.Get(i);
+		pszLine->StripWhitespace();
+		if (pszLine->Empty() || (pszLine->GetChar(0) == '#'))
+		{
+			continue;
+		}
+		bResult = ExpandArguments(pszLine->Text(), paszDest, uiDepth + 1);
+	}
+	aszLines.Kill();
+	return bResult;
 }
 
 
@@ -95,74 +150,121 @@ bool CBuildCommandLine::IsOption(const char* szArgument, const char* szName)
 //
 // The arguments after the tool's name (aszArgv[0]).  False, with why
 // written, if they are wrong: no file, two files, an unknown option or an
-// option without its value.  -help (or -?) asks only for the usage.
+// option without its value; for a plain command line (a -program or -lib
+// in them) what CBuildPlain refuses.  -help (or -?) asks only for the
+// usage.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CBuildCommandLine::Parse(int iArgc, const char* const* aszArgv)
 {
-	int			i;
+	CArrayChars	aszArguments;
+	size		i;
 	const char*	szArgument;
 	CChars		szLine;
+	CChars		szError;
+	int			iPlain;
+	bool		bResult;
 
-	for (i = 1; i < iArgc; i++)
+	aszArguments.Init();
+	bResult = true;
+	for (i = 1; bResult && (i < (size)iArgc); i++)
 	{
-		szArgument = aszArgv[i];
+		bResult = ExpandArguments(aszArgv[i], &aszArguments, 0);
+	}
+	for (i = 0; bResult && (i < aszArguments.NumElements()); i++)
+	{
+		szArgument = aszArguments.GetText(i);
+		if (IsOption(szArgument, "program") || IsOption(szArgument, "lib"))
+		{
+			mbPlain = true;
+		}
+	}
+
+	szLine.Init();
+	szError.Init();
+	for (i = 0; bResult && (i < aszArguments.NumElements()); i++)
+	{
+		szArgument = aszArguments.GetText(i);
 		if (IsOption(szArgument, "help") || IsOption(szArgument, "?") || IsOption(szArgument, "h"))
 		{
 			mbHelp = true;
-		}
-		else if (IsOption(szArgument, "card"))
-		{
-			mbCard = true;
 		}
 		else if (IsOption(szArgument, "quiet"))
 		{
 			mbQuiet = true;
 		}
-		else if (IsOption(szArgument, "config") || IsOption(szArgument, "libc65"))
+		else if (IsOption(szArgument, "card") || IsOption(szArgument, "config") || IsOption(szArgument, "show-plain"))
 		{
-			if (i + 1 >= iArgc)
+			if (mbPlain)
 			{
-				szLine.Init("Option ");
+				szLine.Set(szArgument);
+				szLine.Append(" is for a solution, not a plain command line (-program, -lib).");
+				bResult = false;
+			}
+			else if (IsOption(szArgument, "card"))
+			{
+				mbCard = true;
+			}
+			else if (i + 1 >= aszArguments.NumElements())
+			{
+				szLine.Set("Option ");
 				szLine.Append(szArgument);
 				szLine.Append(" needs a value.");
-				WriteLine(szLine.Text());
-				szLine.Kill();
-				return false;
-			}
-			i++;
-			if (IsOption(szArgument, "config"))
-			{
-				mszConfiguration.Set(aszArgv[i]);
+				bResult = false;
 			}
 			else
 			{
-				mszLibc65.Set(aszArgv[i]);
+				i++;
+				(IsOption(szArgument, "config") ? &mszConfiguration : &mszShowPlain)->Set(aszArguments.GetText(i));
 			}
 		}
-		else if ((szArgument[0] == '-')
-#ifdef _WIN32
-			|| (szArgument[0] == '/')
-#endif
-			)
+		else if (IsOption(szArgument, "libc65"))
 		{
-			szLine.Init("Unknown option ");
-			szLine.Append(szArgument);
-			szLine.Append('.');
-			WriteLine(szLine.Text());
-			szLine.Kill();
-			return false;
+			if (i + 1 >= aszArguments.NumElements())
+			{
+				szLine.Set("Option ");
+				szLine.Append(szArgument);
+				szLine.Append(" needs a value.");
+				bResult = false;
+			}
+			else
+			{
+				i++;
+				mszLibc65.Set(aszArguments.GetText(i));
+			}
+		}
+		else if (BuildLooksLikeOption(szArgument))
+		{
+			iPlain = mcPlain.ParseOption(&aszArguments, &i, &szError);
+			if (iPlain < 0)
+			{
+				szLine.Set(szError);
+				bResult = false;
+			}
+			else if ((iPlain == 0) || !mbPlain)
+			{
+				szLine.Set(iPlain == 0 ? "Unknown option " : "Option ");
+				szLine.Append(szArgument);
+				szLine.Append(iPlain == 0 ? "." : " is for a plain command line (-program, -lib), not a solution.");
+				bResult = false;
+			}
+		}
+		else if (mbPlain)
+		{
+			if (!mcPlain.AddSource(szArgument, &szError))
+			{
+				szLine.Set(szError);
+				bResult = false;
+			}
 		}
 		else if (!mszFile.Empty())
 		{
-			szLine.Init("Only one file can be built: ");
+			szLine.Set("Only one file can be built: ");
 			szLine.Append(mszFile);
 			szLine.Append(" and ");
 			szLine.Append(szArgument);
 			szLine.Append('.');
-			WriteLine(szLine.Text());
-			szLine.Kill();
-			return false;
+			bResult = false;
 		}
 		else
 		{
@@ -170,25 +272,106 @@ bool CBuildCommandLine::Parse(int iArgc, const char* const* aszArgv)
 		}
 	}
 
-	if (mbHelp)
+	if (bResult && !mbHelp)
 	{
-		return true;
+		if (mbPlain)
+		{
+			if (!mcPlain.Finish(&szError))
+			{
+				szLine.Set(szError);
+				bResult = false;
+			}
+		}
+		else if (mszFile.Empty())
+		{
+			szLine.Set("No solution, project, configurations or workspace to build.");
+			bResult = false;
+		}
 	}
-	if (mszFile.Empty())
+	if (!szLine.Empty())
 	{
-		WriteLine("No solution, project, configurations or workspace to build.");
-		return false;
+		WriteLine(szLine.Text());
 	}
-	return true;
+	szError.Kill();
+	szLine.Kill();
+	aszArguments.Kill();
+	return bResult;
 }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Builds the file in the configuration (Parse) and returns the exit code:
-// BUILD_EXIT_SUCCEEDED, BUILD_EXIT_FAILED or BUILD_EXIT_USAGE.
-// szToolDirectory is where Libc65 is looked for above, when -libc65
-// didn't say (NULL for the current directory), then above the file.
+// Libc65's directory: -libc65's (which must be there), else found above
+// szToolDirectory (NULL for the current directory), else above szFile's
+// directory (or the current directory).  False, with why written, if it
+// isn't.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CBuildCommandLine::ResolveLibc65(const char* szToolDirectory, const char* szFile)
+{
+	CFileUtil	cFileUtil;
+	CChars		szDirectory;
+	CChars		szLine;
+	bool		bResult;
+
+	if (!mszLibc65.Empty())
+	{
+		cFileUtil.FullPath(&mszLibc65);
+		if (!cFileUtil.IsDirectory(mszLibc65.Text()))
+		{
+			szLine.Init("Libc65 isn't at ");
+			szLine.Append(mszLibc65);
+			szLine.Append('.');
+			WriteLine(szLine.Text());
+			szLine.Kill();
+			return false;
+		}
+		return true;
+	}
+
+	szDirectory.Init();
+	if (szToolDirectory)
+	{
+		szDirectory.Set(szToolDirectory);
+	}
+	else
+	{
+		cFileUtil.CurrentDirectory(&szDirectory);
+	}
+	bResult = FindLibc65(szDirectory.Text(), &mszLibc65);
+	if (!bResult)
+	{
+		//A tool built outside the tree (on Linux, in ~/build): the solution is in it.
+		szDirectory.Set("");  //SplitPath appends.
+		if (szFile)
+		{
+			szLine.Init();
+			cFileUtil.SplitPath(szFile, &szLine, &szDirectory);
+			szLine.Kill();
+		}
+		else
+		{
+			cFileUtil.CurrentDirectory(&szDirectory);
+		}
+		bResult = FindLibc65(szDirectory.Text(), &mszLibc65);
+	}
+	szDirectory.Kill();
+	if (!bResult)
+	{
+		WriteLine("Could not find Libc65 (HCP65\\Libraries\\Libc65) above the tool's directory or the file's: say where with -libc65.");
+	}
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Builds the file in the configuration (Parse), or the plain command line,
+// and returns the exit code: BUILD_EXIT_SUCCEEDED, BUILD_EXIT_FAILED or
+// BUILD_EXIT_USAGE.  szToolDirectory is where Libc65 is looked for above,
+// when -libc65 didn't say (NULL for the current directory), then above the
+// file.  With -show-plain the solution's build is written as a plain
+// command line instead.
 //
 //////////////////////////////////////////////////////////////////////////
 int CBuildCommandLine::Run(const char* szToolDirectory)
@@ -196,14 +379,18 @@ int CBuildCommandLine::Run(const char* szToolDirectory)
 	CFileUtil	cFileUtil;
 	CArrayInt	aiOrder;
 	CChars		szLine;
-	CChars		szDirectory;
 	size		i;
 	bool		bResult;
+	int			iResult;
 
 	if (mbHelp)
 	{
 		WriteUsage();
 		return BUILD_EXIT_SUCCEEDED;
+	}
+	if (mbPlain)
+	{
+		return RunPlain(szToolDirectory);
 	}
 
 	if (!cFileUtil.Exists(mszFile.Text()))
@@ -246,46 +433,9 @@ int CBuildCommandLine::Run(const char* szToolDirectory)
 		return BUILD_EXIT_USAGE;
 	}
 
-	if (mszLibc65.Empty())
+	if (!ResolveLibc65(szToolDirectory, mszFile.Text()))
 	{
-		szDirectory.Init();
-		if (szToolDirectory)
-		{
-			szDirectory.Set(szToolDirectory);
-		}
-		else
-		{
-			cFileUtil.CurrentDirectory(&szDirectory);
-		}
-		bResult = FindLibc65(szDirectory.Text(), &mszLibc65);
-		if (!bResult)
-		{
-			//A tool built outside the tree (on Linux, in ~/build): the solution is in it.
-			szLine.Init();
-			szDirectory.Set("");  //SplitPath appends.
-			cFileUtil.SplitPath(mszFile.Text(), &szLine, &szDirectory);
-			szLine.Kill();
-			bResult = FindLibc65(szDirectory.Text(), &mszLibc65);
-		}
-		szDirectory.Kill();
-		if (!bResult)
-		{
-			WriteLine("Could not find Libc65 (HCP65\\Libraries\\Libc65) above the tool's directory or the file's: say where with -libc65.");
-			return BUILD_EXIT_USAGE;
-		}
-	}
-	else
-	{
-		cFileUtil.FullPath(&mszLibc65);
-		if (!cFileUtil.IsDirectory(mszLibc65.Text()))
-		{
-			szLine.Init("Libc65 isn't at ");
-			szLine.Append(mszLibc65);
-			szLine.Append('.');
-			WriteLine(szLine.Text());
-			szLine.Kill();
-			return BUILD_EXIT_USAGE;
-		}
+		return BUILD_EXIT_USAGE;
 	}
 
 	if (!ChooseConfiguration())
@@ -308,12 +458,180 @@ int CBuildCommandLine::Run(const char* szToolDirectory)
 		return BUILD_EXIT_USAGE;
 	}
 
+	if (!mszShowPlain.Empty())
+	{
+		iResult = ShowPlain(&aiOrder);
+		aiOrder.Kill();
+		return iResult;
+	}
+
 	bResult = true;
 	for (i = 0; bResult && (i < aiOrder.NumElements()); i++)
 	{
 		bResult = BuildSolution((size)aiOrder.GetValue(i), aiOrder.NumElements() > 1);
 	}
 	aiOrder.Kill();
+	return bResult ? BUILD_EXIT_SUCCEEDED : BUILD_EXIT_FAILED;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Builds the plain command line (CBuildPlain) with CHCP65Build as a
+// solution build is, its root the current directory, and returns the exit
+// code.
+//
+//////////////////////////////////////////////////////////////////////////
+int CBuildCommandLine::RunPlain(const char* szToolDirectory)
+{
+	CBuildConfiguration	cConfiguration;
+	CHCP65Build			cBuild;
+	CArrayChars			aszLines;
+	CFileUtil			cFileUtil;
+	CChars				szRoot;
+	CChars				szPath;
+	CChars				szError;
+	bool				bRunning;
+	EBuildState			eState;
+
+	if (!ResolveLibc65(szToolDirectory, NULL))
+	{
+		return BUILD_EXIT_USAGE;
+	}
+
+	szError.Init();
+	mcPlain.MakeConfiguration(&cConfiguration, &szError);
+	szError.Kill();
+	szRoot.Init();
+	cFileUtil.CurrentDirectory(&szRoot);
+	cBuild.Init(NULL, &cConfiguration, szRoot.Text());
+	cBuild.SetLibc65Directory(mszLibc65.Text());
+	szPath.Init();
+	if (!StrEmpty(mcPlain.GetOutput()))
+	{
+		szPath.Set(mcPlain.GetOutput());
+		cFileUtil.FullPath(&szPath);
+		cBuild.SetOutputDirectory(szPath.Text());
+	}
+	if (!StrEmpty(mcPlain.GetListings()))
+	{
+		szPath.Set(mcPlain.GetListings());
+		cFileUtil.FullPath(&szPath);
+		cBuild.SetListingDirectory(szPath.Text());
+	}
+	szPath.Kill();
+	mcPlain.MakeDescription(cBuild.GetDescription());
+
+	aszLines.Init();
+	bRunning = cBuild.Start(&aszLines);
+	WriteLines(&aszLines);
+	while (bRunning)
+	{
+		ThreadSleep(BUILD_POLL_MILLISECONDS);
+		bRunning = cBuild.Poll(&aszLines);
+		WriteLines(&aszLines);
+	}
+	aszLines.Kill();
+	eState = cBuild.GetState();
+
+	cBuild.Kill();
+	szRoot.Kill();
+	cConfiguration.Kill();
+	return (eState == BS_Succeeded) ? BUILD_EXIT_SUCCEEDED : BUILD_EXIT_FAILED;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Writes the one solution of paiOrder's build in the configuration as a
+// plain command line (CBuildPlain::Write) to -show-plain's file, instead
+// of building it.  Returns the exit code.
+//
+//////////////////////////////////////////////////////////////////////////
+int CBuildCommandLine::ShowPlain(CArrayInt* paiOrder)
+{
+	CBuildWorkspaceSolution*	pcSolution;
+	CBuildConfiguration*		pcConfiguration;
+	CHCP65Build					cBuild;
+	CHCP65BuildDescription*		pcDescription;
+	CArrayChars					aszWritten;
+	CFileUtil					cFileUtil;
+	CChars						szLine;
+	CChars						szCurrent;
+	size						uiSolution;
+	size						i;
+	bool						bResult;
+
+	szLine.Init();
+	if (paiOrder->NumElements() != 1)
+	{
+		szLine.Set("-show-plain writes one solution's build, but ");
+		szLine.Append(mszFile);
+		szLine.Append(" builds ");
+		szLine.Append((uint32)paiOrder->NumElements());
+		szLine.Append(" in ");
+		szLine.Append(mszConfiguration);
+		szLine.Append(": give the solution.");
+		WriteLine(szLine.Text());
+		szLine.Kill();
+		return BUILD_EXIT_USAGE;
+	}
+	uiSolution = (size)paiOrder->GetValue(0);
+	pcSolution = mcWorkspace.GetSolution(uiSolution);
+	pcConfiguration = mcWorkspace.FindConfiguration(uiSolution, mszConfiguration.Text());
+	if (!pcConfiguration->IsHCP65())
+	{
+		szLine.Set("-show-plain is for an HCP65 configuration (W65C816 or 65C64), not ");
+		szLine.Append(mszConfiguration);
+		szLine.Append('.');
+		WriteLine(szLine.Text());
+		szLine.Kill();
+		return BUILD_EXIT_USAGE;
+	}
+
+	cBuild.Init(&pcSolution->mcSolution, pcConfiguration, NULL);
+	cBuild.Describe();
+	pcDescription = cBuild.GetDescription();
+	for (i = 0; i < pcDescription->NumProjects(); i++)
+	{
+		if (!pcDescription->GetProject(i)->mszUnreadable.Empty())
+		{
+			szLine.Set("Could not read ");
+			szLine.Append(pcDescription->GetProject(i)->mszUnreadable);
+			szLine.Append('.');
+			WriteLine(szLine.Text());
+			szLine.Kill();
+			cBuild.Kill();
+			return BUILD_EXIT_FAILED;
+		}
+	}
+
+	szCurrent.Init();
+	cFileUtil.CurrentDirectory(&szCurrent);
+	szLine.Set(pcSolution->mszFile);
+	szLine.Append(" in ");
+	szLine.Append(mszConfiguration);
+	szLine.Append(" as a plain command line.  Run in ");
+	szLine.Append(szCurrent);
+	szLine.Append(": hcp65build @");
+	szLine.Append(mszShowPlain);
+	szCurrent.Kill();
+	aszWritten.Init();
+	bResult = CBuildPlain::Write(mszShowPlain.Text(), pcDescription, pcConfiguration, mszLibc65.Text(), szLine.Text(), &aszWritten);
+	for (i = 0; i < aszWritten.NumElements(); i++)
+	{
+		szLine.Set(bResult ? "Wrote " : "Writing ");
+		szLine.Append(aszWritten.GetText(i));
+		szLine.Append('.');
+		WriteLine(szLine.Text());
+	}
+	if (!bResult)
+	{
+		WriteLine("Could not write them all.");
+	}
+	aszWritten.Kill();
+	cBuild.Kill();
+	szLine.Kill();
 	return bResult ? BUILD_EXIT_SUCCEEDED : BUILD_EXIT_FAILED;
 }
 
@@ -592,7 +910,7 @@ void CBuildCommandLine::WriteLine(const char* szLine)
 //////////////////////////////////////////////////////////////////////////
 void CBuildCommandLine::WriteUsage(void)
 {
-	WriteLine("hcp65build: builds an HCP65-IDE solution, project or workspace from the command line.");
+	WriteLine("hcp65build: compiles and links HCP65 programs from the command line, as HCP65-IDE does.");
 	WriteLine("");
 	WriteLine("  hcp65build <file.sln | file.vcxproj | file.hcp65build | file.hcp65workspace> [options]");
 	WriteLine("");
@@ -601,12 +919,37 @@ void CBuildCommandLine::WriteUsage(void)
 	WriteLine("  -config \"Release|W65C816\"  The build configuration (from the .hcp65build beside the solution).");
 	WriteLine("                             Default: the workspace's last one, else the first HCP65 one.");
 	WriteLine("  -card                      Also put each executable on its configuration's card (Card, CardPath).");
-	WriteLine("  -libc65 <directory>        Libc65 (default: HCP65\\Libraries\\Libc65 above the tool or the file).");
-	WriteLine("  -quiet                     Leave out the progress lines (each unit compiled, project, segment).");
-	WriteLine("  -help                      This.");
+	WriteLine("  -show-plain <file>         Write the build as a plain command line (and a .units file per project)");
+	WriteLine("                             instead of building: hcp65build @<file> builds the same.");
 	WriteLine("");
 	WriteLine("Output goes in Output\\<toolchain>\\<configuration> and listings in Listing\\ beside the solution.");
-	WriteLine("Exit code: 0 built, 1 build failed, 2 bad command line or file.");
+	WriteLine("");
+	WriteLine("  hcp65build -program <name> [-dir <dir>] [-D <define>]... <source>... [-lib <name> ...]... [options]");
+	WriteLine("");
+	WriteLine("A plain command line: what to compile and link, with no solution.");
+	WriteLine("");
+	WriteLine("  -program <name>, -lib <name>  A project: its sources follow.  A library's units are linked only when used.");
+	WriteLine("  -dir <dir>                    The project's directory, its sources relative to it (default: current).");
+	WriteLine("  -D <name>[=<value>]           A define for the project's units.");
+	WriteLine("  -I <dir>, -I+ <dir>           An include directory, -I+ with its sub directories.  Before the first");
+	WriteLine("                                -program or -lib it is every unit's; after, that project's.");
+	WriteLine("  -target W65C816|65C64         The toolchain (default W65C816).");
+	WriteLine("  -nofloats, -no-mathtables     No floating point; no maths tables (MathMult).");
+	WriteLine("  -exe <file> -entry <symbol> [-limit <n>] [-symbol <name>=<n>]...");
+	WriteLine("                                Link an executable.");
+	WriteLine("  -image <file> -size <n> [-fill <n>] [-limit <n>] [-load <n>] -region <start>,<end>,<offset>...");
+	WriteLine("                                Link an image.  Without -exe or -image the units are only compiled.");
+	WriteLine("  -o <dir>, -listings <dir>     Where the program and listings go (default: Output\\<target>\\Plain and");
+	WriteLine("                                Listing\\<target>\\Plain in the current directory).");
+	WriteLine("");
+	WriteLine("Both:");
+	WriteLine("");
+	WriteLine("  -libc65 <directory>        Libc65 (default: HCP65\\Libraries\\Libc65 above the tool or the file).");
+	WriteLine("  -quiet                     Leave out the progress lines (each unit compiled, project, segment).");
+	WriteLine("  @<file>                    Arguments from a file, one a line (# starts a comment line).");
+	WriteLine("  -help                      This.");
+	WriteLine("");
+	WriteLine("Numbers are decimal, 0x or $ hexadecimal.  Exit code: 0 built, 1 build failed, 2 bad command line or file.");
 }
 
 
@@ -687,4 +1030,6 @@ char* CBuildCommandLine::GetLibc65(void) { return mszLibc65.Text(); }
 bool CBuildCommandLine::IsCard(void) { return mbCard; }
 bool CBuildCommandLine::IsQuiet(void) { return mbQuiet; }
 bool CBuildCommandLine::IsHelp(void) { return mbHelp; }
+bool CBuildCommandLine::IsPlain(void) { return mbPlain; }
+CBuildPlain* CBuildCommandLine::GetPlain(void) { return &mcPlain; }
 
