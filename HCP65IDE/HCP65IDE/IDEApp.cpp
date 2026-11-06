@@ -44,7 +44,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define IDE_EMULATOR				"../../../HCP65/HCP65-Emulator/" IDE_EMULATOR_PLATFORM "Release/HCP65Emulator.exe"
 #endif
 #else
-#define IDE_EMULATOR				"../../../HCP65/HCP65-Emulator/HCP65Emulator/build/HCP65Emulator"
+#define IDE_EMULATOR				"../../../build/HCP65Emulator/HCP65Emulator"	//The shared build directories, beside the repositories.
 #endif
 #define IDE_EMULATOR_DIRECTORY		"../../../HCP65/HCP65-Emulator/HCP65Emulator"
 
