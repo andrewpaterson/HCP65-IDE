@@ -70,6 +70,7 @@ void CIDEEdit::Free(void)
 	if (mpEditMenu.IsNotNull())
 	{
 		mpEditMenu->GetOpeningEvent()->Remove(this);
+		mpEditMenu->GetItemClickEvent()->Remove(this);
 	}
 	mcUndoLog.Kill();
 }
@@ -114,6 +115,7 @@ Ptr<CMenuContainer> CIDEEdit::CreateEditMenu(void)
 	mpUndoAllItem = mpEditMenu->AddItem("Undo Across Files");
 	mpRedoAllItem = mpEditMenu->AddItem("Redo Across Files");
 	mpEditMenu->GetOpeningEvent()->Add(this, &CIDEEdit::EditMenuOpening);
+	mpEditMenu->GetItemClickEvent()->Add(this, &CIDEEdit::EditMenuItemClicked);
 	mpcContent->GetWindow()->GetFocus()->GetFocusChangeEvent()->Add(this, &CIDEEdit::FocusChanged);
 	return mpEditMenu;
 }
@@ -150,10 +152,10 @@ void CIDEEdit::EditMenuOpening(CMenuContainer* pcMenu)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// False if pcItem isn't one of Edit's.
+// Edit's items.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEEdit::EditMenuItemClicked(CMenuItem* pcItem)
+void CIDEEdit::EditMenuItemClicked(CMenuItem* pcItem)
 {
 	Ptr<CTextArea>	pArea;
 	Ptr<CTextField>	pField;
@@ -161,22 +163,22 @@ bool CIDEEdit::EditMenuItemClicked(CMenuItem* pcItem)
 	if (pcItem == &mpUndoAllItem)
 	{
 		UndoAcrossFiles();
-		return true;
+		return;
 	}
 	if (pcItem == &mpRedoAllItem)
 	{
 		RedoAcrossFiles();
-		return true;
+		return;
 	}
 	if ((pcItem != &mpUndoItem) && (pcItem != &mpRedoItem) && (pcItem != &mpCutItem) && (pcItem != &mpCopyItem) && (pcItem != &mpPasteItem) && (pcItem != &mpSelectAllItem))
 	{
-		return false;
+		return;
 	}
 	pField = GetEditField();
 	pArea = GetEditArea();
 	if (pField.IsNull() && pArea.IsNull())
 	{
-		return true;
+		return;
 	}
 
 	if (pField.IsNotNull())
@@ -206,7 +208,7 @@ bool CIDEEdit::EditMenuItemClicked(CMenuItem* pcItem)
 			pField->SelectAll();
 		}
 		mpcContent->GetWindow()->GetFocus()->SetFocus(pField);
-		return true;
+		return;
 	}
 
 	if (pcItem == &mpUndoItem)
@@ -236,7 +238,6 @@ bool CIDEEdit::EditMenuItemClicked(CMenuItem* pcItem)
 
 	//The keys go back to the text.
 	mpcContent->GetWindow()->GetFocus()->SetFocus(pArea);
-	return true;
 }
 
 

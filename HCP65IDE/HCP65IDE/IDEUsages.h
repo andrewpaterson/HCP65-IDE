@@ -39,6 +39,8 @@ CONSTRUCTABLE(CIDEUsages);
 DESTRUCTABLE(CIDEUsages);
 protected:
 	CIDEContent*	mpcContent;  //Not held: the content holds it.
+	Ptr<CMenuContainer>	mpEditorMenu;  //The editors' context menu, with Find Usages.
+	Ptr<CMenuItem>		mpFindUsagesItem;
 	Ptr<CTreeContainer>	mpUsages;  //What Find Usages found: projects, classes, lines.
 	Ptr<CDockPane>		mpUsagesTool;
 	CArrayIDELocations	masUsages;  //Each line's place, by its node's data less one.
@@ -50,6 +52,7 @@ public:
 	bool	Save(CObjectWriter* pcFile) override;
 	bool	Load(CObjectReader* pcFile) override;
 
+	void				AddEditorItems(Ptr<CMenuContainer> pMenu);
 	void				CreatePane(SDockPlace* psPlace);
 	bool				FindUsages(bool bDeclarations);
 	void				Clear(void);
@@ -58,6 +61,8 @@ public:
 
 protected:
 	void				UsageActivated(void);
+	void				EditorMenuOpening(CMenuContainer* pcMenu);
+	void				FindUsagesClicked(void);
 };
 
 

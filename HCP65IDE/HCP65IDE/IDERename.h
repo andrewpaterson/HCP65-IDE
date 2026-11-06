@@ -40,6 +40,9 @@ CONSTRUCTABLE(CIDERename);
 DESTRUCTABLE(CIDERename);
 protected:
 	CIDEContent*	mpcContent;  //Not held: the content holds it.
+	Ptr<CMenuContainer>	mpEditorMenu;  //The editors' context menu, with Rename and Refactor.
+	Ptr<CMenuItem>		mpRenameItem;
+	Ptr<CMenuItem>		mpExtractMethodItem;
 	Ptr<CDialog>		mpRenameDialog;  //While Rename is shown.
 	Ptr<CTextField>		mpRenameField;
 	Ptr<CLabel>			mpRenameError;
@@ -52,6 +55,7 @@ public:
 	bool	Save(CObjectWriter* pcFile) override;
 	bool	Load(CObjectReader* pcFile) override;
 
+	void				AddEditorItems(Ptr<CMenuContainer> pMenu);
 	bool	FindRenameTarget(SIDERenameTarget* psDest);
 	void	QueueRename(void);
 	bool	ShowRename(void);
@@ -60,6 +64,8 @@ public:
 protected:
 	void	ShowQueuedRename(void);
 	bool	ApproveRename(void);
+	void				EditorMenuOpening(CMenuContainer* pcMenu);
+	void				RenameClicked(void);
 };
 
 

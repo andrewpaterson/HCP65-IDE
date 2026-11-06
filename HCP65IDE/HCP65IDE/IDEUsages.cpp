@@ -79,6 +79,8 @@ void CIDEUsages::Init(CIDEContent* pcContent)
 {
 	PreInit();
 	mpcContent = pcContent;
+	mpEditorMenu = NULL;
+	mpFindUsagesItem = NULL;
 	masUsages.Init();
 	PostInit();
 }
@@ -91,6 +93,8 @@ void CIDEUsages::Init(CIDEContent* pcContent)
 void CIDEUsages::Class(void)
 {
 	U_Pointer(mpcContent);
+	M_Pointer(mpEditorMenu);
+	M_Pointer(mpFindUsagesItem);
 	M_Pointer(mpUsages);
 	M_Pointer(mpUsagesTool);
 	U_Unknown(CArrayIDELocations, masUsages);
@@ -105,6 +109,14 @@ void CIDEUsages::Class(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDEUsages::Free(void)
 {
+	if (mpEditorMenu.IsNotNull())
+	{
+		mpEditorMenu->GetOpeningEvent()->Remove(this);
+	}
+	if (mpFindUsagesItem.IsNotNull())
+	{
+		mpFindUsagesItem->GetClickEvent()->Remove(this);
+	}
 	if (mpUsages.IsNotNull())
 	{
 		mpUsages->GetActivationEvent()->Remove(this);
@@ -364,3 +376,39 @@ void CIDEUsages::Clear(void)
 	masUsages.Init();
 	mpUsages->RemoveAllNodes();
 }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The editors' context menu's Find Usages (Alt+F7), enabled when the menu
+// opens if a symbol is named at the caret.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEUsages::AddEditorItems(Ptr<CMenuContainer> pMenu)
+{
+	mpEditorMenu = pMenu;
+	mpFindUsagesItem = pMenu->AddItem("Find Usages");
+	mpFindUsagesItem->SetShortcut("Alt+F7");
+	mpFindUsagesItem->GetClickEvent()->Add(this, &CIDEUsages::FindUsagesClicked);
+	pMenu->GetOpeningEvent()->Add(this, &CIDEUsages::EditorMenuOpening);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEUsages::EditorMenuOpening(CMenuContainer* pcMenu)
+{
+	CArrayIDELocations	asLocations;
+	CChars				szKey;
+
+	asLocations.Init();
+	szKey.Init();
+	mpFindUsagesItem->SetEnabled(mpcContent->GetDocuments()->FindSymbolAtCaret(&asLocations, &szKey));
+	szKey.Kill();
+	KillIDELocations(&asLocations);
+}
+
+
+void CIDEUsages::FindUsagesClicked(void) { FindUsages(false); }

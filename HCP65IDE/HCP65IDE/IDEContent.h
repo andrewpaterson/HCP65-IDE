@@ -132,25 +132,9 @@ protected:
 	Ptr<CFont>					mpDimFont;			//A dialog's dividers' titles.
 	SDialogLook					msDialogLook;
 	Ptr<CMenuBar>				mpMenuBar;
-	Ptr<CMenuItem>				mpOpenItem;			//File, Open Project/Solution.
-	Ptr<CMenuItem>				mpAddSolutionItem;	//File, Add Solution.
-	Ptr<CMenuItem>				mpCloseSolutionItem;	//File, Close Solution.
-	Ptr<CMenuContainer>			mpRecentMenu;		//File, Recent Solutions: an item for each, or one saying there are none.
-	Ptr<CMenuItem>				mpClearRecentItem;	//File, Clear Recent Solutions.
-	Ptr<CMenuItem>				mpSaveItem;			//File, Save.
-	Ptr<CMenuItem>				mpSaveAllItem;		//File, Save All.
-	Ptr<CMenuItem>				mpCompareItem;		//Git, Compare with HEAD.
-	Ptr<CMenuItem>				mpCompareBranchItem;	//Git, Compare with Branch.
-	Ptr<CMenuItem>				mpCompareRevisionItem;	//Git, Compare with Revision.
-	Ptr<CMenuItem>				mpCompareFileItem;	//File, Compare with File.
 	Ptr<CMenuItem>				mpExitItem;			//File, Exit.
-	Ptr<CMenuItem>				mpExplorerItem;		//View's tool windows.
-	Ptr<CMenuItem>				mpUsagesItem;
-	Ptr<CMenuItem>				mpBuildItem;
-	Ptr<CMenuItem>				mpDebugItem;
-	Ptr<CMenuItem>				mpClaudeItem;
 	Ptr<CMenuItem>				mpResetLayoutItem;	//Window, Reset Window Layout.
-	Ptr<CMenuItem>				mpCloseAllItem;		//Window, Close All Documents.
+	Ptr<CMenuContainer>			mpViewMenu;			//An item for each tool window, made as it opens.
 	Ptr<CDockManager>			mpDock;
 	Ptr<CImageCel>				mpFolderIcon;		//The file chooser's.
 	Ptr<CImageCel>				mpFileIcon;
@@ -160,8 +144,6 @@ protected:
 	Ptr<CFont>					mpMatchFont;		//What Go to's pattern matched.
 
 	Ptr<CMenuContainer>			mpEditorMenu;		//The editors' context menu: Find Usages, Rename and Refactor.
-	Ptr<CMenuItem>				mpFindUsagesItem;
-	Ptr<CMenuItem>				mpGoToSourceItem;
 	Ptr<CIDEScript>				mpScript;			//How the IDE is driven to check it.
 
 	Ptr<CIDECloseGuard>			mpCloseGuard;		//Asks to save files with changes before they close.
@@ -177,8 +159,6 @@ protected:
 	Ptr<CIDEGitStatus>			mpGitStatus;		//Git statuses, the branch and change bars.
 	Ptr<CIDEDiffs>				mpDiffs;			//Compare with HEAD, a branch, a revision or a file.
 	Ptr<CIDEAskClaude>			mpAskClaude;		//The Claude tab's requests.
-	Ptr<CMenuItem>				mpRenameItem;
-	Ptr<CMenuItem>				mpExtractMethodItem;
 	CBuildWorkspace				mcWorkspace;		//The solutions open, one the startup solution.
 	CIDECodeModel				mcCodeModel;		//Uses mcWorkspace; initialised when a solution is opened.
 
@@ -201,7 +181,6 @@ public:
 	bool			Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* szCodeFont);
 
 	void			SetKeepSettings(bool bKeep);
-	void			MenuItemClicked(CMenuItem* pcItem);
 	bool			GoToDefinition(void);
 	bool			FindReferences(void);
 	void			ShowStatus(const char* szText);
@@ -242,7 +221,6 @@ public:
 	Ptr<CImageCel>		GetSymbolIcon(size uiType);
 	Ptr<CMenuBar>		GetMenuBar(void);
 	Ptr<CMenuContainer>	GetEditorMenu(void);
-	Ptr<CMenuContainer>	GetRecentMenu(void);
 
 	Ptr<CMenuContainer>	CreateEditorMenu(void);
 	Ptr<CIDEScript>		GetScript(void);
@@ -259,11 +237,13 @@ public:
 	Ptr<CIDEUsages>		GetUsages(void);
 	Ptr<CIDERename>		GetRename(void);
 	Ptr<CIDECloseGuard>	GetCloseGuard(void);
-	void				EditorMenuOpening(CMenuContainer* pcMenu);
 
 protected:
 	Ptr<CMenuBar>		CreateMenuBar(void);
 	void				CodeCommandAction(SComponentInputEvent* psEvent);
+	void				MenuItemClicked(CMenuItem* pcItem);
+	void				ViewMenuOpening(CMenuContainer* pcMenu);
+	void				ViewItemClicked(CMenuItem* pcItem);
 };
 
 

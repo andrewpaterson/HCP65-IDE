@@ -112,7 +112,7 @@ CHECKS = [
 		 r'^Menu File/Recent Solutions: 1 ',
 		 r'^Menu Edit: Undo\(disabled\), Redo\(disabled\), Cut, Copy, Paste, Select All, Undo Across Files\(disabled\), Redo Across Files\(disabled\)$',
 		 r'^Menu Navigate: Class\.\.\., File\.\.\., Symbol\.\.\.$',
-		 r'^Menu View: Solution Explorer, Find Usages, Build Output, Debug, Claude$',
+		 r'^Menu View: Solution Explorer, Find Usages, Build, Debug, Claude$',
 		 r'^Menu Git: Compare with HEAD, Compare with Branch\.\.\., Compare with Revision\.\.\.$',
 		 r'^Menu Debug: Start Debugging \(F5\), ',
 		 r'^Menu Window: Reset Window Layout, Close All Documents$',
@@ -120,6 +120,13 @@ CHECKS = [
 		 r'^Menu Editor/Refactor: Extract Method\.\.\.\(disabled\)$',
 		 r'^Menu Explorer: Set as Startup Solution, Remove Solution$',
 		 r'^Menu item \[View/Nope\] not found$'], []),
+	('menu-clicks', {
+		'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'CARET': '36:4', 'DIALOG_ANSWER': 'Cancel',
+		'DEBUG': 'clickmenu:Editor/Rename...,wait:300,clickmenu:Navigate/File...,wait:300,clickmenu:Editor/Find Usages,'
+			'clickmenu:Editor/Go to Source,printtabs,clickmenu:Edit/Select All,clickmenu:View/Build,'
+			'clickmenu:Window/Reset Window Layout,clickmenu:Explorer/Set as Startup Solution,clickmenu:File/Save All,printtabs'},
+		[r'^Dialog \[Rename\] answered Cancel$', r'^Dialog \[Go To\] answered Cancel$',
+		 r'^Tabs: .*>CalculatorParser\.h$', r'^Tabs: .*>CalculatorParser\.h$'], [r'not found', r'disabled']),
 	('view-menu', {
 		'OPEN': 'CalculatorParser.cpp', 'DEBUG': 'clickmenu:View/Debug,clickmenu:Window/Close All Documents,printtabs'},
 		[r'^Tabs:$'], [r'not found', r'disabled']),

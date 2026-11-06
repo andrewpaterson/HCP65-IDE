@@ -47,6 +47,7 @@ CONSTRUCTABLE(CIDEDebugging);
 DESTRUCTABLE(CIDEDebugging);
 protected:
 	CIDEContent*	mpcContent;  //Not held: the content holds it.
+	Ptr<CMenuContainer>	mpDebugMenu;
 	Ptr<CDialog>	mpDialog;  //The address or port asked for, while it's shown.
 	Ptr<CIDEDebugView>	mpDebugView;  //The Debug tab,
 	Ptr<CDockPane>		mpDebugTool;  //its tool window,
@@ -93,7 +94,6 @@ public:
 	Ptr<CButton>		CreateStartButton(void);
 	void				GetUserSettingsFileName(CChars* pszDest);
 	Ptr<CMenuContainer>	CreateDebugMenu(void);
-	bool				DebugMenuItemClicked(CMenuItem* pcItem);
 	void				DebugCommandAction(EComponentInputCommand eCommand);
 	void				PollDebugger(Ptr<CWindow> pWindow);
 
@@ -119,6 +119,7 @@ protected:
 	bool				ShowNewBreakpointDialog(void);
 	bool				ShowAttachDialog(void);
 	Ptr<CIDEDebugView>	GetDebugView(void);
+	void				DebugMenuItemClicked(CMenuItem* pcItem);
 };
 
 

@@ -52,6 +52,11 @@ void CIDESolutions::Init(CIDEContent* pcContent)
 {
 	PreInit();
 	mpcContent = pcContent;
+	mpOpenItem = NULL;
+	mpAddSolutionItem = NULL;
+	mpCloseSolutionItem = NULL;
+	mpRecentMenu = NULL;
+	mpClearRecentItem = NULL;
 	mpExplorer = NULL;
 	mpExplorerTool = NULL;
 	mpExplorerMenu = NULL;
@@ -72,6 +77,11 @@ void CIDESolutions::Init(CIDEContent* pcContent)
 void CIDESolutions::Class(void)
 {
 	U_Pointer(mpcContent);
+	M_Pointer(mpOpenItem);
+	M_Pointer(mpAddSolutionItem);
+	M_Pointer(mpCloseSolutionItem);
+	M_Pointer(mpRecentMenu);
+	M_Pointer(mpClearRecentItem);
 	M_Pointer(mpExplorer);
 	M_Pointer(mpExplorerTool);
 	M_Pointer(mpExplorerMenu);
@@ -92,6 +102,22 @@ void CIDESolutions::Class(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDESolutions::Free(void)
 {
+	if (mpOpenItem.IsNotNull())
+	{
+		mpOpenItem->GetClickEvent()->Remove(this);
+	}
+	if (mpAddSolutionItem.IsNotNull())
+	{
+		mpAddSolutionItem->GetClickEvent()->Remove(this);
+	}
+	if (mpCloseSolutionItem.IsNotNull())
+	{
+		mpCloseSolutionItem->GetClickEvent()->Remove(this);
+	}
+	if (mpClearRecentItem.IsNotNull())
+	{
+		mpClearRecentItem->GetClickEvent()->Remove(this);
+	}
 	if (mpExplorer.IsNotNull() && mpExplorer->GetTree().IsNotNull())
 	{
 		mpExplorer->GetTree()->GetActivationEvent()->Remove(this);
@@ -715,14 +741,14 @@ void CIDESolutions::ShowRecentMenu(void)
 	CChars	szText;
 	size	i;
 
-	if (mpcContent->GetRecentMenu().IsNull())
+	if (mpRecentMenu.IsNull())
 	{
 		return;
 	}
-	mpcContent->GetRecentMenu()->RemoveAllItems();
+	mpRecentMenu->RemoveAllItems();
 	if (mcRecent.NumFiles() == 0)
 	{
-		mpcContent->GetRecentMenu()->AddItem("(No recent solutions)");
+		mpRecentMenu->AddItem("(No recent solutions)")->SetEnabled(false);
 		return;
 	}
 	szText.Init();
@@ -732,7 +758,7 @@ void CIDESolutions::ShowRecentMenu(void)
 		szText.Append((uint32)(i + 1));
 		szText.Append(' ');
 		szText.Append(mcRecent.GetFile(i));
-		mpcContent->GetRecentMenu()->AddItem(szText.Text());
+		mpRecentMenu->AddItem(szText.Text())->GetClickEvent()->Add(this, &CIDESolutions::RecentItemClicked);
 	}
 	szText.Kill();
 }
@@ -744,25 +770,20 @@ void CIDESolutions::ShowRecentMenu(void)
 // is done with the click.  False if pcItem isn't one.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDESolutions::RecentItemClicked(CMenuItem* pcItem)
+void CIDESolutions::RecentItemClicked(CMenuItem* pcItem)
 {
 	Ptr<CMenuItem>	pItem;
 	size			i;
 
-	if (mpcContent->GetRecentMenu().IsNull())
+	for (i = 0; (i < mpRecentMenu->NumItems()) && (i < mcRecent.NumFiles()); i++)
 	{
-		return false;
-	}
-	for (i = 0; (i < mpcContent->GetRecentMenu()->NumItems()) && (i < mcRecent.NumFiles()); i++)
-	{
-		pItem = mpcContent->GetRecentMenu()->GetItem(i);
+		pItem = mpRecentMenu->GetItem(i);
 		if (pcItem == &pItem)
 		{
 			OpenRecentSolution(i);
-			return true;
+			return;
 		}
 	}
-	return false;
 }
 
 
@@ -905,3 +926,51 @@ bool CIDESolutions::ShowActiveFileInExplorer(void)
 Ptr<CSolutionExplorer> CIDESolutions::GetExplorer(void) { return mpExplorer; }
 Ptr<CDockPane> CIDESolutions::GetExplorerTool(void) { return mpExplorerTool; }
 Ptr<CMenuContainer> CIDESolutions::GetExplorerMenu(void) { return mpExplorerMenu; }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// File's Open Project/Solution, Add Solution, Close Solution, Recent
+// Solutions (an item for each, or one saying there are none) and Clear
+// Recent Solutions.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDESolutions::AddFileItems(Ptr<CMenuContainer> pFile)
+{
+	mpOpenItem = pFile->AddItem("Open Project/Solution...", mpcContent->GetFolderIcon());
+	mpOpenItem->GetClickEvent()->Add(this, &CIDESolutions::FileMenuItemClicked);
+	mpAddSolutionItem = pFile->AddItem("Add Solution...");
+	mpAddSolutionItem->GetClickEvent()->Add(this, &CIDESolutions::FileMenuItemClicked);
+	mpCloseSolutionItem = pFile->AddItem("Close Solution");
+	mpCloseSolutionItem->GetClickEvent()->Add(this, &CIDESolutions::FileMenuItemClicked);
+	mpRecentMenu = OMalloc<CMenuContainer>(mpcContent->GetWindow(), mpcContent->GetTheme());
+	pFile->AddItem("Recent Solutions", NULL, mpRecentMenu);
+	mpClearRecentItem = pFile->AddItem("Clear Recent Solutions");
+	mpClearRecentItem->GetClickEvent()->Add(this, &CIDESolutions::FileMenuItemClicked);
+	ShowRecentMenu();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDESolutions::FileMenuItemClicked(CMenuItem* pcItem)
+{
+	if (pcItem == &mpOpenItem)
+	{
+		ShowOpenSolutionDialog();
+	}
+	else if (pcItem == &mpAddSolutionItem)
+	{
+		ShowAddSolutionDialog();
+	}
+	else if (pcItem == &mpCloseSolutionItem)
+	{
+		CloseSelectedSolution();
+	}
+	else if (pcItem == &mpClearRecentItem)
+	{
+		ClearRecentSolutions();
+	}
+}

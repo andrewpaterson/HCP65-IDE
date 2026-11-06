@@ -57,6 +57,7 @@ void CIDEDebugging::Init(CIDEContent* pcContent)
 {
 	PreInit();
 	mpcContent = pcContent;
+	mpDebugMenu = NULL;
 	mpDialog = NULL;
 	mcDebugger.Init();
 	mszDefaultEmulator.Init();
@@ -77,6 +78,7 @@ void CIDEDebugging::Init(CIDEContent* pcContent)
 void CIDEDebugging::Class(void)
 {
 	U_Pointer(mpcContent);
+	M_Pointer(mpDebugMenu);
 	M_Pointer(mpDialog);
 	M_Pointer(mpDebugView);
 	M_Pointer(mpDebugTool);
@@ -111,6 +113,10 @@ void CIDEDebugging::Class(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDEDebugging::Free(void)
 {
+	if (mpDebugMenu.IsNotNull())
+	{
+		mpDebugMenu->GetItemClickEvent()->Remove(this);
+	}
 	if (mpStartButton.IsNotNull())
 	{
 		mpStartButton->GetClickEvent()->Remove(this);
@@ -140,7 +146,9 @@ Ptr<CMenuContainer> CIDEDebugging::CreateDebugMenu(void)
 {
 	Ptr<CMenuContainer>	pDebug;
 
-	pDebug = OMalloc<CMenuContainer>(mpcContent->GetWindow(), mpcContent->GetTheme());
+	mpDebugMenu = OMalloc<CMenuContainer>(mpcContent->GetWindow(), mpcContent->GetTheme());
+	pDebug = mpDebugMenu;
+	pDebug->GetItemClickEvent()->Add(this, &CIDEDebugging::DebugMenuItemClicked);
 	mpStartItem = pDebug->AddItem("Start Debugging (F5)");
 	mpStopItem = pDebug->AddItem("Stop Debugging (Shift+F5)");
 	mpRestartItem = pDebug->AddItem("Restart (Ctrl+Shift+F5)");
@@ -161,7 +169,7 @@ Ptr<CMenuContainer> CIDEDebugging::CreateDebugMenu(void)
 // False if pcItem isn't one of Debug's.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEDebugging::DebugMenuItemClicked(CMenuItem* pcItem)
+void CIDEDebugging::DebugMenuItemClicked(CMenuItem* pcItem)
 {
 	if (pcItem == &mpStartItem)
 	{
@@ -208,11 +216,6 @@ bool CIDEDebugging::DebugMenuItemClicked(CMenuItem* pcItem)
 		mcDebugger.DeleteAllBreakpoints();
 		UpdateDebugView(true);
 	}
-	else
-	{
-		return false;
-	}
-	return true;
 }
 
 

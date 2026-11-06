@@ -43,6 +43,9 @@ CONSTRUCTABLE(CIDENavigator);
 DESTRUCTABLE(CIDENavigator);
 protected:
 	CIDEContent*	mpcContent;  //Not held: the content holds it.
+	Ptr<CMenuContainer>	mpNavigateMenu;
+	Ptr<CMenuContainer>	mpEditorMenu;  //The editors' context menu, with Go to Source.
+	Ptr<CMenuItem>		mpGoToSourceItem;
 	Ptr<CMenuItem>		mpGoToClassItem;  //Navigate, Class, File and Symbol.
 	Ptr<CMenuItem>		mpGoToFileItem;
 	Ptr<CMenuItem>		mpGoToSymbolItem;
@@ -64,7 +67,9 @@ public:
 	bool	Load(CObjectReader* pcFile) override;
 
 	Ptr<CMenuContainer>	CreateNavigateMenu(void);
-	bool				MenuItemClicked(CMenuItem* pcItem);
+	void				MenuItemClicked(CMenuItem* pcItem);
+	void				AddEditorItems(Ptr<CMenuContainer> pMenu);
+	void				EditorMenuOpening(CMenuContainer* pcMenu);
 	void				GoToSearch(size uiTab, CNameMatcher* pcMatcher, CGoToItems* pcDest) override;
 	bool				ShowGoTo(size uiTab);
 	void				QueueGoTo(size uiTab);

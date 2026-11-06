@@ -745,5 +745,7 @@ void CIDEScript::DialogTick(void)
 	{
 		szAnswer = "Cancel";
 	}
+	printf("Dialog [%s] answered %s\n", pWindow->GetWindowTitle(), szAnswer);
+	fflush(stdout);
 	mpDialog->Close(((strcmp(szAnswer, "Save") == 0) || (strcmp(szAnswer, "OK") == 0)) ? "OK" : szAnswer);
 }

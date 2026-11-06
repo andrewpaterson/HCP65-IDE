@@ -63,7 +63,7 @@ public:
 	bool	Load(CObjectReader* pcFile) override;
 
 	Ptr<CMenuContainer>	CreateEditMenu(void);
-	bool				EditMenuItemClicked(CMenuItem* pcItem);
+	void				EditMenuItemClicked(CMenuItem* pcItem);
 	void				EditMenuOpening(CMenuContainer* pcMenu);
 	Ptr<CMenuContainer>	GetEditMenu(void);
 	void				EditorUndoChanged(CTextArea* pcEditor, STextAreaUndo* psUndo);

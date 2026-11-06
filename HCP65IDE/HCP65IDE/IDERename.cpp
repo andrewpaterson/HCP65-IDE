@@ -58,6 +58,9 @@ void CIDERename::Init(CIDEContent* pcContent)
 {
 	PreInit();
 	mpcContent = pcContent;
+	mpEditorMenu = NULL;
+	mpRenameItem = NULL;
+	mpExtractMethodItem = NULL;
 	msRenameTarget.Init();
 	PostInit();
 }
@@ -70,6 +73,9 @@ void CIDERename::Init(CIDEContent* pcContent)
 void CIDERename::Class(void)
 {
 	U_Pointer(mpcContent);
+	M_Pointer(mpEditorMenu);
+	M_Pointer(mpRenameItem);
+	M_Pointer(mpExtractMethodItem);
 	M_Pointer(mpRenameDialog);
 	M_Pointer(mpRenameField);
 	M_Pointer(mpRenameError);
@@ -85,6 +91,14 @@ void CIDERename::Class(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDERename::Free(void)
 {
+	if (mpEditorMenu.IsNotNull())
+	{
+		mpEditorMenu->GetOpeningEvent()->Remove(this);
+	}
+	if (mpRenameItem.IsNotNull())
+	{
+		mpRenameItem->GetClickEvent()->Remove(this);
+	}
 	msRenameTarget.Kill();
 }
 
@@ -535,3 +549,44 @@ size FindIDENameInKey(const char* szKey, const char* szName)
 	}
 	return (size)(szLast - szKey);
 }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The editors' context menu's Rename (Shift+F6), enabled when the menu
+// opens if what is at the caret can be renamed, and Refactor's Extract
+// Method (not done yet, so always disabled).
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDERename::AddEditorItems(Ptr<CMenuContainer> pMenu)
+{
+	Ptr<CMenuContainer>	pRefactor;
+
+	mpEditorMenu = pMenu;
+	mpRenameItem = pMenu->AddItem("Rename...");
+	mpRenameItem->SetShortcut("Shift+F6");
+	mpRenameItem->GetClickEvent()->Add(this, &CIDERename::RenameClicked);
+	pRefactor = OMalloc<CMenuContainer>(mpcContent->GetWindow(), mpcContent->GetTheme());
+	mpExtractMethodItem = pRefactor->AddItem("Extract Method...");
+	mpExtractMethodItem->SetShortcut("Ctrl+Alt+M");
+	mpExtractMethodItem->SetEnabled(false);
+	pMenu->AddItem("Refactor", NULL, pRefactor);
+	pMenu->GetOpeningEvent()->Add(this, &CIDERename::EditorMenuOpening);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDERename::EditorMenuOpening(CMenuContainer* pcMenu)
+{
+	SIDERenameTarget	sTarget;
+
+	sTarget.Init();
+	mpRenameItem->SetEnabled(FindRenameTarget(&sTarget) && sTarget.bRenamable);
+	sTarget.Kill();
+}
+
+
+void CIDERename::RenameClicked(void) { QueueRename(); }

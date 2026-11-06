@@ -44,6 +44,11 @@ CONSTRUCTABLE(CIDESolutions);
 DESTRUCTABLE(CIDESolutions);
 protected:
 	CIDEContent*	mpcContent;  //Not held: the content holds it.
+	Ptr<CMenuItem>		mpOpenItem;  //File, Open Project/Solution.
+	Ptr<CMenuItem>		mpAddSolutionItem;
+	Ptr<CMenuItem>		mpCloseSolutionItem;
+	Ptr<CMenuContainer>	mpRecentMenu;  //File, Recent Solutions: an item for each, or one saying there are none.
+	Ptr<CMenuItem>		mpClearRecentItem;
 	Ptr<CSolutionExplorer>	mpExplorer;  //The solutions' projects, folders and files.
 	Ptr<CDockPane>		mpExplorerTool;
 	Ptr<CMenuContainer>	mpExplorerMenu;  //A solution's: Set as Startup Solution and Remove.
@@ -60,6 +65,7 @@ public:
 	bool	Save(CObjectWriter* pcFile) override;
 	bool	Load(CObjectReader* pcFile) override;
 
+	void				AddFileItems(Ptr<CMenuContainer> pFile);
 	void				CreateExplorerPane(SDockPlace* psPlace);
 	void				ExplorerActivated(void);
 	bool				ShowActiveFileInExplorer(void);
@@ -86,7 +92,6 @@ public:
 	bool				GetSettingsBaseFile(CChars* pszDest);
 	char*				GetStartupFile(void);
 	void				ShowRecentMenu(void);
-	bool				RecentItemClicked(CMenuItem* pcItem);
 
 protected:
 	Ptr<CMenuContainer>	CreateExplorerMenu(void);
@@ -96,6 +101,8 @@ protected:
 	void				WorkspaceChanged(bool bReindex);
 	CBuildRecentFiles*	GetRecent(void);
 	void				OpenQueuedSolution(void);
+	void				FileMenuItemClicked(CMenuItem* pcItem);
+	void				RecentItemClicked(CMenuItem* pcItem);
 };
 
 

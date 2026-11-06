@@ -211,25 +211,9 @@ void CIDEContent::Class(void)
 	U_Data(ARGB32, msDialogLook.sBackground);
 	U_Data(ARGB32, msDialogLook.sDivider);
 	M_Pointer(mpMenuBar);
-	M_Pointer(mpOpenItem);
-	M_Pointer(mpAddSolutionItem);
-	M_Pointer(mpCloseSolutionItem);
-	M_Pointer(mpRecentMenu);
-	M_Pointer(mpClearRecentItem);
-	M_Pointer(mpSaveItem);
-	M_Pointer(mpSaveAllItem);
-	M_Pointer(mpCompareItem);
-	M_Pointer(mpCompareBranchItem);
-	M_Pointer(mpCompareRevisionItem);
-	M_Pointer(mpCompareFileItem);
 	M_Pointer(mpExitItem);
-	M_Pointer(mpExplorerItem);
-	M_Pointer(mpUsagesItem);
-	M_Pointer(mpBuildItem);
-	M_Pointer(mpDebugItem);
-	M_Pointer(mpClaudeItem);
+	M_Pointer(mpViewMenu);
 	M_Pointer(mpResetLayoutItem);
-	M_Pointer(mpCloseAllItem);
 	M_Pointer(mpDock);
 	M_Pointer(mpFolderIcon);
 	M_Pointer(mpFileIcon);
@@ -251,10 +235,6 @@ void CIDEContent::Class(void)
 	M_Pointer(mpDiffs);
 	M_Pointer(mpAskClaude);
 	M_Pointer(mpEditorMenu);
-	M_Pointer(mpFindUsagesItem);
-	M_Pointer(mpGoToSourceItem);
-	M_Pointer(mpRenameItem);
-	M_Pointer(mpExtractMethodItem);
 	U_Unknown(CBuildWorkspace, mcWorkspace);
 	U_Unknown(CIDECodeModel, mcCodeModel);
 	M_Pointer(mpStatusLabel);
@@ -275,14 +255,15 @@ void CIDEContent::Free(void)
 
 	//An object's memory is freed without its destructor running so the content and its listeners take themselves off
 	//the widgets still here.
-	if (mpMenuBar.IsNotNull())
+	if (mpExitItem.IsNotNull())
 	{
-		mpMenuBar->GetItemClickEvent()->Remove(this);
+		mpExitItem->GetClickEvent()->Remove(this);
+		mpResetLayoutItem->GetClickEvent()->Remove(this);
 	}
-	if (mpEditorMenu.IsNotNull())
+	if (mpViewMenu.IsNotNull())
 	{
-		mpEditorMenu->GetOpeningEvent()->Remove(this);
-		mpEditorMenu->GetItemClickEvent()->Remove(this);
+		mpViewMenu->GetOpeningEvent()->Remove(this);
+		mpViewMenu->GetItemClickEvent()->Remove(this);
 	}
 	for (i = 0; mpDocuments.IsNotNull() && (i < mpDocuments->NumTabs()); i++)
 	{
@@ -503,49 +484,33 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 Ptr<CMenuBar> CIDEContent::CreateMenuBar(void)
 {
 	Ptr<CMenuContainer>	pFile;
-	Ptr<CMenuContainer>	pGit;
-	Ptr<CMenuContainer>	pView;
 	Ptr<CMenuContainer>	pWindowMenu;
 
 	pFile = OMalloc<CMenuContainer>(mpWindow, mpTheme);
-	mpOpenItem = pFile->AddItem("Open Project/Solution...", mpFolderIcon);
-	mpAddSolutionItem = pFile->AddItem("Add Solution...");
-	mpCloseSolutionItem = pFile->AddItem("Close Solution");
-	mpRecentMenu = OMalloc<CMenuContainer>(mpWindow, mpTheme);
-	pFile->AddItem("Recent Solutions", NULL, mpRecentMenu);
-	mpClearRecentItem = pFile->AddItem("Clear Recent Solutions");
-	mpSolutions->ShowRecentMenu();
-	mpSaveItem = pFile->AddItem("Save");
-	mpSaveAllItem = pFile->AddItem("Save All");
-	mpCompareFileItem = pFile->AddItem("Compare with File...");
+	mpSolutions->AddFileItems(pFile);
+	mpDocuments->AddFileItems(pFile);
+	mpDiffs->AddFileItems(pFile);
 	pFile->AddSeparator();
 	mpExitItem = pFile->AddItem("Exit");
+	mpExitItem->GetClickEvent()->Add(this, &CIDEContent::MenuItemClicked);
 
-	mpMenuBar = OMalloc<CMenuBar>(mpWindow, mpTheme);
-	pGit = OMalloc<CMenuContainer>(mpWindow, mpTheme);
-	mpCompareItem = pGit->AddItem("Compare with HEAD");
-	mpCompareBranchItem = pGit->AddItem("Compare with Branch...");
-	mpCompareRevisionItem = pGit->AddItem("Compare with Revision...");
-
-	pView = OMalloc<CMenuContainer>(mpWindow, mpTheme);
-	mpExplorerItem = pView->AddItem("Solution Explorer");
-	mpUsagesItem = pView->AddItem("Find Usages");
-	mpBuildItem = pView->AddItem("Build Output");
-	mpDebugItem = pView->AddItem("Debug");
-	mpClaudeItem = pView->AddItem("Claude");
+	mpViewMenu = OMalloc<CMenuContainer>(mpWindow, mpTheme);
+	mpViewMenu->GetOpeningEvent()->Add(this, &CIDEContent::ViewMenuOpening);
+	mpViewMenu->GetItemClickEvent()->Add(this, &CIDEContent::ViewItemClicked);
 
 	pWindowMenu = OMalloc<CMenuContainer>(mpWindow, mpTheme);
 	mpResetLayoutItem = pWindowMenu->AddItem("Reset Window Layout");
-	mpCloseAllItem = pWindowMenu->AddItem("Close All Documents");
+	mpResetLayoutItem->GetClickEvent()->Add(this, &CIDEContent::MenuItemClicked);
+	mpDocuments->AddWindowItems(pWindowMenu);
 
+	mpMenuBar = OMalloc<CMenuBar>(mpWindow, mpTheme);
 	mpMenuBar->AddMenu("File", pFile);
 	mpMenuBar->AddMenu("Edit", mpEdit->CreateEditMenu());
 	mpMenuBar->AddMenu("Navigate", mpNavigator->CreateNavigateMenu());
-	mpMenuBar->AddMenu("View", pView);
-	mpMenuBar->AddMenu("Git", pGit);
+	mpMenuBar->AddMenu("View", mpViewMenu);
+	mpMenuBar->AddMenu("Git", mpDiffs->CreateGitMenu());
 	mpMenuBar->AddMenu("Debug", mpDebugging->CreateDebugMenu());
 	mpMenuBar->AddMenu("Window", pWindowMenu);
-	mpMenuBar->GetItemClickEvent()->Add(this, &CIDEContent::MenuItemClicked);
 	mpMenuBar->SetAlignment(CSH_Stretch, CSV_Stretch);
 	return mpMenuBar;
 }
@@ -557,50 +522,7 @@ Ptr<CMenuBar> CIDEContent::CreateMenuBar(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDEContent::MenuItemClicked(CMenuItem* pcItem)
 {
-	if (pcItem == &mpOpenItem)
-	{
-		mpSolutions->ShowOpenSolutionDialog();
-	}
-	else if (pcItem == &mpAddSolutionItem)
-	{
-		mpSolutions->ShowAddSolutionDialog();
-	}
-	else if (pcItem == &mpCloseSolutionItem)
-	{
-		mpSolutions->CloseSelectedSolution();
-	}
-	else if (pcItem == &mpClearRecentItem)
-	{
-		mpSolutions->ClearRecentSolutions();
-	}
-	else if (mpSolutions->RecentItemClicked(pcItem))
-	{
-	}
-	else if (pcItem == &mpSaveItem)
-	{
-		mpDocuments->SaveActiveFile();
-	}
-	else if (pcItem == &mpSaveAllItem)
-	{
-		mpDocuments->SaveAllFiles();
-	}
-	else if (pcItem == &mpCompareItem)
-	{
-		mpDiffs->CompareWithHead();
-	}
-	else if (pcItem == &mpCompareBranchItem)
-	{
-		mpDiffs->ShowCompareWithBranchDialog();
-	}
-	else if (pcItem == &mpCompareRevisionItem)
-	{
-		mpDiffs->ShowCompareWithRevisionDialog();
-	}
-	else if (pcItem == &mpCompareFileItem)
-	{
-		mpDiffs->ShowCompareWithFileDialog();
-	}
-	else if (pcItem == &mpExitItem)
+	if (pcItem == &mpExitItem)
 	{
 		//As the window's close button: the window stops, and the application saves what it keeps as it ends.  Files
 		//with changes are asked about first.
@@ -609,55 +531,44 @@ void CIDEContent::MenuItemClicked(CMenuItem* pcItem)
 			mpWindow->Stop();
 		}
 	}
-	else if (pcItem == &mpExplorerItem)
-	{
-		mpDock->Activate(mpSolutions->GetExplorerTool());
-	}
-	else if (pcItem == &mpUsagesItem)
-	{
-		mpDock->Activate(mpUsages->GetTool());
-	}
-	else if (pcItem == &mpBuildItem)
-	{
-		mpDock->Activate(mpBuilding->GetBuildTool());
-	}
-	else if (pcItem == &mpDebugItem)
-	{
-		mpDock->Activate(mpDebugging->GetTool());
-	}
-	else if (pcItem == &mpClaudeItem)
-	{
-		mpDock->Activate(mpAskClaude->GetTool());
-	}
 	else if (pcItem == &mpResetLayoutItem)
 	{
 		mpDock->ResetLayout();
 	}
-	else if (pcItem == &mpCloseAllItem)
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// View: an item for each tool window, as the dock has them, which shows it.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::ViewMenuOpening(CMenuContainer* pcMenu)
+{
+	size			i;
+	Ptr<CDockPane>	pPane;
+
+	mpViewMenu->RemoveAllItems();
+	for (i = 0; i < mpDock->NumPanes(); i++)
 	{
-		mpDocuments->CloseAllFiles();
+		pPane = mpDock->GetPane(i);
+		if (pPane->GetKind() == DPK_Tool)
+		{
+			mpViewMenu->AddItem(pPane->GetTitle())->SetTag((int32)i);
+		}
 	}
-	else if (mpEdit->EditMenuItemClicked(pcItem))
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::ViewItemClicked(CMenuItem* pcItem)
+{
+	if ((pcItem->GetTag() >= 0) && ((size)pcItem->GetTag() < mpDock->NumPanes()))
 	{
-	}
-	else if (pcItem == &mpGoToSourceItem)
-	{
-		mpNavigator->GoToSource();
-	}
-	else if (pcItem == &mpFindUsagesItem)
-	{
-		mpUsages->FindUsages(false);
-	}
-	else if (pcItem == &mpRenameItem)
-	{
-		mpRename->QueueRename();
-	}
-	else if (mpNavigator->MenuItemClicked(pcItem))
-	{
-	}
-	else
-	{
-		mpDebugging->DebugMenuItemClicked(pcItem);
+		mpDock->Activate(mpDock->GetPane((size)pcItem->GetTag()));
 	}
 }
 
@@ -1116,59 +1027,20 @@ CSolutionExplorer* CIDEContent::GetExplorer(void) { return &mpSolutions->GetExpl
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The editor's context menu, as IntelliJ's: Go to Source (Control+B, an
+// The editors' context menu, as IntelliJ's: Go to Source (Control+B, an
 // #include's file or a definition), Find Usages (Alt+F7), Rename
-// (Shift+F6) and Refactor, Extract Method (not done yet, so always
-// disabled).  What can't
-// be done is disabled as it opens.
+// (Shift+F6) and Refactor, each added (and enabled as it opens) by the
+// class that does it.
 //
 //////////////////////////////////////////////////////////////////////////
 Ptr<CMenuContainer> CIDEContent::CreateEditorMenu(void)
 {
-	Ptr<CMenuContainer>	pRefactor;
-
-	pRefactor = OMalloc<CMenuContainer>(mpWindow, mpTheme);
-	mpExtractMethodItem = pRefactor->AddItem("Extract Method...");
-	mpExtractMethodItem->SetShortcut("Ctrl+Alt+M");
-	mpExtractMethodItem->SetEnabled(false);
-
 	mpEditorMenu = OMalloc<CMenuContainer>(mpWindow, mpTheme);
-	mpGoToSourceItem = mpEditorMenu->AddItem("Go to Source");
-	mpGoToSourceItem->SetShortcut("Ctrl+B");
-	mpFindUsagesItem = mpEditorMenu->AddItem("Find Usages");
-	mpFindUsagesItem->SetShortcut("Alt+F7");
+	mpNavigator->AddEditorItems(mpEditorMenu);
+	mpUsages->AddEditorItems(mpEditorMenu);
 	mpEditorMenu->AddSeparator();
-	mpRenameItem = mpEditorMenu->AddItem("Rename...");
-	mpRenameItem->SetShortcut("Shift+F6");
-	mpEditorMenu->AddItem("Refactor", NULL, pRefactor);
-	mpEditorMenu->GetItemClickEvent()->Add(this, &CIDEContent::MenuItemClicked);
-	mpEditorMenu->GetOpeningEvent()->Add(this, &CIDEContent::EditorMenuOpening);
+	mpRename->AddEditorItems(mpEditorMenu);
 	return mpEditorMenu;
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// The right button has put the caret under the pointer, or kept the
-// selection it was pressed in.
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDEContent::EditorMenuOpening(CMenuContainer* pcMenu)
-{
-	SIDERenameTarget	sTarget;
-	CArrayIDELocations	asLocations;
-	CChars				szKey;
-
-	sTarget.Init();
-	mpRenameItem->SetEnabled(mpRename->FindRenameTarget(&sTarget) && sTarget.bRenamable);
-	sTarget.Kill();
-
-	asLocations.Init();
-	szKey.Init();
-	mpFindUsagesItem->SetEnabled(mpDocuments->FindSymbolAtCaret(&asLocations, &szKey));
-	mpGoToSourceItem->SetEnabled(mpNavigator->CanGoToSource());
-	szKey.Kill();
-	KillIDELocations(&asLocations);
 }
 
 
@@ -1215,7 +1087,6 @@ Ptr<CImageCel> CIDEContent::GetFileTypeIcon(size uiType) { return maFileIcons.Ge
 Ptr<CImageCel> CIDEContent::GetSymbolIcon(size uiType) { return maSymbolIcons.Get(uiType); }
 Ptr<CMenuBar> CIDEContent::GetMenuBar(void) { return mpMenuBar; }
 Ptr<CMenuContainer> CIDEContent::GetEditorMenu(void) { return mpEditorMenu; }
-Ptr<CMenuContainer> CIDEContent::GetRecentMenu(void) { return mpRecentMenu; }
 Ptr<CIDENavigator> CIDEContent::GetNavigator(void) { return mpNavigator; }
 Ptr<CIDEEdit> CIDEContent::GetEdit(void) { return mpEdit; }
 Ptr<CIDEUsages> CIDEContent::GetUsages(void) { return mpUsages; }

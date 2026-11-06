@@ -43,6 +43,11 @@ void CIDEDiffs::Init(CIDEContent* pcContent)
 {
 	PreInit();
 	mpcContent = pcContent;
+	mpGitMenu = NULL;
+	mpCompareItem = NULL;
+	mpCompareBranchItem = NULL;
+	mpCompareRevisionItem = NULL;
+	mpCompareFileItem = NULL;
 	mpDialog = NULL;
 	mpFileChooser = NULL;
 	maDiffTabs.Init();
@@ -59,6 +64,11 @@ void CIDEDiffs::Init(CIDEContent* pcContent)
 void CIDEDiffs::Class(void)
 {
 	U_Pointer(mpcContent);
+	M_Pointer(mpGitMenu);
+	M_Pointer(mpCompareItem);
+	M_Pointer(mpCompareBranchItem);
+	M_Pointer(mpCompareRevisionItem);
+	M_Pointer(mpCompareFileItem);
 	M_Pointer(mpDialog);
 	M_Pointer(mpFileChooser);
 	M_Embedded(maDiffTabs);
@@ -75,6 +85,14 @@ void CIDEDiffs::Class(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDEDiffs::Free(void)
 {
+	if (mpGitMenu.IsNotNull())
+	{
+		mpGitMenu->GetItemClickEvent()->Remove(this);
+	}
+	if (mpCompareFileItem.IsNotNull())
+	{
+		mpCompareFileItem->GetClickEvent()->Remove(this);
+	}
 }
 
 
@@ -721,5 +739,59 @@ void CIDEDiffs::FindProjects(void)
 		pDiff = maDiffTabs.Get(i);
 		pDiff->GetSide(TDS_Left)->muiProject = mpcContent->GetSolutions()->GetExplorer()->FindFileProject(pDiff->GetSide(TDS_Left)->mszFile.Text());
 		pDiff->GetSide(TDS_Right)->muiProject = mpcContent->GetSolutions()->GetExplorer()->FindFileProject(pDiff->GetSide(TDS_Right)->mszFile.Text());
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Git: Compare with HEAD, a branch or a revision.
+//
+//////////////////////////////////////////////////////////////////////////
+Ptr<CMenuContainer> CIDEDiffs::CreateGitMenu(void)
+{
+	mpGitMenu = OMalloc<CMenuContainer>(mpcContent->GetWindow(), mpcContent->GetTheme());
+	mpCompareItem = mpGitMenu->AddItem("Compare with HEAD");
+	mpCompareBranchItem = mpGitMenu->AddItem("Compare with Branch...");
+	mpCompareRevisionItem = mpGitMenu->AddItem("Compare with Revision...");
+	mpGitMenu->GetItemClickEvent()->Add(this, &CIDEDiffs::MenuItemClicked);
+	return mpGitMenu;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// File's Compare with File.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDiffs::AddFileItems(Ptr<CMenuContainer> pFile)
+{
+	mpCompareFileItem = pFile->AddItem("Compare with File...");
+	mpCompareFileItem->GetClickEvent()->Add(this, &CIDEDiffs::MenuItemClicked);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Git's items and File's Compare with File.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDiffs::MenuItemClicked(CMenuItem* pcItem)
+{
+	if (pcItem == &mpCompareItem)
+	{
+		CompareWithHead();
+	}
+	else if (pcItem == &mpCompareBranchItem)
+	{
+		ShowCompareWithBranchDialog();
+	}
+	else if (pcItem == &mpCompareRevisionItem)
+	{
+		ShowCompareWithRevisionDialog();
+	}
+	else if (pcItem == &mpCompareFileItem)
+	{
+		ShowCompareWithFileDialog();
 	}
 }

@@ -42,6 +42,9 @@ CONSTRUCTABLE(CIDEDocuments);
 DESTRUCTABLE(CIDEDocuments);
 protected:
 	CIDEContent*	mpcContent;  //Not held: the content holds it.
+	Ptr<CMenuItem>		mpSaveItem;  //File, Save.
+	Ptr<CMenuItem>		mpSaveAllItem;  //File, Save All.
+	Ptr<CMenuItem>		mpCloseAllItem;  //Window, Close All Documents.
 	CArray<CIDEEditorTab>		maTabs;
 	Ptr<CIDEEditorTab>			mpActive;			//The selected tab's file, NULL if none is open.
 
@@ -52,6 +55,8 @@ public:
 	bool	Save(CObjectWriter* pcFile) override;
 	bool	Load(CObjectReader* pcFile) override;
 
+	void				AddFileItems(Ptr<CMenuContainer> pFile);
+	void				AddWindowItems(Ptr<CMenuContainer> pWindowMenu);
 	void				SetActiveTab(Ptr<CIDEEditorTab> pTab);
 	void				RemoveTab(Ptr<CIDEEditorTab> pTab);
 	bool			OpenFile(const char* szFileName, size uiProject = SOLUTION_EXPLORER_NO_PROJECT);
@@ -85,6 +90,7 @@ protected:
 	int64				GiveEditedTabs(int64 iNow, bool bNow);
 	void				AddEditedFile(size uiProject, const char* szFileName, const char* szText, size uiChanges, bool bHighlight, bool bIndex, CArrayIDEEditedFiles* papsFiles);
 	bool				TakeEditedFiles(bool bWait);
+	void				MenuItemClicked(CMenuItem* pcItem);
 };
 
 
