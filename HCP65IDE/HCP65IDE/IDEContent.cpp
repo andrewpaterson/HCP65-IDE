@@ -50,6 +50,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define IDE_TOOLBAR_HEIGHT		34		//A grid in a grid has no height of its own.
 #define IDE_TOOLBAR_GAP			8		//Right of the branch, and left of the status.
 #define IDE_STATUS_HEIGHT		24		//The status line along the bottom.
+#define IDE_STATUS_SHOWN		10000	//How long (ms) a status message stays.
+#define IDE_PROGRESS_POLL		250		//How often (ms) the indexing's progress is shown while it lasts.
 
 
 #define IDE_BUILD_POLL			50		//Milliseconds between looks at a running build.
@@ -202,6 +204,7 @@ void CIDEContent::Init(void)
 	muiQueuedChange = MAX_SIZE;
 	miQueuedAction = 0;
 	mbKeepSettings = true;
+	miStatusTime = 0;
 
 	PostInit();
 }
@@ -304,6 +307,8 @@ void CIDEContent::Class(void)
 	U_Int64(miGitStatusTime);
 	M_Pointer(mpBranchLabel);
 	M_Pointer(mpStatusLabel);
+	U_Int64(miStatusTime);
+	M_Pointer(mpProgressLabel);
 	M_Pointer(mpChangeTab);
 	U_Size(muiQueuedChange);
 	U_Int32(miQueuedAction);
@@ -579,6 +584,12 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	pStatusBar->SetAlignment(CSH_Stretch, CSV_Stretch);
 	pStatusBar->AddComponent(pStatusGap, 0, 0, 1, 1, 0, 1);
 	pStatusBar->AddComponent(mpStatusLabel, 1, 0, 1, 1, 1, 1);
+	mpProgressLabel = OMalloc<CLabel>(pWindow, mpFontColours->GetFont(JEWEL_ICON), "");
+	mpProgressLabel->SetAlignment(CSH_Right, CSV_Center);
+	pStatusBar->AddComponent(mpProgressLabel, 2, 0, 1, 1, 0, 1);
+	pStatusGap = OMalloc<CFillContainer>(pWindow);
+	pStatusGap->SetDesiredSize(IDE_TOOLBAR_GAP, 1);
+	pStatusBar->AddComponent(pStatusGap, 3, 0, 1, 1, 0, 1);
 	pMain->AddComponent(pStatusBar, 0, 3, 1, 1, 1, 0);
 	pMain->AddInputActions(gaeIDECodeCommands, this, &CIDEContent::CodeCommandAction);
 	pWindow->SetContainer(pMain);
@@ -1866,13 +1877,19 @@ bool CIDEContent::FindReferences(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The status line says szText until something else is said.  A scripted
-// run (checking the IDE) prints it too.
+// The status line says szText for a while (IDE_STATUS_SHOWN), or until
+// something else is said.  A scripted run (checking the IDE) prints it
+// too.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEContent::ShowStatus(const char* szText)
 {
 	mpStatusLabel->SetText(szText);
+	miStatusTime = GetDebugTickCount();
+	if (mpWindow.IsNotNull())
+	{
+		mpWindow->RequestTick(IDE_STATUS_SHOWN);
+	}
 	if (!mbKeepSettings)
 	{
 		printf("Status: %s\n", szText);
@@ -1886,6 +1903,54 @@ void CIDEContent::ShowStatus(const char* szText)
 //
 //////////////////////////////////////////////////////////////////////////
 char* CIDEContent::GetStatus(void) { return mpStatusLabel->GetText(); }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The status message is cleared once it has been shown a while, and the
+// indexing's progress is shown on the right while it lasts.  How many
+// milliseconds until it changes next, -1 if it won't by itself.
+//
+//////////////////////////////////////////////////////////////////////////
+int64 CIDEContent::UpdateStatusLine(int64 iNow)
+{
+	int64	iWait;
+	size	uiIndexed;
+	size	uiToIndex;
+	CChars	szProgress;
+
+	iWait = -1;
+	if (miStatusTime != 0)
+	{
+		if (iNow - miStatusTime >= IDE_STATUS_SHOWN)
+		{
+			mpStatusLabel->SetText("");
+			miStatusTime = 0;
+		}
+		else
+		{
+			iWait = IDE_STATUS_SHOWN - (iNow - miStatusTime);
+		}
+	}
+
+	mcCodeModel.GetIndexingProgress(&uiIndexed, &uiToIndex);
+	szProgress.Init();
+	if (uiIndexed < uiToIndex)
+	{
+		szProgress.Append("Indexing ");
+		szProgress.Append((uint32)uiIndexed);
+		szProgress.Append(" of ");
+		szProgress.Append((uint32)uiToIndex);
+		szProgress.Append(" files");
+		iWait = ((iWait < 0) || (iWait > IDE_PROGRESS_POLL)) ? IDE_PROGRESS_POLL : iWait;
+	}
+	if (!szProgress.Equals(mpProgressLabel->GetText()))
+	{
+		mpProgressLabel->SetText(szProgress.Text());
+	}
+	szProgress.Kill();
+	return iWait;
+}
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -2476,6 +2541,11 @@ void CIDEContent::Tick(Ptr<CWindow> pWindow)
 		}
 	}
 	ReindexStaleTabs(false);
+	iWait = UpdateStatusLine(iNow);
+	if ((iWait >= 0) && ((iSoonest < 0) || (iWait < iSoonest)))
+	{
+		iSoonest = iWait;
+	}
 	if (iSoonest >= 0)
 	{
 		pWindow->RequestTick((uint32)iSoonest);

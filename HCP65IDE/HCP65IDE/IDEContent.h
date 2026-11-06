@@ -213,7 +213,9 @@ protected:
 	CGitRepositories			mcGit;				//The repositories the solution's files are in.
 	int64						miGitStatusTime;	//When the statuses were last read, 0 to read them now.
 	Ptr<CLabel>					mpBranchLabel;		//On the toolbar.
-	Ptr<CLabel>					mpStatusLabel;		//The status line along the bottom: what last went wrong, or was done.
+	Ptr<CLabel>					mpStatusLabel;		//The status line along the bottom: what last went wrong, or was done,
+	int64						miStatusTime;		//when it said it (it's cleared a while after), 0 if it says nothing,
+	Ptr<CLabel>					mpProgressLabel;	//and on its right what is being done in the background (indexing).
 	Ptr<CIDEEditorTab>			mpChangeTab;		//The tab of the change shown.
 	size						muiQueuedChange;	//A change's line to show once the editor is laid out, MAX_SIZE for none.
 	int							miQueuedAction;		//Then 0 nothing, 1 Rollback or 2 Show Diff.
@@ -266,6 +268,7 @@ public:
 	bool			FindReferences(void);
 	void			ShowStatus(const char* szText);
 	char*			GetStatus(void);
+	int64			UpdateStatusLine(int64 iNow);
 	bool			SetCaretPlace(int iLine, int iColumn);
 	bool			SetConfiguration(const char* szConfiguration);
 	void			ConfigurationChosen(void);
