@@ -872,3 +872,206 @@ void CIDECodeModel::Reset(void)
 char* CIDECodeModel::GetConfiguration(void) { return mszConfiguration.Text(); }
 void CIDECodeModel::AddSystemDirectory(const char* szDirectory) { maszSystemDirectories.Add(szDirectory); }
 
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The kind of icon a symbol of eKind has, IST_Count for one Go to Symbol
+// doesn't list (parameters, labels ...).
+//
+//////////////////////////////////////////////////////////////////////////
+static EIDESymbolType GetIDESymbolType(ECPPSymbolKind eKind)
+{
+	switch (eKind)
+	{
+	case CPPSK_Class:
+	case CPPSK_ClassTemplate:
+		return IST_Class;
+	case CPPSK_Enum:
+		return IST_Enum;
+	case CPPSK_Typedef:
+	case CPPSK_AliasTemplate:
+		return IST_Typedef;
+	case CPPSK_Namespace:
+		return IST_Namespace;
+	case CPPSK_Function:
+	case CPPSK_FunctionTemplate:
+		return IST_Function;
+	case CPPSK_Variable:
+	case CPPSK_Field:
+	case CPPSK_Enumerator:
+		return IST_Variable;
+	default:
+		return IST_Count;
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Splits a symbol's key, "CChars::Append(char const*)", into where it is
+// declared ("CChars", "" at file scope), its name ("Append") and its
+// parameters ("(char const*)", "" if it isn't a function).
+//
+//////////////////////////////////////////////////////////////////////////
+static void SplitIDESymbolKey(const char* szKey, CChars* pszScope, CChars* pszName, CChars* pszParameters)
+{
+	size	uiLength;
+	size	uiEnd;
+	size	uiStart;
+	int		iDepth;
+
+	uiLength = strlen(szKey);
+	uiEnd = uiLength;
+
+	//The parameters are the brackets the key ends with.
+	if ((uiLength > 0) && (szKey[uiLength - 1] == ')'))
+	{
+		iDepth = 0;
+		for (uiEnd = uiLength; uiEnd > 0; uiEnd--)
+		{
+			if (szKey[uiEnd - 1] == ')')
+			{
+				iDepth++;
+			}
+			else if (szKey[uiEnd - 1] == '(')
+			{
+				iDepth--;
+				if (iDepth == 0)
+				{
+					uiEnd--;
+					break;
+				}
+			}
+		}
+	}
+	pszParameters->Init();
+	pszParameters->AppendSubString(szKey, uiEnd, uiLength);
+
+	//The name is after the last "::" outside a template's angle brackets.
+	iDepth = 0;
+	for (uiStart = uiEnd; uiStart > 0; uiStart--)
+	{
+		if (szKey[uiStart - 1] == '>')
+		{
+			iDepth++;
+		}
+		else if ((szKey[uiStart - 1] == '<') && (iDepth > 0))
+		{
+			iDepth--;
+		}
+		else if ((iDepth == 0) && (uiStart >= 2) && (szKey[uiStart - 1] == ':') && (szKey[uiStart - 2] == ':'))
+		{
+			break;
+		}
+	}
+	pszName->Init();
+	pszName->AppendSubString(szKey, uiStart, uiEnd);
+	pszScope->Init();
+	if (uiStart >= 2)
+	{
+		pszScope->AppendSubString(szKey, 0, uiStart - 2);
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Go to Class's results (classes and enums) or, without bClasses, Go to
+// Symbol's (every named thing but parameters, labels and locals): those
+// whose name the pattern matches, declared in one of pcFiles (the
+// solution's files).  Each is shown as its name with its parameters,
+// where it's declared and its file; its data is its symbol's index.
+// aiIcons are the dialog's icons by EIDESymbolType.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDECodeModel::FindGoToSymbols(CNameMatcher* pcMatcher, bool bClasses, CMapStringInt* pcFiles, int32* aiIcons, CGoToItems* pcDest)
+{
+	size				i;
+	CCPPIndexSymbol*	pcSymbol;
+	SCPPIndexLocation*	psLocation;
+	EIDESymbolType		eType;
+	CChars				szScope;
+	CChars				szName;
+	CChars				szParameters;
+	CChars				szLocation;
+	SNameMatch			sMatch;
+	char*				szFile;
+	char*				szShortFile;
+
+	mcIndexMutex.Lock();
+	for (i = 0; i < mcIndex.NumSymbols(); i++)
+	{
+		pcSymbol = mcIndex.GetSymbol(i);
+		eType = GetIDESymbolType(pcSymbol->meKind);
+		if ((eType == IST_Count) || (bClasses && (eType != IST_Class) && (eType != IST_Enum)) || pcSymbol->mszKey.Contains('@'))
+		{
+			continue;
+		}
+		psLocation = pcSymbol->GetDefinition();
+		if (psLocation == NULL)
+		{
+			psLocation = pcSymbol->GetDeclaration();
+		}
+		if (psLocation == NULL)
+		{
+			continue;
+		}
+		szFile = mcIndex.GetFileName(psLocation->uiFile);
+		if (pcFiles->Get(szFile, -1) < 0)
+		{
+			continue;
+		}
+
+		SplitIDESymbolKey(pcSymbol->mszKey.Text(), &szScope, &szName, &szParameters);
+		if (!szName.Empty() && pcMatcher->Match(szName.Text(), szName.Length(), pcMatcher->GetPattern(), StrLen(pcMatcher->GetPattern()), &sMatch))
+		{
+			szName.Append(szParameters);
+			szShortFile = strrchr(szFile, '/');
+			szShortFile = szShortFile ? szShortFile + 1 : szFile;
+			szLocation.Init(szScope);
+			if (!szLocation.Empty())
+			{
+				szLocation.Append("  ");
+			}
+			szLocation.Append(szShortFile);
+			szLocation.Append(":");
+			szLocation.Append(psLocation->iLine + 1);
+			pcDest->Add(szName.Text(), szLocation.Text(), aiIcons[eType], i, &sMatch);
+			szLocation.Kill();
+		}
+		szParameters.Kill();
+		szName.Kill();
+		szScope.Kill();
+	}
+	mcIndexMutex.Unlock();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Where symbol uiSymbol (of FindGoToSymbols) is defined, or declared.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDECodeModel::GetSymbolLocation(size uiSymbol, SIDELocation* psDest)
+{
+	CCPPIndexSymbol*	pcSymbol;
+	SCPPIndexLocation*	psLocation;
+
+	psLocation = NULL;
+	mcIndexMutex.Lock();
+	if (uiSymbol < mcIndex.NumSymbols())
+	{
+		pcSymbol = mcIndex.GetSymbol(uiSymbol);
+		psLocation = pcSymbol->GetDefinition();
+		if (psLocation == NULL)
+		{
+			psLocation = pcSymbol->GetDeclaration();
+		}
+		if (psLocation)
+		{
+			CopyLocation(psLocation, psDest);
+		}
+	}
+	mcIndexMutex.Unlock();
+	return psLocation != NULL;
+}

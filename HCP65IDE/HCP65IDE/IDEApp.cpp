@@ -27,6 +27,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/ArrayChars.h"
 #include "BaseLib/FileUtil.h"
 #include "IDEWindowTick.h"
+#include "BaseLib/Timer.h"
 #include "IDEApp.h"
 
 
@@ -293,6 +294,12 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 				aszOpen.Kill();
 				EditScripted("print");
 			}
+			if (getenv("HCP65_IDE_GOTO") != NULL)
+			{
+				//<tab>:<pattern>, as Navigate's Class (0), File (1) or Symbol (2) with the pattern typed: the best
+				//results are printed and the first opened.
+				GoToScripted(getenv("HCP65_IDE_GOTO"));
+			}
 			if ((getenv("HCP65_IDE_CHANGE") != NULL) && mpContent->GetActiveTab().IsNotNull())
 			{
 				//The change at the line (from 1) shown, as clicking its change bar does; ",rollback" or ",diff" then
@@ -475,6 +482,47 @@ bool CIDEApp::Run(void)
 		mpWindow->SetComponentInput(NULL);
 	}
 	return mbValid;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// HCP65_IDE_GOTO's search.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEApp::GoToScripted(const char* szGoTo)
+{
+	Ptr<CGoToDialog>	pGoTo;
+	SGoToItem*			psItem;
+	size				i;
+	size				uiTab;
+	int64				iStart;
+
+	uiTab = (size)atoi(szGoTo);
+	szGoTo = strchr(szGoTo, ':');
+	if (szGoTo == NULL)
+	{
+		return;
+	}
+	mpContent->CreateGoTo(uiTab);
+	pGoTo = mpContent->GetGoTo();
+	iStart = GetDebugTickCount();
+	pGoTo->SetText(&szGoTo[1]);
+	printf("Go to [%s]: %d results in %d ms\n", &szGoTo[1], (int)pGoTo->NumResults(), (int)(GetDebugTickCount() - iStart));
+	for (i = 0; (i < pGoTo->NumResults()) && (i < 10); i++)
+	{
+		psItem = pGoTo->GetResult(i);
+		printf("  %s  [%s]  score %d\n", psItem->szName.Text(), psItem->szLocation.Text(), psItem->sMatch.iScore);
+	}
+	if (pGoTo->Approve())
+	{
+		mpContent->OpenGoToChoice();
+		if (mpContent->GetActiveTab().IsNotNull())
+		{
+			printf("Opened %s\n", mpContent->GetActiveTab()->GetFileName());
+		}
+	}
+	fflush(stdout);
 }
 
 

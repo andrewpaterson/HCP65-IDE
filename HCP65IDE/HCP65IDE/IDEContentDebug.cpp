@@ -804,6 +804,7 @@ void CIDEContent::RunDebugScript(void)
 {
 	char*	szCommand;
 	bool	bDone;
+	size	uiTab;
 
 	if (maszDebugScript.NumElements() == 0)
 	{
@@ -834,6 +835,19 @@ void CIDEContent::RunDebugScript(void)
 			miDebugScriptWait = 0;
 			bDone = true;
 		}
+	}
+	else if (strncmp(szCommand, "goto:", 5) == 0)
+	{
+		//Navigate's Go to dialog shown on that tab, from a tick as it must be.
+		//goto:<tab>:<pattern> types the pattern too.
+		uiTab = (size)atoi(&szCommand[5]);
+		if (strchr(&szCommand[5], ':') != NULL)
+		{
+			mszGoToPattern.Set(strchr(&szCommand[5], ':') + 1);
+		}
+		maszDebugScript.Remove((size)0);
+		ShowGoTo(uiTab);
+		return;
 	}
 	else if (strcmp(szCommand, "buildtab") == 0)
 	{

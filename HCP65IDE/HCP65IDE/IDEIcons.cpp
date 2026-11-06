@@ -18,6 +18,7 @@ You should have received a copy of the GNU Affero General Public License
 along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 ** ------------------------------------------------------------------------ **/
+#include <math.h>
 #include "BaseLib/Chars.h"
 #include "StandardLib/Objects.h"
 #include "SupportLib/ImageColour.h"
@@ -31,6 +32,18 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define IDE_ICON_CPP_COLOUR		Set32BitColour((uint8)0x55, (uint8)0x8C, (uint8)0xD6)
 #define IDE_ICON_C_COLOUR		Set32BitColour((uint8)0x6B, (uint8)0x8F, (uint8)0xB5)
 #define IDE_ICON_HEADER_COLOUR	Set32BitColour((uint8)0xA0, (uint8)0x74, (uint8)0xC4)
+
+//The symbols' circles, by EIDESymbolType: IntelliJ's class blue, enum green, typedef teal, namespace grey, function
+//pink and variable purple.
+static uint8 gauiIDESymbolColours[IST_Count][3] =
+{
+	{ 0x35, 0x92, 0xC4 },
+	{ 0x4D, 0x9C, 0x5A },
+	{ 0x3A, 0x9E, 0x9A },
+	{ 0x7A, 0x7E, 0x85 },
+	{ 0xC7, 0x5A, 0x8E },
+	{ 0x96, 0x6C, 0xC2 },
+};
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -194,3 +207,77 @@ void CIDEIcons::AddLine(CVectorPath* pcPath, float64 x1, float64 y1, float64 x2,
 	AddVectorStroke(pcPath, &sStart, &sEnd, 0.5);
 }
 
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A circle of the kind's colour with its letter in white.
+//
+//////////////////////////////////////////////////////////////////////////
+Ptr<CImageCel> CIDEIcons::CreateSymbolIcon(EIDESymbolType eType, CColourFormatHelper* pcFormat)
+{
+	Ptr<CImage>		pImage;
+	CImageDraw		cDraw;
+	CVectorPath		cPath;
+	SFloat64Vec2	asCircle[24];
+	size			i;
+	float64			fAngle;
+
+	pImage = OMalloc<CImage>(16, 16, PT_uint8, IMAGE_DIFFUSE_RED, IMAGE_DIFFUSE_GREEN, IMAGE_DIFFUSE_BLUE, IMAGE_OPACITY, CHANNEL_STOP);
+	pImage->Black();
+	cDraw.Init(&pImage);
+
+	for (i = 0; i < 24; i++)
+	{
+		fAngle = (float64)i * 2.0 * 3.14159265358979 / 24.0;
+		asCircle[i].Init(8.0 + 7.0 * cos(fAngle), 8.0 + 7.0 * sin(fAngle));
+	}
+	cPath.Init();
+	cPath.BeginPart(true);
+	cPath.AddPolygon(asCircle, 24, false);
+	Fill(&cDraw, &cPath, Set32BitColour(gauiIDESymbolColours[eType][0], gauiIDESymbolColours[eType][1], gauiIDESymbolColours[eType][2]));
+	cPath.Kill();
+
+	cPath.Init();
+	cPath.BeginPart(true);
+	switch (eType)
+	{
+	case IST_Class:
+		AddLine(&cPath, 10.5, 5.5, 6.5, 5.5);
+		AddLine(&cPath, 6.5, 5.5, 5.5, 6.5);
+		AddLine(&cPath, 5.5, 6.5, 5.5, 9.5);
+		AddLine(&cPath, 5.5, 9.5, 6.5, 10.5);
+		AddLine(&cPath, 6.5, 10.5, 10.5, 10.5);
+		break;
+	case IST_Enum:
+		AddLine(&cPath, 10.5, 5.5, 5.5, 5.5);
+		AddLine(&cPath, 5.5, 5.5, 5.5, 10.5);
+		AddLine(&cPath, 5.5, 10.5, 10.5, 10.5);
+		AddLine(&cPath, 5.5, 8.0, 9.5, 8.0);
+		break;
+	case IST_Typedef:
+		AddLine(&cPath, 5.0, 5.5, 11.0, 5.5);
+		AddLine(&cPath, 8.0, 5.5, 8.0, 11.0);
+		break;
+	case IST_Namespace:
+		AddLine(&cPath, 5.5, 11.0, 5.5, 5.0);
+		AddLine(&cPath, 5.5, 5.0, 10.5, 11.0);
+		AddLine(&cPath, 10.5, 11.0, 10.5, 5.0);
+		break;
+	case IST_Function:
+		AddLine(&cPath, 10.0, 5.0, 8.5, 5.0);
+		AddLine(&cPath, 8.5, 5.0, 7.5, 6.0);
+		AddLine(&cPath, 7.5, 6.0, 7.5, 11.0);
+		AddLine(&cPath, 6.0, 7.5, 10.0, 7.5);
+		break;
+	default:
+		AddLine(&cPath, 5.5, 6.5, 8.0, 10.5);
+		AddLine(&cPath, 8.0, 10.5, 10.5, 6.5);
+		break;
+	}
+	Fill(&cDraw, &cPath, JEWEL_WHITE);
+	cPath.Kill();
+	cDraw.Kill();
+
+	pImage = CImageColourConverter::ConvertColour(pImage, pcFormat->meOrder);
+	return OMalloc<CImageCel>(pImage);
+}

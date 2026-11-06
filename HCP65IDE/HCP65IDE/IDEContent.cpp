@@ -56,7 +56,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 //Go to Definition (F12), Find All References (Shift+F12), Build (Control+Shift+B) and the debugger's keys from anywhere in the window.
-static EComponentInputCommand	gaeIDECodeCommands[] = { CIC_Save, CIC_SaveAll, CIC_GoToDefinition, CIC_FindReferences, CIC_Build, CIC_StartDebugging, CIC_StopDebugging, CIC_RestartDebugging,
+static EComponentInputCommand	gaeIDECodeCommands[] = { CIC_Save, CIC_SaveAll, CIC_GoToDefinition, CIC_FindReferences, CIC_GoToClass, CIC_GoToFile, CIC_GoToSymbol, CIC_Build, CIC_StartDebugging, CIC_StopDebugging, CIC_RestartDebugging,
 														 CIC_BreakAll, CIC_ToggleBreakpoint, CIC_StepOver, CIC_StepInto, CIC_StepOut };
 
 
@@ -195,6 +195,16 @@ void CIDEContent::Init(void)
 	maTabs.Init();
 	maDiffTabs.Init();
 	maFileIcons.Init();
+	maSymbolIcons.Init();
+	mpGoTo = NULL;
+	mpMatchFont = NULL;
+	mszGoToPattern.Init();
+	maszGoToFiles.Init();
+	maiGoToProjects.Init();
+	mcGoToFileSet.Init();
+	miGoToFileIcon = -1;
+	miGoToTicks = 0;
+	memset(maiGoToSymbolIcons, 0, sizeof(maiGoToSymbolIcons));
 	mcDebugger.Init();
 	mszStoppedFile.Init();
 	muiStoppedLine = 0;
@@ -279,6 +289,19 @@ void CIDEContent::Class(void)
 	M_Embedded(maDiffTabs);
 	M_Pointer(mpActiveDiff);
 	M_Embedded(maFileIcons);
+	M_Embedded(maSymbolIcons);
+	M_Pointer(mpGoTo);
+	M_Pointer(mpMatchFont);
+	U_String(mszGoToPattern);
+	U_Unknown(CArrayChars, maszGoToFiles);
+	U_Unknown(CArrayInt, maiGoToProjects);
+	U_Unknown(CMapStringInt, mcGoToFileSet);
+	U_Int32(miGoToFileIcon);
+	U_Int32(miGoToTicks);
+	U_Int32Array(maiGoToSymbolIcons, IST_Count);
+	M_Pointer(mpGoToClassItem);
+	M_Pointer(mpGoToFileItem);
+	M_Pointer(mpGoToSymbolItem);
 	M_Pointer(mpExplorer);
 	M_Pointer(mpExplorerMenu);
 	M_Pointer(mpStartupItem);
@@ -438,6 +461,10 @@ void CIDEContent::Free(void)
 	maszDebugScript.Kill();
 	mszDefaultEmulatorDirectory.Kill();
 	mszDefaultEmulator.Kill();
+	mcGoToFileSet.Kill();
+	maiGoToProjects.Kill();
+	maszGoToFiles.Kill();
+	mszGoToPattern.Kill();
 
 	//A git status still being read is stopped.
 	mcLineChanges.Kill();
@@ -543,6 +570,12 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	{
 		maFileIcons.Add(CIDEIcons::CreateFileIcon((EIDEFileType)i, &cFormat));
 	}
+	for (i = 0; i < IST_Count; i++)
+	{
+		maSymbolIcons.Add(CIDEIcons::CreateSymbolIcon((EIDESymbolType)i, &cFormat));
+	}
+	//Go to's matched characters are bold, if there's a bold font.
+	mpMatchFont = mpBoldColours.IsNotNull() ? mpBoldColours->GetFont(JEWEL_WHITE) : mpFontColours->GetFont(JEWEL_WHITE);
 
 	//Solution Explorer on the left.
 	mpExplorer = OMalloc<CSolutionExplorer>(pWindow, mpTheme);
@@ -667,6 +700,7 @@ Ptr<CMenuBar> CIDEContent::CreateMenuBar(void)
 
 	mpMenuBar->AddMenu("File", pFile);
 	mpMenuBar->AddMenu("Edit", CreateEditMenu());
+	mpMenuBar->AddMenu("Navigate", CreateNavigateMenu());
 	mpMenuBar->AddMenu("View", pView);
 	mpMenuBar->AddMenu("Git", pGit);
 	mpMenuBar->AddMenu("Debug", CreateDebugMenu());
@@ -785,6 +819,18 @@ void CIDEContent::MenuItemClicked(CMenuItem* pcItem)
 	}
 	else if (EditMenuItemClicked(pcItem))
 	{
+	}
+	else if (pcItem == &mpGoToClassItem)
+	{
+		ShowGoTo(IDE_GO_TO_CLASS);
+	}
+	else if (pcItem == &mpGoToFileItem)
+	{
+		ShowGoTo(IDE_GO_TO_FILE);
+	}
+	else if (pcItem == &mpGoToSymbolItem)
+	{
+		ShowGoTo(IDE_GO_TO_SYMBOL);
 	}
 	else
 	{
@@ -1603,6 +1649,18 @@ void CIDEContent::CodeCommandAction(SComponentInputEvent* psEvent)
 	else if (psEvent->eCommand == CIC_SaveAll)
 	{
 		SaveAllFiles();
+	}
+	else if (psEvent->eCommand == CIC_GoToClass)
+	{
+		ShowGoTo(IDE_GO_TO_CLASS);
+	}
+	else if (psEvent->eCommand == CIC_GoToFile)
+	{
+		ShowGoTo(IDE_GO_TO_FILE);
+	}
+	else if (psEvent->eCommand == CIC_GoToSymbol)
+	{
+		ShowGoTo(IDE_GO_TO_SYMBOL);
 	}
 	else if (psEvent->eCommand == CIC_GoToDefinition)
 	{

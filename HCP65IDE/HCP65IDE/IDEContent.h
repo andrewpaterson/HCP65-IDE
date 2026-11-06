@@ -54,6 +54,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDEDebugger.h"
 #include "IDEDebugView.h"
 #include "IDEIcons.h"
+#include "WindowLib/GoToDialog.h"
 #include "SolutionExplorer.h"
 
 
@@ -66,6 +67,11 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define IDE_DOCUMENT_PREFIX		"Document:"
 #define IDE_DIFF_PREFIX			"Diff:"
 #define IDE_LAYOUT_EXTENSION	".layout.user"
+
+//The Go to dialog's tabs.
+#define IDE_GO_TO_CLASS			0
+#define IDE_GO_TO_FILE			1
+#define IDE_GO_TO_SYMBOL		2
 
 
 //The IDE's window's content: the menu bar and toolbar along the top, and under them Visual Studio's docking (see
@@ -92,7 +98,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 //The Claude tab under the editor sends requests, such as refactorings, to Claude Code run headless in the solution's
 //folder (see CClaudeCommand), saying where the caret and selection are.  Files are saved before a request, and the
 //open files Claude changes are read again as it changes them.
-class CIDEContent : public CObject, public CDockManagerListener
+class CIDEContent : public CObject, public CDockManagerListener, public CGoToSearcher
 {
 CONSTRUCTABLE(CIDEContent);
 DESTRUCTABLE(CIDEContent);
@@ -121,6 +127,9 @@ protected:
 	Ptr<CMenuItem>				mpCompareRevisionItem;	//Git, Compare with Revision.
 	Ptr<CMenuItem>				mpCompareFileItem;	//File, Compare with File.
 	Ptr<CMenuItem>				mpExitItem;			//File, Exit.
+	Ptr<CMenuItem>				mpGoToClassItem;	//Navigate, Class, File and Symbol.
+	Ptr<CMenuItem>				mpGoToFileItem;
+	Ptr<CMenuItem>				mpGoToSymbolItem;
 	Ptr<CMenuContainer>			mpEditMenu;
 	Ptr<CMenuItem>				mpUndoItem;			//Edit, as IntelliJ's: Undo, Redo, Cut, Copy, Paste and Select All of the
 	Ptr<CMenuItem>				mpRedoItem;			//active document,
@@ -152,6 +161,17 @@ protected:
 	CArray<CIDEDiffTab>			maDiffTabs;			//A tab for each diff shown.
 	Ptr<CIDEDiffTab>			mpActiveDiff;		//The selected tab's diff, NULL if it isn't one.
 	CArray<CImageCel>			maFileIcons;		//By EIDEFileType.
+	CArray<CImageCel>			maSymbolIcons;		//By EIDESymbolType.
+
+	Ptr<CGoToDialog>			mpGoTo;				//While Go to Class, File or Symbol is shown.
+	Ptr<CFont>					mpMatchFont;		//What Go to's pattern matched.
+	CChars						mszGoToPattern;		//What was typed in Go to last.
+	CArrayChars					maszGoToFiles;		//The solutions' files while Go to is shown,
+	CArrayInt					maiGoToProjects;	//their projects,
+	CMapStringInt				mcGoToFileSet;		//and their indices by path.
+	int32						miGoToFileIcon;		//The dialog's first file icon, by EIDEFileType from it.
+	int32						maiGoToSymbolIcons[IST_Count];
+	int32						miGoToTicks;		//For checking: ticks the dialog has been shown for.
 	Ptr<CSolutionExplorer>		mpExplorer;
 	Ptr<CMenuContainer>			mpExplorerMenu;		//A solution's: Set as Startup Solution and Remove.
 	Ptr<CMenuItem>				mpStartupItem;
@@ -352,6 +372,13 @@ public:
 	CClaudeCommand*		GetClaude(void);
 	Ptr<CIDEClaudePane>	GetClaudePane(void);
 
+	void				GoToSearch(size uiTab, CNameMatcher* pcMatcher, CGoToItems* pcDest) override;
+	bool				ShowGoTo(size uiTab);
+	bool				CreateGoTo(size uiTab);
+	bool				OpenGoToChoice(void);
+	Ptr<CGoToDialog>	GetGoTo(void);
+	void				FindGoToFiles(void);
+	void				GoToSnapshotTick(void);
 	bool				UndoAcrossFiles(void);
 	bool				RedoAcrossFiles(void);
 	void				BeginUndoGroup(void);
@@ -432,6 +459,7 @@ protected:
 	Ptr<CIDEEditorTab>	FindClaudeTab(const char* szFileName);
 
 	Ptr<CMenuContainer>	CreateEditMenu(void);
+	Ptr<CMenuContainer>	CreateNavigateMenu(void);
 	bool				EditMenuItemClicked(CMenuItem* pcItem);
 	Ptr<CIDEEditorTab>	FindTab(CTextArea* pcEditor);
 	bool				UndoLogGroup(size uiGroup, bool bShow);

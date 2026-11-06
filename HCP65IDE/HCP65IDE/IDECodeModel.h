@@ -36,6 +36,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "CppParserLib/CPPIndex.h"
 #include "VisualStudioLib/VcxSolution.h"
 #include "BuildLib/BuildWorkspace.h"
+#include "WindowLib/GoToDialog.h"
+#include "IDEIcons.h"
 
 
 //A file preprocessed and parsed as its project builds it.
@@ -125,6 +127,8 @@ public:
 	bool	FindDefinition(const char* szFileName, int iLine, int iColumn, SIDELocation* psDest);
 	bool	FindReferences(const char* szFileName, int iLine, int iColumn, CArrayIDELocations* pasDest, CChars* pszKey);
 	size	FindProjectOfFile(const char* szFileName);
+	void	FindGoToSymbols(CNameMatcher* pcMatcher, bool bClasses, CMapStringInt* pcFiles, int32* aiIcons, CGoToItems* pcDest);
+	bool	GetSymbolLocation(size uiSymbol, SIDELocation* psDest);
 
 	void	IndexUnit(SIDEIndexJob* psJob);
 

@@ -39,6 +39,9 @@
     <ClCompile Include="IDEContentEdit.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="IDEContentGoTo.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="IDEClaudePane.cpp">
       <Filter>Source</Filter>
     </ClCompile>

@@ -37,6 +37,20 @@ enum EIDEFileType
 };
 
 
+//The kinds of C++ symbol Go to Class and Go to Symbol show, each its letter in a coloured circle as CLion's.
+enum EIDESymbolType
+{
+	IST_Class,		//C
+	IST_Enum,		//E
+	IST_Typedef,	//T
+	IST_Namespace,	//N
+	IST_Function,	//f
+	IST_Variable,	//v, a variable, field or enumerator.
+
+	IST_Count
+};
+
+
 //The IDE's 16 x 16 icons of the kinds of file: an outlined page, as the Jewel icons are, with a coloured badge on
 //its bottom left that says what the file is: ++ for C++, C for C and h for a header.
 class CIDEIcons
@@ -44,6 +58,7 @@ class CIDEIcons
 public:
 	static EIDEFileType		GetFileType(const char* szFileName);
 	static Ptr<CImageCel>	CreateFileIcon(EIDEFileType eType, CColourFormatHelper* pcFormat);
+	static Ptr<CImageCel>	CreateSymbolIcon(EIDESymbolType eType, CColourFormatHelper* pcFormat);
 
 protected:
 	static void				Fill(CImageDraw* pcDraw, CVectorPath* pcPath, ARGB32 sColour);
