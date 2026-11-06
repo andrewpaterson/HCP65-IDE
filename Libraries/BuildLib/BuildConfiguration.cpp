@@ -40,6 +40,7 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 #define BUILD_CONFIGURATION_CARD_PATH	"CardPath"
 #define BUILD_CONFIGURATION_BREAKPOINT_SPACE	"BreakpointSpace"
 #define BUILD_CONFIGURATION_NO_FLOATS	"NoFloats"
+#define BUILD_CONFIGURATION_MATH_TABLES	"MathTables"
 
 
 //The toolchains' names, as saved, by EBuildToolchain.
@@ -60,6 +61,7 @@ void CBuildConfiguration::Init(const char* szName, EBuildToolchain eToolchain, c
 	mszEmulatorArguments.Init();
 	mszBreakpointSpace.Init();
 	mbNoFloats = false;
+	mbMathTables = true;
 	mbImage = false;
 	mcImage.Init();
 	mbExecutable = false;
@@ -137,6 +139,10 @@ void CBuildConfiguration::SaveXML(CXMLWriter* pcWriter)
 	{
 		pcWriter->Attribute(BUILD_CONFIGURATION_NO_FLOATS, "true");
 	}
+	if (!mbMathTables)
+	{
+		pcWriter->Attribute(BUILD_CONFIGURATION_MATH_TABLES, "false");
+	}
 	if (HasCard())
 	{
 		pcWriter->Attribute(BUILD_CONFIGURATION_CARD, mszCard.Text());
@@ -175,6 +181,7 @@ bool CBuildConfiguration::LoadXML(CMarkupTag* pcTag)
 	char*			szToolchain;
 	char*			szSolution;
 	char*			szNoFloats;
+	char*			szMathTables;
 	EBuildToolchain	eToolchain;
 	CMarkupTag*		pcImage;
 	CMarkupTag*		pcExecutable;
@@ -202,6 +209,8 @@ bool CBuildConfiguration::LoadXML(CMarkupTag* pcTag)
 	SetBreakpointSpace(pcTag->GetAttribute((char*)BUILD_CONFIGURATION_BREAKPOINT_SPACE));
 	szNoFloats = pcTag->GetAttribute((char*)BUILD_CONFIGURATION_NO_FLOATS);
 	SetNoFloats((szNoFloats != NULL) && (strcmp(szNoFloats, "true") == 0));
+	szMathTables = pcTag->GetAttribute((char*)BUILD_CONFIGURATION_MATH_TABLES);
+	SetMathTables((szMathTables == NULL) || (strcmp(szMathTables, "false") != 0));
 
 	pcImage = pcTag->GetTag(BUILD_CONFIGURATION_IMAGE);
 	if (pcImage)
@@ -439,6 +448,29 @@ void CBuildConfiguration::SetNoFloats(bool bNoFloats)
 bool CBuildConfiguration::IsNoFloats(void)
 {
 	return mbNoFloats;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether the program runs with the maths tables in memory (true unless
+// set; CCPP65Builder::SetMathTables): the kernal and the operating system,
+// which loads them, run without.
+//
+//////////////////////////////////////////////////////////////////////////
+void CBuildConfiguration::SetMathTables(bool bMathTables)
+{
+	mbMathTables = bMathTables;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+bool CBuildConfiguration::IsMathTables(void)
+{
+	return mbMathTables;
 }
 
 

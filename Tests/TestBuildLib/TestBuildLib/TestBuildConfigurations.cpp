@@ -77,6 +77,8 @@ void TestBuildConfigurationsFile(void)
 	cConfigurations.Init();
 	cConfigurations.Add("Debug|W65C816", BT_W65C816, "Debug|Win32")->SetEmulator("Emulators" _FS_ "HCP65.exe", "Emulators", "--fast --mute");
 	cConfigurations.GetConfiguration(0)->SetBreakpointSpace("User");
+	cConfigurations.GetConfiguration(0)->SetNoFloats(true);
+	cConfigurations.GetConfiguration(0)->SetMathTables(false);
 	cConfigurations.Add("Fast GCC", BT_GCC, "Release|x64");
 	AssertTrue(cConfigurations.Write("Output" _FS_ "Test.hcp65build"));
 
@@ -94,6 +96,12 @@ void TestBuildConfigurationsFile(void)
 	AssertFalse(cRead.GetConfiguration(1)->HasEmulator());
 	AssertString("User", cRead.GetConfiguration(0)->GetBreakpointSpace());
 	AssertString("", cRead.GetConfiguration(1)->GetBreakpointSpace());
+
+	//NoFloats and MathTables (written only when not the default) are kept.
+	AssertTrue(cRead.GetConfiguration(0)->IsNoFloats());
+	AssertFalse(cRead.GetConfiguration(0)->IsMathTables());
+	AssertFalse(cRead.GetConfiguration(1)->IsNoFloats());
+	AssertTrue(cRead.GetConfiguration(1)->IsMathTables());
 	AssertString("W65C816", cRead.GetConfiguration(0)->GetProcessorName());
 	AssertTrue(cRead.GetConfiguration(1)->GetProcessorName() == NULL);
 

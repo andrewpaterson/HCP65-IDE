@@ -52,7 +52,9 @@ enum EBuildToolchain
 //
 //An HCP65 configuration with an image (<Image>, CAsm65Image) or an executable (<Executable>, CAsm65Executable, a
 //program a kernal loads) links what it builds into that file, in the build's Output folder; one without only
-//compiles.  NoFloats="true" makes floating point an error (the kernal has none: CCPP65Builder::SetNoFloats).  Its BreakpointSpace is the emulator's space ("Kernel", "User") that debugging puts breakpoints in;
+//compiles.  NoFloats="true" makes floating point an error (the kernal has none: CCPP65Builder::SetNoFloats).
+//MathTables="false" builds it to run without the maths tables in memory (CCPP65Builder::SetMathTables: the kernal and
+//the operating system, which loads them).  Its BreakpointSpace is the emulator's space ("Kernel", "User") that debugging puts breakpoints in;
 //without one they stop in every space.
 //
 //Debugging loads each <Load File Address/> into the waiting emulator first (a kernal for a program to run on), and
@@ -69,6 +71,7 @@ protected:
 	CChars			mszEmulatorArguments;
 	CChars			mszBreakpointSpace;
 	bool			mbNoFloats;
+	bool			mbMathTables;
 	bool			mbImage;
 	CAsm65Image		mcImage;
 	bool			mbExecutable;
@@ -101,6 +104,8 @@ public:
 	char*			GetBreakpointSpace(void);
 	void			SetNoFloats(bool bNoFloats);
 	bool			IsNoFloats(void);
+	void			SetMathTables(bool bMathTables);
+	bool			IsMathTables(void);
 
 	bool			HasImage(void);
 	CAsm65Image*	GetImage(void);
