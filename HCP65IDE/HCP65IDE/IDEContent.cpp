@@ -951,6 +951,7 @@ bool CIDEContent::OpenSolution(const char* szFileName)
 	mcCodeModel.Init(&mcWorkspace);
 	mcCodeModel.AddDefaultSystemDirectories();
 	mpExplorer->ShowWorkspace(&mcWorkspace);
+	mpNavigator->ForgetGoToFiles();
 	if (!bResult || !IsSolutionOpen())
 	{
 		//One that isn't there any more isn't recent.
@@ -1168,6 +1169,7 @@ bool CIDEContent::CloseSolution(size uiSolution)
 		mcCodeModel.Init(&mcWorkspace);
 		mcCodeModel.AddDefaultSystemDirectories();
 		mpExplorer->ShowWorkspace(&mcWorkspace);
+		mpNavigator->ForgetGoToFiles();
 		ShowConfigurations();
 		return true;
 	}
@@ -1269,6 +1271,7 @@ void CIDEContent::WorkspaceChanged(bool bReindex)
 	size	i;
 
 	mpExplorer->ShowWorkspace(&mcWorkspace);
+	mpNavigator->ForgetGoToFiles();
 	FindRepositories();
 	ShowConfigurations();
 	if (bReindex)

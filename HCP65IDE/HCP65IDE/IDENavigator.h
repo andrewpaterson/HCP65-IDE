@@ -53,7 +53,8 @@ protected:
 	CMapStringInt		mcGoToFileSet;  //and their indices by path.
 	int32				miGoToFileIcon;  //The dialog's first file icon, by EIDEFileType from it.
 	int32				maiGoToSymbolIcons[IST_Count];
-	int32				miQueuedGoTo;  //The Go to tab posted to be shown at the next tick (ShowQueuedGoTo).
+	int32				miQueuedGoTo;
+	bool				mbGoToFilesFound;  //maszGoToFiles is the open solutions' files, until the workspace changes.  //The Go to tab posted to be shown at the next tick (ShowQueuedGoTo).
 
 public:
 	void	Init(CIDEContent* pcContent);
@@ -72,6 +73,7 @@ public:
 	bool				OpenGoToChoice(void);
 	Ptr<CGoToDialog>	GetGoTo(void);
 	void				FindGoToFiles(void);
+	void				ForgetGoToFiles(void);
 	CMapStringInt*		GetSolutionFileSet(void);
 	bool				GoToSource(void);
 	bool				CanGoToSource(void);

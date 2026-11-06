@@ -40,6 +40,7 @@ void CIDENavigator::Init(CIDEContent* pcContent)
 	mcGoToFileSet.Init();
 	miGoToFileIcon = -1;
 	miQueuedGoTo = -1;
+	mbGoToFilesFound = false;
 	memset(maiGoToSymbolIcons, 0, sizeof(maiGoToSymbolIcons));
 	PostInit();
 }
@@ -59,6 +60,7 @@ void CIDENavigator::Class(void)
 	U_Unknown(CMapStringInt, mcGoToFileSet);
 	U_Int32(miGoToFileIcon);
 	U_Int32(miQueuedGoTo);
+	U_Bool(mbGoToFilesFound);
 	U_Int32Array(maiGoToSymbolIcons, IST_Count);
 	M_Pointer(mpGoToClassItem);
 	M_Pointer(mpGoToFileItem);
@@ -93,7 +95,8 @@ bool CIDENavigator::Load(CObjectReader* pcFile) { return false; }
 //
 // Every file of the open solutions' projects, once, with its project:
 // what Go to File searches, and the files Go to Class and Go to Symbol
-// show symbols from.
+// show symbols from.  Found again only after the workspace has changed
+// (ForgetGoToFiles).
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDENavigator::FindGoToFiles(void)
@@ -103,6 +106,11 @@ void CIDENavigator::FindGoToFiles(void)
 	CVcxProject*	pcProject;
 	CChars			szPath;
 
+	if (mbGoToFilesFound)
+	{
+		return;
+	}
+	mbGoToFilesFound = true;
 	maszGoToFiles.ReInit();
 	maiGoToProjects.ReInit();
 	mcGoToFileSet.Kill();
@@ -127,6 +135,18 @@ void CIDENavigator::FindGoToFiles(void)
 			szPath.Kill();
 		}
 	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The solutions or their projects have changed: their files are found
+// again when next needed.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDENavigator::ForgetGoToFiles(void)
+{
+	mbGoToFilesFound = false;
 }
 
 
