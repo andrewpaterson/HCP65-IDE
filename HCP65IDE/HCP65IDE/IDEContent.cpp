@@ -179,7 +179,6 @@ void CIDEContent::Init(void)
 
 	mcWorkspace.Init();
 	mcCodeModel.Init(&mcWorkspace);
-	mszConfiguration.Init();
 	memset(&msDialogLook, 0, sizeof(msDialogLook));
 	maFileIcons.Init();
 	maSymbolIcons.Init();
@@ -262,7 +261,6 @@ void CIDEContent::Class(void)
 	M_Pointer(mpExplorerMenu);
 	M_Pointer(mpStartupItem);
 	M_Pointer(mpRemoveSolutionItem);
-	U_String(mszConfiguration);
 	U_Unknown(CBuildWorkspace, mcWorkspace);
 	U_Unknown(CIDECodeModel, mcCodeModel);
 	M_Pointer(mpDialog);
@@ -330,7 +328,6 @@ void CIDEContent::Free(void)
 		mpBuilding->StopBuild();
 	}
 	mcCodeModel.Kill();
-	mszConfiguration.Kill();
 	mcWorkspace.Kill();
 }
 

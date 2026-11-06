@@ -228,7 +228,7 @@ bool CIDESolutions::OpenSolution(const char* szFileName)
 
 	//The configuration chosen last time, if a solution still has it; chosen before the combo boxes tell of it, so it
 	//isn't indexed twice.
-	mpcContent->mszConfiguration.Set(mpcContent->mcWorkspace.GetConfiguration());
+	mpcContent->mpBuildConfigurations->SetConfigurationName(mpcContent->mcWorkspace.GetConfiguration());
 	mpcContent->mpBuildConfigurations->ShowConfigurations();
 	mpcContent->mcCodeModel.StartIndexing();
 
@@ -505,7 +505,7 @@ void CIDESolutions::LetGoOfWorkspace(void)
 	mpcContent->mcCodeModel.Kill();
 	mpcContent->mcWorkspace.Clear();
 	mpcContent->mpNavigator->ForgetGoToFiles();
-	mpcContent->mszConfiguration.Clear();
+	mpcContent->mpBuildConfigurations->SetConfigurationName("");
 
 	//The repositories are found again from the new solutions' files, and read at the next tick.
 	mpcContent->mpGitStatus->ForgetRepositories();
@@ -558,7 +558,7 @@ bool CIDESolutions::WriteWorkspace(void)
 	CChars		szFile;
 	bool		bResult;
 
-	mpcContent->mcWorkspace.SetConfiguration(mpcContent->mszConfiguration.Text());
+	mpcContent->mcWorkspace.SetConfiguration(mpcContent->mpBuildConfigurations->GetConfigurationName());
 	if ((mpcContent->mcWorkspace.NumSolutions() == 0) || !mpcContent->mbKeepSettings)
 	{
 		//A scripted run (checking the IDE) leaves the workspace's file alone, as it does the layout.

@@ -52,6 +52,7 @@ void CIDEConfigurations::Init(CIDEContent* pcContent)
 {
 	PreInit();
 	mpcContent = pcContent;
+	mszConfiguration.Init();
 	PostInit();
 }
 
@@ -63,6 +64,7 @@ void CIDEConfigurations::Init(CIDEContent* pcContent)
 void CIDEConfigurations::Class(void)
 {
 	U_Pointer(mpcContent);
+	U_String(mszConfiguration);
 	M_Pointer(mpConfigurations);
 	M_Pointer(mpPlatforms);
 }
@@ -76,6 +78,7 @@ void CIDEConfigurations::Class(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDEConfigurations::Free(void)
 {
+	mszConfiguration.Kill();
 	if (mpConfigurations.IsNotNull())
 	{
 		mpConfigurations->GetSelectionEvent()->Remove(this);
@@ -108,17 +111,17 @@ void CIDEConfigurations::ShowConfigurations(void)
 
 	aszNames.Init();
 	mpcContent->mcWorkspace.GetConfigurationNames(&aszNames);
-	if (!aszNames.Contains(mpcContent->mszConfiguration.Text()))
+	if (!aszNames.Contains(mszConfiguration.Text()))
 	{
-		mpcContent->mszConfiguration.Set((aszNames.NumElements() > 0) ? aszNames.GetText(0) : "");
+		mszConfiguration.Set((aszNames.NumElements() > 0) ? aszNames.GetText(0) : "");
 	}
 	aszNames.Kill();
 
 	SetComboBoxItems(mpConfigurations, false);
 	SetComboBoxItems(mpPlatforms, true);
-	if (StringCompare(mpcContent->mszConfiguration.Text(), mpcContent->mcCodeModel.GetConfiguration()) != 0)
+	if (StringCompare(mszConfiguration.Text(), mpcContent->mcCodeModel.GetConfiguration()) != 0)
 	{
-		mpcContent->mcCodeModel.SetConfiguration(mpcContent->mszConfiguration.Text());
+		mpcContent->mcCodeModel.SetConfiguration(mszConfiguration.Text());
 	}
 	ShowConfiguration();
 }
@@ -257,7 +260,7 @@ bool CIDEConfigurations::SetConfiguration(const char* szConfiguration)
 	{
 		return false;
 	}
-	mpcContent->mszConfiguration.Set(szConfiguration);
+	mszConfiguration.Set(szConfiguration);
 	if (StringCompare(mpcContent->mcWorkspace.GetConfiguration(), szConfiguration) != 0)
 	{
 		//Remembered in the workspace file for next time.
@@ -265,9 +268,9 @@ bool CIDEConfigurations::SetConfiguration(const char* szConfiguration)
 	}
 	ShowConfiguration();
 
-	if (StringCompare(mpcContent->mszConfiguration.Text(), mpcContent->mcCodeModel.GetConfiguration()) != 0)
+	if (StringCompare(mszConfiguration.Text(), mpcContent->mcCodeModel.GetConfiguration()) != 0)
 	{
-		mpcContent->mcCodeModel.SetConfiguration(mpcContent->mszConfiguration.Text());
+		mpcContent->mcCodeModel.SetConfiguration(mszConfiguration.Text());
 		mpcContent->mcCodeModel.StartIndexing();
 		for (i = 0; i < mpcContent->mpDocuments->NumTabs(); i++)
 		{
@@ -286,7 +289,7 @@ bool CIDEConfigurations::SetConfiguration(const char* szConfiguration)
 //////////////////////////////////////////////////////////////////////////
 CBuildConfiguration* CIDEConfigurations::GetConfiguration(void)
 {
-	return mpcContent->mcWorkspace.FindConfiguration(mpcContent->mcWorkspace.GetStartup(), mpcContent->mszConfiguration.Text());
+	return mpcContent->mcWorkspace.FindConfiguration(mpcContent->mcWorkspace.GetStartup(), mszConfiguration.Text());
 }
 
 
@@ -297,7 +300,7 @@ CBuildConfiguration* CIDEConfigurations::GetConfiguration(void)
 //////////////////////////////////////////////////////////////////////////
 char* CIDEConfigurations::GetConfigurationName(void)
 {
-	return mpcContent->mszConfiguration.Text();
+	return mszConfiguration.Text();
 }
 
 
@@ -309,7 +312,7 @@ char* CIDEConfigurations::GetConfigurationName(void)
 //////////////////////////////////////////////////////////////////////////
 CBuildConfiguration* CIDEConfigurations::GetChosenConfiguration(void)
 {
-	return mpcContent->mcWorkspace.FindAnyConfiguration(mpcContent->mszConfiguration.Text());
+	return mpcContent->mcWorkspace.FindAnyConfiguration(mszConfiguration.Text());
 }
 
 
@@ -331,3 +334,13 @@ void CIDEConfigurations::CreateComboBoxes(void)
 
 Ptr<CComboBox> CIDEConfigurations::GetConfigurationBox(void) { return mpConfigurations; }
 Ptr<CComboBox> CIDEConfigurations::GetPlatformBox(void) { return mpPlatforms; }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The build configuration chosen is called szName (a workspace's when it
+// is read, empty when the solutions go), before the combo boxes show it.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEConfigurations::SetConfigurationName(const char* szName) { mszConfiguration.Set(szName); }
+bool CIDEConfigurations::HasConfiguration(void) { return !mszConfiguration.Empty(); }

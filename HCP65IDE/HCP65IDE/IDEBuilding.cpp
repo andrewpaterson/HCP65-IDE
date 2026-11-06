@@ -149,12 +149,12 @@ bool CIDEBuilding::Build(void)
 	CArrayChars	aszLines;
 	bool		bResult;
 
-	if (!mpcContent->mpSolutions->IsSolutionOpen() || mpcContent->mszConfiguration.Empty() || mcBuild.IsRunning())
+	if (!mpcContent->mpSolutions->IsSolutionOpen() || !mpcContent->mpBuildConfigurations->HasConfiguration() || mcBuild.IsRunning())
 	{
 		return false;
 	}
 	maiBuildOrder.ReInit();
-	mpcContent->mcWorkspace.GetBuildOrder(mpcContent->mszConfiguration.Text(), &maiBuildOrder);
+	mpcContent->mcWorkspace.GetBuildOrder(mpcContent->mpBuildConfigurations->GetConfigurationName(), &maiBuildOrder);
 	if (maiBuildOrder.NumElements() == 0)
 	{
 		return false;
@@ -233,12 +233,12 @@ bool CIDEBuilding::StartBuildStep(CArrayChars* paszLines)
 		szLine.Init("------ ");
 		szLine.Append(pcSolution->mcSolution.GetName());
 		szLine.Append(": ");
-		szLine.Append(mpcContent->mszConfiguration);
+		szLine.Append(mpcContent->mpBuildConfigurations->GetConfigurationName());
 		szLine.Append(" ------");
 		paszLines->Add(szLine.Text());
 		szLine.Kill();
 	}
-	return mcBuild.Start(&pcSolution->mcSolution, mpcContent->mcWorkspace.FindConfiguration(uiSolution, mpcContent->mszConfiguration.Text()), NULL, mszLibc65.Text(), paszLines);
+	return mcBuild.Start(&pcSolution->mcSolution, mpcContent->mcWorkspace.FindConfiguration(uiSolution, mpcContent->mpBuildConfigurations->GetConfigurationName()), NULL, mszLibc65.Text(), paszLines);
 }
 
 
@@ -285,7 +285,7 @@ void CIDEBuilding::FinishBuildSteps(CArrayChars* paszLines)
 
 	while (!mcBuild.IsRunning() && (mcBuild.GetState() == BS_Succeeded) && (muiBuildStep < maiBuildOrder.NumElements()))
 	{
-		pcConfiguration = mpcContent->mcWorkspace.FindConfiguration((size)maiBuildOrder.GetValue(muiBuildStep), mpcContent->mszConfiguration.Text());
+		pcConfiguration = mpcContent->mcWorkspace.FindConfiguration((size)maiBuildOrder.GetValue(muiBuildStep), mpcContent->mpBuildConfigurations->GetConfigurationName());
 		if (pcConfiguration->IsHCP65())
 		{
 			ReadListings(paszLines);

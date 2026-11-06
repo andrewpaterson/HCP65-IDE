@@ -198,7 +198,6 @@ protected:
 	Ptr<CMenuContainer>			mpExplorerMenu;		//A solution's: Set as Startup Solution and Remove.
 	Ptr<CMenuItem>				mpStartupItem;
 	Ptr<CMenuItem>				mpRemoveSolutionItem;
-	CChars						mszConfiguration;	//The chosen build configuration's name, each solution's of that name; empty if none.
 	CBuildWorkspace				mcWorkspace;		//The solutions open, one the startup solution.
 	CIDECodeModel				mcCodeModel;		//Uses mcWorkspace; initialised when a solution is opened.
 

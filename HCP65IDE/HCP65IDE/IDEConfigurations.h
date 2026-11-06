@@ -23,6 +23,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "StandardLib/Object.h"
 #include "StandardLib/Pointer.h"
 #include "WindowLib/ComboBox.h"
+#include "BaseLib/Chars.h"
 #include "BuildLib/BuildConfiguration.h"
 
 
@@ -39,6 +40,7 @@ CONSTRUCTABLE(CIDEConfigurations);
 DESTRUCTABLE(CIDEConfigurations);
 protected:
 	CIDEContent*	mpcContent;  //Not held: the content holds it.
+	CChars						mszConfiguration;	//The chosen build configuration's name, each solution's of that name; empty if none.
 	Ptr<CComboBox>	mpConfigurations;  //The build configuration's configuration; the code is parsed as its solution configuration.
 	Ptr<CComboBox>	mpPlatforms;  //And its platform.
 
@@ -59,6 +61,8 @@ public:
 	void			SelectComboBoxItem(Ptr<CComboBox> pComboBox, const char* szText);
 	CBuildConfiguration*	GetConfiguration(void);
 	char*			GetConfigurationName(void);
+	void			SetConfigurationName(const char* szName);
+	bool			HasConfiguration(void);
 	void				ShowConfigurations(void);
 
 protected:

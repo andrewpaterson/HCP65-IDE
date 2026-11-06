@@ -1081,11 +1081,11 @@ void CIDEDebugging::ReadLineTables(void)
 		}
 
 		aiOthers.Init();
-		mpcContent->mcWorkspace.GetProcessPrograms(mpcContent->mszConfiguration.Text(), &aiOthers);
+		mpcContent->mcWorkspace.GetProcessPrograms(mpcContent->mpBuildConfigurations->GetConfigurationName(), &aiOthers);
 		for (i = 0; i < aiOthers.NumElements(); i++)
 		{
 			uiOther = (size)aiOthers.GetValue(i);
-			pcOther = mpcContent->mcWorkspace.FindConfiguration(uiOther, mpcContent->mszConfiguration.Text());
+			pcOther = mpcContent->mcWorkspace.FindConfiguration(uiOther, mpcContent->mpBuildConfigurations->GetConfigurationName());
 			if (pcOther->IsHCP65() && CBuild::GetProgramPath(mpcContent->mcWorkspace.GetSolution(uiOther)->mcSolution.GetDirectory(), pcOther, &szFile))
 			{
 				mcDebugger.AddProcessLineTable(szFile.Text(), pcOther->GetBreakpointSpace(), pcOther->GetCardPath());
