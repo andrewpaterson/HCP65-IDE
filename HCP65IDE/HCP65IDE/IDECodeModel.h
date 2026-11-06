@@ -153,6 +153,7 @@ public:
 	bool	GetSymbolLocation(size uiSymbol, SIDELocation* psDest);
 	bool	FindRenameTarget(const char* szFileName, int iLine, int iColumn, CMapStringInt* pcFiles, SIDERenameTarget* psDest);
 	bool	HasSymbol(const char* szKey);
+	size	FindOverrideLocations(const char* szKey, CArrayIDELocations* pasDest);
 	void	GetUsageGroup(SIDELocation* psLocation, CChars* pszProject, CChars* pszClass);
 	bool	FindIncludeFile(size uiProject, const char* szIncluder, const char* szName, bool bSystem, CChars* pszDest);
 

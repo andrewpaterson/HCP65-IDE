@@ -144,7 +144,8 @@ void CIDEUsages::CreatePane(SDockPlace* psPlace)
 //////////////////////////////////////////////////////////////////////////
 //
 // Alt+F7, IntelliJ's Find Usages: every use of the symbol at the caret
-// (not its declarations and definition), in the Find Usages tree under
+// (not its declarations and definition), and of its overrides and what it
+// overrides if it is a virtual member function, in the Find Usages tree under
 // the project its file is in, then the class (or file) it is in, then
 // its line.  With bDeclarations (Shift+F12, Visual Studio's Find All
 // References) its declarations and definition too, each saying so.
@@ -172,6 +173,7 @@ bool CIDEUsages::FindUsages(bool bDeclarations)
 	size				uiIndexed;
 	size				uiToIndex;
 	const char*			szWhat;
+	size				uiOverrides;
 
 	mpcContent->ReindexStaleTabs(true);
 	asLocations.Init();
@@ -183,6 +185,9 @@ bool CIDEUsages::FindUsages(bool bDeclarations)
 		mpcContent->ShowStatus(bDeclarations ? "No references found at the caret." : "No usages found at the caret.");
 		return false;
 	}
+
+	//A virtual member function's overrides (and what it overrides) are used where it is, as IntelliJ's hierarchy.
+	uiOverrides = mpcContent->mcCodeModel.FindOverrideLocations(szKey.Text(), &asLocations);
 
 	//The usages are kept for opening; the declarations and definitions are only kept if asked for.
 	KillIDELocations(&masUsages);
@@ -221,6 +226,12 @@ bool CIDEUsages::FindUsages(bool bDeclarations)
 		szText.Init(uiUsages == 0 ? "No usages of " : "Usages of ");
 	}
 	szText.Append(szName);
+	if (uiOverrides > 0)
+	{
+		szText.Append(" and ");
+		szText.Append((int)uiOverrides);
+		szText.Append(uiOverrides == 1 ? " override" : " overrides");
+	}
 	if (uiUsages > 0)
 	{
 		szText.Append("  ");

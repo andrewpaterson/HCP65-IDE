@@ -1428,6 +1428,48 @@ bool CIDECodeModel::FindRenameTarget(const char* szFileName, int iLine, int iCol
 
 //////////////////////////////////////////////////////////////////////////
 //
+// The places of the member functions that override, or are overridden
+// by, the virtual member function szKey (not its own) added to pasDest.
+// How many functions they are, 0 if szKey isn't a virtual function or
+// has no overrides.
+//
+//////////////////////////////////////////////////////////////////////////
+size CIDECodeModel::FindOverrideLocations(const char* szKey, CArrayIDELocations* pasDest)
+{
+	CCPPIndexSymbol*	pcSymbol;
+	CCPPIndexSymbol*	pcMember;
+	CArrayInt			aiOverrides;
+	size				i;
+	size				j;
+	size				uiOverrides;
+
+	uiOverrides = 0;
+	aiOverrides.Init();
+	mcIndexMutex.Lock();
+	pcSymbol = mcIndex.FindSymbol(szKey);
+	if (pcSymbol && (pcSymbol->meKind == CPPSK_Function) && mcIndex.FindOverrides(pcSymbol, &aiOverrides))
+	{
+		for (i = 0; i < aiOverrides.NumElements(); i++)
+		{
+			pcMember = mcIndex.GetSymbol((size)aiOverrides.GetValue(i));
+			if (pcMember != pcSymbol)
+			{
+				uiOverrides++;
+				for (j = 0; j < pcMember->NumLocations(); j++)
+				{
+					CopyLocation(pcMember->GetLocation(j), pasDest->Add());
+				}
+			}
+		}
+	}
+	mcIndexMutex.Unlock();
+	aiOverrides.Kill();
+	return uiOverrides;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Whether the index has a symbol with szKey, a rename's new name say.
 //
 //////////////////////////////////////////////////////////////////////////
