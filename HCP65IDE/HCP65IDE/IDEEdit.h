@@ -72,7 +72,6 @@ public:
 	bool				RedoAcrossFiles(void);
 	void				BeginUndoGroup(void);
 	void				EndUndoGroup(void);
-	void				FocusChanged(CFocus* pcFocus);
 	void				PaneClosed(Ptr<CComponent> pContent);
 
 protected:
@@ -81,6 +80,7 @@ protected:
 	Ptr<CTextArea>		GetEditArea(void);
 	bool				UndoLogGroup(size uiGroup, bool bShow);
 	bool				RedoLogGroup(size uiGroup, bool bShow);
+	void				FocusChanged(CFocus* pcFocus);
 };
 
 

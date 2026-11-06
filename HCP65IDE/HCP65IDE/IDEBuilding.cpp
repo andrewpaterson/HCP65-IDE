@@ -119,7 +119,7 @@ bool CIDEBuilding::Load(CObjectReader* pcFile) { return false; }
 //////////////////////////////////////////////////////////////////////////
 void CIDEBuilding::ShowBuildTab(void)
 {
-	mpcContent->mpDock->Show(mpBuildTool);
+	mpcContent->GetDock()->Show(mpBuildTool);
 }
 
 
@@ -149,12 +149,12 @@ bool CIDEBuilding::Build(void)
 	CArrayChars	aszLines;
 	bool		bResult;
 
-	if (!mpcContent->mpSolutions->IsSolutionOpen() || !mpcContent->mpBuildConfigurations->HasConfiguration() || mcBuild.IsRunning())
+	if (!mpcContent->GetSolutions()->IsSolutionOpen() || !mpcContent->GetBuildConfigurations()->HasConfiguration() || mcBuild.IsRunning())
 	{
 		return false;
 	}
 	maiBuildOrder.ReInit();
-	mpcContent->mcWorkspace.GetBuildOrder(mpcContent->mpBuildConfigurations->GetConfigurationName(), &maiBuildOrder);
+	mpcContent->GetWorkspace()->GetBuildOrder(mpcContent->GetBuildConfigurations()->GetConfigurationName(), &maiBuildOrder);
 	if (maiBuildOrder.NumElements() == 0)
 	{
 		return false;
@@ -176,7 +176,7 @@ bool CIDEBuilding::Build(void)
 	aszLines.Kill();
 	if (mcBuild.IsRunning())
 	{
-		mpcContent->mpWindow->RequestTick(IDE_BUILD_POLL);
+		mpcContent->GetWindow()->RequestTick(IDE_BUILD_POLL);
 	}
 	return bResult;
 }
@@ -227,18 +227,18 @@ bool CIDEBuilding::StartBuildStep(CArrayChars* paszLines)
 	CChars						szLine;
 
 	uiSolution = (size)maiBuildOrder.GetValue(muiBuildStep);
-	pcSolution = mpcContent->mcWorkspace.GetSolution(uiSolution);
+	pcSolution = mpcContent->GetWorkspace()->GetSolution(uiSolution);
 	if (maiBuildOrder.NumElements() > 1)
 	{
 		szLine.Init("------ ");
 		szLine.Append(pcSolution->mcSolution.GetName());
 		szLine.Append(": ");
-		szLine.Append(mpcContent->mpBuildConfigurations->GetConfigurationName());
+		szLine.Append(mpcContent->GetBuildConfigurations()->GetConfigurationName());
 		szLine.Append(" ------");
 		paszLines->Add(szLine.Text());
 		szLine.Kill();
 	}
-	return mcBuild.Start(&pcSolution->mcSolution, mpcContent->mcWorkspace.FindConfiguration(uiSolution, mpcContent->mpBuildConfigurations->GetConfigurationName()), NULL, mszLibc65.Text(), paszLines);
+	return mcBuild.Start(&pcSolution->mcSolution, mpcContent->GetWorkspace()->FindConfiguration(uiSolution, mpcContent->GetBuildConfigurations()->GetConfigurationName()), NULL, mszLibc65.Text(), paszLines);
 }
 
 
@@ -285,7 +285,7 @@ void CIDEBuilding::FinishBuildSteps(CArrayChars* paszLines)
 
 	while (!mcBuild.IsRunning() && (mcBuild.GetState() == BS_Succeeded) && (muiBuildStep < maiBuildOrder.NumElements()))
 	{
-		pcConfiguration = mpcContent->mcWorkspace.FindConfiguration((size)maiBuildOrder.GetValue(muiBuildStep), mpcContent->mpBuildConfigurations->GetConfigurationName());
+		pcConfiguration = mpcContent->GetWorkspace()->FindConfiguration((size)maiBuildOrder.GetValue(muiBuildStep), mpcContent->GetBuildConfigurations()->GetConfigurationName());
 		if (pcConfiguration->IsHCP65())
 		{
 			ReadListings(paszLines);
@@ -293,7 +293,7 @@ void CIDEBuilding::FinishBuildSteps(CArrayChars* paszLines)
 		muiBuildStep++;
 		if (muiBuildStep == maiBuildOrder.NumElements())
 		{
-			mpcContent->mpDebugging->ReadLineTables();
+			mpcContent->GetDebugging()->ReadLineTables();
 		}
 		else if (!StartBuildStep(paszLines))
 		{
@@ -343,9 +343,9 @@ void CIDEBuilding::ReadListings(CArrayChars* paszLines)
 	szDirectory.Kill();
 
 	SetListings(true);
-	if ((muiListingToShow != MAX_SIZE) && mpcContent->mpDocuments->GetActiveTab().IsNotNull())
+	if ((muiListingToShow != MAX_SIZE) && mpcContent->GetDocuments()->GetActiveTab().IsNotNull())
 	{
-		mpcContent->mpDocuments->GetActiveTab()->ToggleListing(muiListingToShow);
+		mpcContent->GetDocuments()->GetActiveTab()->ToggleListing(muiListingToShow);
 		muiListingToShow = MAX_SIZE;
 	}
 }
@@ -366,9 +366,9 @@ void CIDEBuilding::SetListings(bool bListings)
 		mcListings.Kill();
 		mcListings.Init();
 	}
-	for (i = 0; i < mpcContent->mpDocuments->NumTabs(); i++)
+	for (i = 0; i < mpcContent->GetDocuments()->NumTabs(); i++)
 	{
-		mpcContent->mpDocuments->GetTab(i)->SetListings(bListings ? &mcListings : NULL);
+		mpcContent->GetDocuments()->GetTab(i)->SetListings(bListings ? &mcListings : NULL);
 	}
 }
 
@@ -411,8 +411,8 @@ Ptr<CDockPane> CIDEBuilding::GetBuildTool(void) { return mpBuildTool; }
 //////////////////////////////////////////////////////////////////////////
 void CIDEBuilding::CreatePane(SDockPlace* psPlace)
 {
-	mpBuildPane = OMalloc<CIDEBuildPane>(mpcContent->mpWindow, mpcContent->mpTheme, mpcContent->mpCodeFamily, JEWEL_TEXT);
-	mpBuildTool = mpcContent->mpDock->AddPane(IDE_BUILD_ID, "Build", NULL, mpBuildPane->GetComponent(), DPK_Tool, psPlace);
+	mpBuildPane = OMalloc<CIDEBuildPane>(mpcContent->GetWindow(), mpcContent->GetTheme(), mpcContent->GetCodeFamily(), JEWEL_TEXT);
+	mpBuildTool = mpcContent->GetDock()->AddPane(IDE_BUILD_ID, "Build", NULL, mpBuildPane->GetComponent(), DPK_Tool, psPlace);
 }
 
 
@@ -423,7 +423,7 @@ void CIDEBuilding::CreatePane(SDockPlace* psPlace)
 //////////////////////////////////////////////////////////////////////////
 Ptr<CButton> CIDEBuilding::CreateBuildButton(void)
 {
-	mpBuildButton = OMalloc<CButton>(mpcContent->mpWindow, mpcContent->mpTheme, "Build");
+	mpBuildButton = OMalloc<CButton>(mpcContent->GetWindow(), mpcContent->GetTheme(), "Build");
 	mpBuildButton->SetAlignment(CSH_Left, CSV_Center);
 	mpBuildButton->GetClickEvent()->Add(this, &CIDEBuilding::BuildClicked);
 	return mpBuildButton;

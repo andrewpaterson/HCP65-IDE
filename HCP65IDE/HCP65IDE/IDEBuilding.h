@@ -40,7 +40,6 @@ class CIDEContent;
 //wrote, shown in the editors' gutters.
 class CIDEBuilding : public CObject
 {
-friend class CIDEContent;
 friend class CIDEScript;
 CONSTRUCTABLE(CIDEBuilding);
 DESTRUCTABLE(CIDEBuilding);
@@ -66,22 +65,22 @@ public:
 	Ptr<CButton>		CreateBuildButton(void);
 	Ptr<CDockPane>	GetBuildTool(void);
 	Ptr<CIDEBuildPane>	GetBuildPane(void);
-	void				ShowBuildTab(void);
 	void				SetLibc65Directory(const char* szDirectory);
 	bool				Build(void);
 	void				StopBuild(void);
 	bool				IsBuilding(void);
 	void				ShowListingAfterBuild(size uiLine);
 	CCPP65ListingIndex*	GetListings(void);
-	void				BuildClicked(void);
 	void				SetListings(bool bListings);
+	void				PollBuild(Ptr<CWindow> pWindow);
 
 protected:
 	bool				StartBuildStep(CArrayChars* paszLines);
 	void				ShowBuildProgress(void);
 	void				FinishBuildSteps(CArrayChars* paszLines);
-	void				PollBuild(Ptr<CWindow> pWindow);
 	void				ReadListings(CArrayChars* paszLines);
+	void				ShowBuildTab(void);
+	void				BuildClicked(void);
 };
 
 

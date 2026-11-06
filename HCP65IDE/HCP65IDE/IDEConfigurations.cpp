@@ -110,7 +110,7 @@ void CIDEConfigurations::ShowConfigurations(void)
 	CArrayChars	aszNames;
 
 	aszNames.Init();
-	mpcContent->mcWorkspace.GetConfigurationNames(&aszNames);
+	mpcContent->GetWorkspace()->GetConfigurationNames(&aszNames);
 	if (!aszNames.Contains(mszConfiguration.Text()))
 	{
 		mszConfiguration.Set((aszNames.NumElements() > 0) ? aszNames.GetText(0) : "");
@@ -119,9 +119,9 @@ void CIDEConfigurations::ShowConfigurations(void)
 
 	SetComboBoxItems(mpConfigurations, false);
 	SetComboBoxItems(mpPlatforms, true);
-	if (StringCompare(mszConfiguration.Text(), mpcContent->mcCodeModel.GetConfiguration()) != 0)
+	if (StringCompare(mszConfiguration.Text(), mpcContent->GetCodeModel()->GetConfiguration()) != 0)
 	{
-		mpcContent->mcCodeModel.SetConfiguration(mszConfiguration.Text());
+		mpcContent->GetCodeModel()->SetConfiguration(mszConfiguration.Text());
 	}
 	ShowConfiguration();
 }
@@ -149,16 +149,16 @@ void CIDEConfigurations::ConfigurationChosen(void)
 		return;
 	}
 
-	pcChosen = mpcContent->mcWorkspace.FindAnyConfiguration(szConfiguration, szPlatform);
+	pcChosen = mpcContent->GetWorkspace()->FindAnyConfiguration(szConfiguration, szPlatform);
 	if (pcChosen == NULL)
 	{
 		if ((pcCurrent != NULL) && pcCurrent->Is(NULL, szPlatform))
 		{
-			pcChosen = mpcContent->mcWorkspace.FindAnyConfiguration(szConfiguration, NULL);
+			pcChosen = mpcContent->GetWorkspace()->FindAnyConfiguration(szConfiguration, NULL);
 		}
 		else
 		{
-			pcChosen = mpcContent->mcWorkspace.FindAnyConfiguration(NULL, szPlatform);
+			pcChosen = mpcContent->GetWorkspace()->FindAnyConfiguration(NULL, szPlatform);
 		}
 	}
 	if (pcChosen != NULL)
@@ -184,7 +184,7 @@ void CIDEConfigurations::SetComboBoxItems(Ptr<CComboBox> pComboBox, bool bPlatfo
 	size			i;
 
 	aszNames.Init();
-	mpcContent->mcWorkspace.GetConfigurationNames(&aszNames, bPlatforms);
+	mpcContent->GetWorkspace()->GetConfigurationNames(&aszNames, bPlatforms);
 	pComboBox->RemoveAllItems();
 	for (i = 0; i < aszNames.NumElements(); i++)
 	{
@@ -220,7 +220,7 @@ void CIDEConfigurations::ShowConfiguration(void)
 	szName.Kill();
 
 	//Its programs' line tables bind the source breakpoints.
-	mpcContent->mpDebugging->ReadLineTables();
+	mpcContent->GetDebugging()->ReadLineTables();
 }
 
 
@@ -256,25 +256,25 @@ bool CIDEConfigurations::SetConfiguration(const char* szConfiguration)
 {
 	size	i;
 
-	if (mpcContent->mcWorkspace.FindAnyConfiguration(szConfiguration) == NULL)
+	if (mpcContent->GetWorkspace()->FindAnyConfiguration(szConfiguration) == NULL)
 	{
 		return false;
 	}
 	mszConfiguration.Set(szConfiguration);
-	if (StringCompare(mpcContent->mcWorkspace.GetConfiguration(), szConfiguration) != 0)
+	if (StringCompare(mpcContent->GetWorkspace()->GetConfiguration(), szConfiguration) != 0)
 	{
 		//Remembered in the workspace file for next time.
-		mpcContent->mpSolutions->WriteWorkspace();
+		mpcContent->GetSolutions()->WriteWorkspace();
 	}
 	ShowConfiguration();
 
-	if (StringCompare(mszConfiguration.Text(), mpcContent->mcCodeModel.GetConfiguration()) != 0)
+	if (StringCompare(mszConfiguration.Text(), mpcContent->GetCodeModel()->GetConfiguration()) != 0)
 	{
-		mpcContent->mcCodeModel.SetConfiguration(mszConfiguration.Text());
-		mpcContent->mcCodeModel.StartIndexing();
-		for (i = 0; i < mpcContent->mpDocuments->NumTabs(); i++)
+		mpcContent->GetCodeModel()->SetConfiguration(mszConfiguration.Text());
+		mpcContent->GetCodeModel()->StartIndexing();
+		for (i = 0; i < mpcContent->GetDocuments()->NumTabs(); i++)
 		{
-			mpcContent->mpDocuments->HighlightTab(mpcContent->mpDocuments->GetTab(i));
+			mpcContent->GetDocuments()->HighlightTab(mpcContent->GetDocuments()->GetTab(i));
 		}
 	}
 	return true;
@@ -289,7 +289,7 @@ bool CIDEConfigurations::SetConfiguration(const char* szConfiguration)
 //////////////////////////////////////////////////////////////////////////
 CBuildConfiguration* CIDEConfigurations::GetConfiguration(void)
 {
-	return mpcContent->mcWorkspace.FindConfiguration(mpcContent->mcWorkspace.GetStartup(), mszConfiguration.Text());
+	return mpcContent->GetWorkspace()->FindConfiguration(mpcContent->GetWorkspace()->GetStartup(), mszConfiguration.Text());
 }
 
 
@@ -312,7 +312,7 @@ char* CIDEConfigurations::GetConfigurationName(void)
 //////////////////////////////////////////////////////////////////////////
 CBuildConfiguration* CIDEConfigurations::GetChosenConfiguration(void)
 {
-	return mpcContent->mcWorkspace.FindAnyConfiguration(mszConfiguration.Text());
+	return mpcContent->GetWorkspace()->FindAnyConfiguration(mszConfiguration.Text());
 }
 
 
@@ -323,10 +323,10 @@ CBuildConfiguration* CIDEConfigurations::GetChosenConfiguration(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDEConfigurations::CreateComboBoxes(void)
 {
-	mpConfigurations = OMalloc<CComboBox>(mpcContent->mpWindow, mpcContent->mpTheme);
+	mpConfigurations = OMalloc<CComboBox>(mpcContent->GetWindow(), mpcContent->GetTheme());
 	mpConfigurations->SetAlignment(CSH_Left, CSV_Center);
 	mpConfigurations->GetSelectionEvent()->Add(this, &CIDEConfigurations::ConfigurationChosen);
-	mpPlatforms = OMalloc<CComboBox>(mpcContent->mpWindow, mpcContent->mpTheme);
+	mpPlatforms = OMalloc<CComboBox>(mpcContent->GetWindow(), mpcContent->GetTheme());
 	mpPlatforms->SetAlignment(CSH_Left, CSV_Center);
 	mpPlatforms->GetSelectionEvent()->Add(this, &CIDEConfigurations::ConfigurationChosen);
 }

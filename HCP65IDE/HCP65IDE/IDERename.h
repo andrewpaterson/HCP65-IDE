@@ -54,12 +54,12 @@ public:
 
 	bool	FindRenameTarget(SIDERenameTarget* psDest);
 	void	QueueRename(void);
-	void	ShowQueuedRename(void);
 	bool	ShowRename(void);
-	bool	ApproveRename(void);
 	bool	RenameSymbol(SIDERenameTarget* psTarget, const char* szNewName);
 
 protected:
+	void	ShowQueuedRename(void);
+	bool	ApproveRename(void);
 };
 
 

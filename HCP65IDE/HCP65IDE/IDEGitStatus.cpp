@@ -162,9 +162,9 @@ void CIDEGitStatus::GitFileSaved(const char* szFileName)
 	if (mcGit.RefreshStatus(szFileName))
 	{
 		miGitStatusTime = GetDebugTickCount();
-		if (mpcContent->mpWindow.IsNotNull())
+		if (mpcContent->GetWindow().IsNotNull())
 		{
-			mpcContent->mpWindow->RequestTick(IDE_GIT_POLL);
+			mpcContent->GetWindow()->RequestTick(IDE_GIT_POLL);
 		}
 	}
 }
@@ -203,14 +203,14 @@ void CIDEGitStatus::ShowGitStatus(void)
 	bool				bHeadMoved;
 
 	muiGitVersion = mcGit.GetStatusVersion();
-	if (mpcContent->mpSolutions->GetExplorer().IsNotNull())
+	if (mpcContent->GetSolutions()->GetExplorer().IsNotNull())
 	{
-		mpcContent->mpSolutions->GetExplorer()->ColourFiles(&mcGit, mpcContent->mpFontColours);
+		mpcContent->GetSolutions()->GetExplorer()->ColourFiles(&mcGit, mpcContent->GetFontColours());
 	}
 
-	for (i = 0; i < mpcContent->mpDocuments->NumTabs(); i++)
+	for (i = 0; i < mpcContent->GetDocuments()->NumTabs(); i++)
 	{
-		pTab = mpcContent->mpDocuments->GetTab(i);
+		pTab = mpcContent->GetDocuments()->GetTab(i);
 		pcRepository = mcGit.FindRepository(pTab->GetFileName());
 		eState = pcRepository ? pcRepository->GetFileState(pTab->GetFileName()) : GFS_Unmodified;
 		bHeadMoved = pcRepository && pTab->HasBaseText() && (strcmp(pTab->GetBaseHead(), pcRepository->GetStatus()->GetHead()) != 0);
@@ -219,9 +219,9 @@ void CIDEGitStatus::ShowGitStatus(void)
 			ReadGitBase(pTab);
 			UpdateChangeBars(pTab);
 		}
-		pTab->GetDockPane()->SetTabFont(GetGitStateFont(mpcContent->mpFontColours, eState));
+		pTab->GetDockPane()->SetTabFont(GetGitStateFont(mpcContent->GetFontColours(), eState));
 	}
-	mpcContent->mpDiffs->RefreshMovedDiffs();
+	mpcContent->GetDiffs()->RefreshMovedDiffs();
 	ShowBranch();
 }
 
@@ -245,13 +245,13 @@ void CIDEGitStatus::ShowBranch(void)
 	}
 
 	pcRepository = NULL;
-	if (mpcContent->mpDocuments->GetActiveTab().IsNotNull())
+	if (mpcContent->GetDocuments()->GetActiveTab().IsNotNull())
 	{
-		pcRepository = mcGit.FindRepository(mpcContent->mpDocuments->GetActiveTab()->GetFileName());
+		pcRepository = mcGit.FindRepository(mpcContent->GetDocuments()->GetActiveTab()->GetFileName());
 	}
-	if ((pcRepository == NULL) && mpcContent->mpSolutions->IsSolutionOpen())
+	if ((pcRepository == NULL) && mpcContent->GetSolutions()->IsSolutionOpen())
 	{
-		pcRepository = mcGit.FindRepository(mpcContent->mpSolutions->GetStartupFile());
+		pcRepository = mcGit.FindRepository(mpcContent->GetSolutions()->GetStartupFile());
 	}
 
 	szText.Init();
@@ -367,12 +367,12 @@ void CIDEGitStatus::WindowActivated(void)
 			mcGit.GetRepository(i)->RefreshStatus();
 		}
 		miGitStatusTime = GetDebugTickCount();
-		mpcContent->mpWindow->RequestTick(IDE_GIT_POLL);
+		mpcContent->GetWindow()->RequestTick(IDE_GIT_POLL);
 	}
 
-	for (i = 0; i < mpcContent->mpDiffs->NumDiffs(); i++)
+	for (i = 0; i < mpcContent->GetDiffs()->NumDiffs(); i++)
 	{
-		pDiff = mpcContent->mpDiffs->GetDiff(i);
+		pDiff = mpcContent->GetDiffs()->GetDiff(i);
 		bFromDisk = false;
 		for (iSide = 0; iSide < 2; iSide++)
 		{
@@ -383,7 +383,7 @@ void CIDEGitStatus::WindowActivated(void)
 		}
 		if (bFromDisk)
 		{
-			mpcContent->mpDiffs->RefreshDiff(pDiff);
+			mpcContent->GetDiffs()->RefreshDiff(pDiff);
 		}
 	}
 }
@@ -398,7 +398,7 @@ void CIDEGitStatus::ChangeBarClicked(CCodeEditor* pcEditor, size uiLine)
 {
 	Ptr<CIDEEditorTab>	pTab;
 
-	pTab = mpcContent->mpDocuments->FindTab(pcEditor);
+	pTab = mpcContent->GetDocuments()->FindTab(pcEditor);
 	if (pTab.IsNotNull())
 	{
 		ShowChange(pTab, uiLine);
@@ -479,13 +479,13 @@ bool CIDEGitStatus::ShowChange(Ptr<CIDEEditorTab> pTab, size uiLine)
 	szSummary.Append((msChange.eType == GLC_Added) ? "added" : ((msChange.eType == GLC_Removed) ? "removed" : "changed"));
 	pGrid = OMalloc<CGridContainer>(pWindow);
 	pGrid->SetSizedByContent(true);
-	pLabel = OMalloc<CLabel>(pWindow, mpcContent->mpFontColours->GetFont(JEWEL_ICON), szSummary.Text());
+	pLabel = OMalloc<CLabel>(pWindow, mpcContent->GetFontColours()->GetFont(JEWEL_ICON), szSummary.Text());
 	pLabel->SetAlignment(CSH_Left, CSV_Center);
 	szSummary.Kill();
-	mpShowDiffButton = OMalloc<CButton>(pWindow, mpcContent->mpTheme, "Show Diff");
+	mpShowDiffButton = OMalloc<CButton>(pWindow, mpcContent->GetTheme(), "Show Diff");
 	mpShowDiffButton->SetAlignment(CSH_Right, CSV_Center);
 	mpShowDiffButton->GetClickEvent()->Add(this, &CIDEGitStatus::ShowDiffClicked);
-	mpRollbackButton = OMalloc<CButton>(pWindow, mpcContent->mpTheme, "Rollback");
+	mpRollbackButton = OMalloc<CButton>(pWindow, mpcContent->GetTheme(), "Rollback");
 	mpRollbackButton->SetAlignment(CSH_Right, CSV_Center);
 	mpRollbackButton->GetClickEvent()->Add(this, &CIDEGitStatus::RollbackClicked);
 	pGrid->AddComponent(pLabel, 0, 0, 1, 1, 1, 0);
@@ -500,7 +500,7 @@ bool CIDEGitStatus::ShowChange(Ptr<CIDEEditorTab> pTab, size uiLine)
 		szOld.Init();
 		AppendBaseLines(pTab, msChange.uiBaseStartLine, msChange.uiBaseEndLine, &szOld);
 		szOld.RemoveLastCharacter();
-		pOld = OMalloc<CTextArea>(pWindow, mpcContent->mpCodeFamily, szOld.Text());
+		pOld = OMalloc<CTextArea>(pWindow, mpcContent->GetCodeFamily(), szOld.Text());
 		szOld.Kill();
 		pOld->SetTiledText(true);
 		pOld->SetColour(JEWEL_TEXT);
@@ -509,7 +509,7 @@ bool CIDEGitStatus::ShowChange(Ptr<CIDEEditorTab> pTab, size uiLine)
 		uiLines = msChange.uiBaseEndLine - msChange.uiBaseStartLine;
 		pOld->AddLineBackground(0, uiLines, Set32BitColour((uint8)0x48, (uint8)0x4A, (uint8)0x4A));
 		iWidth = pOld->GetDesiredSize().x;
-		pPane = OMalloc<CScrollPane>(pWindow, mpcContent->mpTheme);
+		pPane = OMalloc<CScrollPane>(pWindow, mpcContent->GetTheme());
 		pPane->SetContent(pOld);
 		pPane->SetDesiredSize((iWidth < IDE_CHANGE_POPUP_WIDTH) ? IDE_CHANGE_POPUP_WIDTH : ((iWidth > IDE_CHANGE_POPUP_MAX_WIDTH) ? IDE_CHANGE_POPUP_MAX_WIDTH : iWidth), (uiLines > IDE_CHANGE_POPUP_ROWS ? IDE_CHANGE_POPUP_ROWS : (int32)uiLines) * iRow);
 		pPane->SetAlignment(CSH_Stretch, CSV_Stretch);
@@ -618,11 +618,11 @@ bool CIDEGitStatus::ShowChangeDiff(void)
 	pTab = mpChangeTab;
 	uiChange = muiChange;
 	CloseChangePopup();
-	if (pTab.IsNull() || !mpcContent->mpDiffs->OpenDiff(pTab->GetFileName(), "HEAD", pTab->GetFileName(), ""))
+	if (pTab.IsNull() || !mpcContent->GetDiffs()->OpenDiff(pTab->GetFileName(), "HEAD", pTab->GetFileName(), ""))
 	{
 		return false;
 	}
-	mpcContent->mpDiffs->GetActiveDiff()->GetView()->ScrollToBlock(uiChange);
+	mpcContent->GetDiffs()->GetActiveDiff()->GetView()->ScrollToBlock(uiChange);
 	return true;
 }
 
@@ -684,7 +684,7 @@ void CIDEGitStatus::QueueChange(size uiLine, int iAction)
 {
 	muiQueuedChange = uiLine;
 	miQueuedAction = iAction;
-	mpcContent->mpWindow->RequestTick(0);
+	mpcContent->GetWindow()->RequestTick(0);
 }
 
 
@@ -705,7 +705,7 @@ void CIDEGitStatus::ShowQueuedChange(void)
 {
 	Ptr<CIDEEditorTab>	pTab;
 
-	pTab = mpcContent->mpDocuments->GetActiveTab();
+	pTab = mpcContent->GetDocuments()->GetActiveTab();
 	if ((muiQueuedChange == MAX_SIZE) || pTab.IsNull() || (pTab->GetEditor()->GetActualSize().x <= 0))
 	{
 		return;
@@ -733,7 +733,7 @@ void CIDEGitStatus::ShowQueuedChange(void)
 //////////////////////////////////////////////////////////////////////////
 Ptr<CLabel> CIDEGitStatus::CreateBranchLabel(void)
 {
-	mpBranchLabel = OMalloc<CLabel>(mpcContent->mpWindow, mpcContent->mpFontColours->GetFont(JEWEL_ICON), "");
+	mpBranchLabel = OMalloc<CLabel>(mpcContent->GetWindow(), mpcContent->GetFontColours()->GetFont(JEWEL_ICON), "");
 	mpBranchLabel->SetAlignment(CSH_Right, CSV_Center);
 	return mpBranchLabel;
 }
@@ -764,11 +764,11 @@ void CIDEGitStatus::FindRepositories(void)
 {
 	size	i;
 
-	for (i = 0; i < mpcContent->mcWorkspace.NumSolutions(); i++)
+	for (i = 0; i < mpcContent->GetWorkspace()->NumSolutions(); i++)
 	{
-		mcGit.FindRepository(mpcContent->mcWorkspace.GetSolution(i)->mszFile.Text());
+		mcGit.FindRepository(mpcContent->GetWorkspace()->GetSolution(i)->mszFile.Text());
 	}
-	mpcContent->mpSolutions->GetExplorer()->ColourFiles(&mcGit, mpcContent->mpFontColours);
+	mpcContent->GetSolutions()->GetExplorer()->ColourFiles(&mcGit, mpcContent->GetFontColours());
 	ReadGitStatus();
 	miGitStatusTime = GetDebugTickCount();
 }

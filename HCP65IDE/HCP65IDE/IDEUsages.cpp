@@ -131,13 +131,13 @@ void CIDEUsages::CreatePane(SDockPlace* psPlace)
 {
 	Ptr<CScrollPane>	pPane;
 
-	mpUsages = OMalloc<CTreeContainer>(mpcContent->mpWindow, mpcContent->mpTheme);
+	mpUsages = OMalloc<CTreeContainer>(mpcContent->GetWindow(), mpcContent->GetTheme());
 	mpUsages->SetAlignment(CSH_Stretch, CSV_Top);
 	mpUsages->GetActivationEvent()->Add(this, &CIDEUsages::UsageActivated);
-	pPane = OMalloc<CScrollPane>(mpcContent->mpWindow, mpcContent->mpTheme);
+	pPane = OMalloc<CScrollPane>(mpcContent->GetWindow(), mpcContent->GetTheme());
 	pPane->SetContent(mpUsages);
 	pPane->SetAlignment(CSH_Stretch, CSV_Stretch);
-	mpUsagesTool = mpcContent->mpDock->AddPane(IDE_USAGES_ID, "Find Usages", NULL, pPane, DPK_Tool, psPlace);
+	mpUsagesTool = mpcContent->GetDock()->AddPane(IDE_USAGES_ID, "Find Usages", NULL, pPane, DPK_Tool, psPlace);
 }
 
 
@@ -175,10 +175,10 @@ bool CIDEUsages::FindUsages(bool bDeclarations)
 	const char*			szWhat;
 	size				uiOverrides;
 
-	mpcContent->mpDocuments->UpdateEditedTabsNow();
+	mpcContent->GetDocuments()->UpdateEditedTabsNow();
 	asLocations.Init();
 	szKey.Init();
-	if (!mpcContent->mpDocuments->FindSymbolAtCaret(&asLocations, &szKey))
+	if (!mpcContent->GetDocuments()->FindSymbolAtCaret(&asLocations, &szKey))
 	{
 		KillIDELocations(&asLocations);
 		szKey.Kill();
@@ -187,7 +187,7 @@ bool CIDEUsages::FindUsages(bool bDeclarations)
 	}
 
 	//A virtual member function's overrides (and what it overrides) are used where it is, as IntelliJ's hierarchy.
-	uiOverrides = mpcContent->mcCodeModel.FindOverrideLocations(szKey.Text(), &asLocations);
+	uiOverrides = mpcContent->GetCodeModel()->FindOverrideLocations(szKey.Text(), &asLocations);
 
 	//The usages are kept for opening; the declarations and definitions are only kept if asked for.
 	KillIDELocations(&masUsages);
@@ -210,7 +210,7 @@ bool CIDEUsages::FindUsages(bool bDeclarations)
 		psUsage = &asUsages[i];
 		psUsage->psLocation = masUsages.Get(i);
 		psUsage->uiIndex = i;
-		mpcContent->mcCodeModel.GetUsageGroup(psUsage->psLocation, &psUsage->szProject, &psUsage->szClass);
+		mpcContent->GetCodeModel()->GetUsageGroup(psUsage->psLocation, &psUsage->szProject, &psUsage->szClass);
 	}
 	qsort(asUsages, uiUsages, sizeof(SIDEUsage), CompareIDEUsages);
 
@@ -241,7 +241,7 @@ bool CIDEUsages::FindUsages(bool bDeclarations)
 	}
 
 	//Until every file is indexed some may be missing.
-	mpcContent->mcCodeModel.GetIndexingProgress(&uiIndexed, &uiToIndex);
+	mpcContent->GetCodeModel()->GetIndexingProgress(&uiIndexed, &uiToIndex);
 	if (uiIndexed < uiToIndex)
 	{
 		szText.Append("  (indexing, ");
@@ -293,7 +293,7 @@ bool CIDEUsages::FindUsages(bool bDeclarations)
 		szText.Append(' ');
 		szText.Append(psUsage->psLocation->iLine + 1);
 		szText.Append(": ");
-		mpcContent->mpDocuments->GetFileLine(psUsage->psLocation->szFileName.Text(), psUsage->psLocation->iLine, &szText);
+		mpcContent->GetDocuments()->GetFileLine(psUsage->psLocation->szFileName.Text(), psUsage->psLocation->iLine, &szText);
 		if (psUsage->psLocation->uiRole == CPPIR_Definition)
 		{
 			szText.Append("  [definition]");
@@ -319,7 +319,7 @@ bool CIDEUsages::FindUsages(bool bDeclarations)
 	szKey.Kill();
 
 	mpUsages->ExpandAll();
-	mpcContent->mpDock->Show(mpUsagesTool);
+	mpcContent->GetDock()->Show(mpUsagesTool);
 	return true;
 }
 
@@ -340,7 +340,7 @@ void CIDEUsages::UsageActivated(void)
 	iData = mpUsages->GetNodeData(mpUsages->GetSelectedNode());
 	if ((iData > 0) && ((size)iData <= masUsages.NumElements()))
 	{
-		mpcContent->mpDocuments->OpenLocation(masUsages.Get((size)iData - 1));
+		mpcContent->GetDocuments()->OpenLocation(masUsages.Get((size)iData - 1));
 	}
 }
 

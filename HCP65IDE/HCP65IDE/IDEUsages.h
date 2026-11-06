@@ -52,12 +52,12 @@ public:
 
 	void				CreatePane(SDockPlace* psPlace);
 	bool				FindUsages(bool bDeclarations);
-	void				UsageActivated(void);
 	void				Clear(void);
 	Ptr<CTreeContainer>	GetUsagesTree(void);
 	Ptr<CDockPane>		GetTool(void);
 
 protected:
+	void				UsageActivated(void);
 };
 
 

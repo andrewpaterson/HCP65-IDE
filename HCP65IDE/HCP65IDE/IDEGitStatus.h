@@ -38,7 +38,6 @@ class CIDEContent;
 //The statuses are read again now and then, and when the window is activated.
 class CIDEGitStatus : public CObject
 {
-friend class CIDEContent;
 friend class CIDEScript;
 CONSTRUCTABLE(CIDEGitStatus);
 DESTRUCTABLE(CIDEGitStatus);
@@ -70,27 +69,27 @@ public:
 	void				FindRepositories(void);
 	void				ForgetRepositories(void);
 	void				ChangeBarClicked(CCodeEditor* pcEditor, size uiLine);
-	bool				ShowChange(Ptr<CIDEEditorTab> pTab, size uiLine);
-	bool				RollbackChange(void);
-	bool				ShowChangeDiff(void);
 	void				WindowActivated(void);
 	void				QueueChange(size uiLine, int iAction);
-	void				RollbackClicked(void);
-	void				ShowDiffClicked(void);
 	Ptr<CGridContainer>	GetChangePopup(void);
 	Ptr<CLabel>			GetBranchLabel(void);
-	void				ReadGitStatus(void);
 	void				GitFileSaved(const char* szFileName);
 	void				ReadGitBase(Ptr<CIDEEditorTab> pTab);
 	void				ShowBranch(void);
 	void				UpdateChangeBars(Ptr<CIDEEditorTab> pTab);
+	int64				PollGit(int64 iNow);
 
 protected:
-	int64				PollGit(int64 iNow);
 	void				ShowQueuedChange(void);
 	void				ShowGitStatus(void);
 	void				CloseChangePopup(void);
 	void				AppendBaseLines(Ptr<CIDEEditorTab> pTab, size uiStart, size uiEnd, CChars* pszDest);
+	bool				ShowChange(Ptr<CIDEEditorTab> pTab, size uiLine);
+	bool				RollbackChange(void);
+	bool				ShowChangeDiff(void);
+	void				RollbackClicked(void);
+	void				ShowDiffClicked(void);
+	void				ReadGitStatus(void);
 };
 
 

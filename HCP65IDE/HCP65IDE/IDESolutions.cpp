@@ -134,7 +134,7 @@ bool CIDESolutions::ShowOpenSolutionDialog(void)
 	bool	bResult;
 
 	bResult = false;
-	mpFileChooser = OMalloc<CFileChooser>(mpcContent->mpWindow, &mpcContent->msDialogLook, "Open Project/Solution", false, GetStartupFile(), asTypes, sizeof(asTypes) / sizeof(SFileChooserType), mpcContent->mpFolderIcon, mpcContent->mpFileIcon);
+	mpFileChooser = OMalloc<CFileChooser>(mpcContent->GetWindow(), mpcContent->GetDialogLook(), "Open Project/Solution", false, GetStartupFile(), asTypes, sizeof(asTypes) / sizeof(SFileChooserType), mpcContent->GetFolderIcon(), mpcContent->GetFileIcon());
 	if (mpFileChooser->Show())
 	{
 		szChosen.Init(mpFileChooser->GetChosen());
@@ -168,7 +168,7 @@ bool CIDESolutions::ShowAddSolutionDialog(void)
 	bool	bResult;
 
 	bResult = false;
-	mpFileChooser = OMalloc<CFileChooser>(mpcContent->mpWindow, &mpcContent->msDialogLook, "Add Solution", false, GetStartupFile(), asTypes, sizeof(asTypes) / sizeof(SFileChooserType), mpcContent->mpFolderIcon, mpcContent->mpFileIcon);
+	mpFileChooser = OMalloc<CFileChooser>(mpcContent->GetWindow(), mpcContent->GetDialogLook(), "Add Solution", false, GetStartupFile(), asTypes, sizeof(asTypes) / sizeof(SFileChooserType), mpcContent->GetFolderIcon(), mpcContent->GetFileIcon());
 	if (mpFileChooser->Show())
 	{
 		szChosen.Init(mpFileChooser->GetChosen());
@@ -197,7 +197,7 @@ bool CIDESolutions::OpenSolution(const char* szFileName)
 	bool		bResult;
 
 	//The files with changes of what is open are asked about first; it opens afterwards.
-	if (IsSolutionOpen() && !mpcContent->mpCloseGuard->ApproveLettingGo(MAX_SIZE, szFileName))
+	if (IsSolutionOpen() && !mpcContent->GetCloseGuard()->ApproveLettingGo(MAX_SIZE, szFileName))
 	{
 		return true;
 	}
@@ -215,17 +215,17 @@ bool CIDESolutions::OpenSolution(const char* szFileName)
 
 	//The solutions being let go of are kept as they were left, and their files closed.
 	LetGoOfWorkspace();
-	bResult = mpcContent->mcWorkspace.Open(szFile.Text());
-	if (!szFile.Equals(szFileName) && (!bResult || (mpcContent->mcWorkspace.FindSolution(szFileName) == MAX_SIZE)))
+	bResult = mpcContent->GetWorkspace()->Open(szFile.Text());
+	if (!szFile.Equals(szFileName) && (!bResult || (mpcContent->GetWorkspace()->FindSolution(szFileName) == MAX_SIZE)))
 	{
 		//The workspace beside it no longer has it (it was removed): it is opened on its own.
-		bResult = mpcContent->mcWorkspace.Open(szFileName);
+		bResult = mpcContent->GetWorkspace()->Open(szFileName);
 	}
 	szFile.Kill();
-	mpcContent->mcCodeModel.Init(&mpcContent->mcWorkspace);
-	mpcContent->mcCodeModel.AddDefaultSystemDirectories();
-	mpExplorer->ShowWorkspace(&mpcContent->mcWorkspace);
-	mpcContent->mpNavigator->ForgetGoToFiles();
+	mpcContent->GetCodeModel()->Init(mpcContent->GetWorkspace());
+	mpcContent->GetCodeModel()->AddDefaultSystemDirectories();
+	mpExplorer->ShowWorkspace(mpcContent->GetWorkspace());
+	mpcContent->GetNavigator()->ForgetGoToFiles();
 	if (!bResult || !IsSolutionOpen())
 	{
 		//One that isn't there any more isn't recent.
@@ -238,19 +238,19 @@ bool CIDESolutions::OpenSolution(const char* szFileName)
 	mcRecent.Add(szFileName);
 	WriteRecent();
 
-	mpcContent->mpGitStatus->FindRepositories();
+	mpcContent->GetGitStatus()->FindRepositories();
 
 	//The breakpoints saved beside it, bound once its configuration's line tables are read.
 	szName.Init();
-	mpcContent->mpDebugging->GetUserSettingsFileName(&szName);
-	mpcContent->mpDebugging->GetDebugger()->ReadSourceBreakpoints(szName.Text());
+	mpcContent->GetDebugging()->GetUserSettingsFileName(&szName);
+	mpcContent->GetDebugging()->GetDebugger()->ReadSourceBreakpoints(szName.Text());
 	szName.Kill();
 
 	//The configuration chosen last time, if a solution still has it; chosen before the combo boxes tell of it, so it
 	//isn't indexed twice.
-	mpcContent->mpBuildConfigurations->SetConfigurationName(mpcContent->mcWorkspace.GetConfiguration());
-	mpcContent->mpBuildConfigurations->ShowConfigurations();
-	mpcContent->mcCodeModel.StartIndexing();
+	mpcContent->GetBuildConfigurations()->SetConfigurationName(mpcContent->GetWorkspace()->GetConfiguration());
+	mpcContent->GetBuildConfigurations()->ShowConfigurations();
+	mpcContent->GetCodeModel()->StartIndexing();
 
 	//The windows where they were left, and the files that were open opened again.
 	mpcContent->LoadLayout();
@@ -299,17 +299,17 @@ bool CIDESolutions::AddSolution(const char* szFileName)
 	}
 
 	//The indexing uses the solutions, so it stops while they change.
-	mpcContent->mcCodeModel.Reset();
-	uiSolution = mpcContent->mcWorkspace.AddSolution(szFileName);
+	mpcContent->GetCodeModel()->Reset();
+	uiSolution = mpcContent->GetWorkspace()->AddSolution(szFileName);
 	if (uiSolution == MAX_SIZE)
 	{
-		mpcContent->mcCodeModel.StartIndexing();
+		mpcContent->GetCodeModel()->StartIndexing();
 		return gcLogger.Error2(__METHOD__, " [", szFileName, "] is already open.", NULL);
 	}
-	if (!mpcContent->mcWorkspace.GetSolution(uiSolution)->mbRead)
+	if (!mpcContent->GetWorkspace()->GetSolution(uiSolution)->mbRead)
 	{
-		mpcContent->mcWorkspace.RemoveSolution(uiSolution);
-		mpcContent->mcCodeModel.StartIndexing();
+		mpcContent->GetWorkspace()->RemoveSolution(uiSolution);
+		mpcContent->GetCodeModel()->StartIndexing();
 		return gcLogger.Error2(__METHOD__, " Could not read [", szFileName, "].", NULL);
 	}
 	WorkspaceChanged(true);
@@ -325,17 +325,17 @@ bool CIDESolutions::AddSolution(const char* szFileName)
 //////////////////////////////////////////////////////////////////////////
 bool CIDESolutions::RemoveSolution(size uiSolution)
 {
-	if ((mpcContent->mcWorkspace.NumSolutions() < 2) || (uiSolution >= mpcContent->mcWorkspace.NumSolutions()))
+	if ((mpcContent->GetWorkspace()->NumSolutions() < 2) || (uiSolution >= mpcContent->GetWorkspace()->NumSolutions()))
 	{
 		return false;
 	}
-	if (mpcContent->mpBuilding->IsBuilding())
+	if (mpcContent->GetBuilding()->IsBuilding())
 	{
 		return gcLogger.Error2(__METHOD__, " A solution can't be removed while a build is running.", NULL);
 	}
 
-	mpcContent->mcCodeModel.Reset();
-	mpcContent->mcWorkspace.RemoveSolution(uiSolution);
+	mpcContent->GetCodeModel()->Reset();
+	mpcContent->GetWorkspace()->RemoveSolution(uiSolution);
 	WorkspaceChanged(true);
 	return true;
 }
@@ -373,7 +373,7 @@ void CIDESolutions::RememberOpenSolution(void)
 	CFileUtil	cFileUtil;
 	CChars		szFile;
 
-	if (!mpcContent->mbKeepSettings)
+	if (!mpcContent->IsKeepingSettings())
 	{
 		return;
 	}
@@ -404,7 +404,7 @@ bool CIDESolutions::CloseSelectedSolution(void)
 	size	uiSolution;
 
 	uiSolution = mpExplorer->GetNodeSolution(mpExplorer->GetTree()->GetSelectedNode());
-	if ((uiSolution == SOLUTION_EXPLORER_NO_SOLUTION) && (mpcContent->mcWorkspace.NumSolutions() == 1))
+	if ((uiSolution == SOLUTION_EXPLORER_NO_SOLUTION) && (mpcContent->GetWorkspace()->NumSolutions() == 1))
 	{
 		uiSolution = 0;
 	}
@@ -426,47 +426,47 @@ bool CIDESolutions::CloseSolution(size uiSolution)
 	Ptr<CIDEEditorTab>	pTab;
 	Ptr<CIDEDiffTab>	pDiff;
 
-	if (uiSolution >= mpcContent->mcWorkspace.NumSolutions())
+	if (uiSolution >= mpcContent->GetWorkspace()->NumSolutions())
 	{
 		return false;
 	}
-	if (mpcContent->mpBuilding->IsBuilding())
+	if (mpcContent->GetBuilding()->IsBuilding())
 	{
 		return gcLogger.Error2(__METHOD__, " A solution can't be closed while a build is running.", NULL);
 	}
 
 	//Its files with changes are asked about first; it closes afterwards.
-	if (!mpcContent->mpCloseGuard->ApproveLettingGo(uiSolution, NULL))
+	if (!mpcContent->GetCloseGuard()->ApproveLettingGo(uiSolution, NULL))
 	{
 		return true;
 	}
 
-	if (mpcContent->mcWorkspace.NumSolutions() == 1)
+	if (mpcContent->GetWorkspace()->NumSolutions() == 1)
 	{
 		LetGoOfWorkspace();
-		mpcContent->mcCodeModel.Init(&mpcContent->mcWorkspace);
-		mpcContent->mcCodeModel.AddDefaultSystemDirectories();
-		mpExplorer->ShowWorkspace(&mpcContent->mcWorkspace);
-		mpcContent->mpNavigator->ForgetGoToFiles();
-		mpcContent->mpBuildConfigurations->ShowConfigurations();
+		mpcContent->GetCodeModel()->Init(mpcContent->GetWorkspace());
+		mpcContent->GetCodeModel()->AddDefaultSystemDirectories();
+		mpExplorer->ShowWorkspace(mpcContent->GetWorkspace());
+		mpcContent->GetNavigator()->ForgetGoToFiles();
+		mpcContent->GetBuildConfigurations()->ShowConfigurations();
 		return true;
 	}
 
 	//Its files' documents, and diffs of them, are closed (closing a document lets its tab go, see PaneClosed).
-	for (i = mpcContent->mpDocuments->NumTabs(); i > 0; i--)
+	for (i = mpcContent->GetDocuments()->NumTabs(); i > 0; i--)
 	{
-		pTab = mpcContent->mpDocuments->GetTab(i - 1);
+		pTab = mpcContent->GetDocuments()->GetTab(i - 1);
 		if (IsSolutionFile(uiSolution, pTab->GetProject()))
 		{
-			mpcContent->mpDock->Close(pTab->GetDockPane());
+			mpcContent->GetDock()->Close(pTab->GetDockPane());
 		}
 	}
-	for (i = mpcContent->mpDiffs->NumDiffs(); i > 0; i--)
+	for (i = mpcContent->GetDiffs()->NumDiffs(); i > 0; i--)
 	{
-		pDiff = mpcContent->mpDiffs->GetDiff(i - 1);
+		pDiff = mpcContent->GetDiffs()->GetDiff(i - 1);
 		if (IsSolutionFile(uiSolution, pDiff->GetSide(TDS_Left)->muiProject) || IsSolutionFile(uiSolution, pDiff->GetSide(TDS_Right)->muiProject))
 		{
-			mpcContent->mpDock->Close(pDiff->GetDockPane());
+			mpcContent->GetDock()->Close(pDiff->GetDockPane());
 		}
 	}
 	return RemoveSolution(uiSolution);
@@ -481,7 +481,7 @@ bool CIDESolutions::CloseSolution(size uiSolution)
 //////////////////////////////////////////////////////////////////////////
 bool CIDESolutions::IsSolutionFile(size uiSolution, size uiProject)
 {
-	return (uiProject < mpcContent->mcWorkspace.NumProjects()) && (mpcContent->mcWorkspace.GetProject(uiProject)->uiSolution == uiSolution);
+	return (uiProject < mpcContent->GetWorkspace()->NumProjects()) && (mpcContent->GetWorkspace()->GetProject(uiProject)->uiSolution == uiSolution);
 }
 
 
@@ -493,15 +493,15 @@ bool CIDESolutions::IsSolutionFile(size uiSolution, size uiProject)
 //////////////////////////////////////////////////////////////////////////
 bool CIDESolutions::SetStartupSolution(size uiSolution)
 {
-	if (uiSolution >= mpcContent->mcWorkspace.NumSolutions())
+	if (uiSolution >= mpcContent->GetWorkspace()->NumSolutions())
 	{
 		return false;
 	}
-	if (uiSolution == mpcContent->mcWorkspace.GetStartup())
+	if (uiSolution == mpcContent->GetWorkspace()->GetStartup())
 	{
 		return true;
 	}
-	mpcContent->mcWorkspace.SetStartup(uiSolution);
+	mpcContent->GetWorkspace()->SetStartup(uiSolution);
 	WorkspaceChanged(false);
 	return true;
 }
@@ -517,18 +517,18 @@ void CIDESolutions::LetGoOfWorkspace(void)
 {
 	mpcContent->SaveLayout();
 
-	mpcContent->mpBuilding->StopBuild();
-	mpcContent->mpBuilding->SetListings(false);
-	mpcContent->mpDocuments->CloseAllFiles();
-	mpcContent->mpUsages->Clear();
+	mpcContent->GetBuilding()->StopBuild();
+	mpcContent->GetBuilding()->SetListings(false);
+	mpcContent->GetDocuments()->CloseAllFiles();
+	mpcContent->GetUsages()->Clear();
 
-	mpcContent->mcCodeModel.Kill();
-	mpcContent->mcWorkspace.Clear();
-	mpcContent->mpNavigator->ForgetGoToFiles();
-	mpcContent->mpBuildConfigurations->SetConfigurationName("");
+	mpcContent->GetCodeModel()->Kill();
+	mpcContent->GetWorkspace()->Clear();
+	mpcContent->GetNavigator()->ForgetGoToFiles();
+	mpcContent->GetBuildConfigurations()->SetConfigurationName("");
 
 	//The repositories are found again from the new solutions' files, and read at the next tick.
-	mpcContent->mpGitStatus->ForgetRepositories();
+	mpcContent->GetGitStatus()->ForgetRepositories();
 }
 
 
@@ -544,21 +544,21 @@ void CIDESolutions::WorkspaceChanged(bool bReindex)
 {
 	size	i;
 
-	mpExplorer->ShowWorkspace(&mpcContent->mcWorkspace);
-	mpcContent->mpNavigator->ForgetGoToFiles();
-	mpcContent->mpGitStatus->FindRepositories();
-	mpcContent->mpBuildConfigurations->ShowConfigurations();
+	mpExplorer->ShowWorkspace(mpcContent->GetWorkspace());
+	mpcContent->GetNavigator()->ForgetGoToFiles();
+	mpcContent->GetGitStatus()->FindRepositories();
+	mpcContent->GetBuildConfigurations()->ShowConfigurations();
 	if (bReindex)
 	{
-		for (i = 0; i < mpcContent->mpDocuments->NumTabs(); i++)
+		for (i = 0; i < mpcContent->GetDocuments()->NumTabs(); i++)
 		{
-			mpcContent->mpDocuments->GetTab(i)->SetProject(mpExplorer->FindFileProject(mpcContent->mpDocuments->GetTab(i)->GetFileName()));
+			mpcContent->GetDocuments()->GetTab(i)->SetProject(mpExplorer->FindFileProject(mpcContent->GetDocuments()->GetTab(i)->GetFileName()));
 		}
-		mpcContent->mpDiffs->FindProjects();
-		mpcContent->mcCodeModel.StartIndexing();
-		for (i = 0; i < mpcContent->mpDocuments->NumTabs(); i++)
+		mpcContent->GetDiffs()->FindProjects();
+		mpcContent->GetCodeModel()->StartIndexing();
+		for (i = 0; i < mpcContent->GetDocuments()->NumTabs(); i++)
 		{
-			mpcContent->mpDocuments->HighlightTab(mpcContent->mpDocuments->GetTab(i));
+			mpcContent->GetDocuments()->HighlightTab(mpcContent->GetDocuments()->GetTab(i));
 		}
 	}
 	WriteWorkspace();
@@ -578,20 +578,20 @@ bool CIDESolutions::WriteWorkspace(void)
 	CChars		szFile;
 	bool		bResult;
 
-	mpcContent->mcWorkspace.SetConfiguration(mpcContent->mpBuildConfigurations->GetConfigurationName());
-	if ((mpcContent->mcWorkspace.NumSolutions() == 0) || !mpcContent->mbKeepSettings)
+	mpcContent->GetWorkspace()->SetConfiguration(mpcContent->GetBuildConfigurations()->GetConfigurationName());
+	if ((mpcContent->GetWorkspace()->NumSolutions() == 0) || !mpcContent->IsKeepingSettings())
 	{
 		//A scripted run (checking the IDE) leaves the workspace's file alone, as it does the layout.
 		return false;
 	}
-	szFile.Init(mpcContent->mcWorkspace.GetFile());
+	szFile.Init(mpcContent->GetWorkspace()->GetFile());
 	if (szFile.Empty())
 	{
-		szFile.Set(mpcContent->mcWorkspace.GetSolution(0)->mszFile);
+		szFile.Set(mpcContent->GetWorkspace()->GetSolution(0)->mszFile);
 		cFileUtil.RemoveExtension(&szFile);
 		szFile.Append(BUILD_WORKSPACE_EXTENSION);
 	}
-	bResult = mpcContent->mcWorkspace.Write(szFile.Text());
+	bResult = mpcContent->GetWorkspace()->Write(szFile.Text());
 	if (!bResult)
 	{
 		gcLogger.Error2(__METHOD__, " Could not write [", szFile.Text(), "].", NULL);
@@ -614,7 +614,7 @@ bool CIDESolutions::WriteWorkspace(void)
 //////////////////////////////////////////////////////////////////////////
 bool CIDESolutions::IsSolutionOpen(void)
 {
-	return (mpcContent->mcWorkspace.GetStartupSolution() != NULL) && mpcContent->mcWorkspace.GetStartupSolution()->mbRead;
+	return (mpcContent->GetWorkspace()->GetStartupSolution() != NULL) && mpcContent->GetWorkspace()->GetStartupSolution()->mbRead;
 }
 
 
@@ -625,7 +625,7 @@ bool CIDESolutions::IsSolutionOpen(void)
 //////////////////////////////////////////////////////////////////////////
 char* CIDESolutions::GetStartupFile(void)
 {
-	return (mpcContent->mcWorkspace.GetStartupSolution() != NULL) ? mpcContent->mcWorkspace.GetStartupSolution()->mszFile.Text() : (char*)"";
+	return (mpcContent->GetWorkspace()->GetStartupSolution() != NULL) ? mpcContent->GetWorkspace()->GetStartupSolution()->mszFile.Text() : (char*)"";
 }
 
 
@@ -638,9 +638,9 @@ char* CIDESolutions::GetStartupFile(void)
 //////////////////////////////////////////////////////////////////////////
 bool CIDESolutions::GetSettingsBaseFile(CChars* pszDest)
 {
-	if (mpcContent->mcWorkspace.GetFile()[0] != '\0')
+	if (mpcContent->GetWorkspace()->GetFile()[0] != '\0')
 	{
-		pszDest->Set(mpcContent->mcWorkspace.GetFile());
+		pszDest->Set(mpcContent->GetWorkspace()->GetFile());
 		return true;
 	}
 	if (GetStartupFile()[0] != '\0')
@@ -652,7 +652,6 @@ bool CIDESolutions::GetSettingsBaseFile(CChars* pszDest)
 }
 
 
-CBuildWorkspace* CIDESolutions::GetWorkspace(void) { return &mpcContent->mcWorkspace; }
 
 
 CBuildRecentFiles* CIDESolutions::GetRecent(void) { return &mcRecent; }
@@ -697,7 +696,7 @@ void CIDESolutions::ClearRecentSolutions(void)
 void CIDESolutions::WriteRecent(void)
 {
 	//A scripted run writes the recent solutions only to a file of its own (HCP65_IDE_RECENT).
-	if (!mszRecentFile.Empty() && (mpcContent->mbKeepSettings || (getenv("HCP65_IDE_RECENT") != NULL)) && !mcRecent.Write(mszRecentFile.Text()))
+	if (!mszRecentFile.Empty() && (mpcContent->IsKeepingSettings() || (getenv("HCP65_IDE_RECENT") != NULL)) && !mcRecent.Write(mszRecentFile.Text()))
 	{
 		gcLogger.Error2(__METHOD__, " Could not write [", mszRecentFile.Text(), "].", NULL);
 	}
@@ -716,14 +715,14 @@ void CIDESolutions::ShowRecentMenu(void)
 	CChars	szText;
 	size	i;
 
-	if (mpcContent->mpRecentMenu.IsNull())
+	if (mpcContent->GetRecentMenu().IsNull())
 	{
 		return;
 	}
-	mpcContent->mpRecentMenu->RemoveAllItems();
+	mpcContent->GetRecentMenu()->RemoveAllItems();
 	if (mcRecent.NumFiles() == 0)
 	{
-		mpcContent->mpRecentMenu->AddItem("(No recent solutions)");
+		mpcContent->GetRecentMenu()->AddItem("(No recent solutions)");
 		return;
 	}
 	szText.Init();
@@ -733,7 +732,7 @@ void CIDESolutions::ShowRecentMenu(void)
 		szText.Append((uint32)(i + 1));
 		szText.Append(' ');
 		szText.Append(mcRecent.GetFile(i));
-		mpcContent->mpRecentMenu->AddItem(szText.Text());
+		mpcContent->GetRecentMenu()->AddItem(szText.Text());
 	}
 	szText.Kill();
 }
@@ -750,13 +749,13 @@ bool CIDESolutions::RecentItemClicked(CMenuItem* pcItem)
 	Ptr<CMenuItem>	pItem;
 	size			i;
 
-	if (mpcContent->mpRecentMenu.IsNull())
+	if (mpcContent->GetRecentMenu().IsNull())
 	{
 		return false;
 	}
-	for (i = 0; (i < mpcContent->mpRecentMenu->NumItems()) && (i < mcRecent.NumFiles()); i++)
+	for (i = 0; (i < mpcContent->GetRecentMenu()->NumItems()) && (i < mcRecent.NumFiles()); i++)
 	{
-		pItem = mpcContent->mpRecentMenu->GetItem(i);
+		pItem = mpcContent->GetRecentMenu()->GetItem(i);
 		if (pcItem == &pItem)
 		{
 			OpenRecentSolution(i);
@@ -780,7 +779,7 @@ bool CIDESolutions::OpenRecentSolution(size uiIndex)
 		return false;
 	}
 	mszQueuedOpen.Set(mcRecent.GetFile(uiIndex));
-	mpcContent->mpWindow->Post(this, &CIDESolutions::OpenQueuedSolution);
+	mpcContent->GetWindow()->Post(this, &CIDESolutions::OpenQueuedSolution);
 	return true;
 }
 
@@ -812,11 +811,11 @@ void CIDESolutions::OpenQueuedSolution(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDESolutions::CreateExplorerPane(SDockPlace* psPlace)
 {
-	mpExplorer = OMalloc<CSolutionExplorer>(mpcContent->mpWindow, mpcContent->mpTheme);
-	mpExplorer->SetBoldColours(mpcContent->mpBoldColours);
+	mpExplorer = OMalloc<CSolutionExplorer>(mpcContent->GetWindow(), mpcContent->GetTheme());
+	mpExplorer->SetBoldColours(mpcContent->GetBoldColours());
 	mpExplorer->GetTree()->GetActivationEvent()->Add(this, &CIDESolutions::ExplorerActivated);
 	mpExplorer->GetTree()->SetContextMenu(CreateExplorerMenu());
-	mpExplorerTool = mpcContent->mpDock->AddPane(IDE_EXPLORER_ID, "Solution Explorer", NULL, mpExplorer->GetComponent(), DPK_Tool, psPlace);
+	mpExplorerTool = mpcContent->GetDock()->AddPane(IDE_EXPLORER_ID, "Solution Explorer", NULL, mpExplorer->GetComponent(), DPK_Tool, psPlace);
 }
 
 
@@ -828,7 +827,7 @@ void CIDESolutions::CreateExplorerPane(SDockPlace* psPlace)
 //////////////////////////////////////////////////////////////////////////
 Ptr<CMenuContainer> CIDESolutions::CreateExplorerMenu(void)
 {
-	mpExplorerMenu = OMalloc<CMenuContainer>(mpcContent->mpWindow, mpcContent->mpTheme);
+	mpExplorerMenu = OMalloc<CMenuContainer>(mpcContent->GetWindow(), mpcContent->GetTheme());
 	mpStartupItem = mpExplorerMenu->AddItem("Set as Startup Solution");
 	mpRemoveSolutionItem = mpExplorerMenu->AddItem("Remove Solution");
 	mpExplorerMenu->GetItemClickEvent()->Add(this, &CIDESolutions::ExplorerMenuItemClicked);
@@ -866,7 +865,7 @@ void CIDESolutions::ExplorerActivated(void)
 	szPath.Init();
 	if (mpExplorer->GetSelectedFilePath(&szPath))
 	{
-		mpcContent->mpDocuments->OpenFile(szPath.Text(), mpExplorer->GetNodeProject(mpExplorer->GetTree()->GetSelectedNode()));
+		mpcContent->GetDocuments()->OpenFile(szPath.Text(), mpExplorer->GetNodeProject(mpExplorer->GetTree()->GetSelectedNode()));
 	}
 	szPath.Kill();
 }
@@ -885,20 +884,20 @@ bool CIDESolutions::ShowActiveFileInExplorer(void)
 	int32				iNode;
 
 	pTree = mpExplorer->GetTree();
-	mpcContent->mpDock->Activate(mpExplorerTool);
-	if (mpcContent->mpDocuments->GetActiveTab().IsNull())
+	mpcContent->GetDock()->Activate(mpExplorerTool);
+	if (mpcContent->GetDocuments()->GetActiveTab().IsNull())
 	{
-		mpcContent->mpWindow->GetFocus()->SetFocus(pTree);
+		mpcContent->GetWindow()->GetFocus()->SetFocus(pTree);
 		return false;
 	}
-	iNode = mpExplorer->FindFilePathNode(mpcContent->mpDocuments->GetActiveTab()->GetFileName(), mpcContent->mpDocuments->GetActiveTab()->GetProject());
+	iNode = mpExplorer->FindFilePathNode(mpcContent->GetDocuments()->GetActiveTab()->GetFileName(), mpcContent->GetDocuments()->GetActiveTab()->GetProject());
 	if (iNode != TREE_NO_NODE)
 	{
 		pTree->SelectNode(iNode);
-		mpcContent->mpWindow->Layout();
+		mpcContent->GetWindow()->Layout();
 		pTree->ShowRow(pTree->FindNodeRow(iNode));
 	}
-	mpcContent->mpDock->Activate(mpcContent->mpDocuments->GetActiveTab()->GetDockPane());
+	mpcContent->GetDock()->Activate(mpcContent->GetDocuments()->GetActiveTab()->GetDockPane());
 	return iNode != TREE_NO_NODE;
 }
 

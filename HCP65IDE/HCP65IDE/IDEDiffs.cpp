@@ -167,7 +167,7 @@ bool CIDEDiffs::ShowCompareWithBranchDialog(void)
 	{
 		return false;
 	}
-	pcRepository = mpcContent->mpGitStatus->GetGit()->FindRepository(pTab->GetFileName());
+	pcRepository = mpcContent->GetGitStatus()->GetGit()->FindRepository(pTab->GetFileName());
 	if (pcRepository == NULL)
 	{
 		return gcLogger.Error2(__METHOD__, " [", pTab->GetFileName(), "] isn't in a git repository.", NULL);
@@ -192,9 +192,9 @@ bool CIDEDiffs::ShowCompareWithBranchDialog(void)
 
 	bResult = false;
 	szChosen.Init();
-	mpDialog = OMalloc<CDialog>(mpcContent->mpWindow, &mpcContent->msDialogLook, "Compare with Branch");
+	mpDialog = OMalloc<CDialog>(mpcContent->GetWindow(), mpcContent->GetDialogLook(), "Compare with Branch");
 	pcBox = &mpDialog->AddComboBox("Branch", aszItems, aszBranches.NumElements(), iSelected);
-	mpcContent->mpScript->WatchDialog(mpDialog);
+	mpcContent->GetScript()->WatchDialog(mpDialog);
 	if (mpDialog->Show(IDE_DIFF_DIALOG_WIDTH) && (pcBox->GetSelectedText() != NULL))
 	{
 		szChosen.Append(pcBox->GetSelectedText());
@@ -228,9 +228,9 @@ bool CIDEDiffs::ShowCompareWithRevisionDialog(void)
 		return false;
 	}
 	szChosen.Init();
-	mpDialog = OMalloc<CDialog>(mpcContent->mpWindow, &mpcContent->msDialogLook, "Compare with Revision");
+	mpDialog = OMalloc<CDialog>(mpcContent->GetWindow(), mpcContent->GetDialogLook(), "Compare with Revision");
 	pcField = &mpDialog->AddTextField("Revision", "HEAD~1");
-	mpcContent->mpScript->WatchDialog(mpDialog);
+	mpcContent->GetScript()->WatchDialog(mpDialog);
 	if (mpDialog->Show(IDE_DIFF_DIALOG_WIDTH))
 	{
 		szChosen.Append(pcField->GetText());
@@ -271,7 +271,7 @@ bool CIDEDiffs::ShowCompareWithFileDialog(void)
 	}
 	bResult = false;
 	szChosen.Init();
-	mpFileChooser = OMalloc<CFileChooser>(mpcContent->mpWindow, &mpcContent->msDialogLook, "Compare with File", false, pTab->GetFileName(), asTypes, sizeof(asTypes) / sizeof(SFileChooserType), mpcContent->mpFolderIcon, mpcContent->mpFileIcon);
+	mpFileChooser = OMalloc<CFileChooser>(mpcContent->GetWindow(), mpcContent->GetDialogLook(), "Compare with File", false, pTab->GetFileName(), asTypes, sizeof(asTypes) / sizeof(SFileChooserType), mpcContent->GetFolderIcon(), mpcContent->GetFileIcon());
 	if (mpFileChooser->Show())
 	{
 		szChosen.Append(mpFileChooser->GetChosen());
@@ -309,13 +309,13 @@ bool CIDEDiffs::OpenDiff(const char* szLeftFile, const char* szLeftRevision, con
 	CFileUtil			cFileUtil;
 	bool				bResult;
 
-	pView = OMalloc<CDiffView>(mpcContent->mpWindow, mpcContent->mpTheme, mpcContent->mpFontColours->GetFont(JEWEL_ICON), mpcContent->mpCodeFamily);
+	pView = OMalloc<CDiffView>(mpcContent->GetWindow(), mpcContent->GetTheme(), mpcContent->GetFontColours()->GetFont(JEWEL_ICON), mpcContent->GetCodeFamily());
 	pView->SetAlignment(CSH_Stretch, CSV_Stretch);
 	pView->GetEditor(TDS_Left)->GetTextArea()->SetTiledText(true);
 	pView->GetEditor(TDS_Left)->GetTextArea()->SetColour(JEWEL_TEXT);
 	pView->GetEditor(TDS_Right)->GetTextArea()->SetTiledText(true);
 	pView->GetEditor(TDS_Right)->GetTextArea()->SetColour(JEWEL_TEXT);
-	pDiff = OMalloc<CIDEDiffTab>(pView, szLeftFile, szLeftRevision, mpcContent->mpSolutions->GetExplorer()->FindFileProject(szLeftFile), szRightFile, szRightRevision, mpcContent->mpSolutions->GetExplorer()->FindFileProject(szRightFile));
+	pDiff = OMalloc<CIDEDiffTab>(pView, szLeftFile, szLeftRevision, mpcContent->GetSolutions()->GetExplorer()->FindFileProject(szLeftFile), szRightFile, szRightRevision, mpcContent->GetSolutions()->GetExplorer()->FindFileProject(szRightFile));
 	pcLeft = pDiff->GetSide(TDS_Left);
 	pcRight = pDiff->GetSide(TDS_Right);
 
@@ -353,12 +353,12 @@ bool CIDEDiffs::OpenDiff(const char* szLeftFile, const char* szLeftRevision, con
 		szID.Init(IDE_DIFF_PREFIX);
 		szID.Append((uint64)muiNextDiff);
 		muiNextDiff++;
-		pPane = mpcContent->mpDock->AddPane(szID.Text(), szTabTitle.Text(), mpcContent->maFileIcons.Get(CIDEIcons::GetFileType(szRightFile)), pView, DPK_Document);
+		pPane = mpcContent->GetDock()->AddPane(szID.Text(), szTabTitle.Text(), mpcContent->GetFileTypeIcon(CIDEIcons::GetFileType(szRightFile)), pView, DPK_Document);
 		szID.Kill();
 		pDiff->SetDockPane(pPane);
-		mpcContent->mpDock->Show(pPane);
+		mpcContent->GetDock()->Show(pPane);
 		mpActiveDiff = pDiff;
-		mpcContent->mpDocuments->SetActiveTab(NULL);
+		mpcContent->GetDocuments()->SetActiveTab(NULL);
 		pView->GetWindow()->GetFocus()->SetFocus(pView->GetEditor(TDS_Right)->GetTextArea());
 		szTabTitle.Kill();
 		szRightTitle.Kill();
@@ -389,7 +389,7 @@ bool CIDEDiffs::ReadDiffSide(CIDEDiffSide* pcSide, CChars* pszDest)
 	pszDest->Clear();
 	if (!pcSide->IsWorkingCopy())
 	{
-		pcRepository = mpcContent->mpGitStatus->GetGit()->FindRepository(pcSide->mszFile.Text());
+		pcRepository = mpcContent->GetGitStatus()->GetGit()->FindRepository(pcSide->mszFile.Text());
 		if (pcRepository == NULL)
 		{
 			return gcLogger.Error2(__METHOD__, " [", pcSide->mszFile.Text(), "] isn't in a git repository.", NULL);
@@ -407,7 +407,7 @@ bool CIDEDiffs::ReadDiffSide(CIDEDiffSide* pcSide, CChars* pszDest)
 		return gcLogger.Error2(__METHOD__, " [", pcSide->mszFile.Text(), "] isn't in [", pcSide->mszRevision.Text(), "].", NULL);
 	}
 
-	pTab = mpcContent->mpDocuments->FindTab(pcSide->mszFile.Text());
+	pTab = mpcContent->GetDocuments()->FindTab(pcSide->mszFile.Text());
 	if (pTab.IsNotNull())
 	{
 		pszDest->Append(pTab->GetEditor()->GetText());
@@ -524,7 +524,7 @@ int64 CIDEDiffs::PollDiffs(int64 iNow)
 			pcSide = pDiff->GetSide((ETextDiffSide)iSide);
 			if (pcSide->IsWorkingCopy())
 			{
-				pTab = mpcContent->mpDocuments->FindTab(pcSide->mszFile.Text());
+				pTab = mpcContent->GetDocuments()->FindTab(pcSide->mszFile.Text());
 				if (pTab.IsNotNull() && (pTab->GetEditor()->GetChangeCount() != pcSide->muiSeenChanges))
 				{
 					pcSide->muiSeenChanges = pTab->GetEditor()->GetChangeCount();
@@ -569,7 +569,7 @@ void CIDEDiffs::RefreshMovedDiffs(void)
 			pcSide = pDiff->GetSide((ETextDiffSide)iSide);
 			if (!pcSide->IsWorkingCopy())
 			{
-				pcRepository = mpcContent->mpGitStatus->GetGit()->FindRepository(pcSide->mszFile.Text());
+				pcRepository = mpcContent->GetGitStatus()->GetGit()->FindRepository(pcSide->mszFile.Text());
 				if (pcRepository && !pcSide->mszHead.Equals(pcRepository->GetStatus()->GetHead()))
 				{
 					bMoved = true;
@@ -602,7 +602,7 @@ void CIDEDiffs::HighlightDiffSide(Ptr<CDiffView> pView, ETextDiffSide eSide, siz
 	}
 	acHighlights.Init();
 	szErrors.Init();
-	if (mpcContent->mcCodeModel.Highlight(uiProject, szFileName, szText, &acHighlights, &szErrors))
+	if (mpcContent->GetCodeModel()->Highlight(uiProject, szFileName, szText, &acHighlights, &szErrors))
 	{
 		ApplyIDEHighlights(pView->GetEditor(eSide)->GetTextArea(), &acHighlights);
 	}
@@ -619,13 +619,13 @@ void CIDEDiffs::HighlightDiffSide(Ptr<CDiffView> pView, ETextDiffSide eSide, siz
 //////////////////////////////////////////////////////////////////////////
 Ptr<CIDEEditorTab> CIDEDiffs::GetComparedTab(void)
 {
-	if (mpcContent->mpDocuments->GetActiveTab().IsNotNull())
+	if (mpcContent->GetDocuments()->GetActiveTab().IsNotNull())
 	{
-		return mpcContent->mpDocuments->GetActiveTab();
+		return mpcContent->GetDocuments()->GetActiveTab();
 	}
 	if (mpActiveDiff.IsNotNull())
 	{
-		return mpcContent->mpDocuments->FindTab(mpActiveDiff->GetSide(TDS_Right)->mszFile.Text());
+		return mpcContent->GetDocuments()->FindTab(mpActiveDiff->GetSide(TDS_Right)->mszFile.Text());
 	}
 	return NULL;
 }
@@ -699,7 +699,7 @@ void CIDEDiffs::CloseAllDiffs(void)
 	{
 		if (i <= maDiffTabs.Size())
 		{
-			mpcContent->mpDock->Close(maDiffTabs.Get(i - 1)->GetDockPane());
+			mpcContent->GetDock()->Close(maDiffTabs.Get(i - 1)->GetDockPane());
 		}
 	}
 }
@@ -719,7 +719,7 @@ void CIDEDiffs::FindProjects(void)
 	for (i = 0; i < maDiffTabs.Size(); i++)
 	{
 		pDiff = maDiffTabs.Get(i);
-		pDiff->GetSide(TDS_Left)->muiProject = mpcContent->mpSolutions->GetExplorer()->FindFileProject(pDiff->GetSide(TDS_Left)->mszFile.Text());
-		pDiff->GetSide(TDS_Right)->muiProject = mpcContent->mpSolutions->GetExplorer()->FindFileProject(pDiff->GetSide(TDS_Right)->mszFile.Text());
+		pDiff->GetSide(TDS_Left)->muiProject = mpcContent->GetSolutions()->GetExplorer()->FindFileProject(pDiff->GetSide(TDS_Left)->mszFile.Text());
+		pDiff->GetSide(TDS_Right)->muiProject = mpcContent->GetSolutions()->GetExplorer()->FindFileProject(pDiff->GetSide(TDS_Right)->mszFile.Text());
 	}
 }

@@ -37,7 +37,6 @@ class CIDEContent;
 //saved, closed, coloured and indexed again from the editor as it changes; and the caret's place in the active one.
 class CIDEDocuments : public CObject
 {
-friend class CIDEContent;
 friend class CIDEScript;
 CONSTRUCTABLE(CIDEDocuments);
 DESTRUCTABLE(CIDEDocuments);

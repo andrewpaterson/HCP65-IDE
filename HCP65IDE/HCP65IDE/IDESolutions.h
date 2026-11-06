@@ -39,7 +39,6 @@ class CIDEContent;
 //files are in, and the settings files kept beside the startup solution.
 class CIDESolutions : public CObject
 {
-friend class CIDEContent;
 friend class CIDEScript;
 CONSTRUCTABLE(CIDESolutions);
 DESTRUCTABLE(CIDESolutions);
@@ -79,25 +78,24 @@ public:
 	bool			SetStartupSolution(size uiSolution);
 	bool			ShowOpenSolutionDialog(void);
 	bool			ShowAddSolutionDialog(void);
-	CBuildWorkspace*	GetWorkspace(void);
 	void			SetRecentFile(const char* szFile);
 	void			ClearRecentSolutions(void);
 	bool			OpenRecentSolution(size uiIndex);
-	CBuildRecentFiles*	GetRecent(void);
-	void				OpenQueuedSolution(void);
 	bool				IsSolutionOpen(void);
 	bool				WriteWorkspace(void);
 	bool				GetSettingsBaseFile(CChars* pszDest);
 	char*				GetStartupFile(void);
+	void				ShowRecentMenu(void);
+	bool				RecentItemClicked(CMenuItem* pcItem);
 
 protected:
-	void				ShowRecentMenu(void);
 	Ptr<CMenuContainer>	CreateExplorerMenu(void);
 	void				ExplorerMenuItemClicked(CMenuItem* pcItem);
 	void				WriteRecent(void);
-	bool				RecentItemClicked(CMenuItem* pcItem);
 	void				LetGoOfWorkspace(void);
 	void				WorkspaceChanged(bool bReindex);
+	CBuildRecentFiles*	GetRecent(void);
+	void				OpenQueuedSolution(void);
 };
 
 

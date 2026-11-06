@@ -109,10 +109,10 @@ bool CIDEDocuments::OpenFile(const char* szFileName, size uiProject)
 	{
 		return false;
 	}
-	mpcContent->mpDock->Activate(pTab->GetDockPane());
+	mpcContent->GetDock()->Activate(pTab->GetDockPane());
 	mpActive = pTab;
-	mpcContent->mpDiffs->SetActiveDiff(NULL);
-	mpcContent->mpGitStatus->ShowBranch();
+	mpcContent->GetDiffs()->SetActiveDiff(NULL);
+	mpcContent->GetGitStatus()->ShowBranch();
 	return true;
 }
 
@@ -146,20 +146,20 @@ Ptr<CIDEEditorTab> CIDEDocuments::OpenFileTab(const char* szFileName, size uiPro
 		gcLogger.Error2(__METHOD__, " Could not read [", szFileName, "].", NULL);
 		return NULL;
 	}
-	pTab = OMalloc<CIDEEditorTab>(mpcContent->mpWindow, mpcContent->mpTheme, mpcContent->mpFontColours->GetFont(JEWEL_ICON), mpcContent->mpCodeFamily, JEWEL_TEXT, szFileName, uiProject, cFile.Text());
+	pTab = OMalloc<CIDEEditorTab>(mpcContent->GetWindow(), mpcContent->GetTheme(), mpcContent->GetFontColours()->GetFont(JEWEL_ICON), mpcContent->GetCodeFamily(), JEWEL_TEXT, szFileName, uiProject, cFile.Text());
 	cFile.Kill();
 	maTabs.Add(pTab);
 	HighlightTab(pTab);
-	if (mpcContent->mpBuilding->GetListings()->NumListings() > 0)
+	if (mpcContent->GetBuilding()->GetListings()->NumListings() > 0)
 	{
-		pTab->SetListings(mpcContent->mpBuilding->GetListings());
+		pTab->SetListings(mpcContent->GetBuilding()->GetListings());
 	}
 
 	szName.Init();
 	cFileUtil.GetFileName(&szName, (char*)szFileName);
 	szID.Init(IDE_DOCUMENT_PREFIX);
 	szID.Append(szFileName);
-	pPane = mpcContent->mpDock->AddPane(szID.Text(), szName.Text(), mpcContent->maFileIcons.Get(CIDEIcons::GetFileType(szFileName)), pTab->GetPane(), DPK_Document, NULL, bShow);
+	pPane = mpcContent->GetDock()->AddPane(szID.Text(), szName.Text(), mpcContent->GetFileTypeIcon(CIDEIcons::GetFileType(szFileName)), pTab->GetPane(), DPK_Document, NULL, bShow);
 	szID.Kill();
 	szName.Kill();
 	pTab->SetDockPane(pPane);
@@ -168,14 +168,14 @@ Ptr<CIDEEditorTab> CIDEDocuments::OpenFileTab(const char* szFileName, size uiPro
 	pPane->SetFocusTarget(pTab->GetEditor());
 
 	//The right button: Rename and Refactor.
-	pTab->GetEditor()->SetContextMenu(mpcContent->mpEditorMenu);
-	pTab->GetCodeEditor()->GetChangeBarClickEvent()->Add(&mpcContent->mpGitStatus, &CIDEGitStatus::ChangeBarClicked);
-	pTab->GetCodeEditor()->GetGlyphClickEvent()->Add(&mpcContent->mpDebugging, &CIDEDebugging::GlyphClicked);
-	pTab->GetEditor()->GetUndoEvent()->Add(&mpcContent->mpEdit, &CIDEEdit::EditorUndoChanged);
-	mpcContent->mpDebugging->ShowBreakpoints(pTab);
-	mpcContent->mpGitStatus->ReadGitBase(pTab);
-	mpcContent->mpGitStatus->UpdateChangeBars(pTab);
-	pPane->SetTabFont(GetGitStateFont(mpcContent->mpFontColours, pTab->GetGitState()));
+	pTab->GetEditor()->SetContextMenu(mpcContent->GetEditorMenu());
+	pTab->GetCodeEditor()->GetChangeBarClickEvent()->Add(&mpcContent->GetGitStatus(), &CIDEGitStatus::ChangeBarClicked);
+	pTab->GetCodeEditor()->GetGlyphClickEvent()->Add(&mpcContent->GetDebugging(), &CIDEDebugging::GlyphClicked);
+	pTab->GetEditor()->GetUndoEvent()->Add(&mpcContent->GetEdit(), &CIDEEdit::EditorUndoChanged);
+	mpcContent->GetDebugging()->ShowBreakpoints(pTab);
+	mpcContent->GetGitStatus()->ReadGitBase(pTab);
+	mpcContent->GetGitStatus()->UpdateChangeBars(pTab);
+	pPane->SetTabFont(GetGitStateFont(mpcContent->GetFontColours(), pTab->GetGitState()));
 	return pTab;
 }
 
@@ -194,7 +194,7 @@ bool CIDEDocuments::CloseFile(const char* szFileName)
 	{
 		return false;
 	}
-	return mpcContent->mpDock->Close(pTab->GetDockPane());
+	return mpcContent->GetDock()->Close(pTab->GetDockPane());
 }
 
 
@@ -212,10 +212,10 @@ void CIDEDocuments::CloseAllFiles(void)
 	{
 		if (i <= maTabs.Size())
 		{
-			mpcContent->mpDock->Close(maTabs.Get(i - 1)->GetDockPane());
+			mpcContent->GetDock()->Close(maTabs.Get(i - 1)->GetDockPane());
 		}
 	}
-	mpcContent->mpDiffs->CloseAllDiffs();
+	mpcContent->GetDiffs()->CloseAllDiffs();
 }
 
 
@@ -236,7 +236,7 @@ bool CIDEDocuments::SaveFile(Ptr<CIDEEditorTab> pTab)
 	{
 		return gcLogger.Error2(__METHOD__, " Could not save [", pTab->GetFileName(), "].", NULL);
 	}
-	mpcContent->mpGitStatus->GitFileSaved(pTab->GetFileName());
+	mpcContent->GetGitStatus()->GitFileSaved(pTab->GetFileName());
 	return true;
 }
 
@@ -296,7 +296,7 @@ void CIDEDocuments::HighlightTab(Ptr<CIDEEditorTab> pTab)
 	}
 	acHighlights.Init();
 	szErrors.Init();
-	if (mpcContent->mcCodeModel.Highlight(pTab->GetProject(), pTab->GetFileName(), pTab->IsEdited() ? pTab->GetEditor()->GetText() : NULL, &acHighlights, &szErrors))
+	if (mpcContent->GetCodeModel()->Highlight(pTab->GetProject(), pTab->GetFileName(), pTab->IsEdited() ? pTab->GetEditor()->GetText() : NULL, &acHighlights, &szErrors))
 	{
 		pTab->SetHighlights(&acHighlights);
 	}
@@ -317,7 +317,7 @@ void CIDEDocuments::ReindexAll(void)
 	size	i;
 
 	TakeEditedFiles(true);
-	mpcContent->mcCodeModel.ReindexAll();
+	mpcContent->GetCodeModel()->ReindexAll();
 	for (i = 0; i < maTabs.Size(); i++)
 	{
 		if (maTabs.Get(i)->IsEdited())
@@ -382,7 +382,7 @@ int64 CIDEDocuments::GiveEditedTabs(int64 iNow, bool bNow)
 		return IDE_EDITS_POLL;
 	}
 
-	bIndexing = mpcContent->mcCodeModel.IsIndexing();
+	bIndexing = mpcContent->GetCodeModel()->IsIndexing();
 	iSoonest = -1;
 	apsFiles.Init();
 	for (i = 0; i < maTabs.Size(); i++)
@@ -420,7 +420,7 @@ int64 CIDEDocuments::GiveEditedTabs(int64 iNow, bool bNow)
 
 	if (apsFiles.NumElements() > 0)
 	{
-		mpcContent->mcCodeModel.ProcessEditedFiles(&apsFiles, bNow);
+		mpcContent->GetCodeModel()->ProcessEditedFiles(&apsFiles, bNow);
 		if (bNow)
 		{
 			TakeEditedFiles(true);
@@ -445,14 +445,14 @@ void CIDEDocuments::ReindexDiscarded(Ptr<CIDEEditorTab> pTab)
 {
 	CArrayIDEEditedFiles	apsFiles;
 
-	if ((pTab->GetProject() == MAX_SIZE) || mpcContent->mcCodeModel.IsIndexing())
+	if ((pTab->GetProject() == MAX_SIZE) || mpcContent->GetCodeModel()->IsIndexing())
 	{
 		return;
 	}
 	TakeEditedFiles(true);
 	apsFiles.Init();
 	AddEditedFile(pTab->GetProject(), pTab->GetFileName(), NULL, 0, false, true, &apsFiles);
-	mpcContent->mcCodeModel.ProcessEditedFiles(&apsFiles, false);
+	mpcContent->GetCodeModel()->ProcessEditedFiles(&apsFiles, false);
 	apsFiles.Kill();
 }
 
@@ -484,9 +484,9 @@ void CIDEDocuments::AddEditedFile(size uiProject, const char* szFileName, const 
 	psFile->Init(uiProject, szFileName, szText, uiChanges, bHighlight, bIndex);
 	if ((eType == IFT_Header) && bIndex)
 	{
-		mpcContent->mcCodeModel.SetHeaderText(szFileName, szText);
+		mpcContent->GetCodeModel()->SetHeaderText(szFileName, szText);
 		szUnit.Init();
-		if (mpcContent->mcCodeModel.GetIncluder(szFileName, &uiUnitProject, &szUnit))
+		if (mpcContent->GetCodeModel()->GetIncluder(szFileName, &uiUnitProject, &szUnit))
 		{
 			pUnitTab = FindTab(szUnit.Text());
 			psFile->SetUnit(uiUnitProject, szUnit.Text(), pUnitTab.IsNotNull() ? pUnitTab->GetEditor()->GetText() : NULL);
@@ -516,7 +516,7 @@ bool CIDEDocuments::TakeEditedFiles(bool bWait)
 	size					i;
 
 	apsFiles.Init();
-	if (!mpcContent->mcCodeModel.TakeEditedFiles(&apsFiles, bWait))
+	if (!mpcContent->GetCodeModel()->TakeEditedFiles(&apsFiles, bWait))
 	{
 		apsFiles.Kill();
 		return false;
@@ -647,7 +647,7 @@ bool CIDEDocuments::OpenLocation(SIDELocation* psLocation)
 {
 	size	uiProject;
 
-	uiProject = mpcContent->mcCodeModel.FindProjectOfFile(psLocation->szFileName.Text());
+	uiProject = mpcContent->GetCodeModel()->FindProjectOfFile(psLocation->szFileName.Text());
 	if ((uiProject == MAX_SIZE) && mpActive.IsNotNull())
 	{
 		uiProject = mpActive->GetProject();
@@ -726,11 +726,11 @@ bool CIDEDocuments::FindSymbolAtCaret(CArrayIDELocations* pasDest, CChars* pszKe
 	}
 	uiLine = pEditor->FindLine(uiStart);
 	iColumn = (int)(uiStart - pEditor->GetLineStart(uiLine));
-	if (mpcContent->mcCodeModel.FindReferences(mpActive->GetFileName(), (int)uiLine, iColumn, pasDest, pszKey))
+	if (mpcContent->GetCodeModel()->FindReferences(mpActive->GetFileName(), (int)uiLine, iColumn, pasDest, pszKey))
 	{
 		return true;
 	}
-	return !bSelected && (iColumn > 0) && mpcContent->mcCodeModel.FindReferences(mpActive->GetFileName(), (int)uiLine, iColumn - 1, pasDest, pszKey);
+	return !bSelected && (iColumn > 0) && mpcContent->GetCodeModel()->FindReferences(mpActive->GetFileName(), (int)uiLine, iColumn - 1, pasDest, pszKey);
 }
 
 

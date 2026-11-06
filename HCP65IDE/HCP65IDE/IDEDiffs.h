@@ -38,7 +38,6 @@ class CIDEContent;
 //files: edits in their editors, and new commits.
 class CIDEDiffs : public CObject
 {
-friend class CIDEContent;
 friend class CIDEScript;
 CONSTRUCTABLE(CIDEDiffs);
 DESTRUCTABLE(CIDEDiffs);
@@ -72,14 +71,14 @@ public:
 	void				FindProjects(void);
 	void				RefreshDiff(Ptr<CIDEDiffTab> pDiff);
 	void				RefreshMovedDiffs(void);
+	int64				PollDiffs(int64 iNow);
+	Ptr<CIDEDiffTab>	FindDiffTab(CDockPane* pcPane);
 
 protected:
 	void				HighlightDiffSide(Ptr<CDiffView> pView, ETextDiffSide eSide, size uiProject, const char* szFileName, const char* szText);
 	Ptr<CIDEEditorTab>	GetComparedTab(void);
 	bool				ReadDiffSide(CIDEDiffSide* pcSide, CChars* pszDest);
 	void				MakeDiffTitle(CIDEDiffSide* pcSide, CIDEDiffSide* pcOther, CChars* pszDest);
-	int64				PollDiffs(int64 iNow);
-	Ptr<CIDEDiffTab>	FindDiffTab(CDockPane* pcPane);
 };
 
 

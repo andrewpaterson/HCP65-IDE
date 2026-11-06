@@ -169,7 +169,7 @@ bool CIDEAskClaude::AskClaude(const char* szRequest)
 		mpClaudePane->SetStatus("Open a solution or a file first: Claude works in its folder.");
 		return false;
 	}
-	if (!mpcContent->mpDocuments->SaveAllFiles())
+	if (!mpcContent->GetDocuments()->SaveAllFiles())
 	{
 		szDirectory.Kill();
 		mpClaudePane->SetStatus("Claude wasn't asked: a file couldn't be saved.");
@@ -193,7 +193,7 @@ bool CIDEAskClaude::AskClaude(const char* szRequest)
 		return false;
 	}
 	mpClaudePane->SetStatus("Claude is working.");
-	mpcContent->mpWindow->RequestTick(IDE_CLAUDE_POLL);
+	mpcContent->GetWindow()->RequestTick(IDE_CLAUDE_POLL);
 	return true;
 }
 
@@ -208,13 +208,13 @@ bool CIDEAskClaude::GetClaudeDirectory(CChars* pszDirectory)
 {
 	CFileUtil	cFileUtil;
 
-	if (mpcContent->mpSolutions->IsSolutionOpen())
+	if (mpcContent->GetSolutions()->IsSolutionOpen())
 	{
-		pszDirectory->Append(mpcContent->mpSolutions->GetStartupFile());
+		pszDirectory->Append(mpcContent->GetSolutions()->GetStartupFile());
 	}
-	else if (mpcContent->mpDocuments->GetActiveTab().IsNotNull())
+	else if (mpcContent->GetDocuments()->GetActiveTab().IsNotNull())
 	{
-		pszDirectory->Append(mpcContent->mpDocuments->GetActiveTab()->GetFileName());
+		pszDirectory->Append(mpcContent->GetDocuments()->GetActiveTab()->GetFileName());
 	}
 	else
 	{
@@ -242,13 +242,13 @@ void CIDEAskClaude::AppendClaudeContext(CChars* pszRequest)
 	size			uiFirst;
 	size			uiLast;
 
-	if (mpcContent->mpDocuments->GetActiveTab().IsNull())
+	if (mpcContent->GetDocuments()->GetActiveTab().IsNull())
 	{
 		return;
 	}
-	pEditor = mpcContent->mpDocuments->GetActiveTab()->GetEditor();
+	pEditor = mpcContent->GetDocuments()->GetActiveTab()->GetEditor();
 
-	szFile.Init(mpcContent->mpDocuments->GetActiveTab()->GetFileName());
+	szFile.Init(mpcContent->GetDocuments()->GetActiveTab()->GetFileName());
 	cFileUtil.FullPath(&szFile);
 	pszRequest->Append("\n\n(From the HCP65 IDE: the file open in the editor is ");
 	pszRequest->Append(szFile);
@@ -374,7 +374,7 @@ void CIDEAskClaude::ReloadClaudeFiles(bool bAll)
 	size				i;
 
 	//Every file read again is one edit for undo: undoing any of them undoes them all.
-	mpcContent->mpEdit->BeginUndoGroup();
+	mpcContent->GetEdit()->BeginUndoGroup();
 	paszChanged = mcClaude.GetChangedFiles();
 	for (; muiClaudeReloaded < paszChanged->NumElements(); muiClaudeReloaded++)
 	{
@@ -387,12 +387,12 @@ void CIDEAskClaude::ReloadClaudeFiles(bool bAll)
 
 	if (bAll)
 	{
-		for (i = 0; i < mpcContent->mpDocuments->NumTabs(); i++)
+		for (i = 0; i < mpcContent->GetDocuments()->NumTabs(); i++)
 		{
-			ReloadClaudeFile(mpcContent->mpDocuments->GetTab(i));
+			ReloadClaudeFile(mpcContent->GetDocuments()->GetTab(i));
 		}
 	}
-	mpcContent->mpEdit->EndUndoGroup();
+	mpcContent->GetEdit()->EndUndoGroup();
 }
 
 
@@ -435,7 +435,7 @@ bool CIDEAskClaude::ReloadClaudeFile(Ptr<CIDEEditorTab> pTab)
 
 	pTab->Reload(cFile.Text());
 	cFile.Kill();
-	mpcContent->mpGitStatus->GitFileSaved(pTab->GetFileName());
+	mpcContent->GetGitStatus()->GitFileSaved(pTab->GetFileName());
 	szNote.Append(" read again.");
 	mpClaudePane->AppendNote(szNote.Text(), false);
 	szNote.Kill();
@@ -460,9 +460,9 @@ Ptr<CIDEEditorTab> CIDEAskClaude::FindClaudeTab(const char* szFileName)
 	szWanted.Init(szFileName);
 	szWanted.Replace('/', '\\');
 	bFound = false;
-	for (i = 0; i < mpcContent->mpDocuments->NumTabs(); i++)
+	for (i = 0; i < mpcContent->GetDocuments()->NumTabs(); i++)
 	{
-		szTab.Init(mpcContent->mpDocuments->GetTab(i)->GetFileName());
+		szTab.Init(mpcContent->GetDocuments()->GetTab(i)->GetFileName());
 		cFileUtil.FullPath(&szTab);
 		szTab.Replace('/', '\\');
 		bFound = StringInsensitiveCompare(szTab.Text(), szWanted.Text()) == 0;
@@ -473,7 +473,7 @@ Ptr<CIDEEditorTab> CIDEAskClaude::FindClaudeTab(const char* szFileName)
 		}
 	}
 	szWanted.Kill();
-	return bFound ? mpcContent->mpDocuments->GetTab(i) : Ptr<CIDEEditorTab>();
+	return bFound ? mpcContent->GetDocuments()->GetTab(i) : Ptr<CIDEEditorTab>();
 }
 
 
@@ -514,7 +514,7 @@ bool SameIDEText(const char* szText1, const char* szText2)
 //////////////////////////////////////////////////////////////////////////
 void CIDEAskClaude::ShowClaudeTab(void)
 {
-	mpcContent->mpDock->Show(mpClaudeTool);
+	mpcContent->GetDock()->Show(mpClaudeTool);
 }
 
 
@@ -531,11 +531,11 @@ Ptr<CDockPane> CIDEAskClaude::GetTool(void) { return mpClaudeTool; }
 //////////////////////////////////////////////////////////////////////////
 void CIDEAskClaude::CreatePane(SDockPlace* psPlace)
 {
-	mpClaudePane = OMalloc<CIDEClaudePane>(mpcContent->mpWindow, mpcContent->mpTheme, mpcContent->mpFontColours->GetFont(JEWEL_ICON), mpcContent->mpCodeFamily);
+	mpClaudePane = OMalloc<CIDEClaudePane>(mpcContent->GetWindow(), mpcContent->GetTheme(), mpcContent->GetFontColours()->GetFont(JEWEL_ICON), mpcContent->GetCodeFamily());
 	mpClaudePane->GetSendButton()->GetClickEvent()->Add(this, &CIDEAskClaude::ClaudeSendClicked);
 	mpClaudePane->GetStopButton()->GetClickEvent()->Add(this, &CIDEAskClaude::ClaudeStopClicked);
 	mpClaudePane->GetNewButton()->GetClickEvent()->Add(this, &CIDEAskClaude::ClaudeNewClicked);
-	mpClaudeTool = mpcContent->mpDock->AddPane(IDE_CLAUDE_ID, "Claude", NULL, mpClaudePane->GetComponent(), DPK_Tool, psPlace);
+	mpClaudeTool = mpcContent->GetDock()->AddPane(IDE_CLAUDE_ID, "Claude", NULL, mpClaudePane->GetComponent(), DPK_Tool, psPlace);
 }
 
 

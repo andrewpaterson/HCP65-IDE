@@ -115,9 +115,9 @@ void CIDENavigator::FindGoToFiles(void)
 	maiGoToProjects.ReInit();
 	mcGoToFileSet.Kill();
 	mcGoToFileSet.Init();
-	for (i = 0; i < mpcContent->mcWorkspace.NumProjects(); i++)
+	for (i = 0; i < mpcContent->GetWorkspace()->NumProjects(); i++)
 	{
-		pcProject = mpcContent->mcWorkspace.GetSolutionProject(i)->GetProject();
+		pcProject = mpcContent->GetWorkspace()->GetSolutionProject(i)->GetProject();
 		if (pcProject == NULL)
 		{
 			continue;
@@ -171,8 +171,8 @@ void CIDENavigator::GoToSearch(size uiTab, CNameMatcher* pcMatcher, CGoToItems* 
 
 	if (uiTab != IDE_GO_TO_FILE)
 	{
-		mpcContent->mpDocuments->UpdateEditedTabsNow();
-		mpcContent->mcCodeModel.FindGoToSymbols(pcMatcher, uiTab == IDE_GO_TO_CLASS, &mcGoToFileSet, maiGoToSymbolIcons, pcDest);
+		mpcContent->GetDocuments()->UpdateEditedTabsNow();
+		mpcContent->GetCodeModel()->FindGoToSymbols(pcMatcher, uiTab == IDE_GO_TO_CLASS, &mcGoToFileSet, maiGoToSymbolIcons, pcDest);
 		return;
 	}
 
@@ -209,7 +209,7 @@ Ptr<CMenuContainer> CIDENavigator::CreateNavigateMenu(void)
 {
 	Ptr<CMenuContainer>	pMenu;
 
-	pMenu = OMalloc<CMenuContainer>(mpcContent->mpWindow, mpcContent->mpTheme);
+	pMenu = OMalloc<CMenuContainer>(mpcContent->GetWindow(), mpcContent->GetTheme());
 	mpGoToClassItem = pMenu->AddItem("Class...");
 	mpGoToClassItem->SetShortcut("Ctrl+N");
 	mpGoToFileItem = pMenu->AddItem("File...");
@@ -238,13 +238,13 @@ bool CIDENavigator::ShowGoTo(size uiTab)
 		return false;
 	}
 	bResult = false;
-	mpcContent->mpScript->WatchDialog(mpGoTo->GetDialog());
+	mpcContent->GetScript()->WatchDialog(mpGoTo->GetDialog());
 	if (mpGoTo->Show())
 	{
 		bResult = OpenGoToChoice();
 	}
 	mszGoToPattern.Set(mpGoTo->GetPattern());
-	mpcContent->mpScript->StopWatchingDialog();
+	mpcContent->GetScript()->StopWatchingDialog();
 	mpGoTo = NULL;
 	return bResult;
 }
@@ -259,7 +259,7 @@ bool CIDENavigator::ShowGoTo(size uiTab)
 void CIDENavigator::QueueGoTo(size uiTab)
 {
 	miQueuedGoTo = (int32)uiTab;
-	mpcContent->mpWindow->Post(this, &CIDENavigator::ShowQueuedGoTo);
+	mpcContent->GetWindow()->Post(this, &CIDENavigator::ShowQueuedGoTo);
 }
 
 
@@ -283,25 +283,25 @@ bool CIDENavigator::CreateGoTo(size uiTab)
 	size	i;
 
 	FindGoToFiles();
-	mpGoTo = OMalloc<CGoToDialog>(mpcContent->mpWindow, &mpcContent->msDialogLook, "Go To", this, mpcContent->mpMatchFont);
+	mpGoTo = OMalloc<CGoToDialog>(mpcContent->GetWindow(), mpcContent->GetDialogLook(), "Go To", this, mpcContent->GetMatchFont());
 	mpGoTo->AddTab("Classes");
 	mpGoTo->AddTab("Files");
 	mpGoTo->AddTab("Symbols");
 	miGoToFileIcon = -1;
-	for (i = 0; i < mpcContent->maFileIcons.Size(); i++)
+	for (i = 0; i < mpcContent->NumFileTypeIcons(); i++)
 	{
 		if (i == 0)
 		{
-			miGoToFileIcon = mpGoTo->AddIcon(mpcContent->maFileIcons.Get(i));
+			miGoToFileIcon = mpGoTo->AddIcon(mpcContent->GetFileTypeIcon(i));
 		}
 		else
 		{
-			mpGoTo->AddIcon(mpcContent->maFileIcons.Get(i));
+			mpGoTo->AddIcon(mpcContent->GetFileTypeIcon(i));
 		}
 	}
 	for (i = 0; i < IST_Count; i++)
 	{
-		maiGoToSymbolIcons[i] = mpGoTo->AddIcon(mpcContent->maSymbolIcons.Get(i));
+		maiGoToSymbolIcons[i] = mpGoTo->AddIcon(mpcContent->GetSymbolIcon(i));
 	}
 	mpGoTo->Start(uiTab, mszGoToPattern.Text());
 	return true;
@@ -332,19 +332,19 @@ bool CIDENavigator::OpenGoToChoice(void)
 		{
 			return false;
 		}
-		bResult = mpcContent->mpDocuments->OpenFile(maszGoToFiles.GetText(psItem->uiData), (size)maiGoToProjects.GetValue(psItem->uiData));
+		bResult = mpcContent->GetDocuments()->OpenFile(maszGoToFiles.GetText(psItem->uiData), (size)maiGoToProjects.GetValue(psItem->uiData));
 		if (bResult)
 		{
 			if (iLine > 0)
 			{
-				mpcContent->mpDocuments->SetCaretPlace(iLine - 1, 0);
+				mpcContent->GetDocuments()->SetCaretPlace(iLine - 1, 0);
 			}
-			mpcContent->mpDocuments->GetActiveTab()->GetEditor()->GetWindow()->GetFocus()->SetFocus(mpcContent->mpDocuments->GetActiveTab()->GetEditor());
+			mpcContent->GetDocuments()->GetActiveTab()->GetEditor()->GetWindow()->GetFocus()->SetFocus(mpcContent->GetDocuments()->GetActiveTab()->GetEditor());
 		}
 		return bResult;
 	}
 
-	if (!mpcContent->mcCodeModel.GetSymbolLocation(psItem->uiData, &sLocation))
+	if (!mpcContent->GetCodeModel()->GetSymbolLocation(psItem->uiData, &sLocation))
 	{
 		return false;
 	}
@@ -353,7 +353,7 @@ bool CIDENavigator::OpenGoToChoice(void)
 		sLocation.iLine = iLine - 1;
 		sLocation.iColumn = 0;
 	}
-	bResult = mpcContent->mpDocuments->OpenLocation(&sLocation);
+	bResult = mpcContent->GetDocuments()->OpenLocation(&sLocation);
 	sLocation.szFileName.Kill();
 	return bResult;
 }
@@ -398,12 +398,12 @@ bool CIDENavigator::GetIncludeAtCaret(CChars* pszName, bool* pbSystem)
 	int			iLine;
 	int			iColumn;
 
-	if (!mpcContent->mpDocuments->GetCaretPlace(&iLine, &iColumn))
+	if (!mpcContent->GetDocuments()->GetCaretPlace(&iLine, &iColumn))
 	{
 		return false;
 	}
 	szLine.Init();
-	mpcContent->mpDocuments->GetFileLine(mpcContent->mpDocuments->GetActiveTab()->GetFileName(), iLine, &szLine);
+	mpcContent->GetDocuments()->GetFileLine(mpcContent->GetDocuments()->GetActiveTab()->GetFileName(), iLine, &szLine);
 	szText = szLine.Text();
 	bResult = false;
 	if (szText[0] == '#')
@@ -459,7 +459,7 @@ bool CIDENavigator::FindIncludedFile(CChars* pszDest)
 	{
 		return false;
 	}
-	bFound = mpcContent->mcCodeModel.FindIncludeFile(mpcContent->mpDocuments->GetActiveTab()->GetProject(), mpcContent->mpDocuments->GetActiveTab()->GetFileName(), szName.Text(), bSystem, pszDest);
+	bFound = mpcContent->GetCodeModel()->FindIncludeFile(mpcContent->GetDocuments()->GetActiveTab()->GetProject(), mpcContent->GetDocuments()->GetActiveTab()->GetFileName(), szName.Text(), bSystem, pszDest);
 	if (!bFound)
 	{
 		//A solution file whose path ends with it.
@@ -494,17 +494,17 @@ bool CIDENavigator::GoToSource(void)
 	CChars	szFile;
 	bool	bResult;
 
-	if (mpcContent->mpDocuments->GetActiveTab().IsNull())
+	if (mpcContent->GetDocuments()->GetActiveTab().IsNull())
 	{
 		return false;
 	}
 	szFile.Init();
 	if (FindIncludedFile(&szFile))
 	{
-		bResult = mpcContent->mpDocuments->OpenFile(szFile.Text(), mpcContent->mcCodeModel.FindProjectOfFile(szFile.Text()) != MAX_SIZE ? mpcContent->mcCodeModel.FindProjectOfFile(szFile.Text()) : mpcContent->mpDocuments->GetActiveTab()->GetProject());
+		bResult = mpcContent->GetDocuments()->OpenFile(szFile.Text(), mpcContent->GetCodeModel()->FindProjectOfFile(szFile.Text()) != MAX_SIZE ? mpcContent->GetCodeModel()->FindProjectOfFile(szFile.Text()) : mpcContent->GetDocuments()->GetActiveTab()->GetProject());
 		if (bResult)
 		{
-			mpcContent->mpWindow->GetFocus()->SetFocus(mpcContent->mpDocuments->GetActiveTab()->GetEditor());
+			mpcContent->GetWindow()->GetFocus()->SetFocus(mpcContent->GetDocuments()->GetActiveTab()->GetEditor());
 		}
 		szFile.Kill();
 		return bResult;
@@ -527,7 +527,7 @@ bool CIDENavigator::CanGoToSource(void)
 	CChars				szKey;
 	bool				bResult;
 
-	if (mpcContent->mpDocuments->GetActiveTab().IsNull())
+	if (mpcContent->GetDocuments()->GetActiveTab().IsNull())
 	{
 		return false;
 	}
@@ -538,7 +538,7 @@ bool CIDENavigator::CanGoToSource(void)
 	{
 		asLocations.Init();
 		szKey.Init();
-		bResult = mpcContent->mpDocuments->FindSymbolAtCaret(&asLocations, &szKey);
+		bResult = mpcContent->GetDocuments()->FindSymbolAtCaret(&asLocations, &szKey);
 		szKey.Kill();
 		KillIDELocations(&asLocations);
 	}
@@ -571,11 +571,11 @@ bool CIDENavigator::SwitchHeaderSource(void)
 	bool				bFound;
 	size				uiProject;
 
-	if (mpcContent->mpDocuments->GetActiveTab().IsNull())
+	if (mpcContent->GetDocuments()->GetActiveTab().IsNull())
 	{
 		return false;
 	}
-	eType = CIDEIcons::GetFileType(mpcContent->mpDocuments->GetActiveTab()->GetFileName());
+	eType = CIDEIcons::GetFileType(mpcContent->GetDocuments()->GetActiveTab()->GetFileName());
 	if (eType == IFT_Header)
 	{
 		aszWanted = aszSources;
@@ -592,7 +592,7 @@ bool CIDENavigator::SwitchHeaderSource(void)
 	}
 
 	//The same name, beside it.
-	szBase.Init(mpcContent->mpDocuments->GetActiveTab()->GetFileName());
+	szBase.Init(mpcContent->GetDocuments()->GetActiveTab()->GetFileName());
 	cFileUtil.RemoveExtension(&szBase);
 	szFound.Init();
 	bFound = false;
@@ -637,11 +637,11 @@ bool CIDENavigator::SwitchHeaderSource(void)
 
 	if (bFound)
 	{
-		uiProject = mpcContent->mcCodeModel.FindProjectOfFile(szFound.Text());
-		bFound = mpcContent->mpDocuments->OpenFile(szFound.Text(), (uiProject != MAX_SIZE) ? uiProject : mpcContent->mpDocuments->GetActiveTab()->GetProject());
+		uiProject = mpcContent->GetCodeModel()->FindProjectOfFile(szFound.Text());
+		bFound = mpcContent->GetDocuments()->OpenFile(szFound.Text(), (uiProject != MAX_SIZE) ? uiProject : mpcContent->GetDocuments()->GetActiveTab()->GetProject());
 		if (bFound)
 		{
-			mpcContent->mpWindow->GetFocus()->SetFocus(mpcContent->mpDocuments->GetActiveTab()->GetEditor());
+			mpcContent->GetWindow()->GetFocus()->SetFocus(mpcContent->GetDocuments()->GetActiveTab()->GetEditor());
 		}
 	}
 	szFound.Kill();

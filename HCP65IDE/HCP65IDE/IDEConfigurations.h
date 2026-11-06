@@ -34,7 +34,6 @@ class CIDEContent;
 //chosen, and the code model parsing as its solution configuration.
 class CIDEConfigurations : public CObject
 {
-friend class CIDEContent;
 friend class CIDEScript;
 CONSTRUCTABLE(CIDEConfigurations);
 DESTRUCTABLE(CIDEConfigurations);
@@ -55,10 +54,6 @@ public:
 	Ptr<CComboBox>		GetConfigurationBox(void);
 	Ptr<CComboBox>		GetPlatformBox(void);
 	bool			SetConfiguration(const char* szConfiguration);
-	void			ConfigurationChosen(void);
-	void			SetComboBoxItems(Ptr<CComboBox> pComboBox, bool bPlatforms);
-	void			ShowConfiguration(void);
-	void			SelectComboBoxItem(Ptr<CComboBox> pComboBox, const char* szText);
 	CBuildConfiguration*	GetConfiguration(void);
 	char*			GetConfigurationName(void);
 	void			SetConfigurationName(const char* szName);
@@ -67,6 +62,10 @@ public:
 
 protected:
 	CBuildConfiguration*	GetChosenConfiguration(void);
+	void			ConfigurationChosen(void);
+	void			SetComboBoxItems(Ptr<CComboBox> pComboBox, bool bPlatforms);
+	void			ShowConfiguration(void);
+	void			SelectComboBoxItem(Ptr<CComboBox> pComboBox, const char* szText);
 };
 
 

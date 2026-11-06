@@ -94,10 +94,10 @@ bool CIDECloseGuard::FindUnsavedFiles(size uiSolution, CArrayChars* paszDest)
 	bool				bFound;
 
 	bFound = false;
-	for (i = 0; i < mpcContent->mpDocuments->NumTabs(); i++)
+	for (i = 0; i < mpcContent->GetDocuments()->NumTabs(); i++)
 	{
-		pTab = mpcContent->mpDocuments->GetTab(i);
-		if (pTab->IsModified() && ((uiSolution == MAX_SIZE) || mpcContent->mpSolutions->IsSolutionFile(uiSolution, pTab->GetProject())))
+		pTab = mpcContent->GetDocuments()->GetTab(i);
+		if (pTab->IsModified() && ((uiSolution == MAX_SIZE) || mpcContent->GetSolutions()->IsSolutionFile(uiSolution, pTab->GetProject())))
 		{
 			paszDest->Add(pTab->GetFileName());
 			bFound = true;
@@ -117,7 +117,7 @@ bool CIDECloseGuard::FindUnsavedFiles(size uiSolution, CArrayChars* paszDest)
 void CIDECloseGuard::QueueAskToSave(EIDEAfterSave eAfter)
 {
 	miAfterSave = eAfter;
-	mpcContent->mpWindow->Post(this, &CIDECloseGuard::AskToSave);
+	mpcContent->GetWindow()->Post(this, &CIDECloseGuard::AskToSave);
 }
 
 
@@ -136,7 +136,7 @@ bool CIDECloseGuard::PaneClosing(CDockPane* pcPane)
 	{
 		return true;
 	}
-	pTab = mpcContent->mpDocuments->FindTab(pcPane);
+	pTab = mpcContent->GetDocuments()->FindTab(pcPane);
 	if (pTab.IsNull() || !pTab->IsModified())
 	{
 		return true;
@@ -189,7 +189,7 @@ bool CIDECloseGuard::ApproveLettingGo(size uiSolution, const char* szFile)
 		return true;
 	}
 	maszSaveFiles.ReInit();
-	if (!FindUnsavedFiles(((uiSolution == MAX_SIZE) || (mpcContent->mcWorkspace.NumSolutions() == 1)) ? MAX_SIZE : uiSolution, &maszSaveFiles))
+	if (!FindUnsavedFiles(((uiSolution == MAX_SIZE) || (mpcContent->GetWorkspace()->NumSolutions() == 1)) ? MAX_SIZE : uiSolution, &maszSaveFiles))
 	{
 		return true;
 	}
@@ -225,9 +225,9 @@ void CIDECloseGuard::AskToSave(void)
 		return;
 	}
 
-	mpSaveDialog = OMalloc<CDialog>(mpcContent->mpWindow, &mpcContent->msDialogLook, "Save Changes");
+	mpSaveDialog = OMalloc<CDialog>(mpcContent->GetWindow(), mpcContent->GetDialogLook(), "Save Changes");
 	pBody = OMalloc<CGridContainer>(mpSaveDialog->GetWindow());
-	pLabel = OMalloc<CLabel>(mpSaveDialog->GetWindow(), mpcContent->mpTheme->GetFont(), "Save changes to the following files?");
+	pLabel = OMalloc<CLabel>(mpSaveDialog->GetWindow(), mpcContent->GetTheme()->GetFont(), "Save changes to the following files?");
 	pLabel->SetAlignment(CSH_Left, CSV_Top);
 	pBody->AddComponent(pLabel, 0, 0, 1, 1, 1, 0);
 	for (i = 0; i < maszSaveFiles.NumElements(); i++)
@@ -235,7 +235,7 @@ void CIDECloseGuard::AskToSave(void)
 		szName.Init();
 		cFileUtil.GetFileName(&szName, maszSaveFiles.GetText(i));
 		szName.Insert(0, "    ");
-		pLabel = OMalloc<CLabel>(mpSaveDialog->GetWindow(), mpcContent->mpTheme->GetFont(), szName.Text());
+		pLabel = OMalloc<CLabel>(mpSaveDialog->GetWindow(), mpcContent->GetTheme()->GetFont(), szName.Text());
 		pLabel->SetAlignment(CSH_Left, CSV_Top);
 		pBody->AddComponent(pLabel, 0, (int)i + 1, 1, 1, 1, 0);
 		szName.Kill();
@@ -243,10 +243,10 @@ void CIDECloseGuard::AskToSave(void)
 	mpSaveDialog->SetBody(pBody, NULL);
 	mpSaveDialog->SetOKCaption("Save");
 	mpSaveDialog->AddExtraButton("Don't Save");
-	mpcContent->mpScript->WatchDialog(mpSaveDialog);
+	mpcContent->GetScript()->WatchDialog(mpSaveDialog);
 	bSave = mpSaveDialog->Show(440, 150 + 22 * (int)maszSaveFiles.NumElements());
 	szClicked.Init(mpSaveDialog->GetClicked());
-	mpcContent->mpScript->StopWatchingDialog();
+	mpcContent->GetScript()->StopWatchingDialog();
 	mpSaveDialog = NULL;
 
 	if (bSave || szClicked.Equals("Don't Save"))
@@ -254,8 +254,8 @@ void CIDECloseGuard::AskToSave(void)
 		bSaved = true;
 		for (i = 0; bSave && (i < maszSaveFiles.NumElements()); i++)
 		{
-			pTab = mpcContent->mpDocuments->FindTab(maszSaveFiles.GetText(i));
-			if (pTab.IsNotNull() && !mpcContent->mpDocuments->SaveFile(pTab))
+			pTab = mpcContent->GetDocuments()->FindTab(maszSaveFiles.GetText(i));
+			if (pTab.IsNotNull() && !mpcContent->GetDocuments()->SaveFile(pTab))
 			{
 				bSaved = false;
 			}
@@ -270,24 +270,24 @@ void CIDECloseGuard::AskToSave(void)
 			case IAS_ClosePanes:
 				for (i = 0; i < maszCloseIDs.NumElements(); i++)
 				{
-					pPane = mpcContent->mpDock->GetPane(maszCloseIDs.GetText(i));
+					pPane = mpcContent->GetDock()->GetPane(maszCloseIDs.GetText(i));
 					if (pPane.IsNotNull())
 					{
-						mpcContent->mpDock->Close(pPane);
+						mpcContent->GetDock()->Close(pPane);
 					}
 				}
 				break;
 			case IAS_CloseSolution:
-				mpcContent->mpSolutions->CloseSolution(muiAfterSolution);
+				mpcContent->GetSolutions()->CloseSolution(muiAfterSolution);
 				break;
 			case IAS_OpenSolution:
-				if (!mpcContent->mpSolutions->OpenSolution(mszAfterFile.Text()))
+				if (!mpcContent->GetSolutions()->OpenSolution(mszAfterFile.Text()))
 				{
 					gcLogger.Error2(__METHOD__, " Could not open [", mszAfterFile.Text(), "].", NULL);
 				}
 				break;
 			case IAS_Exit:
-				mpcContent->mpWindow->Stop();
+				mpcContent->GetWindow()->Stop();
 				break;
 			}
 

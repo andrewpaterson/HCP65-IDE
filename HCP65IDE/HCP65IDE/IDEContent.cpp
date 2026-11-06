@@ -1191,3 +1191,33 @@ Ptr<CIDEConfigurations> CIDEContent::GetBuildConfigurations(void) { return mpBui
 Ptr<CIDEBuilding> CIDEContent::GetBuilding(void) { return mpBuilding; }
 Ptr<CIDESolutions> CIDEContent::GetSolutions(void) { return mpSolutions; }
 Ptr<CIDEDocuments> CIDEContent::GetDocuments(void) { return mpDocuments; }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// What the classes the content holds share.
+//
+//////////////////////////////////////////////////////////////////////////
+CBuildWorkspace* CIDEContent::GetWorkspace(void) { return &mcWorkspace; }
+bool CIDEContent::IsKeepingSettings(void) { return mbKeepSettings; }
+Ptr<CWindow> CIDEContent::GetWindow(void) { return mpWindow; }
+Ptr<CWindowTheme> CIDEContent::GetTheme(void) { return mpTheme; }
+SDialogLook* CIDEContent::GetDialogLook(void) { return &msDialogLook; }
+Ptr<CFontColours> CIDEContent::GetFontColours(void) { return mpFontColours; }
+Ptr<CFontColours> CIDEContent::GetBoldColours(void) { return mpBoldColours; }
+Ptr<CFontFamily> CIDEContent::GetCodeFamily(void) { return mpCodeFamily; }
+Ptr<CFont> CIDEContent::GetDimFont(void) { return mpDimFont; }
+Ptr<CFont> CIDEContent::GetMatchFont(void) { return mpMatchFont; }
+Ptr<CImageCel> CIDEContent::GetFolderIcon(void) { return mpFolderIcon; }
+Ptr<CImageCel> CIDEContent::GetFileIcon(void) { return mpFileIcon; }
+size CIDEContent::NumFileTypeIcons(void) { return maFileIcons.Size(); }
+Ptr<CImageCel> CIDEContent::GetFileTypeIcon(size uiType) { return maFileIcons.Get(uiType); }
+Ptr<CImageCel> CIDEContent::GetSymbolIcon(size uiType) { return maSymbolIcons.Get(uiType); }
+Ptr<CMenuBar> CIDEContent::GetMenuBar(void) { return mpMenuBar; }
+Ptr<CMenuContainer> CIDEContent::GetEditorMenu(void) { return mpEditorMenu; }
+Ptr<CMenuContainer> CIDEContent::GetRecentMenu(void) { return mpRecentMenu; }
+Ptr<CIDENavigator> CIDEContent::GetNavigator(void) { return mpNavigator; }
+Ptr<CIDEEdit> CIDEContent::GetEdit(void) { return mpEdit; }
+Ptr<CIDEUsages> CIDEContent::GetUsages(void) { return mpUsages; }
+Ptr<CIDERename> CIDEContent::GetRename(void) { return mpRename; }
+Ptr<CIDECloseGuard> CIDEContent::GetCloseGuard(void) { return mpCloseGuard; }

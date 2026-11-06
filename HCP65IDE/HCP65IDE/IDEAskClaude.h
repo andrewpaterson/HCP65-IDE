@@ -37,7 +37,6 @@ class CIDEContent;
 //open files Claude changes are read again as it changes them.
 class CIDEAskClaude : public CObject
 {
-friend class CIDEContent;
 friend class CIDEScript;
 CONSTRUCTABLE(CIDEAskClaude);
 DESTRUCTABLE(CIDEAskClaude);
@@ -56,24 +55,24 @@ public:
 	bool	Load(CObjectReader* pcFile) override;
 
 	bool				AskClaude(const char* szRequest);
-	void				ClaudeSendClicked(void);
-	void				ClaudeStopClicked(void);
-	void				ClaudeNewClicked(void);
-	void				ShowClaudeTab(void);
 	bool				IsClaudeRunning(void);
-	CClaudeCommand*		GetClaude(void);
 	Ptr<CIDEClaudePane>	GetClaudePane(void);
 	Ptr<CDockPane>		GetTool(void);
 	void				CreatePane(SDockPlace* psPlace);
 	void				ScrollToEnd(void);
+	void				PollClaude(Ptr<CWindow> pWindow);
 
 protected:
 	bool				GetClaudeDirectory(CChars* pszDirectory);
 	void				AppendClaudeContext(CChars* pszRequest);
-	void				PollClaude(Ptr<CWindow> pWindow);
 	void				ReloadClaudeFiles(bool bAll);
 	bool				ReloadClaudeFile(Ptr<CIDEEditorTab> pTab);
 	Ptr<CIDEEditorTab>	FindClaudeTab(const char* szFileName);
+	void				ClaudeSendClicked(void);
+	void				ClaudeStopClicked(void);
+	void				ClaudeNewClicked(void);
+	void				ShowClaudeTab(void);
+	CClaudeCommand*		GetClaude(void);
 };
 
 

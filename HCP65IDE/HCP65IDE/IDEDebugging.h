@@ -42,7 +42,6 @@ class CIDEContent;
 //gutters.  It also runs HCP65_IDE_DEBUG's script (CIDEScript's commands), which waits for the debugger.
 class CIDEDebugging : public CObject
 {
-friend class CIDEContent;
 friend class CIDEScript;
 CONSTRUCTABLE(CIDEDebugging);
 DESTRUCTABLE(CIDEDebugging);
@@ -78,40 +77,27 @@ public:
 	bool	Save(CObjectWriter* pcFile) override;
 	bool	Load(CObjectReader* pcFile) override;
 
-	void				StartClicked(void);
 	void				SetDefaultEmulator(const char* szExecutable, const char* szDirectory);
-	bool				StartDebugging(void);
 	bool				StopDebugging(void);
-	bool				RestartDebugging(void);
-	bool				BreakAll(void);
-	bool				StepInto(void);
 	bool				StepOver(void);
 	bool				StepOut(void);
-	bool				ToggleBreakpoint(void);
-	bool				ToggleSourceBreakpoint(Ptr<CIDEEditorTab> pTab, size uiLine);
 	void				GlyphClicked(CCodeEditor* pcEditor, size uiLine);
 	void				ReadLineTables(void);
 	void				ShowBreakpoints(Ptr<CIDEEditorTab> pTab);
-	void				ShowAllBreakpoints(void);
-	void				ShowStoppedLine(bool bWasStopped);
-	bool				IsDisassemblyFocussed(void);
-	bool				ShowNewBreakpointDialog(void);
-	bool				ShowAttachDialog(void);
 	bool				AttachDebugger(int iPort);
 	void				SetDebugScript(const char* szCommands);
 	bool				IsDebugScriptRunning(void);
 	CIDEDebugger*		GetDebugger(void);
-	Ptr<CIDEDebugView>	GetDebugView(void);
 	Ptr<CDockPane>		GetTool(void);
 	void				CreatePane(SDockPlace* psPlace);
 	Ptr<CButton>		CreateStartButton(void);
 	void				GetUserSettingsFileName(CChars* pszDest);
-
-protected:
 	Ptr<CMenuContainer>	CreateDebugMenu(void);
 	bool				DebugMenuItemClicked(CMenuItem* pcItem);
 	void				DebugCommandAction(EComponentInputCommand eCommand);
 	void				PollDebugger(Ptr<CWindow> pWindow);
+
+protected:
 	void				UpdateDebugView(bool bKeepCaret);
 	void				RunDebugScript(void);
 	bool				ChooseEmulator(bool bLaunch);
@@ -120,6 +106,19 @@ protected:
 	void				ShowDebugMessages(void);
 	void				ResolveEmulatorPath(const char* szPath, CChars* pszDest);
 	bool				ShowAddressDialog(const char* szTitle, const char* szLabel, const char* szDefault, bool bHex, uint32* puiValue);
+	void				StartClicked(void);
+	bool				StartDebugging(void);
+	bool				RestartDebugging(void);
+	bool				BreakAll(void);
+	bool				StepInto(void);
+	bool				ToggleBreakpoint(void);
+	bool				ToggleSourceBreakpoint(Ptr<CIDEEditorTab> pTab, size uiLine);
+	void				ShowAllBreakpoints(void);
+	void				ShowStoppedLine(bool bWasStopped);
+	bool				IsDisassemblyFocussed(void);
+	bool				ShowNewBreakpointDialog(void);
+	bool				ShowAttachDialog(void);
+	Ptr<CIDEDebugView>	GetDebugView(void);
 };
 
 

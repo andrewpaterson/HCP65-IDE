@@ -117,19 +117,6 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 class CIDEContent : public CObject, public CDockManagerListener
 {
 friend class CIDEScript;
-friend class CIDECloseGuard;
-friend class CIDEEdit;
-friend class CIDENavigator;
-friend class CIDERename;
-friend class CIDEUsages;
-friend class CIDEDocuments;
-friend class CIDESolutions;
-friend class CIDEBuilding;
-friend class CIDEConfigurations;
-friend class CIDEDebugging;
-friend class CIDEGitStatus;
-friend class CIDEDiffs;
-friend class CIDEAskClaude;
 CONSTRUCTABLE(CIDEContent);
 DESTRUCTABLE(CIDEContent);
 protected:
@@ -236,9 +223,26 @@ public:
 	CIDECodeModel*	GetCodeModel(void);
 
 	CSolutionExplorer*	GetExplorer(void);
+	CBuildWorkspace*	GetWorkspace(void);
+	bool				IsKeepingSettings(void);
 
-
-
+	//What the classes the content holds share: the window, its look and the icons.
+	Ptr<CWindow>		GetWindow(void);
+	Ptr<CWindowTheme>	GetTheme(void);
+	SDialogLook*		GetDialogLook(void);
+	Ptr<CFontColours>	GetFontColours(void);
+	Ptr<CFontColours>	GetBoldColours(void);
+	Ptr<CFontFamily>	GetCodeFamily(void);
+	Ptr<CFont>			GetDimFont(void);
+	Ptr<CFont>			GetMatchFont(void);
+	Ptr<CImageCel>		GetFolderIcon(void);
+	Ptr<CImageCel>		GetFileIcon(void);
+	size				NumFileTypeIcons(void);
+	Ptr<CImageCel>		GetFileTypeIcon(size uiType);
+	Ptr<CImageCel>		GetSymbolIcon(size uiType);
+	Ptr<CMenuBar>		GetMenuBar(void);
+	Ptr<CMenuContainer>	GetEditorMenu(void);
+	Ptr<CMenuContainer>	GetRecentMenu(void);
 
 	Ptr<CMenuContainer>	CreateEditorMenu(void);
 	Ptr<CIDEScript>		GetScript(void);
@@ -250,15 +254,16 @@ public:
 	Ptr<CIDEGitStatus>	GetGitStatus(void);
 	Ptr<CIDEDiffs>	GetDiffs(void);
 	Ptr<CIDEAskClaude>	GetAskClaude(void);
+	Ptr<CIDENavigator>	GetNavigator(void);
+	Ptr<CIDEEdit>		GetEdit(void);
+	Ptr<CIDEUsages>		GetUsages(void);
+	Ptr<CIDERename>		GetRename(void);
+	Ptr<CIDECloseGuard>	GetCloseGuard(void);
 	void				EditorMenuOpening(CMenuContainer* pcMenu);
 
 protected:
 	Ptr<CMenuBar>		CreateMenuBar(void);
 	void				CodeCommandAction(SComponentInputEvent* psEvent);
-
-
-
-
 };
 
 

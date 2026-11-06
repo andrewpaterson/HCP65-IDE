@@ -68,11 +68,11 @@ public:
 	bool	PaneClosing(CDockPane* pcPane);
 	bool	RequestExit(void);
 	bool	ApproveLettingGo(size uiSolution, const char* szFile);
-	void	AskToSave(void);
 
 protected:
 	bool	FindUnsavedFiles(size uiSolution, CArrayChars* paszDest);
 	void	QueueAskToSave(EIDEAfterSave eAfter);
+	void	AskToSave(void);
 };
 
 

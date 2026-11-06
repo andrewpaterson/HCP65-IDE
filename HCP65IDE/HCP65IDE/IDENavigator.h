@@ -68,7 +68,6 @@ public:
 	void				GoToSearch(size uiTab, CNameMatcher* pcMatcher, CGoToItems* pcDest) override;
 	bool				ShowGoTo(size uiTab);
 	void				QueueGoTo(size uiTab);
-	void				ShowQueuedGoTo(void);
 	bool				CreateGoTo(size uiTab);
 	bool				OpenGoToChoice(void);
 	Ptr<CGoToDialog>	GetGoTo(void);
@@ -82,6 +81,7 @@ public:
 protected:
 	bool				GetIncludeAtCaret(CChars* pszName, bool* pbSystem);
 	bool				FindIncludedFile(CChars* pszDest);
+	void				ShowQueuedGoTo(void);
 };
 
 
