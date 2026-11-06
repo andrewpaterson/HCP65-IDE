@@ -102,6 +102,7 @@ bool CHCP65Build::Start(CArrayChars* paszLines)
 	{
 		//A program: the runtime after the projects, only what is used kept.
 		mcBuilder.SetRemoveUnused(true);
+		mcBuilder.SetNoFloats(mpcConfiguration->IsNoFloats());
 		uiLimit = mpcConfiguration->HasImage() ? mpcConfiguration->GetImage()->GetLimit() : mpcConfiguration->GetExecutable()->GetLimit();
 		if (uiLimit != 0)
 		{

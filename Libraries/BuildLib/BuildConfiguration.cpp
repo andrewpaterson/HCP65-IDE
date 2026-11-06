@@ -39,6 +39,7 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 #define BUILD_CONFIGURATION_CARD		"Card"
 #define BUILD_CONFIGURATION_CARD_PATH	"CardPath"
 #define BUILD_CONFIGURATION_BREAKPOINT_SPACE	"BreakpointSpace"
+#define BUILD_CONFIGURATION_NO_FLOATS	"NoFloats"
 
 
 //The toolchains' names, as saved, by EBuildToolchain.
@@ -58,6 +59,7 @@ void CBuildConfiguration::Init(const char* szName, EBuildToolchain eToolchain, c
 	mszEmulatorDirectory.Init();
 	mszEmulatorArguments.Init();
 	mszBreakpointSpace.Init();
+	mbNoFloats = false;
 	mbImage = false;
 	mcImage.Init();
 	mbExecutable = false;
@@ -131,6 +133,10 @@ void CBuildConfiguration::SaveXML(CXMLWriter* pcWriter)
 	{
 		pcWriter->Attribute(BUILD_CONFIGURATION_BREAKPOINT_SPACE, mszBreakpointSpace.Text());
 	}
+	if (mbNoFloats)
+	{
+		pcWriter->Attribute(BUILD_CONFIGURATION_NO_FLOATS, "true");
+	}
 	if (HasCard())
 	{
 		pcWriter->Attribute(BUILD_CONFIGURATION_CARD, mszCard.Text());
@@ -168,6 +174,7 @@ bool CBuildConfiguration::LoadXML(CMarkupTag* pcTag)
 	char*			szName;
 	char*			szToolchain;
 	char*			szSolution;
+	char*			szNoFloats;
 	EBuildToolchain	eToolchain;
 	CMarkupTag*		pcImage;
 	CMarkupTag*		pcExecutable;
@@ -193,6 +200,8 @@ bool CBuildConfiguration::LoadXML(CMarkupTag* pcTag)
 	mszSolutionConfiguration.Set(szSolution);
 	SetEmulator(pcTag->GetAttribute((char*)BUILD_CONFIGURATION_EMULATOR), pcTag->GetAttribute((char*)BUILD_CONFIGURATION_EMULATOR_DIRECTORY), pcTag->GetAttribute((char*)BUILD_CONFIGURATION_EMULATOR_ARGUMENTS));
 	SetBreakpointSpace(pcTag->GetAttribute((char*)BUILD_CONFIGURATION_BREAKPOINT_SPACE));
+	szNoFloats = pcTag->GetAttribute((char*)BUILD_CONFIGURATION_NO_FLOATS);
+	SetNoFloats((szNoFloats != NULL) && (strcmp(szNoFloats, "true") == 0));
 
 	pcImage = pcTag->GetTag(BUILD_CONFIGURATION_IMAGE);
 	if (pcImage)
@@ -408,6 +417,28 @@ void CBuildConfiguration::SetBreakpointSpace(const char* szSpace)
 char* CBuildConfiguration::GetBreakpointSpace(void)
 {
 	return mszBreakpointSpace.Text();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Floating point is an error (CCPP65Builder::SetNoFloats): the kernal has
+// none.
+//
+//////////////////////////////////////////////////////////////////////////
+void CBuildConfiguration::SetNoFloats(bool bNoFloats)
+{
+	mbNoFloats = bNoFloats;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+bool CBuildConfiguration::IsNoFloats(void)
+{
+	return mbNoFloats;
 }
 
 
