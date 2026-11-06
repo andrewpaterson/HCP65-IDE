@@ -716,38 +716,48 @@ void CIDECodeModel::GatherUnit(CIDEParsedUnit* pcUnit, CCPPIndexUnit* pcDest, CC
 //
 // The header szFileName is preprocessed from szText (its editor's text)
 // from now on, or from the file again if szText is NULL.  The headers'
-// output kept for all the units is forgotten: it may be what the header
-// was.  Call it once the indexing has finished (IsIndexing).
+// output kept for all the units that depends on it is forgotten first:
+// it points into the header's old text.  Call it once the indexing has
+// finished (IsIndexing).
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDECodeModel::SetHeaderText(const char* szFileName, const char* szText)
 {
-	size			i;
-	CProject*		pcProject;
-	CHeaderFile*	pcHeader;
+	size				i;
+	CProject*			pcProject;
+	CHeaderFile*		pcHeader;
+	CSourceFile*		pcFile;
+	CArrayPPHeaderFiles	apcHeaders;
 
 	//The edits thread may be preprocessing the header.
 	WaitForEditedFiles();
 	mcProjectsMutex.Lock();
+	apcHeaders.Init();
 	for (i = 0; i < mapcProjects.NumElements(); i++)
 	{
 		pcProject = mapcProjects.GetPtr(i);
 		pcHeader = pcProject ? pcProject->GetIncludeFile((char*)szFileName) : NULL;
 		if (pcHeader)
 		{
-			pcHeader->Unload();
-			if (szText)
-			{
-				pcHeader->SetContents(szText);
-			}
-			else
-			{
-				pcHeader->ClearContents();
-			}
+			pcFile = pcHeader;
+			apcHeaders.Add(&pcFile);
 		}
 	}
-	mcHeaderCache.Kill();
-	mcHeaderCache.Init();
+	mcHeaderCache.Forget(&apcHeaders);
+	for (i = 0; i < apcHeaders.NumElements(); i++)
+	{
+		pcFile = *apcHeaders.Get(i);
+		pcFile->Unload();
+		if (szText)
+		{
+			pcFile->SetContents(szText);
+		}
+		else
+		{
+			pcFile->ClearContents();
+		}
+	}
+	apcHeaders.Kill();
 	mcProjectsMutex.Unlock();
 }
 
