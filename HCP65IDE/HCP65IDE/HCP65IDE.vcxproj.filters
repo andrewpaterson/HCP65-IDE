@@ -42,6 +42,12 @@
     <ClCompile Include="IDEContentGoTo.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="IDEContentRename.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="IDEContentRename.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="IDEClaudePane.cpp">
       <Filter>Source</Filter>
     </ClCompile>

@@ -173,6 +173,15 @@ protected:
 	int32						maiGoToSymbolIcons[IST_Count];
 	int32						miGoToTicks;		//For checking: ticks the dialog has been shown for.
 	int32						miQueuedGoTo;		//The Go to tab asked for, shown at the next tick, -1 for none.
+
+	Ptr<CMenuContainer>			mpEditorMenu;		//The editors' context menu: Rename and Refactor.
+	Ptr<CMenuItem>				mpRenameItem;
+	Ptr<CMenuItem>				mpExtractMethodItem;
+	Ptr<CDialog>				mpRenameDialog;		//While Rename is shown.
+	Ptr<CTextField>				mpRenameField;
+	Ptr<CLabel>					mpRenameError;
+	bool						mbQueuedRename;		//Rename asked for, shown at the next tick.
+	SIDERenameTarget			msRenameTarget;		//What Rename's dialog is renaming: its key and name.
 	Ptr<CSolutionExplorer>		mpExplorer;
 	Ptr<CMenuContainer>			mpExplorerMenu;		//A solution's: Set as Startup Solution and Remove.
 	Ptr<CMenuItem>				mpStartupItem;
@@ -377,6 +386,14 @@ public:
 	bool				ShowGoTo(size uiTab);
 	void				QueueGoTo(size uiTab);
 	bool				ShowActiveFileInExplorer(void);
+	Ptr<CMenuContainer>	CreateEditorMenu(void);
+	void				EditorMenuOpening(CMenuContainer* pcMenu);
+	bool				FindRenameTarget(SIDERenameTarget* psDest);
+	void				QueueRename(void);
+	bool				ShowRename(void);
+	bool				ApproveRename(void);
+	void				RenameSnapshotTick(void);
+	bool				RenameSymbol(SIDERenameTarget* psTarget, const char* szNewName);
 	bool				CreateGoTo(size uiTab);
 	bool				OpenGoToChoice(void);
 	Ptr<CGoToDialog>	GetGoTo(void);
@@ -470,6 +487,8 @@ protected:
 };
 
 
+bool IsIDEIdentifier(const char* szName);
+size FindIDENameInKey(const char* szKey, const char* szName);
 Ptr<CFont> GenerateIDEFont(const char* szFontFilename, const char* szName, float32 fPixelSize, EColourOrder eOrder, EFontTurn eTurn = FT_Upright, float32 fWeight = 0.0f);
 ARGB32     GetHighlightColour(ECPPHighlight eKind);
 bool       SameIDEText(const char* szText1, const char* szText2);

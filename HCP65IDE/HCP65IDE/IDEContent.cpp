@@ -56,7 +56,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 //Go to Definition (F12), Find All References (Shift+F12), Build (Control+Shift+B) and the debugger's keys from anywhere in the window.
-static EComponentInputCommand	gaeIDECodeCommands[] = { CIC_Save, CIC_SaveAll, CIC_GoToDefinition, CIC_FindReferences, CIC_GoToClass, CIC_GoToFile, CIC_GoToSymbol, CIC_ShowProjectView, CIC_Build, CIC_StartDebugging, CIC_StopDebugging, CIC_RestartDebugging,
+static EComponentInputCommand	gaeIDECodeCommands[] = { CIC_Save, CIC_SaveAll, CIC_GoToDefinition, CIC_FindReferences, CIC_GoToClass, CIC_GoToFile, CIC_GoToSymbol, CIC_ShowProjectView, CIC_Rename, CIC_Build, CIC_StartDebugging, CIC_StopDebugging, CIC_RestartDebugging,
 														 CIC_BreakAll, CIC_ToggleBreakpoint, CIC_StepOver, CIC_StepInto, CIC_StepOut };
 
 
@@ -205,6 +205,8 @@ void CIDEContent::Init(void)
 	miGoToFileIcon = -1;
 	miGoToTicks = 0;
 	miQueuedGoTo = -1;
+	mbQueuedRename = false;
+	msRenameTarget.Init();
 	memset(maiGoToSymbolIcons, 0, sizeof(maiGoToSymbolIcons));
 	mcDebugger.Init();
 	mszStoppedFile.Init();
@@ -300,6 +302,14 @@ void CIDEContent::Class(void)
 	U_Int32(miGoToFileIcon);
 	U_Int32(miGoToTicks);
 	U_Int32(miQueuedGoTo);
+	M_Pointer(mpEditorMenu);
+	M_Pointer(mpRenameItem);
+	M_Pointer(mpExtractMethodItem);
+	M_Pointer(mpRenameDialog);
+	M_Pointer(mpRenameField);
+	M_Pointer(mpRenameError);
+	U_Bool(mbQueuedRename);
+	U_Data(SIDERenameTarget, msRenameTarget);
 	U_Int32Array(maiGoToSymbolIcons, IST_Count);
 	M_Pointer(mpGoToClassItem);
 	M_Pointer(mpGoToFileItem);
@@ -424,6 +434,11 @@ void CIDEContent::Free(void)
 	{
 		mpEditMenu->GetOpeningEvent()->Remove(this);
 	}
+	if (mpEditorMenu.IsNotNull())
+	{
+		mpEditorMenu->GetOpeningEvent()->Remove(this);
+		mpEditorMenu->GetItemClickEvent()->Remove(this);
+	}
 	for (i = 0; i < maTabs.Size(); i++)
 	{
 		if (maTabs.Get(i).IsNotNull() && maTabs.Get(i)->GetEditor().IsNotNull())
@@ -463,6 +478,7 @@ void CIDEContent::Free(void)
 	maszDebugScript.Kill();
 	mszDefaultEmulatorDirectory.Kill();
 	mszDefaultEmulator.Kill();
+	msRenameTarget.Kill();
 	mcGoToFileSet.Kill();
 	maiGoToProjects.Kill();
 	maszGoToFiles.Kill();
@@ -643,6 +659,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 
 	pMain = OMalloc<CGridContainer>(pWindow);
 	pMain->AddComponent(CreateMenuBar(), 0, 0, 1, 1, 1, 0);
+	CreateEditorMenu();
 	pMain->AddComponent(pToolbar, 0, 1, 1, 1, 1, 0);
 	pMain->AddComponent(mpDock->GetArea(), 0, 2, 1, 1, 1, 1);
 	pMain->AddInputActions(gaeIDECodeCommands, this, &CIDEContent::CodeCommandAction);
@@ -821,6 +838,10 @@ void CIDEContent::MenuItemClicked(CMenuItem* pcItem)
 	}
 	else if (EditMenuItemClicked(pcItem))
 	{
+	}
+	else if (pcItem == &mpRenameItem)
+	{
+		QueueRename();
 	}
 	else if (pcItem == &mpGoToClassItem)
 	{
@@ -1483,6 +1504,9 @@ Ptr<CIDEEditorTab> CIDEContent::OpenFileTab(const char* szFileName, size uiProje
 
 	//Activating the document, or clicking its tab, gives its editor the keys with its caret where it was.
 	pPane->SetFocusTarget(pTab->GetEditor());
+
+	//The right button: Rename and Refactor.
+	pTab->GetEditor()->SetContextMenu(mpEditorMenu);
 	pTab->GetCodeEditor()->GetChangeBarClickEvent()->Add(this, &CIDEContent::ChangeBarClicked);
 	pTab->GetCodeEditor()->GetGlyphClickEvent()->Add(this, &CIDEContent::GlyphClicked);
 	pTab->GetEditor()->GetUndoEvent()->Add(this, &CIDEContent::EditorUndoChanged);
@@ -1662,6 +1686,10 @@ void CIDEContent::CodeCommandAction(SComponentInputEvent* psEvent)
 	else if (psEvent->eCommand == CIC_GoToFile)
 	{
 		QueueGoTo(IDE_GO_TO_FILE);
+	}
+	else if (psEvent->eCommand == CIC_Rename)
+	{
+		QueueRename();
 	}
 	else if (psEvent->eCommand == CIC_ShowProjectView)
 	{
@@ -2463,6 +2491,11 @@ void CIDEContent::Tick(Ptr<CWindow> pWindow)
 		iTab = miQueuedGoTo;
 		miQueuedGoTo = -1;
 		ShowGoTo((size)iTab);
+	}
+	if (mbQueuedRename)
+	{
+		mbQueuedRename = false;
+		ShowRename();
 	}
 	PollBuild(pWindow);
 	PollDebugger(pWindow);

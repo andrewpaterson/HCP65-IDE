@@ -849,6 +849,22 @@ void CIDEContent::RunDebugScript(void)
 		ShowGoTo(uiTab);
 		return;
 	}
+	else if (strcmp(szCommand, "rename") == 0)
+	{
+		//Rename's dialog for what is at the caret, from a tick as it must be.
+		maszDebugScript.Remove((size)0);
+		ShowRename();
+		return;
+	}
+	else if (strcmp(szCommand, "contextmenu") == 0)
+	{
+		//The active editor's context menu opened at its caret, as the Menu key does.
+		if (GetActiveTab().IsNotNull())
+		{
+			GetActiveTab()->GetEditor()->OpenContextMenu(GetActiveTab()->GetEditor()->GetContextMenuPosition());
+		}
+		bDone = true;
+	}
 	else if (strcmp(szCommand, "buildtab") == 0)
 	{
 		mpDock->Show(mpBuildTool);

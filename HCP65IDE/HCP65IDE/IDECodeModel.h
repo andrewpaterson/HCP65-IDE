@@ -70,6 +70,21 @@ struct SIDELocation
 typedef CArrayTemplate<SIDELocation>	CArrayIDELocations;
 
 
+//What Rename found at a place in a file: the symbol (its key and name), every place its name is written (the
+//declarations, definitions and uses, a class's constructors and destructor too) and, if it can't be renamed, why.
+struct SIDERenameTarget
+{
+	CChars				szKey;
+	CChars				szName;
+	CArrayIDELocations	asLocations;
+	bool				bRenamable;
+	CChars				szWhyNot;
+
+	void	Init(void);
+	void	Kill(void);
+};
+
+
 class CIDECodeModel;
 //A file to index on a worker thread.
 struct SIDEIndexJob
@@ -129,6 +144,8 @@ public:
 	size	FindProjectOfFile(const char* szFileName);
 	void	FindGoToSymbols(CNameMatcher* pcMatcher, bool bClasses, CMapStringInt* pcFiles, int32* aiIcons, CGoToItems* pcDest);
 	bool	GetSymbolLocation(size uiSymbol, SIDELocation* psDest);
+	bool	FindRenameTarget(const char* szFileName, int iLine, int iColumn, CMapStringInt* pcFiles, SIDERenameTarget* psDest);
+	bool	HasSymbol(const char* szKey);
 
 	void	IndexUnit(SIDEIndexJob* psJob);
 

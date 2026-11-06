@@ -284,7 +284,8 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 			{
 				//A comma separated list of edits: open:<file>, type:<text>, undo, redo (Edit, Undo and Redo),
 				//undoall, redoall (Edit, Undo and Redo Across Files), group and endgroup (the edits between as one),
-				//menu (Edit opened) and explorer (Alt+1, the active file selected in Solution Explorer).  What each open file's caret line then is is printed.
+				//menu (Edit opened), explorer (Alt+1, the active file selected in Solution Explorer), renamable (what
+				//Rename would rename at the caret) and rename:<name> (renamed, without its dialog).  What each open file's caret line then is is printed.
 				aszOpen.Init();
 				aszOpen.Split(getenv("HCP65_IDE_EDIT"), ',');
 				for (i = 0; i < aszOpen.NumElements(); i++)
@@ -576,6 +577,31 @@ void CIDEApp::EditScripted(const char* szStep)
 	else if ((strcmp(szStep, "redo") == 0) && pTab.IsNotNull())
 	{
 		pTab->GetEditor()->Redo();
+	}
+	else if ((strcmp(szStep, "renamable") == 0) || (strncmp(szStep, "rename:", 7) == 0))
+	{
+		//What Rename would rename at the caret, or renames it.
+		SIDERenameTarget	sTarget;
+
+		sTarget.Init();
+		if (!mpContent->FindRenameTarget(&sTarget))
+		{
+			printf("Rename: nothing at the caret\n");
+		}
+		else if (!sTarget.bRenamable)
+		{
+			printf("Rename: %s [%s] can't be renamed: %s\n", sTarget.szName.Text(), sTarget.szKey.Text(), sTarget.szWhyNot.Text());
+		}
+		else if (szStep[6] == ':')
+		{
+			mpContent->RenameSymbol(&sTarget, &szStep[7]);
+			printf("Rename: %s [%s] to %s\n", sTarget.szName.Text(), sTarget.szKey.Text(), &szStep[7]);
+		}
+		else
+		{
+			printf("Rename: %s [%s] at %d places\n", sTarget.szName.Text(), sTarget.szKey.Text(), (int)sTarget.asLocations.NumElements());
+		}
+		sTarget.Kill();
 	}
 	else if (strcmp(szStep, "explorer") == 0)
 	{

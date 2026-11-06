@@ -1083,3 +1083,192 @@ bool CIDECodeModel::GetSymbolLocation(size uiSymbol, SIDELocation* psDest)
 	mcIndexMutex.Unlock();
 	return psLocation != NULL;
 }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void SIDERenameTarget::Init(void)
+{
+	szKey.Init();
+	szName.Init();
+	asLocations.Init();
+	bRenamable = false;
+	szWhyNot.Init();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void SIDERenameTarget::Kill(void)
+{
+	szWhyNot.Kill();
+	KillIDELocations(&asLocations);
+	szName.Kill();
+	szKey.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A symbol's name as written: a local's is after its key's last colon
+// ("@A.cpp:6:12:iCount"), anything else's is after its scope.
+//
+//////////////////////////////////////////////////////////////////////////
+static void GetIDESymbolName(const char* szKey, CChars* pszDest)
+{
+	CChars		szScope;
+	CChars		szParameters;
+	const char*	szColon;
+
+	if (szKey[0] == '@')
+	{
+		szColon = strrchr(szKey, ':');
+		pszDest->Init(szColon ? szColon + 1 : szKey);
+		return;
+	}
+	SplitIDESymbolKey(szKey, &szScope, pszDest, &szParameters);
+	szParameters.Kill();
+	szScope.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Why Rename can't change pcSymbol's places, NULL if it can: each must be
+// in one of pcFiles (the solution's, what can be edited), written as the
+// name (not made by a macro) and not a call that could be to another
+// overload.
+//
+//////////////////////////////////////////////////////////////////////////
+static const char* GetIDERenameProblem(CCPPIndex* pcIndex, CCPPIndexSymbol* pcSymbol, CMapStringInt* pcFiles)
+{
+	size				i;
+	SCPPIndexLocation*	psLocation;
+
+	for (i = 0; i < pcSymbol->NumLocations(); i++)
+	{
+		psLocation = pcSymbol->GetLocation(i);
+		if (pcFiles->Get(pcIndex->GetFileName(psLocation->uiFile), -1) < 0)
+		{
+			return "it is declared or used in a file that isn't in the solution";
+		}
+		if (psLocation->uiFlags & CPPIF_MACRO)
+		{
+			return "its name is made by a macro";
+		}
+		if (psLocation->uiFlags & CPPIF_AMBIGUOUS)
+		{
+			return "a call to it can't be told from a call to another overload";
+		}
+	}
+	return NULL;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Rename's target at iLine, iColumn (0 based) of szFileName: the symbol
+// named there and every place its name is written.  A class's
+// constructors and destructors are renamed with it.  It can't be renamed
+// (bRenamable false, szWhyNot says why) if it is an operator, a
+// destructor or a compiler type, or if a place can't be changed (see
+// GetIDERenameProblem).  False if no symbol is named there.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDECodeModel::FindRenameTarget(const char* szFileName, int iLine, int iColumn, CMapStringInt* pcFiles, SIDERenameTarget* psDest)
+{
+	CCPPIndexSymbol*	pcSymbol;
+	CCPPIndexSymbol*	pcMember;
+	const char*			szProblem;
+	CChars				szConstructor;
+	CChars				szDestructor;
+	size				i;
+	size				j;
+
+	mcIndexMutex.Lock();
+	pcSymbol = mcIndex.FindSymbolAt(szFileName, iLine, iColumn);
+	if (pcSymbol == NULL)
+	{
+		mcIndexMutex.Unlock();
+		return false;
+	}
+
+	psDest->szKey.Set(pcSymbol->mszKey);
+	GetIDESymbolName(pcSymbol->mszKey.Text(), &psDest->szName);
+	szProblem = NULL;
+	if ((pcSymbol->meKind == CPPSK_BuiltinType) || psDest->szName.Empty())
+	{
+		szProblem = "it is the compiler's";
+	}
+	else if (psDest->szName.StartsWith("operator"))
+	{
+		szProblem = "it is an operator";
+	}
+	else if (psDest->szName.Text()[0] == '~')
+	{
+		szProblem = "a destructor is renamed with its class";
+	}
+	if (szProblem == NULL)
+	{
+		szProblem = GetIDERenameProblem(&mcIndex, pcSymbol, pcFiles);
+	}
+	for (i = 0; i < pcSymbol->NumLocations(); i++)
+	{
+		CopyLocation(pcSymbol->GetLocation(i), psDest->asLocations.Add());
+	}
+
+	//A class's constructors and destructor are named for it.
+	if ((szProblem == NULL) && ((pcSymbol->meKind == CPPSK_Class) || (pcSymbol->meKind == CPPSK_ClassTemplate)))
+	{
+		szConstructor.Init(pcSymbol->mszKey);
+		szConstructor.Append("::");
+		szConstructor.Append(psDest->szName);
+		szConstructor.Append('(');
+		szDestructor.Init(pcSymbol->mszKey);
+		szDestructor.Append("::~");
+		szDestructor.Append(psDest->szName);
+		szDestructor.Append('(');
+		for (i = 0; (i < mcIndex.NumSymbols()) && (szProblem == NULL); i++)
+		{
+			pcMember = mcIndex.GetSymbol(i);
+			if (pcMember->mszKey.StartsWith(szConstructor.Text()) || pcMember->mszKey.StartsWith(szDestructor.Text()))
+			{
+				szProblem = GetIDERenameProblem(&mcIndex, pcMember, pcFiles);
+				for (j = 0; j < pcMember->NumLocations(); j++)
+				{
+					CopyLocation(pcMember->GetLocation(j), psDest->asLocations.Add());
+				}
+			}
+		}
+		szDestructor.Kill();
+		szConstructor.Kill();
+	}
+	mcIndexMutex.Unlock();
+
+	psDest->bRenamable = (szProblem == NULL);
+	if (szProblem)
+	{
+		psDest->szWhyNot.Set(szProblem);
+	}
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether the index has a symbol with szKey, a rename's new name say.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDECodeModel::HasSymbol(const char* szKey)
+{
+	bool	bFound;
+
+	mcIndexMutex.Lock();
+	bFound = mcIndex.FindSymbol(szKey) != NULL;
+	mcIndexMutex.Unlock();
+	return bFound;
+}
