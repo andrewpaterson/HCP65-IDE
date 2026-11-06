@@ -191,8 +191,8 @@ void TestBuildWorkspaceFile(void)
 	cFile.Init();
 	AssertTrue(cFile.Read(TEST_WORKSPACE_FILE));
 	AssertTrue(strstr(cFile.Text(), "<Workspace Configuration=\"Debug|W65C816\">") != NULL);
-	AssertTrue(strstr(cFile.Text(), "File=\"..\\Input\\Workspace\\Program\\Program.sln\"") != NULL);
-	AssertTrue(strstr(cFile.Text(), "File=\"..\\Input\\Workspace\\Kernel\\Kernel.sln\" Startup=\"true\"") != NULL);
+	AssertTrue(strstr(cFile.Text(), "File=\".." _FS_ "Input" _FS_ "Workspace" _FS_ "Program" _FS_ "Program.sln\"") != NULL);
+	AssertTrue(strstr(cFile.Text(), "File=\".." _FS_ "Input" _FS_ "Workspace" _FS_ "Kernel" _FS_ "Kernel.sln\" Startup=\"true\"") != NULL);
 	cFile.Kill();
 
 	cRead.Init();
