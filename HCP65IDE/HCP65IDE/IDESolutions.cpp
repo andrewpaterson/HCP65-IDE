@@ -565,11 +565,12 @@ bool CIDESolutions::WriteWorkspace(void)
 	CChars		szFile;
 	bool		bResult;
 
-	if (mpcContent->mcWorkspace.NumSolutions() == 0)
+	mpcContent->mcWorkspace.SetConfiguration(mpcContent->mszConfiguration.Text());
+	if ((mpcContent->mcWorkspace.NumSolutions() == 0) || !mpcContent->mbKeepSettings)
 	{
+		//A scripted run (checking the IDE) leaves the workspace's file alone, as it does the layout.
 		return false;
 	}
-	mpcContent->mcWorkspace.SetConfiguration(mpcContent->mszConfiguration.Text());
 	szFile.Init(mpcContent->mcWorkspace.GetFile());
 	if (szFile.Empty())
 	{
@@ -696,7 +697,8 @@ void CIDESolutions::ClearRecentSolutions(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDESolutions::WriteRecent(void)
 {
-	if (!mszRecentFile.Empty() && !mcRecent.Write(mszRecentFile.Text()))
+	//A scripted run writes the recent solutions only to a file of its own (HCP65_IDE_RECENT).
+	if (!mszRecentFile.Empty() && (mpcContent->mbKeepSettings || (getenv("HCP65_IDE_RECENT") != NULL)) && !mcRecent.Write(mszRecentFile.Text()))
 	{
 		gcLogger.Error2(__METHOD__, " Could not write [", mszRecentFile.Text(), "].", NULL);
 	}
