@@ -175,7 +175,10 @@ def Run(szExecutable, szName, asVariables):
 	if os.path.exists(szSnapshot):
 		os.remove(szSnapshot)
 	szOut = cResult.stdout.decode('latin-1') + cResult.stderr.decode('latin-1')
-	return cResult.returncode, [l for l in szOut.split('\n') if not l.startswith('Process (')]
+	#The indexer's threads print each file they process (CProject::DumpProcessedCPPFileName), which can land in the
+	#middle of a line the script prints: taking it out wherever it is joins that line up again.
+	szOut = re.sub(r'Process \([^)\n]*\)\n', '', szOut)
+	return cResult.returncode, szOut.split('\n')
 
 
 def Check(szExecutable, szName, asVariables, aszExpected, aszForbidden):
