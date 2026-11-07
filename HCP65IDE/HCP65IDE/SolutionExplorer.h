@@ -88,6 +88,7 @@ protected:
 	CBuildWorkspace*			mpcWorkspace;
 	CArraySolutionExplorerNode	masNodes;
 	Ptr<CFontColours>			mpBoldColours;	//The startup solution's name, NULL to not show it.
+	ARGB32						msText;  //The startup solution's name while nothing in it has changed.
 
 public:
 	void					Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme);

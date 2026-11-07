@@ -22,7 +22,6 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/TextFile.h"
 #include "BaseLib/StringHelper.h"
 #include "StandardLib/ClassDefines.h"
-#include "WindowLib/JewelColours.h"
 #include "IDEContent.h"
 #include "IDEAskClaude.h"
 
@@ -531,7 +530,7 @@ Ptr<CDockPane> CIDEAskClaude::GetTool(void) { return mpClaudeTool; }
 //////////////////////////////////////////////////////////////////////////
 void CIDEAskClaude::CreatePane(SDockPlace* psPlace)
 {
-	mpClaudePane = OMalloc<CIDEClaudePane>(mpcContent->GetWindow(), mpcContent->GetTheme(), mpcContent->GetFontColours()->GetFont(JEWEL_ICON), mpcContent->GetCodeFamily());
+	mpClaudePane = OMalloc<CIDEClaudePane>(mpcContent->GetWindow(), mpcContent->GetTheme(), mpcContent->GetFontColours()->GetFont(mpcContent->GetTheme()->GetColour(TC_Icon)), mpcContent->GetCodeFamily());
 	mpClaudePane->GetSendButton()->GetClickEvent()->Add(this, &CIDEAskClaude::ClaudeSendClicked);
 	mpClaudePane->GetStopButton()->GetClickEvent()->Add(this, &CIDEAskClaude::ClaudeStopClicked);
 	mpClaudePane->GetNewButton()->GetClickEvent()->Add(this, &CIDEAskClaude::ClaudeNewClicked);

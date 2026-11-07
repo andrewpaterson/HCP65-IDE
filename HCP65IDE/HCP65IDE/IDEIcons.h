@@ -24,6 +24,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "SupportLib/ColourFormat.h"
 #include "SupportLib/ImageDraw.h"
 #include "SupportLib/VectorPath.h"
+#include "WindowLib/WindowTheme.h"
 
 
 enum EIDEFileType
@@ -57,8 +58,8 @@ class CIDEIcons
 {
 public:
 	static EIDEFileType		GetFileType(const char* szFileName);
-	static Ptr<CImageCel>	CreateFileIcon(EIDEFileType eType, CColourFormatHelper* pcFormat);
-	static Ptr<CImageCel>	CreateSymbolIcon(EIDESymbolType eType, CColourFormatHelper* pcFormat);
+	static Ptr<CImageCel>	CreateFileIcon(EIDEFileType eType, Ptr<CWindowTheme> pTheme, CColourFormatHelper* pcFormat);
+	static Ptr<CImageCel>	CreateSymbolIcon(EIDESymbolType eType, Ptr<CWindowTheme> pTheme, CColourFormatHelper* pcFormat);
 
 protected:
 	static void				Fill(CImageDraw* pcDraw, CVectorPath* pcPath, ARGB32 sColour);

@@ -35,7 +35,6 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/FillContainer.h"
 #include "WindowLib/ScrollPane.h"
 #include "WindowLib/Label.h"
-#include "WindowLib/JewelColours.h"
 #include "WindowLib/JewelTheme.h"
 #include "WindowLib/JewelImageGenerator.h"
 #include "IDEGit.h"
@@ -343,15 +342,15 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	{
 		mpBoldColours = OMalloc<CFontColours>(mpBoldWhite);
 	}
-	mpTheme = CJewelTheme::CreateDarkTheme(pWindow, mpFontColours->GetFont(JEWEL_TEXT));
+	mpTheme = CJewelTheme::CreateDarkTheme(pWindow, mpFontColours);
 	pWindow->GetColourFormat(&cFormat);
 
 	//The dialogs share the window's theme: they have the same colour format.
-	mpDimFont = mpFontColours->GetFont(JEWEL_LINE_NUMBER);
+	mpDimFont = mpFontColours->GetFont(mpTheme->GetColour(TC_DimText));
 	msDialogLook.pcTheme = &mpTheme;
 	msDialogLook.pcDimFont = &mpDimFont;
-	mpFolderIcon = CJewelImageGenerator::CreateFolder(JEWEL_ICON, &cFormat);
-	mpFileIcon = CJewelImageGenerator::CreateFile(JEWEL_ICON, &cFormat);
+	mpFolderIcon = CJewelImageGenerator::CreateFolder(mpTheme->GetColour(TC_Icon), &cFormat);
+	mpFileIcon = CJewelImageGenerator::CreateFile(mpTheme->GetColour(TC_Icon), &cFormat);
 
 	mpCodeFamily = OMalloc<CFontFamily>("JetBrains Mono", IDE_FONT_CHARACTERS, IDE_CODE_PIXEL_SIZE, pWindow->GetColourOrder());
 	if (!mpCodeFamily->SetFace(FS_Regular, szCodeFont))
@@ -364,7 +363,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	if (mpTurnedWhite.IsNotNull())
 	{
 		mpTurnedColours = OMalloc<CFontColours>(mpTurnedWhite);
-		mpDock = OMalloc<CDockManager>(pWindow, mpTheme, mpTurnedColours->GetFont(JEWEL_TEXT));
+		mpDock = OMalloc<CDockManager>(pWindow, mpTheme, mpTurnedColours->GetFont(mpTheme->GetColour(TC_Text)));
 	}
 	else
 	{
@@ -373,14 +372,14 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpDock->SetListener(this);
 	for (i = 0; i < IFT_Count; i++)
 	{
-		maFileIcons.Add(CIDEIcons::CreateFileIcon((EIDEFileType)i, &cFormat));
+		maFileIcons.Add(CIDEIcons::CreateFileIcon((EIDEFileType)i, mpTheme, &cFormat));
 	}
 	for (i = 0; i < IST_Count; i++)
 	{
-		maSymbolIcons.Add(CIDEIcons::CreateSymbolIcon((EIDESymbolType)i, &cFormat));
+		maSymbolIcons.Add(CIDEIcons::CreateSymbolIcon((EIDESymbolType)i, mpTheme, &cFormat));
 	}
 	//Go to's matched characters are bold, if there's a bold font.
-	mpMatchFont = mpBoldColours.IsNotNull() ? mpBoldColours->GetFont(JEWEL_WHITE) : mpFontColours->GetFont(JEWEL_WHITE);
+	mpMatchFont = (mpBoldColours.IsNotNull() ? mpBoldColours : mpFontColours)->GetFont(mpTheme->GetColour(TC_BrightText));
 
 	//The features split out of the content, before the panes and menus they make.
 	mpScript = OMalloc<CIDEScript>(this);
@@ -442,7 +441,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	pMain->AddComponent(mpDock->GetArea(), 0, 2, 1, 1, 1, 1);
 
 	//The status line along the bottom, as IntelliJ IDEA's.
-	mpStatusLabel = OMalloc<CLabel>(pWindow, mpFontColours->GetFont(JEWEL_ICON), "");
+	mpStatusLabel = OMalloc<CLabel>(pWindow, mpFontColours->GetFont(mpTheme->GetColour(TC_Icon)), "");
 	mpStatusLabel->SetAlignment(CSH_Left, CSV_Center);
 	pStatusGap = OMalloc<CFillContainer>(pWindow);
 	pStatusGap->SetDesiredSize(IDE_TOOLBAR_GAP, 1);
@@ -451,7 +450,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	pStatusBar->SetAlignment(CSH_Stretch, CSV_Stretch);
 	pStatusBar->AddComponent(pStatusGap, 0, 0, 1, 1, 0, 1);
 	pStatusBar->AddComponent(mpStatusLabel, 1, 0, 1, 1, 1, 1);
-	mpProgressLabel = OMalloc<CLabel>(pWindow, mpFontColours->GetFont(JEWEL_ICON), "");
+	mpProgressLabel = OMalloc<CLabel>(pWindow, mpFontColours->GetFont(mpTheme->GetColour(TC_Icon)), "");
 	mpProgressLabel->SetAlignment(CSH_Right, CSV_Center);
 	pStatusBar->AddComponent(mpProgressLabel, 2, 0, 1, 1, 0, 1);
 	pStatusGap = OMalloc<CFillContainer>(pWindow);

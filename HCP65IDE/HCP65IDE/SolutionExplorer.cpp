@@ -27,7 +27,6 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "StandardLib/ObjectWriter.h"
 #include "SupportLib/ColourFormat.h"
 #include "WindowLib/Window.h"
-#include "WindowLib/JewelColours.h"
 #include "WindowLib/JewelImageGenerator.h"
 #include "IDEGit.h"
 #include "SolutionExplorer.h"
@@ -49,10 +48,11 @@ void CSolutionExplorer::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme)
 
 	mpcWorkspace = NULL;
 	masNodes.Init();
+	msText = pTheme->GetColour(TC_Text);
 	pWindow->GetColourFormat(&cFormat);
-	mpFolderIcon = CJewelImageGenerator::CreateFolder(JEWEL_ICON, &cFormat);
-	mpFileIcon = CJewelImageGenerator::CreateFile(JEWEL_ICON, &cFormat);
-	mpProjectIcon = CJewelImageGenerator::CreateFolder(JEWEL_BLUE, &cFormat);
+	mpFolderIcon = CJewelImageGenerator::CreateFolder(pTheme->GetColour(TC_Icon), &cFormat);
+	mpFileIcon = CJewelImageGenerator::CreateFile(pTheme->GetColour(TC_Icon), &cFormat);
+	mpProjectIcon = CJewelImageGenerator::CreateFolder(pTheme->GetColour(TC_Accent), &cFormat);
 	mpSolutionIcon = CJewelImageGenerator::CreateFile(SOLUTION_EXPLORER_SOLUTION_COLOUR, &cFormat);
 
 	mpTree = OMalloc<CTreeContainer>(pWindow, pTheme);
@@ -78,6 +78,7 @@ void CSolutionExplorer::Class(void)
 	M_Pointer(mpProjectIcon);
 	M_Pointer(mpSolutionIcon);
 	M_Pointer(mpBoldColours);
+	U_UInt32(msText);
 	U_Pointer(mpcWorkspace);
 	U_Unknown(CArraySolutionExplorerNode, masNodes);
 }
@@ -772,7 +773,7 @@ Ptr<CFont> CSolutionExplorer::GetFolderFont(int32 iNode, bool bChanged, Ptr<CFon
 {
 	if (IsStartupNode(iNode) && mpBoldColours.IsNotNull())
 	{
-		return mpBoldColours->GetFont(bChanged ? GetGitStateColour(GFS_Modified) : JEWEL_TEXT);
+		return mpBoldColours->GetFont(bChanged ? GetGitStateColour(GFS_Modified) : msText);
 	}
 	return bChanged ? GetGitStateFont(pColours, GFS_Modified) : Ptr<CFont>();
 }

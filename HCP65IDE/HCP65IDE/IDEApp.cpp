@@ -22,7 +22,6 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include <string.h>
 #include "StandardLib/Objects.h"
 #include "WindowLib/ClearCanvasDraw.h"
-#include "WindowLib/JewelColours.h"
 #include <stdio.h>
 #include "BaseLib/ArrayChars.h"
 #include "BaseLib/FileUtil.h"
@@ -212,23 +211,25 @@ void GetIDERecentFile(CChars* pszDest)
 //////////////////////////////////////////////////////////////////////////
 bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativeInput, const char* szInputDirectory, CArrayChars* paszSolutions)
 {
-	Ptr<CIDEWindowTick>	pTick;
-	int32				iNode;
-	int					iLine;
-	int					iColumn;
-	const char*			szTyped;
-	const char*			szCompare;
-	Ptr<CIDEDiffTab>	pDiff;
-	CArrayChars			aszOpen;
-	CChars				szPath;
-	size				i;
+	Ptr<CIDEWindowTick>		pTick;
+	int32					iNode;
+	int						iLine;
+	int						iColumn;
+	const char*				szTyped;
+	const char*				szCompare;
+	Ptr<CIDEDiffTab>		pDiff;
+	Ptr<CClearCanvasDraw>	pBackground;
+	CArrayChars				aszOpen;
+	CChars					szPath;
+	size					i;
 
 	pTick = OMalloc<CIDEWindowTick>();
 	if (getenv("HCP65_IDE_SNAPSHOT") != NULL)
 	{
 		pTick->SetSnapshot(getenv("HCP65_IDE_SNAPSHOT"), (getenv("HCP65_IDE_SNAPSHOT_TICKS") != NULL) ? atoi(getenv("HCP65_IDE_SNAPSHOT_TICKS")) : 30);
 	}
-	mpWindow = OMalloc<CWindow>("HCP65 IDE", pcNativeFactory, pTick, OMalloc<CClearCanvasDraw>(JEWEL_PANEL), CFT_RGBX, CCO_BGR, CRGB_24bit, ARGB_8bit);
+	pBackground = OMalloc<CClearCanvasDraw>(0);  //Coloured once the content has made the theme.
+	mpWindow = OMalloc<CWindow>("HCP65 IDE", pcNativeFactory, pTick, pBackground, CFT_RGBX, CCO_BGR, CRGB_24bit, ARGB_8bit);
 
 	mpContent = OMalloc<CIDEContent>();
 	mpContent->SetKeepSettings(!IsIDEScripted() || (getenv("HCP65_IDE_SAVE_LAYOUT") != NULL));
@@ -236,6 +237,7 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 	mbValid = mpContent->Setup(mpWindow, "Resources/InterVariable.ttf", "Resources/JetBrainsMonoNL-Regular.ttf");
 	if (mbValid)
 	{
+		pBackground->SetColour(mpContent->GetTheme()->GetColour(TC_Panel));
 		//The HCP65 repository is beside the IDE's.
 		mpContent->GetBuilding()->SetLibc65Directory("../../../HCP65/Libraries/Libc65");
 		mpContent->GetDebugging()->SetDefaultEmulator((getenv("HCP65_IDE_EMULATOR") != NULL) ? getenv("HCP65_IDE_EMULATOR") : IDE_EMULATOR, IDE_EMULATOR_DIRECTORY);

@@ -35,7 +35,6 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/FillContainer.h"
 #include "WindowLib/ScrollPane.h"
 #include "WindowLib/Label.h"
-#include "WindowLib/JewelColours.h"
 #include "WindowLib/JewelTheme.h"
 #include "WindowLib/JewelImageGenerator.h"
 #include "IDEGit.h"
@@ -254,15 +253,15 @@ void CIDEBuilding::ShowBuildProgress(void)
 	if (mcBuild.IsRunning() && (uiSteps > 0))
 	{
 		fFraction = ((float)muiBuildStep + mcBuild.GetFraction()) / (float)uiSteps;
-		mpBuildPane->SetProgress(fFraction, JEWEL_BLUE);
+		mpBuildPane->SetProgress(fFraction, mpcContent->GetTheme()->GetColour(TC_Accent));
 	}
 	else if (mcBuild.GetState() == BS_Succeeded)
 	{
-		mpBuildPane->SetProgress(1.0f, JEWEL_GREEN);
+		mpBuildPane->SetProgress(1.0f, mpcContent->GetTheme()->GetColour(TC_Success));
 	}
 	else if ((mcBuild.GetState() == BS_Failed) || (mcBuild.GetState() == BS_Cancelled))
 	{
-		mpBuildPane->SetProgress(1.0f, JEWEL_RED);
+		mpBuildPane->SetProgress(1.0f, mpcContent->GetTheme()->GetColour(TC_Failure));
 	}
 }
 
@@ -406,7 +405,7 @@ Ptr<CDockPane> CIDEBuilding::GetBuildTool(void) { return mpBuildTool; }
 //////////////////////////////////////////////////////////////////////////
 void CIDEBuilding::CreatePane(SDockPlace* psPlace)
 {
-	mpBuildPane = OMalloc<CIDEBuildPane>(mpcContent->GetWindow(), mpcContent->GetTheme(), mpcContent->GetCodeFamily(), JEWEL_TEXT);
+	mpBuildPane = OMalloc<CIDEBuildPane>(mpcContent->GetWindow(), mpcContent->GetTheme(), mpcContent->GetCodeFamily(), mpcContent->GetTheme()->GetColour(TC_Text));
 	mpBuildTool = mpcContent->GetDock()->AddPane(IDE_BUILD_ID, "Build", NULL, mpBuildPane->GetComponent(), DPK_Tool, psPlace);
 }
 

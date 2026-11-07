@@ -19,12 +19,11 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 ** ------------------------------------------------------------------------ **/
 #include "SupportLib/ColourARGB32.h"
-#include "WindowLib/JewelColours.h"
 #include "IDEGit.h"
 
 
 //IntelliJ IDEA's (dark theme) colours for files by what has happened to them since the last commit.  An unmodified
-//file is in the editor's usual text colour.
+//file is in the theme's text colour (GetGitStateFont gives none for it).
 #define IDE_GIT_MODIFIED	Set32BitColour((uint8)0x68, (uint8)0x97, (uint8)0xBB)
 #define IDE_GIT_ADDED		Set32BitColour((uint8)0x62, (uint8)0x97, (uint8)0x55)
 #define IDE_GIT_DELETED		Set32BitColour((uint8)0x6C, (uint8)0x6C, (uint8)0x6C)
@@ -56,7 +55,7 @@ ARGB32 GetGitStateColour(EGitFileState eState)
 	case GFS_Conflicted:
 		return IDE_GIT_CONFLICTED;
 	default:
-		return JEWEL_TEXT;
+		return 0;  //Unmodified files aren't coloured: they are in the text's colour.
 	}
 }
 

@@ -22,7 +22,6 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/Timer.h"
 #include "BaseLib/FileUtil.h"
 #include "BaseLib/Logger.h"
-#include "WindowLib/JewelColours.h"
 #include "StandardLib/TextContent.h"
 #include "IDEGit.h"
 #include "StandardLib/ClassDefines.h"
@@ -479,7 +478,7 @@ bool CIDEGitStatus::ShowChange(Ptr<CIDEEditorTab> pTab, size uiLine)
 	szSummary.Append((msChange.eType == GLC_Added) ? "added" : ((msChange.eType == GLC_Removed) ? "removed" : "changed"));
 	pGrid = OMalloc<CGridContainer>(pWindow);
 	pGrid->SetSizedByContent(true);
-	pLabel = OMalloc<CLabel>(pWindow, mpcContent->GetFontColours()->GetFont(JEWEL_ICON), szSummary.Text());
+	pLabel = OMalloc<CLabel>(pWindow, mpcContent->GetFontColours()->GetFont(mpcContent->GetTheme()->GetColour(TC_Icon)), szSummary.Text());
 	pLabel->SetAlignment(CSH_Left, CSV_Center);
 	szSummary.Kill();
 	mpShowDiffButton = OMalloc<CButton>(pWindow, mpcContent->GetTheme(), "Show Diff");
@@ -503,7 +502,7 @@ bool CIDEGitStatus::ShowChange(Ptr<CIDEEditorTab> pTab, size uiLine)
 		pOld = OMalloc<CTextArea>(pWindow, mpcContent->GetTheme(), mpcContent->GetCodeFamily(), szOld.Text());
 		szOld.Kill();
 		pOld->SetTiledText(true);
-		pOld->SetColour(JEWEL_TEXT);
+		pOld->SetColour(mpcContent->GetTheme()->GetColour(TC_Text));
 		pOld->SetEditable(false);
 		pOld->SetAlignment(CSH_Left, CSV_Top);
 		uiLines = msChange.uiBaseEndLine - msChange.uiBaseStartLine;
@@ -521,7 +520,7 @@ bool CIDEGitStatus::ShowChange(Ptr<CIDEEditorTab> pTab, size uiLine)
 	sPosition.y = pEditor->GetPosition().y + (int32)msChange.uiEndLine * iRow;
 	pPopup = pWindow->OpenPopup(pGrid, sPosition, pTab->GetCodeEditor());
 	sInsets.Init(6, 6);
-	pPopup->SetLook(JEWEL_PANEL, JEWEL_SEPARATOR, &sInsets);
+	pPopup->SetLook(mpcContent->GetTheme()->GetColour(TC_Panel), mpcContent->GetTheme()->GetColour(TC_Separator), &sInsets);
 	mpChangePopup = pGrid;
 	return true;
 }
@@ -733,7 +732,7 @@ void CIDEGitStatus::ShowQueuedChange(void)
 //////////////////////////////////////////////////////////////////////////
 Ptr<CLabel> CIDEGitStatus::CreateBranchLabel(void)
 {
-	mpBranchLabel = OMalloc<CLabel>(mpcContent->GetWindow(), mpcContent->GetFontColours()->GetFont(JEWEL_ICON), "");
+	mpBranchLabel = OMalloc<CLabel>(mpcContent->GetWindow(), mpcContent->GetFontColours()->GetFont(mpcContent->GetTheme()->GetColour(TC_Icon)), "");
 	mpBranchLabel->SetAlignment(CSH_Right, CSV_Center);
 	return mpBranchLabel;
 }

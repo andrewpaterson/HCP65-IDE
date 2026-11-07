@@ -21,7 +21,6 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include <string.h>
 #include "StandardLib/Objects.h"
 #include "StandardLib/ClassDefines.h"
-#include "WindowLib/JewelColours.h"
 #include "IDEBuildPane.h"
 
 
@@ -45,7 +44,8 @@ void CIDEBuildPane::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CFo
 	mpPane = OMalloc<CScrollPane>(pWindow, pTheme);
 	mpPane->SetContent(mpOutput);
 	mpPane->SetAlignment(CSH_Stretch, CSV_Stretch);
-	mpProgress = OMalloc<CProgressBar>(pWindow, JEWEL_SEPARATOR, JEWEL_BLUE, IDE_BUILD_PROGRESS_HEIGHT);
+	msProgress = pTheme->GetColour(TC_Accent);
+	mpProgress = OMalloc<CProgressBar>(pWindow, pTheme->GetColour(TC_Separator), msProgress, IDE_BUILD_PROGRESS_HEIGHT);
 	mpProgress->SetAlignment(CSH_Stretch, CSV_Bottom);
 	mpPanel = OMalloc<CGridContainer>(pWindow);
 	mpPanel->SetAlignment(CSH_Stretch, CSV_Stretch);
@@ -62,6 +62,7 @@ void CIDEBuildPane::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CFo
 //////////////////////////////////////////////////////////////////////////
 void CIDEBuildPane::Class(void)
 {
+	U_UInt32(msProgress);
 	M_Pointer(mpPanel);
 	M_Pointer(mpOutput);
 	M_Pointer(mpProgress);
@@ -107,7 +108,7 @@ bool CIDEBuildPane::Load(CObjectReader* pcFile)
 void CIDEBuildPane::Clear(void)
 {
 	mpOutput->SetText("");
-	SetProgress(0.0f, JEWEL_BLUE);
+	SetProgress(0.0f, msProgress);
 }
 
 

@@ -25,7 +25,6 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/TextFile.h"
 #include "BaseLib/Timer.h"
 #include "StandardLib/Objects.h"
-#include "WindowLib/JewelColours.h"
 #include "IDEIcons.h"
 #include "StandardLib/ClassDefines.h"
 #include "IDEContent.h"
@@ -327,12 +326,12 @@ bool CIDEDiffs::OpenDiff(const char* szLeftFile, const char* szLeftRevision, con
 	CFileUtil			cFileUtil;
 	bool				bResult;
 
-	pView = OMalloc<CDiffView>(mpcContent->GetWindow(), mpcContent->GetTheme(), mpcContent->GetFontColours()->GetFont(JEWEL_ICON), mpcContent->GetCodeFamily());
+	pView = OMalloc<CDiffView>(mpcContent->GetWindow(), mpcContent->GetTheme(), mpcContent->GetFontColours()->GetFont(mpcContent->GetTheme()->GetColour(TC_Icon)), mpcContent->GetCodeFamily());
 	pView->SetAlignment(CSH_Stretch, CSV_Stretch);
 	pView->GetEditor(TDS_Left)->GetTextArea()->SetTiledText(true);
-	pView->GetEditor(TDS_Left)->GetTextArea()->SetColour(JEWEL_TEXT);
+	pView->GetEditor(TDS_Left)->GetTextArea()->SetColour(mpcContent->GetTheme()->GetColour(TC_Text));
 	pView->GetEditor(TDS_Right)->GetTextArea()->SetTiledText(true);
-	pView->GetEditor(TDS_Right)->GetTextArea()->SetColour(JEWEL_TEXT);
+	pView->GetEditor(TDS_Right)->GetTextArea()->SetColour(mpcContent->GetTheme()->GetColour(TC_Text));
 	pDiff = OMalloc<CIDEDiffTab>(pView, szLeftFile, szLeftRevision, mpcContent->GetSolutions()->GetExplorer()->FindFileProject(szLeftFile), szRightFile, szRightRevision, mpcContent->GetSolutions()->GetExplorer()->FindFileProject(szRightFile));
 	pcLeft = pDiff->GetSide(TDS_Left);
 	pcRight = pDiff->GetSide(TDS_Right);

@@ -41,6 +41,7 @@ protected:
 	Ptr<CGridContainer>	mpPanel;
 	Ptr<CTextArea>		mpOutput;
 	Ptr<CProgressBar>	mpProgress;
+	ARGB32				msProgress;  //A build's progress while it runs.
 	Ptr<CScrollPane>	mpPane;
 
 public:

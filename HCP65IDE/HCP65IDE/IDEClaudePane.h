@@ -45,6 +45,7 @@ CONSTRUCTABLE(CIDEClaudePane);
 DESTRUCTABLE(CIDEClaudePane);
 protected:
 	Ptr<CWindow>		mpWindow;
+	ARGB32				msText;  //The conversation's and request's colour.
 	CChars				mszDirectory;	//The folder Claude works in, with a '\' after it.
 	bool				mbScrollToEnd;	//Text was added since the conversation was last scrolled to its end.
 	Ptr<CGridContainer>	mpPanel;

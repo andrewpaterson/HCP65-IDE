@@ -22,7 +22,6 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "StandardLib/Objects.h"
 #include "StandardLib/ClassDefines.h"
 #include "BaseLib/StringHelper.h"
-#include "WindowLib/JewelColours.h"
 #include "IDEClaudePane.h"
 
 
@@ -69,6 +68,8 @@ void CIDEClaudePane::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CF
 
 	PreInit();
 
+	msText = pTheme->GetColour(TC_Text);
+
 	mpWindow = pWindow;
 	mszDirectory.Init();
 	mbScrollToEnd = false;
@@ -78,7 +79,7 @@ void CIDEClaudePane::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CF
 	mpConversation = OMalloc<CTextArea>(pWindow, pTheme, pFamily, "");
 	mpConversation->SetEditable(false);
 	mpConversation->SetTiledText(true);
-	mpConversation->SetColour(JEWEL_TEXT);
+	mpConversation->SetColour(msText);
 	mpConversation->SetAlignment(CSH_Left, CSV_Top);
 	mpConversationPane = OMalloc<CScrollPane>(pWindow, pTheme);
 	mpConversationPane->SetContent(mpConversation);
@@ -86,7 +87,7 @@ void CIDEClaudePane::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CF
 
 	mpRequest = OMalloc<CTextArea>(pWindow, pTheme, pFamily, "");
 	mpRequest->SetTiledText(true);
-	mpRequest->SetColour(JEWEL_TEXT);
+	mpRequest->SetColour(msText);
 	mpRequest->SetAlignment(CSH_Left, CSV_Top);
 	mpRequestPane = OMalloc<CScrollPane>(pWindow, pTheme);
 	mpRequestPane->SetContent(mpRequest);
@@ -123,6 +124,7 @@ void CIDEClaudePane::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CF
 //////////////////////////////////////////////////////////////////////////
 void CIDEClaudePane::Class(void)
 {
+	U_UInt32(msText);
 	M_Pointer(mpWindow);
 	U_String(mszDirectory);
 	U_Bool(mbScrollToEnd);
@@ -221,7 +223,7 @@ void CIDEClaudePane::AppendEvent(CClaudeEvent* pcEvent)
 		break;
 
 	case CET_Text:
-		Append(pcEvent->GetText(), JEWEL_TEXT);
+		Append(pcEvent->GetText(), msText);
 		break;
 
 	case CET_ToolUse:

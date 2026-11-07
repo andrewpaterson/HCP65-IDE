@@ -23,7 +23,6 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/TextFile.h"
 #include "StandardLib/Objects.h"
 #include "StandardLib/ClassDefines.h"
-#include "WindowLib/JewelColours.h"
 #include "IDEContent.h"
 #include "IDEEditorTab.h"
 
@@ -31,7 +30,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define IDE_CARET_LINES_ABOVE	4		//How many lines show above a line jumped to.
 #define IDE_RECOLOUR_DELAY		400		//Milliseconds after the last edit before the text is highlighted again.
 #define IDE_LISTING_TEXT		Set32BitColour((uint8)0xE6, (uint8)0xDF, (uint8)0xB8)	//A line's assembly: the editor's text, a little yellow.
-#define IDE_LISTING_BACKGROUND	Set32BitColour((uint8)0x14, (uint8)0x15, (uint8)0x17)	//Under a line's assembly: darker than the editor's background (JEWEL_EDITOR, the document well's).
+#define IDE_LISTING_BACKGROUND	Set32BitColour((uint8)0x14, (uint8)0x15, (uint8)0x17)	//Under a line's assembly: darker than the editor's background (the theme's editor colour, the document well's).
 
 //IntelliJ IDEA's (dark theme) change bars in the gutter.
 #define IDE_CHANGE_ADDED		Set32BitColour((uint8)0x54, (uint8)0x91, (uint8)0x59)

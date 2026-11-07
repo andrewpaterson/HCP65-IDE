@@ -35,7 +35,6 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/FillContainer.h"
 #include "WindowLib/ScrollPane.h"
 #include "WindowLib/Label.h"
-#include "WindowLib/JewelColours.h"
 #include "WindowLib/JewelTheme.h"
 #include "WindowLib/JewelImageGenerator.h"
 #include "IDEGit.h"
@@ -148,7 +147,7 @@ Ptr<CIDEEditorTab> CIDEDocuments::OpenFileTab(const char* szFileName, size uiPro
 		gcLogger.Error2(__METHOD__, " Could not read [", szFileName, "].", NULL);
 		return NULL;
 	}
-	pTab = OMalloc<CIDEEditorTab>(mpcContent->GetWindow(), mpcContent->GetTheme(), mpcContent->GetFontColours()->GetFont(JEWEL_ICON), mpcContent->GetCodeFamily(), JEWEL_TEXT, szFileName, uiProject, cFile.Text());
+	pTab = OMalloc<CIDEEditorTab>(mpcContent->GetWindow(), mpcContent->GetTheme(), mpcContent->GetFontColours()->GetFont(mpcContent->GetTheme()->GetColour(TC_Icon)), mpcContent->GetCodeFamily(), mpcContent->GetTheme()->GetColour(TC_Text), szFileName, uiProject, cFile.Text());
 	cFile.Kill();
 	maTabs.Add(pTab);
 	RequestHighlight(pTab);

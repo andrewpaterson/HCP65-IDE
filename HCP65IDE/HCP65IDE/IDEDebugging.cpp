@@ -26,7 +26,6 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/FatImageFile.h"
 #include "StandardLib/Objects.h"
 #include "StandardLib/ClassDefines.h"
-#include "WindowLib/JewelColours.h"
 #include "IDEContent.h"
 #include "IDEDebugging.h"
 
@@ -928,7 +927,7 @@ Ptr<CDockPane> CIDEDebugging::GetTool(void) { return mpDebugTool; }
 //////////////////////////////////////////////////////////////////////////
 void CIDEDebugging::CreatePane(SDockPlace* psPlace)
 {
-	mpDebugView = OMalloc<CIDEDebugView>(mpcContent->GetWindow(), mpcContent->GetTheme(), mpcContent->GetCodeFamily(), JEWEL_TEXT);
+	mpDebugView = OMalloc<CIDEDebugView>(mpcContent->GetWindow(), mpcContent->GetTheme(), mpcContent->GetCodeFamily(), mpcContent->GetTheme()->GetColour(TC_Text));
 	mpDebugTool = mpcContent->GetDock()->AddPane(IDE_DEBUG_ID, "Debug", NULL, mpDebugView->GetComponent(), DPK_Tool, psPlace);
 }
 

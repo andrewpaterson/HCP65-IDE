@@ -24,7 +24,6 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "SupportLib/ImageColour.h"
 #include "SupportLib/ImageColourConverter.h"
 #include "SupportLib/VectorShapes.h"
-#include "WindowLib/JewelColours.h"
 #include "IDEIcons.h"
 
 
@@ -84,7 +83,7 @@ EIDEFileType CIDEIcons::GetFileType(const char* szFileName)
 // Points on pixel centres keep the strokes sharp.
 //
 //////////////////////////////////////////////////////////////////////////
-Ptr<CImageCel> CIDEIcons::CreateFileIcon(EIDEFileType eType, CColourFormatHelper* pcFormat)
+Ptr<CImageCel> CIDEIcons::CreateFileIcon(EIDEFileType eType, Ptr<CWindowTheme> pTheme, CColourFormatHelper* pcFormat)
 {
 	Ptr<CImage>		pImage;
 	CImageDraw		cDraw;
@@ -117,7 +116,7 @@ Ptr<CImageCel> CIDEIcons::CreateFileIcon(EIDEFileType eType, CColourFormatHelper
 		AddLine(&cPath, 5.5, 8.5, 10.5, 8.5);
 		AddLine(&cPath, 5.5, 11.5, 10.5, 11.5);
 	}
-	Fill(&cDraw, &cPath, JEWEL_ICON);
+	Fill(&cDraw, &cPath, pTheme->GetColour(TC_Icon));
 	cPath.Kill();
 
 	if (eType != IFT_Other)
@@ -167,7 +166,7 @@ Ptr<CImageCel> CIDEIcons::CreateFileIcon(EIDEFileType eType, CColourFormatHelper
 			AddLine(&cPath, 7.0, 10.5, 7.5, 11.5);
 			AddLine(&cPath, 7.5, 11.5, 7.5, 14.5);
 		}
-		Fill(&cDraw, &cPath, JEWEL_WHITE);
+		Fill(&cDraw, &cPath, pTheme->GetColour(TC_BrightText));
 		cPath.Kill();
 	}
 	cDraw.Kill();
@@ -210,7 +209,7 @@ void CIDEIcons::AddLine(CVectorPath* pcPath, float64 x1, float64 y1, float64 x2,
 // A circle of the kind's colour with its letter in white.
 //
 //////////////////////////////////////////////////////////////////////////
-Ptr<CImageCel> CIDEIcons::CreateSymbolIcon(EIDESymbolType eType, CColourFormatHelper* pcFormat)
+Ptr<CImageCel> CIDEIcons::CreateSymbolIcon(EIDESymbolType eType, Ptr<CWindowTheme> pTheme, CColourFormatHelper* pcFormat)
 {
 	Ptr<CImage>		pImage;
 	CImageDraw		cDraw;
@@ -271,7 +270,7 @@ Ptr<CImageCel> CIDEIcons::CreateSymbolIcon(EIDESymbolType eType, CColourFormatHe
 		AddLine(&cPath, 8.0, 10.5, 10.5, 6.5);
 		break;
 	}
-	Fill(&cDraw, &cPath, JEWEL_WHITE);
+	Fill(&cDraw, &cPath, pTheme->GetColour(TC_BrightText));
 	cPath.Kill();
 	cDraw.Kill();
 
