@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<BuildConfigurations>
+	<Configuration Name="Release|W65C816" Toolchain="W65C816" Solution="Release|Win32" BreakpointSpace="Kernel" Card="..\Output\Card.img" CardPath="\d.drv">
+		<Module File="d.drv" Entry="_KernalCreateDriver" Limit="0x1000"/>
+		<Load File="..\Kernel\Output\W65C816\Release\k.rom" Address="0x0"/>
+	</Configuration>
+	<Configuration Name="Debug|W65C816" Toolchain="W65C816" Solution="Release|Win32">
+		<Module File="d.drv" Entry="_KernalCreateDriver" Limit="0x1000"/>
+	</Configuration>
+</BuildConfigurations>

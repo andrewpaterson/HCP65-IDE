@@ -8,6 +8,7 @@
 
 #define TEST_WORKSPACE_PROGRAM		"Input" _FS_ "Workspace" _FS_ "Program" _FS_ "Program.sln"
 #define TEST_WORKSPACE_KERNEL		"Input" _FS_ "Workspace" _FS_ "Kernel" _FS_ "Kernel.sln"
+#define TEST_WORKSPACE_DRIVER		"Input" _FS_ "Workspace" _FS_ "Driver" _FS_ "Driver.sln"
 #define TEST_WORKSPACE_FILE			"Output" _FS_ "Test" BUILD_WORKSPACE_EXTENSION
 
 
@@ -164,6 +165,88 @@ void TestBuildWorkspaceSolutions(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// A driver's solution beside the program's and the kernal's: debugging the
+// kernal, the driver on its card is a module it loads, not a process, and
+// without a card (Debug) it is neither.  It is never the startup solution's
+// own module, and it is built after the kernal it loads.
+//
+//////////////////////////////////////////////////////////////////////////
+void TestBuildWorkspaceModules(void)
+{
+	CBuildWorkspace			cWorkspace;
+	CArrayInt				aiOrder;
+	CBuildConfiguration*	pcDriver;
+	size					uiKernel;
+	size					uiDriver;
+
+	cWorkspace.Init();
+	AssertTrue(cWorkspace.Open(TEST_WORKSPACE_PROGRAM));
+	uiKernel = cWorkspace.AddSolution(TEST_WORKSPACE_KERNEL);
+	uiDriver = cWorkspace.AddSolution(TEST_WORKSPACE_DRIVER);
+	AssertSize(1, uiKernel);
+	AssertSize(2, uiDriver);
+	AssertSize(4, cWorkspace.NumProjects());
+
+	pcDriver = cWorkspace.FindConfiguration(uiDriver, "Release|W65C816");
+	AssertTrue(pcDriver->HasModule());
+	AssertInt(BP_Module, pcDriver->GetProgram());
+	AssertString("d.drv", pcDriver->GetProgramFile());
+	AssertInt(0x1000, pcDriver->GetProgramLimit());
+	AssertString("_KernalCreateDriver", pcDriver->GetModule()->GetEntry());
+	AssertString("\\d.drv", pcDriver->GetCardPath());
+	AssertString("Kernel", pcDriver->GetBreakpointSpace());
+	AssertTrue(pcDriver->IsOnCard());
+	AssertTrue(cWorkspace.FindConfiguration(uiDriver, "Debug|W65C816")->HasModule());
+	AssertFalse(cWorkspace.FindConfiguration(uiDriver, "Debug|W65C816")->IsOnCard());
+
+	//The driver loads the kernal's ROM, as the program does: the kernal is built first.
+	AssertTrue(cWorkspace.Loads(uiDriver, uiKernel, "Release|W65C816"));
+	AssertFalse(cWorkspace.Loads(uiKernel, uiDriver, "Release|W65C816"));
+	aiOrder.Init();
+	cWorkspace.GetBuildOrder("Release|W65C816", &aiOrder);
+	AssertSize(3, aiOrder.NumElements());
+	AssertInt((int)uiKernel, aiOrder.GetValue(0));
+
+	//Debugging the kernal: the driver is its module and the program its process.
+	cWorkspace.SetStartup(uiKernel);
+	aiOrder.ReInit();
+	cWorkspace.GetModulePrograms("Release|W65C816", &aiOrder);
+	AssertSize(1, aiOrder.NumElements());
+	AssertInt((int)uiDriver, aiOrder.GetValue(0));
+	aiOrder.ReInit();
+	cWorkspace.GetProcessPrograms("Release|W65C816", &aiOrder);
+	AssertSize(1, aiOrder.NumElements());
+	AssertInt(0, aiOrder.GetValue(0));
+
+	//Debug's driver isn't on a card, so the kernal has nothing to load.
+	aiOrder.ReInit();
+	cWorkspace.GetModulePrograms("Debug|W65C816", &aiOrder);
+	AssertSize(0, aiOrder.NumElements());
+
+	//Debugging the program, the driver is still a module (the program doesn't load it).
+	cWorkspace.SetStartup(0);
+	aiOrder.ReInit();
+	cWorkspace.GetModulePrograms("Release|W65C816", &aiOrder);
+	AssertSize(1, aiOrder.NumElements());
+	AssertInt((int)uiDriver, aiOrder.GetValue(0));
+
+	//The startup solution's own driver isn't one of the others.
+	cWorkspace.SetStartup(uiDriver);
+	aiOrder.ReInit();
+	cWorkspace.GetModulePrograms("Release|W65C816", &aiOrder);
+	AssertSize(0, aiOrder.NumElements());
+	aiOrder.ReInit();
+	cWorkspace.GetProcessPrograms("Release|W65C816", &aiOrder);
+	AssertSize(1, aiOrder.NumElements());
+	AssertInt(0, aiOrder.GetValue(0));
+	aiOrder.Kill();
+
+	cWorkspace.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // A workspace file lists the solutions relative to it and which is the
 // startup one, and reads back the same; one that names a solution not
 // there isn't read.
@@ -231,6 +314,7 @@ void TestBuildWorkspace(void)
 
 	TestBuildWorkspaceRelativePath();
 	TestBuildWorkspaceSolutions();
+	TestBuildWorkspaceModules();
 	TestBuildWorkspaceFile();
 
 	TestStatistics();
