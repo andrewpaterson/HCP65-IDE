@@ -79,7 +79,7 @@ void CIDERename::Class(void)
 	M_Pointer(mpRenameDialog);
 	M_Pointer(mpRenameField);
 	M_Pointer(mpRenameError);
-	U_Data(SIDERenameTarget, msRenameTarget);
+	U_Unknown(SIDERenameTarget, msRenameTarget);
 }
 
 
