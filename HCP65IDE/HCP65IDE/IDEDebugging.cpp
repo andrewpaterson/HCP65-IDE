@@ -88,17 +88,6 @@ void CIDEDebugging::Class(void)
 	U_String(mszDefaultEmulatorDirectory);
 	U_String(mszStoppedFile);
 	U_UInt32(muiStoppedLine);
-	M_Pointer(mpStartItem);
-	M_Pointer(mpStepIntoItem);
-	M_Pointer(mpStepOverItem);
-	M_Pointer(mpStepOutItem);
-	M_Pointer(mpBreakItem);
-	M_Pointer(mpStopItem);
-	M_Pointer(mpRestartItem);
-	M_Pointer(mpToggleItem);
-	M_Pointer(mpNewBreakpointItem);
-	M_Pointer(mpDeleteBreakpointsItem);
-	M_Pointer(mpAttachItem);
 	U_Unknown(CArrayChars, maszDebugScript);
 	U_Int64(miDebugScriptTime);
 	U_Int64(miDebugScriptWait);
@@ -113,14 +102,6 @@ void CIDEDebugging::Class(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDEDebugging::Free(void)
 {
-	if (mpDebugMenu.IsNotNull())
-	{
-		mpDebugMenu->GetItemClickEvent()->Remove(this);
-	}
-	if (mpStartButton.IsNotNull())
-	{
-		mpStartButton->GetClickEvent()->Remove(this);
-	}
 	//An emulator being debugged is quit (or detached from).
 	mszStoppedFile.Kill();
 	mcDebugger.Kill();
@@ -138,92 +119,50 @@ bool CIDEDebugging::Save(CObjectWriter* pcFile) { return false; }
 bool CIDEDebugging::Load(CObjectReader* pcFile) { return false; }
 
 
+//Debug's items, in order.
+const char*	gaszDebugMenu[] = { "Debug.Start", "Debug.Stop", "Debug.Restart", "Debug.BreakAll", "Debug.Attach", "Debug.StepInto", "Debug.StepOver",
+							"Debug.StepOut", "Debug.ToggleBreakpoint", "Debug.NewBreakpoint", "Debug.DeleteBreakpoints", NULL };
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Debug's commands, with Visual Studio's keys.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDebugging::AddCommands(Ptr<CCommandSet> pCommands)
+{
+	Ptr<CImageCel>	pNoIcon;
+
+	pCommands->Add("Debug.Start", "Start Debugging", "F5", pNoIcon, this, &CIDEDebugging::StartDebugging);
+	pCommands->Add("Debug.Stop", "Stop Debugging", "Shift+F5", pNoIcon, this, &CIDEDebugging::StopDebugging);
+	pCommands->Add("Debug.Restart", "Restart", "Control+Shift+F5", pNoIcon, this, &CIDEDebugging::RestartDebugging);
+	pCommands->Add("Debug.BreakAll", "Break All", "Control+Pause/Break", pNoIcon, this, &CIDEDebugging::BreakAll);
+	pCommands->Add("Debug.Attach", "Attach to Emulator...", "", pNoIcon, this, &CIDEDebugging::ShowAttachDialog);
+	pCommands->Add("Debug.StepInto", "Step Into", "F11", pNoIcon, this, &CIDEDebugging::StepInto);
+	pCommands->Add("Debug.StepOver", "Step Over", "F10", pNoIcon, this, &CIDEDebugging::StepOver);
+	pCommands->Add("Debug.StepOut", "Step Out", "Shift+F11", pNoIcon, this, &CIDEDebugging::StepOut);
+	pCommands->Add("Debug.ToggleBreakpoint", "Toggle Breakpoint", "F9", pNoIcon, this, &CIDEDebugging::ToggleBreakpoint);
+	pCommands->Add("Debug.NewBreakpoint", "New Breakpoint at Address...", "", pNoIcon, this, &CIDEDebugging::ShowNewBreakpointDialog);
+	pCommands->Add("Debug.DeleteBreakpoints", "Delete All Breakpoints", "", pNoIcon, this, &CIDEDebugging::DeleteAllBreakpoints);
+}
+
+
 //////////////////////////////////////////////////////////////////////////
 //
 //
 //////////////////////////////////////////////////////////////////////////
 Ptr<CMenuContainer> CIDEDebugging::CreateDebugMenu(void)
 {
-	Ptr<CMenuContainer>	pDebug;
+	Ptr<CCommandSet>	pCommands;
+	size				i;
 
 	mpDebugMenu = OMalloc<CMenuContainer>(mpcContent->GetWindow(), mpcContent->GetTheme());
-	pDebug = mpDebugMenu;
-	pDebug->GetItemClickEvent()->Add(this, &CIDEDebugging::DebugMenuItemClicked);
-	mpStartItem = pDebug->AddItem("Start Debugging");
-	mpStartItem->SetShortcut(CIC_StartDebugging);
-	mpStopItem = pDebug->AddItem("Stop Debugging");
-	mpStopItem->SetShortcut(CIC_StopDebugging);
-	mpRestartItem = pDebug->AddItem("Restart");
-	mpRestartItem->SetShortcut(CIC_RestartDebugging);
-	mpBreakItem = pDebug->AddItem("Break All");
-	mpBreakItem->SetShortcut(CIC_BreakAll);
-	mpAttachItem = pDebug->AddItem("Attach to Emulator...");
-	mpStepIntoItem = pDebug->AddItem("Step Into");
-	mpStepIntoItem->SetShortcut(CIC_StepInto);
-	mpStepOverItem = pDebug->AddItem("Step Over");
-	mpStepOverItem->SetShortcut(CIC_StepOver);
-	mpStepOutItem = pDebug->AddItem("Step Out");
-	mpStepOutItem->SetShortcut(CIC_StepOut);
-	mpToggleItem = pDebug->AddItem("Toggle Breakpoint");
-	mpToggleItem->SetShortcut(CIC_ToggleBreakpoint);
-	mpNewBreakpointItem = pDebug->AddItem("New Breakpoint at Address...");
-	mpDeleteBreakpointsItem = pDebug->AddItem("Delete All Breakpoints");
-	return pDebug;
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// False if pcItem isn't one of Debug's.
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDEDebugging::DebugMenuItemClicked(CMenuItem* pcItem)
-{
-	if (pcItem == &mpStartItem)
+	pCommands = mpcContent->GetCommands();
+	for (i = 0; gaszDebugMenu[i]; i++)
 	{
-		StartDebugging();
+		mpDebugMenu->AddItem(pCommands->Find(gaszDebugMenu[i]));
 	}
-	else if (pcItem == &mpStopItem)
-	{
-		StopDebugging();
-	}
-	else if (pcItem == &mpRestartItem)
-	{
-		RestartDebugging();
-	}
-	else if (pcItem == &mpBreakItem)
-	{
-		BreakAll();
-	}
-	else if (pcItem == &mpAttachItem)
-	{
-		ShowAttachDialog();
-	}
-	else if (pcItem == &mpStepIntoItem)
-	{
-		StepInto();
-	}
-	else if (pcItem == &mpStepOverItem)
-	{
-		StepOver();
-	}
-	else if (pcItem == &mpStepOutItem)
-	{
-		StepOut();
-	}
-	else if (pcItem == &mpToggleItem)
-	{
-		ToggleBreakpoint();
-	}
-	else if (pcItem == &mpNewBreakpointItem)
-	{
-		ShowNewBreakpointDialog();
-	}
-	else if (pcItem == &mpDeleteBreakpointsItem)
-	{
-		mcDebugger.DeleteAllBreakpoints();
-		UpdateDebugView(true);
-	}
+	return mpDebugMenu;
 }
 
 
@@ -231,37 +170,10 @@ void CIDEDebugging::DebugMenuItemClicked(CMenuItem* pcItem)
 //
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEDebugging::DebugCommandAction(EComponentInputCommand eCommand)
+void CIDEDebugging::DeleteAllBreakpoints(void)
 {
-	switch (eCommand)
-	{
-	case CIC_StartDebugging:
-		StartDebugging();
-		break;
-	case CIC_StopDebugging:
-		StopDebugging();
-		break;
-	case CIC_RestartDebugging:
-		RestartDebugging();
-		break;
-	case CIC_BreakAll:
-		BreakAll();
-		break;
-	case CIC_ToggleBreakpoint:
-		ToggleBreakpoint();
-		break;
-	case CIC_StepOver:
-		StepOver();
-		break;
-	case CIC_StepInto:
-		StepInto();
-		break;
-	case CIC_StepOut:
-		StepOut();
-		break;
-	default:
-		break;
-	}
+	mcDebugger.DeleteAllBreakpoints();
+	UpdateDebugView(true);
 }
 
 
@@ -1030,7 +942,7 @@ Ptr<CButton> CIDEDebugging::CreateStartButton(void)
 {
 	mpStartButton = OMalloc<CButton>(mpcContent->GetWindow(), mpcContent->GetTheme(), "Start");
 	mpStartButton->SetAlignment(CSH_Left, CSV_Center);
-	mpStartButton->GetClickEvent()->Add(this, &CIDEDebugging::StartClicked);
+	mpStartButton->SetCommand(mpcContent->GetCommands()->Find("Debug.Start"));
 	return mpStartButton;
 }
 
@@ -1280,13 +1192,6 @@ void CIDEDebugging::ShowStoppedLine(bool bWasStopped)
 	}
 	ShowAllBreakpoints();
 }
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDEDebugging::StartClicked(void) { StartDebugging(); }  //The toolbar's Start button, Continue while stopped.
 
 
 //////////////////////////////////////////////////////////////////////////

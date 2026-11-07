@@ -56,9 +56,6 @@ void CIDEDocuments::Init(CIDEContent* pcContent)
 {
 	PreInit();
 	mpcContent = pcContent;
-	mpSaveItem = NULL;
-	mpSaveAllItem = NULL;
-	mpCloseAllItem = NULL;
 	maTabs.Init();
 	mpActive = NULL;
 	muiIndexings = 0;
@@ -73,9 +70,6 @@ void CIDEDocuments::Init(CIDEContent* pcContent)
 void CIDEDocuments::Class(void)
 {
 	U_Pointer(mpcContent);
-	M_Pointer(mpSaveItem);
-	M_Pointer(mpSaveAllItem);
-	M_Pointer(mpCloseAllItem);
 	M_Embedded(maTabs);
 	M_Pointer(mpActive);
 	U_Size(muiIndexings);
@@ -90,18 +84,6 @@ void CIDEDocuments::Class(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDEDocuments::Free(void)
 {
-	if (mpSaveItem.IsNotNull())
-	{
-		mpSaveItem->GetClickEvent()->Remove(this);
-	}
-	if (mpSaveAllItem.IsNotNull())
-	{
-		mpSaveAllItem->GetClickEvent()->Remove(this);
-	}
-	if (mpCloseAllItem.IsNotNull())
-	{
-		mpCloseAllItem->GetClickEvent()->Remove(this);
-	}
 }
 
 
@@ -796,15 +778,27 @@ void CIDEDocuments::RemoveTab(Ptr<CIDEEditorTab> pTab)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Save (Control+S) and Save All (Control+Shift+S), and Close All
+// Documents.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDocuments::AddCommands(Ptr<CCommandSet> pCommands)
+{
+	pCommands->Add("File.Save", "Save", "Control+S", Ptr<CImageCel>(), this, &CIDEDocuments::SaveActiveFile);
+	pCommands->Add("File.SaveAll", "Save All", "Control+Shift+S", Ptr<CImageCel>(), this, &CIDEDocuments::SaveAllFiles);
+	pCommands->Add("Window.CloseAllDocuments", "Close All Documents", NULL, Ptr<CImageCel>(), this, &CIDEDocuments::CloseAllFiles);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // File's Save and Save All.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEDocuments::AddFileItems(Ptr<CMenuContainer> pFile)
 {
-	mpSaveItem = pFile->AddItem("Save");
-	mpSaveItem->GetClickEvent()->Add(this, &CIDEDocuments::MenuItemClicked);
-	mpSaveAllItem = pFile->AddItem("Save All");
-	mpSaveAllItem->GetClickEvent()->Add(this, &CIDEDocuments::MenuItemClicked);
+	pFile->AddItem(mpcContent->GetCommands()->Find("File.Save"));
+	pFile->AddItem(mpcContent->GetCommands()->Find("File.SaveAll"));
 }
 
 
@@ -815,27 +809,7 @@ void CIDEDocuments::AddFileItems(Ptr<CMenuContainer> pFile)
 //////////////////////////////////////////////////////////////////////////
 void CIDEDocuments::AddWindowItems(Ptr<CMenuContainer> pWindowMenu)
 {
-	mpCloseAllItem = pWindowMenu->AddItem("Close All Documents");
-	mpCloseAllItem->GetClickEvent()->Add(this, &CIDEDocuments::MenuItemClicked);
+	pWindowMenu->AddItem(mpcContent->GetCommands()->Find("Window.CloseAllDocuments"));
 }
 
 
-//////////////////////////////////////////////////////////////////////////
-//
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDEDocuments::MenuItemClicked(CMenuItem* pcItem)
-{
-	if (pcItem == &mpSaveItem)
-	{
-		SaveActiveFile();
-	}
-	else if (pcItem == &mpSaveAllItem)
-	{
-		SaveAllFiles();
-	}
-	else if (pcItem == &mpCloseAllItem)
-	{
-		CloseAllFiles();
-	}
-}

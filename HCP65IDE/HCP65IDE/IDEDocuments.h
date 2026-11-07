@@ -25,6 +25,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "StandardLib/Array.h"
 #include "WindowLib/ScrollPane.h"
 #include "WindowLib/DockManager.h"
+#include "WindowLib/CommandSet.h"
 #include "IDECodeModel.h"
 #include "IDEEditorTab.h"
 #include "SolutionExplorer.h"
@@ -41,10 +42,7 @@ friend class CIDEScript;
 CONSTRUCTABLE(CIDEDocuments);
 DESTRUCTABLE(CIDEDocuments);
 protected:
-	CIDEContent*	mpcContent;  //Not held: the content holds it.
-	Ptr<CMenuItem>		mpSaveItem;  //File, Save.
-	Ptr<CMenuItem>		mpSaveAllItem;  //File, Save All.
-	Ptr<CMenuItem>		mpCloseAllItem;  //Window, Close All Documents.
+	CIDEContent*				mpcContent;  //Not held: the content holds it.
 	CArray<CIDEEditorTab>		maTabs;
 	Ptr<CIDEEditorTab>			mpActive;			//The selected tab's file, NULL if none is open.
 	size						muiIndexings;		//The code model's indexings the tabs have seen (NumIndexings).
@@ -56,22 +54,23 @@ public:
 	bool	Save(CObjectWriter* pcFile) override;
 	bool	Load(CObjectReader* pcFile) override;
 
+	void				AddCommands(Ptr<CCommandSet> pCommands);
 	void				AddFileItems(Ptr<CMenuContainer> pFile);
 	void				AddWindowItems(Ptr<CMenuContainer> pWindowMenu);
 	void				SetActiveTab(Ptr<CIDEEditorTab> pTab);
 	void				RemoveTab(Ptr<CIDEEditorTab> pTab);
-	bool			OpenFile(const char* szFileName, size uiProject = SOLUTION_EXPLORER_NO_PROJECT);
+	bool				OpenFile(const char* szFileName, size uiProject = SOLUTION_EXPLORER_NO_PROJECT);
 	Ptr<CIDEEditorTab>	OpenFileTab(const char* szFileName, size uiProject, bool bShow);
-	void			CloseAllFiles(void);
-	bool			SaveFile(Ptr<CIDEEditorTab> pTab);
-	bool			SaveActiveFile(void);
-	bool			SaveAllFiles(void);
-	bool			SetCaretPlace(int iLine, int iColumn);
-	int64			UpdateEditedTabs(int64 iNow);
-	void			UpdateEditedTabsNow(void);
-	void			ReindexAll(void);
-	void			ReindexDiscarded(Ptr<CIDEEditorTab> pTab);
-	bool			CloseFile(const char* szFileName);
+	void				CloseAllFiles(void);
+	bool				SaveFile(Ptr<CIDEEditorTab> pTab);
+	bool				SaveActiveFile(void);
+	bool				SaveAllFiles(void);
+	bool				SetCaretPlace(int iLine, int iColumn);
+	int64				UpdateEditedTabs(int64 iNow);
+	void				UpdateEditedTabsNow(void);
+	void				ReindexAll(void);
+	void				ReindexDiscarded(Ptr<CIDEEditorTab> pTab);
+	bool				CloseFile(const char* szFileName);
 	Ptr<CTextArea>		GetEditor(void);
 	Ptr<CScrollPane>	GetEditorPane(void);
 	Ptr<CIDEEditorTab>	GetActiveTab(void);
@@ -91,7 +90,6 @@ protected:
 	int64				GiveEditedTabs(int64 iNow, bool bNow);
 	void				AddEditedFile(size uiProject, const char* szFileName, const char* szText, size uiChanges, bool bHighlight, bool bIndex, bool bEdited, CArrayIDEEditedFiles* papsFiles);
 	bool				TakeEditedFiles(bool bWait);
-	void				MenuItemClicked(CMenuItem* pcItem);
 };
 
 

@@ -23,6 +23,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "StandardLib/Object.h"
 #include "StandardLib/Pointer.h"
 #include "WindowLib/Dialog.h"
+#include "WindowLib/CommandSet.h"
 #include "BaseLib/ArrayChars.h"
 #include "WindowLib/Window.h"
 #include "WindowLib/MenuContainer.h"
@@ -46,28 +47,17 @@ friend class CIDEScript;
 CONSTRUCTABLE(CIDEDebugging);
 DESTRUCTABLE(CIDEDebugging);
 protected:
-	CIDEContent*	mpcContent;  //Not held: the content holds it.
-	Ptr<CMenuContainer>	mpDebugMenu;
-	Ptr<CDialog>	mpDialog;  //The address or port asked for, while it's shown.
-	Ptr<CIDEDebugView>	mpDebugView;  //The Debug tab,
-	Ptr<CDockPane>		mpDebugTool;  //its tool window,
-	Ptr<CButton>		mpStartButton;  //and the toolbar's Start, or Continue while stopped.
+	CIDEContent*				mpcContent;  //Not held: the content holds it.
+	Ptr<CMenuContainer>			mpDebugMenu;
+	Ptr<CDialog>				mpDialog;  //The address or port asked for, while it's shown.
+	Ptr<CIDEDebugView>			mpDebugView;  //The Debug tab,
+	Ptr<CDockPane>				mpDebugTool;  //its tool window,
+	Ptr<CButton>				mpStartButton;  //and the toolbar's Start, or Continue while stopped.
 	CIDEDebugger				mcDebugger;
 	CChars						mszDefaultEmulator;	//A W65C816 configuration's emulator when it doesn't say.
 	CChars						mszDefaultEmulatorDirectory;
 	CChars						mszStoppedFile;		//The source file the debugger is stopped in, and its line
 	uint32						muiStoppedLine;		//(1 based), 0 if it isn't stopped in one.
-	Ptr<CMenuItem>				mpStartItem;		//Debug's items.
-	Ptr<CMenuItem>				mpStepIntoItem;
-	Ptr<CMenuItem>				mpStepOverItem;
-	Ptr<CMenuItem>				mpStepOutItem;
-	Ptr<CMenuItem>				mpBreakItem;
-	Ptr<CMenuItem>				mpStopItem;
-	Ptr<CMenuItem>				mpRestartItem;
-	Ptr<CMenuItem>				mpToggleItem;
-	Ptr<CMenuItem>				mpNewBreakpointItem;
-	Ptr<CMenuItem>				mpDeleteBreakpointsItem;
-	Ptr<CMenuItem>				mpAttachItem;
 	CArrayChars					maszDebugScript;	//HCP65_IDE_DEBUG's commands still to do, for checking.
 	int64						miDebugScriptTime;	//When the debugger was last seen not running, for a scripted break.
 	int64						miDebugScriptWait;	//When a scripted wait started, 0 if none is.
@@ -94,7 +84,7 @@ public:
 	Ptr<CButton>		CreateStartButton(void);
 	void				GetUserSettingsFileName(CChars* pszDest);
 	Ptr<CMenuContainer>	CreateDebugMenu(void);
-	void				DebugCommandAction(EComponentInputCommand eCommand);
+	void				AddCommands(Ptr<CCommandSet> pCommands);
 	void				PollDebugger(Ptr<CWindow> pWindow);
 
 protected:
@@ -106,7 +96,6 @@ protected:
 	void				ShowDebugMessages(void);
 	void				ResolveEmulatorPath(const char* szPath, CChars* pszDest);
 	bool				ShowAddressDialog(const char* szTitle, const char* szLabel, const char* szDefault, bool bHex, uint32* puiValue);
-	void				StartClicked(void);
 	bool				StartDebugging(void);
 	bool				RestartDebugging(void);
 	bool				BreakAll(void);
@@ -119,7 +108,7 @@ protected:
 	bool				ShowNewBreakpointDialog(void);
 	bool				ShowAttachDialog(void);
 	Ptr<CIDEDebugView>	GetDebugView(void);
-	void				DebugMenuItemClicked(CMenuItem* pcItem);
+	void				DeleteAllBreakpoints(void);
 };
 
 

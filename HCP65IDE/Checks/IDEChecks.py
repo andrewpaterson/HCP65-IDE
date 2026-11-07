@@ -103,6 +103,10 @@ CHECKS = [
 	('debug-dialog', {
 		'OPEN': 'Kernal.cpp', 'DIALOG_ANSWER': 'Cancel', 'DEBUG': 'clickmenu:Debug/New Breakpoint at Address...,answered:1,printtabs'},
 		[r'^Tabs: >Kernal\.cpp'], [r'not found', r'disabled']),
+	('commands', {
+		'OPEN': 'Kernal.cpp', 'DIALOG_ANSWER': 'Cancel',
+		'DEBUG': 'command:Debug.NewBreakpoint,answered:1,printtabs,command:Window.CloseAllDocuments,printtabs,command:No.Such'},
+		[r'^Tabs: >Kernal\.cpp', r'^Tabs:\s*$', r'^Command \[No\.Such\] not found'], []),
 	('configuration', {
 		'CONFIGURATION': 'Debug|W65C816', 'DEBUG': 'printconfig'},
 		[r'^Configuration: \[Debug\] \[W65C816\]$'], []),
@@ -114,7 +118,7 @@ CHECKS = [
 		[r'^Tabs: >Kernal\.cpp'], []),
 	('menus', {
 		'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'CARET': '36:4', 'DEBUG': 'printmenus,clickmenu:View/Nope'},
-		[r'^Menu File: Open Project/Solution\.\.\., Add Solution\.\.\., Close Solution, Recent Solutions>, Clear Recent Solutions, Save, Save All, Compare with File\.\.\., Exit$',
+		[r'^Menu File: Open Project/Solution\.\.\., Add Solution\.\.\., Close Solution, Recent Solutions>, Clear Recent Solutions, Save \[Ctrl\+S\], Save All \[Ctrl\+Shift\+S\], Compare with File\.\.\., Exit$',
 		 r'^Menu File/Recent Solutions: 1 ',
 		 r'^Menu Edit: Undo \[Ctrl\+Z\]\(disabled\), Redo \[Ctrl\+Y\]\(disabled\), Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Select All \[Ctrl\+A\], Undo Across Files\(disabled\), Redo Across Files\(disabled\)$',
 		 r'^Menu Navigate: Class\.\.\. \[Ctrl\+N\], File\.\.\. \[Ctrl\+Shift\+N\], Symbol\.\.\. \[Ctrl\+Alt\+Shift\+N\]$',

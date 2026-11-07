@@ -93,10 +93,6 @@ void CIDEBuilding::Class(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDEBuilding::Free(void)
 {
-	if (mpBuildButton.IsNotNull())
-	{
-		mpBuildButton->GetClickEvent()->Remove(this);
-	}
 	mszLibc65.Kill();
 	mcBuild.Kill();
 	maiBuildOrder.Kill();
@@ -395,7 +391,6 @@ CCPP65ListingIndex* CIDEBuilding::GetListings(void) { return &mcListings; }  //T
 //
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEBuilding::BuildClicked(void) { Build(); }  //The toolbar's Build button.
 
 
 Ptr<CIDEBuildPane> CIDEBuilding::GetBuildPane(void) { return mpBuildPane; }
@@ -418,6 +413,17 @@ void CIDEBuilding::CreatePane(SDockPlace* psPlace)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Build (Control+Shift+B, as Visual Studio's).
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEBuilding::AddCommands(Ptr<CCommandSet> pCommands)
+{
+	pCommands->Add("Build.Build", "Build", "Control+Shift+B", Ptr<CImageCel>(), this, &CIDEBuilding::Build);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // The toolbar's Build button.
 //
 //////////////////////////////////////////////////////////////////////////
@@ -425,7 +431,7 @@ Ptr<CButton> CIDEBuilding::CreateBuildButton(void)
 {
 	mpBuildButton = OMalloc<CButton>(mpcContent->GetWindow(), mpcContent->GetTheme(), "Build");
 	mpBuildButton->SetAlignment(CSH_Left, CSV_Center);
-	mpBuildButton->GetClickEvent()->Add(this, &CIDEBuilding::BuildClicked);
+	mpBuildButton->SetCommand(mpcContent->GetCommands()->Find("Build.Build"));
 	return mpBuildButton;
 }
 

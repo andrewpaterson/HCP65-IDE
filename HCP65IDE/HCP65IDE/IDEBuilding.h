@@ -26,6 +26,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/Window.h"
 #include "WindowLib/Button.h"
 #include "WindowLib/DockManager.h"
+#include "WindowLib/CommandSet.h"
 #include "CppParserLib/CPP65ListingIndex.h"
 #include "IDEBuildPane.h"
 #include "BaseLib/ArrayInt.h"
@@ -44,7 +45,7 @@ friend class CIDEScript;
 CONSTRUCTABLE(CIDEBuilding);
 DESTRUCTABLE(CIDEBuilding);
 protected:
-	CIDEContent*	mpcContent;  //Not held: the content holds it.
+	CIDEContent*				mpcContent;  //Not held: the content holds it.
 	CSolutionBuild				mcBuild;			//The build running, or the last.
 	CArrayInt					maiBuildOrder;		//The solutions a build builds, in order.
 	CCPP65ListingIndex			mcListings;			//The last HCP65 build's listings, given to the open files.
@@ -62,8 +63,9 @@ public:
 	bool	Load(CObjectReader* pcFile) override;
 
 	void				CreatePane(SDockPlace* psPlace);
+	void				AddCommands(Ptr<CCommandSet> pCommands);
 	Ptr<CButton>		CreateBuildButton(void);
-	Ptr<CDockPane>	GetBuildTool(void);
+	Ptr<CDockPane>		GetBuildTool(void);
 	Ptr<CIDEBuildPane>	GetBuildPane(void);
 	void				SetLibc65Directory(const char* szDirectory);
 	bool				Build(void);
@@ -80,7 +82,6 @@ protected:
 	void				FinishBuildSteps(CArrayChars* paszLines);
 	void				ReadListings(CArrayChars* paszLines);
 	void				ShowBuildTab(void);
-	void				BuildClicked(void);
 };
 
 

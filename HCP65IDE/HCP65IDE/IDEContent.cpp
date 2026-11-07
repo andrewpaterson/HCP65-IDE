@@ -54,11 +54,6 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define IDE_PROGRESS_POLL		250		//How often (ms) the indexing's progress is shown while it lasts.
 
 
-//Go to Definition (F12), Find All References (Shift+F12), Build (Control+Shift+B) and the debugger's keys from anywhere in the window.
-static EComponentInputCommand	gaeIDECodeCommands[] = { CIC_Save, CIC_SaveAll, CIC_GoToDefinition, CIC_FindReferences, CIC_GoToClass, CIC_GoToFile, CIC_GoToSymbol, CIC_ShowProjectView, CIC_Rename, CIC_FindUsages, CIC_GoToSource, CIC_SwitchHeaderSource, CIC_Build, CIC_StartDebugging, CIC_StopDebugging, CIC_RestartDebugging,
-														 CIC_BreakAll, CIC_ToggleBreakpoint, CIC_StepOver, CIC_StepInto, CIC_StepOut };
-
-
 //Visual Studio's dark theme colours for C++, by ECPPHighlight.
 struct SIDEHighlightColour
 {
@@ -211,6 +206,7 @@ void CIDEContent::Class(void)
 	U_Data(ARGB32, msDialogLook.sBackground);
 	U_Data(ARGB32, msDialogLook.sDivider);
 	M_Pointer(mpMenuBar);
+	M_Pointer(mpCommands);
 	M_Pointer(mpExitItem);
 	M_Pointer(mpViewMenu);
 	M_Pointer(mpResetLayoutItem);
@@ -280,8 +276,8 @@ void CIDEContent::Free(void)
 	{
 		mpWindow->GetActivationEvent()->Remove(&mpGitStatus);
 		mpWindow->ClearCloseApprover();
+		mpWindow->SetCommands(NULL);  //Their functions are the content's parts'.
 		mpWindow->CancelPosted(this);
-		mpWindow->GetFocus()->GetFocusChangeEvent()->Remove(&mpEdit);
 		mpWindow->CancelPosted(&mpCloseGuard);  //The modules' posted calls too.
 		mpWindow->CancelPosted(&mpNavigator);
 		mpWindow->CancelPosted(&mpRename);
@@ -406,6 +402,11 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpDiffs = OMalloc<CIDEDiffs>(this);
 	mpAskClaude = OMalloc<CIDEAskClaude>(this);
 
+	//What the keys, menus and toolbar run (see CCommandSet), before the menus and toolbar are made from them.
+	mpCommands = OMalloc<CCommandSet>();
+	pWindow->SetCommands(mpCommands);
+	AddCommands();
+
 	//Solution Explorer on the left.
 	sPlace.BesideWell(DS_Left, IDE_EXPLORER_WIDTH);
 	mpSolutions->CreateExplorerPane(&sPlace);
@@ -461,7 +462,6 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	pStatusGap->SetDesiredSize(IDE_TOOLBAR_GAP, 1);
 	pStatusBar->AddComponent(pStatusGap, 3, 0, 1, 1, 0, 1);
 	pMain->AddComponent(pStatusBar, 0, 3, 1, 1, 1, 0);
-	pMain->AddInputActions(gaeIDECodeCommands, this, &CIDEContent::CodeCommandAction);
 	pWindow->SetContainer(pMain);
 	pWindow->GetActivationEvent()->Add(&mpGitStatus, &CIDEGitStatus::WindowActivated);
 
@@ -575,66 +575,24 @@ void CIDEContent::ViewItemClicked(CMenuItem* pcItem)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// The IDE's commands, with Visual Studio's and IntelliJ IDEA's keys: Go to
+// Definition (F12) and Find All References (Shift+F12) here, and each
+// feature's own (Save, Go to Class, Rename, Find Usages, Build, the
+// debugger's ...).  The keys work from anywhere in the window.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEContent::CodeCommandAction(SComponentInputEvent* psEvent)
+void CIDEContent::AddCommands(void)
 {
-	if (psEvent->eCommand == CIC_Save)
-	{
-		mpDocuments->SaveActiveFile();
-	}
-	else if (psEvent->eCommand == CIC_SaveAll)
-	{
-		mpDocuments->SaveAllFiles();
-	}
-	else if (psEvent->eCommand == CIC_GoToClass)
-	{
-		mpNavigator->QueueGoTo(IDE_GO_TO_CLASS);
-	}
-	else if (psEvent->eCommand == CIC_GoToFile)
-	{
-		mpNavigator->QueueGoTo(IDE_GO_TO_FILE);
-	}
-	else if (psEvent->eCommand == CIC_GoToSource)
-	{
-		mpNavigator->GoToSource();
-	}
-	else if (psEvent->eCommand == CIC_SwitchHeaderSource)
-	{
-		mpNavigator->SwitchHeaderSource();
-	}
-	else if (psEvent->eCommand == CIC_FindUsages)
-	{
-		mpUsages->FindUsages(false);
-	}
-	else if (psEvent->eCommand == CIC_Rename)
-	{
-		mpRename->QueueRename();
-	}
-	else if (psEvent->eCommand == CIC_ShowProjectView)
-	{
-		mpSolutions->ShowActiveFileInExplorer();
-	}
-	else if (psEvent->eCommand == CIC_GoToSymbol)
-	{
-		mpNavigator->QueueGoTo(IDE_GO_TO_SYMBOL);
-	}
-	else if (psEvent->eCommand == CIC_GoToDefinition)
-	{
-		GoToDefinition();
-	}
-	else if (psEvent->eCommand == CIC_FindReferences)
-	{
-		FindReferences();
-	}
-	else if (psEvent->eCommand == CIC_Build)
-	{
-		mpBuilding->Build();
-	}
-	else
-	{
-		mpDebugging->DebugCommandAction(psEvent->eCommand);
-	}
+	mpCommands->Add("Navigate.GoToDefinition", "Go to Definition", "F12", Ptr<CImageCel>(), this, &CIDEContent::GoToDefinition);
+	mpCommands->Add("Navigate.FindReferences", "Find All References", "Shift+F12", Ptr<CImageCel>(), this, &CIDEContent::FindReferences);
+	mpEdit->AddCommands(mpCommands);
+	mpDocuments->AddCommands(mpCommands);
+	mpNavigator->AddCommands(mpCommands);
+	mpRename->AddCommands(mpCommands);
+	mpUsages->AddCommands(mpCommands);
+	mpSolutions->AddCommands(mpCommands);
+	mpBuilding->AddCommands(mpCommands);
+	mpDebugging->AddCommands(mpCommands);
 }
 
 
@@ -873,9 +831,6 @@ void CIDEContent::PaneClosed(CDockPane* pcPane)
 	Ptr<CIDEEditorTab>	pTab;
 	Ptr<CIDEDiffTab>	pDiff;
 
-	//The Edit menu lets go of text in it.
-	mpEdit->PaneClosed(pcPane->GetContent());
-
 	pDiff = mpDiffs->FindDiffTab(pcPane);
 	if (pDiff.IsNotNull())
 	{
@@ -1086,6 +1041,7 @@ size CIDEContent::NumFileTypeIcons(void) { return maFileIcons.Size(); }
 Ptr<CImageCel> CIDEContent::GetFileTypeIcon(size uiType) { return maFileIcons.Get(uiType); }
 Ptr<CImageCel> CIDEContent::GetSymbolIcon(size uiType) { return maSymbolIcons.Get(uiType); }
 Ptr<CMenuBar> CIDEContent::GetMenuBar(void) { return mpMenuBar; }
+Ptr<CCommandSet> CIDEContent::GetCommands(void) { return mpCommands; }
 Ptr<CMenuContainer> CIDEContent::GetEditorMenu(void) { return mpEditorMenu; }
 Ptr<CIDENavigator> CIDEContent::GetNavigator(void) { return mpNavigator; }
 Ptr<CIDEEdit> CIDEContent::GetEdit(void) { return mpEdit; }

@@ -47,15 +47,7 @@ void CIDEEdit::Class(void)
 	U_Unknown(CUndoLog, mcUndoLog);
 	U_Bool(mbLogUndoing);
 	M_Pointer(mpEditMenu);
-	M_Pointer(mpUndoItem);
-	M_Pointer(mpRedoItem);
-	M_Pointer(mpCutItem);
-	M_Pointer(mpCopyItem);
-	M_Pointer(mpPasteItem);
-	M_Pointer(mpSelectAllItem);
-	M_Pointer(mpUndoAllItem);
-	M_Pointer(mpRedoAllItem);
-	M_Pointer(mpEditTarget);
+	M_Pointer(mpEditCommands);
 }
 
 
@@ -67,11 +59,6 @@ void CIDEEdit::Class(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDEEdit::Free(void)
 {
-	if (mpEditMenu.IsNotNull())
-	{
-		mpEditMenu->GetOpeningEvent()->Remove(this);
-		mpEditMenu->GetItemClickEvent()->Remove(this);
-	}
 	mcUndoLog.Kill();
 }
 
@@ -86,257 +73,57 @@ bool CIDEEdit::Load(CObjectReader* pcFile) { return false; }
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Edit, as IntelliJ's: Undo, Redo, Cut, Copy, Paste and Select All of the
-// active document, then Undo and Redo Across Files, which go back and
-// forward through the edits of every open file in the order they were
-// made.  The keys are the editor's own: the shortcuts are only shown.
-// What can't be done is disabled as the menu opens.
+// Edit's commands: the standard ones (CIDEEditCommands), then Undo and
+// Redo Across Files, which go back and forward through the edits of every
+// open file in the order they were made.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEEdit::AddCommands(Ptr<CCommandSet> pCommands)
+{
+	Ptr<CCommand>	pCommand;
+
+	mpEditCommands = OMalloc<CIDEEditCommands>(mpcContent, pCommands);
+	pCommand = pCommands->Add("Edit.UndoAcrossFiles", "Undo Across Files", "", Ptr<CImageCel>(), this, &CIDEEdit::UndoAcrossFiles);
+	pCommand->SetEnabledCheck(this, &CIDEEdit::CanUndoAcrossFiles);
+	pCommand = pCommands->Add("Edit.RedoAcrossFiles", "Redo Across Files", "", Ptr<CImageCel>(), this, &CIDEEdit::RedoAcrossFiles);
+	pCommand->SetEnabledCheck(this, &CIDEEdit::CanRedoAcrossFiles);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Edit, as IntelliJ's.  What can't be done is disabled as the menu opens
+// (the commands' enabled checks).
 //
 //////////////////////////////////////////////////////////////////////////
 Ptr<CMenuContainer> CIDEEdit::CreateEditMenu(void)
 {
+	Ptr<CCommandSet>	pCommands;
+
+	pCommands = mpcContent->GetCommands();
 	mpcContent->GetTheme()->GetMenuStyle()->SetDimFont(mpcContent->GetDimFont());
 	mpEditMenu = OMalloc<CMenuContainer>(mpcContent->GetWindow(), mpcContent->GetTheme());
-	mpUndoItem = mpEditMenu->AddItem("Undo");
-	mpUndoItem->SetShortcut(CIC_Undo);
-	mpRedoItem = mpEditMenu->AddItem("Redo");
-	mpRedoItem->SetShortcut(CIC_Redo);
+	mpEditMenu->AddItem(pCommands->Find("Edit.Undo"));
+	mpEditMenu->AddItem(pCommands->Find("Edit.Redo"));
 	mpEditMenu->AddSeparator();
-	mpCutItem = mpEditMenu->AddItem("Cut");
-	mpCutItem->SetShortcut(CIC_Cut);
-	mpCopyItem = mpEditMenu->AddItem("Copy");
-	mpCopyItem->SetShortcut(CIC_Copy);
-	mpPasteItem = mpEditMenu->AddItem("Paste");
-	mpPasteItem->SetShortcut(CIC_Paste);
+	mpEditMenu->AddItem(pCommands->Find("Edit.Cut"));
+	mpEditMenu->AddItem(pCommands->Find("Edit.Copy"));
+	mpEditMenu->AddItem(pCommands->Find("Edit.Paste"));
 	mpEditMenu->AddSeparator();
-	mpSelectAllItem = mpEditMenu->AddItem("Select All");
-	mpSelectAllItem->SetShortcut(CIC_SelectAll);
+	mpEditMenu->AddItem(pCommands->Find("Edit.SelectAll"));
 	mpEditMenu->AddSeparator();
-	mpUndoAllItem = mpEditMenu->AddItem("Undo Across Files");
-	mpRedoAllItem = mpEditMenu->AddItem("Redo Across Files");
-	mpEditMenu->GetOpeningEvent()->Add(this, &CIDEEdit::EditMenuOpening);
-	mpEditMenu->GetItemClickEvent()->Add(this, &CIDEEdit::EditMenuItemClicked);
-	mpcContent->GetWindow()->GetFocus()->GetFocusChangeEvent()->Add(this, &CIDEEdit::FocusChanged);
+	mpEditMenu->AddItem(pCommands->Find("Edit.UndoAcrossFiles"));
+	mpEditMenu->AddItem(pCommands->Find("Edit.RedoAcrossFiles"));
 	return mpEditMenu;
 }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// What can't be done to the text Edit acts on is disabled: Cut and Paste
-// in text that can't be edited (the Build output).  With no text only the
-// across files items can be done, if there are edits to go through.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEEdit::EditMenuOpening(CMenuContainer* pcMenu)
-{
-	Ptr<CTextArea>	pArea;
-	Ptr<CTextField>	pField;
-	bool			bText;
-	bool			bEditable;
-
-	pField = GetEditField();
-	pArea = GetEditArea();
-	bText = pField.IsNotNull() || pArea.IsNotNull();
-	bEditable = bText && (pField.IsNotNull() || pArea->IsEditable());
-	mpUndoItem->SetEnabled(bText && (pField.IsNotNull() ? pField->CanUndo() : pArea->CanUndo()));
-	mpRedoItem->SetEnabled(bText && (pField.IsNotNull() ? pField->CanRedo() : pArea->CanRedo()));
-	mpCutItem->SetEnabled(bEditable);
-	mpCopyItem->SetEnabled(bText);
-	mpPasteItem->SetEnabled(bEditable);
-	mpSelectAllItem->SetEnabled(bText);
-	mpUndoAllItem->SetEnabled(mcUndoLog.FindUndoGroup() != MAX_SIZE);
-	mpRedoAllItem->SetEnabled(mcUndoLog.FindRedoGroup() != MAX_SIZE);
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// Edit's items.
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDEEdit::EditMenuItemClicked(CMenuItem* pcItem)
-{
-	Ptr<CTextArea>	pArea;
-	Ptr<CTextField>	pField;
-
-	if (pcItem == &mpUndoAllItem)
-	{
-		UndoAcrossFiles();
-		return;
-	}
-	if (pcItem == &mpRedoAllItem)
-	{
-		RedoAcrossFiles();
-		return;
-	}
-	if ((pcItem != &mpUndoItem) && (pcItem != &mpRedoItem) && (pcItem != &mpCutItem) && (pcItem != &mpCopyItem) && (pcItem != &mpPasteItem) && (pcItem != &mpSelectAllItem))
-	{
-		return;
-	}
-	pField = GetEditField();
-	pArea = GetEditArea();
-	if (pField.IsNull() && pArea.IsNull())
-	{
-		return;
-	}
-
-	if (pField.IsNotNull())
-	{
-		if (pcItem == &mpUndoItem)
-		{
-			pField->Undo();
-		}
-		else if (pcItem == &mpRedoItem)
-		{
-			pField->Redo();
-		}
-		else if (pcItem == &mpCutItem)
-		{
-			pField->CutToClipboard();
-		}
-		else if (pcItem == &mpCopyItem)
-		{
-			pField->CopyToClipboard();
-		}
-		else if (pcItem == &mpPasteItem)
-		{
-			pField->PasteFromClipboard();
-		}
-		else if (pcItem == &mpSelectAllItem)
-		{
-			pField->SelectAll();
-		}
-		mpcContent->GetWindow()->GetFocus()->SetFocus(pField);
-		return;
-	}
-
-	if (pcItem == &mpUndoItem)
-	{
-		pArea->Undo();
-	}
-	else if (pcItem == &mpRedoItem)
-	{
-		pArea->Redo();
-	}
-	else if ((pcItem == &mpCutItem) && pArea->IsEditable())
-	{
-		pArea->CutToClipboard();
-	}
-	else if (pcItem == &mpCopyItem)
-	{
-		pArea->CopyToClipboard();
-	}
-	else if ((pcItem == &mpPasteItem) && pArea->IsEditable())
-	{
-		pArea->PasteFromClipboard();
-	}
-	else if (pcItem == &mpSelectAllItem)
-	{
-		pArea->SelectAll();
-	}
-
-	//The keys go back to the text.
-	mpcContent->GetWindow()->GetFocus()->SetFocus(pArea);
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// The keys going to a text area or text field make it what Edit acts on.
-// The menu taking them doesn't.
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDEEdit::FocusChanged(CFocus* pcFocus)
-{
-	Ptr<CComponent>	pFocussed;
-
-	pFocussed = pcFocus->GetFocussedComponent();
-	if (pFocussed.IsNotNull() && ((dynamic_cast<CTextArea*>(&pFocussed) != NULL) || (dynamic_cast<CTextField*>(&pFocussed) != NULL)))
-	{
-		mpEditTarget = pFocussed;
-	}
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// A pane closing: the text the keys last went to is let go of if it is
-// in pContent (a closed document's editor, say), so it can be freed.
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDEEdit::PaneClosed(Ptr<CComponent> pContent)
-{
-	if (mpEditTarget.IsNotNull() && pContent.IsNotNull() && ((&mpEditTarget == &pContent) || mpEditTarget->IsWithin(pContent)))
-	{
-		mpEditTarget = NULL;
-	}
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// Whether the text area or text field the keys last went to is still in
-// the window: its tab or tool window may have been closed or hidden.
-//
-//////////////////////////////////////////////////////////////////////////
-bool CIDEEdit::IsEditTargetShown(void)
-{
-	Ptr<CComponent>	pTop;
-
-	if (mpEditTarget.IsNull())
-	{
-		return false;
-	}
-	for (pTop = mpEditTarget; pTop->GetParent().IsNotNull(); pTop = pTop->GetParent())
-	{
-	}
-	return &pTop == &mpcContent->GetWindow();
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// The text field Edit acts on: the one the keys last went to, if they
-// last went to one still shown.  NULL if not.
-//
-//////////////////////////////////////////////////////////////////////////
-Ptr<CTextField> CIDEEdit::GetEditField(void)
-{
-	if (IsEditTargetShown())
-	{
-		return dynamic_cast<CTextField*>(&mpEditTarget);
-	}
-	return NULL;
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// The text area Edit acts on: the one the keys last went to if it is
-// still shown, else the active document if a text field isn't (see
-// GetEditField).  NULL if none.
-//
-//////////////////////////////////////////////////////////////////////////
-Ptr<CTextArea> CIDEEdit::GetEditArea(void)
-{
-	CTextArea*	pcArea;
-
-	if (IsEditTargetShown())
-	{
-		pcArea = dynamic_cast<CTextArea*>(&mpEditTarget);
-		if (pcArea)
-		{
-			return pcArea;
-		}
-		return NULL;
-	}
-	if (mpcContent->GetDocuments()->GetActiveTab().IsNull())
-	{
-		return NULL;
-	}
-	return mpcContent->GetDocuments()->GetActiveTab()->GetEditor();
-}
+bool CIDEEdit::CanUndoAcrossFiles(void) { return mcUndoLog.FindUndoGroup() != MAX_SIZE; }
+bool CIDEEdit::CanRedoAcrossFiles(void) { return mcUndoLog.FindRedoGroup() != MAX_SIZE; }
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -509,3 +296,40 @@ void CIDEEdit::EndUndoGroup(void) { mcUndoLog.EndGroup(); }
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEEdit::FileClosed(char* szFileName) { mcUndoLog.RemoveDocument(szFileName); }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEEditCommands::Init(CIDEContent* pcContent, Ptr<CCommandSet> pCommands)
+{
+	mpcContent = pcContent;
+	CEditCommands::Init(pcContent->GetWindow(), pCommands);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEEditCommands::Class(void)
+{
+	CEditCommands::Class();
+	U_Pointer(mpcContent);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The active document's editor, NULL with no document open.
+//
+//////////////////////////////////////////////////////////////////////////
+Ptr<CComponent> CIDEEditCommands::GetDefaultTarget(void)
+{
+	if (mpcContent->GetDocuments()->GetActiveTab().IsNull())
+	{
+		return NULL;
+	}
+	return mpcContent->GetDocuments()->GetActiveTab()->GetEditor();
+}

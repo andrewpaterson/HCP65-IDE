@@ -34,8 +34,6 @@ void CIDENavigator::Init(CIDEContent* pcContent)
 	PreInit();
 	mpcContent = pcContent;
 	mpNavigateMenu = NULL;
-	mpEditorMenu = NULL;
-	mpGoToSourceItem = NULL;
 	mpGoTo = NULL;
 	mszGoToPattern.Init();
 	maszGoToFiles.Init();
@@ -57,8 +55,6 @@ void CIDENavigator::Class(void)
 {
 	U_Pointer(mpcContent);
 	M_Pointer(mpNavigateMenu);
-	M_Pointer(mpEditorMenu);
-	M_Pointer(mpGoToSourceItem);
 	M_Pointer(mpGoTo);
 	U_String(mszGoToPattern);
 	U_Unknown(CArrayChars, maszGoToFiles);
@@ -68,9 +64,6 @@ void CIDENavigator::Class(void)
 	U_Int32(miQueuedGoTo);
 	U_Bool(mbGoToFilesFound);
 	U_Int32Array(maiGoToSymbolIcons, IST_Count);
-	M_Pointer(mpGoToClassItem);
-	M_Pointer(mpGoToFileItem);
-	M_Pointer(mpGoToSymbolItem);
 }
 
 
@@ -82,18 +75,6 @@ void CIDENavigator::Class(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDENavigator::Free(void)
 {
-	if (mpNavigateMenu.IsNotNull())
-	{
-		mpNavigateMenu->GetItemClickEvent()->Remove(this);
-	}
-	if (mpEditorMenu.IsNotNull())
-	{
-		mpEditorMenu->GetOpeningEvent()->Remove(this);
-	}
-	if (mpGoToSourceItem.IsNotNull())
-	{
-		mpGoToSourceItem->GetClickEvent()->Remove(this);
-	}
 	mcGoToFileSet.Kill();
 	maiGoToProjects.Kill();
 	maszGoToFiles.Kill();
@@ -219,22 +200,43 @@ void CIDENavigator::GoToSearch(size uiTab, CNameMatcher* pcMatcher, CGoToItems* 
 //////////////////////////////////////////////////////////////////////////
 //
 // Navigate, as IntelliJ's: Class, File and Symbol, each the Go to dialog
-// on its tab.  The keys are the content's own: the shortcuts are only
-// shown.
+// on its tab (see AddCommands).
 //
 //////////////////////////////////////////////////////////////////////////
 Ptr<CMenuContainer> CIDENavigator::CreateNavigateMenu(void)
 {
+	Ptr<CCommandSet>	pCommands;
+
+	pCommands = mpcContent->GetCommands();
 	mpNavigateMenu = OMalloc<CMenuContainer>(mpcContent->GetWindow(), mpcContent->GetTheme());
-	mpGoToClassItem = mpNavigateMenu->AddItem("Class...");
-	mpGoToClassItem->SetShortcut(CIC_GoToClass);
-	mpGoToFileItem = mpNavigateMenu->AddItem("File...");
-	mpGoToFileItem->SetShortcut(CIC_GoToFile);
-	mpGoToSymbolItem = mpNavigateMenu->AddItem("Symbol...");
-	mpGoToSymbolItem->SetShortcut(CIC_GoToSymbol);
-	mpNavigateMenu->GetItemClickEvent()->Add(this, &CIDENavigator::MenuItemClicked);
+	mpNavigateMenu->AddItem(pCommands->Find("Navigate.GoToClass"));
+	mpNavigateMenu->AddItem(pCommands->Find("Navigate.GoToFile"));
+	mpNavigateMenu->AddItem(pCommands->Find("Navigate.GoToSymbol"));
 	return mpNavigateMenu;
 }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Go to Class (Control+N), File (Control+Shift+N) and Symbol
+// (Control+Alt+Shift+N) as IntelliJ IDEA's, Go to Source (Control+B)
+// while there is an #include or a definition to go to, and Visual
+// Assist's Switch Header/Source (Alt+O).
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDENavigator::AddCommands(Ptr<CCommandSet> pCommands)
+{
+	pCommands->Add("Navigate.GoToClass", "Class...", "Control+N", Ptr<CImageCel>(), this, &CIDENavigator::GoToClass);
+	pCommands->Add("Navigate.GoToFile", "File...", "Control+Shift+N", Ptr<CImageCel>(), this, &CIDENavigator::GoToFile);
+	pCommands->Add("Navigate.GoToSymbol", "Symbol...", "Control+Alt+Shift+N", Ptr<CImageCel>(), this, &CIDENavigator::GoToSymbol);
+	pCommands->Add("Navigate.GoToSource", "Go to Source", "Control+B", Ptr<CImageCel>(), this, &CIDENavigator::GoToSource)->SetEnabledCheck(this, &CIDENavigator::CanGoToSource);
+	pCommands->Add("Navigate.SwitchHeaderSource", "Switch Header/Source", "Alt+O", Ptr<CImageCel>(), this, &CIDENavigator::SwitchHeaderSource);
+}
+
+
+void CIDENavigator::GoToClass(void) { QueueGoTo(IDE_GO_TO_CLASS); }
+void CIDENavigator::GoToFile(void) { QueueGoTo(IDE_GO_TO_FILE); }
+void CIDENavigator::GoToSymbol(void) { QueueGoTo(IDE_GO_TO_SYMBOL); }
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -679,44 +681,11 @@ CMapStringInt* CIDENavigator::GetSolutionFileSet(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Navigate's items, and the editors' Go to Source.
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDENavigator::MenuItemClicked(CMenuItem* pcItem)
-{
-	if (pcItem == &mpGoToClassItem)
-	{
-		QueueGoTo(IDE_GO_TO_CLASS);
-	}
-	else if (pcItem == &mpGoToFileItem)
-	{
-		QueueGoTo(IDE_GO_TO_FILE);
-	}
-	else if (pcItem == &mpGoToSymbolItem)
-	{
-		QueueGoTo(IDE_GO_TO_SYMBOL);
-	}
-	else if (pcItem == &mpGoToSourceItem)
-	{
-		GoToSource();
-	}
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
 // The editors' context menu's Go to Source (Control+B), enabled when the
 // menu opens if there is an #include or a definition to go to.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDENavigator::AddEditorItems(Ptr<CMenuContainer> pMenu)
 {
-	mpEditorMenu = pMenu;
-	mpGoToSourceItem = pMenu->AddItem("Go to Source");
-	mpGoToSourceItem->SetShortcut(CIC_GoToSource);
-	mpGoToSourceItem->GetClickEvent()->Add(this, &CIDENavigator::MenuItemClicked);
-	pMenu->GetOpeningEvent()->Add(this, &CIDENavigator::EditorMenuOpening);
+	pMenu->AddItem(mpcContent->GetCommands()->Find("Navigate.GoToSource"));
 }
-
-
-void CIDENavigator::EditorMenuOpening(CMenuContainer* pcMenu) { mpGoToSourceItem->SetEnabled(CanGoToSource()); }

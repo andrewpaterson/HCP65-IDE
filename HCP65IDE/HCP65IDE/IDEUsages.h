@@ -24,6 +24,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "StandardLib/Pointer.h"
 #include "WindowLib/TreeContainer.h"
 #include "WindowLib/DockManager.h"
+#include "WindowLib/CommandSet.h"
 #include "IDECodeModel.h"
 
 
@@ -38,9 +39,7 @@ class CIDEUsages : public CObject
 CONSTRUCTABLE(CIDEUsages);
 DESTRUCTABLE(CIDEUsages);
 protected:
-	CIDEContent*	mpcContent;  //Not held: the content holds it.
-	Ptr<CMenuContainer>	mpEditorMenu;  //The editors' context menu, with Find Usages.
-	Ptr<CMenuItem>		mpFindUsagesItem;
+	CIDEContent*		mpcContent;  //Not held: the content holds it.
 	Ptr<CTreeContainer>	mpUsages;  //What Find Usages found: projects, classes, lines.
 	Ptr<CDockPane>		mpUsagesTool;
 	CArrayIDELocations	masUsages;  //Each line's place, by its node's data less one.
@@ -52,7 +51,9 @@ public:
 	bool	Save(CObjectWriter* pcFile) override;
 	bool	Load(CObjectReader* pcFile) override;
 
+	void				AddCommands(Ptr<CCommandSet> pCommands);
 	void				AddEditorItems(Ptr<CMenuContainer> pMenu);
+	bool				CanFindUsages(void);
 	void				CreatePane(SDockPlace* psPlace);
 	bool				FindUsages(bool bDeclarations);
 	void				Clear(void);
@@ -61,8 +62,7 @@ public:
 
 protected:
 	void				UsageActivated(void);
-	void				EditorMenuOpening(CMenuContainer* pcMenu);
-	void				FindUsagesClicked(void);
+	void				FindUsagesOnly(void);
 };
 
 

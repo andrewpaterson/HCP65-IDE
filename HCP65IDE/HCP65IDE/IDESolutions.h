@@ -23,6 +23,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "StandardLib/Object.h"
 #include "StandardLib/Pointer.h"
 #include "WindowLib/FileChooser.h"
+#include "WindowLib/CommandSet.h"
 #include "BaseLib/ArrayChars.h"
 #include "WindowLib/MenuContainer.h"
 #include "WindowLib/DockManager.h"
@@ -43,21 +44,21 @@ friend class CIDEScript;
 CONSTRUCTABLE(CIDESolutions);
 DESTRUCTABLE(CIDESolutions);
 protected:
-	CIDEContent*	mpcContent;  //Not held: the content holds it.
-	Ptr<CMenuItem>		mpOpenItem;  //File, Open Project/Solution.
-	Ptr<CMenuItem>		mpAddSolutionItem;
-	Ptr<CMenuItem>		mpCloseSolutionItem;
-	Ptr<CMenuContainer>	mpRecentMenu;  //File, Recent Solutions: an item for each, or one saying there are none.
-	Ptr<CMenuItem>		mpClearRecentItem;
+	CIDEContent*			mpcContent;  //Not held: the content holds it.
+	Ptr<CMenuItem>			mpOpenItem;  //File, Open Project/Solution.
+	Ptr<CMenuItem>			mpAddSolutionItem;
+	Ptr<CMenuItem>			mpCloseSolutionItem;
+	Ptr<CMenuContainer>		mpRecentMenu;  //File, Recent Solutions: an item for each, or one saying there are none.
+	Ptr<CMenuItem>			mpClearRecentItem;
 	Ptr<CSolutionExplorer>	mpExplorer;  //The solutions' projects, folders and files.
-	Ptr<CDockPane>		mpExplorerTool;
-	Ptr<CMenuContainer>	mpExplorerMenu;  //A solution's: Set as Startup Solution and Remove.
-	Ptr<CMenuItem>		mpStartupItem;
-	Ptr<CMenuItem>		mpRemoveSolutionItem;
-	Ptr<CFileChooser>	mpFileChooser;  //The solution to open or add, while it's shown.
-	CBuildRecentFiles			mcRecent;			//The solutions and workspaces opened last.
-	CChars						mszRecentFile;		//Where they are kept, empty if they aren't.
-	CChars						mszQueuedOpen;		//A recent one chosen, opened at the next tick (OpenQueuedSolution).
+	Ptr<CDockPane>			mpExplorerTool;
+	Ptr<CMenuContainer>		mpExplorerMenu;  //A solution's: Set as Startup Solution and Remove.
+	Ptr<CMenuItem>			mpStartupItem;
+	Ptr<CMenuItem>			mpRemoveSolutionItem;
+	Ptr<CFileChooser>		mpFileChooser;  //The solution to open or add, while it's shown.
+	CBuildRecentFiles		mcRecent;			//The solutions and workspaces opened last.
+	CChars					mszRecentFile;		//Where they are kept, empty if they aren't.
+	CChars					mszQueuedOpen;		//A recent one chosen, opened at the next tick (OpenQueuedSolution).
 public:
 	void	Init(CIDEContent* pcContent);
 	void	Class(void) override;
@@ -65,33 +66,34 @@ public:
 	bool	Save(CObjectWriter* pcFile) override;
 	bool	Load(CObjectReader* pcFile) override;
 
-	void				AddFileItems(Ptr<CMenuContainer> pFile);
-	void				CreateExplorerPane(SDockPlace* psPlace);
-	void				ExplorerActivated(void);
-	bool				ShowActiveFileInExplorer(void);
+	void					AddFileItems(Ptr<CMenuContainer> pFile);
+	void					CreateExplorerPane(SDockPlace* psPlace);
+	void					ExplorerActivated(void);
+	bool					ShowActiveFileInExplorer(void);
+	void					AddCommands(Ptr<CCommandSet> pCommands);
 	Ptr<CSolutionExplorer>	GetExplorer(void);
-	Ptr<CDockPane>		GetExplorerTool(void);
-	Ptr<CMenuContainer>	GetExplorerMenu(void);
-	bool			OpenSolution(const char* szFileName);
-	bool			OpenSolutions(CArrayChars* paszFileNames);
-	bool			AddSolution(const char* szFileName);
-	bool			RemoveSolution(size uiSolution);
-	bool			CloseSolution(size uiSolution);
-	bool			CloseSelectedSolution(void);
-	bool			OpenLastSolution(void);
-	void			RememberOpenSolution(void);
-	bool			IsSolutionFile(size uiSolution, size uiProject);
-	bool			SetStartupSolution(size uiSolution);
-	bool			ShowOpenSolutionDialog(void);
-	bool			ShowAddSolutionDialog(void);
-	void			SetRecentFile(const char* szFile);
-	void			ClearRecentSolutions(void);
-	bool			OpenRecentSolution(size uiIndex);
-	bool				IsSolutionOpen(void);
-	bool				WriteWorkspace(void);
-	bool				GetSettingsBaseFile(CChars* pszDest);
-	char*				GetStartupFile(void);
-	void				ShowRecentMenu(void);
+	Ptr<CDockPane>			GetExplorerTool(void);
+	Ptr<CMenuContainer>		GetExplorerMenu(void);
+	bool					OpenSolution(const char* szFileName);
+	bool					OpenSolutions(CArrayChars* paszFileNames);
+	bool					AddSolution(const char* szFileName);
+	bool					RemoveSolution(size uiSolution);
+	bool					CloseSolution(size uiSolution);
+	bool					CloseSelectedSolution(void);
+	bool					OpenLastSolution(void);
+	void					RememberOpenSolution(void);
+	bool					IsSolutionFile(size uiSolution, size uiProject);
+	bool					SetStartupSolution(size uiSolution);
+	bool					ShowOpenSolutionDialog(void);
+	bool					ShowAddSolutionDialog(void);
+	void					SetRecentFile(const char* szFile);
+	void					ClearRecentSolutions(void);
+	bool					OpenRecentSolution(size uiIndex);
+	bool					IsSolutionOpen(void);
+	bool					WriteWorkspace(void);
+	bool					GetSettingsBaseFile(CChars* pszDest);
+	char*					GetStartupFile(void);
+	void					ShowRecentMenu(void);
 
 protected:
 	Ptr<CMenuContainer>	CreateExplorerMenu(void);

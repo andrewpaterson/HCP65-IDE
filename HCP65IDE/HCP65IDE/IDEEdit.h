@@ -25,35 +25,41 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/UndoLog.h"
 #include "WindowLib/MenuContainer.h"
 #include "WindowLib/TextArea.h"
-#include "WindowLib/TextField.h"
-#include "WindowLib/Focus.h"
+#include "WindowLib/EditCommands.h"
 
 
 class CIDEContent;
 
 
-//The Edit menu, as IntelliJ's: Undo, Redo, Cut, Copy, Paste and Select All of the text the keys last went to (a
-//document, the Build output, Claude's request, a text field; the active document if that has gone), and Undo and
-//Redo Across Files, which go back and forward through the edits of every open file in the order they were made
+//Edit's Undo, Redo, Cut, Copy, Paste and Select All: of the text the keys last went to (a document, the Build output,
+//Claude's request, a text field), or of the active document once that has gone.
+class CIDEEditCommands : public CEditCommands
+{
+CONSTRUCTABLE(CIDEEditCommands);
+DESTRUCTABLE(CIDEEditCommands);
+protected:
+	CIDEContent*	mpcContent;  //Not held: the content holds it.
+
+public:
+	void				Init(CIDEContent* pcContent, Ptr<CCommandSet> pCommands);
+	void				Class(void) override;
+	Ptr<CComponent>		GetDefaultTarget(void) override;
+};
+
+
+//The Edit menu, as IntelliJ's: Undo, Redo, Cut, Copy, Paste and Select All (CIDEEditCommands), and Undo and Redo
+//Across Files, which go back and forward through the edits of every open file in the order they were made
 //(the undo log, fed by the editors' undo events).
 class CIDEEdit : public CObject
 {
 CONSTRUCTABLE(CIDEEdit);
 DESTRUCTABLE(CIDEEdit);
 protected:
-	CIDEContent*	mpcContent;  //Not held: the content holds it.
-	Ptr<CMenuContainer>	mpEditMenu;
-	Ptr<CMenuItem>		mpUndoItem;  //Edit, as IntelliJ's: Undo, Redo, Cut, Copy, Paste and Select All of the
-	Ptr<CMenuItem>		mpRedoItem;  //active document,
-	Ptr<CMenuItem>		mpCutItem;
-	Ptr<CMenuItem>		mpCopyItem;
-	Ptr<CMenuItem>		mpPasteItem;
-	Ptr<CMenuItem>		mpSelectAllItem;
-	Ptr<CMenuItem>		mpUndoAllItem;  //and Undo and Redo Across Files, in the order the edits were made.
-	Ptr<CMenuItem>		mpRedoAllItem;
-	CUndoLog			mcUndoLog;  //Every open file's edits in the order they were made, by file name.
-	bool				mbLogUndoing;  //The undo log is undoing or redoing: the editors' undo events are its own.
-	Ptr<CComponent>		mpEditTarget;  //The text area or text field the keys last went to: what Edit acts on.  NULL once its pane closes.
+	CIDEContent*			mpcContent;  //Not held: the content holds it.
+	Ptr<CMenuContainer>		mpEditMenu;
+	Ptr<CIDEEditCommands>	mpEditCommands;
+	CUndoLog				mcUndoLog;  //Every open file's edits in the order they were made, by file name.
+	bool					mbLogUndoing;  //The undo log is undoing or redoing: the editors' undo events are its own.
 
 public:
 	void	Init(CIDEContent* pcContent);
@@ -62,9 +68,8 @@ public:
 	bool	Save(CObjectWriter* pcFile) override;
 	bool	Load(CObjectReader* pcFile) override;
 
+	void				AddCommands(Ptr<CCommandSet> pCommands);
 	Ptr<CMenuContainer>	CreateEditMenu(void);
-	void				EditMenuItemClicked(CMenuItem* pcItem);
-	void				EditMenuOpening(CMenuContainer* pcMenu);
 	Ptr<CMenuContainer>	GetEditMenu(void);
 	void				EditorUndoChanged(CTextArea* pcEditor, STextAreaUndo* psUndo);
 	void				FileClosed(char* szFileName);
@@ -72,15 +77,12 @@ public:
 	bool				RedoAcrossFiles(void);
 	void				BeginUndoGroup(void);
 	void				EndUndoGroup(void);
-	void				PaneClosed(Ptr<CComponent> pContent);
 
 protected:
-	bool				IsEditTargetShown(void);
-	Ptr<CTextField>		GetEditField(void);
-	Ptr<CTextArea>		GetEditArea(void);
 	bool				UndoLogGroup(size uiGroup, bool bShow);
 	bool				RedoLogGroup(size uiGroup, bool bShow);
-	void				FocusChanged(CFocus* pcFocus);
+	bool				CanUndoAcrossFiles(void);
+	bool				CanRedoAcrossFiles(void);
 };
 
 

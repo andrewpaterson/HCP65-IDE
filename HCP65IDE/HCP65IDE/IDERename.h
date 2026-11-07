@@ -25,6 +25,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/Dialog.h"
 #include "WindowLib/TextField.h"
 #include "WindowLib/Label.h"
+#include "WindowLib/CommandSet.h"
 #include "IDECodeModel.h"
 
 
@@ -39,10 +40,7 @@ class CIDERename : public CObject
 CONSTRUCTABLE(CIDERename);
 DESTRUCTABLE(CIDERename);
 protected:
-	CIDEContent*	mpcContent;  //Not held: the content holds it.
-	Ptr<CMenuContainer>	mpEditorMenu;  //The editors' context menu, with Rename and Refactor.
-	Ptr<CMenuItem>		mpRenameItem;
-	Ptr<CMenuItem>		mpExtractMethodItem;
+	CIDEContent*		mpcContent;  //Not held: the content holds it.
 	Ptr<CDialog>		mpRenameDialog;  //While Rename is shown.
 	Ptr<CTextField>		mpRenameField;
 	Ptr<CLabel>			mpRenameError;
@@ -55,7 +53,9 @@ public:
 	bool	Save(CObjectWriter* pcFile) override;
 	bool	Load(CObjectReader* pcFile) override;
 
-	void				AddEditorItems(Ptr<CMenuContainer> pMenu);
+	void	AddCommands(Ptr<CCommandSet> pCommands);
+	void	AddEditorItems(Ptr<CMenuContainer> pMenu);
+	bool	CanRename(void);
 	bool	FindRenameTarget(SIDERenameTarget* psDest);
 	void	QueueRename(void);
 	bool	ShowRename(void);
@@ -64,8 +64,6 @@ public:
 protected:
 	void	ShowQueuedRename(void);
 	bool	ApproveRename(void);
-	void				EditorMenuOpening(CMenuContainer* pcMenu);
-	void				RenameClicked(void);
 };
 
 

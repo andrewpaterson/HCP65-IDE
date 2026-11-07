@@ -79,8 +79,6 @@ void CIDEUsages::Init(CIDEContent* pcContent)
 {
 	PreInit();
 	mpcContent = pcContent;
-	mpEditorMenu = NULL;
-	mpFindUsagesItem = NULL;
 	masUsages.Init();
 	PostInit();
 }
@@ -93,8 +91,6 @@ void CIDEUsages::Init(CIDEContent* pcContent)
 void CIDEUsages::Class(void)
 {
 	U_Pointer(mpcContent);
-	M_Pointer(mpEditorMenu);
-	M_Pointer(mpFindUsagesItem);
 	M_Pointer(mpUsages);
 	M_Pointer(mpUsagesTool);
 	U_Unknown(CArrayIDELocations, masUsages);
@@ -109,14 +105,6 @@ void CIDEUsages::Class(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDEUsages::Free(void)
 {
-	if (mpEditorMenu.IsNotNull())
-	{
-		mpEditorMenu->GetOpeningEvent()->Remove(this);
-	}
-	if (mpFindUsagesItem.IsNotNull())
-	{
-		mpFindUsagesItem->GetClickEvent()->Remove(this);
-	}
 	if (mpUsages.IsNotNull())
 	{
 		mpUsages->GetActivationEvent()->Remove(this);
@@ -380,35 +368,45 @@ void CIDEUsages::Clear(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The editors' context menu's Find Usages (Alt+F7), enabled when the menu
-// opens if a symbol is named at the caret.
+// Find Usages (Alt+F7, as IntelliJ IDEA's), while a symbol is named at the
+// caret.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEUsages::AddCommands(Ptr<CCommandSet> pCommands)
+{
+	pCommands->Add("Navigate.FindUsages", "Find Usages", "Alt+F7", Ptr<CImageCel>(), this, &CIDEUsages::FindUsagesOnly)->SetEnabledCheck(this, &CIDEUsages::CanFindUsages);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The editors' context menu's Find Usages.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEUsages::AddEditorItems(Ptr<CMenuContainer> pMenu)
 {
-	mpEditorMenu = pMenu;
-	mpFindUsagesItem = pMenu->AddItem("Find Usages");
-	mpFindUsagesItem->SetShortcut(CIC_FindUsages);
-	mpFindUsagesItem->GetClickEvent()->Add(this, &CIDEUsages::FindUsagesClicked);
-	pMenu->GetOpeningEvent()->Add(this, &CIDEUsages::EditorMenuOpening);
+	pMenu->AddItem(mpcContent->GetCommands()->Find("Navigate.FindUsages"));
 }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Whether a symbol is named at the caret.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEUsages::EditorMenuOpening(CMenuContainer* pcMenu)
+bool CIDEUsages::CanFindUsages(void)
 {
 	CArrayIDELocations	asLocations;
 	CChars				szKey;
+	bool				bFound;
 
 	asLocations.Init();
 	szKey.Init();
-	mpFindUsagesItem->SetEnabled(mpcContent->GetDocuments()->FindSymbolAtCaret(&asLocations, &szKey));
+	bFound = mpcContent->GetDocuments()->FindSymbolAtCaret(&asLocations, &szKey);
 	szKey.Kill();
 	KillIDELocations(&asLocations);
+	return bFound;
 }
 
 
-void CIDEUsages::FindUsagesClicked(void) { FindUsages(false); }
+void CIDEUsages::FindUsagesOnly(void) { FindUsages(false); }  //Find Usages without the declarations and definition, which Find All References has.

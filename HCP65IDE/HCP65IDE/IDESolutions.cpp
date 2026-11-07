@@ -894,6 +894,18 @@ void CIDESolutions::ExplorerActivated(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Alt+1, as IntelliJ IDEA's Project tool window: Solution Explorer with
+// the active file selected in it.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDESolutions::AddCommands(Ptr<CCommandSet> pCommands)
+{
+	pCommands->Add("View.SolutionExplorer", "Solution Explorer", "Alt+1", Ptr<CImageCel>(), this, &CIDESolutions::ShowActiveFileInExplorer);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Alt+1: Solution Explorer is shown with the active file selected, its
 // folders opened and the row scrolled into view.  The editor keeps the
 // keys, its caret where it was.  False if there is no file to show.

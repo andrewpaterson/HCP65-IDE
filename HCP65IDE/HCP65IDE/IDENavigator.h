@@ -27,6 +27,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/MapStringInt.h"
 #include "WindowLib/GoToDialog.h"
 #include "WindowLib/MenuContainer.h"
+#include "WindowLib/CommandSet.h"
 #include "IDEIcons.h"
 
 
@@ -42,13 +43,8 @@ friend class CIDEScript;
 CONSTRUCTABLE(CIDENavigator);
 DESTRUCTABLE(CIDENavigator);
 protected:
-	CIDEContent*	mpcContent;  //Not held: the content holds it.
+	CIDEContent*		mpcContent;  //Not held: the content holds it.
 	Ptr<CMenuContainer>	mpNavigateMenu;
-	Ptr<CMenuContainer>	mpEditorMenu;  //The editors' context menu, with Go to Source.
-	Ptr<CMenuItem>		mpGoToSourceItem;
-	Ptr<CMenuItem>		mpGoToClassItem;  //Navigate, Class, File and Symbol.
-	Ptr<CMenuItem>		mpGoToFileItem;
-	Ptr<CMenuItem>		mpGoToSymbolItem;
 	Ptr<CGoToDialog>	mpGoTo;  //While Go to Class, File or Symbol is shown.
 	CChars				mszGoToPattern;  //What was typed in Go to last.
 	CArrayChars			maszGoToFiles;  //The solutions' files (FindGoToFiles),
@@ -66,10 +62,12 @@ public:
 	bool	Save(CObjectWriter* pcFile) override;
 	bool	Load(CObjectReader* pcFile) override;
 
+	void				AddCommands(Ptr<CCommandSet> pCommands);
 	Ptr<CMenuContainer>	CreateNavigateMenu(void);
-	void				MenuItemClicked(CMenuItem* pcItem);
 	void				AddEditorItems(Ptr<CMenuContainer> pMenu);
-	void				EditorMenuOpening(CMenuContainer* pcMenu);
+	void				GoToClass(void);
+	void				GoToFile(void);
+	void				GoToSymbol(void);
 	void				GoToSearch(size uiTab, CNameMatcher* pcMatcher, CGoToItems* pcDest) override;
 	bool				ShowGoTo(size uiTab);
 	void				QueueGoTo(size uiTab);

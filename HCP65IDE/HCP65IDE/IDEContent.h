@@ -37,6 +37,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/Button.h"
 #include "WindowLib/TabbedContainer.h"
 #include "WindowLib/MenuBar.h"
+#include "WindowLib/CommandSet.h"
 #include "WindowLib/Dialog.h"
 #include "WindowLib/FileChooser.h"
 #include "WindowLib/DiffView.h"
@@ -132,6 +133,7 @@ protected:
 	Ptr<CFont>					mpDimFont;			//A dialog's dividers' titles.
 	SDialogLook					msDialogLook;
 	Ptr<CMenuBar>				mpMenuBar;
+	Ptr<CCommandSet>			mpCommands;  //What the keys, menus and toolbar run, given to the window.
 	Ptr<CMenuItem>				mpExitItem;			//File, Exit.
 	Ptr<CMenuItem>				mpResetLayoutItem;	//Window, Reset Window Layout.
 	Ptr<CMenuContainer>			mpViewMenu;			//An item for each tool window, made as it opens.
@@ -180,26 +182,26 @@ public:
 
 	bool			Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* szCodeFont);
 
-	void			SetKeepSettings(bool bKeep);
-	bool			GoToDefinition(void);
-	bool			FindReferences(void);
-	void			ShowStatus(const char* szText);
-	char*			GetStatus(void);
-	int64			UpdateStatusLine(int64 iNow);
-	void			Tick(Ptr<CWindow> pWindow);
-	bool			PaneClosing(CDockPane* pcPane) override;
-	bool			IsPaneModified(CDockPane* pcPane) override;
-	void			PaneClosed(CDockPane* pcPane) override;
-	void			DocumentSelected(CDockPane* pcPane) override;
-	Ptr<CDockPane>	CreatePane(const char* szID) override;
-	bool			SaveLayout(void);
-	bool			LoadLayout(void);
-	bool			GetLayoutFileName(CChars* pszDest);
+	void				SetKeepSettings(bool bKeep);
+	bool				GoToDefinition(void);
+	bool				FindReferences(void);
+	void				ShowStatus(const char* szText);
+	char*				GetStatus(void);
+	int64				UpdateStatusLine(int64 iNow);
+	void				Tick(Ptr<CWindow> pWindow);
+	bool				PaneClosing(CDockPane* pcPane) override;
+	bool				IsPaneModified(CDockPane* pcPane) override;
+	void				PaneClosed(CDockPane* pcPane) override;
+	void				DocumentSelected(CDockPane* pcPane) override;
+	Ptr<CDockPane>		CreatePane(const char* szID) override;
+	bool				SaveLayout(void);
+	bool				LoadLayout(void);
+	bool				GetLayoutFileName(CChars* pszDest);
 	Ptr<CDockManager>	GetDock(void);
-	Ptr<CDockPane>	GetExplorerTool(void);
-	Ptr<CDockPane>	GetDebugTool(void);
-	Ptr<CDockPane>	GetClaudeTool(void);
-	CIDECodeModel*	GetCodeModel(void);
+	Ptr<CDockPane>		GetExplorerTool(void);
+	Ptr<CDockPane>		GetDebugTool(void);
+	Ptr<CDockPane>		GetClaudeTool(void);
+	CIDECodeModel*		GetCodeModel(void);
 
 	CSolutionExplorer*	GetExplorer(void);
 	CBuildWorkspace*	GetWorkspace(void);
@@ -220,27 +222,28 @@ public:
 	Ptr<CImageCel>		GetFileTypeIcon(size uiType);
 	Ptr<CImageCel>		GetSymbolIcon(size uiType);
 	Ptr<CMenuBar>		GetMenuBar(void);
+	Ptr<CCommandSet>	GetCommands(void);
 	Ptr<CMenuContainer>	GetEditorMenu(void);
 
-	Ptr<CMenuContainer>	CreateEditorMenu(void);
-	Ptr<CIDEScript>		GetScript(void);
-	Ptr<CIDEDocuments>	GetDocuments(void);
-	Ptr<CIDESolutions>	GetSolutions(void);
-	Ptr<CIDEBuilding>	GetBuilding(void);
+	Ptr<CMenuContainer>		CreateEditorMenu(void);
+	Ptr<CIDEScript>			GetScript(void);
+	Ptr<CIDEDocuments>		GetDocuments(void);
+	Ptr<CIDESolutions>		GetSolutions(void);
+	Ptr<CIDEBuilding>		GetBuilding(void);
 	Ptr<CIDEConfigurations>	GetBuildConfigurations(void);
-	Ptr<CIDEDebugging>	GetDebugging(void);
-	Ptr<CIDEGitStatus>	GetGitStatus(void);
-	Ptr<CIDEDiffs>	GetDiffs(void);
-	Ptr<CIDEAskClaude>	GetAskClaude(void);
-	Ptr<CIDENavigator>	GetNavigator(void);
-	Ptr<CIDEEdit>		GetEdit(void);
-	Ptr<CIDEUsages>		GetUsages(void);
-	Ptr<CIDERename>		GetRename(void);
-	Ptr<CIDECloseGuard>	GetCloseGuard(void);
+	Ptr<CIDEDebugging>		GetDebugging(void);
+	Ptr<CIDEGitStatus>		GetGitStatus(void);
+	Ptr<CIDEDiffs>			GetDiffs(void);
+	Ptr<CIDEAskClaude>		GetAskClaude(void);
+	Ptr<CIDENavigator>		GetNavigator(void);
+	Ptr<CIDEEdit>			GetEdit(void);
+	Ptr<CIDEUsages>			GetUsages(void);
+	Ptr<CIDERename>			GetRename(void);
+	Ptr<CIDECloseGuard>		GetCloseGuard(void);
 
 protected:
 	Ptr<CMenuBar>		CreateMenuBar(void);
-	void				CodeCommandAction(SComponentInputEvent* psEvent);
+	void				AddCommands(void);
 	void				MenuItemClicked(CMenuItem* pcItem);
 	void				ViewMenuOpening(CMenuContainer* pcMenu);
 	void				ViewItemClicked(CMenuItem* pcItem);

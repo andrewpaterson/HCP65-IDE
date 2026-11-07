@@ -477,6 +477,7 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 		mbInputs = true;
 		mcComponentInput.AddKeyboards();
 		mcComponentInput.AddMice();
+		mpWindow->GetCommands()->BindKeys(&mcComponentInput);  //The IDE's keys, F5 and so on.
 		mpWindow->SetComponentInput(&mcComponentInput);
 
 		//The open editor has the keys, as IntelliJ's; Solution Explorer does with no file open.
