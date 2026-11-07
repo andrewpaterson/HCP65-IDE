@@ -227,11 +227,11 @@ Ptr<CMenuContainer> CIDENavigator::CreateNavigateMenu(void)
 {
 	mpNavigateMenu = OMalloc<CMenuContainer>(mpcContent->GetWindow(), mpcContent->GetTheme());
 	mpGoToClassItem = mpNavigateMenu->AddItem("Class...");
-	mpGoToClassItem->SetShortcut("Ctrl+N");
+	mpGoToClassItem->SetShortcut(CIC_GoToClass);
 	mpGoToFileItem = mpNavigateMenu->AddItem("File...");
-	mpGoToFileItem->SetShortcut("Ctrl+Shift+N");
+	mpGoToFileItem->SetShortcut(CIC_GoToFile);
 	mpGoToSymbolItem = mpNavigateMenu->AddItem("Symbol...");
-	mpGoToSymbolItem->SetShortcut("Ctrl+Alt+Shift+N");
+	mpGoToSymbolItem->SetShortcut(CIC_GoToSymbol);
 	mpNavigateMenu->GetItemClickEvent()->Add(this, &CIDENavigator::MenuItemClicked);
 	return mpNavigateMenu;
 }
@@ -713,7 +713,7 @@ void CIDENavigator::AddEditorItems(Ptr<CMenuContainer> pMenu)
 {
 	mpEditorMenu = pMenu;
 	mpGoToSourceItem = pMenu->AddItem("Go to Source");
-	mpGoToSourceItem->SetShortcut("Ctrl+B");
+	mpGoToSourceItem->SetShortcut(CIC_GoToSource);
 	mpGoToSourceItem->GetClickEvent()->Add(this, &CIDENavigator::MenuItemClicked);
 	pMenu->GetOpeningEvent()->Add(this, &CIDENavigator::EditorMenuOpening);
 }

@@ -564,11 +564,10 @@ void CIDERename::AddEditorItems(Ptr<CMenuContainer> pMenu)
 
 	mpEditorMenu = pMenu;
 	mpRenameItem = pMenu->AddItem("Rename...");
-	mpRenameItem->SetShortcut("Shift+F6");
+	mpRenameItem->SetShortcut(CIC_Rename);
 	mpRenameItem->GetClickEvent()->Add(this, &CIDERename::RenameClicked);
 	pRefactor = OMalloc<CMenuContainer>(mpcContent->GetWindow(), mpcContent->GetTheme());
 	mpExtractMethodItem = pRefactor->AddItem("Extract Method...");
-	mpExtractMethodItem->SetShortcut("Ctrl+Alt+M");
 	mpExtractMethodItem->SetEnabled(false);
 	pMenu->AddItem("Refactor", NULL, pRefactor);
 	pMenu->GetOpeningEvent()->Add(this, &CIDERename::EditorMenuOpening);

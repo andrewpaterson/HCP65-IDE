@@ -44,7 +44,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 //	Start Debugging (Continue)	F5				Step Into					F11
 //	Stop Debugging				Shift+F5		Step Over					F10
 //	Restart						Ctrl+Shift+F5	Step Out					Shift+F11
-//	Break All					Ctrl+Break		Toggle Breakpoint			F9
+//	Break All					Ctrl+Pause		Toggle Breakpoint			F9
 //	Attach to Emulator...						New Breakpoint at Address...
 //												Delete All Breakpoints
 
@@ -149,15 +149,23 @@ Ptr<CMenuContainer> CIDEDebugging::CreateDebugMenu(void)
 	mpDebugMenu = OMalloc<CMenuContainer>(mpcContent->GetWindow(), mpcContent->GetTheme());
 	pDebug = mpDebugMenu;
 	pDebug->GetItemClickEvent()->Add(this, &CIDEDebugging::DebugMenuItemClicked);
-	mpStartItem = pDebug->AddItem("Start Debugging (F5)");
-	mpStopItem = pDebug->AddItem("Stop Debugging (Shift+F5)");
-	mpRestartItem = pDebug->AddItem("Restart (Ctrl+Shift+F5)");
-	mpBreakItem = pDebug->AddItem("Break All (Ctrl+Break)");
+	mpStartItem = pDebug->AddItem("Start Debugging");
+	mpStartItem->SetShortcut(CIC_StartDebugging);
+	mpStopItem = pDebug->AddItem("Stop Debugging");
+	mpStopItem->SetShortcut(CIC_StopDebugging);
+	mpRestartItem = pDebug->AddItem("Restart");
+	mpRestartItem->SetShortcut(CIC_RestartDebugging);
+	mpBreakItem = pDebug->AddItem("Break All");
+	mpBreakItem->SetShortcut(CIC_BreakAll);
 	mpAttachItem = pDebug->AddItem("Attach to Emulator...");
-	mpStepIntoItem = pDebug->AddItem("Step Into (F11)");
-	mpStepOverItem = pDebug->AddItem("Step Over (F10)");
-	mpStepOutItem = pDebug->AddItem("Step Out (Shift+F11)");
-	mpToggleItem = pDebug->AddItem("Toggle Breakpoint (F9)");
+	mpStepIntoItem = pDebug->AddItem("Step Into");
+	mpStepIntoItem->SetShortcut(CIC_StepInto);
+	mpStepOverItem = pDebug->AddItem("Step Over");
+	mpStepOverItem->SetShortcut(CIC_StepOver);
+	mpStepOutItem = pDebug->AddItem("Step Out");
+	mpStepOutItem->SetShortcut(CIC_StepOut);
+	mpToggleItem = pDebug->AddItem("Toggle Breakpoint");
+	mpToggleItem->SetShortcut(CIC_ToggleBreakpoint);
 	mpNewBreakpointItem = pDebug->AddItem("New Breakpoint at Address...");
 	mpDeleteBreakpointsItem = pDebug->AddItem("Delete All Breakpoints");
 	return pDebug;

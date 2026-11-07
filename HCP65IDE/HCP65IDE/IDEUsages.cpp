@@ -388,7 +388,7 @@ void CIDEUsages::AddEditorItems(Ptr<CMenuContainer> pMenu)
 {
 	mpEditorMenu = pMenu;
 	mpFindUsagesItem = pMenu->AddItem("Find Usages");
-	mpFindUsagesItem->SetShortcut("Alt+F7");
+	mpFindUsagesItem->SetShortcut(CIC_FindUsages);
 	mpFindUsagesItem->GetClickEvent()->Add(this, &CIDEUsages::FindUsagesClicked);
 	pMenu->GetOpeningEvent()->Add(this, &CIDEUsages::EditorMenuOpening);
 }

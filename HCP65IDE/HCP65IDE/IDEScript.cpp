@@ -324,7 +324,12 @@ void CIDEScript::PrintMenu(const char* szName, Ptr<CMenuContainer> pMenu)
 	for (i = 0; i < pMenu->NumItems(); i++)
 	{
 		pItem = pMenu->GetItem(i);
-		printf("%s %s%s%s", (i == 0) ? "" : ",", pItem->GetText(), pItem->IsEnabled() ? "" : "(disabled)", pItem->HasSubMenu() ? ">" : "");
+		printf("%s %s", (i == 0) ? "" : ",", pItem->GetText());
+		if (pItem->GetShortcut()[0] != '\0')
+		{
+			printf(" [%s]", pItem->GetShortcut());
+		}
+		printf("%s%s", pItem->IsEnabled() ? "" : "(disabled)", pItem->HasSubMenu() ? ">" : "");
 	}
 	printf("\n");
 	for (i = 0; i < pMenu->NumItems(); i++)
