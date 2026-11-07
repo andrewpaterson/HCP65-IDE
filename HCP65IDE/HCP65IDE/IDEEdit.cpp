@@ -134,7 +134,7 @@ bool CIDEEdit::CanRedoAcrossFiles(void) { return mcUndoLog.FindRedoGroup() != MA
 // and redoing from the log is told here too; it is the log's own doing.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEEdit::EditorUndoChanged(CTextArea* pcEditor, STextAreaUndo* psUndo)
+void CIDEEdit::EditorUndoChanged(CTextArea* pcEditor, STextUndoChange* psUndo)
 {
 	Ptr<CIDEEditorTab>	pTab;
 	size				uiGroup;
@@ -149,20 +149,20 @@ void CIDEEdit::EditorUndoChanged(CTextArea* pcEditor, STextAreaUndo* psUndo)
 		return;
 	}
 
-	if (psUndo->eChange == TAU_Kept)
+	if (psUndo->eChange == TUC_Kept)
 	{
 		mcUndoLog.Kept(pTab->GetFileName(), psUndo->uiIdBefore, psUndo->uiIdAfter);
 	}
-	else if (psUndo->eChange == TAU_Merged)
+	else if (psUndo->eChange == TUC_Merged)
 	{
 		mcUndoLog.Merged(pTab->GetFileName(), psUndo->uiIdBefore, psUndo->uiIdAfter);
 	}
-	else if (psUndo->eChange == TAU_Undone)
+	else if (psUndo->eChange == TUC_Undone)
 	{
 		uiGroup = mcUndoLog.Undone(pTab->GetFileName(), psUndo->uiIdBefore, psUndo->uiIdAfter);
 		UndoLogGroup(uiGroup, false);
 	}
-	else if (psUndo->eChange == TAU_Redone)
+	else if (psUndo->eChange == TUC_Redone)
 	{
 		uiGroup = mcUndoLog.Redone(pTab->GetFileName(), psUndo->uiIdBefore, psUndo->uiIdAfter);
 		RedoLogGroup(uiGroup, false);

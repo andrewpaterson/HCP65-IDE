@@ -71,7 +71,7 @@ public:
 	void				AddCommands(Ptr<CCommandSet> pCommands);
 	Ptr<CMenuContainer>	CreateEditMenu(void);
 	Ptr<CMenuContainer>	GetEditMenu(void);
-	void				EditorUndoChanged(CTextArea* pcEditor, STextAreaUndo* psUndo);
+	void				EditorUndoChanged(CTextArea* pcEditor, STextUndoChange* psUndo);
 	void				FileClosed(char* szFileName);
 	bool				UndoAcrossFiles(void);
 	bool				RedoAcrossFiles(void);
