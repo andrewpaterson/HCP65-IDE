@@ -59,6 +59,7 @@ protected:
 	size				muiSeenChanges;	//The editor's change count when it was last looked at.
 	int64				miChangedTime;	//When the text last changed (GetDebugTickCount).
 	bool				mbRecolour;		//The text changed and hasn't been given to be highlighted since (TakeEdits).
+	bool				mbRecolourNow;	//It is highlighted at once, not after a pause in typing (RequestRecolour).
 	bool				mbEdited;		//The text was changed since the file was opened.
 	bool				mbIndexStale;	//The text changed since the index was given it (TakeEdits).
 	bool				mbCarriageReturns;	//The file's lines end with carriage returns and line feeds.
@@ -86,6 +87,7 @@ public:
 	bool				SetCaretPlace(int iLine, int iColumn);
 	bool				TakeEdits(int64 iNow, bool bNow, bool bCanIndex, bool* pbHighlight, bool* pbIndex, int64* piWait);
 	void				IndexRestarted(void);
+	void				RequestRecolour(void);
 
 	void				SetListings(CCPP65ListingIndex* pcListings);
 	bool				ToggleListing(size uiLine);

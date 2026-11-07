@@ -169,7 +169,7 @@ Ptr<CIDEEditorTab> CIDEDocuments::OpenFileTab(const char* szFileName, size uiPro
 	pTab = OMalloc<CIDEEditorTab>(mpcContent->GetWindow(), mpcContent->GetTheme(), mpcContent->GetFontColours()->GetFont(JEWEL_ICON), mpcContent->GetCodeFamily(), JEWEL_TEXT, szFileName, uiProject, cFile.Text());
 	cFile.Kill();
 	maTabs.Add(pTab);
-	HighlightTab(pTab);
+	RequestHighlight(pTab);
 	if (mpcContent->GetBuilding()->GetListings()->NumListings() > 0)
 	{
 		pTab->SetListings(mpcContent->GetBuilding()->GetListings());
@@ -300,30 +300,16 @@ bool CIDEDocuments::SaveAllFiles(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Colours a tab's text by what the parser found each part of it to be:
-// as its file is, or as it has been edited to.
+// A tab's text coloured by what the parser found each part of it to be,
+// as its file is or as it has been edited to, soon: on the code model's
+// edits thread (see UpdateEditedTabs), not holding the window up.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEDocuments::HighlightTab(Ptr<CIDEEditorTab> pTab)
+void CIDEDocuments::RequestHighlight(Ptr<CIDEEditorTab> pTab)
 {
-	CArrayHighlights	acHighlights;
-	CChars				szErrors;
-
-	//Only C and C++ are parsed; a text file or a project file is shown as it is.
-	if ((pTab->GetProject() == SOLUTION_EXPLORER_NO_PROJECT) || (CIDEIcons::GetFileType(pTab->GetFileName()) == IFT_Other))
-	{
-		return;
-	}
-	acHighlights.Init();
-	szErrors.Init();
-	if (mpcContent->GetCodeModel()->Highlight(pTab->GetProject(), pTab->GetFileName(), pTab->IsEdited() ? pTab->GetEditor()->GetText() : NULL, &acHighlights, &szErrors))
-	{
-		pTab->SetHighlights(&acHighlights);
-	}
-	szErrors.Kill();
-	acHighlights.Kill();
+	pTab->RequestRecolour();
+	mpcContent->GetWindow()->RequestTick(0);
 }
-
 
 //////////////////////////////////////////////////////////////////////////
 //
@@ -410,7 +396,7 @@ int64 CIDEDocuments::GiveEditedTabs(int64 iNow, bool bNow)
 		pTab = maTabs.Get(i);
 		if (pTab->TakeEdits(iNow, bNow, bCanIndex, &bHighlight, &bIndex, &iWait))
 		{
-			AddEditedFile(pTab->GetProject(), pTab->GetFileName(), pTab->GetEditor()->GetText(), pTab->GetEditor()->GetChangeCount(), bHighlight, bIndex, &apsFiles);
+			AddEditedFile(pTab->GetProject(), pTab->GetFileName(), pTab->GetEditor()->GetText(), pTab->GetEditor()->GetChangeCount(), bHighlight, bIndex, pTab->IsEdited(), &apsFiles);
 		}
 		else if ((iWait >= 0) && ((iSoonest < 0) || (iWait < iSoonest)))
 		{
@@ -451,7 +437,7 @@ void CIDEDocuments::ReindexDiscarded(Ptr<CIDEEditorTab> pTab)
 	}
 	TakeEditedFiles(true);
 	apsFiles.Init();
-	AddEditedFile(pTab->GetProject(), pTab->GetFileName(), NULL, 0, false, true, &apsFiles);
+	AddEditedFile(pTab->GetProject(), pTab->GetFileName(), NULL, 0, false, true, false, &apsFiles);
 	mpcContent->GetCodeModel()->ProcessEditedFiles(&apsFiles, false);
 	apsFiles.Kill();
 }
@@ -459,14 +445,15 @@ void CIDEDocuments::ReindexDiscarded(Ptr<CIDEEditorTab> pTab)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// An edited file added to papsFiles, its text copied from szText (NULL:
-// the file is read).  Only C and C++ files are worked out.  A header to
-// index is preprocessed from szText from now on and parsed in the first
-// unit that included it, from that unit's editor if it is open; one that
-// isn't indexed, or no unit has included, is parsed on its own.
+// A file to work out added to papsFiles, its text copied from szText
+// (NULL: the file is read).  Only C and C++ files are worked out.  A
+// header is parsed in the first unit that included it, from that unit's
+// editor if it is open: to index it, preprocessed from szText from now
+// on; unedited (bEdited false), as its file is.  An edited header that
+// isn't indexed, or one no unit has included, is parsed on its own.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEDocuments::AddEditedFile(size uiProject, const char* szFileName, const char* szText, size uiChanges, bool bHighlight, bool bIndex, CArrayIDEEditedFiles* papsFiles)
+void CIDEDocuments::AddEditedFile(size uiProject, const char* szFileName, const char* szText, size uiChanges, bool bHighlight, bool bIndex, bool bEdited, CArrayIDEEditedFiles* papsFiles)
 {
 	SIDEEditedFile*		psFile;
 	EIDEFileType		eType;
@@ -482,9 +469,12 @@ void CIDEDocuments::AddEditedFile(size uiProject, const char* szFileName, const 
 
 	psFile = NewMalloc<SIDEEditedFile>();
 	psFile->Init(uiProject, szFileName, szText, uiChanges, bHighlight, bIndex);
-	if ((eType == IFT_Header) && bIndex)
+	if ((eType == IFT_Header) && (bIndex || !bEdited))
 	{
-		mpcContent->GetCodeModel()->SetHeaderText(szFileName, szText);
+		if (bIndex)
+		{
+			mpcContent->GetCodeModel()->SetHeaderText(szFileName, szText);
+		}
 		szUnit.Init();
 		if (mpcContent->GetCodeModel()->GetIncluder(szFileName, &uiUnitProject, &szUnit))
 		{

@@ -85,11 +85,11 @@ public:
 	Ptr<CIDEEditorTab>	FindTab(CDockPane* pcPane);
 	Ptr<CIDEEditorTab>	FindTab(CCodeEditor* pcEditor);
 	Ptr<CIDEEditorTab>	FindTab(CTextArea* pcEditor);
-	void				HighlightTab(Ptr<CIDEEditorTab> pTab);
+	void				RequestHighlight(Ptr<CIDEEditorTab> pTab);
 
 protected:
 	int64				GiveEditedTabs(int64 iNow, bool bNow);
-	void				AddEditedFile(size uiProject, const char* szFileName, const char* szText, size uiChanges, bool bHighlight, bool bIndex, CArrayIDEEditedFiles* papsFiles);
+	void				AddEditedFile(size uiProject, const char* szFileName, const char* szText, size uiChanges, bool bHighlight, bool bIndex, bool bEdited, CArrayIDEEditedFiles* papsFiles);
 	bool				TakeEditedFiles(bool bWait);
 	void				MenuItemClicked(CMenuItem* pcItem);
 };

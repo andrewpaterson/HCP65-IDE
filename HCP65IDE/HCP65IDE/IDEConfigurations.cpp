@@ -274,7 +274,7 @@ bool CIDEConfigurations::SetConfiguration(const char* szConfiguration)
 		mpcContent->GetCodeModel()->StartIndexing();
 		for (i = 0; i < mpcContent->GetDocuments()->NumTabs(); i++)
 		{
-			mpcContent->GetDocuments()->HighlightTab(mpcContent->GetDocuments()->GetTab(i));
+			mpcContent->GetDocuments()->RequestHighlight(mpcContent->GetDocuments()->GetTab(i));
 		}
 	}
 	return true;

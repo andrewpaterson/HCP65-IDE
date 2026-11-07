@@ -584,7 +584,7 @@ void CIDESolutions::WorkspaceChanged(bool bReindex)
 		mpcContent->GetCodeModel()->StartIndexing();
 		for (i = 0; i < mpcContent->GetDocuments()->NumTabs(); i++)
 		{
-			mpcContent->GetDocuments()->HighlightTab(mpcContent->GetDocuments()->GetTab(i));
+			mpcContent->GetDocuments()->RequestHighlight(mpcContent->GetDocuments()->GetTab(i));
 		}
 	}
 	WriteWorkspace();

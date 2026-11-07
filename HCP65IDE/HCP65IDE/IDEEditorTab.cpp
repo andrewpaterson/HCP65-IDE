@@ -68,6 +68,7 @@ void CIDEEditorTab::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CFo
 	muiSeenChanges = mpEditor->GetChangeCount();
 	miChangedTime = 0;
 	mbRecolour = false;
+	mbRecolourNow = false;
 	mbEdited = false;
 	mbIndexStale = false;
 	mbCarriageReturns = UsesIDECarriageReturns(szText);
@@ -99,6 +100,7 @@ void CIDEEditorTab::Class(void)
 	U_Data(size, muiSeenChanges);
 	U_Data(int64, miChangedTime);
 	U_Bool(mbRecolour);
+	U_Bool(mbRecolourNow);
 	U_Bool(mbEdited);
 	U_Bool(mbIndexStale);
 	M_Pointer(mpZones);
@@ -248,7 +250,7 @@ bool CIDEEditorTab::SetCaretPlace(int iLine, int iColumn)
 // are taken: pbHighlight, if it changed since it was last highlighted,
 // and pbIndex, if it changed since it was last indexed and bCanIndex.
 // Only once the text has been left alone for a moment after an edit, or
-// with bNow at once; until then piWait is how many milliseconds until it
+// with bNow (or after RequestRecolour) at once; until then piWait is how many milliseconds until it
 // might be, -1 for never.  False if there is nothing.
 //
 //////////////////////////////////////////////////////////////////////////
@@ -262,7 +264,7 @@ bool CIDEEditorTab::TakeEdits(int64 iNow, bool bNow, bool bCanIndex, bool* pbHig
 	{
 		return false;
 	}
-	if (!bNow && (iNow - miChangedTime < IDE_RECOLOUR_DELAY))
+	if (!bNow && !mbRecolourNow && (iNow - miChangedTime < IDE_RECOLOUR_DELAY))
 	{
 		*piWait = IDE_RECOLOUR_DELAY - (iNow - miChangedTime);
 		return false;
@@ -271,6 +273,7 @@ bool CIDEEditorTab::TakeEdits(int64 iNow, bool bNow, bool bCanIndex, bool* pbHig
 	*pbHighlight = mbRecolour;
 	*pbIndex = mbIndexStale && bCanIndex;
 	mbRecolour = false;
+	mbRecolourNow = false;
 	mbIndexStale = mbIndexStale && !bCanIndex;
 	return *pbHighlight || *pbIndex;
 }
@@ -289,6 +292,20 @@ void CIDEEditorTab::IndexRestarted(void)
 		mbIndexStale = true;
 		mbRecolour = true;
 	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The tab is highlighted again from its text at the next chance, without
+// waiting for typing to pause: it was opened, or the configuration or
+// solutions its colours depend on changed.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEEditorTab::RequestRecolour(void)
+{
+	mbRecolour = true;
+	mbRecolourNow = true;
 }
 
 
