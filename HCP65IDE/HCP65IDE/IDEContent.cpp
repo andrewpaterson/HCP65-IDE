@@ -203,8 +203,6 @@ void CIDEContent::Class(void)
 	M_Pointer(mpDimFont);
 	U_Pointer(msDialogLook.pcTheme);
 	U_Pointer(msDialogLook.pcDimFont);
-	U_Data(ARGB32, msDialogLook.sBackground);
-	U_Data(ARGB32, msDialogLook.sDivider);
 	M_Pointer(mpMenuBar);
 	M_Pointer(mpCommands);
 	M_Pointer(mpExitItem);
@@ -352,8 +350,6 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpDimFont = mpFontColours->GetFont(JEWEL_LINE_NUMBER);
 	msDialogLook.pcTheme = &mpTheme;
 	msDialogLook.pcDimFont = &mpDimFont;
-	msDialogLook.sBackground = JEWEL_PANEL;
-	msDialogLook.sDivider = JEWEL_SEPARATOR;
 	mpFolderIcon = CJewelImageGenerator::CreateFolder(JEWEL_ICON, &cFormat);
 	mpFileIcon = CJewelImageGenerator::CreateFile(JEWEL_ICON, &cFormat);
 
