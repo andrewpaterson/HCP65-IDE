@@ -183,11 +183,8 @@ Ptr<CImageCel> CIDEIcons::CreateFileIcon(EIDEFileType eType, CColourFormatHelper
 //////////////////////////////////////////////////////////////////////////
 void CIDEIcons::Fill(CImageDraw* pcDraw, CVectorPath* pcPath, ARGB32 sColour)
 {
-	CImageColourARGB	cColour;
 
-	cColour.Init(Get8BitAlphaColour(sColour) / 255.0f, Get8BitRedColour(sColour) / 255.0f, Get8BitGreenColour(sColour) / 255.0f, Get8BitBlueColour(sColour) / 255.0f);
-	pcDraw->SetColour(&cColour);
-	cColour.Kill();
+	pcDraw->SetColour(sColour);
 	pcDraw->DrawPath(pcPath);
 }
 
