@@ -462,7 +462,16 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 
 		mpInput = OMalloc<CInput>((CNativeInput*)NULL);
 		mbValid = mpInput->Read((char*)szInputDirectory);
-		mpInput->AddNativeInput(pcNativeInput);
+		//A scripted run has the platform's keyboard and mouse but takes no input from them: what is typed while its window
+		//has the focus would go into the files it edits, and a check saves them.
+		if (IsIDEScripted())
+		{
+			pcNativeInput->AddDevicesTo(mpInput->GetDevices());
+		}
+		else
+		{
+			mpInput->AddNativeInput(pcNativeInput);
+		}
 		mpInputSource = OMalloc<CWindowInputSource>(mpInput);
 		mcComponentInput.Init(&mpInputSource, &mpWindow);
 		mbInputs = true;

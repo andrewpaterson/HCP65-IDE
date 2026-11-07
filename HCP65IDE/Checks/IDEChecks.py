@@ -82,7 +82,7 @@ CHECKS = [
 		 r'^Opened .*/CalculatorSymbols\.h$'], []),
 	('close-cancel-and-navigate', {
 		'OPEN': 'CalculatorParser.cpp', 'CARET': '36:2', 'TYPE': 'X', 'DIALOG_ANSWER': 'Cancel',
-		'DEBUG': 'closetab,wait:1000,printtabs,edit:caret:26:12,gotosource,printtabs,switchfile,printtabs'},
+		'DEBUG': 'closetab,answered:1,printtabs,edit:caret:26:12,gotosource,printtabs,switchfile,printtabs'},
 		[r'^Tabs: .* >CalculatorParser\.cpp\*$', r'^Tabs: .*CalculatorParser\.cpp\* >CalculatorParser\.h$',
 		 r'^Tabs: .* >CalculatorParser\.cpp\* CalculatorParser\.h$'], []),
 	('exit-dont-save', {
@@ -96,11 +96,11 @@ CHECKS = [
 		 r'^Diffs: \[>CalculatorParser\.cpp \(HEAD vs\. Your version\)\]$', r'^Diffs:$'], []),
 	('git-dialogs', {
 		'OPEN': 'CalculatorParser.cpp', 'DIALOG_ANSWER': 'OK',
-		'DEBUG': 'clickmenu:Git/Compare with Revision...,wait:300,printdiffs,clickmenu:Git/Compare with Branch...,wait:300,printdiffs'},
+		'DEBUG': 'clickmenu:Git/Compare with Revision...,answered:1,printdiffs,clickmenu:Git/Compare with Branch...,answered:2,printdiffs'},
 		[r'^Diffs: \[>CalculatorParser\.cpp \(HEAD~1 vs\. Your version\)\]$',
 		 r'^Diffs: \[CalculatorParser\.cpp \(HEAD~1 vs\. Your version\)\] \[>CalculatorParser\.cpp \(\w+ vs\. Your version\)\]$'], []),
 	('debug-dialog', {
-		'OPEN': 'Kernal.cpp', 'DIALOG_ANSWER': 'Cancel', 'DEBUG': 'clickmenu:Debug/New Breakpoint at Address...,wait:300,printtabs'},
+		'OPEN': 'Kernal.cpp', 'DIALOG_ANSWER': 'Cancel', 'DEBUG': 'clickmenu:Debug/New Breakpoint at Address...,answered:1,printtabs'},
 		[r'^Tabs: >Kernal\.cpp'], [r'not found', r'disabled']),
 	('configuration', {
 		'CONFIGURATION': 'Debug|W65C816', 'DEBUG': 'printconfig'},
@@ -112,7 +112,7 @@ CHECKS = [
 		'OPEN': 'Kernal.cpp', 'DEBUG': 'line:20,buildtab,wait:300,printtabs'},
 		[r'^Tabs: >Kernal\.cpp'], []),
 	('menus', {
-		'OPEN': 'CalculatorParser.cpp', 'CARET': '36:4', 'DEBUG': 'printmenus,clickmenu:View/Nope'},
+		'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'CARET': '36:4', 'DEBUG': 'printmenus,clickmenu:View/Nope'},
 		[r'^Menu File: Open Project/Solution\.\.\., Add Solution\.\.\., Close Solution, Recent Solutions>, Clear Recent Solutions, Save, Save All, Compare with File\.\.\., Exit$',
 		 r'^Menu File/Recent Solutions: 1 ',
 		 r'^Menu Edit: Undo \[Ctrl\+Z\]\(disabled\), Redo \[Ctrl\+Y\]\(disabled\), Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Select All \[Ctrl\+A\], Undo Across Files\(disabled\), Redo Across Files\(disabled\)$',
@@ -127,7 +127,7 @@ CHECKS = [
 		 r'^Menu item \[View/Nope\] not found$'], []),
 	('menu-clicks', {
 		'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'CARET': '36:4', 'DIALOG_ANSWER': 'Cancel',
-		'DEBUG': 'clickmenu:Editor/Rename...,wait:300,clickmenu:Navigate/File...,wait:300,clickmenu:Editor/Find Usages,'
+		'DEBUG': 'clickmenu:Editor/Rename...,answered:1,clickmenu:Navigate/File...,answered:2,clickmenu:Editor/Find Usages,'
 			'clickmenu:Editor/Go to Source,printtabs,clickmenu:Edit/Select All,clickmenu:View/Build,'
 			'clickmenu:Window/Reset Window Layout,clickmenu:Explorer/Set as Startup Solution,clickmenu:File/Save All,printtabs'},
 		[r'^Dialog \[Rename\] answered Cancel$', r'^Dialog \[Go To\] answered Cancel$',

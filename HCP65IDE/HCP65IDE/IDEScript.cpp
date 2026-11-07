@@ -43,6 +43,7 @@ void CIDEScript::Init(CIDEContent* pcContent)
 	mpDialog = NULL;
 	miDialogTicks = 0;
 	muiSpans = 0;
+	muiAnswered = 0;
 	PostInit();
 }
 
@@ -57,6 +58,7 @@ void CIDEScript::Class(void)
 	M_Pointer(mpDialog);
 	U_Int32(miDialogTicks);
 	U_Size(muiSpans);
+	U_Size(muiAnswered);
 }
 
 
@@ -788,5 +790,18 @@ void CIDEScript::DialogTick(void)
 	}
 	printf("Dialog [%s] answered %s\n", pWindow->GetWindowTitle(), szAnswer);
 	fflush(stdout);
+	muiAnswered++;
 	mpDialog->Close(((strcmp(szAnswer, "Save") == 0) || (strcmp(szAnswer, "OK") == 0)) ? "OK" : szAnswer);
 }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// How many dialogs the script has answered since the IDE started.
+//
+//////////////////////////////////////////////////////////////////////////
+size CIDEScript::NumAnsweredDialogs(void)
+{
+	return muiAnswered;
+}
+

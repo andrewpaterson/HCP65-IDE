@@ -49,6 +49,7 @@ protected:
 	CIDEContent*	mpcContent;  //Not held: the content holds the script.
 	Ptr<CDialog>	mpDialog;  //The dialog being watched.
 	int32			miDialogTicks;
+	size			muiAnswered;  //Dialogs answered (DialogTick), for the debug script's answered:<n>.
 	size			muiSpans;  //The active editor's spans when printspans last looked.
 
 public:
@@ -69,6 +70,7 @@ public:
 	void	WatchDialog(Ptr<CDialog> pDialog);
 	void	StopWatchingDialog(void);
 	void	DialogTick(void);
+	size	NumAnsweredDialogs(void);
 };
 
 

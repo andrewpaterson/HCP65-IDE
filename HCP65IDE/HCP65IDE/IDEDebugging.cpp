@@ -849,9 +849,11 @@ void CIDEDebugging::UpdateDebugView(bool bKeepCaret)
 // once it has run a little), restart, stop, bp:<hex address> and
 // toggle (F9 at the disassembly's caret), buildtab (the Build tab shown),
 // line:<line> (a source breakpoint toggled on the open file's line, 1
-// based), built (until HCP65_IDE_BUILD's build has finished) and
-// wait:<milliseconds>.  Each but bp, buildtab, line, built and wait waits
-// for the debugger to be stopped (or not debugging, for start).
+// based), built (until HCP65_IDE_BUILD's build has finished),
+// answered:<n> (until the script has answered n dialogs) and
+// wait:<milliseconds>.  Each but bp, buildtab, line, built, answered and
+// wait waits for the debugger to be stopped (or not debugging, for
+// start).
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEDebugging::SetDebugScript(const char* szCommands)
@@ -941,6 +943,10 @@ void CIDEDebugging::RunDebugScript(void)
 	else if (strcmp(szCommand, "built") == 0)
 	{
 		bDone = !mpcContent->GetBuilding()->IsBuilding();
+	}
+	else if (strncmp(szCommand, "answered:", 9) == 0)
+	{
+		bDone = mpcContent->GetScript()->NumAnsweredDialogs() >= (size)atoi(&szCommand[9]);
 	}
 	else if (strcmp(szCommand, "break") == 0)
 	{
