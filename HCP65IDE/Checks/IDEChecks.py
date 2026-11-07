@@ -6,6 +6,7 @@
 #  IDEChecks.py [ide executable] [check name...]
 #
 #The executable defaults to ../../../build/HCP65IDERelease/HCP65IDE.  Exits non-zero if a check fails.
+#With HCP65_IDE_VERIFY_REDRAW set, every partial paint is checked too, and one that differed fails its check.
 import hashlib, os, re, subprocess, sys, tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -202,6 +203,9 @@ def Check(szExecutable, szName, asVariables, aszExpected, aszForbidden):
 			aszProblems.append('no line (in order) matching: ' + szExpected)
 			break
 		iLine += 1
+	if os.environ.get('HCP65_IDE_VERIFY_REDRAW'):
+		#Every partial paint is checked against drawing all of the window; one that differed is logged.
+		aszForbidden = aszForbidden + [r'A partial paint of']
 	for szForbidden in aszForbidden:
 		for szLine in aszLines:
 			if re.search(szForbidden, szLine):
