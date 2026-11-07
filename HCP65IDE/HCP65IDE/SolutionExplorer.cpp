@@ -144,8 +144,7 @@ void CSolutionExplorer::ShowWorkspace(CBuildWorkspace* pcWorkspace)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// A solution open: "Solution 'Name' (2 of 3 projects)", or "(startup, 2
-// of 3 projects)" if there's more than one.  A solution of one project has it
+// A solution open: "Solution 'Name'".  A solution of one project has it
 // open too.  One that couldn't be read is "(load failed)".
 //
 //////////////////////////////////////////////////////////////////////////
@@ -183,11 +182,7 @@ void CSolutionExplorer::AddSolution(size uiSolution)
 
 	szText.Init("Solution '");
 	szText.Append(pcSolution->GetName());
-	szText.Append("' (");
-	szText.Append((uint32)pcSolution->NumLoadedProjects());
-	szText.Append(" of ");
-	szText.Append((uint32)uiProjects);
-	szText.Append((uiProjects == 1) ? " project)" : " projects)");
+	szText.Append("'");
 	iSolution = AddNode(TREE_NO_NODE, szText.Text(), mpSolutionIcon, SENT_Solution, uiSolution, 0, 0);
 	szText.Kill();
 	if (IsStartupNode(iSolution))
