@@ -485,6 +485,33 @@ void CIDEScript::RunEditStep(const char* szStep)
 			mpcContent->GetSolutions()->ExplorerActivated();
 		}
 	}
+	else if ((strncmp(szStep, "replace:", 8) == 0) && pTab.IsNotNull())
+	{
+		//replace:<line>|<old>|<new>: the first <old> on the line (from 1) made <new>, as one edit.
+		CArrayChars	aszParts;
+		size		uiStart;
+		size		uiEnd;
+		const char*	szFound;
+
+		aszParts.Init();
+		aszParts.Split(&szStep[8], '|');
+		if (aszParts.NumElements() >= 2)
+		{
+			pEditor = pTab->GetEditor();
+			uiLine = (size)(atoi(aszParts.GetText(0)) - 1);
+			if (uiLine < pEditor->NumLines())
+			{
+				szFound = strstr(&pEditor->GetText()[pEditor->GetLineStart(uiLine)], aszParts.GetText(1));
+				if (szFound)
+				{
+					uiStart = (size)(szFound - pEditor->GetText());
+					uiEnd = uiStart + strlen(aszParts.GetText(1));
+					pEditor->ReplaceRanges(&uiStart, &uiEnd, 1, (aszParts.NumElements() > 2) ? aszParts.GetText(2) : "");
+				}
+			}
+		}
+		aszParts.Kill();
+	}
 	else if ((strncmp(szStep, "type:", 5) == 0) && pTab.IsNotNull())
 	{
 		mpcContent->GetWindow()->GetFocus()->SetFocus(pTab->GetEditor());

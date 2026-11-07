@@ -82,7 +82,7 @@ CHECKS = [
 		 r'^Opened .*/CalculatorSymbols\.h$'], []),
 	('close-cancel-and-navigate', {
 		'OPEN': 'CalculatorParser.cpp', 'CARET': '36:2', 'TYPE': 'X', 'DIALOG_ANSWER': 'Cancel',
-		'DEBUG': 'closetab,wait:300,printtabs,edit:caret:26:12,gotosource,printtabs,switchfile,printtabs'},
+		'DEBUG': 'closetab,wait:1000,printtabs,edit:caret:26:12,gotosource,printtabs,switchfile,printtabs'},
 		[r'^Tabs: .* >CalculatorParser\.cpp\*$', r'^Tabs: .*CalculatorParser\.cpp\* >CalculatorParser\.h$',
 		 r'^Tabs: .* >CalculatorParser\.cpp\* CalculatorParser\.h$'], []),
 	('exit-dont-save', {
@@ -132,6 +132,16 @@ CHECKS = [
 			'clickmenu:Window/Reset Window Layout,clickmenu:Explorer/Set as Startup Solution,clickmenu:File/Save All,printtabs'},
 		[r'^Dialog \[Rename\] answered Cancel$', r'^Dialog \[Go To\] answered Cancel$',
 		 r'^Tabs: .*>CalculatorParser\.h$', r'^Tabs: .*>CalculatorParser\.h$'], [r'not found', r'disabled']),
+	('hierarchy-after-edits', {
+		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14',
+		'EDIT': 'renamable,replace:29| : public CCalcExpression|,renamable'},
+		[r'^Rename: IsParentheses \[CCalcParentheses::IsParentheses\(\)\] at 7 places, 1 overrides$',
+		 r'^Rename: IsParentheses \[CCalcParentheses::IsParentheses\(\)\] at 2 places, 0 overrides$'], []),
+	('virtual-after-edits', {
+		'WAIT_INDEX': '1', 'OPEN': 'CalcExpression.h', 'CARET': '37:18',
+		'EDIT': 'renamable,replace:37|virtual |,caret:37:9,renamable'},
+		[r'^Rename: IsParentheses \[CCalcExpression::IsParentheses\(\)\] at 7 places, 1 overrides$',
+		 r'^Rename: IsParentheses \[CCalcExpression::IsParentheses\(\)\] at 5 places, 0 overrides$'], []),
 	('view-menu', {
 		'OPEN': 'CalculatorParser.cpp', 'DEBUG': 'clickmenu:View/Debug,clickmenu:Window/Close All Documents,printtabs'},
 		[r'^Tabs:$'], [r'not found', r'disabled']),
