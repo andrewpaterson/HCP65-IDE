@@ -533,7 +533,7 @@ int64 CIDEDiffs::PollDiffs(int64 iNow)
 	int64				iSoonest;
 
 	iSoonest = -1;
-	for (i = 0; i < maDiffTabs.Size(); i++)
+	for (i = 0; i < maDiffTabs.NumElements(); i++)
 	{
 		pDiff = maDiffTabs.Get(i);
 		for (iSide = 0; iSide < 2; iSide++)
@@ -577,7 +577,7 @@ void CIDEDiffs::RefreshMovedDiffs(void)
 	CGitRepository*		pcRepository;
 	bool				bMoved;
 
-	for (i = 0; i < maDiffTabs.Size(); i++)
+	for (i = 0; i < maDiffTabs.NumElements(); i++)
 	{
 		pDiff = maDiffTabs.Get(i);
 		bMoved = false;
@@ -657,7 +657,7 @@ Ptr<CIDEDiffTab> CIDEDiffs::FindDiffTab(CDockPane* pcPane)
 {
 	size	i;
 
-	for (i = 0; i < maDiffTabs.Size(); i++)
+	for (i = 0; i < maDiffTabs.NumElements(); i++)
 	{
 		if (&maDiffTabs.Get(i)->GetDockPane() == pcPane)
 		{
@@ -676,7 +676,7 @@ Ptr<CIDEDiffTab> CIDEDiffs::GetActiveDiff(void) { return mpActiveDiff; }
 // The diffs' tabs.
 //
 //////////////////////////////////////////////////////////////////////////
-size CIDEDiffs::NumDiffs(void) { return maDiffTabs.Size(); }
+size CIDEDiffs::NumDiffs(void) { return maDiffTabs.NumElements(); }
 Ptr<CIDEDiffTab> CIDEDiffs::GetDiff(size uiIndex) { return maDiffTabs.Get(uiIndex); }
 
 
@@ -712,9 +712,9 @@ void CIDEDiffs::CloseAllDiffs(void)
 {
 	size	i;
 
-	for (i = maDiffTabs.Size(); i > 0; i--)
+	for (i = maDiffTabs.NumElements(); i > 0; i--)
 	{
-		if (i <= maDiffTabs.Size())
+		if (i <= maDiffTabs.NumElements())
 		{
 			mpcContent->GetDock()->Close(maDiffTabs.Get(i - 1)->GetDockPane());
 		}
@@ -733,7 +733,7 @@ void CIDEDiffs::FindProjects(void)
 	size				i;
 	Ptr<CIDEDiffTab>	pDiff;
 
-	for (i = 0; i < maDiffTabs.Size(); i++)
+	for (i = 0; i < maDiffTabs.NumElements(); i++)
 	{
 		pDiff = maDiffTabs.Get(i);
 		pDiff->GetSide(TDS_Left)->muiProject = mpcContent->GetSolutions()->GetExplorer()->FindFileProject(pDiff->GetSide(TDS_Left)->mszFile.Text());

@@ -1032,7 +1032,7 @@ Ptr<CFont> CIDEContent::GetDimFont(void) { return mpDimFont; }
 Ptr<CFont> CIDEContent::GetMatchFont(void) { return mpMatchFont; }
 Ptr<CImageCel> CIDEContent::GetFolderIcon(void) { return mpFolderIcon; }
 Ptr<CImageCel> CIDEContent::GetFileIcon(void) { return mpFileIcon; }
-size CIDEContent::NumFileTypeIcons(void) { return maFileIcons.Size(); }
+size CIDEContent::NumFileTypeIcons(void) { return maFileIcons.NumElements(); }
 Ptr<CImageCel> CIDEContent::GetFileTypeIcon(size uiType) { return maFileIcons.Get(uiType); }
 Ptr<CImageCel> CIDEContent::GetSymbolIcon(size uiType) { return maSymbolIcons.Get(uiType); }
 Ptr<CMenuBar> CIDEContent::GetMenuBar(void) { return mpMenuBar; }

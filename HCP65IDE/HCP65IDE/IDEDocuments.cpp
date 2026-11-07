@@ -209,9 +209,9 @@ void CIDEDocuments::CloseAllFiles(void)
 	size	i;
 
 	//Closing the document lets its file go (PaneClosed); one with changes is asked about first (PaneClosing).
-	for (i = maTabs.Size(); i > 0; i--)
+	for (i = maTabs.NumElements(); i > 0; i--)
 	{
-		if (i <= maTabs.Size())
+		if (i <= maTabs.NumElements())
 		{
 			mpcContent->GetDock()->Close(maTabs.Get(i - 1)->GetDockPane());
 		}
@@ -268,7 +268,7 @@ bool CIDEDocuments::SaveAllFiles(void)
 	bool	bResult;
 
 	bResult = true;
-	for (i = 0; i < maTabs.Size(); i++)
+	for (i = 0; i < maTabs.NumElements(); i++)
 	{
 		if (!SaveFile(maTabs.Get(i)))
 		{
@@ -363,7 +363,7 @@ int64 CIDEDocuments::GiveEditedTabs(int64 iNow, bool bNow)
 	if (muiIndexings != mpcContent->GetCodeModel()->NumIndexings())
 	{
 		muiIndexings = mpcContent->GetCodeModel()->NumIndexings();
-		for (i = 0; i < maTabs.Size(); i++)
+		for (i = 0; i < maTabs.NumElements(); i++)
 		{
 			maTabs.Get(i)->IndexRestarted();
 		}
@@ -372,7 +372,7 @@ int64 CIDEDocuments::GiveEditedTabs(int64 iNow, bool bNow)
 	bCanIndex = !mpcContent->GetCodeModel()->IsIndexing();
 	iSoonest = -1;
 	apsFiles.Init();
-	for (i = 0; i < maTabs.Size(); i++)
+	for (i = 0; i < maTabs.NumElements(); i++)
 	{
 		pTab = maTabs.Get(i);
 		if (pTab->TakeEdits(iNow, bNow, bCanIndex, &bHighlight, &bIndex, &iWait))
@@ -516,7 +516,7 @@ Ptr<CIDEEditorTab> CIDEDocuments::FindTab(const char* szFileName)
 {
 	size	i;
 
-	for (i = 0; i < maTabs.Size(); i++)
+	for (i = 0; i < maTabs.NumElements(); i++)
 	{
 		if (StringCompare(maTabs.Get(i)->GetFileName(), szFileName) == 0)
 		{
@@ -536,7 +536,7 @@ Ptr<CIDEEditorTab> CIDEDocuments::FindTab(CDockPane* pcPane)
 {
 	size	i;
 
-	for (i = 0; i < maTabs.Size(); i++)
+	for (i = 0; i < maTabs.NumElements(); i++)
 	{
 		if (&maTabs.Get(i)->GetDockPane() == pcPane)
 		{
@@ -556,7 +556,7 @@ Ptr<CIDEEditorTab> CIDEDocuments::FindTab(CTextArea* pcEditor)
 {
 	size	i;
 
-	for (i = 0; i < maTabs.Size(); i++)
+	for (i = 0; i < maTabs.NumElements(); i++)
 	{
 		if (&maTabs.Get(i)->GetEditor() == pcEditor)
 		{
@@ -576,7 +576,7 @@ Ptr<CIDEEditorTab> CIDEDocuments::FindTab(CCodeEditor* pcEditor)
 {
 	size	i;
 
-	for (i = 0; i < maTabs.Size(); i++)
+	for (i = 0; i < maTabs.NumElements(); i++)
 	{
 		if (&maTabs.Get(i)->GetCodeEditor() == pcEditor)
 		{
@@ -601,7 +601,7 @@ Ptr<CIDEEditorTab> CIDEDocuments::GetActiveTab(void) { return mpActive; }
 // The open documents' tabs.
 //
 //////////////////////////////////////////////////////////////////////////
-size CIDEDocuments::NumTabs(void) { return maTabs.Size(); }
+size CIDEDocuments::NumTabs(void) { return maTabs.NumElements(); }
 
 
 Ptr<CIDEEditorTab> CIDEDocuments::GetTab(size uiIndex) { return maTabs.Get(uiIndex); }
