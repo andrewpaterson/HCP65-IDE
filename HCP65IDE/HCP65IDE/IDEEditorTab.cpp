@@ -51,7 +51,7 @@ void CIDEEditorTab::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CFo
 
 	mpWindow = pWindow;
 	mcListings.Init();
-	mpCodeEditor = OMalloc<CCodeEditor>(pWindow, pFamily, szText);
+	mpCodeEditor = OMalloc<CCodeEditor>(pWindow, pTheme, pFamily, szText);
 	mpCodeEditor->SetGlyphColumn(true);
 	//The editor fills the view so a press right of the text, or below it, is in the editor: the caret goes to the
 	//nearest text, the end of the line or of the last line, as IntelliJ's.

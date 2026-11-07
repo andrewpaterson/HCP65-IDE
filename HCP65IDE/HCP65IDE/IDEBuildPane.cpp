@@ -37,7 +37,7 @@ void CIDEBuildPane::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CFo
 {
 	PreInit();
 
-	mpOutput = OMalloc<CTextArea>(pWindow, pOutputFamily, "");
+	mpOutput = OMalloc<CTextArea>(pWindow, pTheme, pOutputFamily, "");
 	mpOutput->SetEditable(false);
 	mpOutput->SetTiledText(true);
 	mpOutput->SetColour(sOutputColour);

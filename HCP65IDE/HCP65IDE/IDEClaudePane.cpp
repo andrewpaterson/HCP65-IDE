@@ -75,7 +75,7 @@ void CIDEClaudePane::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CF
 	mpStatus = OMalloc<CLabel>(pWindow, pStatusFont, "");
 	mpStatus->SetAlignment(CSH_Left, CSV_Center);
 
-	mpConversation = OMalloc<CTextArea>(pWindow, pFamily, "");
+	mpConversation = OMalloc<CTextArea>(pWindow, pTheme, pFamily, "");
 	mpConversation->SetEditable(false);
 	mpConversation->SetTiledText(true);
 	mpConversation->SetColour(JEWEL_TEXT);
@@ -84,7 +84,7 @@ void CIDEClaudePane::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CF
 	mpConversationPane->SetContent(mpConversation);
 	mpConversationPane->SetAlignment(CSH_Stretch, CSV_Stretch);
 
-	mpRequest = OMalloc<CTextArea>(pWindow, pFamily, "");
+	mpRequest = OMalloc<CTextArea>(pWindow, pTheme, pFamily, "");
 	mpRequest->SetTiledText(true);
 	mpRequest->SetColour(JEWEL_TEXT);
 	mpRequest->SetAlignment(CSH_Left, CSV_Top);

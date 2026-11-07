@@ -500,7 +500,7 @@ bool CIDEGitStatus::ShowChange(Ptr<CIDEEditorTab> pTab, size uiLine)
 		szOld.Init();
 		AppendBaseLines(pTab, msChange.uiBaseStartLine, msChange.uiBaseEndLine, &szOld);
 		szOld.RemoveLastCharacter();
-		pOld = OMalloc<CTextArea>(pWindow, mpcContent->GetCodeFamily(), szOld.Text());
+		pOld = OMalloc<CTextArea>(pWindow, mpcContent->GetTheme(), mpcContent->GetCodeFamily(), szOld.Text());
 		szOld.Kill();
 		pOld->SetTiledText(true);
 		pOld->SetColour(JEWEL_TEXT);

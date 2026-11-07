@@ -37,11 +37,11 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 //
 //
 //////////////////////////////////////////////////////////////////////////
-static Ptr<CTextArea> CreateIDEDebugText(Ptr<CWindow> pWindow, Ptr<CFontFamily> pFamily, ARGB32 sColour)
+static Ptr<CTextArea> CreateIDEDebugText(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CFontFamily> pFamily, ARGB32 sColour)
 {
 	Ptr<CTextArea>	pText;
 
-	pText = OMalloc<CTextArea>(pWindow, pFamily, "");
+	pText = OMalloc<CTextArea>(pWindow, pTheme, pFamily, "");
 	pText->SetEditable(false);
 	pText->SetTiledText(true);
 	pText->SetColour(sColour);
@@ -61,12 +61,12 @@ void CIDEDebugView::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CFo
 	msColour = sColour;
 	mauiLineAddresses.Init();
 
-	mpRegisters = CreateIDEDebugText(pWindow, pFamily, sColour);
+	mpRegisters = CreateIDEDebugText(pWindow, pTheme, pFamily, sColour);
 	mpRegistersPane = OMalloc<CScrollPane>(pWindow, pTheme);
 	mpRegistersPane->SetContent(mpRegisters);
 	mpRegistersPane->SetAlignment(CSH_Stretch, CSV_Stretch);
 
-	mpDisassembly = CreateIDEDebugText(pWindow, pFamily, sColour);
+	mpDisassembly = CreateIDEDebugText(pWindow, pTheme, pFamily, sColour);
 	mpDisassemblyPane = OMalloc<CScrollPane>(pWindow, pTheme);
 	mpDisassemblyPane->SetContent(mpDisassembly);
 	mpDisassemblyPane->SetAlignment(CSH_Stretch, CSV_Stretch);
