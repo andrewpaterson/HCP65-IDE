@@ -209,8 +209,6 @@ bool CIDECloseGuard::ApproveLettingGo(size uiSolution, const char* szFile)
 //////////////////////////////////////////////////////////////////////////
 void CIDECloseGuard::AskToSave(void)
 {
-	Ptr<CGridContainer>	pBody;
-	Ptr<CLabel>			pLabel;
 	CChars				szName;
 	CFileUtil			cFileUtil;
 	size				i;
@@ -225,26 +223,18 @@ void CIDECloseGuard::AskToSave(void)
 		return;
 	}
 
-	mpSaveDialog = OMalloc<CDialog>(mpcContent->GetWindow(), mpcContent->GetDialogLook(), "Save Changes");
-	pBody = OMalloc<CGridContainer>(mpSaveDialog->GetWindow());
-	pLabel = OMalloc<CLabel>(mpSaveDialog->GetWindow(), mpcContent->GetTheme()->GetFont(), "Save changes to the following files?");
-	pLabel->SetAlignment(CSH_Left, CSV_Top);
-	pBody->AddComponent(pLabel, 0, 0, 1, 1, 1, 0);
+	mpSaveDialog = OMalloc<CMessageDialog>(mpcContent->GetWindow(), mpcContent->GetDialogLook(), "Save Changes", "Save changes to the following files?");
 	for (i = 0; i < maszSaveFiles.NumElements(); i++)
 	{
 		szName.Init();
 		cFileUtil.GetFileName(&szName, maszSaveFiles.GetText(i));
-		szName.Insert(0, "    ");
-		pLabel = OMalloc<CLabel>(mpSaveDialog->GetWindow(), mpcContent->GetTheme()->GetFont(), szName.Text());
-		pLabel->SetAlignment(CSH_Left, CSV_Top);
-		pBody->AddComponent(pLabel, 0, (int)i + 1, 1, 1, 1, 0);
+		mpSaveDialog->AddItem(szName.Text());
 		szName.Kill();
 	}
-	mpSaveDialog->SetBody(pBody, NULL);
-	mpSaveDialog->SetOKCaption("Save");
-	mpSaveDialog->AddExtraButton("Don't Save");
-	mpcContent->GetScript()->WatchDialog(mpSaveDialog);
-	bSave = mpSaveDialog->Show(440, 150 + 22 * (int)maszSaveFiles.NumElements());
+	mpSaveDialog->GetDialog()->SetOKCaption("Save");
+	mpSaveDialog->GetDialog()->AddExtraButton("Don't Save");
+	mpcContent->GetScript()->WatchDialog(mpSaveDialog->GetDialog());
+	bSave = mpSaveDialog->Show();
 	szClicked.Init(mpSaveDialog->GetClicked());
 	mpcContent->GetScript()->StopWatchingDialog();
 	mpSaveDialog = NULL;

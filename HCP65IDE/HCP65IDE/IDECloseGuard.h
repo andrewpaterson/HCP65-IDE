@@ -23,7 +23,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/ArrayChars.h"
 #include "StandardLib/Object.h"
 #include "StandardLib/Pointer.h"
-#include "WindowLib/Dialog.h"
+#include "WindowLib/MessageDialog.h"
 #include "WindowLib/DockPane.h"
 
 
@@ -56,7 +56,7 @@ protected:
 	CArrayChars		maszCloseIDs;  //The panes to close then (IAS_ClosePanes).
 	size			muiAfterSolution;
 	CChars			mszAfterFile;
-	Ptr<CDialog>	mpSaveDialog;  //While it's shown.
+	Ptr<CMessageDialog>	mpSaveDialog;  //While it's shown.
 
 public:
 	void	Init(CIDEContent* pcContent);
