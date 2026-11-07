@@ -231,6 +231,11 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 	pBackground = OMalloc<CClearCanvasDraw>(0);  //Coloured once the content has made the theme.
 	mpWindow = OMalloc<CWindow>("HCP65 IDE", pcNativeFactory, pTick, pBackground, CFT_RGBX, CCO_BGR, CRGB_24bit, ARGB_8bit);
 
+	//Only what changed is drawn.  HCP65_IDE_VERIFY_REDRAW checks every partial paint against drawing all of the window
+	//and logs where they differ, for finding a component that changes without being invalidated.
+	mpWindow->SetPartialRedraw(true);
+	mpWindow->SetVerifyRedraw(getenv("HCP65_IDE_VERIFY_REDRAW") != NULL);
+
 	mpContent = OMalloc<CIDEContent>();
 	mpContent->SetKeepSettings(!IsIDEScripted() || (getenv("HCP65_IDE_SAVE_LAYOUT") != NULL));
 	pTick->SetContent(mpContent);
