@@ -25,6 +25,7 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/MarkupTag.h"
 #include "Assembler65Lib/Asm65Image.h"
 #include "Assembler65Lib/Asm65Executable.h"
+#include "Assembler65Lib/Asm65Module.h"
 #include "BaseLib/ArrayChars.h"
 #include "BaseLib/ArrayUint32.h"
 
@@ -41,6 +42,16 @@ enum EBuildToolchain
 };
 
 
+//What an HCP65 configuration links what it compiles into, if anything.
+enum EBuildProgram
+{
+	BP_None,
+	BP_Image,
+	BP_Executable,
+	BP_Module,
+};
+
+
 //A way the solution is built: a name to choose it by, its toolchain, and the solution configuration ("Debug|Win32")
 //whose projects' files, include directories and defines it builds with.  MSVC builds that configuration as Visual
 //Studio does.  The name is chosen as its configuration and platform, either side of a | ("Debug|W65C816").
@@ -50,12 +61,13 @@ enum EBuildToolchain
 //file.  Without one whatever debugs it chooses.  The emulator must be the configuration's processor
 //(GetProcessorName).
 //
-//An HCP65 configuration with an image (<Image>, CAsm65Image) or an executable (<Executable>, CAsm65Executable, a
-//program a kernal loads) links what it builds into that file, in the build's Output folder; one without only
-//compiles.  NoFloats="true" makes floating point an error (the kernal has none: CCPP65Builder::SetNoFloats).
-//MathTables="false" builds it to run without the maths tables in memory (CCPP65Builder::SetMathTables: the kernal and
-//the operating system, which loads them).  Its BreakpointSpace is the emulator's space ("Kernel", "User") that debugging puts breakpoints in;
-//without one they stop in every space.
+//An HCP65 configuration with an image (<Image>, CAsm65Image), an executable (<Executable>, CAsm65Executable, a
+//program a kernal loads) or a module (<Module>, CAsm65Module, a relocatable driver a kernal loads) links what it
+//builds into that file, in the build's Output folder; one without only compiles.  NoFloats="true" makes floating
+//point an error (the kernal has none: CCPP65Builder::SetNoFloats).  MathTables="false" builds it to run without the
+//maths tables in memory (CCPP65Builder::SetMathTables: the kernal, its drivers and the operating system, which loads
+//them).  Its BreakpointSpace is the emulator's space ("Kernel", "User") that debugging puts breakpoints in; without
+//one they stop in every space.
 //
 //Debugging loads each <Load File Address/> into the waiting emulator first (a kernal for a program to run on), and
 //its own image.  A program is written onto the emulator's SD card image, Card, as CardPath ("\boot.exe") on its FAT
@@ -72,10 +84,10 @@ protected:
 	CChars			mszBreakpointSpace;
 	bool			mbNoFloats;
 	bool			mbMathTables;
-	bool			mbImage;
+	EBuildProgram	meProgram;
 	CAsm65Image		mcImage;
-	bool			mbExecutable;
 	CAsm65Executable	mcExecutable;
+	CAsm65Module	mcModule;
 	CArrayChars		maszLoadFiles;
 	CArrayUint32	mauiLoadAddresses;
 	CChars			mszCard;
@@ -113,7 +125,13 @@ public:
 	bool			HasExecutable(void);
 	CAsm65Executable*	GetExecutable(void);
 	CAsm65Executable*	SetExecutable(const char* szFile, const char* szEntry, uint32 uiLimit);
+	bool			HasModule(void);
+	CAsm65Module*	GetModule(void);
+	CAsm65Module*	SetModule(const char* szFile, const char* szEntry, uint32 uiLimit);
+	EBuildProgram	GetProgram(void);
 	bool			IsLinked(void);
+	char*			GetProgramFile(void);
+	uint32			GetProgramLimit(void);
 
 	void			AddLoad(const char* szFile, uint32 uiAddress);
 	size			NumLoads(void);
@@ -123,12 +141,16 @@ public:
 	bool			HasCard(void);
 	char*			GetCard(void);
 	char*			GetCardPath(void);
+	bool			IsOnCard(void);
 	void			GetConfigurationName(CChars* pszDest);
 	void			GetPlatformName(CChars* pszDest);
 	bool			Is(const char* szConfiguration, const char* szPlatform);
 
 	static const char*	GetToolchainName(EBuildToolchain eToolchain);
 	static bool			FindToolchain(const char* szName, EBuildToolchain* peToolchain);
+
+protected:
+	void			ClearProgram(void);
 };
 
 

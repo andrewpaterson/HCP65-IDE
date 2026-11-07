@@ -64,6 +64,8 @@ protected:
 	static void	CompileThread(void* pvBuild);
 	void		AddDescription(CArrayChars* paszLines);
 	bool		WriteProgram(CArrayChars* paszLines);
+	bool		MakeProgram(CChars* pszErrors);
+	bool		WriteProgramFile(const char* szPath, size* puiSize);
 	void		AddLines(const char* szText, CArrayChars* paszLines);
 	void		AddUnitReports(CArrayChars* paszLines);
 	void		Wait(void);

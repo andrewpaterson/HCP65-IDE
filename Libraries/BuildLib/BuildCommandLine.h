@@ -33,19 +33,19 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 
 
 //hcp65build: builds a solution (.sln), a project (.vcxproj) or a workspace (.hcp65workspace) in one of its build
-//configurations (its .hcp65build) without the IDE, as the IDE's Build does: every solution of a workspace in
-//dependency order, each compiled and linked whole by CSolutionBuild, its output in Output\<toolchain>\<configuration>
-//beside it.  Optionally each program the kernal runs is put on the configuration's card as the debugger does.  Given
-//a solution's configurations (.hcp65build) it builds the solution they are for: the .sln of the same name beside
-//them, else the .vcxproj.
+//configurations (its .hcp65build) without the IDE, as the IDE's Build does: every solution of a workspace in dependency
+//order, each compiled and linked whole by CSolutionBuild, its output in Output\<toolchain>\<configuration> beside it.
+//Optionally each program and driver the kernal runs is put on the configuration's card as the debugger does.  Given a
+//solution's configurations (.hcp65build) it builds the solution they are for: the .sln of the same name beside them,
+//else the .vcxproj.
 //
 //	hcp65build <file> [-config "Release|W65C816"] [-card] [-libc65 <directory>] [-quiet] [-show-plain <file>]
 //	hcp65build -program <name> [-dir <dir>] [-D <define>]... <source>... [-lib ...]... [options]
 //
-//The second is a plain command line (CBuildPlain): what to compile and link given as options, with no solution.  It
-//is chosen by a -program or -lib.  -show-plain writes a solution's build as one, instead of building it, and prints it
-//as one PowerShell command line.  @file reads
-//arguments from a file, one a line (blank lines and lines starting with # are skipped); files can read others.
+//The second is a plain command line (CBuildPlain): what to compile and link given as options, with no solution.  It is
+//chosen by a -program or -lib.  -show-plain writes a solution's build as one, instead of building it, and prints it as
+//one PowerShell command line.  @file reads arguments from a file, one a line (blank lines and lines starting with # are
+//skipped); files can read others.
 //
 //Options start with - or -- (or / on Windows).  Without -config the workspace's last chosen configuration is built,
 //else the first HCP65 one.  Without -libc65 Libc65 is HCP65\Libraries\Libc65 in a directory above the one given

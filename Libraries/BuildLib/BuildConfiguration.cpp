@@ -33,6 +33,7 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 #define BUILD_CONFIGURATION_EMULATOR_ARGUMENTS	"EmulatorArguments"
 #define BUILD_CONFIGURATION_IMAGE		"Image"
 #define BUILD_CONFIGURATION_EXECUTABLE	"Executable"
+#define BUILD_CONFIGURATION_MODULE		"Module"
 #define BUILD_CONFIGURATION_LOAD		"Load"
 #define BUILD_CONFIGURATION_LOAD_FILE	"File"
 #define BUILD_CONFIGURATION_LOAD_ADDRESS	"Address"
@@ -62,10 +63,10 @@ void CBuildConfiguration::Init(const char* szName, EBuildToolchain eToolchain, c
 	mszBreakpointSpace.Init();
 	mbNoFloats = false;
 	mbMathTables = true;
-	mbImage = false;
+	meProgram = BP_None;
 	mcImage.Init();
-	mbExecutable = false;
 	mcExecutable.Init();
+	mcModule.Init();
 	maszLoadFiles.Init();
 	mauiLoadAddresses.Init();
 	mszCard.Init();
@@ -94,6 +95,7 @@ void CBuildConfiguration::Kill(void)
 	mszCard.Kill();
 	mauiLoadAddresses.Kill();
 	maszLoadFiles.Kill();
+	mcModule.Kill();
 	mcExecutable.Kill();
 	mcImage.Kill();
 	mszBreakpointSpace.Kill();
@@ -108,7 +110,8 @@ void CBuildConfiguration::Kill(void)
 //////////////////////////////////////////////////////////////////////////
 //
 // <Configuration Name="Debug|W65C816" Toolchain="W65C816" Solution="Debug|Win32"/>, with Emulator,
-// EmulatorDirectory and EmulatorArguments only where they are set, and its <Image> inside it if it has one.
+// EmulatorDirectory and EmulatorArguments only where they are set, and its <Image>, <Executable> or <Module> inside
+// it if it has one.
 //
 //////////////////////////////////////////////////////////////////////////
 void CBuildConfiguration::SaveXML(CXMLWriter* pcWriter)
@@ -148,13 +151,17 @@ void CBuildConfiguration::SaveXML(CXMLWriter* pcWriter)
 		pcWriter->Attribute(BUILD_CONFIGURATION_CARD, mszCard.Text());
 		pcWriter->Attribute(BUILD_CONFIGURATION_CARD_PATH, mszCardPath.Text());
 	}
-	if (mbImage)
+	if (meProgram == BP_Image)
 	{
 		mcImage.SaveXML(pcWriter);
 	}
-	if (mbExecutable)
+	else if (meProgram == BP_Executable)
 	{
 		mcExecutable.SaveXML(pcWriter);
+	}
+	else if (meProgram == BP_Module)
+	{
+		mcModule.SaveXML(pcWriter);
 	}
 	for (i = 0; i < maszLoadFiles.NumElements(); i++)
 	{
@@ -170,9 +177,10 @@ void CBuildConfiguration::SaveXML(CXMLWriter* pcWriter)
 //////////////////////////////////////////////////////////////////////////
 //
 // False if pcTag isn't a configuration with a name, a toolchain there is
-// and a solution configuration, or if its <Image>, <Executable> or a
-// <Load> isn't one (they are only for an HCP65 toolchain, which has one
-// of an image and an executable at most), or Card is without CardPath.
+// and a solution configuration, or if its <Image>, <Executable>,
+// <Module> or a <Load> isn't one (they are only for an HCP65 toolchain,
+// which has one of an image, an executable and a module at most), or Card
+// is without CardPath.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CBuildConfiguration::LoadXML(CMarkupTag* pcTag)
@@ -185,6 +193,7 @@ bool CBuildConfiguration::LoadXML(CMarkupTag* pcTag)
 	EBuildToolchain	eToolchain;
 	CMarkupTag*		pcImage;
 	CMarkupTag*		pcExecutable;
+	CMarkupTag*		pcModule;
 	CMarkupTag*		pcLoad;
 	STagIterator	sIterator;
 	char*			szFile;
@@ -219,16 +228,25 @@ bool CBuildConfiguration::LoadXML(CMarkupTag* pcTag)
 		{
 			return false;
 		}
-		mbImage = true;
+		meProgram = BP_Image;
 	}
 	pcExecutable = pcTag->GetTag(BUILD_CONFIGURATION_EXECUTABLE);
 	if (pcExecutable)
 	{
-		if (!IsHCP65() || mbImage || !mcExecutable.LoadXML(pcExecutable))
+		if (!IsHCP65() || (meProgram != BP_None) || !mcExecutable.LoadXML(pcExecutable))
 		{
 			return false;
 		}
-		mbExecutable = true;
+		meProgram = BP_Executable;
+	}
+	pcModule = pcTag->GetTag(BUILD_CONFIGURATION_MODULE);
+	if (pcModule)
+	{
+		if (!IsHCP65() || (meProgram != BP_None) || !mcModule.LoadXML(pcModule))
+		{
+			return false;
+		}
+		meProgram = BP_Module;
 	}
 
 	for (pcLoad = pcTag->GetTag(BUILD_CONFIGURATION_LOAD, &sIterator); pcLoad; pcLoad = pcTag->GetNextTag(&sIterator))
@@ -393,7 +411,7 @@ char* CBuildConfiguration::GetEmulatorArguments(void) { return mszEmulatorArgume
 //////////////////////////////////////////////////////////////////////////
 bool CBuildConfiguration::HasImage(void)
 {
-	return mbImage;
+	return meProgram == BP_Image;
 }
 
 
@@ -482,7 +500,7 @@ bool CBuildConfiguration::IsMathTables(void)
 //////////////////////////////////////////////////////////////////////////
 bool CBuildConfiguration::HasExecutable(void)
 {
-	return mbExecutable;
+	return meProgram == BP_Executable;
 }
 
 
@@ -498,50 +516,157 @@ CAsm65Executable* CBuildConfiguration::GetExecutable(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The build links an executable (in place of an image or another
-// executable), as an <Executable> in the configurations' file says: its
-// symbols are added to what is returned.  A configuration made other than
-// from a file (hcp65build's plain command line) is given one this way.
+// The build links an executable (in place of what it linked before), as
+// an <Executable> in the configurations' file says: its symbols are added
+// to what is returned.  A configuration made other than from a file
+// (hcp65build's plain command line) is given one this way.
 //
 //////////////////////////////////////////////////////////////////////////
 CAsm65Executable* CBuildConfiguration::SetExecutable(const char* szFile, const char* szEntry, uint32 uiLimit)
 {
-	mcImage.Kill();
-	mcImage.Init();
-	mbImage = false;
+	ClearProgram();
 	mcExecutable.Kill();
 	mcExecutable.Init(szFile, szEntry, uiLimit);
-	mbExecutable = true;
+	meProgram = BP_Executable;
 	return &mcExecutable;
 }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The build links an image (in place of an executable or another image),
-// as an <Image> says: its regions are added to what is returned.
+// The build links an image (in place of what it linked before), as an
+// <Image> says: its regions are added to what is returned.
 //
 //////////////////////////////////////////////////////////////////////////
 CAsm65Image* CBuildConfiguration::SetImage(const char* szFile, uint32 uiSize, uint8 uiFill, uint32 uiLimit, uint32 uiLoad)
 {
-	mcExecutable.Kill();
-	mcExecutable.Init();
-	mbExecutable = false;
+	ClearProgram();
 	mcImage.Kill();
 	mcImage.Init(szFile, uiSize, uiFill, uiLimit, uiLoad);
-	mbImage = true;
+	meProgram = BP_Image;
 	return &mcImage;
 }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Whether a build links (an image or an executable) or only compiles.
+// Whether a build links what it compiles into a module, a relocatable
+// driver a kernal loads (GetModule).
+//
+//////////////////////////////////////////////////////////////////////////
+bool CBuildConfiguration::HasModule(void)
+{
+	return meProgram == BP_Module;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+CAsm65Module* CBuildConfiguration::GetModule(void)
+{
+	return &mcModule;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The build links a module (in place of what it linked before), as a
+// <Module> says.
+//
+//////////////////////////////////////////////////////////////////////////
+CAsm65Module* CBuildConfiguration::SetModule(const char* szFile, const char* szEntry, uint32 uiLimit)
+{
+	ClearProgram();
+	mcModule.Kill();
+	mcModule.Init(szFile, szEntry, uiLimit);
+	meProgram = BP_Module;
+	return &mcModule;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The image, executable and module emptied: the build links nothing until
+// one is set.
+//
+//////////////////////////////////////////////////////////////////////////
+void CBuildConfiguration::ClearProgram(void)
+{
+	mcModule.Kill();
+	mcModule.Init();
+	mcExecutable.Kill();
+	mcExecutable.Init();
+	mcImage.Kill();
+	mcImage.Init();
+	meProgram = BP_None;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether a build links (an image, an executable or a module) or only
+// compiles.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CBuildConfiguration::IsLinked(void)
 {
-	return mbImage || mbExecutable;
+	return meProgram != BP_None;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+EBuildProgram CBuildConfiguration::GetProgram(void)
+{
+	return meProgram;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The file the build links into (its image's, executable's or module's),
+// "" if it doesn't link.
+//
+//////////////////////////////////////////////////////////////////////////
+char* CBuildConfiguration::GetProgramFile(void)
+{
+	switch (meProgram)
+	{
+	case BP_Image:
+		return mcImage.GetFile();
+	case BP_Executable:
+		return mcExecutable.GetFile();
+	case BP_Module:
+		return mcModule.GetFile();
+	default:
+		return (char*)"";
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The highest address the build's link may place anything at, zero for
+// none (or if it doesn't link).
+//
+//////////////////////////////////////////////////////////////////////////
+uint32 CBuildConfiguration::GetProgramLimit(void)
+{
+	switch (meProgram)
+	{
+	case BP_Image:
+		return mcImage.GetLimit();
+	case BP_Executable:
+		return mcExecutable.GetLimit();
+	case BP_Module:
+		return mcModule.GetLimit();
+	default:
+		return 0;
+	}
 }
 
 
@@ -581,4 +706,16 @@ void CBuildConfiguration::SetCard(const char* szCard, const char* szPath)
 bool CBuildConfiguration::HasCard(void)		{ return !mszCard.Empty() && !mszCardPath.Empty(); }
 char* CBuildConfiguration::GetCard(void)	{ return mszCard.Text(); }
 char* CBuildConfiguration::GetCardPath(void)	{ return mszCardPath.Text(); }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether what it builds is put on its card for the kernal to run: an
+// executable (a program) or a module (a driver), with a Card.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CBuildConfiguration::IsOnCard(void)
+{
+	return ((meProgram == BP_Executable) || (meProgram == BP_Module)) && HasCard();
+}
 

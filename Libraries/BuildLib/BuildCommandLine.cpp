@@ -782,7 +782,7 @@ bool CBuildCommandLine::BuildSolution(size uiSolution, bool bHeading)
 	{
 		return false;
 	}
-	if (mbCard && pcConfiguration->HasExecutable() && pcConfiguration->HasCard())
+	if (mbCard && pcConfiguration->IsOnCard())
 	{
 		return PutOnCard(uiSolution, pcConfiguration);
 	}
@@ -792,9 +792,9 @@ bool CBuildCommandLine::BuildSolution(size uiSolution, bool bHeading)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The built executable onto the configuration's card (an SD card image,
-// relative to the solution's .hcp65build) as its CardPath, as the IDE
-// does before debugging.
+// The built executable or module onto the configuration's card (an SD
+// card image, relative to the solution's .hcp65build) as its CardPath, as
+// the IDE does before debugging.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CBuildCommandLine::PutOnCard(size uiSolution, CBuildConfiguration* pcConfiguration)
@@ -954,7 +954,8 @@ void CBuildCommandLine::WriteUsage(void)
 	WriteLine("");
 	WriteLine("  -config \"Release|W65C816\"  The build configuration (from the .hcp65build beside the solution).");
 	WriteLine("                             Default: the workspace's last one, else the first HCP65 one.");
-	WriteLine("  -card                      Also put each executable on its configuration's card (Card, CardPath).");
+	WriteLine("  -card                      Also put each executable and module on its configuration's card (Card,");
+	WriteLine("                             CardPath).");
 	WriteLine("  -show-plain <file>         Write the build as a plain command line (and a .units file per project)");
 	WriteLine("                             instead of building: hcp65build @<file> builds the same.");
 	WriteLine("");
@@ -974,7 +975,10 @@ void CBuildCommandLine::WriteUsage(void)
 	WriteLine("  -exe <file> -entry <symbol> [-limit <n>] [-symbol <name>=<n>]...");
 	WriteLine("                                Link an executable.");
 	WriteLine("  -image <file> -size <n> [-fill <n>] [-limit <n>] [-load <n>] -region <start>,<end>,<offset>...");
-	WriteLine("                                Link an image.  Without -exe or -image the units are only compiled.");
+	WriteLine("                                Link an image.");
+	WriteLine("  -module <file> -entry <symbol> [-limit <n>]");
+	WriteLine("                                Link a module (a driver).  Without -exe, -image or -module the units");
+	WriteLine("                                are only compiled.");
 	WriteLine("  -o <dir>, -listings <dir>     Where the program and listings go (default: Output\\<target>\\Plain and");
 	WriteLine("                                Listing\\<target>\\Plain in the current directory).");
 	WriteLine("");

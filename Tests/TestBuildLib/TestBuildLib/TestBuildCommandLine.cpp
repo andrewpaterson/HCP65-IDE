@@ -510,6 +510,23 @@ void TestBuildCommandLinePlainParse(void)
 	szError.Kill();
 	cCommandLine.Kill();
 
+	//A module (a driver), linked to be put anywhere.
+	const char* aszModule[] = { "hcp65build", "-program", "Driver", "Driver.cpp", "-module", "UART.DRV", "-entry", "_KernalCreateDriver", "-limit", "0x20000", "-nofloats", "-no-mathtables" };
+	cCommandLine.Init();
+	AssertTrue(cCommandLine.Parse(12, aszModule));
+	szError.Init();
+	AssertTrue(cCommandLine.GetPlain()->MakeConfiguration(&cConfiguration, &szError));
+	AssertTrue(cConfiguration.HasModule());
+	AssertFalse(cConfiguration.HasExecutable());
+	AssertTrue(cConfiguration.IsLinked());
+	AssertString("UART.DRV", cConfiguration.GetModule()->GetFile());
+	AssertString("UART.DRV", cConfiguration.GetProgramFile());
+	AssertString("_KernalCreateDriver", cConfiguration.GetModule()->GetEntry());
+	AssertIntHex(0x20000, cConfiguration.GetProgramLimit());
+	cConfiguration.Kill();
+	szError.Kill();
+	cCommandLine.Kill();
+
 	//Arguments from files, which read others; blank lines and # lines are skipped.
 	cFile.Init("# The program\n\n-program\nFromFile\n@" TEST_COMMAND_LINE_OUTPUT _FS_ "Sources.args\n");
 	AssertTrue(cFile.Write(TEST_COMMAND_LINE_OUTPUT _FS_ "Main.args"));
@@ -552,11 +569,23 @@ void TestBuildCommandLinePlainParse(void)
 
 	const char* aszEntryOnly[] = { "hcp65build", "-program", "P", "A.cpp", "-entry", "Start" };
 	AssertFalse(TestBuildCommandLineParses(6, aszEntryOnly, &szLine));
-	AssertString("-entry and -symbol are for an executable: they need -exe.", szLine.Text());
+	AssertString("-entry is for an executable or a module: it needs -exe or -module.", szLine.Text());
+
+	const char* aszSymbolOnly[] = { "hcp65build", "-program", "P", "A.cpp", "-module", "p.drv", "-entry", "S", "-symbol", "Heap=1" };
+	AssertFalse(TestBuildCommandLineParses(10, aszSymbolOnly, &szLine));
+	AssertString("-symbol is for an executable: it needs -exe.", szLine.Text());
+
+	const char* aszModuleNoEntry[] = { "hcp65build", "-program", "P", "A.cpp", "-module", "p.drv" };
+	AssertFalse(TestBuildCommandLineParses(6, aszModuleNoEntry, &szLine));
+	AssertString("-module needs its entry symbol (-entry).", szLine.Text());
 
 	const char* aszBoth[] = { "hcp65build", "-program", "P", "A.cpp", "-exe", "p.exe", "-entry", "S", "-image", "p.rom" };
 	AssertFalse(TestBuildCommandLineParses(10, aszBoth, &szLine));
-	AssertString("Link an executable (-exe) or an image (-image), not both.", szLine.Text());
+	AssertString("Link one of an executable (-exe), an image (-image) and a module (-module).", szLine.Text());
+
+	const char* aszExeAndModule[] = { "hcp65build", "-program", "P", "A.cpp", "-exe", "p.exe", "-entry", "S", "-module", "p.drv" };
+	AssertFalse(TestBuildCommandLineParses(10, aszExeAndModule, &szLine));
+	AssertString("Link one of an executable (-exe), an image (-image) and a module (-module).", szLine.Text());
 
 	const char* aszNoSize[] = { "hcp65build", "-program", "P", "A.cpp", "-image", "p.rom", "-region", "0,1,0" };
 	AssertFalse(TestBuildCommandLineParses(8, aszNoSize, &szLine));

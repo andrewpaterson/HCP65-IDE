@@ -288,6 +288,64 @@ void TestBuildConfigurationsExecutable(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// A driver's configuration: its module, linked into a file the kernal
+// loads from the card, written and read back the same and put on its
+// card.  A module beside an executable isn't read.
+//
+//////////////////////////////////////////////////////////////////////////
+void TestBuildConfigurationsModule(void)
+{
+	CBuildConfigurations	cRead;
+	CBuildConfigurations	cAgain;
+	CBuildConfiguration*	pcConfiguration;
+	CTextFile				cFile;
+	CFileUtil				cFileUtil;
+
+	cFileUtil.MakeDir("Output");
+	cFile.Init("<BuildConfigurations>\n\t<Configuration Name=\"Debug|W65C816\" Toolchain=\"W65C816\" Solution=\"Debug|Win32\" BreakpointSpace=\"Kernel\" NoFloats=\"true\" MathTables=\"false\" Card=\"Card.img\" CardPath=\"\\OS\\Drivers\\UART.DRV\">\n\t\t<Module File=\"UART.DRV\" Entry=\"_KernalCreateDriver\" Limit=\"0x20000\"/>\n\t\t<Load File=\"Kernal.rom\" Address=\"0x0\"/>\n\t</Configuration>\n</BuildConfigurations>\n");
+	AssertTrue(cFile.Write("Output" _FS_ "Driver.hcp65build"));
+	cFile.Kill();
+
+	cRead.Init();
+	AssertTrue(cRead.Read("Output" _FS_ "Driver.hcp65build"));
+	pcConfiguration = cRead.GetConfiguration(0);
+	AssertTrue(pcConfiguration->HasModule());
+	AssertFalse(pcConfiguration->HasExecutable());
+	AssertFalse(pcConfiguration->HasImage());
+	AssertTrue(pcConfiguration->IsLinked());
+	AssertTrue(pcConfiguration->IsOnCard());
+	AssertString("UART.DRV", pcConfiguration->GetModule()->GetFile());
+	AssertString("_KernalCreateDriver", pcConfiguration->GetModule()->GetEntry());
+	AssertIntHex(0x20000, pcConfiguration->GetModule()->GetLimit());
+	AssertString("UART.DRV", pcConfiguration->GetProgramFile());
+	AssertIntHex(0x20000, pcConfiguration->GetProgramLimit());
+	AssertString("\\OS\\Drivers\\UART.DRV", pcConfiguration->GetCardPath());
+
+	//Written back and read the same.
+	AssertTrue(cRead.Write("Output" _FS_ "DriverAgain.hcp65build"));
+	cAgain.Init();
+	AssertTrue(cAgain.Read("Output" _FS_ "DriverAgain.hcp65build"));
+	pcConfiguration = cAgain.GetConfiguration(0);
+	AssertTrue(pcConfiguration->HasModule());
+	AssertString("_KernalCreateDriver", pcConfiguration->GetModule()->GetEntry());
+	AssertIntHex(0x20000, pcConfiguration->GetModule()->GetLimit());
+	cAgain.Kill();
+
+	cFile.Init("<BuildConfigurations>\n\t<Configuration Name=\"Debug|W65C816\" Toolchain=\"W65C816\" Solution=\"Debug|Win32\">\n\t\t<Executable File=\"boot.exe\" Entry=\"UserStart\"/>\n\t\t<Module File=\"UART.DRV\" Entry=\"_KernalCreateDriver\"/>\n\t</Configuration>\n</BuildConfigurations>\n");
+	AssertTrue(cFile.Write("Output" _FS_ "BadDriver.hcp65build"));
+	cFile.Kill();
+	AssertFalse(cRead.Read("Output" _FS_ "BadDriver.hcp65build"));
+	cFile.Init("<BuildConfigurations>\n\t<Configuration Name=\"Debug|W65C816\" Toolchain=\"W65C816\" Solution=\"Debug|Win32\">\n\t\t<Module File=\"UART.DRV\"/>\n\t</Configuration>\n</BuildConfigurations>\n");
+	AssertTrue(cFile.Write("Output" _FS_ "BadDriver.hcp65build"));
+	cFile.Kill();
+	AssertFalse(cRead.Read("Output" _FS_ "BadDriver.hcp65build"));
+
+	cRead.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // A configuration is chosen by its name's configuration and platform,
 // either side of its |; a name without one is all configuration, and its
 // platform is its toolchain.
@@ -359,6 +417,7 @@ void TestBuildConfigurations(void)
 	TestBuildConfigurationsFile();
 	TestBuildConfigurationsImage();
 	TestBuildConfigurationsExecutable();
+	TestBuildConfigurationsModule();
 	TestBuildConfigurationsPlatforms();
 
 	TestStatistics();

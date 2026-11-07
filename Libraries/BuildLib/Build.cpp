@@ -239,8 +239,8 @@ void CBuild::GetOutputDirectory(CChars* pszDest)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Where this build writes its image or executable: in its output
-// directory.  False if it makes neither.
+// Where this build writes its image, executable or module: in its output
+// directory.  False if it doesn't link.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CBuild::GetProgramPath(CChars* pszDest)
@@ -252,7 +252,7 @@ bool CBuild::GetProgramPath(CChars* pszDest)
 		return false;
 	}
 	GetOutputDirectory(pszDest);
-	cFileUtil.AppendToPath(pszDest, mpcConfiguration->HasImage() ? mpcConfiguration->GetImage()->GetFile() : mpcConfiguration->GetExecutable()->GetFile());
+	cFileUtil.AppendToPath(pszDest, mpcConfiguration->GetProgramFile());
 	return true;
 }
 
@@ -260,7 +260,7 @@ bool CBuild::GetProgramPath(CChars* pszDest)
 //////////////////////////////////////////////////////////////////////////
 //
 // Where a build of the solution in szRoot writes pcConfiguration's image,
-// or its executable.  False if it has neither.
+// executable or module.  False if it doesn't link.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CBuild::GetProgramPath(const char* szRoot, CBuildConfiguration* pcConfiguration, CChars* pszDest)
@@ -272,7 +272,7 @@ bool CBuild::GetProgramPath(const char* szRoot, CBuildConfiguration* pcConfigura
 		return false;
 	}
 	GetDirectory(szRoot, pcConfiguration, "Output", pszDest);
-	cFileUtil.AppendToPath(pszDest, pcConfiguration->HasImage() ? pcConfiguration->GetImage()->GetFile() : pcConfiguration->GetExecutable()->GetFile());
+	cFileUtil.AppendToPath(pszDest, pcConfiguration->GetProgramFile());
 	return true;
 }
 
@@ -280,8 +280,8 @@ bool CBuild::GetProgramPath(const char* szRoot, CBuildConfiguration* pcConfigura
 //////////////////////////////////////////////////////////////////////////
 //
 // Where the build writes its program's line table (CAsm65LineTable, which
-// source line each address is for): beside the image or executable, as
-// <program>.lines.  False if it builds neither.
+// source line each address is for): beside the image, executable or
+// module, as <program>.lines.  False if it doesn't link.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CBuild::GetLineTablePath(const char* szRoot, CBuildConfiguration* pcConfiguration, CChars* pszDest)

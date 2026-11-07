@@ -114,7 +114,7 @@ bool CHCP65Build::Start(CArrayChars* paszLines)
 		mcBuilder.SetRemoveUnused(true);
 		mcBuilder.SetNoFloats(mpcConfiguration->IsNoFloats());
 		mcBuilder.SetMathTables(mpcConfiguration->IsMathTables());
-		uiLimit = mpcConfiguration->HasImage() ? mpcConfiguration->GetImage()->GetLimit() : mpcConfiguration->GetExecutable()->GetLimit();
+		uiLimit = mpcConfiguration->GetProgramLimit();
 		if (uiLimit != 0)
 		{
 			mcBuilder.SetLimit(uiLimit);
@@ -122,6 +122,12 @@ bool CHCP65Build::Start(CArrayChars* paszLines)
 		if (!mszLibc65.Empty())
 		{
 			mcBuilder.AddLibc65(mszLibc65.Text());
+		}
+		if (mpcConfiguration->HasModule())
+		{
+			//A driver: linked to be put anywhere, the kernal's names it uses left as imports.
+			mcBuilder.GetLinker()->SetRelocatable(true);
+			mcBuilder.GetLinker()->KeepSymbol(mpcConfiguration->GetModule()->GetEntry());
 		}
 	}
 	if (mcBuilder.NumUnitsToCompile() == 0)
@@ -272,8 +278,8 @@ CHCP65BuildDescription* CHCP65Build::GetDescription(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The build's thread: compiles the units, and links them if there is an
-// image to make.
+// The build's thread: compiles the units, and links them if there is a
+// program to make.
 //
 //////////////////////////////////////////////////////////////////////////
 void CHCP65Build::CompileThread(void* pvBuild)
@@ -347,26 +353,75 @@ bool CHCP65Build::Poll(CArrayChars* paszLines)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The linked program as the configuration's image or executable, in the
-// Output folder.  Says where each linked segment went and where it was
-// written, or why it couldn't be.
+// The linked program made as the configuration's image, executable or
+// module, its errors appended to pszErrors.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CHCP65Build::MakeProgram(CChars* pszErrors)
+{
+	CAsm65Output*	pcOutput;
+
+	pcOutput = mcBuilder.GetOutput();
+	switch (mpcConfiguration->GetProgram())
+	{
+	case BP_Image:
+		return mpcConfiguration->GetImage()->Make(pcOutput, pszErrors);
+	case BP_Executable:
+		return mpcConfiguration->GetExecutable()->Make(pcOutput, mcBuilder.GetLinker(), pszErrors);
+	case BP_Module:
+		return mpcConfiguration->GetModule()->Make(pcOutput, mcBuilder.GetLinker(), pszErrors);
+	default:
+		return false;
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The program MakeProgram made to szPath; *puiSize is its size.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CHCP65Build::WriteProgramFile(const char* szPath, size* puiSize)
+{
+	switch (mpcConfiguration->GetProgram())
+	{
+	case BP_Image:
+		*puiSize = mpcConfiguration->GetImage()->GetSize();
+		return mpcConfiguration->GetImage()->Write(szPath);
+	case BP_Executable:
+		*puiSize = mpcConfiguration->GetExecutable()->GetSize();
+		return mpcConfiguration->GetExecutable()->Write(szPath);
+	case BP_Module:
+		*puiSize = mpcConfiguration->GetModule()->GetSize();
+		return mpcConfiguration->GetModule()->Write(szPath);
+	default:
+		*puiSize = 0;
+		return false;
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The linked program as the configuration's image, executable or module,
+// in the Output folder.  Says where each linked segment went and where it
+// was written, or why it couldn't be.  Beside it its line table: a
+// module's addresses are from its start, which a debugger adds to where
+// the kernal put it.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CHCP65Build::WriteProgram(CArrayChars* paszLines)
 {
-	CAsm65Image*		pcImage;
-	CAsm65Executable*	pcExecutable;
 	CAsm65Output*	pcOutput;
 	SAsm65Segment*	psSegment;
 	CChars			szErrors;
 	CChars			szPath;
 	CFileUtil		cFileUtil;
 	char			szLine[128];
+	size			uiSize;
 	size			i;
 	bool			bResult;
 
-	pcImage = mpcConfiguration->HasImage() ? mpcConfiguration->GetImage() : NULL;
-	pcExecutable = mpcConfiguration->HasExecutable() ? mpcConfiguration->GetExecutable() : NULL;
 	pcOutput = mcBuilder.GetOutput();
 	for (i = 0; i < pcOutput->NumSegments(); i++)
 	{
@@ -376,7 +431,7 @@ bool CHCP65Build::WriteProgram(CArrayChars* paszLines)
 	}
 
 	szErrors.Init();
-	bResult = pcImage ? pcImage->Make(pcOutput, &szErrors) : pcExecutable->Make(pcOutput, mcBuilder.GetLinker(), &szErrors);
+	bResult = MakeProgram(&szErrors);
 	AddLines(szErrors.Text(), paszLines);
 	szErrors.Kill();
 	if (!bResult)
@@ -388,8 +443,8 @@ bool CHCP65Build::WriteProgram(CArrayChars* paszLines)
 	GetOutputDirectory(&szPath);
 	cFileUtil.TouchDir(szPath.Text());
 	GetProgramPath(&szPath);
-	bResult = pcImage ? pcImage->Write(szPath.Text()) : pcExecutable->Write(szPath.Text());
-	snprintf(szLine, sizeof(szLine), bResult ? "Wrote %u bytes to " : "Could not write %u bytes to ", (unsigned int)(pcImage ? pcImage->GetSize() : pcExecutable->GetSize()));
+	bResult = WriteProgramFile(szPath.Text(), &uiSize);
+	snprintf(szLine, sizeof(szLine), bResult ? "Wrote %u bytes to " : "Could not write %u bytes to ", (unsigned int)uiSize);
 	szErrors.Init(szLine);
 	szErrors.Append(szPath);
 	szErrors.Append(".");
@@ -399,6 +454,10 @@ bool CHCP65Build::WriteProgram(CArrayChars* paszLines)
 	//Beside it, which source line each address is for, so a debugger can stop at a line.
 	if (bResult)
 	{
+		if (mpcConfiguration->HasModule())
+		{
+			mcBuilder.GetLineTable()->Move(-(int64)mpcConfiguration->GetModule()->GetBase());
+		}
 		GetProgramPath(&szPath);
 		szPath.Append(".lines");
 		bResult = mcBuilder.GetLineTable()->WriteFile(szPath.Text());

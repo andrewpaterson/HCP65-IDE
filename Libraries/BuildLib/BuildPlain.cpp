@@ -137,6 +137,7 @@ void CBuildPlain::Init(void)
 	mszEntry.Init();
 	maszSymbols.Init();
 	mszImage.Init();
+	mszModule.Init();
 	muiSize = 0;
 	muiFill = 0xFF;
 	muiLoad = 0;
@@ -156,6 +157,7 @@ void CBuildPlain::Init(void)
 void CBuildPlain::Kill(void)
 {
 	maszRegions.Kill();
+	mszModule.Kill();
 	mszImage.Kill();
 	maszSymbols.Kill();
 	mszEntry.Kill();
@@ -296,7 +298,8 @@ int CBuildPlain::ParseOption(CArrayChars* paszArguments, size* puiIndex, CChars*
 		mbNoMathTables = true;
 		return 1;
 	}
-	if (BuildIsOption(szOption, "o") || BuildIsOption(szOption, "listings") || BuildIsOption(szOption, "exe") || BuildIsOption(szOption, "entry") || BuildIsOption(szOption, "image"))
+	if (BuildIsOption(szOption, "o") || BuildIsOption(szOption, "listings") || BuildIsOption(szOption, "exe") || BuildIsOption(szOption, "entry") || BuildIsOption(szOption, "image") ||
+		BuildIsOption(szOption, "module"))
 	{
 		if (!NeedValue(paszArguments, puiIndex, szOption, pszError))
 		{
@@ -318,6 +321,10 @@ int CBuildPlain::ParseOption(CArrayChars* paszArguments, size* puiIndex, CChars*
 		else if (BuildIsOption(szOption, "entry"))
 		{
 			mszEntry.Set(szValue);
+		}
+		else if (BuildIsOption(szOption, "module"))
+		{
+			mszModule.Set(szValue);
 		}
 		else
 		{
@@ -455,19 +462,24 @@ bool CBuildPlain::Finish(CChars* pszError)
 			return false;
 		}
 	}
-	if (!mszExecutable.Empty() && !mszImage.Empty())
+	if (NumPrograms() > 1)
 	{
-		pszError->Set("Link an executable (-exe) or an image (-image), not both.");
+		pszError->Set("Link one of an executable (-exe), an image (-image) and a module (-module).");
 		return false;
 	}
-	if (mszExecutable.Empty() && (!mszEntry.Empty() || (maszSymbols.NumElements() > 0)))
+	if (mszExecutable.Empty() && (maszSymbols.NumElements() > 0))
 	{
-		pszError->Set("-entry and -symbol are for an executable: they need -exe.");
+		pszError->Set("-symbol is for an executable: it needs -exe.");
 		return false;
 	}
-	if (!mszExecutable.Empty() && mszEntry.Empty())
+	if (mszExecutable.Empty() && mszModule.Empty() && !mszEntry.Empty())
 	{
-		pszError->Set("-exe needs its entry symbol (-entry).");
+		pszError->Set("-entry is for an executable or a module: it needs -exe or -module.");
+		return false;
+	}
+	if ((!mszExecutable.Empty() || !mszModule.Empty()) && mszEntry.Empty())
+	{
+		pszError->Set(mszExecutable.Empty() ? "-module needs its entry symbol (-entry)." : "-exe needs its entry symbol (-entry).");
 		return false;
 	}
 	if (mszImage.Empty() && (mbSize || mbFill || mbLoad || (maszRegions.NumElements() > 0)))
@@ -475,9 +487,9 @@ bool CBuildPlain::Finish(CChars* pszError)
 		pszError->Set("-size, -fill, -load and -region are for an image: they need -image.");
 		return false;
 	}
-	if (mszExecutable.Empty() && mszImage.Empty() && mbLimit)
+	if ((NumPrograms() == 0) && mbLimit)
 	{
-		pszError->Set("-limit is for a program: it needs -exe or -image.");
+		pszError->Set("-limit is for a program: it needs -exe, -image or -module.");
 		return false;
 	}
 	if (!mszImage.Empty())
@@ -510,8 +522,19 @@ bool CBuildPlain::Finish(CChars* pszError)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// How many of -exe, -image and -module were given.
+//
+//////////////////////////////////////////////////////////////////////////
+size CBuildPlain::NumPrograms(void)
+{
+	return (mszExecutable.Empty() ? 0 : 1) + (mszImage.Empty() ? 0 : 1) + (mszModule.Empty() ? 0 : 1);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // The configuration the options describe: Plain|<target>, with the link
-// settings and the executable or image.
+// settings and the executable, image or module.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CBuildPlain::MakeConfiguration(CBuildConfiguration* pcConfiguration, CChars* pszError)
@@ -545,6 +568,10 @@ bool CBuildPlain::MakeConfiguration(CBuildConfiguration* pcConfiguration, CChars
 			pcExecutable->AddSymbol(szSymbol.Text(), iValue);
 			szSymbol.Kill();
 		}
+	}
+	else if (!mszModule.Empty())
+	{
+		pcConfiguration->SetModule(mszModule.Text(), mszEntry.Text(), muiLimit);
 	}
 	else if (!mszImage.Empty())
 	{
@@ -623,6 +650,7 @@ bool CBuildPlain::Describe(CArrayChars* paszArguments, const char* szUnitsDirect
 	CHCP65BuildProject*		pcProject;
 	CAsm65Executable*		pcExecutable;
 	CAsm65Image*			pcImage;
+	CAsm65Module*			pcModule;
 	SAsm65ImageRegion*		psRegion;
 	char					szNumber[64];
 	size					i;
@@ -713,6 +741,20 @@ bool CBuildPlain::Describe(CArrayChars* paszArguments, const char* szUnitsDirect
 			paszArguments->Add("-symbol");
 			paszArguments->Add(szArgument.Text());
 			szArgument.Kill();
+		}
+	}
+	else if (pcConfiguration->HasModule())
+	{
+		pcModule = pcConfiguration->GetModule();
+		paszArguments->Add("-module");
+		paszArguments->Add(pcModule->GetFile());
+		paszArguments->Add("-entry");
+		paszArguments->Add(pcModule->GetEntry());
+		if (pcModule->GetLimit() != 0)
+		{
+			snprintf(szNumber, sizeof(szNumber), "0x%X", (unsigned int)pcModule->GetLimit());
+			paszArguments->Add("-limit");
+			paszArguments->Add(szNumber);
 		}
 	}
 	else if (pcConfiguration->HasImage())

@@ -58,10 +58,12 @@ bool	BuildParseUint32(const char* szNumber, uint32* puiValue);
 //										Link an executable, as an <Executable>.
 //	-image <file> -size <n> [-fill <n>] [-limit <n>] [-load <n>] -region <start>,<end>,<offset> [-region ...]
 //										Link an image, as an <Image>.
+//	-module <file> -entry <symbol> [-limit <n>]
+//										Link a module (a driver), as a <Module>.
 //	-o <dir>, -listings <dir>			Where the program and listings go: Output\<target>\Plain and
 //										Listing\<target>\Plain by default.
 //
-//Without -exe or -image the units are only compiled.  A plain build adds exactly what a solution build with the same
+//Without -exe, -image or -module the units are only compiled.  A plain build adds exactly what a solution build with the same
 //description adds (CHCP65Build), which -show-plain writes for a solution (Write).
 class CBuildPlain
 {
@@ -76,6 +78,7 @@ protected:
 	CChars					mszEntry;
 	CArrayChars				maszSymbols;		//"Name=Value", checked.
 	CChars					mszImage;
+	CChars					mszModule;
 	uint32					muiSize;
 	uint32					muiFill;
 	uint32					muiLoad;
@@ -93,6 +96,7 @@ public:
 	int			ParseOption(CArrayChars* paszArguments, size* puiIndex, CChars* pszError);
 	bool		AddSource(const char* szSource, CChars* pszError);
 	bool		Finish(CChars* pszError);
+	size		NumPrograms(void);
 
 	bool		MakeConfiguration(CBuildConfiguration* pcConfiguration, CChars* pszError);
 	void		MakeDescription(CHCP65BuildDescription* pcDest);
