@@ -25,11 +25,12 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "StandardLib/ClassDefines.h"
 #include "SupportLib/PNGWriter.h"
 #include "IDEContent.h"
+#include "WindowLib/ComponentInput.h"
 #include "IDEScript.h"
 
 
 //The debug script's commands that are the IDE's (RunCommand); "goto:" takes what follows it.
-static const char*	gaszIDEScriptCommands[] = { "goto:", "rename", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printdiffs", "printgit", "printconfig", "printexplorer", "printedits", "printspans", "configuration:", "waitindex" };
+static const char*	gaszIDEScriptCommands[] = { "goto:", "rename", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printexplorer", "printedits", "printspans", "configuration:", "waitindex" };
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -190,6 +191,30 @@ void CIDEScript::RunCommand(const char* szCommand)
 		PrintMenu("Explorer", mpcContent->GetSolutions()->GetExplorerMenu());
 		fflush(stdout);
 	}
+	else if (strcmp(szCommand, "printkeys") == 0)
+	{
+		//Every command with keys, and whether the keyboard gives them.
+		size				i;
+		Ptr<CCommand>		pCommand;
+		CComponentInput*	pcInput;
+
+		pcInput = mpcContent->GetWindow()->GetComponentInput();
+		for (i = 0; i < mpcContent->GetCommands()->NumCommands(); i++)
+		{
+			pCommand = mpcContent->GetCommands()->GetCommand(i);
+			if (!StrEmpty(pCommand->GetKeys()))
+			{
+				printf("Keys: %s %s %s\n", pCommand->GetName(), pCommand->GetKeys(), ((pcInput != NULL) && pcInput->IsBound(pCommand->GetKeys())) ? "bound" : "NOT BOUND");
+			}
+		}
+		fflush(stdout);
+	}
+	else if (strcmp(szCommand, "printbuttons") == 0)
+	{
+		//The toolbar's buttons' commands.
+		printf("Buttons: Build [%s] Start [%s]\n", GetCommandName(mpcContent->GetBuilding()->GetBuildButton()), GetCommandName(mpcContent->GetDebugging()->GetStartButton()));
+		fflush(stdout);
+	}
 	else if (strncmp(szCommand, "command:", 8) == 0)
 	{
 		//command:<name>, the window's command run by name (Debug.StepOver), as its keys would.
@@ -312,6 +337,21 @@ void CIDEScript::RunCommand(const char* szCommand)
 	}
 }
 
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The name of the command a button runs, "none" if it runs none.
+//
+//////////////////////////////////////////////////////////////////////////
+const char* CIDEScript::GetCommandName(Ptr<CButton> pButton)
+{
+	if (pButton.IsNull() || pButton->GetCommand().IsNull())
+	{
+		return "none";
+	}
+	return pButton->GetCommand()->GetName();
+}
 
 
 //////////////////////////////////////////////////////////////////////////

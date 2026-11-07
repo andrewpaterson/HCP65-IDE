@@ -59,13 +59,14 @@ public:
 	bool	Save(CObjectWriter* pcFile) override;
 	bool	Load(CObjectReader* pcFile) override;
 
-	bool	IsCommand(const char* szCommand);
-	void	RunCommand(const char* szCommand);
-	void	PrintMenu(const char* szName, Ptr<CMenuContainer> pMenu);
-	void	ClickMenu(const char* szPath);
-	void	RunEditStep(const char* szStep);
-	void	RunGoTo(const char* szGoTo);
-	void	RunDockMove(const char* szMove);
+	bool		IsCommand(const char* szCommand);
+	void		RunCommand(const char* szCommand);
+	void		PrintMenu(const char* szName, Ptr<CMenuContainer> pMenu);
+	const char*	GetCommandName(Ptr<CButton> pButton);
+	void		ClickMenu(const char* szPath);
+	void		RunEditStep(const char* szStep);
+	void		RunGoTo(const char* szGoTo);
+	void		RunDockMove(const char* szMove);
 
 	void	WatchDialog(Ptr<CDialog> pDialog);
 	void	StopWatchingDialog(void);

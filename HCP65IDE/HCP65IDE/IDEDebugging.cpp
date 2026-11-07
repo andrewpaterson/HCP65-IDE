@@ -1204,3 +1204,11 @@ void CIDEDebugging::SetDefaultEmulator(const char* szExecutable, const char* szD
 	mszDefaultEmulator.Set(szExecutable);
 	mszDefaultEmulatorDirectory.Set(szDirectory);
 }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// NULL until made.
+//
+//////////////////////////////////////////////////////////////////////////
+Ptr<CButton> CIDEDebugging::GetStartButton(void) { return mpStartButton; }

@@ -107,6 +107,12 @@ CHECKS = [
 		'OPEN': 'Kernal.cpp', 'DIALOG_ANSWER': 'Cancel',
 		'DEBUG': 'command:Debug.NewBreakpoint,answered:1,printtabs,command:Window.CloseAllDocuments,printtabs,command:No.Such'},
 		[r'^Tabs: >Kernal\.cpp', r'^Tabs:\s*$', r'^Command \[No\.Such\] not found'], []),
+	('keys-and-buttons', {
+		'DEBUG': 'printkeys,printbuttons'},
+		[r'^Keys: Navigate\.GoToDefinition F12 bound$', r'^Keys: Navigate\.GoToClass Control\+N bound$',
+		 r'^Keys: Build\.Build Control\+Shift\+B bound$', r'^Keys: Debug\.Start F5 bound$',
+		 r'^Keys: Debug\.BreakAll Control\+Pause/Break bound$',
+		 r'^Buttons: Build \[Build\.Build\] Start \[Debug\.Start\]$'], [r'NOT BOUND', r'\[none\]']),
 	('configuration', {
 		'CONFIGURATION': 'Debug|W65C816', 'DEBUG': 'printconfig'},
 		[r'^Configuration: \[Debug\] \[W65C816\]$'], []),

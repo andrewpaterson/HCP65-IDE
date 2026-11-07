@@ -82,6 +82,7 @@ public:
 	Ptr<CDockPane>		GetTool(void);
 	void				CreatePane(SDockPlace* psPlace);
 	Ptr<CButton>		CreateStartButton(void);
+	Ptr<CButton>		GetStartButton(void);
 	void				GetUserSettingsFileName(CChars* pszDest);
 	Ptr<CMenuContainer>	CreateDebugMenu(void);
 	void				AddCommands(Ptr<CCommandSet> pCommands);
