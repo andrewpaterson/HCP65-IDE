@@ -115,10 +115,12 @@ public:
 	void					GetBuildOrder(const char* szConfiguration, CArrayInt* paiDest);
 	bool					Loads(size uiSolution, size uiOther, const char* szConfiguration);
 	void					GetProcessPrograms(const char* szConfiguration, CArrayInt* paiDest);
+	void					GetModulePrograms(const char* szConfiguration, CArrayInt* paiDest);
 
 protected:
 	void					IndexProjects(void);
 	size					GetSolutionInOrder(size uiIndex);
+	void					GetCardPrograms(const char* szConfiguration, EBuildProgram eProgram, CArrayInt* paiDest);
 };
 
 

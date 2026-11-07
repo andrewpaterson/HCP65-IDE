@@ -297,8 +297,8 @@ void CIDEDebugging::ResolveEmulatorPath(const char* szPath, CChars* pszDest)
 //
 // What debugging pcConfiguration loads into the emulator it starts: its
 // <Load>s (a kernal), then its built image; the card it boots from (its
-// Card); and its built executable is written onto that card for the
-// kernal to run.  What was done goes in
+// Card); and its built executable or module is written onto that card for
+// the kernal to run or load.  What was done goes in
 // paszLines.  False, with why in pszMessage, if a file isn't there (it
 // must have been built) or the card can't be written.
 //
@@ -353,9 +353,9 @@ bool CIDEDebugging::ChooseDebugLoads(CBuildConfiguration* pcConfiguration, CChar
 	{
 		mcDebugger.AddLoad(szFile.Text(), pcConfiguration->GetImage()->GetLoad());
 	}
-	else if (pcConfiguration->HasExecutable() && pcConfiguration->HasCard())
+	else if (pcConfiguration->IsOnCard())
 	{
-		//The program goes on the card the emulator boots from, where the kernal finds it.
+		//The program (or driver) goes on the card the emulator boots from, where the kernal finds it.
 		bResult = FatPutDiskFileOnImage(szCard.Text(), pcConfiguration->GetCardPath(), szFile.Text());
 		if (bResult)
 		{
@@ -1073,7 +1073,9 @@ void CIDEDebugging::GlyphClicked(CCodeEditor* pcEditor, size uiLine)
 // (<program>.lines) bind the source breakpoints: its own program's in its
 // breakpoint space, a load's (a kernal) in every space.  The programs of
 // the workspace's other solutions that the kernal runs (on a card) bind
-// theirs too, each in its own space and process.
+// theirs too, each in its own space and process, and the drivers it
+// loads (its own, or other solutions') once they are loaded, where they
+// are.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEDebugging::ReadLineTables(void)
@@ -1097,7 +1099,14 @@ void CIDEDebugging::ReadLineTables(void)
 		}
 		if (CBuild::GetProgramPath(mpcContent->GetWorkspace()->GetStartupSolution()->mcSolution.GetDirectory(), pcConfiguration, &szFile))
 		{
-			mcDebugger.AddLineTable(szFile.Text(), true);
+			if (pcConfiguration->HasModule() && pcConfiguration->HasCard())
+			{
+				mcDebugger.AddModuleLineTable(szFile.Text(), pcConfiguration->GetBreakpointSpace(), pcConfiguration->GetCardPath());
+			}
+			else
+			{
+				mcDebugger.AddLineTable(szFile.Text(), true);
+			}
 		}
 
 		aiOthers.Init();
@@ -1109,6 +1118,17 @@ void CIDEDebugging::ReadLineTables(void)
 			if (pcOther->IsHCP65() && CBuild::GetProgramPath(mpcContent->GetWorkspace()->GetSolution(uiOther)->mcSolution.GetDirectory(), pcOther, &szFile))
 			{
 				mcDebugger.AddProcessLineTable(szFile.Text(), pcOther->GetBreakpointSpace(), pcOther->GetCardPath());
+			}
+		}
+		aiOthers.ReInit();
+		mpcContent->GetWorkspace()->GetModulePrograms(mpcContent->GetBuildConfigurations()->GetConfigurationName(), &aiOthers);
+		for (i = 0; i < aiOthers.NumElements(); i++)
+		{
+			uiOther = (size)aiOthers.GetValue(i);
+			pcOther = mpcContent->GetWorkspace()->FindConfiguration(uiOther, mpcContent->GetBuildConfigurations()->GetConfigurationName());
+			if (pcOther->IsHCP65() && CBuild::GetProgramPath(mpcContent->GetWorkspace()->GetSolution(uiOther)->mcSolution.GetDirectory(), pcOther, &szFile))
+			{
+				mcDebugger.AddModuleLineTable(szFile.Text(), pcOther->GetBreakpointSpace(), pcOther->GetCardPath());
 			}
 		}
 		aiOthers.Kill();

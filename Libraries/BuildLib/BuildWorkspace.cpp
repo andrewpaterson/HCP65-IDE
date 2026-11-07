@@ -733,6 +733,32 @@ CBuildConfiguration* CBuildWorkspace::FindConfiguration(size uiSolution, const c
 //////////////////////////////////////////////////////////////////////////
 void CBuildWorkspace::GetProcessPrograms(const char* szConfiguration, CArrayInt* paiDest)
 {
+	GetCardPrograms(szConfiguration, BP_Executable, paiDest);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The same for the drivers the kernal loads (a module put on a card):
+// their breakpoints are bound once the kernal has loaded them, in their
+// own breakpoint space.
+//
+//////////////////////////////////////////////////////////////////////////
+void CBuildWorkspace::GetModulePrograms(const char* szConfiguration, CArrayInt* paiDest)
+{
+	GetCardPrograms(szConfiguration, BP_Module, paiDest);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The solutions other than the startup one whose configuration
+// szConfiguration builds an eProgram onto a card, and that the startup
+// solution's doesn't load.
+//
+//////////////////////////////////////////////////////////////////////////
+void CBuildWorkspace::GetCardPrograms(const char* szConfiguration, EBuildProgram eProgram, CArrayInt* paiDest)
+{
 	CBuildConfiguration*	pcConfiguration;
 	size					i;
 
@@ -743,7 +769,7 @@ void CBuildWorkspace::GetProcessPrograms(const char* szConfiguration, CArrayInt*
 			continue;
 		}
 		pcConfiguration = FindConfiguration(i, szConfiguration);
-		if ((pcConfiguration != NULL) && pcConfiguration->HasExecutable() && pcConfiguration->HasCard() && !Loads(muiStartup, i, szConfiguration))
+		if ((pcConfiguration != NULL) && (pcConfiguration->GetProgram() == eProgram) && pcConfiguration->IsOnCard() && !Loads(muiStartup, i, szConfiguration))
 		{
 			paiDest->Add((int)i);
 		}

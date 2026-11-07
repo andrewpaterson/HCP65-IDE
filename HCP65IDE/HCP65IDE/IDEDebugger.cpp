@@ -44,6 +44,49 @@ static size	guiIDEDebugChannels = 0;
 
 //////////////////////////////////////////////////////////////////////////
 //
+// A line table's target, every space and process's.
+//
+//////////////////////////////////////////////////////////////////////////
+static void IDEInitTableTarget(SIDELineTableTarget* psTarget)
+{
+	psTarget->bOwn = false;
+	psTarget->szSpace.Init();
+	psTarget->szProcess.Init();
+	psTarget->szModule.Init();
+	psTarget->uiModuleAddress = 0;
+	psTarget->bModuleLoaded = false;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+static void IDEClearTableTarget(SIDELineTableTarget* psTarget)
+{
+	psTarget->bOwn = false;
+	psTarget->szSpace.Clear();
+	psTarget->szProcess.Clear();
+	psTarget->szModule.Clear();
+	psTarget->uiModuleAddress = 0;
+	psTarget->bModuleLoaded = false;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+static void IDEKillTableTarget(SIDELineTableTarget* psTarget)
+{
+	psTarget->szModule.Kill();
+	psTarget->szProcess.Kill();
+	psTarget->szSpace.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEDebugger::Init(void)
@@ -59,6 +102,7 @@ void CIDEDebugger::Init(void)
 	mszOwnProgram.Init();
 	mszCard.Init();
 	muiSeenProcessEvents = 0;
+	muiSeenModuleChanges = 0;
 	maszMessages.Init();
 	mcProcess.Init();
 	mbLaunched = false;
@@ -81,9 +125,7 @@ void CIDEDebugger::Init(void)
 	for (muiLineTables = 0; muiLineTables < IDE_DEBUG_LINE_TABLES; muiLineTables++)
 	{
 		macLineTables[muiLineTables].Init();
-		masTableTargets[muiLineTables].bOwn = false;
-		masTableTargets[muiLineTables].szSpace.Init();
-		masTableTargets[muiLineTables].szProcess.Init();
+		IDEInitTableTarget(&masTableTargets[muiLineTables]);
 	}
 	muiLineTables = 0;
 	mszStatus.Init("Not debugging.");
@@ -113,8 +155,7 @@ void CIDEDebugger::Kill(void)
 	masSourceBreakpoints.Kill();
 	for (ui = 0; ui < IDE_DEBUG_LINE_TABLES; ui++)
 	{
-		masTableTargets[ui].szProcess.Kill();
-		masTableTargets[ui].szSpace.Kill();
+		IDEKillTableTarget(&masTableTargets[ui]);
 	}
 	masBreakpoints.Kill();
 	mcNetwork.Kill();
@@ -377,6 +418,7 @@ bool CIDEDebugger::Connect(CProcessChannel* pcChannel)
 	mbStarting = false;
 	muiSeenStops = 0;
 	muiSeenProcessEvents = 0;
+	muiSeenModuleChanges = 0;
 	muiSeenDisassemblies = 0;
 	muiSeenErrors = 0;
 	mszStatus.Set("Connecting to the emulator.");
@@ -491,7 +533,7 @@ bool CIDEDebugger::StepOnInto(uint32 uiAddress)
 
 	for (ui = 0; ui < muiLineTables; ui++)
 	{
-		if (macLineTables[ui].FindNextLine(uiAddress, &uiNext) && (uiNext - uiAddress <= IDE_DEBUG_ENTRY_CODE))
+		if (IsTableLoaded(ui) && macLineTables[ui].FindNextLine(uiAddress, &uiNext) && (uiNext - uiAddress <= IDE_DEBUG_ENTRY_CODE))
 		{
 			sRange.uiStart = uiAddress;
 			sRange.uiEnd = uiNext;
@@ -618,7 +660,10 @@ bool CIDEDebugger::StepLineRanges(bool bOver)
 	auiRanges.Init();
 	for (ui = 0; (ui < muiLineTables) && (auiRanges.NumElements() == 0); ui++)
 	{
-		macLineTables[ui].FindLineRanges(GetProgramAddress(), &auiRanges);
+		if (IsTableLoaded(ui))
+		{
+			macLineTables[ui].FindLineRanges(GetProgramAddress(), &auiRanges);
+		}
 	}
 	uiRanges = auiRanges.NumElements() / 2;
 	if ((uiRanges == 0) || (uiRanges > DEBUG_MAX_LIST))
@@ -844,9 +889,7 @@ void CIDEDebugger::ClearLineTables(void)
 	for (ui = 0; ui < muiLineTables; ui++)
 	{
 		macLineTables[ui].Clear();
-		masTableTargets[ui].bOwn = false;
-		masTableTargets[ui].szSpace.Clear();
-		masTableTargets[ui].szProcess.Clear();
+		IDEClearTableTarget(&masTableTargets[ui]);
 	}
 	muiLineTables = 0;
 	BindSourceBreakpoints();
@@ -901,6 +944,32 @@ bool CIDEDebugger::AddProcessLineTable(const char* szProgram, const char* szSpac
 
 //////////////////////////////////////////////////////////////////////////
 //
+// The line table of a module (a driver one of the workspace's solutions
+// builds, or the configuration's own) that the kernal loads from its file
+// szModule ("\\OS\\Drivers\\UART.DRV"): its addresses are from the
+// module's start.  Its source breakpoints are in the space szSpace
+// ("Kernel"; every space if empty or the emulator hasn't it), in every
+// process, and wait until the module is loaded, where they are bound.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEDebugger::AddModuleLineTable(const char* szProgram, const char* szSpace, const char* szModule)
+{
+	if (!ReadLineTable(szProgram))
+	{
+		return false;
+	}
+	IDEClearTableTarget(&masTableTargets[muiLineTables]);
+	masTableTargets[muiLineTables].szSpace.Set(szSpace ? szSpace : "");
+	masTableTargets[muiLineTables].szModule.Set(szModule);
+	muiLineTables++;
+	MoveModuleTables();
+	BindSourceBreakpoints();
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // The next table read from beside szProgram (<program>.lines), not yet
 // counted.  False if there is none or there are too many.
 //
@@ -945,6 +1014,13 @@ bool CIDEDebugger::GetTableTarget(size uiTable, bool bOwnRunning, uint32 uiOwnPr
 	if (psTarget->szSpace.Empty() || !mcClient.FindBreakpointSpace(psTarget->szSpace.Text(), puiSpace))
 	{
 		*puiSpace = DEBUG_SPACE_ANY;
+	}
+	if (!psTarget->szModule.Empty())
+	{
+		return psTarget->bModuleLoaded;
+	}
+	if (*puiSpace == DEBUG_SPACE_ANY)
+	{
 		return true;
 	}
 	if (psTarget->szProcess.Empty() || !mcClient.HasProcesses())
@@ -972,6 +1048,64 @@ bool CIDEDebugger::IsTableProcess(const char* szProcess)
 		}
 	}
 	return false;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether a line table's addresses are where its code is: a module's
+// only while it is loaded.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEDebugger::IsTableLoaded(size uiTable)
+{
+	return masTableTargets[uiTable].szModule.Empty() || masTableTargets[uiTable].bModuleLoaded;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Each module's line table moved to where the emulator says the module is
+// loaded; one that isn't loaded waits.  The source breakpoints are bound
+// again if one moved or went.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDebugger::MoveModuleTables(void)
+{
+	SIDELineTableTarget*	psTarget;
+	SDebugModule*			psModule;
+	size					ui;
+	bool					bChanged;
+
+	bChanged = false;
+	for (ui = 0; ui < muiLineTables; ui++)
+	{
+		psTarget = &masTableTargets[ui];
+		if (psTarget->szModule.Empty())
+		{
+			continue;
+		}
+		psModule = mbClient ? mcClient.FindModule(psTarget->szModule.Text()) : NULL;
+		if (psModule)
+		{
+			if (!psTarget->bModuleLoaded || (psTarget->uiModuleAddress != psModule->uiAddress))
+			{
+				macLineTables[ui].Move((int64)psModule->uiAddress - (int64)psTarget->uiModuleAddress);
+				psTarget->uiModuleAddress = psModule->uiAddress;
+				psTarget->bModuleLoaded = true;
+				bChanged = true;
+			}
+		}
+		else if (psTarget->bModuleLoaded)
+		{
+			psTarget->bModuleLoaded = false;
+			bChanged = true;
+		}
+	}
+	if (bChanged)
+	{
+		BindSourceBreakpoints();
+	}
 }
 
 
@@ -1017,7 +1151,7 @@ bool CIDEDebugger::FindSourceLine(uint32 uiAddress, CChars* pszFile, uint32* pui
 // process it stopped in; IDE_TABLE_RANK_SPACE, of its space;
 // IDE_TABLE_RANK_ANY, of every space (a kernal), or when not debugging or
 // the emulator doesn't say; IDE_TABLE_RANK_NONE, of another space or
-// process (or of a program that isn't running).
+// process (or of a program that isn't running, or a module not loaded).
 //
 //////////////////////////////////////////////////////////////////////////
 size CIDEDebugger::GetTableRank(size uiTable)
@@ -1030,6 +1164,10 @@ size CIDEDebugger::GetTableRank(size uiTable)
 	bool	bOwnRunning;
 	bool	bRunning;
 
+	if (!IsTableLoaded(uiTable))
+	{
+		return IDE_TABLE_RANK_NONE;
+	}
 	if (!mbClient || (mcClient.NumStops() == 0))
 	{
 		return IDE_TABLE_RANK_ANY;
@@ -1281,11 +1419,12 @@ bool CIDEDebugger::Poll(CArrayChars* paszOutput)
 	else
 	{
 		TellProcesses(paszOutput);
+		TellModules(paszOutput);
 		if (mcClient.NumStops() != muiSeenStops)
 		{
-			if (mcClient.GetStopReason() == DS_Process)
+			if ((mcClient.GetStopReason() == DS_Process) || (mcClient.GetStopReason() == DS_Module))
 			{
-				//A process started: it has its breakpoints now, and goes on.
+				//A process started or a module loaded: it has its breakpoints now, and goes on.
 				muiSeenStops = mcClient.NumStops();
 				Continue();
 			}
@@ -1348,6 +1487,35 @@ void CIDEDebugger::TellProcesses(CArrayChars* paszOutput)
 	{
 		SendBreakpoints();
 	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Each module the emulator has said it loaded since the last time, in the
+// Build tab, and the modules' line tables moved to where they are.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDebugger::TellModules(CArrayChars* paszOutput)
+{
+	SDebugModule*	psModule;
+	CChars*			pszLine;
+	size			ui;
+
+	if (muiSeenModuleChanges == mcClient.NumModuleChanges())
+	{
+		return;
+	}
+	muiSeenModuleChanges = mcClient.NumModuleChanges();
+	for (ui = 0; ui < mcClient.NumModules(); ui++)
+	{
+		psModule = mcClient.GetModule(ui);
+		pszLine = paszOutput->Add("Module ");
+		pszLine->Append(psModule->szName)->Append(" at ");
+		AppendAddress(pszLine, psModule->uiAddress);
+		pszLine->Append(", ")->Append((int32)psModule->uiSize)->Append(" bytes.");
+	}
+	MoveModuleTables();
 }
 
 

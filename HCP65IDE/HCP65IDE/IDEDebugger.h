@@ -83,13 +83,18 @@ typedef CArrayTemplate<SIDESourceBreakpoint>	CArrayIDESourceBreakpoints;
 
 
 //Whose a line table's breakpoints are: the configuration's own program's (bOwn); or another program's, in its
-//breakpoint space and only in the process running it (szProcess, "\\boot.exe"); or, with neither, every space and
-//process (a kernal loaded with the program).
+//breakpoint space and only in the process running it (szProcess, "\\boot.exe"); or a module's (szModule, a driver
+//"\\OS\\Drivers\\UART.DRV"), in its space and every process, waiting until it is loaded: its table's addresses are
+//moved to where it is (uiModuleAddress, while bModuleLoaded); or, with none, every space and process (a kernal
+//loaded with the program).
 struct SIDELineTableTarget
 {
 	bool	bOwn;
 	CChars	szSpace;
 	CChars	szProcess;
+	CChars	szModule;
+	uint32	uiModuleAddress;
+	bool	bModuleLoaded;
 };
 
 
@@ -134,6 +139,7 @@ protected:
 	CChars					mszOwnProgram;			//The program a process runs ("\\boot.exe"), empty if it isn't one.
 	CChars					mszCard;				//The disk image the emulator boots from (DEBUG_ARGUMENT_CARD), empty for its own.
 	size					muiSeenProcessEvents;
+	size					muiSeenModuleChanges;
 	uint32					muiBreakpointSpace;		//Its DEBUG_SPACE_ANY or index plus one, once welcomed.
 	CArrayChars				maszMessages;			//For the Build tab: what was started, what went wrong.
 	CProcess				mcProcess;
@@ -196,6 +202,7 @@ public:
 	void					ClearLineTables(void);
 	bool					AddLineTable(const char* szProgram, bool bOwnSpace);
 	bool					AddProcessLineTable(const char* szProgram, const char* szSpace, const char* szProcess);
+	bool					AddModuleLineTable(const char* szProgram, const char* szSpace, const char* szModule);
 	size					NumLineTables(void);
 	CAsm65LineTable*		GetLineTable(size uiIndex);
 	bool					FindSourceLine(uint32 uiAddress, CChars* pszFile, uint32* puiLine);
@@ -222,12 +229,15 @@ protected:
 	bool					ReadLineTable(const char* szProgram);
 	bool					GetTableTarget(size uiTable, bool bOwnRunning, uint32 uiOwnProcess, uint32* puiSpace, uint32* puiProcess);
 	bool					IsTableProcess(const char* szProcess);
+	bool					IsTableLoaded(size uiTable);
+	void					MoveModuleTables(void);
 	size					GetTableRank(size uiTable);
 	void					Welcomed(void);
 	bool					LoadFile(const char* szFile, uint32 uiAddress);
 	void					Stopped(void);
 	void					SendBreakpoints(void);
 	void					TellProcesses(CArrayChars* paszOutput);
+	void					TellModules(CArrayChars* paszOutput);
 	void					BreakpointsChanged(void);
 	void					BindSourceBreakpoints(void);
 	void					BindSourceBreakpoint(SIDESourceBreakpoint* psBreakpoint);

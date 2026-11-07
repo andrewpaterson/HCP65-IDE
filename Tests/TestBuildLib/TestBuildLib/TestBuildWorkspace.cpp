@@ -144,6 +144,9 @@ void TestBuildWorkspaceSolutions(void)
 	aiOrder.ReInit();
 	cWorkspace.GetProcessPrograms("Debug|W65C816", &aiOrder);
 	AssertSize(0, aiOrder.NumElements());
+	//Neither builds a driver, a module the kernal loads.
+	cWorkspace.GetModulePrograms("Release|W65C816", &aiOrder);
+	AssertSize(0, aiOrder.NumElements());
 	cWorkspace.SetStartup(0);
 	aiOrder.Kill();
 
