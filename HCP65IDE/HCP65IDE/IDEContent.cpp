@@ -32,11 +32,11 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "SupportLib/TrueTypeFont.h"
 #include "SupportLib/TrueTypeFontFactory.h"
 #include "WindowLib/GridContainer.h"
-#include "WindowLib/FillContainer.h"
 #include "WindowLib/ScrollPane.h"
 #include "WindowLib/Label.h"
 #include "WindowLib/JewelTheme.h"
 #include "WindowLib/JewelImageGenerator.h"
+#include "WindowLib/ToolTips.h"
 #include "IDEGit.h"
 #include "IDEContent.h"
 
@@ -46,9 +46,6 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define IDE_CODE_PIXEL_SIZE		15.0f
 #define IDE_BOLD_WEIGHT			700.0f	//Inter's bold.
 #define IDE_BOTTOM_HEIGHT		180
-#define IDE_TOOLBAR_HEIGHT		34		//A grid in a grid has no height of its own.
-#define IDE_TOOLBAR_GAP			8		//Right of the branch, and left of the status.
-#define IDE_STATUS_HEIGHT		24		//The status line along the bottom.
 #define IDE_STATUS_SHOWN		10000	//How long (ms) a status message stays.
 #define IDE_PROGRESS_POLL		250		//How often (ms) the indexing's progress is shown while it lasts.
 
@@ -178,7 +175,6 @@ void CIDEContent::Init(void)
 	maSymbolIcons.Init();
 	mpMatchFont = NULL;
 	mbKeepSettings = true;
-	miStatusTime = 0;
 
 	PostInit();
 }
@@ -230,8 +226,7 @@ void CIDEContent::Class(void)
 	M_Pointer(mpEditorMenu);
 	U_Unknown(CBuildWorkspace, mcWorkspace);
 	U_Unknown(CIDECodeModel, mcCodeModel);
-	M_Pointer(mpStatusLabel);
-	U_Int64(miStatusTime);
+	M_Pointer(mpStatusBar);
 	M_Pointer(mpProgressLabel);
 	U_Bool(mbKeepSettings);
 }
@@ -274,6 +269,7 @@ void CIDEContent::Free(void)
 		mpWindow->GetActivationEvent()->Remove(&mpGitStatus);
 		mpWindow->ClearCloseApprover();
 		mpWindow->SetCommands(NULL);  //Their functions are the content's parts'.
+		mpWindow->SetToolTips(NULL);
 		mpWindow->CancelPosted(this);
 		mpWindow->CancelPosted(&mpCloseGuard);  //The modules' posted calls too.
 		mpWindow->CancelPosted(&mpNavigator);
@@ -321,11 +317,8 @@ bool CIDEContent::Load(CObjectReader* pcFile)
 bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* szCodeFont)
 {
 	Ptr<CGridContainer>	pMain;
-	Ptr<CGridContainer>	pStatusBar;
-	Ptr<CFillContainer>	pStatusGap;
 	SDockPlace			sPlace;
-	Ptr<CGridContainer>	pToolbar;
-	Ptr<CFillContainer>	pBranchGap;
+	Ptr<CToolbar>		pToolbar;
 	CColourFormatHelper	cFormat;
 	size				i;
 
@@ -420,19 +413,15 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 
 	//The toolbar: the build configuration's configuration and platform, as Visual Studio has them, and Build.
 	mpBuildConfigurations->CreateComboBoxes();
-	pToolbar = OMalloc<CGridContainer>(pWindow);
-	pToolbar->SetDesiredSize(-1, IDE_TOOLBAR_HEIGHT);
-	pToolbar->SetAlignment(CSH_Stretch, CSV_Stretch);
-	pToolbar->AddComponent(mpBuildConfigurations->GetConfigurationBox(), 0, 0, 1, 1, 0, 1);
-	pToolbar->AddComponent(mpBuildConfigurations->GetPlatformBox(), 1, 0, 1, 1, 0, 1);
-	pToolbar->AddComponent(mpBuilding->CreateBuildButton(), 2, 0, 1, 1, 0, 1);
-	pToolbar->AddComponent(mpDebugging->CreateStartButton(), 3, 0, 1, 1, 1, 1);
+	pToolbar = OMalloc<CToolbar>(pWindow, mpTheme, false);
+	pToolbar->Append(mpBuildConfigurations->GetConfigurationBox());
+	pToolbar->Append(mpBuildConfigurations->GetPlatformBox());
+	pToolbar->Append(mpBuilding->CreateBuildButton());
+	pToolbar->Append(mpDebugging->CreateStartButton());
 
 	//The branch checked out, at the toolbar's right, as IntelliJ IDEA shows it.
-	pToolbar->AddComponent(mpGitStatus->CreateBranchLabel(), 4, 0, 1, 1, 0, 1);
-	pBranchGap = OMalloc<CFillContainer>(pWindow);
-	pBranchGap->SetDesiredSize(IDE_TOOLBAR_GAP, 1);
-	pToolbar->AddComponent(pBranchGap, 5, 0, 1, 1, 0, 1);
+	pToolbar->AddStretch();
+	pToolbar->Append(mpGitStatus->CreateBranchLabel());
 
 	pMain = OMalloc<CGridContainer>(pWindow);
 	pMain->AddComponent(CreateMenuBar(), 0, 0, 1, 1, 1, 0);
@@ -440,24 +429,13 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	pMain->AddComponent(pToolbar, 0, 1, 1, 1, 1, 0);
 	pMain->AddComponent(mpDock->GetArea(), 0, 2, 1, 1, 1, 1);
 
-	//The status line along the bottom, as IntelliJ IDEA's.
-	mpStatusLabel = OMalloc<CLabel>(pWindow, mpFontColours->GetFont(mpTheme->GetColour(TC_Icon)), "");
-	mpStatusLabel->SetAlignment(CSH_Left, CSV_Center);
-	pStatusGap = OMalloc<CFillContainer>(pWindow);
-	pStatusGap->SetDesiredSize(IDE_TOOLBAR_GAP, 1);
-	pStatusBar = OMalloc<CGridContainer>(pWindow);
-	pStatusBar->SetDesiredSize(-1, IDE_STATUS_HEIGHT);
-	pStatusBar->SetAlignment(CSH_Stretch, CSV_Stretch);
-	pStatusBar->AddComponent(pStatusGap, 0, 0, 1, 1, 0, 1);
-	pStatusBar->AddComponent(mpStatusLabel, 1, 0, 1, 1, 1, 1);
-	mpProgressLabel = OMalloc<CLabel>(pWindow, mpFontColours->GetFont(mpTheme->GetColour(TC_Icon)), "");
-	mpProgressLabel->SetAlignment(CSH_Right, CSV_Center);
-	pStatusBar->AddComponent(mpProgressLabel, 2, 0, 1, 1, 0, 1);
-	pStatusGap = OMalloc<CFillContainer>(pWindow);
-	pStatusGap->SetDesiredSize(IDE_TOOLBAR_GAP, 1);
-	pStatusBar->AddComponent(pStatusGap, 3, 0, 1, 1, 0, 1);
-	pMain->AddComponent(pStatusBar, 0, 3, 1, 1, 1, 0);
+	//The status line along the bottom, as IntelliJ IDEA's: messages, and the progress on the right.
+	mpStatusBar = OMalloc<CStatusBar>(pWindow, mpTheme, mpFontColours->GetFont(mpTheme->GetColour(TC_Icon)));
+	mpStatusBar->AddMessageField();
+	mpProgressLabel = mpStatusBar->AddField(-1);
+	pMain->AddComponent(mpStatusBar, 0, 3, 1, 1, 1, 0);
 	pWindow->SetContainer(pMain);
+	pWindow->SetToolTips(OMalloc<CToolTips>(pWindow, mpTheme));
 	pWindow->GetActivationEvent()->Add(&mpGitStatus, &CIDEGitStatus::WindowActivated);
 
 	//The close button asks to save changes first.
@@ -641,12 +619,7 @@ bool CIDEContent::FindReferences(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDEContent::ShowStatus(const char* szText)
 {
-	mpStatusLabel->SetText(szText);
-	miStatusTime = GetDebugTickCount();
-	if (mpWindow.IsNotNull())
-	{
-		mpWindow->RequestTick(IDE_STATUS_SHOWN);
-	}
+	mpStatusBar->ShowMessage(szText, IDE_STATUS_SHOWN, GetDebugTickCount());
 	if (!mbKeepSettings)
 	{
 		printf("Status: %s\n", szText);
@@ -659,7 +632,7 @@ void CIDEContent::ShowStatus(const char* szText)
 //
 //
 //////////////////////////////////////////////////////////////////////////
-char* CIDEContent::GetStatus(void) { return mpStatusLabel->GetText(); }
+char* CIDEContent::GetStatus(void) { return mpStatusBar->GetMessage(); }
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -676,19 +649,7 @@ int64 CIDEContent::UpdateStatusLine(int64 iNow)
 	size	uiToIndex;
 	CChars	szProgress;
 
-	iWait = -1;
-	if (miStatusTime != 0)
-	{
-		if (iNow - miStatusTime >= IDE_STATUS_SHOWN)
-		{
-			mpStatusLabel->SetText("");
-			miStatusTime = 0;
-		}
-		else
-		{
-			iWait = IDE_STATUS_SHOWN - (iNow - miStatusTime);
-		}
-	}
+	iWait = mpStatusBar->UpdateMessage(iNow);
 
 	mcCodeModel.GetIndexingProgress(&uiIndexed, &uiToIndex);
 	szProgress.Init();

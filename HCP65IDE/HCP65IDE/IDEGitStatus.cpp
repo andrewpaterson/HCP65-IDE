@@ -734,6 +734,7 @@ Ptr<CLabel> CIDEGitStatus::CreateBranchLabel(void)
 {
 	mpBranchLabel = OMalloc<CLabel>(mpcContent->GetWindow(), mpcContent->GetFontColours()->GetFont(mpcContent->GetTheme()->GetColour(TC_Icon)), "");
 	mpBranchLabel->SetAlignment(CSH_Right, CSV_Center);
+	mpBranchLabel->SetToolTip("The Git branch checked out");
 	return mpBranchLabel;
 }
 

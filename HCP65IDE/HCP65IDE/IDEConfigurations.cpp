@@ -325,9 +325,11 @@ void CIDEConfigurations::CreateComboBoxes(void)
 {
 	mpConfigurations = OMalloc<CComboBox>(mpcContent->GetWindow(), mpcContent->GetTheme());
 	mpConfigurations->SetAlignment(CSH_Left, CSV_Center);
+	mpConfigurations->SetToolTip("Solution Configurations");
 	mpConfigurations->GetSelectionEvent()->Add(this, &CIDEConfigurations::ConfigurationChosen);
 	mpPlatforms = OMalloc<CComboBox>(mpcContent->GetWindow(), mpcContent->GetTheme());
 	mpPlatforms->SetAlignment(CSH_Left, CSV_Center);
+	mpPlatforms->SetToolTip("Solution Platforms");
 	mpPlatforms->GetSelectionEvent()->Add(this, &CIDEConfigurations::ConfigurationChosen);
 }
 

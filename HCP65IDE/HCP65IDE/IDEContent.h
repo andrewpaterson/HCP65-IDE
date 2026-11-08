@@ -35,6 +35,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BuildLib/SolutionBuild.h"
 #include "CppParserLib/CPP65ListingIndex.h"
 #include "WindowLib/Button.h"
+#include "WindowLib/Toolbar.h"
+#include "WindowLib/StatusBar.h"
 #include "WindowLib/TabbedContainer.h"
 #include "WindowLib/MenuBar.h"
 #include "WindowLib/CommandSet.h"
@@ -164,8 +166,7 @@ protected:
 	CBuildWorkspace				mcWorkspace;		//The solutions open, one the startup solution.
 	CIDECodeModel				mcCodeModel;		//Uses mcWorkspace; initialised when a solution is opened.
 
-	Ptr<CLabel>					mpStatusLabel;		//The status line along the bottom: what last went wrong, or was done,
-	int64						miStatusTime;		//when it said it (it's cleared a while after), 0 if it says nothing,
+	Ptr<CStatusBar>				mpStatusBar;		//Along the bottom: what last went wrong, or was done, for a while,
 	Ptr<CLabel>					mpProgressLabel;	//and on its right what is being done in the background (indexing).
 	bool						mbKeepSettings;		//The layout and the open solution are saved for next time; not while being checked.
 
