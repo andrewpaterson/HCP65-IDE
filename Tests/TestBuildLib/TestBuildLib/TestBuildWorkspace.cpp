@@ -339,10 +339,19 @@ void TestBuildWorkspaceRunConfigurations(void)
 		AssertString(aszNames.GetText(i), pcRun->GetName());
 		AssertString(aszNames.GetText(i), pcRun->GetConfiguration());
 		AssertFalse(pcRun->HasTool());
+		AssertTrue(pcRun->IsDefault());
 	}
 
 	pcRun = cWorkspace.AddRunConfiguration("On Emulator", aszNames.GetText(0));
 	AssertNotNull(pcRun);
+	AssertFalse(pcRun->IsDefault());
+	pcRun->SetName(aszNames.GetText(0));
+	AssertTrue(pcRun->IsDefault());
+	pcRun->SetTool("", "Tools", "");
+	AssertFalse(pcRun->IsDefault());
+	pcRun->SetTool("", "", "--fill");
+	AssertFalse(pcRun->IsDefault());
+	pcRun->SetName("On Emulator");
 	pcRun->SetTool("Tools" _FS_ "Emulator", "Tools", "--fill --other");
 	AssertTrue(pcRun->HasTool());
 	AssertNull(cWorkspace.AddRunConfiguration("On Emulator", aszNames.GetText(0)));
@@ -367,6 +376,12 @@ void TestBuildWorkspaceRunConfigurations(void)
 	AssertString("Tools" _FS_ "Emulator", pcRun->GetTool());
 	AssertString("Tools", pcRun->GetDirectory());
 	AssertString("--fill --other", pcRun->GetArguments());
+
+	AssertNotNull(cWorkspace.AddRunConfiguration("Last", aszNames.GetText(0)));
+	cWorkspace.RemoveRunConfiguration(cWorkspace.NumRunConfigurations() - 2);
+	AssertSize(aszNames.NumElements() + 1, cWorkspace.NumRunConfigurations());
+	AssertNull(cWorkspace.FindRunConfiguration("On Emulator"));
+	AssertString("Last", cWorkspace.GetRunConfiguration(cWorkspace.NumRunConfigurations() - 1)->GetName());
 
 	asReplace.Init();
 	asReplace.Add()->Init(pcRun);

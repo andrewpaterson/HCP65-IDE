@@ -108,6 +108,7 @@ public:
 	CRunConfiguration*		FindRunConfiguration(const char* szName);
 	CRunConfiguration*		FindRunConfigurationBuilding(const char* szConfiguration);
 	CRunConfiguration*		AddRunConfiguration(const char* szName, const char* szConfiguration);
+	void					RemoveRunConfiguration(size uiIndex);
 	void					SetRunConfigurations(CArrayRunConfigurations* pasConfigurations);
 	void					AddDefaultRunConfigurations(void);
 

@@ -55,6 +55,7 @@ public:
 	char*	GetDirectory(void);
 	char*	GetArguments(void);
 	bool	HasTool(void);
+	bool	IsDefault(void);
 
 	void	SetName(const char* szName);
 	void	SetConfiguration(const char* szConfiguration);

@@ -142,6 +142,7 @@ char* CRunConfiguration::GetTool(void)			{ return mszTool.Text(); }
 char* CRunConfiguration::GetDirectory(void)		{ return mszDirectory.Text(); }
 char* CRunConfiguration::GetArguments(void)		{ return mszArguments.Text(); }
 bool CRunConfiguration::HasTool(void)			{ return !mszTool.Empty(); }
+bool CRunConfiguration::IsDefault(void)			{ return mszName.Equals(mszConfiguration.Text()) && mszTool.Empty() && mszDirectory.Empty() && mszArguments.Empty(); }  //Nothing but what a build configuration is given (CBuildWorkspace::AddDefaultRunConfigurations).
 void CRunConfiguration::SetName(const char* szName)						{ mszName.Set(szName ? szName : ""); }
 void CRunConfiguration::SetConfiguration(const char* szConfiguration)	{ mszConfiguration.Set(szConfiguration ? szConfiguration : ""); }
 

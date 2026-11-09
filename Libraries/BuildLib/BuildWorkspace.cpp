@@ -290,6 +290,18 @@ void CBuildWorkspace::SetRunConfigurations(CArrayRunConfigurations* pasConfigura
 
 //////////////////////////////////////////////////////////////////////////
 //
+// The others stay in their order.
+//
+//////////////////////////////////////////////////////////////////////////
+void CBuildWorkspace::RemoveRunConfiguration(size uiIndex)
+{
+	masRunConfigurations.Get(uiIndex)->Kill();
+	masRunConfigurations.RemoveAt(uiIndex);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // A workspace with no run configurations (one saved before they existed,
 // or none saved) is given one for each build configuration, named after
 // it.  One that has any is left as it is, so those removed stay removed.
