@@ -85,8 +85,8 @@ CHECKS = [
 	('close-cancel-and-navigate', {
 		'OPEN': 'CalculatorParser.cpp', 'CARET': '36:2', 'TYPE': 'X', 'DIALOG_ANSWER': 'Cancel',
 		'DEBUG': 'closetab,answered:1,printtabs,edit:caret:26:12,gotosource,printtabs,switchfile,printtabs'},
-		[r'^Tabs: .* >CalculatorParser\.cpp\*$', r'^Tabs: .*CalculatorParser\.cpp\* >CalculatorParser\.h$',
-		 r'^Tabs: .* >CalculatorParser\.cpp\* CalculatorParser\.h$'], []),
+		[r'^Tabs: .*>CalculatorParser\.cpp\*$', r'^Tabs: .*CalculatorParser\.cpp\* >CalculatorParser\.h$',
+		 r'^Tabs: .*>CalculatorParser\.cpp\* CalculatorParser\.h$'], []),
 	('exit-dont-save', {
 		'OPEN': 'CalculatorParser.cpp', 'CARET': '36:2', 'EDIT': 'type:X,open:CalculatorSymbols.cpp,type:Y',
 		'DIALOG_ANSWER': "Don't Save", 'DEBUG': 'exit', 'SNAPSHOT': None},
