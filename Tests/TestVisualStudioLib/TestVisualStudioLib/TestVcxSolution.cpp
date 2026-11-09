@@ -25,9 +25,12 @@ void TestVcxSolutionMini(void)
 	CArrayInt							aiIndices;
 	CChars								szExpected;
 	CFileUtil							cFileUtil;
+	SLogConfig							sLogConfig;
 
 	cSolution.Init();
+	sLogConfig = gcLogger.SetSilent();
 	AssertTrue(cSolution.Read("Input" _FS_ "MiniSolution" _FS_ "MiniSolution.sln"));
+	gcLogger.SetConfig(&sLogConfig);
 	AssertString("MiniSolution", cSolution.GetName());
 	AssertString("12.00", cSolution.GetFormatVersion());
 	AssertString("17.8.34525.116", cSolution.GetVisualStudioVersion());
