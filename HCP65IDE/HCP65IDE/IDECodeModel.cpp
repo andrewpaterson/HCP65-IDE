@@ -18,6 +18,9 @@ You should have received a copy of the GNU Affero General Public License
 along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 ** ------------------------------------------------------------------------ **/
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include "BaseLib/FileUtil.h"
 #include "BaseLib/Logger.h"
 #include "BaseLib/ConstructorCall.h"
@@ -31,13 +34,15 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define IDE_INDEX_THREADS	8
 
 
-//The Windows SDK and MSVC library headers aren't on Linux; the MinGW ones stand in for them.
-const char* gaszLinuxSystemDirectories[] =
+//The Windows SDK and MSVC library headers aren't on Linux; the MinGW ones stand in for them: these in the folder of the
+//newest MinGW GCC installed, then its C library's.
+#define IDE_MINGW_GCC_DIRECTORY		"/usr/lib/gcc/x86_64-w64-mingw32"
+#define IDE_MINGW_INCLUDE_DIRECTORY	"/usr/share/mingw-w64/include"
+const char* gaszMinGWGCCDirectories[] =
 {
-	"/usr/lib/gcc/x86_64-w64-mingw32/13-win32/include/c++",
-	"/usr/lib/gcc/x86_64-w64-mingw32/13-win32/include/c++/x86_64-w64-mingw32",
-	"/usr/lib/gcc/x86_64-w64-mingw32/13-win32/include",
-	"/usr/share/mingw-w64/include",
+	"include/c++",
+	"include/c++/x86_64-w64-mingw32",
+	"include",
 	NULL
 };
 
@@ -227,24 +232,106 @@ void CIDECodeModel::KillJobs(void)
 }
 
 
+#ifdef LINUX_GNU
 //////////////////////////////////////////////////////////////////////////
 //
-// The compiler's own headers on this machine, those that exist.
+// Whether the MinGW GCC folder called szName ("13-win32") is newer than
+// the one called szOther, NULL for none.  A folder whose name doesn't start
+// with a version isn't.  Of one version, win32 threads are preferred.
+//
+//////////////////////////////////////////////////////////////////////////
+static bool IsNewerMinGWVersion(const char* szName, const char* szOther)
+{
+	int	aiName[3] = { 0, 0, 0 };
+	int	aiOther[3] = { 0, 0, 0 };
+	int	i;
+
+	if (sscanf(szName, "%d.%d.%d", &aiName[0], &aiName[1], &aiName[2]) < 1)
+	{
+		return false;
+	}
+	if (szOther == NULL)
+	{
+		return true;
+	}
+	sscanf(szOther, "%d.%d.%d", &aiOther[0], &aiOther[1], &aiOther[2]);
+	for (i = 0; i < 3; i++)
+	{
+		if (aiName[i] != aiOther[i])
+		{
+			return aiName[i] > aiOther[i];
+		}
+	}
+	return (strstr(szName, "win32") != NULL) && (strstr(szOther, "win32") == NULL);
+}
+#endif
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The compiler's own headers on this machine, those that exist.  For
+// checking, HCP65_IDE_SYSTEM_ROOT is where they are looked for in place of
+// the root folder.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDECodeModel::AddDefaultSystemDirectories(void)
 {
 #ifdef LINUX_GNU
 	CFileUtil	cFileUtil;
+	CArrayChars	aszFound;
+	CChars		szRoot;
+	CChars		szPath;
+	CChars		szName;
+	CChars		szNewest;
+	CChars		szParent;
 	size		i;
 
-	for (i = 0; gaszLinuxSystemDirectories[i] != NULL; i++)
+	szRoot.Init((getenv("HCP65_IDE_SYSTEM_ROOT") != NULL) ? getenv("HCP65_IDE_SYSTEM_ROOT") : "");
+	szPath.Init();
+	szName.Init();
+	szParent.Init();
+	szNewest.Init();
+	aszFound.Init();
+	szPath.Set(szRoot);
+	szPath.Append(IDE_MINGW_GCC_DIRECTORY);
+	if (cFileUtil.IsDirectory(szPath.Text()))
 	{
-		if (cFileUtil.IsDirectory(gaszLinuxSystemDirectories[i]))
+		cFileUtil.FindAllDirectories(szPath.Text(), &aszFound);
+	}
+	for (i = 0; i < aszFound.NumElements(); i++)
+	{
+		szName.Set("");
+		szParent.Set("");
+		cFileUtil.SplitPath(aszFound.GetText(i), &szName, &szParent);
+		if (IsNewerMinGWVersion(szName.Text(), szNewest.Empty() ? NULL : szNewest.Text()))
 		{
-			AddSystemDirectory(gaszLinuxSystemDirectories[i]);
+			szNewest.Set(szName);
 		}
 	}
+	for (i = 0; !szNewest.Empty() && (gaszMinGWGCCDirectories[i] != NULL); i++)
+	{
+		szName.Set(szPath);
+		szName.Append('/');
+		szName.Append(szNewest);
+		szName.Append('/');
+		szName.Append(gaszMinGWGCCDirectories[i]);
+		if (cFileUtil.IsDirectory(szName.Text()))
+		{
+			AddSystemDirectory(szName.Text());
+		}
+	}
+	szName.Set(szRoot);
+	szName.Append(IDE_MINGW_INCLUDE_DIRECTORY);
+	if (cFileUtil.IsDirectory(szName.Text()))
+	{
+		AddSystemDirectory(szName.Text());
+	}
+	aszFound.Kill();
+	szNewest.Kill();
+	szParent.Kill();
+	szName.Kill();
+	szPath.Kill();
+	szRoot.Kill();
 #endif
 }
 
@@ -1085,6 +1172,7 @@ char* CIDECodeModel::GetConfiguration(void) { return mszConfiguration.Text(); }
 void CIDECodeModel::SetEditsDelay(int iMilliseconds) { miEditsDelay = iMilliseconds; }
 size CIDECodeModel::NumIndexings(void) { return muiIndexings; }
 void CIDECodeModel::AddSystemDirectory(const char* szDirectory) { maszSystemDirectories.Add(szDirectory); }
+CArrayChars* CIDECodeModel::GetSystemDirectories(void) { return &maszSystemDirectories; }
 
 
 //////////////////////////////////////////////////////////////////////////

@@ -7,7 +7,7 @@
 #
 #The executable defaults to ../../../build/HCP65IDERelease/HCP65IDE.  Exits non-zero if a check fails.
 #With HCP65_IDE_VERIFY_REDRAW set, every partial paint is checked too, and one that differed fails its check.
-import hashlib, os, re, subprocess, sys, tempfile
+import atexit, hashlib, os, re, shutil, subprocess, sys, tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 IDE_DIR = os.path.join(HERE, '..', 'HCP65IDE')
@@ -20,6 +20,19 @@ WATCHED = [os.path.join(BASELIB, f) for f in ['CalculatorParser.cpp', 'Calculato
           [os.path.join(KERNAL, 'HCP65Kernal.layout.user'), os.path.join(KERNAL, 'HCP65Kernal.hcp65workspace'),
            os.path.expanduser('~/.config/HCP65IDE/RecentSolutions.xml')]
 BREAKPOINTS = os.path.join(KERNAL, 'HCP65Kernal.hcp65user')
+
+
+
+def MakeSystemRoot(aszVersions, bLibrary=True):
+	#A folder laid out as a machine with these MinGW GCC folders (and their C library's headers) is, for HCP65_IDE_SYSTEM_ROOT.
+	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
+	atexit.register(shutil.rmtree, szRoot, True)
+	for szVersion in aszVersions:
+		os.makedirs(os.path.join(szRoot, 'usr/lib/gcc/x86_64-w64-mingw32', szVersion, 'include/c++/x86_64-w64-mingw32'))
+	if bLibrary:
+		os.makedirs(os.path.join(szRoot, 'usr/share/mingw-w64/include'))
+	return szRoot
+
 
 #Each check: its name, its HCP65_IDE_* variables, the lines (regular expressions) its output must have, in order, and
 #lines it mustn't have.
@@ -117,6 +130,17 @@ CHECKS = [
 	('configuration', {
 		'CONFIGURATION': 'Debug|W65C816', 'DEBUG': 'printconfig'},
 		[r'^Configuration: \[Debug\|W65C816\] \[Debug\|W65C816\]: Debug\|W65C816, Release\|W65C816, Edit Configurations\.\.\.,$'], []),
+	('system-directories-newest', {
+		#The newest MinGW GCC by its number, not its name, and not a folder that isn't a version.
+		'SYSTEM_ROOT': MakeSystemRoot(['9-win32', '13-win32', 'notes']), 'DEBUG': 'printsystem'},
+		[r'^System directories: \S*/13-win32/include/c\+\+, \S*/13-win32/include/c\+\+/x86_64-w64-mingw32, \S*/13-win32/include, \S*/usr/share/mingw-w64/include,$'], [r'/9-win32', r'/notes']),
+	('system-directories-threads', {
+		#Of one version win32 threads, as the MSVC headers these stand in for have, but a newer version over them.
+		'SYSTEM_ROOT': MakeSystemRoot(['13-posix', '13-win32']), 'DEBUG': 'printsystem'},
+		[r'^System directories: \S*/13-win32/include/c\+\+,'], [r'/13-posix']),
+	('system-directories-newer-threads', {
+		'SYSTEM_ROOT': MakeSystemRoot(['13-win32', '14-posix']), 'DEBUG': 'printsystem'},
+		[r'^System directories: \S*/14-posix/include/c\+\+,'], [r'/13-win32']),
 	('run-configuration-tool', {
 		#A run configuration made in the dialog is chosen with its build configuration, and Start runs its tool with its
 		#arguments and working directory, without the debugger, and says how it exited.

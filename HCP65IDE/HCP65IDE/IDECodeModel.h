@@ -173,6 +173,7 @@ public:
 	char*	GetConfiguration(void);
 	void	AddSystemDirectory(const char* szDirectory);
 	void	AddDefaultSystemDirectories(void);
+	CArrayChars*	GetSystemDirectories(void);
 
 	bool	Highlight(size uiProject, const char* szFileName, const char* szContents, CArrayHighlights* pacDest, CChars* pszErrors);
 

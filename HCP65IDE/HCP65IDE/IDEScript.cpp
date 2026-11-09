@@ -30,7 +30,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 //The debug script's commands that are the IDE's (RunCommand); "goto:" takes what follows it.
-static const char*	gaszIDEScriptCommands[] = { "goto:", "rename", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printexplorer", "printedits", "printspans", "configuration:", "waitindex" };
+static const char*	gaszIDEScriptCommands[] = { "goto:", "rename", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printexplorer", "printedits", "printspans", "configuration:", "waitindex" };
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -286,6 +286,21 @@ void CIDEScript::RunCommand(const char* szCommand)
 		for (i = 0; i < pBox->NumItems(); i++)
 		{
 			printf(" %s,", pBox->GetItemText(i));
+		}
+		printf("\n");
+		fflush(stdout);
+	}
+	else if (strcmp(szCommand, "printsystem") == 0)
+	{
+		//Where the code model looks for the compiler's own headers.
+		CArrayChars*	paszDirectories;
+		size			i;
+
+		paszDirectories = mpcContent->GetCodeModel()->GetSystemDirectories();
+		printf("System directories:");
+		for (i = 0; i < paszDirectories->NumElements(); i++)
+		{
+			printf(" %s,", paszDirectories->GetText(i));
 		}
 		printf("\n");
 		fflush(stdout);
