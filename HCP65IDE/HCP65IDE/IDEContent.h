@@ -236,6 +236,7 @@ public:
 	Ptr<CIDEBuilding>		GetBuilding(void);
 	Ptr<CIDEConfigurations>	GetBuildConfigurations(void);
 	Ptr<CIDERunning>		GetRunning(void);
+	Ptr<CStatusBar>			GetStatusBar(void);
 	Ptr<CIDEDebugging>		GetDebugging(void);
 	Ptr<CIDEGitStatus>		GetGitStatus(void);
 	Ptr<CIDEDiffs>			GetDiffs(void);

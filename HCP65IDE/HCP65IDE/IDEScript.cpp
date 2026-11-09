@@ -30,7 +30,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 //The debug script's commands that are the IDE's (RunCommand); "goto:" takes what follows it.
-static const char*	gaszIDEScriptCommands[] = { "goto:", "rename", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printexplorer", "printedits", "printspans", "configuration:", "waitindex" };
+static const char*	gaszIDEScriptCommands[] = { "goto:", "rename", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printbuild", "printstatus", "printexplorer", "printedits", "printspans", "configuration:", "waitindex" };
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -303,6 +303,18 @@ void CIDEScript::RunCommand(const char* szCommand)
 		fflush(stdout);
 		cFile.Kill();
 		szFile.Kill();
+	}
+	else if (strcmp(szCommand, "printbuild") == 0)
+	{
+		//What the Build tab shows.
+		printf("Build tab:\n%s\n", mpcContent->GetBuilding()->GetBuildPane()->GetOutput());
+		fflush(stdout);
+	}
+	else if (strcmp(szCommand, "printstatus") == 0)
+	{
+		//What the status line shows, as ShowStatus prints it only for a run that keeps no settings.
+		printf("Status line: %s\n", mpcContent->GetStatusBar()->GetMessage());
+		fflush(stdout);
 	}
 	else if (strcmp(szCommand, "printsystem") == 0)
 	{

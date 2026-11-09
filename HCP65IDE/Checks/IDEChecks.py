@@ -34,15 +34,18 @@ def MakeSystemRoot(aszVersions, bLibrary=True):
 	return szRoot
 
 
-def MakeSolutionCopy():
+def MakeSolutionCopy(bOther=False):
 	#A copy of a test solution with a comment in its build configurations, to save them to: a scripted run told to keep
-	#its settings with SAVE_LAYOUT, and its recent solutions apart, writes only beside the copy.
+	#its settings with SAVE_LAYOUT, and its recent solutions apart, writes only beside the copy.  It can have a second
+	#build configuration (bOther), Other|W65C816, for when one of them is removed.
 	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
 	atexit.register(shutil.rmtree, szRoot, True)
 	szKernel = os.path.join(szRoot, 'Workspace', 'Kernel')
 	shutil.copytree(os.path.join(ROOT, 'HCP65-IDE', 'Tests', 'TestBuildLib', 'TestBuildLib', 'Input', 'Workspace'), os.path.join(szRoot, 'Workspace'))
 	szFile = os.path.join(szKernel, 'Kernel.hcp65build')
 	szText = open(szFile, newline='').read().replace('<BuildConfigurations>', '<!-- A comment to keep. -->\n<BuildConfigurations>', 1)
+	if bOther:
+		szText = szText.replace('</BuildConfigurations>', '\t<Configuration Name="Other|W65C816" Toolchain="W65C816" Solution="Release|Win32"/>\n</BuildConfigurations>', 1)
 	open(szFile, 'w', newline='').write(szText)
 	return {'SOLUTION': os.path.join(szKernel, 'Kernel.sln'), 'SAVE_LAYOUT': '1', 'RECENT': os.path.join(szRoot, 'Recent.xml')}
 
@@ -196,6 +199,32 @@ CHECKS = [
 		'DIALOG_ANSWER': 'Open File', 'BUILD_EDITS': 'name:Gone',
 		'DEBUG': 'command:Build.EditConfigurations,answered:1,printtabs,printbuildfile'}),
 		[r'^Tabs: .*>Kernel\.hcp65build', r'<Configuration Name="Release\|W65C816"'], [r'Gone']),
+	('build-configuration-remove', dict(MakeSolutionCopy(True), **{
+		#The run configuration that was only for the one removed goes with it, and one that is left is chosen.
+		'DIALOG_ANSWER': 'OK', 'BUILD_EDITS': 'remove',
+		'DEBUG': 'command:Build.EditConfigurations,answered:1,printstatus,printconfig,printbuildfile'}),
+		[r'^Status line: Saved the build configurations\.$',
+		 r'^Configuration: \[Other\|W65C816\] \[Other\|W65C816\]: Other\|W65C816, Edit Configurations\.\.\.,$',
+		 r'<Configuration Name="Other\|W65C816"'], [r'Name="Release\|W65C816"', r'ERROR']),
+	('build-configuration-remove-kept', dict(MakeSolutionCopy(True), **{
+		#One with a tool is kept and stays chosen, as it says.  It builds nothing, as Build says, but its tool still runs.
+		'DIALOG_ANSWER': 'OK', 'RUN_EDITS': 'add;name:Emu;tool:/bin/sh;arguments:-c true', 'BUILD_EDITS': 'remove',
+		'DEBUG': 'command:Run.EditConfigurations,answered:1,command:Build.EditConfigurations,answered:2,printstatus,printconfig,command:Build.Build,wait:200,printbuild,command:Run.Start,wait:500,printrun'}),
+		[r'^Status line: Saved, but run configuration Emu builds a build configuration you removed: choose another for it in Edit Configurations\.$',
+		 r'^Configuration: \[Emu\] \[\]: Other\|W65C816, Emu, Edit Configurations\.\.\.,$',
+		 r'^Emu builds Release\|W65C816, which no open solution has: choose another build configuration in Edit Configurations\.$',
+		 r'^Running: /bin/sh -c true$', r'^Exited with code 0\.$'], [r'ERROR']),
+	('build-configuration-remove-last', dict(MakeSolutionCopy(), **{
+		#With none left there is nothing to choose, and Build says so.
+		'DIALOG_ANSWER': 'OK', 'BUILD_EDITS': 'remove',
+		'DEBUG': 'command:Build.EditConfigurations,answered:1,printconfig,command:Build.Build,wait:200,printbuild'}),
+		[r'^Configuration: \[.*\] \[\]: Edit Configurations\.\.\.,$',
+		 r'^No run configuration is chosen: add one in Edit Configurations\.$'], [r'ERROR']),
+	('build-nothing-to-build', {
+		#However it came to be, a run configuration whose build configuration isn't there says so when built.
+		'DIALOG_ANSWER': 'OK', 'RUN_EDITS': 'add;name:Nothing;build:No|Such',
+		'DEBUG': 'command:Run.EditConfigurations,answered:1,command:Build.Build,wait:200,printbuild'},
+		[r'^Nothing builds No\|Such, which no open solution has: choose another build configuration in Edit Configurations\.$'], []),
 	('run-configuration-tool', {
 		#A run configuration made in the dialog is chosen with its build configuration, and Start runs its tool with its
 		#arguments and working directory, without the debugger, and says how it exited.

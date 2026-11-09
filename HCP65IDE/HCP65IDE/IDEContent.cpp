@@ -978,6 +978,7 @@ Ptr<CIDEGitStatus> CIDEContent::GetGitStatus(void) { return mpGitStatus; }
 Ptr<CIDEDebugging> CIDEContent::GetDebugging(void) { return mpDebugging; }
 Ptr<CIDEConfigurations> CIDEContent::GetBuildConfigurations(void) { return mpBuildConfigurations; }
 Ptr<CIDERunning> CIDEContent::GetRunning(void) { return mpRunning; }
+Ptr<CStatusBar> CIDEContent::GetStatusBar(void) { return mpStatusBar; }
 Ptr<CIDEBuilding> CIDEContent::GetBuilding(void) { return mpBuilding; }
 Ptr<CIDESolutions> CIDEContent::GetSolutions(void) { return mpSolutions; }
 Ptr<CIDEDocuments> CIDEContent::GetDocuments(void) { return mpDocuments; }

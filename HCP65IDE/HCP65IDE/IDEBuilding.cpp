@@ -135,8 +135,9 @@ void CIDEBuilding::SetLibc65Directory(const char* szDirectory)
 //////////////////////////////////////////////////////////////////////////
 //
 // Starts building the solution in the chosen build configuration, its
-// output in the Build tab.  False if there is no solution or
-// configuration, or a build is running.
+// output in the Build tab.  False if there is no solution or a build is
+// running, or if no solution has the build configuration, as the Build tab
+// says.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEBuilding::Build(void)
@@ -144,14 +145,18 @@ bool CIDEBuilding::Build(void)
 	CArrayChars	aszLines;
 	bool		bResult;
 
-	if (!mpcContent->GetSolutions()->IsSolutionOpen() || !mpcContent->GetBuildConfigurations()->HasConfiguration() || mcBuild.IsRunning())
+	if (!mpcContent->GetSolutions()->IsSolutionOpen() || mcBuild.IsRunning())
 	{
 		return false;
 	}
 	maiBuildOrder.ReInit();
-	mpcContent->GetWorkspace()->GetBuildOrder(mpcContent->GetBuildConfigurations()->GetConfigurationName(), &maiBuildOrder);
+	if (mpcContent->GetBuildConfigurations()->HasConfiguration())
+	{
+		mpcContent->GetWorkspace()->GetBuildOrder(mpcContent->GetBuildConfigurations()->GetConfigurationName(), &maiBuildOrder);
+	}
 	if (maiBuildOrder.NumElements() == 0)
 	{
+		ShowNothingToBuild();
 		return false;
 	}
 
@@ -174,6 +179,46 @@ bool CIDEBuilding::Build(void)
 		mpcContent->GetWindow()->RequestTick(IDE_BUILD_POLL);
 	}
 	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Build was asked for but the chosen run configuration builds nothing: the
+// Build tab says why, as the Run tab does for one with no tool.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEBuilding::ShowNothingToBuild(void)
+{
+	CRunConfiguration*	pcRun;
+	CArrayChars			aszLines;
+	CChars				szLine;
+
+	pcRun = mpcContent->GetBuildConfigurations()->GetRunConfiguration();
+	szLine.Init();
+	if (pcRun == NULL)
+	{
+		szLine.Append("No run configuration is chosen: add one in Edit Configurations.");
+	}
+	else if (pcRun->GetConfiguration()[0] == '\0')
+	{
+		szLine.Append(pcRun->GetName());
+		szLine.Append(" has no build configuration: choose one in Edit Configurations.");
+	}
+	else
+	{
+		szLine.Append(pcRun->GetName());
+		szLine.Append(" builds ");
+		szLine.Append(pcRun->GetConfiguration());
+		szLine.Append(", which no open solution has: choose another build configuration in Edit Configurations.");
+	}
+	aszLines.Init();
+	aszLines.Add(szLine.Text());
+	mpBuildPane->Clear();
+	ShowBuildTab();
+	mpBuildPane->AppendLines(&aszLines);
+	aszLines.Kill();
+	szLine.Kill();
 }
 
 
@@ -510,11 +555,12 @@ void CIDEBuilding::ShowEditDialog(void)
 //////////////////////////////////////////////////////////////////////////
 //
 // The dialog's edits go in the file and are read back.  Run configurations
-// follow a build configuration that was renamed, and a new one gets one so
-// it can be chosen.  The code is indexed again, as it is parsed as they say,
-// which stops while they change.  The status line says how it went, and if
-// another open solution still has the old name, as a build configuration is
-// chosen by its name across them.
+// follow a build configuration that was renamed, a new one gets one so it
+// can be chosen, and one removed takes its own with it.  The code is indexed
+// again, as it is parsed as they say, which stops while they change.  The
+// status line says how it went, if another open solution still has the old
+// name, as a build configuration is chosen by its name across them, and if
+// run configurations are left building what was removed.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEBuilding::SaveEdits(CIDEBuildConfigurationsDialog* pcDialog, CBuildWorkspaceSolution* pcSolution, const char* szFile)
@@ -524,6 +570,8 @@ void CIDEBuilding::SaveEdits(CIDEBuildConfigurationsDialog* pcDialog, CBuildWork
 	CBuildConfigurationEdit*		pcEdit;
 	CArrayChars						aszOld;
 	CArrayChars						aszNew;
+	CArrayChars						aszRemoved;
+	CArrayChars						aszKept;
 	CChars							szStatus;
 	bool							bResult;
 	bool							bShared;
@@ -549,6 +597,9 @@ void CIDEBuilding::SaveEdits(CIDEBuildConfigurationsDialog* pcDialog, CBuildWork
 			aszNew.Add(pcEdit->mszName.Text());
 		}
 	}
+	aszRemoved.Init();
+	aszKept.Init();
+	FindRemovedConfigurations(&pcSolution->mcConfigurations, pasEdits, &aszRemoved);
 
 	mpcContent->GetCodeModel()->Reset();
 	bResult = pcSolution->mcConfigurations.ApplyEdits(szFile, pasEdits);
@@ -579,7 +630,30 @@ void CIDEBuilding::SaveEdits(CIDEBuildConfigurationsDialog* pcDialog, CBuildWork
 				pcWorkspace->AddRunConfiguration(pcEdit->mszName.Text(), pcEdit->mszName.Text());
 			}
 		}
-		szStatus.Set(bShared ? "Saved, but another open solution still has the old name of a build configuration you renamed." : "Saved the build configurations.");
+		ForgetRemovedConfigurations(&aszRemoved, &aszKept);
+
+		szStatus.Set("Saved");
+		if (bShared)
+		{
+			szStatus.Append(", but another open solution still has the old name of a build configuration you renamed");
+		}
+		if (aszKept.NumElements() == 1)
+		{
+			szStatus.Append(bShared ? ", and run configuration " : ", but run configuration ");
+			szStatus.Append(aszKept.GetText(0));
+			szStatus.Append(" builds a build configuration you removed: choose another for it in Edit Configurations");
+		}
+		else if (aszKept.NumElements() > 1)
+		{
+			szStatus.Append(bShared ? ", and " : ", but ");
+			szStatus.Append((uint32)aszKept.NumElements());
+			szStatus.Append(" run configurations build build configurations you removed: choose others for them in Edit Configurations");
+		}
+		else if (!bShared)
+		{
+			szStatus.Append(" the build configurations");
+		}
+		szStatus.Append('.');
 	}
 	else
 	{
@@ -590,8 +664,87 @@ void CIDEBuilding::SaveEdits(CIDEBuildConfigurationsDialog* pcDialog, CBuildWork
 	mpcContent->GetSolutions()->WorkspaceChanged(true);
 	mpcContent->ShowStatus(szStatus.Text());
 	szStatus.Kill();
+	aszKept.Kill();
+	aszRemoved.Kill();
 	aszNew.Kill();
 	aszOld.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The names of the build configurations no edit came from: those the
+// dialog removed.  A copy doesn't keep the one it was made from.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEBuilding::FindRemovedConfigurations(CBuildConfigurations* pcConfigurations, CArrayBuildConfigurationEdits* pasEdits, CArrayChars* paszRemoved)
+{
+	CBuildConfigurationEdit*	pcEdit;
+	bool						bKept;
+	size						i;
+	size						j;
+
+	for (i = 0; i < pcConfigurations->NumConfigurations(); i++)
+	{
+		bKept = false;
+		for (j = 0; j < pasEdits->NumElements(); j++)
+		{
+			pcEdit = pasEdits->Get(j);
+			bKept |= !pcEdit->mbNew && (pcEdit->muiSource == i);
+		}
+		if (!bKept)
+		{
+			paszRemoved->Add(pcConfigurations->GetConfiguration(i)->GetName());
+		}
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Once the build configurations in paszRemoved are gone, unless another
+// open solution has one of that name: a run configuration with nothing but
+// the name it was given goes with it.  One with anything of the user's in
+// it stays, and is named in paszKept: its tool still runs, and pointing it
+// at another build configuration is for the user to choose.  The toolbar
+// then chooses by the run configuration's name alone, not that of what it
+// built, so it doesn't move to one of those kept.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEBuilding::ForgetRemovedConfigurations(CArrayChars* paszRemoved, CArrayChars* paszKept)
+{
+	CBuildWorkspace*	pcWorkspace;
+	CRunConfiguration*	pcRun;
+	size				i;
+	size				j;
+
+	pcWorkspace = mpcContent->GetWorkspace();
+	for (i = 0; i < paszRemoved->NumElements(); i++)
+	{
+		if (pcWorkspace->FindAnyConfiguration(paszRemoved->GetText(i)) != NULL)
+		{
+			continue;
+		}
+		for (j = pcWorkspace->NumRunConfigurations(); j-- > 0;)
+		{
+			pcRun = pcWorkspace->GetRunConfiguration(j);
+			if (StringCompare(pcRun->GetConfiguration(), paszRemoved->GetText(i)) == 0)
+			{
+				if (pcRun->IsDefault())
+				{
+					pcWorkspace->RemoveRunConfiguration(j);
+				}
+				else
+				{
+					paszKept->Add(pcRun->GetName());
+				}
+			}
+		}
+		if (StringCompare(mpcContent->GetBuildConfigurations()->GetConfigurationName(), paszRemoved->GetText(i)) == 0)
+		{
+			mpcContent->GetBuildConfigurations()->SetConfigurationName("");
+		}
+	}
 }
 
 
