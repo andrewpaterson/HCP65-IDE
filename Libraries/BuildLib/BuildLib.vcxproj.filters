@@ -18,6 +18,9 @@
     <ClCompile Include="BuildConfigurations.cpp">
       <Filter>Source\Configuration</Filter>
     </ClCompile>
+    <ClCompile Include="BuildConfigurationEdit.cpp">
+      <Filter>Source\Configuration</Filter>
+    </ClCompile>
     <ClCompile Include="RunConfiguration.cpp">
       <Filter>Source\Build</Filter>
     </ClCompile>
@@ -60,6 +63,9 @@
       <Filter>Source\Configuration</Filter>
     </ClInclude>
     <ClInclude Include="BuildConfigurations.h">
+      <Filter>Source\Configuration</Filter>
+    </ClInclude>
+    <ClInclude Include="BuildConfigurationEdit.h">
       <Filter>Source\Configuration</Filter>
     </ClInclude>
     <ClInclude Include="RunConfiguration.h">

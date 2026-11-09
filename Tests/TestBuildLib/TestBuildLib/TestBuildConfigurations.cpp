@@ -399,6 +399,206 @@ void TestBuildConfigurationsPlatforms(void)
 }
 
 
+#define TEST_EDIT_FILE		"Output" _FS_ "Edit.hcp65build"
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// szText written to the file and read; the edits for it as it is, kept.
+//
+//////////////////////////////////////////////////////////////////////////
+static void ReadEditFile(const char* szText, CBuildConfigurations* pcConfigurations, CArrayBuildConfigurationEdits* pasEdits)
+{
+	CTextFile	cFile;
+	size		i;
+
+	cFile.Init(szText);
+	AssertTrue(cFile.Write(TEST_EDIT_FILE));
+	cFile.Kill();
+	AssertTrue(pcConfigurations->Read(TEST_EDIT_FILE));
+	for (i = 0; i < pcConfigurations->NumConfigurations(); i++)
+	{
+		pasEdits->Add()->Init(pcConfigurations->GetConfiguration(i), i);
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The edits go; the file is szExpected to the byte, and no temporary file
+// is left.
+//
+//////////////////////////////////////////////////////////////////////////
+static void KillEdits(CArrayBuildConfigurationEdits* pasEdits)
+{
+	size	i;
+
+	for (i = 0; i < pasEdits->NumElements(); i++)
+	{
+		pasEdits->Get(i)->Kill();
+	}
+	pasEdits->ReInit();
+}
+
+
+static void AssertEditFileHas(const char* szExpected, CArrayBuildConfigurationEdits* pasEdits)
+{
+	CTextFile	cFile;
+
+	cFile.Init();
+	AssertTrue(cFile.Read(TEST_EDIT_FILE));
+	AssertTrue(strstr(cFile.Text(), szExpected) != NULL);
+	cFile.Kill();
+	KillEdits(pasEdits);
+}
+
+
+static void AssertEditFile(const char* szExpected, CArrayBuildConfigurationEdits* pasEdits)
+{
+	CTextFile	cFile;
+	CFileUtil	cFileUtil;
+
+	cFile.Init();
+	AssertTrue(cFile.Read(TEST_EDIT_FILE));
+	AssertString(szExpected, cFile.Text());
+	cFile.Kill();
+	AssertFalse(cFileUtil.Exists(TEST_EDIT_FILE ".tmp"));
+	KillEdits(pasEdits);
+}
+
+
+#define TEST_EDIT_HEADER	"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!-- A comment about <Configuration Name=\"Old\"/> to keep. -->\n<BuildConfigurations>\n"
+#define TEST_EDIT_KERNEL	"\t<!-- The first. -->\n\t<Configuration Name=\"Debug|W65C816\" Toolchain=\"W65C816\" Solution=\"Debug|Win32\" BreakpointSpace=\"Kernel\" NoFloats=\"true\">\n\t\t<Image File=\"Kernal.rom\" Size=\"0x80000\" Fill=\"0xFF\" Limit=\"0x7FC00\" Load=\"0x0\">\n\t\t\t<!-- Inside. -->\n\t\t\t<Region Start=\"0x0\" End=\"0x40000\" Offset=\"0x0\"/>\n\t\t</Image>\n\t</Configuration>\n"
+#define TEST_EDIT_GCC		"\t<Configuration Toolchain=\"GCC\" Name=\"Fast\" Solution=\"Release|x64\"/>\n"
+#define TEST_EDIT_FOOTER	"</BuildConfigurations>\n"
+#define TEST_EDIT_TEXT		TEST_EDIT_HEADER TEST_EDIT_KERNEL TEST_EDIT_GCC TEST_EDIT_FOOTER
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Only what is edited changes in the file: comments, the order of the
+// attributes, how numbers are written and what is inside a configuration
+// stay to the byte.
+//
+//////////////////////////////////////////////////////////////////////////
+void TestBuildConfigurationsEdits(void)
+{
+	CBuildConfigurations			cConfigurations;
+	CArrayBuildConfigurationEdits	asEdits;
+	CBuildConfigurationEdit*		pcEdit;
+	CFileUtil						cFileUtil;
+	CTextFile						cFile;
+	SLogConfig						sLogConfig;
+
+	cFileUtil.MakeDir("Output");
+	cConfigurations.Init();
+	asEdits.Init();
+
+	//Nothing edited changes nothing.
+	ReadEditFile(TEST_EDIT_TEXT, &cConfigurations, &asEdits);
+	AssertTrue(cConfigurations.ApplyEdits(TEST_EDIT_FILE, &asEdits));
+	AssertEditFile(TEST_EDIT_TEXT, &asEdits);
+
+	//An attribute changed where it is, one added at the end of the tag and one taken out.
+	ReadEditFile(TEST_EDIT_TEXT, &cConfigurations, &asEdits);
+	pcEdit = asEdits.Get(1);
+	pcEdit->mszName.Set("Faster");
+	pcEdit->mszBreakpointSpace.Set("A&B");
+	pcEdit = asEdits.Get(0);
+	pcEdit->mbNoFloats = false;
+	pcEdit->mbMathTables = false;
+	pcEdit->mszBreakpointSpace.Set("");
+	AssertTrue(cConfigurations.ApplyEdits(TEST_EDIT_FILE, &asEdits));
+	AssertEditFile(TEST_EDIT_HEADER "\t<!-- The first. -->\n\t<Configuration Name=\"Debug|W65C816\" Toolchain=\"W65C816\" Solution=\"Debug|Win32\" MathTables=\"false\">\n\t\t<Image File=\"Kernal.rom\" Size=\"0x80000\" Fill=\"0xFF\" Limit=\"0x7FC00\" Load=\"0x0\">\n\t\t\t<!-- Inside. -->\n\t\t\t<Region Start=\"0x0\" End=\"0x40000\" Offset=\"0x0\"/>\n\t\t</Image>\n\t</Configuration>\n\t<Configuration Toolchain=\"GCC\" Name=\"Faster\" Solution=\"Release|x64\" BreakpointSpace=\"A&amp;B\"/>\n" TEST_EDIT_FOOTER, &asEdits);
+
+	//And it is what is read back.
+	AssertString("Faster", cConfigurations.GetConfiguration(1)->GetName());
+	AssertString("A&B", cConfigurations.GetConfiguration(1)->GetBreakpointSpace());
+	AssertTrue(cConfigurations.GetConfiguration(0)->HasImage());
+	AssertFalse(cConfigurations.GetConfiguration(0)->IsMathTables());
+
+	//A card needs its path; both go in, and both go out.
+	ReadEditFile(TEST_EDIT_TEXT, &cConfigurations, &asEdits);
+	asEdits.Get(0)->mszCard.Set("Card.img");
+	asEdits.Get(0)->mszCardPath.Set("\\boot.exe");
+	AssertTrue(cConfigurations.ApplyEdits(TEST_EDIT_FILE, &asEdits));
+	AssertEditFile(TEST_EDIT_HEADER "\t<!-- The first. -->\n\t<Configuration Name=\"Debug|W65C816\" Toolchain=\"W65C816\" Solution=\"Debug|Win32\" BreakpointSpace=\"Kernel\" NoFloats=\"true\" Card=\"Card.img\" CardPath=\"\\boot.exe\">\n\t\t<Image File=\"Kernal.rom\" Size=\"0x80000\" Fill=\"0xFF\" Limit=\"0x7FC00\" Load=\"0x0\">\n\t\t\t<!-- Inside. -->\n\t\t\t<Region Start=\"0x0\" End=\"0x40000\" Offset=\"0x0\"/>\n\t\t</Image>\n\t</Configuration>\n" TEST_EDIT_GCC TEST_EDIT_FOOTER, &asEdits);
+	AssertString("Card.img", cConfigurations.GetConfiguration(0)->GetCard());
+
+	//One removed goes with its line; the comment before it isn't its.
+	ReadEditFile(TEST_EDIT_TEXT, &cConfigurations, &asEdits);
+	asEdits.Get(0)->Kill();
+	asEdits.RemoveAt(0);
+	asEdits.Get(0)->muiSource = 1;
+	AssertTrue(cConfigurations.ApplyEdits(TEST_EDIT_FILE, &asEdits));
+	AssertEditFile(TEST_EDIT_HEADER "\t<!-- The first. -->\n" TEST_EDIT_GCC TEST_EDIT_FOOTER, &asEdits);
+	AssertSize(1, cConfigurations.NumConfigurations());
+
+	//A copy has all that is inside the one it copies; a blank one has only what it says.
+	ReadEditFile(TEST_EDIT_TEXT, &cConfigurations, &asEdits);
+	pcEdit = asEdits.Add();
+	pcEdit->Init(asEdits.Get(0), "Copy");
+	pcEdit = asEdits.Add();
+	pcEdit->Init("Blank", BT_W65C816, "Debug|Win32");
+	AssertTrue(cConfigurations.ApplyEdits(TEST_EDIT_FILE, &asEdits));
+	AssertEditFile(TEST_EDIT_HEADER TEST_EDIT_KERNEL TEST_EDIT_GCC "\t<Configuration Name=\"Copy\" Toolchain=\"W65C816\" Solution=\"Debug|Win32\" BreakpointSpace=\"Kernel\" NoFloats=\"true\">\n\t\t<Image File=\"Kernal.rom\" Size=\"0x80000\" Fill=\"0xFF\" Limit=\"0x7FC00\" Load=\"0x0\">\n\t\t\t<!-- Inside. -->\n\t\t\t<Region Start=\"0x0\" End=\"0x40000\" Offset=\"0x0\"/>\n\t\t</Image>\n\t</Configuration>\n\t<Configuration Name=\"Blank\" Toolchain=\"W65C816\" Solution=\"Debug|Win32\"/>\n" TEST_EDIT_FOOTER, &asEdits);
+	AssertSize(4, cConfigurations.NumConfigurations());
+	AssertTrue(cConfigurations.GetConfiguration(2)->HasImage());
+	AssertFalse(cConfigurations.GetConfiguration(3)->HasImage());
+
+	//Windows' line ends are kept, and new lines have them.
+	ReadEditFile("<BuildConfigurations>\r\n  <Configuration Name=\"A\" Toolchain=\"GCC\" Solution=\"Release|x64\"/>\r\n</BuildConfigurations>\r\n", &cConfigurations, &asEdits);
+	asEdits.Add()->Init("B", BT_GCC, "Release|x64");
+	AssertTrue(cConfigurations.ApplyEdits(TEST_EDIT_FILE, &asEdits));
+	AssertEditFile("<BuildConfigurations>\r\n  <Configuration Name=\"A\" Toolchain=\"GCC\" Solution=\"Release|x64\"/>\r\n  <Configuration Name=\"B\" Toolchain=\"GCC\" Solution=\"Release|x64\"/>\r\n</BuildConfigurations>\r\n", &asEdits);
+
+	//An edit the file can't have (an image for GCC) leaves the file, and the configurations, as they were.
+	ReadEditFile(TEST_EDIT_TEXT, &cConfigurations, &asEdits);
+	asEdits.Get(0)->meToolchain = BT_GCC;
+	sLogConfig = gcLogger.SetSilent();
+	AssertFalse(cConfigurations.ApplyEdits(TEST_EDIT_FILE, &asEdits));
+	gcLogger.SetConfig(&sLogConfig);
+	AssertEditFile(TEST_EDIT_TEXT, &asEdits);
+	AssertSize(2, cConfigurations.NumConfigurations());
+	AssertTrue(cConfigurations.GetConfiguration(0)->HasImage());
+	AssertTrue(BT_W65C816 == cConfigurations.GetConfiguration(0)->GetToolchain());
+
+	//A file changed since it was read isn't edited: what is edited wouldn't be what is there.
+	ReadEditFile(TEST_EDIT_TEXT, &cConfigurations, &asEdits);
+	cFile.Init(TEST_EDIT_HEADER TEST_EDIT_GCC TEST_EDIT_KERNEL TEST_EDIT_FOOTER);
+	AssertTrue(cFile.Write(TEST_EDIT_FILE));
+	cFile.Kill();
+	asEdits.Get(0)->mszBreakpointSpace.Set("User");
+	AssertFalse(cConfigurations.ApplyEdits(TEST_EDIT_FILE, &asEdits));
+	AssertEditFile(TEST_EDIT_HEADER TEST_EDIT_GCC TEST_EDIT_KERNEL TEST_EDIT_FOOTER, &asEdits);
+
+	//With no file yet, it is written from the configurations there are, with the edits.
+	cFileUtil.Delete(TEST_EDIT_FILE);
+	cConfigurations.Kill();
+	cConfigurations.Init();
+	cConfigurations.Add("Only", BT_GCC, "Release|x64");
+	asEdits.Add()->Init(cConfigurations.GetConfiguration(0), 0);
+	asEdits.Get(0)->mbNoFloats = true;
+	AssertTrue(cConfigurations.ApplyEdits(TEST_EDIT_FILE, &asEdits));
+	AssertTrue(cFileUtil.Exists(TEST_EDIT_FILE));
+	AssertEditFileHas("NoFloats=\"true\"", &asEdits);
+	AssertTrue(cConfigurations.GetConfiguration(0)->IsNoFloats());
+
+	//A file with no configurations at all can be added to, however its root is written.
+	cConfigurations.Kill();
+	cConfigurations.Init();
+	ReadEditFile("<BuildConfigurations/>\n", &cConfigurations, &asEdits);
+	AssertSize(0, cConfigurations.NumConfigurations());
+	asEdits.Add()->Init("First", BT_GCC, "Release|x64");
+	AssertTrue(cConfigurations.ApplyEdits(TEST_EDIT_FILE, &asEdits));
+	AssertEditFile("<BuildConfigurations>\n\t<Configuration Name=\"First\" Toolchain=\"GCC\" Solution=\"Release|x64\"/>\n</BuildConfigurations>\n", &asEdits);
+
+	asEdits.Kill();
+	cConfigurations.Kill();
+	cFileUtil.Delete(TEST_EDIT_FILE);
+}
+
+
 //////////////////////////////////////////////////////////////////////////
 //
 //
@@ -413,6 +613,7 @@ void TestBuildConfigurations(void)
 	TestBuildConfigurationsExecutable();
 	TestBuildConfigurationsModule();
 	TestBuildConfigurationsPlatforms();
+	TestBuildConfigurationsEdits();
 
 	TestStatistics();
 }
