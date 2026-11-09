@@ -51,8 +51,7 @@ protected:
 	Ptr<CMenuContainer>			mpDebugMenu;
 	Ptr<CDialog>				mpDialog;  //The address or port asked for, while it's shown.
 	Ptr<CIDEDebugView>			mpDebugView;  //The Debug tab,
-	Ptr<CDockPane>				mpDebugTool;  //its tool window,
-	Ptr<CButton>				mpStartButton;  //and the toolbar's Start, or Continue while stopped.
+	Ptr<CDockPane>				mpDebugTool;  //and its tool window.
 	CIDEDebugger				mcDebugger;
 	CChars						mszDefaultEmulator;	//A W65C816 configuration's emulator when it doesn't say.
 	CChars						mszDefaultEmulatorDirectory;
@@ -81,8 +80,7 @@ public:
 	CIDEDebugger*		GetDebugger(void);
 	Ptr<CDockPane>		GetTool(void);
 	void				CreatePane(SDockPlace* psPlace);
-	Ptr<CButton>		CreateStartButton(void);
-	Ptr<CButton>		GetStartButton(void);
+	bool				ChooseTool(CChars* pszExecutable, CChars* pszDirectory, CChars* pszArguments, CChars* pszMessage);
 	void				GetUserSettingsFileName(CChars* pszDest);
 	Ptr<CMenuContainer>	CreateDebugMenu(void);
 	void				AddCommands(Ptr<CCommandSet> pCommands);
@@ -92,7 +90,6 @@ protected:
 	void				UpdateDebugView(bool bKeepCaret);
 	void				RunDebugScript(void);
 	bool				ChooseEmulator(bool bLaunch);
-	bool				ChooseTool(CChars* pszExecutable, CChars* pszDirectory, CChars* pszArguments, CChars* pszMessage);
 	bool				ChooseDebugLoads(CBuildConfiguration* pcConfiguration, CChars* pszMessage, CArrayChars* paszLines);
 	void				SaveBreakpoints(void);
 	void				ShowDebugMessages(void);

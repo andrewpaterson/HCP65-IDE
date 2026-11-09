@@ -219,6 +219,7 @@ void CIDEContent::Class(void)
 	M_Pointer(mpSolutions);
 	M_Pointer(mpBuilding);
 	M_Pointer(mpBuildConfigurations);
+	M_Pointer(mpRunning);
 	M_Pointer(mpDebugging);
 	M_Pointer(mpGitStatus);
 	M_Pointer(mpDiffs);
@@ -386,6 +387,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpSolutions = OMalloc<CIDESolutions>(this);
 	mpBuilding = OMalloc<CIDEBuilding>(this);
 	mpBuildConfigurations = OMalloc<CIDEConfigurations>(this);
+	mpRunning = OMalloc<CIDERunning>(this);
 	mpDebugging = OMalloc<CIDEDebugging>(this);
 	mpGitStatus = OMalloc<CIDEGitStatus>(this);
 	mpDiffs = OMalloc<CIDEDiffs>(this);
@@ -400,13 +402,14 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	sPlace.BesideWell(DS_Left, IDE_EXPLORER_WIDTH);
 	mpSolutions->CreateExplorerPane(&sPlace);
 
-	//Under the well, tabbed together: what Find Usages (and Find All References) found, what the build wrote, the
-	//debugger's view and Claude.
+	//Under the well, tabbed together: what Find Usages (and Find All References) found, what the build wrote, what the
+	//run configuration's tool wrote, the debugger's view and Claude.
 	sPlace.BesideWell(DS_Bottom, IDE_BOTTOM_HEIGHT);
 	mpUsages->CreatePane(&sPlace);
 
 	sPlace.WithPane(IDE_USAGES_ID);
 	mpBuilding->CreatePane(&sPlace);
+	mpRunning->CreatePane(&sPlace);
 
 	mpDebugging->CreatePane(&sPlace);
 	mpAskClaude->CreatePane(&sPlace);
@@ -415,7 +418,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	//The toolbar: the run configuration, as IntelliJ IDEA has them, and Start.
 	pToolbar = OMalloc<CToolbar>(pWindow, mpTheme, false);
 	pToolbar->Append(mpBuildConfigurations->CreateComboBox());
-	pToolbar->Append(mpDebugging->CreateStartButton());
+	pToolbar->Append(mpRunning->CreateStartButton());
 
 	//The branch checked out, at the toolbar's right, as IntelliJ IDEA shows it.
 	pToolbar->AddStretch();
@@ -565,6 +568,7 @@ void CIDEContent::AddCommands(void)
 	mpSolutions->AddCommands(mpCommands);
 	mpBuilding->AddCommands(mpCommands);
 	mpBuildConfigurations->AddCommands(mpCommands);
+	mpRunning->AddCommands(mpCommands);
 	mpDebugging->AddCommands(mpCommands);
 }
 
@@ -688,6 +692,7 @@ void CIDEContent::Tick(Ptr<CWindow> pWindow)
 	int64				iSoonest;
 
 	mpBuilding->PollBuild(pWindow);
+	mpRunning->PollRun(pWindow);
 	mpDebugging->PollDebugger(pWindow);
 	mpAskClaude->PollClaude(pWindow);
 	mpAskClaude->ScrollToEnd();
@@ -971,6 +976,7 @@ Ptr<CIDEGitStatus> CIDEContent::GetGitStatus(void) { return mpGitStatus; }
 
 Ptr<CIDEDebugging> CIDEContent::GetDebugging(void) { return mpDebugging; }
 Ptr<CIDEConfigurations> CIDEContent::GetBuildConfigurations(void) { return mpBuildConfigurations; }
+Ptr<CIDERunning> CIDEContent::GetRunning(void) { return mpRunning; }
 Ptr<CIDEBuilding> CIDEContent::GetBuilding(void) { return mpBuilding; }
 Ptr<CIDESolutions> CIDEContent::GetSolutions(void) { return mpSolutions; }
 Ptr<CIDEDocuments> CIDEContent::GetDocuments(void) { return mpDocuments; }

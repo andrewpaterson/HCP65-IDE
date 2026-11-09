@@ -81,7 +81,6 @@ void CIDEDebugging::Class(void)
 	M_Pointer(mpDialog);
 	M_Pointer(mpDebugView);
 	M_Pointer(mpDebugTool);
-	M_Pointer(mpStartButton);
 	U_Unknown(CIDEDebugger, mcDebugger);
 	U_String(mszDefaultEmulator);
 	U_String(mszDefaultEmulatorDirectory);
@@ -119,7 +118,7 @@ bool CIDEDebugging::Load(CObjectReader* pcFile) { return false; }
 
 
 //Debug's items, in order.
-const char*	gaszDebugMenu[] = { "Debug.Start", "Debug.Stop", "Debug.Restart", "Debug.BreakAll", "Debug.Attach", "Debug.StepInto", "Debug.StepOver",
+const char*	gaszDebugMenu[] = { "Debug.Start", "Run.Start", "Debug.Stop", "Run.Stop", "Debug.Restart", "Debug.BreakAll", "Debug.Attach", "Debug.StepInto", "Debug.StepOver",
 							"Debug.StepOut", "Debug.ToggleBreakpoint", "Debug.NewBreakpoint", "Debug.DeleteBreakpoints", "Run.EditConfigurations", NULL };
 
 
@@ -816,13 +815,12 @@ void CIDEDebugging::PollDebugger(Ptr<CWindow> pWindow)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The Debug tab, and the Start button's caption.
+// The Debug tab.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEDebugging::UpdateDebugView(bool bKeepCaret)
 {
 	mpDebugView->Update(&mcDebugger, bKeepCaret);
-	mpStartButton->SetCaption(mcDebugger.IsStopped() ? "Continue" : "Start");
 }
 
 
@@ -1002,20 +1000,6 @@ void CIDEDebugging::CreatePane(SDockPlace* psPlace)
 {
 	mpDebugView = OMalloc<CIDEDebugView>(mpcContent->GetWindow(), mpcContent->GetTheme(), mpcContent->GetCodeFamily(), mpcContent->GetTheme()->GetColour(TC_Text));
 	mpDebugTool = mpcContent->GetDock()->AddPane(IDE_DEBUG_ID, "Debug", NULL, mpDebugView->GetComponent(), DPK_Tool, psPlace);
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// The toolbar's Start button: Continue while stopped.
-//
-//////////////////////////////////////////////////////////////////////////
-Ptr<CButton> CIDEDebugging::CreateStartButton(void)
-{
-	mpStartButton = OMalloc<CButton>(mpcContent->GetWindow(), mpcContent->GetTheme(), "Start");
-	mpStartButton->SetAlignment(CSH_Left, CSV_Center);
-	mpStartButton->SetCommand(mpcContent->GetCommands()->Find("Debug.Start"));
-	return mpStartButton;
 }
 
 
@@ -1284,4 +1268,3 @@ void CIDEDebugging::SetDefaultEmulator(const char* szExecutable, const char* szD
 // NULL until made.
 //
 //////////////////////////////////////////////////////////////////////////
-Ptr<CButton> CIDEDebugging::GetStartButton(void) { return mpStartButton; }

@@ -30,7 +30,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 //The debug script's commands that are the IDE's (RunCommand); "goto:" takes what follows it.
-static const char*	gaszIDEScriptCommands[] = { "goto:", "rename", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printexplorer", "printedits", "printspans", "configuration:", "waitindex" };
+static const char*	gaszIDEScriptCommands[] = { "goto:", "rename", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printexplorer", "printedits", "printspans", "configuration:", "waitindex" };
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -212,7 +212,7 @@ void CIDEScript::RunCommand(const char* szCommand)
 	else if (strcmp(szCommand, "printbuttons") == 0)
 	{
 		//The toolbar's buttons' commands.
-		printf("Buttons: Start [%s]\n", GetCommandName(mpcContent->GetDebugging()->GetStartButton()));
+		printf("Buttons: Start [%s]\n", GetCommandName(mpcContent->GetRunning()->GetStartButton()));
 		fflush(stdout);
 	}
 	else if (strncmp(szCommand, "command:", 8) == 0)
@@ -288,6 +288,12 @@ void CIDEScript::RunCommand(const char* szCommand)
 			printf(" %s,", pBox->GetItemText(i));
 		}
 		printf("\n");
+		fflush(stdout);
+	}
+	else if (strcmp(szCommand, "printrun") == 0)
+	{
+		//Whether the tool is running, the Start button's caption, and what the Run tab shows.
+		printf("Run: %s [%s]\n%s\n", mpcContent->GetRunning()->IsRunning() ? "running" : "not running", mpcContent->GetRunning()->GetStartButton()->GetCaption(), mpcContent->GetRunning()->GetRunPane()->GetOutput());
 		fflush(stdout);
 	}
 	else if (strcmp(szCommand, "printexplorer") == 0)

@@ -68,6 +68,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDESolutions.h"
 #include "IDEBuilding.h"
 #include "IDEConfigurations.h"
+#include "IDERunning.h"
 #include "IDEDebugging.h"
 #include "IDEGitStatus.h"
 #include "IDEDiffs.h"
@@ -78,6 +79,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 //The tool windows' IDs in the layout file, and the prefixes of the documents'.
 #define IDE_EXPLORER_ID			"SolutionExplorer"
 #define IDE_BUILD_ID			"Build"
+#define IDE_RUN_ID				"Run"
 #define IDE_DEBUG_ID			"Debug"
 #define IDE_CLAUDE_ID			"Claude"
 #define IDE_USAGES_ID			"FindUsages"
@@ -159,6 +161,7 @@ protected:
 	Ptr<CIDESolutions>			mpSolutions;		//Opening, adding and removing solutions, and the recent ones.
 	Ptr<CIDEBuilding>			mpBuilding;			//Build, its menu and tab, and the listings.
 	Ptr<CIDEConfigurations>		mpBuildConfigurations;	//The toolbar's run configuration, and the build configuration it builds.
+	Ptr<CIDERunning>			mpRunning;			//Start, running the run configuration's tool, and the Run tab.
 	Ptr<CIDEDebugging>			mpDebugging;		//The Debug menu, the debugger and breakpoints.
 	Ptr<CIDEGitStatus>			mpGitStatus;		//Git statuses, the branch and change bars.
 	Ptr<CIDEDiffs>				mpDiffs;			//Compare with HEAD, a branch, a revision or a file.
@@ -232,6 +235,7 @@ public:
 	Ptr<CIDESolutions>		GetSolutions(void);
 	Ptr<CIDEBuilding>		GetBuilding(void);
 	Ptr<CIDEConfigurations>	GetBuildConfigurations(void);
+	Ptr<CIDERunning>		GetRunning(void);
 	Ptr<CIDEDebugging>		GetDebugging(void);
 	Ptr<CIDEGitStatus>		GetGitStatus(void);
 	Ptr<CIDEDiffs>			GetDiffs(void);

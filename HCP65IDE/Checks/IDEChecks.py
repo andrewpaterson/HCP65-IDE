@@ -111,18 +111,26 @@ CHECKS = [
 	('keys-and-buttons', {
 		'DEBUG': 'printkeys,printbuttons'},
 		[r'^Keys: Navigate\.GoToDefinition F12 bound$', r'^Keys: Navigate\.GoToClass Control\+N bound$',
-		 r'^Keys: Build\.Build Control\+Shift\+B bound$', r'^Keys: Debug\.Start F5 bound$',
+		 r'^Keys: Build\.Build Control\+Shift\+B bound$', r'^Keys: Run\.Start Control\+F5 bound$', r'^Keys: Debug\.Start F5 bound$',
 		 r'^Keys: Debug\.BreakAll Control\+Pause/Break bound$',
-		 r'^Buttons: Start \[Debug\.Start\]$'], [r'NOT BOUND', r'\[none\]']),
+		 r'^Buttons: Start \[Run\.Start\]$'], [r'NOT BOUND', r'\[none\]']),
 	('configuration', {
 		'CONFIGURATION': 'Debug|W65C816', 'DEBUG': 'printconfig'},
 		[r'^Configuration: \[Debug\|W65C816\] \[Debug\|W65C816\]: Debug\|W65C816, Release\|W65C816, Edit Configurations\.\.\.,$'], []),
-	('run-configuration-chosen', {
-		#A run configuration made in the dialog is chosen with its build configuration.
-		'DIALOG_ANSWER': 'OK', 'RUN_EDITS': 'add;name:Echo;build:Release|W65C816;tool:/bin/echo',
-		'DEBUG': 'command:Run.EditConfigurations,answered:1,printconfig'},
+	('run-configuration-tool', {
+		#A run configuration made in the dialog is chosen with its build configuration, and Start runs its tool with its
+		#arguments and working directory, without the debugger, and says how it exited.
+		'DIALOG_ANSWER': 'OK',
+		'RUN_EDITS': 'add;name:Echo;build:Release|W65C816;tool:/bin/sh;directory:/tmp;arguments:-c pwd',
+		'DEBUG': 'command:Run.EditConfigurations,answered:1,printconfig,command:Run.Start,wait:500,printrun'},
 		[r'^Dialog \[Run Configurations\] answered OK$',
-		 r'^Configuration: \[Echo\] \[Release\|W65C816\]: Debug\|W65C816, Release\|W65C816, Echo, Edit Configurations\.\.\.,$'], []),
+		 r'^Configuration: \[Echo\] \[Release\|W65C816\]: Debug\|W65C816, Release\|W65C816, Echo, Edit Configurations\.\.\.,$',
+		 r'^Run: not running \[Start\]$', r'^Running: /bin/sh -c pwd$', r'^/tmp$', r'^Exited with code 0\.$'], []),
+	('run-configuration-stop', {
+		#Start again while it runs stops it, and the button says Stop until then.
+		'DIALOG_ANSWER': 'OK', 'RUN_EDITS': 'add;name:Sleep;tool:/bin/sleep;arguments:30',
+		'DEBUG': 'command:Run.EditConfigurations,answered:1,command:Run.Start,wait:300,printrun,command:Run.Stop,wait:300,printrun'},
+		[r'^Run: running \[Stop\]$', r'^Running: /bin/sleep 30$', r'^Run: not running \[Start\]$', r'^Exited with code '], []),
 	('run-configuration-rules', {
 		#OK is refused for a name used twice or none; Cancel changes nothing, and removing them all gives the defaults.
 		'DIALOG_ANSWER': 'Cancel',
@@ -132,6 +140,11 @@ CHECKS = [
 		 r'^Run dialog: refused \[A run configuration needs a name\.\]$',
 		 r'^Run dialog: OK \[\]$', r'^Run dialog: OK \[\]$',
 		 r'^Configuration: \[Debug\|W65C816\] \[Debug\|W65C816\]: Debug\|W65C816, Release\|W65C816, Edit Configurations\.\.\.,$'], []),
+	('run-configuration-no-tool', {
+		#A tool that isn't there says so when it starts.
+		'DIALOG_ANSWER': 'OK', 'RUN_EDITS': 'add;name:Missing;tool:/no/such/tool',
+		'DEBUG': 'command:Run.EditConfigurations,answered:1,command:Run.Start,wait:500,printrun'},
+		[r'^Run: not running \[Start\]$', r'^Running: /no/such/tool$'], []),
 	('explorer', {
 		'OPEN': 'CalculatorParser.cpp', 'EDIT': 'explorer', 'DEBUG': 'printexplorer'},
 		[r'^Explorer: \[.*/BaseLib/CalculatorParser\.cpp\]$'], []),
@@ -144,10 +157,10 @@ CHECKS = [
 		 r'^Menu File/Recent Solutions: 1 ',
 		 r'^Menu Edit: Undo \[Ctrl\+Z\]\(disabled\), Redo \[Ctrl\+Shift\+Z\]\(disabled\), Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Select All \[Ctrl\+A\], Undo Across Files\(disabled\), Redo Across Files\(disabled\)$',
 		 r'^Menu Navigate: Class\.\.\. \[Ctrl\+N\], File\.\.\. \[Ctrl\+Shift\+N\], Symbol\.\.\. \[Ctrl\+Alt\+Shift\+N\]$',
-		 r'^Menu View: Solution Explorer, Find Usages, Build, Debug, Claude$',
+		 r'^Menu View: Solution Explorer, Find Usages, Build, Run, Debug, Claude$',
 		 r'^Menu Git: Compare with HEAD, Compare with Branch\.\.\., Compare with Revision\.\.\.$',
 		 r'^Menu Build: Build \[Ctrl\+Shift\+B\]$',
-		 r'^Menu Debug: Start Debugging \[F5\], Stop Debugging \[Shift\+F5\], Restart \[Ctrl\+Shift\+F5\], Break All \[Ctrl\+Pause/Break\], Attach to Emulator\.\.\., Step Into \[F11\], Step Over \[F10\], Step Out \[Shift\+F11\], Toggle Breakpoint \[F9\], ',
+		 r'^Menu Debug: Start Debugging \[F5\], Start Without Debugging \[Ctrl\+F5\], Stop Debugging \[Shift\+F5\], Stop Running\(disabled\), Restart \[Ctrl\+Shift\+F5\], Break All \[Ctrl\+Pause/Break\], Attach to Emulator\.\.\., Step Into \[F11\], Step Over \[F10\], Step Out \[Shift\+F11\], Toggle Breakpoint \[F9\], ',
 		 r'^Menu Window: Reset Window Layout, Close All Documents$',
 		 r'^Menu Editor: Go to Source \[Ctrl\+B\], Find Usages \[Alt\+F7\], Rename\.\.\. \[Shift\+F6\], Refactor>$',
 		 r'^Menu Editor/Refactor: Extract Method\.\.\.\(disabled\)$',
