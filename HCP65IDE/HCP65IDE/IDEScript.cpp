@@ -212,7 +212,7 @@ void CIDEScript::RunCommand(const char* szCommand)
 	else if (strcmp(szCommand, "printbuttons") == 0)
 	{
 		//The toolbar's buttons' commands.
-		printf("Buttons: Build [%s] Start [%s]\n", GetCommandName(mpcContent->GetBuilding()->GetBuildButton()), GetCommandName(mpcContent->GetDebugging()->GetStartButton()));
+		printf("Buttons: Start [%s]\n", GetCommandName(mpcContent->GetDebugging()->GetStartButton()));
 		fflush(stdout);
 	}
 	else if (strncmp(szCommand, "command:", 8) == 0)

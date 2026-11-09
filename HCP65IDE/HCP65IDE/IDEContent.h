@@ -157,7 +157,7 @@ protected:
 	Ptr<CIDEUsages>				mpUsages;			//Find Usages.
 	Ptr<CIDEDocuments>			mpDocuments;		//The open files' tabs.
 	Ptr<CIDESolutions>			mpSolutions;		//Opening, adding and removing solutions, and the recent ones.
-	Ptr<CIDEBuilding>			mpBuilding;			//Build, its tab and button, and the listings.
+	Ptr<CIDEBuilding>			mpBuilding;			//Build, its menu and tab, and the listings.
 	Ptr<CIDEConfigurations>		mpBuildConfigurations;	//The toolbar's configuration and platform.
 	Ptr<CIDEDebugging>			mpDebugging;		//The Debug menu, the debugger and breakpoints.
 	Ptr<CIDEGitStatus>			mpGitStatus;		//Git statuses, the branch and change bars.

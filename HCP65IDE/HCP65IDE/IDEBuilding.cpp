@@ -77,7 +77,6 @@ void CIDEBuilding::Class(void)
 	U_Unknown(CCPP65ListingIndex, mcListings);
 	M_Pointer(mpBuildPane);
 	M_Pointer(mpBuildTool);
-	M_Pointer(mpBuildButton);
 	U_Size(muiBuildStep);
 	U_String(mszLibc65);
 	U_Size(muiListingToShow);
@@ -423,15 +422,16 @@ void CIDEBuilding::AddCommands(Ptr<CCommandSet> pCommands)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The toolbar's Build button.
+// The Build menu.
 //
 //////////////////////////////////////////////////////////////////////////
-Ptr<CButton> CIDEBuilding::CreateBuildButton(void)
+Ptr<CMenuContainer> CIDEBuilding::CreateBuildMenu(void)
 {
-	mpBuildButton = OMalloc<CButton>(mpcContent->GetWindow(), mpcContent->GetTheme(), "Build");
-	mpBuildButton->SetAlignment(CSH_Left, CSV_Center);
-	mpBuildButton->SetCommand(mpcContent->GetCommands()->Find("Build.Build"));
-	return mpBuildButton;
+	Ptr<CMenuContainer>	pMenu;
+
+	pMenu = OMalloc<CMenuContainer>(mpcContent->GetWindow(), mpcContent->GetTheme());
+	pMenu->AddItem(mpcContent->GetCommands()->Find("Build.Build"));
+	return pMenu;
 }
 
 
@@ -449,9 +449,3 @@ void CIDEBuilding::StopBuild(void)
 }
 
 
-//////////////////////////////////////////////////////////////////////////
-//
-// NULL until made.
-//
-//////////////////////////////////////////////////////////////////////////
-Ptr<CButton> CIDEBuilding::GetBuildButton(void) { return mpBuildButton; }

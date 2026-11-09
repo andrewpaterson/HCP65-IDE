@@ -113,7 +113,7 @@ CHECKS = [
 		[r'^Keys: Navigate\.GoToDefinition F12 bound$', r'^Keys: Navigate\.GoToClass Control\+N bound$',
 		 r'^Keys: Build\.Build Control\+Shift\+B bound$', r'^Keys: Debug\.Start F5 bound$',
 		 r'^Keys: Debug\.BreakAll Control\+Pause/Break bound$',
-		 r'^Buttons: Build \[Build\.Build\] Start \[Debug\.Start\]$'], [r'NOT BOUND', r'\[none\]']),
+		 r'^Buttons: Start \[Debug\.Start\]$'], [r'NOT BOUND', r'\[none\]']),
 	('configuration', {
 		'CONFIGURATION': 'Debug|W65C816', 'DEBUG': 'printconfig'},
 		[r'^Configuration: \[Debug\] \[W65C816\]$'], []),
@@ -131,6 +131,7 @@ CHECKS = [
 		 r'^Menu Navigate: Class\.\.\. \[Ctrl\+N\], File\.\.\. \[Ctrl\+Shift\+N\], Symbol\.\.\. \[Ctrl\+Alt\+Shift\+N\]$',
 		 r'^Menu View: Solution Explorer, Find Usages, Build, Debug, Claude$',
 		 r'^Menu Git: Compare with HEAD, Compare with Branch\.\.\., Compare with Revision\.\.\.$',
+		 r'^Menu Build: Build \[Ctrl\+Shift\+B\]$',
 		 r'^Menu Debug: Start Debugging \[F5\], Stop Debugging \[Shift\+F5\], Restart \[Ctrl\+Shift\+F5\], Break All \[Ctrl\+Pause/Break\], Attach to Emulator\.\.\., Step Into \[F11\], Step Over \[F10\], Step Out \[Shift\+F11\], Toggle Breakpoint \[F9\], ',
 		 r'^Menu Window: Reset Window Layout, Close All Documents$',
 		 r'^Menu Editor: Go to Source \[Ctrl\+B\], Find Usages \[Alt\+F7\], Rename\.\.\. \[Shift\+F6\], Refactor>$',

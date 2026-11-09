@@ -24,7 +24,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "StandardLib/Pointer.h"
 #include "BaseLib/ArrayChars.h"
 #include "WindowLib/Window.h"
-#include "WindowLib/Button.h"
+#include "WindowLib/MenuContainer.h"
 #include "WindowLib/DockManager.h"
 #include "WindowLib/CommandSet.h"
 #include "CppParserLib/CPP65ListingIndex.h"
@@ -50,7 +50,6 @@ protected:
 	CArrayInt					maiBuildOrder;		//The solutions a build builds, in order.
 	CCPP65ListingIndex			mcListings;			//The last HCP65 build's listings, given to the open files.
 	Ptr<CDockPane>				mpBuildTool;
-	Ptr<CButton>				mpBuildButton;
 	Ptr<CIDEBuildPane>			mpBuildPane;
 	size						muiBuildStep;		//The one being built.
 	CChars						mszLibc65;			//The HCP65 compiler's system headers.
@@ -64,8 +63,7 @@ public:
 
 	void				CreatePane(SDockPlace* psPlace);
 	void				AddCommands(Ptr<CCommandSet> pCommands);
-	Ptr<CButton>		CreateBuildButton(void);
-	Ptr<CButton>		GetBuildButton(void);
+	Ptr<CMenuContainer>	CreateBuildMenu(void);
 	Ptr<CDockPane>		GetBuildTool(void);
 	Ptr<CIDEBuildPane>	GetBuildPane(void);
 	void				SetLibc65Directory(const char* szDirectory);

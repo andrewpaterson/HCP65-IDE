@@ -411,12 +411,11 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpAskClaude->CreatePane(&sPlace);
 	mpDock->Show(mpUsages->GetTool());
 
-	//The toolbar: the build configuration's configuration and platform, as Visual Studio has them, and Build.
+	//The toolbar: the build configuration's configuration and platform, as Visual Studio has them, and Start.
 	mpBuildConfigurations->CreateComboBoxes();
 	pToolbar = OMalloc<CToolbar>(pWindow, mpTheme, false);
 	pToolbar->Append(mpBuildConfigurations->GetConfigurationBox());
 	pToolbar->Append(mpBuildConfigurations->GetPlatformBox());
-	pToolbar->Append(mpBuilding->CreateBuildButton());
 	pToolbar->Append(mpDebugging->CreateStartButton());
 
 	//The branch checked out, at the toolbar's right, as IntelliJ IDEA shows it.
@@ -450,7 +449,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 // Solutions, Clear Recent Solutions, Save, Save All, Compare with File and
 // Exit;
 // View, showing the tool windows; Git, with Compare with HEAD, a branch
-// or a revision; Debug; and Window, with Reset Window Layout and Close
+// or a revision; Build; Debug; and Window, with Reset Window Layout and Close
 // All Documents, as in Visual Studio.
 //
 //////////////////////////////////////////////////////////////////////////
@@ -482,6 +481,7 @@ Ptr<CMenuBar> CIDEContent::CreateMenuBar(void)
 	mpMenuBar->AddMenu("Navigate", mpNavigator->CreateNavigateMenu());
 	mpMenuBar->AddMenu("View", mpViewMenu);
 	mpMenuBar->AddMenu("Git", mpDiffs->CreateGitMenu());
+	mpMenuBar->AddMenu("Build", mpBuilding->CreateBuildMenu());
 	mpMenuBar->AddMenu("Debug", mpDebugging->CreateDebugMenu());
 	mpMenuBar->AddMenu("Window", pWindowMenu);
 	mpMenuBar->SetAlignment(CSH_Stretch, CSV_Stretch);
