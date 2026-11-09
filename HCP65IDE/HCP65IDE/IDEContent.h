@@ -138,8 +138,6 @@ protected:
 	SDialogLook					msDialogLook;
 	Ptr<CMenuBar>				mpMenuBar;
 	Ptr<CCommandSet>			mpCommands;  //What the keys, menus and toolbar run, given to the window.
-	Ptr<CMenuItem>				mpExitItem;			//File, Exit.
-	Ptr<CMenuItem>				mpResetLayoutItem;	//Window, Reset Window Layout.
 	Ptr<CMenuContainer>			mpViewMenu;			//An item for each tool window, made as it opens.
 	Ptr<CDockManager>			mpDock;
 	Ptr<CImageCel>				mpFolderIcon;		//The file chooser's.
@@ -250,7 +248,8 @@ public:
 protected:
 	Ptr<CMenuBar>		CreateMenuBar(void);
 	void				AddCommands(void);
-	void				MenuItemClicked(CMenuItem* pcItem);
+	void				Exit(void);
+	void				ResetLayout(void);
 	void				ViewMenuOpening(CMenuContainer* pcMenu);
 	void				ViewItemClicked(CMenuItem* pcItem);
 };

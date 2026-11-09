@@ -313,6 +313,12 @@ CHECKS = [
 		'EDIT': 'renamable,replace:37|virtual |,caret:37:9,renamable'},
 		[r'^Rename: IsParentheses \[CCalcExpression::IsParentheses\(\)\] at 7 places, 1 overrides$',
 		 r'^Rename: IsParentheses \[CCalcExpression::IsParentheses\(\)\] at 5 places, 0 overrides$'], []),
+	('file-commands', {
+		#Menu items that became commands run from their names, as their keys would.  A file chooser isn't answered, so
+		#those aren't run here.
+		'OPEN': 'CalculatorParser.cpp', 'DIALOG_ANSWER': 'Cancel',
+		'DEBUG': 'command:Git.CompareWithBranch,answered:1,command:Git.CompareWithRevision,answered:2,command:Git.CompareWithHead,printdiffs,command:Window.ResetLayout,printtabs'},
+		[r'^Dialog \[.*\] answered Cancel$', r'^Dialog \[.*\] answered Cancel$', r'^Diffs: \[>CalculatorParser\.cpp \(HEAD vs\. Your version\)\]$', r'^Tabs: .*CalculatorParser\.cpp'], [r'not found']),
 	('view-menu', {
 		'OPEN': 'CalculatorParser.cpp', 'DEBUG': 'clickmenu:View/Debug,clickmenu:Window/Close All Documents,printtabs'},
 		[r'^Tabs:$'], [r'not found', r'disabled']),

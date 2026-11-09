@@ -200,9 +200,7 @@ void CIDEContent::Class(void)
 	U_Pointer(msDialogLook.pcDimFont);
 	M_Pointer(mpMenuBar);
 	M_Pointer(mpCommands);
-	M_Pointer(mpExitItem);
 	M_Pointer(mpViewMenu);
-	M_Pointer(mpResetLayoutItem);
 	M_Pointer(mpDock);
 	M_Pointer(mpFolderIcon);
 	M_Pointer(mpFileIcon);
@@ -244,11 +242,6 @@ void CIDEContent::Free(void)
 
 	//An object's memory is freed without its destructor running so the content and its listeners take themselves off
 	//the widgets still here.
-	if (mpExitItem.IsNotNull())
-	{
-		mpExitItem->GetClickEvent()->Remove(this);
-		mpResetLayoutItem->GetClickEvent()->Remove(this);
-	}
 	if (mpViewMenu.IsNotNull())
 	{
 		mpViewMenu->GetOpeningEvent()->Remove(this);
@@ -278,6 +271,7 @@ void CIDEContent::Free(void)
 		mpWindow->CancelPosted(&mpSolutions);
 		mpWindow->CancelPosted(&mpBuildConfigurations);
 		mpWindow->CancelPosted(&mpBuilding);
+		mpWindow->CancelPosted(&mpDiffs);
 	}
 
 	//A build still running is stopped (an HCP65 build is waited for) before the solution it builds goes.
@@ -466,16 +460,14 @@ Ptr<CMenuBar> CIDEContent::CreateMenuBar(void)
 	mpDocuments->AddFileItems(pFile);
 	mpDiffs->AddFileItems(pFile);
 	pFile->AddSeparator();
-	mpExitItem = pFile->AddItem("Exit");
-	mpExitItem->GetClickEvent()->Add(this, &CIDEContent::MenuItemClicked);
+	pFile->AddItem(mpCommands->Find("File.Exit"));
 
 	mpViewMenu = OMalloc<CMenuContainer>(mpWindow, mpTheme);
 	mpViewMenu->GetOpeningEvent()->Add(this, &CIDEContent::ViewMenuOpening);
 	mpViewMenu->GetItemClickEvent()->Add(this, &CIDEContent::ViewItemClicked);
 
 	pWindowMenu = OMalloc<CMenuContainer>(mpWindow, mpTheme);
-	mpResetLayoutItem = pWindowMenu->AddItem("Reset Window Layout");
-	mpResetLayoutItem->GetClickEvent()->Add(this, &CIDEContent::MenuItemClicked);
+	pWindowMenu->AddItem(mpCommands->Find("Window.ResetLayout"));
 	mpDocuments->AddWindowItems(pWindowMenu);
 
 	mpMenuBar = OMalloc<CMenuBar>(mpWindow, mpTheme);
@@ -496,22 +488,18 @@ Ptr<CMenuBar> CIDEContent::CreateMenuBar(void)
 //
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEContent::MenuItemClicked(CMenuItem* pcItem)
+void CIDEContent::Exit(void)
 {
-	if (pcItem == &mpExitItem)
+	//As the window's close button: the window stops, and the application saves what it keeps as it ends.  Files
+	//with changes are asked about first.
+	if (mpCloseGuard->RequestExit())
 	{
-		//As the window's close button: the window stops, and the application saves what it keeps as it ends.  Files
-		//with changes are asked about first.
-		if (mpCloseGuard->RequestExit())
-		{
-			mpWindow->Stop();
-		}
-	}
-	else if (pcItem == &mpResetLayoutItem)
-	{
-		mpDock->ResetLayout();
+		mpWindow->Stop();
 	}
 }
+
+
+void CIDEContent::ResetLayout(void) { mpDock->ResetLayout(); }
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -562,11 +550,17 @@ void CIDEContent::AddCommands(void)
 	mpCommands->Add("Navigate.GoToDefinition", "Go to Definition", "F12", Ptr<CImageCel>(), this, &CIDEContent::GoToDefinition);
 	mpCommands->Add("Navigate.FindReferences", "Find All References", "Shift+F12", Ptr<CImageCel>(), this, &CIDEContent::FindReferences);
 	mpEdit->AddCommands(mpCommands);
+
+	//File's in its menu's order, as the Keymap lists them in the order they're added.
+	mpSolutions->AddCommands(mpCommands);
 	mpDocuments->AddCommands(mpCommands);
+	mpDiffs->AddCommands(mpCommands);
+	mpCommands->Add("File.Exit", "Exit", "", Ptr<CImageCel>(), this, &CIDEContent::Exit);
+	mpCommands->Add("Window.ResetLayout", "Reset Window Layout", "", Ptr<CImageCel>(), this, &CIDEContent::ResetLayout);
+
 	mpNavigator->AddCommands(mpCommands);
 	mpRename->AddCommands(mpCommands);
 	mpUsages->AddCommands(mpCommands);
-	mpSolutions->AddCommands(mpCommands);
 	mpBuilding->AddCommands(mpCommands);
 	mpBuildConfigurations->AddCommands(mpCommands);
 	mpRunning->AddCommands(mpCommands);

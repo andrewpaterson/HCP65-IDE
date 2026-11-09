@@ -45,19 +45,14 @@ CONSTRUCTABLE(CIDESolutions);
 DESTRUCTABLE(CIDESolutions);
 protected:
 	CIDEContent*			mpcContent;  //Not held: the content holds it.
-	Ptr<CMenuItem>			mpOpenItem;  //File, Open Project/Solution.
-	Ptr<CMenuItem>			mpAddSolutionItem;
-	Ptr<CMenuItem>			mpCloseSolutionItem;
 	Ptr<CMenuContainer>		mpRecentMenu;  //File, Recent Solutions: an item for each, or one saying there are none.
-	Ptr<CMenuItem>			mpClearRecentItem;
 	Ptr<CSolutionExplorer>	mpExplorer;  //The solutions' projects, folders and files.
 	Ptr<CDockPane>			mpExplorerTool;
 	Ptr<CMenuContainer>		mpExplorerMenu;  //A solution's: Set as Startup Solution and Remove.
-	Ptr<CMenuItem>			mpStartupItem;
-	Ptr<CMenuItem>			mpRemoveSolutionItem;
 	Ptr<CFileChooser>		mpFileChooser;  //The solution to open or add, while it's shown.
 	CBuildRecentFiles		mcRecent;			//The solutions and workspaces opened last.
 	CChars					mszRecentFile;		//Where they are kept, empty if they aren't.
+	CChars					mszQueuedCommand;	//The name of the command to run at the next tick.
 	CChars					mszQueuedOpen;		//A recent one chosen, opened at the next tick (OpenQueuedSolution).
 public:
 	void	Init(CIDEContent* pcContent);
@@ -98,12 +93,12 @@ public:
 
 protected:
 	Ptr<CMenuContainer>	CreateExplorerMenu(void);
-	void				ExplorerMenuItemClicked(CMenuItem* pcItem);
 	void				WriteRecent(void);
 	void				LetGoOfWorkspace(void);
 	CBuildRecentFiles*	GetRecent(void);
 	void				OpenQueuedSolution(void);
-	void				FileMenuItemClicked(CMenuItem* pcItem);
+	void				QueueCommand(CCommand* pcCommand);
+	void				RunQueuedCommand(void);
 	void				RecentItemClicked(CMenuItem* pcItem);
 };
 

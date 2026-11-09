@@ -52,17 +52,12 @@ void CIDESolutions::Init(CIDEContent* pcContent)
 {
 	PreInit();
 	mpcContent = pcContent;
-	mpOpenItem = NULL;
-	mpAddSolutionItem = NULL;
-	mpCloseSolutionItem = NULL;
 	mpRecentMenu = NULL;
-	mpClearRecentItem = NULL;
 	mpExplorer = NULL;
 	mpExplorerTool = NULL;
 	mpExplorerMenu = NULL;
-	mpStartupItem = NULL;
-	mpRemoveSolutionItem = NULL;
 	mpFileChooser = NULL;
+	mszQueuedCommand.Init();
 	mcRecent.Init();
 	mszRecentFile.Init();
 	mszQueuedOpen.Init();
@@ -77,17 +72,12 @@ void CIDESolutions::Init(CIDEContent* pcContent)
 void CIDESolutions::Class(void)
 {
 	U_Pointer(mpcContent);
-	M_Pointer(mpOpenItem);
-	M_Pointer(mpAddSolutionItem);
-	M_Pointer(mpCloseSolutionItem);
 	M_Pointer(mpRecentMenu);
-	M_Pointer(mpClearRecentItem);
 	M_Pointer(mpExplorer);
 	M_Pointer(mpExplorerTool);
 	M_Pointer(mpExplorerMenu);
-	M_Pointer(mpStartupItem);
-	M_Pointer(mpRemoveSolutionItem);
 	M_Pointer(mpFileChooser);
+	U_String(mszQueuedCommand);
 	U_Unknown(CBuildRecentFiles, mcRecent);
 	U_String(mszRecentFile);
 	U_String(mszQueuedOpen);
@@ -102,30 +92,11 @@ void CIDESolutions::Class(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDESolutions::Free(void)
 {
-	if (mpOpenItem.IsNotNull())
-	{
-		mpOpenItem->GetClickEvent()->Remove(this);
-	}
-	if (mpAddSolutionItem.IsNotNull())
-	{
-		mpAddSolutionItem->GetClickEvent()->Remove(this);
-	}
-	if (mpCloseSolutionItem.IsNotNull())
-	{
-		mpCloseSolutionItem->GetClickEvent()->Remove(this);
-	}
-	if (mpClearRecentItem.IsNotNull())
-	{
-		mpClearRecentItem->GetClickEvent()->Remove(this);
-	}
 	if (mpExplorer.IsNotNull() && mpExplorer->GetTree().IsNotNull())
 	{
 		mpExplorer->GetTree()->GetActivationEvent()->Remove(this);
 	}
-	if (mpExplorerMenu.IsNotNull())
-	{
-		mpExplorerMenu->GetItemClickEvent()->Remove(this);
-	}
+	mszQueuedCommand.Kill();
 	mszQueuedOpen.Kill();
 	mszRecentFile.Kill();
 	mcRecent.Kill();
@@ -858,28 +829,9 @@ void CIDESolutions::CreateExplorerPane(SDockPlace* psPlace)
 Ptr<CMenuContainer> CIDESolutions::CreateExplorerMenu(void)
 {
 	mpExplorerMenu = OMalloc<CMenuContainer>(mpcContent->GetWindow(), mpcContent->GetTheme());
-	mpStartupItem = mpExplorerMenu->AddItem("Set as Startup Solution");
-	mpRemoveSolutionItem = mpExplorerMenu->AddItem("Remove Solution");
-	mpExplorerMenu->GetItemClickEvent()->Add(this, &CIDESolutions::ExplorerMenuItemClicked);
+	mpExplorerMenu->AddItem(mpcContent->GetCommands()->Find("Explorer.SetStartupSolution"));
+	mpExplorerMenu->AddItem(mpcContent->GetCommands()->Find("Explorer.RemoveSolution"));
 	return mpExplorerMenu;
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// Solution Explorer's menu's items.
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDESolutions::ExplorerMenuItemClicked(CMenuItem* pcItem)
-{
-	if (pcItem == &mpStartupItem)
-	{
-		SetStartupSolution(mpExplorer->GetNodeSolution(mpExplorer->GetTree()->GetSelectedNode()));
-	}
-	else if (pcItem == &mpRemoveSolutionItem)
-	{
-		RemoveSolution(mpExplorer->GetNodeSolution(mpExplorer->GetTree()->GetSelectedNode()));
-	}
 }
 
 
@@ -909,6 +861,12 @@ void CIDESolutions::ExplorerActivated(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDESolutions::AddCommands(Ptr<CCommandSet> pCommands)
 {
+	pCommands->Add("File.OpenSolution", "Open Project/Solution...", "", mpcContent->GetFolderIcon(), this, &CIDESolutions::QueueCommand);
+	pCommands->Add("File.AddSolution", "Add Solution...", "", Ptr<CImageCel>(), this, &CIDESolutions::QueueCommand);
+	pCommands->Add("File.CloseSolution", "Close Solution", "", Ptr<CImageCel>(), this, &CIDESolutions::QueueCommand);
+	pCommands->Add("File.ClearRecentSolutions", "Clear Recent Solutions", "", Ptr<CImageCel>(), this, &CIDESolutions::QueueCommand);
+	pCommands->Add("Explorer.SetStartupSolution", "Set as Startup Solution", "", Ptr<CImageCel>(), this, &CIDESolutions::QueueCommand);
+	pCommands->Add("Explorer.RemoveSolution", "Remove Solution", "", Ptr<CImageCel>(), this, &CIDESolutions::QueueCommand);
 	pCommands->Add("View.SolutionExplorer", "Solution Explorer", "Alt+1", Ptr<CImageCel>(), this, &CIDESolutions::ShowActiveFileInExplorer);
 }
 
@@ -958,17 +916,29 @@ Ptr<CMenuContainer> CIDESolutions::GetExplorerMenu(void) { return mpExplorerMenu
 //////////////////////////////////////////////////////////////////////////
 void CIDESolutions::AddFileItems(Ptr<CMenuContainer> pFile)
 {
-	mpOpenItem = pFile->AddItem("Open Project/Solution...", mpcContent->GetFolderIcon());
-	mpOpenItem->GetClickEvent()->Add(this, &CIDESolutions::FileMenuItemClicked);
-	mpAddSolutionItem = pFile->AddItem("Add Solution...");
-	mpAddSolutionItem->GetClickEvent()->Add(this, &CIDESolutions::FileMenuItemClicked);
-	mpCloseSolutionItem = pFile->AddItem("Close Solution");
-	mpCloseSolutionItem->GetClickEvent()->Add(this, &CIDESolutions::FileMenuItemClicked);
+	Ptr<CCommandSet>	pCommands;
+
+	pCommands = mpcContent->GetCommands();
+	pFile->AddItem(pCommands->Find("File.OpenSolution"));
+	pFile->AddItem(pCommands->Find("File.AddSolution"));
+	pFile->AddItem(pCommands->Find("File.CloseSolution"));
 	mpRecentMenu = OMalloc<CMenuContainer>(mpcContent->GetWindow(), mpcContent->GetTheme());
 	pFile->AddItem("Recent Solutions", NULL, mpRecentMenu);
-	mpClearRecentItem = pFile->AddItem("Clear Recent Solutions");
-	mpClearRecentItem->GetClickEvent()->Add(this, &CIDESolutions::FileMenuItemClicked);
+	pFile->AddItem(pCommands->Find("File.ClearRecentSolutions"));
 	ShowRecentMenu();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A command's keys or menu item: what it does is done at the next tick,
+// outside the input, as it can show a dialog.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDESolutions::QueueCommand(CCommand* pcCommand)
+{
+	mszQueuedCommand.Set(pcCommand->GetName());
+	mpcContent->GetWindow()->Post(this, &CIDESolutions::RunQueuedCommand);
 }
 
 
@@ -976,22 +946,30 @@ void CIDESolutions::AddFileItems(Ptr<CMenuContainer> pFile)
 //
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDESolutions::FileMenuItemClicked(CMenuItem* pcItem)
+void CIDESolutions::RunQueuedCommand(void)
 {
-	if (pcItem == &mpOpenItem)
+	if (mszQueuedCommand.Equals("File.OpenSolution"))
 	{
 		ShowOpenSolutionDialog();
 	}
-	else if (pcItem == &mpAddSolutionItem)
+	else if (mszQueuedCommand.Equals("File.AddSolution"))
 	{
 		ShowAddSolutionDialog();
 	}
-	else if (pcItem == &mpCloseSolutionItem)
+	else if (mszQueuedCommand.Equals("File.CloseSolution"))
 	{
 		CloseSelectedSolution();
 	}
-	else if (pcItem == &mpClearRecentItem)
+	else if (mszQueuedCommand.Equals("File.ClearRecentSolutions"))
 	{
 		ClearRecentSolutions();
+	}
+	else if (mszQueuedCommand.Equals("Explorer.SetStartupSolution"))
+	{
+		SetStartupSolution(mpExplorer->GetNodeSolution(mpExplorer->GetTree()->GetSelectedNode()));
+	}
+	else if (mszQueuedCommand.Equals("Explorer.RemoveSolution"))
+	{
+		RemoveSolution(mpExplorer->GetNodeSolution(mpExplorer->GetTree()->GetSelectedNode()));
 	}
 }

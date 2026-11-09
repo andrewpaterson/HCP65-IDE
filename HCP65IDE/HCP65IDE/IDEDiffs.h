@@ -44,10 +44,7 @@ DESTRUCTABLE(CIDEDiffs);
 protected:
 	CIDEContent*	mpcContent;  //Not held: the content holds it.
 	Ptr<CMenuContainer>	mpGitMenu;
-	Ptr<CMenuItem>		mpCompareItem;  //Git, Compare with HEAD.
-	Ptr<CMenuItem>		mpCompareBranchItem;
-	Ptr<CMenuItem>		mpCompareRevisionItem;
-	Ptr<CMenuItem>		mpCompareFileItem;  //File, Compare with File.
+	CChars			mszQueuedCommand;  //The name of the command to run at the next tick.
 	Ptr<CDialog>	mpDialog;  //The branch or revision asked for, while it's shown.
 	Ptr<CFileChooser>	mpFileChooser;  //The file to compare with, while it's shown.
 	CArray<CIDEDiffTab>			maDiffTabs;			//A tab for each diff shown.
@@ -62,6 +59,7 @@ public:
 
 	Ptr<CMenuContainer>	CreateGitMenu(void);
 	void				AddFileItems(Ptr<CMenuContainer> pFile);
+	void				AddCommands(Ptr<CCommandSet> pCommands);
 	bool				CompareWithHead(void);
 	bool				CompareWithRevision(const char* szRevision);
 	bool				CompareWithFile(const char* szPath);
@@ -86,7 +84,8 @@ protected:
 	Ptr<CIDEEditorTab>	GetComparedTab(void);
 	bool				ReadDiffSide(CIDEDiffSide* pcSide, CChars* pszDest);
 	void				MakeDiffTitle(CIDEDiffSide* pcSide, CIDEDiffSide* pcOther, CChars* pszDest);
-	void				MenuItemClicked(CMenuItem* pcItem);
+	void				QueueCommand(CCommand* pcCommand);
+	void				RunQueuedCommand(void);
 };
 
 

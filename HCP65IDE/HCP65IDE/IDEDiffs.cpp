@@ -43,10 +43,7 @@ void CIDEDiffs::Init(CIDEContent* pcContent)
 	PreInit();
 	mpcContent = pcContent;
 	mpGitMenu = NULL;
-	mpCompareItem = NULL;
-	mpCompareBranchItem = NULL;
-	mpCompareRevisionItem = NULL;
-	mpCompareFileItem = NULL;
+	mszQueuedCommand.Init();
 	mpDialog = NULL;
 	mpFileChooser = NULL;
 	maDiffTabs.Init();
@@ -64,10 +61,7 @@ void CIDEDiffs::Class(void)
 {
 	U_Pointer(mpcContent);
 	M_Pointer(mpGitMenu);
-	M_Pointer(mpCompareItem);
-	M_Pointer(mpCompareBranchItem);
-	M_Pointer(mpCompareRevisionItem);
-	M_Pointer(mpCompareFileItem);
+	U_String(mszQueuedCommand);
 	M_Pointer(mpDialog);
 	M_Pointer(mpFileChooser);
 	M_Embedded(maDiffTabs);
@@ -84,14 +78,7 @@ void CIDEDiffs::Class(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDEDiffs::Free(void)
 {
-	if (mpGitMenu.IsNotNull())
-	{
-		mpGitMenu->GetItemClickEvent()->Remove(this);
-	}
-	if (mpCompareFileItem.IsNotNull())
-	{
-		mpCompareFileItem->GetClickEvent()->Remove(this);
-	}
+	mszQueuedCommand.Kill();
 }
 
 
@@ -749,11 +736,13 @@ void CIDEDiffs::FindProjects(void)
 //////////////////////////////////////////////////////////////////////////
 Ptr<CMenuContainer> CIDEDiffs::CreateGitMenu(void)
 {
+	Ptr<CCommandSet>	pCommands;
+
+	pCommands = mpcContent->GetCommands();
 	mpGitMenu = OMalloc<CMenuContainer>(mpcContent->GetWindow(), mpcContent->GetTheme());
-	mpCompareItem = mpGitMenu->AddItem("Compare with HEAD");
-	mpCompareBranchItem = mpGitMenu->AddItem("Compare with Branch...");
-	mpCompareRevisionItem = mpGitMenu->AddItem("Compare with Revision...");
-	mpGitMenu->GetItemClickEvent()->Add(this, &CIDEDiffs::MenuItemClicked);
+	mpGitMenu->AddItem(pCommands->Find("Git.CompareWithHead"));
+	mpGitMenu->AddItem(pCommands->Find("Git.CompareWithBranch"));
+	mpGitMenu->AddItem(pCommands->Find("Git.CompareWithRevision"));
 	return mpGitMenu;
 }
 
@@ -765,31 +754,55 @@ Ptr<CMenuContainer> CIDEDiffs::CreateGitMenu(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDEDiffs::AddFileItems(Ptr<CMenuContainer> pFile)
 {
-	mpCompareFileItem = pFile->AddItem("Compare with File...");
-	mpCompareFileItem->GetClickEvent()->Add(this, &CIDEDiffs::MenuItemClicked);
+	pFile->AddItem(mpcContent->GetCommands()->Find("File.CompareWithFile"));
 }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Git's items and File's Compare with File.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEDiffs::MenuItemClicked(CMenuItem* pcItem)
+void CIDEDiffs::AddCommands(Ptr<CCommandSet> pCommands)
 {
-	if (pcItem == &mpCompareItem)
+	pCommands->Add("Git.CompareWithHead", "Compare with HEAD", "", Ptr<CImageCel>(), this, &CIDEDiffs::QueueCommand);
+	pCommands->Add("Git.CompareWithBranch", "Compare with Branch...", "", Ptr<CImageCel>(), this, &CIDEDiffs::QueueCommand);
+	pCommands->Add("Git.CompareWithRevision", "Compare with Revision...", "", Ptr<CImageCel>(), this, &CIDEDiffs::QueueCommand);
+	pCommands->Add("File.CompareWithFile", "Compare with File...", "", Ptr<CImageCel>(), this, &CIDEDiffs::QueueCommand);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A command's keys or menu item: what it does is done at the next tick,
+// outside the input, as it can show a dialog.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDiffs::QueueCommand(CCommand* pcCommand)
+{
+	mszQueuedCommand.Set(pcCommand->GetName());
+	mpcContent->GetWindow()->Post(this, &CIDEDiffs::RunQueuedCommand);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDiffs::RunQueuedCommand(void)
+{
+	if (mszQueuedCommand.Equals("Git.CompareWithHead"))
 	{
 		CompareWithHead();
 	}
-	else if (pcItem == &mpCompareBranchItem)
+	else if (mszQueuedCommand.Equals("Git.CompareWithBranch"))
 	{
 		ShowCompareWithBranchDialog();
 	}
-	else if (pcItem == &mpCompareRevisionItem)
+	else if (mszQueuedCommand.Equals("Git.CompareWithRevision"))
 	{
 		ShowCompareWithRevisionDialog();
 	}
-	else if (pcItem == &mpCompareFileItem)
+	else if (mszQueuedCommand.Equals("File.CompareWithFile"))
 	{
 		ShowCompareWithFileDialog();
 	}
