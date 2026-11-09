@@ -238,8 +238,9 @@ void CIDEDebugging::ResolveRunPath(const char* szPath, CChars* pszDest)
 //////////////////////////////////////////////////////////////////////////
 //
 // The external tool the chosen run configuration starts, both to run and
-// to debug: its own, or without one its build configuration's emulator, or
-// for a W65C816 the default.  False, with why in pszMessage, if it has none.
+// to debug: its own, or without one for a W65C816 the default emulator, in
+// its folder and with its arguments if it has them.  False, with why in
+// pszMessage, if there is none.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEDebugging::ChooseTool(CChars* pszExecutable, CChars* pszDirectory, CChars* pszArguments, CChars* pszMessage)
@@ -266,30 +267,24 @@ bool CIDEDebugging::ChooseTool(CChars* pszExecutable, CChars* pszDirectory, CCha
 		}
 		pszArguments->Set(pcRun->GetArguments());
 	}
-	else if ((pcConfiguration != NULL) && pcConfiguration->HasEmulator())
-	{
-		ResolveEmulatorPath(pcConfiguration->GetEmulator(), pszExecutable);
-		if (pcConfiguration->GetEmulatorDirectory()[0] != '\0')
-		{
-			ResolveEmulatorPath(pcConfiguration->GetEmulatorDirectory(), pszDirectory);
-		}
-		else
-		{
-			cFileUtil.SplitPath(pszExecutable->Text(), &szFile, pszDirectory);
-		}
-		pszArguments->Set(pcConfiguration->GetEmulatorArguments());
-	}
 	else if ((pcConfiguration != NULL) && (pcConfiguration->GetToolchain() == BT_W65C816) && !mszDefaultEmulator.Empty())
 	{
 		pszExecutable->Set(mszDefaultEmulator);
-		pszDirectory->Set(mszDefaultEmulatorDirectory);
-		pszArguments->Set(pcConfiguration->GetEmulatorArguments());
+		if ((pcRun != NULL) && (pcRun->GetDirectory()[0] != '\0'))
+		{
+			ResolveRunPath(pcRun->GetDirectory(), pszDirectory);
+		}
+		else
+		{
+			pszDirectory->Set(mszDefaultEmulatorDirectory);
+		}
+		pszArguments->Set((pcRun != NULL) ? pcRun->GetArguments() : "");
 	}
 	else
 	{
 		pszMessage->Set("No tool is set for ");
 		pszMessage->Append((pcRun != NULL) ? pcRun->GetName() : "this run configuration");
-		pszMessage->Append(": give it one in " "Edit Configurations.");
+		pszMessage->Append(": give it one in Edit Configurations.");
 		szFile.Kill();
 		return false;
 	}

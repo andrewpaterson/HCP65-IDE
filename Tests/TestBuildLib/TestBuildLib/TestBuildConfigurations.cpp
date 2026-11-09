@@ -75,7 +75,7 @@ void TestBuildConfigurationsFile(void)
 
 	cFileUtil.MakeDir("Output");
 	cConfigurations.Init();
-	cConfigurations.Add("Debug|W65C816", BT_W65C816, "Debug|Win32")->SetEmulator("Emulators" _FS_ "HCP65.exe", "Emulators", "--fast --mute");
+	cConfigurations.Add("Debug|W65C816", BT_W65C816, "Debug|Win32");
 	cConfigurations.GetConfiguration(0)->SetBreakpointSpace("User");
 	cConfigurations.GetConfiguration(0)->SetNoFloats(true);
 	cConfigurations.GetConfiguration(0)->SetMathTables(false);
@@ -88,12 +88,6 @@ void TestBuildConfigurationsFile(void)
 	AssertBuildConfiguration("Debug|W65C816", BT_W65C816, "Debug|Win32", cRead.GetConfiguration(0));
 	AssertBuildConfiguration("Fast GCC", BT_GCC, "Release|x64", cRead.GetConfiguration(1));
 
-	//The emulator is kept, and only where it was set.
-	AssertTrue(cRead.GetConfiguration(0)->HasEmulator());
-	AssertString("Emulators" _FS_ "HCP65.exe", cRead.GetConfiguration(0)->GetEmulator());
-	AssertString("Emulators", cRead.GetConfiguration(0)->GetEmulatorDirectory());
-	AssertString("--fast --mute", cRead.GetConfiguration(0)->GetEmulatorArguments());
-	AssertFalse(cRead.GetConfiguration(1)->HasEmulator());
 	AssertString("User", cRead.GetConfiguration(0)->GetBreakpointSpace());
 	AssertString("", cRead.GetConfiguration(1)->GetBreakpointSpace());
 

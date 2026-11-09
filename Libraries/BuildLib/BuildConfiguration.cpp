@@ -28,9 +28,6 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 #define BUILD_CONFIGURATION_NAME		"Name"
 #define BUILD_CONFIGURATION_TOOLCHAIN	"Toolchain"
 #define BUILD_CONFIGURATION_SOLUTION	"Solution"
-#define BUILD_CONFIGURATION_EMULATOR	"Emulator"
-#define BUILD_CONFIGURATION_EMULATOR_DIRECTORY	"EmulatorDirectory"
-#define BUILD_CONFIGURATION_EMULATOR_ARGUMENTS	"EmulatorArguments"
 #define BUILD_CONFIGURATION_IMAGE		"Image"
 #define BUILD_CONFIGURATION_EXECUTABLE	"Executable"
 #define BUILD_CONFIGURATION_MODULE		"Module"
@@ -57,9 +54,6 @@ void CBuildConfiguration::Init(const char* szName, EBuildToolchain eToolchain, c
 	mszName.Init(szName);
 	meToolchain = eToolchain;
 	mszSolutionConfiguration.Init(szSolutionConfiguration);
-	mszEmulator.Init();
-	mszEmulatorDirectory.Init();
-	mszEmulatorArguments.Init();
 	mszBreakpointSpace.Init();
 	mbNoFloats = false;
 	mbMathTables = true;
@@ -99,9 +93,6 @@ void CBuildConfiguration::Kill(void)
 	mcExecutable.Kill();
 	mcImage.Kill();
 	mszBreakpointSpace.Kill();
-	mszEmulatorArguments.Kill();
-	mszEmulatorDirectory.Kill();
-	mszEmulator.Kill();
 	mszSolutionConfiguration.Kill();
 	mszName.Kill();
 }
@@ -109,9 +100,8 @@ void CBuildConfiguration::Kill(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// <Configuration Name="Debug|W65C816" Toolchain="W65C816" Solution="Debug|Win32"/>, with Emulator,
-// EmulatorDirectory and EmulatorArguments only where they are set, and its <Image>, <Executable> or <Module> inside
-// it if it has one.
+// <Configuration Name="Debug|W65C816" Toolchain="W65C816" Solution="Debug|Win32"/>, with its <Image>, <Executable> or
+// <Module> inside it if it has one.
 //
 //////////////////////////////////////////////////////////////////////////
 void CBuildConfiguration::SaveXML(CXMLWriter* pcWriter)
@@ -122,18 +112,6 @@ void CBuildConfiguration::SaveXML(CXMLWriter* pcWriter)
 	pcWriter->Attribute(BUILD_CONFIGURATION_NAME, mszName.Text());
 	pcWriter->Attribute(BUILD_CONFIGURATION_TOOLCHAIN, GetToolchainName(meToolchain));
 	pcWriter->Attribute(BUILD_CONFIGURATION_SOLUTION, mszSolutionConfiguration.Text());
-	if (!mszEmulator.Empty())
-	{
-		pcWriter->Attribute(BUILD_CONFIGURATION_EMULATOR, mszEmulator.Text());
-	}
-	if (!mszEmulatorDirectory.Empty())
-	{
-		pcWriter->Attribute(BUILD_CONFIGURATION_EMULATOR_DIRECTORY, mszEmulatorDirectory.Text());
-	}
-	if (!mszEmulatorArguments.Empty())
-	{
-		pcWriter->Attribute(BUILD_CONFIGURATION_EMULATOR_ARGUMENTS, mszEmulatorArguments.Text());
-	}
 	if (!mszBreakpointSpace.Empty())
 	{
 		pcWriter->Attribute(BUILD_CONFIGURATION_BREAKPOINT_SPACE, mszBreakpointSpace.Text());
@@ -214,7 +192,6 @@ bool CBuildConfiguration::LoadXML(CMarkupTag* pcTag)
 	mszName.Set(szName);
 	meToolchain = eToolchain;
 	mszSolutionConfiguration.Set(szSolution);
-	SetEmulator(pcTag->GetAttribute((char*)BUILD_CONFIGURATION_EMULATOR), pcTag->GetAttribute((char*)BUILD_CONFIGURATION_EMULATOR_DIRECTORY), pcTag->GetAttribute((char*)BUILD_CONFIGURATION_EMULATOR_ARGUMENTS));
 	SetBreakpointSpace(pcTag->GetAttribute((char*)BUILD_CONFIGURATION_BREAKPOINT_SPACE));
 	szNoFloats = pcTag->GetAttribute((char*)BUILD_CONFIGURATION_NO_FLOATS);
 	SetNoFloats((szNoFloats != NULL) && (strcmp(szNoFloats, "true") == 0));
@@ -288,19 +265,6 @@ bool CBuildConfiguration::IsHCP65(void)
 const char* CBuildConfiguration::GetProcessorName(void)
 {
 	return IsHCP65() ? GetToolchainName(meToolchain) : NULL;
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// NULL or empty for none.
-//
-//////////////////////////////////////////////////////////////////////////
-void CBuildConfiguration::SetEmulator(const char* szExecutable, const char* szDirectory, const char* szArguments)
-{
-	mszEmulator.Set(szExecutable ? szExecutable : "");
-	mszEmulatorDirectory.Set(szDirectory ? szDirectory : "");
-	mszEmulatorArguments.Set(szArguments ? szArguments : "");
 }
 
 
@@ -398,10 +362,6 @@ bool CBuildConfiguration::FindToolchain(const char* szName, EBuildToolchain* peT
 char* CBuildConfiguration::GetName(void) { return mszName.Text(); }
 EBuildToolchain CBuildConfiguration::GetToolchain(void) { return meToolchain; }
 char* CBuildConfiguration::GetSolutionConfiguration(void) { return mszSolutionConfiguration.Text(); }
-bool CBuildConfiguration::HasEmulator(void) { return !mszEmulator.Empty(); }
-char* CBuildConfiguration::GetEmulator(void) { return mszEmulator.Text(); }
-char* CBuildConfiguration::GetEmulatorDirectory(void) { return mszEmulatorDirectory.Text(); }
-char* CBuildConfiguration::GetEmulatorArguments(void) { return mszEmulatorArguments.Text(); }
 
 
 //////////////////////////////////////////////////////////////////////////

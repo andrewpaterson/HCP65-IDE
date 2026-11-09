@@ -53,7 +53,7 @@ protected:
 	Ptr<CIDEDebugView>			mpDebugView;  //The Debug tab,
 	Ptr<CDockPane>				mpDebugTool;  //and its tool window.
 	CIDEDebugger				mcDebugger;
-	CChars						mszDefaultEmulator;	//A W65C816 configuration's emulator when it doesn't say.
+	CChars						mszDefaultEmulator;	//A W65C816 run configuration's tool when it hasn't one.
 	CChars						mszDefaultEmulatorDirectory;
 	CChars						mszStoppedFile;		//The source file the debugger is stopped in, and its line
 	uint32						muiStoppedLine;		//(1 based), 0 if it isn't stopped in one.

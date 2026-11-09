@@ -56,10 +56,8 @@ enum EBuildProgram
 //whose projects' files, include directories and defines it builds with.  MSVC builds that configuration as Visual
 //Studio does.  The name is chosen as its configuration and platform, either side of a | ("Debug|W65C816").
 //
-//An HCP65 configuration can say which emulator debugs what it builds: the executable, the folder it runs in and
-//arguments to give it after the debugging ones (split at spaces).  Paths may be relative to the configurations'
-//file.  Without one whatever debugs it chooses.  The emulator must be the configuration's processor
-//(GetProcessorName).
+//What it is run in isn't here: that is a run configuration's (CRunConfiguration).  An emulator that debugs what an
+//HCP65 configuration builds must be the configuration's processor (GetProcessorName).
 //
 //An HCP65 configuration with an image (<Image>, CAsm65Image), an executable (<Executable>, CAsm65Executable, a
 //program a kernal loads) or a module (<Module>, CAsm65Module, a relocatable driver a kernal loads) links what it
@@ -78,9 +76,6 @@ protected:
 	CChars			mszName;
 	EBuildToolchain	meToolchain;
 	CChars			mszSolutionConfiguration;
-	CChars			mszEmulator;
-	CChars			mszEmulatorDirectory;
-	CChars			mszEmulatorArguments;
 	CChars			mszBreakpointSpace;
 	bool			mbNoFloats;
 	bool			mbMathTables;
@@ -107,11 +102,6 @@ public:
 	bool			IsHCP65(void);
 	const char*		GetProcessorName(void);
 
-	void			SetEmulator(const char* szExecutable, const char* szDirectory, const char* szArguments);
-	bool			HasEmulator(void);
-	char*			GetEmulator(void);
-	char*			GetEmulatorDirectory(void);
-	char*			GetEmulatorArguments(void);
 	void			SetBreakpointSpace(const char* szSpace);
 	char*			GetBreakpointSpace(void);
 	void			SetNoFloats(bool bNoFloats);

@@ -28,8 +28,9 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 
 //A named way to run what the workspace builds, as IntelliJ IDEA has them: the build configuration it builds and is
 //debugged as ("Debug|W65C816"), and the external tool it starts: the executable, the folder it runs in and arguments
-//to give it (split at spaces).  Paths may be relative to the workspace's file.  Without a tool it starts the build
-//configuration's emulator.  Kept in the workspace file (CBuildWorkspace).
+//to give it (split at spaces).  Paths may be relative to the workspace's file.  Without a tool, one that builds for the
+//W65C816 starts the default emulator, with its folder and arguments if it has them.  Kept in the workspace file
+//(CBuildWorkspace).
 class CRunConfiguration
 {
 protected:

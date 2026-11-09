@@ -167,6 +167,16 @@ CHECKS = [
 		'DIALOG_ANSWER': 'OK', 'RUN_EDITS': 'add;name:Sleep;tool:/bin/sleep;arguments:30',
 		'DEBUG': 'command:Run.EditConfigurations,answered:1,command:Run.Start,wait:300,printrun,command:Run.Stop,wait:300,printrun'},
 		[r'^Run: running \[Stop\]$', r'^Running: /bin/sleep 30$', r'^Run: not running \[Start\]$', r'^Exited with code '], []),
+	('run-configuration-default-tool', {
+		#Without a tool a W65C816 one starts the default emulator, with its own folder and arguments.
+		'EMULATOR': '/bin/sh', 'DIALOG_ANSWER': 'OK', 'RUN_EDITS': 'add;name:Default;directory:/tmp;arguments:-c pwd',
+		'DEBUG': 'command:Run.EditConfigurations,answered:1,command:Run.Start,wait:500,printrun'},
+		[r'^Running: /bin/sh -c pwd$', r'^/tmp$', r'^Exited with code 0\.$'], []),
+	('run-configuration-nothing-to-start', {
+		#Without a tool, and no build configuration to say it is a W65C816 one, it says what to do.
+		'DIALOG_ANSWER': 'OK', 'RUN_EDITS': 'add;name:Nothing;build:No|Such',
+		'DEBUG': 'command:Run.EditConfigurations,answered:1,command:Run.Start,wait:200,printrun'},
+		[r'^Run: not running \[Start\]$', r'^No tool is set for Nothing: give it one in Edit Configurations\.$'], []),
 	('run-configuration-rules', {
 		#OK is refused for a name used twice or none; Cancel changes nothing, and removing them all gives the defaults.
 		'DIALOG_ANSWER': 'Cancel',
