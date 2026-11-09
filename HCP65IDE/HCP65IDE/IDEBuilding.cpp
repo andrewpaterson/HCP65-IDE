@@ -573,6 +573,7 @@ void CIDEBuilding::SaveEdits(CIDEBuildConfigurationsDialog* pcDialog, CBuildWork
 	CArrayChars						aszRemoved;
 	CArrayChars						aszKept;
 	CChars							szStatus;
+	char*							szRenamed;
 	bool							bResult;
 	bool							bShared;
 	size							i;
@@ -607,20 +608,25 @@ void CIDEBuilding::SaveEdits(CIDEBuildConfigurationsDialog* pcDialog, CBuildWork
 	szStatus.Init();
 	if (bResult)
 	{
+		for (i = 0; i < pcWorkspace->NumRunConfigurations(); i++)
+		{
+			szRenamed = FindRename(&aszOld, &aszNew, pcWorkspace->GetRunConfiguration(i)->GetConfiguration());
+			if (szRenamed != NULL)
+			{
+				pcWorkspace->GetRunConfiguration(i)->SetConfiguration(szRenamed);
+			}
+		}
+		szRenamed = FindRename(&aszOld, &aszNew, mpcContent->GetBuildConfigurations()->GetConfigurationName());
+		if (szRenamed != NULL)
+		{
+			mpcContent->GetBuildConfigurations()->SetConfigurationName(szRenamed);
+		}
 		for (i = 0; i < aszOld.NumElements(); i++)
 		{
-			for (j = 0; j < pcWorkspace->NumRunConfigurations(); j++)
+			for (j = 0; j < pcWorkspace->NumSolutions(); j++)
 			{
-				if (StringCompare(pcWorkspace->GetRunConfiguration(j)->GetConfiguration(), aszOld.GetText(i)) == 0)
-				{
-					pcWorkspace->GetRunConfiguration(j)->SetConfiguration(aszNew.GetText(i));
-				}
+				bShared |= (pcWorkspace->GetSolution(j) != pcSolution) && (pcWorkspace->FindConfiguration(j, aszOld.GetText(i)) != NULL);
 			}
-			if (StringCompare(mpcContent->GetBuildConfigurations()->GetConfigurationName(), aszOld.GetText(i)) == 0)
-			{
-				mpcContent->GetBuildConfigurations()->SetConfigurationName(aszNew.GetText(i));
-			}
-			bShared |= pcWorkspace->FindAnyConfiguration(aszOld.GetText(i)) != NULL;
 		}
 		for (i = 0; i < pasEdits->NumElements(); i++)
 		{
@@ -668,6 +674,29 @@ void CIDEBuilding::SaveEdits(CIDEBuildConfigurationsDialog* pcDialog, CBuildWork
 	aszRemoved.Kill();
 	aszNew.Kill();
 	aszOld.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// What the build configuration szName before the edits is called after
+// them, NULL if it wasn't renamed.  Each run configuration asks once, with
+// the name it had, so names swapped or passed along a chain aren't renamed
+// twice.
+//
+//////////////////////////////////////////////////////////////////////////
+char* CIDEBuilding::FindRename(CArrayChars* paszOld, CArrayChars* paszNew, const char* szName)
+{
+	size	i;
+
+	for (i = 0; i < paszOld->NumElements(); i++)
+	{
+		if (StringCompare(paszOld->GetText(i), szName) == 0)
+		{
+			return paszNew->GetText(i);
+		}
+	}
+	return NULL;
 }
 
 

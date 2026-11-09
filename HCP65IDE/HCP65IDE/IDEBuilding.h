@@ -82,6 +82,7 @@ protected:
 	void				RequestEditDialog(void);
 	void				ShowEditDialog(void);
 	void				SaveEdits(CIDEBuildConfigurationsDialog* pcDialog, CBuildWorkspaceSolution* pcSolution, const char* szFile);
+	char*				FindRename(CArrayChars* paszOld, CArrayChars* paszNew, const char* szName);
 	void				FindRemovedConfigurations(CBuildConfigurations* pcConfigurations, CArrayBuildConfigurationEdits* pasEdits, CArrayChars* paszRemoved);
 	void				ForgetRemovedConfigurations(CArrayChars* paszRemoved, CArrayChars* paszKept);
 	void				ShowNothingToBuild(void);

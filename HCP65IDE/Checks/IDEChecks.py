@@ -199,6 +199,18 @@ CHECKS = [
 		'DIALOG_ANSWER': 'Open File', 'BUILD_EDITS': 'name:Gone',
 		'DEBUG': 'command:Build.EditConfigurations,answered:1,printtabs,printbuildfile'}),
 		[r'^Tabs: .*>Kernel\.hcp65build', r'<Configuration Name="Release\|W65C816"'], [r'Gone']),
+	('build-configuration-swap', dict(MakeSolutionCopy(True), **{
+		#Swapping two names: each run configuration follows what it built, not the name another has just been given, and
+		#the old names still being in the solution saved isn't another solution having them.
+		'DIALOG_ANSWER': 'OK', 'RUN_EDITS': 'add;name:Fast;build:Release|W65C816;add;name:Small;build:Other|W65C816',
+		'BUILD_EDITS': 'select:0;name:Other|W65C816;select:1;name:Release|W65C816',
+		'DEBUG': 'command:Run.EditConfigurations,answered:1,command:Build.EditConfigurations,answered:2,printstatus,printconfig,printrunconfigurations,printbuildfile'}),
+		[r'^Status line: Saved the build configurations\.$',
+		 r'^Configuration: \[Small\] \[Release\|W65C816\]:',
+		 r'^Run configuration: Fast builds Other\|W65C816$',
+		 r'^Run configuration: Small builds Release\|W65C816$',
+		 r'<Configuration Name="Other\|W65C816" Toolchain="W65C816" Solution="Release\|Win32" BreakpointSpace="Kernel">',
+		 r'<Configuration Name="Release\|W65C816" Toolchain="W65C816" Solution="Release\|Win32"/>'], [r'ERROR']),
 	('build-configuration-remove', dict(MakeSolutionCopy(True), **{
 		#The run configuration that was only for the one removed goes with it, and one that is left is chosen.
 		'DIALOG_ANSWER': 'OK', 'BUILD_EDITS': 'remove',
