@@ -26,6 +26,7 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/ArrayTemplate.h"
 #include "VisualStudioLib/VcxSolution.h"
 #include "BuildConfigurations.h"
+#include "RunConfiguration.h"
 
 
 #define BUILD_WORKSPACE_EXTENSION	".hcp65workspace"
@@ -60,11 +61,12 @@ typedef CArrayTemplate<SBuildWorkspaceProject>		CArrayBuildWorkspaceProjects;
 
 //The solutions open together (a program's and the kernal it runs on), one of them the startup solution: the one
 //debugged.  The workspace file (.hcp65workspace) lists them and which is the startup one, their paths relative to
-//it, and the configuration chosen last:
+//it, its run configurations, and the run configuration and build configuration chosen last:
 //
-//	<Workspace Configuration="Release|W65C816">
+//	<Workspace RunConfiguration="ModPlay" Configuration="Release|W65C816">
 //		<Solution File="ModPlay\HCP65ModPlay.sln" Startup="true"/>
 //		<Solution File="..\HCP65Lib\Kernal\HCP65Kernal.sln"/>
+//		<RunConfiguration Name="ModPlay" Configuration="Release|W65C816" Tool="..\Emulator.exe" Arguments="--fill"/>
 //	</Workspace>
 //
 //Each solution has its own configurations (its .hcp65build); a configuration is chosen by name for all of them.
@@ -77,6 +79,8 @@ protected:
 	CArrayBuildWorkspaceSolutions	mapcSolutions;
 	size							muiStartup;		//MAX_SIZE with no solutions.
 	CChars							mszConfiguration;	//The configuration chosen last, empty if none.
+	CChars							mszRunConfiguration;	//The run configuration chosen last, empty if none.
+	CArrayRunConfigurations			masRunConfigurations;
 	CArrayBuildWorkspaceProjects	masProjects;
 
 public:
@@ -96,6 +100,16 @@ public:
 	size					GetStartup(void);
 	void					SetConfiguration(const char* szConfiguration);
 	char*					GetConfiguration(void);
+	void					SetRunConfigurationName(const char* szName);
+	char*					GetRunConfigurationName(void);
+
+	size					NumRunConfigurations(void);
+	CRunConfiguration*		GetRunConfiguration(size uiIndex);
+	CRunConfiguration*		FindRunConfiguration(const char* szName);
+	CRunConfiguration*		FindRunConfigurationBuilding(const char* szConfiguration);
+	CRunConfiguration*		AddRunConfiguration(const char* szName, const char* szConfiguration);
+	void					SetRunConfigurations(CArrayRunConfigurations* pasConfigurations);
+	void					AddDefaultRunConfigurations(void);
 
 	size					NumSolutions(void);
 	CBuildWorkspaceSolution*	GetSolution(size uiSolution);
@@ -121,6 +135,7 @@ protected:
 	void					IndexProjects(void);
 	size					GetSolutionInOrder(size uiIndex);
 	void					GetCardPrograms(const char* szConfiguration, EBuildProgram eProgram, CArrayInt* paiDest);
+	void					ClearRunConfigurations(void);
 };
 
 

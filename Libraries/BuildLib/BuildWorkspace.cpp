@@ -34,6 +34,7 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 #define BUILD_WORKSPACE_FILE			"File"
 #define BUILD_WORKSPACE_STARTUP			"Startup"
 #define BUILD_WORKSPACE_CONFIGURATION	"Configuration"
+#define BUILD_WORKSPACE_RUN_CONFIGURATION	"RunConfiguration"
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -172,6 +173,8 @@ void CBuildWorkspace::Init(void)
 	mapcSolutions.Init();
 	muiStartup = MAX_SIZE;
 	mszConfiguration.Init();
+	mszRunConfiguration.Init();
+	masRunConfigurations.Init();
 	masProjects.Init();
 }
 
@@ -184,9 +187,130 @@ void CBuildWorkspace::Kill(void)
 {
 	Clear();
 	masProjects.Kill();
+	masRunConfigurations.Kill();
+	mszRunConfiguration.Kill();
 	mszConfiguration.Kill();
 	mapcSolutions.Kill();
 	mszFile.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CBuildWorkspace::ClearRunConfigurations(void)
+{
+	size	i;
+
+	for (i = 0; i < masRunConfigurations.NumElements(); i++)
+	{
+		masRunConfigurations.Get(i)->Kill();
+	}
+	masRunConfigurations.ReInit();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// NULL if there is none called szName.
+//
+//////////////////////////////////////////////////////////////////////////
+CRunConfiguration* CBuildWorkspace::FindRunConfiguration(const char* szName)
+{
+	size	i;
+
+	for (i = 0; i < masRunConfigurations.NumElements(); i++)
+	{
+		if (StringCompare(masRunConfigurations.Get(i)->GetName(), szName) == 0)
+		{
+			return masRunConfigurations.Get(i);
+		}
+	}
+	return NULL;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The first run configuration of the build configuration szConfiguration,
+// NULL if there is none.
+//
+//////////////////////////////////////////////////////////////////////////
+CRunConfiguration* CBuildWorkspace::FindRunConfigurationBuilding(const char* szConfiguration)
+{
+	size	i;
+
+	for (i = 0; i < masRunConfigurations.NumElements(); i++)
+	{
+		if (StringCompare(masRunConfigurations.Get(i)->GetConfiguration(), szConfiguration) == 0)
+		{
+			return masRunConfigurations.Get(i);
+		}
+	}
+	return NULL;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// NULL if there's already one called szName.
+//
+//////////////////////////////////////////////////////////////////////////
+CRunConfiguration* CBuildWorkspace::AddRunConfiguration(const char* szName, const char* szConfiguration)
+{
+	CRunConfiguration*	pcConfiguration;
+
+	if (FindRunConfiguration(szName) != NULL)
+	{
+		return NULL;
+	}
+	pcConfiguration = masRunConfigurations.Add();
+	pcConfiguration->Init(szName, szConfiguration);
+	return pcConfiguration;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Copies of pasConfigurations in place of the run configurations there are.
+//
+//////////////////////////////////////////////////////////////////////////
+void CBuildWorkspace::SetRunConfigurations(CArrayRunConfigurations* pasConfigurations)
+{
+	size	i;
+
+	ClearRunConfigurations();
+	for (i = 0; i < pasConfigurations->NumElements(); i++)
+	{
+		masRunConfigurations.Add()->Init(pasConfigurations->Get(i));
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A workspace with no run configurations (one saved before they existed,
+// or none saved) is given one for each build configuration, named after
+// it.  One that has any is left as it is, so those removed stay removed.
+//
+//////////////////////////////////////////////////////////////////////////
+void CBuildWorkspace::AddDefaultRunConfigurations(void)
+{
+	CArrayChars	aszNames;
+	size		i;
+
+	if (masRunConfigurations.NumElements() != 0)
+	{
+		return;
+	}
+	aszNames.Init();
+	GetConfigurationNames(&aszNames);
+	for (i = 0; i < aszNames.NumElements(); i++)
+	{
+		AddRunConfiguration(aszNames.GetText(i), aszNames.GetText(i));
+	}
+	aszNames.Kill();
 }
 
 
@@ -208,6 +332,8 @@ void CBuildWorkspace::Clear(void)
 	masProjects.ReInit();
 	muiStartup = MAX_SIZE;
 	mszConfiguration.Set("");
+	mszRunConfiguration.Set("");
+	ClearRunConfigurations();
 	mszFile.Set("");
 }
 
@@ -261,6 +387,7 @@ bool CBuildWorkspace::Read(const char* szFile)
 	char*			szConfiguration;
 	size			uiSolution;
 	bool			bResult;
+	CRunConfiguration	cRun;
 
 	Clear();
 	szName.Init();
@@ -280,6 +407,21 @@ bool CBuildWorkspace::Read(const char* szFile)
 	{
 		szConfiguration = pcRoot->GetStringAttribute(BUILD_WORKSPACE_CONFIGURATION);
 		mszConfiguration.Set(szConfiguration ? szConfiguration : "");
+		szConfiguration = pcRoot->GetStringAttribute(BUILD_WORKSPACE_RUN_CONFIGURATION);
+		mszRunConfiguration.Set(szConfiguration ? szConfiguration : "");
+		for (pcTag = pcRoot->GetTag(RUN_CONFIGURATION_TAG, &sIterator); pcTag; pcTag = pcRoot->GetNextTag(&sIterator))
+		{
+			cRun.Init();
+			if (cRun.LoadXML(pcTag) && (FindRunConfiguration(cRun.GetName()) == NULL))
+			{
+				masRunConfigurations.Add()->Init(&cRun);
+			}
+			else
+			{
+				bResult = false;
+			}
+			cRun.Kill();
+		}
 		for (pcTag = pcRoot->GetTag(BUILD_WORKSPACE_SOLUTION, &sIterator); pcTag; pcTag = pcRoot->GetNextTag(&sIterator))
 		{
 			szPath = pcTag->GetStringAttribute(BUILD_WORKSPACE_FILE);
@@ -339,6 +481,10 @@ bool CBuildWorkspace::Write(const char* szFile)
 	{
 		cWriter.Attribute(BUILD_WORKSPACE_CONFIGURATION, mszConfiguration.Text());
 	}
+	if (!mszRunConfiguration.Empty())
+	{
+		cWriter.Attribute(BUILD_WORKSPACE_RUN_CONFIGURATION, mszRunConfiguration.Text());
+	}
 	for (i = 0; i < mapcSolutions.NumElements(); i++)
 	{
 		MakeRelativePath(szDirectory.Text(), GetSolution(i)->mszFile.Text(), &szRelative);
@@ -349,6 +495,10 @@ bool CBuildWorkspace::Write(const char* szFile)
 			cWriter.Attribute(BUILD_WORKSPACE_STARTUP, "true");
 		}
 		cWriter.End();
+	}
+	for (i = 0; i < masRunConfigurations.NumElements(); i++)
+	{
+		masRunConfigurations.Get(i)->SaveXML(&cWriter);
 	}
 	cWriter.End();
 	bResult = cWriter.Write(szFull.Text());
@@ -486,6 +636,10 @@ void CBuildWorkspace::SetStartup(size uiSolution)
 size CBuildWorkspace::GetStartup(void)										{ return muiStartup; }
 void CBuildWorkspace::SetConfiguration(const char* szConfiguration)		{ mszConfiguration.Set(szConfiguration ? szConfiguration : ""); }
 char* CBuildWorkspace::GetConfiguration(void)								{ return mszConfiguration.Text(); }
+void CBuildWorkspace::SetRunConfigurationName(const char* szName)			{ mszRunConfiguration.Set(szName ? szName : ""); }
+char* CBuildWorkspace::GetRunConfigurationName(void)						{ return mszRunConfiguration.Text(); }
+size CBuildWorkspace::NumRunConfigurations(void)							{ return masRunConfigurations.NumElements(); }
+CRunConfiguration* CBuildWorkspace::GetRunConfiguration(size uiIndex)		{ return masRunConfigurations.SafeGet(uiIndex); }
 size CBuildWorkspace::NumSolutions(void)									{ return mapcSolutions.NumElements(); }
 CBuildWorkspaceSolution* CBuildWorkspace::GetSolution(size uiSolution)		{ return (uiSolution < mapcSolutions.NumElements()) ? *mapcSolutions.Get(uiSolution) : NULL; }
 CBuildWorkspaceSolution* CBuildWorkspace::GetStartupSolution(void)			{ return GetSolution(muiStartup); }

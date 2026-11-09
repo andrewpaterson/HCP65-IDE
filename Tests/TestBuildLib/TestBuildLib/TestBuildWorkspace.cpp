@@ -306,6 +306,101 @@ void TestBuildWorkspaceFile(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// One default for each build configuration name, only while there are
+// none; found by name and build configuration; written, read back and
+// replaced; and a workspace file without any (from before they existed)
+// still reads, its configuration still chosen.
+//
+//////////////////////////////////////////////////////////////////////////
+void TestBuildWorkspaceRunConfigurations(void)
+{
+	CBuildWorkspace			cWorkspace;
+	CBuildWorkspace			cRead;
+	CArrayRunConfigurations	asReplace;
+	CArrayChars				aszNames;
+	CRunConfiguration*		pcRun;
+	CTextFile				cFile;
+	CFileUtil				cFileUtil;
+	SLogConfig				sLogConfig;
+	size					i;
+
+	cFileUtil.MakeDir("Output");
+	cWorkspace.Init();
+	AssertTrue(cWorkspace.Open(TEST_WORKSPACE_PROGRAM));
+	AssertSize(0, cWorkspace.NumRunConfigurations());
+	cWorkspace.AddDefaultRunConfigurations();
+	aszNames.Init();
+	cWorkspace.GetConfigurationNames(&aszNames);
+	AssertTrue(aszNames.NumElements() > 0);
+	AssertSize(aszNames.NumElements(), cWorkspace.NumRunConfigurations());
+	for (i = 0; i < aszNames.NumElements(); i++)
+	{
+		pcRun = cWorkspace.GetRunConfiguration(i);
+		AssertString(aszNames.GetText(i), pcRun->GetName());
+		AssertString(aszNames.GetText(i), pcRun->GetConfiguration());
+		AssertFalse(pcRun->HasTool());
+	}
+
+	pcRun = cWorkspace.AddRunConfiguration("On Emulator", aszNames.GetText(0));
+	AssertNotNull(pcRun);
+	pcRun->SetTool("Tools" _FS_ "Emulator", "Tools", "--fill --other");
+	AssertTrue(pcRun->HasTool());
+	AssertNull(cWorkspace.AddRunConfiguration("On Emulator", aszNames.GetText(0)));
+	AssertTrue(pcRun == cWorkspace.FindRunConfiguration("On Emulator"));
+	AssertNull(cWorkspace.FindRunConfiguration("Nope"));
+	AssertString(aszNames.GetText(0), cWorkspace.FindRunConfigurationBuilding(aszNames.GetText(0))->GetName());
+	AssertNull(cWorkspace.FindRunConfigurationBuilding("No|Such"));
+
+	cWorkspace.AddDefaultRunConfigurations();
+	AssertSize(aszNames.NumElements() + 1, cWorkspace.NumRunConfigurations());
+
+	cWorkspace.SetRunConfigurationName("On Emulator");
+	cWorkspace.SetConfiguration(aszNames.GetText(0));
+	AssertTrue(cWorkspace.Write(TEST_WORKSPACE_FILE));
+	cRead.Init();
+	AssertTrue(cRead.Open(TEST_WORKSPACE_FILE));
+	AssertString("On Emulator", cRead.GetRunConfigurationName());
+	AssertSize(aszNames.NumElements() + 1, cRead.NumRunConfigurations());
+	pcRun = cRead.FindRunConfiguration("On Emulator");
+	AssertNotNull(pcRun);
+	AssertString(aszNames.GetText(0), pcRun->GetConfiguration());
+	AssertString("Tools" _FS_ "Emulator", pcRun->GetTool());
+	AssertString("Tools", pcRun->GetDirectory());
+	AssertString("--fill --other", pcRun->GetArguments());
+
+	asReplace.Init();
+	asReplace.Add()->Init(pcRun);
+	asReplace.Get(0)->SetName("Only");
+	cRead.SetRunConfigurations(&asReplace);
+	asReplace.Get(0)->Kill();
+	asReplace.Kill();
+	AssertSize(1, cRead.NumRunConfigurations());
+	AssertString("Only", cRead.GetRunConfiguration(0)->GetName());
+	AssertString("--fill --other", cRead.GetRunConfiguration(0)->GetArguments());
+
+	cFile.Init("<Workspace Configuration=\"Debug|W65C816\">\n\t<Solution File=\".." _FS_ "Input" _FS_ "Workspace" _FS_ "Program" _FS_ "Program.sln\"/>\n</Workspace>\n");
+	AssertTrue(cFile.Write("Output" _FS_ "Old" BUILD_WORKSPACE_EXTENSION));
+	cFile.Kill();
+	AssertTrue(cRead.Open("Output" _FS_ "Old" BUILD_WORKSPACE_EXTENSION));
+	AssertString("Debug|W65C816", cRead.GetConfiguration());
+	AssertString("", cRead.GetRunConfigurationName());
+	AssertSize(0, cRead.NumRunConfigurations());
+
+	cFile.Init("<Workspace>\n\t<Solution File=\".." _FS_ "Input" _FS_ "Workspace" _FS_ "Program" _FS_ "Program.sln\"/>\n\t<RunConfiguration Configuration=\"Debug|W65C816\"/>\n</Workspace>\n");
+	AssertTrue(cFile.Write("Output" _FS_ "Bad" BUILD_WORKSPACE_EXTENSION));
+	cFile.Kill();
+	sLogConfig = gcLogger.SetSilent();
+	AssertFalse(cRead.Open("Output" _FS_ "Bad" BUILD_WORKSPACE_EXTENSION));
+	gcLogger.SetConfig(&sLogConfig);
+
+	aszNames.Kill();
+	cRead.Kill();
+	cWorkspace.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 //
 //////////////////////////////////////////////////////////////////////////
 void TestBuildWorkspace(void)
@@ -316,6 +411,7 @@ void TestBuildWorkspace(void)
 	TestBuildWorkspaceSolutions();
 	TestBuildWorkspaceModules();
 	TestBuildWorkspaceFile();
+	TestBuildWorkspaceRunConfigurations();
 
 	TestStatistics();
 }
