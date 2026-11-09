@@ -1,6 +1,7 @@
 #include "BaseLib/FileUtil.h"
 #include "BaseLib/ArrayInt.h"
 #include "BaseLib/ArrayChars.h"
+#include "BaseLib/Logger.h"
 #include "VisualStudioLib/VcxProject.h"
 #include "TestLib/Assert.h"
 
@@ -282,9 +283,12 @@ void TestVcxProjectMacros(void)
 void TestVcxProjectBad(void)
 {
 	CVcxProject	cProject;
+	SLogConfig	sLogConfig;
 
 	cProject.Init();
+	sLogConfig = gcLogger.SetSilent();
 	AssertFalse(cProject.Read("Input" _FS_ "MiniLib" _FS_ "NotThere.vcxproj"));
+	gcLogger.SetConfig(&sLogConfig);
 	cProject.Kill();
 }
 

@@ -1,5 +1,6 @@
 #include "BaseLib/FileUtil.h"
 #include "BaseLib/ArrayInt.h"
+#include "BaseLib/Logger.h"
 #include "VisualStudioLib/VcxSolution.h"
 #include "VisualStudioLib/VcxPath.h"
 #include "TestLib/Assert.h"
@@ -147,6 +148,7 @@ void TestVcxSolutionFromProject(void)
 	CVcxSolutionProject*	pcProject;
 	CChars					szExpected;
 	CFileUtil				cFileUtil;
+	SLogConfig				sLogConfig;
 
 	cSolution.Init();
 	AssertTrue(cSolution.ReadProject("Input" _FS_ "MiniLib" _FS_ "MiniLib.vcxproj"));
@@ -168,7 +170,9 @@ void TestVcxSolutionFromProject(void)
 	cSolution.Kill();
 
 	cSolution.Init();
+	sLogConfig = gcLogger.SetSilent();
 	AssertFalse(cSolution.ReadProject("Input" _FS_ "MiniLib" _FS_ "NotThere.vcxproj"));
+	gcLogger.SetConfig(&sLogConfig);
 	cSolution.Kill();
 }
 
@@ -181,7 +185,9 @@ void TestVcxSolutionFromProject(void)
 void TestVcxSolutionBad(void)
 {
 	CVcxSolution	cSolution;
+	SLogConfig		sLogConfig;
 
+	sLogConfig = gcLogger.SetSilent();
 	cSolution.Init();
 	AssertFalse(cSolution.Read("Input" _FS_ "MiniSolution" _FS_ "NotThere.sln"));
 	cSolution.Kill();
@@ -189,6 +195,7 @@ void TestVcxSolutionBad(void)
 	cSolution.Init();
 	AssertFalse(cSolution.Read("Input" _FS_ "MiniSolution" _FS_ "Broken.sln"));
 	cSolution.Kill();
+	gcLogger.SetConfig(&sLogConfig);
 }
 
 
