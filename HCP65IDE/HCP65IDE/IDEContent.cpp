@@ -218,6 +218,7 @@ void CIDEContent::Class(void)
 	M_Pointer(mpBuilding);
 	M_Pointer(mpBuildConfigurations);
 	M_Pointer(mpRunning);
+	M_Pointer(mpSettings);
 	M_Pointer(mpDebugging);
 	M_Pointer(mpGitStatus);
 	M_Pointer(mpDiffs);
@@ -272,6 +273,7 @@ void CIDEContent::Free(void)
 		mpWindow->CancelPosted(&mpBuildConfigurations);
 		mpWindow->CancelPosted(&mpBuilding);
 		mpWindow->CancelPosted(&mpDiffs);
+		mpWindow->CancelPosted(&mpSettings);
 	}
 
 	//A build still running is stopped (an HCP65 build is waited for) before the solution it builds goes.
@@ -383,6 +385,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpBuilding = OMalloc<CIDEBuilding>(this);
 	mpBuildConfigurations = OMalloc<CIDEConfigurations>(this);
 	mpRunning = OMalloc<CIDERunning>(this);
+	mpSettings = OMalloc<CIDESettings>(this);
 	mpDebugging = OMalloc<CIDEDebugging>(this);
 	mpGitStatus = OMalloc<CIDEGitStatus>(this);
 	mpDiffs = OMalloc<CIDEDiffs>(this);
@@ -443,8 +446,8 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 //////////////////////////////////////////////////////////////////////////
 //
 // File, with Open Project/Solution, Add Solution, Close Solution, Recent
-// Solutions, Clear Recent Solutions, Save, Save All, Compare with File and
-// Exit;
+// Solutions, Clear Recent Solutions, Save, Save All, Compare with File,
+// Settings and Exit;
 // View, showing the tool windows; Git, with Compare with HEAD, a branch
 // or a revision; Build; Debug; and Window, with Reset Window Layout and Close
 // All Documents, as in Visual Studio.
@@ -459,6 +462,8 @@ Ptr<CMenuBar> CIDEContent::CreateMenuBar(void)
 	mpSolutions->AddFileItems(pFile);
 	mpDocuments->AddFileItems(pFile);
 	mpDiffs->AddFileItems(pFile);
+	pFile->AddSeparator();
+	pFile->AddItem(mpCommands->Find("File.Settings"));
 	pFile->AddSeparator();
 	pFile->AddItem(mpCommands->Find("File.Exit"));
 
@@ -555,6 +560,7 @@ void CIDEContent::AddCommands(void)
 	mpSolutions->AddCommands(mpCommands);
 	mpDocuments->AddCommands(mpCommands);
 	mpDiffs->AddCommands(mpCommands);
+	mpSettings->AddCommands(mpCommands);
 	mpCommands->Add("File.Exit", "Exit", "", Ptr<CImageCel>(), this, &CIDEContent::Exit);
 	mpCommands->Add("Window.ResetLayout", "Reset Window Layout", "", Ptr<CImageCel>(), this, &CIDEContent::ResetLayout);
 
@@ -972,6 +978,7 @@ Ptr<CIDEGitStatus> CIDEContent::GetGitStatus(void) { return mpGitStatus; }
 Ptr<CIDEDebugging> CIDEContent::GetDebugging(void) { return mpDebugging; }
 Ptr<CIDEConfigurations> CIDEContent::GetBuildConfigurations(void) { return mpBuildConfigurations; }
 Ptr<CIDERunning> CIDEContent::GetRunning(void) { return mpRunning; }
+Ptr<CIDESettings> CIDEContent::GetSettings(void) { return mpSettings; }
 Ptr<CStatusBar> CIDEContent::GetStatusBar(void) { return mpStatusBar; }
 Ptr<CIDEBuilding> CIDEContent::GetBuilding(void) { return mpBuilding; }
 Ptr<CIDESolutions> CIDEContent::GetSolutions(void) { return mpSolutions; }

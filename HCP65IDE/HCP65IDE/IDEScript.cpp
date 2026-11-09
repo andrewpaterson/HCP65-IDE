@@ -30,7 +30,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 //The debug script's commands that are the IDE's (RunCommand); "goto:" takes what follows it.
-static const char*	gaszIDEScriptCommands[] = { "goto:", "rename", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printedits", "printspans", "configuration:", "waitindex" };
+static const char*	gaszIDEScriptCommands[] = { "goto:", "rename", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printedits", "printspans", "configuration:", "waitindex" };
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -45,6 +45,7 @@ void CIDEScript::Init(CIDEContent* pcContent)
 	miDialogTicks = 0;
 	muiSpans = 0;
 	muiAnswered = 0;
+	msDialogDrawn.Clear();
 	PostInit();
 }
 
@@ -60,6 +61,7 @@ void CIDEScript::Class(void)
 	U_Int32(miDialogTicks);
 	U_Size(muiSpans);
 	U_Size(muiAnswered);
+	U_Unknown(SMemberCall, msDialogDrawn);
 }
 
 
@@ -195,6 +197,7 @@ void CIDEScript::RunCommand(const char* szCommand)
 	{
 		//Every command with keys, and whether the keyboard gives them.
 		size				i;
+		size				j;
 		Ptr<CCommand>		pCommand;
 		CComponentInput*	pcInput;
 
@@ -202,9 +205,9 @@ void CIDEScript::RunCommand(const char* szCommand)
 		for (i = 0; i < mpcContent->GetCommands()->NumCommands(); i++)
 		{
 			pCommand = mpcContent->GetCommands()->GetCommand(i);
-			if (!StrEmpty(pCommand->GetKeys()))
+			for (j = 0; j < pCommand->NumKeys(); j++)
 			{
-				printf("Keys: %s %s %s\n", pCommand->GetName(), pCommand->GetKeys(), ((pcInput != NULL) && pcInput->IsBound(pCommand->GetKeys())) ? "bound" : "NOT BOUND");
+				printf("Keys: %s %s %s\n", pCommand->GetName(), pCommand->GetKeys(j), ((pcInput != NULL) && ((pCommand->GetKeyScope() == CKS_Editor) ? pcInput->IsEditorBound(pCommand->GetKeys(j)) : pcInput->IsBound(pCommand->GetKeys(j)))) ? "bound" : "NOT BOUND");
 			}
 		}
 		fflush(stdout);
@@ -303,6 +306,16 @@ void CIDEScript::RunCommand(const char* szCommand)
 		fflush(stdout);
 		cFile.Kill();
 		szFile.Kill();
+	}
+	else if (strcmp(szCommand, "printkeymap") == 0)
+	{
+		//The user's keys, as they're kept.
+		CTextFile	cFile;
+
+		cFile.Init();
+		printf("Keymap file:\n%s\n", cFile.Read(mpcContent->GetSettings()->GetKeymapFile()) ? cFile.Text() : "(none)");
+		fflush(stdout);
+		cFile.Kill();
 	}
 	else if (strcmp(szCommand, "printbuild") == 0)
 	{
@@ -890,6 +903,7 @@ void CIDEScript::DialogTick(void)
 {
 	Ptr<CWindow>	pWindow;
 	const char*		szAnswer;
+	SMemberCall		sDrawn;
 
 	pWindow = mpDialog->GetWindow();
 	miDialogTicks++;
@@ -903,6 +917,14 @@ void CIDEScript::DialogTick(void)
 	{
 		SavePNG(pWindow->GetCanvas()->GetImageOrNull(), getenv("HCP65_IDE_DIALOG_SNAPSHOT"));
 	}
+	if (msDialogDrawn.IsSet())
+	{
+		sDrawn = msDialogDrawn;
+		msDialogDrawn.Clear();
+		sDrawn.Call(this);
+		return;
+	}
+	PressDialogKeys(pWindow);
 	szAnswer = getenv("HCP65_IDE_DIALOG_ANSWER");
 	if (szAnswer == NULL)
 	{
@@ -912,6 +934,36 @@ void CIDEScript::DialogTick(void)
 	fflush(stdout);
 	muiAnswered++;
 	mpDialog->Close(((strcmp(szAnswer, "Save") == 0) || (strcmp(szAnswer, "OK") == 0)) ? "OK" : szAnswer);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// For checking, HCP65_IDE_DIALOG_KEYS, tab and backtab separated by
+// commas, are pressed before the dialog is answered, and what has the
+// keys after each is printed.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEScript::PressDialogKeys(Ptr<CWindow> pWindow)
+{
+	CArrayChars		aszKeys;
+	Ptr<CComponent>	pFocussed;
+	size			i;
+
+	if (getenv("HCP65_IDE_DIALOG_KEYS") == NULL)
+	{
+		return;
+	}
+	aszKeys.Init();
+	aszKeys.Split(getenv("HCP65_IDE_DIALOG_KEYS"), ',');
+	for (i = 0; i < aszKeys.NumElements(); i++)
+	{
+		pWindow->InputCommand(aszKeys.Get(i)->Equals("backtab") ? CIC_BackTab : CIC_Tab, true);
+		pFocussed = pWindow->GetFocus()->GetFocussedComponent();
+		printf("Focus: %s\n", pFocussed.IsNotNull() ? pFocussed.ClassName() : "(none)");
+	}
+	fflush(stdout);
+	aszKeys.Kill();
 }
 
 

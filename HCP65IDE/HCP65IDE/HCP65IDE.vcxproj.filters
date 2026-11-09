@@ -63,6 +63,15 @@
     <ClCompile Include="IDEBuilding.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="IDESettings.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="IDESettingsDialog.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="IDEKeymapPage.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="IDERunConfigurationsDialog.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -132,6 +141,15 @@
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDEBuilding.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDESettings.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDESettingsDialog.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDEKeymapPage.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDERunConfigurationsDialog.h">

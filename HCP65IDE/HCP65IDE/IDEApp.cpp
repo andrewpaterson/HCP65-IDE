@@ -35,6 +35,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 static const char*	gaszIDEScriptVariables[] =
 {
 	"HCP65_IDE_ADD",
+	"HCP65_IDE_KEYMAP_EDITS",
 	"HCP65_IDE_ATTACH",
 	"HCP65_IDE_BUILD",
 	"HCP65_IDE_BUILD_EDITS",
@@ -48,6 +49,7 @@ static const char*	gaszIDEScriptVariables[] =
 	"HCP65_IDE_DEBUG",
 	"HCP65_IDE_DEFINITION",
 	"HCP65_IDE_DIALOG_ANSWER",
+	"HCP65_IDE_DIALOG_KEYS",
 	"HCP65_IDE_DIALOG_SNAPSHOT",
 	"HCP65_IDE_DOCK",
 	"HCP65_IDE_EDIT",
@@ -120,6 +122,7 @@ static bool IsIDEScripted(void)
 //The user's recent solutions (GetIDERecentFile).
 #define IDE_RECENT_DIRECTORY		"HCP65IDE"
 #define IDE_RECENT_FILE				"RecentSolutions.xml"
+#define IDE_KEYMAP_FILE				"Keymap.xml"
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -137,6 +140,9 @@ void CIDEApp::Init(void)
 }
 
 
+static void GetIDEUserFile(CChars* pszDest, const char* szFile, const char* szVariable);
+
+
 //////////////////////////////////////////////////////////////////////////
 //
 // The user's file the recent solutions are kept in:
@@ -146,13 +152,44 @@ void CIDEApp::Init(void)
 //////////////////////////////////////////////////////////////////////////
 void GetIDERecentFile(CChars* pszDest)
 {
+	GetIDEUserFile(pszDest, IDE_RECENT_FILE, "HCP65_IDE_RECENT");
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The user's file the keys they've changed are kept in, beside the recent
+// solutions; HCP65_IDE_KEYMAP if it is set.  A scripted run, checking the
+// IDE, has none unless it is set: the user's keys aren't what's checked.
+//
+//////////////////////////////////////////////////////////////////////////
+static void GetIDEKeymapFile(CChars* pszDest)
+{
+	if ((getenv("HCP65_IDE_KEYMAP") == NULL) && IsIDEScripted())
+	{
+		pszDest->Init();
+		return;
+	}
+	GetIDEUserFile(pszDest, IDE_KEYMAP_FILE, "HCP65_IDE_KEYMAP");
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A file of the user's in %APPDATA%\HCP65IDE, or ~/.config/HCP65IDE/ on
+// Linux; the variable szVariable says if it is set.  Empty if there's no
+// such place.
+//
+//////////////////////////////////////////////////////////////////////////
+static void GetIDEUserFile(CChars* pszDest, const char* szFile, const char* szVariable)
+{
 	CFileUtil	cFileUtil;
 	const char*	szBase;
 
 	pszDest->Init();
-	if (getenv("HCP65_IDE_RECENT") != NULL)
+	if (getenv(szVariable) != NULL)
 	{
-		pszDest->Set(getenv("HCP65_IDE_RECENT"));
+		pszDest->Set(getenv(szVariable));
 		return;
 	}
 #ifdef _WIN32
@@ -174,7 +211,7 @@ void GetIDERecentFile(CChars* pszDest)
 		return;
 	}
 	cFileUtil.AppendToPath(pszDest, IDE_RECENT_DIRECTORY);
-	cFileUtil.AppendToPath(pszDest, IDE_RECENT_FILE);
+	cFileUtil.AppendToPath(pszDest, szFile);
 }
 
 
@@ -489,6 +526,9 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 		mbInputs = true;
 		mcComponentInput.AddKeyboards();
 		mcComponentInput.AddMice();
+		GetIDEKeymapFile(&szPath);
+		mpContent->GetSettings()->ReadKeymap(szPath.Text());  //Any the user changed.
+		szPath.Kill();
 		mpWindow->GetCommands()->BindKeys(&mcComponentInput);  //The IDE's keys, F5 and so on.
 		mpWindow->SetComponentInput(&mcComponentInput);
 

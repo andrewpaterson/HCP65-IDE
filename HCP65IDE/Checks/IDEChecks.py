@@ -18,7 +18,7 @@ KERNAL = os.path.join(ROOT, 'HCP65', 'Kernal')
 #Files the checks edit in the IDE (never saving them) and the user's files a scripted run mustn't write.
 WATCHED = [os.path.join(BASELIB, f) for f in ['CalculatorParser.cpp', 'CalculatorParser.h', 'CalculatorSymbols.cpp', 'CalcParentheses.h', 'CalcExpression.h']] + \
           [os.path.join(KERNAL, 'HCP65Kernal.layout.user'), os.path.join(KERNAL, 'HCP65Kernal.hcp65workspace'), os.path.join(KERNAL, 'HCP65Kernal.hcp65build'),
-           os.path.expanduser('~/.config/HCP65IDE/RecentSolutions.xml')]
+           os.path.expanduser('~/.config/HCP65IDE/RecentSolutions.xml'), os.path.expanduser('~/.config/HCP65IDE/Keymap.xml')]
 BREAKPOINTS = os.path.join(KERNAL, 'HCP65Kernal.hcp65user')
 
 
@@ -48,6 +48,16 @@ def MakeSolutionCopy(bOther=False):
 		szText = szText.replace('</BuildConfigurations>', '\t<Configuration Name="Other|W65C816" Toolchain="W65C816" Solution="Release|Win32"/>\n</BuildConfigurations>', 1)
 	open(szFile, 'w', newline='').write(szText)
 	return {'SOLUTION': os.path.join(szKernel, 'Kernel.sln'), 'SAVE_LAYOUT': '1', 'RECENT': os.path.join(szRoot, 'Recent.xml')}
+
+
+def MakeKeymapFile(szText=None):
+	#Where a scripted run keeps its keys, with szText in it if it's given.
+	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
+	atexit.register(shutil.rmtree, szRoot, True)
+	szFile = os.path.join(szRoot, 'Keymap.xml')
+	if szText is not None:
+		open(szFile, 'w').write(szText)
+	return szFile
 
 
 #Each check: its name, its HCP65_IDE_* variables, the lines (regular expressions) its output must have, in order, and
@@ -283,7 +293,7 @@ CHECKS = [
 		[r'^Tabs: >Kernal\.cpp'], []),
 	('menus', {
 		'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'CARET': '36:4', 'DEBUG': 'printmenus,clickmenu:View/Nope'},
-		[r'^Menu File: Open Project/Solution\.\.\., Add Solution\.\.\., Close Solution, Recent Solutions>, Clear Recent Solutions, Save \[Ctrl\+S\], Save All \[Ctrl\+Shift\+S\], Compare with File\.\.\., Exit$',
+		[r'^Menu File: Open Project/Solution\.\.\., Add Solution\.\.\., Close Solution, Recent Solutions>, Clear Recent Solutions, Save \[Ctrl\+S\], Save All \[Ctrl\+Shift\+S\], Compare with File\.\.\., Settings\.\.\. \[Ctrl\+Alt\+S\], Exit$',
 		 r'^Menu File/Recent Solutions: 1 ',
 		 r'^Menu Edit: Undo \[Ctrl\+Z\]\(disabled\), Redo \[Ctrl\+Shift\+Z\]\(disabled\), Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Select All \[Ctrl\+A\], Undo Across Files\(disabled\), Redo Across Files\(disabled\)$',
 		 r'^Menu Navigate: Class\.\.\. \[Ctrl\+N\], File\.\.\. \[Ctrl\+Shift\+N\], Symbol\.\.\. \[Ctrl\+Alt\+Shift\+N\]$',
@@ -313,6 +323,86 @@ CHECKS = [
 		'EDIT': 'renamable,replace:37|virtual |,caret:37:9,renamable'},
 		[r'^Rename: IsParentheses \[CCalcExpression::IsParentheses\(\)\] at 7 places, 1 overrides$',
 		 r'^Rename: IsParentheses \[CCalcExpression::IsParentheses\(\)\] at 5 places, 0 overrides$'], []),
+	('settings-list', {
+		#Every command, grouped and filtered; the keys are as they were and nothing is kept.
+		'DIALOG_ANSWER': 'Cancel', 'KEYMAP_EDITS': 'select:Edit.Copy;show;filter:delete;show',
+		'DEBUG': 'clickmenu:File/Settings...,answered:1,printkeys,printkeymap'},
+		[r'^Keymap row: File\.OpenSolution \[\]$', r'^Keymap row: File\.Exit \[\]$', r'^Keymap row: Edit\.Copy \[Ctrl\+C, Ctrl\+Insert\]$',
+		 r'^Keymap row: Git\.CompareWithHead \[\]$', r'^Keymap row: Debug\.StepOver \[F10\]$', r'^Keymap row: Window\.CloseDocument \[Ctrl\+F4\]$',
+		 r'^Keymap row: Explorer\.RemoveSolution \[\]$', r'^Keymap row: Editor\.Up \[Up\]$', r'^Keymap row: Editor\.ToggleOverwrite \[Insert\]$',
+		 r'^Keymap row: Edit\.Cut \[Ctrl\+X, Shift\+Delete\]$', r'^Keymap row: Editor\.DeleteLine \[Ctrl\+Y\]$',
+		 r'^Dialog \[Settings\] answered Cancel$', r'^Keys: Edit\.Copy Control\+C bound$', r'^Keys: Edit\.Copy Control\+Insert bound$',
+		 r'^Keys: Editor\.Up Cursor Up bound$', r'^Keys: Window\.CloseDocument Control\+F4 bound$', r'^Keymap file:$', r'^\(none\)$'],
+		[r'NOT BOUND', r'ERROR']),
+	('settings-tab', {
+		#Tab goes round the dialog from the filter: the list, its buttons, OK and Cancel, its pages and back to the filter.
+		'DIALOG_ANSWER': 'Cancel', 'DIALOG_KEYS': 'tab,tab,tab,tab,tab,tab,tab,tab,tab,backtab,backtab', 'DEBUG': 'command:File.Settings,answered:1'},
+		[r'^Focus: CListContainer$', r'^Focus: CButton$', r'^Focus: CButton$', r'^Focus: CButton$', r'^Focus: CButton$', r'^Focus: CButton$', r'^Focus: CButton$',
+		 r'^Focus: CListContainer$', r'^Focus: CTextField$', r'^Focus: CListContainer$', r'^Focus: CButton$'], [r'ERROR']),
+	('keymap-save', {
+		#Keys added and taken away apply straight away and are kept, and a command's others stay.
+		'DIALOG_ANSWER': 'OK', 'KEYMAP': MakeKeymapFile(),
+		'KEYMAP_EDITS': 'select:Navigate.GoToSource;add:Control+K;select:Debug.StepOver;remove;select:Edit.Copy;remove;add:Control+Shift+K',
+		'DEBUG': 'command:File.Settings,answered:1,printstatus,printkeys,printmenus,printkeymap'},
+		[r'^Keymap: Ctrl\+K is free\.$', r'^Keymap: Ctrl\+Shift\+K is free\.$', r'^Status line: Saved the keymap\.$',
+		 r'^Keys: Edit\.Copy Control\+Shift\+K bound$', r'^Keys: Navigate\.GoToSource Control\+B bound$', r'^Keys: Navigate\.GoToSource Control\+K bound$',
+		 r'Copy \[Ctrl\+Shift\+K\]', r'Step Over,', r'^Menu Editor: Go to Source \[Ctrl\+B\]',
+		 r'^Keymap file:$', r'Name="Edit\.Copy"', r'Control\+Shift\+K', r'Name="Navigate\.GoToSource"', r'Control\+B', r'Control\+K', r'Name="Debug\.StepOver"'],
+		[r'Keys: Debug\.StepOver', r'Keys: Edit\.Copy Control\+C', r'Name="File\.Save"', r'NOT BOUND', r'ERROR']),
+	('keymap-read', {
+		#Those kept come back as the IDE starts, and a command that isn't one any more is ignored.
+		'KEYMAP': MakeKeymapFile('<Keymap>\n  <Command Name="Navigate.GoToSource"><Keys>Control+K</Keys></Command>\n'
+			'  <Command Name="Debug.StepOver"/>\n  <Command Name="Edit.Copy"><Keys>Control+Shift+K</Keys></Command>\n'
+			'  <Command Name="No.Such"><Keys>F1</Keys></Command>\n</Keymap>\n'),
+		'DEBUG': 'printkeys,printmenus'},
+		[r'^Keys: Edit\.Copy Control\+Shift\+K bound$', r'^Keys: Navigate\.GoToSource Control\+K bound$', r'Copy \[Ctrl\+Shift\+K\]', r'^Menu Editor: Go to Source \[Ctrl\+K\]'],
+		[r'Keys: Debug\.StepOver', r'Keys: Navigate\.GoToSource Control\+B', r'Keys: Edit\.Copy Control\+C', r'No\.Such', r'NOT BOUND', r'ERROR']),
+	('keymap-bad-file', {
+		#One that isn't a keymap is said, and the default keys are used.
+		'KEYMAP': MakeKeymapFile('<NotAKeymap/>\n'), 'DEBUG': 'printkeys'},
+		[r"^Status: The keymap couldn't be read: the default keys are used\.$", r'^Keys: Edit\.Copy Control\+C bound$', r'^Keys: Debug\.StepOver F10 bound$'], [r'NOT BOUND']),
+	('keymap-cancel', {
+		#Nothing changes, nothing is written.
+		'DIALOG_ANSWER': 'Cancel', 'KEYMAP': MakeKeymapFile(), 'KEYMAP_EDITS': 'select:Debug.StepOver;remove;add:Control+K',
+		'DEBUG': 'command:File.Settings,answered:1,printkeys,printkeymap'},
+		[r'^Keys: Debug\.StepOver F10 bound$', r'^\(none\)$'], [r'Keys: Debug\.StepOver Control\+K', r'Saved the keymap']),
+	('keymap-move', {
+		#A key has one command, so giving it to another moves it, and two can swap theirs.
+		'DIALOG_ANSWER': 'OK', 'KEYMAP': MakeKeymapFile(),
+		'KEYMAP_EDITS': 'select:Navigate.GoToSource;add:F5;select:Debug.Start;add:Control+B;select:Navigate.GoToSource;show',
+		'DEBUG': 'command:File.Settings,answered:1,printkeys'},
+		[r'^Keymap: F5 moves here from Debug: Start Debugging\.$', r'^Keymap: Ctrl\+B moves here from Navigate: Go to Source\.$',
+		 r'^Keymap row: Navigate\.GoToSource \[F5\]$', r'^Keymap row: Debug\.Start \[Ctrl\+B\]$',
+		 r'^Keys: Navigate\.GoToSource F5 bound$', r'^Keys: Debug\.Start Control\+B bound$'],
+		[r'Keys: Navigate\.GoToSource Control\+B', r'Keys: Debug\.Start F5', r'NOT BOUND', r'ERROR']),
+	('keymap-refused', {
+		#What types can't be had by anything, and what a dialog or text field needs only by an editor's.
+		'DIALOG_ANSWER': 'OK', 'KEYMAP': MakeKeymapFile(),
+		'KEYMAP_EDITS': 'select:Debug.StepOver;add:Q;add:Shift+Q;add:Space;add:Enter;add:Control+C;add:Cursor Up;add:F10;add:Control+D;select:Editor.Up;add:Q;add:F8;select:Edit.Copy;add:Tab',
+		'DEBUG': 'command:File.Settings,answered:1,printkeys'},
+		[r'^Keymap: Q types a character: add Ctrl or Alt\.$', r'^Keymap: Shift\+Q types a character: add Ctrl or Alt\.$', r'^Keymap: Space types a character: add Ctrl or Alt\.$',
+		 r'^Keymap: Enter is needed by dialogs and text fields\.$', r'^Keymap: Ctrl\+C moves here|^Keymap: Ctrl\+C is needed by dialogs and text fields\.$', r'^Keymap: Up is needed by dialogs and text fields\.$',
+		 r'^Keymap: F10 is already its shortcut\.$', r'^Keymap: Ctrl\+D moves here from Editor Actions: Duplicate\.$',
+		 r'^Keymap: Q types a character: add Ctrl or Alt\.$', r'^Keymap: F8 is free\.$', r'^Keymap: Tab moves here from Editor Actions: Tab\.$',
+		 r'^Keys: Edit\.Copy Tab bound$', r'^Keys: Editor\.Up Cursor Up bound$', r'^Keys: Editor\.Up F8 bound$', r'^Keys: Debug\.StepOver F10 bound$', r'^Keys: Debug\.StepOver Control\+D bound$'],
+		[r'Keys: Debug\.StepOver Q', r'Keys: Debug\.StepOver Enter', r'Keys: Editor\.Duplicate', r'Keys: Editor\.Tab', r'NOT BOUND', r'ERROR']),
+	('keymap-reset', {
+		#One command back, taking its keys from whichever has them, then all of them, which leaves nothing to keep.
+		'DIALOG_ANSWER': 'OK', 'KEYMAP': MakeKeymapFile(),
+		'KEYMAP_EDITS': 'select:Navigate.GoToSource;add:F5;select:Debug.Start;reset;select:Navigate.GoToSource;show;select:Debug.StepOver;remove;resetall',
+		'DEBUG': 'command:File.Settings,answered:1,printkeys,printkeymap'},
+		[r'^Keymap row: Navigate\.GoToSource \[Ctrl\+B\]$', r'^Keys: Debug\.Start F5 bound$', r'^Keys: Debug\.StepOver F10 bound$', r'^Keymap file:$', r'<Keymap'],
+		[r'Keys: Navigate\.GoToSource F5', r'Name="', r'NOT BOUND', r'ERROR']),
+	('keymap-capture', {
+		#Add Shortcut, over the Settings dialog: OK gives the command the keys.
+		'DIALOG_ANSWER': 'OK', 'KEYMAP': MakeKeymapFile(), 'KEYMAP_EDITS': 'select:Navigate.GoToSource;capture:Control+K',
+		'DEBUG': 'command:File.Settings,answered:2,printkeys'},
+		[r'^Dialog \[Add Shortcut\] answered OK$', r'^Dialog \[Settings\] answered OK$', r'^Keys: Navigate\.GoToSource Control\+K bound$'], [r'ERROR']),
+	('keymap-capture-cancel', {
+		#Cancel in Add Shortcut, and Settings is still there to be answered.
+		'DIALOG_ANSWER': 'Cancel', 'KEYMAP': MakeKeymapFile(), 'KEYMAP_EDITS': 'select:Navigate.GoToSource;capture:Control+K',
+		'DEBUG': 'command:File.Settings,answered:2,printkeys'},
+		[r'^Dialog \[Add Shortcut\] answered Cancel$', r'^Dialog \[Settings\] answered Cancel$'], [r'Keys: Navigate\.GoToSource Control\+K', r'ERROR']),
 	('file-commands', {
 		#Menu items that became commands run from their names, as their keys would.  A file chooser isn't answered, so
 		#those aren't run here.

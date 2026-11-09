@@ -22,6 +22,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define __IDE_SCRIPT_H__
 #include "StandardLib/Object.h"
 #include "StandardLib/Pointer.h"
+#include "StandardLib/MemberCall.h"
 #include "WindowLib/Dialog.h"
 
 
@@ -50,6 +51,7 @@ protected:
 	Ptr<CDialog>	mpDialog;  //The dialog being watched.
 	int32			miDialogTicks;
 	size			muiAnswered;  //Dialogs answered (DialogTick), for the debug script's answered:<n>.
+	SMemberCall	msDialogDrawn;  //SetDialogDrawnCall\'s, not set if there is none.
 	size			muiSpans;  //The active editor's spans when printspans last looked.
 
 public:
@@ -71,8 +73,25 @@ public:
 	void	WatchDialog(Ptr<CDialog> pDialog);
 	void	StopWatchingDialog(void);
 	void	DialogTick(void);
+	void	PressDialogKeys(Ptr<CWindow> pWindow);
+	template<class M, class O>
+	void	SetDialogDrawnCall(O* pcObject, void(M::*fFunction)(void));
 	size	NumAnsweredDialogs(void);
 };
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// fFunction is called, once, when the dialog being watched has been drawn
+// and instead of it being answered then: what a user would do in it, like
+// opening another dialog over it.  Watch the dialog again after that.
+//
+//////////////////////////////////////////////////////////////////////////
+template<class M, class O>
+void CIDEScript::SetDialogDrawnCall(O* pcObject, void(M::*fFunction)(void))
+{
+	msDialogDrawn.Init(pcObject, fFunction);
+}
 
 
 #endif // __IDE_SCRIPT_H__

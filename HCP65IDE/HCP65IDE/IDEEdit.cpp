@@ -83,6 +83,7 @@ void CIDEEdit::AddCommands(Ptr<CCommandSet> pCommands)
 	Ptr<CCommand>	pCommand;
 
 	mpEditCommands = OMalloc<CIDEEditCommands>(mpcContent, pCommands);
+	mpEditCommands->AddKeymapCommands(pCommands);
 	pCommand = pCommands->Add("Edit.UndoAcrossFiles", "Undo Across Files", "", Ptr<CImageCel>(), this, &CIDEEdit::UndoAcrossFiles);
 	pCommand->SetEnabledCheck(this, &CIDEEdit::CanUndoAcrossFiles);
 	pCommand = pCommands->Add("Edit.RedoAcrossFiles", "Redo Across Files", "", Ptr<CImageCel>(), this, &CIDEEdit::RedoAcrossFiles);

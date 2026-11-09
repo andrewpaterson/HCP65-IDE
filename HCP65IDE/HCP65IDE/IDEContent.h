@@ -69,6 +69,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDEBuilding.h"
 #include "IDEConfigurations.h"
 #include "IDERunning.h"
+#include "IDESettings.h"
 #include "IDEDebugging.h"
 #include "IDEGitStatus.h"
 #include "IDEDiffs.h"
@@ -160,6 +161,7 @@ protected:
 	Ptr<CIDEBuilding>			mpBuilding;			//Build, its menu and tab, and the listings.
 	Ptr<CIDEConfigurations>		mpBuildConfigurations;	//The toolbar's run configuration, and the build configuration it builds.
 	Ptr<CIDERunning>			mpRunning;			//Start, running the run configuration's tool, and the Run tab.
+	Ptr<CIDESettings>			mpSettings;			//File, Settings, and the user's keys.
 	Ptr<CIDEDebugging>			mpDebugging;		//The Debug menu, the debugger and breakpoints.
 	Ptr<CIDEGitStatus>			mpGitStatus;		//Git statuses, the branch and change bars.
 	Ptr<CIDEDiffs>				mpDiffs;			//Compare with HEAD, a branch, a revision or a file.
@@ -234,6 +236,7 @@ public:
 	Ptr<CIDEBuilding>		GetBuilding(void);
 	Ptr<CIDEConfigurations>	GetBuildConfigurations(void);
 	Ptr<CIDERunning>		GetRunning(void);
+	Ptr<CIDESettings>		GetSettings(void);
 	Ptr<CStatusBar>			GetStatusBar(void);
 	Ptr<CIDEDebugging>		GetDebugging(void);
 	Ptr<CIDEGitStatus>		GetGitStatus(void);
