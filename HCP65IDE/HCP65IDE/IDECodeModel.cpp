@@ -129,6 +129,7 @@ void CIDECodeModel::Init(CBuildWorkspace* pcWorkspace)
 	mpcWorkspace = pcWorkspace;
 	mszConfiguration.Init();
 	maszSystemDirectories.Init();
+	mbSystemDirectoriesMissing = false;
 
 	mapcProjects.Init();
 	mcHeaderCache.Init();
@@ -269,9 +270,10 @@ static bool IsNewerMinGWVersion(const char* szName, const char* szOther)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The compiler's own headers on this machine, those that exist.  For
-// checking, HCP65_IDE_SYSTEM_ROOT is where they are looked for in place of
-// the root folder.
+// The compiler's own headers on this machine, those that exist; those that
+// don't are logged, as without them almost nothing can be parsed (see
+// IsMissingSystemDirectories).  For checking, HCP65_IDE_SYSTEM_ROOT is where
+// they are looked for in place of the root folder.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDECodeModel::AddDefaultSystemDirectories(void)
@@ -319,12 +321,27 @@ void CIDECodeModel::AddDefaultSystemDirectories(void)
 		{
 			AddSystemDirectory(szName.Text());
 		}
+		else
+		{
+			mbSystemDirectoriesMissing = true;
+			gcLogger.Info2(__METHOD__, " System headers [", szName.Text(), "] aren't there.", NULL);
+		}
+	}
+	if (szNewest.Empty())
+	{
+		mbSystemDirectoriesMissing = true;
+		gcLogger.Info2(__METHOD__, " No MinGW GCC is in [", szPath.Text(), "].", NULL);
 	}
 	szName.Set(szRoot);
 	szName.Append(IDE_MINGW_INCLUDE_DIRECTORY);
 	if (cFileUtil.IsDirectory(szName.Text()))
 	{
 		AddSystemDirectory(szName.Text());
+	}
+	else
+	{
+		mbSystemDirectoriesMissing = true;
+		gcLogger.Info2(__METHOD__, " System headers [", szName.Text(), "] aren't there.", NULL);
 	}
 	aszFound.Kill();
 	szNewest.Kill();
@@ -1173,6 +1190,7 @@ void CIDECodeModel::SetEditsDelay(int iMilliseconds) { miEditsDelay = iMilliseco
 size CIDECodeModel::NumIndexings(void) { return muiIndexings; }
 void CIDECodeModel::AddSystemDirectory(const char* szDirectory) { maszSystemDirectories.Add(szDirectory); }
 CArrayChars* CIDECodeModel::GetSystemDirectories(void) { return &maszSystemDirectories; }
+bool CIDECodeModel::IsMissingSystemDirectories(void) { return mbSystemDirectoriesMissing; }
 
 
 //////////////////////////////////////////////////////////////////////////

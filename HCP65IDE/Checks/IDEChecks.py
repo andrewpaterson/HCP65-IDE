@@ -141,6 +141,18 @@ CHECKS = [
 	('system-directories-newer-threads', {
 		'SYSTEM_ROOT': MakeSystemRoot(['13-win32', '14-posix']), 'DEBUG': 'printsystem'},
 		[r'^System directories: \S*/14-posix/include/c\+\+,'], [r'/13-win32']),
+	('system-directories-found', {
+		#Nothing is said when they are all there.
+		'SYSTEM_ROOT': MakeSystemRoot(['13-win32']), 'DEBUG': 'wait:100'},
+		[], [r"MinGW's headers weren't found"]),
+	('system-directories-none', {
+		#The status line says why code navigation finds nothing.
+		'SYSTEM_ROOT': MakeSystemRoot([], False), 'DEBUG': 'printsystem'},
+		[r"^Status: MinGW's headers weren't found, so code navigation won't work: ", r'^System directories:$'], []),
+	('system-directories-no-library', {
+		#The compiler's without the C library's are just as bad.
+		'SYSTEM_ROOT': MakeSystemRoot(['13-win32'], False), 'DEBUG': 'printsystem'},
+		[r"^Status: MinGW's headers weren't found", r'^System directories: \S*/13-win32/include/c\+\+,'], []),
 	('run-configuration-tool', {
 		#A run configuration made in the dialog is chosen with its build configuration, and Start runs its tool with its
 		#arguments and working directory, without the debugger, and says how it exited.

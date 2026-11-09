@@ -143,6 +143,7 @@ protected:
 	CBuildWorkspace*	mpcWorkspace;
 	CChars				mszConfiguration;		//The build configuration, "Release|W65C816"; each solution builds its own solution configuration for it.
 	CArrayChars			maszSystemDirectories;	//Where the compiler's own headers are ($(IncludePath)).
+	bool				mbSystemDirectoriesMissing;	//Some that are needed aren't on this machine.
 
 	CArrayIDEProjects	mapcProjects;			//A CppParserLib project for each of the workspace's, NULL until used.
 	CPPHeaderCache		mcHeaderCache;			//Headers' preprocessed output, kept for all the units.
@@ -174,6 +175,7 @@ public:
 	void	AddSystemDirectory(const char* szDirectory);
 	void	AddDefaultSystemDirectories(void);
 	CArrayChars*	GetSystemDirectories(void);
+	bool	IsMissingSystemDirectories(void);
 
 	bool	Highlight(size uiProject, const char* szFileName, const char* szContents, CArrayHighlights* pacDest, CChars* pszErrors);
 

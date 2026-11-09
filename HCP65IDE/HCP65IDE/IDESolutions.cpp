@@ -281,6 +281,12 @@ bool CIDESolutions::OpenSolution(const char* szFileName)
 
 	//The windows where they were left, and the files that were open opened again.
 	mpcContent->LoadLayout();
+
+	//Without them no file parses, and nothing else would say why Go to Source, Find Usages and Rename find nothing.
+	if (mpcContent->GetCodeModel()->IsMissingSystemDirectories())
+	{
+		mpcContent->ShowStatus("MinGW's headers weren't found, so code navigation won't work: install g++-mingw-w64-x86-64-win32 and mingw-w64-common.");
+	}
 	return true;
 }
 
