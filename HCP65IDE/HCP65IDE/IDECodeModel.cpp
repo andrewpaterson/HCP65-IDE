@@ -26,6 +26,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/ConstructorCall.h"
 #include "BaseLib/PointerFunctions.h"
 #include "BaseLib/StringHelper.h"
+#include "BaseLib/Timer.h"
 #include "CppParserLib/CppParser.h"
 #include "IDECodeModel.h"
 
@@ -143,6 +144,11 @@ void CIDECodeModel::Init(CBuildWorkspace* pcWorkspace)
 	muiIndexings = 0;
 	mbCancelled = false;
 	mcIncluders.Init();
+	maszProblems.Init();
+	mcProblems.Init();
+	muiProblemUnits = 0;
+	miIndexStart = 0;
+	miIndexEnd = -1;
 
 	mbEdits = false;
 	mapsEdited.Init();
@@ -165,6 +171,8 @@ void CIDECodeModel::Kill(void)
 		mbEdits = false;
 	}
 	mapsEdited.Kill();
+	mcProblems.Kill();
+	maszProblems.Kill();
 	mcIncluders.Kill();
 	mcIndexMutex.Kill();
 	mcIndex.Kill();
@@ -651,6 +659,13 @@ void CIDECodeModel::StartIndexing(void)
 	mcIndex.Init();
 	mcIncluders.Kill();
 	mcIncluders.Init();
+	maszProblems.Kill();
+	maszProblems.Init();
+	mcProblems.Kill();
+	mcProblems.Init();
+	muiProblemUnits = 0;
+	miIndexStart = GetDebugTickCount();
+	miIndexEnd = -1;
 	muiIndexed = 0;
 	muiIndexings++;
 	mcIndexMutex.Unlock();
@@ -685,6 +700,14 @@ void CIDECodeModel::StartIndexing(void)
 			psJob->uiProject = i;
 			mapsJobs.Add(psJob);
 		}
+	}
+
+	//With nothing to index it is done already.
+	if (mapsJobs.NumElements() == 0)
+	{
+		mcIndexMutex.Lock();
+		miIndexEnd = miIndexStart;
+		mcIndexMutex.Unlock();
 	}
 
 	mcJobs.Init(IDE_INDEX_THREADS);
@@ -762,6 +785,7 @@ void CIDECodeModel::IndexUnit(SIDEIndexJob* psJob)
 	CCPPIndexUnit		cGathered;
 	CIDEIndexedFiles	cIndexed;
 	CChars				szErrors;
+	CArrayChars			aszErrors;
 	bool				bCancelled;
 	size				i;
 
@@ -786,6 +810,9 @@ void CIDECodeModel::IndexUnit(SIDEIndexJob* psJob)
 	}
 	cUnit.Kill();
 
+	aszErrors.Init();
+	aszErrors.Split(szErrors.Text(), '\n');
+
 	mcIndexMutex.Lock();
 	mcIndex.Merge(&cGathered);
 	for (i = 0; i < cGathered.maszFiles.NumElements(); i++)
@@ -795,9 +822,28 @@ void CIDECodeModel::IndexUnit(SIDEIndexJob* psJob)
 			mcIncluders.Put(cGathered.maszFiles.GetText(i), (int)psJob->uiIndex);
 		}
 	}
+
+	//What it couldn't include (a header's problem is the same in every unit that includes it, so it is kept once).
+	if (!szErrors.Empty())
+	{
+		muiProblemUnits++;
+	}
+	for (i = 0; i < aszErrors.NumElements(); i++)
+	{
+		if ((aszErrors.GetText(i)[0] != '\0') && (mcProblems.Get(aszErrors.GetText(i), -1) < 0))
+		{
+			mcProblems.Put(aszErrors.GetText(i), 0);
+			maszProblems.Add(aszErrors.GetText(i));
+		}
+	}
 	muiIndexed++;
+	if (muiIndexed == mapsJobs.NumElements())
+	{
+		miIndexEnd = GetDebugTickCount();
+	}
 	mcIndexMutex.Unlock();
 
+	aszErrors.Kill();
 	cGathered.Kill();
 	szErrors.Kill();
 }
@@ -948,6 +994,59 @@ void CIDECodeModel::GetIndexingProgress(size* puiIndexed, size* puiToIndex)
 	*puiIndexed = muiIndexed;
 	*puiToIndex = mapsJobs.NumElements();
 	mcIndexMutex.Unlock();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// What the units indexed since the last call couldn't include (or other
+// preprocessor errors), each once in an indexing, added to paszDest.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDECodeModel::TakeIndexingProblems(CArrayChars* paszDest)
+{
+	size	i;
+
+	mcIndexMutex.Lock();
+	for (i = 0; i < maszProblems.NumElements(); i++)
+	{
+		paszDest->Add(maszProblems.GetText(i));
+	}
+	maszProblems.Kill();
+	maszProblems.Init();
+	mcIndexMutex.Unlock();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// How many of the units indexed so far had problems.
+//
+//////////////////////////////////////////////////////////////////////////
+size CIDECodeModel::NumIndexingProblemUnits(void)
+{
+	size	uiUnits;
+
+	mcIndexMutex.Lock();
+	uiUnits = muiProblemUnits;
+	mcIndexMutex.Unlock();
+	return uiUnits;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// How long the index took to build, -1 while it is being.
+//
+//////////////////////////////////////////////////////////////////////////
+int64 CIDECodeModel::GetIndexingMilliseconds(void)
+{
+	int64	iMilliseconds;
+
+	mcIndexMutex.Lock();
+	iMilliseconds = (miIndexEnd >= 0) ? (miIndexEnd - miIndexStart) : -1;
+	mcIndexMutex.Unlock();
+	return iMilliseconds;
 }
 
 

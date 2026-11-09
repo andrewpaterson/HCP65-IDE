@@ -249,6 +249,7 @@
     <ClCompile Include="IDENavigator.cpp" />
     <ClCompile Include="IDERename.cpp" />
     <ClCompile Include="IDEUsages.cpp" />
+    <ClCompile Include="IDEIndexing.cpp" />
     <ClCompile Include="IDECloseGuard.cpp" />
     <ClCompile Include="IDEDocuments.cpp" />
     <ClCompile Include="IDESolutions.cpp" />
@@ -296,6 +297,7 @@
     <ClInclude Include="IDENavigator.h" />
     <ClInclude Include="IDERename.h" />
     <ClInclude Include="IDEUsages.h" />
+    <ClInclude Include="IDEIndexing.h" />
     <ClInclude Include="IDEDebugger.h" />
     <ClInclude Include="IDEDebugView.h" />
     <ClInclude Include="IDEEditorTab.h" />

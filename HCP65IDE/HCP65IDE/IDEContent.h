@@ -64,6 +64,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDENavigator.h"
 #include "IDERename.h"
 #include "IDEUsages.h"
+#include "IDEIndexing.h"
 #include "IDEDocuments.h"
 #include "IDESolutions.h"
 #include "IDEBuilding.h"
@@ -84,6 +85,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define IDE_DEBUG_ID			"Debug"
 #define IDE_CLAUDE_ID			"Claude"
 #define IDE_USAGES_ID			"FindUsages"
+#define IDE_INDEXING_ID			"Indexing"
 
 
 #define IDE_DOCUMENT_PREFIX		"Document:"
@@ -156,6 +158,7 @@ protected:
 	Ptr<CIDENavigator>			mpNavigator;		//Go to, Go to Source and Alt+O.
 	Ptr<CIDERename>				mpRename;			//Rename.
 	Ptr<CIDEUsages>				mpUsages;			//Find Usages.
+	Ptr<CIDEIndexing>			mpIndexing;			//The Indexing tab.
 	Ptr<CIDEDocuments>			mpDocuments;		//The open files' tabs.
 	Ptr<CIDESolutions>			mpSolutions;		//Opening, adding and removing solutions, and the recent ones.
 	Ptr<CIDEBuilding>			mpBuilding;			//Build, its menu and tab, and the listings.
@@ -245,6 +248,7 @@ public:
 	Ptr<CIDENavigator>		GetNavigator(void);
 	Ptr<CIDEEdit>			GetEdit(void);
 	Ptr<CIDEUsages>			GetUsages(void);
+	Ptr<CIDEIndexing>		GetIndexing(void);
 	Ptr<CIDERename>			GetRename(void);
 	Ptr<CIDECloseGuard>		GetCloseGuard(void);
 

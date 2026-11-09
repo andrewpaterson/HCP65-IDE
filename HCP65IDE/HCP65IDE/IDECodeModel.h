@@ -158,6 +158,11 @@ protected:
 	size				muiIndexings;			//How many times the index has been started (StartIndexing).
 	bool				mbCancelled;			//The jobs not started yet do nothing (KillJobs).
 	CMapStringInt		mcIncluders;			//A file to the first indexed unit that included it (the job's index).
+	CArrayChars			maszProblems;			//What the units indexed couldn't include, each once, until taken (TakeIndexingProblems).
+	CMapStringInt		mcProblems;				//Every one found since the index was started.
+	size				muiProblemUnits;		//How many units had any.
+	int64				miIndexStart;			//When the index was started (GetDebugTickCount),
+	int64				miIndexEnd;				//and when its last unit was done, -1 until then.
 
 	CWorkerThreadJobs	mcEdits;				//The edits thread: one, working out the edited files away from the UI thread.
 	bool				mbEdits;				//It has been started.
@@ -182,6 +187,9 @@ public:
 	void	StartIndexing(void);
 	void	WaitForIndexing(void);
 	void	GetIndexingProgress(size* puiIndexed, size* puiToIndex);
+	void	TakeIndexingProblems(CArrayChars* paszDest);
+	size	NumIndexingProblemUnits(void);
+	int64	GetIndexingMilliseconds(void);
 	bool	IsIndexing(void);
 	size	NumIndexings(void);
 	void	SetHeaderText(const char* szFileName, const char* szText);

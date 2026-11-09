@@ -32,7 +32,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 //The Build tab under the editor: what the build wrote, which is kept scrolled to its end as lines are added, over a
-//bar showing how far the build has got: blue while it runs, green when it has succeeded and red when it hasn't.
+//bar showing how far the build has got: blue while it runs, green when it has succeeded and red when it hasn't.  The
+//Run and Indexing tabs are ones too (CIDEIndexing).
 class CIDEBuildPane : public CObject
 {
 CONSTRUCTABLE(CIDEBuildPane);

@@ -213,6 +213,7 @@ void CIDEContent::Class(void)
 	M_Pointer(mpNavigator);
 	M_Pointer(mpRename);
 	M_Pointer(mpUsages);
+	M_Pointer(mpIndexing);
 	M_Pointer(mpDocuments);
 	M_Pointer(mpSolutions);
 	M_Pointer(mpBuilding);
@@ -380,6 +381,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpNavigator = OMalloc<CIDENavigator>(this);
 	mpRename = OMalloc<CIDERename>(this);
 	mpUsages = OMalloc<CIDEUsages>(this);
+	mpIndexing = OMalloc<CIDEIndexing>(this);
 	mpDocuments = OMalloc<CIDEDocuments>(this);
 	mpSolutions = OMalloc<CIDESolutions>(this);
 	mpBuilding = OMalloc<CIDEBuilding>(this);
@@ -400,13 +402,14 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	sPlace.BesideWell(DS_Left, IDE_EXPLORER_WIDTH);
 	mpSolutions->CreateExplorerPane(&sPlace);
 
-	//Under the well, tabbed together: what Find Usages (and Find All References) found, what the build wrote, what the
-	//run configuration's tool wrote, the debugger's view and Claude.
+	//Under the well, tabbed together: what Find Usages (and Find All References) found, what the build wrote, how the
+	//index is getting on, what the run configuration's tool wrote, the debugger's view and Claude.
 	sPlace.BesideWell(DS_Bottom, IDE_BOTTOM_HEIGHT);
 	mpUsages->CreatePane(&sPlace);
 
 	sPlace.WithPane(IDE_USAGES_ID);
 	mpBuilding->CreatePane(&sPlace);
+	mpIndexing->CreatePane(&sPlace);
 	mpRunning->CreatePane(&sPlace);
 
 	mpDebugging->CreatePane(&sPlace);
@@ -672,6 +675,12 @@ int64 CIDEContent::UpdateStatusLine(int64 iNow)
 		mpProgressLabel->SetText(szProgress.Text());
 	}
 	szProgress.Kill();
+
+	//The Indexing tab follows it too, and is looked at again until it has shown the end.
+	if (mpIndexing->Update())
+	{
+		iWait = ((iWait < 0) || (iWait > IDE_PROGRESS_POLL)) ? IDE_PROGRESS_POLL : iWait;
+	}
 	return iWait;
 }
 
@@ -1011,5 +1020,6 @@ Ptr<CMenuContainer> CIDEContent::GetEditorMenu(void) { return mpEditorMenu; }
 Ptr<CIDENavigator> CIDEContent::GetNavigator(void) { return mpNavigator; }
 Ptr<CIDEEdit> CIDEContent::GetEdit(void) { return mpEdit; }
 Ptr<CIDEUsages> CIDEContent::GetUsages(void) { return mpUsages; }
+Ptr<CIDEIndexing> CIDEContent::GetIndexing(void) { return mpIndexing; }
 Ptr<CIDERename> CIDEContent::GetRename(void) { return mpRename; }
 Ptr<CIDECloseGuard> CIDEContent::GetCloseGuard(void) { return mpCloseGuard; }
