@@ -603,6 +603,9 @@ CProject* CIDECodeModel::GetProject(size uiProject)
 	pcProject = NewMalloc<CProject>();
 	pcProject->Init();
 	pcProject->SetHeaderCache(&mcHeaderCache);
+
+	//A header that can't be found (as the compiler's own often can't) costs only what it would have added.
+	pcProject->SetSkipFailedDirectives(true);
 	pcSolutionProject = mpcWorkspace->GetSolutionProject(uiProject);
 	pcConfiguration = GetProjectConfiguration(uiProject);
 	aszDirectories.Init();
