@@ -120,7 +120,7 @@ bool CIDEDebugging::Load(CObjectReader* pcFile) { return false; }
 
 //Debug's items, in order.
 const char*	gaszDebugMenu[] = { "Debug.Start", "Debug.Stop", "Debug.Restart", "Debug.BreakAll", "Debug.Attach", "Debug.StepInto", "Debug.StepOver",
-							"Debug.StepOut", "Debug.ToggleBreakpoint", "Debug.NewBreakpoint", "Debug.DeleteBreakpoints", NULL };
+							"Debug.StepOut", "Debug.ToggleBreakpoint", "Debug.NewBreakpoint", "Debug.DeleteBreakpoints", "Run.EditConfigurations", NULL };
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -201,6 +201,101 @@ void CIDEDebugging::ResolveEmulatorPath(const char* szPath, CChars* pszDest)
 	cFileUtil.FullPath(pszDest);
 	szName.Kill();
 	szFile.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A run configuration's path: relative to the workspace's file, or to the
+// first solution's folder, where that will be written, before it has been.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDebugging::ResolveRunPath(const char* szPath, CChars* pszDest)
+{
+	CFileUtil	cFileUtil;
+	CChars		szFile;
+	CChars		szName;
+
+	if (cFileUtil.IsAbsolutePath(szPath))
+	{
+		pszDest->Set(szPath);
+		return;
+	}
+	szName.Init();
+	szFile.Init(mpcContent->GetWorkspace()->GetFile());
+	if (szFile.Empty() && (mpcContent->GetWorkspace()->NumSolutions() > 0))
+	{
+		szFile.Set(mpcContent->GetWorkspace()->GetSolution(0)->mszFile);
+	}
+	pszDest->Set("");
+	cFileUtil.SplitPath(szFile.Text(), &szName, pszDest);
+	cFileUtil.AppendToPath(pszDest, szPath);
+	cFileUtil.FullPath(pszDest);
+	szFile.Kill();
+	szName.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The external tool the chosen run configuration starts, both to run and
+// to debug: its own, or without one its build configuration's emulator, or
+// for a W65C816 the default.  False, with why in pszMessage, if it has none.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEDebugging::ChooseTool(CChars* pszExecutable, CChars* pszDirectory, CChars* pszArguments, CChars* pszMessage)
+{
+	CRunConfiguration*		pcRun;
+	CBuildConfiguration*	pcConfiguration;
+	CFileUtil				cFileUtil;
+	CChars					szFile;
+
+	pcRun = mpcContent->GetBuildConfigurations()->GetRunConfiguration();
+	pcConfiguration = mpcContent->GetBuildConfigurations()->GetConfiguration();
+	szFile.Init();
+	pszDirectory->Set("");
+	if ((pcRun != NULL) && pcRun->HasTool())
+	{
+		ResolveRunPath(pcRun->GetTool(), pszExecutable);
+		if (pcRun->GetDirectory()[0] != '\0')
+		{
+			ResolveRunPath(pcRun->GetDirectory(), pszDirectory);
+		}
+		else
+		{
+			cFileUtil.SplitPath(pszExecutable->Text(), &szFile, pszDirectory);
+		}
+		pszArguments->Set(pcRun->GetArguments());
+	}
+	else if ((pcConfiguration != NULL) && pcConfiguration->HasEmulator())
+	{
+		ResolveEmulatorPath(pcConfiguration->GetEmulator(), pszExecutable);
+		if (pcConfiguration->GetEmulatorDirectory()[0] != '\0')
+		{
+			ResolveEmulatorPath(pcConfiguration->GetEmulatorDirectory(), pszDirectory);
+		}
+		else
+		{
+			cFileUtil.SplitPath(pszExecutable->Text(), &szFile, pszDirectory);
+		}
+		pszArguments->Set(pcConfiguration->GetEmulatorArguments());
+	}
+	else if ((pcConfiguration != NULL) && (pcConfiguration->GetToolchain() == BT_W65C816) && !mszDefaultEmulator.Empty())
+	{
+		pszExecutable->Set(mszDefaultEmulator);
+		pszDirectory->Set(mszDefaultEmulatorDirectory);
+		pszArguments->Set(pcConfiguration->GetEmulatorArguments());
+	}
+	else
+	{
+		pszMessage->Set("No tool is set for ");
+		pszMessage->Append((pcRun != NULL) ? pcRun->GetName() : "this run configuration");
+		pszMessage->Append(": give it one in " "Edit Configurations.");
+		szFile.Kill();
+		return false;
+	}
+	szFile.Kill();
+	return true;
 }
 
 
@@ -297,7 +392,7 @@ bool CIDEDebugging::ChooseDebugLoads(CBuildConfiguration* pcConfiguration, CChar
 //////////////////////////////////////////////////////////////////////////
 //
 // Gives the debugger the chosen configuration's processor and (bLaunch)
-// emulator: the one its configuration names, or for a W65C816 the default.
+// emulator: the chosen run configuration's tool (see ChooseTool).
 // False, told in the Build tab, if it has no processor (MSVC, GCC) or no
 // emulator.
 //
@@ -308,16 +403,16 @@ bool CIDEDebugging::ChooseEmulator(bool bLaunch)
 	const char*				szProcessor;
 	CChars					szExecutable;
 	CChars					szDirectory;
-	CChars					szFile;
+	CChars					szArguments;
 	CChars					szMessage;
 	CArrayChars				aszLines;
-	CFileUtil				cFileUtil;
 	bool					bResult;
 
 	pcConfiguration = mpcContent->GetBuildConfigurations()->GetConfiguration();
 	szMessage.Init();
 	szExecutable.Init();
 	szDirectory.Init();
+	szArguments.Init();
 	bResult = false;
 	if (pcConfiguration == NULL)
 	{
@@ -341,35 +436,12 @@ bool CIDEDebugging::ChooseEmulator(bool bLaunch)
 		{
 			//Attached to: the emulator is whatever is running, checked when it says what it is.
 		}
-		else if (pcConfiguration->HasEmulator())
+		else if (ChooseTool(&szExecutable, &szDirectory, &szArguments, &szMessage))
 		{
-			ResolveEmulatorPath(pcConfiguration->GetEmulator(), &szExecutable);
-			if (pcConfiguration->GetEmulatorDirectory()[0] != '\0')
-			{
-				ResolveEmulatorPath(pcConfiguration->GetEmulatorDirectory(), &szDirectory);
-			}
-			else
-			{
-				szFile.Init();
-				cFileUtil.SplitPath(szExecutable.Text(), &szFile, &szDirectory);
-				szFile.Kill();
-			}
-			mcDebugger.SetEmulator(szExecutable.Text(), szDirectory.Text(), pcConfiguration->GetEmulatorArguments());
-		}
-		else if ((pcConfiguration->GetToolchain() == BT_W65C816) && !mszDefaultEmulator.Empty())
-		{
-			mcDebugger.SetEmulator(mszDefaultEmulator.Text(), mszDefaultEmulatorDirectory.Text(), pcConfiguration->GetEmulatorArguments());
+			mcDebugger.SetEmulator(szExecutable.Text(), szDirectory.Text(), szArguments.Text());
 		}
 		else
 		{
-			szFile.Init();
-			CBuildConfigurations::GetFileName(mpcContent->GetSolutions()->GetStartupFile(), &szFile);
-			szMessage.Set("No emulator is set for ");
-			szMessage.Append(pcConfiguration->GetName());
-			szMessage.Append(": give its configuration an Emulator in ");
-			szMessage.Append(szFile);
-			szMessage.Append('.');
-			szFile.Kill();
 			bResult = false;
 		}
 
@@ -391,6 +463,7 @@ bool CIDEDebugging::ChooseEmulator(bool bLaunch)
 		aszLines.Kill();
 		mpcContent->GetDock()->Show(mpcContent->GetBuilding()->GetBuildTool());
 	}
+	szArguments.Kill();
 	szDirectory.Kill();
 	szExecutable.Kill();
 	szMessage.Kill();

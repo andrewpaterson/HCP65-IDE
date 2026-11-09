@@ -44,6 +44,9 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDEConfigurations.h"
 
 
+#define IDE_EDIT_CONFIGURATIONS	"Edit Configurations..."
+
+
 //////////////////////////////////////////////////////////////////////////
 //
 //
@@ -52,6 +55,7 @@ void CIDEConfigurations::Init(CIDEContent* pcContent)
 {
 	PreInit();
 	mpcContent = pcContent;
+	mszRunConfiguration.Init();
 	mszConfiguration.Init();
 	PostInit();
 }
@@ -64,9 +68,10 @@ void CIDEConfigurations::Init(CIDEContent* pcContent)
 void CIDEConfigurations::Class(void)
 {
 	U_Pointer(mpcContent);
+	U_String(mszRunConfiguration);
 	U_String(mszConfiguration);
-	M_Pointer(mpConfigurations);
-	M_Pointer(mpPlatforms);
+	M_Pointer(mpRunConfigurations);
+	M_Pointer(mpDialog);
 }
 
 
@@ -79,13 +84,10 @@ void CIDEConfigurations::Class(void)
 void CIDEConfigurations::Free(void)
 {
 	mszConfiguration.Kill();
-	if (mpConfigurations.IsNotNull())
+	mszRunConfiguration.Kill();
+	if (mpRunConfigurations.IsNotNull())
 	{
-		mpConfigurations->GetSelectionEvent()->Remove(this);
-	}
-	if (mpPlatforms.IsNotNull())
-	{
-		mpPlatforms->GetSelectionEvent()->Remove(this);
+		mpRunConfigurations->GetSelectionEvent()->Remove(this);
 	}
 }
 
@@ -100,26 +102,54 @@ bool CIDEConfigurations::Load(CObjectReader* pcFile) { return false; }
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The names of every solution's configurations in the toolbar.  The one
-// chosen stays chosen if a solution still has it, or the startup
-// solution's first is.  The code model is told but not indexed again.
+// Edit Configurations.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEConfigurations::AddCommands(Ptr<CCommandSet> pCommands)
+{
+	pCommands->Add("Run.EditConfigurations", IDE_EDIT_CONFIGURATIONS, "", Ptr<CImageCel>(), this, &CIDEConfigurations::RequestEditDialog);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The workspace's run configurations in the toolbar; it is given defaults
+// if it has none.  The one chosen stays chosen if it is still there;
+// otherwise the first of the chosen build configuration is, as a workspace
+// saved before there were run configurations remembers only that, or the
+// first.  The code model is told but not indexed again.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEConfigurations::ShowConfigurations(void)
 {
-	CArrayChars	aszNames;
+	CBuildWorkspace*	pcWorkspace;
+	CRunConfiguration*	pcRun;
+	size				i;
 
-	aszNames.Init();
-	mpcContent->GetWorkspace()->GetConfigurationNames(&aszNames);
-	if (!aszNames.Contains(mszConfiguration.Text()))
+	pcWorkspace = mpcContent->GetWorkspace();
+	pcWorkspace->AddDefaultRunConfigurations();
+	pcRun = pcWorkspace->FindRunConfiguration(mszRunConfiguration.Text());
+	if (pcRun == NULL)
 	{
-		mszConfiguration.Set((aszNames.NumElements() > 0) ? aszNames.GetText(0) : "");
+		pcRun = pcWorkspace->FindRunConfigurationBuilding(mszConfiguration.Text());
 	}
-	aszNames.Kill();
+	if (pcRun == NULL)
+	{
+		pcRun = pcWorkspace->GetRunConfiguration(0);
+	}
+	mszRunConfiguration.Set(pcRun ? pcRun->GetName() : "");
+	mszConfiguration.Set((pcRun && pcWorkspace->FindAnyConfiguration(pcRun->GetConfiguration())) ? pcRun->GetConfiguration() : "");
 
-	SetComboBoxItems(mpConfigurations, false);
-	SetComboBoxItems(mpPlatforms, true);
-	if (StringCompare(mszConfiguration.Text(), mpcContent->GetCodeModel()->GetConfiguration()) != 0)
+	mpRunConfigurations->RemoveAllItems();
+	for (i = 0; i < pcWorkspace->NumRunConfigurations(); i++)
+	{
+		mpRunConfigurations->AddItem(pcWorkspace->GetRunConfiguration(i)->GetName());
+	}
+	if (mpcContent->GetSolutions()->IsSolutionOpen())
+	{
+		mpRunConfigurations->AddItem(IDE_EDIT_CONFIGURATIONS);
+	}
+	if (!mszConfiguration.Empty() && (StringCompare(mszConfiguration.Text(), mpcContent->GetCodeModel()->GetConfiguration()) != 0))
 	{
 		mpcContent->GetCodeModel()->SetConfiguration(mszConfiguration.Text());
 	}
@@ -129,146 +159,84 @@ void CIDEConfigurations::ShowConfigurations(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The configuration and platform chosen in the toolbar.  If there's no
-// build configuration with both, the one changed is kept: the first with
-// it is chosen.
+// A run configuration, or the last item, Edit Configurations, chosen in
+// the toolbar.  That one isn't kept: the one before stays chosen, and the
+// dialog is shown once the input has been read.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEConfigurations::ConfigurationChosen(void)
+void CIDEConfigurations::RunConfigurationChosen(void)
 {
-	char*					szConfiguration;
-	char*					szPlatform;
-	CBuildConfiguration*	pcCurrent;
-	CBuildConfiguration*	pcChosen;
+	int32	iSelected;
 
-	szConfiguration = mpConfigurations->GetSelectedText();
-	szPlatform = mpPlatforms->GetSelectedText();
-	pcCurrent = GetChosenConfiguration();
-	if ((szConfiguration == NULL) || (szPlatform == NULL) || ((pcCurrent != NULL) && pcCurrent->Is(szConfiguration, szPlatform)))
+	iSelected = mpRunConfigurations->GetSelected();
+	if (iSelected < 0)
 	{
 		return;
 	}
-
-	pcChosen = mpcContent->GetWorkspace()->FindAnyConfiguration(szConfiguration, szPlatform);
-	if (pcChosen == NULL)
+	if ((size)iSelected < mpcContent->GetWorkspace()->NumRunConfigurations())
 	{
-		if ((pcCurrent != NULL) && pcCurrent->Is(NULL, szPlatform))
-		{
-			pcChosen = mpcContent->GetWorkspace()->FindAnyConfiguration(szConfiguration, NULL);
-		}
-		else
-		{
-			pcChosen = mpcContent->GetWorkspace()->FindAnyConfiguration(NULL, szPlatform);
-		}
-	}
-	if (pcChosen != NULL)
-	{
-		SetConfiguration(pcChosen->GetName());
+		SetRunConfiguration(mpRunConfigurations->GetItemText((size)iSelected));
 	}
 	else
 	{
 		ShowConfiguration();
+		RequestEditDialog();
 	}
 }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Every solution's configurations' configuration names, or platforms, in
-// pComboBox.
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDEConfigurations::SetComboBoxItems(Ptr<CComboBox> pComboBox, bool bPlatforms)
-{
-	CArrayChars		aszNames;
-	size			i;
-
-	aszNames.Init();
-	mpcContent->GetWorkspace()->GetConfigurationNames(&aszNames, bPlatforms);
-	pComboBox->RemoveAllItems();
-	for (i = 0; i < aszNames.NumElements(); i++)
-	{
-		pComboBox->AddItem(aszNames.GetText(i));
-	}
-	aszNames.Kill();
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// The chosen build configuration's configuration and platform selected in
-// the toolbar.
+// The chosen run configuration selected in the toolbar, and its
+// programs' line tables bind the source breakpoints.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEConfigurations::ShowConfiguration(void)
 {
-	CChars					szName;
-	CBuildConfiguration*	pcConfiguration;
-
-	pcConfiguration = GetChosenConfiguration();
-	if (pcConfiguration == NULL)
-	{
-		return;
-	}
-
-	szName.Init();
-	pcConfiguration->GetConfigurationName(&szName);
-	SelectComboBoxItem(mpConfigurations, szName.Text());
-	szName.Clear();
-	pcConfiguration->GetPlatformName(&szName);
-	SelectComboBoxItem(mpPlatforms, szName.Text());
-	szName.Kill();
-
-	//Its programs' line tables bind the source breakpoints.
-	mpcContent->GetDebugging()->ReadLineTables();
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// pComboBox's item szText selected (selecting doesn't tell the listeners).
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDEConfigurations::SelectComboBoxItem(Ptr<CComboBox> pComboBox, const char* szText)
-{
 	size	i;
 
-	for (i = 0; i < pComboBox->NumItems(); i++)
+	for (i = 0; i < mpcContent->GetWorkspace()->NumRunConfigurations(); i++)
 	{
-		if (StringCompare(pComboBox->GetItemText(i), szText) == 0)
+		if (StringCompare(mpRunConfigurations->GetItemText(i), mszRunConfiguration.Text()) == 0)
 		{
-			pComboBox->Select((int32)i);
-			return;
+			mpRunConfigurations->Select((int32)i);
 		}
 	}
+	if (!mszConfiguration.Empty())
+	{
+		mpcContent->GetDebugging()->ReadLineTables();
+	}
 }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The build configuration szConfiguration is chosen: each solution's of
-// that name.  The code is parsed as their solution configurations build
-// it: if it changed the solutions are indexed again and the open files are
-// highlighted again.  False if no solution has such a build configuration.
+// The run configuration szName is chosen, and with it its build
+// configuration.  The code is parsed as that builds it: if it changed the
+// solutions are indexed again and the open files are highlighted again.
+// False if there's no such run configuration.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEConfigurations::SetConfiguration(const char* szConfiguration)
+bool CIDEConfigurations::SetRunConfiguration(const char* szName)
 {
-	size	i;
+	CRunConfiguration*	pcRun;
+	size				i;
 
-	if (mpcContent->GetWorkspace()->FindAnyConfiguration(szConfiguration) == NULL)
+	pcRun = mpcContent->GetWorkspace()->FindRunConfiguration(szName);
+	if (pcRun == NULL)
 	{
 		return false;
 	}
-	mszConfiguration.Set(szConfiguration);
-	if (StringCompare(mpcContent->GetWorkspace()->GetConfiguration(), szConfiguration) != 0)
+	mszRunConfiguration.Set(pcRun->GetName());
+	mszConfiguration.Set(mpcContent->GetWorkspace()->FindAnyConfiguration(pcRun->GetConfiguration()) ? pcRun->GetConfiguration() : "");
+	if ((StringCompare(mpcContent->GetWorkspace()->GetConfiguration(), mszConfiguration.Text()) != 0) || (StringCompare(mpcContent->GetWorkspace()->GetRunConfigurationName(), mszRunConfiguration.Text()) != 0))
 	{
 		//Remembered in the workspace file for next time.
 		mpcContent->GetSolutions()->WriteWorkspace();
 	}
 	ShowConfiguration();
 
-	if (StringCompare(mszConfiguration.Text(), mpcContent->GetCodeModel()->GetConfiguration()) != 0)
+	if (!mszConfiguration.Empty() && (StringCompare(mszConfiguration.Text(), mpcContent->GetCodeModel()->GetConfiguration()) != 0))
 	{
 		mpcContent->GetCodeModel()->SetConfiguration(mszConfiguration.Text());
 		mpcContent->GetCodeModel()->StartIndexing();
@@ -278,6 +246,75 @@ bool CIDEConfigurations::SetConfiguration(const char* szConfiguration)
 		}
 	}
 	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The first run configuration of the build configuration szConfiguration
+// is chosen, unless the one chosen already builds it.  False if none does.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEConfigurations::SetConfiguration(const char* szConfiguration)
+{
+	CRunConfiguration*	pcRun;
+
+	pcRun = GetRunConfiguration();
+	if ((pcRun == NULL) || (StringCompare(pcRun->GetConfiguration(), szConfiguration) != 0))
+	{
+		pcRun = mpcContent->GetWorkspace()->FindRunConfigurationBuilding(szConfiguration);
+	}
+	return (pcRun != NULL) && SetRunConfiguration(pcRun->GetName());
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Edit Configurations waits for the next tick: a dialog can't be shown
+// from an input listener (see CWindow::ShowModal).
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEConfigurations::RequestEditDialog(void)
+{
+	mpcContent->GetWindow()->Post(this, &CIDEConfigurations::ShowEditDialog);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// What is edited replaces the workspace's run configurations if OK closes
+// it, and the one selected in it is chosen.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEConfigurations::ShowEditDialog(void)
+{
+	CBuildWorkspace*	pcWorkspace;
+	CChars				szSelected;
+
+	if (!mpcContent->GetSolutions()->IsSolutionOpen())
+	{
+		return;
+	}
+	pcWorkspace = mpcContent->GetWorkspace();
+	mpDialog = OMalloc<CIDERunConfigurationsDialog>(mpcContent->GetWindow(), mpcContent->GetDialogLook(), pcWorkspace, mszRunConfiguration.Text());
+	if (getenv("HCP65_IDE_RUN_EDITS") != NULL)
+	{
+		mpDialog->ApplyEdits(getenv("HCP65_IDE_RUN_EDITS"));
+	}
+	mpcContent->GetScript()->WatchDialog(mpDialog->GetDialog());
+	if (mpDialog->Show())
+	{
+		szSelected.Init(mpDialog->GetSelectedName());
+		pcWorkspace->SetRunConfigurations(mpDialog->GetEdited());
+		pcWorkspace->AddDefaultRunConfigurations();
+		mszRunConfiguration.Set(szSelected.Text());
+		szSelected.Kill();
+		ShowConfigurations();
+		SetRunConfiguration(mszRunConfiguration.Text());
+		mpcContent->GetSolutions()->WriteWorkspace();
+	}
+	mpcContent->GetScript()->StopWatchingDialog();
+	mpDialog = NULL;
 }
 
 
@@ -306,43 +343,42 @@ char* CIDEConfigurations::GetConfigurationName(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// A configuration with the chosen name, the startup solution's if it has
-// one: what the toolbar shows.
+// NULL if none is chosen.
 //
 //////////////////////////////////////////////////////////////////////////
-CBuildConfiguration* CIDEConfigurations::GetChosenConfiguration(void)
+CRunConfiguration* CIDEConfigurations::GetRunConfiguration(void)
 {
-	return mpcContent->GetWorkspace()->FindAnyConfiguration(mszConfiguration.Text());
+	return mpcContent->GetWorkspace()->FindRunConfiguration(mszRunConfiguration.Text());
 }
 
 
+char* CIDEConfigurations::GetRunConfigurationName(void) { return mszRunConfiguration.Text(); }
+
+
 //////////////////////////////////////////////////////////////////////////
 //
-// The toolbar's configuration and platform combo boxes.
+// The toolbar's run configuration combo box.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEConfigurations::CreateComboBoxes(void)
+Ptr<CComboBox> CIDEConfigurations::CreateComboBox(void)
 {
-	mpConfigurations = OMalloc<CComboBox>(mpcContent->GetWindow(), mpcContent->GetTheme());
-	mpConfigurations->SetAlignment(CSH_Left, CSV_Center);
-	mpConfigurations->SetToolTip("Solution Configurations");
-	mpConfigurations->GetSelectionEvent()->Add(this, &CIDEConfigurations::ConfigurationChosen);
-	mpPlatforms = OMalloc<CComboBox>(mpcContent->GetWindow(), mpcContent->GetTheme());
-	mpPlatforms->SetAlignment(CSH_Left, CSV_Center);
-	mpPlatforms->SetToolTip("Solution Platforms");
-	mpPlatforms->GetSelectionEvent()->Add(this, &CIDEConfigurations::ConfigurationChosen);
+	mpRunConfigurations = OMalloc<CComboBox>(mpcContent->GetWindow(), mpcContent->GetTheme());
+	mpRunConfigurations->SetAlignment(CSH_Left, CSV_Center);
+	mpRunConfigurations->SetToolTip("Run Configurations");
+	mpRunConfigurations->GetSelectionEvent()->Add(this, &CIDEConfigurations::RunConfigurationChosen);
+	return mpRunConfigurations;
 }
 
 
-Ptr<CComboBox> CIDEConfigurations::GetConfigurationBox(void) { return mpConfigurations; }
-Ptr<CComboBox> CIDEConfigurations::GetPlatformBox(void) { return mpPlatforms; }
+Ptr<CComboBox> CIDEConfigurations::GetRunConfigurationBox(void) { return mpRunConfigurations; }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The build configuration chosen is called szName (a workspace's when it
-// is read, empty when the solutions go), before the combo boxes show it.
+// What is chosen is called this (a workspace's when it is read, empty when
+// the solutions go), before the combo box shows it.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEConfigurations::SetConfigurationName(const char* szName) { mszConfiguration.Set(szName); }
+void CIDEConfigurations::SetRunConfigurationName(const char* szName) { mszRunConfiguration.Set(szName); }
 bool CIDEConfigurations::HasConfiguration(void) { return !mszConfiguration.Empty(); }

@@ -60,6 +60,7 @@ static const char*	gaszIDEScriptVariables[] =
 	"HCP65_IDE_EDITS_DELAY",
 	"HCP65_IDE_REMOVE",
 	"HCP65_IDE_REOPEN",
+	"HCP65_IDE_RUN_EDITS",
 	"HCP65_IDE_SAVE",
 	"HCP65_IDE_SCROLL",
 	"HCP65_IDE_SNAPSHOT",
@@ -196,6 +197,7 @@ void GetIDERecentFile(CChars* pszDest)
 // HCP65_IDE_CARET=line:column (1 based), HCP65_IDE_TYPE,
 // HCP65_IDE_REFERENCES, HCP65_IDE_DEFINITION, HCP65_IDE_REOPEN,
 // HCP65_IDE_DEBUG (CIDEContent::SetDebugScript's commands),
+// HCP65_IDE_RUN_EDITS (CIDERunConfigurationsDialog::ApplyEdits),
 // HCP65_IDE_ATTACH (a port to attach the debugger to) and
 // HCP65_IDE_CLAUDE (a request sent to Claude Code) are for
 // checking it: a snapshot of the window, every folder expanded, files

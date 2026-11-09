@@ -92,10 +92,12 @@ protected:
 	void				UpdateDebugView(bool bKeepCaret);
 	void				RunDebugScript(void);
 	bool				ChooseEmulator(bool bLaunch);
+	bool				ChooseTool(CChars* pszExecutable, CChars* pszDirectory, CChars* pszArguments, CChars* pszMessage);
 	bool				ChooseDebugLoads(CBuildConfiguration* pcConfiguration, CChars* pszMessage, CArrayChars* paszLines);
 	void				SaveBreakpoints(void);
 	void				ShowDebugMessages(void);
 	void				ResolveEmulatorPath(const char* szPath, CChars* pszDest);
+	void				ResolveRunPath(const char* szPath, CChars* pszDest);
 	bool				ShowAddressDialog(const char* szTitle, const char* szLabel, const char* szDefault, bool bHex, uint32* puiValue);
 	bool				StartDebugging(void);
 	bool				RestartDebugging(void);

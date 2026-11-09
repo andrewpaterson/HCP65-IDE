@@ -116,7 +116,22 @@ CHECKS = [
 		 r'^Buttons: Start \[Debug\.Start\]$'], [r'NOT BOUND', r'\[none\]']),
 	('configuration', {
 		'CONFIGURATION': 'Debug|W65C816', 'DEBUG': 'printconfig'},
-		[r'^Configuration: \[Debug\] \[W65C816\]$'], []),
+		[r'^Configuration: \[Debug\|W65C816\] \[Debug\|W65C816\]: Debug\|W65C816, Release\|W65C816, Edit Configurations\.\.\.,$'], []),
+	('run-configuration-chosen', {
+		#A run configuration made in the dialog is chosen with its build configuration.
+		'DIALOG_ANSWER': 'OK', 'RUN_EDITS': 'add;name:Echo;build:Release|W65C816;tool:/bin/echo',
+		'DEBUG': 'command:Run.EditConfigurations,answered:1,printconfig'},
+		[r'^Dialog \[Run Configurations\] answered OK$',
+		 r'^Configuration: \[Echo\] \[Release\|W65C816\]: Debug\|W65C816, Release\|W65C816, Echo, Edit Configurations\.\.\.,$'], []),
+	('run-configuration-rules', {
+		#OK is refused for a name used twice or none; Cancel changes nothing, and removing them all gives the defaults.
+		'DIALOG_ANSWER': 'Cancel',
+		'RUN_EDITS': 'add;name:Debug|W65C816;check;name:;check;name:Fine;check;remove;remove;remove;check',
+		'DEBUG': 'command:Run.EditConfigurations,answered:1,printconfig'},
+		[r'^Run dialog: refused \[Another run configuration has this name\.\]$',
+		 r'^Run dialog: refused \[A run configuration needs a name\.\]$',
+		 r'^Run dialog: OK \[\]$', r'^Run dialog: OK \[\]$',
+		 r'^Configuration: \[Debug\|W65C816\] \[Debug\|W65C816\]: Debug\|W65C816, Release\|W65C816, Edit Configurations\.\.\.,$'], []),
 	('explorer', {
 		'OPEN': 'CalculatorParser.cpp', 'EDIT': 'explorer', 'DEBUG': 'printexplorer'},
 		[r'^Explorer: \[.*/BaseLib/CalculatorParser\.cpp\]$'], []),

@@ -23,15 +23,19 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "StandardLib/Object.h"
 #include "StandardLib/Pointer.h"
 #include "WindowLib/ComboBox.h"
+#include "WindowLib/CommandSet.h"
 #include "BaseLib/Chars.h"
 #include "BuildLib/BuildConfiguration.h"
+#include "BuildLib/RunConfiguration.h"
+#include "IDERunConfigurationsDialog.h"
 
 
 class CIDEContent;
 
 
-//The toolbar's build configuration and platform, as Visual Studio has them: the solutions' configurations, the one
-//chosen, and the code model parsing as its solution configuration.
+//The toolbar's run configuration, as IntelliJ IDEA has them: the workspace's run configurations (CRunConfiguration),
+//the one chosen and Edit Configurations.  The one chosen says which build configuration is built and debugged, each
+//solution's of that name, and the code model parses as its solution configuration.
 class CIDEConfigurations : public CObject
 {
 friend class CIDEScript;
@@ -39,9 +43,10 @@ CONSTRUCTABLE(CIDEConfigurations);
 DESTRUCTABLE(CIDEConfigurations);
 protected:
 	CIDEContent*	mpcContent;  //Not held: the content holds it.
-	CChars						mszConfiguration;	//The chosen build configuration's name, each solution's of that name; empty if none.
-	Ptr<CComboBox>	mpConfigurations;  //The build configuration's configuration; the code is parsed as its solution configuration.
-	Ptr<CComboBox>	mpPlatforms;  //And its platform.
+	CChars						mszRunConfiguration;	//The chosen run configuration's name; empty if none.
+	CChars						mszConfiguration;	//The name of the build configuration it builds; empty if none has it.
+	Ptr<CComboBox>				mpRunConfigurations;  //Each run configuration, then Edit Configurations.
+	Ptr<CIDERunConfigurationsDialog>	mpDialog;  //While it's shown.
 
 public:
 	void	Init(CIDEContent* pcContent);
@@ -50,9 +55,13 @@ public:
 	bool	Save(CObjectWriter* pcFile) override;
 	bool	Load(CObjectReader* pcFile) override;
 
-	void				CreateComboBoxes(void);
-	Ptr<CComboBox>		GetConfigurationBox(void);
-	Ptr<CComboBox>		GetPlatformBox(void);
+	void				AddCommands(Ptr<CCommandSet> pCommands);
+	Ptr<CComboBox>		CreateComboBox(void);
+	Ptr<CComboBox>		GetRunConfigurationBox(void);
+	bool			SetRunConfiguration(const char* szName);
+	CRunConfiguration*	GetRunConfiguration(void);
+	char*			GetRunConfigurationName(void);
+	void			SetRunConfigurationName(const char* szName);
 	bool			SetConfiguration(const char* szConfiguration);
 	CBuildConfiguration*	GetConfiguration(void);
 	char*			GetConfigurationName(void);
@@ -61,11 +70,10 @@ public:
 	void				ShowConfigurations(void);
 
 protected:
-	CBuildConfiguration*	GetChosenConfiguration(void);
-	void			ConfigurationChosen(void);
-	void			SetComboBoxItems(Ptr<CComboBox> pComboBox, bool bPlatforms);
+	void			RunConfigurationChosen(void);
 	void			ShowConfiguration(void);
-	void			SelectComboBoxItem(Ptr<CComboBox> pComboBox, const char* szText);
+	void			RequestEditDialog(void);
+	void			ShowEditDialog(void);
 };
 
 

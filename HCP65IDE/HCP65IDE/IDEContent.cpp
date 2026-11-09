@@ -275,6 +275,7 @@ void CIDEContent::Free(void)
 		mpWindow->CancelPosted(&mpNavigator);
 		mpWindow->CancelPosted(&mpRename);
 		mpWindow->CancelPosted(&mpSolutions);
+		mpWindow->CancelPosted(&mpBuildConfigurations);
 	}
 
 	//A build still running is stopped (an HCP65 build is waited for) before the solution it builds goes.
@@ -411,11 +412,9 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpAskClaude->CreatePane(&sPlace);
 	mpDock->Show(mpUsages->GetTool());
 
-	//The toolbar: the build configuration's configuration and platform, as Visual Studio has them, and Start.
-	mpBuildConfigurations->CreateComboBoxes();
+	//The toolbar: the run configuration, as IntelliJ IDEA has them, and Start.
 	pToolbar = OMalloc<CToolbar>(pWindow, mpTheme, false);
-	pToolbar->Append(mpBuildConfigurations->GetConfigurationBox());
-	pToolbar->Append(mpBuildConfigurations->GetPlatformBox());
+	pToolbar->Append(mpBuildConfigurations->CreateComboBox());
 	pToolbar->Append(mpDebugging->CreateStartButton());
 
 	//The branch checked out, at the toolbar's right, as IntelliJ IDEA shows it.
@@ -565,6 +564,7 @@ void CIDEContent::AddCommands(void)
 	mpUsages->AddCommands(mpCommands);
 	mpSolutions->AddCommands(mpCommands);
 	mpBuilding->AddCommands(mpCommands);
+	mpBuildConfigurations->AddCommands(mpCommands);
 	mpDebugging->AddCommands(mpCommands);
 }
 

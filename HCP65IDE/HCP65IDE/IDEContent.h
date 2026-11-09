@@ -158,7 +158,7 @@ protected:
 	Ptr<CIDEDocuments>			mpDocuments;		//The open files' tabs.
 	Ptr<CIDESolutions>			mpSolutions;		//Opening, adding and removing solutions, and the recent ones.
 	Ptr<CIDEBuilding>			mpBuilding;			//Build, its menu and tab, and the listings.
-	Ptr<CIDEConfigurations>		mpBuildConfigurations;	//The toolbar's configuration and platform.
+	Ptr<CIDEConfigurations>		mpBuildConfigurations;	//The toolbar's run configuration, and the build configuration it builds.
 	Ptr<CIDEDebugging>			mpDebugging;		//The Debug menu, the debugger and breakpoints.
 	Ptr<CIDEGitStatus>			mpGitStatus;		//Git statuses, the branch and change bars.
 	Ptr<CIDEDiffs>				mpDiffs;			//Compare with HEAD, a branch, a revision or a file.

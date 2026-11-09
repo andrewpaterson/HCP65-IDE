@@ -275,6 +275,7 @@ bool CIDESolutions::OpenSolution(const char* szFileName)
 	//The configuration chosen last time, if a solution still has it; chosen before the combo boxes tell of it, so it
 	//isn't indexed twice.
 	mpcContent->GetBuildConfigurations()->SetConfigurationName(mpcContent->GetWorkspace()->GetConfiguration());
+	mpcContent->GetBuildConfigurations()->SetRunConfigurationName(mpcContent->GetWorkspace()->GetRunConfigurationName());
 	mpcContent->GetBuildConfigurations()->ShowConfigurations();
 	mpcContent->GetCodeModel()->StartIndexing();
 
@@ -552,6 +553,7 @@ void CIDESolutions::LetGoOfWorkspace(void)
 	mpcContent->GetWorkspace()->Clear();
 	mpcContent->GetNavigator()->ForgetGoToFiles();
 	mpcContent->GetBuildConfigurations()->SetConfigurationName("");
+	mpcContent->GetBuildConfigurations()->SetRunConfigurationName("");
 
 	//The repositories are found again from the new solutions' files, and read at the next tick.
 	mpcContent->GetGitStatus()->ForgetRepositories();
@@ -605,6 +607,7 @@ bool CIDESolutions::WriteWorkspace(void)
 	bool		bResult;
 
 	mpcContent->GetWorkspace()->SetConfiguration(mpcContent->GetBuildConfigurations()->GetConfigurationName());
+	mpcContent->GetWorkspace()->SetRunConfigurationName(mpcContent->GetBuildConfigurations()->GetRunConfigurationName());
 	if ((mpcContent->GetWorkspace()->NumSolutions() == 0) || !mpcContent->IsKeepingSettings())
 	{
 		//A scripted run (checking the IDE) leaves the workspace's file alone, as it does the layout.

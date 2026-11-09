@@ -277,7 +277,17 @@ void CIDEScript::RunCommand(const char* szCommand)
 	}
 	else if (strcmp(szCommand, "printconfig") == 0)
 	{
-		printf("Configuration: [%s] [%s]\n", mpcContent->GetBuildConfigurations()->GetConfigurationBox()->GetSelectedText(), mpcContent->GetBuildConfigurations()->GetPlatformBox()->GetSelectedText());
+		//The toolbar's run configuration, the build configuration it builds and each it can choose.
+		Ptr<CComboBox>	pBox;
+		size			i;
+
+		pBox = mpcContent->GetBuildConfigurations()->GetRunConfigurationBox();
+		printf("Configuration: [%s] [%s]:", pBox->GetSelectedText(), mpcContent->GetBuildConfigurations()->GetConfigurationName());
+		for (i = 0; i < pBox->NumItems(); i++)
+		{
+			printf(" %s,", pBox->GetItemText(i));
+		}
+		printf("\n");
 		fflush(stdout);
 	}
 	else if (strcmp(szCommand, "printexplorer") == 0)

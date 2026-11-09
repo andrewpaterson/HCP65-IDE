@@ -254,6 +254,7 @@
     <ClCompile Include="IDESolutions.cpp" />
     <ClCompile Include="IDEBuilding.cpp" />
     <ClCompile Include="IDEConfigurations.cpp" />
+    <ClCompile Include="IDERunConfigurationsDialog.cpp" />
     <ClCompile Include="IDEScript.cpp" />
     <ClCompile Include="IDEGit.cpp" />
     <ClCompile Include="IDEDebugger.cpp" />
@@ -276,6 +277,7 @@
     <ClInclude Include="IDESolutions.h" />
     <ClInclude Include="IDEBuilding.h" />
     <ClInclude Include="IDEConfigurations.h" />
+    <ClInclude Include="IDERunConfigurationsDialog.h" />
     <ClInclude Include="IDEDebugging.h" />
     <ClInclude Include="IDEGitStatus.h" />
     <ClInclude Include="IDEDiffs.h" />
