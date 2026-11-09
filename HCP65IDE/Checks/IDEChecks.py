@@ -142,11 +142,11 @@ CHECKS = [
 		 r'^Diffs: \[CalculatorParser\.cpp \(HEAD~1 vs\. Your version\)\] \[>CalculatorParser\.cpp \(\w+ vs\. Your version\)\]$'], []),
 	('debug-dialog', {
 		'OPEN': 'Kernal.cpp', 'DIALOG_ANSWER': 'Cancel', 'DEBUG': 'clickmenu:Debug/New Breakpoint at Address...,answered:1,printtabs'},
-		[r'^Tabs: >Kernal\.cpp'], [r'not found', r'disabled']),
+		[r'^Tabs: .*>Kernal\.cpp'], [r'not found', r'disabled']),
 	('commands', {
 		'OPEN': 'Kernal.cpp', 'DIALOG_ANSWER': 'Cancel',
 		'DEBUG': 'command:Debug.NewBreakpoint,answered:1,printtabs,command:Window.CloseAllDocuments,printtabs,command:No.Such'},
-		[r'^Tabs: >Kernal\.cpp', r'^Tabs:\s*$', r'^Command \[No\.Such\] not found'], []),
+		[r'^Tabs: .*>Kernal\.cpp', r'^Tabs:\s*$', r'^Command \[No\.Such\] not found'], []),
 	('keys-and-buttons', {
 		'DEBUG': 'printkeys,printbuttons'},
 		[r'^Keys: Navigate\.GoToDefinition F12 bound$', r'^Keys: Navigate\.GoToClass Control\+N bound$',
@@ -290,7 +290,7 @@ CHECKS = [
 		[r'^Explorer: \[.*/BaseLib/CalculatorParser\.cpp\]$'], []),
 	('breakpoint', {
 		'OPEN': 'Kernal.cpp', 'DEBUG': 'line:20,buildtab,wait:300,printtabs'},
-		[r'^Tabs: >Kernal\.cpp'], []),
+		[r'^Tabs: .*>Kernal\.cpp'], []),
 	('menus', {
 		'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'CARET': '36:4', 'DEBUG': 'printmenus,clickmenu:View/Nope'},
 		[r'^Menu File: Open Project/Solution\.\.\., Add Solution\.\.\., Close Solution, Recent Solutions>, Clear Recent Solutions, Save \[Ctrl\+S\], Save All \[Ctrl\+Shift\+S\], Compare with File\.\.\., Settings\.\.\. \[Ctrl\+Alt\+S\], Exit$',
