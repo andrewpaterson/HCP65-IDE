@@ -252,6 +252,7 @@
     <ClCompile Include="IDECloseGuard.cpp" />
     <ClCompile Include="IDEDocuments.cpp" />
     <ClCompile Include="IDESolutions.cpp" />
+    <ClCompile Include="IDEBuildConfigurationsDialog.cpp" />
     <ClCompile Include="IDEBuilding.cpp" />
     <ClCompile Include="IDEConfigurations.cpp" />
     <ClCompile Include="IDERunConfigurationsDialog.cpp" />
@@ -276,6 +277,7 @@
     <ClInclude Include="IDECloseGuard.h" />
     <ClInclude Include="IDEDocuments.h" />
     <ClInclude Include="IDESolutions.h" />
+    <ClInclude Include="IDEBuildConfigurationsDialog.h" />
     <ClInclude Include="IDEBuilding.h" />
     <ClInclude Include="IDEConfigurations.h" />
     <ClInclude Include="IDERunConfigurationsDialog.h" />

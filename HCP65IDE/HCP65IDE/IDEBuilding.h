@@ -25,6 +25,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/ArrayChars.h"
 #include "WindowLib/Window.h"
 #include "WindowLib/MenuContainer.h"
+#include "IDEBuildConfigurationsDialog.h"
 #include "WindowLib/DockManager.h"
 #include "WindowLib/CommandSet.h"
 #include "CppParserLib/CPP65ListingIndex.h"
@@ -50,6 +51,7 @@ protected:
 	CArrayInt					maiBuildOrder;		//The solutions a build builds, in order.
 	CCPP65ListingIndex			mcListings;			//The last HCP65 build's listings, given to the open files.
 	Ptr<CDockPane>				mpBuildTool;
+	Ptr<CIDEBuildConfigurationsDialog>	mpDialog;  //While it's shown.
 	Ptr<CIDEBuildPane>			mpBuildPane;
 	size						muiBuildStep;		//The one being built.
 	CChars						mszLibc65;			//The HCP65 compiler's system headers.
@@ -74,8 +76,12 @@ public:
 	CCPP65ListingIndex*	GetListings(void);
 	void				SetListings(bool bListings);
 	void				PollBuild(Ptr<CWindow> pWindow);
+	bool				CanEditConfigurations(void);
 
 protected:
+	void				RequestEditDialog(void);
+	void				ShowEditDialog(void);
+	void				SaveEdits(CIDEBuildConfigurationsDialog* pcDialog, CBuildWorkspaceSolution* pcSolution, const char* szFile);
 	bool				StartBuildStep(CArrayChars* paszLines);
 	void				ShowBuildProgress(void);
 	void				FinishBuildSteps(CArrayChars* paszLines);

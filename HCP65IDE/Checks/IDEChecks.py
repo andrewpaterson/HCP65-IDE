@@ -17,7 +17,7 @@ KERNAL = os.path.join(ROOT, 'HCP65', 'Kernal')
 
 #Files the checks edit in the IDE (never saving them) and the user's files a scripted run mustn't write.
 WATCHED = [os.path.join(BASELIB, f) for f in ['CalculatorParser.cpp', 'CalculatorParser.h', 'CalculatorSymbols.cpp', 'CalcParentheses.h', 'CalcExpression.h']] + \
-          [os.path.join(KERNAL, 'HCP65Kernal.layout.user'), os.path.join(KERNAL, 'HCP65Kernal.hcp65workspace'),
+          [os.path.join(KERNAL, 'HCP65Kernal.layout.user'), os.path.join(KERNAL, 'HCP65Kernal.hcp65workspace'), os.path.join(KERNAL, 'HCP65Kernal.hcp65build'),
            os.path.expanduser('~/.config/HCP65IDE/RecentSolutions.xml')]
 BREAKPOINTS = os.path.join(KERNAL, 'HCP65Kernal.hcp65user')
 
@@ -32,6 +32,19 @@ def MakeSystemRoot(aszVersions, bLibrary=True):
 	if bLibrary:
 		os.makedirs(os.path.join(szRoot, 'usr/share/mingw-w64/include'))
 	return szRoot
+
+
+def MakeSolutionCopy():
+	#A copy of a test solution with a comment in its build configurations, to save them to: a scripted run told to keep
+	#its settings with SAVE_LAYOUT, and its recent solutions apart, writes only beside the copy.
+	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
+	atexit.register(shutil.rmtree, szRoot, True)
+	szKernel = os.path.join(szRoot, 'Workspace', 'Kernel')
+	shutil.copytree(os.path.join(ROOT, 'HCP65-IDE', 'Tests', 'TestBuildLib', 'TestBuildLib', 'Input', 'Workspace'), os.path.join(szRoot, 'Workspace'))
+	szFile = os.path.join(szKernel, 'Kernel.hcp65build')
+	szText = open(szFile, newline='').read().replace('<BuildConfigurations>', '<!-- A comment to keep. -->\n<BuildConfigurations>', 1)
+	open(szFile, 'w', newline='').write(szText)
+	return {'SOLUTION': os.path.join(szKernel, 'Kernel.sln'), 'SAVE_LAYOUT': '1', 'RECENT': os.path.join(szRoot, 'Recent.xml')}
 
 
 #Each check: its name, its HCP65_IDE_* variables, the lines (regular expressions) its output must have, in order, and
@@ -153,6 +166,36 @@ CHECKS = [
 		#The compiler's without the C library's are just as bad.
 		'SYSTEM_ROOT': MakeSystemRoot(['13-win32'], False), 'DEBUG': 'printsystem'},
 		[r"^Status: MinGW's headers weren't found", r'^System directories: \S*/13-win32/include/c\+\+,'], []),
+	('build-configuration-rules', {
+		#OK is refused for what the file couldn't have, and the real file isn't written by a scripted run.
+		'DIALOG_ANSWER': 'OK',
+		'BUILD_EDITS': 'name:Release|W65C816;check;name:;check;name:Fine;solution:Debug|Win32;card:Card.img;check;cardpath:\\\\boot.exe;toolchain:GCC;check;toolchain:W65C816;check',
+		'DEBUG': 'command:Build.EditConfigurations,answered:1,printconfig'},
+		[r'^Build dialog: refused \[Another build configuration has this name\.\]$',
+		 r'^Build dialog: refused \[A build configuration needs a name\.\]$',
+		 r'^Build dialog: refused \[A card and a path on it go together\.\]$',
+		 r'^Build dialog: refused \[Only an HCP65 toolchain can link a program, load files or use a card\.\]$',
+		 r'^Build dialog: OK \[\]$', r'^Dialog \[Build Configurations: HCP65Kernal\] answered OK$',
+		 r"^Status: A scripted run doesn't save build configurations\.$",
+		 r'^Configuration: \[Debug\|W65C816\] \[Debug\|W65C816\]:'], []),
+	('build-configuration-save', dict(MakeSolutionCopy(), **{
+		#What is changed goes in the file; its comment stays; the run configuration follows the rename, and the copy gets one.
+		'DIALOG_ANSWER': 'OK', 'BUILD_EDITS': 'name:Renamed|W65C816;breakpoint:Kernal;nofloats:1;add;name:Copied|W65C816',
+		'DEBUG': 'command:Build.EditConfigurations,answered:1,printconfig,printbuildfile'}),
+		[r'^Configuration: \[.*\] \[Renamed\|W65C816\]: .*Copied\|W65C816, Edit Configurations\.\.\.,$',
+		 r'^<!-- A comment to keep\. -->$',
+		 r'<Configuration Name="Renamed\|W65C816" Toolchain="W65C816" .*BreakpointSpace="Kernal" NoFloats="true"',
+		 r'<Configuration Name="Copied\|W65C816" Toolchain="W65C816"'], [r'ERROR']),
+	('build-configuration-cancel', dict(MakeSolutionCopy(), **{
+		#Cancel changes nothing.
+		'DIALOG_ANSWER': 'Cancel', 'BUILD_EDITS': 'name:Gone;remove',
+		'DEBUG': 'command:Build.EditConfigurations,answered:1,printbuildfile'}),
+		[r'^<!-- A comment to keep\. -->$', r'<Configuration Name="Release\|W65C816"'], [r'Gone']),
+	('build-configuration-open-file', dict(MakeSolutionCopy(), **{
+		#Open File opens the file instead of saving.
+		'DIALOG_ANSWER': 'Open File', 'BUILD_EDITS': 'name:Gone',
+		'DEBUG': 'command:Build.EditConfigurations,answered:1,printtabs,printbuildfile'}),
+		[r'^Tabs: .*>Kernel\.hcp65build', r'<Configuration Name="Release\|W65C816"'], [r'Gone']),
 	('run-configuration-tool', {
 		#A run configuration made in the dialog is chosen with its build configuration, and Start runs its tool with its
 		#arguments and working directory, without the debugger, and says how it exited.
@@ -205,7 +248,7 @@ CHECKS = [
 		 r'^Menu Navigate: Class\.\.\. \[Ctrl\+N\], File\.\.\. \[Ctrl\+Shift\+N\], Symbol\.\.\. \[Ctrl\+Alt\+Shift\+N\]$',
 		 r'^Menu View: Solution Explorer, Find Usages, Build, Run, Debug, Claude$',
 		 r'^Menu Git: Compare with HEAD, Compare with Branch\.\.\., Compare with Revision\.\.\.$',
-		 r'^Menu Build: Build \[Ctrl\+Shift\+B\]$',
+		 r'^Menu Build: Build \[Ctrl\+Shift\+B\], Edit Build Configurations\.\.\.$',
 		 r'^Menu Debug: Start Debugging \[F5\], Start Without Debugging \[Ctrl\+F5\], Stop Debugging \[Shift\+F5\], Stop Running\(disabled\), Restart \[Ctrl\+Shift\+F5\], Break All \[Ctrl\+Pause/Break\], Attach to Emulator\.\.\., Step Into \[F11\], Step Over \[F10\], Step Out \[Shift\+F11\], Toggle Breakpoint \[F9\], ',
 		 r'^Menu Window: Reset Window Layout, Close All Documents$',
 		 r'^Menu Editor: Go to Source \[Ctrl\+B\], Find Usages \[Alt\+F7\], Rename\.\.\. \[Shift\+F6\], Refactor>$',
@@ -248,12 +291,15 @@ def Run(szExecutable, szName, asVariables):
 	szSnapshot = os.path.join(tempfile.gettempdir(), 'IDEChecks-%d.png' % os.getpid())
 	asEnv['HCP65_IDE_SNAPSHOT'] = szSnapshot
 	asEnv['HCP65_IDE_SNAPSHOT_TICKS'] = '3'
+	aszArguments = []
 	for szKey, szValue in asVariables.items():
-		if szValue is None:
+		if szKey == 'SOLUTION':
+			aszArguments = [szValue]
+		elif szValue is None:
 			asEnv.pop('HCP65_IDE_' + szKey, None)
 		else:
 			asEnv['HCP65_IDE_' + szKey] = szValue
-	cResult = subprocess.run([szExecutable], cwd=IDE_DIR, env=asEnv, capture_output=True, timeout=300)
+	cResult = subprocess.run([szExecutable] + aszArguments, cwd=IDE_DIR, env=asEnv, capture_output=True, timeout=300)
 	if os.path.exists(szSnapshot):
 		os.remove(szSnapshot)
 	szOut = cResult.stdout.decode('latin-1') + cResult.stderr.decode('latin-1')

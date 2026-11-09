@@ -77,6 +77,7 @@ void CIDEBuilding::Class(void)
 	U_Unknown(CCPP65ListingIndex, mcListings);
 	M_Pointer(mpBuildPane);
 	M_Pointer(mpBuildTool);
+	M_Pointer(mpDialog);
 	U_Size(muiBuildStep);
 	U_String(mszLibc65);
 	U_Size(muiListingToShow);
@@ -411,12 +412,14 @@ void CIDEBuilding::CreatePane(SDockPlace* psPlace)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Build (Control+Shift+B, as Visual Studio's).
+// Build (Control+Shift+B, as Visual Studio's) and Edit Build
+// Configurations.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEBuilding::AddCommands(Ptr<CCommandSet> pCommands)
 {
 	pCommands->Add("Build.Build", "Build", "Control+Shift+B", Ptr<CImageCel>(), this, &CIDEBuilding::Build);
+	pCommands->Add("Build.EditConfigurations", "Edit Build Configurations...", "", Ptr<CImageCel>(), this, &CIDEBuilding::RequestEditDialog)->SetEnabledCheck(this, &CIDEBuilding::CanEditConfigurations);
 }
 
 
@@ -431,7 +434,164 @@ Ptr<CMenuContainer> CIDEBuilding::CreateBuildMenu(void)
 
 	pMenu = OMalloc<CMenuContainer>(mpcContent->GetWindow(), mpcContent->GetTheme());
 	pMenu->AddItem(mpcContent->GetCommands()->Find("Build.Build"));
+	pMenu->AddItem(mpcContent->GetCommands()->Find("Build.EditConfigurations"));
 	return pMenu;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A running build uses the configurations, which saving reads again.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEBuilding::CanEditConfigurations(void)
+{
+	return mpcContent->GetSolutions()->IsSolutionOpen() && !mcBuild.IsRunning();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The dialog waits for the next tick: one can't be shown from an input
+// listener (see CWindow::ShowModal).
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEBuilding::RequestEditDialog(void)
+{
+	mpcContent->GetWindow()->Post(this, &CIDEBuilding::ShowEditDialog);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The startup solution's build configurations edited, the chosen one
+// selected.  OK saves them, and Open File opens their file instead.  A
+// scripted run leaves the file alone, as it does the layout.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEBuilding::ShowEditDialog(void)
+{
+	CBuildWorkspaceSolution*	pcSolution;
+	CChars						szFile;
+	bool						bOK;
+
+	if (!CanEditConfigurations())
+	{
+		return;
+	}
+	pcSolution = mpcContent->GetWorkspace()->GetStartupSolution();
+	if (pcSolution == NULL)
+	{
+		return;
+	}
+	szFile.Init();
+	CBuildConfigurations::GetFileName(pcSolution->mszFile.Text(), &szFile);
+	mpDialog = OMalloc<CIDEBuildConfigurationsDialog>(mpcContent->GetWindow(), mpcContent->GetDialogLook(), pcSolution->mcSolution.GetName(), &pcSolution->mcSolution, &pcSolution->mcConfigurations, mpcContent->GetBuildConfigurations()->GetConfigurationName());
+	if (getenv("HCP65_IDE_BUILD_EDITS") != NULL)
+	{
+		mpDialog->ApplyEdits(getenv("HCP65_IDE_BUILD_EDITS"));
+	}
+	mpcContent->GetScript()->WatchDialog(mpDialog->GetDialog());
+	bOK = mpDialog->Show();
+	mpcContent->GetScript()->StopWatchingDialog();
+	if (bOK)
+	{
+		SaveEdits(&mpDialog, pcSolution, szFile.Text());
+	}
+	else if (StringCompare(mpDialog->GetDialog()->GetClicked(), IDE_BUILD_DIALOG_OPEN_FILE) == 0)
+	{
+		mpcContent->GetDocuments()->OpenFile(szFile.Text());
+	}
+	mpDialog = NULL;
+	szFile.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The dialog's edits go in the file and are read back.  Run configurations
+// follow a build configuration that was renamed, and a new one gets one so
+// it can be chosen.  The code is indexed again, as it is parsed as they say,
+// which stops while they change.  The status line says how it went, and if
+// another open solution still has the old name, as a build configuration is
+// chosen by its name across them.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEBuilding::SaveEdits(CIDEBuildConfigurationsDialog* pcDialog, CBuildWorkspaceSolution* pcSolution, const char* szFile)
+{
+	CBuildWorkspace*				pcWorkspace;
+	CArrayBuildConfigurationEdits*	pasEdits;
+	CBuildConfigurationEdit*		pcEdit;
+	CArrayChars						aszOld;
+	CArrayChars						aszNew;
+	CChars							szStatus;
+	bool							bResult;
+	bool							bShared;
+	size							i;
+	size							j;
+
+	if (!mpcContent->IsKeepingSettings())
+	{
+		mpcContent->ShowStatus("A scripted run doesn't save build configurations.");
+		return;
+	}
+
+	pcWorkspace = mpcContent->GetWorkspace();
+	pasEdits = pcDialog->GetEdits();
+	aszOld.Init();
+	aszNew.Init();
+	for (i = 0; i < pasEdits->NumElements(); i++)
+	{
+		pcEdit = pasEdits->Get(i);
+		if (!pcEdit->mbNew && !pcEdit->mszName.Equals(pcSolution->mcConfigurations.GetConfiguration(pcEdit->muiSource)->GetName()))
+		{
+			aszOld.Add(pcSolution->mcConfigurations.GetConfiguration(pcEdit->muiSource)->GetName());
+			aszNew.Add(pcEdit->mszName.Text());
+		}
+	}
+
+	mpcContent->GetCodeModel()->Reset();
+	bResult = pcSolution->mcConfigurations.ApplyEdits(szFile, pasEdits);
+	bShared = false;
+	szStatus.Init();
+	if (bResult)
+	{
+		for (i = 0; i < aszOld.NumElements(); i++)
+		{
+			for (j = 0; j < pcWorkspace->NumRunConfigurations(); j++)
+			{
+				if (StringCompare(pcWorkspace->GetRunConfiguration(j)->GetConfiguration(), aszOld.GetText(i)) == 0)
+				{
+					pcWorkspace->GetRunConfiguration(j)->SetConfiguration(aszNew.GetText(i));
+				}
+			}
+			if (StringCompare(mpcContent->GetBuildConfigurations()->GetConfigurationName(), aszOld.GetText(i)) == 0)
+			{
+				mpcContent->GetBuildConfigurations()->SetConfigurationName(aszNew.GetText(i));
+			}
+			bShared |= pcWorkspace->FindAnyConfiguration(aszOld.GetText(i)) != NULL;
+		}
+		for (i = 0; i < pasEdits->NumElements(); i++)
+		{
+			pcEdit = pasEdits->Get(i);
+			if (pcEdit->mbNew && (pcWorkspace->FindRunConfigurationBuilding(pcEdit->mszName.Text()) == NULL))
+			{
+				pcWorkspace->AddRunConfiguration(pcEdit->mszName.Text(), pcEdit->mszName.Text());
+			}
+		}
+		szStatus.Set(bShared ? "Saved, but another open solution still has the old name of a build configuration you renamed." : "Saved the build configurations.");
+	}
+	else
+	{
+		szStatus.Set("Could not save ");
+		szStatus.Append(szFile);
+		szStatus.Append(": it may have changed on disk.  Nothing was changed.");
+	}
+	mpcContent->GetSolutions()->WorkspaceChanged(true);
+	mpcContent->ShowStatus(szStatus.Text());
+	szStatus.Kill();
+	aszNew.Kill();
+	aszOld.Kill();
 }
 
 

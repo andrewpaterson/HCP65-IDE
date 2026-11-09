@@ -129,6 +129,7 @@ set(IDE_SOURCES
 	"${IDE_DIR}/IDEContent.cpp"
 	"${IDE_DIR}/IDEDocuments.cpp"
 	"${IDE_DIR}/IDESolutions.cpp"
+	"${IDE_DIR}/IDEBuildConfigurationsDialog.cpp"
 	"${IDE_DIR}/IDEBuilding.cpp"
 	"${IDE_DIR}/IDEConfigurations.cpp"
 	"${IDE_DIR}/IDERunConfigurationsDialog.cpp"

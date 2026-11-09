@@ -91,6 +91,7 @@ public:
 	bool					OpenRecentSolution(size uiIndex);
 	bool					IsSolutionOpen(void);
 	bool					WriteWorkspace(void);
+	void					WorkspaceChanged(bool bReindex);
 	bool					GetSettingsBaseFile(CChars* pszDest);
 	char*					GetStartupFile(void);
 	void					ShowRecentMenu(void);
@@ -100,7 +101,6 @@ protected:
 	void				ExplorerMenuItemClicked(CMenuItem* pcItem);
 	void				WriteRecent(void);
 	void				LetGoOfWorkspace(void);
-	void				WorkspaceChanged(bool bReindex);
 	CBuildRecentFiles*	GetRecent(void);
 	void				OpenQueuedSolution(void);
 	void				FileMenuItemClicked(CMenuItem* pcItem);

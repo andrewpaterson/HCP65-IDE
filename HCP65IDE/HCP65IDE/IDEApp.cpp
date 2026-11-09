@@ -37,6 +37,7 @@ static const char*	gaszIDEScriptVariables[] =
 	"HCP65_IDE_ADD",
 	"HCP65_IDE_ATTACH",
 	"HCP65_IDE_BUILD",
+	"HCP65_IDE_BUILD_EDITS",
 	"HCP65_IDE_CARET",
 	"HCP65_IDE_CHANGE",
 	"HCP65_IDE_CLAUDE",
@@ -199,6 +200,7 @@ void GetIDERecentFile(CChars* pszDest)
 // HCP65_IDE_REFERENCES, HCP65_IDE_DEFINITION, HCP65_IDE_REOPEN,
 // HCP65_IDE_DEBUG (CIDEContent::SetDebugScript's commands),
 // HCP65_IDE_RUN_EDITS (CIDERunConfigurationsDialog::ApplyEdits),
+// HCP65_IDE_BUILD_EDITS (CIDEBuildConfigurationsDialog::ApplyEdits),
 // HCP65_IDE_ATTACH (a port to attach the debugger to) and
 // HCP65_IDE_CLAUDE (a request sent to Claude Code) are for
 // checking it: a snapshot of the window, every folder expanded, files

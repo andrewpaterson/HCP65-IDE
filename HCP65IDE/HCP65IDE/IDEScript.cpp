@@ -30,7 +30,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 //The debug script's commands that are the IDE's (RunCommand); "goto:" takes what follows it.
-static const char*	gaszIDEScriptCommands[] = { "goto:", "rename", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printexplorer", "printedits", "printspans", "configuration:", "waitindex" };
+static const char*	gaszIDEScriptCommands[] = { "goto:", "rename", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printexplorer", "printedits", "printspans", "configuration:", "waitindex" };
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -289,6 +289,20 @@ void CIDEScript::RunCommand(const char* szCommand)
 		}
 		printf("\n");
 		fflush(stdout);
+	}
+	else if (strcmp(szCommand, "printbuildfile") == 0)
+	{
+		//The startup solution's build configurations file.
+		CChars		szFile;
+		CTextFile	cFile;
+
+		szFile.Init();
+		CBuildConfigurations::GetFileName(mpcContent->GetWorkspace()->GetStartupSolution()->mszFile.Text(), &szFile);
+		cFile.Init();
+		printf("Build file:\n%s\n", cFile.Read(szFile.Text()) ? cFile.Text() : "(none)");
+		fflush(stdout);
+		cFile.Kill();
+		szFile.Kill();
 	}
 	else if (strcmp(szCommand, "printsystem") == 0)
 	{

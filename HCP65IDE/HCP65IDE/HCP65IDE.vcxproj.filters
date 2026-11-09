@@ -57,6 +57,9 @@
     <ClCompile Include="IDESolutions.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="IDEBuildConfigurationsDialog.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="IDEBuilding.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -123,6 +126,9 @@
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDESolutions.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDEBuildConfigurationsDialog.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDEBuilding.h">

@@ -277,6 +277,7 @@ void CIDEContent::Free(void)
 		mpWindow->CancelPosted(&mpRename);
 		mpWindow->CancelPosted(&mpSolutions);
 		mpWindow->CancelPosted(&mpBuildConfigurations);
+		mpWindow->CancelPosted(&mpBuilding);
 	}
 
 	//A build still running is stopped (an HCP65 build is waited for) before the solution it builds goes.
