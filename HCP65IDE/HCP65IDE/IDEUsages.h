@@ -93,9 +93,6 @@ public:
 	bool				HasSteps(void) override;
 	bool				Step(bool bNext, bool bKeepKeys) override;
 
-	static const char*	GetUsageTypeName(SIDELocation* psLocation);
-	static int			GetUsageTypeRank(SIDELocation* psLocation);
-
 protected:
 	void				ShowUsages(bool bKeepSelected);
 	void				UsageActivated(void);

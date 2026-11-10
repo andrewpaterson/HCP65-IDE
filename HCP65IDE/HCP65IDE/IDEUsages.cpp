@@ -45,41 +45,54 @@ struct SIDEUsage
 };
 
 
-//The usage types' groups, in the order the tree shows them: the declarations first, then how the references use it.
-static const int	giIDEUsageTypeDefinition = 0;
-static const int	giIDEUsageTypeDeclaration = 1;
-static const int	gaiIDEUsageTypeRanks[CPPUT_NumUsageTypes] =
+//A usage type's group in the tree: where it goes among the others and what it is called.
+struct SIDEUsageType
 {
-	14,		//CPPUT_Other
-	2,		//CPPUT_Call
-	3,		//CPPUT_Read
-	4,		//CPPUT_Write
-	12,		//CPPUT_TypeInExpression
-	11,		//CPPUT_TemplateArgument
-	10,		//CPPUT_BaseClass
-	5,		//CPPUT_Field
-	7,		//CPPUT_Local
-	8,		//CPPUT_Global
-	6,		//CPPUT_Parameter
-	9,		//CPPUT_Function
-	13,		//CPPUT_Alias
+	int			iRank;
+	const char*	szName;
 };
-static const char*	gaszIDEUsageTypeNames[CPPUT_NumUsageTypes] =
+
+
+//The groups, the declarations' first, then how the references use the symbol, each by its ECPPUsageType.
+static const SIDEUsageType	gsIDEUsageTypeDefinition = { 0, "Definition" };
+static const SIDEUsageType	gsIDEUsageTypeDeclaration = { 1, "Declaration" };
+static const SIDEUsageType	gasIDEUsageTypes[] =
 {
-	"Unclassified usage",
-	"Call",
-	"Value read",
-	"Value write",
-	"Usage as a type in an expression",
-	"Usage in template argument",
-	"Usage in base class list",
-	"Usage in field declaration",
-	"Usage in local variable declaration",
-	"Usage in global variable declaration",
-	"Usage in parameter declaration",
-	"Usage in function declaration",
-	"Usage in type alias",
+	{ 14,	"Unclassified usage" },						//CPPUT_Other
+	{ 2,	"Call" },									//CPPUT_Call
+	{ 3,	"Value read" },								//CPPUT_Read
+	{ 4,	"Value write" },							//CPPUT_Write
+	{ 12,	"Usage as a type in an expression" },		//CPPUT_TypeInExpression
+	{ 11,	"Usage in template argument" },				//CPPUT_TemplateArgument
+	{ 10,	"Usage in base class list" },				//CPPUT_BaseClass
+	{ 5,	"Usage in field declaration" },				//CPPUT_Field
+	{ 7,	"Usage in local variable declaration" },	//CPPUT_Local
+	{ 8,	"Usage in global variable declaration" },	//CPPUT_Global
+	{ 6,	"Usage in parameter declaration" },			//CPPUT_Parameter
+	{ 9,	"Usage in function declaration" },			//CPPUT_Function
+	{ 13,	"Usage in type alias" },					//CPPUT_Alias
 };
+static_assert(sizeof(gasIDEUsageTypes) / sizeof(SIDEUsageType) == CPPUT_NumUsageTypes, "Each ECPPUsageType needs its group in gasIDEUsageTypes.");
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A place's usage type group: its definition's, a declaration's, or that
+// of how a reference uses its symbol.
+//
+//////////////////////////////////////////////////////////////////////////
+static const SIDEUsageType* GetIDEUsageType(SIDELocation* psLocation)
+{
+	if (psLocation->uiRole == CPPIR_Definition)
+	{
+		return &gsIDEUsageTypeDefinition;
+	}
+	if (psLocation->uiRole == CPPIR_Declaration)
+	{
+		return &gsIDEUsageTypeDeclaration;
+	}
+	return &gasIDEUsageTypes[(psLocation->uiUsage < CPPUT_NumUsageTypes) ? psLocation->uiUsage : CPPUT_Other];
+}
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -617,7 +630,7 @@ void CIDEUsages::ShowUsages(bool bKeepSelected)
 		psUsage = &asUsages[i];
 		psUsage->psLocation = masUsages.Get(i);
 		psUsage->uiIndex = i;
-		psUsage->iType = GetUsageTypeRank(psUsage->psLocation);
+		psUsage->iType = GetIDEUsageType(psUsage->psLocation)->iRank;
 		psUsage->bByType = bByType;
 		psUsage->bByProject = bByProject;
 		mpcContent->GetCodeModel()->GetUsageGroup(psUsage->psLocation, &psUsage->szProject, &psUsage->szClass);
@@ -675,7 +688,7 @@ void CIDEUsages::ShowUsages(bool bKeepSelected)
 			for (uiCount = 0, j = i; (j < uiUsages) && (asUsages[j].iType == psUsage->iType); j++, uiCount++)
 			{
 			}
-			szText.Init(GetUsageTypeName(psUsage->psLocation));
+			szText.Init(GetIDEUsageType(psUsage->psLocation)->szName);
 			AppendIDEUsageCount(&szText, uiCount, szWhat);
 			iType = mpUsages->AddNode(iRoot, szText.Text(), NULL, 0);
 			szText.Kill();
@@ -777,47 +790,6 @@ void CIDEUsages::ShowUsages(bool bKeepSelected)
 
 	mpUsages->ExpandAll();
 	mpUsages->SelectNode((iSelect != TREE_NO_NODE) ? iSelect : iFirstLine);
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// What a place's usage type group is called: its definition, a
-// declaration, or how a reference uses its symbol.
-//
-//////////////////////////////////////////////////////////////////////////
-const char* CIDEUsages::GetUsageTypeName(SIDELocation* psLocation)
-{
-	if (psLocation->uiRole == CPPIR_Definition)
-	{
-		return "Definition";
-	}
-	if (psLocation->uiRole == CPPIR_Declaration)
-	{
-		return "Declaration";
-	}
-	return (psLocation->uiUsage < CPPUT_NumUsageTypes) ? gaszIDEUsageTypeNames[psLocation->uiUsage] : gaszIDEUsageTypeNames[CPPUT_Other];
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// Where a place's usage type group goes among the others: definitions,
-// declarations, calls, reads and writes, then the declarations a type is
-// named in, and the rest.
-//
-//////////////////////////////////////////////////////////////////////////
-int CIDEUsages::GetUsageTypeRank(SIDELocation* psLocation)
-{
-	if (psLocation->uiRole == CPPIR_Definition)
-	{
-		return giIDEUsageTypeDefinition;
-	}
-	if (psLocation->uiRole == CPPIR_Declaration)
-	{
-		return giIDEUsageTypeDeclaration;
-	}
-	return (psLocation->uiUsage < CPPUT_NumUsageTypes) ? gaiIDEUsageTypeRanks[psLocation->uiUsage] : gaiIDEUsageTypeRanks[CPPUT_Other];
 }
 
 
