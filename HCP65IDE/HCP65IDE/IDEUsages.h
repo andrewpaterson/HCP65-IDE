@@ -32,6 +32,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 class CIDEContent;
 class CIDEFileLines;
+class CMarkupTag;
+class CXMLWriter;
 struct SIDEPlaceChange;
 
 
@@ -121,6 +123,8 @@ public:
 	void				AdjustPlaces(const char* szFile, SIDEPlaceChange* psChange);
 	int64				Poll(int64 iNow);
 	void				SetGrouping(uint8 uiGrouping);
+	void				ReadSettings(CMarkupTag* pcSettings);
+	void				WriteSettings(CXMLWriter* pcWriter);
 	uint8				GetGrouping(void);
 	Ptr<CTreeContainer>	GetUsagesTree(void);
 	Ptr<CDockPane>		GetTool(void);
@@ -144,6 +148,7 @@ protected:
 	void				ReturnToEditor(void);
 	void				PopupUsageClicked(CMenuItem* pcItem);
 	void				GroupingChanged(void);
+	void				ShowGrouping(uint8 uiGrouping);
 	void				FindUsagesOnly(void);
 };
 

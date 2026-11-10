@@ -20,6 +20,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 ** ------------------------------------------------------------------------ **/
 #include <stdlib.h>
 #include "BaseLib/StringHelper.h"
+#include "BaseLib/MarkupTag.h"
+#include "BaseLib/XMLWriter.h"
 #include "StandardLib/ClassDefines.h"
 #include "WindowLib/GridContainer.h"
 #include "WindowLib/ScrollPane.h"
@@ -31,6 +33,12 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define IDE_USAGES_POPUP_MAXIMUM		100		//The most usages Control+B's popup shows; Find Usages shows the rest.
 #define IDE_USAGES_OPEN_FILES_MAXIMUM	1000	//With more usages than this the tree's files start closed.
 #define IDE_USAGES_REFRESH				500		//Milliseconds after the last edit that moved a usage until the tree shows it.
+
+//Find Usages' part of the settings' file.
+#define IDE_USAGES_SETTINGS_TAG			"FindUsages"
+#define IDE_USAGES_BY_TYPE_ATTRIBUTE	"GroupByType"
+#define IDE_USAGES_BY_PROJECT_ATTRIBUTE	"GroupByProject"
+#define IDE_USAGES_BY_CLASS_ATTRIBUTE	"GroupByClass"
 
 
 //A usage type's group in the tree: where it goes among the others and what it is called.
@@ -1091,8 +1099,8 @@ void CIDEUsages::ReturnToEditor(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// A grouping check box was ticked or cleared: what was found is shown
-// again, grouped as they say.
+// A grouping check box was ticked or cleared: the groups are as the
+// boxes say.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEUsages::GroupingChanged(void)
@@ -1103,23 +1111,37 @@ void CIDEUsages::GroupingChanged(void)
 	uiGrouping |= mpByType->IsTicked() ? IDE_USAGES_BY_TYPE : 0;
 	uiGrouping |= mpByProject->IsTicked() ? IDE_USAGES_BY_PROJECT : 0;
 	uiGrouping |= mpByClass->IsTicked() ? IDE_USAGES_BY_CLASS : 0;
+	SetGrouping(uiGrouping);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The groups (IDE_USAGES_BY_*) changed, as the check boxes change them:
+// they are shown (ShowGrouping) and kept for the next time the IDE is run
+// (CIDESettings::WriteSettings).
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEUsages::SetGrouping(uint8 uiGrouping)
+{
+	uiGrouping &= IDE_USAGES_BY_ALL;
 	if (uiGrouping != muiGrouping)
 	{
-		muiGrouping = uiGrouping;
-		ShowUsages(true);
+		ShowGrouping(uiGrouping);
+		mpcContent->GetSettings()->WriteSettings();
 	}
 }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The groups (IDE_USAGES_BY_*), as the check boxes would set them: the
-// boxes are ticked to match and what was found is shown again.
+// The groups are uiGrouping: the boxes are ticked to match and what was
+// found is shown again.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEUsages::SetGrouping(uint8 uiGrouping)
+void CIDEUsages::ShowGrouping(uint8 uiGrouping)
 {
-	muiGrouping = uiGrouping & IDE_USAGES_BY_ALL;
+	muiGrouping = uiGrouping;
 	if (mpByType.IsNotNull())
 	{
 		mpByType->SetTicked((muiGrouping & IDE_USAGES_BY_TYPE) != 0);
@@ -1127,6 +1149,50 @@ void CIDEUsages::SetGrouping(uint8 uiGrouping)
 		mpByClass->SetTicked((muiGrouping & IDE_USAGES_BY_CLASS) != 0);
 	}
 	ShowUsages(true);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Find Usages' part of how the IDE was left, in the settings' file (see
+// CIDESettings): its groups, <FindUsages GroupByType="true" .../>.  One
+// the file doesn't say stays as it is.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEUsages::ReadSettings(CMarkupTag* pcSettings)
+{
+	static const char*	aszAttributes[] = { IDE_USAGES_BY_TYPE_ATTRIBUTE, IDE_USAGES_BY_PROJECT_ATTRIBUTE, IDE_USAGES_BY_CLASS_ATTRIBUTE };
+	static const uint8	auiGroups[] = { IDE_USAGES_BY_TYPE, IDE_USAGES_BY_PROJECT, IDE_USAGES_BY_CLASS };
+	CMarkupTag*			pcTag;
+	char*				szValue;
+	uint8				uiGrouping;
+	size				i;
+
+	pcTag = pcSettings->GetTag(IDE_USAGES_SETTINGS_TAG);
+	if (pcTag == NULL)
+	{
+		return;
+	}
+	uiGrouping = muiGrouping;
+	for (i = 0; i < sizeof(auiGroups); i++)
+	{
+		szValue = pcTag->GetStringAttribute(aszAttributes[i]);
+		if (szValue)
+		{
+			uiGrouping = (StringCompare(szValue, "true") == 0) ? (uiGrouping | auiGroups[i]) : (uiGrouping & ~auiGroups[i]);
+		}
+	}
+	ShowGrouping(uiGrouping);
+}
+
+
+void CIDEUsages::WriteSettings(CXMLWriter* pcWriter)
+{
+	pcWriter->Begin(IDE_USAGES_SETTINGS_TAG);
+	pcWriter->Attribute(IDE_USAGES_BY_TYPE_ATTRIBUTE, (muiGrouping & IDE_USAGES_BY_TYPE) != 0);
+	pcWriter->Attribute(IDE_USAGES_BY_PROJECT_ATTRIBUTE, (muiGrouping & IDE_USAGES_BY_PROJECT) != 0);
+	pcWriter->Attribute(IDE_USAGES_BY_CLASS_ATTRIBUTE, (muiGrouping & IDE_USAGES_BY_CLASS) != 0);
+	pcWriter->End();
 }
 
 

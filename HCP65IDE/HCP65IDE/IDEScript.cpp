@@ -30,7 +30,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 //The debug script's commands that are the IDE's (RunCommand); "goto:" takes what follows it.
-static const char*	gaszIDEScriptCommands[] = { "goto:", "rename", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printedits", "printspans", "configuration:", "waitindex" };
+static const char*	gaszIDEScriptCommands[] = { "goto:", "rename", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printsettings", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printedits", "printspans", "configuration:", "waitindex" };
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -314,6 +314,16 @@ void CIDEScript::RunCommand(const char* szCommand)
 
 		cFile.Init();
 		printf("Keymap file:\n%s\n", cFile.Read(mpcContent->GetSettings()->GetKeymapFile()) ? cFile.Text() : "(none)");
+		fflush(stdout);
+		cFile.Kill();
+	}
+	else if (strcmp(szCommand, "printsettings") == 0)
+	{
+		//How the user left the IDE, as it's kept.
+		CTextFile	cFile;
+
+		cFile.Init();
+		printf("Settings file:\n%s\n", cFile.Read(mpcContent->GetSettings()->GetSettingsFile()) ? cFile.Text() : "(none)");
 		fflush(stdout);
 		cFile.Kill();
 	}

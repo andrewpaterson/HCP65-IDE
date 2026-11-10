@@ -123,6 +123,7 @@ static bool IsIDEScripted(void)
 #define IDE_RECENT_DIRECTORY		"HCP65IDE"
 #define IDE_RECENT_FILE				"RecentSolutions.xml"
 #define IDE_KEYMAP_FILE				"Keymap.xml"
+#define IDE_SETTINGS_FILE			"Settings.xml"
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -158,20 +159,31 @@ void GetIDERecentFile(CChars* pszDest)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The user's file the keys they've changed are kept in, beside the recent
-// solutions; HCP65_IDE_KEYMAP if it is set.  A scripted run, checking the
-// IDE, has none unless it is set: the user's keys aren't what's checked.
+// A file of the user's, beside the recent solutions, that says how they
+// set the IDE up; the variable szVariable if it is set.  A scripted run,
+// checking the IDE, has none unless it is set: the user's own isn't what's
+// checked.
 //
 //////////////////////////////////////////////////////////////////////////
-static void GetIDEKeymapFile(CChars* pszDest)
+static void GetIDEUsersOwnFile(CChars* pszDest, const char* szFile, const char* szVariable)
 {
-	if ((getenv("HCP65_IDE_KEYMAP") == NULL) && IsIDEScripted())
+	if ((getenv(szVariable) == NULL) && IsIDEScripted())
 	{
 		pszDest->Init();
 		return;
 	}
-	GetIDEUserFile(pszDest, IDE_KEYMAP_FILE, "HCP65_IDE_KEYMAP");
+	GetIDEUserFile(pszDest, szFile, szVariable);
 }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The user's files the keys they've changed (HCP65_IDE_KEYMAP if it is
+// set) and how they left the IDE (HCP65_IDE_SETTINGS) are kept in.
+//
+//////////////////////////////////////////////////////////////////////////
+static void GetIDEKeymapFile(CChars* pszDest) { GetIDEUsersOwnFile(pszDest, IDE_KEYMAP_FILE, "HCP65_IDE_KEYMAP"); }
+static void GetIDESettingsFile(CChars* pszDest) { GetIDEUsersOwnFile(pszDest, IDE_SETTINGS_FILE, "HCP65_IDE_SETTINGS"); }
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -290,6 +302,9 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 		mpContent->GetDebugging()->SetDefaultEmulator((getenv("HCP65_IDE_EMULATOR") != NULL) ? getenv("HCP65_IDE_EMULATOR") : IDE_EMULATOR, IDE_EMULATOR_DIRECTORY);
 		GetIDERecentFile(&szPath);
 		mpContent->GetSolutions()->SetRecentFile(szPath.Text());
+		szPath.Kill();
+		GetIDESettingsFile(&szPath);
+		mpContent->GetSettings()->ReadSettings(szPath.Text());  //How the user left the IDE.
 		szPath.Kill();
 
 		//Sized first: what the checks below scroll to depends on the size.

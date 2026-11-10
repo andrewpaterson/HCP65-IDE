@@ -31,8 +31,12 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 class CIDEContent;
 
 
+#define IDE_SETTINGS_TAG	"Settings"	//The root of the file how the IDE was left is kept in.
+
+
 //File, Settings, and the keys a user has changed, which are read from a file of theirs as the IDE starts and written to
-//it when OK closes the dialog.  They apply straight away.
+//it when OK closes the dialog.  They apply straight away.  How the IDE was left (Find Usages' groups) is kept in
+//another file of theirs: each part of the IDE reads and writes its own in it (ReadSettings and WriteSettings).
 class CIDESettings : public CObject
 {
 CONSTRUCTABLE(CIDESettings);
@@ -40,6 +44,7 @@ DESTRUCTABLE(CIDESettings);
 protected:
 	CIDEContent*				mpcContent;  //Not held: the content holds it.
 	CChars						mszKeymapFile;  //Empty if the keys aren't kept.
+	CChars						mszSettingsFile;  //Empty if how the IDE was left isn't kept.
 	Ptr<CIDESettingsDialog>		mpDialog;  //While it's shown.
 	Ptr<CIDEKeymapPage>			mpKeymapPage;
 
@@ -53,6 +58,9 @@ public:
 	void	AddCommands(Ptr<CCommandSet> pCommands);
 	void	ReadKeymap(const char* szFile);
 	char*	GetKeymapFile(void);
+	void	ReadSettings(const char* szFile);
+	bool	WriteSettings(void);
+	char*	GetSettingsFile(void);
 
 protected:
 	void	RequestDialog(void);

@@ -21,6 +21,9 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdlib.h>
 #include "BaseLib/FileUtil.h"
 #include "BaseLib/Logger.h"
+#include "BaseLib/StringHelper.h"
+#include "BaseLib/XMLFile.h"
+#include "BaseLib/XMLWriter.h"
 #include "StandardLib/ClassDefines.h"
 #include "StandardLib/Objects.h"
 #include "IDEContent.h"
@@ -36,6 +39,7 @@ void CIDESettings::Init(CIDEContent* pcContent)
 	PreInit();
 	mpcContent = pcContent;
 	mszKeymapFile.Init();
+	mszSettingsFile.Init();
 	PostInit();
 }
 
@@ -48,6 +52,7 @@ void CIDESettings::Class(void)
 {
 	U_Pointer(mpcContent);
 	U_String(mszKeymapFile);
+	U_String(mszSettingsFile);
 	M_Pointer(mpDialog);
 	M_Pointer(mpKeymapPage);
 }
@@ -59,6 +64,7 @@ void CIDESettings::Class(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDESettings::Free(void)
 {
+	mszSettingsFile.Kill();
 	mszKeymapFile.Kill();
 }
 
@@ -99,6 +105,80 @@ void CIDESettings::ReadKeymap(const char* szFile)
 		}
 	}
 }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// What the IDE keeps of how the user left it, from szFile, as it starts:
+// each part of the IDE reads its own from the file's root (Find Usages its
+// groups).  It being missing only means nothing has been kept; "" keeps
+// nothing.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDESettings::ReadSettings(const char* szFile)
+{
+	CXMLFile	cFile;
+	CFileUtil	cFileUtil;
+	CChars		szFileName;
+	CChars		szDirectory;
+	CMarkupTag*	pcRoot;
+
+	mszSettingsFile.Set(szFile);
+	if (mszSettingsFile.Empty() || !cFileUtil.Exists(szFile))
+	{
+		return;
+	}
+	szFileName.Init();
+	szDirectory.Init();
+	cFileUtil.SplitPath(szFile, &szFileName, &szDirectory);
+	if (szDirectory.Empty())
+	{
+		szDirectory.Set(".");
+	}
+	cFile.Init();
+	pcRoot = (cFile.Read(szFileName.Text(), szDirectory.Text()) && cFile.mcMarkup.mpcDoc) ? cFile.mcMarkup.mpcDoc->GetRootTag() : NULL;
+	if (pcRoot && (StringCompare(pcRoot->GetName(), IDE_SETTINGS_TAG) == 0))
+	{
+		mpcContent->GetUsages()->ReadSettings(pcRoot);
+	}
+	else
+	{
+		gcLogger.Warning2(__METHOD__, " Settings [", szFile, "] couldn't be read.", NULL);
+	}
+	cFile.Kill();
+	szDirectory.Kill();
+	szFileName.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// What ReadSettings reads, written when a part of it changes.  False if
+// it couldn't be written; true if it was, or nothing is kept.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDESettings::WriteSettings(void)
+{
+	CXMLWriter	cWriter;
+	CFileUtil	cFileUtil;
+	bool		bResult;
+
+	if (mszSettingsFile.Empty())
+	{
+		return true;
+	}
+	cFileUtil.TouchDir(mszSettingsFile.Text(), true);
+	cWriter.Init();
+	cWriter.Begin(IDE_SETTINGS_TAG);
+	mpcContent->GetUsages()->WriteSettings(&cWriter);
+	cWriter.End();
+	bResult = cWriter.Write(mszSettingsFile.Text());
+	cWriter.Kill();
+	return bResult;
+}
+
+
+char* CIDESettings::GetSettingsFile(void) { return mszSettingsFile.Text(); }
 
 
 //////////////////////////////////////////////////////////////////////////

@@ -103,6 +103,16 @@ def MakeKeymapFile(szText=None):
 	return szFile
 
 
+def MakeSettingsFile(szText=None):
+	#Where a scripted run keeps how the IDE was left, with szText in it if it's given.
+	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
+	atexit.register(shutil.rmtree, szRoot, True)
+	szFile = os.path.join(szRoot, 'Settings.xml')
+	if szText is not None:
+		open(szFile, 'w').write(szText)
+	return szFile
+
+
 #Each check: its name, its HCP65_IDE_* variables, the lines (regular expressions) its output must have, in order, and
 #lines it mustn't have.
 CHECKS = [
@@ -275,7 +285,17 @@ CHECKS = [
 		[r'^Usages of F  4 usages$', r'^    2: class CA', r'^    3: int G', r'^Usages of F  4 usages$', r'^    4: class CA',
 		 r'^    5: int G\(void\) \{ int x = return F\(\); \}$', r'^    6: int CA::N', r'^    7: int main',
 		 r'^Selection: \[F\] on line 5, caret line 5$', r'^Selected: 5: int G'], [r'not enabled']),
-	('usages-many-files-closed',dict(MakeUsagesKernel(USAGES_KERNEL, {'Aaa.cpp': ManyUsages('A', 600), 'Bbb.cpp': ManyUsages('B', 600)}), **{
+	('usages-groups-kept', dict(MakeUsagesKernel(), **{
+		#Find Usages' groups are kept when they change, for the next time the IDE is run.
+		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp', 'CARET': '1:5', 'SETTINGS': MakeSettingsFile(), 'EDIT': 'usagegroups:c,usages',
+		'DEBUG': 'printsettings'}),
+		[r'^  Kernel\.cpp  4$', r'^    CA  2$', r'^Settings file:$', r'<FindUsages GroupByType="false" GroupByProject="false" GroupByClass="true"'], []),
+	('usages-groups-read', dict(MakeUsagesKernel(), **{
+		#Those kept come back as the IDE starts: by usage type alone here, and the one the file doesn't say stays on.
+		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp', 'CARET': '1:5', 'EDIT': 'usages',
+		'SETTINGS': MakeSettingsFile('<Settings>\n  <FindUsages GroupByProject="false" GroupByClass="false"/>\n</Settings>\n')}),
+		[r'^Usages of F  4 usages$', r'^  Call  4 usages$', r'^    Kernel\.cpp  4$', r'^      2: class CA'], [r'^\s+Kernel  4 usages$', r'^\s+CA  2$']),
+	('usages-many-files-closed', dict(MakeUsagesKernel(USAGES_KERNEL, {'Aaa.cpp': ManyUsages('A', 600), 'Bbb.cpp': ManyUsages('B', 600)}), **{
 		#Past 1000 usages (1204 here) the tree's files start closed, but for the first line's: the top, the three files
 		#and Aaa.cpp's 600 lines can be seen.  A step from Aaa.cpp's last line opens Bbb.cpp for its first.
 		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp', 'CARET': '1:5', 'EDIT': 'usagegroups:,usages,printrows,printselected,select:601',
