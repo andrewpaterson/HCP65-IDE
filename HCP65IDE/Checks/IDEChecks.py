@@ -81,8 +81,16 @@ CHECKS = [
 		[r'BaseLib  ', r'Call  ']),
 	('usages-jump-to-source', {
 		#F4 in the Find Usages tree goes to the selected usage, as double clicking it does: the second of Calculator.cpp's.
-		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usages,focus:usages,select:3,f4'},
+		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usages,focus:usages,select:3,key:f4'},
 		[r'^  Calculator\.cpp  3$', r'^    391: ', r'Calculator\.cpp \(focus\) line 391: '], []),
+	('usages-enter-space', {
+		#As IntelliJ's, enter and space in the Find Usages tree don't go to the usage: the tree keeps the keys.
+		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usages,focus:usages,select:3,key:enter,key:space'},
+		[r'^    391: ', r'CalcParentheses\.h line 38: '], [r'Calculator\.cpp.* line \d+: \[', r'\(focus\)']),
+	('usages-escape', {
+		#Escape in the Find Usages tree gives the keys back to the editor, where they were.
+		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usages,focus:usages,select:3,key:escape'},
+		[r'^    391: ', r'CalcParentheses\.h \(focus\) line 38: '], [r'Calculator\.cpp.* line \d+: \[']),
 	('rename-after-edits', {
 		'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'CARET': '36:2',
 		'EDIT': 'type:int i; ,rename:mpcCalc2,rename:mpcCalc3,renamable'},

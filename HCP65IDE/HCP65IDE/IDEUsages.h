@@ -52,6 +52,7 @@ DESTRUCTABLE(CIDEUsages);
 protected:
 	CIDEContent*		mpcContent;  //Not held: the content holds it.
 	Ptr<CTreeContainer>	mpUsages;  //What Find Usages found: usage types, projects, files, classes, lines.
+	Ptr<CInputAction>	mpEscapeAction;  //Escape in the tree goes back to the editor.
 	Ptr<CDockPane>		mpUsagesTool;
 	Ptr<CCheckBox>		mpByType;
 	Ptr<CCheckBox>		mpByProject;
@@ -87,6 +88,7 @@ public:
 protected:
 	void				ShowUsages(void);
 	void				UsageActivated(void);
+	void				ReturnToEditor(void);
 	void				GroupingChanged(void);
 	void				FindUsagesOnly(void);
 };

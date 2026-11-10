@@ -751,10 +751,26 @@ void CIDEScript::RunEditStep(const char* szStep)
 		//select:<node>, from 0 in the order "usages" prints them: that row of the Find Usages tree selected.
 		mpcContent->GetUsages()->GetUsagesTree()->SelectNode(atoi(&szStep[7]));
 	}
-	else if (strcmp(szStep, "f4") == 0)
+	else if (strncmp(szStep, "key:", 4) == 0)
 	{
-		//Jump to Source, to the focussed component and its parents, as F4 gives it.
-		mpcContent->GetWindow()->InputCommand(CIC_JumpToSource, true);
+		//key:f4, key:space, key:enter or key:escape: what the key gives (Jump to Source for F4) to the focussed component
+		//and its parents.
+		if (strcmp(&szStep[4], "f4") == 0)
+		{
+			mpcContent->GetWindow()->InputCommand(CIC_JumpToSource, true);
+		}
+		else if (strcmp(&szStep[4], "space") == 0)
+		{
+			mpcContent->GetWindow()->InputCommand(CIC_Space, true);
+		}
+		else if (strcmp(&szStep[4], "enter") == 0)
+		{
+			mpcContent->GetWindow()->InputCommand(CIC_Enter, true);
+		}
+		else if (strcmp(&szStep[4], "escape") == 0)
+		{
+			mpcContent->GetWindow()->InputCommand(CIC_ClearSelection, true);
+		}
 	}
 	else if (strcmp(szStep, "explorer") == 0)
 	{

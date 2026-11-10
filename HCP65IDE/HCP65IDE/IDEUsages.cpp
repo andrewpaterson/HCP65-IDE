@@ -166,6 +166,7 @@ void CIDEUsages::Class(void)
 {
 	U_Pointer(mpcContent);
 	M_Pointer(mpUsages);
+	M_Pointer(mpEscapeAction);
 	M_Pointer(mpUsagesTool);
 	M_Pointer(mpByType);
 	M_Pointer(mpByProject);
@@ -190,6 +191,11 @@ void CIDEUsages::Free(void)
 	if (mpUsages.IsNotNull())
 	{
 		mpUsages->GetActivationEvent()->Remove(this);
+		if (mpEscapeAction.IsNotNull())
+		{
+			mpUsages->RemoveInputAction(mpEscapeAction);
+			mpEscapeAction = NULL;
+		}
 	}
 	if (mpByType.IsNotNull())
 	{
@@ -225,6 +231,12 @@ void CIDEUsages::CreatePane(SDockPlace* psPlace)
 	mpUsages = OMalloc<CTreeContainer>(mpcContent->GetWindow(), mpcContent->GetTheme());
 	mpUsages->SetAlignment(CSH_Stretch, CSV_Top);
 	mpUsages->GetActivationEvent()->Add(this, &CIDEUsages::UsageActivated);
+
+	//As IntelliJ's: only Jump to Source (F4) and double clicking go to a usage, not space or enter, and escape goes back
+	//to the editor.
+	mpUsages->SetInputActionsEnabled(CIC_Space, false);
+	mpUsages->SetInputActionsEnabled(CIC_Enter, false);
+	mpEscapeAction = mpUsages->AddInputAction(CIC_ClearSelection, this, &CIDEUsages::ReturnToEditor);
 	pPane = OMalloc<CScrollPane>(mpcContent->GetWindow(), mpcContent->GetTheme());
 	pPane->SetContent(mpUsages);
 	pPane->SetAlignment(CSH_Stretch, CSV_Stretch);
@@ -564,7 +576,7 @@ int CIDEUsages::GetUsageTypeRank(SIDELocation* psLocation)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// A line's node, double clicked or entered, opens its place.
+// A line's node, double clicked or jumped to (F4), opens its place.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEUsages::UsageActivated(void)
@@ -579,6 +591,24 @@ void CIDEUsages::UsageActivated(void)
 	if ((iData > 0) && ((size)iData <= masUsages.NumElements()))
 	{
 		mpcContent->GetDocuments()->OpenLocation(masUsages.Get((size)iData - 1));
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Escape in the tree: the keys go back to the active editor, as
+// IntelliJ's tool windows give them back.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEUsages::ReturnToEditor(void)
+{
+	Ptr<CIDEEditorTab>	pTab;
+
+	pTab = mpcContent->GetDocuments()->GetActiveTab();
+	if (pTab.IsNotNull())
+	{
+		mpcContent->GetWindow()->GetFocus()->SetFocus(pTab->GetEditor());
 	}
 }
 
