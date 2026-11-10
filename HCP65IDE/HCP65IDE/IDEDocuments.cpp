@@ -616,15 +616,20 @@ Ptr<CIDEEditorTab> CIDEDocuments::GetTab(size uiIndex) { return maTabs.Get(uiInd
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The file the location is in, in its tab, with the caret on it.  A
-// file that isn't one of the solution's projects' items is highlighted as
-// part of the project of the file it was found from.
+// The file the location is in, in its tab, with the caret on it and its
+// editor given the keys.  With bSelectName the name there is selected,
+// the caret at its end, as a step through the usages shows what it went
+// to while the tool window keeps the keys.  A file that isn't one of the
+// solution's projects' items is highlighted as part of the project of the
+// file it was found from.  False, the status line saying so and nothing
+// selected, if the file can't be opened or no longer has the line.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEDocuments::OpenLocation(SIDELocation* psLocation)
+bool CIDEDocuments::OpenLocation(SIDELocation* psLocation, bool bSelectName)
 {
 	size				uiProject;
 	SIDENavigationPlace	sFrom;
+	CChars				szStatus;
 	bool				bRecord;
 
 	//A jump, the file opened with it: where it leaves goes on Back (CIDENavigationHistory).
@@ -637,7 +642,18 @@ bool CIDEDocuments::OpenLocation(SIDELocation* psLocation)
 	if (!OpenFile(psLocation->szFileName.Text(), uiProject) || !SetCaretPlace(psLocation->iLine, psLocation->iColumn))
 	{
 		mpcContent->GetNavigationHistory()->EndJump(&sFrom, false);
+		szStatus.Init("Couldn't go to ");
+		szStatus.Append(GetIDEFileNamePart(psLocation->szFileName.Text()));
+		szStatus.Append(':');
+		szStatus.Append(psLocation->iLine + 1);
+		szStatus.Append(": the file can't be opened or no longer has that line.");
+		mpcContent->ShowStatus(szStatus.Text());
+		szStatus.Kill();
 		return false;
+	}
+	if (bSelectName)
+	{
+		SelectAtCaret((size)psLocation->iLength);
 	}
 	mpActive->GetEditor()->GetWindow()->GetFocus()->SetFocus(mpActive->GetEditor());
 	mpcContent->GetNavigationHistory()->EndJump(&sFrom, bRecord);
@@ -647,9 +663,9 @@ bool CIDEDocuments::OpenLocation(SIDELocation* psLocation)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The active editor's text from its caret, uiLength bytes of it, selected,
-// the caret at its end, as a step through usages selects the name it went
-// to.  Nothing is selected for 0.
+// The active editor's text from its caret, uiLength bytes of it and no
+// further than the end of its line, selected, the caret at its end.
+// Nothing is selected for 0.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEDocuments::SelectAtCaret(size uiLength)
@@ -657,6 +673,7 @@ void CIDEDocuments::SelectAtCaret(size uiLength)
 	Ptr<CTextArea>	pEditor;
 	size			uiStart;
 	size			uiEnd;
+	size			uiLineEnd;
 
 	if (mpActive.IsNull() || (uiLength == 0))
 	{
@@ -665,11 +682,8 @@ void CIDEDocuments::SelectAtCaret(size uiLength)
 	pEditor = mpActive->GetEditor();
 	uiStart = pEditor->GetCaretPosition();
 	uiEnd = uiStart + uiLength;
-	if (uiEnd > strlen(pEditor->GetText()))
-	{
-		uiEnd = strlen(pEditor->GetText());
-	}
-	pEditor->Select(uiStart, uiEnd);
+	uiLineEnd = pEditor->GetLineEnd(pEditor->FindLine(uiStart));
+	pEditor->Select(uiStart, (uiEnd < uiLineEnd) ? uiEnd : uiLineEnd);
 }
 
 

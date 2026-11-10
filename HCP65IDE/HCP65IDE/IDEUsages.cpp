@@ -562,9 +562,7 @@ bool CIDEUsages::ShowUsagesPopup(void)
 	}
 	if (msPopupFound.asUsages.NumElements() == 1)
 	{
-		psUsage = msPopupFound.asUsages.Get(0);
-		mpcContent->GetDocuments()->OpenLocation(&psUsage->sLocation);
-		mpcContent->GetDocuments()->SelectAtCaret((size)psUsage->sLocation.iLength);
+		mpcContent->GetDocuments()->OpenLocation(&msPopupFound.asUsages.Get(0)->sLocation, true);
 		return true;
 	}
 
@@ -645,8 +643,7 @@ void CIDEUsages::OpenPopup(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDEUsages::PopupUsageClicked(CMenuItem* pcItem)
 {
-	size		i;
-	SIDEUsage*	psUsage;
+	size	i;
 
 	for (i = 1; i < mpPopup->NumItems(); i++)
 	{
@@ -654,9 +651,7 @@ void CIDEUsages::PopupUsageClicked(CMenuItem* pcItem)
 		{
 			if (i - 1 < msPopupFound.asUsages.NumElements())
 			{
-				psUsage = msPopupFound.asUsages.Get(i - 1);
-				mpcContent->GetDocuments()->OpenLocation(&psUsage->sLocation);
-				mpcContent->GetDocuments()->SelectAtCaret((size)psUsage->sLocation.iLength);
+				mpcContent->GetDocuments()->OpenLocation(&msPopupFound.asUsages.Get(i - 1)->sLocation, true);
 			}
 			return;
 		}
@@ -993,8 +988,7 @@ bool CIDEUsages::Step(bool bNext, bool bKeepKeys)
 		{
 			mpUsages->SelectNode(iNode);
 			mpUsages->ShowRow(mpUsages->FindNodeRow(iNode));
-			mpcContent->GetDocuments()->OpenLocation(&psUsage->sLocation);
-			mpcContent->GetDocuments()->SelectAtCaret((size)psUsage->sLocation.iLength);
+			mpcContent->GetDocuments()->OpenLocation(&psUsage->sLocation, true);
 			if (bKeepKeys)
 			{
 				mpcContent->GetWindow()->GetFocus()->SetFocus(mpUsages);

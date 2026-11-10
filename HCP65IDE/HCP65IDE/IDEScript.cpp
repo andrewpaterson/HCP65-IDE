@@ -914,7 +914,7 @@ void CIDEScript::RunEditStep(const char* szStep)
 		{
 			pEditor = mpcContent->GetDocuments()->GetTab(i)->GetEditor();
 			uiLine = pEditor->FindLine(pEditor->GetCaretPosition());
-			uiEnd = (uiLine + 1 < pEditor->NumLines()) ? pEditor->GetLineStart(uiLine + 1) - 1 : strlen(pEditor->GetText());
+			uiEnd = pEditor->GetLineEnd(uiLine);
 			szLine.Init();
 			szLine.AppendSubString(pEditor->GetText(), pEditor->GetLineStart(uiLine), uiEnd);
 			printf("%s%s%s line %d: [%s]\n", mpcContent->GetDocuments()->GetTab(i)->GetFileName(), mpcContent->GetDocuments()->GetTab(i)->IsModified() ? " *" : "", (mpcContent->GetWindow()->GetFocus()->GetFocussedComponent() == pEditor) ? " (focus)" : "", (int)uiLine + 1, szLine.Text());

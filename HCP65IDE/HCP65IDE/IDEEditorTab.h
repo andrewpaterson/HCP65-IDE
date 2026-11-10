@@ -85,6 +85,7 @@ public:
 	void				SetHighlights(CArrayHighlights* pacHighlights);
 	bool				GetCaretPlace(int* piLine, int* piColumn);
 	bool				SetCaretPlace(int iLine, int iColumn);
+	size				FindPosition(int iLine, int iColumn);
 	bool				TakeEdits(int64 iNow, bool bNow, bool bCanIndex, bool* pbHighlight, bool* pbIndex, int64* piWait);
 	void				IndexRestarted(void);
 	void				RequestRecolour(void);

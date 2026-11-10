@@ -213,8 +213,27 @@ bool CIDEEditorTab::GetCaretPlace(int* piLine, int* piColumn)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Puts the caret at a line and column (0 based, the column in bytes)
-// and scrolls the editor to show it.  False if the file hasn't that line.
+// The position in the text of a line and column (0 based, the column in
+// bytes): the line's end if it hasn't that column, as it might not since
+// the place was found.
+//
+//////////////////////////////////////////////////////////////////////////
+size CIDEEditorTab::FindPosition(int iLine, int iColumn)
+{
+	size	uiPosition;
+	size	uiLineEnd;
+
+	uiPosition = mpEditor->GetLineStart((size)iLine) + (size)iColumn;
+	uiLineEnd = mpEditor->GetLineEnd((size)iLine);
+	return (uiPosition < uiLineEnd) ? uiPosition : uiLineEnd;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Puts the caret at a line and column (0 based, the column in bytes; see
+// FindPosition) and scrolls the editor to show it.  False if the file
+// hasn't that line.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEEditorTab::SetCaretPlace(int iLine, int iColumn)
@@ -233,7 +252,7 @@ bool CIDEEditorTab::SetCaretPlace(int iLine, int iColumn)
 	//Laid out so the caret has a place: its line a few lines from the top, and the text only scrolled sideways if the
 	//caret is past the right of the view (a window not shown yet has no width).  The code is right of the gutter.
 	mpWindow->Layout();
-	mpEditor->SetCaretPosition(mpEditor->GetLineStart((size)iLine) + (size)iColumn);
+	mpEditor->SetCaretPosition(FindPosition(iLine, iColumn));
 	mpWindow->Layout();
 	mpEditor->GetCaretBounds(&cCaret);
 	iView = mpPane->GetActualSize().x;
@@ -486,7 +505,6 @@ void CIDEEditorTab::Reload(const char* szText)
 {
 	int		iLine;
 	int		iColumn;
-	size	uiLineEnd;
 
 	//Pasted over the whole text: line ends become line feeds, as they are typed.  SaveFile puts carriage returns back.
 	GetCaretPlace(&iLine, &iColumn);
@@ -503,12 +521,7 @@ void CIDEEditorTab::Reload(const char* szText)
 
 	if ((size)iLine < mpEditor->NumLines())
 	{
-		uiLineEnd = ((size)iLine + 1 < mpEditor->NumLines()) ? mpEditor->GetLineStart((size)iLine + 1) - 1 : strlen(mpEditor->GetText());
-		if (mpEditor->GetLineStart((size)iLine) + (size)iColumn > uiLineEnd)
-		{
-			iColumn = (int)(uiLineEnd - mpEditor->GetLineStart((size)iLine));
-		}
-		mpEditor->SetCaretPosition(mpEditor->GetLineStart((size)iLine) + (size)iColumn);
+		mpEditor->SetCaretPosition(FindPosition(iLine, iColumn));
 	}
 	muiSavedUndo = mpEditor->GetUndoId();
 	ShowModified();

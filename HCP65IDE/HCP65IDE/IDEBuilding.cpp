@@ -883,7 +883,7 @@ bool CIDEBuilding::Step(bool bNext, bool bKeepKeys)
 	{
 		muiStepLine = psFound->uiOutputLine;
 		uiStart = pOutput->GetLineStart(psFound->uiOutputLine);
-		uiEnd = (psFound->uiOutputLine + 1 < pOutput->NumLines()) ? pOutput->GetLineStart(psFound->uiOutputLine + 1) - 1 : strlen(pOutput->GetText());
+		uiEnd = pOutput->GetLineEnd(psFound->uiOutputLine);
 		pOutput->Select(uiStart, uiEnd);
 
 		memset(&sLocation, 0, sizeof(SIDELocation));
@@ -891,8 +891,10 @@ bool CIDEBuilding::Step(bool bNext, bool bKeepKeys)
 		sLocation.iLine = psFound->iLine - 1;
 		sLocation.iColumn = (psFound->iColumn > 0) ? psFound->iColumn - 1 : 0;
 		sLocation.iContainer = -1;
-		mpcContent->GetDocuments()->OpenLocation(&sLocation);
-		mpcContent->GetDocuments()->SelectWordAtCaret();
+		if (mpcContent->GetDocuments()->OpenLocation(&sLocation))
+		{
+			mpcContent->GetDocuments()->SelectWordAtCaret();
+		}
 		sLocation.szFileName.Kill();
 		if (bKeepKeys)
 		{

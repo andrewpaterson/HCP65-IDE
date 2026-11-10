@@ -384,9 +384,6 @@ bool CIDENavigationHistory::Go(SIDENavigationPlace* psPlace)
 	Ptr<CIDEEditorTab>	pTab;
 	Ptr<CTextArea>		pEditor;
 	int32				iLine;
-	int32				iColumn;
-	size				uiLineStart;
-	size				uiLineEnd;
 	bool				bResult;
 
 	mbMoving = true;
@@ -400,14 +397,7 @@ bool CIDENavigationHistory::Go(SIDENavigationPlace* psPlace)
 		{
 			iLine = (int32)pEditor->NumLines() - 1;
 		}
-		uiLineStart = pEditor->GetLineStart((size)iLine);
-		uiLineEnd = ((size)iLine + 1 < pEditor->NumLines()) ? pEditor->GetLineStart((size)iLine + 1) - 1 : strlen(pEditor->GetText());
-		iColumn = psPlace->iColumn;
-		if ((size)iColumn > uiLineEnd - uiLineStart)
-		{
-			iColumn = (int32)(uiLineEnd - uiLineStart);
-		}
-		mpcContent->GetDocuments()->SetCaretPlace(iLine, iColumn);
+		mpcContent->GetDocuments()->SetCaretPlace(iLine, psPlace->iColumn);
 		mpcContent->GetWindow()->GetFocus()->SetFocus(pEditor);
 	}
 	mbMoving = false;
