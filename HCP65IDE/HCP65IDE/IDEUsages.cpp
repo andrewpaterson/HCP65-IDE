@@ -321,6 +321,7 @@ bool CIDEUsages::FindUsages(bool bDeclarations)
 
 	ShowUsages(false);
 	mpcContent->GetDock()->Show(mpUsagesTool);
+	mpcContent->GetWindow()->GetFocus()->SetFocus(mpUsages);
 	return true;
 }
 

@@ -84,9 +84,10 @@ CHECKS = [
 		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usages,focus:usages,select:3,key:f4'},
 		[r'^  Calculator\.cpp  3$', r'^    391: ', r'Calculator\.cpp \(focus\) line 391: '], []),
 	('usages-first-selected', {
-		#Find Usages selects the first usage, for F4 to go to; grouped again, the usage selected stays selected.
+		#Find Usages selects the first usage and gives the tree the keys, for F4 to go to it; grouped again, the usage
+		#selected stays selected.
 		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14',
-		'EDIT': 'usagegroups:,usages,printselected,select:3,usagegroups:c,printselected,usagegroups:,usages,focus:usages,key:f4'},
+		'EDIT': 'usagegroups:,usages,printselected,select:3,usagegroups:c,printselected,usagegroups:,usages,key:f4'},
 		[r'^Selected: 367: ', r'^Selected: 391: ', r'Calculator\.cpp \(focus\) line 367: '], [r'^Selected: none']),
 	('usages-enter-space', {
 		#As IntelliJ's, enter and space in the Find Usages tree don't go to the usage: the tree keeps the keys.
