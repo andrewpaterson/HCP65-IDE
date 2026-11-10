@@ -59,6 +59,8 @@ void CIDEEditorTab::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CFo
 	mpEditor = mpCodeEditor->GetTextArea();
 	mpEditor->SetTiledText(true);
 	mpEditor->SetColour(sColour);
+	//The caret's line is highlighted, as IntelliJ's caret row, so where a step or a jump went shows without the keys.
+	mpEditor->SetCaretLine(true, pTheme->GetColour(TC_CaretLine));
 	mpPane = OMalloc<CScrollPane>(pWindow, pTheme);
 	mpPane->SetContent(mpCodeEditor);
 	mpPane->SetAlignment(CSH_Stretch, CSV_Stretch);
