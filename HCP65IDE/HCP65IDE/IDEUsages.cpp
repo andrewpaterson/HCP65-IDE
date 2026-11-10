@@ -652,7 +652,8 @@ bool CIDEUsages::ShowUsagesPopup(void)
 //
 // The popup opened under the active editor's caret, as IntelliJ's, its
 // first usage selected.  It is at most a third of the screen's height and
-// no taller than the editor's view: more usages scroll.
+// no taller than the editor's view: more usages scroll.  A press anywhere
+// outside it closes it, in the editor too.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEUsages::OpenPopup(void)
@@ -673,6 +674,9 @@ void CIDEUsages::OpenPopup(void)
 	pEditor->GetCaretBounds(&cCaret);
 	sPosition.Init(cBounds.GetLeft() + cCaret.GetLeft(), cBounds.GetTop() + cCaret.GetBottom());
 	pPopup = mpPopup->Open(sPosition, pEditor, true);
+
+	//Its owner is the editor, most of the window: a press there closes it, as one anywhere else outside it does.
+	pPopup->SetOwnerPressKeepsOpen(false);
 
 	iMaximum = -1;
 	if (mpcContent->GetWindow()->GetScreenArea(&cScreen) && (cScreen.GetHeight() > 0))

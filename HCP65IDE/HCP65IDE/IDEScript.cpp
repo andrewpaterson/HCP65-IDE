@@ -782,6 +782,21 @@ void CIDEScript::RunEditStep(const char* szStep)
 		printf("Selected: %s\n", szNode.Empty() ? "none" : szNode.Text());
 		szNode.Kill();
 	}
+	else if ((strcmp(szStep, "presseditor") == 0) && pTab.IsNotNull())
+	{
+		//The pointer moved over the active editor, near the bottom of its view and away from a popup under the caret,
+		//and what a press there does to the popups done (CFocus::FocusClick): "Pressed: the editor", or what else was
+		//under the pointer.
+		CInt32Rect		cBounds;
+		Ptr<CComponent>	pUnder;
+
+		mpcContent->GetWindow()->Layout();
+		pTab->GetPane()->GetActualBounds(&cBounds);
+		mpcContent->GetWindow()->PointerMoved((cBounds.GetLeft() + cBounds.GetRight()) / 2, cBounds.GetBottom() - 40);
+		pUnder = mpcContent->GetWindow()->GetFocus()->GetMouseOverComponent();
+		printf("Pressed: %s\n", (pUnder.IsNotNull() && pUnder->IsWithin(pTab->GetEditor())) ? "the editor" : "something else");
+		mpcContent->GetWindow()->ClosePopupsOutside(pUnder);
+	}
 	else if (strcmp(szStep, "printrows") == 0)
 	{
 		//How many of the Find Usages tree's nodes can be seen (those in open nodes), as "Rows: <count>".

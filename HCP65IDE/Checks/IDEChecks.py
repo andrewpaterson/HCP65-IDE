@@ -285,6 +285,11 @@ CHECKS = [
 		[r'^Usages of F  4 usages$', r'^    2: class CA', r'^    3: int G', r'^Usages of F  4 usages$', r'^    4: class CA',
 		 r'^    5: int G\(void\) \{ int x = return F\(\); \}$', r'^    6: int CA::N', r'^    7: int main',
 		 r'^Selection: \[F\] on line 5, caret line 5$', r'^Selected: 5: int G'], [r'not enabled']),
+	('gotosource-popup-press-outside', dict(MakeUsagesKernel(), **{
+		#A press outside Control+B's popup closes it, in the editor too, which is its owner.
+		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp', 'CARET': '1:5',
+		'DEBUG': 'gotosource,edit:printpopup,edit:presseditor,edit:printpopup,edit:print'}),
+		[r'^Popup: Usages of F  4 usages \| ', r'^Pressed: the editor$', r'^Popup: none$', r'Kernel\.cpp.* line 1: '], []),
 	('usages-include-in-folder', dict(MakeUsagesKernel(
 		'int F(void);\n#include "A/Inner.h"\nint F(void) { return SA(); }\n', {'A/Inner.h': 'inline int SA(void) { return F(); }\n'}), **{
 		#A header included by a path with a folder, from beside the file that includes it, is indexed: F's usage in it is
