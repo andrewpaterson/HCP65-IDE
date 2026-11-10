@@ -276,12 +276,179 @@ static bool IsNewerMinGWVersion(const char* szName, const char* szOther)
 #endif
 
 
+#ifdef _WIN32
+//The folders Visual Studio is installed in, each holding <version>\<edition>\VC\Tools\MSVC\<toolset>.
+static const char* gaszVisualStudioDirectories[] = { "C:/Program Files (x86)/Microsoft Visual Studio", "C:/Program Files/Microsoft Visual Studio", NULL };
+#define IDE_WINDOWS_KITS_INCLUDE_DIRECTORY	"C:/Program Files (x86)/Windows Kits/10/Include"
+//The Windows SDK's folders MSVC's INCLUDE has, in its order (after the toolset's own include).
+static const char* gaszWindowsKitsDirectories[] = { "ucrt", "shared", "um", NULL };
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether the version szName ("14.29.30133", "10.0.19041.0") is newer
+// than szOther, NULL for none.  A name that doesn't start with a number
+// isn't.
+//
+//////////////////////////////////////////////////////////////////////////
+static bool IsNewerVersion(const char* szName, const char* szOther)
+{
+	int	aiName[4] = { 0, 0, 0, 0 };
+	int	aiOther[4] = { 0, 0, 0, 0 };
+	int	i;
+
+	if (sscanf(szName, "%d.%d.%d.%d", &aiName[0], &aiName[1], &aiName[2], &aiName[3]) < 1)
+	{
+		return false;
+	}
+	if (szOther == NULL)
+	{
+		return true;
+	}
+	sscanf(szOther, "%d.%d.%d.%d", &aiOther[0], &aiOther[1], &aiOther[2], &aiOther[3]);
+	for (i = 0; i < 4; i++)
+	{
+		if (aiName[i] != aiOther[i])
+		{
+			return aiName[i] > aiOther[i];
+		}
+	}
+	return false;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The full path of szDirectory's folder with the newest version name
+// that has szInside in it (szInside may be ""), appended to pszDest.
+// False if it has none.
+//
+//////////////////////////////////////////////////////////////////////////
+static bool FindNewestVersionDirectory(const char* szDirectory, const char* szInside, CChars* pszDest)
+{
+	CFileUtil	cFileUtil;
+	CArrayChars	aszFound;
+	CChars		szName;
+	CChars		szParent;
+	CChars		szNewest;
+	CChars		szPath;
+	size		i;
+	bool		bFound;
+
+	aszFound.Init();
+	szName.Init();
+	szParent.Init();
+	szNewest.Init();
+	szPath.Init();
+	if (cFileUtil.IsDirectory(szDirectory))
+	{
+		cFileUtil.FindAllDirectories(szDirectory, &aszFound);
+	}
+	for (i = 0; i < aszFound.NumElements(); i++)
+	{
+		szName.Set("");
+		szParent.Set("");
+		cFileUtil.SplitPath(aszFound.GetText(i), &szName, &szParent);
+		szPath.Set(aszFound.GetText(i));
+		szPath.Append('/');
+		szPath.Append(szInside);
+		if (cFileUtil.IsDirectory(szPath.Text()) && IsNewerVersion(szName.Text(), szNewest.Empty() ? NULL : szNewest.Text()))
+		{
+			szNewest.Set(szName);
+		}
+	}
+	bFound = !szNewest.Empty();
+	if (bFound)
+	{
+		pszDest->Append(szDirectory);
+		pszDest->Append('/');
+		pszDest->Append(szNewest);
+	}
+	szPath.Kill();
+	szNewest.Kill();
+	szParent.Kill();
+	szName.Kill();
+	aszFound.Kill();
+	return bFound;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The newest MSVC toolset's include folder (VC\Tools\MSVC\<toolset>\
+// include) of any Visual Studio installed, set in pszDest.  False if
+// there is none.
+//
+//////////////////////////////////////////////////////////////////////////
+static bool FindVisualStudioInclude(CChars* pszDest)
+{
+	CFileUtil	cFileUtil;
+	CArrayChars	aszVersions;
+	CArrayChars	aszEditions;
+	CChars		szTools;
+	CChars		szToolset;
+	CChars		szNewest;
+	CChars		szName;
+	CChars		szParent;
+	size		i;
+	size		j;
+	size		k;
+
+	szNewest.Init();
+	szName.Init();
+	szParent.Init();
+	for (i = 0; gaszVisualStudioDirectories[i] != NULL; i++)
+	{
+		aszVersions.Init();
+		if (cFileUtil.IsDirectory(gaszVisualStudioDirectories[i]))
+		{
+			cFileUtil.FindAllDirectories(gaszVisualStudioDirectories[i], &aszVersions);
+		}
+		for (j = 0; j < aszVersions.NumElements(); j++)
+		{
+			aszEditions.Init();
+			cFileUtil.FindAllDirectories(aszVersions.GetText(j), &aszEditions);
+			for (k = 0; k < aszEditions.NumElements(); k++)
+			{
+				szTools.Init(aszEditions.GetText(k));
+				szTools.Append("/VC/Tools/MSVC");
+				szToolset.Init();
+				if (FindNewestVersionDirectory(szTools.Text(), "include", &szToolset))
+				{
+					szName.Set("");
+					szParent.Set("");
+					cFileUtil.SplitPath(szToolset.Text(), &szName, &szParent);
+					if (szNewest.Empty() || IsNewerVersion(szName.Text(), szNewest.Text()))
+					{
+						szNewest.Set(szName);
+						pszDest->Set(szToolset);
+						pszDest->Append("/include");
+					}
+				}
+				szToolset.Kill();
+				szTools.Kill();
+			}
+			aszEditions.Kill();
+		}
+		aszVersions.Kill();
+	}
+	szParent.Kill();
+	szName.Kill();
+	szNewest.Kill();
+	return !pszDest->Empty();
+}
+#endif
+
+
 //////////////////////////////////////////////////////////////////////////
 //
 // The compiler's own headers on this machine, those that exist; those that
 // don't are logged, as without them almost nothing can be parsed (see
-// IsMissingSystemDirectories).  For checking, HCP65_IDE_SYSTEM_ROOT is where
-// they are looked for in place of the root folder.
+// IsMissingSystemDirectories): MinGW's on Linux, and on Windows the newest
+// Visual Studio MSVC toolset's and Windows SDK's, in MSVC's INCLUDE order.
+// For checking, HCP65_IDE_SYSTEM_ROOT is where MinGW's are looked for in
+// place of the root folder.  Every configuration has them, after its own
+// include directories, until a build configuration says which it has.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDECodeModel::AddDefaultSystemDirectories(void)
@@ -357,6 +524,56 @@ void CIDECodeModel::AddDefaultSystemDirectories(void)
 	szName.Kill();
 	szPath.Kill();
 	szRoot.Kill();
+#endif
+#ifdef _WIN32
+	//As MSVC's INCLUDE has them: the toolset's own headers, then the Windows SDK's.
+	CFileUtil	cFileUtil;
+	CChars		szInclude;
+	CChars		szKits;
+	CChars		szName;
+	size		i;
+
+	szInclude.Init();
+	if (FindVisualStudioInclude(&szInclude))
+	{
+		szInclude.Replace('\\', '/');
+		AddSystemDirectory(szInclude.Text());
+	}
+	else
+	{
+		mbSystemDirectoriesMissing = true;
+		gcLogger.Info2(__METHOD__, " No Visual Studio MSVC toolset was found.", NULL);
+	}
+	szInclude.Kill();
+
+	szKits.Init();
+	if (FindNewestVersionDirectory(IDE_WINDOWS_KITS_INCLUDE_DIRECTORY, "ucrt", &szKits))
+	{
+		szKits.Replace('\\', '/');
+		szName.Init();
+		for (i = 0; gaszWindowsKitsDirectories[i] != NULL; i++)
+		{
+			szName.Set(szKits);
+			szName.Append('/');
+			szName.Append(gaszWindowsKitsDirectories[i]);
+			if (cFileUtil.IsDirectory(szName.Text()))
+			{
+				AddSystemDirectory(szName.Text());
+			}
+			else
+			{
+				mbSystemDirectoriesMissing = true;
+				gcLogger.Info2(__METHOD__, " System headers [", szName.Text(), "] aren't there.", NULL);
+			}
+		}
+		szName.Kill();
+	}
+	else
+	{
+		mbSystemDirectoriesMissing = true;
+		gcLogger.Info2(__METHOD__, " No Windows SDK is in [", IDE_WINDOWS_KITS_INCLUDE_DIRECTORY, "].", NULL);
+	}
+	szKits.Kill();
 #endif
 }
 
