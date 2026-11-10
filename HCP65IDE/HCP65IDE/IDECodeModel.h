@@ -166,7 +166,7 @@ protected:
 	int64				miIndexEnd;				//and when its last unit was done, -1 until then.
 	CMapStringInt		mcProjectFiles;			//Each project item's full path, in any case, to its project's index (FindProjectOfFile).
 	CArrayChars			maszProjectFiles;		//The same full paths, in the projects' order.
-	size				muiProjectFilesProjects;	//How many projects mcProjectFiles was made from, MAX_SIZE until it is made.
+	bool				mbProjectFiles;			//They have been found since the workspace last changed (FindProjectFiles).
 
 	CWorkerThreadJobs	mcEdits;				//The edits thread: one, working out the edited files away from the UI thread.
 	bool				mbEdits;				//It has been started.
@@ -208,10 +208,13 @@ public:
 	bool	FindReferences(const char* szFileName, int iLine, int iColumn, CArrayIDELocations* pasDest, CChars* pszKey);
 	bool	FindRoleAt(const char* szFileName, int iLine, int iColumn, uint8* puiRole);
 	size	FindProjectOfFile(const char* szFileName);
+	size	NumProjectFiles(void);
+	char*	GetProjectFile(size uiIndex);
+	void	ForgetProjectFiles(void);
 	size	FindFilesNamed(const char* szName, CArrayChars* paszDest);
-	void	FindGoToSymbols(CNameMatcher* pcMatcher, bool bClasses, CMapStringInt* pcFiles, int32* aiIcons, CGoToItems* pcDest);
+	void	FindGoToSymbols(CNameMatcher* pcMatcher, bool bClasses, int32* aiIcons, CGoToItems* pcDest);
 	bool	GetSymbolLocation(size uiSymbol, SIDELocation* psDest);
-	bool	FindRenameTarget(const char* szFileName, int iLine, int iColumn, CMapStringInt* pcFiles, SIDERenameTarget* psDest);
+	bool	FindRenameTarget(const char* szFileName, int iLine, int iColumn, SIDERenameTarget* psDest);
 	bool	HasSymbol(const char* szKey);
 	size	FindOverrideLocations(const char* szKey, CArrayIDELocations* pasDest);
 	void	GetUsageGroup(SIDELocation* psLocation, CChars* pszProject, CChars* pszClass);
@@ -230,14 +233,15 @@ protected:
 	const char*			GetSolutionConfiguration(size uiSolution);
 	void				AddCompilerDefines(CVcxConfiguration* pcConfiguration, CConfig* pcConfig);
 	void				KillProjects(void);
-	void				MakeProjectFiles(void);
-	void				ForgetProjectFiles(void);
+	void				FindProjectFiles(void);
 	void				KillJobs(void);
 	void				WaitForEditedFiles(void);
 	void				ProcessEditedFile(SIDEEditedFile* psFile);
 	void				HighlightFile(CIDEParsedUnit* pcUnit, CSourceFile* pcFile, CArrayHighlights* pacDest);
 	void				GatherUnit(CIDEParsedUnit* pcUnit, CCPPIndexUnit* pcDest, CCPPIndexedFiles* pcIndexed);
 	void				CopyLocation(SCPPIndexLocation* psLocation, SIDELocation* psDest);
+	void				CopyLocations(CCPPIndexSymbol* pcSymbol, CArrayIDELocations* pasDest);
+	void				FindOverrides(CCPPIndexSymbol* pcSymbol, CArrayInt* paiDest);
 };
 
 

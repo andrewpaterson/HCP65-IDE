@@ -36,12 +36,8 @@ void CIDENavigator::Init(CIDEContent* pcContent)
 	mpNavigateMenu = NULL;
 	mpGoTo = NULL;
 	mszGoToPattern.Init();
-	maszGoToFiles.Init();
-	maiGoToProjects.Init();
-	mcGoToFileSet.Init();
 	miGoToFileIcon = -1;
 	miQueuedGoTo = -1;
-	mbGoToFilesFound = false;
 	memset(maiGoToSymbolIcons, 0, sizeof(maiGoToSymbolIcons));
 	PostInit();
 }
@@ -57,12 +53,8 @@ void CIDENavigator::Class(void)
 	M_Pointer(mpNavigateMenu);
 	M_Pointer(mpGoTo);
 	U_String(mszGoToPattern);
-	U_Unknown(CArrayChars, maszGoToFiles);
-	U_Unknown(CArrayInt, maiGoToProjects);
-	U_Unknown(CMapStringInt, mcGoToFileSet);
 	U_Int32(miGoToFileIcon);
 	U_Int32(miQueuedGoTo);
-	U_Bool(mbGoToFilesFound);
 	U_Int32Array(maiGoToSymbolIcons, IST_Count);
 }
 
@@ -75,9 +67,6 @@ void CIDENavigator::Class(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDENavigator::Free(void)
 {
-	mcGoToFileSet.Kill();
-	maiGoToProjects.Kill();
-	maszGoToFiles.Kill();
 	mszGoToPattern.Kill();
 }
 
@@ -92,73 +81,15 @@ bool CIDENavigator::Load(CObjectReader* pcFile) { return false; }
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Every file of the open solutions' projects, once, with its project:
-// what Go to File searches, and the files Go to Class and Go to Symbol
-// show symbols from.  Found again only after the workspace has changed
-// (ForgetGoToFiles).
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDENavigator::FindGoToFiles(void)
-{
-	size			i;
-	size			j;
-	CVcxProject*	pcProject;
-	CChars			szPath;
-
-	if (mbGoToFilesFound)
-	{
-		return;
-	}
-	mbGoToFilesFound = true;
-	maszGoToFiles.ReInit();
-	maiGoToProjects.ReInit();
-	mcGoToFileSet.Kill();
-	mcGoToFileSet.Init();
-	for (i = 0; i < mpcContent->GetWorkspace()->NumProjects(); i++)
-	{
-		pcProject = mpcContent->GetWorkspace()->GetSolutionProject(i)->GetProject();
-		if (pcProject == NULL)
-		{
-			continue;
-		}
-		for (j = 0; j < pcProject->NumItems(); j++)
-		{
-			szPath.Init();
-			pcProject->GetFullPath(pcProject->GetItem(j), &szPath);
-			if (mcGoToFileSet.Get(szPath.Text(), -1) < 0)
-			{
-				mcGoToFileSet.Put(szPath.Text(), (int)maszGoToFiles.NumElements());
-				maszGoToFiles.Add(szPath.Text());
-				maiGoToProjects.Add((int)i);
-			}
-			szPath.Kill();
-		}
-	}
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// The solutions or their projects have changed: their files are found
-// again when next needed.
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDENavigator::ForgetGoToFiles(void)
-{
-	mbGoToFilesFound = false;
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
 // Go to Class (uiTab 0) and Go to Symbol (2) find the index's symbols
-// declared in the solutions' files, Go to File (1) the files.  A file is
+// declared in the projects' files, Go to File (1) the files.  A file is
 // shown by its name, with its folder, "~" for the home folder, after it.
 // The content is its Go to dialog's searcher.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDENavigator::GoToSearch(size uiTab, CNameMatcher* pcMatcher, CGoToItems* pcDest)
 {
+	CIDECodeModel*	pcCodeModel;
 	size		i;
 	SNameMatch	sMatch;
 	char*		szPath;
@@ -168,18 +99,19 @@ void CIDENavigator::GoToSearch(size uiTab, CNameMatcher* pcMatcher, CGoToItems* 
 	const char*	szHome;
 	size		uiHome;
 
+	pcCodeModel = mpcContent->GetCodeModel();
 	if (uiTab != IDE_GO_TO_FILE)
 	{
 		mpcContent->GetDocuments()->UpdateEditedTabsNow();
-		mpcContent->GetCodeModel()->FindGoToSymbols(pcMatcher, uiTab == IDE_GO_TO_CLASS, &mcGoToFileSet, maiGoToSymbolIcons, pcDest);
+		pcCodeModel->FindGoToSymbols(pcMatcher, uiTab == IDE_GO_TO_CLASS, maiGoToSymbolIcons, pcDest);
 		return;
 	}
 
 	szHome = getenv("HOME");
 	uiHome = szHome ? strlen(szHome) : 0;
-	for (i = 0; i < maszGoToFiles.NumElements(); i++)
+	for (i = 0; i < pcCodeModel->NumProjectFiles(); i++)
 	{
-		szPath = maszGoToFiles.GetText(i);
+		szPath = pcCodeModel->GetProjectFile(i);
 		if (pcMatcher->MatchPath(szPath, &sMatch))
 		{
 			szName.Init();
@@ -302,7 +234,6 @@ bool CIDENavigator::CreateGoTo(size uiTab)
 {
 	size	i;
 
-	FindGoToFiles();
 	mpGoTo = OMalloc<CGoToDialog>(mpcContent->GetWindow(), mpcContent->GetDialogLook(), "Go To", this, mpcContent->GetMatchFont());
 	mpGoTo->AddTab("Classes");
 	mpGoTo->AddTab("Files");
@@ -348,18 +279,14 @@ bool CIDENavigator::OpenGoToChoice(void)
 	iLine = mpGoTo->GetLine();
 	if (mpGoTo->GetTab() == IDE_GO_TO_FILE)
 	{
-		if (psItem->uiData >= maszGoToFiles.NumElements())
+		if (psItem->uiData >= mpcContent->GetCodeModel()->NumProjectFiles())
 		{
 			return false;
 		}
-		bResult = mpcContent->GetDocuments()->OpenFile(maszGoToFiles.GetText(psItem->uiData), (size)maiGoToProjects.GetValue(psItem->uiData));
-		if (bResult)
+		bResult = OpenProjectFile(mpcContent->GetCodeModel()->GetProjectFile(psItem->uiData));
+		if (bResult && (iLine > 0))
 		{
-			if (iLine > 0)
-			{
-				mpcContent->GetDocuments()->SetCaretPlace(iLine - 1, 0);
-			}
-			mpcContent->GetDocuments()->GetActiveTab()->GetEditor()->GetWindow()->GetFocus()->SetFocus(mpcContent->GetDocuments()->GetActiveTab()->GetEditor());
+			mpcContent->GetDocuments()->SetCaretPlace(iLine - 1, 0);
 		}
 		return bResult;
 	}
@@ -389,18 +316,86 @@ Ptr<CGoToDialog> CIDENavigator::GetGoTo(void) { return mpGoTo; }
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Whether szPath ends with szEnd.
+// Whether szPath ends with szEnd, whatever the case of either and
+// whichever separators they have.
 //
 //////////////////////////////////////////////////////////////////////////
 static bool EndsWithIDEPath(const char* szPath, const char* szEnd)
 {
 	size	uiPath;
 	size	uiEnd;
+	char	cPath;
+	char	cEnd;
 
 	uiPath = strlen(szPath);
 	uiEnd = strlen(szEnd);
-	return (uiPath >= uiEnd) && (strcmp(&szPath[uiPath - uiEnd], szEnd) == 0);
+	if (uiPath < uiEnd)
+	{
+		return false;
+	}
+	for (; uiEnd > 0; uiEnd--, uiPath--)
+	{
+		cPath = szPath[uiPath - 1];
+		cEnd = szEnd[uiEnd - 1];
+		cPath = (cPath == '\\') ? '/' : (((cPath >= 'A') && (cPath <= 'Z')) ? (char)(cPath - 'A' + 'a') : cPath);
+		cEnd = (cEnd == '\\') ? '/' : (((cEnd >= 'A') && (cEnd <= 'Z')) ? (char)(cEnd - 'A' + 'a') : cEnd);
+		if (cPath != cEnd)
+		{
+			return false;
+		}
+	}
+	return true;
 }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The first of the projects' files whose path ends with szEnd (a
+// separator and a name, say), in pszDest.  False if none does.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDENavigator::FindProjectFileEnding(const char* szEnd, CChars* pszDest)
+{
+	CIDECodeModel*	pcCodeModel;
+	size			i;
+
+	pcCodeModel = mpcContent->GetCodeModel();
+	for (i = 0; i < pcCodeModel->NumProjectFiles(); i++)
+	{
+		if (EndsWithIDEPath(pcCodeModel->GetProjectFile(i), szEnd))
+		{
+			pszDest->Set(pcCodeModel->GetProjectFile(i));
+			return true;
+		}
+	}
+	return false;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// szFileName opened as its project's file (the active file's project if
+// no project has it), its editor given the keys.  False if it can't be
+// opened.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDENavigator::OpenProjectFile(const char* szFileName)
+{
+	size	uiProject;
+
+	uiProject = mpcContent->GetCodeModel()->FindProjectOfFile(szFileName);
+	if ((uiProject == MAX_SIZE) && mpcContent->GetDocuments()->GetActiveTab().IsNotNull())
+	{
+		uiProject = mpcContent->GetDocuments()->GetActiveTab()->GetProject();
+	}
+	if (!mpcContent->GetDocuments()->OpenFile(szFileName, uiProject))
+	{
+		return false;
+	}
+	mpcContent->GetWindow()->GetFocus()->SetFocus(mpcContent->GetDocuments()->GetActiveTab()->GetEditor());
+	return true;
+}
+
 
 //////////////////////////////////////////////////////////////////////////
 //
@@ -473,7 +468,6 @@ bool CIDENavigator::FindIncludedFile(CChars* pszDest)
 	CChars	szEnd;
 	bool	bSystem;
 	bool	bFound;
-	size	i;
 
 	if (!GetIncludeAtCaret(&szName, &bSystem))
 	{
@@ -485,16 +479,7 @@ bool CIDENavigator::FindIncludedFile(CChars* pszDest)
 		//A solution file whose path ends with it.
 		szEnd.Init("/");
 		szEnd.Append(szName);
-		szEnd.Replace('\\', '/');
-		FindGoToFiles();
-		for (i = 0; (i < maszGoToFiles.NumElements()) && !bFound; i++)
-		{
-			if (EndsWithIDEPath(maszGoToFiles.GetText(i), szEnd.Text()))
-			{
-				pszDest->Set(maszGoToFiles.GetText(i));
-				bFound = true;
-			}
-		}
+		bFound = FindProjectFileEnding(szEnd.Text(), pszDest);
 		szEnd.Kill();
 	}
 	szName.Kill();
@@ -522,11 +507,7 @@ bool CIDENavigator::GoToSource(void)
 	szFile.Init();
 	if (FindIncludedFile(&szFile))
 	{
-		bResult = mpcContent->GetDocuments()->OpenFile(szFile.Text(), mpcContent->GetCodeModel()->FindProjectOfFile(szFile.Text()) != MAX_SIZE ? mpcContent->GetCodeModel()->FindProjectOfFile(szFile.Text()) : mpcContent->GetDocuments()->GetActiveTab()->GetProject());
-		if (bResult)
-		{
-			mpcContent->GetWindow()->GetFocus()->SetFocus(mpcContent->GetDocuments()->GetActiveTab()->GetEditor());
-		}
+		bResult = OpenProjectFile(szFile.Text());
 		szFile.Kill();
 		return bResult;
 	}
@@ -587,9 +568,7 @@ bool CIDENavigator::SwitchHeaderSource(void)
 	CChars				szFound;
 	EIDEFileType		eType;
 	size				i;
-	size				j;
 	bool				bFound;
-	size				uiProject;
 
 	if (mpcContent->GetDocuments()->GetActiveTab().IsNull())
 	{
@@ -634,49 +613,22 @@ bool CIDENavigator::SwitchHeaderSource(void)
 	{
 		szName.Init();
 		cFileUtil.GetFileName(&szName, szBase.Text());
-		FindGoToFiles();
-		for (j = 0; (j < maszGoToFiles.NumElements()) && !bFound; j++)
+		for (i = 0; (i < uiWanted) && !bFound; i++)
 		{
-			for (i = 0; (i < uiWanted) && !bFound; i++)
-			{
-				szPath.Init("/");
-				szPath.Append(szName);
-				szPath.Append('.');
-				szPath.Append(aszWanted[i]);
-				if (EndsWithIDEPath(maszGoToFiles.GetText(j), szPath.Text()))
-				{
-					szFound.Set(maszGoToFiles.GetText(j));
-					bFound = true;
-				}
-				szPath.Kill();
-			}
+			szPath.Init("/");
+			szPath.Append(szName);
+			szPath.Append('.');
+			szPath.Append(aszWanted[i]);
+			bFound = FindProjectFileEnding(szPath.Text(), &szFound);
+			szPath.Kill();
 		}
 		szName.Kill();
 	}
 	szBase.Kill();
 
-	if (bFound)
-	{
-		uiProject = mpcContent->GetCodeModel()->FindProjectOfFile(szFound.Text());
-		bFound = mpcContent->GetDocuments()->OpenFile(szFound.Text(), (uiProject != MAX_SIZE) ? uiProject : mpcContent->GetDocuments()->GetActiveTab()->GetProject());
-		if (bFound)
-		{
-			mpcContent->GetWindow()->GetFocus()->SetFocus(mpcContent->GetDocuments()->GetActiveTab()->GetEditor());
-		}
-	}
+	bFound = bFound && OpenProjectFile(szFound.Text());
 	szFound.Kill();
 	return bFound;
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// The solutions' files by path (FindGoToFiles), what Rename can edit.
-//
-//////////////////////////////////////////////////////////////////////////
-CMapStringInt* CIDENavigator::GetSolutionFileSet(void)
-{
-	return &mcGoToFileSet;
 }
 
 

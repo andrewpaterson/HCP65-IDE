@@ -187,7 +187,7 @@ void CIDECodeModel::Init(CBuildWorkspace* pcWorkspace)
 	miIndexEnd = -1;
 	mcProjectFiles.Init(false);
 	maszProjectFiles.Init();
-	muiProjectFilesProjects = MAX_SIZE;
+	mbProjectFiles = false;
 
 	mbEdits = false;
 	mapsEdited.Init();
@@ -1310,6 +1310,21 @@ int64 CIDECodeModel::GetIndexingMilliseconds(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Where a symbol is defined, or declared if no file indexed so far
+// defines it.  NULL if it is only used.
+//
+//////////////////////////////////////////////////////////////////////////
+static SCPPIndexLocation* GetIDESymbolPlace(CCPPIndexSymbol* pcSymbol)
+{
+	SCPPIndexLocation*	psLocation;
+
+	psLocation = pcSymbol->GetDefinition();
+	return psLocation ? psLocation : pcSymbol->GetDeclaration();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Where what is named at a place (0 based) is defined, or declared if
 // no file indexed so far defines it.  False if nothing indexed is named
 // there.
@@ -1320,20 +1335,12 @@ bool CIDECodeModel::FindDefinition(const char* szFileName, int iLine, int iColum
 	CCPPIndexSymbol*	pcSymbol;
 	SCPPIndexLocation*	psLocation;
 
-	psLocation = NULL;
 	mcIndexMutex.Lock();
 	pcSymbol = mcIndex.FindSymbolAt(szFileName, iLine, iColumn);
-	if (pcSymbol)
+	psLocation = pcSymbol ? GetIDESymbolPlace(pcSymbol) : NULL;
+	if (psLocation)
 	{
-		psLocation = pcSymbol->GetDefinition();
-		if (psLocation == NULL)
-		{
-			psLocation = pcSymbol->GetDeclaration();
-		}
-		if (psLocation)
-		{
-			CopyLocation(psLocation, psDest);
-		}
+		CopyLocation(psLocation, psDest);
 	}
 	mcIndexMutex.Unlock();
 	return psLocation != NULL;
@@ -1350,17 +1357,13 @@ bool CIDECodeModel::FindDefinition(const char* szFileName, int iLine, int iColum
 bool CIDECodeModel::FindReferences(const char* szFileName, int iLine, int iColumn, CArrayIDELocations* pasDest, CChars* pszKey)
 {
 	CCPPIndexSymbol*	pcSymbol;
-	size				i;
 
 	mcIndexMutex.Lock();
 	pcSymbol = mcIndex.FindSymbolAt(szFileName, iLine, iColumn);
 	if (pcSymbol)
 	{
 		pszKey->Append(pcSymbol->mszKey);
-		for (i = 0; i < pcSymbol->NumLocations(); i++)
-		{
-			CopyLocation(pcSymbol->GetLocation(i), pasDest->Add());
-		}
+		CopyLocations(pcSymbol, pasDest);
 	}
 	mcIndexMutex.Unlock();
 	return pcSymbol != NULL;
@@ -1423,9 +1426,54 @@ void CIDECodeModel::CopyLocation(SCPPIndexLocation* psLocation, SIDELocation* ps
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Every place a symbol is named added to pasDest.  Call it with the
+// index's mutex held.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDECodeModel::CopyLocations(CCPPIndexSymbol* pcSymbol, CArrayIDELocations* pasDest)
+{
+	size	i;
+
+	for (i = 0; i < pcSymbol->NumLocations(); i++)
+	{
+		CopyLocation(pcSymbol->GetLocation(i), pasDest->Add());
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The index's symbols of the member functions that override, or are
+// overridden by, the virtual member function pcSymbol (not its own) added
+// to paiDest: none if it isn't one or has none.  Call it with the index's
+// mutex held.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDECodeModel::FindOverrides(CCPPIndexSymbol* pcSymbol, CArrayInt* paiDest)
+{
+	CArrayInt	aiHierarchy;
+	size		i;
+
+	aiHierarchy.Init();
+	if ((pcSymbol->meKind == CPPSK_Function) && mcIndex.FindOverrides(pcSymbol, &aiHierarchy))
+	{
+		for (i = 0; i < aiHierarchy.NumElements(); i++)
+		{
+			if (mcIndex.GetSymbol((size)aiHierarchy.GetValue(i)) != pcSymbol)
+			{
+				paiDest->Add(aiHierarchy.GetValue(i));
+			}
+		}
+	}
+	aiHierarchy.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // The first of the workspace's projects that has szFileName (a full
 // path, whatever its case) as an item, MAX_SIZE if none has.  The items'
-// paths are worked out once (MakeProjectFiles): finding each on the disk,
+// paths are worked out once (FindProjectFiles): finding each on the disk,
 // for its case, took Find Usages 95ms a usage.
 //
 //////////////////////////////////////////////////////////////////////////
@@ -1433,12 +1481,30 @@ size CIDECodeModel::FindProjectOfFile(const char* szFileName)
 {
 	int32	iProject;
 
-	if (muiProjectFilesProjects != mpcWorkspace->NumProjects())
-	{
-		MakeProjectFiles();
-	}
+	FindProjectFiles();
 	iProject = mcProjectFiles.Get(szFileName, -1);
 	return (iProject >= 0) ? (size)iProject : MAX_SIZE;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The workspace's projects' files, each once by its full path, in the
+// projects' order: what Go to File searches, what Go to Class and Go to
+// Symbol show symbols from, and what Rename can edit.
+//
+//////////////////////////////////////////////////////////////////////////
+size CIDECodeModel::NumProjectFiles(void)
+{
+	FindProjectFiles();
+	return maszProjectFiles.NumElements();
+}
+
+
+char* CIDECodeModel::GetProjectFile(size uiIndex)
+{
+	FindProjectFiles();
+	return maszProjectFiles.GetText(uiIndex);
 }
 
 
@@ -1459,10 +1525,7 @@ size CIDECodeModel::FindFilesNamed(const char* szName, CArrayChars* paszDest)
 	bool		bHave;
 	char*		szPath;
 
-	if (muiProjectFilesProjects != mpcWorkspace->NumProjects())
-	{
-		MakeProjectFiles();
-	}
+	FindProjectFiles();
 	uiFound = 0;
 	mcIndexMutex.Lock();
 	for (i = 0; i < maszProjectFiles.NumElements() + mcIndex.NumFiles(); i++)
@@ -1493,16 +1556,22 @@ size CIDECodeModel::FindFilesNamed(const char* szName, CArrayChars* paszDest)
 //////////////////////////////////////////////////////////////////////////
 //
 // Every item of the workspace's projects by its full path, to the first
-// project that has it.
+// project that has it, found if they haven't been since the workspace
+// changed (ForgetProjectFiles).
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDECodeModel::MakeProjectFiles(void)
+void CIDECodeModel::FindProjectFiles(void)
 {
 	size			i;
 	size			j;
 	CVcxProject*	pcProject;
 	CChars			szPath;
 
+	if (mbProjectFiles)
+	{
+		return;
+	}
+	mbProjectFiles = true;
 	mcProjectFiles.Kill();
 	mcProjectFiles.Init(false);
 	maszProjectFiles.ReInit();
@@ -1525,19 +1594,18 @@ void CIDECodeModel::MakeProjectFiles(void)
 			szPath.Kill();
 		}
 	}
-	muiProjectFilesProjects = mpcWorkspace->NumProjects();
 }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
 // The projects' items are found again the next time they are wanted: the
-// workspace's solutions are changing.
+// workspace's solutions, or a project's items, have changed.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDECodeModel::ForgetProjectFiles(void)
 {
-	muiProjectFilesProjects = MAX_SIZE;
+	mbProjectFiles = false;
 }
 
 
@@ -1779,13 +1847,13 @@ static void SplitIDESymbolKey(const char* szKey, CChars* pszScope, CChars* pszNa
 //
 // Go to Class's results (classes and enums) or, without bClasses, Go to
 // Symbol's (every named thing but parameters, labels and locals): those
-// whose name the pattern matches, declared in one of pcFiles (the
-// solution's files).  Each is shown as its name with its parameters,
+// whose name the pattern matches, declared in one of the projects' files.
+// Each is shown as its name with its parameters,
 // where it's declared and its file; its data is its symbol's index.
 // aiIcons are the dialog's icons by EIDESymbolType.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDECodeModel::FindGoToSymbols(CNameMatcher* pcMatcher, bool bClasses, CMapStringInt* pcFiles, int32* aiIcons, CGoToItems* pcDest)
+void CIDECodeModel::FindGoToSymbols(CNameMatcher* pcMatcher, bool bClasses, int32* aiIcons, CGoToItems* pcDest)
 {
 	size				i;
 	CCPPIndexSymbol*	pcSymbol;
@@ -1797,8 +1865,8 @@ void CIDECodeModel::FindGoToSymbols(CNameMatcher* pcMatcher, bool bClasses, CMap
 	CChars				szLocation;
 	SNameMatch			sMatch;
 	char*				szFile;
-	char*				szShortFile;
 
+	FindProjectFiles();
 	mcIndexMutex.Lock();
 	for (i = 0; i < mcIndex.NumSymbols(); i++)
 	{
@@ -1808,17 +1876,13 @@ void CIDECodeModel::FindGoToSymbols(CNameMatcher* pcMatcher, bool bClasses, CMap
 		{
 			continue;
 		}
-		psLocation = pcSymbol->GetDefinition();
-		if (psLocation == NULL)
-		{
-			psLocation = pcSymbol->GetDeclaration();
-		}
+		psLocation = GetIDESymbolPlace(pcSymbol);
 		if (psLocation == NULL)
 		{
 			continue;
 		}
 		szFile = mcIndex.GetFileName(psLocation->uiFile);
-		if (pcFiles->Get(szFile, -1) < 0)
+		if (mcProjectFiles.Get(szFile, -1) < 0)
 		{
 			continue;
 		}
@@ -1827,14 +1891,12 @@ void CIDECodeModel::FindGoToSymbols(CNameMatcher* pcMatcher, bool bClasses, CMap
 		if (!szName.Empty() && pcMatcher->Match(szName.Text(), szName.Length(), pcMatcher->GetPattern(), StrLen(pcMatcher->GetPattern()), &sMatch))
 		{
 			szName.Append(szParameters);
-			szShortFile = strrchr(szFile, '/');
-			szShortFile = szShortFile ? szShortFile + 1 : szFile;
 			szLocation.Init(szScope);
 			if (!szLocation.Empty())
 			{
 				szLocation.Append("  ");
 			}
-			szLocation.Append(szShortFile);
+			szLocation.Append(GetIDEFileNamePart(szFile));
 			szLocation.Append(":");
 			szLocation.Append(psLocation->iLine + 1);
 			pcDest->Add(szName.Text(), szLocation.Text(), aiIcons[eType], i, &sMatch);
@@ -1855,23 +1917,13 @@ void CIDECodeModel::FindGoToSymbols(CNameMatcher* pcMatcher, bool bClasses, CMap
 //////////////////////////////////////////////////////////////////////////
 bool CIDECodeModel::GetSymbolLocation(size uiSymbol, SIDELocation* psDest)
 {
-	CCPPIndexSymbol*	pcSymbol;
 	SCPPIndexLocation*	psLocation;
 
-	psLocation = NULL;
 	mcIndexMutex.Lock();
-	if (uiSymbol < mcIndex.NumSymbols())
+	psLocation = (uiSymbol < mcIndex.NumSymbols()) ? GetIDESymbolPlace(mcIndex.GetSymbol(uiSymbol)) : NULL;
+	if (psLocation)
 	{
-		pcSymbol = mcIndex.GetSymbol(uiSymbol);
-		psLocation = pcSymbol->GetDefinition();
-		if (psLocation == NULL)
-		{
-			psLocation = pcSymbol->GetDeclaration();
-		}
-		if (psLocation)
-		{
-			CopyLocation(psLocation, psDest);
-		}
+		CopyLocation(psLocation, psDest);
 	}
 	mcIndexMutex.Unlock();
 	return psLocation != NULL;
@@ -1970,10 +2022,11 @@ static const char* GetIDERenameProblem(CCPPIndex* pcIndex, CCPPIndexSymbol* pcSy
 // constructors and destructors are renamed with it.  It can't be renamed
 // (bRenamable false, szWhyNot says why) if it is an operator, a
 // destructor or a compiler type, or if a place can't be changed (see
-// GetIDERenameProblem).  False if no symbol is named there.
+// GetIDERenameProblem: it must be in one of the projects' files).  False
+// if no symbol is named there.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDECodeModel::FindRenameTarget(const char* szFileName, int iLine, int iColumn, CMapStringInt* pcFiles, SIDERenameTarget* psDest)
+bool CIDECodeModel::FindRenameTarget(const char* szFileName, int iLine, int iColumn, SIDERenameTarget* psDest)
 {
 	CCPPIndexSymbol*	pcSymbol;
 	CCPPIndexSymbol*	pcMember;
@@ -1981,9 +2034,9 @@ bool CIDECodeModel::FindRenameTarget(const char* szFileName, int iLine, int iCol
 	CChars				szConstructor;
 	CChars				szDestructor;
 	size				i;
-	size				j;
 	CArrayInt			aiOverrides;
 
+	FindProjectFiles();
 	mcIndexMutex.Lock();
 	pcSymbol = mcIndex.FindSymbolAt(szFileName, iLine, iColumn);
 	if (pcSymbol == NULL)
@@ -2009,12 +2062,9 @@ bool CIDECodeModel::FindRenameTarget(const char* szFileName, int iLine, int iCol
 	}
 	if (szProblem == NULL)
 	{
-		szProblem = GetIDERenameProblem(&mcIndex, pcSymbol, pcFiles);
+		szProblem = GetIDERenameProblem(&mcIndex, pcSymbol, &mcProjectFiles);
 	}
-	for (i = 0; i < pcSymbol->NumLocations(); i++)
-	{
-		CopyLocation(pcSymbol->GetLocation(i), psDest->asLocations.Add());
-	}
+	CopyLocations(pcSymbol, &psDest->asLocations);
 
 	//A class's constructors and destructor are named for it.
 	if ((szProblem == NULL) && ((pcSymbol->meKind == CPPSK_Class) || (pcSymbol->meKind == CPPSK_ClassTemplate)))
@@ -2032,11 +2082,8 @@ bool CIDECodeModel::FindRenameTarget(const char* szFileName, int iLine, int iCol
 			pcMember = mcIndex.GetSymbol(i);
 			if (pcMember->mszKey.StartsWith(szConstructor.Text()) || pcMember->mszKey.StartsWith(szDestructor.Text()))
 			{
-				szProblem = GetIDERenameProblem(&mcIndex, pcMember, pcFiles);
-				for (j = 0; j < pcMember->NumLocations(); j++)
-				{
-					CopyLocation(pcMember->GetLocation(j), psDest->asLocations.Add());
-				}
+				szProblem = GetIDERenameProblem(&mcIndex, pcMember, &mcProjectFiles);
+				CopyLocations(pcMember, &psDest->asLocations);
 			}
 		}
 		szDestructor.Kill();
@@ -2044,28 +2091,19 @@ bool CIDECodeModel::FindRenameTarget(const char* szFileName, int iLine, int iCol
 	}
 
 	//A virtual member function is renamed with what overrides it and what it overrides.
-	if ((szProblem == NULL) && (pcSymbol->meKind == CPPSK_Function))
+	if (szProblem == NULL)
 	{
 		aiOverrides.Init();
-		if (mcIndex.FindOverrides(pcSymbol, &aiOverrides))
+		FindOverrides(pcSymbol, &aiOverrides);
+		psDest->uiOverrides = aiOverrides.NumElements();
+		for (i = 0; i < aiOverrides.NumElements(); i++)
 		{
-			for (i = 0; i < aiOverrides.NumElements(); i++)
+			pcMember = mcIndex.GetSymbol((size)aiOverrides.GetValue(i));
+			if (szProblem == NULL)
 			{
-				pcMember = mcIndex.GetSymbol((size)aiOverrides.GetValue(i));
-				if (pcMember == pcSymbol)
-				{
-					continue;
-				}
-				psDest->uiOverrides++;
-				if (szProblem == NULL)
-				{
-					szProblem = GetIDERenameProblem(&mcIndex, pcMember, pcFiles);
-				}
-				for (j = 0; j < pcMember->NumLocations(); j++)
-				{
-					CopyLocation(pcMember->GetLocation(j), psDest->asLocations.Add());
-				}
+				szProblem = GetIDERenameProblem(&mcIndex, pcMember, &mcProjectFiles);
 			}
+			CopyLocations(pcMember, &psDest->asLocations);
 		}
 		aiOverrides.Kill();
 	}
@@ -2091,32 +2129,23 @@ bool CIDECodeModel::FindRenameTarget(const char* szFileName, int iLine, int iCol
 size CIDECodeModel::FindOverrideLocations(const char* szKey, CArrayIDELocations* pasDest)
 {
 	CCPPIndexSymbol*	pcSymbol;
-	CCPPIndexSymbol*	pcMember;
 	CArrayInt			aiOverrides;
 	size				i;
-	size				j;
 	size				uiOverrides;
 
-	uiOverrides = 0;
 	aiOverrides.Init();
 	mcIndexMutex.Lock();
 	pcSymbol = mcIndex.FindSymbol(szKey);
-	if (pcSymbol && (pcSymbol->meKind == CPPSK_Function) && mcIndex.FindOverrides(pcSymbol, &aiOverrides))
+	if (pcSymbol)
 	{
+		FindOverrides(pcSymbol, &aiOverrides);
 		for (i = 0; i < aiOverrides.NumElements(); i++)
 		{
-			pcMember = mcIndex.GetSymbol((size)aiOverrides.GetValue(i));
-			if (pcMember != pcSymbol)
-			{
-				uiOverrides++;
-				for (j = 0; j < pcMember->NumLocations(); j++)
-				{
-					CopyLocation(pcMember->GetLocation(j), pasDest->Add());
-				}
-			}
+			CopyLocations(mcIndex.GetSymbol((size)aiOverrides.GetValue(i)), pasDest);
 		}
 	}
 	mcIndexMutex.Unlock();
+	uiOverrides = aiOverrides.NumElements();
 	aiOverrides.Kill();
 	return uiOverrides;
 }

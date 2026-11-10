@@ -122,12 +122,11 @@ bool CIDERename::FindRenameTarget(SIDERenameTarget* psDest)
 		return false;
 	}
 
-	//What can be edited: the solutions' files.  The index is brought up to date with the editors first.
-	mpcContent->GetNavigator()->FindGoToFiles();
+	//The index is brought up to date with the editors first.
 	mpcContent->GetDocuments()->UpdateEditedTabsNow();
 
 	if (!mpcContent->GetDocuments()->FindSymbolPlace(&iLine, &iStartColumn, &uiRole) ||
-		!mpcContent->GetCodeModel()->FindRenameTarget(mpcContent->GetDocuments()->GetActiveTab()->GetFileName(), iLine, iStartColumn, mpcContent->GetNavigator()->GetSolutionFileSet(), psDest))
+		!mpcContent->GetCodeModel()->FindRenameTarget(mpcContent->GetDocuments()->GetActiveTab()->GetFileName(), iLine, iStartColumn, psDest))
 	{
 		return false;
 	}

@@ -222,7 +222,7 @@ bool CIDESolutions::OpenSolution(const char* szFileName)
 	mpcContent->GetCodeModel()->Init(mpcContent->GetWorkspace());
 	mpcContent->GetCodeModel()->AddDefaultSystemDirectories();
 	mpExplorer->ShowWorkspace(mpcContent->GetWorkspace());
-	mpcContent->GetNavigator()->ForgetGoToFiles();
+	mpcContent->GetCodeModel()->ForgetProjectFiles();
 	if (!bResult || !IsSolutionOpen())
 	{
 		//One that isn't there any more isn't recent.
@@ -451,7 +451,7 @@ bool CIDESolutions::CloseSolution(size uiSolution)
 		mpcContent->GetCodeModel()->Init(mpcContent->GetWorkspace());
 		mpcContent->GetCodeModel()->AddDefaultSystemDirectories();
 		mpExplorer->ShowWorkspace(mpcContent->GetWorkspace());
-		mpcContent->GetNavigator()->ForgetGoToFiles();
+		mpcContent->GetCodeModel()->ForgetProjectFiles();
 		mpcContent->GetBuildConfigurations()->ShowConfigurations();
 		return true;
 	}
@@ -528,7 +528,6 @@ void CIDESolutions::LetGoOfWorkspace(void)
 
 	mpcContent->GetCodeModel()->Kill();
 	mpcContent->GetWorkspace()->Clear();
-	mpcContent->GetNavigator()->ForgetGoToFiles();
 	mpcContent->GetBuildConfigurations()->SetConfigurationName("");
 	mpcContent->GetBuildConfigurations()->SetRunConfigurationName("");
 
@@ -550,7 +549,7 @@ void CIDESolutions::WorkspaceChanged(bool bReindex)
 	size	i;
 
 	mpExplorer->ShowWorkspace(mpcContent->GetWorkspace());
-	mpcContent->GetNavigator()->ForgetGoToFiles();
+	mpcContent->GetCodeModel()->ForgetProjectFiles();
 	mpcContent->GetGitStatus()->FindRepositories();
 	mpcContent->GetBuildConfigurations()->ShowConfigurations();
 	if (bReindex)

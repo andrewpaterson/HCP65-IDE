@@ -36,7 +36,8 @@ class CIDEContent;
 
 //Getting about the code, as IntelliJ: Navigate's Go to Class (Control+N), File (Control+Shift+N) and Symbol
 //(Control+Alt+Shift+N), whose dialog's searcher it is; Go to Source (Control+B), the file an #include names or a
-//definition; and Alt+O, between a .cpp and its header.  It keeps the solutions' files (FindGoToFiles).
+//definition; and Alt+O, between a .cpp and its header.  The files it searches are the code model's list of the
+//projects' files (CIDECodeModel::GetProjectFile).
 class CIDENavigator : public CObject, public CGoToSearcher
 {
 friend class CIDEScript;
@@ -47,13 +48,9 @@ protected:
 	Ptr<CMenuContainer>	mpNavigateMenu;
 	Ptr<CGoToDialog>	mpGoTo;  //While Go to Class, File or Symbol is shown.
 	CChars				mszGoToPattern;  //What was typed in Go to last.
-	CArrayChars			maszGoToFiles;  //The solutions' files (FindGoToFiles),
-	CArrayInt			maiGoToProjects;  //their projects,
-	CMapStringInt		mcGoToFileSet;  //and their indices by path.
 	int32				miGoToFileIcon;  //The dialog's first file icon, by EIDEFileType from it.
 	int32				maiGoToSymbolIcons[IST_Count];
-	int32				miQueuedGoTo;
-	bool				mbGoToFilesFound;  //maszGoToFiles is the open solutions' files, until the workspace changes.  //The Go to tab posted to be shown at the next tick (ShowQueuedGoTo).
+	int32				miQueuedGoTo;  //The Go to tab posted to be shown at the next tick (ShowQueuedGoTo).
 
 public:
 	void	Init(CIDEContent* pcContent);
@@ -74,9 +71,6 @@ public:
 	bool				CreateGoTo(size uiTab);
 	bool				OpenGoToChoice(void);
 	Ptr<CGoToDialog>	GetGoTo(void);
-	void				FindGoToFiles(void);
-	void				ForgetGoToFiles(void);
-	CMapStringInt*		GetSolutionFileSet(void);
 	bool				GoToSource(void);
 	bool				CanGoToSource(void);
 	bool				SwitchHeaderSource(void);
@@ -84,6 +78,8 @@ public:
 protected:
 	bool				GetIncludeAtCaret(CChars* pszName, bool* pbSystem);
 	bool				FindIncludedFile(CChars* pszDest);
+	bool				FindProjectFileEnding(const char* szEnd, CChars* pszDest);
+	bool				OpenProjectFile(const char* szFileName);
 	void				ShowQueuedGoTo(void);
 };
 
