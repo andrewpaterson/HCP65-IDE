@@ -780,6 +780,13 @@ void CIDEScript::RunEditStep(const char* szStep)
 				printf("%s %s", (i > 0) ? " |" : "", pPopup->GetItem(i)->GetText());
 			}
 			printf("\n");
+			if (pPopup->GetParent().IsNotNull())
+			{
+				//What holds the menu (a scroll pane once its height is limited), as the window lays it out, and the menu:
+				//"Popup height: 300 scrolling, the menu 2394".
+				mpcContent->GetWindow()->Layout();
+				printf("Popup height: %d %s, the menu %d\n", pPopup->GetParent()->GetActualSize().y, (pPopup->GetParent()->GetActualSize().y < pPopup->GetActualSize().y) ? "scrolling" : "all shown", pPopup->GetActualSize().y);
+			}
 		}
 	}
 	else if (strcmp(szStep, "printhistory") == 0)

@@ -194,6 +194,11 @@ CHECKS = [
 		[r'^Popup: Usages of IsParentheses and 1 override  3 usages \| Calculator\.cpp:367  if \(\(\*ppcExpression\)->IsParentheses\(\)\) \| '
 		 r'Calculator\.cpp:391  if \(pcExpression->IsParentheses\(\)\) \| Calculator\.cpp:421  if \(pcExpression->IsParentheses\(\)\)$',
 		 r'^Popup: none$', r'Calculator\.cpp \(focus\) line 367: '], []),
+	('gotosource-popup-scrolls', {
+		#CCodabase's 133 usages: the popup is no taller than a third of the screen or the editor's view, and scrolls.
+		'WAIT_INDEX': '1', 'OPEN': 'Codabase.h', 'CARET': '27:8',
+		'DEBUG': 'gotosource,edit:printpopup'},
+		[r'^Popup: Usages of CCodabase  133 usages \| ', r'^Popup height: \d+ scrolling, the menu \d+$'], [r'all shown']),
 	('gotosource-on-usage', {
 		#Control+B on a usage still goes to the definition (CCalcExpression's, as pcExpression is one), with no popup.
 		'WAIT_INDEX': '1', 'OPEN': 'Calculator.cpp', 'CARET': '391:22',

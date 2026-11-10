@@ -410,7 +410,8 @@ static int __cdecl CompareIDEPopupUsages(const void* pv1, const void* pv2)
 // Control+B on a declaration or the definition, as IntelliJ's: a small
 // popup under the caret of the symbol's usages (and its overrides', as
 // Find Usages has), the first selected, "Calculator.cpp:367  the line";
-// Enter or a click goes to one.  With only one it is gone to; with none
+// Enter or a click goes to one.  It is at most a third of the screen's
+// height and no taller than the editor's view; more usages scroll.  With only one it is gone to; with none
 // the status line says so.  False if no symbol is named at the caret.
 //
 //////////////////////////////////////////////////////////////////////////
@@ -428,7 +429,11 @@ bool CIDEUsages::ShowUsagesPopup(void)
 	Ptr<CTextArea>		pEditor;
 	CInt32Rect			cBounds;
 	CInt32Rect			cCaret;
+	CInt32Rect			cScreen;
 	SInt32Vec2			sPosition;
+	Ptr<CPopup>			pPopup;
+	int32				iMaximum;
+	int32				iView;
 	size				uiOverrides;
 	size				i;
 
@@ -521,7 +526,23 @@ bool CIDEUsages::ShowUsagesPopup(void)
 	pEditor->GetActualBounds(&cBounds);
 	pEditor->GetCaretBounds(&cCaret);
 	sPosition.Init(cBounds.GetLeft() + cCaret.GetLeft(), cBounds.GetTop() + cCaret.GetBottom());
-	mpPopup->Open(sPosition, pEditor, true);
+	pPopup = mpPopup->Open(sPosition, pEditor, true);
+
+	//At most a third of the screen's height, and no taller than the editor's view: more usages scroll.
+	iMaximum = -1;
+	if (mpcContent->GetWindow()->GetScreenArea(&cScreen) && (cScreen.GetHeight() > 0))
+	{
+		iMaximum = cScreen.GetHeight() / 3;
+	}
+	iView = pTab->GetPane()->GetActualSize().y;
+	if ((iView > 0) && ((iMaximum < 0) || (iView < iMaximum)))
+	{
+		iMaximum = iView;
+	}
+	if (iMaximum > 0)
+	{
+		pPopup->SetMaximumHeight(iMaximum, mpcContent->GetTheme());
+	}
 	mpPopup->Select(1);
 	return true;
 }
