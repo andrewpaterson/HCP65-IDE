@@ -147,6 +147,7 @@ set(IDE_SOURCES
 	"${IDE_DIR}/IDERename.cpp"
 	"${IDE_DIR}/IDEUsages.cpp"
 	"${IDE_DIR}/IDEIndexing.cpp"
+	"${IDE_DIR}/IDEOccurrences.cpp"
 	"${IDE_DIR}/IDECloseGuard.cpp"
 	"${IDE_DIR}/IDEScript.cpp"
 	"${IDE_DIR}/IDEGit.cpp"

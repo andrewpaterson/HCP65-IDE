@@ -213,6 +213,7 @@ void CIDEContent::Class(void)
 	M_Pointer(mpNavigator);
 	M_Pointer(mpRename);
 	M_Pointer(mpUsages);
+	M_Pointer(mpOccurrences);
 	M_Pointer(mpIndexing);
 	M_Pointer(mpDocuments);
 	M_Pointer(mpSolutions);
@@ -381,6 +382,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpNavigator = OMalloc<CIDENavigator>(this);
 	mpRename = OMalloc<CIDERename>(this);
 	mpUsages = OMalloc<CIDEUsages>(this);
+	mpOccurrences = OMalloc<CIDEOccurrences>(this);
 	mpIndexing = OMalloc<CIDEIndexing>(this);
 	mpDocuments = OMalloc<CIDEDocuments>(this);
 	mpSolutions = OMalloc<CIDESolutions>(this);
@@ -570,6 +572,7 @@ void CIDEContent::AddCommands(void)
 	mpNavigator->AddCommands(mpCommands);
 	mpRename->AddCommands(mpCommands);
 	mpUsages->AddCommands(mpCommands);
+	mpOccurrences->AddCommands(mpCommands);
 	mpBuilding->AddCommands(mpCommands);
 	mpBuildConfigurations->AddCommands(mpCommands);
 	mpRunning->AddCommands(mpCommands);
@@ -1020,6 +1023,7 @@ Ptr<CMenuContainer> CIDEContent::GetEditorMenu(void) { return mpEditorMenu; }
 Ptr<CIDENavigator> CIDEContent::GetNavigator(void) { return mpNavigator; }
 Ptr<CIDEEdit> CIDEContent::GetEdit(void) { return mpEdit; }
 Ptr<CIDEUsages> CIDEContent::GetUsages(void) { return mpUsages; }
+Ptr<CIDEOccurrences> CIDEContent::GetOccurrences(void) { return mpOccurrences; }
 Ptr<CIDEIndexing> CIDEContent::GetIndexing(void) { return mpIndexing; }
 Ptr<CIDERename> CIDEContent::GetRename(void) { return mpRename; }
 Ptr<CIDECloseGuard> CIDEContent::GetCloseGuard(void) { return mpCloseGuard; }

@@ -32,15 +32,29 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDEBuildPane.h"
 #include "BaseLib/ArrayInt.h"
 #include "BuildLib/SolutionBuild.h"
+#include "IDESteppable.h"
 
 
 class CIDEContent;
 
 
+//A message in the Build tab with a place in the source: "Kernel.cpp (2, 22): ...".
+struct SIDEBuildMessage
+{
+	size	uiOutputLine;  //Its line in the Build tab, from 0.
+	CChars	szFile;  //The full path of the file it is about.
+	int32	iLine;  //From 1.
+	int32	iColumn;  //From 1, 1 if it doesn't say.
+};
+
+
+typedef CArrayTemplate<SIDEBuildMessage>	CArrayIDEBuildMessages;
+
+
 //Build (Control+Shift+B, or the toolbar's Build): the solutions a build configuration builds, in order, one build
 //step after another while the IDE goes on, the Build tab's output and progress, and the HCP65 listings the last build
 //wrote, shown in the editors' gutters.
-class CIDEBuilding : public CObject
+class CIDEBuilding : public CObject, public CIDESteppable
 {
 friend class CIDEScript;
 CONSTRUCTABLE(CIDEBuilding);
@@ -56,6 +70,7 @@ protected:
 	size						muiBuildStep;		//The one being built.
 	CChars						mszLibc65;			//The HCP65 compiler's system headers.
 	size						muiListingToShow;	//The line to show the code of after the next build, MAX_SIZE for none.
+	size						muiStepLine;		//The Build tab's line of the message last stepped to, MAX_SIZE for none.
 public:
 	void	Init(CIDEContent* pcContent);
 	void	Class(void) override;
@@ -78,6 +93,15 @@ public:
 	void				PollBuild(Ptr<CWindow> pWindow);
 	bool				CanEditConfigurations(void);
 
+	Ptr<CDockPane>		GetSteppablePane(void) override;
+	const char*			GetSteppableName(void) override;
+	bool				HasSteps(void) override;
+	bool				Step(bool bNext, bool bKeepKeys) override;
+	size				FindMessages(CArrayIDEBuildMessages* pasDest);
+
+	static bool			ParseMessageLine(const char* szLine, CChars* pszFile, int32* piLine, int32* piColumn);
+	static bool			ParseUnitLine(const char* szLine, CChars* pszName);
+
 protected:
 	void				RequestEditDialog(void);
 	void				ShowEditDialog(void);
@@ -91,6 +115,8 @@ protected:
 	void				FinishBuildSteps(CArrayChars* paszLines);
 	void				ReadListings(CArrayChars* paszLines);
 	void				ShowBuildTab(void);
+	bool				FindMessageFile(const char* szName, const char* szUnit, CChars* pszDest);
+	void				ClearBuildTab(void);
 };
 
 

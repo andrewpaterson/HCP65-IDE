@@ -620,6 +620,57 @@ void CIDEUsages::UsageActivated(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Next or Previous Occurrence (CIDEOccurrences): the usage line after (or
+// before) the selected one is selected and its place opened in its
+// editor, which has the keys unless bKeepKeys (the tree was stepped in).
+// Past the last (or first) nothing moves.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEUsages::Step(bool bNext, bool bKeepKeys)
+{
+	int32	iNode;
+	int32	iStep;
+	int64	iData;
+
+	iStep = bNext ? 1 : -1;
+	iNode = mpUsages->GetSelectedNode();
+	if (iNode == TREE_NO_NODE)
+	{
+		iNode = bNext ? -1 : mpUsages->NumNodes();
+	}
+	for (iNode += iStep; (iNode >= 0) && (iNode < mpUsages->NumNodes()); iNode += iStep)
+	{
+		iData = mpUsages->GetNodeData(iNode);
+		if ((iData > 0) && ((size)iData <= masUsages.NumElements()))
+		{
+			mpUsages->SelectNode(iNode);
+			mpUsages->ShowRow(mpUsages->FindNodeRow(iNode));
+			mpcContent->GetDocuments()->OpenLocation(masUsages.Get((size)iData - 1));
+			if (bKeepKeys)
+			{
+				mpcContent->GetWindow()->GetFocus()->SetFocus(mpUsages);
+			}
+			return true;
+		}
+	}
+	mpcContent->ShowStatus(bNext ? "No usages after this one." : "No usages before this one.");
+	return false;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// What Next and Previous Occurrence need of a tool window: the Find Usages
+// pane, and whether it has a usage to go to.
+//
+//////////////////////////////////////////////////////////////////////////
+Ptr<CDockPane> CIDEUsages::GetSteppablePane(void) { return mpUsagesTool; }
+const char* CIDEUsages::GetSteppableName(void) { return "Find Usages"; }
+bool CIDEUsages::HasSteps(void) { return mbFound && (masUsages.NumElements() > 0) && mpUsages.IsNotNull(); }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Escape in the tree: the keys go back to the active editor, as
 // IntelliJ's tool windows give them back.
 //

@@ -51,6 +51,9 @@
     <ClCompile Include="IDEIndexing.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="IDEOccurrences.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="IDECloseGuard.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -189,6 +192,12 @@
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDEIndexing.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDEOccurrences.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDESteppable.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDEDebugger.h">

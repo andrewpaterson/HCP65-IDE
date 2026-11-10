@@ -50,6 +50,17 @@ def MakeSolutionCopy(bOther=False):
 	return {'SOLUTION': os.path.join(szKernel, 'Kernel.sln'), 'SAVE_LAYOUT': '1', 'RECENT': os.path.join(szRoot, 'Recent.xml')}
 
 
+def MakeBrokenKernel():
+	#A copy of the test solution whose kernel doesn't compile: two errors in Kernel.cpp, on lines 2 and 5, and a usage of
+	#F on line 5.  Its recent solutions are apart from the user's.
+	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
+	atexit.register(shutil.rmtree, szRoot, True)
+	szKernel = os.path.join(szRoot, 'Workspace', 'Kernel')
+	shutil.copytree(os.path.join(ROOT, 'HCP65-IDE', 'Tests', 'TestBuildLib', 'TestBuildLib', 'Input', 'Workspace'), os.path.join(szRoot, 'Workspace'))
+	open(os.path.join(szKernel, 'Kernel.cpp'), 'w', newline='').write('int main(void) { return 0; }\nint F(void) { return giMissing; }\nint G(void)\n{\n\treturn F() + giAlsoMissing;\n}\n')
+	return {'SOLUTION': os.path.join(szKernel, 'Kernel.sln'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
+
+
 def MakeKeymapFile(szText=None):
 	#Where a scripted run keeps its keys, with szText in it if it's given.
 	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
@@ -89,6 +100,54 @@ CHECKS = [
 		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14',
 		'EDIT': 'usagegroups:,usages,printselected,select:3,usagegroups:c,printselected,usagegroups:,usages,key:f4'},
 		[r'^Selected: 367: ', r'^Selected: 391: ', r'Calculator\.cpp \(focus\) line 367: '], [r'^Selected: none']),
+	('usages-next-occurrence', {
+		#Control+Alt+Down and Up in the Find Usages tree go to the next and previous usage, each opened in its editor with
+		#the tree keeping the keys; past the last nothing moves.  (The editor opened has the keys by the time the script
+		#runs, so the tree is given them again.)
+		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usages',
+		'DEBUG': 'edit:focus:usages,command:Navigate.NextOccurrence,edit:printselected,command:Navigate.NextOccurrence,edit:printselected,'
+		         'command:Navigate.NextOccurrence,printstatus,edit:printselected,command:Navigate.PreviousOccurrence,edit:printselected,edit:print'},
+		[r'^Selected: 391: ', r'^Selected: 421: ', r'^Status line: No usages after this one\.$', r'^Selected: 421: ', r'^Selected: 391: ',
+		 r'Calculator\.cpp line 391: '], [r'not enabled', r'Calculator\.cpp \(focus\)']),
+	('usages-step-from-editor', {
+		#From a source editor, Control+Alt+Down steps through Find Usages, the one tool window seen with something to step
+		#to, from the usage selected; the editor opened has the keys, so it goes on from there.
+		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usages',
+		'DEBUG': 'edit:focus:editor,command:Navigate.NextOccurrence,edit:printselected,command:Navigate.NextOccurrence,'
+		         'edit:printselected,command:Navigate.PreviousOccurrence,edit:printselected,edit:print'},
+		[r'^Selected: 391: ', r'^Selected: 421: ', r'^Selected: 391: ', r'Calculator\.cpp \(focus\) line 391: '],
+		[r'not enabled', r'Nothing to step through']),
+	('usages-step-behind-build', {
+		#Find Usages behind the Build tab can't be seen, and Build has nothing: from the editor nothing steps.
+		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usages',
+		'DEBUG': 'edit:focus:build,edit:focus:editor,command:Navigate.NextOccurrence,printstatus,edit:printselected,edit:print'},
+		[r'^Status line: Nothing to step through: ', r'^Selected: 367: ', r'CalcParentheses\.h \(focus\) line 38: '],
+		[r'Calculator\.cpp.* line \d+: \[']),
+	('build-step-from-editor', dict(MakeBrokenKernel(), **{
+		#Built, the kernel's errors are stepped through from its editor: Build is the one tool window seen with something
+		#to step to.  Its messages name files by their names; the kernel's is found.
+		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp', 'BUILD': '1',
+		'DEBUG': 'wait:6000,edit:focus:editor,command:Navigate.NextOccurrence,edit:print,command:Navigate.NextOccurrence,edit:print,'
+		         'command:Navigate.NextOccurrence,printstatus,command:Navigate.PreviousOccurrence,edit:print'}),
+		[r'Kernel\.cpp \(focus\) line 2: ', r'Kernel\.cpp \(focus\) line 5: ', r'^Status line: No build messages after this one\.$',
+		 r'Kernel\.cpp \(focus\) line 2: '], [r'not enabled', r'Nothing to step through']),
+	('build-step-in-pane', dict(MakeBrokenKernel(), **{
+		#In the Build tab, Control+Alt+Down goes to its first message, the tab keeping the keys.
+		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp', 'BUILD': '1',
+		'DEBUG': 'wait:6000,edit:focus:build,command:Navigate.NextOccurrence,edit:print'}),
+		[r'Kernel\.cpp line 2: '], [r'not enabled', r'\(focus\)']),
+	('steps-ambiguous', dict(MakeBrokenKernel(), **{
+		#Find Usages floated beside the Build tab, both seen with something to step to: from the editor neither steps.
+		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp', 'CARET': '2:6', 'BUILD': '1', 'DOCK': 'float:FindUsages', 'EDIT': 'usages',
+		'DEBUG': 'wait:6000,edit:focus:editor,command:Navigate.NextOccurrence,printstatus,edit:print'}),
+		[r'^Usages of F  1 usage$', r'^Status line: Find Usages and Build can both step: click in the one to step through\.$',
+		 r'Kernel\.cpp \(focus\) line 2: '], [r'Kernel\.cpp \(focus\) line 5: ']),
+	('usages-keys', {
+		#Find Usages' keys, and Jump to Source's, are bound: F4, Alt+F7 and Control+Alt+Down and Up.
+		'DEBUG': 'printkeys'},
+		[r'^Keys: Window\.JumpToSource F4 bound$', r'^Keys: Navigate\.FindUsages Alt\+F7 bound$',
+		 r'^Keys: Navigate\.NextOccurrence Control\+Alt\+Cursor Down bound$', r'^Keys: Navigate\.PreviousOccurrence Control\+Alt\+Cursor Up bound$'],
+		[r'NOT BOUND']),
 	('usages-enter-space', {
 		#As IntelliJ's, enter and space in the Find Usages tree don't go to the usage: the tree keeps the keys.
 		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usages,focus:usages,select:3,key:enter,key:space'},

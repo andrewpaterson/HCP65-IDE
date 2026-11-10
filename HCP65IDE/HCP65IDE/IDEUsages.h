@@ -27,6 +27,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/CommandSet.h"
 #include "WindowLib/CheckBox.h"
 #include "IDECodeModel.h"
+#include "IDESteppable.h"
 
 
 class CIDEContent;
@@ -45,7 +46,7 @@ class CIDEContent;
 //project, the file, the class in it, and each line, in the order it is in its file, which opens the place.  Check boxes
 //above it turn the usage type, project and class groups on and off; with them off it is files and their lines.  Find
 //All References (Shift+F12) shows its declarations and definition there too.
-class CIDEUsages : public CObject
+class CIDEUsages : public CObject, public CIDESteppable
 {
 CONSTRUCTABLE(CIDEUsages);
 DESTRUCTABLE(CIDEUsages);
@@ -81,6 +82,11 @@ public:
 	uint8				GetGrouping(void);
 	Ptr<CTreeContainer>	GetUsagesTree(void);
 	Ptr<CDockPane>		GetTool(void);
+
+	Ptr<CDockPane>		GetSteppablePane(void) override;
+	const char*			GetSteppableName(void) override;
+	bool				HasSteps(void) override;
+	bool				Step(bool bNext, bool bKeepKeys) override;
 
 	static const char*	GetUsageTypeName(SIDELocation* psLocation);
 	static int			GetUsageTypeRank(SIDELocation* psLocation);

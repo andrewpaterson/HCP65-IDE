@@ -165,6 +165,7 @@ protected:
 	int64				miIndexStart;			//When the index was started (GetDebugTickCount),
 	int64				miIndexEnd;				//and when its last unit was done, -1 until then.
 	CMapStringInt		mcProjectFiles;			//Each project item's full path, in any case, to its project's index (FindProjectOfFile).
+	CArrayChars			maszProjectFiles;		//The same full paths, in the projects' order.
 	size				muiProjectFilesProjects;	//How many projects mcProjectFiles was made from, MAX_SIZE until it is made.
 
 	CWorkerThreadJobs	mcEdits;				//The edits thread: one, working out the edited files away from the UI thread.
@@ -206,6 +207,7 @@ public:
 	bool	FindDefinition(const char* szFileName, int iLine, int iColumn, SIDELocation* psDest);
 	bool	FindReferences(const char* szFileName, int iLine, int iColumn, CArrayIDELocations* pasDest, CChars* pszKey);
 	size	FindProjectOfFile(const char* szFileName);
+	size	FindFilesNamed(const char* szName, CArrayChars* paszDest);
 	void	FindGoToSymbols(CNameMatcher* pcMatcher, bool bClasses, CMapStringInt* pcFiles, int32* aiIcons, CGoToItems* pcDest);
 	bool	GetSymbolLocation(size uiSymbol, SIDELocation* psDest);
 	bool	FindRenameTarget(const char* szFileName, int iLine, int iColumn, CMapStringInt* pcFiles, SIDERenameTarget* psDest);

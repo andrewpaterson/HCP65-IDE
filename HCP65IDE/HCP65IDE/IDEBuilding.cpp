@@ -18,6 +18,7 @@ You should have received a copy of the GNU Affero General Public License
 along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 ** ------------------------------------------------------------------------ **/
+#include <stdio.h>
 #include <string.h>
 #include "BaseLib/FileUtil.h"
 #include "BaseLib/Logger.h"
@@ -61,6 +62,7 @@ void CIDEBuilding::Init(CIDEContent* pcContent)
 	muiBuildStep = 0;
 	mszLibc65.Init();
 	muiListingToShow = MAX_SIZE;
+	muiStepLine = MAX_SIZE;
 	PostInit();
 }
 
@@ -81,6 +83,7 @@ void CIDEBuilding::Class(void)
 	U_Size(muiBuildStep);
 	U_String(mszLibc65);
 	U_Size(muiListingToShow);
+	U_Size(muiStepLine);
 }
 
 
@@ -163,7 +166,7 @@ bool CIDEBuilding::Build(void)
 	//The listings of every solution built are read, in place of the last build's.
 	SetListings(false);
 	muiBuildStep = 0;
-	mpBuildPane->Clear();
+	ClearBuildTab();
 	ShowBuildTab();
 	aszLines.Init();
 	bResult = StartBuildStep(&aszLines);
@@ -179,6 +182,19 @@ bool CIDEBuilding::Build(void)
 		mpcContent->GetWindow()->RequestTick(IDE_BUILD_POLL);
 	}
 	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The Build tab emptied for a new build's output, and the message last
+// stepped to with it.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEBuilding::ClearBuildTab(void)
+{
+	mpBuildPane->Clear();
+	muiStepLine = MAX_SIZE;
 }
 
 
@@ -214,7 +230,7 @@ void CIDEBuilding::ShowNothingToBuild(void)
 	}
 	aszLines.Init();
 	aszLines.Add(szLine.Text());
-	mpBuildPane->Clear();
+	ClearBuildTab();
 	ShowBuildTab();
 	mpBuildPane->AppendLines(&aszLines);
 	aszLines.Kill();
@@ -791,3 +807,323 @@ void CIDEBuilding::StopBuild(void)
 }
 
 
+//////////////////////////////////////////////////////////////////////////
+//
+// What Next and Previous Occurrence need of a tool window (CIDEOccurrences):
+// the Build tab, and whether it has a message with a place to go to.
+//
+//////////////////////////////////////////////////////////////////////////
+Ptr<CDockPane> CIDEBuilding::GetSteppablePane(void) { return mpBuildTool; }
+const char* CIDEBuilding::GetSteppableName(void) { return "Build"; }
+
+
+bool CIDEBuilding::HasSteps(void)
+{
+	CArrayIDEBuildMessages	asMessages;
+	size					uiMessages;
+	size					i;
+
+	asMessages.Init();
+	uiMessages = FindMessages(&asMessages);
+	for (i = 0; i < asMessages.NumElements(); i++)
+	{
+		asMessages.Get(i)->szFile.Kill();
+	}
+	asMessages.Kill();
+	return uiMessages > 0;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Next or Previous Occurrence: the message after (or before) the current
+// one, where the Build tab's caret was put, or else the one last stepped
+// to, is selected and its place opened in its editor, which has the keys
+// unless bKeepKeys (the Build tab was stepped in).  Past the last (or
+// first) nothing moves.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEBuilding::Step(bool bNext, bool bKeepKeys)
+{
+	CArrayIDEBuildMessages	asMessages;
+	SIDEBuildMessage*		psMessage;
+	SIDEBuildMessage*		psFound;
+	Ptr<CTextArea>			pOutput;
+	SIDELocation			sLocation;
+	size					uiCurrent;
+	size					uiStart;
+	size					uiEnd;
+	size					i;
+	bool					bFound;
+
+	pOutput = mpBuildPane->GetOutputArea();
+	asMessages.Init();
+	FindMessages(&asMessages);
+
+	//A caret put somewhere (not left following the output at its end) says where the current message is.
+	uiCurrent = muiStepLine;
+	if (pOutput->GetCaretPosition() < strlen(pOutput->GetText()))
+	{
+		uiCurrent = pOutput->FindLine(pOutput->GetCaretPosition());
+	}
+
+	psFound = NULL;
+	for (i = 0; i < asMessages.NumElements(); i++)
+	{
+		psMessage = asMessages.Get(bNext ? i : asMessages.NumElements() - 1 - i);
+		if ((uiCurrent == MAX_SIZE) || (bNext ? (psMessage->uiOutputLine > uiCurrent) : (psMessage->uiOutputLine < uiCurrent)))
+		{
+			psFound = psMessage;
+			break;
+		}
+	}
+
+	bFound = (psFound != NULL);
+	if (bFound)
+	{
+		muiStepLine = psFound->uiOutputLine;
+		uiStart = pOutput->GetLineStart(psFound->uiOutputLine);
+		uiEnd = (psFound->uiOutputLine + 1 < pOutput->NumLines()) ? pOutput->GetLineStart(psFound->uiOutputLine + 1) - 1 : strlen(pOutput->GetText());
+		pOutput->Select(uiStart, uiEnd);
+
+		memset(&sLocation, 0, sizeof(SIDELocation));
+		sLocation.szFileName.Init(psFound->szFile);
+		sLocation.iLine = psFound->iLine - 1;
+		sLocation.iColumn = (psFound->iColumn > 0) ? psFound->iColumn - 1 : 0;
+		sLocation.iContainer = -1;
+		mpcContent->GetDocuments()->OpenLocation(&sLocation);
+		sLocation.szFileName.Kill();
+		if (bKeepKeys)
+		{
+			mpcContent->GetWindow()->GetFocus()->SetFocus(pOutput);
+		}
+	}
+	else
+	{
+		mpcContent->ShowStatus(bNext ? "No build messages after this one." : "No build messages before this one.");
+	}
+
+	for (i = 0; i < asMessages.NumElements(); i++)
+	{
+		asMessages.Get(i)->szFile.Kill();
+	}
+	asMessages.Kill();
+	return bFound;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The Build tab's messages with a place in a file that can be found, in
+// the order it has them, appended to pasDest.  Each file is found by its
+// name (CIDECodeModel::FindFilesNamed), the one next to the unit being
+// compiled ("Kernel.cpp (1/12)") if more than one has it.  How many there
+// are.
+//
+//////////////////////////////////////////////////////////////////////////
+size CIDEBuilding::FindMessages(CArrayIDEBuildMessages* pasDest)
+{
+	CArrayChars			aszLines;
+	CChars				szUnit;
+	CChars				szName;
+	CChars				szPath;
+	SIDEBuildMessage*	psMessage;
+	int32				iLine;
+	int32				iColumn;
+	size				i;
+	size				uiFound;
+
+	aszLines.Init();
+	aszLines.Split(mpBuildPane->GetOutput(), '\n');
+	szUnit.Init();
+	uiFound = 0;
+	for (i = 0; i < aszLines.NumElements(); i++)
+	{
+		szName.Init();
+		szPath.Init();
+		if (ParseUnitLine(aszLines.GetText(i), &szName))
+		{
+			szUnit.Clear();
+			FindMessageFile(szName.Text(), NULL, &szUnit);
+		}
+		else if (ParseMessageLine(aszLines.GetText(i), &szName, &iLine, &iColumn) && FindMessageFile(szName.Text(), szUnit.Text(), &szPath))
+		{
+			psMessage = pasDest->Add();
+			psMessage->uiOutputLine = i;
+			psMessage->szFile.Init(szPath);
+			psMessage->iLine = iLine;
+			psMessage->iColumn = iColumn;
+			uiFound++;
+		}
+		szPath.Kill();
+		szName.Kill();
+	}
+	szUnit.Kill();
+	aszLines.Kill();
+	return uiFound;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The full path of the file a message names: szName itself if it is one,
+// or the file called szName in szUnit's directory (the unit being
+// compiled, "" or NULL if it isn't known), or the first file called it.
+// False if there is none.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEBuilding::FindMessageFile(const char* szName, const char* szUnit, CChars* pszDest)
+{
+	CFileUtil	cFileUtil;
+	CArrayChars	aszFound;
+	CChars		szUnitName;
+	CChars		szUnitDirectory;
+	CChars		szName2;
+	CChars		szDirectory;
+	size		i;
+	size		uiChosen;
+
+	if (cFileUtil.IsAbsolutePath(szName))
+	{
+		pszDest->Append(szName);
+		return true;
+	}
+	aszFound.Init();
+	if (mpcContent->GetCodeModel()->FindFilesNamed(szName, &aszFound) == 0)
+	{
+		aszFound.Kill();
+		return false;
+	}
+
+	uiChosen = 0;
+	if ((szUnit != NULL) && (szUnit[0] != '\0'))
+	{
+		szUnitName.Init();
+		szUnitDirectory.Init();
+		cFileUtil.SplitPath(szUnit, &szUnitName, &szUnitDirectory);
+		for (i = 0; i < aszFound.NumElements(); i++)
+		{
+			szName2.Init();
+			szDirectory.Init();
+			cFileUtil.SplitPath(aszFound.GetText(i), &szName2, &szDirectory);
+			if (szDirectory.EqualsIgnoreCase(szUnitDirectory))
+			{
+				uiChosen = i;
+				szDirectory.Kill();
+				szName2.Kill();
+				break;
+			}
+			szDirectory.Kill();
+			szName2.Kill();
+		}
+		szUnitDirectory.Kill();
+		szUnitName.Kill();
+	}
+	pszDest->Append(aszFound.GetText(uiChosen));
+	aszFound.Kill();
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A message with a place: "<file> (<line>, <column>): ...", the HCP65
+// compiler's, or "<file>(<line>,<column>): ..." or "<file>(<line>): ...",
+// MSVC's.  The file, line and column (1 if there isn't one) of it.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEBuilding::ParseMessageLine(const char* szLine, CChars* pszFile, int32* piLine, int32* piColumn)
+{
+	const char*	szClose;
+	const char*	szOpen;
+	const char*	sz;
+	int			iLine;
+	int			iColumn;
+	int			iRead;
+	size		uiFileLength;
+
+	szClose = strstr(szLine, "): ");
+	if (szClose == NULL)
+	{
+		return false;
+	}
+	for (szOpen = szClose; (szOpen > szLine) && (*szOpen != '('); szOpen--)
+	{
+	}
+	if ((*szOpen != '(') || (szOpen == szLine))
+	{
+		return false;
+	}
+	for (sz = szOpen + 1; sz < szClose; sz++)
+	{
+		if (!(((*sz >= '0') && (*sz <= '9')) || (*sz == ',') || (*sz == ' ')))
+		{
+			return false;
+		}
+	}
+	iLine = 0;
+	iColumn = 1;
+	iRead = sscanf(szOpen + 1, "%d , %d", &iLine, &iColumn);
+	if ((iRead < 1) || (iLine < 1))
+	{
+		return false;
+	}
+
+	uiFileLength = (size)(szOpen - szLine);
+	while ((uiFileLength > 0) && (szLine[uiFileLength - 1] == ' '))
+	{
+		uiFileLength--;
+	}
+	if (uiFileLength == 0)
+	{
+		return false;
+	}
+	pszFile->AppendSubString(szLine, 0, uiFileLength);
+	*piLine = iLine;
+	*piColumn = (iRead >= 2) ? iColumn : 1;
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A unit's line as it is compiled: "<file> (<count>/<total>)".  The file
+// of it.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEBuilding::ParseUnitLine(const char* szLine, CChars* pszName)
+{
+	const char*	szOpen;
+	const char*	sz;
+	size		uiLength;
+	bool		bSlash;
+
+	uiLength = strlen(szLine);
+	if ((uiLength < 6) || (szLine[uiLength - 1] != ')'))
+	{
+		return false;
+	}
+	szOpen = strrchr(szLine, '(');
+	if ((szOpen == NULL) || (szOpen < szLine + 2) || (szOpen[-1] != ' '))
+	{
+		return false;
+	}
+	bSlash = false;
+	for (sz = szOpen + 1; sz < szLine + uiLength - 1; sz++)
+	{
+		if (*sz == '/')
+		{
+			bSlash = true;
+		}
+		else if ((*sz < '0') || (*sz > '9'))
+		{
+			return false;
+		}
+	}
+	if (!bSlash)
+	{
+		return false;
+	}
+	pszName->AppendSubString(szLine, 0, (size)(szOpen - 1 - szLine));
+	return true;
+}

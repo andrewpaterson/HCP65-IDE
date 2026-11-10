@@ -150,6 +150,7 @@ void CIDECodeModel::Init(CBuildWorkspace* pcWorkspace)
 	miIndexStart = 0;
 	miIndexEnd = -1;
 	mcProjectFiles.Init(false);
+	maszProjectFiles.Init();
 	muiProjectFilesProjects = MAX_SIZE;
 
 	mbEdits = false;
@@ -173,6 +174,7 @@ void CIDECodeModel::Kill(void)
 		mbEdits = false;
 	}
 	mapsEdited.Kill();
+	maszProjectFiles.Kill();
 	mcProjectFiles.Kill();
 	mcProblems.Kill();
 	maszProblems.Kill();
@@ -1370,6 +1372,54 @@ size CIDECodeModel::FindProjectOfFile(const char* szFileName)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// The full paths of the files called szName (a file name, whatever its
+// case) that the projects have as items, then those the index has (headers
+// they include), each once, appended to paszDest.  How many there are.
+//
+//////////////////////////////////////////////////////////////////////////
+size CIDECodeModel::FindFilesNamed(const char* szName, CArrayChars* paszDest)
+{
+	CFileUtil	cFileUtil;
+	CChars		szFile;
+	size		uiFound;
+	size		i;
+	size		j;
+	bool		bHave;
+	char*		szPath;
+
+	if (muiProjectFilesProjects != mpcWorkspace->NumProjects())
+	{
+		MakeProjectFiles();
+	}
+	uiFound = 0;
+	mcIndexMutex.Lock();
+	for (i = 0; i < maszProjectFiles.NumElements() + mcIndex.NumFiles(); i++)
+	{
+		szPath = (i < maszProjectFiles.NumElements()) ? maszProjectFiles.GetText(i) : mcIndex.GetFileName(i - maszProjectFiles.NumElements());
+		szFile.Init();
+		cFileUtil.GetFileName(&szFile, szPath);
+		if (szFile.EqualsIgnoreCase(szName))
+		{
+			bHave = false;
+			for (j = paszDest->NumElements() - uiFound; j < paszDest->NumElements(); j++)
+			{
+				bHave = bHave || paszDest->Get(j)->EqualsIgnoreCase(szPath);
+			}
+			if (!bHave)
+			{
+				paszDest->Add(szPath);
+				uiFound++;
+			}
+		}
+		szFile.Kill();
+	}
+	mcIndexMutex.Unlock();
+	return uiFound;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Every item of the workspace's projects by its full path, to the first
 // project that has it.
 //
@@ -1383,6 +1433,7 @@ void CIDECodeModel::MakeProjectFiles(void)
 
 	mcProjectFiles.Kill();
 	mcProjectFiles.Init(false);
+	maszProjectFiles.ReInit();
 	for (i = 0; i < mpcWorkspace->NumProjects(); i++)
 	{
 		pcProject = mpcWorkspace->GetSolutionProject(i)->GetProject();
@@ -1397,6 +1448,7 @@ void CIDECodeModel::MakeProjectFiles(void)
 			if (mcProjectFiles.Get(szPath.Text(), -1) < 0)
 			{
 				mcProjectFiles.Put(szPath.Text(), (int32)i);
+				maszProjectFiles.Add(szPath.Text());
 			}
 			szPath.Kill();
 		}
