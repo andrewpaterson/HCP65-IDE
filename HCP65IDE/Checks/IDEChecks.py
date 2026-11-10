@@ -354,7 +354,7 @@ CHECKS = [
 	('go-to-file', {
 		'WAIT_INDEX': '1', 'GOTO': '1:bl/csym'},
 		[r'^Go to \[bl/csym\]: 2 results', r'^  CalculatorSymbols\.h ', r'^  CalculatorSymbols\.cpp ',
-		 r'^Opened .*/CalculatorSymbols\.h$'], []),
+		 r'^Opened .*[/\\]CalculatorSymbols\.h$'], []),
 	('close-cancel-and-navigate', {
 		'OPEN': 'CalculatorParser.cpp', 'CARET': '36:2', 'TYPE': 'X', 'DIALOG_ANSWER': 'Cancel',
 		'DEBUG': 'closetab,answered:1,printtabs,edit:caret:26:12,gotosource,printtabs,switchfile,printtabs'},

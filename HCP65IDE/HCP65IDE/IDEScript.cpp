@@ -379,7 +379,7 @@ void CIDEScript::RunCommand(const char* szCommand)
 		printf("Tabs:");
 		for (i = 0; i < mpcContent->GetDocuments()->NumTabs(); i++)
 		{
-			printf(" %s%s%s", (mpcContent->GetDocuments()->GetTab(i) == mpcContent->GetDocuments()->GetActiveTab()) ? ">" : "", strrchr(mpcContent->GetDocuments()->GetTab(i)->GetFileName(), '/') + 1, mpcContent->GetDocuments()->GetTab(i)->IsModified() ? "*" : "");
+			printf(" %s%s%s", (mpcContent->GetDocuments()->GetTab(i) == mpcContent->GetDocuments()->GetActiveTab()) ? ">" : "", GetIDEFileNamePart(mpcContent->GetDocuments()->GetTab(i)->GetFileName()), mpcContent->GetDocuments()->GetTab(i)->IsModified() ? "*" : "");
 		}
 		printf("\n");
 		fflush(stdout);
