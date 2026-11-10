@@ -892,6 +892,7 @@ bool CIDEBuilding::Step(bool bNext, bool bKeepKeys)
 		sLocation.iColumn = (psFound->iColumn > 0) ? psFound->iColumn - 1 : 0;
 		sLocation.iContainer = -1;
 		mpcContent->GetDocuments()->OpenLocation(&sLocation);
+		mpcContent->GetDocuments()->SelectWordAtCaret();
 		sLocation.szFileName.Kill();
 		if (bKeepKeys)
 		{

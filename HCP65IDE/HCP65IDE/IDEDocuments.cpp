@@ -638,6 +638,66 @@ bool CIDEDocuments::OpenLocation(SIDELocation* psLocation)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// The active editor's text from its caret, uiLength bytes of it, selected,
+// the caret at its end, as a step through usages selects the name it went
+// to.  Nothing is selected for 0.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDocuments::SelectAtCaret(size uiLength)
+{
+	Ptr<CTextArea>	pEditor;
+	size			uiStart;
+	size			uiEnd;
+
+	if (mpActive.IsNull() || (uiLength == 0))
+	{
+		return;
+	}
+	pEditor = mpActive->GetEditor();
+	uiStart = pEditor->GetCaretPosition();
+	uiEnd = uiStart + uiLength;
+	if (uiEnd > strlen(pEditor->GetText()))
+	{
+		uiEnd = strlen(pEditor->GetText());
+	}
+	pEditor->Select(uiStart, uiEnd);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The name (letters, digits and underscores) starting at the active
+// editor's caret selected, as a step through build messages selects what
+// the message is at.  Nothing if no name starts there.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDocuments::SelectWordAtCaret(void)
+{
+	char*	szText;
+	size	uiStart;
+	size	uiEnd;
+	char	c;
+
+	if (mpActive.IsNull())
+	{
+		return;
+	}
+	szText = mpActive->GetEditor()->GetText();
+	uiStart = mpActive->GetEditor()->GetCaretPosition();
+	for (uiEnd = uiStart; szText[uiEnd] != '\0'; uiEnd++)
+	{
+		c = szText[uiEnd];
+		if (!(((c >= 'a') && (c <= 'z')) || ((c >= 'A') && (c <= 'Z')) || ((c >= '0') && (c <= '9')) || (c == '_')))
+		{
+			break;
+		}
+	}
+	SelectAtCaret(uiEnd - uiStart);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // The caret's line and column (0 based, the column in bytes) in the
 // selected tab.  False if no file is open.
 //

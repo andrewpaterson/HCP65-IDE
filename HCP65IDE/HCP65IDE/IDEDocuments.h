@@ -80,6 +80,8 @@ public:
 	Ptr<CIDEEditorTab>	GetTab(size uiIndex);
 	bool				GetCaretPlace(int* piLine, int* piColumn);
 	bool				OpenLocation(SIDELocation* psLocation);
+	void				SelectAtCaret(size uiLength);
+	void				SelectWordAtCaret(void);
 	Ptr<CIDEEditorTab>	FindTab(const char* szFileName);
 	Ptr<CIDEEditorTab>	FindTab(CDockPane* pcPane);
 	Ptr<CIDEEditorTab>	FindTab(CCodeEditor* pcEditor);

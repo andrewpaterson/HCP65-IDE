@@ -761,6 +761,26 @@ void CIDEScript::RunEditStep(const char* szStep)
 		printf("Selected: %s\n", szNode.Empty() ? "none" : szNode.Text());
 		szNode.Kill();
 	}
+	else if (strcmp(szStep, "printselection") == 0)
+	{
+		//The active editor's selected text, as "Selection: [<text>] on line <caret's line, from 1>", or
+		//"Selection: none", and the line its caret line highlight is on.
+		CChars	szSelected;
+		size	uiStart;
+		size	uiEnd;
+
+		szSelected.Init();
+		if (pTab.IsNotNull() && pTab->GetEditor()->GetSelection(&uiStart, &uiEnd))
+		{
+			szSelected.AppendSubString(pTab->GetEditor()->GetText(), uiStart, uiEnd);
+			printf("Selection: [%s] on line %d, caret line %d\n", szSelected.Text(), (int)pTab->GetEditor()->FindLine(uiEnd) + 1, (int)pTab->GetEditor()->GetCaretLine() + 1);
+		}
+		else
+		{
+			printf("Selection: none\n");
+		}
+		szSelected.Kill();
+	}
 	else if (strncmp(szStep, "select:", 7) == 0)
 	{
 		//select:<node>, from 0 in the order "usages" prints them: that row of the Find Usages tree selected.

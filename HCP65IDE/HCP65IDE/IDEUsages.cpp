@@ -646,6 +646,7 @@ bool CIDEUsages::Step(bool bNext, bool bKeepKeys)
 			mpUsages->SelectNode(iNode);
 			mpUsages->ShowRow(mpUsages->FindNodeRow(iNode));
 			mpcContent->GetDocuments()->OpenLocation(masUsages.Get((size)iData - 1));
+			mpcContent->GetDocuments()->SelectAtCaret((size)masUsages.Get((size)iData - 1)->iLength);
 			if (bKeepKeys)
 			{
 				mpcContent->GetWindow()->GetFocus()->SetFocus(mpUsages);

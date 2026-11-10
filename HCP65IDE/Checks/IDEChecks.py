@@ -105,17 +105,19 @@ CHECKS = [
 		#the tree keeping the keys; past the last nothing moves.  (The editor opened has the keys by the time the script
 		#runs, so the tree is given them again.)
 		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usages',
-		'DEBUG': 'edit:focus:usages,command:Navigate.NextOccurrence,edit:printselected,command:Navigate.NextOccurrence,edit:printselected,'
+		'DEBUG': 'edit:focus:usages,command:Navigate.NextOccurrence,edit:printselected,edit:printselection,command:Navigate.NextOccurrence,edit:printselected,'
 		         'command:Navigate.NextOccurrence,printstatus,edit:printselected,command:Navigate.PreviousOccurrence,edit:printselected,edit:print'},
-		[r'^Selected: 391: ', r'^Selected: 421: ', r'^Status line: No usages after this one\.$', r'^Selected: 421: ', r'^Selected: 391: ',
-		 r'Calculator\.cpp line 391: '], [r'not enabled', r'Calculator\.cpp \(focus\)']),
+		[r'^Selected: 391: ', r'^Selection: \[IsParentheses\] on line 391, caret line 391$', r'^Selected: 421: ',
+		 r'^Status line: No usages after this one\.$', r'^Selected: 421: ', r'^Selected: 391: ', r'Calculator\.cpp line 391: '],
+		[r'not enabled', r'Calculator\.cpp \(focus\)']),
 	('usages-step-from-editor', {
 		#From a source editor, Control+Alt+Down steps through Find Usages, the one tool window seen with something to step
 		#to, from the usage selected; the editor opened has the keys, so it goes on from there.
 		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usages',
 		'DEBUG': 'edit:focus:editor,command:Navigate.NextOccurrence,edit:printselected,command:Navigate.NextOccurrence,'
-		         'edit:printselected,command:Navigate.PreviousOccurrence,edit:printselected,edit:print'},
-		[r'^Selected: 391: ', r'^Selected: 421: ', r'^Selected: 391: ', r'Calculator\.cpp \(focus\) line 391: '],
+		         'edit:printselected,edit:printselection,command:Navigate.PreviousOccurrence,edit:printselected,edit:print'},
+		[r'^Selected: 391: ', r'^Selected: 421: ', r'^Selection: \[IsParentheses\] on line 421, caret line 421$', r'^Selected: 391: ',
+		 r'Calculator\.cpp \(focus\) line 391: '],
 		[r'not enabled', r'Nothing to step through']),
 	('usages-step-behind-build', {
 		#Find Usages behind the Build tab can't be seen, and Build has nothing: from the editor nothing steps.
@@ -127,10 +129,11 @@ CHECKS = [
 		#Built, the kernel's errors are stepped through from its editor: Build is the one tool window seen with something
 		#to step to.  Its messages name files by their names; the kernel's is found.
 		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp', 'BUILD': '1',
-		'DEBUG': 'wait:6000,edit:focus:editor,command:Navigate.NextOccurrence,edit:print,command:Navigate.NextOccurrence,edit:print,'
-		         'command:Navigate.NextOccurrence,printstatus,command:Navigate.PreviousOccurrence,edit:print'}),
-		[r'Kernel\.cpp \(focus\) line 2: ', r'Kernel\.cpp \(focus\) line 5: ', r'^Status line: No build messages after this one\.$',
-		 r'Kernel\.cpp \(focus\) line 2: '], [r'not enabled', r'Nothing to step through']),
+		'DEBUG': 'wait:6000,edit:focus:editor,command:Navigate.NextOccurrence,edit:printselection,edit:print,command:Navigate.NextOccurrence,'
+		         'edit:printselection,edit:print,command:Navigate.NextOccurrence,printstatus,command:Navigate.PreviousOccurrence,edit:print'}),
+		[r'^Selection: \[giMissing\] on line 2, caret line 2$', r'Kernel\.cpp \(focus\) line 2: ',
+		 r'^Selection: \[giAlsoMissing\] on line 5, caret line 5$', r'Kernel\.cpp \(focus\) line 5: ',
+		 r'^Status line: No build messages after this one\.$', r'Kernel\.cpp \(focus\) line 2: '], [r'not enabled', r'Nothing to step through']),
 	('build-step-in-pane', dict(MakeBrokenKernel(), **{
 		#In the Build tab, Control+Alt+Down goes to its first message, the tab keeping the keys.
 		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp', 'BUILD': '1',
