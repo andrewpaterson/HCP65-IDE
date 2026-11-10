@@ -541,7 +541,7 @@ CHECKS = [
 		[r'^Run: not running \[Start\]$', r'^Running: /no/such/tool$'], []),
 	('explorer', {
 		'OPEN': 'CalculatorParser.cpp', 'EDIT': 'explorer', 'DEBUG': 'printexplorer'},
-		[r'^Explorer: \[.*/BaseLib/CalculatorParser\.cpp\]$'], []),
+		[r'^Explorer: \[.*[/\\]BaseLib[/\\]CalculatorParser\.cpp\]$'], []),
 	('breakpoint', {
 		'OPEN': 'Kernal.cpp', 'DEBUG': 'line:20,buildtab,wait:300,printtabs'},
 		[r'^Tabs: .*>Kernal\.cpp'], []),
