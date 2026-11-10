@@ -393,9 +393,8 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 			{
 				mpContent->GetDocuments()->SetCaretPlace(iLine - 1, iColumn - 1);
 			}
-			if ((getenv("HCP65_IDE_TYPE") != NULL) && mpContent->GetDocuments()->GetEditor().IsNotNull())
+			if ((getenv("HCP65_IDE_TYPE") != NULL) && mpContent->GetDocuments()->FocusActiveEditor())
 			{
-				mpWindow->GetFocus()->SetFocus(mpContent->GetDocuments()->GetEditor());
 				for (szTyped = getenv("HCP65_IDE_TYPE"); *szTyped != '\0'; szTyped++)
 				{
 					mpWindow->InputPrintable(*szTyped, true);
@@ -464,7 +463,7 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 				if ((getenv("HCP65_IDE_TYPE_AFTER") != NULL) && pDiff.IsNotNull())
 				{
 					mpContent->GetDocuments()->OpenFile(pDiff->GetSide(TDS_Right)->mszFile.Text());
-					mpWindow->GetFocus()->SetFocus(mpContent->GetDocuments()->GetEditor());
+					mpContent->GetDocuments()->FocusActiveEditor();
 					for (szTyped = getenv("HCP65_IDE_TYPE_AFTER"); *szTyped != '\0'; szTyped++)
 					{
 						mpWindow->InputPrintable(*szTyped, true);
@@ -538,11 +537,7 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 		mpWindow->SetComponentInput(&mcComponentInput);
 
 		//The open editor has the keys, as IntelliJ's; Solution Explorer does with no file open.
-		if (mpContent->GetDocuments()->GetActiveTab().IsNotNull())
-		{
-			mpWindow->GetFocus()->SetFocus(mpContent->GetDocuments()->GetActiveTab()->GetEditor());
-		}
-		else
+		if (!mpContent->GetDocuments()->FocusActiveEditor())
 		{
 			mpWindow->GetFocus()->SetFocus(mpContent->GetExplorer()->GetTree());
 		}

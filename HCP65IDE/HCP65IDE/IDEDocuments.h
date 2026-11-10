@@ -129,6 +129,7 @@ public:
 	Ptr<CTextArea>		GetEditor(void);
 	Ptr<CScrollPane>	GetEditorPane(void);
 	Ptr<CIDEEditorTab>	GetActiveTab(void);
+	bool				FocusActiveEditor(void);
 	bool				FindSymbolPlace(int* piLine, int* piColumn, uint8* puiRole);
 	bool				FindSymbolAtCaret(CArrayIDELocations* pasDest, CChars* pszKey);
 	void				GetFileLine(const char* szFileName, int iLine, CChars* pszDest);

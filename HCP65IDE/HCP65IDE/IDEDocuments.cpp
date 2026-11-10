@@ -620,6 +620,23 @@ Ptr<CIDEEditorTab> CIDEDocuments::GetActiveTab(void) { return mpActive; }
 
 //////////////////////////////////////////////////////////////////////////
 //
+// The active file's editor is given the keys, as IntelliJ's has them
+// after anything that goes to a file.  False if no file is active.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEDocuments::FocusActiveEditor(void)
+{
+	if (mpActive.IsNull())
+	{
+		return false;
+	}
+	mpcContent->GetWindow()->GetFocus()->SetFocus(mpActive->GetEditor());
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // The open documents' tabs.
 //
 //////////////////////////////////////////////////////////////////////////
@@ -670,7 +687,7 @@ bool CIDEDocuments::OpenLocation(SIDELocation* psLocation, bool bSelectName)
 	{
 		SelectAtCaret((size)psLocation->iLength);
 	}
-	mpActive->GetEditor()->GetWindow()->GetFocus()->SetFocus(mpActive->GetEditor());
+	FocusActiveEditor();
 	mpcContent->GetNavigationHistory()->EndJump(&sFrom, bRecord);
 	return true;
 }

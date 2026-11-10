@@ -821,16 +821,27 @@ bool CIDEBuilding::HasSteps(void)
 {
 	CArrayIDEBuildMessages	asMessages;
 	size					uiMessages;
-	size					i;
 
 	asMessages.Init();
 	uiMessages = FindMessages(&asMessages);
-	for (i = 0; i < asMessages.NumElements(); i++)
-	{
-		asMessages.Get(i)->szFile.Kill();
-	}
-	asMessages.Kill();
+	KillMessages(&asMessages);
 	return uiMessages > 0;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEBuilding::KillMessages(CArrayIDEBuildMessages* pasMessages)
+{
+	size	i;
+
+	for (i = 0; i < pasMessages->NumElements(); i++)
+	{
+		pasMessages->Get(i)->szFile.Kill();
+	}
+	pasMessages->Kill();
 }
 
 
@@ -906,11 +917,7 @@ bool CIDEBuilding::Step(bool bNext, bool bKeepKeys)
 		mpcContent->ShowStatus(bNext ? "No build messages after this one." : "No build messages before this one.");
 	}
 
-	for (i = 0; i < asMessages.NumElements(); i++)
-	{
-		asMessages.Get(i)->szFile.Kill();
-	}
-	asMessages.Kill();
+	KillMessages(&asMessages);
 	return bFound;
 }
 

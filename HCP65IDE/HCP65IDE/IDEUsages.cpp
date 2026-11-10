@@ -1085,13 +1085,7 @@ bool CIDEUsages::HasSteps(void) { return mbFound && (msFound.asUsages.NumElement
 //////////////////////////////////////////////////////////////////////////
 void CIDEUsages::ReturnToEditor(void)
 {
-	Ptr<CIDEEditorTab>	pTab;
-
-	pTab = mpcContent->GetDocuments()->GetActiveTab();
-	if (pTab.IsNotNull())
-	{
-		mpcContent->GetWindow()->GetFocus()->SetFocus(pTab->GetEditor());
-	}
+	mpcContent->GetDocuments()->FocusActiveEditor();
 }
 
 

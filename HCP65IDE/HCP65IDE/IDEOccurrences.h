@@ -49,6 +49,7 @@ public:
 
 	void			AddCommands(Ptr<CCommandSet> pCommands);
 	CIDESteppable*	FindSteppable(bool* pbKeepKeys, bool bSay);
+	CIDESteppable*	FindFocussedSteppable(void);
 
 protected:
 	void			NextOccurrence(void);

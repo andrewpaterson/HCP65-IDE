@@ -953,10 +953,7 @@ bool CIDEContent::LoadLayout(void)
 		}
 
 		//As IntelliJ's, the open editor has the keys, its caret shown.
-		if (mpDocuments->GetActiveTab().IsNotNull())
-		{
-			mpWindow->GetFocus()->SetFocus(mpDocuments->GetActiveTab()->GetEditor());
-		}
+		mpDocuments->FocusActiveEditor();
 	}
 	return bResult;
 }

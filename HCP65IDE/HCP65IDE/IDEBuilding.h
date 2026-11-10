@@ -98,6 +98,7 @@ public:
 	bool				HasSteps(void) override;
 	bool				Step(bool bNext, bool bKeepKeys) override;
 	size				FindMessages(CArrayIDEBuildMessages* pasDest);
+	void				KillMessages(CArrayIDEBuildMessages* pasMessages);
 
 	static bool			ParseMessageLine(const char* szLine, CChars* pszFile, int32* piLine, int32* piColumn);
 	static bool			ParseUnitLine(const char* szLine, CChars* pszName);

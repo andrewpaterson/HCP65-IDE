@@ -360,7 +360,7 @@ bool CIDENavigationHistory::Go(SIDENavigationPlace* psPlace)
 			iLine = (int32)pEditor->NumLines() - 1;
 		}
 		mpcContent->GetDocuments()->SetCaretPlace(iLine, psPlace->iColumn);
-		mpcContent->GetWindow()->GetFocus()->SetFocus(pEditor);
+		mpcContent->GetDocuments()->FocusActiveEditor();
 	}
 	mbMoving = false;
 	Arrived();

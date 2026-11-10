@@ -110,31 +110,19 @@ CIDESteppable* CIDEOccurrences::FindSteppable(bool* pbKeepKeys, bool bSay)
 {
 	CIDESteppable*	apcSteppables[IDE_NUM_STEPPABLES];
 	CIDESteppable*	pcFound;
-	Ptr<CComponent>	pFocussed;
-	Ptr<CDockPane>	pPane;
 	size			uiSteppables;
 	size			uiFound;
 	size			i;
 	CChars			szNames;
 
-	*pbKeepKeys = false;
-	uiSteppables = GetSteppables(apcSteppables);
-	pFocussed = mpcContent->GetWindow()->GetFocus()->GetFocussedComponent();
-	pPane = mpcContent->GetDock()->FindPane(pFocussed);
-	for (i = 0; i < uiSteppables; i++)
+	pcFound = FindFocussedSteppable();
+	*pbKeepKeys = (pcFound != NULL);
+	if (pcFound || !IsInSourceEditor(mpcContent->GetWindow()->GetFocus()->GetFocussedComponent()))
 	{
-		if (pPane.IsNotNull() && (apcSteppables[i]->GetSteppablePane() == pPane))
-		{
-			*pbKeepKeys = true;
-			return apcSteppables[i];
-		}
-	}
-	if (!IsInSourceEditor(pFocussed))
-	{
-		return NULL;
+		return pcFound;
 	}
 
-	pcFound = NULL;
+	uiSteppables = GetSteppables(apcSteppables);
 	uiFound = 0;
 	szNames.Init();
 	for (i = 0; i < uiSteppables; i++)
@@ -166,28 +154,37 @@ CIDESteppable* CIDEOccurrences::FindSteppable(bool* pbKeepKeys, bool bSay)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Whether the keys are in a steppable tool window or a source editor.
+// The steppable tool window the keys are in, NULL if they are in none.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEOccurrences::CanStep(void)
+CIDESteppable* CIDEOccurrences::FindFocussedSteppable(void)
 {
 	CIDESteppable*	apcSteppables[IDE_NUM_STEPPABLES];
-	Ptr<CComponent>	pFocussed;
 	Ptr<CDockPane>	pPane;
 	size			uiSteppables;
 	size			i;
 
-	pFocussed = mpcContent->GetWindow()->GetFocus()->GetFocussedComponent();
-	pPane = mpcContent->GetDock()->FindPane(pFocussed);
+	pPane = mpcContent->GetDock()->FindPane(mpcContent->GetWindow()->GetFocus()->GetFocussedComponent());
 	uiSteppables = GetSteppables(apcSteppables);
 	for (i = 0; i < uiSteppables; i++)
 	{
 		if (pPane.IsNotNull() && (apcSteppables[i]->GetSteppablePane() == pPane))
 		{
-			return true;
+			return apcSteppables[i];
 		}
 	}
-	return IsInSourceEditor(pFocussed);
+	return NULL;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether the keys are in a steppable tool window or a source editor.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEOccurrences::CanStep(void)
+{
+	return (FindFocussedSteppable() != NULL) || IsInSourceEditor(mpcContent->GetWindow()->GetFocus()->GetFocussedComponent());
 }
 
 

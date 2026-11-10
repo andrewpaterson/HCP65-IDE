@@ -388,12 +388,7 @@ bool CIDENavigator::OpenProjectFile(const char* szFileName)
 	{
 		uiProject = mpcContent->GetDocuments()->GetActiveTab()->GetProject();
 	}
-	if (!mpcContent->GetDocuments()->OpenFile(szFileName, uiProject))
-	{
-		return false;
-	}
-	mpcContent->GetWindow()->GetFocus()->SetFocus(mpcContent->GetDocuments()->GetActiveTab()->GetEditor());
-	return true;
+	return mpcContent->GetDocuments()->OpenFile(szFileName, uiProject) && mpcContent->GetDocuments()->FocusActiveEditor();
 }
 
 

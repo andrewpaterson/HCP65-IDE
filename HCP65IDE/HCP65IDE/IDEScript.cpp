@@ -651,7 +651,7 @@ void CIDEScript::RunEditStep(const char* szStep)
 	}
 	else if ((strncmp(szStep, "type:", 5) == 0) && pTab.IsNotNull())
 	{
-		mpcContent->GetWindow()->GetFocus()->SetFocus(pTab->GetEditor());
+		mpcContent->GetDocuments()->FocusActiveEditor();
 		for (szTyped = &szStep[5]; *szTyped != '\0'; szTyped++)
 		{
 			mpcContent->GetWindow()->InputPrintable(*szTyped, true);
@@ -745,9 +745,9 @@ void CIDEScript::RunEditStep(const char* szStep)
 			mpcContent->GetDock()->Show(mpcContent->GetUsages()->GetTool());
 			mpcContent->GetWindow()->GetFocus()->SetFocus(mpcContent->GetUsages()->GetUsagesTree());
 		}
-		else if (pTab.IsNotNull())
+		else
 		{
-			mpcContent->GetWindow()->GetFocus()->SetFocus(pTab->GetEditor());
+			mpcContent->GetDocuments()->FocusActiveEditor();
 		}
 	}
 	else if (strcmp(szStep, "printselected") == 0)
