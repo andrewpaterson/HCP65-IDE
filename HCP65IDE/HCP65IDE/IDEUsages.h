@@ -32,6 +32,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 class CIDEContent;
 class CIDEFileLines;
+struct SIDEPlaceChange;
 
 
 //How Find Usages groups what it found (CIDEUsages::muiGrouping): above each file by how each is used and by project,
@@ -42,8 +43,9 @@ class CIDEFileLines;
 #define IDE_USAGES_BY_ALL		(IDE_USAGES_BY_TYPE | IDE_USAGES_BY_PROJECT | IDE_USAGES_BY_CLASS)
 
 
-//A usage Find Usages found: its place, and what the tree groups it by, its file's project and the class it is in.  They
-//are worked out when it is found, not when the tree is grouped: the index can have been built again by then.
+//A usage Find Usages found: its place, which follows its file's edits while the file is open (CIDEDocuments tells them),
+//and what the tree groups it by, its file's project and the class it is in.  They are worked out when it is found, not
+//when the tree is grouped: the index can have been built again by then.
 struct SIDEUsage
 {
 	SIDELocation	sLocation;
@@ -68,6 +70,7 @@ struct SIDEFoundUsages
 	void	Init(void);
 	void	Kill(void);
 	void	Clear(void);
+	bool	AdjustPlaces(const char* szFile, SIDEPlaceChange* psChange);
 	void	AppendTitle(CChars* pszDest);
 };
 
@@ -93,6 +96,8 @@ protected:
 	Ptr<CCheckBox>		mpByClass;
 	SIDEFoundUsages		msFound;  //What the tree shows, if mbFound: each line's usage by its node's data less one.
 	bool				mbFound;  //Something has been looked for.
+	bool				mbMoved;  //Edits have moved usages since the tree was shown, the last at miMoved.
+	int64				miMoved;
 	Ptr<CMenuContainer>	mpPopup;  //Control+B's usages on a declaration, made when it is first shown.
 	SIDEFoundUsages		msPopupFound;  //What the popup shows: each row's usage by its row less one (the first is its title).
 	uint8				muiGrouping;  //IDE_USAGES_BY_*.
@@ -113,6 +118,8 @@ public:
 	bool				ShowUsagesPopup(void);
 	Ptr<CMenuContainer>	GetUsagesPopup(void);
 	void				Clear(void);
+	void				AdjustPlaces(const char* szFile, SIDEPlaceChange* psChange);
+	int64				Poll(int64 iNow);
 	void				SetGrouping(uint8 uiGrouping);
 	uint8				GetGrouping(void);
 	Ptr<CTreeContainer>	GetUsagesTree(void);

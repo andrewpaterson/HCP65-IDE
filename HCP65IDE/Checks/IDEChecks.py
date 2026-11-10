@@ -266,7 +266,16 @@ CHECKS = [
 		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp', 'CARET': '1:5', 'EDIT': 'usagegroups:,usages'}),
 		[r'^Usages of F  6 usages$', r'^  Kernel\.cpp  4$', r'^  Same\.cpp  1  .*[/\\]A$', r'^    2: int SA', r'^  Same\.cpp  1  .*[/\\]B$', r'^    2: int SB'],
 		[r'Kernel\.cpp  4  ']),
-	('usages-many-files-closed', dict(MakeUsagesKernel(USAGES_KERNEL, {'Aaa.cpp': ManyUsages('A', 600), 'Bbb.cpp': ManyUsages('B', 600)}), **{
+	('usages-follow-edits', dict(MakeUsagesKernel(), **{
+		#A usage follows its file's edits: two lines put in at the top, and "x = " before the F on what was line 3, the
+		#step to it selects F on line 5, and the tree, once the edits have stopped, says 5.
+		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp', 'CARET': '1:5', 'EDIT': 'usagegroups:,usages',
+		'DEBUG': 'edit:focus:editor,edit:caret:1:1,edit:key:enter,edit:key:enter,edit:caret:5:15,edit:type:int x = ,wait:900,edit:printusages,'
+		         'command:Navigate.NextOccurrence,edit:printselection,edit:printselected'}),
+		[r'^Usages of F  4 usages$', r'^    2: class CA', r'^    3: int G', r'^Usages of F  4 usages$', r'^    4: class CA',
+		 r'^    5: int G\(void\) \{ int x = return F\(\); \}$', r'^    6: int CA::N', r'^    7: int main',
+		 r'^Selection: \[F\] on line 5, caret line 5$', r'^Selected: 5: int G'], [r'not enabled']),
+	('usages-many-files-closed',dict(MakeUsagesKernel(USAGES_KERNEL, {'Aaa.cpp': ManyUsages('A', 600), 'Bbb.cpp': ManyUsages('B', 600)}), **{
 		#Past 1000 usages (1204 here) the tree's files start closed, but for the first line's: the top, the three files
 		#and Aaa.cpp's 600 lines can be seen.  A step from Aaa.cpp's last line opens Bbb.cpp for its first.
 		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp', 'CARET': '1:5', 'EDIT': 'usagegroups:,usages,printrows,printselected,select:601',

@@ -20,8 +20,6 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 ** ------------------------------------------------------------------------ **/
 #include <string.h>
 #include "BaseLib/FileUtil.h"
-#include "BaseLib/ConstructorCall.h"
-#include "BaseLib/PointerFunctions.h"
 #include "StandardLib/ClassDefines.h"
 #include "IDEContent.h"
 #include "IDENavigationHistory.h"
@@ -68,29 +66,6 @@ void SIDENavigationPlace::Set(SIDENavigationPlace* psPlace)
 //
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDENavigationAnchor::Init(CIDENavigationHistory* pcHistory, const char* szFile)
-{
-	mpcHistory = pcHistory;
-	mszFile.Init(szFile);
-}
-
-
-void CIDENavigationAnchor::Kill(void)
-{
-	mszFile.Kill();
-}
-
-
-void CIDENavigationAnchor::DocumentChanged(STextDocumentChange* psChange)
-{
-	mpcHistory->AdjustPlaces(mszFile.Text(), psChange);
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-//
-//////////////////////////////////////////////////////////////////////////
 void CIDENavigationHistory::Init(CIDEContent* pcContent)
 {
 	PreInit();
@@ -104,7 +79,6 @@ void CIDENavigationHistory::Init(CIDEContent* pcContent)
 	miLastChange = 0;
 	miJumps = 0;
 	mbMoving = false;
-	mapcAnchors.Init();
 	PostInit();
 }
 
@@ -125,27 +99,15 @@ void CIDENavigationHistory::Class(void)
 	U_Int64(miLastChange);
 	U_Int32(miJumps);
 	U_Bool(mbMoving);
-	U_Unknown(CArrayIDENavigationAnchors, mapcAnchors);
 }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The anchors are taken off the editors when their files close
-// (FileClosed); any left are only freed.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDENavigationHistory::Free(void)
 {
-	size					i;
-	CIDENavigationAnchor*	pcAnchor;
-
-	for (i = 0; i < mapcAnchors.NumElements(); i++)
-	{
-		pcAnchor = mapcAnchors.GetPtr(i);
-		SafeKill(pcAnchor);
-	}
-	mapcAnchors.Kill();
 	msLast.Kill();
 	msSettled.Kill();
 	KillPlaces(&masForward);
@@ -502,51 +464,11 @@ void CIDENavigationHistory::Push(SIDENavigationPlace* psPlace, bool bClearForwar
 
 //////////////////////////////////////////////////////////////////////////
 //
-// A file opened in a tab: its edits move the places in it.
+// An edit of the open file szFile (CIDEDocuments::DocumentChanged): the
+// places in it move with their text.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDENavigationHistory::FileOpened(Ptr<CIDEEditorTab> pTab)
-{
-	CIDENavigationAnchor*	pcAnchor;
-
-	pcAnchor = NewMalloc<CIDENavigationAnchor>();
-	pcAnchor->Init(this, pTab->GetFileName());
-	mapcAnchors.Add(pcAnchor);
-	pTab->GetEditor()->AddDocumentListener(pcAnchor);
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// A file's tab closed: its places keep their lines.
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDENavigationHistory::FileClosed(Ptr<CIDEEditorTab> pTab)
-{
-	size					i;
-	CIDENavigationAnchor*	pcAnchor;
-
-	for (i = 0; i < mapcAnchors.NumElements(); i++)
-	{
-		pcAnchor = mapcAnchors.GetPtr(i);
-		if (pcAnchor->mszFile.Equals(pTab->GetFileName()))
-		{
-			pTab->GetEditor()->RemoveDocumentListener(pcAnchor);
-			mapcAnchors.RemoveAt(i);
-			SafeKill(pcAnchor);
-			return;
-		}
-	}
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// An edit of the open file szFile: the places in it below the edit move
-// with their lines, and those on lines taken out go to where they were.
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDENavigationHistory::AdjustPlaces(const char* szFile, STextDocumentChange* psChange)
+void CIDENavigationHistory::AdjustPlaces(const char* szFile, SIDEPlaceChange* psChange)
 {
 	size	i;
 
@@ -563,32 +485,11 @@ void CIDENavigationHistory::AdjustPlaces(const char* szFile, STextDocumentChange
 }
 
 
-void CIDENavigationHistory::AdjustPlace(SIDENavigationPlace* psPlace, const char* szFile, STextDocumentChange* psChange)
+void CIDENavigationHistory::AdjustPlace(SIDENavigationPlace* psPlace, const char* szFile, SIDEPlaceChange* psChange)
 {
-	size	uiLine;
-
-	if ((psChange->uiLines == 0) || !psPlace->szFile.Equals(szFile))
+	if (psPlace->szFile.Equals(szFile))
 	{
-		return;
-	}
-	uiLine = (size)psPlace->iLine;
-	if (psChange->eChange == TDC_Inserted)
-	{
-		if ((uiLine > psChange->uiLine) || ((uiLine == psChange->uiLine) && psChange->bLineStart))
-		{
-			psPlace->iLine += (int32)psChange->uiLines;
-		}
-	}
-	else
-	{
-		if (uiLine > psChange->LastLine())
-		{
-			psPlace->iLine -= (int32)psChange->uiLines;
-		}
-		else if (uiLine > psChange->uiLine)
-		{
-			psPlace->iLine = (int32)psChange->uiLine;
-		}
+		AdjustIDEPlace(&psPlace->iLine, &psPlace->iColumn, psChange);
 	}
 }
 

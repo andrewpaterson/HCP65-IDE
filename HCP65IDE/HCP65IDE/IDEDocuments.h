@@ -21,6 +21,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __IDE_DOCUMENTS_H__
 #define __IDE_DOCUMENTS_H__
 #include "BaseLib/ArrayTemplate.h"
+#include "BaseLib/ArrayTemplatePtr.h"
+#include "BaseLib/TextDocument.h"
 #include "BaseLib/TextFile.h"
 #include "StandardLib/Object.h"
 #include "StandardLib/Pointer.h"
@@ -59,6 +61,32 @@ protected:
 };
 
 
+//An edit of an open file, as the places kept in the file are moved by it (AdjustIDEPlace): the edit, the column it
+//starts at on its line and, for text put in, how much of it is on its last line.
+struct SIDEPlaceChange
+{
+	STextDocumentChange*	psChange;
+	int32					iColumn;
+	int32					iLastLength;
+};
+
+
+//Told an open file's edits, so the places kept in it (the navigation history's, Find Usages') stay on the same text.
+class CIDEDocumentAnchor : public CTextDocumentListener
+{
+public:
+	CIDEDocuments*	mpcDocuments;
+	CChars			mszFile;
+
+	void	Init(CIDEDocuments* pcDocuments, const char* szFile);
+	void	Kill(void);
+	void	DocumentChanged(STextDocumentChange* psChange) override;
+};
+
+
+typedef CArrayTemplatePtr<CIDEDocumentAnchor>	CArrayIDEDocumentAnchors;
+
+
 //The open files: each in its editor tab (CIDEEditorTab), opened from Solution Explorer, a place found or a script,
 //saved, closed, coloured and indexed again from the editor as it changes; and the caret's place in the active one.
 class CIDEDocuments : public CObject
@@ -71,6 +99,8 @@ protected:
 	CArray<CIDEEditorTab>		maTabs;
 	Ptr<CIDEEditorTab>			mpActive;			//The selected tab's file, NULL if none is open.
 	size						muiIndexings;		//The code model's indexings the tabs have seen (NumIndexings).
+	CArrayIDEDocumentAnchors	mapcAnchors;		//One for each open file.
+	bool						mbReloading;		//A tab's text is being read again: the places in it keep their lines.
 
 public:
 	void	Init(CIDEContent* pcContent);
@@ -113,12 +143,19 @@ public:
 	Ptr<CIDEEditorTab>	FindTab(CCodeEditor* pcEditor);
 	Ptr<CIDEEditorTab>	FindTab(CTextArea* pcEditor);
 	void				RequestHighlight(Ptr<CIDEEditorTab> pTab);
+	void				ReloadTab(Ptr<CIDEEditorTab> pTab, const char* szText);
+	void				DocumentChanged(const char* szFileName, STextDocumentChange* psChange);
 
 protected:
+	void				AddAnchor(Ptr<CIDEEditorTab> pTab);
+	void				RemoveAnchor(Ptr<CIDEEditorTab> pTab);
 	int64				GiveEditedTabs(int64 iNow, bool bNow);
 	void				AddEditedFile(size uiProject, const char* szFileName, const char* szText, size uiChanges, bool bHighlight, bool bIndex, bool bEdited, CArrayIDEEditedFiles* papsFiles);
 	bool				TakeEditedFiles(bool bWait);
 };
+
+
+bool AdjustIDEPlace(int32* piLine, int32* piColumn, SIDEPlaceChange* psChange);
 
 
 #endif // __IDE_DOCUMENTS_H__

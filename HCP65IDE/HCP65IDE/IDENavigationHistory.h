@@ -22,8 +22,6 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define __IDE_NAVIGATION_HISTORY_H__
 #include "BaseLib/Chars.h"
 #include "BaseLib/ArrayTemplate.h"
-#include "BaseLib/ArrayTemplatePtr.h"
-#include "BaseLib/TextDocument.h"
 #include "StandardLib/Object.h"
 #include "StandardLib/Pointer.h"
 #include "WindowLib/CommandSet.h"
@@ -35,7 +33,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define IDE_NAVIGATION_SETTLE		1000	//Milliseconds the caret stays put for where it is to be a place.
 
 
-//A place in a file: where its caret was.  Its line follows the file's edits while the file is open.
+//A place in a file: where its caret was.  It follows the file's edits while the file is open (CIDEDocuments tells them).
 struct SIDENavigationPlace
 {
 	CChars	szFile;
@@ -53,25 +51,8 @@ struct SIDENavigationPlace
 typedef CArrayTemplate<SIDENavigationPlace>	CArrayIDENavigationPlaces;
 
 
-class CIDENavigationHistory;
-//Told an open file's edits, to keep the history's places in it on the same text.
-class CIDENavigationAnchor : public CTextDocumentListener
-{
-public:
-	CIDENavigationHistory*	mpcHistory;
-	CChars					mszFile;
-
-	void	Init(CIDENavigationHistory* pcHistory, const char* szFile);
-	void	Kill(void);
-	void	DocumentChanged(STextDocumentChange* psChange) override;
-};
-
-
-typedef CArrayTemplatePtr<CIDENavigationAnchor>	CArrayIDENavigationAnchors;
-
-
 class CIDEContent;
-class CIDEEditorTab;
+struct SIDEPlaceChange;
 //IntelliJ IDEA's Back and Forward (Control+Alt+Left and Right): the places the caret was, as a browser's history.  A
 //jump (CIDEDocuments::OpenLocation and OpenFile: Go to, Find Usages, F4, Next Occurrence, Solution Explorer...) puts
 //where it left on Back, as does a move of the caret far from where it had stayed (a click, Control+End) or another
@@ -92,7 +73,6 @@ protected:
 	int64						miLastChange;
 	int32						miJumps;  //Jumps begun and not ended; only the outermost is recorded.
 	bool						mbMoving;  //Back or Forward is moving: nothing is recorded.
-	CArrayIDENavigationAnchors	mapcAnchors;  //One for each open file.
 
 public:
 	void			Init(CIDEContent* pcContent);
@@ -114,9 +94,7 @@ public:
 	bool			CanGoBack(void);
 	bool			CanGoForward(void);
 
-	void			FileOpened(Ptr<CIDEEditorTab> pTab);
-	void			FileClosed(Ptr<CIDEEditorTab> pTab);
-	void			AdjustPlaces(const char* szFile, STextDocumentChange* psChange);
+	void			AdjustPlaces(const char* szFile, SIDEPlaceChange* psChange);
 
 	size			NumBack(void);
 	size			NumForward(void);
@@ -130,7 +108,7 @@ protected:
 	void			Push(SIDENavigationPlace* psPlace, bool bClearForward);
 	bool			Go(SIDENavigationPlace* psPlace);
 	void			Arrived(void);
-	void			AdjustPlace(SIDENavigationPlace* psPlace, const char* szFile, STextDocumentChange* psChange);
+	void			AdjustPlace(SIDENavigationPlace* psPlace, const char* szFile, SIDEPlaceChange* psChange);
 	void			KillPlaces(CArrayIDENavigationPlaces* pasPlaces);
 	void			PrintPlaces(CArrayIDENavigationPlaces* pasPlaces, CChars* pszDest);
 };

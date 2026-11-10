@@ -432,7 +432,7 @@ bool CIDEAskClaude::ReloadClaudeFile(Ptr<CIDEEditorTab> pTab)
 		return false;
 	}
 
-	pTab->Reload(cFile.Text());
+	mpcContent->GetDocuments()->ReloadTab(pTab, cFile.Text());
 	cFile.Kill();
 	mpcContent->GetGitStatus()->GitFileSaved(pTab->GetFileName());
 	szNote.Append(" read again.");

@@ -20,6 +20,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 ** ------------------------------------------------------------------------ **/
 #include <string.h>
 #include "BaseLib/FileUtil.h"
+#include "BaseLib/ConstructorCall.h"
+#include "BaseLib/PointerFunctions.h"
 #include "BaseLib/Logger.h"
 #include "BaseLib/Timer.h"
 #include "BaseLib/StringHelper.h"
@@ -58,6 +60,8 @@ void CIDEDocuments::Init(CIDEContent* pcContent)
 	maTabs.Init();
 	mpActive = NULL;
 	muiIndexings = 0;
+	mapcAnchors.Init();
+	mbReloading = false;
 	PostInit();
 }
 
@@ -72,17 +76,28 @@ void CIDEDocuments::Class(void)
 	M_Embedded(maTabs);
 	M_Pointer(mpActive);
 	U_Size(muiIndexings);
+	U_Unknown(CArrayIDEDocumentAnchors, mapcAnchors);
+	U_Bool(mbReloading);
 }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// An object's memory is freed without its destructor running, so it
-// takes itself off what it listens to.
+// The anchors are taken off the editors when their files close
+// (RemoveTab); any left are only freed.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEDocuments::Free(void)
 {
+	size				i;
+	CIDEDocumentAnchor*	pcAnchor;
+
+	for (i = 0; i < mapcAnchors.NumElements(); i++)
+	{
+		pcAnchor = mapcAnchors.GetPtr(i);
+		SafeKill(pcAnchor);
+	}
+	mapcAnchors.Kill();
 }
 
 
@@ -183,7 +198,7 @@ Ptr<CIDEEditorTab> CIDEDocuments::OpenFileTab(const char* szFileName, size uiPro
 	mpcContent->GetGitStatus()->ReadGitBase(pTab);
 	mpcContent->GetGitStatus()->UpdateChangeBars(pTab);
 	pPane->SetTabFont(GetGitStateFont(mpcContent->GetFontColours(), pTab->GetGitState()));
-	mpcContent->GetNavigationHistory()->FileOpened(pTab);
+	AddAnchor(pTab);
 	return pTab;
 }
 
@@ -985,7 +1000,179 @@ void CIDEDocuments::RemoveTab(Ptr<CIDEEditorTab> pTab)
 	{
 		mpActive = NULL;
 	}
+	RemoveAnchor(pTab);
 	maTabs.Remove(pTab);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDocumentAnchor::Init(CIDEDocuments* pcDocuments, const char* szFile)
+{
+	mpcDocuments = pcDocuments;
+	mszFile.Init(szFile);
+}
+
+
+void CIDEDocumentAnchor::Kill(void)
+{
+	mszFile.Kill();
+}
+
+
+void CIDEDocumentAnchor::DocumentChanged(STextDocumentChange* psChange)
+{
+	mpcDocuments->DocumentChanged(mszFile.Text(), psChange);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A file opened in a tab: its edits are told to DocumentChanged.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDocuments::AddAnchor(Ptr<CIDEEditorTab> pTab)
+{
+	CIDEDocumentAnchor*	pcAnchor;
+
+	pcAnchor = NewMalloc<CIDEDocumentAnchor>();
+	pcAnchor->Init(this, pTab->GetFileName());
+	mapcAnchors.Add(pcAnchor);
+	pTab->GetEditor()->AddDocumentListener(pcAnchor);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A file's tab is closing: the places in it keep their lines.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDocuments::RemoveAnchor(Ptr<CIDEEditorTab> pTab)
+{
+	size				i;
+	CIDEDocumentAnchor*	pcAnchor;
+
+	for (i = 0; i < mapcAnchors.NumElements(); i++)
+	{
+		pcAnchor = mapcAnchors.GetPtr(i);
+		if (pcAnchor->mszFile.Equals(pTab->GetFileName()))
+		{
+			pTab->GetEditor()->RemoveDocumentListener(pcAnchor);
+			mapcAnchors.RemoveAt(i);
+			SafeKill(pcAnchor);
+			return;
+		}
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// An edit of the open file szFileName, after its text has changed: the
+// places kept in the file, the navigation history's and Find Usages',
+// move with their text (AdjustIDEPlace).  The line the edit starts on
+// starts where it did, and for text put in so does its last line, which
+// say where on their lines the edit is.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDocuments::DocumentChanged(const char* szFileName, STextDocumentChange* psChange)
+{
+	Ptr<CIDEEditorTab>	pTab;
+	SIDEPlaceChange		sChange;
+
+	pTab = FindTab(szFileName);
+	if (mbReloading || pTab.IsNull())
+	{
+		return;
+	}
+	sChange.psChange = psChange;
+	sChange.iColumn = (int32)(psChange->uiStart - pTab->GetEditor()->GetLineStart(psChange->uiLine));
+	sChange.iLastLength = 0;
+	if (psChange->eChange == TDC_Inserted)
+	{
+		sChange.iLastLength = (int32)(psChange->uiEnd - pTab->GetEditor()->GetLineStart(psChange->LastLine()));
+	}
+	mpcContent->GetNavigationHistory()->AdjustPlaces(szFileName, &sChange);
+	mpcContent->GetUsages()->AdjustPlaces(szFileName, &sChange);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A tab's text read again from its file, which changed on the disk: all
+// of its text is replaced, which would take every place kept in it to
+// its end, so they keep their lines.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDocuments::ReloadTab(Ptr<CIDEEditorTab> pTab, const char* szText)
+{
+	mbReloading = true;
+	pTab->Reload(szText);
+	mbReloading = false;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A place (a line and column, 0 based) in a file moved by an edit of the
+// file, to stay on the text it was on.  Text put in before it on its line
+// moves it along, or down with the rest of its line if lines were put in;
+// lines put in above it move it down.  Text taken out before it moves it
+// back; a place in what was taken out goes to where that was.  (Lines
+// taken out up to the middle of its line leave its column that much too
+// far along: the edit doesn't say how much of that line went.)  True if
+// it moved.
+//
+//////////////////////////////////////////////////////////////////////////
+bool AdjustIDEPlace(int32* piLine, int32* piColumn, SIDEPlaceChange* psChange)
+{
+	int32	iLine;
+	int32	iColumn;
+	int32	iChangeLine;
+	int32	iLines;
+	int32	iLength;
+
+	iLine = *piLine;
+	iColumn = *piColumn;
+	iChangeLine = (int32)psChange->psChange->uiLine;
+	iLines = (int32)psChange->psChange->uiLines;
+	iLength = (int32)psChange->psChange->Length();
+	if (psChange->psChange->eChange == TDC_Inserted)
+	{
+		if (iLine > iChangeLine)
+		{
+			iLine += iLines;
+		}
+		else if ((iLine == iChangeLine) && (iColumn >= psChange->iColumn))
+		{
+			iColumn = (iLines == 0) ? iColumn + iLength : iColumn - psChange->iColumn + psChange->iLastLength;
+			iLine += iLines;
+		}
+	}
+	else if (iLine > iChangeLine + iLines)
+	{
+		iLine -= iLines;
+	}
+	else if (iLine > iChangeLine)
+	{
+		//On a line taken out, or the rest of the last one, which is now after where the text was.
+		iColumn = (iLine == iChangeLine + iLines) ? psChange->iColumn + iColumn : psChange->iColumn;
+		iLine = iChangeLine;
+	}
+	else if ((iLine == iChangeLine) && (iColumn > psChange->iColumn))
+	{
+		iColumn = ((iLines == 0) && (iColumn - iLength > psChange->iColumn)) ? iColumn - iLength : psChange->iColumn;
+	}
+
+	if ((iLine == *piLine) && (iColumn == *piColumn))
+	{
+		return false;
+	}
+	*piLine = iLine;
+	*piColumn = iColumn;
+	return true;
 }
 
 

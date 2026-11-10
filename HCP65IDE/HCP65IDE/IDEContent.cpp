@@ -749,6 +749,13 @@ void CIDEContent::Tick(Ptr<CWindow> pWindow)
 	{
 		iSoonest = iWait;
 	}
+
+	//Find Usages' lines are shown as they are now once the edits that moved them have stopped.
+	iWait = mpUsages->Poll(iNow);
+	if ((iWait >= 0) && ((iSoonest < 0) || (iWait < iSoonest)))
+	{
+		iSoonest = iWait;
+	}
 	if (iSoonest >= 0)
 	{
 		pWindow->RequestTick((uint32)iSoonest);
@@ -839,7 +846,6 @@ void CIDEContent::PaneClosed(CDockPane* pcPane)
 	pTab->GetCodeEditor()->GetGlyphClickEvent()->Remove(&mpDebugging);
 	pTab->GetEditor()->GetUndoEvent()->Remove(&mpEdit);
 	mpEdit->FileClosed(pTab->GetFileName());
-	mpNavigationHistory->FileClosed(pTab);
 	if (pTab->IsModified())
 	{
 		mpDocuments->ReindexDiscarded(pTab);

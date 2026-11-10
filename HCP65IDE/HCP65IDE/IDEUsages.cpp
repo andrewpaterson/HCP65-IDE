@@ -30,6 +30,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define IDE_USAGES_OPTION_GAP			16		//Between the grouping check boxes.
 #define IDE_USAGES_POPUP_MAXIMUM		100		//The most usages Control+B's popup shows; Find Usages shows the rest.
 #define IDE_USAGES_OPEN_FILES_MAXIMUM	1000	//With more usages than this the tree's files start closed.
+#define IDE_USAGES_REFRESH				500		//Milliseconds after the last edit that moved a usage until the tree shows it.
 
 
 //A usage type's group in the tree: where it goes among the others and what it is called.
@@ -282,6 +283,31 @@ void SIDEFoundUsages::Clear(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// An edit of the open file szFile: the usages in it move with their text
+// (AdjustIDEPlace).  True if any moved.
+//
+//////////////////////////////////////////////////////////////////////////
+bool SIDEFoundUsages::AdjustPlaces(const char* szFile, SIDEPlaceChange* psChange)
+{
+	size			i;
+	SIDELocation*	psLocation;
+	bool			bMoved;
+
+	bMoved = false;
+	for (i = 0; i < asUsages.NumElements(); i++)
+	{
+		psLocation = &asUsages.Get(i)->sLocation;
+		if (psLocation->szFileName.Equals(szFile) && AdjustIDEPlace(&psLocation->iLine, &psLocation->iColumn, psChange))
+		{
+			bMoved = true;
+		}
+	}
+	return bMoved;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // What was found, as the tree's top and the popup's first row say it:
 // "Usages of IsParentheses and 1 override  3 usages", or "No usages of
 // IsParentheses"; "References to" with the declarations.
@@ -322,6 +348,8 @@ void CIDEUsages::Init(CIDEContent* pcContent)
 	mpcContent = pcContent;
 	msFound.Init();
 	mbFound = false;
+	mbMoved = false;
+	miMoved = 0;
 	msPopupFound.Init();
 	muiGrouping = IDE_USAGES_BY_ALL;
 	PostInit();
@@ -343,6 +371,8 @@ void CIDEUsages::Class(void)
 	M_Pointer(mpByClass);
 	U_Unknown(SIDEFoundUsages, msFound);
 	U_Bool(mbFound);
+	U_Bool(mbMoved);
+	U_Int64(miMoved);
 	M_Pointer(mpPopup);
 	U_Unknown(SIDEFoundUsages, msPopupFound);
 	U_UInt8(muiGrouping);
@@ -508,6 +538,7 @@ bool CIDEUsages::FindUsages(bool bDeclarations)
 		return false;
 	}
 	mbFound = true;
+	mbMoved = false;
 
 	ShowUsages(false);
 	mpcContent->GetDock()->Show(mpUsagesTool);
@@ -1116,6 +1147,54 @@ Ptr<CDockPane> CIDEUsages::GetTool(void) { return mpUsagesTool; }
 
 //////////////////////////////////////////////////////////////////////////
 //
+// An edit of the open file szFile (CIDEDocuments::DocumentChanged): the
+// usages in it, the tree's and the popup's, move with their text, so one
+// gone to after lines were put in above it is still where its name is.
+// The tree's lines say where they were until Poll shows them again.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEUsages::AdjustPlaces(const char* szFile, SIDEPlaceChange* psChange)
+{
+	msPopupFound.AdjustPlaces(szFile, psChange);
+	if (msFound.AdjustPlaces(szFile, psChange))
+	{
+		mbMoved = true;
+		miMoved = GetDebugTickCount();
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Each window tick: once the edits that moved the tree's usages have
+// stopped for IDE_USAGES_REFRESH, the tree is shown again with the lines
+// as they are now, the selected usage still selected and in view.
+// Milliseconds until it should be looked at again, -1 if not until
+// something changes.
+//
+//////////////////////////////////////////////////////////////////////////
+int64 CIDEUsages::Poll(int64 iNow)
+{
+	if (!mbMoved)
+	{
+		return -1;
+	}
+	if (iNow - miMoved < IDE_USAGES_REFRESH)
+	{
+		return IDE_USAGES_REFRESH - (iNow - miMoved);
+	}
+	mbMoved = false;
+	ShowUsages(true);
+	if (mpUsages.IsNotNull() && (mpUsages->GetSelected() >= 0))
+	{
+		mpUsages->ShowRow(mpUsages->GetSelected());
+	}
+	return -1;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // The solutions have gone: so have the places found in them, from the
 // tree and the popup, which is closed.
 //
@@ -1124,6 +1203,7 @@ void CIDEUsages::Clear(void)
 {
 	msFound.Clear();
 	mbFound = false;
+	mbMoved = false;
 	msPopupFound.Clear();
 	if (mpPopup.IsNotNull() && mpPopup->IsOpen())
 	{
