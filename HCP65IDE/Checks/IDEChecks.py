@@ -66,10 +66,19 @@ CHECKS = [
 	('usages-rename', {
 		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usages,references,renamable'},
 		[r'^Usages of IsParentheses and 1 override  3 usages$',
-		 r'^      Calculator\.cpp 367:',
+		 r'^  Call  3 usages$', r'^    BaseLib  3 usages$', r'^      Calculator\.cpp  3$', r'^        CCalculator  3$', r'^          367: ',
+		 r'^          391: ', r'^          421: ',
 		 r'^References to IsParentheses and 1 override  7 references$',
-		 r'^      CalcParentheses\.h 38: .*\[declaration\]$',
-		 r'^Rename: IsParentheses \[CCalcParentheses::IsParentheses\(\)\] at 7 places, 1 overrides$'], []),
+		 r'^  Definition  2 references$', r'^  Declaration  2 references$', r'^      CalcParentheses\.h  1$', r'^          38: ',
+		 r'^  Call  3 references$',
+		 r'^Rename: IsParentheses \[CCalcParentheses::IsParentheses\(\)\] at 7 places, 1 overrides$'], [r'\[declaration\]']),
+	('usages-files-only', {
+		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,references,usagegroups:c,usages'},
+		[r'^References to IsParentheses and 1 override  7 references$',
+		 r'^  CalcExpression\.cpp  1$', r'^    60: .*\[definition\]$', r'^  CalcExpression\.h  1$', r'^    37: .*\[declaration\]$',
+		 r'^  CalcParentheses\.cpp  1$', r'^  CalcParentheses\.h  1$', r'^  Calculator\.cpp  3$', r'^    367: ', r'^    391: ', r'^    421: ',
+		 r'^Usages of IsParentheses and 1 override  3 usages$', r'^  Calculator\.cpp  3$', r'^    CCalculator  3$', r'^      367: '],
+		[r'BaseLib  ', r'Call  ']),
 	('rename-after-edits', {
 		'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'CARET': '36:2',
 		'EDIT': 'type:int i; ,rename:mpcCalc2,rename:mpcCalc3,renamable'},

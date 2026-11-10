@@ -712,6 +712,17 @@ void CIDEScript::RunEditStep(const char* szStep)
 			szNode.Kill();
 		}
 	}
+	else if (strncmp(szStep, "usagegroups:", 12) == 0)
+	{
+		//Find Usages' groups, as its check boxes set them: t by usage type, p by project, c by class; none is files.
+		uint8	uiGrouping;
+
+		uiGrouping = 0;
+		uiGrouping |= (strchr(&szStep[12], 't') != NULL) ? IDE_USAGES_BY_TYPE : 0;
+		uiGrouping |= (strchr(&szStep[12], 'p') != NULL) ? IDE_USAGES_BY_PROJECT : 0;
+		uiGrouping |= (strchr(&szStep[12], 'c') != NULL) ? IDE_USAGES_BY_CLASS : 0;
+		mpcContent->GetUsages()->SetGrouping(uiGrouping);
+	}
 	else if (strncmp(szStep, "focus:", 6) == 0)
 	{
 		//The keys given to the Build output, Claude's request or the active document.

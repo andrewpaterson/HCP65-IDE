@@ -64,6 +64,7 @@ struct SIDELocation
 	int32	iLength;
 	uint8	uiRole;		//ECPPIndexRole.
 	uint8	uiFlags;	//CPPIF_AMBIGUOUS.
+	uint8	uiUsage;	//ECPPUsageType.
 	int32	iContainer;	//The index's symbol of the class or function it is in, -1 if neither.
 };
 
