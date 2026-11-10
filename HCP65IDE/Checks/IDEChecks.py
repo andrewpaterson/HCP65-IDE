@@ -68,6 +68,11 @@ USAGES_KERNEL = ('int F(void) { return 0; }\n'
                  'int main(void) { return F() + G(); }\n')
 
 
+def ManyUsages(szPrefix, iCount):
+	#A file of iCount functions, <prefix>0 on line 2 to <prefix><iCount - 1>, each using F once.
+	return 'int F(void);\n' + ''.join('int %s%d(void) { return F(); }\n' % (szPrefix, i) for i in range(iCount))
+
+
 def MakeUsagesKernel(szKernel=USAGES_KERNEL, asFiles={}):
 	#A copy of the test solution whose kernel is szKernel: as it is given, F is defined on line 1 and used on lines 2 and
 	#4, in CA, and on lines 3 and 5, in no class.  asFiles are more of the kernel project's files, by name.  Its recent
@@ -261,6 +266,20 @@ CHECKS = [
 		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp', 'CARET': '1:5', 'EDIT': 'usagegroups:,usages'}),
 		[r'^Usages of F  6 usages$', r'^  Kernel\.cpp  4$', r'^  Same\.cpp  1  .*[/\\]A$', r'^    2: int SA', r'^  Same\.cpp  1  .*[/\\]B$', r'^    2: int SB'],
 		[r'Kernel\.cpp  4  ']),
+	('usages-many-files-closed', dict(MakeUsagesKernel(USAGES_KERNEL, {'Aaa.cpp': ManyUsages('A', 600), 'Bbb.cpp': ManyUsages('B', 600)}), **{
+		#Past 1000 usages (1204 here) the tree's files start closed, but for the first line's: the top, the three files
+		#and Aaa.cpp's 600 lines can be seen.  A step from Aaa.cpp's last line opens Bbb.cpp for its first.
+		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp', 'CARET': '1:5', 'EDIT': 'usagegroups:,usages,printrows,printselected,select:601',
+		'DEBUG': 'edit:focus:usages,command:Navigate.NextOccurrence,edit:printselected,edit:printrows'}),
+		[r'^Usages of F  1204 usages$', r'^  Aaa\.cpp  600$', r'^  Bbb\.cpp  600$', r'^  Kernel\.cpp  4$', r'^Rows: 604$',
+		 r'^Selected: 2: int A0\(void\)', r'^Selected: 2: int B0\(void\)', r'^Rows: 1204$'], [r'not enabled']),
+	('gotosource-popup-more', dict(MakeUsagesKernel(USAGES_KERNEL, {'Aaa.cpp': ManyUsages('A', 150)}), **{
+		#Control+B's popup shows 100 usages; its last row says how many more there are, and opens them all in Find
+		#Usages.
+		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp', 'CARET': '1:5',
+		'DEBUG': 'gotosource,edit:printpopup,edit:key:documentend,edit:key:enter,edit:printpopup,edit:printusages'}),
+		[r'^Popup: Usages of F  154 usages \| Aaa\.cpp:2  int A0\(void\).* \| Aaa\.cpp:101  int A99\(void\) \{ return F\(\); \} \| '
+		 r'\.\.\. and 54 more: show them all in Find Usages$', r'^Popup: none$', r'^Usages of F  154 usages$'], [r'A100\(void\).* \| ']),
 	('usages-keys', {
 		#Find Usages' keys, and Jump to Source's, are bound: F4, Alt+F7 and Control+Alt+Down and Up.
 		'DEBUG': 'printkeys'},

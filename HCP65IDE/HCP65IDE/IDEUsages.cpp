@@ -27,7 +27,9 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDEUsages.h"
 
 
-#define IDE_USAGES_OPTION_GAP	16	//Between the grouping check boxes.
+#define IDE_USAGES_OPTION_GAP			16		//Between the grouping check boxes.
+#define IDE_USAGES_POPUP_MAXIMUM		100		//The most usages Control+B's popup shows; Find Usages shows the rest.
+#define IDE_USAGES_OPEN_FILES_MAXIMUM	1000	//With more usages than this the tree's files start closed.
 
 
 //A usage type's group in the tree: where it goes among the others and what it is called.
@@ -537,15 +539,19 @@ bool CIDEUsages::IsOnOwnDeclaration(void)
 // Control+B on a declaration or the definition, as IntelliJ's: a small
 // popup under the caret of the symbol's usages (and its overrides', as
 // Find Usages has), the first selected, "Calculator.cpp:367  the line";
-// Enter or a click goes to one.  With only one it is gone to; with none
+// Enter or a click goes to one.  It shows IDE_USAGES_POPUP_MAXIMUM of
+// them: with more, its last row says how many more there are, and opens
+// them all in Find Usages.  With only one usage it is gone to; with none
 // the status line says so.  False if no symbol is named at the caret.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEUsages::ShowUsagesPopup(void)
 {
-	CChars		szText;
-	SIDEUsage*	psUsage;
-	size		i;
+	CIDEFileLines	cLines;
+	CChars			szText;
+	SIDEUsage*		psUsage;
+	size			uiUsages;
+	size			i;
 
 	if (!Find(false, &msPopupFound))
 	{
@@ -576,14 +582,25 @@ bool CIDEUsages::ShowUsagesPopup(void)
 	msPopupFound.AppendTitle(&szText);
 	mpPopup->AddItem(szText.Text())->SetEnabled(false);
 	szText.Kill();
-	for (i = 0; i < msPopupFound.asUsages.NumElements(); i++)
+	uiUsages = msPopupFound.asUsages.NumElements();
+	cLines.Init(&mpcContent->GetDocuments());
+	for (i = 0; (i < uiUsages) && (i < IDE_USAGES_POPUP_MAXIMUM); i++)
 	{
 		psUsage = msPopupFound.asUsages.Get(i);
 		szText.Init(GetIDEFileNamePart(psUsage->sLocation.szFileName.Text()));
 		szText.Append(':');
 		szText.Append(psUsage->sLocation.iLine + 1);
 		szText.Append("  ");
-		mpcContent->GetDocuments()->GetFileLine(psUsage->sLocation.szFileName.Text(), psUsage->sLocation.iLine, &szText);
+		cLines.AppendLine(psUsage->sLocation.szFileName.Text(), psUsage->sLocation.iLine, &szText);
+		mpPopup->AddItem(szText.Text());
+		szText.Kill();
+	}
+	cLines.Kill();
+	if (uiUsages > IDE_USAGES_POPUP_MAXIMUM)
+	{
+		szText.Init("... and ");
+		szText.Append((int)(uiUsages - IDE_USAGES_POPUP_MAXIMUM));
+		szText.Append(" more: show them all in Find Usages");
 		mpPopup->AddItem(szText.Text());
 		szText.Kill();
 	}
@@ -638,7 +655,9 @@ void CIDEUsages::OpenPopup(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// A usage chosen in Control+B's popup is gone to, its name selected.
+// A usage chosen in Control+B's popup is gone to, its name selected.  The
+// row after the last usage it shows opens them all in Find Usages: the
+// caret is still on the declaration they were found from.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEUsages::PopupUsageClicked(CMenuItem* pcItem)
@@ -649,7 +668,11 @@ void CIDEUsages::PopupUsageClicked(CMenuItem* pcItem)
 	{
 		if (&mpPopup->GetItem(i) == pcItem)
 		{
-			if (i - 1 < msPopupFound.asUsages.NumElements())
+			if (i - 1 == IDE_USAGES_POPUP_MAXIMUM)
+			{
+				FindUsages(false);
+			}
+			else if (i - 1 < msPopupFound.asUsages.NumElements())
 			{
 				mpcContent->GetDocuments()->OpenLocation(&msPopupFound.asUsages.Get(i - 1)->sLocation, true);
 			}
@@ -677,6 +700,7 @@ void CIDEUsages::ShowUsages(bool bKeepSelected)
 {
 	CArrayIDEUsageRows	asRows;
 	SIDEUsageRow*		psRow;
+	CIDEFileLines		cLines;
 	CChars				szText;
 	const char*			szWhat;
 	size				uiIndexed;
@@ -688,9 +712,11 @@ void CIDEUsages::ShowUsages(bool bKeepSelected)
 	int32				iRoot;
 	int32				iType;
 	int32				iProject;
+	int32				iFile;
 	int32				iNode;
 	bool				bByType;
 	bool				bByProject;
+	bool				bOpenFiles;
 
 	if (mpUsages.IsNull())
 	{
@@ -735,11 +761,16 @@ void CIDEUsages::ShowUsages(bool bKeepSelected)
 		szText.Append(" files)");
 	}
 	iRoot = mpUsages->AddNode(TREE_NO_NODE, szText.Text(), NULL, 0);
+	mpUsages->SetExpanded(iRoot, true);
 	szText.Kill();
 
+	//The tree has a row for each line that can be seen, which thousands of make it slow: past
+	//IDE_USAGES_OPEN_FILES_MAXIMUM usages the files start closed, but for the selected line's.
+	bOpenFiles = (uiRows <= IDE_USAGES_OPEN_FILES_MAXIMUM);
 	szWhat = msFound.bDeclarations ? " reference" : " usage";
 	iType = iRoot;
 	iProject = iRoot;
+	cLines.Init(&mpcContent->GetDocuments());
 	for (i = 0; i < uiRows; i += uiFile)
 	{
 		psRow = asRows.Get(i);
@@ -753,11 +784,13 @@ void CIDEUsages::ShowUsages(bool bKeepSelected)
 			iProject = AddGroupNode(iType, psRow->szProject, CountIDEUsageGroup(psRow, uiRows - i, IUL_Project), szWhat);
 		}
 		uiFile = CountIDEUsageGroup(psRow, uiRows - i, IUL_File);
-		AddFileUsages(AddFileNode(iProject, asRows.GetData(), uiRows, i, uiFile), psRow, uiFile);
+		iFile = AddFileNode(iProject, asRows.GetData(), uiRows, i, uiFile);
+		mpUsages->SetExpanded(iFile, bOpenFiles);
+		AddFileUsages(iFile, psRow, uiFile, &cLines);
 	}
+	cLines.Kill();
 	asRows.Kill();
 
-	mpUsages->ExpandAll();
 	iNode = (iSelectedData > 0) ? FindUsageNode(iSelectedData) : TREE_NO_NODE;
 	mpUsages->SelectNode((iNode != TREE_NO_NODE) ? iNode : FindUsageNode(0));
 }
@@ -765,8 +798,8 @@ void CIDEUsages::ShowUsages(bool bKeepSelected)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// A group's node under iParent: "Call  3 usages", or "CCalculator  3" if
-// szWhat is NULL.
+// A group's node under iParent, open: "Call  3 usages", or
+// "CCalculator  3" if szWhat is NULL.
 //
 //////////////////////////////////////////////////////////////////////////
 int32 CIDEUsages::AddGroupNode(int32 iParent, const char* szName, size uiCount, const char* szWhat)
@@ -777,6 +810,7 @@ int32 CIDEUsages::AddGroupNode(int32 iParent, const char* szName, size uiCount, 
 	szText.Init(szName);
 	AppendIDEUsageCount(&szText, uiCount, szWhat);
 	iNode = mpUsages->AddNode(iParent, szText.Text(), NULL, 0);
+	mpUsages->SetExpanded(iNode, true);
 	szText.Kill();
 	return iNode;
 }
@@ -821,7 +855,7 @@ int32 CIDEUsages::AddFileNode(int32 iParent, SIDEUsageRow* pasRows, size uiRows,
 // lines; lines in no class are under the file.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEUsages::AddFileUsages(int32 iFile, SIDEUsageRow* pasRows, size uiCount)
+void CIDEUsages::AddFileUsages(int32 iFile, SIDEUsageRow* pasRows, size uiCount, CIDEFileLines* pcLines)
 {
 	CChars*	pszClass;
 	size	uiLines;
@@ -840,7 +874,7 @@ void CIDEUsages::AddFileUsages(int32 iFile, SIDEUsageRow* pasRows, size uiCount)
 		}
 		if (!bByClass || pszClass->Empty())
 		{
-			AddUsageLine(iFile, &pasRows[i]);
+			AddUsageLine(iFile, &pasRows[i], pcLines);
 			continue;
 		}
 
@@ -854,7 +888,7 @@ void CIDEUsages::AddFileUsages(int32 iFile, SIDEUsageRow* pasRows, size uiCount)
 		{
 			if (pasRows[j].psUsage->szClass.Equals(*pszClass))
 			{
-				AddUsageLine(iClass, &pasRows[j]);
+				AddUsageLine(iClass, &pasRows[j], pcLines);
 			}
 		}
 	}
@@ -868,7 +902,7 @@ void CIDEUsages::AddFileUsages(int32 iFile, SIDEUsageRow* pasRows, size uiCount)
 // definition says what it is.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEUsages::AddUsageLine(int32 iParent, SIDEUsageRow* psRow)
+void CIDEUsages::AddUsageLine(int32 iParent, SIDEUsageRow* psRow, CIDEFileLines* pcLines)
 {
 	CChars			szText;
 	SIDELocation*	psLocation;
@@ -877,7 +911,7 @@ void CIDEUsages::AddUsageLine(int32 iParent, SIDEUsageRow* psRow)
 	szText.Init();
 	szText.Append(psLocation->iLine + 1);
 	szText.Append(": ");
-	mpcContent->GetDocuments()->GetFileLine(psLocation->szFileName.Text(), psLocation->iLine, &szText);
+	pcLines->AppendLine(psLocation->szFileName.Text(), psLocation->iLine, &szText);
 	if ((muiGrouping & IDE_USAGES_BY_TYPE) == 0)
 	{
 		if (psLocation->uiRole == CPPIR_Definition)

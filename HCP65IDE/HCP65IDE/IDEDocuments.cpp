@@ -828,58 +828,141 @@ bool CIDEDocuments::FindSymbolAtCaret(CArrayIDELocations* pasDest, CChars* pszKe
 //////////////////////////////////////////////////////////////////////////
 void CIDEDocuments::GetFileLine(const char* szFileName, int iLine, CChars* pszDest)
 {
+	CIDEFileLines	cLines;
+
+	cLines.Init(this);
+	cLines.AppendLine(szFileName, iLine, pszDest);
+	cLines.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEFileLines::Init(CIDEDocuments* pcDocuments)
+{
+	mpcDocuments = pcDocuments;
+	mszFileName.Init();
+	mcFile.Init();
+	mauiLineStarts.Init();
+	mbRead = false;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEFileLines::Kill(void)
+{
+	mauiLineStarts.Kill();
+	mcFile.Kill();
+	mszFileName.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The text from szStart up to szEnd appended to pszDest without the white
+// space at its ends, its tabs as spaces.
+//
+//////////////////////////////////////////////////////////////////////////
+static void AppendIDETrimmedLine(CChars* pszDest, const char* szStart, const char* szEnd)
+{
+	size	uiPosition;
+
+	while ((szStart < szEnd) && ((*szStart == ' ') || (*szStart == '\t')))
+	{
+		szStart++;
+	}
+	while ((szEnd > szStart) && ((szEnd[-1] == ' ') || (szEnd[-1] == '\t') || (szEnd[-1] == '\r')))
+	{
+		szEnd--;
+	}
+	uiPosition = pszDest->Length();
+	pszDest->AppendSubString(szStart, szEnd);
+	for (; uiPosition < pszDest->Length(); uiPosition++)
+	{
+		if (pszDest->Text()[uiPosition] == '\t')
+		{
+			pszDest->Text()[uiPosition] = ' ';
+		}
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The text of a file's line (0 based) appended to pszDest, without the
+// white space at its ends, tabs as spaces.  Nothing if the file hasn't
+// the line or can't be read.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEFileLines::AppendLine(const char* szFileName, int iLine, CChars* pszDest)
+{
 	Ptr<CIDEEditorTab>	pTab;
 	Ptr<CTextArea>		pEditor;
-	CTextFile			cFile;
-	char*				szPosition;
-	char*				szEnd;
-	size				uiStart;
-	size				uiPosition;
-	int					i;
+	size				uiLine;
+	size				uiEnd;
 
-	pTab = FindTab(szFileName);
-	szPosition = NULL;
-	cFile.Init();
+	uiLine = (size)iLine;
+	pTab = mpcDocuments->FindTab(szFileName);
 	if (pTab.IsNotNull())
 	{
 		pEditor = pTab->GetEditor();
-		if ((size)iLine < pEditor->NumLines())
+		if ((iLine >= 0) && (uiLine < pEditor->NumLines()))
 		{
-			szPosition = &pEditor->GetText()[pEditor->GetLineStart((size)iLine)];
+			AppendIDETrimmedLine(pszDest, &pEditor->GetText()[pEditor->GetLineStart(uiLine)], &pEditor->GetText()[pEditor->GetLineEnd(uiLine)]);
 		}
+		return;
 	}
-	else if (cFile.Read((char*)szFileName))
+
+	if (!mszFileName.Equals(szFileName))
 	{
-		szPosition = cFile.Text();
-		for (i = 0; (i < iLine) && szPosition; i++)
-		{
-			szPosition = strchr(szPosition, '\n');
-			szPosition = szPosition ? szPosition + 1 : NULL;
-		}
+		Read(szFileName);
 	}
-	if (szPosition)
+	if (mbRead && (iLine >= 0) && (uiLine < mauiLineStarts.NumElements()))
 	{
-		szEnd = strchr(szPosition, '\n');
-		szEnd = szEnd ? szEnd : szPosition + strlen(szPosition);
-		while ((szPosition < szEnd) && ((*szPosition == ' ') || (*szPosition == '\t')))
+		uiEnd = (uiLine + 1 < mauiLineStarts.NumElements()) ? *mauiLineStarts.Get(uiLine + 1) - 1 : (size)mcFile.Length();
+		AppendIDETrimmedLine(pszDest, mcFile.Text() + *mauiLineStarts.Get(uiLine), mcFile.Text() + uiEnd);
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// szFileName read from the disk, in place of the file read before, and
+// where each of its lines starts.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEFileLines::Read(const char* szFileName)
+{
+	char*	szText;
+	size	uiLength;
+	size	uiStart;
+	size	i;
+
+	mszFileName.Set(szFileName);
+	mauiLineStarts.ReInit();
+	mcFile.Kill();
+	mcFile.Init();
+	mbRead = mcFile.Read(szFileName);
+	if (mbRead)
+	{
+		szText = mcFile.Text();
+		uiLength = (size)mcFile.Length();
+		uiStart = 0;
+		mauiLineStarts.Add(&uiStart);
+		for (i = 0; i < uiLength; i++)
 		{
-			szPosition++;
-		}
-		while ((szEnd > szPosition) && ((szEnd[-1] == ' ') || (szEnd[-1] == '\t') || (szEnd[-1] == '\r')))
-		{
-			szEnd--;
-		}
-		uiStart = pszDest->Length();
-		pszDest->AppendSubString(szPosition, szEnd);
-		for (uiPosition = uiStart; uiPosition < pszDest->Length(); uiPosition++)
-		{
-			if (pszDest->Text()[uiPosition] == '\t')
+			if (szText[i] == '\n')
 			{
-				pszDest->Text()[uiPosition] = ' ';
+				uiStart = i + 1;
+				mauiLineStarts.Add(&uiStart);
 			}
 		}
 	}
-	cFile.Kill();
 }
 
 

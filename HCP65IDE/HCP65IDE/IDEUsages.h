@@ -31,6 +31,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 class CIDEContent;
+class CIDEFileLines;
 
 
 //How Find Usages groups what it found (CIDEUsages::muiGrouping): above each file by how each is used and by project,
@@ -127,8 +128,8 @@ protected:
 	void				ShowUsages(bool bKeepSelected);
 	int32				AddGroupNode(int32 iParent, const char* szName, size uiCount, const char* szWhat);
 	int32				AddFileNode(int32 iParent, SIDEUsageRow* pasRows, size uiRows, size uiFirst, size uiCount);
-	void				AddFileUsages(int32 iFile, SIDEUsageRow* pasRows, size uiCount);
-	void				AddUsageLine(int32 iParent, SIDEUsageRow* psRow);
+	void				AddFileUsages(int32 iFile, SIDEUsageRow* pasRows, size uiCount, CIDEFileLines* pcLines);
+	void				AddUsageLine(int32 iParent, SIDEUsageRow* psRow, CIDEFileLines* pcLines);
 	int32				FindUsageNode(int64 iData);
 	SIDEUsage*			GetNodeUsage(int32 iNode);
 	void				OpenPopup(void);

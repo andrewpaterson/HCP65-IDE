@@ -765,6 +765,11 @@ void CIDEScript::RunEditStep(const char* szStep)
 		printf("Selected: %s\n", szNode.Empty() ? "none" : szNode.Text());
 		szNode.Kill();
 	}
+	else if (strcmp(szStep, "printrows") == 0)
+	{
+		//How many of the Find Usages tree's nodes can be seen (those in open nodes), as "Rows: <count>".
+		printf("Rows: %d\n", (int)mpcContent->GetUsages()->GetUsagesTree()->NumRows());
+	}
 	else if (strcmp(szStep, "printpopup") == 0)
 	{
 		//Control+B's usages popup's rows, "Popup: <row> | <row> ...", or "Popup: none" if it isn't open.

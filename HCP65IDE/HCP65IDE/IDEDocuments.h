@@ -20,6 +20,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 ** ------------------------------------------------------------------------ **/
 #ifndef __IDE_DOCUMENTS_H__
 #define __IDE_DOCUMENTS_H__
+#include "BaseLib/ArrayTemplate.h"
+#include "BaseLib/TextFile.h"
 #include "StandardLib/Object.h"
 #include "StandardLib/Pointer.h"
 #include "StandardLib/Array.h"
@@ -32,6 +34,29 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 class CIDEContent;
+class CIDEDocuments;
+
+
+//The text of files' lines, for a list of places to show (Find Usages' tree, Control+B's popup): as its editor has it if
+//the file is open, else as it is on the disk.  A file that isn't open is read, and its lines found, once for all the
+//lines asked of it in a row: places come a file at a time, and reading the file for each made thousands of them slow.
+class CIDEFileLines
+{
+protected:
+	CIDEDocuments*			mpcDocuments;
+	CChars					mszFileName;	//The file last asked for that isn't open.
+	CTextFile				mcFile;			//Its text, if mbRead.
+	CArrayTemplate<size>	mauiLineStarts;
+	bool					mbRead;			//False if it couldn't be read.
+
+public:
+	void	Init(CIDEDocuments* pcDocuments);
+	void	Kill(void);
+	void	AppendLine(const char* szFileName, int iLine, CChars* pszDest);
+
+protected:
+	void	Read(const char* szFileName);
+};
 
 
 //The open files: each in its editor tab (CIDEEditorTab), opened from Solution Explorer, a place found or a script,
