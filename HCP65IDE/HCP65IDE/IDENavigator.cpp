@@ -505,6 +505,7 @@ bool CIDENavigator::FindIncludedFile(CChars* pszDest)
 //////////////////////////////////////////////////////////////////////////
 //
 // Control+B, as IntelliJ's: on an #include the file it names is opened;
+// on a symbol's own declaration or definition, a popup of its usages;
 // anywhere else, the definition of what is at the caret (as F12).  False
 // if there's nothing to go to.
 //
@@ -530,6 +531,12 @@ bool CIDENavigator::GoToSource(void)
 		return bResult;
 	}
 	szFile.Kill();
+
+	//On its own declaration or definition there is nowhere to go: its usages are shown, as IntelliJ's does.
+	if (mpcContent->GetUsages()->IsOnOwnDeclaration())
+	{
+		return mpcContent->GetUsages()->ShowUsagesPopup();
+	}
 	return mpcContent->GoToDefinition();
 }
 

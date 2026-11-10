@@ -761,6 +761,27 @@ void CIDEScript::RunEditStep(const char* szStep)
 		printf("Selected: %s\n", szNode.Empty() ? "none" : szNode.Text());
 		szNode.Kill();
 	}
+	else if (strcmp(szStep, "printpopup") == 0)
+	{
+		//Control+B's usages popup's rows, "Popup: <row> | <row> ...", or "Popup: none" if it isn't open.
+		Ptr<CMenuContainer>	pPopup;
+		size				i;
+
+		pPopup = mpcContent->GetUsages()->GetUsagesPopup();
+		if (pPopup.IsNull() || !pPopup->IsOpen())
+		{
+			printf("Popup: none\n");
+		}
+		else
+		{
+			printf("Popup:");
+			for (i = 0; i < pPopup->NumItems(); i++)
+			{
+				printf("%s %s", (i > 0) ? " |" : "", pPopup->GetItem(i)->GetText());
+			}
+			printf("\n");
+		}
+	}
 	else if (strcmp(szStep, "printhistory") == 0)
 	{
 		//Back and Forward's places: "History: back [Calculator.cpp:367, ...] forward [...]".

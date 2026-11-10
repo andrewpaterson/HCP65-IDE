@@ -410,7 +410,7 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 				//printed), usagegroups:<tpc> (Find Usages grouped by usage type, project and class, or none of them),
 				//focus:usages (its tree focussed), select:<node> (its row of that node selected), printselected (the
 				//selected row printed), printselection (the active editor's selected text and caret line), printhistory
-				//(Back and Forward's places) and key:<f4|space|enter|escape|documentend|documenthome> (what the key
+				//(Back and Forward's places), printpopup (Control+B's usages popup) and key:<f4|space|enter|escape|documentend|documenthome> (what the key
 				//gives, Jump to Source for F4).
 				//What each open file's caret line then is is printed.
 				aszOpen.Init();

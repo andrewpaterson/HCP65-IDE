@@ -186,6 +186,19 @@ CHECKS = [
 		'OPEN': 'Calculator.cpp', 'CARET': '10:1',
 		'DEBUG': 'wait:1500,edit:focus:editor,edit:key:documentend,wait:1500,edit:printhistory,command:Navigate.Back,edit:print'},
 		[r'^History: back \[(.*, )?Calculator\.cpp:10\] forward \[\]$', r'Calculator\.cpp \(focus\) line 10: '], [r'not enabled']),
+	('gotosource-usages-popup', {
+		#Control+B on a symbol's own declaration shows a popup of its usages, as IntelliJ's, the first selected; Enter
+		#goes to it and the popup closes.
+		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14',
+		'DEBUG': 'gotosource,edit:printpopup,edit:key:enter,edit:printpopup,edit:print'},
+		[r'^Popup: Usages of IsParentheses and 1 override  3 usages \| Calculator\.cpp:367  if \(\(\*ppcExpression\)->IsParentheses\(\)\) \| '
+		 r'Calculator\.cpp:391  if \(pcExpression->IsParentheses\(\)\) \| Calculator\.cpp:421  if \(pcExpression->IsParentheses\(\)\)$',
+		 r'^Popup: none$', r'Calculator\.cpp \(focus\) line 367: '], []),
+	('gotosource-on-usage', {
+		#Control+B on a usage still goes to the definition (CCalcExpression's, as pcExpression is one), with no popup.
+		'WAIT_INDEX': '1', 'OPEN': 'Calculator.cpp', 'CARET': '391:22',
+		'DEBUG': 'gotosource,edit:printpopup,edit:print'},
+		[r'^Popup: none$', r'CalcExpression\.cpp \(focus\) line 60: '], []),
 	('usages-keys', {
 		#Find Usages' keys, and Jump to Source's, are bound: F4, Alt+F7 and Control+Alt+Down and Up.
 		'DEBUG': 'printkeys'},

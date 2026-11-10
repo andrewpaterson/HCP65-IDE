@@ -149,6 +149,7 @@ void CIDEUsages::Init(CIDEContent* pcContent)
 	PreInit();
 	mpcContent = pcContent;
 	masUsages.Init();
+	masPopupUsages.Init();
 	mszName.Init();
 	muiOverrides = 0;
 	mbDeclarations = false;
@@ -172,6 +173,8 @@ void CIDEUsages::Class(void)
 	M_Pointer(mpByProject);
 	M_Pointer(mpByClass);
 	U_Unknown(CArrayIDELocations, masUsages);
+	M_Pointer(mpPopup);
+	U_Unknown(CArrayIDELocations, masPopupUsages);
 	U_String(mszName);
 	U_Size(muiOverrides);
 	U_Bool(mbDeclarations);
@@ -203,6 +206,11 @@ void CIDEUsages::Free(void)
 		mpByProject->GetChangeEvent()->Remove(this);
 		mpByClass->GetChangeEvent()->Remove(this);
 	}
+	if (mpPopup.IsNotNull())
+	{
+		mpPopup->GetItemClickEvent()->Remove(this);
+	}
+	KillIDELocations(&masPopupUsages);
 	KillIDELocations(&masUsages);
 	mszName.Kill();
 }
@@ -324,6 +332,228 @@ bool CIDEUsages::FindUsages(bool bDeclarations)
 	mpcContent->GetWindow()->GetFocus()->SetFocus(mpUsages);
 	return true;
 }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether the active editor's caret is on a declaration or the definition
+// of the symbol named there, for Control+B to show its usages, as
+// IntelliJ's does, rather than go to the definition it is on.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEUsages::IsOnOwnDeclaration(void)
+{
+	CArrayIDELocations	asLocations;
+	CChars				szKey;
+	SIDELocation*		psLocation;
+	Ptr<CIDEEditorTab>	pTab;
+	int					iLine;
+	int					iColumn;
+	size				i;
+	bool				bOn;
+
+	pTab = mpcContent->GetDocuments()->GetActiveTab();
+	if (pTab.IsNull() || !mpcContent->GetDocuments()->GetCaretPlace(&iLine, &iColumn))
+	{
+		return false;
+	}
+	mpcContent->GetDocuments()->UpdateEditedTabsNow();
+	asLocations.Init();
+	szKey.Init();
+	bOn = false;
+	if (mpcContent->GetDocuments()->FindSymbolAtCaret(&asLocations, &szKey))
+	{
+		for (i = 0; i < asLocations.NumElements(); i++)
+		{
+			psLocation = asLocations.Get(i);
+			if ((psLocation->uiRole != CPPIR_Reference) && (psLocation->iLine == iLine) && (iColumn >= psLocation->iColumn) &&
+				(iColumn <= psLocation->iColumn + psLocation->iLength) && (StringInsensitiveCompare(psLocation->szFileName.Text(), pTab->GetFileName()) == 0))
+			{
+				bOn = true;
+			}
+		}
+	}
+	KillIDELocations(&asLocations);
+	szKey.Kill();
+	return bOn;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The order of the popup's usages: by file, then line, then column.
+//
+//////////////////////////////////////////////////////////////////////////
+static int __cdecl CompareIDEPopupUsages(const void* pv1, const void* pv2)
+{
+	SIDELocation*	ps1;
+	SIDELocation*	ps2;
+	int				iResult;
+
+	ps1 = (SIDELocation*)pv1;
+	ps2 = (SIDELocation*)pv2;
+	iResult = StringInsensitiveCompare(ps1->szFileName.Text(), ps2->szFileName.Text());
+	if (iResult != 0)
+	{
+		return iResult;
+	}
+	if (ps1->iLine != ps2->iLine)
+	{
+		return (ps1->iLine < ps2->iLine) ? -1 : 1;
+	}
+	return (ps1->iColumn < ps2->iColumn) ? -1 : ((ps1->iColumn > ps2->iColumn) ? 1 : 0);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Control+B on a declaration or the definition, as IntelliJ's: a small
+// popup under the caret of the symbol's usages (and its overrides', as
+// Find Usages has), the first selected, "Calculator.cpp:367  the line";
+// Enter or a click goes to one.  With only one it is gone to; with none
+// the status line says so.  False if no symbol is named at the caret.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEUsages::ShowUsagesPopup(void)
+{
+	CArrayIDELocations	asLocations;
+	CChars				szKey;
+	CChars				szName;
+	CChars				szText;
+	CChars				szFile;
+	CChars				szLine;
+	CFileUtil			cFileUtil;
+	SIDELocation*		psLocation;
+	Ptr<CIDEEditorTab>	pTab;
+	Ptr<CTextArea>		pEditor;
+	CInt32Rect			cBounds;
+	CInt32Rect			cCaret;
+	SInt32Vec2			sPosition;
+	size				uiOverrides;
+	size				i;
+
+	mpcContent->GetDocuments()->UpdateEditedTabsNow();
+	asLocations.Init();
+	szKey.Init();
+	if (!mpcContent->GetDocuments()->FindSymbolAtCaret(&asLocations, &szKey))
+	{
+		KillIDELocations(&asLocations);
+		szKey.Kill();
+		return false;
+	}
+	uiOverrides = mpcContent->GetCodeModel()->FindOverrideLocations(szKey.Text(), &asLocations);
+	szName.Init();
+	GetIDESymbolName(szKey.Text(), &szName);
+	szKey.Kill();
+
+	KillIDELocations(&masPopupUsages);
+	masPopupUsages.Init();
+	for (i = 0; i < asLocations.NumElements(); i++)
+	{
+		psLocation = asLocations.Get(i);
+		if (psLocation->uiRole == CPPIR_Reference)
+		{
+			memcpy(masPopupUsages.Add(), psLocation, sizeof(SIDELocation));
+			psLocation->szFileName.Init();
+		}
+	}
+	KillIDELocations(&asLocations);
+	qsort(masPopupUsages.GetData(), masPopupUsages.NumElements(), sizeof(SIDELocation), CompareIDEPopupUsages);
+
+	if (masPopupUsages.NumElements() == 0)
+	{
+		szText.Init("No usages of ");
+		szText.Append(szName);
+		szText.Append(".");
+		mpcContent->ShowStatus(szText.Text());
+		szText.Kill();
+		szName.Kill();
+		return true;
+	}
+	if (masPopupUsages.NumElements() == 1)
+	{
+		szName.Kill();
+		mpcContent->GetDocuments()->OpenLocation(masPopupUsages.Get(0));
+		mpcContent->GetDocuments()->SelectAtCaret((size)masPopupUsages.Get(0)->iLength);
+		return true;
+	}
+
+	if (mpPopup.IsNull())
+	{
+		mpPopup = OMalloc<CMenuContainer>(mpcContent->GetWindow(), mpcContent->GetTheme());
+		mpPopup->GetItemClickEvent()->Add(this, &CIDEUsages::PopupUsageClicked);
+	}
+	mpPopup->RemoveAllItems();
+	szText.Init("Usages of ");
+	szText.Append(szName);
+	if (uiOverrides > 0)
+	{
+		szText.Append(" and ");
+		szText.Append((int)uiOverrides);
+		szText.Append(uiOverrides == 1 ? " override" : " overrides");
+	}
+	AppendIDEUsageCount(&szText, masPopupUsages.NumElements(), " usage");
+	mpPopup->AddItem(szText.Text())->SetEnabled(false);
+	szText.Kill();
+	szName.Kill();
+	for (i = 0; i < masPopupUsages.NumElements(); i++)
+	{
+		psLocation = masPopupUsages.Get(i);
+		szFile.Init();
+		cFileUtil.GetFileName(&szFile, psLocation->szFileName.Text());
+		szText.Init(szFile);
+		szText.Append(':');
+		szText.Append(psLocation->iLine + 1);
+		szText.Append("  ");
+		szLine.Init();
+		mpcContent->GetDocuments()->GetFileLine(psLocation->szFileName.Text(), psLocation->iLine, &szLine);
+		szLine.StripWhitespace();
+		szText.Append(szLine);
+		mpPopup->AddItem(szText.Text());
+		szLine.Kill();
+		szText.Kill();
+		szFile.Kill();
+	}
+
+	//Under the caret, as IntelliJ's.
+	pTab = mpcContent->GetDocuments()->GetActiveTab();
+	pEditor = pTab->GetEditor();
+	pEditor->GetActualBounds(&cBounds);
+	pEditor->GetCaretBounds(&cCaret);
+	sPosition.Init(cBounds.GetLeft() + cCaret.GetLeft(), cBounds.GetTop() + cCaret.GetBottom());
+	mpPopup->Open(sPosition, pEditor, true);
+	mpPopup->Select(1);
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A usage chosen in Control+B's popup is gone to, its name selected.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEUsages::PopupUsageClicked(CMenuItem* pcItem)
+{
+	size			i;
+	SIDELocation*	psLocation;
+
+	for (i = 1; i < mpPopup->NumItems(); i++)
+	{
+		if (&mpPopup->GetItem(i) == pcItem)
+		{
+			if (i - 1 < masPopupUsages.NumElements())
+			{
+				psLocation = masPopupUsages.Get(i - 1);
+				mpcContent->GetDocuments()->OpenLocation(psLocation);
+				mpcContent->GetDocuments()->SelectAtCaret((size)psLocation->iLength);
+			}
+			return;
+		}
+	}
+}
+
+
+Ptr<CMenuContainer> CIDEUsages::GetUsagesPopup(void) { return mpPopup; }
 
 
 //////////////////////////////////////////////////////////////////////////

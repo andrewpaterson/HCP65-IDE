@@ -59,6 +59,8 @@ protected:
 	Ptr<CCheckBox>		mpByProject;
 	Ptr<CCheckBox>		mpByClass;
 	CArrayIDELocations	masUsages;  //Each line's place, by its node's data less one.
+	Ptr<CMenuContainer>	mpPopup;  //Control+B's usages on a declaration, made when it is first shown.
+	CArrayIDELocations	masPopupUsages;  //Each of its rows' place, by its row less one (the first row is its title).
 	CChars				mszName;  //The symbol found's name, and how many overrides it has, for the tree's top.
 	size				muiOverrides;
 	bool				mbDeclarations;  //Find All References: the declarations and definition are there.
@@ -77,6 +79,9 @@ public:
 	bool				CanFindUsages(void);
 	void				CreatePane(SDockPlace* psPlace);
 	bool				FindUsages(bool bDeclarations);
+	bool				IsOnOwnDeclaration(void);
+	bool				ShowUsagesPopup(void);
+	Ptr<CMenuContainer>	GetUsagesPopup(void);
 	void				Clear(void);
 	void				SetGrouping(uint8 uiGrouping);
 	uint8				GetGrouping(void);
@@ -95,6 +100,7 @@ protected:
 	void				ShowUsages(bool bKeepSelected);
 	void				UsageActivated(void);
 	void				ReturnToEditor(void);
+	void				PopupUsageClicked(CMenuItem* pcItem);
 	void				GroupingChanged(void);
 	void				FindUsagesOnly(void);
 };
