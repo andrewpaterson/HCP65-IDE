@@ -250,6 +250,7 @@
     <ClCompile Include="IDERename.cpp" />
     <ClCompile Include="IDEUsages.cpp" />
     <ClCompile Include="IDEIndexing.cpp" />
+    <ClCompile Include="IDENavigationHistory.cpp" />
     <ClCompile Include="IDEOccurrences.cpp" />
     <ClCompile Include="IDECloseGuard.cpp" />
     <ClCompile Include="IDEDocuments.cpp" />
@@ -299,6 +300,7 @@
     <ClInclude Include="IDERename.h" />
     <ClInclude Include="IDEUsages.h" />
     <ClInclude Include="IDEIndexing.h" />
+    <ClInclude Include="IDENavigationHistory.h" />
     <ClInclude Include="IDEOccurrences.h" />
     <ClInclude Include="IDESteppable.h" />
     <ClInclude Include="IDEDebugger.h" />

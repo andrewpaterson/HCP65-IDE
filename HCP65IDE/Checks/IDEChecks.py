@@ -145,11 +145,53 @@ CHECKS = [
 		'DEBUG': 'wait:6000,edit:focus:editor,command:Navigate.NextOccurrence,printstatus,edit:print'}),
 		[r'^Usages of F  1 usage$', r'^Status line: Find Usages and Build can both step: click in the one to step through\.$',
 		 r'Kernel\.cpp \(focus\) line 2: '], [r'Kernel\.cpp \(focus\) line 5: ']),
+	('nav-back-forward', {
+		#A jump (F4 in Find Usages) puts where it left on Back; Back goes there and puts where it was on Forward; Forward
+		#goes back again.  (The tabs the user's layout opens can be on Back before them.)
+		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usages',
+		'DEBUG': 'edit:focus:usages,edit:key:f4,edit:printhistory,command:Navigate.Back,edit:printhistory,edit:print,'
+		         'command:Navigate.Forward,edit:printhistory,edit:print'},
+		[r'^History: back \[(.*, )?CalcParentheses\.h:38\] forward \[\]$', r'^History: back \[.*\] forward \[Calculator\.cpp:367\]$',
+		 r'CalcParentheses\.h \(focus\) line 38: ', r'^History: back \[(.*, )?CalcParentheses\.h:38\] forward \[\]$',
+		 r'Calculator\.cpp \(focus\) line 367: '], [r'not enabled']),
+	('nav-steps', {
+		#Each Next Occurrence step is a place: Back goes back through them one at a time.
+		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usages',
+		'DEBUG': 'edit:focus:editor,command:Navigate.NextOccurrence,command:Navigate.NextOccurrence,edit:printhistory,'
+		         'command:Navigate.Back,edit:print,command:Navigate.Back,edit:print'},
+		[r'^History: back \[(.*, )?CalcParentheses\.h:38, Calculator\.cpp:391\] forward \[\]$', r'Calculator\.cpp \(focus\) line 391: ',
+		 r'CalcParentheses\.h \(focus\) line 38: '], [r'not enabled']),
+	('nav-closed-file', {
+		#Back to a place whose file has been closed opens it again, its caret there.
+		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usages',
+		'DEBUG': 'edit:focus:usages,edit:key:f4,closeall,command:Navigate.Back,edit:print'},
+		[r'CalcParentheses\.h \(focus\) line 38: '], [r'not enabled', r'Calculator\.cpp.* line \d+: \[']),
+	('nav-jump-clears-forward', {
+		#A new jump after Back clears Forward, as a browser's does.
+		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usages',
+		'DEBUG': 'edit:focus:usages,edit:key:f4,command:Navigate.Back,edit:printhistory,edit:focus:usages,edit:select:3,edit:key:f4,'
+		         'edit:printhistory,command:Navigate.Forward'},
+		[r'^History: back \[.*\] forward \[Calculator\.cpp:367\]$', r'^History: back \[(.*, )?CalcParentheses\.h:38\] forward \[\]$',
+		 r'^Command \[Navigate\.Forward\] not found, not enabled or did nothing\.$'], []),
+	('nav-edit-follows', {
+		#A place in an open file moves with its line: two lines put in above it move it down two.
+		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usages',
+		'DEBUG': 'edit:focus:usages,edit:key:f4,edit:focus:usages,edit:select:4,edit:key:f4,edit:printhistory,'
+		         'edit:focus:editor,edit:caret:1:1,edit:key:enter,edit:key:enter,edit:printhistory,command:Navigate.Back,edit:print'},
+		[r'^History: back \[(.*, )?CalcParentheses\.h:38, Calculator\.cpp:367\] forward \[\]$',
+		 r'^History: back \[(.*, )?CalcParentheses\.h:38, Calculator\.cpp:369\] forward \[\]$',
+		 r'Calculator\.cpp \* \(focus\) line 369: \[\s*if \(\(\*ppcExpression\)->IsParentheses\(\)\)\]'], [r'not enabled']),
+	('nav-far-move', {
+		#The caret moved far from where it stayed (Control+End) is a place to come back to.
+		'OPEN': 'Calculator.cpp', 'CARET': '10:1',
+		'DEBUG': 'wait:1500,edit:focus:editor,edit:key:documentend,wait:1500,edit:printhistory,command:Navigate.Back,edit:print'},
+		[r'^History: back \[(.*, )?Calculator\.cpp:10\] forward \[\]$', r'Calculator\.cpp \(focus\) line 10: '], [r'not enabled']),
 	('usages-keys', {
 		#Find Usages' keys, and Jump to Source's, are bound: F4, Alt+F7 and Control+Alt+Down and Up.
 		'DEBUG': 'printkeys'},
 		[r'^Keys: Window\.JumpToSource F4 bound$', r'^Keys: Navigate\.FindUsages Alt\+F7 bound$',
-		 r'^Keys: Navigate\.NextOccurrence Control\+Alt\+Cursor Down bound$', r'^Keys: Navigate\.PreviousOccurrence Control\+Alt\+Cursor Up bound$'],
+		 r'^Keys: Navigate\.NextOccurrence Control\+Alt\+Cursor Down bound$', r'^Keys: Navigate\.PreviousOccurrence Control\+Alt\+Cursor Up bound$',
+		 r'^Keys: Navigate\.Back Control\+Alt\+Cursor Left bound$', r'^Keys: Navigate\.Forward Control\+Alt\+Cursor Right bound$'],
 		[r'NOT BOUND']),
 	('usages-enter-space', {
 		#As IntelliJ's, enter and space in the Find Usages tree don't go to the usage: the tree keeps the keys.
@@ -385,7 +427,7 @@ CHECKS = [
 		[r'^Menu File: Open Project/Solution\.\.\., Add Solution\.\.\., Close Solution, Recent Solutions>, Clear Recent Solutions, Save \[Ctrl\+S\], Save All \[Ctrl\+Shift\+S\], Compare with File\.\.\., Settings\.\.\. \[Ctrl\+Alt\+S\], Exit$',
 		 r'^Menu File/Recent Solutions: 1 ',
 		 r'^Menu Edit: Undo \[Ctrl\+Z\]\(disabled\), Redo \[Ctrl\+Shift\+Z\]\(disabled\), Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Select All \[Ctrl\+A\], Undo Across Files\(disabled\), Redo Across Files\(disabled\)$',
-		 r'^Menu Navigate: Class\.\.\. \[Ctrl\+N\], File\.\.\. \[Ctrl\+Shift\+N\], Symbol\.\.\. \[Ctrl\+Alt\+Shift\+N\]$',
+		 r'^Menu Navigate: Back \[Ctrl\+Alt\+Left\](\(disabled\))?, Forward \[Ctrl\+Alt\+Right\](\(disabled\))?, Class\.\.\. \[Ctrl\+N\], File\.\.\. \[Ctrl\+Shift\+N\], Symbol\.\.\. \[Ctrl\+Alt\+Shift\+N\]$',
 		 r'^Menu View: Solution Explorer, Find Usages, Build, Indexing, Run, Debug, Claude$',
 		 r'^Menu Git: Compare with HEAD, Compare with Branch\.\.\., Compare with Revision\.\.\.$',
 		 r'^Menu Build: Build \[Ctrl\+Shift\+B\], Edit Build Configurations\.\.\.$',

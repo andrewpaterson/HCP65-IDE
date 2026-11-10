@@ -104,16 +104,22 @@ bool CIDEDocuments::Load(CObjectReader* pcFile) { return false; }
 bool CIDEDocuments::OpenFile(const char* szFileName, size uiProject)
 {
 	Ptr<CIDEEditorTab>	pTab;
+	SIDENavigationPlace	sFrom;
+	bool				bRecord;
 
+	//A jump: where it leaves goes on Back (CIDENavigationHistory).
+	bRecord = mpcContent->GetNavigationHistory()->BeginJump(&sFrom);
 	pTab = OpenFileTab(szFileName, uiProject, true);
 	if (pTab.IsNull())
 	{
+		mpcContent->GetNavigationHistory()->EndJump(&sFrom, false);
 		return false;
 	}
 	mpcContent->GetDock()->Activate(pTab->GetDockPane());
 	mpActive = pTab;
 	mpcContent->GetDiffs()->SetActiveDiff(NULL);
 	mpcContent->GetGitStatus()->ShowBranch();
+	mpcContent->GetNavigationHistory()->EndJump(&sFrom, bRecord);
 	return true;
 }
 
@@ -177,6 +183,7 @@ Ptr<CIDEEditorTab> CIDEDocuments::OpenFileTab(const char* szFileName, size uiPro
 	mpcContent->GetGitStatus()->ReadGitBase(pTab);
 	mpcContent->GetGitStatus()->UpdateChangeBars(pTab);
 	pPane->SetTabFont(GetGitStateFont(mpcContent->GetFontColours(), pTab->GetGitState()));
+	mpcContent->GetNavigationHistory()->FileOpened(pTab);
 	return pTab;
 }
 
@@ -616,22 +623,24 @@ Ptr<CIDEEditorTab> CIDEDocuments::GetTab(size uiIndex) { return maTabs.Get(uiInd
 //////////////////////////////////////////////////////////////////////////
 bool CIDEDocuments::OpenLocation(SIDELocation* psLocation)
 {
-	size	uiProject;
+	size				uiProject;
+	SIDENavigationPlace	sFrom;
+	bool				bRecord;
 
+	//A jump, the file opened with it: where it leaves goes on Back (CIDENavigationHistory).
+	bRecord = mpcContent->GetNavigationHistory()->BeginJump(&sFrom);
 	uiProject = mpcContent->GetCodeModel()->FindProjectOfFile(psLocation->szFileName.Text());
 	if ((uiProject == MAX_SIZE) && mpActive.IsNotNull())
 	{
 		uiProject = mpActive->GetProject();
 	}
-	if (!OpenFile(psLocation->szFileName.Text(), uiProject))
+	if (!OpenFile(psLocation->szFileName.Text(), uiProject) || !SetCaretPlace(psLocation->iLine, psLocation->iColumn))
 	{
-		return false;
-	}
-	if (!SetCaretPlace(psLocation->iLine, psLocation->iColumn))
-	{
+		mpcContent->GetNavigationHistory()->EndJump(&sFrom, false);
 		return false;
 	}
 	mpActive->GetEditor()->GetWindow()->GetFocus()->SetFocus(mpActive->GetEditor());
+	mpcContent->GetNavigationHistory()->EndJump(&sFrom, bRecord);
 	return true;
 }
 
@@ -721,11 +730,17 @@ bool CIDEDocuments::GetCaretPlace(int* piLine, int* piColumn)
 //////////////////////////////////////////////////////////////////////////
 bool CIDEDocuments::SetCaretPlace(int iLine, int iColumn)
 {
+	bool	bResult;
+
 	if (mpActive.IsNull())
 	{
 		return false;
 	}
-	return mpActive->SetCaretPlace(iLine, iColumn);
+	bResult = mpActive->SetCaretPlace(iLine, iColumn);
+
+	//Put there by the IDE, not moved by the user: not a move to go back from.
+	mpcContent->GetNavigationHistory()->CaretPlaced();
+	return bResult;
 }
 
 

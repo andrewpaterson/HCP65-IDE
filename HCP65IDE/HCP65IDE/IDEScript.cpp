@@ -761,6 +761,16 @@ void CIDEScript::RunEditStep(const char* szStep)
 		printf("Selected: %s\n", szNode.Empty() ? "none" : szNode.Text());
 		szNode.Kill();
 	}
+	else if (strcmp(szStep, "printhistory") == 0)
+	{
+		//Back and Forward's places: "History: back [Calculator.cpp:367, ...] forward [...]".
+		CChars	szHistory;
+
+		szHistory.Init();
+		mpcContent->GetNavigationHistory()->Print(&szHistory);
+		printf("History: %s\n", szHistory.Text());
+		szHistory.Kill();
+	}
 	else if (strcmp(szStep, "printselection") == 0)
 	{
 		//The active editor's selected text, as "Selection: [<text>] on line <caret's line, from 1>", or
@@ -788,8 +798,8 @@ void CIDEScript::RunEditStep(const char* szStep)
 	}
 	else if (strncmp(szStep, "key:", 4) == 0)
 	{
-		//key:f4, key:space, key:enter or key:escape: what the key gives (Jump to Source for F4) to the focussed component
-		//and its parents.
+		//key:f4, key:space, key:enter, key:escape, key:documentend or key:documenthome: what the key gives (Jump to
+		//Source for F4, Control+End and Control+Home in an editor) to the focussed component and its parents.
 		if (strcmp(&szStep[4], "f4") == 0)
 		{
 			mpcContent->GetWindow()->InputCommand(CIC_JumpToSource, true);
@@ -805,6 +815,14 @@ void CIDEScript::RunEditStep(const char* szStep)
 		else if (strcmp(&szStep[4], "escape") == 0)
 		{
 			mpcContent->GetWindow()->InputCommand(CIC_ClearSelection, true);
+		}
+		else if (strcmp(&szStep[4], "documentend") == 0)
+		{
+			mpcContent->GetWindow()->InputCommand(CIC_DocumentEnd, true);
+		}
+		else if (strcmp(&szStep[4], "documenthome") == 0)
+		{
+			mpcContent->GetWindow()->InputCommand(CIC_DocumentHome, true);
 		}
 	}
 	else if (strcmp(szStep, "explorer") == 0)

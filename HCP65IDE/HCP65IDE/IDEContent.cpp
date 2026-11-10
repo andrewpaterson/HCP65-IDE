@@ -214,6 +214,7 @@ void CIDEContent::Class(void)
 	M_Pointer(mpRename);
 	M_Pointer(mpUsages);
 	M_Pointer(mpOccurrences);
+	M_Pointer(mpNavigationHistory);
 	M_Pointer(mpIndexing);
 	M_Pointer(mpDocuments);
 	M_Pointer(mpSolutions);
@@ -383,6 +384,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpRename = OMalloc<CIDERename>(this);
 	mpUsages = OMalloc<CIDEUsages>(this);
 	mpOccurrences = OMalloc<CIDEOccurrences>(this);
+	mpNavigationHistory = OMalloc<CIDENavigationHistory>(this);
 	mpIndexing = OMalloc<CIDEIndexing>(this);
 	mpDocuments = OMalloc<CIDEDocuments>(this);
 	mpSolutions = OMalloc<CIDESolutions>(this);
@@ -573,6 +575,7 @@ void CIDEContent::AddCommands(void)
 	mpRename->AddCommands(mpCommands);
 	mpUsages->AddCommands(mpCommands);
 	mpOccurrences->AddCommands(mpCommands);
+	mpNavigationHistory->AddCommands(mpCommands);
 	mpBuilding->AddCommands(mpCommands);
 	mpBuildConfigurations->AddCommands(mpCommands);
 	mpRunning->AddCommands(mpCommands);
@@ -737,6 +740,13 @@ void CIDEContent::Tick(Ptr<CWindow> pWindow)
 	{
 		iSoonest = iWait;
 	}
+
+	//A caret moved far from where it stayed is a place to come back to.
+	iWait = mpNavigationHistory->Poll(iNow);
+	if ((iWait >= 0) && ((iSoonest < 0) || (iWait < iSoonest)))
+	{
+		iSoonest = iWait;
+	}
 	if (iSoonest >= 0)
 	{
 		pWindow->RequestTick((uint32)iSoonest);
@@ -827,6 +837,7 @@ void CIDEContent::PaneClosed(CDockPane* pcPane)
 	pTab->GetCodeEditor()->GetGlyphClickEvent()->Remove(&mpDebugging);
 	pTab->GetEditor()->GetUndoEvent()->Remove(&mpEdit);
 	mpEdit->FileClosed(pTab->GetFileName());
+	mpNavigationHistory->FileClosed(pTab);
 	if (pTab->IsModified())
 	{
 		mpDocuments->ReindexDiscarded(pTab);
@@ -1024,6 +1035,7 @@ Ptr<CIDENavigator> CIDEContent::GetNavigator(void) { return mpNavigator; }
 Ptr<CIDEEdit> CIDEContent::GetEdit(void) { return mpEdit; }
 Ptr<CIDEUsages> CIDEContent::GetUsages(void) { return mpUsages; }
 Ptr<CIDEOccurrences> CIDEContent::GetOccurrences(void) { return mpOccurrences; }
+Ptr<CIDENavigationHistory> CIDEContent::GetNavigationHistory(void) { return mpNavigationHistory; }
 Ptr<CIDEIndexing> CIDEContent::GetIndexing(void) { return mpIndexing; }
 Ptr<CIDERename> CIDEContent::GetRename(void) { return mpRename; }
 Ptr<CIDECloseGuard> CIDEContent::GetCloseGuard(void) { return mpCloseGuard; }

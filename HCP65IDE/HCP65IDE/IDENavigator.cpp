@@ -199,8 +199,8 @@ void CIDENavigator::GoToSearch(size uiTab, CNameMatcher* pcMatcher, CGoToItems* 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Navigate, as IntelliJ's: Class, File and Symbol, each the Go to dialog
-// on its tab (see AddCommands).
+// Navigate, as IntelliJ's: Back and Forward, then Class, File and Symbol,
+// each the Go to dialog on its tab (see AddCommands).
 //
 //////////////////////////////////////////////////////////////////////////
 Ptr<CMenuContainer> CIDENavigator::CreateNavigateMenu(void)
@@ -209,6 +209,7 @@ Ptr<CMenuContainer> CIDENavigator::CreateNavigateMenu(void)
 
 	pCommands = mpcContent->GetCommands();
 	mpNavigateMenu = OMalloc<CMenuContainer>(mpcContent->GetWindow(), mpcContent->GetTheme());
+	mpcContent->GetNavigationHistory()->AddNavigateItems(mpNavigateMenu);
 	mpNavigateMenu->AddItem(pCommands->Find("Navigate.GoToClass"));
 	mpNavigateMenu->AddItem(pCommands->Find("Navigate.GoToFile"));
 	mpNavigateMenu->AddItem(pCommands->Find("Navigate.GoToSymbol"));

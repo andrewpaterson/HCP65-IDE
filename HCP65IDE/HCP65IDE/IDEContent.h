@@ -65,6 +65,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDERename.h"
 #include "IDEUsages.h"
 #include "IDEOccurrences.h"
+#include "IDENavigationHistory.h"
 #include "IDEIndexing.h"
 #include "IDEDocuments.h"
 #include "IDESolutions.h"
@@ -160,6 +161,7 @@ protected:
 	Ptr<CIDERename>				mpRename;			//Rename.
 	Ptr<CIDEUsages>				mpUsages;			//Find Usages.
 	Ptr<CIDEOccurrences>		mpOccurrences;		//Next and Previous Occurrence through Find Usages or Build.
+	Ptr<CIDENavigationHistory>	mpNavigationHistory;	//Back and Forward.
 	Ptr<CIDEIndexing>			mpIndexing;			//The Indexing tab.
 	Ptr<CIDEDocuments>			mpDocuments;		//The open files' tabs.
 	Ptr<CIDESolutions>			mpSolutions;		//Opening, adding and removing solutions, and the recent ones.
@@ -240,6 +242,7 @@ public:
 	Ptr<CIDESolutions>		GetSolutions(void);
 	Ptr<CIDEBuilding>		GetBuilding(void);
 	Ptr<CIDEOccurrences>	GetOccurrences(void);
+	Ptr<CIDENavigationHistory>	GetNavigationHistory(void);
 	Ptr<CIDEConfigurations>	GetBuildConfigurations(void);
 	Ptr<CIDERunning>		GetRunning(void);
 	Ptr<CIDESettings>		GetSettings(void);
