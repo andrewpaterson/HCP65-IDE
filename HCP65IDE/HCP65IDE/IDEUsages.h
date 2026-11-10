@@ -86,7 +86,7 @@ public:
 	static int			GetUsageTypeRank(SIDELocation* psLocation);
 
 protected:
-	void				ShowUsages(void);
+	void				ShowUsages(bool bKeepSelected);
 	void				UsageActivated(void);
 	void				ReturnToEditor(void);
 	void				GroupingChanged(void);

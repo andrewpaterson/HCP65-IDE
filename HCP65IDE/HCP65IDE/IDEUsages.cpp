@@ -319,7 +319,7 @@ bool CIDEUsages::FindUsages(bool bDeclarations)
 	mbDeclarations = bDeclarations;
 	mbFound = true;
 
-	ShowUsages();
+	ShowUsages(false);
 	mpcContent->GetDock()->Show(mpUsagesTool);
 	return true;
 }
@@ -331,9 +331,11 @@ bool CIDEUsages::FindUsages(bool bDeclarations)
 // the groups that are on (the usage type, then the project), each file,
 // the classes in it if they are grouped, and each line, in the order the
 // file has them.  A class's lines are under it, where it first has one.
+// The first line is selected, for F4 to go to, or with bKeepSelected the
+// usage that was, if one was: the same usages grouped again.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEUsages::ShowUsages(void)
+void CIDEUsages::ShowUsages(bool bKeepSelected)
 {
 	CChars			szText;
 	CChars			szFile;
@@ -362,12 +364,23 @@ void CIDEUsages::ShowUsages(void)
 	bool			bNewProject;
 	bool			bNewFile;
 	size			uiClass;
+	int64			iSelectedData;
+	int32			iNode;
+	int32			iFirstLine;
+	int32			iSelect;
 
+	iSelectedData = 0;
+	if (bKeepSelected && (mpUsages->GetSelectedNode() != TREE_NO_NODE))
+	{
+		iSelectedData = mpUsages->GetNodeData(mpUsages->GetSelectedNode());
+	}
 	mpUsages->RemoveAllNodes();
 	if (!mbFound)
 	{
 		return;
 	}
+	iFirstLine = TREE_NO_NODE;
+	iSelect = TREE_NO_NODE;
 
 	bByType = (muiGrouping & IDE_USAGES_BY_TYPE) != 0;
 	bByProject = (muiGrouping & IDE_USAGES_BY_PROJECT) != 0;
@@ -517,8 +530,16 @@ void CIDEUsages::ShowUsages(void)
 		{
 			szText.Append("  [one of the overloads]");
 		}
-		mpUsages->AddNode(iParent, szText.Text(), NULL, (int64)psUsage->uiIndex + 1);
+		iNode = mpUsages->AddNode(iParent, szText.Text(), NULL, (int64)psUsage->uiIndex + 1);
 		szText.Kill();
+		if (iFirstLine == TREE_NO_NODE)
+		{
+			iFirstLine = iNode;
+		}
+		if ((iSelectedData > 0) && ((int64)psUsage->uiIndex + 1 == iSelectedData))
+		{
+			iSelect = iNode;
+		}
 	}
 	aiClassNodes.Kill();
 	aszClasses.Kill();
@@ -530,6 +551,7 @@ void CIDEUsages::ShowUsages(void)
 	free(asUsages);
 
 	mpUsages->ExpandAll();
+	mpUsages->SelectNode((iSelect != TREE_NO_NODE) ? iSelect : iFirstLine);
 }
 
 
@@ -630,7 +652,7 @@ void CIDEUsages::GroupingChanged(void)
 	if (uiGrouping != muiGrouping)
 	{
 		muiGrouping = uiGrouping;
-		ShowUsages();
+		ShowUsages(true);
 	}
 }
 
@@ -650,7 +672,7 @@ void CIDEUsages::SetGrouping(uint8 uiGrouping)
 		mpByProject->SetTicked((muiGrouping & IDE_USAGES_BY_PROJECT) != 0);
 		mpByClass->SetTicked((muiGrouping & IDE_USAGES_BY_CLASS) != 0);
 	}
-	ShowUsages();
+	ShowUsages(true);
 }
 
 

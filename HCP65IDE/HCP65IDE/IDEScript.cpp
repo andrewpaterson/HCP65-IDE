@@ -746,6 +746,21 @@ void CIDEScript::RunEditStep(const char* szStep)
 			mpcContent->GetWindow()->GetFocus()->SetFocus(pTab->GetEditor());
 		}
 	}
+	else if (strcmp(szStep, "printselected") == 0)
+	{
+		//The Find Usages tree's selected row, as "Selected: <its text>", or "Selected: none".
+		Ptr<CTreeContainer>	pTree;
+		CChars				szNode;
+
+		pTree = mpcContent->GetUsages()->GetUsagesTree();
+		szNode.Init();
+		if (pTree->GetSelectedNode() != TREE_NO_NODE)
+		{
+			pTree->GetNodeText(pTree->GetSelectedNode(), &szNode);
+		}
+		printf("Selected: %s\n", szNode.Empty() ? "none" : szNode.Text());
+		szNode.Kill();
+	}
 	else if (strncmp(szStep, "select:", 7) == 0)
 	{
 		//select:<node>, from 0 in the order "usages" prints them: that row of the Find Usages tree selected.
