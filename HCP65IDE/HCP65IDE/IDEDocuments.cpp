@@ -746,12 +746,15 @@ bool CIDEDocuments::SetCaretPlace(int iLine, int iColumn)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The symbol named at the active editor's caret (or just before it, as
-// after it's typed), or where its selection starts: its key and every
-// place it is named.  False if there is none.
+// Where a symbol is named in the active editor: at its caret, or just
+// before it (as after the name is typed), or where its selection starts.
+// Its line and a column in the name (0 based), and how it is named there
+// (ECPPIndexRole: declared, defined or used).  False if none is.  Every
+// command that works on the symbol at the caret finds it here, so they
+// all agree on where that is.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEDocuments::FindSymbolAtCaret(CArrayIDELocations* pasDest, CChars* pszKey)
+bool CIDEDocuments::FindSymbolPlace(int* piLine, int* piColumn, uint8* puiRole)
 {
 	Ptr<CTextArea>	pEditor;
 	size			uiStart;
@@ -772,11 +775,33 @@ bool CIDEDocuments::FindSymbolAtCaret(CArrayIDELocations* pasDest, CChars* pszKe
 	}
 	uiLine = pEditor->FindLine(uiStart);
 	iColumn = (int)(uiStart - pEditor->GetLineStart(uiLine));
-	if (mpcContent->GetCodeModel()->FindReferences(mpActive->GetFileName(), (int)uiLine, iColumn, pasDest, pszKey))
+	if (!mpcContent->GetCodeModel()->FindRoleAt(mpActive->GetFileName(), (int)uiLine, iColumn, puiRole))
 	{
-		return true;
+		if (bSelected || (iColumn == 0) || !mpcContent->GetCodeModel()->FindRoleAt(mpActive->GetFileName(), (int)uiLine, iColumn - 1, puiRole))
+		{
+			return false;
+		}
+		iColumn--;
 	}
-	return !bSelected && (iColumn > 0) && mpcContent->GetCodeModel()->FindReferences(mpActive->GetFileName(), (int)uiLine, iColumn - 1, pasDest, pszKey);
+	*piLine = (int)uiLine;
+	*piColumn = iColumn;
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The symbol named at the active editor's caret (FindSymbolPlace): its
+// key and every place it is named.  False if there is none.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEDocuments::FindSymbolAtCaret(CArrayIDELocations* pasDest, CChars* pszKey)
+{
+	int		iLine;
+	int		iColumn;
+	uint8	uiRole;
+
+	return FindSymbolPlace(&iLine, &iColumn, &uiRole) && mpcContent->GetCodeModel()->FindReferences(mpActive->GetFileName(), iLine, iColumn, pasDest, pszKey);
 }
 
 

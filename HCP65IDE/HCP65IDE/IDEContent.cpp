@@ -585,23 +585,25 @@ void CIDEContent::AddCommands(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Opens where what is named at the caret is defined (or declared, if no
-// file indexed so far defines it) with the caret on its name.
+// Opens where what is named at the caret (CIDEDocuments::FindSymbolPlace)
+// is defined (or declared, if no file indexed so far defines it) with the
+// caret on its name.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEContent::GoToDefinition(void)
 {
 	int				iLine;
 	int				iColumn;
+	uint8			uiRole;
 	SIDELocation	sLocation;
 	bool			bResult;
 
-	if (!mpDocuments->GetCaretPlace(&iLine, &iColumn))
+	if (mpDocuments->GetActiveTab().IsNull())
 	{
 		return false;
 	}
 	mpDocuments->UpdateEditedTabsNow();
-	if (!mcCodeModel.FindDefinition(mpDocuments->GetActiveTab()->GetFileName(), iLine, iColumn, &sLocation))
+	if (!mpDocuments->FindSymbolPlace(&iLine, &iColumn, &uiRole) || !mcCodeModel.FindDefinition(mpDocuments->GetActiveTab()->GetFileName(), iLine, iColumn, &sLocation))
 	{
 		ShowStatus("No definition found at the caret.");
 		return false;

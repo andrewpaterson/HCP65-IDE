@@ -549,10 +549,11 @@ bool CIDENavigator::GoToSource(void)
 //////////////////////////////////////////////////////////////////////////
 bool CIDENavigator::CanGoToSource(void)
 {
-	CChars				szFile;
-	CArrayIDELocations	asLocations;
-	CChars				szKey;
-	bool				bResult;
+	CChars	szFile;
+	int		iLine;
+	int		iColumn;
+	uint8	uiRole;
+	bool	bResult;
 
 	if (mpcContent->GetDocuments()->GetActiveTab().IsNull())
 	{
@@ -561,15 +562,7 @@ bool CIDENavigator::CanGoToSource(void)
 	szFile.Init();
 	bResult = FindIncludedFile(&szFile);
 	szFile.Kill();
-	if (!bResult)
-	{
-		asLocations.Init();
-		szKey.Init();
-		bResult = mpcContent->GetDocuments()->FindSymbolAtCaret(&asLocations, &szKey);
-		szKey.Kill();
-		KillIDELocations(&asLocations);
-	}
-	return bResult;
+	return bResult || mpcContent->GetDocuments()->FindSymbolPlace(&iLine, &iColumn, &uiRole);
 }
 
 

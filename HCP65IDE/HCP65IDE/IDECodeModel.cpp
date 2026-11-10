@@ -1333,6 +1333,42 @@ bool CIDECodeModel::FindReferences(const char* szFileName, int iLine, int iColum
 
 //////////////////////////////////////////////////////////////////////////
 //
+// How what is named at a place (0 based) is named there: declared,
+// defined or used (ECPPIndexRole).  False if nothing indexed is named
+// there.  Nothing is copied, so it can be asked whenever a command wants
+// to know if it has a symbol to work on.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDECodeModel::FindRoleAt(const char* szFileName, int iLine, int iColumn, uint8* puiRole)
+{
+	CCPPIndexSymbol*	pcSymbol;
+	SCPPIndexLocation*	psLocation;
+	size				i;
+	bool				bFound;
+
+	bFound = false;
+	mcIndexMutex.Lock();
+	pcSymbol = mcIndex.FindSymbolAt(szFileName, iLine, iColumn);
+	if (pcSymbol)
+	{
+		for (i = 0; (i < pcSymbol->NumLocations()) && !bFound; i++)
+		{
+			psLocation = pcSymbol->GetLocation(i);
+			if ((psLocation->iLine == iLine) && (psLocation->iColumn <= iColumn) && (iColumn < psLocation->iColumn + psLocation->iLength) &&
+				(StringInsensitiveCompare(mcIndex.GetFileName(psLocation->uiFile), szFileName) == 0))
+			{
+				*puiRole = psLocation->uiRole;
+				bFound = true;
+			}
+		}
+	}
+	mcIndexMutex.Unlock();
+	return bFound;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Call it with the index's mutex held.
 //
 //////////////////////////////////////////////////////////////////////////

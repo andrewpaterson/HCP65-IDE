@@ -343,39 +343,12 @@ bool CIDEUsages::FindUsages(bool bDeclarations)
 //////////////////////////////////////////////////////////////////////////
 bool CIDEUsages::IsOnOwnDeclaration(void)
 {
-	CArrayIDELocations	asLocations;
-	CChars				szKey;
-	SIDELocation*		psLocation;
-	Ptr<CIDEEditorTab>	pTab;
-	int					iLine;
-	int					iColumn;
-	size				i;
-	bool				bOn;
+	int		iLine;
+	int		iColumn;
+	uint8	uiRole;
 
-	pTab = mpcContent->GetDocuments()->GetActiveTab();
-	if (pTab.IsNull() || !mpcContent->GetDocuments()->GetCaretPlace(&iLine, &iColumn))
-	{
-		return false;
-	}
 	mpcContent->GetDocuments()->UpdateEditedTabsNow();
-	asLocations.Init();
-	szKey.Init();
-	bOn = false;
-	if (mpcContent->GetDocuments()->FindSymbolAtCaret(&asLocations, &szKey))
-	{
-		for (i = 0; i < asLocations.NumElements(); i++)
-		{
-			psLocation = asLocations.Get(i);
-			if ((psLocation->uiRole != CPPIR_Reference) && (psLocation->iLine == iLine) && (iColumn >= psLocation->iColumn) &&
-				(iColumn <= psLocation->iColumn + psLocation->iLength) && (StringInsensitiveCompare(psLocation->szFileName.Text(), pTab->GetFileName()) == 0))
-			{
-				bOn = true;
-			}
-		}
-	}
-	KillIDELocations(&asLocations);
-	szKey.Kill();
-	return bOn;
+	return mpcContent->GetDocuments()->FindSymbolPlace(&iLine, &iColumn, &uiRole) && (uiRole != CPPIR_Reference);
 }
 
 
@@ -1033,16 +1006,11 @@ void CIDEUsages::AddEditorItems(Ptr<CMenuContainer> pMenu)
 //////////////////////////////////////////////////////////////////////////
 bool CIDEUsages::CanFindUsages(void)
 {
-	CArrayIDELocations	asLocations;
-	CChars				szKey;
-	bool				bFound;
+	int		iLine;
+	int		iColumn;
+	uint8	uiRole;
 
-	asLocations.Init();
-	szKey.Init();
-	bFound = mpcContent->GetDocuments()->FindSymbolAtCaret(&asLocations, &szKey);
-	szKey.Kill();
-	KillIDELocations(&asLocations);
-	return bFound;
+	return mpcContent->GetDocuments()->FindSymbolPlace(&iLine, &iColumn, &uiRole);
 }
 
 

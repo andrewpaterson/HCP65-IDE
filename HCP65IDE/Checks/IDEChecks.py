@@ -61,6 +61,33 @@ def MakeBrokenKernel():
 	return {'SOLUTION': os.path.join(szKernel, 'Kernel.sln'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
 
 
+USAGES_KERNEL = ('int F(void) { return 0; }\n'
+                 'class CA { public: int M(void) { return F(); } int N(void); };\n'
+                 'int G(void) { return F(); }\n'
+                 'int CA::N(void) { return F(); }\n'
+                 'int main(void) { return F() + G(); }\n')
+
+
+def MakeUsagesKernel(szKernel=USAGES_KERNEL, asFiles={}):
+	#A copy of the test solution whose kernel is szKernel: as it is given, F is defined on line 1 and used on lines 2 and
+	#4, in CA, and on lines 3 and 5, in no class.  asFiles are more of the kernel project's files, by name.  Its recent
+	#solutions are apart from the user's.
+	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
+	atexit.register(shutil.rmtree, szRoot, True)
+	szFolder = os.path.join(szRoot, 'Workspace', 'Kernel')
+	shutil.copytree(os.path.join(ROOT, 'HCP65-IDE', 'Tests', 'TestBuildLib', 'TestBuildLib', 'Input', 'Workspace'), os.path.join(szRoot, 'Workspace'))
+	open(os.path.join(szFolder, 'Kernel.cpp'), 'w', newline='').write(szKernel)
+	szItems = ''
+	for szName, szText in asFiles.items():
+		os.makedirs(os.path.dirname(os.path.join(szFolder, szName)), exist_ok=True)
+		open(os.path.join(szFolder, szName), 'w', newline='').write(szText)
+		szItems += '\r\n    <%s Include="%s" />' % ('ClCompile' if szName.endswith('.cpp') else 'ClInclude', szName.replace('/', '\\'))
+	szProject = os.path.join(szFolder, 'Kernel.vcxproj')
+	szText = open(szProject, newline='', encoding='utf-8-sig').read().replace('<ClCompile Include="Kernel.cpp" />', '<ClCompile Include="Kernel.cpp" />' + szItems, 1)
+	open(szProject, 'w', newline='', encoding='utf-8-sig').write(szText)
+	return {'SOLUTION': os.path.join(szFolder, 'Kernel.sln'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
+
+
 def MakeKeymapFile(szText=None):
 	#Where a scripted run keeps its keys, with szText in it if it's given.
 	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
@@ -204,6 +231,17 @@ CHECKS = [
 		'WAIT_INDEX': '1', 'OPEN': 'Calculator.cpp', 'CARET': '391:22',
 		'DEBUG': 'gotosource,edit:printpopup,edit:print'},
 		[r'^Popup: none$', r'CalcExpression\.cpp \(focus\) line 60: '], []),
+	('gotosource-after-name', dict(MakeUsagesKernel(), **{
+		#Control+B with the caret just after a name, as after it is typed, goes to its definition, as Find Usages and
+		#Rename find the name there.
+		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp', 'CARET': '3:23',
+		'DEBUG': 'command:Navigate.GoToSource,edit:print'}),
+		[r'Kernel\.cpp \(focus\) line 1: '], [r'not enabled', r'No definition found']),
+	('gotosource-after-step', dict(MakeUsagesKernel(), **{
+		#A step through the usages leaves the name selected with the caret after it: Control+B goes to its definition.
+		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp', 'CARET': '1:5', 'EDIT': 'usagegroups:,usages',
+		'DEBUG': 'edit:focus:editor,command:Navigate.NextOccurrence,edit:printselection,command:Navigate.GoToSource,edit:print'}),
+		[r'^Selection: \[F\] on line 3, caret line 3$', r'Kernel\.cpp \(focus\) line 1: '], [r'not enabled', r'No definition found']),
 	('usages-keys', {
 		#Find Usages' keys, and Jump to Source's, are bound: F4, Alt+F7 and Control+Alt+Down and Up.
 		'DEBUG': 'printkeys'},

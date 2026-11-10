@@ -206,6 +206,7 @@ public:
 	void	SetEditsDelay(int iMilliseconds);
 	bool	FindDefinition(const char* szFileName, int iLine, int iColumn, SIDELocation* psDest);
 	bool	FindReferences(const char* szFileName, int iLine, int iColumn, CArrayIDELocations* pasDest, CChars* pszKey);
+	bool	FindRoleAt(const char* szFileName, int iLine, int iColumn, uint8* puiRole);
 	size	FindProjectOfFile(const char* szFileName);
 	size	FindFilesNamed(const char* szName, CArrayChars* paszDest);
 	void	FindGoToSymbols(CNameMatcher* pcMatcher, bool bClasses, CMapStringInt* pcFiles, int32* aiIcons, CGoToItems* pcDest);

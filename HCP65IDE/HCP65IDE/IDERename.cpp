@@ -109,10 +109,10 @@ bool CIDERename::FindRenameTarget(SIDERenameTarget* psDest)
 	Ptr<CTextArea>	pEditor;
 	size			uiStart;
 	size			uiEnd;
-	size			uiLine;
+	int				iLine;
 	int				iStartColumn;
 	int				iEndColumn;
-	bool			bSelected;
+	uint8			uiRole;
 	bool			bInName;
 	SIDELocation*	psLocation;
 	size			i;
@@ -126,37 +126,26 @@ bool CIDERename::FindRenameTarget(SIDERenameTarget* psDest)
 	mpcContent->GetNavigator()->FindGoToFiles();
 	mpcContent->GetDocuments()->UpdateEditedTabsNow();
 
+	if (!mpcContent->GetDocuments()->FindSymbolPlace(&iLine, &iStartColumn, &uiRole) ||
+		!mpcContent->GetCodeModel()->FindRenameTarget(mpcContent->GetDocuments()->GetActiveTab()->GetFileName(), iLine, iStartColumn, mpcContent->GetNavigator()->GetSolutionFileSet(), psDest))
+	{
+		return false;
+	}
 	pEditor = mpcContent->GetDocuments()->GetActiveTab()->GetEditor();
-	bSelected = pEditor->GetSelection(&uiStart, &uiEnd);
-	if (!bSelected)
-	{
-		uiStart = pEditor->GetCaretPosition();
-		uiEnd = uiStart;
-	}
-	uiLine = pEditor->FindLine(uiStart);
-	iStartColumn = (int)(uiStart - pEditor->GetLineStart(uiLine));
-	if (!mpcContent->GetCodeModel()->FindRenameTarget(mpcContent->GetDocuments()->GetActiveTab()->GetFileName(), (int)uiLine, iStartColumn, mpcContent->GetNavigator()->GetSolutionFileSet(), psDest))
-	{
-		//The caret just after a name, as after it's typed, names it too.
-		if (bSelected || (iStartColumn == 0) || !mpcContent->GetCodeModel()->FindRenameTarget(mpcContent->GetDocuments()->GetActiveTab()->GetFileName(), (int)uiLine, iStartColumn - 1, mpcContent->GetNavigator()->GetSolutionFileSet(), psDest))
-		{
-			return false;
-		}
-	}
-	if (!bSelected)
+	if (!pEditor->GetSelection(&uiStart, &uiEnd))
 	{
 		return true;
 	}
 
 	//The selection is all in the name named where it starts.
 	bInName = false;
-	if (pEditor->FindLine(uiEnd) == uiLine)
+	if (pEditor->FindLine(uiEnd) == (size)iLine)
 	{
-		iEndColumn = (int)(uiEnd - pEditor->GetLineStart(uiLine));
+		iEndColumn = (int)(uiEnd - pEditor->GetLineStart((size)iLine));
 		for (i = 0; i < psDest->asLocations.NumElements(); i++)
 		{
 			psLocation = psDest->asLocations.Get(i);
-			if ((psLocation->iLine == (int32)uiLine) && psLocation->szFileName.Equals(mpcContent->GetDocuments()->GetActiveTab()->GetFileName()) &&
+			if ((psLocation->iLine == (int32)iLine) && psLocation->szFileName.Equals(mpcContent->GetDocuments()->GetActiveTab()->GetFileName()) &&
 				(psLocation->iColumn <= iStartColumn) && (iEndColumn <= psLocation->iColumn + psLocation->iLength))
 			{
 				bInName = true;
