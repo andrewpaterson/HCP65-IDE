@@ -30,7 +30,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 //The debug script's commands that are the IDE's (RunCommand); "goto:" takes what follows it.
-static const char*	gaszIDEScriptCommands[] = { "goto:", "rename", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printsettings", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printedits", "printspans", "configuration:", "waitindex" };
+static const char*	gaszIDEScriptCommands[] = { "goto:", "rename", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printsettings", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printedits", "printspans", "configuration:", "waitindex" };
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -316,6 +316,13 @@ void CIDEScript::RunCommand(const char* szCommand)
 		printf("Keymap file:\n%s\n", cFile.Read(mpcContent->GetSettings()->GetKeymapFile()) ? cFile.Text() : "(none)");
 		fflush(stdout);
 		cFile.Kill();
+	}
+	else if (strcmp(szCommand, "printindexing") == 0)
+	{
+		//How long the index took to build, and how many units couldn't include something: "Indexing: 5230 ms, 2 units
+		//with problems", -1 ms while it is still being built.
+		printf("Indexing: %d ms, %d units with problems\n", (int)mpcContent->GetCodeModel()->GetIndexingMilliseconds(), (int)mpcContent->GetCodeModel()->NumIndexingProblemUnits());
+		fflush(stdout);
 	}
 	else if (strcmp(szCommand, "printsettings") == 0)
 	{

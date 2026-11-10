@@ -285,6 +285,14 @@ CHECKS = [
 		[r'^Usages of F  4 usages$', r'^    2: class CA', r'^    3: int G', r'^Usages of F  4 usages$', r'^    4: class CA',
 		 r'^    5: int G\(void\) \{ int x = return F\(\); \}$', r'^    6: int CA::N', r'^    7: int main',
 		 r'^Selection: \[F\] on line 5, caret line 5$', r'^Selected: 5: int G'], [r'not enabled']),
+	('usages-include-in-folder', dict(MakeUsagesKernel(
+		'int F(void);\n#include "A/Inner.h"\nint F(void) { return SA(); }\n', {'A/Inner.h': 'inline int SA(void) { return F(); }\n'}), **{
+		#A header included by a path with a folder, from beside the file that includes it, is indexed: F's usage in it is
+		#found, and Control+B on SA goes to it there.
+		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp', 'CARET': '1:5', 'EDIT': 'usagegroups:,usages',
+		'DEBUG': 'edit:caret:3:22,command:Navigate.GoToSource,edit:print,printindexing'}),
+		[r'^Usages of F  1 usage$', r'^  Inner\.h  1$', r'^    1: inline int SA', r'Inner\.h \(focus\) line 1: ', r'^Indexing: \d+ ms, 0 units with problems$'],
+		[r'not enabled', r'No definition found']),
 	('usages-groups-kept', dict(MakeUsagesKernel(), **{
 		#Find Usages' groups are kept when they change, for the next time the IDE is run.
 		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp', 'CARET': '1:5', 'SETTINGS': MakeSettingsFile(), 'EDIT': 'usagegroups:c,usages',

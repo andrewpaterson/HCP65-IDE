@@ -814,8 +814,9 @@ CTranslationUnit* CIDECodeModel::AddUnit(size uiProject, const char* szFileName)
 	pcLibrary = pcProject->GetLibrary(szDirectory.Text());
 	if (pcLibrary == NULL)
 	{
-		//Quoted includes look in the file's own directory first.
-		pcLibrary = pcProject->AddLibrary(szDirectory.Text(), szDirectory.Text(), false);
+		//Quoted includes look in the file's own directory first, and in the folders in it for one named with its folder
+		//("Sub/Header.h").
+		pcLibrary = pcProject->AddLibrary(szDirectory.Text(), szDirectory.Text(), true);
 		pcConfig = pcLibrary->AddConfiguration(mszConfiguration.Text());
 		pcConfig->mbHostDefines = false;
 		pcConfiguration = GetProjectConfiguration(uiProject);
