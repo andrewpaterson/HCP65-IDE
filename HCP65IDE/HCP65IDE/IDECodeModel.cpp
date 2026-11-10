@@ -149,6 +149,8 @@ void CIDECodeModel::Init(CBuildWorkspace* pcWorkspace)
 	muiProblemUnits = 0;
 	miIndexStart = 0;
 	miIndexEnd = -1;
+	mcProjectFiles.Init(false);
+	muiProjectFilesProjects = MAX_SIZE;
 
 	mbEdits = false;
 	mapsEdited.Init();
@@ -171,6 +173,7 @@ void CIDECodeModel::Kill(void)
 		mbEdits = false;
 	}
 	mapsEdited.Kill();
+	mcProjectFiles.Kill();
 	mcProblems.Kill();
 	maszProblems.Kill();
 	mcIncluders.Kill();
@@ -1347,17 +1350,39 @@ void CIDECodeModel::CopyLocation(SCPPIndexLocation* psLocation, SIDELocation* ps
 //////////////////////////////////////////////////////////////////////////
 //
 // The first of the workspace's projects that has szFileName (a full
-// path, whatever its case) as an item, MAX_SIZE if none has.
+// path, whatever its case) as an item, MAX_SIZE if none has.  The items'
+// paths are worked out once (MakeProjectFiles): finding each on the disk,
+// for its case, took Find Usages 95ms a usage.
 //
 //////////////////////////////////////////////////////////////////////////
 size CIDECodeModel::FindProjectOfFile(const char* szFileName)
+{
+	int32	iProject;
+
+	if (muiProjectFilesProjects != mpcWorkspace->NumProjects())
+	{
+		MakeProjectFiles();
+	}
+	iProject = mcProjectFiles.Get(szFileName, -1);
+	return (iProject >= 0) ? (size)iProject : MAX_SIZE;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Every item of the workspace's projects by its full path, to the first
+// project that has it.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDECodeModel::MakeProjectFiles(void)
 {
 	size			i;
 	size			j;
 	CVcxProject*	pcProject;
 	CChars			szPath;
-	bool			bFound;
 
+	mcProjectFiles.Kill();
+	mcProjectFiles.Init(false);
 	for (i = 0; i < mpcWorkspace->NumProjects(); i++)
 	{
 		pcProject = mpcWorkspace->GetSolutionProject(i)->GetProject();
@@ -1369,15 +1394,26 @@ size CIDECodeModel::FindProjectOfFile(const char* szFileName)
 		{
 			szPath.Init();
 			pcProject->GetFullPath(pcProject->GetItem(j), &szPath);
-			bFound = szPath.EqualsIgnoreCase(szFileName);
-			szPath.Kill();
-			if (bFound)
+			if (mcProjectFiles.Get(szPath.Text(), -1) < 0)
 			{
-				return i;
+				mcProjectFiles.Put(szPath.Text(), (int32)i);
 			}
+			szPath.Kill();
 		}
 	}
-	return MAX_SIZE;
+	muiProjectFilesProjects = mpcWorkspace->NumProjects();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The projects' items are found again the next time they are wanted: the
+// workspace's solutions are changing.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDECodeModel::ForgetProjectFiles(void)
+{
+	muiProjectFilesProjects = MAX_SIZE;
 }
 
 
@@ -1491,9 +1527,9 @@ void CIDECodeModel::SetConfiguration(const char* szConfiguration)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Nothing is being indexed and the projects will be made again: before
-// the workspace's solutions change, as the jobs use them.  StartIndexing
-// indexes them again.
+// Nothing is being indexed and the projects will be made again, and their
+// items found again: before the workspace's solutions change, as the jobs
+// use them.  StartIndexing indexes them again.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDECodeModel::Reset(void)
@@ -1502,6 +1538,7 @@ void CIDECodeModel::Reset(void)
 	mcProjectsMutex.Lock();
 	KillProjects();
 	mcProjectsMutex.Unlock();
+	ForgetProjectFiles();
 }
 
 

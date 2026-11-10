@@ -164,6 +164,8 @@ protected:
 	size				muiProblemUnits;		//How many units had any.
 	int64				miIndexStart;			//When the index was started (GetDebugTickCount),
 	int64				miIndexEnd;				//and when its last unit was done, -1 until then.
+	CMapStringInt		mcProjectFiles;			//Each project item's full path, in any case, to its project's index (FindProjectOfFile).
+	size				muiProjectFilesProjects;	//How many projects mcProjectFiles was made from, MAX_SIZE until it is made.
 
 	CWorkerThreadJobs	mcEdits;				//The edits thread: one, working out the edited files away from the UI thread.
 	bool				mbEdits;				//It has been started.
@@ -225,6 +227,8 @@ protected:
 	const char*			GetSolutionConfiguration(size uiSolution);
 	void				AddCompilerDefines(CVcxConfiguration* pcConfiguration, CConfig* pcConfig);
 	void				KillProjects(void);
+	void				MakeProjectFiles(void);
+	void				ForgetProjectFiles(void);
 	void				KillJobs(void);
 	void				WaitForEditedFiles(void);
 	void				ProcessEditedFile(SIDEEditedFile* psFile);
