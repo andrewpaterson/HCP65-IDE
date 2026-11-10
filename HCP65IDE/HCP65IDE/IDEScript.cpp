@@ -736,10 +736,25 @@ void CIDEScript::RunEditStep(const char* szStep)
 			mpcContent->GetDock()->Show(mpcContent->GetAskClaude()->GetTool());
 			mpcContent->GetWindow()->GetFocus()->SetFocus(mpcContent->GetAskClaude()->GetClaudePane()->GetRequestArea());
 		}
+		else if (strcmp(&szStep[6], "usages") == 0)
+		{
+			mpcContent->GetDock()->Show(mpcContent->GetUsages()->GetTool());
+			mpcContent->GetWindow()->GetFocus()->SetFocus(mpcContent->GetUsages()->GetUsagesTree());
+		}
 		else if (pTab.IsNotNull())
 		{
 			mpcContent->GetWindow()->GetFocus()->SetFocus(pTab->GetEditor());
 		}
+	}
+	else if (strncmp(szStep, "select:", 7) == 0)
+	{
+		//select:<node>, from 0 in the order "usages" prints them: that row of the Find Usages tree selected.
+		mpcContent->GetUsages()->GetUsagesTree()->SelectNode(atoi(&szStep[7]));
+	}
+	else if (strcmp(szStep, "f4") == 0)
+	{
+		//Jump to Source, to the focussed component and its parents, as F4 gives it.
+		mpcContent->GetWindow()->InputCommand(CIC_JumpToSource, true);
 	}
 	else if (strcmp(szStep, "explorer") == 0)
 	{

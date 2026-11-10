@@ -407,7 +407,8 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 				//undoall, redoall (Edit, Undo and Redo Across Files), group and endgroup (the edits between as one),
 				//menu (Edit opened), explorer (Alt+1, the active file selected in Solution Explorer), renamable (what
 				//Rename would rename at the caret), rename:<name> (renamed, without its dialog), usages (Alt+F7, the tree
-				//printed) and usagegroups:<tpc> (Find Usages grouped by usage type, project and class, or none of them).
+				//printed), usagegroups:<tpc> (Find Usages grouped by usage type, project and class, or none of them),
+				//focus:usages (its tree focussed), select:<node> (its row of that node selected) and f4 (Jump to Source).
 				//What each open file's caret line then is is printed.
 				aszOpen.Init();
 				aszOpen.Split(getenv("HCP65_IDE_EDIT"), ',');

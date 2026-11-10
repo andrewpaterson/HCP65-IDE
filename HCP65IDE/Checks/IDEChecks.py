@@ -79,6 +79,10 @@ CHECKS = [
 		 r'^  CalcParentheses\.cpp  1$', r'^  CalcParentheses\.h  1$', r'^  Calculator\.cpp  3$', r'^    367: ', r'^    391: ', r'^    421: ',
 		 r'^Usages of IsParentheses and 1 override  3 usages$', r'^  Calculator\.cpp  3$', r'^    CCalculator  3$', r'^      367: '],
 		[r'BaseLib  ', r'Call  ']),
+	('usages-jump-to-source', {
+		#F4 in the Find Usages tree goes to the selected usage, as double clicking it does: the second of Calculator.cpp's.
+		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usages,focus:usages,select:3,f4'},
+		[r'^  Calculator\.cpp  3$', r'^    391: ', r'Calculator\.cpp \(focus\) line 391: '], []),
 	('rename-after-edits', {
 		'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'CARET': '36:2',
 		'EDIT': 'type:int i; ,rename:mpcCalc2,rename:mpcCalc3,renamable'},
