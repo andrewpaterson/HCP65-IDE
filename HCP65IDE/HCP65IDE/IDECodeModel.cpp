@@ -107,6 +107,42 @@ void KillIDELocations(CArrayIDELocations* pasLocations)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// psSource's place given to psDest with its file's name, which psSource
+// is left without: it is still to be killed, as it would have been.
+//
+//////////////////////////////////////////////////////////////////////////
+void MoveIDELocation(SIDELocation* psDest, SIDELocation* psSource)
+{
+	memcpy(psDest, psSource, sizeof(SIDELocation));
+	psSource->szFileName.Init();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The file's name in its path: what is after the last separator, of
+// either kind.
+//
+//////////////////////////////////////////////////////////////////////////
+const char* GetIDEFileNamePart(const char* szPath)
+{
+	const char*	szName;
+	const char*	szPosition;
+
+	szName = szPath;
+	for (szPosition = szPath; *szPosition != '\0'; szPosition++)
+	{
+		if ((*szPosition == '/') || (*szPosition == '\\'))
+		{
+			szName = szPosition + 1;
+		}
+	}
+	return szName;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // A worker thread indexing one file.
 //
 //////////////////////////////////////////////////////////////////////////

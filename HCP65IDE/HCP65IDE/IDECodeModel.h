@@ -242,6 +242,8 @@ protected:
 
 
 void KillIDELocations(CArrayIDELocations* pasLocations);
+void MoveIDELocation(SIDELocation* psDest, SIDELocation* psSource);
+const char* GetIDEFileNamePart(const char* szPath);
 void KillIDEEditedFiles(CArrayIDEEditedFiles* papsFiles);
 void GetIDESymbolName(const char* szKey, CChars* pszDest);
 

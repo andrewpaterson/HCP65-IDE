@@ -242,6 +242,25 @@ CHECKS = [
 		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp', 'CARET': '1:5', 'EDIT': 'usagegroups:,usages',
 		'DEBUG': 'edit:focus:editor,command:Navigate.NextOccurrence,edit:printselection,command:Navigate.GoToSource,edit:print'}),
 		[r'^Selection: \[F\] on line 3, caret line 3$', r'Kernel\.cpp \(focus\) line 1: '], [r'not enabled', r'No definition found']),
+	('usages-step-tree-order', dict(MakeUsagesKernel(), **{
+		#A class's lines are together under its node, so the tree's order isn't the file's: Control+Alt+Down steps down
+		#the tree, from line 2 to CA's other line, 4, before lines 3 and 5.
+		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp', 'CARET': '1:5', 'EDIT': 'usagegroups:c,usages',
+		'DEBUG': 'edit:focus:usages,command:Navigate.NextOccurrence,edit:printselected,command:Navigate.NextOccurrence,edit:printselected,'
+		         'command:Navigate.NextOccurrence,edit:printselected'}),
+		[r'^Usages of F  4 usages$', r'^  Kernel\.cpp  4$', r'^    CA  2$', r'^      2: class CA ', r'^      4: int CA::N', r'^    3: int G', r'^    5: int main',
+		 r'^Selected: 4: ', r'^Selected: 3: ', r'^Selected: 5: '], [r'not enabled']),
+	('usages-regroup-after-reindex', dict(MakeUsagesKernel(), **{
+		#A usage keeps the class it was found in: grouped by class while the index is being built again, CA's are still
+		#under CA.
+		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp', 'CARET': '1:5', 'EDIT': 'usagegroups:,usages,reindexall,usagegroups:c,printusages'}),
+		[r'^Usages of F  4 usages$', r'^  Kernel\.cpp  4$', r'^    2: ', r'^Usages of F  4 usages$', r'^  Kernel\.cpp  4$', r'^    CA  2$', r'^      2: ', r'^      4: '], []),
+	('usages-same-file-names', dict(MakeUsagesKernel(USAGES_KERNEL,
+		{'A/Same.cpp': 'int F(void);\nint SA(void) { return F(); }\n', 'B/Same.cpp': 'int F(void);\nint SB(void) { return F(); }\n'}), **{
+		#Files are in the order of their names, and two of one name are told apart by their folders, after their counts.
+		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp', 'CARET': '1:5', 'EDIT': 'usagegroups:,usages'}),
+		[r'^Usages of F  6 usages$', r'^  Kernel\.cpp  4$', r'^  Same\.cpp  1  .*[/\\]A$', r'^    2: int SA', r'^  Same\.cpp  1  .*[/\\]B$', r'^    2: int SB'],
+		[r'Kernel\.cpp  4  ']),
 	('usages-keys', {
 		#Find Usages' keys, and Jump to Source's, are bound: F4, Alt+F7 and Control+Alt+Down and Up.
 		'DEBUG': 'printkeys'},

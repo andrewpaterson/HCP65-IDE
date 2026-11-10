@@ -41,11 +41,43 @@ class CIDEContent;
 #define IDE_USAGES_BY_ALL		(IDE_USAGES_BY_TYPE | IDE_USAGES_BY_PROJECT | IDE_USAGES_BY_CLASS)
 
 
+//A usage Find Usages found: its place, and what the tree groups it by, its file's project and the class it is in.  They
+//are worked out when it is found, not when the tree is grouped: the index can have been built again by then.
+struct SIDEUsage
+{
+	SIDELocation	sLocation;
+	CChars			szProject;
+	CChars			szClass;	//Empty if it is in none.
+};
+
+
+typedef CArrayTemplate<SIDEUsage>	CArrayIDEUsages;
+
+
+//What was found of a symbol: its name, how many overrides it has (their usages are with its own) and the usages, in the
+//order of their files' names, then their lines and columns.  With bDeclarations its declarations and definition are
+//among them.
+struct SIDEFoundUsages
+{
+	CChars			szName;
+	size			uiOverrides;
+	bool			bDeclarations;
+	CArrayIDEUsages	asUsages;
+
+	void	Init(void);
+	void	Kill(void);
+	void	Clear(void);
+	void	AppendTitle(CChars* pszDest);
+};
+
+
+struct SIDEUsageRow;
 //IntelliJ's Find Usages (Alt+F7): every use of the symbol at the caret, not its declarations, in the Find Usages tool
 //window beside Build: a tree of how each is used (a call, a value read, a type in a field's declaration...), the
 //project, the file, the class in it, and each line, in the order it is in its file, which opens the place.  Check boxes
 //above it turn the usage type, project and class groups on and off; with them off it is files and their lines.  Find
-//All References (Shift+F12) shows its declarations and definition there too.
+//All References (Shift+F12) shows its declarations and definition there too.  Control+B on a declaration shows the
+//usages in a popup under the caret.
 class CIDEUsages : public CObject, public CIDESteppable
 {
 CONSTRUCTABLE(CIDEUsages);
@@ -58,13 +90,10 @@ protected:
 	Ptr<CCheckBox>		mpByType;
 	Ptr<CCheckBox>		mpByProject;
 	Ptr<CCheckBox>		mpByClass;
-	CArrayIDELocations	masUsages;  //Each line's place, by its node's data less one.
-	Ptr<CMenuContainer>	mpPopup;  //Control+B's usages on a declaration, made when it is first shown.
-	CArrayIDELocations	masPopupUsages;  //Each of its rows' place, by its row less one (the first row is its title).
-	CChars				mszName;  //The symbol found's name, and how many overrides it has, for the tree's top.
-	size				muiOverrides;
-	bool				mbDeclarations;  //Find All References: the declarations and definition are there.
+	SIDEFoundUsages		msFound;  //What the tree shows, if mbFound: each line's usage by its node's data less one.
 	bool				mbFound;  //Something has been looked for.
+	Ptr<CMenuContainer>	mpPopup;  //Control+B's usages on a declaration, made when it is first shown.
+	SIDEFoundUsages		msPopupFound;  //What the popup shows: each row's usage by its row less one (the first is its title).
 	uint8				muiGrouping;  //IDE_USAGES_BY_*.
 
 public:
@@ -94,7 +123,15 @@ public:
 	bool				Step(bool bNext, bool bKeepKeys) override;
 
 protected:
+	bool				Find(bool bDeclarations, SIDEFoundUsages* psDest);
 	void				ShowUsages(bool bKeepSelected);
+	int32				AddGroupNode(int32 iParent, const char* szName, size uiCount, const char* szWhat);
+	int32				AddFileNode(int32 iParent, SIDEUsageRow* pasRows, size uiRows, size uiFirst, size uiCount);
+	void				AddFileUsages(int32 iFile, SIDEUsageRow* pasRows, size uiCount);
+	void				AddUsageLine(int32 iParent, SIDEUsageRow* psRow);
+	int32				FindUsageNode(int64 iData);
+	SIDEUsage*			GetNodeUsage(int32 iNode);
+	void				OpenPopup(void);
 	void				UsageActivated(void);
 	void				ReturnToEditor(void);
 	void				PopupUsageClicked(CMenuItem* pcItem);

@@ -807,8 +807,9 @@ bool CIDEDocuments::FindSymbolAtCaret(CArrayIDELocations* pasDest, CChars* pszKe
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The text of a file's line (0 based), as its editor has it if it is
-// open, else as it is on the disk; trimmed, tabs as spaces.
+// The text of a file's line (0 based) appended to pszDest, as its editor
+// has it if it is open, else as it is on the disk; without the white
+// space at its ends, tabs as spaces.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEDocuments::GetFileLine(const char* szFileName, int iLine, CChars* pszDest)
@@ -818,6 +819,8 @@ void CIDEDocuments::GetFileLine(const char* szFileName, int iLine, CChars* pszDe
 	CTextFile			cFile;
 	char*				szPosition;
 	char*				szEnd;
+	size				uiStart;
+	size				uiPosition;
 	int					i;
 
 	pTab = FindTab(szFileName);
@@ -843,10 +846,24 @@ void CIDEDocuments::GetFileLine(const char* szFileName, int iLine, CChars* pszDe
 	if (szPosition)
 	{
 		szEnd = strchr(szPosition, '\n');
-		pszDest->AppendSubString(szPosition, szEnd ? szEnd : szPosition + strlen(szPosition));
-		pszDest->Replace('\r', ' ');
-		pszDest->Replace('\t', ' ');
-		pszDest->StripWhitespace(true);
+		szEnd = szEnd ? szEnd : szPosition + strlen(szPosition);
+		while ((szPosition < szEnd) && ((*szPosition == ' ') || (*szPosition == '\t')))
+		{
+			szPosition++;
+		}
+		while ((szEnd > szPosition) && ((szEnd[-1] == ' ') || (szEnd[-1] == '\t') || (szEnd[-1] == '\r')))
+		{
+			szEnd--;
+		}
+		uiStart = pszDest->Length();
+		pszDest->AppendSubString(szPosition, szEnd);
+		for (uiPosition = uiStart; uiPosition < pszDest->Length(); uiPosition++)
+		{
+			if (pszDest->Text()[uiPosition] == '\t')
+			{
+				pszDest->Text()[uiPosition] = ' ';
+			}
+		}
 	}
 	cFile.Kill();
 }

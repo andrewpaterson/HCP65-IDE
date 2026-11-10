@@ -19,8 +19,6 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 ** ------------------------------------------------------------------------ **/
 #include <stdlib.h>
-#include "BaseLib/FileUtil.h"
-#include "BaseLib/TextFile.h"
 #include "BaseLib/StringHelper.h"
 #include "StandardLib/ClassDefines.h"
 #include "WindowLib/GridContainer.h"
@@ -30,19 +28,6 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 #define IDE_USAGES_OPTION_GAP	16	//Between the grouping check boxes.
-
-
-//A usage, where Find Usages puts it: its usage type's group, its project and the class it is in, for sorting the tree.
-struct SIDEUsage
-{
-	int				iType;
-	CChars			szProject;
-	CChars			szClass;
-	SIDELocation*	psLocation;
-	size			uiIndex;
-	bool			bByType;
-	bool			bByProject;
-};
 
 
 //A usage type's group in the tree: where it goes among the others and what it is called.
@@ -75,6 +60,31 @@ static const SIDEUsageType	gasIDEUsageTypes[] =
 static_assert(sizeof(gasIDEUsageTypes) / sizeof(SIDEUsageType) == CPPUT_NumUsageTypes, "Each ECPPUsageType needs its group in gasIDEUsageTypes.");
 
 
+//The tree's groups above a file's lines, the outermost first: a row is in a group with those before it that are the
+//same in it and in the groups outside it.
+enum EIDEUsageLevel
+{
+	IUL_Type,
+	IUL_Project,
+	IUL_File,
+};
+
+
+//A usage as the tree sorts it: by its usage type's rank and its project, each only if the tree groups by it (0 and ""
+//if not), then in the order it was found in, which is by file and line.
+struct SIDEUsageRow
+{
+	SIDEUsage*	psUsage;
+	size		uiIndex;	//Its usage's, in what was found.
+	int			iType;
+	const char*	szProject;
+	bool		bShown;		//Its line is in the tree.
+};
+
+
+typedef CArrayTemplate<SIDEUsageRow>	CArrayIDEUsageRows;
+
+
 //////////////////////////////////////////////////////////////////////////
 //
 // A place's usage type group: its definition's, a declaration's, or that
@@ -97,42 +107,31 @@ static const SIDEUsageType* GetIDEUsageType(SIDELocation* psLocation)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The groups that are on, by usage type then project, then the files
-// (whatever their case), then each file's lines and columns in order.
+// The order usages are kept in, and the popup shows them in: by their
+// files' names (whatever their case), files of one name by their paths,
+// then by line and column.
 //
 //////////////////////////////////////////////////////////////////////////
 static int __cdecl CompareIDEUsages(const void* pv1, const void* pv2)
 {
-	SIDEUsage*	ps1;
-	SIDEUsage*	ps2;
-	int			iResult;
+	SIDELocation*	ps1;
+	SIDELocation*	ps2;
+	int				iResult;
 
-	ps1 = (SIDEUsage*)pv1;
-	ps2 = (SIDEUsage*)pv2;
-	iResult = 0;
-	if (ps1->bByType)
-	{
-		iResult = (ps1->iType != ps2->iType) ? ((ps1->iType < ps2->iType) ? -1 : 1) : 0;
-	}
-	if ((iResult == 0) && ps1->bByProject)
-	{
-		iResult = StringInsensitiveCompare(ps1->szProject.Text(), ps2->szProject.Text());
-	}
+	ps1 = &((SIDEUsage*)pv1)->sLocation;
+	ps2 = &((SIDEUsage*)pv2)->sLocation;
+	iResult = StringInsensitiveCompare(GetIDEFileNamePart(ps1->szFileName.Text()), GetIDEFileNamePart(ps2->szFileName.Text()));
 	if (iResult == 0)
 	{
-		iResult = StringInsensitiveCompare(ps1->psLocation->szFileName.Text(), ps2->psLocation->szFileName.Text());
+		iResult = StringInsensitiveCompare(ps1->szFileName.Text(), ps2->szFileName.Text());
 	}
-	if (iResult == 0)
+	if ((iResult == 0) && (ps1->iLine != ps2->iLine))
 	{
-		iResult = (ps1->psLocation->iLine != ps2->psLocation->iLine) ? ((ps1->psLocation->iLine < ps2->psLocation->iLine) ? -1 : 1) : 0;
+		iResult = (ps1->iLine < ps2->iLine) ? -1 : 1;
 	}
-	if (iResult == 0)
+	if ((iResult == 0) && (ps1->iColumn != ps2->iColumn))
 	{
-		iResult = (ps1->psLocation->iColumn != ps2->psLocation->iColumn) ? ((ps1->psLocation->iColumn < ps2->psLocation->iColumn) ? -1 : 1) : 0;
-	}
-	if (iResult == 0)
-	{
-		iResult = (ps1->uiIndex != ps2->uiIndex) ? ((ps1->uiIndex < ps2->uiIndex) ? -1 : 1) : 0;
+		iResult = (ps1->iColumn < ps2->iColumn) ? -1 : 1;
 	}
 	return iResult;
 }
@@ -140,15 +139,173 @@ static int __cdecl CompareIDEUsages(const void* pv1, const void* pv2)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// " 3 usages" after a group's name, or " 1 usage".
+// The order of the tree's rows: by the groups above the files that are
+// on, then as the usages were found.
+//
+//////////////////////////////////////////////////////////////////////////
+static int __cdecl CompareIDEUsageRows(const void* pv1, const void* pv2)
+{
+	SIDEUsageRow*	ps1;
+	SIDEUsageRow*	ps2;
+	int				iResult;
+
+	ps1 = (SIDEUsageRow*)pv1;
+	ps2 = (SIDEUsageRow*)pv2;
+	if (ps1->iType != ps2->iType)
+	{
+		return (ps1->iType < ps2->iType) ? -1 : 1;
+	}
+	iResult = StringInsensitiveCompare(ps1->szProject, ps2->szProject);
+	if (iResult != 0)
+	{
+		return iResult;
+	}
+	return (ps1->uiIndex < ps2->uiIndex) ? -1 : ((ps1->uiIndex > ps2->uiIndex) ? 1 : 0);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether two rows are in the same group at eLevel: the same usage type,
+// and for a project's group the same project, and for a file's the same
+// file.  A group the tree doesn't have is the same for every row.
+//
+//////////////////////////////////////////////////////////////////////////
+static bool IsSameIDEUsageGroup(SIDEUsageRow* ps1, SIDEUsageRow* ps2, EIDEUsageLevel eLevel)
+{
+	if (ps1->iType != ps2->iType)
+	{
+		return false;
+	}
+	if ((eLevel >= IUL_Project) && (StringInsensitiveCompare(ps1->szProject, ps2->szProject) != 0))
+	{
+		return false;
+	}
+	return (eLevel < IUL_File) || ps1->psUsage->sLocation.szFileName.EqualsIgnoreCase(ps2->psUsage->sLocation.szFileName);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// How many of pasRows, from its first, are in the first's group at eLevel.
+//
+//////////////////////////////////////////////////////////////////////////
+static size CountIDEUsageGroup(SIDEUsageRow* pasRows, size uiRows, EIDEUsageLevel eLevel)
+{
+	size	uiCount;
+
+	for (uiCount = 1; (uiCount < uiRows) && IsSameIDEUsageGroup(&pasRows[0], &pasRows[uiCount], eLevel); uiCount++)
+	{
+	}
+	return uiCount;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether two rows' files are different files of one name under the same
+// usage type and project, where only their folders tell them apart.
+//
+//////////////////////////////////////////////////////////////////////////
+static bool IsSameIDEUsageFileName(SIDEUsageRow* ps1, SIDEUsageRow* ps2)
+{
+	return IsSameIDEUsageGroup(ps1, ps2, IUL_Project) && !IsSameIDEUsageGroup(ps1, ps2, IUL_File) &&
+		(StringInsensitiveCompare(GetIDEFileNamePart(ps1->psUsage->sLocation.szFileName.Text()), GetIDEFileNamePart(ps2->psUsage->sLocation.szFileName.Text())) == 0);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// "  3 usages" after a group's name, or "  1 usage"; "  3" alone if
+// szWhat is NULL.
 //
 //////////////////////////////////////////////////////////////////////////
 static void AppendIDEUsageCount(CChars* pszDest, size uiCount, const char* szWhat)
 {
 	pszDest->Append("  ");
 	pszDest->Append((int)uiCount);
-	pszDest->Append(szWhat);
-	pszDest->Append(uiCount == 1 ? "" : "s");
+	if (szWhat)
+	{
+		pszDest->Append(szWhat);
+		pszDest->Append(uiCount == 1 ? "" : "s");
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void SIDEFoundUsages::Init(void)
+{
+	szName.Init();
+	uiOverrides = 0;
+	bDeclarations = false;
+	asUsages.Init();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void SIDEFoundUsages::Kill(void)
+{
+	size		i;
+	SIDEUsage*	psUsage;
+
+	for (i = 0; i < asUsages.NumElements(); i++)
+	{
+		psUsage = asUsages.Get(i);
+		psUsage->szClass.Kill();
+		psUsage->szProject.Kill();
+		psUsage->sLocation.szFileName.Kill();
+	}
+	asUsages.Kill();
+	szName.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Nothing is found.
+//
+//////////////////////////////////////////////////////////////////////////
+void SIDEFoundUsages::Clear(void)
+{
+	Kill();
+	Init();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// What was found, as the tree's top and the popup's first row say it:
+// "Usages of IsParentheses and 1 override  3 usages", or "No usages of
+// IsParentheses"; "References to" with the declarations.
+//
+//////////////////////////////////////////////////////////////////////////
+void SIDEFoundUsages::AppendTitle(CChars* pszDest)
+{
+	if (bDeclarations)
+	{
+		pszDest->Append(asUsages.NumElements() == 0 ? "No references to " : "References to ");
+	}
+	else
+	{
+		pszDest->Append(asUsages.NumElements() == 0 ? "No usages of " : "Usages of ");
+	}
+	pszDest->Append(szName);
+	if (uiOverrides > 0)
+	{
+		pszDest->Append(" and ");
+		pszDest->Append((int)uiOverrides);
+		pszDest->Append(uiOverrides == 1 ? " override" : " overrides");
+	}
+	if (asUsages.NumElements() > 0)
+	{
+		AppendIDEUsageCount(pszDest, asUsages.NumElements(), bDeclarations ? " reference" : " usage");
+	}
 }
 
 
@@ -161,12 +318,9 @@ void CIDEUsages::Init(CIDEContent* pcContent)
 {
 	PreInit();
 	mpcContent = pcContent;
-	masUsages.Init();
-	masPopupUsages.Init();
-	mszName.Init();
-	muiOverrides = 0;
-	mbDeclarations = false;
+	msFound.Init();
 	mbFound = false;
+	msPopupFound.Init();
 	muiGrouping = IDE_USAGES_BY_ALL;
 	PostInit();
 }
@@ -185,13 +339,10 @@ void CIDEUsages::Class(void)
 	M_Pointer(mpByType);
 	M_Pointer(mpByProject);
 	M_Pointer(mpByClass);
-	U_Unknown(CArrayIDELocations, masUsages);
-	M_Pointer(mpPopup);
-	U_Unknown(CArrayIDELocations, masPopupUsages);
-	U_String(mszName);
-	U_Size(muiOverrides);
-	U_Bool(mbDeclarations);
+	U_Unknown(SIDEFoundUsages, msFound);
 	U_Bool(mbFound);
+	M_Pointer(mpPopup);
+	U_Unknown(SIDEFoundUsages, msPopupFound);
 	U_UInt8(muiGrouping);
 }
 
@@ -223,9 +374,8 @@ void CIDEUsages::Free(void)
 	{
 		mpPopup->GetItemClickEvent()->Remove(this);
 	}
-	KillIDELocations(&masPopupUsages);
-	KillIDELocations(&masUsages);
-	mszName.Kill();
+	msPopupFound.Kill();
+	msFound.Kill();
 }
 
 
@@ -290,19 +440,20 @@ void CIDEUsages::CreatePane(SDockPlace* psPlace)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Alt+F7, IntelliJ's Find Usages: every use of the symbol at the caret
-// (not its declarations and definition), and of its overrides and what it
-// overrides if it is a virtual member function, in the Find Usages tree
-// (ShowUsages).  With bDeclarations (Shift+F12, Visual Studio's Find All
-// References) its declarations and definition too.  False if there is no
-// symbol at the caret.
+// Every use of the symbol at the caret (not its declarations and
+// definition, unless bDeclarations), and of its overrides and what it
+// overrides if it is a virtual member function, as IntelliJ's hierarchy
+// has them, in psDest, each with the project and class the tree groups it
+// by, in the order they are kept in (CompareIDEUsages).  False, with
+// psDest as it was, if no symbol is named at the caret.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEUsages::FindUsages(bool bDeclarations)
+bool CIDEUsages::Find(bool bDeclarations, SIDEFoundUsages* psDest)
 {
 	CArrayIDELocations	asLocations;
 	CChars				szKey;
 	SIDELocation*		psLocation;
+	SIDEUsage*			psUsage;
 	size				i;
 
 	mpcContent->GetDocuments()->UpdateEditedTabsNow();
@@ -312,32 +463,48 @@ bool CIDEUsages::FindUsages(bool bDeclarations)
 	{
 		KillIDELocations(&asLocations);
 		szKey.Kill();
-		mpcContent->ShowStatus(bDeclarations ? "No references found at the caret." : "No usages found at the caret.");
 		return false;
 	}
 
-	//A virtual member function's overrides (and what it overrides) are used where it is, as IntelliJ's hierarchy.
-	muiOverrides = mpcContent->GetCodeModel()->FindOverrideLocations(szKey.Text(), &asLocations);
+	psDest->Kill();
+	psDest->uiOverrides = mpcContent->GetCodeModel()->FindOverrideLocations(szKey.Text(), &asLocations);
+	psDest->bDeclarations = bDeclarations;
+	GetIDESymbolName(szKey.Text(), &psDest->szName);
+	szKey.Kill();
 
-	//The usages are kept for opening; the declarations and definitions are only kept if asked for.
-	KillIDELocations(&masUsages);
-	masUsages.Init();
+	psDest->asUsages.Init();
 	for (i = 0; i < asLocations.NumElements(); i++)
 	{
 		psLocation = asLocations.Get(i);
 		if (bDeclarations || (psLocation->uiRole == CPPIR_Reference))
 		{
-			memcpy(masUsages.Add(), psLocation, sizeof(SIDELocation));
-			psLocation->szFileName.Init();
+			psUsage = psDest->asUsages.Add();
+			MoveIDELocation(&psUsage->sLocation, psLocation);
+			mpcContent->GetCodeModel()->GetUsageGroup(&psUsage->sLocation, &psUsage->szProject, &psUsage->szClass);
 		}
 	}
 	KillIDELocations(&asLocations);
+	qsort(psDest->asUsages.GetData(), psDest->asUsages.NumElements(), sizeof(SIDEUsage), CompareIDEUsages);
+	return true;
+}
 
-	mszName.Kill();
-	mszName.Init();
-	GetIDESymbolName(szKey.Text(), &mszName);
-	szKey.Kill();
-	mbDeclarations = bDeclarations;
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Alt+F7, IntelliJ's Find Usages: what Find finds of the symbol at the
+// caret, in the Find Usages tree (ShowUsages), which is given the keys.
+// With bDeclarations (Shift+F12, Visual Studio's Find All References) its
+// declarations and definition too.  False if there is no symbol at the
+// caret.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEUsages::FindUsages(bool bDeclarations)
+{
+	if (!Find(bDeclarations, &msFound))
+	{
+		mpcContent->ShowStatus(bDeclarations ? "No references found at the caret." : "No usages found at the caret.");
+		return false;
+	}
 	mbFound = true;
 
 	ShowUsages(false);
@@ -367,105 +534,37 @@ bool CIDEUsages::IsOnOwnDeclaration(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The order of the popup's usages: by file, then line, then column.
-//
-//////////////////////////////////////////////////////////////////////////
-static int __cdecl CompareIDEPopupUsages(const void* pv1, const void* pv2)
-{
-	SIDELocation*	ps1;
-	SIDELocation*	ps2;
-	int				iResult;
-
-	ps1 = (SIDELocation*)pv1;
-	ps2 = (SIDELocation*)pv2;
-	iResult = StringInsensitiveCompare(ps1->szFileName.Text(), ps2->szFileName.Text());
-	if (iResult != 0)
-	{
-		return iResult;
-	}
-	if (ps1->iLine != ps2->iLine)
-	{
-		return (ps1->iLine < ps2->iLine) ? -1 : 1;
-	}
-	return (ps1->iColumn < ps2->iColumn) ? -1 : ((ps1->iColumn > ps2->iColumn) ? 1 : 0);
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
 // Control+B on a declaration or the definition, as IntelliJ's: a small
 // popup under the caret of the symbol's usages (and its overrides', as
 // Find Usages has), the first selected, "Calculator.cpp:367  the line";
-// Enter or a click goes to one.  It is at most a third of the screen's
-// height and no taller than the editor's view; more usages scroll.  With only one it is gone to; with none
+// Enter or a click goes to one.  With only one it is gone to; with none
 // the status line says so.  False if no symbol is named at the caret.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEUsages::ShowUsagesPopup(void)
 {
-	CArrayIDELocations	asLocations;
-	CChars				szKey;
-	CChars				szName;
-	CChars				szText;
-	CChars				szFile;
-	CChars				szLine;
-	CFileUtil			cFileUtil;
-	SIDELocation*		psLocation;
-	Ptr<CIDEEditorTab>	pTab;
-	Ptr<CTextArea>		pEditor;
-	CInt32Rect			cBounds;
-	CInt32Rect			cCaret;
-	CInt32Rect			cScreen;
-	SInt32Vec2			sPosition;
-	Ptr<CPopup>			pPopup;
-	int32				iMaximum;
-	int32				iView;
-	size				uiOverrides;
-	size				i;
+	CChars		szText;
+	SIDEUsage*	psUsage;
+	size		i;
 
-	mpcContent->GetDocuments()->UpdateEditedTabsNow();
-	asLocations.Init();
-	szKey.Init();
-	if (!mpcContent->GetDocuments()->FindSymbolAtCaret(&asLocations, &szKey))
+	if (!Find(false, &msPopupFound))
 	{
-		KillIDELocations(&asLocations);
-		szKey.Kill();
 		return false;
 	}
-	uiOverrides = mpcContent->GetCodeModel()->FindOverrideLocations(szKey.Text(), &asLocations);
-	szName.Init();
-	GetIDESymbolName(szKey.Text(), &szName);
-	szKey.Kill();
-
-	KillIDELocations(&masPopupUsages);
-	masPopupUsages.Init();
-	for (i = 0; i < asLocations.NumElements(); i++)
+	if (msPopupFound.asUsages.NumElements() == 0)
 	{
-		psLocation = asLocations.Get(i);
-		if (psLocation->uiRole == CPPIR_Reference)
-		{
-			memcpy(masPopupUsages.Add(), psLocation, sizeof(SIDELocation));
-			psLocation->szFileName.Init();
-		}
-	}
-	KillIDELocations(&asLocations);
-	qsort(masPopupUsages.GetData(), masPopupUsages.NumElements(), sizeof(SIDELocation), CompareIDEPopupUsages);
-
-	if (masPopupUsages.NumElements() == 0)
-	{
-		szText.Init("No usages of ");
-		szText.Append(szName);
+		szText.Init();
+		msPopupFound.AppendTitle(&szText);
 		szText.Append(".");
 		mpcContent->ShowStatus(szText.Text());
 		szText.Kill();
-		szName.Kill();
 		return true;
 	}
-	if (masPopupUsages.NumElements() == 1)
+	if (msPopupFound.asUsages.NumElements() == 1)
 	{
-		szName.Kill();
-		mpcContent->GetDocuments()->OpenLocation(masPopupUsages.Get(0));
-		mpcContent->GetDocuments()->SelectAtCaret((size)masPopupUsages.Get(0)->iLength);
+		psUsage = msPopupFound.asUsages.Get(0);
+		mpcContent->GetDocuments()->OpenLocation(&psUsage->sLocation);
+		mpcContent->GetDocuments()->SelectAtCaret((size)psUsage->sLocation.iLength);
 		return true;
 	}
 
@@ -475,38 +574,45 @@ bool CIDEUsages::ShowUsagesPopup(void)
 		mpPopup->GetItemClickEvent()->Add(this, &CIDEUsages::PopupUsageClicked);
 	}
 	mpPopup->RemoveAllItems();
-	szText.Init("Usages of ");
-	szText.Append(szName);
-	if (uiOverrides > 0)
-	{
-		szText.Append(" and ");
-		szText.Append((int)uiOverrides);
-		szText.Append(uiOverrides == 1 ? " override" : " overrides");
-	}
-	AppendIDEUsageCount(&szText, masPopupUsages.NumElements(), " usage");
+	szText.Init();
+	msPopupFound.AppendTitle(&szText);
 	mpPopup->AddItem(szText.Text())->SetEnabled(false);
 	szText.Kill();
-	szName.Kill();
-	for (i = 0; i < masPopupUsages.NumElements(); i++)
+	for (i = 0; i < msPopupFound.asUsages.NumElements(); i++)
 	{
-		psLocation = masPopupUsages.Get(i);
-		szFile.Init();
-		cFileUtil.GetFileName(&szFile, psLocation->szFileName.Text());
-		szText.Init(szFile);
+		psUsage = msPopupFound.asUsages.Get(i);
+		szText.Init(GetIDEFileNamePart(psUsage->sLocation.szFileName.Text()));
 		szText.Append(':');
-		szText.Append(psLocation->iLine + 1);
+		szText.Append(psUsage->sLocation.iLine + 1);
 		szText.Append("  ");
-		szLine.Init();
-		mpcContent->GetDocuments()->GetFileLine(psLocation->szFileName.Text(), psLocation->iLine, &szLine);
-		szLine.StripWhitespace();
-		szText.Append(szLine);
+		mpcContent->GetDocuments()->GetFileLine(psUsage->sLocation.szFileName.Text(), psUsage->sLocation.iLine, &szText);
 		mpPopup->AddItem(szText.Text());
-		szLine.Kill();
 		szText.Kill();
-		szFile.Kill();
 	}
+	OpenPopup();
+	return true;
+}
 
-	//Under the caret, as IntelliJ's.
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The popup opened under the active editor's caret, as IntelliJ's, its
+// first usage selected.  It is at most a third of the screen's height and
+// no taller than the editor's view: more usages scroll.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEUsages::OpenPopup(void)
+{
+	Ptr<CIDEEditorTab>	pTab;
+	Ptr<CTextArea>		pEditor;
+	Ptr<CPopup>			pPopup;
+	CInt32Rect			cBounds;
+	CInt32Rect			cCaret;
+	CInt32Rect			cScreen;
+	SInt32Vec2			sPosition;
+	int32				iMaximum;
+	int32				iView;
+
 	pTab = mpcContent->GetDocuments()->GetActiveTab();
 	pEditor = pTab->GetEditor();
 	pEditor->GetActualBounds(&cBounds);
@@ -514,7 +620,6 @@ bool CIDEUsages::ShowUsagesPopup(void)
 	sPosition.Init(cBounds.GetLeft() + cCaret.GetLeft(), cBounds.GetTop() + cCaret.GetBottom());
 	pPopup = mpPopup->Open(sPosition, pEditor, true);
 
-	//At most a third of the screen's height, and no taller than the editor's view: more usages scroll.
 	iMaximum = -1;
 	if (mpcContent->GetWindow()->GetScreenArea(&cScreen) && (cScreen.GetHeight() > 0))
 	{
@@ -530,7 +635,6 @@ bool CIDEUsages::ShowUsagesPopup(void)
 		pPopup->SetMaximumHeight(iMaximum, mpcContent->GetTheme());
 	}
 	mpPopup->Select(1);
-	return true;
 }
 
 
@@ -541,18 +645,18 @@ bool CIDEUsages::ShowUsagesPopup(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDEUsages::PopupUsageClicked(CMenuItem* pcItem)
 {
-	size			i;
-	SIDELocation*	psLocation;
+	size		i;
+	SIDEUsage*	psUsage;
 
 	for (i = 1; i < mpPopup->NumItems(); i++)
 	{
 		if (&mpPopup->GetItem(i) == pcItem)
 		{
-			if (i - 1 < masPopupUsages.NumElements())
+			if (i - 1 < msPopupFound.asUsages.NumElements())
 			{
-				psLocation = masPopupUsages.Get(i - 1);
-				mpcContent->GetDocuments()->OpenLocation(psLocation);
-				mpcContent->GetDocuments()->SelectAtCaret((size)psLocation->iLength);
+				psUsage = msPopupFound.asUsages.Get(i - 1);
+				mpcContent->GetDocuments()->OpenLocation(&psUsage->sLocation);
+				mpcContent->GetDocuments()->SelectAtCaret((size)psUsage->sLocation.iLength);
 			}
 			return;
 		}
@@ -568,45 +672,35 @@ Ptr<CMenuContainer> CIDEUsages::GetUsagesPopup(void) { return mpPopup; }
 // What was found, in the tree: its top says what was looked for, then
 // the groups that are on (the usage type, then the project), each file,
 // the classes in it if they are grouped, and each line, in the order the
-// file has them.  A class's lines are under it, where it first has one.
-// The first line is selected, for F4 to go to, or with bKeepSelected the
-// usage that was, if one was: the same usages grouped again.
+// file has them.  The nodes are added in the order the tree shows them,
+// so a step to the next node is a step down the tree.  The first line is
+// selected, for F4 to go to, or with bKeepSelected the usage that was, if
+// one was: the same usages grouped again.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEUsages::ShowUsages(bool bKeepSelected)
 {
-	CChars			szText;
-	CChars			szFile;
-	SIDEUsage*		asUsages;
-	SIDEUsage*		psUsage;
-	size			uiUsages;
-	size			i;
-	size			j;
-	size			uiCount;
-	int32			iRoot;
-	int32			iParent;
-	int32			iType;
-	int32			iProject;
-	int32			iFile;
-	int32			iClass;
-	CFileUtil		cFileUtil;
-	CArrayChars		aszClasses;
-	CArrayInt		aiClassNodes;
-	size			uiIndexed;
-	size			uiToIndex;
-	const char*		szWhat;
-	bool			bByType;
-	bool			bByProject;
-	bool			bByClass;
-	bool			bNewType;
-	bool			bNewProject;
-	bool			bNewFile;
-	size			uiClass;
-	int64			iSelectedData;
-	int32			iNode;
-	int32			iFirstLine;
-	int32			iSelect;
+	CArrayIDEUsageRows	asRows;
+	SIDEUsageRow*		psRow;
+	CChars				szText;
+	const char*			szWhat;
+	size				uiIndexed;
+	size				uiToIndex;
+	size				uiRows;
+	size				uiFile;
+	size				i;
+	int64				iSelectedData;
+	int32				iRoot;
+	int32				iType;
+	int32				iProject;
+	int32				iNode;
+	bool				bByType;
+	bool				bByProject;
 
+	if (mpUsages.IsNull())
+	{
+		return;
+	}
 	iSelectedData = 0;
 	if (bKeepSelected && (mpUsages->GetSelectedNode() != TREE_NO_NODE))
 	{
@@ -617,48 +711,25 @@ void CIDEUsages::ShowUsages(bool bKeepSelected)
 	{
 		return;
 	}
-	iFirstLine = TREE_NO_NODE;
-	iSelect = TREE_NO_NODE;
 
 	bByType = (muiGrouping & IDE_USAGES_BY_TYPE) != 0;
 	bByProject = (muiGrouping & IDE_USAGES_BY_PROJECT) != 0;
-	bByClass = (muiGrouping & IDE_USAGES_BY_CLASS) != 0;
-	uiUsages = masUsages.NumElements();
-	asUsages = (SIDEUsage*)malloc((uiUsages > 0 ? uiUsages : 1) * sizeof(SIDEUsage));
-	for (i = 0; i < uiUsages; i++)
+	uiRows = msFound.asUsages.NumElements();
+	asRows.Init();
+	for (i = 0; i < uiRows; i++)
 	{
-		psUsage = &asUsages[i];
-		psUsage->psLocation = masUsages.Get(i);
-		psUsage->uiIndex = i;
-		psUsage->iType = GetIDEUsageType(psUsage->psLocation)->iRank;
-		psUsage->bByType = bByType;
-		psUsage->bByProject = bByProject;
-		mpcContent->GetCodeModel()->GetUsageGroup(psUsage->psLocation, &psUsage->szProject, &psUsage->szClass);
+		psRow = asRows.Add();
+		psRow->psUsage = msFound.asUsages.Get(i);
+		psRow->uiIndex = i;
+		psRow->iType = bByType ? GetIDEUsageType(&psRow->psUsage->sLocation)->iRank : 0;
+		psRow->szProject = bByProject ? psRow->psUsage->szProject.Text() : "";
+		psRow->bShown = false;
 	}
-	qsort(asUsages, uiUsages, sizeof(SIDEUsage), CompareIDEUsages);
-
-	szWhat = mbDeclarations ? " reference" : " usage";
-	if (mbDeclarations)
-	{
-		szText.Init(uiUsages == 0 ? "No references to " : "References to ");
-	}
-	else
-	{
-		szText.Init(uiUsages == 0 ? "No usages of " : "Usages of ");
-	}
-	szText.Append(mszName);
-	if (muiOverrides > 0)
-	{
-		szText.Append(" and ");
-		szText.Append((int)muiOverrides);
-		szText.Append(muiOverrides == 1 ? " override" : " overrides");
-	}
-	if (uiUsages > 0)
-	{
-		AppendIDEUsageCount(&szText, uiUsages, szWhat);
-	}
+	qsort(asRows.GetData(), uiRows, sizeof(SIDEUsageRow), CompareIDEUsageRows);
 
 	//Until every file is indexed some may be missing.
+	szText.Init();
+	msFound.AppendTitle(&szText);
 	mpcContent->GetCodeModel()->GetIndexingProgress(&uiIndexed, &uiToIndex);
 	if (uiIndexed < uiToIndex)
 	{
@@ -671,125 +742,210 @@ void CIDEUsages::ShowUsages(bool bKeepSelected)
 	iRoot = mpUsages->AddNode(TREE_NO_NODE, szText.Text(), NULL, 0);
 	szText.Kill();
 
+	szWhat = msFound.bDeclarations ? " reference" : " usage";
 	iType = iRoot;
 	iProject = iRoot;
-	iFile = iRoot;
-	aszClasses.Init();
-	aiClassNodes.Init();
-	for (i = 0; i < uiUsages; i++)
+	for (i = 0; i < uiRows; i += uiFile)
 	{
-		psUsage = &asUsages[i];
-		bNewType = bByType && ((i == 0) || (psUsage->iType != asUsages[i - 1].iType));
-		bNewProject = bByProject && (bNewType || (i == 0) || !psUsage->szProject.Equals(asUsages[i - 1].szProject));
-		bNewFile = bNewType || bNewProject || (i == 0) || !psUsage->psLocation->szFileName.EqualsIgnoreCase(asUsages[i - 1].psLocation->szFileName);
-
-		if (bNewType)
+		psRow = asRows.Get(i);
+		if (bByType && ((i == 0) || !IsSameIDEUsageGroup(psRow, asRows.Get(i - 1), IUL_Type)))
 		{
-			for (uiCount = 0, j = i; (j < uiUsages) && (asUsages[j].iType == psUsage->iType); j++, uiCount++)
-			{
-			}
-			szText.Init(GetIDEUsageType(psUsage->psLocation)->szName);
-			AppendIDEUsageCount(&szText, uiCount, szWhat);
-			iType = mpUsages->AddNode(iRoot, szText.Text(), NULL, 0);
-			szText.Kill();
+			iType = AddGroupNode(iRoot, GetIDEUsageType(&psRow->psUsage->sLocation)->szName, CountIDEUsageGroup(psRow, uiRows - i, IUL_Type), szWhat);
+			iProject = iType;
 		}
-		if (bNewProject)
+		if (bByProject && ((i == 0) || !IsSameIDEUsageGroup(psRow, asRows.Get(i - 1), IUL_Project)))
 		{
-			for (uiCount = 0, j = i; (j < uiUsages) && (!bByType || (asUsages[j].iType == psUsage->iType)) && asUsages[j].szProject.Equals(psUsage->szProject); j++, uiCount++)
-			{
-			}
-			szText.Init(psUsage->szProject);
-			AppendIDEUsageCount(&szText, uiCount, szWhat);
-			iProject = mpUsages->AddNode(bByType ? iType : iRoot, szText.Text(), NULL, 0);
-			szText.Kill();
+			iProject = AddGroupNode(iType, psRow->szProject, CountIDEUsageGroup(psRow, uiRows - i, IUL_Project), szWhat);
 		}
-		if (bNewFile)
-		{
-			for (uiCount = 0, j = i; (j < uiUsages) && (!bByType || (asUsages[j].iType == psUsage->iType)) && (!bByProject || asUsages[j].szProject.Equals(psUsage->szProject)) && asUsages[j].psLocation->szFileName.EqualsIgnoreCase(psUsage->psLocation->szFileName); j++, uiCount++)
-			{
-			}
-			szFile.Init();
-			cFileUtil.GetFileName(&szFile, psUsage->psLocation->szFileName.Text());
-			szText.Init(szFile);
-			szText.Append("  ");
-			szText.Append((int)uiCount);
-			iFile = mpUsages->AddNode(bByProject ? iProject : (bByType ? iType : iRoot), szText.Text(), NULL, 0);
-			szText.Kill();
-			szFile.Kill();
-
-			//The file's lines, from its first, under the classes they are in.
-			aszClasses.ReInit();
-			aiClassNodes.Kill();
-			aiClassNodes.Init();
-		}
-
-		iParent = iFile;
-		if (bByClass && !psUsage->szClass.Empty())
-		{
-			uiClass = aszClasses.GetIndex(psUsage->szClass.Text());
-			if (uiClass == ARRAY_ELEMENT_NOT_FOUND)
-			{
-				for (uiCount = 0, j = i; (j < uiUsages) && (!bByType || (asUsages[j].iType == psUsage->iType)) && (!bByProject || asUsages[j].szProject.Equals(psUsage->szProject)) && asUsages[j].psLocation->szFileName.EqualsIgnoreCase(psUsage->psLocation->szFileName); j++)
-				{
-					if (asUsages[j].szClass.Equals(psUsage->szClass))
-					{
-						uiCount++;
-					}
-				}
-				szText.Init(psUsage->szClass);
-				szText.Append("  ");
-				szText.Append((int)uiCount);
-				iClass = mpUsages->AddNode(iFile, szText.Text(), NULL, 0);
-				szText.Kill();
-				aszClasses.Add(psUsage->szClass.Text());
-				aiClassNodes.Add(iClass);
-				uiClass = aszClasses.NumElements() - 1;
-			}
-			iParent = aiClassNodes.GetValue(uiClass);
-		}
-
-		//"36: the line", the usage's index (plus one) its data.
-		szText.Init();
-		szText.Append(psUsage->psLocation->iLine + 1);
-		szText.Append(": ");
-		mpcContent->GetDocuments()->GetFileLine(psUsage->psLocation->szFileName.Text(), psUsage->psLocation->iLine, &szText);
-		if (!bByType)
-		{
-			if (psUsage->psLocation->uiRole == CPPIR_Definition)
-			{
-				szText.Append("  [definition]");
-			}
-			else if (psUsage->psLocation->uiRole == CPPIR_Declaration)
-			{
-				szText.Append("  [declaration]");
-			}
-		}
-		if (psUsage->psLocation->uiFlags & CPPIF_AMBIGUOUS)
-		{
-			szText.Append("  [one of the overloads]");
-		}
-		iNode = mpUsages->AddNode(iParent, szText.Text(), NULL, (int64)psUsage->uiIndex + 1);
-		szText.Kill();
-		if (iFirstLine == TREE_NO_NODE)
-		{
-			iFirstLine = iNode;
-		}
-		if ((iSelectedData > 0) && ((int64)psUsage->uiIndex + 1 == iSelectedData))
-		{
-			iSelect = iNode;
-		}
+		uiFile = CountIDEUsageGroup(psRow, uiRows - i, IUL_File);
+		AddFileUsages(AddFileNode(iProject, asRows.GetData(), uiRows, i, uiFile), psRow, uiFile);
 	}
-	aiClassNodes.Kill();
-	aszClasses.Kill();
-	for (i = 0; i < uiUsages; i++)
-	{
-		asUsages[i].szClass.Kill();
-		asUsages[i].szProject.Kill();
-	}
-	free(asUsages);
+	asRows.Kill();
 
 	mpUsages->ExpandAll();
-	mpUsages->SelectNode((iSelect != TREE_NO_NODE) ? iSelect : iFirstLine);
+	iNode = (iSelectedData > 0) ? FindUsageNode(iSelectedData) : TREE_NO_NODE;
+	mpUsages->SelectNode((iNode != TREE_NO_NODE) ? iNode : FindUsageNode(0));
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A group's node under iParent: "Call  3 usages", or "CCalculator  3" if
+// szWhat is NULL.
+//
+//////////////////////////////////////////////////////////////////////////
+int32 CIDEUsages::AddGroupNode(int32 iParent, const char* szName, size uiCount, const char* szWhat)
+{
+	CChars	szText;
+	int32	iNode;
+
+	szText.Init(szName);
+	AppendIDEUsageCount(&szText, uiCount, szWhat);
+	iNode = mpUsages->AddNode(iParent, szText.Text(), NULL, 0);
+	szText.Kill();
+	return iNode;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The node of the file whose rows are the uiCount from uiFirst of
+// pasRows: "Calculator.cpp  3", with its folder after it if the file
+// before or after it in the group is another of that name.
+//
+//////////////////////////////////////////////////////////////////////////
+int32 CIDEUsages::AddFileNode(int32 iParent, SIDEUsageRow* pasRows, size uiRows, size uiFirst, size uiCount)
+{
+	CChars		szText;
+	const char*	szFile;
+	const char*	szName;
+	int32		iNode;
+	bool		bShared;
+
+	szFile = pasRows[uiFirst].psUsage->sLocation.szFileName.Text();
+	szName = GetIDEFileNamePart(szFile);
+	szText.Init(szName);
+	AppendIDEUsageCount(&szText, uiCount, NULL);
+	bShared = (uiFirst > 0) && IsSameIDEUsageFileName(&pasRows[uiFirst], &pasRows[uiFirst - 1]);
+	bShared = bShared || ((uiFirst + uiCount < uiRows) && IsSameIDEUsageFileName(&pasRows[uiFirst], &pasRows[uiFirst + uiCount]));
+	if (bShared && (szName > szFile + 1))
+	{
+		szText.Append("  ");
+		szText.AppendSubString(szFile, szName - 1);
+	}
+	iNode = mpUsages->AddNode(iParent, szText.Text(), NULL, 0);
+	szText.Kill();
+	return iNode;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A file's lines under its node, from its first.  If classes are grouped
+// a class's node goes where the file first has a line in it, with all its
+// lines; lines in no class are under the file.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEUsages::AddFileUsages(int32 iFile, SIDEUsageRow* pasRows, size uiCount)
+{
+	CChars*	pszClass;
+	size	uiLines;
+	size	i;
+	size	j;
+	int32	iClass;
+	bool	bByClass;
+
+	bByClass = (muiGrouping & IDE_USAGES_BY_CLASS) != 0;
+	for (i = 0; i < uiCount; i++)
+	{
+		pszClass = &pasRows[i].psUsage->szClass;
+		if (pasRows[i].bShown)
+		{
+			continue;
+		}
+		if (!bByClass || pszClass->Empty())
+		{
+			AddUsageLine(iFile, &pasRows[i]);
+			continue;
+		}
+
+		uiLines = 0;
+		for (j = i; j < uiCount; j++)
+		{
+			uiLines += pasRows[j].psUsage->szClass.Equals(*pszClass) ? 1 : 0;
+		}
+		iClass = AddGroupNode(iFile, pszClass->Text(), uiLines, NULL);
+		for (j = i; j < uiCount; j++)
+		{
+			if (pasRows[j].psUsage->szClass.Equals(*pszClass))
+			{
+				AddUsageLine(iClass, &pasRows[j]);
+			}
+		}
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A usage's line under iParent, "36: the line", its usage's index (plus
+// one) its data.  Without the usage type groups a declaration or the
+// definition says what it is.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEUsages::AddUsageLine(int32 iParent, SIDEUsageRow* psRow)
+{
+	CChars			szText;
+	SIDELocation*	psLocation;
+
+	psLocation = &psRow->psUsage->sLocation;
+	szText.Init();
+	szText.Append(psLocation->iLine + 1);
+	szText.Append(": ");
+	mpcContent->GetDocuments()->GetFileLine(psLocation->szFileName.Text(), psLocation->iLine, &szText);
+	if ((muiGrouping & IDE_USAGES_BY_TYPE) == 0)
+	{
+		if (psLocation->uiRole == CPPIR_Definition)
+		{
+			szText.Append("  [definition]");
+		}
+		else if (psLocation->uiRole == CPPIR_Declaration)
+		{
+			szText.Append("  [declaration]");
+		}
+	}
+	if (psLocation->uiFlags & CPPIF_AMBIGUOUS)
+	{
+		szText.Append("  [one of the overloads]");
+	}
+	mpUsages->AddNode(iParent, szText.Text(), NULL, (int64)psRow->uiIndex + 1);
+	szText.Kill();
+	psRow->bShown = true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The node of the line whose data is iData, or with 0 the first line's.
+// TREE_NO_NODE if there is none.
+//
+//////////////////////////////////////////////////////////////////////////
+int32 CIDEUsages::FindUsageNode(int64 iData)
+{
+	int32	iNode;
+	int64	iNodeData;
+
+	for (iNode = 0; iNode < mpUsages->NumNodes(); iNode++)
+	{
+		iNodeData = mpUsages->GetNodeData(iNode);
+		if ((iNodeData > 0) && ((iData == 0) || (iNodeData == iData)))
+		{
+			return iNode;
+		}
+	}
+	return TREE_NO_NODE;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The usage a node is the line of, NULL if it is a group's node or none.
+//
+//////////////////////////////////////////////////////////////////////////
+SIDEUsage* CIDEUsages::GetNodeUsage(int32 iNode)
+{
+	int64	iData;
+
+	if ((iNode < 0) || (iNode >= mpUsages->NumNodes()))
+	{
+		return NULL;
+	}
+	iData = mpUsages->GetNodeData(iNode);
+	if ((iData <= 0) || ((size)iData > msFound.asUsages.NumElements()))
+	{
+		return NULL;
+	}
+	return msFound.asUsages.Get((size)iData - 1);
 }
 
 
@@ -800,33 +956,29 @@ void CIDEUsages::ShowUsages(bool bKeepSelected)
 //////////////////////////////////////////////////////////////////////////
 void CIDEUsages::UsageActivated(void)
 {
-	int64	iData;
+	SIDEUsage*	psUsage;
 
-	if (mpUsages->GetSelectedNode() == TREE_NO_NODE)
+	psUsage = GetNodeUsage(mpUsages->GetSelectedNode());
+	if (psUsage)
 	{
-		return;
-	}
-	iData = mpUsages->GetNodeData(mpUsages->GetSelectedNode());
-	if ((iData > 0) && ((size)iData <= masUsages.NumElements()))
-	{
-		mpcContent->GetDocuments()->OpenLocation(masUsages.Get((size)iData - 1));
+		mpcContent->GetDocuments()->OpenLocation(&psUsage->sLocation);
 	}
 }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Next or Previous Occurrence (CIDEOccurrences): the usage line after (or
-// before) the selected one is selected and its place opened in its
-// editor, which has the keys unless bKeepKeys (the tree was stepped in).
-// Past the last (or first) nothing moves.
+// Next or Previous Occurrence (CIDEOccurrences): the usage line below (or
+// above) the selected one in the tree is selected and its place opened in
+// its editor, which has the keys unless bKeepKeys (the tree was stepped
+// in).  Past the last (or first) nothing moves.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEUsages::Step(bool bNext, bool bKeepKeys)
 {
-	int32	iNode;
-	int32	iStep;
-	int64	iData;
+	SIDEUsage*	psUsage;
+	int32		iNode;
+	int32		iStep;
 
 	iStep = bNext ? 1 : -1;
 	iNode = mpUsages->GetSelectedNode();
@@ -836,13 +988,13 @@ bool CIDEUsages::Step(bool bNext, bool bKeepKeys)
 	}
 	for (iNode += iStep; (iNode >= 0) && (iNode < mpUsages->NumNodes()); iNode += iStep)
 	{
-		iData = mpUsages->GetNodeData(iNode);
-		if ((iData > 0) && ((size)iData <= masUsages.NumElements()))
+		psUsage = GetNodeUsage(iNode);
+		if (psUsage)
 		{
 			mpUsages->SelectNode(iNode);
 			mpUsages->ShowRow(mpUsages->FindNodeRow(iNode));
-			mpcContent->GetDocuments()->OpenLocation(masUsages.Get((size)iData - 1));
-			mpcContent->GetDocuments()->SelectAtCaret((size)masUsages.Get((size)iData - 1)->iLength);
+			mpcContent->GetDocuments()->OpenLocation(&psUsage->sLocation);
+			mpcContent->GetDocuments()->SelectAtCaret((size)psUsage->sLocation.iLength);
 			if (bKeepKeys)
 			{
 				mpcContent->GetWindow()->GetFocus()->SetFocus(mpUsages);
@@ -863,7 +1015,7 @@ bool CIDEUsages::Step(bool bNext, bool bKeepKeys)
 //////////////////////////////////////////////////////////////////////////
 Ptr<CDockPane> CIDEUsages::GetSteppablePane(void) { return mpUsagesTool; }
 const char* CIDEUsages::GetSteppableName(void) { return "Find Usages"; }
-bool CIDEUsages::HasSteps(void) { return mbFound && (masUsages.NumElements() > 0) && mpUsages.IsNotNull(); }
+bool CIDEUsages::HasSteps(void) { return mbFound && (msFound.asUsages.NumElements() > 0) && mpUsages.IsNotNull(); }
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -936,15 +1088,23 @@ Ptr<CDockPane> CIDEUsages::GetTool(void) { return mpUsagesTool; }
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The solutions have gone: so have the places found in them.
+// The solutions have gone: so have the places found in them, from the
+// tree and the popup, which is closed.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEUsages::Clear(void)
 {
-	KillIDELocations(&masUsages);
-	masUsages.Init();
+	msFound.Clear();
 	mbFound = false;
-	mpUsages->RemoveAllNodes();
+	msPopupFound.Clear();
+	if (mpPopup.IsNotNull() && mpPopup->IsOpen())
+	{
+		mpPopup->Close();
+	}
+	if (mpUsages.IsNotNull())
+	{
+		mpUsages->RemoveAllNodes();
+	}
 }
 
 

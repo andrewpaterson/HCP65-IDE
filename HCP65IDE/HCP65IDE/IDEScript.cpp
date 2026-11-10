@@ -690,15 +690,19 @@ void CIDEScript::RunEditStep(const char* szStep)
 		}
 		sTarget.Kill();
 	}
-	else if ((strcmp(szStep, "usages") == 0) || (strcmp(szStep, "references") == 0))
+	else if ((strcmp(szStep, "usages") == 0) || (strcmp(szStep, "references") == 0) || (strcmp(szStep, "printusages") == 0))
 	{
-		//Alt+F7 (or Shift+F12, with the declarations), the Find Usages tree printed.
+		//Alt+F7 (or Shift+F12, with the declarations), the Find Usages tree printed, each node indented by its depth, in
+		//the order the tree shows them; printusages prints the tree as it is.
 		Ptr<CTreeContainer>	pTree;
 		int32				iNode;
 		int32				iDepth;
 		CChars				szNode;
 
-		mpcContent->GetUsages()->FindUsages(szStep[0] == 'r');
+		if (szStep[0] != 'p')
+		{
+			mpcContent->GetUsages()->FindUsages(szStep[0] == 'r');
+		}
 		pTree = mpcContent->GetUsages()->GetUsagesTree();
 		for (iNode = 0; iNode < pTree->NumNodes(); iNode++)
 		{
