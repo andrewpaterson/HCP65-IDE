@@ -388,6 +388,13 @@ CHECKS = [
 		'WAIT_INDEX': '1', 'GOTO': '1:bl/csym'},
 		[r'^Go to \[bl/csym\]: 2 results', r'^  CalculatorSymbols\.h ', r'^  CalculatorSymbols\.cpp ',
 		 r'^Opened .*[/\\]CalculatorSymbols\.h$'], []),
+	('go-to-keys-change-tab', {
+		#With the dialog open its own keys change its tab, searching for what is typed in it.
+		'WAIT_INDEX': '1', 'DIALOG_ANSWER': 'Cancel', 'DIALOG_KEYS': 'Control+Shift+N,Control+Alt+Shift+N,Control+N',
+		'DEBUG': 'goto:0:calcpars,answered:1'},
+		[r'^Keys Control\+Shift\+N: taken$', r'^Go to tab 1 \[calcpars\]: 2 results$', r'^  CalculatorParser\.h ',
+		 r'^Keys Control\+Alt\+Shift\+N: taken$', r'^Go to tab 2 \[calcpars\]: 1 results$', r'^  CCalculatorParser ',
+		 r'^Keys Control\+N: taken$', r'^Go to tab 0 \[calcpars\]: 1 results$', r'^Focus: CTextField$'], [r'not taken']),
 	('close-cancel-and-navigate', {
 		'OPEN': 'CalculatorParser.cpp', 'CARET': '36:2', 'TYPE': 'X', 'DIALOG_ANSWER': 'Cancel',
 		'DEBUG': 'closetab,answered:1,printtabs,edit:caret:26:12,gotosource,printtabs,switchfile,printtabs'},

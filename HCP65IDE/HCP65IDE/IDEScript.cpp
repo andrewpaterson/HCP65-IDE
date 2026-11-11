@@ -1105,14 +1105,19 @@ void CIDEScript::DialogTick(void)
 //
 // For checking, HCP65_IDE_DIALOG_KEYS, tab and backtab separated by
 // commas, are pressed before the dialog is answered, and what has the
-// keys after each is printed.
+// keys after each is printed.  One with a plus, "Control+Shift+N", is a
+// command's keys: with the Go to dialog open its tab, text and results
+// are printed after them.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEScript::PressDialogKeys(Ptr<CWindow> pWindow)
 {
-	CArrayChars		aszKeys;
-	Ptr<CComponent>	pFocussed;
-	size			i;
+	CArrayChars			aszKeys;
+	Ptr<CComponent>		pFocussed;
+	Ptr<CGoToDialog>	pGoTo;
+	size				i;
+	size				j;
+	bool				bTaken;
 
 	if (getenv("HCP65_IDE_DIALOG_KEYS") == NULL)
 	{
@@ -1122,7 +1127,24 @@ void CIDEScript::PressDialogKeys(Ptr<CWindow> pWindow)
 	aszKeys.Split(getenv("HCP65_IDE_DIALOG_KEYS"), ',');
 	for (i = 0; i < aszKeys.NumElements(); i++)
 	{
-		pWindow->InputCommand(aszKeys.Get(i)->Equals("backtab") ? CIC_BackTab : CIC_Tab, true);
+		if (aszKeys.Get(i)->Contains("+"))
+		{
+			bTaken = pWindow->InputKeys(aszKeys.Get(i)->Text());
+			printf("Keys %s: %s\n", aszKeys.Get(i)->Text(), bTaken ? "taken" : "not taken");
+			pGoTo = mpcContent->GetNavigator()->GetGoTo();
+			if (pGoTo.IsNotNull())
+			{
+				printf("Go to tab %d [%s]: %d results\n", (int)pGoTo->GetTab(), pGoTo->GetPattern(), (int)pGoTo->NumResults());
+				for (j = 0; (j < pGoTo->NumResults()) && (j < 3); j++)
+				{
+					printf("  %s  [%s]\n", pGoTo->GetResult(j)->szName.Text(), pGoTo->GetResult(j)->szLocation.Text());
+				}
+			}
+		}
+		else
+		{
+			pWindow->InputCommand(aszKeys.Get(i)->Equals("backtab") ? CIC_BackTab : CIC_Tab, true);
+		}
 		pFocussed = pWindow->GetFocus()->GetFocussedComponent();
 		printf("Focus: %s\n", pFocussed.IsNotNull() ? pFocussed.ClassName() : "(none)");
 	}

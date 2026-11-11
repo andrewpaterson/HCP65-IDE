@@ -235,9 +235,9 @@ bool CIDENavigator::CreateGoTo(size uiTab)
 	size	i;
 
 	mpGoTo = OMalloc<CGoToDialog>(mpcContent->GetWindow(), mpcContent->GetDialogLook(), "Go To", this, mpcContent->GetMatchFont());
-	mpGoTo->AddTab("Classes");
-	mpGoTo->AddTab("Files");
-	mpGoTo->AddTab("Symbols");
+	mpGoTo->AddTab("Classes", mpcContent->GetCommands()->Find("Navigate.GoToClass"));
+	mpGoTo->AddTab("Files", mpcContent->GetCommands()->Find("Navigate.GoToFile"));
+	mpGoTo->AddTab("Symbols", mpcContent->GetCommands()->Find("Navigate.GoToSymbol"));
 	miGoToFileIcon = -1;
 	for (i = 0; i < mpcContent->NumFileTypeIcons(); i++)
 	{
