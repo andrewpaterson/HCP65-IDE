@@ -562,10 +562,13 @@ bool CBuildPlain::MakeConfiguration(CBuildConfiguration* pcConfiguration, CChars
 		for (i = 0; i < maszSymbols.NumElements(); i++)
 		{
 			szSymbol.Init(maszSymbols.GetText(i));
+			//-symbol's <name>=<number> was checked when it was read, so this always parses.
 			uiEquals = szSymbol.Find(0, '=');
-			BuildParseNumber(szSymbol.Text(uiEquals + 1), &iValue);
-			szSymbol.SetLength(uiEquals);
-			pcExecutable->AddSymbol(szSymbol.Text(), iValue);
+			if (BuildParseNumber(szSymbol.Text(uiEquals + 1), &iValue))
+			{
+				szSymbol.SetLength(uiEquals);
+				pcExecutable->AddSymbol(szSymbol.Text(), iValue);
+			}
 			szSymbol.Kill();
 		}
 	}
