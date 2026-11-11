@@ -972,6 +972,7 @@ void CBuildCommandLine::WriteUsage(void)
 	WriteLine("                                -program or -lib it is every unit's; after, that project's.");
 	WriteLine("  -target W65C816|65C64         The toolchain (default W65C816).");
 	WriteLine("  -nofloats, -no-mathtables     No floating point; no maths tables (MathMult).");
+	WriteLine("  -prefer-size                  Smaller code before faster, where the compiler has the choice.");
 	WriteLine("  -exe <file> -entry <symbol> [-limit <n>] [-symbol <name>=<n>]...");
 	WriteLine("                                Link an executable.");
 	WriteLine("  -image <file> -size <n> [-fill <n>] [-limit <n>] [-load <n>] -region <start>,<end>,<offset>...");

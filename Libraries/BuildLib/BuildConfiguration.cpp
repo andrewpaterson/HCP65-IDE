@@ -39,6 +39,7 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 #define BUILD_CONFIGURATION_BREAKPOINT_SPACE	"BreakpointSpace"
 #define BUILD_CONFIGURATION_NO_FLOATS	"NoFloats"
 #define BUILD_CONFIGURATION_MATH_TABLES	"MathTables"
+#define BUILD_CONFIGURATION_PREFER_SIZE	"PreferSize"
 
 
 //The toolchains' names, as saved, by EBuildToolchain.
@@ -57,6 +58,7 @@ void CBuildConfiguration::Init(const char* szName, EBuildToolchain eToolchain, c
 	mszBreakpointSpace.Init();
 	mbNoFloats = false;
 	mbMathTables = true;
+	mbPreferSize = false;
 	meProgram = BP_None;
 	mcImage.Init();
 	mcExecutable.Init();
@@ -124,6 +126,10 @@ void CBuildConfiguration::SaveXML(CXMLWriter* pcWriter)
 	{
 		pcWriter->Attribute(BUILD_CONFIGURATION_MATH_TABLES, "false");
 	}
+	if (mbPreferSize)
+	{
+		pcWriter->Attribute(BUILD_CONFIGURATION_PREFER_SIZE, "true");
+	}
 	if (HasCard())
 	{
 		pcWriter->Attribute(BUILD_CONFIGURATION_CARD, mszCard.Text());
@@ -168,6 +174,7 @@ bool CBuildConfiguration::LoadXML(CMarkupTag* pcTag)
 	char*			szSolution;
 	char*			szNoFloats;
 	char*			szMathTables;
+	char*			szPreferSize;
 	EBuildToolchain	eToolchain;
 	CMarkupTag*		pcImage;
 	CMarkupTag*		pcExecutable;
@@ -197,6 +204,8 @@ bool CBuildConfiguration::LoadXML(CMarkupTag* pcTag)
 	SetNoFloats((szNoFloats != NULL) && (strcmp(szNoFloats, "true") == 0));
 	szMathTables = pcTag->GetAttribute((char*)BUILD_CONFIGURATION_MATH_TABLES);
 	SetMathTables((szMathTables == NULL) || (strcmp(szMathTables, "false") != 0));
+	szPreferSize = pcTag->GetAttribute((char*)BUILD_CONFIGURATION_PREFER_SIZE);
+	SetPreferSize((szPreferSize != NULL) && (strcmp(szPreferSize, "true") == 0));
 
 	pcImage = pcTag->GetTag(BUILD_CONFIGURATION_IMAGE);
 	if (pcImage)
@@ -449,6 +458,29 @@ void CBuildConfiguration::SetMathTables(bool bMathTables)
 bool CBuildConfiguration::IsMathTables(void)
 {
 	return mbMathTables;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether the compiler prefers smaller code to faster where it has the
+// choice (false unless set; CCPPCompileOptions::mePrefer): for what must fit,
+// a ROM's kernal.
+//
+//////////////////////////////////////////////////////////////////////////
+void CBuildConfiguration::SetPreferSize(bool bPreferSize)
+{
+	mbPreferSize = bPreferSize;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+bool CBuildConfiguration::IsPreferSize(void)
+{
+	return mbPreferSize;
 }
 
 

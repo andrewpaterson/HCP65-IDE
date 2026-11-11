@@ -40,6 +40,7 @@ public:
 	CChars			mszBreakpointSpace;
 	bool			mbNoFloats;
 	bool			mbMathTables;
+	bool			mbPreferSize;
 	CChars			mszCard;
 	CChars			mszCardPath;
 

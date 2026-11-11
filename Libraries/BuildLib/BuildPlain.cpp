@@ -131,6 +131,7 @@ void CBuildPlain::Init(void)
 	meToolchain = BT_W65C816;
 	mbNoFloats = false;
 	mbNoMathTables = false;
+	mbPreferSize = false;
 	mszOutput.Init();
 	mszListings.Init();
 	mszExecutable.Init();
@@ -296,6 +297,11 @@ int CBuildPlain::ParseOption(CArrayChars* paszArguments, size* puiIndex, CChars*
 	if (BuildIsOption(szOption, "no-mathtables"))
 	{
 		mbNoMathTables = true;
+		return 1;
+	}
+	if (BuildIsOption(szOption, "prefer-size"))
+	{
+		mbPreferSize = true;
 		return 1;
 	}
 	if (BuildIsOption(szOption, "o") || BuildIsOption(szOption, "listings") || BuildIsOption(szOption, "exe") || BuildIsOption(szOption, "entry") || BuildIsOption(szOption, "image") ||
@@ -556,6 +562,7 @@ bool CBuildPlain::MakeConfiguration(CBuildConfiguration* pcConfiguration, CChars
 	szName.Kill();
 	pcConfiguration->SetNoFloats(mbNoFloats);
 	pcConfiguration->SetMathTables(!mbNoMathTables);
+	pcConfiguration->SetPreferSize(mbPreferSize);
 	if (!mszExecutable.Empty())
 	{
 		pcExecutable = pcConfiguration->SetExecutable(mszExecutable.Text(), mszEntry.Text(), muiLimit);
@@ -673,6 +680,10 @@ bool CBuildPlain::Describe(CArrayChars* paszArguments, const char* szUnitsDirect
 	if (!pcConfiguration->IsMathTables())
 	{
 		paszArguments->Add("-no-mathtables");
+	}
+	if (pcConfiguration->IsPreferSize())
+	{
+		paszArguments->Add("-prefer-size");
 	}
 	for (i = 0; i < pcDescription->mcIncludes.NumIncludes(); i++)
 	{

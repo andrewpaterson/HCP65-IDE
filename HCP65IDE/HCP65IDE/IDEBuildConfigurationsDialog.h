@@ -57,6 +57,7 @@ protected:
 	Ptr<CTextField>					mpBreakpointSpace;
 	Ptr<CCheckBox>					mpNoFloats;
 	Ptr<CCheckBox>					mpMathTables;
+	Ptr<CCheckBox>					mpPreferSize;
 	Ptr<CTextField>					mpCard;
 	Ptr<CTextField>					mpCardPath;
 	Ptr<CLabel>						mpContents;

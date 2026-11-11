@@ -63,6 +63,7 @@ void CBuildConfigurationEdit::Init(const char* szName, EBuildToolchain eToolchai
 	mszBreakpointSpace.Init();
 	mbNoFloats = false;
 	mbMathTables = true;
+	mbPreferSize = false;
 	mszCard.Init();
 	mszCardPath.Init();
 }
@@ -82,6 +83,7 @@ void CBuildConfigurationEdit::Init(CBuildConfiguration* pcConfiguration, size ui
 	mszBreakpointSpace.Set(pcConfiguration->GetBreakpointSpace());
 	mbNoFloats = pcConfiguration->IsNoFloats();
 	mbMathTables = pcConfiguration->IsMathTables();
+	mbPreferSize = pcConfiguration->IsPreferSize();
 	if (pcConfiguration->HasCard())
 	{
 		mszCard.Set(pcConfiguration->GetCard());
@@ -103,6 +105,7 @@ void CBuildConfigurationEdit::Init(CBuildConfigurationEdit* pcCopied, const char
 	mszBreakpointSpace.Set(pcCopied->mszBreakpointSpace);
 	mbNoFloats = pcCopied->mbNoFloats;
 	mbMathTables = pcCopied->mbMathTables;
+	mbPreferSize = pcCopied->mbPreferSize;
 	mszCard.Set(pcCopied->mszCard);
 	mszCardPath.Set(pcCopied->mszCardPath);
 }
@@ -413,6 +416,10 @@ static void SetEditAttributes(CChars* pszTag, CBuildConfigurationEdit* pcEdit, C
 	if ((pcSource == NULL) || (pcEdit->mbMathTables != pcSource->IsMathTables()))
 	{
 		SetEditAttribute(pszTag, "MathTables", pcEdit->mbMathTables ? NULL : "false");
+	}
+	if ((pcSource == NULL) || (pcEdit->mbPreferSize != pcSource->IsPreferSize()))
+	{
+		SetEditAttribute(pszTag, "PreferSize", pcEdit->mbPreferSize ? "true" : NULL);
 	}
 	if ((pcSource == NULL) || !pcEdit->mszCard.Equals(pcSource->GetCard()))
 	{

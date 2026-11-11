@@ -103,6 +103,7 @@ void CIDEBuildConfigurationsDialog::Class(void)
 	M_Pointer(mpBreakpointSpace);
 	M_Pointer(mpNoFloats);
 	M_Pointer(mpMathTables);
+	M_Pointer(mpPreferSize);
 	M_Pointer(mpCard);
 	M_Pointer(mpCardPath);
 	M_Pointer(mpContents);
@@ -231,6 +232,8 @@ Ptr<CComponent> CIDEBuildConfigurationsDialog::CreateBody(void)
 	mpNoFloats->SetAlignment(CSH_Left, CSV_Center);
 	mpMathTables = OMalloc<CCheckBox>(pWindow, psLook->pcTheme, "Maths tables in memory");
 	mpMathTables->SetAlignment(CSH_Left, CSV_Center);
+	mpPreferSize = OMalloc<CCheckBox>(pWindow, psLook->pcTheme, "Prefer size to speed");
+	mpPreferSize->SetAlignment(CSH_Left, CSV_Center);
 	mpCard = CreateField();
 	mpCardPath = CreateField();
 	mpContents = OMalloc<CLabel>(pWindow, psLook->pcDimFont, "");
@@ -247,6 +250,7 @@ Ptr<CComponent> CIDEBuildConfigurationsDialog::CreateBody(void)
 	AddFormRow(pForm, &iRow, "Breakpoint space", mpBreakpointSpace);
 	AddFormRow(pForm, &iRow, "", mpNoFloats);
 	AddFormRow(pForm, &iRow, "", mpMathTables);
+	AddFormRow(pForm, &iRow, "", mpPreferSize);
 	AddFormRow(pForm, &iRow, "Card", mpCard);
 	AddFormRow(pForm, &iRow, "Path on card", mpCardPath);
 	AddFormRow(pForm, &iRow, NULL, mpContents);
@@ -360,6 +364,7 @@ void CIDEBuildConfigurationsDialog::ShowSelected(void)
 	mpCardPath->SetText(pcEdit ? pcEdit->mszCardPath.Text() : "");
 	mpNoFloats->SetTicked(pcEdit ? pcEdit->mbNoFloats : false);
 	mpMathTables->SetTicked(pcEdit ? pcEdit->mbMathTables : true);
+	mpPreferSize->SetTicked(pcEdit ? pcEdit->mbPreferSize : false);
 	if (pcEdit)
 	{
 		SelectItem(mpToolchain, CBuildConfiguration::GetToolchainName(pcEdit->meToolchain));
@@ -457,6 +462,7 @@ void CIDEBuildConfigurationsDialog::Keep(void)
 	pcEdit->mszBreakpointSpace.Set(mpBreakpointSpace->GetText());
 	pcEdit->mbNoFloats = mpNoFloats->IsTicked();
 	pcEdit->mbMathTables = mpMathTables->IsTicked();
+	pcEdit->mbPreferSize = mpPreferSize->IsTicked();
 	pcEdit->mszCard.Set(mpCard->GetText());
 	pcEdit->mszCardPath.Set(mpCardPath->GetText());
 }
@@ -711,6 +717,10 @@ void CIDEBuildConfigurationsDialog::ApplyEdits(const char* szEdits)
 		else if (strncmp(sz, "mathtables:", 11) == 0)
 		{
 			mpMathTables->SetTicked(sz[11] == '1');
+		}
+		else if (strncmp(sz, "prefersize:", 11) == 0)
+		{
+			mpPreferSize->SetTicked(sz[11] == '1');
 		}
 		else if (strncmp(sz, "card:", 5) == 0)
 		{

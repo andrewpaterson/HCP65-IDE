@@ -54,6 +54,7 @@ bool	BuildParseUint32(const char* szNumber, uint32* puiValue);
 //										as a Visual Studio project's is.
 //	-D <name>[=<value>]					A define for the project's units.
 //	-nofloats, -no-mathtables			As a configuration's NoFloats="true" and MathTables="false".
+//	-prefer-size						As a configuration's PreferSize="true": smaller code before faster.
 //	-exe <file> -entry <symbol> [-limit <n>] [-symbol <name>=<value>]...
 //										Link an executable, as an <Executable>.
 //	-image <file> -size <n> [-fill <n>] [-limit <n>] [-load <n>] -region <start>,<end>,<offset> [-region ...]
@@ -72,6 +73,7 @@ protected:
 	EBuildToolchain			meToolchain;
 	bool					mbNoFloats;
 	bool					mbNoMathTables;
+	bool					mbPreferSize;
 	CChars					mszOutput;
 	CChars					mszListings;
 	CChars					mszExecutable;

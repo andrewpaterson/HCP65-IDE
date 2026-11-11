@@ -478,6 +478,7 @@ void TestBuildCommandLinePlainParse(void)
 	AssertString("Plain|W65C816", cConfiguration.GetName());
 	AssertTrue(cConfiguration.IsNoFloats());
 	AssertTrue(cConfiguration.IsMathTables());
+	AssertFalse(cConfiguration.IsPreferSize());
 	AssertTrue(cConfiguration.HasExecutable());
 	AssertFalse(cConfiguration.HasImage());
 	AssertString("main.exe", cConfiguration.GetExecutable()->GetFile());
@@ -491,13 +492,14 @@ void TestBuildCommandLinePlainParse(void)
 	cCommandLine.Kill();
 
 	//An image, for the 65C64.
-	const char* aszImage[] = { "hcp65build", "-target", "65C64", "-program", "Rom", "Rom.cpp", "-image", "k.rom", "-size", "0x100", "-fill", "0", "-load", "$8000", "-region", "0,0x80,0", "-region", "0x100,0x180,0x80", "-no-mathtables" };
+	const char* aszImage[] = { "hcp65build", "-target", "65C64", "-program", "Rom", "Rom.cpp", "-image", "k.rom", "-size", "0x100", "-fill", "0", "-load", "$8000", "-region", "0,0x80,0", "-region", "0x100,0x180,0x80", "-no-mathtables", "-prefer-size" };
 	cCommandLine.Init();
-	AssertTrue(cCommandLine.Parse(19, aszImage));
+	AssertTrue(cCommandLine.Parse(20, aszImage));
 	szError.Init();
 	AssertTrue(cCommandLine.GetPlain()->MakeConfiguration(&cConfiguration, &szError));
 	AssertString("Plain|65C64", cConfiguration.GetName());
 	AssertFalse(cConfiguration.IsMathTables());
+	AssertTrue(cConfiguration.IsPreferSize());
 	AssertTrue(cConfiguration.HasImage());
 	AssertString("k.rom", cConfiguration.GetImage()->GetFile());
 	AssertIntHex(0x100, cConfiguration.GetImage()->GetSize());

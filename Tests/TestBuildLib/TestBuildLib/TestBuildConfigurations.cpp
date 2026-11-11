@@ -79,6 +79,7 @@ void TestBuildConfigurationsFile(void)
 	cConfigurations.GetConfiguration(0)->SetBreakpointSpace("User");
 	cConfigurations.GetConfiguration(0)->SetNoFloats(true);
 	cConfigurations.GetConfiguration(0)->SetMathTables(false);
+	cConfigurations.GetConfiguration(0)->SetPreferSize(true);
 	cConfigurations.Add("Fast GCC", BT_GCC, "Release|x64");
 	AssertTrue(cConfigurations.Write("Output" _FS_ "Test.hcp65build"));
 
@@ -91,11 +92,13 @@ void TestBuildConfigurationsFile(void)
 	AssertString("User", cRead.GetConfiguration(0)->GetBreakpointSpace());
 	AssertString("", cRead.GetConfiguration(1)->GetBreakpointSpace());
 
-	//NoFloats and MathTables (written only when not the default) are kept.
+	//NoFloats, MathTables and PreferSize (written only when not the default) are kept.
 	AssertTrue(cRead.GetConfiguration(0)->IsNoFloats());
 	AssertFalse(cRead.GetConfiguration(0)->IsMathTables());
+	AssertTrue(cRead.GetConfiguration(0)->IsPreferSize());
 	AssertFalse(cRead.GetConfiguration(1)->IsNoFloats());
 	AssertTrue(cRead.GetConfiguration(1)->IsMathTables());
+	AssertFalse(cRead.GetConfiguration(1)->IsPreferSize());
 	AssertString("W65C816", cRead.GetConfiguration(0)->GetProcessorName());
 	AssertTrue(cRead.GetConfiguration(1)->GetProcessorName() == NULL);
 
