@@ -47,6 +47,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 //Milliseconds between looks at the edits thread while it is busy.
 #define IDE_EDITS_POLL	20
+#define IDE_PREVIEW_CHANGES	MAX_SIZE	//The change count of a file highlighted for Find in Files' preview, not a tab.
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -62,6 +63,10 @@ void CIDEDocuments::Init(CIDEContent* pcContent)
 	muiIndexings = 0;
 	mapcAnchors.Init();
 	mbReloading = false;
+	mszPreviewFile.Init();
+	mszPreviewText.Init();
+	mbPreview = false;
+	mbPreviewing = false;
 	PostInit();
 }
 
@@ -78,6 +83,10 @@ void CIDEDocuments::Class(void)
 	U_Size(muiIndexings);
 	U_Unknown(CArrayIDEDocumentAnchors, mapcAnchors);
 	U_Bool(mbReloading);
+	U_String(mszPreviewFile);
+	U_String(mszPreviewText);
+	U_Bool(mbPreview);
+	U_Bool(mbPreviewing);
 }
 
 
@@ -98,6 +107,8 @@ void CIDEDocuments::Free(void)
 		SafeKill(pcAnchor);
 	}
 	mapcAnchors.Kill();
+	mszPreviewText.Kill();
+	mszPreviewFile.Kill();
 }
 
 
@@ -337,6 +348,30 @@ void CIDEDocuments::ReindexAll(void)
 // again, -1 for never.
 //
 //////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+//
+// The file Find in Files previews is highlighted by the edits thread,
+// as an edited tab is, from szText (the preview's): what it makes is
+// given to CIDEFindInFiles::PreviewHighlighted at a later
+// UpdateEditedTabs.  A file asked for before the last was given to the
+// thread takes its place.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDocuments::HighlightPreview(const char* szFileName, const char* szText)
+{
+	mszPreviewFile.Set(szFileName);
+	mszPreviewText.Set(szText);
+	mbPreview = true;
+}
+
+
+bool CIDEDocuments::IsHighlightingPreview(void) { return mbPreview || mbPreviewing; }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
 int64 CIDEDocuments::UpdateEditedTabs(int64 iNow)
 {
 	return GiveEditedTabs(iNow, false);
@@ -376,6 +411,7 @@ int64 CIDEDocuments::GiveEditedTabs(int64 iNow, bool bNow)
 	bool					bIndex;
 	int64					iWait;
 	int64					iSoonest;
+	size					uiBefore;
 	CArrayIDEEditedFiles	apsFiles;
 
 	if (!TakeEditedFiles(bNow))
@@ -405,6 +441,16 @@ int64 CIDEDocuments::GiveEditedTabs(int64 iNow, bool bNow)
 		{
 			iSoonest = iWait;
 		}
+	}
+
+	//The file Find in Files previews is highlighted with them, but not when they are wanted at once.
+	if (mbPreview && !bNow)
+	{
+		mbPreview = false;
+		uiBefore = apsFiles.NumElements();
+		AddEditedFile(mpcContent->GetCodeModel()->FindProjectOfFile(mszPreviewFile.Text()), mszPreviewFile.Text(), mszPreviewText.Text(), IDE_PREVIEW_CHANGES, true, false, false, &apsFiles);
+		mbPreviewing = apsFiles.NumElements() > uiBefore;
+		mszPreviewText.Set("");
 	}
 
 	if (apsFiles.NumElements() > 0)
@@ -517,6 +563,15 @@ bool CIDEDocuments::TakeEditedFiles(bool bWait)
 	for (i = 0; i < apsFiles.NumElements(); i++)
 	{
 		psFile = apsFiles.GetPtr(i);
+		if (psFile->uiChanges == IDE_PREVIEW_CHANGES)
+		{
+			mbPreviewing = false;
+			if (psFile->bHighlighted)
+			{
+				mpcContent->GetFindInFiles()->PreviewHighlighted(psFile->szFileName.Text(), &psFile->acHighlights);
+			}
+			continue;
+		}
 		pTab = psFile->bHighlighted ? FindTab(psFile->szFileName.Text()) : Ptr<CIDEEditorTab>();
 		if (pTab.IsNotNull() && (pTab->GetEditor()->GetChangeCount() == psFile->uiChanges))
 		{
@@ -1113,6 +1168,7 @@ void CIDEDocuments::DocumentChanged(const char* szFileName, STextDocumentChange*
 	}
 	mpcContent->GetNavigationHistory()->AdjustPlaces(szFileName, &sChange);
 	mpcContent->GetUsages()->AdjustPlaces(szFileName, &sChange);
+	mpcContent->GetFindInFiles()->AdjustPlaces(szFileName, &sChange);
 }
 
 

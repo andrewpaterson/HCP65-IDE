@@ -213,6 +213,7 @@ void CIDEContent::Class(void)
 	M_Pointer(mpNavigator);
 	M_Pointer(mpRename);
 	M_Pointer(mpUsages);
+	M_Pointer(mpFindInFiles);
 	M_Pointer(mpOccurrences);
 	M_Pointer(mpNavigationHistory);
 	M_Pointer(mpIndexing);
@@ -271,6 +272,7 @@ void CIDEContent::Free(void)
 		mpWindow->CancelPosted(this);
 		mpWindow->CancelPosted(&mpCloseGuard);  //The modules' posted calls too.
 		mpWindow->CancelPosted(&mpNavigator);
+		mpWindow->CancelPosted(&mpFindInFiles);
 		mpWindow->CancelPosted(&mpRename);
 		mpWindow->CancelPosted(&mpSolutions);
 		mpWindow->CancelPosted(&mpBuildConfigurations);
@@ -383,6 +385,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpNavigator = OMalloc<CIDENavigator>(this);
 	mpRename = OMalloc<CIDERename>(this);
 	mpUsages = OMalloc<CIDEUsages>(this);
+	mpFindInFiles = OMalloc<CIDEFindInFiles>(this);
 	mpOccurrences = OMalloc<CIDEOccurrences>(this);
 	mpNavigationHistory = OMalloc<CIDENavigationHistory>(this);
 	mpIndexing = OMalloc<CIDEIndexing>(this);
@@ -412,6 +415,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpUsages->CreatePane(&sPlace);
 
 	sPlace.WithPane(IDE_USAGES_ID);
+	mpFindInFiles->CreatePane(&sPlace);
 	mpBuilding->CreatePane(&sPlace);
 	mpIndexing->CreatePane(&sPlace);
 	mpRunning->CreatePane(&sPlace);
@@ -574,6 +578,7 @@ void CIDEContent::AddCommands(void)
 	mpNavigator->AddCommands(mpCommands);
 	mpRename->AddCommands(mpCommands);
 	mpUsages->AddCommands(mpCommands);
+	mpFindInFiles->AddCommands(mpCommands);
 	mpOccurrences->AddCommands(mpCommands);
 	mpNavigationHistory->AddCommands(mpCommands);
 	mpBuilding->AddCommands(mpCommands);
@@ -752,6 +757,11 @@ void CIDEContent::Tick(Ptr<CWindow> pWindow)
 
 	//Find Usages' lines are shown as they are now once the edits that moved them have stopped.
 	iWait = mpUsages->Poll(iNow);
+	if ((iWait >= 0) && ((iSoonest < 0) || (iWait < iSoonest)))
+	{
+		iSoonest = iWait;
+	}
+	iWait = mpFindInFiles->Poll(iNow);
 	if ((iWait >= 0) && ((iSoonest < 0) || (iWait < iSoonest)))
 	{
 		iSoonest = iWait;
@@ -1039,6 +1049,7 @@ Ptr<CMenuContainer> CIDEContent::GetEditorMenu(void) { return mpEditorMenu; }
 Ptr<CIDENavigator> CIDEContent::GetNavigator(void) { return mpNavigator; }
 Ptr<CIDEEdit> CIDEContent::GetEdit(void) { return mpEdit; }
 Ptr<CIDEUsages> CIDEContent::GetUsages(void) { return mpUsages; }
+Ptr<CIDEFindInFiles> CIDEContent::GetFindInFiles(void) { return mpFindInFiles; }
 Ptr<CIDEOccurrences> CIDEContent::GetOccurrences(void) { return mpOccurrences; }
 Ptr<CIDENavigationHistory> CIDEContent::GetNavigationHistory(void) { return mpNavigationHistory; }
 Ptr<CIDEIndexing> CIDEContent::GetIndexing(void) { return mpIndexing; }

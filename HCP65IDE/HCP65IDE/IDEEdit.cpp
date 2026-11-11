@@ -115,6 +115,7 @@ Ptr<CMenuContainer> CIDEEdit::CreateEditMenu(void)
 	mpEditMenu->AddSeparator();
 	mpEditMenu->AddItem(pCommands->Find("Edit.UndoAcrossFiles"));
 	mpEditMenu->AddItem(pCommands->Find("Edit.RedoAcrossFiles"));
+	mpcContent->GetFindInFiles()->AddEditItems(mpEditMenu);
 	return mpEditMenu;
 }
 

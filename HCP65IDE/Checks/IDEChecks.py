@@ -375,7 +375,7 @@ CHECKS = [
 	('undo-across-files', {
 		'OPEN': 'CalculatorParser.cpp', 'CARET': '36:2',
 		'EDIT': 'type:X,open:CalculatorSymbols.cpp,type:Y,undoall,print,undoall,print,redoall,redoall,print'},
-		[r'^Edit menu: .*Undo Across Files Redo Across Files$',
+		[r'^Edit menu: .*Undo Across Files Redo Across Files Find in Files\.\.\.$',
 		 r'CalculatorParser\.cpp \* line 36: \[\tXmpcCalculator',
 		 r'CalculatorSymbols\.cpp \(focus\) line 1: \[#include "Logger\.h"\]',
 		 r'CalculatorParser\.cpp \(focus\) line 36: \[\tmpcCalculator',
@@ -395,6 +395,32 @@ CHECKS = [
 		[r'^Keys Control\+Shift\+N: taken$', r'^Go to tab 1 \[calcpars\]: 2 results$', r'^  CalculatorParser\.h ',
 		 r'^Keys Control\+Alt\+Shift\+N: taken$', r'^Go to tab 2 \[calcpars\]: 1 results$', r'^  CCalculatorParser ',
 		 r'^Keys Control\+N: taken$', r'^Go to tab 0 \[calcpars\]: 1 results$', r'^Focus: CTextField$'], [r'not taken']),
+	('find-in-solution', {
+		#Find in Files, whatever the case: the first results with where the text is in each, the first previewed and
+		#opened with the text selected, and all of them in the Find tool window.
+		'WAIT_INDEX': '1', 'FIND': '0:-:calculatorparser'},
+		[r'^Find \[calculatorparser\]: 13 matches in 2 files', r'^  class CCalculatorParser  \[CalculatorParser\.h 29\]  match 7\+16$',
+		 r'^  #include "CalculatorParser\.h"  \[CalculatorParser\.cpp 26\]  match 10\+16$', r'^Preview: CalculatorParser\.h line 29 of ',
+		 r'^Opened CalculatorParser\.h 29:24$', r'^Find window: 13 results', r"^Occurrences of 'calculatorparser' in the solution  13 matches in 2 files$",
+		 r'^  CalculatorParser\.h  1 match$', r'^    29: class CCalculatorParser$', r'^  CalculatorParser\.cpp  12 matches$'], [r'ERROR']),
+	('find-match-case', {
+		'WAIT_INDEX': '1', 'FIND': '0:c:calculatorparser'},
+		[r'^Find \[calculatorparser\]: Nothing found', r'^Find window: 0 results'], [r'^Opened ', r'ERROR']),
+	('find-in-project-words', {
+		#In the active file's project, whole words with their case: not CCalculatorParser's.
+		'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'FIND': '1:cw:Parse'},
+		[r'^Find \[Parse\]: \d+\+? matches in \d+\+? files', r'^  CCalcObject\* CCalculatorParser::Parse\(const char\* szText\)  \[CalculatorParser\.cpp 57\]  match 32\+5$',
+		 r"^Occurrences of 'Parse' in BaseLib  \d+ matches in \d+ files"], [r'\[CalculatorParser\.cpp 33\]', r'ERROR']),
+	('find-in-directory', {
+		#In a directory and under it, whatever is in a project.
+		'WAIT_INDEX': '1', 'FIND': '2:-:class CCalculatorParser', 'FIND_DIRECTORY': os.path.join(ROOT, 'CommonLibraries', 'Libraries')},
+		[r'^Find \[class CCalculatorParser\]: 1 match in 1 file', r'^  class CCalculatorParser  \[CalculatorParser\.h 29\]  match 0\+23$',
+		 r"^Occurrences of 'class CCalculatorParser' in .*Libraries  1 match in 1 file$", r'^  CalculatorParser\.h  1 match$'], [r'ERROR']),
+	('find-dialog-open-in-find-window', {
+		#The dialog shown, and Open in Find Window clicked.
+		'WAIT_INDEX': '1', 'DIALOG_ANSWER': 'Open in Find Window', 'DEBUG': 'find:0:calculatorparser,answered:1,printfind'},
+		[r'^Dialog \[Find in Files\] answered Open in Find Window$', r"^Occurrences of 'calculatorparser' in the solution  13 matches in 2 files$",
+		 r'^    29: class CCalculatorParser$'], [r'ERROR']),
 	('close-cancel-and-navigate', {
 		'OPEN': 'CalculatorParser.cpp', 'CARET': '36:2', 'TYPE': 'X', 'DIALOG_ANSWER': 'Cancel',
 		'DEBUG': 'closetab,answered:1,printtabs,edit:caret:26:12,gotosource,printtabs,switchfile,printtabs'},
@@ -569,9 +595,9 @@ CHECKS = [
 		'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'CARET': '36:4', 'DEBUG': 'printmenus,clickmenu:View/Nope'},
 		[r'^Menu File: Open Project/Solution\.\.\., Add Solution\.\.\., Close Solution, Recent Solutions>, Clear Recent Solutions, Save \[Ctrl\+S\], Save All \[Ctrl\+Shift\+S\], Compare with File\.\.\., Settings\.\.\. \[Ctrl\+Alt\+S\], Exit$',
 		 r'^Menu File/Recent Solutions: 1 ',
-		 r'^Menu Edit: Undo \[Ctrl\+Z\]\(disabled\), Redo \[Ctrl\+Shift\+Z\]\(disabled\), Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Select All \[Ctrl\+A\], Undo Across Files\(disabled\), Redo Across Files\(disabled\)$',
+		 r'^Menu Edit: Undo \[Ctrl\+Z\]\(disabled\), Redo \[Ctrl\+Shift\+Z\]\(disabled\), Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Select All \[Ctrl\+A\], Undo Across Files\(disabled\), Redo Across Files\(disabled\), Find in Files\.\.\. \[Ctrl\+Shift\+F\]$',
 		 r'^Menu Navigate: Back \[Ctrl\+Alt\+Left\](\(disabled\))?, Forward \[Ctrl\+Alt\+Right\](\(disabled\))?, Class\.\.\. \[Ctrl\+N\], File\.\.\. \[Ctrl\+Shift\+N\], Symbol\.\.\. \[Ctrl\+Alt\+Shift\+N\]$',
-		 r'^Menu View: Solution Explorer, Find Usages, Build, Indexing, Run, Debug, Claude$',
+		 r'^Menu View: Solution Explorer, Find Usages, Find, Build, Indexing, Run, Debug, Claude$',
 		 r'^Menu Git: Compare with HEAD, Compare with Branch\.\.\., Compare with Revision\.\.\.$',
 		 r'^Menu Build: Build \[Ctrl\+Shift\+B\], Edit Build Configurations\.\.\.$',
 		 r'^Menu Debug: Start Debugging \[F5\], Start Without Debugging \[Ctrl\+F5\], Stop Debugging \[Shift\+F5\], Stop Running\(disabled\), Restart \[Ctrl\+Shift\+F5\], Break All \[Ctrl\+Pause/Break\], Attach to Emulator\.\.\., Step Into \[F11\], Step Over \[F10\], Step Out \[Shift\+F11\], Toggle Breakpoint \[F9\], ',

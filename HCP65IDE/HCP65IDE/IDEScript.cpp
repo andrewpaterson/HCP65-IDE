@@ -30,7 +30,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 //The debug script's commands that are the IDE's (RunCommand); "goto:" takes what follows it.
-static const char*	gaszIDEScriptCommands[] = { "goto:", "rename", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printsettings", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printedits", "printspans", "configuration:", "waitindex" };
+static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "rename", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printsettings", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printedits", "printspans", "configuration:", "waitindex" };
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -143,6 +143,26 @@ void CIDEScript::RunCommand(const char* szCommand)
 			mpcContent->GetNavigator()->mszGoToPattern.Set(strchr(&szCommand[5], ':') + 1);
 		}
 		mpcContent->GetNavigator()->ShowGoTo(uiTab);
+	}
+	else if (strncmp(szCommand, "find:", 5) == 0)
+	{
+		//Find in Files' dialog shown on that scope, from a tick as it must be.  find:<scope>:<text> types the text too.
+		mpcContent->GetFindInFiles()->muiScope = (size)atoi(&szCommand[5]);
+		if (strchr(&szCommand[5], ':') != NULL)
+		{
+			mpcContent->GetFindInFiles()->mszText.Set(strchr(&szCommand[5], ':') + 1);
+		}
+		if (getenv("HCP65_IDE_FIND_DIRECTORY") != NULL)
+		{
+			mpcContent->GetFindInFiles()->mszDirectory.Set(getenv("HCP65_IDE_FIND_DIRECTORY"));
+		}
+		mpcContent->GetFindInFiles()->ShowFind();
+	}
+	else if (strcmp(szCommand, "printfind") == 0)
+	{
+		//The Find tool window's tree, each node indented by its depth.
+		PrintFindTree(MAX_SIZE);
+		fflush(stdout);
 	}
 	else if (strcmp(szCommand, "rename") == 0)
 	{
@@ -567,6 +587,95 @@ void CIDEScript::ClickMenu(const char* szPath)
 	}
 	fflush(stdout);
 	aszParts.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// HCP65_IDE_FIND's search: <scope>:<options>:<text>.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEScript::RunFind(const char* szFind)
+{
+	Ptr<CIDEFindInFiles>	pFindInFiles;
+	Ptr<CFindInFilesDialog>	pFind;
+	Ptr<CTextArea>			pPreview;
+	SFindInFilesItem*		psItem;
+	const char*				szOptions;
+	const char*				szText;
+	size					i;
+	int64					iStart;
+	int						iLine;
+	int						iColumn;
+
+	szOptions = strchr(szFind, ':');
+	szText = szOptions ? strchr(&szOptions[1], ':') : NULL;
+	if (szText == NULL)
+	{
+		return;
+	}
+	pFindInFiles = mpcContent->GetFindInFiles();
+	pFindInFiles->muiScope = (size)atoi(szFind);
+	pFindInFiles->mbMatchCase = (memchr(szOptions, 'c', (size)(szText - szOptions)) != NULL);
+	pFindInFiles->mbWholeWords = (memchr(szOptions, 'w', (size)(szText - szOptions)) != NULL);
+	pFindInFiles->mszText.Set(&szText[1]);
+	if (getenv("HCP65_IDE_FIND_DIRECTORY") != NULL)
+	{
+		pFindInFiles->mszDirectory.Set(getenv("HCP65_IDE_FIND_DIRECTORY"));
+	}
+
+	iStart = GetDebugTickCount();
+	pFindInFiles->CreateFind();
+	pFind = pFindInFiles->GetFind();
+	pFind->Finish();
+	printf("Find [%s]: %s in %d ms\n", pFind->GetText(), pFind->GetStatus(), (int)(GetDebugTickCount() - iStart));
+	for (i = 0; (i < pFind->NumResults()) && (i < 10); i++)
+	{
+		psItem = pFind->GetResult(i);
+		printf("  %s  [%s]  match %d+%d\n", psItem->szText.Text(), psItem->szLocation.Text(), (int)psItem->uiMatchStart, (int)psItem->uiMatchLength);
+	}
+	pPreview = pFind->GetPreview()->GetTextArea();
+	printf("Preview: %s line %d of %d\n", GetIDEFileNamePart(pFind->GetPreviewTitle()), (int)pPreview->FindLine(pPreview->GetCaretPosition()) + 1, (int)pPreview->NumLines());
+
+	if (pFind->Approve() && pFindInFiles->OpenFindChoice() && mpcContent->GetDocuments()->GetCaretPlace(&iLine, &iColumn))
+	{
+		printf("Opened %s %d:%d\n", GetIDEFileNamePart(mpcContent->GetDocuments()->GetActiveTab()->GetFileName()), iLine + 1, iColumn + 1);
+	}
+	pFindInFiles->mpDialog = NULL;
+	pFind = NULL;
+
+	iStart = GetDebugTickCount();
+	printf("Find window: %d results in %d ms\n", (int)pFindInFiles->OpenInFindWindow(), (int)(GetDebugTickCount() - iStart));
+	PrintFindTree(12);
+	fflush(stdout);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The Find tool window's first uiMaximum nodes, each indented by its
+// depth.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEScript::PrintFindTree(size uiMaximum)
+{
+	Ptr<CTreeContainer>	pTree;
+	CChars				szNode;
+	int32				iNode;
+	int32				iDepth;
+
+	pTree = mpcContent->GetFindInFiles()->GetFindTree();
+	for (iNode = 0; (iNode < pTree->NumNodes()) && ((size)iNode < uiMaximum); iNode++)
+	{
+		szNode.Init();
+		pTree->GetNodeText(iNode, &szNode);
+		for (iDepth = pTree->GetNodeDepth(iNode); iDepth > 0; iDepth--)
+		{
+			printf("  ");
+		}
+		printf("%s\n", szNode.Text());
+		szNode.Kill();
+	}
 }
 
 
@@ -1041,6 +1150,9 @@ void CIDEScript::WatchDialog(Ptr<CDialog> pDialog)
 }
 
 
+bool CIDEScript::IsWatchingDialog(void) { return mpDialog.IsNotNull(); }
+
+
 //////////////////////////////////////////////////////////////////////////
 //
 // The dialog shown has gone.
@@ -1068,9 +1180,30 @@ void CIDEScript::DialogTick(void)
 	Ptr<CWindow>	pWindow;
 	const char*		szAnswer;
 	SMemberCall		sDrawn;
+	bool			bHighlighting;
 
 	pWindow = mpDialog->GetWindow();
 	miDialogTicks++;
+	if (mpcContent->GetFindInFiles()->GetFind().IsNotNull())
+	{
+		//Find in Files searches between ticks: all of it is found, and its preview coloured, before the dialog is
+		//saved and answered.
+		mpcContent->GetFindInFiles()->GetFind()->Finish();
+		bHighlighting = mpcContent->GetDocuments()->IsHighlightingPreview();
+		mpcContent->GetFindInFiles()->DialogTick();
+		if (mpcContent->GetDocuments()->IsHighlightingPreview() && (miDialogTicks < 20000))
+		{
+			pWindow->RequestTick(5);
+			return;
+		}
+		if (bHighlighting)
+		{
+			//Just coloured: it is drawn before it is saved.
+			pWindow->Invalidate();
+			pWindow->RequestTick(0);
+			return;
+		}
+	}
 	if (miDialogTicks < 5)
 	{
 		pWindow->Invalidate();
@@ -1097,6 +1230,11 @@ void CIDEScript::DialogTick(void)
 	printf("Dialog [%s] answered %s\n", pWindow->GetWindowTitle(), szAnswer);
 	fflush(stdout);
 	muiAnswered++;
+	if ((strcmp(szAnswer, "Open in Find Window") == 0) && mpcContent->GetFindInFiles()->GetFind().IsNotNull())
+	{
+		mpcContent->GetFindInFiles()->GetFind()->OpenInFindWindow();
+		return;
+	}
 	mpDialog->Close(((strcmp(szAnswer, "Save") == 0) || (strcmp(szAnswer, "OK") == 0)) ? "OK" : szAnswer);
 }
 

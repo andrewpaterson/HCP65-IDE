@@ -55,6 +55,7 @@ static const char*	gaszIDEScriptVariables[] =
 	"HCP65_IDE_EDIT",
 	"HCP65_IDE_EXPAND",
 	"HCP65_IDE_GOTO",
+	"HCP65_IDE_FIND",
 	"HCP65_IDE_LISTING",
 	"HCP65_IDE_OPEN",
 	"HCP65_IDE_RECENT",
@@ -441,6 +442,13 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 				//<tab>:<pattern>, as Navigate's Class (0), File (1) or Symbol (2) with the pattern typed: the best
 				//results are printed and the first opened.
 				mpContent->GetScript()->RunGoTo(getenv("HCP65_IDE_GOTO"));
+			}
+			if (getenv("HCP65_IDE_FIND") != NULL)
+			{
+				//<scope>:<options>:<text>, as Find in Files in the solution (0), the active file's project (1) or
+				//HCP65_IDE_FIND_DIRECTORY (2), with Match case (c) and Words (w) or neither (-): the first results and
+				//the preview are printed, the first opened, and all of them listed in the Find tool window.
+				mpContent->GetScript()->RunFind(getenv("HCP65_IDE_FIND"));
 			}
 			if ((getenv("HCP65_IDE_CHANGE") != NULL) && mpContent->GetDocuments()->GetActiveTab().IsNotNull())
 			{

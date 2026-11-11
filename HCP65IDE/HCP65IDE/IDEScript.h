@@ -34,6 +34,8 @@ class CIDEContent;
 //  HCP65_IDE_EDIT        a comma separated list of edits (RunEditStep): open:<file>, type:<text>, undo, redo, undoall,
 //                        redoall, group, endgroup, menu, explorer, renamable, rename:<name>, usages and print.
 //  HCP65_IDE_GOTO        <tab>:<pattern>, Go to's results printed and the first opened (RunGoTo).
+//  HCP65_IDE_FIND        <scope>:<options>:<text>, Find in Files' results printed, the first opened and all of them
+//                        listed in the Find tool window (RunFind); HCP65_IDE_FIND_DIRECTORY is scope 2's directory.
 //  HCP65_IDE_DOCK        a comma separated list of dock moves: <action>:<pane ID> or reset (RunDockMove).
 //  HCP65_IDE_DEBUG       the debug script: the debugger's commands (CIDEContent::RunDebugScript) and these, the IDE's
 //                        (RunCommand): goto:<tab>[:<pattern>], rename, closetab, closeall, exit, gotosource,
@@ -68,10 +70,13 @@ public:
 	void		ClickMenu(const char* szPath);
 	void		RunEditStep(const char* szStep);
 	void		RunGoTo(const char* szGoTo);
+	void		RunFind(const char* szFind);
+	void		PrintFindTree(size uiMaximum);
 	void		RunDockMove(const char* szMove);
 
 	void	WatchDialog(Ptr<CDialog> pDialog);
 	void	StopWatchingDialog(void);
+	bool	IsWatchingDialog(void);
 	void	DialogTick(void);
 	void	PressDialogKeys(Ptr<CWindow> pWindow);
 	template<class M, class O>

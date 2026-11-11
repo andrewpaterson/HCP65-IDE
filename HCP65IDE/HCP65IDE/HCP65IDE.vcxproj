@@ -249,6 +249,7 @@
     <ClCompile Include="IDENavigator.cpp" />
     <ClCompile Include="IDERename.cpp" />
     <ClCompile Include="IDEUsages.cpp" />
+    <ClCompile Include="IDEFindInFiles.cpp" />
     <ClCompile Include="IDEIndexing.cpp" />
     <ClCompile Include="IDENavigationHistory.cpp" />
     <ClCompile Include="IDEOccurrences.cpp" />
@@ -299,6 +300,7 @@
     <ClInclude Include="IDENavigator.h" />
     <ClInclude Include="IDERename.h" />
     <ClInclude Include="IDEUsages.h" />
+    <ClInclude Include="IDEFindInFiles.h" />
     <ClInclude Include="IDEIndexing.h" />
     <ClInclude Include="IDENavigationHistory.h" />
     <ClInclude Include="IDEOccurrences.h" />

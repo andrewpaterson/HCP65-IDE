@@ -198,11 +198,14 @@ size CIDEOccurrences::GetSteppables(CIDESteppable** apcDest)
 {
 	Ptr<CIDEUsages>		pUsages;
 	Ptr<CIDEBuilding>	pBuilding;
+	Ptr<CIDEFindInFiles>	pFind;
 
 	pUsages = mpcContent->GetUsages();
 	pBuilding = mpcContent->GetBuilding();
+	pFind = mpcContent->GetFindInFiles();
 	apcDest[0] = &pUsages;
 	apcDest[1] = &pBuilding;
+	apcDest[2] = &pFind;
 	return IDE_NUM_STEPPABLES;
 }
 

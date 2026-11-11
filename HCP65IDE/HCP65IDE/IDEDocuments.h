@@ -101,6 +101,10 @@ protected:
 	size						muiIndexings;		//The code model's indexings the tabs have seen (NumIndexings).
 	CArrayIDEDocumentAnchors	mapcAnchors;		//One for each open file.
 	bool						mbReloading;		//A tab's text is being read again: the places in it keep their lines.
+	CChars						mszPreviewFile;		//The file Find in Files previews, to be highlighted (HighlightPreview) if mbPreview.
+	CChars						mszPreviewText;
+	bool						mbPreview;
+	bool						mbPreviewing;		//It is with the edits thread.
 
 public:
 	void	Init(CIDEContent* pcContent);
@@ -144,6 +148,8 @@ public:
 	Ptr<CIDEEditorTab>	FindTab(CCodeEditor* pcEditor);
 	Ptr<CIDEEditorTab>	FindTab(CTextArea* pcEditor);
 	void				RequestHighlight(Ptr<CIDEEditorTab> pTab);
+	void				HighlightPreview(const char* szFileName, const char* szText);
+	bool				IsHighlightingPreview(void);
 	void				ReloadTab(Ptr<CIDEEditorTab> pTab, const char* szText);
 	void				DocumentChanged(const char* szFileName, STextDocumentChange* psChange);
 
