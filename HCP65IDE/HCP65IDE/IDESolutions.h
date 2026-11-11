@@ -79,6 +79,8 @@ public:
 	void					RememberOpenSolution(void);
 	bool					IsSolutionFile(size uiSolution, size uiProject);
 	bool					SetStartupSolution(size uiSolution);
+	bool					SetStartupProject(size uiSolution, size uiProject);
+	bool					CanSetStartupProject(void);
 	bool					ShowOpenSolutionDialog(void);
 	bool					ShowAddSolutionDialog(void);
 	void					SetRecentFile(const char* szFile);

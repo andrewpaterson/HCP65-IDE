@@ -513,6 +513,58 @@ bool CIDESolutions::SetStartupSolution(size uiSolution)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// A solution's startup project, by its index in the solution, as Visual
+// Studio's Set as Startup Project: the application of the solution's that
+// is built into its program (an HCP65 build leaves the others out) and
+// that Start runs.  The workspace file is written.  False if it isn't an
+// application.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDESolutions::SetStartupProject(size uiSolution, size uiProject)
+{
+	CBuildWorkspace*	pcWorkspace;
+
+	pcWorkspace = mpcContent->GetWorkspace();
+	if (uiSolution >= pcWorkspace->NumSolutions())
+	{
+		return false;
+	}
+	if (uiProject == pcWorkspace->GetStartupProject(uiSolution))
+	{
+		return true;
+	}
+	if (!pcWorkspace->SetStartupProject(uiSolution, uiProject))
+	{
+		return false;
+	}
+	WorkspaceChanged(false);
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether Solution Explorer's selected node is a project that could be
+// made its solution's startup project: an application that isn't it.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDESolutions::CanSetStartupProject(void)
+{
+	SSolutionExplorerNode*		psNode;
+	CBuildWorkspaceSolution*	pcSolution;
+
+	psNode = mpExplorer.IsNotNull() ? mpExplorer->GetNode(mpExplorer->GetTree()->GetSelectedNode()) : NULL;
+	if ((psNode == NULL) || (psNode->eType != SENT_Project) || (psNode->uiSolution >= mpcContent->GetWorkspace()->NumSolutions()))
+	{
+		return false;
+	}
+	pcSolution = mpcContent->GetWorkspace()->GetSolution(psNode->uiSolution);
+	return pcSolution->IsApplication(psNode->uiProject) && (psNode->uiProject != pcSolution->GetStartupProject());
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // What is open is let go of: its layout saved, a build of it stopped, its
 // files closed and the references found in it forgotten.
 //
@@ -823,13 +875,15 @@ void CIDESolutions::CreateExplorerPane(SDockPlace* psPlace)
 //////////////////////////////////////////////////////////////////////////
 //
 // Solution Explorer's menu, for the solution of the node selected: Set as
-// Startup Solution and Remove.
+// Startup Solution and Remove; and for a project selected, Set as Startup
+// Project.
 //
 //////////////////////////////////////////////////////////////////////////
 Ptr<CMenuContainer> CIDESolutions::CreateExplorerMenu(void)
 {
 	mpExplorerMenu = OMalloc<CMenuContainer>(mpcContent->GetWindow(), mpcContent->GetTheme());
 	mpExplorerMenu->AddItem(mpcContent->GetCommands()->Find("Explorer.SetStartupSolution"));
+	mpExplorerMenu->AddItem(mpcContent->GetCommands()->Find("Explorer.SetStartupProject"));
 	mpExplorerMenu->AddItem(mpcContent->GetCommands()->Find("Explorer.RemoveSolution"));
 	return mpExplorerMenu;
 }
@@ -866,6 +920,7 @@ void CIDESolutions::AddCommands(Ptr<CCommandSet> pCommands)
 	pCommands->Add("File.CloseSolution", "Close Solution", "", Ptr<CImageCel>(), this, &CIDESolutions::QueueCommand);
 	pCommands->Add("File.ClearRecentSolutions", "Clear Recent Solutions", "", Ptr<CImageCel>(), this, &CIDESolutions::QueueCommand);
 	pCommands->Add("Explorer.SetStartupSolution", "Set as Startup Solution", "", Ptr<CImageCel>(), this, &CIDESolutions::QueueCommand);
+	pCommands->Add("Explorer.SetStartupProject", "Set as Startup Project", "", Ptr<CImageCel>(), this, &CIDESolutions::QueueCommand)->SetEnabledCheck(this, &CIDESolutions::CanSetStartupProject);
 	pCommands->Add("Explorer.RemoveSolution", "Remove Solution", "", Ptr<CImageCel>(), this, &CIDESolutions::QueueCommand);
 	pCommands->Add("View.SolutionExplorer", "Solution Explorer", "Alt+1", Ptr<CImageCel>(), this, &CIDESolutions::ShowActiveFileInExplorer);
 }
@@ -948,6 +1003,8 @@ void CIDESolutions::QueueCommand(CCommand* pcCommand)
 //////////////////////////////////////////////////////////////////////////
 void CIDESolutions::RunQueuedCommand(void)
 {
+	SSolutionExplorerNode*	psNode;
+
 	if (mszQueuedCommand.Equals("File.OpenSolution"))
 	{
 		ShowOpenSolutionDialog();
@@ -967,6 +1024,14 @@ void CIDESolutions::RunQueuedCommand(void)
 	else if (mszQueuedCommand.Equals("Explorer.SetStartupSolution"))
 	{
 		SetStartupSolution(mpExplorer->GetNodeSolution(mpExplorer->GetTree()->GetSelectedNode()));
+	}
+	else if (mszQueuedCommand.Equals("Explorer.SetStartupProject"))
+	{
+		psNode = mpExplorer->GetNode(mpExplorer->GetTree()->GetSelectedNode());
+		if (psNode && (psNode->eType == SENT_Project))
+		{
+			SetStartupProject(psNode->uiSolution, psNode->uiProject);
+		}
 	}
 	else if (mszQueuedCommand.Equals("Explorer.RemoveSolution"))
 	{

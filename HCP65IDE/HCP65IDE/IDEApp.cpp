@@ -55,6 +55,7 @@ static const char*	gaszIDEScriptVariables[] =
 	"HCP65_IDE_EDIT",
 	"HCP65_IDE_EXPAND",
 	"HCP65_IDE_GOTO",
+	"HCP65_IDE_STARTUP_PROJECT",
 	"HCP65_IDE_FIND",
 	"HCP65_IDE_LISTING",
 	"HCP65_IDE_OPEN",
@@ -327,6 +328,12 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 			{
 				//As a solution's Set as Startup Solution, by its place in Solution Explorer (0 based).
 				mpContent->GetSolutions()->SetStartupSolution((size)atoi(getenv("HCP65_IDE_STARTUP")));
+			}
+			if (getenv("HCP65_IDE_STARTUP_PROJECT") != NULL)
+			{
+				//As a project's Set as Startup Project: <solution>:<project>, the solution by its place in Solution
+				//Explorer (0 based) and the project by its name.  Each solution's startup project is printed.
+				mpContent->GetScript()->SetStartupProject(getenv("HCP65_IDE_STARTUP_PROJECT"));
 			}
 			if (getenv("HCP65_IDE_REMOVE") != NULL)
 			{

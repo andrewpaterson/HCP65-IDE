@@ -34,6 +34,7 @@ class CIDEContent;
 //  HCP65_IDE_EDIT        a comma separated list of edits (RunEditStep): open:<file>, type:<text>, undo, redo, undoall,
 //                        redoall, group, endgroup, menu, explorer, renamable, rename:<name>, usages and print.
 //  HCP65_IDE_GOTO        <tab>:<pattern>, Go to's results printed and the first opened (RunGoTo).
+//  HCP65_IDE_STARTUP_PROJECT  <solution>:<project>, a solution's startup project set and each solution's printed.
 //  HCP65_IDE_FIND        <scope>:<options>:<text>, Find in Files' results printed, the first opened and all of them
 //                        listed in the Find tool window (RunFind); HCP65_IDE_FIND_DIRECTORY is scope 2's directory.
 //  HCP65_IDE_DOCK        a comma separated list of dock moves: <action>:<pane ID> or reset (RunDockMove).
@@ -71,6 +72,8 @@ public:
 	void		RunEditStep(const char* szStep);
 	void		RunGoTo(const char* szGoTo);
 	void		RunFind(const char* szFind);
+	void		SetStartupProject(const char* szStartup);
+	void		PrintStartupProjects(void);
 	void		PrintFindTree(size uiMaximum);
 	void		RunDockMove(const char* szMove);
 

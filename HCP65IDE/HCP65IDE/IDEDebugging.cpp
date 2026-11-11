@@ -239,17 +239,20 @@ void CIDEDebugging::ResolveRunPath(const char* szPath, CChars* pszDest)
 //
 // The external tool the chosen run configuration starts, both to run and
 // to debug: its own, or without one for a W65C816 the default emulator, in
-// its folder and with its arguments if it has them.  False, with why in
-// pszMessage, if there is none.
+// its folder and with its arguments if it has them, or for GCC the program
+// it linked of the startup solution's startup project, in the project's
+// folder.  False, with why in pszMessage, if there is none.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEDebugging::ChooseTool(CChars* pszExecutable, CChars* pszDirectory, CChars* pszArguments, CChars* pszMessage)
 {
 	CRunConfiguration*		pcRun;
-	CBuildConfiguration*	pcConfiguration;
-	CFileUtil				cFileUtil;
-	CChars					szFile;
+	CBuildConfiguration*		pcConfiguration;
+	CBuildWorkspaceSolution*	pcSolution;
+	CFileUtil					cFileUtil;
+	CChars						szFile;
 
+	pcSolution = mpcContent->GetWorkspace()->GetStartupSolution();
 	pcRun = mpcContent->GetBuildConfigurations()->GetRunConfiguration();
 	pcConfiguration = mpcContent->GetBuildConfigurations()->GetConfiguration();
 	szFile.Init();
@@ -277,6 +280,20 @@ bool CIDEDebugging::ChooseTool(CChars* pszExecutable, CChars* pszDirectory, CCha
 		else
 		{
 			pszDirectory->Set(mszDefaultEmulatorDirectory);
+		}
+		pszArguments->Set((pcRun != NULL) ? pcRun->GetArguments() : "");
+	}
+	else if ((pcConfiguration != NULL) && (pcConfiguration->GetToolchain() == BT_GCC) && (pcSolution != NULL) && (pcSolution->GetStartupProject() != MAX_SIZE))
+	{
+		//What GCC linked of the startup solution's startup project, in the project's folder as Visual Studio runs one.
+		CGCCBuild::GetExecutablePath(pcSolution->mcSolution.GetDirectory(), pcConfiguration, pcSolution->GetStartupProjectName(), pszExecutable);
+		if ((pcRun != NULL) && (pcRun->GetDirectory()[0] != '\0'))
+		{
+			ResolveRunPath(pcRun->GetDirectory(), pszDirectory);
+		}
+		else
+		{
+			pszDirectory->Set(pcSolution->mcSolution.GetProject(pcSolution->GetStartupProject())->GetProject()->GetDirectory());
 		}
 		pszArguments->Set((pcRun != NULL) ? pcRun->GetArguments() : "");
 	}

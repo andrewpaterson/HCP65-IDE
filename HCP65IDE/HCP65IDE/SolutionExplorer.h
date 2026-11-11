@@ -71,7 +71,7 @@ typedef CArrayTemplate<SSolutionExplorerEntry>	CArraySolutionExplorerEntry;
 
 
 //Solution Explorer: each of the workspace's solutions, its solution folders and projects, each project's filters as
-//folders and its files in them, as Visual Studio shows them.  With more than one solution the startup one's name is bold.  In each folder the folders come first and then the projects or files, each in
+//folders and its files in them, as Visual Studio shows them.  With more than one solution the startup one's name is bold, as is the name of the startup project of a solution with more than one application.  In each folder the folders come first and then the projects or files, each in
 //alphabetical order.  Files can be coloured by what git says has happened to them (ColourFiles).  It is an object held by
 //the IDE's content.
 class CSolutionExplorer : public CObject

@@ -294,7 +294,7 @@ bool CIDEBuilding::StartBuildStep(CArrayChars* paszLines)
 		paszLines->Add(szLine.Text());
 		szLine.Kill();
 	}
-	return mcBuild.Start(&pcSolution->mcSolution, mpcContent->GetWorkspace()->FindConfiguration(uiSolution, mpcContent->GetBuildConfigurations()->GetConfigurationName()), NULL, mszLibc65.Text(), paszLines);
+	return mcBuild.Start(&pcSolution->mcSolution, mpcContent->GetWorkspace()->FindConfiguration(uiSolution, mpcContent->GetBuildConfigurations()->GetConfigurationName()), NULL, mszLibc65.Text(), paszLines, pcSolution->GetStartupProjectName());
 }
 
 

@@ -380,6 +380,10 @@ void CSolutionExplorer::AddProject(int32 iParentNode, size uiSolution, size uiPr
 	}
 	iNode = AddNode(iParentNode, szText.Text(), mpProjectIcon, SENT_Project, uiSolution, uiProject, 0);
 	szText.Kill();
+	if (IsStartupNode(iNode))
+	{
+		mpTree->SetNodeFont(iNode, GetFolderFont(iNode, false, Ptr<CFontColours>()));
+	}
 
 	if (pcProject->IsLoaded())
 	{
@@ -746,15 +750,27 @@ void CSolutionExplorer::SetBoldColours(Ptr<CFontColours> pBoldColours)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The startup solution's node, when there is more than one solution.
+// The startup solution's node, when there is more than one solution, or
+// a solution's startup project's, when the solution has more than one
+// application.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CSolutionExplorer::IsStartupNode(int32 iNode)
 {
-	SSolutionExplorerNode*	psNode;
+	SSolutionExplorerNode*		psNode;
+	CBuildWorkspaceSolution*	pcSolution;
 
 	psNode = GetNode(iNode);
-	if ((psNode == NULL) || (psNode->eType != SENT_Solution) || (mpcWorkspace == NULL))
+	if ((psNode == NULL) || (mpcWorkspace == NULL))
+	{
+		return false;
+	}
+	if (psNode->eType == SENT_Project)
+	{
+		pcSolution = mpcWorkspace->GetSolution(psNode->uiSolution);
+		return (pcSolution->NumApplications() > 1) && (psNode->uiProject == pcSolution->GetStartupProject());
+	}
+	if (psNode->eType != SENT_Solution)
 	{
 		return false;
 	}
@@ -765,7 +781,8 @@ bool CSolutionExplorer::IsStartupNode(int32 iNode)
 //////////////////////////////////////////////////////////////////////////
 //
 // The font of a node that isn't a file: coloured as modified if bChanged
-// (a file in it has changed), bold for the startup solution.  NULL for the
+// (a file in it has changed), bold for the startup solution and a
+// solution's startup project.  NULL for the
 // theme's.
 //
 //////////////////////////////////////////////////////////////////////////

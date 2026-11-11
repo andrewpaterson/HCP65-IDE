@@ -30,7 +30,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 //The debug script's commands that are the IDE's (RunCommand); "goto:" takes what follows it.
-static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "rename", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printsettings", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printedits", "printspans", "configuration:", "waitindex" };
+static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printstartup", "printworkspace", "rename", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printsettings", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printedits", "printspans", "configuration:", "waitindex" };
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -157,6 +157,21 @@ void CIDEScript::RunCommand(const char* szCommand)
 			mpcContent->GetFindInFiles()->mszDirectory.Set(getenv("HCP65_IDE_FIND_DIRECTORY"));
 		}
 		mpcContent->GetFindInFiles()->ShowFind();
+	}
+	else if (strcmp(szCommand, "printstartup") == 0)
+	{
+		//Each solution's startup project, and what Start would run.
+		PrintStartupProjects();
+	}
+	else if (strcmp(szCommand, "printworkspace") == 0)
+	{
+		//The workspace's file, as it is on the disk.
+		CTextFile	cFile;
+
+		cFile.Init();
+		printf("Workspace file:\n%s\n", cFile.Read(mpcContent->GetWorkspace()->GetFile()) ? cFile.Text() : "(none)");
+		cFile.Kill();
+		fflush(stdout);
 	}
 	else if (strcmp(szCommand, "printfind") == 0)
 	{
@@ -587,6 +602,97 @@ void CIDEScript::ClickMenu(const char* szPath)
 	}
 	fflush(stdout);
 	aszParts.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// HCP65_IDE_STARTUP_PROJECT: <solution>:<project>, the solution by its
+// place and the project by its name, made its startup project.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEScript::SetStartupProject(const char* szStartup)
+{
+	CBuildWorkspace*		pcWorkspace;
+	CVcxSolutionProject*	pcProject;
+	const char*				szName;
+	size					uiSolution;
+	size					i;
+	bool					bSet;
+
+	pcWorkspace = mpcContent->GetWorkspace();
+	uiSolution = (size)atoi(szStartup);
+	szName = strchr(szStartup, ':');
+	bSet = false;
+	if (szName && (uiSolution < pcWorkspace->NumSolutions()))
+	{
+		for (i = 0; i < pcWorkspace->GetSolution(uiSolution)->mcSolution.NumProjects(); i++)
+		{
+			pcProject = pcWorkspace->GetSolution(uiSolution)->mcSolution.GetProject(i);
+			if (StringInsensitiveCompare(pcProject->GetName(), &szName[1]) == 0)
+			{
+				bSet = mpcContent->GetSolutions()->SetStartupProject(uiSolution, i);
+				break;
+			}
+		}
+	}
+	printf("Set startup project %s: %s\n", szStartup, bSet ? "done" : "refused");
+	PrintStartupProjects();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Each solution's startup project (and how many applications it has),
+// Solution Explorer's bold rows, and the tool Start would run.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEScript::PrintStartupProjects(void)
+{
+	CBuildWorkspace*			pcWorkspace;
+	CBuildWorkspaceSolution*	pcSolution;
+	Ptr<CTreeContainer>			pTree;
+	CChars						szExecutable;
+	CChars						szDirectory;
+	CChars						szArguments;
+	CChars						szMessage;
+	CChars						szNode;
+	size						i;
+	int32						iNode;
+
+	pcWorkspace = mpcContent->GetWorkspace();
+	for (i = 0; i < pcWorkspace->NumSolutions(); i++)
+	{
+		pcSolution = pcWorkspace->GetSolution(i);
+		printf("Startup project of %s: [%s] of %d applications%s\n", pcSolution->mcSolution.GetName(), pcSolution->GetStartupProjectName(), (int)pcSolution->NumApplications(), pcSolution->mszStartupProject.Empty() ? "" : " (chosen)");
+	}
+	pTree = mpcContent->GetSolutions()->GetExplorer()->GetTree();
+	for (iNode = 0; iNode < pTree->NumNodes(); iNode++)
+	{
+		if (pTree->GetNodeFont(iNode).IsNotNull() && (mpcContent->GetSolutions()->GetExplorer()->GetNode(iNode)->eType == SENT_Project))
+		{
+			szNode.Init();
+			printf("Bold project: %s\n", pTree->GetNodeText(iNode, &szNode));
+			szNode.Kill();
+		}
+	}
+	szExecutable.Init();
+	szDirectory.Init();
+	szArguments.Init();
+	szMessage.Init();
+	if (mpcContent->GetDebugging()->ChooseTool(&szExecutable, &szDirectory, &szArguments, &szMessage))
+	{
+		printf("Start runs: %s in %s\n", szExecutable.Text(), szDirectory.Text());
+	}
+	else
+	{
+		printf("Start runs: nothing (%s)\n", szMessage.Text());
+	}
+	szMessage.Kill();
+	szArguments.Kill();
+	szDirectory.Kill();
+	szExecutable.Kill();
+	fflush(stdout);
 }
 
 

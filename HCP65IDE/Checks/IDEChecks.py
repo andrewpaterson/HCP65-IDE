@@ -50,6 +50,13 @@ def MakeSolutionCopy(bOther=False):
 	return {'SOLUTION': os.path.join(szKernel, 'Kernel.sln'), 'SAVE_LAYOUT': '1', 'RECENT': os.path.join(szRoot, 'Recent.xml')}
 
 
+def MakeToolsCopy():
+	#A copy of the test solutions opened on Tools, which has two applications (First and Second) and a library (Shared).
+	asCopy = MakeSolutionCopy()
+	asCopy['SOLUTION'] = os.path.join(os.path.dirname(os.path.dirname(asCopy['SOLUTION'])), 'Tools', 'Tools.sln')
+	return asCopy
+
+
 def MakeBrokenKernel():
 	#A copy of the test solution whose kernel doesn't compile: two errors in Kernel.cpp, on lines 2 and 5, and a usage of
 	#F on line 5.  Its recent solutions are apart from the user's.
@@ -395,6 +402,24 @@ CHECKS = [
 		[r'^Keys Control\+Shift\+N: taken$', r'^Go to tab 1 \[calcpars\]: 2 results$', r'^  CalculatorParser\.h ',
 		 r'^Keys Control\+Alt\+Shift\+N: taken$', r'^Go to tab 2 \[calcpars\]: 1 results$', r'^  CCalculatorParser ',
 		 r'^Keys Control\+N: taken$', r'^Go to tab 0 \[calcpars\]: 1 results$', r'^Focus: CTextField$'], [r'not taken']),
+	('startup-project-default', dict(MakeToolsCopy(), **{
+		#A solution with two applications: its first is its startup project, bold in Solution Explorer.
+		'DEBUG': 'printstartup'}),
+		[r'^Startup project of Tools: \[First\] of 2 applications$', r'^Bold project: First$'], [r'chosen', r'Bold project: Second', r'ERROR']),
+	('startup-project-set', dict(MakeToolsCopy(), **{
+		#Set as Startup Project: kept in the workspace file, and what GCC links of it is what Start runs, in its folder.
+		'STARTUP_PROJECT': '0:Second', 'CONFIGURATION': 'Release|GCC', 'DEBUG': 'printstartup,printworkspace'}),
+		[r'^Set startup project 0:Second: done$', r'^Startup project of Tools: \[Second\] of 2 applications \(chosen\)$', r'^Bold project: Second$',
+		 r'^Start runs: .*Output[/\\]GCC[/\\]Release[/\\]Second(\.exe)? in .*Tools$', r'Tools\.sln" Startup="true" StartupProject="Second"/>'],
+		[r'Bold project: First', r'ERROR']),
+	('startup-project-library', dict(MakeToolsCopy(), **{
+		#A library can't be a startup project.
+		'STARTUP_PROJECT': '0:Shared', 'DEBUG': 'printstartup'}),
+		[r'^Set startup project 0:Shared: refused$', r'^Startup project of Tools: \[First\] of 2 applications$'], [r'chosen', r'ERROR']),
+	('startup-project-build', dict(MakeToolsCopy(), **{
+		#An HCP65 build builds the startup project and the library, not the other application.
+		'STARTUP_PROJECT': '0:Second', 'CONFIGURATION': 'Release|W65C816', 'DEBUG': 'command:Build.Build,wait:200,printbuild'}),
+		[r'Second: Release\|Win32', r'Shared: Release\|Win32', r'build succeeded'], [r'First: Release\|Win32', r'ERROR']),
 	('find-in-solution', {
 		#Find in Files, whatever the case: the first results with where the text is in each, the first previewed and
 		#opened with the text selected, and all of them in the Find tool window.
@@ -604,7 +629,7 @@ CHECKS = [
 		 r'^Menu Window: Reset Window Layout, Close All Documents$',
 		 r'^Menu Editor: Go to Source \[Ctrl\+B\], Find Usages \[Alt\+F7\], Rename\.\.\. \[Shift\+F6\], Refactor>$',
 		 r'^Menu Editor/Refactor: Extract Method\.\.\.\(disabled\)$',
-		 r'^Menu Explorer: Set as Startup Solution, Remove Solution$',
+		 r'^Menu Explorer: Set as Startup Solution, Set as Startup Project\(disabled\), Remove Solution$',
 		 r'^Menu item \[View/Nope\] not found$'], []),
 	('menu-clicks', {
 		'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'CARET': '36:4', 'DIALOG_ANSWER': 'Cancel',
