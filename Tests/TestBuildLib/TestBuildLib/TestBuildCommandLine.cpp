@@ -114,6 +114,27 @@ void TestBuildCommandLineParse(void)
 	AssertString("Unknown option -fast.", cCommandLine.GetLastLine());
 	cCommandLine.Kill();
 
+	const char* aszStartup[] = { "hcp65build", "A.sln", "-startup", "Second", "-config", "Release|W65C816" };
+	cCommandLine.Init();
+	AssertTrue(cCommandLine.Parse(6, aszStartup));
+	AssertString("Second", cCommandLine.GetStartupProject());
+	AssertString("Release|W65C816", cCommandLine.GetConfiguration());
+	cCommandLine.Kill();
+
+	const char* aszNoStartup[] = { "hcp65build", "A.sln", "-startup" };
+	cCommandLine.Init();
+	AssertFalse(cCommandLine.Parse(3, aszNoStartup));
+	AssertString("Option -startup needs a value.", cCommandLine.GetLastLine());
+	cCommandLine.Kill();
+
+	//-startup must name an application of a solution built: a library isn't one.
+	const char* aszBadStartup[] = { "hcp65build", "Input" _FS_ "Workspace" _FS_ "Tools" _FS_ "Tools.sln", "-startup", "Shared", "-libc65", TEST_COMMAND_LINE_LIBC65 };
+	cCommandLine.Init();
+	AssertTrue(cCommandLine.Parse(6, aszBadStartup));
+	AssertInt(BUILD_EXIT_USAGE, cCommandLine.Run(NULL));
+	AssertString("No solution has an application called Shared to be its startup project.", cCommandLine.GetLastLine());
+	cCommandLine.Kill();
+
 	const char* aszMissing[] = { "hcp65build", "A.sln", "-config" };
 	cCommandLine.Init();
 	AssertFalse(cCommandLine.Parse(3, aszMissing));

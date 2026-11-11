@@ -47,6 +47,7 @@ void CBuildCommandLine::Init(void)
 	mszConfiguration.Init();
 	mszLibc65.Init();
 	mszShowPlain.Init();
+	mszStartupProject.Init();
 	mbCard = false;
 	mbQuiet = false;
 	mbHelp = false;
@@ -66,6 +67,7 @@ void CBuildCommandLine::Kill(void)
 	mcBuild.Kill();
 	mcWorkspace.Kill();
 	mcPlain.Kill();
+	mszStartupProject.Kill();
 	mszShowPlain.Kill();
 	mszLibc65.Kill();
 	mszConfiguration.Kill();
@@ -198,7 +200,7 @@ bool CBuildCommandLine::Parse(int iArgc, const char* const* aszArgv)
 		{
 			mbQuiet = true;
 		}
-		else if (IsOption(szArgument, "card") || IsOption(szArgument, "config") || IsOption(szArgument, "show-plain"))
+		else if (IsOption(szArgument, "card") || IsOption(szArgument, "config") || IsOption(szArgument, "show-plain") || IsOption(szArgument, "startup"))
 		{
 			if (mbPlain)
 			{
@@ -220,7 +222,7 @@ bool CBuildCommandLine::Parse(int iArgc, const char* const* aszArgv)
 			else
 			{
 				i++;
-				(IsOption(szArgument, "config") ? &mszConfiguration : &mszShowPlain)->Set(aszArguments.GetText(i));
+				(IsOption(szArgument, "config") ? &mszConfiguration : (IsOption(szArgument, "startup") ? &mszStartupProject : &mszShowPlain))->Set(aszArguments.GetText(i));
 			}
 		}
 		else if (IsOption(szArgument, "libc65"))
@@ -443,7 +445,7 @@ int CBuildCommandLine::Run(const char* szToolDirectory)
 		return BUILD_EXIT_USAGE;
 	}
 
-	if (!ChooseConfiguration())
+	if (!ChooseConfiguration() || !ChooseStartupProject())
 	{
 		return BUILD_EXIT_USAGE;
 	}
@@ -599,6 +601,7 @@ int CBuildCommandLine::ShowPlain(CArrayInt* paiOrder, const char* szToolDirector
 	}
 
 	cBuild.Init(&pcSolution->mcSolution, pcConfiguration, NULL);
+	cBuild.SetStartupProject(pcSolution->GetStartupProjectName());
 	cBuild.Describe();
 	pcDescription = cBuild.GetDescription();
 	for (i = 0; i < pcDescription->NumProjects(); i++)
@@ -669,6 +672,48 @@ int CBuildCommandLine::ShowPlain(CArrayInt* paiOrder, const char* szToolDirector
 	cBuild.Kill();
 	szLine.Kill();
 	return bResult ? BUILD_EXIT_SUCCEEDED : BUILD_EXIT_FAILED;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The application -startup named is the startup project of each solution
+// that has it.  False, saying so, if none has.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CBuildCommandLine::ChooseStartupProject(void)
+{
+	CBuildWorkspaceSolution*	pcSolution;
+	CChars						szLine;
+	size						i;
+	size						j;
+	bool						bFound;
+
+	if (mszStartupProject.Empty())
+	{
+		return true;
+	}
+	bFound = false;
+	for (i = 0; i < mcWorkspace.NumSolutions(); i++)
+	{
+		pcSolution = mcWorkspace.GetSolution(i);
+		for (j = 0; j < pcSolution->mcSolution.NumProjects(); j++)
+		{
+			if (pcSolution->IsApplication(j) && mszStartupProject.EqualsIgnoreCase(pcSolution->mcSolution.GetProject(j)->GetName()))
+			{
+				bFound |= pcSolution->SetStartupProject(j);
+			}
+		}
+	}
+	if (!bFound)
+	{
+		szLine.Init("No solution has an application called ");
+		szLine.Append(mszStartupProject);
+		szLine.Append(" to be its startup project.");
+		WriteLine(szLine.Text());
+		szLine.Kill();
+	}
+	return bFound;
 }
 
 
@@ -768,7 +813,7 @@ bool CBuildCommandLine::BuildSolution(size uiSolution, bool bHeading)
 	}
 
 	aszLines.Init();
-	bRunning = mcBuild.Start(&pcSolution->mcSolution, pcConfiguration, NULL, mszLibc65.Text(), &aszLines);
+	bRunning = mcBuild.Start(&pcSolution->mcSolution, pcConfiguration, NULL, mszLibc65.Text(), &aszLines, pcSolution->GetStartupProjectName());
 	WriteLines(&aszLines);
 	while (bRunning)
 	{
@@ -954,6 +999,8 @@ void CBuildCommandLine::WriteUsage(void)
 	WriteLine("");
 	WriteLine("  -config \"Release|W65C816\"  The build configuration (from the .hcp65build beside the solution).");
 	WriteLine("                             Default: the workspace's last one, else the first HCP65 one.");
+	WriteLine("  -startup <project>         The application built into its solution's program (the solution's startup");
+	WriteLine("                             project).  Default: the one its workspace says, else its first.");
 	WriteLine("  -card                      Also put each executable and module on its configuration's card (Card,");
 	WriteLine("                             CardPath).");
 	WriteLine("  -show-plain <file>         Write the build as a plain command line (and a .units file per project)");
@@ -1067,6 +1114,7 @@ bool CBuildCommandLine::FindSolutionFile(const char* szConfigurations, CChars* p
 
 char* CBuildCommandLine::GetFile(void) { return mszFile.Text(); }
 char* CBuildCommandLine::GetConfiguration(void) { return mszConfiguration.Text(); }
+char* CBuildCommandLine::GetStartupProject(void) { return mszStartupProject.Text(); }
 char* CBuildCommandLine::GetLibc65(void) { return mszLibc65.Text(); }
 bool CBuildCommandLine::IsCard(void) { return mbCard; }
 bool CBuildCommandLine::IsQuiet(void) { return mbQuiet; }

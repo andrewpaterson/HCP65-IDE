@@ -39,13 +39,17 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 //solution's configurations (.hcp65build) it builds the solution they are for: the .sln of the same name beside them,
 //else the .vcxproj.
 //
-//	hcp65build <file> [-config "Release|W65C816"] [-card] [-libc65 <directory>] [-quiet] [-show-plain <file>]
+//	hcp65build <file> [-config "Release|W65C816"] [-startup <project>] [-card] [-libc65 <directory>] [-quiet]
+//	           [-show-plain <file>]
 //	hcp65build -program <name> [-dir <dir>] [-D <define>]... <source>... [-lib ...]... [options]
 //
 //The second is a plain command line (CBuildPlain): what to compile and link given as options, with no solution.  It is
 //chosen by a -program or -lib.  -show-plain writes a solution's build as one, instead of building it, and prints it as
 //one PowerShell command line.  @file reads arguments from a file, one a line (blank lines and lines starting with # are
 //skipped); files can read others.
+//
+//A solution with several applications builds its startup project into its program (see CBuildWorkspaceSolution): the
+//one its workspace file says, else its first; -startup <project> chooses another, in the solution that has it.
 //
 //Options start with - or -- (or / on Windows).  Without -config the workspace's last chosen configuration is built,
 //else the first HCP65 one.  Without -libc65 Libc65 is HCP65\Libraries\Libc65 in a directory above the one given
@@ -58,6 +62,7 @@ protected:
 	CChars				mszConfiguration;
 	CChars				mszLibc65;
 	CChars				mszShowPlain;
+	CChars				mszStartupProject;
 	bool				mbCard;
 	bool				mbQuiet;
 	bool				mbHelp;
@@ -75,6 +80,7 @@ public:
 
 			char*	GetFile(void);
 			char*	GetConfiguration(void);
+			char*	GetStartupProject(void);
 			char*	GetLibc65(void);
 			bool	IsCard(void);
 			bool	IsQuiet(void);
@@ -93,6 +99,7 @@ protected:
 			bool	ExpandArguments(const char* szArgument, CArrayChars* paszDest, size uiDepth);
 			bool	ResolveLibc65(const char* szToolDirectory, const char* szFile);
 			bool	ChooseConfiguration(void);
+			bool	ChooseStartupProject(void);
 			bool	BuildSolution(size uiSolution, bool bHeading);
 			bool	PutOnCard(size uiSolution, CBuildConfiguration* pcConfiguration);
 			int		RunPlain(const char* szToolDirectory);
