@@ -1,7 +1,7 @@
 #include <string.h>
 #include "BaseLib/FileUtil.h"
 #include "BaseLib/NativeThread.h"
-#include "CppParserLib/CPP65ListingIndex.h"
+#include "CppCompilerLib/CPP65ListingIndex.h"
 #include "BuildLib/SolutionBuild.h"
 #include "TestLib/Assert.h"
 

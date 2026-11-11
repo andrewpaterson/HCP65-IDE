@@ -40,8 +40,8 @@ set(X11LIB_DIR "${COMMON_DIR}/X11Lib")
 set(THREADLIB_DIR "${COMMON_DIR}/ThreadLib")
 set(MICROPROCESSORLIB_DIR "${COMMON_DIR}/MicroprocessorLib")
 set(EMULATORDEBUGLIB_DIR "${COMMON_DIR}/EmulatorDebugLib")
-set(CPPPARSERLIB_DIR "${COMMON_DIR}/CppParserLib")
-# Assembler65Lib (which CppParserLib's 65C64 generator uses) is in the HCP65 repository, beside CommonLibraries.
+set(CPPCOMPILERLIB_DIR "${COMMON_DIR}/CppCompilerLib")
+# Assembler65Lib (which CppCompilerLib's 65C64 generator uses) is in the HCP65 repository, beside CommonLibraries.
 set(HCP65_LIBRARIES_DIR "${CODAPHELA_ROOT}/HCP65/Libraries")
 set(ASSEMBLER65LIB_DIR "${HCP65_LIBRARIES_DIR}/Assembler65Lib")
 set(VISUALSTUDIOLIB_DIR "${IDE_ROOT}/Libraries/VisualStudioLib")
@@ -111,7 +111,7 @@ vcxproj_sources(EMULATORDEBUGLIB_SOURCES "${EMULATORDEBUGLIB_DIR}/EmulatorDebugL
 
 vcxproj_sources(ASSEMBLER65LIB_SOURCES "${ASSEMBLER65LIB_DIR}/Assembler65Lib.vcxproj")
 
-vcxproj_sources(CPPPARSERLIB_SOURCES "${CPPPARSERLIB_DIR}/CppParserLib.vcxproj")
+vcxproj_sources(CPPCOMPILERLIB_SOURCES "${CPPCOMPILERLIB_DIR}/CppCompilerLib.vcxproj")
 
 vcxproj_sources(VISUALSTUDIOLIB_SOURCES "${VISUALSTUDIOLIB_DIR}/VisualStudioLib.vcxproj")
 
@@ -233,9 +233,9 @@ target_link_libraries(EmulatorDebugLib PUBLIC ThreadLib MicroprocessorLib Standa
 add_library(Assembler65Lib STATIC ${ASSEMBLER65LIB_SOURCES})
 target_link_libraries(Assembler65Lib PUBLIC MicroprocessorLib StandardLib BaseLib)
 
-# CppParserLib preprocesses, parses and highlights the solution's C++.  Its 65C64 generator brings in the rest.
-add_library(CppParserLib STATIC ${CPPPARSERLIB_SOURCES})
-target_link_libraries(CppParserLib PUBLIC Assembler65Lib MicroprocessorLib ThreadLib StandardLib BaseLib)
+# CppCompilerLib preprocesses, parses and highlights the solution's C++.  Its 65C64 generator brings in the rest.
+add_library(CppCompilerLib STATIC ${CPPCOMPILERLIB_SOURCES})
+target_link_libraries(CppCompilerLib PUBLIC Assembler65Lib MicroprocessorLib ThreadLib StandardLib BaseLib)
 
 # VisualStudioLib reads Visual Studio's projects and solutions.  It only needs BaseLib.
 add_library(VisualStudioLib STATIC ${VISUALSTUDIOLIB_SOURCES})
@@ -243,7 +243,7 @@ target_link_libraries(VisualStudioLib PUBLIC BaseLib)
 
 # BuildLib builds the solution's configurations: with the HCP65 compiler, MSVC or GCC.
 add_library(BuildLib STATIC ${BUILDLIB_SOURCES})
-target_link_libraries(BuildLib PUBLIC VisualStudioLib CppParserLib ThreadLib BaseLib)
+target_link_libraries(BuildLib PUBLIC VisualStudioLib CppCompilerLib ThreadLib BaseLib)
 
 # GitLib runs git for the files' statuses and their text in the last commit.
 add_library(GitLib STATIC ${GITLIB_SOURCES})
@@ -255,9 +255,9 @@ target_link_libraries(ClaudeLib PUBLIC ThreadLib BaseLib)
 
 add_executable(HCP65IDE ${IDE_SOURCES})
 target_include_directories(HCP65IDE PRIVATE "${IDE_DIR}")
-target_link_libraries(HCP65IDE PRIVATE X11Lib WindowLib InputLib BuildLib GitLib ClaudeLib VisualStudioLib CppParserLib Assembler65Lib EmulatorDebugLib MicroprocessorLib ThreadLib SupportLib StandardLib BaseLib)
+target_link_libraries(HCP65IDE PRIVATE X11Lib WindowLib InputLib BuildLib GitLib ClaudeLib VisualStudioLib CppCompilerLib Assembler65Lib EmulatorDebugLib MicroprocessorLib ThreadLib SupportLib StandardLib BaseLib)
 
 # hcp65build, the command-line build (BuildCommandLine.h): no window, so no X11.  Build only it with
 #   cmake --build build/HCP65IDE --target hcp65build
 add_executable(hcp65build "${IDE_ROOT}/HCP65Build/HCP65Build.cpp")
-target_link_libraries(hcp65build PRIVATE BuildLib VisualStudioLib CppParserLib Assembler65Lib MicroprocessorLib ThreadLib StandardLib BaseLib)
+target_link_libraries(hcp65build PRIVATE BuildLib VisualStudioLib CppCompilerLib Assembler65Lib MicroprocessorLib ThreadLib StandardLib BaseLib)

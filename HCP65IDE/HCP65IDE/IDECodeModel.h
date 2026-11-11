@@ -27,13 +27,13 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/Mutex.h"
 #include "BaseLib/MapStringInt.h"
 #include "ThreadLib/WorkerThreadJobs.h"
-#include "CppParserLib/Config.h"
-#include "CppParserLib/Project.h"
-#include "CppParserLib/PPHeaderCache.h"
-#include "CppParserLib/CppTokeniser.h"
-#include "CppParserLib/CPPSyntaxTree.h"
-#include "CppParserLib/CPPHighlighter.h"
-#include "CppParserLib/CPPIndex.h"
+#include "CppCompilerLib/Config.h"
+#include "CppCompilerLib/Project.h"
+#include "CppCompilerLib/PPHeaderCache.h"
+#include "CppCompilerLib/CppTokeniser.h"
+#include "CppCompilerLib/CPPSyntaxTree.h"
+#include "CppCompilerLib/CPPHighlighter.h"
+#include "CppCompilerLib/CPPIndex.h"
 #include "VisualStudioLib/VcxSolution.h"
 #include "BuildLib/BuildWorkspace.h"
 #include "WindowLib/GoToDialog.h"
@@ -146,7 +146,7 @@ protected:
 	CArrayChars			maszSystemDirectories;	//Where the compiler's own headers are ($(IncludePath)).
 	bool				mbSystemDirectoriesMissing;	//Some that are needed aren't on this machine.
 
-	CArrayIDEProjects	mapcProjects;			//A CppParserLib project for each of the workspace's, NULL until used.
+	CArrayIDEProjects	mapcProjects;			//A CppCompilerLib project for each of the workspace's, NULL until used.
 	CPPHeaderCache		mcHeaderCache;			//Headers' preprocessed output, kept for all the units.
 	CMutex				mcProjectsMutex;		//The projects, their libraries and units are made one thread at a time.
 

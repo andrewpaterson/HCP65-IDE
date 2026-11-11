@@ -1,5 +1,5 @@
 # Linux build of TestBuildLib (BaseLib + TestLib + StandardLib + ThreadLib + MicroprocessorLib + Assembler65Lib +
-# CppParserLib + VisualStudioLib + BuildLib + TestBuildLib).
+# CppCompilerLib + VisualStudioLib + BuildLib + TestBuildLib).
 #
 # Builds 32-bit (-m32, needs g++-multilib) by default.  Add -DBASELIB_64=ON
 # for a 64-bit build, in its own build directory:
@@ -40,8 +40,8 @@ set(TESTLIB_DIR "${COMMON_DIR}/TestLib")
 set(STANDARDLIB_DIR "${COMMON_DIR}/StandardLib")
 set(THREADLIB_DIR "${COMMON_DIR}/ThreadLib")
 set(MICROPROCESSORLIB_DIR "${COMMON_DIR}/MicroprocessorLib")
-set(CPPPARSERLIB_DIR "${COMMON_DIR}/CppParserLib")
-# Assembler65Lib (which CppParserLib's HCP65 compiler uses) is in the HCP65 repository, beside CommonLibraries.
+set(CPPCOMPILERLIB_DIR "${COMMON_DIR}/CppCompilerLib")
+# Assembler65Lib (which CppCompilerLib's HCP65 compiler uses) is in the HCP65 repository, beside CommonLibraries.
 set(HCP65_LIBRARIES_DIR "${CODAPHELA_ROOT}/HCP65/Libraries")
 set(ASSEMBLER65LIB_DIR "${HCP65_LIBRARIES_DIR}/Assembler65Lib")
 set(VISUALSTUDIOLIB_DIR "${IDE_ROOT}/Libraries/VisualStudioLib")
@@ -103,7 +103,7 @@ vcxproj_sources(MICROPROCESSORLIB_SOURCES "${MICROPROCESSORLIB_DIR}/Microprocess
 
 vcxproj_sources(ASSEMBLER65LIB_SOURCES "${ASSEMBLER65LIB_DIR}/Assembler65Lib.vcxproj")
 
-vcxproj_sources(CPPPARSERLIB_SOURCES "${CPPPARSERLIB_DIR}/CppParserLib.vcxproj")
+vcxproj_sources(CPPCOMPILERLIB_SOURCES "${CPPCOMPILERLIB_DIR}/CppCompilerLib.vcxproj")
 
 vcxproj_sources(VISUALSTUDIOLIB_SOURCES "${VISUALSTUDIOLIB_DIR}/VisualStudioLib.vcxproj")
 
@@ -203,8 +203,8 @@ add_library(Assembler65Lib STATIC ${ASSEMBLER65LIB_SOURCES})
 target_link_libraries(Assembler65Lib PUBLIC MicroprocessorLib StandardLib BaseLib)
 
 # The HCP65 compiler, which builds the W65C816 and 65C64 configurations.
-add_library(CppParserLib STATIC ${CPPPARSERLIB_SOURCES})
-target_link_libraries(CppParserLib PUBLIC Assembler65Lib MicroprocessorLib ThreadLib StandardLib BaseLib)
+add_library(CppCompilerLib STATIC ${CPPCOMPILERLIB_SOURCES})
+target_link_libraries(CppCompilerLib PUBLIC Assembler65Lib MicroprocessorLib ThreadLib StandardLib BaseLib)
 
 # VisualStudioLib only needs BaseLib (its XML parser).
 add_library(VisualStudioLib STATIC ${VISUALSTUDIOLIB_SOURCES})
@@ -212,10 +212,10 @@ target_link_libraries(VisualStudioLib PUBLIC BaseLib)
 
 # BuildLib builds Visual Studio solutions' configurations: with the HCP65 compiler, MSVC or GCC.
 add_library(BuildLib STATIC ${BUILDLIB_SOURCES})
-target_link_libraries(BuildLib PUBLIC VisualStudioLib CppParserLib ThreadLib BaseLib)
+target_link_libraries(BuildLib PUBLIC VisualStudioLib CppCompilerLib ThreadLib BaseLib)
 
 add_executable(TestBuildLib ${TESTBUILDLIB_SOURCES})
-target_link_libraries(TestBuildLib PRIVATE TestLib BuildLib VisualStudioLib CppParserLib Assembler65Lib MicroprocessorLib ThreadLib StandardLib BaseLib)
+target_link_libraries(TestBuildLib PRIVATE TestLib BuildLib VisualStudioLib CppCompilerLib Assembler65Lib MicroprocessorLib ThreadLib StandardLib BaseLib)
 
 # The tests read their input (Input/ ...) relative to the project directory,
 # as Visual Studio does.

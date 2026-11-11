@@ -21,7 +21,7 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdio.h>
 #include <string.h>
 #include "BaseLib/FileUtil.h"
-#include "CppParserLib/VisualStudioProject.h"
+#include "CppCompilerLib/VisualStudioProject.h"
 #include "HCP65Build.h"
 
 

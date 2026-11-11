@@ -18,7 +18,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WinGdiLib", "..\..\CommonLi
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WinInputLib", "..\..\CommonLibraries\Libraries\WinInputLib\WinInputLib.vcxproj", "{EFE4D8A4-D7F4-4BA2-9F43-0E3BC02268C2}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CppParserLib", "..\..\CommonLibraries\Libraries\CppParserLib\CppParserLib.vcxproj", "{4D010C1E-4DCE-4271-9B1C-87BBF0BC761C}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CppCompilerLib", "..\..\CommonLibraries\Libraries\CppCompilerLib\CppCompilerLib.vcxproj", "{4D010C1E-4DCE-4271-9B1C-87BBF0BC761C}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ThreadLib", "..\..\CommonLibraries\Libraries\ThreadLib\ThreadLib.vcxproj", "{7269D64F-994A-4233-9ADD-BAD415A07B64}"
 EndProject

@@ -27,7 +27,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/PointerFunctions.h"
 #include "BaseLib/StringHelper.h"
 #include "BaseLib/Timer.h"
-#include "CppParserLib/CppParser.h"
+#include "CppCompilerLib/CppParser.h"
 #include "IDECodeModel.h"
 
 
@@ -843,7 +843,7 @@ CTranslationUnit* CIDECodeModel::AddUnit(size uiProject, const char* szFileName)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The CppParserLib project for the workspace's project uiProject, made
+// The CppCompilerLib project for the workspace's project uiProject, made
 // the first time: the project's include directories, then the
 // compiler's.  Call it with the projects' mutex held.
 //

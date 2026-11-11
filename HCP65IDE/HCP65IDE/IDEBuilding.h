@@ -28,7 +28,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDEBuildConfigurationsDialog.h"
 #include "WindowLib/DockManager.h"
 #include "WindowLib/CommandSet.h"
-#include "CppParserLib/CPP65ListingIndex.h"
+#include "CppCompilerLib/CPP65ListingIndex.h"
 #include "IDEBuildPane.h"
 #include "BaseLib/ArrayInt.h"
 #include "BuildLib/SolutionBuild.h"

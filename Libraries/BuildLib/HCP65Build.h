@@ -22,7 +22,7 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 #define __H_C_P_65_BUILD_H__
 #include "BaseLib/NativeThread.h"
 #include "ThreadLib/WorkerThreadJobs.h"
-#include "CppParserLib/CPP65Builder.h"
+#include "CppCompilerLib/CPP65Builder.h"
 #include "Build.h"
 #include "HCP65BuildDescription.h"
 

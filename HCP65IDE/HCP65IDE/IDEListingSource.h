@@ -21,7 +21,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __IDE_LISTING_SOURCE_H__
 #define __IDE_LISTING_SOURCE_H__
 #include "BaseLib/Chars.h"
-#include "CppParserLib/CPP65ListingIndex.h"
+#include "CppCompilerLib/CPP65ListingIndex.h"
 #include "WindowLib/LineZoneSource.h"
 
 

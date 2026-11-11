@@ -33,7 +33,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BuildLib/BuildWorkspace.h"
 #include "BuildLib/BuildRecentFiles.h"
 #include "BuildLib/SolutionBuild.h"
-#include "CppParserLib/CPP65ListingIndex.h"
+#include "CppCompilerLib/CPP65ListingIndex.h"
 #include "WindowLib/Button.h"
 #include "WindowLib/Toolbar.h"
 #include "WindowLib/StatusBar.h"

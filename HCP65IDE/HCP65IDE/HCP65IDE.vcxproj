@@ -338,7 +338,7 @@
     <ProjectReference Include="..\..\..\CommonLibraries\Libraries\WinInputLib\WinInputLib.vcxproj">
       <Project>{efe4d8a4-d7f4-4ba2-9f43-0e3bc02268c2}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\CommonLibraries\Libraries\CppParserLib\CppParserLib.vcxproj">
+    <ProjectReference Include="..\..\..\CommonLibraries\Libraries\CppCompilerLib\CppCompilerLib.vcxproj">
       <Project>{4d010c1e-4dce-4271-9b1c-87bbf0bc761c}</Project>
     </ProjectReference>
     <ProjectReference Include="..\..\..\CommonLibraries\Libraries\EmulatorDebugLib\EmulatorDebugLib.vcxproj">
