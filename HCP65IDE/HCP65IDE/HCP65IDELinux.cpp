@@ -78,7 +78,7 @@ int main(int argc, char* argv[])
 			//The app (its window, content and input) is held by the root while it runs.
 			pApp = OMalloc<CIDEApp>();
 			ORoot()->Add(pApp);
-			pApp->Setup(&cNativeFactory, &cX11Input, "../../../commonlibraries/Libraries/WinInputLib/xml", &aszSolutions);
+			pApp->Setup(&cNativeFactory, &cX11Input, "../../../CommonLibraries/Libraries/WinInputLib/xml", &aszSolutions);
 			bResult = pApp->Run();
 			ORoot()->Remove(pApp);
 			pApp = NULL;

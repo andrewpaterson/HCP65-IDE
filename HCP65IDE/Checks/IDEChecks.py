@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #The HCP65 IDE's checks: the IDE is run scripted (HCP65_IDE_* variables, see CIDEApp::Setup and CIDEScript) on the
-#HCP65Kernal solution, as last opened, and what it prints is checked.  The files it is pointed at (in commonlibraries)
+#HCP65Kernal solution, as last opened, and what it prints is checked.  The files it is pointed at (in CommonLibraries)
 #must be as committed, and none of them, nor the user's layout, workspace or recent solutions, may change.
 #
 #  IDEChecks.py [ide executable] [check name...]
@@ -12,7 +12,7 @@ import atexit, hashlib, os, re, shutil, subprocess, sys, tempfile
 HERE = os.path.dirname(os.path.abspath(__file__))
 IDE_DIR = os.path.join(HERE, '..', 'HCP65IDE')
 ROOT = os.path.abspath(os.path.join(HERE, '..', '..', '..'))
-BASELIB = os.path.join(ROOT, 'commonlibraries', 'Libraries', 'BaseLib')
+BASELIB = os.path.join(ROOT, 'CommonLibraries', 'Libraries', 'BaseLib')
 KERNAL = os.path.join(ROOT, 'HCP65', 'Kernal')
 
 #Files the checks edit in the IDE (never saving them) and the user's files a scripted run mustn't write.

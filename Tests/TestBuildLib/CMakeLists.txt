@@ -34,7 +34,7 @@ option(BASELIB_64 "Build 64-bit instead of 32-bit" OFF)
 # This test is in the HCP65-IDE repository (with BuildLib and VisualStudioLib), which is beside CommonLibraries.
 get_filename_component(IDE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../.." ABSOLUTE)
 get_filename_component(CODAPHELA_ROOT "${IDE_ROOT}/.." ABSOLUTE)
-set(COMMON_DIR "${CODAPHELA_ROOT}/commonlibraries/Libraries")
+set(COMMON_DIR "${CODAPHELA_ROOT}/CommonLibraries/Libraries")
 set(BASELIB_DIR "${COMMON_DIR}/BaseLib")
 set(TESTLIB_DIR "${COMMON_DIR}/TestLib")
 set(STANDARDLIB_DIR "${COMMON_DIR}/StandardLib")
