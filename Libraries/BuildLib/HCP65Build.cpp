@@ -172,7 +172,7 @@ void CHCP65Build::Describe(void)
 
 	mcDescription.Clear();
 	asProjects.Init();
-	GetProjects(&asProjects);
+	GetProjects(&asProjects, true);
 	for (i = 0; i < asProjects.NumElements(); i++)
 	{
 		psProject = asProjects.Get(i);

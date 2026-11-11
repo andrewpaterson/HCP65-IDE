@@ -32,6 +32,24 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Where a build of the solution in szRoot links the application szProject
+// (<project>[.exe] in the configuration's Output folder): what a run
+// configuration without a tool runs for the startup project.
+//
+//////////////////////////////////////////////////////////////////////////
+void CGCCBuild::GetExecutablePath(const char* szRoot, CBuildConfiguration* pcConfiguration, const char* szProject, CChars* pszDest)
+{
+	CFileUtil	cFileUtil;
+
+	GetDirectory(szRoot, pcConfiguration, "Output", pszDest);
+	cFileUtil.FullPath(pszDest);
+	cFileUtil.AppendToPath(pszDest, szProject);
+	pszDest->Append(GCC_EXECUTABLE_EXTENSION);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // The compiles, then the archives, then the links: an application can use
 // any of the solution's libraries.
 //

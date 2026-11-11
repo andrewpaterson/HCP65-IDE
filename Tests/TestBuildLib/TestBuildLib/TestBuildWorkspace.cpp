@@ -9,6 +9,7 @@
 #define TEST_WORKSPACE_PROGRAM		"Input" _FS_ "Workspace" _FS_ "Program" _FS_ "Program.sln"
 #define TEST_WORKSPACE_KERNEL		"Input" _FS_ "Workspace" _FS_ "Kernel" _FS_ "Kernel.sln"
 #define TEST_WORKSPACE_DRIVER		"Input" _FS_ "Workspace" _FS_ "Driver" _FS_ "Driver.sln"
+#define TEST_WORKSPACE_TOOLS		"Input" _FS_ "Workspace" _FS_ "Tools" _FS_ "Tools.sln"
 #define TEST_WORKSPACE_FILE			"Output" _FS_ "Test" BUILD_WORKSPACE_EXTENSION
 
 
@@ -416,6 +417,82 @@ void TestBuildWorkspaceRunConfigurations(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// A solution's startup project is the application chosen, else its first:
+// Tools has two (First and Second) and a library, Program one.  It is
+// kept in the workspace file by name, only for a solution it was chosen
+// for; one that has gone is the first again.
+//
+//////////////////////////////////////////////////////////////////////////
+void TestBuildWorkspaceStartupProject(void)
+{
+	CBuildWorkspace				cWorkspace;
+	CBuildWorkspace				cRead;
+	CBuildWorkspaceSolution*	pcTools;
+	CBuildWorkspaceSolution*	pcProgram;
+	CFileUtil					cFileUtil;
+	CTextFile					cFile;
+
+	cFileUtil.MakeDir("Output");
+	cWorkspace.Init();
+	AssertTrue(cWorkspace.Open(TEST_WORKSPACE_TOOLS));
+	AssertSize(1, cWorkspace.AddSolution(TEST_WORKSPACE_PROGRAM));
+	pcTools = cWorkspace.GetSolution(0);
+	pcProgram = cWorkspace.GetSolution(1);
+
+	//First, Second and Shared: the library isn't an application.
+	AssertSize(3, pcTools->mcSolution.NumProjects());
+	AssertTrue(pcTools->IsApplication(0));
+	AssertTrue(pcTools->IsApplication(1));
+	AssertFalse(pcTools->IsApplication(2));
+	AssertFalse(pcTools->IsApplication(3));
+	AssertSize(2, pcTools->NumApplications());
+	AssertSize(1, pcProgram->NumApplications());
+
+	//Not chosen: the first application.
+	AssertSize(0, cWorkspace.GetStartupProject(0));
+	AssertString("First", cWorkspace.GetStartupProjectName(0));
+	AssertString("Program", cWorkspace.GetStartupProjectName(1));
+	AssertString("", cWorkspace.GetStartupProjectName(2));
+	AssertSize(MAX_SIZE, cWorkspace.GetStartupProject(2));
+
+	//A library can't be chosen, nor a project that isn't there.
+	AssertFalse(cWorkspace.SetStartupProject(0, 2));
+	AssertFalse(cWorkspace.SetStartupProject(0, 3));
+	AssertFalse(cWorkspace.SetStartupProject(2, 0));
+	AssertString("First", cWorkspace.GetStartupProjectName(0));
+	AssertTrue(cWorkspace.SetStartupProject(0, 1));
+	AssertSize(1, cWorkspace.GetStartupProject(0));
+	AssertString("Second", cWorkspace.GetStartupProjectName(0));
+
+	//Written for Tools, which it was chosen for, and not for Program.
+	AssertTrue(cWorkspace.Write(TEST_WORKSPACE_FILE));
+	cFile.Init();
+	AssertTrue(cFile.Read(TEST_WORKSPACE_FILE));
+	AssertTrue(strstr(cFile.Text(), "Tools.sln\" Startup=\"true\" StartupProject=\"Second\"/>") != NULL);
+	AssertTrue(strstr(cFile.Text(), "Program.sln\"/>") != NULL);
+	cFile.Kill();
+
+	cRead.Init();
+	AssertTrue(cRead.Open(TEST_WORKSPACE_FILE));
+	AssertString("Second", cRead.GetStartupProjectName(0));
+	AssertString("Program", cRead.GetStartupProjectName(1));
+	AssertTrue(cRead.GetSolution(1)->mszStartupProject.Empty());
+
+	//A startup project that has gone (or is a library now): the first application, the name kept.
+	cRead.GetSolution(0)->mszStartupProject.Set("Gone");
+	AssertString("First", cRead.GetStartupProjectName(0));
+	cRead.GetSolution(0)->mszStartupProject.Set("Shared");
+	AssertString("First", cRead.GetStartupProjectName(0));
+	cRead.GetSolution(0)->mszStartupProject.Set("second");
+	AssertString("Second", cRead.GetStartupProjectName(0));
+
+	cRead.Kill();
+	cWorkspace.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 //
 //////////////////////////////////////////////////////////////////////////
 void TestBuildWorkspace(void)
@@ -427,6 +504,7 @@ void TestBuildWorkspace(void)
 	TestBuildWorkspaceModules();
 	TestBuildWorkspaceFile();
 	TestBuildWorkspaceRunConfigurations();
+	TestBuildWorkspaceStartupProject();
 
 	TestStatistics();
 }

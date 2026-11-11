@@ -32,7 +32,14 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 #define BUILD_WORKSPACE_EXTENSION	".hcp65workspace"
 
 
-//One solution of a workspace: the solution (or a project read as one) and its build configurations.
+//One solution of a workspace: the solution (or a project read as one), its build configurations and its startup
+//project.
+//
+//The startup project is the one of the solution's applications (its projects that aren't static libraries) that is
+//built into the solution's program and run, as Visual Studio's: an HCP65 build links it with the libraries and leaves
+//the other applications out, and a run configuration without a tool runs what a GCC build made of it.  It is the
+//project chosen (SetStartupProject, kept by name in the workspace file) or, with none chosen or the one chosen gone,
+//the solution's first application.
 class CBuildWorkspaceSolution
 {
 public:
@@ -40,10 +47,17 @@ public:
 	CVcxSolution			mcSolution;
 	bool					mbRead;
 	CBuildConfigurations	mcConfigurations;
+	CChars					mszStartupProject;	//The name of the project chosen, empty if none was.
 
 	void	Init(void);
 	void	Kill(void);
 	bool	Open(const char* szFile);
+
+	bool	IsApplication(size uiProject);
+	size	NumApplications(void);
+	size	GetStartupProject(void);
+	char*	GetStartupProjectName(void);
+	bool	SetStartupProject(size uiProject);
 };
 
 
@@ -64,10 +78,13 @@ typedef CArrayTemplate<SBuildWorkspaceProject>		CArrayBuildWorkspaceProjects;
 //it, its run configurations, and the run configuration and build configuration chosen last:
 //
 //	<Workspace RunConfiguration="ModPlay" Configuration="Release|W65C816">
-//		<Solution File="ModPlay\HCP65ModPlay.sln" Startup="true"/>
+//		<Solution File="ModPlay\HCP65ModPlay.sln" Startup="true" StartupProject="HCP65ModPlay"/>
 //		<Solution File="..\HCP65Lib\Kernal\HCP65Kernal.sln"/>
 //		<RunConfiguration Name="ModPlay" Configuration="Release|W65C816" Tool="..\Emulator.exe" Arguments="--fill"/>
 //	</Workspace>
+//
+//A solution's StartupProject is the application of its that was chosen as its startup project (see
+//CBuildWorkspaceSolution); it is only written for a solution one was chosen for.
 //
 //Each solution has its own configurations (its .hcp65build); a configuration is chosen by name for all of them.
 //Its projects are numbered once across the solutions (NumProjects), so a shared project is one project.  Built by a
@@ -98,6 +115,9 @@ public:
 	size					FindSolution(const char* szFile);
 	void					SetStartup(size uiSolution);
 	size					GetStartup(void);
+	bool					SetStartupProject(size uiSolution, size uiProject);
+	size					GetStartupProject(size uiSolution);
+	char*					GetStartupProjectName(size uiSolution);
 	void					SetConfiguration(const char* szConfiguration);
 	char*					GetConfiguration(void);
 	void					SetRunConfigurationName(const char* szName);

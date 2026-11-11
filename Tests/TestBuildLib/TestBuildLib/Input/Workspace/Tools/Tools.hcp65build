@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<BuildConfigurations>
+	<Configuration Name="Release|W65C816" Toolchain="W65C816" Solution="Release|Win32"/>
+	<Configuration Name="Release|GCC" Toolchain="GCC" Solution="Release|Win32"/>
+</BuildConfigurations>

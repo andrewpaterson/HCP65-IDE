@@ -25,7 +25,8 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 #include "GCCBuild.h"
 
 
-//Builds a solution in a build configuration, with the configuration's toolchain: the HCP65 compiler, MSVC or GCC.  The
+//Builds a solution in a build configuration, with the configuration's toolchain: the HCP65 compiler, MSVC or GCC.
+//Given the solution's startup project, an HCP65 build builds only that application of the solution's (see CBuild).  The
 //last build is kept (its state, progress and listings) until the next starts.
 class CSolutionBuild
 {
@@ -39,7 +40,7 @@ public:
 	void			Init(void);
 	void			Kill(void);
 
-	bool			Start(CVcxSolution* pcSolution, CBuildConfiguration* pcConfiguration, const char* szRoot, const char* szLibc65Directory, CArrayChars* paszLines);
+	bool			Start(CVcxSolution* pcSolution, CBuildConfiguration* pcConfiguration, const char* szRoot, const char* szLibc65Directory, CArrayChars* paszLines, const char* szStartupProject = NULL);
 	bool			Poll(CArrayChars* paszLines);
 	void			Cancel(void);
 

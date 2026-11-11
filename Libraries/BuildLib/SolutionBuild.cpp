@@ -66,7 +66,7 @@ void CSolutionBuild::End(void)
 // paszLines.  False if it couldn't start or a build is running.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CSolutionBuild::Start(CVcxSolution* pcSolution, CBuildConfiguration* pcConfiguration, const char* szRoot, const char* szLibc65Directory, CArrayChars* paszLines)
+bool CSolutionBuild::Start(CVcxSolution* pcSolution, CBuildConfiguration* pcConfiguration, const char* szRoot, const char* szLibc65Directory, CArrayChars* paszLines, const char* szStartupProject)
 {
 	if (IsRunning())
 	{
@@ -90,6 +90,7 @@ bool CSolutionBuild::Start(CVcxSolution* pcSolution, CBuildConfiguration* pcConf
 		mcGCC.Init(pcSolution, pcConfiguration, szRoot);
 		mpcBuild = &mcGCC;
 	}
+	mpcBuild->SetStartupProject(szStartupProject);
 	return mpcBuild->Start(paszLines);
 }
 

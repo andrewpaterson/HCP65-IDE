@@ -28,6 +28,9 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 //application linked with all the solution's libraries.
 class CGCCBuild : public CCommandBuild
 {
+public:
+	static	void	GetExecutablePath(const char* szRoot, CBuildConfiguration* pcConfiguration, const char* szProject, CChars* pszDest);
+
 protected:
 	bool	AddCommands(CArrayChars* paszLines) override;
 	void	AddCompile(SBuildProject* psProject, const char* szSource, const char* szObject, CArrayChars* paszIncludes, CArrayChars* paszDefines);

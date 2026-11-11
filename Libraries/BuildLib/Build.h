@@ -53,6 +53,12 @@ typedef CArrayTemplate<SBuildProject>	CArrayBuildProjects;
 //carry on: Start, then Poll until it says the build has finished, adding the lines the build wrote.  What it makes
 //goes in Output\<toolchain>\<configuration> beside the solution (or in another root), and listings in Listing\ beside
 //that.
+//
+//A solution can have several applications (projects that aren't static libraries), one of them its startup project
+//(SetStartupProject, see CBuildWorkspaceSolution).  A build that links the whole solution into one program (an HCP65
+//build) builds only that application, with the libraries: the others have programs of their own to be.  A build that
+//links each application (GCC, MSVC) builds them all, as Visual Studio does.  With no startup project every project is
+//built.
 class CBuild
 {
 protected:
@@ -61,6 +67,7 @@ protected:
 	CChars					mszRoot;
 	CChars					mszOutputDirectory;		//In place of Root\Output\<toolchain>\<configuration>, if not empty.
 	CChars					mszListingDirectory;	//In place of Root\Listing\<toolchain>\<configuration>, if not empty.
+	CChars					mszStartupProject;		//The solution's startup project's name, empty if it hasn't been said.
 	EBuildState				meState;
 	CChars					mszProgress;
 	size					muiDone;	//How many of the build's steps (units compiled, commands run) are done,
@@ -83,7 +90,9 @@ public:
 			void		GetOutputDirectory(CChars* pszDest);
 			void		GetListingDirectory(CChars* pszDest);
 			bool		GetProgramPath(CChars* pszDest);
-			void		GetProjects(CArrayBuildProjects* pasDest);
+			void		SetStartupProject(const char* szName);
+			char*		GetStartupProject(void);
+			void		GetProjects(CArrayBuildProjects* pasDest, bool bOneApplication = false);
 
 	static	void		GetDirectory(const char* szRoot, CBuildConfiguration* pcConfiguration, const char* szKind, CChars* pszDest);
 	static	bool		GetProgramPath(const char* szRoot, CBuildConfiguration* pcConfiguration, CChars* pszDest);

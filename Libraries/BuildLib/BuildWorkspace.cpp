@@ -33,6 +33,7 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 #define BUILD_WORKSPACE_SOLUTION		"Solution"
 #define BUILD_WORKSPACE_FILE			"File"
 #define BUILD_WORKSPACE_STARTUP			"Startup"
+#define BUILD_WORKSPACE_STARTUP_PROJECT	"StartupProject"
 #define BUILD_WORKSPACE_CONFIGURATION	"Configuration"
 #define BUILD_WORKSPACE_RUN_CONFIGURATION	"RunConfiguration"
 
@@ -47,6 +48,7 @@ void CBuildWorkspaceSolution::Init(void)
 	mcSolution.Init();
 	mbRead = false;
 	mcConfigurations.Init();
+	mszStartupProject.Init();
 }
 
 
@@ -56,6 +58,7 @@ void CBuildWorkspaceSolution::Init(void)
 //////////////////////////////////////////////////////////////////////////
 void CBuildWorkspaceSolution::Kill(void)
 {
+	mszStartupProject.Kill();
 	mcConfigurations.Kill();
 	mcSolution.Kill();
 	mszFile.Kill();
@@ -450,6 +453,11 @@ bool CBuildWorkspace::Read(const char* szFile)
 			{
 				muiStartup = uiSolution;
 			}
+			szStartup = pcTag->GetStringAttribute(BUILD_WORKSPACE_STARTUP_PROJECT);
+			if ((uiSolution != MAX_SIZE) && szStartup)
+			{
+				GetSolution(uiSolution)->mszStartupProject.Set(szStartup);
+			}
 		}
 	}
 	szSolution.Kill();
@@ -506,6 +514,10 @@ bool CBuildWorkspace::Write(const char* szFile)
 		{
 			cWriter.Attribute(BUILD_WORKSPACE_STARTUP, "true");
 		}
+		if (!GetSolution(i)->mszStartupProject.Empty())
+		{
+			cWriter.Attribute(BUILD_WORKSPACE_STARTUP_PROJECT, GetSolution(i)->mszStartupProject.Text());
+		}
 		cWriter.End();
 	}
 	for (i = 0; i < masRunConfigurations.NumElements(); i++)
@@ -544,6 +556,123 @@ char* CBuildWorkspace::GetFile(void)
 // Opens the solution (or project) szFile in the workspace: the startup
 // solution if it is the first.  Its index (also if it couldn't be read:
 // see mbRead), or MAX_SIZE if it is already open.
+//
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether the solution's project is an application: a project that was
+// read and isn't a static library (as a build tells them apart, see
+// CBuild::GetProjects), by its first configuration.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CBuildWorkspaceSolution::IsApplication(size uiProject)
+{
+	CVcxSolutionProject*	pcSolutionProject;
+	CVcxProject*			pcProject;
+	char*					szType;
+
+	if (uiProject >= mcSolution.NumProjects())
+	{
+		return false;
+	}
+	pcSolutionProject = mcSolution.GetProject(uiProject);
+	if (!pcSolutionProject->IsVcxProject() || !pcSolutionProject->IsLoaded())
+	{
+		return false;
+	}
+	pcProject = pcSolutionProject->GetProject();
+	if (pcProject->NumConfigurations() == 0)
+	{
+		return true;
+	}
+	szType = pcProject->GetConfiguration(0)->GetProperty("ConfigurationType");
+	return !(szType && (StringInsensitiveCompare(szType, "StaticLibrary") == 0));
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+size CBuildWorkspaceSolution::NumApplications(void)
+{
+	size	i;
+	size	uiApplications;
+
+	uiApplications = 0;
+	for (i = 0; i < mcSolution.NumProjects(); i++)
+	{
+		uiApplications += IsApplication(i) ? 1 : 0;
+	}
+	return uiApplications;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The solution's startup project, its index in the solution: the
+// application chosen or, with none chosen (or it has gone, or is a
+// library now), the first application.  MAX_SIZE if the solution has no
+// application.
+//
+//////////////////////////////////////////////////////////////////////////
+size CBuildWorkspaceSolution::GetStartupProject(void)
+{
+	size	i;
+	size	uiFirst;
+
+	uiFirst = MAX_SIZE;
+	for (i = 0; i < mcSolution.NumProjects(); i++)
+	{
+		if (IsApplication(i))
+		{
+			if (!mszStartupProject.Empty() && mszStartupProject.EqualsIgnoreCase(mcSolution.GetProject(i)->GetName()))
+			{
+				return i;
+			}
+			if (uiFirst == MAX_SIZE)
+			{
+				uiFirst = i;
+			}
+		}
+	}
+	return uiFirst;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The startup project's name, "" if the solution has no application.
+//
+//////////////////////////////////////////////////////////////////////////
+char* CBuildWorkspaceSolution::GetStartupProjectName(void)
+{
+	size	uiProject;
+
+	uiProject = GetStartupProject();
+	return (uiProject != MAX_SIZE) ? mcSolution.GetProject(uiProject)->GetName() : (char*)"";
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// One of the solution's applications is chosen as its startup project.
+// False if the project isn't one.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CBuildWorkspaceSolution::SetStartupProject(size uiProject)
+{
+	if (!IsApplication(uiProject))
+	{
+		return false;
+	}
+	mszStartupProject.Set(mcSolution.GetProject(uiProject)->GetName());
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 //
 //////////////////////////////////////////////////////////////////////////
 size CBuildWorkspace::AddSolution(const char* szFile)
@@ -646,6 +775,31 @@ void CBuildWorkspace::SetStartup(size uiSolution)
 
 
 size CBuildWorkspace::GetStartup(void)										{ return muiStartup; }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A solution's startup project (see CBuildWorkspaceSolution): chosen by
+// its index in the solution; its index (MAX_SIZE if the solution has no
+// application); and its name ("" if it has none).
+//
+//////////////////////////////////////////////////////////////////////////
+bool CBuildWorkspace::SetStartupProject(size uiSolution, size uiProject)
+{
+	return (uiSolution < mapcSolutions.NumElements()) && GetSolution(uiSolution)->SetStartupProject(uiProject);
+}
+
+
+size CBuildWorkspace::GetStartupProject(size uiSolution)
+{
+	return (uiSolution < mapcSolutions.NumElements()) ? GetSolution(uiSolution)->GetStartupProject() : MAX_SIZE;
+}
+
+
+char* CBuildWorkspace::GetStartupProjectName(size uiSolution)
+{
+	return (uiSolution < mapcSolutions.NumElements()) ? GetSolution(uiSolution)->GetStartupProjectName() : (char*)"";
+}
 void CBuildWorkspace::SetConfiguration(const char* szConfiguration)		{ mszConfiguration.Set(szConfiguration ? szConfiguration : ""); }
 char* CBuildWorkspace::GetConfiguration(void)								{ return mszConfiguration.Text(); }
 void CBuildWorkspace::SetRunConfigurationName(const char* szName)			{ mszRunConfiguration.Set(szName ? szName : ""); }

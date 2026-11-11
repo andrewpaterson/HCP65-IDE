@@ -229,6 +229,93 @@ void TestBuildGCC(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Tools has two applications and a library.  An HCP65 build, which links
+// the solution into one program, builds the startup project and the
+// library and leaves the other application out; told of none it builds
+// them all.  GCC links each application: the startup project's is what a
+// run configuration without a tool runs.
+//
+//////////////////////////////////////////////////////////////////////////
+void TestBuildStartupProject(void)
+{
+	CVcxSolution			cSolution;
+	CBuildConfiguration		cConfiguration;
+	CBuildConfiguration		cGCC;
+	CSolutionBuild			cBuild;
+	CArrayChars				aszLines;
+	CArrayBuildProjects		asProjects;
+	CChars					szPath;
+	CChars					szExpected;
+	CFileUtil				cFileUtil;
+	int						i;
+
+	cSolution.Init();
+	AssertTrue(cSolution.Read("Input" _FS_ "Workspace" _FS_ "Tools" _FS_ "Tools.sln"));
+	cConfiguration.Init("Release|W65C816", BT_W65C816, "Release|Win32");
+	cBuild.Init();
+	aszLines.Init();
+
+	cBuild.Start(&cSolution, &cConfiguration, "Output" _FS_ "StartupSecond", TEST_BUILD_LIBC65, &aszLines, "Second");
+	for (i = 0; (i < 60000) && cBuild.Poll(&aszLines); i++)
+	{
+		ThreadSleep(10);
+	}
+	AssertInt(BS_Succeeded, cBuild.GetState());
+	AssertString("Second", cBuild.GetBuild()->GetStartupProject());
+	AssertTrue(TestBuildHasLine(&aszLines, "Second: Release|Win32"));
+	AssertTrue(TestBuildHasLine(&aszLines, "Shared: Release|Win32"));
+	AssertFalse(TestBuildHasLine(&aszLines, "First: Release|Win32"));
+	AssertFalse(TestBuildHasLine(&aszLines, "First.cpp"));
+
+	//Every project it builds, and those of them that go into one program.
+	asProjects.Init();
+	cBuild.GetBuild()->GetProjects(&asProjects);
+	AssertSize(3, asProjects.NumElements());
+	AssertFalse(asProjects.Get(0)->bLibrary);
+	AssertTrue(asProjects.Get(2)->bLibrary);
+	cBuild.GetBuild()->GetProjects(&asProjects, true);
+	AssertSize(2, asProjects.NumElements());
+	AssertString("Second", asProjects.Get(0)->pcProject->GetName());
+	AssertString("Shared", asProjects.Get(1)->pcProject->GetName());
+	asProjects.Kill();
+
+	//Told of no startup project it builds both applications, as it always did.
+	aszLines.ReInit();
+	cBuild.Start(&cSolution, &cConfiguration, "Output" _FS_ "StartupNone", TEST_BUILD_LIBC65, &aszLines);
+	for (i = 0; (i < 60000) && cBuild.Poll(&aszLines); i++)
+	{
+		ThreadSleep(10);
+	}
+	AssertString("", cBuild.GetBuild()->GetStartupProject());
+	AssertTrue(TestBuildHasLine(&aszLines, "First: Release|Win32"));
+	AssertTrue(TestBuildHasLine(&aszLines, "Second: Release|Win32"));
+
+	//Where GCC links an application.
+	cGCC.Init("Release|GCC", BT_GCC, "Release|Win32");
+	szExpected.Init();
+	CBuild::GetDirectory("Output" _FS_ "Root", &cGCC, "Output", &szExpected);
+	cFileUtil.FullPath(&szExpected);
+	cFileUtil.AppendToPath(&szExpected, "Second");
+#ifdef _WIN32
+	szExpected.Append(".exe");
+#endif
+	szPath.Init();
+	CGCCBuild::GetExecutablePath("Output" _FS_ "Root", &cGCC, "Second", &szPath);
+	AssertString(szExpected.Text(), szPath.Text());
+	AssertTrue(strstr(szPath.Text(), "GCC") != NULL);
+	szPath.Kill();
+	szExpected.Kill();
+	cGCC.Kill();
+
+	aszLines.Kill();
+	cBuild.Kill();
+	cConfiguration.Kill();
+	cSolution.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 //
 //////////////////////////////////////////////////////////////////////////
 void TestBuild(void)
@@ -236,6 +323,7 @@ void TestBuild(void)
 	BeginTests();
 
 	TestBuildHCP65();
+	TestBuildStartupProject();
 #ifdef _WIN32
 	TestBuildMSVC();
 #endif // _WIN32
