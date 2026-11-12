@@ -294,6 +294,14 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 	mpWindow->SetPartialRedraw(true);
 	mpWindow->SetVerifyRedraw(getenv("HCP65_IDE_VERIFY_REDRAW") != NULL);
 
+	//The layout is kept from one paint to the next unless something says it changed.  HCP65_IDE_VERIFY_LAYOUT lays the
+	//window out every paint anyway and logs the components that moved, for finding one that needed a layout and didn't
+	//ask for it (CWindow::SetCheckLayoutCache, which Debug builds have on).  It is slow: for checking only.
+	if (getenv("HCP65_IDE_VERIFY_LAYOUT") != NULL)
+	{
+		mpWindow->SetCheckLayoutCache(true);
+	}
+
 	//A scripted run's commands are for it whatever window the platform's focus is in: another program's window coming
 	//to the front (a second run of the checks, the person at the machine) mustn't make it ignore them, as an inactive
 	//window does.

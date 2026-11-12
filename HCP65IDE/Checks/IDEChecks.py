@@ -7,6 +7,8 @@
 #
 #The executable defaults to ../../../build/HCP65IDERelease/HCP65IDE.  Exits non-zero if a check fails.
 #With HCP65_IDE_VERIFY_REDRAW set, every partial paint is checked too, and one that differed fails its check.
+#With HCP65_IDE_VERIFY_LAYOUT set, the window is laid out every paint, and a component that had moved without the
+#layout being invalidated fails its check.
 #
 #What the checks open doesn't depend on what the user opened last, and doesn't change it: each run is given recent
 #solutions of its own (HCP65_IDE_RECENT, a file made for the checks) that say what was open.  By default that is the
@@ -1057,6 +1059,9 @@ def Check(szExecutable, szName, asVariables, aszExpected, aszForbidden):
 	if os.environ.get('HCP65_IDE_VERIFY_REDRAW'):
 		#Every partial paint is checked against drawing all of the window; one that differed is logged.
 		aszForbidden = aszForbidden + [r'A partial paint of']
+	if os.environ.get('HCP65_IDE_VERIFY_LAYOUT'):
+		#The window is laid out every paint though nothing asked for it; a component that moved is logged.
+		aszForbidden = aszForbidden + [r"but the layout wasn't invalidated"]
 	for szForbidden in aszForbidden:
 		for szLine in aszLines:
 			if re.search(szForbidden, szLine):
