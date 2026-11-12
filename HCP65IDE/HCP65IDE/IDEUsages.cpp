@@ -250,6 +250,8 @@ static void AppendIDEUsageCount(CChars* pszDest, size uiCount, const char* szWha
 void SIDEFoundUsages::Init(void)
 {
 	szName.Init();
+	szKey.Init();
+	bDeclared = false;
 	uiOverrides = 0;
 	bDeclarations = false;
 	asUsages.Init();
@@ -273,6 +275,11 @@ void SIDEFoundUsages::Kill(void)
 		psUsage->sLocation.szFileName.Kill();
 	}
 	asUsages.Kill();
+	if (bDeclared)
+	{
+		sDeclaration.szFileName.Kill();
+	}
+	szKey.Kill();
 	szName.Kill();
 }
 
@@ -302,6 +309,10 @@ bool SIDEFoundUsages::AdjustPlaces(const char* szFile, SIDEPlaceChange* psChange
 	bool			bMoved;
 
 	bMoved = false;
+	if (bDeclared && sDeclaration.szFileName.Equals(szFile))
+	{
+		AdjustIDEPlace(&sDeclaration.iLine, &sDeclaration.iColumn, psChange);
+	}
 	for (i = 0; i < asUsages.NumElements(); i++)
 	{
 		psLocation = &asUsages.Get(i)->sLocation;
@@ -471,6 +482,7 @@ bool CIDEUsages::Find(bool bDeclarations, SIDEFoundUsages* psDest)
 	CArrayIDELocations	asLocations;
 	CChars				szKey;
 	SIDELocation*		psLocation;
+	SIDELocation*		psDeclared;
 	SIDEUsage*			psUsage;
 	size				i;
 
@@ -485,12 +497,36 @@ bool CIDEUsages::Find(bool bDeclarations, SIDEFoundUsages* psDest)
 	}
 
 	psDest->Kill();
+	psDest->Init();
+	psDest->szKey.Set(szKey);
+
+	//Where it is declared: its definition, else its first declaration, before the overrides' are with its own.
+	psDeclared = NULL;
+	for (i = 0; i < asLocations.NumElements(); i++)
+	{
+		psLocation = asLocations.Get(i);
+		if ((psLocation->uiRole == CPPIR_Definition) || ((psLocation->uiRole == CPPIR_Declaration) && (psDeclared == NULL)))
+		{
+			psDeclared = psLocation;
+			if (psLocation->uiRole == CPPIR_Definition)
+			{
+				break;
+			}
+		}
+	}
+	if (psDeclared)
+	{
+		memcpy(&psDest->sDeclaration, psDeclared, sizeof(SIDELocation));
+		psDest->sDeclaration.szFileName.Init(psDeclared->szFileName);
+		psDest->bDeclared = true;
+	}
+
 	psDest->uiOverrides = mpcContent->GetCodeModel()->FindOverrideLocations(szKey.Text(), &asLocations);
 	psDest->bDeclarations = bDeclarations;
+	psDest->szName.Kill();
 	GetIDESymbolName(szKey.Text(), &psDest->szName);
 	szKey.Kill();
 
-	psDest->asUsages.Init();
 	for (i = 0; i < asLocations.NumElements(); i++)
 	{
 		psLocation = asLocations.Get(i);
@@ -973,6 +1009,24 @@ bool CIDEUsages::GetResultLocation(CIDEResultsPane* pcPane, int64 iData, SIDELoc
 	psLocation = &msFound.asUsages.Get((size)iData - 1)->sLocation;
 	memcpy(psDest, psLocation, sizeof(SIDELocation));
 	psDest->szFileName.Init(psLocation->szFileName);
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The results pane's source: where the symbol the usages are of is
+// defined or declared, for Jump to Source.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEUsages::GetDeclarationLocation(CIDEResultsPane* pcPane, SIDELocation* psDest)
+{
+	if (!mbFound || !msFound.bDeclared)
+	{
+		return false;
+	}
+	memcpy(psDest, &msFound.sDeclaration, sizeof(SIDELocation));
+	psDest->szFileName.Init(msFound.sDeclaration.szFileName);
 	return true;
 }
 

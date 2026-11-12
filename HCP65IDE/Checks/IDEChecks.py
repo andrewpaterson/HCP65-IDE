@@ -139,15 +139,20 @@ CHECKS = [
 		 r'^  CalcParentheses\.cpp  1$', r'^  CalcParentheses\.h  1$', r'^  Calculator\.cpp  3$', r'^    367: ', r'^    391: ', r'^    421: ',
 		 r'^Usages of IsParentheses and 1 override  3 usages$', r'^  Calculator\.cpp  3$', r'^    CCalculator  3$', r'^      367: '],
 		[r'BaseLib  ', r'Call  ']),
-	('usages-jump-to-source', {
-		#F4 in the Find Usages tree goes to the selected usage, as double clicking it does: the second of Calculator.cpp's.
-		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usages,focus:usages,select:3,key:f4'},
+	('usages-enter', {
+		#Enter in the Find Usages tree goes to the selected usage, as double clicking it does: the second of Calculator.cpp's.
+		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usages,focus:usages,select:3,key:enter'},
 		[r'^  Calculator\.cpp  3$', r'^    391: ', r'Calculator\.cpp \(focus\) line 391: '], []),
+	('usages-jump-to-declaration', {
+		#F4 in the Find Usages tree goes to the symbol's definition, as IntelliJ's goes to the declaration, whichever usage
+		#is selected.
+		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usages,focus:usages,select:3,key:f4'},
+		[r'^    391: ', r'CalcParentheses\.cpp \(focus\) line 72: '], [r'Calculator\.cpp \(focus\)']),
 	('usages-first-selected', {
-		#Find Usages selects the first usage and gives the tree the keys, for F4 to go to it; grouped again, the usage
+		#Find Usages selects the first usage and gives the tree the keys, for enter to go to it; grouped again, the usage
 		#selected stays selected.
 		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14',
-		'EDIT': 'usagegroups:,usages,printselected,select:3,usagegroups:c,printselected,usagegroups:,usages,key:f4'},
+		'EDIT': 'usagegroups:,usages,printselected,select:3,usagegroups:c,printselected,usagegroups:,usages,key:enter'},
 		[r'^Selected: 367: ', r'^Selected: 391: ', r'Calculator\.cpp \(focus\) line 367: '], [r'^Selected: none']),
 	('usages-next-occurrence', {
 		#Control+Alt+Down and Up in the Find Usages tree go to the next and previous usage, each opened in its editor with
@@ -195,10 +200,10 @@ CHECKS = [
 		[r'^Usages of F  1 usage$', r'^Status line: Find Usages and Build can both step: click in the one to step through\.$',
 		 r'Kernel\.cpp \(focus\) line 2: '], [r'Kernel\.cpp \(focus\) line 5: ']),
 	('nav-back-forward', {
-		#A jump (F4 in Find Usages) puts where it left on Back; Back goes there and puts where it was on Forward; Forward
+		#A jump (enter in Find Usages) puts where it left on Back; Back goes there and puts where it was on Forward; Forward
 		#goes back again.  (The tabs the user's layout opens can be on Back before them.)
 		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usages',
-		'DEBUG': 'edit:focus:usages,edit:key:f4,edit:printhistory,command:Navigate.Back,edit:printhistory,edit:print,'
+		'DEBUG': 'edit:focus:usages,edit:key:enter,edit:printhistory,command:Navigate.Back,edit:printhistory,edit:print,'
 		         'command:Navigate.Forward,edit:printhistory,edit:print'},
 		[r'^History: back \[(.*, )?CalcParentheses\.h:38\] forward \[\]$', r'^History: back \[.*\] forward \[Calculator\.cpp:367\]$',
 		 r'CalcParentheses\.h \(focus\) line 38: ', r'^History: back \[(.*, )?CalcParentheses\.h:38\] forward \[\]$',
@@ -213,19 +218,19 @@ CHECKS = [
 	('nav-closed-file', {
 		#Back to a place whose file has been closed opens it again, its caret there.
 		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usages',
-		'DEBUG': 'edit:focus:usages,edit:key:f4,closeall,command:Navigate.Back,edit:print'},
+		'DEBUG': 'edit:focus:usages,edit:key:enter,closeall,command:Navigate.Back,edit:print'},
 		[r'CalcParentheses\.h \(focus\) line 38: '], [r'not enabled', r'Calculator\.cpp.* line \d+: \[']),
 	('nav-jump-clears-forward', {
 		#A new jump after Back clears Forward, as a browser's does.
 		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usages',
-		'DEBUG': 'edit:focus:usages,edit:key:f4,command:Navigate.Back,edit:printhistory,edit:focus:usages,edit:select:3,edit:key:f4,'
+		'DEBUG': 'edit:focus:usages,edit:key:enter,command:Navigate.Back,edit:printhistory,edit:focus:usages,edit:select:3,edit:key:enter,'
 		         'edit:printhistory,command:Navigate.Forward'},
 		[r'^History: back \[.*\] forward \[Calculator\.cpp:367\]$', r'^History: back \[(.*, )?CalcParentheses\.h:38\] forward \[\]$',
 		 r'^Command \[Navigate\.Forward\] not found, not enabled or did nothing\.$'], []),
 	('nav-edit-follows', {
 		#A place in an open file moves with its line: two lines put in above it move it down two.
 		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usages',
-		'DEBUG': 'edit:focus:usages,edit:key:f4,edit:focus:usages,edit:select:4,edit:key:f4,edit:printhistory,'
+		'DEBUG': 'edit:focus:usages,edit:key:enter,edit:focus:usages,edit:select:4,edit:key:enter,edit:printhistory,'
 		         'edit:focus:editor,edit:caret:1:1,edit:key:enter,edit:key:enter,edit:printhistory,command:Navigate.Back,edit:print'},
 		[r'^History: back \[(.*, )?CalcParentheses\.h:38, Calculator\.cpp:367\] forward \[\]$',
 		 r'^History: back \[(.*, )?CalcParentheses\.h:38, Calculator\.cpp:369\] forward \[\]$',
@@ -336,10 +341,21 @@ CHECKS = [
 		 r'^Keys: Navigate\.NextOccurrence Control\+Alt\+Cursor Down bound$', r'^Keys: Navigate\.PreviousOccurrence Control\+Alt\+Cursor Up bound$',
 		 r'^Keys: Navigate\.Back Control\+Alt\+Cursor Left bound$', r'^Keys: Navigate\.Forward Control\+Alt\+Cursor Right bound$'],
 		[r'NOT BOUND']),
-	('usages-enter-space', {
-		#As IntelliJ's, enter and space in the Find Usages tree don't go to the usage: the tree keeps the keys.
-		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usages,focus:usages,select:3,key:enter,key:space'},
-		[r'^    391: ', r'CalcParentheses\.h line 38: '], [r'Calculator\.cpp.* line \d+: \[', r'\(focus\)']),
+	('usages-typing', {
+		#Space, and a character typed, in the Find Usages tree are typed in the active editor, which gets the keys: no
+		#usage is gone to.
+		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usages,focus:usages,select:3,key:space,key:type:ab'},
+		[r'^    391: ', r'CalcParentheses\.h.*\(focus\) line 38: \[.* ab'], [r'Calculator\.cpp.* line \d+: \[']),
+	('usages-single-click', {
+		#With Navigate with Single Click a usage is opened as it is selected, and the tree keeps the keys; without, selecting
+		#one opens nothing.
+		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14',
+		'EDIT': 'usagegroups:,usages,focus:usages,select:3,print,usagesingleclick:on,select:4,print'},
+		[r'CalcParentheses\.h line 38: ', r'Calculator\.cpp line 421: '], [r'line 391: \[', r'Calculator\.cpp \(focus\)']),
+	('find-jump-to-source', {
+		#The Find tool window's results are of nothing declared: F4 opens the selected one, as enter does.
+		'WAIT_INDEX': '1', 'DIALOG_ANSWER': 'Open in Find Window', 'DEBUG': 'find:0:calculatorparser,answered:1,edit:key:f4,edit:print'},
+		[r'CalculatorParser\.h \(focus\) line 29: '], [r'ERROR']),
 	('usages-escape', {
 		#Escape in the Find Usages tree gives the keys back to the editor, where they were.
 		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usages,focus:usages,select:3,key:escape'},

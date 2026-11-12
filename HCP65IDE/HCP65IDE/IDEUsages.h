@@ -60,12 +60,15 @@ struct SIDEUsage
 typedef CArrayTemplate<SIDEUsage>	CArrayIDEUsages;
 
 
-//What was found of a symbol: its name, how many overrides it has (their usages are with its own) and the usages, in the
+//What was found of a symbol: its name and key, where it is declared, how many overrides it has (their usages are with its own) and the usages, in the
 //order of their files' names, then their lines and columns.  With bDeclarations its declarations and definition are
 //among them.
 struct SIDEFoundUsages
 {
 	CChars			szName;
+	CChars			szKey;			//The symbol's key in the index.
+	SIDELocation	sDeclaration;	//Where it is defined, or without a definition declared, if bDeclared: it follows edits too.
+	bool			bDeclared;
 	size			uiOverrides;
 	bool			bDeclarations;
 	CArrayIDEUsages	asUsages;
@@ -136,6 +139,7 @@ public:
 	bool				HasSteps(void) override;
 	bool				Step(bool bNext, bool bKeepKeys) override;
 	bool				GetResultLocation(CIDEResultsPane* pcPane, int64 iData, SIDELocation* psDest) override;
+	bool				GetDeclarationLocation(CIDEResultsPane* pcPane, SIDELocation* psDest) override;
 
 protected:
 	bool				Find(bool bDeclarations, SIDEFoundUsages* psDest);

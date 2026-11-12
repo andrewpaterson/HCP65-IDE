@@ -43,14 +43,22 @@ public:
 	//The place of the result a node's data (above 0) is of.  psDest isn't initialised: its file name is made, for the
 	//caller to kill, only if it answers true.
 	virtual bool	GetResultLocation(CIDEResultsPane* pcPane, int64 iData, SIDELocation* psDest) =0;
+
+	//Where what the results are of is declared (the symbol Find Usages found the usages of), made as a result's is.
+	//False if they are of nothing that is declared, as text found is.
+	virtual bool	GetDeclarationLocation(CIDEResultsPane* pcPane, SIDELocation* psDest);
 };
 
 
 //What a tool window of places found shows (Find Usages', Find in Files' Find): a tree whose nodes with data above 0
 //are results, each a line of a file, under nodes that group them (with data 0).  Its source makes the nodes (between
 //BeginShow and EndShow) and says where each result is; the pane opens a result's place when it is double clicked or
-//jumped to (F4), steps through the results for Next and Previous Occurrence, and gives the keys back to the editor on
-//escape.  As IntelliJ's, space and enter don't open a result.
+//enter is pressed on it, steps through the results for Next and Previous Occurrence, and gives the keys back to the
+//editor on escape.  As IntelliJ's, Jump to Source (F4) goes to where what the results are of is declared, whichever
+//row is selected (or, for results of nothing declared, opens the selected one as enter does); a click or the arrow
+//keys only select; and a character typed, space too, isn't the tree's: the active editor gets the keys and has it
+//typed in it.  With Navigate with Single Click (SetNavigateOnSelect, off to start with) a result is opened as it is
+//selected, by a click or the arrow keys, the tree keeping the keys.
 //
 //Its rows are made as IntelliJ's are (AddGroup, AddResult): a group's name with what is said of it after (how many
 //are in it, its directory) dim, a file's with its file type's icon, and a result's line with its line number dim, the
@@ -72,11 +80,16 @@ protected:
 	Ptr<CTreeContainer>	mpTree;
 	Ptr<CScrollPane>	mpScrollPane;
 	Ptr<CInputAction>	mpEscapeAction;  //Escape in the tree goes back to the editor.
+	Ptr<CInputAction>	mpJumpAction;  //F4 in it goes to the declaration.
+	Ptr<CInputAction>	mpSpaceAction;  //Space, and a character typed, in it are typed in the editor.
+	Ptr<CInputAction>	mpTypeAction;
 	Ptr<CSplitContainer>	mpSplit;  //The tree and, right of it, the preview.
 	Ptr<CCodePreview>	mpPreview;
 	size				muiPreviewChanges;  //The previewed file's editor's change count when its text was taken, MAX_SIZE if it wasn't open.
 	CChars				mszNoun;  //What a result is called in the status line: "usages", "matches".
 	bool				mbSelectOnOpen;  //A result opened from the tree has its text selected in its editor.
+	bool				mbNavigateOnSelect;  //A result is opened as it is selected.
+	bool				mbShowing;  //The tree is being made, or stepped through: what is selected isn't the user's doing.
 
 public:
 	void	Init(CIDEContent* pcContent, CIDEResultsSource* pcSource, const char* szNoun, bool bSelectOnOpen);
@@ -102,6 +115,8 @@ public:
 	void				Focus(void);
 	void				Detach(void);
 
+	void				SetNavigateOnSelect(bool bNavigate);
+	bool				IsNavigateOnSelect(void);
 	void				SetPreviewShown(bool bShown);
 	bool				IsPreviewShown(void);
 	Ptr<CCodePreview>	GetPreview(void);
@@ -116,6 +131,9 @@ protected:
 	void				ResultSelected(void);
 	void				ShareChanged(void);
 	void				ReturnToEditor(void);
+	void				JumpToSource(void);
+	void				TypeSpace(void);
+	void				TypeCharacter(SComponentInputEvent* psEvent);
 };
 
 

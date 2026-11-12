@@ -24,9 +24,20 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDEResultsPane.h"
 
 
+#define IDE_RESULTS_NAVIGATE_ATTRIBUTE	"NavigateWithSingleClick"
 #define IDE_RESULTS_PREVIEW_ATTRIBUTE	"Preview"
 #define IDE_RESULTS_SHARE_ATTRIBUTE		"PreviewShare"
 #define IDE_RESULTS_TREE_SHARE			450		//Of the pane, out of SPLIT_CONTAINER_WHOLE, until the sash is dragged.
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEResultsSource::GetDeclarationLocation(CIDEResultsPane* pcPane, SIDELocation* psDest)
+{
+	return false;
+}
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -43,16 +54,21 @@ void CIDEResultsPane::Init(CIDEContent* pcContent, CIDEResultsSource* pcSource, 
 	mpcSource = pcSource;
 	mszNoun.Init(szNoun);
 	mbSelectOnOpen = bSelectOnOpen;
+	mbNavigateOnSelect = false;
+	mbShowing = false;
 
 	mpTree = OMalloc<CTreeContainer>(mpcContent->GetWindow(), mpcContent->GetTheme());
 	mpTree->SetAlignment(CSH_Stretch, CSV_Top);
 	mpTree->GetActivationEvent()->Add(this, &CIDEResultsPane::ResultActivated);
 
-	//As IntelliJ's: only Jump to Source (F4) and double clicking go to a result, not space or enter, and escape goes back
-	//to the editor.
+	//As IntelliJ's: enter and double clicking go to a result (the list's own actions), Jump to Source (F4) goes to the
+	//declaration, space is typed in the editor as any character is, and escape goes back to the editor.
 	mpTree->SetInputActionsEnabled(CIC_Space, false);
-	mpTree->SetInputActionsEnabled(CIC_Enter, false);
+	mpTree->SetInputActionsEnabled(CIC_JumpToSource, false);
 	mpEscapeAction = mpTree->AddInputAction(CIC_ClearSelection, this, &CIDEResultsPane::ReturnToEditor);
+	mpJumpAction = mpTree->AddInputAction(CIC_JumpToSource, this, &CIDEResultsPane::JumpToSource);
+	mpSpaceAction = mpTree->AddInputAction(CIC_Space, this, &CIDEResultsPane::TypeSpace);
+	mpTypeAction = mpTree->AddInputAction(IAF_Printable, NULL, this, &CIDEResultsPane::TypeCharacter);
 	mpScrollPane = OMalloc<CScrollPane>(mpcContent->GetWindow(), mpcContent->GetTheme());
 	mpScrollPane->SetContent(mpTree);
 	mpScrollPane->SetAlignment(CSH_Stretch, CSV_Stretch);
@@ -82,11 +98,16 @@ void CIDEResultsPane::Class(void)
 	M_Pointer(mpTree);
 	M_Pointer(mpScrollPane);
 	M_Pointer(mpEscapeAction);
+	M_Pointer(mpJumpAction);
+	M_Pointer(mpSpaceAction);
+	M_Pointer(mpTypeAction);
 	M_Pointer(mpSplit);
 	M_Pointer(mpPreview);
 	U_Size(muiPreviewChanges);
 	U_String(mszNoun);
 	U_Bool(mbSelectOnOpen);
+	U_Bool(mbNavigateOnSelect);
+	U_Bool(mbShowing);
 }
 
 
@@ -109,7 +130,13 @@ void CIDEResultsPane::Free(void)
 		if (mpEscapeAction.IsNotNull())
 		{
 			mpTree->RemoveInputAction(mpEscapeAction);
+			mpTree->RemoveInputAction(mpJumpAction);
+			mpTree->RemoveInputAction(mpSpaceAction);
+			mpTree->RemoveInputAction(mpTypeAction);
 			mpEscapeAction = NULL;
+			mpJumpAction = NULL;
+			mpSpaceAction = NULL;
+			mpTypeAction = NULL;
 		}
 	}
 	mszNoun.Kill();
@@ -158,7 +185,9 @@ void CIDEResultsPane::EndShow(int64 iSelectedData)
 	int32	iNode;
 
 	iNode = (iSelectedData > 0) ? FindResultNode(iSelectedData) : TREE_NO_NODE;
+	mbShowing = true;
 	mpTree->SelectNode((iNode != TREE_NO_NODE) ? iNode : FindResultNode(0));
+	mbShowing = false;
 	ShowPreview();
 }
 
@@ -321,7 +350,8 @@ bool CIDEResultsPane::OpenResult(int32 iNode, bool bSelect)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// A line's node, double clicked or jumped to (F4), opens its place.
+// A line's node, double clicked or with enter pressed on it, opens its
+// place.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEResultsPane::ResultActivated(void)
@@ -354,7 +384,9 @@ bool CIDEResultsPane::Step(bool bNext, bool bKeepKeys)
 	{
 		if (GetResultData(iNode) != 0)
 		{
+			mbShowing = true;
 			mpTree->SelectNode(iNode);
+			mbShowing = false;
 			mpTree->ShowRow(mpTree->FindNodeRow(iNode));
 			OpenResult(iNode, true);
 			if (bKeepKeys)
@@ -400,12 +432,68 @@ void CIDEResultsPane::Focus(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Another row of the tree is selected: its result is previewed.
+// Jump to Source (F4) in the tree, as IntelliJ's: where what the results
+// are of is declared is opened, whichever row is selected.  Results of
+// nothing declared (text found): the selected one is opened, as enter
+// does.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEResultsPane::JumpToSource(void)
+{
+	SIDELocation	sLocation;
+
+	if (mpcSource->GetDeclarationLocation(this, &sLocation))
+	{
+		mpcContent->GetDocuments()->OpenLocation(&sLocation, false);
+		sLocation.szFileName.Kill();
+	}
+	else
+	{
+		OpenResult(mpTree->GetSelectedNode(), mbSelectOnOpen);
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A character typed in the tree, or space, isn't the tree's: the active
+// editor gets the keys and has it typed in it.  With no editor it is
+// lost.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEResultsPane::TypeCharacter(SComponentInputEvent* psEvent)
+{
+	if (mpcContent->GetDocuments()->FocusActiveEditor())
+	{
+		mpcContent->GetWindow()->InputPrintable(psEvent->cPrintable, psEvent->bInsert);
+	}
+}
+
+
+void CIDEResultsPane::TypeSpace(void)
+{
+	if (mpcContent->GetDocuments()->FocusActiveEditor())
+	{
+		mpcContent->GetWindow()->InputCommand(CIC_Space, true);
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Another row of the tree is selected: its result is previewed and, with
+// Navigate with Single Click, opened in its editor, the tree keeping the
+// keys.  Not when the pane selected it itself (the tree made again, a
+// step, which opens it anyway).
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEResultsPane::ResultSelected(void)
 {
 	ShowPreview();
+	if (mbNavigateOnSelect && !mbShowing && OpenResult(mpTree->GetSelectedNode(), true))
+	{
+		Focus();
+	}
 }
 
 
@@ -540,6 +628,20 @@ void CIDEResultsPane::SetPreviewShown(bool bShown)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Navigate with Single Click: a result is opened as it is selected.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEResultsPane::SetNavigateOnSelect(bool bNavigate)
+{
+	mbNavigateOnSelect = bNavigate;
+}
+
+
+bool CIDEResultsPane::IsNavigateOnSelect(void) { return mbNavigateOnSelect; }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // The sash was dragged: the share is kept.
 //
 //////////////////////////////////////////////////////////////////////////
@@ -551,8 +653,9 @@ void CIDEResultsPane::ShareChanged(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Whether the preview is shown and the tree's share of the pane, from and
-// to its owner's tag of the IDE's settings.
+// Whether a result is opened as it is selected, whether the preview is
+// shown and the tree's share of the pane, from and to its owner's tag of
+// the IDE's settings.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEResultsPane::ReadSettings(CMarkupTag* pcTag)
@@ -560,6 +663,11 @@ void CIDEResultsPane::ReadSettings(CMarkupTag* pcTag)
 	char*	szValue;
 	int32	iShare;
 
+	szValue = pcTag->GetStringAttribute(IDE_RESULTS_NAVIGATE_ATTRIBUTE);
+	if (szValue)
+	{
+		mbNavigateOnSelect = (StringCompare(szValue, "true") == 0);
+	}
 	szValue = pcTag->GetStringAttribute(IDE_RESULTS_PREVIEW_ATTRIBUTE);
 	if (szValue)
 	{
@@ -579,6 +687,7 @@ void CIDEResultsPane::ReadSettings(CMarkupTag* pcTag)
 
 void CIDEResultsPane::WriteSettings(CXMLWriter* pcWriter)
 {
+	pcWriter->Attribute(IDE_RESULTS_NAVIGATE_ATTRIBUTE, mbNavigateOnSelect);
 	pcWriter->Attribute(IDE_RESULTS_PREVIEW_ATTRIBUTE, IsPreviewShown());
 	pcWriter->Attribute(IDE_RESULTS_SHARE_ATTRIBUTE, mpSplit->GetShare());
 }

@@ -1058,6 +1058,11 @@ void CIDEScript::RunEditStep(const char* szStep)
 		//usagepreview:on or :off, as the tool window's Preview: the preview shown beside the tree or not.
 		mpcContent->GetUsages()->GetResultsPane()->SetPreviewShown(strcmp(&szStep[13], "on") == 0);
 	}
+	else if (strncmp(szStep, "usagesingleclick:", 17) == 0)
+	{
+		//usagesingleclick:on or :off, as the tool window's Navigate with Single Click.
+		mpcContent->GetUsages()->GetResultsPane()->SetNavigateOnSelect(strcmp(&szStep[17], "on") == 0);
+	}
 	else if (strcmp(szStep, "usageparts") == 0)
 	{
 		//The Find Usages tree's rows with their parts marked: {d:...} dim, {m:...} the text found.
@@ -1202,6 +1207,14 @@ void CIDEScript::RunEditStep(const char* szStep)
 		if (strcmp(&szStep[4], "f4") == 0)
 		{
 			mpcContent->GetWindow()->InputCommand(CIC_JumpToSource, true);
+		}
+		else if (strncmp(&szStep[4], "type:", 5) == 0)
+		{
+			//key:type:<characters>, each typed as its key would.
+			for (i = 9; szStep[i] != '\0'; i++)
+			{
+				mpcContent->GetWindow()->InputPrintable(szStep[i], true);
+			}
 		}
 		else if (strcmp(&szStep[4], "space") == 0)
 		{
