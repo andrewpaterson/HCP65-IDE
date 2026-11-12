@@ -292,6 +292,14 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 	mpWindow->SetPartialRedraw(true);
 	mpWindow->SetVerifyRedraw(getenv("HCP65_IDE_VERIFY_REDRAW") != NULL);
 
+	//A scripted run's commands are for it whatever window the platform's focus is in: another program's window coming
+	//to the front (a second run of the checks, the person at the machine) mustn't make it ignore them, as an inactive
+	//window does.
+	if (IsIDEScripted())
+	{
+		mpWindow->SetKeepsActive(true);
+	}
+
 	mpContent = OMalloc<CIDEContent>();
 	mpContent->SetKeepSettings(!IsIDEScripted() || (getenv("HCP65_IDE_SAVE_LAYOUT") != NULL));
 	pTick->SetContent(mpContent);
