@@ -68,6 +68,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDEOccurrences.h"
 #include "IDENavigationHistory.h"
 #include "IDECaretUsages.h"
+#include "IDEPasteHistory.h"
 #include "IDEIndexing.h"
 #include "IDEDocuments.h"
 #include "IDESolutions.h"
@@ -168,6 +169,7 @@ protected:
 	Ptr<CIDEOccurrences>		mpOccurrences;		//Next and Previous Occurrence through Find Usages or Build.
 	Ptr<CIDENavigationHistory>	mpNavigationHistory;	//Back and Forward.
 	Ptr<CIDECaretUsages>		mpCaretUsages;			//The usages of the symbol at the caret, highlighted.
+	Ptr<CIDEPasteHistory>		mpPasteHistory;			//Paste from History: what the clipboard's history chooses with.
 	Ptr<CIDEIndexing>			mpIndexing;			//The Indexing tab.
 	Ptr<CIDEDocuments>			mpDocuments;		//The open files' tabs.
 	Ptr<CIDESolutions>			mpSolutions;		//Opening, adding and removing solutions, and the recent ones.
@@ -228,6 +230,7 @@ public:
 	Ptr<CWindow>		GetWindow(void);
 	Ptr<CWindowTheme>	GetTheme(void);
 	SDialogLook*		GetDialogLook(void);
+	Ptr<CIDEPasteHistory>	GetPasteHistory(void);
 	Ptr<CFontColours>	GetFontColours(void);
 	Ptr<CFontColours>	GetBoldColours(void);
 	Ptr<CFontFamily>	GetCodeFamily(void);

@@ -1507,6 +1507,19 @@ void CIDEScript::RunEditStep(const char* szStep)
 			printf("\n");
 		}
 	}
+	else if (strcmp(szStep, "printclipboardhistory") == 0)
+	{
+		//The clipboard's history, newest first: "Clipboard history: <n>" and each entry as " [<text>]".
+		Ptr<CClipboardHistory>	pHistory;
+
+		pHistory = mpcContent->GetPasteHistory()->GetHistory();
+		printf("Clipboard history: %d", (int)pHistory->NumEntries());
+		for (i = 0; i < pHistory->NumEntries(); i++)
+		{
+			printf(" [%s]", pHistory->GetText(i));
+		}
+		printf("\n");
+	}
 	else if (strncmp(szStep, "keys:", 5) == 0)
 	{
 		//keys:<keys>, a command's keys ("Alt+Shift+Cursor Down"), as pressing them runs what they are bound to.
@@ -1881,15 +1894,23 @@ void CIDEScript::DialogTick(void)
 		mpcContent->GetFindInFiles()->GetFind()->OpenInFindWindow();
 		return;
 	}
+	if ((strcmp(szAnswer, "OK") == 0) && mpcContent->GetPasteHistory()->GetDialog().IsNotNull() && (mpcContent->GetPasteHistory()->GetDialog()->GetDialog() == mpDialog))
+	{
+		//Choose Content to Paste's OK chooses what is selected, as clicking it does.
+		mpDialog->OKClicked();
+		return;
+	}
 	mpDialog->Close(((strcmp(szAnswer, "Save") == 0) || (strcmp(szAnswer, "OK") == 0)) ? "OK" : szAnswer);
 }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// For checking, HCP65_IDE_DIALOG_KEYS, tab and backtab separated by
-// commas, are pressed before the dialog is answered, and what has the
-// keys after each is printed.  One with a plus, "Control+Shift+N", is a
+// For checking, HCP65_IDE_DIALOG_KEYS, separated by commas, are pressed
+// before the dialog is answered, and what has the keys after each is
+// printed: tab, backtab, down, up, selectdown, delete, backspace and
+// type:<characters>.  With Choose Content to Paste open its rows are
+// printed after each too (PrintPasteHistoryDialog).  One with a plus, "Control+Shift+N", is a
 // command's keys: with the Go to dialog open its tab, text and results
 // are printed after them.
 //
@@ -1925,15 +1946,58 @@ void CIDEScript::PressDialogKeys(Ptr<CWindow> pWindow)
 				}
 			}
 		}
+		else if (aszKeys.Get(i)->StartsWith("type:"))
+		{
+			for (j = 5; j < aszKeys.Get(i)->Length(); j++)
+			{
+				pWindow->InputPrintable(aszKeys.Get(i)->Text()[j], true);
+			}
+		}
+		else if (aszKeys.Get(i)->Equals("down") || aszKeys.Get(i)->Equals("up") || aszKeys.Get(i)->Equals("selectdown") || aszKeys.Get(i)->Equals("delete") || aszKeys.Get(i)->Equals("backspace"))
+		{
+			pWindow->InputCommand(aszKeys.Get(i)->Equals("down") ? CIC_Down : (aszKeys.Get(i)->Equals("up") ? CIC_Up : (aszKeys.Get(i)->Equals("selectdown") ? CIC_SelectDown : (aszKeys.Get(i)->Equals("delete") ? CIC_Delete : CIC_Backspace))), true);
+		}
 		else
 		{
 			pWindow->InputCommand(aszKeys.Get(i)->Equals("backtab") ? CIC_BackTab : CIC_Tab, true);
 		}
+		PrintPasteHistoryDialog(pWindow);
 		pFocussed = pWindow->GetFocus()->GetFocussedComponent();
 		printf("Focus: %s\n", pFocussed.IsNotNull() ? pFocussed.ClassName() : "(none)");
 	}
 	fflush(stdout);
 	aszKeys.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// If pWindow is Choose Content to Paste's: "Paste history [<filter>]:"
+// and each row as " <text>", a '*' before a selected one, and the preview
+// as "Paste preview: [<text>]".
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEScript::PrintPasteHistoryDialog(Ptr<CWindow> pWindow)
+{
+	Ptr<CPasteHistoryDialog>	pDialog;
+	CChars						szRow;
+	int32						i;
+
+	pDialog = mpcContent->GetPasteHistory()->GetDialog();
+	if (pDialog.IsNull() || (pDialog->GetDialog()->GetWindow() != pWindow))
+	{
+		return;
+	}
+	printf("Paste history [%s]:", pDialog->GetFilter());
+	szRow.Init();
+	for (i = 0; i < pDialog->GetList()->NumRows(); i++)
+	{
+		szRow.Clear();
+		pDialog->GetRowText(i, &szRow);
+		printf(" %s%s", pDialog->GetList()->IsRowSelected(i) ? "*" : "", szRow.Text());
+	}
+	szRow.Kill();
+	printf("\nPaste preview: [%s]\n", pDialog->GetPreview()->GetText());
 }
 
 

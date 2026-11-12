@@ -66,6 +66,9 @@
     <ClCompile Include="IDECaretUsages.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="IDEPasteHistory.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="IDEOccurrences.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -222,6 +225,9 @@
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDECaretUsages.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDEPasteHistory.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDEOccurrences.h">

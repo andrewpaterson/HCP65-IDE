@@ -469,8 +469,8 @@ CHECKS = [
 		 r'CalculatorSymbols\.cpp \* \(focus\) line 1: \[Y#include'], []),
 	('edit-menu-focus', {
 		'OPEN': 'CalculatorParser.cpp', 'EDIT': 'focus:build,print,focus:claude,print'},
-		[r'^Edit menu: Undo\(disabled\) Redo\(disabled\) Cut\(disabled\) Copy Paste\(disabled\) Select All',
-		 r'^Edit menu: Undo\(disabled\) Redo\(disabled\) Cut Copy Paste Select All'], []),
+		[r'^Edit menu: Undo\(disabled\) Redo\(disabled\) Cut\(disabled\) Copy Paste\(disabled\) Paste from History\.\.\.\(disabled\) Select All',
+		 r'^Edit menu: Undo\(disabled\) Redo\(disabled\) Cut Copy Paste Paste from History\.\.\. Select All'], []),
 	('go-to-file', {
 		'WAIT_INDEX': '1', 'GOTO': '1:bl/csym'},
 		[r'^Go to \[bl/csym\]: 2 results', r'^  CalculatorSymbols\.h ', r'^  CalculatorSymbols\.cpp ',
@@ -804,14 +804,14 @@ CHECKS = [
 		'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'CARET': '36:4', 'DEBUG': 'printmenus,clickmenu:View/Nope'},
 		[r'^Menu File: Open Project/Solution\.\.\., Add Solution\.\.\., Close Solution, Recent Solutions>, Clear Recent Solutions, Save \[Ctrl\+S\], Save All \[Ctrl\+Shift\+S\], Compare with File\.\.\., Settings\.\.\. \[Ctrl\+Alt\+S\], Exit$',
 		 r'^Menu File/Recent Solutions: 1 ',
-		 r'^Menu Edit: Undo \[Ctrl\+Z\]\(disabled\), Redo \[Ctrl\+Shift\+Z\]\(disabled\), Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Select All \[Ctrl\+A\], Extend Selection \[Ctrl\+W\], Shrink Selection \[Ctrl\+Shift\+W\], Undo Across Files\(disabled\), Redo Across Files\(disabled\), Find in Files\.\.\. \[Ctrl\+Shift\+F\]$',
+		 r'^Menu Edit: Undo \[Ctrl\+Z\]\(disabled\), Redo \[Ctrl\+Shift\+Z\]\(disabled\), Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\], Select All \[Ctrl\+A\], Extend Selection \[Ctrl\+W\], Shrink Selection \[Ctrl\+Shift\+W\], Undo Across Files\(disabled\), Redo Across Files\(disabled\), Find in Files\.\.\. \[Ctrl\+Shift\+F\]$',
 		 r'^Menu Navigate: Back \[Ctrl\+Alt\+Left\](\(disabled\))?, Forward \[Ctrl\+Alt\+Right\](\(disabled\))?, Class\.\.\. \[Ctrl\+N\], File\.\.\. \[Ctrl\+Shift\+N\], Symbol\.\.\. \[Ctrl\+Alt\+Shift\+N\]$',
 		 r'^Menu View: Solution Explorer, Find Usages, Find, Build, Indexing, Run, Debug, Claude$',
 		 r'^Menu Git: Compare with HEAD, Compare with Branch\.\.\., Compare with Revision\.\.\.$',
 		 r'^Menu Build: Build \[Ctrl\+Shift\+B\], Edit Build Configurations\.\.\.$',
 		 r'^Menu Debug: Start Debugging \[F5\], Start Without Debugging \[Ctrl\+F5\], Stop Debugging \[Shift\+F5\], Stop Running\(disabled\), Restart \[Ctrl\+Shift\+F5\], Break All \[Ctrl\+Pause/Break\], Attach to Emulator\.\.\., Step Into \[F11\], Step Over \[F10\], Step Out \[Shift\+F11\], Toggle Breakpoint \[F9\], ',
 		 r'^Menu Window: Reset Window Layout, Close All Documents$',
-		 r'^Menu Editor: Go to Source \[Ctrl\+B\], Find Usages \[Alt\+F7\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Rename\.\.\. \[Shift\+F6\], Refactor>$',
+		 r'^Menu Editor: Go to Source \[Ctrl\+B\], Find Usages \[Alt\+F7\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Rename\.\.\. \[Shift\+F6\], Refactor>, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\]$',
 		 r'^Menu Editor/Refactor: Extract Method\.\.\.\(disabled\)$',
 		 r'^Menu Explorer: Set as Startup Solution, Set as Startup Project\(disabled\), Remove Solution$',
 		 r'^Menu item \[View/Nope\] not found$'], []),
@@ -978,7 +978,16 @@ CHECKS = [
 		#the window.
 		'OPEN': 'CalcParentheses.h', 'CARET': '38:1',
 		'DEBUG': 'wait:1500,edit:gutterclick:38,edit:printselection,wait:1000,edit:shiftgutterclick:36,edit:printselection'},
-		[r'^Selection: \[\tbool\t\tIsParentheses\(void\);$', r'^\] on line 39, caret line 39$', r'^Selection: \[\tCNumber\t\tEvaluate\(void\);$', r'^\tvoid\t\tSetExpression\(CCalcExpression\* pcExpression\);$', r'^\] on line 38, caret line 36$'], []),
+		[r'^Selection: \[\tbool\t\tIsParentheses\(void\);$', r'^\] on line 39, caret line 39$', r'^Selection: \[\tCNumber\t\tEvaluate\(void\);$', r'^\tvoid\t\tSetExpression\(CCalcExpression\* pcExpression\);$', r'^\] on line 38, caret line 36$'], []),	('editor-paste-history', {
+		#Paste from History (Control+Shift+V), as IntelliJ IDEA's: three words copied from line 38 are the clipboard's
+		#history, newest first; Choose Content to Paste lists them, down selects and previews the second, and OK pastes
+		#it at the caret and makes it the newest, so a plain Control+V pastes it again.  The run's clipboard is its own,
+		#not the system's.
+		'OPEN': 'CalcParentheses.h', 'CARET': '38:1', 'DIALOG_KEYS': 'down', 'DIALOG_ANSWER': 'OK',
+		'DEBUG': 'wait:1500,edit:doubleclick:38:2,edit:keys:Control+C,edit:doubleclick:38:10,edit:keys:Control+C,edit:doubleclick:38:22,edit:keys:Control+C,edit:printclipboardhistory,edit:caret:1:1,edit:keys:Control+Shift+V,answered:1,edit:printclipboardhistory,edit:keys:Control+V,edit:print'},
+		[r'^Clipboard history: 3 \[void\] \[IsParentheses\] \[bool\]$', r'^Paste history \[\]: void \*IsParentheses bool$', r'^Paste preview: \[IsParentheses\]$',
+		 r'^Dialog \[Choose Content to Paste\] answered OK$', r'^Clipboard history: 3 \[IsParentheses\] \[void\] \[bool\]$',
+		 r'^Edit menu:.* Paste Paste from History\.\.\. Select All', r'CalcParentheses\.h \* \(focus\) line 1: \[IsParenthesesIsParentheses/\*\* -'], []),
 ]
 
 

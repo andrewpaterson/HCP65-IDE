@@ -298,6 +298,9 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 	if (IsIDEScripted())
 	{
 		mpWindow->SetKeepsActive(true);
+		//Nor does it use the system's clipboard: its copies would replace what the person has on theirs, and what they
+		//have would be in the checks' clipboard history.
+		mpWindow->GetClipboard()->SetDetached(true);
 	}
 
 	mpContent = OMalloc<CIDEContent>();

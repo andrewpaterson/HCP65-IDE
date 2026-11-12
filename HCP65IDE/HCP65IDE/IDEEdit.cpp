@@ -110,6 +110,7 @@ Ptr<CMenuContainer> CIDEEdit::CreateEditMenu(void)
 	mpEditMenu->AddItem(pCommands->Find("Edit.Cut"));
 	mpEditMenu->AddItem(pCommands->Find("Edit.Copy"));
 	mpEditMenu->AddItem(pCommands->Find("Edit.Paste"));
+	mpEditMenu->AddItem(pCommands->Find("Edit.PasteFromHistory"));
 	mpEditMenu->AddSeparator();
 	mpEditMenu->AddItem(pCommands->Find("Edit.SelectAll"));
 	mpEditMenu->AddItem(pCommands->Find("Editor.ExtendSelection"));

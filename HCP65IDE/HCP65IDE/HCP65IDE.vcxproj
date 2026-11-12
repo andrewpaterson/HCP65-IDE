@@ -255,6 +255,7 @@
     <ClCompile Include="IDEIndexing.cpp" />
     <ClCompile Include="IDENavigationHistory.cpp" />
     <ClCompile Include="IDECaretUsages.cpp" />
+    <ClCompile Include="IDEPasteHistory.cpp" />
     <ClCompile Include="IDEOccurrences.cpp" />
     <ClCompile Include="IDECloseGuard.cpp" />
     <ClCompile Include="IDEDocuments.cpp" />
@@ -309,6 +310,7 @@
     <ClInclude Include="IDEIndexing.h" />
     <ClInclude Include="IDENavigationHistory.h" />
     <ClInclude Include="IDECaretUsages.h" />
+    <ClInclude Include="IDEPasteHistory.h" />
     <ClInclude Include="IDEOccurrences.h" />
     <ClInclude Include="IDESteppable.h" />
     <ClInclude Include="IDEDebugger.h" />

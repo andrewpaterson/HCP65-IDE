@@ -219,6 +219,7 @@ void CIDEContent::Class(void)
 	M_Pointer(mpOccurrences);
 	M_Pointer(mpNavigationHistory);
 	M_Pointer(mpCaretUsages);
+	M_Pointer(mpPasteHistory);
 	M_Pointer(mpIndexing);
 	M_Pointer(mpDocuments);
 	M_Pointer(mpSolutions);
@@ -397,6 +398,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpOccurrences = OMalloc<CIDEOccurrences>(this);
 	mpNavigationHistory = OMalloc<CIDENavigationHistory>(this);
 	mpCaretUsages = OMalloc<CIDECaretUsages>(this);
+	mpPasteHistory = OMalloc<CIDEPasteHistory>(this);
 	mpIndexing = OMalloc<CIDEIndexing>(this);
 	mpDocuments = OMalloc<CIDEDocuments>(this);
 	mpSolutions = OMalloc<CIDESolutions>(this);
@@ -1001,7 +1003,7 @@ CSolutionExplorer* CIDEContent::GetExplorer(void) { return &mpSolutions->GetExpl
 // The editors' context menu, as IntelliJ's: Go to Source (Control+B, an
 // #include's file or a definition), Find Usages (Alt+F7), Rename
 // (Shift+F6) and Refactor, each added (and enabled as it opens) by the
-// class that does it.
+// class that does it, then Cut, Copy, Paste and Paste from History.
 //
 //////////////////////////////////////////////////////////////////////////
 Ptr<CMenuContainer> CIDEContent::CreateEditorMenu(void)
@@ -1011,6 +1013,11 @@ Ptr<CMenuContainer> CIDEContent::CreateEditorMenu(void)
 	mpUsages->AddEditorItems(mpEditorMenu);
 	mpEditorMenu->AddSeparator();
 	mpRename->AddEditorItems(mpEditorMenu);
+	mpEditorMenu->AddSeparator();
+	mpEditorMenu->AddItem(mpCommands->Find("Edit.Cut"));
+	mpEditorMenu->AddItem(mpCommands->Find("Edit.Copy"));
+	mpEditorMenu->AddItem(mpCommands->Find("Edit.Paste"));
+	mpEditorMenu->AddItem(mpCommands->Find("Edit.PasteFromHistory"));
 	return mpEditorMenu;
 }
 
@@ -1049,6 +1056,7 @@ bool CIDEContent::IsKeepingSettings(void) { return mbKeepSettings; }
 Ptr<CWindow> CIDEContent::GetWindow(void) { return mpWindow; }
 Ptr<CWindowTheme> CIDEContent::GetTheme(void) { return mpTheme; }
 SDialogLook* CIDEContent::GetDialogLook(void) { return &msDialogLook; }
+Ptr<CIDEPasteHistory> CIDEContent::GetPasteHistory(void) { return mpPasteHistory; }
 Ptr<CFontColours> CIDEContent::GetFontColours(void) { return mpFontColours; }
 Ptr<CFontColours> CIDEContent::GetBoldColours(void) { return mpBoldColours; }
 Ptr<CFontFamily> CIDEContent::GetCodeFamily(void) { return mpCodeFamily; }

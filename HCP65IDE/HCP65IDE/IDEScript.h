@@ -94,6 +94,7 @@ public:
 	void	StopWatchingDialog(void);
 	bool	IsWatchingDialog(void);
 	void	DialogTick(void);
+	void	PrintPasteHistoryDialog(Ptr<CWindow> pWindow);
 	void	PressDialogKeys(Ptr<CWindow> pWindow);
 	template<class M, class O>
 	void	SetDialogDrawnCall(O* pcObject, void(M::*fFunction)(void));
