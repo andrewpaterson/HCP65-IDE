@@ -34,7 +34,6 @@ struct SIDEPlace
 
 
 typedef CArrayTemplate<SIDEPlace>	CArrayIDEPlaces;
-typedef CArrayTemplate<size>		CArrayIDESizes;
 
 
 //C++'s keywords, which a name can't be.
@@ -342,8 +341,8 @@ bool CIDERename::RenameSymbol(SIDERenameTarget* psTarget, const char* szNewName)
 	CChars				szMessage;
 	size				uiPlaces;
 	SIDEPlace*			psPlace;
-	CArrayIDESizes		auiStarts;
-	CArrayIDESizes		auiEnds;
+	CArrayTextRange		asRanges;
+	STextRange			sRange;
 	bool				bFound;
 
 	//Each file's editor, opened (not shown) if it isn't open.
@@ -415,8 +414,7 @@ bool CIDERename::RenameSymbol(SIDERenameTarget* psTarget, const char* szNewName)
 		mpcContent->GetEdit()->BeginUndoGroup();
 		for (uiFile = 0; uiFile < aszFiles.NumElements(); uiFile++)
 		{
-			auiStarts.Init();
-			auiEnds.Init();
+			asRanges.Init();
 			for (i = 0; i < asPlaces.NumElements(); i++)
 			{
 				psPlace = asPlaces.Get(i);
@@ -425,29 +423,26 @@ bool CIDERename::RenameSymbol(SIDERenameTarget* psTarget, const char* szNewName)
 					continue;
 				}
 				bFound = false;
-				for (j = 0; j < auiStarts.NumElements(); j++)
+				for (j = 0; j < asRanges.NumElements(); j++)
 				{
-					if (*auiStarts.Get(j) >= psPlace->uiStart)
+					if (asRanges.Get(j)->uiStart >= psPlace->uiStart)
 					{
-						bFound = (*auiStarts.Get(j) == psPlace->uiStart);
+						bFound = (asRanges.Get(j)->uiStart == psPlace->uiStart);
 						break;
 					}
 				}
 				if (!bFound)
 				{
-					auiStarts.InsertAt(&psPlace->uiStart, j);
+					sRange.uiStart = psPlace->uiStart;
+					sRange.uiEnd = psPlace->uiStart + psTarget->szName.Length();
+					asRanges.InsertAt(&sRange, j);
 				}
 			}
-			for (i = 0; i < auiStarts.NumElements(); i++)
+			if (mpcContent->GetDocuments()->FindTab(aszFiles.GetText(uiFile))->GetEditor()->ReplaceRanges(asRanges.GetData(), asRanges.NumElements(), szNewName))
 			{
-				*auiEnds.Add() = *auiStarts.Get(i) + psTarget->szName.Length();
+				uiPlaces += asRanges.NumElements();
 			}
-			if (mpcContent->GetDocuments()->FindTab(aszFiles.GetText(uiFile))->GetEditor()->ReplaceRanges(auiStarts.GetData(), auiEnds.GetData(), auiStarts.NumElements(), szNewName))
-			{
-				uiPlaces += auiStarts.NumElements();
-			}
-			auiEnds.Kill();
-			auiStarts.Kill();
+			asRanges.Kill();
 		}
 		mpcContent->GetEdit()->EndUndoGroup();
 

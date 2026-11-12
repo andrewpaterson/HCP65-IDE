@@ -1185,8 +1185,7 @@ void CIDEScript::RunEditStep(const char* szStep)
 	{
 		//replace:<line>|<old>|<new>: the first <old> on the line (from 1) made <new>, as one edit.
 		CArrayChars	aszParts;
-		size		uiStart;
-		size		uiEnd;
+		STextRange	sRange;
 		const char*	szFound;
 
 		aszParts.Init();
@@ -1200,9 +1199,9 @@ void CIDEScript::RunEditStep(const char* szStep)
 				szFound = strstr(&pEditor->GetText()[pEditor->GetLineStart(uiLine)], aszParts.GetText(1));
 				if (szFound)
 				{
-					uiStart = (size)(szFound - pEditor->GetText());
-					uiEnd = uiStart + strlen(aszParts.GetText(1));
-					pEditor->ReplaceRanges(&uiStart, &uiEnd, 1, (aszParts.NumElements() > 2) ? aszParts.GetText(2) : "");
+					sRange.uiStart = (size)(szFound - pEditor->GetText());
+					sRange.uiEnd = sRange.uiStart + strlen(aszParts.GetText(1));
+					pEditor->ReplaceRanges(&sRange, 1, (aszParts.NumElements() > 2) ? aszParts.GetText(2) : "");
 				}
 			}
 		}
