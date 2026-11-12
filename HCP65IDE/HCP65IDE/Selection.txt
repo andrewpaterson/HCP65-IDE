@@ -289,3 +289,15 @@ Cleanup after the review of 2026-11-12 (no behaviour changed but two fixes):
   - CIDEEditorTab keeps its syntax ranges as ranges of the text, converted once when they are set, and gives Extend
     Selection only those around the selection; it asks for a parse through an event (GetSyntaxBehindEvent) the
     documents listen to, where it held the documents.
+
+Second cleanup, 2026-11-12:
+  - A box and the line commands: back tab, delete line, duplicate and cut line work on the lines of the box's rows
+    (CTextEditing::SelectBoxLines makes the box a selection of them first); enter, home enter, end enter and deleting
+    a word end the box (EndBox) and are made at its caret corner.
+  - A select drag held still outside the view goes on scrolling (CFocus::RepeatDrag every FOCUS_DRAG_REPEAT_PERIOD),
+    and the pointer is NC_Move while the selected text is dragged.
+  - An input event says whether Control and Alt are held (SComponentInputEvent::bControl, bAlt); the drop copies when
+    the release's event says Control is.
+  - CTextArea and CTextField give their editing (GetEditing): the moves and edits are called on it, the text area's
+    own pass-throughs are gone.  The selected text's occurrences are STextRanges (CTextArea::GetOccurrence), asked
+    for by RequestOccurrences where they go out of date.
