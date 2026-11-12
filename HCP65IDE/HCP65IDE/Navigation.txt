@@ -17,14 +17,10 @@ a declaration), Back and Forward, Next and Previous Occurrence, Switch Header/So
 Gaps
 ----
 
-Find Usages tool window (planned below)
-  - No preview of the selected usage's code beside the tree.  (Nor has the Find tool window.)
-  - Rows are one plain string: the text found isn't highlighted, the line number isn't dimmed, files have no icons.
-  - No toolbar: rerun, expand all, collapse all, previous and next, preview on and off.
-  - No filters: read access and write access, though the index knows which each usage is.
-  - Enter does nothing; only F4 and a double click open a usage.  No single click navigation.
-  - A new search replaces the last: no history, no pinned results.
-  - No scope: every project is always searched.
+Find Usages tool window (built 2026-11-12, see the plan below)
+  - What is left: the Find tool window (Find in Files') has one result at a time, without tabs or a pin; there is no
+    export of the results; the tree doesn't follow the editor's caret (IntelliJ's Autoscroll from Source); and a
+    result's row isn't coloured as code, only its preview is.
 
 Usages popup
   - A menu of text rows: no code preview, no typing to filter, no Open in Find Window, no highlighted match.
@@ -58,8 +54,15 @@ Find in Files
   - Regular expressions, a file mask, a button to choose the directory, Replace in Files.
 
 
-Plan: completing the Find Usages tool window
---------------------------------------------
+Plan: completing the Find Usages tool window (all eight steps built 2026-11-12)
+--------------------------------------------------------------------------------
+
+As built it differs from the plan in these:
+  - step 5: the toolbar's commands are each pane's own and have no keys.
+  - step 7: a pinned tab's name has "* " before it; only Find Usages has tabs, the Find tool window hasn't.
+  - step 8d: Scope on the toolbar opens a menu of the scopes beside its button, not a combo box, which a toolbar down
+    the side has no room for.
+  - step 8: Find in Files' Match case and Words are kept in the settings too.
 
 Each step can be built, checked and committed on its own, in this order.  The Find tool window gets the same from
 the shared pane of step 1.
