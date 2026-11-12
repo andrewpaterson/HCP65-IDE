@@ -818,14 +818,14 @@ void CIDEUsages::ShowUsages(bool bKeepSelected)
 //////////////////////////////////////////////////////////////////////////
 int32 CIDEUsages::AddGroupNode(int32 iParent, const char* szName, size uiCount, const char* szWhat)
 {
-	CChars	szText;
+	CChars	szDetail;
 	int32	iNode;
 
-	szText.Init(szName);
-	AppendIDEUsageCount(&szText, uiCount, szWhat);
-	iNode = mpPane->GetTree()->AddNode(iParent, szText.Text(), NULL, 0);
+	szDetail.Init();
+	AppendIDEUsageCount(&szDetail, uiCount, szWhat);
+	iNode = mpPane->AddGroup(iParent, szName, szDetail.Text());
 	mpPane->GetTree()->SetExpanded(iNode, true);
-	szText.Kill();
+	szDetail.Kill();
 	return iNode;
 }
 
@@ -839,7 +839,7 @@ int32 CIDEUsages::AddGroupNode(int32 iParent, const char* szName, size uiCount, 
 //////////////////////////////////////////////////////////////////////////
 int32 CIDEUsages::AddFileNode(int32 iParent, SIDEUsageRow* pasRows, size uiRows, size uiFirst, size uiCount)
 {
-	CChars		szText;
+	CChars		szDetail;
 	const char*	szFile;
 	const char*	szName;
 	int32		iNode;
@@ -847,17 +847,17 @@ int32 CIDEUsages::AddFileNode(int32 iParent, SIDEUsageRow* pasRows, size uiRows,
 
 	szFile = pasRows[uiFirst].psUsage->sLocation.szFileName.Text();
 	szName = GetIDEFileNamePart(szFile);
-	szText.Init(szName);
-	AppendIDEUsageCount(&szText, uiCount, NULL);
+	szDetail.Init();
+	AppendIDEUsageCount(&szDetail, uiCount, NULL);
 	bShared = (uiFirst > 0) && IsSameIDEUsageFileName(&pasRows[uiFirst], &pasRows[uiFirst - 1]);
 	bShared = bShared || ((uiFirst + uiCount < uiRows) && IsSameIDEUsageFileName(&pasRows[uiFirst], &pasRows[uiFirst + uiCount]));
 	if (bShared && (szName > szFile + 1))
 	{
-		szText.Append("  ");
-		szText.AppendSubString(szFile, szName - 1);
+		szDetail.Append("  ");
+		szDetail.AppendSubString(szFile, szName - 1);
 	}
-	iNode = mpPane->GetTree()->AddNode(iParent, szText.Text(), NULL, 0);
-	szText.Kill();
+	iNode = mpPane->AddGroup(iParent, szName, szDetail.Text(), szFile);
+	szDetail.Kill();
 	return iNode;
 }
 
@@ -918,31 +918,28 @@ void CIDEUsages::AddFileUsages(int32 iFile, SIDEUsageRow* pasRows, size uiCount,
 //////////////////////////////////////////////////////////////////////////
 void CIDEUsages::AddUsageLine(int32 iParent, SIDEUsageRow* psRow, CIDEFileLines* pcLines)
 {
-	CChars			szText;
+	CChars			szNote;
 	SIDELocation*	psLocation;
 
 	psLocation = &psRow->psUsage->sLocation;
-	szText.Init();
-	szText.Append(psLocation->iLine + 1);
-	szText.Append(": ");
-	pcLines->AppendLine(psLocation->szFileName.Text(), psLocation->iLine, &szText);
+	szNote.Init();
 	if ((muiGrouping & IDE_USAGES_BY_TYPE) == 0)
 	{
 		if (psLocation->uiRole == CPPIR_Definition)
 		{
-			szText.Append("  [definition]");
+			szNote.Append("  [definition]");
 		}
 		else if (psLocation->uiRole == CPPIR_Declaration)
 		{
-			szText.Append("  [declaration]");
+			szNote.Append("  [declaration]");
 		}
 	}
 	if (psLocation->uiFlags & CPPIF_AMBIGUOUS)
 	{
-		szText.Append("  [one of the overloads]");
+		szNote.Append("  [one of the overloads]");
 	}
-	mpPane->GetTree()->AddNode(iParent, szText.Text(), NULL, (int64)psRow->uiIndex + 1);
-	szText.Kill();
+	mpPane->AddResult(iParent, pcLines, psLocation->szFileName.Text(), psLocation->iLine, psLocation->iColumn, psLocation->iLength, szNote.Text(), (int64)psRow->uiIndex + 1);
+	szNote.Kill();
 	psRow->bShown = true;
 }
 

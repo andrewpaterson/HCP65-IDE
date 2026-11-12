@@ -402,6 +402,17 @@ CHECKS = [
 		[r'^Keys Control\+Shift\+N: taken$', r'^Go to tab 1 \[calcpars\]: 2 results$', r'^  CalculatorParser\.h ',
 		 r'^Keys Control\+Alt\+Shift\+N: taken$', r'^Go to tab 2 \[calcpars\]: 1 results$', r'^  CCalculatorParser ',
 		 r'^Keys Control\+N: taken$', r'^Go to tab 0 \[calcpars\]: 1 results$', r'^Focus: CTextField$'], [r'not taken']),
+	('usages-row-parts', {
+		#A usage's row has its line number dim and the usage's own text in the match font; a group's count is dim, a file
+		#has its icon, and what is noted of a usage is dim.
+		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,references,usageparts'},
+		[r'^  CalcParentheses\.h\{d:  1\} \(icon\)$', r'^    \{d:38: \}bool  \{m:IsParentheses\}\(void\);\{d:  \[declaration\]\}$',
+		 r'^  Calculator\.cpp\{d:  3\} \(icon\)$', r'^    \{d:391: \}if \(pcExpression->\{m:IsParentheses\}\(\)\)$'], [r'\{\?:', r'ERROR']),
+	('find-row-parts', {
+		#The Find tool window's rows: the text found is in the match font whatever its case.
+		'WAIT_INDEX': '1', 'DIALOG_ANSWER': 'Open in Find Window', 'DEBUG': 'find:0:calculatorparser,answered:1,printfindparts'},
+		[r'^  CalculatorParser\.h\{d:  1 match\} \(icon\)$', r'^    \{d:29: \}class C\{m:CalculatorParser\}$',
+		 r'^    \{d:35: \}memset\(this, 0, sizeof\(C\{m:CalculatorParser\}\)\);$'], [r'\{\?:', r'ERROR']),
 	('startup-project-default', dict(MakeToolsCopy(), **{
 		#A solution with two applications: its first is its startup project, bold in Solution Explorer.
 		'DEBUG': 'printstartup'}),

@@ -24,6 +24,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "StandardLib/Pointer.h"
 #include "StandardLib/MemberCall.h"
 #include "WindowLib/Dialog.h"
+#include "WindowLib/TreeContainer.h"
 
 
 class CIDEContent;
@@ -75,6 +76,7 @@ public:
 	void		SetStartupProject(const char* szStartup);
 	void		PrintStartupProjects(void);
 	void		PrintFindTree(size uiMaximum);
+	void		PrintTreeParts(Ptr<CTreeContainer> pTree);
 	void		RunDockMove(const char* szMove);
 
 	void	WatchDialog(Ptr<CDialog> pDialog);

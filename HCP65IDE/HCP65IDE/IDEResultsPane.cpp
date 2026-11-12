@@ -150,6 +150,81 @@ void CIDEResultsPane::Clear(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// A node that groups results (a usage type, a project, a file): its name,
+// then szDetail (how many are in it, its directory; with the spaces that
+// part it from the name; NULL for none) dim.  With szFileName it is that
+// file's node and has its file type's icon.
+//
+//////////////////////////////////////////////////////////////////////////
+int32 CIDEResultsPane::AddGroup(int32 iParent, const char* szName, const char* szDetail, const char* szFileName)
+{
+	Ptr<CImageCel>	pIcon;
+	CChars			szText;
+	int32			iNode;
+
+	if (szFileName)
+	{
+		pIcon = mpcContent->GetFileTypeIcon((size)CIDEIcons::GetFileType(szFileName));
+	}
+	szText.Init(szName);
+	szText.Append(szDetail ? szDetail : "");
+	iNode = mpTree->AddNode(iParent, szText.Text(), pIcon, 0);
+	if (szText.Length() > strlen(szName))
+	{
+		mpTree->AddNodeRange(iNode, strlen(szName), szText.Length() - strlen(szName), mpcContent->GetDimFont());
+	}
+	szText.Kill();
+	return iNode;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A result's node: its line's number, dim, and the line as it is now
+// (from pcLines, without the white space at its ends), the text found
+// (iLength of the line from iColumn) in the match font; then szNote (with
+// the spaces that part it from the line; NULL for none) dim.  iData,
+// above 0, is what its source knows it by.
+//
+//////////////////////////////////////////////////////////////////////////
+int32 CIDEResultsPane::AddResult(int32 iParent, CIDEFileLines* pcLines, const char* szFileName, int32 iLine, int32 iColumn, int32 iLength, const char* szNote, int64 iData)
+{
+	CChars	szText;
+	size	uiNumber;
+	size	uiTrimmed;
+	size	uiLineEnd;
+	size	uiMatch;
+	int32	iNode;
+
+	szText.Init();
+	szText.Append(iLine + 1);
+	szText.Append(": ");
+	uiNumber = szText.Length();
+	pcLines->AppendLine(szFileName, iLine, &szText, &uiTrimmed);
+	uiLineEnd = szText.Length();
+	szText.Append(szNote ? szNote : "");
+	iNode = mpTree->AddNode(iParent, szText.Text(), NULL, iData);
+
+	mpTree->AddNodeRange(iNode, 0, uiNumber, mpcContent->GetDimFont());
+	if ((iColumn >= 0) && ((size)iColumn >= uiTrimmed) && (iLength > 0))
+	{
+		uiMatch = uiNumber + (size)iColumn - uiTrimmed;
+		if ((uiMatch < uiLineEnd) && ((size)iLength <= uiLineEnd - uiMatch))
+		{
+			mpTree->AddNodeRange(iNode, uiMatch, (size)iLength, mpcContent->GetMatchFont());
+		}
+	}
+	if (szText.Length() > uiLineEnd)
+	{
+		mpTree->AddNodeRange(iNode, uiLineEnd, szText.Length() - uiLineEnd, mpcContent->GetDimFont());
+	}
+	szText.Kill();
+	return iNode;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // The tree's node for a result (its data), or with 0 its first result's:
 // TREE_NO_NODE if there is none.
 //

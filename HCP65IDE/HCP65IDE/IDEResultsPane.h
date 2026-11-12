@@ -28,6 +28,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 class CIDEContent;
+class CIDEFileLines;
 class CIDEResultsPane;
 
 
@@ -46,6 +47,10 @@ public:
 //BeginShow and EndShow) and says where each result is; the pane opens a result's place when it is double clicked or
 //jumped to (F4), steps through the results for Next and Previous Occurrence, and gives the keys back to the editor on
 //escape.  As IntelliJ's, space and enter don't open a result.
+//
+//Its rows are made as IntelliJ's are (AddGroup, AddResult): a group's name with what is said of it after (how many
+//are in it, its directory) dim, a file's with its file type's icon, and a result's line with its line number dim, the
+//text found in the match font and anything noted of it dim.
 class CIDEResultsPane : public CObject
 {
 CONSTRUCTABLE(CIDEResultsPane);
@@ -72,6 +77,8 @@ public:
 	int64				BeginShow(bool bKeepSelected);
 	void				EndShow(int64 iSelectedData);
 	void				Clear(void);
+	int32				AddGroup(int32 iParent, const char* szName, const char* szDetail, const char* szFileName = NULL);
+	int32				AddResult(int32 iParent, CIDEFileLines* pcLines, const char* szFileName, int32 iLine, int32 iColumn, int32 iLength, const char* szNote, int64 iData);
 	int32				FindResultNode(int64 iData);
 	int64				GetResultData(int32 iNode);
 	bool				HasResults(void);

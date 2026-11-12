@@ -54,7 +54,7 @@ protected:
 public:
 	void	Init(CIDEDocuments* pcDocuments);
 	void	Kill(void);
-	void	AppendLine(const char* szFileName, int iLine, CChars* pszDest);
+	void	AppendLine(const char* szFileName, int iLine, CChars* pszDest, size* puiTrimmed = NULL);
 
 protected:
 	void	Read(const char* szFileName);

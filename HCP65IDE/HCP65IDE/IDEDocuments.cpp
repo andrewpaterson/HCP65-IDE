@@ -952,13 +952,16 @@ void CIDEFileLines::Kill(void)
 //////////////////////////////////////////////////////////////////////////
 //
 // The text from szStart up to szEnd appended to pszDest without the white
-// space at its ends, its tabs as spaces.
+// space at its ends, its tabs as spaces.  How much white space was left
+// off its start.
 //
 //////////////////////////////////////////////////////////////////////////
-static void AppendIDETrimmedLine(CChars* pszDest, const char* szStart, const char* szEnd)
+static size AppendIDETrimmedLine(CChars* pszDest, const char* szStart, const char* szEnd)
 {
-	size	uiPosition;
+	const char*	szLine;
+	size		uiPosition;
 
+	szLine = szStart;
 	while ((szStart < szEnd) && ((*szStart == ' ') || (*szStart == '\t')))
 	{
 		szStart++;
@@ -976,6 +979,7 @@ static void AppendIDETrimmedLine(CChars* pszDest, const char* szStart, const cha
 			pszDest->Text()[uiPosition] = ' ';
 		}
 	}
+	return (size)(szStart - szLine);
 }
 
 
@@ -986,13 +990,18 @@ static void AppendIDETrimmedLine(CChars* pszDest, const char* szStart, const cha
 // the line or can't be read.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEFileLines::AppendLine(const char* szFileName, int iLine, CChars* pszDest)
+void CIDEFileLines::AppendLine(const char* szFileName, int iLine, CChars* pszDest, size* puiTrimmed)
 {
 	Ptr<CIDEEditorTab>	pTab;
 	Ptr<CTextArea>		pEditor;
 	size				uiLine;
 	size				uiEnd;
+	size				uiTrimmed;
 
+	if (puiTrimmed)
+	{
+		*puiTrimmed = 0;
+	}
 	uiLine = (size)iLine;
 	pTab = mpcDocuments->FindTab(szFileName);
 	if (pTab.IsNotNull())
@@ -1000,7 +1009,11 @@ void CIDEFileLines::AppendLine(const char* szFileName, int iLine, CChars* pszDes
 		pEditor = pTab->GetEditor();
 		if ((iLine >= 0) && (uiLine < pEditor->NumLines()))
 		{
-			AppendIDETrimmedLine(pszDest, &pEditor->GetText()[pEditor->GetLineStart(uiLine)], &pEditor->GetText()[pEditor->GetLineEnd(uiLine)]);
+			uiTrimmed = AppendIDETrimmedLine(pszDest, &pEditor->GetText()[pEditor->GetLineStart(uiLine)], &pEditor->GetText()[pEditor->GetLineEnd(uiLine)]);
+			if (puiTrimmed)
+			{
+				*puiTrimmed = uiTrimmed;
+			}
 		}
 		return;
 	}
@@ -1012,7 +1025,11 @@ void CIDEFileLines::AppendLine(const char* szFileName, int iLine, CChars* pszDes
 	if (mbRead && (iLine >= 0) && (uiLine < mauiLineStarts.NumElements()))
 	{
 		uiEnd = (uiLine + 1 < mauiLineStarts.NumElements()) ? *mauiLineStarts.Get(uiLine + 1) - 1 : (size)mcFile.Length();
-		AppendIDETrimmedLine(pszDest, mcFile.Text() + *mauiLineStarts.Get(uiLine), mcFile.Text() + uiEnd);
+		uiTrimmed = AppendIDETrimmedLine(pszDest, mcFile.Text() + *mauiLineStarts.Get(uiLine), mcFile.Text() + uiEnd);
+		if (puiTrimmed)
+		{
+			*puiTrimmed = uiTrimmed;
+		}
 	}
 }
 

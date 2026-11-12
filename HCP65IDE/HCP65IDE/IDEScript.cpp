@@ -30,7 +30,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 //The debug script's commands that are the IDE's (RunCommand); "goto:" takes what follows it.
-static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printstartup", "printworkspace", "rename", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printsettings", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printedits", "printspans", "configuration:", "waitindex" };
+static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printstartup", "printworkspace", "rename", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printsettings", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printedits", "printspans", "configuration:", "waitindex" };
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -171,6 +171,12 @@ void CIDEScript::RunCommand(const char* szCommand)
 		cFile.Init();
 		printf("Workspace file:\n%s\n", cFile.Read(mpcContent->GetWorkspace()->GetFile()) ? cFile.Text() : "(none)");
 		cFile.Kill();
+		fflush(stdout);
+	}
+	else if (strcmp(szCommand, "printfindparts") == 0)
+	{
+		//The Find tool window's rows with their parts marked, as the usageparts step's.
+		PrintTreeParts(mpcContent->GetFindInFiles()->GetFindTree());
 		fflush(stdout);
 	}
 	else if (strcmp(szCommand, "printfind") == 0)
@@ -759,6 +765,54 @@ void CIDEScript::RunFind(const char* szFind)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// A results tree's nodes, each indented by its depth, with the parts of
+// its name that have fonts of their own marked: {d:...} for the dim font,
+// {m:...} for the match font (the text found), {?:...} for any other; and
+// "(icon)" after a node that has one.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEScript::PrintTreeParts(Ptr<CTreeContainer> pTree)
+{
+	Ptr<CFont>	pFont;
+	CChars		szNode;
+	CChars		szLine;
+	size		uiPosition;
+	size		uiStart;
+	size		uiLength;
+	size		i;
+	int32		iNode;
+	int32		iDepth;
+
+	for (iNode = 0; iNode < pTree->NumNodes(); iNode++)
+	{
+		szNode.Init();
+		pTree->GetNodeText(iNode, &szNode);
+		szLine.Init();
+		uiPosition = 0;
+		for (i = 0; i < pTree->NumNodeRanges(iNode); i++)
+		{
+			pTree->GetNodeRange(iNode, i, &uiStart, &uiLength);
+			pFont = pTree->GetNodeRangeFont(iNode, i);
+			szLine.AppendSubString(szNode.Text(), uiPosition, uiStart);
+			szLine.Append((pFont == mpcContent->GetDimFont()) ? "{d:" : ((pFont == mpcContent->GetMatchFont()) ? "{m:" : "{?:"));
+			szLine.AppendSubString(szNode.Text(), uiStart, uiStart + uiLength);
+			szLine.Append("}");
+			uiPosition = uiStart + uiLength;
+		}
+		szLine.AppendSubString(szNode.Text(), uiPosition, szNode.Length());
+		for (iDepth = pTree->GetNodeDepth(iNode); iDepth > 0; iDepth--)
+		{
+			printf("  ");
+		}
+		printf("%s%s\n", szLine.Text(), pTree->GetNodeIcon(iNode).IsNotNull() ? " (icon)" : "");
+		szLine.Kill();
+		szNode.Kill();
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // The Find tool window's first uiMaximum nodes, each indented by its
 // depth.
 //
@@ -947,6 +1001,11 @@ void CIDEScript::RunEditStep(const char* szStep)
 			printf("%s\n", szNode.Text());
 			szNode.Kill();
 		}
+	}
+	else if (strcmp(szStep, "usageparts") == 0)
+	{
+		//The Find Usages tree's rows with their parts marked: {d:...} dim, {m:...} the text found.
+		PrintTreeParts(mpcContent->GetUsages()->GetUsagesTree());
 	}
 	else if (strncmp(szStep, "usagegroups:", 12) == 0)
 	{

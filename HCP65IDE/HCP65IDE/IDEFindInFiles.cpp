@@ -988,8 +988,7 @@ void CIDEFindInFiles::ShowResults(bool bKeepSelected)
 		}
 		szFile = maszFoundFiles.GetText(psPlace->uiFile);
 		szName = GetIDEFileNamePart(szFile);
-		szText.Init(szName);
-		szText.Append("  ");
+		szText.Init("  ");
 		szText.Append((uint32)uiCount);
 		szText.Append((uiCount == 1) ? " match" : " matches");
 		if ((size)(szName - szFile) > uiCommon + 1)
@@ -997,19 +996,14 @@ void CIDEFindInFiles::ShowResults(bool bKeepSelected)
 			szText.Append("  ");
 			szText.AppendSubString(&szFile[uiCommon], szName - 1);
 		}
-		iFile = pTree->AddNode(iRoot, szText.Text(), NULL, 0);
+		iFile = mpPane->AddGroup(iRoot, szName, szText.Text(), szFile);
 		pTree->SetExpanded(iFile, bOpenFiles);
 		szText.Kill();
 
 		for (j = i; j < i + uiCount; j++)
 		{
 			psPlace = masFound.Get(j);
-			szText.Init();
-			szText.Append(psPlace->iLine + 1);
-			szText.Append(": ");
-			cLines.AppendLine(szFile, psPlace->iLine, &szText);
-			pTree->AddNode(iFile, szText.Text(), NULL, (int64)j + 1);
-			szText.Kill();
+			mpPane->AddResult(iFile, &cLines, szFile, psPlace->iLine, psPlace->iColumn, psPlace->iLength, NULL, (int64)j + 1);
 		}
 	}
 	cLines.Kill();
