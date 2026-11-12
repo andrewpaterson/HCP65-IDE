@@ -148,6 +148,7 @@ public:
 	void				ShowPreview(void);
 	void				PreviewHighlighted(const char* szFileName, CArrayHighlights* pacHighlights) override;
 	void				ReadSettings(CMarkupTag* pcTag);
+	void				CopySettings(Ptr<CIDEResultsPane> pSource);
 	void				WriteSettings(CXMLWriter* pcWriter);
 
 protected:

@@ -35,6 +35,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 //Find Usages' part of the settings' file.
 #define IDE_USAGES_SETTINGS_TAG			"FindUsages"
+#define IDE_USAGES_PINNED_PREFIX			"* "	//Before a pinned tab's name.
 #define IDE_USAGES_BY_TYPE_ATTRIBUTE	"GroupByType"
 #define IDE_USAGES_BY_PROJECT_ATTRIBUTE	"GroupByProject"
 #define IDE_USAGES_BY_CLASS_ATTRIBUTE	"GroupByClass"
@@ -366,10 +367,7 @@ void CIDEUsages::Init(CIDEContent* pcContent)
 {
 	PreInit();
 	mpcContent = pcContent;
-	msFound.Init();
-	mbFound = false;
-	mbMoved = false;
-	miMoved = 0;
+	maSearches.Init();
 	msPopupFound.Init();
 	muiGrouping = IDE_USAGES_BY_ALL;
 	mbShowRead = true;
@@ -385,12 +383,10 @@ void CIDEUsages::Init(CIDEContent* pcContent)
 void CIDEUsages::Class(void)
 {
 	U_Pointer(mpcContent);
-	M_Pointer(mpPane);
+	M_Pointer(mpTabs);
+	M_Embedded(maSearches);
+	M_Pointer(mpSearch);
 	M_Pointer(mpUsagesTool);
-	U_Unknown(SIDEFoundUsages, msFound);
-	U_Bool(mbFound);
-	U_Bool(mbMoved);
-	U_Int64(miMoved);
 	M_Pointer(mpPopup);
 	U_Unknown(SIDEFoundUsages, msPopupFound);
 	U_UInt8(muiGrouping);
@@ -407,12 +403,16 @@ void CIDEUsages::Class(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDEUsages::Free(void)
 {
+	if (mpTabs.IsNotNull())
+	{
+		mpTabs->GetSelectionEvent()->Remove(this);
+		mpTabs->GetCloseRequestEvent()->Remove(this);
+	}
 	if (mpPopup.IsNotNull())
 	{
 		mpPopup->GetItemClickEvent()->Remove(this);
 	}
 	msPopupFound.Kill();
-	msFound.Kill();
 }
 
 
@@ -433,16 +433,13 @@ bool CIDEUsages::Load(CObjectReader* pcFile) { return false; }
 //////////////////////////////////////////////////////////////////////////
 void CIDEUsages::CreatePane(SDockPlace* psPlace)
 {
-	mpPane = OMalloc<CIDEResultsPane>(mpcContent, this, "usages", false);
-	mpPane->AddToolbarSeparator();
-	AddGroupingCommand("Usages.GroupByType", "Group by Usage Type", ITI_GroupByType, &CIDEUsages::ToggleByType, &CIDEUsages::IsByType);
-	AddGroupingCommand("Usages.GroupByProject", "Group by Project", ITI_GroupByProject, &CIDEUsages::ToggleByProject, &CIDEUsages::IsByProject);
-	AddGroupingCommand("Usages.GroupByClass", "Group by Class", ITI_GroupByClass, &CIDEUsages::ToggleByClass, &CIDEUsages::IsByClass);
-	mpPane->AddToolbarSeparator();
-	AddGroupingCommand("Usages.ShowReadAccess", "Show Read Access", ITI_ReadAccess, &CIDEUsages::ToggleShowRead, &CIDEUsages::IsShowRead);
-	AddGroupingCommand("Usages.ShowWriteAccess", "Show Write Access", ITI_WriteAccess, &CIDEUsages::ToggleShowWrite, &CIDEUsages::IsShowWrite);
-	mpPane->AddViewCommands();
-	mpUsagesTool = mpcContent->GetDock()->AddPane(IDE_USAGES_ID, "Find Usages", NULL, mpPane->GetComponent(), DPK_Tool, psPlace);
+	mpTabs = OMalloc<CTabbedContainer>(mpcContent->GetWindow(), mpcContent->GetTheme());
+	mpTabs->SetAlignment(CSH_Stretch, CSV_Stretch);
+	mpTabs->SetHideSingleTab(true);
+	mpTabs->GetSelectionEvent()->Add(this, &CIDEUsages::TabSelected);
+	mpTabs->GetCloseRequestEvent()->Add(this, &CIDEUsages::TabCloseRequested);
+	AddSearch();
+	mpUsagesTool = mpcContent->GetDock()->AddPane(IDE_USAGES_ID, "Find Usages", NULL, mpTabs, DPK_Tool, psPlace);
 }
 
 
@@ -553,17 +550,27 @@ bool CIDEUsages::FindAt(const char* szFileName, int iLine, int iColumn, bool bDe
 //////////////////////////////////////////////////////////////////////////
 bool CIDEUsages::FindUsages(bool bDeclarations)
 {
-	if (!Find(bDeclarations, &msFound))
+	SIDEFoundUsages	sFound;
+
+	sFound.Init();
+	if (!Find(bDeclarations, &sFound))
 	{
+		sFound.Kill();
 		mpcContent->ShowStatus(bDeclarations ? "No references found at the caret." : "No usages found at the caret.");
 		return false;
 	}
-	mbFound = true;
-	mbMoved = false;
+
+	//In the tab shown, unless it is pinned: then in a new one.
+	if (mpSearch->mbPinned)
+	{
+		AddSearch();
+	}
+	mpSearch->SetFound(&sFound);
+	mpSearch->mpTab->SetText(mpSearch->msFound.szName.Text());
 
 	ShowUsages(false);
 	mpcContent->GetDock()->Show(mpUsagesTool);
-	mpPane->Focus();
+	mpSearch->mpPane->Focus();
 	return true;
 }
 
@@ -773,12 +780,14 @@ void CIDEUsages::ShowUsages(bool bKeepSelected)
 	bool				bByProject;
 	bool				bOpenFiles;
 
-	if (mpPane.IsNull())
+	if (mpSearch.IsNull())
 	{
 		return;
 	}
-	iSelectedData = mpPane->BeginShow(bKeepSelected);
-	if (!mbFound)
+	mpSearch->mbMoved = false;
+	mpSearch->mbStale = false;
+	iSelectedData = mpSearch->mpPane->BeginShow(bKeepSelected);
+	if (!mpSearch->mbFound)
 	{
 		return;
 	}
@@ -786,14 +795,14 @@ void CIDEUsages::ShowUsages(bool bKeepSelected)
 	bByType = (muiGrouping & IDE_USAGES_BY_TYPE) != 0;
 	bByProject = (muiGrouping & IDE_USAGES_BY_PROJECT) != 0;
 	asRows.Init();
-	for (i = 0; i < msFound.asUsages.NumElements(); i++)
+	for (i = 0; i < mpSearch->msFound.asUsages.NumElements(); i++)
 	{
-		if (!IsUsageShown(msFound.asUsages.Get(i)))
+		if (!IsUsageShown(mpSearch->msFound.asUsages.Get(i)))
 		{
 			continue;
 		}
 		psRow = asRows.Add();
-		psRow->psUsage = msFound.asUsages.Get(i);
+		psRow->psUsage = mpSearch->msFound.asUsages.Get(i);
 		psRow->uiIndex = i;
 		psRow->iType = bByType ? GetIDEUsageType(&psRow->psUsage->sLocation)->iRank : 0;
 		psRow->szProject = bByProject ? psRow->psUsage->szProject.Text() : "";
@@ -804,7 +813,7 @@ void CIDEUsages::ShowUsages(bool bKeepSelected)
 
 	//Until every file is indexed some may be missing.
 	szText.Init();
-	msFound.AppendTitle(&szText);
+	mpSearch->msFound.AppendTitle(&szText);
 	mpcContent->GetCodeModel()->GetIndexingProgress(&uiIndexed, &uiToIndex);
 	if (uiIndexed < uiToIndex)
 	{
@@ -814,20 +823,20 @@ void CIDEUsages::ShowUsages(bool bKeepSelected)
 		szText.Append((uint32)uiToIndex);
 		szText.Append(" files)");
 	}
-	if (uiRows < msFound.asUsages.NumElements())
+	if (uiRows < mpSearch->msFound.asUsages.NumElements())
 	{
 		szText.Append("  (");
-		szText.Append((uint32)(msFound.asUsages.NumElements() - uiRows));
+		szText.Append((uint32)(mpSearch->msFound.asUsages.NumElements() - uiRows));
 		szText.Append(" hidden)");
 	}
-	iRoot = mpPane->GetTree()->AddNode(TREE_NO_NODE, szText.Text(), NULL, 0);
-	mpPane->GetTree()->SetExpanded(iRoot, true);
+	iRoot = mpSearch->mpPane->GetTree()->AddNode(TREE_NO_NODE, szText.Text(), NULL, 0);
+	mpSearch->mpPane->GetTree()->SetExpanded(iRoot, true);
 	szText.Kill();
 
 	//The tree has a row for each line that can be seen, which thousands of make it slow: past
 	//IDE_USAGES_OPEN_FILES_MAXIMUM usages the files start closed, but for the selected line's.
 	bOpenFiles = (uiRows <= IDE_USAGES_OPEN_FILES_MAXIMUM);
-	szWhat = msFound.bDeclarations ? " reference" : " usage";
+	szWhat = mpSearch->msFound.bDeclarations ? " reference" : " usage";
 	iType = iRoot;
 	iProject = iRoot;
 	cLines.Init(&mpcContent->GetDocuments());
@@ -845,13 +854,13 @@ void CIDEUsages::ShowUsages(bool bKeepSelected)
 		}
 		uiFile = CountIDEUsageGroup(psRow, uiRows - i, IUL_File);
 		iFile = AddFileNode(iProject, asRows.GetData(), uiRows, i, uiFile);
-		mpPane->GetTree()->SetExpanded(iFile, bOpenFiles);
+		mpSearch->mpPane->GetTree()->SetExpanded(iFile, bOpenFiles);
 		AddFileUsages(iFile, psRow, uiFile, &cLines);
 	}
 	cLines.Kill();
 	asRows.Kill();
 
-	mpPane->EndShow(iSelectedData);
+	mpSearch->mpPane->EndShow(iSelectedData);
 }
 
 
@@ -868,8 +877,8 @@ int32 CIDEUsages::AddGroupNode(int32 iParent, const char* szName, size uiCount, 
 
 	szDetail.Init();
 	AppendIDEUsageCount(&szDetail, uiCount, szWhat);
-	iNode = mpPane->AddGroup(iParent, szName, szDetail.Text());
-	mpPane->GetTree()->SetExpanded(iNode, true);
+	iNode = mpSearch->mpPane->AddGroup(iParent, szName, szDetail.Text());
+	mpSearch->mpPane->GetTree()->SetExpanded(iNode, true);
 	szDetail.Kill();
 	return iNode;
 }
@@ -901,7 +910,7 @@ int32 CIDEUsages::AddFileNode(int32 iParent, SIDEUsageRow* pasRows, size uiRows,
 		szDetail.Append("  ");
 		szDetail.AppendSubString(szFile, szName - 1);
 	}
-	iNode = mpPane->AddGroup(iParent, szName, szDetail.Text(), szFile);
+	iNode = mpSearch->mpPane->AddGroup(iParent, szName, szDetail.Text(), szFile);
 	szDetail.Kill();
 	return iNode;
 }
@@ -983,7 +992,7 @@ void CIDEUsages::AddUsageLine(int32 iParent, SIDEUsageRow* psRow, CIDEFileLines*
 	{
 		szNote.Append("  [one of the overloads]");
 	}
-	mpPane->AddResult(iParent, pcLines, psLocation->szFileName.Text(), psLocation->iLine, psLocation->iColumn, psLocation->iLength, szNote.Text(), (int64)psRow->uiIndex + 1);
+	mpSearch->mpPane->AddResult(iParent, pcLines, psLocation->szFileName.Text(), psLocation->iLine, psLocation->iColumn, psLocation->iLength, szNote.Text(), (int64)psRow->uiIndex + 1);
 	szNote.Kill();
 	psRow->bShown = true;
 }
@@ -997,7 +1006,277 @@ void CIDEUsages::AddUsageLine(int32 iParent, SIDEUsageRow* psRow, CIDEFileLines*
 //////////////////////////////////////////////////////////////////////////
 bool CIDEUsages::Step(bool bNext, bool bKeepKeys)
 {
-	return mpPane->Step(bNext, bKeepKeys);
+	return mpSearch->mpPane->Step(bNext, bKeepKeys);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEUsagesSearch::Init(Ptr<CIDEResultsPane> pPane)
+{
+	PreInit();
+	mpPane = pPane;
+	msFound.Init();
+	mbFound = false;
+	mbMoved = false;
+	miMoved = 0;
+	mbStale = false;
+	mbPinned = false;
+	PostInit();
+}
+
+
+void CIDEUsagesSearch::Class(void)
+{
+	M_Pointer(mpPane);
+	M_Pointer(mpTab);
+	U_Unknown(SIDEFoundUsages, msFound);
+	U_Bool(mbFound);
+	U_Bool(mbMoved);
+	U_Int64(miMoved);
+	U_Bool(mbStale);
+	U_Bool(mbPinned);
+}
+
+
+void CIDEUsagesSearch::Free(void)
+{
+	msFound.Kill();
+}
+
+
+bool CIDEUsagesSearch::Save(CObjectWriter* pcFile) { return false; }
+bool CIDEUsagesSearch::Load(CObjectReader* pcFile) { return false; }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// What was found is the search's, in place of what it had: psFound is
+// taken, not copied.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEUsagesSearch::SetFound(SIDEFoundUsages* psFound)
+{
+	msFound.Kill();
+	memcpy(&msFound, psFound, sizeof(SIDEFoundUsages));
+	mbFound = true;
+	mbMoved = false;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A new, empty search in a tab of its own, which is chosen: a results
+// pane with the groupings, the filters and Pin Tab on its toolbar, and
+// the settings of the pane before it.
+//
+//////////////////////////////////////////////////////////////////////////
+Ptr<CIDEUsagesSearch> CIDEUsages::AddSearch(void)
+{
+	Ptr<CIDEUsagesSearch>	pSearch;
+	Ptr<CIDEResultsPane>	pPane;
+	Ptr<CIDEResultsPane>	pLast;
+
+	pLast = mpSearch.IsNotNull() ? mpSearch->mpPane : Ptr<CIDEResultsPane>();
+	pPane = OMalloc<CIDEResultsPane>(mpcContent, this, "usages", false);
+	pSearch = OMalloc<CIDEUsagesSearch>(pPane);
+	maSearches.Add(pSearch);
+	mpSearch = pSearch;
+
+	pPane->AddToolbarSeparator();
+	AddPaneCommand(pPane, "Usages.GroupByType", "Group by Usage Type", ITI_GroupByType, &CIDEUsages::ToggleByType, &CIDEUsages::IsByType);
+	AddPaneCommand(pPane, "Usages.GroupByProject", "Group by Project", ITI_GroupByProject, &CIDEUsages::ToggleByProject, &CIDEUsages::IsByProject);
+	AddPaneCommand(pPane, "Usages.GroupByClass", "Group by Class", ITI_GroupByClass, &CIDEUsages::ToggleByClass, &CIDEUsages::IsByClass);
+	pPane->AddToolbarSeparator();
+	AddPaneCommand(pPane, "Usages.ShowReadAccess", "Show Read Access", ITI_ReadAccess, &CIDEUsages::ToggleShowRead, &CIDEUsages::IsShowRead);
+	AddPaneCommand(pPane, "Usages.ShowWriteAccess", "Show Write Access", ITI_WriteAccess, &CIDEUsages::ToggleShowWrite, &CIDEUsages::IsShowWrite);
+	pPane->AddViewCommands();
+	AddPaneCommand(pPane, "Usages.PinTab", "Pin Tab", ITI_Pin, &CIDEUsages::TogglePinned, &CIDEUsages::IsPinned);
+	if (pLast.IsNotNull())
+	{
+		pPane->CopySettings(pLast);
+	}
+
+	//The tab is chosen without TabSelected being told: the search is the one shown already.
+	mpTabs->GetSelectionEvent()->Remove(this);
+	pSearch->mpTab = mpTabs->AddTab("Find Usages", pPane->GetComponent(), Ptr<CImageCel>(), true);
+	mpTabs->Select(pSearch->mpTab);
+	mpTabs->GetSelectionEvent()->Add(this, &CIDEUsages::TabSelected);
+	return pSearch;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A search and its tab go.  With bKeepOne, as closing a tab does, the
+// last to go is replaced by an empty one, so the tool window always has
+// a tab; the tab left of it (or the first) is chosen.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEUsages::RemoveSearch(Ptr<CIDEUsagesSearch> pSearch, bool bKeepOne)
+{
+	size	uiIndex;
+
+	for (uiIndex = 0; (uiIndex < maSearches.NumElements()) && (maSearches.Get(uiIndex) != pSearch); uiIndex++)
+	{
+	}
+	if (uiIndex == maSearches.NumElements())
+	{
+		return;
+	}
+	pSearch->mpPane->Detach();
+	mpTabs->GetSelectionEvent()->Remove(this);
+	mpTabs->RemoveTab(pSearch->mpTab);
+	maSearches.RemoveAt(uiIndex);
+	if (mpSearch == pSearch)
+	{
+		mpSearch = NULL;
+		if (maSearches.NumElements() > 0)
+		{
+			mpSearch = maSearches.Get((uiIndex > 0) ? uiIndex - 1 : 0);
+			mpTabs->Select(mpSearch->mpTab);
+		}
+	}
+	mpTabs->GetSelectionEvent()->Add(this, &CIDEUsages::TabSelected);
+	if (mpSearch.IsNull() && bKeepOne)
+	{
+		AddSearch();
+	}
+	else if (mpSearch.IsNotNull() && (mpSearch->mbStale || mpSearch->mbMoved))
+	{
+		ShowUsages(true);
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The search whose pane or tab it is, NULL if none's.
+//
+//////////////////////////////////////////////////////////////////////////
+Ptr<CIDEUsagesSearch> CIDEUsages::FindSearch(CIDEResultsPane* pcPane)
+{
+	size	i;
+
+	for (i = 0; i < maSearches.NumElements(); i++)
+	{
+		if (&maSearches.Get(i)->mpPane == pcPane)
+		{
+			return maSearches.Get(i);
+		}
+	}
+	return NULL;
+}
+
+
+Ptr<CIDEUsagesSearch> CIDEUsages::FindSearch(CTabComponent* pcTab)
+{
+	size	i;
+
+	for (i = 0; i < maSearches.NumElements(); i++)
+	{
+		if (&maSearches.Get(i)->mpTab == pcTab)
+		{
+			return maSearches.Get(i);
+		}
+	}
+	return NULL;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Another tab was chosen: its search is the one shown, with its tree made
+// again if the groupings or filters changed, or edits moved its usages,
+// while it wasn't.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEUsages::TabSelected(CTabComponent* pcTab)
+{
+	Ptr<CIDEUsagesSearch>	pSearch;
+
+	pSearch = FindSearch(mpTabs->GetSelected().IsNotNull() ? &mpTabs->GetSelected() : pcTab);
+	if (pSearch.IsNull() || (pSearch == mpSearch))
+	{
+		return;
+	}
+	mpSearch = pSearch;
+	if (mpSearch->mbStale || mpSearch->mbMoved)
+	{
+		ShowUsages(true);
+	}
+	mpSearch->mpPane->RefreshToolbar();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A tab's cross was pressed: its search goes, pinned or not.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEUsages::TabCloseRequested(CTabComponent* pcTab)
+{
+	Ptr<CIDEUsagesSearch>	pSearch;
+
+	pSearch = FindSearch(pcTab);
+	if (pSearch.IsNotNull())
+	{
+		RemoveSearch(pSearch, true);
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Pin Tab, as IntelliJ's: the next Find Usages leaves a pinned tab as it
+// is and shows what it finds in a new one.  A pinned tab's name has a pin
+// before it.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEUsages::TogglePinned(void)
+{
+	SetPinned(!mpSearch->mbPinned);
+}
+
+
+void CIDEUsages::SetPinned(bool bPinned)
+{
+	CChars	szName;
+
+	mpSearch->mbPinned = bPinned;
+	szName.Init(bPinned ? IDE_USAGES_PINNED_PREFIX : "");
+	szName.Append(mpSearch->mbFound ? mpSearch->msFound.szName.Text() : "Find Usages");
+	mpSearch->mpTab->SetText(szName.Text());
+	szName.Kill();
+	mpSearch->mpPane->RefreshToolbar();
+}
+
+
+bool CIDEUsages::IsPinned(void) { return mpSearch.IsNotNull() && mpSearch->mbPinned; }
+size CIDEUsages::NumSearches(void) { return maSearches.NumElements(); }
+Ptr<CTabbedContainer> CIDEUsages::GetTabs(void) { return mpTabs; }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The groupings or the filters changed: the tab shown is made again, and
+// the others are when they are chosen.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEUsages::ShowAllUsages(void)
+{
+	size	i;
+
+	for (i = 0; i < maSearches.NumElements(); i++)
+	{
+		maSearches.Get(i)->mbStale = true;
+	}
+	if (mpSearch.IsNotNull())
+	{
+		ShowUsages(true);
+	}
 }
 
 
@@ -1009,13 +1288,15 @@ bool CIDEUsages::Step(bool bNext, bool bKeepKeys)
 //////////////////////////////////////////////////////////////////////////
 bool CIDEUsages::GetResultLocation(CIDEResultsPane* pcPane, int64 iData, SIDELocation* psDest)
 {
-	SIDELocation*	psLocation;
+	Ptr<CIDEUsagesSearch>	pSearch;
+	SIDELocation*			psLocation;
 
-	if ((iData <= 0) || ((size)iData > msFound.asUsages.NumElements()))
+	pSearch = FindSearch(pcPane);
+	if (pSearch.IsNull() || (iData <= 0) || ((size)iData > pSearch->msFound.asUsages.NumElements()))
 	{
 		return false;
 	}
-	psLocation = &msFound.asUsages.Get((size)iData - 1)->sLocation;
+	psLocation = &pSearch->msFound.asUsages.Get((size)iData - 1)->sLocation;
 	memcpy(psDest, psLocation, sizeof(SIDELocation));
 	psDest->szFileName.Init(psLocation->szFileName);
 	return true;
@@ -1030,29 +1311,34 @@ bool CIDEUsages::GetResultLocation(CIDEResultsPane* pcPane, int64 iData, SIDELoc
 //////////////////////////////////////////////////////////////////////////
 bool CIDEUsages::GetDeclarationLocation(CIDEResultsPane* pcPane, SIDELocation* psDest)
 {
-	if (!mbFound || !msFound.bDeclared)
+	Ptr<CIDEUsagesSearch>	pSearch;
+
+	pSearch = FindSearch(pcPane);
+	if (pSearch.IsNull() || !pSearch->mbFound || !pSearch->msFound.bDeclared)
 	{
 		return false;
 	}
-	memcpy(psDest, &msFound.sDeclaration, sizeof(SIDELocation));
-	psDest->szFileName.Init(msFound.sDeclaration.szFileName);
+	memcpy(psDest, &pSearch->msFound.sDeclaration, sizeof(SIDELocation));
+	psDest->szFileName.Init(pSearch->msFound.sDeclaration.szFileName);
 	return true;
 }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// A grouping's or a filter's button on the pane's toolbar: its command,
-// the pane's, turns it on and off and says which it is.
+// A grouping's, a filter's or Pin Tab's button on a pane's toolbar: its
+// command, the pane's, turns it on and off and says which it is.  What
+// they turn on is the tool window's (or, for Pin Tab, the tab shown's),
+// so each tab's buttons show the same.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEUsages::AddGroupingCommand(const char* szName, const char* szCaption, EIDEToolIcon eIcon, void(CIDEUsages::*fToggle)(void), bool(CIDEUsages::*fIsOn)(void))
+void CIDEUsages::AddPaneCommand(Ptr<CIDEResultsPane> pPane, const char* szName, const char* szCaption, EIDEToolIcon eIcon, void(CIDEUsages::*fToggle)(void), bool(CIDEUsages::*fIsOn)(void))
 {
 	Ptr<CCommand>	pCommand;
 
-	pCommand = mpPane->GetCommands()->Add(szName, szCaption, "", mpcContent->GetToolIcon(eIcon), this, fToggle);
+	pCommand = pPane->GetCommands()->Add(szName, szCaption, "", mpcContent->GetToolIcon(eIcon), this, fToggle);
 	pCommand->SetCheckedCheck(this, fIsOn);
-	mpPane->AddToolbarCommand(pCommand, eIcon);
+	pPane->AddToolbarCommand(pCommand, eIcon);
 }
 
 
@@ -1081,12 +1367,12 @@ void CIDEUsages::SetAccessShown(bool bRead, bool bWrite)
 	{
 		mbShowRead = bRead;
 		mbShowWrite = bWrite;
-		ShowUsages(true);
+		ShowAllUsages();
 		mpcContent->GetSettings()->WriteSettings();
 	}
-	if (mpPane.IsNotNull())
+	if (mpSearch.IsNotNull())
 	{
-		mpPane->RefreshToolbar();
+		mpSearch->mpPane->RefreshToolbar();
 	}
 }
 
@@ -1126,7 +1412,10 @@ bool CIDEUsages::IsUsageShown(SIDEUsage* psUsage)
 //////////////////////////////////////////////////////////////////////////
 bool CIDEUsages::CanRerunResults(CIDEResultsPane* pcPane)
 {
-	return mbFound && msFound.bDeclared;
+	Ptr<CIDEUsagesSearch>	pSearch;
+
+	pSearch = FindSearch(pcPane);
+	return pSearch.IsNotNull() && pSearch->mbFound && pSearch->msFound.bDeclared;
 }
 
 
@@ -1135,17 +1424,15 @@ void CIDEUsages::RerunResults(CIDEResultsPane* pcPane)
 	SIDEFoundUsages	sFound;
 	CChars			szFileName;
 
-	if (!CanRerunResults(pcPane))
+	if (!CanRerunResults(pcPane) || (FindSearch(pcPane) != mpSearch))
 	{
 		return;
 	}
 	sFound.Init();
-	szFileName.Init(msFound.sDeclaration.szFileName);
-	if (FindAt(szFileName.Text(), msFound.sDeclaration.iLine, msFound.sDeclaration.iColumn, msFound.bDeclarations, &sFound))
+	szFileName.Init(mpSearch->msFound.sDeclaration.szFileName);
+	if (FindAt(szFileName.Text(), mpSearch->msFound.sDeclaration.iLine, mpSearch->msFound.sDeclaration.iColumn, mpSearch->msFound.bDeclarations, &sFound))
 	{
-		msFound.Kill();
-		memcpy(&msFound, &sFound, sizeof(SIDEFoundUsages));
-		mbMoved = false;
+		mpSearch->SetFound(&sFound);
 		ShowUsages(true);
 	}
 	else
@@ -1165,7 +1452,7 @@ void CIDEUsages::RerunResults(CIDEResultsPane* pcPane)
 //////////////////////////////////////////////////////////////////////////
 Ptr<CDockPane> CIDEUsages::GetSteppablePane(void) { return mpUsagesTool; }
 const char* CIDEUsages::GetSteppableName(void) { return "Find Usages"; }
-bool CIDEUsages::HasSteps(void) { return mbFound && (msFound.asUsages.NumElements() > 0) && mpPane.IsNotNull(); }
+bool CIDEUsages::HasSteps(void) { return mpSearch->mbFound && (mpSearch->msFound.asUsages.NumElements() > 0) && mpSearch.IsNotNull(); }
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -1184,9 +1471,9 @@ void CIDEUsages::SetGrouping(uint8 uiGrouping)
 		ShowGrouping(uiGrouping);
 		mpcContent->GetSettings()->WriteSettings();
 	}
-	if (mpPane.IsNotNull())
+	if (mpSearch.IsNotNull())
 	{
-		mpPane->RefreshToolbar();
+		mpSearch->mpPane->RefreshToolbar();
 	}
 }
 
@@ -1200,7 +1487,7 @@ void CIDEUsages::SetGrouping(uint8 uiGrouping)
 void CIDEUsages::ShowGrouping(uint8 uiGrouping)
 {
 	muiGrouping = uiGrouping;
-	ShowUsages(true);
+	ShowAllUsages();
 }
 
 
@@ -1239,10 +1526,10 @@ void CIDEUsages::ReadSettings(CMarkupTag* pcSettings)
 	szValue = pcTag->GetStringAttribute(IDE_USAGES_WRITE_ATTRIBUTE);
 	mbShowWrite = !szValue || (StringCompare(szValue, "true") == 0);
 	ShowGrouping(uiGrouping);
-	if (mpPane.IsNotNull())
+	if (mpSearch.IsNotNull())
 	{
-		mpPane->ReadSettings(pcTag);
-		mpPane->RefreshToolbar();
+		mpSearch->mpPane->ReadSettings(pcTag);
+		mpSearch->mpPane->RefreshToolbar();
 	}
 }
 
@@ -1255,9 +1542,9 @@ void CIDEUsages::WriteSettings(CXMLWriter* pcWriter)
 	pcWriter->Attribute(IDE_USAGES_BY_CLASS_ATTRIBUTE, (muiGrouping & IDE_USAGES_BY_CLASS) != 0);
 	pcWriter->Attribute(IDE_USAGES_READ_ATTRIBUTE, mbShowRead);
 	pcWriter->Attribute(IDE_USAGES_WRITE_ATTRIBUTE, mbShowWrite);
-	if (mpPane.IsNotNull())
+	if (mpSearch.IsNotNull())
 	{
-		mpPane->WriteSettings(pcWriter);
+		mpSearch->mpPane->WriteSettings(pcWriter);
 	}
 	pcWriter->End();
 }
@@ -1268,8 +1555,8 @@ void CIDEUsages::WriteSettings(CXMLWriter* pcWriter)
 //
 //////////////////////////////////////////////////////////////////////////
 uint8 CIDEUsages::GetGrouping(void) { return muiGrouping; }
-Ptr<CTreeContainer> CIDEUsages::GetUsagesTree(void) { return mpPane.IsNotNull() ? mpPane->GetTree() : Ptr<CTreeContainer>(); }
-Ptr<CIDEResultsPane> CIDEUsages::GetResultsPane(void) { return mpPane; }
+Ptr<CTreeContainer> CIDEUsages::GetUsagesTree(void) { return mpSearch.IsNotNull() ? mpSearch->mpPane->GetTree() : Ptr<CTreeContainer>(); }
+Ptr<CIDEResultsPane> CIDEUsages::GetResultsPane(void) { return mpSearch->mpPane; }
 Ptr<CDockPane> CIDEUsages::GetTool(void) { return mpUsagesTool; }
 
 
@@ -1283,11 +1570,18 @@ Ptr<CDockPane> CIDEUsages::GetTool(void) { return mpUsagesTool; }
 //////////////////////////////////////////////////////////////////////////
 void CIDEUsages::AdjustPlaces(const char* szFile, SIDEPlaceChange* psChange)
 {
+	Ptr<CIDEUsagesSearch>	pSearch;
+	size					i;
+
 	msPopupFound.AdjustPlaces(szFile, psChange);
-	if (msFound.AdjustPlaces(szFile, psChange))
+	for (i = 0; i < maSearches.NumElements(); i++)
 	{
-		mbMoved = true;
-		miMoved = GetDebugTickCount();
+		pSearch = maSearches.Get(i);
+		if (pSearch->msFound.AdjustPlaces(szFile, psChange))
+		{
+			pSearch->mbMoved = true;
+			pSearch->miMoved = GetDebugTickCount();
+		}
 	}
 }
 
@@ -1303,20 +1597,16 @@ void CIDEUsages::AdjustPlaces(const char* szFile, SIDEPlaceChange* psChange)
 //////////////////////////////////////////////////////////////////////////
 int64 CIDEUsages::Poll(int64 iNow)
 {
-	if (!mbMoved)
+	if (mpSearch.IsNull() || !mpSearch->mbMoved)
 	{
 		return -1;
 	}
-	if (iNow - miMoved < IDE_USAGES_REFRESH)
+	if (iNow - mpSearch->miMoved < IDE_USAGES_REFRESH)
 	{
-		return IDE_USAGES_REFRESH - (iNow - miMoved);
+		return IDE_USAGES_REFRESH - (iNow - mpSearch->miMoved);
 	}
-	mbMoved = false;
 	ShowUsages(true);
-	if (mpPane.IsNotNull())
-	{
-		mpPane->ShowSelected();
-	}
+	mpSearch->mpPane->ShowSelected();
 	return -1;
 }
 
@@ -1329,17 +1619,19 @@ int64 CIDEUsages::Poll(int64 iNow)
 //////////////////////////////////////////////////////////////////////////
 void CIDEUsages::Clear(void)
 {
-	msFound.Clear();
-	mbFound = false;
-	mbMoved = false;
 	msPopupFound.Clear();
 	if (mpPopup.IsNotNull() && mpPopup->IsOpen())
 	{
 		mpPopup->Close();
 	}
-	if (mpPane.IsNotNull())
+	if (mpTabs.IsNotNull())
 	{
-		mpPane->Clear();
+		//Every tab goes, pinned or not, but for an empty one.
+		while (maSearches.NumElements() > 0)
+		{
+			RemoveSearch(maSearches.Get(maSearches.NumElements() - 1), false);
+		}
+		AddSearch();
 	}
 }
 

@@ -712,6 +712,21 @@ void CIDEResultsPane::ReadSettings(CMarkupTag* pcTag)
 }
 
 
+//////////////////////////////////////////////////////////////////////////
+//
+// The same settings as another pane has, as a new tab's pane starts with
+// the last's.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEResultsPane::CopySettings(Ptr<CIDEResultsPane> pSource)
+{
+	mbNavigateOnSelect = pSource->mbNavigateOnSelect;
+	SetPreviewShown(pSource->IsPreviewShown());
+	mpSplit->SetShare(pSource->mpSplit->GetShare());
+	RefreshToolbar();
+}
+
+
 void CIDEResultsPane::WriteSettings(CXMLWriter* pcWriter)
 {
 	pcWriter->Attribute(IDE_RESULTS_NAVIGATE_ATTRIBUTE, mbNavigateOnSelect);

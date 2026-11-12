@@ -1120,6 +1120,49 @@ void CIDEScript::RunEditStep(const char* szStep)
 		//usagesingleclick:on or :off, as the tool window's Navigate with Single Click.
 		mpcContent->GetUsages()->GetResultsPane()->SetNavigateOnSelect(strcmp(&szStep[17], "on") == 0);
 	}
+	else if (strcmp(szStep, "usagetabs") == 0)
+	{
+		//The Find Usages tool window's tabs, the chosen one after a '>': "Usage tabs: * IsParentheses, >SetExpression".
+		Ptr<CTabbedContainer>	pTabs;
+
+		pTabs = mpcContent->GetUsages()->GetTabs();
+		printf("Usage tabs:");
+		for (i = 0; i < pTabs->NumTabs(); i++)
+		{
+			printf("%s %s%s", (i > 0) ? "," : "", (pTabs->GetTab(i) == pTabs->GetSelected()) ? ">" : "", pTabs->GetTab(i)->GetText());
+		}
+		printf("\n");
+	}
+	else if (strncmp(szStep, "usagetab:", 9) == 0)
+	{
+		//usagetab:<name>: the tab of the Find Usages tool window with that name chosen.
+		Ptr<CTabbedContainer>	pTabs;
+
+		pTabs = mpcContent->GetUsages()->GetTabs();
+		for (i = 0; i < pTabs->NumTabs(); i++)
+		{
+			if (strcmp(pTabs->GetTab(i)->GetText(), &szStep[9]) == 0)
+			{
+				pTabs->Select(i);
+				break;
+			}
+		}
+	}
+	else if (strncmp(szStep, "usageclosetab:", 14) == 0)
+	{
+		//usageclosetab:<name>: that tab's cross pressed.
+		Ptr<CTabbedContainer>	pTabs;
+
+		pTabs = mpcContent->GetUsages()->GetTabs();
+		for (i = 0; i < pTabs->NumTabs(); i++)
+		{
+			if (strcmp(pTabs->GetTab(i)->GetText(), &szStep[14]) == 0)
+			{
+				pTabs->TabClosePressed(pTabs->GetTab(i));
+				break;
+			}
+		}
+	}
 	else if (strcmp(szStep, "usagetoolbar") == 0)
 	{
 		//The Find Usages tool window's toolbar.

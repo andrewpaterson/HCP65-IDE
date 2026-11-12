@@ -23,6 +23,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "StandardLib/Object.h"
 #include "StandardLib/Pointer.h"
 #include "WindowLib/TreeContainer.h"
+#include "WindowLib/TabbedContainer.h"
 #include "IDEResultsPane.h"
 #include "WindowLib/DockManager.h"
 #include "WindowLib/CommandSet.h"
@@ -80,6 +81,33 @@ struct SIDEFoundUsages
 };
 
 
+//One Find Usages, in a tab of the tool window: its results pane, what it found (if it has found anything: a new tab
+//hasn't), whether edits have moved its usages since its tree was made, whether the groupings or filters have changed
+//since (it is made again when its tab is chosen), and whether it is pinned.
+class CIDEUsagesSearch : public CObject
+{
+CONSTRUCTABLE(CIDEUsagesSearch);
+DESTRUCTABLE(CIDEUsagesSearch);
+public:
+	Ptr<CIDEResultsPane>	mpPane;
+	Ptr<CTabComponent>		mpTab;
+	SIDEFoundUsages			msFound;  //What the tree shows, if mbFound: each line's usage by its node's data less one.
+	bool					mbFound;
+	bool					mbMoved;  //Edits have moved usages since the tree was shown, the last at miMoved.
+	int64					miMoved;
+	bool					mbStale;
+	bool					mbPinned;
+
+	void	Init(Ptr<CIDEResultsPane> pPane);
+	void	Class(void) override;
+	void	Free(void) override;
+	bool	Save(CObjectWriter* pcFile) override;
+	bool	Load(CObjectReader* pcFile) override;
+
+	void	SetFound(SIDEFoundUsages* psFound);
+};
+
+
 struct SIDEUsageRow;
 //IntelliJ's Find Usages (Alt+F7): every use of the symbol at the caret, not its declarations, in the Find Usages tool
 //window beside Build: a tree of how each is used (a call, a value read, a type in a field's declaration...), the
@@ -87,7 +115,12 @@ struct SIDEUsageRow;
 //its toolbar turn the usage type, project and class groups on and off; with them off it is files and their lines.
 //Rerun finds the symbol's usages again, from where it is declared, wherever the caret is now.  Show Read Access and
 //Show Write Access leave a variable's or field's usages that only read it, or that write it, out of the tree, as
-//IntelliJ's do; the tree's first row says how many are hidden.  Find
+//IntelliJ's do; the tree's first row says how many are hidden.
+//
+//Each Find Usages shows what it finds in the tool window's tab that is chosen, named for the symbol, unless that tab
+//is pinned (Pin Tab, on the toolbar): then it is left as it is and a new tab is made.  A tab is closed by its cross;
+//the tool window always has one, empty until something is found, and its tab bar is only shown with more than one.
+//The groupings and filters are the tool window's, the same for every tab.  Find
 //All References (Shift+F12) shows its declarations and definition there too.  Control+B on a declaration shows the
 //usages in a popup under the caret.  The tree is a results pane's (CIDEResultsPane), which opens and steps through
 //the usages: a line's node's data is its usage's index in what was found, and one.
@@ -97,12 +130,10 @@ CONSTRUCTABLE(CIDEUsages);
 DESTRUCTABLE(CIDEUsages);
 protected:
 	CIDEContent*		mpcContent;  //Not held: the content holds it.
-	Ptr<CIDEResultsPane>	mpPane;  //What Find Usages found, a tree: usage types, projects, files, classes, lines.
+	Ptr<CTabbedContainer>	mpTabs;  //A tab for each search, its page the search's results pane.
+	CArray<CIDEUsagesSearch>	maSearches;
+	Ptr<CIDEUsagesSearch>	mpSearch;  //The search whose tab is chosen: never NULL once the tool window is made.
 	Ptr<CDockPane>		mpUsagesTool;
-	SIDEFoundUsages		msFound;  //What the tree shows, if mbFound: each line's usage by its node's data less one.
-	bool				mbFound;  //Something has been looked for.
-	bool				mbMoved;  //Edits have moved usages since the tree was shown, the last at miMoved.
-	int64				miMoved;
 	Ptr<CMenuContainer>	mpPopup;  //Control+B's usages on a declaration, made when it is first shown.
 	SIDEFoundUsages		msPopupFound;  //What the popup shows: each row's usage by its row less one (the first is its title).
 	uint8				muiGrouping;  //IDE_USAGES_BY_*.
@@ -129,6 +160,9 @@ public:
 	int64				Poll(int64 iNow);
 	void				SetGrouping(uint8 uiGrouping);
 	void				SetAccessShown(bool bRead, bool bWrite);
+	void				SetPinned(bool bPinned);
+	size				NumSearches(void);
+	Ptr<CTabbedContainer>	GetTabs(void);
 	void				ReadSettings(CMarkupTag* pcSettings);
 	void				WriteSettings(CXMLWriter* pcWriter);
 	uint8				GetGrouping(void);
@@ -155,7 +189,16 @@ protected:
 	void				OpenPopup(void);
 	void				PopupUsageClicked(CMenuItem* pcItem);
 	void				ShowGrouping(uint8 uiGrouping);
-	void				AddGroupingCommand(const char* szName, const char* szCaption, EIDEToolIcon eIcon, void(CIDEUsages::*fToggle)(void), bool(CIDEUsages::*fIsOn)(void));
+	void				AddPaneCommand(Ptr<CIDEResultsPane> pPane, const char* szName, const char* szCaption, EIDEToolIcon eIcon, void(CIDEUsages::*fToggle)(void), bool(CIDEUsages::*fIsOn)(void));
+	Ptr<CIDEUsagesSearch>	AddSearch(void);
+	void				RemoveSearch(Ptr<CIDEUsagesSearch> pSearch, bool bKeepOne);
+	Ptr<CIDEUsagesSearch>	FindSearch(CIDEResultsPane* pcPane);
+	Ptr<CIDEUsagesSearch>	FindSearch(CTabComponent* pcTab);
+	void				TabSelected(CTabComponent* pcTab);
+	void				TabCloseRequested(CTabComponent* pcTab);
+	void				TogglePinned(void);
+	bool				IsPinned(void);
+	void				ShowAllUsages(void);
 	void				ToggleByType(void);
 	void				ToggleByProject(void);
 	void				ToggleByClass(void);

@@ -443,10 +443,21 @@ CHECKS = [
 		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14',
 		'EDIT': 'usagegroups:,usages,usagetoolbar,usagetool:Next Occurrence,printselected,usagetoolbar,usagetool:Group by Project,usagetoolbar,printusages,'
 		        'usagetool:Preview,usagetool:Navigate with Single Click,usagetoolbar,usagetool:Collapse All,printrows,usagetool:Expand All,printrows,usagetool:Rerun,printusages'},
-		[r'^Toolbar: Rerun, Previous Occurrence\(disabled\), Next Occurrence, Expand All, Collapse All, Group by Usage Type, Group by Project, Group by Class, Show Read Access\(on\), Show Write Access\(on\), Preview\(on\), Navigate with Single Click$',
+		[r'^Toolbar: Rerun, Previous Occurrence\(disabled\), Next Occurrence, Expand All, Collapse All, Group by Usage Type, Group by Project, Group by Class, Show Read Access\(on\), Show Write Access\(on\), Preview\(on\), Navigate with Single Click, Pin Tab$',
 		 r'^Selected: 391: ', r'^Toolbar: Rerun, Previous Occurrence, Next Occurrence, ', r'Group by Project\(on\), Group by Class, Show Read Access\(on\), Show Write Access\(on\), Preview\(on\)',
-		 r'^  BaseLib  3 usages$', r'Preview, Navigate with Single Click\(on\)$', r'^Rows: 1$', r'^Rows: 6$',
+		 r'^  BaseLib  3 usages$', r'Preview, Navigate with Single Click\(on\), Pin Tab$', r'^Rows: 1$', r'^Rows: 6$',
 		 r'^Usages of IsParentheses and 1 override  3 usages$', r'^  BaseLib  3 usages$', r'^      391: '], [r'No tool button', r'ERROR']),
+	('usages-tabs', {
+		#Find Usages shows what it finds in the tab chosen unless it is pinned: then in a new tab, the pinned one kept.  A
+		#tab that isn't pinned is used again.  A tab chosen shows its own usages; its cross closes it, pinned or not.
+		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14',
+		'EDIT': 'usagegroups:,usages,usagetabs,usagetool:Pin Tab,usagetoolbar,usagetabs,focus:editor,caret:37:14,usages,usagetabs,usagetoolbar,'
+		        'focus:editor,caret:36:14,usages,usagetabs,usagetab:* IsParentheses,usagetabs,printusages,usageclosetab:* IsParentheses,usagetabs,printusages'},
+		[r'^Usage tabs: >IsParentheses$', r'Navigate with Single Click, Pin Tab\(on\)$', r'^Usage tabs: >\* IsParentheses$',
+		 r'^Usages of SetExpression', r'^Usage tabs: (\* IsParentheses, >SetExpression|>SetExpression, \* IsParentheses)$', r'Navigate with Single Click, Pin Tab$',
+		 r'^Usages of Evaluate', r'^Usage tabs: (\* IsParentheses, >Evaluate|>Evaluate, \* IsParentheses)$',
+		 r'^Usage tabs: (>\* IsParentheses, Evaluate|Evaluate, >\* IsParentheses)$',
+		 r'^Usages of IsParentheses and 1 override  3 usages$', r'^Usage tabs: >Evaluate$', r'^Usages of Evaluate'], [r'ERROR', r'SetExpression, .*Evaluate|Evaluate, .*SetExpression']),
 	('usages-access-filters', {
 		#Show Read Access and Show Write Access, both on to start with: off, a field's usages that read it, or write it, are
 		#left out of the tree, whose first row says how many are hidden.
