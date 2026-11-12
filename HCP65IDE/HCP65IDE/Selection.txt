@@ -236,6 +236,23 @@ Step 7 - Box selection engine (BaseLib CTextEditing)
   a click ends the box (a plain caret where the caret was).  Undo puts a plain selection back (box not remembered).
   Tests: TestTextEditing.
 
+  As built (2026-11-12), in CTextEditing (no new files):
+  7a. The box is two corners, each a row and an x (the view's): BoxSelect(anchor row, x, caret row, x), and
+      BoxSelectUp/Down/Left/Right/Home/End moving the caret corner a row, a character along its row, or to its row's
+      ends (starting a box at the caret, or a selection's anchor).  GetBox gives its rows and x's, GetBoxRanges each
+      row's range (FindPositionInRow at both x's, so a short row's is empty at its end).  While there is a box nothing
+      else is selected and the caret is the caret corner.
+  7b. Printable, Tab, Backspace, Delete, Paste, Cut and Copy check for a box first.  Every row's range is replaced in
+      one edit, bottom up (ReplaceBoxRanges); the box is then a zero-width box after the text on a reference row (the
+      caret's row if it reaches the box's left edge, else the first that does).  With no width, backspace and delete
+      take the character before or after on each row that reaches the box, never a line feed.  Tab: spaces to the next
+      stop from the left edge on the caret's row, the same on every row.  Paste: as many lines as rows (a last line
+      feed ignored) one to a row, else the whole text on every row; text with line feeds ends the box, the caret after
+      the last row's.  Copy: the ranges joined by line feeds.
+  7c. MoveCaret (so every move, Select, click), ClearSelection, Reset, and any document change but the box's own
+      (mbBoxEditing; undo, redo, other edits) end it.  Typing in a box isn't merged for undo; each key is a step.
+  Rows rather than lines, so a wrapped line's rows are separate rows of the box.
+
 Step 8 - Box selection drawing and input (CTextArea, CTextEditingInput, IDE)
   Drawn as one rectangle per row.  Shift+Alt+arrows/Home/End and Shift+Alt+drag make a box (VS's keys); Alt+drag too
   where the window manager doesn't take it.  Edit menu: Extend Selection, Shrink Selection, Select All; IDE checks.
