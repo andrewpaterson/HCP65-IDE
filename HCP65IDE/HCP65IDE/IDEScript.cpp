@@ -1148,6 +1148,33 @@ void CIDEScript::RunEditStep(const char* szStep)
 		//Alt+F7 itself: Find Usages with its settings (the usages step never has the declarations).
 		mpcContent->GetCommands()->Run("Navigate.FindUsages");
 	}
+	else if (strcmp(szStep, "usagescopemenu") == 0)
+	{
+		//The toolbar's Scope menu's items, after it was opened (usagetool:Scope).
+		Ptr<CMenuContainer>	pMenu;
+		CChars				szItems;
+
+		pMenu = mpcContent->GetUsages()->GetScopeMenu();
+		szItems.Init();
+		for (i = 0; pMenu.IsNotNull() && (i < pMenu->NumItems()); i++)
+		{
+			szItems.Append((i > 0) ? ", " : "");
+			szItems.Append(pMenu->GetItem(i)->GetText());
+		}
+		printf("Scope menu%s: %s\n", (pMenu.IsNotNull() && pMenu->IsOpen()) ? " (open)" : "", szItems.Text());
+		szItems.Kill();
+	}
+	else if (strncmp(szStep, "usagescopemenu:", 15) == 0)
+	{
+		//usagescopemenu:<n>: that item of the Scope menu clicked, from 0.
+		Ptr<CMenuContainer>	pMenu;
+
+		pMenu = mpcContent->GetUsages()->GetScopeMenu();
+		if (pMenu.IsNotNull() && ((size)atoi(&szStep[15]) < pMenu->NumItems()))
+		{
+			mpcContent->GetUsages()->ScopeMenuClicked(&pMenu->GetItem((size)atoi(&szStep[15])));
+		}
+	}
 	else if (strcmp(szStep, "usagetabs") == 0)
 	{
 		//The Find Usages tool window's tabs, the chosen one after a '>': "Usage tabs: * IsParentheses, >SetExpression".

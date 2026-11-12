@@ -413,6 +413,8 @@ void CIDEUsages::Class(void)
 	U_String(mszDirectory);
 	U_Bool(mbDeclarations);
 	M_Pointer(mpSettingsDialog);
+	M_Pointer(mpScopeMenu);
+	U_Data(EIDEScope[IS_Count], maeMenuScopes);
 	U_Bool(mbShowRead);
 	U_Bool(mbShowWrite);
 }
@@ -434,6 +436,10 @@ void CIDEUsages::Free(void)
 	if (mpPopup.IsNotNull())
 	{
 		mpPopup->GetItemClickEvent()->Remove(this);
+	}
+	if (mpScopeMenu.IsNotNull())
+	{
+		mpScopeMenu->GetItemClickEvent()->Remove(this);
 	}
 	msPopupFound.Kill();
 	mszDirectory.Kill();
@@ -1138,6 +1144,7 @@ Ptr<CIDEUsagesSearch> CIDEUsages::AddSearch(void)
 	AddPaneCommand(pPane, "Usages.ShowWriteAccess", "Show Write Access", ITI_WriteAccess, &CIDEUsages::ToggleShowWrite, &CIDEUsages::IsShowWrite);
 	pPane->AddViewCommands();
 	AddPaneCommand(pPane, "Usages.PinTab", "Pin Tab", ITI_Pin, &CIDEUsages::TogglePinned, &CIDEUsages::IsPinned);
+	pPane->AddToolbarCommand(pPane->GetCommands()->Add("Usages.Scope", "Scope", "", mpcContent->GetToolIcon(ITI_Settings), this, &CIDEUsages::OpenScopeMenu), ITI_Settings);
 	if (pLast.IsNotNull())
 	{
 		pPane->CopySettings(pLast);
@@ -1410,6 +1417,94 @@ bool CIDEUsages::ShowSettings(void)
 	mpSettingsDialog = NULL;
 	return bResult;
 }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The tab shown shows its usages in another scope, as the IDE was when
+// they were found: they aren't found again, and Find Usages' settings
+// aren't changed.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEUsages::SetSearchScope(EIDEScope eScope)
+{
+	if (mpSearch->mcScope.GetScope() != eScope)
+	{
+		mpSearch->mcScope.SetScope(eScope);
+		ShowUsages(true);
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The toolbar's Scope: a menu of the scopes there are to choose, the one
+// the tab shows saying so, opened beside its button.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEUsages::OpenScopeMenu(void)
+{
+	Ptr<CToolbar>	pToolbar;
+	Ptr<CButton>	pButton;
+	CInt32Rect		cBounds;
+	SInt32Vec2		sPosition;
+	CChars			szText;
+	size			uiScopes;
+	size			i;
+
+	if (mpScopeMenu.IsNull())
+	{
+		mpScopeMenu = OMalloc<CMenuContainer>(mpcContent->GetWindow(), mpcContent->GetTheme());
+		mpScopeMenu->GetItemClickEvent()->Add(this, &CIDEUsages::ScopeMenuClicked);
+	}
+	mpScopeMenu->RemoveAllItems();
+	uiScopes = 0;
+	for (i = 0; i < IS_Count; i++)
+	{
+		if (CIDEScope::IsOffered(mpcContent, (EIDEScope)i))
+		{
+			szText.Init(CIDEScope::GetScopeName((EIDEScope)i));
+			if (mpSearch->mcScope.GetScope() == (EIDEScope)i)
+			{
+				szText.Append("  (shown)");
+			}
+			mpScopeMenu->AddItem(szText.Text());
+			szText.Kill();
+			maeMenuScopes[uiScopes] = (EIDEScope)i;
+			uiScopes++;
+		}
+	}
+
+	//Right of the button whose command it is.
+	pToolbar = mpSearch->mpPane->GetToolbar();
+	pButton = pToolbar->GetCommandButton(pToolbar->NumCommandButtons() - 1);
+	pButton->GetActualBounds(&cBounds);
+	sPosition.Init(cBounds.GetRight(), cBounds.GetTop());
+	mpScopeMenu->Open(sPosition, pButton, true);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A scope was chosen from the toolbar's menu.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEUsages::ScopeMenuClicked(CMenuItem* pcItem)
+{
+	size	i;
+
+	for (i = 0; i < mpScopeMenu->NumItems(); i++)
+	{
+		if (&mpScopeMenu->GetItem(i) == pcItem)
+		{
+			SetSearchScope(maeMenuScopes[i]);
+			return;
+		}
+	}
+}
+
+
+Ptr<CMenuContainer> CIDEUsages::GetScopeMenu(void) { return mpScopeMenu; }
 
 
 //////////////////////////////////////////////////////////////////////////

@@ -131,7 +131,10 @@ struct SIDEUsageRow;
 //a directory's, and whether Find Usages has the declarations with the usages; OK finds the usages of the symbol at the
 //caret with them, and Find Usages uses them from then on.  Find All References uses the scope too, and always has the
 //declarations.  They are kept in the IDE's settings.  The index is of the whole workspace: a scope leaves usages out
-//of the tree, it doesn't look in less.  The usages popup is always of every usage.  Find
+//of the tree, it doesn't look in less.  The usages popup is always of every usage.
+//
+//Scope, on the toolbar, opens a menu of the scopes: choosing one shows the tab's usages in that scope, as the IDE was
+//when they were found, without finding them again or changing the settings.  Find
 //All References (Shift+F12) shows its declarations and definition there too.  Control+B on a declaration shows the
 //usages in a popup under the caret.  The tree is a results pane's (CIDEResultsPane), which opens and steps through
 //the usages: a line's node's data is its usage's index in what was found, and one.
@@ -152,6 +155,8 @@ protected:
 	CChars				mszDirectory;  //and whether Find Usages has the declarations with the usages.
 	bool				mbDeclarations;
 	Ptr<CDialog>		mpSettingsDialog;  //While Find Usages Settings is shown.
+	Ptr<CMenuContainer>	mpScopeMenu;  //The toolbar's Scope's scopes, made when it is first opened.
+	EIDEScope			maeMenuScopes[IS_Count];  //The scope of each of its items.
 	bool				mbShowRead;  //Usages that read a value are in the tree.
 	bool				mbShowWrite;  //Usages that write one are.
 
@@ -179,6 +184,10 @@ public:
 	void				SetScopeSettings(EIDEScope eScope, const char* szDirectory, bool bDeclarations);
 	EIDEScope			GetScope(void);
 	bool				ShowSettings(void);
+	void				SetSearchScope(EIDEScope eScope);
+	void				OpenScopeMenu(void);
+	void				ScopeMenuClicked(CMenuItem* pcItem);
+	Ptr<CMenuContainer>	GetScopeMenu(void);
 	size				NumSearches(void);
 	Ptr<CTabbedContainer>	GetTabs(void);
 	void				ReadSettings(CMarkupTag* pcSettings);
