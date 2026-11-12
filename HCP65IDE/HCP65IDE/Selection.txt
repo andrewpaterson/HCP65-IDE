@@ -110,6 +110,26 @@ Step 3 - Drag and drop (CTextEditingInput)
   moves the text there (Control: copies) as one undo step; dropping inside the selection does nothing; release without
   a drag puts the caret.  Escape cancels.  Not between components or windows.
 
+  As built (2026-11-12):
+  3a. BaseLib CTextEditing::MoveText(uiStart, uiEnd, uiTo, bCopy): one edit (one undo puts the text and the selection
+      back); the text at uiTo is selected after, caret at its end.  uiTo inside the range or at either end, an empty
+      range or one past the end, or a text that can't be edited: nothing, false.  CTextEditing::GetView.
+  3b. WindowLib CTextEditingInput: SetTextDragEnabled (CTextArea turns it on; CTextField doesn't, it has no drop
+      caret).  A single press on a selected character (FindCharacterAt) of an editable text doesn't move the caret
+      (TETD_Pressed).  Moving more than TEXT_DRAG_DISTANCE (4) pixels from it drags (TETD_Dragging): the drop position
+      is the gap nearest the pointer (GetDropPosition) and the view is asked to show its caret, which CTextArea draws
+      at the drop position (GetCaretBounds), so the view scrolls to it as a selection's drag scrolls to the caret.  The
+      release: dragged -> MoveText to the drop position, copying with control held (CComponentInput::IsControl, read at
+      the release); not dragged -> the caret where it was pressed, nothing selected.  Escape (CIC_ClearSelection)
+      while pressed or dragging cancels it and stops the focus' drag; otherwise it clears the selection as before.
+      Losing focus ends it.  Double and triple clicks in the selection select as before (only a single press drags).
+  Not done: the pointer's shape doesn't change while dragging; the drop caret blinks as the caret does; dragging
+  doesn't scroll while the pointer is held still past the view's edge (nor does a selection's drag).
+  Tests: TestTextEditingMoveText (BaseLib, 65C64, 816), TestTextEditingInputDragText, TestTextAreaEditDragText (drop
+  caret, control copies through test input devices, Escape from the window, scrolling).  IDE: script step
+  dragtext:<line>:<column>:<line>:<column>, check editor-drag-text (moving only: the scripted IDE has no keyboard
+  device to hold control).
+
 Step 4 - Selected text occurrences (CTextArea, opt-in: SetHighlightOccurrences)
   A selection on one line that isn't all spaces has its other exact matches in the document drawn with a quieter
   selection colour (theme TC_TextOccurrence), case-sensitive, up to 1000; found again after selection changes and edits

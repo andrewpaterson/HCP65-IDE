@@ -862,6 +862,12 @@ CHECKS = [
 		'OPEN': 'CalcParentheses.h', 'CARET': '38:1',
 		'DEBUG': 'wait:1500,edit:doubleclick:38:10,edit:printselection,wait:1000,edit:tripleclick:38:10,edit:printselection'},
 		[r'^Selection: \[IsParentheses\] on line 38, caret line 38$', r'^Selection: \[\tbool\t\tIsParentheses\(void\);$', r'^\] on line 39, caret line 39$'], []),
+	('editor-drag-text', {
+		#Dragging the selected text moves it: IsParentheses, selected by a double click, is pressed on and dropped at
+		#the start of line 39's "void", where it stays selected.  Real presses through the window.
+		'OPEN': 'CalcParentheses.h', 'CARET': '38:1',
+		'DEBUG': 'wait:1500,edit:doubleclick:38:10,wait:1000,edit:dragtext:38:12:39:2,edit:printselection,edit:print'},
+		[r'^Selection: \[IsParentheses\] on line 39, caret line 39$', r'CalcParentheses\.h \* \(focus\) line 39: \[\tIsParenthesesvoid\t\tPrint\(CChars\* psz\);\]$'], []),
 	('editor-gutter-select', {
 		#Pressing a line's number in the gutter selects the line with its line feed; a shift press on line 36's number
 		#then selects from where that selection started (line 38's start) up to line 36's start.  Real presses through

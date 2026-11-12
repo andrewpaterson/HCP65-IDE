@@ -1092,6 +1092,70 @@ void CIDEScript::ClickGutter(bool bShift, const char* szLine)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// The window's point over the active editor's character at
+// <line>:<column> (from 1, the column in bytes), or with bGap the gap
+// before it.  False if there is no editor or no such line.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEScript::FindEditorPoint(const char* szPlace, bool bGap, int32* px, int32* py)
+{
+	Ptr<CTextArea>	pEditor;
+	CInt32Rect		cLine;
+	size			uiLine;
+	size			uiPosition;
+
+	if (mpcContent->GetDocuments()->GetActiveTab().IsNull() || (strchr(szPlace, ':') == NULL) || (atoi(szPlace) < 1))
+	{
+		return false;
+	}
+	pEditor = mpcContent->GetDocuments()->GetActiveTab()->GetEditor();
+	uiLine = (size)(atoi(szPlace) - 1);
+	if (!pEditor->GetLineBounds(uiLine, &cLine))
+	{
+		return false;
+	}
+	uiPosition = pEditor->GetLineStart(uiLine) + (size)(atoi(strchr(szPlace, ':') + 1) - 1);
+	*px = pEditor->GetPosition().x + pEditor->GetPositionX(uiPosition, false) + (bGap ? 0 : 1);
+	*py = pEditor->GetPosition().y + (cLine.GetTop() + cLine.GetBottom()) / 2;
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// dragtext:<line>:<column>:<line>:<column>: button one is pressed over the
+// active editor's character at the first place, which should be selected
+// and in view, the pointer moved to the gap before the second, and the
+// button released there, through the window: the selected text is moved
+// there.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEScript::DragText(const char* szPlaces)
+{
+	const char*	szTo;
+	int32		x;
+	int32		y;
+
+	szTo = strchr(szPlaces, ':');
+	szTo = (szTo != NULL) ? strchr(szTo + 1, ':') : NULL;
+	if ((szTo == NULL) || !FindEditorPoint(szPlaces, false, &x, &y))
+	{
+		return;
+	}
+	mpcContent->GetWindow()->PointerMoved(x, y);
+	mpcContent->GetWindow()->InputCommand(CIC_ActivateComponent, true);
+	if (!FindEditorPoint(szTo + 1, true, &x, &y))
+	{
+		mpcContent->GetWindow()->InputCommand(CIC_ExecuteComponent, true);
+		return;
+	}
+	mpcContent->GetWindow()->PointerMoved(x, y);
+	mpcContent->GetWindow()->InputCommand(CIC_ExecuteComponent, true);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // One of HCP65_IDE_EDIT's steps.
 //
 //////////////////////////////////////////////////////////////////////////
@@ -1518,6 +1582,10 @@ void CIDEScript::RunEditStep(const char* szStep)
 	else if (strncmp(szStep, "shiftgutterclick:", 17) == 0)
 	{
 		ClickGutter(true, &szStep[17]);
+	}
+	else if (strncmp(szStep, "dragtext:", 9) == 0)
+	{
+		DragText(&szStep[9]);
 	}
 	else if (strcmp(szStep, "reindexall") == 0)
 	{
