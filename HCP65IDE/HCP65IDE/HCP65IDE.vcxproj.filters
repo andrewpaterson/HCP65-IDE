@@ -48,6 +48,9 @@
     <ClCompile Include="IDEUsages.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="IDEScope.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="IDEResultsPane.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -198,6 +201,9 @@
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDEUsages.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDEScope.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDEResultsPane.h">

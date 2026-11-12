@@ -34,18 +34,12 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDECodeModel.h"
 #include "IDEDocuments.h"
 #include "IDESteppable.h"
+#include "IDEScope.h"
 
 
 class CIDEContent;
 class CIDEFileLines;
 struct SIDEPlaceChange;
-
-
-//Find in Files' scopes, its dialog's tabs.
-#define IDE_FIND_IN_SOLUTION	0	//Every project's files.
-#define IDE_FIND_IN_PROJECT		1	//The files of the project the active file is in.
-#define IDE_FIND_IN_DIRECTORY	2	//The files in the directory typed, and under it.
-#define IDE_FIND_NUM_SCOPES		3
 
 
 //A place the text was found: its file (by index, in the files searched or the files found in), where it is in the
@@ -63,9 +57,9 @@ struct SIDEFindPlace
 typedef CArrayTemplate<SIDEFindPlace>	CArrayIDEFindPlaces;
 
 
-//IntelliJ IDEA's Find in Files (Control+Shift+F): the text typed is looked for in the solutions' files, the files of
-//the active file's project, or the files in a directory and under it, whatever its case unless Match case, and as whole
-//words with Words.  Its dialog (CFindInFilesDialog, whose searcher it is) previews the first results as the text is
+//IntelliJ IDEA's Find in Files (Control+Shift+F): the text typed is looked for in a scope's files (CIDEScope: the
+//solutions', the startup solution's, the active file's project's, the active file, the open files, or those in a
+//directory and under it; a tab of the dialog each), whatever its case unless Match case, and as whole words with Words.  Its dialog (CFindInFilesDialog, whose searcher it is) previews the first results as the text is
 //typed, each with its file's code under them; enter opens the selected one.  An open file is searched as its editor has
 //it.  What was typed, and how, is remembered for the next time; text selected in the editor (on one line) is what is
 //looked for instead.
@@ -92,14 +86,16 @@ protected:
 	//What was typed last, and how.
 	CChars					mszText;
 	CChars					mszDirectory;
-	size					muiScope;
+	EIDEScope				meScope;
 	bool					mbMatchCase;
 	bool					mbWholeWords;
 
 	//The search under way: the dialog's, or Open in Find Window's.
 	CTextSearch				mcSearch;
 	bool					mbSearch;  //mcSearch is made.
-	size					muiProject;  //The project In Project searches, MAX_SIZE if none.
+	CIDEScope				mcScope;  //Where it looks: as the IDE was when it started.
+	EIDEScope				maeDialogScopes[IS_Count];  //The scope of each of the dialog's tabs.
+	size					muiDialogScopes;
 	CArrayChars				maszFiles;  //The files searched and to search.
 	CArrayChars				maszDirectories;  //The directories whose files and directories are still to be listed, the next last.
 	size					muiNextFile;  //In maszFiles.
@@ -130,7 +126,7 @@ public:
 	bool					ShowFind(void);
 	bool					CreateFind(void);
 	bool					OpenFindChoice(void);
-	size					OpenInFindWindow(void);
+	size					OpenInFindWindow(bool bRerun = false);
 	Ptr<CFindInFilesDialog>	GetFind(void);
 
 	void					FindStart(SFindInFilesQuery* psQuery) override;
@@ -163,14 +159,13 @@ protected:
 	void				ShowQueuedFind(void);
 	void				GetInitialText(CChars* pszDest);
 	void				GetInitialDirectory(CChars* pszDest);
-	void				GetProjectDescription(CChars* pszDest);
-	void				StartSearch(size uiScope, const char* szText, const char* szDirectory, bool bMatchCase, bool bWholeWords);
+	size				FindDialogScope(EIDEScope eScope);
+	void				StartSearch(const char* szText, bool bMatchCase, bool bWholeWords);
 	bool				SearchSome(CFindInFilesItems* pcDest);
 	void				ListDirectory(const char* szDirectory);
 	void				SearchFile(size uiFile, CFindInFilesItems* pcDest);
 	bool				GetFileText(const char* szFileName, CTextFile* pcFile, char** pszText, size* puiLength);
 	void				AddItem(CFindInFilesItems* pcDest, size uiFile, SIDEFindPlace* psPlace, const char* szLine, const char* szLineEnd, size uiPlace);
-	void				AppendScopeName(CChars* pszDest);
 	void				ShowResults(bool bKeepSelected);
 	size				GetCommonDirectoryLength(void);
 	bool				GetPlaceLocation(CArrayChars* paszFiles, SIDEFindPlace* psPlace, SIDELocation* psDest);

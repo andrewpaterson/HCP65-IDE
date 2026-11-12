@@ -147,7 +147,7 @@ void CIDEScript::RunCommand(const char* szCommand)
 	else if (strncmp(szCommand, "find:", 5) == 0)
 	{
 		//Find in Files' dialog shown on that scope, from a tick as it must be.  find:<scope>:<text> types the text too.
-		mpcContent->GetFindInFiles()->muiScope = (size)atoi(&szCommand[5]);
+		mpcContent->GetFindInFiles()->meScope = GetScriptScope(&szCommand[5]);
 		if (strchr(&szCommand[5], ':') != NULL)
 		{
 			mpcContent->GetFindInFiles()->mszText.Set(strchr(&szCommand[5], ':') + 1);
@@ -721,6 +721,23 @@ void CIDEScript::PrintStartupProjects(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// A scope as the script gives it, a number: 0 the solution, 1 the active
+// file's project, 2 a directory, 3 the startup solution, 4 the current
+// file and 5 the open files.
+//
+//////////////////////////////////////////////////////////////////////////
+EIDEScope CIDEScript::GetScriptScope(const char* szScope)
+{
+	static const EIDEScope	aeScopes[] = { IS_Solution, IS_Project, IS_Directory, IS_StartupSolution, IS_CurrentFile, IS_OpenFiles };
+	int						iScope;
+
+	iScope = atoi(szScope);
+	return ((iScope >= 0) && (iScope < IS_Count)) ? aeScopes[iScope] : IS_Solution;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // HCP65_IDE_FIND's search: <scope>:<options>:<text>.
 //
 //////////////////////////////////////////////////////////////////////////
@@ -744,7 +761,7 @@ void CIDEScript::RunFind(const char* szFind)
 		return;
 	}
 	pFindInFiles = mpcContent->GetFindInFiles();
-	pFindInFiles->muiScope = (size)atoi(szFind);
+	pFindInFiles->meScope = GetScriptScope(szFind);
 	pFindInFiles->mbMatchCase = (memchr(szOptions, 'c', (size)(szText - szOptions)) != NULL);
 	pFindInFiles->mbWholeWords = (memchr(szOptions, 'w', (size)(szText - szOptions)) != NULL);
 	pFindInFiles->mszText.Set(&szText[1]);

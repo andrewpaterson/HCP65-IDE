@@ -26,6 +26,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/Dialog.h"
 #include "WindowLib/TreeContainer.h"
 #include "IDEResultsPane.h"
+#include "IDEScope.h"
 
 
 class CIDEContent;
@@ -74,6 +75,7 @@ public:
 	void		RunEditStep(const char* szStep);
 	void		RunGoTo(const char* szGoTo);
 	void		RunFind(const char* szFind);
+	EIDEScope	GetScriptScope(const char* szScope);
 	void		SetStartupProject(const char* szStartup);
 	void		PrintStartupProjects(void);
 	void		PrintFindTree(size uiMaximum);

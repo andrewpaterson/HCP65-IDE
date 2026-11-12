@@ -452,8 +452,8 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 			}
 			if (getenv("HCP65_IDE_FIND") != NULL)
 			{
-				//<scope>:<options>:<text>, as Find in Files in the solution (0), the active file's project (1) or
-				//HCP65_IDE_FIND_DIRECTORY (2), with Match case (c) and Words (w) or neither (-): the first results and
+				//<scope>:<options>:<text>, as Find in Files in the solution (0), the active file's project (1),
+				//HCP65_IDE_FIND_DIRECTORY (2), the startup solution (3), the current file (4) or the open files (5), with Match case (c) and Words (w) or neither (-): the first results and
 				//the preview are printed, the first opened, and all of them listed in the Find tool window.
 				mpContent->GetScript()->RunFind(getenv("HCP65_IDE_FIND"));
 			}

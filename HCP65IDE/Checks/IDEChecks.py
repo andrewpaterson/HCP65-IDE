@@ -516,6 +516,16 @@ CHECKS = [
 		'WAIT_INDEX': '1', 'FIND': '2:-:class CCalculatorParser', 'FIND_DIRECTORY': os.path.join(ROOT, 'CommonLibraries', 'Libraries')},
 		[r'^Find \[class CCalculatorParser\]: 1 match in 1 file', r'^  class CCalculatorParser  \[CalculatorParser\.h 29\]  match 0\+23$',
 		 r"^Occurrences of 'class CCalculatorParser' in .*Libraries  1 match in 1 file$", r'^  CalculatorParser\.h  1 match$'], [r'ERROR']),
+	('find-in-current-file', {
+		#The Current File scope: only the active file is searched, though others have the text.
+		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'FIND': '4:-:IsParentheses'},
+		[r'^Find \[IsParentheses\]: 1 match in 1 file', r'^  bool  IsParentheses\(void\);  \[CalcParentheses\.h 38\]  match 6\+13$',
+		 r"^Occurrences of 'IsParentheses' in CalcParentheses\.h  1 match in 1 file$"], [r'Calculator\.cpp', r'ERROR']),
+	('find-in-open-files', {
+		#The Open Files scope: the files with an editor's tab.
+		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'FIND': '5:-:IsParentheses'},
+		[r'^Find \[IsParentheses\]: \d+ match(es)? in \d+ files?', r'\[CalcParentheses\.h 38\]', r"^Occurrences of 'IsParentheses' in the open files  "],
+		[r'\[Calculator\.cpp ', r'ERROR']),
 	('find-dialog-open-in-find-window', {
 		#The dialog shown, and Open in Find Window clicked.
 		'WAIT_INDEX': '1', 'DIALOG_ANSWER': 'Open in Find Window', 'DEBUG': 'find:0:calculatorparser,answered:1,printfind'},

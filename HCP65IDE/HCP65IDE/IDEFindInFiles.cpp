@@ -34,6 +34,10 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define IDE_FIND_RESULTS_MAXIMUM		10000	//The most results the Find tool window lists.
 #define IDE_FIND_OPEN_FILES_MAXIMUM		1000	//With more results than this the tree's files start closed.
 #define IDE_FIND_SETTINGS_TAG			"FindInFiles"
+#define IDE_FIND_SCOPE_ATTRIBUTE			"Scope"
+#define IDE_FIND_DIRECTORY_ATTRIBUTE		"Directory"
+#define IDE_FIND_MATCH_CASE_ATTRIBUTE	"MatchCase"
+#define IDE_FIND_WORDS_ATTRIBUTE			"Words"
 #define IDE_FIND_REFRESH				500		//Milliseconds after the last edit that moved a result until the tree shows it.
 
 
@@ -49,11 +53,12 @@ void CIDEFindInFiles::Init(CIDEContent* pcContent)
 	mpDialog = NULL;
 	mszText.Init();
 	mszDirectory.Init();
-	muiScope = IDE_FIND_IN_SOLUTION;
+	meScope = IS_Solution;
 	mbMatchCase = false;
 	mbWholeWords = false;
 	mbSearch = false;
-	muiProject = MAX_SIZE;
+	mcScope.Init();
+	muiDialogScopes = 0;
 	maszFiles.Init();
 	maszDirectories.Init();
 	muiNextFile = 0;
@@ -81,12 +86,14 @@ void CIDEFindInFiles::Class(void)
 	M_Pointer(mpDialog);
 	U_String(mszText);
 	U_String(mszDirectory);
-	U_Size(muiScope);
+	U_Enum(meScope);
 	U_Bool(mbMatchCase);
 	U_Bool(mbWholeWords);
 	U_Unknown(CTextSearch, mcSearch);
 	U_Bool(mbSearch);
-	U_Size(muiProject);
+	U_Unknown(CIDEScope, mcScope);
+	U_Data(EIDEScope[IS_Count], maeDialogScopes);
+	U_Size(muiDialogScopes);
 	U_Unknown(CArrayChars, maszFiles);
 	U_Unknown(CArrayChars, maszDirectories);
 	U_Size(muiNextFile);
@@ -120,6 +127,7 @@ void CIDEFindInFiles::Free(void)
 	masPlaces.Kill();
 	maszDirectories.Kill();
 	maszFiles.Kill();
+	mcScope.Kill();
 	mszDirectory.Kill();
 	mszText.Kill();
 }
@@ -224,9 +232,10 @@ bool CIDEFindInFiles::ShowFind(void)
 
 	mszText.Set(mpDialog->GetText());
 	mszDirectory.Set(mpDialog->GetDirectory());
-	muiScope = mpDialog->GetScope();
+	meScope = (mpDialog->GetScope() < muiDialogScopes) ? maeDialogScopes[mpDialog->GetScope()] : IS_Solution;
 	mbMatchCase = mpDialog->IsMatchCase();
 	mbWholeWords = mpDialog->IsWholeWords();
+	mpcContent->GetSettings()->WriteSettings();
 
 	bResult = false;
 	if (eResult == FIFR_Chosen)
@@ -250,38 +259,47 @@ bool CIDEFindInFiles::ShowFind(void)
 //////////////////////////////////////////////////////////////////////////
 bool CIDEFindInFiles::CreateFind(void)
 {
-	Ptr<CIDEEditorTab>	pTab;
+	static const char*	aszTabs[] = { "In Solution", "In Startup Solution", "In Project", "Current File", "Open Files", "Directory" };
+	CIDEScope			cScope;
 	CChars				szText;
 	CChars				szDirectory;
-	CChars				szProject;
-
-	//The project of the active file, for In Project.
-	muiProject = MAX_SIZE;
-	pTab = mpcContent->GetDocuments()->GetActiveTab();
-	if (pTab.IsNotNull())
-	{
-		muiProject = mpcContent->GetCodeModel()->FindProjectOfFile(pTab->GetFileName());
-		if ((muiProject == MAX_SIZE) && (pTab->GetProject() < mpcContent->GetWorkspace()->NumProjects()))
-		{
-			muiProject = pTab->GetProject();
-		}
-	}
+	CChars				szDescription;
+	size				i;
 
 	szText.Init();
 	szDirectory.Init();
-	szProject.Init();
 	GetInitialText(&szText);
 	GetInitialDirectory(&szDirectory);
-	GetProjectDescription(&szProject);
 
+	//A tab for each scope there is to choose, saying what it would look in now.
 	mpDialog = OMalloc<CFindInFilesDialog>(mpcContent->GetWindow(), mpcContent->GetDialogLook(), "Find in Files", this, mpcContent->GetMatchFont(), mpcContent->GetCodeFamily());
-	mpDialog->AddScope("In Solution", "Every project's files");
-	mpDialog->AddScope("In Project", szProject.Text());
-	mpDialog->AddDirectoryScope("Directory", szDirectory.Text());
+	muiDialogScopes = 0;
+	cScope.Init();
+	for (i = 0; i < IS_Count; i++)
+	{
+		if (!CIDEScope::IsOffered(mpcContent, (EIDEScope)i))
+		{
+			continue;
+		}
+		maeDialogScopes[muiDialogScopes] = (EIDEScope)i;
+		muiDialogScopes++;
+		if (i == IS_Directory)
+		{
+			mpDialog->AddDirectoryScope(aszTabs[i], szDirectory.Text());
+		}
+		else
+		{
+			cScope.Capture(mpcContent, (EIDEScope)i, "");
+			szDescription.Init();
+			cScope.AppendDescription(mpcContent, &szDescription);
+			mpDialog->AddScope(aszTabs[i], szDescription.Text());
+			szDescription.Kill();
+		}
+	}
+	cScope.Kill();
 	mpDialog->SetOptions(mbMatchCase, mbWholeWords);
-	mpDialog->Start(muiScope, szText.Text());
+	mpDialog->Start(FindDialogScope(meScope), szText.Text());
 
-	szProject.Kill();
 	szDirectory.Kill();
 	szText.Kill();
 	return true;
@@ -331,28 +349,6 @@ void CIDEFindInFiles::GetInitialDirectory(CChars* pszDest)
 	{
 		pszDest->Append(pTab->GetFileName());
 		cFileUtil.RemoveLastFromPath(pszDest);
-	}
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// What In Project searches, for its page.
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDEFindInFiles::GetProjectDescription(CChars* pszDest)
-{
-	CVcxProject*	pcProject;
-
-	pcProject = (muiProject != MAX_SIZE) ? mpcContent->GetWorkspace()->GetSolutionProject(muiProject)->GetProject() : NULL;
-	if (pcProject)
-	{
-		pszDest->Append("The files of ");
-		pszDest->Append(pcProject->GetName());
-	}
-	else
-	{
-		pszDest->Append("The active file isn't in a project");
 	}
 }
 
@@ -425,10 +421,12 @@ bool CIDEFindInFiles::OpenFindChoice(void)
 //
 // Open in Find Window: everything what was last typed finds (up to
 // IDE_FIND_RESULTS_MAXIMUM) is listed in the Find tool window, which is
-// shown with the keys.  How many were found.
+// shown with the keys.  It is looked for in the scope as the IDE is now,
+// or with bRerun in the scope it was last looked for in.  How many were
+// found.
 //
 //////////////////////////////////////////////////////////////////////////
-size CIDEFindInFiles::OpenInFindWindow(void)
+size CIDEFindInFiles::OpenInFindWindow(bool bRerun)
 {
 	SIDEFindPlace*	psPlace;
 	SIDEFindPlace*	psFound;
@@ -441,7 +439,11 @@ size CIDEFindInFiles::OpenInFindWindow(void)
 	{
 		return 0;
 	}
-	StartSearch(muiScope, mszText.Text(), mszDirectory.Text(), mbMatchCase, mbWholeWords);
+	if (!bRerun)
+	{
+		mcScope.Capture(mpcContent, meScope, mszDirectory.Text());
+	}
+	StartSearch(mszText.Text(), mbMatchCase, mbWholeWords);
 	bMore = true;
 	while (bMore && (masPlaces.NumElements() < IDE_FIND_RESULTS_MAXIMUM))
 	{
@@ -470,7 +472,7 @@ size CIDEFindInFiles::OpenInFindWindow(void)
 	mszFoundTitle.Set("Occurrences of '");
 	mszFoundTitle.Append(mszText);
 	mszFoundTitle.Append("' ");
-	AppendScopeName(&mszFoundTitle);
+	mcScope.AppendName(mpcContent, &mszFoundTitle);
 	mszFoundTitle.Append("  ");
 	mszFoundTitle.Append((uint32)masFound.NumElements());
 	mszFoundTitle.Append((masFound.NumElements() == 1) ? " match in " : " matches in ");
@@ -495,34 +497,8 @@ size CIDEFindInFiles::OpenInFindWindow(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// "in the solution", "in BaseLib" or "in <directory>".
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDEFindInFiles::AppendScopeName(CChars* pszDest)
-{
-	CVcxProject*	pcProject;
-
-	if (muiScope == IDE_FIND_IN_PROJECT)
-	{
-		pcProject = (muiProject != MAX_SIZE) ? mpcContent->GetWorkspace()->GetSolutionProject(muiProject)->GetProject() : NULL;
-		pszDest->Append("in ");
-		pszDest->Append(pcProject ? pcProject->GetName() : "no project");
-	}
-	else if (muiScope == IDE_FIND_IN_DIRECTORY)
-	{
-		pszDest->Append("in ");
-		pszDest->Append(mszDirectory);
-	}
-	else
-	{
-		pszDest->Append("in the solution");
-	}
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// The results pane's Rerun: what was last looked for is found again.
+// The results pane's Rerun: what was last looked for is found again, in
+// the scope as it was then.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEFindInFiles::CanRerunResults(CIDEResultsPane* pcPane)
@@ -535,7 +511,7 @@ void CIDEFindInFiles::RerunResults(CIDEResultsPane* pcPane)
 {
 	if (CanRerunResults(pcPane))
 	{
-		OpenInFindWindow();
+		OpenInFindWindow(true);
 	}
 }
 
@@ -547,7 +523,8 @@ void CIDEFindInFiles::RerunResults(CIDEResultsPane* pcPane)
 //////////////////////////////////////////////////////////////////////////
 void CIDEFindInFiles::FindStart(SFindInFilesQuery* psQuery)
 {
-	StartSearch(psQuery->uiScope, psQuery->szText, psQuery->szDirectory, psQuery->bMatchCase, psQuery->bWholeWords);
+	mcScope.Capture(mpcContent, (psQuery->uiScope < muiDialogScopes) ? maeDialogScopes[psQuery->uiScope] : IS_Solution, psQuery->szDirectory);
+	StartSearch(psQuery->szText, psQuery->bMatchCase, psQuery->bWholeWords);
 }
 
 
@@ -574,17 +551,12 @@ bool CIDEFindInFiles::FindStep(CFindInFilesItems* pcDest)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The scope's files, or for a directory the directory to list, and
-// nothing found yet.
+// The scope's files (mcScope's), or for a directory the directory to
+// list, and nothing found yet.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEFindInFiles::StartSearch(size uiScope, const char* szText, const char* szDirectory, bool bMatchCase, bool bWholeWords)
+void CIDEFindInFiles::StartSearch(const char* szText, bool bMatchCase, bool bWholeWords)
 {
-	CIDECodeModel*	pcCodeModel;
-	CFileUtil		cFileUtil;
-	CChars			szPath;
-	size			i;
-
 	if (mbSearch)
 	{
 		mcSearch.Kill();
@@ -595,32 +567,30 @@ void CIDEFindInFiles::StartSearch(size uiScope, const char* szText, const char* 
 	maszDirectories.ReInit();
 	masPlaces.ReInit();
 	muiNextFile = 0;
-	if (mcSearch.IsEmpty())
+	if (!mcSearch.IsEmpty())
 	{
-		return;
+		mcScope.ListFiles(mpcContent, &maszFiles, &maszDirectories);
 	}
+}
 
-	pcCodeModel = mpcContent->GetCodeModel();
-	if (uiScope == IDE_FIND_IN_DIRECTORY)
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The dialog's tab for a scope, its first if it has none for it.
+//
+//////////////////////////////////////////////////////////////////////////
+size CIDEFindInFiles::FindDialogScope(EIDEScope eScope)
+{
+	size	i;
+
+	for (i = 0; i < muiDialogScopes; i++)
 	{
-		szPath.Init(szDirectory);
-		szPath.StripWhitespace();
-		if (!szPath.Empty() && cFileUtil.IsDirectory(szPath.Text()))
+		if (maeDialogScopes[i] == eScope)
 		{
-			maszDirectories.Add(szPath.Text());
-		}
-		szPath.Kill();
-	}
-	else
-	{
-		for (i = 0; i < pcCodeModel->NumProjectFiles(); i++)
-		{
-			if ((uiScope == IDE_FIND_IN_SOLUTION) || ((muiProject != MAX_SIZE) && (pcCodeModel->FindProjectOfFile(pcCodeModel->GetProjectFile(i)) == muiProject)))
-			{
-				maszFiles.Add(pcCodeModel->GetProjectFile(i));
-			}
+			return i;
 		}
 	}
+	return 0;
 }
 
 
@@ -1141,16 +1111,32 @@ void CIDEFindInFiles::Clear(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// What is kept of Find in Files in the IDE's settings: the Find tool
+// What is kept of Find in Files in the IDE's settings: the scope and
+// directory it last looked in and how it had to match, and the Find tool
 // window's preview and its share (the results pane's).
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEFindInFiles::ReadSettings(CMarkupTag* pcSettings)
 {
 	CMarkupTag*	pcTag;
+	char*		szValue;
 
 	pcTag = pcSettings->GetTag(IDE_FIND_SETTINGS_TAG);
-	if (pcTag && mpPane.IsNotNull())
+	if (pcTag == NULL)
+	{
+		return;
+	}
+	CIDEScope::FindScope(pcTag->GetStringAttribute(IDE_FIND_SCOPE_ATTRIBUTE), &meScope);
+	szValue = pcTag->GetStringAttribute(IDE_FIND_DIRECTORY_ATTRIBUTE);
+	if (szValue)
+	{
+		mszDirectory.Set(szValue);
+	}
+	szValue = pcTag->GetStringAttribute(IDE_FIND_MATCH_CASE_ATTRIBUTE);
+	mbMatchCase = szValue && (StringCompare(szValue, "true") == 0);
+	szValue = pcTag->GetStringAttribute(IDE_FIND_WORDS_ATTRIBUTE);
+	mbWholeWords = szValue && (StringCompare(szValue, "true") == 0);
+	if (mpPane.IsNotNull())
 	{
 		mpPane->ReadSettings(pcTag);
 	}
@@ -1160,6 +1146,10 @@ void CIDEFindInFiles::ReadSettings(CMarkupTag* pcSettings)
 void CIDEFindInFiles::WriteSettings(CXMLWriter* pcWriter)
 {
 	pcWriter->Begin(IDE_FIND_SETTINGS_TAG);
+	pcWriter->Attribute(IDE_FIND_SCOPE_ATTRIBUTE, CIDEScope::GetScopeName(meScope));
+	pcWriter->Attribute(IDE_FIND_DIRECTORY_ATTRIBUTE, mszDirectory.Text());
+	pcWriter->Attribute(IDE_FIND_MATCH_CASE_ATTRIBUTE, mbMatchCase);
+	pcWriter->Attribute(IDE_FIND_WORDS_ATTRIBUTE, mbWholeWords);
 	if (mpPane.IsNotNull())
 	{
 		mpPane->WriteSettings(pcWriter);
