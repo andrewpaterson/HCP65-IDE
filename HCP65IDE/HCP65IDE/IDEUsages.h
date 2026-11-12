@@ -23,6 +23,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "StandardLib/Object.h"
 #include "StandardLib/Pointer.h"
 #include "WindowLib/TreeContainer.h"
+#include "IDEResultsPane.h"
 #include "WindowLib/DockManager.h"
 #include "WindowLib/CommandSet.h"
 #include "WindowLib/CheckBox.h"
@@ -83,15 +84,15 @@ struct SIDEUsageRow;
 //project, the file, the class in it, and each line, in the order it is in its file, which opens the place.  Check boxes
 //above it turn the usage type, project and class groups on and off; with them off it is files and their lines.  Find
 //All References (Shift+F12) shows its declarations and definition there too.  Control+B on a declaration shows the
-//usages in a popup under the caret.
-class CIDEUsages : public CObject, public CIDESteppable
+//usages in a popup under the caret.  The tree is a results pane's (CIDEResultsPane), which opens and steps through
+//the usages: a line's node's data is its usage's index in what was found, and one.
+class CIDEUsages : public CObject, public CIDESteppable, public CIDEResultsSource
 {
 CONSTRUCTABLE(CIDEUsages);
 DESTRUCTABLE(CIDEUsages);
 protected:
 	CIDEContent*		mpcContent;  //Not held: the content holds it.
-	Ptr<CTreeContainer>	mpUsages;  //What Find Usages found: usage types, projects, files, classes, lines.
-	Ptr<CInputAction>	mpEscapeAction;  //Escape in the tree goes back to the editor.
+	Ptr<CIDEResultsPane>	mpPane;  //What Find Usages found, a tree: usage types, projects, files, classes, lines.
 	Ptr<CDockPane>		mpUsagesTool;
 	Ptr<CCheckBox>		mpByType;
 	Ptr<CCheckBox>		mpByProject;
@@ -133,6 +134,7 @@ public:
 	const char*			GetSteppableName(void) override;
 	bool				HasSteps(void) override;
 	bool				Step(bool bNext, bool bKeepKeys) override;
+	bool				GetResultLocation(CIDEResultsPane* pcPane, int64 iData, SIDELocation* psDest) override;
 
 protected:
 	bool				Find(bool bDeclarations, SIDEFoundUsages* psDest);
@@ -141,11 +143,7 @@ protected:
 	int32				AddFileNode(int32 iParent, SIDEUsageRow* pasRows, size uiRows, size uiFirst, size uiCount);
 	void				AddFileUsages(int32 iFile, SIDEUsageRow* pasRows, size uiCount, CIDEFileLines* pcLines);
 	void				AddUsageLine(int32 iParent, SIDEUsageRow* psRow, CIDEFileLines* pcLines);
-	int32				FindUsageNode(int64 iData);
-	SIDEUsage*			GetNodeUsage(int32 iNode);
 	void				OpenPopup(void);
-	void				UsageActivated(void);
-	void				ReturnToEditor(void);
 	void				PopupUsageClicked(CMenuItem* pcItem);
 	void				GroupingChanged(void);
 	void				ShowGrouping(uint8 uiGrouping);

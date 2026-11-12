@@ -371,8 +371,7 @@ void CIDEUsages::Init(CIDEContent* pcContent)
 void CIDEUsages::Class(void)
 {
 	U_Pointer(mpcContent);
-	M_Pointer(mpUsages);
-	M_Pointer(mpEscapeAction);
+	M_Pointer(mpPane);
 	M_Pointer(mpUsagesTool);
 	M_Pointer(mpByType);
 	M_Pointer(mpByProject);
@@ -395,15 +394,6 @@ void CIDEUsages::Class(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDEUsages::Free(void)
 {
-	if (mpUsages.IsNotNull())
-	{
-		mpUsages->GetActivationEvent()->Remove(this);
-		if (mpEscapeAction.IsNotNull())
-		{
-			mpUsages->RemoveInputAction(mpEscapeAction);
-			mpEscapeAction = NULL;
-		}
-	}
 	if (mpByType.IsNotNull())
 	{
 		mpByType->GetChangeEvent()->Remove(this);
@@ -435,22 +425,10 @@ bool CIDEUsages::Load(CObjectReader* pcFile) { return false; }
 //////////////////////////////////////////////////////////////////////////
 void CIDEUsages::CreatePane(SDockPlace* psPlace)
 {
-	Ptr<CScrollPane>	pPane;
 	Ptr<CGridContainer>	pOptions;
 	Ptr<CGridContainer>	pPanel;
 
-	mpUsages = OMalloc<CTreeContainer>(mpcContent->GetWindow(), mpcContent->GetTheme());
-	mpUsages->SetAlignment(CSH_Stretch, CSV_Top);
-	mpUsages->GetActivationEvent()->Add(this, &CIDEUsages::UsageActivated);
-
-	//As IntelliJ's: only Jump to Source (F4) and double clicking go to a usage, not space or enter, and escape goes back
-	//to the editor.
-	mpUsages->SetInputActionsEnabled(CIC_Space, false);
-	mpUsages->SetInputActionsEnabled(CIC_Enter, false);
-	mpEscapeAction = mpUsages->AddInputAction(CIC_ClearSelection, this, &CIDEUsages::ReturnToEditor);
-	pPane = OMalloc<CScrollPane>(mpcContent->GetWindow(), mpcContent->GetTheme());
-	pPane->SetContent(mpUsages);
-	pPane->SetAlignment(CSH_Stretch, CSV_Stretch);
+	mpPane = OMalloc<CIDEResultsPane>(mpcContent, this, "usages", false);
 
 	mpByType = OMalloc<CCheckBox>(mpcContent->GetWindow(), mpcContent->GetTheme(), "Group by usage type", (muiGrouping & IDE_USAGES_BY_TYPE) != 0);
 	mpByProject = OMalloc<CCheckBox>(mpcContent->GetWindow(), mpcContent->GetTheme(), "Group by project", (muiGrouping & IDE_USAGES_BY_PROJECT) != 0);
@@ -473,7 +451,7 @@ void CIDEUsages::CreatePane(SDockPlace* psPlace)
 	pPanel = OMalloc<CGridContainer>(mpcContent->GetWindow());
 	pPanel->SetAlignment(CSH_Stretch, CSV_Stretch);
 	pPanel->AddComponent(pOptions, 0, 0, 1, 1, 1, 0);
-	pPanel->AddComponent(pPane, 0, 1, 1, 1, 1, 1);
+	pPanel->AddComponent(mpPane->GetComponent(), 0, 1, 1, 1, 1, 1);
 	mpUsagesTool = mpcContent->GetDock()->AddPane(IDE_USAGES_ID, "Find Usages", NULL, pPanel, DPK_Tool, psPlace);
 }
 
@@ -550,7 +528,7 @@ bool CIDEUsages::FindUsages(bool bDeclarations)
 
 	ShowUsages(false);
 	mpcContent->GetDock()->Show(mpUsagesTool);
-	mpcContent->GetWindow()->GetFocus()->SetFocus(mpUsages);
+	mpPane->Focus();
 	return true;
 }
 
@@ -756,21 +734,15 @@ void CIDEUsages::ShowUsages(bool bKeepSelected)
 	int32				iType;
 	int32				iProject;
 	int32				iFile;
-	int32				iNode;
 	bool				bByType;
 	bool				bByProject;
 	bool				bOpenFiles;
 
-	if (mpUsages.IsNull())
+	if (mpPane.IsNull())
 	{
 		return;
 	}
-	iSelectedData = 0;
-	if (bKeepSelected && (mpUsages->GetSelectedNode() != TREE_NO_NODE))
-	{
-		iSelectedData = mpUsages->GetNodeData(mpUsages->GetSelectedNode());
-	}
-	mpUsages->RemoveAllNodes();
+	iSelectedData = mpPane->BeginShow(bKeepSelected);
 	if (!mbFound)
 	{
 		return;
@@ -803,8 +775,8 @@ void CIDEUsages::ShowUsages(bool bKeepSelected)
 		szText.Append((uint32)uiToIndex);
 		szText.Append(" files)");
 	}
-	iRoot = mpUsages->AddNode(TREE_NO_NODE, szText.Text(), NULL, 0);
-	mpUsages->SetExpanded(iRoot, true);
+	iRoot = mpPane->GetTree()->AddNode(TREE_NO_NODE, szText.Text(), NULL, 0);
+	mpPane->GetTree()->SetExpanded(iRoot, true);
 	szText.Kill();
 
 	//The tree has a row for each line that can be seen, which thousands of make it slow: past
@@ -828,14 +800,13 @@ void CIDEUsages::ShowUsages(bool bKeepSelected)
 		}
 		uiFile = CountIDEUsageGroup(psRow, uiRows - i, IUL_File);
 		iFile = AddFileNode(iProject, asRows.GetData(), uiRows, i, uiFile);
-		mpUsages->SetExpanded(iFile, bOpenFiles);
+		mpPane->GetTree()->SetExpanded(iFile, bOpenFiles);
 		AddFileUsages(iFile, psRow, uiFile, &cLines);
 	}
 	cLines.Kill();
 	asRows.Kill();
 
-	iNode = (iSelectedData > 0) ? FindUsageNode(iSelectedData) : TREE_NO_NODE;
-	mpUsages->SelectNode((iNode != TREE_NO_NODE) ? iNode : FindUsageNode(0));
+	mpPane->EndShow(iSelectedData);
 }
 
 
@@ -852,8 +823,8 @@ int32 CIDEUsages::AddGroupNode(int32 iParent, const char* szName, size uiCount, 
 
 	szText.Init(szName);
 	AppendIDEUsageCount(&szText, uiCount, szWhat);
-	iNode = mpUsages->AddNode(iParent, szText.Text(), NULL, 0);
-	mpUsages->SetExpanded(iNode, true);
+	iNode = mpPane->GetTree()->AddNode(iParent, szText.Text(), NULL, 0);
+	mpPane->GetTree()->SetExpanded(iNode, true);
 	szText.Kill();
 	return iNode;
 }
@@ -885,7 +856,7 @@ int32 CIDEUsages::AddFileNode(int32 iParent, SIDEUsageRow* pasRows, size uiRows,
 		szText.Append("  ");
 		szText.AppendSubString(szFile, szName - 1);
 	}
-	iNode = mpUsages->AddNode(iParent, szText.Text(), NULL, 0);
+	iNode = mpPane->GetTree()->AddNode(iParent, szText.Text(), NULL, 0);
 	szText.Kill();
 	return iNode;
 }
@@ -970,7 +941,7 @@ void CIDEUsages::AddUsageLine(int32 iParent, SIDEUsageRow* psRow, CIDEFileLines*
 	{
 		szText.Append("  [one of the overloads]");
 	}
-	mpUsages->AddNode(iParent, szText.Text(), NULL, (int64)psRow->uiIndex + 1);
+	mpPane->GetTree()->AddNode(iParent, szText.Text(), NULL, (int64)psRow->uiIndex + 1);
 	szText.Kill();
 	psRow->bShown = true;
 }
@@ -978,103 +949,34 @@ void CIDEUsages::AddUsageLine(int32 iParent, SIDEUsageRow* psRow, CIDEFileLines*
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The node of the line whose data is iData, or with 0 the first line's.
-// TREE_NO_NODE if there is none.
-//
-//////////////////////////////////////////////////////////////////////////
-int32 CIDEUsages::FindUsageNode(int64 iData)
-{
-	int32	iNode;
-	int64	iNodeData;
-
-	for (iNode = 0; iNode < mpUsages->NumNodes(); iNode++)
-	{
-		iNodeData = mpUsages->GetNodeData(iNode);
-		if ((iNodeData > 0) && ((iData == 0) || (iNodeData == iData)))
-		{
-			return iNode;
-		}
-	}
-	return TREE_NO_NODE;
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// The usage a node is the line of, NULL if it is a group's node or none.
-//
-//////////////////////////////////////////////////////////////////////////
-SIDEUsage* CIDEUsages::GetNodeUsage(int32 iNode)
-{
-	int64	iData;
-
-	if ((iNode < 0) || (iNode >= mpUsages->NumNodes()))
-	{
-		return NULL;
-	}
-	iData = mpUsages->GetNodeData(iNode);
-	if ((iData <= 0) || ((size)iData > msFound.asUsages.NumElements()))
-	{
-		return NULL;
-	}
-	return msFound.asUsages.Get((size)iData - 1);
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// A line's node, double clicked or jumped to (F4), opens its place.
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDEUsages::UsageActivated(void)
-{
-	SIDEUsage*	psUsage;
-
-	psUsage = GetNodeUsage(mpUsages->GetSelectedNode());
-	if (psUsage)
-	{
-		mpcContent->GetDocuments()->OpenLocation(&psUsage->sLocation);
-	}
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// Next or Previous Occurrence (CIDEOccurrences): the usage line below (or
-// above) the selected one in the tree is selected and its place opened in
-// its editor, which has the keys unless bKeepKeys (the tree was stepped
-// in).  Past the last (or first) nothing moves.
+// Next or Previous Occurrence (CIDEOccurrences) steps through the tree's
+// usages (CIDEResultsPane::Step).
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEUsages::Step(bool bNext, bool bKeepKeys)
 {
-	SIDEUsage*	psUsage;
-	int32		iNode;
-	int32		iStep;
+	return mpPane->Step(bNext, bKeepKeys);
+}
 
-	iStep = bNext ? 1 : -1;
-	iNode = mpUsages->GetSelectedNode();
-	if (iNode == TREE_NO_NODE)
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The results pane's source: the place of the usage a line's node is of
+// (its index in what was found, and one).
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEUsages::GetResultLocation(CIDEResultsPane* pcPane, int64 iData, SIDELocation* psDest)
+{
+	SIDELocation*	psLocation;
+
+	if ((iData <= 0) || ((size)iData > msFound.asUsages.NumElements()))
 	{
-		iNode = bNext ? -1 : mpUsages->NumNodes();
+		return false;
 	}
-	for (iNode += iStep; (iNode >= 0) && (iNode < mpUsages->NumNodes()); iNode += iStep)
-	{
-		psUsage = GetNodeUsage(iNode);
-		if (psUsage)
-		{
-			mpUsages->SelectNode(iNode);
-			mpUsages->ShowRow(mpUsages->FindNodeRow(iNode));
-			mpcContent->GetDocuments()->OpenLocation(&psUsage->sLocation, true);
-			if (bKeepKeys)
-			{
-				mpcContent->GetWindow()->GetFocus()->SetFocus(mpUsages);
-			}
-			return true;
-		}
-	}
-	mpcContent->ShowStatus(bNext ? "No usages after this one." : "No usages before this one.");
-	return false;
+	psLocation = &msFound.asUsages.Get((size)iData - 1)->sLocation;
+	memcpy(psDest, psLocation, sizeof(SIDELocation));
+	psDest->szFileName.Init(psLocation->szFileName);
+	return true;
 }
 
 
@@ -1086,19 +988,7 @@ bool CIDEUsages::Step(bool bNext, bool bKeepKeys)
 //////////////////////////////////////////////////////////////////////////
 Ptr<CDockPane> CIDEUsages::GetSteppablePane(void) { return mpUsagesTool; }
 const char* CIDEUsages::GetSteppableName(void) { return "Find Usages"; }
-bool CIDEUsages::HasSteps(void) { return mbFound && (msFound.asUsages.NumElements() > 0) && mpUsages.IsNotNull(); }
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// Escape in the tree: the keys go back to the active editor, as
-// IntelliJ's tool windows give them back.
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDEUsages::ReturnToEditor(void)
-{
-	mpcContent->GetDocuments()->FocusActiveEditor();
-}
+bool CIDEUsages::HasSteps(void) { return mbFound && (msFound.asUsages.NumElements() > 0) && mpPane.IsNotNull(); }
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -1205,7 +1095,7 @@ void CIDEUsages::WriteSettings(CXMLWriter* pcWriter)
 //
 //////////////////////////////////////////////////////////////////////////
 uint8 CIDEUsages::GetGrouping(void) { return muiGrouping; }
-Ptr<CTreeContainer> CIDEUsages::GetUsagesTree(void) { return mpUsages; }
+Ptr<CTreeContainer> CIDEUsages::GetUsagesTree(void) { return mpPane.IsNotNull() ? mpPane->GetTree() : Ptr<CTreeContainer>(); }
 Ptr<CDockPane> CIDEUsages::GetTool(void) { return mpUsagesTool; }
 
 
@@ -1249,9 +1139,9 @@ int64 CIDEUsages::Poll(int64 iNow)
 	}
 	mbMoved = false;
 	ShowUsages(true);
-	if (mpUsages.IsNotNull() && (mpUsages->GetSelected() >= 0))
+	if (mpPane.IsNotNull())
 	{
-		mpUsages->ShowRow(mpUsages->GetSelected());
+		mpPane->ShowSelected();
 	}
 	return -1;
 }
@@ -1273,9 +1163,9 @@ void CIDEUsages::Clear(void)
 	{
 		mpPopup->Close();
 	}
-	if (mpUsages.IsNotNull())
+	if (mpPane.IsNotNull())
 	{
-		mpUsages->RemoveAllNodes();
+		mpPane->Clear();
 	}
 }
 

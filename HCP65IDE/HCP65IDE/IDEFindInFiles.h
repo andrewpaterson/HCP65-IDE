@@ -27,6 +27,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/TextFile.h"
 #include "WindowLib/FindInFilesDialog.h"
 #include "WindowLib/TreeContainer.h"
+#include "IDEResultsPane.h"
 #include "WindowLib/DockManager.h"
 #include "WindowLib/MenuContainer.h"
 #include "WindowLib/CommandSet.h"
@@ -69,15 +70,16 @@ typedef CArrayTemplate<SIDEFindPlace>	CArrayIDEFindPlaces;
 //looked for instead.
 //
 //Open in Find Window lists every result (up to IDE_FIND_RESULTS_MAXIMUM) in the Find tool window beside Find Usages: a
-//tree of the files and under each its lines, which opens the place.  Their places follow their files' edits, and Next
-//and Previous Occurrence step through them.
+//tree of the files and under each its lines, which opens the place (a results pane, CIDEResultsPane: a line's node's
+//data is its result's index, and one).  Their places follow their files' edits, and Next and Previous Occurrence step
+//through them.
 //
 //The preview is coloured as an editor is, by the edits thread (CIDEDocuments::HighlightPreview), a moment after it is
 //shown: the dialog's ticks ask for what it made.
 //
 //The search is a little at a time (SearchSome): a directory's files are listed, or a file is searched, until the time
 //is up, so the dialog is never kept from the keys.
-class CIDEFindInFiles : public CObject, public CFindInFilesSearcher, public CIDESteppable
+class CIDEFindInFiles : public CObject, public CFindInFilesSearcher, public CIDESteppable, public CIDEResultsSource
 {
 friend class CIDEScript;
 CONSTRUCTABLE(CIDEFindInFiles);
@@ -103,8 +105,7 @@ protected:
 	CArrayIDEFindPlaces		masPlaces;  //What was found, a dialog's item's by its data.
 
 	//The Find tool window.
-	Ptr<CTreeContainer>		mpTree;
-	Ptr<CInputAction>		mpEscapeAction;  //Escape in the tree goes back to the editor.
+	Ptr<CIDEResultsPane>	mpPane;  //The tree of what was found.
 	Ptr<CDockPane>			mpTool;
 	CArrayChars				maszFoundFiles;  //The files the tree's results are in.
 	CArrayIDEFindPlaces		masFound;  //The tree's results, each line's by its node's data less one.
@@ -150,6 +151,7 @@ public:
 	const char*				GetSteppableName(void) override;
 	bool					HasSteps(void) override;
 	bool					Step(bool bNext, bool bKeepKeys) override;
+	bool					GetResultLocation(CIDEResultsPane* pcPane, int64 iData, SIDELocation* psDest) override;
 
 protected:
 	void				ShowQueuedFind(void);
@@ -165,11 +167,7 @@ protected:
 	void				AppendScopeName(CChars* pszDest);
 	void				ShowResults(bool bKeepSelected);
 	size				GetCommonDirectoryLength(void);
-	int32				FindResultNode(int64 iData);
-	SIDEFindPlace*		GetNodePlace(int32 iNode);
-	bool				OpenPlace(CArrayChars* paszFiles, SIDEFindPlace* psPlace);
-	void				ResultActivated(void);
-	void				ReturnToEditor(void);
+	bool				GetPlaceLocation(CArrayChars* paszFiles, SIDEFindPlace* psPlace, SIDELocation* psDest);
 };
 
 

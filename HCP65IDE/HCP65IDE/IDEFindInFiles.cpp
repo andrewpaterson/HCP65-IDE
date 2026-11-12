@@ -57,8 +57,7 @@ void CIDEFindInFiles::Init(CIDEContent* pcContent)
 	maszDirectories.Init();
 	muiNextFile = 0;
 	masPlaces.Init();
-	mpTree = NULL;
-	mpEscapeAction = NULL;
+	mpPane = NULL;
 	mpTool = NULL;
 	maszFoundFiles.Init();
 	masFound.Init();
@@ -91,8 +90,7 @@ void CIDEFindInFiles::Class(void)
 	U_Unknown(CArrayChars, maszDirectories);
 	U_Size(muiNextFile);
 	U_Unknown(CArrayIDEFindPlaces, masPlaces);
-	M_Pointer(mpTree);
-	M_Pointer(mpEscapeAction);
+	M_Pointer(mpPane);
 	M_Pointer(mpTool);
 	U_Unknown(CArrayChars, maszFoundFiles);
 	U_Unknown(CArrayIDEFindPlaces, masFound);
@@ -111,14 +109,6 @@ void CIDEFindInFiles::Class(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDEFindInFiles::Free(void)
 {
-	if (mpTree.IsNotNull())
-	{
-		mpTree->GetActivationEvent()->Remove(this);
-		if (mpEscapeAction.IsNotNull())
-		{
-			mpTree->RemoveInputAction(mpEscapeAction);
-		}
-	}
 	if (mbSearch)
 	{
 		mcSearch.Kill();
@@ -173,21 +163,8 @@ void CIDEFindInFiles::AddEditItems(Ptr<CMenuContainer> pMenu)
 //////////////////////////////////////////////////////////////////////////
 void CIDEFindInFiles::CreatePane(SDockPlace* psPlace)
 {
-	Ptr<CScrollPane>	pPane;
-
-	mpTree = OMalloc<CTreeContainer>(mpcContent->GetWindow(), mpcContent->GetTheme());
-	mpTree->SetAlignment(CSH_Stretch, CSV_Top);
-	mpTree->GetActivationEvent()->Add(this, &CIDEFindInFiles::ResultActivated);
-
-	//As Find Usages': only Jump to Source (F4) and double clicking go to a result, not space or enter, and escape goes
-	//back to the editor.
-	mpTree->SetInputActionsEnabled(CIC_Space, false);
-	mpTree->SetInputActionsEnabled(CIC_Enter, false);
-	mpEscapeAction = mpTree->AddInputAction(CIC_ClearSelection, this, &CIDEFindInFiles::ReturnToEditor);
-	pPane = OMalloc<CScrollPane>(mpcContent->GetWindow(), mpcContent->GetTheme());
-	pPane->SetContent(mpTree);
-	pPane->SetAlignment(CSH_Stretch, CSV_Stretch);
-	mpTool = mpcContent->GetDock()->AddPane(IDE_FIND_ID, "Find", NULL, pPane, DPK_Tool, psPlace);
+	mpPane = OMalloc<CIDEResultsPane>(mpcContent, this, "matches", true);
+	mpTool = mpcContent->GetDock()->AddPane(IDE_FIND_ID, "Find", NULL, mpPane->GetComponent(), DPK_Tool, psPlace);
 }
 
 
@@ -379,27 +356,39 @@ void CIDEFindInFiles::GetProjectDescription(CChars* pszDest)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The place of a result.
+// The place of a result, as a location to open: its file name is made,
+// for the caller to kill, if it answers true.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEFindInFiles::OpenPlace(CArrayChars* paszFiles, SIDEFindPlace* psPlace)
+bool CIDEFindInFiles::GetPlaceLocation(CArrayChars* paszFiles, SIDEFindPlace* psPlace, SIDELocation* psDest)
 {
-	SIDELocation	sLocation;
-	bool			bResult;
-
 	if (psPlace->uiFile >= paszFiles->NumElements())
 	{
 		return false;
 	}
-	memset(&sLocation, 0, sizeof(SIDELocation));
-	sLocation.szFileName.Init(paszFiles->GetText(psPlace->uiFile));
-	sLocation.iLine = psPlace->iLine;
-	sLocation.iColumn = psPlace->iColumn;
-	sLocation.iLength = psPlace->iLength;
-	sLocation.iContainer = -1;
-	bResult = mpcContent->GetDocuments()->OpenLocation(&sLocation, true);
-	sLocation.szFileName.Kill();
-	return bResult;
+	memset(psDest, 0, sizeof(SIDELocation));
+	psDest->szFileName.Init(paszFiles->GetText(psPlace->uiFile));
+	psDest->iLine = psPlace->iLine;
+	psDest->iColumn = psPlace->iColumn;
+	psDest->iLength = psPlace->iLength;
+	psDest->iContainer = -1;
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The results pane's source: the place of the result a line's node is of
+// (its index in what was found, and one).
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEFindInFiles::GetResultLocation(CIDEResultsPane* pcPane, int64 iData, SIDELocation* psDest)
+{
+	if ((iData <= 0) || ((size)iData > masFound.NumElements()))
+	{
+		return false;
+	}
+	return GetPlaceLocation(&maszFoundFiles, masFound.Get((size)iData - 1), psDest);
 }
 
 
@@ -411,13 +400,21 @@ bool CIDEFindInFiles::OpenPlace(CArrayChars* paszFiles, SIDEFindPlace* psPlace)
 bool CIDEFindInFiles::OpenFindChoice(void)
 {
 	SFindInFilesItem*	psItem;
+	SIDELocation		sLocation;
+	bool				bResult;
 
 	psItem = mpDialog->GetChosen();
 	if ((psItem == NULL) || (psItem->uiData >= masPlaces.NumElements()))
 	{
 		return false;
 	}
-	return OpenPlace(&maszFiles, masPlaces.Get(psItem->uiData));
+	if (!GetPlaceLocation(&maszFiles, masPlaces.Get(psItem->uiData), &sLocation))
+	{
+		return false;
+	}
+	bResult = mpcContent->GetDocuments()->OpenLocation(&sLocation, true);
+	sLocation.szFileName.Kill();
+	return bResult;
 }
 
 
@@ -487,7 +484,7 @@ size CIDEFindInFiles::OpenInFindWindow(void)
 	if (mpTool.IsNotNull())
 	{
 		mpcContent->GetDock()->Show(mpTool);
-		mpcContent->GetWindow()->GetFocus()->SetFocus(mpTree);
+		mpPane->Focus();
 	}
 	return masFound.NumElements();
 }
@@ -949,38 +946,34 @@ size CIDEFindInFiles::GetCommonDirectoryLength(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDEFindInFiles::ShowResults(bool bKeepSelected)
 {
-	CIDEFileLines	cLines;
-	SIDEFindPlace*	psPlace;
-	CChars			szText;
-	const char*		szFile;
-	const char*		szName;
-	size			uiCommon;
-	size			uiCount;
-	size			i;
-	size			j;
-	int64			iSelectedData;
-	int32			iRoot;
-	int32			iFile;
-	int32			iNode;
-	bool			bOpenFiles;
+	Ptr<CTreeContainer>	pTree;
+	CIDEFileLines		cLines;
+	SIDEFindPlace*		psPlace;
+	CChars				szText;
+	const char*			szFile;
+	const char*			szName;
+	size				uiCommon;
+	size				uiCount;
+	size				i;
+	size				j;
+	int64				iSelectedData;
+	int32				iRoot;
+	int32				iFile;
+	bool				bOpenFiles;
 
-	if (mpTree.IsNull())
+	if (mpPane.IsNull())
 	{
 		return;
 	}
-	iSelectedData = 0;
-	if (bKeepSelected && (mpTree->GetSelectedNode() != TREE_NO_NODE))
-	{
-		iSelectedData = mpTree->GetNodeData(mpTree->GetSelectedNode());
-	}
-	mpTree->RemoveAllNodes();
+	pTree = mpPane->GetTree();
+	iSelectedData = mpPane->BeginShow(bKeepSelected);
 	if (!mbFound)
 	{
 		return;
 	}
 
-	iRoot = mpTree->AddNode(TREE_NO_NODE, mszFoundTitle.Text(), NULL, 0);
-	mpTree->SetExpanded(iRoot, true);
+	iRoot = pTree->AddNode(TREE_NO_NODE, mszFoundTitle.Text(), NULL, 0);
+	pTree->SetExpanded(iRoot, true);
 
 	//The tree has a row for each line that can be seen, which thousands of make it slow: past
 	//IDE_FIND_OPEN_FILES_MAXIMUM results the files start closed.
@@ -1004,8 +997,8 @@ void CIDEFindInFiles::ShowResults(bool bKeepSelected)
 			szText.Append("  ");
 			szText.AppendSubString(&szFile[uiCommon], szName - 1);
 		}
-		iFile = mpTree->AddNode(iRoot, szText.Text(), NULL, 0);
-		mpTree->SetExpanded(iFile, bOpenFiles);
+		iFile = pTree->AddNode(iRoot, szText.Text(), NULL, 0);
+		pTree->SetExpanded(iFile, bOpenFiles);
 		szText.Kill();
 
 		for (j = i; j < i + uiCount; j++)
@@ -1015,133 +1008,31 @@ void CIDEFindInFiles::ShowResults(bool bKeepSelected)
 			szText.Append(psPlace->iLine + 1);
 			szText.Append(": ");
 			cLines.AppendLine(szFile, psPlace->iLine, &szText);
-			mpTree->AddNode(iFile, szText.Text(), NULL, (int64)j + 1);
+			pTree->AddNode(iFile, szText.Text(), NULL, (int64)j + 1);
 			szText.Kill();
 		}
 	}
 	cLines.Kill();
 
-	iNode = (iSelectedData > 0) ? FindResultNode(iSelectedData) : TREE_NO_NODE;
-	mpTree->SelectNode((iNode != TREE_NO_NODE) ? iNode : FindResultNode(0));
+	mpPane->EndShow(iSelectedData);
 }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The tree's node for a result (its data), or with 0 its first result's:
-// TREE_NO_NODE if there is none.
-//
-//////////////////////////////////////////////////////////////////////////
-int32 CIDEFindInFiles::FindResultNode(int64 iData)
-{
-	int32	iNode;
-	int64	iNodeData;
-
-	for (iNode = 0; iNode < mpTree->NumNodes(); iNode++)
-	{
-		iNodeData = mpTree->GetNodeData(iNode);
-		if ((iNodeData > 0) && ((iData == 0) || (iNodeData == iData)))
-		{
-			return iNode;
-		}
-	}
-	return TREE_NO_NODE;
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// The result a node is the line of, NULL if it is a file's node or none.
-//
-//////////////////////////////////////////////////////////////////////////
-SIDEFindPlace* CIDEFindInFiles::GetNodePlace(int32 iNode)
-{
-	int64	iData;
-
-	if ((iNode < 0) || (iNode >= mpTree->NumNodes()))
-	{
-		return NULL;
-	}
-	iData = mpTree->GetNodeData(iNode);
-	if ((iData <= 0) || ((size)iData > masFound.NumElements()))
-	{
-		return NULL;
-	}
-	return masFound.Get((size)iData - 1);
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// A line's node, double clicked or jumped to (F4), opens its place.
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDEFindInFiles::ResultActivated(void)
-{
-	SIDEFindPlace*	psPlace;
-
-	psPlace = GetNodePlace(mpTree->GetSelectedNode());
-	if (psPlace)
-	{
-		OpenPlace(&maszFoundFiles, psPlace);
-	}
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// Next or Previous Occurrence (CIDEOccurrences): the result below (or
-// above) the selected one in the tree is selected and its place opened in
-// its editor, which has the keys unless bKeepKeys (the tree was stepped
-// in).  Past the last (or first) nothing moves.
+// Next or Previous Occurrence (CIDEOccurrences) steps through the tree's
+// results (CIDEResultsPane::Step).
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEFindInFiles::Step(bool bNext, bool bKeepKeys)
 {
-	SIDEFindPlace*	psPlace;
-	int32			iNode;
-	int32			iStep;
-
-	iStep = bNext ? 1 : -1;
-	iNode = mpTree->GetSelectedNode();
-	if (iNode == TREE_NO_NODE)
-	{
-		iNode = bNext ? -1 : mpTree->NumNodes();
-	}
-	for (iNode += iStep; (iNode >= 0) && (iNode < mpTree->NumNodes()); iNode += iStep)
-	{
-		psPlace = GetNodePlace(iNode);
-		if (psPlace)
-		{
-			mpTree->SelectNode(iNode);
-			mpTree->ShowRow(mpTree->FindNodeRow(iNode));
-			OpenPlace(&maszFoundFiles, psPlace);
-			if (bKeepKeys)
-			{
-				mpcContent->GetWindow()->GetFocus()->SetFocus(mpTree);
-			}
-			return true;
-		}
-	}
-	mpcContent->ShowStatus(bNext ? "No matches after this one." : "No matches before this one.");
-	return false;
+	return mpPane->Step(bNext, bKeepKeys);
 }
 
 
 Ptr<CDockPane> CIDEFindInFiles::GetSteppablePane(void) { return mpTool; }
 const char* CIDEFindInFiles::GetSteppableName(void) { return "Find"; }
-bool CIDEFindInFiles::HasSteps(void) { return mbFound && (masFound.NumElements() > 0) && mpTree.IsNotNull(); }
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// Escape in the tree: the keys go back to the active editor.
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDEFindInFiles::ReturnToEditor(void)
-{
-	mpcContent->GetDocuments()->FocusActiveEditor();
-}
+bool CIDEFindInFiles::HasSteps(void) { return mbFound && (masFound.NumElements() > 0) && mpPane.IsNotNull(); }
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -1205,9 +1096,9 @@ int64 CIDEFindInFiles::Poll(int64 iNow)
 	}
 	mbMoved = false;
 	ShowResults(true);
-	if (mpTree.IsNotNull() && (mpTree->GetSelected() >= 0))
+	if (mpPane.IsNotNull())
 	{
-		mpTree->ShowRow(mpTree->GetSelected());
+		mpPane->ShowSelected();
 	}
 	return -1;
 }
@@ -1224,15 +1115,15 @@ void CIDEFindInFiles::Clear(void)
 	masFound.ReInit();
 	mbFound = false;
 	mbMoved = false;
-	if (mpTree.IsNotNull())
+	if (mpPane.IsNotNull())
 	{
-		mpTree->RemoveAllNodes();
+		mpPane->Clear();
 	}
 }
 
 
 Ptr<CFindInFilesDialog> CIDEFindInFiles::GetFind(void) { return mpDialog; }
-Ptr<CTreeContainer> CIDEFindInFiles::GetFindTree(void) { return mpTree; }
+Ptr<CTreeContainer> CIDEFindInFiles::GetFindTree(void) { return mpPane.IsNotNull() ? mpPane->GetTree() : Ptr<CTreeContainer>(); }
 Ptr<CDockPane> CIDEFindInFiles::GetTool(void) { return mpTool; }
 size CIDEFindInFiles::NumFound(void) { return masFound.NumElements(); }
 
