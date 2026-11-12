@@ -165,6 +165,7 @@ void CIDEFindInFiles::AddEditItems(Ptr<CMenuContainer> pMenu)
 void CIDEFindInFiles::CreatePane(SDockPlace* psPlace)
 {
 	mpPane = OMalloc<CIDEResultsPane>(mpcContent, this, "matches", true);
+	mpPane->AddViewCommands();
 	mpTool = mpcContent->GetDock()->AddPane(IDE_FIND_ID, "Find", NULL, mpPane->GetComponent(), DPK_Tool, psPlace);
 }
 
@@ -515,6 +516,26 @@ void CIDEFindInFiles::AppendScopeName(CChars* pszDest)
 	else
 	{
 		pszDest->Append("in the solution");
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The results pane's Rerun: what was last looked for is found again.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEFindInFiles::CanRerunResults(CIDEResultsPane* pcPane)
+{
+	return mbFound && !mszText.Empty() && mpDialog.IsNull();
+}
+
+
+void CIDEFindInFiles::RerunResults(CIDEResultsPane* pcPane)
+{
+	if (CanRerunResults(pcPane))
+	{
+		OpenInFindWindow();
 	}
 }
 

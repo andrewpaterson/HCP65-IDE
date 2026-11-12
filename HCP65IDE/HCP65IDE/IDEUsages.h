@@ -26,7 +26,6 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDEResultsPane.h"
 #include "WindowLib/DockManager.h"
 #include "WindowLib/CommandSet.h"
-#include "WindowLib/CheckBox.h"
 #include "IDECodeModel.h"
 #include "IDESteppable.h"
 
@@ -84,8 +83,9 @@ struct SIDEFoundUsages
 struct SIDEUsageRow;
 //IntelliJ's Find Usages (Alt+F7): every use of the symbol at the caret, not its declarations, in the Find Usages tool
 //window beside Build: a tree of how each is used (a call, a value read, a type in a field's declaration...), the
-//project, the file, the class in it, and each line, in the order it is in its file, which opens the place.  Check boxes
-//above it turn the usage type, project and class groups on and off; with them off it is files and their lines.  Find
+//project, the file, the class in it, and each line, in the order it is in its file, which opens the place.  Buttons on
+//its toolbar turn the usage type, project and class groups on and off; with them off it is files and their lines.
+//Rerun finds the symbol's usages again, from where it is declared, wherever the caret is now.  Find
 //All References (Shift+F12) shows its declarations and definition there too.  Control+B on a declaration shows the
 //usages in a popup under the caret.  The tree is a results pane's (CIDEResultsPane), which opens and steps through
 //the usages: a line's node's data is its usage's index in what was found, and one.
@@ -97,9 +97,6 @@ protected:
 	CIDEContent*		mpcContent;  //Not held: the content holds it.
 	Ptr<CIDEResultsPane>	mpPane;  //What Find Usages found, a tree: usage types, projects, files, classes, lines.
 	Ptr<CDockPane>		mpUsagesTool;
-	Ptr<CCheckBox>		mpByType;
-	Ptr<CCheckBox>		mpByProject;
-	Ptr<CCheckBox>		mpByClass;
 	SIDEFoundUsages		msFound;  //What the tree shows, if mbFound: each line's usage by its node's data less one.
 	bool				mbFound;  //Something has been looked for.
 	bool				mbMoved;  //Edits have moved usages since the tree was shown, the last at miMoved.
@@ -140,6 +137,8 @@ public:
 	bool				Step(bool bNext, bool bKeepKeys) override;
 	bool				GetResultLocation(CIDEResultsPane* pcPane, int64 iData, SIDELocation* psDest) override;
 	bool				GetDeclarationLocation(CIDEResultsPane* pcPane, SIDELocation* psDest) override;
+	bool				CanRerunResults(CIDEResultsPane* pcPane) override;
+	void				RerunResults(CIDEResultsPane* pcPane) override;
 
 protected:
 	bool				Find(bool bDeclarations, SIDEFoundUsages* psDest);
@@ -150,8 +149,15 @@ protected:
 	void				AddUsageLine(int32 iParent, SIDEUsageRow* psRow, CIDEFileLines* pcLines);
 	void				OpenPopup(void);
 	void				PopupUsageClicked(CMenuItem* pcItem);
-	void				GroupingChanged(void);
 	void				ShowGrouping(uint8 uiGrouping);
+	void				AddGroupingCommand(const char* szName, const char* szCaption, EIDEToolIcon eIcon, void(CIDEUsages::*fToggle)(void), bool(CIDEUsages::*fIsOn)(void));
+	void				ToggleByType(void);
+	void				ToggleByProject(void);
+	void				ToggleByClass(void);
+	bool				IsByType(void);
+	bool				IsByProject(void);
+	bool				IsByClass(void);
+	bool				FindAt(const char* szFileName, int iLine, int iColumn, bool bDeclarations, SIDEFoundUsages* psDest);
 	void				FindUsagesOnly(void);
 };
 

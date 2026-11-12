@@ -176,6 +176,212 @@ Ptr<CImageCel> CIDEIcons::CreateFileIcon(EIDEFileType eType, Ptr<CWindowTheme> p
 }
 
 
+//The tool icons' lines, by EIDEToolIcon: each line is x1, y1, x2, y2 in the 16 x 16 icon.
+static const float64 gafRerun[] =
+{
+	11.21, 4.17, 12.53, 5.89,
+	12.53, 5.89, 13.0, 8.0,
+	13.0, 8.0, 12.53, 10.11,
+	12.53, 10.11, 11.21, 11.83,
+	11.21, 11.83, 9.29, 12.83,
+	9.29, 12.83, 7.13, 12.92,
+	7.13, 12.92, 5.13, 12.1,
+	5.13, 12.1, 3.67, 10.5,
+	3.67, 10.5, 3.02, 8.44,
+	3.02, 8.44, 3.3, 6.29,
+	3.3, 6.29, 4.46, 4.46,
+	4.46, 4.46, 6.29, 3.3,
+	11.2, 1.2, 11.2, 4.2,
+	11.2, 4.2, 8.2, 4.2,
+};
+static const float64 gafPrevious[] =
+{
+	8.0, 13.0, 8.0, 3.0,
+	4.0, 7.0, 8.0, 3.0,
+	8.0, 3.0, 12.0, 7.0,
+};
+static const float64 gafNext[] =
+{
+	8.0, 3.0, 8.0, 13.0,
+	4.0, 9.0, 8.0, 13.0,
+	8.0, 13.0, 12.0, 9.0,
+};
+static const float64 gafExpandAll[] =
+{
+	4.0, 6.0, 8.0, 2.5,
+	8.0, 2.5, 12.0, 6.0,
+	4.0, 10.0, 8.0, 13.5,
+	8.0, 13.5, 12.0, 10.0,
+};
+static const float64 gafCollapseAll[] =
+{
+	4.0, 2.5, 8.0, 6.0,
+	8.0, 6.0, 12.0, 2.5,
+	4.0, 13.5, 8.0, 10.0,
+	8.0, 10.0, 12.0, 13.5,
+};
+static const float64 gafGroupByType[] =
+{
+	4.5, 3.0, 2.5, 3.0,
+	2.5, 3.0, 2.5, 13.0,
+	2.5, 13.0, 4.5, 13.0,
+	7.0, 4.5, 13.0, 4.5,
+	10.0, 4.5, 10.0, 11.5,
+};
+static const float64 gafGroupByProject[] =
+{
+	4.5, 3.0, 2.5, 3.0,
+	2.5, 3.0, 2.5, 13.0,
+	2.5, 13.0, 4.5, 13.0,
+	7.5, 11.5, 7.5, 4.5,
+	7.5, 4.5, 11.5, 4.5,
+	11.5, 4.5, 12.5, 5.5,
+	12.5, 5.5, 12.5, 7.0,
+	12.5, 7.0, 11.5, 8.0,
+	11.5, 8.0, 7.5, 8.0,
+};
+static const float64 gafGroupByClass[] =
+{
+	4.5, 3.0, 2.5, 3.0,
+	2.5, 3.0, 2.5, 13.0,
+	2.5, 13.0, 4.5, 13.0,
+	12.5, 5.5, 11.5, 4.5,
+	11.5, 4.5, 8.5, 4.5,
+	8.5, 4.5, 7.5, 5.5,
+	7.5, 5.5, 7.5, 10.5,
+	7.5, 10.5, 8.5, 11.5,
+	8.5, 11.5, 11.5, 11.5,
+	11.5, 11.5, 12.5, 10.5,
+};
+static const float64 gafPreview[] =
+{
+	2.5, 3.5, 13.5, 3.5,
+	13.5, 3.5, 13.5, 12.5,
+	13.5, 12.5, 2.5, 12.5,
+	2.5, 12.5, 2.5, 3.5,
+	7.0, 3.5, 7.0, 12.5,
+	9.0, 6.0, 11.5, 6.0,
+	9.0, 8.0, 11.5, 8.0,
+	9.0, 10.0, 11.5, 10.0,
+};
+static const float64 gafSingleClick[] =
+{
+	4.5, 2.5, 4.5, 12.5,
+	4.5, 12.5, 7.0, 10.0,
+	7.0, 10.0, 9.0, 13.5,
+	4.5, 2.5, 11.5, 9.5,
+	11.5, 9.5, 7.5, 9.8,
+};
+static const float64 gafReadAccess[] =
+{
+	5.5, 12.5, 5.5, 3.5,
+	5.5, 3.5, 9.5, 3.5,
+	9.5, 3.5, 10.5, 4.5,
+	10.5, 4.5, 10.5, 7.0,
+	10.5, 7.0, 9.5, 8.0,
+	9.5, 8.0, 5.5, 8.0,
+	8.0, 8.0, 10.5, 12.5,
+};
+static const float64 gafWriteAccess[] =
+{
+	2.5, 3.5, 5.0, 12.5,
+	5.0, 12.5, 8.0, 6.5,
+	8.0, 6.5, 11.0, 12.5,
+	11.0, 12.5, 13.5, 3.5,
+};
+static const float64 gafPin[] =
+{
+	5.0, 2.5, 11.0, 2.5,
+	6.0, 2.5, 6.0, 8.0,
+	10.0, 2.5, 10.0, 8.0,
+	3.5, 8.0, 12.5, 8.0,
+	8.0, 8.0, 8.0, 13.5,
+};
+static const float64 gafSettings[] =
+{
+	11.0, 8.0, 10.43, 9.76,
+	10.43, 9.76, 8.93, 10.85,
+	8.93, 10.85, 7.07, 10.85,
+	7.07, 10.85, 5.57, 9.76,
+	5.57, 9.76, 5.0, 8.0,
+	5.0, 8.0, 5.57, 6.24,
+	5.57, 6.24, 7.07, 5.15,
+	7.07, 5.15, 8.93, 5.15,
+	8.93, 5.15, 10.43, 6.24,
+	10.43, 6.24, 11.0, 8.0,
+	8.0, 2.0, 8.0, 3.5,
+	8.0, 12.5, 8.0, 14.0,
+	2.0, 8.0, 3.5, 8.0,
+	12.5, 8.0, 14.0, 8.0,
+	3.8, 3.8, 4.9, 4.9,
+	11.1, 11.1, 12.2, 12.2,
+	3.8, 12.2, 4.9, 11.1,
+	11.1, 4.9, 12.2, 3.8,
+};
+
+
+struct SIDEToolIconLines
+{
+	const float64*	pafLines;
+	size			uiNumLines;
+};
+
+
+#define IDE_TOOL_ICON(name)	{ gaf##name, sizeof(gaf##name) / (4 * sizeof(float64)) }
+
+
+static const SIDEToolIconLines	gasIDEToolIcons[] =
+{
+	IDE_TOOL_ICON(Rerun),
+	IDE_TOOL_ICON(Previous),
+	IDE_TOOL_ICON(Next),
+	IDE_TOOL_ICON(ExpandAll),
+	IDE_TOOL_ICON(CollapseAll),
+	IDE_TOOL_ICON(GroupByType),
+	IDE_TOOL_ICON(GroupByProject),
+	IDE_TOOL_ICON(GroupByClass),
+	IDE_TOOL_ICON(Preview),
+	IDE_TOOL_ICON(SingleClick),
+	IDE_TOOL_ICON(ReadAccess),
+	IDE_TOOL_ICON(WriteAccess),
+	IDE_TOOL_ICON(Pin),
+	IDE_TOOL_ICON(Settings),
+};
+static_assert(sizeof(gasIDEToolIcons) / sizeof(SIDEToolIconLines) == ITI_Count, "Each EIDEToolIcon needs its lines in gasIDEToolIcons.");
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A tool window's toolbar's icon, its lines in sColour.
+//
+//////////////////////////////////////////////////////////////////////////
+Ptr<CImageCel> CIDEIcons::CreateToolIcon(EIDEToolIcon eIcon, ARGB32 sColour, CColourFormatHelper* pcFormat)
+{
+	Ptr<CImage>		pImage;
+	CImageDraw		cDraw;
+	CVectorPath		cPath;
+	const float64*	pafLine;
+	size			i;
+
+	pImage = OMalloc<CImage>(16, 16, PT_uint8, IMAGE_DIFFUSE_RED, IMAGE_DIFFUSE_GREEN, IMAGE_DIFFUSE_BLUE, IMAGE_OPACITY, CHANNEL_STOP);
+	pImage->Black();
+	cDraw.Init(&pImage);
+	cPath.Init();
+	cPath.BeginPart(true);
+	for (i = 0; i < gasIDEToolIcons[eIcon].uiNumLines; i++)
+	{
+		pafLine = &gasIDEToolIcons[eIcon].pafLines[i * 4];
+		AddLine(&cPath, pafLine[0], pafLine[1], pafLine[2], pafLine[3]);
+	}
+	Fill(&cDraw, &cPath, sColour);
+	cPath.Kill();
+	cDraw.Kill();
+
+	pImage = CImageColourConverter::ConvertColour(pImage, pcFormat->meOrder);
+	return OMalloc<CImageCel>(pImage);
+}
+
+
 //////////////////////////////////////////////////////////////////////////
 //
 //

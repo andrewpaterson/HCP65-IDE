@@ -52,14 +52,37 @@ enum EIDESymbolType
 };
 
 
+//A tool window's toolbar's icons (CIDEResultsPane's), each a few lines.
+enum EIDEToolIcon
+{
+	ITI_Rerun,			//An arrow round a circle.
+	ITI_Previous,		//An arrow up.
+	ITI_Next,			//An arrow down.
+	ITI_ExpandAll,		//Arrow heads up and down, apart.
+	ITI_CollapseAll,	//Arrow heads down and up, together.
+	ITI_GroupByType,	//A bracket and a T.
+	ITI_GroupByProject,	//A bracket and a P.
+	ITI_GroupByClass,	//A bracket and a C.
+	ITI_Preview,		//A pane with lines of text in its right half.
+	ITI_SingleClick,	//A pointer.
+	ITI_ReadAccess,		//An R.
+	ITI_WriteAccess,	//A W.
+	ITI_Pin,			//A pin.
+	ITI_Settings,		//A cog.
+	ITI_Count
+};
+
+
 //The IDE's 16 x 16 icons of the kinds of file: an outlined page, as the Jewel icons are, with a coloured badge on
-//its bottom left that says what the file is: ++ for C++, C for C and h for a header.
+//its bottom left that says what the file is: ++ for C++, C for C and h for a header.  And a tool window's toolbar's
+//icons, drawn in one colour (the theme's icon colour, or its dim text's for a button that can't be used).
 class CIDEIcons
 {
 public:
 	static EIDEFileType		GetFileType(const char* szFileName);
 	static Ptr<CImageCel>	CreateFileIcon(EIDEFileType eType, Ptr<CWindowTheme> pTheme, CColourFormatHelper* pcFormat);
 	static Ptr<CImageCel>	CreateSymbolIcon(EIDESymbolType eType, Ptr<CWindowTheme> pTheme, CColourFormatHelper* pcFormat);
+	static Ptr<CImageCel>	CreateToolIcon(EIDEToolIcon eIcon, ARGB32 sColour, CColourFormatHelper* pcFormat);
 
 protected:
 	static void				Fill(CImageDraw* pcDraw, CVectorPath* pcPath, ARGB32 sColour);

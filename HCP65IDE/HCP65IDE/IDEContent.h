@@ -151,6 +151,7 @@ protected:
 	Ptr<CImageCel>				mpFileIcon;
 	CArray<CImageCel>			maFileIcons;		//By EIDEFileType.
 	CArray<CImageCel>			maSymbolIcons;		//By EIDESymbolType.
+	CArray<CImageCel>			maToolIcons;		//By EIDEToolIcon, then each again dim for a button that can't be used.
 
 	Ptr<CFont>					mpMatchFont;		//What Go to's pattern matched.
 
@@ -235,6 +236,7 @@ public:
 	size				NumFileTypeIcons(void);
 	Ptr<CImageCel>		GetFileTypeIcon(size uiType);
 	Ptr<CImageCel>		GetSymbolIcon(size uiType);
+	Ptr<CImageCel>		GetToolIcon(size uiIcon, bool bDim = false);
 	Ptr<CMenuBar>		GetMenuBar(void);
 	Ptr<CCommandSet>	GetCommands(void);
 	Ptr<CMenuContainer>	GetEditorMenu(void);

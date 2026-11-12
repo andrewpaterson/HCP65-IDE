@@ -26,6 +26,9 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/ScrollPane.h"
 #include "WindowLib/SplitContainer.h"
 #include "WindowLib/CodePreview.h"
+#include "WindowLib/Toolbar.h"
+#include "WindowLib/CommandSet.h"
+#include "IDEIcons.h"
 #include "BaseLib/XMLWriter.h"
 #include "BaseLib/MarkupTag.h"
 #include "IDECodeModel.h"
@@ -47,6 +50,10 @@ public:
 	//Where what the results are of is declared (the symbol Find Usages found the usages of), made as a result's is.
 	//False if they are of nothing that is declared, as text found is.
 	virtual bool	GetDeclarationLocation(CIDEResultsPane* pcPane, SIDELocation* psDest);
+
+	//Whether what was looked for can be looked for again, and doing so (the pane's Rerun).
+	virtual bool	CanRerunResults(CIDEResultsPane* pcPane);
+	virtual void	RerunResults(CIDEResultsPane* pcPane);
 };
 
 
@@ -69,6 +76,12 @@ public:
 //moment after.  Whether it is shown, and the tree's share of the pane, are settings its owner keeps (ReadSettings,
 //WriteSettings) and are written when they change.
 //
+//Down its left is a toolbar, as IntelliJ's: Rerun (its source looks again), Previous and Next Occurrence, Expand All
+//and Collapse All, then whatever its source adds (Find Usages' groupings; AddToolbarCommand), then Preview and
+//Navigate with Single Click (AddViewCommands, called by its owner after its own).  Their commands are the pane's own
+//(GetCommands), not the application's: they have no keys.  A button is on while what it turns on is, and dim while it
+//can't be used.
+//
 //Whatever lets go of a pane before the IDE closes calls Detach first.
 class CIDEResultsPane : public CObject, public CIDEPreviewAsker
 {
@@ -83,6 +96,9 @@ protected:
 	Ptr<CInputAction>	mpJumpAction;  //F4 in it goes to the declaration.
 	Ptr<CInputAction>	mpSpaceAction;  //Space, and a character typed, in it are typed in the editor.
 	Ptr<CInputAction>	mpTypeAction;
+	Ptr<CGridContainer>	mpPanel;  //The toolbar and, right of it, the split.
+	Ptr<CToolbar>		mpToolbar;
+	Ptr<CCommandSet>	mpCommands;  //The toolbar's.
 	Ptr<CSplitContainer>	mpSplit;  //The tree and, right of it, the preview.
 	Ptr<CCodePreview>	mpPreview;
 	size				muiPreviewChanges;  //The previewed file's editor's change count when its text was taken, MAX_SIZE if it wasn't open.
@@ -115,6 +131,14 @@ public:
 	void				Focus(void);
 	void				Detach(void);
 
+	Ptr<CCommandSet>	GetCommands(void);
+	Ptr<CToolbar>		GetToolbar(void);
+	void				AddToolbarCommand(Ptr<CCommand> pCommand, EIDEToolIcon eIcon);
+	void				AddToolbarSeparator(void);
+	void				AddViewCommands(void);
+	void				RefreshToolbar(void);
+	bool				CanStep(bool bNext);
+
 	void				SetNavigateOnSelect(bool bNavigate);
 	bool				IsNavigateOnSelect(void);
 	void				SetPreviewShown(bool bShown);
@@ -130,6 +154,17 @@ protected:
 	void				ResultActivated(void);
 	void				ResultSelected(void);
 	void				ShareChanged(void);
+	void				AddCommand(const char* szName, const char* szCaption, EIDEToolIcon eIcon, void(CIDEResultsPane::*fRun)(void), bool(CIDEResultsPane::*fEnabled)(void), bool(CIDEResultsPane::*fChecked)(void));
+	void				Rerun(void);
+	bool				CanRerun(void);
+	void				StepPrevious(void);
+	void				StepNext(void);
+	bool				CanStepPrevious(void);
+	bool				CanStepNext(void);
+	void				ExpandAll(void);
+	void				CollapseAll(void);
+	void				TogglePreview(void);
+	void				ToggleNavigateOnSelect(void);
 	void				ReturnToEditor(void);
 	void				JumpToSource(void);
 	void				TypeSpace(void);

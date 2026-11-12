@@ -156,6 +156,8 @@ public:
 	bool					HasSteps(void) override;
 	bool					Step(bool bNext, bool bKeepKeys) override;
 	bool					GetResultLocation(CIDEResultsPane* pcPane, int64 iData, SIDELocation* psDest) override;
+	bool					CanRerunResults(CIDEResultsPane* pcPane) override;
+	void					RerunResults(CIDEResultsPane* pcPane) override;
 
 protected:
 	void				ShowQueuedFind(void);

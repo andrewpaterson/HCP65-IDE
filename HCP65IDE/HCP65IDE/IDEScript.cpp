@@ -30,7 +30,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 //The debug script's commands that are the IDE's (RunCommand); "goto:" takes what follows it.
-static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printfindpreview", "printstartup", "printworkspace", "rename", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printsettings", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printedits", "printspans", "configuration:", "waitindex" };
+static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printfindpreview", "printfindtoolbar", "findtool:", "printstartup", "printworkspace", "rename", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printsettings", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printedits", "printspans", "configuration:", "waitindex" };
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -178,6 +178,17 @@ void CIDEScript::RunCommand(const char* szCommand)
 		//What the Find tool window's preview shows.
 		PrintPanePreview(mpcContent->GetFindInFiles()->GetResultsPane());
 		fflush(stdout);
+	}
+	else if (strcmp(szCommand, "printfindtoolbar") == 0)
+	{
+		//The Find tool window's toolbar.
+		PrintPaneToolbar(mpcContent->GetFindInFiles()->GetResultsPane());
+		fflush(stdout);
+	}
+	else if (strncmp(szCommand, "findtool:", 9) == 0)
+	{
+		//findtool:<caption>: that button of the Find tool window's toolbar clicked.
+		ClickPaneTool(mpcContent->GetFindInFiles()->GetResultsPane(), &szCommand[9]);
 	}
 	else if (strcmp(szCommand, "printfindparts") == 0)
 	{
@@ -771,6 +782,52 @@ void CIDEScript::RunFind(const char* szFind)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// A results pane's toolbar: "Toolbar: <caption>[(on)][(disabled)], ...".
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEScript::PrintPaneToolbar(Ptr<CIDEResultsPane> pPane)
+{
+	Ptr<CToolbar>	pToolbar;
+	Ptr<CCommand>	pCommand;
+	size			i;
+
+	pToolbar = pPane->GetToolbar();
+	printf("Toolbar:");
+	for (i = 0; i < pToolbar->NumCommandButtons(); i++)
+	{
+		pCommand = pToolbar->GetCommandButton(i)->GetCommand();
+		printf("%s %s%s%s", (i > 0) ? "," : "", pCommand->GetCaption(), pToolbar->GetCommandButton(i)->IsHighlighted() ? "(on)" : "", pToolbar->IsShownDisabled(i) ? "(disabled)" : "");
+	}
+	printf("\n");
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The button of a results pane's toolbar whose command has szCaption is
+// clicked.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEScript::ClickPaneTool(Ptr<CIDEResultsPane> pPane, const char* szCaption)
+{
+	Ptr<CToolbar>	pToolbar;
+	size			i;
+
+	pToolbar = pPane->GetToolbar();
+	for (i = 0; i < pToolbar->NumCommandButtons(); i++)
+	{
+		if (strcmp(pToolbar->GetCommandButton(i)->GetCommand()->GetCaption(), szCaption) == 0)
+		{
+			pToolbar->GetCommandButton(i)->Click();
+			return;
+		}
+	}
+	printf("No tool button [%s].\n", szCaption);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // What a results pane's preview shows: "Preview: <file> line <n> of <m>
 // [<the caret's line>] coloured <spans>", the spans being how many the
 // edits thread's highlighting gave it (it is waited for); "Preview: none"
@@ -1062,6 +1119,16 @@ void CIDEScript::RunEditStep(const char* szStep)
 	{
 		//usagesingleclick:on or :off, as the tool window's Navigate with Single Click.
 		mpcContent->GetUsages()->GetResultsPane()->SetNavigateOnSelect(strcmp(&szStep[17], "on") == 0);
+	}
+	else if (strcmp(szStep, "usagetoolbar") == 0)
+	{
+		//The Find Usages tool window's toolbar.
+		PrintPaneToolbar(mpcContent->GetUsages()->GetResultsPane());
+	}
+	else if (strncmp(szStep, "usagetool:", 10) == 0)
+	{
+		//usagetool:<caption>: that button of the Find Usages tool window's toolbar clicked.
+		ClickPaneTool(mpcContent->GetUsages()->GetResultsPane(), &szStep[10]);
 	}
 	else if (strcmp(szStep, "usageparts") == 0)
 	{

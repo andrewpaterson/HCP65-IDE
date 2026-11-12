@@ -29,7 +29,6 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDEUsages.h"
 
 
-#define IDE_USAGES_OPTION_GAP			16		//Between the grouping check boxes.
 #define IDE_USAGES_POPUP_MAXIMUM		100		//The most usages Control+B's popup shows; Find Usages shows the rest.
 #define IDE_USAGES_OPEN_FILES_MAXIMUM	1000	//With more usages than this the tree's files start closed.
 #define IDE_USAGES_REFRESH				500		//Milliseconds after the last edit that moved a usage until the tree shows it.
@@ -384,9 +383,6 @@ void CIDEUsages::Class(void)
 	U_Pointer(mpcContent);
 	M_Pointer(mpPane);
 	M_Pointer(mpUsagesTool);
-	M_Pointer(mpByType);
-	M_Pointer(mpByProject);
-	M_Pointer(mpByClass);
 	U_Unknown(SIDEFoundUsages, msFound);
 	U_Bool(mbFound);
 	U_Bool(mbMoved);
@@ -405,12 +401,6 @@ void CIDEUsages::Class(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDEUsages::Free(void)
 {
-	if (mpByType.IsNotNull())
-	{
-		mpByType->GetChangeEvent()->Remove(this);
-		mpByProject->GetChangeEvent()->Remove(this);
-		mpByClass->GetChangeEvent()->Remove(this);
-	}
 	if (mpPopup.IsNotNull())
 	{
 		mpPopup->GetItemClickEvent()->Remove(this);
@@ -436,34 +426,13 @@ bool CIDEUsages::Load(CObjectReader* pcFile) { return false; }
 //////////////////////////////////////////////////////////////////////////
 void CIDEUsages::CreatePane(SDockPlace* psPlace)
 {
-	Ptr<CGridContainer>	pOptions;
-	Ptr<CGridContainer>	pPanel;
-
 	mpPane = OMalloc<CIDEResultsPane>(mpcContent, this, "usages", false);
-
-	mpByType = OMalloc<CCheckBox>(mpcContent->GetWindow(), mpcContent->GetTheme(), "Group by usage type", (muiGrouping & IDE_USAGES_BY_TYPE) != 0);
-	mpByProject = OMalloc<CCheckBox>(mpcContent->GetWindow(), mpcContent->GetTheme(), "Group by project", (muiGrouping & IDE_USAGES_BY_PROJECT) != 0);
-	mpByClass = OMalloc<CCheckBox>(mpcContent->GetWindow(), mpcContent->GetTheme(), "Group by class", (muiGrouping & IDE_USAGES_BY_CLASS) != 0);
-	mpByType->SetAlignment(CSH_Left, CSV_Center);
-	mpByProject->SetAlignment(CSH_Left, CSV_Center);
-	mpByClass->SetAlignment(CSH_Left, CSV_Center);
-	mpByType->SetInsets(0, IDE_USAGES_OPTION_GAP, 0, 0);
-	mpByProject->SetInsets(0, IDE_USAGES_OPTION_GAP, 0, 0);
-	mpByType->GetChangeEvent()->Add(this, &CIDEUsages::GroupingChanged);
-	mpByProject->GetChangeEvent()->Add(this, &CIDEUsages::GroupingChanged);
-	mpByClass->GetChangeEvent()->Add(this, &CIDEUsages::GroupingChanged);
-	pOptions = OMalloc<CGridContainer>(mpcContent->GetWindow());
-	pOptions->SetAlignment(CSH_Stretch, CSV_Top);
-	pOptions->SetInsets(2, 4, 2, 4);
-	pOptions->AddComponent(mpByType, 0, 0);
-	pOptions->AddComponent(mpByProject, 1, 0);
-	pOptions->AddComponent(mpByClass, 2, 0, 1, 1, 1, 0);
-
-	pPanel = OMalloc<CGridContainer>(mpcContent->GetWindow());
-	pPanel->SetAlignment(CSH_Stretch, CSV_Stretch);
-	pPanel->AddComponent(pOptions, 0, 0, 1, 1, 1, 0);
-	pPanel->AddComponent(mpPane->GetComponent(), 0, 1, 1, 1, 1, 1);
-	mpUsagesTool = mpcContent->GetDock()->AddPane(IDE_USAGES_ID, "Find Usages", NULL, pPanel, DPK_Tool, psPlace);
+	mpPane->AddToolbarSeparator();
+	AddGroupingCommand("Usages.GroupByType", "Group by Usage Type", ITI_GroupByType, &CIDEUsages::ToggleByType, &CIDEUsages::IsByType);
+	AddGroupingCommand("Usages.GroupByProject", "Group by Project", ITI_GroupByProject, &CIDEUsages::ToggleByProject, &CIDEUsages::IsByProject);
+	AddGroupingCommand("Usages.GroupByClass", "Group by Class", ITI_GroupByClass, &CIDEUsages::ToggleByClass, &CIDEUsages::IsByClass);
+	mpPane->AddViewCommands();
+	mpUsagesTool = mpcContent->GetDock()->AddPane(IDE_USAGES_ID, "Find Usages", NULL, mpPane->GetComponent(), DPK_Tool, psPlace);
 }
 
 
@@ -479,6 +448,26 @@ void CIDEUsages::CreatePane(SDockPlace* psPlace)
 //////////////////////////////////////////////////////////////////////////
 bool CIDEUsages::Find(bool bDeclarations, SIDEFoundUsages* psDest)
 {
+	int		iLine;
+	int		iColumn;
+	uint8	uiRole;
+
+	if (!mpcContent->GetDocuments()->FindSymbolPlace(&iLine, &iColumn, &uiRole))
+	{
+		return false;
+	}
+	return FindAt(mpcContent->GetDocuments()->GetActiveTab()->GetFileName(), iLine, iColumn, bDeclarations, psDest);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The usages of the symbol named at a place in a file (a line and column
+// from 0), as Find's are.  False if no symbol is named there.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEUsages::FindAt(const char* szFileName, int iLine, int iColumn, bool bDeclarations, SIDEFoundUsages* psDest)
+{
 	CArrayIDELocations	asLocations;
 	CChars				szKey;
 	SIDELocation*		psLocation;
@@ -489,7 +478,7 @@ bool CIDEUsages::Find(bool bDeclarations, SIDEFoundUsages* psDest)
 	mpcContent->GetDocuments()->UpdateEditedTabsNow();
 	asLocations.Init();
 	szKey.Init();
-	if (!mpcContent->GetDocuments()->FindSymbolAtCaret(&asLocations, &szKey))
+	if (!mpcContent->GetCodeModel()->FindReferences(szFileName, iLine, iColumn, &asLocations, &szKey))
 	{
 		KillIDELocations(&asLocations);
 		szKey.Kill();
@@ -1033,6 +1022,71 @@ bool CIDEUsages::GetDeclarationLocation(CIDEResultsPane* pcPane, SIDELocation* p
 
 //////////////////////////////////////////////////////////////////////////
 //
+// A grouping's button on the pane's toolbar: its command, the pane's,
+// turns the group on and off and says which it is.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEUsages::AddGroupingCommand(const char* szName, const char* szCaption, EIDEToolIcon eIcon, void(CIDEUsages::*fToggle)(void), bool(CIDEUsages::*fIsOn)(void))
+{
+	Ptr<CCommand>	pCommand;
+
+	pCommand = mpPane->GetCommands()->Add(szName, szCaption, "", mpcContent->GetToolIcon(eIcon), this, fToggle);
+	pCommand->SetCheckedCheck(this, fIsOn);
+	mpPane->AddToolbarCommand(pCommand, eIcon);
+}
+
+
+void CIDEUsages::ToggleByType(void) { SetGrouping(muiGrouping ^ IDE_USAGES_BY_TYPE); }
+void CIDEUsages::ToggleByProject(void) { SetGrouping(muiGrouping ^ IDE_USAGES_BY_PROJECT); }
+void CIDEUsages::ToggleByClass(void) { SetGrouping(muiGrouping ^ IDE_USAGES_BY_CLASS); }
+bool CIDEUsages::IsByType(void) { return (muiGrouping & IDE_USAGES_BY_TYPE) != 0; }
+bool CIDEUsages::IsByProject(void) { return (muiGrouping & IDE_USAGES_BY_PROJECT) != 0; }
+bool CIDEUsages::IsByClass(void) { return (muiGrouping & IDE_USAGES_BY_CLASS) != 0; }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The results pane's Rerun: the symbol's usages are found again, from
+// where it is declared (which has followed its file's edits), with its
+// declarations if they were there before.  It can be while the symbol's
+// declaration is known.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEUsages::CanRerunResults(CIDEResultsPane* pcPane)
+{
+	return mbFound && msFound.bDeclared;
+}
+
+
+void CIDEUsages::RerunResults(CIDEResultsPane* pcPane)
+{
+	SIDEFoundUsages	sFound;
+	CChars			szFileName;
+
+	if (!CanRerunResults(pcPane))
+	{
+		return;
+	}
+	sFound.Init();
+	szFileName.Init(msFound.sDeclaration.szFileName);
+	if (FindAt(szFileName.Text(), msFound.sDeclaration.iLine, msFound.sDeclaration.iColumn, msFound.bDeclarations, &sFound))
+	{
+		msFound.Kill();
+		memcpy(&msFound, &sFound, sizeof(SIDEFoundUsages));
+		mbMoved = false;
+		ShowUsages(true);
+	}
+	else
+	{
+		sFound.Kill();
+		mpcContent->ShowStatus("The symbol is no longer where it was declared: find its usages again from the editor.");
+	}
+	szFileName.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // What Next and Previous Occurrence need of a tool window: the Find Usages
 // pane, and whether it has a usage to go to.
 //
@@ -1040,24 +1094,6 @@ bool CIDEUsages::GetDeclarationLocation(CIDEResultsPane* pcPane, SIDELocation* p
 Ptr<CDockPane> CIDEUsages::GetSteppablePane(void) { return mpUsagesTool; }
 const char* CIDEUsages::GetSteppableName(void) { return "Find Usages"; }
 bool CIDEUsages::HasSteps(void) { return mbFound && (msFound.asUsages.NumElements() > 0) && mpPane.IsNotNull(); }
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// A grouping check box was ticked or cleared: the groups are as the
-// boxes say.
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDEUsages::GroupingChanged(void)
-{
-	uint8	uiGrouping;
-
-	uiGrouping = 0;
-	uiGrouping |= mpByType->IsTicked() ? IDE_USAGES_BY_TYPE : 0;
-	uiGrouping |= mpByProject->IsTicked() ? IDE_USAGES_BY_PROJECT : 0;
-	uiGrouping |= mpByClass->IsTicked() ? IDE_USAGES_BY_CLASS : 0;
-	SetGrouping(uiGrouping);
-}
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -1075,6 +1111,10 @@ void CIDEUsages::SetGrouping(uint8 uiGrouping)
 		ShowGrouping(uiGrouping);
 		mpcContent->GetSettings()->WriteSettings();
 	}
+	if (mpPane.IsNotNull())
+	{
+		mpPane->RefreshToolbar();
+	}
 }
 
 
@@ -1087,12 +1127,6 @@ void CIDEUsages::SetGrouping(uint8 uiGrouping)
 void CIDEUsages::ShowGrouping(uint8 uiGrouping)
 {
 	muiGrouping = uiGrouping;
-	if (mpByType.IsNotNull())
-	{
-		mpByType->SetTicked((muiGrouping & IDE_USAGES_BY_TYPE) != 0);
-		mpByProject->SetTicked((muiGrouping & IDE_USAGES_BY_PROJECT) != 0);
-		mpByClass->SetTicked((muiGrouping & IDE_USAGES_BY_CLASS) != 0);
-	}
 	ShowUsages(true);
 }
 
@@ -1131,6 +1165,7 @@ void CIDEUsages::ReadSettings(CMarkupTag* pcSettings)
 	if (mpPane.IsNotNull())
 	{
 		mpPane->ReadSettings(pcTag);
+		mpPane->RefreshToolbar();
 	}
 }
 

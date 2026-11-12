@@ -79,6 +79,8 @@ public:
 	void		PrintFindTree(size uiMaximum);
 	void		PrintTreeParts(Ptr<CTreeContainer> pTree);
 	void		PrintPanePreview(Ptr<CIDEResultsPane> pPane);
+	void		PrintPaneToolbar(Ptr<CIDEResultsPane> pPane);
+	void		ClickPaneTool(Ptr<CIDEResultsPane> pPane, const char* szCaption);
 	void		RunDockMove(const char* szMove);
 
 	void	WatchDialog(Ptr<CDialog> pDialog);

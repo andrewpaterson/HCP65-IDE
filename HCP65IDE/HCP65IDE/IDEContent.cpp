@@ -173,6 +173,7 @@ void CIDEContent::Init(void)
 	memset(&msDialogLook, 0, sizeof(msDialogLook));
 	maFileIcons.Init();
 	maSymbolIcons.Init();
+	maToolIcons.Init();
 	mpMatchFont = NULL;
 	mbKeepSettings = true;
 
@@ -206,6 +207,7 @@ void CIDEContent::Class(void)
 	M_Pointer(mpFileIcon);
 	M_Embedded(maFileIcons);
 	M_Embedded(maSymbolIcons);
+	M_Embedded(maToolIcons);
 	M_Pointer(mpMatchFont);
 	M_Pointer(mpScript);
 	M_Pointer(mpCloseGuard);
@@ -374,6 +376,10 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	for (i = 0; i < IST_Count; i++)
 	{
 		maSymbolIcons.Add(CIDEIcons::CreateSymbolIcon((EIDESymbolType)i, mpTheme, &cFormat));
+	}
+	for (i = 0; i < 2 * ITI_Count; i++)
+	{
+		maToolIcons.Add(CIDEIcons::CreateToolIcon((EIDEToolIcon)(i % ITI_Count), mpTheme->GetColour((i < ITI_Count) ? TC_Icon : TC_DimText), &cFormat));
 	}
 	//Go to's matched characters are bold, if there's a bold font.
 	mpMatchFont = (mpBoldColours.IsNotNull() ? mpBoldColours : mpFontColours)->GetFont(mpTheme->GetColour(TC_BrightText));
@@ -1043,6 +1049,7 @@ Ptr<CImageCel> CIDEContent::GetFileIcon(void) { return mpFileIcon; }
 size CIDEContent::NumFileTypeIcons(void) { return maFileIcons.NumElements(); }
 Ptr<CImageCel> CIDEContent::GetFileTypeIcon(size uiType) { return maFileIcons.Get(uiType); }
 Ptr<CImageCel> CIDEContent::GetSymbolIcon(size uiType) { return maSymbolIcons.Get(uiType); }
+Ptr<CImageCel> CIDEContent::GetToolIcon(size uiIcon, bool bDim) { return maToolIcons.Get(uiIcon + (bDim ? (size)ITI_Count : 0)); }
 Ptr<CMenuBar> CIDEContent::GetMenuBar(void) { return mpMenuBar; }
 Ptr<CCommandSet> CIDEContent::GetCommands(void) { return mpCommands; }
 Ptr<CMenuContainer> CIDEContent::GetEditorMenu(void) { return mpEditorMenu; }

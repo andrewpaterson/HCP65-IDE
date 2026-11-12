@@ -40,6 +40,10 @@ bool CIDEResultsSource::GetDeclarationLocation(CIDEResultsPane* pcPane, SIDELoca
 }
 
 
+bool CIDEResultsSource::CanRerunResults(CIDEResultsPane* pcPane) { return false; }
+void CIDEResultsSource::RerunResults(CIDEResultsPane* pcPane) {}
+
+
 //////////////////////////////////////////////////////////////////////////
 //
 // szNoun is what a result is called when there are none to step to
@@ -82,6 +86,21 @@ void CIDEResultsPane::Init(CIDEContent* pcContent, CIDEResultsSource* pcSource, 
 	mpSplit->SetShare(IDE_RESULTS_TREE_SHARE);
 	mpSplit->GetShareEvent()->Add(this, &CIDEResultsPane::ShareChanged);
 	mpTree->GetSelectionEvent()->Add(this, &CIDEResultsPane::ResultSelected);
+
+	//The toolbar, down the left.
+	mpCommands = OMalloc<CCommandSet>();
+	mpToolbar = OMalloc<CToolbar>(mpcContent->GetWindow(), mpcContent->GetTheme(), true);
+	mpToolbar->SetAlignment(CSH_Left, CSV_Stretch);
+	AddCommand("Results.Rerun", "Rerun", ITI_Rerun, &CIDEResultsPane::Rerun, &CIDEResultsPane::CanRerun, NULL);
+	AddCommand("Results.Previous", "Previous Occurrence", ITI_Previous, &CIDEResultsPane::StepPrevious, &CIDEResultsPane::CanStepPrevious, NULL);
+	AddCommand("Results.Next", "Next Occurrence", ITI_Next, &CIDEResultsPane::StepNext, &CIDEResultsPane::CanStepNext, NULL);
+	AddCommand("Results.ExpandAll", "Expand All", ITI_ExpandAll, &CIDEResultsPane::ExpandAll, &CIDEResultsPane::HasResults, NULL);
+	AddCommand("Results.CollapseAll", "Collapse All", ITI_CollapseAll, &CIDEResultsPane::CollapseAll, &CIDEResultsPane::HasResults, NULL);
+
+	mpPanel = OMalloc<CGridContainer>(mpcContent->GetWindow());
+	mpPanel->SetAlignment(CSH_Stretch, CSV_Stretch);
+	mpPanel->AddComponent(mpToolbar, 0, 0, 1, 1, 0, 1);
+	mpPanel->AddComponent(mpSplit, 1, 0, 1, 1, 1, 1);
 	PostInit();
 }
 
@@ -101,6 +120,9 @@ void CIDEResultsPane::Class(void)
 	M_Pointer(mpJumpAction);
 	M_Pointer(mpSpaceAction);
 	M_Pointer(mpTypeAction);
+	M_Pointer(mpPanel);
+	M_Pointer(mpToolbar);
+	M_Pointer(mpCommands);
 	M_Pointer(mpSplit);
 	M_Pointer(mpPreview);
 	U_Size(muiPreviewChanges);
@@ -189,6 +211,7 @@ void CIDEResultsPane::EndShow(int64 iSelectedData)
 	mpTree->SelectNode((iNode != TREE_NO_NODE) ? iNode : FindResultNode(0));
 	mbShowing = false;
 	ShowPreview();
+	RefreshToolbar();
 }
 
 
@@ -201,6 +224,7 @@ void CIDEResultsPane::Clear(void)
 {
 	mpTree->RemoveAllNodes();
 	mpPreview->Clear();
+	RefreshToolbar();
 }
 
 
@@ -490,6 +514,7 @@ void CIDEResultsPane::TypeSpace(void)
 void CIDEResultsPane::ResultSelected(void)
 {
 	ShowPreview();
+	RefreshToolbar();
 	if (mbNavigateOnSelect && !mbShowing && OpenResult(mpTree->GetSelectedNode(), true))
 	{
 		Focus();
@@ -622,6 +647,7 @@ void CIDEResultsPane::SetPreviewShown(bool bShown)
 		{
 			mpPreview->Clear();
 		}
+		RefreshToolbar();
 	}
 }
 
@@ -634,6 +660,7 @@ void CIDEResultsPane::SetPreviewShown(bool bShown)
 void CIDEResultsPane::SetNavigateOnSelect(bool bNavigate)
 {
 	mbNavigateOnSelect = bNavigate;
+	RefreshToolbar();
 }
 
 
@@ -695,6 +722,133 @@ void CIDEResultsPane::WriteSettings(CXMLWriter* pcWriter)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// One of the pane's own commands, and its button on the toolbar with its
+// icon, dim while it can't be used.  fEnabled and fChecked can be NULL.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEResultsPane::AddCommand(const char* szName, const char* szCaption, EIDEToolIcon eIcon, void(CIDEResultsPane::*fRun)(void), bool(CIDEResultsPane::*fEnabled)(void), bool(CIDEResultsPane::*fChecked)(void))
+{
+	Ptr<CCommand>	pCommand;
+
+	pCommand = mpCommands->Add(szName, szCaption, "", mpcContent->GetToolIcon(eIcon), this, fRun);
+	if (fEnabled)
+	{
+		pCommand->SetEnabledCheck(this, fEnabled);
+	}
+	if (fChecked)
+	{
+		pCommand->SetCheckedCheck(this, fChecked);
+	}
+	AddToolbarCommand(pCommand, eIcon);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A button for a command of the pane's (GetCommands) that its source
+// made, after those there are: its icon is eIcon's, dim while it can't
+// be used.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEResultsPane::AddToolbarCommand(Ptr<CCommand> pCommand, EIDEToolIcon eIcon)
+{
+	mpToolbar->AddCommand(pCommand, mpcContent->GetToolIcon(eIcon, true));
+}
+
+
+void CIDEResultsPane::AddToolbarSeparator(void) { mpToolbar->AddSeparator(); }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The toolbar's last buttons, after its source's: Preview and Navigate
+// with Single Click.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEResultsPane::AddViewCommands(void)
+{
+	mpToolbar->AddSeparator();
+	AddCommand("Results.Preview", "Preview", ITI_Preview, &CIDEResultsPane::TogglePreview, NULL, &CIDEResultsPane::IsPreviewShown);
+	AddCommand("Results.NavigateWithSingleClick", "Navigate with Single Click", ITI_SingleClick, &CIDEResultsPane::ToggleNavigateOnSelect, NULL, &CIDEResultsPane::IsNavigateOnSelect);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The toolbar's buttons are as their commands are now.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEResultsPane::RefreshToolbar(void)
+{
+	if (mpToolbar.IsNotNull())
+	{
+		mpToolbar->Refresh();
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The toolbar's commands.  Rerun has the source look again.  Previous
+// and Next Occurrence step as the application's do, the tree keeping the
+// keys.  Preview and Navigate with Single Click are kept in the
+// settings.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEResultsPane::Rerun(void) { mpcSource->RerunResults(this); }
+bool CIDEResultsPane::CanRerun(void) { return mpcSource->CanRerunResults(this); }
+void CIDEResultsPane::StepPrevious(void) { Step(false, true); }
+void CIDEResultsPane::StepNext(void) { Step(true, true); }
+bool CIDEResultsPane::CanStepPrevious(void) { return CanStep(false); }
+bool CIDEResultsPane::CanStepNext(void) { return CanStep(true); }
+void CIDEResultsPane::ExpandAll(void) { mpTree->ExpandAll(); }
+void CIDEResultsPane::CollapseAll(void) { mpTree->CollapseAll(); }
+
+
+void CIDEResultsPane::TogglePreview(void)
+{
+	SetPreviewShown(!IsPreviewShown());
+	mpcContent->GetSettings()->WriteSettings();
+}
+
+
+void CIDEResultsPane::ToggleNavigateOnSelect(void)
+{
+	SetNavigateOnSelect(!mbNavigateOnSelect);
+	mpcContent->GetSettings()->WriteSettings();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether there is a result after (or before) the selected row to step
+// to; with none selected, whether there is one at all.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEResultsPane::CanStep(bool bNext)
+{
+	int32	iNode;
+	int32	iStep;
+
+	iStep = bNext ? 1 : -1;
+	iNode = mpTree->GetSelectedNode();
+	if (iNode == TREE_NO_NODE)
+	{
+		iNode = bNext ? -1 : mpTree->NumNodes();
+	}
+	for (iNode += iStep; (iNode >= 0) && (iNode < mpTree->NumNodes()); iNode += iStep)
+	{
+		if (GetResultData(iNode) != 0)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // The pane is being let go of before the IDE closes: what it asked to be
 // highlighted isn't given to it.
 //
@@ -718,7 +872,9 @@ void CIDEResultsPane::ReturnToEditor(void)
 
 
 Ptr<CTreeContainer> CIDEResultsPane::GetTree(void) { return mpTree; }
-Ptr<CComponent> CIDEResultsPane::GetComponent(void) { return mpSplit; }
+Ptr<CComponent> CIDEResultsPane::GetComponent(void) { return mpPanel; }
+Ptr<CCommandSet> CIDEResultsPane::GetCommands(void) { return mpCommands; }
+Ptr<CToolbar> CIDEResultsPane::GetToolbar(void) { return mpToolbar; }
 Ptr<CCodePreview> CIDEResultsPane::GetPreview(void) { return mpPreview; }
 Ptr<CSplitContainer> CIDEResultsPane::GetSplit(void) { return mpSplit; }
 bool CIDEResultsPane::IsPreviewShown(void) { return mpSplit->IsSecondShown(); }

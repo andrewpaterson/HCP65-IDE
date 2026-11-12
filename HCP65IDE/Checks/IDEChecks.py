@@ -436,6 +436,22 @@ CHECKS = [
 		#The Find tool window has the same preview.
 		'WAIT_INDEX': '1', 'DIALOG_ANSWER': 'Open in Find Window', 'DEBUG': 'find:0:calculatorparser,answered:1,printfindpreview'},
 		[r'^Preview: CalculatorParser\.h line 29 of \d+ \[class CCalculatorParser\] coloured$'], [r'ERROR']),
+	('usages-toolbar', {
+		#The tool window's toolbar: Previous Occurrence is dim on the first usage; Next Occurrence steps and the tree keeps
+		#the keys; a grouping's button turns the group on, and is on while it is; Preview and Navigate with Single Click
+		#turn on and off; Rerun finds the usages again.
+		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14',
+		'EDIT': 'usagegroups:,usages,usagetoolbar,usagetool:Next Occurrence,printselected,usagetoolbar,usagetool:Group by Project,usagetoolbar,printusages,'
+		        'usagetool:Preview,usagetool:Navigate with Single Click,usagetoolbar,usagetool:Collapse All,printrows,usagetool:Expand All,printrows,usagetool:Rerun,printusages'},
+		[r'^Toolbar: Rerun, Previous Occurrence\(disabled\), Next Occurrence, Expand All, Collapse All, Group by Usage Type, Group by Project, Group by Class, Preview\(on\), Navigate with Single Click$',
+		 r'^Selected: 391: ', r'^Toolbar: Rerun, Previous Occurrence, Next Occurrence, ', r'Group by Project\(on\), Group by Class, Preview\(on\)',
+		 r'^  BaseLib  3 usages$', r'Preview, Navigate with Single Click\(on\)$', r'^Rows: 1$', r'^Rows: 6$',
+		 r'^Usages of IsParentheses and 1 override  3 usages$', r'^  BaseLib  3 usages$', r'^      391: '], [r'No tool button', r'ERROR']),
+	('find-toolbar', {
+		#The Find tool window's toolbar has no groupings; Rerun finds the text again.
+		'WAIT_INDEX': '1', 'DIALOG_ANSWER': 'Open in Find Window', 'DEBUG': 'find:0:calculatorparser,answered:1,printfindtoolbar,findtool:Rerun,printfind'},
+		[r'^Toolbar: Rerun, Previous Occurrence\(disabled\), Next Occurrence, Expand All, Collapse All, Preview\(on\), Navigate with Single Click$',
+		 r"^Occurrences of 'calculatorparser' in the solution  13 matches in 2 files$"], [r'No tool button', r'ERROR']),
 	('find-row-parts', {
 		#The Find tool window's rows: the text found is in the match font whatever its case.
 		'WAIT_INDEX': '1', 'DIALOG_ANSWER': 'Open in Find Window', 'DEBUG': 'find:0:calculatorparser,answered:1,printfindparts'},
