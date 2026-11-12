@@ -257,6 +257,22 @@ Step 8 - Box selection drawing and input (CTextArea, CTextEditingInput, IDE)
   Drawn as one rectangle per row.  Shift+Alt+arrows/Home/End and Shift+Alt+drag make a box (VS's keys); Alt+drag too
   where the window manager doesn't take it.  Edit menu: Extend Selection, Shrink Selection, Select All; IDE checks.
 
+  As built (2026-11-12):
+  8a. WindowLib commands CIC_BoxSelectUp/Down/Left/Right/Home/End (Alt+Shift and the arrows, Home, End; keymap
+      commands Editor.BoxSelect*, "Column Select ...") reach CTextEditing's box moves.  CIC_StartDragBox (Alt+Shift
+      or Alt and button one, released as CIC_StopDragSelect) is a click to the focus (CFocus::IsClick) and starts a
+      box drag in CTextEditingInput: the box from the pressed row and x to the row and x under the pointer, the x the
+      nearest gap, or past a short row's end the pointer's own x.  The release ends the drag; the press forgets the
+      clicks counted, so a press after it is a single click.
+  8b. CTextArea draws a box (CTextAreaShapes::AddBox) as a rectangle on each row from its left x to its right, past
+      short rows' text; with no width a line a pixel wide in the caret's colour on each row.  CTextArea::BoxSelect,
+      IsBox, GetBoxRanges for scripts and tests.
+  8c. IDE: the Edit menu has Extend Selection and Shrink Selection after Select All.  Script steps keys:<keys> (a
+      command's keys, as pressed) and printbox; check editor-box-selection (Alt+Shift arrows make the box, typing
+      replaces each row's range, undo ends it).
+  Not checked in the IDE: Alt+drag (the window manager may take Alt+drag; Alt+Shift+drag is VS's), which TestWindowLib
+  covers.
+
 
 After each step: commit, TestTextEditing/TestTextEditingInput/TestTextArea/TestTextField/TestCodeEditor green, IDE
 checks green.  User's decisions 2026-11-12: Extend parses on demand when stale; box selection VS style; occurrences

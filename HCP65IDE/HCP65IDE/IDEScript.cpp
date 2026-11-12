@@ -1509,6 +1509,38 @@ void CIDEScript::RunEditStep(const char* szStep)
 			printf("\n");
 		}
 	}
+	else if (strncmp(szStep, "keys:", 5) == 0)
+	{
+		//keys:<keys>, a command's keys ("Alt+Shift+Cursor Down"), as pressing them runs what they are bound to.
+		mpcContent->GetWindow()->InputKeys(&szStep[5]);
+	}
+	else if ((strcmp(szStep, "printbox") == 0) && pTab.IsNotNull())
+	{
+		//The active editor's box selection, each row's range as "[text]", or "Box: none".
+		CArrayTextRange	asRanges;
+		STextRange*		psRange;
+
+		if (!pTab->GetEditor()->IsBox())
+		{
+			printf("Box: none\n");
+		}
+		else
+		{
+			asRanges.Init();
+			pTab->GetEditor()->GetBoxRanges(&asRanges);
+			printf("Box:");
+			for (i = 0; i < asRanges.NumElements(); i++)
+			{
+				psRange = asRanges.Get(i);
+				szLine.Init();
+				szLine.AppendSubString(pTab->GetEditor()->GetText(), psRange->uiStart, psRange->uiEnd);
+				printf(" [%s]", szLine.Text());
+				szLine.Kill();
+			}
+			printf("\n");
+			asRanges.Kill();
+		}
+	}
 	else if ((strcmp(szStep, "extend") == 0) && pTab.IsNotNull())
 	{
 		//Extend Selection in the active editor, as Control+W: with the syntax parsed now if it is behind the text.

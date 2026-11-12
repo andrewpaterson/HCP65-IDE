@@ -804,7 +804,7 @@ CHECKS = [
 		'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'CARET': '36:4', 'DEBUG': 'printmenus,clickmenu:View/Nope'},
 		[r'^Menu File: Open Project/Solution\.\.\., Add Solution\.\.\., Close Solution, Recent Solutions>, Clear Recent Solutions, Save \[Ctrl\+S\], Save All \[Ctrl\+Shift\+S\], Compare with File\.\.\., Settings\.\.\. \[Ctrl\+Alt\+S\], Exit$',
 		 r'^Menu File/Recent Solutions: 1 ',
-		 r'^Menu Edit: Undo \[Ctrl\+Z\]\(disabled\), Redo \[Ctrl\+Shift\+Z\]\(disabled\), Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Select All \[Ctrl\+A\], Undo Across Files\(disabled\), Redo Across Files\(disabled\), Find in Files\.\.\. \[Ctrl\+Shift\+F\]$',
+		 r'^Menu Edit: Undo \[Ctrl\+Z\]\(disabled\), Redo \[Ctrl\+Shift\+Z\]\(disabled\), Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Select All \[Ctrl\+A\], Extend Selection \[Ctrl\+W\], Shrink Selection \[Ctrl\+Shift\+W\], Undo Across Files\(disabled\), Redo Across Files\(disabled\), Find in Files\.\.\. \[Ctrl\+Shift\+F\]$',
 		 r'^Menu Navigate: Back \[Ctrl\+Alt\+Left\](\(disabled\))?, Forward \[Ctrl\+Alt\+Right\](\(disabled\))?, Class\.\.\. \[Ctrl\+N\], File\.\.\. \[Ctrl\+Shift\+N\], Symbol\.\.\. \[Ctrl\+Alt\+Shift\+N\]$',
 		 r'^Menu View: Solution Explorer, Find Usages, Find, Build, Indexing, Run, Debug, Claude$',
 		 r'^Menu Git: Compare with HEAD, Compare with Branch\.\.\., Compare with Revision\.\.\.$',
@@ -962,6 +962,16 @@ CHECKS = [
 		[r'^Selection: \[mpcLeft\] on line 400', r'^Selection: \[pcBinary->mpcLeft\] on line 400', r'^Selection: \[&pcBinary->mpcLeft\] on line 400',
 		 r'^Selection: \[\(&pcBinary->mpcLeft\)\] on line 400', r'^Selection: \[StripParentheses\(&pcBinary->mpcLeft\)\] on line 400',
 		 r'^Selection: \[\(&pcBinary->mpcLeft\)\] on line 400', r'^Selection: \[pcBinary->mpcRight\] on line 401'], []),
+	('editor-box-selection', {
+		#Alt+Shift and the arrows make a box (column) selection, as Visual Studio's: from void on line 37 down two rows and
+		#right four characters is each row's first word.  Typing replaces each, leaving a caret on each row; undo puts the
+		#text back and ends the box.
+		'OPEN': 'CalcParentheses.h', 'CARET': '37:2',
+		'DEBUG': 'wait:1500,edit:keys:Alt+Shift+Cursor Down,edit:keys:Alt+Shift+Cursor Down,edit:keys:Alt+Shift+Cursor Right,'
+		         'edit:keys:Alt+Shift+Cursor Right,edit:keys:Alt+Shift+Cursor Right,edit:keys:Alt+Shift+Cursor Right,edit:printbox,'
+		         'edit:key:type:X,edit:printbox,edit:print,command:Edit.Undo,edit:printbox,edit:print'},
+		[r'^Box: \[void\] \[bool\] \[void\]$', r'^Box: \[\] \[\] \[\]$', r'CalcParentheses\.h \* \(focus\) line 39: \[\tX\t\tPrint\(CChars\* psz\);\]$',
+		 r'^Box: none$', r'CalcParentheses\.h \(focus\) line 39: \[\tvoid\t\tPrint\(CChars\* psz\);\]$'], []),
 	('editor-gutter-select', {
 		#Pressing a line's number in the gutter selects the line with its line feed; a shift press on line 36's number
 		#then selects from where that selection started (line 38's start) up to line 36's start.  Real presses through

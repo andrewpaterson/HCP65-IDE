@@ -112,6 +112,8 @@ Ptr<CMenuContainer> CIDEEdit::CreateEditMenu(void)
 	mpEditMenu->AddItem(pCommands->Find("Edit.Paste"));
 	mpEditMenu->AddSeparator();
 	mpEditMenu->AddItem(pCommands->Find("Edit.SelectAll"));
+	mpEditMenu->AddItem(pCommands->Find("Editor.ExtendSelection"));
+	mpEditMenu->AddItem(pCommands->Find("Editor.ShrinkSelection"));
 	mpEditMenu->AddSeparator();
 	mpEditMenu->AddItem(pCommands->Find("Edit.UndoAcrossFiles"));
 	mpEditMenu->AddItem(pCommands->Find("Edit.RedoAcrossFiles"));
