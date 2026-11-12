@@ -123,6 +123,7 @@ struct SIDEEditedFile
 
 	CArrayHighlights	acHighlights;	//Made: the file's highlights, if bHighlighted.
 	bool				bHighlighted;
+	CArrayCPPSyntaxRanges	asSyntaxRanges;	//Made with the highlights: what each node of its syntax was parsed from.
 	bool				bIndexed;		//Made: the index has the file from szText (or the file's own text).
 
 	void	Init(size uiProject, const char* szFileName, const char* szText, size uiChanges, bool bHighlight, bool bIndex);
@@ -239,7 +240,7 @@ protected:
 	void				KillJobs(void);
 	void				WaitForEditedFiles(void);
 	void				ProcessEditedFile(SIDEEditedFile* psFile);
-	void				HighlightFile(CIDEParsedUnit* pcUnit, CSourceFile* pcFile, CArrayHighlights* pacDest);
+	void				HighlightFile(CIDEParsedUnit* pcUnit, CSourceFile* pcFile, CArrayHighlights* pacDest, CArrayCPPSyntaxRanges* pasRanges);
 	void				GatherUnit(CIDEParsedUnit* pcUnit, CCPPIndexUnit* pcDest, CCPPIndexedFiles* pcIndexed);
 	void				CopyLocation(SCPPIndexLocation* psLocation, SIDELocation* psDest);
 	void				CopyLocations(CCPPIndexSymbol* pcSymbol, CArrayIDELocations* pasDest);

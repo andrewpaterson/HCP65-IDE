@@ -211,6 +211,22 @@ Step 6 - Syntax ranges in the IDE
   the text ranges are mixed in everywhere (inside a string or comment the parser has no nodes).
   Checks: IDEChecks script step extend:/shrink.
 
+  As built (2026-11-12):
+  6a. CppCompilerLib CCPPHighlighter::FindSyntaxRanges: for one source file of a parsed unit, every node whose first
+      and last tokens are written in that file (not made by a macro, not from another file) gives its first token's
+      start to its last token's end as lines and columns (SCPPSyntaxRange), sorted, each once.  A node ending in a
+      macro's tokens (g(a) * TWO) has none.  PrintSyntaxRanges for tests.
+  6b. IDE: the edits thread makes them with the highlights (CIDECodeModel::HighlightFile, SIDEEditedFile::
+      asSyntaxRanges); a tab takes them with the highlights, with the change count they were parsed at
+      (CIDEEditorTab::SetSyntaxRanges).  The tab is its editor's CTextSelectionRanges (CTextArea::SetSelectionRanges):
+      when its ranges are behind the text it has the documents work the edited tabs out now
+      (CIDEDocuments::UpdateEditedTabsNow, as Find Usages does, on the UI thread), then gives them as byte ranges.
+      Lines and columns rather than bytes, as the highlights are, so a file's carriage returns don't matter.
+  Not done: the status bar doesn't say "Parsing..." first (it would only show after the parse); the guard that skips
+  ranges still behind after that parse (a tab whose project has gone) isn't checked.
+  Tests: TestCppHighlighterSyntaxRanges; script steps extend and shrink, check editor-extend-selection (the syntax's
+  member access and call between the text's ranges, and an edit followed at once by Extend, parsed on demand).
+
 Step 7 - Box selection engine (BaseLib CTextEditing)
   A box is the anchor's and caret's lines with an x from each (pixels from the view, so tabs and spans are right).
   Each line's range is its characters between the two x's; lines shorter than the left edge have an empty range at

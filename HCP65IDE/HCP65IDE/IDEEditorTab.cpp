@@ -63,6 +63,7 @@ void CIDEEditorTab::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CFo
 	mpEditor->SetCaretLine(true, pTheme->GetColour(TC_CaretLine));
 	//The selected text's other occurrences in the file are highlighted, as IntelliJ's are.
 	mpEditor->SetHighlightOccurrences(true);
+	mpEditor->SetSelectionRanges(this);
 	mpPane = OMalloc<CScrollPane>(pWindow, pTheme);
 	mpPane->SetContent(mpCodeEditor);
 	mpPane->SetAlignment(CSH_Stretch, CSV_Stretch);
@@ -75,6 +76,9 @@ void CIDEEditorTab::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CFo
 	mbEdited = false;
 	mbIndexStale = false;
 	muiIndexedChanges = muiSeenChanges;
+	masSyntaxRanges.Init();
+	muiSyntaxChanges = MAX_SIZE;
+	mpcDocuments = NULL;
 	mbCarriageReturns = UsesIDECarriageReturns(szText);
 	muiSavedUndo = mpEditor->GetUndoId();
 	mbShownModified = false;
@@ -108,6 +112,9 @@ void CIDEEditorTab::Class(void)
 	U_Bool(mbEdited);
 	U_Bool(mbIndexStale);
 	U_Size(muiIndexedChanges);
+	U_Unknown(CArrayCPPSyntaxRanges, masSyntaxRanges);
+	U_Size(muiSyntaxChanges);
+	U_Pointer(mpcDocuments);
 	M_Pointer(mpZones);
 	U_Unknown(CIDEListingSource, mcListings);
 	U_Bool(mbCarriageReturns);
@@ -127,6 +134,11 @@ void CIDEEditorTab::Class(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDEEditorTab::Free(void)
 {
+	if (mpEditor.IsNotNull())
+	{
+		mpEditor->SetSelectionRanges(NULL);
+	}
+	masSyntaxRanges.Kill();
 	mszBaseHead.Kill();
 	mszBaseText.Kill();
 	mcListings.Kill();
@@ -165,6 +177,72 @@ bool CIDEEditorTab::Load(CObjectReader* pcFile)
 void CIDEEditorTab::SetHighlights(CArrayHighlights* pacHighlights)
 {
 	ApplyIDEHighlights(mpEditor, pacHighlights);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// What each node of the text's syntax was parsed from (lines and columns
+// from 0), parsed with the editor's text at change count uiChanges, for
+// Extend Selection to grow through.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEEditorTab::SetSyntaxRanges(CArrayCPPSyntaxRanges* pasRanges, size uiChanges)
+{
+	masSyntaxRanges.ReInit();
+	masSyntaxRanges.Copy(pasRanges);
+	muiSyntaxChanges = uiChanges;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The documents that parse the tab's text when Extend Selection wants its
+// syntax and the ranges are behind the text.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEEditorTab::SetDocuments(CIDEDocuments* pcDocuments)
+{
+	mpcDocuments = pcDocuments;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The syntax ranges, for Extend Selection to pick from.  When the text
+// has changed since they were parsed it is parsed now, on this thread, as
+// the edits thread would (the user's choice: parse on demand); a text
+// that isn't C or C++, or isn't in a project, has none.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEEditorTab::AddSelectionRanges(size uiStart, size uiEnd, CArrayTextRange* pasDest)
+{
+	SCPPSyntaxRange*	psRange;
+	STextRange			sRange;
+	size				uiLines;
+	size				i;
+
+	if ((muiSyntaxChanges != mpEditor->GetChangeCount()) && mpcDocuments)
+	{
+		mpcDocuments->UpdateEditedTabsNow();
+	}
+	if (muiSyntaxChanges != mpEditor->GetChangeCount())
+	{
+		return;
+	}
+
+	uiLines = mpEditor->NumLines();
+	for (i = 0; i < masSyntaxRanges.NumElements(); i++)
+	{
+		psRange = masSyntaxRanges.Get(i);
+		if (((size)psRange->iLine >= uiLines) || ((size)psRange->iEndLine >= uiLines))
+		{
+			continue;
+		}
+		sRange.uiStart = FindPosition(psRange->iLine, psRange->iColumn);
+		sRange.uiEnd = FindPosition(psRange->iEndLine, psRange->iEndColumn);
+		*pasDest->Add() = sRange;
+	}
 }
 
 

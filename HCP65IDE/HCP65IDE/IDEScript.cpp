@@ -1509,6 +1509,15 @@ void CIDEScript::RunEditStep(const char* szStep)
 			printf("\n");
 		}
 	}
+	else if ((strcmp(szStep, "extend") == 0) && pTab.IsNotNull())
+	{
+		//Extend Selection in the active editor, as Control+W: with the syntax parsed now if it is behind the text.
+		pTab->GetEditor()->ExtendSelection();
+	}
+	else if ((strcmp(szStep, "shrink") == 0) && pTab.IsNotNull())
+	{
+		pTab->GetEditor()->ShrinkSelection();
+	}
 	else if (strcmp(szStep, "printcaretusages") == 0)
 	{
 		//The usages of the symbol at the active editor's caret highlighted in it (CIDECaretUsages): "Caret usages: <n> at

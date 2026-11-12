@@ -951,6 +951,17 @@ CHECKS = [
 		[r'^Caret usages: 4 at 363:20w 369:4 370:21 371:13$', r'^Caret usages: 4 at 363:20w 369:4 370:21 371:13$', r'^Caret usages: 0 at$', r'^Caret usages: 0 at$',
 		 r'^Caret usages: 4 at 363:20w 369:4 370:21 371:13$', r'^Caret usages: 0 at$', r'^Caret usages: 4 at 363:20w 369:4 370:22 371:13$',
 		 r'^Caret usages: 6 at 361:19w 394:3 400:3 401:3 408:3 423:3$'], []),
+	('editor-extend-selection', {
+		#Extend Selection grows through the syntax as well as the text: from mpcLeft to the member access (the syntax's),
+		#the brackets' inside then the brackets (the text's), the call (the syntax's); Shrink goes back.  Straight after an
+		#edit (before the edits pause) the text is parsed for it then and there.
+		'OPEN': 'Calculator.cpp', 'CARET': '400:33',
+		'DEBUG': 'wait:2000,edit:extend,edit:printselection,edit:extend,edit:printselection,edit:extend,edit:printselection,'
+		         'edit:extend,edit:printselection,edit:extend,edit:printselection,edit:shrink,edit:printselection,'
+		         'edit:replace:401|->mpcRight)|->mpcRight ),edit:caret:401:33,edit:extend,edit:extend,edit:printselection'},
+		[r'^Selection: \[mpcLeft\] on line 400', r'^Selection: \[pcBinary->mpcLeft\] on line 400', r'^Selection: \[&pcBinary->mpcLeft\] on line 400',
+		 r'^Selection: \[\(&pcBinary->mpcLeft\)\] on line 400', r'^Selection: \[StripParentheses\(&pcBinary->mpcLeft\)\] on line 400',
+		 r'^Selection: \[\(&pcBinary->mpcLeft\)\] on line 400', r'^Selection: \[pcBinary->mpcRight\] on line 401'], []),
 	('editor-gutter-select', {
 		#Pressing a line's number in the gutter selects the line with its line feed; a shift press on line 36's number
 		#then selects from where that selection started (line 38's start) up to line 36's start.  Real presses through

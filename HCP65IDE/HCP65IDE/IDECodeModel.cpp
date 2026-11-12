@@ -661,7 +661,7 @@ bool CIDECodeModel::Highlight(size uiProject, const char* szFileName, const char
 		pcFile = cUnit.mpcUnit;
 	}
 
-	HighlightFile(&cUnit, pcFile, pacDest);
+	HighlightFile(&cUnit, pcFile, pacDest, NULL);
 	cUnit.Kill();
 	return true;
 }
@@ -670,10 +670,10 @@ bool CIDECodeModel::Highlight(size uiProject, const char* szFileName, const char
 //////////////////////////////////////////////////////////////////////////
 //
 // The highlights of pcFile (the unit's own file or a header it included)
-// added to pacDest.
+// added to pacDest, and its syntax ranges to pasRanges unless it is NULL.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDECodeModel::HighlightFile(CIDEParsedUnit* pcUnit, CSourceFile* pcFile, CArrayHighlights* pacDest)
+void CIDECodeModel::HighlightFile(CIDEParsedUnit* pcUnit, CSourceFile* pcFile, CArrayHighlights* pacDest, CArrayCPPSyntaxRanges* pasRanges)
 {
 	CCPPHighlighter	cHighlighter;
 	size			i;
@@ -683,6 +683,10 @@ void CIDECodeModel::HighlightFile(CIDEParsedUnit* pcUnit, CSourceFile* pcFile, C
 	for (i = 0; i < cHighlighter.NumHighlights(); i++)
 	{
 		pacDest->Add(cHighlighter.Get(i));
+	}
+	if (pasRanges)
+	{
+		cHighlighter.FindSyntaxRanges(pcFile, &pcUnit->mcTokeniser, &pcUnit->mcTree, pasRanges);
 	}
 	cHighlighter.Kill();
 }

@@ -181,6 +181,7 @@ Ptr<CIDEEditorTab> CIDEDocuments::OpenFileTab(const char* szFileName, size uiPro
 	}
 	pTab = OMalloc<CIDEEditorTab>(mpcContent->GetWindow(), mpcContent->GetTheme(), mpcContent->GetFontColours()->GetFont(mpcContent->GetTheme()->GetColour(TC_Icon)), mpcContent->GetCodeFamily(), mpcContent->GetTheme()->GetColour(TC_Text), szFileName, uiProject, cFile.Text());
 	cFile.Kill();
+	pTab->SetDocuments(this);
 	maTabs.Add(pTab);
 	RequestHighlight(pTab);
 	if (mpcContent->GetBuilding()->GetListings()->NumListings() > 0)
@@ -700,6 +701,7 @@ bool CIDEDocuments::TakeEditedFiles(bool bWait)
 		if (pTab.IsNotNull() && psFile->bHighlighted && (pTab->GetEditor()->GetChangeCount() == psFile->uiChanges))
 		{
 			pTab->SetHighlights(&psFile->acHighlights);
+			pTab->SetSyntaxRanges(&psFile->asSyntaxRanges, psFile->uiChanges);
 		}
 	}
 	KillIDEEditedFiles(&apsFiles);
