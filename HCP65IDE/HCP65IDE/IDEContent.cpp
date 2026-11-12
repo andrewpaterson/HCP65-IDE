@@ -275,6 +275,7 @@ void CIDEContent::Free(void)
 		mpWindow->CancelPosted(&mpCloseGuard);  //The modules' posted calls too.
 		mpWindow->CancelPosted(&mpNavigator);
 		mpWindow->CancelPosted(&mpFindInFiles);
+		mpWindow->CancelPosted(&mpUsages);
 		mpWindow->CancelPosted(&mpRename);
 		mpWindow->CancelPosted(&mpSolutions);
 		mpWindow->CancelPosted(&mpBuildConfigurations);

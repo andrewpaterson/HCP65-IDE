@@ -29,6 +29,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/CommandSet.h"
 #include "IDECodeModel.h"
 #include "IDESteppable.h"
+#include "IDEScope.h"
+#include "WindowLib/Dialog.h"
 
 
 class CIDEContent;
@@ -78,12 +80,14 @@ struct SIDEFoundUsages
 	void	Clear(void);
 	bool	AdjustPlaces(const char* szFile, SIDEPlaceChange* psChange);
 	void	AppendTitle(CChars* pszDest);
+	void	AppendTitle(CChars* pszDest, const char* szScope, size uiCount);
 };
 
 
 //One Find Usages, in a tab of the tool window: its results pane, what it found (if it has found anything: a new tab
 //hasn't), whether edits have moved its usages since its tree was made, whether the groupings or filters have changed
-//since (it is made again when its tab is chosen), and whether it is pinned.
+//since (it is made again when its tab is chosen), and whether it is pinned.  It keeps every usage it found; its tree
+//shows those in its scope, which is the tool window's as the IDE was when it was found.
 class CIDEUsagesSearch : public CObject
 {
 CONSTRUCTABLE(CIDEUsagesSearch);
@@ -91,7 +95,8 @@ DESTRUCTABLE(CIDEUsagesSearch);
 public:
 	Ptr<CIDEResultsPane>	mpPane;
 	Ptr<CTabComponent>		mpTab;
-	SIDEFoundUsages			msFound;  //What the tree shows, if mbFound: each line's usage by its node's data less one.
+	SIDEFoundUsages			msFound;  //What was found, if mbFound: each line's usage by its node's data less one.
+	CIDEScope				mcScope;  //Its scope: the tree shows the usages found that are in it.
 	bool					mbFound;
 	bool					mbMoved;  //Edits have moved usages since the tree was shown, the last at miMoved.
 	int64					miMoved;
@@ -120,7 +125,13 @@ struct SIDEUsageRow;
 //Each Find Usages shows what it finds in the tool window's tab that is chosen, named for the symbol, unless that tab
 //is pinned (Pin Tab, on the toolbar): then it is left as it is and a new tab is made.  A tab is closed by its cross;
 //the tool window always has one, empty until something is found, and its tab bar is only shown with more than one.
-//The groupings and filters are the tool window's, the same for every tab.  Find
+//The groupings and filters are the tool window's, the same for every tab.
+//
+//Find Usages Settings (Control+Alt+Shift+F7) chooses the scope usages are looked for in (CIDEScope), the directory for
+//a directory's, and whether Find Usages has the declarations with the usages; OK finds the usages of the symbol at the
+//caret with them, and Find Usages uses them from then on.  Find All References uses the scope too, and always has the
+//declarations.  They are kept in the IDE's settings.  The index is of the whole workspace: a scope leaves usages out
+//of the tree, it doesn't look in less.  The usages popup is always of every usage.  Find
 //All References (Shift+F12) shows its declarations and definition there too.  Control+B on a declaration shows the
 //usages in a popup under the caret.  The tree is a results pane's (CIDEResultsPane), which opens and steps through
 //the usages: a line's node's data is its usage's index in what was found, and one.
@@ -137,6 +148,10 @@ protected:
 	Ptr<CMenuContainer>	mpPopup;  //Control+B's usages on a declaration, made when it is first shown.
 	SIDEFoundUsages		msPopupFound;  //What the popup shows: each row's usage by its row less one (the first is its title).
 	uint8				muiGrouping;  //IDE_USAGES_BY_*.
+	EIDEScope			meScope;  //Find Usages Settings': where usages are looked for, the directory for a directory's,
+	CChars				mszDirectory;  //and whether Find Usages has the declarations with the usages.
+	bool				mbDeclarations;
+	Ptr<CDialog>		mpSettingsDialog;  //While Find Usages Settings is shown.
 	bool				mbShowRead;  //Usages that read a value are in the tree.
 	bool				mbShowWrite;  //Usages that write one are.
 
@@ -161,6 +176,9 @@ public:
 	void				SetGrouping(uint8 uiGrouping);
 	void				SetAccessShown(bool bRead, bool bWrite);
 	void				SetPinned(bool bPinned);
+	void				SetScopeSettings(EIDEScope eScope, const char* szDirectory, bool bDeclarations);
+	EIDEScope			GetScope(void);
+	bool				ShowSettings(void);
 	size				NumSearches(void);
 	Ptr<CTabbedContainer>	GetTabs(void);
 	void				ReadSettings(CMarkupTag* pcSettings);
@@ -212,6 +230,8 @@ protected:
 	bool				IsUsageShown(SIDEUsage* psUsage);
 	bool				FindAt(const char* szFileName, int iLine, int iColumn, bool bDeclarations, SIDEFoundUsages* psDest);
 	void				FindUsagesOnly(void);
+	void				QueueSettings(void);
+	void				ShowQueuedSettings(void);
 };
 
 

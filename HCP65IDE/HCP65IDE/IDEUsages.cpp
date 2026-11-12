@@ -40,6 +40,9 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define IDE_USAGES_BY_PROJECT_ATTRIBUTE	"GroupByProject"
 #define IDE_USAGES_BY_CLASS_ATTRIBUTE	"GroupByClass"
 #define IDE_USAGES_READ_ATTRIBUTE		"ShowReadAccess"
+#define IDE_USAGES_SCOPE_ATTRIBUTE		"Scope"
+#define IDE_USAGES_DIRECTORY_ATTRIBUTE	"Directory"
+#define IDE_USAGES_DECLARATIONS_ATTRIBUTE	"IncludeDeclarations"
 #define IDE_USAGES_WRITE_ATTRIBUTE		"ShowWriteAccess"
 
 
@@ -336,13 +339,25 @@ bool SIDEFoundUsages::AdjustPlaces(const char* szFile, SIDEPlaceChange* psChange
 //////////////////////////////////////////////////////////////////////////
 void SIDEFoundUsages::AppendTitle(CChars* pszDest)
 {
+	AppendTitle(pszDest, NULL, asUsages.NumElements());
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The title with the scope the usages are in (" in BaseLib"; NULL or ""
+// for none) and how many of them there are in it.
+//
+//////////////////////////////////////////////////////////////////////////
+void SIDEFoundUsages::AppendTitle(CChars* pszDest, const char* szScope, size uiCount)
+{
 	if (bDeclarations)
 	{
-		pszDest->Append(asUsages.NumElements() == 0 ? "No references to " : "References to ");
+		pszDest->Append(uiCount == 0 ? "No references to " : "References to ");
 	}
 	else
 	{
-		pszDest->Append(asUsages.NumElements() == 0 ? "No usages of " : "Usages of ");
+		pszDest->Append(uiCount == 0 ? "No usages of " : "Usages of ");
 	}
 	pszDest->Append(szName);
 	if (uiOverrides > 0)
@@ -351,9 +366,10 @@ void SIDEFoundUsages::AppendTitle(CChars* pszDest)
 		pszDest->Append((int)uiOverrides);
 		pszDest->Append(uiOverrides == 1 ? " override" : " overrides");
 	}
-	if (asUsages.NumElements() > 0)
+	pszDest->Append(szScope ? szScope : "");
+	if (uiCount > 0)
 	{
-		AppendIDEUsageCount(pszDest, asUsages.NumElements(), bDeclarations ? " reference" : " usage");
+		AppendIDEUsageCount(pszDest, uiCount, bDeclarations ? " reference" : " usage");
 	}
 }
 
@@ -370,6 +386,9 @@ void CIDEUsages::Init(CIDEContent* pcContent)
 	maSearches.Init();
 	msPopupFound.Init();
 	muiGrouping = IDE_USAGES_BY_ALL;
+	meScope = IS_Solution;
+	mszDirectory.Init();
+	mbDeclarations = false;
 	mbShowRead = true;
 	mbShowWrite = true;
 	PostInit();
@@ -390,6 +409,10 @@ void CIDEUsages::Class(void)
 	M_Pointer(mpPopup);
 	U_Unknown(SIDEFoundUsages, msPopupFound);
 	U_UInt8(muiGrouping);
+	U_Enum(meScope);
+	U_String(mszDirectory);
+	U_Bool(mbDeclarations);
+	M_Pointer(mpSettingsDialog);
 	U_Bool(mbShowRead);
 	U_Bool(mbShowWrite);
 }
@@ -413,6 +436,7 @@ void CIDEUsages::Free(void)
 		mpPopup->GetItemClickEvent()->Remove(this);
 	}
 	msPopupFound.Kill();
+	mszDirectory.Kill();
 }
 
 
@@ -566,6 +590,7 @@ bool CIDEUsages::FindUsages(bool bDeclarations)
 		AddSearch();
 	}
 	mpSearch->SetFound(&sFound);
+	mpSearch->mcScope.Capture(mpcContent, meScope, mszDirectory.Text());
 	mpSearch->mpTab->SetText(mpSearch->msFound.szName.Text());
 
 	ShowUsages(false);
@@ -769,6 +794,8 @@ void CIDEUsages::ShowUsages(bool bKeepSelected)
 	size				uiIndexed;
 	size				uiToIndex;
 	size				uiRows;
+	size				uiInScope;
+	CChars				szScope;
 	size				uiFile;
 	size				i;
 	int64				iSelectedData;
@@ -795,8 +822,15 @@ void CIDEUsages::ShowUsages(bool bKeepSelected)
 	bByType = (muiGrouping & IDE_USAGES_BY_TYPE) != 0;
 	bByProject = (muiGrouping & IDE_USAGES_BY_PROJECT) != 0;
 	asRows.Init();
+	uiInScope = 0;
 	for (i = 0; i < mpSearch->msFound.asUsages.NumElements(); i++)
 	{
+		//Those out of the scope aren't its usages at all; those the filters leave out are, and are counted as hidden.
+		if (!mpSearch->mcScope.Contains(mpcContent, mpSearch->msFound.asUsages.Get(i)->sLocation.szFileName.Text()))
+		{
+			continue;
+		}
+		uiInScope++;
 		if (!IsUsageShown(mpSearch->msFound.asUsages.Get(i)))
 		{
 			continue;
@@ -813,7 +847,14 @@ void CIDEUsages::ShowUsages(bool bKeepSelected)
 
 	//Until every file is indexed some may be missing.
 	szText.Init();
-	mpSearch->msFound.AppendTitle(&szText);
+	szScope.Init();
+	if (mpSearch->mcScope.GetScope() != IS_Solution)
+	{
+		szScope.Append(" ");
+		mpSearch->mcScope.AppendName(mpcContent, &szScope);
+	}
+	mpSearch->msFound.AppendTitle(&szText, szScope.Text(), uiInScope);
+	szScope.Kill();
 	mpcContent->GetCodeModel()->GetIndexingProgress(&uiIndexed, &uiToIndex);
 	if (uiIndexed < uiToIndex)
 	{
@@ -823,10 +864,10 @@ void CIDEUsages::ShowUsages(bool bKeepSelected)
 		szText.Append((uint32)uiToIndex);
 		szText.Append(" files)");
 	}
-	if (uiRows < mpSearch->msFound.asUsages.NumElements())
+	if (uiRows < uiInScope)
 	{
 		szText.Append("  (");
-		szText.Append((uint32)(mpSearch->msFound.asUsages.NumElements() - uiRows));
+		szText.Append((uint32)(uiInScope - uiRows));
 		szText.Append(" hidden)");
 	}
 	iRoot = mpSearch->mpPane->GetTree()->AddNode(TREE_NO_NODE, szText.Text(), NULL, 0);
@@ -1019,6 +1060,7 @@ void CIDEUsagesSearch::Init(Ptr<CIDEResultsPane> pPane)
 	PreInit();
 	mpPane = pPane;
 	msFound.Init();
+	mcScope.Init();
 	mbFound = false;
 	mbMoved = false;
 	miMoved = 0;
@@ -1033,6 +1075,7 @@ void CIDEUsagesSearch::Class(void)
 	M_Pointer(mpPane);
 	M_Pointer(mpTab);
 	U_Unknown(SIDEFoundUsages, msFound);
+	U_Unknown(CIDEScope, mcScope);
 	U_Bool(mbFound);
 	U_Bool(mbMoved);
 	U_Int64(miMoved);
@@ -1043,6 +1086,7 @@ void CIDEUsagesSearch::Class(void)
 
 void CIDEUsagesSearch::Free(void)
 {
+	mcScope.Kill();
 	msFound.Kill();
 }
 
@@ -1257,6 +1301,115 @@ void CIDEUsages::SetPinned(bool bPinned)
 bool CIDEUsages::IsPinned(void) { return mpSearch.IsNotNull() && mpSearch->mbPinned; }
 size CIDEUsages::NumSearches(void) { return maSearches.NumElements(); }
 Ptr<CTabbedContainer> CIDEUsages::GetTabs(void) { return mpTabs; }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Find Usages' settings: the scope usages are looked for in, the
+// directory for a directory's, and whether Find Usages has the
+// declarations with the usages.  They are kept for the next time the IDE
+// is run.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEUsages::SetScopeSettings(EIDEScope eScope, const char* szDirectory, bool bDeclarations)
+{
+	meScope = eScope;
+	mszDirectory.Set(szDirectory ? szDirectory : "");
+	mbDeclarations = bDeclarations;
+	mpcContent->GetSettings()->WriteSettings();
+}
+
+
+EIDEScope CIDEUsages::GetScope(void) { return meScope; }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The dialog is shown at the next tick: ShowModal can't be called from
+// the input (a key or a menu click) that asks for it.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEUsages::QueueSettings(void)
+{
+	if (mpSettingsDialog.IsNull())
+	{
+		mpcContent->GetWindow()->Post(this, &CIDEUsages::ShowQueuedSettings);
+	}
+}
+
+
+void CIDEUsages::ShowQueuedSettings(void)
+{
+	ShowSettings();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// IntelliJ's Find Usages Settings (Control+Alt+Shift+F7): the scope (of
+// those there are to choose now), the directory a directory's scope looks
+// in (the active file's, until one is typed) and Include Declarations.
+// OK keeps them and finds the usages of the symbol at the caret with
+// them.  False if it was cancelled or nothing was found.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEUsages::ShowSettings(void)
+{
+	Ptr<CComboBox>		pScope;
+	Ptr<CTextField>		pDirectory;
+	Ptr<CCheckBox>		pDeclarations;
+	Ptr<CIDEEditorTab>	pTab;
+	const char*			aszScopes[IS_Count];
+	EIDEScope			aeScopes[IS_Count];
+	CFileUtil			cFileUtil;
+	CChars				szDirectory;
+	size				uiScopes;
+	size				i;
+	int					iSelected;
+	bool				bResult;
+
+	uiScopes = 0;
+	iSelected = 0;
+	for (i = 0; i < IS_Count; i++)
+	{
+		if (CIDEScope::IsOffered(mpcContent, (EIDEScope)i))
+		{
+			if ((EIDEScope)i == meScope)
+			{
+				iSelected = (int)uiScopes;
+			}
+			aeScopes[uiScopes] = (EIDEScope)i;
+			aszScopes[uiScopes] = CIDEScope::GetScopeName((EIDEScope)i);
+			uiScopes++;
+		}
+	}
+	szDirectory.Init(mszDirectory);
+	pTab = mpcContent->GetDocuments()->GetActiveTab();
+	if (szDirectory.Empty() && pTab.IsNotNull())
+	{
+		szDirectory.Set(pTab->GetFileName());
+		cFileUtil.RemoveLastFromPath(&szDirectory);
+	}
+
+	mpSettingsDialog = OMalloc<CDialog>(mpcContent->GetWindow(), mpcContent->GetDialogLook(), "Find Usages Settings");
+	pScope = mpSettingsDialog->AddComboBox("Scope:", aszScopes, uiScopes, iSelected);
+	pDirectory = mpSettingsDialog->AddTextField("Directory:", szDirectory.Text());
+	pDeclarations = mpSettingsDialog->AddCheckBox("Include declarations", mbDeclarations);
+	mpSettingsDialog->SetOKCaption("Find");
+	szDirectory.Kill();
+
+	bResult = false;
+	mpcContent->GetScript()->WatchDialog(mpSettingsDialog);
+	if (mpSettingsDialog->Show(520))
+	{
+		iSelected = pScope->GetSelected();
+		SetScopeSettings(((iSelected >= 0) && ((size)iSelected < uiScopes)) ? aeScopes[iSelected] : IS_Solution, pDirectory->GetText(), pDeclarations->IsTicked());
+		bResult = FindUsages(mbDeclarations);
+	}
+	mpcContent->GetScript()->StopWatchingDialog();
+	mpSettingsDialog = NULL;
+	return bResult;
+}
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -1521,6 +1674,14 @@ void CIDEUsages::ReadSettings(CMarkupTag* pcSettings)
 			uiGrouping = (StringCompare(szValue, "true") == 0) ? (uiGrouping | auiGroups[i]) : (uiGrouping & ~auiGroups[i]);
 		}
 	}
+	CIDEScope::FindScope(pcTag->GetStringAttribute(IDE_USAGES_SCOPE_ATTRIBUTE), &meScope);
+	szValue = pcTag->GetStringAttribute(IDE_USAGES_DIRECTORY_ATTRIBUTE);
+	if (szValue)
+	{
+		mszDirectory.Set(szValue);
+	}
+	szValue = pcTag->GetStringAttribute(IDE_USAGES_DECLARATIONS_ATTRIBUTE);
+	mbDeclarations = szValue && (StringCompare(szValue, "true") == 0);
 	szValue = pcTag->GetStringAttribute(IDE_USAGES_READ_ATTRIBUTE);
 	mbShowRead = !szValue || (StringCompare(szValue, "true") == 0);
 	szValue = pcTag->GetStringAttribute(IDE_USAGES_WRITE_ATTRIBUTE);
@@ -1540,6 +1701,9 @@ void CIDEUsages::WriteSettings(CXMLWriter* pcWriter)
 	pcWriter->Attribute(IDE_USAGES_BY_TYPE_ATTRIBUTE, (muiGrouping & IDE_USAGES_BY_TYPE) != 0);
 	pcWriter->Attribute(IDE_USAGES_BY_PROJECT_ATTRIBUTE, (muiGrouping & IDE_USAGES_BY_PROJECT) != 0);
 	pcWriter->Attribute(IDE_USAGES_BY_CLASS_ATTRIBUTE, (muiGrouping & IDE_USAGES_BY_CLASS) != 0);
+	pcWriter->Attribute(IDE_USAGES_SCOPE_ATTRIBUTE, CIDEScope::GetScopeName(meScope));
+	pcWriter->Attribute(IDE_USAGES_DIRECTORY_ATTRIBUTE, mszDirectory.Text());
+	pcWriter->Attribute(IDE_USAGES_DECLARATIONS_ATTRIBUTE, mbDeclarations);
 	pcWriter->Attribute(IDE_USAGES_READ_ATTRIBUTE, mbShowRead);
 	pcWriter->Attribute(IDE_USAGES_WRITE_ATTRIBUTE, mbShowWrite);
 	if (mpSearch.IsNotNull())
@@ -1645,6 +1809,7 @@ void CIDEUsages::Clear(void)
 void CIDEUsages::AddCommands(Ptr<CCommandSet> pCommands)
 {
 	pCommands->Add("Navigate.FindUsages", "Find Usages", "Alt+F7", Ptr<CImageCel>(), this, &CIDEUsages::FindUsagesOnly)->SetEnabledCheck(this, &CIDEUsages::CanFindUsages);
+	pCommands->Add("Navigate.FindUsagesSettings", "Find Usages Settings...", "Control+Alt+Shift+F7", Ptr<CImageCel>(), this, &CIDEUsages::QueueSettings)->SetEnabledCheck(this, &CIDEUsages::CanFindUsages);
 }
 
 
@@ -1656,6 +1821,7 @@ void CIDEUsages::AddCommands(Ptr<CCommandSet> pCommands)
 void CIDEUsages::AddEditorItems(Ptr<CMenuContainer> pMenu)
 {
 	pMenu->AddItem(mpcContent->GetCommands()->Find("Navigate.FindUsages"));
+	pMenu->AddItem(mpcContent->GetCommands()->Find("Navigate.FindUsagesSettings"));
 }
 
 
@@ -1674,4 +1840,4 @@ bool CIDEUsages::CanFindUsages(void)
 }
 
 
-void CIDEUsages::FindUsagesOnly(void) { FindUsages(false); }  //Find Usages without the declarations and definition, which Find All References has.
+void CIDEUsages::FindUsagesOnly(void) { FindUsages(mbDeclarations); }  //Find Usages, with the declarations if its settings say so; Find All References always has them.

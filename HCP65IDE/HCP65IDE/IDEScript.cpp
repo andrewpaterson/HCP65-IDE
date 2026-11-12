@@ -1137,6 +1137,17 @@ void CIDEScript::RunEditStep(const char* szStep)
 		//usagesingleclick:on or :off, as the tool window's Navigate with Single Click.
 		mpcContent->GetUsages()->GetResultsPane()->SetNavigateOnSelect(strcmp(&szStep[17], "on") == 0);
 	}
+	else if (strncmp(szStep, "usagescope:", 11) == 0)
+	{
+		//usagescope:<scope>[:d]: Find Usages' settings' scope, as the script numbers them (GetScriptScope), with the
+		//declarations if :d follows; its directory is HCP65_IDE_FIND_DIRECTORY.
+		mpcContent->GetUsages()->SetScopeSettings(GetScriptScope(&szStep[11]), getenv("HCP65_IDE_FIND_DIRECTORY"), strstr(&szStep[11], ":d") != NULL);
+	}
+	else if (strcmp(szStep, "usagesonly") == 0)
+	{
+		//Alt+F7 itself: Find Usages with its settings (the usages step never has the declarations).
+		mpcContent->GetCommands()->Run("Navigate.FindUsages");
+	}
 	else if (strcmp(szStep, "usagetabs") == 0)
 	{
 		//The Find Usages tool window's tabs, the chosen one after a '>': "Usage tabs: * IsParentheses, >SetExpression".

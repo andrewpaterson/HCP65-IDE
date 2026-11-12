@@ -458,6 +458,31 @@ CHECKS = [
 		 r'^Usages of Evaluate', r'^Usage tabs: (\* IsParentheses, >Evaluate|>Evaluate, \* IsParentheses)$',
 		 r'^Usage tabs: (>\* IsParentheses, Evaluate|Evaluate, >\* IsParentheses)$',
 		 r'^Usages of IsParentheses and 1 override  3 usages$', r'^Usage tabs: >Evaluate$', r'^Usages of Evaluate'], [r'ERROR', r'SetExpression, .*Evaluate|Evaluate, .*SetExpression']),
+	('usages-scope-current-file', {
+		#Find Usages' scope: with Current File the usages in other files aren't in the tree, whose first row says the scope.
+		#The symbol is declared in CalcParentheses.h and only used in Calculator.cpp.
+		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usagescope:4,usages,usagescope:4,references'},
+		[r'^No usages of IsParentheses and 1 override in CalcParentheses\.h$',
+		 r'^References to IsParentheses and 1 override in CalcParentheses\.h  1 reference$', r'^    38: bool  IsParentheses\(void\);'],
+		[r'Calculator\.cpp', r'hidden', r'ERROR']),
+	('usages-scope-project', {
+		#The Project scope is the active file's project; Find All References uses the scope too.
+		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usagescope:1,references'},
+		[r'^References to IsParentheses and 1 override in BaseLib  7 references$', r'^  Calculator\.cpp  3$'], [r'ERROR']),
+	('usages-scope-directory', {
+		#A directory's scope: nothing of the symbol's is in a directory it isn't used in.
+		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'FIND_DIRECTORY': os.path.join(ROOT, 'CommonLibraries', 'Libraries', 'WindowLib'),
+		'EDIT': 'usagegroups:,usagescope:2,usages'},
+		[r'^No usages of IsParentheses and 1 override in .*WindowLib$'], [r'Calculator\.cpp', r'ERROR']),
+	('usages-settings-declarations', {
+		#Find Usages (Alt+F7) has the declarations with the usages when its settings say so.
+		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usagescope:0:d,usagesonly,printusages'},
+		[r'^References to IsParentheses and 1 override  7 references$'], [r'ERROR']),
+	('usages-settings-dialog', {
+		#Find Usages Settings: its dialog, answered Find, finds the usages of the symbol at the caret.
+		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'DIALOG_ANSWER': 'OK',
+		'EDIT': 'usagegroups:', 'DEBUG': 'command:Navigate.FindUsagesSettings,answered:1,edit:printusages'},
+		[r'^Dialog \[Find Usages Settings\] answered OK$', r'^Usages of IsParentheses and 1 override  3 usages$'], [r'ERROR']),
 	('usages-access-filters', {
 		#Show Read Access and Show Write Access, both on to start with: off, a field's usages that read it, or write it, are
 		#left out of the tree, whose first row says how many are hidden.
@@ -712,7 +737,7 @@ CHECKS = [
 		 r'^Menu Build: Build \[Ctrl\+Shift\+B\], Edit Build Configurations\.\.\.$',
 		 r'^Menu Debug: Start Debugging \[F5\], Start Without Debugging \[Ctrl\+F5\], Stop Debugging \[Shift\+F5\], Stop Running\(disabled\), Restart \[Ctrl\+Shift\+F5\], Break All \[Ctrl\+Pause/Break\], Attach to Emulator\.\.\., Step Into \[F11\], Step Over \[F10\], Step Out \[Shift\+F11\], Toggle Breakpoint \[F9\], ',
 		 r'^Menu Window: Reset Window Layout, Close All Documents$',
-		 r'^Menu Editor: Go to Source \[Ctrl\+B\], Find Usages \[Alt\+F7\], Rename\.\.\. \[Shift\+F6\], Refactor>$',
+		 r'^Menu Editor: Go to Source \[Ctrl\+B\], Find Usages \[Alt\+F7\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Rename\.\.\. \[Shift\+F6\], Refactor>$',
 		 r'^Menu Editor/Refactor: Extract Method\.\.\.\(disabled\)$',
 		 r'^Menu Explorer: Set as Startup Solution, Set as Startup Project\(disabled\), Remove Solution$',
 		 r'^Menu item \[View/Nope\] not found$'], []),
