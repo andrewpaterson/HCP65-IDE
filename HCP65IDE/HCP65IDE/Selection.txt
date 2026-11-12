@@ -135,6 +135,22 @@ Step 4 - Selected text occurrences (CTextArea, opt-in: SetHighlightOccurrences)
   selection colour (theme TC_TextOccurrence), case-sensitive, up to 1000; found again after selection changes and edits
   (on the tick, not per key).  The IDE turns it on for editors.
 
+  As built (2026-11-12):
+  4a. BaseLib CTextNavigation::IsOccurrenceText (one line, not only spaces and tabs) and FindOccurrences(uiStart,
+      uiEnd, uiMax, CArrayTextOccurrence*): the other exact matches, from the text's start, not overlapping each
+      other, the range itself left out.
+  4b. WindowLib theme colour TC_TextOccurrence (Jewel: 0x2B3345, between the caret line and the selection).
+      CTextArea::SetHighlightOccurrences / SetOccurrenceColour / NumOccurrences / GetOccurrenceStart /
+      GetOccurrenceLength.  A selection or text change (UpdateMarks, TextEdited, SetText, AppendText) stops the old
+      occurrences being drawn at once and posts FindOccurrences to the window (CWindow::Post: once per tick however
+      many keys or moves come first); it finds up to TEXT_AREA_MAX_OCCURRENCES (1000) and draws them in the selection
+      map under the selection.  Nothing selected and none shown: nothing is posted.
+  4c. IDE: editors turn it on (CIDEEditorTab).  Script step printoccurrences; check editor-occurrences.
+  Not done: CTextArea::SetOccurrences(ranges) for 4b's usages - it comes with 4b, which will draw its own ranges with
+  these.
+  Tests: TestTextNavigationOccurrences (BaseLib, 65C64, 816), TestTextAreaEditOccurrences (painted pixels, posting,
+  stale after edits that keep the selection, at most 1000; CWindow::NumPosted for it).  Built and checked 2026-11-12.
+
 Step 4b - Usages of the symbol at the caret (IDE, user's choice: as IntelliJ)
   With no selection, once the caret has rested (~300 ms, the edits delay's clock) on an identifier the index knows,
   its usages in this file (CCPPIndex, as Find Usages finds them) are drawn in the occurrence colour, the declaration

@@ -868,6 +868,12 @@ CHECKS = [
 		'OPEN': 'CalcParentheses.h', 'CARET': '38:1',
 		'DEBUG': 'wait:1500,edit:doubleclick:38:10,wait:1000,edit:dragtext:38:12:39:2,edit:printselection,edit:print'},
 		[r'^Selection: \[IsParentheses\] on line 39, caret line 39$', r'CalcParentheses\.h \* \(focus\) line 39: \[\tIsParenthesesvoid\t\tPrint\(CChars\* psz\);\]$'], []),
+	('editor-occurrences', {
+		#The selected text's other occurrences in the file are highlighted: void, selected by a double click on line
+		#38, is in the header six more times (case and all).  They are found at a tick after the selection changes.
+		'OPEN': 'CalcParentheses.h', 'CARET': '38:1',
+		'DEBUG': 'wait:1500,edit:doubleclick:38:22,wait:500,edit:printselection,edit:printoccurrences'},
+		[r'^Selection: \[void\] on line 38, caret line 38$', r'^Occurrences: 6 at 34:2 35:2 35:13 36:20 37:2 39:2$'], []),
 	('editor-gutter-select', {
 		#Pressing a line's number in the gutter selects the line with its line feed; a shift press on line 36's number
 		#then selects from where that selection started (line 38's start) up to line 36's start.  Real presses through

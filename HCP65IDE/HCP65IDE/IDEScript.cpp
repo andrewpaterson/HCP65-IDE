@@ -1493,6 +1493,22 @@ void CIDEScript::RunEditStep(const char* szStep)
 		printf("History: %s\n", szHistory.Text());
 		szHistory.Kill();
 	}
+	else if (strcmp(szStep, "printoccurrences") == 0)
+	{
+		//The active editor's selected text's other occurrences, as they are drawn: "Occurrences: <n> at <line>:<column>
+		//...", lines and columns from 1, columns in bytes.  They are found at a tick after the selection changes.
+		if (pTab.IsNotNull())
+		{
+			pEditor = pTab->GetEditor();
+			printf("Occurrences: %d at", (int)pEditor->NumOccurrences());
+			for (i = 0; i < pEditor->NumOccurrences(); i++)
+			{
+				uiLine = pEditor->FindLine(pEditor->GetOccurrenceStart(i));
+				printf(" %d:%d", (int)uiLine + 1, (int)(pEditor->GetOccurrenceStart(i) - pEditor->GetLineStart(uiLine)) + 1);
+			}
+			printf("\n");
+		}
+	}
 	else if (strcmp(szStep, "printselection") == 0)
 	{
 		//The active editor's selected text, as "Selection: [<text>] on line <caret's line, from 1>", or

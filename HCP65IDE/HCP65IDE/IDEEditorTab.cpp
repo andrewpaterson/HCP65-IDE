@@ -61,6 +61,8 @@ void CIDEEditorTab::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CFo
 	mpEditor->SetColour(sColour);
 	//The caret's line is highlighted, as IntelliJ's caret row, so where a step or a jump went shows without the keys.
 	mpEditor->SetCaretLine(true, pTheme->GetColour(TC_CaretLine));
+	//The selected text's other occurrences in the file are highlighted, as IntelliJ's are.
+	mpEditor->SetHighlightOccurrences(true);
 	mpPane = OMalloc<CScrollPane>(pWindow, pTheme);
 	mpPane->SetContent(mpCodeEditor);
 	mpPane->SetAlignment(CSH_Stretch, CSV_Stretch);
