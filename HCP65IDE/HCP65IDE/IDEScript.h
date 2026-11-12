@@ -77,6 +77,7 @@ public:
 	void		ClickGutter(bool bShift, const char* szLine);
 	void		DragText(const char* szPlaces);
 	bool		FindEditorPoint(const char* szPlace, bool bGap, int32* px, int32* py);
+	void		PrintPlace(Ptr<CTextArea> pEditor, size uiPosition);
 	void		RunGoTo(const char* szGoTo);
 	void		RunFind(const char* szFind);
 	EIDEScope	GetScriptScope(const char* szScope);

@@ -78,7 +78,7 @@ void CIDEEditorTab::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CFo
 	muiIndexedChanges = muiSeenChanges;
 	masSyntaxRanges.Init();
 	muiSyntaxChanges = MAX_SIZE;
-	mpcDocuments = NULL;
+	mcSyntaxBehind.Init();
 	mbCarriageReturns = UsesIDECarriageReturns(szText);
 	muiSavedUndo = mpEditor->GetUndoId();
 	mbShownModified = false;
@@ -112,9 +112,9 @@ void CIDEEditorTab::Class(void)
 	U_Bool(mbEdited);
 	U_Bool(mbIndexStale);
 	U_Size(muiIndexedChanges);
-	U_Unknown(CArrayCPPSyntaxRanges, masSyntaxRanges);
+	U_Unknown(CArrayTextRange, masSyntaxRanges);
 	U_Size(muiSyntaxChanges);
-	U_Pointer(mpcDocuments);
+	U_Unknown(CComponentEvent<CIDEEditorTab>, mcSyntaxBehind);
 	M_Pointer(mpZones);
 	U_Unknown(CIDEListingSource, mcListings);
 	U_Bool(mbCarriageReturns);
@@ -138,6 +138,7 @@ void CIDEEditorTab::Free(void)
 	{
 		mpEditor->SetSelectionRanges(NULL);
 	}
+	mcSyntaxBehind.Kill();
 	masSyntaxRanges.Kill();
 	mszBaseHead.Kill();
 	mszBaseText.Kill();
@@ -183,65 +184,78 @@ void CIDEEditorTab::SetHighlights(CArrayHighlights* pacHighlights)
 //////////////////////////////////////////////////////////////////////////
 //
 // What each node of the text's syntax was parsed from (lines and columns
-// from 0), parsed with the editor's text at change count uiChanges, for
-// Extend Selection to grow through.
+// from 0, sorted by start then end), parsed with the editor's text as it
+// is now, at change count uiChanges, for Extend Selection to grow
+// through.  They are kept as ranges of the text.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEEditorTab::SetSyntaxRanges(CArrayCPPSyntaxRanges* pasRanges, size uiChanges)
 {
+	SCPPSyntaxRange*	psSyntax;
+	STextRange*			psRange;
+	size				uiLines;
+	size				i;
+
 	masSyntaxRanges.ReInit();
-	masSyntaxRanges.Copy(pasRanges);
+	uiLines = mpEditor->NumLines();
+	for (i = 0; i < pasRanges->NumElements(); i++)
+	{
+		psSyntax = pasRanges->Get(i);
+		if (((size)psSyntax->iLine < uiLines) && ((size)psSyntax->iEndLine < uiLines))
+		{
+			psRange = masSyntaxRanges.Add();
+			psRange->uiStart = FindPosition(psSyntax->iLine, psSyntax->iColumn);
+			psRange->uiEnd = FindPosition(psSyntax->iEndLine, psSyntax->iEndColumn);
+		}
+	}
 	muiSyntaxChanges = uiChanges;
 }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The documents that parse the tab's text when Extend Selection wants its
-// syntax and the ranges are behind the text.
+// Called when Extend Selection wants the syntax and the ranges are behind
+// the text: whoever parses the tab's text does so before it returns (the
+// documents, on this thread, as the edits thread would).
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEEditorTab::SetDocuments(CIDEDocuments* pcDocuments)
-{
-	mpcDocuments = pcDocuments;
-}
+CComponentEvent<CIDEEditorTab>* CIDEEditorTab::GetSyntaxBehindEvent(void) { return &mcSyntaxBehind; }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The syntax ranges, for Extend Selection to pick from.  When the text
-// has changed since they were parsed it is parsed now, on this thread, as
-// the edits thread would (the user's choice: parse on demand); a text
-// that isn't C or C++, or isn't in a project, has none.
+// The syntax ranges around uiStart to uiEnd, for Extend Selection to pick
+// from.  When the text has changed since they were parsed it is parsed
+// now (the user's choice: parse on demand; see GetSyntaxBehindEvent); a
+// text that isn't C or C++, or isn't in a project, has none.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEEditorTab::AddSelectionRanges(size uiStart, size uiEnd, CArrayTextRange* pasDest)
 {
-	SCPPSyntaxRange*	psRange;
-	STextRange			sRange;
-	size				uiLines;
-	size				i;
+	STextRange*	psRange;
+	size		i;
 
-	if ((muiSyntaxChanges != mpEditor->GetChangeCount()) && mpcDocuments)
+	if (muiSyntaxChanges != mpEditor->GetChangeCount())
 	{
-		mpcDocuments->UpdateEditedTabsNow();
+		mcSyntaxBehind.Call(this);
 	}
 	if (muiSyntaxChanges != mpEditor->GetChangeCount())
 	{
 		return;
 	}
 
-	uiLines = mpEditor->NumLines();
+	//They are sorted by start: one that starts after uiStart isn't around it, nor is any after it.
 	for (i = 0; i < masSyntaxRanges.NumElements(); i++)
 	{
 		psRange = masSyntaxRanges.Get(i);
-		if (((size)psRange->iLine >= uiLines) || ((size)psRange->iEndLine >= uiLines))
+		if (psRange->uiStart > uiStart)
 		{
-			continue;
+			break;
 		}
-		sRange.uiStart = FindPosition(psRange->iLine, psRange->iColumn);
-		sRange.uiEnd = FindPosition(psRange->iEndLine, psRange->iEndColumn);
-		*pasDest->Add() = sRange;
+		if (psRange->uiEnd >= uiEnd)
+		{
+			*pasDest->Add() = *psRange;
+		}
 	}
 }
 

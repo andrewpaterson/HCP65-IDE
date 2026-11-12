@@ -244,6 +244,7 @@ protected:
 	void				GatherUnit(CIDEParsedUnit* pcUnit, CCPPIndexUnit* pcDest, CCPPIndexedFiles* pcIndexed);
 	void				CopyLocation(SCPPIndexLocation* psLocation, SIDELocation* psDest);
 	void				CopyLocations(CCPPIndexSymbol* pcSymbol, CArrayIDELocations* pasDest);
+	void				CopyLocationsInFile(CCPPIndexSymbol* pcSymbol, const char* szFileName, CArrayIDELocations* pasDest);
 	void				FindOverrides(CCPPIndexSymbol* pcSymbol, CArrayInt* paiDest);
 };
 

@@ -1011,29 +1011,14 @@ void CIDEScript::RunGoTo(const char* szGoTo)
 //////////////////////////////////////////////////////////////////////////
 void CIDEScript::ClickEditor(int32 iClicks, const char* szPlace)
 {
-	Ptr<CTextArea>	pEditor;
-	CInt32Rect		cLine;
-	size			uiLine;
-	size			uiPosition;
-	int32			x;
-	int32			y;
-	int32			i;
+	int32	x;
+	int32	y;
+	int32	i;
 
-	if (mpcContent->GetDocuments()->GetActiveTab().IsNull() || (strchr(szPlace, ':') == NULL) || (atoi(szPlace) < 1))
+	if (!FindEditorPoint(szPlace, false, &x, &y))
 	{
 		return;
 	}
-
-	pEditor = mpcContent->GetDocuments()->GetActiveTab()->GetEditor();
-	uiLine = (size)(atoi(szPlace) - 1);
-	if (!pEditor->GetLineBounds(uiLine, &cLine))
-	{
-		return;
-	}
-	uiPosition = pEditor->GetLineStart(uiLine) + (size)(atoi(strchr(szPlace, ':') + 1) - 1);
-	x = pEditor->GetPosition().x + pEditor->GetPositionX(uiPosition, false) + 1;
-	y = pEditor->GetPosition().y + (cLine.GetTop() + cLine.GetBottom()) / 2;
-
 	mpcContent->GetWindow()->PointerMoved(x, y);
 	for (i = 0; i < iClicks; i++)
 	{
@@ -1118,6 +1103,21 @@ bool CIDEScript::FindEditorPoint(const char* szPlace, bool bGap, int32* px, int3
 	*px = pEditor->GetPosition().x + pEditor->GetPositionX(uiPosition, false) + (bGap ? 0 : 1);
 	*py = pEditor->GetPosition().y + (cLine.GetTop() + cLine.GetBottom()) / 2;
 	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A position of pEditor's text printed as " <line>:<column>", from 1, the
+// column in bytes.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEScript::PrintPlace(Ptr<CTextArea> pEditor, size uiPosition)
+{
+	size	uiLine;
+
+	uiLine = pEditor->FindLine(uiPosition);
+	printf(" %d:%d", (int)uiLine + 1, (int)(uiPosition - pEditor->GetLineStart(uiLine)) + 1);
 }
 
 
@@ -1502,8 +1502,7 @@ void CIDEScript::RunEditStep(const char* szStep)
 			printf("Occurrences: %d at", (int)pEditor->NumOccurrences());
 			for (i = 0; i < pEditor->NumOccurrences(); i++)
 			{
-				uiLine = pEditor->FindLine(pEditor->GetOccurrenceStart(i));
-				printf(" %d:%d", (int)uiLine + 1, (int)(pEditor->GetOccurrenceStart(i) - pEditor->GetLineStart(uiLine)) + 1);
+				PrintPlace(pEditor, pEditor->GetOccurrenceStart(i));
 			}
 			printf("\n");
 		}
@@ -1562,8 +1561,8 @@ void CIDEScript::RunEditStep(const char* szStep)
 			for (i = 0; i < pEditor->NumOccurrenceRanges(); i++)
 			{
 				psRange = pEditor->GetOccurrenceRange(i);
-				uiLine = pEditor->FindLine(psRange->uiStart);
-				printf(" %d:%d%s", (int)uiLine + 1, (int)(psRange->uiStart - pEditor->GetLineStart(uiLine)) + 1, psRange->bWrite ? "w" : "");
+				PrintPlace(pEditor, psRange->uiStart);
+				printf("%s", psRange->bWrite ? "w" : "");
 			}
 			printf("\n");
 		}

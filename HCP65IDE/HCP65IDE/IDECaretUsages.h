@@ -59,7 +59,7 @@ public:
 protected:
 	void	Watch(Ptr<CIDEEditorTab> pTab);
 	bool	IsOnShownUsage(Ptr<CTextArea> pEditor, size uiCaret);
-	void	ShowUsages(Ptr<CIDEEditorTab> pTab);
+	void	ShowUsages(void);
 };
 
 

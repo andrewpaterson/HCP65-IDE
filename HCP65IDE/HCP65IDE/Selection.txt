@@ -79,11 +79,11 @@ Step 2 - Gutter selection (WindowLib CCodeEditor)
       as now.
   2b. WindowLib CTextEditingInput::StartLineDrag(x, y, bExtend) (CTextArea passes it on), x, y the text area's:
       - press (bExtend false): the line under y (FindLineAround, with its line feed) is selected and kept as the
-        drag's origin, unit TEDU_Line; caret after its line feed, as a triple click leaves it.
-      - Shift/Control press (bExtend true): the origin is the anchor alone (the caret when nothing is selected), unit
-        TEDU_Line, so the anchor stays where it is, mid-line or not, and the caret goes to the start of the line under
+        drag's origin, a TED_Lines drag; caret after its line feed, as a triple click leaves it.
+      - Shift/Control press (bExtend true): the origin is the anchor alone (the caret when nothing is selected), a
+        TED_Lines drag, so the anchor stays where it is, mid-line or not, and the caret goes to the start of the line under
         the pointer (above the anchor) or after its line feed (below).  Needs CTextEditing::GetAnchorPosition.
-      - Both start the focus's FD_Select drag on the text area with the unit kept (mbUnitPress), so the moves after it
+      - Both start the focus's FD_Select drag on the text area as a TED_Lines drag (StartDrag), so the moves after it
         are step 1's DragByUnit: dragging up or down the gutter, or on into the code, grows by whole lines.  The click
         count is forgotten so a press in the code after it is a single click.
       CCodeEditor: ClickAction calls it for the number columns; a new CIC_StartDragSelect action does the same with
@@ -116,7 +116,7 @@ Step 3 - Drag and drop (CTextEditingInput)
       range or one past the end, or a text that can't be edited: nothing, false.  CTextEditing::GetView.
   3b. WindowLib CTextEditingInput: SetTextDragEnabled (CTextArea turns it on; CTextField doesn't, it has no drop
       caret).  A single press on a selected character (FindCharacterAt) of an editable text doesn't move the caret
-      (TETD_Pressed).  Moving more than TEXT_DRAG_DISTANCE (4) pixels from it drags (TETD_Dragging): the drop position
+      (TED_TextPressed).  Moving more than TEXT_DRAG_DISTANCE (4) pixels from it drags (TED_Text): the drop position
       is the gap nearest the pointer (GetDropPosition) and the view is asked to show its caret, which CTextArea draws
       at the drop position (GetCaretBounds), so the view scrolls to it as a selection's drag scrolls to the caret.  The
       release: dragged -> MoveText to the drop position, copying with control held (CComponentInput::IsControl, read at
@@ -162,7 +162,7 @@ Step 4b - Usages of the symbol at the caret (IDE, user's choice: as IntelliJ)
   4b-a. WindowLib CTextArea::SetOccurrenceRanges(STextOccurrenceRange*, n) / ClearOccurrenceRanges: ranges given
       (bWrite: a declaration), drawn under the text only while nothing is selected, in TC_TextOccurrence or the new
       TC_TextWriteOccurrence (Jewel 0x40332B, as IntelliJ's write access); SetOccurrenceColours sets both.  Dropped when
-      the text changes (TextChanged).  Step 4's own occurrences stay separate (they are the selection's).
+      the text changes (CTextAreaOccurrences listens to the document).  Step 4's own occurrences stay separate (they are the selection's).
   4b-b. IDE CIDECaretUsages (polled from the IDE's tick like Back/Forward's history): the active tab's caret staying
       put IDE_CARET_USAGES_REST (300 ms) with the index current for its text looks up the symbol there
       (CIDEDocuments::FindSymbolPlace, as Find Usages) and its places in this file only
@@ -239,7 +239,7 @@ Step 7 - Box selection engine (BaseLib CTextEditing)
   As built (2026-11-12), in CTextEditing (no new files):
   7a. The box is two corners, each a row and an x (the view's): BoxSelect(anchor row, x, caret row, x), and
       BoxSelectUp/Down/Left/Right/Home/End moving the caret corner a row, a character along its row, or to its row's
-      ends (starting a box at the caret, or a selection's anchor).  GetBox gives its rows and x's, GetBoxRanges each
+      ends (starting a box at the caret, or a selection's anchor).  GetBox gives its corners (STextBox: its rows and x's), GetBoxRanges each
       row's range (FindPositionInRow at both x's, so a short row's is empty at its end).  While there is a box nothing
       else is selected and the caret is the caret corner.
   7b. Printable, Tab, Backspace, Delete, Paste, Cut and Copy check for a box first.  Every row's range is replaced in
@@ -277,3 +277,15 @@ Step 8 - Box selection drawing and input (CTextArea, CTextEditingInput, IDE)
 After each step: commit, TestTextEditing/TestTextEditingInput/TestTextArea/TestTextField/TestCodeEditor green, IDE
 checks green.  User's decisions 2026-11-12: Extend parses on demand when stale; box selection VS style; occurrences
 are selected text matches and the usages of the symbol at the caret.
+
+
+Cleanup after the review of 2026-11-12 (no behaviour changed but two fixes):
+  - CTextEditingInput has one drag (ETextEditingDrag) where it had mbDragging, meUnit, meTextDrag and mbBoxDrag; a
+    press says what it drags through StartDrag.  Fixed: Escape ends a box being dragged (it came back when the pointer
+    moved), and the right button keeps the selection only on a selected character (CTextEditing::IsSelectedAt).
+  - CTextEditing: the box is an STextBox, MoveBoxCaret moves its caret corner (the input no longer keeps the anchor),
+    ReplaceRanges takes STextRanges and shares ReplaceEachRange with the box's edits.
+  - CTextArea's occurrences are a CTextAreaOccurrences, which listens to the document.
+  - CIDEEditorTab keeps its syntax ranges as ranges of the text, converted once when they are set, and gives Extend
+    Selection only those around the selection; it asks for a parse through an event (GetSyntaxBehindEvent) the
+    documents listen to, where it held the documents.

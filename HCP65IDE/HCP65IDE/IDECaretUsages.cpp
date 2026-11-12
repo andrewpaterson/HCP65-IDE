@@ -128,7 +128,7 @@ int64 CIDECaretUsages::Poll(int64 iNow)
 	}
 
 	mbLookedUp = true;
-	ShowUsages(pTab);
+	ShowUsages();
 	return -1;
 }
 
@@ -175,13 +175,14 @@ bool CIDECaretUsages::IsOnShownUsage(Ptr<CTextArea> pEditor, size uiCaret)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The places in the tab's file that name the symbol at its caret (or just
+// The places in the watched tab's file (it is the active one, whose caret
+// the documents find the symbol at) that name the symbol at its caret (or just
 // before it) drawn as occurrences: where it is declared or defined in the
 // write colour, its uses in the occurrence colour.  Nothing if no symbol
 // the index knows is named there.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDECaretUsages::ShowUsages(Ptr<CIDEEditorTab> pTab)
+void CIDECaretUsages::ShowUsages(void)
 {
 	CArrayIDELocations			asLocations;
 	CArrayTextOccurrenceRange	asRanges;
@@ -193,18 +194,18 @@ void CIDECaretUsages::ShowUsages(Ptr<CIDEEditorTab> pTab)
 	size						i;
 
 	asLocations.Init();
-	if (mpcContent->GetDocuments()->FindSymbolPlace(&iLine, &iColumn, &uiRole) && mpcContent->GetCodeModel()->FindFileReferences(pTab->GetFileName(), iLine, iColumn, &asLocations))
+	if (mpcContent->GetDocuments()->FindSymbolPlace(&iLine, &iColumn, &uiRole) && mpcContent->GetCodeModel()->FindFileReferences(mpTab->GetFileName(), iLine, iColumn, &asLocations))
 	{
 		asRanges.Init();
 		for (i = 0; i < asLocations.NumElements(); i++)
 		{
 			psLocation = asLocations.Get(i);
 			psRange = asRanges.Add();
-			psRange->uiStart = pTab->FindPosition(psLocation->iLine, psLocation->iColumn);
-			psRange->uiEnd = pTab->FindPosition(psLocation->iLine, psLocation->iColumn + psLocation->iLength);
+			psRange->uiStart = mpTab->FindPosition(psLocation->iLine, psLocation->iColumn);
+			psRange->uiEnd = mpTab->FindPosition(psLocation->iLine, psLocation->iColumn + psLocation->iLength);
 			psRange->bWrite = psLocation->uiRole != CPPIR_Reference;
 		}
-		pTab->GetEditor()->SetOccurrenceRanges(asRanges.GetData(), asRanges.NumElements());
+		mpTab->GetEditor()->SetOccurrenceRanges(asRanges.GetData(), asRanges.NumElements());
 		asRanges.Kill();
 	}
 	KillIDELocations(&asLocations);

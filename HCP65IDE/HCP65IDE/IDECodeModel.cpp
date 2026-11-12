@@ -1386,31 +1386,12 @@ bool CIDECodeModel::FindReferences(const char* szFileName, int iLine, int iColum
 bool CIDECodeModel::FindFileReferences(const char* szFileName, int iLine, int iColumn, CArrayIDELocations* pasDest)
 {
 	CCPPIndexSymbol*	pcSymbol;
-	SCPPIndexLocation*	psLocation;
-	size				i;
-	size				uiFile;
-	bool				bInFile;
 
 	mcIndexMutex.Lock();
 	pcSymbol = mcIndex.FindSymbolAt(szFileName, iLine, iColumn);
 	if (pcSymbol)
 	{
-		//Locations are by the index's file number: the name is compared once for each run of them in a file.
-		uiFile = MAX_SIZE;
-		bInFile = false;
-		for (i = 0; i < pcSymbol->NumLocations(); i++)
-		{
-			psLocation = pcSymbol->GetLocation(i);
-			if (psLocation->uiFile != uiFile)
-			{
-				uiFile = psLocation->uiFile;
-				bInFile = StringInsensitiveCompare(mcIndex.GetFileName(uiFile), szFileName) == 0;
-			}
-			if (bInFile)
-			{
-				CopyLocation(psLocation, pasDest->Add());
-			}
-		}
+		CopyLocationsInFile(pcSymbol, szFileName, pasDest);
 	}
 	mcIndexMutex.Unlock();
 	return pcSymbol != NULL;
@@ -1484,6 +1465,38 @@ void CIDECodeModel::CopyLocations(CCPPIndexSymbol* pcSymbol, CArrayIDELocations*
 	for (i = 0; i < pcSymbol->NumLocations(); i++)
 	{
 		CopyLocation(pcSymbol->GetLocation(i), pasDest->Add());
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The symbol's places in szFileName, added to pasDest.  Locations are by
+// the index's file number: the name is compared once for each run of them
+// in a file.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDECodeModel::CopyLocationsInFile(CCPPIndexSymbol* pcSymbol, const char* szFileName, CArrayIDELocations* pasDest)
+{
+	SCPPIndexLocation*	psLocation;
+	size				i;
+	size				uiFile;
+	bool				bInFile;
+
+	uiFile = MAX_SIZE;
+	bInFile = false;
+	for (i = 0; i < pcSymbol->NumLocations(); i++)
+	{
+		psLocation = pcSymbol->GetLocation(i);
+		if (psLocation->uiFile != uiFile)
+		{
+			uiFile = psLocation->uiFile;
+			bInFile = StringInsensitiveCompare(mcIndex.GetFileName(uiFile), szFileName) == 0;
+		}
+		if (bInFile)
+		{
+			CopyLocation(psLocation, pasDest->Add());
+		}
 	}
 }
 

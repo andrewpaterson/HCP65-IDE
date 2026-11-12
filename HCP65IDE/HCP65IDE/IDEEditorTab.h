@@ -44,7 +44,6 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 //
 //SaveFile writes the text back with the file's line ends: lines typed into a file whose lines end with carriage returns
 //and line feeds get them too.  The tab's name ends with a '*' while the text has changed since it was opened or saved.
-class CIDEDocuments;
 class CIDEEditorTab : public CObject, public CTextSelectionRanges
 {
 CONSTRUCTABLE(CIDEEditorTab);
@@ -74,9 +73,9 @@ protected:
 	CChars				mszBaseText;	//That text.
 	CChars				mszBaseHead;	//The commit it is from.
 	size				muiBarChanges;	//The editor's change count when the change bars were worked out, MAX_SIZE for again.
-	CArrayCPPSyntaxRanges	masSyntaxRanges;	//What each node of the text's syntax was parsed from, for Extend Selection.
+	CArrayTextRange		masSyntaxRanges;	//What each node of the text's syntax was parsed from, by start then end, for Extend Selection.
 	size				muiSyntaxChanges;	//The editor's change count they were parsed at, MAX_SIZE for none.
-	CIDEDocuments*		mpcDocuments;	//Not held: to parse the text at once when the ranges are behind it, NULL for never.
+	CComponentEvent<CIDEEditorTab>	mcSyntaxBehind;	//Extend Selection wants the syntax and the ranges are behind the text.
 
 public:
 	void				Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CFont> pTitleFont, Ptr<CFontFamily> pFamily, ARGB32 sColour, const char* szFileName, size uiProject, const char* szText);
@@ -89,7 +88,7 @@ public:
 	void				SetDockPane(Ptr<CDockPane> pPane);
 	void				SetHighlights(CArrayHighlights* pacHighlights);
 	void				SetSyntaxRanges(CArrayCPPSyntaxRanges* pasRanges, size uiChanges);
-	void				SetDocuments(CIDEDocuments* pcDocuments);
+	CComponentEvent<CIDEEditorTab>*	GetSyntaxBehindEvent(void);
 	void				AddSelectionRanges(size uiStart, size uiEnd, CArrayTextRange* pasDest) override;
 	bool				GetCaretPlace(int* piLine, int* piColumn);
 	bool				SetCaretPlace(int iLine, int iColumn);
