@@ -1,0 +1,163 @@
+Navigation in the HCP65 IDE against IntelliJ IDEA
+==================================================
+
+Written 2026-11-12 from the IDE's commands and the Find Usages, Go to and Find in Files code.  The gaps are a list
+to choose from, not a list to finish: only what is planned below is to be built.
+
+
+What there is
+-------------
+
+Go to Class, File and Symbol (Control+N, Control+Shift+N, Control+Alt+Shift+N), Go to Definition (F12), Go to Source
+(Control+B), Find Usages (Alt+F7) and Find All References (Shift+F12) in a tool window, the usages popup (Control+B on
+a declaration), Back and Forward, Next and Previous Occurrence, Switch Header/Source (Alt+O), Find in Files
+(Control+Shift+F) with its Find tool window, and Solution Explorer with the active file selected (Alt+1).
+
+
+Gaps
+----
+
+Find Usages tool window (planned below)
+  - No preview of the selected usage's code beside the tree.  (Nor has the Find tool window.)
+  - Rows are one plain string: the text found isn't highlighted, the line number isn't dimmed, files have no icons.
+  - No toolbar: rerun, expand all, collapse all, previous and next, preview on and off.
+  - No filters: read access and write access, though the index knows which each usage is.
+  - Enter does nothing; only F4 and a double click open a usage.  No single click navigation.
+  - A new search replaces the last: no history, no pinned results.
+  - No scope: every project is always searched.
+
+Usages popup
+  - A menu of text rows: no code preview, no typing to filter, no Open in Find Window, no highlighted match.
+
+Go to dialogs
+  - No preview of the selected class or symbol; no recent items while the field is empty.
+  - No "include non-solution items", no All tab, no Shift Shift, no Actions tab (the first three were ruled out
+    when it was built).
+
+In a file
+  - Find and Replace (Control+F, Control+R) with every match highlighted, and F3 for the next.
+  - Go to Line (Control+G).
+  - File Structure popup (Control+F12) and a Structure tool window.
+  - Matching brace, next and previous method, last edit location (Control+Shift+Backspace).
+  - The other occurrences of the identifier at the caret highlighted.
+  - Bookmarks.
+
+Between files
+  - Recent Files (Control+E), Recent Locations (Control+Shift+E), the Switcher (Control+Tab).
+  - A navigation bar or breadcrumbs.
+
+Symbols
+  - Control+click on an identifier; a tool tip, Quick Documentation (Control+Q) and Quick Definition
+    (Control+Shift+I) for it.
+  - Go to Implementation (Control+Alt+B), Super Method (Control+U), Type Declaration, the Type and Call Hierarchies,
+    and gutter icons for overridden and overriding methods.  The index doesn't link a virtual function to its
+    overrides, which most of these need first.
+  - Go to Related Symbol, Go to Test.
+
+Find in Files
+  - Regular expressions, a file mask, a button to choose the directory, Replace in Files.
+
+
+Plan: completing the Find Usages tool window
+--------------------------------------------
+
+Each step can be built, checked and committed on its own, in this order.  The Find tool window gets the same from
+the shared pane of step 1.
+
+1. One results pane for both tool windows.
+   CIDEUsages and CIDEFindInFiles each make a tree in a scroll pane, open a place on F4 or a double click, give the
+   keys back on escape, step with Next and Previous Occurrence and show the tree again after edits.  That becomes
+   one class, CIDEResultsPane (the tree, and from the later steps the preview and the toolbar), which each of them
+   fills with its nodes and their places.  No change to what is seen.
+
+2. Rows with parts.
+   CTreeContainer's node is one text in one font.  A node gets styled ranges of its text (SetNodeRanges: start,
+   length, font), its row made of a label for each run as a Go to result's name is.  With it:
+     - the line number dim, then the line, with the usage's own text (its column and length are known) in the
+       match font;
+     - a group's count dim after its name ("Calculator.cpp  3 usages");
+     - a file's node with its file type icon (CIDEIcons has them) and a project's with the project icon;
+     - the declaration and overload notes ("[definition]") dim.
+
+3. The preview.
+   CFindInFilesDialog's preview (the file's title, a read only CCodeEditor, the text found coloured and centred)
+   becomes a WindowLib component, CCodePreview, which the dialog and the results pane both use.  The pane shows it
+   right of the tree; selecting a usage's line shows its file there, coloured by the edits thread as the dialog's is
+   (CIDEDocuments::HighlightPreview keeps one file for one asker today: it is given the asker, so the dialog and two
+   panes can each have a file).  An open file is shown as its editor has it.
+   The tree and the preview need a sash to drag between them.  WindowLib has only docking's split, so this needs a
+   small CSplitContainer (two components, a sash, the share kept).  The share, and whether the preview is shown, are
+   kept in the IDE's settings beside the grouping.
+
+4. Keys and clicks.
+   Enter on a usage opens it and gives its editor the keys, as F4 and a double click do today; on a group or a file
+   it opens or closes the node.  F4 changes: as IntelliJ's it goes to the symbol's declaration (the tree's first
+   entry) whichever line is selected, the editor getting the keys.  With Find Usages, whose tree hasn't the
+   declarations, that is the symbol's definition, else its declaration, from the index.  The Find tool window's
+   results have no declaration, so there F4 stays the same as Enter.
+   Space isn't a key of the tree's: like any other key that types a character it goes to the active editor, which
+   gets the keys and has it typed in it.
+   A single click, or the arrow keys, only select (and so preview).  "Navigate with Single Click" (off to start
+   with) opens each usage as it is selected, the tree keeping the keys.
+   (Decided 2026-11-12.)
+
+5. A toolbar.
+   Down the pane's left as IntelliJ's, on CToolbar: Rerun, Previous and Next Occurrence, Expand All, Collapse All,
+   the three groupings (in place of today's check boxes), Preview, Navigate with Single Click.  Each needs a glyph
+   from CIDEIcons and a tool tip; CToolbar has no disabled look for a button yet, which Previous and Next want.
+   Rerun finds the same symbol again (by its key, not the caret), which also serves after a re-index.
+
+6. Filters.
+   Read access and write access toggles on the toolbar, for a variable's or field's usages: CPPUT_Read and
+   CPPUT_Write are in the index already.  The first row says how many are hidden.
+
+7. A tab for each search.
+   Each Find Usages opens its results in a new tab of the tool window, named for the symbol, in place of the last
+   tab unless that one is pinned (a pin on the tab, as IntelliJ's); a pinned tab stays until it is closed.  Each tab
+   is a results pane of its own, its places still following edits.  (Decided 2026-11-12, rather than Back and
+   Forward through a history.)
+
+8. Scopes.
+   One list of scopes for Find Usages and Find in Files (a CIDEScope: which it is, with the project, file and
+   directory it was made for, that says whether a file is in it and lists its files):
+     - Solution: every solution of the workspace, as today.
+     - Startup Solution: the startup solution alone (a program without the kernal it runs on).  Only offered while
+       the workspace has more than one solution.
+     - Project: the active file's project.
+     - Current File: the file the editor shows.
+     - Open Files: the files with an editor's tab.
+     - Directory: the files in a directory typed, and under it.
+   The active file and its project are those of when the search was made.
+
+   8a. Find in Files uses the list: its dialog has a tab for each scope (it has Solution, Project and Directory
+       today), and its files come from the CIDEScope.  It keeps its own last scope.
+
+   8b. Find Usages and Find All References show only the usages in the scope's files; the tree's first row says
+       which ("Usages of Init in BaseLib").  The index is still of the whole workspace: a scope leaves usages out,
+       it doesn't search less.  A header no project has is only in Solution.  The usages popup (Control+B) is
+       always of the whole solution, and Rename always changes every usage.
+
+   8c. Find Usages Settings (Control+Alt+Shift+F7, Navigate.FindUsagesSettings): the scope, the directory for
+       Directory, and Include Declarations.  OK finds the usages of the symbol at the caret with them and keeps
+       them: Alt+F7 uses them from then on.  Shift+F12 uses the scope too but always has the declarations, as
+       Visual Studio's.  They are kept in the IDE's settings between sessions (the scope, the directory and Include
+       Declarations), as the grouping is; Find in Files' last scope and directory are kept there as well.
+
+   8d. A scope combo on the results pane's toolbar (after step 5): choosing another shows the tab's usages in that
+       scope without finding them again, so a tab keeps everything it found and what it shows is those in its
+       scope.  It doesn't change the settings Alt+F7 uses.
+
+   Not wanted: IntelliJ's "search for text occurrences" (the name in comments and strings); Find in Files with
+   Words is for that.
+
+Decided 2026-11-12:
+   - step 3: a new CSplitContainer in WindowLib; the preview right of the tree.
+   - step 4: Enter does what F4 does today; F4 goes to the declaration whichever line is selected.
+   - step 4: space, as any key that types a character, is typed in the active editor.
+   - step 7: each search in its own tab that can be pinned.
+   - step 8: the scopes are Solution, Startup Solution, Project, Current File, Open Files and Directory, one list
+     shared with Find in Files; chosen in a settings dialog and on the tool window's toolbar; remembered between
+     sessions; honoured by Find Usages and Find All References, not the usages popup or Rename; Include
+     Declarations is an option for Alt+F7 while Shift+F12 always has them; no text occurrences.
+
+Nothing is left to decide.
