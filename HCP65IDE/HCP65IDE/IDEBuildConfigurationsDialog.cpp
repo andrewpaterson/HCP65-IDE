@@ -46,6 +46,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 //////////////////////////////////////////////////////////////////////////
 void CIDEBuildConfigurationsDialog::Init(Ptr<CWindow> pOwner, SDialogLook* psLook, const char* szSolution, CVcxSolution* pcSolution, CBuildConfigurations* pcConfigurations, const char* szSelected)
 {
+	Ptr<CComponent>	pBody;
 	CChars	szTitle;
 	size	i;
 
@@ -70,7 +71,9 @@ void CIDEBuildConfigurationsDialog::Init(Ptr<CWindow> pOwner, SDialogLook* psLoo
 	mpDialog = OMalloc<CDialog>(pOwner, psLook, szTitle.Text());
 	szTitle.Kill();
 	mpDialog->SetResizable(IDE_BUILD_DIALOG_WIDTH / 2, IDE_BUILD_DIALOG_HEIGHT / 2);
-	mpDialog->SetBody(CreateBody(), mpName);
+	//The body is made first: it makes the component that has the keys when the dialog opens.
+	pBody = CreateBody();
+	mpDialog->SetBody(pBody, mpName);
 	mpDialog->AddExtraButton(IDE_BUILD_DIALOG_OPEN_FILE);
 	mpDialog->SetApprover(this, &CIDEBuildConfigurationsDialog::Approve);
 

@@ -45,6 +45,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 //////////////////////////////////////////////////////////////////////////
 void CIDERunConfigurationsDialog::Init(Ptr<CWindow> pOwner, SDialogLook* psLook, CBuildWorkspace* pcWorkspace, const char* szSelected)
 {
+	Ptr<CComponent>	pBody;
 	size	i;
 
 	PreInit();
@@ -65,7 +66,9 @@ void CIDERunConfigurationsDialog::Init(Ptr<CWindow> pOwner, SDialogLook* psLook,
 
 	mpDialog = OMalloc<CDialog>(pOwner, psLook, "Run Configurations");
 	mpDialog->SetResizable(IDE_RUN_DIALOG_WIDTH / 2, IDE_RUN_DIALOG_HEIGHT / 2);
-	mpDialog->SetBody(CreateBody(), mpName);
+	//The body is made first: it makes the component that has the keys when the dialog opens.
+	pBody = CreateBody();
+	mpDialog->SetBody(pBody, mpName);
 	mpDialog->SetApprover(this, &CIDERunConfigurationsDialog::Approve);
 
 	mpList->GetSelectionEvent()->Add(this, &CIDERunConfigurationsDialog::SelectionChanged);
