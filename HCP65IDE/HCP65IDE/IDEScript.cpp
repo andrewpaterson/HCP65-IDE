@@ -1502,7 +1502,7 @@ void CIDEScript::RunEditStep(const char* szStep)
 			printf("Occurrences: %d at", (int)pEditor->NumOccurrences());
 			for (i = 0; i < pEditor->NumOccurrences(); i++)
 			{
-				PrintPlace(pEditor, pEditor->GetOccurrenceStart(i));
+				PrintPlace(pEditor, pEditor->GetOccurrence(i)->uiStart);
 			}
 			printf("\n");
 		}
