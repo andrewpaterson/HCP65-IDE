@@ -1,12 +1,20 @@
 #!/usr/bin/env python3
 #The HCP65 IDE's checks: the IDE is run scripted (HCP65_IDE_* variables, see CIDEApp::Setup and CIDEScript) on the
-#HCP65Kernal solution, as last opened, and what it prints is checked.  The files it is pointed at (in CommonLibraries)
+#ModPlay and Kernal solutions together, and what it prints is checked.  The files it is pointed at (in CommonLibraries)
 #must be as committed, and none of them, nor the user's layout, workspace or recent solutions, may change.
 #
-#  IDEChecks.py [ide executable] [check name...]
+#  IDEChecks.py [ide executable] [-open <file>...] [check name...]
 #
 #The executable defaults to ../../../build/HCP65IDERelease/HCP65IDE.  Exits non-zero if a check fails.
 #With HCP65_IDE_VERIFY_REDRAW set, every partial paint is checked too, and one that differed fails its check.
+#
+#What the checks open doesn't depend on what the user opened last, and doesn't change it: each run is given recent
+#solutions of its own (HCP65_IDE_RECENT, a file made for the checks) that say what was open.  By default that is the
+#user's ModPlay workspace (HCP65/ModPlay/HCP65ModPlay.hcp65workspace: ModPlay, the startup solution, and the kernal it
+#runs on), as it is now.  -open <file> opens something else: a workspace, a solution, or several solutions (-open for
+#each: they are opened together, the first the startup one, as a workspace made for the checks); -open user opens
+#whatever the user had open last, as the IDE itself would.  The user's own recent solutions, and the workspace's file
+#and layout, are put back as they were when the checks end if anything changed them.
 import atexit, hashlib, os, re, shutil, subprocess, sys, tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -14,13 +22,68 @@ IDE_DIR = os.path.join(HERE, '..', 'HCP65IDE')
 ROOT = os.path.abspath(os.path.join(HERE, '..', '..', '..'))
 BASELIB = os.path.join(ROOT, 'CommonLibraries', 'Libraries', 'BaseLib')
 KERNAL = os.path.join(ROOT, 'HCP65', 'Kernal')
+MODPLAY = os.path.join(ROOT, 'HCP65', 'ModPlay')
+USER_RECENT = os.path.expanduser('~/.config/HCP65IDE/RecentSolutions.xml')
 
 #Files the checks edit in the IDE (never saving them) and the user's files a scripted run mustn't write.
 WATCHED = [os.path.join(BASELIB, f) for f in ['CalculatorParser.cpp', 'CalculatorParser.h', 'CalculatorSymbols.cpp', 'CalcParentheses.h', 'CalcExpression.h']] + \
           [os.path.join(KERNAL, 'HCP65Kernal.layout.user'), os.path.join(KERNAL, 'HCP65Kernal.hcp65workspace'), os.path.join(KERNAL, 'HCP65Kernal.hcp65build'),
-           os.path.expanduser('~/.config/HCP65IDE/RecentSolutions.xml'), os.path.expanduser('~/.config/HCP65IDE/Keymap.xml')]
+           os.path.join(MODPLAY, 'HCP65ModPlay.layout.user'), os.path.join(MODPLAY, 'HCP65ModPlay.hcp65workspace'), os.path.join(MODPLAY, 'HCP65ModPlay.hcp65build'),
+           USER_RECENT, os.path.expanduser('~/.config/HCP65IDE/Keymap.xml')]
+#The user's files that are put back as they were when the checks end, if anything changed them.
+RESTORED = [USER_RECENT] + [f for f in WATCHED if f.endswith('.layout.user') or f.endswith('.hcp65workspace')]
+#The recent solutions each run is given, unless its check has its own: made by OpenForChecks, None for the user's.
+CHECKS_RECENT = None
 BREAKPOINTS = os.path.join(KERNAL, 'HCP65Kernal.hcp65user')
 
+
+
+def MakeRecentSolutions(aszFiles):
+	#A recent solutions file, made for the checks, that says aszFiles was open last: a workspace or a solution, or
+	#several solutions as a workspace made for the checks (the first the startup one).
+	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
+	atexit.register(shutil.rmtree, szRoot, True)
+	aszFiles = [os.path.abspath(szFile) for szFile in aszFiles]
+	for szFile in aszFiles:
+		if not os.path.isfile(szFile):
+			sys.exit('IDEChecks: %s: no such file to open.' % szFile)
+	szOpen = aszFiles[0]
+	if len(aszFiles) > 1:
+		szOpen = os.path.join(szRoot, 'Checks.hcp65workspace')
+		szText = '<?xml version="1.0" encoding="UTF-8"?>\n<Workspace>\n'
+		for i, szFile in enumerate(aszFiles):
+			szText += '  <Solution File="%s"%s/>\n' % (szFile, ' Startup="true"' if i == 0 else '')
+		open(szOpen, 'w', newline='').write(szText + '</Workspace>\n')
+	szRecent = os.path.join(szRoot, 'RecentSolutions.xml')
+	szText = '<?xml version="1.0" encoding="UTF-8"?>\n<RecentFiles Open="%s">\n  <File Path="%s"/>\n</RecentFiles>\n' % (szOpen, szOpen)
+	open(szRecent, 'w', newline='').write(szText)
+	return szRecent
+
+
+def OpenForChecks(aszFiles):
+	#What every check that hasn't its own opens: aszFiles (see MakeRecentSolutions), or with ['user'] whatever the user
+	#had open last.
+	global CHECKS_RECENT
+	CHECKS_RECENT = None if (aszFiles == ['user']) else MakeRecentSolutions(aszFiles)
+
+
+def OpenedForCheck(aszFiles):
+	#For one check: recent solutions of its own that say aszFiles was open last, as OpenForChecks makes for them all.
+	szRecent = MakeRecentSolutions(aszFiles)
+	return {'RECENT': szRecent}
+
+
+def RestoreUserFiles(asContents):
+	#The user's recent solutions, workspaces and layouts as they were when the checks started (asContents: each file's
+	#bytes, None if it wasn't there), put back if they aren't.
+	for szFile, sContents in asContents.items():
+		sNow = open(szFile, 'rb').read() if os.path.exists(szFile) else None
+		if sNow != sContents:
+			if sContents is None:
+				os.remove(szFile)
+			else:
+				open(szFile, 'wb').write(sContents)
+			print('Put back %s' % szFile)
 
 
 def MakeSystemRoot(aszVersions, bLibrary=True):
@@ -909,6 +972,8 @@ def Run(szExecutable, szName, asVariables):
 	szSnapshot = os.path.join(tempfile.gettempdir(), 'IDEChecks-%d.png' % os.getpid())
 	asEnv['HCP65_IDE_SNAPSHOT'] = szSnapshot
 	asEnv['HCP65_IDE_SNAPSHOT_TICKS'] = '3'
+	if CHECKS_RECENT and ('RECENT' not in asVariables):
+		asEnv['HCP65_IDE_RECENT'] = CHECKS_RECENT
 	aszArguments = []
 	for szKey, szValue in asVariables.items():
 		if szKey == 'SOLUTION':
@@ -972,6 +1037,15 @@ def main():
 	szExecutable = os.path.join(ROOT, 'build', 'HCP65IDERelease', 'HCP65IDE')
 	if aszArgs and os.path.isfile(aszArgs[0]):
 		szExecutable = os.path.abspath(aszArgs.pop(0))
+	aszOpen = []
+	while '-open' in aszArgs:
+		i = aszArgs.index('-open')
+		if i + 1 >= len(aszArgs):
+			sys.exit('IDEChecks: -open needs a file.')
+		aszOpen.append(aszArgs[i + 1])
+		del aszArgs[i:i + 2]
+	OpenForChecks(aszOpen if aszOpen else [os.path.join(MODPLAY, 'HCP65ModPlay.hcp65workspace')])
+	atexit.register(RestoreUserFiles, {szFile: (open(szFile, 'rb').read() if os.path.exists(szFile) else None) for szFile in RESTORED})
 	iFailed = 0
 	for szName, asVariables, aszExpected, aszForbidden in CHECKS:
 		if aszArgs and szName not in aszArgs:
