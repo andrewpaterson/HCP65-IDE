@@ -668,7 +668,8 @@ void CIDEDocuments::AddEditedFile(size uiProject, const char* szFileName, const 
 //
 // What the edits thread made shown: the highlights of each file whose
 // editor hasn't changed since its text was given (one that has is given
-// again).  Without bWait, false if the thread hasn't finished.
+// again), and the text each file's index has.  Without bWait, false if
+// the thread hasn't finished.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEDocuments::TakeEditedFiles(bool bWait)
@@ -691,8 +692,12 @@ bool CIDEDocuments::TakeEditedFiles(bool bWait)
 		{
 			continue;
 		}
-		pTab = psFile->bHighlighted ? FindTab(psFile->szFileName.Text()) : Ptr<CIDEEditorTab>();
-		if (pTab.IsNotNull() && (pTab->GetEditor()->GetChangeCount() == psFile->uiChanges))
+		pTab = (psFile->bHighlighted || psFile->bIndexed) ? FindTab(psFile->szFileName.Text()) : Ptr<CIDEEditorTab>();
+		if (pTab.IsNotNull() && psFile->bIndexed && psFile->bText)
+		{
+			pTab->Indexed(psFile->uiChanges);
+		}
+		if (pTab.IsNotNull() && psFile->bHighlighted && (pTab->GetEditor()->GetChangeCount() == psFile->uiChanges))
 		{
 			pTab->SetHighlights(&psFile->acHighlights);
 		}

@@ -151,6 +151,7 @@ set(IDE_SOURCES
 	"${IDE_DIR}/IDEFindInFiles.cpp"
 	"${IDE_DIR}/IDEIndexing.cpp"
 	"${IDE_DIR}/IDENavigationHistory.cpp"
+	"${IDE_DIR}/IDECaretUsages.cpp"
 	"${IDE_DIR}/IDEOccurrences.cpp"
 	"${IDE_DIR}/IDECloseGuard.cpp"
 	"${IDE_DIR}/IDEScript.cpp"

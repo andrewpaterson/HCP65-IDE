@@ -1373,6 +1373,48 @@ bool CIDECodeModel::FindReferences(const char* szFileName, int iLine, int iColum
 
 //////////////////////////////////////////////////////////////////////////
 //
+// The places in szFileName that name what is named at a place in it (0
+// based), as FindReferences finds them but only that file's: for an
+// editor to show the usages of the symbol at its caret.  False if nothing
+// indexed is named there.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDECodeModel::FindFileReferences(const char* szFileName, int iLine, int iColumn, CArrayIDELocations* pasDest)
+{
+	CCPPIndexSymbol*	pcSymbol;
+	SCPPIndexLocation*	psLocation;
+	size				i;
+	size				uiFile;
+	bool				bInFile;
+
+	mcIndexMutex.Lock();
+	pcSymbol = mcIndex.FindSymbolAt(szFileName, iLine, iColumn);
+	if (pcSymbol)
+	{
+		//Locations are by the index's file number: the name is compared once for each run of them in a file.
+		uiFile = MAX_SIZE;
+		bInFile = false;
+		for (i = 0; i < pcSymbol->NumLocations(); i++)
+		{
+			psLocation = pcSymbol->GetLocation(i);
+			if (psLocation->uiFile != uiFile)
+			{
+				uiFile = psLocation->uiFile;
+				bInFile = StringInsensitiveCompare(mcIndex.GetFileName(uiFile), szFileName) == 0;
+			}
+			if (bInFile)
+			{
+				CopyLocation(psLocation, pasDest->Add());
+			}
+		}
+	}
+	mcIndexMutex.Unlock();
+	return pcSymbol != NULL;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // How what is named at a place (0 based) is named there: declared,
 // defined or used (ECPPIndexRole).  False if nothing indexed is named
 // there.  Nothing is copied, so it can be asked whenever a command wants

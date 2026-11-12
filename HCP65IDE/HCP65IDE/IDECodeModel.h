@@ -123,6 +123,7 @@ struct SIDEEditedFile
 
 	CArrayHighlights	acHighlights;	//Made: the file's highlights, if bHighlighted.
 	bool				bHighlighted;
+	bool				bIndexed;		//Made: the index has the file from szText (or the file's own text).
 
 	void	Init(size uiProject, const char* szFileName, const char* szText, size uiChanges, bool bHighlight, bool bIndex);
 	void	SetUnit(size uiProject, const char* szUnit, const char* szText);
@@ -207,6 +208,7 @@ public:
 	bool	FindDefinition(const char* szFileName, int iLine, int iColumn, SIDELocation* psDest);
 	bool	FindReferences(const char* szFileName, int iLine, int iColumn, CArrayIDELocations* pasDest, CChars* pszKey);
 	bool	FindRoleAt(const char* szFileName, int iLine, int iColumn, uint8* puiRole);
+	bool	FindFileReferences(const char* szFileName, int iLine, int iColumn, CArrayIDELocations* pasDest);
 	size	FindProjectOfFile(const char* szFileName);
 	size	NumProjectFiles(void);
 	char*	GetProjectFile(size uiIndex);

@@ -1509,6 +1509,25 @@ void CIDEScript::RunEditStep(const char* szStep)
 			printf("\n");
 		}
 	}
+	else if (strcmp(szStep, "printcaretusages") == 0)
+	{
+		//The usages of the symbol at the active editor's caret highlighted in it (CIDECaretUsages): "Caret usages: <n> at
+		//<line>:<column> ...", lines and columns from 1, columns in bytes, "w" after where it is declared.
+		if (pTab.IsNotNull())
+		{
+			STextOccurrenceRange*	psRange;
+
+			pEditor = pTab->GetEditor();
+			printf("Caret usages: %d at", (int)pEditor->NumOccurrenceRanges());
+			for (i = 0; i < pEditor->NumOccurrenceRanges(); i++)
+			{
+				psRange = pEditor->GetOccurrenceRange(i);
+				uiLine = pEditor->FindLine(psRange->uiStart);
+				printf(" %d:%d%s", (int)uiLine + 1, (int)(psRange->uiStart - pEditor->GetLineStart(uiLine)) + 1, psRange->bWrite ? "w" : "");
+			}
+			printf("\n");
+		}
+	}
 	else if (strcmp(szStep, "printselection") == 0)
 	{
 		//The active editor's selected text, as "Selection: [<text>] on line <caret's line, from 1>", or

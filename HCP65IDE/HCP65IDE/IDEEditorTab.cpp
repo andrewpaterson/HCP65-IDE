@@ -74,6 +74,7 @@ void CIDEEditorTab::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CFo
 	mbRecolourNow = false;
 	mbEdited = false;
 	mbIndexStale = false;
+	muiIndexedChanges = muiSeenChanges;
 	mbCarriageReturns = UsesIDECarriageReturns(szText);
 	muiSavedUndo = mpEditor->GetUndoId();
 	mbShownModified = false;
@@ -106,6 +107,7 @@ void CIDEEditorTab::Class(void)
 	U_Bool(mbRecolourNow);
 	U_Bool(mbEdited);
 	U_Bool(mbIndexStale);
+	U_Size(muiIndexedChanges);
 	M_Pointer(mpZones);
 	U_Unknown(CIDEListingSource, mcListings);
 	U_Bool(mbCarriageReturns);
@@ -313,7 +315,33 @@ void CIDEEditorTab::IndexRestarted(void)
 	{
 		mbIndexStale = true;
 		mbRecolour = true;
+		muiIndexedChanges = MAX_SIZE;
 	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The index was given the editor's text as it was at change count
+// uiChanges.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEEditorTab::Indexed(size uiChanges)
+{
+	muiIndexedChanges = uiChanges;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The index has the editor's text as it is now, so its places are the
+// editor's: from the file, unedited since it was opened, or given since
+// the last edit.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEEditorTab::IsIndexCurrent(void)
+{
+	return muiIndexedChanges == mpEditor->GetChangeCount();
 }
 
 

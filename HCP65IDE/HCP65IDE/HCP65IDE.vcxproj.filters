@@ -63,6 +63,9 @@
     <ClCompile Include="IDENavigationHistory.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="IDECaretUsages.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="IDEOccurrences.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -216,6 +219,9 @@
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDENavigationHistory.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDECaretUsages.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDEOccurrences.h">

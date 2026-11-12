@@ -62,6 +62,7 @@ protected:
 	bool				mbRecolourNow;	//It is highlighted at once, not after a pause in typing (RequestRecolour).
 	bool				mbEdited;		//The text was changed since the file was opened.
 	bool				mbIndexStale;	//The text changed since the index was given it (TakeEdits).
+	size				muiIndexedChanges;	//The editor's change count the index has its text from, MAX_SIZE if it hasn't the editor's text.
 	bool				mbCarriageReturns;	//The file's lines end with carriage returns and line feeds.
 	size				muiSavedUndo;	//The editor's undo id when the file was opened or last saved: undone back to it, it isn't modified.
 	bool				mbShownModified;	//The tab's name ends with a '*'.
@@ -88,6 +89,8 @@ public:
 	size				FindPosition(int iLine, int iColumn);
 	bool				TakeEdits(int64 iNow, bool bNow, bool bCanIndex, bool* pbHighlight, bool* pbIndex, int64* piWait);
 	void				IndexRestarted(void);
+	void				Indexed(size uiChanges);
+	bool				IsIndexCurrent(void);
 	void				RequestRecolour(void);
 
 	void				SetListings(CCPP65ListingIndex* pcListings);

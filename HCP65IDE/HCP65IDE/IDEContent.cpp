@@ -218,6 +218,7 @@ void CIDEContent::Class(void)
 	M_Pointer(mpFindInFiles);
 	M_Pointer(mpOccurrences);
 	M_Pointer(mpNavigationHistory);
+	M_Pointer(mpCaretUsages);
 	M_Pointer(mpIndexing);
 	M_Pointer(mpDocuments);
 	M_Pointer(mpSolutions);
@@ -395,6 +396,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpFindInFiles = OMalloc<CIDEFindInFiles>(this);
 	mpOccurrences = OMalloc<CIDEOccurrences>(this);
 	mpNavigationHistory = OMalloc<CIDENavigationHistory>(this);
+	mpCaretUsages = OMalloc<CIDECaretUsages>(this);
 	mpIndexing = OMalloc<CIDEIndexing>(this);
 	mpDocuments = OMalloc<CIDEDocuments>(this);
 	mpSolutions = OMalloc<CIDESolutions>(this);
@@ -757,6 +759,13 @@ void CIDEContent::Tick(Ptr<CWindow> pWindow)
 
 	//A caret moved far from where it stayed is a place to come back to.
 	iWait = mpNavigationHistory->Poll(iNow);
+	if ((iWait >= 0) && ((iSoonest < 0) || (iWait < iSoonest)))
+	{
+		iSoonest = iWait;
+	}
+
+	//The symbol at a caret that stays put has its usages in the file highlighted.
+	iWait = mpCaretUsages->Poll(iNow);
 	if ((iWait >= 0) && ((iSoonest < 0) || (iWait < iSoonest)))
 	{
 		iSoonest = iWait;

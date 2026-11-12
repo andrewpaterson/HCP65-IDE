@@ -874,6 +874,18 @@ CHECKS = [
 		'OPEN': 'CalcParentheses.h', 'CARET': '38:1',
 		'DEBUG': 'wait:1500,edit:doubleclick:38:22,wait:500,edit:printselection,edit:printoccurrences'},
 		[r'^Selection: \[void\] on line 38, caret line 38$', r'^Occurrences: 6 at 34:2 35:2 35:13 36:20 37:2 39:2$'], []),
+	('editor-caret-usages', {
+		#The caret resting on a symbol (300 ms) highlights its usages in the file, where it is declared marked w: pcChild in
+		#Calculator.cpp's StripParentheses.  Moved within one they stay; moved off, or the file edited, they go at once;
+		#after an edit they come back once the index has the edited text (where the edit moved one, there).  Only this
+		#file's: StripParentheses' definition and uses, not its declaration in Calculator.h.
+		'WAIT_INDEX': '1', 'OPEN': 'Calculator.cpp', 'CARET': '363:21',
+		'DEBUG': 'wait:1000,edit:printcaretusages,edit:caret:369:5,edit:printcaretusages,edit:caret:365:3,edit:printcaretusages,'
+		         'edit:caret:363:21,wait:50,edit:printcaretusages,wait:1000,edit:printcaretusages,edit:replace:370|= pcChild|=  pcChild,edit:printcaretusages,'
+		         'wait:3000,edit:printcaretusages,edit:caret:361:20,wait:1000,edit:printcaretusages'},
+		[r'^Caret usages: 4 at 363:20w 369:4 370:21 371:13$', r'^Caret usages: 4 at 363:20w 369:4 370:21 371:13$', r'^Caret usages: 0 at$', r'^Caret usages: 0 at$',
+		 r'^Caret usages: 4 at 363:20w 369:4 370:21 371:13$', r'^Caret usages: 0 at$', r'^Caret usages: 4 at 363:20w 369:4 370:22 371:13$',
+		 r'^Caret usages: 6 at 361:19w 394:3 400:3 401:3 408:3 423:3$'], []),
 	('editor-gutter-select', {
 		#Pressing a line's number in the gutter selects the line with its line feed; a shift press on line 36's number
 		#then selects from where that selection started (line 38's start) up to line 36's start.  Real presses through

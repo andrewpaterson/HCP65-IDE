@@ -158,6 +158,23 @@ Step 4b - Usages of the symbol at the caret (IDE, user's choice: as IntelliJ)
   after the edits pause).  Only symbols the index has: member calls through objects only as far as the semantic
   pass types them.  WindowLib side: CTextArea::SetOccurrences(ranges) used by both 4 and 4b.
 
+  As built (2026-11-12):
+  4b-a. WindowLib CTextArea::SetOccurrenceRanges(STextOccurrenceRange*, n) / ClearOccurrenceRanges: ranges given
+      (bWrite: a declaration), drawn under the text only while nothing is selected, in TC_TextOccurrence or the new
+      TC_TextWriteOccurrence (Jewel 0x40332B, as IntelliJ's write access); SetOccurrenceColours sets both.  Dropped when
+      the text changes (TextChanged).  Step 4's own occurrences stay separate (they are the selection's).
+  4b-b. IDE CIDECaretUsages (polled from the IDE's tick like Back/Forward's history): the active tab's caret staying
+      put IDE_CARET_USAGES_REST (300 ms) with the index current for its text looks up the symbol there
+      (CIDEDocuments::FindSymbolPlace, as Find Usages) and its places in this file only
+      (CIDECodeModel::FindFileReferences, not the overrides'); definitions and declarations are bWrite.  A caret moved
+      within the ranges keeps them; moved off, or another tab, clears them.
+  4b-c. When the index has a tab's text: CIDEEditorTab::IsIndexCurrent compares the editor's change count with the one
+      the index last took (Indexed, from CIDEDocuments::TakeEditedFiles when the edits thread merged it:
+      SIDEEditedFile::bIndexed); a tab opened has the file's text, an edited tab after the index is built again from
+      the files hasn't (IndexRestarted).  While the solution is indexing, nothing is looked up.
+  Script step printcaretusages; check editor-caret-usages (rest, move within, move off, edit and re-index with a
+  usage moved, only this file's).  Not checked: an edited tab after the index is rebuilt from files.
+
 Step 5 - Extend/Shrink Selection engine (BaseLib CTextEditing)
   ExtendSelection grows to the smallest range around the selection that is bigger than it; ShrinkSelection goes back
   through the ranges extended through (forgotten when the selection changes any other way).  Text ranges, for any

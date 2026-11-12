@@ -36,6 +36,7 @@ void SIDEEditedFile::Init(size uiProject, const char* szFileName, const char* sz
 	this->uiChanges = uiChanges;
 	this->bHighlight = bHighlight;
 	this->bIndex = bIndex;
+	bIndexed = false;
 
 	bUnit = false;
 	uiUnitProject = 0;
@@ -285,6 +286,7 @@ void CIDECodeModel::ProcessEditedFile(SIDEEditedFile* psFile)
 		}
 		mcIndex.Merge(&cGathered);
 		mcIndexMutex.Unlock();
+		psFile->bIndexed = true;
 	}
 	cUnit.Kill();
 
