@@ -1,0 +1,117 @@
+Selection in the HCP65 IDE's editor (plan, 2026-11-12)
+=====================================================
+
+Chosen by the user: Extend/Shrink Selection, column (box) selection, and the mouse and look extras.  Not chosen:
+multiple carets.
+
+Today: CTextEditing (BaseLib) has one caret and one anchor, the selection between them.  Keys select by character,
+word, home/end, page and document; Control+A; Control+W selects the word at the caret (CIC_SelectWholeWord).  The
+pointer drags to select and shift+press extends.  There is no double click on text, no triple click, no gutter
+selection, no drag and drop, no occurrence highlighting.  CTextArea draws the selection as a range of shapes in its
+selection map (UpdateMarks).  CCodeEditor's gutter is a CTextArea that calls a gutter click event with the line.
+
+
+Step 1 - Clicks (WindowLib CTextEditingInput, shared by CTextArea and CTextField)
+  Double click selects the word (CTextEditing::SelectWholeWord's rules); triple click selects the line with its line
+  feed (a field: all of it).  Dragging on after a double or triple click extends by whole words or whole lines, keeping
+  the first word or line selected, as VS and IntelliJ do.  Counted with SDoubleClick's time and distance.
+  Tests: TestTextEditingInput.
+
+  Step 1 in detail:
+  How a press arrives now: button 1 unmodified -> CIC_ActivateComponent (CTextEditingInput::ActivateComponent moves
+  the caret to the nearest gap, then CFocus::StartDrag(FD_Select) -> StartDragSelect anchors there); the release ->
+  CIC_ExecuteComponent; moves -> ContDragSelect; Shift/Control+button 1 -> CIC_StartDragSelect directly (extends).
+  1a. WindowLib SClickCount (in DoubleClick.h/.cpp beside SDoubleClick, sharing DOUBLE_CLICK_MILLISECONDS/PIXELS, now in
+      DoubleClick.h): Pressed(x, y) returns 1, 2 or 3 - a press within 500 ms and 4 px of the last press counts on
+      from it; a fourth counts as 1 again.  Pressed(x, y, iMilliseconds) for tests.  Forget() on focus lost.
+  1b. BaseLib CTextEditing:
+      - FindCharacterAt(x, y, &uiPosition): the character under the pointer, not the nearest gap (pointer on the
+        right half of 'b' is 'b', not the gap after it); past the line's end it is the line's end.
+      - CTextNavigation::FindWordAround(uiPosition, &uiStart, &uiEnd) (built in CTextNavigation, beside the word
+        moves; CTextEditing::GetNavigation gives it to the input): CTextNavigation's word rules - a run of word characters, a run
+        of spaces/tabs, or one other character (so "->" is two clicks' worth: '-' or '>').  At a line end: nothing
+        (start = end).
+      - CTextNavigation::FindLineAround(uiPosition, &uiStart, &uiEnd): the line with its line feed (CR LF is one character); the last
+        line to the text's end.  Lines, not wrapped rows.  Single line: the whole text.
+      Ctrl+W's SelectWholeWord is left as it is (caret based) - step 5 replaces it.
+  1c. CTextEditingInput: ActivateComponent counts the press.  1: as now.  2: selects FindWordAround of the character
+      under the pointer; 3: FindLineAround.  The selected range is kept as the drag's origin with a unit (character,
+      word, line), and StartDragSelect doesn't re-anchor for a word or line press.  ContDragSelect by word or line:
+      pointer before the origin -> anchor at the origin's end, caret at the start of the word/line under the pointer;
+      after it -> anchor at the origin's start, caret at that word's/line's end; inside -> the origin.  Release ends
+      the unit; a Shift+press after it extends by characters from the anchor, as now.  The press's x, y are the
+      component's, as the release's.
+  1d. Applies to CTextArea, CTextField and so the IDE's editors, Build/Find text areas, Go to dialog field.  The gutter
+      is step 2.  CTextArea's read-only text that can't be selected (SetPointerEnabled(false)) gets nothing.
+  Tests:
+    TestTextEditing (BaseLib, also the 65C64/816/size16 builds): FindCharacterAt left/right half, past line end;
+      FindWordAround on a word's start/middle/end char, spaces, tabs, punctuation, UTF-8 letters, line end, empty
+      text; FindLineAround first/middle/last line, CR LF, empty line, single line.
+    TestTextEditingInput: double press selects the word; triple the line with its LF; fourth is a plain click; slow
+      second press (601 ms) and moved one (5 px) are plain; drag after a double left and right by words keeps the
+      first word; drag after a triple by lines; Shift+press after a double extends by characters; single line triple
+      selects all; SetPointerEnabled(false) ignores them.  SClickCount on its own.
+    TestTextArea: double click on a proportional font's character's right half selects its word; TestTextField: double
+      and triple click.  Mutation checks: break each rule once and see a test fail.
+  IDE: script step doubleclick:/tripleclick: (line, column) + IDEChecks entry; check by hand in Xephyr if you want it.
+  Commit: commonlibraries (BaseLib + WindowLib + tests), HCP65-IDE (script step + checks + this file).
+  BUILT 2026-11-12.  Tests: TestBaseLib 64/size16, TestBaseLib65 TestTextNavigation+TestTextEditing on the 65C64 and
+  the 816, TestWindowLib 32/64; IDE check editor-clicks; 9 mutations each caught.  The TestTextField and TestTextArea
+  cases needed a press away from the test's earlier ones first: quick presses within 4 px now count as a double click.
+
+Step 2 - Gutter selection (WindowLib CCodeEditor)
+  Pressing a line number selects the line; dragging in the gutter selects whole lines; shift+press extends by lines.
+  Glyph and change bar columns keep their clicks.  Tests: TestCodeEditor.
+
+Step 3 - Drag and drop (CTextEditingInput)
+  A press in the selection that moves past the drag distance drags the text: a drop caret follows the pointer, release
+  moves the text there (Control: copies) as one undo step; dropping inside the selection does nothing; release without
+  a drag puts the caret.  Escape cancels.  Not between components or windows.
+
+Step 4 - Selected text occurrences (CTextArea, opt-in: SetHighlightOccurrences)
+  A selection on one line that isn't all spaces has its other exact matches in the document drawn with a quieter
+  selection colour (theme TC_TextOccurrence), case-sensitive, up to 1000; found again after selection changes and edits
+  (on the tick, not per key).  The IDE turns it on for editors.
+
+Step 4b - Usages of the symbol at the caret (IDE, user's choice: as IntelliJ)
+  With no selection, once the caret has rested (~300 ms, the edits delay's clock) on an identifier the index knows,
+  its usages in this file (CCPPIndex, as Find Usages finds them) are drawn in the occurrence colour, the declaration
+  in a write colour.  Gone when the caret leaves the identifier or the file is edited (until the index catches up
+  after the edits pause).  Only symbols the index has: member calls through objects only as far as the semantic
+  pass types them.  WindowLib side: CTextArea::SetOccurrences(ranges) used by both 4 and 4b.
+
+Step 5 - Extend/Shrink Selection engine (BaseLib CTextEditing)
+  ExtendSelection grows to the smallest range around the selection that is bigger than it; ShrinkSelection goes back
+  through the ranges extended through (forgotten when the selection changes any other way).  Text ranges, for any
+  text: word, inside quotes, with quotes, inside brackets ( [ { <none>, with brackets, line without its indent, whole
+  lines, comment, whole text.  A view or owner can add ranges (CTextSelectionRanges interface) - the IDE's syntax.
+  Control+W becomes CIC_ExtendSelection (its first step is the word, as now), Control+Shift+W CIC_ShrinkSelection.
+  Tests: TestTextEditing (65C64 + 816 + size16 as BaseLib's are).
+
+Step 6 - Syntax ranges in the IDE
+  The parse the IDE already makes for colours (open + after the 400 ms pause, CIDECodeModel edits thread) also
+  collects each syntax node's byte range in the file (CCPPSyntax miFirstToken..miLastToken, parent chain) into a
+  sorted array kept on the tab with the change count it was parsed at, like the highlights.  Extend uses them while the
+  change count matches; when it doesn't (user's choice: parse on demand) Control+W parses the file then and there, on
+  the UI thread, as the edits thread would, and uses that parse's ranges (the status bar says "Parsing..." first).
+  Headers: only what the includer's parse reached (lazy declarations aren't parsed) - text ranges cover the rest, and
+  the text ranges are mixed in everywhere (inside a string or comment the parser has no nodes).
+  Checks: IDEChecks script step extend:/shrink.
+
+Step 7 - Box selection engine (BaseLib CTextEditing)
+  A box is the anchor's and caret's lines with an x from each (pixels from the view, so tabs and spans are right).
+  Each line's range is its characters between the two x's; lines shorter than the left edge have an empty range at
+  their end.  Typing, backspace, delete, tab, paste and cut act on every line's range in one undo step
+  (ReplaceRanges); a zero-width box is a caret on every line.  Copy gives the lines joined by line feeds; pasting n
+  lines into an n-line box puts one on each line, other text goes on every line.  Moving without shift, Escape, or
+  a click ends the box (a plain caret where the caret was).  Undo puts a plain selection back (box not remembered).
+  Tests: TestTextEditing.
+
+Step 8 - Box selection drawing and input (CTextArea, CTextEditingInput, IDE)
+  Drawn as one rectangle per row.  Shift+Alt+arrows/Home/End and Shift+Alt+drag make a box (VS's keys); Alt+drag too
+  where the window manager doesn't take it.  Edit menu: Extend Selection, Shrink Selection, Select All; IDE checks.
+
+
+After each step: commit, TestTextEditing/TestTextEditingInput/TestTextArea/TestTextField/TestCodeEditor green, IDE
+checks green.  User's decisions 2026-11-12: Extend parses on demand when stale; box selection VS style; occurrences
+are selected text matches and the usages of the symbol at the caret.

@@ -1003,6 +1003,48 @@ void CIDEScript::RunGoTo(const char* szGoTo)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// doubleclick:<line>:<column> and tripleclick:<line>:<column>, from 1, as
+// caret: the pointer is put over the active editor's character there,
+// which should be in view, and button one pressed and released that many
+// times through the window, as a person would.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEScript::ClickEditor(int32 iClicks, const char* szPlace)
+{
+	Ptr<CTextArea>	pEditor;
+	CInt32Rect		cLine;
+	size			uiLine;
+	size			uiPosition;
+	int32			x;
+	int32			y;
+	int32			i;
+
+	if (mpcContent->GetDocuments()->GetActiveTab().IsNull() || (strchr(szPlace, ':') == NULL) || (atoi(szPlace) < 1))
+	{
+		return;
+	}
+
+	pEditor = mpcContent->GetDocuments()->GetActiveTab()->GetEditor();
+	uiLine = (size)(atoi(szPlace) - 1);
+	if (!pEditor->GetLineBounds(uiLine, &cLine))
+	{
+		return;
+	}
+	uiPosition = pEditor->GetLineStart(uiLine) + (size)(atoi(strchr(szPlace, ':') + 1) - 1);
+	x = pEditor->GetPosition().x + pEditor->GetPositionX(uiPosition, false) + 1;
+	y = pEditor->GetPosition().y + (cLine.GetTop() + cLine.GetBottom()) / 2;
+
+	mpcContent->GetWindow()->PointerMoved(x, y);
+	for (i = 0; i < iClicks; i++)
+	{
+		mpcContent->GetWindow()->InputCommand(CIC_ActivateComponent, true);
+		mpcContent->GetWindow()->InputCommand(CIC_ExecuteComponent, true);
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // One of HCP65_IDE_EDIT's steps.
 //
 //////////////////////////////////////////////////////////////////////////
@@ -1413,6 +1455,14 @@ void CIDEScript::RunEditStep(const char* szStep)
 		{
 			mpcContent->GetDocuments()->SetCaretPlace(atoi(&szStep[6]) - 1, atoi(strchr(&szStep[6], ':') + 1) - 1);
 		}
+	}
+	else if (strncmp(szStep, "doubleclick:", 12) == 0)
+	{
+		ClickEditor(2, &szStep[12]);
+	}
+	else if (strncmp(szStep, "tripleclick:", 12) == 0)
+	{
+		ClickEditor(3, &szStep[12]);
 	}
 	else if (strcmp(szStep, "reindexall") == 0)
 	{

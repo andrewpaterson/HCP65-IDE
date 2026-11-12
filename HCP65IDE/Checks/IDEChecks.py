@@ -856,6 +856,12 @@ CHECKS = [
 	('view-menu', {
 		'OPEN': 'CalculatorParser.cpp', 'DEBUG': 'clickmenu:View/Debug,clickmenu:Window/Close All Documents,printtabs'},
 		[r'^Tabs:$'], [r'not found', r'disabled']),
+	('editor-clicks', {
+		#A double click in the editor selects the word under the pointer, a triple click its line with its line feed (the
+		#caret then on the next line).  Real presses through the window, column 10 being the P of IsParentheses.
+		'OPEN': 'CalcParentheses.h', 'CARET': '38:1',
+		'DEBUG': 'wait:1500,edit:doubleclick:38:10,edit:printselection,wait:1000,edit:tripleclick:38:10,edit:printselection'},
+		[r'^Selection: \[IsParentheses\] on line 38, caret line 38$', r'^Selection: \[\tbool\t\tIsParentheses\(void\);$', r'^\] on line 39, caret line 39$'], []),
 ]
 
 
