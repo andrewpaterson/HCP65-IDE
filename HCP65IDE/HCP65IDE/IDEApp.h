@@ -56,6 +56,9 @@ public:
 	bool	Load(CObjectReader* pcFile) override;
 
 	bool	Run(void);
+
+protected:
+	void	AddScriptKeyboard(void);
 };
 
 

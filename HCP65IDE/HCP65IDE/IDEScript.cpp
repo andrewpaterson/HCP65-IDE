@@ -26,6 +26,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "SupportLib/PNGWriter.h"
 #include "IDEContent.h"
 #include "WindowLib/ComponentInput.h"
+#include "InputLib/ProgramDeviceDetail.h"
+#include "WindowLib/ComponentInput.h"
 #include "IDEScript.h"
 
 
@@ -43,6 +45,8 @@ void CIDEScript::Init(CIDEContent* pcContent)
 	mpcContent = pcContent;
 	mpDialog = NULL;
 	miDialogTicks = 0;
+	mpcKeyboard = NULL;
+	mpcKeyboardInput = NULL;
 	muiSpans = 0;
 	muiAnswered = 0;
 	msDialogDrawn.Clear();
@@ -59,6 +63,8 @@ void CIDEScript::Class(void)
 	U_Pointer(mpcContent);
 	M_Pointer(mpDialog);
 	U_Int32(miDialogTicks);
+	U_Pointer(mpcKeyboard);
+	U_Pointer(mpcKeyboardInput);
 	U_Size(muiSpans);
 	U_Size(muiAnswered);
 	U_Unknown(SMemberCall, msDialogDrawn);
@@ -1507,6 +1513,49 @@ void CIDEScript::RunEditStep(const char* szStep)
 			printf("\n");
 		}
 	}
+	else if (strncmp(szStep, "press:", 6) == 0)
+	{
+		PressKey(&szStep[6], true);
+	}
+	else if (strncmp(szStep, "release:", 8) == 0)
+	{
+		PressKey(&szStep[8], false);
+	}
+	else if (strncmp(szStep, "tap:", 4) == 0)
+	{
+		PressKey(&szStep[4], true);
+		PressKey(&szStep[4], false);
+	}
+	else if ((strcmp(szStep, "printview") == 0) && pTab.IsNotNull())
+	{
+		//The lines of the active editor that are in view, and the caret's: "View: lines <first> to <last>, caret line
+		//<line>", from 1.  A line is in view if any of it is.
+		CInt32Rect	cView;
+		CInt32Rect	cLine;
+		size		uiFirst;
+		size		uiLast;
+
+		//Laid out as the next paint would lay it out: only if something has asked for it.
+		pEditor = pTab->GetEditor();
+		if (mpcContent->GetWindow()->IsLayoutDirty())
+		{
+			mpcContent->GetWindow()->Layout();
+		}
+		uiFirst = 0;
+		uiLast = 0;
+		if (pEditor->GetScrollView(&cView))
+		{
+			for (uiLine = 0; uiLine < pEditor->NumLines(); uiLine++)
+			{
+				if (pEditor->GetLineBounds(uiLine, &cLine) && (pEditor->GetPosition().y + cLine.GetBottom() > cView.GetTop()) && (pEditor->GetPosition().y + cLine.GetTop() < cView.GetBottom()))
+				{
+					uiFirst = (uiFirst == 0) ? uiLine + 1 : uiFirst;
+					uiLast = uiLine + 1;
+				}
+			}
+		}
+		printf("View: lines %d to %d, caret line %d\n", (int)uiFirst, (int)uiLast, (int)pEditor->FindLine(pEditor->GetCaretPosition()) + 1);
+	}
 	else if (strcmp(szStep, "printclipboardhistory") == 0)
 	{
 		//The clipboard's history, newest first: "Clipboard history: <n>" and each entry as " [<text>]".
@@ -1788,6 +1837,31 @@ void CIDEScript::RunDockMove(const char* szMove)
 	szAction.Kill();
 }
 
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The keyboard the steps press:<key>, release:<key> and tap:<key> press
+// the keys of ("Left Control", "End" ...), and the component input that
+// hears it: what they do reaches the window as a real key does, where the
+// steps keys: and key: run the command the keys are bound to.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEScript::SetKeyboard(CProgramDeviceDetail* pcKeyboard, CComponentInput* pcInput)
+{
+	mpcKeyboard = pcKeyboard;
+	mpcKeyboardInput = pcInput;
+}
+
+
+void CIDEScript::PressKey(const char* szKey, bool bDown)
+{
+	if (mpcKeyboard)
+	{
+		mpcKeyboard->AddEvent((char*)szKey, bDown ? 1.0f : 0.0f);
+		mpcKeyboardInput->Update();
+	}
+}
 
 
 //////////////////////////////////////////////////////////////////////////

@@ -32,6 +32,9 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 class CIDEContent;
 
 
+class CProgramDeviceDetail;
+class CComponentInput;
+
 //How the IDE is driven to check it, from the command line's environment and the debug script, all in one place:
 //
 //  HCP65_IDE_EDIT        a comma separated list of edits (RunEditStep): open:<file>, type:<text>, undo, redo, undoall,
@@ -56,6 +59,8 @@ protected:
 	CIDEContent*	mpcContent;  //Not held: the content holds the script.
 	Ptr<CDialog>	mpDialog;  //The dialog being watched.
 	int32			miDialogTicks;
+	CProgramDeviceDetail*	mpcKeyboard;  //Not held: the keyboard whose keys the steps press:, release: and tap: press, NULL for none.
+	CComponentInput*		mpcKeyboardInput;  //Not held: what hears it.
 	size			muiAnswered;  //Dialogs answered (DialogTick), for the debug script's answered:<n>.
 	SMemberCall	msDialogDrawn;  //SetDialogDrawnCall\'s, not set if there is none.
 	size			muiSpans;  //The active editor's spans when printspans last looked.
@@ -94,6 +99,8 @@ public:
 	void	StopWatchingDialog(void);
 	bool	IsWatchingDialog(void);
 	void	DialogTick(void);
+	void	SetKeyboard(CProgramDeviceDetail* pcKeyboard, CComponentInput* pcInput);
+	void	PressKey(const char* szKey, bool bDown);
 	void	PrintPasteHistoryDialog(Ptr<CWindow> pWindow);
 	void	PressDialogKeys(Ptr<CWindow> pWindow);
 	template<class M, class O>

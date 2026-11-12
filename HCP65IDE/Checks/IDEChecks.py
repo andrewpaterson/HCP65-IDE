@@ -995,6 +995,14 @@ CHECKS = [
 		'OPEN': 'CalcParentheses.h', 'CARET': '38:2',
 		'DEBUG': 'wait:1500,edit:keys:Alt+Shift+Cursor Down,edit:keys:Alt+Shift+Cursor Right,edit:keys:Alt+Shift+Cursor Right,edit:keys:Alt+Shift+Cursor Right,edit:keys:Alt+Shift+Cursor Right,edit:printbox,edit:keys:Control+C,edit:printclipboardhistory,edit:caret:1:1,edit:keys:Control+V,edit:print'},
 		[r'^Box: \[bool\] \[void\]$', r'^Clipboard history: 1 \[bool$', r'^void\]$', r'CalcParentheses\.h \* \(focus\) line 2: \[void\]$'], []),
+	('editor-document-keys-scroll', {
+		#Control+End and Control+Home, pressed on a keyboard (the script's, which the component input hears as it hears
+		#a real one), move the caret to the document's end and start and the view with it.  The keys' actions keep the
+		#layout, so the scroll pane has to ask for the layout that moves the text itself: it didn't, and the view stayed
+		#where it was unless something else happened to lay the window out.
+		'OPEN': 'CalculatorParser.cpp',
+		'DEBUG': 'wait:1500,edit:printview,edit:press:Left Control,edit:tap:End,edit:release:Left Control,wait:300,edit:printview,edit:press:Left Control,edit:tap:Home,edit:release:Left Control,wait:300,edit:printview'},
+		[r'^View: lines 1 to \d+, caret line 1$', r'^View: lines \d+ to 420, caret line 420$', r'^View: lines 1 to \d+, caret line 1$'], []),
 ]
 
 

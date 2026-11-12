@@ -27,6 +27,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/FileUtil.h"
 #include "IDEWindowTick.h"
 #include "BaseLib/Timer.h"
+#include "InputLib/ProgramInput.h"
+#include "InputLib/ProgramDeviceDetail.h"
 #include "IDEApp.h"
 
 
@@ -571,6 +573,10 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 		mbInputs = true;
 		mcComponentInput.AddKeyboards();
 		mcComponentInput.AddMice();
+		if (IsIDEScripted())
+		{
+			AddScriptKeyboard();
+		}
 		GetIDEKeymapFile(&szPath);
 		mpContent->GetSettings()->ReadKeymap(szPath.Text());  //Any the user changed.
 		szPath.Kill();
@@ -585,6 +591,33 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 	}
 
 	return mbValid;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A scripted run's keyboard: one the script presses the keys of (its
+// steps press:, release: and tap:), so what they do comes to the window
+// as a real keyboard's does, through the component input.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEApp::AddScriptKeyboard(void)
+{
+	static const char*		aszKeys[] = { "Left Control", "Left Shift", "Left Alt", "Home", "End", "Page Up", "Page Down", "Cursor Up", "Cursor Down", "Cursor Left", "Cursor Right", "Enter", "Escape", "Tab", "Backspace", "Delete", "Space", "A", "C", "V", "X", "W", "Z" };
+	CProgramInput*			pcProgram;
+	CProgramDeviceDetail*	pcKeyboard;
+	size					i;
+
+	pcProgram = mpInput->GetProgramInput();
+	pcProgram->AddDetail("Programmatic: Keyboard", "Script Keyboard");
+	pcKeyboard = pcProgram->macPDeviceDetails.Get(pcProgram->macPDeviceDetails.NumElements() - 1);
+	for (i = 0; i < sizeof(aszKeys) / sizeof(aszKeys[0]); i++)
+	{
+		pcKeyboard->AddSource((char*)aszKeys[i]);
+	}
+	mpInput->AddProgramInput();
+	mcComponentInput.AddKeyboard(mpInput->GetDevices()->GetDevice(pcKeyboard->miUniqueID));
+	mpContent->GetScript()->SetKeyboard(pcKeyboard, &mcComponentInput);
 }
 
 
