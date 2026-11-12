@@ -862,6 +862,13 @@ CHECKS = [
 		'OPEN': 'CalcParentheses.h', 'CARET': '38:1',
 		'DEBUG': 'wait:1500,edit:doubleclick:38:10,edit:printselection,wait:1000,edit:tripleclick:38:10,edit:printselection'},
 		[r'^Selection: \[IsParentheses\] on line 38, caret line 38$', r'^Selection: \[\tbool\t\tIsParentheses\(void\);$', r'^\] on line 39, caret line 39$'], []),
+	('editor-gutter-select', {
+		#Pressing a line's number in the gutter selects the line with its line feed; a shift press on line 36's number
+		#then selects from where that selection started (line 38's start) up to line 36's start.  Real presses through
+		#the window.
+		'OPEN': 'CalcParentheses.h', 'CARET': '38:1',
+		'DEBUG': 'wait:1500,edit:gutterclick:38,edit:printselection,wait:1000,edit:shiftgutterclick:36,edit:printselection'},
+		[r'^Selection: \[\tbool\t\tIsParentheses\(void\);$', r'^\] on line 39, caret line 39$', r'^Selection: \[\tCNumber\t\tEvaluate\(void\);$', r'^\tvoid\t\tSetExpression\(CCalcExpression\* pcExpression\);$', r'^\] on line 38, caret line 36$'], []),
 ]
 
 

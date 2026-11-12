@@ -63,6 +63,48 @@ Step 2 - Gutter selection (WindowLib CCodeEditor)
   Pressing a line number selects the line; dragging in the gutter selects whole lines; shift+press extends by lines.
   Glyph and change bar columns keep their clicks.  Tests: TestCodeEditor.
 
+  Step 2 in detail:
+  How a gutter press arrives now: the gutter is a CTextArea that can't be selected or focussed, so a press focusses
+  the CCodeEditor and its CIC_ActivateComponent action (ClickAction) gives the focus to the code's text area, then
+  calls one event by the gap nearest the pointer: glyph column (gap 0) -> glyph click event (IDE: breakpoints), at or
+  past the gap after the number on a line with a change bar -> change bar click event (IDE: git's old lines), anything
+  else -> gutter click event (CLineZones: toggles a line's listing pages).  Shift/Control+press goes to the focussed
+  CCodeEditor as CIC_StartDragSelect, which it has no action for: nothing happens today.
+  The gutter's columns: [glyph] mark digits space(change bar).
+  2a. Columns by the character under the pointer (CTextArea::FindCharacterAt, passing step 1's CTextEditing one), not
+      the nearest gap: the glyph column is the glyph's whole cell, not its left half.  Glyph -> glyph event as now;
+      change bar character on a line with a bar -> change bar event as now; the mark character -> gutter click event
+      as now (so CLineZones' '+' marks keep working and don't select); the digits, and the bar column on a line with
+      no bar -> line selection (below), no event.  Past the gutter's row (a line component's gap) -> the line above,
+      as now.
+  2b. WindowLib CTextEditingInput::StartLineDrag(x, y, bExtend) (CTextArea passes it on), x, y the text area's:
+      - press (bExtend false): the line under y (FindLineAround, with its line feed) is selected and kept as the
+        drag's origin, unit TEDU_Line; caret after its line feed, as a triple click leaves it.
+      - Shift/Control press (bExtend true): the origin is the anchor alone (the caret when nothing is selected), unit
+        TEDU_Line, so the anchor stays where it is, mid-line or not, and the caret goes to the start of the line under
+        the pointer (above the anchor) or after its line feed (below).  Needs CTextEditing::GetAnchorPosition.
+      - Both start the focus's FD_Select drag on the text area with the unit kept (mbUnitPress), so the moves after it
+        are step 1's DragByUnit: dragging up or down the gutter, or on into the code, grows by whole lines.  The click
+        count is forgotten so a press in the code after it is a single click.
+      CCodeEditor: ClickAction calls it for the number columns; a new CIC_StartDragSelect action does the same with
+      bExtend (giving the text area the focus first; the drag that came to the code editor is stopped and the text
+      area's started in its place).  Presses outside the gutter are the code's own, as now.
+  2c. A text area that can't be selected (SetSelectable(false)) gets focus only, as now.  Double and triple clicks in
+      the gutter are just presses (each selects its line); clicks aren't counted there.
+  Tests (TestCodeEditor): press on a number selects the line with its LF, caret on the next line; last line to the
+    text's end; one-line text; drag down two lines; drag up past the origin keeps the origin's line; drag on into the
+    code; Shift+press below and above a mid-line anchor and with no selection; Control+press as Shift; press in a line
+    component's gap; glyph cell's right half -> glyph event, no selection; change bar -> bar event; mark column ->
+    gutter event, no selection; bar column on a line without a bar selects; not selectable -> nothing; a press in the
+    code after a gutter press is a single click.  The existing gutter tests' press points are checked against 2a.
+    Mutation checks as step 1.
+  IDE: script steps gutterclick:<line> and shiftgutterclick:<line> (press on the line's number, through the window) +
+    IDEChecks entry editor-gutter-select (printselection after each).
+  Commit: commonlibraries (BaseLib GetAnchorPosition + WindowLib + tests), HCP65-IDE (script steps + check + this file).
+  BUILT 2026-11-12 as planned (commonlibraries 755b535c3).  Tests: TestCodeEditorLineSelection, TestWindowLib 32/64,
+  TestBaseLib 64/size16; IDE check editor-gutter-select.  8 mutations caught; forgetting the click count in
+  StartLineDrag wasn't needed (the press focusses the code editor first, which forgets them), so it was left out.
+
 Step 3 - Drag and drop (CTextEditingInput)
   A press in the selection that moves past the drag distance drags the text: a drop caret follows the pointer, release
   moves the text there (Control: copies) as one undo step; dropping inside the selection does nothing; release without

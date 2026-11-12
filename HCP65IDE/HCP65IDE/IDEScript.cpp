@@ -1045,6 +1045,53 @@ void CIDEScript::ClickEditor(int32 iClicks, const char* szPlace)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// gutterclick:<line> and shiftgutterclick:<line>, from 1: the pointer is
+// put over the last digit of the line's number in the active editor's
+// gutter, which should be in view, and button one pressed and released
+// through the window, with shift held for shiftgutterclick.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEScript::ClickGutter(bool bShift, const char* szLine)
+{
+	Ptr<CTextArea>	pGutter;
+	CInt32Rect		cLine;
+	size			uiLine;
+	size			uiDigit;
+	int32			x;
+	int32			y;
+
+	if (mpcContent->GetDocuments()->GetActiveTab().IsNull() || (atoi(szLine) < 1))
+	{
+		return;
+	}
+
+	//The gutter's rows end in the number and a space for the change bar.
+	pGutter = mpcContent->GetDocuments()->GetActiveTab()->GetCodeEditor()->GetGutter();
+	uiLine = (size)(atoi(szLine) - 1);
+	if (!pGutter->GetLineBounds(uiLine, &cLine))
+	{
+		return;
+	}
+	uiDigit = pGutter->GetLineEnd(uiLine) - 2;
+	x = pGutter->GetPosition().x + (pGutter->GetPositionX(uiDigit, false) + pGutter->GetPositionX(uiDigit + 1, false)) / 2;
+	y = pGutter->GetPosition().y + (cLine.GetTop() + cLine.GetBottom()) / 2;
+
+	mpcContent->GetWindow()->PointerMoved(x, y);
+	if (bShift)
+	{
+		mpcContent->GetWindow()->InputCommand(CIC_StartDragSelect, true);
+		mpcContent->GetWindow()->InputCommand(CIC_StopDragSelect, true);
+	}
+	else
+	{
+		mpcContent->GetWindow()->InputCommand(CIC_ActivateComponent, true);
+		mpcContent->GetWindow()->InputCommand(CIC_ExecuteComponent, true);
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // One of HCP65_IDE_EDIT's steps.
 //
 //////////////////////////////////////////////////////////////////////////
@@ -1463,6 +1510,14 @@ void CIDEScript::RunEditStep(const char* szStep)
 	else if (strncmp(szStep, "tripleclick:", 12) == 0)
 	{
 		ClickEditor(3, &szStep[12]);
+	}
+	else if (strncmp(szStep, "gutterclick:", 12) == 0)
+	{
+		ClickGutter(false, &szStep[12]);
+	}
+	else if (strncmp(szStep, "shiftgutterclick:", 17) == 0)
+	{
+		ClickGutter(true, &szStep[17]);
 	}
 	else if (strcmp(szStep, "reindexall") == 0)
 	{

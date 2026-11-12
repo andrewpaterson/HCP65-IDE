@@ -74,6 +74,7 @@ public:
 	void		ClickMenu(const char* szPath);
 	void		RunEditStep(const char* szStep);
 	void		ClickEditor(int32 iClicks, const char* szPlace);
+	void		ClickGutter(bool bShift, const char* szLine);
 	void		RunGoTo(const char* szGoTo);
 	void		RunFind(const char* szFind);
 	EIDEScope	GetScriptScope(const char* szScope);
