@@ -33,6 +33,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define IDE_FIND_BINARY_CHECK			4096	//A file with a zero in its first bytes isn't text, and isn't searched.
 #define IDE_FIND_RESULTS_MAXIMUM		10000	//The most results the Find tool window lists.
 #define IDE_FIND_OPEN_FILES_MAXIMUM		1000	//With more results than this the tree's files start closed.
+#define IDE_FIND_SETTINGS_TAG			"FindInFiles"
 #define IDE_FIND_REFRESH				500		//Milliseconds after the last edit that moved a result until the tree shows it.
 
 
@@ -217,6 +218,7 @@ bool CIDEFindInFiles::ShowFind(void)
 	}
 	eResult = mpDialog->Show();
 	mpDialog->GetDialog()->ClearTicker();
+	mpcContent->GetDocuments()->ForgetPreviewAsker(this);
 	mpcContent->GetScript()->StopWatchingDialog();
 
 	mszText.Set(mpDialog->GetText());
@@ -860,7 +862,7 @@ void CIDEFindInFiles::FindPreviewShown(SFindInFilesItem* psItem, Ptr<CTextArea> 
 {
 	if (bNewText && (psItem->uiData < masPlaces.NumElements()) && mpDialog.IsNotNull())
 	{
-		mpcContent->GetDocuments()->HighlightPreview(maszFiles.GetText(masPlaces.Get(psItem->uiData)->uiFile), pPreview->GetText());
+		mpcContent->GetDocuments()->HighlightPreview(this, maszFiles.GetText(masPlaces.Get(psItem->uiData)->uiFile), pPreview->GetText());
 		mpDialog->GetDialog()->GetWindow()->RequestTick(0);
 	}
 }
@@ -1116,8 +1118,38 @@ void CIDEFindInFiles::Clear(void)
 }
 
 
+//////////////////////////////////////////////////////////////////////////
+//
+// What is kept of Find in Files in the IDE's settings: the Find tool
+// window's preview and its share (the results pane's).
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEFindInFiles::ReadSettings(CMarkupTag* pcSettings)
+{
+	CMarkupTag*	pcTag;
+
+	pcTag = pcSettings->GetTag(IDE_FIND_SETTINGS_TAG);
+	if (pcTag && mpPane.IsNotNull())
+	{
+		mpPane->ReadSettings(pcTag);
+	}
+}
+
+
+void CIDEFindInFiles::WriteSettings(CXMLWriter* pcWriter)
+{
+	pcWriter->Begin(IDE_FIND_SETTINGS_TAG);
+	if (mpPane.IsNotNull())
+	{
+		mpPane->WriteSettings(pcWriter);
+	}
+	pcWriter->End();
+}
+
+
 Ptr<CFindInFilesDialog> CIDEFindInFiles::GetFind(void) { return mpDialog; }
 Ptr<CTreeContainer> CIDEFindInFiles::GetFindTree(void) { return mpPane.IsNotNull() ? mpPane->GetTree() : Ptr<CTreeContainer>(); }
+Ptr<CIDEResultsPane> CIDEFindInFiles::GetResultsPane(void) { return mpPane; }
 Ptr<CDockPane> CIDEFindInFiles::GetTool(void) { return mpTool; }
 size CIDEFindInFiles::NumFound(void) { return masFound.NumElements(); }
 

@@ -408,6 +408,18 @@ CHECKS = [
 		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,references,usageparts'},
 		[r'^  CalcParentheses\.h\{d:  1\} \(icon\)$', r'^    \{d:38: \}bool  \{m:IsParentheses\}\(void\);\{d:  \[declaration\]\}$',
 		 r'^  Calculator\.cpp\{d:  3\} \(icon\)$', r'^    \{d:391: \}if \(pcExpression->\{m:IsParentheses\}\(\)\)$'], [r'\{\?:', r'ERROR']),
+	('usages-preview', {
+		#Beside the tree the selected usage's file is shown at its line, coloured as an editor is; stepping to another
+		#usage shows that; with the preview off nothing is shown.
+		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14',
+		'EDIT': 'usagegroups:,usages,usagepreview,focus:usages', 'DEBUG': 'command:Navigate.NextOccurrence,edit:usagepreview,edit:usagepreview:off,edit:usagepreview,edit:usagepreview:on,edit:usagepreview'},
+		[r'^Preview: Calculator\.cpp line 367 of \d+ \[if \(\(\*ppcExpression\)->IsParentheses\(\)\)\] coloured$',
+		 r'^Preview: Calculator\.cpp line 391 of \d+ \[if \(pcExpression->IsParentheses\(\)\)\] coloured$', r'^Preview: hidden$',
+		 r'^Preview: Calculator\.cpp line 391 of '], [r'Preview: none', r'ERROR']),
+	('find-preview', {
+		#The Find tool window has the same preview.
+		'WAIT_INDEX': '1', 'DIALOG_ANSWER': 'Open in Find Window', 'DEBUG': 'find:0:calculatorparser,answered:1,printfindpreview'},
+		[r'^Preview: CalculatorParser\.h line 29 of \d+ \[class CCalculatorParser\] coloured$'], [r'ERROR']),
 	('find-row-parts', {
 		#The Find tool window's rows: the text found is in the match font whatever its case.
 		'WAIT_INDEX': '1', 'DIALOG_ANSWER': 'Open in Find Window', 'DEBUG': 'find:0:calculatorparser,answered:1,printfindparts'},

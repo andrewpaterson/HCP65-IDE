@@ -47,7 +47,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 //Milliseconds between looks at the edits thread while it is busy.
 #define IDE_EDITS_POLL	20
-#define IDE_PREVIEW_CHANGES	MAX_SIZE	//The change count of a file highlighted for Find in Files' preview, not a tab.
+#define IDE_PREVIEW_TOKENS		1000000		//A file highlighted for a preview, not a tab, has one of this many change counts, from
+#define IDE_PREVIEW_FIRST_TOKEN	(MAX_SIZE - IDE_PREVIEW_TOKENS)	//this one up: no editor is changed so often.
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -63,10 +64,8 @@ void CIDEDocuments::Init(CIDEContent* pcContent)
 	muiIndexings = 0;
 	mapcAnchors.Init();
 	mbReloading = false;
-	mszPreviewFile.Init();
-	mszPreviewText.Init();
-	mbPreview = false;
-	mbPreviewing = false;
+	masPreviews.Init();
+	muiPreviewToken = 0;
 	PostInit();
 }
 
@@ -83,10 +82,8 @@ void CIDEDocuments::Class(void)
 	U_Size(muiIndexings);
 	U_Unknown(CArrayIDEDocumentAnchors, mapcAnchors);
 	U_Bool(mbReloading);
-	U_String(mszPreviewFile);
-	U_String(mszPreviewText);
-	U_Bool(mbPreview);
-	U_Bool(mbPreviewing);
+	U_Unknown(CArrayIDEPreviewRequests, masPreviews);
+	U_Size(muiPreviewToken);
 }
 
 
@@ -107,8 +104,11 @@ void CIDEDocuments::Free(void)
 		SafeKill(pcAnchor);
 	}
 	mapcAnchors.Kill();
-	mszPreviewText.Kill();
-	mszPreviewFile.Kill();
+	while (masPreviews.NumElements() > 0)
+	{
+		RemovePreview(0);
+	}
+	masPreviews.Kill();
 }
 
 
@@ -350,22 +350,151 @@ void CIDEDocuments::ReindexAll(void)
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
 //
-// The file Find in Files previews is highlighted by the edits thread,
-// as an edited tab is, from szText (the preview's): what it makes is
-// given to CIDEFindInFiles::PreviewHighlighted at a later
-// UpdateEditedTabs.  A file asked for before the last was given to the
-// thread takes its place.
+// A file a preview shows is highlighted by the edits thread, as an edited
+// tab is, from szText (the preview's): what it makes is given to the
+// asker's PreviewHighlighted at a later UpdateEditedTabs.  A file an
+// asker asks for before its last was given to the thread takes its
+// place.  The asker isn't held: it calls ForgetPreviewAsker before it
+// goes.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEDocuments::HighlightPreview(const char* szFileName, const char* szText)
+void CIDEDocuments::HighlightPreview(CIDEPreviewAsker* pcAsker, const char* szFileName, const char* szText)
 {
-	mszPreviewFile.Set(szFileName);
-	mszPreviewText.Set(szText);
-	mbPreview = true;
+	SIDEPreviewRequest*	psRequest;
+	size				i;
+
+	for (i = 0; i < masPreviews.NumElements(); i++)
+	{
+		psRequest = masPreviews.Get(i);
+		if ((psRequest->pcAsker == pcAsker) && !psRequest->bGiven)
+		{
+			psRequest->szFileName.Set(szFileName);
+			psRequest->szText.Set(szText);
+			return;
+		}
+	}
+	psRequest = masPreviews.Add();
+	psRequest->pcAsker = pcAsker;
+	psRequest->szFileName.Init(szFileName);
+	psRequest->szText.Init(szText);
+	psRequest->uiToken = 0;
+	psRequest->bGiven = false;
+	mpcContent->GetWindow()->RequestTick(0);
 }
 
 
-bool CIDEDocuments::IsHighlightingPreview(void) { return mbPreview || mbPreviewing; }
+//////////////////////////////////////////////////////////////////////////
+//
+// An asker is going: what it asked for isn't given to it, or to the
+// thread if it hasn't been.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDocuments::ForgetPreviewAsker(CIDEPreviewAsker* pcAsker)
+{
+	size	i;
+
+	for (i = masPreviews.NumElements(); i > 0; i--)
+	{
+		if (masPreviews.Get(i - 1)->pcAsker == pcAsker)
+		{
+			if (masPreviews.Get(i - 1)->bGiven)
+			{
+				masPreviews.Get(i - 1)->pcAsker = NULL;
+			}
+			else
+			{
+				RemovePreview(i - 1);
+			}
+		}
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDocuments::RemovePreview(size uiIndex)
+{
+	masPreviews.Get(uiIndex)->szText.Kill();
+	masPreviews.Get(uiIndex)->szFileName.Kill();
+	masPreviews.RemoveAt(uiIndex);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The previews' files not yet with the edits thread are added to those
+// given to it, each known by a change count no editor has.  One that
+// can't be highlighted (it isn't code) is forgotten.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDocuments::GivePreviews(CArrayIDEEditedFiles* papsFiles)
+{
+	SIDEPreviewRequest*	psRequest;
+	size				uiBefore;
+	size				i;
+
+	for (i = masPreviews.NumElements(); i > 0; i--)
+	{
+		psRequest = masPreviews.Get(i - 1);
+		if (psRequest->bGiven)
+		{
+			continue;
+		}
+		muiPreviewToken = (muiPreviewToken + 1) % IDE_PREVIEW_TOKENS;
+		psRequest->uiToken = IDE_PREVIEW_FIRST_TOKEN + muiPreviewToken;
+		uiBefore = papsFiles->NumElements();
+		AddEditedFile(mpcContent->GetCodeModel()->FindProjectOfFile(psRequest->szFileName.Text()), psRequest->szFileName.Text(), psRequest->szText.Text(), psRequest->uiToken, true, false, false, papsFiles);
+		if (papsFiles->NumElements() > uiBefore)
+		{
+			psRequest->bGiven = true;
+			psRequest->szText.Set("");
+		}
+		else
+		{
+			RemovePreview(i - 1);
+		}
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A file the edits thread has done with: if it was a preview's it is
+// given to whoever asked for it, if they still want it.  False if it is a
+// tab's.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEDocuments::TakePreview(SIDEEditedFile* psFile)
+{
+	SIDEPreviewRequest*	psRequest;
+	CIDEPreviewAsker*	pcAsker;
+	size				i;
+
+	if (psFile->uiChanges < IDE_PREVIEW_FIRST_TOKEN)
+	{
+		return false;
+	}
+	for (i = 0; i < masPreviews.NumElements(); i++)
+	{
+		psRequest = masPreviews.Get(i);
+		if (psRequest->bGiven && (psRequest->uiToken == psFile->uiChanges))
+		{
+			pcAsker = psRequest->pcAsker;
+			RemovePreview(i);
+			if (pcAsker && psFile->bHighlighted)
+			{
+				pcAsker->PreviewHighlighted(psFile->szFileName.Text(), &psFile->acHighlights);
+			}
+			break;
+		}
+	}
+	return true;
+}
+
+
+bool CIDEDocuments::IsHighlightingPreview(void) { return masPreviews.NumElements() > 0; }
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -411,7 +540,6 @@ int64 CIDEDocuments::GiveEditedTabs(int64 iNow, bool bNow)
 	bool					bIndex;
 	int64					iWait;
 	int64					iSoonest;
-	size					uiBefore;
 	CArrayIDEEditedFiles	apsFiles;
 
 	if (!TakeEditedFiles(bNow))
@@ -443,14 +571,10 @@ int64 CIDEDocuments::GiveEditedTabs(int64 iNow, bool bNow)
 		}
 	}
 
-	//The file Find in Files previews is highlighted with them, but not when they are wanted at once.
-	if (mbPreview && !bNow)
+	//The files previews show are highlighted with them, but not when they are wanted at once.
+	if (!bNow)
 	{
-		mbPreview = false;
-		uiBefore = apsFiles.NumElements();
-		AddEditedFile(mpcContent->GetCodeModel()->FindProjectOfFile(mszPreviewFile.Text()), mszPreviewFile.Text(), mszPreviewText.Text(), IDE_PREVIEW_CHANGES, true, false, false, &apsFiles);
-		mbPreviewing = apsFiles.NumElements() > uiBefore;
-		mszPreviewText.Set("");
+		GivePreviews(&apsFiles);
 	}
 
 	if (apsFiles.NumElements() > 0)
@@ -563,13 +687,8 @@ bool CIDEDocuments::TakeEditedFiles(bool bWait)
 	for (i = 0; i < apsFiles.NumElements(); i++)
 	{
 		psFile = apsFiles.GetPtr(i);
-		if (psFile->uiChanges == IDE_PREVIEW_CHANGES)
+		if (TakePreview(psFile))
 		{
-			mbPreviewing = false;
-			if (psFile->bHighlighted)
-			{
-				mpcContent->GetFindInFiles()->PreviewHighlighted(psFile->szFileName.Text(), &psFile->acHighlights);
-			}
 			continue;
 		}
 		pTab = psFile->bHighlighted ? FindTab(psFile->szFileName.Text()) : Ptr<CIDEEditorTab>();

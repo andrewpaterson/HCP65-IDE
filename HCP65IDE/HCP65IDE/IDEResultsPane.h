@@ -24,11 +24,15 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "StandardLib/Pointer.h"
 #include "WindowLib/TreeContainer.h"
 #include "WindowLib/ScrollPane.h"
+#include "WindowLib/SplitContainer.h"
+#include "WindowLib/CodePreview.h"
+#include "BaseLib/XMLWriter.h"
+#include "BaseLib/MarkupTag.h"
 #include "IDECodeModel.h"
+#include "IDEDocuments.h"
 
 
 class CIDEContent;
-class CIDEFileLines;
 class CIDEResultsPane;
 
 
@@ -51,7 +55,14 @@ public:
 //Its rows are made as IntelliJ's are (AddGroup, AddResult): a group's name with what is said of it after (how many
 //are in it, its directory) dim, a file's with its file type's icon, and a result's line with its line number dim, the
 //text found in the match font and anything noted of it dim.
-class CIDEResultsPane : public CObject
+//
+//Right of the tree, across a sash, is a preview of the selected result (a CCodePreview): its file's code at its line,
+//the text found coloured, as its editor has it if it is open, and coloured as an editor is by the edits thread a
+//moment after.  Whether it is shown, and the tree's share of the pane, are settings its owner keeps (ReadSettings,
+//WriteSettings) and are written when they change.
+//
+//Whatever lets go of a pane before the IDE closes calls Detach first.
+class CIDEResultsPane : public CObject, public CIDEPreviewAsker
 {
 CONSTRUCTABLE(CIDEResultsPane);
 DESTRUCTABLE(CIDEResultsPane);
@@ -61,6 +72,9 @@ protected:
 	Ptr<CTreeContainer>	mpTree;
 	Ptr<CScrollPane>	mpScrollPane;
 	Ptr<CInputAction>	mpEscapeAction;  //Escape in the tree goes back to the editor.
+	Ptr<CSplitContainer>	mpSplit;  //The tree and, right of it, the preview.
+	Ptr<CCodePreview>	mpPreview;
+	size				muiPreviewChanges;  //The previewed file's editor's change count when its text was taken, MAX_SIZE if it wasn't open.
 	CChars				mszNoun;  //What a result is called in the status line: "usages", "matches".
 	bool				mbSelectOnOpen;  //A result opened from the tree has its text selected in its editor.
 
@@ -86,9 +100,21 @@ public:
 	bool				Step(bool bNext, bool bKeepKeys);
 	void				ShowSelected(void);
 	void				Focus(void);
+	void				Detach(void);
+
+	void				SetPreviewShown(bool bShown);
+	bool				IsPreviewShown(void);
+	Ptr<CCodePreview>	GetPreview(void);
+	Ptr<CSplitContainer>	GetSplit(void);
+	void				ShowPreview(void);
+	void				PreviewHighlighted(const char* szFileName, CArrayHighlights* pacHighlights) override;
+	void				ReadSettings(CMarkupTag* pcTag);
+	void				WriteSettings(CXMLWriter* pcWriter);
 
 protected:
 	void				ResultActivated(void);
+	void				ResultSelected(void);
+	void				ShareChanged(void);
 	void				ReturnToEditor(void);
 };
 

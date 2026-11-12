@@ -128,6 +128,7 @@ public:
 	void				WriteSettings(CXMLWriter* pcWriter);
 	uint8				GetGrouping(void);
 	Ptr<CTreeContainer>	GetUsagesTree(void);
+	Ptr<CIDEResultsPane>	GetResultsPane(void);
 	Ptr<CDockPane>		GetTool(void);
 
 	Ptr<CDockPane>		GetSteppablePane(void) override;

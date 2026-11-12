@@ -71,6 +71,30 @@ struct SIDEPlaceChange
 };
 
 
+//Whatever previews a file's code (Find in Files' dialog, a results pane) and wants it coloured as an editor is.
+class CIDEPreviewAsker
+{
+public:
+	//The file it asked to be highlighted has been: it is coloured if it is still what is shown.
+	virtual void	PreviewHighlighted(const char* szFileName, CArrayHighlights* pacHighlights) =0;
+};
+
+
+//A file a preview shows, to be highlighted by the edits thread (CIDEDocuments::HighlightPreview): who asked, the file
+//and its text until it is given to the thread, and what the thread's file is known by after (its change count).
+struct SIDEPreviewRequest
+{
+	CIDEPreviewAsker*	pcAsker;	//NULL once it no longer wants it.
+	CChars				szFileName;
+	CChars				szText;
+	size				uiToken;
+	bool				bGiven;
+};
+
+
+typedef CArrayTemplate<SIDEPreviewRequest>	CArrayIDEPreviewRequests;
+
+
 //Told an open file's edits, so the places kept in it (the navigation history's, Find Usages') stay on the same text.
 class CIDEDocumentAnchor : public CTextDocumentListener
 {
@@ -101,10 +125,8 @@ protected:
 	size						muiIndexings;		//The code model's indexings the tabs have seen (NumIndexings).
 	CArrayIDEDocumentAnchors	mapcAnchors;		//One for each open file.
 	bool						mbReloading;		//A tab's text is being read again: the places in it keep their lines.
-	CChars						mszPreviewFile;		//The file Find in Files previews, to be highlighted (HighlightPreview) if mbPreview.
-	CChars						mszPreviewText;
-	bool						mbPreview;
-	bool						mbPreviewing;		//It is with the edits thread.
+	CArrayIDEPreviewRequests	masPreviews;		//The files previews show that are to be, or are being, highlighted.
+	size						muiPreviewToken;	//The last request's.
 
 public:
 	void	Init(CIDEContent* pcContent);
@@ -148,7 +170,8 @@ public:
 	Ptr<CIDEEditorTab>	FindTab(CCodeEditor* pcEditor);
 	Ptr<CIDEEditorTab>	FindTab(CTextArea* pcEditor);
 	void				RequestHighlight(Ptr<CIDEEditorTab> pTab);
-	void				HighlightPreview(const char* szFileName, const char* szText);
+	void				HighlightPreview(CIDEPreviewAsker* pcAsker, const char* szFileName, const char* szText);
+	void				ForgetPreviewAsker(CIDEPreviewAsker* pcAsker);
 	bool				IsHighlightingPreview(void);
 	void				ReloadTab(Ptr<CIDEEditorTab> pTab, const char* szText);
 	void				DocumentChanged(const char* szFileName, STextDocumentChange* psChange);
@@ -159,6 +182,9 @@ protected:
 	int64				GiveEditedTabs(int64 iNow, bool bNow);
 	void				AddEditedFile(size uiProject, const char* szFileName, const char* szText, size uiChanges, bool bHighlight, bool bIndex, bool bEdited, CArrayIDEEditedFiles* papsFiles);
 	bool				TakeEditedFiles(bool bWait);
+	void				GivePreviews(CArrayIDEEditedFiles* papsFiles);
+	bool				TakePreview(SIDEEditedFile* psFile);
+	void				RemovePreview(size uiIndex);
 };
 
 

@@ -19,8 +19,14 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 ** ------------------------------------------------------------------------ **/
 #include "StandardLib/ClassDefines.h"
+#include "BaseLib/TextFile.h"
 #include "IDEContent.h"
 #include "IDEResultsPane.h"
+
+
+#define IDE_RESULTS_PREVIEW_ATTRIBUTE	"Preview"
+#define IDE_RESULTS_SHARE_ATTRIBUTE		"PreviewShare"
+#define IDE_RESULTS_TREE_SHARE			450		//Of the pane, out of SPLIT_CONTAINER_WHOLE, until the sash is dragged.
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -50,6 +56,16 @@ void CIDEResultsPane::Init(CIDEContent* pcContent, CIDEResultsSource* pcSource, 
 	mpScrollPane = OMalloc<CScrollPane>(mpcContent->GetWindow(), mpcContent->GetTheme());
 	mpScrollPane->SetContent(mpTree);
 	mpScrollPane->SetAlignment(CSH_Stretch, CSV_Stretch);
+
+	//The selected result's code, right of the tree.
+	muiPreviewChanges = MAX_SIZE;
+	mpPreview = OMalloc<CCodePreview>(mpcContent->GetWindow(), mpcContent->GetTheme(), mpcContent->GetDimFont(), mpcContent->GetCodeFamily());
+	mpSplit = OMalloc<CSplitContainer>(mpcContent->GetWindow(), mpcContent->GetTheme(), true);
+	mpSplit->SetAlignment(CSH_Stretch, CSV_Stretch);
+	mpSplit->SetComponents(mpScrollPane, mpPreview);
+	mpSplit->SetShare(IDE_RESULTS_TREE_SHARE);
+	mpSplit->GetShareEvent()->Add(this, &CIDEResultsPane::ShareChanged);
+	mpTree->GetSelectionEvent()->Add(this, &CIDEResultsPane::ResultSelected);
 	PostInit();
 }
 
@@ -66,6 +82,9 @@ void CIDEResultsPane::Class(void)
 	M_Pointer(mpTree);
 	M_Pointer(mpScrollPane);
 	M_Pointer(mpEscapeAction);
+	M_Pointer(mpSplit);
+	M_Pointer(mpPreview);
+	U_Size(muiPreviewChanges);
 	U_String(mszNoun);
 	U_Bool(mbSelectOnOpen);
 }
@@ -79,8 +98,13 @@ void CIDEResultsPane::Class(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDEResultsPane::Free(void)
 {
+	if (mpSplit.IsNotNull())
+	{
+		mpSplit->GetShareEvent()->Remove(this);
+	}
 	if (mpTree.IsNotNull())
 	{
+		mpTree->GetSelectionEvent()->Remove(this);
 		mpTree->GetActivationEvent()->Remove(this);
 		if (mpEscapeAction.IsNotNull())
 		{
@@ -118,6 +142,7 @@ int64 CIDEResultsPane::BeginShow(bool bKeepSelected)
 		iSelectedData = mpTree->GetNodeData(mpTree->GetSelectedNode());
 	}
 	mpTree->RemoveAllNodes();
+	mpPreview->Clear();
 	return iSelectedData;
 }
 
@@ -134,6 +159,7 @@ void CIDEResultsPane::EndShow(int64 iSelectedData)
 
 	iNode = (iSelectedData > 0) ? FindResultNode(iSelectedData) : TREE_NO_NODE;
 	mpTree->SelectNode((iNode != TREE_NO_NODE) ? iNode : FindResultNode(0));
+	ShowPreview();
 }
 
 
@@ -145,6 +171,7 @@ void CIDEResultsPane::EndShow(int64 iSelectedData)
 void CIDEResultsPane::Clear(void)
 {
 	mpTree->RemoveAllNodes();
+	mpPreview->Clear();
 }
 
 
@@ -373,6 +400,204 @@ void CIDEResultsPane::Focus(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Another row of the tree is selected: its result is previewed.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEResultsPane::ResultSelected(void)
+{
+	ShowPreview();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Where a line and column (from 0, the column in bytes) are in szText.
+//
+//////////////////////////////////////////////////////////////////////////
+static size FindIDEResultPosition(const char* szText, size uiLength, int32 iLine, int32 iColumn)
+{
+	const char*	szNewLine;
+	size		uiPosition;
+	size		uiLineEnd;
+
+	uiPosition = 0;
+	for (; iLine > 0; iLine--)
+	{
+		szNewLine = (const char*)memchr(&szText[uiPosition], '\n', uiLength - uiPosition);
+		if (szNewLine == NULL)
+		{
+			return uiLength;
+		}
+		uiPosition = (size)(szNewLine - szText) + 1;
+	}
+	szNewLine = (const char*)memchr(&szText[uiPosition], '\n', uiLength - uiPosition);
+	uiLineEnd = szNewLine ? (size)(szNewLine - szText) : uiLength;
+	uiPosition += (iColumn > 0) ? (size)iColumn : 0;
+	return (uiPosition < uiLineEnd) ? uiPosition : uiLineEnd;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The preview shows the selected result: its file's code (as its editor
+// has it if it is open, else as it is on the disk), at its place, the
+// text found coloured.  The code is only taken again when the file isn't
+// the one shown or its editor has changed it since; it is then given to
+// the edits thread to be coloured.  A group's row, or none, shows nothing.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEResultsPane::ShowPreview(void)
+{
+	Ptr<CIDEEditorTab>	pTab;
+	SIDELocation		sLocation;
+	CTextFile			cFile;
+	const char*			szText;
+	size				uiLength;
+	size				uiChanges;
+	int64				iData;
+
+	if (!IsPreviewShown())
+	{
+		return;
+	}
+	iData = GetResultData(mpTree->GetSelectedNode());
+	if ((iData == 0) || !mpcSource->GetResultLocation(this, iData, &sLocation))
+	{
+		mpPreview->Clear();
+		return;
+	}
+
+	pTab = mpcContent->GetDocuments()->FindTab(sLocation.szFileName.Text());
+	uiChanges = pTab.IsNotNull() ? pTab->GetEditor()->GetChangeCount() : MAX_SIZE;
+	if (!mpPreview->IsShowing(sLocation.szFileName.Text()) || (uiChanges != muiPreviewChanges))
+	{
+		cFile.Init();
+		szText = NULL;
+		if (pTab.IsNotNull())
+		{
+			szText = pTab->GetEditor()->GetText();
+		}
+		else if (cFile.Read(sLocation.szFileName.Text()))
+		{
+			szText = cFile.Text();
+		}
+		if (szText == NULL)
+		{
+			cFile.Kill();
+			sLocation.szFileName.Kill();
+			mpPreview->Clear();
+			return;
+		}
+		mpPreview->SetCode(sLocation.szFileName.Text(), szText);
+		muiPreviewChanges = uiChanges;
+		mpcContent->GetDocuments()->HighlightPreview(this, sLocation.szFileName.Text(), szText);
+		cFile.Kill();
+	}
+
+	szText = mpPreview->GetTextArea()->GetText();
+	uiLength = strlen(szText);
+	mpPreview->ShowPlace(FindIDEResultPosition(szText, uiLength, sLocation.iLine, sLocation.iColumn), (sLocation.iLength > 0) ? (size)sLocation.iLength : 0);
+	sLocation.szFileName.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The edits thread highlighted a file for the preview: if the preview
+// still shows it, it is coloured as its editor would be.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEResultsPane::PreviewHighlighted(const char* szFileName, CArrayHighlights* pacHighlights)
+{
+	if (mpPreview->IsShowing(szFileName))
+	{
+		ApplyIDEHighlights(mpPreview->GetTextArea(), pacHighlights);
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The preview is shown beside the tree, or the tree has the whole pane.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEResultsPane::SetPreviewShown(bool bShown)
+{
+	if (bShown != IsPreviewShown())
+	{
+		mpSplit->SetSecondShown(bShown);
+		if (bShown)
+		{
+			ShowPreview();
+		}
+		else
+		{
+			mpPreview->Clear();
+		}
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The sash was dragged: the share is kept.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEResultsPane::ShareChanged(void)
+{
+	mpcContent->GetSettings()->WriteSettings();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether the preview is shown and the tree's share of the pane, from and
+// to its owner's tag of the IDE's settings.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEResultsPane::ReadSettings(CMarkupTag* pcTag)
+{
+	char*	szValue;
+	int32	iShare;
+
+	szValue = pcTag->GetStringAttribute(IDE_RESULTS_PREVIEW_ATTRIBUTE);
+	if (szValue)
+	{
+		SetPreviewShown(StringCompare(szValue, "true") == 0);
+	}
+	szValue = pcTag->GetStringAttribute(IDE_RESULTS_SHARE_ATTRIBUTE);
+	if (szValue)
+	{
+		iShare = atoi(szValue);
+		if ((iShare > 0) && (iShare < SPLIT_CONTAINER_WHOLE))
+		{
+			mpSplit->SetShare(iShare);
+		}
+	}
+}
+
+
+void CIDEResultsPane::WriteSettings(CXMLWriter* pcWriter)
+{
+	pcWriter->Attribute(IDE_RESULTS_PREVIEW_ATTRIBUTE, IsPreviewShown());
+	pcWriter->Attribute(IDE_RESULTS_SHARE_ATTRIBUTE, mpSplit->GetShare());
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The pane is being let go of before the IDE closes: what it asked to be
+// highlighted isn't given to it.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEResultsPane::Detach(void)
+{
+	mpcContent->GetDocuments()->ForgetPreviewAsker(this);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Escape in the tree: the keys go back to the active editor, as
 // IntelliJ's tool windows give them back.
 //
@@ -384,5 +609,8 @@ void CIDEResultsPane::ReturnToEditor(void)
 
 
 Ptr<CTreeContainer> CIDEResultsPane::GetTree(void) { return mpTree; }
-Ptr<CComponent> CIDEResultsPane::GetComponent(void) { return mpScrollPane; }
+Ptr<CComponent> CIDEResultsPane::GetComponent(void) { return mpSplit; }
+Ptr<CCodePreview> CIDEResultsPane::GetPreview(void) { return mpPreview; }
+Ptr<CSplitContainer> CIDEResultsPane::GetSplit(void) { return mpSplit; }
+bool CIDEResultsPane::IsPreviewShown(void) { return mpSplit->IsSecondShown(); }
 

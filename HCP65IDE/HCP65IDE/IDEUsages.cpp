@@ -1074,6 +1074,10 @@ void CIDEUsages::ReadSettings(CMarkupTag* pcSettings)
 		}
 	}
 	ShowGrouping(uiGrouping);
+	if (mpPane.IsNotNull())
+	{
+		mpPane->ReadSettings(pcTag);
+	}
 }
 
 
@@ -1083,6 +1087,10 @@ void CIDEUsages::WriteSettings(CXMLWriter* pcWriter)
 	pcWriter->Attribute(IDE_USAGES_BY_TYPE_ATTRIBUTE, (muiGrouping & IDE_USAGES_BY_TYPE) != 0);
 	pcWriter->Attribute(IDE_USAGES_BY_PROJECT_ATTRIBUTE, (muiGrouping & IDE_USAGES_BY_PROJECT) != 0);
 	pcWriter->Attribute(IDE_USAGES_BY_CLASS_ATTRIBUTE, (muiGrouping & IDE_USAGES_BY_CLASS) != 0);
+	if (mpPane.IsNotNull())
+	{
+		mpPane->WriteSettings(pcWriter);
+	}
 	pcWriter->End();
 }
 
@@ -1093,6 +1101,7 @@ void CIDEUsages::WriteSettings(CXMLWriter* pcWriter)
 //////////////////////////////////////////////////////////////////////////
 uint8 CIDEUsages::GetGrouping(void) { return muiGrouping; }
 Ptr<CTreeContainer> CIDEUsages::GetUsagesTree(void) { return mpPane.IsNotNull() ? mpPane->GetTree() : Ptr<CTreeContainer>(); }
+Ptr<CIDEResultsPane> CIDEUsages::GetResultsPane(void) { return mpPane; }
 Ptr<CDockPane> CIDEUsages::GetTool(void) { return mpUsagesTool; }
 
 

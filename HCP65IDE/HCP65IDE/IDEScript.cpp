@@ -30,7 +30,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 //The debug script's commands that are the IDE's (RunCommand); "goto:" takes what follows it.
-static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printstartup", "printworkspace", "rename", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printsettings", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printedits", "printspans", "configuration:", "waitindex" };
+static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printfindpreview", "printstartup", "printworkspace", "rename", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printsettings", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printedits", "printspans", "configuration:", "waitindex" };
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -171,6 +171,12 @@ void CIDEScript::RunCommand(const char* szCommand)
 		cFile.Init();
 		printf("Workspace file:\n%s\n", cFile.Read(mpcContent->GetWorkspace()->GetFile()) ? cFile.Text() : "(none)");
 		cFile.Kill();
+		fflush(stdout);
+	}
+	else if (strcmp(szCommand, "printfindpreview") == 0)
+	{
+		//What the Find tool window's preview shows.
+		PrintPanePreview(mpcContent->GetFindInFiles()->GetResultsPane());
 		fflush(stdout);
 	}
 	else if (strcmp(szCommand, "printfindparts") == 0)
@@ -765,6 +771,46 @@ void CIDEScript::RunFind(const char* szFind)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// What a results pane's preview shows: "Preview: <file> line <n> of <m>
+// [<the caret's line>] coloured <spans>", the spans being how many the
+// edits thread's highlighting gave it (it is waited for); "Preview: none"
+// if it shows nothing and "Preview: hidden" if it isn't shown.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEScript::PrintPanePreview(Ptr<CIDEResultsPane> pPane)
+{
+	Ptr<CTextArea>	pCode;
+	CChars			szLine;
+	size			uiLine;
+	int				i;
+
+	if (!pPane->IsPreviewShown())
+	{
+		printf("Preview: hidden\n");
+		return;
+	}
+	if (pPane->GetPreview()->GetTitle()[0] == '\0')
+	{
+		printf("Preview: none\n");
+		return;
+	}
+	for (i = 0; (i < 2000) && mpcContent->GetDocuments()->IsHighlightingPreview(); i++)
+	{
+		ThreadSleep(5);
+		mpcContent->GetDocuments()->UpdateEditedTabs(GetDebugTickCount());
+	}
+	pCode = pPane->GetPreview()->GetTextArea();
+	uiLine = pCode->FindLine(pCode->GetCaretPosition());
+	szLine.Init();
+	szLine.AppendSubString(pCode->GetText(), pCode->GetLineStart(uiLine), pCode->GetLineEnd(uiLine));
+	szLine.StripWhitespace();
+	printf("Preview: %s line %d of %d [%s] %s\n", GetIDEFileNamePart(pPane->GetPreview()->GetTitle()), (int)uiLine + 1, (int)pCode->NumLines(), szLine.Text(), (pCode->NumSpans() > 0) ? "coloured" : "plain");
+	szLine.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // A results tree's nodes, each indented by its depth, with the parts of
 // its name that have fonts of their own marked: {d:...} for the dim font,
 // {m:...} for the match font (the text found), {?:...} for any other; and
@@ -1001,6 +1047,16 @@ void CIDEScript::RunEditStep(const char* szStep)
 			printf("%s\n", szNode.Text());
 			szNode.Kill();
 		}
+	}
+	else if (strcmp(szStep, "usagepreview") == 0)
+	{
+		//What the Find Usages tool window's preview shows.
+		PrintPanePreview(mpcContent->GetUsages()->GetResultsPane());
+	}
+	else if (strncmp(szStep, "usagepreview:", 13) == 0)
+	{
+		//usagepreview:on or :off, as the tool window's Preview: the preview shown beside the tree or not.
+		mpcContent->GetUsages()->GetResultsPane()->SetPreviewShown(strcmp(&szStep[13], "on") == 0);
 	}
 	else if (strcmp(szStep, "usageparts") == 0)
 	{

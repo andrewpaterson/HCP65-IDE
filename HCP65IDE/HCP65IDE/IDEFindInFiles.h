@@ -32,6 +32,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/MenuContainer.h"
 #include "WindowLib/CommandSet.h"
 #include "IDECodeModel.h"
+#include "IDEDocuments.h"
 #include "IDESteppable.h"
 
 
@@ -79,7 +80,7 @@ typedef CArrayTemplate<SIDEFindPlace>	CArrayIDEFindPlaces;
 //
 //The search is a little at a time (SearchSome): a directory's files are listed, or a file is searched, until the time
 //is up, so the dialog is never kept from the keys.
-class CIDEFindInFiles : public CObject, public CFindInFilesSearcher, public CIDESteppable, public CIDEResultsSource
+class CIDEFindInFiles : public CObject, public CFindInFilesSearcher, public CIDESteppable, public CIDEResultsSource, public CIDEPreviewAsker
 {
 friend class CIDEScript;
 CONSTRUCTABLE(CIDEFindInFiles);
@@ -137,13 +138,16 @@ public:
 	bool					FindPreviewPlace(SFindInFilesItem* psItem, CChars* pszTitle, size* puiStart, size* puiLength) override;
 	bool					FindPreviewText(SFindInFilesItem* psItem, CChars* pszText) override;
 	void					FindPreviewShown(SFindInFilesItem* psItem, Ptr<CTextArea> pPreview, bool bNewText) override;
-	void					PreviewHighlighted(const char* szFileName, CArrayHighlights* pacHighlights);
+	void					PreviewHighlighted(const char* szFileName, CArrayHighlights* pacHighlights) override;
 	void					DialogTick(void);
 
 	void					Clear(void);
 	void					AdjustPlaces(const char* szFile, SIDEPlaceChange* psChange);
+	void					ReadSettings(CMarkupTag* pcSettings);
+	void					WriteSettings(CXMLWriter* pcWriter);
 	int64					Poll(int64 iNow);
 	Ptr<CTreeContainer>		GetFindTree(void);
+	Ptr<CIDEResultsPane>	GetResultsPane(void);
 	Ptr<CDockPane>			GetTool(void);
 	size					NumFound(void);
 
