@@ -988,6 +988,13 @@ CHECKS = [
 		[r'^Clipboard history: 3 \[void\] \[IsParentheses\] \[bool\]$', r'^Paste history \[\]: void \*IsParentheses bool$', r'^Paste preview: \[IsParentheses\]$',
 		 r'^Dialog \[Choose Content to Paste\] answered OK$', r'^Clipboard history: 3 \[IsParentheses\] \[void\] \[bool\]$',
 		 r'^Edit menu:.* Paste Paste from History\.\.\. Select All', r'CalcParentheses\.h \* \(focus\) line 1: \[IsParenthesesIsParentheses/\*\* -'], []),
+	('editor-paste-block', {
+		#What a box selection copies is a block: pasted at a plain caret it goes in as a column, a row to each line from
+		#the caret down.  "bool" and "void" from lines 38 and 39, pasted at the start of line 1: line 2, which is empty,
+		#gets the second.
+		'OPEN': 'CalcParentheses.h', 'CARET': '38:2',
+		'DEBUG': 'wait:1500,edit:keys:Alt+Shift+Cursor Down,edit:keys:Alt+Shift+Cursor Right,edit:keys:Alt+Shift+Cursor Right,edit:keys:Alt+Shift+Cursor Right,edit:keys:Alt+Shift+Cursor Right,edit:printbox,edit:keys:Control+C,edit:printclipboardhistory,edit:caret:1:1,edit:keys:Control+V,edit:print'},
+		[r'^Box: \[bool\] \[void\]$', r'^Clipboard history: 1 \[bool$', r'^void\]$', r'CalcParentheses\.h \* \(focus\) line 2: \[void\]$'], []),
 ]
 
 
