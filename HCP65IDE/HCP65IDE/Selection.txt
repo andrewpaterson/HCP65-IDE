@@ -183,6 +183,24 @@ Step 5 - Extend/Shrink Selection engine (BaseLib CTextEditing)
   Control+W becomes CIC_ExtendSelection (its first step is the word, as now), Control+Shift+W CIC_ShrinkSelection.
   Tests: TestTextEditing (65C64 + 816 + size16 as BaseLib's are).
 
+  As built (2026-11-12):
+  5a. BaseLib CTextNavigation: FindWordOver (the word run over a selection or next to a caret), FindQuotesAround (' or
+      " paired from the line's start, backslash escapes, not past the line), FindBracketsAround + FindClosingBracket
+      (the nearest ( [ { at or before the selection whose pair, with its brackets, is around it and bigger; pairs
+      found forward from the opener, so they are right however the selection cuts them; strings and comments aren't
+      skipped), FindCommentAround (// outside quotes to the line end, or /* */).
+  5b. CTextEditing::ExtendSelection: of the text's ranges (word; quotes' inside and with them; brackets' inside and
+      with them; the line without its indent; whole lines; comment; whole text) and those a CTextSelectionRanges
+      (SetSelectionRanges) adds, the smallest around the selection and bigger.  The selection it grew from is kept
+      (anchor, or none, and caret); ShrinkSelection pops them back while the selection is as Extend or Shrink left it
+      (msExtended) and the text hasn't changed (DocumentChanged forgets them).  SelectWholeWord is gone: Extend's
+      first step from a caret is the same word.
+  5c. WindowLib: CIC_SelectWholeWord became CIC_ExtendSelection (Control+W) and CIC_ShrinkSelection (Control+Shift+W),
+      commands Editor.ExtendSelection / Editor.ShrinkSelection (Editor.SelectWord is gone: a keymap that rebound it
+      loses that binding); CTextArea::ExtendSelection / ShrinkSelection.  Edit menu items are step 8.
+  Tests: TestTextNavigationRanges, TestTextEditingExtendSelection (BaseLib 64/size16, 65C64, 816),
+  TestTextEditingInputExtendSelection; TestKeymap and TestTextAreaEdit updated.
+
 Step 6 - Syntax ranges in the IDE
   The parse the IDE already makes for colours (open + after the 400 ms pause, CIDECodeModel edits thread) also
   collects each syntax node's byte range in the file (CCPPSyntax miFirstToken..miLastToken, parent chain) into a
