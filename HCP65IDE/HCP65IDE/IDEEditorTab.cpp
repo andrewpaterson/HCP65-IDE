@@ -633,11 +633,11 @@ void CIDEEditorTab::Reload(const char* szText)
 	mpEditor->SelectAll();
 	if (szText[0] == '\0')
 	{
-		mpEditor->Delete();
+		mpEditor->GetEditing()->Delete();
 	}
 	else
 	{
-		mpEditor->Paste((char*)szText);
+		mpEditor->GetEditing()->Paste((char*)szText);
 	}
 	mbCarriageReturns = UsesIDECarriageReturns(szText);
 

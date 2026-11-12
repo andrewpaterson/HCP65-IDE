@@ -160,7 +160,7 @@ void CIDEBuildPane::AppendLines(CArrayChars* paszLines)
 	szText.Kill();
 	if (bFollow)
 	{
-		mpOutput->DocumentEnd();
+		mpOutput->GetEditing()->DocumentEnd();
 	}
 }
 

@@ -592,11 +592,11 @@ bool CIDEGitStatus::RollbackChange(void)
 	pEditor->Select(uiStart, uiEnd);
 	if (szLines.Empty())
 	{
-		pEditor->Delete();
+		pEditor->GetEditing()->Delete();
 	}
 	else
 	{
-		pEditor->Paste(szLines.Text());
+		pEditor->GetEditing()->Paste(szLines.Text());
 	}
 	szLines.Kill();
 	pEditor->GetWindow()->GetFocus()->SetFocus(pEditor);
