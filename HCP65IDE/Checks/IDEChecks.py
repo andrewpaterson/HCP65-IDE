@@ -237,9 +237,10 @@ CHECKS = [
 		 r'Calculator\.cpp \(focus\) line 391: '],
 		[r'not enabled', r'Nothing to step through']),
 	('usages-step-behind-build', {
-		#Find Usages behind the Build tab can't be seen, and Build has nothing: from the editor nothing steps.
+		#Find Usages behind the Build tab can't be seen, and Build has nothing: from the editor nothing steps.  In the IDE's
+		#own layout, where they are tabbed together, whatever the user's is.
 		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usages',
-		'DEBUG': 'edit:focus:build,edit:focus:editor,command:Navigate.NextOccurrence,printstatus,edit:printselected,edit:print'},
+		'DEBUG': 'command:Window.ResetLayout,edit:focus:build,edit:focus:editor,command:Navigate.NextOccurrence,printstatus,edit:printselected,edit:print'},
 		[r'^Status line: Nothing to step through: ', r'^Selected: 367: ', r'CalcParentheses\.h \(focus\) line 38: '],
 		[r'Calculator\.cpp.* line \d+: \[']),
 	('build-step-from-editor', dict(MakeBrokenKernel(), **{
@@ -312,10 +313,10 @@ CHECKS = [
 		 r'Calculator\.cpp:391  if \(pcExpression->IsParentheses\(\)\) \| Calculator\.cpp:421  if \(pcExpression->IsParentheses\(\)\)$',
 		 r'^Popup: none$', r'Calculator\.cpp \(focus\) line 367: '], []),
 	('gotosource-popup-scrolls', {
-		#CCodabase's 133 usages: the popup is no taller than a third of the screen or the editor's view, and scrolls.
+		#CCodabase's many usages: the popup is no taller than a third of the screen or the editor's view, and scrolls.
 		'WAIT_INDEX': '1', 'OPEN': 'Codabase.h', 'CARET': '27:8',
 		'DEBUG': 'gotosource,edit:printpopup'},
-		[r'^Popup: Usages of CCodabase  133 usages \| ', r'^Popup height: \d+ scrolling, the menu \d+$'], [r'all shown']),
+		[r'^Popup: Usages of CCodabase  \d\d+ usages \| ', r'^Popup height: \d+ scrolling, the menu \d+$'], [r'all shown']),
 	('gotosource-on-usage', {
 		#Control+B on a usage still goes to the definition (CCalcExpression's, as pcExpression is one), with no popup.
 		'WAIT_INDEX': '1', 'OPEN': 'Calculator.cpp', 'CARET': '391:22',
@@ -547,13 +548,13 @@ CHECKS = [
 		'EDIT': 'usagegroups:', 'DEBUG': 'command:Navigate.FindUsagesSettings,answered:1,edit:printusages'},
 		[r'^Dialog \[Find Usages Settings\] answered OK$', r'^Usages of IsParentheses and 1 override  3 usages$'], [r'ERROR']),
 	('usages-scope-menu', {
-		#The toolbar's Scope: a menu of the scopes, the tab's saying so; one chosen shows the usages already found that are
+		#The toolbar's Scope: a menu of the scopes (the startup solution's too, with two solutions open), the tab's saying so; one chosen shows the usages already found that are
 		#in it, as the IDE was when they were found, and choosing the solution's shows them all again.
 		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14',
-		'EDIT': 'usagegroups:,references,usagetool:Scope,usagescopemenu,usagescopemenu:2,printusages,usagetool:Scope,usagescopemenu,usagescopemenu:0,printusages'},
-		[r'^References to IsParentheses and 1 override  7 references$', r'^Scope menu \(open\): Solution  \(shown\), Project, Current File, Open Files, Directory$',
+		'EDIT': 'usagegroups:,references,usagetool:Scope,usagescopemenu,usagescopemenu:3,printusages,usagetool:Scope,usagescopemenu,usagescopemenu:0,printusages'},
+		[r'^References to IsParentheses and 1 override  7 references$', r'^Scope menu \(open\): Solution  \(shown\), Startup Solution, Project, Current File, Open Files, Directory$',
 		 r'^References to IsParentheses and 1 override in CalcParentheses\.h  1 reference$',
-		 r'^Scope menu \(open\): Solution, Project, Current File  \(shown\), Open Files, Directory$',
+		 r'^Scope menu \(open\): Solution, Startup Solution, Project, Current File  \(shown\), Open Files, Directory$',
 		 r'^References to IsParentheses and 1 override  7 references$'], [r'ERROR']),
 	('usages-access-filters', {
 		#Show Read Access and Show Write Access, both on to start with: off, a field's usages that read it, or write it, are
@@ -686,11 +687,12 @@ CHECKS = [
 		#The compiler's without the C library's are just as bad.
 		'SYSTEM_ROOT': MakeSystemRoot(['13-win32'], False), 'DEBUG': 'printsystem'},
 		[r"^Status: MinGW's headers weren't found", r'^System directories: \S*/13-win32/include/c\+\+,'], []),
-	('build-configuration-rules', {
-		#OK is refused for what the file couldn't have, and the real file isn't written by a scripted run.
+	('build-configuration-rules', dict(OpenedForCheck([os.path.join(KERNAL, 'HCP65Kernal.sln')]), **{
+		#OK is refused for what the file couldn't have, and the real file isn't written by a scripted run.  The kernal's
+		#configurations: an image, and no card.
 		'DIALOG_ANSWER': 'OK',
 		'BUILD_EDITS': 'name:Release|W65C816;check;name:;check;name:Fine;solution:Debug|Win32;card:Card.img;check;cardpath:\\\\boot.exe;toolchain:GCC;check;toolchain:W65C816;check',
-		'DEBUG': 'command:Build.EditConfigurations,answered:1,printconfig'},
+		'DEBUG': 'command:Build.EditConfigurations,answered:1,printconfig'}),
 		[r'^Build dialog: refused \[Another build configuration has this name\.\]$',
 		 r'^Build dialog: refused \[A build configuration needs a name\.\]$',
 		 r'^Build dialog: refused \[A card and a path on it go together\.\]$',
