@@ -38,6 +38,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define IDE_USAGES_BY_TYPE_ATTRIBUTE	"GroupByType"
 #define IDE_USAGES_BY_PROJECT_ATTRIBUTE	"GroupByProject"
 #define IDE_USAGES_BY_CLASS_ATTRIBUTE	"GroupByClass"
+#define IDE_USAGES_READ_ATTRIBUTE		"ShowReadAccess"
+#define IDE_USAGES_WRITE_ATTRIBUTE		"ShowWriteAccess"
 
 
 //A usage type's group in the tree: where it goes among the others and what it is called.
@@ -370,6 +372,8 @@ void CIDEUsages::Init(CIDEContent* pcContent)
 	miMoved = 0;
 	msPopupFound.Init();
 	muiGrouping = IDE_USAGES_BY_ALL;
+	mbShowRead = true;
+	mbShowWrite = true;
 	PostInit();
 }
 
@@ -390,6 +394,8 @@ void CIDEUsages::Class(void)
 	M_Pointer(mpPopup);
 	U_Unknown(SIDEFoundUsages, msPopupFound);
 	U_UInt8(muiGrouping);
+	U_Bool(mbShowRead);
+	U_Bool(mbShowWrite);
 }
 
 
@@ -420,8 +426,9 @@ bool CIDEUsages::Load(CObjectReader* pcFile) { return false; }
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The Find Usages tool window: the grouping check boxes over a tree,
-// beside Build, as IntelliJ's Find window.  A line's node opens its place.
+// The Find Usages tool window, beside Build, as IntelliJ's Find window: a
+// results pane, with the groupings and the access filters on its
+// toolbar.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEUsages::CreatePane(SDockPlace* psPlace)
@@ -431,6 +438,9 @@ void CIDEUsages::CreatePane(SDockPlace* psPlace)
 	AddGroupingCommand("Usages.GroupByType", "Group by Usage Type", ITI_GroupByType, &CIDEUsages::ToggleByType, &CIDEUsages::IsByType);
 	AddGroupingCommand("Usages.GroupByProject", "Group by Project", ITI_GroupByProject, &CIDEUsages::ToggleByProject, &CIDEUsages::IsByProject);
 	AddGroupingCommand("Usages.GroupByClass", "Group by Class", ITI_GroupByClass, &CIDEUsages::ToggleByClass, &CIDEUsages::IsByClass);
+	mpPane->AddToolbarSeparator();
+	AddGroupingCommand("Usages.ShowReadAccess", "Show Read Access", ITI_ReadAccess, &CIDEUsages::ToggleShowRead, &CIDEUsages::IsShowRead);
+	AddGroupingCommand("Usages.ShowWriteAccess", "Show Write Access", ITI_WriteAccess, &CIDEUsages::ToggleShowWrite, &CIDEUsages::IsShowWrite);
 	mpPane->AddViewCommands();
 	mpUsagesTool = mpcContent->GetDock()->AddPane(IDE_USAGES_ID, "Find Usages", NULL, mpPane->GetComponent(), DPK_Tool, psPlace);
 }
@@ -775,10 +785,13 @@ void CIDEUsages::ShowUsages(bool bKeepSelected)
 
 	bByType = (muiGrouping & IDE_USAGES_BY_TYPE) != 0;
 	bByProject = (muiGrouping & IDE_USAGES_BY_PROJECT) != 0;
-	uiRows = msFound.asUsages.NumElements();
 	asRows.Init();
-	for (i = 0; i < uiRows; i++)
+	for (i = 0; i < msFound.asUsages.NumElements(); i++)
 	{
+		if (!IsUsageShown(msFound.asUsages.Get(i)))
+		{
+			continue;
+		}
 		psRow = asRows.Add();
 		psRow->psUsage = msFound.asUsages.Get(i);
 		psRow->uiIndex = i;
@@ -786,6 +799,7 @@ void CIDEUsages::ShowUsages(bool bKeepSelected)
 		psRow->szProject = bByProject ? psRow->psUsage->szProject.Text() : "";
 		psRow->bShown = false;
 	}
+	uiRows = asRows.NumElements();
 	qsort(asRows.GetData(), uiRows, sizeof(SIDEUsageRow), CompareIDEUsageRows);
 
 	//Until every file is indexed some may be missing.
@@ -799,6 +813,12 @@ void CIDEUsages::ShowUsages(bool bKeepSelected)
 		szText.Append(" of ");
 		szText.Append((uint32)uiToIndex);
 		szText.Append(" files)");
+	}
+	if (uiRows < msFound.asUsages.NumElements())
+	{
+		szText.Append("  (");
+		szText.Append((uint32)(msFound.asUsages.NumElements() - uiRows));
+		szText.Append(" hidden)");
 	}
 	iRoot = mpPane->GetTree()->AddNode(TREE_NO_NODE, szText.Text(), NULL, 0);
 	mpPane->GetTree()->SetExpanded(iRoot, true);
@@ -1022,8 +1042,8 @@ bool CIDEUsages::GetDeclarationLocation(CIDEResultsPane* pcPane, SIDELocation* p
 
 //////////////////////////////////////////////////////////////////////////
 //
-// A grouping's button on the pane's toolbar: its command, the pane's,
-// turns the group on and off and says which it is.
+// A grouping's or a filter's button on the pane's toolbar: its command,
+// the pane's, turns it on and off and says which it is.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEUsages::AddGroupingCommand(const char* szName, const char* szCaption, EIDEToolIcon eIcon, void(CIDEUsages::*fToggle)(void), bool(CIDEUsages::*fIsOn)(void))
@@ -1042,6 +1062,58 @@ void CIDEUsages::ToggleByClass(void) { SetGrouping(muiGrouping ^ IDE_USAGES_BY_C
 bool CIDEUsages::IsByType(void) { return (muiGrouping & IDE_USAGES_BY_TYPE) != 0; }
 bool CIDEUsages::IsByProject(void) { return (muiGrouping & IDE_USAGES_BY_PROJECT) != 0; }
 bool CIDEUsages::IsByClass(void) { return (muiGrouping & IDE_USAGES_BY_CLASS) != 0; }
+void CIDEUsages::ToggleShowRead(void) { SetAccessShown(!mbShowRead, mbShowWrite); }
+void CIDEUsages::ToggleShowWrite(void) { SetAccessShown(mbShowRead, !mbShowWrite); }
+bool CIDEUsages::IsShowRead(void) { return mbShowRead; }
+bool CIDEUsages::IsShowWrite(void) { return mbShowWrite; }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether usages that read a value, and those that write one, are in the
+// tree: it is shown again, and they are kept for the next time the IDE is
+// run.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEUsages::SetAccessShown(bool bRead, bool bWrite)
+{
+	if ((bRead != mbShowRead) || (bWrite != mbShowWrite))
+	{
+		mbShowRead = bRead;
+		mbShowWrite = bWrite;
+		ShowUsages(true);
+		mpcContent->GetSettings()->WriteSettings();
+	}
+	if (mpPane.IsNotNull())
+	{
+		mpPane->RefreshToolbar();
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether a usage is in the tree: not one that reads a value with read
+// access hidden, nor one that writes one with write access hidden.  Its
+// declarations always are.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEUsages::IsUsageShown(SIDEUsage* psUsage)
+{
+	if (psUsage->sLocation.uiRole != CPPIR_Reference)
+	{
+		return true;
+	}
+	if (psUsage->sLocation.uiUsage == CPPUT_Read)
+	{
+		return mbShowRead;
+	}
+	if (psUsage->sLocation.uiUsage == CPPUT_Write)
+	{
+		return mbShowWrite;
+	}
+	return true;
+}
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -1098,7 +1170,8 @@ bool CIDEUsages::HasSteps(void) { return mbFound && (msFound.asUsages.NumElement
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The groups (IDE_USAGES_BY_*) changed, as the check boxes change them:
+// The groups (IDE_USAGES_BY_*) changed, as the toolbar's buttons change
+// them:
 // they are shown (ShowGrouping) and kept for the next time the IDE is run
 // (CIDESettings::WriteSettings).
 //
@@ -1161,6 +1234,10 @@ void CIDEUsages::ReadSettings(CMarkupTag* pcSettings)
 			uiGrouping = (StringCompare(szValue, "true") == 0) ? (uiGrouping | auiGroups[i]) : (uiGrouping & ~auiGroups[i]);
 		}
 	}
+	szValue = pcTag->GetStringAttribute(IDE_USAGES_READ_ATTRIBUTE);
+	mbShowRead = !szValue || (StringCompare(szValue, "true") == 0);
+	szValue = pcTag->GetStringAttribute(IDE_USAGES_WRITE_ATTRIBUTE);
+	mbShowWrite = !szValue || (StringCompare(szValue, "true") == 0);
 	ShowGrouping(uiGrouping);
 	if (mpPane.IsNotNull())
 	{
@@ -1176,6 +1253,8 @@ void CIDEUsages::WriteSettings(CXMLWriter* pcWriter)
 	pcWriter->Attribute(IDE_USAGES_BY_TYPE_ATTRIBUTE, (muiGrouping & IDE_USAGES_BY_TYPE) != 0);
 	pcWriter->Attribute(IDE_USAGES_BY_PROJECT_ATTRIBUTE, (muiGrouping & IDE_USAGES_BY_PROJECT) != 0);
 	pcWriter->Attribute(IDE_USAGES_BY_CLASS_ATTRIBUTE, (muiGrouping & IDE_USAGES_BY_CLASS) != 0);
+	pcWriter->Attribute(IDE_USAGES_READ_ATTRIBUTE, mbShowRead);
+	pcWriter->Attribute(IDE_USAGES_WRITE_ATTRIBUTE, mbShowWrite);
 	if (mpPane.IsNotNull())
 	{
 		mpPane->WriteSettings(pcWriter);

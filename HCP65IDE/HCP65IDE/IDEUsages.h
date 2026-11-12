@@ -85,7 +85,9 @@ struct SIDEUsageRow;
 //window beside Build: a tree of how each is used (a call, a value read, a type in a field's declaration...), the
 //project, the file, the class in it, and each line, in the order it is in its file, which opens the place.  Buttons on
 //its toolbar turn the usage type, project and class groups on and off; with them off it is files and their lines.
-//Rerun finds the symbol's usages again, from where it is declared, wherever the caret is now.  Find
+//Rerun finds the symbol's usages again, from where it is declared, wherever the caret is now.  Show Read Access and
+//Show Write Access leave a variable's or field's usages that only read it, or that write it, out of the tree, as
+//IntelliJ's do; the tree's first row says how many are hidden.  Find
 //All References (Shift+F12) shows its declarations and definition there too.  Control+B on a declaration shows the
 //usages in a popup under the caret.  The tree is a results pane's (CIDEResultsPane), which opens and steps through
 //the usages: a line's node's data is its usage's index in what was found, and one.
@@ -104,6 +106,8 @@ protected:
 	Ptr<CMenuContainer>	mpPopup;  //Control+B's usages on a declaration, made when it is first shown.
 	SIDEFoundUsages		msPopupFound;  //What the popup shows: each row's usage by its row less one (the first is its title).
 	uint8				muiGrouping;  //IDE_USAGES_BY_*.
+	bool				mbShowRead;  //Usages that read a value are in the tree.
+	bool				mbShowWrite;  //Usages that write one are.
 
 public:
 	void	Init(CIDEContent* pcContent);
@@ -124,6 +128,7 @@ public:
 	void				AdjustPlaces(const char* szFile, SIDEPlaceChange* psChange);
 	int64				Poll(int64 iNow);
 	void				SetGrouping(uint8 uiGrouping);
+	void				SetAccessShown(bool bRead, bool bWrite);
 	void				ReadSettings(CMarkupTag* pcSettings);
 	void				WriteSettings(CXMLWriter* pcWriter);
 	uint8				GetGrouping(void);
@@ -157,6 +162,11 @@ protected:
 	bool				IsByType(void);
 	bool				IsByProject(void);
 	bool				IsByClass(void);
+	void				ToggleShowRead(void);
+	void				ToggleShowWrite(void);
+	bool				IsShowRead(void);
+	bool				IsShowWrite(void);
+	bool				IsUsageShown(SIDEUsage* psUsage);
 	bool				FindAt(const char* szFileName, int iLine, int iColumn, bool bDeclarations, SIDEFoundUsages* psDest);
 	void				FindUsagesOnly(void);
 };

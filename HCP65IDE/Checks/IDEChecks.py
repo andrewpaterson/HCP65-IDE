@@ -443,10 +443,19 @@ CHECKS = [
 		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14',
 		'EDIT': 'usagegroups:,usages,usagetoolbar,usagetool:Next Occurrence,printselected,usagetoolbar,usagetool:Group by Project,usagetoolbar,printusages,'
 		        'usagetool:Preview,usagetool:Navigate with Single Click,usagetoolbar,usagetool:Collapse All,printrows,usagetool:Expand All,printrows,usagetool:Rerun,printusages'},
-		[r'^Toolbar: Rerun, Previous Occurrence\(disabled\), Next Occurrence, Expand All, Collapse All, Group by Usage Type, Group by Project, Group by Class, Preview\(on\), Navigate with Single Click$',
-		 r'^Selected: 391: ', r'^Toolbar: Rerun, Previous Occurrence, Next Occurrence, ', r'Group by Project\(on\), Group by Class, Preview\(on\)',
+		[r'^Toolbar: Rerun, Previous Occurrence\(disabled\), Next Occurrence, Expand All, Collapse All, Group by Usage Type, Group by Project, Group by Class, Show Read Access\(on\), Show Write Access\(on\), Preview\(on\), Navigate with Single Click$',
+		 r'^Selected: 391: ', r'^Toolbar: Rerun, Previous Occurrence, Next Occurrence, ', r'Group by Project\(on\), Group by Class, Show Read Access\(on\), Show Write Access\(on\), Preview\(on\)',
 		 r'^  BaseLib  3 usages$', r'Preview, Navigate with Single Click\(on\)$', r'^Rows: 1$', r'^Rows: 6$',
 		 r'^Usages of IsParentheses and 1 override  3 usages$', r'^  BaseLib  3 usages$', r'^      391: '], [r'No tool button', r'ERROR']),
+	('usages-access-filters', {
+		#Show Read Access and Show Write Access, both on to start with: off, a field's usages that read it, or write it, are
+		#left out of the tree, whose first row says how many are hidden.
+		'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.h', 'CARET': '32:17',
+		'EDIT': 'usagegroups:t,usages,usagetoolbar,usagetool:Show Read Access,printusages,usagetoolbar,usagetool:Show Read Access,usagetool:Show Write Access,printusages'},
+		[r'^Usages of mpcCalculator  18 usages$', r'^  Value read  16 usages$', r'^  Value write  2 usages$', r'Show Read Access\(on\), Show Write Access\(on\), Preview',
+		 r'^Usages of mpcCalculator  18 usages  \(16 hidden\)$', r'^  Value write  2 usages$', r'^      36: mpcCalculator = pcCalculator;$',
+		 r'Show Read Access, Show Write Access\(on\), Preview', r'^Usages of mpcCalculator  18 usages  \(2 hidden\)$', r'^  Value read  16 usages$'],
+		[r'No tool button', r'ERROR']),
 	('find-toolbar', {
 		#The Find tool window's toolbar has no groupings; Rerun finds the text again.
 		'WAIT_INDEX': '1', 'DIALOG_ANSWER': 'Open in Find Window', 'DEBUG': 'find:0:calculatorparser,answered:1,printfindtoolbar,findtool:Rerun,printfind'},
