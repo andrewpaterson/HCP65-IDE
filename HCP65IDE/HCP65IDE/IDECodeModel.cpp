@@ -2137,6 +2137,10 @@ void CIDECodeModel::FindAssemblyRename(CCPPIndexSymbol* pcSymbol, SIDERenameTarg
 	{
 		psDest->uiAssembly = IAR_Type;
 	}
+	else if ((pcSymbol->meKind == CPPSK_Field) && bClassScope)
+	{
+		psDest->uiAssembly = IAR_Field;
+	}
 	else if ((pcSymbol->meKind == CPPSK_Function) || (pcSymbol->meKind == CPPSK_Variable))
 	{
 		psDest->uiAssembly = bClassScope ? IAR_Member : IAR_Function;

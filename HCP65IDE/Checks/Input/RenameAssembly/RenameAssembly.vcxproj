@@ -13,6 +13,7 @@
     <ClInclude Include="Engine.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="EngineLayout.inc" />
     <None Include="EngineW65C816.asm" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

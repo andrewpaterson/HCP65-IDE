@@ -651,12 +651,21 @@ CHECKS = [
 		[r'^Status: Renamed C65Core to C65Kernel: ', r'^\tC65Kernel\t\t\tcCore;$'], [r'Unsaved at exit']),
 	('rename-assembly-class', dict(MakeRenameAssemblyCopy(), **{
 		#A class renamed in hand written assembly's labels (_CEngine__Init, __0, __2), in parameter lists with its length
-		#(FP7CEngine to FP6CMotor) and in comments; not CEngineCache's labels, or a string.
-		'WAIT_INDEX': '1', 'OPEN': 'Engine.h', 'CARET': '5:8', 'DEBUG': 'edit:renamesearch:ct-s,edit:rename:CMotor,printdiskfile:EngineW65C816.asm'}),
-		[r'^Status: Renamed CEngine to CMotor: .*, 10 in assembly in 3 files\.$', r"^; CMotor's functions in assembly", r'^_CMotor__0:$', r'^_CMotor__Init:$',
-		 r'^\t\tjsr _CEngineCache__Init$', r'^_CMotor__Run__Fi:$', r'^_CMotor__Mix__Fi:$', r'^_CPart__Attach__FP6CMotor:$', r'^_EngineCount__FP6CMotor:$', r'^\t\tlda #<_CMotor__2$',
-		 r'^_CEngineCache__Init:$', r'^\t\t\.byte "CEngine", 0$'],
-		[r'_CEngine__', r'7CEngine', r'CMotorCache']),
+		#(FP7CEngine to FP6CMotor), in generated layout constants (SIZEOF_CEngine, CEngine_miSpeed: in the assembly, the
+		#.inc and a C++ string) and in comments; not CEngineCache's labels or constants, or an assembly string.
+		'WAIT_INDEX': '1', 'OPEN': 'Engine.h', 'CARET': '5:8',
+		'DEBUG': 'edit:renamesearch:ct-s,edit:rename:CMotor,printdiskfile:EngineW65C816.asm,printdiskfile:EngineLayout.inc,printdiskfile:Engine.cpp'}),
+		[r'^Status: Renamed CEngine to CMotor: .*, 15 in assembly in 4 files\.$', r"^; CMotor's functions in assembly", r'^_CMotor__0:$', r'^_CMotor__Init:$',
+		 r'^\t\tjsr _CEngineCache__Init$', r'^_CMotor__Run__Fi:$', r'^_CMotor__Mix__Fi:$', r'^\t\tlda CMotor_miSpeed,x$', r'^\t\tldy #SIZEOF_CMotor$', r'^_CPart__Attach__FP6CMotor:$', r'^_EngineCount__FP6CMotor:$', r'^\t\tlda #<_CMotor__2$',
+		 r'^_CEngineCache__Init:$', r'^\t\t\.byte "CEngine", 0$',
+		 r'^CMotor_miSpeed = 0x0$', r'^SIZEOF_CMotor = 0x2$', r'^CEngineCache_miSpeed = 0x0$', r'^SIZEOF_CEngineCache = 0x2$',
+		 r'^const char\* gszEngineSpeed = "CMotor_miSpeed";$'],
+		[r'_CEngine__', r'7CEngine', r'CMotorCache', r'CEngine_miSpeed', r'SIZEOF_CEngine\b']),
+	('rename-assembly-field', dict(MakeRenameAssemblyCopy(), **{
+		#A field renamed in generated layout constants, its class's (CEngine_miSpeed) not another's (CEngineCache_miSpeed).
+		'WAIT_INDEX': '1', 'OPEN': 'Engine.h', 'CARET': '8:8', 'DEBUG': 'edit:renamesearch:ct-s,edit:rename:miPace,printdiskfile:EngineW65C816.asm,printdiskfile:EngineLayout.inc'}),
+		[r'^Status: Renamed miSpeed to miPace: .*, 2 in assembly in 4 files\.$', r'^\t\tlda CEngine_miPace,x$', r'^CEngine_miPace = 0x0$', r'^CEngineCache_miSpeed = 0x0$'],
+		[r'CEngine_miSpeed', r'CEngineCache_miPace']),
 	('rename-assembly-member', dict(MakeRenameAssemblyCopy(), **{
 		#A member function: _CEngine__Init, not _CEngineCache__Init.
 		'WAIT_INDEX': '1', 'OPEN': 'Engine.h', 'CARET': '10:8', 'DEBUG': 'edit:renamesearch:ct-s,edit:rename:Start,printdiskfile:EngineW65C816.asm'}),

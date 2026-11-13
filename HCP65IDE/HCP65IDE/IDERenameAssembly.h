@@ -29,11 +29,13 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 //(CPP65GeneratorLabels.cpp) and in comments.
 enum EIDEAssemblyRename
 {
-	IAR_None,		//Only comments: the symbol has no label of its own (a field, a parameter, a namespace...).
-	IAR_Type,		//A class or enum: a part of a label ("_CFatVolume__Init"), and a type in a parameter list
-					//("17CFatInfoSectorCache", its length with it).
+	IAR_None,		//Only comments: the symbol has no label of its own (a parameter, a namespace...).
+	IAR_Type,		//A class or enum: a part of a label ("_CFatVolume__Init"), a type in a parameter list
+					//("17CFatInfoSectorCache", its length with it), and a generated layout constant
+					//("SIZEOF_CFatVolume", "CFatVolume_muiID": BaseLib's FatW65C816.inc).
 	IAR_Member,		//A member function or static member: "_Scope__Name" ending there or before "__".
 	IAR_Function,	//A function or variable outside a class: "_Scope__Name" or "_Name", the same.
+	IAR_Field,		//A data member: only a layout constant, its class and it ("CFatVolume_muiID").
 };
 
 
@@ -44,6 +46,7 @@ struct SIDEAssemblyRename
 	CChars				szOld;
 	CChars				szNew;
 	CChars				szScope;
+	CChars				szClass;		//szScope's last part: a field's layout constants start with it.
 	CChars				szKey;			//An overloaded function's key, as the index has it ("CFat::Open(uint8)").
 	CArrayChars			aszOverloads;	//With every overload's key (its own too): a label is renamed if it fits it alone.
 	size				uiUnsure;		//Labels that fit it and other overloads too: left, for the status line to say.
@@ -70,6 +73,7 @@ typedef CArrayTemplate<SIDEAssemblyEdit>	CArrayIDEAssemblyEdits;
 void	FindIDEAssemblyEdits(const char* szText, size uiLength, SIDEAssemblyRename* psRename, bool bComments, CArrayIDEAssemblyEdits* pasDest);
 void	KillIDEAssemblyEdits(CArrayIDEAssemblyEdits* pasEdits);
 bool	IsIDEAssemblyFile(const char* szFileName);
+bool	IsIDELayoutPrefix(const char* szToken, size uiLength, const char* szName, size uiNameLength);
 
 
 #endif // __IDE_RENAME_ASSEMBLY_H__

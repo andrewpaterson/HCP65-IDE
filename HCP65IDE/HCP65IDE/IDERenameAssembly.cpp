@@ -31,11 +31,19 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 //////////////////////////////////////////////////////////////////////////
 void SIDEAssemblyRename::Init(EIDEAssemblyRename eRenameKind, const char* szOldName, const char* szNewName, const char* szScopeKey)
 {
+	size	uiLast;
+
 	eKind = eRenameKind;
 	szOld.Init(szOldName);
 	szNew.Init(szNewName);
 	szScope.Init(szScopeKey ? szScopeKey : "");
 	szScope.Replace("::", "__");
+	szClass.Init(szScope.Text());
+	uiLast = szClass.FindFromEnd("__");
+	if (uiLast != ARRAY_ELEMENT_NOT_FOUND)
+	{
+		szClass.RemoveFromStart(uiLast + 2);
+	}
 	szKey.Init();
 	aszOverloads.Init();
 	uiUnsure = 0;
@@ -46,6 +54,7 @@ void SIDEAssemblyRename::Kill(void)
 {
 	aszOverloads.Kill();
 	szKey.Kill();
+	szClass.Kill();
 	szScope.Kill();
 	szNew.Kill();
 	szOld.Kill();
@@ -108,6 +117,39 @@ static void AddIDEAssemblyEdit(CArrayIDEAssemblyEdits* pasDest, size uiStart, si
 
 //////////////////////////////////////////////////////////////////////////
 //
+// If szToken (uiLength long) is a layout constant of szName's: szName,
+// one '_' and a member's name ("CFat_muiID", not "CFat__Init").
+//
+//////////////////////////////////////////////////////////////////////////
+bool IsIDELayoutPrefix(const char* szToken, size uiLength, const char* szName, size uiNameLength)
+{
+	return (uiLength > uiNameLength + 1) && (memcmp(szToken, szName, uiNameLength) == 0) && (szToken[uiNameLength] == '_') && (szToken[uiNameLength + 1] != '_');
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A field's layout constant in szToken (uiLength long): its class, one
+// '_' and it ("CFat_muiID").  True if it is one.
+//
+//////////////////////////////////////////////////////////////////////////
+static bool FindIDEFieldLabelEdit(const char* szToken, size uiStart, size uiLength, SIDEAssemblyRename* psRename, bool bComment, CArrayIDEAssemblyEdits* pasDest)
+{
+	size	uiClass;
+
+	uiClass = psRename->szClass.Length();
+	if ((uiClass == 0) || (uiLength != uiClass + 1 + psRename->szOld.Length()) || (memcmp(szToken, psRename->szClass.Text(), uiClass) != 0) ||
+		(szToken[uiClass] != '_') || (memcmp(&szToken[uiClass + 1], psRename->szOld.Text(), psRename->szOld.Length()) != 0))
+	{
+		return false;
+	}
+	AddIDEAssemblyEdit(pasDest, uiStart + uiClass + 1, psRename->szOld.Length(), psRename->szNew.Text(), bComment);
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // A type's name in a label token from uiStart (szToken, uiLength long):
 // each name in a parameter list, its length before it
 // ("17CFatInfoSectorCache", or "8NS__CFat" in a namespace), given the new
@@ -161,6 +203,18 @@ static bool FindIDETypeLabelEdits(const char* szToken, size uiStart, size uiLeng
 		uiCovered = uiBlob + uiCount;
 		k = uiCovered - 1;
 		bFound = true;
+	}
+
+	//A generated layout constant (BaseLib's FatW65C816.inc): "SIZEOF_CFat", and "CFat_muiID" before one of its members.
+	if ((uiLength == 7 + uiOld) && (memcmp(szToken, "SIZEOF_", 7) == 0) && (memcmp(&szToken[7], psRename->szOld.Text(), uiOld) == 0))
+	{
+		AddIDEAssemblyEdit(pasDest, uiStart + 7, uiOld, psRename->szNew.Text(), bComment);
+		return true;
+	}
+	if ((uiCovered == 0) && IsIDELayoutPrefix(szToken, uiLength, psRename->szOld.Text(), uiOld))
+	{
+		AddIDEAssemblyEdit(pasDest, uiStart, uiOld, psRename->szNew.Text(), bComment);
+		return true;
 	}
 
 	//Parts of the label itself, between "_" or "__" and "__" or its end.
@@ -671,6 +725,10 @@ void FindIDEAssemblyEdits(const char* szText, size uiLength, SIDEAssemblyRename*
 				else if ((psRename->eKind == IAR_Member) || (psRename->eKind == IAR_Function))
 				{
 					bLabel = FindIDENamedLabelEdit(&szText[i], i, j - i, psRename, bComment, pasDest);
+				}
+				else if (psRename->eKind == IAR_Field)
+				{
+					bLabel = FindIDEFieldLabelEdit(&szText[i], i, j - i, psRename, bComment, pasDest);
 				}
 				if (!bLabel && bComment && (j - i == psRename->szOld.Length()) && (memcmp(&szText[i], psRename->szOld.Text(), j - i) == 0))
 				{

@@ -130,7 +130,7 @@ protected:
 	size	RenameAssembly(SIDERenameTarget* psTarget, const char* szNewName, CArrayChars* paszFiles, size* puiUnsure);
 	bool	ApproveRename(void);
 	size	FindRenameFile(CArrayChars* paszFiles, const char* szFileName);
-	bool	SearchRenameFiles(const char* szName, bool bComments, bool bText, CArrayChars* paszFiles, CArrayIDEPlaces* pasPlaces, CChars* pszChanged);
+	bool	SearchRenameFiles(const char* szName, bool bComments, bool bText, bool bLayout, CArrayChars* paszFiles, CArrayIDEPlaces* pasPlaces, CChars* pszChanged);
 };
 
 
@@ -140,8 +140,8 @@ size FindIDENameInKey(const char* szKey, const char* szName);
 
 bool	IsIDENameChar(char c);
 void	AddIDEOccurrence(SIDELineCounter* psLines, size uiStart, bool bComment, CArrayIDENameOccurrences* pasDest);
-void	FindIDEWords(const char* szText, size uiStart, size uiEnd, const char* szName, size uiNameLength, bool bComment, SIDELineCounter* psLines, CArrayIDENameOccurrences* pasDest);
-void	FindIDECppOccurrences(const char* szText, size uiLength, const char* szName, bool bCode, bool bComments, SIDELineCounter* psLines, CArrayIDENameOccurrences* pasDest);
+void	FindIDEWords(const char* szText, size uiStart, size uiEnd, const char* szName, size uiNameLength, bool bComment, SIDELineCounter* psLines, CArrayIDENameOccurrences* pasDest, bool bLayout = false);
+void	FindIDECppOccurrences(const char* szText, size uiLength, const char* szName, bool bCode, bool bComments, SIDELineCounter* psLines, CArrayIDENameOccurrences* pasDest, bool bLayout = false);
 bool	IsIDERenameTextFile(const char* szFileName);
 
 

@@ -97,19 +97,41 @@ void AddIDEOccurrence(SIDELineCounter* psLines, size uiStart, bool bComment, CAr
 //////////////////////////////////////////////////////////////////////////
 //
 // Each place szName is a whole word in szText from uiStart to uiEnd.
+// With bLayout (a type's name) also where a word is one of its generated
+// layout constants: "SIZEOF_CFat", and "CFat_muiID" (see
+// IsIDELayoutPrefix), the name in it.
 //
 //////////////////////////////////////////////////////////////////////////
-void FindIDEWords(const char* szText, size uiStart, size uiEnd, const char* szName, size uiNameLength, bool bComment, SIDELineCounter* psLines, CArrayIDENameOccurrences* pasDest)
+void FindIDEWords(const char* szText, size uiStart, size uiEnd, const char* szName, size uiNameLength, bool bComment, SIDELineCounter* psLines, CArrayIDENameOccurrences* pasDest, bool bLayout)
 {
 	size	i;
+	size	j;
 
 	for (i = uiStart; i + uiNameLength <= uiEnd; i++)
 	{
-		if ((szText[i] == szName[0]) && (strncmp(&szText[i], szName, uiNameLength) == 0) &&
-			((i == 0) || !IsIDENameChar(szText[i - 1])) && !IsIDENameChar(szText[i + uiNameLength]))
+		if ((i != 0) && IsIDENameChar(szText[i - 1]))
+		{
+			continue;
+		}
+		if ((szText[i] == szName[0]) && (strncmp(&szText[i], szName, uiNameLength) == 0) && !IsIDENameChar(szText[i + uiNameLength]))
 		{
 			AddIDEOccurrence(psLines, i, bComment, pasDest);
 			i += uiNameLength - 1;
+		}
+		else if (bLayout && IsIDENameChar(szText[i]))
+		{
+			for (j = i; (j < uiEnd) && IsIDENameChar(szText[j]); j++)
+			{
+			}
+			if ((j - i == 7 + uiNameLength) && (strncmp(&szText[i], "SIZEOF_", 7) == 0) && (strncmp(&szText[i + 7], szName, uiNameLength) == 0))
+			{
+				AddIDEOccurrence(psLines, i + 7, bComment, pasDest);
+			}
+			else if (IsIDELayoutPrefix(&szText[i], j - i, szName, uiNameLength))
+			{
+				AddIDEOccurrence(psLines, i, bComment, pasDest);
+			}
+			i = j - 1;
 		}
 	}
 }
@@ -123,7 +145,7 @@ void FindIDEWords(const char* szText, size uiStart, size uiEnd, const char* szNa
 // searched as any other.
 //
 //////////////////////////////////////////////////////////////////////////
-void FindIDECppOccurrences(const char* szText, size uiLength, const char* szName, bool bCode, bool bComments, SIDELineCounter* psLines, CArrayIDENameOccurrences* pasDest)
+void FindIDECppOccurrences(const char* szText, size uiLength, const char* szName, bool bCode, bool bComments, SIDELineCounter* psLines, CArrayIDENameOccurrences* pasDest, bool bLayout)
 {
 	size		uiNameLength;
 	size		i;
@@ -146,7 +168,7 @@ void FindIDECppOccurrences(const char* szText, size uiLength, const char* szName
 			j = szEnd ? (size)(szEnd - szText) : uiLength;
 			if (bComments)
 			{
-				FindIDEWords(szText, i + 2, j, szName, uiNameLength, true, psLines, pasDest);
+				FindIDEWords(szText, i + 2, j, szName, uiNameLength, true, psLines, pasDest, bLayout);
 			}
 			i = j;
 		}
@@ -156,7 +178,7 @@ void FindIDECppOccurrences(const char* szText, size uiLength, const char* szName
 			j = szEnd ? (size)(szEnd - szText) : uiLength;
 			if (bComments)
 			{
-				FindIDEWords(szText, i + 2, j, szName, uiNameLength, true, psLines, pasDest);
+				FindIDEWords(szText, i + 2, j, szName, uiNameLength, true, psLines, pasDest, bLayout);
 			}
 			i = szEnd ? j + 2 : uiLength;
 		}
@@ -171,7 +193,7 @@ void FindIDECppOccurrences(const char* szText, size uiLength, const char* szName
 			}
 			if (bComments)
 			{
-				FindIDEWords(szText, i + 1, j, szName, uiNameLength, true, psLines, pasDest);
+				FindIDEWords(szText, i + 1, j, szName, uiNameLength, true, psLines, pasDest, bLayout);
 			}
 			i = ((j < uiLength) && (szText[j] == c)) ? j + 1 : j;
 		}
@@ -210,7 +232,7 @@ void FindIDECppOccurrences(const char* szText, size uiLength, const char* szName
 				szEnd = strstr(&szText[k < uiLength ? k : uiLength], szClose.Text());
 				if (bComments && (k < uiLength))
 				{
-					FindIDEWords(szText, k + 1, szEnd ? (size)(szEnd - szText) : uiLength, szName, uiNameLength, true, psLines, pasDest);
+					FindIDEWords(szText, k + 1, szEnd ? (size)(szEnd - szText) : uiLength, szName, uiNameLength, true, psLines, pasDest, bLayout);
 				}
 				i = szEnd ? (size)(szEnd - szText) + szClose.Length() : uiLength;
 				szClose.Kill();
@@ -652,7 +674,7 @@ size CIDERename::FindRenameFile(CArrayChars* paszFiles, const char* szFileName)
 // file's editor doesn't have the text that was searched.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDERename::SearchRenameFiles(const char* szName, bool bComments, bool bText, CArrayChars* paszFiles, CArrayIDEPlaces* pasPlaces, CChars* pszChanged)
+bool CIDERename::SearchRenameFiles(const char* szName, bool bComments, bool bText, bool bLayout, CArrayChars* paszFiles, CArrayIDEPlaces* pasPlaces, CChars* pszChanged)
 {
 	CIDECodeModel*				pModel;
 	size						uiProjectFile;
@@ -696,7 +718,7 @@ bool CIDERename::SearchRenameFiles(const char* szName, bool bComments, bool bTex
 		sLines.Init(szText);
 		if (bCpp)
 		{
-			FindIDECppOccurrences(szText, uiLength, szName, bText, bComments, &sLines, &asFound);
+			FindIDECppOccurrences(szText, uiLength, szName, bText, bComments, &sLines, &asFound, bLayout);
 		}
 		else
 		{
@@ -817,7 +839,7 @@ bool CIDERename::RenameSymbol(SIDERenameTarget* psTarget, const char* szNewName,
 	bText = mabText[psTarget->bType];
 	if (bChanged && (bComments || bText))
 	{
-		bChanged = SearchRenameFiles(psTarget->szName.Text(), bComments, bText, &aszFiles, &asPlaces, &szChanged);
+		bChanged = SearchRenameFiles(psTarget->szName.Text(), bComments, bText, psTarget->uiAssembly == IAR_Type, &aszFiles, &asPlaces, &szChanged);
 	}
 
 	if (!bChanged)

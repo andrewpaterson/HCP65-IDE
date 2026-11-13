@@ -1,6 +1,9 @@
 #include "Engine.h"
 
 
+const char* gszEngineSpeed = "CEngine_miSpeed";
+
+
 void CEngine::Init(void)
 {
 	miSpeed = 0;
