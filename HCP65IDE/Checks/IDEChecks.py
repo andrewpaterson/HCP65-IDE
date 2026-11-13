@@ -29,6 +29,8 @@ import atexit, hashlib, os, re, shutil, subprocess, sys, tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 IDE_DIR = os.path.join(HERE, '..', 'HCP65IDE')
+#Rename's searches are checked on a project of their own (Input/RenameSearch), whose counts don't move as other code does.
+RENAME_SEARCH = os.path.join(HERE, 'Input', 'RenameSearch', 'RenameSearch.vcxproj')
 ROOT = os.path.abspath(os.path.join(HERE, '..', '..', '..'))
 BASELIB = os.path.join(ROOT, 'CommonLibraries', 'Libraries', 'BaseLib')
 KERNAL = os.path.join(ROOT, 'HCP65', 'Kernal')
@@ -459,6 +461,21 @@ CHECKS = [
 		[r'^Status: Renamed CCalculatorParser to CCalcParser2: 12 places in 2 files\.$',
 		 r'^Status: Renamed CCalcParser2 to CCalcParser3: 12 places in 2 files\.$',
 		 r'^Rename: CCalcParser3 \[CCalcParser3\] at 12 places, 0 overrides$'], [r'Rename stopped']),
+	('rename-search-type', {
+		#A class renamed with Rename's searches: in comments and strings (Shape.h's comment, Shape.cpp's comment twice and its
+		#string), and as text the index doesn't have (Shape_Linux.cpp, which LINUX_GNU leaves out of Debug|Win32, and
+		#Notes.txt, but not its CShapes).
+		'SOLUTION': RENAME_SEARCH, 'WAIT_INDEX': '1', 'OPEN': 'Shape.h', 'CARET': '13:8', 'EDIT': 'renamesearch:ct,rename:CFigure'},
+		[r'^Status: Renamed CShape to CFigure: 4 places, 2 text occurrences, 4 in comments and strings in 4 files\.$'], [r'Rename stopped']),
+	('rename-search-off', {
+		#Without the searches only the places the index has are renamed.
+		'SOLUTION': RENAME_SEARCH, 'WAIT_INDEX': '1', 'OPEN': 'Shape.h', 'CARET': '13:8', 'EDIT': 'renamesearch:--,rename:CFigure'},
+		[r'^Status: Renamed CShape to CFigure: 4 places in 2 files\.$'], [r'text occurrence', r'in comments']),
+	('rename-search-member', {
+		#A member's text search finds both Draws in the code LINUX_GNU leaves out, but not CPen::Draw's declaration,
+		#definition or call in the code the index has.
+		'SOLUTION': RENAME_SEARCH, 'WAIT_INDEX': '1', 'OPEN': 'Shape.h', 'CARET': '19:8', 'EDIT': 'renamesearch:ct,rename:Paint'},
+		[r'^Status: Renamed Draw to Paint: 3 places, 2 text occurrences in 3 files\.$'], [r'Rename stopped']),
 	('rename-while-reindexing', {
 		'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'CARET': '36:2', 'TYPE': 'int iTypedName; ', 'EDITS_DELAY': '1500',
 		'DEBUG': 'wait:700,printedits,edit:caret:36:7,edit:renamable,printedits'},

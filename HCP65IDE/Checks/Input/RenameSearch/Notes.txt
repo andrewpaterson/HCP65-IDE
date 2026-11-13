@@ -1,0 +1,2 @@
+CShape is the class Rename's searches are checked with.
+CShapes is not its name.
