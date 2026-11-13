@@ -203,8 +203,9 @@ bool CIDEEdit::RedoAcrossFiles(void)
 //
 // Undoes the steps of uiGroup not undone yet, newest first, each in its
 // own file.  A file edited since (its text isn't as the step left it)
-// isn't changed: its later edits would go too.  With bShow the last file
-// undone is shown.
+// isn't changed: its later edits would go too.  A file Rename File
+// renamed is renamed back, before the group's edits are undone, as they
+// are kept under its name.  With bShow the last file undone is shown.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEEdit::UndoLogGroup(size uiGroup, bool bShow)
@@ -213,27 +214,45 @@ bool CIDEEdit::UndoLogGroup(size uiGroup, bool bShow)
 	SUndoLogStep*		psStep;
 	Ptr<CIDEEditorTab>	pTab;
 	Ptr<CIDEEditorTab>	pShown;
+	bool				bRenames;
 
 	if (uiGroup == MAX_SIZE)
 	{
 		return false;
 	}
+	bRenames = false;
 	mbLogUndoing = true;
 	for (i = mcUndoLog.NumSteps(); i > 0; i--)
 	{
 		psStep = mcUndoLog.Get(i - 1);
 		if ((psStep->uiGroup == uiGroup) && !mcUndoLog.IsUndone(i - 1))
 		{
-			pTab = mpcContent->GetDocuments()->FindTab(psStep->szDocument.Text());
-			if (pTab.IsNotNull() && (pTab->GetEditor()->GetUndoId() == psStep->uiIdAfter))
+			if (psStep->bRename)
 			{
-				pTab->GetEditor()->UndoTo(psStep->uiIdBefore);
-				pShown = pTab;
+				//A file Rename File renamed, renamed back.
+				bRenames = true;
+				if (!mpcContent->GetFileRename()->MoveFile(psStep->szRenamed.Text(), psStep->szDocument.Text(), NULL))
+				{
+					ShowRenameNotMoved(psStep->szRenamed.Text(), psStep->szDocument.Text());
+				}
+			}
+			else
+			{
+				pTab = mpcContent->GetDocuments()->FindTab(psStep->szDocument.Text());
+				if (pTab.IsNotNull() && (pTab->GetEditor()->GetUndoId() == psStep->uiIdAfter))
+				{
+					pTab->GetEditor()->UndoTo(psStep->uiIdBefore);
+					pShown = pTab;
+				}
 			}
 			mcUndoLog.MarkUndone(i - 1);
 		}
 	}
 	mbLogUndoing = false;
+	if (bRenames)
+	{
+		RenamesChanged(uiGroup);
+	}
 
 	if (bShow && pShown.IsNotNull())
 	{
@@ -245,8 +264,8 @@ bool CIDEEdit::UndoLogGroup(size uiGroup, bool bShow)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Redoes the undone steps of uiGroup, oldest first.  With bShow the last
-// file redone is shown.
+// Redoes the undone steps of uiGroup, oldest first: Rename File's edits,
+// then its renames.  With bShow the last file redone is shown.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEEdit::RedoLogGroup(size uiGroup, bool bShow)
@@ -255,27 +274,44 @@ bool CIDEEdit::RedoLogGroup(size uiGroup, bool bShow)
 	SUndoLogStep*		psStep;
 	Ptr<CIDEEditorTab>	pTab;
 	Ptr<CIDEEditorTab>	pShown;
+	bool				bRenames;
 
 	if (uiGroup == MAX_SIZE)
 	{
 		return false;
 	}
+	bRenames = false;
 	mbLogUndoing = true;
 	for (i = 0; i < mcUndoLog.NumSteps(); i++)
 	{
 		psStep = mcUndoLog.Get(i);
 		if ((psStep->uiGroup == uiGroup) && mcUndoLog.IsUndone(i))
 		{
-			pTab = mpcContent->GetDocuments()->FindTab(psStep->szDocument.Text());
-			if (pTab.IsNotNull() && (pTab->GetEditor()->GetUndoId() == psStep->uiIdBefore))
+			if (psStep->bRename)
 			{
-				pTab->GetEditor()->UndoTo(psStep->uiIdAfter);
-				pShown = pTab;
+				bRenames = true;
+				if (!mpcContent->GetFileRename()->MoveFile(psStep->szDocument.Text(), psStep->szRenamed.Text(), NULL))
+				{
+					ShowRenameNotMoved(psStep->szDocument.Text(), psStep->szRenamed.Text());
+				}
+			}
+			else
+			{
+				pTab = mpcContent->GetDocuments()->FindTab(psStep->szDocument.Text());
+				if (pTab.IsNotNull() && (pTab->GetEditor()->GetUndoId() == psStep->uiIdBefore))
+				{
+					pTab->GetEditor()->UndoTo(psStep->uiIdAfter);
+					pShown = pTab;
+				}
 			}
 			mcUndoLog.MarkRedone(i);
 		}
 	}
 	mbLogUndoing = false;
+	if (bRenames)
+	{
+		RenamesChanged(uiGroup);
+	}
 
 	if (bShow && pShown.IsNotNull())
 	{
@@ -302,6 +338,55 @@ void CIDEEdit::EndUndoGroup(void) { mcUndoLog.EndGroup(); }
 //////////////////////////////////////////////////////////////////////////
 void CIDEEdit::FileClosed(char* szFileName) { mcUndoLog.RemoveDocument(szFileName); }
 void CIDEEdit::FileRenamed(char* szOldFileName, char* szNewFileName) { mcUndoLog.RenameDocument(szOldFileName, szNewFileName); }
+void CIDEEdit::LogFileRenamed(char* szOldFileName, char* szNewFileName) { mcUndoLog.Renamed(szOldFileName, szNewFileName); }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Files of uiGroup were renamed back, or again: its files are saved, as
+// Rename File saves them, and the workspace is shown and indexed again.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEEdit::RenamesChanged(size uiGroup)
+{
+	size				i;
+	SUndoLogStep*		psStep;
+	Ptr<CIDEEditorTab>	pTab;
+
+	for (i = 0; i < mcUndoLog.NumSteps(); i++)
+	{
+		psStep = mcUndoLog.Get(i);
+		if ((psStep->uiGroup == uiGroup) && !psStep->bRename)
+		{
+			pTab = mpcContent->GetDocuments()->FindTab(psStep->szDocument.Text());
+			if (pTab.IsNotNull())
+			{
+				mpcContent->GetDocuments()->SaveFile(pTab);
+			}
+		}
+	}
+	mpcContent->GetSolutions()->WorkspaceChanged(true);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The status line says a file couldn't be renamed (the name was taken,
+// say), so the undo or redo is only part done.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEEdit::ShowRenameNotMoved(char* szFrom, char* szTo)
+{
+	CChars	szMessage;
+
+	szMessage.Init("Couldn't rename ");
+	szMessage.Append(szFrom);
+	szMessage.Append(" to ");
+	szMessage.Append(szTo);
+	szMessage.Append(".");
+	mpcContent->ShowStatus(szMessage.Text());
+	szMessage.Kill();
+}
 
 
 //////////////////////////////////////////////////////////////////////////

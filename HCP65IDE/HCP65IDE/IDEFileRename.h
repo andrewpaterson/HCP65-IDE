@@ -23,6 +23,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/Chars.h"
 #include "BaseLib/ArrayChars.h"
 #include "BaseLib/ArrayTemplate.h"
+#include "BaseLib/ArrayInt.h"
 #include "StandardLib/Object.h"
 #include "StandardLib/Pointer.h"
 
@@ -67,10 +68,10 @@ public:
 	void	FindRelatedFiles(const char* szFileName, CArrayChars* paszDest);
 	void	AddRenames(const char* szFileName, const char* szNewName, bool bRelated, CArrayIDEFileRenames* pasDest);
 	bool	RenameFiles(CArrayIDEFileRenames* pasRenames);
+	bool	MoveFile(const char* szFrom, const char* szTo, CArrayInt* paiProjects);
 
 protected:
 	bool	FindProblem(CArrayIDEFileRenames* pasRenames, CChars* pszDest);
-	bool	MoveFile(SIDEFileRename* psRename);
 };
 
 

@@ -74,6 +74,7 @@ public:
 	void				EditorUndoChanged(CTextArea* pcEditor, STextUndoChange* psUndo);
 	void				FileClosed(char* szFileName);
 	void				FileRenamed(char* szOldFileName, char* szNewFileName);
+	void				LogFileRenamed(char* szOldFileName, char* szNewFileName);
 	bool				UndoAcrossFiles(void);
 	bool				RedoAcrossFiles(void);
 	void				BeginUndoGroup(void);
@@ -82,6 +83,8 @@ public:
 protected:
 	bool				UndoLogGroup(size uiGroup, bool bShow);
 	bool				RedoLogGroup(size uiGroup, bool bShow);
+	void				RenamesChanged(size uiGroup);
+	void				ShowRenameNotMoved(char* szFrom, char* szTo);
 	bool				CanUndoAcrossFiles(void);
 	bool				CanRedoAcrossFiles(void);
 };

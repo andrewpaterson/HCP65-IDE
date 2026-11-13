@@ -78,6 +78,9 @@ void KillIDEFileRenames(CArrayIDEFileRenames* pasRenames)
 }
 
 
+static bool ContainsIDEProject(CArrayInt* paiProjects, size uiProject);
+
+
 //////////////////////////////////////////////////////////////////////////
 //
 // The length of a file name's stem: up to its first '.'.
@@ -314,20 +317,62 @@ bool CIDEFileRename::FindProblem(CArrayIDEFileRenames* pasRenames, CChars* pszDe
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The file renamed on the disk: with git mv if git tracks it, so the
-// rename is staged.
+// The file at szFrom renamed szTo (a full path in the same directory):
+// on the disk, with git mv if git tracks it so the rename is staged; in
+// every project that has it (each project changed added to paiProjects
+// if it isn't NULL); in its tab, and in the undo log's edits.  Rename
+// File, and the undo and redo of one, rename each file with it.  False
+// if it couldn't be renamed on the disk, when nothing else changes.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEFileRename::MoveFile(SIDEFileRename* psRename)
+bool CIDEFileRename::MoveFile(const char* szFrom, const char* szTo, CArrayInt* paiProjects)
 {
-	CGitRepository*	pcRepository;
+	CFileUtil			cFileUtil;
+	CGitRepository*		pcRepository;
+	CBuildWorkspace*	pcWorkspace;
+	CVcxProject*		pcProject;
+	Ptr<CIDEEditorTab>	pTab;
+	CChars				szName;
+	CChars				szDirectory;
+	bool				bMoved;
+	size				i;
 
-	pcRepository = mpcContent->GetGitStatus()->GetGit()->FindRepository(psRename->szOldPath.Text());
-	if (pcRepository && pcRepository->IsTracked(psRename->szOldPath.Text()))
+	pcRepository = mpcContent->GetGitStatus()->GetGit()->FindRepository(szFrom);
+	if (pcRepository && pcRepository->IsTracked(szFrom))
 	{
-		return pcRepository->Move(psRename->szOldPath.Text(), psRename->szNewPath.Text());
+		bMoved = pcRepository->Move(szFrom, szTo);
 	}
-	return rename(psRename->szOldPath.Text(), psRename->szNewPath.Text()) == 0;
+	else
+	{
+		bMoved = !cFileUtil.Exists(szTo) && (rename(szFrom, szTo) == 0);
+	}
+	if (!bMoved)
+	{
+		return false;
+	}
+
+	szName.Init();
+	szDirectory.Init();
+	cFileUtil.SplitPath(szTo, &szName, &szDirectory);
+	pcWorkspace = mpcContent->GetWorkspace();
+	for (i = 0; i < pcWorkspace->NumProjects(); i++)
+	{
+		pcProject = pcWorkspace->GetSolutionProject(i)->GetProject();
+		if (pcProject && pcProject->RenameItem(szFrom, szName.Text()) && paiProjects && !ContainsIDEProject(paiProjects, i))
+		{
+			paiProjects->Add((int)i);
+		}
+	}
+	szDirectory.Kill();
+	szName.Kill();
+
+	pTab = mpcContent->GetDocuments()->FindTab(szFrom);
+	if (pTab.IsNotNull())
+	{
+		pTab->SetFileName(szTo);
+	}
+	mpcContent->GetEdit()->FileRenamed((char*)szFrom, (char*)szTo);
+	return true;
 }
 
 
@@ -392,8 +437,6 @@ bool CIDEFileRename::RenameFiles(CArrayIDEFileRenames* pasRenames)
 	SIDEFileRename*		psRename;
 	Ptr<CIDEEditorTab>	pTab;
 	Ptr<CTextArea>		pEditor;
-	CVcxProject*		pcProject;
-	CBuildWorkspace*	pcWorkspace;
 	STextRange			sRange;
 	size				uiBefore;
 	size				uiStart;
@@ -473,7 +516,7 @@ bool CIDEFileRename::RenameFiles(CArrayIDEFileRenames* pasRenames)
 		return false;
 	}
 
-	//The #includes changed, as one undo group.  An edit within a line moves no other line.
+	//The #includes changed, then the files renamed, as one undo group.  An edit within a line moves no other line.
 	mpcContent->GetEdit()->BeginUndoGroup();
 	for (i = 0; i < asIncludes.NumElements(); i++)
 	{
@@ -484,15 +527,13 @@ bool CIDEFileRename::RenameFiles(CArrayIDEFileRenames* pasRenames)
 		sRange.uiEnd = sRange.uiStart + (size)psInclude->iLength;
 		pEditor->ReplaceRanges(&sRange, 1, psRename->szNewName.Text());
 	}
-	mpcContent->GetEdit()->EndUndoGroup();
 
-	//The files renamed: on the disk, in the projects, in their tabs and the undo log.
-	pcWorkspace = mpcContent->GetWorkspace();
+	//The files renamed: on the disk, in the projects, in their tabs and the undo log, each a step of the group.
 	aiProjects.Init();
 	for (i = 0; (i < pasRenames->NumElements()) && bResult; i++)
 	{
 		psRename = pasRenames->Get(i);
-		bResult = MoveFile(psRename);
+		bResult = MoveFile(psRename->szOldPath.Text(), psRename->szNewPath.Text(), &aiProjects);
 		if (!bResult)
 		{
 			szMessage.Append("Rename stopped: ");
@@ -500,20 +541,7 @@ bool CIDEFileRename::RenameFiles(CArrayIDEFileRenames* pasRenames)
 			szMessage.Append(" couldn't be renamed on the disk.");
 			break;
 		}
-		for (j = 0; j < pcWorkspace->NumProjects(); j++)
-		{
-			pcProject = pcWorkspace->GetSolutionProject(j)->GetProject();
-			if (pcProject && pcProject->RenameItem(psRename->szOldPath.Text(), psRename->szNewName.Text()) && !ContainsIDEProject(&aiProjects, j))
-			{
-				aiProjects.Add((int)j);
-			}
-		}
-		pTab = mpcContent->GetDocuments()->FindTab(psRename->szOldPath.Text());
-		if (pTab.IsNotNull())
-		{
-			pTab->SetFileName(psRename->szNewPath.Text());
-			mpcContent->GetEdit()->FileRenamed(psRename->szOldPath.Text(), psRename->szNewPath.Text());
-		}
+		mpcContent->GetEdit()->LogFileRenamed(psRename->szOldPath.Text(), psRename->szNewPath.Text());
 		for (j = 0; j < aszEdited.NumElements(); j++)
 		{
 			if (StringCompare(aszEdited.GetText(j), psRename->szOldPath.Text()) == 0)
@@ -522,6 +550,8 @@ bool CIDEFileRename::RenameFiles(CArrayIDEFileRenames* pasRenames)
 			}
 		}
 	}
+
+	mpcContent->GetEdit()->EndUndoGroup();
 
 	//The files edited are saved, as the files have moved under them.
 	for (i = 0; i < aszEdited.NumElements(); i++)

@@ -515,6 +515,29 @@ CHECKS = [
 		[r'^Status: Renamed Engine\.h to Motor\.h: 7 #includes in 7 files, 2 projects\.$',
 		 r'^Project files: Commented\.cpp Engine\.cpp Engine_Linux\.cpp .* Motor\.h EngineCache\.h', r'^#include "Motor\.h"$'],
 		[r'Rename stopped', r'more file']),
+	('rename-file-undo', dict(MakeRenameFileCopy(), **{
+		#Undo Across Files undoes all of Rename File (step 4): the files renamed back on the disk, in the projects and in
+		#Engine.h's tab, the #includes as they were, saved.
+		'WAIT_INDEX': '1', 'OPEN': 'Engine.h',
+		'DEBUG': 'edit:renamefilerelated:CPPEngine.h,edit:undoall,printprojectfiles,printtabs,printdiskfile:Sub/User.cpp,printdiskfile:Engine.cpp,'
+		         'printdiskfile:Tool/Tool.vcxproj'}),
+		[r'^Status: Renamed Engine\.h to CPPEngine\.h and 2 more files: 7 #includes in 7 files, 2 projects\.$',
+		 r'^Project files: Commented\.cpp Engine\.cpp Engine_Linux\.cpp Other/OtherUser\.cpp Sub/Angle\.cpp Sub/Indented\.cpp Sub/User\.cpp '
+		 r'Engine\.h EngineCache\.h Other/Engine\.h Tool/Tool\.cpp$',
+		 r'^Tabs: Engine\.h ', r'^#include "\.\./Engine\.h"', r'^#include "Engine\.h"', r'<ClInclude Include="\.\.\\Engine\.h" />'],
+		[r"Couldn't rename", r'CPPEngine\.h"', r'Disk file .*:\n\(none\)']),
+	('rename-file-redo', dict(MakeRenameFileCopy(), **{
+		#Redo Across Files after the undo renames them all again.
+		'WAIT_INDEX': '1', 'OPEN': 'Engine.h',
+		'DEBUG': 'edit:renamefilerelated:CPPEngine.h,edit:undoall,edit:redoall,printprojectfiles,printtabs,printdiskfile:Sub/User.cpp,printdiskfile:CPPEngine.cpp'}),
+		[r'^Project files: Commented\.cpp CPPEngine\.cpp CPPEngine_Linux\.cpp .* CPPEngine\.h EngineCache\.h',
+		 r'^Tabs: CPPEngine\.h ', r'^#include "\.\./CPPEngine\.h"', r'^#include "CPPEngine\.h"'],
+		[r"Couldn't rename", r'Disk file .*:\n\(none\)']),
+	('rename-file-undo-in-file', dict(MakeRenameFileCopy(), **{
+		#Control+Z in one of the files Rename File edited undoes the whole of it, the renames too.
+		'WAIT_INDEX': '1', 'OPEN': 'Engine.h', 'DEBUG': 'edit:renamefilerelated:CPPEngine.h,edit:open:Sub/User.cpp,edit:undo,printprojectfiles,printdiskfile:Tool/Tool.cpp'}),
+		[r'^Project files: Commented\.cpp Engine\.cpp Engine_Linux\.cpp .* Engine\.h EngineCache\.h', r'^#include "\.\./Engine\.h"'],
+		[r"Couldn't rename", r'Project files:.*CPPEngine', r'CPPEngine\.h"']),
 	('rename-file-refused', dict(MakeRenameFileCopy(), **{
 		#A name that is taken, one with a directory, and the same name: nothing is renamed.
 		'WAIT_INDEX': '1', 'OPEN': 'Engine.h', 'DEBUG': 'edit:renamefile:EngineCache.h,edit:renamefile:Sub/Engine.h,edit:renamefile:Engine.h,printprojectfiles'}),
