@@ -1,5 +1,7 @@
 # Linux build of the HCP65 IDE (BaseLib + StandardLib + SupportLib + InputLib +
 # WindowLib + X11Lib + VisualStudioLib + BuildLib + GitLib + ClaudeLib + the IDE's window sources).
+# HCP65IDE shows its window on the X display; HCP65IDERef draws it on WinRefLib's reference screen, in
+# memory, for the checks (Checks/IDEChecks.py) to run without a display.
 #
 # 64-bit only: there is no 32-bit libX11 installed.  Needs libx11-dev.
 #
@@ -37,6 +39,7 @@ set(SUPPORTLIB_DIR "${COMMON_DIR}/SupportLib")
 set(INPUTLIB_DIR "${COMMON_DIR}/InputLib")
 set(WINDOWLIB_DIR "${COMMON_DIR}/WindowLib")
 set(X11LIB_DIR "${COMMON_DIR}/X11Lib")
+set(WINREFLIB_DIR "${COMMON_DIR}/WinRefLib")
 set(THREADLIB_DIR "${COMMON_DIR}/ThreadLib")
 set(MICROPROCESSORLIB_DIR "${COMMON_DIR}/MicroprocessorLib")
 set(EMULATORDEBUGLIB_DIR "${COMMON_DIR}/EmulatorDebugLib")
@@ -104,6 +107,7 @@ vcxproj_sources(INPUTLIB_SOURCES "${INPUTLIB_DIR}/InputLib.vcxproj")
 vcxproj_sources(WINDOWLIB_SOURCES "${WINDOWLIB_DIR}/WindowLib.vcxproj")
 
 vcxproj_sources(X11LIB_SOURCES "${X11LIB_DIR}/X11Lib.vcxproj")
+vcxproj_sources(WINREFLIB_SOURCES "${WINREFLIB_DIR}/WinRefLib.vcxproj")
 vcxproj_sources(THREADLIB_SOURCES "${THREADLIB_DIR}/ThreadLib.vcxproj")
 
 vcxproj_sources(MICROPROCESSORLIB_SOURCES "${MICROPROCESSORLIB_DIR}/MicroprocessorLib.vcxproj")
@@ -121,9 +125,9 @@ vcxproj_sources(GITLIB_SOURCES "${GITLIB_DIR}/GitLib.vcxproj")
 
 vcxproj_sources(CLAUDELIB_SOURCES "${CLAUDELIB_DIR}/ClaudeLib.vcxproj")
 
-# HCP65IDE.cpp (WinMain) is Windows only.
+# Everything but a main: HCP65IDE.cpp (WinMain) is Windows only, HCP65IDELinux.cpp is the X11 IDE's and
+# HCP65IDERef.cpp the reference screen's.
 set(IDE_SOURCES
-	"${IDE_DIR}/HCP65IDELinux.cpp"
 	"${IDE_DIR}/IDEMain.cpp"
 	"${IDE_DIR}/IDECodeModel.cpp"
 	"${IDE_DIR}/IDECodeModelEdits.cpp"
@@ -259,9 +263,19 @@ target_link_libraries(GitLib PUBLIC StandardLib ThreadLib BaseLib)
 add_library(ClaudeLib STATIC ${CLAUDELIB_SOURCES})
 target_link_libraries(ClaudeLib PUBLIC ThreadLib BaseLib)
 
-add_executable(HCP65IDE ${IDE_SOURCES})
-target_include_directories(HCP65IDE PRIVATE "${IDE_DIR}")
-target_link_libraries(HCP65IDE PRIVATE X11Lib WindowLib InputLib BuildLib GitLib ClaudeLib VisualStudioLib CppCompilerLib Assembler65Lib EmulatorDebugLib MicroprocessorLib ThreadLib SupportLib StandardLib BaseLib)
+add_library(WinRefLib STATIC ${WINREFLIB_SOURCES})
+target_link_libraries(WinRefLib PUBLIC WindowLib InputLib SupportLib StandardLib BaseLib)
+
+# The IDE, whichever window it is shown in.
+add_library(HCP65IDELib STATIC ${IDE_SOURCES})
+target_include_directories(HCP65IDELib PUBLIC "${IDE_DIR}")
+target_link_libraries(HCP65IDELib PUBLIC WindowLib InputLib BuildLib GitLib ClaudeLib VisualStudioLib CppCompilerLib Assembler65Lib EmulatorDebugLib MicroprocessorLib ThreadLib SupportLib StandardLib BaseLib)
+
+add_executable(HCP65IDE "${IDE_DIR}/HCP65IDELinux.cpp")
+target_link_libraries(HCP65IDE PRIVATE HCP65IDELib X11Lib)
+
+add_executable(HCP65IDERef "${IDE_DIR}/HCP65IDERef.cpp")
+target_link_libraries(HCP65IDERef PRIVATE HCP65IDELib WinRefLib)
 
 # hcp65build, the command-line build (BuildCommandLine.h): no window, so no X11.  Build only it with
 #   cmake --build build/HCP65IDE --target hcp65build

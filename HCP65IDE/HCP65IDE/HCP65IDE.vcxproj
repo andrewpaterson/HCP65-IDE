@@ -17,6 +17,10 @@
       <Configuration>Release</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
+    <ProjectConfiguration Include="Reference|x64">
+      <Configuration>Reference</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{ADC053B5-6F33-4EE1-AB79-34C003908A92}</ProjectGuid>
@@ -31,6 +35,12 @@
     <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <CharacterSet>NotSet</CharacterSet>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Reference|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <CharacterSet>NotSet</CharacterSet>
     <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -62,17 +72,25 @@
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Reference|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
   <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Reference|x64'">
+    <TargetName>HCP65IDERef</TargetName>
+  </PropertyGroup>
   <PropertyGroup>
     <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</LinkIncremental>
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</LinkIncremental>
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</LinkIncremental>
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkIncremental>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Reference|x64'">false</LinkIncremental>
     <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ProjectDir)..\..\..\CommonLibraries\Libraries\;$(ProjectDir)..\..\..\HCP65\Libraries\;$(ProjectDir)..\..\Libraries\;$(IncludePath)</IncludePath>
     <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)..\..\..\CommonLibraries\Libraries\;$(ProjectDir)..\..\..\HCP65\Libraries\;$(ProjectDir)..\..\Libraries\;$(IncludePath)</IncludePath>
     <IncludePath Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ProjectDir)..\..\..\CommonLibraries\Libraries\;$(ProjectDir)..\..\..\HCP65\Libraries\;$(ProjectDir)..\..\Libraries\;$(IncludePath)</IncludePath>
     <IncludePath Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)..\..\..\CommonLibraries\Libraries\;$(ProjectDir)..\..\..\HCP65\Libraries\;$(ProjectDir)..\..\Libraries\;$(IncludePath)</IncludePath>
+    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Reference|x64'">$(ProjectDir)..\..\..\CommonLibraries\Libraries\;$(ProjectDir)..\..\..\HCP65\Libraries\;$(ProjectDir)..\..\Libraries\;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86)</LibraryPath>
@@ -235,8 +253,56 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
     </Link>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Reference|x64'">
+    <ClCompile>
+      <PreprocessorDefinitions>NDEBUG;_LIB;_CRT_SECURE_NO_DEPRECATE;WIN32;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <StringPooling>true</StringPooling>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
+      <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <OpenMPSupport>true</OpenMPSupport>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
+      <SDLCheck>false</SDLCheck>
+      <Optimization>MaxSpeed</Optimization>
+      <RemoveUnreferencedCodeData>true</RemoveUnreferencedCodeData>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <CallingConvention>VectorCall</CallingConvention>
+      <DisableSpecificWarnings>26440;26447;26455;26476</DisableSpecificWarnings>
+      <ExceptionHandling>false</ExceptionHandling>
+      <FloatingPointExceptions>false</FloatingPointExceptions>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Console</SubSystem>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+      <TargetMachine>MachineX64</TargetMachine>
+      <IgnoreSpecificDefaultLibraries>
+      </IgnoreSpecificDefaultLibraries>
+      <AdditionalDependencies>shlwapi.lib;ws2_32.lib;dinput8.lib;dxguid.lib;xinput.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+    </Link>
+  </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="HCP65IDE.cpp" />
+    <ClCompile Include="HCP65IDE.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Reference|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="HCP65IDERef.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="IDEMain.cpp" />
     <ClCompile Include="IDECodeModel.cpp" />
     <ClCompile Include="IDECodeModelEdits.cpp" />
@@ -349,6 +415,9 @@
     </ProjectReference>
     <ProjectReference Include="..\..\..\CommonLibraries\Libraries\WinInputLib\WinInputLib.vcxproj">
       <Project>{efe4d8a4-d7f4-4ba2-9f43-0e3bc02268c2}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\CommonLibraries\Libraries\WinRefLib\WinRefLib.vcxproj">
+      <Project>{5f0b57a7-0f29-4845-9320-14b4b27491f7}</Project>
     </ProjectReference>
     <ProjectReference Include="..\..\..\CommonLibraries\Libraries\CppCompilerLib\CppCompilerLib.vcxproj">
       <Project>{4d010c1e-4dce-4271-9b1c-87bbf0bc761c}</Project>
