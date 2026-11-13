@@ -3,12 +3,20 @@
 #ModPlay and Kernal solutions together, and what it prints is checked.  The files it is pointed at (in CommonLibraries)
 #must be as committed, and none of them, nor the user's layout, workspace or recent solutions, may change.
 #
-#  IDEChecks.py [ide executable] [-open <file>...] [check name...]
+#  IDEChecks.py [ide executable] [-native] [-outputs <directory>] [-open <file>...] [check name...]
 #
-#The executable defaults to ../../../build/HCP65IDERelease/HCP65IDE.  Exits non-zero if a check fails.
+#The checks run on the IDE drawn on the reference screen (HCP65IDERef, see HCP65IDERef.cpp), in memory: no display is
+#needed and nothing typed or clicked reaches it.  Then, unless checks are named, the native smoke checks (NATIVE_SMOKE)
+#run on the IDE in a real window, on X11 or Windows, so its backend is run too.  -native runs every check on the native
+#IDE instead.  The executables default to the Release builds (REFERENCE_EXECUTABLE and NATIVE_EXECUTABLE); one given
+#runs every check.  Exits non-zero if a check fails.  -outputs <directory> writes what each check printed to
+#<directory>/<check>.txt (<check>.native.txt for a smoke check), to compare runs.
+#
 #With HCP65_IDE_VERIFY_REDRAW set, every partial paint is checked too, and one that differed fails its check.
 #With HCP65_IDE_VERIFY_LAYOUT set, the window is laid out every paint, and a component that had moved without the
 #layout being invalidated fails its check.
+#With HCP65_IDE_VERIFY_PRESENT set, on the reference screen every present is checked: what a window shows after it must
+#be what it drew, and one that isn't fails its check.
 #
 #What the checks open doesn't depend on what the user opened last, and doesn't change it: each run is given recent
 #solutions of its own (HCP65_IDE_RECENT, a file made for the checks) that say what was open.  By default that is the
@@ -26,6 +34,15 @@ BASELIB = os.path.join(ROOT, 'CommonLibraries', 'Libraries', 'BaseLib')
 KERNAL = os.path.join(ROOT, 'HCP65', 'Kernal')
 MODPLAY = os.path.join(ROOT, 'HCP65', 'ModPlay')
 USER_RECENT = os.path.expanduser('~/.config/HCP65IDE/RecentSolutions.xml')
+if os.name == 'nt':
+	#The Visual Studio builds: Release|x64 and Reference|x64 (HCP65IDERef.cpp in place of the WinMain).
+	REFERENCE_EXECUTABLE = os.path.join(HERE, '..', 'x64', 'Reference', 'HCP65IDERef.exe')
+	NATIVE_EXECUTABLE = os.path.join(HERE, '..', 'x64', 'Release', 'HCP65IDE.exe')
+else:
+	REFERENCE_EXECUTABLE = os.path.join(ROOT, 'build', 'HCP65IDERelease', 'HCP65IDERef')
+	NATIVE_EXECUTABLE = os.path.join(ROOT, 'build', 'HCP65IDERelease', 'HCP65IDE')
+#The checks also run on the native IDE, in a real window, by default: as few as show its backend works.
+NATIVE_SMOKE = ['explorer']
 
 #Files the checks edit in the IDE (never saving them) and the user's files a scripted run mustn't write.
 WATCHED = [os.path.join(BASELIB, f) for f in ['CalculatorParser.cpp', 'CalculatorParser.h', 'CalculatorSymbols.cpp', 'CalcParentheses.h', 'CalcExpression.h']] + \
@@ -37,6 +54,8 @@ RESTORED = [USER_RECENT] + [f for f in WATCHED if f.endswith('.layout.user') or 
 #The recent solutions each run is given, unless its check has its own: made by OpenForChecks, None for the user's.
 CHECKS_RECENT = None
 BREAKPOINTS = os.path.join(KERNAL, 'HCP65Kernal.hcp65user')
+#Where what each check printed is written (-outputs), None for nowhere.
+OUTPUTS = None
 
 
 
@@ -1041,10 +1060,12 @@ def Run(szExecutable, szName, asVariables):
 	return cResult.returncode, szOut.split('\n')
 
 
-def Check(szExecutable, szName, asVariables, aszExpected, aszForbidden):
+def Check(szExecutable, szName, asVariables, aszExpected, aszForbidden, szOutputSuffix=''):
 	asBefore = Hashes()
 	bBreakpoints = os.path.exists(BREAKPOINTS)
 	iCode, aszLines = Run(szExecutable, szName, asVariables)
+	if OUTPUTS:
+		open(os.path.join(OUTPUTS, szName + szOutputSuffix + '.txt'), 'w').write('\n'.join(aszLines))
 	aszProblems = []
 	if iCode != 0:
 		aszProblems.append('exited with %d' % iCode)
@@ -1059,6 +1080,9 @@ def Check(szExecutable, szName, asVariables, aszExpected, aszForbidden):
 	if os.environ.get('HCP65_IDE_VERIFY_REDRAW'):
 		#Every partial paint is checked against drawing all of the window; one that differed is logged.
 		aszForbidden = aszForbidden + [r'A partial paint of']
+	if os.environ.get('HCP65_IDE_VERIFY_PRESENT'):
+		#What a window shows after each present is checked against what it drew; one that differed is logged.
+		aszForbidden = aszForbidden + [r'A present of']
 	if os.environ.get('HCP65_IDE_VERIFY_LAYOUT'):
 		#The window is laid out every paint though nothing asked for it; a component that moved is logged.
 		aszForbidden = aszForbidden + [r"but the layout wasn't invalidated"]
@@ -1084,26 +1108,57 @@ def Check(szExecutable, szName, asVariables, aszExpected, aszForbidden):
 	return True
 
 
-def main():
-	aszArgs = sys.argv[1:]
-	szExecutable = os.path.join(ROOT, 'build', 'HCP65IDERelease', 'HCP65IDE')
-	if aszArgs and os.path.isfile(aszArgs[0]):
-		szExecutable = os.path.abspath(aszArgs.pop(0))
-	aszOpen = []
-	while '-open' in aszArgs:
-		i = aszArgs.index('-open')
-		if i + 1 >= len(aszArgs):
-			sys.exit('IDEChecks: -open needs a file.')
-		aszOpen.append(aszArgs[i + 1])
-		del aszArgs[i:i + 2]
-	OpenForChecks(aszOpen if aszOpen else [os.path.join(MODPLAY, 'HCP65ModPlay.hcp65workspace')])
-	atexit.register(RestoreUserFiles, {szFile: (open(szFile, 'rb').read() if os.path.exists(szFile) else None) for szFile in RESTORED})
+def TakeOption(aszArgs, szOption, bValue):
+	#Whether szOption is in aszArgs, or with bValue the argument after it (None if it isn't there); both taken out.
+	if szOption not in aszArgs:
+		return None if bValue else False
+	i = aszArgs.index(szOption)
+	if not bValue:
+		del aszArgs[i]
+		return True
+	if i + 1 >= len(aszArgs):
+		sys.exit('IDEChecks: %s needs an argument.' % szOption)
+	szValue = aszArgs[i + 1]
+	del aszArgs[i:i + 2]
+	return szValue
+
+
+def RunChecks(szExecutable, aszNames, szOutputSuffix=''):
+	#The checks named (all of them if none are) on szExecutable.  Returns how many failed.
 	iFailed = 0
 	for szName, asVariables, aszExpected, aszForbidden in CHECKS:
-		if aszArgs and szName not in aszArgs:
+		if aszNames and szName not in aszNames:
 			continue
-		if not Check(szExecutable, szName, asVariables, aszExpected, aszForbidden):
+		if not Check(szExecutable, szName, asVariables, aszExpected, aszForbidden, szOutputSuffix):
 			iFailed += 1
+	return iFailed
+
+
+def main():
+	global OUTPUTS
+	aszArgs = sys.argv[1:]
+	szGiven = None
+	if aszArgs and os.path.isfile(aszArgs[0]):
+		szGiven = os.path.abspath(aszArgs.pop(0))
+	bNative = TakeOption(aszArgs, '-native', False)
+	OUTPUTS = TakeOption(aszArgs, '-outputs', True)
+	if OUTPUTS:
+		os.makedirs(OUTPUTS, exist_ok=True)
+	aszOpen = []
+	while '-open' in aszArgs:
+		aszOpen.append(TakeOption(aszArgs, '-open', True))
+	OpenForChecks(aszOpen if aszOpen else [os.path.join(MODPLAY, 'HCP65ModPlay.hcp65workspace')])
+	atexit.register(RestoreUserFiles, {szFile: (open(szFile, 'rb').read() if os.path.exists(szFile) else None) for szFile in RESTORED})
+
+	if szGiven:
+		iFailed = RunChecks(szGiven, aszArgs)
+	elif bNative:
+		iFailed = RunChecks(NATIVE_EXECUTABLE, aszArgs)
+	else:
+		iFailed = RunChecks(REFERENCE_EXECUTABLE, aszArgs)
+		if not aszArgs:
+			print('Native smoke checks on %s' % NATIVE_EXECUTABLE)
+			iFailed += RunChecks(NATIVE_EXECUTABLE, NATIVE_SMOKE, '.native')
 	print('%d failed' % iFailed)
 	return 1 if iFailed else 0
 
