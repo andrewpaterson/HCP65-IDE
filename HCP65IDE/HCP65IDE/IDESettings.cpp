@@ -141,6 +141,7 @@ void CIDESettings::ReadSettings(const char* szFile)
 	{
 		mpcContent->GetUsages()->ReadSettings(pcRoot);
 		mpcContent->GetFindInFiles()->ReadSettings(pcRoot);
+		mpcContent->GetRename()->ReadSettings(pcRoot);
 	}
 	else
 	{
@@ -173,6 +174,7 @@ bool CIDESettings::WriteSettings(void)
 	cWriter.Begin(IDE_SETTINGS_TAG);
 	mpcContent->GetUsages()->WriteSettings(&cWriter);
 	mpcContent->GetFindInFiles()->WriteSettings(&cWriter);
+	mpcContent->GetRename()->WriteSettings(&cWriter);
 	cWriter.End();
 	bResult = cWriter.Write(mszSettingsFile.Text());
 	cWriter.Kill();

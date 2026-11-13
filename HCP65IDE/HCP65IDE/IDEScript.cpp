@@ -1229,6 +1229,12 @@ void CIDEScript::RunEditStep(const char* szStep)
 	{
 		pTab->GetEditor()->Redo();
 	}
+	else if (strncmp(szStep, "renamesearch:", 13) == 0)
+	{
+		//renamesearch:<c|-><t|->, Rename's searches in comments and strings (c) and for text occurrences (t), for every
+		//kind of symbol, as if ticked in its dialog.
+		mpcContent->GetRename()->SetSearches(szStep[13] == 'c', (szStep[13] != '\0') && (szStep[14] == 't'));
+	}
 	else if ((strcmp(szStep, "renamable") == 0) || (strncmp(szStep, "rename:", 7) == 0))
 	{
 		//What Rename would rename at the caret, or renames it.

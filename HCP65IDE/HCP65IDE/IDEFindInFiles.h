@@ -154,6 +154,7 @@ public:
 	bool					GetResultLocation(CIDEResultsPane* pcPane, int64 iData, SIDELocation* psDest) override;
 	bool					CanRerunResults(CIDEResultsPane* pcPane) override;
 	void					RerunResults(CIDEResultsPane* pcPane) override;
+	bool					GetFileText(const char* szFileName, CTextFile* pcFile, char** pszText, size* puiLength);
 
 protected:
 	void				ShowQueuedFind(void);
@@ -164,7 +165,6 @@ protected:
 	bool				SearchSome(CFindInFilesItems* pcDest);
 	void				ListDirectory(const char* szDirectory);
 	void				SearchFile(size uiFile, CFindInFilesItems* pcDest);
-	bool				GetFileText(const char* szFileName, CTextFile* pcFile, char** pszText, size* puiLength);
 	void				AddItem(CFindInFilesItems* pcDest, size uiFile, SIDEFindPlace* psPlace, const char* szLine, const char* szLineEnd, size uiPlace);
 	void				ShowResults(bool bKeepSelected);
 	size				GetCommonDirectoryLength(void);

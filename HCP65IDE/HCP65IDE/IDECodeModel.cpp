@@ -2002,6 +2002,7 @@ void SIDERenameTarget::Init(void)
 	bRenamable = false;
 	szWhyNot.Init();
 	uiOverrides = 0;
+	bType = false;
 }
 
 
@@ -2107,6 +2108,8 @@ bool CIDECodeModel::FindRenameTarget(const char* szFileName, int iLine, int iCol
 
 	psDest->szKey.Set(pcSymbol->mszKey);
 	GetIDESymbolName(pcSymbol->mszKey.Text(), &psDest->szName);
+	psDest->bType = (pcSymbol->meKind == CPPSK_Namespace) || (pcSymbol->meKind == CPPSK_Class) || (pcSymbol->meKind == CPPSK_Enum) ||
+					(pcSymbol->meKind == CPPSK_Typedef) || (pcSymbol->meKind == CPPSK_ClassTemplate) || (pcSymbol->meKind == CPPSK_AliasTemplate);
 	szProblem = NULL;
 	if ((pcSymbol->meKind == CPPSK_BuiltinType) || psDest->szName.Empty())
 	{

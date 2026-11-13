@@ -25,15 +25,73 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDERename.h"
 
 
+#define IDE_RENAME_SETTINGS_TAG			"Rename"
+#define IDE_RENAME_COMMENTS_ATTRIBUTE		"SearchInComments"
+#define IDE_RENAME_TEXT_ATTRIBUTE			"SearchForText"
+#define IDE_RENAME_TYPE_COMMENTS_ATTRIBUTE	"SearchInCommentsForTypes"
+#define IDE_RENAME_TYPE_TEXT_ATTRIBUTE		"SearchForTextForTypes"
+
+
+//How Rename found a place: the index has it, or a search found it as text the index doesn't have or in a comment or string.
+enum EIDERenamePlace
+{
+	IRP_Index,
+	IRP_Text,
+	IRP_Comment,
+};
+
+
 //A place Rename changes: the file (its index in the rename's files) and where the old name starts in its text.
 struct SIDEPlace
 {
 	size	uiFile;
 	size	uiStart;
+	uint8	uiKind;		//EIDERenamePlace.
 };
 
 
-typedef CArrayTemplate<SIDEPlace>	CArrayIDEPlaces;
+//Where a search found the old name in a file's text.
+struct SIDENameOccurrence
+{
+	size	uiStart;
+	int32	iLine;		//0 based.
+	int32	iColumn;	//0 based.
+	bool	bComment;	//In a comment or a string, else in code (or a text file).
+};
+
+
+typedef CArrayTemplate<SIDENameOccurrence>	CArrayIDENameOccurrences;
+
+
+//The line and column of offsets into a text, asked for in order.
+struct SIDELineCounter
+{
+	const char*	szText;
+	size		uiCounted;
+	int32		iLine;
+	size		uiLineStart;
+
+	void Init(const char* szSource)
+	{
+		szText = szSource;
+		uiCounted = 0;
+		iLine = 0;
+		uiLineStart = 0;
+	}
+
+	void MoveTo(size uiOffset)
+	{
+		for (; uiCounted < uiOffset; uiCounted++)
+		{
+			if (szText[uiCounted] == '\n')
+			{
+				iLine++;
+				uiLineStart = uiCounted + 1;
+			}
+		}
+	}
+};
+
 
 
 //C++'s keywords, which a name can't be.
@@ -53,11 +111,195 @@ static const char* gaszIDEKeywords[] =
 //
 //
 //////////////////////////////////////////////////////////////////////////
+static bool IsIDENameChar(char c)
+{
+	return ((c >= 'a') && (c <= 'z')) || ((c >= 'A') && (c <= 'Z')) || ((c >= '0') && (c <= '9')) || (c == '_');
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+static void AddIDEOccurrence(SIDELineCounter* psLines, size uiStart, bool bComment, CArrayIDENameOccurrences* pasDest)
+{
+	SIDENameOccurrence*	psOccurrence;
+
+	psLines->MoveTo(uiStart);
+	psOccurrence = pasDest->Add();
+	psOccurrence->uiStart = uiStart;
+	psOccurrence->iLine = psLines->iLine;
+	psOccurrence->iColumn = (int32)(uiStart - psLines->uiLineStart);
+	psOccurrence->bComment = bComment;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Each place szName is a whole word in szText from uiStart to uiEnd.
+//
+//////////////////////////////////////////////////////////////////////////
+static void FindIDEWords(const char* szText, size uiStart, size uiEnd, const char* szName, size uiNameLength, bool bComment, SIDELineCounter* psLines, CArrayIDENameOccurrences* pasDest)
+{
+	size	i;
+
+	for (i = uiStart; i + uiNameLength <= uiEnd; i++)
+	{
+		if ((szText[i] == szName[0]) && (strncmp(&szText[i], szName, uiNameLength) == 0) &&
+			((i == 0) || !IsIDENameChar(szText[i - 1])) && !IsIDENameChar(szText[i + uiNameLength]))
+		{
+			AddIDEOccurrence(psLines, i, bComment, pasDest);
+			i += uiNameLength - 1;
+		}
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Where a C or C++ file names szName: as an identifier in its code
+// (bCode), and as a word in its comments, strings and character literals
+// (bComments).  The file isn't preprocessed: code an #if leaves out is
+// searched as any other.
+//
+//////////////////////////////////////////////////////////////////////////
+static void FindIDECppOccurrences(const char* szText, size uiLength, const char* szName, bool bCode, bool bComments, SIDELineCounter* psLines, CArrayIDENameOccurrences* pasDest)
+{
+	size		uiNameLength;
+	size		i;
+	size		j;
+	size		k;
+	char		c;
+	char		cNext;
+	const char*	szEnd;
+	CChars		szClose;
+
+	uiNameLength = strlen(szName);
+	i = 0;
+	while (i < uiLength)
+	{
+		c = szText[i];
+		cNext = (i + 1 < uiLength) ? szText[i + 1] : '\0';
+		if ((c == '/') && (cNext == '/'))
+		{
+			szEnd = strchr(&szText[i], '\n');
+			j = szEnd ? (size)(szEnd - szText) : uiLength;
+			if (bComments)
+			{
+				FindIDEWords(szText, i + 2, j, szName, uiNameLength, true, psLines, pasDest);
+			}
+			i = j;
+		}
+		else if ((c == '/') && (cNext == '*'))
+		{
+			szEnd = strstr(&szText[i + 2], "*/");
+			j = szEnd ? (size)(szEnd - szText) : uiLength;
+			if (bComments)
+			{
+				FindIDEWords(szText, i + 2, j, szName, uiNameLength, true, psLines, pasDest);
+			}
+			i = szEnd ? j + 2 : uiLength;
+		}
+		else if ((c == '"') || (c == '\''))
+		{
+			for (j = i + 1; (j < uiLength) && (szText[j] != c) && (szText[j] != '\n'); j++)
+			{
+				if ((szText[j] == '\\') && (j + 1 < uiLength))
+				{
+					j++;
+				}
+			}
+			if (bComments)
+			{
+				FindIDEWords(szText, i + 1, j, szName, uiNameLength, true, psLines, pasDest);
+			}
+			i = ((j < uiLength) && (szText[j] == c)) ? j + 1 : j;
+		}
+		else if (((c >= '0') && (c <= '9')) || ((c == '.') && (cNext >= '0') && (cNext <= '9')))
+		{
+			//A number, with its suffix, exponent sign and digit separators.
+			for (j = i + 1; j < uiLength; j++)
+			{
+				if (IsIDENameChar(szText[j]) || (szText[j] == '.') || ((szText[j] == '\'') && (j + 1 < uiLength) && IsIDENameChar(szText[j + 1])))
+				{
+					continue;
+				}
+				if (((szText[j] == '+') || (szText[j] == '-')) && strchr("eEpP", szText[j - 1]))
+				{
+					continue;
+				}
+				break;
+			}
+			i = j;
+		}
+		else if (IsIDENameChar(c))
+		{
+			for (j = i + 1; (j < uiLength) && IsIDENameChar(szText[j]); j++)
+			{
+			}
+			if ((j < uiLength) && (szText[j] == '"') && (szText[j - 1] == 'R') &&
+				((j - i == 1) || ((j - i == 2) && strchr("uUL", szText[i])) || ((j - i == 3) && (strncmp(&szText[i], "u8", 2) == 0))))
+			{
+				//A raw string: R"delimiter( ... )delimiter".
+				for (k = j + 1; (k < uiLength) && (szText[k] != '(') && (k - j <= 17); k++)
+				{
+				}
+				szClose.Init(")");
+				szClose.AppendSubString(szText, j + 1, k);
+				szClose.Append('"');
+				szEnd = strstr(&szText[k < uiLength ? k : uiLength], szClose.Text());
+				if (bComments && (k < uiLength))
+				{
+					FindIDEWords(szText, k + 1, szEnd ? (size)(szEnd - szText) : uiLength, szName, uiNameLength, true, psLines, pasDest);
+				}
+				i = szEnd ? (size)(szEnd - szText) + szClose.Length() : uiLength;
+				szClose.Kill();
+				continue;
+			}
+			if (bCode && (j - i == uiNameLength) && (strncmp(&szText[i], szName, uiNameLength) == 0))
+			{
+				AddIDEOccurrence(psLines, i, false, pasDest);
+			}
+			i = j;
+		}
+		else
+		{
+			i++;
+		}
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A text file Rename's text search looks in.
+//
+//////////////////////////////////////////////////////////////////////////
+static bool IsIDERenameTextFile(const char* szFileName)
+{
+	size	uiLength;
+
+	uiLength = strlen(szFileName);
+	return ((uiLength > 4) && (StringInsensitiveCompare(&szFileName[uiLength - 4], ".txt") == 0)) ||
+		   ((uiLength > 3) && (StringInsensitiveCompare(&szFileName[uiLength - 3], ".md") == 0));
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
 void CIDERename::Init(CIDEContent* pcContent)
 {
 	PreInit();
 	mpcContent = pcContent;
 	msRenameTarget.Init();
+
+	//As IntelliJ's: a type's name is looked for in comments and as text, anything else's isn't.
+	mabComments[0] = false;
+	mabText[0] = false;
+	mabComments[1] = true;
+	mabText[1] = true;
 	PostInit();
 }
 
@@ -72,7 +314,11 @@ void CIDERename::Class(void)
 	M_Pointer(mpRenameDialog);
 	M_Pointer(mpRenameField);
 	M_Pointer(mpRenameError);
+	M_Pointer(mpCommentsBox);
+	M_Pointer(mpTextBox);
 	U_Unknown(SIDERenameTarget, msRenameTarget);
+	U_BoolArray(mabComments, 2);
+	U_BoolArray(mabText, 2);
 }
 
 
@@ -235,6 +481,8 @@ bool CIDERename::ShowRename(void)
 	mpRenameDialog = OMalloc<CDialog>(mpcContent->GetWindow(), mpcContent->GetDialogLook(), "Rename");
 	mpRenameField = mpRenameDialog->AddTextField(szPrompt.Text(), sTarget.szName.Text());
 	mpRenameField->SelectAll();
+	mpCommentsBox = mpRenameDialog->AddCheckBox("Search in comments and strings", mabComments[sTarget.bType]);
+	mpTextBox = mpRenameDialog->AddCheckBox("Search for text occurrences", mabText[sTarget.bType]);
 	mpRenameError = OMalloc<CLabel>(mpRenameDialog->GetWindow(), mpcContent->GetDimFont(), "");
 	mpRenameDialog->AddEditor("", mpRenameError);
 	mpRenameDialog->SetOKCaption("Refactor");
@@ -245,6 +493,13 @@ bool CIDERename::ShowRename(void)
 	mpcContent->GetScript()->WatchDialog(mpRenameDialog);
 	if (mpRenameDialog->Show(480))
 	{
+		//The searches are remembered for the next type, or the next anything else.
+		if ((mabComments[sTarget.bType] != mpCommentsBox->IsTicked()) || (mabText[sTarget.bType] != mpTextBox->IsTicked()))
+		{
+			mabComments[sTarget.bType] = mpCommentsBox->IsTicked();
+			mabText[sTarget.bType] = mpTextBox->IsTicked();
+			mpcContent->GetSettings()->WriteSettings();
+		}
 		szNewName.Init(mpRenameField->GetText());
 		bResult = RenameSymbol(&sTarget, szNewName.Text());
 		szNewName.Kill();
@@ -253,6 +508,8 @@ bool CIDERename::ShowRename(void)
 	mpcContent->GetScript()->StopWatchingDialog();
 	mpRenameField = NULL;
 	mpRenameError = NULL;
+	mpCommentsBox = NULL;
+	mpTextBox = NULL;
 	mpRenameDialog = NULL;
 	sTarget.Kill();
 	return bResult;
@@ -317,11 +574,133 @@ bool CIDERename::ApproveRename(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// The index in paszFiles of szFileName, added with its editor opened
+// (not shown) if it isn't open.  MAX_SIZE if it can't be opened.
+//
+//////////////////////////////////////////////////////////////////////////
+size CIDERename::FindRenameFile(CArrayChars* paszFiles, const char* szFileName)
+{
+	size				uiFile;
+	Ptr<CIDEEditorTab>	pTab;
+
+	for (uiFile = 0; uiFile < paszFiles->NumElements(); uiFile++)
+	{
+		if (StringCompare(paszFiles->GetText(uiFile), szFileName) == 0)
+		{
+			return uiFile;
+		}
+	}
+	pTab = mpcContent->GetDocuments()->FindTab(szFileName);
+	if (pTab.IsNull())
+	{
+		pTab = mpcContent->GetDocuments()->OpenFileTab(szFileName, mpcContent->GetCodeModel()->FindProjectOfFile(szFileName), false);
+	}
+	if (pTab.IsNull())
+	{
+		return MAX_SIZE;
+	}
+	paszFiles->Add(szFileName);
+	return uiFile;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Rename's searches: each of the solution's files looked in for szName
+// in comments and strings (bComments), and as code the index doesn't
+// have or in the projects' text files (bText), the places found added
+// to pasPlaces.  A name in code the index has is another symbol's, or
+// already one of the places.  False, with the file in pszChanged, if a
+// file's editor doesn't have the text that was searched.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDERename::SearchRenameFiles(const char* szName, bool bComments, bool bText, CArrayChars* paszFiles, CArrayIDEPlaces* pasPlaces, CChars* pszChanged)
+{
+	CIDECodeModel*				pModel;
+	size						uiProjectFile;
+	char*						szFileName;
+	EIDEFileType				eType;
+	bool						bCpp;
+	CTextFile					cFile;
+	char*						szText;
+	size						uiLength;
+	SIDELineCounter				sLines;
+	CArrayIDENameOccurrences	asFound;
+	SIDENameOccurrence*			psFound;
+	size						i;
+	uint8						uiRole;
+	size						uiFile;
+	char*						szEditorText;
+	SIDEPlace*					psPlace;
+	size						uiNameLength;
+	bool						bResult;
+
+	pModel = mpcContent->GetCodeModel();
+	uiNameLength = strlen(szName);
+	bResult = true;
+	for (uiProjectFile = 0; (uiProjectFile < pModel->NumProjectFiles()) && bResult; uiProjectFile++)
+	{
+		szFileName = pModel->GetProjectFile(uiProjectFile);
+		eType = CIDEIcons::GetFileType(szFileName);
+		bCpp = (eType == IFT_CPP) || (eType == IFT_C) || (eType == IFT_Header);
+		if (!bCpp && !(bText && IsIDERenameTextFile(szFileName)))
+		{
+			continue;
+		}
+
+		cFile.Init();
+		if (!mpcContent->GetFindInFiles()->GetFileText(szFileName, &cFile, &szText, &uiLength))
+		{
+			cFile.Kill();
+			continue;
+		}
+		asFound.Init();
+		sLines.Init(szText);
+		if (bCpp)
+		{
+			FindIDECppOccurrences(szText, uiLength, szName, bText, bComments, &sLines, &asFound);
+		}
+		else
+		{
+			FindIDEWords(szText, 0, uiLength, szName, uiNameLength, false, &sLines, &asFound);
+		}
+		cFile.Kill();
+
+		for (i = 0; i < asFound.NumElements(); i++)
+		{
+			psFound = asFound.Get(i);
+			if (bCpp && !psFound->bComment && pModel->FindRoleAt(szFileName, psFound->iLine, psFound->iColumn, &uiRole))
+			{
+				continue;
+			}
+			uiFile = FindRenameFile(paszFiles, szFileName);
+			szEditorText = (uiFile != MAX_SIZE) ? mpcContent->GetDocuments()->FindTab(szFileName)->GetEditor()->GetText() : NULL;
+			if ((szEditorText == NULL) || (psFound->uiStart + uiNameLength > strlen(szEditorText)) || (strncmp(&szEditorText[psFound->uiStart], szName, uiNameLength) != 0))
+			{
+				pszChanged->Set(szFileName);
+				bResult = false;
+				break;
+			}
+			psPlace = pasPlaces->Add();
+			psPlace->uiFile = uiFile;
+			psPlace->uiStart = psFound->uiStart;
+			psPlace->uiKind = psFound->bComment ? IRP_Comment : IRP_Text;
+		}
+		asFound.Kill();
+	}
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Changes every place psTarget's name is written to szNewName, in each
 // file's editor (opening it if it isn't open), as one edit per file and
 // one undo across them all (Edit, Undo Across Files, or Control+Z in any
-// of them).  Nothing is changed if any place no longer has the old name:
-// the file was edited since it was indexed.
+// of them).  With the searches remembered for its kind (see
+// SetSearches) the name is changed in comments and strings, and as text
+// the index doesn't have, too.  Nothing is changed if any place no longer
+// has the old name: the file was edited since it was indexed.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDERename::RenameSymbol(SIDERenameTarget* psTarget, const char* szNewName)
@@ -329,7 +708,6 @@ bool CIDERename::RenameSymbol(SIDERenameTarget* psTarget, const char* szNewName)
 	CArrayChars			aszFiles;
 	CArrayIDEPlaces		asPlaces;
 	SIDELocation*		psLocation;
-	Ptr<CIDEEditorTab>	pTab;
 	Ptr<CTextArea>		pEditor;
 	size				i;
 	size				j;
@@ -339,45 +717,36 @@ bool CIDERename::RenameSymbol(SIDERenameTarget* psTarget, const char* szNewName)
 	char*				szText;
 	bool				bChanged;
 	CChars				szMessage;
-	size				uiPlaces;
+	CChars				szChanged;
+	size				auiPlaces[3];
 	SIDEPlace*			psPlace;
 	CArrayTextRange		asRanges;
 	STextRange			sRange;
 	bool				bFound;
+	bool				bComments;
+	bool				bText;
 
 	//Each file's editor, opened (not shown) if it isn't open.
 	aszFiles.Init();
 	asPlaces.Init();
+	szChanged.Init();
 	bChanged = true;
 	for (i = 0; i < psTarget->asLocations.NumElements(); i++)
 	{
 		psLocation = psTarget->asLocations.Get(i);
-		for (uiFile = 0; uiFile < aszFiles.NumElements(); uiFile++)
+		uiFile = FindRenameFile(&aszFiles, psLocation->szFileName.Text());
+		if (uiFile == MAX_SIZE)
 		{
-			if (StringCompare(aszFiles.GetText(uiFile), psLocation->szFileName.Text()) == 0)
-			{
-				break;
-			}
-		}
-		if (uiFile == aszFiles.NumElements())
-		{
-			pTab = mpcContent->GetDocuments()->FindTab(psLocation->szFileName.Text());
-			if (pTab.IsNull())
-			{
-				pTab = mpcContent->GetDocuments()->OpenFileTab(psLocation->szFileName.Text(), mpcContent->GetCodeModel()->FindProjectOfFile(psLocation->szFileName.Text()), false);
-			}
-			if (pTab.IsNull())
-			{
-				bChanged = false;
-				break;
-			}
-			aszFiles.Add(psLocation->szFileName.Text());
+			szChanged.Set(psLocation->szFileName);
+			bChanged = false;
+			break;
 		}
 
 		//The old name must still be there; a destructor's place may include its ~.
 		pEditor = mpcContent->GetDocuments()->FindTab(aszFiles.GetText(uiFile))->GetEditor();
 		if ((size)psLocation->iLine >= pEditor->NumLines())
 		{
+			szChanged.Set(psLocation->szFileName);
 			bChanged = false;
 			break;
 		}
@@ -391,18 +760,28 @@ bool CIDERename::RenameSymbol(SIDERenameTarget* psTarget, const char* szNewName)
 		}
 		if ((uiLength != psTarget->szName.Length()) || (strncmp(&szText[uiStart], psTarget->szName.Text(), uiLength) != 0))
 		{
+			szChanged.Set(psLocation->szFileName);
 			bChanged = false;
 			break;
 		}
 		psPlace = asPlaces.Add();
 		psPlace->uiFile = uiFile;
 		psPlace->uiStart = uiStart;
+		psPlace->uiKind = IRP_Index;
+	}
+
+	//IntelliJ's searches in comments and strings, and for text occurrences.
+	bComments = mabComments[psTarget->bType];
+	bText = mabText[psTarget->bType];
+	if (bChanged && (bComments || bText))
+	{
+		bChanged = SearchRenameFiles(psTarget->szName.Text(), bComments, bText, &aszFiles, &asPlaces, &szChanged);
 	}
 
 	if (!bChanged)
 	{
 		szMessage.Init("Rename stopped: ");
-		szMessage.Append(psLocation->szFileName.Text());
+		szMessage.Append(szChanged);
 		szMessage.Append(" has changed since it was indexed.  Save it and try again once it has been indexed.");
 		mpcContent->ShowStatus(szMessage.Text());
 		szMessage.Kill();
@@ -410,7 +789,9 @@ bool CIDERename::RenameSymbol(SIDERenameTarget* psTarget, const char* szNewName)
 	else
 	{
 		//One edit per file, its places in order, the same place once.
-		uiPlaces = 0;
+		auiPlaces[IRP_Index] = 0;
+		auiPlaces[IRP_Text] = 0;
+		auiPlaces[IRP_Comment] = 0;
 		mpcContent->GetEdit()->BeginUndoGroup();
 		for (uiFile = 0; uiFile < aszFiles.NumElements(); uiFile++)
 		{
@@ -436,12 +817,10 @@ bool CIDERename::RenameSymbol(SIDERenameTarget* psTarget, const char* szNewName)
 					sRange.uiStart = psPlace->uiStart;
 					sRange.uiEnd = psPlace->uiStart + psTarget->szName.Length();
 					asRanges.InsertAt(&sRange, j);
+					auiPlaces[psPlace->uiKind]++;
 				}
 			}
-			if (mpcContent->GetDocuments()->FindTab(aszFiles.GetText(uiFile))->GetEditor()->ReplaceRanges(asRanges.GetData(), asRanges.NumElements(), szNewName))
-			{
-				uiPlaces += asRanges.NumElements();
-			}
+			mpcContent->GetDocuments()->FindTab(aszFiles.GetText(uiFile))->GetEditor()->ReplaceRanges(asRanges.GetData(), asRanges.NumElements(), szNewName);
 			asRanges.Kill();
 		}
 		mpcContent->GetEdit()->EndUndoGroup();
@@ -451,17 +830,88 @@ bool CIDERename::RenameSymbol(SIDERenameTarget* psTarget, const char* szNewName)
 		szMessage.Append(" to ");
 		szMessage.Append(szNewName);
 		szMessage.Append(": ");
-		szMessage.Append((int)uiPlaces);
-		szMessage.Append(uiPlaces == 1 ? " place in " : " places in ");
+		szMessage.Append((int)auiPlaces[IRP_Index]);
+		szMessage.Append(auiPlaces[IRP_Index] == 1 ? " place" : " places");
+		if (auiPlaces[IRP_Text] > 0)
+		{
+			szMessage.Append(", ");
+			szMessage.Append((int)auiPlaces[IRP_Text]);
+			szMessage.Append(auiPlaces[IRP_Text] == 1 ? " text occurrence" : " text occurrences");
+		}
+		if (auiPlaces[IRP_Comment] > 0)
+		{
+			szMessage.Append(", ");
+			szMessage.Append((int)auiPlaces[IRP_Comment]);
+			szMessage.Append(" in comments and strings");
+		}
+		szMessage.Append(" in ");
 		szMessage.Append((int)aszFiles.NumElements());
 		szMessage.Append(aszFiles.NumElements() == 1 ? " file." : " files.");
 		mpcContent->ShowStatus(szMessage.Text());
 		szMessage.Kill();
 	}
 
+	szChanged.Kill();
 	asPlaces.Kill();
 	aszFiles.Kill();
 	return bChanged;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Rename's searches for every kind of symbol, as the script's
+// renamesearch step sets them.  Not written to the settings.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDERename::SetSearches(bool bComments, bool bText)
+{
+	mabComments[0] = bComments;
+	mabComments[1] = bComments;
+	mabText[0] = bText;
+	mabText[1] = bText;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Rename's part of how the IDE was left, in the settings' file (see
+// CIDESettings): its searches, <Rename SearchInComments="false" .../>.
+// One the file doesn't say stays as it is.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDERename::ReadSettings(CMarkupTag* pcSettings)
+{
+	static const char*	aszAttributes[] = { IDE_RENAME_COMMENTS_ATTRIBUTE, IDE_RENAME_TEXT_ATTRIBUTE, IDE_RENAME_TYPE_COMMENTS_ATTRIBUTE, IDE_RENAME_TYPE_TEXT_ATTRIBUTE };
+	bool*				apbValues[] = { &mabComments[0], &mabText[0], &mabComments[1], &mabText[1] };
+	CMarkupTag*			pcTag;
+	char*				szValue;
+	size				i;
+
+	pcTag = pcSettings->GetTag(IDE_RENAME_SETTINGS_TAG);
+	if (pcTag == NULL)
+	{
+		return;
+	}
+	for (i = 0; i < 4; i++)
+	{
+		szValue = pcTag->GetStringAttribute(aszAttributes[i]);
+		if (szValue)
+		{
+			*apbValues[i] = (StringCompare(szValue, "true") == 0);
+		}
+	}
+}
+
+
+void CIDERename::WriteSettings(CXMLWriter* pcWriter)
+{
+	pcWriter->Begin(IDE_RENAME_SETTINGS_TAG);
+	pcWriter->Attribute(IDE_RENAME_COMMENTS_ATTRIBUTE, mabComments[0]);
+	pcWriter->Attribute(IDE_RENAME_TEXT_ATTRIBUTE, mabText[0]);
+	pcWriter->Attribute(IDE_RENAME_TYPE_COMMENTS_ATTRIBUTE, mabComments[1]);
+	pcWriter->Attribute(IDE_RENAME_TYPE_TEXT_ATTRIBUTE, mabText[1]);
+	pcWriter->End();
 }
 
 

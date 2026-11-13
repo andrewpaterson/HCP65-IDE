@@ -25,16 +25,24 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/Dialog.h"
 #include "WindowLib/TextField.h"
 #include "WindowLib/Label.h"
+#include "WindowLib/CheckBox.h"
+#include "BaseLib/MarkupTag.h"
+#include "BaseLib/XMLWriter.h"
 #include "WindowLib/CommandSet.h"
 #include "IDECodeModel.h"
 
 
 class CIDEContent;
+struct SIDEPlace;
+typedef CArrayTemplate<SIDEPlace>	CArrayIDEPlaces;
 
 
 //IntelliJ's Rename (Shift+F6): the symbol at the caret (or the name the selection is in) renamed everywhere the index
 //has it, a class's constructors and destructor too, in each file's editor as one edit and across the files as one
-//undo group.  The new name is asked for in a dialog; nothing changes if a file changed since it was indexed.
+//undo group.  The new name is asked for in a dialog; nothing changes if a file changed since it was indexed.  As
+//IntelliJ's, it can also search the solution's files for the name in comments and strings, and as text the index
+//doesn't have (code a configuration leaves out, macro bodies, the projects' .txt and .md files); each search is
+//remembered apart for types and for everything else.
 class CIDERename : public CObject
 {
 CONSTRUCTABLE(CIDERename);
@@ -44,7 +52,11 @@ protected:
 	Ptr<CDialog>		mpRenameDialog;  //While Rename is shown.
 	Ptr<CTextField>		mpRenameField;
 	Ptr<CLabel>			mpRenameError;
+	Ptr<CCheckBox>		mpCommentsBox;
+	Ptr<CCheckBox>		mpTextBox;
 	SIDERenameTarget	msRenameTarget;  //What Rename's dialog is renaming: its key and name.
+	bool				mabComments[2];  //Search in comments and strings, for everything else [0] and for types [1].
+	bool				mabText[2];  //Search for text occurrences, the same.
 
 public:
 	void	Init(CIDEContent* pcContent);
@@ -60,10 +72,15 @@ public:
 	void	QueueRename(void);
 	bool	ShowRename(void);
 	bool	RenameSymbol(SIDERenameTarget* psTarget, const char* szNewName);
+	void	SetSearches(bool bComments, bool bText);
+	void	ReadSettings(CMarkupTag* pcSettings);
+	void	WriteSettings(CXMLWriter* pcWriter);
 
 protected:
 	void	ShowQueuedRename(void);
 	bool	ApproveRename(void);
+	size	FindRenameFile(CArrayChars* paszFiles, const char* szFileName);
+	bool	SearchRenameFiles(const char* szName, bool bComments, bool bText, CArrayChars* paszFiles, CArrayIDEPlaces* pasPlaces, CChars* pszChanged);
 };
 
 

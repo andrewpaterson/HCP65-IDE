@@ -82,6 +82,7 @@ struct SIDERenameTarget
 	bool				bRenamable;
 	CChars				szWhyNot;
 	size				uiOverrides;	//The virtual member functions renamed with it: what overrides it and what it overrides.
+	bool				bType;			//A class, enum, typedef, template or namespace: Rename's searches are remembered apart for them.
 
 	void	Init(void);
 	void	Kill(void);
