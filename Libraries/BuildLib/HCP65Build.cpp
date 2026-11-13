@@ -130,6 +130,11 @@ bool CHCP65Build::Start(CArrayChars* paszLines)
 			mcBuilder.GetLinker()->SetRelocatable(true);
 			mcBuilder.GetLinker()->KeepSymbol(mpcConfiguration->GetModule()->GetEntry());
 		}
+		else if (mpcConfiguration->HasExecutable())
+		{
+			//Its loader calls the entry, which nothing in the program need call.
+			mcBuilder.GetLinker()->KeepSymbol(mpcConfiguration->GetExecutable()->GetEntry());
+		}
 	}
 	if (mcBuilder.NumUnitsToCompile() == 0)
 	{

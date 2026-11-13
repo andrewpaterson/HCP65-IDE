@@ -10,6 +10,7 @@ bool TestBuildEndsWith(const char* szText, const char* szEnd);
 
 #define TEST_COMMAND_LINE_LIBC65	".." _FS_ ".." _FS_ ".." _FS_ ".." _FS_ "HCP65" _FS_ "Libraries" _FS_ "Libc65"
 #define TEST_COMMAND_LINE_OUTPUT	"Output" _FS_ "CommandLine"
+#define TEST_COMMAND_LINE_LIBRARIES	".." _FS_ ".." _FS_ ".." _FS_ ".." _FS_ "CommonLibraries" _FS_ "Libraries"
 
 
 //The command line with the lines it writes kept, not printed.
@@ -727,6 +728,50 @@ void TestBuildCommandLinePlainSameAsProject(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// A plain command line linking an executable whose entry nothing in the
+// program calls keeps it (an extern "C" Start).  Its source is given as a
+// full path, and CommonLibraries without its sub directories (-I): Libc65's
+// units find BaseLib's headers there.  An entry nothing defines says so.
+//
+//////////////////////////////////////////////////////////////////////////
+void TestBuildCommandLinePlainEntry(void)
+{
+	CTestBuildCommandLine	cCommandLine;
+	CFileUtil				cFileUtil;
+	CTextFile				cFile;
+	CChars					szSource;
+
+	cFileUtil.TouchDir(TEST_COMMAND_LINE_OUTPUT _FS_ "Entry");
+	cFile.Init("extern \"C\" int Start(void)\n{\n\treturn 3;\n}\n");
+	AssertTrue(cFile.Write(TEST_COMMAND_LINE_OUTPUT _FS_ "Entry" _FS_ "Entry.cpp"));
+	cFile.Kill();
+	szSource.Init(TEST_COMMAND_LINE_OUTPUT _FS_ "Entry" _FS_ "Entry.cpp");
+	cFileUtil.FullPath(&szSource);
+
+	const char* aszKept[] = { "hcp65build", "-quiet", "-libc65", TEST_COMMAND_LINE_LIBC65, "-I", TEST_COMMAND_LINE_LIBRARIES, "-program", "Entry", szSource.Text(),
+							  "-exe", "entry.exe", "-entry", "_Start", "-o", TEST_COMMAND_LINE_OUTPUT _FS_ "Entry" _FS_ "Out", "-listings", TEST_COMMAND_LINE_OUTPUT _FS_ "Entry" _FS_ "Listing" };
+	cCommandLine.Init();
+	AssertTrue(cCommandLine.Parse(17, aszKept));
+	AssertInt(BUILD_EXIT_SUCCEEDED, cCommandLine.Run(NULL));
+	AssertString("Plain|W65C816 build succeeded.", cCommandLine.GetLastLine());
+	AssertTrue(cFileUtil.Exists(TEST_COMMAND_LINE_OUTPUT _FS_ "Entry" _FS_ "Out" _FS_ "entry.exe"));
+	cCommandLine.Kill();
+
+	const char* aszUndefined[] = { "hcp65build", "-quiet", "-libc65", TEST_COMMAND_LINE_LIBC65, "-I", TEST_COMMAND_LINE_LIBRARIES, "-program", "Entry", szSource.Text(),
+								   "-exe", "entry.exe", "-entry", "_Nowhere", "-o", TEST_COMMAND_LINE_OUTPUT _FS_ "Entry" _FS_ "Out", "-listings", TEST_COMMAND_LINE_OUTPUT _FS_ "Entry" _FS_ "Listing" };
+	cCommandLine.Init();
+	AssertTrue(cCommandLine.Parse(17, aszUndefined));
+	AssertInt(BUILD_EXIT_FAILED, cCommandLine.Run(NULL));
+	AssertTrue(cCommandLine.HasLine("The entry _Nowhere is not defined."));
+	AssertString("Plain|W65C816 build failed.", cCommandLine.GetLastLine());
+	cCommandLine.Kill();
+
+	szSource.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 //
 //////////////////////////////////////////////////////////////////////////
 void TestBuildCommandLine(void)
@@ -742,6 +787,7 @@ void TestBuildCommandLine(void)
 	TestBuildCommandLinePlainPowerShell();
 	TestBuildCommandLinePlainParse();
 	TestBuildCommandLinePlainSameAsProject();
+	TestBuildCommandLinePlainEntry();
 
 	TestStatistics();
 }
