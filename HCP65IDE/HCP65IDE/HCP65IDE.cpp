@@ -19,6 +19,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 ** ------------------------------------------------------------------------ **/
 #include <windows.h>
+#include "BaseLib/LeakDetector.h"
 #include "BaseLib/GlobalMemory.h"
 #include "WinGdiLib/WinGDIWindowFactory.h"
 #include "WinInputLib/WinInput.h"
@@ -81,7 +82,7 @@ int PASCAL WinMain(HINSTANCE hInstance,	HINSTANCE hPrevInstance, LPTSTR lpCmdLin
 	CArrayChars	aszSolutions;
 	int			iResult;
 
-	_CrtSetBreakAlloc(0);
+	BreakOnAllocation(0);
 	StartIDE();
 
 	aszSolutions.Init();
@@ -110,7 +111,7 @@ int PASCAL WinMain(HINSTANCE hInstance,	HINSTANCE hPrevInstance, LPTSTR lpCmdLin
 
 	aszSolutions.Kill();
 	iResult = StopIDE(bResult);
-	_CrtDumpMemoryLeaks();
+	LeakDetection();
 	return iResult;
 }
 
