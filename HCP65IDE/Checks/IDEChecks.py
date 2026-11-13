@@ -451,6 +451,14 @@ CHECKS = [
 		[r'^Status: Renamed mpcCalculator to mpcCalc2: 19 places in 2 files\.$',
 		 r'^Status: Renamed mpcCalc2 to mpcCalc3: 19 places in 2 files\.$',
 		 r'^Rename: mpcCalc3 \[CCalculatorParser::mpcCalc3\] at 19 places, 0 overrides$'], [r'Rename stopped']),
+	('rename-class-twice', {
+		#A class renamed (its header, its constructor and destructor, files opened as hidden tabs) and renamed again: the
+		#second rename finds every place by the new name, as the renamed files are indexed again before it looks.
+		'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'CARET': '33:8',
+		'EDIT': 'rename:CCalcParser2,rename:CCalcParser3,renamable'},
+		[r'^Status: Renamed CCalculatorParser to CCalcParser2: 12 places in 2 files\.$',
+		 r'^Status: Renamed CCalcParser2 to CCalcParser3: 12 places in 2 files\.$',
+		 r'^Rename: CCalcParser3 \[CCalcParser3\] at 12 places, 0 overrides$'], [r'Rename stopped']),
 	('rename-while-reindexing', {
 		'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'CARET': '36:2', 'TYPE': 'int iTypedName; ', 'EDITS_DELAY': '1500',
 		'DEBUG': 'wait:700,printedits,edit:caret:36:7,edit:renamable,printedits'},
