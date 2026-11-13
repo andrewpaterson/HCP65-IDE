@@ -4,6 +4,7 @@
 #include "BaseLib/Logger.h"
 #include "VisualStudioLib/VcxProject.h"
 #include "TestLib/Assert.h"
+#include "TestLib/AssertFile.h"
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -295,6 +296,96 @@ void TestVcxProjectBad(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// The path of szName in the project's directory.
+//
+//////////////////////////////////////////////////////////////////////////
+static void ProjectPath(CVcxProject* pcProject, const char* szName, CChars* pszDest)
+{
+	pszDest->Init(pcProject->GetDirectory());
+	pszDest->Append(FILE_SEPARATOR);
+	pszDest->Append(szName);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Items renamed in a copy of Input/RenameItem/Before: only the Include
+// values naming them change, in the .vcxproj and its .filters, the rest
+// of each file byte for byte as it was (Input/RenameItem/Expected).  An
+// item in a subdirectory keeps its directories and backslashes,
+// EngineCache.cpp (whose name starts with Engine) keeps its name, and
+// another project naming the file renames its own item.
+//
+//////////////////////////////////////////////////////////////////////////
+void TestVcxProjectRenameItem(void)
+{
+	CVcxProject	cProject;
+	CVcxProject	cOther;
+	CVcxItem*	pcItem;
+	CChars		szPath;
+	CChars		szHeader;
+	CFileUtil	cFileUtil;
+	SLogConfig	sLogConfig;
+
+	cFileUtil.RemoveDir("Output" _FS_ "RenameItem");
+	AssertTrue(cFileUtil.TouchDir("Output" _FS_ "RenameItem"));
+	AssertTrue(cFileUtil.CopyDir("Input" _FS_ "RenameItem" _FS_ "Before", "Output" _FS_ "RenameItem"));
+
+	cProject.Init();
+	AssertTrue(cProject.Read("Output" _FS_ "RenameItem" _FS_ "RenameLib" _FS_ "RenameLib.vcxproj"));
+	AssertSize(5, cProject.NumItems());
+
+	//The header, then the source named in another case, then the one in a subdirectory.
+	ProjectPath(&cProject, "Engine.h", &szHeader);
+	AssertTrue(cProject.RenameItem(szHeader.Text(), "CPPEngine.h"));
+	ProjectPath(&cProject, "engine.CPP", &szPath);
+	AssertTrue(cProject.RenameItem(szPath.Text(), "CPPEngine.cpp"));
+	szPath.Kill();
+	ProjectPath(&cProject, "Source" _FS_ "Engine" _FS_ "Engine_Linux.cpp", &szPath);
+	AssertTrue(cProject.RenameItem(szPath.Text(), "CPPEngine_Linux.cpp"));
+	szPath.Kill();
+	AssertFile("Input" _FS_ "RenameItem" _FS_ "Expected" _FS_ "RenameLib" _FS_ "RenameLib.vcxproj", "Output" _FS_ "RenameItem" _FS_ "RenameLib" _FS_ "RenameLib.vcxproj");
+	AssertFile("Input" _FS_ "RenameItem" _FS_ "Expected" _FS_ "RenameLib" _FS_ "RenameLib.vcxproj.filters", "Output" _FS_ "RenameItem" _FS_ "RenameLib" _FS_ "RenameLib.vcxproj.filters");
+
+	//The project was read again: the items have their new names and keep their filters.
+	AssertSize(5, cProject.NumItems());
+	AssertNull(cProject.FindItem("ClInclude", "Engine.h"));
+	pcItem = cProject.FindItem("ClInclude", "CPPEngine.h");
+	AssertNotNull(pcItem);
+	AssertString("Header Files", pcItem->GetFilter());
+	pcItem = cProject.FindItem("ClCompile", "Source\\Engine\\CPPEngine_Linux.cpp");
+	AssertNotNull(pcItem);
+	AssertString("Source Files", pcItem->GetFilter());
+	AssertNotNull(cProject.FindItem("ClCompile", "EngineCache.cpp"));
+
+	//Another project's item of the same file.
+	cOther.Init();
+	AssertTrue(cOther.Read("Output" _FS_ "RenameItem" _FS_ "Other" _FS_ "Other.vcxproj"));
+	AssertTrue(cOther.RenameItem(szHeader.Text(), "CPPEngine.h"));
+	AssertFile("Input" _FS_ "RenameItem" _FS_ "Expected" _FS_ "Other" _FS_ "Other.vcxproj", "Output" _FS_ "RenameItem" _FS_ "Other" _FS_ "Other.vcxproj");
+	AssertNotNull(cOther.FindItem("ClInclude", "..\\RenameLib\\CPPEngine.h"));
+	cOther.Kill();
+
+	//Not an item, or not a file name: nothing changes.
+	sLogConfig = gcLogger.SetSilent();
+	AssertFalse(cProject.RenameItem(szHeader.Text(), "Engine.h"));
+	gcLogger.SetConfig(&sLogConfig);
+	szHeader.Kill();
+	ProjectPath(&cProject, "CPPEngine.h", &szHeader);
+	AssertFalse(cProject.RenameItem(szHeader.Text(), ""));
+	AssertFalse(cProject.RenameItem(szHeader.Text(), "Sub\\Engine.h"));
+	AssertFalse(cProject.RenameItem(szHeader.Text(), "Sub/Engine.h"));
+	AssertFile("Input" _FS_ "RenameItem" _FS_ "Expected" _FS_ "RenameLib" _FS_ "RenameLib.vcxproj", "Output" _FS_ "RenameItem" _FS_ "RenameLib" _FS_ "RenameLib.vcxproj");
+	AssertNotNull(cProject.FindItem("ClInclude", "CPPEngine.h"));
+	szHeader.Kill();
+
+	cProject.Kill();
+	cFileUtil.RemoveDir("Output" _FS_ "RenameItem");
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 //
 //////////////////////////////////////////////////////////////////////////
 void TestVcxProject(void)
@@ -305,6 +396,7 @@ void TestVcxProject(void)
 	TestVcxProjectSupportLib();
 	TestVcxProjectMacros();
 	TestVcxProjectBad();
+	TestVcxProjectRenameItem();
 
 	TestStatistics();
 }

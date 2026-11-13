@@ -68,6 +68,7 @@ public:
 	CVcxItem*				FindItem(const char* szElement, const char* szInclude);
 	void					GetItemsInFilter(const char* szFilter, CArrayInt* paiItems);
 	void					GetFullPath(CVcxItem* pcItem, CChars* pszDest);
+	bool					RenameItem(const char* szOldPath, const char* szNewName);
 
 	size					NumFilters(void);
 	CVcxFilter*				GetFilter(size uiIndex);
@@ -84,6 +85,7 @@ public:
 protected:
 	bool					ReadProject(CMarkupTag* pcProject);
 	bool					ReadFilters(CMarkupTag* pcProject);
+	bool					RenameIncludes(const char* szFileName, CArrayChars* paszIncludes, const char* szNewName);
 	void					ReadItemGroup(CMarkupTag* pcItemGroup);
 	void					ReadPropertyGroup(CMarkupTag* pcPropertyGroup);
 	void					ReadItemDefinitionGroup(CMarkupTag* pcItemDefinitionGroup);

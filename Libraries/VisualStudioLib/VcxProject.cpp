@@ -21,6 +21,7 @@ along with Codaphela VisualStudioLib.  If not, see <http://www.gnu.org/licenses/
 #include "BaseLib/FileUtil.h"
 #include "BaseLib/Logger.h"
 #include "BaseLib/StringHelper.h"
+#include "BaseLib/TextFile.h"
 #include "VcxPath.h"
 #include "VcxProject.h"
 
@@ -645,6 +646,155 @@ void CVcxProject::GetChildFilters(const char* szParent, CArrayInt* paiFilters)
 void CVcxProject::GetFullPath(CVcxItem* pcItem, CChars* pszDest)
 {
 	ResolveVcxPath(mszDirectory.Text(), pcItem->GetInclude(), pszDest);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The item whose file is szOldPath (a full path, any case) renamed
+// szNewName (a file name, without directories: the file stays where it
+// is), in the .vcxproj and its .vcxproj.filters, which are written, then
+// the project read again.  Only the Include values that name the item
+// change; the rest of each file stays as it was, byte for byte.  False if
+// the project has no such item, szNewName isn't a file name or a file
+// can't be written.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CVcxProject::RenameItem(const char* szOldPath, const char* szNewName)
+{
+	CArrayChars	aszIncludes;
+	CChars		szPath;
+	CChars		szFilters;
+	CChars		szFileName;
+	size		i;
+	bool		bResult;
+
+	if ((szNewName == NULL) || (szNewName[0] == '\0') || strchr(szNewName, '\\') || strchr(szNewName, '/'))
+	{
+		return false;
+	}
+
+	//The Include values, as the project writes them, of the items that are the file.
+	aszIncludes.Init();
+	for (i = 0; i < masItems.NumElements(); i++)
+	{
+		szPath.Init();
+		GetFullPath(masItems.Get(i), &szPath);
+		if (StringInsensitiveCompare(szPath.Text(), szOldPath) == 0)
+		{
+			aszIncludes.Add(masItems.Get(i)->GetInclude());
+		}
+		szPath.Kill();
+	}
+	if (aszIncludes.NumElements() == 0)
+	{
+		aszIncludes.Kill();
+		return false;
+	}
+
+	szFileName.Init(mszFileName);
+	szFilters.Init(mszFileName);
+	szFilters.Append(".filters");
+	bResult = RenameIncludes(szFileName.Text(), &aszIncludes, szNewName);
+	if (bResult && mbFilters)
+	{
+		bResult = RenameIncludes(szFilters.Text(), &aszIncludes, szNewName);
+	}
+	szFilters.Kill();
+	aszIncludes.Kill();
+
+	//Read again, so the items have their new names.
+	Kill();
+	Init();
+	if (!Read(szFileName.Text()))
+	{
+		bResult = false;
+	}
+	szFileName.Kill();
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Each Include="..." in szFileName's text whose value is one of
+// paszIncludes (any case) given szNewName in place of its file name, its
+// directories kept as written, and the file written if anything changed.
+// False if it can't be read or written.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CVcxProject::RenameIncludes(const char* szFileName, CArrayChars* paszIncludes, const char* szNewName)
+{
+	CTextFile	cFile;
+	CChars		szText;
+	CChars		szValue;
+	char*		szAttribute;
+	char*		szEnd;
+	size		uiStart;
+	size		uiEnd;
+	size		uiName;
+	size		i;
+	bool		bChanged;
+	bool		bResult;
+
+	cFile.Init();
+	if (!cFile.Read(szFileName))
+	{
+		cFile.Kill();
+		return false;
+	}
+	szText.Init();
+	szText.AppendSubString(cFile.Text(), (size)cFile.Length());
+	cFile.Kill();
+
+	bChanged = false;
+	uiStart = 0;
+	for (;;)
+	{
+		szAttribute = strstr(&szText.Text()[uiStart], "Include=\"");
+		if (szAttribute == NULL)
+		{
+			break;
+		}
+		uiStart = (size)(szAttribute - szText.Text()) + 9;
+		szEnd = strchr(&szText.Text()[uiStart], '"');
+		if (szEnd == NULL)
+		{
+			break;
+		}
+		uiEnd = (size)(szEnd - szText.Text());
+
+		szValue.Init();
+		szValue.AppendSubString(szText.Text(), uiStart, uiEnd);
+		for (i = 0; i < paszIncludes->NumElements(); i++)
+		{
+			if (StringInsensitiveCompare(szValue.Text(), paszIncludes->GetText(i)) == 0)
+			{
+				//The file name is after the value's last separator.
+				for (uiName = uiEnd; (uiName > uiStart) && (szText.Text()[uiName - 1] != '\\') && (szText.Text()[uiName - 1] != '/'); uiName--)
+				{
+				}
+				szText.Remove(uiName, uiEnd);
+				szText.Insert(uiName, szNewName);
+				uiEnd = uiName + strlen(szNewName);
+				bChanged = true;
+				break;
+			}
+		}
+		szValue.Kill();
+		uiStart = uiEnd + 1;
+	}
+
+	bResult = true;
+	if (bChanged)
+	{
+		cFile.Init();
+		cFile.mcText.AppendSubString(szText.Text(), (lsize)szText.Length());
+		bResult = cFile.Write(szFileName);
+		cFile.Kill();
+	}
+	szText.Kill();
+	return bResult;
 }
 
 
