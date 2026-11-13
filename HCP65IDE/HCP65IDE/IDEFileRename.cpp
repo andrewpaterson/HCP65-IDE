@@ -662,7 +662,7 @@ void CIDEFileRename::ShowRenameStatus(CChars* pszMessage, CChars* pszStatus)
 //
 // A type's files (RenameFile.txt, "Which files are a class's"): the
 // stem is the type's name without its one letter prefix (CPreprocessor's
-// is Preprocessor); the file the index has it declared or defined in, if
+// is Preprocessor, C65Instruction's 65Instruction); the file the index has it declared or defined in, if
 // its stem is that, and that file's related files (FindRelatedFiles), the
 // declaring file first.  False, and none, if it has no such file.
 //
@@ -677,7 +677,9 @@ bool CIDEFileRename::FindClassFiles(SIDERenameTarget* psTarget, CArrayChars* pas
 	size			i;
 
 	szClass = psTarget->szName.Text();
-	if (!psTarget->bType || (psTarget->szName.Length() < 2) || (szClass[0] < 'A') || (szClass[0] > 'Z') || (szClass[1] < 'A') || (szClass[1] > 'Z'))
+	//A capital letter, then the stem's start: a capital or a digit (C65Instruction's stem is 65Instruction).
+	if (!psTarget->bType || (psTarget->szName.Length() < 2) || (szClass[0] < 'A') || (szClass[0] > 'Z') ||
+		!(((szClass[1] >= 'A') && (szClass[1] <= 'Z')) || ((szClass[1] >= '0') && (szClass[1] <= '9'))))
 	{
 		return false;
 	}

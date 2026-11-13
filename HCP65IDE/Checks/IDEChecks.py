@@ -200,6 +200,15 @@ def MakeRenameFileCopy():
 	return {'SOLUTION': os.path.join(szFolder, 'RenameFile.sln'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
 
 
+def MakeRenameDigitCopy():
+	#A copy of Input/RenameDigit (C65Core in 65Core.h and 65Core.cpp, C65CoreCycles in 65CoreCycles.h), to rename in.
+	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
+	atexit.register(shutil.rmtree, szRoot, True)
+	szFolder = os.path.join(szRoot, 'RenameDigit')
+	shutil.copytree(os.path.join(HERE, 'Input', 'RenameDigit'), szFolder)
+	return {'SOLUTION': os.path.join(szFolder, 'RenameDigit.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
+
+
 def MakeKeymapFile(szText=None):
 	#Where a scripted run keeps its keys, with szText in it if it's given.
 	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
@@ -604,6 +613,15 @@ CHECKS = [
 		[r'^Dialog \[Rename\] answered OK$', r'^Status: Renamed CEngine to CMotor: .*  Renamed Engine\.h to Motor\.h and 2 more files: ',
 		 r'^Project files: Commented\.cpp Motor\.cpp Motor_Linux\.cpp '],
 		[r'Rename stopped', r"Can't rename"]),
+	('rename-class-files-digit', dict(MakeRenameDigitCopy(), **{
+		#A class whose stem starts with a digit (C65Core's is 65Core) has files too: C65Core to C65C64Core renames 65Core.h
+		#and 65Core.cpp to 65C64Core.h and 65C64Core.cpp, not C65CoreCycles or its 65CoreCycles.h.
+		'WAIT_INDEX': '1', 'OPEN': '65Core.h', 'CARET': '5:8',
+		'DEBUG': 'edit:renamesearch:ctf,edit:rename:C65C64Core,printprojectfiles,printdiskfile:65CoreCycles.h,printdiskfile:Main.cpp'}),
+		[r'^Status: Renamed C65Core to C65C64Core: .*  Renamed 65Core\.h to 65C64Core\.h and 1 more file: ',
+		 r'^Project files: 65C64Core\.cpp Main\.cpp 65C64Core\.h 65CoreCycles\.h$', r'^#include "65C64Core\.h"$', r'^\tC65C64Core\*\tmpcCore;$',
+		 r'^\tC65C64Core\t\t\tcCore;$', r'^\tC65CoreCycles\tcCycles;$'],
+		[r'Rename stopped', r"Can't rename", r'C65C64CoreCycles', r'65C64CoreCycles']),
 	('rename-file-refused', dict(MakeRenameFileCopy(), **{
 		#A name that is taken, one with a directory, and the same name: nothing is renamed.
 		'WAIT_INDEX': '1', 'OPEN': 'Engine.h', 'DEBUG': 'edit:renamefile:EngineCache.h,edit:renamefile:Sub/Engine.h,edit:renamefile:Engine.h,printprojectfiles'}),
