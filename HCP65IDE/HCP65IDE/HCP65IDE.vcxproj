@@ -316,6 +316,7 @@
     <ClCompile Include="IDENavigator.cpp" />
     <ClCompile Include="IDERename.cpp" />
     <ClCompile Include="IDEFileRename.cpp" />
+    <ClCompile Include="IDERenameAssembly.cpp" />
     <ClCompile Include="IDEUsages.cpp" />
     <ClCompile Include="IDEScope.cpp" />
     <ClCompile Include="IDEResultsPane.cpp" />
@@ -372,6 +373,7 @@
     <ClInclude Include="IDENavigator.h" />
     <ClInclude Include="IDERename.h" />
     <ClInclude Include="IDEFileRename.h" />
+    <ClInclude Include="IDERenameAssembly.h" />
     <ClInclude Include="IDEUsages.h" />
     <ClInclude Include="IDEScope.h" />
     <ClInclude Include="IDEResultsPane.h" />

@@ -39,6 +39,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BuildLib/BuildWorkspace.h"
 #include "WindowLib/GoToDialog.h"
 #include "IDEIcons.h"
+#include "IDERenameAssembly.h"
 
 
 //A file preprocessed and parsed as its project builds it.
@@ -92,6 +93,9 @@ struct SIDERenameTarget
 	CChars				szWhyNot;
 	size				uiOverrides;	//The virtual member functions renamed with it: what overrides it and what it overrides.
 	bool				bType;			//A class, enum, typedef, template or namespace: Rename's searches are remembered apart for them.
+	uint8				uiAssembly;		//How hand written assembly's labels name it (EIDEAssemblyRename).
+	CChars				szScope;		//The scopes its name is in, as its key has them ("NS::CFat"), empty for none.
+	bool				bOverloaded;	//A function with others of its name in its scope: its labels can't be told from theirs.
 
 	void	Init(void);
 	void	Kill(void);
@@ -228,6 +232,7 @@ public:
 	void	FindGoToSymbols(CNameMatcher* pcMatcher, bool bClasses, int32* aiIcons, CGoToItems* pcDest);
 	bool	GetSymbolLocation(size uiSymbol, SIDELocation* psDest);
 	bool	FindRenameTarget(const char* szFileName, int iLine, int iColumn, SIDERenameTarget* psDest);
+	void	FindAssemblyRename(CCPPIndexSymbol* pcSymbol, SIDERenameTarget* psDest);
 	bool	HasSymbol(const char* szKey);
 	size	FindOverrideLocations(const char* szKey, CArrayIDELocations* pasDest);
 	void	GetUsageGroup(SIDELocation* psLocation, CChars* pszProject, CChars* pszClass);

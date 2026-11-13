@@ -209,6 +209,15 @@ def MakeRenameDigitCopy():
 	return {'SOLUTION': os.path.join(szFolder, 'RenameDigit.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
 
 
+def MakeRenameAssemblyCopy():
+	#A copy of Input/RenameAssembly (CEngine, its W65C816 assembly naming it as the compiler labels it), to rename in.
+	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
+	atexit.register(shutil.rmtree, szRoot, True)
+	szFolder = os.path.join(szRoot, 'RenameAssembly')
+	shutil.copytree(os.path.join(HERE, 'Input', 'RenameAssembly'), szFolder)
+	return {'SOLUTION': os.path.join(szFolder, 'RenameAssembly.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
+
+
 def MakeKeymapFile(szText=None):
 	#Where a scripted run keeps its keys, with szText in it if it's given.
 	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
@@ -640,6 +649,28 @@ CHECKS = [
 		#With renamesearch's s each rename: is saved: it is on the disk, and nothing is left unsaved.
 		'WAIT_INDEX': '1', 'OPEN': '65Core.h', 'CARET': '5:8', 'DEBUG': 'edit:renamesearch:ct-s,edit:rename:C65Kernel,printdiskfile:Main.cpp'}),
 		[r'^Status: Renamed C65Core to C65Kernel: ', r'^\tC65Kernel\t\t\tcCore;$'], [r'Unsaved at exit']),
+	('rename-assembly-class', dict(MakeRenameAssemblyCopy(), **{
+		#A class renamed in hand written assembly's labels (_CEngine__Init, __0, __2), in parameter lists with its length
+		#(FP7CEngine to FP6CMotor) and in comments; not CEngineCache's labels, or a string.
+		'WAIT_INDEX': '1', 'OPEN': 'Engine.h', 'CARET': '5:8', 'DEBUG': 'edit:renamesearch:ct-s,edit:rename:CMotor,printdiskfile:EngineW65C816.asm'}),
+		[r'^Status: Renamed CEngine to CMotor: .*, 9 in assembly in 3 files\.$', r"^; CMotor's functions in assembly", r'^_CMotor__0:$', r'^_CMotor__Init:$',
+		 r'^\t\tjsr _CEngineCache__Init$', r'^_CMotor__Run__Fi:$', r'^_CPart__Attach__FP6CMotor:$', r'^_EngineCount__FP6CMotor:$', r'^\t\tlda #<_CMotor__2$',
+		 r'^_CEngineCache__Init:$', r'^\t\t\.byte "CEngine", 0$'],
+		[r'_CEngine__', r'7CEngine', r'CMotorCache']),
+	('rename-assembly-member', dict(MakeRenameAssemblyCopy(), **{
+		#A member function: _CEngine__Init, not _CEngineCache__Init.
+		'WAIT_INDEX': '1', 'OPEN': 'Engine.h', 'CARET': '10:8', 'DEBUG': 'edit:renamesearch:ct-s,edit:rename:Start,printdiskfile:EngineW65C816.asm'}),
+		[r'^Status: Renamed Init to Start: .*, 2 in assembly in 3 files\.$', r'^_CEngine__Start:$', r'^\t\tjsr _CEngineCache__Init$', r'^\t\tjsr _CEngine__Start$',
+		 r'^_CEngineCache__Init:$'], [r'_CEngine__Init', r'_CEngineCache__Start']),
+	('rename-assembly-overloaded', dict(MakeRenameAssemblyCopy(), **{
+		#An overloaded member's labels can't be told from its overloads': they're left, and the status line says so.
+		'WAIT_INDEX': '1', 'OPEN': 'Engine.h', 'CARET': '11:8', 'DEBUG': 'edit:renamesearch:ct-s,edit:rename:Go,printdiskfile:EngineW65C816.asm'}),
+		[r"^Status: Renamed Run to Go: .*Assembly labels of an overloaded function aren't changed: check them by hand\.$", r'^_CEngine__Run__Fi:$',
+		 r'^_CEngine__Run__Fc:$'], [r'_CEngine__Go']),
+	('rename-assembly-function', dict(MakeRenameAssemblyCopy(), **{
+		#A function outside a class: its label, its parameter list as it was.
+		'WAIT_INDEX': '1', 'OPEN': 'Engine.h', 'CARET': '30:6', 'DEBUG': 'edit:renamesearch:ct-s,edit:rename:MotorCount,printdiskfile:EngineW65C816.asm'}),
+		[r'^Status: Renamed EngineCount to MotorCount: .*, 1 in assembly in 3 files\.$', r'^_MotorCount__FP7CEngine:$'], [r'_EngineCount__']),
 	('rename-file-refused', dict(MakeRenameFileCopy(), **{
 		#A name that is taken, one with a directory, and the same name: nothing is renamed.
 		'WAIT_INDEX': '1', 'OPEN': 'Engine.h', 'DEBUG': 'edit:renamefile:EngineCache.h,edit:renamefile:Sub/Engine.h,edit:renamefile:Engine.h,printprojectfiles'}),

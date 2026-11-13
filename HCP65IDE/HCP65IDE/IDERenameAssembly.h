@@ -1,0 +1,71 @@
+/** ---------------- COPYRIGHT NOTICE, DISCLAIMER, and LICENSE ------------- **
+
+Copyright (c) 2026 Andrew Paterson
+
+This file is part of The Codaphela Project: Codaphela HCP65IDE
+
+Codaphela HCP65IDE is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+Codaphela HCP65IDE is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
+
+** ------------------------------------------------------------------------ **/
+#ifndef __IDE_RENAME_ASSEMBLY_H__
+#define __IDE_RENAME_ASSEMBLY_H__
+#include "BaseLib/Chars.h"
+#include "BaseLib/ArrayTemplate.h"
+
+
+//What Rename changes in hand written assembly (RenameFile.txt's assembly step): a C++ name in the compiler's labels
+//(CPP65GeneratorLabels.cpp) and in comments.
+enum EIDEAssemblyRename
+{
+	IAR_None,		//Only comments: the symbol has no label of its own (a field, a parameter, a namespace...).
+	IAR_Type,		//A class or enum: a part of a label ("_CFatVolume__Init"), and a type in a parameter list
+					//("17CFatInfoSectorCache", its length with it).
+	IAR_Member,		//A member function or static member: "_Scope__Name" ending there or before "__".
+	IAR_Function,	//A function or variable outside a class: "_Scope__Name" or "_Name", the same.
+};
+
+
+//A rename as labels have it: szScope is the symbol's scopes as a label writes them ("NS__CFatVolume"), empty for none.
+struct SIDEAssemblyRename
+{
+	EIDEAssemblyRename	eKind;
+	CChars				szOld;
+	CChars				szNew;
+	CChars				szScope;
+
+	void	Init(EIDEAssemblyRename eKind, const char* szOldName, const char* szNewName, const char* szScopeKey);
+	void	Kill(void);
+};
+
+
+//An edit of assembly text: the old text from uiStart, uiLength long, replaced by szReplacement.
+struct SIDEAssemblyEdit
+{
+	size	uiStart;
+	size	uiLength;
+	CChars	szReplacement;
+	bool	bComment;
+	bool	bLength;	//A name's length before it in a parameter list: not a place of its own.
+};
+
+
+typedef CArrayTemplate<SIDEAssemblyEdit>	CArrayIDEAssemblyEdits;
+
+
+void	FindIDEAssemblyEdits(const char* szText, size uiLength, SIDEAssemblyRename* psRename, bool bComments, CArrayIDEAssemblyEdits* pasDest);
+void	KillIDEAssemblyEdits(CArrayIDEAssemblyEdits* pasEdits);
+bool	IsIDEAssemblyFile(const char* szFileName);
+
+
+#endif // __IDE_RENAME_ASSEMBLY_H__

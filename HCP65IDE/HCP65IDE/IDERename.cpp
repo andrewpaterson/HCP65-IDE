@@ -743,6 +743,7 @@ bool CIDERename::SearchRenameFiles(const char* szName, bool bComments, bool bTex
 //////////////////////////////////////////////////////////////////////////
 bool CIDERename::RenameSymbol(SIDERenameTarget* psTarget, const char* szNewName, CArrayChars* paszEdited, CChars* pszStatus)
 {
+	size				uiAssembly;
 	CArrayChars			aszFiles;
 	CArrayIDEPlaces		asPlaces;
 	SIDELocation*		psLocation;
@@ -768,6 +769,7 @@ bool CIDERename::RenameSymbol(SIDERenameTarget* psTarget, const char* szNewName,
 	aszFiles.Init();
 	asPlaces.Init();
 	szChanged.Init();
+	uiAssembly = 0;
 	bChanged = true;
 	for (i = 0; i < psTarget->asLocations.NumElements(); i++)
 	{
@@ -861,6 +863,7 @@ bool CIDERename::RenameSymbol(SIDERenameTarget* psTarget, const char* szNewName,
 			mpcContent->GetDocuments()->FindTab(aszFiles.GetText(uiFile))->GetEditor()->ReplaceRanges(asRanges.GetData(), asRanges.NumElements(), szNewName);
 			asRanges.Kill();
 		}
+		uiAssembly = RenameAssembly(psTarget, szNewName, &aszFiles);
 		mpcContent->GetEdit()->EndUndoGroup();
 
 		szMessage.Init("Renamed ");
@@ -882,9 +885,19 @@ bool CIDERename::RenameSymbol(SIDERenameTarget* psTarget, const char* szNewName,
 			szMessage.Append((int)auiPlaces[IRP_Comment]);
 			szMessage.Append(" in comments and strings");
 		}
+		if (uiAssembly > 0)
+		{
+			szMessage.Append(", ");
+			szMessage.Append((int)uiAssembly);
+			szMessage.Append(" in assembly");
+		}
 		szMessage.Append(" in ");
 		szMessage.Append((int)aszFiles.NumElements());
 		szMessage.Append(aszFiles.NumElements() == 1 ? " file." : " files.");
+		if (psTarget->bOverloaded && ((psTarget->uiAssembly == IAR_Member) || (psTarget->uiAssembly == IAR_Function)))
+		{
+			szMessage.Append("  Assembly labels of an overloaded function aren't changed: check them by hand.");
+		}
 		ShowRenameStatus(&szMessage, pszStatus);
 		szMessage.Kill();
 	}
@@ -897,6 +910,93 @@ bool CIDERename::RenameSymbol(SIDERenameTarget* psTarget, const char* szNewName,
 	}
 	aszFiles.Kill();
 	return bChanged;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The symbol renamed in the solution's hand written assembly (.asm and
+// .inc items): in the labels the compiler gives it (FindIDEAssemblyEdits),
+// and with the comment search in comments, each file's edits from its end
+// back, in its editor (opened, not shown, if it isn't open; added to
+// paszFiles).  An overloaded function's labels aren't changed: they can't
+// be told from its overloads' without their parameters' types.  The number
+// of places changed (a name in a parameter list and its length are one).
+//
+//////////////////////////////////////////////////////////////////////////
+size CIDERename::RenameAssembly(SIDERenameTarget* psTarget, const char* szNewName, CArrayChars* paszFiles)
+{
+	CIDECodeModel*			pcModel;
+	SIDEAssemblyRename		sRename;
+	EIDEAssemblyRename		eKind;
+	CArrayIDEAssemblyEdits	asEdits;
+	CTextFile				cFile;
+	char*					szText;
+	char*					szFileName;
+	size					uiLength;
+	size					uiFile;
+	size					uiEdits;
+	size					i;
+	size					j;
+	bool					bComments;
+	Ptr<CTextArea>			pEditor;
+	STextRange				sRange;
+	SIDEAssemblyEdit*		psEdit;
+
+	eKind = (EIDEAssemblyRename)psTarget->uiAssembly;
+	if (psTarget->bOverloaded && ((eKind == IAR_Member) || (eKind == IAR_Function)))
+	{
+		eKind = IAR_None;
+	}
+	bComments = mabComments[psTarget->bType];
+	if ((eKind == IAR_None) && !bComments)
+	{
+		return 0;
+	}
+	sRename.Init(eKind, psTarget->szName.Text(), szNewName, psTarget->szScope.Text());
+	pcModel = mpcContent->GetCodeModel();
+	uiEdits = 0;
+	for (i = 0; i < pcModel->NumProjectFiles(); i++)
+	{
+		szFileName = pcModel->GetProjectFile(i);
+		if (!IsIDEAssemblyFile(szFileName))
+		{
+			continue;
+		}
+
+		//Looked in as it is first, so only files that have the name are opened.
+		cFile.Init();
+		asEdits.Init();
+		if (mpcContent->GetFindInFiles()->GetFileText(szFileName, &cFile, &szText, &uiLength))
+		{
+			FindIDEAssemblyEdits(szText, uiLength, &sRename, bComments, &asEdits);
+		}
+		cFile.Kill();
+		uiFile = (asEdits.NumElements() > 0) ? FindRenameFile(paszFiles, szFileName) : MAX_SIZE;
+		KillIDEAssemblyEdits(&asEdits);
+		if (uiFile == MAX_SIZE)
+		{
+			continue;
+		}
+
+		pEditor = mpcContent->GetDocuments()->FindTab(paszFiles->GetText(uiFile))->GetEditor();
+		asEdits.Init();
+		FindIDEAssemblyEdits(pEditor->GetText(), strlen(pEditor->GetText()), &sRename, bComments, &asEdits);
+		for (j = asEdits.NumElements(); j > 0; j--)
+		{
+			psEdit = asEdits.Get(j - 1);
+			sRange.uiStart = psEdit->uiStart;
+			sRange.uiEnd = psEdit->uiStart + psEdit->uiLength;
+			pEditor->ReplaceRanges(&sRange, 1, psEdit->szReplacement.Text());
+			if (!psEdit->bLength)
+			{
+				uiEdits++;
+			}
+		}
+		KillIDEAssemblyEdits(&asEdits);
+	}
+	sRename.Kill();
+	return uiEdits;
 }
 
 

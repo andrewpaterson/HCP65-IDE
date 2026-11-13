@@ -151,6 +151,7 @@ set(IDE_SOURCES
 	"${IDE_DIR}/IDENavigator.cpp"
 	"${IDE_DIR}/IDERename.cpp"
 	"${IDE_DIR}/IDEFileRename.cpp"
+	"${IDE_DIR}/IDERenameAssembly.cpp"
 	"${IDE_DIR}/IDEUsages.cpp"
 	"${IDE_DIR}/IDEScope.cpp"
 	"${IDE_DIR}/IDEResultsPane.cpp"

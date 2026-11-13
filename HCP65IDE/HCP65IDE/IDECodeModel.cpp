@@ -2013,6 +2013,9 @@ void SIDERenameTarget::Init(void)
 	szWhyNot.Init();
 	uiOverrides = 0;
 	bType = false;
+	uiAssembly = IAR_None;
+	szScope.Init();
+	bOverloaded = false;
 }
 
 
@@ -2022,6 +2025,7 @@ void SIDERenameTarget::Init(void)
 //////////////////////////////////////////////////////////////////////////
 void SIDERenameTarget::Kill(void)
 {
+	szScope.Kill();
 	szWhyNot.Kill();
 	KillIDELocations(&asLocations);
 	szName.Kill();
@@ -2088,6 +2092,69 @@ static const char* GetIDERenameProblem(CCPPIndex* pcIndex, CCPPIndexSymbol* pcSy
 
 //////////////////////////////////////////////////////////////////////////
 //
+// How hand written assembly's labels name pcSymbol (EIDEAssemblyRename,
+// RenameFile.txt's assembly step), its scope as its key has it, and
+// whether it is a function overloaded in its scope (whose labels can't be
+// told from its overloads' without their parameters' types).  Call it with
+// the index's mutex held.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDECodeModel::FindAssemblyRename(CCPPIndexSymbol* pcSymbol, SIDERenameTarget* psDest)
+{
+	const char*			szKey;
+	const char*			szParameters;
+	const char*			szSeparator;
+	const char*			szLast;
+	CCPPIndexSymbol*	pcScope;
+	CCPPIndexSymbol*	pcOther;
+	CChars				szPrefix;
+	bool				bClassScope;
+	size				i;
+
+	szKey = pcSymbol->mszKey.Text();
+	psDest->uiAssembly = IAR_None;
+	if (szKey[0] == '@')
+	{
+		return;
+	}
+	szParameters = strchr(szKey, '(');
+	szLast = NULL;
+	for (szSeparator = strstr(szKey, "::"); szSeparator && (!szParameters || (szSeparator < szParameters)); szSeparator = strstr(szSeparator + 2, "::"))
+	{
+		szLast = szSeparator;
+	}
+	if (szLast)
+	{
+		psDest->szScope.Set(szKey);
+		psDest->szScope.SetLength((size)(szLast - szKey));
+	}
+	pcScope = psDest->szScope.Empty() ? NULL : mcIndex.FindSymbol(psDest->szScope.Text());
+	bClassScope = pcScope && ((pcScope->meKind == CPPSK_Class) || (pcScope->meKind == CPPSK_ClassTemplate));
+
+	if ((pcSymbol->meKind == CPPSK_Class) || (pcSymbol->meKind == CPPSK_Enum))
+	{
+		psDest->uiAssembly = IAR_Type;
+	}
+	else if ((pcSymbol->meKind == CPPSK_Function) || (pcSymbol->meKind == CPPSK_Variable))
+	{
+		psDest->uiAssembly = bClassScope ? IAR_Member : IAR_Function;
+		if ((pcSymbol->meKind == CPPSK_Function) && szParameters)
+		{
+			szPrefix.Init();
+			szPrefix.AppendSubString(szKey, szParameters + 1);
+			for (i = 0; (i < mcIndex.NumSymbols()) && !psDest->bOverloaded; i++)
+			{
+				pcOther = mcIndex.GetSymbol(i);
+				psDest->bOverloaded = (pcOther != pcSymbol) && (pcOther->meKind == CPPSK_Function) && pcOther->mszKey.StartsWith(szPrefix.Text());
+			}
+			szPrefix.Kill();
+		}
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Rename's target at iLine, iColumn (0 based) of szFileName: the symbol
 // named there and every place its name is written.  A class's
 // constructors and destructors are renamed with it.  It can't be renamed
@@ -2120,6 +2187,7 @@ bool CIDECodeModel::FindRenameTarget(const char* szFileName, int iLine, int iCol
 	GetIDESymbolName(pcSymbol->mszKey.Text(), &psDest->szName);
 	psDest->bType = (pcSymbol->meKind == CPPSK_Namespace) || (pcSymbol->meKind == CPPSK_Class) || (pcSymbol->meKind == CPPSK_Enum) ||
 					(pcSymbol->meKind == CPPSK_Typedef) || (pcSymbol->meKind == CPPSK_ClassTemplate) || (pcSymbol->meKind == CPPSK_AliasTemplate);
+	FindAssemblyRename(pcSymbol, psDest);
 	szProblem = NULL;
 	if ((pcSymbol->meKind == CPPSK_BuiltinType) || psDest->szName.Empty())
 	{
