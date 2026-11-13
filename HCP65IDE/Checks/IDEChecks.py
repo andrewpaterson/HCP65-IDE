@@ -688,7 +688,7 @@ CHECKS = [
 		#A namespace: a part of labels (_NGear__Spin) and of length-prefixed names, the lengths of the names they are in
 		#with them (C23CBox__T_C12NGear__CGear to C22CBox__T_C11NCog__CGear).
 		'WAIT_INDEX': '1', 'OPEN': 'Gear.h', 'CARET': '5:12', 'DEBUG': 'edit:renamesearch:ct-s,edit:rename:NCog,printdiskfile:GearW65C816.asm'}),
-		[r'^Status: Renamed NGear to NCog: .*, 8 in assembly in \d+ files\.$', r"^; NCog's and CBox's functions", r'^_NCog__CGear__Turn:$', r'^_NCog__Spin__FPC11NCog__CGear:$',
+		[r'^Status: Renamed NGear to NCog: .*, 9 in assembly in \d+ files\.$', r"^; NCog's and CBox's functions", r'^_NCog__CGear__Turn:$', r'^_NCog__Spin__FPC11NCog__CGear:$',
 		 r'^\t\tjsr _NCog__CGear__Turn$', r'^_CBox__T_C11NCog__CGear__Fill:$', r'^_CBox__T_i__Fill:$', r'^_Pack__FPC22CBox__T_C11NCog__CGear:$',
 		 r'^\t\tjsr _CBox__T_C11NCog__CGear__Fill$', r'^_Load__FPC9CBox__T_i:$'],
 		[r'_NGear', r'NGear__']),
@@ -701,8 +701,8 @@ CHECKS = [
 	('rename-assembly-template', dict(MakeRenameAssemblyCopy(), **{
 		#A class template: its instances' labels (_CBox__T_i) and their length-prefixed names.
 		'WAIT_INDEX': '1', 'OPEN': 'Gear.h', 'CARET': '20:8', 'DEBUG': 'edit:renamesearch:ct-s,edit:rename:CCrate,printdiskfile:GearW65C816.asm'}),
-		[r'^Status: Renamed CBox to CCrate: .*, 7 in assembly in \d+ files\.$', r"^; NGear's and CCrate's functions", r'^_CCrate__T_C12NGear__CGear__Fill:$', r'^_CCrate__T_i__Fill:$',
-		 r'^_Pack__FPC25CCrate__T_C12NGear__CGear:$', r'^\t\tjsr _CCrate__T_C12NGear__CGear__Fill$', r'^_Load__FPC11CCrate__T_i:$', r'^\t\tjsr _CCrate__T_i__Fill$'],
+		[r'^Status: Renamed CBox to CCrate: .*, 8 in assembly in \d+ files\.$', r"^; NGear's and CCrate's functions", r'^_CCrate__T_C12NGear__CGear__Fill:$', r'^_CCrate__T_i__Fill:$',
+		 r'^_Pack__FPC25CCrate__T_C12NGear__CGear:$', r'^\t\tjsr _CCrate__T_C12NGear__CGear__Fill$', r'^_Load__FPC11CCrate__T_i:$', r'^\t\tjsr _CCrate__T_i__Fill$', r'^\t\tjsr _Load__FPC11CCrate__T_i$'],
 		[r'CBox__']),
 	('rename-assembly-template-member', dict(MakeRenameAssemblyCopy(), **{
 		#A class template's member: its label in every instance, after the instance's template arguments.
@@ -714,6 +714,12 @@ CHECKS = [
 		#A function in a namespace: _NGear__Spin and its parameters.
 		'WAIT_INDEX': '1', 'OPEN': 'Gear.h', 'CARET': '15:8', 'DEBUG': 'edit:renamesearch:ct-s,edit:rename:Whirl,printdiskfile:GearW65C816.asm'}),
 		[r'^Status: Renamed Spin to Whirl: .*, 1 in assembly in \d+ files\.$', r'^_NGear__Whirl__FPC12NGear__CGear:$'], [r'__Spin']),
+	('rename-assembly-extern-c', dict(MakeRenameAssemblyCopy(), **{
+		#A function declared inside extern "C" in a namespace: its label is its name alone (_GearCount), not the namespace's
+		#and parameters' (_NGear__GearCount__Fi, as a C++ function's would be).
+		'WAIT_INDEX': '1', 'OPEN': 'Gear.h', 'CARET': '37:8', 'DEBUG': 'edit:renamesearch:ct-s,edit:rename:CogCount,printdiskfile:GearW65C816.asm'}),
+		[r'^Status: Renamed GearCount to CogCount: .*, 2 in assembly in \d+ files\.$', r'^_CogCount:$', r'^_NGear__GearCount__Fi:$', r'^\t\tjsr _CogCount$'],
+		[r'^_GearCount:', r'_NGear__CogCount']),
 	('rename-file-refused', dict(MakeRenameFileCopy(), **{
 		#A name that is taken, one with a directory, and the same name: nothing is renamed.
 		'WAIT_INDEX': '1', 'OPEN': 'Engine.h', 'DEBUG': 'edit:renamefile:EngineCache.h,edit:renamefile:Sub/Engine.h,edit:renamefile:Engine.h,printprojectfiles'}),

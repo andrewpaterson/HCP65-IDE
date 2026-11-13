@@ -17,3 +17,9 @@ _Pack__FPC23CBox__T_C12NGear__CGear:
 _Load__FPC9CBox__T_i:
 		jsr _CBox__T_i__Fill
 		rtl
+_GearCount:
+		jsr _Load__FPC9CBox__T_i
+		rtl
+_NGear__GearCount__Fi:
+		jsr _GearCount
+		rtl

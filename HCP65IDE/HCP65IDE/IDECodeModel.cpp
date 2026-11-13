@@ -2094,6 +2094,26 @@ static const char* GetIDERenameProblem(CCPPIndex* pcIndex, CCPPIndexSymbol* pcSy
 
 //////////////////////////////////////////////////////////////////////////
 //
+// If a declaration of pcSymbol is inside extern "C" (CPPIF_C_LINKAGE).
+//
+//////////////////////////////////////////////////////////////////////////
+static bool HasIDECLinkage(CCPPIndexSymbol* pcSymbol)
+{
+	size	i;
+
+	for (i = 0; i < pcSymbol->NumLocations(); i++)
+	{
+		if (pcSymbol->GetLocation(i)->uiFlags & CPPIF_C_LINKAGE)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // How hand written assembly's labels name pcSymbol (EIDEAssemblyRename,
 // RenameFile.txt's assembly step), its scope as its key has it, and
 // whether it is a function overloaded in its scope (whose labels can't be
@@ -2144,6 +2164,12 @@ void CIDECodeModel::FindAssemblyRename(CCPPIndexSymbol* pcSymbol, SIDERenameTarg
 	else if ((pcSymbol->meKind == CPPSK_Field) && bClassScope)
 	{
 		psDest->uiAssembly = IAR_Field;
+	}
+	else if (((pcSymbol->meKind == CPPSK_Function) || (pcSymbol->meKind == CPPSK_Variable)) && !bClassScope && HasIDECLinkage(pcSymbol))
+	{
+		//Declared inside extern "C": its label is its name alone, without its namespace or parameters ("_Read").
+		psDest->uiAssembly = IAR_Function;
+		psDest->szScope.Clear();
 	}
 	else if ((pcSymbol->meKind == CPPSK_Function) || (pcSymbol->meKind == CPPSK_Variable))
 	{

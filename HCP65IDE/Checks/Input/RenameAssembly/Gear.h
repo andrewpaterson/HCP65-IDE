@@ -30,4 +30,13 @@ void Pack(CBox<NGear::CGear>* pcBox);
 void Load(CBox<int>* pcBox);
 
 
+namespace NGear
+{
+	extern "C"
+	{
+		int GearCount(int iGears);
+	}
+}
+
+
 #endif // __GEAR_H__

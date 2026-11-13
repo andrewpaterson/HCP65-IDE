@@ -26,3 +26,9 @@ void Load(CBox<int>* pcBox)
 {
 	pcBox->Fill(1);
 }
+
+
+int NGear::GearCount(int iGears)
+{
+	return iGears;
+}
