@@ -13,10 +13,10 @@ _CEngine__Mix__Fi:
 		lda CEngine_miSpeed,x
 		ldy #SIZEOF_CEngine
 		rtl
-_CPart__Attach__FP7CEngine:
+_CPart__Attach__FPC7CEngine:
 		jsr _CEngine__Init
 		rtl
-_EngineCount__FP7CEngine:
+_EngineCount__FPC7CEngine:
 		lda #<_CEngine__2
 		rtl
 _CEngineCache__Init:

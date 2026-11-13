@@ -2133,9 +2133,13 @@ void CIDECodeModel::FindAssemblyRename(CCPPIndexSymbol* pcSymbol, SIDERenameTarg
 	pcScope = psDest->szScope.Empty() ? NULL : mcIndex.FindSymbol(psDest->szScope.Text());
 	bClassScope = pcScope && ((pcScope->meKind == CPPSK_Class) || (pcScope->meKind == CPPSK_ClassTemplate));
 
-	if ((pcSymbol->meKind == CPPSK_Class) || (pcSymbol->meKind == CPPSK_Enum))
+	if ((pcSymbol->meKind == CPPSK_Class) || (pcSymbol->meKind == CPPSK_Enum) || (pcSymbol->meKind == CPPSK_ClassTemplate))
 	{
 		psDest->uiAssembly = IAR_Type;
+	}
+	else if (pcSymbol->meKind == CPPSK_Namespace)
+	{
+		psDest->uiAssembly = IAR_Namespace;
 	}
 	else if ((pcSymbol->meKind == CPPSK_Field) && bClassScope)
 	{

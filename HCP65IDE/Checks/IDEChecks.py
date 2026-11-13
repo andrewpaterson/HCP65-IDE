@@ -651,12 +651,12 @@ CHECKS = [
 		[r'^Status: Renamed C65Core to C65Kernel: ', r'^\tC65Kernel\t\t\tcCore;$'], [r'Unsaved at exit']),
 	('rename-assembly-class', dict(MakeRenameAssemblyCopy(), **{
 		#A class renamed in hand written assembly's labels (_CEngine__Init, __0, __2), in parameter lists with its length
-		#(FP7CEngine to FP6CMotor), in generated layout constants (SIZEOF_CEngine, CEngine_miSpeed: in the assembly, the
+		#(FPC7CEngine to FPC6CMotor), in generated layout constants (SIZEOF_CEngine, CEngine_miSpeed: in the assembly, the
 		#.inc and a C++ string) and in comments; not CEngineCache's labels or constants, or an assembly string.
 		'WAIT_INDEX': '1', 'OPEN': 'Engine.h', 'CARET': '5:8',
 		'DEBUG': 'edit:renamesearch:ct-s,edit:rename:CMotor,printdiskfile:EngineW65C816.asm,printdiskfile:EngineLayout.inc,printdiskfile:Engine.cpp'}),
 		[r'^Status: Renamed CEngine to CMotor: .*, 15 in assembly in 4 files\.$', r"^; CMotor's functions in assembly", r'^_CMotor__0:$', r'^_CMotor__Init:$',
-		 r'^\t\tjsr _CEngineCache__Init$', r'^_CMotor__Run__Fi:$', r'^_CMotor__Mix__Fi:$', r'^\t\tlda CMotor_miSpeed,x$', r'^\t\tldy #SIZEOF_CMotor$', r'^_CPart__Attach__FP6CMotor:$', r'^_EngineCount__FP6CMotor:$', r'^\t\tlda #<_CMotor__2$',
+		 r'^\t\tjsr _CEngineCache__Init$', r'^_CMotor__Run__Fi:$', r'^_CMotor__Mix__Fi:$', r'^\t\tlda CMotor_miSpeed,x$', r'^\t\tldy #SIZEOF_CMotor$', r'^_CPart__Attach__FPC6CMotor:$', r'^_EngineCount__FPC6CMotor:$', r'^\t\tlda #<_CMotor__2$',
 		 r'^_CEngineCache__Init:$', r'^\t\t\.byte "CEngine", 0$',
 		 r'^CMotor_miSpeed = 0x0$', r'^SIZEOF_CMotor = 0x2$', r'^CEngineCache_miSpeed = 0x0$', r'^SIZEOF_CEngineCache = 0x2$',
 		 r'^const char\* gszEngineSpeed = "CMotor_miSpeed";$'],
@@ -683,7 +683,37 @@ CHECKS = [
 	('rename-assembly-function', dict(MakeRenameAssemblyCopy(), **{
 		#A function outside a class: its label, its parameter list as it was.
 		'WAIT_INDEX': '1', 'OPEN': 'Engine.h', 'CARET': '32:6', 'DEBUG': 'edit:renamesearch:ct-s,edit:rename:MotorCount,printdiskfile:EngineW65C816.asm'}),
-		[r'^Status: Renamed EngineCount to MotorCount: .*, 1 in assembly in 3 files\.$', r'^_MotorCount__FP7CEngine:$'], [r'_EngineCount__']),
+		[r'^Status: Renamed EngineCount to MotorCount: .*, 1 in assembly in 3 files\.$', r'^_MotorCount__FPC7CEngine:$'], [r'_EngineCount__']),
+	('rename-assembly-namespace', dict(MakeRenameAssemblyCopy(), **{
+		#A namespace: a part of labels (_NGear__Spin) and of length-prefixed names, the lengths of the names they are in
+		#with them (C23CBox__T_C12NGear__CGear to C22CBox__T_C11NCog__CGear).
+		'WAIT_INDEX': '1', 'OPEN': 'Gear.h', 'CARET': '5:12', 'DEBUG': 'edit:renamesearch:ct-s,edit:rename:NCog,printdiskfile:GearW65C816.asm'}),
+		[r'^Status: Renamed NGear to NCog: .*, 8 in assembly in \d+ files\.$', r"^; NCog's and CBox's functions", r'^_NCog__CGear__Turn:$', r'^_NCog__Spin__FPC11NCog__CGear:$',
+		 r'^\t\tjsr _NCog__CGear__Turn$', r'^_CBox__T_C11NCog__CGear__Fill:$', r'^_CBox__T_i__Fill:$', r'^_Pack__FPC22CBox__T_C11NCog__CGear:$',
+		 r'^\t\tjsr _CBox__T_C11NCog__CGear__Fill$', r'^_Load__FPC9CBox__T_i:$'],
+		[r'_NGear', r'NGear__']),
+	('rename-assembly-namespace-class', dict(MakeRenameAssemblyCopy(), **{
+		#A class in a namespace, in a template argument too.
+		'WAIT_INDEX': '1', 'OPEN': 'Gear.h', 'CARET': '7:9', 'DEBUG': 'edit:renamesearch:ct-s,edit:rename:CCog,printdiskfile:GearW65C816.asm'}),
+		[r'^Status: Renamed CGear to CCog: .*, 6 in assembly in \d+ files\.$', r'^_NGear__CCog__Turn:$', r'^_NGear__Spin__FPC11NGear__CCog:$',
+		 r'^\t\tjsr _NGear__CCog__Turn$', r'^_CBox__T_C11NGear__CCog__Fill:$', r'^_Pack__FPC22CBox__T_C11NGear__CCog:$', r'^\t\tjsr _CBox__T_C11NGear__CCog__Fill$'],
+		[r'__CGear']),
+	('rename-assembly-template', dict(MakeRenameAssemblyCopy(), **{
+		#A class template: its instances' labels (_CBox__T_i) and their length-prefixed names.
+		'WAIT_INDEX': '1', 'OPEN': 'Gear.h', 'CARET': '20:8', 'DEBUG': 'edit:renamesearch:ct-s,edit:rename:CCrate,printdiskfile:GearW65C816.asm'}),
+		[r'^Status: Renamed CBox to CCrate: .*, 7 in assembly in \d+ files\.$', r"^; NGear's and CCrate's functions", r'^_CCrate__T_C12NGear__CGear__Fill:$', r'^_CCrate__T_i__Fill:$',
+		 r'^_Pack__FPC25CCrate__T_C12NGear__CGear:$', r'^\t\tjsr _CCrate__T_C12NGear__CGear__Fill$', r'^_Load__FPC11CCrate__T_i:$', r'^\t\tjsr _CCrate__T_i__Fill$'],
+		[r'CBox__']),
+	('rename-assembly-template-member', dict(MakeRenameAssemblyCopy(), **{
+		#A class template's member: its label in every instance, after the instance's template arguments.
+		'WAIT_INDEX': '1', 'OPEN': 'Gear.h', 'CARET': '25:8', 'DEBUG': 'edit:renamesearch:ct-s,edit:rename:Stuff,printdiskfile:GearW65C816.asm'}),
+		[r'^Status: Renamed Fill to Stuff: .*, 4 in assembly in \d+ files\.$', r'^_CBox__T_C12NGear__CGear__Stuff:$', r'^_CBox__T_i__Stuff:$',
+		 r'^\t\tjsr _CBox__T_C12NGear__CGear__Stuff$', r'^\t\tjsr _CBox__T_i__Stuff$'],
+		[r'__Fill']),
+	('rename-assembly-namespace-function', dict(MakeRenameAssemblyCopy(), **{
+		#A function in a namespace: _NGear__Spin and its parameters.
+		'WAIT_INDEX': '1', 'OPEN': 'Gear.h', 'CARET': '15:8', 'DEBUG': 'edit:renamesearch:ct-s,edit:rename:Whirl,printdiskfile:GearW65C816.asm'}),
+		[r'^Status: Renamed Spin to Whirl: .*, 1 in assembly in \d+ files\.$', r'^_NGear__Whirl__FPC12NGear__CGear:$'], [r'__Spin']),
 	('rename-file-refused', dict(MakeRenameFileCopy(), **{
 		#A name that is taken, one with a directory, and the same name: nothing is renamed.
 		'WAIT_INDEX': '1', 'OPEN': 'Engine.h', 'DEBUG': 'edit:renamefile:EngineCache.h,edit:renamefile:Sub/Engine.h,edit:renamefile:Engine.h,printprojectfiles'}),

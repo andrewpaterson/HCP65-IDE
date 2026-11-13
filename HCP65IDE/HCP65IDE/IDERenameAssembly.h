@@ -29,13 +29,16 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 //(CPP65GeneratorLabels.cpp) and in comments.
 enum EIDEAssemblyRename
 {
-	IAR_None,		//Only comments: the symbol has no label of its own (a parameter, a namespace...).
-	IAR_Type,		//A class or enum: a part of a label ("_CFatVolume__Init"), a type in a parameter list
-					//("17CFatInfoSectorCache", its length with it), and a generated layout constant
+	IAR_None,		//Only comments: the symbol has no label of its own (a parameter, a local...).
+	IAR_Type,		//A class or enum: a part of a label ("_CFatVolume__Init", "_CBox__T_i__Fill"), a type in a
+					//parameter list or a template argument ("PC17CFatInfoSectorCache", its length and the lengths of
+					//the names it is in with it), and a generated layout constant
 					//("SIZEOF_CFatVolume", "CFatVolume_muiID": BaseLib's FatW65C816.inc).
 	IAR_Member,		//A member function or static member: "_Scope__Name" ending there or before "__".
 	IAR_Function,	//A function or variable outside a class: "_Scope__Name" or "_Name", the same.
 	IAR_Field,		//A data member: only a layout constant, its class and it ("CFatVolume_muiID").
+	IAR_Namespace,	//A namespace: a part of a label ("_NGear__Spin") and of a type's name in a parameter list
+					//("C12NGear__CGear", its length with it), as a class's.
 };
 
 

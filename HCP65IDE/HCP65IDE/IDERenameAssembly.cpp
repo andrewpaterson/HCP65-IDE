@@ -150,97 +150,185 @@ static bool FindIDEFieldLabelEdit(const char* szToken, size uiStart, size uiLeng
 
 //////////////////////////////////////////////////////////////////////////
 //
-// A type's name in a label token from uiStart (szToken, uiLength long):
-// each name in a parameter list, its length before it
-// ("17CFatInfoSectorCache", or "8NS__CFat" in a namespace), given the new
-// name and length; and each part of the label ("_CFat__Init",
-// "_NS__CFat__0") that is the name.  True if it had any.
+// If szToken has a length-prefixed name at uiAt (a class's "C" or an
+// enum's "N" before it: "C12NGear__CGear"), that fits before uiEnd and
+// ends where a mangled type can: its length's digits end at *puiName and
+// the name runs to *puiEnd.
+//
+//////////////////////////////////////////////////////////////////////////
+static bool IsIDELengthName(const char* szToken, size uiAt, size uiEnd, size uiFrom, size* puiName, size* puiEnd)
+{
+	size	uiCount;
+	size	m;
+
+	if ((uiAt <= uiFrom) || (szToken[uiAt] < '1') || (szToken[uiAt] > '9') || ((szToken[uiAt - 1] != 'C') && (szToken[uiAt - 1] != 'N')))
+	{
+		return false;
+	}
+	uiCount = 0;
+	for (m = uiAt; (m < uiEnd) && (szToken[m] >= '0') && (szToken[m] <= '9'); m++)
+	{
+		uiCount = (uiCount * 10) + (size)(szToken[m] - '0');
+	}
+	if ((m + uiCount > uiEnd) || ((m + uiCount < uiEnd) && !strchr("vbchstijxyfdePRKVAFCNMEz_", szToken[m + uiCount])))
+	{
+		return false;
+	}
+	*puiName = m;
+	*puiEnd = m + uiCount;
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// If szToken has template arguments at uiAt ("T_i__", "T_C12NGear__CGear__"
+// and "T_JicE__" for a pack), where the part after them starts (past
+// their "__"), else uiAt.  Their length-prefixed names can have "__" in
+// them.
+//
+//////////////////////////////////////////////////////////////////////////
+static size SkipIDETemplateArguments(const char* szToken, size uiLength, size uiAt)
+{
+	size	i;
+	size	uiName;
+	size	uiNameEnd;
+
+	if ((uiAt + 2 > uiLength) || (szToken[uiAt] != 'T') || (szToken[uiAt + 1] != '_'))
+	{
+		return uiAt;
+	}
+	for (i = uiAt + 1; i + 1 < uiLength; )
+	{
+		if (IsIDELengthName(szToken, i, uiLength, uiAt, &uiName, &uiNameEnd))
+		{
+			i = uiNameEnd;
+		}
+		else if ((szToken[i] == '_') && (szToken[i + 1] == '_'))
+		{
+			return i + 2;
+		}
+		else
+		{
+			i++;
+		}
+	}
+	return uiAt;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// psRename's name where it is a part of szToken from uiFrom to uiEnd: at
+// a part's start (uiFrom when bStarts, else after "__") and ending at
+// uiEnd or "__".  A length-prefixed name in it ("C12NGear__CGear", a
+// parameter or a template argument) is looked in the same way, its length
+// changed when its name's is: so are the lengths of the names it is in.
+// The edits, in the order of the text, are added to pasDest; the length
+// the part's text changes by is returned.
+//
+//////////////////////////////////////////////////////////////////////////
+static int FindIDETypePartEdits(const char* szToken, size uiStart, size uiFrom, size uiEnd, bool bStarts, SIDEAssemblyRename* psRename, bool bComment, CArrayIDEAssemblyEdits* pasDest)
+{
+	size					uiOld;
+	size					i;
+	size					uiName;
+	size					uiNameEnd;
+	int						iChange;
+	int						iInner;
+	CArrayIDEAssemblyEdits	asInner;
+	CChars					szLength;
+	SIDEAssemblyEdit*		psEdit;
+	size					j;
+
+	uiOld = psRename->szOld.Length();
+	iChange = 0;
+	i = uiFrom;
+	while (i < uiEnd)
+	{
+		if (IsIDELengthName(szToken, i, uiEnd, uiFrom, &uiName, &uiNameEnd))
+		{
+			asInner.Init();
+			iInner = FindIDETypePartEdits(szToken, uiStart, uiName, uiNameEnd, true, psRename, bComment, &asInner);
+			if (asInner.NumElements() > 0)
+			{
+				if (iInner != 0)
+				{
+					szLength.Init();
+					szLength.Append((int)((int)(uiNameEnd - uiName) + iInner));
+					AddIDEAssemblyEdit(pasDest, uiStart + i, uiName - i, szLength.Text(), bComment, true);
+					iChange += (int)szLength.Length() - (int)(uiName - i);
+					szLength.Kill();
+				}
+				for (j = 0; j < asInner.NumElements(); j++)
+				{
+					psEdit = pasDest->Add();
+					memcpy(psEdit, asInner.Get(j), sizeof(SIDEAssemblyEdit));
+				}
+				asInner.Kill();
+				iChange += iInner;
+				i = uiNameEnd;
+				continue;
+			}
+			asInner.Kill();
+		}
+		if ((((i == uiFrom) && bStarts) || ((i >= uiFrom + 2) && (szToken[i - 1] == '_') && (szToken[i - 2] == '_'))) && (i + uiOld <= uiEnd) &&
+			(memcmp(&szToken[i], psRename->szOld.Text(), uiOld) == 0) && ((i + uiOld == uiEnd) || ((i + uiOld + 2 <= uiEnd) && (szToken[i + uiOld] == '_') && (szToken[i + uiOld + 1] == '_'))))
+		{
+			AddIDEAssemblyEdit(pasDest, uiStart + i, uiOld, psRename->szNew.Text(), bComment);
+			iChange += (int)psRename->szNew.Length() - (int)uiOld;
+			i += uiOld;
+			continue;
+		}
+		i++;
+	}
+	return iChange;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A type's or namespace's name in a token from uiStart (szToken, uiLength
+// long): each part of a label that is the name ("_CFat__Init",
+// "_NGear__CGear__Turn", "_CBox__T_i__Fill"), and each length-prefixed
+// name with it as a part (parameters, template arguments: "PC7CEngine",
+// "C23CBox__T_C12NGear__CGear"), given its new length; a type's
+// generated layout constants too ("SIZEOF_CFat", "CFat_muiID").  True if
+// it had any.
 //
 //////////////////////////////////////////////////////////////////////////
 static bool FindIDETypeLabelEdits(const char* szToken, size uiStart, size uiLength, SIDEAssemblyRename* psRename, bool bComment, CArrayIDEAssemblyEdits* pasDest)
 {
 	size	uiOld;
-	size	k;
-	size	m;
-	size	uiCount;
-	size	uiBlob;
-	size	uiCovered;
-	size	uiPart;
-	size	uiPartEnd;
-	bool	bFound;
-	CChars	szLength;
+	size	uiBefore;
 
 	uiOld = psRename->szOld.Length();
-	bFound = false;
-	uiCovered = 0;
-
-	//Names in parameter lists: a length, then that many characters ending with the name.
-	for (k = 1; k < uiLength; k++)
+	if ((psRename->eKind == IAR_Type) && (szToken[0] != '_'))
 	{
-		if ((szToken[k] < '0') || (szToken[k] > '9') || ((szToken[k - 1] >= '0') && (szToken[k - 1] <= '9')))
+		//A generated layout constant (BaseLib's FatW65C816.inc): "SIZEOF_CFat", and "CFat_muiID" before one of its members.
+		if ((uiLength == 7 + uiOld) && (memcmp(szToken, "SIZEOF_", 7) == 0) && (memcmp(&szToken[7], psRename->szOld.Text(), uiOld) == 0))
 		{
-			continue;
+			AddIDEAssemblyEdit(pasDest, uiStart + 7, uiOld, psRename->szNew.Text(), bComment);
+			return true;
 		}
-		uiCount = 0;
-		for (m = k; (m < uiLength) && (szToken[m] >= '0') && (szToken[m] <= '9'); m++)
+		if (IsIDELayoutPrefix(szToken, uiLength, psRename->szOld.Text(), uiOld))
 		{
-			uiCount = (uiCount * 10) + (size)(szToken[m] - '0');
+			AddIDEAssemblyEdit(pasDest, uiStart, uiOld, psRename->szNew.Text(), bComment);
+			return true;
 		}
-		uiBlob = m;
-		if ((uiCount < uiOld) || (uiBlob + uiCount > uiLength) || (memcmp(&szToken[uiBlob + uiCount - uiOld], psRename->szOld.Text(), uiOld) != 0))
-		{
-			continue;
-		}
-		if ((uiCount != uiOld) && ((uiCount < uiOld + 2) || (memcmp(&szToken[uiBlob + uiCount - uiOld - 2], "__", 2) != 0)))
-		{
-			continue;
-		}
-		szLength.Init();
-		szLength.Append((int)(uiCount - uiOld + psRename->szNew.Length()));
-		AddIDEAssemblyEdit(pasDest, uiStart + k, m - k, szLength.Text(), bComment, true);
-		szLength.Kill();
-		AddIDEAssemblyEdit(pasDest, uiStart + uiBlob + uiCount - uiOld, uiOld, psRename->szNew.Text(), bComment);
-		uiCovered = uiBlob + uiCount;
-		k = uiCovered - 1;
-		bFound = true;
 	}
 
-	//A generated layout constant (BaseLib's FatW65C816.inc): "SIZEOF_CFat", and "CFat_muiID" before one of its members.
-	if ((uiLength == 7 + uiOld) && (memcmp(szToken, "SIZEOF_", 7) == 0) && (memcmp(&szToken[7], psRename->szOld.Text(), uiOld) == 0))
-	{
-		AddIDEAssemblyEdit(pasDest, uiStart + 7, uiOld, psRename->szNew.Text(), bComment);
-		return true;
-	}
-	if ((uiCovered == 0) && IsIDELayoutPrefix(szToken, uiLength, psRename->szOld.Text(), uiOld))
-	{
-		AddIDEAssemblyEdit(pasDest, uiStart, uiOld, psRename->szNew.Text(), bComment);
-		return true;
-	}
-
-	//Parts of the label itself, between "_" or "__" and "__" or its end.
+	//A label's parts start after its "_"; another token (a comment's word) only has length-prefixed names looked in.
+	uiBefore = pasDest->NumElements();
 	if (szToken[0] == '_')
 	{
-		for (uiPart = 1; uiPart < uiLength; uiPart = uiPartEnd + 2)
-		{
-			for (uiPartEnd = uiPart; (uiPartEnd + 1 < uiLength) && !((szToken[uiPartEnd] == '_') && (szToken[uiPartEnd + 1] == '_')); uiPartEnd++)
-			{
-			}
-			if (uiPartEnd + 1 >= uiLength)
-			{
-				uiPartEnd = uiLength;
-			}
-			if ((uiPart >= uiCovered) && (uiPartEnd - uiPart == uiOld) && (memcmp(&szToken[uiPart], psRename->szOld.Text(), uiOld) == 0))
-			{
-				AddIDEAssemblyEdit(pasDest, uiStart + uiPart, uiOld, psRename->szNew.Text(), bComment);
-				bFound = true;
-			}
-			if (uiPartEnd >= uiLength)
-			{
-				break;
-			}
-		}
+		FindIDETypePartEdits(szToken, uiStart, 1, uiLength, true, psRename, bComment, pasDest);
 	}
-	return bFound;
+	else
+	{
+		FindIDETypePartEdits(szToken, uiStart, 0, uiLength, false, psRename, bComment, pasDest);
+	}
+	return pasDest->NumElements() > uiBefore;
 }
 
 
@@ -571,6 +659,14 @@ static bool FitsIDEOverload(const char* szRest, size uiLength, const char* szKey
 		return false;
 	}
 	uiAt = 0;
+	if ((uiLength >= 4) && (memcmp(szRest, "__T_", 4) == 0))
+	{
+		//An instance of a function template: its arguments, then its parameters.
+		uiAt = SkipIDETemplateArguments(szRest, uiLength, 2) - 2;
+		szRest = &szRest[uiAt];
+		uiLength -= uiAt;
+		uiAt = 0;
+	}
 	bLabelConst = (uiLength >= 3) && (memcmp(szRest, "__K", 3) == 0);
 	if (bLabelConst)
 	{
@@ -633,6 +729,11 @@ static bool FindIDENamedLabelEdit(const char* szToken, size uiStart, size uiLeng
 			return false;
 		}
 		uiName = 1 + psRename->szScope.Length() + 2;
+		if ((uiName + psRename->szOld.Length() > uiLength) || (memcmp(&szToken[uiName], psRename->szOld.Text(), psRename->szOld.Length()) != 0))
+		{
+			//A member of a class template's instance: its arguments after the class ("_CBox__T_i__Fill").
+			uiName = SkipIDETemplateArguments(szToken, uiLength, uiName);
+		}
 	}
 	uiOld = psRename->szOld.Length();
 	uiEnd = uiName + uiOld;
@@ -718,7 +819,7 @@ void FindIDEAssemblyEdits(const char* szText, size uiLength, SIDEAssemblyRename*
 			if (!bComment || bComments)
 			{
 				bLabel = false;
-				if (psRename->eKind == IAR_Type)
+				if ((psRename->eKind == IAR_Type) || (psRename->eKind == IAR_Namespace))
 				{
 					bLabel = FindIDETypeLabelEdits(&szText[i], i, j - i, psRename, bComment, pasDest);
 				}

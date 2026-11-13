@@ -8,13 +8,16 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine.cpp" />
+    <ClCompile Include="Gear.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine.h" />
+    <ClInclude Include="Gear.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="EngineLayout.inc" />
     <None Include="EngineW65C816.asm" />
+    <None Include="GearW65C816.asm" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{9F405162-0000-4000-8000-000000000001}</ProjectGuid>
