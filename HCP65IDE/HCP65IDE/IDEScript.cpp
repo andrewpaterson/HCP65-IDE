@@ -1229,6 +1229,39 @@ void CIDEScript::RunEditStep(const char* szStep)
 	{
 		pTab->GetEditor()->Redo();
 	}
+	else if ((strcmp(szStep, "printincludes") == 0) && pTab.IsNotNull())
+	{
+		//The #includes that find the active file (Rename File's), each includer named from the active file's directory.
+		CArrayIDELocations	asIncludes;
+		CFileUtil			cFileUtil;
+		CChars				szName;
+		CChars				szDirectory;
+		size				uiDirectory;
+		size				i;
+		SIDELocation*		psInclude;
+		char*				szIncluder;
+
+		szName.Init();
+		szDirectory.Init();
+		cFileUtil.SplitPath(pTab->GetFileName(), &szName, &szDirectory);
+		uiDirectory = szDirectory.Length() + 1;
+		asIncludes.Init();
+		printf("Includes of %s: %d\n", szName.Text(), (int)mpcContent->GetCodeModel()->FindIncludesOf(pTab->GetFileName(), &mpcContent->GetFindInFiles(), &asIncludes));
+		for (i = 0; i < asIncludes.NumElements(); i++)
+		{
+			psInclude = asIncludes.Get(i);
+			szIncluder = psInclude->szFileName.Text();
+			if (strncmp(szIncluder, szDirectory.Text(), szDirectory.Length()) == 0)
+			{
+				szIncluder += uiDirectory;
+			}
+			printf("  %s %d:%d %d\n", szIncluder, (int)psInclude->iLine + 1, (int)psInclude->iColumn + 1, (int)psInclude->iLength);
+			psInclude->szFileName.Kill();
+		}
+		asIncludes.Kill();
+		szDirectory.Kill();
+		szName.Kill();
+	}
 	else if (strncmp(szStep, "renamesearch:", 13) == 0)
 	{
 		//renamesearch:<c|-><t|->, Rename's searches in comments and strings (c) and for text occurrences (t), for every

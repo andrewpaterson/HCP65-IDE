@@ -31,6 +31,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 IDE_DIR = os.path.join(HERE, '..', 'HCP65IDE')
 #Rename's searches are checked on a project of their own (Input/RenameSearch), whose counts don't move as other code does.
 RENAME_SEARCH = os.path.join(HERE, 'Input', 'RenameSearch', 'RenameSearch.vcxproj')
+#Rename File is checked on a solution of its own (Input/RenameFile): Engine.h, the #includes that find it and some that don't.
+RENAME_FILE = os.path.join(HERE, 'Input', 'RenameFile', 'RenameFile.sln')
 ROOT = os.path.abspath(os.path.join(HERE, '..', '..', '..'))
 BASELIB = os.path.join(ROOT, 'CommonLibraries', 'Libraries', 'BaseLib')
 KERNAL = os.path.join(ROOT, 'HCP65', 'Kernal')
@@ -476,6 +478,18 @@ CHECKS = [
 		#definition or call in the code the index has.
 		'SOLUTION': RENAME_SEARCH, 'WAIT_INDEX': '1', 'OPEN': 'Shape.h', 'CARET': '19:8', 'EDIT': 'renamesearch:ct,rename:Paint'},
 		[r'^Status: Renamed Draw to Paint: 3 places, 2 text occurrences in 3 files\.$'], [r'Rename stopped']),
+	('rename-file-includes', {
+		#The #includes that find Engine.h (Rename File step 2): relative, with a backslash, indented "# include", <> through
+		#the include path, in code LINUX_GNU leaves out, and from the Tool project; not the ones in comments, not
+		#EngineCache.h's, and not Other/OtherUser.cpp's, which finds Other/Engine.h.
+		'SOLUTION': RENAME_FILE, 'WAIT_INDEX': '1', 'OPEN': 'Engine.h', 'EDIT': 'printincludes'},
+		[r'^Includes of Engine\.h: 7$', r'^  Commented\.cpp 6:11 8$', r'^  Engine\.cpp 1:11 8$', r'^  Engine_Linux\.cpp 2:11 8$',
+		 r'^  Sub/Angle\.cpp 1:11 8$', r'^  Sub/Indented\.cpp 1:16 8$', r'^  Sub/User\.cpp 1:14 8$', r'^  Tool/Tool\.cpp 1:14 8$'],
+		[r'OtherUser', r'Commented\.cpp [13]:']),
+	('rename-file-includes-same-name', {
+		#Other/Engine.h, a file with the same name, is found only by the #include next to it.
+		'SOLUTION': RENAME_FILE, 'WAIT_INDEX': '1', 'OPEN': 'Other/Engine.h', 'EDIT': 'printincludes'},
+		[r'^Includes of Engine\.h: 1$', r'^  OtherUser\.cpp 1:11 8$'], [r'Sub/', r'Tool/']),
 	('rename-while-reindexing', {
 		'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'CARET': '36:2', 'TYPE': 'int iTypedName; ', 'EDITS_DELAY': '1500',
 		'DEBUG': 'wait:700,printedits,edit:caret:36:7,edit:renamable,printedits'},

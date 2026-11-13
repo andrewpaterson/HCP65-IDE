@@ -567,19 +567,35 @@ bool CSolutionExplorer::GetNodeFileName(int32 iNode, CChars* pszDest)
 //////////////////////////////////////////////////////////////////////////
 //
 // The node of the first file named szFileName (whatever its case),
-// TREE_NO_NODE if there is none.
+// TREE_NO_NODE if there is none.  A name with directories in it
+// ("Other/Engine.h") is the end of the file's path.
 //
 //////////////////////////////////////////////////////////////////////////
 int32 CSolutionExplorer::FindFileNode(const char* szFileName)
 {
 	int32	iNode;
 	CChars	szName;
+	CChars	szPath;
 	bool	bFound;
+	bool	bPath;
+	size	uiLength;
 
+	bPath = (strchr(szFileName, '/') != NULL) || (strchr(szFileName, '\\') != NULL);
+	uiLength = strlen(szFileName);
 	for (iNode = 0; iNode < mpTree->NumNodes(); iNode++)
 	{
 		szName.Init();
 		bFound = GetNodeFileName(iNode, &szName) && szName.EqualsIgnoreCase(szFileName);
+		if (!bFound && bPath && (szName.Length() > 0))
+		{
+			szPath.Init();
+			if (GetNodeFilePath(iNode, &szPath) && (szPath.Length() > uiLength))
+			{
+				szPath.Replace('\\', '/');
+				bFound = (szPath.Text()[szPath.Length() - uiLength - 1] == '/') && (StringInsensitiveCompare(&szPath.Text()[szPath.Length() - uiLength], szFileName) == 0);
+			}
+			szPath.Kill();
+		}
 		szName.Kill();
 		if (bFound)
 		{

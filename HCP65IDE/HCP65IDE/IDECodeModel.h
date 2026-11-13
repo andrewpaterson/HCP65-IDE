@@ -26,6 +26,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/ArrayTemplatePtr.h"
 #include "BaseLib/Mutex.h"
 #include "BaseLib/MapStringInt.h"
+#include "BaseLib/TextFile.h"
 #include "ThreadLib/WorkerThreadJobs.h"
 #include "CppCompilerLib/Config.h"
 #include "CppCompilerLib/Project.h"
@@ -74,6 +75,14 @@ typedef CArrayTemplate<SIDELocation>	CArrayIDELocations;
 
 //What Rename found at a place in a file: the symbol (its key and name), every place its name is written (the
 //declarations, definitions and uses, a class's constructors and destructor too) and, if it can't be renamed, why.
+//Where the code model gets a file's text: its editor's if it is open, else the disk's (pcFile reads it and keeps it).
+class CIDEFileTexts
+{
+public:
+	virtual bool	GetFileText(const char* szFileName, CTextFile* pcFile, char** pszText, size* puiLength) =0;
+};
+
+
 struct SIDERenameTarget
 {
 	CChars				szKey;
@@ -223,6 +232,7 @@ public:
 	size	FindOverrideLocations(const char* szKey, CArrayIDELocations* pasDest);
 	void	GetUsageGroup(SIDELocation* psLocation, CChars* pszProject, CChars* pszClass);
 	bool	FindIncludeFile(size uiProject, const char* szIncluder, const char* szName, bool bSystem, CChars* pszDest);
+	size	FindIncludesOf(const char* szFileName, CIDEFileTexts* pcTexts, CArrayIDELocations* pasDest);
 
 	void	IndexUnit(SIDEIndexJob* psJob);
 	bool	IsIndexedByAnother(const char* szFileName, size uiJob);

@@ -2276,6 +2276,252 @@ void CIDECodeModel::GetUsageGroup(SIDELocation* psLocation, CChars* pszProject, 
 }
 
 
+//An #include in a file's text: where its name is (between its quotes or angle brackets) and on which line.
+struct SIDEIncludeDirective
+{
+	size	uiNameStart;
+	size	uiNameEnd;
+	int32	iLine;		//0 based.
+	size	uiLineStart;
+	bool	bSystem;
+};
+
+
+typedef CArrayTemplate<SIDEIncludeDirective>	CArrayIDEIncludeDirectives;
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Where the next comment starts on a line from uiStart (before uiEnd),
+// past any string or character literal: MAX_SIZE if none.  pbBlock says
+// if it is a /* comment, rather than a // one.
+//
+//////////////////////////////////////////////////////////////////////////
+static size FindIDELineComment(const char* szText, size uiStart, size uiEnd, bool* pbBlock)
+{
+	size	i;
+	char	cQuote;
+
+	for (i = uiStart; i + 1 < uiEnd; i++)
+	{
+		if ((szText[i] == '"') || (szText[i] == '\''))
+		{
+			cQuote = szText[i];
+			for (i++; (i < uiEnd) && (szText[i] != cQuote); i++)
+			{
+				if (szText[i] == '\\')
+				{
+					i++;
+				}
+			}
+		}
+		else if ((szText[i] == '/') && ((szText[i + 1] == '/') || (szText[i + 1] == '*')))
+		{
+			*pbBlock = (szText[i + 1] == '*');
+			return i;
+		}
+	}
+	return MAX_SIZE;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Each #include in a file's text, as written: the text isn't
+// preprocessed, so an #include an #if leaves out is one too, but one in a
+// comment isn't.  "# include" and indented ones are found.
+//
+//////////////////////////////////////////////////////////////////////////
+static void FindIDEIncludeDirectives(const char* szText, size uiLength, CArrayIDEIncludeDirectives* pasDest)
+{
+	size					uiLineStart;
+	size					uiLineEnd;
+	size					p;
+	size					uiComment;
+	const char*				szNewLine;
+	const char*				szClose;
+	char					cClose;
+	bool					bInBlock;
+	bool					bBlock;
+	int32					iLine;
+	SIDEIncludeDirective*	psDirective;
+
+	bInBlock = false;
+	iLine = 0;
+	for (uiLineStart = 0; uiLineStart < uiLength; uiLineStart = uiLineEnd + 1, iLine++)
+	{
+		szNewLine = (const char*)memchr(&szText[uiLineStart], '\n', uiLength - uiLineStart);
+		uiLineEnd = szNewLine ? (size)(szNewLine - szText) : uiLength;
+		p = uiLineStart;
+		if (bInBlock)
+		{
+			szClose = strstr(&szText[p], "*/");
+			if ((szClose == NULL) || ((size)(szClose - szText) >= uiLineEnd))
+			{
+				continue;
+			}
+			p = (size)(szClose - szText) + 2;
+			bInBlock = false;
+		}
+
+		while ((p < uiLineEnd) && ((szText[p] == ' ') || (szText[p] == '\t')))
+		{
+			p++;
+		}
+		if ((p < uiLineEnd) && (szText[p] == '#'))
+		{
+			p++;
+			while ((p < uiLineEnd) && ((szText[p] == ' ') || (szText[p] == '\t')))
+			{
+				p++;
+			}
+			if ((p + 7 < uiLineEnd) && (strncmp(&szText[p], "include", 7) == 0) && ((szText[p + 7] == ' ') || (szText[p + 7] == '\t') || (szText[p + 7] == '"') || (szText[p + 7] == '<')))
+			{
+				p += 7;
+				while ((p < uiLineEnd) && ((szText[p] == ' ') || (szText[p] == '\t')))
+				{
+					p++;
+				}
+				if ((p < uiLineEnd) && ((szText[p] == '"') || (szText[p] == '<')))
+				{
+					cClose = (szText[p] == '"') ? '"' : '>';
+					szClose = (const char*)memchr(&szText[p + 1], cClose, uiLineEnd - (p + 1));
+					if (szClose && ((size)(szClose - szText) > p + 1))
+					{
+						psDirective = pasDest->Add();
+						psDirective->uiNameStart = p + 1;
+						psDirective->uiNameEnd = (size)(szClose - szText);
+						psDirective->iLine = iLine;
+						psDirective->uiLineStart = uiLineStart;
+						psDirective->bSystem = (cClose == '>');
+						p = psDirective->uiNameEnd + 1;
+					}
+				}
+			}
+		}
+
+		//A /* comment left open at the end of the line hides the lines after it.
+		for (;;)
+		{
+			uiComment = FindIDELineComment(szText, p, uiLineEnd, &bBlock);
+			if ((uiComment == MAX_SIZE) || !bBlock)
+			{
+				break;
+			}
+			szClose = strstr(&szText[uiComment + 2], "*/");
+			if ((szClose == NULL) || ((size)(szClose - szText) >= uiLineEnd))
+			{
+				bInBlock = true;
+				break;
+			}
+			p = (size)(szClose - szText) + 2;
+		}
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Every #include, in the projects' C and C++ files, that finds
+// szFileName (a full path) as the compiler would (see FindIncludeFile),
+// added to pasDest: the includer, the line, and the column and length of
+// the file's name in the #include (its last part, after any directories),
+// which is what renaming the file changes.  An #include an #if leaves out
+// is found too; one in a comment isn't.  The file must still be where
+// szFileName says: an #include is found by looking for its file.  The
+// number found.
+//
+//////////////////////////////////////////////////////////////////////////
+size CIDECodeModel::FindIncludesOf(const char* szFileName, CIDEFileTexts* pcTexts, CArrayIDELocations* pasDest)
+{
+	CFileUtil					cFileUtil;
+	CChars						szTargetName;
+	CChars						szTargetDirectory;
+	CChars						szName;
+	CChars						szFound;
+	CTextFile					cFile;
+	CArrayIDEIncludeDirectives	asDirectives;
+	SIDEIncludeDirective*		psDirective;
+	SIDELocation*				psLocation;
+	EIDEFileType				eType;
+	char*						szIncluder;
+	char*						szText;
+	size						uiLength;
+	size						uiProject;
+	size						uiNamePart;
+	size						uiFound;
+	size						i;
+	size						j;
+
+	FindProjectFiles();
+	szTargetName.Init();
+	szTargetDirectory.Init();
+	cFileUtil.SplitPath(szFileName, &szTargetName, &szTargetDirectory);
+	uiFound = 0;
+	for (i = 0; i < maszProjectFiles.NumElements(); i++)
+	{
+		szIncluder = maszProjectFiles.GetText(i);
+		eType = CIDEIcons::GetFileType(szIncluder);
+		if ((eType != IFT_CPP) && (eType != IFT_C) && (eType != IFT_Header))
+		{
+			continue;
+		}
+		cFile.Init();
+		if (!pcTexts->GetFileText(szIncluder, &cFile, &szText, &uiLength))
+		{
+			cFile.Kill();
+			continue;
+		}
+
+		asDirectives.Init();
+		FindIDEIncludeDirectives(szText, uiLength, &asDirectives);
+		uiProject = MAX_SIZE;
+		for (j = 0; j < asDirectives.NumElements(); j++)
+		{
+			psDirective = asDirectives.Get(j);
+
+			//Only an #include whose last part is the file's name can find it.
+			for (uiNamePart = psDirective->uiNameEnd; (uiNamePart > psDirective->uiNameStart) && (szText[uiNamePart - 1] != '/') && (szText[uiNamePart - 1] != '\\'); uiNamePart--)
+			{
+			}
+			if ((psDirective->uiNameEnd - uiNamePart != szTargetName.Length()) || (MemICmp(&szText[uiNamePart], szTargetName.Text(), szTargetName.Length()) != 0))
+			{
+				continue;
+			}
+
+			if (uiProject == MAX_SIZE)
+			{
+				uiProject = FindProjectOfFile(szIncluder);
+			}
+			szName.Init();
+			szName.AppendSubString(szText, psDirective->uiNameStart, psDirective->uiNameEnd);
+			szName.Replace('\\', '/');
+			szFound.Init();
+			if (FindIncludeFile(uiProject, szIncluder, szName.Text(), psDirective->bSystem, &szFound) && (StringInsensitiveCompare(szFound.Text(), szFileName) == 0))
+			{
+				psLocation = pasDest->Add();
+				psLocation->szFileName.Init(szIncluder);
+				psLocation->iLine = psDirective->iLine;
+				psLocation->iColumn = (int32)(uiNamePart - psDirective->uiLineStart);
+				psLocation->iLength = (int32)(psDirective->uiNameEnd - uiNamePart);
+				psLocation->uiRole = 0;
+				psLocation->uiFlags = 0;
+				psLocation->uiUsage = 0;
+				psLocation->iContainer = -1;
+				uiFound++;
+			}
+			szFound.Kill();
+			szName.Kill();
+		}
+		asDirectives.Kill();
+		cFile.Kill();
+	}
+	szTargetDirectory.Kill();
+	szTargetName.Kill();
+	return uiFound;
+}
+
+
 //////////////////////////////////////////////////////////////////////////
 //
 // The file an #include names, as the compiler would find it: "" includes

@@ -1,0 +1,32 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Commented.cpp" />
+    <ClCompile Include="Engine.cpp" />
+    <ClCompile Include="Engine_Linux.cpp" />
+    <ClCompile Include="Other\OtherUser.cpp" />
+    <ClCompile Include="Sub\Angle.cpp" />
+    <ClCompile Include="Sub\Indented.cpp" />
+    <ClCompile Include="Sub\User.cpp" />
+    <ClInclude Include="Engine.h" />
+    <ClInclude Include="EngineCache.h" />
+    <ClInclude Include="Other\Engine.h" />
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{5C1D2E3F-0000-4000-8000-000000000001}</ProjectGuid>
+    <RootNamespace>Engine</RootNamespace>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+  </PropertyGroup>
+  <PropertyGroup>
+    <IncludePath>$(ProjectDir);$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>

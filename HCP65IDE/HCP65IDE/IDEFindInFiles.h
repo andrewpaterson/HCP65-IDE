@@ -74,7 +74,7 @@ typedef CArrayTemplate<SIDEFindPlace>	CArrayIDEFindPlaces;
 //
 //The search is a little at a time (SearchSome): a directory's files are listed, or a file is searched, until the time
 //is up, so the dialog is never kept from the keys.
-class CIDEFindInFiles : public CObject, public CFindInFilesSearcher, public CIDESteppable, public CIDEResultsSource, public CIDEPreviewAsker
+class CIDEFindInFiles : public CObject, public CFindInFilesSearcher, public CIDESteppable, public CIDEResultsSource, public CIDEPreviewAsker, public CIDEFileTexts
 {
 friend class CIDEScript;
 CONSTRUCTABLE(CIDEFindInFiles);
@@ -154,7 +154,7 @@ public:
 	bool					GetResultLocation(CIDEResultsPane* pcPane, int64 iData, SIDELocation* psDest) override;
 	bool					CanRerunResults(CIDEResultsPane* pcPane) override;
 	void					RerunResults(CIDEResultsPane* pcPane) override;
-	bool					GetFileText(const char* szFileName, CTextFile* pcFile, char** pszText, size* puiLength);
+	bool					GetFileText(const char* szFileName, CTextFile* pcFile, char** pszText, size* puiLength) override;
 
 protected:
 	void				ShowQueuedFind(void);
