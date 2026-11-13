@@ -610,6 +610,14 @@ CHECKS = [
 		 r"^Status: Can't rename: Engine\.h is already called that\.$",
 		 r'^Project files: Commented\.cpp Engine\.cpp Engine_Linux\.cpp .* Engine\.h EngineCache\.h'],
 		[r'^Status: Renamed']),
+	('index-parent-includes', {
+		#Units reaching Engine.h with "../Engine.h" (Sub/User.cpp in its project's directory, Tool/Tool.cpp from outside
+		#every include directory of its project) and "..\\Engine.h" (Sub/Indented.cpp) include it, as MSVC does: the
+		#index has no problems, and has CEngine at its 4 places (the 5th is in code LINUX_GNU leaves out).
+		'SOLUTION': RENAME_FILE, 'WAIT_INDEX': '1', 'OPEN': 'Engine.h', 'CARET': '5:8',
+		'DEBUG': 'printindexing,edit:renamable,edit:usagegroups:,edit:usages'},
+		[r'^Indexing: \d+ ms, 0 units with problems$', r'^Rename: CEngine \[CEngine\] at 4 places, 0 overrides$', r'^Usages of CEngine  3 usages$'],
+		[r'Could not include']),
 	('rename-file-includes-same-name', {
 		#Other/Engine.h, a file with the same name, is found only by the #include next to it.
 		'SOLUTION': RENAME_FILE, 'WAIT_INDEX': '1', 'OPEN': 'Other/Engine.h', 'EDIT': 'printincludes'},

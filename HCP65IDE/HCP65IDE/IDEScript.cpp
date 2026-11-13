@@ -434,8 +434,9 @@ void CIDEScript::RunCommand(const char* szCommand)
 	else if (strcmp(szCommand, "printindexing") == 0)
 	{
 		//How long the index took to build, and how many units couldn't include something: "Indexing: 5230 ms, 2 units
-		//with problems", -1 ms while it is still being built.
+		//with problems", -1 ms while it is still being built; then the Indexing tab's text, which says what they were.
 		printf("Indexing: %d ms, %d units with problems\n", (int)mpcContent->GetCodeModel()->GetIndexingMilliseconds(), (int)mpcContent->GetCodeModel()->NumIndexingProblemUnits());
+		printf("Indexing pane:\n%s\n", mpcContent->GetIndexing()->GetPane()->GetOutputArea()->GetText());
 		fflush(stdout);
 	}
 	else if (strcmp(szCommand, "printsettings") == 0)
