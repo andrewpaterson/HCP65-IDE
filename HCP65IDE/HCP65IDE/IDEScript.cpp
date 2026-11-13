@@ -32,6 +32,11 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 //The debug script's commands that are the IDE's (RunCommand); "goto:" takes what follows it.
+//The searches of the script's renamefile steps (renamefilesearch).
+static bool			gbIDEScriptFileComments = false;
+static bool			gbIDEScriptFileText = false;
+
+
 static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printfindpreview", "printfindtoolbar", "findtool:", "printstartup", "printworkspace", "rename", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printsettings", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printprojectfiles", "printdiskfile:", "printedits", "printspans", "configuration:", "waitindex" };
 
 
@@ -1273,6 +1278,13 @@ void CIDEScript::RunEditStep(const char* szStep)
 	{
 		pTab->GetEditor()->Redo();
 	}
+	else if (strncmp(szStep, "renamefilesearch:", 17) == 0)
+	{
+		//renamefilesearch:<c|-><t|->, the searches of the renamefile steps after it, in comments and strings (c) and for
+		//text occurrences (t); both off until it is given, whatever the settings say.
+		gbIDEScriptFileComments = (szStep[17] == 'c');
+		gbIDEScriptFileText = (szStep[17] != '\0') && (szStep[18] == 't');
+	}
 	else if (((strncmp(szStep, "renamefile:", 11) == 0) || (strncmp(szStep, "renamefilerelated:", 18) == 0)) && pTab.IsNotNull())
 	{
 		//Rename File on the active tab's file (Rename File's core, without its dialog), with its related files for
@@ -1285,7 +1297,7 @@ void CIDEScript::RunEditStep(const char* szStep)
 		szFileName.Init(pTab->GetFileName());
 		asRenames.Init();
 		mpcContent->GetFileRename()->AddRenames(szFileName.Text(), strchr(szStep, ':') + 1, bRelated, &asRenames);
-		mpcContent->GetFileRename()->RenameFiles(&asRenames);
+		mpcContent->GetFileRename()->RenameFiles(&asRenames, gbIDEScriptFileComments, gbIDEScriptFileText);
 		KillIDEFileRenames(&asRenames);
 		szFileName.Kill();
 	}
@@ -1503,8 +1515,12 @@ void CIDEScript::RunEditStep(const char* szStep)
 	}
 	else if (strncmp(szStep, "focus:", 6) == 0)
 	{
-		//The keys given to the Build output, Claude's request or the active document.
-		if (strcmp(&szStep[6], "build") == 0)
+		//The keys given to the Build output, Claude's request, Solution Explorer or the active document.
+		if (strcmp(&szStep[6], "explorer") == 0)
+		{
+			mpcContent->GetWindow()->GetFocus()->SetFocus(mpcContent->GetSolutions()->GetExplorer()->GetTree());
+		}
+		else if (strcmp(&szStep[6], "build") == 0)
 		{
 			mpcContent->GetDock()->Show(mpcContent->GetBuilding()->GetBuildTool());
 			mpcContent->GetWindow()->GetFocus()->SetFocus(mpcContent->GetBuilding()->GetBuildPane()->GetOutputArea());

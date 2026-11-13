@@ -37,6 +37,49 @@ struct SIDEPlace;
 typedef CArrayTemplate<SIDEPlace>	CArrayIDEPlaces;
 
 
+//Where a search found the old name in a file's text.
+struct SIDENameOccurrence
+{
+	size	uiStart;
+	int32	iLine;		//0 based.
+	int32	iColumn;	//0 based.
+	bool	bComment;	//In a comment or a string, else in code (or a text file).
+};
+
+
+typedef CArrayTemplate<SIDENameOccurrence>	CArrayIDENameOccurrences;
+
+
+//The line and column of offsets into a text, asked for in order.
+struct SIDELineCounter
+{
+	const char*	szText;
+	size		uiCounted;
+	int32		iLine;
+	size		uiLineStart;
+
+	void Init(const char* szSource)
+	{
+		szText = szSource;
+		uiCounted = 0;
+		iLine = 0;
+		uiLineStart = 0;
+	}
+
+	void MoveTo(size uiOffset)
+	{
+		for (; uiCounted < uiOffset; uiCounted++)
+		{
+			if (szText[uiCounted] == '\n')
+			{
+				iLine++;
+				uiLineStart = uiCounted + 1;
+			}
+		}
+	}
+};
+
+
 //IntelliJ's Rename (Shift+F6): the symbol at the caret (or the name the selection is in) renamed everywhere the index
 //has it, a class's constructors and destructor too, in each file's editor as one edit and across the files as one
 //undo group.  The new name is asked for in a dialog; nothing changes if a file changed since it was indexed.  As
@@ -78,6 +121,7 @@ public:
 
 protected:
 	void	ShowQueuedRename(void);
+	bool	IsExplorerFocussed(void);
 	bool	ApproveRename(void);
 	size	FindRenameFile(CArrayChars* paszFiles, const char* szFileName);
 	bool	SearchRenameFiles(const char* szName, bool bComments, bool bText, CArrayChars* paszFiles, CArrayIDEPlaces* pasPlaces, CChars* pszChanged);
@@ -86,6 +130,13 @@ protected:
 
 bool IsIDEIdentifier(const char* szName);
 size FindIDENameInKey(const char* szKey, const char* szName);
+
+
+bool	IsIDENameChar(char c);
+void	AddIDEOccurrence(SIDELineCounter* psLines, size uiStart, bool bComment, CArrayIDENameOccurrences* pasDest);
+void	FindIDEWords(const char* szText, size uiStart, size uiEnd, const char* szName, size uiNameLength, bool bComment, SIDELineCounter* psLines, CArrayIDENameOccurrences* pasDest);
+void	FindIDECppOccurrences(const char* szText, size uiLength, const char* szName, bool bCode, bool bComments, SIDELineCounter* psLines, CArrayIDENameOccurrences* pasDest);
+bool	IsIDERenameTextFile(const char* szFileName);
 
 
 #endif // __IDE_RENAME_H__

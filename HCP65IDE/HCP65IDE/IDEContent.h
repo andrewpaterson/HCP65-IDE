@@ -212,6 +212,7 @@ public:
 	void				Tick(Ptr<CWindow> pWindow);
 	bool				PaneClosing(CDockPane* pcPane) override;
 	bool				IsPaneModified(CDockPane* pcPane) override;
+	void				DocumentMenuCreated(Ptr<CMenuContainer> pMenu) override;
 	void				PaneClosed(CDockPane* pcPane) override;
 	void				DocumentSelected(CDockPane* pcPane) override;
 	Ptr<CDockPane>		CreatePane(const char* szID) override;

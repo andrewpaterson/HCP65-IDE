@@ -50,47 +50,6 @@ struct SIDEPlace
 };
 
 
-//Where a search found the old name in a file's text.
-struct SIDENameOccurrence
-{
-	size	uiStart;
-	int32	iLine;		//0 based.
-	int32	iColumn;	//0 based.
-	bool	bComment;	//In a comment or a string, else in code (or a text file).
-};
-
-
-typedef CArrayTemplate<SIDENameOccurrence>	CArrayIDENameOccurrences;
-
-
-//The line and column of offsets into a text, asked for in order.
-struct SIDELineCounter
-{
-	const char*	szText;
-	size		uiCounted;
-	int32		iLine;
-	size		uiLineStart;
-
-	void Init(const char* szSource)
-	{
-		szText = szSource;
-		uiCounted = 0;
-		iLine = 0;
-		uiLineStart = 0;
-	}
-
-	void MoveTo(size uiOffset)
-	{
-		for (; uiCounted < uiOffset; uiCounted++)
-		{
-			if (szText[uiCounted] == '\n')
-			{
-				iLine++;
-				uiLineStart = uiCounted + 1;
-			}
-		}
-	}
-};
 
 
 
@@ -111,7 +70,7 @@ static const char* gaszIDEKeywords[] =
 //
 //
 //////////////////////////////////////////////////////////////////////////
-static bool IsIDENameChar(char c)
+bool IsIDENameChar(char c)
 {
 	return ((c >= 'a') && (c <= 'z')) || ((c >= 'A') && (c <= 'Z')) || ((c >= '0') && (c <= '9')) || (c == '_');
 }
@@ -121,7 +80,7 @@ static bool IsIDENameChar(char c)
 //
 //
 //////////////////////////////////////////////////////////////////////////
-static void AddIDEOccurrence(SIDELineCounter* psLines, size uiStart, bool bComment, CArrayIDENameOccurrences* pasDest)
+void AddIDEOccurrence(SIDELineCounter* psLines, size uiStart, bool bComment, CArrayIDENameOccurrences* pasDest)
 {
 	SIDENameOccurrence*	psOccurrence;
 
@@ -139,7 +98,7 @@ static void AddIDEOccurrence(SIDELineCounter* psLines, size uiStart, bool bComme
 // Each place szName is a whole word in szText from uiStart to uiEnd.
 //
 //////////////////////////////////////////////////////////////////////////
-static void FindIDEWords(const char* szText, size uiStart, size uiEnd, const char* szName, size uiNameLength, bool bComment, SIDELineCounter* psLines, CArrayIDENameOccurrences* pasDest)
+void FindIDEWords(const char* szText, size uiStart, size uiEnd, const char* szName, size uiNameLength, bool bComment, SIDELineCounter* psLines, CArrayIDENameOccurrences* pasDest)
 {
 	size	i;
 
@@ -163,7 +122,7 @@ static void FindIDEWords(const char* szText, size uiStart, size uiEnd, const cha
 // searched as any other.
 //
 //////////////////////////////////////////////////////////////////////////
-static void FindIDECppOccurrences(const char* szText, size uiLength, const char* szName, bool bCode, bool bComments, SIDELineCounter* psLines, CArrayIDENameOccurrences* pasDest)
+void FindIDECppOccurrences(const char* szText, size uiLength, const char* szName, bool bCode, bool bComments, SIDELineCounter* psLines, CArrayIDENameOccurrences* pasDest)
 {
 	size		uiNameLength;
 	size		i;
@@ -275,7 +234,7 @@ static void FindIDECppOccurrences(const char* szText, size uiLength, const char*
 // A text file Rename's text search looks in.
 //
 //////////////////////////////////////////////////////////////////////////
-static bool IsIDERenameTextFile(const char* szFileName)
+bool IsIDERenameTextFile(const char* szFileName)
 {
 	size	uiLength;
 
@@ -414,7 +373,24 @@ bool CIDERename::FindRenameTarget(SIDERenameTarget* psDest)
 //////////////////////////////////////////////////////////////////////////
 void CIDERename::QueueRename(void)
 {
+	//In Solution Explorer, as in IntelliJ's Project view, it renames the selected file.
+	if (IsExplorerFocussed())
+	{
+		mpcContent->GetFileRename()->RenameExplorerFile();
+		return;
+	}
 	mpcContent->GetWindow()->Post(this, &CIDERename::ShowQueuedRename);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether Solution Explorer has the keys: Rename is Rename File there.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDERename::IsExplorerFocussed(void)
+{
+	return mpcContent->GetWindow()->GetFocus()->GetFocussedComponent() == mpcContent->GetSolutions()->GetExplorer()->GetTree();
 }
 
 
@@ -994,6 +970,7 @@ void CIDERename::AddEditorItems(Ptr<CMenuContainer> pMenu)
 
 	pMenu->AddItem(mpcContent->GetCommands()->Find("Refactor.Rename"));
 	pRefactor = OMalloc<CMenuContainer>(mpcContent->GetWindow(), mpcContent->GetTheme());
+	pRefactor->AddItem(mpcContent->GetCommands()->Find("Refactor.RenameFile"));
 	pRefactor->AddItem("Extract Method...")->SetEnabled(false);
 	pMenu->AddItem("Refactor", NULL, pRefactor);
 }
@@ -1009,6 +986,10 @@ bool CIDERename::CanRename(void)
 	SIDERenameTarget	sTarget;
 	bool				bRenamable;
 
+	if (IsExplorerFocussed())
+	{
+		return mpcContent->GetFileRename()->CanRenameExplorerFile();
+	}
 	sTarget.Init();
 	bRenamable = FindRenameTarget(&sTarget) && sTarget.bRenamable;
 	sTarget.Kill();

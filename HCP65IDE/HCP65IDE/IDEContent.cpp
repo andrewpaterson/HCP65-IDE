@@ -280,6 +280,7 @@ void CIDEContent::Free(void)
 		mpWindow->CancelPosted(&mpFindInFiles);
 		mpWindow->CancelPosted(&mpUsages);
 		mpWindow->CancelPosted(&mpRename);
+		mpWindow->CancelPosted(&mpFileRename);
 		mpWindow->CancelPosted(&mpSolutions);
 		mpWindow->CancelPosted(&mpBuildConfigurations);
 		mpWindow->CancelPosted(&mpBuilding);
@@ -590,6 +591,7 @@ void CIDEContent::AddCommands(void)
 
 	mpNavigator->AddCommands(mpCommands);
 	mpRename->AddCommands(mpCommands);
+	mpFileRename->AddCommands(mpCommands);
 	mpUsages->AddCommands(mpCommands);
 	mpFindInFiles->AddCommands(mpCommands);
 	mpOccurrences->AddCommands(mpCommands);
@@ -827,6 +829,17 @@ void CIDEContent::DocumentSelected(CDockPane* pcPane)
 bool CIDEContent::PaneClosing(CDockPane* pcPane)
 {
 	return mpCloseGuard->PaneClosing(pcPane);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The documents' tab menu gets Rename File.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEContent::DocumentMenuCreated(Ptr<CMenuContainer> pMenu)
+{
+	mpFileRename->AddDocumentItems(pMenu);
 }
 
 

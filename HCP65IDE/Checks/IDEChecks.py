@@ -538,6 +538,42 @@ CHECKS = [
 		'WAIT_INDEX': '1', 'OPEN': 'Engine.h', 'DEBUG': 'edit:renamefilerelated:CPPEngine.h,edit:open:Sub/User.cpp,edit:undo,printprojectfiles,printdiskfile:Tool/Tool.cpp'}),
 		[r'^Project files: Commented\.cpp Engine\.cpp Engine_Linux\.cpp .* Engine\.h EngineCache\.h', r'^#include "\.\./Engine\.h"'],
 		[r"Couldn't rename", r'Project files:.*CPPEngine', r'CPPEngine\.h"']),
+	('rename-file-dialog', dict(MakeRenameFileCopy(), **{
+		#Rename File's dialog (step 5), from the editors' Refactor menu, with its ticks as they start: the stem typed over,
+		#the related files renamed too, and Engine.h in Commented.cpp's comment, but not on #include lines that aren't
+		#Engine.h's (Other/OtherUser.cpp's) or in a comment (Commented.cpp's /* */).
+		'WAIT_INDEX': '1', 'OPEN': 'Engine.h', 'SETTINGS': MakeSettingsFile(), 'DIALOG_KEYS': 'type:CPPEngine', 'DIALOG_ANSWER': 'OK',
+		'DEBUG': 'printmenus,command:Refactor.RenameFile,answered:1,printprojectfiles,printdiskfile:Commented.cpp,printdiskfile:Other/OtherUser.cpp'}),
+		[r'^Menu Editor/Refactor: Rename File\.\.\., Extract Method', r'^Menu Explorer: .*, Rename\.\.\.(\(disabled\))?$',
+		 r'^Dialog \[Rename File\] answered OK$',
+		 r'^Status: Renamed Engine\.h to CPPEngine\.h and 2 more files: 7 #includes, 1 in comments and strings in 7 files, 2 projects\.$',
+		 r'^Project files: Commented\.cpp CPPEngine\.cpp CPPEngine_Linux\.cpp ', r'^//#include "CPPEngine\.h"$', r'^#include "Engine\.h"$'],
+		[r'Rename stopped', r"Can't rename"]),
+	('rename-file-dialog-cancel', dict(MakeRenameFileCopy(), **{
+		#Cancel renames nothing.
+		'WAIT_INDEX': '1', 'OPEN': 'Engine.h', 'SETTINGS': MakeSettingsFile(), 'DIALOG_KEYS': 'type:CPPEngine', 'DIALOG_ANSWER': 'Cancel',
+		'DEBUG': 'command:Refactor.RenameFile,answered:1,printprojectfiles'}),
+		[r'^Dialog \[Rename File\] answered Cancel$', r'^Project files: Commented\.cpp Engine\.cpp Engine_Linux\.cpp '],
+		[r'^Status: Renamed']),
+	('rename-file-tab-menu', dict(MakeRenameFileCopy(), **{
+		#The document tab menu's Rename File renames the file of the tab it was opened for.
+		'WAIT_INDEX': '1', 'OPEN': 'Engine.h', 'SETTINGS': MakeSettingsFile(), 'DIALOG_KEYS': 'type:Motor', 'DIALOG_ANSWER': 'OK',
+		'DEBUG': 'tabmenu,command:Document.RenameFile,answered:1,printprojectfiles'}),
+		[r'^Status: Renamed Engine\.h to Motor\.h and 2 more files: ', r'^Project files: Commented\.cpp Motor\.cpp Motor_Linux\.cpp '],
+		[r'Rename stopped']),
+	('rename-file-explorer', dict(MakeRenameFileCopy(), **{
+		#Shift+F6 (Rename) with Solution Explorer's keys renames its selected file, as IntelliJ's Project view does.
+		'WAIT_INDEX': '1', 'OPEN': 'Sub/User.cpp', 'SETTINGS': MakeSettingsFile(), 'DIALOG_KEYS': 'type:Customer', 'DIALOG_ANSWER': 'OK',
+		'DEBUG': 'edit:explorer,edit:focus:explorer,command:Refactor.Rename,answered:1,printprojectfiles'}),
+		[r'^Dialog \[Rename File\] answered OK$', r'^Status: Renamed User\.cpp to Customer\.cpp: no file refers to it, 1 project\.$',
+		 r'^Project files: .* Sub/Customer\.cpp '],
+		[r'Rename stopped', r'Sub/User\.cpp']),
+	('rename-file-dialog-taken', dict(MakeRenameFileCopy(), **{
+		#A name that is taken, typed in the dialog: nothing is renamed, and the status line says why.
+		'WAIT_INDEX': '1', 'OPEN': 'Engine.h', 'SETTINGS': MakeSettingsFile(), 'DIALOG_KEYS': 'type:EngineCache', 'DIALOG_ANSWER': 'OK',
+		'DEBUG': 'command:Refactor.RenameFile,answered:1,printprojectfiles'}),
+		[r"^Status: Can't rename: EngineCache\.h is already there\.$", r'^Project files: Commented\.cpp Engine\.cpp Engine_Linux\.cpp '],
+		[r'^Status: Renamed']),
 	('rename-file-refused', dict(MakeRenameFileCopy(), **{
 		#A name that is taken, one with a directory, and the same name: nothing is renamed.
 		'WAIT_INDEX': '1', 'OPEN': 'Engine.h', 'DEBUG': 'edit:renamefile:EngineCache.h,edit:renamefile:Sub/Engine.h,edit:renamefile:Engine.h,printprojectfiles'}),
@@ -933,8 +969,8 @@ CHECKS = [
 		 r'^Menu Debug: Start Debugging \[F5\], Start Without Debugging \[Ctrl\+F5\], Stop Debugging \[Shift\+F5\], Stop Running\(disabled\), Restart \[Ctrl\+Shift\+F5\], Break All \[Ctrl\+Pause/Break\], Attach to Emulator\.\.\., Step Into \[F11\], Step Over \[F10\], Step Out \[Shift\+F11\], Toggle Breakpoint \[F9\], ',
 		 r'^Menu Window: Reset Window Layout, Close All Documents$',
 		 r'^Menu Editor: Go to Source \[Ctrl\+B\], Find Usages \[Alt\+F7\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Rename\.\.\. \[Shift\+F6\], Refactor>, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\]$',
-		 r'^Menu Editor/Refactor: Extract Method\.\.\.\(disabled\)$',
-		 r'^Menu Explorer: Set as Startup Solution, Set as Startup Project\(disabled\), Remove Solution$',
+		 r'^Menu Editor/Refactor: Rename File\.\.\., Extract Method\.\.\.\(disabled\)$',
+		 r'^Menu Explorer: Set as Startup Solution, Set as Startup Project\(disabled\), Remove Solution, Rename\.\.\.(\(disabled\))?$',
 		 r'^Menu item \[View/Nope\] not found$'], []),
 	('menu-clicks', {
 		'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'CARET': '36:4', 'DIALOG_ANSWER': 'Cancel',

@@ -885,6 +885,8 @@ Ptr<CMenuContainer> CIDESolutions::CreateExplorerMenu(void)
 	mpExplorerMenu->AddItem(mpcContent->GetCommands()->Find("Explorer.SetStartupSolution"));
 	mpExplorerMenu->AddItem(mpcContent->GetCommands()->Find("Explorer.SetStartupProject"));
 	mpExplorerMenu->AddItem(mpcContent->GetCommands()->Find("Explorer.RemoveSolution"));
+	mpExplorerMenu->AddSeparator();
+	mpExplorerMenu->AddItem(mpcContent->GetCommands()->Find("Explorer.RenameFile"));
 	return mpExplorerMenu;
 }
 
