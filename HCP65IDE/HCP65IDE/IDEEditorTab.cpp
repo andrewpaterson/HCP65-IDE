@@ -692,6 +692,37 @@ void CIDEEditorTab::ShowModified(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// The tab's file was renamed (Rename File): it is szFileName now, and its
+// pane's id and title follow it.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEEditorTab::SetFileName(const char* szFileName)
+{
+	CFileUtil	cFileUtil;
+	CChars		szName;
+	CChars		szID;
+
+	mszFileName.Set(szFileName);
+	if (mpDockPane.IsNotNull())
+	{
+		szID.Init(IDE_DOCUMENT_PREFIX);
+		szID.Append(szFileName);
+		mpDockPane->SetID(szID.Text());
+		szID.Kill();
+		szName.Init();
+		cFileUtil.GetFileName(&szName, szFileName);
+		if (IsModified())
+		{
+			szName.Append('*');
+		}
+		mpDockPane->SetTitle(szName.Text());
+		szName.Kill();
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // True if szText's first line ends with a carriage return and line feed.
 //
 //////////////////////////////////////////////////////////////////////////

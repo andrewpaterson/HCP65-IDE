@@ -73,6 +73,7 @@ public:
 	Ptr<CMenuContainer>	GetEditMenu(void);
 	void				EditorUndoChanged(CTextArea* pcEditor, STextUndoChange* psUndo);
 	void				FileClosed(char* szFileName);
+	void				FileRenamed(char* szOldFileName, char* szNewFileName);
 	bool				UndoAcrossFiles(void);
 	bool				RedoAcrossFiles(void);
 	void				BeginUndoGroup(void);

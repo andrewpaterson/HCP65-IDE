@@ -214,6 +214,7 @@ void CIDEContent::Class(void)
 	M_Pointer(mpEdit);
 	M_Pointer(mpNavigator);
 	M_Pointer(mpRename);
+	M_Pointer(mpFileRename);
 	M_Pointer(mpUsages);
 	M_Pointer(mpFindInFiles);
 	M_Pointer(mpOccurrences);
@@ -393,6 +394,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpEdit = OMalloc<CIDEEdit>(this);
 	mpNavigator = OMalloc<CIDENavigator>(this);
 	mpRename = OMalloc<CIDERename>(this);
+	mpFileRename = OMalloc<CIDEFileRename>(this);
 	mpUsages = OMalloc<CIDEUsages>(this);
 	mpFindInFiles = OMalloc<CIDEFindInFiles>(this);
 	mpOccurrences = OMalloc<CIDEOccurrences>(this);
@@ -1079,4 +1081,5 @@ Ptr<CIDEOccurrences> CIDEContent::GetOccurrences(void) { return mpOccurrences; }
 Ptr<CIDENavigationHistory> CIDEContent::GetNavigationHistory(void) { return mpNavigationHistory; }
 Ptr<CIDEIndexing> CIDEContent::GetIndexing(void) { return mpIndexing; }
 Ptr<CIDERename> CIDEContent::GetRename(void) { return mpRename; }
+Ptr<CIDEFileRename> CIDEContent::GetFileRename(void) { return mpFileRename; }
 Ptr<CIDECloseGuard> CIDEContent::GetCloseGuard(void) { return mpCloseGuard; }

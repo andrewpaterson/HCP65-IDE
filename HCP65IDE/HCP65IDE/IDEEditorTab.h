@@ -118,6 +118,7 @@ public:
 	Ptr<CScrollPane>	GetPane(void);
 	Ptr<CDockPane>		GetDockPane(void);
 	char*				GetFileName(void);
+	void				SetFileName(const char* szFileName);
 	size				GetProject(void);
 	void				SetProject(size uiProject);
 	bool				IsEdited(void);

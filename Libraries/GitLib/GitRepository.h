@@ -57,6 +57,8 @@ public:
 	bool			ReadHeadText(const char* szFullPath, CChars* pszDest);
 	bool			ReadRevisionText(const char* szFullPath, const char* szRevision, CChars* pszDest);
 	bool			ReadBranches(CArrayChars* paszDest);
+	bool			IsTracked(const char* szFullPath);
+	bool			Move(const char* szOldFullPath, const char* szNewFullPath);
 
 protected:
 	void			AddStatusArguments(CArrayChars* paszArguments);

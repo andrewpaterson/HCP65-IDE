@@ -393,6 +393,74 @@ void TestGitCommand(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Whether a file is tracked, and a tracked file renamed with git mv: the
+// rename staged, the file moved.  An untracked file, or a name taken,
+// isn't moved.
+//
+//////////////////////////////////////////////////////////////////////////
+void TestGitRepositoryMove(void)
+{
+	CFileUtil		cFileUtil;
+	CChars			szRoot;
+	CChars			szPath;
+	CChars			szNew;
+	CGitRepository	cRepository;
+	CGitCommand		cCommand;
+	CArrayChars		aszArguments;
+
+	szRoot.Init(TEST_GIT_REPOSITORY "Move");
+	cFileUtil.FullPath(&szRoot);
+	NormaliseGitPath(&szRoot);
+	cFileUtil.RemoveDir(szRoot.Text());
+	AssertTrue(cFileUtil.MakeDirs(false, szRoot.Text(), NULL));
+	szPath.Init();
+	szNew.Init();
+	AssertTrue(cFileUtil.MakeDir(TestGitPath(&szPath, szRoot.Text(), "Sub")));
+	AssertTrue(RunTestGit(szRoot.Text(), "init", "-q", "--initial-branch=master", NULL));
+	WriteTestGitFile(szRoot.Text(), "Engine.h", "e\n");
+	WriteTestGitFile(szRoot.Text(), "Sub/Util.h", "u\n");
+	AssertTrue(RunTestGit(szRoot.Text(), "add", "-A", NULL));
+	AssertTrue(RunTestGit(szRoot.Text(), "commit", "-q", "-m", "First", NULL));
+	WriteTestGitFile(szRoot.Text(), "New.h", "n\n");
+
+	cRepository.Init(szRoot.Text());
+	AssertTrue(cRepository.IsTracked(TestGitPath(&szPath, szRoot.Text(), "Engine.h")));
+	AssertTrue(cRepository.IsTracked(TestGitPath(&szPath, szRoot.Text(), "Sub/Util.h")));
+	AssertFalse(cRepository.IsTracked(TestGitPath(&szPath, szRoot.Text(), "New.h")));
+	AssertFalse(cRepository.IsTracked(TestGitPath(&szPath, szRoot.Text(), "Missing.h")));
+	AssertFalse(cRepository.IsTracked("/no-such-folder-for-git/Engine.h"));
+
+	//Tracked: moved, and staged as a rename.
+	AssertTrue(cRepository.Move(TestGitPath(&szPath, szRoot.Text(), "Engine.h"), TestGitPath(&szNew, szRoot.Text(), "CPPEngine.h")));
+	AssertFalse(cFileUtil.Exists(TestGitPath(&szPath, szRoot.Text(), "Engine.h")));
+	AssertTrue(cFileUtil.Exists(TestGitPath(&szPath, szRoot.Text(), "CPPEngine.h")));
+	AssertTrue(cRepository.Move(TestGitPath(&szPath, szRoot.Text(), "Sub/Util.h"), TestGitPath(&szNew, szRoot.Text(), "Sub/Utility.h")));
+	aszArguments.Init();
+	aszArguments.Add("status");
+	aszArguments.Add("--porcelain");
+	aszArguments.Add("--untracked-files=no");
+	cCommand.Init();
+	AssertTrue(cCommand.Run(szRoot.Text(), &aszArguments));
+	AssertString("R  Engine.h -> CPPEngine.h\nR  Sub/Util.h -> Sub/Utility.h\n", cCommand.GetOutput()->Text());
+	cCommand.Kill();
+	aszArguments.Kill();
+
+	//Untracked, or onto a file that is there: nothing moves.
+	AssertFalse(cRepository.Move(TestGitPath(&szPath, szRoot.Text(), "New.h"), TestGitPath(&szNew, szRoot.Text(), "Newer.h")));
+	AssertTrue(cFileUtil.Exists(TestGitPath(&szPath, szRoot.Text(), "New.h")));
+	AssertFalse(cRepository.Move(TestGitPath(&szPath, szRoot.Text(), "CPPEngine.h"), TestGitPath(&szNew, szRoot.Text(), "Sub/Utility.h")));
+	AssertTrue(cFileUtil.Exists(TestGitPath(&szPath, szRoot.Text(), "CPPEngine.h")));
+
+	cRepository.Kill();
+	szNew.Kill();
+	szPath.Kill();
+	cFileUtil.RemoveDir(szRoot.Text());
+	szRoot.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 //
 //////////////////////////////////////////////////////////////////////////
 void TestGitRepository(void)
@@ -403,6 +471,7 @@ void TestGitRepository(void)
 	TestGitRepositoryPaths();
 	TestGitRepositoryStatus();
 	TestGitRepositories();
+	TestGitRepositoryMove();
 
 	TestStatistics();
 }

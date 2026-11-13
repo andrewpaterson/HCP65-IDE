@@ -301,6 +301,7 @@ void CIDEEdit::EndUndoGroup(void) { mcUndoLog.EndGroup(); }
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEEdit::FileClosed(char* szFileName) { mcUndoLog.RemoveDocument(szFileName); }
+void CIDEEdit::FileRenamed(char* szOldFileName, char* szNewFileName) { mcUndoLog.RenameDocument(szOldFileName, szNewFileName); }
 
 
 //////////////////////////////////////////////////////////////////////////

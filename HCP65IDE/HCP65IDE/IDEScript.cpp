@@ -32,7 +32,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 //The debug script's commands that are the IDE's (RunCommand); "goto:" takes what follows it.
-static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printfindpreview", "printfindtoolbar", "findtool:", "printstartup", "printworkspace", "rename", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printsettings", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printedits", "printspans", "configuration:", "waitindex" };
+static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printfindpreview", "printfindtoolbar", "findtool:", "printstartup", "printworkspace", "rename", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printsettings", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printprojectfiles", "printdiskfile:", "printedits", "printspans", "configuration:", "waitindex" };
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -307,6 +307,50 @@ void CIDEScript::RunCommand(const char* szCommand)
 			printf(" [%s%s]", (mpcContent->GetDiffs()->GetDiff(i) == mpcContent->GetDiffs()->GetActiveDiff()) ? ">" : "", mpcContent->GetDiffs()->GetDiff(i)->GetDockPane()->GetTitle());
 		}
 		printf("\n");
+		fflush(stdout);
+	}
+	else if ((strcmp(szCommand, "printprojectfiles") == 0) || (strncmp(szCommand, "printdiskfile:", 14) == 0))
+	{
+		//The projects' files, or one file's text as it is on the disk, named from the first solution's directory.
+		CTextFile	cFile;
+		CChars		szDirectory;
+		CChars		szPath;
+		char*		szFile;
+		size		i;
+
+		szDirectory.Init();
+		if (mpcContent->GetWorkspace()->NumProjects() > 0)
+		{
+			szDirectory.Set(mpcContent->GetWorkspace()->GetProjectSolution(0)->GetDirectory());
+			if (!szDirectory.EndsWith(FILE_SEPARATOR[0]))
+			{
+				szDirectory.Append(FILE_SEPARATOR[0]);
+			}
+		}
+		if (szCommand[5] == 'p')
+		{
+			printf("Project files:");
+			for (i = 0; i < mpcContent->GetCodeModel()->NumProjectFiles(); i++)
+			{
+				szFile = mpcContent->GetCodeModel()->GetProjectFile(i);
+				if (strncmp(szFile, szDirectory.Text(), szDirectory.Length()) == 0)
+				{
+					szFile += szDirectory.Length();
+				}
+				printf(" %s", szFile);
+			}
+			printf("\n");
+		}
+		else
+		{
+			szPath.Init(szDirectory);
+			szPath.Append(&szCommand[14]);
+			cFile.Init();
+			printf("Disk file %s:\n%s\n", &szCommand[14], cFile.Read(szPath.Text()) ? cFile.Text() : "(none)");
+			cFile.Kill();
+			szPath.Kill();
+		}
+		szDirectory.Kill();
 		fflush(stdout);
 	}
 	else if (strcmp(szCommand, "printgit") == 0)
@@ -1228,6 +1272,22 @@ void CIDEScript::RunEditStep(const char* szStep)
 	else if ((strcmp(szStep, "redo") == 0) && pTab.IsNotNull())
 	{
 		pTab->GetEditor()->Redo();
+	}
+	else if (((strncmp(szStep, "renamefile:", 11) == 0) || (strncmp(szStep, "renamefilerelated:", 18) == 0)) && pTab.IsNotNull())
+	{
+		//Rename File on the active tab's file (Rename File's core, without its dialog), with its related files for
+		//renamefilerelated.
+		CArrayIDEFileRenames	asRenames;
+		CChars					szFileName;
+		bool					bRelated;
+
+		bRelated = (szStep[10] != ':');
+		szFileName.Init(pTab->GetFileName());
+		asRenames.Init();
+		mpcContent->GetFileRename()->AddRenames(szFileName.Text(), strchr(szStep, ':') + 1, bRelated, &asRenames);
+		mpcContent->GetFileRename()->RenameFiles(&asRenames);
+		KillIDEFileRenames(&asRenames);
+		szFileName.Kill();
 	}
 	else if ((strcmp(szStep, "printincludes") == 0) && pTab.IsNotNull())
 	{

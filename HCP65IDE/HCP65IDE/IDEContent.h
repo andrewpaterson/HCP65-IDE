@@ -63,6 +63,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDEEdit.h"
 #include "IDENavigator.h"
 #include "IDERename.h"
+#include "IDEFileRename.h"
 #include "IDEUsages.h"
 #include "IDEFindInFiles.h"
 #include "IDEOccurrences.h"
@@ -164,6 +165,7 @@ protected:
 	Ptr<CIDEEdit>				mpEdit;				//The Edit menu and undo across files.
 	Ptr<CIDENavigator>			mpNavigator;		//Go to, Go to Source and Alt+O.
 	Ptr<CIDERename>				mpRename;			//Rename.
+	Ptr<CIDEFileRename>			mpFileRename;		//Rename File.
 	Ptr<CIDEUsages>				mpUsages;			//Find Usages.
 	Ptr<CIDEFindInFiles>		mpFindInFiles;		//Find in Files and the Find tool window.
 	Ptr<CIDEOccurrences>		mpOccurrences;		//Next and Previous Occurrence through Find Usages or Build.
@@ -267,6 +269,7 @@ public:
 	Ptr<CIDEFindInFiles>	GetFindInFiles(void);
 	Ptr<CIDEIndexing>		GetIndexing(void);
 	Ptr<CIDERename>			GetRename(void);
+	Ptr<CIDEFileRename>		GetFileRename(void);
 	Ptr<CIDECloseGuard>		GetCloseGuard(void);
 
 protected:

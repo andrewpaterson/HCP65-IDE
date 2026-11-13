@@ -286,6 +286,74 @@ bool CGitRepository::ReadRevisionText(const char* szFullPath, const char* szRevi
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Whether git tracks the file (it is in the index).
+//
+//////////////////////////////////////////////////////////////////////////
+bool CGitRepository::IsTracked(const char* szFullPath)
+{
+	CGitCommand	cCommand;
+	CArrayChars	aszArguments;
+	CChars		szPath;
+	bool		bResult;
+
+	szPath.Init();
+	if (!GetRelativePath(szFullPath, &szPath))
+	{
+		szPath.Kill();
+		return false;
+	}
+	aszArguments.Init();
+	aszArguments.Add("ls-files");
+	aszArguments.Add("--error-unmatch");
+	aszArguments.Add("--");
+	aszArguments.Add(szPath.Text());
+	cCommand.Init();
+	bResult = cCommand.Run(mszRoot.Text(), &aszArguments);
+	cCommand.Kill();
+	aszArguments.Kill();
+	szPath.Kill();
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The tracked file renamed with git mv, so git has the rename staged.
+// False if git couldn't (the file isn't tracked, the new name is taken,
+// either path isn't in the repository).
+//
+//////////////////////////////////////////////////////////////////////////
+bool CGitRepository::Move(const char* szOldFullPath, const char* szNewFullPath)
+{
+	CGitCommand	cCommand;
+	CArrayChars	aszArguments;
+	CChars		szOld;
+	CChars		szNew;
+	bool		bResult;
+
+	szOld.Init();
+	szNew.Init();
+	bResult = GetRelativePath(szOldFullPath, &szOld) && GetRelativePath(szNewFullPath, &szNew);
+	if (bResult)
+	{
+		aszArguments.Init();
+		aszArguments.Add("mv");
+		aszArguments.Add("--");
+		aszArguments.Add(szOld.Text());
+		aszArguments.Add(szNew.Text());
+		cCommand.Init();
+		bResult = cCommand.Run(mszRoot.Text(), &aszArguments);
+		cCommand.Kill();
+		aszArguments.Kill();
+	}
+	szNew.Kill();
+	szOld.Kill();
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Adds the repository's branches to paszDest: the local ones, then the
 // remote ones ("origin/master"), each sorted as git sorts them.  A
 // remote's HEAD (which only names another of its branches) is left out.

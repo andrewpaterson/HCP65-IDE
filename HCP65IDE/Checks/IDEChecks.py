@@ -188,6 +188,16 @@ def MakeUsagesKernel(szKernel=USAGES_KERNEL, asFiles={}):
 	return {'SOLUTION': os.path.join(szFolder, 'Kernel.sln'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
 
 
+def MakeRenameFileCopy():
+	#A copy of Rename File's solution (Input/RenameFile), which a check can rename files in.  Its recent solutions are
+	#apart from the user's.
+	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
+	atexit.register(shutil.rmtree, szRoot, True)
+	szFolder = os.path.join(szRoot, 'RenameFile')
+	shutil.copytree(os.path.join(HERE, 'Input', 'RenameFile'), szFolder)
+	return {'SOLUTION': os.path.join(szFolder, 'RenameFile.sln'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
+
+
 def MakeKeymapFile(szText=None):
 	#Where a scripted run keeps its keys, with szText in it if it's given.
 	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
@@ -486,6 +496,33 @@ CHECKS = [
 		[r'^Includes of Engine\.h: 7$', r'^  Commented\.cpp 6:11 8$', r'^  Engine\.cpp 1:11 8$', r'^  Engine_Linux\.cpp 2:11 8$',
 		 r'^  Sub/Angle\.cpp 1:11 8$', r'^  Sub/Indented\.cpp 1:16 8$', r'^  Sub/User\.cpp 1:14 8$', r'^  Tool/Tool\.cpp 1:14 8$'],
 		[r'OtherUser', r'Commented\.cpp [13]:']),
+	('rename-file-related', dict(MakeRenameFileCopy(), **{
+		#Rename File (step 3) on Engine.h with its related files, Engine.cpp and Engine_Linux.cpp (not EngineCache.h): the
+		#files and both projects' items renamed, the 7 #includes changed and saved, Engine.h's tab following it.
+		'WAIT_INDEX': '1', 'OPEN': 'Engine.h',
+		'DEBUG': 'edit:renamefilerelated:CPPEngine.h,edit:printincludes,printprojectfiles,printtabs,printdiskfile:Sub/User.cpp,'
+		         'printdiskfile:Tool/Tool.vcxproj,printdiskfile:CPPEngine_Linux.cpp,printdiskfile:Commented.cpp'}),
+		[r'^Status: Renamed Engine\.h to CPPEngine\.h and 2 more files: 7 #includes in 7 files, 2 projects\.$',
+		 r'^Includes of CPPEngine\.h: 7$', r'^  Sub/Indented\.cpp 1:16 11$',
+		 r'^Project files: Commented\.cpp CPPEngine\.cpp CPPEngine_Linux\.cpp Other/OtherUser\.cpp Sub/Angle\.cpp Sub/Indented\.cpp Sub/User\.cpp '
+		 r'CPPEngine\.h EngineCache\.h Other/Engine\.h Tool/Tool\.cpp$',
+		 r'^Tabs: >CPPEngine\.h ', r'^#include "\.\./CPPEngine\.h"', r'<ClInclude Include="\.\.\\CPPEngine\.h" />', r'^#include "CPPEngine\.h"',
+		 r'^//#include "Engine\.h"$'],
+		[r'Rename stopped', r"Can't rename", r'Project files:.* Engine\.h', r'Disk file .*:\n\(none\)']),
+	('rename-file-one', dict(MakeRenameFileCopy(), **{
+		#Rename File on Engine.h alone: Engine.cpp keeps its name, and its #include is changed.
+		'WAIT_INDEX': '1', 'OPEN': 'Engine.h', 'DEBUG': 'edit:renamefile:Motor.h,printprojectfiles,printdiskfile:Engine.cpp'}),
+		[r'^Status: Renamed Engine\.h to Motor\.h: 7 #includes in 7 files, 2 projects\.$',
+		 r'^Project files: Commented\.cpp Engine\.cpp Engine_Linux\.cpp .* Motor\.h EngineCache\.h', r'^#include "Motor\.h"$'],
+		[r'Rename stopped', r'more file']),
+	('rename-file-refused', dict(MakeRenameFileCopy(), **{
+		#A name that is taken, one with a directory, and the same name: nothing is renamed.
+		'WAIT_INDEX': '1', 'OPEN': 'Engine.h', 'DEBUG': 'edit:renamefile:EngineCache.h,edit:renamefile:Sub/Engine.h,edit:renamefile:Engine.h,printprojectfiles'}),
+		[r"^Status: Can't rename: EngineCache\.h is already there\.$",
+		 r"^Status: Can't rename: a file's new name can't be empty or have directories in it\.$",
+		 r"^Status: Can't rename: Engine\.h is already called that\.$",
+		 r'^Project files: Commented\.cpp Engine\.cpp Engine_Linux\.cpp .* Engine\.h EngineCache\.h'],
+		[r'^Status: Renamed']),
 	('rename-file-includes-same-name', {
 		#Other/Engine.h, a file with the same name, is found only by the #include next to it.
 		'SOLUTION': RENAME_FILE, 'WAIT_INDEX': '1', 'OPEN': 'Other/Engine.h', 'EDIT': 'printincludes'},
