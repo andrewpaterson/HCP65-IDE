@@ -33,6 +33,8 @@ IDE_DIR = os.path.join(HERE, '..', 'HCP65IDE')
 RENAME_SEARCH = os.path.join(HERE, 'Input', 'RenameSearch', 'RenameSearch.vcxproj')
 #Rename File is checked on a solution of its own (Input/RenameFile): Engine.h, the #includes that find it and some that don't.
 RENAME_FILE = os.path.join(HERE, 'Input', 'RenameFile', 'RenameFile.sln')
+#A unit including <windows.h> (Input/WindowsHeaders), with Win32 and x64 configurations.
+WINDOWS_HEADERS = os.path.join(HERE, 'Input', 'WindowsHeaders', 'WindowsHeaders.vcxproj')
 ROOT = os.path.abspath(os.path.join(HERE, '..', '..', '..'))
 BASELIB = os.path.join(ROOT, 'CommonLibraries', 'Libraries', 'BaseLib')
 KERNAL = os.path.join(ROOT, 'HCP65', 'Kernal')
@@ -618,6 +620,15 @@ CHECKS = [
 		'DEBUG': 'printindexing,edit:renamable,edit:usagegroups:,edit:usages'},
 		[r'^Indexing: \d+ ms, 0 units with problems$', r'^Rename: CEngine \[CEngine\] at 4 places, 0 overrides$', r'^Usages of CEngine  3 usages$'],
 		[r'Could not include']),
+	('index-windows-headers', {
+		#<windows.h> is read whole: on Linux MinGW's headers stand in for the Windows SDK's, and know the target by GCC's
+		#name for it (__i386__), which winnt.h stopped with an #error without.
+		'SOLUTION': WINDOWS_HEADERS, 'WAIT_INDEX': '1', 'OPEN': 'Main.cpp', 'DEBUG': 'wait:1500,printindexing'},
+		[r'^Indexing: \d+ ms, 0 units with problems$', r'^Indexing 1 files? \(Debug\|Win32\)$'], [r'#error', r'Could not include']),
+	('index-windows-headers-x64', {
+		#The same for x64 (__x86_64__).
+		'SOLUTION': WINDOWS_HEADERS, 'WAIT_INDEX': '1', 'OPEN': 'Main.cpp', 'CONFIGURATION': 'Debug|x64', 'DEBUG': 'wait:1500,printindexing'},
+		[r'^Indexing: \d+ ms, 0 units with problems$', r'^Indexing 1 files? \(Debug\|x64\)$'], [r'#error', r'Could not include']),
 	('rename-file-includes-same-name', {
 		#Other/Engine.h, a file with the same name, is found only by the #include next to it.
 		'SOLUTION': RENAME_FILE, 'WAIT_INDEX': '1', 'OPEN': 'Other/Engine.h', 'EDIT': 'printincludes'},

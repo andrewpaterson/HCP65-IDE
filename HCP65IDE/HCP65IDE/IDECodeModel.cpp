@@ -1733,7 +1733,8 @@ const char* CIDECodeModel::GetSolutionConfiguration(size uiSolution)
 //////////////////////////////////////////////////////////////////////////
 //
 // What MSVC defines itself for the configuration's platform, whatever
-// machine the IDE runs on.
+// machine the IDE runs on; on Linux, where MinGW's headers stand in for
+// the Windows SDK's, GCC's name for the target too.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDECodeModel::AddCompilerDefines(CVcxConfiguration* pcConfiguration, CConfig* pcConfig)
@@ -1752,10 +1753,19 @@ void CIDECodeModel::AddCompilerDefines(CVcxConfiguration* pcConfiguration, CConf
 		pcConfig->AddDefine("_WIN64=1");
 		pcConfig->AddDefine("_M_X64=100");
 		pcConfig->AddDefine("_M_AMD64=100");
+#ifdef LINUX_GNU
+		//MinGW's headers, standing in for the Windows SDK's, know the target by GCC's names for it (winnt.h stops with
+		//"#error No supported target architecture" without them).
+		pcConfig->AddDefine("__x86_64__=1");
+		pcConfig->AddDefine("__amd64__=1");
+#endif
 	}
 	else
 	{
 		pcConfig->AddDefine("_M_IX86=600");
+#ifdef LINUX_GNU
+		pcConfig->AddDefine("__i386__=1");
+#endif
 	}
 	if ((pcConfiguration != NULL) && (StringInsensitiveCompare(pcConfiguration->GetConfiguration(), "Debug") == 0))
 	{
