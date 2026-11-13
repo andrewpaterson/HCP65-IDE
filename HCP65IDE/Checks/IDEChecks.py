@@ -622,6 +622,24 @@ CHECKS = [
 		 r'^Project files: 65C64Core\.cpp Main\.cpp 65C64Core\.h 65CoreCycles\.h$', r'^#include "65C64Core\.h"$', r'^\tC65C64Core\*\tmpcCore;$',
 		 r'^\tC65C64Core\t\t\tcCore;$', r'^\tC65CoreCycles\tcCycles;$'],
 		[r'Rename stopped', r"Can't rename", r'C65C64CoreCycles', r'65C64CoreCycles']),
+	('rename-file-then-class', dict(MakeRenameDigitCopy(), **{
+		#After C65Core's files are renamed the projects are made again, so the index finds 65C64Core.h (it couldn't
+		#include it, its header directory's list having the old name), and C65CoreCycles, whose header includes it, is
+		#renamed with its files straight after.
+		'WAIT_INDEX': '1', 'OPEN': '65Core.h', 'CARET': '5:8',
+		'DEBUG': 'edit:renamesearch:ctf,edit:rename:C65C64Core,waitindex,wait:1500,printindexing,edit:open:65CoreCycles.h,edit:caret:6:8,'
+		         'edit:rename:C65C64CoreCycles,waitindex,wait:1500,printindexing,printprojectfiles'}),
+		[r'^Indexing: \d+ ms, 0 units with problems$', r'^Status: Renamed C65CoreCycles to C65C64CoreCycles: .*  Renamed 65CoreCycles\.h to 65C64CoreCycles\.h',
+		 r'^Indexing: \d+ ms, 0 units with problems$', r'^Project files: 65C64Core\.cpp Main\.cpp 65C64Core\.h 65C64CoreCycles\.h$'],
+		[r'Could not include', r"can't be renamed", r'Rename stopped']),
+	('rename-unsaved-warning', dict(MakeRenameDigitCopy(), **{
+		#A scripted rename of a symbol alone leaves its edits unsaved, and the run says so as it ends.
+		'WAIT_INDEX': '1', 'OPEN': '65Core.h', 'CARET': '5:8', 'DEBUG': 'edit:renamesearch:ct,edit:rename:C65Kernel,printdiskfile:Main.cpp'}),
+		[r'^Status: Renamed C65Core to C65Kernel: ', r'^\tC65Core\t\t\tcCore;$', r'^Unsaved at exit: \d+ files?: .*65Core\.h'], []),
+	('rename-saves', dict(MakeRenameDigitCopy(), **{
+		#With renamesearch's s each rename: is saved: it is on the disk, and nothing is left unsaved.
+		'WAIT_INDEX': '1', 'OPEN': '65Core.h', 'CARET': '5:8', 'DEBUG': 'edit:renamesearch:ct-s,edit:rename:C65Kernel,printdiskfile:Main.cpp'}),
+		[r'^Status: Renamed C65Core to C65Kernel: ', r'^\tC65Kernel\t\t\tcCore;$'], [r'Unsaved at exit']),
 	('rename-file-refused', dict(MakeRenameFileCopy(), **{
 		#A name that is taken, one with a directory, and the same name: nothing is renamed.
 		'WAIT_INDEX': '1', 'OPEN': 'Engine.h', 'DEBUG': 'edit:renamefile:EngineCache.h,edit:renamefile:Sub/Engine.h,edit:renamefile:Engine.h,printprojectfiles'}),

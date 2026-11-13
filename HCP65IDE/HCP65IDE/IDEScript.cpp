@@ -35,6 +35,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 //The searches of the script's renamefile steps (renamefilesearch).
 static bool			gbIDEScriptFileComments = false;
 static bool			gbIDEScriptFileText = false;
+static bool			gbIDEScriptRenameSaves = false;  //rename: saves what it edited (renamesearch's s): a symbol's rename alone leaves it unsaved.
 static bool			gbIDEScriptClassFiles = false;  //rename: renames a type's files too (renamesearch's f), never from the settings.
 
 
@@ -126,6 +127,39 @@ bool CIDEScript::IsCommand(const char* szCommand)
 		}
 	}
 	return false;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A scripted run ending with files changed and not saved says so: a
+// script's edits (a symbol's rename: without s, say) are lost when it
+// exits, which is easily missed.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEScript::WarnUnsaved(void)
+{
+	CChars	szFiles;
+	size	i;
+	size	uiUnsaved;
+
+	szFiles.Init();
+	uiUnsaved = 0;
+	for (i = 0; i < mpcContent->GetDocuments()->NumTabs(); i++)
+	{
+		if (mpcContent->GetDocuments()->GetTab(i)->IsModified())
+		{
+			szFiles.Append(' ');
+			szFiles.Append(mpcContent->GetDocuments()->GetTab(i)->GetFileName());
+			uiUnsaved++;
+		}
+	}
+	if (uiUnsaved > 0)
+	{
+		printf("Unsaved at exit: %d %s:%s\n", (int)uiUnsaved, (uiUnsaved == 1) ? "file" : "files", szFiles.Text());
+		fflush(stdout);
+	}
+	szFiles.Kill();
 }
 
 
@@ -1338,10 +1372,12 @@ void CIDEScript::RunEditStep(const char* szStep)
 	}
 	else if (strncmp(szStep, "renamesearch:", 13) == 0)
 	{
-		//renamesearch:<c|-><t|->[f], Rename's searches in comments and strings (c) and for text occurrences (t), for every
-		//kind of symbol, as if ticked in its dialog, and with f a type's files renamed with it (off until it is given).
+		//renamesearch:<c|-><t|->[f|-][s], Rename's searches in comments and strings (c) and for text occurrences (t), for
+		//every kind of symbol, as if ticked in its dialog; with f a type's files renamed with it, and with s what each
+		//rename: edits saved (both off until given: checks rename the solution's own symbols and must not write them).
 		mpcContent->GetRename()->SetSearches(szStep[13] == 'c', (szStep[13] != '\0') && (szStep[14] == 't'));
 		gbIDEScriptClassFiles = (szStep[13] != '\0') && (szStep[14] != '\0') && (szStep[15] == 'f');
+		gbIDEScriptRenameSaves = (szStep[13] != '\0') && (szStep[14] != '\0') && (szStep[15] != '\0') && (szStep[16] == 's');
 	}
 	else if ((strcmp(szStep, "renamable") == 0) || (strncmp(szStep, "rename:", 7) == 0))
 	{
@@ -1360,6 +1396,10 @@ void CIDEScript::RunEditStep(const char* szStep)
 		else if (szStep[6] == ':')
 		{
 			mpcContent->GetRename()->RenameClass(&sTarget, &szStep[7], gbIDEScriptClassFiles);
+			if (gbIDEScriptRenameSaves)
+			{
+				mpcContent->GetDocuments()->SaveAllFiles();
+			}
 			printf("Rename: %s [%s] to %s\n", sTarget.szName.Text(), sTarget.szKey.Text(), &szStep[7]);
 		}
 		else

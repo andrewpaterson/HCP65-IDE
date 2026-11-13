@@ -94,6 +94,10 @@ void CIDEWindowTick::Tick(Ptr<CWindow> pWindow, int64 iUpdateTimeInMillieconds, 
 	{
 		if (miSnapshotTicks == 0)
 		{
+			if (mpContent.IsNotNull())
+			{
+				mpContent->GetScript()->WarnUnsaved();
+			}
 			SavePNG(pWindow->GetCanvas()->GetImageOrNull(), mszSnapshot.Text());
 			pWindow->Stop();
 		}

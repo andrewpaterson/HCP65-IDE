@@ -920,7 +920,8 @@ bool CIDEFileRename::RenameFiles(CArrayIDEFileRenames* pasRenames, bool bComment
 	}
 	mpcContent->GetEdit()->EndUndoGroup();
 
-	//The files edited are saved, as the files have moved under them.
+	//The files edited are saved, as the files have moved under them; the projects are made again, as their header
+	//directories list their headers by name (a header renamed couldn't be included until they were).
 	for (i = 0; i < aszEdited.NumElements(); i++)
 	{
 		pTab = mpcContent->GetDocuments()->FindTab(aszEdited.GetText(i));
@@ -929,6 +930,7 @@ bool CIDEFileRename::RenameFiles(CArrayIDEFileRenames* pasRenames, bool bComment
 			mpcContent->GetDocuments()->SaveFile(pTab);
 		}
 	}
+	mpcContent->GetCodeModel()->Reset();
 	mpcContent->GetSolutions()->WorkspaceChanged(true);
 
 	if (bResult)

@@ -365,6 +365,7 @@ void CIDEEdit::RenamesChanged(size uiGroup)
 			}
 		}
 	}
+	mpcContent->GetCodeModel()->Reset();
 	mpcContent->GetSolutions()->WorkspaceChanged(true);
 }
 

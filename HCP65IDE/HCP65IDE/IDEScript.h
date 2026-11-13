@@ -74,6 +74,7 @@ public:
 
 	bool		IsCommand(const char* szCommand);
 	void		RunCommand(const char* szCommand);
+	void		WarnUnsaved(void);
 	void		PrintMenu(const char* szName, Ptr<CMenuContainer> pMenu);
 	const char*	GetCommandName(Ptr<CButton> pButton);
 	void		ClickMenu(const char* szPath);
