@@ -64,6 +64,21 @@ class was renamed.
 Plan
 ----
 
+All seven steps built and committed 2026-11-13 (HCP65-IDE e4d7c82, 29b884b, 0a9d8f3, 4564ad0, 4fc9811, 186b0fa;
+CommonLibraries cef64c8e4, 80c5e3362, a2b3a7849), each with the whole of IDEChecks.py passing.  As built it differs
+from the plan in these:
+  - step 3: the script steps are renamefile:<name> and renamefilerelated:<name>, with renamefilesearch:<c|-><t|-> for
+    their searches (off until given, whatever the settings say).
+  - step 5: the comment search never changes a name on a line that is an #include (in a comment or not): #includes are
+    found as the compiler finds them, so Other/Engine.h's are left.  The documents' tab menu needed a WindowLib hook
+    (CDockManagerListener::DocumentMenuCreated, CDockManager::GetMenuPane).  The related files are listed on a line of
+    their own under their tick.
+  - step 6: any type with a one letter prefix and files of its stem (not only classes); a new name without the prefix
+    letter can't rename the files.  Scripts rename a type's files only with renamesearch's f, so checks renaming the
+    solution's own classes never move its files.
+  - step 7: the fixture checks are rename-file-*, rename-class-files* (each on its own copy of Checks/Input/RenameFile).
+
+
 Each step can be built, checked and committed on its own, in this order.  Nothing is tried on real code until the
 step it needs is committed.
 
