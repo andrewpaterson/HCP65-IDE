@@ -1,0 +1,122 @@
+Renaming files in the HCP65 IDE
+===============================
+
+Written 2026-11-13, after CPreprocessor was renamed CCPPPreprocessor with Rename (CommonLibraries ae946688c) and its
+files were left as Preprocessor.h, Preprocessor.cpp, Preprocessor_Linux.cpp and Preprocessor_Windows.cpp.  The user
+asked for two things:
+  - Rename File, a refactoring of its own, so the files of a class renamed earlier (as CCPPPreprocessor's) can be
+    renamed after it;
+  - Rename of a class renaming its files too, as part of the one refactoring.
+The second is built on the first: a class's Rename works out which files are the class's and hands them to the same
+file renaming.
+
+IntelliJ IDEA is the reference, as for the rest of the IDE: in its Project view Shift+F6 on a file renames it and
+updates what refers to it, and renaming a class renames the file named after it.
+
+
+What renaming a file has to change
+----------------------------------
+
+For each file renamed, Old.h to New.h say:
+  1. The file on disk.
+  2. Every #include that finds it.  An #include is found as the compiler would find it (CIDECodeModel::
+     FindIncludeFile: next to the includer for "", then the project's include directories, then the compiler's), so
+     "Preprocessor.h", "CppCompilerLib/Preprocessor.h" and "../CppCompilerLib/Preprocessor.h" are all changed when
+     they find the file, and an #include of another file with the same name isn't.  Only the file's name in the
+     #include changes; its directories and separators are kept.  #includes in code an #if leaves out are changed
+     too: the files are scanned as text, not preprocessed (as Rename's text search scans them).
+  3. The item in every project of the workspace that has the file, in the .vcxproj and its .vcxproj.filters.  This
+     isn't optional: the Linux CMake builds read their sources from the .vcxproj's ClCompile items
+     (vcxproj_sources), so a file renamed on disk but not in the project breaks the Linux build.  The edit is made to
+     the project file's text, changing only the Include="..." values, so the rest of the file stays as Visual Studio
+     wrote it.
+  4. The IDE's own state: an open editor tab follows its file (its file name, its dock pane's id and title, its git
+     state), the undo log's steps of the old name become the new name's, and the files are indexed again (as saving a
+     header does today: everything indexed again, then the open files' edits).
+
+Optionally, as IntelliJ's dialog offers: the old file name as a word in comments and strings (Rename's comment search,
+the word being "Preprocessor.h"), and in the projects' .txt and .md files.
+
+Not changed: files outside the workspace's projects (docs, plans such as ConsolidationPlan.txt, generated listings),
+as Rename's searches don't look there either.  The file stays in its directory: moving files is another refactoring.
+
+
+Which files are a class's
+-------------------------
+
+A class's files have the class's name without its one letter prefix as their stem (CPreprocessor: "Preprocessor"):
+  - Stem.h, Stem.hpp, Stem.inl, Stem.cpp, Stem.c: the class's own files;
+  - Stem_Anything.cpp (Preprocessor_Linux.cpp, Preprocessor_Windows.cpp): the house style's platform parts.
+They must be in the workspace's projects and in the directory of the file that declares the class, and the index
+must have the class declared in one of them, so a file that only shares the name is never taken.  Their new stem is
+the new class name without the same prefix: CCPPPreprocessor's is "CPPPreprocessor", so Preprocessor_Linux.cpp
+becomes CPPPreprocessor_Linux.cpp.
+
+PreprocessorHeaderCache.cpp has CPreprocessor's member functions but its stem isn't the class's, so it isn't one of
+its files and keeps its name.  (Its own Rename File can rename it.)
+
+Rename File uses the same rule for its "related files": renaming Preprocessor.h to CPPPreprocessor.h offers the files
+with the same stem in the same directory (Preprocessor.cpp, Preprocessor_Linux.cpp, Preprocessor_Windows.cpp), each
+given the new stem with its own suffix and extension.  That is what renames CCPPPreprocessor's files now, after the
+class was renamed.
+
+
+Plan
+----
+
+Each step can be built, checked and committed on its own, in this order.  Nothing is tried on real code until the
+step it needs is committed.
+
+1. Project files can rename an item.
+   VisualStudioLib only reads .vcxproj and .vcxproj.filters files.  CVcxProject gets RenameItem(old path, new path):
+   the Include values that name the item, in both files, changed in their text and written, then the project read
+   again.  Tests in TestVisualStudioLib: a ClCompile and a ClInclude renamed, the filters' entry too, the rest of each
+   file byte for byte as it was, an item in a subdirectory (backslashes kept), an item named in two projects.
+
+2. The #includes that find a file.
+   CIDECodeModel::FindIncludesOf(file, places): every solution file's #include lines (the text scanned, so inactive
+   code too), each resolved with FindIncludeFile from its own file and project; the ones that find the file, with the
+   place and length of the name in the #include.
+
+3. Rename File's core: CIDEFileRename (IDEFileRename.cpp), no dialog yet.
+   Given files and their new names: checks first (the new names are file names, none is taken on disk or in a
+   project, every file is in the workspace, the editors' texts are as they were searched) and changes nothing if
+   one fails; then, as one undo group, the #include edits in each includer's editor (ReplaceRanges, as Rename),
+   the files renamed on disk, the projects' items renamed, the tabs and the undo log told, and the files indexed
+   again.  Script step renamefile:<new name>[,related] on the active tab's file, and a status line ("Renamed
+   Preprocessor.h to CPPPreprocessor.h and 3 related files: 14 #includes in 13 files, 2 projects.").
+
+4. Undo of a file rename.
+   CUndoLog only records text edits of documents named by their file.  It gets a step that isn't a document's edit:
+   a file renamed (old and new path), undone by renaming it back on disk, in its projects and in its tabs, so Edit,
+   Undo Across Files (and Control+Z on any of the group's edits) undoes the whole refactoring, as IntelliJ's undo of
+   a rename does.
+
+5. Rename File's dialog and where it is.
+   Shift+F6 in Solution Explorer on a file, a Rename File... item on the editor's tab menu and in Refactor, the
+   dialog as IntelliJ's: the new name with its stem selected (not the extension), a tick for the related files
+   (listing them), the comment and text search ticks.  Solution Explorer gets the first menu of a file node.
+
+6. Rename of a class renames its files.
+   Rename's dialog gets a third tick, Rename files, shown when the class has files by the rule above (listing them),
+   remembered with the type searches (on).  The class's places and the files' are one refactoring and one undo
+   group; the status line says both.  rename:<name> in scripts follows the tick; renamesearch gets an f.
+
+7. Checks, then CCPPPreprocessor's files.
+   A fixture project in Checks/Input (a class with Stem.h, Stem.cpp, Stem_Linux.cpp inside #ifdef LINUX_GNU, an
+   #include of it from a subdirectory, one in inactive code, one of a same named file elsewhere that must not change,
+   two projects naming it): rename-file, rename-file-related, rename-file-undo, rename-class-files.  Then, committed
+   first: Rename File on Preprocessor.h to CPPPreprocessor.h with its related files, built and tested on Linux
+   (TestCppCompilerLib) as the class rename was.
+
+
+Decided 2026-11-13
+------------------
+
+  a. Git: a tracked file is renamed with git mv (GitLib), so git has the rename staged; an untracked one on disk.
+  b. Saving: Rename File, and a class rename that renames files, saves the files it edits.
+  c. Undo: file renames are undoable (step 4), the whole refactoring undone as one group.
+  d. A class's files are the stem rule's only (Stem.h/.hpp/.inl/.cpp/.c and Stem_*.cpp, in the class's directory,
+     the class declared in one); PreprocessorHeaderCache.cpp keeps its name.
+
+Nothing is left to decide.
