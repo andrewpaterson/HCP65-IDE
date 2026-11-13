@@ -534,14 +534,15 @@ CHECKS = [
 		 r'^Usages of IsParentheses and 1 override  3 usages$', r'^  BaseLib  3 usages$', r'^      391: '], [r'No tool button', r'ERROR']),
 	('usages-tabs', {
 		#Find Usages shows what it finds in the tab chosen unless it is pinned: then in a new tab, the pinned one kept.  A
-		#tab that isn't pinned is used again.  A tab chosen shows its own usages; its cross closes it, pinned or not.
+		#tab that isn't pinned is used again, in its place.  A tab chosen shows its own usages; its cross closes it, pinned
+		#or not.
 		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14',
 		'EDIT': 'usagegroups:,usages,usagetabs,usagetool:Pin Tab,usagetoolbar,usagetabs,focus:editor,caret:37:14,usages,usagetabs,usagetoolbar,'
 		        'focus:editor,caret:36:14,usages,usagetabs,usagetab:* IsParentheses,usagetabs,printusages,usageclosetab:* IsParentheses,usagetabs,printusages'},
 		[r'^Usage tabs: >IsParentheses$', r'Navigate with Single Click, Pin Tab\(on\), Scope$', r'^Usage tabs: >\* IsParentheses$',
-		 r'^Usages of SetExpression', r'^Usage tabs: (\* IsParentheses, >SetExpression|>SetExpression, \* IsParentheses)$', r'Navigate with Single Click, Pin Tab, Scope$',
-		 r'^Usages of Evaluate', r'^Usage tabs: (\* IsParentheses, >Evaluate|>Evaluate, \* IsParentheses)$',
-		 r'^Usage tabs: (>\* IsParentheses, Evaluate|Evaluate, >\* IsParentheses)$',
+		 r'^Usages of SetExpression', r'^Usage tabs: \* IsParentheses, >SetExpression$', r'Navigate with Single Click, Pin Tab, Scope$',
+		 r'^Usages of Evaluate', r'^Usage tabs: \* IsParentheses, >Evaluate$',
+		 r'^Usage tabs: >\* IsParentheses, Evaluate$',
 		 r'^Usages of IsParentheses and 1 override  3 usages$', r'^Usage tabs: >Evaluate$', r'^Usages of Evaluate'], [r'ERROR', r'SetExpression, .*Evaluate|Evaluate, .*SetExpression']),
 	('usages-scope-current-file', {
 		#Find Usages' scope: with Current File the usages in other files aren't in the tree, whose first row says the scope.
