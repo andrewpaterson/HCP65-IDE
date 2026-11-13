@@ -97,9 +97,12 @@ protected:
 	Ptr<CLabel>			mpRenameError;
 	Ptr<CCheckBox>		mpCommentsBox;
 	Ptr<CCheckBox>		mpTextBox;
+	Ptr<CCheckBox>		mpFilesBox;  //NULL unless the type has files (CIDEFileRename::FindClassFiles).
+	CArrayChars			maszClassFiles;  //The files of the type Rename's dialog is renaming.
 	SIDERenameTarget	msRenameTarget;  //What Rename's dialog is renaming: its key and name.
 	bool				mabComments[2];  //Search in comments and strings, for everything else [0] and for types [1].
 	bool				mabText[2];  //Search for text occurrences, the same.
+	bool				mbFiles;  //Rename a type's files with it.
 
 public:
 	void	Init(CIDEContent* pcContent);
@@ -114,7 +117,8 @@ public:
 	bool	FindRenameTarget(SIDERenameTarget* psDest);
 	void	QueueRename(void);
 	bool	ShowRename(void);
-	bool	RenameSymbol(SIDERenameTarget* psTarget, const char* szNewName);
+	bool	RenameSymbol(SIDERenameTarget* psTarget, const char* szNewName, CArrayChars* paszEdited = NULL, CChars* pszStatus = NULL);
+	bool	RenameClass(SIDERenameTarget* psTarget, const char* szNewName, bool bFiles);
 	void	SetSearches(bool bComments, bool bText);
 	void	ReadSettings(CMarkupTag* pcSettings);
 	void	WriteSettings(CXMLWriter* pcWriter);
@@ -122,6 +126,7 @@ public:
 protected:
 	void	ShowQueuedRename(void);
 	bool	IsExplorerFocussed(void);
+	void	ShowRenameStatus(CChars* pszMessage, CChars* pszStatus);
 	bool	ApproveRename(void);
 	size	FindRenameFile(CArrayChars* paszFiles, const char* szFileName);
 	bool	SearchRenameFiles(const char* szName, bool bComments, bool bText, CArrayChars* paszFiles, CArrayIDEPlaces* pasPlaces, CChars* pszChanged);

@@ -35,6 +35,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 //The searches of the script's renamefile steps (renamefilesearch).
 static bool			gbIDEScriptFileComments = false;
 static bool			gbIDEScriptFileText = false;
+static bool			gbIDEScriptClassFiles = false;  //rename: renames a type's files too (renamesearch's f), never from the settings.
 
 
 static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printfindpreview", "printfindtoolbar", "findtool:", "printstartup", "printworkspace", "rename", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printsettings", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printprojectfiles", "printdiskfile:", "printedits", "printspans", "configuration:", "waitindex" };
@@ -1336,9 +1337,10 @@ void CIDEScript::RunEditStep(const char* szStep)
 	}
 	else if (strncmp(szStep, "renamesearch:", 13) == 0)
 	{
-		//renamesearch:<c|-><t|->, Rename's searches in comments and strings (c) and for text occurrences (t), for every
-		//kind of symbol, as if ticked in its dialog.
+		//renamesearch:<c|-><t|->[f], Rename's searches in comments and strings (c) and for text occurrences (t), for every
+		//kind of symbol, as if ticked in its dialog, and with f a type's files renamed with it (off until it is given).
 		mpcContent->GetRename()->SetSearches(szStep[13] == 'c', (szStep[13] != '\0') && (szStep[14] == 't'));
+		gbIDEScriptClassFiles = (szStep[13] != '\0') && (szStep[14] != '\0') && (szStep[15] == 'f');
 	}
 	else if ((strcmp(szStep, "renamable") == 0) || (strncmp(szStep, "rename:", 7) == 0))
 	{
@@ -1356,7 +1358,7 @@ void CIDEScript::RunEditStep(const char* szStep)
 		}
 		else if (szStep[6] == ':')
 		{
-			mpcContent->GetRename()->RenameSymbol(&sTarget, &szStep[7]);
+			mpcContent->GetRename()->RenameClass(&sTarget, &szStep[7], gbIDEScriptClassFiles);
 			printf("Rename: %s [%s] to %s\n", sTarget.szName.Text(), sTarget.szKey.Text(), &szStep[7]);
 		}
 		else

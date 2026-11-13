@@ -34,6 +34,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/CheckBox.h"
 #include "WindowLib/CommandSet.h"
 #include "WindowLib/MenuContainer.h"
+#include "IDECodeModel.h"
 
 
 class CIDEContent;
@@ -108,7 +109,10 @@ public:
 
 	void	FindRelatedFiles(const char* szFileName, CArrayChars* paszDest);
 	void	AddRenames(const char* szFileName, const char* szNewName, bool bRelated, CArrayIDEFileRenames* pasDest);
-	bool	RenameFiles(CArrayIDEFileRenames* pasRenames, bool bComments, bool bText);
+	bool	RenameFiles(CArrayIDEFileRenames* pasRenames, bool bComments, bool bText, CChars* pszStatus = NULL);
+	bool	FindProblem(CArrayIDEFileRenames* pasRenames, CChars* pszDest);
+	bool	FindClassFiles(SIDERenameTarget* psTarget, CArrayChars* paszDest);
+	bool	AddClassRenames(const char* szOldName, const char* szNewName, CArrayChars* paszFiles, CArrayIDEFileRenames* pasDest);
 	bool	MoveFile(const char* szFrom, const char* szTo, CArrayInt* paiProjects);
 	bool	IsRenamable(const char* szFileName);
 	void	RenameExplorerFile(void);
@@ -116,8 +120,8 @@ public:
 	bool	GetExplorerFile(CChars* pszDest);
 
 protected:
-	bool	FindProblem(CArrayIDEFileRenames* pasRenames, CChars* pszDest);
 	size	FindEditedFile(CArrayChars* paszFiles, const char* szFileName);
+	void	ShowRenameStatus(CChars* pszMessage, CChars* pszStatus);
 	bool	AddEdit(CArrayChars* paszFiles, CArrayIDEFileEdits* pasEdits, const char* szFileName, size uiStart, const char* szOldName, size uiRename, uint8 uiKind, CChars* pszChanged);
 	bool	SearchFiles(CArrayChars* paszOldNames, bool bComments, bool bText, CArrayChars* paszFiles, CArrayIDEFileEdits* pasEdits, CChars* pszChanged);
 	void	ShowQueuedRenameFile(void);

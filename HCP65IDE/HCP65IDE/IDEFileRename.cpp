@@ -641,6 +641,112 @@ bool CIDEFileRename::SearchFiles(CArrayChars* paszOldNames, bool bComments, bool
 
 //////////////////////////////////////////////////////////////////////////
 //
+// What Rename File did, on the status line, or appended to pszStatus (a
+// class's Rename says it with its own).
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEFileRename::ShowRenameStatus(CChars* pszMessage, CChars* pszStatus)
+{
+	if (pszStatus)
+	{
+		pszStatus->Append(pszMessage);
+	}
+	else
+	{
+		mpcContent->ShowStatus(pszMessage->Text());
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A type's files (RenameFile.txt, "Which files are a class's"): the
+// stem is the type's name without its one letter prefix (CPreprocessor's
+// is Preprocessor); the file the index has it declared or defined in, if
+// its stem is that, and that file's related files (FindRelatedFiles), the
+// declaring file first.  False, and none, if it has no such file.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEFileRename::FindClassFiles(SIDERenameTarget* psTarget, CArrayChars* paszDest)
+{
+	CFileUtil		cFileUtil;
+	CChars			szName;
+	CChars			szDirectory;
+	SIDELocation*	psLocation;
+	char*			szClass;
+	size			i;
+
+	szClass = psTarget->szName.Text();
+	if (!psTarget->bType || (psTarget->szName.Length() < 2) || (szClass[0] < 'A') || (szClass[0] > 'Z') || (szClass[1] < 'A') || (szClass[1] > 'Z'))
+	{
+		return false;
+	}
+	for (i = 0; i < psTarget->asLocations.NumElements(); i++)
+	{
+		psLocation = psTarget->asLocations.Get(i);
+		if ((psLocation->uiRole != CPPIR_Declaration) && (psLocation->uiRole != CPPIR_Definition))
+		{
+			continue;
+		}
+		szName.Init();
+		szDirectory.Init();
+		cFileUtil.SplitPath(psLocation->szFileName.Text(), &szName, &szDirectory);
+		if ((GetIDEStemLength(szName.Text()) == psTarget->szName.Length() - 1) && (MemICmp(szName.Text(), &szClass[1], psTarget->szName.Length() - 1) == 0) && IsRenamable(psLocation->szFileName.Text()))
+		{
+			paszDest->Add(psLocation->szFileName.Text());
+			FindRelatedFiles(psLocation->szFileName.Text(), paszDest);
+			szDirectory.Kill();
+			szName.Kill();
+			return true;
+		}
+		szDirectory.Kill();
+		szName.Kill();
+	}
+	return false;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The files of a type szOldName (FindClassFiles) to be named for
+// szNewName added to pasDest: the new name without its prefix in place
+// of each file's stem, the rest of each name kept.  False, and none, if
+// szNewName doesn't have the old name's prefix letter, so its files have
+// no stem to be given.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEFileRename::AddClassRenames(const char* szOldName, const char* szNewName, CArrayChars* paszFiles, CArrayIDEFileRenames* pasDest)
+{
+	CFileUtil	cFileUtil;
+	CChars		szName;
+	CChars		szDirectory;
+	CChars		szNewFile;
+	size		uiOldStem;
+	size		i;
+
+	if ((strlen(szNewName) < 2) || (szNewName[0] != szOldName[0]))
+	{
+		return false;
+	}
+	uiOldStem = strlen(szOldName) - 1;
+	for (i = 0; i < paszFiles->NumElements(); i++)
+	{
+		szName.Init();
+		szDirectory.Init();
+		cFileUtil.SplitPath(paszFiles->GetText(i), &szName, &szDirectory);
+		szNewFile.Init(&szNewName[1]);
+		szNewFile.Append(szName.Text(uiOldStem));
+		pasDest->Add()->Init(paszFiles->GetText(i), szNewFile.Text());
+		szNewFile.Kill();
+		szDirectory.Kill();
+		szName.Kill();
+	}
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Renames the files (Rename File): every #include that finds one is
 // changed, and with bComments and bText its old name in comments and
 // strings and in the projects' text files, in each file's editor (opened,
@@ -653,7 +759,7 @@ bool CIDEFileRename::SearchFiles(CArrayChars* paszOldNames, bool bComments, bool
 // was searched.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEFileRename::RenameFiles(CArrayIDEFileRenames* pasRenames, bool bComments, bool bText)
+bool CIDEFileRename::RenameFiles(CArrayIDEFileRenames* pasRenames, bool bComments, bool bText, CChars* pszStatus)
 {
 	CFileUtil			cFileUtil;
 	CChars				szMessage;
@@ -686,7 +792,7 @@ bool CIDEFileRename::RenameFiles(CArrayIDEFileRenames* pasRenames, bool bComment
 	{
 		szMessage.Insert(0, "Can't rename: ");
 		szMessage.Append('.');
-		mpcContent->ShowStatus(szMessage.Text());
+		ShowRenameStatus(&szMessage, pszStatus);
 		szMessage.Kill();
 		return false;
 	}
@@ -744,7 +850,7 @@ bool CIDEFileRename::RenameFiles(CArrayIDEFileRenames* pasRenames, bool bComment
 		szMessage.Append("Rename stopped: ");
 		szMessage.Append(szChanged);
 		szMessage.Append(" has changed since it was searched.");
-		mpcContent->ShowStatus(szMessage.Text());
+		ShowRenameStatus(&szMessage, pszStatus);
 		szMessage.Kill();
 		szChanged.Kill();
 		asEdits.Kill();
@@ -864,7 +970,7 @@ bool CIDEFileRename::RenameFiles(CArrayIDEFileRenames* pasRenames, bool bComment
 		szMessage.Append((int)aiProjects.NumElements());
 		szMessage.Append(aiProjects.NumElements() == 1 ? " project." : " projects.");
 	}
-	mpcContent->ShowStatus(szMessage.Text());
+	ShowRenameStatus(&szMessage, pszStatus);
 
 	szMessage.Kill();
 	szChanged.Kill();

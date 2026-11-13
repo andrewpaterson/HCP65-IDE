@@ -30,6 +30,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define IDE_RENAME_TEXT_ATTRIBUTE			"SearchForText"
 #define IDE_RENAME_TYPE_COMMENTS_ATTRIBUTE	"SearchInCommentsForTypes"
 #define IDE_RENAME_TYPE_TEXT_ATTRIBUTE		"SearchForTextForTypes"
+#define IDE_RENAME_FILES_ATTRIBUTE			"RenameFilesForTypes"
 
 
 //How Rename found a place: the index has it, or a search found it as text the index doesn't have or in a comment or string.
@@ -259,6 +260,8 @@ void CIDERename::Init(CIDEContent* pcContent)
 	mabText[0] = false;
 	mabComments[1] = true;
 	mabText[1] = true;
+	mbFiles = true;
+	maszClassFiles.Init();
 	PostInit();
 }
 
@@ -275,6 +278,9 @@ void CIDERename::Class(void)
 	M_Pointer(mpRenameError);
 	M_Pointer(mpCommentsBox);
 	M_Pointer(mpTextBox);
+	M_Pointer(mpFilesBox);
+	U_Unknown(CArrayChars, maszClassFiles);
+	U_Bool(mbFiles);
 	U_Unknown(SIDERenameTarget, msRenameTarget);
 	U_BoolArray(mabComments, 2);
 	U_BoolArray(mabText, 2);
@@ -289,6 +295,7 @@ void CIDERename::Class(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDERename::Free(void)
 {
+	maszClassFiles.Kill();
 	msRenameTarget.Kill();
 }
 
@@ -417,6 +424,11 @@ bool CIDERename::ShowRename(void)
 	CChars				szPrompt;
 	CChars				szNewName;
 	bool				bResult;
+	CFileUtil			cFileUtil;
+	CChars				szFiles;
+	CChars				szFileName;
+	Ptr<CLabel>			pFiles;
+	size				i;
 
 	sTarget.Init();
 	if (!FindRenameTarget(&sTarget))
@@ -459,6 +471,28 @@ bool CIDERename::ShowRename(void)
 	mpRenameField->SelectAll();
 	mpCommentsBox = mpRenameDialog->AddCheckBox("Search in comments and strings", mabComments[sTarget.bType]);
 	mpTextBox = mpRenameDialog->AddCheckBox("Search for text occurrences", mabText[sTarget.bType]);
+
+	//A type's files can be renamed with it, as IntelliJ renames a class's file.
+	maszClassFiles.ReInit();
+	mpFilesBox = NULL;
+	if (mpcContent->GetFileRename()->FindClassFiles(&sTarget, &maszClassFiles))
+	{
+		szFiles.Init();
+		for (i = 0; i < maszClassFiles.NumElements(); i++)
+		{
+			szFileName.Init();
+			cFileUtil.GetFileName(&szFileName, maszClassFiles.GetText(i));
+			szFiles.Append(i > 0 ? ", " : "");
+			szFiles.Append(szFileName);
+			szFileName.Kill();
+		}
+		mpFilesBox = mpRenameDialog->AddCheckBox("Rename files", mbFiles);
+		pFiles = OMalloc<CLabel>(mpRenameDialog->GetWindow(), mpcContent->GetDimFont(), szFiles.Text());
+		pFiles->SetAlignment(CSH_Left, CSV_Center);
+		mpRenameDialog->AddEditor("", pFiles);
+		pFiles = NULL;
+		szFiles.Kill();
+	}
 	mpRenameError = OMalloc<CLabel>(mpRenameDialog->GetWindow(), mpcContent->GetDimFont(), "");
 	mpRenameDialog->AddEditor("", mpRenameError);
 	mpRenameDialog->SetOKCaption("Refactor");
@@ -476,8 +510,13 @@ bool CIDERename::ShowRename(void)
 			mabText[sTarget.bType] = mpTextBox->IsTicked();
 			mpcContent->GetSettings()->WriteSettings();
 		}
+		if (mpFilesBox.IsNotNull() && (mpFilesBox->IsTicked() != mbFiles))
+		{
+			mbFiles = mpFilesBox->IsTicked();
+			mpcContent->GetSettings()->WriteSettings();
+		}
 		szNewName.Init(mpRenameField->GetText());
-		bResult = RenameSymbol(&sTarget, szNewName.Text());
+		bResult = RenameClass(&sTarget, szNewName.Text(), mpFilesBox.IsNotNull() && mpFilesBox->IsTicked());
 		szNewName.Kill();
 	}
 	mpRenameDialog->ClearApprover();
@@ -486,6 +525,8 @@ bool CIDERename::ShowRename(void)
 	mpRenameError = NULL;
 	mpCommentsBox = NULL;
 	mpTextBox = NULL;
+	mpFilesBox = NULL;
+	maszClassFiles.ReInit();
 	mpRenameDialog = NULL;
 	sTarget.Kill();
 	return bResult;
@@ -506,6 +547,8 @@ bool CIDERename::ApproveRename(void)
 	const char*	szProblem;
 	CChars		szNewKey;
 	size		uiNameStart;
+	CChars					szFilesProblem;
+	CArrayIDEFileRenames	asRenames;
 
 	szName = mpRenameField->GetText();
 	szProblem = NULL;
@@ -543,7 +586,26 @@ bool CIDERename::ApproveRename(void)
 		}
 	}
 
+	//The type's files must be able to have the new name's stem.
+	szFilesProblem.Init();
+	if ((szProblem == NULL) && mpFilesBox.IsNotNull() && mpFilesBox->IsTicked())
+	{
+		asRenames.Init();
+		if (!mpcContent->GetFileRename()->AddClassRenames(msRenameTarget.szName.Text(), szName, &maszClassFiles, &asRenames))
+		{
+			szProblem = "Its files need the new name to start with the same letter.";
+		}
+		else if (mpcContent->GetFileRename()->FindProblem(&asRenames, &szFilesProblem))
+		{
+			szFilesProblem.Insert(0, "Its files can't be renamed: ");
+			szFilesProblem.Append('.');
+			szProblem = szFilesProblem.Text();
+		}
+		KillIDEFileRenames(&asRenames);
+	}
+
 	mpRenameError->SetText(szProblem ? szProblem : "");
+	szFilesProblem.Kill();
 	return szProblem == NULL;
 }
 
@@ -679,7 +741,7 @@ bool CIDERename::SearchRenameFiles(const char* szName, bool bComments, bool bTex
 // has the old name: the file was edited since it was indexed.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDERename::RenameSymbol(SIDERenameTarget* psTarget, const char* szNewName)
+bool CIDERename::RenameSymbol(SIDERenameTarget* psTarget, const char* szNewName, CArrayChars* paszEdited, CChars* pszStatus)
 {
 	CArrayChars			aszFiles;
 	CArrayIDEPlaces		asPlaces;
@@ -759,7 +821,7 @@ bool CIDERename::RenameSymbol(SIDERenameTarget* psTarget, const char* szNewName)
 		szMessage.Init("Rename stopped: ");
 		szMessage.Append(szChanged);
 		szMessage.Append(" has changed since it was indexed.  Save it and try again once it has been indexed.");
-		mpcContent->ShowStatus(szMessage.Text());
+		ShowRenameStatus(&szMessage, pszStatus);
 		szMessage.Kill();
 	}
 	else
@@ -823,14 +885,116 @@ bool CIDERename::RenameSymbol(SIDERenameTarget* psTarget, const char* szNewName)
 		szMessage.Append(" in ");
 		szMessage.Append((int)aszFiles.NumElements());
 		szMessage.Append(aszFiles.NumElements() == 1 ? " file." : " files.");
-		mpcContent->ShowStatus(szMessage.Text());
+		ShowRenameStatus(&szMessage, pszStatus);
 		szMessage.Kill();
 	}
 
 	szChanged.Kill();
 	asPlaces.Kill();
+	for (i = 0; paszEdited && bChanged && (i < aszFiles.NumElements()); i++)
+	{
+		paszEdited->Add(aszFiles.GetText(i));
+	}
 	aszFiles.Kill();
 	return bChanged;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// What Rename did, on the status line, or appended to pszStatus.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDERename::ShowRenameStatus(CChars* pszMessage, CChars* pszStatus)
+{
+	if (pszStatus)
+	{
+		pszStatus->Append(pszMessage);
+	}
+	else
+	{
+		mpcContent->ShowStatus(pszMessage->Text());
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Rename, and with bFiles a type's files renamed with it (RenameFile.txt
+// step 6): its files (CIDEFileRename::FindClassFiles) given the new
+// name's stem by Rename File, the symbol's places, the #includes and the
+// files renamed as one undo group, and every file edited saved, as
+// Rename File saves them.  Nothing changes if the files can't be renamed
+// (the status line says why).  False if nothing was renamed.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDERename::RenameClass(SIDERenameTarget* psTarget, const char* szNewName, bool bFiles)
+{
+	Ptr<CIDEFileRename>		pFileRename;
+	CArrayChars				aszClassFiles;
+	CArrayChars				aszEdited;
+	CArrayIDEFileRenames	asRenames;
+	CChars					szStatus;
+	SIDEFileRename*			psRename;
+	Ptr<CIDEEditorTab>		pTab;
+	size					i;
+	size					j;
+	bool					bResult;
+
+	pFileRename = mpcContent->GetFileRename();
+	aszClassFiles.Init();
+	asRenames.Init();
+	if (!bFiles || !pFileRename->FindClassFiles(psTarget, &aszClassFiles) || !pFileRename->AddClassRenames(psTarget->szName.Text(), szNewName, &aszClassFiles, &asRenames))
+	{
+		KillIDEFileRenames(&asRenames);
+		aszClassFiles.Kill();
+		return RenameSymbol(psTarget, szNewName);
+	}
+	aszClassFiles.Kill();
+
+	szStatus.Init();
+	if (pFileRename->FindProblem(&asRenames, &szStatus))
+	{
+		szStatus.Insert(0, "Can't rename its files: ");
+		szStatus.Append('.');
+		mpcContent->ShowStatus(szStatus.Text());
+		szStatus.Kill();
+		KillIDEFileRenames(&asRenames);
+		return false;
+	}
+
+	aszEdited.Init();
+	mpcContent->GetEdit()->BeginUndoGroup();
+	bResult = RenameSymbol(psTarget, szNewName, &aszEdited, &szStatus);
+	if (bResult)
+	{
+		szStatus.Append("  ");
+		bResult = pFileRename->RenameFiles(&asRenames, mabComments[psTarget->bType], mabText[psTarget->bType], &szStatus);
+	}
+	mpcContent->GetEdit()->EndUndoGroup();
+
+	//The symbol's edits are saved too, in the files' new names.
+	for (i = 0; i < aszEdited.NumElements(); i++)
+	{
+		for (j = 0; j < asRenames.NumElements(); j++)
+		{
+			psRename = asRenames.Get(j);
+			if (StringCompare(aszEdited.GetText(i), psRename->szOldPath.Text()) == 0)
+			{
+				aszEdited.Get(i)->Set(psRename->szNewPath);
+			}
+		}
+		pTab = mpcContent->GetDocuments()->FindTab(aszEdited.GetText(i));
+		if (pTab.IsNotNull())
+		{
+			mpcContent->GetDocuments()->SaveFile(pTab);
+		}
+	}
+	mpcContent->ShowStatus(szStatus.Text());
+	szStatus.Kill();
+	aszEdited.Kill();
+	KillIDEFileRenames(&asRenames);
+	return bResult;
 }
 
 
@@ -869,6 +1033,11 @@ void CIDERename::ReadSettings(CMarkupTag* pcSettings)
 	{
 		return;
 	}
+	szValue = pcTag->GetStringAttribute(IDE_RENAME_FILES_ATTRIBUTE);
+	if (szValue)
+	{
+		mbFiles = (StringCompare(szValue, "true") == 0);
+	}
 	for (i = 0; i < 4; i++)
 	{
 		szValue = pcTag->GetStringAttribute(aszAttributes[i]);
@@ -887,6 +1056,7 @@ void CIDERename::WriteSettings(CXMLWriter* pcWriter)
 	pcWriter->Attribute(IDE_RENAME_TEXT_ATTRIBUTE, mabText[0]);
 	pcWriter->Attribute(IDE_RENAME_TYPE_COMMENTS_ATTRIBUTE, mabComments[1]);
 	pcWriter->Attribute(IDE_RENAME_TYPE_TEXT_ATTRIBUTE, mabText[1]);
+	pcWriter->Attribute(IDE_RENAME_FILES_ATTRIBUTE, mbFiles);
 	pcWriter->End();
 }
 

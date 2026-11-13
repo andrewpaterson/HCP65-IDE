@@ -574,6 +574,34 @@ CHECKS = [
 		'DEBUG': 'command:Refactor.RenameFile,answered:1,printprojectfiles'}),
 		[r"^Status: Can't rename: EngineCache\.h is already there\.$", r'^Project files: Commented\.cpp Engine\.cpp Engine_Linux\.cpp '],
 		[r'^Status: Renamed']),
+	('rename-class-files', dict(MakeRenameFileCopy(), **{
+		#A class's Rename with its files (step 6): CEngine to CMotor, Engine.h, Engine.cpp and Engine_Linux.cpp to Motor.h,
+		#Motor.cpp and Motor_Linux.cpp, the #includes and both projects with them, every file edited saved.
+		'WAIT_INDEX': '1', 'OPEN': 'Engine.h', 'CARET': '5:8',
+		'DEBUG': 'edit:renamesearch:ctf,edit:rename:CMotor,printprojectfiles,printtabs,printdiskfile:Motor.h,printdiskfile:Motor_Linux.cpp,printdiskfile:Tool/Tool.cpp'}),
+		[r'^Status: Renamed CEngine to CMotor: .*  Renamed Engine\.h to Motor\.h and 2 more files: 7 #includes, ',
+		 r'^Project files: Commented\.cpp Motor\.cpp Motor_Linux\.cpp Other/OtherUser\.cpp .* Motor\.h EngineCache\.h Other/Engine\.h Tool/Tool\.cpp$',
+		 r'^Tabs: >Motor\.h ', r'^class CMotor$', r'^void CMotor::InitPlatform\(void\)$', r'^#include "\.\./Motor\.h"$', r'^\tCMotor\tcEngine;$'],
+		[r'Rename stopped', r"Can't rename", r'Disk file .*:\n\(none\)']),
+	('rename-class-files-undo', dict(MakeRenameFileCopy(), **{
+		#Undo Across Files undoes all of it: the class's name and its files.
+		'WAIT_INDEX': '1', 'OPEN': 'Engine.h', 'CARET': '5:8',
+		'DEBUG': 'edit:renamesearch:ctf,edit:rename:CMotor,edit:undoall,printprojectfiles,printdiskfile:Engine.h,printdiskfile:Tool/Tool.cpp'}),
+		[r'^Project files: Commented\.cpp Engine\.cpp Engine_Linux\.cpp .* Engine\.h EngineCache\.h', r'^class CEngine$', r'^#include "\.\./Engine\.h"$',
+		 r'^\tCEngine\tcEngine;$'],
+		[r"Couldn't rename", r'Disk file .*:\n\(none\)']),
+	('rename-class-no-files', dict(MakeRenameFileCopy(), **{
+		#Without the f the files keep their names; a new name without the prefix letter leaves them too.
+		'WAIT_INDEX': '1', 'OPEN': 'Engine.h', 'CARET': '5:8', 'DEBUG': 'edit:renamesearch:ct,edit:rename:CMotor,printprojectfiles'}),
+		[r'^Status: Renamed CEngine to CMotor: ', r'^Project files: Commented\.cpp Engine\.cpp Engine_Linux\.cpp '],
+		[r'Renamed Engine\.h']),
+	('rename-class-files-dialog', dict(MakeRenameFileCopy(), **{
+		#The Rename dialog of a class with files has Rename files, ticked as it starts, listing them.
+		'WAIT_INDEX': '1', 'OPEN': 'Engine.h', 'CARET': '5:8', 'SETTINGS': MakeSettingsFile(), 'DIALOG_KEYS': 'type:CMotor', 'DIALOG_ANSWER': 'OK',
+		'DEBUG': 'rename,answered:1,printprojectfiles'}),
+		[r'^Dialog \[Rename\] answered OK$', r'^Status: Renamed CEngine to CMotor: .*  Renamed Engine\.h to Motor\.h and 2 more files: ',
+		 r'^Project files: Commented\.cpp Motor\.cpp Motor_Linux\.cpp '],
+		[r'Rename stopped', r"Can't rename"]),
 	('rename-file-refused', dict(MakeRenameFileCopy(), **{
 		#A name that is taken, one with a directory, and the same name: nothing is renamed.
 		'WAIT_INDEX': '1', 'OPEN': 'Engine.h', 'DEBUG': 'edit:renamefile:EngineCache.h,edit:renamefile:Sub/Engine.h,edit:renamefile:Engine.h,printprojectfiles'}),
