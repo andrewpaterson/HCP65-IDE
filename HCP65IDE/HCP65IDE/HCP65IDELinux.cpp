@@ -18,42 +18,31 @@ You should have received a copy of the GNU Affero General Public License
 along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 ** ------------------------------------------------------------------------ **/
-#include "BaseLib/Logger.h"
-#include "BaseLib/TypeNames.h"
-#include "BaseLib/TypeConverter.h"
 #include "BaseLib/GlobalMemory.h"
-#include "BaseLib/GlobalDataTypesIO.h"
-#include "BaseLib/Socket.h"
-#include "StandardLib/Objects.h"
 #include "X11Lib/X11WindowFactory.h"
 #include "X11Lib/X11Input.h"
-#include "IDEApp.h"
+#include "IDEMain.h"
 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The IDE's window on Linux, showing the solutions or workspace given (or nothing).  Run from the HCP65IDE directory the
-// resources and WinInputLib's XML are found relative to it.
+// The IDE's window on Linux, on the X display, showing the solutions or
+// workspace given (or nothing).
 //
-// HCP65_IDE_SNAPSHOT=file.png (and HCP65_IDE_SNAPSHOT_TICKS) saves the window and closes it.  HCP65_IDE_EXPAND opens
-// every folder in Solution Explorer and HCP65_IDE_OPEN=name opens the file of that name, as a double click on it does.
+// HCP65_IDE_SNAPSHOT=file.png (and HCP65_IDE_SNAPSHOT_TICKS) saves the
+// window and closes it.  HCP65_IDE_EXPAND opens every folder in Solution
+// Explorer and HCP65_IDE_OPEN=name opens the file of that name, as a
+// double click on it does.
 //
 //////////////////////////////////////////////////////////////////////////
 int main(int argc, char* argv[])
 {
-	gcLogger.Init();
-	TypesInit();
-	TypeConverterInit();
-	MemoryInit();
-	DataIOInit();
-	ObjectsInit();
-	SocketsInit();  //The debugger's connection to the emulator.
-
 	bool		bResult;
 	CArrayChars	aszSolutions;
 	int			i;
 
-	//One or more solutions, or a workspace, opened together; none, the IDE starts with nothing open.
+	StartIDE();
+
 	aszSolutions.Init();
 	for (i = 1; i < argc; i++)
 	{
@@ -61,56 +50,25 @@ int main(int argc, char* argv[])
 	}
 
 	{
-		CX11WindowFactory		cNativeFactory;
-		CX11Input				cX11Input;
-		Ptr<CIDEApp>			pApp;
+		CX11WindowFactory	cNativeFactory;
+		CX11Input			cX11Input;
 
 		bResult = cNativeFactory.Init(&gcMemoryAllocator, NULL);
 		if (bResult)
 		{
-			//Validating every object each time one changes is too slow for the text's glyphs.  They are validated once at the end.
-			gcObjects.DisableValidation();
-
 			//The app's input reads the devices from the XML, then adds these.
 			cX11Input.Init();
 			cNativeFactory.SetInput(&cX11Input);
 
-			//The app (its window, content and input) is held by the root while it runs.
-			pApp = OMalloc<CIDEApp>();
-			ORoot()->Add(pApp);
-			pApp->Setup(&cNativeFactory, &cX11Input, "../../../CommonLibraries/Libraries/WinInputLib/xml", &aszSolutions);
-			bResult = pApp->Run();
-			ORoot()->Remove(pApp);
-			pApp = NULL;
+			bResult = RunIDE(&cNativeFactory, &cX11Input, &aszSolutions);
 
 			cNativeFactory.SetInput(NULL);
 			cX11Input.Kill();
-
-			gcObjects.EnableValidation();
-			gcObjects.ValidateObjectsConsistency();
 		}
-
 		cNativeFactory.Kill();
 	}
 
 	aszSolutions.Kill();
-	ObjectsFlush();
-	SocketsKill();
-	ObjectsKill();
-	DataIOKill();
-	MemoryKill();
-	TypeConverterKill();
-	TypesKill();
-
-	gcLogger.Kill();
-
-	if (bResult)
-	{
-		return 0;
-	}
-	else
-	{
-		return 1;
-	}
+	return StopIDE(bResult);
 }
 

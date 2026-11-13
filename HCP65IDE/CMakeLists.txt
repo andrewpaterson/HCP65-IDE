@@ -124,6 +124,7 @@ vcxproj_sources(CLAUDELIB_SOURCES "${CLAUDELIB_DIR}/ClaudeLib.vcxproj")
 # HCP65IDE.cpp (WinMain) is Windows only.
 set(IDE_SOURCES
 	"${IDE_DIR}/HCP65IDELinux.cpp"
+	"${IDE_DIR}/IDEMain.cpp"
 	"${IDE_DIR}/IDECodeModel.cpp"
 	"${IDE_DIR}/IDECodeModelEdits.cpp"
 	"${IDE_DIR}/IDEContent.cpp"

@@ -12,6 +12,9 @@
     <ClCompile Include="HCP65IDE.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="IDEMain.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="IDECodeModel.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -264,6 +267,9 @@
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDEApp.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDEMain.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDEWindowTick.h">

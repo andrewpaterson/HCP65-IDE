@@ -237,6 +237,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="HCP65IDE.cpp" />
+    <ClCompile Include="IDEMain.cpp" />
     <ClCompile Include="IDECodeModel.cpp" />
     <ClCompile Include="IDECodeModelEdits.cpp" />
     <ClCompile Include="IDEContent.cpp" />
@@ -323,6 +324,7 @@
     <ClInclude Include="IDEGit.h" />
     <ClInclude Include="IDEDiffTab.h" />
     <ClInclude Include="IDEApp.h" />
+    <ClInclude Include="IDEMain.h" />
     <ClInclude Include="IDEWindowTick.h" />
     <ClInclude Include="SolutionExplorer.h" />
   </ItemGroup>
