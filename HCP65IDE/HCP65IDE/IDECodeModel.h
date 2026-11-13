@@ -95,7 +95,8 @@ struct SIDERenameTarget
 	bool				bType;			//A class, enum, typedef, template or namespace: Rename's searches are remembered apart for them.
 	uint8				uiAssembly;		//How hand written assembly's labels name it (EIDEAssemblyRename).
 	CChars				szScope;		//The scopes its name is in, as its key has them ("NS::CFat"), empty for none.
-	bool				bOverloaded;	//A function with others of its name in its scope: its labels can't be told from theirs.
+	bool				bOverloaded;	//A function with others of its name in its scope.
+	CArrayChars			aszOverloads;	//Then every one's key, its own too: assembly labels are told apart by their parameters.
 
 	void	Init(void);
 	void	Kill(void);

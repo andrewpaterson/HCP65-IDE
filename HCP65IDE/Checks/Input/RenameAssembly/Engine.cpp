@@ -19,6 +19,18 @@ void CEngine::Run(char cStep)
 }
 
 
+void CEngine::Mix(int iSpeed)
+{
+	miSpeed = iSpeed;
+}
+
+
+void CEngine::Mix(long lSpeed)
+{
+	miSpeed = (int)lSpeed;
+}
+
+
 void CEngineCache::Init(void)
 {
 }

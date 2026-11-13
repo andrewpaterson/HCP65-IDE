@@ -653,8 +653,8 @@ CHECKS = [
 		#A class renamed in hand written assembly's labels (_CEngine__Init, __0, __2), in parameter lists with its length
 		#(FP7CEngine to FP6CMotor) and in comments; not CEngineCache's labels, or a string.
 		'WAIT_INDEX': '1', 'OPEN': 'Engine.h', 'CARET': '5:8', 'DEBUG': 'edit:renamesearch:ct-s,edit:rename:CMotor,printdiskfile:EngineW65C816.asm'}),
-		[r'^Status: Renamed CEngine to CMotor: .*, 9 in assembly in 3 files\.$', r"^; CMotor's functions in assembly", r'^_CMotor__0:$', r'^_CMotor__Init:$',
-		 r'^\t\tjsr _CEngineCache__Init$', r'^_CMotor__Run__Fi:$', r'^_CPart__Attach__FP6CMotor:$', r'^_EngineCount__FP6CMotor:$', r'^\t\tlda #<_CMotor__2$',
+		[r'^Status: Renamed CEngine to CMotor: .*, 10 in assembly in 3 files\.$', r"^; CMotor's functions in assembly", r'^_CMotor__0:$', r'^_CMotor__Init:$',
+		 r'^\t\tjsr _CEngineCache__Init$', r'^_CMotor__Run__Fi:$', r'^_CMotor__Mix__Fi:$', r'^_CPart__Attach__FP6CMotor:$', r'^_EngineCount__FP6CMotor:$', r'^\t\tlda #<_CMotor__2$',
 		 r'^_CEngineCache__Init:$', r'^\t\t\.byte "CEngine", 0$'],
 		[r'_CEngine__', r'7CEngine', r'CMotorCache']),
 	('rename-assembly-member', dict(MakeRenameAssemblyCopy(), **{
@@ -663,13 +663,17 @@ CHECKS = [
 		[r'^Status: Renamed Init to Start: .*, 2 in assembly in 3 files\.$', r'^_CEngine__Start:$', r'^\t\tjsr _CEngineCache__Init$', r'^\t\tjsr _CEngine__Start$',
 		 r'^_CEngineCache__Init:$'], [r'_CEngine__Init', r'_CEngineCache__Start']),
 	('rename-assembly-overloaded', dict(MakeRenameAssemblyCopy(), **{
-		#An overloaded member's labels can't be told from its overloads': they're left, and the status line says so.
+		#An overloaded member: the label whose parameters are Run(int)'s (Fi) and no other overload's, not Run(char)'s (Fc).
 		'WAIT_INDEX': '1', 'OPEN': 'Engine.h', 'CARET': '11:8', 'DEBUG': 'edit:renamesearch:ct-s,edit:rename:Go,printdiskfile:EngineW65C816.asm'}),
-		[r"^Status: Renamed Run to Go: .*Assembly labels of an overloaded function aren't changed: check them by hand\.$", r'^_CEngine__Run__Fi:$',
-		 r'^_CEngine__Run__Fc:$'], [r'_CEngine__Go']),
+		[r'^Status: Renamed Run to Go: .*, 1 in assembly in 3 files\.$', r'^_CEngine__Go__Fi:$', r'^_CEngine__Run__Fc:$'], [r'_CEngine__Go__Fc', r'check by hand']),
+	('rename-assembly-overload-unsure', dict(MakeRenameAssemblyCopy(), **{
+		#A label that fits two overloads (Fi is Mix(int)'s and Mix(long)'s, both 4 bytes) is left, and the status line says so.
+		'WAIT_INDEX': '1', 'OPEN': 'Engine.h', 'CARET': '13:8', 'DEBUG': 'edit:renamesearch:ct-s,edit:rename:Blend,printdiskfile:EngineW65C816.asm'}),
+		[r'^Status: Renamed Mix to Blend: .*1 assembly label fits this overload and another: left, check by hand\.$', r'^_CEngine__Mix__Fi:$'],
+		[r'_CEngine__Blend']),
 	('rename-assembly-function', dict(MakeRenameAssemblyCopy(), **{
 		#A function outside a class: its label, its parameter list as it was.
-		'WAIT_INDEX': '1', 'OPEN': 'Engine.h', 'CARET': '30:6', 'DEBUG': 'edit:renamesearch:ct-s,edit:rename:MotorCount,printdiskfile:EngineW65C816.asm'}),
+		'WAIT_INDEX': '1', 'OPEN': 'Engine.h', 'CARET': '32:6', 'DEBUG': 'edit:renamesearch:ct-s,edit:rename:MotorCount,printdiskfile:EngineW65C816.asm'}),
 		[r'^Status: Renamed EngineCount to MotorCount: .*, 1 in assembly in 3 files\.$', r'^_MotorCount__FP7CEngine:$'], [r'_EngineCount__']),
 	('rename-file-refused', dict(MakeRenameFileCopy(), **{
 		#A name that is taken, one with a directory, and the same name: nothing is renamed.

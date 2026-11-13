@@ -127,7 +127,7 @@ protected:
 	void	ShowQueuedRename(void);
 	bool	IsExplorerFocussed(void);
 	void	ShowRenameStatus(CChars* pszMessage, CChars* pszStatus);
-	size	RenameAssembly(SIDERenameTarget* psTarget, const char* szNewName, CArrayChars* paszFiles);
+	size	RenameAssembly(SIDERenameTarget* psTarget, const char* szNewName, CArrayChars* paszFiles, size* puiUnsure);
 	bool	ApproveRename(void);
 	size	FindRenameFile(CArrayChars* paszFiles, const char* szFileName);
 	bool	SearchRenameFiles(const char* szName, bool bComments, bool bText, CArrayChars* paszFiles, CArrayIDEPlaces* pasPlaces, CChars* pszChanged);

@@ -22,6 +22,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define __IDE_RENAME_ASSEMBLY_H__
 #include "BaseLib/Chars.h"
 #include "BaseLib/ArrayTemplate.h"
+#include "BaseLib/ArrayChars.h"
 
 
 //What Rename changes in hand written assembly (RenameFile.txt's assembly step): a C++ name in the compiler's labels
@@ -43,6 +44,9 @@ struct SIDEAssemblyRename
 	CChars				szOld;
 	CChars				szNew;
 	CChars				szScope;
+	CChars				szKey;			//An overloaded function's key, as the index has it ("CFat::Open(uint8)").
+	CArrayChars			aszOverloads;	//With every overload's key (its own too): a label is renamed if it fits it alone.
+	size				uiUnsure;		//Labels that fit it and other overloads too: left, for the status line to say.
 
 	void	Init(EIDEAssemblyRename eKind, const char* szOldName, const char* szNewName, const char* szScopeKey);
 	void	Kill(void);

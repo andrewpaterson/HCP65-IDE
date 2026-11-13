@@ -744,6 +744,7 @@ bool CIDERename::SearchRenameFiles(const char* szName, bool bComments, bool bTex
 bool CIDERename::RenameSymbol(SIDERenameTarget* psTarget, const char* szNewName, CArrayChars* paszEdited, CChars* pszStatus)
 {
 	size				uiAssembly;
+	size				uiUnsure;
 	CArrayChars			aszFiles;
 	CArrayIDEPlaces		asPlaces;
 	SIDELocation*		psLocation;
@@ -770,6 +771,7 @@ bool CIDERename::RenameSymbol(SIDERenameTarget* psTarget, const char* szNewName,
 	asPlaces.Init();
 	szChanged.Init();
 	uiAssembly = 0;
+	uiUnsure = 0;
 	bChanged = true;
 	for (i = 0; i < psTarget->asLocations.NumElements(); i++)
 	{
@@ -863,7 +865,7 @@ bool CIDERename::RenameSymbol(SIDERenameTarget* psTarget, const char* szNewName,
 			mpcContent->GetDocuments()->FindTab(aszFiles.GetText(uiFile))->GetEditor()->ReplaceRanges(asRanges.GetData(), asRanges.NumElements(), szNewName);
 			asRanges.Kill();
 		}
-		uiAssembly = RenameAssembly(psTarget, szNewName, &aszFiles);
+		uiAssembly = RenameAssembly(psTarget, szNewName, &aszFiles, &uiUnsure);
 		mpcContent->GetEdit()->EndUndoGroup();
 
 		szMessage.Init("Renamed ");
@@ -894,9 +896,12 @@ bool CIDERename::RenameSymbol(SIDERenameTarget* psTarget, const char* szNewName,
 		szMessage.Append(" in ");
 		szMessage.Append((int)aszFiles.NumElements());
 		szMessage.Append(aszFiles.NumElements() == 1 ? " file." : " files.");
-		if (psTarget->bOverloaded && ((psTarget->uiAssembly == IAR_Member) || (psTarget->uiAssembly == IAR_Function)))
+		if (uiUnsure > 0)
 		{
-			szMessage.Append("  Assembly labels of an overloaded function aren't changed: check them by hand.");
+			szMessage.Append("  ");
+			szMessage.Append((int)uiUnsure);
+			szMessage.Append((uiUnsure == 1) ? " assembly label fits" : " assembly labels fit");
+			szMessage.Append(" this overload and another: left, check by hand.");
 		}
 		ShowRenameStatus(&szMessage, pszStatus);
 		szMessage.Kill();
@@ -919,12 +924,13 @@ bool CIDERename::RenameSymbol(SIDERenameTarget* psTarget, const char* szNewName,
 // .inc items): in the labels the compiler gives it (FindIDEAssemblyEdits),
 // and with the comment search in comments, each file's edits from its end
 // back, in its editor (opened, not shown, if it isn't open; added to
-// paszFiles).  An overloaded function's labels aren't changed: they can't
-// be told from its overloads' without their parameters' types.  The number
-// of places changed (a name in a parameter list and its length are one).
+// paszFiles).  An overloaded function's label is changed when its
+// parameters fit this overload and no other (the labels that fit others
+// too are counted in *puiUnsure and left).  The number of places changed
+// (a name in a parameter list and its length are one).
 //
 //////////////////////////////////////////////////////////////////////////
-size CIDERename::RenameAssembly(SIDERenameTarget* psTarget, const char* szNewName, CArrayChars* paszFiles)
+size CIDERename::RenameAssembly(SIDERenameTarget* psTarget, const char* szNewName, CArrayChars* paszFiles, size* puiUnsure)
 {
 	CIDECodeModel*			pcModel;
 	SIDEAssemblyRename		sRename;
@@ -944,16 +950,20 @@ size CIDERename::RenameAssembly(SIDERenameTarget* psTarget, const char* szNewNam
 	SIDEAssemblyEdit*		psEdit;
 
 	eKind = (EIDEAssemblyRename)psTarget->uiAssembly;
-	if (psTarget->bOverloaded && ((eKind == IAR_Member) || (eKind == IAR_Function)))
-	{
-		eKind = IAR_None;
-	}
 	bComments = mabComments[psTarget->bType];
 	if ((eKind == IAR_None) && !bComments)
 	{
 		return 0;
 	}
 	sRename.Init(eKind, psTarget->szName.Text(), szNewName, psTarget->szScope.Text());
+	if (psTarget->bOverloaded)
+	{
+		sRename.szKey.Set(psTarget->szKey);
+		for (i = 0; i < psTarget->aszOverloads.NumElements(); i++)
+		{
+			sRename.aszOverloads.Add(psTarget->aszOverloads.GetText(i));
+		}
+	}
 	pcModel = mpcContent->GetCodeModel();
 	uiEdits = 0;
 	for (i = 0; i < pcModel->NumProjectFiles(); i++)
@@ -995,6 +1005,7 @@ size CIDERename::RenameAssembly(SIDERenameTarget* psTarget, const char* szNewNam
 		}
 		KillIDEAssemblyEdits(&asEdits);
 	}
+	*puiUnsure = sRename.uiUnsure;
 	sRename.Kill();
 	return uiEdits;
 }

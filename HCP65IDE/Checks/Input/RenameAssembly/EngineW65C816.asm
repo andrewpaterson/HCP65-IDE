@@ -9,6 +9,8 @@ _CEngine__Init:
 _CEngine__Run__Fi:
 _CEngine__Run__Fc:
 		rtl
+_CEngine__Mix__Fi:
+		rtl
 _CPart__Attach__FP7CEngine:
 		jsr _CEngine__Init
 		rtl

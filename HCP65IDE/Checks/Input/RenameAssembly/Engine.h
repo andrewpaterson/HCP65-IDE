@@ -10,6 +10,8 @@ public:
 	void	Init(void);
 	void	Run(int iSteps);
 	void	Run(char cStep);
+	void	Mix(int iSpeed);
+	void	Mix(long lSpeed);
 };
 
 

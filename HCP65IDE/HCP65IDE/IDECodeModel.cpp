@@ -2016,6 +2016,7 @@ void SIDERenameTarget::Init(void)
 	uiAssembly = IAR_None;
 	szScope.Init();
 	bOverloaded = false;
+	aszOverloads.Init();
 }
 
 
@@ -2025,6 +2026,7 @@ void SIDERenameTarget::Init(void)
 //////////////////////////////////////////////////////////////////////////
 void SIDERenameTarget::Kill(void)
 {
+	aszOverloads.Kill();
 	szScope.Kill();
 	szWhyNot.Kill();
 	KillIDELocations(&asLocations);
@@ -2142,10 +2144,18 @@ void CIDECodeModel::FindAssemblyRename(CCPPIndexSymbol* pcSymbol, SIDERenameTarg
 		{
 			szPrefix.Init();
 			szPrefix.AppendSubString(szKey, szParameters + 1);
-			for (i = 0; (i < mcIndex.NumSymbols()) && !psDest->bOverloaded; i++)
+			for (i = 0; i < mcIndex.NumSymbols(); i++)
 			{
 				pcOther = mcIndex.GetSymbol(i);
-				psDest->bOverloaded = (pcOther != pcSymbol) && (pcOther->meKind == CPPSK_Function) && pcOther->mszKey.StartsWith(szPrefix.Text());
+				if ((pcOther->meKind == CPPSK_Function) && pcOther->mszKey.StartsWith(szPrefix.Text()))
+				{
+					psDest->aszOverloads.Add(pcOther->mszKey.Text());
+					psDest->bOverloaded |= (pcOther != pcSymbol);
+				}
+			}
+			if (!psDest->bOverloaded)
+			{
+				psDest->aszOverloads.ReInit();
 			}
 			szPrefix.Kill();
 		}

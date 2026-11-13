@@ -36,11 +36,16 @@ void SIDEAssemblyRename::Init(EIDEAssemblyRename eRenameKind, const char* szOldN
 	szNew.Init(szNewName);
 	szScope.Init(szScopeKey ? szScopeKey : "");
 	szScope.Replace("::", "__");
+	szKey.Init();
+	aszOverloads.Init();
+	uiUnsure = 0;
 }
 
 
 void SIDEAssemblyRename::Kill(void)
 {
+	aszOverloads.Kill();
+	szKey.Kill();
 	szScope.Kill();
 	szNew.Kill();
 	szOld.Kill();
@@ -185,11 +190,371 @@ static bool FindIDETypeLabelEdits(const char* szToken, size uiStart, size uiLeng
 }
 
 
+//A scalar type a key names, and the sizes and signs the compiler can give it on the 65C64 and the W65C816.
+struct SIDEKeyScalar
+{
+	const char*	szName;
+	const char*	szCodes;	//The mangled codes it can be (c h s t i j x y b f d e v).
+};
+
+
+static const SIDEKeyScalar gasIDEKeyScalars[] =
+{
+	{ "void", "v" },					{ "bool", "b" },
+	{ "char", "ch" },					{ "signed char", "c" },				{ "unsigned char", "h" },
+	{ "short", "s" },					{ "short int", "s" },				{ "signed short", "s" },
+	{ "unsigned short", "t" },			{ "unsigned short int", "t" },
+	{ "int", "si" },					{ "signed", "si" },					{ "signed int", "si" },
+	{ "unsigned", "tj" },				{ "unsigned int", "tj" },
+	{ "long", "ix" },					{ "long int", "ix" },				{ "unsigned long", "jy" },
+	{ "unsigned long int", "jy" },		{ "long long", "x" },				{ "unsigned long long", "y" },
+	{ "int8", "c" },					{ "uint8", "h" },					{ "int16", "s" },
+	{ "uint16", "t" },					{ "int32", "i" },					{ "uint32", "j" },
+	{ "int64", "x" },					{ "uint64", "y" },					{ "size", "tjy" },
+	{ "lsize", "jy" },					{ "wchar_t", "stij" },				{ "char16_t", "t" },
+	{ "char32_t", "j" },				{ "float", "f" },					{ "double", "df" },
+	{ "long double", "ed" },
+	{ NULL, NULL },
+};
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// szText from uiStart to uiEnd without spaces either side, into pszDest.
+//
+//////////////////////////////////////////////////////////////////////////
+static void TrimIDEKeyPart(const char* szText, size uiStart, size uiEnd, CChars* pszDest)
+{
+	while ((uiStart < uiEnd) && (szText[uiStart] == ' '))
+	{
+		uiStart++;
+	}
+	while ((uiEnd > uiStart) && (szText[uiEnd - 1] == ' '))
+	{
+		uiEnd--;
+	}
+	pszDest->Init();
+	pszDest->AppendSubString(szText, uiStart, uiEnd);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A function's key split into its parameters' types ("char const*"),
+// whether it takes "..." and whether it is a const member.  False if it
+// has no parameter list.
+//
+//////////////////////////////////////////////////////////////////////////
+static bool SplitIDEKeyParameters(const char* szKey, CArrayChars* paszDest, bool* pbVariadic, bool* pbConst)
+{
+	const char*	szOpen;
+	size		uiStart;
+	size		uiPart;
+	size		i;
+	int			iDepth;
+	CChars		szPart;
+
+	szOpen = strchr(szKey, '(');
+	if (szOpen == NULL)
+	{
+		return false;
+	}
+	*pbVariadic = false;
+	iDepth = 0;
+	uiStart = (size)(szOpen - szKey) + 1;
+	uiPart = uiStart;
+	for (i = uiStart; szKey[i] != '\0'; i++)
+	{
+		if ((szKey[i] == '(') || (szKey[i] == '[') || (szKey[i] == '<'))
+		{
+			iDepth++;
+		}
+		else if ((szKey[i] == ']') || (szKey[i] == '>'))
+		{
+			iDepth--;
+		}
+		else if (szKey[i] == ')')
+		{
+			if (iDepth == 0)
+			{
+				break;
+			}
+			iDepth--;
+		}
+		else if ((szKey[i] == ',') && (iDepth == 0))
+		{
+			TrimIDEKeyPart(szKey, uiPart, i, &szPart);
+			paszDest->Add(szPart.Text());
+			szPart.Kill();
+			uiPart = i + 1;
+		}
+	}
+	TrimIDEKeyPart(szKey, uiPart, i, &szPart);
+	if (!szPart.Empty())
+	{
+		paszDest->Add(szPart.Text());
+	}
+	szPart.Kill();
+	if ((paszDest->NumElements() > 0) && (strcmp(paszDest->GetText(paszDest->NumElements() - 1), "...") == 0))
+	{
+		paszDest->RemoveTail();
+		*pbVariadic = true;
+	}
+	*pbConst = (szKey[i] == ')') && (strstr(&szKey[i], " const") != NULL);
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The mangled type at *puiAt passed over (an array's, a function's or a
+// member pointer's, which keys aren't compared with).
+//
+//////////////////////////////////////////////////////////////////////////
+static bool SkipIDEMangledType(const char* szMangled, size uiLength, size* puiAt)
+{
+	size	uiCount;
+	char	c;
+
+	while ((*puiAt < uiLength) && ((szMangled[*puiAt] == 'V') || (szMangled[*puiAt] == 'K')))
+	{
+		(*puiAt)++;
+	}
+	if (*puiAt >= uiLength)
+	{
+		return false;
+	}
+	c = szMangled[(*puiAt)++];
+	if (strchr("vbchstijxyfde", c))
+	{
+		return true;
+	}
+	if ((c == 'P') || (c == 'R'))
+	{
+		return SkipIDEMangledType(szMangled, uiLength, puiAt);
+	}
+	if ((c == 'C') || (c == 'N'))
+	{
+		for (uiCount = 0; (*puiAt < uiLength) && (szMangled[*puiAt] >= '0') && (szMangled[*puiAt] <= '9'); (*puiAt)++)
+		{
+			uiCount = (uiCount * 10) + (size)(szMangled[*puiAt] - '0');
+		}
+		*puiAt += uiCount;
+		return *puiAt <= uiLength;
+	}
+	if (c == 'A')
+	{
+		while ((*puiAt < uiLength) && (szMangled[*puiAt] != '_'))
+		{
+			(*puiAt)++;
+		}
+		(*puiAt)++;
+		return SkipIDEMangledType(szMangled, uiLength, puiAt);
+	}
+	if (c == 'M')
+	{
+		return SkipIDEMangledType(szMangled, uiLength, puiAt) && SkipIDEMangledType(szMangled, uiLength, puiAt);
+	}
+	if (c == 'F')
+	{
+		while ((*puiAt < uiLength) && (szMangled[*puiAt] != 'E'))
+		{
+			if (szMangled[*puiAt] == 'z')
+			{
+				(*puiAt)++;
+			}
+			else if (!SkipIDEMangledType(szMangled, uiLength, puiAt))
+			{
+				return false;
+			}
+		}
+		(*puiAt)++;
+		return *puiAt <= uiLength;
+	}
+	return false;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether the mangled type at *puiAt (passed over) can be the key's type
+// szKeyType ("char const*", "uint32", "NS::CFat&").  A scalar a key names
+// by a typedef this doesn't know (or a function pointer, an array) fits
+// any: only what is known tells overloads apart.
+//
+//////////////////////////////////////////////////////////////////////////
+static bool MatchIDEMangledType(const char* szMangled, size uiLength, size* puiAt, const char* szKeyType)
+{
+	CChars		szKey;
+	CChars		szInner;
+	CChars		szName;
+	bool		bKeyConst;
+	bool		bKeyVolatile;
+	bool		bConst;
+	bool		bVolatile;
+	bool		bResult;
+	size		uiCount;
+	size		i;
+	char		c;
+
+	szKey.Init(szKeyType);
+	szKey.StripWhitespace();
+	bKeyConst = false;
+	bKeyVolatile = false;
+	for (;;)
+	{
+		if (szKey.EndsWith(" const"))
+		{
+			bKeyConst = true;
+			szKey.SetLength(szKey.Length() - 6);
+		}
+		else if (szKey.EndsWith(" volatile"))
+		{
+			bKeyVolatile = true;
+			szKey.SetLength(szKey.Length() - 9);
+		}
+		else
+		{
+			break;
+		}
+	}
+	if ((szKey.Contains('(') || szKey.Contains('[')))
+	{
+		szKey.Kill();
+		return SkipIDEMangledType(szMangled, uiLength, puiAt);
+	}
+
+	bVolatile = (*puiAt < uiLength) && (szMangled[*puiAt] == 'V');
+	if (bVolatile)
+	{
+		(*puiAt)++;
+	}
+	bConst = (*puiAt < uiLength) && (szMangled[*puiAt] == 'K');
+	if (bConst)
+	{
+		(*puiAt)++;
+	}
+	if ((*puiAt >= uiLength) || (bConst != bKeyConst) || (bVolatile != bKeyVolatile))
+	{
+		szKey.Kill();
+		return false;
+	}
+
+	c = szMangled[(*puiAt)++];
+	bResult = false;
+	if ((c == 'P') || (c == 'R'))
+	{
+		if (szKey.EndsWith((c == 'P') ? "*" : "&"))
+		{
+			szInner.Init(szKey);
+			szInner.SetLength(szKey.Length() - 1);
+			if ((c == 'R') && szInner.EndsWith("&"))
+			{
+				szInner.SetLength(szInner.Length() - 1);
+			}
+			bResult = MatchIDEMangledType(szMangled, uiLength, puiAt, szInner.Text());
+			szInner.Kill();
+		}
+	}
+	else if ((c == 'C') || (c == 'N'))
+	{
+		for (uiCount = 0; (*puiAt < uiLength) && (szMangled[*puiAt] >= '0') && (szMangled[*puiAt] <= '9'); (*puiAt)++)
+		{
+			uiCount = (uiCount * 10) + (size)(szMangled[*puiAt] - '0');
+		}
+		if (*puiAt + uiCount <= uiLength)
+		{
+			szName.Init();
+			szName.AppendSubString(&szMangled[*puiAt], uiCount);
+			szKey.Replace("::", "__");
+			bResult = szName.Equals(szKey) || (szName.EndsWith(szKey.Text()) && (szName.Length() > szKey.Length() + 1) && szName.SubStringEquals(szName.Length() - szKey.Length() - 2, "__"));
+			szName.Kill();
+		}
+		*puiAt += uiCount;
+	}
+	else if (strchr("vbchstijxyfde", c))
+	{
+		bResult = !szKey.Contains('*') && !szKey.Contains('&');
+		for (i = 0; bResult && gasIDEKeyScalars[i].szName; i++)
+		{
+			if (szKey.Equals(gasIDEKeyScalars[i].szName))
+			{
+				bResult = (strchr(gasIDEKeyScalars[i].szCodes, c) != NULL);
+				break;
+			}
+		}
+	}
+	else
+	{
+		(*puiAt)--;
+		bResult = SkipIDEMangledType(szMangled, uiLength, puiAt);
+	}
+	szKey.Kill();
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether a label's parameter part (after the name: "", "__K",
+// "__F<types>", "__K__F<types>") can be the key's function.
+//
+//////////////////////////////////////////////////////////////////////////
+static bool FitsIDEOverload(const char* szRest, size uiLength, const char* szKey)
+{
+	CArrayChars	aszParameters;
+	bool		bVariadic;
+	bool		bConst;
+	bool		bLabelConst;
+	bool		bFits;
+	size		uiAt;
+	size		i;
+
+	aszParameters.Init();
+	if (!SplitIDEKeyParameters(szKey, &aszParameters, &bVariadic, &bConst))
+	{
+		aszParameters.Kill();
+		return false;
+	}
+	uiAt = 0;
+	bLabelConst = (uiLength >= 3) && (memcmp(szRest, "__K", 3) == 0);
+	if (bLabelConst)
+	{
+		uiAt = 3;
+	}
+	bFits = (bLabelConst == bConst);
+	if (bFits && (uiAt == uiLength))
+	{
+		bFits = (aszParameters.NumElements() == 0) && !bVariadic;
+	}
+	else if (bFits)
+	{
+		bFits = (uiLength >= uiAt + 3) && (memcmp(&szRest[uiAt], "__F", 3) == 0);
+		uiAt += 3;
+		for (i = 0; bFits && (i < aszParameters.NumElements()); i++)
+		{
+			bFits = MatchIDEMangledType(szRest, uiLength, &uiAt, aszParameters.GetText(i));
+		}
+		if (bFits && bVariadic)
+		{
+			bFits = (uiAt < uiLength) && (szRest[uiAt] == 'z');
+			uiAt++;
+		}
+		bFits = bFits && (uiAt == uiLength);
+	}
+	aszParameters.Kill();
+	return bFits;
+}
+
+
 //////////////////////////////////////////////////////////////////////////
 //
 // A member's or function's own label: "_" and its scopes ("Scope__", none
 // for a function outside every scope) then its name, ending there or
-// before "__" (its parameters).  True if the token is one.
+// before "__" (its parameters).  An overloaded function's is changed only
+// when its parameters fit it and no other overload (FitsIDEOverload); one
+// that fits it and another too is counted (uiUnsure) and left.  True if
+// the token is one.
 //
 //////////////////////////////////////////////////////////////////////////
 static bool FindIDENamedLabelEdit(const char* szToken, size uiStart, size uiLength, SIDEAssemblyRename* psRename, bool bComment, CArrayIDEAssemblyEdits* pasDest)
@@ -197,6 +562,9 @@ static bool FindIDENamedLabelEdit(const char* szToken, size uiStart, size uiLeng
 	size	uiName;
 	size	uiOld;
 	size	uiEnd;
+	size	uiFits;
+	size	i;
+	bool	bOwn;
 
 	if (szToken[0] != '_')
 	{
@@ -218,6 +586,28 @@ static bool FindIDENamedLabelEdit(const char* szToken, size uiStart, size uiLeng
 		((uiEnd < uiLength) && ((uiEnd + 1 >= uiLength) || (szToken[uiEnd] != '_') || (szToken[uiEnd + 1] != '_'))))
 	{
 		return false;
+	}
+	//An overload's label is its own when it fits it and no other overload; one that fits it and others is left.
+	if (psRename->aszOverloads.NumElements() > 0)
+	{
+		bOwn = FitsIDEOverload(&szToken[uiEnd], uiLength - uiEnd, psRename->szKey.Text());
+		uiFits = 0;
+		for (i = 0; i < psRename->aszOverloads.NumElements(); i++)
+		{
+			if (FitsIDEOverload(&szToken[uiEnd], uiLength - uiEnd, psRename->aszOverloads.GetText(i)))
+			{
+				uiFits++;
+			}
+		}
+		if (!bOwn)
+		{
+			return true;
+		}
+		if (uiFits != 1)
+		{
+			psRename->uiUnsure++;
+			return true;
+		}
 	}
 	AddIDEAssemblyEdit(pasDest, uiStart + uiName, uiOld, psRename->szNew.Text(), bComment);
 	return true;
