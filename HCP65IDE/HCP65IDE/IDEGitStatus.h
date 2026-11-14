@@ -52,6 +52,8 @@ protected:
 	CGitLineChanges				mcLineChanges;		//Worked out for one tab at a time.
 	size						muiGitVersion;		//mcGit's status version when it was last shown.
 	Ptr<CGridContainer>			mpChangePopup;		//A change's old lines and its buttons, while it is open.
+	Ptr<CPopup>					mpChangeHolder;		//The window's popup holding it.
+	bool						mbCloseChange;		//Its editor scrolled: it closes at the next tick, not in the layout that scrolled.
 	Ptr<CButton>				mpRollbackButton;	//In the change popup.
 	Ptr<CButton>				mpShowDiffButton;
 	SGitLineChange				msChange;
@@ -83,6 +85,10 @@ protected:
 	void				ShowQueuedChange(void);
 	void				ShowGitStatus(void);
 	void				CloseChangePopup(void);
+	void				ForgetChangePopup(void);
+	void				ChangePopupClosed(void);
+	void				ChangeEditorEdited(void);
+	void				ChangeEditorScrolled(void);
 	void				AppendBaseLines(Ptr<CIDEEditorTab> pTab, size uiStart, size uiEnd, CChars* pszDest);
 	bool				ShowChange(Ptr<CIDEEditorTab> pTab, size uiLine);
 	bool				RollbackChange(void);

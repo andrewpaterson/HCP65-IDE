@@ -963,6 +963,18 @@ CHECKS = [
 		'DEBUG': 'wait:300,printgit,clickmenu:Git/Compare with HEAD,printdiffs,closeall,printdiffs'},
 		[r'^Git: branch \[Git: \w+\] change popup open$',
 		 r'^Diffs: \[>CalculatorParser\.cpp \(HEAD vs\. Your version\)\]$', r'^Diffs:$'], []),
+	('git-change-popup-closes', {
+		#The change popup shows the change as it was when it opened, so a press in the code, an edit, Escape and a
+		#scroll each close it (Rollback would otherwise put the old lines over lines an edit had moved there), and it
+		#is told however it closed.  It opens at the left of the code in view, though X typed in line 36 scrolls the
+		#code sideways.  Its change bar is clicked for real each time.
+		'OPEN': 'CalculatorParser.cpp', 'CARET': '36:2', 'TYPE': 'X', 'DIALOG_ANSWER': "Don't Save",
+		'DEBUG': 'wait:300,edit:changebarclick:36,printgit,edit:presseditor,printgit,'
+		         'edit:changebarclick:36,printgit,edit:type:Y,printgit,'
+		         'edit:changebarclick:36,printgit,edit:keys:Escape,printgit,'
+		         'edit:changebarclick:36,printgit,edit:keys:Control+End,wait:300,printgit'},
+		[r'^Git: branch \[Git: \w+\] change popup open$', r"^Git: change popup 0 right of the code's left$", r'^Pressed: the editor$', r'^Git: branch \[Git: \w+\] change popup closed$',
+		 r'^Git: branch \[Git: \w+\] change popup open$', r'^Git: branch \[Git: \w+\] change popup closed$', r'^Git: branch \[Git: \w+\] change popup open$', r'^Git: branch \[Git: \w+\] change popup closed$', r'^Git: branch \[Git: \w+\] change popup open$', r'^Git: branch \[Git: \w+\] change popup closed$'], []),
 	('git-dialogs', {
 		'OPEN': 'CalculatorParser.cpp', 'DIALOG_ANSWER': 'OK',
 		'DEBUG': 'clickmenu:Git/Compare with Revision...,answered:1,printdiffs,clickmenu:Git/Compare with Branch...,answered:2,printdiffs'},

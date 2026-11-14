@@ -52,6 +52,7 @@ void CIDEGitStatus::Init(CIDEContent* pcContent)
 	mcLineChanges.Init();
 	muiGitVersion = 0;
 	muiChange = 0;
+	mbCloseChange = false;
 	memset(&msChange, 0, sizeof(SGitLineChange));
 	PostInit();
 }
@@ -73,6 +74,8 @@ void CIDEGitStatus::Class(void)
 	U_Unknown(CGitLineChanges, mcLineChanges);
 	U_Size(muiGitVersion);
 	M_Pointer(mpChangePopup);
+	M_Pointer(mpChangeHolder);
+	U_Bool(mbCloseChange);
 	M_Pointer(mpRollbackButton);
 	M_Pointer(mpShowDiffButton);
 	U_Data(SGitLineChange, msChange);
@@ -88,14 +91,7 @@ void CIDEGitStatus::Class(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDEGitStatus::Free(void)
 {
-	if (mpRollbackButton.IsNotNull())
-	{
-		mpRollbackButton->GetClickEvent()->Remove(this);
-	}
-	if (mpShowDiffButton.IsNotNull())
-	{
-		mpShowDiffButton->GetClickEvent()->Remove(this);
-	}
+	ForgetChangePopup();
 	mcLineChanges.Kill();
 
 	//A git status still being read is stopped.
@@ -121,6 +117,10 @@ int64 CIDEGitStatus::PollGit(int64 iNow)
 {
 	int64	iWait;
 
+	if (mbCloseChange)
+	{
+		CloseChangePopup();
+	}
 	ShowQueuedChange();
 	if (mcGit.NumRepositories() == 0)
 	{
@@ -427,6 +427,7 @@ bool CIDEGitStatus::ShowChange(Ptr<CIDEEditorTab> pTab, size uiLine)
 	Ptr<CPopup>				pPopup;
 	Ptr<CWindow>			pWindow;
 	Ptr<CTextArea>			pEditor;
+	Ptr<CTextArea>			pGutter;
 	CChars					szOld;
 	CChars					szSummary;
 	SInsets					sInsets;
@@ -515,13 +516,23 @@ bool CIDEGitStatus::ShowChange(Ptr<CIDEEditorTab> pTab, size uiLine)
 		pGrid->AddComponent(pPane, 0, 1, 3, 1, 1, 1);
 	}
 
-	//Under the change, at the left of the code.
-	sPosition.x = pEditor->GetPosition().x;
+	//Under the change, at the left of the code in view: right of the gutter, which stays at the view's left when the
+	//code is scrolled sideways.
+	pGutter = pTab->GetCodeEditor()->GetGutter();
+	sPosition.x = pGutter->GetPosition().x + pGutter->GetActualSize().x;
 	sPosition.y = pEditor->GetPosition().y + (int32)msChange.uiEndLine * iRow;
 	pPopup = pWindow->OpenPopup(pGrid, sPosition, pTab->GetCodeEditor());
 	sInsets.Init(6, 6);
 	pPopup->SetLook(mpcContent->GetTheme()->GetColour(TC_Panel), mpcContent->GetTheme()->GetColour(TC_Separator), &sInsets);
 	mpChangePopup = pGrid;
+	mpChangeHolder = pPopup;
+
+	//It shows the change as it was when opened, so a press in the code, an edit or a scroll closes it, as IntelliJ
+	//IDEA's does: Rollback would otherwise put the old lines over lines the edit had moved there.
+	pPopup->SetOwnerPressKeepsOpen(false);
+	pPopup->GetClosedEvent()->Add(this, &CIDEGitStatus::ChangePopupClosed);
+	pTab->GetCodeEditor()->GetChangeEvent()->Add(this, &CIDEGitStatus::ChangeEditorEdited);
+	pTab->GetPane()->GetScrollEvent()->Add(this, &CIDEGitStatus::ChangeEditorScrolled);
 	return true;
 }
 
@@ -634,7 +645,24 @@ void CIDEGitStatus::CloseChangePopup(void)
 {
 	if (mpChangePopup.IsNotNull())
 	{
+		//Its closed event forgets it.
 		mpChangePopup->GetWindow()->ClosePopup(mpChangePopup);
+	}
+	ForgetChangePopup();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The change popup is gone however it closed (Escape, a press outside it,
+// or CloseChangePopup): what it showed, and what it listened to, go.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEGitStatus::ForgetChangePopup(void)
+{
+	if (mpChangeHolder.IsNotNull())
+	{
+		mpChangeHolder->GetClosedEvent()->Remove(this);
 	}
 	if (mpRollbackButton.IsNotNull())
 	{
@@ -644,11 +672,35 @@ void CIDEGitStatus::CloseChangePopup(void)
 	{
 		mpShowDiffButton->GetClickEvent()->Remove(this);
 	}
+	if (mpChangeTab.IsNotNull())
+	{
+		mpChangeTab->GetCodeEditor()->GetChangeEvent()->Remove(this);
+		mpChangeTab->GetPane()->GetScrollEvent()->Remove(this);
+	}
 	mpChangePopup = NULL;
+	mpChangeHolder = NULL;
 	mpRollbackButton = NULL;
 	mpShowDiffButton = NULL;
 	mpChangeTab = NULL;
+	mbCloseChange = false;
 }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The change popup's editor scrolled, in its layout: the popup closes at
+// the next tick, as closing it takes it out of the window being laid out.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEGitStatus::ChangeEditorScrolled(void)
+{
+	mbCloseChange = true;
+	mpcContent->GetWindow()->RequestTick(0);
+}
+
+
+void CIDEGitStatus::ChangePopupClosed(void) { ForgetChangePopup(); }
+void CIDEGitStatus::ChangeEditorEdited(void) { CloseChangePopup(); }
 
 
 //////////////////////////////////////////////////////////////////////////

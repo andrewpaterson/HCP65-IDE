@@ -396,6 +396,15 @@ void CIDEScript::RunCommand(const char* szCommand)
 	else if (strcmp(szCommand, "printgit") == 0)
 	{
 		printf("Git: branch [%s] change popup %s\n", mpcContent->GetGitStatus()->GetBranchLabel()->GetText(), mpcContent->GetGitStatus()->GetChangePopup().IsNotNull() ? "open" : "closed");
+		if (mpcContent->GetGitStatus()->GetChangePopup().IsNotNull() && mpcContent->GetDocuments()->GetActiveTab().IsNotNull())
+		{
+			//"Git: change popup 0 right of the code's left": the popup's left less the gutter's right, which stays at
+			//the view's left when the code is scrolled sideways.
+			Ptr<CTextArea>	pGutter;
+
+			pGutter = mpcContent->GetDocuments()->GetActiveTab()->GetCodeEditor()->GetGutter();
+			printf("Git: change popup %d right of the code's left\n", (int)(mpcContent->GetGitStatus()->GetChangePopup()->GetParent()->GetPosition().x - pGutter->GetPosition().x - pGutter->GetActualSize().x));
+		}
 		fflush(stdout);
 	}
 	else if (strcmp(szCommand, "printedits") == 0)
@@ -1127,7 +1136,7 @@ void CIDEScript::ClickEditor(int32 iClicks, const char* szPlace)
 // through the window, with shift held for shiftgutterclick.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEScript::ClickGutter(bool bShift, const char* szLine)
+void CIDEScript::ClickGutter(bool bShift, bool bChangeBar, const char* szLine)
 {
 	Ptr<CTextArea>	pGutter;
 	CInt32Rect		cLine;
@@ -1148,7 +1157,7 @@ void CIDEScript::ClickGutter(bool bShift, const char* szLine)
 	{
 		return;
 	}
-	uiDigit = pGutter->GetLineEnd(uiLine) - 2;
+	uiDigit = pGutter->GetLineEnd(uiLine) - (bChangeBar ? 1 : 2);
 	x = pGutter->GetPosition().x + (pGutter->GetPositionX(uiDigit, false) + pGutter->GetPositionX(uiDigit + 1, false)) / 2;
 	y = pGutter->GetPosition().y + (cLine.GetTop() + cLine.GetBottom()) / 2;
 
@@ -1871,11 +1880,15 @@ void CIDEScript::RunEditStep(const char* szStep)
 	}
 	else if (strncmp(szStep, "gutterclick:", 12) == 0)
 	{
-		ClickGutter(false, &szStep[12]);
+		ClickGutter(false, false, &szStep[12]);
 	}
 	else if (strncmp(szStep, "shiftgutterclick:", 17) == 0)
 	{
-		ClickGutter(true, &szStep[17]);
+		ClickGutter(true, false, &szStep[17]);
+	}
+	else if (strncmp(szStep, "changebarclick:", 15) == 0)
+	{
+		ClickGutter(false, true, &szStep[15]);
 	}
 	else if (strncmp(szStep, "dragtext:", 9) == 0)
 	{
