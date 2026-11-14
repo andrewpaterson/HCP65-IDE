@@ -26,7 +26,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 //What Rename changes in hand written assembly (RenameFile.txt's assembly step): a C++ name in the compiler's labels
-//(CPP65GeneratorLabels.cpp) and in comments.
+//(CPPUnitLabels.cpp) and in comments.
 enum EIDEAssemblyRename
 {
 	IAR_None,		//Only comments: the symbol has no label of its own (a parameter, a local...).
