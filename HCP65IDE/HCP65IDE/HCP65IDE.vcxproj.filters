@@ -51,6 +51,12 @@
     <ClCompile Include="IDERename.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="IDEChangeSignatureDialog.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="IDEChangeSignature.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="IDEIntroduceVariable.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -213,6 +219,12 @@
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDERename.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDEChangeSignatureDialog.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDEChangeSignature.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDEIntroduceVariable.h">

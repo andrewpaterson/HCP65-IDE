@@ -39,7 +39,7 @@ static bool			gbIDEScriptRenameSaves = false;  //rename: saves what it edited (r
 static bool			gbIDEScriptClassFiles = false;  //rename: renames a type's files too (renamesearch's f), never from the settings.
 
 
-static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printfindpreview", "printfindtoolbar", "findtool:", "printstartup", "printworkspace", "rename", "safedelete", "introducevariable", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printsettings", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printprojectfiles", "printdiskfile:", "printdisklines:", "printedits", "printspans", "configuration:", "waitindex" };
+static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printfindpreview", "printfindtoolbar", "findtool:", "printstartup", "printworkspace", "rename", "safedelete", "introducevariable", "changesignature", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printsettings", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printprojectfiles", "printdiskfile:", "printdisklines:", "printedits", "printspans", "configuration:", "waitindex" };
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -127,6 +127,22 @@ bool CIDEScript::IsCommand(const char* szCommand)
 		}
 	}
 	return false;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A scripted run prints what a refactoring found standing in its way,
+// which its Problems Detected dialog shows a user.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEScript::PrintConflict(const char* szConflict)
+{
+	if (getenv("HCP65_IDE_DEBUG") != NULL)
+	{
+		printf("Conflict: %s\n", szConflict);
+		fflush(stdout);
+	}
 }
 
 
@@ -262,6 +278,11 @@ void CIDEScript::RunCommand(const char* szCommand)
 	{
 		//Introduce Variable's dialog for the selection.
 		mpcContent->GetIntroduceVariable()->ShowIntroduce();
+	}
+	else if (strcmp(szCommand, "changesignature") == 0)
+	{
+		//Change Signature's dialogs for the function at the caret (HCP65_IDE_SIGNATURE_EDITS is what is done in the first).
+		mpcContent->GetChangeSignature()->ShowChangeSignature();
 	}
 	else if (strcmp(szCommand, "closetab") == 0)
 	{
@@ -1453,6 +1474,73 @@ void CIDEScript::RunEditStep(const char* szStep)
 		{
 			pTab->GetEditor()->Select(pTab->GetEditor()->GetLineStart((size)(iLine - 1)) + (size)(iColumn - 1), pTab->GetEditor()->GetLineStart((size)(iEndLine - 1)) + (size)(iEndColumn - 1));
 		}
+	}
+	else if ((strcmp(szStep, "changeable") == 0) || (strncmp(szStep, "changesignature:", 16) == 0) || (strncmp(szStep, "changesignatureanyway:", 22) == 0))
+	{
+		//What Change Signature found for the function at the caret (changeable); or its signature changed to a list
+		//(CIDEChangeSignature::ParseChange: "1;0=iFirst;+int|iNew|5|;return=int;name=Start"), if nothing stands in the way
+		//(changesignature:<list>) or whatever does (changesignatureanyway:<list>): what stands in the way is printed,
+		//each as "Conflict: ...".  What is edited is saved if renamesearch's s is given.
+		SIDESignature			sSignature;
+		SIDESignatureChange		sChange;
+		CArrayChars				aszConflicts;
+		CChars					szPrinted;
+		CChars					szProblem;
+		const char*				szSpec;
+		size					uiConflict;
+		bool					bAnyway;
+
+		bAnyway = (strncmp(szStep, "changesignatureanyway:", 22) == 0);
+		szSpec = bAnyway ? &szStep[22] : ((szStep[15] == ':') ? &szStep[16] : NULL);
+		sSignature.Init();
+		if (!mpcContent->GetChangeSignature()->FindSignature(&sSignature))
+		{
+			printf("Change Signature: nothing at the caret\n");
+		}
+		else
+		{
+			szPrinted.Init();
+			printf("%s", mpcContent->GetChangeSignature()->PrintSignature(&sSignature, &szPrinted));
+			szPrinted.Kill();
+			if (sSignature.bChangeable && szSpec)
+			{
+				sChange.Init();
+				szProblem.Init();
+				aszConflicts.Init();
+				if (!mpcContent->GetChangeSignature()->ParseChange(&sSignature, szSpec, &sChange, &szProblem))
+				{
+					printf("Change Signature: %s\n", szProblem.Text());
+				}
+				else
+				{
+					szPrinted.Init();
+					mpcContent->GetChangeSignature()->AppendNewSignature(&sSignature, &sChange, &szPrinted);
+					printf("New signature: %s\n", szPrinted.Text());
+					szPrinted.Kill();
+					mpcContent->GetChangeSignature()->FindConflicts(&sSignature, &sChange, &aszConflicts);
+					for (uiConflict = 0; uiConflict < aszConflicts.NumElements(); uiConflict++)
+					{
+						printf("Conflict: %s\n", aszConflicts.GetText(uiConflict));
+					}
+					if ((aszConflicts.NumElements() == 0) || bAnyway)
+					{
+						mpcContent->GetChangeSignature()->Change(&sSignature, &sChange);
+						if (gbIDEScriptRenameSaves)
+						{
+							mpcContent->GetDocuments()->SaveAllFiles();
+						}
+					}
+					else
+					{
+						printf("Change Signature: not changed\n");
+					}
+				}
+				aszConflicts.Kill();
+				szProblem.Kill();
+				sChange.Kill();
+			}
+		}
+		sSignature.Kill();
 	}
 	else if ((strcmp(szStep, "introducecandidates") == 0) || (strncmp(szStep, "introducechoose:", 16) == 0))
 	{

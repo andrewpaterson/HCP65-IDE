@@ -315,6 +315,8 @@
     <ClCompile Include="IDEEdit.cpp" />
     <ClCompile Include="IDENavigator.cpp" />
     <ClCompile Include="IDERename.cpp" />
+    <ClCompile Include="IDEChangeSignatureDialog.cpp" />
+    <ClCompile Include="IDEChangeSignature.cpp" />
     <ClCompile Include="IDEIntroduceVariable.cpp" />
     <ClCompile Include="IDESafeDelete.cpp" />
     <ClCompile Include="IDERefactorUnit.cpp" />
@@ -371,6 +373,8 @@
     <ClInclude Include="IDEEdit.h" />
     <ClInclude Include="IDENavigator.h" />
     <ClInclude Include="IDERename.h" />
+    <ClInclude Include="IDEChangeSignatureDialog.h" />
+    <ClInclude Include="IDEChangeSignature.h" />
     <ClInclude Include="IDEIntroduceVariable.h" />
     <ClInclude Include="IDESafeDelete.h" />
     <ClInclude Include="IDERefactorUnit.h" />

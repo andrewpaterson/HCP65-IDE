@@ -248,6 +248,17 @@ def MakeIntroduceVariableCopy():
 	return {'SOLUTION': os.path.join(szFolder, 'IntroduceVariable.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
 
 
+def MakeChangeSignatureCopy():
+	#A copy of Input/ChangeSignature (CBrush, whose functions have default values, an override in CSpray and other
+	#names for their parameters where they are defined; overloads of Blend; Next, which is also pointed to), to
+	#change signatures in.
+	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
+	atexit.register(shutil.rmtree, szRoot, True)
+	szFolder = os.path.join(szRoot, 'ChangeSignature')
+	shutil.copytree(os.path.join(HERE, 'Input', 'ChangeSignature'), szFolder)
+	return {'SOLUTION': os.path.join(szFolder, 'ChangeSignature.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
+
+
 def MakeKeymapFile(szText=None):
 	#Where a scripted run keeps its keys, with szText in it if it's given.
 	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
@@ -960,6 +971,160 @@ CHECKS = [
 		 r'^Popup: Expressions \| miScale \| miScale \* 2 \| Scaled\(iExtra\) \+ miScale \* 2 \| iResult = Scaled\(iExtra\) \+ miScale \* 2$',
 		 r'^Selection: \[miScale \* 2\] on line 66', r'^Introduce Variable: \[miScale \* 2\] is \[int\], named \[iScale\], 2 occurrences$'],
 		[r"can't"]),
+	('change-signature-reorder', dict(MakeChangeSignatureCopy(), **{
+		#Change Signature (Refactorings.txt, 2): a function's parameters put in another order and one renamed.  The
+		#declaration and the definition each keep what they wrote (the definition names them iR, iG and iB), the renamed
+		#one is renamed where the body uses it, and the call's arguments follow their parameters.
+		'WAIT_INDEX': '1', 'OPEN': 'Paint.h', 'CARET': '11:9',
+		'DEBUG': 'edit:renamesearch:---s,edit:changesignature:2;0=iR2;1,printdisklines:Paint.h,printdisklines:Paint.cpp,printdisklines:Main.cpp'}),
+		[r'^Change Signature: CBrush::Mix \[CBrush::Mix\(int, int, int\)\] int \(int iRed, int iGreen, int iBlue\): 2 declarations and definitions, 0 overrides, 0 family, 1 calls, 0 other uses$',
+		 r'^  declared Paint\.h:11 ', r'^  defined Paint\.cpp:19 ', r'^  called Main\.cpp:16 with 3 arguments$',
+		 r'^New signature: int CBrush::Mix\(int iBlue, int iR2, int iGreen\)$',
+		 r"^Status: Changed CBrush::Mix's signature: 2 declarations and definitions, 1 call in 3 files\.$",
+		 r'^11\|\tint\t\t\t\tMix\(int iBlue, int iR2, int iGreen\);$', r'^19\|int CBrush::Mix\(int iB, int iR2, int iG\)$', r'^23\|\tiTotal = iR2 \+ iG \* 2;$',
+		 r'^24\|\treturn iTotal \+ iB \+ iR2;$', r'^16\|\tiMixed = cBrush\.Mix\(3, 1, Next\(\)\);$'],
+		[r'^Conflict', r'not changed']),
+	('change-signature-from-call', dict(MakeChangeSignatureCopy(), **{
+		#From a call of it: the same function, the same change.
+		'WAIT_INDEX': '1', 'OPEN': 'Main.cpp', 'CARET': '16:19',
+		'DEBUG': 'edit:renamesearch:---s,edit:changesignature:2;0;1,printdisklines:Paint.h,printdisklines:Main.cpp'}),
+		[r'^Change Signature: CBrush::Mix ', r'^11\|\tint\t\t\t\tMix\(int iBlue, int iRed, int iGreen\);$', r'^16\|\tiMixed = cBrush\.Mix\(3, 1, Next\(\)\);$'],
+		[r'^Conflict']),
+	('change-signature-add', dict(MakeChangeSignatureCopy(), **{
+		#A new parameter between two: its type and name in the declaration and the definition, and the value given for it
+		#in each call, where its place is.  A parameter added to one that had none replaces (void).
+		'WAIT_INDEX': '1', 'OPEN': 'Paint.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:10:9,edit:changesignature:0;+bool|bFast|true|;1,edit:caret:13:9,edit:changesignature:+int|iValue|7|,'
+		         'printdisklines:Paint.h,printdisklines:Paint.cpp,printdisklines:Main.cpp'}),
+		[r'^New signature: void CBrush::Init\(int iSize, bool bFast, const char\* szName = 0\)$', r'^New signature: void CBrush::Clear\(int iValue\)$',
+		 r'^10\|\tvoid\t\t\tInit\(int iSize, bool bFast, const char\* szName = 0\);$', r'^13\|\tvoid\t\t\tClear\(int iValue\);$',
+		 r'^8\|void CBrush::Init\(int iSize, bool bFast, const char\* szName\)$', r'^42\|void CBrush::Clear\(int iValue\)$',
+		 r'^14\|\tcBrush\.Init\(4, true\);$', r'^15\|\tcSpray\.Init\(2, true, "wide"\);$', r'^20\|\tcBrush\.Clear\(7\);$'],
+		[r'^Conflict']),
+	('change-signature-override', dict(MakeChangeSignatureCopy(), **{
+		#A virtual function is changed with what overrides it, from either of them, in the calls on both classes.  A new
+		#parameter's default value is in each one's declaration (a call on the derived class uses that one's), not in
+		#the definitions; the calls there are leave it to the default.
+		'WAIT_INDEX': '1', 'OPEN': 'Paint.h', 'CARET': '20:8',
+		'DEBUG': 'edit:renamesearch:---s,edit:changesignature:0;1;+int|iZ||9,printdisklines:Paint.h,printdisklines:Paint.cpp,printdisklines:Main.cpp'}),
+		[r'^Change Signature: CSpray::Draw \[CSpray::Draw\(int, int\)\] void \(int iX, int iY\): 4 declarations and definitions, 1 overrides, 0 family, 2 calls, 0 other uses$',
+		 r"^Status: Changed CSpray::Draw's signature: 4 declarations and definitions \(1 override\), 2 calls in 3 files\.$",
+		 r'^12\|\tvirtual void\tDraw\(int iX, int iY, int iZ = 9\);$', r'^20\|\tvoid\tDraw\(int iX, int iY, int iZ = 9\) override;$',
+		 r'^32\|void CBrush::Draw\(int iX, int iY, int iZ\)$', r'^52\|void CSpray::Draw\(int iX, int iY, int iZ\)$',
+		 r'^18\|\tpcBrush->Draw\(iMixed, 2\);$', r'^19\|\tcSpray\.Draw\(3, 4\);$'],
+		[r'^Conflict']),
+	('change-signature-conflicts', dict(MakeChangeSignatureCopy(), **{
+		#What stands in the way stops it: a parameter taken out that the bodies still use, an argument taken out that
+		#does something.  Anyway, it is changed.
+		'WAIT_INDEX': '1', 'OPEN': 'Paint.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:12:15,edit:changesignature:1,edit:caret:11:9,edit:changesignature:0;2,edit:changesignatureanyway:0;2,'
+		         'printdisklines:Paint.h,printdisklines:Paint.cpp,printdisklines:Main.cpp'}),
+		[r'^Conflict: CBrush::Draw still uses the parameter taken out, iX, at Paint\.cpp:34\.$', r'^Conflict: CSpray::Draw still uses the parameter taken out, iX, at Paint\.cpp:54\.$',
+		 r'^Change Signature: not changed$',
+		 r'^Conflict: CBrush::Mix still uses the parameter taken out, iG, at Paint\.cpp:23\.$',
+		 r'^Conflict: The argument taken out of the call at Main\.cpp:16 does something \(a call, an assignment or the like\), which goes with it\.$',
+		 r'^Change Signature: not changed$', r"^Status: Changed CBrush::Mix's signature: ",
+		 r'^11\|\tint\t\t\t\tMix\(int iRed, int iBlue\);$', r'^12\|\tvirtual void\tDraw\(int iX, int iY\);$', r'^19\|int CBrush::Mix\(int iR, int iB\)$',
+		 r'^16\|\tiMixed = cBrush\.Mix\(1, 3\);$'],
+		[]),
+	('change-signature-defaults', dict(MakeChangeSignatureCopy(), **{
+		#A default value taken away is written into the call that left its argument to it; one given to a parameter is
+		#written in the declaration, not the definition; a parameter with a default value before one without stands in
+		#the way.
+		'WAIT_INDEX': '1', 'OPEN': 'Paint.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:10:9,edit:changesignature:1;0,edit:changesignature:0;1|||,edit:caret:11:9,edit:changesignature:0;1;2|||3,'
+		         'printdisklines:Paint.h,printdisklines:Paint.cpp,printdisklines:Main.cpp'}),
+		[r'^Conflict: A parameter with a default value is before one without: iSize needs one, or to come first\.$', r'^Change Signature: not changed$',
+		 r'^New signature: void CBrush::Init\(int iSize, const char\* szName\)$', r'^New signature: int CBrush::Mix\(int iRed, int iGreen, int iBlue = 3\)$',
+		 r'^10\|\tvoid\t\t\tInit\(int iSize, const char\* szName\);$', r'^11\|\tint\t\t\t\tMix\(int iRed, int iGreen, int iBlue = 3\);$',
+		 r'^19\|int CBrush::Mix\(int iR, int iG, int iB\)$', r'^14\|\tcBrush\.Init\(4, 0\);$', r'^15\|\tcSpray\.Init\(2, "wide"\);$'],
+		[]),
+	('change-signature-return-name', dict(MakeChangeSignatureCopy(), **{
+		#What it returns, its name, and a parameter's type and default value, with the rest: the return type where each
+		#writes it (the declaration's name stays in its column), the name by Rename, the type where each declares the
+		#parameter, each with its own name unless it is renamed.
+		'WAIT_INDEX': '1', 'OPEN': 'Paint.h', 'CARET': '11:9',
+		'DEBUG': 'edit:renamesearch:---s,edit:changesignature:0|iRedder|long|;1;2||short|5;return=long;name=Stir,'
+		         'printdisklines:Paint.h,printdisklines:Paint.cpp,printdisklines:Main.cpp'}),
+		[r'^New signature: long CBrush::Stir\(long iRedder, int iGreen, short iBlue = 5\)$',
+		 r"^Status: Changed CBrush::Mix's signature: 2 declarations and definitions, 1 call in 3 files\.  It is now Stir\.$",
+		 r'^11\|\tlong\t\t\tStir\(long iRedder, int iGreen, short iBlue = 5\);$', r'^19\|long CBrush::Stir\(long iRedder, int iG, short iB\)$',
+		 r'^23\|\tiTotal = iRedder \+ iG \* 2;$', r'^16\|\tiMixed = cBrush\.Stir\(1, Next\(\), 3\);$'],
+		[r'^Conflict', r'\|.*Mix\(']),
+	('change-signature-other-conflicts', dict(MakeChangeSignatureCopy(), **{
+		#Another function of its name with the new parameters; a function named without being called (a pointer to it);
+		#a call whose value is used when it is to return nothing.  With none of its parameters left a declaration says
+		#(void) and a call ().
+		'WAIT_INDEX': '1', 'OPEN': 'Paint.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:24:7,edit:changesignature:0;1;+int|iExtra|0|,edit:caret:26:7,edit:changesignature:return=void,'
+		         'edit:caret:25:7,edit:changesignatureanyway:,printdisklines:Paint.h,printdisklines:Main.cpp'}),
+		[r'^Conflict: There is another Blend with these parameters: Blend\(int, int, int\)\.$', r'^Change Signature: not changed$',
+		 r"^Conflict: It is named without being called at Main\.cpp:4 \(its address, or a pointer to it\): what it is used as there isn't changed\.$",
+		 r'^Conflict: What it returns is used by the call at Main\.cpp:16\.$', r'^Change Signature: not changed$',
+		 r'^New signature: int Blend\(void\)$', r'^Conflict: Blend still uses the parameter taken out, iFirst, at Paint\.cpp:74\.$',
+		 r'^24\|int\t\tBlend\(int iFirst, int iSecond\);$', r'^25\|int\t\tBlend\(void\);$', r'^26\|int\t\tNext\(void\);$', r'^21\|\treturn Blend\(1, 2\) \+ Blend\(\);$'],
+		[]),
+	('change-signature-refused', dict(MakeChangeSignatureCopy(), **{
+		#What isn't a function, and what can't be a signature.
+		'WAIT_INDEX': '1', 'OPEN': 'Paint.h',
+		'DEBUG': 'edit:caret:8:8,edit:changeable,edit:caret:10:9,edit:changesignature:5,edit:changesignature:0;0,edit:changesignature:0;1;+int||1|,'
+		         'edit:changesignature:0;1=iSize,edit:changesignature:0=2x;1,edit:changesignature:name=9lives'}),
+		[r"^Change Signature: CBrush::miSize \[CBrush::miSize\] can't be changed: it isn't a function$", r'^Change Signature: The function has no such parameter: 5$',
+		 r'^Change Signature: A parameter is given twice\.$', r'^Change Signature: A new parameter needs a type and a name\.$',
+		 r'^Change Signature: Two parameters are named iSize\.$', r"^Change Signature: A parameter's name isn't a name: 2x$", r"^Change Signature: The function's name isn't a name\.$"],
+		[r'^Status: Changed']),
+	('change-signature-template-family', dict(MakeRenameTemplateCopy(), **{
+		#In a template (Refactorings.txt, T2): CHolder<M>'s body calls CFoo::Init and CBar::Init by one name, so
+		#they are changed together, from either, and the template's call is changed once.  CLone::Init, which no instance
+		#calls, is left.
+		'WAIT_INDEX': '1', 'OPEN': 'Foo.h', 'CARET': '10:8',
+		'DEBUG': 'edit:renamesearch:---s,edit:changesignature:+int|iLevel|3|,printdisklines:Holder.h,printdisklines:Foo.h,printdisklines:Bar.h,printdisklines:Bar.cpp,'
+		         'printdisklines:Lone.h,printdisklines:Main.cpp'}),
+		[r'^Change Signature: CFoo::Init \[CFoo::Init\(\)\] void \(\): 4 declarations and definitions, 0 overrides, 1 family, 3 calls, 0 other uses$',
+		 r"^Status: Changed CFoo::Init's signature: 4 declarations and definitions, 3 calls in 6 files\.  With CBar::Init, which a template calls with it by one name\.$",
+		 r'^11\|\tvoid\tStart\(void\) \{ mp->Init\(3\); \}$', r'^Disk lines Foo\.h:$', r'^10\|\tvoid\tInit\(int iLevel\);$', r'^Disk lines Bar\.h:$', r'^10\|\tvoid\tInit\(int iLevel\);$',
+		 r'^4\|void CBar::Init\(int iLevel\)$', r'^Disk lines Lone\.h:$', r'^10\|\tvoid\tInit\(void\);$',
+		 r'^15\|\tcFoo\.Init\(3\);$', r'^16\|\tcBar\.Init\(3\);$', r'^17\|\tcLone\.Init\(\);$'],
+		[r'^Conflict']),
+	('change-signature-undo', dict(MakeChangeSignatureCopy(), **{
+		#One Undo Across Files takes all of it back, in every file.
+		'WAIT_INDEX': '1', 'OPEN': 'Paint.h', 'CARET': '11:9',
+		'DEBUG': 'edit:changesignature:2;0=iR2;1,edit:undoall,edit:renamesearch:---s,edit:caret:13:9,edit:changesignature:+int|iValue|7|,'
+		         'printdisklines:Paint.h,printdisklines:Paint.cpp,printdisklines:Main.cpp'}),
+		[r"^Status: Changed CBrush::Mix's signature: ", r"^Status: Changed CBrush::Clear's signature: ",
+		 r'^11\|\tint\t\t\t\tMix\(int iRed, int iGreen, int iBlue\);$', r'^19\|int CBrush::Mix\(int iR, int iG, int iB\)$', r'^23\|\tiTotal = iR \+ iG \* 2;$',
+		 r'^16\|\tiMixed = cBrush\.Mix\(1, Next\(\), 3\);$'],
+		[r'^[0-9]+[|].*iR2']),
+	('change-signature-dialog', dict(MakeChangeSignatureCopy(), **{
+		#The dialog: the parameters in its list, the selected one's form, and the signature as it would be, as they are
+		#changed (SIGNATURE_EDITS does what a user would); then the change.
+		'WAIT_INDEX': '1', 'OPEN': 'Paint.h', 'CARET': '10:9', 'SETTINGS': MakeSettingsFile(), 'DIALOG_ANSWER': 'OK',
+		'SIGNATURE_EDITS': 'print;select:0;name:iWidth;add;type:bool;name:bFast;value:true;print;check;function:Start;return:int;print',
+		'DEBUG': 'changesignature,answered:1,printstatus,command:File.SaveAll,printdisklines:Paint.h,printdisklines:Paint.cpp,printdisklines:Main.cpp'}),
+		[r'^Signature dialog: >int iSize \| const char\* szName = 0$', r'^Signature shown: void CBrush::Init\(int iSize, const char\* szName = 0\)$',
+		 r'^Signature dialog: int iWidth \| >bool bFast \| const char\* szName = 0$', r'^Signature shown: void CBrush::Init\(int iWidth, bool bFast, const char\* szName = 0\)$',
+		 r'^Signature dialog: OK \[\]$', r'^Signature shown: int CBrush::Start\(int iWidth, bool bFast, const char\* szName = 0\)$',
+		 r'^Dialog \[Change Signature\] answered OK$', r"^Status line: Changed CBrush::Init's signature: 2 declarations and definitions, 2 calls in 3 files\.  It is now Start\.$",
+		 r'^10\|\tint\t\t\t\tStart\(int iWidth, bool bFast, const char\* szName = 0\);$', r'^8\|int CBrush::Start\(int iWidth, bool bFast, const char\* szName\)$',
+		 r'^10\|\tmiSize = iWidth \+ \(szName \? 1 : 0\);$', r'^14\|\tcBrush\.Start\(4, true\);$', r'^15\|\tcSpray\.Start\(2, true, "wide"\);$'],
+		[r'^Conflict', r'Problems Detected']),
+	('change-signature-dialog-moves', dict(MakeChangeSignatureCopy(), **{
+		#Up, Down and Remove in the dialog, and what it refuses: a new parameter without a type, no name for the function.
+		'WAIT_INDEX': '1', 'OPEN': 'Paint.h', 'CARET': '11:9', 'SETTINGS': MakeSettingsFile(), 'DIALOG_ANSWER': 'Cancel',
+		'SIGNATURE_EDITS': 'select:2;up;up;print;down;print;select:0;remove;print;add;check;type:int;name:iNew;check;function:;check',
+		'DEBUG': 'changesignature,answered:1,printstatus'}),
+		[r'^Signature dialog: >int iBlue \| int iRed \| int iGreen$', r'^Signature dialog: int iRed \| >int iBlue \| int iGreen$', r'^Signature dialog: >int iBlue \| int iGreen$',
+		 r'^Signature dialog: refused \[A new parameter needs a type and a name\.\]$', r'^Signature dialog: OK \[\]$', r'^Signature dialog: refused \[The function needs a name\.\]$',
+		 r'^Dialog \[Change Signature\] answered Cancel$'],
+		[r'Changed CBrush']),
+	('change-signature-dialog-problems', dict(MakeChangeSignatureCopy(), **{
+		#What stands in the way is shown in Problems Detected: Cancel there changes nothing, Continue changes it.
+		'WAIT_INDEX': '1', 'OPEN': 'Paint.h', 'CARET': '12:15', 'SETTINGS': MakeSettingsFile(), 'DIALOG_ANSWER': 'OK|Cancel|OK|OK',
+		'SIGNATURE_EDITS': 'select:0;remove',
+		'DEBUG': 'changesignature,answered:2,printstatus,changesignature,answered:4,printstatus'}),
+		[r'^Dialog \[Change Signature\] answered OK$', r'^Conflict: CBrush::Draw still uses the parameter taken out, iX, at Paint\.cpp:34\.$', r'^Dialog \[Problems Detected\] answered Cancel$',
+		 r'^Dialog \[Problems Detected\] answered OK$', r"^Status line: Changed CBrush::Draw's signature: 4 declarations and definitions \(1 override\), 2 calls in 3 files\.$"],
+		[]),
 	('rename-assembly-class', dict(MakeRenameAssemblyCopy(), **{
 		#A class renamed in hand written assembly's labels (_CEngine__Init, __0, __2), in parameter lists with its length
 		#(FPC7CEngine to FPC6CMotor), in generated layout constants (SIZEOF_CEngine, CEngine_miSpeed: in the assembly, the
@@ -1464,7 +1629,7 @@ CHECKS = [
 		 r'^Menu Debug: Start Debugging \[F5\], Start Without Debugging \[Ctrl\+F5\], Stop Debugging \[Shift\+F5\], Stop Running\(disabled\), Restart \[Ctrl\+Shift\+F5\], Break All \[Ctrl\+Pause/Break\], Attach to Emulator\.\.\., Step Into \[F11\], Step Over \[F10\], Step Out \[Shift\+F11\], Toggle Breakpoint \[F9\], ',
 		 r'^Menu Window: Reset Window Layout, Close All Documents$',
 		 r'^Menu Editor: Go to Source \[Ctrl\+B\], Find Usages \[Alt\+F7\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Rename\.\.\. \[Shift\+F6\], Refactor>, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\]$',
-		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Extract Method\.\.\.\(disabled\)$',
+		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Extract Method\.\.\.\(disabled\)$',
 		 r'^Menu Explorer: Set as Startup Solution, Set as Startup Project\(disabled\), Remove Solution, Rename\.\.\.(\(disabled\))?$',
 		 r'^Menu item \[View/Nope\] not found$'], []),
 	('menu-clicks', {

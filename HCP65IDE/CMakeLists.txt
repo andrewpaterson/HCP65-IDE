@@ -148,6 +148,8 @@ set(IDE_SOURCES
 	"${IDE_DIR}/IDEEdit.cpp"
 	"${IDE_DIR}/IDENavigator.cpp"
 	"${IDE_DIR}/IDERename.cpp"
+	"${IDE_DIR}/IDEChangeSignatureDialog.cpp"
+	"${IDE_DIR}/IDEChangeSignature.cpp"
 	"${IDE_DIR}/IDEIntroduceVariable.cpp"
 	"${IDE_DIR}/IDESafeDelete.cpp"
 	"${IDE_DIR}/IDERefactorUnit.cpp"
