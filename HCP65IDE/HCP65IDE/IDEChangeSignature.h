@@ -66,6 +66,20 @@ struct SIDESignatureSite
 	bool						bFirst;			//It is where its symbol is first declared: a new default value is written here.
 	CChars						szLabel;		//Where it is first declared: the label hand written assembly names its symbol by, as it was.
 	size						uiNewName;		//Where its name is in its file's text once the change is made.
+
+	//The rest of what it writes, for making a declaration or a definition from another (CIDEDefinitions).
+	SCPPSyntaxRange				sAll;			//All of it: the declaration with its ; or the definition, with a template<...> of its own.
+	SCPPSyntaxRange				sName;			//Its name as it writes it: "Init", "CFoo::Init".
+	SCPPSyntaxRange				sAfter;			//From its parameters' ) to the end of what follows them (const, override).
+	SCPPSyntaxRange				sBody;			//A definition's body, from its { to its }.
+	bool						bBody;
+	bool						bInClass;		//It is written in its class.
+	bool						bPure;			//= 0.
+	CChars						szOwnName;		//Its own name: "Init", "operator==", "~CFoo".
+	CChars						szQualifiers;	//What follows its parameters that a definition outside its class writes too: " const".
+	CChars						szOwnTemplate;	//Its own template<...>, if it has one: a function template's, or a class template's member's outside it.
+	CChars						szClassQualifier;	//In its class: what its name is written after outside it, "NS::CFoo::", "CBox<M, I>::".
+	CChars						szClassTemplate;	//...and the template<...> a class template's member is written under there; empty if it isn't one's.
 	CArrayIDEWrittenParameters	asParameters;
 
 	void	Init(void);
@@ -209,6 +223,9 @@ public:
 
 protected:
 	void				ShowQueuedChangeSignature(void);
+public:
+	bool				ReadSite(CIDERefactorUnit* pcUnit, SIDELocation* psLocation, const char* szKey, SIDESignatureSite* psSite, const char** pszWhyNot);
+protected:
 	bool				ShowConflicts(CArrayChars* paszConflicts);
 	CIDERefactorUnit*	GetUnit(const char* szFileName);
 	void				KillUnits(void);

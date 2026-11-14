@@ -259,6 +259,16 @@ def MakeChangeSignatureCopy():
 	return {'SOLUTION': os.path.join(szFolder, 'ChangeSignature.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
 
 
+def MakeDefinitionsCopy():
+	#A copy of Input/Definitions (CTank, with functions declared and not defined, defined in the class, and defined
+	#outside it; CStore, a class template; functions outside any class), to make declarations and definitions in.
+	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
+	atexit.register(shutil.rmtree, szRoot, True)
+	szFolder = os.path.join(szRoot, 'Definitions')
+	shutil.copytree(os.path.join(HERE, 'Input', 'Definitions'), szFolder)
+	return {'SOLUTION': os.path.join(szFolder, 'Definitions.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
+
+
 def MakeKeymapFile(szText=None):
 	#Where a scripted run keeps its keys, with szText in it if it's given.
 	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
@@ -608,7 +618,7 @@ CHECKS = [
 		#Engine.h's (Other/OtherUser.cpp's) or in a comment (Commented.cpp's /* */).
 		'WAIT_INDEX': '1', 'OPEN': 'Engine.h', 'SETTINGS': MakeSettingsFile(), 'DIALOG_KEYS': 'type:CPPEngine', 'DIALOG_ANSWER': 'OK',
 		'DEBUG': 'printmenus,command:Refactor.RenameFile,answered:1,printprojectfiles,printdiskfile:Commented.cpp,printdiskfile:Other/OtherUser.cpp'}),
-		[r'^Menu Editor/Refactor: Rename File\.\.\., Extract Method', r'^Menu Explorer: .*, Rename\.\.\.(\(disabled\))?$',
+		[r'^Menu Editor/Refactor: Rename File\.\.\., .*Extract Method', r'^Menu Explorer: .*, Rename\.\.\.(\(disabled\))?$',
 		 r'^Dialog \[Rename File\] answered OK$',
 		 r'^Status: Renamed Engine\.h to CPPEngine\.h and 2 more files: 7 #includes, 1 in comments and strings in 7 files, 2 projects\.$',
 		 r'^Project files: Commented\.cpp CPPEngine\.cpp CPPEngine_Linux\.cpp ', r'^//#include "CPPEngine\.h"$', r'^#include "Engine\.h"$'],
@@ -1144,6 +1154,95 @@ CHECKS = [
 		'DEBUG': 'edit:renamesearch:---s,edit:printlabel,edit:changesignature:0;1;+char|cMode|\'a\'|,printdisklines:PaintW65C816.asm'}),
 		[r'^Label: none$', r"^Status: Changed Blend's signature: 2 declarations and definitions, 1 call in 3 files\.$", r'^8\|\t\tjsr _Blend__Fss$'],
 		[r'label in assembly']),
+	('definitions-generate', dict(MakeDefinitionsCopy(), **{
+		#Generate Definition: Fill is declared in CTank and defined nowhere.  Its definition goes in the file CTank's
+		#others are in, after Init's (declared before it), two blank lines from what is around it, under a comment
+		#like Init's, without its default value.
+		'WAIT_INDEX': '1', 'OPEN': 'Tank.h', 'CARET': '14:8',
+		'DEBUG': 'edit:renamesearch:---s,edit:generatedefinition,printdisklines:Tank.h,printdisklines:Tank.cpp'}),
+		[r'^Status: Defined CTank::Fill in Tank\.cpp\.$', r'^Definitions: done$',
+		 r'^14\|\tvoid\tFill\(int iAmount, int iRate = 1\);$',
+		 r'^21\|\}$', r'^22\|$', r'^23\|$', r'^24\|/{74}$', r'^25\|//$', r'^26\|//$', r'^27\|/{74}$', r'^28\|void CTank::Fill\(int iAmount, int iRate\)$', r'^29\|\{$', r'^30\|\}$',
+		 r'^31\|$', r'^32\|$', r'^33\|/{74}$', r'^35\|// Whether it holds all it can\.$', r'^38\|bool CTank::IsFull\(void\) const$'],
+		[r'^Definitions: refused']),
+	('definitions-generate-template', dict(MakeDefinitionsCopy(), **{
+		#A function outside any class goes at the end of its header's source file; a class template's member in the
+		#header, under the class's template<...>, after the member defined before it.
+		'WAIT_INDEX': '1', 'OPEN': 'Tank.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:49:8,edit:generatedefinition,edit:caret:38:8,edit:generatedefinition,printdisklines:Tank.h,printdisklines:Tank.cpp'}),
+		[r'^Status: Defined MeasureTank in Tank\.cpp\.$', r'^Status: Defined CStore::Get in Tank\.h\.$',
+		 r'^46\|\}$', r'^47\|$', r'^48\|$', r'^49\|/{74}$', r'^52\|/{74}$', r'^53\|template<class M>$', r'^54\|M\* CStore<M>::Get\(void\)$', r'^55\|\{$', r'^56\|\}$', r'^57\|$', r'^58\|$',
+		 r'^59\|int\t\tMeasureTank\(CTank\* pcTank\);$',
+		 r'^65\|\}$', r'^66\|$', r'^67\|$', r'^68\|/{74}$', r'^71\|/{74}$', r'^72\|int MeasureTank\(CTank\* pcTank\)$', r'^73\|\{$', r'^74\|\}$', r'^74 lines$'],
+		[r'^Definitions: refused']),
+	('definitions-move-out', dict(MakeDefinitionsCopy(), **{
+		#Move Definition out of Class: a body on the declaration's line is opened out, one of several lines loses the
+		#class's indentation, and const goes with it.  They are defined in the order the class declares them.
+		'WAIT_INDEX': '1', 'OPEN': 'Tank.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:16:8,edit:movedefinitionout,edit:caret:15:8,edit:movedefinitionout,printdisklines:Tank.h,printdisklines:Tank.cpp'}),
+		[r"^Status: Moved CTank::Drain's definition out of its class, to Tank\.cpp\.$", r"^Status: Moved CTank::GetLevel's definition out of its class, to Tank\.cpp\.$",
+		 r'^15\|\tint\t\tGetLevel\(void\) const;$', r'^16\|\tint\t\tDrain\(int iAmount\);$', r'^17\|\tbool\tIsFull\(void\) const;$',
+		 r'^28\|int CTank::GetLevel\(void\) const$', r'^29\|\{$', r'^30\|\treturn miLevel;$', r'^31\|\}$', r'^32\|$', r'^33\|$', r'^34\|/{74}$',
+		 r'^38\|int CTank::Drain\(int iAmount\)$', r'^39\|\{$', r'^40\|\tint\tiTaken;$', r'^41\|$', r'^42\|\tiTaken = \(iAmount < miLevel\) \? iAmount : miLevel;$',
+		 r'^44\|\treturn iTaken;$', r'^45\|\}$', r'^53\|bool CTank::IsFull\(void\) const$'],
+		[r'^Definitions: refused']),
+	('definitions-move-out-template', dict(MakeDefinitionsCopy(), **{
+		#A class template's member stays in the header, under the class's template<...>.
+		'WAIT_INDEX': '1', 'OPEN': 'Tank.h', 'CARET': '39:8',
+		'DEBUG': 'edit:renamesearch:---s,edit:movedefinitionout,printdisklines:Tank.h'}),
+		[r"^Status: Moved CStore::Set's definition out of its class, to Tank\.h\.$",
+		 r'^39\|\tvoid\tSet\(M\* pcItem\);$', r'^53\|template<class M>$', r'^54\|void CStore<M>::Set\(M\* pcItem\)$', r'^55\|\{$', r'^56\|\tmcItem = \*pcItem;$', r'^57\|\}$',
+		 r'^60\|int\t\tMeasureTank\(CTank\* pcTank\);$'],
+		[r'^Definitions: refused']),
+	('definitions-move-in', dict(MakeDefinitionsCopy(), **{
+		#Move Definition into Class: one statement stays on the declaration's line, more go under it indented with the
+		#class; a constructor's initialisers come with it and its parameter takes the name the definition gave it.
+		#The definitions outside go with the comments over them.
+		'WAIT_INDEX': '1', 'OPEN': 'Tank.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:25:8,edit:movedefinitionin,edit:caret:24:8,edit:movedefinitionin,edit:caret:12:5,edit:movedefinitionin,'
+		         'printdisklines:Tank.h,printdisklines:Tank.cpp'}),
+		[r"^Status: Moved CTank::Empty's definition into its class, from Tank\.cpp\.$", r"^Status: Moved CTank::IsFull's definition into its class, from Tank\.cpp\.$",
+		 r"^Status: Moved CTank::CTank's definition into its class, from Tank\.cpp\.$",
+		 r'^12\|\t\t\tCTank\(int iCapacity\) : miLevel\(0\), miSize\(iCapacity\) \{\}$',
+		 r'^24\|\tbool\tIsFull\(void\) const \{ return miLevel >= miSize; \}$',
+		 r'^25\|\tvoid\tEmpty\(void\)$', r'^26\|\t\{$', r'^27\|\t\tif \(miLevel > 0\)$', r'^28\|\t\t\{$', r'^29\|\t\t\tmiLevel = 0;$', r'^30\|\t\t\}$', r'^31\|\t\}$', r'^32\|\tvirtual void\tVent\(void\) =0;$',
+		 r'^1\|#include "Tank\.h"$', r'^3\|$', r'^4\|/{74}$', r'^8\|void CTank::Init\(int iSize\)$', r'^12\|\}$', r'^13\|$', r'^14\|$', r'^15\|/{74}$', r'^19\|int CountTanks\(CTank\* pacTanks, int iCount\)$'],
+		[r'^Definitions: refused', r'Whether it holds', r'CTank::CTank\(int', r'CTank::Empty\(']),
+	('definitions-move-in-template', dict(MakeDefinitionsCopy(), **{
+		#A class template's member comes in from under its template<...>, which goes with it; an empty body is {}.
+		'WAIT_INDEX': '1', 'OPEN': 'Tank.h', 'CARET': '37:8',
+		'DEBUG': 'edit:renamesearch:---s,edit:movedefinitionin,printdisklines:Tank.h'}),
+		[r"^Status: Moved CStore::Init's definition into its class, from Tank\.h\.$",
+		 r'^37\|\tvoid\tInit\(void\) \{\}$', r'^40\|\};$', r'^41\|$', r'^42\|$', r'^43\|int\t\tMeasureTank\(CTank\* pcTank\);$', r'^46 lines$'],
+		[r'^Definitions: refused', r'CStore<M>::Init']),
+	('definitions-generate-declaration', dict(MakeDefinitionsCopy(), **{
+		#Generate Declaration: a function defined in a source file is declared in its header, after the functions it
+		#declares.  A member defined that its class doesn't declare (which is nothing to the compiler: the file says
+		#what it is) is declared in the class, after its last function and lined up with it.
+		'WAIT_INDEX': '1', 'OPEN': 'Tank.cpp',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:52:5,edit:generatedeclaration,edit:caret:62:14,edit:generatedeclaration,printdisklines:Tank.h'}),
+		[r'^Status: Declared CountTanks in Tank\.h\.$', r'^Status: Declared CTank::Reset in Tank\.h\.$',
+		 r'^26\|\tvirtual void\tVent\(void\) =0;$', r'^27\|\tvoid\t\t\tReset\(int iLevel\);$', r'^28\|\};$',
+		 r'^50\|int\t\tMeasureTank\(CTank\* pcTank\);$', r'^51\|int\t\tCountTanks\(CTank\* pacTanks, int iCount\);$', r'^52\|$', r'^54\|#endif // __TANK_H__$'],
+		[r'^Definitions: refused']),
+	('definitions-refused', dict(MakeDefinitionsCopy(), **{
+		#What can't be done, and why: nothing is changed.
+		'WAIT_INDEX': '1', 'OPEN': 'Tank.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:26:18,edit:generatedefinition,edit:caret:13:8,edit:generatedefinition,edit:caret:24:8,edit:movedefinitionout,'
+		         'edit:caret:15:8,edit:movedefinitionin,edit:caret:8:7,edit:generatedefinition,edit:caret:14:8,edit:generatedeclaration,edit:caret:14:8,edit:movedefinitionin,'
+		         'edit:caret:3:1,edit:generatedeclaration,printdisklines:Tank.h,printdisklines:Tank.cpp'}),
+		[r"^Status: Can't generate a definition of CTank::Vent: it is pure virtual\.$", r"^Status: Can't generate a definition of CTank::Init: it is defined already\.$",
+		 r"^Status: Can't move the definition of CTank::IsFull: it isn't defined in its class\.$", r"^Status: Can't move the definition of CTank::GetLevel: it is defined in its class already\.$",
+		 r"^Status: Can't generate a definition: it isn't a function\.$", r"^Status: Can't generate a declaration of CTank::Fill: it is declared already\.$",
+		 r"^Status: Can't move the definition of CTank::Fill: it has no definition\.$", r"^Status: Can't generate a declaration: there is no function at the caret\.$",
+		 r'^52 lines$', r'^65 lines$'],
+		[r'^Definitions: done']),
+	('definitions-undo', dict(MakeDefinitionsCopy(), **{
+		#One Undo Across Files takes it back in both files (the first press says where: the other file isn't in view).
+		'WAIT_INDEX': '1', 'OPEN': 'Tank.h', 'CARET': '16:8',
+		'DEBUG': 'edit:renamesearch:---s,edit:movedefinitionout,edit:undoall,edit:undoall,edit:saveall,printdisklines:Tank.h,printdisklines:Tank.cpp'}),
+		[r"^Status: Moved CTank::Drain's definition out of its class, to Tank\.cpp\.$", r'^Status: Ctrl\+Z again to undo the change in Tank\.cpp', r'^16\|\tint\t\tDrain\(int iAmount\)$', r'^23\|\t\}$', r'^52 lines$', r'^65 lines$'],
+		[r'CTank::Drain\(']),
 	('rename-assembly-class', dict(MakeRenameAssemblyCopy(), **{
 		#A class renamed in hand written assembly's labels (_CEngine__Init, __0, __2), in parameter lists with its length
 		#(FPC7CEngine to FPC6CMotor), in generated layout constants (SIZEOF_CEngine, CEngine_miSpeed: in the assembly, the
@@ -1648,7 +1747,7 @@ CHECKS = [
 		 r'^Menu Debug: Start Debugging \[F5\], Start Without Debugging \[Ctrl\+F5\], Stop Debugging \[Shift\+F5\], Stop Running\(disabled\), Restart \[Ctrl\+Shift\+F5\], Break All \[Ctrl\+Pause/Break\], Attach to Emulator\.\.\., Step Into \[F11\], Step Over \[F10\], Step Out \[Shift\+F11\], Toggle Breakpoint \[F9\], ',
 		 r'^Menu Window: Reset Window Layout, Close All Documents$',
 		 r'^Menu Editor: Go to Source \[Ctrl\+B\], Find Usages \[Alt\+F7\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Rename\.\.\. \[Shift\+F6\], Refactor>, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\]$',
-		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Extract Method\.\.\.\(disabled\)$',
+		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Extract Method\.\.\.\(disabled\)$',
 		 r'^Menu Explorer: Set as Startup Solution, Set as Startup Project\(disabled\), Remove Solution, Rename\.\.\.(\(disabled\))?$',
 		 r'^Menu item \[View/Nope\] not found$'], []),
 	('menu-clicks', {

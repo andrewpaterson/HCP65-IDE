@@ -76,6 +76,18 @@ void SIDESignatureSite::Init(void)
 	bFirst = false;
 	szLabel.Init();
 	uiNewName = 0;
+	memset(&sAll, 0, sizeof(SCPPSyntaxRange));
+	memset(&sName, 0, sizeof(SCPPSyntaxRange));
+	memset(&sAfter, 0, sizeof(SCPPSyntaxRange));
+	memset(&sBody, 0, sizeof(SCPPSyntaxRange));
+	bBody = false;
+	bInClass = false;
+	bPure = false;
+	szOwnName.Init();
+	szQualifiers.Init();
+	szOwnTemplate.Init();
+	szClassQualifier.Init();
+	szClassTemplate.Init();
 	asParameters.Init();
 }
 
@@ -93,6 +105,11 @@ void SIDESignatureSite::Kill(void)
 		asParameters.Get(i)->szKey.Kill();
 	}
 	asParameters.Kill();
+	szClassTemplate.Kill();
+	szClassQualifier.Kill();
+	szOwnTemplate.Kill();
+	szQualifiers.Kill();
+	szOwnName.Kill();
 	szLabel.Kill();
 	szKey.Kill();
 	szFileName.Kill();
@@ -615,14 +632,56 @@ void CIDEChangeSignature::KillUnits(void)
 //////////////////////////////////////////////////////////////////////////
 bool CIDEChangeSignature::AddSite(SIDESignature* psSignature, SIDELocation* psLocation, const char* szKey, const char** pszWhyNot)
 {
-	CIDERefactorUnit*			pcUnit;
+	CIDERefactorUnit*	pcUnit;
+	SIDESignatureSite*	psSite;
+
+	pcUnit = GetUnit(psLocation->szFileName.Text());
+	if (!pcUnit)
+	{
+		*pszWhyNot = "a file it is declared in couldn't be parsed";
+		return false;
+	}
+	psSite = (SIDESignatureSite*)malloc(sizeof(SIDESignatureSite));
+	psSite->Init();
+	if (!ReadSite(pcUnit, psLocation, szKey, psSite, pszWhyNot))
+	{
+		psSite->Kill();
+		free(psSite);
+		return false;
+	}
+	psSignature->apsSites.Add(psSite);
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A declaration or definition of a function named at psLocation in the
+// file pcUnit has parsed, read into psSite: where its parameters are and
+// each of them, what it returns, and the rest of what it writes (its
+// name, what follows its parameters, its body, its template<...>, and in
+// its class what its name is written after outside it).  False, with
+// why, if a macro made it or what declares the name isn't a function's
+// declarator.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEChangeSignature::ReadSite(CIDERefactorUnit* pcUnit, SIDELocation* psLocation, const char* szKey, SIDESignatureSite* psSite, const char** pszWhyNot)
+{
 	CCPPSyntax*					pcNode;
+	CCPPSyntax*					pcOuter;
+	CCPPSyntax*					pcParent;
+	CCPPSyntaxInitDeclarator*	pcInit;
+	CCPPSyntaxClassSpecifier*	pcClass;
+	CCPPSyntaxTemplateDeclaration*	pcTemplate;
+	CCPPSyntaxFunctionDefinition*	pcDefinition;
+	CChars						szPart;
+	CChars						szArguments;
+	bool						bClassFound;
 	CCPPSyntaxDeclarator*		pcDeclarator;
 	CCPPSyntaxFunctionSuffix*	pcSuffix;
 	CCPPSyntaxParameter*		pcParameter;
 	CCPPSyntaxName*				pcName;
 	CCPPSyntaxDeclSpecifiers*	pcSpecifiers;
-	SIDESignatureSite*			psSite;
 	SIDEWrittenParameter*		psWritten;
 	bool						bStorage;
 	SCPPSyntaxRange				sOpen;
@@ -635,12 +694,6 @@ bool CIDEChangeSignature::AddSite(SIDESignature* psSignature, SIDELocation* psLo
 	size						i;
 	uint8						uiKind;
 
-	pcUnit = GetUnit(psLocation->szFileName.Text());
-	if (!pcUnit)
-	{
-		*pszWhyNot = "a file it is declared in couldn't be parsed";
-		return false;
-	}
 	iToken = pcUnit->FindTokenAt(psLocation->iLine, psLocation->iColumn);
 	pcNode = pcUnit->FindNodeOfTokens(iToken, iToken);
 	pcDeclarator = (CCPPSyntaxDeclarator*)pcUnit->FindAncestor(pcNode, CPPS_Declarator);
@@ -680,8 +733,6 @@ bool CIDEChangeSignature::AddSite(SIDESignature* psSignature, SIDELocation* psLo
 		return false;
 	}
 
-	psSite = (SIDESignatureSite*)malloc(sizeof(SIDESignatureSite));
-	psSite->Init();
 	psSite->szFileName.Set(psLocation->szFileName);
 	psSite->szKey.Set(szKey);
 	psSite->iLine = psLocation->iLine;
@@ -691,7 +742,115 @@ bool CIDEChangeSignature::AddSite(SIDESignature* psSignature, SIDELocation* psLo
 	psSite->sParameters.iColumn = sOpen.iEndColumn;
 	psSite->sParameters.iEndLine = sClose.iLine;
 	psSite->sParameters.iEndColumn = sClose.iColumn;
-	psSignature->apsSites.Add(psSite);
+
+	//What follows its parameters: const and the like, which a definition outside its class writes too, and override
+	//and final, which it doesn't.
+	psSite->sAfter.iLine = sClose.iEndLine;
+	psSite->sAfter.iColumn = sClose.iEndColumn;
+	psSite->sAfter.iEndLine = sClose.iEndLine;
+	psSite->sAfter.iEndColumn = sClose.iEndColumn;
+	if ((pcSuffix->miLastToken > iClose) && pcUnit->GetTokensRange(iClose + 1, pcSuffix->miLastToken, &sRange))
+	{
+		psSite->sAfter.iEndLine = sRange.iEndLine;
+		psSite->sAfter.iEndColumn = sRange.iEndColumn;
+	}
+	for (iToken = iClose + 1; iToken <= pcSuffix->miLastToken; iToken++)
+	{
+		if (!pcUnit->IsToken(iToken, "override") && !pcUnit->IsToken(iToken, "final"))
+		{
+			psSite->szQualifiers.Append(' ');
+			pcUnit->AppendTokens(iToken, iToken, &psSite->szQualifiers);
+		}
+	}
+
+	//All of it, its body, its own template<...>, and whether it is in its class.
+	pcOuter = pcDeclarator->mpcParent;
+	pcInit = NULL;
+	if (pcOuter && (pcOuter->GetKind() == CPPS_InitDeclarator))
+	{
+		pcInit = (CCPPSyntaxInitDeclarator*)pcOuter;
+		pcOuter = pcOuter->mpcParent;
+	}
+	psSite->bPure = pcInit && (pcInit->meInitializer == CPPI_Equals);
+	if (pcOuter && (pcOuter->GetKind() == CPPS_FunctionDefinition))
+	{
+		pcDefinition = (CCPPSyntaxFunctionDefinition*)pcOuter;
+		psSite->bBody = (pcDefinition->meBody == CPPFB_Body) && pcDefinition->mpcBody && pcUnit->GetRange(pcDefinition->mpcBody, &psSite->sBody);
+	}
+	pcClass = pcOuter ? (CCPPSyntaxClassSpecifier*)pcUnit->FindAncestor(pcOuter, CPPS_ClassSpecifier) : NULL;
+	psSite->bInClass = (pcClass != NULL);
+	while (pcOuter && pcOuter->mpcParent && (pcOuter->mpcParent->GetKind() == CPPS_TemplateDeclaration))
+	{
+		pcTemplate = (CCPPSyntaxTemplateDeclaration*)pcOuter->mpcParent;
+		szPart.Init();
+		pcUnit->AppendTokens(pcTemplate->miFirstToken, pcOuter->miFirstToken - 1, &szPart);
+		szPart.Append(psSite->szOwnTemplate.Empty() ? "" : "\n");
+		psSite->szOwnTemplate.Insert(0, &szPart);
+		szPart.Kill();
+		pcOuter = pcTemplate;
+	}
+	if (!pcOuter || !pcUnit->GetRange(pcOuter, &psSite->sAll))
+	{
+		*pszWhyNot = "a declaration of it is partly made by a macro";
+		return false;
+	}
+
+	//In its class: the classes and namespaces it is in, each a class template's with its parameters' names, and
+	//the template<...> of each.
+	bClassFound = false;
+	for (pcParent = pcClass; pcParent; pcParent = pcParent->mpcParent)
+	{
+		szPart.Init();
+		if ((pcParent->GetKind() == CPPS_ClassSpecifier) && ((CCPPSyntaxClassSpecifier*)pcParent)->mpcName)
+		{
+			pcUnit->AppendTokens(((CCPPSyntaxClassSpecifier*)pcParent)->mpcName->miFirstToken, ((CCPPSyntaxClassSpecifier*)pcParent)->mpcName->miLastToken, &szPart);
+			bClassFound = true;
+		}
+		else if ((pcParent->GetKind() == CPPS_Namespace) && (((CCPPSyntaxNamespace*)pcParent)->miName >= 0))
+		{
+			pcUnit->AppendTokens(((CCPPSyntaxNamespace*)pcParent)->miName, ((CCPPSyntaxNamespace*)pcParent)->miName, &szPart);
+		}
+		else if ((pcParent->GetKind() == CPPS_TemplateDeclaration) && bClassFound)
+		{
+			//The class just named is a template: its parameters' names after it, and its template<...>.
+			pcTemplate = (CCPPSyntaxTemplateDeclaration*)pcParent;
+			szArguments.Init("<");
+			for (i = 0; i < pcTemplate->macpParameters.NumElements(); i++)
+			{
+				szArguments.Append((i > 0) ? ", " : "");
+				pcNode = pcTemplate->macpParameters.GetPtr(i);
+				if (pcNode->GetKind() == CPPS_TypeParameter)
+				{
+					pcUnit->AppendTokens(((CCPPSyntaxTypeParameter*)pcNode)->miName, ((CCPPSyntaxTypeParameter*)pcNode)->miName, &szArguments);
+				}
+				else if ((pcNode->GetKind() == CPPS_Parameter) && ((CCPPSyntaxParameter*)pcNode)->mpcDeclarator && ((CCPPSyntaxParameter*)pcNode)->mpcDeclarator->GetName())
+				{
+					pcName = ((CCPPSyntaxParameter*)pcNode)->mpcDeclarator->GetName();
+					pcUnit->AppendTokens(pcName->miFirstToken, pcName->miLastToken, &szArguments);
+				}
+			}
+			szArguments.Append(">");
+			//After the class's name, which is the qualifier's first part so far.
+			iToken = (int32)psSite->szClassQualifier.Find("::");
+			psSite->szClassQualifier.Insert((size)iToken, &szArguments);
+			szArguments.Kill();
+			if (pcTemplate->mpcDeclaration)
+			{
+				szArguments.Init();
+				pcUnit->AppendTokens(pcTemplate->miFirstToken, pcTemplate->mpcDeclaration->miFirstToken - 1, &szArguments);
+				szArguments.Append(psSite->szClassTemplate.Empty() ? "" : "\n");
+				psSite->szClassTemplate.Insert(0, &szArguments);
+				szArguments.Kill();
+			}
+			bClassFound = false;
+		}
+		if (!szPart.Empty())
+		{
+			szPart.Append("::");
+			psSite->szClassQualifier.Insert(0, &szPart);
+		}
+		szPart.Kill();
+	}
 
 	//What it returns: from the first of its specifiers that is of its type (not virtual, static and the like, which
 	//come first) to its name.
@@ -710,6 +869,11 @@ bool CIDEChangeSignature::AddSite(SIDESignature* psSignature, SIDELocation* psLo
 		pcSpecifiers = ((CCPPSyntaxFunctionDefinition*)pcNode)->mpcSpecifiers;
 	}
 	pcName = pcDeclarator->GetName();
+	if (pcName && pcName->GetLast())
+	{
+		pcUnit->GetRange(pcName, &psSite->sName);
+		pcUnit->AppendTokens(pcName->GetLast()->miFirstToken, pcName->GetLast()->miLastToken, &psSite->szOwnName);
+	}
 	if (pcSpecifiers && (pcSpecifiers->miFirstToken >= 0) && pcName)
 	{
 		for (iToken = pcSpecifiers->miFirstToken; iToken <= pcSpecifiers->miLastToken; iToken++)

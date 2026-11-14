@@ -271,6 +271,7 @@ public:
 	bool	GetSymbolLocations(const char* szKey, CArrayIDELocations* pasDest, uint8* puiKind);
 	size	FindSymbolsDeclaredIn(CArrayIDEFileRanges* pasRanges, CArrayChars* paszKeys);
 	size	FindOverriders(const char* szKey, CArrayIDELocations* pasDest);
+	size	FindSiblingFunctions(const char* szKey, const char* szFileName, CArrayIDELocations* pasDeclared, CArrayIDELocations* pasDefined);
 	bool	FindAssemblyTarget(const char* szKey, SIDERenameTarget* psDest);
 	size	FindOverrideLocations(const char* szKey, CArrayIDELocations* pasDest);
 	void	GetUsageGroup(SIDELocation* psLocation, CChars* pszProject, CChars* pszClass);
@@ -311,6 +312,7 @@ const char* GetIDEFileNamePart(const char* szPath);
 void KillIDEEditedFiles(CArrayIDEEditedFiles* papsFiles);
 void GetIDESymbolName(const char* szKey, CChars* pszDest);
 void GetIDEScopedName(const char* szKey, CChars* pszDest);
+void GetIDESymbolScope(const char* szKey, CChars* pszDest);
 
 
 #endif // __IDE_CODE_MODEL_H__

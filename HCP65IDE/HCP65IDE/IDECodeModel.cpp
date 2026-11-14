@@ -1855,6 +1855,7 @@ static EIDESymbolType GetIDESymbolType(ECPPSymbolKind eKind)
 static void SplitIDESymbolKey(const char* szKey, CChars* pszScope, CChars* pszName, CChars* pszParameters)
 {
 	size	uiLength;
+	size	uiClose;
 	size	uiEnd;
 	size	uiStart;
 	int		iDepth;
@@ -1862,11 +1863,18 @@ static void SplitIDESymbolKey(const char* szKey, CChars* pszScope, CChars* pszNa
 	uiLength = strlen(szKey);
 	uiEnd = uiLength;
 
-	//The parameters are the brackets the key ends with.
-	if ((uiLength > 0) && (szKey[uiLength - 1] == ')'))
+	//The parameters are the brackets the key ends with, and what a member function has after them (" const").
+	for (uiClose = uiLength; (uiClose > 0) && ((szKey[uiClose - 1] == ' ') || ((szKey[uiClose - 1] >= 'a') && (szKey[uiClose - 1] <= 'z'))); uiClose--)
+	{
+	}
+	if ((uiClose == 0) || (szKey[uiClose - 1] != ')'))
+	{
+		uiClose = uiLength;
+	}
+	if ((uiClose > 0) && (szKey[uiClose - 1] == ')'))
 	{
 		iDepth = 0;
-		for (uiEnd = uiLength; uiEnd > 0; uiEnd--)
+		for (uiEnd = uiClose; uiEnd > 0; uiEnd--)
 		{
 			if (szKey[uiEnd - 1] == ')')
 			{
@@ -2145,6 +2153,26 @@ void GetIDEScopedName(const char* szKey, CChars* pszDest)
 		pszDest->Append("::");
 	}
 	pszDest->Append(szName);
+	szParameters.Kill();
+	szName.Kill();
+	szScope.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The scope a symbol is in, appended: "NS::CFoo" for the key
+// "NS::CFoo::Init(int)", nothing for one in no scope.
+//
+//////////////////////////////////////////////////////////////////////////
+void GetIDESymbolScope(const char* szKey, CChars* pszDest)
+{
+	CChars	szScope;
+	CChars	szName;
+	CChars	szParameters;
+
+	SplitIDESymbolKey(szKey, &szScope, &szName, &szParameters);
+	pszDest->Append(szScope);
 	szParameters.Kill();
 	szName.Kill();
 	szScope.Kill();
@@ -2715,6 +2743,119 @@ size CIDECodeModel::FindOverriders(const char* szKey, CArrayIDELocations* pasDes
 	}
 	mcIndexMutex.Unlock();
 	return uiOverriders;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The functions declared beside the function szKey in szFileName: those
+// of its scope (its class's members; with no scope, the functions outside
+// any) that the file declares, in the order it declares them.  Each one's
+// place there is added to pasDeclared and, to pasDefined, where it is
+// defined if that is somewhere else (a line of -1 if it isn't: it is
+// defined right there, or nowhere).  The number of them.
+//
+//////////////////////////////////////////////////////////////////////////
+size CIDECodeModel::FindSiblingFunctions(const char* szKey, const char* szFileName, CArrayIDELocations* pasDeclared, CArrayIDELocations* pasDefined)
+{
+	CCPPIndexSymbol*	pcSymbol;
+	SCPPIndexLocation*	psLocation;
+	SCPPIndexLocation*	psDeclared;
+	SCPPIndexLocation*	psDefined;
+	SIDELocation		sDeclared;
+	SIDELocation		sDefined;
+	SIDELocation*		psOther;
+	CChars				szScope;
+	CChars				szName;
+	CChars				szParameters;
+	CChars				szOtherScope;
+	size				i;
+	size				j;
+	size				uiFile;
+	size				uiAt;
+	size				uiFirst;
+	bool				bSame;
+
+	SplitIDESymbolKey(szKey, &szScope, &szName, &szParameters);
+	szName.Kill();
+	szParameters.Kill();
+	uiFirst = pasDeclared->NumElements();
+
+	mcIndexMutex.Lock();
+	uiFile = MAX_SIZE;
+	for (i = 0; i < mcIndex.NumFiles(); i++)
+	{
+		if (StringInsensitiveCompare(mcIndex.GetFileName(i), szFileName) == 0)
+		{
+			uiFile = i;
+			break;
+		}
+	}
+	for (i = 0; (uiFile != MAX_SIZE) && (i < mcIndex.NumSymbols()); i++)
+	{
+		pcSymbol = mcIndex.GetSymbol(i);
+		if ((pcSymbol->meKind != CPPSK_Function) && (pcSymbol->meKind != CPPSK_FunctionTemplate))
+		{
+			continue;
+		}
+		psDeclared = NULL;
+		psDefined = NULL;
+		for (j = 0; j < pcSymbol->NumLocations(); j++)
+		{
+			psLocation = pcSymbol->GetLocation(j);
+			if (psLocation->uiRole == CPPIR_Reference)
+			{
+				continue;
+			}
+			if ((psLocation->uiFile == uiFile) && !psDeclared)
+			{
+				psDeclared = psLocation;
+			}
+			else if ((psLocation->uiRole == CPPIR_Definition) && !psDefined)
+			{
+				psDefined = psLocation;
+			}
+		}
+		if (!psDeclared)
+		{
+			continue;
+		}
+		SplitIDESymbolKey(pcSymbol->mszKey.Text(), &szOtherScope, &szName, &szParameters);
+		bSame = szOtherScope.Equals(szScope.Text());
+		szParameters.Kill();
+		szName.Kill();
+		szOtherScope.Kill();
+		if (!bSame)
+		{
+			continue;
+		}
+
+		CopyLocation(psDeclared, &sDeclared);
+		if (psDefined)
+		{
+			CopyLocation(psDefined, &sDefined);
+		}
+		else
+		{
+			sDefined = sDeclared;
+			sDefined.szFileName.Init();
+			sDefined.iLine = -1;
+		}
+		//In the file's order.
+		for (uiAt = uiFirst; uiAt < pasDeclared->NumElements(); uiAt++)
+		{
+			psOther = pasDeclared->Get(uiAt);
+			if ((psOther->iLine > sDeclared.iLine) || ((psOther->iLine == sDeclared.iLine) && (psOther->iColumn > sDeclared.iColumn)))
+			{
+				break;
+			}
+		}
+		pasDeclared->InsertAt(&sDeclared, uiAt);
+		pasDefined->InsertAt(&sDefined, uiAt);
+	}
+	mcIndexMutex.Unlock();
+	szScope.Kill();
+	return pasDeclared->NumElements() - uiFirst;
 }
 
 

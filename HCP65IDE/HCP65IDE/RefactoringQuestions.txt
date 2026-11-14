@@ -77,3 +77,25 @@ Open
     isn't written as a call (CFoo x(1, 2); new CFoo(1); a member's initialiser), and those places aren't changed
     yet: they show as "named without being called" in Problems Detected.  Your code makes objects with Init, so I
     left constructors until the rest of the plan is done.  Say if you want them sooner.
+
+14. Generate Definition, Generate Declaration and Move Definition out of / into Class are in the editor's Refactor
+    menu.  Generate Definition has CLion's Ctrl+Shift+D; the other three have no keys.  What keys do you want?
+
+15. Where a new definition goes: after the definition of the function declared before it in the class (so a .cpp
+    stays in the class's order), under a comment copied from that one if it says nothing (your banner of slashes),
+    two blank lines apart.  If none of the class's functions is defined outside it, at the end of the header's
+    .cpp; a class template's member in the header, before its #endif.  Is that where you would put them?
+
+16. Move Definition into Class keeps one statement of 60 characters or fewer on the declaration's line
+    ("int GetLevel(void) const { return miLevel; }") and puts anything more under it as a block.  Right limit?
+
+17. A constructor defined outside its class wasn't its definition to the index (CommonLibraries 4187b9af1 fixes the
+    parser's resolution of X::X).  Nothing in the compiler's output changes, and the whole suite passes, but it is a
+    change in CppCompilerLib made for the IDE: look at it when you look at the others.
+
+18. Two of the IDE's checks fail here that aren't in the list of known failures, and I don't think tonight's work
+    made them: usages-scope-menu expects "Startup Solution" in the menu, which needs a workspace of more than one
+    solution (I run the checks on HCP65ModPlay.sln alone, since HCP65ModPlay.hcp65workspace isn't on this disk);
+    usages-tabs gets "Usage tabs: >Evaluate, * IsParentheses" where it expects "* IsParentheses, >Evaluate" (the
+    tab that isn't pinned is used again, but not in its place).  Nothing I changed is in Find Usages' tabs.  Do
+    they pass for you?

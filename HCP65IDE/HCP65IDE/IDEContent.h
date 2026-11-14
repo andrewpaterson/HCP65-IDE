@@ -67,6 +67,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDESafeDelete.h"
 #include "IDEIntroduceVariable.h"
 #include "IDEChangeSignature.h"
+#include "IDEDefinitions.h"
 #include "IDEUsages.h"
 #include "IDEFindInFiles.h"
 #include "IDEOccurrences.h"
@@ -172,6 +173,7 @@ protected:
 	Ptr<CIDESafeDelete>			mpSafeDelete;		//Safe Delete.
 	Ptr<CIDEIntroduceVariable>	mpIntroduceVariable;	//Introduce Variable.
 	Ptr<CIDEChangeSignature>	mpChangeSignature;		//Change Signature.
+	Ptr<CIDEDefinitions>		mpDefinitions;			//Generate Definition and Declaration, Move Definition.
 	Ptr<CIDEUsages>				mpUsages;			//Find Usages.
 	Ptr<CIDEFindInFiles>		mpFindInFiles;		//Find in Files and the Find tool window.
 	Ptr<CIDEOccurrences>		mpOccurrences;		//Next and Previous Occurrence through Find Usages or Build.
@@ -280,6 +282,7 @@ public:
 	Ptr<CIDESafeDelete>		GetSafeDelete(void);
 	Ptr<CIDEIntroduceVariable>	GetIntroduceVariable(void);
 	Ptr<CIDEChangeSignature>	GetChangeSignature(void);
+	Ptr<CIDEDefinitions>		GetDefinitions(void);
 	Ptr<CIDECloseGuard>		GetCloseGuard(void);
 
 protected:

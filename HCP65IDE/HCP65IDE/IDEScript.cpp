@@ -1475,6 +1475,34 @@ void CIDEScript::RunEditStep(const char* szStep)
 			pTab->GetEditor()->Select(pTab->GetEditor()->GetLineStart((size)(iLine - 1)) + (size)(iColumn - 1), pTab->GetEditor()->GetLineStart((size)(iEndLine - 1)) + (size)(iEndColumn - 1));
 		}
 	}
+	else if ((strcmp(szStep, "generatedefinition") == 0) || (strcmp(szStep, "generatedeclaration") == 0) || (strcmp(szStep, "movedefinitionout") == 0) || (strcmp(szStep, "movedefinitionin") == 0))
+	{
+		//What a declaration and its definition are to each other, for the function at the caret (CIDEDefinitions):
+		//"Definitions: done" or "Definitions: refused", after the status line's "Status: ...".
+		bool	bDone;
+
+		if (strcmp(szStep, "generatedefinition") == 0)
+		{
+			bDone = mpcContent->GetDefinitions()->GenerateDefinition();
+		}
+		else if (strcmp(szStep, "generatedeclaration") == 0)
+		{
+			bDone = mpcContent->GetDefinitions()->GenerateDeclaration();
+		}
+		else if (strcmp(szStep, "movedefinitionout") == 0)
+		{
+			bDone = mpcContent->GetDefinitions()->MoveDefinitionOut();
+		}
+		else
+		{
+			bDone = mpcContent->GetDefinitions()->MoveDefinitionIn();
+		}
+		printf("Definitions: %s\n", bDone ? "done" : "refused");
+		if (bDone && gbIDEScriptRenameSaves)
+		{
+			mpcContent->GetDocuments()->SaveAllFiles();
+		}
+	}
 	else if (strcmp(szStep, "printlabel") == 0)
 	{
 		//The label the compiler gives the function declared at the caret, for the build configuration's processor:
@@ -2174,6 +2202,11 @@ void CIDEScript::RunEditStep(const char* szStep)
 		mpcContent->GetDocuments()->ReindexAll();
 		mpcContent->GetCodeModel()->WaitForIndexing();
 		mpcContent->GetDocuments()->UpdateEditedTabsNow();
+	}
+	else if (strcmp(szStep, "saveall") == 0)
+	{
+		//Every edited file saved, so printdisklines shows what the editors have.
+		mpcContent->GetDocuments()->SaveAllFiles();
 	}
 	else if (strcmp(szStep, "undoall") == 0)
 	{

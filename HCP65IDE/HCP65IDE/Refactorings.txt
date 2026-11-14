@@ -154,6 +154,8 @@ Phase 1 - nothing new from the compiler
      In a template: a class template's member moves between the class and outside it in the header (T4), never to
      a .cpp; Pull Up to a base that is a template's instance, and out of a template to a base that isn't one, only
      for members that don't use the parameters.
+     The first is done, 2026-11-15: Move Definition out of Class and into Class (IDEDefinitions.h says what they
+     do), a class template's member too.
   4. Copy (F5).  A class and its files under a new name.  A class template the same.
 
 
@@ -206,6 +208,9 @@ IntelliJ has none of these for Java.
 
  13. Generate a definition from a declaration, and a declaration from a definition; a declaration brought back in
      step with its edited definition.  Small once F5 is there.  A class template's member by T4.
+     Generate Definition (Ctrl+Shift+D) and Generate Declaration are done, 2026-11-15 (IDEDefinitions.h): a member
+     defined that its class doesn't declare is declared from the file as it is written, since the compiler has no
+     symbol for it.
  14. A function made inline in its header, or moved out to the source, static and inline put right.
  15. #includes added, removed and sorted: the #include a name newly used needs is added, those no name comes from
      removed, and an #include replaced by a forward declaration where only a pointer or reference is used.  A name
@@ -269,7 +274,9 @@ Where it is
   3. T3, the template as itself: done in the compiler.  F1, F2 and Introduce Variable: done (HCP65-IDE 3334b30).
   4. Change Signature: done but for what is listed under it (HCP65-IDE d47e44d and the assembly labels after it).
      Its dialog is a list and a form, not a table (question 10).
-  5. Move, starting with what a declaration and its definition are to each other (F5): a definition made from a
-     declaration and a declaration from a definition, a function's body moved into its class and out of it; then
-     Pull Up and Push Down, a class to its own files, a function to another file.  Next.
+  5. Move, starting with what a declaration and its definition are to each other (F5).  Done 2026-11-15: Generate
+     Definition, Generate Declaration, Move Definition out of Class and into Class (CIDEDefinitions; a constructor
+     defined outside its class needed CommonLibraries 4187b9af1).  Next: a declaration brought back in step with
+     its edited definition and a function outside a class made inline in its header and moved back out (13, 14);
+     then Pull Up and Push Down, a class to its own files, a function to another file.
 
