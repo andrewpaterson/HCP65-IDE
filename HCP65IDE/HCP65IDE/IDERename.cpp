@@ -491,6 +491,17 @@ bool CIDERename::ShowRename(void)
 	mpRenameDialog = OMalloc<CDialog>(mpcContent->GetWindow(), mpcContent->GetDialogLook(), "Rename");
 	mpRenameField = mpRenameDialog->AddTextField(szPrompt.Text(), sTarget.szName.Text());
 	mpRenameField->SelectAll();
+	if (sTarget.uiFamily > 0)
+	{
+		//A template's body names it and other classes' members by one name: they can only be renamed together.
+		szFiles.Init();
+		AppendRenamedWith(&sTarget, &szFiles);
+		pFiles = OMalloc<CLabel>(mpRenameDialog->GetWindow(), mpcContent->GetDimFont(), szFiles.Text());
+		pFiles->SetAlignment(CSH_Left, CSV_Center);
+		mpRenameDialog->AddEditor("", pFiles);
+		pFiles = NULL;
+		szFiles.Kill();
+	}
 	mpCommentsBox = mpRenameDialog->AddCheckBox("Search in comments and strings", mabComments[sTarget.bType]);
 	mpTextBox = mpRenameDialog->AddCheckBox("Search for text occurrences", mabText[sTarget.bType]);
 
@@ -924,6 +935,11 @@ bool CIDERename::RenameSymbol(SIDERenameTarget* psTarget, const char* szNewName,
 			szMessage.Append((uiUnsure == 1) ? " assembly label fits" : " assembly labels fit");
 			szMessage.Append(" this overload and another: left, check by hand.");
 		}
+		if (psTarget->uiFamily > 0)
+		{
+			szMessage.Append("  ");
+			AppendRenamedWith(psTarget, &szMessage);
+		}
 		ShowRenameStatus(&szMessage, pszStatus);
 		szMessage.Kill();
 	}
@@ -950,8 +966,35 @@ bool CIDERename::RenameSymbol(SIDERenameTarget* psTarget, const char* szNewName,
 // too are counted in *puiUnsure and left).  The number of places changed
 // (a name in a parameter list and its length are one).
 //
+// What is renamed with the symbol, its overrides and its family, is
+// renamed in its own labels too (_CBar__Init with _CFoo__Init).
+//
 //////////////////////////////////////////////////////////////////////////
 size CIDERename::RenameAssembly(SIDERenameTarget* psTarget, const char* szNewName, CArrayChars* paszFiles, size* puiUnsure)
+{
+	size	uiEdits;
+	size	uiUnsure;
+	size	i;
+
+	uiEdits = RenameAssemblyOf(psTarget, szNewName, mabComments[psTarget->bType], paszFiles, puiUnsure);
+	for (i = 0; i < psTarget->apsWith.NumElements(); i++)
+	{
+		//The comments have the new name already.
+		uiUnsure = 0;
+		uiEdits += RenameAssemblyOf(psTarget->apsWith.GetPtr(i), szNewName, false, paszFiles, &uiUnsure);
+		*puiUnsure += uiUnsure;
+	}
+	return uiEdits;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// One symbol renamed in the assembly's labels, and with bComments its
+// name in the comments (RenameAssembly).
+//
+//////////////////////////////////////////////////////////////////////////
+size CIDERename::RenameAssemblyOf(SIDERenameTarget* psTarget, const char* szNewName, bool bComments, CArrayChars* paszFiles, size* puiUnsure)
 {
 	CIDECodeModel*			pcModel;
 	SIDEAssemblyRename		sRename;
@@ -965,13 +1008,12 @@ size CIDERename::RenameAssembly(SIDERenameTarget* psTarget, const char* szNewNam
 	size					uiEdits;
 	size					i;
 	size					j;
-	bool					bComments;
 	Ptr<CTextArea>			pEditor;
 	STextRange				sRange;
 	SIDEAssemblyEdit*		psEdit;
 
 	eKind = (EIDEAssemblyRename)psTarget->uiAssembly;
-	bComments = mabComments[psTarget->bType];
+	*puiUnsure = 0;
 	if ((eKind == IAR_None) && !bComments)
 	{
 		return 0;
@@ -1029,6 +1071,22 @@ size CIDERename::RenameAssembly(SIDERenameTarget* psTarget, const char* szNewNam
 	*puiUnsure = sRename.uiUnsure;
 	sRename.Kill();
 	return uiEdits;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// What is renamed with psTarget because a template names them by one
+// name, as the dialog and the status line say it: "CHolder::Start names
+// it and CBar::Init by one name: renamed together."
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDERename::AppendRenamedWith(SIDERenameTarget* psTarget, CChars* pszDest)
+{
+	pszDest->Append(psTarget->szFamilyWhere.Empty() ? "A template" : psTarget->szFamilyWhere.Text());
+	pszDest->Append(" names it and ");
+	pszDest->Append(psTarget->szFamily);
+	pszDest->Append(" by one name: renamed together.");
 }
 
 

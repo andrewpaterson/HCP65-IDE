@@ -218,6 +218,16 @@ def MakeRenameAssemblyCopy():
 	return {'SOLUTION': os.path.join(szFolder, 'RenameAssembly.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
 
 
+def MakeRenameTemplateCopy():
+	#A copy of Input/RenameTemplate (CHolder<M>, whose body calls mp->Init() and reads mp->miCount, instantiated with CFoo
+	#and with CBar; CLone has the same members and is in no instance), to refactor in.
+	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
+	atexit.register(shutil.rmtree, szRoot, True)
+	szFolder = os.path.join(szRoot, 'RenameTemplate')
+	shutil.copytree(os.path.join(HERE, 'Input', 'RenameTemplate'), szFolder)
+	return {'SOLUTION': os.path.join(szFolder, 'RenameTemplate.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
+
+
 def MakeKeymapFile(szText=None):
 	#Where a scripted run keeps its keys, with szText in it if it's given.
 	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
@@ -652,6 +662,50 @@ CHECKS = [
 		#With renamesearch's s each rename: is saved: it is on the disk, and nothing is left unsaved.
 		'WAIT_INDEX': '1', 'OPEN': '65Core.h', 'CARET': '5:8', 'DEBUG': 'edit:renamesearch:ct-s,edit:rename:C65Kernel,printdiskfile:Main.cpp'}),
 		[r'^Status: Renamed C65Core to C65Kernel: ', r'^\tC65Kernel\t\t\tcCore;$'], [r'Unsaved at exit']),
+	('rename-template-family', dict(MakeRenameTemplateCopy(), **{
+		#A member a template's body names is renamed with its family (Refactorings.txt, T2): CHolder<M>'s mp->Init() is
+		#CFoo::Init in CHolder<CFoo> and CBar::Init in CHolder<CBar>, so CFoo::Init to Begin renames CBar::Init, its
+		#definition, its calls and its assembly label too, and the template's one call once.  CLone::Init, which no
+		#instance names, keeps its name; so does the miCount the template reads.
+		'WAIT_INDEX': '1', 'OPEN': 'Foo.h', 'CARET': '10:8',
+		'DEBUG': 'edit:renamable,edit:renamesearch:ct-s,edit:rename:Begin,printdiskfile:Holder.h,printdiskfile:Foo.h,printdiskfile:Bar.h,printdiskfile:Bar.cpp,'
+		         'printdiskfile:Lone.h,printdiskfile:Main.cpp,printdiskfile:HolderW65C816.asm'}),
+		[r'^Rename: Init \[CFoo::Init\(\)\] at 8 places, 0 overrides$', r'^Rename family: CBar::Init in CHolder::Start$',
+		 r'^Status: Renamed Init to Begin: 7 places, 4 in assembly in 7 files\.  CHolder::Start names it and CBar::Init by one name: renamed together\.$',
+		 r'^\tvoid\tStart\(void\) \{ mp->Begin\(\); \}$', r'^\tint\t\tTotal\(void\) \{ return mp->miCount; \}$',
+		 r'^Disk file Foo\.h:$', r'^\tvoid\tBegin\(void\);$', r'^Disk file Bar\.h:$', r'^\tvoid\tBegin\(void\);$', r'^void CBar::Begin\(void\)$',
+		 r'^Disk file Lone\.h:$', r'^\tvoid\tInit\(void\);$',
+		 r'^\tcFoo\.Begin\(\);$', r'^\tcBar\.Begin\(\);$', r'^\tcLone\.Init\(\);$',
+		 r'^_CFoo__Begin:$', r'^_CBar__Begin:$', r'^_CLone__Init:$', r'^\t\tjsr _CFoo__Begin$', r'^\t\tjsr _CBar__Begin$', r'^\t\tjsr _CLone__Init$'],
+		[r'Rename stopped', r"Can't rename", r'CLone::Begin', r'_CLone__Begin']),
+	('rename-template-family-from-other', dict(MakeRenameTemplateCopy(), **{
+		#From any of the family, and from the template's own call: the same members are renamed.
+		'WAIT_INDEX': '1', 'OPEN': 'Bar.cpp', 'CARET': '4:12',
+		'DEBUG': 'edit:renamable,edit:open:Holder.h,edit:caret:11:27,edit:renamable,edit:renamesearch:ct-s,edit:rename:Begin,printdiskfile:Foo.h,printdiskfile:Bar.h'}),
+		[r'^Rename: Init \[CBar::Init\(\)\] at 8 places, 0 overrides$', r'^Rename family: CFoo::Init in CHolder::Start$',
+		 r'^Rename: Init \[C(Foo|Bar)::Init\(\)\] at 8 places, 0 overrides$', r'^Rename family: C(Foo|Bar)::Init in CHolder::Start$',
+		 r'^Status: Renamed Init to Begin: 7 places, ', r'^Disk file Foo\.h:$', r'^\tvoid\tBegin\(void\);$', r'^Disk file Bar\.h:$', r'^\tvoid\tBegin\(void\);$'],
+		[r'Rename stopped', r"Can't rename"]),
+	('rename-template-family-field', dict(MakeRenameTemplateCopy(), **{
+		#A field a template's body reads is renamed with the other instances' fields of its name, not CLone's.
+		'WAIT_INDEX': '1', 'OPEN': 'Foo.h', 'CARET': '8:8',
+		'DEBUG': 'edit:renamable,edit:renamesearch:ct-s,edit:rename:miTotal,printdiskfile:Holder.h,printdiskfile:Bar.cpp,printdiskfile:Lone.cpp'}),
+		[r'^Rename family: CBar::miCount in CHolder::Total$', r'^Status: Renamed miCount to miTotal: .*CHolder::Total names it and CBar::miCount by one name: renamed together\.$',
+		 r'^\tint\t\tTotal\(void\) \{ return mp->miTotal; \}$', r'^\tmiTotal = 1;$', r'^\tmiCount = 2;$'],
+		[r'Rename stopped', r"Can't rename"]),
+	('rename-template-family-dialog', dict(MakeRenameTemplateCopy(), **{
+		#The Rename dialog says what is renamed with it and why.
+		'WAIT_INDEX': '1', 'OPEN': 'Foo.h', 'CARET': '10:8', 'SETTINGS': MakeSettingsFile(), 'DIALOG_KEYS': 'type:Begin', 'DIALOG_ANSWER': 'OK',
+		'DEBUG': 'rename,answered:1,edit:open:Bar.h,edit:caret:10:8,edit:print'}),
+		[r'^Dialog \[Rename\] answered OK$', r'^Status: Renamed Init to Begin: .*CHolder::Start names it and CBar::Init by one name: renamed together\.$',
+		 r'Bar\.h \* \(focus\) line 10: \[\tvoid\tBegin\(void\);\]$'],
+		[r'Rename stopped', r"Can't rename"]),
+	('rename-no-family', dict(MakeRenameTemplateCopy(), **{
+		#A member no template names (CLone::Init) is renamed alone, and nothing is said of a family.
+		'WAIT_INDEX': '1', 'OPEN': 'Lone.h', 'CARET': '10:8', 'DEBUG': 'edit:renamable,edit:renamesearch:ct-s,edit:rename:Begin,printdiskfile:Foo.h,printdiskfile:Holder.h'}),
+		[r'^Rename: Init \[CLone::Init\(\)\] at 3 places, 0 overrides$', r'^Status: Renamed Init to Begin: 3 places, 2 in assembly in 4 files\.$',
+		 r'^\tvoid\tInit\(void\);$', r'^\tvoid\tStart\(void\) \{ mp->Init\(\); \}$'],
+		[r'Rename family', r'by one name']),
 	('rename-assembly-class', dict(MakeRenameAssemblyCopy(), **{
 		#A class renamed in hand written assembly's labels (_CEngine__Init, __0, __2), in parameter lists with its length
 		#(FPC7CEngine to FPC6CMotor), in generated layout constants (SIZEOF_CEngine, CEngine_miSpeed: in the assembly, the
@@ -1168,12 +1222,12 @@ CHECKS = [
 		 r'^Tabs: .*>CalculatorParser\.h$', r'^Tabs: .*>CalculatorParser\.h$'], [r'not found', r'disabled']),
 	('hierarchy-after-edits', {
 		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14',
-		'EDIT': 'renamable,replace:29| : public CCalcExpression|,renamable'},
+		'EDIT': 'edit:renamable,replace:29| : public CCalcExpression|,renamable'},
 		[r'^Rename: IsParentheses \[CCalcParentheses::IsParentheses\(\)\] at 7 places, 1 overrides$',
 		 r'^Rename: IsParentheses \[CCalcParentheses::IsParentheses\(\)\] at 2 places, 0 overrides$'], []),
 	('virtual-after-edits', {
 		'WAIT_INDEX': '1', 'OPEN': 'CalcExpression.h', 'CARET': '37:18',
-		'EDIT': 'renamable,replace:37|virtual |,caret:37:9,renamable'},
+		'EDIT': 'edit:renamable,replace:37|virtual |,caret:37:9,renamable'},
 		[r'^Rename: IsParentheses \[CCalcExpression::IsParentheses\(\)\] at 7 places, 1 overrides$',
 		 r'^Rename: IsParentheses \[CCalcExpression::IsParentheses\(\)\] at 5 places, 0 overrides$'], []),
 	('settings-list', {

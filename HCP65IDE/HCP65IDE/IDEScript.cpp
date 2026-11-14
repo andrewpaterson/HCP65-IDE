@@ -1414,6 +1414,10 @@ void CIDEScript::RunEditStep(const char* szStep)
 		else
 		{
 			printf("Rename: %s [%s] at %d places, %d overrides\n", sTarget.szName.Text(), sTarget.szKey.Text(), (int)sTarget.asLocations.NumElements(), (int)sTarget.uiOverrides);
+			if (sTarget.uiFamily > 0)
+			{
+				printf("Rename family: %s in %s\n", sTarget.szFamily.Text(), sTarget.szFamilyWhere.Text());
+			}
 		}
 		sTarget.Kill();
 	}

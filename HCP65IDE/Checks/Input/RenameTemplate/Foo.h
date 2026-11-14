@@ -1,0 +1,14 @@
+#ifndef __FOO_H__
+#define __FOO_H__
+
+
+class CFoo
+{
+public:
+	int		miCount;
+
+	void	Init(void);
+};
+
+
+#endif // __FOO_H__

@@ -84,6 +84,10 @@ public:
 };
 
 
+struct SIDERenameTarget;
+typedef CArrayTemplatePtr<SIDERenameTarget>	CArrayIDERenameTargets;
+
+
 struct SIDERenameTarget
 {
 	CChars				szKey;
@@ -93,6 +97,12 @@ struct SIDERenameTarget
 	CChars				szWhyNot;
 	size				uiOverrides;	//The virtual member functions renamed with it: what overrides it and what it overrides.
 	bool				bType;			//A class, enum, typedef, template or namespace: Rename's searches are remembered apart for them.
+	size				uiFamily;		//The members of other classes renamed with it: a template's body names them and it by one name
+										//(mp->Init() in CHolder<M>, instantiated with each of their classes), and theirs in turn.
+	CChars				szFamily;		//Their keys' names with their scopes, for showing: "CBar::Init, CBaz::Init".
+	CChars				szFamilyWhere;	//The template's class or function that names them (the first found): "CHolder::Start".
+	CArrayIDERenameTargets	apsWith;	//What is renamed with it, its overrides and its family: each one's key, name, scope and
+										//assembly, without its places (which are in asLocations).
 	uint8				uiAssembly;		//How hand written assembly's labels name it (EIDEAssemblyRename).
 	CChars				szScope;		//The scopes its name is in, as its key has them ("NS::CFat"), empty for none.
 	bool				bOverloaded;	//A function with others of its name in its scope.
@@ -271,6 +281,7 @@ void MoveIDELocation(SIDELocation* psDest, SIDELocation* psSource);
 const char* GetIDEFileNamePart(const char* szPath);
 void KillIDEEditedFiles(CArrayIDEEditedFiles* papsFiles);
 void GetIDESymbolName(const char* szKey, CChars* pszDest);
+void GetIDEScopedName(const char* szKey, CChars* pszDest);
 
 
 #endif // __IDE_CODE_MODEL_H__

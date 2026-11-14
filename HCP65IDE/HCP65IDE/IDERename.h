@@ -128,6 +128,8 @@ protected:
 	bool	IsExplorerFocussed(void);
 	void	ShowRenameStatus(CChars* pszMessage, CChars* pszStatus);
 	size	RenameAssembly(SIDERenameTarget* psTarget, const char* szNewName, CArrayChars* paszFiles, size* puiUnsure);
+	size	RenameAssemblyOf(SIDERenameTarget* psTarget, const char* szNewName, bool bComments, CArrayChars* paszFiles, size* puiUnsure);
+	void	AppendRenamedWith(SIDERenameTarget* psTarget, CChars* pszDest);
 	bool	ApproveRename(void);
 	size	FindRenameFile(CArrayChars* paszFiles, const char* szFileName);
 	bool	SearchRenameFiles(const char* szName, bool bComments, bool bText, bool bLayout, CArrayChars* paszFiles, CArrayIDEPlaces* pasPlaces, CChars* pszChanged);

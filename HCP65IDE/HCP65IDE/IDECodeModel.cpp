@@ -2012,6 +2012,10 @@ void SIDERenameTarget::Init(void)
 	bRenamable = false;
 	szWhyNot.Init();
 	uiOverrides = 0;
+	uiFamily = 0;
+	szFamily.Init();
+	szFamilyWhere.Init();
+	apsWith.Init();
 	bType = false;
 	uiAssembly = IAR_None;
 	szScope.Init();
@@ -2026,6 +2030,16 @@ void SIDERenameTarget::Init(void)
 //////////////////////////////////////////////////////////////////////////
 void SIDERenameTarget::Kill(void)
 {
+	size	i;
+
+	for (i = 0; i < apsWith.NumElements(); i++)
+	{
+		apsWith.GetPtr(i)->Kill();
+		free(apsWith.GetPtr(i));
+	}
+	apsWith.Kill();
+	szFamilyWhere.Kill();
+	szFamily.Kill();
 	aszOverloads.Kill();
 	szScope.Kill();
 	szWhyNot.Kill();
@@ -2109,6 +2123,31 @@ static bool HasIDECLinkage(CCPPIndexSymbol* pcSymbol)
 		}
 	}
 	return false;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A symbol's name with its scopes and without its parameters, appended:
+// "CFoo::Init" for the key "CFoo::Init(int)".
+//
+//////////////////////////////////////////////////////////////////////////
+void GetIDEScopedName(const char* szKey, CChars* pszDest)
+{
+	CChars	szScope;
+	CChars	szName;
+	CChars	szParameters;
+
+	SplitIDESymbolKey(szKey, &szScope, &szName, &szParameters);
+	if (!szScope.Empty())
+	{
+		pszDest->Append(szScope);
+		pszDest->Append("::");
+	}
+	pszDest->Append(szName);
+	szParameters.Kill();
+	szName.Kill();
+	szScope.Kill();
 }
 
 
@@ -2201,7 +2240,11 @@ void CIDECodeModel::FindAssemblyRename(CCPPIndexSymbol* pcSymbol, SIDERenameTarg
 //
 // Rename's target at iLine, iColumn (0 based) of szFileName: the symbol
 // named there and every place its name is written.  A class's
-// constructors and destructors are renamed with it.  It can't be renamed
+// constructors and destructors are renamed with it; a virtual member
+// function's overrides are; and so is a member's family, the members of
+// other classes that a template's body names with it by one name
+// (CCPPIndex::FindFamily), whose overrides and families are too.  It
+// can't be renamed
 // (bRenamable false, szWhyNot says why) if it is an operator, a
 // destructor or a compiler type, or if a place can't be changed (see
 // GetIDERenameProblem: it must be in one of the projects' files).  False
@@ -2216,7 +2259,14 @@ bool CIDECodeModel::FindRenameTarget(const char* szFileName, int iLine, int iCol
 	CChars				szConstructor;
 	CChars				szDestructor;
 	size				i;
-	CArrayInt			aiOverrides;
+	size				j;
+	size				uiNext;
+	CArrayInt			aiWith;
+	CArrayInt			aiFound;
+	CCPPIndexSymbol*	pcFrom;
+	SCPPIndexLocation	sWhere;
+	SIDERenameTarget*	psWith;
+	bool				bFamily;
 
 	FindProjectFiles();
 	mcIndexMutex.Lock();
@@ -2275,22 +2325,76 @@ bool CIDECodeModel::FindRenameTarget(const char* szFileName, int iLine, int iCol
 		szConstructor.Kill();
 	}
 
-	//A virtual member function is renamed with what overrides it and what it overrides.
+	//A virtual member function is renamed with what overrides it and what it overrides.  A member a template's body
+	//names is renamed with its family, the members the same name is in the template's other instances: the template is
+	//written once for them all.  What is found is looked at the same way, until nothing new is.
 	if (szProblem == NULL)
 	{
-		aiOverrides.Init();
-		FindOverrides(pcSymbol, &aiOverrides);
-		psDest->uiOverrides = aiOverrides.NumElements();
-		for (i = 0; i < aiOverrides.NumElements(); i++)
+		aiWith.Init();
+		pcFrom = pcSymbol;
+		uiNext = 0;
+		for (;;)
 		{
-			pcMember = mcIndex.GetSymbol((size)aiOverrides.GetValue(i));
+			for (j = 0; j < 2; j++)
+			{
+				bFamily = (j == 1);
+				aiFound.Init();
+				if (bFamily)
+				{
+					mcIndex.FindFamily(pcFrom, &aiFound, &sWhere);
+				}
+				else
+				{
+					FindOverrides(pcFrom, &aiFound);
+				}
+				for (i = 0; i < aiFound.NumElements(); i++)
+				{
+					pcMember = mcIndex.GetSymbol((size)aiFound.GetValue(i));
+					if ((pcMember == pcSymbol) || (aiWith.Find(aiFound.GetValue(i)) != ARRAY_ELEMENT_NOT_FOUND))
+					{
+						continue;
+					}
+					aiWith.Add(aiFound.GetValue(i));
+					if (!bFamily)
+					{
+						psDest->uiOverrides++;
+						continue;
+					}
+					if ((psDest->uiFamily == 0) && (sWhere.iContainer >= 0))
+					{
+						GetIDEScopedName(mcIndex.GetSymbol((size)sWhere.iContainer)->mszKey.Text(), &psDest->szFamilyWhere);
+					}
+					psDest->szFamily.Append((psDest->uiFamily > 0) ? ", " : "");
+					GetIDEScopedName(pcMember->mszKey.Text(), &psDest->szFamily);
+					psDest->uiFamily++;
+				}
+				aiFound.Kill();
+			}
+			if (uiNext == aiWith.NumElements())
+			{
+				break;
+			}
+			pcFrom = mcIndex.GetSymbol((size)aiWith.GetValue(uiNext));
+			uiNext++;
+		}
+
+		for (i = 0; i < aiWith.NumElements(); i++)
+		{
+			pcMember = mcIndex.GetSymbol((size)aiWith.GetValue(i));
 			if (szProblem == NULL)
 			{
 				szProblem = GetIDERenameProblem(&mcIndex, pcMember, &mcProjectFiles);
 			}
 			CopyLocations(pcMember, &psDest->asLocations);
+
+			psWith = (SIDERenameTarget*)malloc(sizeof(SIDERenameTarget));
+			psWith->Init();
+			psWith->szKey.Set(pcMember->mszKey);
+			GetIDESymbolName(pcMember->mszKey.Text(), &psWith->szName);
+			FindAssemblyRename(pcMember, psWith);
+			psDest->apsWith.Add(psWith);
 		}
-		aiOverrides.Kill();
+		aiWith.Kill();
 	}
 	mcIndexMutex.Unlock();
 
