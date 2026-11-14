@@ -29,7 +29,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/DockManager.h"
 #include "SolutionExplorer.h"
 #include "BuildLib/BuildWorkspace.h"
-#include "BuildLib/BuildRecentFiles.h"
+#include "BaseLib/RecentFiles.h"
 
 
 class CIDEContent;
@@ -50,7 +50,7 @@ protected:
 	Ptr<CDockPane>			mpExplorerTool;
 	Ptr<CMenuContainer>		mpExplorerMenu;  //A solution's: Set as Startup Solution and Remove.
 	Ptr<CFileChooser>		mpFileChooser;  //The solution to open or add, while it's shown.
-	CBuildRecentFiles		mcRecent;			//The solutions and workspaces opened last.
+	CRecentFiles			mcRecent;			//The solutions and workspaces opened last.
 	CChars					mszRecentFile;		//Where they are kept, empty if they aren't.
 	CChars					mszQueuedCommand;	//The name of the command to run at the next tick.
 	CChars					mszQueuedOpen;		//A recent one chosen, opened at the next tick (OpenQueuedSolution).
@@ -97,7 +97,7 @@ protected:
 	Ptr<CMenuContainer>	CreateExplorerMenu(void);
 	void				WriteRecent(void);
 	void				LetGoOfWorkspace(void);
-	CBuildRecentFiles*	GetRecent(void);
+	CRecentFiles*		GetRecent(void);
 	void				OpenQueuedSolution(void);
 	void				QueueCommand(CCommand* pcCommand);
 	void				RunQueuedCommand(void);

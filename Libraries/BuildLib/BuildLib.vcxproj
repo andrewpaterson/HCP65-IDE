@@ -24,7 +24,6 @@
     <ClCompile Include="BuildWorkspace.cpp" />
     <ClCompile Include="RunConfiguration.cpp" />
     <ClCompile Include="BuildConfigurationEdit.cpp" />
-    <ClCompile Include="BuildRecentFiles.cpp" />
     <ClCompile Include="Build.cpp" />
     <ClCompile Include="CommandBuild.cpp" />
     <ClCompile Include="MSVCBuild.cpp" />
@@ -41,7 +40,6 @@
     <ClInclude Include="BuildWorkspace.h" />
     <ClInclude Include="RunConfiguration.h" />
     <ClInclude Include="BuildConfigurationEdit.h" />
-    <ClInclude Include="BuildRecentFiles.h" />
     <ClInclude Include="Build.h" />
     <ClInclude Include="CommandBuild.h" />
     <ClInclude Include="MSVCBuild.h" />

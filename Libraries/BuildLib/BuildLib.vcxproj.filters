@@ -27,9 +27,6 @@
     <ClCompile Include="BuildWorkspace.cpp">
       <Filter>Source\Build</Filter>
     </ClCompile>
-    <ClCompile Include="BuildRecentFiles.cpp">
-      <Filter>Source\Build</Filter>
-    </ClCompile>
     <ClCompile Include="Build.cpp">
       <Filter>Source\Build</Filter>
     </ClCompile>
@@ -72,9 +69,6 @@
       <Filter>Source\Build</Filter>
     </ClInclude>
     <ClInclude Include="BuildWorkspace.h">
-      <Filter>Source\Build</Filter>
-    </ClInclude>
-    <ClInclude Include="BuildRecentFiles.h">
       <Filter>Source\Build</Filter>
     </ClInclude>
     <ClInclude Include="Build.h">

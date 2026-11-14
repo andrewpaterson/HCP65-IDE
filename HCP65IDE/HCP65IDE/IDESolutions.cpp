@@ -78,7 +78,7 @@ void CIDESolutions::Class(void)
 	M_Pointer(mpExplorerMenu);
 	M_Pointer(mpFileChooser);
 	U_String(mszQueuedCommand);
-	U_Unknown(CBuildRecentFiles, mcRecent);
+	U_Unknown(CRecentFiles, mcRecent);
 	U_String(mszRecentFile);
 	U_String(mszQueuedOpen);
 }
@@ -712,7 +712,7 @@ bool CIDESolutions::GetSettingsBaseFile(CChars* pszDest)
 
 
 
-CBuildRecentFiles* CIDESolutions::GetRecent(void) { return &mcRecent; }
+CRecentFiles* CIDESolutions::GetRecent(void) { return &mcRecent; }
 
 
 //////////////////////////////////////////////////////////////////////////

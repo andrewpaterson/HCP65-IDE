@@ -15,9 +15,6 @@
     <ClCompile Include="TestBuildWorkspace.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="TestBuildRecentFiles.cpp">
-      <Filter>Source</Filter>
-    </ClCompile>
     <ClCompile Include="TestBuild.cpp">
       <Filter>Source</Filter>
     </ClCompile>

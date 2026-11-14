@@ -31,7 +31,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "VisualStudioLib/VcxSolution.h"
 #include "BuildLib/BuildConfigurations.h"
 #include "BuildLib/BuildWorkspace.h"
-#include "BuildLib/BuildRecentFiles.h"
+#include "BaseLib/RecentFiles.h"
 #include "BuildLib/SolutionBuild.h"
 #include "CppCompilerLib/CPP65ListingIndex.h"
 #include "WindowLib/Button.h"
