@@ -1,0 +1,230 @@
+Refactorings in the HCP65 IDE (plan, 2026-11-14)
+================================================
+
+The intent (the user, 2026-11-14): the IDE makes refactorings to C++ in the same way that IntelliJ IDEA can to Java
+code.  IntelliJ IDEA is the reference for what each refactoring does and for its key, as for the rest of the IDE.
+Each refactoring is an item of its own, checked by running the IDE.  The order is proposed, not agreed: the user
+picks what is built next.
+
+No half-measures (the user, 2026-11-14: "The aim is to make the HCP65 fully useful").  Each refactoring is built to
+what IntelliJ's does, with its dialog, its preview and its conflicts: the lines below name them, they don't size
+them.  One of them is the work Rename was, or more: Change Signature alone is its table of parameters, every call's
+arguments rewritten, the conflicts found before anything changes, and the assembly's labels.  A refactoring is built
+in steps that are each checked and committed, and the steps add up to all of it.
+
+Templates are a large part of this code (the user, 2026-11-14), so they are planned for from the start and are not a
+limit: every refactoring says what it does in a template, and what templates need comes before the refactorings that
+need it.  Planned again for that on 2026-11-14.
+
+Done before this plan: Rename (Shift+F6, IDERename.cpp), in hand written assembly too (IDERenameAssembly.cpp), and
+Rename File (IDEFileRename.cpp, RenameFile.txt).  The editor's Refactor menu has them and a disabled
+"Extract Method...".
+
+
+Templates
+---------
+
+A template's body isn't code until it has arguments, and a refactoring has to know what each name in it means and
+what type each expression has in the template's own words (M*, not CFoo*).  There are three kinds of name in one:
+  a. Names that don't depend on the arguments: size i, miUsedElements, memcpy.  The same in every instance.
+  b. Names that depend on the template's own shape: M* pv = Get(i), mcArray.Add(x) where mcArray is a
+     CArrayTemplate<M>.  The type can be said in the template's words and the member found in the template.
+  c. Names only an instance decides: pv->Init(), Compare(a, b) with arguments of M.  They can be different things
+     in different instances.
+
+What others do (looked up 2026-11-14): clangd guesses in the template as written (its HeuristicResolver: the
+member is looked up in the primary template, specialisations ignored, "results may not be fully accurate");
+ReSharper C++'s older documentation says every name in a template is treated as dependent; Visual Studio lets the
+user name sample arguments for a template and analyses that instance; Google's ClangMR refactors from the instances
+and merges the edits, leaving what is right for one instance and wrong for another to a person.  Nobody has it
+whole.  The two real ways are the template as itself and the instances as evidence, and this plan has both: the
+compiler is ours, so the first is the type checker's own work and not a guesser beside it.
+
+  T1. Every instance is evidence (kind c).  A name in a template's body is a reference of what it resolves to in
+      each instance, in whichever unit the instance is, so Find Usages and Rename of CFoo::Init have mp->Init() in
+      CHolder<M>.  Done 2026-11-14: instances in other units than the one that indexed the header were already
+      kept (CCPPIndex::Gather keeps resolved names in files another unit indexed); two instances in one unit kept
+      only the first's, and now keep each (SCPPResolvedName's iNext, CCPPSemanticPass::GetNextResolved).
+      TestCppIndexTemplateInstances.
+  T2. Families (kind c).  mp->Init() in CHolder<M> ties together every class CHolder is instantiated with: an
+      interface nobody wrote.  Changing CFoo::Init alone breaks CHolder<CBar>.  So a refactoring that changes a
+      member a template's body names shows the family as a conflict: "CHolder<M> calls this as mp->Init(), which is
+      also CBar::Init and CBaz::Init: change them all, or cancel", as a virtual function's overrides are changed
+      together.  It needs every symbol at a place from the index (CCPPIndex::FindSymbolAt gives one), and the
+      classes of a family from the places they share.  Rename is wrong without it: from what the index gives it, it
+      renames the template's mp->Init() with CFoo::Init and leaves CBar::Init (read from the code, not yet shown
+      by a check in the IDE: the first step is that check).  First.
+  T3. The template as itself (kinds a and b).  The type checker checks a template's body once with each parameter
+      bound to a type that stands for itself and is written by its name: the types are M*, CArrayTemplate<M>&, as
+      the source has them; a member of CArrayTemplate<M> is found in the template; what only an instance decides
+      has a dependent type, which what is made of it has too, with no error.  A template nothing instantiates is
+      typed like any other.  The kept check's GetType answers with these in a template's body, never with an
+      instance's types.  Until then GetType gives the first instance's (CFoo* in CArrayTemplate<M>), which must not
+      be written into the template: the refactorings that write a type refuse in one.
+  T4. What a refactoring writes in a template.  A member of a class template defined outside it is
+      template<class M> void CArrayTemplate<M>::Name(...), in the header and not a .cpp; a function made from part
+      of a function template has the parameters it uses; typename where a dependent type needs it.  Part of each
+      refactoring that writes a declaration.
+  T5. Specialisations.  A template and its explicit and partial specialisations are definitions of their own with
+      one name: Rename, Change Signature and Safe Delete take them together, as T2's families.
+  T6. Classes a macro makes (ARRAY_BLOCK making CArrayBlock and CArrayLargeBlock from one text included twice) are
+      templates in what they do and macros in what they are: none of the above reaches them, and code a macro made
+      has no source of its own.  Open: whether the included text is treated as a body with the macro's uses as its
+      instances.  To be looked at with the user before the refactorings that would meet them.
+
+
+Foundations
+-----------
+
+Exists:
+  - The index (CCPPIndex: every name's declarations, definitions and uses, a local's too, each use read, written or
+    called, in its class or function; base classes and virtuals), Find Usages, edits to many files as one undo
+    group, and "nothing changes if a file changed since it was indexed".
+  - The syntax tree, each node with the source it was parsed from, names with the symbol the parser resolved, and
+    scopes to look a new name up in for a clash (CCPPScope::Find and FindHere).
+  - The kept check (CommonLibraries ecab9f7fd and eb887e04d, 2026-11-14).  CCPPSemanticPass::Check with bKeep keeps
+    the checked unit until the pass is killed: GetType gives any expression's type, AppendType and AppendDeclaration
+    write a type as C++ (CCPPTypeWriter), and FindChanges says how the variable a name names is changed where it is
+    used (assigned, bound to a reference that isn't const, its address taken, a member function that isn't const
+    called on it).  The index's checks aren't kept.
+
+To build:
+  F1. The checked unit in the IDE.  CIDECodeModel makes a kept check of one file when a refactoring starts (a header
+      in a unit that includes it, as the edited files are parsed), and finds the node of a selection or of the
+      caret.  First, with the first refactoring that needs a type.
+  F2. Declared type text.  A variable's or a function's type copied from its declaration, so uint32 and size stay
+      what they are: the compiler's types have no typedefs in them, and the type writer writes size as
+      "unsigned long long".  The type writer is for an expression that is computed.  In a template the declaration's
+      text is already in the template's words.  With Introduce Variable.
+  F3. Flow over the syntax tree.  Which locals a selection reads, writes and leaves live after it, and where it
+      exits (return, break, continue, goto).  The compiler's liveness is the IR's, which a check doesn't make; this
+      is the syntax's, and says more is live than is where it can't tell.  It is the same in a template.  With
+      Extract Method.
+  F4. Preview and conflicts.  IntelliJ's "problems detected" list before anything changes, and one undo for the
+      whole refactoring.  T2's families are its first conflict.  With T2.
+  F5. A declaration and its definition as one thing: a member's declaration in the header and its definition in the
+      .cpp, found from either; a class template's member defined outside it, in the header (T4).  With Change
+      Signature.
+
+
+Phase 1 - nothing new from the compiler
+---------------------------------------
+
+  1. Safe Delete (Alt+Delete).  A symbol is deleted only if Find Usages finds no use of it; otherwise the usages
+     are shown.  Its declaration and its definition go together.
+     In a template: a member a template's body names through an instance is used (T1); a member of a template
+     nothing instantiates has only the uses the parser found, and says so.
+  2. Change Signature (Ctrl+F6).  Parameters added, removed, reordered and renamed, and the return type changed, in
+     the declaration, the definition, every override and every call.  A new parameter has a value for the calls
+     there already are.
+     In a template: a member of a class template changes in the template and at every call on any instance; a
+     function a template's body calls through an instance changes with its family (T2), the call in the body once;
+     specialisations with the template (T5).
+  3. Move:
+       - a member function's body between the class (inline) and the .cpp;
+       - Pull Members Up and Push Members Down;
+       - a class to its own .h and .cpp, the #includes and the projects' files changed as Rename File changes them;
+       - a function or a global to another file or namespace.
+     In a template: a class template's member moves between the class and outside it in the header (T4), never to
+     a .cpp; Pull Up to a base that is a template's instance, and out of a template to a base that isn't one, only
+     for members that don't use the parameters.
+  4. Copy (F5).  A class and its files under a new name.  A class template the same.
+
+
+Phase 2 - the kept check
+------------------------
+
+These write a type, so in a template they need T3.
+
+  5. Introduce Variable (Ctrl+Alt+V).  The selected expression becomes a local, every occurrence of the same
+     expression in the function replaced if asked.  It is declared at the top of the function, as the house style
+     has locals.
+     In a template: declared in the template's words (M* pv); an expression whose type only an instance decides is
+     refused, with why.
+  6. Inline Variable (Ctrl+Alt+N).  Refused if the variable is changed after its initialiser, or its initialiser
+     has side effects.
+     In a template: a call through an instance (pv->Next()) is taken to change what it is called on unless every
+     instance's function is const.
+  7. Introduce Field (Ctrl+Alt+F), Constant (Ctrl+Alt+C) and Parameter (Ctrl+Alt+P).  The same extraction to
+     another place; Parameter is a Change Signature too.
+  8. Introduce Typedef.  The selected type is given a name, and the other uses of the type replaced.  In a
+     template it may be a typedef of the class template's, written with its parameters.
+
+
+Phase 3 - flow
+--------------
+
+  9. Extract Method (Ctrl+Alt+M).  The selected statements, or expression, become a function.  The locals it reads
+     are parameters; one local live after it is what it returns, more are reference or pointer parameters.  In a
+     member function the declaration goes in the class and the definition in the .cpp.  Refused if the selection
+     has more than one kind of exit.
+     In a template: the parameters' types are their declarations' text (F2); a member of a class template is
+     declared in the class and defined in the header as T4 writes it; from a function template the new function
+     is a template of the parameters the selection uses.
+ 10. Inline Function (Ctrl+Alt+N on a function).  At one call or at all of them, the function deleted if asked.
+     Refused for a virtual or recursive function, and for a body with several returns where a statement is.
+     In a template: a class template's member inlined into another of its members stays in the template's words;
+     into code outside, its parameters are the instance's arguments there.
+ 11. Extract Superclass, Extract Interface and Extract Class (members moved into a new class held as a field).
+     Built on Move and Introduce Field.  From a class template the new class is one too if what moves uses the
+     parameters.
+ 12. Encapsulate Field.  A getter and a setter, the reads and writes replaced: FindChanges tells them apart.
+
+
+Phase 4 - C++ only
+------------------
+
+IntelliJ has none of these for Java.
+
+ 13. Generate a definition from a declaration, and a declaration from a definition; a declaration brought back in
+     step with its edited definition.  Small once F5 is there.  A class template's member by T4.
+ 14. A function made inline in its header, or moved out to the source, static and inline put right.
+ 15. #includes added, removed and sorted: the #include a name newly used needs is added, those no name comes from
+     removed, and an #include replaced by a forward declaration where only a pointer or reference is used.  A name
+     a template's body uses through an instance needs the #include where the instance is, not in the template.
+ 16. Convert macro.  A #define of a constant to a const or an enumerator; a function-like macro to an inline
+     function (a function template where its arguments' types differ between its uses) where each of its
+     arguments is used once.  Inline macro, at one use.  With T6.
+ 17. . to -> and back; a pointer parameter to a reference and back, every use and call changed.
+ 18. Make a member function const (and static), its overrides with it, checked against what it changes; its family
+     with it where a template's body calls it (T2).
+ 19. A function to a member function and back: its first parameter is this.
+ 20. Extract template parameter: a type used in a function or class becomes a parameter.  A typedef of the
+     template with the type it had keeps the code that used it compiling (the ACCU article "Refactoring Towards
+     Seams in C++").  Its inverse: a parameter every instance gives the same argument is removed.
+ 21. Move into or out of a namespace; a using added or removed, the names qualified or not to match.
+ 22. An enum to an enum class, every use of an enumerator qualified.
+ 23. Assembly.  Rename already changes hand written .asm by the compiler's labels; Change Signature and Move need
+     the same rules where they change a label.  A template instance's labels have its arguments in them.
+ 24. Write the interface a template uses.  The members a template's body needs of its argument (T2's family, from
+     the template's side) shown, and written as a base class or a comment if asked.
+
+
+What every one of them is limited by
+------------------------------------
+
+  - Macros.  Code a macro made has no source of its own: a refactoring refuses when its selection or a usage is in
+    one, and says so (T6).
+  - Code an #if leaves out in the configuration isn't in the index.  As Rename: a text search if asked, what it
+    finds shown as unsure.
+  - Other configurations.  A file only another configuration builds (Thing_Linux.cpp) is only seen as text.
+  - A template nothing in the workspace instantiates has no evidence for its names of kind c: they are found by
+    their text, as unsure.
+  - FindChanges doesn't find an array passed as a pointer, or what is done through a pointer or a reference made
+    earlier.
+  - Not checked yet: that a constructor's calls in every form (CFoo x(1, 2), new, a member initialiser) are in the
+    index as calls with arguments that can be reached, which Change Signature of a constructor needs.
+
+
+Suggested order
+---------------
+
+By what each needs, not by what is cheap.
+  1. T2 with F4, in Rename: it is wrong in a template's body today.
+  2. Safe Delete.
+  3. T3, the template as itself, in the type checker; then F1 and F2 with Introduce Variable, in and out of
+     templates from its first day.
+  4. Change Signature with F5, T4 and T5.
+  5. Down the phases, T6 looked at with the user before Convert macro.
+WindowLib has no table whose cells are edited (CGridContainer lays components out, CListContainer and
+CTreeContainer list them): Change Signature's parameters need one, which is a WindowLib piece of its own.
