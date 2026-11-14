@@ -33,6 +33,7 @@ void CIDEEdit::Init(CIDEContent* pcContent)
 	mpcContent = pcContent;
 	mcUndoLog.Init();
 	mbLogUndoing = false;
+	mcAcrossFiles.Init(this);
 	PostInit();
 }
 
@@ -46,6 +47,7 @@ void CIDEEdit::Class(void)
 	U_Pointer(mpcContent);
 	U_Unknown(CUndoLog, mcUndoLog);
 	U_Bool(mbLogUndoing);
+	U_Unknown(CRevealingUndo, mcAcrossFiles);
 	M_Pointer(mpEditMenu);
 	M_Pointer(mpEditCommands);
 }
@@ -59,6 +61,7 @@ void CIDEEdit::Class(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDEEdit::Free(void)
 {
+	mcAcrossFiles.Kill();
 	mcUndoLog.Kill();
 }
 
@@ -177,25 +180,188 @@ void CIDEEdit::EditorUndoChanged(CTextArea* pcEditor, STextUndoChange* psUndo)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Undoes the newest edit, or group of edits, of any open file.  The file
-// is shown.  False if there is nothing to undo.
+// Undoes the newest edit, or group of edits, of any open file, once it's
+// shown (see PressAcrossFiles).  False if there is nothing to undo.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEEdit::UndoAcrossFiles(void)
 {
-	return UndoLogGroup(mcUndoLog.FindUndoGroup(), true);
+	return PressAcrossFiles(false);
 }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Redoes the edit, or group of edits, undone last.  False if there is
-// nothing to redo.
+// Redoes the edit, or group of edits, undone last, once it's shown.
+// False if there is nothing to redo.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEEdit::RedoAcrossFiles(void)
 {
-	return RedoLogGroup(mcUndoLog.FindRedoGroup(), true);
+	return PressAcrossFiles(true);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Undo or Redo Across Files, through the revealing undo: an edit in a file
+// that isn't active, or that its editor doesn't show, is shown first, the
+// status line saying so with the command's keys (or name, as it has none
+// by default).
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEEdit::PressAcrossFiles(bool bRedo)
+{
+	Ptr<CCommand>	pCommand;
+	CChars			szKeys;
+	CChars			szMessage;
+	bool			bResult;
+
+	pCommand = mpcContent->GetCommands()->Find(bRedo ? "Edit.RedoAcrossFiles" : "Edit.UndoAcrossFiles");
+	szKeys.Init();
+	if (pCommand.IsNotNull() && !pCommand->AppendKeysText(&szKeys, mpcContent->GetWindow()->GetComponentInput()))
+	{
+		szKeys.Append(pCommand->GetCaption());
+	}
+	szMessage.Init();
+	bResult = mcAcrossFiles.Press(bRedo, szKeys.Text(), &szMessage);
+	if (!szMessage.Empty())
+	{
+		mpcContent->ShowStatus(szMessage.Text());
+	}
+	szMessage.Kill();
+	szKeys.Kill();
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The open file the next undo (or redo) across files would show: the one
+// it would undo last, as UndoLogGroup and RedoLogGroup go.  NULL if
+// there's nothing to undo, or none of its files is open.
+//
+//////////////////////////////////////////////////////////////////////////
+Ptr<CIDEEditorTab> CIDEEdit::FindGroupTab(bool bRedo)
+{
+	size				uiGroup;
+	size				i;
+	size				uiStep;
+	SUndoLogStep*		psStep;
+	Ptr<CIDEEditorTab>	pTab;
+	Ptr<CIDEEditorTab>	pFound;
+
+	uiGroup = bRedo ? mcUndoLog.FindRedoGroup() : mcUndoLog.FindUndoGroup();
+	if (uiGroup == MAX_SIZE)
+	{
+		return NULL;
+	}
+	for (i = 0; i < mcUndoLog.NumSteps(); i++)
+	{
+		uiStep = bRedo ? i : (mcUndoLog.NumSteps() - 1 - i);
+		psStep = mcUndoLog.Get(uiStep);
+		if ((psStep->uiGroup == uiGroup) && !psStep->bRename && (mcUndoLog.IsUndone(uiStep) == bRedo))
+		{
+			pTab = mpcContent->GetDocuments()->FindTab(psStep->szDocument.Text());
+			if (pTab.IsNotNull())
+			{
+				pFound = pTab;
+			}
+		}
+	}
+	return pFound;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// In view if its file is the one active and its editor shows the edit;
+// with no open file to show (a group of renames), as it is.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEEdit::IsUndoShown(bool bRedo)
+{
+	Ptr<CIDEEditorTab>	pTab;
+
+	pTab = FindGroupTab(bRedo);
+	if (pTab.IsNull())
+	{
+		return true;
+	}
+	return (pTab == mpcContent->GetDocuments()->GetActiveTab()) && pTab->GetEditor()->IsUndoShown(bRedo);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Its file is opened, and its editor scrolled to the edit.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEEdit::ShowUndo(bool bRedo)
+{
+	Ptr<CIDEEditorTab>	pTab;
+
+	pTab = FindGroupTab(bRedo);
+	if (pTab.IsNull())
+	{
+		return false;
+	}
+	mpcContent->GetDocuments()->OpenFile(pTab->GetFileName(), pTab->GetProject());
+	pTab->GetEditor()->ShowUndo(bRedo);
+	return true;
+}
+
+
+bool CIDEEdit::DoUndo(bool bRedo)
+{
+	return bRedo ? RedoLogGroup(mcUndoLog.FindRedoGroup(), true) : UndoLogGroup(mcUndoLog.FindUndoGroup(), true);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// "in CalculatorParser.cpp at line 36".
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEEdit::AppendUndoWhere(bool bRedo, CChars* pszDest)
+{
+	Ptr<CIDEEditorTab>	pTab;
+	char*				szFile;
+	char*				szLeaf;
+
+	pTab = FindGroupTab(bRedo);
+	if (pTab.IsNull())
+	{
+		return;
+	}
+	szFile = pTab->GetFileName();
+	szLeaf = szFile;
+	for (; *szFile != '\0'; szFile++)
+	{
+		if ((*szFile == '/') || (*szFile == '\\'))
+		{
+			szLeaf = szFile + 1;
+		}
+	}
+	pszDest->Append("in ");
+	pszDest->Append(szLeaf);
+	pszDest->Append(' ');
+	pTab->GetEditor()->AppendUndoWhere(bRedo, pszDest);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// An editor's undo showed an edit out of view: the status line says to
+// press again.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEEdit::EditorUndoMessage(CTextArea* pcEditor, char* szMessage)
+{
+	if (!StrEmpty(szMessage))
+	{
+		mpcContent->ShowStatus(szMessage);
+	}
 }
 
 

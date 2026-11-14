@@ -26,9 +26,11 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/MenuContainer.h"
 #include "WindowLib/TextArea.h"
 #include "WindowLib/EditCommands.h"
+#include "WindowLib/RevealingUndo.h"
 
 
 class CIDEContent;
+class CIDEEditorTab;
 
 
 //Edit's Undo, Redo, Cut, Copy, Paste and Select All: of the text the keys last went to (a document, the Build output,
@@ -50,7 +52,11 @@ public:
 //The Edit menu, as IntelliJ's: Undo, Redo, Cut, Copy, Paste and Select All (CIDEEditCommands), and Undo and Redo
 //Across Files, which go back and forward through the edits of every open file in the order they were made
 //(the undo log, fed by the editors' undo events).
-class CIDEEdit : public CObject
+//
+//Neither undoes what can't be seen (CRevealingUndo): an editor's undo of an edit scrolled out of view, or an undo
+//across files of an edit in a file that isn't the one active or isn't scrolled to it, first shows the edit, the status
+//line saying to press again, and undoes it at the next press.
+class CIDEEdit : public CObject, public CRevealingUndoHost
 {
 CONSTRUCTABLE(CIDEEdit);
 DESTRUCTABLE(CIDEEdit);
@@ -60,6 +66,7 @@ protected:
 	Ptr<CIDEEditCommands>	mpEditCommands;
 	CUndoLog				mcUndoLog;  //Every open file's edits in the order they were made, by file name.
 	bool					mbLogUndoing;  //The undo log is undoing or redoing: the editors' undo events are its own.
+	CRevealingUndo			mcAcrossFiles;  //Undo and Redo Across Files, shown before they're done.
 
 public:
 	void	Init(CIDEContent* pcContent);
@@ -72,6 +79,7 @@ public:
 	Ptr<CMenuContainer>	CreateEditMenu(void);
 	Ptr<CMenuContainer>	GetEditMenu(void);
 	void				EditorUndoChanged(CTextArea* pcEditor, STextUndoChange* psUndo);
+	void				EditorUndoMessage(CTextArea* pcEditor, char* szMessage);
 	void				FileClosed(char* szFileName);
 	void				FileRenamed(char* szOldFileName, char* szNewFileName);
 	void				LogFileRenamed(char* szOldFileName, char* szNewFileName);
@@ -87,6 +95,12 @@ protected:
 	void				ShowRenameNotMoved(char* szFrom, char* szTo);
 	bool				CanUndoAcrossFiles(void);
 	bool				CanRedoAcrossFiles(void);
+	bool				PressAcrossFiles(bool bRedo);
+	Ptr<CIDEEditorTab>	FindGroupTab(bool bRedo);
+	bool				IsUndoShown(bool bRedo) override;
+	bool				ShowUndo(bool bRedo) override;
+	bool				DoUndo(bool bRedo) override;
+	void				AppendUndoWhere(bool bRedo, CChars* pszDest) override;
 };
 
 

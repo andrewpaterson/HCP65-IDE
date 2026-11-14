@@ -537,20 +537,23 @@ CHECKS = [
 		[r'Rename stopped', r'more file']),
 	('rename-file-undo', dict(MakeRenameFileCopy(), **{
 		#Undo Across Files undoes all of Rename File (step 4): the files renamed back on the disk, in the projects and in
-		#Engine.h's tab, the #includes as they were, saved.
+		#Engine.h's tab, the #includes as they were, saved.  The first press shows a file it changed; the second undoes.
 		'WAIT_INDEX': '1', 'OPEN': 'Engine.h',
-		'DEBUG': 'edit:renamefilerelated:CPPEngine.h,edit:undoall,printprojectfiles,printtabs,printdiskfile:Sub/User.cpp,printdiskfile:Engine.cpp,'
+		'DEBUG': 'edit:renamefilerelated:CPPEngine.h,edit:undoall,edit:undoall,printprojectfiles,printtabs,printdiskfile:Sub/User.cpp,printdiskfile:Engine.cpp,'
 		         'printdiskfile:Tool/Tool.vcxproj'}),
 		[r'^Status: Renamed Engine\.h to CPPEngine\.h and 2 more files: 7 #includes in 7 files, 2 projects\.$',
+		 r'^Status: Undo Across Files again to undo the change in Commented\.cpp at line 1\.$',
 		 r'^Project files: Commented\.cpp Engine\.cpp Engine_Linux\.cpp Other/OtherUser\.cpp Sub/Angle\.cpp Sub/Indented\.cpp Sub/User\.cpp '
 		 r'Engine\.h EngineCache\.h Other/Engine\.h Tool/Tool\.cpp$',
 		 r'^Tabs: Engine\.h ', r'^#include "\.\./Engine\.h"', r'^#include "Engine\.h"', r'<ClInclude Include="\.\.\\Engine\.h" />'],
 		[r"Couldn't rename", r'CPPEngine\.h"', r'Disk file .*:\n\(none\)']),
 	('rename-file-redo', dict(MakeRenameFileCopy(), **{
-		#Redo Across Files after the undo renames them all again.
+		#Redo Across Files after the undo renames them all again (each pressed twice, the first showing a file changed if
+		#it isn't the one active).
 		'WAIT_INDEX': '1', 'OPEN': 'Engine.h',
-		'DEBUG': 'edit:renamefilerelated:CPPEngine.h,edit:undoall,edit:redoall,printprojectfiles,printtabs,printdiskfile:Sub/User.cpp,printdiskfile:CPPEngine.cpp'}),
-		[r'^Project files: Commented\.cpp CPPEngine\.cpp CPPEngine_Linux\.cpp .* CPPEngine\.h EngineCache\.h',
+		'DEBUG': 'edit:renamefilerelated:CPPEngine.h,edit:undoall,edit:undoall,printprojectfiles,edit:redoall,edit:redoall,printprojectfiles,printtabs,'
+		         'printdiskfile:Sub/User.cpp,printdiskfile:CPPEngine.cpp'}),
+		[r'^Project files: Commented\.cpp Engine\.cpp ', r'^Project files: Commented\.cpp CPPEngine\.cpp CPPEngine_Linux\.cpp .* CPPEngine\.h EngineCache\.h',
 		 r'^Tabs: CPPEngine\.h ', r'^#include "\.\./CPPEngine\.h"', r'^#include "CPPEngine\.h"'],
 		[r"Couldn't rename", r'Disk file .*:\n\(none\)']),
 	('rename-file-undo-in-file', dict(MakeRenameFileCopy(), **{
@@ -778,13 +781,25 @@ CHECKS = [
 	('nothing-at-caret', {
 		'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'CARET': '1:1', 'EDIT': 'usages,renamable'},
 		[r'^Status: No usages found at the caret\.$', r'^Rename: nothing at the caret$'], []),
+	('undo-out-of-view', {
+		#Ctrl+Z in an editor undoes an edit in view at once; one scrolled out of view is shown by the first press, which
+		#says so, and undone by the second.
+		'OPEN': 'CalculatorParser.cpp', 'CARET': '36:2', 'TYPE': 'X',
+		'DEBUG': 'wait:300,edit:caret:400:1,wait:300,edit:keys:Control+Z,wait:300,edit:print,edit:keys:Control+Z,wait:300,edit:print'},
+		[r'^Status: Ctrl\+Z again to undo the change at line 36\.$', r'CalculatorParser\.cpp \* \(focus\) line 400: ',
+		 r'CalculatorParser\.cpp \(focus\) line 36: \[\tmpcCalculator'], []),
 	('undo-across-files', {
+		#Undo Across Files undoes an edit in the active file, in view, at once; one in another file is shown by the first
+		#press, which says so, and undone by the second.  Redo the same.
 		'OPEN': 'CalculatorParser.cpp', 'CARET': '36:2',
-		'EDIT': 'type:X,open:CalculatorSymbols.cpp,type:Y,undoall,print,undoall,print,redoall,redoall,print'},
+		'EDIT': 'type:X,open:CalculatorSymbols.cpp,type:Y,undoall,print,undoall,undoall,print,redoall,redoall,redoall,print'},
 		[r'^Edit menu: .*Undo Across Files Redo Across Files Find in Files\.\.\.$',
 		 r'CalculatorParser\.cpp \* line 36: \[\tXmpcCalculator',
 		 r'CalculatorSymbols\.cpp \(focus\) line 1: \[#include "Logger\.h"\]',
+		 r'^Status: Undo Across Files again to undo the change in CalculatorParser\.cpp at line 36\.$',
 		 r'CalculatorParser\.cpp \(focus\) line 36: \[\tmpcCalculator',
+		 r'^Status: Redo Across Files again to redo the change in CalculatorSymbols\.cpp at line 1\.$',
+		 r'CalculatorParser\.cpp \* line 36: \[\tXmpcCalculator',
 		 r'CalculatorSymbols\.cpp \* \(focus\) line 1: \[Y#include'], []),
 	('edit-menu-focus', {
 		'OPEN': 'CalculatorParser.cpp', 'EDIT': 'focus:build,print,focus:claude,print'},
