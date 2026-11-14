@@ -524,7 +524,7 @@ CHECKS = [
 		#EngineCache.h's, and not Other/OtherUser.cpp's, which finds Other/Engine.h.
 		'SOLUTION': RENAME_FILE, 'WAIT_INDEX': '1', 'OPEN': 'Engine.h', 'EDIT': 'printincludes'},
 		[r'^Includes of Engine\.h: 7$', r'^  Commented\.cpp 6:11 8$', r'^  Engine\.cpp 1:11 8$', r'^  Engine_Linux\.cpp 2:11 8$',
-		 r'^  Sub/Angle\.cpp 1:11 8$', r'^  Sub/Indented\.cpp 1:16 8$', r'^  Sub/User\.cpp 1:14 8$', r'^  Tool/Tool\.cpp 1:14 8$'],
+		 r'^  Sub[/\\]Angle\.cpp 1:11 8$', r'^  Sub[/\\]Indented\.cpp 1:16 8$', r'^  Sub[/\\]User\.cpp 1:14 8$', r'^  Tool[/\\]Tool\.cpp 1:14 8$'],
 		[r'OtherUser', r'Commented\.cpp [13]:']),
 	('rename-file-related', dict(MakeRenameFileCopy(), **{
 		#Rename File (step 3) on Engine.h with its related files, Engine.cpp and Engine_Linux.cpp (not EngineCache.h): the
@@ -533,9 +533,9 @@ CHECKS = [
 		'DEBUG': 'edit:renamefilerelated:CPPEngine.h,edit:printincludes,printprojectfiles,printtabs,printdiskfile:Sub/User.cpp,'
 		         'printdiskfile:Tool/Tool.vcxproj,printdiskfile:CPPEngine_Linux.cpp,printdiskfile:Commented.cpp'}),
 		[r'^Status: Renamed Engine\.h to CPPEngine\.h and 2 more files: 7 #includes in 7 files, 2 projects\.$',
-		 r'^Includes of CPPEngine\.h: 7$', r'^  Sub/Indented\.cpp 1:16 11$',
-		 r'^Project files: Commented\.cpp CPPEngine\.cpp CPPEngine_Linux\.cpp Other/OtherUser\.cpp Sub/Angle\.cpp Sub/Indented\.cpp Sub/User\.cpp '
-		 r'CPPEngine\.h EngineCache\.h Other/Engine\.h Tool/Tool\.cpp$',
+		 r'^Includes of CPPEngine\.h: 7$', r'^  Sub[/\\]Indented\.cpp 1:16 11$',
+		 r'^Project files: Commented\.cpp CPPEngine\.cpp CPPEngine_Linux\.cpp Other[/\\]OtherUser\.cpp Sub[/\\]Angle\.cpp Sub[/\\]Indented\.cpp Sub[/\\]User\.cpp '
+		 r'CPPEngine\.h EngineCache\.h Other[/\\]Engine\.h Tool[/\\]Tool\.cpp$',
 		 r'^Tabs: >CPPEngine\.h ', r'^#include "\.\./CPPEngine\.h"', r'<ClInclude Include="\.\.\\CPPEngine\.h" />', r'^#include "CPPEngine\.h"',
 		 r'^//#include "Engine\.h"$'],
 		[r'Rename stopped', r"Can't rename", r'Project files:.* Engine\.h', r'Disk file .*:\n\(none\)']),
@@ -553,8 +553,8 @@ CHECKS = [
 		         'printdiskfile:Tool/Tool.vcxproj'}),
 		[r'^Status: Renamed Engine\.h to CPPEngine\.h and 2 more files: 7 #includes in 7 files, 2 projects\.$',
 		 r'^Status: Ctrl\+Z again to undo the change in Commented\.cpp at line 1\.$',
-		 r'^Project files: Commented\.cpp Engine\.cpp Engine_Linux\.cpp Other/OtherUser\.cpp Sub/Angle\.cpp Sub/Indented\.cpp Sub/User\.cpp '
-		 r'Engine\.h EngineCache\.h Other/Engine\.h Tool/Tool\.cpp$',
+		 r'^Project files: Commented\.cpp Engine\.cpp Engine_Linux\.cpp Other[/\\]OtherUser\.cpp Sub[/\\]Angle\.cpp Sub[/\\]Indented\.cpp Sub[/\\]User\.cpp '
+		 r'Engine\.h EngineCache\.h Other[/\\]Engine\.h Tool[/\\]Tool\.cpp$',
 		 r'^Tabs: Engine\.h ', r'^#include "\.\./Engine\.h"', r'^#include "Engine\.h"', r'<ClInclude Include="\.\.\\Engine\.h" />'],
 		[r"Couldn't rename", r'CPPEngine\.h"', r'Disk file .*:\n\(none\)']),
 	('rename-file-redo', dict(MakeRenameFileCopy(), **{
@@ -599,7 +599,7 @@ CHECKS = [
 		'WAIT_INDEX': '1', 'OPEN': 'Sub/User.cpp', 'SETTINGS': MakeSettingsFile(), 'DIALOG_KEYS': 'type:Customer', 'DIALOG_ANSWER': 'OK',
 		'DEBUG': 'edit:explorer,edit:focus:explorer,command:Refactor.Rename,answered:1,printprojectfiles'}),
 		[r'^Dialog \[Rename File\] answered OK$', r'^Status: Renamed User\.cpp to Customer\.cpp: no file refers to it, 1 project\.$',
-		 r'^Project files: .* Sub/Customer\.cpp '],
+		 r'^Project files: .* Sub[/\\]Customer\.cpp '],
 		[r'Rename stopped', r'Sub/User\.cpp']),
 	('rename-file-dialog-taken', dict(MakeRenameFileCopy(), **{
 		#A name that is taken, typed in the dialog: nothing is renamed, and the status line says why.
@@ -613,7 +613,7 @@ CHECKS = [
 		'WAIT_INDEX': '1', 'OPEN': 'Engine.h', 'CARET': '5:8',
 		'DEBUG': 'edit:renamesearch:ctf,edit:rename:CMotor,printprojectfiles,printtabs,printdiskfile:Motor.h,printdiskfile:Motor_Linux.cpp,printdiskfile:Tool/Tool.cpp'}),
 		[r'^Status: Renamed CEngine to CMotor: .*  Renamed Engine\.h to Motor\.h and 2 more files: 7 #includes, ',
-		 r'^Project files: Commented\.cpp Motor\.cpp Motor_Linux\.cpp Other/OtherUser\.cpp .* Motor\.h EngineCache\.h Other/Engine\.h Tool/Tool\.cpp$',
+		 r'^Project files: Commented\.cpp Motor\.cpp Motor_Linux\.cpp Other[/\\]OtherUser\.cpp .* Motor\.h EngineCache\.h Other[/\\]Engine\.h Tool[/\\]Tool\.cpp$',
 		 r'^Tabs: >Motor\.h ', r'^class CMotor$', r'^void CMotor::InitPlatform\(void\)$', r'^#include "\.\./Motor\.h"$', r'^\tCMotor\tcEngine;$'],
 		[r'Rename stopped', r"Can't rename", r'Disk file .*:\n\(none\)']),
 	('rename-class-files-undo', dict(MakeRenameFileCopy(), **{

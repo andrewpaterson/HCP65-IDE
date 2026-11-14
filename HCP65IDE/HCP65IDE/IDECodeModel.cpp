@@ -2797,6 +2797,8 @@ bool CIDECodeModel::FindIncludeFile(size uiProject, const char* szIncluder, cons
 		cFileUtil.AppendToPath(&szPath, szName);
 		if (cFileUtil.Exists(szPath.Text()))
 		{
+			//The name's separators are the #include's; a path with both kinds isn't collapsed ("Sub/../Engine.h" on Windows).
+			cFileUtil.FixSeparators(&szPath);
 			cFileUtil.FullPath(&szPath);
 			pszDest->Set(szPath);
 			bFound = true;
