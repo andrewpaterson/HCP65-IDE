@@ -1321,7 +1321,8 @@ void CIDERename::AddCommands(Ptr<CCommandSet> pCommands)
 //////////////////////////////////////////////////////////////////////////
 //
 // The editors' context menu's Rename, and Refactor's Rename File, Safe
-// Delete and Extract Method (not done yet, so always disabled).
+// Delete, Introduce Variable and Extract Method (not done yet, so always
+// disabled).
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDERename::AddEditorItems(Ptr<CMenuContainer> pMenu)
@@ -1332,6 +1333,7 @@ void CIDERename::AddEditorItems(Ptr<CMenuContainer> pMenu)
 	pRefactor = OMalloc<CMenuContainer>(mpcContent->GetWindow(), mpcContent->GetTheme());
 	pRefactor->AddItem(mpcContent->GetCommands()->Find("Refactor.RenameFile"));
 	mpcContent->GetSafeDelete()->AddEditorItems(pRefactor);
+	mpcContent->GetIntroduceVariable()->AddEditorItems(pRefactor);
 	pRefactor->AddItem("Extract Method...")->SetEnabled(false);
 	pMenu->AddItem("Refactor", NULL, pRefactor);
 }

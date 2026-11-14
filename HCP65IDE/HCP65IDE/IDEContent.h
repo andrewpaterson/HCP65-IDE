@@ -65,6 +65,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDERename.h"
 #include "IDEFileRename.h"
 #include "IDESafeDelete.h"
+#include "IDEIntroduceVariable.h"
 #include "IDEUsages.h"
 #include "IDEFindInFiles.h"
 #include "IDEOccurrences.h"
@@ -168,6 +169,7 @@ protected:
 	Ptr<CIDERename>				mpRename;			//Rename.
 	Ptr<CIDEFileRename>			mpFileRename;		//Rename File.
 	Ptr<CIDESafeDelete>			mpSafeDelete;		//Safe Delete.
+	Ptr<CIDEIntroduceVariable>	mpIntroduceVariable;	//Introduce Variable.
 	Ptr<CIDEUsages>				mpUsages;			//Find Usages.
 	Ptr<CIDEFindInFiles>		mpFindInFiles;		//Find in Files and the Find tool window.
 	Ptr<CIDEOccurrences>		mpOccurrences;		//Next and Previous Occurrence through Find Usages or Build.
@@ -274,6 +276,7 @@ public:
 	Ptr<CIDERename>			GetRename(void);
 	Ptr<CIDEFileRename>		GetFileRename(void);
 	Ptr<CIDESafeDelete>		GetSafeDelete(void);
+	Ptr<CIDEIntroduceVariable>	GetIntroduceVariable(void);
 	Ptr<CIDECloseGuard>		GetCloseGuard(void);
 
 protected:

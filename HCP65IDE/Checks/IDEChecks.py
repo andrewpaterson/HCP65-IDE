@@ -238,6 +238,16 @@ def MakeSafeDeleteCopy():
 	return {'SOLUTION': os.path.join(szFolder, 'SafeDelete.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
 
 
+def MakeIntroduceVariableCopy():
+	#A copy of Input/IntroduceVariable (CCalc, whose Total has expressions written more than once, and CStack<M>), to
+	#introduce variables in.
+	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
+	atexit.register(shutil.rmtree, szRoot, True)
+	szFolder = os.path.join(szRoot, 'IntroduceVariable')
+	shutil.copytree(os.path.join(HERE, 'Input', 'IntroduceVariable'), szFolder)
+	return {'SOLUTION': os.path.join(szFolder, 'IntroduceVariable.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
+
+
 def MakeKeymapFile(szText=None):
 	#Where a scripted run keeps its keys, with szText in it if it's given.
 	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
@@ -856,6 +866,100 @@ CHECKS = [
 		[r'^Status: Deleted CLonely: 3 declarations and definitions in 2 files, with 3 things declared in it\.$', r'^Status: Deleted CShape::miSpare: 1 declaration in 1 file\.$',
 		 r'^37\|//Nothing uses it but itself\.$', r'^38\|class CLonely$', r'^54 lines$', r'^74\|void CLonely::Init\(void\)$', r'^84\|int CLonely::Get\(void\)$', r'^108 lines$'],
 		[r'Safe Delete stopped']),
+	('introduce-variable-all', dict(MakeIntroduceVariableCopy(), **{
+		#Introduce Variable (Refactorings.txt, 5) for an expression written twice in a function: declared with the
+		#function's declarations, its name in their column, assigned before the first statement that uses it, and both
+		#occurrences replaced.  The caret is left on the assignment.
+		'WAIT_INDEX': '1', 'OPEN': 'Calc.cpp',
+		'DEBUG': 'edit:renamesearch:---s,edit:selecttext:66:29-66:40,edit:introduce:iDouble,edit:print,printdisklines:Calc.cpp'}),
+		[r'^Introduce Variable: \[miScale \* 2\] is \[int\], named \[iScale\], 2 occurrences$', r'^Status: Introduced int iDouble = miScale \* 2: 2 occurrences replaced\.$',
+		 r'Calc\.cpp \(focus\) line 67: \[\tiDouble = miScale \* 2;\]$',
+		 r'^62\|\tint\t\tiResult;$', r'^63\|\tCCalc\*\tpcOther;$', r'^64\|\tint\t\tiDouble;$', r'^65\|$', r'^66\|\tpcOther = this;$', r'^67\|\tiDouble = miScale \* 2;$',
+		 r'^68\|\tiResult = Scaled\(iExtra\) \+ iDouble;$', r'^71\|\t\tiResult \+= iDouble;$', r'^102 lines$'],
+		[r"can't"]),
+	('introduce-variable-one', dict(MakeIntroduceVariableCopy(), **{
+		#The selected occurrence alone: the other is left as it is written.
+		'WAIT_INDEX': '1', 'OPEN': 'Calc.cpp',
+		'DEBUG': 'edit:renamesearch:---s,edit:selecttext:69:14-69:25,edit:introduceone:iDouble,printdisklines:Calc.cpp'}),
+		[r'^Status: Introduced int iDouble = miScale \* 2: 1 occurrence replaced\.$',
+		 r'^64\|\tint\t\tiDouble;$', r'^67\|\tiResult = Scaled\(iExtra\) \+ miScale \* 2;$', r'^70\|\t\tiDouble = miScale \* 2;$', r'^71\|\t\tiResult \+= iDouble;$'],
+		[r"can't"]),
+	('introduce-variable-declared-type', dict(MakeIntroduceVariableCopy(), **{
+		#A call's type is what its function's declaration says it returns (uint32, not unsigned int), and its name is
+		#from the function's.  The call on another object (pcOther->GetCount()) is another expression.  Used in an if's
+		#condition and after it, it is assigned before the if.
+		'WAIT_INDEX': '1', 'OPEN': 'Calc.cpp',
+		'DEBUG': 'edit:renamesearch:---s,edit:selecttext:67:6-67:16,edit:introduce:uiCount,printdisklines:Calc.cpp'}),
+		[r'^Introduce Variable: \[GetCount\(\)\] is \[uint32\], named \[uiCount\], 2 occurrences$', r'^Status: Introduced uint32 uiCount = GetCount\(\): 2 occurrences replaced\.$',
+		 r'^64\|\tuint32\tuiCount;$', r'^67\|\tiResult = Scaled\(iExtra\) \+ miScale \* 2;$', r'^68\|\tuiCount = GetCount\(\);$', r'^69\|\tif \(uiCount > 4\)$',
+		 r'^72\|\t\tiResult \+= pcOther->GetCount\(\);$', r'^76\|\treturn iResult \+ uiCount;$'],
+		[r"can't"]),
+	('introduce-variable-statement', dict(MakeIntroduceVariableCopy(), **{
+		#A statement that is only the expression becomes the assignment.
+		'WAIT_INDEX': '1', 'OPEN': 'Calc.cpp',
+		'DEBUG': 'edit:renamesearch:---s,edit:selecttext:72:2-72:11,edit:introduce:szName,printdisklines:Calc.cpp'}),
+		[r'^Introduce Variable: \[GetName\(\)\] is \[char\*\], named \[szName\], 1 occurrence$', r'^Status: Introduced char\* szName = GetName\(\): the statement is its assignment\.$',
+		 r'^64\|\tchar\*\tszName;$', r'^73\|\tszName = GetName\(\);$', r'^74\|\tInit\(\);$', r'^101 lines$'],
+		[r"can't"]),
+	('introduce-variable-no-declarations', dict(MakeIntroduceVariableCopy(), **{
+		#A function with no declarations gets them: the variable's, and a blank line.  Its type is the compiler's where
+		#no declaration says it (uint32 + int).
+		'WAIT_INDEX': '1', 'OPEN': 'Calc.cpp',
+		'DEBUG': 'edit:renamesearch:---s,edit:selecttext:84:13-84:27,edit:introduce:uiNext,printdisklines:Calc.cpp'}),
+		[r'^Introduce Variable: \[GetCount\(\) \+ 1\] is \[unsigned int\], named \[uiCount\], 1 occurrence$',
+		 r'^82\|void CCalc::Reset\(void\)$', r'^83\|\{$', r'^84\|\tunsigned int\tuiNext;$', r'^85\|$', r'^86\|\tuiNext = GetCount\(\) \+ 1;$', r'^87\|\tmuiCount = uiNext;$', r'^88\|\}$'],
+		[r"can't"]),
+	('introduce-variable-realign', dict(MakeIntroduceVariableCopy(), **{
+		#A type longer than the declarations' column allows moves their names over to the new one's.
+		'WAIT_INDEX': '1', 'OPEN': 'Calc.cpp',
+		'DEBUG': 'edit:renamesearch:---s,edit:selecttext:98:17-98:27,edit:introduce:uiBig,printdisklines:Calc.cpp'}),
+		[r'^Introduce Variable: \[BigValue\(\)\] is \[unsigned long long\], named \[uiBigValue\], 1 occurrence$',
+		 r'^94\|\tint\t\t\t\t\tiResult;$', r'^95\|\tchar\*\t\t\t\tsz;$', r'^96\|\tunsigned long long\tuiBig;$', r'^97\|$', r'^98\|\tsz = GetName\(\);$', r'^99\|\tuiBig = BigValue\(\);$',
+		 r'^100\|\tiResult = \(int\)uiBig \+ \(sz \? 1 : 0\);$'],
+		[r"can't"]),
+	('introduce-variable-template', dict(MakeIntroduceVariableCopy(), **{
+		#In a template (Refactorings.txt, T3): the type is in the template's own words, M* for Top() whatever CStack is
+		#instantiated with; what only the template's argument decides (Top()->miScale) is refused.  The header is parsed
+		#in the unit that includes it.
+		'WAIT_INDEX': '1', 'OPEN': 'Calc.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:selecttext:47:26-47:40,edit:introducible,edit:selecttext:47:26-47:31,edit:introduce:pTop,printdisklines:Calc.h'}),
+		[r"^Introduce Variable: can't: its type depends on the template's arguments$",
+		 r'^Introduce Variable: \[Top\(\)\] is \[M\*\], named \[pTop\], 1 occurrence$', r'^Status: Introduced M\* pTop = Top\(\): 1 occurrence replaced\.$',
+		 r'^45\|\tint\tiResult;$', r'^46\|\tM\*\tpTop;$', r'^47\|$', r'^48\|\tpTop = Top\(\);$', r'^49\|\tiResult = miDepth \* 2 \+ pTop->miScale;$'],
+		[r'CCalc\*']),
+	('introduce-variable-refused', dict(MakeIntroduceVariableCopy(), **{
+		#What can't be: an expression with no value; a selection that isn't one expression; no selection.  A name the
+		#function uses is refused.  A variable's own name is an expression, and the places it is assigned aren't
+		#occurrences of its value.
+		'WAIT_INDEX': '1', 'OPEN': 'Calc.cpp',
+		'DEBUG': 'edit:introducible,edit:selecttext:73:2-73:8,edit:introducible,edit:selecttext:74:9-74:18,edit:introducible,edit:selecttext:74:9-74:16,edit:introducible,'
+		         'edit:selecttext:66:29-66:40,edit:introduce:iExtra,edit:introduce:2bad,printdisklines:Calc.cpp'}),
+		[r'^Introduce Variable: nothing is selected$', r"^Introduce Variable: can't: it has no value \(its type is void\)$", r"^Introduce Variable: can't: the selection isn't an expression$",
+		 r'^Introduce Variable: \[iResult\] is \[int\], named \[iResult2\], 1 occurrence$',
+		 r'^Status: Introduce Variable: The function uses that name already\.$', r"^Status: Introduce Variable: It isn't a name\.$", r'^100 lines$'],
+		[r'^Status: Introduced']),
+	('introduce-variable-undo', dict(MakeIntroduceVariableCopy(), **{
+		#One undo takes all of it back: the declaration, the assignment and the occurrences.
+		'WAIT_INDEX': '1', 'OPEN': 'Calc.cpp',
+		'DEBUG': 'edit:selecttext:66:29-66:40,edit:introduce:iDouble,edit:undo,edit:renamesearch:---s,edit:selecttext:72:2-72:11,edit:introduce:szName,printdisklines:Calc.cpp'}),
+		[r'^Status: Introduced int iDouble', r'^62\|\tint\t\tiResult;$', r'^63\|\tCCalc\*\tpcOther;$', r'^64\|\tchar\*\tszName;$', r'^65\|$',
+		 r'^67\|\tiResult = Scaled\(iExtra\) \+ miScale \* 2;$', r'^101 lines$'],
+		[r'\|.*iDouble']),
+	('introduce-variable-dialog', dict(MakeIntroduceVariableCopy(), **{
+		#The dialog: the suggested name typed over, every occurrence replaced as its box says to start with.
+		'WAIT_INDEX': '1', 'OPEN': 'Calc.cpp', 'SETTINGS': MakeSettingsFile(), 'DIALOG_KEYS': 'type:iTwice', 'DIALOG_ANSWER': 'OK',
+		'DEBUG': 'edit:selecttext:66:29-66:40,introducevariable,answered:1,printstatus'}),
+		[r'^Dialog \[Introduce Variable\] answered OK$', r'^Status: Introduced int iTwice = miScale \* 2: 2 occurrences replaced\.$'],
+		[r"can't"]),
+	('introduce-variable-choose', dict(MakeIntroduceVariableCopy(), **{
+		#With nothing selected the expressions the caret is in are offered, the innermost first, in a popup under it;
+		#the one chosen is selected and introduced.
+		'WAIT_INDEX': '1', 'OPEN': 'Calc.cpp', 'CARET': '66:31', 'SETTINGS': MakeSettingsFile(),
+		'DEBUG': 'edit:introducecandidates,introducevariable,edit:printpopup,edit:introducechoose:1,edit:printselection,edit:introducible'}),
+		[r'^Expressions: miScale \| miScale \* 2 \| Scaled\(iExtra\) \+ miScale \* 2 \| iResult = Scaled\(iExtra\) \+ miScale \* 2$',
+		 r'^Popup: Expressions \| miScale \| miScale \* 2 \| Scaled\(iExtra\) \+ miScale \* 2 \| iResult = Scaled\(iExtra\) \+ miScale \* 2$',
+		 r'^Selection: \[miScale \* 2\] on line 66', r'^Introduce Variable: \[miScale \* 2\] is \[int\], named \[iScale\], 2 occurrences$'],
+		[r"can't"]),
 	('rename-assembly-class', dict(MakeRenameAssemblyCopy(), **{
 		#A class renamed in hand written assembly's labels (_CEngine__Init, __0, __2), in parameter lists with its length
 		#(FPC7CEngine to FPC6CMotor), in generated layout constants (SIZEOF_CEngine, CEngine_miSpeed: in the assembly, the
@@ -1360,7 +1464,7 @@ CHECKS = [
 		 r'^Menu Debug: Start Debugging \[F5\], Start Without Debugging \[Ctrl\+F5\], Stop Debugging \[Shift\+F5\], Stop Running\(disabled\), Restart \[Ctrl\+Shift\+F5\], Break All \[Ctrl\+Pause/Break\], Attach to Emulator\.\.\., Step Into \[F11\], Step Over \[F10\], Step Out \[Shift\+F11\], Toggle Breakpoint \[F9\], ',
 		 r'^Menu Window: Reset Window Layout, Close All Documents$',
 		 r'^Menu Editor: Go to Source \[Ctrl\+B\], Find Usages \[Alt\+F7\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Rename\.\.\. \[Shift\+F6\], Refactor>, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\]$',
-		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Extract Method\.\.\.\(disabled\)$',
+		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Extract Method\.\.\.\(disabled\)$',
 		 r'^Menu Explorer: Set as Startup Solution, Set as Startup Project\(disabled\), Remove Solution, Rename\.\.\.(\(disabled\))?$',
 		 r'^Menu item \[View/Nope\] not found$'], []),
 	('menu-clicks', {

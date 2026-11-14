@@ -214,6 +214,9 @@ protected:
 	void				AddFileUsages(int32 iFile, SIDEUsageRow* pasRows, size uiCount, CIDEFileLines* pcLines);
 	void				AddUsageLine(int32 iParent, SIDEUsageRow* psRow, CIDEFileLines* pcLines);
 	void				OpenPopup(void);
+public:
+	void				OpenCaretPopup(Ptr<CMenuContainer> pMenu, size uiSelected);
+protected:
 	void				PopupUsageClicked(CMenuItem* pcItem);
 	void				ShowGrouping(uint8 uiGrouping);
 	void				AddPaneCommand(Ptr<CIDEResultsPane> pPane, const char* szName, const char* szCaption, EIDEToolIcon eIcon, void(CIDEUsages::*fToggle)(void), bool(CIDEUsages::*fIsOn)(void));

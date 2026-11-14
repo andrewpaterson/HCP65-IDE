@@ -39,7 +39,7 @@ static bool			gbIDEScriptRenameSaves = false;  //rename: saves what it edited (r
 static bool			gbIDEScriptClassFiles = false;  //rename: renames a type's files too (renamesearch's f), never from the settings.
 
 
-static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printfindpreview", "printfindtoolbar", "findtool:", "printstartup", "printworkspace", "rename", "safedelete", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printsettings", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printprojectfiles", "printdiskfile:", "printdisklines:", "printedits", "printspans", "configuration:", "waitindex" };
+static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printfindpreview", "printfindtoolbar", "findtool:", "printstartup", "printworkspace", "rename", "safedelete", "introducevariable", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printsettings", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printprojectfiles", "printdiskfile:", "printdisklines:", "printedits", "printspans", "configuration:", "waitindex" };
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -257,6 +257,11 @@ void CIDEScript::RunCommand(const char* szCommand)
 	{
 		//Safe Delete's dialogs for what is at the caret.
 		mpcContent->GetSafeDelete()->ShowSafeDelete();
+	}
+	else if (strcmp(szCommand, "introducevariable") == 0)
+	{
+		//Introduce Variable's dialog for the selection.
+		mpcContent->GetIntroduceVariable()->ShowIntroduce();
 	}
 	else if (strcmp(szCommand, "closetab") == 0)
 	{
@@ -1436,6 +1441,78 @@ void CIDEScript::RunEditStep(const char* szStep)
 		gbIDEScriptClassFiles = (szStep[13] != '\0') && (szStep[14] != '\0') && (szStep[15] == 'f');
 		gbIDEScriptRenameSaves = (szStep[13] != '\0') && (szStep[14] != '\0') && (szStep[15] != '\0') && (szStep[16] == 's');
 	}
+	else if ((strncmp(szStep, "selecttext:", 11) == 0) && pTab.IsNotNull())
+	{
+		//selecttext:<line>:<column>-<line>:<column>, from 1, the end exclusive: that text selected in the active editor.
+		int		iLine;
+		int		iColumn;
+		int		iEndLine;
+		int		iEndColumn;
+
+		if (sscanf(&szStep[11], "%d:%d-%d:%d", &iLine, &iColumn, &iEndLine, &iEndColumn) == 4)
+		{
+			pTab->GetEditor()->Select(pTab->GetEditor()->GetLineStart((size)(iLine - 1)) + (size)(iColumn - 1), pTab->GetEditor()->GetLineStart((size)(iEndLine - 1)) + (size)(iEndColumn - 1));
+		}
+	}
+	else if ((strcmp(szStep, "introducecandidates") == 0) || (strncmp(szStep, "introducechoose:", 16) == 0))
+	{
+		//With nothing selected, the expressions at the caret that Introduce Variable offers, innermost first, as
+		//"Expressions: a | a + b | f(a + b)" (introducecandidates); or one of them chosen, from 0, which selects it
+		//(introducechoose:<n>).
+		CArrayChars	aszCandidates;
+		size		uiCandidates;
+		size		uiCandidate;
+
+		aszCandidates.Init();
+		uiCandidates = mpcContent->GetIntroduceVariable()->FindCandidates(&aszCandidates);
+		if (szStep[15] == ':')
+		{
+			mpcContent->GetIntroduceVariable()->ChooseCandidate((size)atoi(&szStep[16]));
+		}
+		else
+		{
+			printf("Expressions:");
+			for (uiCandidate = 0; uiCandidate < uiCandidates; uiCandidate++)
+			{
+				printf("%s %s", (uiCandidate > 0) ? " |" : "", aszCandidates.GetText(uiCandidate));
+			}
+			printf("\n");
+		}
+		aszCandidates.Kill();
+	}
+	else if ((strcmp(szStep, "introducible") == 0) || (strncmp(szStep, "introduce:", 10) == 0) || (strncmp(szStep, "introduceone:", 13) == 0))
+	{
+		//What Introduce Variable would do for the selection (introducible); or the variable introduced with a name, for
+		//every occurrence of the expression (introduce:<name>) or the selected one (introduceone:<name>).  What is
+		//edited is saved if renamesearch's s is given.
+		SIDEIntroduction	sIntroduction;
+		CChars				szPrinted;
+
+		sIntroduction.Init();
+		if (!mpcContent->GetIntroduceVariable()->FindIntroduction(&sIntroduction))
+		{
+			printf("Introduce Variable: nothing is selected\n");
+		}
+		else
+		{
+			szPrinted.Init();
+			printf("%s", mpcContent->GetIntroduceVariable()->PrintIntroduction(&sIntroduction, &szPrinted));
+			szPrinted.Kill();
+			if (sIntroduction.bPossible && (szStep[9] == ':'))
+			{
+				mpcContent->GetIntroduceVariable()->Introduce(&sIntroduction, &szStep[10], true);
+			}
+			else if (sIntroduction.bPossible && (szStep[9] == 'o'))
+			{
+				mpcContent->GetIntroduceVariable()->Introduce(&sIntroduction, &szStep[13], false);
+			}
+			if (gbIDEScriptRenameSaves && (szStep[9] != 'b'))
+			{
+				mpcContent->GetDocuments()->SaveAllFiles();
+			}
+		}
+		sIntroduction.Kill();
+	}
 	else if (strncmp(szStep, "safedeletesearch:", 17) == 0)
 	{
 		//safedeletesearch:<c|-><t|->: Safe Delete's searches in comments and strings, and for text occurrences.
@@ -1728,6 +1805,11 @@ void CIDEScript::RunEditStep(const char* szStep)
 		size				i;
 
 		pPopup = mpcContent->GetUsages()->GetUsagesPopup();
+		if (pPopup.IsNull() || !pPopup->IsOpen())
+		{
+			//Or Introduce Variable's expressions.
+			pPopup = mpcContent->GetIntroduceVariable()->GetChooser();
+		}
 		if (pPopup.IsNull() || !pPopup->IsOpen())
 		{
 			printf("Popup: none\n");
