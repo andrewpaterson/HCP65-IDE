@@ -311,7 +311,7 @@ void CIDEScript::RunCommand(const char* szCommand)
 			pCommand = mpcContent->GetCommands()->GetCommand(i);
 			for (j = 0; j < pCommand->NumKeys(); j++)
 			{
-				printf("Keys: %s %s %s\n", pCommand->GetName(), pCommand->GetKeys(j), ((pcInput != NULL) && ((pCommand->GetKeyScope() == CKS_Editor) ? pcInput->IsEditorBound(pCommand->GetKeys(j)) : pcInput->IsBound(pCommand->GetKeys(j)))) ? "bound" : "NOT BOUND");
+				printf("Keys: %s %s %s\n", pCommand->GetName(), pCommand->GetKeys(j), ((pcInput != NULL) && pcInput->IsBound(pCommand->GetKeys(j), pCommand->GetKeysContext(j))) ? "bound" : "NOT BOUND");
 			}
 		}
 		fflush(stdout);
