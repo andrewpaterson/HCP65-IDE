@@ -106,6 +106,9 @@ To build:
       what they are: the compiler's types have no typedefs in them, and the type writer writes size as
       "unsigned long long".  The type writer is for an expression that is computed.  In a template the declaration's
       text is already in the template's words.  With Introduce Variable.
+      Done 2026-11-14: CIDERefactorUnit::AppendDeclaredType, for a variable, a parameter or a field named and for
+      a call (what its function is declared to return).  A type that names a template's parameter, or something
+      declared in a class, is left to the type writer: it may not mean the same where it is to be written.
   F3. Flow over the syntax tree.  Which locals a selection reads, writes and leaves live after it, and where it
       exits (return, break, continue, goto).  The compiler's liveness is the IR's, which a check doesn't make; this
       is the syntax's, and says more is live than is where it can't tell.  It is the same in a template.  With
@@ -157,6 +160,8 @@ These write a type, so in a template they need T3.
      has locals.
      In a template: declared in the template's words (M* pv); an expression whose type only an instance decides is
      refused, with why.
+     Done 2026-11-14 (IDEIntroduceVariable.h says what it does), with the popup of the expressions at the caret
+     when nothing is selected.  Questions 7 to 9 are about it.
   6. Inline Variable (Ctrl+Alt+N).  Refused if the variable is changed after its initialiser, or its initialiser
      has side effects.
      In a template: a call through an instance (pv->Next()) is taken to change what it is called on unless every
@@ -254,5 +259,9 @@ Where it is
      says what is renamed with a member in its dialog and status line, which is all it needed (question 1).
      With it, Rename File on Windows was found to leave "../Engine.h" #includes unchanged, and fixed (8c83367).
   2. Safe Delete: done but for what is listed under it above.
-  3. T3, the template as itself: done in the compiler.  F2 and Introduce Variable: next.
+  3. T3, the template as itself: done in the compiler.  F1, F2 and Introduce Variable: done (HCP65-IDE 3334b30).
+  4. Change Signature, with F4, F5, T4 and T5: next.  In stages, each checked and committed: every declaration,
+     definition, override, family member and call found, with their parameters' and arguments' places; the edits
+     (parameters kept, removed, added, reordered and renamed); the conflicts; the dialog and its table; the return
+     type, const and the name; the assembly's labels.
 

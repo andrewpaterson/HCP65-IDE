@@ -41,3 +41,19 @@ Open
  6. A value parameter of a template as itself has no value, and is 1 where the check needs one: "M maItems[N]" is
     an array of 1 inside the check.  Nothing I have built writes such an array's type; if a refactoring ever would,
     it has to write N.  Noted in case it surprises you; no answer needed unless you want it done another way.
+
+ 7. Introduce Variable and where the variable is declared.  I followed what every function in your code does: the
+    variable is declared with the others at the top of the function, its name lined up in their column with tabs
+    (theirs are moved over if the new type is longer), and assigned on a line before the statement that first uses
+    it.  IntelliJ would write "int iDouble = miScale * 2;" at the use.  Is the top of the function always right, or
+    do you want a choice (a box in the dialog) for declaring it where it is used?
+
+ 8. Introduce Variable's suggested names follow the prefixes I see in your code (i, ui, b, f, sz, c, pc, s, ps, e, p,
+    pv; CChars is sz; Ptr<> is p) with what the expression's last name says, without its own prefix or a leading
+    Get/Is/Has/Find/Calculate/Create/Make/Read.  Tell me any prefix I have wrong or missing (int64? float32 arrays
+    "a"?  size as ui?) and I will put it right.
+
+ 9. Introduce Variable replaces every occurrence of the expression in the function when asked, as IntelliJ does,
+    without checking that the expression's value is the same at each (a variable in it may have changed between
+    them, or it may be a call with effects).  IntelliJ doesn't check either.  Do you want it to refuse, or to warn,
+    when something in the expression is changed between the first and last occurrence?  FindChanges can tell.
