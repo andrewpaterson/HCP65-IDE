@@ -447,7 +447,7 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 			if (getenv("HCP65_IDE_EDIT") != NULL)
 			{
 				//A comma separated list of edits: open:<file>, type:<text>, undo, redo (Edit, Undo and Redo),
-				//undoall, redoall (Edit, Undo and Redo Across Files), group and endgroup (the edits between as one),
+				//undoall, redoall (Ctrl+Z and Ctrl+Shift+Z in an editor, across files), group and endgroup (the edits between as one),
 				//menu (Edit opened), explorer (Alt+1, the active file selected in Solution Explorer), renamable (what
 				//Rename would rename at the caret), rename:<name> (renamed, without its dialog), renamesearch:<c|-><t|-> (its
 				//searches in comments and for text), printincludes (the #includes that find the active file),

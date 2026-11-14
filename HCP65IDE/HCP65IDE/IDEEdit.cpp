@@ -33,7 +33,7 @@ void CIDEEdit::Init(CIDEContent* pcContent)
 	mpcContent = pcContent;
 	mcUndoLog.Init();
 	mbLogUndoing = false;
-	mcAcrossFiles.Init(this);
+	mcUndo.Init(this);
 	PostInit();
 }
 
@@ -47,7 +47,7 @@ void CIDEEdit::Class(void)
 	U_Pointer(mpcContent);
 	U_Unknown(CUndoLog, mcUndoLog);
 	U_Bool(mbLogUndoing);
-	U_Unknown(CRevealingUndo, mcAcrossFiles);
+	U_Unknown(CRevealingUndo, mcUndo);
 	M_Pointer(mpEditMenu);
 	M_Pointer(mpEditCommands);
 }
@@ -61,7 +61,7 @@ void CIDEEdit::Class(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDEEdit::Free(void)
 {
-	mcAcrossFiles.Kill();
+	mcUndo.Kill();
 	mcUndoLog.Kill();
 }
 
@@ -76,21 +76,14 @@ bool CIDEEdit::Load(CObjectReader* pcFile) { return false; }
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Edit's commands: the standard ones (CIDEEditCommands), then Undo and
-// Redo Across Files, which go back and forward through the edits of every
-// open file in the order they were made.
+// Edit's commands: the standard ones (CIDEEditCommands).  The editors'
+// Undo and Redo come here (PressUndo).
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEEdit::AddCommands(Ptr<CCommandSet> pCommands)
 {
-	Ptr<CCommand>	pCommand;
-
 	mpEditCommands = OMalloc<CIDEEditCommands>(mpcContent, pCommands);
 	mpEditCommands->AddKeymapCommands(pCommands);
-	pCommand = pCommands->Add("Edit.UndoAcrossFiles", "Undo Across Files", "", Ptr<CImageCel>(), this, &CIDEEdit::UndoAcrossFiles);
-	pCommand->SetEnabledCheck(this, &CIDEEdit::CanUndoAcrossFiles);
-	pCommand = pCommands->Add("Edit.RedoAcrossFiles", "Redo Across Files", "", Ptr<CImageCel>(), this, &CIDEEdit::RedoAcrossFiles);
-	pCommand->SetEnabledCheck(this, &CIDEEdit::CanRedoAcrossFiles);
 }
 
 
@@ -119,8 +112,6 @@ Ptr<CMenuContainer> CIDEEdit::CreateEditMenu(void)
 	mpEditMenu->AddItem(pCommands->Find("Editor.ExtendSelection"));
 	mpEditMenu->AddItem(pCommands->Find("Editor.ShrinkSelection"));
 	mpEditMenu->AddSeparator();
-	mpEditMenu->AddItem(pCommands->Find("Edit.UndoAcrossFiles"));
-	mpEditMenu->AddItem(pCommands->Find("Edit.RedoAcrossFiles"));
 	mpcContent->GetFindInFiles()->AddEditItems(mpEditMenu);
 	return mpEditMenu;
 }
@@ -130,8 +121,7 @@ Ptr<CMenuContainer> CIDEEdit::CreateEditMenu(void)
 //
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEEdit::CanUndoAcrossFiles(void) { return mcUndoLog.FindUndoGroup() != MAX_SIZE; }
-bool CIDEEdit::CanRedoAcrossFiles(void) { return mcUndoLog.FindRedoGroup() != MAX_SIZE; }
+bool CIDEEdit::CanPressUndo(bool bRedo) { return (bRedo ? mcUndoLog.FindRedoGroup() : mcUndoLog.FindUndoGroup()) != MAX_SIZE; }
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -180,60 +170,31 @@ void CIDEEdit::EditorUndoChanged(CTextArea* pcEditor, STextUndoChange* psUndo)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Undoes the newest edit, or group of edits, of any open file, once it's
-// shown (see PressAcrossFiles).  False if there is nothing to undo.
+// Undo or redo in an editor (its keys, or Edit's Undo and Redo): the
+// newest edit of any open file, or the one undone last, through the
+// revealing undo; an edit in a file that isn't active, or out of view, is
+// shown first, the status line saying so.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEEdit::UndoAcrossFiles(void)
+void CIDEEdit::PressUndo(bool bRedo)
 {
-	return PressAcrossFiles(false);
-}
+	CChars	szKeys;
+	CChars	szMessage;
 
-
-//////////////////////////////////////////////////////////////////////////
-//
-// Redoes the edit, or group of edits, undone last, once it's shown.
-// False if there is nothing to redo.
-//
-//////////////////////////////////////////////////////////////////////////
-bool CIDEEdit::RedoAcrossFiles(void)
-{
-	return PressAcrossFiles(true);
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// Undo or Redo Across Files, through the revealing undo: an edit in a file
-// that isn't active, or that its editor doesn't show, is shown first, the
-// status line saying so with the command's keys (or name, as it has none
-// by default).
-//
-//////////////////////////////////////////////////////////////////////////
-bool CIDEEdit::PressAcrossFiles(bool bRedo)
-{
-	Ptr<CCommand>	pCommand;
-	CChars			szKeys;
-	CChars			szMessage;
-	bool			bResult;
-
-	pCommand = mpcContent->GetCommands()->Find(bRedo ? "Edit.RedoAcrossFiles" : "Edit.UndoAcrossFiles");
 	szKeys.Init();
-	if (pCommand.IsNotNull() && !pCommand->AppendKeysText(&szKeys, mpcContent->GetWindow()->GetComponentInput()))
+	if ((mpcContent->GetWindow()->GetComponentInput() == NULL) || !mpcContent->GetWindow()->GetComponentInput()->GetShortcutText(bRedo ? CIC_Redo : CIC_Undo, &szKeys))
 	{
-		szKeys.Append(pCommand->GetCaption());
+		szKeys.Append(bRedo ? "Redo" : "Undo");
 	}
 	szMessage.Init();
-	bResult = mcAcrossFiles.Press(bRedo, szKeys.Text(), &szMessage);
+	mcUndo.Press(bRedo, szKeys.Text(), &szMessage);
 	if (!szMessage.Empty())
 	{
 		mpcContent->ShowStatus(szMessage.Text());
 	}
 	szMessage.Kill();
 	szKeys.Kill();
-	return bResult;
 }
-
 
 //////////////////////////////////////////////////////////////////////////
 //
@@ -347,21 +308,6 @@ void CIDEEdit::AppendUndoWhere(bool bRedo, CChars* pszDest)
 	pszDest->Append(szLeaf);
 	pszDest->Append(' ');
 	pTab->GetEditor()->AppendUndoWhere(bRedo, pszDest);
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// An editor's undo showed an edit out of view: the status line says to
-// press again.
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDEEdit::EditorUndoMessage(CTextArea* pcEditor, char* szMessage)
-{
-	if (!StrEmpty(szMessage))
-	{
-		mpcContent->ShowStatus(szMessage);
-	}
 }
 
 

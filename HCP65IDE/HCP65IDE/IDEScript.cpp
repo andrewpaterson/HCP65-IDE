@@ -1903,11 +1903,11 @@ void CIDEScript::RunEditStep(const char* szStep)
 	}
 	else if (strcmp(szStep, "undoall") == 0)
 	{
-		mpcContent->GetEdit()->UndoAcrossFiles();
+		mpcContent->GetEdit()->PressUndo(false);
 	}
 	else if (strcmp(szStep, "redoall") == 0)
 	{
-		mpcContent->GetEdit()->RedoAcrossFiles();
+		mpcContent->GetEdit()->PressUndo(true);
 	}
 	else if (strcmp(szStep, "group") == 0)
 	{

@@ -542,7 +542,7 @@ CHECKS = [
 		'DEBUG': 'edit:renamefilerelated:CPPEngine.h,edit:undoall,edit:undoall,printprojectfiles,printtabs,printdiskfile:Sub/User.cpp,printdiskfile:Engine.cpp,'
 		         'printdiskfile:Tool/Tool.vcxproj'}),
 		[r'^Status: Renamed Engine\.h to CPPEngine\.h and 2 more files: 7 #includes in 7 files, 2 projects\.$',
-		 r'^Status: Undo Across Files again to undo the change in Commented\.cpp at line 1\.$',
+		 r'^Status: Ctrl\+Z again to undo the change in Commented\.cpp at line 1\.$',
 		 r'^Project files: Commented\.cpp Engine\.cpp Engine_Linux\.cpp Other/OtherUser\.cpp Sub/Angle\.cpp Sub/Indented\.cpp Sub/User\.cpp '
 		 r'Engine\.h EngineCache\.h Other/Engine\.h Tool/Tool\.cpp$',
 		 r'^Tabs: Engine\.h ', r'^#include "\.\./Engine\.h"', r'^#include "Engine\.h"', r'<ClInclude Include="\.\.\\Engine\.h" />'],
@@ -786,20 +786,17 @@ CHECKS = [
 		#says so, and undone by the second.
 		'OPEN': 'CalculatorParser.cpp', 'CARET': '36:2', 'TYPE': 'X',
 		'DEBUG': 'wait:300,edit:caret:400:1,wait:300,edit:keys:Control+Z,wait:300,edit:print,edit:keys:Control+Z,wait:300,edit:print'},
-		[r'^Status: Ctrl\+Z again to undo the change at line 36\.$', r'CalculatorParser\.cpp \* \(focus\) line 400: ',
+		[r'^Status: Ctrl\+Z again to undo the change in CalculatorParser\.cpp at line 36\.$', r'CalculatorParser\.cpp \* \(focus\) line 400: ',
 		 r'CalculatorParser\.cpp \(focus\) line 36: \[\tmpcCalculator'], []),
-	('undo-across-files', {
-		#Undo Across Files undoes an edit in the active file, in view, at once; one in another file is shown by the first
-		#press, which says so, and undone by the second.  Redo the same.
+	('undo-keys-across-files', {
+		#Ctrl+Z in an editor undoes the other open files' edits too, newest first, as they were made: typed in one file,
+		#then in another, the second's is undone, then the first's is shown and undone; Ctrl+Shift+Z redoes them.
 		'OPEN': 'CalculatorParser.cpp', 'CARET': '36:2',
-		'EDIT': 'type:X,open:CalculatorSymbols.cpp,type:Y,undoall,print,undoall,undoall,print,redoall,redoall,redoall,print'},
-		[r'^Edit menu: .*Undo Across Files Redo Across Files Find in Files\.\.\.$',
-		 r'CalculatorParser\.cpp \* line 36: \[\tXmpcCalculator',
-		 r'CalculatorSymbols\.cpp \(focus\) line 1: \[#include "Logger\.h"\]',
-		 r'^Status: Undo Across Files again to undo the change in CalculatorParser\.cpp at line 36\.$',
-		 r'CalculatorParser\.cpp \(focus\) line 36: \[\tmpcCalculator',
-		 r'^Status: Redo Across Files again to redo the change in CalculatorSymbols\.cpp at line 1\.$',
-		 r'CalculatorParser\.cpp \* line 36: \[\tXmpcCalculator',
+		'DEBUG': 'wait:300,edit:type:X,edit:open:CalculatorSymbols.cpp,edit:type:Y,edit:keys:Control+Z,edit:print,edit:keys:Control+Z,edit:print,'
+		         'edit:keys:Control+Z,edit:print,edit:keys:Control+Shift+Z,edit:keys:Control+Shift+Z,edit:keys:Control+Shift+Z,edit:print'},
+		[r'CalculatorSymbols\.cpp \(focus\) line 1: \[#include "Logger\.h"\]', r'^Status: Ctrl\+Z again to undo the change in CalculatorParser\.cpp at line 36\.$',
+		 r'CalculatorParser\.cpp \* \(focus\) line 36: \[\tXmpcCalculator', r'CalculatorParser\.cpp \(focus\) line 36: \[\tmpcCalculator',
+		 r'^Status: Ctrl\+Shift\+Z again to redo the change in CalculatorSymbols\.cpp at line 1\.$',
 		 r'CalculatorSymbols\.cpp \* \(focus\) line 1: \[Y#include'], []),
 	('edit-menu-focus', {
 		'OPEN': 'CalculatorParser.cpp', 'EDIT': 'focus:build,print,focus:claude,print'},
@@ -1151,7 +1148,7 @@ CHECKS = [
 		'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'CARET': '36:4', 'DEBUG': 'printmenus,clickmenu:View/Nope'},
 		[r'^Menu File: Open Project/Solution\.\.\., Add Solution\.\.\., Close Solution, Recent Solutions>, Clear Recent Solutions, Save \[Ctrl\+S\], Save All \[Ctrl\+Shift\+S\], Compare with File\.\.\., Settings\.\.\. \[Ctrl\+Alt\+S\], Exit$',
 		 r'^Menu File/Recent Solutions: 1 ',
-		 r'^Menu Edit: Undo \[Ctrl\+Z\]\(disabled\), Redo \[Ctrl\+Shift\+Z\]\(disabled\), Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\], Select All \[Ctrl\+A\], Extend Selection \[Ctrl\+W\], Shrink Selection \[Ctrl\+Shift\+W\], Undo Across Files\(disabled\), Redo Across Files\(disabled\), Find in Files\.\.\. \[Ctrl\+Shift\+F\]$',
+		 r'^Menu Edit: Undo \[Ctrl\+Z\]\(disabled\), Redo \[Ctrl\+Shift\+Z\]\(disabled\), Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\], Select All \[Ctrl\+A\], Extend Selection \[Ctrl\+W\], Shrink Selection \[Ctrl\+Shift\+W\], Find in Files\.\.\. \[Ctrl\+Shift\+F\]$',
 		 r'^Menu Navigate: Back \[Ctrl\+Alt\+Left\](\(disabled\))?, Forward \[Ctrl\+Alt\+Right\](\(disabled\))?, Class\.\.\. \[Ctrl\+N\], File\.\.\. \[Ctrl\+Shift\+N\], Symbol\.\.\. \[Ctrl\+Alt\+Shift\+N\]$',
 		 r'^Menu View: Solution Explorer, Find Usages, Find, Build, Indexing, Run, Debug, Claude$',
 		 r'^Menu Git: Compare with HEAD, Compare with Branch\.\.\., Compare with Revision\.\.\.$',

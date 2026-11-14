@@ -756,8 +756,7 @@ bool CIDERename::SearchRenameFiles(const char* szName, bool bComments, bool bTex
 //
 // Changes every place psTarget's name is written to szNewName, in each
 // file's editor (opening it if it isn't open), as one edit per file and
-// one undo across them all (Edit, Undo Across Files, or Control+Z in any
-// of them).  With the searches remembered for its kind (see
+// one undo across them all (Control+Z).  With the searches remembered for its kind (see
 // SetSearches) the name is changed in comments and strings, and as text
 // the index doesn't have, too.  Nothing is changed if any place no longer
 // has the old name: the file was edited since it was indexed.

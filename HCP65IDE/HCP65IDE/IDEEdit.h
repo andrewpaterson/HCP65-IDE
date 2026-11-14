@@ -49,14 +49,14 @@ public:
 };
 
 
-//The Edit menu, as IntelliJ's: Undo, Redo, Cut, Copy, Paste and Select All (CIDEEditCommands), and Undo and Redo
-//Across Files, which go back and forward through the edits of every open file in the order they were made
-//(the undo log, fed by the editors' undo events).
+//The Edit menu, as IntelliJ's: Undo, Redo, Cut, Copy, Paste and Select All (CIDEEditCommands).  In the editors Undo
+//and Redo (Ctrl+Z and Ctrl+Shift+Z) go back and forward through the edits of every open file in the order they were
+//made (the undo log, fed by the editors' undo events), not only the file's own.
 //
-//Neither undoes what can't be seen (CRevealingUndo): an editor's undo of an edit scrolled out of view, or an undo
-//across files of an edit in a file that isn't the one active or isn't scrolled to it, first shows the edit, the status
-//line saying to press again, and undoes it at the next press.
-class CIDEEdit : public CObject, public CRevealingUndoHost
+//Undo doesn't undo what can't be seen (CRevealingUndo): an edit in a file that isn't the one active, or that its
+//editor is scrolled away from, is shown by the first press, the status line saying to press again, and undone by the
+//next.
+class CIDEEdit : public CObject, public CRevealingUndoHost, public CTextUndoPresser
 {
 CONSTRUCTABLE(CIDEEdit);
 DESTRUCTABLE(CIDEEdit);
@@ -66,7 +66,7 @@ protected:
 	Ptr<CIDEEditCommands>	mpEditCommands;
 	CUndoLog				mcUndoLog;  //Every open file's edits in the order they were made, by file name.
 	bool					mbLogUndoing;  //The undo log is undoing or redoing: the editors' undo events are its own.
-	CRevealingUndo			mcAcrossFiles;  //Undo and Redo Across Files, shown before they're done.
+	CRevealingUndo			mcUndo;  //Undo and Redo, shown before they're done.
 
 public:
 	void	Init(CIDEContent* pcContent);
@@ -79,12 +79,11 @@ public:
 	Ptr<CMenuContainer>	CreateEditMenu(void);
 	Ptr<CMenuContainer>	GetEditMenu(void);
 	void				EditorUndoChanged(CTextArea* pcEditor, STextUndoChange* psUndo);
-	void				EditorUndoMessage(CTextArea* pcEditor, char* szMessage);
 	void				FileClosed(char* szFileName);
 	void				FileRenamed(char* szOldFileName, char* szNewFileName);
 	void				LogFileRenamed(char* szOldFileName, char* szNewFileName);
-	bool				UndoAcrossFiles(void);
-	bool				RedoAcrossFiles(void);
+	void				PressUndo(bool bRedo) override;
+	bool				CanPressUndo(bool bRedo) override;
 	void				BeginUndoGroup(void);
 	void				EndUndoGroup(void);
 
@@ -93,9 +92,7 @@ protected:
 	bool				RedoLogGroup(size uiGroup, bool bShow);
 	void				RenamesChanged(size uiGroup);
 	void				ShowRenameNotMoved(char* szFrom, char* szTo);
-	bool				CanUndoAcrossFiles(void);
-	bool				CanRedoAcrossFiles(void);
-	bool				PressAcrossFiles(bool bRedo);
+
 	Ptr<CIDEEditorTab>	FindGroupTab(bool bRedo);
 	bool				IsUndoShown(bool bRedo) override;
 	bool				ShowUndo(bool bRedo) override;

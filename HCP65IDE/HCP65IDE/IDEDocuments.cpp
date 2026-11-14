@@ -206,8 +206,7 @@ Ptr<CIDEEditorTab> CIDEDocuments::OpenFileTab(const char* szFileName, size uiPro
 	pTab->GetCodeEditor()->GetChangeBarClickEvent()->Add(&mpcContent->GetGitStatus(), &CIDEGitStatus::ChangeBarClicked);
 	pTab->GetCodeEditor()->GetGlyphClickEvent()->Add(&mpcContent->GetDebugging(), &CIDEDebugging::GlyphClicked);
 	pTab->GetEditor()->GetUndoEvent()->Add(&mpcContent->GetEdit(), &CIDEEdit::EditorUndoChanged);
-	pTab->GetEditor()->SetRevealsUndo(true);
-	pTab->GetEditor()->GetUndoMessageEvent()->Add(&mpcContent->GetEdit(), &CIDEEdit::EditorUndoMessage);
+	pTab->GetEditor()->SetUndoPresser(&mpcContent->GetEdit());
 	mpcContent->GetDebugging()->ShowBreakpoints(pTab);
 	mpcContent->GetGitStatus()->ReadGitBase(pTab);
 	mpcContent->GetGitStatus()->UpdateChangeBars(pTab);
