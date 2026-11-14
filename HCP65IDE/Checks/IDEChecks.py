@@ -1217,16 +1217,17 @@ CHECKS = [
 		 r'^Keys: Navigate\.GoToSource F5 bound$', r'^Keys: Debug\.Start Control\+B bound$'],
 		[r'Keys: Navigate\.GoToSource Control\+B', r'Keys: Debug\.Start F5', r'NOT BOUND', r'ERROR']),
 	('keymap-refused', {
-		#What types can't be had by anything, and what a dialog or text field needs only by an editor's.
+		#What types can't be had by anything, and what a dialog or text field needs only by an editor's.  A Global key an
+		#editor action has stays the editor's there, which is said.
 		'DIALOG_ANSWER': 'OK', 'KEYMAP': MakeKeymapFile(),
 		'KEYMAP_EDITS': 'select:Debug.StepOver;add:Q;add:Shift+Q;add:Space;add:Enter;add:Control+C;add:Cursor Up;add:F10;add:Control+D;select:Editor.Up;add:Q;add:F8;select:Edit.Copy;add:Tab',
 		'DEBUG': 'command:File.Settings,answered:1,printkeys'},
 		[r'^Keymap: Q types a character: add Ctrl or Alt\.$', r'^Keymap: Shift\+Q types a character: add Ctrl or Alt\.$', r'^Keymap: Space types a character: add Ctrl or Alt\.$',
 		 r'^Keymap: Enter is needed by dialogs and text fields\.$', r'^Keymap: Ctrl\+C moves here|^Keymap: Ctrl\+C is needed by dialogs and text fields\.$', r'^Keymap: Up is needed by dialogs and text fields\.$',
-		 r'^Keymap: F10 is already its shortcut\.$', r'^Keymap: Ctrl\+D moves here from Editor Actions: Duplicate\.$',
+		 r'^Keymap: F10 is already its shortcut\.$', r'^Keymap: Ctrl\+D is free\.  Editor Actions: Duplicate keeps it over the Editor\.$',
 		 r'^Keymap: Q types a character: add Ctrl or Alt\.$', r'^Keymap: F8 is free\.$', r'^Keymap: Tab moves here from Editor Actions: Tab\.$',
-		 r'^Keys: Edit\.Copy Tab bound$', r'^Keys: Editor\.Up Cursor Up bound$', r'^Keys: Editor\.Up F8 bound$', r'^Keys: Debug\.StepOver F10 bound$', r'^Keys: Debug\.StepOver Control\+D bound$'],
-		[r'Keys: Debug\.StepOver Q', r'Keys: Debug\.StepOver Enter', r'Keys: Editor\.Duplicate', r'Keys: Editor\.Tab', r'NOT BOUND', r'ERROR']),
+		 r'^Keys: Edit\.Copy Tab bound$', r'^Keys: Editor\.Up Cursor Up bound$', r'^Keys: Editor\.Up F8 bound$', r'^Keys: Editor\.Duplicate Control\+D bound$', r'^Keys: Debug\.StepOver F10 bound$', r'^Keys: Debug\.StepOver Control\+D bound$'],
+		[r'Keys: Debug\.StepOver Q', r'Keys: Debug\.StepOver Enter', r'Keys: Editor\.Tab', r'NOT BOUND', r'ERROR']),
 	('keymap-reset', {
 		#One command back, taking its keys from whichever has them, then all of them, which leaves nothing to keep.
 		'DIALOG_ANSWER': 'OK', 'KEYMAP': MakeKeymapFile(),
