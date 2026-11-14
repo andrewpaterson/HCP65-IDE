@@ -8,10 +8,14 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="Gauge.cpp" />
     <ClCompile Include="Tank.cpp" />
+    <ClCompile Include="Valve.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Gauge.h" />
     <ClInclude Include="Tank.h" />
+    <ClInclude Include="Valve.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{8E3F4051-0000-4000-8000-000000000008}</ProjectGuid>

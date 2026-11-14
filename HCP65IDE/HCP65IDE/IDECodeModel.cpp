@@ -2752,13 +2752,15 @@ size CIDECodeModel::FindOverriders(const char* szKey, CArrayIDELocations* pasDes
 // of its scope (its class's members; with no scope, the functions outside
 // any) that the file declares, in the order it declares them.  Each one's
 // place there is added to pasDeclared and, to pasDefined, where it is
-// defined if that is somewhere else (a line of -1 if it isn't: it is
-// defined right there, or nowhere).  The number of them.
+// defined outside its class (a line of -1 if it isn't: it is defined in
+// the class, or nowhere).  A function that isn't a class's and is defined
+// where the file declares it is defined there.  The number of them.
 //
 //////////////////////////////////////////////////////////////////////////
 size CIDECodeModel::FindSiblingFunctions(const char* szKey, const char* szFileName, CArrayIDELocations* pasDeclared, CArrayIDELocations* pasDefined)
 {
 	CCPPIndexSymbol*	pcSymbol;
+	CCPPIndexSymbol*	pcScope;
 	SCPPIndexLocation*	psLocation;
 	SCPPIndexLocation*	psDeclared;
 	SCPPIndexLocation*	psDefined;
@@ -2775,6 +2777,7 @@ size CIDECodeModel::FindSiblingFunctions(const char* szKey, const char* szFileNa
 	size				uiAt;
 	size				uiFirst;
 	bool				bSame;
+	bool				bInClass;
 
 	SplitIDESymbolKey(szKey, &szScope, &szName, &szParameters);
 	szName.Kill();
@@ -2782,6 +2785,8 @@ size CIDECodeModel::FindSiblingFunctions(const char* szKey, const char* szFileNa
 	uiFirst = pasDeclared->NumElements();
 
 	mcIndexMutex.Lock();
+	pcScope = szScope.Empty() ? NULL : mcIndex.FindSymbol(szScope.Text());
+	bInClass = pcScope && ((pcScope->meKind == CPPSK_Class) || (pcScope->meKind == CPPSK_ClassTemplate));
 	uiFile = MAX_SIZE;
 	for (i = 0; i < mcIndex.NumFiles(); i++)
 	{
@@ -2819,6 +2824,10 @@ size CIDECodeModel::FindSiblingFunctions(const char* szKey, const char* szFileNa
 		if (!psDeclared)
 		{
 			continue;
+		}
+		if (!psDefined && !bInClass && (psDeclared->uiRole == CPPIR_Definition))
+		{
+			psDefined = psDeclared;
 		}
 		SplitIDESymbolKey(pcSymbol->mszKey.Text(), &szOtherScope, &szName, &szParameters);
 		bSame = szOtherScope.Equals(szScope.Text());

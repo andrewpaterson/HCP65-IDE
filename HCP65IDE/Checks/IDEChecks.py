@@ -1243,6 +1243,49 @@ CHECKS = [
 		'DEBUG': 'edit:renamesearch:---s,edit:movedefinitionout,edit:undoall,edit:undoall,edit:saveall,printdisklines:Tank.h,printdisklines:Tank.cpp'}),
 		[r"^Status: Moved CTank::Drain's definition out of its class, to Tank\.cpp\.$", r'^Status: Ctrl\+Z again to undo the change in Tank\.cpp', r'^16\|\tint\t\tDrain\(int iAmount\)$', r'^23\|\t\}$', r'^52 lines$', r'^65 lines$'],
 		[r'CTank::Drain\(']),
+	('definitions-function-in', dict(MakeDefinitionsCopy(), **{
+		#Move Definition into Class for a function outside any class: a header declares it and a source file defines
+		#it, so it is defined in the header, inline, as the source file wrote it and last in the header (what its body
+		#names is declared by there); it stays declared where it was, with its default value.
+		'WAIT_INDEX': '1', 'OPEN': 'Gauge.h', 'CARET': '5:8',
+		'DEBUG': 'edit:renamesearch:---s,edit:movedefinitionin,printdisklines:Gauge.h,printdisklines:Gauge.cpp'}),
+		[r"^Status: Moved ReadGauge's definition into its header, Gauge\.h, from Gauge\.cpp\.$",
+		 r'^5\|int\t\tReadGauge\(int iGauge, int iScale = 1\);$', r'^13\|inline int ClampGauge\(int iValue, int iMax = 100\)$', r'^24\|M MaxGauge\(M a, M b\)$',
+		 r'^27\|\}$', r'^28\|$', r'^29\|$', r'^30\|/{74}$', r'^33\|/{74}$', r'^34\|inline int ReadGauge\(int iIndex, int iScale\)$', r'^35\|\{$', r'^36\|\treturn ClampGauge\(iIndex \* iScale, 100\);$', r'^37\|\}$',
+		 r'^38\|$', r'^39\|$', r'^40\|#endif // __GAUGE_H__$',
+		 r'^1\|#include "Gauge\.h"$', r'^3\|$', r'^4\|/{74}$', r'^8\|int ResetGauge\(int iGauge\)$', r'^11 lines$'],
+		[r'^Definitions: refused']),
+	('definitions-function-out', dict(MakeDefinitionsCopy(), **{
+		#Move Definition out of Class for a function outside any class that a header defines: it is defined in the
+		#header's source file, after the functions declared before it, without its inline or its default value, and
+		#declared where it was.  A function template stays in its header.
+		'WAIT_INDEX': '1', 'OPEN': 'Gauge.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:24:4,edit:movedefinitionout,edit:caret:13:14,edit:movedefinitionout,printdisklines:Gauge.h,printdisklines:Gauge.cpp'}),
+		[r"^Status: Can't move the definition of MaxGauge: a function template is defined in its header\.$", r"^Status: Moved ClampGauge's definition out of its header, to Gauge\.cpp\.$",
+		 r'^6\|int\t\tResetGauge\(int iGauge\);$', r'^7\|$', r'^8\|$', r'^9\|int ClampGauge\(int iValue, int iMax = 100\);$', r'^10\|$', r'^11\|$', r'^12\|/{74}$', r'^16\|template<class M>$', r'^23 lines$',
+		 r'^18\|int ResetGauge\(int iGauge\)$', r'^21\|\}$', r'^22\|$', r'^23\|$', r'^24\|/{74}$', r'^28\|int ClampGauge\(int iValue, int iMax\)$', r'^29\|\{$',
+		 r'^30\|\treturn \(iValue > iMax\) \? iMax : iValue;$', r'^31\|\}$', r'^31 lines$'],
+		[r'inline int ClampGauge']),
+	('definitions-match-declaration', dict(MakeDefinitionsCopy(), **{
+		#A member's definition was edited (what it returns, its parameters' names, no const), so its class declares
+		#one nothing defines: Generate Declaration on the definition changes that declaration to match.  It keeps its
+		#virtual, its default value (the parameter after which every one has one) and its name's column.
+		'WAIT_INDEX': '1', 'OPEN': 'Valve.cpp', 'CARET': '18:15',
+		'DEBUG': 'edit:renamesearch:---s,edit:generatedeclaration,printdisklines:Valve.h,printdisklines:Valve.cpp'}),
+		[r"^Status: Changed CValve::Open's declaration in Valve\.h to match its definition\.$",
+		 r'^11\|\tvoid\t\t\tInit\(void\);$', r'^12\|\tvirtual long\tOpen\(int iFlow, int iTime = 5\);$', r'^13\|\tvoid\t\t\tClose\(int iDelay\);$', r'^18 lines$',
+		 r'^18\|long CValve::Open\(int iFlow, int iTime\)$', r'^41 lines$'],
+		[r'^Definitions: refused']),
+	('definitions-match-definition', dict(MakeDefinitionsCopy(), **{
+		#A member's declaration was edited: Generate Definition on it changes the definition it had to match, and
+		#makes no second one.  A parameter whose type is as it was keeps the name the body uses (iDegrees).
+		'WAIT_INDEX': '1', 'OPEN': 'Valve.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:14:10,edit:generatedefinition,edit:open:Valve.h,edit:caret:13:10,edit:generatedefinition,'
+		         'printdisklines:Valve.h,printdisklines:Valve.cpp'}),
+		[r"^Status: Changed CValve::Turn's definition in Valve\.cpp to match its declaration\.$", r"^Status: Changed CValve::Close's definition in Valve\.cpp to match its declaration\.$",
+		 r'^13\|\tvoid\t\t\tClose\(int iDelay\);$', r'^14\|\tint\t\t\t\tTurn\(int iAngle, bool bFast\) const;$', r'^18 lines$',
+		 r'^18\|long CValve::Open\(int iFlow, int iTime\)$', r'^28\|void CValve::Close\(int iDelay\)$', r'^38\|int CValve::Turn\(int iDegrees, bool bFast\) const$', r'^40\|\treturn iDegrees \+ miFlow;$', r'^41 lines$'],
+		[r'^Definitions: refused']),
 	('rename-assembly-class', dict(MakeRenameAssemblyCopy(), **{
 		#A class renamed in hand written assembly's labels (_CEngine__Init, __0, __2), in parameter lists with its length
 		#(FPC7CEngine to FPC6CMotor), in generated layout constants (SIZEOF_CEngine, CEngine_miSpeed: in the assembly, the

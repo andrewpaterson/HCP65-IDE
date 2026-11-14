@@ -38,6 +38,26 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define IDE_PLACE_BEFORE	1	//Before the definition of one declared after it, or before a header's #endif.
 #define IDE_PLACE_END		2	//At the end of the file.
 
+#define IDE_FILES_ANY		0	//Where the functions declared with it are defined.
+#define IDE_FILES_HEADER	1	//In the file it is declared in.
+#define IDE_FILES_SOURCE	2	//Not in the file it is declared in: in that header's source file.
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+static bool IsIDEHeaderFile(const char* szFileName)
+{
+	CChars	szName;
+	bool	bHeader;
+
+	szName.Init(szFileName);
+	bHeader = szName.EndsWithIgnoreCase(".h") || szName.EndsWithIgnoreCase(".hpp") || szName.EndsWithIgnoreCase(".hh") || szName.EndsWithIgnoreCase(".inl");
+	szName.Kill();
+	return bHeader;
+}
+
 
 //////////////////////////////////////////////////////////////////////////
 //
@@ -52,6 +72,7 @@ void SIDEFunction::Init(void)
 	bDeclaration = false;
 	sDefinition.Init();
 	bDefinition = false;
+	bUndeclared = false;
 }
 
 
@@ -489,6 +510,7 @@ bool CIDEDefinitions::FindUndeclaredFunction(SIDEFunction* psDest)
 		psDest->szName.Set(psDest->szKey);
 		psDest->bFunction = true;
 		psDest->bDefinition = true;
+		psDest->bUndeclared = true;
 	}
 	sLocation.szFileName.Kill();
 	szScope.Kill();
@@ -774,12 +796,13 @@ void CIDEDefinitions::AppendBodyInClass(const char* szBody, const char* szIndent
 // after it; a class template's member, and a function template, in the
 // header they are declared in.  With none of them defined, at the end of
 // the header's source file (its stem with .cpp or .c), or for a
-// template before the header's #endif.  *puiAt is in the file's editor's
-// text and *piWhere says how it is put there (IDE_PLACE_).  False, with
-// why, if there is nowhere.
+// template before the header's #endif.  iFiles (IDE_FILES_) keeps it in
+// the file it is declared in, or out of it.  *puiAt is in the file's
+// editor's text and *piWhere says how it is put there (IDE_PLACE_).
+// False, with why, if there is nowhere.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEDefinitions::FindDefinitionPlace(SIDEFunction* psFunction, CIDEFileEdits* pcEdits, CChars* pszFileName, size* puiAt, int* piWhere, CChars* pszBanner, const char** pszWhyNot)
+bool CIDEDefinitions::FindDefinitionPlace(SIDEFunction* psFunction, CIDEFileEdits* pcEdits, int iFiles, CChars* pszFileName, size* puiAt, int* piWhere, CChars* pszBanner, const char** pszWhyNot)
 {
 	CIDECodeModel*		pcModel;
 	CArrayIDELocations	asDeclared;
@@ -799,10 +822,11 @@ bool CIDEDefinitions::FindDefinitionPlace(SIDEFunction* psFunction, CIDEFileEdit
 	int					iStep;
 	bool				bInHeader;
 	bool				bFound;
+	bool				bSameFile;
 
 	pcModel = mpcContent->GetCodeModel();
 	psDeclared = psFunction->bDeclaration ? &psFunction->sDeclaration : &psFunction->sDefinition;
-	bInHeader = !psDeclared->szOwnTemplate.Empty() || (psDeclared->bInClass && !psDeclared->szClassTemplate.Empty());
+	bInHeader = (iFiles == IDE_FILES_HEADER) || !psDeclared->szOwnTemplate.Empty() || (psDeclared->bInClass && !psDeclared->szClassTemplate.Empty());
 
 	asDeclared.Init();
 	asDefined.Init();
@@ -810,7 +834,9 @@ bool CIDEDefinitions::FindDefinitionPlace(SIDEFunction* psFunction, CIDEFileEdit
 	uiOwn = MAX_SIZE;
 	for (i = 0; i < asDeclared.NumElements(); i++)
 	{
-		if ((asDeclared.Get(i)->iLine == psDeclared->iLine) && (asDeclared.Get(i)->iColumn == psDeclared->iColumn))
+		//A function outside a class moved into its header goes last in it: what its body names is all declared by
+		//there, as it was for the source file.
+		if ((asDeclared.Get(i)->iLine == psDeclared->iLine) && (asDeclared.Get(i)->iColumn == psDeclared->iColumn) && (iFiles != IDE_FILES_HEADER))
 		{
 			uiOwn = i;
 		}
@@ -824,7 +850,8 @@ bool CIDEDefinitions::FindDefinitionPlace(SIDEFunction* psFunction, CIDEFileEdit
 		for (i = uiOwn + (size)iStep; !bFound && (i < asDeclared.NumElements()); i += (size)iStep)
 		{
 			psDefined = asDefined.Get(i);
-			if ((psDefined->iLine >= 0) && (!bInHeader || (StringInsensitiveCompare(psDefined->szFileName.Text(), psDeclared->szFileName.Text()) == 0)))
+			bSameFile = (psDefined->iLine >= 0) && (StringInsensitiveCompare(psDefined->szFileName.Text(), psDeclared->szFileName.Text()) == 0);
+			if ((psDefined->iLine >= 0) && (!bInHeader || bSameFile) && ((iFiles != IDE_FILES_SOURCE) || !bSameFile))
 			{
 				bFound = true;
 				uiSibling = i;
@@ -925,13 +952,14 @@ bool CIDEDefinitions::FindDefinitionPlace(SIDEFunction* psFunction, CIDEFileEdit
 //
 // A function's definition as it is written outside its class, from where
 // it is declared (szDeclarationText is that file's text): the comment
-// over it, its class template's template<...> and its own, what it
-// returns, its name after its class's, its parameters without their
+// over it, its class template's template<...> and its own, szPrefix
+// ("inline ", or NULL), what it returns, its name after its class's, its
+// parameters without their
 // default values, what follows them (const), a constructor's
 // initialisers, and its body (an empty one if szBody is NULL).
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEDefinitions::AppendDefinition(SIDEFunction* psFunction, const char* szDeclarationText, const char* szBanner, const char* szInitialisers, const char* szBody, CChars* pszDest)
+void CIDEDefinitions::AppendDefinition(SIDEFunction* psFunction, const char* szDeclarationText, const char* szBanner, const char* szPrefix, const char* szInitialisers, const char* szBody, CChars* pszDest)
 {
 	SIDESignatureSite*	psDeclared;
 	CChars				szPart;
@@ -946,6 +974,7 @@ void CIDEDefinitions::AppendDefinition(SIDEFunction* psFunction, const char* szD
 	{
 		pszDest->Append(psDeclared->szOwnTemplate)->Append('\n');
 	}
+	pszDest->Append(szPrefix ? szPrefix : "");
 	if (psDeclared->bReturn)
 	{
 		szPart.Init();
@@ -984,7 +1013,7 @@ void CIDEDefinitions::AppendDefinition(SIDEFunction* psFunction, const char* szD
 // as it is now.  False, with why, if there is nowhere for it.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEDefinitions::PutDefinition(SIDEFunction* psFunction, CIDEFileEdits* pcEdits, const char* szInitialisers, const char* szBody, CChars* pszFileName, size* puiAt, const char** pszWhyNot)
+bool CIDEDefinitions::PutDefinition(SIDEFunction* psFunction, CIDEFileEdits* pcEdits, int iFiles, const char* szPrefix, const char* szInitialisers, const char* szBody, CChars* pszFileName, size* puiAt, const char** pszWhyNot)
 {
 	SIDESignatureSite*	psDeclared;
 	CChars				szBanner;
@@ -996,7 +1025,7 @@ bool CIDEDefinitions::PutDefinition(SIDEFunction* psFunction, CIDEFileEdits* pcE
 	psDeclared = psFunction->bDeclaration ? &psFunction->sDeclaration : &psFunction->sDefinition;
 	szBanner.Init();
 	iWhere = IDE_PLACE_END;
-	if (!FindDefinitionPlace(psFunction, pcEdits, pszFileName, puiAt, &iWhere, &szBanner, pszWhyNot))
+	if (!FindDefinitionPlace(psFunction, pcEdits, iFiles, pszFileName, puiAt, &iWhere, &szBanner, pszWhyNot))
 	{
 		szBanner.Kill();
 		return false;
@@ -1016,7 +1045,7 @@ bool CIDEDefinitions::PutDefinition(SIDEFunction* psFunction, CIDEFileEdits* pcE
 		//After what is before it: on a line of its own, two blank lines down.
 		szDefinition.Append(((*puiAt > 0) && (szText[*puiAt - 1] != '\n')) ? "\n\n\n" : "\n\n");
 	}
-	AppendDefinition(psFunction, szDeclarationText, szBanner.Text(), szInitialisers, szBody, &szDefinition);
+	AppendDefinition(psFunction, szDeclarationText, szBanner.Text(), szPrefix, szInitialisers, szBody, &szDefinition);
 	if (iWhere == IDE_PLACE_BEFORE)
 	{
 		szDefinition.Append("\n\n");
@@ -1054,13 +1083,15 @@ void CIDEDefinitions::ShowDefinition(const char* szFileName, size uiAt)
 //////////////////////////////////////////////////////////////////////////
 bool CIDEDefinitions::GenerateDefinition(void)
 {
-	SIDEFunction	sFunction;
-	CIDEFileEdits	cEdits;
-	CChars			szFileName;
-	CChars			szMessage;
-	const char*		szWhyNot;
-	size			uiAt;
-	bool			bResult;
+	SIDEFunction		sFunction;
+	CIDEFileEdits		cEdits;
+	SIDESignatureSite	sStale;
+	CChars				szFileName;
+	CChars				szMessage;
+	const char*			szWhyNot;
+	char*				szText;
+	size				uiAt;
+	bool				bResult;
 
 	sFunction.Init();
 	bResult = ReadFunction(&sFunction, "generate a definition");
@@ -1082,7 +1113,32 @@ bool CIDEDefinitions::GenerateDefinition(void)
 		cEdits.Init(mpcContent);
 		szFileName.Init();
 		uiAt = 0;
-		bResult = !szWhyNot && PutDefinition(&sFunction, &cEdits, NULL, NULL, &szFileName, &uiAt, &szWhyNot);
+		sStale.Init();
+		if (!szWhyNot && FindUndeclaredDefinition(&sFunction, &cEdits, &sStale))
+		{
+			//It has a definition that was left behind when one of them was edited: that is changed to match.
+			szFileName.Set(sStale.szFileName);
+			szText = cEdits.GetText(szFileName.Text());
+			MatchSite(&sStale, szText, &sFunction.sDeclaration, cEdits.GetText(sFunction.sDeclaration.szFileName.Text()), false, cEdits.GetEdits(szFileName.Text()));
+			uiAt = FindIDETextOffset(szText, sStale.sName.iLine, sStale.sName.iColumn);
+			cEdits.Apply();
+			ShowDefinition(szFileName.Text(), uiAt);
+			szMessage.Init("Changed ");
+			szMessage.Append(sFunction.szName);
+			szMessage.Append("'s definition in ");
+			szMessage.Append(GetIDEFileNamePart(szFileName.Text()));
+			szMessage.Append(" to match its declaration.");
+			mpcContent->ShowStatus(szMessage.Text());
+			szMessage.Kill();
+			sStale.Kill();
+			szFileName.Kill();
+			cEdits.Kill();
+			KillUnits();
+			sFunction.Kill();
+			return true;
+		}
+		sStale.Kill();
+		bResult = !szWhyNot && PutDefinition(&sFunction, &cEdits, IDE_FILES_ANY, NULL, NULL, NULL, &szFileName, &uiAt, &szWhyNot);
 		if (bResult)
 		{
 			cEdits.Apply();
@@ -1129,6 +1185,7 @@ bool CIDEDefinitions::GenerateDeclaration(void)
 	CArrayChars			aszRelated;
 	SIDESignatureSite*	psDefinition;
 	SIDESignatureSite	sLast;
+	SIDESignatureSite	sStale;
 	SIDELocation*		psLocation;
 	CIDERefactorUnit*	pcUnit;
 	CCPPSyntax*			pcClass;
@@ -1151,9 +1208,12 @@ bool CIDEDefinitions::GenerateDeclaration(void)
 	bool				bResult;
 	bool				bMember;
 	bool				bLast;
+	bool				bStale;
 
 	pcModel = mpcContent->GetCodeModel();
 	sFunction.Init();
+	sStale.Init();
+	bStale = false;
 	bResult = ReadFunction(&sFunction, "generate a declaration");
 	if (bResult)
 	{
@@ -1220,12 +1280,19 @@ bool CIDEDefinitions::GenerateDeclaration(void)
 				for (i = asDeclared.NumElements(); !bLast && (i > 0); i--)
 				{
 					psLocation = asDeclared.Get(i - 1);
-					if ((psLocation->iLine >= sRange.iLine) && (psLocation->iLine <= sRange.iEndLine) && mpcContent->GetChangeSignature()->ReadSite(pcUnit, psLocation, "", &sLast, &szWhyNot))
+					if ((psLocation->iLine >= sRange.iLine) && (psLocation->iLine <= sRange.iEndLine))
 					{
-						bLast = true;
+						bLast = mpcContent->GetChangeSignature()->ReadSite(pcUnit, psLocation, "", &sLast, &szWhyNot);
+						if (!bLast)
+						{
+							sLast.Kill();
+							sLast.Init();
+						}
 					}
 				}
 				szWhyNot = NULL;
+				//A member with a definition and no declaration: its class may declare it as it was before it was edited.
+				bStale = FindUndefinedNamesake(pcUnit, &asDeclared, &asDefined, &sRange, psDefinition->szOwnName.Text(), &sStale);
 				KillIDELocations(&asDefined);
 				KillIDELocations(&asDeclared);
 			}
@@ -1277,7 +1344,22 @@ bool CIDEDefinitions::GenerateDeclaration(void)
 			}
 		}
 
-		if (!szWhyNot && szDefinitionText && szText)
+		if (!szWhyNot && szDefinitionText && szText && bStale)
+		{
+			//The class declares it as it was before its definition was edited: that declaration is changed to match.
+			MatchSite(&sStale, szText, psDefinition, szDefinitionText, true, cEdits.GetEdits(szHeader.Text()));
+			uiAt = FindIDETextOffset(szText, sStale.sName.iLine, sStale.sName.iColumn);
+			cEdits.Apply();
+			ShowDefinition(szHeader.Text(), uiAt);
+			szMessage.Init("Changed ");
+			szMessage.Append(sFunction.szName);
+			szMessage.Append("'s declaration in ");
+			szMessage.Append(GetIDEFileNamePart(szHeader.Text()));
+			szMessage.Append(" to match its definition.");
+			mpcContent->ShowStatus(szMessage.Text());
+			szMessage.Kill();
+		}
+		else if (!szWhyNot && szDefinitionText && szText)
 		{
 			//The declaration's line: indented and lined up as the last function's is, or one tab in a class.
 			szReturn.Init();
@@ -1351,8 +1433,551 @@ bool CIDEDefinitions::GenerateDeclaration(void)
 		cEdits.Kill();
 	}
 	KillUnits();
+	sStale.Kill();
 	sFunction.Kill();
 	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The one function of a name that a class declares and nothing defines:
+// what a member's definition was the definition of before it was edited.
+// pasDeclared and pasDefined are the class's file's functions
+// (FindSiblingFunctions) and psClass is the class in it.  False if there
+// is none, or more than one (overloads: which one it was can't be told).
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEDefinitions::FindUndefinedNamesake(CIDERefactorUnit* pcUnit, CArrayIDELocations* pasDeclared, CArrayIDELocations* pasDefined, SCPPSyntaxRange* psClass, const char* szOwnName, SIDESignatureSite* psDest)
+{
+	SIDESignatureSite	sSite;
+	SIDELocation*		psLocation;
+	const char*			szWhyNot;
+	size				uiFound;
+	size				i;
+
+	uiFound = 0;
+	for (i = 0; i < pasDeclared->NumElements(); i++)
+	{
+		psLocation = pasDeclared->Get(i);
+		if ((psLocation->iLine < psClass->iLine) || (psLocation->iLine > psClass->iEndLine) || (pasDefined->Get(i)->iLine >= 0))
+		{
+			continue;
+		}
+		sSite.Init();
+		if (mpcContent->GetChangeSignature()->ReadSite(pcUnit, psLocation, "", &sSite, &szWhyNot) && !sSite.bBody && !sSite.bPure && sSite.szOwnName.Equals(szOwnName))
+		{
+			uiFound++;
+			if (uiFound == 1)
+			{
+				psDest->Kill();
+				memcpy(psDest, &sSite, sizeof(SIDESignatureSite));
+				continue;
+			}
+		}
+		sSite.Kill();
+	}
+	return uiFound == 1;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The definition a member that is declared and not defined had before it
+// or its declaration was edited: the one definition written with its
+// class's name and its own, "CFoo::Fill(", in the files its class's
+// functions are defined in, that defines nothing the class declares (it
+// is no symbol, or one with that definition and nothing else).  False if
+// there is none, or more than one.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEDefinitions::FindUndeclaredDefinition(SIDEFunction* psFunction, CIDEFileEdits* pcEdits, SIDESignatureSite* psDest)
+{
+	CIDECodeModel*		pcModel;
+	CArrayIDELocations	asDeclared;
+	CArrayIDELocations	asDefined;
+	CArrayIDELocations	asLocations;
+	CArrayChars			aszFiles;
+	CArrayChars			aszRelated;
+	SIDESignatureSite*	psDeclaration;
+	SIDESignatureSite	sSite;
+	SIDELocation		sLocation;
+	CIDERefactorUnit*	pcUnit;
+	CChars				szWritten;
+	CChars				szKey;
+	const char*			szWhyNot;
+	const char*			szFound;
+	char*				szText;
+	size				uiFound;
+	size				uiName;
+	size				uiLineStart;
+	size				uiDeclared;
+	size				i;
+	size				j;
+	int32				iLine;
+	uint8				uiKind;
+
+	psDeclaration = &psFunction->sDeclaration;
+	if (!psFunction->bDeclaration || !psDeclaration->bInClass || psDeclaration->szClassQualifier.Empty())
+	{
+		return false;
+	}
+	pcModel = mpcContent->GetCodeModel();
+
+	//The files: where the class's functions are defined, its header's source files, and its header.
+	aszFiles.Init();
+	asDeclared.Init();
+	asDefined.Init();
+	pcModel->FindSiblingFunctions(psFunction->szKey.Text(), psDeclaration->szFileName.Text(), &asDeclared, &asDefined);
+	for (i = 0; i < asDefined.NumElements(); i++)
+	{
+		if (asDefined.Get(i)->iLine >= 0)
+		{
+			aszFiles.AddIfUnique(asDefined.Get(i)->szFileName.Text());
+		}
+	}
+	KillIDELocations(&asDefined);
+	KillIDELocations(&asDeclared);
+	aszRelated.Init();
+	mpcContent->GetFileRename()->FindRelatedFiles(psDeclaration->szFileName.Text(), &aszRelated);
+	for (i = 0; i < aszRelated.NumElements(); i++)
+	{
+		aszFiles.AddIfUnique(aszRelated.GetText(i));
+	}
+	aszRelated.Kill();
+	aszFiles.AddIfUnique(psDeclaration->szFileName.Text());
+
+	szWritten.Init();
+	szWritten.Append(psDeclaration->szClassQualifier);
+	szWritten.Append(psDeclaration->szOwnName);
+	uiFound = 0;
+	for (i = 0; i < aszFiles.NumElements(); i++)
+	{
+		szText = pcEdits->GetText(aszFiles.GetText(i));
+		pcUnit = szText ? GetUnit(aszFiles.GetText(i)) : NULL;
+		if (!pcUnit)
+		{
+			continue;
+		}
+		for (szFound = strstr(szText, szWritten.Text()); szFound; szFound = strstr(szFound + 1, szWritten.Text()))
+		{
+			if (((szFound > szText) && IsIDENameChar(szFound[-1])) || IsIDENameChar(szFound[szWritten.Length()]))
+			{
+				continue;
+			}
+			uiName = (size)(szFound - szText) + psDeclaration->szClassQualifier.Length();
+			iLine = 0;
+			uiLineStart = 0;
+			for (j = 0; j < uiName; j++)
+			{
+				if (szText[j] == '\n')
+				{
+					iLine++;
+					uiLineStart = j + 1;
+				}
+			}
+			//What it defines is declared nowhere else.
+			szKey.Init();
+			uiDeclared = 0;
+			if (pcModel->GetSymbolAt(aszFiles.GetText(i), iLine, (int)(uiName - uiLineStart), &szKey, &uiKind))
+			{
+				asLocations.Init();
+				pcModel->GetSymbolLocations(szKey.Text(), &asLocations, &uiKind);
+				for (j = 0; j < asLocations.NumElements(); j++)
+				{
+					uiDeclared += (asLocations.Get(j)->uiRole != CPPIR_Reference) ? 1 : 0;
+				}
+				KillIDELocations(&asLocations);
+			}
+			szKey.Kill();
+			if (uiDeclared > 1)
+			{
+				continue;
+			}
+			sLocation.szFileName.Init(aszFiles.GetText(i));
+			sLocation.iLine = iLine;
+			sLocation.iColumn = (int32)(uiName - uiLineStart);
+			sLocation.iLength = (int32)psDeclaration->szOwnName.Length();
+			sLocation.uiRole = CPPIR_Definition;
+			sLocation.uiFlags = 0;
+			sLocation.uiUsage = 0;
+			sLocation.iContainer = -1;
+			sSite.Init();
+			if (mpcContent->GetChangeSignature()->ReadSite(pcUnit, &sLocation, "", &sSite, &szWhyNot) && sSite.bBody && !sSite.bInClass)
+			{
+				uiFound++;
+				if (uiFound == 1)
+				{
+					psDest->Kill();
+					memcpy(psDest, &sSite, sizeof(SIDESignatureSite));
+					sLocation.szFileName.Kill();
+					continue;
+				}
+			}
+			sSite.Kill();
+			sLocation.szFileName.Kill();
+		}
+	}
+	szWritten.Kill();
+	aszFiles.Kill();
+	return uiFound == 1;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A parameter's type as a declaration or definition writes it, without
+// its name, its default value or any space: what tells whether two write
+// the same parameter.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDefinitions::AppendParameterType(SIDESignatureSite* psSite, const char* szText, size uiParameter, CChars* pszDest)
+{
+	SIDEWrittenParameter*	psWritten;
+	SCPPSyntaxRange			sRange;
+	CChars					szType;
+
+	psWritten = psSite->asParameters.Get(uiParameter);
+	szType.Init();
+	sRange = psWritten->sAll;
+	if (psWritten->bName)
+	{
+		sRange.iEndLine = psWritten->sName.iLine;
+		sRange.iEndColumn = psWritten->sName.iColumn;
+		AppendIDERangeText(szText, &sRange, &szType);
+		sRange = psWritten->sAll;
+		sRange.iLine = psWritten->sName.iEndLine;
+		sRange.iColumn = psWritten->sName.iEndColumn;
+	}
+	if (psWritten->bDefault)
+	{
+		sRange.iEndLine = psWritten->sDefault.iLine;
+		sRange.iEndColumn = psWritten->sDefault.iColumn;
+	}
+	AppendIDERangeText(szText, &sRange, &szType);
+	szType.Replace(" ", "");
+	szType.Replace("\t", "");
+	szType.Replace("\n", "");
+	szType.Replace("\r", "");
+	pszDest->Append(szType);
+	szType.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A declaration or a definition changed to match the other (psModel):
+// its parameters, what it returns and what follows its parameters (const)
+// become the model's, as edits of its file.  A declaration keeps what
+// only it writes: its parameters' default values, where each still has
+// one after it, and override and final.  A definition keeps the name it
+// gave a parameter whose type is as it was, since its body uses it.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDefinitions::MatchSite(SIDESignatureSite* psChanged, const char* szChangedText, SIDESignatureSite* psModel, const char* szModelText, bool bDeclaration, CIDETextEdits* pcEdits)
+{
+	SIDEWrittenParameter*	psWritten;
+	SCPPSyntaxRange			sRange;
+	CArrayChars				aszParameters;
+	CArrayChars				aszDefaults;
+	CChars					szNew;
+	CChars					szOld;
+	CChars					szType;
+	CChars					szOtherType;
+	size					uiCount;
+	size					uiStart;
+	size					uiName;
+	size					uiLineStart;
+	size					uiNameColumn;
+	size					uiReturnEnd;
+	size					i;
+	bool					bDefaults;
+	bool					bKeep;
+	bool					bTabs;
+
+	//Its parameters.
+	uiCount = psModel->asParameters.NumElements();
+	aszParameters.Init();
+	aszDefaults.Init();
+	for (i = 0; i < uiCount; i++)
+	{
+		bKeep = false;
+		if (!bDeclaration && (i < psChanged->asParameters.NumElements()) && psChanged->asParameters.Get(i)->bName)
+		{
+			szType.Init();
+			szOtherType.Init();
+			AppendParameterType(psChanged, szChangedText, i, &szType);
+			AppendParameterType(psModel, szModelText, i, &szOtherType);
+			bKeep = szType.Equals(szOtherType.Text());
+			szOtherType.Kill();
+			szType.Kill();
+		}
+		psWritten = bKeep ? psChanged->asParameters.Get(i) : psModel->asParameters.Get(i);
+		sRange = psWritten->sAll;
+		if (psWritten->bDefault)
+		{
+			sRange.iEndLine = psWritten->sDefault.iLine;
+			sRange.iEndColumn = psWritten->sDefault.iColumn;
+		}
+		szNew.Init();
+		AppendIDERangeText(bKeep ? szChangedText : szModelText, &sRange, &szNew);
+		szNew.StripWhitespace();
+		aszParameters.Add(szNew.Text());
+		szNew.Kill();
+
+		szNew.Init();
+		if (bDeclaration && (i < psChanged->asParameters.NumElements()) && psChanged->asParameters.Get(i)->bDefault)
+		{
+			AppendIDERangeText(szChangedText, &psChanged->asParameters.Get(i)->sDefault, &szNew);
+			szNew.StripWhitespace();
+		}
+		aszDefaults.Add(szNew.Text());
+		szNew.Kill();
+	}
+	szNew.Init();
+	if (uiCount == 0)
+	{
+		AppendIDERangeText(szModelText, &psModel->sParameters, &szNew);
+		szNew.StripWhitespace();
+	}
+	//A default value stays where every parameter after it has one.
+	bDefaults = true;
+	for (i = uiCount; i > 0; i--)
+	{
+		bDefaults = bDefaults && !aszDefaults.Get(i - 1)->Empty();
+		if (!bDefaults)
+		{
+			aszDefaults.Get(i - 1)->Clear();
+		}
+	}
+	for (i = 0; i < uiCount; i++)
+	{
+		szNew.Append((i > 0) ? ", " : "");
+		szNew.Append(aszParameters.GetText(i));
+		if (!aszDefaults.Get(i)->Empty())
+		{
+			szNew.Append(' ');
+			szNew.Append(aszDefaults.GetText(i));
+		}
+	}
+	pcEdits->Replace(FindIDETextOffset(szChangedText, psChanged->sParameters.iLine, psChanged->sParameters.iColumn),
+					 FindIDETextOffset(szChangedText, psChanged->sParameters.iEndLine, psChanged->sParameters.iEndColumn), szNew.Text());
+	szNew.Kill();
+	aszDefaults.Kill();
+	aszParameters.Kill();
+
+	//What it returns.  Its name stays in its column where tabs put it there (a class's declarations are lined up);
+	//otherwise the space after what it returns stays as it is.
+	if (psChanged->bReturn && psModel->bReturn)
+	{
+		szOld.Init();
+		szNew.Init();
+		AppendIDERangeText(szChangedText, &psChanged->sReturn, &szOld);
+		AppendIDERangeText(szModelText, &psModel->sReturn, &szNew);
+		szOld.StripWhitespace();
+		szNew.StripWhitespace();
+		if (!szOld.Equals(szNew.Text()))
+		{
+			uiStart = FindIDETextOffset(szChangedText, psChanged->sReturn.iLine, psChanged->sReturn.iColumn);
+			uiName = FindIDETextOffset(szChangedText, psChanged->sName.iLine, psChanged->sName.iColumn);
+			bTabs = uiName > uiStart + szOld.Length();
+			for (i = uiStart + szOld.Length(); i < uiName; i++)
+			{
+				bTabs = bTabs && (szChangedText[i] == '\t');
+			}
+			if (bTabs)
+			{
+				uiLineStart = FindIDETextOffset(szChangedText, psChanged->sReturn.iLine, 0);
+				uiNameColumn = FindIDEVisualColumn(szChangedText, uiLineStart, uiName, 4);
+				uiReturnEnd = FindIDEVisualColumn(szChangedText, uiLineStart, uiStart, 4) + szNew.Length();
+				if (uiNameColumn > uiReturnEnd)
+				{
+					AppendIDETabsTo(&szNew, uiReturnEnd, uiNameColumn, 4);
+				}
+				else
+				{
+					szNew.Append('\t');
+				}
+				pcEdits->Replace(uiStart, uiName, szNew.Text());
+			}
+			else
+			{
+				pcEdits->Replace(uiStart, uiStart + szOld.Length(), szNew.Text());
+			}
+		}
+		szNew.Kill();
+		szOld.Kill();
+	}
+
+	//What follows its parameters.
+	szOld.Init();
+	szNew.Init();
+	AppendIDERangeText(szChangedText, &psChanged->sAfter, &szOld);
+	szNew.Append(psModel->szQualifiers);
+	if (bDeclaration)
+	{
+		szNew.Append(szOld.Contains("override") ? " override" : "");
+		szNew.Append(szOld.Contains("final") ? " final" : "");
+	}
+	if (!szOld.Equals(szNew.Text()))
+	{
+		pcEdits->Replace(FindIDETextOffset(szChangedText, psChanged->sAfter.iLine, psChanged->sAfter.iColumn),
+						 FindIDETextOffset(szChangedText, psChanged->sAfter.iEndLine, psChanged->sAfter.iEndColumn), szNew.Text());
+	}
+	szNew.Kill();
+	szOld.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A function outside any class that is defined in a header (inline) is
+// defined in the header's source file instead, without its inline, where
+// PutDefinition puts it.  In the header its definition goes, with the
+// comment over it, if the header declares it too; otherwise it becomes
+// its declaration, there.  A function template stays where it is.  False,
+// with why, if it can't be.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEDefinitions::MoveFunctionToSource(SIDEFunction* psFunction, CIDEFileEdits* pcEdits, CChars* pszFileName, const char** pszWhyNot)
+{
+	SIDESignatureSite*	psDefinition;
+	CChars				szBody;
+	CChars				szOutside;
+	CChars				szDeclaration;
+	CChars				szPart;
+	char*				szText;
+	size				uiStart;
+	size				uiEnd;
+	size				uiAt;
+	bool				bResult;
+
+	psDefinition = &psFunction->sDefinition;
+	if (!psDefinition->szOwnTemplate.Empty())
+	{
+		*pszWhyNot = "a function template is defined in its header";
+		return false;
+	}
+	szText = pcEdits->GetText(psDefinition->szFileName.Text());
+	if (!szText)
+	{
+		*pszWhyNot = "its file couldn't be opened";
+		return false;
+	}
+	szBody.Init();
+	szOutside.Init();
+	AppendIDERangeText(szText, &psDefinition->sBody, &szBody);
+	AppendBodyOutside(szBody.Text(), &szOutside);
+	uiAt = 0;
+	bResult = PutDefinition(psFunction, pcEdits, IDE_FILES_SOURCE, NULL, NULL, szOutside.Text(), pszFileName, &uiAt, pszWhyNot);
+	if (bResult)
+	{
+		uiStart = FindIDETextOffset(szText, psDefinition->sAll.iLine, psDefinition->sAll.iColumn);
+		uiEnd = FindIDETextOffset(szText, psDefinition->sAll.iEndLine, psDefinition->sAll.iEndColumn);
+		if (psFunction->bDeclaration)
+		{
+			ExtendIDEDeletion(szText, &uiStart, &uiEnd, true);
+			pcEdits->GetEdits(psDefinition->szFileName.Text())->Replace(uiStart, uiEnd, "");
+		}
+		else
+		{
+			//Its declaration, where its definition and the comment over that were.
+			szDeclaration.Init();
+			if (psDefinition->bReturn)
+			{
+				szPart.Init();
+				AppendIDERangeText(szText, &psDefinition->sReturn, &szPart);
+				szPart.StripWhitespace();
+				szDeclaration.Append(szPart)->Append(' ');
+				szPart.Kill();
+			}
+			AppendIDERangeText(szText, &psDefinition->sName, &szDeclaration);
+			szDeclaration.Append('(');
+			AppendParameters(psDefinition, szText, true, &szDeclaration);
+			szDeclaration.Append(')');
+			szDeclaration.Append(psDefinition->szQualifiers);
+			szDeclaration.Append(';');
+			pcEdits->GetEdits(psDefinition->szFileName.Text())->Replace(FindBannerStart(szText, uiStart), uiEnd, szDeclaration.Text());
+			szDeclaration.Kill();
+		}
+	}
+	szOutside.Kill();
+	szBody.Kill();
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A function outside any class that a header declares and a source file
+// defines is defined in the header, inline: after the header's other
+// definitions or before its #endif (PutDefinition), and it stays declared
+// where it was, with its default values.  Its definition in the source
+// file goes with the comment over it.  The definition is written as the
+// source file wrote it: its parameters' names are the ones its body
+// uses.  False, with why, if it can't be.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEDefinitions::MoveFunctionToHeader(SIDEFunction* psFunction, CIDEFileEdits* pcEdits, CChars* pszFileName, const char** pszWhyNot)
+{
+	SIDESignatureSite*	psDefinition;
+	SIDEFunction		sWritten;
+	CChars				szBanner;
+	CChars				szDefinition;
+	CChars				szBody;
+	CChars				szOutside;
+	char*				szText;
+	char*				szHeaderText;
+	size				uiStart;
+	size				uiEnd;
+	size				uiAt;
+	int					iWhere;
+
+	psDefinition = &psFunction->sDefinition;
+	szText = pcEdits->GetText(psDefinition->szFileName.Text());
+	szHeaderText = pcEdits->GetText(psFunction->sDeclaration.szFileName.Text());
+	if (!szText || !szHeaderText)
+	{
+		*pszWhyNot = "a file couldn't be opened";
+		return false;
+	}
+	szBanner.Init();
+	uiAt = 0;
+	iWhere = IDE_PLACE_END;
+	if (!FindDefinitionPlace(psFunction, pcEdits, IDE_FILES_HEADER, pszFileName, &uiAt, &iWhere, &szBanner, pszWhyNot))
+	{
+		szBanner.Kill();
+		return false;
+	}
+
+	//The definition as its own file writes it (AppendDefinition writes from the declaration, if there is one).
+	memcpy(&sWritten, psFunction, sizeof(SIDEFunction));
+	sWritten.bDeclaration = false;
+	szBody.Init();
+	szOutside.Init();
+	szDefinition.Init();
+	AppendIDERangeText(szText, &psDefinition->sBody, &szBody);
+	AppendBodyOutside(szBody.Text(), &szOutside);
+	if (iWhere != IDE_PLACE_BEFORE)
+	{
+		szDefinition.Append(((uiAt > 0) && (szHeaderText[uiAt - 1] != '\n')) ? "\n\n\n" : "\n\n");
+	}
+	AppendDefinition(&sWritten, szText, szBanner.Text(), "inline ", NULL, szOutside.Text(), &szDefinition);
+	if (iWhere == IDE_PLACE_BEFORE)
+	{
+		szDefinition.Append("\n\n");
+	}
+	pcEdits->GetEdits(pszFileName->Text())->Insert(uiAt, szDefinition.Text());
+
+	uiStart = FindIDETextOffset(szText, psDefinition->sAll.iLine, psDefinition->sAll.iColumn);
+	uiEnd = FindIDETextOffset(szText, psDefinition->sAll.iEndLine, psDefinition->sAll.iEndColumn);
+	ExtendIDEDeletion(szText, &uiStart, &uiEnd, true);
+	pcEdits->GetEdits(psDefinition->szFileName.Text())->Replace(uiStart, uiEnd, "");
+	szDefinition.Kill();
+	szOutside.Kill();
+	szBody.Kill();
+	szBanner.Kill();
+	return true;
 }
 
 
@@ -1386,12 +2011,37 @@ bool CIDEDefinitions::MoveDefinitionOut(void)
 	{
 		psDefinition = &sFunction.sDefinition;
 		szWhyNot = NULL;
+		cEdits.Init(mpcContent);
+		szFileName.Init();
+		if (sFunction.bDefinition && !psDefinition->bInClass && (!sFunction.bDeclaration || !sFunction.sDeclaration.bInClass) && IsIDEHeaderFile(psDefinition->szFileName.Text()))
+		{
+			//A function outside any class, defined in a header: to the header's source file.
+			bResult = MoveFunctionToSource(&sFunction, &cEdits, &szFileName, &szWhyNot);
+			if (bResult)
+			{
+				cEdits.Apply();
+				szMessage.Init("Moved ");
+				szMessage.Append(sFunction.szName);
+				szMessage.Append("'s definition out of its header, to ");
+				szMessage.Append(GetIDEFileNamePart(szFileName.Text()));
+				szMessage.Append(".");
+				mpcContent->ShowStatus(szMessage.Text());
+				szMessage.Kill();
+			}
+			else
+			{
+				Refuse("move the definition", &sFunction, szWhyNot);
+			}
+			szFileName.Kill();
+			cEdits.Kill();
+			KillUnits();
+			sFunction.Kill();
+			return bResult;
+		}
 		if (!sFunction.bDefinition || !psDefinition->bInClass)
 		{
 			szWhyNot = "it isn't defined in its class";
 		}
-		cEdits.Init(mpcContent);
-		szFileName.Init();
 		szBody.Init();
 		szOutside.Init();
 		szInitialisers.Init();
@@ -1413,7 +2063,7 @@ bool CIDEDefinitions::MoveDefinitionOut(void)
 			szInitialisers.StripWhitespace(true);
 		}
 		uiAt = 0;
-		bResult = !szWhyNot && PutDefinition(&sFunction, &cEdits, szInitialisers.Text(), szOutside.Text(), &szFileName, &uiAt, &szWhyNot);
+		bResult = !szWhyNot && PutDefinition(&sFunction, &cEdits, IDE_FILES_ANY, NULL, szInitialisers.Text(), szOutside.Text(), &szFileName, &uiAt, &szWhyNot);
 		if (bResult)
 		{
 			//In the class: what follows its parameters stays, and a ; is where its initialisers and body were.
@@ -1485,6 +2135,36 @@ bool CIDEDefinitions::MoveDefinitionIn(void)
 		psDeclaration = &sFunction.sDeclaration;
 		psDefinition = &sFunction.sDefinition;
 		szWhyNot = NULL;
+		if (sFunction.bDeclaration && sFunction.bDefinition && !psDeclaration->bInClass && !psDefinition->bInClass && IsIDEHeaderFile(psDeclaration->szFileName.Text()) &&
+			!IsIDEHeaderFile(psDefinition->szFileName.Text()))
+		{
+			//A function outside any class, declared in a header and defined in a source file: into the header, inline.
+			cEdits.Init(mpcContent);
+			szName.Init();
+			bResult = MoveFunctionToHeader(&sFunction, &cEdits, &szName, &szWhyNot);
+			if (bResult)
+			{
+				cEdits.Apply();
+				szMessage.Init("Moved ");
+				szMessage.Append(sFunction.szName);
+				szMessage.Append("'s definition into its header, ");
+				szMessage.Append(GetIDEFileNamePart(szName.Text()));
+				szMessage.Append(", from ");
+				szMessage.Append(GetIDEFileNamePart(psDefinition->szFileName.Text()));
+				szMessage.Append(".");
+				mpcContent->ShowStatus(szMessage.Text());
+				szMessage.Kill();
+			}
+			else
+			{
+				Refuse("move the definition", &sFunction, szWhyNot);
+			}
+			szName.Kill();
+			cEdits.Kill();
+			KillUnits();
+			sFunction.Kill();
+			return bResult;
+		}
 		if (!sFunction.bDeclaration || !psDeclaration->bInClass)
 		{
 			szWhyNot = (sFunction.bDefinition && psDefinition->bInClass) ? "it is defined in its class already" : "it isn't declared in a class";

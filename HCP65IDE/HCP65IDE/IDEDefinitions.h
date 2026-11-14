@@ -45,6 +45,7 @@ struct SIDEFunction
 	bool				bDeclaration;
 	SIDESignatureSite	sDefinition;
 	bool				bDefinition;
+	bool				bUndeclared;	//A member defined outside a class that doesn't declare it: no symbol, read from its file.
 
 	void	Init(void);
 	void	Kill(void);
@@ -80,10 +81,17 @@ public:
 //    it), under a comment like theirs; a class template's member under its template<...> in the header.
 //  - Generate Declaration: a function defined and not declared is declared, in its class after its other functions
 //    and lined up with them, or in the header of its source file.
+//  - The two brought back into step.  A member whose definition was edited (another parameter, say) is a member
+//    its class doesn't declare, and the class's declaration of that name is left with no definition: Generate
+//    Declaration on the definition changes that declaration to match it (its default values kept, and override),
+//    and Generate Definition on the declaration changes the definition to match the declaration (the names its
+//    body uses kept where a parameter's type is as it was).  What the caret is on is what is right.
 //  - Move Definition out of Class: a function defined in its class is left declared there and defined outside, as
-//    Generate Definition would place it, with its body.
+//    Generate Definition would place it, with its body.  A function outside any class that is defined in a header
+//    (inline) is defined in the header's source file instead, without its inline, and declared in the header.
 //  - Move Definition into Class: the reverse; one statement stays on the declaration's line, as the house style has
-//    a class's short functions, more go under it.
+//    a class's short functions, more go under it.  A function outside any class that a header declares is defined
+//    in that header, inline, and stays declared where it was.
 //Each is one undo.  The status line says what was done, or why it can't be.
 class CIDEDefinitions : public CObject
 {
@@ -119,9 +127,15 @@ protected:
 	void				KillUnits(void);
 	bool				ReadFunction(SIDEFunction* psDest, const char* szOperation);
 	void				Refuse(const char* szOperation, SIDEFunction* psFunction, const char* szWhyNot);
-	bool				FindDefinitionPlace(SIDEFunction* psFunction, CIDEFileEdits* pcEdits, CChars* pszFileName, size* puiAt, int* piWhere, CChars* pszBanner, const char** pszWhyNot);
-	void				AppendDefinition(SIDEFunction* psFunction, const char* szDeclarationText, const char* szBanner, const char* szInitialisers, const char* szBody, CChars* pszDest);
-	bool				PutDefinition(SIDEFunction* psFunction, CIDEFileEdits* pcEdits, const char* szInitialisers, const char* szBody, CChars* pszFileName, size* puiAt, const char** pszWhyNot);
+	bool				FindDefinitionPlace(SIDEFunction* psFunction, CIDEFileEdits* pcEdits, int iFiles, CChars* pszFileName, size* puiAt, int* piWhere, CChars* pszBanner, const char** pszWhyNot);
+	void				AppendDefinition(SIDEFunction* psFunction, const char* szDeclarationText, const char* szBanner, const char* szPrefix, const char* szInitialisers, const char* szBody, CChars* pszDest);
+	bool				PutDefinition(SIDEFunction* psFunction, CIDEFileEdits* pcEdits, int iFiles, const char* szPrefix, const char* szInitialisers, const char* szBody, CChars* pszFileName, size* puiAt, const char** pszWhyNot);
+	bool				FindUndefinedNamesake(CIDERefactorUnit* pcUnit, CArrayIDELocations* pasDeclared, CArrayIDELocations* pasDefined, SCPPSyntaxRange* psClass, const char* szOwnName, SIDESignatureSite* psDest);
+	bool				FindUndeclaredDefinition(SIDEFunction* psFunction, CIDEFileEdits* pcEdits, SIDESignatureSite* psDest);
+	void				AppendParameterType(SIDESignatureSite* psSite, const char* szText, size uiParameter, CChars* pszDest);
+	void				MatchSite(SIDESignatureSite* psChanged, const char* szChangedText, SIDESignatureSite* psModel, const char* szModelText, bool bDeclaration, CIDETextEdits* pcEdits);
+	bool				MoveFunctionToSource(SIDEFunction* psFunction, CIDEFileEdits* pcEdits, CChars* pszFileName, const char** pszWhyNot);
+	bool				MoveFunctionToHeader(SIDEFunction* psFunction, CIDEFileEdits* pcEdits, CChars* pszFileName, const char** pszWhyNot);
 	void				AppendParameters(SIDESignatureSite* psSite, const char* szText, bool bDefaults, CChars* pszDest);
 	void				AppendBanner(const char* szText, size uiDefinition, CChars* pszDest);
 	size				FindBannerStart(const char* szText, size uiDefinition);
