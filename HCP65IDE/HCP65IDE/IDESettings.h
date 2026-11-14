@@ -24,8 +24,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "StandardLib/Object.h"
 #include "StandardLib/Pointer.h"
 #include "WindowLib/CommandSet.h"
-#include "IDESettingsDialog.h"
-#include "IDEKeymapPage.h"
+#include "WindowLib/SettingsDialog.h"
+#include "WindowLib/KeymapPage.h"
 
 
 class CIDEContent;
@@ -36,8 +36,9 @@ class CIDEContent;
 
 //File, Settings, and the keys a user has changed, which are read from a file of theirs as the IDE starts and written to
 //it when OK closes the dialog.  They apply straight away.  How the IDE was left (Find Usages' groups) is kept in
-//another file of theirs: each part of the IDE reads and writes its own in it (ReadSettings and WriteSettings).
-class CIDESettings : public CObject
+//another file of theirs: each part of the IDE reads and writes its own in it (ReadSettings and WriteSettings).  The
+//IDE's script (CIDEScript) watches the dialogs for its checks, through the keymap page's watcher.
+class CIDESettings : public CObject, public CKeymapPageWatcher
 {
 CONSTRUCTABLE(CIDESettings);
 DESTRUCTABLE(CIDESettings);
@@ -45,8 +46,8 @@ protected:
 	CIDEContent*				mpcContent;  //Not held: the content holds it.
 	CChars						mszKeymapFile;  //Empty if the keys aren't kept.
 	CChars						mszSettingsFile;  //Empty if how the IDE was left isn't kept.
-	Ptr<CIDESettingsDialog>		mpDialog;  //While it's shown.
-	Ptr<CIDEKeymapPage>			mpKeymapPage;
+	Ptr<CSettingsDialog>		mpDialog;  //While it's shown.
+	Ptr<CKeymapPage>			mpKeymapPage;
 
 public:
 	void	Init(CIDEContent* pcContent);
@@ -61,6 +62,10 @@ public:
 	void	ReadSettings(const char* szFile);
 	bool	WriteSettings(void);
 	char*	GetSettingsFile(void);
+
+	void	WatchDialog(Ptr<CDialog> pDialog) override;
+	void	StopWatchingDialog(void) override;
+	void	ShowCaptureWhenDrawn(CKeymapPage* pcPage) override;
 
 protected:
 	void	RequestDialog(void);

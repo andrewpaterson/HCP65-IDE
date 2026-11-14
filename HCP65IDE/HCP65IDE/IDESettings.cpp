@@ -30,6 +30,24 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDESettings.h"
 
 
+//The keymap's groups, in the order they're shown: the part of a command's name before its dot and what's shown.
+static SKeymapGroup	gasIDEKeymapGroups[] =
+{
+	{ "File", "File" },
+	{ "Edit", "Edit" },
+	{ "Navigate", "Navigate" },
+	{ "Refactor", "Refactor" },
+	{ "View", "View" },
+	{ "Git", "Git" },
+	{ "Build", "Build" },
+	{ "Run", "Run" },
+	{ "Debug", "Debug" },
+	{ "Window", "Window" },
+	{ "Explorer", "Solution Explorer" },
+	{ "Editor", "Editor Actions" },
+};
+
+
 //////////////////////////////////////////////////////////////////////////
 //
 //
@@ -70,6 +88,17 @@ void CIDESettings::Free(void)
 
 
 char* CIDESettings::GetKeymapFile(void) { return mszKeymapFile.Text(); }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The keymap page's dialogs are watched by the IDE's script, for its
+// checks (see CKeymapPageWatcher).
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDESettings::WatchDialog(Ptr<CDialog> pDialog) { mpcContent->GetScript()->WatchDialog(pDialog); }
+void CIDESettings::StopWatchingDialog(void) { mpcContent->GetScript()->StopWatchingDialog(); }
+void CIDESettings::ShowCaptureWhenDrawn(CKeymapPage* pcPage) { mpcContent->GetScript()->SetDialogDrawnCall(pcPage, &CKeymapPage::ShowCapture); }
 bool CIDESettings::Save(CObjectWriter* pcFile) { return false; }
 bool CIDESettings::Load(CObjectReader* pcFile) { return false; }
 
@@ -209,8 +238,8 @@ void CIDESettings::ShowDialog(void)
 	bool			bOK;
 
 	pWindow = mpcContent->GetWindow();
-	mpDialog = OMalloc<CIDESettingsDialog>(pWindow, mpcContent->GetDialogLook());
-	mpKeymapPage = OMalloc<CIDEKeymapPage>(mpDialog->GetDialog(), mpcContent->GetCommands(), pWindow->GetComponentInput(), mpcContent->GetScript());
+	mpDialog = OMalloc<CSettingsDialog>(pWindow, mpcContent->GetDialogLook());
+	mpKeymapPage = OMalloc<CKeymapPage>(mpDialog->GetDialog(), mpcContent->GetCommands(), pWindow->GetComponentInput(), gasIDEKeymapGroups, sizeof(gasIDEKeymapGroups) / sizeof(gasIDEKeymapGroups[0]), this);
 	mpDialog->AddPage(mpKeymapPage);
 	if (getenv("HCP65_IDE_KEYMAP_EDITS") != NULL)
 	{

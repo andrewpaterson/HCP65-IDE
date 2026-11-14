@@ -334,8 +334,6 @@
     <ClCompile Include="IDEConfigurations.cpp" />
     <ClCompile Include="IDERunConfigurationsDialog.cpp" />
     <ClCompile Include="IDESettings.cpp" />
-    <ClCompile Include="IDESettingsDialog.cpp" />
-    <ClCompile Include="IDEKeymapPage.cpp" />
     <ClCompile Include="IDERunning.cpp" />
     <ClCompile Include="IDEScript.cpp" />
     <ClCompile Include="IDEGit.cpp" />
@@ -362,8 +360,6 @@
     <ClInclude Include="IDEConfigurations.h" />
     <ClInclude Include="IDERunConfigurationsDialog.h" />
     <ClInclude Include="IDESettings.h" />
-    <ClInclude Include="IDESettingsDialog.h" />
-    <ClInclude Include="IDEKeymapPage.h" />
     <ClInclude Include="IDERunning.h" />
     <ClInclude Include="IDEDebugging.h" />
     <ClInclude Include="IDEGitStatus.h" />

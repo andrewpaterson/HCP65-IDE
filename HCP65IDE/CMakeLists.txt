@@ -139,8 +139,6 @@ set(IDE_SOURCES
 	"${IDE_DIR}/IDEConfigurations.cpp"
 	"${IDE_DIR}/IDERunConfigurationsDialog.cpp"
 	"${IDE_DIR}/IDESettings.cpp"
-	"${IDE_DIR}/IDESettingsDialog.cpp"
-	"${IDE_DIR}/IDEKeymapPage.cpp"
 	"${IDE_DIR}/IDERunning.cpp"
 	"${IDE_DIR}/IDEDebugging.cpp"
 	"${IDE_DIR}/IDEGitStatus.cpp"
