@@ -64,6 +64,8 @@ struct SIDESignatureSite
 	bool						bReturn;		//It writes one (a constructor doesn't).
 	bool						bDefinition;
 	bool						bFirst;			//It is where its symbol is first declared: a new default value is written here.
+	CChars						szLabel;		//Where it is first declared: the label hand written assembly names its symbol by, as it was.
+	size						uiNewName;		//Where its name is in its file's text once the change is made.
 	CArrayIDEWrittenParameters	asParameters;
 
 	void	Init(void);
@@ -168,6 +170,11 @@ typedef CArrayTemplatePtr<CIDERefactorUnit>	CArrayIDESignatureUnits;
 //but not called (its address taken); an argument taken out that does something; a parameter with a default value
 //before one without; a new parameter with no value for the calls there are; another function of the same name with
 //the new parameters; a call whose value is used when it is to return nothing.
+//
+//Hand written assembly names a function by the label the compiler gives it, which has its parameters' types in it
+//where it is overloaded or isn't a member.  Where the solution has assembly and builds for a processor, each changed
+//function's label is asked of the compiler before and after (for that processor: an int is 2 bytes on one and 4 on the
+//other), and the assembly's labels are changed from the one to the other.
 class CIDEChangeSignature : public CObject
 {
 CONSTRUCTABLE(CIDEChangeSignature);
@@ -192,6 +199,7 @@ public:
 	bool	ShowChangeSignature(void);
 	bool	IsUnchanged(SIDESignature* psSignature, SIDESignatureChange* psChange);
 	bool	FindSignature(SIDESignature* psDest);
+	bool	AppendCaretLabel(CChars* pszDest);
 	bool	ParseChange(SIDESignature* psSignature, const char* szSpec, SIDESignatureChange* psDest, CChars* pszProblem);
 	bool	FindProblem(SIDESignature* psSignature, SIDESignatureChange* psChange, CChars* pszProblem);
 	void	FindConflicts(SIDESignature* psSignature, SIDESignatureChange* psChange, CArrayChars* paszDest);
@@ -211,6 +219,9 @@ protected:
 	void				AppendSiteParameters(SIDESignature* psSignature, SIDESignatureSite* psSite, bool bFirst, CArrayIDENewParameters* pasNew, const char* szText, CChars* pszDest);
 	void				AppendCallArguments(SIDESignature* psSignature, SIDESignatureCall* psCall, CArrayIDENewParameters* pasNew, const char* szText, CChars* pszDest);
 	void				ShowChangeStatus(CChars* pszMessage, CChars* pszStatus);
+	bool				GetAssemblyTarget(ECPPTarget* peTarget);
+	void				FindLabels(SIDESignature* psSignature, ECPPTarget eTarget, bool bNew, CArrayChars* paszNew);
+	size				ChangeLabels(SIDESignature* psSignature, CArrayChars* paszNew);
 };
 
 

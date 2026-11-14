@@ -1125,6 +1125,25 @@ CHECKS = [
 		[r'^Dialog \[Change Signature\] answered OK$', r'^Conflict: CBrush::Draw still uses the parameter taken out, iX, at Paint\.cpp:34\.$', r'^Dialog \[Problems Detected\] answered Cancel$',
 		 r'^Dialog \[Problems Detected\] answered OK$', r"^Status line: Changed CBrush::Draw's signature: 4 declarations and definitions \(1 override\), 2 calls in 3 files\.$"],
 		[]),
+	('change-signature-assembly', dict(MakeChangeSignatureCopy(), **{
+		#Hand written assembly names a function by the compiler's label, which has its parameters' types in it where it
+		#isn't a member or is overloaded: with a W65C816 configuration the labels are asked of the compiler (printlabel
+		#prints one) before and after, and the assembly's are changed.  Blend(int, int)'s becomes _Blend__Fssc and
+		#Blend(int, int, int)'s is left; a member that isn't overloaded keeps its label whatever its parameters.
+		'WAIT_INDEX': '1', 'OPEN': 'Paint.h', 'CONFIGURATION': 'Debug|W65C816',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:24:7,edit:printlabel,edit:changesignature:0;1;+char|cMode|\'a\'|,edit:caret:24:7,edit:printlabel,'
+		         'edit:caret:11:9,edit:changesignature:2;0;1,printdisklines:PaintW65C816.asm,printdisklines:Main.cpp'}),
+		[r'^Label: _Blend__Fss$', r"^Status: Changed Blend's signature: 2 declarations and definitions, 1 call in 3 files\.  1 label in assembly\.$", r'^Label: _Blend__Fssc$',
+		 r"^Status: Changed CBrush::Mix's signature: 2 declarations and definitions, 1 call in 3 files\.$",
+		 r'^6\|\t\tjsr _CBrush__Init$', r'^7\|\t\tjsr _CBrush__Mix$', r'^8\|\t\tjsr _Blend__Fssc$', r'^9\|\t\tjsr _Blend__Fsss$', r'^10\|\t\tjsr _Next$',
+		 r"^21\|\treturn Blend\(1, 2, 'a'\) \+ Blend\(1, 2, 3\);$"],
+		[r'^Conflict']),
+	('change-signature-assembly-host', dict(MakeChangeSignatureCopy(), **{
+		#A configuration that isn't for a processor has no labels: the assembly is left.
+		'WAIT_INDEX': '1', 'OPEN': 'Paint.h', 'CONFIGURATION': 'Debug|Win32', 'CARET': '24:7',
+		'DEBUG': 'edit:renamesearch:---s,edit:printlabel,edit:changesignature:0;1;+char|cMode|\'a\'|,printdisklines:PaintW65C816.asm'}),
+		[r'^Label: none$', r"^Status: Changed Blend's signature: 2 declarations and definitions, 1 call in 3 files\.$", r'^8\|\t\tjsr _Blend__Fss$'],
+		[r'label in assembly']),
 	('rename-assembly-class', dict(MakeRenameAssemblyCopy(), **{
 		#A class renamed in hand written assembly's labels (_CEngine__Init, __0, __2), in parameter lists with its length
 		#(FPC7CEngine to FPC6CMotor), in generated layout constants (SIZEOF_CEngine, CEngine_miSpeed: in the assembly, the

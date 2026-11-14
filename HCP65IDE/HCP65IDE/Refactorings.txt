@@ -139,6 +139,13 @@ Phase 1 - nothing new from the compiler
      In a template: a member of a class template changes in the template and at every call on any instance; a
      function a template's body calls through an instance changes with its family (T2), the call in the body once;
      specialisations with the template (T5).
+     Done 2026-11-14 (IDEChangeSignature.h says what it does), with its conflicts shown before anything changes
+     (F4, for it: Problems Detected), a parameter's type and default value, the return type, the name (by
+     Rename), and the assembly's labels asked of the compiler.  But for:
+       - a constructor's calls that aren't written as calls (question 13);
+       - specialisations (T5): an explicit specialisation of a function template is another symbol to the index,
+         and isn't changed with the template;
+       - a function type elsewhere that the function is assigned to (a pointer to it) is left, and said.
   3. Move:
        - a member function's body between the class (inline) and the .cpp;
        - Pull Members Up and Push Members Down;
@@ -260,8 +267,9 @@ Where it is
      With it, Rename File on Windows was found to leave "../Engine.h" #includes unchanged, and fixed (8c83367).
   2. Safe Delete: done but for what is listed under it above.
   3. T3, the template as itself: done in the compiler.  F1, F2 and Introduce Variable: done (HCP65-IDE 3334b30).
-  4. Change Signature, with F4, F5, T4 and T5: next.  In stages, each checked and committed: every declaration,
-     definition, override, family member and call found, with their parameters' and arguments' places; the edits
-     (parameters kept, removed, added, reordered and renamed); the conflicts; the dialog and its table; the return
-     type, const and the name; the assembly's labels.
+  4. Change Signature: done but for what is listed under it (HCP65-IDE d47e44d and the assembly labels after it).
+     Its dialog is a list and a form, not a table (question 10).
+  5. Move, starting with what a declaration and its definition are to each other (F5): a definition made from a
+     declaration and a declaration from a definition, a function's body moved into its class and out of it; then
+     Pull Up and Push Down, a class to its own files, a function to another file.  Next.
 

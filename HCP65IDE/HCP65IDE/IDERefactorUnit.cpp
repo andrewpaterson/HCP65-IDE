@@ -213,10 +213,11 @@ void CIDERefactorUnit::Kill(void)
 // that unit's text from pcTexts too.  With bCheck its expressions are
 // typed, in a check that is kept.  False if it isn't in a project, its
 // text can't be had, or nothing of it is in the unit (the unit no longer
-// includes it).
+// includes it).  The check is for eTarget: the host's sizes, or a
+// processor's for the labels its functions have there.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDERefactorUnit::Parse(CIDECodeModel* pcModel, CIDEFileTexts* pcTexts, const char* szFileName, bool bCheck)
+bool CIDERefactorUnit::Parse(CIDECodeModel* pcModel, CIDEFileTexts* pcTexts, const char* szFileName, bool bCheck, ECPPTarget eTarget)
 {
 	CTextFile	cFile;
 	CTextFile	cUnitFile;
@@ -262,7 +263,7 @@ bool CIDERefactorUnit::Parse(CIDECodeModel* pcModel, CIDEFileTexts* pcTexts, con
 	mbParsed = bResult && (mpcFile != NULL);
 	if (mbParsed && bCheck)
 	{
-		mcPass.Check(&mcUnit.mcTree, CPPT_Host, true);
+		mcPass.Check(&mcUnit.mcTree, eTarget, true);
 		mbChecked = true;
 	}
 	return mbParsed;
@@ -722,5 +723,33 @@ bool CIDERefactorUnit::AppendDeclaredType(CCPPSyntax* pcExpression, CChars* pszD
 		return AppendDeclaredTypeOf(((CCPPSyntaxParameter*)pcDeclaration)->mpcSpecifiers, ((CCPPSyntaxParameter*)pcDeclaration)->mpcDeclarator, pszDest);
 	}
 	return false;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The label the compiler gives the function whose name is written at a
+// place in the file (in a declaration or a definition of it), for the
+// target the unit was checked for (CCPPSemanticPass::AppendFunctionLabel).
+// False if there is no function's declarator there, or the unit wasn't
+// checked.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDERefactorUnit::AppendFunctionLabel(int iLine, int iColumn, CChars* pszDest)
+{
+	CCPPSyntaxDeclarator*	pcDeclarator;
+	CCPPSyntax*				pcNode;
+
+	if (!mbChecked)
+	{
+		return false;
+	}
+	pcNode = FindNodeAt(iLine, iColumn);
+	pcDeclarator = (CCPPSyntaxDeclarator*)FindAncestor(pcNode, CPPS_Declarator);
+	while (pcDeclarator && pcDeclarator->mpcParent && (pcDeclarator->mpcParent->GetKind() == CPPS_Declarator))
+	{
+		pcDeclarator = (CCPPSyntaxDeclarator*)pcDeclarator->mpcParent;
+	}
+	return pcDeclarator && mcPass.AppendFunctionLabel(pcDeclarator, pszDest);
 }
 

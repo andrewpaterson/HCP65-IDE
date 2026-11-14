@@ -28,6 +28,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDERename.h"
 #include "IDESafeDelete.h"
 #include "IDEIntroduceVariable.h"
+#include "IDERenameAssembly.h"
 #include "IDEChangeSignatureDialog.h"
 #include "IDEChangeSignature.h"
 
@@ -73,6 +74,8 @@ void SIDESignatureSite::Init(void)
 	bReturn = false;
 	bDefinition = false;
 	bFirst = false;
+	szLabel.Init();
+	uiNewName = 0;
 	asParameters.Init();
 }
 
@@ -90,6 +93,7 @@ void SIDESignatureSite::Kill(void)
 		asParameters.Get(i)->szKey.Kill();
 	}
 	asParameters.Kill();
+	szLabel.Kill();
 	szKey.Kill();
 	szFileName.Kill();
 }
@@ -1859,6 +1863,220 @@ void CIDEChangeSignature::ShowChangeStatus(CChars* pszMessage, CChars* pszStatus
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Whether hand written assembly's labels are to be looked to: the
+// solution has assembly, and its build configuration is for a processor
+// (*peTarget), whose labels they are.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEChangeSignature::GetAssemblyTarget(ECPPTarget* peTarget)
+{
+	CIDECodeModel*			pcModel;
+	CBuildConfiguration*	pcConfiguration;
+	size					i;
+	bool					bAssembly;
+
+	pcConfiguration = mpcContent->GetBuildConfigurations()->HasConfiguration() ? mpcContent->GetBuildConfigurations()->GetConfiguration() : NULL;
+	if (!pcConfiguration || ((pcConfiguration->GetToolchain() != BT_W65C816) && (pcConfiguration->GetToolchain() != BT_65C64)))
+	{
+		return false;
+	}
+	*peTarget = (pcConfiguration->GetToolchain() == BT_W65C816) ? CPPT_W65C816 : CPPT_65C64;
+	pcModel = mpcContent->GetCodeModel();
+	bAssembly = false;
+	for (i = 0; !bAssembly && (i < pcModel->NumProjectFiles()); i++)
+	{
+		bAssembly = IsIDEAssemblyFile(pcModel->GetProjectFile(i));
+	}
+	return bAssembly;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The label the compiler gives the function whose declaration's or
+// definition's name the caret is on, for the build configuration's
+// processor.  False if the configuration isn't for one, or no function
+// is declared there.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEChangeSignature::AppendCaretLabel(CChars* pszDest)
+{
+	CIDERefactorUnit	cUnit;
+	Ptr<CIDEEditorTab>	pTab;
+	ECPPTarget			eTarget;
+	int					iLine;
+	int					iColumn;
+	uint8				uiRole;
+	bool				bResult;
+
+	pTab = mpcContent->GetDocuments()->GetActiveTab();
+	if (pTab.IsNull() || !GetAssemblyTarget(&eTarget) || !mpcContent->GetDocuments()->FindSymbolPlace(&iLine, &iColumn, &uiRole))
+	{
+		return false;
+	}
+	mpcContent->GetDocuments()->UpdateEditedTabsNow();
+	cUnit.Init();
+	bResult = cUnit.Parse(mpcContent->GetCodeModel(), &mpcContent->GetFindInFiles(), pTab->GetFileName(), true, eTarget) && cUnit.AppendFunctionLabel(iLine, iColumn, pszDest);
+	cUnit.Kill();
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The label of each symbol changed, asked of the compiler where the
+// symbol is first declared (a kept check of that file for eTarget): as
+// it is now, into the site (bNew false), or as it is once the change is
+// made, into paszNew, one for each site (empty where it has none), with
+// the file parsed from its editor's text and the name found where it now
+// is.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEChangeSignature::FindLabels(SIDESignature* psSignature, ECPPTarget eTarget, bool bNew, CArrayChars* paszNew)
+{
+	CIDERefactorUnit	cUnit;
+	SIDESignatureSite*	psSite;
+	Ptr<CIDEEditorTab>	pTab;
+	CChars				szLabel;
+	size				uiLine;
+	size				i;
+	int					iLine;
+	int					iColumn;
+
+	if (bNew)
+	{
+		mpcContent->GetDocuments()->UpdateEditedTabsNow();
+	}
+	for (i = 0; i < psSignature->apsSites.NumElements(); i++)
+	{
+		psSite = psSignature->apsSites.GetPtr(i);
+		szLabel.Init();
+		if (psSite->bFirst)
+		{
+			iLine = psSite->iLine;
+			iColumn = psSite->iColumn;
+			pTab = mpcContent->GetDocuments()->FindTab(psSite->szFileName.Text());
+			if (bNew && pTab.IsNotNull())
+			{
+				uiLine = pTab->GetEditor()->FindLine(psSite->uiNewName);
+				iLine = (int)uiLine;
+				iColumn = (int)(psSite->uiNewName - pTab->GetEditor()->GetLineStart(uiLine));
+			}
+			cUnit.Init();
+			if (cUnit.Parse(mpcContent->GetCodeModel(), &mpcContent->GetFindInFiles(), psSite->szFileName.Text(), true, eTarget))
+			{
+				cUnit.AppendFunctionLabel(iLine, iColumn, &szLabel);
+			}
+			cUnit.Kill();
+		}
+		if (bNew)
+		{
+			paszNew->Add(szLabel.Text());
+		}
+		else
+		{
+			psSite->szLabel.Set(szLabel);
+		}
+		szLabel.Kill();
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Each symbol's old label changed to its new one in the solution's
+// assembly, where they differ: every place it is written as a whole
+// label, in each file's editor (opened, not shown, if it isn't open and
+// has one).  The number of places changed.
+//
+//////////////////////////////////////////////////////////////////////////
+size CIDEChangeSignature::ChangeLabels(SIDESignature* psSignature, CArrayChars* paszNew)
+{
+	CIDECodeModel*		pcModel;
+	CIDETextEdits		cEdits;
+	CTextFile			cFile;
+	Ptr<CIDEEditorTab>	pTab;
+	SIDESignatureSite*	psSite;
+	char*				szFileName;
+	char*				szText;
+	const char*			szFound;
+	const char*			szOld;
+	size				uiLength;
+	size				uiOldLength;
+	size				uiAt;
+	size				uiChanged;
+	size				uiInFile;
+	size				i;
+	size				j;
+	int					iPass;
+
+	pcModel = mpcContent->GetCodeModel();
+	uiChanged = 0;
+	for (i = 0; i < pcModel->NumProjectFiles(); i++)
+	{
+		szFileName = pcModel->GetProjectFile(i);
+		if (!IsIDEAssemblyFile(szFileName))
+		{
+			continue;
+		}
+
+		//Looked in as it is first, so only a file that has one of the labels is opened; then its editor is changed.
+		for (iPass = 0; iPass < 2; iPass++)
+		{
+			cFile.Init();
+			cEdits.Init();
+			pTab = mpcContent->GetDocuments()->FindTab(szFileName);
+			if (iPass == 1)
+			{
+				if (pTab.IsNull())
+				{
+					pTab = mpcContent->GetDocuments()->OpenFileTab(szFileName, pcModel->FindProjectOfFile(szFileName), false);
+				}
+				szText = pTab.IsNotNull() ? pTab->GetEditor()->GetText() : NULL;
+			}
+			else if (!mpcContent->GetFindInFiles()->GetFileText(szFileName, &cFile, &szText, &uiLength))
+			{
+				szText = NULL;
+			}
+			uiInFile = 0;
+			for (j = 0; szText && (j < psSignature->apsSites.NumElements()); j++)
+			{
+				psSite = psSignature->apsSites.GetPtr(j);
+				szOld = psSite->szLabel.Text();
+				uiOldLength = psSite->szLabel.Length();
+				if ((uiOldLength == 0) || paszNew->Get(j)->Empty() || psSite->szLabel.Equals(paszNew->GetText(j)))
+				{
+					continue;
+				}
+				for (szFound = strstr(szText, szOld); szFound; szFound = strstr(szFound + 1, szOld))
+				{
+					uiAt = (size)(szFound - szText);
+					if (((uiAt == 0) || !IsIDENameChar(szText[uiAt - 1])) && !IsIDENameChar(szText[uiAt + uiOldLength]))
+					{
+						cEdits.Replace(uiAt, uiAt + uiOldLength, paszNew->GetText(j));
+						uiInFile++;
+					}
+				}
+			}
+			if ((iPass == 1) && (uiInFile > 0) && pTab.IsNotNull())
+			{
+				cEdits.Apply(pTab->GetEditor());
+				uiChanged += uiInFile;
+			}
+			cEdits.Kill();
+			cFile.Kill();
+			if (uiInFile == 0)
+			{
+				break;
+			}
+		}
+	}
+	return uiChanged;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // The function given the new parameters, whatever stands in the way:
 // every declaration's and definition's parameters, every call's
 // arguments, and a renamed parameter's uses in each definition's body,
@@ -1869,6 +2087,10 @@ void CIDEChangeSignature::ShowChangeStatus(CChars* pszMessage, CChars* pszStatus
 //////////////////////////////////////////////////////////////////////////
 bool CIDEChangeSignature::Change(SIDESignature* psSignature, SIDESignatureChange* psChange, CChars* pszStatus)
 {
+	CArrayChars				aszNewLabels;
+	ECPPTarget				eTarget;
+	size					uiLabels;
+	bool					bLabels;
 	CArrayIDENewParameters*	pasNew;
 	SIDERenameTarget		sTarget;
 	CChars					szReturn;
@@ -1904,6 +2126,14 @@ bool CIDEChangeSignature::Change(SIDESignature* psSignature, SIDESignatureChange
 	pasNew = &psChange->asParameters;
 	uiName = 0;
 	bNameFound = false;
+	uiLabels = 0;
+
+	//The labels the assembly names them by, as they are now.
+	bLabels = GetAssemblyTarget(&eTarget);
+	if (bLabels)
+	{
+		FindLabels(psSignature, eTarget, false, NULL);
+	}
 
 	//Every file's editor first: nothing is changed unless all can be.
 	aszFiles.Init();
@@ -2029,14 +2259,31 @@ bool CIDEChangeSignature::Change(SIDESignature* psSignature, SIDESignatureChange
 				cEdits.Replace(FindIDETextOffset(szText, psCall->sArguments.iLine, psCall->sArguments.iColumn), FindIDETextOffset(szText, psCall->sArguments.iEndLine, psCall->sArguments.iEndColumn), szNew.Text());
 				szNew.Kill();
 			}
-			//Where the function's name is in its first declaration once the edits are made, for renaming it.
+			//Where each one's name is once the edits are made: for its new label, and for renaming the function.
+			for (i = 0; i < psSignature->apsSites.NumElements(); i++)
+			{
+				psSite = psSignature->apsSites.GetPtr(i);
+				if (StringInsensitiveCompare(psSite->szFileName.Text(), aszFiles.GetText(uiFile)) == 0)
+				{
+					psSite->uiNewName = cEdits.AdjustPosition(FindIDETextOffset(szText, psSite->iLine, psSite->iColumn));
+				}
+			}
 			if (!psChange->szName.Empty() && (StringInsensitiveCompare(psSignature->apsSites.GetPtr(0)->szFileName.Text(), aszFiles.GetText(uiFile)) == 0))
 			{
-				uiName = cEdits.AdjustPosition(FindIDETextOffset(szText, psSignature->apsSites.GetPtr(0)->iLine, psSignature->apsSites.GetPtr(0)->iColumn));
+				uiName = psSignature->apsSites.GetPtr(0)->uiNewName;
 				bNameFound = true;
 			}
 			cEdits.Apply(pEditor);
 			cEdits.Kill();
+		}
+
+		//The assembly's labels, from what they were to what the compiler gives the functions now.
+		if (bLabels)
+		{
+			aszNewLabels.Init();
+			FindLabels(psSignature, eTarget, true, &aszNewLabels);
+			uiLabels = ChangeLabels(psSignature, &aszNewLabels);
+			aszNewLabels.Kill();
 		}
 
 		//Its name, by Rename, once the index has what was just changed: the overrides, the family and the assembly's
@@ -2071,6 +2318,10 @@ bool CIDEChangeSignature::Change(SIDESignature* psSignature, SIDESignatureChange
 		szMessage.Append(psSignature->apsCalls.NumElements() == 1 ? " call in " : " calls in ");
 		szMessage.Append((uint32)aszFiles.NumElements());
 		szMessage.Append(aszFiles.NumElements() == 1 ? " file." : " files.");
+		if (uiLabels > 0)
+		{
+			szMessage.Append("  ")->Append((uint32)uiLabels)->Append(uiLabels == 1 ? " label in assembly." : " labels in assembly.");
+		}
 		if (psSignature->uiFamily > 0)
 		{
 			szMessage.Append("  With ")->Append(psSignature->szFamily)->Append(", which a template calls with it by one name.");

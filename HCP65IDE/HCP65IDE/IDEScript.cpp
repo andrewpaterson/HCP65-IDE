@@ -1475,6 +1475,16 @@ void CIDEScript::RunEditStep(const char* szStep)
 			pTab->GetEditor()->Select(pTab->GetEditor()->GetLineStart((size)(iLine - 1)) + (size)(iColumn - 1), pTab->GetEditor()->GetLineStart((size)(iEndLine - 1)) + (size)(iEndColumn - 1));
 		}
 	}
+	else if (strcmp(szStep, "printlabel") == 0)
+	{
+		//The label the compiler gives the function declared at the caret, for the build configuration's processor:
+		//"Label: _CBrush__Mix", or "Label: none".
+		CChars	szLabel;
+
+		szLabel.Init();
+		printf("Label: %s\n", mpcContent->GetChangeSignature()->AppendCaretLabel(&szLabel) ? szLabel.Text() : "none");
+		szLabel.Kill();
+	}
 	else if ((strcmp(szStep, "changeable") == 0) || (strncmp(szStep, "changesignature:", 16) == 0) || (strncmp(szStep, "changesignatureanyway:", 22) == 0))
 	{
 		//What Change Signature found for the function at the caret (changeable); or its signature changed to a list

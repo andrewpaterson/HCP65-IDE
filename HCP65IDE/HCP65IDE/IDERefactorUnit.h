@@ -86,7 +86,7 @@ public:
 	void			Init(void);
 	void			Kill(void);
 
-	bool			Parse(CIDECodeModel* pcModel, CIDEFileTexts* pcTexts, const char* szFileName, bool bCheck);
+	bool			Parse(CIDECodeModel* pcModel, CIDEFileTexts* pcTexts, const char* szFileName, bool bCheck, ECPPTarget eTarget = CPPT_Host);
 	bool			IsParsed(void) { return mbParsed; }
 	bool			IsChecked(void) { return mbChecked; }
 	char*			GetFileName(void) { return mszFileName.Text(); }
@@ -101,6 +101,7 @@ public:
 	bool			IsExpression(CCPPSyntax* pcNode);
 	void			AppendTokens(int32 iFirstToken, int32 iLastToken, CChars* pszDest);
 	bool			AppendDeclaredType(CCPPSyntax* pcExpression, CChars* pszDest);
+	bool			AppendFunctionLabel(int iLine, int iColumn, CChars* pszDest);
 	CCPPSyntax*		FindNodeOfTokens(int32 iFirstToken, int32 iLastToken);
 	CCPPSyntax*		FindNodeAt(int iLine, int iColumn);
 	CCPPSyntax*		FindAncestor(CCPPSyntax* pcNode, ECPPSyntax eKind);

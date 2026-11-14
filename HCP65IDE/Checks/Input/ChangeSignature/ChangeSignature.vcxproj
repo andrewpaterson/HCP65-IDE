@@ -13,6 +13,9 @@
   <ItemGroup>
     <ClInclude Include="Paint.h" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="PaintW65C816.asm" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{8E3F4051-0000-4000-8000-000000000007}</ProjectGuid>
     <RootNamespace>ChangeSignature</RootNamespace>

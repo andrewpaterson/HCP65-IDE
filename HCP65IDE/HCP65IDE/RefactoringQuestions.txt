@@ -57,3 +57,23 @@ Open
     without checking that the expression's value is the same at each (a variable in it may have changed between
     them, or it may be a call with effects).  IntelliJ doesn't check either.  Do you want it to refuse, or to warn,
     when something in the expression is changed between the first and last occurrence?  FindChanges can tell.
+
+10. Change Signature's dialog isn't IntelliJ's table.  WindowLib has no table whose cells are edited, so it is in the
+    Build Configurations dialog's way: the parameters in a list (with Add, Remove, Up and Down under it) and the
+    selected one's type, name, default value and value in calls in a form beside it, with the signature as it
+    would be declared shown under them as it is changed.  Everything IntelliJ's does can be done in it.  Do you want
+    an editable table built in WindowLib for it (and for whatever else would use one), or is this the way?
+
+11. Change Signature and the assembly's labels.  The label is asked of the compiler for the processor of the build
+    configuration that is selected (W65C816 or 65C64: an int is "s" on one and "i" on the other), and only that
+    processor's spelling is changed in the solution's assembly.  With an MSVC or GCC configuration selected nothing
+    is changed in assembly at all.  Should it always do both processors' labels, whatever is selected?
+
+12. Change Signature and each file's own words.  A declaration and a definition keep what they wrote for a kept
+    parameter: if the definition names it iR where the class says iRed, it still does afterwards (unless you rename
+    it, which names it the same in both).  IntelliJ would have one name.  Is keeping each one's own text right?
+
+13. Change Signature of a constructor changes its declarations and definitions, but an object made with arguments
+    isn't written as a call (CFoo x(1, 2); new CFoo(1); a member's initialiser), and those places aren't changed
+    yet: they show as "named without being called" in Problems Detected.  Your code makes objects with Init, so I
+    left constructors until the rest of the plan is done.  Say if you want them sooner.
