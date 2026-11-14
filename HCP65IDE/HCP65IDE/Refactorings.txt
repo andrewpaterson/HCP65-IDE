@@ -20,6 +20,8 @@ Done before this plan: Rename (Shift+F6, IDERename.cpp), in hand written assembl
 Rename File (IDEFileRename.cpp, RenameFile.txt).  The editor's Refactor menu has them and a disabled
 "Extract Method...".
 
+Progress is at the end ("Where it is"); what the user is asked is in RefactoringQuestions.txt.
+
 
 Templates
 ---------
@@ -50,17 +52,23 @@ compiler is ours, so the first is the type checker's own work and not a guesser 
       interface nobody wrote.  Changing CFoo::Init alone breaks CHolder<CBar>.  So a refactoring that changes a
       member a template's body names shows the family as a conflict: "CHolder<M> calls this as mp->Init(), which is
       also CBar::Init and CBaz::Init: change them all, or cancel", as a virtual function's overrides are changed
-      together.  It needs every symbol at a place from the index (CCPPIndex::FindSymbolAt gives one), and the
-      classes of a family from the places they share.  Rename is wrong without it: from what the index gives it, it
-      renames the template's mp->Init() with CFoo::Init and leaves CBar::Init (read from the code, not yet shown
-      by a check in the IDE: the first step is that check).  First.
+      together.  Done for Rename 2026-11-14 (it renamed the template's mp->Init() with CFoo::Init and left
+      CBar::Init): a reference a template's instance resolved is flagged CPPIF_INSTANCE, CCPPIndex::FindFamily
+      gives the symbols that share such a place, and CIDECodeModel::FindRenameTarget takes a symbol's overrides and
+      family, and theirs.  Each later refactoring that changes how a member is named or called does the same.
   T3. The template as itself (kinds a and b).  The type checker checks a template's body once with each parameter
       bound to a type that stands for itself and is written by its name: the types are M*, CArrayTemplate<M>&, as
       the source has them; a member of CArrayTemplate<M> is found in the template; what only an instance decides
       has a dependent type, which what is made of it has too, with no error.  A template nothing instantiates is
       typed like any other.  The kept check's GetType answers with these in a template's body, never with an
-      instance's types.  Until then GetType gives the first instance's (CFoo* in CArrayTemplate<M>), which must not
-      be written into the template: the refactorings that write a type refuse in one.
+      instance's types.
+      Done 2026-11-14 in the type checker's own way: the template is instantiated as itself, each type parameter a
+      placeholder class with nothing in it that is written as its name (CCPPUnit::PlaceholderClass,
+      CheckTemplatesAsThemselves), and its functions checked quietly.  What only an argument would have isn't
+      there to find, so such an expression has no type (GetType is NULL) where this plan said "a dependent
+      type": a refactoring says its type depends on the template's arguments.  An instance with arguments no
+      longer gives its types to the pass.  Left: a partial specialisation isn't checked as itself; a value
+      parameter is 1 in the check (question 6); the index's checks don't do it (question 5).
   T4. What a refactoring writes in a template.  A member of a class template defined outside it is
       template<class M> void CArrayTemplate<M>::Name(...), in the header and not a .cpp; a function made from part
       of a function template has the parameters it uses; typename where a dependent type needs it.  Part of each
@@ -91,7 +99,9 @@ Exists:
 To build:
   F1. The checked unit in the IDE.  CIDECodeModel makes a kept check of one file when a refactoring starts (a header
       in a unit that includes it, as the edited files are parsed), and finds the node of a selection or of the
-      caret.  First, with the first refactoring that needs a type.
+      caret.  Done 2026-11-14 as CIDERefactorUnit (IDERefactorUnit.h): Parse, with the kept check if asked,
+      FindTokenAt, FindNodeAt, FindNodeOfTokens, GetRange.  Safe Delete uses it without the check; nothing has
+      used the check yet.
   F2. Declared type text.  A variable's or a function's type copied from its declaration, so uint32 and size stay
       what they are: the compiler's types have no typedefs in them, and the type writer writes size as
       "unsigned long long".  The type writer is for an expression that is computed.  In a template the declaration's
@@ -114,6 +124,12 @@ Phase 1 - nothing new from the compiler
      are shown.  Its declaration and its definition go together.
      In a template: a member a template's body names through an instance is used (T1); a member of a template
      nothing instantiates has only the uses the parser found, and says so.
+     Done 2026-11-14 (IDESafeDelete.h says what it does), but for:
+       - a class's files: a class taken out leaves its .h and .cpp with their #includes and guards, and the
+         projects' items and the #includes of the header; IntelliJ deletes a class's file with it;
+       - Safe Delete of a file from Solution Explorer;
+       - a member of a template nothing instantiates doesn't say its uses may be incomplete;
+       - a parameter (it is Change Signature's, and is refused until that is done).
   2. Change Signature (Ctrl+F6).  Parameters added, removed, reordered and renamed, and the return type changed, in
      the declaration, the definition, every override and every call.  A new parameter has a value for the calls
      there already are.
@@ -228,3 +244,15 @@ By what each needs, not by what is cheap.
   5. Down the phases, T6 looked at with the user before Convert macro.
 WindowLib has no table whose cells are edited (CGridContainer lays components out, CListContainer and
 CTreeContainer list them): Change Signature's parameters need one, which is a WindowLib piece of its own.
+
+
+Where it is
+-----------
+
+2026-11-14, night.  In the suggested order:
+  1. T2 in Rename: done (HCP65-IDE 154ca24, CommonLibraries 0629636fc).  F4's conflicts list isn't built: Rename
+     says what is renamed with a member in its dialog and status line, which is all it needed (question 1).
+     With it, Rename File on Windows was found to leave "../Engine.h" #includes unchanged, and fixed (8c83367).
+  2. Safe Delete: done but for what is listed under it above.
+  3. T3, the template as itself: done in the compiler.  F2 and Introduce Variable: next.
+

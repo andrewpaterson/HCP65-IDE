@@ -1,0 +1,43 @@
+Questions for the user from the work on Refactorings.txt
+========================================================
+
+Kept while working through the plan (started the night of 2026-11-14).  Each says what I did meanwhile, so nothing
+waits on an answer; an answer that differs is a change to make.  Answered ones are moved to the end.
+
+
+Open
+----
+
+ 1. Rename and a template's family (T2).  A member a template's body names (mp->Init() in CHolder<M>) is now always
+    renamed with the other classes' members of that name the template is instantiated with, and the dialog and
+    status line say so ("CHolder::Start names it and CBar::Init by one name: renamed together.").  There is no way
+    to rename one alone, because the template would stop compiling for the others.  IntelliJ asks about a base
+    method ("rename base method too?"); I didn't add a question here because "no" has no working outcome.  Is
+    all-or-cancel right, or do you want a choice that leaves the template for you to fix?
+
+ 2. HCP65IDERef (Reference|x64, the IDE drawn in memory for the checks) doesn't build on Windows:
+    HCP65IDERef.cpp(84) warning C4007 "'main': must be '__cdecl'" is treated as an error.  The checks were run on
+    the native Release|x64 IDE instead, as earlier sessions ran them.  Do you want main made __cdecl there (as the
+    test projects' mains are), so the checks can run with no window on Windows too?
+
+ 3. TestCppCompilerLib in Debug stops at TestProject.cpp:249: AddIncludeDirectory("NoSuchDirectory") logs a fatal
+    error the test expects, and a Debug build breaks on any logged error.  It isn't mine (the test is from
+    2026-11-13) and I left it; the suite was proved in Release|x64.  Should the test silence the logger around
+    that line?
+
+ 4. Safe Delete and a class's files.  Deleting a class leaves its .h and .cpp there with their #includes and include
+    guard, still in the projects and still #included.  IntelliJ deletes a class's file with it.  I mean to add it as
+    Rename has "Rename files": when a class's files (CIDEFileRename::FindClassFiles) have nothing else in them, a
+    "Delete files" box, ticked, that deletes them, takes their items out of the projects and the #includes of the
+    header out of the files that have them.  Is that what you want, and should the files go to the recycle bin or
+    be deleted outright (git has them either way)?
+
+ 5. Templates as themselves and the index (T3).  A kept check, which a refactoring makes for the one file it works
+    on, now types a template's body in the template's own words.  The index's checks don't: so in a template nothing
+    instantiates, mcArray.Add(x) on a member that is a CArray<M> still isn't a reference of CArray::Add for Find
+    Usages and Rename.  Doing it while indexing would find those, and costs indexing time I haven't measured.  Do
+    you want it measured and, if it is cheap, turned on?
+
+ 6. A value parameter of a template as itself has no value, and is 1 where the check needs one: "M maItems[N]" is
+    an array of 1 inside the check.  Nothing I have built writes such an array's type; if a refactoring ever would,
+    it has to write N.  Noted in case it surprises you; no answer needed unless you want it done another way.
