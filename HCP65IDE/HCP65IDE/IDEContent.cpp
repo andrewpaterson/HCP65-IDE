@@ -215,6 +215,7 @@ void CIDEContent::Class(void)
 	M_Pointer(mpNavigator);
 	M_Pointer(mpRename);
 	M_Pointer(mpFileRename);
+	M_Pointer(mpSafeDelete);
 	M_Pointer(mpUsages);
 	M_Pointer(mpFindInFiles);
 	M_Pointer(mpOccurrences);
@@ -281,6 +282,7 @@ void CIDEContent::Free(void)
 		mpWindow->CancelPosted(&mpUsages);
 		mpWindow->CancelPosted(&mpRename);
 		mpWindow->CancelPosted(&mpFileRename);
+		mpWindow->CancelPosted(&mpSafeDelete);
 		mpWindow->CancelPosted(&mpSolutions);
 		mpWindow->CancelPosted(&mpBuildConfigurations);
 		mpWindow->CancelPosted(&mpBuilding);
@@ -396,6 +398,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpNavigator = OMalloc<CIDENavigator>(this);
 	mpRename = OMalloc<CIDERename>(this);
 	mpFileRename = OMalloc<CIDEFileRename>(this);
+	mpSafeDelete = OMalloc<CIDESafeDelete>(this);
 	mpUsages = OMalloc<CIDEUsages>(this);
 	mpFindInFiles = OMalloc<CIDEFindInFiles>(this);
 	mpOccurrences = OMalloc<CIDEOccurrences>(this);
@@ -592,6 +595,7 @@ void CIDEContent::AddCommands(void)
 	mpNavigator->AddCommands(mpCommands);
 	mpRename->AddCommands(mpCommands);
 	mpFileRename->AddCommands(mpCommands);
+	mpSafeDelete->AddCommands(mpCommands);
 	mpUsages->AddCommands(mpCommands);
 	mpFindInFiles->AddCommands(mpCommands);
 	mpOccurrences->AddCommands(mpCommands);
@@ -1095,4 +1099,5 @@ Ptr<CIDENavigationHistory> CIDEContent::GetNavigationHistory(void) { return mpNa
 Ptr<CIDEIndexing> CIDEContent::GetIndexing(void) { return mpIndexing; }
 Ptr<CIDERename> CIDEContent::GetRename(void) { return mpRename; }
 Ptr<CIDEFileRename> CIDEContent::GetFileRename(void) { return mpFileRename; }
+Ptr<CIDESafeDelete> CIDEContent::GetSafeDelete(void) { return mpSafeDelete; }
 Ptr<CIDECloseGuard> CIDEContent::GetCloseGuard(void) { return mpCloseGuard; }

@@ -113,6 +113,27 @@ struct SIDERenameTarget
 };
 
 
+//A range of a file's text that a refactoring changes or takes out: lines and columns from 0, its end exclusive, as
+//the syntax tree gives a node's (CIDERefactorUnit::GetRange); then where it starts and ends in the file's text.
+struct SIDEFileRange
+{
+	CChars	szFileName;
+	int32	iLine;
+	int32	iColumn;
+	int32	iEndLine;
+	int32	iEndColumn;
+	size	uiStart;
+	size	uiEnd;
+
+	void	Init(const char* szFile, int32 iStartLine, int32 iStartColumn, int32 iLastLine, int32 iLastColumn);
+	void	Kill(void);
+	bool	Has(const char* szFile, int32 iAtLine, int32 iAtColumn);
+};
+
+
+typedef CArrayTemplate<SIDEFileRange>	CArrayIDEFileRanges;
+
+
 class CIDECodeModel;
 //A file to index on a worker thread.
 struct SIDEIndexJob
@@ -167,6 +188,7 @@ typedef CArrayTemplatePtr<CProject>		CArrayIDEProjects;
 //once however many solutions have it.
 class CIDECodeModel
 {
+friend class CIDERefactorUnit;
 protected:
 	CBuildWorkspace*	mpcWorkspace;
 	CChars				mszConfiguration;		//The build configuration, "Release|W65C816"; each solution builds its own solution configuration for it.
@@ -245,6 +267,11 @@ public:
 	bool	FindRenameTarget(const char* szFileName, int iLine, int iColumn, SIDERenameTarget* psDest);
 	void	FindAssemblyRename(CCPPIndexSymbol* pcSymbol, SIDERenameTarget* psDest);
 	bool	HasSymbol(const char* szKey);
+	bool	GetSymbolAt(const char* szFileName, int iLine, int iColumn, CChars* pszKey, uint8* puiKind);
+	bool	GetSymbolLocations(const char* szKey, CArrayIDELocations* pasDest, uint8* puiKind);
+	size	FindSymbolsDeclaredIn(CArrayIDEFileRanges* pasRanges, CArrayChars* paszKeys);
+	size	FindOverriders(const char* szKey, CArrayIDELocations* pasDest);
+	bool	FindAssemblyTarget(const char* szKey, SIDERenameTarget* psDest);
 	size	FindOverrideLocations(const char* szKey, CArrayIDELocations* pasDest);
 	void	GetUsageGroup(SIDELocation* psLocation, CChars* pszProject, CChars* pszClass);
 	bool	FindIncludeFile(size uiProject, const char* szIncluder, const char* szName, bool bSystem, CChars* pszDest);
@@ -273,10 +300,12 @@ protected:
 	void				CopyLocations(CCPPIndexSymbol* pcSymbol, CArrayIDELocations* pasDest);
 	void				CopyLocationsInFile(CCPPIndexSymbol* pcSymbol, const char* szFileName, CArrayIDELocations* pasDest);
 	void				FindOverrides(CCPPIndexSymbol* pcSymbol, CArrayInt* paiDest);
+	bool				IsDerivedClass(CCPPIndexSymbol* pcClass, CCPPIndexSymbol* pcBase, int iDepth);
 };
 
 
 void KillIDELocations(CArrayIDELocations* pasLocations);
+void KillIDEFileRanges(CArrayIDEFileRanges* pasRanges);
 void MoveIDELocation(SIDELocation* psDest, SIDELocation* psSource);
 const char* GetIDEFileNamePart(const char* szPath);
 void KillIDEEditedFiles(CArrayIDEEditedFiles* papsFiles);

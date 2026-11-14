@@ -228,6 +228,16 @@ def MakeRenameTemplateCopy():
 	return {'SOLUTION': os.path.join(szFolder, 'RenameTemplate.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
 
 
+def MakeSafeDeleteCopy():
+	#A copy of Input/SafeDelete (CShape and what uses some of it, CLonely which nothing uses, an enum, a typedef, functions
+	#and a global, and assembly that calls CShape::Kill), to delete in.
+	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
+	atexit.register(shutil.rmtree, szRoot, True)
+	szFolder = os.path.join(szRoot, 'SafeDelete')
+	shutil.copytree(os.path.join(HERE, 'Input', 'SafeDelete'), szFolder)
+	return {'SOLUTION': os.path.join(szFolder, 'SafeDelete.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
+
+
 def MakeKeymapFile(szText=None):
 	#Where a scripted run keeps its keys, with szText in it if it's given.
 	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
@@ -706,6 +716,146 @@ CHECKS = [
 		[r'^Rename: Init \[CLone::Init\(\)\] at 3 places, 0 overrides$', r'^Status: Renamed Init to Begin: 3 places, 2 in assembly in 4 files\.$',
 		 r'^\tvoid\tInit\(void\);$', r'^\tvoid\tStart\(void\) \{ mp->Init\(\); \}$'],
 		[r'Rename family', r'by one name']),
+	('safe-delete-function', dict(MakeSafeDeleteCopy(), **{
+		#Safe Delete (Refactorings.txt, 1) of a member function nothing calls: its declaration's line in the class and its
+		#definition with the comment over it are taken out, the functions around it left two blank lines apart as they
+		#were.  Its parameter and its local go with it.  printdisklines numbers the lines, so what is left is exact.
+		'WAIT_INDEX': '1', 'OPEN': 'Shape.h', 'CARET': '26:9',
+		'DEBUG': 'edit:renamesearch:---s,edit:safedelete,printdisklines:Shape.h,printdisklines:Shape.cpp'}),
+		[r'^Safe Delete: CShape::Unused \[CShape::Unused\(int\)\], 4 symbols, no usages$', r'^  takes out Shape\.h 26:1-27:1$', r'^  takes out Shape\.cpp 38:1-52:1$',
+		 r'^Status: Deleted CShape::Unused: 2 declarations and definitions in 2 files, with 3 things declared in it\.$',
+		 r'^25\|\tint\t\tArea\(void\);$', r'^26\|\tvirtual void\tDraw\(void\);$', r'^27\|\};$', r'^54 lines$',
+		 r'^35\|\}$', r'^36\|$', r'^37\|$', r'^38\|/+$', r'^39\|//$', r'^40\|//$', r'^41\|/+$', r'^42\|void CShape::Draw\(void\)$'],
+		[r'\|.*Unused\(int', r'Safe Delete stopped', r'not deleted']),
+	('safe-delete-used', dict(MakeSafeDeleteCopy(), **{
+		#What is used isn't deleted: the usages are listed, and the files are as they were.
+		'WAIT_INDEX': '1', 'OPEN': 'Shape.h', 'CARET': '23:9', 'DEBUG': 'edit:renamesearch:---s,edit:safedelete,printdisklines:Shape.h'}),
+		[r'^Safe Delete: CShape::Init \[CShape::Init\(\)\], 1 symbol, 2 usages$', r'^  used at Main\.cpp 12:9$', r'^  used at Main\.cpp 16:11$',
+		 r'^Safe Delete: not deleted, it is used$', r'^23\|\tvoid\tInit\(void\);$', r'^55 lines$'],
+		[r'^Status: Deleted']),
+	('safe-delete-anyway', dict(MakeSafeDeleteCopy(), **{
+		#Deleted anyway, the status line says what is left using it.  One declarator of two goes with its comma.
+		'WAIT_INDEX': '1', 'OPEN': 'Shape.h', 'CARET': '20:17', 'DEBUG': 'edit:renamesearch:---s,edit:safedelete:anyway,printdisklines:Shape.h'}),
+		[r'^Safe Delete: CShape::miHeight \[CShape::miHeight\], 1 symbol, 1 usage$', r'^  takes out Shape\.h 20:14-20:24$', r'^  used at Shape\.cpp 14:2$',
+		 r'^Status: Deleted CShape::miHeight: 1 declaration in 1 file\.  Left using it: 1 usage\.$', r'^20\|\tint\t\tmiWidth;$', r'^55 lines$'],
+		[r'miHeight;']),
+	('safe-delete-class', dict(MakeSafeDeleteCopy(), **{
+		#A class nothing else uses goes with its members' definitions (their uses of each other aren't usages) and the
+		#comment over it.
+		'WAIT_INDEX': '1', 'OPEN': 'Shape.h', 'CARET': '39:8', 'DEBUG': 'edit:renamesearch:---s,edit:safedelete,printdisklines:Shape.h,printdisklines:Shape.cpp'}),
+		[r'^Safe Delete: CLonely \[CLonely\], 4 symbols, no usages$', r'^  takes out Shape\.h 38:1-49:1$',
+		 r'^Status: Deleted CLonely: 3 declarations and definitions in 2 files, with 3 things declared in it\.$',
+		 r'^35\|\};$', r'^36\|$', r'^37\|$', r'^38\|typedef int\tTSpare;$', r'^44 lines$',
+		 r'^67\|\}$', r'^68\|$', r'^69\|$', r'^70\|/+$', r'^75\|int UnusedFunction\(int iValue\)$'],
+		[r'\|.*CLonely', r'\|.*Nothing uses it but itself', r'not deleted']),
+	('safe-delete-class-used', dict(MakeSafeDeleteCopy(), **{
+		#A class's usages are its members' too, and its labels in assembly; a class derived from it uses it.
+		'WAIT_INDEX': '1', 'OPEN': 'Shape.h', 'CARET': '17:8', 'DEBUG': 'edit:safedelete'}),
+		[r'^Safe Delete: CShape \[CShape\], 12 symbols, 5 usages, 1 in assembly$', r'^  used at Shape\.h 31:24$', r'^  used at Main\.cpp 6:2$',
+		 r'^  used at Main\.cpp 18:29$', r'^Safe Delete: not deleted, it is used$'],
+		[r'^Status: Deleted']),
+	('safe-delete-overridden', dict(MakeSafeDeleteCopy(), **{
+		#A virtual function a derived class overrides: the override's declaration and definition are usages.
+		'WAIT_INDEX': '1', 'OPEN': 'Shape.h', 'CARET': '27:17', 'DEBUG': 'edit:safedelete'}),
+		[r'^Safe Delete: CShape::Draw \[CShape::Draw\(\)\], 1 symbol, 2 usages \(1 function overrides it\)$', r'^  used at Shape\.h 34:7$', r'^  used at Shape\.cpp 65:15$',
+		 r'^Safe Delete: not deleted, it is used$'],
+		[r'^Status: Deleted']),
+	('safe-delete-override', dict(MakeSafeDeleteCopy(), **{
+		#The override itself overrides nothing below it: it has no usages and goes.
+		'WAIT_INDEX': '1', 'OPEN': 'Shape.h', 'CARET': '34:8', 'DEBUG': 'edit:renamesearch:---s,edit:safedelete,printdisklines:Shape.h'}),
+		[r'^Safe Delete: CCircle::Draw \[CCircle::Draw\(\)\], 1 symbol, no usages$', r'^Status: Deleted CCircle::Draw: 2 declarations and definitions in 2 files\.$',
+		 r'^31\|class CCircle : public CShape$', r'^33\|public:$', r'^34\|\};$'],
+		[r'override;', r'not deleted']),
+	('safe-delete-assembly', dict(MakeSafeDeleteCopy(), **{
+		#A function only hand written assembly calls, by its label, is used.
+		'WAIT_INDEX': '1', 'OPEN': 'Shape.h', 'CARET': '24:9', 'DEBUG': 'edit:safedelete'}),
+		[r'^Safe Delete: CShape::Kill \[CShape::Kill\(\)\], 1 symbol, 1 in assembly$', r'^Safe Delete: not deleted, it is used$'],
+		[r'^Status: Deleted']),
+	('safe-delete-others', dict(MakeSafeDeleteCopy(), **{
+		#An enumerator with its line; a typedef; a function that only calls itself, its declaration and its definition; a
+		#global's extern declaration and its definition; a class only ever declared; a local.  A parameter is Change
+		#Signature's.
+		'WAIT_INDEX': '1', 'OPEN': 'Shape.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:26:20,edit:safedelete,edit:caret:52:13,edit:safedelete,edit:caret:50:7,edit:safedelete,edit:caret:49:13,edit:safedelete,'
+		         'edit:caret:12:3,edit:safedelete,edit:caret:5:8,edit:safedelete,edit:open:Main.cpp,edit:caret:9:10,edit:safedelete,'
+		         'printdisklines:Shape.h,printdisklines:Shape.cpp,printdisklines:Main.cpp'}),
+		[r"^Safe Delete: iScale \[@.*Shape\.h:26:14:iScale\] can't be deleted: a parameter is removed by changing its function's signature$",
+		 r'^Status: Deleted giUnused: 2 declarations and definitions in 2 files\.$',
+		 r'^Status: Deleted UnusedFunction: 2 declarations and definitions in 2 files, with 2 things declared in it\.$',
+		 r'^Status: Deleted TSpare: 1 declaration in 1 file\.$', r'^Status: Deleted EShapeKind::SK_Spare: 1 declaration in 1 file\.$',
+		 r'^Status: Deleted CUnused: 1 declaration in 1 file\.$', r'^Status: Deleted iUnusedLocal: 1 declaration in 1 file\.$',
+		 r'^Disk lines Shape\.h:$', r'^2\|#define __SHAPE_H__$', r'^3\|$', r'^4\|$', r'^5\|enum EShapeKind$', r'^7\|\tSK_Circle,$', r'^8\|\tSK_Square,$', r'^9\|\};$',
+		 r'^42\|\};$', r'^43\|$', r'^44\|$', r'^45\|int\t\tUsedFunction\(int iValue\);$', r'^46\|$', r'^47\|$', r'^48\|#endif // __SHAPE_H__$', r'^48 lines$',
+		 r'^Disk lines Shape\.cpp:$', r'^1\|#include "Shape\.h"$', r'^2\|$', r'^3\|$', r'^4\|/+$', r'^8\|void CShape::Init\(void\)$',
+		 r'^91\|int UsedFunction\(int iValue\)$', r'^94 lines$',
+		 r'^Disk lines Main\.cpp:$', r'^8\|\tEShapeKind\teKind;$', r'^9\|$', r'^10\|\t//UnusedFunction'],
+		[r'not deleted', r'Safe Delete stopped', r'\|.*giUnused', r'\|.*SK_Spare', r'\|.*CUnused', r'\|typedef', r'\|.*iUnusedLocal', r'\|int UnusedFunction']),
+	('safe-delete-searches', dict(MakeSafeDeleteCopy(), **{
+		#As IntelliJ's searches: the name in a comment or a string is a usage when they are searched, and not otherwise.
+		'WAIT_INDEX': '1', 'OPEN': 'Shape.h', 'CARET': '50:7',
+		'DEBUG': 'edit:safedeletesearch:c-,edit:safedelete,edit:caret:49:13,edit:safedelete,edit:safedeletesearch:--,edit:safedeletable'}),
+		[r'^Safe Delete: UnusedFunction \[UnusedFunction\(int\)\], 3 symbols, 1 in comments and strings$', r'^Safe Delete: not deleted, it is used$',
+		 r'^Safe Delete: TSpare \[TSpare\], 1 symbol, 1 in comments and strings$', r'^Safe Delete: not deleted, it is used$',
+		 r'^Safe Delete: TSpare \[TSpare\], 1 symbol, no usages$'],
+		[r'^Status: Deleted']),
+	('safe-delete-dialog', dict(MakeSafeDeleteCopy(), **{
+		#The dialog, then the deletion, when nothing uses it.
+		'WAIT_INDEX': '1', 'OPEN': 'Shape.h', 'CARET': '26:9', 'SETTINGS': MakeSettingsFile(), 'DIALOG_ANSWER': 'OK',
+		'DEBUG': 'safedelete,answered:1,printstatus'}),
+		[r'^Dialog \[Safe Delete\] answered OK$', r'^Status: Deleted CShape::Unused: 2 declarations and definitions in 2 files, with 3 things declared in it\.$'],
+		[r'Usages Detected']),
+	('safe-delete-dialog-usages', dict(MakeSafeDeleteCopy(), **{
+		#Used: Usages Detected says how much, and View Usages shows them in Find Usages with nothing deleted.
+		'WAIT_INDEX': '1', 'OPEN': 'Shape.h', 'CARET': '23:9', 'SETTINGS': MakeSettingsFile(), 'DIALOG_ANSWER': 'OK|View Usages',
+		'DEBUG': 'safedelete,answered:2,edit:printusages,printstatus'}),
+		[r'^Dialog \[Safe Delete\] answered OK$', r'^Dialog \[Usages Detected\] answered View Usages$', r'Main\.cpp'],
+		[r'^Status: Deleted']),
+	('safe-delete-dialog-anyway', dict(MakeSafeDeleteCopy(), **{
+		#Delete Anyway deletes it; Cancel in the first dialog does nothing.
+		'WAIT_INDEX': '1', 'OPEN': 'Shape.h', 'CARET': '23:9', 'SETTINGS': MakeSettingsFile(), 'DIALOG_ANSWER': 'OK|OK|Cancel',
+		'DEBUG': 'safedelete,answered:2,printstatus,edit:caret:25:9,safedelete,answered:3,printstatus'}),
+		[r'^Dialog \[Usages Detected\] answered OK$', r'^Status: Deleted CShape::Init: 2 declarations and definitions in 2 files\.  Left using it: 2 usages\.$',
+		 r'^Dialog \[Safe Delete\] answered Cancel$', r'^Status line: Deleted CShape::Init'],
+		[r'Deleted CShape::Area']),
+	('safe-delete-namespace', dict(MakeSafeDeleteCopy(), **{
+		#A namespace goes with what is in it, a function's definition outside it too; an alias.
+		'WAIT_INDEX': '1', 'OPEN': 'Extra.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:46:8,edit:safedelete,edit:caret:5:12,edit:safedelete,printdisklines:Extra.h,printdisklines:Extra.cpp'}),
+		[r'^Safe Delete: TWord \[TWord\], 1 symbol, no usages$', r'^Status: Deleted TWord: 1 declaration in 1 file\.$',
+		 r'^Safe Delete: NSpare \[NSpare\], 6 symbols, no usages$', r'^  takes out Extra\.h 5:1-17:1$', r'^  takes out Extra\.cpp 4:1-14:1$',
+		 r'^Status: Deleted NSpare: 2 declarations and definitions in 2 files, with 5 things declared in it\.$',
+		 r'^Disk lines Extra\.h:$', r'^2\|#define __EXTRA_H__$', r'^3\|$', r'^4\|$', r'^5\|template<class M>$', r'^6\|M Largest\(M a, M b\)$',
+		 r'^31\|\}$', r'^32\|$', r'^33\|$', r'^34\|#endif // __EXTRA_H__$', r'^34 lines$',
+		 r'^Disk lines Extra\.cpp:$', r'^1\|#include "Extra\.h"$', r'^2\|$', r'^3\|$', r'^4\|/+$', r'^8\|int UseBox\(void\)$'],
+		[r'\|.*NSpare', r'\|.*TWord', r'\|.*CInside', r'not deleted']),
+	('safe-delete-template', dict(MakeSafeDeleteCopy(), **{
+		#In templates (Refactorings.txt, "In a template"): a function template goes with its template<...> line; a class
+		#template's member defined outside it goes with its own template<...> and the comment over it; what an instance
+		#uses is used (CBox<int>'s Set and Get in Extra.cpp), and so is what the template's own body uses (mItem).
+		'WAIT_INDEX': '1', 'OPEN': 'Extra.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:31:8,edit:safedelete,edit:caret:28:5,edit:safedelete,edit:caret:25:8,edit:safedelete,edit:caret:18:4,edit:safedelete,'
+		         'printdisklines:Extra.h'}),
+		[r'^Safe Delete: CBox::Set \[CBox::Set\(M\)\], 4 symbols, 1 usage$', r'^  takes out Extra\.h 31:1-32:1$', r'^  takes out Extra\.h 35:1-46:1$', r'^  used at Extra\.cpp 22:7$',
+		 r'^Safe Delete: not deleted, it is used$',
+		 r'^Safe Delete: CBox::mItem \[CBox::mItem\], 1 symbol, 2 usages$', r'^  used at Extra\.h 30:24$', r'^  used at Extra\.h 42:2$', r'^Safe Delete: not deleted, it is used$',
+		 r'^Safe Delete: CBox \[CBox\], 8 symbols, 3 usages$', r'^Safe Delete: not deleted, it is used$',
+		 r'^Safe Delete: Largest \[Largest\(M, M\)\], 4 symbols, no usages$', r'^  takes out Extra\.h 17:1-24:1$',
+		 r'^Status: Deleted Largest: 1 declaration in 1 file, with 3 things declared in it\.$',
+		 r'^14\|\}$', r'^15\|$', r'^16\|$', r'^17\|template<class M>$', r'^18\|class CBox$', r'^42 lines$'],
+		[r'\|.*Largest']),
+	('safe-delete-template-instance', dict(MakeRenameTemplateCopy(), **{
+		#A member only a template's body names, through an instance, is used (T1): CFoo::Init by CHolder<CFoo>'s
+		#mp->Init(), as well as by main.
+		'WAIT_INDEX': '1', 'OPEN': 'Foo.h', 'CARET': '10:8', 'DEBUG': 'edit:safedelete'}),
+		[r'^Safe Delete: CFoo::Init \[CFoo::Init\(\)\], 1 symbol, 2 usages, 2 in assembly$', r'^  used at Holder\.h 11:25$', r'^Safe Delete: not deleted, it is used$'],
+		[r'^Status: Deleted']),
+	('safe-delete-undo', dict(MakeSafeDeleteCopy(), **{
+		#One Undo Across Files puts back everything a deletion took out, in every file.
+		'WAIT_INDEX': '1', 'OPEN': 'Shape.h', 'CARET': '39:8',
+		'DEBUG': 'edit:safedelete,edit:undoall,edit:renamesearch:---s,edit:caret:21:9,edit:safedelete,printdisklines:Shape.h,printdisklines:Shape.cpp'}),
+		[r'^Status: Deleted CLonely: 3 declarations and definitions in 2 files, with 3 things declared in it\.$', r'^Status: Deleted CShape::miSpare: 1 declaration in 1 file\.$',
+		 r'^37\|//Nothing uses it but itself\.$', r'^38\|class CLonely$', r'^54 lines$', r'^74\|void CLonely::Init\(void\)$', r'^84\|int CLonely::Get\(void\)$', r'^108 lines$'],
+		[r'Safe Delete stopped']),
 	('rename-assembly-class', dict(MakeRenameAssemblyCopy(), **{
 		#A class renamed in hand written assembly's labels (_CEngine__Init, __0, __2), in parameter lists with its length
 		#(FPC7CEngine to FPC6CMotor), in generated layout constants (SIZEOF_CEngine, CEngine_miSpeed: in the assembly, the
@@ -1210,7 +1360,7 @@ CHECKS = [
 		 r'^Menu Debug: Start Debugging \[F5\], Start Without Debugging \[Ctrl\+F5\], Stop Debugging \[Shift\+F5\], Stop Running\(disabled\), Restart \[Ctrl\+Shift\+F5\], Break All \[Ctrl\+Pause/Break\], Attach to Emulator\.\.\., Step Into \[F11\], Step Over \[F10\], Step Out \[Shift\+F11\], Toggle Breakpoint \[F9\], ',
 		 r'^Menu Window: Reset Window Layout, Close All Documents$',
 		 r'^Menu Editor: Go to Source \[Ctrl\+B\], Find Usages \[Alt\+F7\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Rename\.\.\. \[Shift\+F6\], Refactor>, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\]$',
-		 r'^Menu Editor/Refactor: Rename File\.\.\., Extract Method\.\.\.\(disabled\)$',
+		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Extract Method\.\.\.\(disabled\)$',
 		 r'^Menu Explorer: Set as Startup Solution, Set as Startup Project\(disabled\), Remove Solution, Rename\.\.\.(\(disabled\))?$',
 		 r'^Menu item \[View/Nope\] not found$'], []),
 	('menu-clicks', {

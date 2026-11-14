@@ -2442,6 +2442,308 @@ size CIDECodeModel::FindOverrideLocations(const char* szKey, CArrayIDELocations*
 
 //////////////////////////////////////////////////////////////////////////
 //
+//
+//////////////////////////////////////////////////////////////////////////
+void SIDEFileRange::Init(const char* szFile, int32 iStartLine, int32 iStartColumn, int32 iLastLine, int32 iLastColumn)
+{
+	szFileName.Init(szFile);
+	iLine = iStartLine;
+	iColumn = iStartColumn;
+	iEndLine = iLastLine;
+	iEndColumn = iLastColumn;
+	uiStart = 0;
+	uiEnd = 0;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void SIDEFileRange::Kill(void)
+{
+	szFileName.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether a place in szFile is in the range.
+//
+//////////////////////////////////////////////////////////////////////////
+bool SIDEFileRange::Has(const char* szFile, int32 iAtLine, int32 iAtColumn)
+{
+	if ((iAtLine < iLine) || ((iAtLine == iLine) && (iAtColumn < iColumn)))
+	{
+		return false;
+	}
+	if ((iAtLine > iEndLine) || ((iAtLine == iEndLine) && (iAtColumn >= iEndColumn)))
+	{
+		return false;
+	}
+	return StringInsensitiveCompare(szFileName.Text(), szFile) == 0;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void KillIDEFileRanges(CArrayIDEFileRanges* pasRanges)
+{
+	size	i;
+
+	for (i = 0; i < pasRanges->NumElements(); i++)
+	{
+		pasRanges->Get(i)->Kill();
+	}
+	pasRanges->Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The symbol named at a place (0 based) of szFileName: its key and its
+// kind (ECPPSymbolKind).  False if none is.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDECodeModel::GetSymbolAt(const char* szFileName, int iLine, int iColumn, CChars* pszKey, uint8* puiKind)
+{
+	CCPPIndexSymbol*	pcSymbol;
+
+	mcIndexMutex.Lock();
+	pcSymbol = mcIndex.FindSymbolAt(szFileName, iLine, iColumn);
+	if (pcSymbol)
+	{
+		pszKey->Set(pcSymbol->mszKey);
+		*puiKind = (uint8)pcSymbol->meKind;
+	}
+	mcIndexMutex.Unlock();
+	return pcSymbol != NULL;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Every place the symbol szKey is named, added to pasDest, and its kind.
+// False if the index has no such symbol.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDECodeModel::GetSymbolLocations(const char* szKey, CArrayIDELocations* pasDest, uint8* puiKind)
+{
+	CCPPIndexSymbol*	pcSymbol;
+
+	mcIndexMutex.Lock();
+	pcSymbol = mcIndex.FindSymbol(szKey);
+	if (pcSymbol)
+	{
+		CopyLocations(pcSymbol, pasDest);
+		*puiKind = (uint8)pcSymbol->meKind;
+	}
+	mcIndexMutex.Unlock();
+	return pcSymbol != NULL;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The symbols with a declaration or a definition in one of the ranges,
+// what is taken out with them: a class's members, an enum's enumerators,
+// a function's parameters and locals.  Their keys are added to paszKeys,
+// those not there already; the number added.
+//
+//////////////////////////////////////////////////////////////////////////
+size CIDECodeModel::FindSymbolsDeclaredIn(CArrayIDEFileRanges* pasRanges, CArrayChars* paszKeys)
+{
+	CMapStringInt		cKeys;
+	CArrayInt			aiRangeFiles;
+	CCPPIndexSymbol*	pcSymbol;
+	SCPPIndexLocation*	psLocation;
+	SIDEFileRange*		psRange;
+	size				i;
+	size				j;
+	size				k;
+	size				uiAdded;
+	int					iFile;
+	bool				bIn;
+
+	cKeys.Init();
+	for (i = 0; i < paszKeys->NumElements(); i++)
+	{
+		cKeys.Put(paszKeys->GetText(i), 1);
+	}
+
+	mcIndexMutex.Lock();
+	//Each range's file as the index numbers it, -1 if the index hasn't the file.
+	aiRangeFiles.Init();
+	for (i = 0; i < pasRanges->NumElements(); i++)
+	{
+		iFile = -1;
+		for (j = 0; j < mcIndex.NumFiles(); j++)
+		{
+			if (StringInsensitiveCompare(mcIndex.GetFileName(j), pasRanges->Get(i)->szFileName.Text()) == 0)
+			{
+				iFile = (int)j;
+				break;
+			}
+		}
+		aiRangeFiles.Add(iFile);
+	}
+
+	uiAdded = 0;
+	for (i = 0; i < mcIndex.NumSymbols(); i++)
+	{
+		pcSymbol = mcIndex.GetSymbol(i);
+		bIn = false;
+		for (j = 0; (j < pcSymbol->NumLocations()) && !bIn; j++)
+		{
+			psLocation = pcSymbol->GetLocation(j);
+			if (psLocation->uiRole == CPPIR_Reference)
+			{
+				continue;
+			}
+			for (k = 0; (k < pasRanges->NumElements()) && !bIn; k++)
+			{
+				psRange = pasRanges->Get(k);
+				if ((int)psLocation->uiFile != aiRangeFiles.GetValue(k))
+				{
+					continue;
+				}
+				bIn = !((psLocation->iLine < psRange->iLine) || ((psLocation->iLine == psRange->iLine) && (psLocation->iColumn < psRange->iColumn)) ||
+						(psLocation->iLine > psRange->iEndLine) || ((psLocation->iLine == psRange->iEndLine) && (psLocation->iColumn >= psRange->iEndColumn)));
+			}
+		}
+		if (bIn && (cKeys.Get(pcSymbol->mszKey.Text(), -1) < 0))
+		{
+			paszKeys->Add(pcSymbol->mszKey.Text());
+			cKeys.Put(pcSymbol->mszKey.Text(), 1);
+			uiAdded++;
+		}
+	}
+	aiRangeFiles.Kill();
+	mcIndexMutex.Unlock();
+	cKeys.Kill();
+	return uiAdded;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether pcClass is pcBase or has it for a base class, however far up.
+// Call it with the index's mutex held.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDECodeModel::IsDerivedClass(CCPPIndexSymbol* pcClass, CCPPIndexSymbol* pcBase, int iDepth)
+{
+	size	i;
+
+	if (pcClass == pcBase)
+	{
+		return true;
+	}
+	if (iDepth > 32)
+	{
+		return false;
+	}
+	for (i = 0; i < pcClass->maiBases.NumElements(); i++)
+	{
+		if (IsDerivedClass(mcIndex.GetSymbol((size)pcClass->maiBases.GetValue(i)), pcBase, iDepth + 1))
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The declarations and definitions of the member functions that override
+// the virtual member function szKey in the classes derived from its
+// class, added to pasDest: what is left overriding nothing if it is taken
+// out.  The number of functions; 0 if it isn't virtual or nothing
+// overrides it.
+//
+//////////////////////////////////////////////////////////////////////////
+size CIDECodeModel::FindOverriders(const char* szKey, CArrayIDELocations* pasDest)
+{
+	CCPPIndexSymbol*	pcSymbol;
+	CCPPIndexSymbol*	pcClass;
+	CCPPIndexSymbol*	pcOther;
+	CCPPIndexSymbol*	pcOtherClass;
+	CArrayInt			aiOverrides;
+	CChars				szScope;
+	CChars				szName;
+	CChars				szParameters;
+	size				i;
+	size				j;
+	size				uiOverriders;
+
+	uiOverriders = 0;
+	mcIndexMutex.Lock();
+	pcSymbol = mcIndex.FindSymbol(szKey);
+	SplitIDESymbolKey(szKey, &szScope, &szName, &szParameters);
+	pcClass = (pcSymbol && !szScope.Empty()) ? mcIndex.FindSymbol(szScope.Text()) : NULL;
+	szParameters.Kill();
+	szName.Kill();
+	szScope.Kill();
+	if (pcClass)
+	{
+		aiOverrides.Init();
+		FindOverrides(pcSymbol, &aiOverrides);
+		for (i = 0; i < aiOverrides.NumElements(); i++)
+		{
+			pcOther = mcIndex.GetSymbol((size)aiOverrides.GetValue(i));
+			SplitIDESymbolKey(pcOther->mszKey.Text(), &szScope, &szName, &szParameters);
+			pcOtherClass = szScope.Empty() ? NULL : mcIndex.FindSymbol(szScope.Text());
+			szParameters.Kill();
+			szName.Kill();
+			szScope.Kill();
+			if (pcOtherClass && (pcOtherClass != pcClass) && IsDerivedClass(pcOtherClass, pcClass, 0))
+			{
+				uiOverriders++;
+				for (j = 0; j < pcOther->NumLocations(); j++)
+				{
+					if (pcOther->GetLocation(j)->uiRole != CPPIR_Reference)
+					{
+						CopyLocation(pcOther->GetLocation(j), pasDest->Add());
+					}
+				}
+			}
+		}
+		aiOverrides.Kill();
+	}
+	mcIndexMutex.Unlock();
+	return uiOverriders;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// How hand written assembly's labels name the symbol szKey, in psDest
+// (its key, name, scope, assembly kind and overloads: what
+// FindIDEAssemblyEdits is asked with).  False if there is no such symbol.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDECodeModel::FindAssemblyTarget(const char* szKey, SIDERenameTarget* psDest)
+{
+	CCPPIndexSymbol*	pcSymbol;
+
+	mcIndexMutex.Lock();
+	pcSymbol = mcIndex.FindSymbol(szKey);
+	if (pcSymbol)
+	{
+		psDest->szKey.Set(pcSymbol->mszKey);
+		GetIDESymbolName(pcSymbol->mszKey.Text(), &psDest->szName);
+		FindAssemblyRename(pcSymbol, psDest);
+	}
+	mcIndexMutex.Unlock();
+	return pcSymbol != NULL;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Whether the index has a symbol with szKey, a rename's new name say.
 //
 //////////////////////////////////////////////////////////////////////////

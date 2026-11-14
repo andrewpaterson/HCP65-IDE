@@ -315,6 +315,8 @@
     <ClCompile Include="IDEEdit.cpp" />
     <ClCompile Include="IDENavigator.cpp" />
     <ClCompile Include="IDERename.cpp" />
+    <ClCompile Include="IDESafeDelete.cpp" />
+    <ClCompile Include="IDERefactorUnit.cpp" />
     <ClCompile Include="IDEFileRename.cpp" />
     <ClCompile Include="IDERenameAssembly.cpp" />
     <ClCompile Include="IDEUsages.cpp" />
@@ -368,6 +370,8 @@
     <ClInclude Include="IDEEdit.h" />
     <ClInclude Include="IDENavigator.h" />
     <ClInclude Include="IDERename.h" />
+    <ClInclude Include="IDESafeDelete.h" />
+    <ClInclude Include="IDERefactorUnit.h" />
     <ClInclude Include="IDEFileRename.h" />
     <ClInclude Include="IDERenameAssembly.h" />
     <ClInclude Include="IDEUsages.h" />

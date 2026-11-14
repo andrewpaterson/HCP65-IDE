@@ -51,6 +51,12 @@
     <ClCompile Include="IDERename.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="IDESafeDelete.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="IDERefactorUnit.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="IDEFileRename.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -204,6 +210,12 @@
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDERename.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDESafeDelete.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDERefactorUnit.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDEFileRename.h">

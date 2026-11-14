@@ -39,7 +39,7 @@ static bool			gbIDEScriptRenameSaves = false;  //rename: saves what it edited (r
 static bool			gbIDEScriptClassFiles = false;  //rename: renames a type's files too (renamesearch's f), never from the settings.
 
 
-static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printfindpreview", "printfindtoolbar", "findtool:", "printstartup", "printworkspace", "rename", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printsettings", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printprojectfiles", "printdiskfile:", "printedits", "printspans", "configuration:", "waitindex" };
+static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printfindpreview", "printfindtoolbar", "findtool:", "printstartup", "printworkspace", "rename", "safedelete", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printsettings", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printprojectfiles", "printdiskfile:", "printdisklines:", "printedits", "printspans", "configuration:", "waitindex" };
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -253,6 +253,11 @@ void CIDEScript::RunCommand(const char* szCommand)
 		//Rename's dialog for what is at the caret, from a tick as it must be.
 		mpcContent->GetRename()->ShowRename();
 	}
+	else if (strcmp(szCommand, "safedelete") == 0)
+	{
+		//Safe Delete's dialogs for what is at the caret.
+		mpcContent->GetSafeDelete()->ShowSafeDelete();
+	}
 	else if (strcmp(szCommand, "closetab") == 0)
 	{
 		//The active document closed, as its tab's cross does.
@@ -391,6 +396,49 @@ void CIDEScript::RunCommand(const char* szCommand)
 			szPath.Kill();
 		}
 		szDirectory.Kill();
+		fflush(stdout);
+	}
+	else if (strncmp(szCommand, "printdisklines:", 15) == 0)
+	{
+		//One file's text as it is on the disk, each line after its number ("12|	int	miCount;"), so a check can say
+		//which line something is on, and that a line is blank.  Named from the first solution's directory.
+		CTextFile	cFile;
+		CChars		szPath;
+		char*		szText;
+		char*		szEnd;
+		int			iLine;
+
+		szPath.Init();
+		if (mpcContent->GetWorkspace()->NumProjects() > 0)
+		{
+			szPath.Set(mpcContent->GetWorkspace()->GetProjectSolution(0)->GetDirectory());
+			if (!szPath.EndsWith(FILE_SEPARATOR[0]))
+			{
+				szPath.Append(FILE_SEPARATOR[0]);
+			}
+		}
+		szPath.Append(&szCommand[15]);
+		cFile.Init();
+		printf("Disk lines %s:\n", &szCommand[15]);
+		if (cFile.Read(szPath.Text()))
+		{
+			iLine = 1;
+			for (szText = cFile.Text(); *szText != '\0'; iLine++)
+			{
+				for (szEnd = szText; (*szEnd != '\0') && (*szEnd != '\n'); szEnd++)
+				{
+				}
+				printf("%d|%.*s\n", iLine, (int)(((szEnd > szText) && (szEnd[-1] == '\r')) ? (szEnd - szText - 1) : (szEnd - szText)), szText);
+				szText = (*szEnd == '\n') ? szEnd + 1 : szEnd;
+			}
+			printf("%d lines\n", iLine - 1);
+		}
+		else
+		{
+			printf("(none)\n");
+		}
+		cFile.Kill();
+		szPath.Kill();
 		fflush(stdout);
 	}
 	else if (strcmp(szCommand, "printgit") == 0)
@@ -1388,6 +1436,48 @@ void CIDEScript::RunEditStep(const char* szStep)
 		gbIDEScriptClassFiles = (szStep[13] != '\0') && (szStep[14] != '\0') && (szStep[15] == 'f');
 		gbIDEScriptRenameSaves = (szStep[13] != '\0') && (szStep[14] != '\0') && (szStep[15] != '\0') && (szStep[16] == 's');
 	}
+	else if (strncmp(szStep, "safedeletesearch:", 17) == 0)
+	{
+		//safedeletesearch:<c|-><t|->: Safe Delete's searches in comments and strings, and for text occurrences.
+		mpcContent->GetSafeDelete()->SetSearches(szStep[17] == 'c', (szStep[17] != '\0') && (szStep[18] == 't'));
+	}
+	else if ((strcmp(szStep, "safedeletable") == 0) || (strcmp(szStep, "safedelete") == 0) || (strcmp(szStep, "safedelete:anyway") == 0))
+	{
+		//What Safe Delete would take out for what is at the caret and what would be left using it (safedeletable); or
+		//it deleted if nothing uses it (safedelete), or whatever uses it (safedelete:anyway).  What is edited is saved
+		//if renamesearch's s is given.
+		SIDESafeDeletion	sDeletion;
+		CChars				szPrinted;
+		bool				bOnlyFind;
+		bool				bAnyway;
+
+		bOnlyFind = (strcmp(szStep, "safedeletable") == 0);
+		bAnyway = (strcmp(szStep, "safedelete:anyway") == 0);
+		sDeletion.Init();
+		if (!mpcContent->GetSafeDelete()->FindDeletion(&sDeletion))
+		{
+			printf("Safe Delete: nothing at the caret\n");
+		}
+		else
+		{
+			szPrinted.Init();
+			printf("%s", mpcContent->GetSafeDelete()->PrintDeletion(&sDeletion, &szPrinted));
+			szPrinted.Kill();
+			if (sDeletion.bDeletable && !bOnlyFind && ((sDeletion.NumUsages() == 0) || bAnyway))
+			{
+				mpcContent->GetSafeDelete()->Delete(&sDeletion);
+				if (gbIDEScriptRenameSaves)
+				{
+					mpcContent->GetDocuments()->SaveAllFiles();
+				}
+			}
+			else if (sDeletion.bDeletable && !bOnlyFind)
+			{
+				printf("Safe Delete: not deleted, it is used\n");
+			}
+		}
+		sDeletion.Kill();
+	}
 	else if ((strcmp(szStep, "renamable") == 0) || (strncmp(szStep, "rename:", 7) == 0))
 	{
 		//What Rename would rename at the caret, or renames it.
@@ -2080,15 +2170,19 @@ void CIDEScript::StopWatchingDialog(void)
 //
 // A few ticks in, so it has been drawn, the watched dialog is saved and
 // answered: Save or OK click OK, any other caption closes it as that
-// button does.
+// button does.  Answers separated by | are the first dialog's, the
+// second's and so on (the last is every later one's): "OK|View Usages".
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEScript::DialogTick(void)
 {
 	Ptr<CWindow>	pWindow;
 	const char*		szAnswer;
+	const char*		szNext;
+	CChars			szThisAnswer;
 	SMemberCall		sDrawn;
 	bool			bHighlighting;
+	size			i;
 
 	pWindow = mpDialog->GetWindow();
 	miDialogTicks++;
@@ -2135,21 +2229,37 @@ void CIDEScript::DialogTick(void)
 	{
 		szAnswer = "Cancel";
 	}
+	for (i = 0; i < muiAnswered; i++)
+	{
+		szNext = strchr(szAnswer, '|');
+		if (szNext == NULL)
+		{
+			break;
+		}
+		szAnswer = szNext + 1;
+	}
+	szNext = strchr(szAnswer, '|');
+	szThisAnswer.Init();
+	szThisAnswer.Append(szAnswer, szNext ? (size)(szNext - szAnswer) : strlen(szAnswer));
+	szAnswer = szThisAnswer.Text();
 	printf("Dialog [%s] answered %s\n", pWindow->GetWindowTitle(), szAnswer);
 	fflush(stdout);
 	muiAnswered++;
 	if ((strcmp(szAnswer, "Open in Find Window") == 0) && mpcContent->GetFindInFiles()->GetFind().IsNotNull())
 	{
 		mpcContent->GetFindInFiles()->GetFind()->OpenInFindWindow();
+		szThisAnswer.Kill();
 		return;
 	}
 	if ((strcmp(szAnswer, "OK") == 0) && mpcContent->GetPasteHistory()->GetDialog().IsNotNull() && (mpcContent->GetPasteHistory()->GetDialog()->GetDialog() == mpDialog))
 	{
 		//Choose Content to Paste's OK chooses what is selected, as clicking it does.
 		mpDialog->OKClicked();
+		szThisAnswer.Kill();
 		return;
 	}
 	mpDialog->Close(((strcmp(szAnswer, "Save") == 0) || (strcmp(szAnswer, "OK") == 0)) ? "OK" : szAnswer);
+	szThisAnswer.Kill();
 }
 
 
