@@ -33,6 +33,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 class CIDEContent;
+class CIDEFileEdits;
 struct SIDECaretContext;
 struct SIDEPlace;
 typedef CArrayTemplate<SIDEPlace>	CArrayIDEPlaces;
@@ -124,6 +125,7 @@ public:
 	void	SetSearches(bool bComments, bool bText);
 	void	ReadSettings(CMarkupTag* pcSettings);
 	void	WriteSettings(CXMLWriter* pcWriter);
+	size	MoveAssembly(const char* szKey, const char* szNewScopeKey, CIDEFileEdits* pcFiles, size* puiUnsure);
 
 protected:
 	void	ShowQueuedRename(void);

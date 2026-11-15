@@ -23,6 +23,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "StandardLib/ClassDefines.h"
 #include "IDEContent.h"
 #include "IDERename.h"
+#include "IDEDefinitions.h"
 #include "IDEContextActions.h"
 
 
@@ -985,6 +986,118 @@ size CIDERename::RenameAssembly(SIDERenameTarget* psTarget, const char* szNewNam
 		uiEdits += RenameAssemblyOf(psTarget->apsWith.GetPtr(i), szNewName, false, paszFiles, &uiUnsure);
 		*puiUnsure += uiUnsure;
 	}
+	return uiEdits;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A member or function that goes to other scopes (a member moved to
+// another class, szNewScopeKey that class's key; or made a function of no
+// class, szNewScopeKey empty), in hand written assembly: the labels the
+// compiler gives it, and a field's layout constants, are written with the
+// scopes it goes to (SIDEAssemblyRename::SetMove).  szKey is its symbol as
+// it is before it moves.  The edits are pcFiles', so they are undone with
+// the move; returns how many, and in *puiUnsure the labels that fit it and
+// an overload of it both, which are left.
+//
+//////////////////////////////////////////////////////////////////////////
+size CIDERename::MoveAssembly(const char* szKey, const char* szNewScopeKey, CIDEFileEdits* pcFiles, size* puiUnsure)
+{
+	CIDECodeModel*			pcModel;
+	CArrayIDELocations		asLocations;
+	SIDERenameTarget		sTarget;
+	SIDEAssemblyRename		sRename;
+	CArrayIDEAssemblyEdits	asEdits;
+	SIDEAssemblyEdit*		psEdit;
+	SIDELocation*			psLocation;
+	CTextFile				cFile;
+	char*					szText;
+	char*					szFileName;
+	size					uiLength;
+	size					uiEdits;
+	size					i;
+	size					j;
+	uint8					uiKind;
+	bool					bFound;
+
+	*puiUnsure = 0;
+	pcModel = mpcContent->GetCodeModel();
+
+	//Any .asm at all?  Then how its labels name it, from where it is declared.
+	bFound = false;
+	for (i = 0; !bFound && (i < pcModel->NumProjectFiles()); i++)
+	{
+		bFound = IsIDEAssemblyFile(pcModel->GetProjectFile(i));
+	}
+	if (!bFound)
+	{
+		return 0;
+	}
+	asLocations.Init();
+	pcModel->GetSymbolLocations(szKey, &asLocations, &uiKind);
+	sTarget.Init();
+	bFound = false;
+	for (i = 0; !bFound && (i < asLocations.NumElements()); i++)
+	{
+		psLocation = asLocations.Get(i);
+		bFound = (psLocation->uiRole != CPPIR_Reference) && pcModel->FindRenameTarget(psLocation->szFileName.Text(), psLocation->iLine, psLocation->iColumn, &sTarget);
+	}
+	KillIDELocations(&asLocations);
+	uiEdits = 0;
+	if (bFound && ((sTarget.uiAssembly == IAR_Member) || (sTarget.uiAssembly == IAR_Function) || (sTarget.uiAssembly == IAR_Field)))
+	{
+		sRename.Init((EIDEAssemblyRename)sTarget.uiAssembly, sTarget.szName.Text(), sTarget.szName.Text(), sTarget.szScope.Text());
+		sRename.SetMove(szNewScopeKey);
+		if (sTarget.bOverloaded)
+		{
+			sRename.szKey.Set(sTarget.szKey);
+			for (i = 0; i < sTarget.aszOverloads.NumElements(); i++)
+			{
+				sRename.aszOverloads.Add(sTarget.aszOverloads.GetText(i));
+			}
+		}
+		for (i = 0; i < pcModel->NumProjectFiles(); i++)
+		{
+			szFileName = pcModel->GetProjectFile(i);
+			if (!IsIDEAssemblyFile(szFileName))
+			{
+				continue;
+			}
+
+			//Looked in as it is first, so only a file that has one of the labels is opened.
+			cFile.Init();
+			asEdits.Init();
+			sRename.uiUnsure = 0;
+			if (mpcContent->GetFindInFiles()->GetFileText(szFileName, &cFile, &szText, &uiLength))
+			{
+				FindIDEAssemblyEdits(szText, uiLength, &sRename, false, &asEdits);
+			}
+			cFile.Kill();
+			bFound = (asEdits.NumElements() > 0);
+			KillIDEAssemblyEdits(&asEdits);
+			szText = bFound ? pcFiles->GetText(szFileName) : NULL;
+			if (!szText)
+			{
+				//Nothing of it to change here; what may be an overload's is still said.
+				*puiUnsure += sRename.uiUnsure;
+				continue;
+			}
+			asEdits.Init();
+			sRename.uiUnsure = 0;
+			FindIDEAssemblyEdits(szText, strlen(szText), &sRename, false, &asEdits);
+			for (j = 0; j < asEdits.NumElements(); j++)
+			{
+				psEdit = asEdits.Get(j);
+				pcFiles->GetEdits(szFileName)->Replace(psEdit->uiStart, psEdit->uiStart + psEdit->uiLength, psEdit->szReplacement.Text());
+				uiEdits++;
+			}
+			*puiUnsure += sRename.uiUnsure;
+			KillIDEAssemblyEdits(&asEdits);
+		}
+		sRename.Kill();
+	}
+	sTarget.Kill();
 	return uiEdits;
 }
 

@@ -47,11 +47,38 @@ void SIDEAssemblyRename::Init(EIDEAssemblyRename eRenameKind, const char* szOldN
 	szKey.Init();
 	aszOverloads.Init();
 	uiUnsure = 0;
+	bMoves = false;
+	szNewScope.Init();
+	szNewClass.Init();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// It goes to other scopes, as the index has them ("NS::CDrum", or empty
+// for none): its labels are written with those (Scope__Name, Class_field).
+//
+//////////////////////////////////////////////////////////////////////////
+void SIDEAssemblyRename::SetMove(const char* szNewScopeKey)
+{
+	size	uiLast;
+
+	bMoves = true;
+	szNewScope.Set(szNewScopeKey ? szNewScopeKey : "");
+	szNewScope.Replace("::", "__");
+	szNewClass.Set(szNewScope.Text());
+	uiLast = szNewClass.FindFromEnd("__");
+	if (uiLast != ARRAY_ELEMENT_NOT_FOUND)
+	{
+		szNewClass.RemoveFromStart(uiLast + 2);
+	}
 }
 
 
 void SIDEAssemblyRename::Kill(void)
 {
+	szNewClass.Kill();
+	szNewScope.Kill();
 	aszOverloads.Kill();
 	szKey.Kill();
 	szClass.Kill();
@@ -142,6 +169,15 @@ static bool FindIDEFieldLabelEdit(const char* szToken, size uiStart, size uiLeng
 		(szToken[uiClass] != '_') || (memcmp(&szToken[uiClass + 1], psRename->szOld.Text(), psRename->szOld.Length()) != 0))
 	{
 		return false;
+	}
+	if (psRename->bMoves)
+	{
+		//Its class's name is the one it has gone to.
+		if (!psRename->szNewClass.Empty())
+		{
+			AddIDEAssemblyEdit(pasDest, uiStart, uiClass, psRename->szNewClass.Text(), bComment);
+		}
+		return true;
 	}
 	AddIDEAssemblyEdit(pasDest, uiStart + uiClass + 1, psRename->szOld.Length(), psRename->szNew.Text(), bComment);
 	return true;
@@ -709,10 +745,12 @@ static bool FitsIDEOverload(const char* szRest, size uiLength, const char* szKey
 //////////////////////////////////////////////////////////////////////////
 static bool FindIDENamedLabelEdit(const char* szToken, size uiStart, size uiLength, SIDEAssemblyRename* psRename, bool bComment, CArrayIDEAssemblyEdits* pasDest)
 {
+	CChars	szScopes;
 	size	uiName;
 	size	uiOld;
 	size	uiEnd;
 	size	uiFits;
+	size	uiScopeEnd;
 	size	i;
 	bool	bOwn;
 
@@ -721,6 +759,7 @@ static bool FindIDENamedLabelEdit(const char* szToken, size uiStart, size uiLeng
 		return false;
 	}
 	uiName = 1;
+	uiScopeEnd = 1 + (psRename->szScope.Empty() ? 0 : psRename->szScope.Length() + 2);
 	if (!psRename->szScope.Empty())
 	{
 		if ((uiLength < 1 + psRename->szScope.Length() + 2) || (memcmp(&szToken[1], psRename->szScope.Text(), psRename->szScope.Length()) != 0) ||
@@ -763,6 +802,23 @@ static bool FindIDENamedLabelEdit(const char* szToken, size uiStart, size uiLeng
 			psRename->uiUnsure++;
 			return true;
 		}
+	}
+	if (psRename->bMoves)
+	{
+		//Its scopes are the ones it has gone to; a class template's instance's arguments can't be carried over.
+		if (uiName != uiScopeEnd)
+		{
+			psRename->uiUnsure++;
+			return true;
+		}
+		szScopes.Init(psRename->szNewScope);
+		if (!szScopes.Empty())
+		{
+			szScopes.Append("__");
+		}
+		AddIDEAssemblyEdit(pasDest, uiStart + 1, uiScopeEnd - 1, szScopes.Text(), bComment);
+		szScopes.Kill();
+		return true;
 	}
 	AddIDEAssemblyEdit(pasDest, uiStart + uiName, uiOld, psRename->szNew.Text(), bComment);
 	return true;
@@ -831,7 +887,7 @@ void FindIDEAssemblyEdits(const char* szText, size uiLength, SIDEAssemblyRename*
 				{
 					bLabel = FindIDEFieldLabelEdit(&szText[i], i, j - i, psRename, bComment, pasDest);
 				}
-				if (!bLabel && bComment && (j - i == psRename->szOld.Length()) && (memcmp(&szText[i], psRename->szOld.Text(), j - i) == 0))
+				if (!bLabel && bComment && !psRename->bMoves && (j - i == psRename->szOld.Length()) && (memcmp(&szText[i], psRename->szOld.Text(), j - i) == 0))
 				{
 					AddIDEAssemblyEdit(pasDest, i, j - i, psRename->szNew.Text(), true);
 				}

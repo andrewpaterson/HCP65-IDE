@@ -447,6 +447,13 @@ Where it is
      Still to do: write the casts where its value is used as an integer instead of refusing (the compiler is to
      record those places for one named enum), and a compiler hole: arithmetic on an enum class's enumerator in an
      arm of ?: ("c ? E::A + 1 : 0") isn't reported.
+ 27. Plan item 23, assembly: Pull Members Up and Push Members Down change the labels hand written assembly names a
+     moved member by (CIDERename::MoveAssembly, SIDEAssemblyRename::SetMove): a function's or static member's
+     "_CTun__Fill" and a field's layout constant "CTun_miLevel" get the class it went to, an overload's where its
+     parameters tell it apart (one that fits another overload too is left and said).  Not where the members go
+     down to more than one class, nor for what only its declaration goes up.  Still to do: Convert to Member
+     Function and back, Extract Class and Superclass, and Extract Template Parameter (a template instance's labels
+     have its arguments in them: the compiler is to be asked).
 
 
 When the plan is done

@@ -53,8 +53,12 @@ struct SIDEAssemblyRename
 	CChars				szKey;			//An overloaded function's key, as the index has it ("CFat::Open(uint8)").
 	CArrayChars			aszOverloads;	//With every overload's key (its own too): a label is renamed if it fits it alone.
 	size				uiUnsure;		//Labels that fit it and other overloads too: left, for the status line to say.
+	bool				bMoves;			//It goes to another scope (SetMove): a member moved to another class, or made a function.
+	CChars				szNewScope;		//Then the scopes it goes to, as a label writes them; empty for none,
+	CChars				szNewClass;		//and the last of them.
 
 	void	Init(EIDEAssemblyRename eKind, const char* szOldName, const char* szNewName, const char* szScopeKey);
+	void	SetMove(const char* szNewScopeKey);
 	void	Kill(void);
 };
 

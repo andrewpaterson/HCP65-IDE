@@ -2233,11 +2233,16 @@ bool CIDEMoveMembers::Move(SIDEMembersMove* psMove, CChars* pszStatus)
 	size					uiTargets;
 	size					i;
 	size					j;
+	size					uiLabels;
+	size					uiUnsure;
+	size					uiLeft;
 	bool					bInline;
 	bool					bResult;
 	bool					bField;
 
 	pcModel = mpcContent->GetCodeModel();
+	uiLabels = 0;
+	uiLeft = 0;
 	mpcContent->GetDocuments()->UpdateEditedTabsNow();
 	cEdits.Init(mpcContent);
 	asInserts.Init();
@@ -2259,6 +2264,20 @@ bool CIDEMoveMembers::Move(SIDEMembersMove* psMove, CChars* pszStatus)
 		}
 		uiMoved++;
 		szLast.Set(psMember->szName);
+
+		//Hand written assembly's labels for it: its class is the one it goes to, where that is one class and its
+		//code goes with it (what only its declaration goes up for keeps its label).
+		if ((uiTargets == 1) && !psMember->bAbstract)
+		{
+			for (j = 0; j < psMove->asTargets.NumElements(); j++)
+			{
+				if (psMove->bUp ? (j == psMove->uiTarget) : psMove->asTargets.Get(j)->bChosen)
+				{
+					uiLabels += mpcContent->GetRename()->MoveAssembly(psMember->szKey.Text(), psMove->asTargets.Get(j)->szKey.Text(), &cEdits, &uiUnsure);
+					uiLeft += uiUnsure;
+				}
+			}
+		}
 		szOutsideText = psMember->bOutside ? cEdits.GetText(psMember->szOutsideFile.Text()) : NULL;
 		szCopies.Init();
 
@@ -2422,6 +2441,14 @@ bool CIDEMoveMembers::Move(SIDEMembersMove* psMove, CChars* pszStatus)
 				GetIDEScopedName(psMove->asTargets.Get(j)->szKey.Text(), &szMessage);
 				uiAt++;
 			}
+		}
+		if (uiLabels > 0)
+		{
+			szMessage.Append("; ")->Append((uint32)uiLabels)->Append((uiLabels == 1) ? " label in assembly changed" : " labels in assembly changed");
+		}
+		if (uiLeft > 0)
+		{
+			szMessage.Append("; ")->Append((uint32)uiLeft)->Append((uiLeft == 1) ? " label that may be an overload's left" : " labels that may be an overload's left");
 		}
 		szMessage.Append(".");
 		ShowMoveStatus(&szMessage, pszStatus);

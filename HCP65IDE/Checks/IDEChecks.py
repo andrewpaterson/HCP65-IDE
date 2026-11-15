@@ -218,6 +218,16 @@ def MakeRenameAssemblyCopy():
 	return {'SOLUTION': os.path.join(szFolder, 'RenameAssembly.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
 
 
+def MakeMoveAssemblyCopy():
+	#A copy of Input/MoveAssembly (CTun, which derives from CVat, and W65C816 assembly that names CTun's members by
+	#the compiler's labels), to move members in.
+	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
+	atexit.register(shutil.rmtree, szRoot, True)
+	szFolder = os.path.join(szRoot, 'MoveAssembly')
+	shutil.copytree(os.path.join(HERE, 'Input', 'MoveAssembly'), szFolder)
+	return {'SOLUTION': os.path.join(szFolder, 'MoveAssembly.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
+
+
 def MakeRenameTemplateCopy():
 	#A copy of Input/RenameTemplate (CHolder<M>, whose body calls mp->Init() and reads mp->miCount, instantiated with CFoo
 	#and with CBar; CLone has the same members and is in no instance), to refactor in.
@@ -1466,6 +1476,18 @@ CHECKS = [
 		 r'^13\|\tvoid\t\t\tClose\(int iDelay\);$', r'^14\|\tint\t\t\t\tTurn\(int iAngle, bool bFast\) const;$', r'^18 lines$',
 		 r'^18\|long CValve::Open\(int iFlow, int iTime\)$', r'^28\|void CValve::Close\(int iDelay\)$', r'^38\|int CValve::Turn\(int iDegrees, bool bFast\) const$', r'^40\|\treturn iDegrees \+ miFlow;$', r'^41 lines$'],
 		[r'^Definitions: refused']),
+	('pull-up-assembly', dict(MakeMoveAssemblyCopy(), **{
+		#Pull Members Up where hand written assembly names the members by the compiler's labels: a field's layout
+		#constant, a function's label (twice) and an overload's that is told by its parameters get the class they
+		#went to.  The overload whose label fits another overload too (an int's and a long's are written alike on
+		#one processor or the other) is left, and said; what stayed in the class keeps its labels.
+		'WAIT_INDEX': '1', 'OPEN': 'Tun.h', 'CARET': '14:7',
+		'DEBUG': 'edit:renamesearch:---s,edit:pullup:CVat|miLevel;Fill();Drain(int);Drain(char),printdisklines:TunW65C816.asm,printdisklines:Tun.h,edit:undoall,edit:undoall,edit:saveall,printdisklines:TunW65C816.asm'}),
+		[r"^Status: Pulled 4 members up from CTun to CVat; 4 labels in assembly changed; 1 label that may be an overload's left\.$",
+		 r'^6\|\t\tlda CVat_miLevel,x$', r'^7\|\t\tjsr _CVat__Fill$', r'^8\|\t\tjsr _CTun__Stir$', r'^9\|\t\tjsr _CTun__Drain__Fi$', r'^10\|\t\tjsr _CTun__Drain__Fx$',
+		 r'^11\|\t\tjsr _CVat__Drain__Fc$', r'^12\|\t\tjsr _CVat__Init$', r'^13\|\t\tjsr _CVat__Fill$', r'^14 lines$',
+		 r'^12\|\tvoid\tFill\(void\);$', r'^6\|\t\tlda CTun_miLevel,x$', r'^11\|\t\tjsr _CTun__Drain__Fc$'],
+		[]),
 	('move-members-pull-up', dict(MakeMoveMembersCopy(), **{
 		#Pull Members Up: what is found for the class the caret is in (its members, their access, where each is
 		#defined, and its base classes), and the member at the caret moved: its declaration to the end of the base
