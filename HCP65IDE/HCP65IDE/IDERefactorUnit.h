@@ -88,6 +88,7 @@ public:
 	void			Kill(void);
 
 	bool			Parse(CIDECodeModel* pcModel, CIDEFileTexts* pcTexts, const char* szFileName, bool bCheck, ECPPTarget eTarget = CPPT_Host);
+	void			SetRecordedEnum(const char* szQualifiedName) { mcPass.SetRecordedEnum(szQualifiedName); }  //Before Parse: see CCPPSemanticPass.
 	bool			IsParsed(void) { return mbParsed; }
 	bool			IsChecked(void) { return mbChecked; }
 	size			NumErrors(void);

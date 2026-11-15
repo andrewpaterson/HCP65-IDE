@@ -8,10 +8,52 @@
 int UseMotor(CMotor* pcMotor)
 {
 	int	iNext;
+	int	aiCounts[2];
 
 	pcMotor->meMode = EM_Fast;
 	pcMotor->meState = CMotor::ES_Running;
 	pcMotor->meLevel = EL_High;
 	iNext = pcMotor->meLevel + 1;
-	return (pcMotor->meLevel == EL_High) ? iNext : 0;
+	aiCounts[pcMotor->meLevel] = iNext;
+	if (pcMotor->meLevel)
+	{
+		iNext = EL_High;
+	}
+	return (pcMotor->meLevel == EL_High) ? iNext : aiCounts[EL_Low];
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+int UseFlags(void)
+{
+	EFlag	eFlags;
+
+	eFlags = EF_Read;
+	eFlags = (EFlag)(eFlags | EF_Write);
+	eFlags |= EF_Read;
+	return (eFlags & EF_Write) ? 1 : 0;
+}
+
+
+enum EStep
+{
+	ET_First,
+	ET_Last,
+};
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+int UseSteps(void)
+{
+	EStep	eStep;
+
+	eStep = ET_First;
+	eStep++;
+	return (eStep == ET_Last) ? 1 : 0;
 }

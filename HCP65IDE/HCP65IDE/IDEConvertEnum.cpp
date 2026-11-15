@@ -24,9 +24,14 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "CppCompilerLib/CPPIndex.h"
 #include "CppCompilerLib/CPPSyntaxEnumSpecifier.h"
 #include "CppCompilerLib/CPPSyntaxEnumerator.h"
+#include "CppCompilerLib/CPPSyntaxes.h"
+#include "CppCompilerLib/CPPSemanticPass.h"
+#include "CppCompilerLib/CPP65Type.h"
 #include "IDEContent.h"
 #include "IDERename.h"
 #include "IDEDefinitions.h"
+#include "IDEIncludes.h"
+#include "IDEChangeSignature.h"
 #include "IDEContextActions.h"
 #include "IDEConvertEnum.h"
 
@@ -46,6 +51,16 @@ void SIDEEnumConversion::Init(void)
 	aiEnumAts.Init();
 	aszUseFiles.Init();
 	aiUseAts.Init();
+	aszCastFiles.Init();
+	aiCastAts.Init();
+	aiCastSpans.Init();
+	aiCastAfter.Init();
+	aszCastTexts.Init();
+	aszReplaceFiles.Init();
+	aiReplaceStarts.Init();
+	aiReplaceEnds.Init();
+	aszReplaceTexts.Init();
+	aszCastPlaces.Init();
 }
 
 
@@ -55,6 +70,16 @@ void SIDEEnumConversion::Init(void)
 //////////////////////////////////////////////////////////////////////////
 void SIDEEnumConversion::Kill(void)
 {
+	aszCastPlaces.Kill();
+	aszReplaceTexts.Kill();
+	aiReplaceEnds.Kill();
+	aiReplaceStarts.Kill();
+	aszReplaceFiles.Kill();
+	aszCastTexts.Kill();
+	aiCastAfter.Kill();
+	aiCastSpans.Kill();
+	aiCastAts.Kill();
+	aszCastFiles.Kill();
 	aiUseAts.Kill();
 	aszUseFiles.Kill();
 	aiEnumAts.Kill();
@@ -463,6 +488,287 @@ bool CIDEConvertEnum::FindConversion(SIDEEnumConversion* psDest)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Something to write at a place for a cast: before an expression uiSpan
+// long that starts there, or after one that ends there.  Once.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEConvertEnum::AddInsert(SIDEEnumConversion* psDest, const char* szFileName, size uiAt, size uiSpan, bool bAfter, const char* szText)
+{
+	size	i;
+
+	for (i = 0; i < psDest->aszCastFiles.NumElements(); i++)
+	{
+		if (((size)psDest->aiCastAts.GetValue(i) == uiAt) && ((size)psDest->aiCastSpans.GetValue(i) == uiSpan) && ((psDest->aiCastAfter.GetValue(i) != 0) == bAfter) &&
+			psDest->aszCastTexts.Get(i)->Equals(szText) && (StringInsensitiveCompare(psDest->aszCastFiles.GetText(i), szFileName) == 0))
+		{
+			return;
+		}
+	}
+	psDest->aszCastFiles.Add(szFileName);
+	psDest->aiCastAts.Add((int)uiAt);
+	psDest->aiCastSpans.Add((int)uiSpan);
+	psDest->aiCastAfter.Add(bAfter ? 1 : 0);
+	psDest->aszCastTexts.Add(szText);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A cast written before an expression of the file: "(int)" before a name,
+// a call or something in brackets, "(int)(" and ")" round anything else.
+// False if the expression isn't the file's own text (another file's, or a
+// macro's).
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEConvertEnum::AddCast(CIDERefactorUnit* pcUnit, const char* szText, const char* szFileName, CCPPSyntax* pcNode, const char* szCast, SIDEEnumConversion* psDest)
+{
+	SCPPSyntaxRange	sRange;
+	CChars			szBefore;
+	CChars			szPlace;
+	size			uiStart;
+	size			uiEnd;
+	bool			bWhole;
+
+	if (!pcNode || !pcUnit->GetRange(pcNode, &sRange))
+	{
+		return false;
+	}
+	uiStart = FindIDETextOffset(szText, sRange.iLine, sRange.iColumn);
+	uiEnd = FindIDETextOffset(szText, sRange.iEndLine, sRange.iEndColumn);
+	switch (pcNode->GetKind())
+	{
+	case CPPS_IdExpression:
+	case CPPS_LiteralExpression:
+	case CPPS_ParenthesisedExpression:
+	case CPPS_CallExpression:
+	case CPPS_MemberExpression:
+	case CPPS_SubscriptExpression:
+	case CPPS_ThisExpression:
+		bWhole = true;
+		break;
+	default:
+		bWhole = false;
+		break;
+	}
+	szBefore.Init(szCast);
+	if (!bWhole)
+	{
+		szBefore.Append('(');
+		AddInsert(psDest, szFileName, uiEnd, uiEnd - uiStart, true, ")");
+	}
+	AddInsert(psDest, szFileName, uiStart, uiEnd - uiStart, false, szBefore.Text());
+	szBefore.Kill();
+
+	szPlace.Init(GetIDEFileNamePart(szFileName));
+	szPlace.Append(" line ")->Append((int32)(sRange.iLine + 1));
+	psDest->aszCastPlaces.AddIfUnique(szPlace.Text());
+	szPlace.Kill();
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The casts one file needs: it is checked with the enum taken as an enum
+// class, and each place the check records is given its cast (see the
+// class's comment).  Only the file's own text: a header's are found when
+// it is the file.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEConvertEnum::FindFileCasts(const char* szFileName, SIDEEnumConversion* psDest)
+{
+	static const ECppTokens		aeCompound[] = { CT_AssignmentAdd, CT_AssignmentSubtract, CT_AssignmentMultiply, CT_AssignmentDivide, CT_AssignmentModulus, CT_AssignmentBitwiseAnd,
+												 CT_AssignmentBitwiseOr, CT_AssignmentBitwiseXor, CT_AssignmentLeftShift, CT_AssignmentRightShift };
+	CIDERefactorUnit			cUnit;
+	CCPPSemanticPass*			pcPass;
+	SCPPEnumCast*				psCast;
+	CCPPSyntaxBinaryExpression*	pcBinary;
+	CCPPSyntax*					pcNode;
+	SCPPSyntaxRange				sRange;
+	SCPPSyntaxRange				sLeft;
+	CTextFile					cFile;
+	CChars						szEnum;
+	CChars						szCast;
+	CChars						szOperator;
+	char*						szText;
+	size						uiLength;
+	size						uiStart;
+	size						uiEnd;
+	size						i;
+	size						j;
+	bool						bCompound;
+
+	cFile.Init();
+	cUnit.Init();
+	cUnit.SetRecordedEnum(psDest->szKey.Text());
+	szText = NULL;
+	if (!mpcContent->GetFindInFiles()->GetFileText(szFileName, &cFile, &szText, &uiLength) || !szText || !cUnit.Parse(mpcContent->GetCodeModel(), &mpcContent->GetFindInFiles(), szFileName, true))
+	{
+		cUnit.Kill();
+		cFile.Kill();
+		return;
+	}
+	pcPass = cUnit.GetPass();
+	szEnum.Init();
+	if (!pcPass->GetRecordedEnumType() || !pcPass->AppendType(pcPass->GetRecordedEnumType(), &szEnum))
+	{
+		szEnum.Set(psDest->szName);
+	}
+	szEnum.Insert(0, "(");
+	szEnum.Append(')');
+	for (i = 0; i < pcPass->NumEnumCasts(); i++)
+	{
+		psCast = pcPass->GetEnumCast(i);
+		pcNode = psCast->pcNode;
+		if (!pcNode || !cUnit.GetRange(pcNode, &sRange))
+		{
+			continue;
+		}
+		pcBinary = (pcNode->GetKind() == CPPS_BinaryExpression) ? (CCPPSyntaxBinaryExpression*)pcNode : NULL;
+		switch (psCast->uiKind)
+		{
+		case CPPEC_TO_OTHER:
+			szCast.Init("(");
+			if (!psCast->psTo || !pcPass->AppendType(psCast->psTo->IsReference() ? psCast->psTo->psBase->Unqualified() : psCast->psTo->Unqualified(), &szCast))
+			{
+				szCast.Set("(int");
+			}
+			szCast.Append(')');
+			AddCast(&cUnit, szText, szFileName, pcNode, szCast.Text(), psDest);
+			szCast.Kill();
+			break;
+		case CPPEC_TO_ENUM:
+			AddCast(&cUnit, szText, szFileName, pcNode, szEnum.Text(), psDest);
+			break;
+		case CPPEC_CONDITION:
+			AddCast(&cUnit, szText, szFileName, pcNode, "(int)", psDest);
+			break;
+		case CPPEC_INCREMENT:
+			Refuse(psDest, "its value is stepped with ++ or --, which an enum class's can't be", szFileName, sRange.iLine);
+			break;
+		default:
+			//An operator: each operand that is the enum's value.
+			bCompound = false;
+			for (j = 0; pcBinary && (j < sizeof(aeCompound) / sizeof(ECppTokens)); j++)
+			{
+				bCompound = bCompound || (pcBinary->meOperator == aeCompound[j]);
+			}
+			if (bCompound && pcPass->IsRecordedEnum(pcPass->GetType(pcBinary->mpcLeft)) && cUnit.GetRange(pcBinary->mpcLeft, &sLeft) &&
+				cUnit.GetTokensRange(pcBinary->mpcLeft->miLastToken + 1, pcBinary->mpcLeft->miLastToken + 1, &sRange))
+			{
+				//"e |= x" written out: "e = (E)((int)e | x)".
+				uiStart = FindIDETextOffset(szText, sRange.iLine, sRange.iColumn);
+				uiEnd = FindIDETextOffset(szText, sRange.iEndLine, sRange.iEndColumn);
+				szOperator.Init();
+				szOperator.AppendSubString(szText, uiStart, uiEnd - 1);
+				szCast.Init("= ");
+				szCast.Append(szEnum)->Append("((int)");
+				szCast.AppendSubString(szText, FindIDETextOffset(szText, sLeft.iLine, sLeft.iColumn), FindIDETextOffset(szText, sLeft.iEndLine, sLeft.iEndColumn));
+				szCast.Append(' ')->Append(szOperator);
+				psDest->aszReplaceFiles.Add(szFileName);
+				psDest->aiReplaceStarts.Add((int)uiStart);
+				psDest->aiReplaceEnds.Add((int)uiEnd);
+				psDest->aszReplaceTexts.Add(szCast.Text());
+				szCast.Kill();
+				szOperator.Kill();
+				if (cUnit.GetRange(pcBinary->mpcRight, &sRange))
+				{
+					uiEnd = FindIDETextOffset(szText, sRange.iEndLine, sRange.iEndColumn);
+					AddInsert(psDest, szFileName, uiEnd, uiEnd, true, ")");
+				}
+				if (pcPass->IsRecordedEnum(pcPass->GetType(pcBinary->mpcRight)))
+				{
+					AddCast(&cUnit, szText, szFileName, pcBinary->mpcRight, "(int)", psDest);
+				}
+				szCast.Init(GetIDEFileNamePart(szFileName));
+				szCast.Append(" line ")->Append((int32)(sLeft.iLine + 1));
+				psDest->aszCastPlaces.AddIfUnique(szCast.Text());
+				szCast.Kill();
+			}
+			else if (pcBinary)
+			{
+				if (pcPass->IsRecordedEnum(pcPass->GetType(pcBinary->mpcLeft)))
+				{
+					AddCast(&cUnit, szText, szFileName, pcBinary->mpcLeft, "(int)", psDest);
+				}
+				if (pcPass->IsRecordedEnum(pcPass->GetType(pcBinary->mpcRight)))
+				{
+					AddCast(&cUnit, szText, szFileName, pcBinary->mpcRight, "(int)", psDest);
+				}
+			}
+			else if (pcNode->GetKind() == CPPS_UnaryExpression)
+			{
+				AddCast(&cUnit, szText, szFileName, ((CCPPSyntaxUnaryExpression*)pcNode)->mpcOperand, "(int)", psDest);
+			}
+			else if (pcNode->GetKind() == CPPS_SubscriptExpression)
+			{
+				if (pcPass->IsRecordedEnum(pcPass->GetType(((CCPPSyntaxSubscriptExpression*)pcNode)->mpcIndex)))
+				{
+					AddCast(&cUnit, szText, szFileName, ((CCPPSyntaxSubscriptExpression*)pcNode)->mpcIndex, "(int)", psDest);
+				}
+				if (pcPass->IsRecordedEnum(pcPass->GetType(((CCPPSyntaxSubscriptExpression*)pcNode)->mpcArray)))
+				{
+					AddCast(&cUnit, szText, szFileName, ((CCPPSyntaxSubscriptExpression*)pcNode)->mpcArray, "(int)", psDest);
+				}
+			}
+			break;
+		}
+	}
+	szEnum.Kill();
+	cUnit.Kill();
+	cFile.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The casts the enum's value needs once it is an enum class's: in its own
+// file and every file of the solutions that reaches it by its #includes.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEConvertEnum::FindCasts(SIDEEnumConversion* psDest)
+{
+	CIDECodeModel*		pcModel;
+	CIDEIncludeGraph	cGraph;
+	CArrayChars			aszSeen;
+	char*				szFileName;
+	size				i;
+	size				j;
+
+	if (!psDest->bPossible)
+	{
+		return;
+	}
+	pcModel = mpcContent->GetCodeModel();
+	cGraph.Init(pcModel, &mpcContent->GetFindInFiles());
+	aszSeen.Init();
+	for (j = 0; j < psDest->aszEnumFiles.NumElements(); j++)
+	{
+		if (!aszSeen.Contains(psDest->aszEnumFiles.GetText(j)))
+		{
+			aszSeen.Add(psDest->aszEnumFiles.GetText(j));
+			FindFileCasts(psDest->aszEnumFiles.GetText(j), psDest);
+		}
+	}
+	for (i = 0; i < pcModel->NumProjectFiles(); i++)
+	{
+		szFileName = pcModel->GetProjectFile(i);
+		for (j = 0; !aszSeen.Contains(szFileName) && (j < psDest->aszEnumFiles.NumElements()); j++)
+		{
+			if (cGraph.Reaches(cGraph.Get(szFileName), cGraph.Get(psDest->aszEnumFiles.GetText(j)), -1, NULL))
+			{
+				aszSeen.Add(szFileName);
+				FindFileCasts(szFileName, psDest);
+			}
+		}
+	}
+	aszSeen.Kill();
+	cGraph.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // How many files a list of them names.
 //
 //////////////////////////////////////////////////////////////////////////
@@ -498,13 +804,19 @@ bool CIDEConvertEnum::Convert(SIDEEnumConversion* psConversion, CChars* pszStatu
 	CIDEFileEdits	cFiles;
 	CChars			szMessage;
 	CChars			szPrefix;
+	CChars			szAll;
 	size			uiBefore;
 	size			uiAfter;
+	size			uiUses;
+	size			uiBest;
 	size			i;
+	size			j;
+	int				iPass;
 	bool			bResult;
 
 	szMessage.Init();
 	bResult = psConversion->bPossible;
+	uiUses = psConversion->aszUseFiles.NumElements();
 	cFiles.Init(mpcContent);
 	if (!bResult)
 	{
@@ -520,15 +832,59 @@ bool CIDEConvertEnum::Convert(SIDEEnumConversion* psConversion, CChars* pszStatu
 			cFiles.GetEdits(psConversion->aszEnumFiles.GetText(i))->Insert((size)psConversion->aiEnumAts.GetValue(i), " class");
 		}
 	}
+	//The names are written inside whatever cast is written at the same place: they are a cast's of no length.
 	for (i = 0; bResult && (i < psConversion->aszUseFiles.NumElements()); i++)
 	{
-		bResult = (cFiles.GetText(psConversion->aszUseFiles.GetText(i)) != NULL);
-		if (bResult)
-		{
-			cFiles.GetEdits(psConversion->aszUseFiles.GetText(i))->Insert((size)psConversion->aiUseAts.GetValue(i), szPrefix.Text());
-		}
+		AddInsert(psConversion, psConversion->aszUseFiles.GetText(i), (size)psConversion->aiUseAts.GetValue(i), 0, false, szPrefix.Text());
 	}
 	szPrefix.Kill();
+	for (i = 0; bResult && (i < psConversion->aszCastFiles.NumElements()); i++)
+	{
+		if (psConversion->aiCastAts.GetValue(i) < 0)
+		{
+			continue;
+		}
+		bResult = (cFiles.GetText(psConversion->aszCastFiles.GetText(i)) != NULL);
+
+		//Everything written at this place, in order: what closes the shorter expressions that end here first, then
+		//what opens the longer ones that start here.
+		szAll.Init();
+		for (iPass = 0; iPass < 2; iPass++)
+		{
+			for (;;)
+			{
+				uiBest = MAX_SIZE;
+				for (j = i; j < psConversion->aszCastFiles.NumElements(); j++)
+				{
+					if ((psConversion->aiCastAts.GetValue(j) == psConversion->aiCastAts.GetValue(i)) && ((psConversion->aiCastAfter.GetValue(j) != 0) == (iPass == 0)) && (psConversion->aiCastSpans.GetValue(j) >= 0) &&
+						(StringInsensitiveCompare(psConversion->aszCastFiles.GetText(j), psConversion->aszCastFiles.GetText(i)) == 0) &&
+						((uiBest == MAX_SIZE) || ((iPass == 0) ? (psConversion->aiCastSpans.GetValue(j) < psConversion->aiCastSpans.GetValue(uiBest)) : (psConversion->aiCastSpans.GetValue(j) > psConversion->aiCastSpans.GetValue(uiBest)))))
+					{
+						uiBest = j;
+					}
+				}
+				if (uiBest == MAX_SIZE)
+				{
+					break;
+				}
+				szAll.Append(psConversion->aszCastTexts.GetText(uiBest));
+				*psConversion->aiCastSpans.Get(uiBest) = -1;
+			}
+		}
+		if (bResult && !szAll.Empty())
+		{
+			cFiles.GetEdits(psConversion->aszCastFiles.GetText(i))->Insert((size)psConversion->aiCastAts.GetValue(i), szAll.Text());
+		}
+		szAll.Kill();
+	}
+	for (i = 0; bResult && (i < psConversion->aszReplaceFiles.NumElements()); i++)
+	{
+		bResult = (cFiles.GetText(psConversion->aszReplaceFiles.GetText(i)) != NULL);
+		if (bResult)
+		{
+			cFiles.GetEdits(psConversion->aszReplaceFiles.GetText(i))->Replace((size)psConversion->aiReplaceStarts.GetValue(i), (size)psConversion->aiReplaceEnds.GetValue(i), psConversion->aszReplaceTexts.GetText(i));
+		}
+	}
 	if (!bResult && szMessage.Empty())
 	{
 		szMessage.Append("Can't make ")->Append(psConversion->szName)->Append(" an enum class: a file it is in couldn't be opened.");
@@ -540,17 +896,22 @@ bool CIDEConvertEnum::Convert(SIDEEnumConversion* psConversion, CChars* pszStatu
 		if (uiAfter > uiBefore)
 		{
 			bResult = false;
-			szMessage.Append("Can't make ")->Append(psConversion->szName)->Append(" an enum class: its values are used as integers, or integers as its values (");
-			szMessage.Append((uint32)(uiAfter - uiBefore))->Append((uiAfter - uiBefore == 1) ? " error" : " errors")->Append(" with it one).");
+			szMessage.Append("Can't make ")->Append(psConversion->szName)->Append(" an enum class: the code doesn't compile with it one, even with the casts that could be written (");
+			szMessage.Append((uint32)(uiAfter - uiBefore))->Append((uiAfter - uiBefore == 1) ? " error" : " errors")->Append(").");
 		}
 	}
 	if (bResult)
 	{
 		cFiles.Apply();
-		szMessage.Append("Made ")->Append(psConversion->szName)->Append(" an enum class: ")->Append((uint32)psConversion->aszUseFiles.NumElements());
-		szMessage.Append((psConversion->aszUseFiles.NumElements() == 1) ? " use of its enumerators given its name, in " : " uses of its enumerators given its name, in ");
+		szMessage.Append("Made ")->Append(psConversion->szName)->Append(" an enum class: ")->Append((uint32)uiUses);
+		szMessage.Append((uiUses == 1) ? " use of its enumerators given its name, in " : " uses of its enumerators given its name, in ");
 		i = CountIDEEnumFiles(&psConversion->aszEnumFiles, &psConversion->aszUseFiles);
-		szMessage.Append((uint32)i)->Append((i == 1) ? " file." : " files.");
+		szMessage.Append((uint32)i)->Append((i == 1) ? " file" : " files");
+		if (psConversion->aszCastPlaces.NumElements() > 0)
+		{
+			szMessage.Append("; casts written at ")->Append((uint32)psConversion->aszCastPlaces.NumElements())->Append((psConversion->aszCastPlaces.NumElements() == 1) ? " place" : " places");
+		}
+		szMessage.Append('.');
 	}
 	if (pszStatus)
 	{
@@ -575,6 +936,9 @@ bool CIDEConvertEnum::Convert(SIDEEnumConversion* psConversion, CChars* pszStatu
 bool CIDEConvertEnum::ConvertAtCaret(CChars* pszStatus)
 {
 	SIDEEnumConversion	sConversion;
+	CArrayChars			aszAsked;
+	CChars				szLine;
+	size				i;
 	bool				bResult;
 
 	sConversion.Init();
@@ -587,7 +951,27 @@ bool CIDEConvertEnum::ConvertAtCaret(CChars* pszStatus)
 		sConversion.Kill();
 		return false;
 	}
-	bResult = Convert(&sConversion, pszStatus);
+	FindCasts(&sConversion);
+	bResult = true;
+	if (!pszStatus && sConversion.bPossible && (sConversion.aszCastPlaces.NumElements() > 0))
+	{
+		//The places a cast is written, first.
+		aszAsked.Init();
+		for (i = 0; i < sConversion.aszCastPlaces.NumElements(); i++)
+		{
+			szLine.Init(sConversion.aszCastPlaces.GetText(i));
+			szLine.Append(": its value is used as an integer, or an integer as its value: a cast is written.");
+			aszAsked.Add(szLine.Text());
+			szLine.Kill();
+		}
+		bResult = mpcContent->GetChangeSignature()->ShowConflicts(&aszAsked);
+		aszAsked.Kill();
+		if (!bResult)
+		{
+			mpcContent->ShowStatus("Convert Enum to Enum Class: nothing was changed.");
+		}
+	}
+	bResult = bResult && Convert(&sConversion, pszStatus);
 	sConversion.Kill();
 	return bResult;
 }
@@ -612,6 +996,11 @@ char* CIDEConvertEnum::PrintConversion(SIDEEnumConversion* psConversion, CChars*
 	pszDest->Append(", ")->Append((uint32)psConversion->uiEnumerators)->Append((psConversion->uiEnumerators == 1) ? " enumerator, " : " enumerators, ");
 	pszDest->Append((uint32)psConversion->aszEnumFiles.NumElements())->Append((psConversion->aszEnumFiles.NumElements() == 1) ? " declaration, " : " declarations, ");
 	pszDest->Append((uint32)psConversion->aszUseFiles.NumElements())->Append((psConversion->aszUseFiles.NumElements() == 1) ? " use in " : " uses in ");
-	pszDest->Append((uint32)uiFiles)->Append((uiFiles == 1) ? " file\n" : " files\n");
+	pszDest->Append((uint32)uiFiles)->Append((uiFiles == 1) ? " file" : " files");
+	if (psConversion->aszCastPlaces.NumElements() > 0)
+	{
+		pszDest->Append(", casts at ")->Append((uint32)psConversion->aszCastPlaces.NumElements())->Append((psConversion->aszCastPlaces.NumElements() == 1) ? " place" : " places");
+	}
+	pszDest->Append('\n');
 	return pszDest->Text();
 }

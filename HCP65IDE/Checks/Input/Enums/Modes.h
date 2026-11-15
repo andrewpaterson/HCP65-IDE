@@ -36,4 +36,11 @@ public:
 };
 
 
+enum EFlag
+{
+	EF_Read = 1,
+	EF_Write = 2,
+};
+
+
 #endif // __MODES_H__

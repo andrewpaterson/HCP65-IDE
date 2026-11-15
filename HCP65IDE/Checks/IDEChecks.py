@@ -2420,23 +2420,42 @@ CHECKS = [
 		 r'^11\|\};$', r'^12\|$', r'^13\|$', r'^14\|//Runs what it is given\.$', r'^15\|template<class M>$',
 		 r'^34\|//M must have:$', r'^35\|//\tWake\(\?, \?\);$', r'^36\|template<class M>$', r'^43 lines$'],
 		[]),
+	('enum-to-class-casts-shown', dict(MakeEnumsCopy(), **{
+		#The command shows where casts are written before it changes anything: Cancel there changes nothing, Continue
+		#does it.
+		'WAIT_INDEX': '1', 'OPEN': 'Modes.h', 'CARET': '13:7', 'SETTINGS': MakeSettingsFile(), 'DIALOG_ANSWER': 'Cancel|OK',
+		'DEBUG': 'edit:renamesearch:---s,command:Refactor.EnumToEnumClass,answered:1,printstatus,command:Refactor.EnumToEnumClass,answered:2,printstatus'}),
+		[r'^Dialog \[Problems Detected\] answered Cancel$', r'^Status line: Convert Enum to Enum Class: nothing was changed\.$',
+		 r'^Dialog \[Problems Detected\] answered OK$',
+		 r'^Status line: Made ELevel an enum class: 5 uses of its enumerators given its name, in 3 files; casts written at 5 places\.$'],
+		[]),
 	('enum-to-class', dict(MakeEnumsCopy(), **{
 		#Convert Enum to Enum Class: EMode's enum becomes enum class and its enumerators get its name wherever they
 		#are named without it (not in its own list, nor where it is written already); from an enumerator, CMotor's
-		#EState, whose enumerators are named in the class and with the class's name; and ELevel, whose value is used
-		#as an integer, is refused.
+		#EState, whose enumerators are named in the class and with the class's name.  ELevel's value is added to, used
+		#as an index and as a condition, and given to an int: each gets its cast.  EFlag's are or-ed and and-ed, and
+		#|= is written out.  EStep's is stepped with ++: refused.
 		'WAIT_INDEX': '1', 'OPEN': 'Modes.h',
-		'DEBUG': 'edit:renamesearch:---s,edit:caret:5:7,edit:enumtoclass,edit:caret:25:4,edit:enumtoclass,edit:caret:13:7,edit:enumtoclass,edit:caret:20:8,edit:convertableenum,'
-				 'printdisklines:Modes.h,printdisklines:Modes.cpp,printdisklines:Use.cpp'}),
-		[r'^Convert Enum: EMode, 3 enumerators, 1 declaration, 4 uses in 3 files$', r'^Status: Made EMode an enum class: 4 uses of its enumerators given its name, in 3 files\.$',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:5:7,edit:enumtoclass,edit:caret:25:4,edit:enumtoclass,edit:caret:13:7,edit:enumtoclass,edit:caret:39:7,edit:enumtoclass,edit:caret:20:8,edit:convertableenum,'
+				 'edit:open:Use.cpp,edit:caret:41:7,edit:enumtoclass,printdisklines:Modes.h,printdisklines:Modes.cpp,printdisklines:Use.cpp'}),
+		[r'^Convert Enum: EMode, 3 enumerators, 1 declaration, 4 uses in 3 files, casts at 1 place$', r'^Status: Made EMode an enum class: 4 uses of its enumerators given its name, in 3 files; casts written at 1 place\.$',
 		 r'^Convert Enum: EState, 2 enumerators, 1 declaration, 3 uses in 2 files$', r'^Status: Made EState an enum class: 3 uses of its enumerators given its name, in 3 files\.$',
-		 r'^Convert Enum: ELevel, 2 enumerators, 1 declaration, 3 uses in 2 files$',
-		 r"^Status: Can't make ELevel an enum class: its values are used as integers, or integers as its values \(\d+ errors? with it one\)\.$",
+		 r'^Convert Enum: ELevel, 2 enumerators, 1 declaration, 5 uses in 2 files, casts at 5 places$',
+		 r'^Status: Made ELevel an enum class: 5 uses of its enumerators given its name, in 3 files; casts written at 5 places\.$',
+		 r'^Convert Enum: EFlag, 2 enumerators, 1 declaration, 4 uses in 1 file, casts at 3 places$',
+		 r'^Status: Made EFlag an enum class: 4 uses of its enumerators given its name, in 2 files; casts written at 3 places\.$',
 		 r'^Convert Enum: no enum at the caret$',
-		 r'^5\|enum class EMode$', r'^9\|\tEM_Fast = EM_Slow \* 2,$', r'^13\|enum ELevel$', r'^23\|\tenum class EState$', r'^34\|\tbool\tIsFast\(void\) \{ return meMode == EMode::EM_Fast; \}$', r'^39 lines$',
-		 r'^10\|\tmeMode = EMode::EM_Off;$', r'^11\|\tmeState = EState::ES_Idle;$', r'^12\|\tmeLevel = EL_Low;$', r'^24\|\tcase EMode::EM_Slow:$', r'^26\|\tcase EMode::EM_Fast:$',
+		 r"^Convert Enum: EStep can't be: its value is stepped with \+\+ or --, which an enum class's can't be \(Use\.cpp line 57\)$",
+		 r"^Status: Can't make EStep an enum class: its value is stepped with \+\+ or --, which an enum class's can't be \(Use\.cpp line 57\)\.$",
+		 r'^5\|enum class EMode$', r'^9\|\tEM_Fast = \(int\)EM_Slow \* 2,$', r'^13\|enum class ELevel$', r'^23\|\tenum class EState$', r'^34\|\tbool\tIsFast\(void\) \{ return meMode == EMode::EM_Fast; \}$',
+		 r'^39\|enum class EFlag$', r'^46 lines$',
+		 r'^10\|\tmeMode = EMode::EM_Off;$', r'^11\|\tmeState = EState::ES_Idle;$', r'^12\|\tmeLevel = ELevel::EL_Low;$', r'^24\|\tcase EMode::EM_Slow:$', r'^26\|\tcase EMode::EM_Fast:$',
 		 r'^29\|\t\treturn \(meState == EState::ES_Running\) \? 3 : 0;$', r'^31 lines$',
-		 r'^12\|\tpcMotor->meMode = EMode::EM_Fast;$', r'^13\|\tpcMotor->meState = CMotor::EState::ES_Running;$', r'^14\|\tpcMotor->meLevel = EL_High;$', r'^15\|\tiNext = pcMotor->meLevel \+ 1;$', r'^17 lines$'],
+		 r'^13\|\tpcMotor->meMode = EMode::EM_Fast;$', r'^14\|\tpcMotor->meState = CMotor::EState::ES_Running;$', r'^15\|\tpcMotor->meLevel = ELevel::EL_High;$',
+		 r'^16\|\tiNext = \(int\)pcMotor->meLevel \+ 1;$', r'^17\|\taiCounts\[\(int\)pcMotor->meLevel\] = iNext;$', r'^18\|\tif \(\(int\)pcMotor->meLevel\)$', r'^20\|\t\tiNext = \(int\)ELevel::EL_High;$',
+		 r'^22\|\treturn \(pcMotor->meLevel == ELevel::EL_High\) \? iNext : aiCounts\[\(int\)ELevel::EL_Low\];$',
+		 r'^34\|\teFlags = EFlag::EF_Read;$', r'^35\|\teFlags = \(EFlag\)\(\(int\)eFlags \| \(int\)EFlag::EF_Write\);$', r'^36\|\teFlags = \(EFlag\)\(\(int\)eFlags \| \(int\)EFlag::EF_Read\);$',
+		 r'^37\|\treturn \(\(int\)eFlags & \(int\)EFlag::EF_Write\) \? 1 : 0;$', r'^41\|enum EStep$', r'^57\|\teStep\+\+;$'],
 		[]),
 	('pointer-parameter', dict(MakePointersCopy(), **{
 		#Convert Pointer to Reference on a parameter: its * a & in every declaration and definition of its function

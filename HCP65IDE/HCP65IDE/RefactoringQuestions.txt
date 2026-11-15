@@ -83,10 +83,10 @@ Open
 
 58. Convert Enum to Enum Class (new, on an enum or one of its enumerators; no key) gives every use of an enumerator
     the enum's name, and refuses if the code then doesn't compile: an enum class's value is no integer, so
-    "eLevel + 1", "aiCounts[eLevel]", "if (eMode)" and "eFlags = FLAG_A | FLAG_B" all stop it.  I mean to have it
-    write the casts instead ("(int)eLevel + 1", "(EFlags)((int)FLAG_A | (int)FLAG_B)") and show them first as
-    Problems Detected's list, so nothing is refused for that.  Is that what you want, or should an enum used as
-    flags or as an index stay an enum (refused, with the places listed)?
+    "eLevel + 1", "aiCounts[eLevel]", "if (eMode)" and "eFlags = FLAG_A | FLAG_B" all stop it.  It writes the
+    casts instead now ("(int)eLevel + 1", "(EFlags)((int)FLAG_A | (int)FLAG_B)") and shows the places first as
+    Problems Detected's list, so nothing is refused for that (only ++ and --).  Is that what you want, or should
+    an enum used as flags or as an index stay an enum (refused, with the places listed)?
 
 59. Write Template's Interface (new; no key) writes what a template needs of its argument as a comment over it,
     or as an abstract class before it (named C<Template>Interface unless you type another).  It leaves the

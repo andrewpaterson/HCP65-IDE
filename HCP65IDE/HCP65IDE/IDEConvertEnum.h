@@ -48,6 +48,16 @@ struct SIDEEnumConversion
 	CArrayInt	aiEnumAts;			//where its "enum" ends, for " class".
 	CArrayChars	aszUseFiles;		//Each place an enumerator is named without the enum's name, a file's together:
 	CArrayInt	aiUseAts;			//where the enumerator's name starts, for "EName::".
+	CArrayChars	aszCastFiles;		//What is written for the casts an enum class's value needs where it is used as an integer
+	CArrayInt	aiCastAts;			//(FindCasts): where,
+	CArrayInt	aiCastSpans;		//the length of the expression it is written for (what is written for a longer one is outside),
+	CArrayInt	aiCastAfter;		//whether it goes after the expression (a closing bracket) or before it,
+	CArrayChars	aszCastTexts;		//and the text.
+	CArrayChars	aszReplaceFiles;	//An operator like |= on the enum's value written out ("e = (E)((int)e |"): the file,
+	CArrayInt	aiReplaceStarts;	//the operator's place,
+	CArrayInt	aiReplaceEnds;
+	CArrayChars	aszReplaceTexts;	//and what takes its place.
+	CArrayChars	aszCastPlaces;		//Each place a cast is written, for showing: "Use.cpp line 15".
 
 	void	Init(void);
 	void	Kill(void);
@@ -59,8 +69,13 @@ struct SIDEEnumConversion
 //  - every place one of its enumerators is named gets the enum's name before it ("EN_First" becomes
 //    "EName::EN_First", "CTank::EN_First" becomes "CTank::EName::EN_First"), in every file of the solutions that
 //    names one.  One that is written with the enum's name already is left, and so are those in the enum's own list.
-//An enum class's value is no integer: the files changed are checked as they would be, and nothing is changed if
-//they have more errors than they had (a value of it used as an integer or a condition, or an integer given to it).
+//An enum class's value is no integer.  Where the enum's value is used as one, the cast is written: every file
+//that #includes the enum's is checked with the enum taken as an enum class (CCPPSemanticPass::SetRecordedEnum), and
+//each place that refuses is given what it needs: "(int)eLevel + 1", "aiCounts[(int)eLevel]", "if ((int)eMode)",
+//"int i = (int)eLevel;", "eFlags = (EFlags)((int)FLAG_A | (int)FLAG_B)", and "eFlags |= FLAG_B" written out as
+//"eFlags = (EFlags)((int)eFlags | (int)EFlags::FLAG_B)".  The command shows the places first.  ++ and -- on its
+//value have no cast: the enum is refused.  The files are then checked as they would be, and nothing is changed
+//if they have more errors than they had.
 //Refused: an enum with no name, one that is an enum class already, a declaration or an enumerator's use that a
 //macro makes, a file that isn't one of the solutions'.  One undo across the files.
 class CIDEConvertEnum : public CObject
@@ -83,6 +98,7 @@ public:
 	bool	CanConvert(void);
 	void	QueueConvert(void);
 	bool	FindConversion(SIDEEnumConversion* psDest);
+	void	FindCasts(SIDEEnumConversion* psDest);
 	bool	Convert(SIDEEnumConversion* psConversion, CChars* pszStatus = NULL);
 	bool	ConvertAtCaret(CChars* pszStatus = NULL);
 	char*	PrintConversion(SIDEEnumConversion* psConversion, CChars* pszDest);
@@ -93,6 +109,9 @@ protected:
 	bool	FindEnumKeyword(const char* szText, size uiName, size* puiKeywordEnd);
 	bool	IsQualified(const char* szText, size uiName, const char* szEnumName);
 	void	FindUses(const char* szEnumeratorKey, const char* szEnumerator, const char* szEnumFile, size uiListStart, size uiListEnd, SIDEEnumConversion* psDest);
+	void	FindFileCasts(const char* szFileName, SIDEEnumConversion* psDest);
+	bool	AddCast(CIDERefactorUnit* pcUnit, const char* szText, const char* szFileName, CCPPSyntax* pcNode, const char* szCast, SIDEEnumConversion* psDest);
+	void	AddInsert(SIDEEnumConversion* psDest, const char* szFileName, size uiAt, size uiSpan, bool bAfter, const char* szText);
 };
 
 

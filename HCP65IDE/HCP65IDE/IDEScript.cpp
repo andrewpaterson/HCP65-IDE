@@ -1980,6 +1980,7 @@ void CIDEScript::RunEditStep(const char* szStep)
 		}
 		else
 		{
+			mpcContent->GetConvertEnum()->FindCasts(&sConversion);
 			printf("%s", mpcContent->GetConvertEnum()->PrintConversion(&sConversion, &szPrinted));
 			if (strcmp(szStep, "enumtoclass") == 0)
 			{
