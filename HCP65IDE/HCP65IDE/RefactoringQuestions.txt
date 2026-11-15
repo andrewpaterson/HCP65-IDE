@@ -25,19 +25,6 @@ Open
     2026-11-13) and I left it; the suite was proved in Release|x64.  Should the test silence the logger around
     that line?
 
- 4. Safe Delete and a class's files.  Deleting a class leaves its .h and .cpp there with their #includes and include
-    guard, still in the projects and still #included.  IntelliJ deletes a class's file with it.  I mean to add it as
-    Rename has "Rename files": when a class's files (CIDEFileRename::FindClassFiles) have nothing else in them, a
-    "Delete files" box, ticked, that deletes them, takes their items out of the projects and the #includes of the
-    header out of the files that have them.  Is that what you want, and should the files go to the recycle bin or
-    be deleted outright (git has them either way)?
-
- 5. Templates as themselves and the index (T3).  A kept check, which a refactoring makes for the one file it works
-    on, now types a template's body in the template's own words.  The index's checks don't: so in a template nothing
-    instantiates, mcArray.Add(x) on a member that is a CArray<M> still isn't a reference of CArray::Add for Find
-    Usages and Rename.  Doing it while indexing would find those, and costs indexing time I haven't measured.  Do
-    you want it measured and, if it is cheap, turned on?
-
  6. A value parameter of a template as itself has no value, and is 1 where the check needs one: "M maItems[N]" is
     an array of 1 inside the check.  Nothing I have built writes such an array's type; if a refactoring ever would,
     it has to write N.  Noted in case it surprises you; no answer needed unless you want it done another way.
@@ -53,21 +40,11 @@ Open
     Get/Is/Has/Find/Calculate/Create/Make/Read.  Tell me any prefix I have wrong or missing (int64? float32 arrays
     "a"?  size as ui?) and I will put it right.
 
- 9. Introduce Variable replaces every occurrence of the expression in the function when asked, as IntelliJ does,
-    without checking that the expression's value is the same at each (a variable in it may have changed between
-    them, or it may be a call with effects).  IntelliJ doesn't check either.  Do you want it to refuse, or to warn,
-    when something in the expression is changed between the first and last occurrence?  FindChanges can tell.
-
 10. Change Signature's dialog isn't IntelliJ's table.  WindowLib has no table whose cells are edited, so it is in the
     Build Configurations dialog's way: the parameters in a list (with Add, Remove, Up and Down under it) and the
     selected one's type, name, default value and value in calls in a form beside it, with the signature as it
     would be declared shown under them as it is changed.  Everything IntelliJ's does can be done in it.  Do you want
     an editable table built in WindowLib for it (and for whatever else would use one), or is this the way?
-
-11. Change Signature and the assembly's labels.  The label is asked of the compiler for the processor of the build
-    configuration that is selected (W65C816 or 65C64: an int is "s" on one and "i" on the other), and only that
-    processor's spelling is changed in the solution's assembly.  With an MSVC or GCC configuration selected nothing
-    is changed in assembly at all.  Should it always do both processors' labels, whatever is selected?
 
 12. Change Signature and each file's own words.  A declaration and a definition keep what they wrote for a kept
     parameter: if the definition names it iR where the class says iRed, it still does afterwards (unless you rename
@@ -178,12 +155,6 @@ Open
 34. A typedef in a class template is written on the line before the member that first uses it, with no blank line
     after it, and one in a function at the very start of its body.  Is that where you want them?
 
-35. Extract Method gives a variable the new function changes, that is used afterwards, back by reference
-    ("int& iLow") where there is more than one, and an object (a variable whose type is a class) by reference
-    always, so nothing is copied and the statements are moved as they are written.  Your functions take pointers
-    for what they change ("size* puiAt"): pointers would mean rewriting each use in the moved statements (*piLow,
-    psOther->).  Do you want pointers, with the uses rewritten?
-
 36. The new function is a protected member, declared in a protected part at the class's end (one is made if the
     class's last part isn't protected) and defined straight after the function it came from; from a function of
     no class it is defined just before that function, not static.  IntelliJ would make it private (static if it
@@ -242,6 +213,48 @@ Open
 
 Answered
 --------
+
+ 4. Safe Delete and a class's files.  Deleting a class leaves its .h and .cpp there with their #includes and include
+    guard, still in the projects and still #included.  IntelliJ deletes a class's file with it.  I mean to add it as
+    Rename has "Rename files": when a class's files (CIDEFileRename::FindClassFiles) have nothing else in them, a
+    "Delete files" box, ticked, that deletes them, takes their items out of the projects and the #includes of the
+    header out of the files that have them.  Is that what you want, and should the files go to the recycle bin or
+    be deleted outright (git has them either way)?
+    Answered 2026-11-15: yes, and the files are deleted outright.  To do: Safe Delete's "Delete files" box, ticked,
+    where the class's files have nothing else in them: the files deleted, their items taken out of the projects,
+    and the #includes of the header taken out of the files that have them.
+
+ 5. Templates as themselves and the index (T3).  A kept check, which a refactoring makes for the one file it works
+    on, now types a template's body in the template's own words.  The index's checks don't: so in a template nothing
+    instantiates, mcArray.Add(x) on a member that is a CArray<M> still isn't a reference of CArray::Add for Find
+    Usages and Rename.  Doing it while indexing would find those, and costs indexing time I haven't measured.  Do
+    you want it measured and, if it is cheap, turned on?
+    Answered 2026-11-15: yes, measure it.  To do: the indexing time with templates checked as themselves and
+    without, on the libraries; turned on if it is cheap, and the numbers shown to the user either way.
+
+ 9. Introduce Variable replaces every occurrence of the expression in the function when asked, as IntelliJ does,
+    without checking that the expression's value is the same at each (a variable in it may have changed between
+    them, or it may be a call with effects).  IntelliJ doesn't check either.  Do you want it to refuse, or to warn,
+    when something in the expression is changed between the first and last occurrence?  FindChanges can tell.
+    Answered 2026-11-15: warn, in Problems Detected, and let the user go on.  To do: where something in the
+    expression is changed between its first and last occurrence (FindChanges), or the expression does something
+    (a call, a ++), replacing every occurrence shows that first.
+
+11. Change Signature and the assembly's labels.  The label is asked of the compiler for the processor of the build
+    configuration that is selected (W65C816 or 65C64: an int is "s" on one and "i" on the other), and only that
+    processor's spelling is changed in the solution's assembly.  With an MSVC or GCC configuration selected nothing
+    is changed in assembly at all.  Should it always do both processors' labels, whatever is selected?
+    Answered 2026-11-15: yes, always both processors' labels, whatever configuration is selected.  To do in Change
+    Signature (and wherever else a label is asked of the compiler for one target: Rename's assembly, Move).
+
+35. Extract Method gives a variable the new function changes, that is used afterwards, back by reference
+    ("int& iLow") where there is more than one, and an object (a variable whose type is a class) by reference
+    always, so nothing is copied and the statements are moved as they are written.  Your functions take pointers
+    for what they change ("size* puiAt"): pointers would mean rewriting each use in the moved statements (*piLow,
+    psOther->).  Do you want pointers, with the uses rewritten?
+    Answered 2026-11-15: yes, pointers, as the default of an option in Extract Method's dialog (a tick, as IDEA's
+    dialog has its options); references where it is unticked.  To do: the tick, and with it the uses in the moved
+    statements rewritten (*piLow, psOther->) and the call passing addresses.
 
 45. Optimise #includes (Ctrl+Alt+O) on a header: when an #include goes (nothing the header names comes from it, or
     it becomes a forward declaration), the files that #include the header and got a name through it are each given
