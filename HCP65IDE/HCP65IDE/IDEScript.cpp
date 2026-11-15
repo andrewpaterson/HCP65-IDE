@@ -39,7 +39,7 @@ static bool			gbIDEScriptRenameSaves = false;  //rename: saves what it edited (r
 static bool			gbIDEScriptClassFiles = false;  //rename: renames a type's files too (renamesearch's f), never from the settings.
 
 
-static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printfindpreview", "printfindtoolbar", "findtool:", "printstartup", "printworkspace", "rename", "safedelete", "introducevariable", "changesignature", "pullmembersup", "pushmembersdown", "moveclass", "copyclass", "inlinevariable", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printsettings", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printprojectfiles", "printdiskfile:", "printdisklines:", "printedits", "printspans", "configuration:", "waitindex" };
+static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printfindpreview", "printfindtoolbar", "findtool:", "printstartup", "printworkspace", "rename", "safedelete", "introducevariable", "introducefield", "introduceconstant", "introduceparameter", "changesignature", "pullmembersup", "pushmembersdown", "moveclass", "copyclass", "inlinevariable", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printsettings", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printprojectfiles", "printdiskfile:", "printdisklines:", "printedits", "printspans", "configuration:", "waitindex" };
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -273,6 +273,11 @@ void CIDEScript::RunCommand(const char* szCommand)
 	{
 		//Safe Delete's dialogs for what is at the caret.
 		mpcContent->GetSafeDelete()->ShowSafeDelete();
+	}
+	else if ((strcmp(szCommand, "introducefield") == 0) || (strcmp(szCommand, "introduceconstant") == 0) || (strcmp(szCommand, "introduceparameter") == 0))
+	{
+		//Introduce Field's, Constant's or Parameter's dialog for the selection.
+		mpcContent->GetIntroduceVariable()->ShowIntroduce((szCommand[9] == 'f') ? IDE_INTRODUCE_FIELD : ((szCommand[9] == 'c') ? IDE_INTRODUCE_CONSTANT : IDE_INTRODUCE_PARAMETER));
 	}
 	else if (strcmp(szCommand, "introducevariable") == 0)
 	{
@@ -1830,6 +1835,56 @@ void CIDEScript::RunEditStep(const char* szStep)
 			printf("\n");
 		}
 		aszCandidates.Kill();
+	}
+	else if ((strncmp(szStep, "introducefield:", 15) == 0) || (strncmp(szStep, "introduceconstant:", 18) == 0) || (strncmp(szStep, "introduceparameter:", 19) == 0) || (strcmp(szStep, "introduciblekinds") == 0))
+	{
+		//The selection introduced as a field, a constant or a parameter with a name, for every occurrence of it
+		//("introducefield:miCount"; no name: the one suggested); or what each kind would be called and why it
+		//can't be one (introduciblekinds).
+		SIDEIntroduction	sIntroduction;
+		CChars				szName;
+		const char*			szGiven;
+		const char*			szProblem;
+		int					iKind;
+		static const char*	aszKinds[] = { "Variable", "Field", "Constant", "Parameter" };
+
+		sIntroduction.Init();
+		if (!mpcContent->GetIntroduceVariable()->FindIntroduction(&sIntroduction))
+		{
+			printf("Introduce: nothing is selected\n");
+		}
+		else if (!sIntroduction.bPossible)
+		{
+			printf("Introduce: can't be: %s\n", sIntroduction.szWhyNot.Text());
+		}
+		else if (strcmp(szStep, "introduciblekinds") == 0)
+		{
+			for (iKind = IDE_INTRODUCE_FIELD; iKind <= IDE_INTRODUCE_PARAMETER; iKind++)
+			{
+				szName.Init();
+				mpcContent->GetIntroduceVariable()->AppendSuggestedName(&sIntroduction, iKind, &szName);
+				szProblem = mpcContent->GetIntroduceVariable()->GetKindProblem(&sIntroduction, iKind);
+				printf("Introduce %s: %s%s%s\n", aszKinds[iKind], szName.Text(), szProblem ? ", can't be: " : "", szProblem ? szProblem : "");
+				szName.Kill();
+			}
+		}
+		else
+		{
+			iKind = (szStep[9] == 'f') ? IDE_INTRODUCE_FIELD : ((szStep[9] == 'c') ? IDE_INTRODUCE_CONSTANT : IDE_INTRODUCE_PARAMETER);
+			szGiven = strchr(szStep, ':') + 1;
+			szName.Init(szGiven);
+			if (szName.Empty())
+			{
+				mpcContent->GetIntroduceVariable()->AppendSuggestedName(&sIntroduction, iKind, &szName);
+			}
+			mpcContent->GetIntroduceVariable()->Introduce(&sIntroduction, szName.Text(), true, NULL, iKind);
+			szName.Kill();
+			if (gbIDEScriptRenameSaves)
+			{
+				mpcContent->GetDocuments()->SaveAllFiles();
+			}
+		}
+		sIntroduction.Kill();
 	}
 	else if ((strcmp(szStep, "introducible") == 0) || (strncmp(szStep, "introduce:", 10) == 0) || (strncmp(szStep, "introduceone:", 13) == 0))
 	{

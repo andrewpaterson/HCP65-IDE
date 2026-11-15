@@ -1563,6 +1563,59 @@ CHECKS = [
 		'DEBUG': 'inlinevariable,answered:1,printstatus,edit:caret:38:6,inlinevariable,printstatus,edit:caret:26:6,inlinevariable,printstatus,edit:undo,printdisklines:Flow.cpp'}),
 		[r'^Dialog \[Problems Detected\] answered Cancel$', r"^Status: Can't inline iCount: it is changed \(assigned in an expression, \+\+, \+=\) at line 43\.$", r'^Status: Inlined iOnce: 1 use\.$'],
 		[r'Inlined iScaled']),
+	('introduce-kinds', dict(MakeIntroduceVariableCopy(), **{
+		#What the selection can be introduced as, and the name suggested for each: a field's with m before the
+		#variable's, a constant's in capitals.  A call with the function's parameter can't be a constant or a
+		#parameter; a member can't be passed by a call; a number can be anything.
+		'WAIT_INDEX': '1', 'OPEN': 'Calc.cpp',
+		'DEBUG': 'edit:selecttext:66:12-66:26,edit:introduciblekinds,edit:selecttext:66:29-66:40,edit:introduciblekinds,edit:selecttext:67:19-67:20,edit:introduciblekinds'}),
+		[r'^Introduce Field: miScaled$', r"^Introduce Constant: SCALED, can't be: the expression isn't a constant: it names a variable or does something$",
+		 r"^Introduce Parameter: iScaled, can't be: the expression uses the function's own variables or parameters, which a call of it can't give$",
+		 r'^Introduce Field: miScale$', r"^Introduce Parameter: iScale, can't be: the expression uses its class's members, which a call of the function names another way$",
+		 r'^Introduce Field: miValue$', r'^Introduce Constant: VALUE$', r'^Introduce Parameter: iValue$'],
+		[]),
+	('introduce-field', dict(MakeIntroduceVariableCopy(), **{
+		#Introduce Field: the expression becomes a field of the function's class, declared after the class's last
+		#field and lined up with it, in the header; it is assigned before the first statement that uses it, and both
+		#occurrences are replaced.  A name the class has is refused.
+		'WAIT_INDEX': '1', 'OPEN': 'Calc.cpp',
+		'DEBUG': 'edit:renamesearch:---s,edit:selecttext:66:29-66:40,edit:introducefield:,edit:introducefield:muiCount,edit:introducefield:miDouble,printdisklines:Calc.h,printdisklines:Calc.cpp'}),
+		[r'^Status: Introduce Variable: The function uses that name already\.$', r'^Status: Introduce Variable: The class has that name already\.$',
+		 r'^Status: Introduced the field int miDouble = miScale \* 2: 2 occurrences replaced\.$',
+		 r'^13\|\tchar\*\tmszName;$', r'^14\|\tint\t\tmiDouble;$', r'^15\|$', r'^16\|\tvoid\t\t\t\tInit\(void\);$',
+		 r'^62\|\tint\t\tiResult;$', r'^63\|\tCCalc\*\tpcOther;$', r'^64\|$', r'^65\|\tpcOther = this;$', r'^66\|\tmiDouble = miScale \* 2;$', r'^67\|\tiResult = Scaled\(iExtra\) \+ miDouble;$',
+		 r'^70\|\t\tiResult \+= miDouble;$'],
+		[]),
+	('introduce-constant', dict(MakeIntroduceVariableCopy(), **{
+		#Introduce Constant: a number becomes a #define after the file's #include, two blank lines from it, and each
+		#place it is written in the function its name; a second goes under the first.  An expression of more than one
+		#thing is in parentheses.
+		'WAIT_INDEX': '1', 'OPEN': 'Calc.cpp',
+		'DEBUG': 'edit:renamesearch:---s,edit:selecttext:66:39-66:40,edit:introduceconstant:DOUBLE,edit:selecttext:70:19-70:20,edit:introduceconstant:,'
+		         'edit:selecttext:109:29-109:38,edit:introduceconstant:CHOICE,printdisklines:Calc.cpp'}),
+		[r'^Status: Introduced the constant DOUBLE = 2: 2 occurrences replaced\.$', r'^Status: Introduced the constant VALUE = 4: 1 occurrence replaced\.$',
+		 r'^1\|#include "Calc\.h"$', r'^2\|$', r'^3\|$', r'^4\|#define DOUBLE\t2$', r'^5\|#define VALUE\t4$', r'^6\|',
+		 r'\tiResult = Scaled\(iExtra\) \+ miScale \* DOUBLE;$', r'\tif \(GetCount\(\) > VALUE\)$', r'\t\tiResult \+= miScale \* DOUBLE;$'],
+		[]),
+	('introduce-parameter', dict(MakeIntroduceVariableCopy(), **{
+		#Introduce Parameter: the number becomes a parameter of its function, added last where the class declares it
+		#and where it is defined (Change Signature), every call passes the number, and in the function it is the
+		#parameter's name; all one undo.
+		'WAIT_INDEX': '1', 'OPEN': 'Calc.cpp',
+		'DEBUG': 'edit:renamesearch:---s,edit:selecttext:67:19-67:20,edit:introduceparameter:iLimit,printdisklines:Calc.h,printdisklines:Calc.cpp,printdisklines:Main.cpp,'
+		         'edit:undoall,edit:undoall,edit:saveall,printdisklines:Calc.h'}),
+		[r'^Status: Introduced the parameter int iLimit = 4: 1 occurrence replaced\.$',
+		 r'^20\|\tint\t\t\t\t\tTotal\(int iExtra, int iLimit\);$', r'^60\|int CCalc::Total\(int iExtra, int iLimit\)$', r'^67\|\tif \(GetCount\(\) > iLimit\)$',
+		 r'^12\|\treturn cCalc\.Total\(2, 4\) \+ cStack\.Depth\(\);$', r'^20\|\tint\t\t\t\t\tTotal\(int iExtra\);$'],
+		[r'^Conflict']),
+	('introduce-constant-dialog', dict(MakeIntroduceVariableCopy(), **{
+		#The dialog for a kind (Ctrl+Alt+C's): its title and the name it suggests; and the status line says why a
+		#selection can't be one.
+		'WAIT_INDEX': '1', 'OPEN': 'Calc.cpp', 'SETTINGS': MakeSettingsFile(), 'DIALOG_ANSWER': 'OK',
+		'DEBUG': 'edit:selecttext:67:19-67:20,introduceconstant,answered:1,printstatus,edit:selecttext:69:29-69:36,introduceconstant,printstatus'}),
+		[r'^Dialog \[Introduce Constant\] answered OK$', r'^Status: Introduced the constant VALUE = 4: 1 occurrence replaced\.$',
+		 r"^Status: Can't introduce it: the expression isn't a constant: it names a variable or does something\.$"],
+		[]),
 	('rename-assembly-class', dict(MakeRenameAssemblyCopy(), **{
 		#A class renamed in hand written assembly's labels (_CEngine__Init, __0, __2), in parameter lists with its length
 		#(FPC7CEngine to FPC6CMotor), in generated layout constants (SIZEOF_CEngine, CEngine_miSpeed: in the assembly, the
@@ -2067,7 +2120,7 @@ CHECKS = [
 		 r'^Menu Debug: Start Debugging \[F5\], Start Without Debugging \[Ctrl\+F5\], Stop Debugging \[Shift\+F5\], Stop Running\(disabled\), Restart \[Ctrl\+Shift\+F5\], Break All \[Ctrl\+Pause/Break\], Attach to Emulator\.\.\., Step Into \[F11\], Step Over \[F10\], Step Out \[Shift\+F11\], Toggle Breakpoint \[F9\], ',
 		 r'^Menu Window: Reset Window Layout, Close All Documents$',
 		 r'^Menu Editor: Go to Source \[Ctrl\+B\], Find Usages \[Alt\+F7\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Rename\.\.\. \[Shift\+F6\], Refactor>, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\]$',
-		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Inline Variable\.\.\. \[Ctrl\+Alt\+N\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\.(\(disabled\))?, Push Members Down\.\.\.(\(disabled\))?, Move\.\.\. \[F6\](\(disabled\))?, Copy Class\.\.\.(\(disabled\))?, Extract Method\.\.\.\(disabled\)$',
+		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Introduce Field\.\.\. \[Ctrl\+Alt\+F\](\(disabled\))?, Introduce Constant\.\.\. \[Ctrl\+Alt\+C\](\(disabled\))?, Introduce Parameter\.\.\. \[Ctrl\+Alt\+P\](\(disabled\))?, Inline Variable\.\.\. \[Ctrl\+Alt\+N\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\.(\(disabled\))?, Push Members Down\.\.\.(\(disabled\))?, Move\.\.\. \[F6\](\(disabled\))?, Copy Class\.\.\.(\(disabled\))?, Extract Method\.\.\.\(disabled\)$',
 		 r'^Menu Explorer: Set as Startup Solution, Set as Startup Project\(disabled\), Remove Solution, Rename\.\.\.(\(disabled\))?$',
 		 r'^Menu item \[View/Nope\] not found$'], []),
 	('menu-clicks', {

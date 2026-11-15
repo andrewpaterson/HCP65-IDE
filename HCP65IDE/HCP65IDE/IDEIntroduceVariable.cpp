@@ -25,6 +25,9 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDEContent.h"
 #include "IDERename.h"
 #include "IDESafeDelete.h"
+#include "IDEChangeSignature.h"
+#include "IDEDefinitions.h"
+#include "IDEMoveMembers.h"
 #include "IDEIntroduceVariable.h"
 
 
@@ -54,6 +57,13 @@ void SIDEIntroduction::Init(void)
 	szIndent.Init();
 	asDeclared.Init();
 	aszUsed.Init();
+	szFunctionKey.Init();
+	iFunctionLine = 0;
+	iFunctionColumn = 0;
+	szClassKey.Init();
+	bConstant = false;
+	bUsesLocals = false;
+	bUsesMembers = false;
 }
 
 
@@ -63,6 +73,8 @@ void SIDEIntroduction::Init(void)
 //////////////////////////////////////////////////////////////////////////
 void SIDEIntroduction::Kill(void)
 {
+	szClassKey.Kill();
+	szFunctionKey.Kill();
 	aszUsed.Kill();
 	asDeclared.Kill();
 	szIndent.Kill();
@@ -121,6 +133,8 @@ void CIDEIntroduceVariable::Init(CIDEContent* pcContent)
 	msShown.Init();
 	mbAll = true;
 	masCandidates.Init();
+	miKind = IDE_INTRODUCE_VARIABLE;
+	mszNameProblem.Init();
 	PostInit();
 }
 
@@ -149,6 +163,7 @@ void CIDEIntroduceVariable::Class(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDEIntroduceVariable::Free(void)
 {
+	mszNameProblem.Kill();
 	masCandidates.Kill();
 	msShown.Kill();
 }
@@ -171,6 +186,9 @@ bool CIDEIntroduceVariable::Load(CObjectReader* pcFile) { return false; }
 void CIDEIntroduceVariable::AddCommands(Ptr<CCommandSet> pCommands)
 {
 	pCommands->Add("Refactor.IntroduceVariable", "Introduce Variable...", "Control+Alt+V", Ptr<CImageCel>(), this, &CIDEIntroduceVariable::QueueIntroduce)->SetEnabledCheck(this, &CIDEIntroduceVariable::CanIntroduce);
+	pCommands->Add("Refactor.IntroduceField", "Introduce Field...", "Control+Alt+F", Ptr<CImageCel>(), this, &CIDEIntroduceVariable::QueueIntroduceField)->SetEnabledCheck(this, &CIDEIntroduceVariable::CanIntroduce);
+	pCommands->Add("Refactor.IntroduceConstant", "Introduce Constant...", "Control+Alt+C", Ptr<CImageCel>(), this, &CIDEIntroduceVariable::QueueIntroduceConstant)->SetEnabledCheck(this, &CIDEIntroduceVariable::CanIntroduce);
+	pCommands->Add("Refactor.IntroduceParameter", "Introduce Parameter...", "Control+Alt+P", Ptr<CImageCel>(), this, &CIDEIntroduceVariable::QueueIntroduceParameter)->SetEnabledCheck(this, &CIDEIntroduceVariable::CanIntroduce);
 }
 
 
@@ -181,6 +199,9 @@ void CIDEIntroduceVariable::AddCommands(Ptr<CCommandSet> pCommands)
 void CIDEIntroduceVariable::AddEditorItems(Ptr<CMenuContainer> pRefactor)
 {
 	pRefactor->AddItem(mpcContent->GetCommands()->Find("Refactor.IntroduceVariable"));
+	pRefactor->AddItem(mpcContent->GetCommands()->Find("Refactor.IntroduceField"));
+	pRefactor->AddItem(mpcContent->GetCommands()->Find("Refactor.IntroduceConstant"));
+	pRefactor->AddItem(mpcContent->GetCommands()->Find("Refactor.IntroduceParameter"));
 }
 
 
@@ -311,7 +332,7 @@ void CIDEIntroduceVariable::ChooserClicked(CMenuItem* pcItem)
 	{
 		if ((&mpChooser->GetItem(i) == pcItem) && ChooseCandidate(i - 1))
 		{
-			QueueIntroduce();
+			PostIntroduce();
 			return;
 		}
 	}
@@ -325,6 +346,24 @@ void CIDEIntroduceVariable::ChooserClicked(CMenuItem* pcItem)
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEIntroduceVariable::QueueIntroduce(void)
+{
+	miKind = IDE_INTRODUCE_VARIABLE;
+	PostIntroduce();
+}
+
+
+void CIDEIntroduceVariable::QueueIntroduceField(void) { miKind = IDE_INTRODUCE_FIELD; PostIntroduce(); }
+void CIDEIntroduceVariable::QueueIntroduceConstant(void) { miKind = IDE_INTRODUCE_CONSTANT; PostIntroduce(); }
+void CIDEIntroduceVariable::QueueIntroduceParameter(void) { miKind = IDE_INTRODUCE_PARAMETER; PostIntroduce(); }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The dialog is shown once the menu or popup that asked for it has gone;
+// what is introduced is as it was asked (miKind).
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEIntroduceVariable::PostIntroduce(void)
 {
 	mpcContent->GetWindow()->Post(this, &CIDEIntroduceVariable::ShowQueuedIntroduce);
 }
@@ -902,6 +941,7 @@ bool CIDEIntroduceVariable::FindIntroduction(SIDEIntroduction* psDest)
 				}
 			}
 			SuggestName(&cUnit, pcExpression, psDest);
+			FindContext(&cUnit, pcFunction, pcExpression, psDest);
 		}
 	}
 	cUnit.Kill();
@@ -914,8 +954,11 @@ bool CIDEIntroduceVariable::FindIntroduction(SIDEIntroduction* psDest)
 // Why szName can't be the variable's name, NULL if it can.
 //
 //////////////////////////////////////////////////////////////////////////
-const char* CIDEIntroduceVariable::GetNameProblem(SIDEIntroduction* psIntroduction, const char* szName)
+const char* CIDEIntroduceVariable::GetNameProblem(SIDEIntroduction* psIntroduction, const char* szName, int iKind)
 {
+	CChars	szKey;
+	bool	bTaken;
+
 	if (!IsIDEIdentifier(szName))
 	{
 		return "It isn't a name.";
@@ -924,7 +967,476 @@ const char* CIDEIntroduceVariable::GetNameProblem(SIDEIntroduction* psIntroducti
 	{
 		return "The function uses that name already.";
 	}
+	if ((iKind == IDE_INTRODUCE_FIELD) || (iKind == IDE_INTRODUCE_CONSTANT))
+	{
+		//A field's name in its class, a constant's anywhere.
+		szKey.Init();
+		if (iKind == IDE_INTRODUCE_FIELD)
+		{
+			szKey.Append(psIntroduction->szClassKey);
+			szKey.Append("::");
+		}
+		szKey.Append(szName);
+		bTaken = mpcContent->GetCodeModel()->HasSymbol(szKey.Text());
+		szKey.Kill();
+		if (bTaken)
+		{
+			return (iKind == IDE_INTRODUCE_FIELD) ? "The class has that name already." : "Something has that name already.";
+		}
+	}
 	return NULL;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Why the expression can't be introduced as a kind of thing, NULL if it
+// can.
+//
+//////////////////////////////////////////////////////////////////////////
+const char* CIDEIntroduceVariable::GetKindProblem(SIDEIntroduction* psIntroduction, int iKind)
+{
+	if ((iKind == IDE_INTRODUCE_FIELD) && psIntroduction->szClassKey.Empty())
+	{
+		return "the expression isn't in a member function of a class of the solution";
+	}
+	if ((iKind == IDE_INTRODUCE_CONSTANT) && !psIntroduction->bConstant)
+	{
+		return "the expression isn't a constant: it names a variable or does something";
+	}
+	if ((iKind == IDE_INTRODUCE_CONSTANT) && psIntroduction->bStatementOne)
+	{
+		return "the expression is a statement by itself";
+	}
+	if ((iKind == IDE_INTRODUCE_PARAMETER) && psIntroduction->szFunctionKey.Empty())
+	{
+		return "the function it is in isn't one the index knows";
+	}
+	if ((iKind == IDE_INTRODUCE_PARAMETER) && psIntroduction->bUsesLocals)
+	{
+		return "the expression uses the function's own variables or parameters, which a call of it can't give";
+	}
+	if ((iKind == IDE_INTRODUCE_PARAMETER) && psIntroduction->bUsesMembers)
+	{
+		return "the expression uses its class's members, which a call of the function names another way";
+	}
+	return NULL;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The name suggested for a kind of thing, from the variable's: a field's
+// with m before it (miCount), a constant's in capitals without its type's
+// letters (COUNT).
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEIntroduceVariable::AppendSuggestedName(SIDEIntroduction* psIntroduction, int iKind, CChars* pszDest)
+{
+	const char*	szName;
+	size		i;
+	bool		bPreviousLower;
+
+	szName = psIntroduction->szSuggested.Text();
+	if (iKind == IDE_INTRODUCE_FIELD)
+	{
+		pszDest->Append('m');
+		pszDest->Append(szName);
+	}
+	else if (iKind == IDE_INTRODUCE_CONSTANT)
+	{
+		//Past the lower case letters the name starts with, if a capital follows them.
+		for (i = 0; (szName[i] >= 'a') && (szName[i] <= 'z'); i++)
+		{
+		}
+		szName = ((szName[i] >= 'A') && (szName[i] <= 'Z')) ? &szName[i] : szName;
+		bPreviousLower = false;
+		for (i = 0; szName[i] != '\0'; i++)
+		{
+			if ((szName[i] >= 'A') && (szName[i] <= 'Z') && bPreviousLower)
+			{
+				pszDest->Append('_');
+			}
+			bPreviousLower = ((szName[i] >= 'a') && (szName[i] <= 'z')) || ((szName[i] >= '0') && (szName[i] <= '9'));
+			pszDest->Append(((szName[i] >= 'a') && (szName[i] <= 'z')) ? (char)(szName[i] - 'a' + 'A') : szName[i]);
+		}
+	}
+	else
+	{
+		pszDest->Append(szName);
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Where the expression is: the function it is in (its key, and where its
+// name is written), that function's class, and what the expression names:
+// the function's own variables and parameters, its class's members, and
+// whether it is a constant (it names no variable and does nothing).
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEIntroduceVariable::FindContext(CIDERefactorUnit* pcUnit, CCPPSyntaxFunctionDefinition* pcFunction, CCPPSyntax* pcExpression, SIDEIntroduction* psDest)
+{
+	CIDECodeModel*		pcModel;
+	CArrayIDEFileRanges	asRanges;
+	CArrayIDELocations	asLocations;
+	CArrayChars			aszKeys;
+	CCPPSyntaxName*		pcName;
+	CIDEEffectFinder	cEffects;
+	SCPPSyntaxRange		sRange;
+	CChars				szScope;
+	int32				iToken;
+	size				i;
+	uint8				uiKind;
+
+	pcModel = mpcContent->GetCodeModel();
+	pcName = pcFunction->mpcDeclarator ? pcFunction->mpcDeclarator->GetName() : NULL;
+	if (pcName && pcName->GetLast() && pcUnit->GetTokensRange(pcName->GetLast()->miFirstToken, pcName->GetLast()->miFirstToken, &sRange) &&
+		pcModel->GetSymbolAt(psDest->szFileName.Text(), sRange.iLine, sRange.iColumn, &psDest->szFunctionKey, &uiKind))
+	{
+		psDest->iFunctionLine = sRange.iLine;
+		psDest->iFunctionColumn = sRange.iColumn;
+		szScope.Init();
+		GetIDESymbolScope(psDest->szFunctionKey.Text(), &szScope);
+		asLocations.Init();
+		if (!szScope.Empty() && pcModel->GetSymbolLocations(szScope.Text(), &asLocations, &uiKind) && ((uiKind == CPPSK_Class) || (uiKind == CPPSK_ClassTemplate)))
+		{
+			psDest->szClassKey.Set(szScope);
+		}
+		KillIDELocations(&asLocations);
+		szScope.Kill();
+	}
+
+	cEffects.mbEffects = false;
+	cEffects.Look(pcExpression);
+	psDest->bConstant = !cEffects.mbEffects;
+	for (iToken = pcExpression->miFirstToken; iToken <= pcExpression->miLastToken; iToken++)
+	{
+		if (pcUnit->IsToken(iToken, "this"))
+		{
+			psDest->bUsesMembers = true;
+			psDest->bConstant = false;
+		}
+	}
+	if (pcUnit->GetRange(pcExpression, &sRange))
+	{
+		asRanges.Init();
+		asRanges.Add()->Init(psDest->szFileName.Text(), sRange.iLine, sRange.iColumn, sRange.iEndLine, sRange.iEndColumn);
+		aszKeys.Init();
+		pcModel->FindSymbolsUsedIn(&asRanges, &aszKeys);
+		for (i = 0; i < aszKeys.NumElements(); i++)
+		{
+			asLocations.Init();
+			uiKind = CPPSK_Variable;
+			pcModel->GetSymbolLocations(aszKeys.GetText(i), &asLocations, &uiKind);
+			KillIDELocations(&asLocations);
+			if (aszKeys.GetText(i)[0] == '@')
+			{
+				psDest->bUsesLocals = true;
+			}
+			szScope.Init();
+			GetIDESymbolScope(aszKeys.GetText(i), &szScope);
+			if (!psDest->szClassKey.Empty() && szScope.Equals(psDest->szClassKey.Text()) && ((uiKind == CPPSK_Field) || (uiKind == CPPSK_Function) || (uiKind == CPPSK_FunctionTemplate) || (uiKind == CPPSK_Variable)))
+			{
+				psDest->bUsesMembers = true;
+			}
+			szScope.Kill();
+			if ((uiKind != CPPSK_Enumerator) && (uiKind != CPPSK_Enum) && (uiKind != CPPSK_Class) && (uiKind != CPPSK_ClassTemplate) && (uiKind != CPPSK_Typedef) && (uiKind != CPPSK_BuiltinType))
+			{
+				psDest->bConstant = false;
+			}
+		}
+		aszKeys.Kill();
+		KillIDEFileRanges(&asRanges);
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Where a new #define goes in a file: after its last #define or
+// #include before its code starts (true: its line goes there as it is);
+// with neither, at its start, after the comment it opens with (false).
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEIntroduceVariable::FindDefinePlace(const char* szText, size* puiAt)
+{
+	size	uiLine;
+	size	uiNext;
+	size	uiFirstCode;
+	size	i;
+	bool	bFound;
+	bool	bComment;
+
+	bFound = false;
+	bComment = false;
+	uiFirstCode = 0;
+	for (uiLine = 0; szText[uiLine] != '\0'; uiLine = uiNext)
+	{
+		for (uiNext = uiLine; (szText[uiNext] != '\0') && (szText[uiNext] != '\n'); uiNext++)
+		{
+		}
+		uiNext = (szText[uiNext] == '\n') ? uiNext + 1 : uiNext;
+		for (i = uiLine; (szText[i] == ' ') || (szText[i] == '\t') || (szText[i] == '\r') || ((uiLine == 0) && ((uint8)szText[i] >= 0xef)); i++)
+		{
+		}
+		if (bComment)
+		{
+			bComment = (strstr(&szText[uiLine], "*/") == NULL) || ((size)(strstr(&szText[uiLine], "*/") - szText) >= uiNext);
+			uiFirstCode = uiNext;
+		}
+		else if ((szText[i] == '\n') || (szText[i] == '\0') || ((szText[i] == '/') && (szText[i + 1] == '/')))
+		{
+			uiFirstCode = bFound ? uiFirstCode : uiNext;
+		}
+		else if ((szText[i] == '/') && (szText[i + 1] == '*'))
+		{
+			bComment = (strstr(&szText[i + 2], "*/") == NULL) || ((size)(strstr(&szText[i + 2], "*/") - szText) >= uiNext);
+			uiFirstCode = bFound ? uiFirstCode : uiNext;
+		}
+		else if (szText[i] == '#')
+		{
+			for (i++; (szText[i] == ' ') || (szText[i] == '\t'); i++)
+			{
+			}
+			if ((strncmp(&szText[i], "include", 7) == 0) || (strncmp(&szText[i], "define", 6) == 0))
+			{
+				*puiAt = uiNext;
+				bFound = true;
+			}
+		}
+		else
+		{
+			break;
+		}
+	}
+	if (!bFound)
+	{
+		*puiAt = uiFirstCode;
+	}
+	return bFound;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The expression made a field, a constant or a parameter: see the
+// class's comment.  One undo across the files it changes.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEIntroduceVariable::IntroduceElsewhere(SIDEIntroduction* psIntroduction, const char* szName, bool bAll, CChars* pszStatus, int iKind)
+{
+	CIDEFileEdits		cFiles;
+	CIDETextEdits*		pcEdits;
+	Ptr<CIDEEditorTab>	pTab;
+	SIDESignature		sSignature;
+	SIDESignatureChange	sChange;
+	SIDENewParameter*	psNew;
+	CArrayChars			aszConflicts;
+	CArrayInt			aiStarts;
+	CArrayInt			aiEnds;
+	STextRange*			psOccurrence;
+	CChars				szMessage;
+	CChars				szLine;
+	const char*			szText;
+	const char*			szProblem;
+	size				uiFirst;
+	size				uiLast;
+	size				uiAnchor;
+	size				uiAt;
+	size				uiReplaced;
+	size				i;
+	bool				bStatement;
+	bool				bAfter;
+	bool				bResult;
+
+	pTab = mpcContent->GetDocuments()->FindTab(psIntroduction->szFileName.Text());
+	szText = pTab->GetEditor()->GetText();
+	uiFirst = bAll ? 0 : psIntroduction->uiSelected;
+	uiLast = bAll ? psIntroduction->asOccurrences.NumElements() - 1 : psIntroduction->uiSelected;
+	uiAnchor = (uiFirst == uiLast) ? psIntroduction->uiAnchorOne : psIntroduction->uiAnchorAll;
+	bStatement = (uiFirst == uiLast) ? psIntroduction->bStatementOne : psIntroduction->bStatementAll;
+	uiReplaced = 0;
+	bResult = true;
+	szProblem = NULL;
+
+	if (iKind == IDE_INTRODUCE_PARAMETER)
+	{
+		//Change Signature adds the parameter and gives every call the expression; the expression becomes the
+		//parameter's name in the same edit.
+		sSignature.Init();
+		sChange.Init();
+		aiStarts.Init();
+		aiEnds.Init();
+		if (!mpcContent->GetChangeSignature()->FindSignature(&sSignature, psIntroduction->szFileName.Text(), psIntroduction->iFunctionLine, psIntroduction->iFunctionColumn) || !sSignature.bChangeable)
+		{
+			szProblem = "its function's signature can't be changed";
+			bResult = false;
+		}
+		else
+		{
+			for (i = 0; i < sSignature.aszOldTypes.NumElements(); i++)
+			{
+				sChange.asParameters.Add()->Init((int32)i);
+			}
+			psNew = sChange.asParameters.Add();
+			psNew->Init(-1);
+			psNew->szType.Set(psIntroduction->szType);
+			psNew->szName.Set(szName);
+			psNew->szCallValue.Set(psIntroduction->szExpression);
+			for (i = uiFirst; i <= uiLast; i++)
+			{
+				psOccurrence = psIntroduction->asOccurrences.Get(i);
+				aiStarts.Add((int)psOccurrence->uiStart);
+				aiEnds.Add((int)psOccurrence->uiEnd);
+				uiReplaced++;
+			}
+			aszConflicts.Init();
+			mpcContent->GetChangeSignature()->FindConflicts(&sSignature, &sChange, &aszConflicts);
+			bResult = (aszConflicts.NumElements() == 0) || mpcContent->GetChangeSignature()->ShowConflicts(&aszConflicts);
+			aszConflicts.Kill();
+			if (bResult)
+			{
+				mpcContent->GetChangeSignature()->SetExtraEdits(psIntroduction->szFileName.Text(), &aiStarts, &aiEnds, szName);
+				szMessage.Init();
+				bResult = mpcContent->GetChangeSignature()->Change(&sSignature, &sChange, &szMessage);
+				szMessage.Kill();
+			}
+		}
+		aiEnds.Kill();
+		aiStarts.Kill();
+		sChange.Kill();
+		sSignature.Kill();
+	}
+	else
+	{
+		cFiles.Init(mpcContent);
+		pcEdits = cFiles.GetEdits(psIntroduction->szFileName.Text());
+		szText = cFiles.GetText(psIntroduction->szFileName.Text());
+		if (iKind == IDE_INTRODUCE_FIELD)
+		{
+			//Its declaration in the class, and its assignment before the statement (or the statement, made it).
+			szLine.Init("\t");
+			szLine.Append(psIntroduction->szType);
+			szLine.Append('\t');
+			szLine.Append(szName);
+			szLine.Append(";\n");
+			if (!mpcContent->GetMoveMembers()->AddMember(psIntroduction->szClassKey.Text(), -1, szLine.Text(), &cFiles))
+			{
+				szProblem = "its class's definition wasn't found in the solution";
+				bResult = false;
+			}
+			szLine.Kill();
+			if (bResult && !bStatement)
+			{
+				szLine.Init();
+				for (i = uiAnchor; (szText[i] == ' ') || (szText[i] == '\t'); i++)
+				{
+					szLine.Append(szText[i]);
+				}
+				szLine.Append(szName);
+				szLine.Append(" = ");
+				szLine.Append(psIntroduction->szExpression);
+				szLine.Append(";\n");
+				pcEdits->Insert(uiAnchor, szLine.Text());
+				szLine.Kill();
+			}
+		}
+		else
+		{
+			//Its #define: in parentheses if it is more than one thing.
+			szLine.Init();
+			bAfter = FindDefinePlace(szText, &uiAt);
+			if (bAfter)
+			{
+				//After an #include: two blank lines between them.
+				for (i = uiAt - 1; (i > 0) && (szText[i - 1] != '\n'); i--)
+				{
+				}
+				for (; (szText[i] == ' ') || (szText[i] == '\t') || (szText[i] == '#'); i++)
+				{
+				}
+				if (strncmp(&szText[i], "include", 7) == 0)
+				{
+					szLine.Append("\n\n");
+				}
+			}
+			szLine.Append("#define ");
+			szLine.Append(szName);
+			szLine.Append('\t');
+			bStatement = false;
+			for (i = 0; i < psIntroduction->szExpression.Length(); i++)
+			{
+				bStatement = bStatement || !(IsIDENameChar(psIntroduction->szExpression.Text()[i]) || (psIntroduction->szExpression.Text()[i] == '.'));
+			}
+			if (bStatement && (psIntroduction->szExpression.Text()[0] != '"') && (psIntroduction->szExpression.Text()[0] != '\'') && (psIntroduction->szExpression.Text()[0] != '('))
+			{
+				szLine.Append('(')->Append(psIntroduction->szExpression)->Append(')');
+			}
+			else
+			{
+				szLine.Append(psIntroduction->szExpression);
+			}
+			bStatement = false;
+			szLine.Append("\n");
+			if (!bAfter)
+			{
+				szLine.Append("\n\n");
+			}
+			pcEdits->Insert(uiAt, szLine.Text());
+			szLine.Kill();
+		}
+		for (i = uiFirst; bResult && (i <= uiLast); i++)
+		{
+			psOccurrence = psIntroduction->asOccurrences.Get(i);
+			if (bStatement && (i == uiFirst))
+			{
+				szLine.Init(szName);
+				szLine.Append(" = ");
+				szLine.Append(psIntroduction->szExpression);
+				pcEdits->Replace(psOccurrence->uiStart, psOccurrence->uiEnd, szLine.Text());
+				szLine.Kill();
+			}
+			else
+			{
+				pcEdits->Replace(psOccurrence->uiStart, psOccurrence->uiEnd, szName);
+				uiReplaced++;
+			}
+		}
+		if (bResult)
+		{
+			cFiles.Apply();
+		}
+		cFiles.Kill();
+	}
+
+	szMessage.Init();
+	if (bResult)
+	{
+		szMessage.Append((iKind == IDE_INTRODUCE_FIELD) ? "Introduced the field " : ((iKind == IDE_INTRODUCE_CONSTANT) ? "Introduced the constant " : "Introduced the parameter "));
+		if (iKind != IDE_INTRODUCE_CONSTANT)
+		{
+			szMessage.Append(psIntroduction->szType);
+			szMessage.Append(' ');
+		}
+		szMessage.Append(szName);
+		szMessage.Append(" = ");
+		szMessage.Append(psIntroduction->szExpression);
+		szMessage.Append(": ");
+		szMessage.Append((uint32)uiReplaced);
+		szMessage.Append(uiReplaced == 1 ? " occurrence replaced." : " occurrences replaced.");
+		ShowIntroduceStatus(&szMessage, pszStatus);
+	}
+	else if (szProblem)
+	{
+		szMessage.Append("Can't introduce it: ");
+		szMessage.Append(szProblem);
+		szMessage.Append(".");
+		ShowIntroduceStatus(&szMessage, pszStatus);
+	}
+	szMessage.Kill();
+	return bResult;
 }
 
 
@@ -975,7 +1487,7 @@ void CIDEIntroduceVariable::ShowIntroduceStatus(CChars* pszMessage, CChars* pszS
 // assignment.  False if the name can't be used.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEIntroduceVariable::Introduce(SIDEIntroduction* psIntroduction, const char* szName, bool bAll, CChars* pszStatus)
+bool CIDEIntroduceVariable::Introduce(SIDEIntroduction* psIntroduction, const char* szName, bool bAll, CChars* pszStatus, int iKind)
 {
 	CIDETextEdits		cEdits;
 	Ptr<CIDEEditorTab>	pTab;
@@ -997,8 +1509,16 @@ bool CIDEIntroduceVariable::Introduce(SIDEIntroduction* psIntroduction, const ch
 	bool				bStatement;
 	bool				bUniform;
 
-	szProblem = psIntroduction->bPossible ? GetNameProblem(psIntroduction, szName) : "It can't be introduced.";
+	szProblem = psIntroduction->bPossible ? GetNameProblem(psIntroduction, szName, iKind) : "It can't be introduced.";
 	pTab = mpcContent->GetDocuments()->FindTab(psIntroduction->szFileName.Text());
+	if (!szProblem && psIntroduction->bPossible && GetKindProblem(psIntroduction, iKind))
+	{
+		mszNameProblem.Set("Can't introduce it: ");
+		mszNameProblem.Append(GetKindProblem(psIntroduction, iKind));
+		mszNameProblem.Append(".");
+		ShowIntroduceStatus(&mszNameProblem, pszStatus);
+		return false;
+	}
 	if (szProblem || pTab.IsNull())
 	{
 		szMessage.Init("Introduce Variable: ");
@@ -1006,6 +1526,10 @@ bool CIDEIntroduceVariable::Introduce(SIDEIntroduction* psIntroduction, const ch
 		ShowIntroduceStatus(&szMessage, pszStatus);
 		szMessage.Kill();
 		return false;
+	}
+	if (iKind != IDE_INTRODUCE_VARIABLE)
+	{
+		return IntroduceElsewhere(psIntroduction, szName, bAll, pszStatus, iKind);
 	}
 	pEditor = pTab->GetEditor();
 
@@ -1132,7 +1656,7 @@ bool CIDEIntroduceVariable::ApproveName(void)
 {
 	const char*	szProblem;
 
-	szProblem = GetNameProblem(&msShown, mpNameField->GetText());
+	szProblem = GetNameProblem(&msShown, mpNameField->GetText(), miKind);
 	mpError->SetText(szProblem ? szProblem : "");
 	return szProblem == NULL;
 }
@@ -1146,7 +1670,7 @@ bool CIDEIntroduceVariable::ApproveName(void)
 // nothing was introduced.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEIntroduceVariable::ShowIntroduce(void)
+bool CIDEIntroduceVariable::ShowIntroduce(int iKind)
 {
 	CChars		szText;
 	Ptr<CLabel>	pLabel;
@@ -1158,6 +1682,11 @@ bool CIDEIntroduceVariable::ShowIntroduce(void)
 	size		uiEnd;
 	size		uiCandidates;
 	size		i;
+
+	if (iKind >= 0)
+	{
+		miKind = iKind;
+	}
 
 	//Nothing selected: the expressions at the caret are offered, or the only one taken.
 	if (mpcContent->GetDocuments()->GetActiveTab().IsNotNull() && !mpcContent->GetDocuments()->GetActiveTab()->GetEditor()->GetSelection(&uiStart, &uiEnd))
@@ -1195,18 +1724,22 @@ bool CIDEIntroduceVariable::ShowIntroduce(void)
 		mpcContent->ShowStatus("There is no expression at the caret to introduce a variable for.");
 		return false;
 	}
-	if (!msShown.bPossible)
+	if (!msShown.bPossible || GetKindProblem(&msShown, miKind))
 	{
-		szText.Init("Can't introduce a variable: ");
-		szText.Append(msShown.szWhyNot);
+		szText.Init("Can't introduce it: ");
+		szText.Append(msShown.bPossible ? GetKindProblem(&msShown, miKind) : msShown.szWhyNot.Text());
 		szText.Append(".");
 		mpcContent->ShowStatus(szText.Text());
 		szText.Kill();
 		return false;
 	}
 
-	mpDialog = OMalloc<CDialog>(mpcContent->GetWindow(), mpcContent->GetDialogLook(), "Introduce Variable");
-	mpNameField = mpDialog->AddTextField("Name:", msShown.szSuggested.Text());
+	mpDialog = OMalloc<CDialog>(mpcContent->GetWindow(), mpcContent->GetDialogLook(), (miKind == IDE_INTRODUCE_FIELD) ? "Introduce Field" :
+						((miKind == IDE_INTRODUCE_CONSTANT) ? "Introduce Constant" : ((miKind == IDE_INTRODUCE_PARAMETER) ? "Introduce Parameter" : "Introduce Variable")));
+	szText.Init();
+	AppendSuggestedName(&msShown, miKind, &szText);
+	mpNameField = mpDialog->AddTextField("Name:", szText.Text());
+	szText.Kill();
 	mpNameField->SelectAll();
 	szText.Init(msShown.szType);
 	szText.Append("  =  ");
@@ -1241,7 +1774,7 @@ bool CIDEIntroduceVariable::ShowIntroduce(void)
 			bAll = mbAll;
 		}
 		szText.Init(mpNameField->GetText());
-		bResult = Introduce(&msShown, szText.Text(), bAll);
+		bResult = Introduce(&msShown, szText.Text(), bAll, NULL, miKind);
 		szText.Kill();
 	}
 	mpNameField = NULL;

@@ -204,6 +204,10 @@ These write a type, so in a template they need T3.
      done more than once or not at all (question 28).  Not constants and fields (question 29).
   7. Introduce Field (Ctrl+Alt+F), Constant (Ctrl+Alt+C) and Parameter (Ctrl+Alt+P).  The same extraction to
      another place; Parameter is a Change Signature too.
+     Done 2026-11-15, as kinds of Introduce Variable (IDEIntroduceVariable.h says what each does): a field in the
+     class, after its last field; a constant as a #define, which is how constants are written here; a parameter
+     by Change Signature, with the occurrences replaced in the same edit.  In a class template the field's type
+     is in the template's own words, as the variable's is (T3).
   8. Introduce Typedef.  The selected type is given a name, and the other uses of the type replaced.  In a
      template it may be a typedef of the class template's, written with its parameters.
 
@@ -316,6 +320,7 @@ Where it is
      what is listed under 3.
   6. Copy (4): done.
   7. Inline Variable (6): done (CIDEInlineVariable).
-  8. Introduce Field, Constant and Parameter (7): next.  Then Typedef (8), Extract Method (9), Inline Function
-     (10), Extract Superclass, Interface and Class (11), Encapsulate Field (12), and Phase 4 from 15.
+  8. Introduce Field, Constant and Parameter (7): done.
+  9. Introduce Typedef (8): next.  Then Extract Method (9), Inline Function (10), Extract Superclass, Interface and
+     Class (11), Encapsulate Field (12), and Phase 4 from 15.
 

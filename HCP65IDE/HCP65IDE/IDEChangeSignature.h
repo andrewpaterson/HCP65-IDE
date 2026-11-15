@@ -198,6 +198,10 @@ protected:
 	Ptr<CIDEChangeSignatureDialog>	mpSignatureDialog;  //While it is shown.
 	Ptr<CDialog>			mpDialog;  //Problems Detected, while it is shown.
 	CArrayIDESignatureUnits	mapcUnits;  //The files parsed for the signature being found.
+	const char*				mszExtraFile;  //Edits made with the next change, as one edit with it (SetExtraEdits): each of
+	CArrayInt*				mpaiExtraStarts;  //these ranges of the file's text becomes mszExtraText.  Not held.
+	CArrayInt*				mpaiExtraEnds;
+	const char*				mszExtraText;
 
 public:
 	void	Init(CIDEContent* pcContent);
@@ -212,7 +216,8 @@ public:
 	void	QueueChangeSignature(void);
 	bool	ShowChangeSignature(void);
 	bool	IsUnchanged(SIDESignature* psSignature, SIDESignatureChange* psChange);
-	bool	FindSignature(SIDESignature* psDest);
+	bool	FindSignature(SIDESignature* psDest, const char* szFileName = NULL, int iAtLine = -1, int iAtColumn = -1);
+	void	SetExtraEdits(const char* szFileName, CArrayInt* paiStarts, CArrayInt* paiEnds, const char* szText);
 	bool	AppendCaretLabel(CChars* pszDest);
 	bool	ParseChange(SIDESignature* psSignature, const char* szSpec, SIDESignatureChange* psDest, CChars* pszProblem);
 	bool	FindProblem(SIDESignature* psSignature, SIDESignatureChange* psChange, CChars* pszProblem);

@@ -343,6 +343,10 @@ void CIDEChangeSignature::Init(CIDEContent* pcContent)
 	PreInit();
 	mpcContent = pcContent;
 	mapcUnits.Init();
+	mszExtraFile = NULL;
+	mpaiExtraStarts = NULL;
+	mpaiExtraEnds = NULL;
+	mszExtraText = NULL;
 	PostInit();
 }
 
@@ -502,6 +506,23 @@ bool CIDEChangeSignature::ShowConflicts(CArrayChars* paszConflicts)
 	bContinue = mpDialog->Show(760);
 	mpDialog = NULL;
 	return bContinue;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Edits to be made with the next Change, as one edit of the file with
+// the change's own (they don't touch): each range of the file's text
+// becomes szText.  Introduce Parameter replaces the expression with the
+// parameter's name so.  They are forgotten once the change is made.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEChangeSignature::SetExtraEdits(const char* szFileName, CArrayInt* paiStarts, CArrayInt* paiEnds, const char* szText)
+{
+	mszExtraFile = szFileName;
+	mpaiExtraStarts = paiStarts;
+	mpaiExtraEnds = paiEnds;
+	mszExtraText = szText;
 }
 
 
@@ -1127,7 +1148,7 @@ void CIDEChangeSignature::FindOldParameters(SIDESignature* psSignature)
 // symbol is named at the caret.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEChangeSignature::FindSignature(SIDESignature* psDest)
+bool CIDEChangeSignature::FindSignature(SIDESignature* psDest, const char* szFileName, int iAtLine, int iAtColumn)
 {
 	SIDERenameTarget	sTarget;
 	SIDELocation*		psLocation;
@@ -1143,13 +1164,26 @@ bool CIDEChangeSignature::FindSignature(SIDESignature* psDest)
 	size				j;
 	bool				bFound;
 
-	if (mpcContent->GetDocuments()->GetActiveTab().IsNull())
+	if (!szFileName && mpcContent->GetDocuments()->GetActiveTab().IsNull())
 	{
 		return false;
 	}
 	mpcContent->GetDocuments()->UpdateEditedTabsNow();
-	if (!mpcContent->GetDocuments()->FindSymbolPlace(&iLine, &iColumn, &uiRole) ||
-		!mpcContent->GetCodeModel()->GetSymbolAt(mpcContent->GetDocuments()->GetActiveTab()->GetFileName(), iLine, iColumn, &psDest->szKey, &uiKind))
+	if (szFileName)
+	{
+		//The function named at a place, not at the caret (Introduce Parameter's).
+		iLine = iAtLine;
+		iColumn = iAtColumn;
+	}
+	else
+	{
+		szFileName = mpcContent->GetDocuments()->GetActiveTab()->GetFileName();
+		if (!mpcContent->GetDocuments()->FindSymbolPlace(&iLine, &iColumn, &uiRole))
+		{
+			return false;
+		}
+	}
+	if (!mpcContent->GetCodeModel()->GetSymbolAt(szFileName, iLine, iColumn, &psDest->szKey, &uiKind))
 	{
 		return false;
 	}
@@ -1161,7 +1195,7 @@ bool CIDEChangeSignature::FindSignature(SIDESignature* psDest)
 	}
 
 	sTarget.Init();
-	if (!mpcContent->GetCodeModel()->FindRenameTarget(mpcContent->GetDocuments()->GetActiveTab()->GetFileName(), iLine, iColumn, &sTarget))
+	if (!mpcContent->GetCodeModel()->FindRenameTarget(szFileName, iLine, iColumn, &sTarget))
 	{
 		sTarget.Kill();
 		return false;
@@ -2299,6 +2333,13 @@ bool CIDEChangeSignature::Change(SIDESignature* psSignature, SIDESignatureChange
 			pEditor = mpcContent->GetDocuments()->FindTab(aszFiles.GetText(uiFile))->GetEditor();
 			szText = pEditor->GetText();
 			cEdits.Init();
+			if (mszExtraFile && (StringInsensitiveCompare(mszExtraFile, aszFiles.GetText(uiFile)) == 0))
+			{
+				for (i = 0; i < mpaiExtraStarts->NumElements(); i++)
+				{
+					cEdits.Replace((size)mpaiExtraStarts->GetValue(i), (size)mpaiExtraEnds->GetValue(i), mszExtraText);
+				}
+			}
 			for (i = 0; i < psSignature->apsSites.NumElements(); i++)
 			{
 				psSite = psSignature->apsSites.GetPtr(i);
@@ -2457,5 +2498,6 @@ bool CIDEChangeSignature::Change(SIDESignature* psSignature, SIDESignatureChange
 		szMessage.Kill();
 	}
 	aszFiles.Kill();
+	mszExtraFile = NULL;
 	return bOpened;
 }

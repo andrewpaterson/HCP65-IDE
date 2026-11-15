@@ -35,6 +35,14 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 class CIDEContent;
 
 
+//What the expression becomes: a variable of its function, a field of its function's class, a constant of its file,
+//or a parameter of its function.
+#define IDE_INTRODUCE_VARIABLE	0
+#define IDE_INTRODUCE_FIELD		1
+#define IDE_INTRODUCE_CONSTANT	2
+#define IDE_INTRODUCE_PARAMETER	3
+
+
 //A whitespace run before a declared name in a function's declarations, and the column the name is in.
 struct SIDEDeclaredName
 {
@@ -70,6 +78,13 @@ struct SIDEIntroduction
 	CChars					szIndent;			//A statement's indentation in the function's body.
 	CArrayIDEDeclaredNames	asDeclared;			//The names the function's declarations declare, for lining the new one up with them.
 	CArrayChars				aszUsed;			//Every name written in the function: the variable's must not be one.
+	CChars					szFunctionKey;		//The function it is in, and where its name is written there (from 0): what Introduce
+	int32					iFunctionLine;		//Parameter changes the signature of.  Empty if the index doesn't know it.
+	int32					iFunctionColumn;
+	CChars					szClassKey;			//The class the function is a member of, empty if it is none's: Introduce Field's.
+	bool					bConstant;			//It names no variable and calls nothing: it can be a constant.
+	bool					bUsesLocals;		//It names the function's own variables or parameters,
+	bool					bUsesMembers;		//or members of the function's class (or this): a call of the function can't give it.
 
 	void	Init(void);
 	void	Kill(void);
@@ -88,6 +103,17 @@ struct SIDEIntroduction
 //
 //With nothing selected, as IntelliJ's: the expressions the caret is in are offered in a popup under it, the innermost
 //first, and the one chosen is selected and introduced; if there is only one it is taken.
+//
+//Its other kinds (Refactorings.txt, 7) are the same extraction to another place:
+//  - Introduce Field (Ctrl+Alt+F): in a member function, the expression becomes a field of the class, declared at
+//    the end of the class's protected part (where its fields are; a struct's public) and lined up with the one above
+//    it, and assigned where the variable would have been.  Its name is suggested with the field's m before it.
+//  - Introduce Constant (Ctrl+Alt+C): an expression that names no variable and calls nothing becomes a #define, as
+//    constants are written here, after the file's last #define or #include, in parentheses if it is more than one
+//    thing.  Its name is suggested in capitals.
+//  - Introduce Parameter (Ctrl+Alt+P): the expression becomes a parameter of its function, added last by Change
+//    Signature (every declaration, definition and override of it), and every call of the function passes the
+//    expression: so it can't use the function's own variables or parameters, or its class's members.
 class CIDEIntroduceVariable : public CObject
 {
 CONSTRUCTABLE(CIDEIntroduceVariable);
@@ -100,6 +126,8 @@ protected:
 	Ptr<CCheckBox>		mpAllBox;
 	SIDEIntroduction	msShown;  //What the dialog is introducing.
 	bool				mbAll;  //Replace all occurrences, as last chosen.
+	int					miKind;  //What is being introduced (IDE_INTRODUCE_).
+	CChars				mszNameProblem;  //Why a name can't be had, where it has to be made up to say.
 	Ptr<CMenuContainer>	mpChooser;  //The expressions at the caret to choose one of, when nothing is selected.
 	CArrayTextRange		masCandidates;  //Where each is in the editor's text, the innermost first.
 
@@ -114,17 +142,26 @@ public:
 	void	AddEditorItems(Ptr<CMenuContainer> pRefactor);
 	bool	CanIntroduce(void);
 	void	QueueIntroduce(void);
-	bool	ShowIntroduce(void);
+	void	QueueIntroduceField(void);
+	void	QueueIntroduceConstant(void);
+	void	QueueIntroduceParameter(void);
+	bool	ShowIntroduce(int iKind = -1);
+	const char*	GetKindProblem(SIDEIntroduction* psIntroduction, int iKind);
+	void	AppendSuggestedName(SIDEIntroduction* psIntroduction, int iKind, CChars* pszDest);
 	size	FindCandidates(CArrayChars* paszTexts);
 	bool	ChooseCandidate(size uiCandidate);
 	Ptr<CMenuContainer>	GetChooser(void);
 	bool	FindIntroduction(SIDEIntroduction* psDest);
-	bool	Introduce(SIDEIntroduction* psIntroduction, const char* szName, bool bAll, CChars* pszStatus = NULL);
-	const char*	GetNameProblem(SIDEIntroduction* psIntroduction, const char* szName);
+	bool	Introduce(SIDEIntroduction* psIntroduction, const char* szName, bool bAll, CChars* pszStatus = NULL, int iKind = IDE_INTRODUCE_VARIABLE);
+	const char*	GetNameProblem(SIDEIntroduction* psIntroduction, const char* szName, int iKind = IDE_INTRODUCE_VARIABLE);
 	char*	PrintIntroduction(SIDEIntroduction* psIntroduction, CChars* pszDest);
 
 protected:
 	void		ShowQueuedIntroduce(void);
+	void		PostIntroduce(void);
+	void		FindContext(CIDERefactorUnit* pcUnit, CCPPSyntaxFunctionDefinition* pcFunction, CCPPSyntax* pcExpression, SIDEIntroduction* psDest);
+	bool		IntroduceElsewhere(SIDEIntroduction* psIntroduction, const char* szName, bool bAll, CChars* pszStatus, int iKind);
+	bool		FindDefinePlace(const char* szText, size* puiAt);
 	void		ChooserClicked(CMenuItem* pcItem);
 	bool		ApproveName(void);
 	bool		Refuse(SIDEIntroduction* psDest, const char* szWhyNot);

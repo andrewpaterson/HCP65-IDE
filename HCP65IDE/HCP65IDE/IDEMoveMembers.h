@@ -151,6 +151,7 @@ public:
 	void	FindConflicts(SIDEMembersMove* psMove, CArrayChars* paszDest);
 	bool	Move(SIDEMembersMove* psMove, CChars* pszStatus = NULL);
 	char*	PrintMove(SIDEMembersMove* psMove, CChars* pszDest);
+	bool	AddMember(const char* szClassKey, int32 iAccess, const char* szDeclaration, CIDEFileEdits* pcEdits);
 
 protected:
 	void				ShowQueuedPullUp(void);
