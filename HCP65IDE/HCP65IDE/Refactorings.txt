@@ -406,7 +406,8 @@ finished, not started before.
      Method finds duplicates in its own file).
   b. Every getter there is looked at for const, and for where it is written (question 44: one line at the bottom
      of the class's .cpp, const).
-  c. G++'s -Wsuggest-override turned on, and every function it names fixed, in all his projects.
+  c. G++'s -Wsuggest-override turned on, and every function it names fixed, in all his projects (every project
+     he cares about has a working Linux build).
   d. An optional warning in the HCP65 compiler for a function that overrides one of a base class and isn't marked
      override (MSVC has it only in /analyze, C26433; G++ and Clang have -Wsuggest-override).
   e. Asked and not yet answered: an Alt+Enter menu of what can be done at the caret (question 54).
