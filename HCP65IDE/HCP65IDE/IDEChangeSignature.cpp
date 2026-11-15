@@ -393,6 +393,7 @@ bool CIDEChangeSignature::Load(CObjectReader* pcFile) { return false; }
 void CIDEChangeSignature::AddCommands(Ptr<CCommandSet> pCommands)
 {
 	pCommands->Add("Refactor.ChangeSignature", "Change Signature...", "Control+F6", Ptr<CImageCel>(), this, &CIDEChangeSignature::QueueChangeSignature)->SetEnabledCheck(this, &CIDEChangeSignature::CanChangeSignature);
+	pCommands->Add("Refactor.UnifyParameterNames", "Unify Parameter Names", "", Ptr<CImageCel>(), this, &CIDEChangeSignature::QueueUnifyNames)->SetEnabledCheck(this, &CIDEChangeSignature::CanChangeSignature);
 }
 
 
@@ -404,6 +405,7 @@ void CIDEChangeSignature::AddCommands(Ptr<CCommandSet> pCommands)
 void CIDEChangeSignature::AddEditorItems(Ptr<CMenuContainer> pRefactor)
 {
 	pRefactor->AddItem(mpcContent->GetCommands()->Find("Refactor.ChangeSignature"));
+	pRefactor->AddItem(mpcContent->GetCommands()->Find("Refactor.UnifyParameterNames"));
 }
 
 
@@ -418,6 +420,11 @@ void CIDEChangeSignature::AddContextActions(SIDECaretContext* psContext)
 	if (psContext->bFunction)
 	{
 		psContext->Offer("Refactor.ChangeSignature");
+	}
+	if (psContext->bFunction && psContext->bParameters && psContext->bDeclared && psContext->bDefined)
+	{
+		//Declared and defined apart: the two may name its parameters differently.
+		psContext->Offer("Refactor.UnifyParameterNames");
 	}
 }
 
@@ -2301,6 +2308,149 @@ size CIDEChangeSignature::ChangeLabels(SIDESignature* psSignature, CArrayChars* 
 }
 
 
+void CIDEChangeSignature::QueueUnifyNames(void) { mpcContent->GetWindow()->Post(this, &CIDEChangeSignature::UnifyNamesQueued); }
+void CIDEChangeSignature::UnifyNamesQueued(void) { UnifyNames(); }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Unify Parameter Names, for the function at the caret: its parameters
+// are named in every declaration and definition as they are named where
+// the caret is (the declaration's names taken by the definition, or the
+// definition's by the declaration; the first declaration's, from a call),
+// and a definition's body names them so too.  It is Change Signature with
+// nothing changed but the names.  The status says what was done, or that
+// they are the same already.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEChangeSignature::UnifyNames(CChars* pszStatus)
+{
+	SIDESignature			sSignature;
+	SIDESignatureChange		sChange;
+	SIDESignatureSite*		psSite;
+	SIDESignatureSite*		psModel;
+	SIDEWrittenParameter*	psWritten;
+	SIDENewParameter*		psNew;
+	Ptr<CIDEEditorTab>		pTab;
+	CTextFile				cFile;
+	CArrayChars				aszNames;
+	CChars					szName;
+	CChars					szMessage;
+	char*					szText;
+	size					uiLength;
+	size					uiDifferent;
+	size					i;
+	size					j;
+	int						iLine;
+	int						iColumn;
+	uint8					uiRole;
+	bool					bResult;
+
+	sSignature.Init();
+	if (!FindSignature(&sSignature) || !sSignature.bChangeable || (sSignature.apsSites.NumElements() == 0))
+	{
+		szMessage.Init(sSignature.szWhyNot.Empty() ? "There is no function at the caret." : "Can't unify its parameters' names: ");
+		szMessage.Append(sSignature.szWhyNot)->Append(sSignature.szWhyNot.Empty() ? "" : ".");
+		ShowChangeStatus(&szMessage, pszStatus);
+		szMessage.Kill();
+		sSignature.Kill();
+		return false;
+	}
+
+	//The declaration or definition the caret is on, whose names the others take: the first declaration, from elsewhere.
+	psModel = sSignature.apsSites.GetPtr(0);
+	pTab = mpcContent->GetDocuments()->GetActiveTab();
+	if (pTab.IsNotNull() && mpcContent->GetDocuments()->FindSymbolPlace(&iLine, &iColumn, &uiRole))
+	{
+		for (i = 0; i < sSignature.apsSites.NumElements(); i++)
+		{
+			psSite = sSignature.apsSites.GetPtr(i);
+			if ((psSite->iLine == iLine) && (StringInsensitiveCompare(psSite->szFileName.Text(), pTab->GetFileName()) == 0) && psSite->szKey.Equals(sSignature.szKey.Text()))
+			{
+				psModel = psSite;
+			}
+		}
+	}
+
+	//Its names, and how many of the others' differ.
+	aszNames.Init();
+	uiDifferent = 0;
+	for (i = 0; i <= sSignature.apsSites.NumElements(); i++)
+	{
+		//The one whose names they are first, then each of the others.
+		psSite = (i == 0) ? psModel : sSignature.apsSites.GetPtr(i - 1);
+		if ((i > 0) && (psSite == psModel))
+		{
+			continue;
+		}
+		cFile.Init();
+		if (mpcContent->GetFindInFiles()->GetFileText(psSite->szFileName.Text(), &cFile, &szText, &uiLength))
+		{
+			for (j = 0; j < psSite->asParameters.NumElements(); j++)
+			{
+				psWritten = psSite->asParameters.Get(j);
+				szName.Init();
+				if (psWritten->bName)
+				{
+					szName.AppendSubString(szText, FindIDETextOffset(szText, psWritten->sName.iLine, psWritten->sName.iColumn), FindIDETextOffset(szText, psWritten->sName.iEndLine, psWritten->sName.iEndColumn));
+				}
+				if (psSite == psModel)
+				{
+					aszNames.Add(szName.Text());
+				}
+				else if ((j < aszNames.NumElements()) && !aszNames.Get(j)->Empty() && !szName.Empty() && !szName.Equals(aszNames.GetText(j)))
+				{
+					uiDifferent++;
+				}
+				szName.Kill();
+			}
+		}
+		cFile.Kill();
+	}
+
+	bResult = uiDifferent > 0;
+	if (!bResult)
+	{
+		szMessage.Init("The parameters of ");
+		szMessage.Append(sSignature.szName)->Append(" have the same names wherever it is declared and defined.");
+		ShowChangeStatus(&szMessage, pszStatus);
+		szMessage.Kill();
+	}
+	else
+	{
+		sChange.Init();
+		for (i = 0; i < sSignature.aszOldTypes.NumElements(); i++)
+		{
+			psNew = sChange.asParameters.Add();
+			psNew->Init((int32)i);
+			if ((i < aszNames.NumElements()) && !aszNames.Get(i)->Empty())
+			{
+				psNew->szName.Set(aszNames.GetText(i));
+			}
+		}
+		szMessage.Init();
+		bResult = Change(&sSignature, &sChange, &szMessage);
+		szMessage.Kill();
+		sChange.Kill();
+		szMessage.Init(bResult ? "Unified the names of " : "Couldn't unify the names of ");
+		szMessage.Append(sSignature.szName)->Append("'s parameters");
+		if (bResult)
+		{
+			szMessage.Append(": ")->Append((uint32)uiDifferent)->Append((uiDifferent == 1) ? " was named differently, and is as it is named here now." : " were named differently, and are as they are named here now.");
+		}
+		else
+		{
+			szMessage.Append('.');
+		}
+		ShowChangeStatus(&szMessage, pszStatus);
+		szMessage.Kill();
+	}
+	aszNames.Kill();
+	sSignature.Kill();
+	return bResult;
+}
+
+
 //////////////////////////////////////////////////////////////////////////
 //
 // The function given the new parameters, whatever stands in the way:
@@ -2352,6 +2502,17 @@ bool CIDEChangeSignature::Change(SIDESignature* psSignature, SIDESignatureChange
 
 	pcModel = mpcContent->GetCodeModel();
 	pasNew = &psChange->asParameters;
+
+	//A parameter that is kept, and not renamed, has the first declaration's name in every declaration and
+	//definition from now on: where one called it something else, it and its uses there are renamed.
+	for (i = 0; i < pasNew->NumElements(); i++)
+	{
+		psNew = pasNew->Get(i);
+		if ((psNew->iOld >= 0) && psNew->szName.Empty() && ((size)psNew->iOld < psSignature->aszOldNames.NumElements()))
+		{
+			psNew->szName.Set(psSignature->aszOldNames.GetText((size)psNew->iOld));
+		}
+	}
 	uiName = 0;
 	bNameFound = false;
 	uiLabels = 0;

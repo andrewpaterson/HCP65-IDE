@@ -117,6 +117,7 @@ public:
 	bool	ExtractClass(SIDETemplateExtraction* psExtraction, const char* szName, const char* szTemplateName, CChars* pszStatus = NULL);
 	void	QueueRemove(void);
 	bool	RemoveParameter(CChars* pszStatus = NULL);
+	bool	FoldNameClass(const char* szClassKey, CChars* pszName);
 
 protected:
 	void	ShowQueuedExtract(void);

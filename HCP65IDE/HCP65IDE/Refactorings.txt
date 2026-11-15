@@ -435,6 +435,9 @@ Where it is
        - Extract Method finds the other places the selection is written and makes them calls too (question 37): done.
        - a field pulled up goes after the base class's last field (question 20): done.
        - Extract Superclass, Interface and Class have their members in a table, with "Make abstract" (question 41): done.
+       - Change Signature leaves a parameter one name everywhere, and Unify Parameter Names does only that (question 12): done.
+       - Remove Template Parameter gives the class its name back from the class that was its name (question 57): done.
+       - Inline inlines a constant of a file or a class (question 29): done.
 
 
 When the plan is done

@@ -1509,6 +1509,172 @@ static bool FindIDETemplateArguments(const char* szText, size uiAt, CArrayInt* p
 
 //////////////////////////////////////////////////////////////////////////
 //
+// A class that was a template until its last parameter went may have a
+// class that was its name ("class CTank : public CTankTemplate", what
+// Extract Template Parameter left where the class was): one class
+// derives from it, from it alone, and has nothing of its own but
+// constructors written in it.  Then the class takes the name again: the
+// name's class goes, and the class is called by the name wherever it is
+// named, its constructors and destructor too.  As edits of their own,
+// checked as they would be: false, with nothing changed, if there is no
+// such class or the code wouldn't compile so.  *pszName is the name.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDETemplateParameter::FoldNameClass(const char* szClassKey, CChars* pszName)
+{
+	CIDECodeModel*				pcModel;
+	CIDEFileEdits				cFiles;
+	CIDERefactorUnit			cUnit;
+	CArrayChars					aszDerived;
+	CArrayIDELocations			asLocations;
+	SIDERenameTarget			sTarget;
+	SIDELocation*				psLocation;
+	CCPPSyntaxClassSpecifier*	pcClass;
+	CCPPSyntaxDeclarator*		pcDeclarator;
+	CCPPSyntax*					pcNode;
+	CCPPSyntax*					pcDeclaration;
+	CCPPSyntax*					pcMember;
+	SCPPSyntaxRange				sRange;
+	CChars						szFileName;
+	CChars						szName;
+	CChars						szOldName;
+	char*						szText;
+	size						uiStart;
+	size						uiEnd;
+	size						uiAt;
+	size						uiBefore;
+	size						i;
+	int32						iToken;
+	int32						iLine;
+	int32						iColumn;
+	uint8						uiKind;
+	bool						bResult;
+
+	pcModel = mpcContent->GetCodeModel();
+	mpcContent->GetDocuments()->UpdateEditedTabsNow();
+	aszDerived.Init();
+	pcModel->FindClassDerived(szClassKey, false, &aszDerived);
+	szFileName.Init();
+	szName.Init();
+	szOldName.Init();
+	GetIDESymbolName(szClassKey, &szOldName);
+	iLine = 0;
+	iColumn = 0;
+	bResult = false;
+	if (aszDerived.NumElements() == 1)
+	{
+		GetIDESymbolName(aszDerived.GetText(0), &szName);
+		asLocations.Init();
+		if (pcModel->GetSymbolLocations(aszDerived.GetText(0), &asLocations, &uiKind) && (uiKind == CPPSK_Class))
+		{
+			for (i = 0; !bResult && (i < asLocations.NumElements()); i++)
+			{
+				if (asLocations.Get(i)->uiRole == CPPIR_Definition)
+				{
+					szFileName.Set(asLocations.Get(i)->szFileName);
+					iLine = asLocations.Get(i)->iLine;
+					iColumn = asLocations.Get(i)->iColumn;
+					bResult = true;
+				}
+			}
+		}
+		KillIDELocations(&asLocations);
+	}
+	aszDerived.Kill();
+
+	//The name's class: one base, and constructors written in it.
+	memset(&sRange, 0, sizeof(SCPPSyntaxRange));
+	cUnit.Init();
+	pcClass = NULL;
+	if (bResult && cUnit.Parse(pcModel, &mpcContent->GetFindInFiles(), szFileName.Text(), false))
+	{
+		iToken = cUnit.FindTokenAt(iLine, iColumn);
+		pcNode = (iToken != -1) ? cUnit.FindNodeOfTokens(iToken, iToken) : NULL;
+		pcClass = pcNode ? (CCPPSyntaxClassSpecifier*)cUnit.FindAncestor(pcNode, CPPS_ClassSpecifier) : NULL;
+	}
+	pcDeclaration = pcClass ? cUnit.FindAncestor(pcClass, CPPS_SimpleDeclaration) : NULL;
+	bResult = bResult && pcClass && pcDeclaration && (pcClass->macpBases.NumElements() == 1) && cUnit.GetRange(pcDeclaration, &sRange);
+	for (i = 0; bResult && (i < pcClass->macpMembers.NumElements()); i++)
+	{
+		pcMember = pcClass->macpMembers.GetPtr(i);
+		if (pcMember->GetKind() == CPPS_AccessSpecifier)
+		{
+			continue;
+		}
+		pcDeclarator = (pcMember->GetKind() == CPPS_FunctionDefinition) ? ((CCPPSyntaxFunctionDefinition*)pcMember)->mpcDeclarator : NULL;
+		bResult = pcDeclarator && pcDeclarator->mpcName && (pcDeclarator->mpcName->miFirstToken == pcDeclarator->mpcName->miLastToken) && cUnit.IsToken(pcDeclarator->mpcName->miLastToken, szName.Text());
+	}
+	cUnit.Kill();
+
+	//Every place the class is named, for the name it takes.
+	sTarget.Init();
+	if (bResult)
+	{
+		bResult = false;
+		asLocations.Init();
+		pcModel->GetSymbolLocations(szClassKey, &asLocations, &uiKind);
+		for (i = 0; !bResult && (i < asLocations.NumElements()); i++)
+		{
+			psLocation = asLocations.Get(i);
+			bResult = (psLocation->uiRole == CPPIR_Definition) && pcModel->FindRenameTarget(psLocation->szFileName.Text(), psLocation->iLine, psLocation->iColumn, &sTarget) &&
+					  (sTarget.asLocations.NumElements() > 0);
+		}
+		KillIDELocations(&asLocations);
+	}
+	cFiles.Init(mpcContent);
+	szText = bResult ? cFiles.GetText(szFileName.Text()) : NULL;
+	bResult = bResult && szText;
+	uiStart = 0;
+	uiEnd = 0;
+	if (bResult)
+	{
+		uiStart = FindIDETextOffset(szText, sRange.iLine, sRange.iColumn);
+		uiEnd = FindIDETextOffset(szText, sRange.iEndLine, sRange.iEndColumn);
+		ExtendIDEDeletion(szText, &uiStart, &uiEnd, true);
+		cFiles.GetEdits(szFileName.Text())->Replace(uiStart, uiEnd, "");
+	}
+	for (i = 0; bResult && (i < sTarget.asLocations.NumElements()); i++)
+	{
+		psLocation = sTarget.asLocations.Get(i);
+		szText = cFiles.GetText(psLocation->szFileName.Text());
+		if (!szText)
+		{
+			bResult = false;
+			break;
+		}
+		uiAt = FindIDETextOffset(szText, psLocation->iLine, psLocation->iColumn);
+		if ((StringInsensitiveCompare(psLocation->szFileName.Text(), szFileName.Text()) == 0) && (uiAt >= uiStart) && (uiAt < uiEnd))
+		{
+			continue;
+		}
+		if (strncmp(&szText[uiAt], szOldName.Text(), szOldName.Length()) != 0)
+		{
+			bResult = false;
+			break;
+		}
+		cFiles.GetEdits(psLocation->szFileName.Text())->Replace(uiAt, uiAt + szOldName.Length(), szName.Text());
+	}
+	if (bResult)
+	{
+		uiBefore = cFiles.CountErrors(false);
+		bResult = cFiles.CountErrors(true) <= uiBefore;
+	}
+	if (bResult)
+	{
+		cFiles.Apply();
+		pszName->Set(szName);
+	}
+	cFiles.Kill();
+	sTarget.Kill();
+	szOldName.Kill();
+	szName.Kill();
+	szFileName.Kill();
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Remove Template Parameter (Refactorings.txt, 20, the inverse of Extract
 // Template Parameter), for the class template's parameter the caret is
 // on: if every place the template is used gives the parameter the same
@@ -1517,8 +1683,10 @@ static bool FindIDETemplateArguments(const char* szText, size uiAt, CArrayInt* p
 // template<...> (the whole of it, if it was the only parameter: the class
 // is a template no longer, and a member defined outside it in a header
 // becomes inline), and the argument goes from every use.  The files
-// changed are checked as they would be first.  The status says what was
-// done, or why nothing was.
+// changed are checked as they would be first.  Where the class is a
+// template no longer and a class was its name, it takes the name again
+// (FoldNameClass), in the same undo.  The status says what was done, or
+// why nothing was.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDETemplateParameter::RemoveParameter(CChars* pszStatus)
@@ -1921,6 +2089,7 @@ bool CIDETemplateParameter::RemoveParameter(CChars* pszStatus)
 	szMessage.Init();
 	if (bResult)
 	{
+		mpcContent->GetEdit()->BeginUndoGroup();
 		cFiles.Apply();
 		szOne.Init();
 		GetIDESymbolName(szClassKey.Text(), &szOne);
@@ -1934,6 +2103,15 @@ bool CIDETemplateParameter::RemoveParameter(CChars* pszStatus)
 			szMessage.Append(" in all ")->Append((uint32)uiUses)->Append(" places the template is used.");
 		}
 		szOne.Kill();
+
+		//A template no longer: the class that was its name gives it the name back.
+		szOne.Init();
+		if ((uiParameters == 1) && FoldNameClass(szClassKey.Text(), &szOne))
+		{
+			szMessage.Append("  It is ")->Append(szOne)->Append(" again, which was the class that was its name.");
+		}
+		szOne.Kill();
+		mpcContent->GetEdit()->EndUndoGroup();
 	}
 	else
 	{

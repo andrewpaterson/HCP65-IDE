@@ -1130,6 +1130,25 @@ CHECKS = [
 		 r'^Dialog \[Problems Detected\] answered Cancel$', r'^Status line: $', r'^Dialog \[Problems Detected\] answered OK$',
 		 r'^Status: Introduced int iBase2 = iBase \* 2: 2 occurrences replaced\.$'],
 		[]),
+	('unify-parameter-names', dict(MakeChangeSignatureCopy(), **{
+		#Unify Parameter Names: the definition calls its parameters iR, iG and iB where the class declares iRed, iGreen
+		#and iBlue.  From the declaration the definition takes its names, in its body too; one whose names are the
+		#same already is left.  Show Context Actions offers it on a function declared and defined apart.
+		'WAIT_INDEX': '1', 'OPEN': 'Paint.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:11:9,edit:contextactions,edit:unifynames,edit:caret:12:18,edit:unifynames,printdisklines:Paint.h,printdisklines:Paint.cpp'}),
+		[r'^Context actions: Rename\.\.\. \| Change Signature\.\.\. \| Unify Parameter Names \| ',
+		 r"^Status: Unified the names of CBrush::Mix's parameters: 3 were named differently, and are as they are named here now\.$",
+		 r'^Status: The parameters of CBrush::Draw have the same names wherever it is declared and defined\.$',
+		 r'^11\|\tint\t\t\t\tMix\(int iRed, int iGreen, int iBlue\);$', r'^19\|int CBrush::Mix\(int iRed, int iGreen, int iBlue\)$', r'^23\|\tiTotal = iRed \+ iGreen \* 2;$',
+		 r'^24\|\treturn iTotal \+ iBlue \+ iRed;$'],
+		[]),
+	('unify-parameter-names-definition', dict(MakeChangeSignatureCopy(), **{
+		#From the definition, the declaration takes the definition's names.
+		'WAIT_INDEX': '1', 'OPEN': 'Paint.cpp',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:19:14,edit:unifynames,printdisklines:Paint.h,printdisklines:Paint.cpp'}),
+		[r"^Status: Unified the names of CBrush::Mix's parameters: 3 were named differently, and are as they are named here now\.$",
+		 r'^11\|\tint\t\t\t\tMix\(int iR, int iG, int iB\);$', r'^19\|int CBrush::Mix\(int iR, int iG, int iB\)$', r'^23\|\tiTotal = iR \+ iG \* 2;$'],
+		[]),
 	('change-signature-reorder', dict(MakeChangeSignatureCopy(), **{
 		#Change Signature (Refactorings.txt, 2): a function's parameters put in another order and one renamed.  The
 		#declaration and the definition each keep what they wrote (the definition names them iR, iG and iB), the renamed
@@ -1140,8 +1159,8 @@ CHECKS = [
 		 r'^  declared Paint\.h:11 ', r'^  defined Paint\.cpp:19 ', r'^  called Main\.cpp:16 with 3 arguments$',
 		 r'^New signature: int CBrush::Mix\(int iBlue, int iR2, int iGreen\)$',
 		 r"^Status: Changed CBrush::Mix's signature: 2 declarations and definitions, 1 call in 3 files\.$",
-		 r'^11\|\tint\t\t\t\tMix\(int iBlue, int iR2, int iGreen\);$', r'^19\|int CBrush::Mix\(int iB, int iR2, int iG\)$', r'^23\|\tiTotal = iR2 \+ iG \* 2;$',
-		 r'^24\|\treturn iTotal \+ iB \+ iR2;$', r'^16\|\tiMixed = cBrush\.Mix\(3, 1, Next\(\)\);$'],
+		 r'^11\|\tint\t\t\t\tMix\(int iBlue, int iR2, int iGreen\);$', r'^19\|int CBrush::Mix\(int iBlue, int iR2, int iGreen\)$', r'^23\|\tiTotal = iR2 \+ iGreen \* 2;$',
+		 r'^24\|\treturn iTotal \+ iBlue \+ iR2;$', r'^16\|\tiMixed = cBrush\.Mix\(3, 1, Next\(\)\);$'],
 		[r'^Conflict', r'not changed']),
 	('change-signature-from-call', dict(MakeChangeSignatureCopy(), **{
 		#From a call of it: the same function, the same change.
@@ -1183,7 +1202,7 @@ CHECKS = [
 		 r'^Conflict: CBrush::Mix still uses the parameter taken out, iG, at Paint\.cpp:23\.$',
 		 r'^Conflict: The argument taken out of the call at Main\.cpp:16 does something \(a call, an assignment or the like\), which goes with it\.$',
 		 r'^Change Signature: not changed$', r"^Status: Changed CBrush::Mix's signature: ",
-		 r'^11\|\tint\t\t\t\tMix\(int iRed, int iBlue\);$', r'^12\|\tvirtual void\tDraw\(int iX, int iY\);$', r'^19\|int CBrush::Mix\(int iR, int iB\)$',
+		 r'^11\|\tint\t\t\t\tMix\(int iRed, int iBlue\);$', r'^12\|\tvirtual void\tDraw\(int iX, int iY\);$', r'^19\|int CBrush::Mix\(int iRed, int iBlue\)$',
 		 r'^16\|\tiMixed = cBrush\.Mix\(1, 3\);$'],
 		[]),
 	('change-signature-defaults', dict(MakeChangeSignatureCopy(), **{
@@ -1196,7 +1215,7 @@ CHECKS = [
 		[r'^Conflict: A parameter with a default value is before one without: iSize needs one, or to come first\.$', r'^Change Signature: not changed$',
 		 r'^New signature: void CBrush::Init\(int iSize, const char\* szName\)$', r'^New signature: int CBrush::Mix\(int iRed, int iGreen, int iBlue = 3\)$',
 		 r'^10\|\tvoid\t\t\tInit\(int iSize, const char\* szName\);$', r'^11\|\tint\t\t\t\tMix\(int iRed, int iGreen, int iBlue = 3\);$',
-		 r'^19\|int CBrush::Mix\(int iR, int iG, int iB\)$', r'^14\|\tcBrush\.Init\(4, 0\);$', r'^15\|\tcSpray\.Init\(2, "wide"\);$'],
+		 r'^19\|int CBrush::Mix\(int iRed, int iGreen, int iBlue\)$', r'^14\|\tcBrush\.Init\(4, 0\);$', r'^15\|\tcSpray\.Init\(2, "wide"\);$'],
 		[]),
 	('change-signature-return-name', dict(MakeChangeSignatureCopy(), **{
 		#What it returns, its name, and a parameter's type and default value, with the rest: the return type where each
@@ -1207,8 +1226,8 @@ CHECKS = [
 		         'printdisklines:Paint.h,printdisklines:Paint.cpp,printdisklines:Main.cpp'}),
 		[r'^New signature: long CBrush::Stir\(long iRedder, int iGreen, short iBlue = 5\)$',
 		 r"^Status: Changed CBrush::Mix's signature: 2 declarations and definitions, 1 call in 3 files\.  It is now Stir\.$",
-		 r'^11\|\tlong\t\t\tStir\(long iRedder, int iGreen, short iBlue = 5\);$', r'^19\|long CBrush::Stir\(long iRedder, int iG, short iB\)$',
-		 r'^23\|\tiTotal = iRedder \+ iG \* 2;$', r'^16\|\tiMixed = cBrush\.Stir\(1, Next\(\), 3\);$'],
+		 r'^11\|\tlong\t\t\tStir\(long iRedder, int iGreen, short iBlue = 5\);$', r'^19\|long CBrush::Stir\(long iRedder, int iGreen, short iBlue\)$',
+		 r'^23\|\tiTotal = iRedder \+ iGreen \* 2;$', r'^16\|\tiMixed = cBrush\.Stir\(1, Next\(\), 3\);$'],
 		[r'^Conflict', r'\|.*Mix\(']),
 	('change-signature-other-conflicts', dict(MakeChangeSignatureCopy(), **{
 		#Another function of its name with the new parameters; a function named without being called (a pointer to it);
@@ -1680,6 +1699,20 @@ CHECKS = [
 		 r'^Inline Variable: iResult = \[\(iA \+ iB\) \* 2 \+ Scale\(iA \+ iB\)\], 1 uses, 0 in parentheses, assigned by a statement$', r'^Status: Inlined iResult: 1 use\.$',
 		 r'^8\|int FlowSum\(int iA, int iB\)$', r'^9\|\{$', r'^10\|\treturn \(iA \+ iB\) \* 2 \+ Scale\(iA \+ iB\);$', r'^11\|\}$', r'^12\|$', r'^13\|$', r'^14\|/{74}$'],
 		[r'^Conflict']),
+	('inline-constant', dict(MakeInlineVariableCopy(), **{
+		#Inline for a constant of a file or a class: its value takes the place of every use, in whatever file, in
+		#parentheses where it needs them, and its declaration goes; from a use, that use alone can be, the constant
+		#staying.  One whose value names a variable that isn't const isn't a constant.
+		'WAIT_INDEX': '1', 'OPEN': 'Limits.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:8:12,edit:inlinableconstant,edit:open:Limits.cpp,edit:caret:13:46,edit:inlineconstant:this,'
+				 'edit:open:Limits.h,edit:caret:6:12,edit:inlineconstant,edit:caret:5:12,edit:inlineconstant,printdisklines:Limits.h,printdisklines:Limits.cpp'}),
+		[r"^Inline Constant: giLive can't be: its value names giCount, which isn't a constant \(Limits\.h line 8\)$",
+		 r'^Inline Constant: miDepth = \[4\], 2 uses in 2 files, 1 declaration, the caret on a use$', r'^Status: Inlined miDepth = 4: 1 use; the constant stays\.$',
+		 r'^Inline Constant: giSpare = \[giMostUnits \* 2 \+ 1\], 1 use in 1 file, 1 declaration$', r'^Status: Inlined giSpare = giMostUnits \* 2 \+ 1: 1 use, and the constant is taken out\.$',
+		 r'^Inline Constant: giMostUnits = \[8\], 3 uses in 1 file, 1 declaration$', r'^Status: Inlined giMostUnits = 8: 3 uses, and the constant is taken out\.$',
+		 r'^5\|int\t\t\tgiCount = 0;$', r'^6\|const int\tgiLive = giCount \+ 1;$', r'^12\|\tstatic const int\tmiDepth = 4;$', r'^18 lines$',
+		 r'^10\|\tint\taiUnits\[8\];$', r'^12\|\taiUnits\[0\] = 8 \* iScale;$', r'^13\|\treturn aiUnits\[0\] \+ \(8 \* 2 \+ 1\) \* 3 \+ 4 \+ giLive;$'],
+		[]),
 	('inline-variable-conflicts', dict(MakeInlineVariableCopy(), **{
 		#What stands in the way: a value that is a call and would be made twice; a variable the value reads that is
 		#changed before the use.  Nothing is inlined until it is asked for all the same.  A call used once is inlined
@@ -2375,7 +2408,7 @@ CHECKS = [
 				 'edit:caret:54:32,edit:contextactions,edit:caret:12:3,edit:contextactions,edit:caret:10:20,edit:contextactions,edit:caret:1:5,edit:contextactions,'
 				 'edit:caret:5:2,edit:contextactions'}),
 		[r'^Context\ actions:\ Rename\.\.\.\ \|\ Change\ Signature\.\.\.\ \|\ Inline\.\.\.\ \|\ Move\ Definition\ into\ Class\ \|\ Make\ Member\ Function\ const\ \|\ Make\ Member\ Function\ static\ \|\ Convert\ Member\ Function\ to\ Function\ \|\ Push\ Members\ Down\.\.\.\ \|\ Safe\ Delete\.\.\.$',
-		 r'^Context\ actions:\ Rename\.\.\.\ \|\ Change\ Signature\.\.\.\ \|\ Inline\.\.\.\ \|\ Move\ Definition\ into\ Class\ \|\ Convert\ Function\ to\ Member\ Function\ \|\ Move\.\.\.\ \|\ Safe\ Delete\.\.\.$',
+		 r'^Context\ actions:\ Rename\.\.\.\ \|\ Change\ Signature\.\.\.\ \|\ Unify\ Parameter\ Names\ \|\ Inline\.\.\.\ \|\ Move\ Definition\ into\ Class\ \|\ Convert\ Function\ to\ Member\ Function\ \|\ Move\.\.\.\ \|\ Safe\ Delete\.\.\.$',
 		 r'^Context\ actions:\ Rename\.\.\.\ \|\ Convert\ Pointer\ to\ Reference$',
 		 r'^Context\ actions:\ Rename\.\.\.\ \|\ Move\.\.\.\ \|\ Copy\ Class\.\.\.\ \|\ Extract\ Superclass\.\.\.\ \|\ Extract\ Interface\.\.\.\ \|\ Extract\ Class\.\.\.\ \|\ Extract\ Template\ Parameter\.\.\.$',
 		 r'^Context\ actions:\ Rename\.\.\.\ \|\ Convert\ Reference\ to\ Pointer$',
@@ -2402,11 +2435,11 @@ CHECKS = [
 				 'edit:caret:20:14,edit:contextactions,edit:caret:7:8,edit:contextactions,edit:caret:34:8,edit:contextactions'}),
 		[r'^Context\ actions:\ Rename\.\.\.\ \|\ Move\.\.\.\ \|\ Copy\ Class\.\.\.\ \|\ Push\ Members\ Down\.\.\.\ \|\ Extract\ Superclass\.\.\.\ \|\ Extract\ Interface\.\.\.\ \|\ Extract\ Class\.\.\.\ \|\ Safe\ Delete\.\.\.$',
 		 r'^Context\ actions:\ Rename\.\.\.\ \|\ Move\.\.\.\ \|\ Copy\ Class\.\.\.\ \|\ Pull\ Members\ Up\.\.\.\ \|\ Extract\ Superclass\.\.\.\ \|\ Extract\ Interface\.\.\.\ \|\ Extract\ Class\.\.\.\ \|\ Safe\ Delete\.\.\.$',
-		 r'^Context\ actions:\ Rename\.\.\.\ \|\ Change\ Signature\.\.\.\ \|\ Inline\.\.\.\ \|\ Move\ Definition\ into\ Class\ \|\ Make\ Member\ Function\ const\ \|\ Push\ Members\ Down\.\.\.\ \|\ Safe\ Delete\.\.\.$',
-		 r'^Context\ actions:\ Rename\.\.\.\ \|\ Change\ Signature\.\.\.\ \|\ Inline\.\.\.\ \|\ Move\ Definition\ into\ Class\ \|\ Make\ Member\ Function\ const\ \|\ Pull\ Members\ Up\.\.\.\ \|\ Safe\ Delete\.\.\.$',
-		 r'^Context\ actions:\ Rename\.\.\.\ \|\ Change\ Signature\.\.\.\ \|\ Inline\.\.\.\ \|\ Move\ Definition\ into\ Class\ \|\ Make\ Member\ Function\ const\ \|\ Make\ Member\ Function\ static\ \|\ Convert\ Member\ Function\ to\ Function\ \|\ Push\ Members\ Down\.\.\.\ \|\ Safe\ Delete\.\.\.$',
+		 r'^Context\ actions:\ Rename\.\.\.\ \|\ Change\ Signature\.\.\.\ \|\ Unify\ Parameter\ Names\ \|\ Inline\.\.\.\ \|\ Move\ Definition\ into\ Class\ \|\ Make\ Member\ Function\ const\ \|\ Push\ Members\ Down\.\.\.\ \|\ Safe\ Delete\.\.\.$',
+		 r'^Context\ actions:\ Rename\.\.\.\ \|\ Change\ Signature\.\.\.\ \|\ Unify\ Parameter\ Names\ \|\ Inline\.\.\.\ \|\ Move\ Definition\ into\ Class\ \|\ Make\ Member\ Function\ const\ \|\ Pull\ Members\ Up\.\.\.\ \|\ Safe\ Delete\.\.\.$',
+		 r'^Context\ actions:\ Rename\.\.\.\ \|\ Change\ Signature\.\.\.\ \|\ Unify\ Parameter\ Names\ \|\ Inline\.\.\.\ \|\ Move\ Definition\ into\ Class\ \|\ Make\ Member\ Function\ const\ \|\ Make\ Member\ Function\ static\ \|\ Convert\ Member\ Function\ to\ Function\ \|\ Push\ Members\ Down\.\.\.\ \|\ Safe\ Delete\.\.\.$',
 		 r'^Context\ actions:\ Rename\.\.\.\ \|\ Encapsulate\ Field\.\.\.\ \|\ Safe\ Delete\.\.\.$',
-		 r'^Context\ actions:\ Rename\.\.\.\ \|\ Change\ Signature\.\.\.\ \|\ Inline\.\.\.\ \|\ Move\ Definition\ into\ Class\ \|\ Convert\ Function\ to\ Member\ Function\ \|\ Move\.\.\.\ \|\ Safe\ Delete\.\.\.$'],
+		 r'^Context\ actions:\ Rename\.\.\.\ \|\ Change\ Signature\.\.\.\ \|\ Unify\ Parameter\ Names\ \|\ Inline\.\.\.\ \|\ Move\ Definition\ into\ Class\ \|\ Convert\ Function\ to\ Member\ Function\ \|\ Move\.\.\.\ \|\ Safe\ Delete\.\.\.$'],
 		[]),
 	('context-actions-macro', dict(MakeMacrosCopy(), **{
 		#A macro where it is used and where it is #defined.
@@ -2437,6 +2470,16 @@ CHECKS = [
 		'WAIT_INDEX': '1', 'OPEN': 'Mix.h', 'CARET': '15:8', 'EDIT': 'usages'}),
 		[r'^Usages of Read  11 usages$', r'^      Rack\.h  1$', r'^        CRack  1$', r'^          14: int  Level\(void\) \{ return mcGauge\.Read\(\); \}$'],
 		[]),
+	('template-fold', dict(MakeTemplatesCopy(), **{
+		#Extract Template Parameter on a class and Remove Template Parameter after it: the class is a template no
+		#longer, and takes its name back from the class that was its name, which goes.
+		'WAIT_INDEX': '1', 'OPEN': 'Tank.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:9:3,edit:extracttemplate:M:CTankTemplate,edit:caret:6:17,edit:removetemplateparameter,printdisklines:Tank.h,printdisklines:Tank.cpp'}),
+		[r'^Status: Removed the template parameter M from CTankTemplate: it is CGauge in all 2 places the template is used\.  It is CTank again, which was the class that was its name\.$',
+		 r'^6\|class CTank$', r'^9\|\tCGauge\*\tmpcGauge;$', r'^13\|\tCTank\(void\);$', r'^14\|\t~CTank\(void\);$', r'^17\|\tCTank\*\tSame\(void\) \{ return this; \}$', r'^18\|\};$',
+		 r'^25\|inline CTank::CTank\(void\)$', r'^36\|inline CTank::~CTank\(void\)$', r'^46\|inline void CTank::Init\(CGauge\* pcGauge\)$', r'^66\|class CPipe;$', r'^80 lines$',
+		 r'^10\|\tCTank\tcTank;$'],
+		[r'CTankTemplate\b.*\n(.*\n)*Disk lines Tank\.cpp', r'^\d+\|.*CTankTemplate']),
 	('rename-assembly-class', dict(MakeRenameAssemblyCopy(), **{
 		#A class renamed in hand written assembly's labels (_CEngine__Init, __0, __2), in parameter lists with its length
 		#(FPC7CEngine to FPC6CMotor), in generated layout constants (SIZEOF_CEngine, CEngine_miSpeed: in the assembly, the
@@ -2941,7 +2984,7 @@ CHECKS = [
 		 r'^Menu Debug: Start Debugging \[F5\], Start Without Debugging \[Ctrl\+F5\], Stop Debugging \[Shift\+F5\], Stop Running\(disabled\), Restart \[Ctrl\+Shift\+F5\], Break All \[Ctrl\+Pause/Break\], Attach to Emulator\.\.\., Step Into \[F11\], Step Over \[F10\], Step Out \[Shift\+F11\], Toggle Breakpoint \[F9\], ',
 		 r'^Menu Window: Reset Window Layout, Close All Documents$',
 		 r'^Menu Editor: Go to Source \[Ctrl\+B\], Find Usages \[Alt\+F7\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Show Context Actions \[Alt\+Enter\], Rename\.\.\. \[Shift\+F6\], Refactor>, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\]$',
-		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Introduce Field\.\.\. \[Ctrl\+Alt\+F\](\(disabled\))?, Introduce Constant\.\.\. \[Ctrl\+Alt\+C\](\(disabled\))?, Introduce Parameter\.\.\. \[Ctrl\+Alt\+P\](\(disabled\))?, Introduce Typedef\.\.\. \[Ctrl\+Alt\+K\](\(disabled\))?, Inline\.\.\. \[Ctrl\+Alt\+N\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\.(\(disabled\))?, Push Members Down\.\.\.(\(disabled\))?, Move\.\.\. \[F6\](\(disabled\))?, Copy Class\.\.\.(\(disabled\))?, Extract Method\.\.\. \[Ctrl\+Alt\+M\](\(disabled\))?, Extract Superclass\.\.\.(\(disabled\))?, Extract Interface\.\.\.(\(disabled\))?, Extract Class\.\.\.(\(disabled\))?, Encapsulate Field\.\.\.(\(disabled\))?, Optimise #includes \[Ctrl\+Alt\+O\], Convert Macro\.\.\.(\(disabled\))?, Convert Pointer to Reference(\(disabled\))?, Convert Reference to Pointer(\(disabled\))?, Make Member Function const(\(disabled\))?, Make Member Function static(\(disabled\))?, Convert Function to Member Function(\(disabled\))?, Convert Member Function to Function(\(disabled\))?, Extract Template Parameter\.\.\., Remove Template Parameter$',
+		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Introduce Field\.\.\. \[Ctrl\+Alt\+F\](\(disabled\))?, Introduce Constant\.\.\. \[Ctrl\+Alt\+C\](\(disabled\))?, Introduce Parameter\.\.\. \[Ctrl\+Alt\+P\](\(disabled\))?, Introduce Typedef\.\.\. \[Ctrl\+Alt\+K\](\(disabled\))?, Inline\.\.\. \[Ctrl\+Alt\+N\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Unify Parameter Names(\(disabled\))?, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\.(\(disabled\))?, Push Members Down\.\.\.(\(disabled\))?, Move\.\.\. \[F6\](\(disabled\))?, Copy Class\.\.\.(\(disabled\))?, Extract Method\.\.\. \[Ctrl\+Alt\+M\](\(disabled\))?, Extract Superclass\.\.\.(\(disabled\))?, Extract Interface\.\.\.(\(disabled\))?, Extract Class\.\.\.(\(disabled\))?, Encapsulate Field\.\.\.(\(disabled\))?, Optimise #includes \[Ctrl\+Alt\+O\], Convert Macro\.\.\.(\(disabled\))?, Convert Pointer to Reference(\(disabled\))?, Convert Reference to Pointer(\(disabled\))?, Make Member Function const(\(disabled\))?, Make Member Function static(\(disabled\))?, Convert Function to Member Function(\(disabled\))?, Convert Member Function to Function(\(disabled\))?, Extract Template Parameter\.\.\., Remove Template Parameter$',
 		 r'^Menu Explorer: Set as Startup Solution, Set as Startup Project\(disabled\), Remove Solution, Rename\.\.\.(\(disabled\))?$',
 		 r'^Menu item \[View/Nope\] not found$'], []),
 	('menu-clicks', {

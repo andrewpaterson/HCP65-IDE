@@ -160,6 +160,8 @@ Answered
     body renamed with it.  And a refactoring of its own, offered from an Alt+Enter popup: the parameters' names
     made the same from either side, the declaration's taken by the definition or the definition's by the
     declaration, whichever the caret is on.
+    Done 2026-11-15 (CIDEChangeSignature::Change gives a kept parameter the first declaration's name everywhere;
+    UnifyNames is the refactoring, "Unify Parameter Names", in the Refactor menu and Show Context Actions).
 
 13. Change Signature of a constructor changes its declarations and definitions, but an object made with arguments
     isn't written as a call (CFoo x(1, 2); new CFoo(1); a member's initialiser), and those places aren't changed
@@ -248,6 +250,7 @@ Answered
     constant outside a function (IntelliJ inlines constants).  Do you want constants?
     Answered 2026-11-15: yes: a const variable of a file or a class whose value is a constant is inlined, with
     Inline Function's choice (every use and the constant taken out, or this use only).  Not an enumerator.  To do.
+    Done 2026-11-15 (CIDEInlineVariable::FindConstantInlining, InlineConstant; Inline's dialog asks which).
 
 30. Introduce Constant makes a #define, since every constant in your code is one (530 #defines of a number or a
     string in BaseLib, WindowLib and the IDE; no const variables), after the file's last #define or #include, and
@@ -479,3 +482,4 @@ Answered
     Answered 2026-11-15: fold it back: where the class that is its name is all that derives from it and has
     nothing but the constructors it hands on, the template takes the name again (CTank) and the name's class
     goes.  To do in Remove Template Parameter.
+    Done 2026-11-15 (CIDETemplateParameter::FoldNameClass).

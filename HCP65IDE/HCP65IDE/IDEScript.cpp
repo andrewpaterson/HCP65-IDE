@@ -1812,6 +1812,50 @@ void CIDEScript::RunEditStep(const char* szStep)
 		szPrinted.Kill();
 		sExtraction.Kill();
 	}
+	else if ((strcmp(szStep, "inlinableconstant") == 0) || (strcmp(szStep, "inlineconstant") == 0) || (strcmp(szStep, "inlineconstant:this") == 0))
+	{
+		//What Inline found for the constant at the caret (inlinableconstant); or it inlined, every use with the
+		//constant taken out (inlineconstant) or the use at the caret only (inlineconstant:this).
+		SIDEConstantInlining	sInlining;
+		CChars					szPrinted;
+
+		sInlining.Init();
+		if (!mpcContent->GetInlineVariable()->FindConstantInlining(&sInlining))
+		{
+			printf("Inline Constant: none at the caret\n");
+		}
+		else
+		{
+			szPrinted.Init();
+			printf("%s", mpcContent->GetInlineVariable()->PrintConstantInlining(&sInlining, &szPrinted));
+			szPrinted.Clear();
+			if (strcmp(szStep, "inlinableconstant") != 0)
+			{
+				mpcContent->GetInlineVariable()->InlineConstant(&sInlining, strcmp(szStep, "inlineconstant:this") == 0, &szPrinted);
+				printf("Status: %s\n", szPrinted.Text());
+				if (gbIDEScriptRenameSaves)
+				{
+					mpcContent->GetDocuments()->SaveAllFiles();
+				}
+			}
+			szPrinted.Kill();
+		}
+		sInlining.Kill();
+	}
+	else if (strcmp(szStep, "unifynames") == 0)
+	{
+		//Unify Parameter Names for the function at the caret, with what the status bar would say.
+		CChars	szPrinted;
+
+		szPrinted.Init();
+		mpcContent->GetChangeSignature()->UnifyNames(&szPrinted);
+		printf("Status: %s\n", szPrinted.Text());
+		if (gbIDEScriptRenameSaves)
+		{
+			mpcContent->GetDocuments()->SaveAllFiles();
+		}
+		szPrinted.Kill();
+	}
 	else if (strcmp(szStep, "contextactions") == 0)
 	{
 		//Show Context Actions' refactorings for what is at the caret, as "Context actions: Rename... | Inline...", or

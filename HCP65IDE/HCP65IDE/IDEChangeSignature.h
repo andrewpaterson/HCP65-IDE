@@ -216,6 +216,8 @@ public:
 	void	AddContextActions(SIDECaretContext* psContext);
 	bool	CanChangeSignature(void);
 	void	QueueChangeSignature(void);
+	void	QueueUnifyNames(void);
+	bool	UnifyNames(CChars* pszStatus = NULL);
 	bool	ShowChangeSignature(void);
 	bool	IsUnchanged(SIDESignature* psSignature, SIDESignatureChange* psChange);
 	bool	FindSignature(SIDESignature* psDest, const char* szFileName = NULL, int iAtLine = -1, int iAtColumn = -1);
@@ -230,6 +232,7 @@ public:
 
 protected:
 	void				ShowQueuedChangeSignature(void);
+	void				UnifyNamesQueued(void);
 public:
 	bool				ReadSite(CIDERefactorUnit* pcUnit, SIDELocation* psLocation, const char* szKey, SIDESignatureSite* psSite, const char** pszWhyNot);
 	bool				ShowConflicts(CArrayChars* paszConflicts);
