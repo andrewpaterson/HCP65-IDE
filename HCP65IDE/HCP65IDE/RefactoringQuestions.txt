@@ -201,11 +201,6 @@ Open
     pointer to it and no setter.  Is that how you write accessors (in the class, or declared there and defined in
     the .cpp; const or not)?
 
-46. Sort #includes puts the file's own header first, then keeps the directories in the order they first come
-    ("BaseLib/..." before "WindowLib/..." if they are so now) and sorts by name inside each.  Your files look to be
-    in dependency order rather than by name: is there an order you want it to make (and should Optimise #includes
-    sort as well, as IntelliJ's does)?
-
 47. A forward declaration made from an #include is written after the #includes, two lines down ("class CGauge;"),
     with any the file has there already.  Optimise #includes does this in .cpp files too, not only in headers.  It
     leaves <> #includes, #includes inside an #if, and a .cpp's #include of its own header alone.  Right?
@@ -264,6 +259,16 @@ Answered
     Answered 2026-11-15: show the files and ask first, then do it as it does now.  To do: Optimise #includes lists
     the files that would be given their own #include (as Problems Detected lists conflicts) before anything is
     changed.
+
+46. Sort #includes puts the file's own header first, then keeps the directories in the order they first come
+    ("BaseLib/..." before "WindowLib/..." if they are so now) and sorts by name inside each.  Your files look to be
+    in dependency order rather than by name: is there an order you want it to make (and should Optimise #includes
+    sort as well, as IntelliJ's does)?
+    Answered 2026-11-15: sorting is part of Optimise #includes and Sort #includes goes as a command of its own.
+    The order: the lowest level libraries at the top, each library after those it depends on (StandardLib's
+    COrderer can order the libraries by what they depend on, if need be).  An #include that is added goes in its
+    place in that order, not after the last.  Still to be said: the order inside one library, and where <>
+    #includes and a source file's own header go.
 
 48. Convert Macro and Inline Macro are built for ordinary macros (a #define of a value to a constant or, with the
     #defines beside it, an enum; a macro with parameters to an inline function, a template where its uses' types
