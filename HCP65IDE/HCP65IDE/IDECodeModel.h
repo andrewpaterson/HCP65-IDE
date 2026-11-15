@@ -253,6 +253,7 @@ protected:
 	CArrayIDEEditedFiles	mapsEdited;			//The files given it, until they are taken.
 	bool				mbEditsBusy;			//Under the index mutex.
 	int					miEditsDelay;			//Milliseconds the edits thread waits before it starts, for checking.
+	bool				mbIndexTemplates;		//The index checks each template in its own words too: what a template nothing instantiates names is in it.
 
 public:
 	void	Init(CBuildWorkspace* pcWorkspace);
@@ -279,6 +280,8 @@ public:
 	void	SetHeaderText(const char* szFileName, const char* szText);
 	bool	GetIncluder(const char* szFileName, size* puiProject, CChars* pszUnit);
 	void	ReindexAll(void);
+	void	SetIndexTemplates(bool bIndexTemplates);
+	bool	IsIndexingTemplates(void);
 	void	ProcessEditedFiles(CArrayIDEEditedFiles* papsFiles, bool bNow);
 	bool	TakeEditedFiles(CArrayIDEEditedFiles* papsDest, bool bWait);
 	bool	IsProcessingEditedFiles(void);

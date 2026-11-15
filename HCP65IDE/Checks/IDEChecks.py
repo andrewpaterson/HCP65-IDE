@@ -2375,6 +2375,12 @@ CHECKS = [
 		'DEBUG': 'edit:caret:54:32,wait:300,edit:press:Left Alt,edit:tap:Enter,edit:release:Left Alt,wait:300,edit:printpopup,edit:key:escape,edit:printpopup,edit:print'}),
 		[r'^Popup: Rename\.\.\. \| Convert Reference to Pointer$', r'^Popup: none$'],
 		[]),
+	('index-template-itself', dict(MakeTemplatesCopy(), **{
+		#The index checks a template in its own words: what the body of a template nothing instantiates names is a
+		#usage (CRack<M>::Level calls CGauge::Read).
+		'WAIT_INDEX': '1', 'OPEN': 'Mix.h', 'CARET': '15:8', 'EDIT': 'usages'}),
+		[r'^Usages of Read  11 usages$', r'^      Rack\.h  1$', r'^        CRack  1$', r'^          14: int  Level\(void\) \{ return mcGauge\.Read\(\); \}$'],
+		[]),
 	('rename-assembly-class', dict(MakeRenameAssemblyCopy(), **{
 		#A class renamed in hand written assembly's labels (_CEngine__Init, __0, __2), in parameter lists with its length
 		#(FPC7CEngine to FPC6CMotor), in generated layout constants (SIZEOF_CEngine, CEngine_miSpeed: in the assembly, the

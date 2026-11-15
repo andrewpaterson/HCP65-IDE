@@ -121,6 +121,9 @@ Answered
     you want it measured and, if it is cheap, turned on?
     Answered 2026-11-15: yes, measure it.  To do: the indexing time with templates checked as themselves and
     without, on the libraries; turned on if it is cheap, and the numbers shown to the user either way.
+    Done 2026-11-15.  Measured on HCP65ModPlay.sln (793 files, Debug|W65C816, Release x64 IDE), three runs each:
+    25.3, 25.2 and 25.1 s without; 26.7, 26.8 and 27.0 s with: about 1.6 s more, 6%.  It is on
+    (CIDECodeModel::mbIndexTemplates; CCPPSemanticPass::SetTemplatesAsThemselves).
 
  7. Introduce Variable and where the variable is declared.  I followed what every function in your code does: the
     variable is declared with the others at the top of the function, its name lined up in their column with tabs

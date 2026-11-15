@@ -163,6 +163,7 @@ void IDEIndexJob(void* pvData)
 //////////////////////////////////////////////////////////////////////////
 void CIDECodeModel::Init(CBuildWorkspace* pcWorkspace)
 {
+	mbIndexTemplates = true;
 	mpcWorkspace = pcWorkspace;
 	mszConfiguration.Init();
 	maszSystemDirectories.Init();
@@ -1124,6 +1125,7 @@ void CIDECodeModel::GatherUnit(CIDEParsedUnit* pcUnit, CCPPIndexUnit* pcDest, CC
 	CCPPSemanticPass	cPass;
 
 	cPass.Init();
+	cPass.SetTemplatesAsThemselves(mbIndexTemplates);
 	cPass.Check(&pcUnit->mcTree);
 	CCPPIndex::Gather(&pcUnit->mcTokeniser, &pcUnit->mcTree, pcDest, &cPass, pcIndexed);
 	cPass.Kill();
@@ -1215,6 +1217,16 @@ void CIDECodeModel::ReindexAll(void)
 	mcHeaderCache.Init();
 	StartIndexing();
 }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether the index checks each template in its own words too (see
+// mbIndexTemplates).  It is what the next indexing does.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDECodeModel::SetIndexTemplates(bool bIndexTemplates) { mbIndexTemplates = bIndexTemplates; }
+bool CIDECodeModel::IsIndexingTemplates(void) { return mbIndexTemplates; }
 
 
 //////////////////////////////////////////////////////////////////////////

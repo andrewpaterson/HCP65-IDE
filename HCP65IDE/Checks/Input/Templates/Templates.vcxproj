@@ -7,11 +7,13 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Rack.cpp" />
     <ClCompile Include="Mix.cpp" />
     <ClCompile Include="Pair.cpp" />
     <ClCompile Include="Tank.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Rack.h" />
     <ClInclude Include="Mix.h" />
     <ClInclude Include="Pair.h" />
     <ClInclude Include="Tank.h" />
