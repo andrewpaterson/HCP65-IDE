@@ -1165,6 +1165,8 @@ bool CIDETemplateParameter::ExtractClass(SIDETemplateExtraction* psExtraction, c
 	size				uiAllStart;
 	size				uiMoved;
 	size				uiBefore;
+	size				uiLabels;
+	size				uiUnsure;
 	size				i;
 	size				j;
 	size				k;
@@ -1392,6 +1394,36 @@ bool CIDETemplateParameter::ExtractClass(SIDETemplateExtraction* psExtraction, c
 			bResult = false;
 		}
 	}
+	uiLabels = 0;
+	if (bResult && !psExtraction->szTypeKey.Empty())
+	{
+		//Hand written assembly's labels for its functions: they are the template's instance's now, whose labels have
+		//the argument in them ("_CTankTemplate__T_C6CGauge__Fill": a class's is C, its name's length and its name
+		//with __ between its scopes).  Only for a class as the argument: the language's own types are written as
+		//each processor has them.
+		szScope.Init(psExtraction->szTypeKey);
+		szScope.Replace("::", "__");
+		szPiece.Init();
+		GetIDESymbolScope(psExtraction->szClassKey.Text(), &szPiece);
+		if (!szPiece.Empty())
+		{
+			szPiece.Append("::");
+		}
+		szPiece.Append(szTemplateName)->Append("__T_C")->Append((uint32)szScope.Length())->Append(szScope);
+		for (i = 0; i < aszKeys.NumElements(); i++)
+		{
+			szScope.Clear();
+			GetIDESymbolScope(aszKeys.GetText(i), &szScope);
+			asLocations.Init();
+			if (szScope.Equals(psExtraction->szClassKey.Text()) && pcModel->GetSymbolLocations(aszKeys.GetText(i), &asLocations, &uiKind) && ((uiKind == CPPSK_Function) || (uiKind == CPPSK_Variable)))
+			{
+				uiLabels += mpcContent->GetRename()->MoveAssembly(aszKeys.GetText(i), szPiece.Text(), &cFiles, &uiUnsure);
+			}
+			KillIDELocations(&asLocations);
+		}
+		szPiece.Kill();
+		szScope.Kill();
+	}
 	if (bResult)
 	{
 		cFiles.Apply();
@@ -1400,6 +1432,10 @@ bool CIDETemplateParameter::ExtractClass(SIDETemplateExtraction* psExtraction, c
 		if (uiMoved > 0)
 		{
 			szMessage.Append(", and ")->Append((uint32)uiMoved)->Append((uiMoved == 1) ? " definition is in " : " definitions are in ")->Append(GetIDEFileNamePart(psExtraction->szClassFile.Text()))->Append(" now");
+		}
+		if (uiLabels > 0)
+		{
+			szMessage.Append("; ")->Append((uint32)uiLabels)->Append((uiLabels == 1) ? " label in assembly changed" : " labels in assembly changed");
 		}
 		szMessage.Append('.');
 	}

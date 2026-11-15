@@ -228,6 +228,15 @@ def MakeMoveAssemblyCopy():
 	return {'SOLUTION': os.path.join(szFolder, 'MoveAssembly.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
 
 
+def MakeTemplateAssemblyCopy():
+	#A copy of Input/TemplateAssembly: CTank, which has a CGauge, and W65C816 assembly that calls CTank's functions.
+	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
+	atexit.register(shutil.rmtree, szRoot, True)
+	szFolder = os.path.join(szRoot, 'TemplateAssembly')
+	shutil.copytree(os.path.join(HERE, 'Input', 'TemplateAssembly'), szFolder)
+	return {'SOLUTION': os.path.join(szFolder, 'TemplateAssembly.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
+
+
 def MakeRenameTemplateCopy():
 	#A copy of Input/RenameTemplate (CHolder<M>, whose body calls mp->Init() and reads mp->miCount, instantiated with CFoo
 	#and with CBar; CLone has the same members and is in no instance), to refactor in.
@@ -1524,6 +1533,14 @@ CHECKS = [
 		'DEBUG': 'edit:renamesearch:---s,edit:extractsuperclass:CKettle|miLevel;Fill();Stir(),printdisklines:TunW65C816.asm'}),
 		[r'^Status: Extracted the superclass CKettle from CTun: 3 members, in Kettle\.h and Kettle\.cpp; 4 labels in assembly changed\.$',
 		 r'^6\|\t\tlda CKettle_miLevel,x$', r'^7\|\t\tjsr _CKettle__Fill$', r'^8\|\t\tjsr _CKettle__Stir$', r'^9\|\t\tjsr _CTun__Drain__Fi$', r'^12\|\t\tjsr _CVat__Init$', r'^13\|\t\tjsr _CKettle__Fill$'],
+		[]),
+	('extract-template-assembly', dict(MakeTemplateAssemblyCopy(), **{
+		#Extract Template Parameter from a class whose functions hand written assembly calls: they are the functions
+		#of the template's instance afterwards, and their labels have its argument in them.
+		'WAIT_INDEX': '1', 'OPEN': 'Tank.h', 'CARET': '9:3',
+		'DEBUG': 'edit:renamesearch:---s,edit:extracttemplate:M:CTankTemplate,printdisklines:TankW65C816.asm'}),
+		[r'^Status: Extracted the template parameter M from CGauge in CTank: .*; 2 labels in assembly changed\.$',
+		 r'^6\|\t\tjsr _CTankTemplate__T_C6CGauge__Init__FPC6CGauge$', r'^7\|\t\tjsr _CTankTemplate__T_C6CGauge__Level$', r'^8\|\t\tjsr _CGauge__Read$'],
 		[]),
 	('pull-up-assembly', dict(MakeMoveAssemblyCopy(), **{
 		#Pull Members Up where hand written assembly names the members by the compiler's labels: a field's layout
