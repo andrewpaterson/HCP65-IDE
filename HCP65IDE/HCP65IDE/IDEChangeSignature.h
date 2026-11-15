@@ -98,6 +98,8 @@ struct SIDESignatureCall
 	CArrayIDESyntaxRanges	asArguments;
 	CArrayInt				aiEffects;		//Whether each argument does something (a call, an assignment, ++, new): taking it out takes that out.
 	bool					bValueUsed;		//What it returns is used: it isn't a statement by itself.
+	bool					bBare;			//An object made with no brackets ("CBox cBox;", "new CBox"): sArguments is the empty place
+											//they would go, and arguments it is given are written in ( ).
 
 	void	Init(void);
 	void	Kill(void);
@@ -247,6 +249,8 @@ protected:
 	void				AddConstructions(SIDESignature* psSignature);
 	void				AddConstruction(SIDESignature* psSignature, SIDELocation* psLocation);
 	bool				AddInitializer(SIDESignature* psSignature, CIDERefactorUnit* pcUnit, CCPPSyntax* pcInitializer, const char* szFileName);
+	bool				AddBareObject(SIDESignature* psSignature, CIDERefactorUnit* pcUnit, int32 iLastToken, const char* szFileName);
+	bool				TakesArguments(SIDESignature* psSignature, size uiArguments);
 	void				FindOldParameters(SIDESignature* psSignature);
 	void				AppendPlace(const char* szFileName, int32 iLine, CChars* pszDest);
 	void				AppendSiteParameters(SIDESignature* psSignature, SIDESignatureSite* psSite, bool bFirst, CArrayIDENewParameters* pasNew, const char* szText, CChars* pszDest);

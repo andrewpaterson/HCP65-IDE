@@ -1179,6 +1179,15 @@ CHECKS = [
 		 r'^Dialog \[Problems Detected\] answered Cancel$', r'^Status line: $', r'^Dialog \[Problems Detected\] answered OK$',
 		 r'^Status: Introduced int iBase2 = iBase \* 2: 2 occurrences replaced\.$'],
 		[]),
+	('change-signature-constructor-bare', dict(MakeConstructorsCopy(), **{
+		#A constructor that takes nothing given a parameter: an object made with no brackets (a variable, new) gets
+		#them with the value, as one made with empty brackets does.
+		'WAIT_INDEX': '1', 'OPEN': 'Box.h', 'CARET': '20:3',
+		'DEBUG': 'edit:renamesearch:---s,edit:changeable,edit:changesignature:+int|iSize|7|,printdisklines:Box.h,printdisklines:Box.cpp'}),
+		[r'^Change Signature: CLid::CLid \[CLid::CLid\(\)\]  \(\): 2 declarations and definitions, 0 overrides, 0 family, 3 calls, 0 other uses$',
+		 r'^Status: Changed CLid::CLid.s signature: 2 declarations and definitions, 3 calls in 2 files\.$',
+		 r'^20\|\tCLid\(int iSize\);$', r'^44\|CLid::CLid\(int iSize\)$', r'^56\|\tCLid\tcLid\(7\);$', r'^57\|\tCLid\*\tpcLid;$', r'^58\|\tCLid\tcOther = CLid\(7\);$', r'^60\|\tpcLid = new CLid\(7\);$'],
+		[]),
 	('change-signature-constructor', dict(MakeConstructorsCopy(), **{
 		#Change Signature of a constructor: an object made with arguments is changed as a call is, however it is
 		#made: a variable's ( and {, new, a temporary, a base's and a member's initialiser.

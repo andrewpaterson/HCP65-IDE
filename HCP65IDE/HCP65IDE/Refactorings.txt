@@ -471,7 +471,8 @@ Where it is
  29. After the queue, question 13: Change Signature of a constructor changes where objects are made with arguments
      (a variable's ( and {, new, a temporary, a base's and a member's initialiser): the index has those as places
      the class is named, so they are found from the class's places (AddConstructions).  By the number of
-     arguments; an object made with none isn't touched.
+     arguments.  An object made with no brackets ("CLid cLid;", "new CLid") is given them when it gets an
+     argument; a data member that no constructor initialises isn't given an initialiser.
 
 
 When the plan is done

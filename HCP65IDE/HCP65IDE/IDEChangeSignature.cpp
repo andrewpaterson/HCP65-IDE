@@ -130,6 +130,7 @@ void SIDESignatureCall::Init(void)
 	asArguments.Init();
 	aiEffects.Init();
 	bValueUsed = false;
+	bBare = false;
 }
 
 
@@ -1033,6 +1034,91 @@ static size CountIDEKeyParameters(const char* szKey)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Whether the constructor is the one an object made with uiArguments
+// arguments is made with: it can take that many, with its default values
+// or without, and no other constructor of its class has that many
+// parameters (the count is all there is to go by).
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEChangeSignature::TakesArguments(SIDESignature* psSignature, size uiArguments)
+{
+	SIDESignatureSite*	psSite;
+	size				uiTotal;
+	size				uiDefaults;
+	size				uiSiteDefaults;
+	size				i;
+	size				j;
+
+	uiTotal = (psSignature->apsSites.NumElements() > 0) ? psSignature->apsSites.GetPtr(0)->asParameters.NumElements() : 0;
+	uiDefaults = 0;
+	for (i = 0; i < psSignature->apsSites.NumElements(); i++)
+	{
+		psSite = psSignature->apsSites.GetPtr(i);
+		uiSiteDefaults = 0;
+		for (j = 0; j < psSite->asParameters.NumElements(); j++)
+		{
+			uiSiteDefaults += psSite->asParameters.Get(j)->bDefault ? 1 : 0;
+		}
+		uiDefaults = (uiSiteDefaults > uiDefaults) ? uiSiteDefaults : uiDefaults;
+	}
+	if ((uiArguments > uiTotal) || (uiArguments + uiDefaults < uiTotal))
+	{
+		return false;
+	}
+	for (i = 0; i < psSignature->aszOverloads.NumElements(); i++)
+	{
+		if (!psSignature->aszOverloads.Get(i)->Equals(psSignature->szKey) && (CountIDEKeyParameters(psSignature->aszOverloads.GetText(i)) == uiArguments))
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// An object made with no brackets at all ("CBox cBox;", "new CBox"), as
+// a call of the constructor with no arguments, if it is the one that
+// takes none: iLastToken is what the brackets would follow.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEChangeSignature::AddBareObject(SIDESignature* psSignature, CIDERefactorUnit* pcUnit, int32 iLastToken, const char* szFileName)
+{
+	SIDESignatureCall*	psCall;
+	SCPPSyntaxRange		sRange;
+	size				i;
+
+	if (!TakesArguments(psSignature, 0) || !pcUnit->GetTokensRange(iLastToken, iLastToken, &sRange))
+	{
+		return false;
+	}
+	for (i = 0; i < psSignature->apsCalls.NumElements(); i++)
+	{
+		psCall = psSignature->apsCalls.GetPtr(i);
+		if ((psCall->sArguments.iLine == sRange.iEndLine) && (psCall->sArguments.iColumn == sRange.iEndColumn) && psCall->szFileName.Equals(szFileName))
+		{
+			return true;
+		}
+	}
+	psCall = (SIDESignatureCall*)malloc(sizeof(SIDESignatureCall));
+	psCall->Init();
+	psCall->szFileName.Set(szFileName);
+	psCall->iLine = sRange.iLine;
+	psCall->iColumn = sRange.iColumn;
+	psCall->sArguments.iLine = sRange.iEndLine;
+	psCall->sArguments.iColumn = sRange.iEndColumn;
+	psCall->sArguments.iEndLine = sRange.iEndLine;
+	psCall->sArguments.iEndColumn = sRange.iEndColumn;
+	psCall->bValueUsed = true;
+	psCall->bBare = true;
+	psSignature->apsCalls.Add(psCall);
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // An object's initialiser, "(3, 4)" or "{3, 4}", as a call of the
 // constructor: its arguments are the call's.  Only if they are as many as
 // the constructor can take, and no other constructor of the class takes
@@ -1043,17 +1129,12 @@ static size CountIDEKeyParameters(const char* szKey)
 bool CIDEChangeSignature::AddInitializer(SIDESignature* psSignature, CIDERefactorUnit* pcUnit, CCPPSyntax* pcInitializer, const char* szFileName)
 {
 	CArraySyntax*		papcElements;
-	SIDESignatureSite*	psSite;
 	SIDESignatureCall*	psCall;
 	CIDEEffectFinder	cEffects;
 	SCPPSyntaxRange		sOpen;
 	SCPPSyntaxRange		sClose;
 	SCPPSyntaxRange		sRange;
-	size				uiTotal;
-	size				uiDefaults;
-	size				uiSiteDefaults;
 	size				i;
-	size				j;
 
 	if (!pcInitializer)
 	{
@@ -1077,29 +1158,9 @@ bool CIDEChangeSignature::AddInitializer(SIDESignature* psSignature, CIDERefacto
 		return false;
 	}
 
-	//As many arguments as it takes, with its default values or without.
-	uiTotal = (psSignature->apsSites.NumElements() > 0) ? psSignature->apsSites.GetPtr(0)->asParameters.NumElements() : 0;
-	uiDefaults = 0;
-	for (i = 0; i < psSignature->apsSites.NumElements(); i++)
-	{
-		psSite = psSignature->apsSites.GetPtr(i);
-		uiSiteDefaults = 0;
-		for (j = 0; j < psSite->asParameters.NumElements(); j++)
-		{
-			uiSiteDefaults += psSite->asParameters.Get(j)->bDefault ? 1 : 0;
-		}
-		uiDefaults = (uiSiteDefaults > uiDefaults) ? uiSiteDefaults : uiDefaults;
-	}
-	if ((papcElements->NumElements() > uiTotal) || (papcElements->NumElements() + uiDefaults < uiTotal))
+	if (!TakesArguments(psSignature, papcElements->NumElements()))
 	{
 		return false;
-	}
-	for (i = 0; i < psSignature->aszOverloads.NumElements(); i++)
-	{
-		if (!psSignature->aszOverloads.Get(i)->Equals(psSignature->szKey) && (CountIDEKeyParameters(psSignature->aszOverloads.GetText(i)) == papcElements->NumElements()))
-		{
-			return false;
-		}
 	}
 	for (i = 0; i < psSignature->apsCalls.NumElements(); i++)
 	{
@@ -1193,7 +1254,14 @@ void CIDEChangeSignature::AddConstruction(SIDESignature* psSignature, SIDELocati
 			pcType = ((CCPPSyntaxNewExpression*)pcUp)->mpcType;
 			if (pcType && (pcType->miFirstToken <= iToken) && (pcType->miLastToken >= iToken) && (((CCPPSyntaxNewExpression*)pcUp)->macpArraySizes.NumElements() == 0))
 			{
-				AddInitializer(psSignature, pcUnit, ((CCPPSyntaxNewExpression*)pcUp)->mpcInitializer, psLocation->szFileName.Text());
+				if (((CCPPSyntaxNewExpression*)pcUp)->mpcInitializer)
+				{
+					AddInitializer(psSignature, pcUnit, ((CCPPSyntaxNewExpression*)pcUp)->mpcInitializer, psLocation->szFileName.Text());
+				}
+				else if (pcUp->miLastToken == pcType->miLastToken)
+				{
+					AddBareObject(psSignature, pcUnit, pcType->miLastToken, psLocation->szFileName.Text());
+				}
 			}
 			return;
 		case CPPS_MemberInitializer:
@@ -1231,13 +1299,19 @@ void CIDEChangeSignature::AddConstruction(SIDESignature* psSignature, SIDELocati
 					AddInitializer(psSignature, pcUnit, pcInit->mpcInitializer, psLocation->szFileName.Text());
 				}
 
-				//A data member: its initialiser in each constructor that names it.
+				//A data member: its initialiser in each constructor that names it.  A variable with no brackets is made
+				//with no arguments (not one only declared, with extern).
 				szKey.Init();
 				asLocations.Init();
+				uiKind = 0;
 				if (pcUnit->GetTokensRange(pcDeclarator->GetName()->miFirstToken, pcDeclarator->GetName()->miFirstToken, &sRange) &&
 					pcModel->GetSymbolAt(psLocation->szFileName.Text(), sRange.iLine, sRange.iColumn, &szKey, &uiKind) && (uiKind == CPPSK_Field))
 				{
 					pcModel->GetSymbolLocations(szKey.Text(), &asLocations, &uiKind);
+				}
+				else if ((uiKind == CPPSK_Variable) && !(pcInit && pcInit->mpcInitializer) && !pcUnit->IsToken(pcDeclaration->miFirstToken, "extern"))
+				{
+					AddBareObject(psSignature, pcUnit, pcDeclarator->GetName()->miLastToken, psLocation->szFileName.Text());
 				}
 				for (j = 0; j < asLocations.NumElements(); j++)
 				{
@@ -2965,6 +3039,11 @@ bool CIDEChangeSignature::Change(SIDESignature* psSignature, SIDESignatureChange
 				}
 				szNew.Init();
 				AppendCallArguments(psSignature, psCall, pasNew, szText, &szNew);
+				if (psCall->bBare && !szNew.Empty())
+				{
+					szNew.Insert(0, "(");
+					szNew.Append(')');
+				}
 				cEdits.Replace(FindIDETextOffset(szText, psCall->sArguments.iLine, psCall->sArguments.iColumn), FindIDETextOffset(szText, psCall->sArguments.iEndLine, psCall->sArguments.iEndColumn), szNew.Text());
 				szNew.Kill();
 			}

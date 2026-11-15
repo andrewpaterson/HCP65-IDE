@@ -12,6 +12,15 @@ public:
 };
 
 
+class CLid
+{
+public:
+	int		miSize;
+
+	CLid(void);
+};
+
+
 class CCrate : public CBox
 {
 public:
