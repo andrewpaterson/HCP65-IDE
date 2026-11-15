@@ -342,6 +342,19 @@ def MakeIncludesCopy():
 	return {'SOLUTION': os.path.join(szFolder, 'Includes.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
 
 
+def MakeMacrosCopy():
+	#A copy of Input/Macros, to convert and inline macros in: Macros.h #defines values (a number, an expression of
+	#another, a string, a float), a run of whole numbers, names an #if and an #ifdef use, and macros with parameters
+	#(one used with ints and with floats, one whose argument does something, one without brackets, one that changes
+	#its argument, one that makes a string, one that is statements, one used inside itself, one of several lines);
+	#Use.cpp uses them all.
+	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
+	atexit.register(shutil.rmtree, szRoot, True)
+	szFolder = os.path.join(szRoot, 'Macros')
+	shutil.copytree(os.path.join(HERE, 'Input', 'Macros'), szFolder)
+	return {'SOLUTION': os.path.join(szFolder, 'Macros.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
+
+
 def MakeKeymapFile(szText=None):
 	#Where a scripted run keeps its keys, with szText in it if it's given.
 	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
@@ -1953,6 +1966,65 @@ CHECKS = [
 		 r'^Status: The #includes of Wide\.cpp are as they should be\.$',
 		 r'^1\|#include "Units\.h"$', r'^2\|#include "Order\.h"$', r'^3\|$', r'^1\|#include "Pipe\.h"$', r'^3\|#include "Drum\.h"$'],
 		[]),
+	('macro-found', dict(MakeMacrosCopy(), **{
+		#Convert Macro: the macro at the caret, its #define and every place its name is written, and what it would
+		#become or why it can't: one an #if or an #ifdef names, one whose body has no brackets round it, one that
+		#changes its argument, one that makes a string of it, one whose parameter's type is declared after it.  One
+		#whose argument is a call the body has twice is shown as a conflict; one used with ints and with floats would
+		#be a function template.
+		'WAIT_INDEX': '1', 'OPEN': 'Macros.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:9:10,edit:macro,edit:caret:10:10,edit:macro,edit:caret:18:10,edit:macro,edit:caret:19:10,edit:macro,edit:caret:20:10,edit:macro,edit:caret:21:10,edit:macro,edit:caret:17:10,edit:macro,edit:caret:16:10,edit:macro'}),
+		[r'^Macro: LIMIT \[4\], Macros\.h line 9$', r'^  Flags\.cpp line 7: on an #if$', r'^  Flags\.cpp line 8: used$', r"^Convert Macro: LIMIT can't be: an #if names it \(Flags\.cpp line 7\)$", r'^Enum of: LIMIT$',
+		 r"^Convert Macro: DEBUG_UNITS can't be: an #if names it \(Flags\.cpp line 4\)$",
+		 r'^Macro: ADD\(a, b\) \[a \+ b\], Macros\.h line 18$', r'^  Use\.cpp line 33: used with \[iCount\], \[1\]$',
+		 r"^Convert Macro: ADD can't be: what it makes isn't one value or one statement where it is used: its body needs brackets round it \(Use\.cpp line 33\)$",
+		 r"^Convert Macro: BUMP can't be: it changes its argument: a function would change its own copy$",
+		 r"^Convert Macro: NAME_OF can't be: its body has # or ##: only a macro can make a string or a name of its arguments$",
+		 r"^Convert Macro: RESET can't be: the code doesn't compile with it a function: its body or its parameters' types name something that isn't declared where it is #defined, or a use gives it what a function can't take$",
+		 r'^Macro: SQUARE\(x\) \[\(\(x\) \* \(x\)\)\], Macros\.h line 17$', r'^Converted: inline int SQUARE\(int x\) \{ return \(\(x\) \* \(x\)\); \}$',
+		 r'^Conflict: Next\(psUnit\), in Use\.cpp at line 32, is worked out 2 times by the macro and would be once by a function\.$',
+		 r'^  Use\.cpp line 29: used with \[iCount\], \[MAX_UNITS\]$', r'^  Use\.cpp line 30: used with \[fRate\], \[2\.0f\]$', r'^Converted: template<class T>$',
+		 r'^inline T BIGGER\(T a, T b\) \{ return \(\(a\) > \(b\) \? \(a\) : \(b\)\); \}$'],
+		[r'^Status']),
+	('macro-convert', dict(MakeMacrosCopy(), **{
+		#Convert Macro done: #defines of values become constants of the types the compiler gives them (a string a
+		#char array), a run of #defines of whole numbers one enum, and macros with parameters inline functions with
+		#the types their uses give them (a function template where those differ; void for one that is statements;
+		#one of several lines on one).
+		'WAIT_INDEX': '1', 'OPEN': 'Macros.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:38:10,edit:macroconvert,edit:caret:23:10,edit:macroconvert,edit:caret:22:10,edit:macroconvert,edit:caret:17:10,edit:macroconvert,edit:caret:16:10,edit:macroconvert,edit:caret:13:10,edit:macroenum:EKind,edit:caret:8:10,edit:macroconvert,edit:caret:7:10,edit:macroconvert,edit:caret:6:10,edit:macroconvert,edit:caret:5:10,edit:macroconvert,printdisklines:Macros.h'}),
+		[r'^Status: Converted the macro CLEAR to a function\.$', r'^Status: Converted the macro LONGER to a function\.$', r'^Status: Converted the macro TWICE to a function\.$',
+		 r'^Conflict: Next\(psUnit\), in Use\.cpp at line 32, is worked out 2 times by the macro and would be once by a function\.$', r'^Status: Converted the macro SQUARE to a function\.$',
+		 r'^Status: Converted the macro BIGGER to a function template\.$', r'^Status: Converted 3 #defines to the enum EKind\.$', r'^Status: Converted the macro RATE to a constant\.$',
+		 r'^Status: Converted the macro TITLE to a constant\.$', r'^Status: Converted the macro SCALE to a constant\.$', r'^Status: Converted the macro MAX_UNITS to a constant\.$',
+		 r'^5\|const int MAX_UNITS = 8;  //The most there are\.$', r'^6\|const int SCALE = \(MAX_UNITS \* 2\);$', r'^7\|const char TITLE\[\] = "Units";$', r'^8\|const float RATE = 1\.5f;$',
+		 r'^9\|#define LIMIT\t\t4$', r'^12\|enum EKind$', r'^13\|\{$', r'^14\|\tKIND_NONE,\t\t//Nothing\.$', r'^15\|\tKIND_SOLID,$', r'^16\|\tKIND_LIQUID,$', r'^17\|\};$',
+		 r'^19\|template<class T>$', r'^20\|inline T BIGGER\(T a, T b\) \{ return \(\(a\) > \(b\) \? \(a\) : \(b\)\); \}$', r'^21\|inline int SQUARE\(int x\) \{ return \(\(x\) \* \(x\)\); \}$',
+		 r'^22\|#define ADD\(a, b\)\t\ta \+ b$', r'^26\|inline int TWICE\(int x\) \{ return \(\(x\) \+ \(x\)\); \}$', r'^27\|inline int LONGER\(int a, int b\) \{ return \(\(a\) \+ \(b\)\); \}$',
+		 r'^\d+\|inline void CLEAR\(SUnit\* p\) \{ \(p\)->miCount = 0; \(p\)->miKind = KIND_NONE; \}$'],
+		[r"can't be"]),
+	('macro-inline', dict(MakeMacrosCopy(), **{
+		#Inline Macro: every use replaced by what the preprocessor makes of it and the #define taken out (a use in
+		#another's argument with it), or only the use at the caret (a string made of its argument; a macro of several
+		#lines; arguments put in the body).  A name that is no macro is none; one an #if names can't go from all its
+		#uses, and at its #define there is no use to inline.
+		'WAIT_INDEX': '1', 'OPEN': 'Use.cpp',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:39:24,edit:macro,edit:macroinline:all,edit:caret:39:16,edit:macroinline:this,edit:caret:35:13,edit:macroinline:this,edit:caret:40:16,edit:macroinline:all,edit:caret:30:10,edit:macroinline:this,edit:caret:19:6,edit:macro,edit:open:Macros.h,edit:caret:9:10,edit:macroinline:all,edit:macroinline:this,printdisklines:Use.cpp,printdisklines:Macros.h'}),
+		[r'^Macro: TWICE\(x\) \[\(\(x\) \+ \(x\)\)\], Macros\.h line 22$', r'^  Use\.cpp line 39: used with \[TWICE\(iCount\)\], at the caret$', r'^  Use\.cpp line 39: used with \[iCount\]$',
+		 r'^Status: Inlined the macro TWICE at 2 uses and took its #define out\.$', r'^Status: Inlined the macro SCALE here\.$', r'^Status: Inlined the macro NAME_OF here\.$',
+		 r'^Status: Inlined the macro LONGER at 1 use and took its #define out\.$', r'^Status: Inlined the macro BIGGER here\.$', r'^Macro: none$',
+		 r'^Inline Macro: An #if names it: only a macro can be there \(Flags\.cpp line 7\)\.$', r"^Inline Macro: The caret isn't on a use of it\.$",
+		 r'^30\|\tfBig = \(\(fRate\) > \(2\.0f\) \? \(fRate\) : \(2\.0f\)\);$', r'^35\|\tszTitle = "iBig";$',
+		 r'^39\|\taiUnits\[0\] = \(MAX_UNITS \* 2\) \+ \(\(\(\(iCount\) \+ \(iCount\)\)\) \+ \(\(\(iCount\) \+ \(iCount\)\)\)\);$', r'^40\|\taiUnits\[1\] = \(\(iBig\) \+ \(2\)\);$',
+		 r'^21\|#define RESET\(p\)', r'^22\|$', r'^23\|$', r'^24\|struct SUnit$'],
+		[r'#define TWICE', r'#define LONGER']),
+	('macro-dialogs', dict(MakeMacrosCopy(), **{
+		#Convert Macro's dialog, and Inline...'s for a macro (the key that inlines a variable or a function).
+		'WAIT_INDEX': '1', 'OPEN': 'Macros.h', 'SETTINGS': MakeSettingsFile(), 'DIALOG_ANSWER': 'Cancel',
+		'DEBUG': 'edit:caret:5:10,convertmacro,answered:1,edit:caret:22:10,inlinevariable,answered:2,edit:caret:19:10,convertmacro,printstatus,printdisklines:Macros.h'}),
+		[r'^Dialog \[Convert Macro MAX_UNITS\] answered Cancel$', r'^Dialog \[Inline Macro TWICE\] answered Cancel$',
+		 r"^Status: Can't convert the macro BUMP: it changes its argument: a function would change its own copy\.$", r'^5\|#define MAX_UNITS\t8\t//The most there are\.$'],
+		[r'^Status: Converted', r'^Status: Inlined']),
 	('rename-assembly-class', dict(MakeRenameAssemblyCopy(), **{
 		#A class renamed in hand written assembly's labels (_CEngine__Init, __0, __2), in parameter lists with its length
 		#(FPC7CEngine to FPC6CMotor), in generated layout constants (SIZEOF_CEngine, CEngine_miSpeed: in the assembly, the
@@ -2457,7 +2529,7 @@ CHECKS = [
 		 r'^Menu Debug: Start Debugging \[F5\], Start Without Debugging \[Ctrl\+F5\], Stop Debugging \[Shift\+F5\], Stop Running\(disabled\), Restart \[Ctrl\+Shift\+F5\], Break All \[Ctrl\+Pause/Break\], Attach to Emulator\.\.\., Step Into \[F11\], Step Over \[F10\], Step Out \[Shift\+F11\], Toggle Breakpoint \[F9\], ',
 		 r'^Menu Window: Reset Window Layout, Close All Documents$',
 		 r'^Menu Editor: Go to Source \[Ctrl\+B\], Find Usages \[Alt\+F7\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Rename\.\.\. \[Shift\+F6\], Refactor>, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\]$',
-		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Introduce Field\.\.\. \[Ctrl\+Alt\+F\](\(disabled\))?, Introduce Constant\.\.\. \[Ctrl\+Alt\+C\](\(disabled\))?, Introduce Parameter\.\.\. \[Ctrl\+Alt\+P\](\(disabled\))?, Introduce Typedef\.\.\. \[Ctrl\+Alt\+K\](\(disabled\))?, Inline\.\.\. \[Ctrl\+Alt\+N\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\.(\(disabled\))?, Push Members Down\.\.\.(\(disabled\))?, Move\.\.\. \[F6\](\(disabled\))?, Copy Class\.\.\.(\(disabled\))?, Extract Method\.\.\. \[Ctrl\+Alt\+M\](\(disabled\))?, Extract Superclass\.\.\.(\(disabled\))?, Extract Interface\.\.\.(\(disabled\))?, Extract Class\.\.\.(\(disabled\))?, Encapsulate Field\.\.\.(\(disabled\))?, Optimise #includes \[Ctrl\+Alt\+O\], Sort #includes$',
+		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Introduce Field\.\.\. \[Ctrl\+Alt\+F\](\(disabled\))?, Introduce Constant\.\.\. \[Ctrl\+Alt\+C\](\(disabled\))?, Introduce Parameter\.\.\. \[Ctrl\+Alt\+P\](\(disabled\))?, Introduce Typedef\.\.\. \[Ctrl\+Alt\+K\](\(disabled\))?, Inline\.\.\. \[Ctrl\+Alt\+N\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\.(\(disabled\))?, Push Members Down\.\.\.(\(disabled\))?, Move\.\.\. \[F6\](\(disabled\))?, Copy Class\.\.\.(\(disabled\))?, Extract Method\.\.\. \[Ctrl\+Alt\+M\](\(disabled\))?, Extract Superclass\.\.\.(\(disabled\))?, Extract Interface\.\.\.(\(disabled\))?, Extract Class\.\.\.(\(disabled\))?, Encapsulate Field\.\.\.(\(disabled\))?, Optimise #includes \[Ctrl\+Alt\+O\], Sort #includes, Convert Macro\.\.\.(\(disabled\))?$',
 		 r'^Menu Explorer: Set as Startup Solution, Set as Startup Project\(disabled\), Remove Solution, Rename\.\.\.(\(disabled\))?$',
 		 r'^Menu item \[View/Nope\] not found$'], []),
 	('menu-clicks', {

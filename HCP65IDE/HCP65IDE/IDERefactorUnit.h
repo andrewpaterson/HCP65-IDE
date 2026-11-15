@@ -110,10 +110,31 @@ public:
 	bool			GetRange(CCPPSyntax* pcNode, SCPPSyntaxRange* psDest);
 	bool			GetTokensRange(int32 iFirstToken, int32 iLastToken, SCPPSyntaxRange* psDest);
 	bool			IsToken(int32 iToken, const char* szText);
+	bool			IsTokenFrom(int32 iToken, int iLine, int iColumn, int iEndLine, int iEndColumn, int32* piLine, int32* piColumn, int32* piBy);
+	bool			FindExpansionTokens(int iLine, int iColumn, int iEndLine, int iEndColumn, int32* piFirstToken, int32* piLastToken);
+	bool			FindSpelledTokens(int iLine, int iColumn, int iEndLine, int iEndColumn, int32 iFrom, int32 iTo, size uiCopies, int32* piFirstToken, int32* piLastToken);
 
 protected:
 	bool			AppendDeclaredTypeOf(CCPPSyntaxDeclSpecifiers* pcSpecifiers, CCPPSyntaxDeclarator* pcDeclarator, CChars* pszDest);
 };
+
+
+//A file's text, and its unit's, as a refactoring would leave them, for checking the file before they are changed
+//(CountIDETrialErrors).  A text that is NULL is the file's as it is.
+class CIDETrialTexts : public CIDEFileTexts
+{
+public:
+	CIDEFileTexts*	mpcTexts;
+	const char*		mszFileName;
+	char*			mszText;
+	const char*		mszUnit;
+	char*			mszUnitText;
+
+	bool	GetFileText(const char* szFileName, CTextFile* pcFile, char** pszText, size* puiLength) override;
+};
+
+
+size	CountIDETrialErrors(CIDECodeModel* pcModel, CIDEFileTexts* pcTexts, const char* szFileName, char* szText, const char* szUnit, char* szUnitText);
 
 
 //Finds whether an expression does something: a call, new, delete, throw, ++, --, an assignment.

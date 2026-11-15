@@ -142,7 +142,8 @@ bool CIDEInlineVariable::CanInline(void)
 	int		iColumn;
 	uint8	uiRole;
 
-	return mpcContent->GetDocuments()->GetActiveTab().IsNotNull() && mpcContent->GetDocuments()->FindSymbolPlace(&iLine, &iColumn, &uiRole);
+	//A macro's name is no symbol of the index: any name may be one.
+	return mpcContent->GetDocuments()->GetActiveTab().IsNotNull() && (mpcContent->GetDocuments()->FindSymbolPlace(&iLine, &iColumn, &uiRole) || mpcContent->GetConvertMacro()->CanConvert());
 }
 
 
@@ -674,13 +675,15 @@ bool CIDEInlineVariable::ShowInline(void)
 	SIDEInlining	sInlining;
 	CChars			szMessage;
 	bool			bResult;
+	bool			bMacro;
 
 	sInlining.Init();
 	if (!FindInlining(&sInlining))
 	{
-		//Not a variable: a function, then (the same key inlines either, as IntelliJ's does).
+		//Not a variable: a macro or a function, then (the same key inlines any of them, as IntelliJ's does).
 		sInlining.Kill();
-		return mpcContent->GetInlineFunction()->ShowInline();
+		bResult = mpcContent->GetConvertMacro()->ShowInline(&bMacro);
+		return bMacro ? bResult : mpcContent->GetInlineFunction()->ShowInline();
 	}
 	if (!sInlining.bPossible)
 	{

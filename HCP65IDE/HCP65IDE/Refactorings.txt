@@ -280,6 +280,15 @@ IntelliJ has none of these for Java.
  16. Convert macro.  A #define of a constant to a const or an enumerator; a function-like macro to an inline
      function (a function template where its arguments' types differ between its uses) where each of its
      arguments is used once.  Inline macro, at one use.  With T6.
+     Done 2026-11-15 but for T6 (IDEConvertMacro.h says what it does): Convert Macro... and, on a macro's name,
+     Inline... (Ctrl+Alt+N).  A macro isn't in the index: its #define and uses are found by its name in the
+     solution's files' texts.  Types are the compiler's, from kept checks: a constant's of its value written as an
+     expression where the #define is, a function's parameters' and result's of the tokens each use made
+     (CIDERefactorUnit::FindExpansionTokens, FindSpelledTokens: a macro's arguments are ordinary tokens of the
+     file, wherever its body put them).  An argument used more than once is allowed, against the plan's "used
+     once": a use where it does something is a conflict shown first.  The files are checked as they would be and
+     must have no more errors.  Left: T6 (question 48); a macro #defined more than once or in the compiler's own
+     headers; variadic macros (inlined, not converted); the first 30 files that use a macro are the ones checked.
  17. . to -> and back; a pointer parameter to a reference and back, every use and call changed.
  18. Make a member function const (and static), its overrides with it, checked against what it changes; its family
      with it where a template's body calls it (T2).
@@ -352,5 +361,6 @@ Where it is
  12. Extract Superclass, Interface and Class (11): done (CIDEExtractClass).
  13. Encapsulate Field (12): done (CIDEEncapsulateField).  Phase 3 is done.
  14. #includes (15): done (CIDEIncludes).
- 15. Phase 4 from 16 (Convert macro): next.  Then 17 to 24 in their order.
+ 15. Convert macro (16): done but for T6 (CIDEConvertMacro; question 48).
+ 16. Phase 4 from 17 (. to ->, pointer parameter to reference): next.  Then 18 to 24 in their order.
 

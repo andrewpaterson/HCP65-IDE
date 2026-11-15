@@ -474,6 +474,201 @@ bool CIDERefactorUnit::IsToken(int32 iToken, const char* szText)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Whether a token is from a range of the file: written there (a macro's
+// argument is, wherever the macro's body put it), or made by a macro
+// whose name is written there.  Where that is in *piLine and *piColumn,
+// and the macro's use in *piBy (-1 if the token is written there itself).
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDERefactorUnit::IsTokenFrom(int32 iToken, int iLine, int iColumn, int iEndLine, int iEndColumn, int32* piLine, int32* piColumn, int32* piBy)
+{
+	CPreprocessedTokens*	pcTokens;
+	SMacroExpansion*		psExpansion;
+	SPreprocessedToken*		psSource;
+	int32					iExpansion;
+
+	psSource = mcUnit.mcTokeniser.GetSource(mcUnit.mcTokeniser.Get((size)iToken));
+	if (psSource->iExpansion == -1)
+	{
+		*piLine = psSource->iLine;
+		*piColumn = psSource->iColumn;
+		*piBy = -1;
+		return (psSource->pcFile == mpcFile) && ((psSource->iLine > iLine) || ((psSource->iLine == iLine) && (psSource->iColumn >= iColumn))) &&
+			   ((psSource->iLine < iEndLine) || ((psSource->iLine == iEndLine) && (psSource->iColumn < iEndColumn)));
+	}
+	pcTokens = mcUnit.mpcUnit->GetTokens();
+	for (iExpansion = psSource->iExpansion; iExpansion != -1; iExpansion = psExpansion->iParent)
+	{
+		psExpansion = pcTokens->GetExpansion((size)iExpansion);
+		if ((psExpansion->pcFile == mpcFile) && ((psExpansion->iLine > iLine) || ((psExpansion->iLine == iLine) && (psExpansion->iColumn >= iColumn))) &&
+			((psExpansion->iLine < iEndLine) || ((psExpansion->iLine == iEndLine) && (psExpansion->iColumn < iEndColumn))))
+		{
+			*piLine = psExpansion->iLine;
+			*piColumn = psExpansion->iColumn;
+			*piBy = iExpansion;
+			return true;
+		}
+	}
+	return false;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The tokens a macro's use is in the unit: the use written in a range of
+// the file (from its name to the end of its arguments), every token it
+// was replaced by, its arguments' among them.  The first run of them: a
+// use that is another macro's argument is there as often as that macro's
+// body has the argument.  False if no macro is used there or it made
+// nothing.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDERefactorUnit::FindExpansionTokens(int iLine, int iColumn, int iEndLine, int iEndColumn, int32* piFirstToken, int32* piLastToken)
+{
+	CPreprocessedTokens*	pcTokens;
+	SMacroExpansion*		psExpansion;
+	size					i;
+	int32					iAtLine;
+	int32					iAtColumn;
+	int32					iBy;
+	bool					bFound;
+
+	*piFirstToken = -1;
+	*piLastToken = -1;
+	if (!mbParsed)
+	{
+		return false;
+	}
+	pcTokens = mcUnit.mpcUnit->GetTokens();
+	bFound = false;
+	for (i = 0; (i < pcTokens->NumExpansions()) && !bFound; i++)
+	{
+		psExpansion = pcTokens->GetExpansion(i);
+		bFound = (psExpansion->pcFile == mpcFile) && (psExpansion->iLine == iLine) && (psExpansion->iColumn == iColumn);
+	}
+	for (i = 0; bFound && (i < mcUnit.mcTokeniser.NumTokens()); i++)
+	{
+		if (IsTokenFrom((int32)i, iLine, iColumn, iEndLine, iEndColumn, &iAtLine, &iAtColumn, &iBy))
+		{
+			if (*piFirstToken < 0)
+			{
+				*piFirstToken = (int32)i;
+			}
+			*piLastToken = (int32)i;
+		}
+		else if (*piFirstToken >= 0)
+		{
+			break;
+		}
+	}
+	return *piFirstToken >= 0;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The tokens, from iFrom to iTo, that are from a range of the file
+// (IsTokenFrom): an argument of a macro's use, the first of the uiCopies
+// times the macro's body has it.  False if there are none, or they aren't
+// one run.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDERefactorUnit::FindSpelledTokens(int iLine, int iColumn, int iEndLine, int iEndColumn, int32 iFrom, int32 iTo, size uiCopies, int32* piFirstToken, int32* piLastToken)
+{
+	size	uiTokens;
+	size	uiTaken;
+	int32	i;
+	int32	iAtLine;
+	int32	iAtColumn;
+	int32	iBy;
+
+	*piFirstToken = -1;
+	*piLastToken = -1;
+	uiTokens = 0;
+	for (i = iFrom; mbParsed && (i <= iTo) && ((size)i < mcUnit.mcTokeniser.NumTokens()); i++)
+	{
+		uiTokens += IsTokenFrom(i, iLine, iColumn, iEndLine, iEndColumn, &iAtLine, &iAtColumn, &iBy) ? 1 : 0;
+	}
+	if ((uiTokens == 0) || (uiCopies == 0) || ((uiTokens % uiCopies) != 0))
+	{
+		return false;
+	}
+	uiTaken = 0;
+	for (i = iFrom; (i <= iTo) && (uiTaken < uiTokens / uiCopies); i++)
+	{
+		if (IsTokenFrom(i, iLine, iColumn, iEndLine, iEndColumn, &iAtLine, &iAtColumn, &iBy))
+		{
+			if (*piFirstToken < 0)
+			{
+				*piFirstToken = i;
+			}
+			*piLastToken = i;
+			uiTaken++;
+		}
+		else if (*piFirstToken >= 0)
+		{
+			//Something else is in among them.
+			*piFirstToken = -1;
+			*piLastToken = -1;
+			return false;
+		}
+	}
+	return *piFirstToken >= 0;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDETrialTexts::GetFileText(const char* szFileName, CTextFile* pcFile, char** pszText, size* puiLength)
+{
+	if (mszText && (StringInsensitiveCompare(szFileName, mszFileName) == 0))
+	{
+		*pszText = mszText;
+		*puiLength = strlen(mszText);
+		return true;
+	}
+	if (mszUnitText && mszUnit && (StringInsensitiveCompare(szFileName, mszUnit) == 0))
+	{
+		*pszText = mszUnitText;
+		*puiLength = strlen(mszUnitText);
+		return true;
+	}
+	return mpcTexts->GetFileText(szFileName, pcFile, pszText, puiLength);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The errors a file's check has (its preprocessing's and its parse's
+// too), with szText as its text (as it is, if NULL) and szUnitText as the
+// text of szUnit, the unit it is parsed in.  MAX_SIZE if it can't be
+// parsed.  A header checked with a text is left with that text in the
+// code model: the caller gives it back its own
+// (CIDECodeModel::SetHeaderText).
+//
+//////////////////////////////////////////////////////////////////////////
+size CountIDETrialErrors(CIDECodeModel* pcModel, CIDEFileTexts* pcTexts, const char* szFileName, char* szText, const char* szUnit, char* szUnitText)
+{
+	CIDETrialTexts		cTexts;
+	CIDERefactorUnit	cUnit;
+	size				uiErrors;
+
+	cTexts.mpcTexts = pcTexts;
+	cTexts.mszFileName = szFileName;
+	cTexts.mszText = szText;
+	cTexts.mszUnit = szUnit;
+	cTexts.mszUnitText = szUnitText;
+	cUnit.Init();
+	uiErrors = cUnit.Parse(pcModel, &cTexts, szFileName, true) ? cUnit.NumErrors() : MAX_SIZE;
+	cUnit.Kill();
+	return uiErrors;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // The tokens written in a range of the file (a selection): the first
 // that starts in it and the last that ends in it.  False if there are
 // none, or one of them is only partly in it.

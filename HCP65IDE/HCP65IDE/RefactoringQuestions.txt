@@ -244,3 +244,22 @@ Open
 47. A forward declaration made from an #include is written after the #includes, two lines down ("class CGauge;"),
     with any the file has there already.  Optimise #includes does this in .cpp files too, not only in headers.  It
     leaves <> #includes, #includes inside an #if, and a .cpp's #include of its own header alone.  Right?
+
+48. Convert Macro and Inline Macro are built for ordinary macros (a #define of a value to a constant or, with the
+    #defines beside it, an enum; a macro with parameters to an inline function, a template where its uses' types
+    differ; Inline... on a macro's name).  T6 is untouched: the classes a macro makes from a text included more
+    than once (ARRAY_BLOCK making CArrayBlock and CArrayLargeBlock).  Should the refactorings treat that included
+    text as a template's body with the macro's uses as its instances (so Rename and the rest reach into it), or is
+    that code going to become real templates, in which case the tool to build is "convert this macro-made class to
+    a template"?
+
+49. Your own code keeps its constants as #defines ("#define IDE_INCLUDE_KEPT 0").  Convert Macro writes
+    "const int NAME = 8;" where the #define was, an enum as
+        enum EName
+        {
+        	NAME_A,		//its comment
+        	NAME_B,
+        };
+    (values written only where they don't count up from 0), and a function on one line,
+    "inline int SQUARE(int x) { return ((x) * (x)); }", keeping the macro's name and its brackets.  Is that the
+    form you want (the brackets taken out, the function under a comment banner, the name changed to your case)?

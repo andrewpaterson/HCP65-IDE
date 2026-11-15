@@ -29,35 +29,6 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDEIncludes.h"
 
 
-//A file's text, and its unit's, as a refactoring would leave them, for checking the file before they are changed.
-class CIDETrialTexts : public CIDEFileTexts
-{
-public:
-	CIDEFileTexts*	mpcTexts;
-	const char*		mszFileName;
-	char*			mszText;
-	const char*		mszUnit;
-	char*			mszUnitText;
-
-	bool	GetFileText(const char* szFileName, CTextFile* pcFile, char** pszText, size* puiLength) override
-	{
-		if (mszText && (StringInsensitiveCompare(szFileName, mszFileName) == 0))
-		{
-			*pszText = mszText;
-			*puiLength = strlen(mszText);
-			return true;
-		}
-		if (mszUnitText && (StringInsensitiveCompare(szFileName, mszUnit) == 0))
-		{
-			*pszText = mszUnitText;
-			*puiLength = strlen(mszUnitText);
-			return true;
-		}
-		return mpcTexts->GetFileText(szFileName, pcFile, pszText, puiLength);
-	}
-};
-
-
 //////////////////////////////////////////////////////////////////////////
 //
 //
@@ -1353,19 +1324,7 @@ bool CIDEIncludes::MakeDependantEdits(SIDEIncludePlan* psPlan, const char* szFil
 //////////////////////////////////////////////////////////////////////////
 size CIDEIncludes::CountErrors(const char* szFileName, char* szText, const char* szUnit, char* szUnitText)
 {
-	CIDETrialTexts		cTexts;
-	CIDERefactorUnit	cUnit;
-	size				uiErrors;
-
-	cTexts.mpcTexts = &mpcContent->GetFindInFiles();
-	cTexts.mszFileName = szFileName;
-	cTexts.mszText = szText;
-	cTexts.mszUnit = szUnit;
-	cTexts.mszUnitText = szUnitText;
-	cUnit.Init();
-	uiErrors = cUnit.Parse(mpcContent->GetCodeModel(), &cTexts, szFileName, true) ? cUnit.NumErrors() : MAX_SIZE;
-	cUnit.Kill();
-	return uiErrors;
+	return CountIDETrialErrors(mpcContent->GetCodeModel(), &mpcContent->GetFindInFiles(), szFileName, szText, szUnit, szUnitText);
 }
 
 

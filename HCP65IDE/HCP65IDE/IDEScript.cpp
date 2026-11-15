@@ -39,7 +39,7 @@ static bool			gbIDEScriptRenameSaves = false;  //rename: saves what it edited (r
 static bool			gbIDEScriptClassFiles = false;  //rename: renames a type's files too (renamesearch's f), never from the settings.
 
 
-static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printfindpreview", "printfindtoolbar", "findtool:", "printstartup", "printworkspace", "rename", "safedelete", "introducevariable", "introducefield", "introduceconstant", "introduceparameter", "changesignature", "pullmembersup", "pushmembersdown", "moveclass", "copyclass", "inlinevariable", "introducetypedef", "extractmethod", "extractsuperclass", "extractinterface", "extractclass", "encapsulatefield", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printsettings", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printprojectfiles", "printdiskfile:", "printdisklines:", "printedits", "printspans", "configuration:", "waitindex" };
+static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printfindpreview", "printfindtoolbar", "findtool:", "printstartup", "printworkspace", "rename", "safedelete", "introducevariable", "introducefield", "introduceconstant", "introduceparameter", "changesignature", "pullmembersup", "pushmembersdown", "moveclass", "copyclass", "inlinevariable", "introducetypedef", "extractmethod", "extractsuperclass", "extractinterface", "extractclass", "encapsulatefield", "convertmacro", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printsettings", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printprojectfiles", "printdiskfile:", "printdisklines:", "printedits", "printspans", "configuration:", "waitindex" };
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -293,6 +293,11 @@ void CIDEScript::RunCommand(const char* szCommand)
 	{
 		//Extract Superclass's, Interface's or Class's dialog for the class at the caret.
 		mpcContent->GetExtractClass()->ShowExtract((szCommand[7] == 's') ? IDE_EXTRACT_SUPERCLASS : ((szCommand[7] == 'i') ? IDE_EXTRACT_INTERFACE : IDE_EXTRACT_DELEGATE));
+	}
+	else if (strcmp(szCommand, "convertmacro") == 0)
+	{
+		//Convert Macro's dialog for the macro at the caret.
+		mpcContent->GetConvertMacro()->ShowConvert();
 	}
 	else if (strcmp(szCommand, "encapsulatefield") == 0)
 	{
@@ -1717,6 +1722,75 @@ void CIDEScript::RunEditStep(const char* szStep)
 		sMove.Kill();
 		aszParts.Kill();
 		szSpec.Kill();
+	}
+	else if ((strcmp(szStep, "macro") == 0) || (strcmp(szStep, "macroconvert") == 0) || (strncmp(szStep, "macroenum:", 10) == 0) || (strncmp(szStep, "macroinline:", 12) == 0))
+	{
+		//The macro at the caret: its #define, its uses and what Convert Macro would make of it (macro); or it
+		//converted (macroconvert), the #defines it stands among made an enum ("macroenum:EName", no name for an
+		//enum without one), or it inlined ("macroinline:all" at every use, "macroinline:this" at the caret's).
+		SIDEMacro	sMacro;
+		CChars		szPrinted;
+		size		uiConflict;
+		int			iMode;
+
+		sMacro.Init();
+		szPrinted.Init();
+		if (!mpcContent->GetConvertMacro()->FindMacro(&sMacro))
+		{
+			printf("Macro: none\n");
+		}
+		else if (strncmp(szStep, "macroinline:", 12) == 0)
+		{
+			iMode = (strcmp(&szStep[12], "this") == 0) ? IDE_MACRO_INLINE_THIS : IDE_MACRO_INLINE_ALL;
+			if (mpcContent->GetConvertMacro()->GetInlineProblem(&sMacro, iMode))
+			{
+				printf("Inline Macro: %s\n", mpcContent->GetConvertMacro()->GetInlineProblem(&sMacro, iMode));
+			}
+			else
+			{
+				mpcContent->GetConvertMacro()->Inline(&sMacro, iMode, &szPrinted);
+				printf("Status: %s\n", szPrinted.Text());
+			}
+		}
+		else
+		{
+			mpcContent->GetConvertMacro()->FindConversion(&sMacro);
+			if (strcmp(szStep, "macro") == 0)
+			{
+				printf("%s", mpcContent->GetConvertMacro()->PrintMacro(&sMacro, &szPrinted));
+			}
+			else if (strncmp(szStep, "macroenum:", 10) == 0)
+			{
+				if (mpcContent->GetConvertMacro()->GetEnumProblem(&sMacro, &szStep[10]))
+				{
+					printf("Convert Macro: %s\n", mpcContent->GetConvertMacro()->GetEnumProblem(&sMacro, &szStep[10]));
+				}
+				else
+				{
+					mpcContent->GetConvertMacro()->ConvertToEnum(&sMacro, &szStep[10], &szPrinted);
+					printf("Status: %s\n", szPrinted.Text());
+				}
+			}
+			else if (!sMacro.bPossible)
+			{
+				printf("Convert Macro: %s can't be: %s\n", sMacro.szName.Text(), sMacro.szWhyNot.Text());
+			}
+			else
+			{
+				for (uiConflict = 0; uiConflict < sMacro.aszConflicts.NumElements(); uiConflict++)
+				{
+					printf("Conflict: %s\n", sMacro.aszConflicts.GetText(uiConflict));
+				}
+				mpcContent->GetConvertMacro()->Convert(&sMacro, &szPrinted);
+				printf("Status: %s\n", szPrinted.Text());
+			}
+		}
+		if (gbIDEScriptRenameSaves)
+		{
+			mpcContent->GetDocuments()->SaveAllFiles();
+		}
+		szPrinted.Kill();
+		sMacro.Kill();
 	}
 	else if ((strcmp(szStep, "includes") == 0) || (strcmp(szStep, "optimiseincludes") == 0) || (strcmp(szStep, "sortincludes") == 0))
 	{
