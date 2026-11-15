@@ -79,11 +79,6 @@ Open
     CDrum); "Keep abstract" leaves it pure virtual in the base class and then nothing is in the way.  A pulled-up or
     pushed-down function isn't given "override" or "virtual" that it didn't have.  Should it be?
 
-22. Move Class to Its Own Files (F6) makes the new files empty and fills them as an edit, so that one undo puts the
-    class back and leaves the new files empty, in the projects.  Nothing breaks, but the empty files stay until you
-    delete them.  The alternative is an undo step that deletes files and project items (as Rename File's renames
-    back): do you want that?
-
 23. The new header gets every #include the old header has, and the new source file every #include the old one
     has (so it also #includes the old header).  That always compiles; what isn't needed is left for the #includes
     refactoring (plan item 15).  The new files aren't added to git (Rename File stages its renames with git mv):
@@ -224,6 +219,15 @@ Answered
     is changed in assembly at all.  Should it always do both processors' labels, whatever is selected?
     Answered 2026-11-15: yes, always both processors' labels, whatever configuration is selected.  To do in Change
     Signature (and wherever else a label is asked of the compiler for one target: Rename's assembly, Move).
+
+22. Move Class to Its Own Files (F6) makes the new files empty and fills them as an edit, so that one undo puts the
+    class back and leaves the new files empty, in the projects.  Nothing breaks, but the empty files stay until you
+    delete them.  The alternative is an undo step that deletes files and project items (as Rename File's renames
+    back): do you want that?
+    Answered 2026-11-15: yes, undo deletes the files and their project entries.  To do: an undo step for the files
+    a refactoring made (Move Class to Its Own Files, Move to File where it makes one, Copy Class, Extract
+    Superclass, Interface and Class): the files deleted and their items taken out of the projects, as Rename
+    File's undo renames back; redo makes them again.
 
 35. Extract Method gives a variable the new function changes, that is used afterwards, back by reference
     ("int& iLow") where there is more than one, and an object (a variable whose type is a class) by reference
