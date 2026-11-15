@@ -1476,6 +1476,16 @@ CHECKS = [
 		 r'^13\|\tvoid\t\t\tClose\(int iDelay\);$', r'^14\|\tint\t\t\t\tTurn\(int iAngle, bool bFast\) const;$', r'^18 lines$',
 		 r'^18\|long CValve::Open\(int iFlow, int iTime\)$', r'^28\|void CValve::Close\(int iDelay\)$', r'^38\|int CValve::Turn\(int iDegrees, bool bFast\) const$', r'^40\|\treturn iDegrees \+ miFlow;$', r'^41 lines$'],
 		[r'^Definitions: refused']),
+	('convert-member-assembly', dict(MakeMoveAssemblyCopy(), **{
+		#Convert to Function, and back to a member, where hand written assembly calls the function by the compiler's
+		#label: the label has the function's class and its parameters in it, so the compiler is asked for it as it
+		#is and as it becomes.
+		'WAIT_INDEX': '1', 'OPEN': 'Tun.cpp', 'CARET': '58:13',
+		'DEBUG': 'edit:renamesearch:---s,edit:membertofunction,printdisklines:TunW65C816.asm,edit:open:Tun.cpp,edit:caret:58:7,edit:functiontomember,printdisklines:TunW65C816.asm'}),
+		[r'^Status: Converted CTun::Stir to the function Stir\(CTun\* pcTun, \.\.\.\): 0 calls changed, 1 label in assembly\.$',
+		 r'^7\|\t\tjsr _CTun__Fill$', r'^8\|\t\tjsr _Stir__FPC4CTun$', r'^9\|\t\tjsr _CTun__Drain__Fi$',
+		 r'^Status: Converted Stir .*1 label in assembly\.$', r'^8\|\t\tjsr _CTun__Stir$'],
+		[]),
 	('pull-up-assembly', dict(MakeMoveAssemblyCopy(), **{
 		#Pull Members Up where hand written assembly names the members by the compiler's labels: a field's layout
 		#constant, a function's label (twice) and an overload's that is told by its parameters get the class they

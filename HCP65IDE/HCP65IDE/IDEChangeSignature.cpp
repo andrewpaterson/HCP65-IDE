@@ -2150,13 +2150,14 @@ bool CIDEChangeSignature::AppendCaretLabel(CChars* pszDest)
 //////////////////////////////////////////////////////////////////////////
 //
 // The label of each symbol changed, asked of the compiler where the
-// symbol is first declared (a kept check of that file for eTarget), into
+// symbol is first declared, or with bDefinitions where it is defined (for
+// a change that moves its declaration; a kept check of that file for eTarget), into
 // paszDest, one for each site (empty where it has none): as it is now
 // (bNew false), or as it is once the change is made, with the file
 // parsed from its editor's text and the name found where it now is.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEChangeSignature::FindLabels(SIDESignature* psSignature, ECPPTarget eTarget, bool bNew, CArrayChars* paszDest)
+void CIDEChangeSignature::FindLabels(SIDESignature* psSignature, ECPPTarget eTarget, bool bNew, CArrayChars* paszDest, bool bDefinitions)
 {
 	CIDERefactorUnit	cUnit;
 	SIDESignatureSite*	psSite;
@@ -2175,7 +2176,7 @@ void CIDEChangeSignature::FindLabels(SIDESignature* psSignature, ECPPTarget eTar
 	{
 		psSite = psSignature->apsSites.GetPtr(i);
 		szLabel.Init();
-		if (psSite->bFirst)
+		if (bDefinitions ? psSite->bDefinition : psSite->bFirst)
 		{
 			iLine = psSite->iLine;
 			iColumn = psSite->iColumn;

@@ -236,6 +236,9 @@ protected:
 public:
 	bool				ReadSite(CIDERefactorUnit* pcUnit, SIDELocation* psLocation, const char* szKey, SIDESignatureSite* psSite, const char** pszWhyNot);
 	bool				ShowConflicts(CArrayChars* paszConflicts);
+	bool				HasAssembly(void);
+	void				FindLabels(SIDESignature* psSignature, ECPPTarget eTarget, bool bNew, CArrayChars* paszDest, bool bDefinitions = false);
+	size				ChangeLabels(SIDESignature* psSignature, CArrayChars* paszOld, CArrayChars* paszNew, CArrayChars* paszOtherOld, CArrayChars* paszOtherNew);
 protected:
 	CIDERefactorUnit*	GetUnit(const char* szFileName);
 	void				KillUnits(void);
@@ -247,10 +250,7 @@ protected:
 	void				AppendCallArguments(SIDESignature* psSignature, SIDESignatureCall* psCall, CArrayIDENewParameters* pasNew, const char* szText, CChars* pszDest);
 	void				ShowChangeStatus(CChars* pszMessage, CChars* pszStatus);
 	bool				GetAssemblyTarget(ECPPTarget* peTarget);
-	bool				HasAssembly(void);
 	ECPPTarget			FindAssemblyFileTarget(const char* szFileName, const char* szText);
-	void				FindLabels(SIDESignature* psSignature, ECPPTarget eTarget, bool bNew, CArrayChars* paszDest);
-	size				ChangeLabels(SIDESignature* psSignature, CArrayChars* paszOld, CArrayChars* paszNew, CArrayChars* paszOtherOld, CArrayChars* paszOtherNew);
 };
 
 

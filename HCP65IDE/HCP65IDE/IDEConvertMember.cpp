@@ -993,13 +993,23 @@ bool CIDEConvertMember::ToFunction(SIDESignature* psSignature, CIDEFileEdits* pc
 //////////////////////////////////////////////////////////////////////////
 bool CIDEConvertMember::Convert(bool bToMember, CChars* pszStatus)
 {
-	CIDEFileEdits	cFiles;
-	SIDESignature	sSignature;
-	CChars			szMessage;
-	size			uiCalls;
-	size			uiBefore;
-	bool			bResult;
-	bool			bFound;
+	CIDEFileEdits		cFiles;
+	SIDESignature		sSignature;
+	SIDESignatureSite*	psSite;
+	CArrayChars			aszOldLabels;
+	CArrayChars			aszNewLabels;
+	CArrayChars			aszOtherOldLabels;
+	CArrayChars			aszOtherNewLabels;
+	CChars				szMessage;
+	CChars				szName;
+	char*				szText;
+	size				uiCalls;
+	size				uiBefore;
+	size				uiLabels;
+	size				i;
+	bool				bResult;
+	bool				bFound;
+	bool				bLabels;
 
 	if (!CanConvert())
 	{
@@ -1038,8 +1048,61 @@ bool CIDEConvertMember::Convert(bool bToMember, CChars* pszStatus)
 	}
 	if (bResult)
 	{
+		//Hand written assembly names it by the compiler's label, which has its class and its parameters in it: the
+		//label of its definition as it is, and as it is afterwards (where the definition's name is by then).
+		aszOldLabels.Init();
+		aszNewLabels.Init();
+		aszOtherOldLabels.Init();
+		aszOtherNewLabels.Init();
+		bLabels = mpcContent->GetChangeSignature()->HasAssembly();
+		if (bLabels)
+		{
+			mpcContent->GetChangeSignature()->FindLabels(&sSignature, CPPT_W65C816, false, &aszOldLabels, true);
+			mpcContent->GetChangeSignature()->FindLabels(&sSignature, CPPT_65C64, false, &aszOtherOldLabels, true);
+			for (i = 0; i < sSignature.apsSites.NumElements(); i++)
+			{
+				psSite = sSignature.apsSites.GetPtr(i);
+				szText = psSite->bDefinition ? cFiles.GetText(psSite->szFileName.Text()) : NULL;
+				if (szText)
+				{
+					psSite->uiNewName = cFiles.GetEdits(psSite->szFileName.Text())->AdjustPosition(FindIDETextOffset(szText, psSite->iLine, psSite->iColumn));
+				}
+			}
+		}
 		cFiles.Apply();
-		szMessage.Append(": ")->Append((uint32)uiCalls)->Append((uiCalls == 1) ? " call changed." : " calls changed.");
+		uiLabels = 0;
+		if (bLabels)
+		{
+			mpcContent->GetChangeSignature()->FindLabels(&sSignature, CPPT_W65C816, true, &aszNewLabels, true);
+			mpcContent->GetChangeSignature()->FindLabels(&sSignature, CPPT_65C64, true, &aszOtherNewLabels, true);
+
+			//Only a label that is this function's: it has its name in it.
+			szName.Init("_");
+			szName.Append(sSignature.szOldName);
+			for (i = 0; i < aszNewLabels.NumElements(); i++)
+			{
+				if (!aszNewLabels.Get(i)->Contains(szName.Text()))
+				{
+					aszNewLabels.Get(i)->Clear();
+				}
+				if (!aszOtherNewLabels.Get(i)->Contains(szName.Text()))
+				{
+					aszOtherNewLabels.Get(i)->Clear();
+				}
+			}
+			szName.Kill();
+			uiLabels = mpcContent->GetChangeSignature()->ChangeLabels(&sSignature, &aszOldLabels, &aszNewLabels, &aszOtherOldLabels, &aszOtherNewLabels);
+		}
+		aszOtherNewLabels.Kill();
+		aszOtherOldLabels.Kill();
+		aszNewLabels.Kill();
+		aszOldLabels.Kill();
+		szMessage.Append(": ")->Append((uint32)uiCalls)->Append((uiCalls == 1) ? " call changed" : " calls changed");
+		if (uiLabels > 0)
+		{
+			szMessage.Append(", ")->Append((uint32)uiLabels)->Append((uiLabels == 1) ? " label in assembly" : " labels in assembly");
+		}
+		szMessage.Append('.');
 	}
 	else
 	{
