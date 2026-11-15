@@ -279,6 +279,16 @@ def MakeMoveMembersCopy():
 	return {'SOLUTION': os.path.join(szFolder, 'MoveMembers.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
 
 
+def MakeInlineVariableCopy():
+	#A copy of Input/InlineVariable (Flow.cpp: functions whose variables have one value, a value that is a call, a
+	#value whose variable is changed, and variables that can't be inlined), to inline variables in.
+	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
+	atexit.register(shutil.rmtree, szRoot, True)
+	szFolder = os.path.join(szRoot, 'InlineVariable')
+	shutil.copytree(os.path.join(HERE, 'Input', 'InlineVariable'), szFolder)
+	return {'SOLUTION': os.path.join(szFolder, 'InlineVariable.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
+
+
 def MakeKeymapFile(szText=None):
 	#Where a scripted run keeps its keys, with szText in it if it's given.
 	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
@@ -1515,6 +1525,44 @@ CHECKS = [
 		'DEBUG': 'copyclass,answered:1,printstatus'}),
 		[r'^Dialog \[Copy CVessel\] answered Cancel$'],
 		[r'Copied']),
+	('inline-variable', dict(MakeInlineVariableCopy(), **{
+		#Inline Variable: iSum is declared at the top of its function and given its value by one statement; both go,
+		#and its value is written where it was used, in parentheses where the expression would take it apart
+		#(iSum * 2).  Then iResult, from a use of it: its value is a call, used once.
+		'WAIT_INDEX': '1', 'OPEN': 'Flow.cpp', 'CARET': '10:6',
+		'DEBUG': 'edit:renamesearch:---s,edit:inlinable,edit:inlinevariable,edit:caret:13:10,edit:inlinevariable,printdisklines:Flow.cpp'}),
+		[r'^Inline Variable: iSum = \[iA \+ iB\], 2 uses, 1 in parentheses, assigned by a statement$', r'^Status: Inlined iSum: 2 uses\.$',
+		 r'^Inline Variable: iResult = \[\(iA \+ iB\) \* 2 \+ Scale\(iA \+ iB\)\], 1 uses, 0 in parentheses, assigned by a statement$', r'^Status: Inlined iResult: 1 use\.$',
+		 r'^8\|int FlowSum\(int iA, int iB\)$', r'^9\|\{$', r'^10\|\treturn \(iA \+ iB\) \* 2 \+ Scale\(iA \+ iB\);$', r'^11\|\}$', r'^12\|$', r'^13\|$', r'^14\|/{74}$'],
+		[r'^Conflict']),
+	('inline-variable-conflicts', dict(MakeInlineVariableCopy(), **{
+		#What stands in the way: a value that is a call and would be made twice; a variable the value reads that is
+		#changed before the use.  Nothing is inlined until it is asked for all the same.  A call used once is inlined
+		#without a word.
+		'WAIT_INDEX': '1', 'OPEN': 'Flow.cpp',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:25:6,edit:inlinevariable,edit:caret:39:6,edit:inlinevariable,edit:caret:26:6,edit:inlinevariable,edit:caret:25:6,edit:inlinevariable:anyway,printdisklines:Flow.cpp'}),
+		[r'^Inline Variable: iScaled = \[Scale\(iA\)\], 2 uses, 0 in parentheses, given by its declaration$', r'^Conflict: Its value does something \(a call, an assignment\), which would be done 2 times\.$',
+		 r'^Inline Variable: iFirst = \[iA \* 2\], 1 uses, 0 in parentheses, assigned by a statement$', r'^Conflict: iA, which its value reads, is changed at line 45, before iFirst is last used\.$',
+		 r'^Inline Variable: iOnce = \[Scale\(iA \+ 1\)\], 1 uses, 0 in parentheses, given by its declaration$', r'^Status: Inlined iOnce: 1 use\.$', r'^Status: Inlined iScaled: 2 uses\.$',
+		 r'^23\|int FlowCall\(int iA\)$', r'^24\|\{$', r'^25\|\treturn Scale\(iA\) \+ Scale\(iA\) \+ Scale\(iA \+ 1\);$', r'^26\|\}$'],
+		[r'Inlined iFirst']),
+	('inline-variable-refused', dict(MakeInlineVariableCopy(), **{
+		#What can't be inlined, and why (the compiler says how each is changed).
+		'WAIT_INDEX': '1', 'OPEN': 'Flow.cpp',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:38:6,edit:inlinevariable,edit:caret:57:7,edit:inlinevariable,edit:caret:58:7,edit:inlinevariable,edit:caret:59:7,edit:inlinevariable,'
+		         'edit:caret:60:7,edit:inlinevariable,edit:caret:61:7,edit:inlinevariable,edit:caret:8:6,edit:inlinevariable,edit:caret:8:18,edit:inlinevariable,printdisklines:Flow.cpp'}),
+		[r"^Inline Variable: iCount can't be inlined: it is changed \(assigned in an expression, \+\+, \+=\) at line 43$", r"^Inline Variable: iX can't be inlined: it is declared with others in one declaration$",
+		 r"^Inline Variable: iTaken can't be inlined: its address is taken at line 67$", r"^Inline Variable: iTwice can't be inlined: it is assigned more than once: again at line 69$",
+		 r"^Inline Variable: iLate can't be inlined: it is given its value in a block that this use is outside: the use at line 74$", r"^Inline Variable: iNever can't be inlined: it is never given a value$",
+		 r'^Inline Variable: no variable$', r'^85 lines$'],
+		[r'^Status: Inlined']),
+	('inline-variable-dialog', dict(MakeInlineVariableCopy(), **{
+		#Ctrl+Alt+N's command: Problems Detected if anything is in the way (Cancel inlines nothing), and the status
+		#line says why a variable can't be inlined.
+		'WAIT_INDEX': '1', 'OPEN': 'Flow.cpp', 'CARET': '25:6', 'SETTINGS': MakeSettingsFile(), 'DIALOG_ANSWER': 'Cancel',
+		'DEBUG': 'inlinevariable,answered:1,printstatus,edit:caret:38:6,inlinevariable,printstatus,edit:caret:26:6,inlinevariable,printstatus,edit:undo,printdisklines:Flow.cpp'}),
+		[r'^Dialog \[Problems Detected\] answered Cancel$', r"^Status: Can't inline iCount: it is changed \(assigned in an expression, \+\+, \+=\) at line 43\.$", r'^Status: Inlined iOnce: 1 use\.$'],
+		[r'Inlined iScaled']),
 	('rename-assembly-class', dict(MakeRenameAssemblyCopy(), **{
 		#A class renamed in hand written assembly's labels (_CEngine__Init, __0, __2), in parameter lists with its length
 		#(FPC7CEngine to FPC6CMotor), in generated layout constants (SIZEOF_CEngine, CEngine_miSpeed: in the assembly, the
@@ -2019,7 +2067,7 @@ CHECKS = [
 		 r'^Menu Debug: Start Debugging \[F5\], Start Without Debugging \[Ctrl\+F5\], Stop Debugging \[Shift\+F5\], Stop Running\(disabled\), Restart \[Ctrl\+Shift\+F5\], Break All \[Ctrl\+Pause/Break\], Attach to Emulator\.\.\., Step Into \[F11\], Step Over \[F10\], Step Out \[Shift\+F11\], Toggle Breakpoint \[F9\], ',
 		 r'^Menu Window: Reset Window Layout, Close All Documents$',
 		 r'^Menu Editor: Go to Source \[Ctrl\+B\], Find Usages \[Alt\+F7\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Rename\.\.\. \[Shift\+F6\], Refactor>, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\]$',
-		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\.(\(disabled\))?, Push Members Down\.\.\.(\(disabled\))?, Move\.\.\. \[F6\](\(disabled\))?, Copy Class\.\.\.(\(disabled\))?, Extract Method\.\.\.\(disabled\)$',
+		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Inline Variable\.\.\. \[Ctrl\+Alt\+N\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\.(\(disabled\))?, Push Members Down\.\.\.(\(disabled\))?, Move\.\.\. \[F6\](\(disabled\))?, Copy Class\.\.\.(\(disabled\))?, Extract Method\.\.\.\(disabled\)$',
 		 r'^Menu Explorer: Set as Startup Solution, Set as Startup Project\(disabled\), Remove Solution, Rename\.\.\.(\(disabled\))?$',
 		 r'^Menu item \[View/Nope\] not found$'], []),
 	('menu-clicks', {

@@ -39,7 +39,7 @@ static bool			gbIDEScriptRenameSaves = false;  //rename: saves what it edited (r
 static bool			gbIDEScriptClassFiles = false;  //rename: renames a type's files too (renamesearch's f), never from the settings.
 
 
-static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printfindpreview", "printfindtoolbar", "findtool:", "printstartup", "printworkspace", "rename", "safedelete", "introducevariable", "changesignature", "pullmembersup", "pushmembersdown", "moveclass", "copyclass", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printsettings", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printprojectfiles", "printdiskfile:", "printdisklines:", "printedits", "printspans", "configuration:", "waitindex" };
+static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printfindpreview", "printfindtoolbar", "findtool:", "printstartup", "printworkspace", "rename", "safedelete", "introducevariable", "changesignature", "pullmembersup", "pushmembersdown", "moveclass", "copyclass", "inlinevariable", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printsettings", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printprojectfiles", "printdiskfile:", "printdisklines:", "printedits", "printspans", "configuration:", "waitindex" };
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -283,6 +283,11 @@ void CIDEScript::RunCommand(const char* szCommand)
 	{
 		//Pull Members Up's or Push Members Down's dialogs for the class at the caret.
 		mpcContent->GetMoveMembers()->ShowMove(strcmp(szCommand, "pullmembersup") == 0);
+	}
+	else if (strcmp(szCommand, "inlinevariable") == 0)
+	{
+		//Inline Variable for the variable at the caret, with Problems Detected if anything is in the way.
+		mpcContent->GetInlineVariable()->ShowInline();
 	}
 	else if (strcmp(szCommand, "copyclass") == 0)
 	{
@@ -1623,6 +1628,39 @@ void CIDEScript::RunEditStep(const char* szStep)
 		}
 		szPrinted.Kill();
 		sMove.Kill();
+	}
+	else if ((strcmp(szStep, "inlinable") == 0) || (strcmp(szStep, "inlinevariable") == 0) || (strcmp(szStep, "inlinevariable:anyway") == 0))
+	{
+		//What Inline Variable found for the variable at the caret (inlinable); or it inlined, if nothing stands in
+		//the way (what does is printed, and ":anyway" inlines all the same, as Continue does).
+		SIDEInlining	sInlining;
+		CChars			szPrinted;
+		size			uiConflict;
+
+		sInlining.Init();
+		szPrinted.Init();
+		if (!mpcContent->GetInlineVariable()->FindInlining(&sInlining))
+		{
+			printf("Inline Variable: no variable\n");
+		}
+		else
+		{
+			printf("%s", mpcContent->GetInlineVariable()->PrintInlining(&sInlining, &szPrinted));
+			for (uiConflict = 0; uiConflict < sInlining.aszConflicts.NumElements(); uiConflict++)
+			{
+				printf("Conflict: %s\n", sInlining.aszConflicts.GetText(uiConflict));
+			}
+			if (sInlining.bPossible && (strcmp(szStep, "inlinable") != 0) && ((sInlining.aszConflicts.NumElements() == 0) || (strcmp(szStep, "inlinevariable:anyway") == 0)))
+			{
+				mpcContent->GetInlineVariable()->Inline(&sInlining);
+				if (gbIDEScriptRenameSaves)
+				{
+					mpcContent->GetDocuments()->SaveAllFiles();
+				}
+			}
+		}
+		szPrinted.Kill();
+		sInlining.Kill();
 	}
 	else if (strncmp(szStep, "copyclass:", 10) == 0)
 	{

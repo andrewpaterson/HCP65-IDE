@@ -143,3 +143,14 @@ Open
     definitions into new files named for the new class (CBarrel: Barrel.h, Barrel.cpp), whether or not the class
     had files of its own.  What else is in the class's files (another class in its header) isn't copied.  The
     class's name in comments inside the copy is left as it was.  Is that what you want of it?
+
+28. Inline Variable (Ctrl+Alt+N) has no dialog: it inlines, and says how many uses in the status line; Problems
+    Detected comes up only if something is in the way.  IntelliJ asks "Inline local variable?" first unless told
+    not to.  A value that is a call is inlined without a word where the variable is used once (the call is still
+    made once, though later than it was), and is a conflict where it is used more than once.  Is that right, or
+    should a call always be asked about?
+
+29. Inline Variable takes a variable declared at the top and assigned by one statement (your style) as having one
+    value, as well as "int x = value;".  It refuses one whose assignment is in a block its uses are outside, or
+    that is used before the assignment.  It only inlines a function's own variables: not a parameter, a field or a
+    constant outside a function (IntelliJ inlines constants).  Do you want constants?

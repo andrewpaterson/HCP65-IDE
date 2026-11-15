@@ -197,6 +197,11 @@ These write a type, so in a template they need T3.
      has side effects.
      In a template: a call through an instance (pv->Next()) is taken to change what it is called on unless every
      instance's function is const.
+     Done 2026-11-15 (IDEInlineVariable.h says what it does): a function's own variable with one value, given by
+     its declaration or by the one statement that assigns it.  How each use changes it is the compiler's answer
+     (CCPPSemanticPass::FindChanges, which is where the template rule is).  A value with side effects isn't
+     refused outright: it is inlined where it is used once, and a conflict to continue past where it would be
+     done more than once or not at all (question 28).  Not constants and fields (question 29).
   7. Introduce Field (Ctrl+Alt+F), Constant (Ctrl+Alt+C) and Parameter (Ctrl+Alt+P).  The same extraction to
      another place; Parameter is a Change Signature too.
   8. Introduce Typedef.  The selected type is given a name, and the other uses of the type replaced.  In a
@@ -310,7 +315,7 @@ Where it is
      CVcxProject::AddItemBeside); a function or a global to another file (the same F6).  Move is done but for
      what is listed under 3.
   6. Copy (4): done.
-  7. Inline Variable (6): next.  Then Introduce Field, Constant and Parameter (7), Typedef (8), Extract Method (9),
-     Inline Function (10), Extract Superclass, Interface and Class (11), Encapsulate Field (12), and Phase 4 from
-     15.
+  7. Inline Variable (6): done (CIDEInlineVariable).
+  8. Introduce Field, Constant and Parameter (7): next.  Then Typedef (8), Extract Method (9), Inline Function
+     (10), Extract Superclass, Interface and Class (11), Encapsulate Field (12), and Phase 4 from 15.
 

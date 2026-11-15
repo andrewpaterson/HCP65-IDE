@@ -114,5 +114,46 @@ protected:
 };
 
 
+//Finds whether an expression does something: a call, new, delete, throw, ++, --, an assignment.
+class CIDEEffectFinder : public CCPPSyntaxChildVisitor
+{
+public:
+	bool	mbEffects;
+
+	void	Look(CCPPSyntax* pcNode)
+	{
+		ECppTokens	eOperator;
+
+		switch (pcNode->GetKind())
+		{
+		case CPPS_CallExpression:
+		case CPPS_NewExpression:
+		case CPPS_DeleteExpression:
+		case CPPS_ThrowExpression:
+			mbEffects = true;
+			break;
+		case CPPS_UnaryExpression:
+			eOperator = ((CCPPSyntaxUnaryExpression*)pcNode)->meOperator;
+			mbEffects |= (eOperator == CT_Increment) || (eOperator == CT_Decrement);
+			break;
+		case CPPS_BinaryExpression:
+			eOperator = ((CCPPSyntaxBinaryExpression*)pcNode)->meOperator;
+			mbEffects |= (eOperator == CT_Assignment) || (eOperator == CT_AssignmentAdd) || (eOperator == CT_AssignmentSubtract) || (eOperator == CT_AssignmentMultiply) ||
+						 (eOperator == CT_AssignmentDivide) || (eOperator == CT_AssignmentModulus) || (eOperator == CT_AssignmentBitwiseAnd) || (eOperator == CT_AssignmentBitwiseOr) ||
+						 (eOperator == CT_AssignmentBitwiseXor) || (eOperator == CT_AssignmentLeftShift) || (eOperator == CT_AssignmentRightShift);
+			break;
+		default:
+			break;
+		}
+		if (!mbEffects)
+		{
+			pcNode->VisitFields(this);
+		}
+	}
+
+	void	Visit(CCPPSyntax* pcChild) override	{ Look(pcChild); }
+};
+
+
 #endif // __IDE_REFACTOR_UNIT_H__
 

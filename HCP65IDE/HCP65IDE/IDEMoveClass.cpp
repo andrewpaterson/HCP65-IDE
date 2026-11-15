@@ -603,7 +603,7 @@ bool CIDEMoveClass::FindMove(SIDEClassMove* psDest, bool bCopy)
 		uiOthers = 0;
 		for (i = 0; i < aszKeys.NumElements(); i++)
 		{
-			if (aszKeys.Get(i)->Equals(psDest->szKey.Text()) || aszKeys.Get(i)->StartsWith(szPrefix.Text()))
+			if (aszKeys.Get(i)->Equals(psDest->szKey.Text()) || aszKeys.Get(i)->StartsWith(szPrefix.Text()) || (aszKeys.GetText(i)[0] == '@'))
 			{
 				continue;
 			}
@@ -1671,7 +1671,7 @@ bool CIDEMoveClass::FindFunctionMove(SIDEFunctionMove* psDest)
 	GetIDEScopedName(psDest->szKey.Text(), &psDest->szName);
 	szScope.Init();
 	GetIDESymbolScope(psDest->szKey.Text(), &szScope);
-	if (szScope.Contains("("))
+	if (szScope.Contains("(") || (psDest->szKey.Text()[0] == '@'))
 	{
 		//A function's own variable.
 		szScope.Kill();
@@ -1922,7 +1922,7 @@ void CIDEMoveClass::AddUsedIncludes(SIDEFileRange* psRange, const char* szTarget
 	{
 		szScope.Init();
 		GetIDESymbolScope(aszKeys.GetText(i), &szScope);
-		bLocal = szScope.Contains("(") || aszKeys.Get(i)->Equals(psMove->szKey.Text());
+		bLocal = szScope.Contains("(") || (aszKeys.GetText(i)[0] == '@') || aszKeys.Get(i)->Equals(psMove->szKey.Text());
 		szScope.Kill();
 		if (bLocal)
 		{
