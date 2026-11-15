@@ -2,6 +2,7 @@
 #include "BaseLib/ArrayInt.h"
 #include "BaseLib/ArrayChars.h"
 #include "BaseLib/Logger.h"
+#include "BaseLib/TextFile.h"
 #include "VisualStudioLib/VcxProject.h"
 #include "TestLib/Assert.h"
 #include "TestLib/AssertFile.h"
@@ -386,6 +387,66 @@ void TestVcxProjectRenameItem(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Items added beside others in a copy of Input/RenameItem/Before: each is
+// the kind of item the one it is beside is, written after it with its
+// directories, and in its filter, but without what the other is built
+// with (Engine_Linux.cpp is excluded from a build: Piston.cpp isn't).
+// Nothing is added beside a file that
+// isn't an item, or for a file that is one already.
+//
+//////////////////////////////////////////////////////////////////////////
+void TestVcxProjectAddItemBeside(void)
+{
+	CVcxProject	cProject;
+	CVcxItem*	pcItem;
+	CChars		szPath;
+	CTextFile	cFile;
+	CFileUtil	cFileUtil;
+
+	cFileUtil.RemoveDir("Output" _FS_ "AddItem");
+	AssertTrue(cFileUtil.TouchDir("Output" _FS_ "AddItem"));
+	AssertTrue(cFileUtil.CopyDir("Input" _FS_ "RenameItem" _FS_ "Before", "Output" _FS_ "AddItem"));
+
+	cProject.Init();
+	AssertTrue(cProject.Read("Output" _FS_ "AddItem" _FS_ "RenameLib" _FS_ "RenameLib.vcxproj"));
+	AssertSize(5, cProject.NumItems());
+
+	ProjectPath(&cProject, "Engine.h", &szPath);
+	AssertTrue(cProject.AddItemBeside(szPath.Text(), "Piston.h"));
+	AssertFalse(cProject.AddItemBeside(szPath.Text(), "Piston.h"));
+	AssertFalse(cProject.AddItemBeside(szPath.Text(), "Sub\\Piston.h"));
+	szPath.Kill();
+	ProjectPath(&cProject, "Source" _FS_ "Engine" _FS_ "Engine_Linux.cpp", &szPath);
+	AssertTrue(cProject.AddItemBeside(szPath.Text(), "Piston.cpp"));
+	szPath.Kill();
+	ProjectPath(&cProject, "NotThere.cpp", &szPath);
+	AssertFalse(cProject.AddItemBeside(szPath.Text(), "Other.cpp"));
+	szPath.Kill();
+
+	AssertSize(7, cProject.NumItems());
+	AssertNotNull(cProject.FindItem("ClInclude", "Engine.h"));
+	pcItem = cProject.FindItem("ClInclude", "Piston.h");
+	AssertNotNull(pcItem);
+	AssertString("Header Files", pcItem->GetFilter());
+	pcItem = cProject.FindItem("ClCompile", "Source\\Engine\\Piston.cpp");
+	AssertNotNull(pcItem);
+	AssertString("Source Files", pcItem->GetFilter());
+
+	//Each is on the line after the one it is beside.
+	cFile.Init();
+	AssertTrue(cFile.Read("Output" _FS_ "AddItem" _FS_ "RenameLib" _FS_ "RenameLib.vcxproj"));
+	cFile.mcText.Replace("\r", "");
+	AssertTrue(cFile.mcText.Contains("    <ClInclude Include=\"Engine.h\" />\n    <ClInclude Include=\"Piston.h\" />\n"));
+	AssertTrue(cFile.mcText.Contains("    </ClCompile>\n    <ClCompile Include=\"Source\\Engine\\Piston.cpp\" />\n  </ItemGroup>\n"));
+	cFile.Kill();
+
+	cProject.Kill();
+	cFileUtil.RemoveDir("Output" _FS_ "AddItem");
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 //
 //////////////////////////////////////////////////////////////////////////
 void TestVcxProject(void)
@@ -397,6 +458,7 @@ void TestVcxProject(void)
 	TestVcxProjectMacros();
 	TestVcxProjectBad();
 	TestVcxProjectRenameItem();
+	TestVcxProjectAddItemBeside();
 
 	TestStatistics();
 }

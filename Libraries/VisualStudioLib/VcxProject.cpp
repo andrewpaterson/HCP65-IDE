@@ -717,6 +717,219 @@ bool CVcxProject::RenameItem(const char* szOldPath, const char* szNewName)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// A new item for a file szNewName in the same directory as the file at
+// szExistingPath, which is an item: the same kind of item (ClInclude,
+// ClCompile), written after it in the .vcxproj and, in its .filters, in
+// the same filter.  A file made from another's (a class moved to files of
+// its own) goes where that one is.  The project is read again.  False if
+// the project has no item for szExistingPath, has one for the new file
+// already, or szNewName isn't a file name alone.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CVcxProject::AddItemBeside(const char* szExistingPath, const char* szNewName)
+{
+	CArrayChars	aszIncludes;
+	CChars		szPath;
+	CChars		szNewPath;
+	CChars		szFilters;
+	CChars		szFileName;
+	size		uiName;
+	size		i;
+	bool		bResult;
+
+	if ((szNewName == NULL) || (szNewName[0] == '\0') || strchr(szNewName, '\\') || strchr(szNewName, '/'))
+	{
+		return false;
+	}
+
+	//The new file's path, and the Include values of the items that are the existing file.
+	szNewPath.Init(szExistingPath);
+	for (uiName = szNewPath.Length(); (uiName > 0) && (szNewPath.Text()[uiName - 1] != '\\') && (szNewPath.Text()[uiName - 1] != '/'); uiName--)
+	{
+	}
+	szNewPath.SetLength(uiName);
+	szNewPath.Append(szNewName);
+	aszIncludes.Init();
+	bResult = true;
+	for (i = 0; i < masItems.NumElements(); i++)
+	{
+		szPath.Init();
+		GetFullPath(masItems.Get(i), &szPath);
+		if (StringInsensitiveCompare(szPath.Text(), szExistingPath) == 0)
+		{
+			aszIncludes.Add(masItems.Get(i)->GetInclude());
+		}
+		else if (StringInsensitiveCompare(szPath.Text(), szNewPath.Text()) == 0)
+		{
+			bResult = false;
+		}
+		szPath.Kill();
+	}
+	szNewPath.Kill();
+	if (!bResult || (aszIncludes.NumElements() == 0))
+	{
+		aszIncludes.Kill();
+		return false;
+	}
+
+	szFileName.Init(mszFileName);
+	szFilters.Init(mszFileName);
+	szFilters.Append(".filters");
+	bResult = AddIncludesBeside(szFileName.Text(), &aszIncludes, szNewName, false);
+	if (bResult && mbFilters)
+	{
+		bResult = AddIncludesBeside(szFilters.Text(), &aszIncludes, szNewName, true);
+	}
+	szFilters.Kill();
+	aszIncludes.Kill();
+
+	Kill();
+	Init();
+	if (!Read(szFileName.Text()))
+	{
+		bResult = false;
+	}
+	szFileName.Kill();
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// After the first element of szFileName's text with an Include="..."
+// whose value is one of paszIncludes (any case), a copy of that element
+// with szNewName in place of the value's file name: all of it (bWhole: a
+// .filters' element, with the Filter in it), or it alone, closed, without
+// what is in it (what one file is built with isn't another's).  The file
+// is written.  False if it can't be read or written, or no element has
+// such a value.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CVcxProject::AddIncludesBeside(const char* szFileName, CArrayChars* paszIncludes, const char* szNewName, bool bWhole)
+{
+	CTextFile	cFile;
+	CChars		szText;
+	CChars		szValue;
+	CChars		szCopy;
+	CChars		szClose;
+	char*		szAttribute;
+	char*		szEnd;
+	char*		szClosing;
+	size		uiStart;
+	size		uiEnd;
+	size		uiName;
+	size		uiElement;
+	size		uiLineStart;
+	size		uiElementEnd;
+	size		i;
+	bool		bFound;
+	bool		bResult;
+
+	cFile.Init();
+	if (!cFile.Read(szFileName))
+	{
+		cFile.Kill();
+		return false;
+	}
+	szText.Init();
+	szText.AppendSubString(cFile.Text(), (size)cFile.Length());
+	cFile.Kill();
+
+	bFound = false;
+	uiStart = 0;
+	while (!bFound)
+	{
+		szAttribute = strstr(&szText.Text()[uiStart], "Include=\"");
+		if (szAttribute == NULL)
+		{
+			break;
+		}
+		uiStart = (size)(szAttribute - szText.Text()) + 9;
+		szEnd = strchr(&szText.Text()[uiStart], '"');
+		if (szEnd == NULL)
+		{
+			break;
+		}
+		uiEnd = (size)(szEnd - szText.Text());
+
+		szValue.Init();
+		szValue.AppendSubString(szText.Text(), uiStart, uiEnd);
+		for (i = 0; !bFound && (i < paszIncludes->NumElements()); i++)
+		{
+			bFound = StringInsensitiveCompare(szValue.Text(), paszIncludes->GetText(i)) == 0;
+		}
+		szValue.Kill();
+		if (!bFound)
+		{
+			uiStart = uiEnd + 1;
+			continue;
+		}
+
+		//The element: from its line's start to the end of the line its "/>" or its closing tag is on.
+		for (uiElement = uiStart; (uiElement > 0) && (szText.Text()[uiElement] != '<'); uiElement--)
+		{
+		}
+		for (uiLineStart = uiElement; (uiLineStart > 0) && (szText.Text()[uiLineStart - 1] != '\n'); uiLineStart--)
+		{
+		}
+		for (uiElementEnd = uiEnd; (szText.Text()[uiElementEnd] != '\0') && (szText.Text()[uiElementEnd] != '>'); uiElementEnd++)
+		{
+		}
+		if ((uiElementEnd > 0) && (szText.Text()[uiElementEnd - 1] != '/'))
+		{
+			szClose.Init("</");
+			for (i = uiElement + 1; (szText.Text()[i] != ' ') && (szText.Text()[i] != '>') && (szText.Text()[i] != '\0'); i++)
+			{
+				szClose.Append(szText.Text()[i]);
+			}
+			szClose.Append('>');
+			szClosing = strstr(&szText.Text()[uiElementEnd], szClose.Text());
+			uiElementEnd = szClosing ? (size)(szClosing - szText.Text()) + szClose.Length() - 1 : uiElementEnd;
+			szClose.Kill();
+		}
+		for (; (szText.Text()[uiElementEnd] != '\0') && (szText.Text()[uiElementEnd] != '\n'); uiElementEnd++)
+		{
+		}
+		if (szText.Text()[uiElementEnd] == '\n')
+		{
+			uiElementEnd++;
+		}
+
+		//Its copy, with the new name after the value's last separator.
+		for (uiName = uiEnd; (uiName > uiStart) && (szText.Text()[uiName - 1] != '\\') && (szText.Text()[uiName - 1] != '/'); uiName--)
+		{
+		}
+		szCopy.Init();
+		szCopy.AppendSubString(szText.Text(), uiLineStart, uiName);
+		szCopy.Append(szNewName);
+		if (bWhole)
+		{
+			szCopy.AppendSubString(szText.Text(), uiEnd, uiElementEnd);
+		}
+		else
+		{
+			szCopy.Append("\" />");
+			szCopy.Append(((uiElementEnd >= 2) && (szText.Text()[uiElementEnd - 2] == '\r')) ? "\r\n" : "\n");
+		}
+		szText.Insert(uiElementEnd, szCopy.Text());
+		szCopy.Kill();
+	}
+
+	bResult = bFound;
+	if (bFound)
+	{
+		cFile.Init();
+		cFile.mcText.AppendSubString(szText.Text(), (lsize)szText.Length());
+		bResult = cFile.Write(szFileName);
+		cFile.Kill();
+	}
+	szText.Kill();
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Each Include="..." in szFileName's text whose value is one of
 // paszIncludes (any case) given szNewName in place of its file name, its
 // directories kept as written, and the file written if anything changed.
