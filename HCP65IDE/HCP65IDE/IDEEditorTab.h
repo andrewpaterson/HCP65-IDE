@@ -127,6 +127,7 @@ public:
 	bool				SaveFile(void);
 	void				Reload(const char* szText);
 	bool				IsModified(void);
+	void				ForgetModified(void);
 	bool				UsesCarriageReturns(void);
 	void				ShowModified(void);
 };

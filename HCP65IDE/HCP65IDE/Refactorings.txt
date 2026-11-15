@@ -424,6 +424,7 @@ Where it is
        - Introduce Variable warns before it replaces every occurrence of what may not be one value (question 9): done.
        - Introduce Constant can replace every occurrence in the file (question 30): done.
        - Encapsulate Field's getter is const, and both are a line each at the bottom of the class's .cpp (question 44): done.
+       - undo takes away the files a refactoring made, and they are staged when they are made (questions 22, 23): done.
 
 
 When the plan is done

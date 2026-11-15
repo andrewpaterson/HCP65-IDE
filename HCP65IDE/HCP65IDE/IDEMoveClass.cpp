@@ -231,6 +231,7 @@ void CIDEMoveClass::Class(void)
 	U_Pointer(mpsMove);
 	U_Pointer(mpsFunctionMove);
 	U_Unknown(CArrayTemplatePtr<CIDERefactorUnit>, mapcUnits);
+	U_Unknown(CArrayChars, maszCreated);
 }
 
 
@@ -1072,7 +1073,9 @@ bool CIDEMoveClass::FindIncludePlace(const char* szText, const char* szIncluded,
 //
 // A new file made, empty, and made an item of every project the file at
 // szBeside is an item of, beside it, and a line of the CMakeLists.txt
-// that list that one.  False if it can't be made.
+// that list that one.  Its making is a step of the undo log, in the
+// group of the edits that write it (BeginCreating): undo takes the file
+// away again.  False if it can't be made.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEMoveClass::CreateFile(const char* szPath, const char* szBeside)
@@ -1096,6 +1099,133 @@ bool CIDEMoveClass::CreateFile(const char* szPath, const char* szBeside)
 		}
 	}
 	AddToListFiles(szBeside, GetIDEFileNamePart(szPath));
+	mpcContent->GetEdit()->LogFileCreated((char*)szPath, (char*)szBeside);
+	maszCreated.Add(szPath);
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Files are about to be made and written (CreateFile, then the edits
+// that fill them): all of it is one undo, from here to EndCreating,
+// which is told whether they were written and saved, and then stages
+// them where their directory is a git repository's (as Rename File
+// stages its renames).
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEMoveClass::BeginCreating(void)
+{
+	maszCreated.ReInit();
+	mpcContent->GetEdit()->BeginUndoGroup();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEMoveClass::EndCreating(bool bWritten)
+{
+	CGitRepository*	pcRepository;
+	size			i;
+
+	for (i = 0; bWritten && (i < maszCreated.NumElements()); i++)
+	{
+		pcRepository = mpcContent->GetGitStatus()->GetGit()->FindRepository(maszCreated.GetText(i));
+		if (pcRepository)
+		{
+			pcRepository->Add(maszCreated.GetText(i));
+		}
+	}
+	maszCreated.ReInit();
+	mpcContent->GetEdit()->EndUndoGroup();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A file a refactoring made taken away again, for the undo of its
+// making: out of git's index if it was staged, off the disk, out of
+// every project that has it and out of the CMakeLists.txt that list it.
+// False if it couldn't be deleted, when nothing else changes.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEMoveClass::RemoveCreatedFile(const char* szPath)
+{
+	CFileUtil			cFileUtil;
+	CGitRepository*		pcRepository;
+	CBuildWorkspace*	pcWorkspace;
+	CVcxProject*		pcProject;
+	size				i;
+
+	pcRepository = mpcContent->GetGitStatus()->GetGit()->FindRepository(szPath);
+	if (pcRepository && pcRepository->IsTracked(szPath))
+	{
+		pcRepository->Unstage(szPath);
+	}
+	if (cFileUtil.Exists(szPath) && !cFileUtil.Delete(szPath))
+	{
+		return false;
+	}
+	pcWorkspace = mpcContent->GetWorkspace();
+	for (i = 0; i < pcWorkspace->NumProjects(); i++)
+	{
+		pcProject = pcWorkspace->GetSolutionProject(i)->GetProject();
+		if (pcProject)
+		{
+			pcProject->RemoveItem(szPath);
+		}
+	}
+	AddToListFiles(szPath, NULL);
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A file that was taken away made again, for the redo of its making:
+// with the text it had, in the projects and the CMakeLists.txt beside
+// the file it was first made beside, and staged.  Nothing is logged.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEMoveClass::RecreateFile(const char* szPath, const char* szBeside, const char* szContent)
+{
+	CFileUtil			cFileUtil;
+	CGitRepository*		pcRepository;
+	CBuildWorkspace*	pcWorkspace;
+	CVcxProject*		pcProject;
+	CTextFile			cFile;
+	size				i;
+	bool				bWritten;
+
+	if (cFileUtil.Exists(szPath))
+	{
+		return false;
+	}
+	cFile.Init();
+	cFile.mcText.Append(szContent);
+	bWritten = cFile.Write(szPath);
+	cFile.Kill();
+	if (!bWritten)
+	{
+		return false;
+	}
+	pcWorkspace = mpcContent->GetWorkspace();
+	for (i = 0; i < pcWorkspace->NumProjects(); i++)
+	{
+		pcProject = pcWorkspace->GetSolutionProject(i)->GetProject();
+		if (pcProject)
+		{
+			pcProject->AddItemBeside(szBeside, GetIDEFileNamePart(szPath));
+		}
+	}
+	AddToListFiles(szBeside, GetIDEFileNamePart(szPath));
+	pcRepository = mpcContent->GetGitStatus()->GetGit()->FindRepository(szPath);
+	if (pcRepository)
+	{
+		pcRepository->Add(szPath);
+	}
 	return true;
 }
 
@@ -1104,7 +1234,8 @@ bool CIDEMoveClass::CreateFile(const char* szPath, const char* szBeside)
 //
 // Each CMakeLists.txt in a project's directory, or one or two above it,
 // that has a line naming the file at szBeside gets that line again after
-// it with szNewName in the name's place.
+// it with szNewName in the name's place.  With no szNewName the lines
+// that name the file are taken out: what was added for it, taken away.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEMoveClass::AddToListFiles(const char* szBeside, const char* szNewName)
@@ -1185,6 +1316,13 @@ void CIDEMoveClass::AddToListFiles(const char* szBeside, const char* szNewName)
 			{
 			}
 			uiNext = FindIDENextLine(szText.Text(), uiAt);
+			if (!szNewName)
+			{
+				szText.Remove(uiLineStart, uiNext);
+				uiAt = uiLineStart;
+				bChanged = true;
+				continue;
+			}
 			szLine.Init();
 			szLine.AppendSubString(szText.Text(), uiLineStart, uiAt);
 			szLine.Append(szNewName);
@@ -1289,7 +1427,8 @@ bool CIDEMoveClass::Move(SIDEClassMove* psMove, const char* szStem, CChars* pszS
 		bResult = (psTarget != NULL);
 	}
 
-	//The new files, empty, in the projects.
+	//The new files, empty, in the projects: one undo with the edits that write them.
+	BeginCreating();
 	bResult = bResult && CreateFile(szNewHeader.Text(), psMove->szHeader.Text());
 	bResult = bResult && (szNewSource.Empty() || CreateFile(szNewSource.Text(), psMove->szSource.Text()));
 	uiIncludes = 0;
@@ -1470,10 +1609,15 @@ bool CIDEMoveClass::Move(SIDEClassMove* psMove, const char* szStem, CChars* pszS
 		szSourceText.Kill();
 		szHeaderText.Kill();
 	}
+	if (!bResult)
+	{
+		EndCreating(false);
+	}
 	if (bResult)
 	{
 		cEdits.Apply();
 		mpcContent->GetDocuments()->SaveAllFiles();
+		EndCreating(true);
 		mpcContent->GetCodeModel()->Reset();
 		mpcContent->GetSolutions()->WorkspaceChanged(true);
 

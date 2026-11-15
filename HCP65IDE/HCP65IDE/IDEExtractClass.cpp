@@ -906,9 +906,14 @@ bool CIDEExtractClass::Extract(SIDEMembersMove* psMove, int iKind, const char* s
 		szSourceText.Append(szSourceBlocks);
 	}
 
+	pcMoveClass->BeginCreating();
 	bResult = (uiMoved > 0) && pcMoveClass->CreateFile(szNewHeader.Text(), psMove->sClass.szFileName.Text());
 	bResult = bResult && (szNewSource.Empty() || pcMoveClass->CreateFile(szNewSource.Text(), szSourceFile.Text()));
 	bResult = bResult && cFiles.GetText(szNewHeader.Text()) && (szNewSource.Empty() || cFiles.GetText(szNewSource.Text()));
+	if (!bResult)
+	{
+		pcMoveClass->EndCreating(false);
+	}
 	if (bResult)
 	{
 		cFiles.GetEdits(szNewHeader.Text())->Insert(0, szHeaderText.Text());
@@ -918,6 +923,7 @@ bool CIDEExtractClass::Extract(SIDEMembersMove* psMove, int iKind, const char* s
 		}
 		cFiles.Apply();
 		mpcContent->GetDocuments()->SaveAllFiles();
+		pcMoveClass->EndCreating(true);
 		mpcContent->GetCodeModel()->Reset();
 		mpcContent->GetSolutions()->WorkspaceChanged(true);
 

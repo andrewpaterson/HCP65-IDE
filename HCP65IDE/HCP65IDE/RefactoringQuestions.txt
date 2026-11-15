@@ -200,6 +200,7 @@ Answered
     a refactoring made (Move Class to Its Own Files, Move to File where it makes one, Copy Class, Extract
     Superclass, Interface and Class): the files deleted and their items taken out of the projects, as Rename
     File's undo renames back; redo makes them again.
+    Done 2026-11-15 (CUndoLog::Created; CIDEMoveClass::BeginCreating, RemoveCreatedFile, RecreateFile; CIDEEdit).
 
 23. The new header gets every #include the old header has, and the new source file every #include the old one
     has (so it also #includes the old header).  That always compiles; what isn't needed is left for the #includes
@@ -208,6 +209,8 @@ Answered
     Answered 2026-11-15: yes: the new files are staged (git add), where the project is in a git repository, and
     unstaged when undo deletes them.  To do in Move Class, Copy Class, Extract Superclass, Extract Interface,
     Extract Class and Move to File; with undo deleting the files a refactoring made (question 45).
+    Done 2026-11-15 (CGitRepository::Add and Unstage; staged by EndCreating, unstaged by RemoveCreatedFile).  The checks
+    don't run in a git repository, so the staging itself is proved by GitLib's test, not by a check of the IDE.
 
 25. F6 is now "Move...": on a class (or a member of one) it is Move Class to Its Own Files; on a function or a
     variable that is in no class it is Move to File, which asks for the header it goes to (a text field: the name

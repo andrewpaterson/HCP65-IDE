@@ -1551,12 +1551,18 @@ CHECKS = [
 		 r"^Move Class: CRight can't be moved: it and what stays in Pair\.h each name the other: their headers would each have to #include the other$"],
 		[r'^Move Class: moved', r'^Status: Moved']),
 	('move-class-undo', dict(MakeMoveMembersCopy(), **{
-		#One undo puts the class back and empties the new files, which stay: what builds is what built before.
+		#One undo puts the class back and takes the new files away, off the disk and out of the project: what builds
+		#is what built before.  Redo makes them again, with what they had, and moves the class again.
 		'WAIT_INDEX': '1', 'OPEN': 'Drum.h', 'CARET': '27:8',
-		'DEBUG': 'edit:renamesearch:---s,edit:moveclass:,edit:undoall,edit:undoall,edit:saveall,printdisklines:Keg.h,printdisklines:Keg.cpp,printdisklines:Drum.h,printdisklines:Drum.cpp,printdisklines:Main.cpp'}),
-		[r'^Status: Moved CKeg to Keg\.h and Keg\.cpp', r'^Disk lines Keg\.h:$', r'^0 lines$|^\(none\)$', r'^Disk lines Keg\.cpp:$', r'^0 lines$|^\(none\)$',
-		 r'^27\|class CKeg : public CVessel$', r'^35 lines$', r'^79\|void CKeg::Vent\(void\)$', r'^82 lines$', r'^1\|#include "Drum\.h"$', r'^2\|#include "Crate\.h"$'],
-		[r'#include "Keg\.h"']),
+		'DEBUG': 'edit:renamesearch:---s,edit:moveclass:,printprojectfiles,edit:undoall,edit:undoall,edit:saveall,printprojectfiles,printdisklines:Keg.h,printdisklines:Keg.cpp,printdisklines:Drum.h,printdisklines:Drum.cpp,printdisklines:Main.cpp,'
+				 'edit:redoall,edit:redoall,printprojectfiles,printdisklines:Keg.h,printdisklines:Keg.cpp,printdisklines:Drum.h,printtabs'}),
+		[r'^Status: Moved CKeg to Keg\.h and Keg\.cpp', r'^Project files: Main\.cpp Vessel\.cpp Drum\.cpp Keg\.cpp Pair\.cpp Vessel\.h Drum\.h Keg\.h Crate\.h Pair\.h$',
+		 r'^Project files: Main\.cpp Vessel\.cpp Drum\.cpp Pair\.cpp Vessel\.h Drum\.h Crate\.h Pair\.h$',
+		 r'^Disk lines Keg\.h:$', r'^\(none\)$', r'^Disk lines Keg\.cpp:$', r'^\(none\)$',
+		 r'^27\|class CKeg : public CVessel$', r'^35 lines$', r'^79\|void CKeg::Vent\(void\)$', r'^82 lines$', r'^1\|#include "Drum\.h"$', r'^2\|#include "Crate\.h"$',
+		 r'^Project files: Main\.cpp Vessel\.cpp Drum\.cpp Keg\.cpp Pair\.cpp Vessel\.h Drum\.h Keg\.h Crate\.h Pair\.h$',
+		 r'^Disk lines Keg\.h:$', r'^6\|class CKeg : public CVessel$', r'^14 lines$', r'^Disk lines Keg\.cpp:$', r'^1\|#include "Keg\.h"$', r'^22 lines$', r'^27 lines$'],
+		[]),
 	('move-class-dialog', dict(MakeMoveMembersCopy(), **{
 		#The dialog: the files' name, suggested from the class's.
 		'WAIT_INDEX': '1', 'OPEN': 'Drum.h', 'CARET': '27:8', 'SETTINGS': MakeSettingsFile(), 'DIALOG_ANSWER': 'OK',

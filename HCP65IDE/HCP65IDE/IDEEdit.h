@@ -51,7 +51,9 @@ public:
 
 //The Edit menu, as IntelliJ's: Undo, Redo, Cut, Copy, Paste and Select All (CIDEEditCommands).  In the editors Undo
 //and Redo (Ctrl+Z and Ctrl+Shift+Z) go back and forward through the edits of every open file in the order they were
-//made (the undo log, fed by the editors' undo events), not only the file's own.
+//made (the undo log, fed by the editors' undo events), not only the file's own.  A file renamed is renamed back, and
+//a file a refactoring made is taken away again (off the disk, out of the projects and out of git's index), its text
+//kept for a redo to make it again.
 //
 //Undo doesn't undo what can't be seen (CRevealingUndo): an edit in a file that isn't the one active, or that its
 //editor is scrolled away from, is shown by the first press, the status line saying to press again, and undone by the
@@ -82,6 +84,7 @@ public:
 	void				FileClosed(char* szFileName);
 	void				FileRenamed(char* szOldFileName, char* szNewFileName);
 	void				LogFileRenamed(char* szOldFileName, char* szNewFileName);
+	void				LogFileCreated(char* szFileName, char* szBeside);
 	void				PressUndo(bool bRedo) override;
 	bool				CanPressUndo(bool bRedo) override;
 	void				BeginUndoGroup(void);
@@ -92,6 +95,8 @@ protected:
 	bool				RedoLogGroup(size uiGroup, bool bShow);
 	void				RenamesChanged(size uiGroup);
 	void				ShowRenameNotMoved(char* szFrom, char* szTo);
+	void				KeepCreatedTexts(size uiGroup);
+	bool				RemoveCreatedFile(SUndoLogStep* psStep);
 
 	Ptr<CIDEEditorTab>	FindGroupTab(bool bRedo);
 	bool				IsUndoShown(bool bRedo) override;

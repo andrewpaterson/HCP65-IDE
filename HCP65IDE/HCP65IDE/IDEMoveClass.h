@@ -124,6 +124,7 @@ protected:
 	SIDEClassMove*						mpsMove;  //The move the dialog is shown for.  Not held.
 	SIDEFunctionMove*					mpsFunctionMove;  //...or this one.
 	CArrayTemplatePtr<CIDERefactorUnit>	mapcUnits;  //The files parsed for the move being found.
+	CArrayChars							maszCreated;  //The files made since BeginCreating, to stage when they are written.
 
 public:
 	void	Init(CIDEContent* pcContent);
@@ -136,6 +137,10 @@ public:
 	void	AddEditorItems(Ptr<CMenuContainer> pRefactor);
 	void	AddContextActions(SIDECaretContext* psContext);
 	bool	CanMove(void);
+	void	BeginCreating(void);
+	void	EndCreating(bool bWritten);
+	bool	RemoveCreatedFile(const char* szPath);
+	bool	RecreateFile(const char* szPath, const char* szBeside, const char* szContent);
 	void	QueueMove(void);
 	bool	ShowMove(void);
 	bool	FindMove(SIDEClassMove* psDest, bool bCopy = false);

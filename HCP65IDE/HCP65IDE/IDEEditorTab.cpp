@@ -617,6 +617,19 @@ bool CIDEEditorTab::SaveFile(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// The text is taken as saved, as it is: the tab can be closed without
+// asking (its file is being taken away by an undo).
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEEditorTab::ForgetModified(void)
+{
+	muiSavedUndo = mpEditor->GetUndoId();
+	ShowModified();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // The file's text was changed by something else: the tab shows szText,
 // the file as it is now, unmodified.  It is an edit, so the text is
 // highlighted again and the lines' code and change bars are worked out
