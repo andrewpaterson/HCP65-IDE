@@ -355,6 +355,16 @@ def MakeMacrosCopy():
 	return {'SOLUTION': os.path.join(szFolder, 'Macros.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
 
 
+def MakeEnumsCopy():
+	#A copy of Input/Enums, to make enums enum classes in: EMode and ELevel in Modes.h, EState in CMotor, and what
+	#names their enumerators in Modes.cpp and Use.cpp (ELevel's as an integer too).
+	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
+	atexit.register(shutil.rmtree, szRoot, True)
+	szFolder = os.path.join(szRoot, 'Enums')
+	shutil.copytree(os.path.join(HERE, 'Input', 'Enums'), szFolder)
+	return {'SOLUTION': os.path.join(szFolder, 'Enums.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
+
+
 def MakePointersCopy():
 	#A copy of Input/Pointers, to make pointers references in and back: CVat's functions take SLevel by pointer and
 	#by reference (one overridden, one that calls itself, one that tests its pointer, one that steps it), and Use
@@ -2276,6 +2286,24 @@ CHECKS = [
 		[r'^Dialog \[Convert Macro MAX_UNITS\] answered Cancel$', r'^Dialog \[Inline Macro TWICE\] answered Cancel$',
 		 r"^Status: Can't convert the macro BUMP: it changes its argument: a function would change its own copy\.$", r'^5\|#define MAX_UNITS\t8\t//The most there are\.$'],
 		[r'^Status: Converted', r'^Status: Inlined']),
+	('enum-to-class', dict(MakeEnumsCopy(), **{
+		#Convert Enum to Enum Class: EMode's enum becomes enum class and its enumerators get its name wherever they
+		#are named without it (not in its own list, nor where it is written already); from an enumerator, CMotor's
+		#EState, whose enumerators are named in the class and with the class's name; and ELevel, whose value is used
+		#as an integer, is refused.
+		'WAIT_INDEX': '1', 'OPEN': 'Modes.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:5:7,edit:enumtoclass,edit:caret:25:4,edit:enumtoclass,edit:caret:13:7,edit:enumtoclass,edit:caret:20:8,edit:convertableenum,'
+				 'printdisklines:Modes.h,printdisklines:Modes.cpp,printdisklines:Use.cpp'}),
+		[r'^Convert Enum: EMode, 3 enumerators, 1 declaration, 4 uses in 3 files$', r'^Status: Made EMode an enum class: 4 uses of its enumerators given its name, in 3 files\.$',
+		 r'^Convert Enum: EState, 2 enumerators, 1 declaration, 3 uses in 2 files$', r'^Status: Made EState an enum class: 3 uses of its enumerators given its name, in 3 files\.$',
+		 r'^Convert Enum: ELevel, 2 enumerators, 1 declaration, 3 uses in 2 files$',
+		 r"^Status: Can't make ELevel an enum class: its values are used as integers, or integers as its values \(\d+ errors? with it one\)\.$",
+		 r'^Convert Enum: no enum at the caret$',
+		 r'^5\|enum class EMode$', r'^9\|\tEM_Fast = EM_Slow \* 2,$', r'^13\|enum ELevel$', r'^23\|\tenum class EState$', r'^34\|\tbool\tIsFast\(void\) \{ return meMode == EMode::EM_Fast; \}$', r'^39 lines$',
+		 r'^10\|\tmeMode = EMode::EM_Off;$', r'^11\|\tmeState = EState::ES_Idle;$', r'^12\|\tmeLevel = EL_Low;$', r'^24\|\tcase EMode::EM_Slow:$', r'^26\|\tcase EMode::EM_Fast:$',
+		 r'^29\|\t\treturn \(meState == EState::ES_Running\) \? 3 : 0;$', r'^31 lines$',
+		 r'^12\|\tpcMotor->meMode = EMode::EM_Fast;$', r'^13\|\tpcMotor->meState = CMotor::EState::ES_Running;$', r'^14\|\tpcMotor->meLevel = EL_High;$', r'^15\|\tiNext = pcMotor->meLevel \+ 1;$', r'^17 lines$'],
+		[]),
 	('pointer-parameter', dict(MakePointersCopy(), **{
 		#Convert Pointer to Reference on a parameter: its * a & in every declaration and definition of its function
 		#and of the function that overrides it, p->x made p.x, (*p).x made p.x, *p made p, p given on made &p, and
@@ -3039,7 +3067,7 @@ CHECKS = [
 		 r'^Menu Debug: Start Debugging \[F5\], Start Without Debugging \[Ctrl\+F5\], Stop Debugging \[Shift\+F5\], Stop Running\(disabled\), Restart \[Ctrl\+Shift\+F5\], Break All \[Ctrl\+Pause/Break\], Attach to Emulator\.\.\., Step Into \[F11\], Step Over \[F10\], Step Out \[Shift\+F11\], Toggle Breakpoint \[F9\], ',
 		 r'^Menu Window: Reset Window Layout, Close All Documents$',
 		 r'^Menu Editor: Go to Source \[Ctrl\+B\], Find Usages \[Alt\+F7\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Show Context Actions \[Alt\+Enter\], Rename\.\.\. \[Shift\+F6\], Refactor>, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\]$',
-		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Introduce Field\.\.\. \[Ctrl\+Alt\+F\](\(disabled\))?, Introduce Constant\.\.\. \[Ctrl\+Alt\+C\](\(disabled\))?, Introduce Parameter\.\.\. \[Ctrl\+Alt\+P\](\(disabled\))?, Introduce Typedef\.\.\. \[Ctrl\+Alt\+K\](\(disabled\))?, Inline\.\.\. \[Ctrl\+Alt\+N\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Unify Parameter Names(\(disabled\))?, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\.(\(disabled\))?, Push Members Down\.\.\.(\(disabled\))?, Move\.\.\. \[F6\](\(disabled\))?, Copy Class\.\.\.(\(disabled\))?, Extract Method\.\.\. \[Ctrl\+Alt\+M\](\(disabled\))?, Extract Superclass\.\.\.(\(disabled\))?, Extract Interface\.\.\.(\(disabled\))?, Extract Class\.\.\.(\(disabled\))?, Encapsulate Field\.\.\.(\(disabled\))?, Optimise #includes \[Ctrl\+Alt\+O\], Convert Macro\.\.\.(\(disabled\))?, Convert Pointer to Reference(\(disabled\))?, Convert Reference to Pointer(\(disabled\))?, Make Member Function const(\(disabled\))?, Make Member Function static(\(disabled\))?, Convert Function to Member Function(\(disabled\))?, Convert Member Function to Function(\(disabled\))?, Extract Template Parameter\.\.\., Remove Template Parameter$',
+		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Introduce Field\.\.\. \[Ctrl\+Alt\+F\](\(disabled\))?, Introduce Constant\.\.\. \[Ctrl\+Alt\+C\](\(disabled\))?, Introduce Parameter\.\.\. \[Ctrl\+Alt\+P\](\(disabled\))?, Introduce Typedef\.\.\. \[Ctrl\+Alt\+K\](\(disabled\))?, Inline\.\.\. \[Ctrl\+Alt\+N\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Unify Parameter Names(\(disabled\))?, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\.(\(disabled\))?, Push Members Down\.\.\.(\(disabled\))?, Move\.\.\. \[F6\](\(disabled\))?, Copy Class\.\.\.(\(disabled\))?, Extract Method\.\.\. \[Ctrl\+Alt\+M\](\(disabled\))?, Extract Superclass\.\.\.(\(disabled\))?, Extract Interface\.\.\.(\(disabled\))?, Extract Class\.\.\.(\(disabled\))?, Encapsulate Field\.\.\.(\(disabled\))?, Optimise #includes \[Ctrl\+Alt\+O\], Convert Macro\.\.\.(\(disabled\))?, Convert Pointer to Reference(\(disabled\))?, Convert Reference to Pointer(\(disabled\))?, Convert Enum to Enum Class(\(disabled\))?, Make Member Function const(\(disabled\))?, Make Member Function static(\(disabled\))?, Convert Function to Member Function(\(disabled\))?, Convert Member Function to Function(\(disabled\))?, Extract Template Parameter\.\.\., Remove Template Parameter$',
 		 r'^Menu Explorer: Set as Startup Solution, Set as Startup Project\(disabled\), Remove Solution, Rename\.\.\.(\(disabled\))?$',
 		 r'^Menu item \[View/Nope\] not found$'], []),
 	('menu-clicks', {

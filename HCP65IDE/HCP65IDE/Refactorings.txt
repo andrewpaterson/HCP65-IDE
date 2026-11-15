@@ -441,6 +441,12 @@ Where it is
        - Introduce Typedef in a header names the type in the files that #include it too (question 33): done.
        - Inline Function gives a changed parameter a variable, and takes a call out of an expression (question 39): done.
        - Move to File's field completes, and a button opens a chooser of the solution's files (question 25): done.
+ 26. The queue's (7), plan item 22: Convert Enum to Enum Class (CIDEConvertEnum).  The enum's "enum" becomes "enum
+     class" and its enumerators' uses get its name, across the solution; refused where the files don't compile
+     with it one.  For that the compiler was made to refuse an enum class's value as an integer (it took any).
+     Still to do: write the casts where its value is used as an integer instead of refusing (the compiler is to
+     record those places for one named enum), and a compiler hole: arithmetic on an enum class's enumerator in an
+     arm of ?: ("c ? E::A + 1 : 0") isn't reported.
 
 
 When the plan is done

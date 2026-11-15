@@ -1935,6 +1935,36 @@ void CIDEScript::RunEditStep(const char* szStep)
 		szPrinted.Kill();
 		sChange.Kill();
 	}
+	else if ((strcmp(szStep, "convertableenum") == 0) || (strcmp(szStep, "enumtoclass") == 0))
+	{
+		//What Convert Enum to Enum Class found for the enum at the caret (convertableenum); or it converted, with what
+		//the status bar would say.
+		SIDEEnumConversion	sConversion;
+		CChars				szPrinted;
+
+		sConversion.Init();
+		szPrinted.Init();
+		if (!mpcContent->GetConvertEnum()->FindConversion(&sConversion))
+		{
+			printf("Convert Enum: no enum at the caret\n");
+		}
+		else
+		{
+			printf("%s", mpcContent->GetConvertEnum()->PrintConversion(&sConversion, &szPrinted));
+			if (strcmp(szStep, "enumtoclass") == 0)
+			{
+				szPrinted.Clear();
+				mpcContent->GetConvertEnum()->Convert(&sConversion, &szPrinted);
+				printf("Status: %s\n", szPrinted.Text());
+				if (gbIDEScriptRenameSaves)
+				{
+					mpcContent->GetDocuments()->SaveAllFiles();
+				}
+			}
+		}
+		szPrinted.Kill();
+		sConversion.Kill();
+	}
 	else if ((strcmp(szStep, "pointertoreference") == 0) || (strcmp(szStep, "referencetopointer") == 0))
 	{
 		//The parameter or local variable at the caret made a reference (or a pointer), with what the status bar

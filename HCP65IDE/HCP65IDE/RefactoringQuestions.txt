@@ -81,6 +81,13 @@ Open
     leaves <> #includes, #includes inside an #if, and a .cpp's #include of its own header alone.  Right?
 
 
+58. Convert Enum to Enum Class (new, on an enum or one of its enumerators; no key) gives every use of an enumerator
+    the enum's name, and refuses if the code then doesn't compile: an enum class's value is no integer, so
+    "eLevel + 1", "aiCounts[eLevel]", "if (eMode)" and "eFlags = FLAG_A | FLAG_B" all stop it.  I mean to have it
+    write the casts instead ("(int)eLevel + 1", "(EFlags)((int)FLAG_A | (int)FLAG_B)") and show them first as
+    Problems Detected's list, so nothing is refused for that.  Is that what you want, or should an enum used as
+    flags or as an index stay an enum (refused, with the places listed)?
+
 Answered
 --------
 

@@ -200,6 +200,7 @@ size CIDEContextActions::FindActions(SIDECaretContext* psDest)
 		mpcContent->GetMemberQualifier()->AddContextActions(psDest);
 		mpcContent->GetConvertMember()->AddContextActions(psDest);
 		mpcContent->GetConvertPointer()->AddContextActions(psDest);
+		mpcContent->GetConvertEnum()->AddContextActions(psDest);
 		mpcContent->GetEncapsulateField()->AddContextActions(psDest);
 		mpcContent->GetMoveClass()->AddContextActions(psDest);
 		mpcContent->GetMoveMembers()->AddContextActions(psDest);
