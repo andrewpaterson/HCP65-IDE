@@ -1486,6 +1486,35 @@ CHECKS = [
 		'DEBUG': 'moveclass,answered:1,printstatus'}),
 		[r'^Dialog \[Move ReadGauge to File\] answered Cancel$'],
 		[r'Moved ReadGauge']),
+	('copy-class', dict(MakeDefinitionsCopy(), **{
+		#Copy Class: CTank as CBarrel, in Barrel.h and Barrel.cpp made as Move Class makes them, with the class's name
+		#changed where the copied text names it (the class, its constructor in the class and outside it, the name
+		#before each member's definition), and Tank.h and Tank.cpp as they were.  A name that is the class's own, or
+		#taken, or no name, is refused.
+		'WAIT_INDEX': '1', 'OPEN': 'Tank.h', 'CARET': '5:8',
+		'DEBUG': 'edit:renamesearch:---s,edit:copyclass:CTank,edit:copyclass:CStore,edit:copyclass:9x,edit:copyclass:CBarrel,printdisklines:Barrel.h,printdisklines:Barrel.cpp,printdisklines:Tank.h,printdisklines:Tank.cpp'}),
+		[r'^Copy Class: the copy has another name$', r'^Copy Class: there is a CStore already$', r"^Copy Class: the copy's name is letters, digits and _$",
+		 r'^Status: Copied CTank as CBarrel to Barrel\.h and Barrel\.cpp: 4 definitions outside it\.$', r'^Copy Class: copied$',
+		 r'^1\|#ifndef __BARREL_H__$', r'^5\|class CBarrel$', r'^12\|\t\t\tCBarrel\(int iSize\);$', r'^13\|\tvoid\tInit\(int iSize\);$', r'^27\|\};$', r'^30\|#endif // __BARREL_H__$', r'^30 lines$',
+		 r'^1\|#include "Barrel\.h"$', r'^2\|#include "Tank\.h"$', r'^9\|CBarrel::CBarrel\(int iCapacity\) : miLevel\(0\), miSize\(iCapacity\)$', r'^18\|void CBarrel::Init\(int iSize\)$',
+		 r'^27\|// Whether it holds all it can\.$', r'^30\|bool CBarrel::IsFull\(void\) const$', r'^40\|void CBarrel::Empty\(void\)$', r'^46 lines$',
+		 r'^5\|class CTank$', r'^12\|\t\t\tCTank\(int iSize\);$', r'^52 lines$', r'^8\|CTank::CTank\(int iCapacity\) : miLevel\(0\), miSize\(iCapacity\)$', r'^65 lines$'],
+		[]),
+	('copy-class-template', dict(MakeMoveMembersCopy(), **{
+		#A class template, with the member its header defines outside it; the copy's header #includes the one it was
+		#copied from, where the class it derives from is.
+		'WAIT_INDEX': '1', 'OPEN': 'Crate.h', 'CARET': '16:8',
+		'DEBUG': 'edit:renamesearch:---s,edit:copyclass:CChest,printdisklines:Chest.h,printdisklines:Crate.h'}),
+		[r'^Status: Copied CCrate as CChest to Chest\.h: 1 definition outside it\.$',
+		 r'^1\|#ifndef __CHEST_H__$', r'^3\|#include "Crate\.h"$', r'^6\|template<class M>$', r'^7\|class CChest : public CBox<M>$', r'^14\|template<class M>$', r'^15\|int CChest<M>::Size\(void\)$', r'^21 lines$',
+		 r'^16\|class CCrate : public CBox<M>$', r'^24\|int CCrate<M>::Size\(void\)$', r'^30 lines$'],
+		[]),
+	('copy-class-dialog', dict(MakeMoveMembersCopy(), **{
+		#The dialog starts with the class's own name, which the copy can't have: OK is refused, and it says why.
+		'WAIT_INDEX': '1', 'OPEN': 'Vessel.h', 'CARET': '5:8', 'SETTINGS': MakeSettingsFile(), 'DIALOG_ANSWER': 'Cancel',
+		'DEBUG': 'copyclass,answered:1,printstatus'}),
+		[r'^Dialog \[Copy CVessel\] answered Cancel$'],
+		[r'Copied']),
 	('rename-assembly-class', dict(MakeRenameAssemblyCopy(), **{
 		#A class renamed in hand written assembly's labels (_CEngine__Init, __0, __2), in parameter lists with its length
 		#(FPC7CEngine to FPC6CMotor), in generated layout constants (SIZEOF_CEngine, CEngine_miSpeed: in the assembly, the
@@ -1990,7 +2019,7 @@ CHECKS = [
 		 r'^Menu Debug: Start Debugging \[F5\], Start Without Debugging \[Ctrl\+F5\], Stop Debugging \[Shift\+F5\], Stop Running\(disabled\), Restart \[Ctrl\+Shift\+F5\], Break All \[Ctrl\+Pause/Break\], Attach to Emulator\.\.\., Step Into \[F11\], Step Over \[F10\], Step Out \[Shift\+F11\], Toggle Breakpoint \[F9\], ',
 		 r'^Menu Window: Reset Window Layout, Close All Documents$',
 		 r'^Menu Editor: Go to Source \[Ctrl\+B\], Find Usages \[Alt\+F7\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Rename\.\.\. \[Shift\+F6\], Refactor>, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\]$',
-		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\.(\(disabled\))?, Push Members Down\.\.\.(\(disabled\))?, Move\.\.\. \[F6\](\(disabled\))?, Extract Method\.\.\.\(disabled\)$',
+		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\.(\(disabled\))?, Push Members Down\.\.\.(\(disabled\))?, Move\.\.\. \[F6\](\(disabled\))?, Copy Class\.\.\.(\(disabled\))?, Extract Method\.\.\.\(disabled\)$',
 		 r'^Menu Explorer: Set as Startup Solution, Set as Startup Project\(disabled\), Remove Solution, Rename\.\.\.(\(disabled\))?$',
 		 r'^Menu item \[View/Nope\] not found$'], []),
 	('menu-clicks', {

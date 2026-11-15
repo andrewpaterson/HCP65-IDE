@@ -138,3 +138,8 @@ Open
 
 26. Moving to another namespace isn't built: your code has one file with a namespace in it, so I left it rather
     than build it untried.  A function that is in a namespace is refused by Move to File.  Say if you want it.
+
+27. Copy Class has no key: IntelliJ's is F5, which is Start Debugging here.  It copies the class and its members'
+    definitions into new files named for the new class (CBarrel: Barrel.h, Barrel.cpp), whether or not the class
+    had files of its own.  What else is in the class's files (another class in its header) isn't copied.  The
+    class's name in comments inside the copy is left as it was.  Is that what you want of it?

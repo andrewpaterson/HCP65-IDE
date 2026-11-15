@@ -260,6 +260,7 @@ bool CIDEMoveClass::Load(CObjectReader* pcFile) { return false; }
 void CIDEMoveClass::AddCommands(Ptr<CCommandSet> pCommands)
 {
 	pCommands->Add("Refactor.MoveClass", "Move...", "F6", Ptr<CImageCel>(), this, &CIDEMoveClass::QueueMove)->SetEnabledCheck(this, &CIDEMoveClass::CanMove);
+	pCommands->Add("Refactor.CopyClass", "Copy Class...", "", Ptr<CImageCel>(), this, &CIDEMoveClass::QueueCopy)->SetEnabledCheck(this, &CIDEMoveClass::CanMove);
 }
 
 
@@ -270,6 +271,7 @@ void CIDEMoveClass::AddCommands(Ptr<CCommandSet> pCommands)
 void CIDEMoveClass::AddEditorItems(Ptr<CMenuContainer> pRefactor)
 {
 	pRefactor->AddItem(mpcContent->GetCommands()->Find("Refactor.MoveClass"));
+	pRefactor->AddItem(mpcContent->GetCommands()->Find("Refactor.CopyClass"));
 }
 
 
@@ -289,6 +291,8 @@ bool CIDEMoveClass::CanMove(void)
 
 void CIDEMoveClass::QueueMove(void) { mpcContent->GetWindow()->Post(this, &CIDEMoveClass::ShowQueuedMove); }
 void CIDEMoveClass::ShowQueuedMove(void) { ShowMove(); }
+void CIDEMoveClass::QueueCopy(void) { mpcContent->GetWindow()->Post(this, &CIDEMoveClass::ShowQueuedCopy); }
+void CIDEMoveClass::ShowQueuedCopy(void) { ShowCopy(); }
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -403,7 +407,7 @@ bool CIDEMoveClass::IsMoved(SIDEClassMove* psMove, const char* szFileName, int32
 // why not.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEMoveClass::FindMove(SIDEClassMove* psDest)
+bool CIDEMoveClass::FindMove(SIDEClassMove* psDest, bool bCopy)
 {
 	CIDECodeModel*			pcModel;
 	CArrayIDELocations		asLocations;
@@ -588,8 +592,8 @@ bool CIDEMoveClass::FindMove(SIDEClassMove* psDest)
 		}
 	}
 
-	//It shares its header with something.
-	if (psDest->bMovable)
+	//It shares its header with something (a copy needn't).
+	if (psDest->bMovable && !bCopy)
 	{
 		asRanges.Init();
 		asRanges.Add()->Init(psDest->szHeader.Text(), 0, 0, IDE_MOVE_CLASS_END_LINE, 0);
@@ -629,7 +633,7 @@ bool CIDEMoveClass::FindMove(SIDEClassMove* psDest)
 	if (psDest->bMovable)
 	{
 		FindUsers(psDest);
-		if (psDest->bHeaderUses && psDest->bNeedsHeader)
+		if (psDest->bHeaderUses && psDest->bNeedsHeader && !bCopy)
 		{
 			psDest->bMovable = false;
 			psDest->szWhyNot.Set("it and what stays in ");
@@ -1192,13 +1196,18 @@ void CIDEMoveClass::AddToListFiles(const char* szBeside, const char* szNewName)
 // the files can't be made.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEMoveClass::Move(SIDEClassMove* psMove, const char* szStem, CChars* pszStatus)
+bool CIDEMoveClass::Move(SIDEClassMove* psMove, const char* szStem, CChars* pszStatus, const char* szCopyName)
 {
 	CIDECodeModel*		pcModel;
 	CIDEFileEdits		cEdits;
 	CArrayIDEFileRanges	asTaken;
+	CArrayIDELocations	asLocations;
+	SIDERenameTarget	sTarget;
+	SIDERenameTarget*	psTarget;
+	SCPPSyntaxRange		sRange;
 	SIDEFileRange*		psRange;
 	SIDEFileRange*		psOther;
+	CChars				szOldName;
 	CChars				szNewHeader;
 	CChars				szNewSource;
 	CChars				szHeaderText;
@@ -1217,6 +1226,7 @@ bool CIDEMoveClass::Move(SIDEClassMove* psMove, const char* szStem, CChars* pszS
 	size				uiOutside;
 	size				i;
 	size				j;
+	uint8				uiKind;
 	bool				bPragma;
 	bool				bComment;
 	bool				bMerged;
@@ -1236,6 +1246,27 @@ bool CIDEMoveClass::Move(SIDEClassMove* psMove, const char* szStem, CChars* pszS
 	}
 	szNewName.Init(GetIDEFileNamePart(szNewHeader.Text()));
 	bResult = szText && (psMove->szSource.Empty() || szOldSource);
+
+	//A copy: every place the class's name is written, as Rename finds them.
+	szOldName.Init();
+	GetIDESymbolName(psMove->szKey.Text(), &szOldName);
+	sTarget.Init();
+	psTarget = NULL;
+	if (bResult && szCopyName)
+	{
+		asLocations.Init();
+		pcModel->GetSymbolLocations(psMove->szKey.Text(), &asLocations, &uiKind);
+		for (i = 0; !psTarget && (i < asLocations.NumElements()); i++)
+		{
+			if ((asLocations.Get(i)->uiRole == CPPIR_Definition) && IsMoved(psMove, asLocations.Get(i)->szFileName.Text(), asLocations.Get(i)->iLine) &&
+				pcModel->FindRenameTarget(asLocations.Get(i)->szFileName.Text(), asLocations.Get(i)->iLine, asLocations.Get(i)->iColumn, &sTarget))
+			{
+				psTarget = &sTarget;
+			}
+		}
+		KillIDELocations(&asLocations);
+		bResult = (psTarget != NULL);
+	}
 
 	//The new files, empty, in the projects.
 	bResult = bResult && CreateFile(szNewHeader.Text(), psMove->szHeader.Text());
@@ -1265,7 +1296,7 @@ bool CIDEMoveClass::Move(SIDEClassMove* psMove, const char* szStem, CChars* pszS
 			szHeaderText.Append("#include \"")->Append(GetIDEFileNamePart(psMove->szHeader.Text()))->Append("\"\n");
 		}
 		szHeaderText.Append("\n\n");
-		AppendBlock(szText, psMove->sClass.iLine, psMove->sClass.iColumn, psMove->sClass.iEndLine, psMove->sClass.iEndColumn, &szHeaderText);
+		AppendMovedBlock(szText, psMove->szHeader.Text(), &psMove->sClass, psTarget, szOldName.Text(), szCopyName, &szHeaderText);
 
 		szSourceText.Init();
 		if (szOldSource)
@@ -1280,7 +1311,11 @@ bool CIDEMoveClass::Move(SIDEClassMove* psMove, const char* szStem, CChars* pszS
 			if (StringInsensitiveCompare(psRange->szFileName.Text(), psMove->szHeader.Text()) == 0)
 			{
 				szHeaderText.Append("\n\n");
-				AppendBlock(szText, psRange->iLine, psRange->iColumn, psRange->iEndLine, psRange->iEndColumn, &szHeaderText);
+				sRange.iLine = psRange->iLine;
+				sRange.iColumn = psRange->iColumn;
+				sRange.iEndLine = psRange->iEndLine;
+				sRange.iEndColumn = psRange->iEndColumn;
+				AppendMovedBlock(szText, psRange->szFileName.Text(), &sRange, psTarget, szOldName.Text(), szCopyName, &szHeaderText);
 				uiStart = FindIDETextOffset(szText, psRange->iLine, psRange->iColumn);
 				uiEnd = FindIDETextOffset(szText, psRange->iEndLine, psRange->iEndColumn);
 				ExtendIDEDeletion(szText, &uiStart, &uiEnd, true);
@@ -1291,7 +1326,11 @@ bool CIDEMoveClass::Move(SIDEClassMove* psMove, const char* szStem, CChars* pszS
 			else
 			{
 				szSourceText.Append("\n\n");
-				AppendBlock(szOldSource, psRange->iLine, psRange->iColumn, psRange->iEndLine, psRange->iEndColumn, &szSourceText);
+				sRange.iLine = psRange->iLine;
+				sRange.iColumn = psRange->iColumn;
+				sRange.iEndLine = psRange->iEndLine;
+				sRange.iEndColumn = psRange->iEndColumn;
+				AppendMovedBlock(szOldSource, psRange->szFileName.Text(), &sRange, psTarget, szOldName.Text(), szCopyName, &szSourceText);
 				uiStart = FindIDETextOffset(szOldSource, psRange->iLine, psRange->iColumn);
 				uiEnd = FindIDETextOffset(szOldSource, psRange->iEndLine, psRange->iEndColumn);
 				ExtendIDEDeletion(szOldSource, &uiStart, &uiEnd, true);
@@ -1320,8 +1359,13 @@ bool CIDEMoveClass::Move(SIDEClassMove* psMove, const char* szStem, CChars* pszS
 		asTaken.Get(asTaken.NumElements() - 1)->uiStart = uiStart;
 		asTaken.Get(asTaken.NumElements() - 1)->uiEnd = uiEnd;
 
-		//What is taken out: pieces that touch or overlap (each takes the blank lines around it) are one piece, and
-		//one a file ends with takes the blank lines before it.
+		//What is taken out (nothing, for a copy): pieces that touch or overlap (each takes the blank lines around
+		//it) are one piece, and one a file ends with takes the blank lines before it.
+		if (szCopyName)
+		{
+			KillIDEFileRanges(&asTaken);
+			asTaken.Init();
+		}
 		bMerged = true;
 		while (bMerged)
 		{
@@ -1353,9 +1397,12 @@ bool CIDEMoveClass::Move(SIDEClassMove* psMove, const char* szStem, CChars* pszS
 			}
 		}
 
-		//The new header #included where the class is needed.
+		//The new header #included where the class is needed (nowhere yet, for a copy).
 		szLine.Init();
-		if (psMove->bHeaderUses)
+		if (szCopyName)
+		{
+		}
+		else if (psMove->bHeaderUses)
 		{
 			FindIncludePlace(szText, "", szNewName.Text(), &uiAt, &szLine);
 			if (!szLine.Empty())
@@ -1409,8 +1456,13 @@ bool CIDEMoveClass::Move(SIDEClassMove* psMove, const char* szStem, CChars* pszS
 		mpcContent->GetCodeModel()->Reset();
 		mpcContent->GetSolutions()->WorkspaceChanged(true);
 
-		szMessage.Init("Moved ");
+		szMessage.Init(szCopyName ? "Copied " : "Moved ");
 		szMessage.Append(psMove->szName);
+		if (szCopyName)
+		{
+			szMessage.Append(" as ");
+			szMessage.Append(szCopyName);
+		}
 		szMessage.Append(" to ");
 		szMessage.Append(szNewName);
 		if (!szNewSource.Empty())
@@ -1420,9 +1472,14 @@ bool CIDEMoveClass::Move(SIDEClassMove* psMove, const char* szStem, CChars* pszS
 		}
 		szMessage.Append(": ");
 		szMessage.Append((uint32)uiOutside);
-		szMessage.Append((uiOutside == 1) ? " definition outside it, " : " definitions outside it, ");
-		szMessage.Append((uint32)uiIncludes);
-		szMessage.Append((uiIncludes == 1) ? " #include added." : " #includes added.");
+		szMessage.Append((uiOutside == 1) ? " definition outside it" : " definitions outside it");
+		if (!szCopyName)
+		{
+			szMessage.Append(", ");
+			szMessage.Append((uint32)uiIncludes);
+			szMessage.Append((uiIncludes == 1) ? " #include added" : " #includes added");
+		}
+		szMessage.Append(".");
 		if (pszStatus)
 		{
 			pszStatus->Set(szMessage.Text());
@@ -1434,6 +1491,8 @@ bool CIDEMoveClass::Move(SIDEClassMove* psMove, const char* szStem, CChars* pszS
 		szMessage.Kill();
 	}
 	KillIDEFileRanges(&asTaken);
+	sTarget.Kill();
+	szOldName.Kill();
 	szNewName.Kill();
 	szNewSource.Kill();
 	szNewHeader.Kill();
@@ -2255,6 +2314,221 @@ bool CIDEMoveClass::ShowFunctionMove(SIDEFunctionMove* psMove)
 	szSource.Kill();
 	szHeader.Kill();
 	szName.Kill();
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// What is written at a range of a file as it goes to another
+// (AppendBlock); for a copy (psTarget isn't NULL), with szNewName in
+// place of the class's name at each place in it that Rename would change
+// (psTarget's places): its own name, its constructors', its destructor's.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEMoveClass::AppendMovedBlock(const char* szText, const char* szFileName, SCPPSyntaxRange* psRange, SIDERenameTarget* psTarget, const char* szOldName, const char* szNewName, CChars* pszDest)
+{
+	CArrayInt		aiPlaces;
+	SIDELocation*	psLocation;
+	size			uiStart;
+	size			uiEnd;
+	size			uiAt;
+	size			uiPlace;
+	size			uiOldLength;
+	size			i;
+	size			j;
+
+	if (!psTarget)
+	{
+		AppendBlock(szText, psRange->iLine, psRange->iColumn, psRange->iEndLine, psRange->iEndColumn, pszDest);
+		return;
+	}
+	uiStart = FindIDECommentStart(szText, FindIDETextOffset(szText, psRange->iLine, psRange->iColumn));
+	uiEnd = FindIDENextLine(szText, FindIDETextOffset(szText, psRange->iEndLine, psRange->iEndColumn));
+	uiOldLength = strlen(szOldName);
+
+	//The places in it, in order.
+	aiPlaces.Init();
+	for (i = 0; i < psTarget->asLocations.NumElements(); i++)
+	{
+		psLocation = psTarget->asLocations.Get(i);
+		if (StringInsensitiveCompare(psLocation->szFileName.Text(), szFileName) != 0)
+		{
+			continue;
+		}
+		uiPlace = FindIDETextOffset(szText, psLocation->iLine, psLocation->iColumn);
+		if ((uiPlace < uiStart) || (uiPlace + uiOldLength > uiEnd) || (strncmp(&szText[uiPlace], szOldName, uiOldLength) != 0))
+		{
+			continue;
+		}
+		for (j = 0; (j < aiPlaces.NumElements()) && ((size)aiPlaces.GetValue(j) < uiPlace); j++)
+		{
+		}
+		if ((j == aiPlaces.NumElements()) || ((size)aiPlaces.GetValue(j) != uiPlace))
+		{
+			aiPlaces.InsertAt((int)uiPlace, j);
+		}
+	}
+	uiAt = uiStart;
+	for (i = 0; i < aiPlaces.NumElements(); i++)
+	{
+		uiPlace = (size)aiPlaces.GetValue(i);
+		pszDest->AppendSubString(szText, uiAt, uiPlace);
+		pszDest->Append(szNewName);
+		uiAt = uiPlace + uiOldLength;
+	}
+	pszDest->AppendSubString(szText, uiAt, uiEnd);
+	if (!pszDest->EndsWith("\n"))
+	{
+		pszDest->Append('\n');
+	}
+	aiPlaces.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Why a class can't be copied under a name: it isn't a name, it is the
+// class's own, something has it already, or the files it would have are
+// there.  *pszStem is the name its files get: the new name without its C.
+// False if it can.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEMoveClass::FindCopyProblem(SIDEClassMove* psMove, const char* szNewName, CChars* pszStem, CChars* pszDest)
+{
+	CChars	szOwnName;
+	CChars	szKey;
+	size	i;
+	bool	bName;
+
+	bName = (szNewName[0] != '\0') && !((szNewName[0] >= '0') && (szNewName[0] <= '9'));
+	for (i = 0; szNewName[i] != '\0'; i++)
+	{
+		bName = bName && IsIDENameChar(szNewName[i]);
+	}
+	if (!bName)
+	{
+		pszDest->Set("the copy's name is letters, digits and _");
+		return true;
+	}
+	szOwnName.Init();
+	GetIDESymbolName(psMove->szKey.Text(), &szOwnName);
+	szKey.Init();
+	szKey.AppendSubString(psMove->szKey.Text(), 0, psMove->szKey.Length() - szOwnName.Length());
+	szKey.Append(szNewName);
+	if (szOwnName.Equals(szNewName))
+	{
+		pszDest->Set("the copy has another name");
+	}
+	else if (mpcContent->GetCodeModel()->HasSymbol(szKey.Text()))
+	{
+		pszDest->Set("there is a ");
+		pszDest->Append(szNewName);
+		pszDest->Append(" already");
+	}
+	szKey.Kill();
+	szOwnName.Kill();
+	if (!pszDest->Empty())
+	{
+		return true;
+	}
+	pszStem->Set(&szNewName[((szNewName[0] == 'C') && (szNewName[1] >= 'A') && (szNewName[1] <= 'Z')) ? 1 : 0]);
+	return FindProblem(psMove, pszStem->Text(), pszDest);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The dialog says why the name written can't be the copy's.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEMoveClass::ApproveCopy(void)
+{
+	CChars	szProblem;
+	CChars	szStem;
+	bool	bProblem;
+
+	szProblem.Init();
+	szStem.Init();
+	bProblem = FindCopyProblem(mpsMove, mpNameField->GetText(), &szStem, &szProblem);
+	if (bProblem)
+	{
+		if ((szProblem.Text()[0] >= 'a') && (szProblem.Text()[0] <= 'z'))
+		{
+			szProblem.Text()[0] -= 'a' - 'A';
+		}
+		szProblem.Append('.');
+	}
+	mpError->SetText(szProblem.Text());
+	szStem.Kill();
+	szProblem.Kill();
+	return !bProblem;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Copy Class for the class at the caret: its dialog (the copy's name),
+// then the copy.  False if nothing was copied.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEMoveClass::ShowCopy(void)
+{
+	SIDEClassMove	sMove;
+	CChars			szMessage;
+	CChars			szName;
+	CChars			szStem;
+	CChars			szProblem;
+	bool			bResult;
+
+	sMove.Init();
+	if (!FindMove(&sMove, true))
+	{
+		mpcContent->ShowStatus("There is no class at the caret to copy.");
+		sMove.Kill();
+		return false;
+	}
+	if (!sMove.bMovable)
+	{
+		szMessage.Init("Can't copy ");
+		szMessage.Append(sMove.szName);
+		szMessage.Append(": ");
+		szMessage.Append(sMove.szWhyNot);
+		szMessage.Append(".");
+		mpcContent->ShowStatus(szMessage.Text());
+		szMessage.Kill();
+		sMove.Kill();
+		return false;
+	}
+
+	szMessage.Init("Copy ");
+	szMessage.Append(sMove.szName);
+	mpDialog = OMalloc<CDialog>(mpcContent->GetWindow(), mpcContent->GetDialogLook(), szMessage.Text());
+	szMessage.Kill();
+	mpsMove = &sMove;
+	szName.Init();
+	GetIDESymbolName(sMove.szKey.Text(), &szName);
+	mpNameField = mpDialog->AddTextField("New name:", szName.Text());
+	mpError = OMalloc<CLabel>(mpDialog->GetWindow(), mpcContent->GetDimFont(), "");
+	mpDialog->AddEditor("", mpError);
+	mpDialog->SetOKCaption("Refactor");
+	mpDialog->SetApprover(this, &CIDEMoveClass::ApproveCopy);
+	mpcContent->GetScript()->WatchDialog(mpDialog);
+	bResult = mpDialog->Show(560);
+	szName.Set(bResult ? mpNameField->GetText() : "");
+	mpDialog->ClearApprover();
+	mpcContent->GetScript()->StopWatchingDialog();
+	mpNameField = NULL;
+	mpError = NULL;
+	mpDialog = NULL;
+	mpsMove = NULL;
+	szStem.Init();
+	szProblem.Init();
+	bResult = bResult && !FindCopyProblem(&sMove, szName.Text(), &szStem, &szProblem) && Move(&sMove, szStem.Text(), NULL, szName.Text());
+	szProblem.Kill();
+	szStem.Kill();
+	szName.Kill();
+	sMove.Kill();
 	return bResult;
 }
 

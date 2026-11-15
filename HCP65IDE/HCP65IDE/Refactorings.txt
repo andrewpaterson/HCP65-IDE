@@ -178,6 +178,7 @@ Phase 1 - nothing new from the compiler
        - a static function, which only its file can use, is refused;
        - it goes to a header that is there: no new file is made for it.
   4. Copy (F5).  A class and its files under a new name.  A class template the same.
+     Done 2026-11-15: Copy Class (IDEMoveClass.h), by what makes Move Class's files.  No key (question 27).
 
 
 Phase 2 - the kept check
@@ -308,7 +309,8 @@ Where it is
      Members Up and Push Members Down (CIDEMoveMembers); a class to its own files (CIDEMoveClass, with
      CVcxProject::AddItemBeside); a function or a global to another file (the same F6).  Move is done but for
      what is listed under 3.
-  6. Copy (4): next.  Then Inline Variable (6), Introduce Field, Constant and Parameter (7), Typedef (8), Extract
-     Method (9), Inline Function (10), Extract Superclass, Interface and Class (11), Encapsulate Field (12), and
-     Phase 4 from 15.
+  6. Copy (4): done.
+  7. Inline Variable (6): next.  Then Introduce Field, Constant and Parameter (7), Typedef (8), Extract Method (9),
+     Inline Function (10), Extract Superclass, Interface and Class (11), Encapsulate Field (12), and Phase 4 from
+     15.
 

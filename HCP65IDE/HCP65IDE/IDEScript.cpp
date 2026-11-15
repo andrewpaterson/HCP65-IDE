@@ -39,7 +39,7 @@ static bool			gbIDEScriptRenameSaves = false;  //rename: saves what it edited (r
 static bool			gbIDEScriptClassFiles = false;  //rename: renames a type's files too (renamesearch's f), never from the settings.
 
 
-static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printfindpreview", "printfindtoolbar", "findtool:", "printstartup", "printworkspace", "rename", "safedelete", "introducevariable", "changesignature", "pullmembersup", "pushmembersdown", "moveclass", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printsettings", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printprojectfiles", "printdiskfile:", "printdisklines:", "printedits", "printspans", "configuration:", "waitindex" };
+static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printfindpreview", "printfindtoolbar", "findtool:", "printstartup", "printworkspace", "rename", "safedelete", "introducevariable", "changesignature", "pullmembersup", "pushmembersdown", "moveclass", "copyclass", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printsettings", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printprojectfiles", "printdiskfile:", "printdisklines:", "printedits", "printspans", "configuration:", "waitindex" };
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -283,6 +283,11 @@ void CIDEScript::RunCommand(const char* szCommand)
 	{
 		//Pull Members Up's or Push Members Down's dialogs for the class at the caret.
 		mpcContent->GetMoveMembers()->ShowMove(strcmp(szCommand, "pullmembersup") == 0);
+	}
+	else if (strcmp(szCommand, "copyclass") == 0)
+	{
+		//Copy Class's dialog for the class at the caret.
+		mpcContent->GetMoveClass()->ShowCopy();
 	}
 	else if (strcmp(szCommand, "moveclass") == 0)
 	{
@@ -1617,6 +1622,36 @@ void CIDEScript::RunEditStep(const char* szStep)
 			szProblem.Kill();
 		}
 		szPrinted.Kill();
+		sMove.Kill();
+	}
+	else if (strncmp(szStep, "copyclass:", 10) == 0)
+	{
+		//The class at the caret copied under a name ("copyclass:CDrum"), if it can be.
+		SIDEClassMove	sMove;
+		CChars			szProblem;
+		CChars			szStem;
+
+		sMove.Init();
+		szProblem.Init();
+		szStem.Init();
+		if (!mpcContent->GetMoveClass()->FindMove(&sMove, true))
+		{
+			printf("Copy Class: no class\n");
+		}
+		else if (!sMove.bMovable)
+		{
+			printf("Copy Class: can't be copied: %s\n", sMove.szWhyNot.Text());
+		}
+		else if (mpcContent->GetMoveClass()->FindCopyProblem(&sMove, &szStep[10], &szStem, &szProblem))
+		{
+			printf("Copy Class: %s\n", szProblem.Text());
+		}
+		else
+		{
+			printf("Copy Class: %s\n", mpcContent->GetMoveClass()->Move(&sMove, szStem.Text(), NULL, &szStep[10]) ? "copied" : "not copied");
+		}
+		szStem.Kill();
+		szProblem.Kill();
 		sMove.Kill();
 	}
 	else if ((strcmp(szStep, "movableclass") == 0) || (strncmp(szStep, "moveclass:", 10) == 0))

@@ -98,6 +98,11 @@ struct SIDEFunctionMove
 //again and puts the class back, so what builds before and after an undo is the same.  The files changed are saved and
 //the projects read again, as after Rename File.
 //
+//Copy Class (Refactorings.txt, 4; IntelliJ's Copy): the class under a new name in files of its own, made as Move
+//Class to Its Own Files makes them, with the class's name changed wherever the copied text names the class (its
+//constructors and destructor, the class's name before its members' definitions), and nothing taken out of the files
+//it is copied from.  The new header #includes the old one if the copy names something that is declared there.
+//
 //Move to File (the same F6, on a function or a variable that is in no class): it goes to another header of the
 //solution, named in the dialog.  Its declarations (prototypes, an extern) go to that header, after the last function
 //it declares, or before its #endif; its definition goes to the end of that header's source file, or, if a header
@@ -130,9 +135,12 @@ public:
 	bool	CanMove(void);
 	void	QueueMove(void);
 	bool	ShowMove(void);
-	bool	FindMove(SIDEClassMove* psDest);
+	bool	FindMove(SIDEClassMove* psDest, bool bCopy = false);
 	bool	FindProblem(SIDEClassMove* psMove, const char* szStem, CChars* pszDest);
-	bool	Move(SIDEClassMove* psMove, const char* szStem, CChars* pszStatus = NULL);
+	bool	Move(SIDEClassMove* psMove, const char* szStem, CChars* pszStatus = NULL, const char* szCopyName = NULL);
+	void	QueueCopy(void);
+	bool	ShowCopy(void);
+	bool	FindCopyProblem(SIDEClassMove* psMove, const char* szNewName, CChars* pszStem, CChars* pszDest);
 	char*	PrintMove(SIDEClassMove* psMove, CChars* pszDest);
 	bool	FindFunctionMove(SIDEFunctionMove* psDest);
 	bool	FindFunctionProblem(SIDEFunctionMove* psMove, const char* szHeaderName, CChars* pszHeader, CChars* pszSource, CChars* pszDest);
@@ -142,6 +150,9 @@ public:
 protected:
 	void				ShowQueuedMove(void);
 	bool				ApproveMove(void);
+	void				ShowQueuedCopy(void);
+	bool				ApproveCopy(void);
+	void				AppendMovedBlock(const char* szText, const char* szFileName, SCPPSyntaxRange* psRange, SIDERenameTarget* psTarget, const char* szOldName, const char* szNewName, CChars* pszDest);
 	bool				ApproveFunctionMove(void);
 	bool				ShowFunctionMove(SIDEFunctionMove* psMove);
 	bool				IsFunctionMoved(SIDEFunctionMove* psMove, const char* szFileName, int32 iLine);
