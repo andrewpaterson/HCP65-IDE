@@ -56,9 +56,6 @@ Open
     __IDE_MOVE_CLASS_H__ style for several words).  A CMakeLists.txt up to two directories above a project that
     lists the old file gets a line for the new one after it.  Right?
 
-26. Moving to another namespace isn't built: your code has one file with a namespace in it, so I left it rather
-    than build it untried.  A function that is in a namespace is refused by Move to File.  Say if you want it.
-
 27. Copy Class has no key: IntelliJ's is F5, which is Start Debugging here.  It copies the class and its members'
     definitions into new files named for the new class (CBarrel: Barrel.h, Barrel.cpp), whether or not the class
     had files of its own.  What else is in the class's files (another class in its header) isn't copied.  The
@@ -220,6 +217,13 @@ Answered
     in (Go to File's matching, in a dropdown that shows each one's path), and a button beside it opens a chooser
     of the solution's projects and files to pick one from.  To do in Move to File's dialog; the chooser of the
     solution's files is a piece of its own (WindowLib's file chooser shows the disk, not the solution).
+
+26. Moving to another namespace isn't built: your code has one file with a namespace in it, so I left it rather
+    than build it untried.  A function that is in a namespace is refused by Move to File.  Say if you want it.
+    Answered 2026-11-15, in his words: "There is a plan to bring the HCP65 C++ compiler into full compliance
+    with C++2014..." and no more.  Taken to mean yes (my reading, said to him, his to correct): code in
+    namespaces is coming, so moving into, out of and between namespaces is built in full, every use qualified
+    again, and Move to File takes a function that is in one.  To do, as plan item 21.
 
 29. Inline Variable takes a variable declared at the top and assigned by one statement (your style) as having one
     value, as well as "int x = value;".  It refuses one whose assignment is in a block its uses are outside, or
