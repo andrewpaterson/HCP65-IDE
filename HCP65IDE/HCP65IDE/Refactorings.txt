@@ -423,6 +423,7 @@ Where it is
        - Extract Class gives the new class an empty Init and the class it came from a call of it (question 42): done.
        - Introduce Variable warns before it replaces every occurrence of what may not be one value (question 9): done.
        - Introduce Constant can replace every occurrence in the file (question 30): done.
+       - Encapsulate Field's getter is const, and both are a line each at the bottom of the class's .cpp (question 44): done.
 
 
 When the plan is done

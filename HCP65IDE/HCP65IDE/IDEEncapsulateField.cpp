@@ -656,6 +656,9 @@ bool CIDEEncapsulateField::Encapsulate(SIDEEncapsulation* psEncapsulation, CChar
 	CChars				szText;
 	CChars				szLine;
 	CChars				szMessage;
+	CChars				szSource;
+	CChars				szScoped;
+	CChars				szBody;
 	char*				szFile;
 	size				uiChanged;
 	size				uiStart;
@@ -714,20 +717,63 @@ bool CIDEEncapsulateField::Encapsulate(SIDEEncapsulation* psEncapsulation, CChar
 		uiChanged++;
 	}
 
-	//The getter and the setter, in the class, as its short functions are written.
+	//The getter and the setter: declared in the class and defined, a line each, at the bottom of the class's source
+	//file, where the one-line functions are; in the class, as its short functions are written, if it has no source
+	//file or is a template.  A getter of a value is const (one of an object gives a pointer the caller changes it
+	//through, and isn't).
+	szSource.Init();
+	szScoped.Init();
+	sClass.Init();
+	if (pcMembers->ReadClass(psEncapsulation->szClassKey.Text(), &sClass) && !sClass.bTemplate)
+	{
+		pcMembers->FindSourceFile(&sClass, &szSource);
+	}
+	pcMembers->KillUnits();
+	sClass.Kill();
+	szFile = szSource.Empty() ? NULL : cFiles.GetText(szSource.Text());
+	GetIDEScopedName(psEncapsulation->szClassKey.Text(), &szScoped);
 	szText.Init();
+	szLine.Init();
 	if (psEncapsulation->bGetter)
 	{
-		szText.Append('\t')->Append(psEncapsulation->szType)->Append(psEncapsulation->bObject ? "*\t" : "\t")->Append(psEncapsulation->szGetter)->Append("(void) { return ");
-		szText.Append(psEncapsulation->bObject ? "&" : "")->Append(psEncapsulation->szName)->Append("; }\n");
+		szText.Append('\t')->Append(psEncapsulation->szType)->Append(psEncapsulation->bObject ? "*\t" : "\t")->Append(psEncapsulation->szGetter)->Append(psEncapsulation->bObject ? "(void)" : "(void) const");
+		szLine.Append(psEncapsulation->szType)->Append(psEncapsulation->bObject ? "* " : " ")->Append(szScoped)->Append("::")->Append(psEncapsulation->szGetter)->Append(psEncapsulation->bObject ? "(void)" : "(void) const");
+		szBody.Init(" { return ");
+		szBody.Append(psEncapsulation->bObject ? "&" : "")->Append(psEncapsulation->szName)->Append("; }\n");
+		szText.Append(szFile ? ";\n" : szBody.Text());
+		szLine.Append(szBody);
+		szBody.Kill();
 	}
 	if (psEncapsulation->bSetter)
 	{
-		szText.Append("\tvoid\t")->Append(psEncapsulation->szSetter)->Append('(')->Append(psEncapsulation->szType)->Append(' ')->Append(psEncapsulation->szParameter)->Append(") { ");
-		szText.Append(psEncapsulation->szName)->Append(" = ")->Append(psEncapsulation->szParameter)->Append("; }\n");
+		szText.Append("\tvoid\t")->Append(psEncapsulation->szSetter)->Append('(')->Append(psEncapsulation->szType)->Append(' ')->Append(psEncapsulation->szParameter)->Append(")");
+		szLine.Append("void ")->Append(szScoped)->Append("::")->Append(psEncapsulation->szSetter)->Append('(')->Append(psEncapsulation->szType)->Append(' ')->Append(psEncapsulation->szParameter)->Append(")");
+		szBody.Init(" { ");
+		szBody.Append(psEncapsulation->szName)->Append(" = ")->Append(psEncapsulation->szParameter)->Append("; }\n");
+		szText.Append(szFile ? ";\n" : szBody.Text());
+		szLine.Append(szBody);
+		szBody.Kill();
 	}
 	bResult = pcMembers->AddMember(psEncapsulation->szClassKey.Text(), IDE_ACCESS_PUBLIC, szText.Text(), &cFiles);
+	if (bResult && szFile)
+	{
+		//Under the one-line functions the file ends with, or two lines under whatever else it ends with.
+		for (uiEnd = strlen(szFile); (uiEnd > 0) && ((szFile[uiEnd - 1] == '\n') || (szFile[uiEnd - 1] == '\r') || (szFile[uiEnd - 1] == ' ') || (szFile[uiEnd - 1] == '\t')); uiEnd--)
+		{
+		}
+		for (uiStart = uiEnd; (uiStart > 0) && (szFile[uiStart - 1] != '\n'); uiStart--)
+		{
+		}
+		szBody.Init();
+		szBody.AppendSubString(szFile, uiStart, uiEnd);
+		szLine.Insert(0, (szBody.EndsWith("}") && szBody.Contains("{") && szBody.Contains("::") && (szFile[uiStart] != '\t') && (szFile[uiStart] != '{')) ? "\n" : "\n\n\n");
+		szBody.Kill();
+		cFiles.GetEdits(szSource.Text())->Replace(uiEnd, strlen(szFile), szLine.Text());
+	}
+	szLine.Kill();
 	szText.Kill();
+	szScoped.Kill();
+	szSource.Kill();
 
 	//The field, protected: in the class's protected part, or in one made at the class's start.
 	szFile = cFiles.GetText(psEncapsulation->szFileName.Text());

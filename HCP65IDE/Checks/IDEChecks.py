@@ -1944,8 +1944,9 @@ CHECKS = [
 		 r'^3\|#include "Sized\.h"$', r'^16\|template<class M>$', r'^17\|class CCrate : public CBox<M>, public CSized<M>$', r'^23 lines$'],
 		[r'CCrate<M>::Size']),
 	('encapsulate-field', dict(MakeEncapsulateFieldCopy(), **{
-		#Encapsulate Field: every place the field is named, and how (the compiler says).  The class gets GetValue and
-		#SetValue at the end of its public part, the field goes to a protected part made at the class's start, and
+		#Encapsulate Field: every place the field is named, and how (the compiler says).  The class declares GetValue
+		#(const) and SetValue at the end of its public part and its source file defines them at its bottom, a line
+		#each; the field goes to a protected part made at the class's start, and
 		#outside the class a read is the getter, an assignment the setter (what is assigned may read the field too),
 		#and a += or a ++ the setter of the getter's value changed.  The class's own functions still name the field.
 		'WAIT_INDEX': '1', 'OPEN': 'Dial.h', 'CARET': '14:8',
@@ -1954,9 +1955,10 @@ CHECKS = [
 		 r'^  Dial\.cpp line 28: assigned$', r'^  Dial\.cpp line 28: read$', r'^  Dial\.cpp line 29: changed with an operator$', r'^  Dial\.cpp line 30: stepped$',
 		 r'^Status: Encapsulated CDial::miValue: GetValue and SetValue, 6 places changed\.$',
 		 r'^11\|class CDial$', r'^12\|\{$', r'^13\|protected:$', r'^14\|\tint\t\tmiValue;$', r'^15\|$', r'^16\|public:$', r'^17\|\tint\t\tmiStep;$', r'^22\|\tint\t\tTwice\(void\) \{ return miValue \* 2; \}$',
-		 r'^23\|\tint\t\tGetValue\(void\) \{ return miValue; \}$', r'^24\|\tvoid\tSetValue\(int iValue\) \{ miValue = iValue; \}$', r'^25\|\};$',
+		 r'^23\|\tint\t\tGetValue\(void\) const;$', r'^24\|\tvoid\tSetValue\(int iValue\);$', r'^25\|\};$',
 		 r'^10\|\tmiValue = 0;$', r'^28\|\tcOther\.SetValue\(pcDial->GetValue\(\) \+ 1\);$', r'^29\|\tpcDial->SetValue\(pcDial->GetValue\(\) \+ 2\);$', r'^30\|\tpcDial->SetValue\(pcDial->GetValue\(\) \+ 1\);$',
-		 r'^31\|\tiRead = cOther\.GetValue\(\) \* pcDial->GetValue\(\);$', r'^32\|\tpiStep = &pcDial->miStep;$'],
+		 r'^31\|\tiRead = cOther\.GetValue\(\) \* pcDial->GetValue\(\);$', r'^32\|\tpiStep = &pcDial->miStep;$',
+		 r'^38\|$', r'^39\|$', r'^40\|int CDial::GetValue\(void\) const \{ return miValue; \}$', r'^41\|void CDial::SetValue\(int iValue\) \{ miValue = iValue; \}$', r'^41 lines$'],
 		[r'^Conflict']),
 	('encapsulate-field-object', dict(MakeEncapsulateFieldCopy(), **{
 		#A field that is an object has a getter that gives a pointer to it, and no setter: a member named through it
@@ -1968,10 +1970,11 @@ CHECKS = [
 		 r'^Encapsulate Field: CDial::msMark, \[SMark\], public, GetMark and SetMark\(sMark\)$', r'^  Dial\.cpp line 12: a member of it named, in the class$', r'^  Dial\.cpp line 33: a member of it named$',
 		 r'^  Dial\.cpp line 34: its address taken$', r'^Encapsulate Field: A field that is an object has no setter: its getter gives a pointer to it\.$',
 		 r'^Status: Encapsulated CDial::msMark: GetMark, 2 places changed\.$',
-		 r'^13\|protected:$', r'^14\|\tSMark\tmsMark;$', r'^16\|public:$', r'^23\|\tSMark\*\tGetMark\(void\) \{ return &msMark; \}$',
+		 r'^13\|protected:$', r'^14\|\tSMark\tmsMark;$', r'^16\|public:$', r'^23\|\tSMark\*\tGetMark\(void\);$',
 		 r'^\d+\|class CKnob$', r'^\d+\|protected:$', r'^\d+\|\tint\t\tmiTurn;$', r'^\d+\|\tint\t\tmiGrip;$', r'^\d+\|$', r'^\d+\|public:$', r'^\d+\|\tvoid\tInit\(void\) \{ miTurn = 0; \}$',
-		 r'^\d+\|\tint\t\tGetGrip\(void\) \{ return miGrip; \}$', r'^\d+\|\tvoid\tSetGrip\(int iGrip\) \{ miGrip = iGrip; \}$',
-		 r'^12\|\tmsMark\.iAt = 0;$', r'^33\|\tpcDial->GetMark\(\)->iAt = iRead;$', r'^34\|\tpsMark = cOther\.GetMark\(\);$', r'^35\|\tpcKnob->SetGrip\(\*piStep \+ psMark->iAt\);$'],
+		 r'^36\|\tint\t\tGetGrip\(void\) const;$', r'^37\|\tvoid\tSetGrip\(int iGrip\);$',
+		 r'^12\|\tmsMark\.iAt = 0;$', r'^33\|\tpcDial->GetMark\(\)->iAt = iRead;$', r'^34\|\tpsMark = cOther\.GetMark\(\);$', r'^35\|\tpcKnob->SetGrip\(\*piStep \+ psMark->iAt\);$',
+		 r'^40\|int CKnob::GetGrip\(void\) const \{ return miGrip; \}$', r'^41\|void CKnob::SetGrip\(int iGrip\) \{ miGrip = iGrip; \}$', r'^42\|SMark\* CDial::GetMark\(void\) \{ return &msMark; \}$'],
 		[r'^Conflict']),
 	('encapsulate-field-refused', dict(MakeEncapsulateFieldCopy(), **{
 		#A place that uses the field in a way no getter or setter stands for (its address is taken) stays, and is
