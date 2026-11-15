@@ -312,6 +312,10 @@ Answered
     Answered 2026-11-15: some of the rewriting.  To do: a function that changes its parameters is inlined with
     variables of its own for them, and a call inside a bigger expression is inlined with a variable for what it
     gives, declared and assigned before the statement.  A function that returns before its end stays refused.
+    Done 2026-11-15 (IDE_INLINE_OWN_PARAMETER, IDE_CALL_HOISTED; the variable is named as Introduce Variable
+    names one).  A call is taken out only of a statement that always makes it, once: an expression's statement, a
+    return, an if's condition; not after && or ||, in an arm of ?:, after a comma, in a loop's condition, or in a
+    declaration's value.  Those stay calls.
 
 41. Extract Superclass, Extract Interface and Extract Class each make the new class in a header of its own (and a
     source file if a function that moves is defined in one), named for the class without its C, as Move Class

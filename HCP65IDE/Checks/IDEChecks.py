@@ -1982,7 +1982,7 @@ CHECKS = [
 		 r'^Status: Inlined CPump::Scaled: 2 calls; the function is taken out\.$',
 		 r'^26\|\tint\t\t\tGetRate\(void\) \{ return miRate; \}$', r'^27\|\tvoid\t\tStep\(int iBy\);$', r'^36\|void\tReport\(CPump\* pcPump, int iWhat\);$', r'^39 lines$',
 		 r'^41\|\treturn miCount \+ \(miLimit \* \(i \+ 1\)\);$', r'^117\|\tiTotal = \(\(pcPump->GetRate\(\) \+ 1\) \* 2\) \* 2;$', r'^118\|\tiTotal \+= pcPump->miLimit \* \(iTotal - 1\);$',
-		 r'^122\|\treturn iTotal \* 2;$', r'^123 lines$'],
+		 r'^122\|\treturn iTotal \* 2;$', r'^145 lines$'],
 		[r'^Conflict', r'Twice\(', r'Scaled\(']),
 	('inline-function-statements', dict(MakeInlineFunctionCopy(), **{
 		#Functions with statements go where their call is a statement.  Report's statements are written at its call,
@@ -2000,23 +2000,40 @@ CHECKS = [
 		 r'^12\|\tint\t\tBytes\(void\) \{ return miUsed \* sizeof\(M\); \}$', r'^28\|\tvoid\t\tStep\(int iBy\);$', r'^37\|int\t\tTwice\(int iValue\);$', r'^40 lines$',
 		 r'^35\|\tint\ti;$', r'^36\|\tint\tiNext;$', r'^37\|$', r'^38\|\tfor \(i = 0; i < iTimes; i\+\+\)$', r'^40\|\t\tiNext = miCount \+ \(i \+ 1\);$', r'^41\|\t\tmiCount = iNext;$', r'^42\|\t\}$',
 		 r'^114\|\tint\t\t\tiTotal;$', r'^115\|\tint\t\t\tiNext;$', r'^116\|$', r'^117\|\tcOther\.Init\(3\);$', r'^118\|\tiNext = cOther\.miCount \+ 2;$', r'^119\|\tcOther\.miCount = iNext;$',
-		 r'^122\|\t\(&cOther\)->Kind\(\);$', r'^123\|\t\(&cOther\)->miLimit = iTotal;$', r'^125\|\tiTotal = cSlot\.miUsed \* sizeof\(long\);$', r'^127 lines$'],
+		 r'^122\|\t\(&cOther\)->Kind\(\);$', r'^123\|\t\(&cOther\)->miLimit = iTotal;$', r'^125\|\tiTotal = cSlot\.miUsed \* sizeof\(long\);$', r'^149 lines$'],
 		[r'Report\(']),
 	('inline-function-refused', dict(MakeInlineFunctionCopy(), **{
-		#What can't be inlined: a virtual function, one that returns part of the way through, one that changes its
-		#parameter.  A member that isn't public named where the call is outside the class is a conflict: nothing is
+		#What can't be inlined: a virtual function, one that returns part of the way through.  A member that isn't public named where the call is outside the class is a conflict: nothing is
 		#inlined.  And one call alone, at the caret: the function stays.
 		'WAIT_INDEX': '1', 'OPEN': 'Pump.h',
-		'DEBUG': 'edit:renamesearch:---s,edit:caret:30:15,edit:inlinablefunction,edit:caret:31:9,edit:inlinablefunction,edit:caret:33:9,edit:inlinablefunction,edit:caret:26:9,edit:inlinefunction:all,'
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:30:15,edit:inlinablefunction,edit:caret:31:9,edit:inlinablefunction,edit:caret:26:9,edit:inlinefunction:all,'
 		         'edit:open:Pump.cpp,edit:caret:132:10,edit:inlinefunction:this,printdisklines:Pump.h,printdisklines:Pump.cpp'}),
 		[r"^Inline Function: CPump::Kind can't be inlined: it is virtual$",
 		 r"^Inline Function: CPump::Loop can't be inlined: it returns part of the way through its body: only a function that returns once, at its end, is inlined$",
-		 r"^Inline Function: CPump::Bump can't be inlined: it changes its parameter iA$",
 		 r"^Conflict: The body names miRate, which isn't public: the call at Pump\.cpp line 127 is outside the class\.$",
 		 r'^  Pump\.cpp line 132: returned, at the caret$', r'^Status: Inlined Twice: 1 call\.$',
 		 r'^26\|\tint\t\t\tGetRate\(void\) \{ return miRate; \}$', r'^37\|int\t\tTwice\(int iValue\);$',
-		 r'^127\|\tiTotal = Twice\(pcPump->GetRate\(\) \+ 1\) \* 2;$', r'^132\|\treturn iTotal \* 2;$', r'^133 lines$'],
+		 r'^127\|\tiTotal = Twice\(pcPump->GetRate\(\) \+ 1\) \* 2;$', r'^132\|\treturn iTotal \* 2;$', r'^155 lines$'],
 		[r'Inlined CPump::GetRate']),
+	('inline-function-temporaries', dict(MakeInlineFunctionCopy(), **{
+		#A function that changes its parameter is inlined with a variable for it (numbered where the function it
+		#goes into has the name), and a call inside a bigger expression is taken out of it: the statements before
+		#the statement, what it returned in a variable.  A loop's condition and an arm of ?: keep their calls, so
+		#the function stays.
+		'WAIT_INDEX': '1', 'OPEN': 'Pump.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:33:9,edit:inlinablefunction,edit:inlinefunction:all:anyway,printdisklines:Pump.h,printdisklines:Pump.cpp'}),
+		[r'^Inline Function: CPump::Bump, statements, 6 calls$', r'^  its parameter iA is changed: it gets a variable$',
+		 r'^  Pump\.cpp line 144: assigned, on pcPump->, outside the class$', r'^  Pump\.cpp line 145: taken out of an expression, on pcPump->, outside the class$',
+		 r'^  Pump\.cpp line 146: taken out of an expression, on pcPump->, outside the class$', r'^  Pump\.cpp line 146: taken out of an expression, on pcPump->, outside the class$',
+		 r'^  Pump\.cpp line 150: in an expression, on pcPump->, outside the class$', r'^  Pump\.cpp line 154: in an expression, on pcPump->, outside the class$',
+		 r"^Conflict: The call at Pump\.cpp line 150 is part of an expression it can't be taken out of, and Bump has statements: it stays a call\.$",
+		 r'^Status: Inlined CPump::Bump: 4 calls, 2 left as they were\.$',
+		 r'^33\|\tint\t\t\tBump\(int iA\);$',
+		 r'^142\|\tint\tiTotal;$', r'^143\|\tint\tiA2;$', r'^144\|\tint\tiBump;$', r'^145\|\tint\tiBump2;$', r'^146\|\tint\tiBump3;$', r'^147\|$',
+		 r'^148\|\tiA2 = 3;$', r'^149\|\tiA2 = iA2 \+ 1;$', r'^150\|\tiTotal = iA2;$', r'^151\|\tiA2 = iA;$', r'^152\|\tiA2 = iA2 \+ 1;$', r'^153\|\tiBump = iA2;$',
+		 r'^154\|\tiTotal = iTotal \+ iBump \* 2;$', r'^157\|\tiBump2 = iA2;$', r'^158\|\tiA2 = 4;$', r'^160\|\tiBump3 = iA2;$', r'^161\|\tif \(iBump2 > iBump3\)$',
+		 r'^165\|\twhile \(pcPump->Bump\(1\) < iTotal\)$', r'^169\|\treturn \(iTotal > 0\) \? pcPump->Bump\(iTotal\) : 0;$', r'^170 lines$'],
+		[]),
 	('inline-function-dialog', dict(MakeInlineFunctionCopy(), **{
 		#Ctrl+Alt+N on a function: the dialog asks which calls, then Problems Detected if anything is in the way;
 		#on something that is neither a variable nor a function the status line says so.

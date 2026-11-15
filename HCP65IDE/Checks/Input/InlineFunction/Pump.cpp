@@ -131,3 +131,25 @@ int UsePump(CPump* pcPump)
 	iTotal = cSlot.Bytes();
 	return Twice(iTotal);
 }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+int UseBump(CPump* pcPump, int iA)
+{
+	int	iTotal;
+
+	iTotal = pcPump->Bump(3);
+	iTotal = iTotal + pcPump->Bump(iA) * 2;
+	if (pcPump->Bump(iTotal) > pcPump->Bump(4))
+	{
+		iTotal = 0;
+	}
+	while (pcPump->Bump(1) < iTotal)
+	{
+		iTotal--;
+	}
+	return (iTotal > 0) ? pcPump->Bump(iTotal) : 0;
+}

@@ -47,12 +47,14 @@ class CIDEContent;
 #define IDE_INLINE_THIS_WORD	2	//this: the call's object.
 #define IDE_INLINE_SCOPED		3	//A type or constant of the class named alone: the class's name before it.
 #define IDE_INLINE_TEMPLATE		4	//A class template's parameter: the instance's argument at the call.
+#define IDE_INLINE_OWN_PARAMETER	5	//A parameter the body changes: the variable it gets where it is inlined.
 
 //Where a call is written.
 #define IDE_CALL_IN_EXPRESSION	0	//Part of an expression.
 #define IDE_CALL_STATEMENT		1	//A statement by itself: "Fill(3);".
 #define IDE_CALL_ASSIGNED		2	//All of what a statement assigns: "x = Level();".
 #define IDE_CALL_RETURNED		3	//All of what a statement returns: "return Level();".
+#define IDE_CALL_HOISTED		4	//Part of an expression of a statement that always makes it, once: what it gives can go in a variable before the statement.
 
 
 //A place in the function's body that is written differently where the body is inlined.
@@ -93,6 +95,8 @@ struct SIDEInlineCall
 	CArrayChars	aszNames;			//The names the function the call is in writes.
 	CArrayChars	aszInstance;		//The call's object's class template's arguments, if they are needed and known.
 	bool		bSelected;			//It is the call at the caret.
+	CChars		szVariable;			//IDE_CALL_HOISTED: a name for the variable what it gives goes in (Introduce Variable's).
+	CArrayChars	aszOwnNames;		//While it is inlined: the variable each changed parameter gets here, empty for the others.
 
 	void	Init(void);
 	void	Kill(void);
@@ -122,6 +126,9 @@ struct SIDEFunctionInlining
 	CArrayChars				aszDeclared;		//and their names.
 	CArrayIDEInlineReplaces	asReplaces;			//In the order they are written.
 	CArrayInt				aiParameterUses;	//How many times the body names each parameter.
+	CArrayChars				aszOwnParameters;	//For each parameter: its name if the body changes it (it gets a variable), or empty,
+	CArrayChars				aszOwnTypes;		//and its type as it is written.
+	CChars					szReturnType;		//What it returns, as a variable of it is declared; empty if one can't be (void, a reference).
 	CArrayChars				aszTemplateParameters;	//Its class template's parameters' names, if its body names any.
 	CChars					szNotPublic;		//A member its body names that isn't public (the first), empty if none.
 	bool					bNamesMembers;
@@ -143,16 +150,27 @@ struct SIDEFunctionInlining
 //statement's indentation, and what it returned is assigned, returned, or dropped.  Its own variables' declarations
 //go with the declarations of the function it is inlined into.
 //
+//A call of one with statements that is part of a bigger expression is taken out of it: the statements are written
+//before the statement the call is in, what it returned is assigned to a variable (named as Introduce Variable would
+//name it, declared with the function's declarations), and the variable is written where the call was.  Only where
+//the statement always makes the call, and once: an expression's statement, a return, an if's condition, in braces
+//and on a line of its own; not after && or ||, in the arms of ?:, after a comma, or in a loop's condition.  The
+//function's statements run before the rest of that statement, then.
+//
+//A parameter the body changes (passed by value) gets a variable of its own where it is inlined, with the parameter's
+//name (numbered if the function it goes into has the name), declared with that function's declarations and given
+//the argument before the statements.  One passed by reference is the argument itself, as the others are.
+//
 //In the body, each parameter becomes the call's argument (in parentheses where it is more than one thing and is an
 //operand); a member named alone gets the call's object before it ("cTank.miLevel", "pcTank->Fill()"), this becomes
 //the object, and a type or constant of the class gets the class's name.  A class template's member inlined where the
 //call isn't in the template has the template's parameters replaced by the instance's arguments there, which the
 //compiler gives from the object's type (T3).
 //
-//Refused: a virtual function, a recursive one, one that returns part of the way through, one that changes a
-//parameter, a constructor, destructor or operator, a function template.  Shown first as Problems Detected: a call
-//that is part of an expression where the function has statements (it stays a call, and the function isn't taken
-//out); an argument that does something and would be written more than once, or not at all; a member that isn't
+//Refused: a virtual function, a recursive one, one that returns part of the way through, a constructor, destructor
+//or operator, a function template.  Shown first as Problems Detected: a call that is part of an expression it
+//can't be taken out of, where the function has statements (it stays a call, and the function isn't taken out);
+//an argument that does something and would be written more than once, or not at all; a member that isn't
 //public named where the call is outside the class; one of its variables' names that the function it goes into uses;
 //and, where it is to be taken out, a place it is named without being called.
 class CIDEInlineFunction : public CObject
@@ -185,6 +203,8 @@ protected:
 	bool	IsInlined(SIDEFunctionInlining* psInlining, SIDEInlineCall* psCall, int iMode);
 	void	AppendBody(SIDEFunctionInlining* psInlining, SIDEInlineCall* psCall, const char* szText, size uiStart, size uiEnd, CChars* pszDest);
 	void	AppendPlace(SIDEInlineCall* psCall, CChars* pszDest);
+	void	KeepNestedCalls(SIDEFunctionInlining* psDest);
+	void	AddDeclaration(CArrayIDEFileRanges* pasInserts, CArrayChars* paszTexts, SIDEInlineCall* psCall, const char* szFile, const char* szDeclaration);
 };
 
 

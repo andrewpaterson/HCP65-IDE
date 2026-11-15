@@ -31,6 +31,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDEDefinitions.h"
 #include "IDEMoveMembers.h"
 #include "IDEInlineVariable.h"
+#include "IDEIntroduceVariable.h"
 #include "IDEInlineFunction.h"
 
 
@@ -61,6 +62,8 @@ void SIDEInlineCall::Init(void)
 	aszNames.Init();
 	aszInstance.Init();
 	bSelected = false;
+	szVariable.Init();
+	aszOwnNames.Init();
 }
 
 
@@ -70,6 +73,8 @@ void SIDEInlineCall::Init(void)
 //////////////////////////////////////////////////////////////////////////
 void SIDEInlineCall::Kill(void)
 {
+	aszOwnNames.Kill();
+	szVariable.Kill();
 	aszInstance.Kill();
 	aszNames.Kill();
 	szAssigned.Kill();
@@ -110,6 +115,9 @@ void SIDEFunctionInlining::Init(void)
 	bNamesMembers = false;
 	apsCalls.Init();
 	bSelectedCall = false;
+	aszOwnParameters.Init();
+	aszOwnTypes.Init();
+	szReturnType.Init();
 }
 
 
@@ -127,6 +135,9 @@ void SIDEFunctionInlining::Kill(void)
 		free(apsCalls.GetPtr(i));
 	}
 	apsCalls.Kill();
+	szReturnType.Kill();
+	aszOwnTypes.Kill();
+	aszOwnParameters.Kill();
 	szNotPublic.Kill();
 	aszTemplateParameters.Kill();
 	aiParameterUses.Kill();
@@ -140,6 +151,9 @@ void SIDEFunctionInlining::Kill(void)
 	sSignature.Kill();
 	szWhyNot.Kill();
 }
+
+
+static const char*	gaszIDEInlineSpecifiers[] = { "static ", "inline ", "virtual ", "extern ", "static\t", "inline\t", "virtual\t", "extern\t" };
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -192,6 +206,47 @@ static bool IsIDECompoundText(const char* szText)
 		}
 	}
 	return false;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The statement a call inside a bigger expression can be taken out of,
+// its statements written before it: one that always makes the call, and
+// once.  NULL if there is none: the call is after && or ||, in an arm of
+// ?:, after a comma, or in something that isn't an expression's
+// statement, a return or an if's condition.
+//
+//////////////////////////////////////////////////////////////////////////
+static CCPPSyntax* FindIDEHoistStatement(CIDERefactorUnit* pcUnit, CCPPSyntax* pcCall)
+{
+	CCPPSyntax*					pcNode;
+	CCPPSyntax*					pcParent;
+	CCPPSyntaxBinaryExpression*	pcBinary;
+
+	pcNode = pcCall;
+	for (pcParent = pcNode->mpcParent; pcParent && pcUnit->IsExpression(pcParent); pcParent = pcParent->mpcParent)
+	{
+		if (pcParent->GetKind() == CPPS_BinaryExpression)
+		{
+			pcBinary = (CCPPSyntaxBinaryExpression*)pcParent;
+			if (((pcBinary->meOperator == CT_LogicalAnd) || (pcBinary->meOperator == CT_LogicalOr) || (pcBinary->meOperator == CT_Comma)) && (pcBinary->mpcRight == pcNode))
+			{
+				return NULL;
+			}
+		}
+		else if ((pcParent->GetKind() == CPPS_ConditionalExpression) && (((CCPPSyntaxConditionalExpression*)pcParent)->mpcCondition != pcNode))
+		{
+			return NULL;
+		}
+		pcNode = pcParent;
+	}
+	if (pcParent && ((pcParent->GetKind() == CPPS_ExpressionStatement) || (pcParent->GetKind() == CPPS_ReturnStatement) ||
+					 ((pcParent->GetKind() == CPPS_IfStatement) && (((CCPPSyntaxIfStatement*)pcParent)->mpcCondition == pcNode))))
+	{
+		return pcParent;
+	}
+	return NULL;
 }
 
 
@@ -328,6 +383,33 @@ bool CIDEInlineFunction::ReadBody(CIDERefactorUnit* pcUnit, SIDESignatureSite* p
 	}
 	pcBody = (CCPPSyntaxCompoundStatement*)pcFunction->mpcBody;
 	uiStatements = pcBody->macpStatements.NumElements();
+
+	//What it returns, as a variable of it is declared: without static and the like, and a const that isn't a pointer's.
+	if (psSite->bReturn)
+	{
+		szLine.Init();
+		AppendIDERangeText(szText, &psSite->sReturn, &szLine);
+		szLine.StripWhitespace();
+		for (i = 0; i < sizeof(gaszIDEInlineSpecifiers) / sizeof(char*); i++)
+		{
+			if (szLine.StartsWith(gaszIDEInlineSpecifiers[i]))
+			{
+				szLine.RemoveFromStart(strlen(gaszIDEInlineSpecifiers[i]));
+				szLine.StripWhitespace();
+				i = (size)-1;
+			}
+		}
+		if (szLine.StartsWith("const ") && !szLine.Contains("*"))
+		{
+			szLine.RemoveFromStart(6);
+			szLine.StripWhitespace();
+		}
+		if (!szLine.Empty() && (szLine.Text()[szLine.Length() - 1] != '&') && !szLine.Equals("void"))
+		{
+			psDest->szReturnType.Set(szLine);
+		}
+		szLine.Kill();
+	}
 	cExits.muiReturns = 0;
 	cExits.mbLeaves = false;
 	cExits.miLoops = 0;
@@ -422,8 +504,8 @@ bool CIDEInlineFunction::ReadBody(CIDERefactorUnit* pcUnit, SIDESignatureSite* p
 //
 // The places in the body that are written differently where it is
 // inlined: its parameters, its class's members named alone, this, its
-// class's types and constants, and its class template's parameters.  It
-// is refused if the body changes a parameter.
+// class's types and constants, and its class template's parameters.  A
+// parameter the body changes gets a variable of its own.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEInlineFunction::ReadReplaces(CIDERefactorUnit* pcUnit, SIDESignatureSite* psSite, const char* szText, SIDEFunctionInlining* psDest)
@@ -456,7 +538,9 @@ void CIDEInlineFunction::ReadReplaces(CIDERefactorUnit* pcUnit, SIDESignatureSit
 	int							iKind;
 	uint8						uiKind;
 	ECPPSyntax					eParent;
+	SIDEWrittenParameter*		psParameter;
 	bool						bOperand;
+	bool						bChanged;
 
 	pcModel = mpcContent->GetCodeModel();
 	uiBody = FindIDETextOffset(szText, psSite->sBody.iLine, psSite->sBody.iColumn);
@@ -466,6 +550,7 @@ void CIDEInlineFunction::ReadReplaces(CIDERefactorUnit* pcUnit, SIDESignatureSit
 	for (i = 0; psDest->bPossible && (i < psSite->asParameters.NumElements()); i++)
 	{
 		uiUses = 0;
+		bChanged = false;
 		asLocations.Init();
 		if (!psSite->asParameters.Get(i)->szKey.Empty())
 		{
@@ -496,13 +581,7 @@ void CIDEInlineFunction::ReadReplaces(CIDERefactorUnit* pcUnit, SIDESignatureSit
 			pcBinary = (eParent == CPPS_BinaryExpression) ? (CCPPSyntaxBinaryExpression*)pcParent : NULL;
 			if ((pcUnit->GetPass()->FindChanges(pcUse) != 0) || (pcBinary && (pcBinary->meOperator == CT_Assignment) && (pcBinary->mpcLeft == pcUse)))
 			{
-				szName.Init();
-				GetIDESymbolName(psSite->asParameters.Get(i)->szKey.Text(), &szName);
-				psDest->bPossible = false;
-				psDest->szWhyNot.Set("it changes its parameter ");
-				psDest->szWhyNot.Append(szName);
-				szName.Kill();
-				break;
+				bChanged = true;
 			}
 			bOperand = (eParent == CPPS_UnaryExpression) || (eParent == CPPS_CastExpression) || (eParent == CPPS_ConditionalExpression) || (eParent == CPPS_MemberExpression) ||
 					   (eParent == CPPS_SubscriptExpression) || (pcBinary && !(((pcBinary->meOperator == CT_Assignment) || (pcBinary->meOperator == CT_Comma)) && (pcBinary->mpcRight == pcUse)));
@@ -515,6 +594,59 @@ void CIDEInlineFunction::ReadReplaces(CIDERefactorUnit* pcUnit, SIDESignatureSit
 			uiUses++;
 		}
 		KillIDELocations(&asLocations);
+
+		//One the body changes gets a variable of its own where it is inlined, if its type can be written for one; a
+		//reference is the argument itself.
+		szScope.Init();
+		szName.Init();
+		if (bChanged && psDest->bPossible)
+		{
+			psParameter = psSite->asParameters.Get(i);
+			uiAt = FindIDETextOffset(szText, psParameter->sAll.iLine, psParameter->sAll.iColumn);
+			uiBefore = FindIDETextOffset(szText, psParameter->sName.iLine, psParameter->sName.iColumn);
+			if (psParameter->bName && (uiBefore > uiAt))
+			{
+				szScope.AppendSubString(szText, uiAt, uiBefore);
+				szScope.StripWhitespace();
+			}
+			uiAt = FindIDETextOffset(szText, psParameter->sName.iEndLine, psParameter->sName.iEndColumn);
+			uiBefore = psParameter->bDefault ? FindIDETextOffset(szText, psParameter->sDefault.iLine, psParameter->sDefault.iColumn) : FindIDETextOffset(szText, psParameter->sAll.iEndLine, psParameter->sAll.iEndColumn);
+			szTemplate.Init();
+			if (uiBefore > uiAt)
+			{
+				szTemplate.AppendSubString(szText, uiAt, uiBefore);
+				szTemplate.StripWhitespace();
+			}
+			GetIDESymbolName(psParameter->szKey.Text(), &szName);
+			if (szScope.Empty() || !szTemplate.Empty())
+			{
+				psDest->bPossible = false;
+				psDest->szWhyNot.Set("it changes its parameter ");
+				psDest->szWhyNot.Append(szName)->Append(", which a variable can't be made for (an array, or a pointer to a function)");
+				szName.Clear();
+			}
+			else if (szScope.Text()[szScope.Length() - 1] == '&')
+			{
+				szName.Clear();
+			}
+			else
+			{
+				for (j = 0; j < psDest->asReplaces.NumElements(); j++)
+				{
+					if ((psDest->asReplaces.Get(j)->iKind == IDE_INLINE_PARAMETER) && (psDest->asReplaces.Get(j)->iIndex == (int)i))
+					{
+						psDest->asReplaces.Get(j)->iKind = IDE_INLINE_OWN_PARAMETER;
+					}
+				}
+				uiUses = 1;
+				psDest->bExpression = false;
+			}
+			szTemplate.Kill();
+		}
+		psDest->aszOwnParameters.Add(szName.Text());
+		psDest->aszOwnTypes.Add(szScope.Text());
+		szName.Kill();
+		szScope.Kill();
 		psDest->aiParameterUses.Add((int)uiUses);
 	}
 	if (!psDest->bPossible)
@@ -656,6 +788,7 @@ bool CIDEInlineFunction::ReadCall(SIDESignatureCall* psCall, CCPPSyntax* pcValue
 	CCPPSyntaxCompoundStatement*	pcBody;
 	CCPPSyntaxName*					pcName;
 	CIDEEffectFinder				cEffects;
+	SIDEIntroduction				sIntroduction;
 	SPreprocessedToken*				psSource;
 	SCPPSyntaxRange					sRange;
 	SCPP65Type*						psType;
@@ -758,6 +891,20 @@ bool CIDEInlineFunction::ReadCall(SIDESignatureCall* psCall, CCPPSyntax* pcValue
 		pcStatement = pcBinary->mpcParent;
 		AppendIDERangeText(szFile, &sRange, &psInline->szAssigned);
 	}
+	else
+	{
+		//Inside a bigger expression: it may be taken out of it.
+		pcStatement = FindIDEHoistStatement(&cUnit, pcTop);
+		if (pcStatement)
+		{
+			psInline->iContext = IDE_CALL_HOISTED;
+		}
+	}
+	if (pcStatement && !(pcStatement->mpcParent && ((pcStatement->mpcParent->GetKind() == CPPS_CompoundStatement) || (pcStatement->mpcParent->GetKind() == CPPS_CaseStatement))))
+	{
+		//Not in braces: more statements can't be written where it is.
+		pcStatement = NULL;
+	}
 	if (pcStatement && cUnit.GetRange(pcStatement, &sRange))
 	{
 		psInline->uiStatement = FindIDETextOffset(szFile, sRange.iLine, 0);
@@ -825,6 +972,35 @@ bool CIDEInlineFunction::ReadCall(SIDESignatureCall* psCall, CCPPSyntax* pcValue
 				psInline->aszNames.AddIfUnique(szText.Text());
 				szText.Kill();
 			}
+		}
+	}
+
+	//The variable what it gives goes in, where it is taken out of an expression: named as Introduce Variable names one.
+	if (psInline->iContext == IDE_CALL_HOISTED)
+	{
+		if (!pcFunction || psDest->szReturnType.Empty())
+		{
+			psInline->iContext = IDE_CALL_IN_EXPRESSION;
+		}
+		else
+		{
+			sIntroduction.Init();
+			sIntroduction.szType.Set(psDest->szReturnType);
+			for (i = 0; i < psInline->aszNames.NumElements(); i++)
+			{
+				sIntroduction.aszUsed.Add(psInline->aszNames.GetText(i));
+			}
+			for (i = 0; i < psDest->aszDeclared.NumElements(); i++)
+			{
+				sIntroduction.aszUsed.Add(psDest->aszDeclared.GetText(i));
+			}
+			for (i = 0; i < psDest->aszOwnParameters.NumElements(); i++)
+			{
+				sIntroduction.aszUsed.Add(psDest->aszOwnParameters.GetText(i));
+			}
+			mpcContent->GetIntroduceVariable()->SuggestName(&cUnit, pcCall, &sIntroduction);
+			psInline->szVariable.Set(sIntroduction.szSuggested);
+			sIntroduction.Kill();
 		}
 	}
 
@@ -1029,6 +1205,7 @@ bool CIDEInlineFunction::FindInlining(SIDEFunctionInlining* psDest)
 				Refuse(psDest, "a call of it can't be read (a macro makes it)");
 			}
 		}
+		KeepNestedCalls(psDest);
 	}
 	cUnit.Kill();
 	cFile.Kill();
@@ -1049,7 +1226,44 @@ bool CIDEInlineFunction::IsInlined(SIDEFunctionInlining* psInlining, SIDEInlineC
 	{
 		return false;
 	}
-	return psInlining->bExpression || (psCall->iContext != IDE_CALL_IN_EXPRESSION);
+	if (psInlining->bExpression)
+	{
+		return true;
+	}
+	if (psCall->iContext == IDE_CALL_HOISTED)
+	{
+		return (psInlining->uiValueEnd > psInlining->uiValue) && !psInlining->szReturnType.Empty() && !psCall->szVariable.Empty();
+	}
+	return psCall->iContext != IDE_CALL_IN_EXPRESSION;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A call written in another's arguments stays a call where the function
+// has statements: the other is written with it, and can't be if the
+// call is taken out of what the other's statement was.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEInlineFunction::KeepNestedCalls(SIDEFunctionInlining* psDest)
+{
+	SIDEInlineCall*	psCall;
+	SIDEInlineCall*	psOther;
+	size			i;
+	size			j;
+
+	for (i = 0; !psDest->bExpression && (i < psDest->apsCalls.NumElements()); i++)
+	{
+		psCall = psDest->apsCalls.GetPtr(i);
+		for (j = 0; (psCall->iContext == IDE_CALL_HOISTED) && (j < psDest->apsCalls.NumElements()); j++)
+		{
+			psOther = psDest->apsCalls.GetPtr(j);
+			if ((i != j) && (psOther->uiStart <= psCall->uiStart) && (psCall->uiEnd <= psOther->uiEnd) && (StringInsensitiveCompare(psOther->szFileName.Text(), psCall->szFileName.Text()) == 0))
+			{
+				psCall->iContext = IDE_CALL_IN_EXPRESSION;
+			}
+		}
+	}
 }
 
 
@@ -1098,7 +1312,7 @@ void CIDEInlineFunction::FindConflicts(SIDEFunctionInlining* psInlining, int iMo
 		{
 			szLine.Init("The call at ");
 			AppendPlace(psCall, &szLine);
-			szLine.Append(" is part of an expression, and ")->Append(psInlining->sSignature.szOldName)->Append(" has statements: it stays a call.");
+			szLine.Append(" is part of an expression it can't be taken out of, and ")->Append(psInlining->sSignature.szOldName)->Append(" has statements: it stays a call.");
 			paszDest->Add(szLine.Text());
 			szLine.Kill();
 			uiStay++;
@@ -1225,6 +1439,10 @@ void CIDEInlineFunction::AppendBody(SIDEFunctionInlining* psInlining, SIDEInline
 				pszDest->Append(psInlining->szClassName)->Append("::");
 			}
 		}
+		else if (psReplace->iKind == IDE_INLINE_OWN_PARAMETER)
+		{
+			pszDest->Append(psCall->aszOwnNames.GetText((size)psReplace->iIndex));
+		}
 		else if (psCall->bOutside && ((size)psReplace->iIndex < psCall->aszInstance.NumElements()))
 		{
 			pszDest->Append(psCall->aszInstance.GetText((size)psReplace->iIndex));
@@ -1240,6 +1458,47 @@ void CIDEInlineFunction::AppendBody(SIDEFunctionInlining* psInlining, SIDEInline
 
 //////////////////////////////////////////////////////////////////////////
 //
+// A declaration ("int	iNext;") to go with the declarations of the
+// function a call is in, lined up with them: once, however many calls in
+// that function ask for it.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEInlineFunction::AddDeclaration(CArrayIDEFileRanges* pasInserts, CArrayChars* paszTexts, SIDEInlineCall* psCall, const char* szFile, const char* szDeclaration)
+{
+	CChars	szLine;
+	size	uiInsert;
+
+	for (uiInsert = 0; uiInsert < pasInserts->NumElements(); uiInsert++)
+	{
+		if ((pasInserts->Get(uiInsert)->uiStart == psCall->uiDeclarations) && (StringInsensitiveCompare(pasInserts->Get(uiInsert)->szFileName.Text(), psCall->szFileName.Text()) == 0))
+		{
+			break;
+		}
+	}
+	if (uiInsert == pasInserts->NumElements())
+	{
+		pasInserts->Add()->Init(psCall->szFileName.Text(), 0, 0, 0, 0);
+		pasInserts->Get(uiInsert)->uiStart = psCall->uiDeclarations;
+		pasInserts->Get(uiInsert)->uiEnd = psCall->bDeclarations ? 0 : 1;
+		paszTexts->Add("");
+	}
+	szLine.Init("\t");
+	szLine.Append(szDeclaration);
+	szLine.Append('\n');
+	if (psCall->bDeclarations)
+	{
+		RealignIDEDeclaration(&szLine, FindIDENameColumn(szFile, psCall->uiDeclarations));
+	}
+	if (!paszTexts->Get(uiInsert)->Contains(szLine.Text()))
+	{
+		paszTexts->Get(uiInsert)->Append(szLine);
+	}
+	szLine.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // The function inlined where a mode says, and taken out if it says so
 // and nothing is left that names it.  One undo across the files.
 //
@@ -1249,6 +1508,9 @@ bool CIDEInlineFunction::Inline(SIDEFunctionInlining* psInlining, int iMode, CCh
 	CIDEFileEdits		cFiles;
 	CArrayIDEFileRanges	asInserts;
 	CArrayChars			aszInsertTexts;
+	CArrayIDEFileRanges	asHoists;
+	CArrayChars			aszHoistTexts;
+	CArrayChars			aszHoisted;
 	CArrayChars			aszLines;
 	SIDEInlineCall*		psCall;
 	SIDESignatureSite*	psSite;
@@ -1257,6 +1519,8 @@ bool CIDEInlineFunction::Inline(SIDEFunctionInlining* psInlining, int iMode, CCh
 	CChars				szStatements;
 	CChars				szLine;
 	CChars				szMessage;
+	CChars				szVariable;
+	const char*			szArgument;
 	char*				szDefinition;
 	char*				szFile;
 	size				uiInlined;
@@ -1277,6 +1541,9 @@ bool CIDEInlineFunction::Inline(SIDEFunctionInlining* psInlining, int iMode, CCh
 	cFiles.Init(mpcContent);
 	asInserts.Init();
 	aszInsertTexts.Init();
+	asHoists.Init();
+	aszHoistTexts.Init();
+	aszHoisted.Init();
 	szDefinition = cFiles.GetText(psInlining->szFileName.Text());
 	uiInlined = 0;
 	uiStayed = 0;
@@ -1297,6 +1564,20 @@ bool CIDEInlineFunction::Inline(SIDEFunctionInlining* psInlining, int iMode, CCh
 		{
 			uiStayed++;
 			continue;
+		}
+		//The variables its changed parameters get here: their own names, numbered where the function it goes into
+		//has them.
+		psCall->aszOwnNames.ReInit();
+		for (j = 0; j < psInlining->aszOwnParameters.NumElements(); j++)
+		{
+			szLine.Init(psInlining->aszOwnParameters.GetText(j));
+			for (k = 2; !szLine.Empty() && (psCall->aszNames.Contains(szLine.Text()) || psInlining->aszDeclared.Contains(szLine.Text())); k++)
+			{
+				szLine.Set(psInlining->aszOwnParameters.GetText(j));
+				szLine.Append((uint32)k);
+			}
+			psCall->aszOwnNames.Add(szLine.Text());
+			szLine.Kill();
 		}
 		szValue.Init();
 		if (psInlining->uiValueEnd > psInlining->uiValue)
@@ -1319,8 +1600,18 @@ bool CIDEInlineFunction::Inline(SIDEFunctionInlining* psInlining, int iMode, CCh
 		}
 		else
 		{
-			//Its statements at the call's statement's indentation, then what becomes of what it returned.
+			//Its changed parameters' variables given the arguments (or the default values the call leaves out),
 			szText.Init();
+			for (j = 0; j < psInlining->aszOwnParameters.NumElements(); j++)
+			{
+				if (!psCall->aszOwnNames.Get(j)->Empty())
+				{
+					szArgument = (j < psCall->aszArguments.NumElements()) ? psCall->aszArguments.GetText(j) : ((j < psInlining->sSignature.aszOldDefaults.NumElements()) ? psInlining->sSignature.aszOldDefaults.GetText(j) : "");
+					szText.Append(psCall->szIndent)->Append(psCall->aszOwnNames.GetText(j))->Append(" = ")->Append(szArgument)->Append(";\n");
+				}
+			}
+
+			//Its statements at the call's statement's indentation, then what becomes of what it returned.
 			szStatements.Init();
 			if (psInlining->uiStatementsEnd > psInlining->uiStatements)
 			{
@@ -1348,73 +1639,120 @@ bool CIDEInlineFunction::Inline(SIDEFunctionInlining* psInlining, int iMode, CCh
 				aszLines.Kill();
 			}
 			szStatements.Kill();
-			if (psCall->iContext == IDE_CALL_ASSIGNED)
+			szVariable.Init();
+			if (psCall->iContext == IDE_CALL_HOISTED)
 			{
-				szText.Append(psCall->szIndent)->Append(psCall->szAssigned)->Append(" = ")->Append(szValue)->Append(";\n");
-			}
-			else if (psCall->iContext == IDE_CALL_RETURNED)
-			{
-				szText.Append(psCall->szIndent)->Append(szValue.Empty() ? "return" : "return ")->Append(szValue)->Append(";\n");
-			}
-			else if (!szValue.Empty() && psInlining->bValueEffects)
-			{
-				szText.Append(psCall->szIndent)->Append(szValue)->Append(";\n");
-			}
-			if (szText.Empty())
-			{
-				//Nothing is left of it: its line goes.
-				uiStart = psCall->uiStatement + psCall->szIndent.Length();
-				uiEnd = psCall->uiStatementEnd;
-				ExtendIDEDeletion(szFile, &uiStart, &uiEnd, true);
-				cFiles.GetEdits(psCall->szFileName.Text())->Replace(uiStart, uiEnd, "");
-			}
-			else
-			{
-				szText.SetLength(szText.Length() - 1);
-				cFiles.GetEdits(psCall->szFileName.Text())->Replace(psCall->uiStatement, psCall->uiStatementEnd, szText.Text());
-			}
-			szText.Kill();
-
-			//Its own variables' declarations, with the declarations of the function the call is in: once for each.
-			if (psInlining->aszDeclarations.NumElements() > 0)
-			{
-				bFound = false;
-				for (k = 0; k < asInserts.NumElements(); k++)
+				//What it returned goes in a variable no other call taken out in this function has, before the
+				//statement, and the variable where the call was.
+				szVariable.Set(psCall->szVariable);
+				for (k = 2; ; k++)
 				{
-					bFound = bFound || ((asInserts.Get(k)->uiStart == psCall->uiDeclarations) && (StringInsensitiveCompare(asInserts.Get(k)->szFileName.Text(), psCall->szFileName.Text()) == 0));
+					szLine.Init(psCall->szFileName);
+					szLine.Append('|')->Append((uint32)psCall->uiDeclarations)->Append('|')->Append(szVariable);
+					bFound = aszHoisted.Contains(szLine.Text()) || ((k > 2) && (psCall->aszNames.Contains(szVariable.Text()) || psInlining->aszDeclared.Contains(szVariable.Text())));
+					if (!bFound)
+					{
+						aszHoisted.Add(szLine.Text());
+					}
+					szLine.Kill();
+					if (!bFound)
+					{
+						break;
+					}
+					szVariable.Set(psCall->szVariable);
+					szVariable.Append((uint32)k);
+				}
+				szText.Append(psCall->szIndent)->Append(szVariable)->Append(" = ")->Append(szValue)->Append(";\n");
+				bFound = false;
+				for (k = 0; k < asHoists.NumElements(); k++)
+				{
+					if ((asHoists.Get(k)->uiStart == psCall->uiStatement) && (StringInsensitiveCompare(asHoists.Get(k)->szFileName.Text(), psCall->szFileName.Text()) == 0))
+					{
+						aszHoistTexts.Get(k)->Append(szText);
+						bFound = true;
+					}
 				}
 				if (!bFound)
 				{
-					szText.Init();
-					for (j = 0; j < psInlining->aszDeclarations.NumElements(); j++)
-					{
-						//Lined up with the declarations it joins.
-						szLine.Init("\t");
-						szLine.Append(psInlining->aszDeclarations.GetText(j));
-						szLine.Append('\n');
-						if (psCall->bDeclarations)
-						{
-							RealignIDEDeclaration(&szLine, FindIDENameColumn(szFile, psCall->uiDeclarations));
-						}
-						szText.Append(szLine);
-						szLine.Kill();
-					}
-					if (!psCall->bDeclarations)
-					{
-						szText.Append('\n');
-					}
-					asInserts.Add()->Init(psCall->szFileName.Text(), 0, 0, 0, 0);
-					asInserts.Get(asInserts.NumElements() - 1)->uiStart = psCall->uiDeclarations;
-					aszInsertTexts.Add(szText.Text());
-					szText.Kill();
+					asHoists.Add()->Init(psCall->szFileName.Text(), 0, 0, 0, 0);
+					asHoists.Get(asHoists.NumElements() - 1)->uiStart = psCall->uiStatement;
+					asHoists.Get(asHoists.NumElements() - 1)->uiEnd = psCall->uiStatement + psCall->szIndent.Length();
+					aszHoistTexts.Add(szText.Text());
+				}
+				cFiles.GetEdits(psCall->szFileName.Text())->Replace(psCall->uiStart, psCall->uiEnd, szVariable.Text());
+			}
+			else
+			{
+				if (psCall->iContext == IDE_CALL_ASSIGNED)
+				{
+					szText.Append(psCall->szIndent)->Append(psCall->szAssigned)->Append(" = ")->Append(szValue)->Append(";\n");
+				}
+				else if (psCall->iContext == IDE_CALL_RETURNED)
+				{
+					szText.Append(psCall->szIndent)->Append(szValue.Empty() ? "return" : "return ")->Append(szValue)->Append(";\n");
+				}
+				else if (!szValue.Empty() && psInlining->bValueEffects)
+				{
+					szText.Append(psCall->szIndent)->Append(szValue)->Append(";\n");
+				}
+				if (szText.Empty())
+				{
+					//Nothing is left of it: its line goes.
+					uiStart = psCall->uiStatement + psCall->szIndent.Length();
+					uiEnd = psCall->uiStatementEnd;
+					ExtendIDEDeletion(szFile, &uiStart, &uiEnd, true);
+					cFiles.GetEdits(psCall->szFileName.Text())->Replace(uiStart, uiEnd, "");
+				}
+				else
+				{
+					szText.SetLength(szText.Length() - 1);
+					cFiles.GetEdits(psCall->szFileName.Text())->Replace(psCall->uiStatement, psCall->uiStatementEnd, szText.Text());
 				}
 			}
+			szText.Kill();
+
+			//Its own variables' declarations, with the declarations of the function the call is in, once for each; and
+			//those of its changed parameters' variables and of the one what it returned goes in.
+			for (j = 0; j < psInlining->aszDeclarations.NumElements(); j++)
+			{
+				AddDeclaration(&asInserts, &aszInsertTexts, psCall, szFile, psInlining->aszDeclarations.GetText(j));
+			}
+			for (j = 0; j < psInlining->aszOwnParameters.NumElements(); j++)
+			{
+				if (!psCall->aszOwnNames.Get(j)->Empty())
+				{
+					szLine.Init(psInlining->aszOwnTypes.GetText(j));
+					szLine.Append('\t')->Append(psCall->aszOwnNames.GetText(j))->Append(';');
+					AddDeclaration(&asInserts, &aszInsertTexts, psCall, szFile, szLine.Text());
+					szLine.Kill();
+				}
+			}
+			if (!szVariable.Empty())
+			{
+				szLine.Init(psInlining->szReturnType);
+				szLine.Append('\t')->Append(szVariable)->Append(';');
+				AddDeclaration(&asInserts, &aszInsertTexts, psCall, szFile, szLine.Text());
+				szLine.Kill();
+			}
+			szVariable.Kill();
 		}
 		szValue.Kill();
 		uiInlined++;
 	}
+	for (i = 0; i < asHoists.NumElements(); i++)
+	{
+		//The statements taken out of a statement, before it: its indentation follows them.
+		szFile = cFiles.GetText(asHoists.Get(i)->szFileName.Text());
+		aszHoistTexts.Get(i)->AppendSubString(szFile, asHoists.Get(i)->uiStart, asHoists.Get(i)->uiEnd);
+		cFiles.GetEdits(asHoists.Get(i)->szFileName.Text())->Replace(asHoists.Get(i)->uiStart, asHoists.Get(i)->uiEnd, aszHoistTexts.GetText(i));
+	}
 	for (i = 0; i < asInserts.NumElements(); i++)
 	{
+		//A blank line after them where the function had no declarations (its end says so).
+		if (asInserts.Get(i)->uiEnd != 0)
+		{
+			aszInsertTexts.Get(i)->Append('\n');
+		}
 		cFiles.GetEdits(asInserts.Get(i)->szFileName.Text())->Insert(asInserts.Get(i)->uiStart, aszInsertTexts.GetText(i));
 	}
 
@@ -1458,6 +1796,9 @@ bool CIDEInlineFunction::Inline(SIDEFunctionInlining* psInlining, int iMode, CCh
 		mpcContent->ShowStatus(szMessage.Text());
 	}
 	szMessage.Kill();
+	aszHoisted.Kill();
+	aszHoistTexts.Kill();
+	KillIDEFileRanges(&asHoists);
 	aszInsertTexts.Kill();
 	KillIDEFileRanges(&asInserts);
 	cFiles.Kill();
@@ -1472,7 +1813,7 @@ bool CIDEInlineFunction::Inline(SIDEFunctionInlining* psInlining, int iMode, CCh
 //////////////////////////////////////////////////////////////////////////
 char* CIDEInlineFunction::PrintInlining(SIDEFunctionInlining* psInlining, CChars* pszDest)
 {
-	static const char*	aszContexts[] = { "in an expression", "a statement", "assigned", "returned" };
+	static const char*	aszContexts[] = { "in an expression", "a statement", "assigned", "returned", "taken out of an expression" };
 	SIDEInlineCall*		psCall;
 	size				i;
 
@@ -1485,12 +1826,19 @@ char* CIDEInlineFunction::PrintInlining(SIDEFunctionInlining* psInlining, CChars
 	pszDest->Append(psInlining->bExpression ? ", an expression, " : ", statements, ");
 	pszDest->Append((uint32)psInlining->apsCalls.NumElements());
 	pszDest->Append((psInlining->apsCalls.NumElements() == 1) ? " call\n" : " calls\n");
+	for (i = 0; i < psInlining->aszOwnParameters.NumElements(); i++)
+	{
+		if (!psInlining->aszOwnParameters.Get(i)->Empty())
+		{
+			pszDest->Append("  its parameter ")->Append(psInlining->aszOwnParameters.GetText(i))->Append(" is changed: it gets a variable\n");
+		}
+	}
 	for (i = 0; i < psInlining->apsCalls.NumElements(); i++)
 	{
 		psCall = psInlining->apsCalls.GetPtr(i);
 		pszDest->Append("  ");
 		AppendPlace(psCall, pszDest);
-		pszDest->Append(": ")->Append(aszContexts[psCall->iContext]);
+		pszDest->Append(": ")->Append(aszContexts[(psCall->iContext == IDE_CALL_HOISTED) && psInlining->bExpression ? IDE_CALL_IN_EXPRESSION : psCall->iContext]);
 		if (!psCall->szObject.Empty())
 		{
 			pszDest->Append(", on ")->Append(psCall->szObject);

@@ -162,6 +162,7 @@ public:
 	void	FindReplaceWarnings(CIDERefactorUnit* pcUnit, CCPPSyntax* pcBody, CCPPSyntax* pcSelected, CArraySyntax* papcNodes, SIDEIntroduction* psDest);
 	bool	Introduce(SIDEIntroduction* psIntroduction, const char* szName, bool bAll, CChars* pszStatus = NULL, int iKind = IDE_INTRODUCE_VARIABLE);
 	const char*	GetNameProblem(SIDEIntroduction* psIntroduction, const char* szName, int iKind = IDE_INTRODUCE_VARIABLE);
+	void	SuggestName(CIDERefactorUnit* pcUnit, CCPPSyntax* pcExpression, SIDEIntroduction* psDest);
 	char*	PrintIntroduction(SIDEIntroduction* psIntroduction, CChars* pszDest);
 
 protected:
@@ -177,7 +178,6 @@ protected:
 	void		FindOccurrences(CIDERefactorUnit* pcUnit, CCPPSyntax* pcBody, CCPPSyntax* pcSelected, const char* szText, SIDEIntroduction* psDest, CArraySyntax* papcNodes);
 	CCPPSyntax*	FindAnchor(CArraySyntax* papcNodes, size uiFirst, size uiLast);
 	void		FindDeclarations(CIDERefactorUnit* pcUnit, CCPPSyntaxCompoundStatement* pcBody, const char* szText, SIDEIntroduction* psDest);
-	void		SuggestName(CIDERefactorUnit* pcUnit, CCPPSyntax* pcExpression, SIDEIntroduction* psDest);
 	void		ShowIntroduceStatus(CChars* pszMessage, CChars* pszStatus);
 };
 

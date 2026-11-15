@@ -439,6 +439,7 @@ Where it is
        - Remove Template Parameter gives the class its name back from the class that was its name (question 57): done.
        - Inline inlines a constant of a file or a class (question 29): done.
        - Introduce Typedef in a header names the type in the files that #include it too (question 33): done.
+       - Inline Function gives a changed parameter a variable, and takes a call out of an expression (question 39): done.
 
 
 When the plan is done
