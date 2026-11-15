@@ -51,6 +51,9 @@
     <ClCompile Include="IDERename.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="IDEConvertPointer.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="IDEConvertMacro.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -252,6 +255,9 @@
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDERename.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDEConvertPointer.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDEConvertMacro.h">

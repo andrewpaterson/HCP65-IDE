@@ -263,3 +263,9 @@ Open
     (values written only where they don't count up from 0), and a function on one line,
     "inline int SQUARE(int x) { return ((x) * (x)); }", keeping the macro's name and its brackets.  Is that the
     form you want (the brackets taken out, the function under a comment banner, the name changed to your case)?
+
+50. Convert Pointer to Reference (and back) keeps the variable's name: "SLevel* psLevel" becomes "SLevel& psLevel".
+    Should it rename it too (to "sLevel", by your prefixes: which prefix does a reference to a struct or a class
+    have here?), or is Rename afterwards what you want?  It works on a parameter (every declaration, override, use
+    and call) and on a local variable declared with its value; a field isn't done (its constructors would have to
+    initialise it).  Is a field wanted?

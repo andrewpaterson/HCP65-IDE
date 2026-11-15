@@ -189,6 +189,91 @@ size CIDEFileEdits::NumFiles(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// The errors the checks of the files to be changed have, as they are or
+// (bEdited) as they would be with the edits made: a refactoring that
+// can't tell by itself whether what it leaves compiles asks before and
+// after, and does nothing if there would be more.  Each file is checked
+// in its unit; a header's new text is every unit's while they are
+// checked, and a file's unit has its new text too if it is one of the
+// files.  A file that can't be parsed counts nothing.
+//
+//////////////////////////////////////////////////////////////////////////
+size CIDEFileEdits::CountErrors(bool bEdited)
+{
+	CIDECodeModel*	pcModel;
+	CArrayChars		aszTexts;
+	CChars			szNew;
+	CChars			szUnit;
+	char*			szText;
+	size			uiErrors;
+	size			uiFile;
+	size			uiProject;
+	size			uiUnit;
+	size			i;
+	size			j;
+
+	pcModel = mpcContent->GetCodeModel();
+	aszTexts.Init();
+	for (i = 0; i < maszFiles.NumElements(); i++)
+	{
+		szNew.Init();
+		szText = GetText(maszFiles.GetText(i));
+		if (szText && bEdited)
+		{
+			mapcEdits.GetPtr(i)->ApplyTo(szText, &szNew);
+		}
+		else if (szText)
+		{
+			szNew.Append(szText);
+		}
+		aszTexts.Add(szNew.Text());
+		szNew.Kill();
+	}
+
+	pcModel->WaitForIndexing();
+	uiErrors = 0;
+	szUnit.Init();
+	for (i = 0; i < maszFiles.NumElements(); i++)
+	{
+		//The headers' texts again each time: checking a header gives the code model that header's text.
+		for (j = 0; bEdited && (j < maszFiles.NumElements()); j++)
+		{
+			if (CIDEIcons::GetFileType(maszFiles.GetText(j)) == IFT_Header)
+			{
+				pcModel->SetHeaderText(maszFiles.GetText(j), aszTexts.GetText(j));
+			}
+		}
+		uiUnit = MAX_SIZE;
+		if (bEdited && pcModel->GetIncluder(maszFiles.GetText(i), &uiProject, &szUnit) && (StringInsensitiveCompare(szUnit.Text(), maszFiles.GetText(i)) != 0))
+		{
+			for (j = 0; j < maszFiles.NumElements(); j++)
+			{
+				if (StringInsensitiveCompare(maszFiles.GetText(j), szUnit.Text()) == 0)
+				{
+					uiUnit = j;
+				}
+			}
+		}
+		uiFile = CountIDETrialErrors(pcModel, &mpcContent->GetFindInFiles(), maszFiles.GetText(i), bEdited ? aszTexts.GetText(i) : NULL, (uiUnit != MAX_SIZE) ? maszFiles.GetText(uiUnit) : NULL,
+									 (uiUnit != MAX_SIZE) ? aszTexts.GetText(uiUnit) : NULL);
+		uiErrors += (uiFile == MAX_SIZE) ? 0 : uiFile;
+	}
+	szUnit.Kill();
+	for (i = 0; bEdited && (i < maszFiles.NumElements()); i++)
+	{
+		szText = GetText(maszFiles.GetText(i));
+		if (szText && (CIDEIcons::GetFileType(maszFiles.GetText(i)) == IFT_Header))
+		{
+			pcModel->SetHeaderText(maszFiles.GetText(i), szText);
+		}
+	}
+	aszTexts.Kill();
+	return uiErrors;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Every file's edits made, as one undo group.
 //
 //////////////////////////////////////////////////////////////////////////

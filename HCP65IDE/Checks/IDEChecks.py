@@ -355,6 +355,17 @@ def MakeMacrosCopy():
 	return {'SOLUTION': os.path.join(szFolder, 'Macros.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
 
 
+def MakePointersCopy():
+	#A copy of Input/Pointers, to make pointers references in and back: CVat's functions take SLevel by pointer and
+	#by reference (one overridden, one that calls itself, one that tests its pointer, one that steps it), and Use
+	#calls them with addresses, pointers and NULL and has pointer and reference locals.
+	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
+	atexit.register(shutil.rmtree, szRoot, True)
+	szFolder = os.path.join(szRoot, 'Pointers')
+	shutil.copytree(os.path.join(HERE, 'Input', 'Pointers'), szFolder)
+	return {'SOLUTION': os.path.join(szFolder, 'Pointers.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
+
+
 def MakeKeymapFile(szText=None):
 	#Where a scripted run keeps its keys, with szText in it if it's given.
 	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
@@ -2025,6 +2036,41 @@ CHECKS = [
 		[r'^Dialog \[Convert Macro MAX_UNITS\] answered Cancel$', r'^Dialog \[Inline Macro TWICE\] answered Cancel$',
 		 r"^Status: Can't convert the macro BUMP: it changes its argument: a function would change its own copy\.$", r'^5\|#define MAX_UNITS\t8\t//The most there are\.$'],
 		[r'^Status: Converted', r'^Status: Inlined']),
+	('pointer-parameter', dict(MakePointersCopy(), **{
+		#Convert Pointer to Reference on a parameter: its * a & in every declaration and definition of its function
+		#and of the function that overrides it, p->x made p.x, (*p).x made p.x, *p made p, p given on made &p, and
+		#every call's argument: &c made c, a pointer made *p.  A call of the function itself, and of the function it
+		#overrides, with the parameter stays as it is.  And back, a reference made a pointer.
+		'WAIT_INDEX': '1', 'OPEN': 'Vat.cpp',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:30:25,edit:pointertoreference,edit:caret:94:24,edit:pointertoreference,edit:caret:54:32,edit:referencetopointer,printdisklines:Vat.h,printdisklines:Vat.cpp'}),
+		[r'^Status: Converted the parameter psLevel of CVat::Fill to a reference: 7 uses and 3 calls changed\.$',
+		 r'^Status: Converted the parameter psLevel of CVat::Sum to a reference: 3 uses and 2 calls changed\.$',
+		 r'^Status: Converted the parameter sLevel of CVat::Drain to a pointer: 3 uses and 2 calls changed\.$',
+		 r'^19\|\tvirtual\tint\t\tFill\(SLevel& psLevel, int iAmount\);$', r'^20\|\t\t\tint\t\tDrain\(const SLevel\* sLevel\);$', r'^21\|\t\t\tint\t\tCheck\(SLevel\* psLevel\);$',
+		 r'^23\|\t\t\tint\t\tSum\(SLevel& psLevel, int iTimes\);$', r'^30\|\tint\t\tFill\(SLevel& psLevel, int iAmount\) override;$',
+		 r'^30\|int CVat::Fill\(SLevel& psLevel, int iAmount\)$', r'^32\|\tpsLevel\.miDepth \+= iAmount;$', r'^33\|\tpsLevel\.miMark = Depth\(&psLevel\);$', r'^34\|\tmsLevel = psLevel;$',
+		 r'^43\|int CDeepVat::Fill\(SLevel& psLevel, int iAmount\)$', r'^46\|\treturn CVat::Fill\(psLevel, 0\);$',
+		 r'^54\|int CVat::Drain\(const SLevel\* sLevel\)$', r'^58\|\tpsSame = sLevel;$', r'^59\|\tmiCount = sLevel->miDepth \+ Depth\(&msLevel\);$', r'^60\|\tmsLevel = \*sLevel;$',
+		 r'^100\|\treturn psLevel\.miMark \+ Sum\(psLevel, iTimes - 1\);$',
+		 r'^119\|\tiTotal = pcVat->Fill\(sLevel, 1\);$', r'^120\|\tiTotal \+= pcDeep->Fill\(\*psMine, 2\);$', r'^121\|\tiTotal \+= pcVat->Drain\(&sLevel\);$', r'^122\|\tiTotal \+= pcVat->Drain\(psMine\);$',
+		 r'^127\|\treturn iTotal \+ pcVat->Sum\(\*psLate, 2\);$'],
+		[r"^Status: Can't"]),
+	('pointer-local', dict(MakePointersCopy(), **{
+		#Refused: a pointer a call gives NULL, one that is stepped, a local variable with no value where it is
+		#declared, and what is no pointer.  A local pointer made a reference (its initialiser's & goes) and a local
+		#reference made a pointer; then a function's parameter, whose calls with those change to match.
+		'WAIT_INDEX': '1', 'OPEN': 'Vat.cpp',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:69:26,edit:pointertoreference,edit:caret:83:26,edit:pointertoreference,edit:caret:118:11,edit:pointertoreference,edit:caret:112:11,edit:referencetopointer,edit:caret:111:11,edit:pointertoreference,edit:caret:114:8,edit:pointertoreference,edit:caret:20:20,edit:pointertoreference,printdisklines:Vat.h,printdisklines:Vat.cpp'}),
+		[r"^Status: Can't convert the parameter psLevel of CVat::Check to a reference: it is given NULL \(Vat\.cpp line 123\)\.$",
+		 r"^Status: Can't convert the parameter psLevel of CVat::Step to a reference: it is stepped: a reference always refers to one thing \(Vat\.cpp line 85\)\.$",
+		 r'^Status: Converted the variable psLocal to a reference: 3 uses changed\.$', r'^Status: Converted the variable sOther to a pointer: 3 uses changed\.$',
+		 r"^Status: Can't convert the variable psMine to a reference: it isn't given a value where it is declared: a reference must be\.$",
+		 r"^Status: Can't convert the variable iTotal to a reference: it isn't a pointer\.$", r'^Status: Converted the parameter psLevel of Depth to a reference: 1 use and 4 calls changed\.$',
+		 r'^34\|int\t\tDepth\(SLevel& psLevel\);$', r'^20\|int Depth\(SLevel& psLevel\)$', r'^22\|\treturn psLevel\.miDepth;$', r'^33\|\t\(\*psLevel\)\.miMark = Depth\(\*psLevel\);$',
+		 r'^59\|\tmiCount = sLevel\.miDepth \+ Depth\(msLevel\);$', r'^69\|int CVat::Check\(SLevel\* psLevel\)$', r'^85\|\tpsLevel\+\+;$',
+		 r'^112\|\tSLevel\*\tsOther = &pcVat->msLevel;$', r'^118\|\tSLevel&\tpsLocal = pcVat->msLevel;$',
+		 r'^124\|\tiTotal \+= psLocal\.miDepth \+ psLocal\.miMark \+ Depth\(psLocal\);$', r'^125\|\tsOther->miDepth = iTotal;$', r'^126\|\tiTotal \+= Depth\(\*sOther\) \+ sOther->miMark;$'],
+		[]),
 	('rename-assembly-class', dict(MakeRenameAssemblyCopy(), **{
 		#A class renamed in hand written assembly's labels (_CEngine__Init, __0, __2), in parameter lists with its length
 		#(FPC7CEngine to FPC6CMotor), in generated layout constants (SIZEOF_CEngine, CEngine_miSpeed: in the assembly, the
@@ -2529,7 +2575,7 @@ CHECKS = [
 		 r'^Menu Debug: Start Debugging \[F5\], Start Without Debugging \[Ctrl\+F5\], Stop Debugging \[Shift\+F5\], Stop Running\(disabled\), Restart \[Ctrl\+Shift\+F5\], Break All \[Ctrl\+Pause/Break\], Attach to Emulator\.\.\., Step Into \[F11\], Step Over \[F10\], Step Out \[Shift\+F11\], Toggle Breakpoint \[F9\], ',
 		 r'^Menu Window: Reset Window Layout, Close All Documents$',
 		 r'^Menu Editor: Go to Source \[Ctrl\+B\], Find Usages \[Alt\+F7\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Rename\.\.\. \[Shift\+F6\], Refactor>, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\]$',
-		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Introduce Field\.\.\. \[Ctrl\+Alt\+F\](\(disabled\))?, Introduce Constant\.\.\. \[Ctrl\+Alt\+C\](\(disabled\))?, Introduce Parameter\.\.\. \[Ctrl\+Alt\+P\](\(disabled\))?, Introduce Typedef\.\.\. \[Ctrl\+Alt\+K\](\(disabled\))?, Inline\.\.\. \[Ctrl\+Alt\+N\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\.(\(disabled\))?, Push Members Down\.\.\.(\(disabled\))?, Move\.\.\. \[F6\](\(disabled\))?, Copy Class\.\.\.(\(disabled\))?, Extract Method\.\.\. \[Ctrl\+Alt\+M\](\(disabled\))?, Extract Superclass\.\.\.(\(disabled\))?, Extract Interface\.\.\.(\(disabled\))?, Extract Class\.\.\.(\(disabled\))?, Encapsulate Field\.\.\.(\(disabled\))?, Optimise #includes \[Ctrl\+Alt\+O\], Sort #includes, Convert Macro\.\.\.(\(disabled\))?$',
+		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Introduce Field\.\.\. \[Ctrl\+Alt\+F\](\(disabled\))?, Introduce Constant\.\.\. \[Ctrl\+Alt\+C\](\(disabled\))?, Introduce Parameter\.\.\. \[Ctrl\+Alt\+P\](\(disabled\))?, Introduce Typedef\.\.\. \[Ctrl\+Alt\+K\](\(disabled\))?, Inline\.\.\. \[Ctrl\+Alt\+N\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\.(\(disabled\))?, Push Members Down\.\.\.(\(disabled\))?, Move\.\.\. \[F6\](\(disabled\))?, Copy Class\.\.\.(\(disabled\))?, Extract Method\.\.\. \[Ctrl\+Alt\+M\](\(disabled\))?, Extract Superclass\.\.\.(\(disabled\))?, Extract Interface\.\.\.(\(disabled\))?, Extract Class\.\.\.(\(disabled\))?, Encapsulate Field\.\.\.(\(disabled\))?, Optimise #includes \[Ctrl\+Alt\+O\], Sort #includes, Convert Macro\.\.\.(\(disabled\))?, Convert Pointer to Reference(\(disabled\))?, Convert Reference to Pointer(\(disabled\))?$',
 		 r'^Menu Explorer: Set as Startup Solution, Set as Startup Project\(disabled\), Remove Solution, Rename\.\.\.(\(disabled\))?$',
 		 r'^Menu item \[View/Nope\] not found$'], []),
 	('menu-clicks', {

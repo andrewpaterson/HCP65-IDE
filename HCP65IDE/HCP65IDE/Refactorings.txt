@@ -290,6 +290,11 @@ IntelliJ has none of these for Java.
      must have no more errors.  Left: T6 (question 48); a macro #defined more than once or in the compiler's own
      headers; variadic macros (inlined, not converted); the first 30 files that use a macro are the ones checked.
  17. . to -> and back; a pointer parameter to a reference and back, every use and call changed.
+     Done 2026-11-15 (IDEConvertPointer.h says what it does): Convert Pointer to Reference and Convert Reference
+     to Pointer, for a parameter (its function's every declaration and override, from
+     CIDEChangeSignature::FindSignature) or a local variable declared with its value.  The files changed are
+     checked as they would be (CIDEFileEdits::CountErrors) and nothing is done if they have more errors.  Left: a
+     field; a "* const"; the name keeps its prefix (question 50).
  18. Make a member function const (and static), its overrides with it, checked against what it changes; its family
      with it where a template's body calls it (T2).
  19. A function to a member function and back: its first parameter is this.
@@ -362,5 +367,6 @@ Where it is
  13. Encapsulate Field (12): done (CIDEEncapsulateField).  Phase 3 is done.
  14. #includes (15): done (CIDEIncludes).
  15. Convert macro (16): done but for T6 (CIDEConvertMacro; question 48).
- 16. Phase 4 from 17 (. to ->, pointer parameter to reference): next.  Then 18 to 24 in their order.
+ 16. Pointer to reference and back (17): done (CIDEConvertPointer).
+ 17. Phase 4 from 18 (make a member function const or static): next.  Then 19 to 24 in their order.
 

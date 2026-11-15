@@ -70,6 +70,7 @@ public:
 	char*			GetText(const char* szFileName);
 	CIDETextEdits*	GetEdits(const char* szFileName);
 	size			NumFiles(void);
+	size			CountErrors(bool bEdited);
 	void			Apply(void);
 };
 

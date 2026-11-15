@@ -1723,6 +1723,24 @@ void CIDEScript::RunEditStep(const char* szStep)
 		aszParts.Kill();
 		szSpec.Kill();
 	}
+	else if ((strcmp(szStep, "pointertoreference") == 0) || (strcmp(szStep, "referencetopointer") == 0))
+	{
+		//The parameter or local variable at the caret made a reference (or a pointer), with what the status bar
+		//would say: what was changed, or why nothing was.
+		CChars	szPrinted;
+
+		szPrinted.Init();
+		if (!mpcContent->GetConvertPointer()->Convert(strcmp(szStep, "pointertoreference") == 0, &szPrinted) && szPrinted.Empty())
+		{
+			szPrinted.Set("nothing at the caret");
+		}
+		printf("Status: %s\n", szPrinted.Text());
+		if (gbIDEScriptRenameSaves)
+		{
+			mpcContent->GetDocuments()->SaveAllFiles();
+		}
+		szPrinted.Kill();
+	}
 	else if ((strcmp(szStep, "macro") == 0) || (strcmp(szStep, "macroconvert") == 0) || (strncmp(szStep, "macroenum:", 10) == 0) || (strncmp(szStep, "macroinline:", 12) == 0))
 	{
 		//The macro at the caret: its #define, its uses and what Convert Macro would make of it (macro); or it
