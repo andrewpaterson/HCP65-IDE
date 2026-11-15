@@ -68,12 +68,6 @@ Open
     __IDE_MOVE_CLASS_H__ style for several words).  A CMakeLists.txt up to two directories above a project that
     lists the old file gets a line for the new one after it.  Right?
 
-25. F6 is now "Move...": on a class (or a member of one) it is Move Class to Its Own Files; on a function or a
-    variable that is in no class it is Move to File, which asks for the header it goes to (a text field: the name
-    of a header of the solution).  Its definition goes to that header's source file.  The files it goes to get an
-    #include of the header that declares each thing its text names, where they have none ("include what you
-    use", by the file's name alone).  IntelliJ would let you pick the file from a tree: do you want a chooser?
-
 26. Moving to another namespace isn't built: your code has one file with a namespace in it, so I left it rather
     than build it untried.  A function that is in a namespace is refused by Move to File.  Say if you want it.
 
@@ -227,6 +221,16 @@ Answered
     a refactoring made (Move Class to Its Own Files, Move to File where it makes one, Copy Class, Extract
     Superclass, Interface and Class): the files deleted and their items taken out of the projects, as Rename
     File's undo renames back; redo makes them again.
+
+25. F6 is now "Move...": on a class (or a member of one) it is Move Class to Its Own Files; on a function or a
+    variable that is in no class it is Move to File, which asks for the header it goes to (a text field: the name
+    of a header of the solution).  Its definition goes to that header's source file.  The files it goes to get an
+    #include of the header that declares each thing its text names, where they have none ("include what you
+    use", by the file's name alone).  IntelliJ would let you pick the file from a tree: do you want a chooser?
+    Answered 2026-11-15: both, as IntelliJ has: the field completes over the solution's headers as it is typed
+    in (Go to File's matching, in a dropdown that shows each one's path), and a button beside it opens a chooser
+    of the solution's projects and files to pick one from.  To do in Move to File's dialog; the chooser of the
+    solution's files is a piece of its own (WindowLib's file chooser shows the disk, not the solution).
 
 30. Introduce Constant makes a #define, since every constant in your code is one (530 #defines of a number or a
     string in BaseLib, WindowLib and the IDE; no const variables), after the file's last #define or #include, and
