@@ -168,6 +168,7 @@ protected:
 	void				ReadMembers(SIDEMembersMove* psMove, const char* szCaretKey);
 	bool				ReadMember(SIDEMembersMove* psMove, const char* szKey, SIDEMovedMember* psDest);
 	bool				ScanClass(SIDEMoveClass* psClass, int32 iAtToken, int32 iAccess, int32* piAccessAt, int32* piBoundaryToken, int32* piCloseToken);
+	void				AddForwardDeclarations(SIDEMoveClass* psClass, const char* szText, const char* szDeclaration, CIDEFileEdits* pcEdits);
 	bool				FindInsertPlace(SIDEMoveClass* psClass, const char* szText, int32 iAccess, size* puiAt, CChars* pszBefore, bool bLastPart = false);
 	void				FindSourceFile(SIDEMoveClass* psClass, CChars* pszDest);
 	bool				IsChosen(SIDEMembersMove* psMove, const char* szKey, bool bAbstractToo);

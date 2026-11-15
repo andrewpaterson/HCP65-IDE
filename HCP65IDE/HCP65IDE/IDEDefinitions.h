@@ -61,6 +61,7 @@ protected:
 	CIDEContent*						mpcContent;
 	CArrayChars							maszFiles;
 	CArrayTemplatePtr<CIDETextEdits>	mapcEdits;
+	CArrayChars							maszNotes;
 
 public:
 	void			Init(CIDEContent* pcContent);
@@ -72,6 +73,7 @@ public:
 	size			NumFiles(void);
 	size			CountErrors(bool bEdited);
 	void			Apply(void);
+	bool			NoteOnce(const char* szNote);
 };
 
 

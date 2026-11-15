@@ -771,6 +771,145 @@ bool CIDEMoveMembers::FindInsertPlace(SIDEMoveClass* psClass, const char* szText
 
 //////////////////////////////////////////////////////////////////////////
 //
+// A member's declaration names what its class's file must have declared
+// above the class.  A class of the solution's that the file declares
+// only below it (one that derives from it, say) is declared above it too
+// ("class CDeepVat;"): with the declarations already there, or on its
+// own above the class, its template<...> and its comment.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEMoveMembers::AddForwardDeclarations(SIDEMoveClass* psClass, const char* szText, const char* szDeclaration, CIDEFileEdits* pcEdits)
+{
+	CIDECodeModel*		pcModel;
+	CArrayIDELocations	asLocations;
+	SIDELocation*		psLocation;
+	CChars				szWord;
+	CChars				szOwnName;
+	CChars				szNote;
+	CChars				szForward;
+	const char*			szFrom;
+	const char*			szEnd;
+	size				uiLine;
+	size				uiPrevious;
+	size				uiName;
+	size				uiAt;
+	size				i;
+	uint8				uiKind;
+	bool				bAbove;
+	bool				bBelow;
+	bool				bElsewhere;
+	bool				bStruct;
+	bool				bDeclarations;
+
+	pcModel = mpcContent->GetCodeModel();
+	szOwnName.Init();
+	GetIDESymbolName(psClass->szKey.Text(), &szOwnName);
+	for (szFrom = szDeclaration; *szFrom != '\0'; szFrom = szEnd)
+	{
+		szEnd = szFrom + 1;
+		if (!IsIDENameChar(*szFrom))
+		{
+			continue;
+		}
+		for (; IsIDENameChar(*szEnd); szEnd++)
+		{
+		}
+		if (((*szFrom >= '0') && (*szFrom <= '9')) || ((szFrom - szDeclaration >= 2) && (szFrom[-1] == ':') && (szFrom[-2] == ':')))
+		{
+			continue;
+		}
+		szWord.Init();
+		szWord.AppendSubString(szDeclaration, (size)(szFrom - szDeclaration), (size)(szEnd - szDeclaration));
+		asLocations.Init();
+		if (!szWord.Equals(szOwnName.Text()) && pcModel->GetSymbolLocations(szWord.Text(), &asLocations, &uiKind) && (uiKind == CPPSK_Class))
+		{
+			bAbove = false;
+			bBelow = false;
+			bElsewhere = false;
+			bStruct = false;
+			for (i = 0; i < asLocations.NumElements(); i++)
+			{
+				psLocation = asLocations.Get(i);
+				if (psLocation->uiRole == CPPIR_Reference)
+				{
+					continue;
+				}
+				if (StringInsensitiveCompare(psLocation->szFileName.Text(), psClass->szFileName.Text()) != 0)
+				{
+					bElsewhere = true;
+				}
+				else if (psLocation->iLine < psClass->sRange.iLine)
+				{
+					bAbove = true;
+				}
+				else if (!bBelow)
+				{
+					//Declared as it is where it is: "struct SLevel".
+					uiName = FindIDETextOffset(szText, psLocation->iLine, psLocation->iColumn);
+					for (; (uiName > 0) && ((szText[uiName - 1] == ' ') || (szText[uiName - 1] == '\t')); uiName--)
+					{
+					}
+					bStruct = (uiName >= 6) && (memcmp(&szText[uiName - 6], "struct", 6) == 0);
+					bBelow = true;
+				}
+			}
+			szNote.Init("forward ");
+			szNote.Append(psClass->szFileName)->Append(' ')->Append(szWord);
+			if (bBelow && !bAbove && !bElsewhere && pcEdits->NoteOnce(szNote.Text()))
+			{
+				//Above the class: its line, and the template<...> and the comment's lines over it.
+				uiLine = FindIDETextOffset(szText, psClass->sRange.iLine, 0);
+				while (uiLine > 0)
+				{
+					for (uiPrevious = uiLine - 1; (uiPrevious > 0) && (szText[uiPrevious - 1] != '\n'); uiPrevious--)
+					{
+					}
+					for (uiAt = uiPrevious; (szText[uiAt] == ' ') || (szText[uiAt] == '\t'); uiAt++)
+					{
+					}
+					if ((strncmp(&szText[uiAt], "//", 2) != 0) && (strncmp(&szText[uiAt], "template", 8) != 0))
+					{
+						break;
+					}
+					uiLine = uiPrevious;
+				}
+
+				//The line with something on it above that: another such declaration, and this one goes under it.
+				for (uiAt = uiLine; (uiAt > 0) && ((szText[uiAt - 1] == '\n') || (szText[uiAt - 1] == '\r') || (szText[uiAt - 1] == ' ') || (szText[uiAt - 1] == '\t')); uiAt--)
+				{
+				}
+				for (uiPrevious = uiAt; (uiPrevious > 0) && (szText[uiPrevious - 1] != '\n'); uiPrevious--)
+				{
+				}
+				bDeclarations = (uiAt > uiPrevious) && (szText[uiAt - 1] == ';') && ((strncmp(&szText[uiPrevious], "class ", 6) == 0) || (strncmp(&szText[uiPrevious], "struct ", 7) == 0)) &&
+								(memchr(&szText[uiPrevious], '{', uiAt - uiPrevious) == NULL) && (memchr(&szText[uiPrevious], ':', uiAt - uiPrevious) == NULL);
+				szForward.Init(bStruct ? "struct " : "class ");
+				szForward.Append(szWord)->Append(";\n");
+				if (bDeclarations)
+				{
+					for (uiLine = uiAt; (szText[uiLine] != '\0') && (szText[uiLine] != '\n'); uiLine++)
+					{
+					}
+					uiLine += (szText[uiLine] == '\n') ? 1 : 0;
+				}
+				else
+				{
+					szForward.Append("\n\n");
+				}
+				pcEdits->GetEdits(psClass->szFileName.Text())->Insert(uiLine, szForward.Text());
+				szForward.Kill();
+			}
+			szNote.Kill();
+		}
+		KillIDELocations(&asLocations);
+		szWord.Kill();
+	}
+	szOwnName.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // A member's declaration (its line, "\tint\tmiCount;\n") added to a
 // class: at the end of its part with iAccess (IDE_ACCESS_), or, for -1,
 // where its fields go: after the last field it has, or, if it has none,
@@ -871,6 +1010,7 @@ bool CIDEMoveMembers::AddMember(const char* szClassKey, int32 iAccess, const cha
 		}
 		aszLines.Kill();
 		pcEdits->GetEdits(sClass.szFileName.Text())->Insert(uiAt, szBefore.Text());
+		AddForwardDeclarations(&sClass, szText, szDeclaration, pcEdits);
 	}
 	szBefore.Kill();
 	sClass.Kill();

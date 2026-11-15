@@ -98,6 +98,25 @@ void CIDEFileEdits::Init(CIDEContent* pcContent)
 	mpcContent = pcContent;
 	maszFiles.Init();
 	mapcEdits.Init();
+	maszNotes.Init();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Something an edit is made for once, however often it is asked for (a
+// class's forward declaration, that two members added need): true the
+// first time it is noted.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEFileEdits::NoteOnce(const char* szNote)
+{
+	if (maszNotes.GetIndex(szNote) != ARRAY_ELEMENT_NOT_FOUND)
+	{
+		return false;
+	}
+	maszNotes.Add(szNote);
+	return true;
 }
 
 
@@ -114,6 +133,7 @@ void CIDEFileEdits::Kill(void)
 		mapcEdits.GetPtr(i)->Kill();
 		free(mapcEdits.GetPtr(i));
 	}
+	maszNotes.Kill();
 	mapcEdits.Kill();
 	maszFiles.Kill();
 }
