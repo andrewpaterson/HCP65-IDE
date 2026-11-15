@@ -2082,15 +2082,36 @@ CHECKS = [
 		 r'^112\|\tSLevel\*\tsOther = &pcVat->msLevel;$', r'^118\|\tSLevel&\tpsLocal = pcVat->msLevel;$',
 		 r'^124\|\tiTotal \+= psLocal\.miDepth \+ psLocal\.miMark \+ Depth\(psLocal\);$', r'^125\|\tsOther->miDepth = iTotal;$', r'^126\|\tiTotal \+= Depth\(\*sOther\) \+ sOther->miMark;$'],
 		[]),
-	('qualifier-p1', dict(MakeQualifiersCopy(), **{
+	('qualifier-const', dict(MakeQualifiersCopy(), **{
+		#Make Member Function const: const after its parameters in its declaration and definition, and in the function
+		#that overrides it.  What a body does that a const function can't is a conflict and nothing is changed: a
+		#field assigned (an array's element, a struct's member), a call of a member that isn't const (one made const
+		#since is no conflict).  What a pointer field points to may be changed.  With a, it is made const whatever
+		#the conflicts.  A function that is no member, and one that is const, are refused.
 		'WAIT_INDEX': '1', 'OPEN': 'Meter.cpp',
 		'DEBUG': 'edit:renamesearch:---s,edit:caret:64:14,edit:makeconst,edit:caret:21:14,edit:makeconst,edit:caret:21:14,edit:makeconst,edit:caret:74:14,edit:makeconst,edit:caret:41:14,edit:makeconst,edit:caret:53:14,edit:makeconst,edit:caret:64:14,edit:makeconst,edit:caret:105:18,edit:makeconst:a,edit:caret:116:6,edit:makeconst,edit:open:Meter.h,edit:caret:21:10,edit:makeconst,printdisklines:Meter.h,printdisklines:Meter.cpp'}),
-		[r'^Status'],
-		[]),
-	('qualifier-p2', dict(MakeQualifiersCopy(), **{
+		[r"^Conflict: It calls Level, which isn't const, in Meter\.cpp at line 66\.$", r"^Conflict: It calls Raise, which isn't const, in Meter\.cpp at line 66\.$",
+		 r'^Status: Made CMeter::Level const, and 1 function with it\.$', r"^Status: Can't make CMeter::Level const: it is const already\.$", r'^Status: Made CMeter::Next const\.$',
+		 r'^Conflict: It assigns miLevel, in Meter\.cpp at line 43\.$', r'^Conflict: It assigns maiMarks, in Meter\.cpp at line 44\.$', r'^Conflict: It assigns msMark, in Meter\.cpp at line 55\.$',
+		 r"^Conflict: It calls Raise, which isn't const, in Meter\.cpp at line 66\.$", r'^Conflict: It assigns miLevel, in Meter\.cpp at line 107\.$', r'^Status: Made CMeter::Find const\.$',
+		 r"^Status: Can't make Use const: it isn't a member function\.$", r'^Status: Made CMeter::Top const\.$',
+		 r'^20\|\tvirtual\tint\t\tLevel\(void\) const;$', r'^21\|\t\t\tint\t\tTop\(void\) const \{ return maiMarks\[3\]; \}$', r'^23\|\t\t\tint\t\tRaise\(int iBy\);$', r'^26\|\t\t\tint\t\tNext\(void\) const;$',
+		 r'^29\|\t\t\tCMeter\*\tFind\(void\) const;$', r'^36\|\tint\t\tLevel\(void\) const override;$',
+		 r'^21\|int CMeter::Level\(void\) const$', r'^31\|int CFineMeter::Level\(void\) const$', r'^41\|int CMeter::Raise\(int iBy\)$', r'^64\|int CMeter::Both\(void\)$', r'^74\|int CMeter::Next\(void\) const$',
+		 r'^105\|CMeter\* CMeter::Find\(void\) const$'],
+		[r'^Status: Made CMeter::(Raise|Mark|Both)']),
+	('qualifier-static', dict(MakeQualifiersCopy(), **{
+		#Make Member Function static: refused for a function whose body names a field, a virtual one and one static
+		#already.  static goes before it in its class (in the column virtual has), a const after its parameters is
+		#taken away, and the calls on an object name the class, but not the call on what a function gives.
 		'WAIT_INDEX': '1', 'OPEN': 'Meter.cpp',
 		'DEBUG': 'edit:renamesearch:---s,edit:caret:95:14,edit:makestatic,edit:caret:21:14,edit:makestatic,edit:caret:105:18,edit:makestatic,edit:caret:85:14,edit:makestatic,edit:caret:85:14,edit:makestatic,edit:open:Meter.h,edit:caret:22:10,edit:makestatic,printdisklines:Meter.h,printdisklines:Meter.cpp'}),
-		[r'^Status'],
+		[r"^Status: Can't make CMeter::Twice static: its body uses its object: it names miLevel \(Meter\.cpp line 97\)\.$",
+		 r"^Status: Can't make CMeter::Level static: it is virtual: a virtual function is called on an object\.$",
+		 r"^Status: Can't make CMeter::Find static: its body uses its object: it names miLevel \(Meter\.cpp line 107\)\.$",
+		 r'^Status: Made CMeter::Scale static: 2 calls name CMeter\.$', r"^Status: Can't make CMeter::Scale static: it is static already\.$", r'^Status: Made CMeter::Zero static: 1 call names CMeter\.$',
+		 r'^22\|\tstatic\tint\t\tZero\(void\) \{ return 0; \}$', r'^27\|\tstatic\tint\t\tScale\(int iValue\);$', r'^85\|int CMeter::Scale\(int iValue\)$', r'^97\|\treturn Scale\(iValue\) \+ miLevel;$',
+		 r'^122\|\tiTotal = CMeter::Scale\(2\);$', r'^123\|\tiTotal \+= CMeter::Scale\(3\);$', r'^124\|\tiTotal \+= pcMeter->Find\(\)->Scale\(4\);$', r'^125\|\tiTotal \+= CMeter::Zero\(\) \+ cMeter\.Top\(\);$'],
 		[]),
 	('rename-assembly-class', dict(MakeRenameAssemblyCopy(), **{
 		#A class renamed in hand written assembly's labels (_CEngine__Init, __0, __2), in parameter lists with its length
