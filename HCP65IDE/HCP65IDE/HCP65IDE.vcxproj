@@ -315,6 +315,7 @@
     <ClCompile Include="IDEEdit.cpp" />
     <ClCompile Include="IDENavigator.cpp" />
     <ClCompile Include="IDERename.cpp" />
+    <ClCompile Include="IDEEncapsulateField.cpp" />
     <ClCompile Include="IDEExtractClass.cpp" />
     <ClCompile Include="IDEInlineFunction.cpp" />
     <ClCompile Include="IDEExtractMethod.cpp" />
@@ -381,6 +382,7 @@
     <ClInclude Include="IDEEdit.h" />
     <ClInclude Include="IDENavigator.h" />
     <ClInclude Include="IDERename.h" />
+    <ClInclude Include="IDEEncapsulateField.h" />
     <ClInclude Include="IDEExtractClass.h" />
     <ClInclude Include="IDEInlineFunction.h" />
     <ClInclude Include="IDEExtractMethod.h" />

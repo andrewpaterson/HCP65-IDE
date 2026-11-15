@@ -148,6 +148,7 @@ set(IDE_SOURCES
 	"${IDE_DIR}/IDEEdit.cpp"
 	"${IDE_DIR}/IDENavigator.cpp"
 	"${IDE_DIR}/IDERename.cpp"
+	"${IDE_DIR}/IDEEncapsulateField.cpp"
 	"${IDE_DIR}/IDEExtractClass.cpp"
 	"${IDE_DIR}/IDEInlineFunction.cpp"
 	"${IDE_DIR}/IDEExtractMethod.cpp"

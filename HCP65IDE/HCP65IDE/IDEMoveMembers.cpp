@@ -781,6 +781,7 @@ bool CIDEMoveMembers::AddMember(const char* szClassKey, int32 iAccess, const cha
 	CArrayIDEFileRanges	asRanges;
 	CArrayIDELocations	asLocations;
 	CArrayChars			aszKeys;
+	CArrayChars			aszLines;
 	CChars				szScope;
 	CChars				szBefore;
 	CChars				szLine;
@@ -844,11 +845,24 @@ bool CIDEMoveMembers::AddMember(const char* szClassKey, int32 iAccess, const cha
 	bResult = szText && (bField || FindInsertPlace(&sClass, szText, iAccess, &uiAt, &szBefore, bLastPart));
 	if (bResult)
 	{
+		//Each of its lines (it may be several declarations) lined up with the declaration above where it goes.
+		aszLines.Init();
 		szLine.Init(szDeclaration);
-		RealignIDEDeclaration(&szLine, FindIDENameColumn(szText, uiAt));
-		szBefore.Append(szLine);
-		pcEdits->GetEdits(sClass.szFileName.Text())->Insert(uiAt, szBefore.Text());
+		szLine.Split(&aszLines, '\n');
 		szLine.Kill();
+		for (i = 0; i < aszLines.NumElements(); i++)
+		{
+			if (!aszLines.Get(i)->Empty())
+			{
+				szLine.Init(aszLines.GetText(i));
+				szLine.Append('\n');
+				RealignIDEDeclaration(&szLine, FindIDENameColumn(szText, uiAt));
+				szBefore.Append(szLine);
+				szLine.Kill();
+			}
+		}
+		aszLines.Kill();
+		pcEdits->GetEdits(sClass.szFileName.Text())->Insert(uiAt, szBefore.Text());
 	}
 	szBefore.Kill();
 	sClass.Kill();

@@ -244,6 +244,9 @@ Phase 3 - flow
      and Move Class's making of files.  But for the "abstract" tick in the dialog (question 41), and an Init for
      an extracted class (question 42).
  12. Encapsulate Field.  A getter and a setter, the reads and writes replaced: FindChanges tells them apart.
+     Done 2026-11-15 (IDEEncapsulateField.h says what it does).  A place that uses the field in a way neither
+     stands for (its address taken, a reference bound to it) stays and is a conflict if the field is to be
+     protected.
 
 
 Phase 4 - C++ only
@@ -339,5 +342,6 @@ Where it is
  10. Extract Method (9), with F3 (flow): done (CIDEExtractMethod).
  11. Inline Function (10): done (CIDEInlineFunction).
  12. Extract Superclass, Interface and Class (11): done (CIDEExtractClass).
- 13. Encapsulate Field (12): next.  Then Phase 4 from 15.
+ 13. Encapsulate Field (12): done (CIDEEncapsulateField).  Phase 3 is done.
+ 14. Phase 4 from 15 (#includes): next.  Then 16 to 24 in their order.
 

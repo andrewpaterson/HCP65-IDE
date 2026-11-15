@@ -320,6 +320,16 @@ def MakeInlineFunctionCopy():
 	return {'SOLUTION': os.path.join(szFolder, 'InlineFunction.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
 
 
+def MakeEncapsulateFieldCopy():
+	#A copy of Input/EncapsulateField (CDial, whose public fields a function outside it reads, assigns, adds to,
+	#steps and takes the addresses of; CKnob, which has a protected part), to encapsulate fields in.
+	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
+	atexit.register(shutil.rmtree, szRoot, True)
+	szFolder = os.path.join(szRoot, 'EncapsulateField')
+	shutil.copytree(os.path.join(HERE, 'Input', 'EncapsulateField'), szFolder)
+	return {'SOLUTION': os.path.join(szFolder, 'EncapsulateField.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
+
+
 def MakeKeymapFile(szText=None):
 	#Where a scripted run keeps its keys, with szText in it if it's given.
 	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
@@ -1850,6 +1860,46 @@ CHECKS = [
 		 r'^5\|template<class M>$', r'^6\|class CSized$', r'^8\|public:$', r'^9\|\tint\t\tSize\(void\) \{ return sizeof\(M\); \}$', r'^13 lines$',
 		 r'^3\|#include "Sized\.h"$', r'^16\|template<class M>$', r'^17\|class CCrate : public CBox<M>, public CSized<M>$', r'^23 lines$'],
 		[r'CCrate<M>::Size']),
+	('encapsulate-field', dict(MakeEncapsulateFieldCopy(), **{
+		#Encapsulate Field: every place the field is named, and how (the compiler says).  The class gets GetValue and
+		#SetValue at the end of its public part, the field goes to a protected part made at the class's start, and
+		#outside the class a read is the getter, an assignment the setter (what is assigned may read the field too),
+		#and a += or a ++ the setter of the getter's value changed.  The class's own functions still name the field.
+		'WAIT_INDEX': '1', 'OPEN': 'Dial.h', 'CARET': '14:8',
+		'DEBUG': 'edit:renamesearch:---s,edit:encapsulable,edit:encapsulate:gsp,printdisklines:Dial.h,printdisklines:Dial.cpp'}),
+		[r'^Encapsulate Field: CDial::miValue, \[int\], public, GetValue and SetValue\(iValue\)$', r'^  Dial\.h line 20: read, in the class$', r'^  Dial\.cpp line 10: assigned, in the class$',
+		 r'^  Dial\.cpp line 28: assigned$', r'^  Dial\.cpp line 28: read$', r'^  Dial\.cpp line 29: changed with an operator$', r'^  Dial\.cpp line 30: stepped$',
+		 r'^Status: Encapsulated CDial::miValue: GetValue and SetValue, 6 places changed\.$',
+		 r'^11\|class CDial$', r'^12\|\{$', r'^13\|protected:$', r'^14\|\tint\t\tmiValue;$', r'^15\|$', r'^16\|public:$', r'^17\|\tint\t\tmiStep;$', r'^22\|\tint\t\tTwice\(void\) \{ return miValue \* 2; \}$',
+		 r'^23\|\tint\t\tGetValue\(void\) \{ return miValue; \}$', r'^24\|\tvoid\tSetValue\(int iValue\) \{ miValue = iValue; \}$', r'^25\|\};$',
+		 r'^10\|\tmiValue = 0;$', r'^28\|\tcOther\.SetValue\(pcDial->GetValue\(\) \+ 1\);$', r'^29\|\tpcDial->SetValue\(pcDial->GetValue\(\) \+ 2\);$', r'^30\|\tpcDial->SetValue\(pcDial->GetValue\(\) \+ 1\);$',
+		 r'^31\|\tiRead = cOther\.GetValue\(\) \* pcDial->GetValue\(\);$', r'^32\|\tpiStep = &pcDial->miStep;$'],
+		[r'^Conflict']),
+	('encapsulate-field-object', dict(MakeEncapsulateFieldCopy(), **{
+		#A field that is an object has a getter that gives a pointer to it, and no setter: a member named through it
+		#goes through the getter, and its address is the getter.  And a field of a class that has a protected part
+		#goes to the end of that part; with i its class's own functions use the getter and setter too.
+		'WAIT_INDEX': '1', 'OPEN': 'Dial.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:30:8,edit:encapsulate:gspi,edit:caret:16:9,edit:encapsulable,edit:encapsulate:gs,edit:encapsulate:gp,printdisklines:Dial.h,printdisklines:Dial.cpp'}),
+		[r'^Status: Encapsulated CKnob::miGrip: GetGrip and SetGrip, 1 place changed\.$',
+		 r'^Encapsulate Field: CDial::msMark, \[SMark\], public, GetMark and SetMark\(sMark\)$', r'^  Dial\.cpp line 12: a member of it named, in the class$', r'^  Dial\.cpp line 33: a member of it named$',
+		 r'^  Dial\.cpp line 34: its address taken$', r'^Encapsulate Field: A field that is an object has no setter: its getter gives a pointer to it\.$',
+		 r'^Status: Encapsulated CDial::msMark: GetMark, 2 places changed\.$',
+		 r'^13\|protected:$', r'^14\|\tSMark\tmsMark;$', r'^16\|public:$', r'^23\|\tSMark\*\tGetMark\(void\) \{ return &msMark; \}$',
+		 r'^\d+\|class CKnob$', r'^\d+\|protected:$', r'^\d+\|\tint\t\tmiTurn;$', r'^\d+\|\tint\t\tmiGrip;$', r'^\d+\|$', r'^\d+\|public:$', r'^\d+\|\tvoid\tInit\(void\) \{ miTurn = 0; \}$',
+		 r'^\d+\|\tint\t\tGetGrip\(void\) \{ return miGrip; \}$', r'^\d+\|\tvoid\tSetGrip\(int iGrip\) \{ miGrip = iGrip; \}$',
+		 r'^12\|\tmsMark\.iAt = 0;$', r'^33\|\tpcDial->GetMark\(\)->iAt = iRead;$', r'^34\|\tpsMark = cOther\.GetMark\(\);$', r'^35\|\tpcKnob->SetGrip\(\*piStep \+ psMark->iAt\);$'],
+		[r'^Conflict']),
+	('encapsulate-field-refused', dict(MakeEncapsulateFieldCopy(), **{
+		#A place that uses the field in a way no getter or setter stands for (its address is taken) stays, and is
+		#in the way if the field is to be protected: nothing is done.  A field declared with another is refused, and
+		#a function is no field.  The dialog is Encapsulate's.
+		'WAIT_INDEX': '1', 'OPEN': 'Dial.h', 'SETTINGS': MakeSettingsFile(), 'DIALOG_ANSWER': 'Cancel',
+		'DEBUG': 'edit:caret:15:8,edit:encapsulate:gsp,edit:caret:17:8,edit:encapsulable,edit:caret:20:8,edit:encapsulable,edit:caret:14:8,encapsulatefield,answered:1,printstatus,printdisklines:Dial.h'}),
+		[r"^Conflict: miStep is used in Dial\.cpp at line 32 in a way a getter or a setter can't stand for: it stays, and won't compile once the field is protected\.$",
+		 r"^Encapsulate Field: CDial::miRange can't be: it is declared with others in one declaration$", r'^Encapsulate Field: no field$', r'^Dial\.h|^Dialog \[Encapsulate CDial::miValue\] answered Cancel$',
+		 r'^15\|\tint\t\tmiStep;$', r'^36 lines$'],
+		[r'^Status: Encapsulated']),
 	('rename-assembly-class', dict(MakeRenameAssemblyCopy(), **{
 		#A class renamed in hand written assembly's labels (_CEngine__Init, __0, __2), in parameter lists with its length
 		#(FPC7CEngine to FPC6CMotor), in generated layout constants (SIZEOF_CEngine, CEngine_miSpeed: in the assembly, the
@@ -2354,7 +2404,7 @@ CHECKS = [
 		 r'^Menu Debug: Start Debugging \[F5\], Start Without Debugging \[Ctrl\+F5\], Stop Debugging \[Shift\+F5\], Stop Running\(disabled\), Restart \[Ctrl\+Shift\+F5\], Break All \[Ctrl\+Pause/Break\], Attach to Emulator\.\.\., Step Into \[F11\], Step Over \[F10\], Step Out \[Shift\+F11\], Toggle Breakpoint \[F9\], ',
 		 r'^Menu Window: Reset Window Layout, Close All Documents$',
 		 r'^Menu Editor: Go to Source \[Ctrl\+B\], Find Usages \[Alt\+F7\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Rename\.\.\. \[Shift\+F6\], Refactor>, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\]$',
-		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Introduce Field\.\.\. \[Ctrl\+Alt\+F\](\(disabled\))?, Introduce Constant\.\.\. \[Ctrl\+Alt\+C\](\(disabled\))?, Introduce Parameter\.\.\. \[Ctrl\+Alt\+P\](\(disabled\))?, Introduce Typedef\.\.\. \[Ctrl\+Alt\+K\](\(disabled\))?, Inline\.\.\. \[Ctrl\+Alt\+N\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\.(\(disabled\))?, Push Members Down\.\.\.(\(disabled\))?, Move\.\.\. \[F6\](\(disabled\))?, Copy Class\.\.\.(\(disabled\))?, Extract Method\.\.\. \[Ctrl\+Alt\+M\](\(disabled\))?, Extract Superclass\.\.\.(\(disabled\))?, Extract Interface\.\.\.(\(disabled\))?, Extract Class\.\.\.(\(disabled\))?$',
+		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Introduce Field\.\.\. \[Ctrl\+Alt\+F\](\(disabled\))?, Introduce Constant\.\.\. \[Ctrl\+Alt\+C\](\(disabled\))?, Introduce Parameter\.\.\. \[Ctrl\+Alt\+P\](\(disabled\))?, Introduce Typedef\.\.\. \[Ctrl\+Alt\+K\](\(disabled\))?, Inline\.\.\. \[Ctrl\+Alt\+N\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\.(\(disabled\))?, Push Members Down\.\.\.(\(disabled\))?, Move\.\.\. \[F6\](\(disabled\))?, Copy Class\.\.\.(\(disabled\))?, Extract Method\.\.\. \[Ctrl\+Alt\+M\](\(disabled\))?, Extract Superclass\.\.\.(\(disabled\))?, Extract Interface\.\.\.(\(disabled\))?, Extract Class\.\.\.(\(disabled\))?, Encapsulate Field\.\.\.(\(disabled\))?$',
 		 r'^Menu Explorer: Set as Startup Solution, Set as Startup Project\(disabled\), Remove Solution, Rename\.\.\.(\(disabled\))?$',
 		 r'^Menu item \[View/Nope\] not found$'], []),
 	('menu-clicks', {

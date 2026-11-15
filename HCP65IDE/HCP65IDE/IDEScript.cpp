@@ -39,7 +39,7 @@ static bool			gbIDEScriptRenameSaves = false;  //rename: saves what it edited (r
 static bool			gbIDEScriptClassFiles = false;  //rename: renames a type's files too (renamesearch's f), never from the settings.
 
 
-static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printfindpreview", "printfindtoolbar", "findtool:", "printstartup", "printworkspace", "rename", "safedelete", "introducevariable", "introducefield", "introduceconstant", "introduceparameter", "changesignature", "pullmembersup", "pushmembersdown", "moveclass", "copyclass", "inlinevariable", "introducetypedef", "extractmethod", "extractsuperclass", "extractinterface", "extractclass", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printsettings", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printprojectfiles", "printdiskfile:", "printdisklines:", "printedits", "printspans", "configuration:", "waitindex" };
+static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printfindpreview", "printfindtoolbar", "findtool:", "printstartup", "printworkspace", "rename", "safedelete", "introducevariable", "introducefield", "introduceconstant", "introduceparameter", "changesignature", "pullmembersup", "pushmembersdown", "moveclass", "copyclass", "inlinevariable", "introducetypedef", "extractmethod", "extractsuperclass", "extractinterface", "extractclass", "encapsulatefield", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printsettings", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printprojectfiles", "printdiskfile:", "printdisklines:", "printedits", "printspans", "configuration:", "waitindex" };
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -293,6 +293,11 @@ void CIDEScript::RunCommand(const char* szCommand)
 	{
 		//Extract Superclass's, Interface's or Class's dialog for the class at the caret.
 		mpcContent->GetExtractClass()->ShowExtract((szCommand[7] == 's') ? IDE_EXTRACT_SUPERCLASS : ((szCommand[7] == 'i') ? IDE_EXTRACT_INTERFACE : IDE_EXTRACT_DELEGATE));
+	}
+	else if (strcmp(szCommand, "encapsulatefield") == 0)
+	{
+		//Encapsulate Field's dialog for the field at the caret.
+		mpcContent->GetEncapsulateField()->ShowEncapsulate();
 	}
 	else if (strcmp(szCommand, "extractmethod") == 0)
 	{
@@ -1712,6 +1717,58 @@ void CIDEScript::RunEditStep(const char* szStep)
 		sMove.Kill();
 		aszParts.Kill();
 		szSpec.Kill();
+	}
+	else if ((strcmp(szStep, "encapsulable") == 0) || (strncmp(szStep, "encapsulate:", 12) == 0))
+	{
+		//What Encapsulate Field found for the field at the caret (encapsulable): its names and every place it is
+		//used; or it encapsulated as letters ask ("encapsulate:gsp": a getter, a setter, protected; i: in the class's
+		//own functions too; a: all the same, whatever stands in the way), which is printed.
+		SIDEEncapsulation	sEncapsulation;
+		CArrayChars			aszConflicts;
+		CChars				szPrinted;
+		size				uiConflict;
+
+		sEncapsulation.Init();
+		szPrinted.Init();
+		if (!mpcContent->GetEncapsulateField()->FindEncapsulation(&sEncapsulation))
+		{
+			printf("Encapsulate Field: no field\n");
+		}
+		else if ((szStep[11] != ':') || !sEncapsulation.bPossible)
+		{
+			printf("%s", mpcContent->GetEncapsulateField()->PrintEncapsulation(&sEncapsulation, &szPrinted));
+		}
+		else
+		{
+			sEncapsulation.bGetter = (strchr(&szStep[12], 'g') != NULL);
+			sEncapsulation.bSetter = (strchr(&szStep[12], 's') != NULL);
+			sEncapsulation.bProtect = (strchr(&szStep[12], 'p') != NULL);
+			sEncapsulation.bInside = (strchr(&szStep[12], 'i') != NULL);
+			if (mpcContent->GetEncapsulateField()->GetProblem(&sEncapsulation))
+			{
+				printf("Encapsulate Field: %s\n", mpcContent->GetEncapsulateField()->GetProblem(&sEncapsulation));
+			}
+			else
+			{
+				aszConflicts.Init();
+				mpcContent->GetEncapsulateField()->FindConflicts(&sEncapsulation, &aszConflicts);
+				for (uiConflict = 0; uiConflict < aszConflicts.NumElements(); uiConflict++)
+				{
+					printf("Conflict: %s\n", aszConflicts.GetText(uiConflict));
+				}
+				if ((aszConflicts.NumElements() == 0) || (strchr(&szStep[12], 'a') != NULL))
+				{
+					mpcContent->GetEncapsulateField()->Encapsulate(&sEncapsulation);
+					if (gbIDEScriptRenameSaves)
+					{
+						mpcContent->GetDocuments()->SaveAllFiles();
+					}
+				}
+				aszConflicts.Kill();
+			}
+		}
+		szPrinted.Kill();
+		sEncapsulation.Kill();
 	}
 	else if ((strcmp(szStep, "inlinablefunction") == 0) || (strncmp(szStep, "inlinefunction:", 15) == 0))
 	{

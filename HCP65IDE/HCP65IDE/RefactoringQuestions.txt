@@ -222,3 +222,10 @@ Open
 
 43. An extracted interface's functions are pure virtual with no virtual destructor, and the class's own
     functions aren't marked override.  Right for your code?
+
+44. Encapsulate Field writes the getter and setter in the class, on one line each at the end of its public part
+    ("int GetLevel(void) { return miLevel; }"), not const, and moves the field to the class's protected part (to
+    one made at the class's start if it has none).  It changes the places outside the class's own functions; a
+    tick makes the class's own functions use them too.  A field that is an object gets a getter that gives a
+    pointer to it and no setter.  Is that how you write accessors (in the class, or declared there and defined in
+    the .cpp; const or not)?

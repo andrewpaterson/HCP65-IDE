@@ -226,6 +226,7 @@ void CIDEContent::Class(void)
 	M_Pointer(mpExtractMethod);
 	M_Pointer(mpInlineFunction);
 	M_Pointer(mpExtractClass);
+	M_Pointer(mpEncapsulateField);
 	M_Pointer(mpUsages);
 	M_Pointer(mpFindInFiles);
 	M_Pointer(mpOccurrences);
@@ -301,6 +302,7 @@ void CIDEContent::Free(void)
 		mpWindow->CancelPosted(&mpIntroduceTypedef);
 		mpWindow->CancelPosted(&mpExtractMethod);
 		mpWindow->CancelPosted(&mpExtractClass);
+		mpWindow->CancelPosted(&mpEncapsulateField);
 		mpWindow->CancelPosted(&mpSolutions);
 		mpWindow->CancelPosted(&mpBuildConfigurations);
 		mpWindow->CancelPosted(&mpBuilding);
@@ -427,6 +429,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpExtractMethod = OMalloc<CIDEExtractMethod>(this);
 	mpInlineFunction = OMalloc<CIDEInlineFunction>(this);
 	mpExtractClass = OMalloc<CIDEExtractClass>(this);
+	mpEncapsulateField = OMalloc<CIDEEncapsulateField>(this);
 	mpUsages = OMalloc<CIDEUsages>(this);
 	mpFindInFiles = OMalloc<CIDEFindInFiles>(this);
 	mpOccurrences = OMalloc<CIDEOccurrences>(this);
@@ -633,6 +636,7 @@ void CIDEContent::AddCommands(void)
 	mpIntroduceTypedef->AddCommands(mpCommands);
 	mpExtractMethod->AddCommands(mpCommands);
 	mpExtractClass->AddCommands(mpCommands);
+	mpEncapsulateField->AddCommands(mpCommands);
 	mpUsages->AddCommands(mpCommands);
 	mpFindInFiles->AddCommands(mpCommands);
 	mpOccurrences->AddCommands(mpCommands);
@@ -1147,4 +1151,5 @@ Ptr<CIDEIntroduceTypedef> CIDEContent::GetIntroduceTypedef(void) { return mpIntr
 Ptr<CIDEExtractMethod> CIDEContent::GetExtractMethod(void) { return mpExtractMethod; }
 Ptr<CIDEInlineFunction> CIDEContent::GetInlineFunction(void) { return mpInlineFunction; }
 Ptr<CIDEExtractClass> CIDEContent::GetExtractClass(void) { return mpExtractClass; }
+Ptr<CIDEEncapsulateField> CIDEContent::GetEncapsulateField(void) { return mpEncapsulateField; }
 Ptr<CIDECloseGuard> CIDEContent::GetCloseGuard(void) { return mpCloseGuard; }
