@@ -164,13 +164,6 @@ Open
 43. An extracted interface's functions are pure virtual with no virtual destructor, and the class's own
     functions aren't marked override.  Right for your code?
 
-44. Encapsulate Field writes the getter and setter in the class, on one line each at the end of its public part
-    ("int GetLevel(void) { return miLevel; }"), not const, and moves the field to the class's protected part (to
-    one made at the class's start if it has none).  It changes the places outside the class's own functions; a
-    tick makes the class's own functions use them too.  A field that is an object gets a getter that gives a
-    pointer to it and no setter.  Is that how you write accessors (in the class, or declared there and defined in
-    the .cpp; const or not)?
-
 47. A forward declaration made from an #include is written after the #includes, two lines down ("class CGauge;"),
     with any the file has there already.  Optimise #includes does this in .cpp files too, not only in headers.  It
     leaves <> #includes, #includes inside an #if, and a .cpp's #include of its own header alone.  Right?
@@ -266,6 +259,18 @@ Answered
     Answered 2026-11-15: yes.  To do: Extract Class writes an empty Init(void) in the new class and a call of it
     from the Init of the class it came from, where that has one.  The members that move stay public (Encapsulate
     Field is for what comes after).
+
+44. Encapsulate Field writes the getter and setter in the class, on one line each at the end of its public part
+    ("int GetLevel(void) { return miLevel; }"), not const, and moves the field to the class's protected part (to
+    one made at the class's start if it has none).  It changes the places outside the class's own functions; a
+    tick makes the class's own functions use them too.  A field that is an object gets a getter that gives a
+    pointer to it and no setter.  Is that how you write accessors (in the class, or declared there and defined in
+    the .cpp; const or not)?
+    Answered 2026-11-15: declared in the class and defined on one line at the bottom of the class's .cpp, where
+    the one-line functions are ("int32 CListContainer::GetSelected(void) { return miSelected; }": there is a
+    pattern for it, not kept to everywhere), and the getter const.  To do: Encapsulate Field writes them so (in
+    the class as now where the class has no source file, or is a template).  And when the refactoring plan is
+    done, remind the user to come back to this: all the getters there are need looking at for const too.
 
 45. Optimise #includes (Ctrl+Alt+O) on a header: when an #include goes (nothing the header names comes from it, or
     it becomes a forward declaration), the files that #include the header and got a name through it are each given
