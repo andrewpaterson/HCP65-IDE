@@ -274,7 +274,7 @@ Answered
     a template"?
     Answered 2026-11-15: they become real templates, which the refactorings then see as any other code; nothing
     is built for T6 here.  The plan for it, for another session, is CommonLibraries
-    Libraries/BaseLib/ArrayTemplatesPlan.txt (d2816c752): each family written once with a size policy as a
+    Libraries/BaseLib/ArrayTemplatesPlan.txt (971a024df): each family written once with a size policy as a
     template parameter, its old names kept by derived classes.
 
 49. Your own code keeps its constants as #defines ("#define IDE_INCLUDE_KEPT 0").  Convert Macro writes
