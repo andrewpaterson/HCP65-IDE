@@ -309,6 +309,17 @@ def MakeExtractMethodCopy():
 	return {'SOLUTION': os.path.join(szFolder, 'ExtractMethod.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
 
 
+def MakeInlineFunctionCopy():
+	#A copy of Input/InlineFunction (CPump, with functions that return an expression, have statements, and can't be
+	#inlined each for its own reason; CSlot, a class template; Twice and Report, functions of no class), to inline
+	#functions in.
+	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
+	atexit.register(shutil.rmtree, szRoot, True)
+	szFolder = os.path.join(szRoot, 'InlineFunction')
+	shutil.copytree(os.path.join(HERE, 'Input', 'InlineFunction'), szFolder)
+	return {'SOLUTION': os.path.join(szFolder, 'InlineFunction.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
+
+
 def MakeKeymapFile(szText=None):
 	#Where a scripted run keeps its keys, with szText in it if it's given.
 	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
@@ -1735,6 +1746,61 @@ CHECKS = [
 		 r"^Extract Method: can't be: it leaves by a break, a continue or a goto that a function of it couldn't make \(or has a label\)$",
 		 r"^Extract Method: can't be: the selection isn't an expression, or whole statements of one block$", r'^Dialog \[Extract Method\] answered Cancel$'],
 		[r'^Status: Extracted']),
+	('inline-function', dict(MakeInlineFunctionCopy(), **{
+		#Inline Function, for functions that return an expression: every call becomes the expression, each parameter
+		#the call's argument (in parentheses where it is more than one thing and an operand), the whole in parentheses
+		#where what it is written into would take it apart, and a member named alone gets the call's object before it.
+		#The functions are taken out, their declarations too.
+		'WAIT_INDEX': '1', 'OPEN': 'Pump.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:37:7,edit:inlinefunction:all,edit:open:Pump.h,edit:caret:27:9,edit:inlinefunction:all,printdisklines:Pump.h,printdisklines:Pump.cpp'}),
+		[r'^Inline Function: Twice, an expression, 2 calls$', r'^  Pump\.cpp line 127: in an expression$', r'^  Pump\.cpp line 132: returned$', r'^Status: Inlined Twice: 2 calls; the function is taken out\.$',
+		 r'^Inline Function: CPump::Scaled, an expression, 2 calls$', r'^  Pump\.cpp line 41: in an expression$', r'^  Pump\.cpp line 118: in an expression, on pcPump->, outside the class$',
+		 r'^Status: Inlined CPump::Scaled: 2 calls; the function is taken out\.$',
+		 r'^26\|\tint\t\t\tGetRate\(void\) \{ return miRate; \}$', r'^27\|\tvoid\t\tStep\(int iBy\);$', r'^36\|void\tReport\(CPump\* pcPump, int iWhat\);$', r'^39 lines$',
+		 r'^41\|\treturn miCount \+ \(miLimit \* \(i \+ 1\)\);$', r'^117\|\tiTotal = \(\(pcPump->GetRate\(\) \+ 1\) \* 2\) \* 2;$', r'^118\|\tiTotal \+= pcPump->miLimit \* \(iTotal - 1\);$',
+		 r'^122\|\treturn iTotal \* 2;$', r'^123 lines$'],
+		[r'^Conflict', r'Twice\(', r'Scaled\(']),
+	('inline-function-statements', dict(MakeInlineFunctionCopy(), **{
+		#Functions with statements go where their call is a statement.  Report's statements are written at its call,
+		#its parameter (called on) the argument in parentheses; Step's too, in a loop of another member (its own
+		#variable's declaration joins that function's, lined up with them) and, since the conflict is continued past,
+		#on an object outside the class.  A class template's member inlined outside the template has the template's
+		#parameter replaced by the instance's argument, as the object's declaration writes it.
+		'WAIT_INDEX': '1', 'OPEN': 'Pump.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:38:7,edit:inlinefunction:all,edit:open:Pump.h,edit:caret:12:8,edit:inlinefunction:keep,edit:open:Pump.h,edit:caret:28:9,edit:inlinefunction:keep,'
+		         'edit:inlinefunction:keep:anyway,printdisklines:Pump.h,printdisklines:Pump.cpp'}),
+		[r'^Inline Function: Report, statements, 1 call$', r'^Status: Inlined Report: 1 call; the function is taken out\.$',
+		 r'^Inline Function: CSlot::Bytes, an expression, 1 call$', r'^  Pump\.cpp line 121: assigned, on cSlot\., outside the class$', r'^Status: Inlined CSlot::Bytes: 1 call\.$',
+		 r'^Inline Function: CPump::Step, statements, 2 calls$', r"^Conflict: The body names miCount, which isn't public: the call at Pump\.cpp line 115 is outside the class\.$",
+		 r'^Status: Inlined CPump::Step: 2 calls\.$',
+		 r'^12\|\tint\t\tBytes\(void\) \{ return miUsed \* sizeof\(M\); \}$', r'^28\|\tvoid\t\tStep\(int iBy\);$', r'^37\|int\t\tTwice\(int iValue\);$', r'^40 lines$',
+		 r'^35\|\tint\ti;$', r'^36\|\tint\tiNext;$', r'^37\|$', r'^38\|\tfor \(i = 0; i < iTimes; i\+\+\)$', r'^40\|\t\tiNext = miCount \+ \(i \+ 1\);$', r'^41\|\t\tmiCount = iNext;$', r'^42\|\t\}$',
+		 r'^114\|\tint\t\t\tiTotal;$', r'^115\|\tint\t\t\tiNext;$', r'^116\|$', r'^117\|\tcOther\.Init\(3\);$', r'^118\|\tiNext = cOther\.miCount \+ 2;$', r'^119\|\tcOther\.miCount = iNext;$',
+		 r'^122\|\t\(&cOther\)->Kind\(\);$', r'^123\|\t\(&cOther\)->miLimit = iTotal;$', r'^125\|\tiTotal = cSlot\.miUsed \* sizeof\(long\);$', r'^127 lines$'],
+		[r'Report\(']),
+	('inline-function-refused', dict(MakeInlineFunctionCopy(), **{
+		#What can't be inlined: a virtual function, one that returns part of the way through, one that changes its
+		#parameter.  A member that isn't public named where the call is outside the class is a conflict: nothing is
+		#inlined.  And one call alone, at the caret: the function stays.
+		'WAIT_INDEX': '1', 'OPEN': 'Pump.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:30:15,edit:inlinablefunction,edit:caret:31:9,edit:inlinablefunction,edit:caret:33:9,edit:inlinablefunction,edit:caret:26:9,edit:inlinefunction:all,'
+		         'edit:open:Pump.cpp,edit:caret:132:10,edit:inlinefunction:this,printdisklines:Pump.h,printdisklines:Pump.cpp'}),
+		[r"^Inline Function: CPump::Kind can't be inlined: it is virtual$",
+		 r"^Inline Function: CPump::Loop can't be inlined: it returns part of the way through its body: only a function that returns once, at its end, is inlined$",
+		 r"^Inline Function: CPump::Bump can't be inlined: it changes its parameter iA$",
+		 r"^Conflict: The body names miRate, which isn't public: the call at Pump\.cpp line 127 is outside the class\.$",
+		 r'^  Pump\.cpp line 132: returned, at the caret$', r'^Status: Inlined Twice: 1 call\.$',
+		 r'^26\|\tint\t\t\tGetRate\(void\) \{ return miRate; \}$', r'^37\|int\t\tTwice\(int iValue\);$',
+		 r'^127\|\tiTotal = Twice\(pcPump->GetRate\(\) \+ 1\) \* 2;$', r'^132\|\treturn iTotal \* 2;$', r'^133 lines$'],
+		[r'Inlined CPump::GetRate']),
+	('inline-function-dialog', dict(MakeInlineFunctionCopy(), **{
+		#Ctrl+Alt+N on a function: the dialog asks which calls, then Problems Detected if anything is in the way;
+		#on something that is neither a variable nor a function the status line says so.
+		'WAIT_INDEX': '1', 'OPEN': 'Pump.h', 'CARET': '26:9', 'SETTINGS': MakeSettingsFile(), 'DIALOG_ANSWER': 'OK|Cancel',
+		'DEBUG': 'inlinevariable,answered:2,printstatus,edit:caret:30:15,inlinevariable,printstatus,edit:caret:16:8,inlinevariable,printstatus'}),
+		[r'^Dialog \[Inline CPump::GetRate\] answered OK$', r'^Dialog \[Problems Detected\] answered Cancel$', r"^Status: Can't inline CPump::Kind: it is virtual\.$",
+		 r'^Status: There is no variable or function at the caret to inline\.$'],
+		[r'^Status: Inlined']),
 	('rename-assembly-class', dict(MakeRenameAssemblyCopy(), **{
 		#A class renamed in hand written assembly's labels (_CEngine__Init, __0, __2), in parameter lists with its length
 		#(FPC7CEngine to FPC6CMotor), in generated layout constants (SIZEOF_CEngine, CEngine_miSpeed: in the assembly, the
@@ -2239,7 +2305,7 @@ CHECKS = [
 		 r'^Menu Debug: Start Debugging \[F5\], Start Without Debugging \[Ctrl\+F5\], Stop Debugging \[Shift\+F5\], Stop Running\(disabled\), Restart \[Ctrl\+Shift\+F5\], Break All \[Ctrl\+Pause/Break\], Attach to Emulator\.\.\., Step Into \[F11\], Step Over \[F10\], Step Out \[Shift\+F11\], Toggle Breakpoint \[F9\], ',
 		 r'^Menu Window: Reset Window Layout, Close All Documents$',
 		 r'^Menu Editor: Go to Source \[Ctrl\+B\], Find Usages \[Alt\+F7\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Rename\.\.\. \[Shift\+F6\], Refactor>, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\]$',
-		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Introduce Field\.\.\. \[Ctrl\+Alt\+F\](\(disabled\))?, Introduce Constant\.\.\. \[Ctrl\+Alt\+C\](\(disabled\))?, Introduce Parameter\.\.\. \[Ctrl\+Alt\+P\](\(disabled\))?, Introduce Typedef\.\.\. \[Ctrl\+Alt\+K\](\(disabled\))?, Inline Variable\.\.\. \[Ctrl\+Alt\+N\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\.(\(disabled\))?, Push Members Down\.\.\.(\(disabled\))?, Move\.\.\. \[F6\](\(disabled\))?, Copy Class\.\.\.(\(disabled\))?, Extract Method\.\.\. \[Ctrl\+Alt\+M\](\(disabled\))?$',
+		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Introduce Field\.\.\. \[Ctrl\+Alt\+F\](\(disabled\))?, Introduce Constant\.\.\. \[Ctrl\+Alt\+C\](\(disabled\))?, Introduce Parameter\.\.\. \[Ctrl\+Alt\+P\](\(disabled\))?, Introduce Typedef\.\.\. \[Ctrl\+Alt\+K\](\(disabled\))?, Inline\.\.\. \[Ctrl\+Alt\+N\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\.(\(disabled\))?, Push Members Down\.\.\.(\(disabled\))?, Move\.\.\. \[F6\](\(disabled\))?, Copy Class\.\.\.(\(disabled\))?, Extract Method\.\.\. \[Ctrl\+Alt\+M\](\(disabled\))?$',
 		 r'^Menu Explorer: Set as Startup Solution, Set as Startup Project\(disabled\), Remove Solution, Rename\.\.\.(\(disabled\))?$',
 		 r'^Menu item \[View/Nope\] not found$'], []),
 	('menu-clicks', {

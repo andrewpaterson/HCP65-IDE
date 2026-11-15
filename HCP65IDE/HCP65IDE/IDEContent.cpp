@@ -224,6 +224,7 @@ void CIDEContent::Class(void)
 	M_Pointer(mpInlineVariable);
 	M_Pointer(mpIntroduceTypedef);
 	M_Pointer(mpExtractMethod);
+	M_Pointer(mpInlineFunction);
 	M_Pointer(mpUsages);
 	M_Pointer(mpFindInFiles);
 	M_Pointer(mpOccurrences);
@@ -422,6 +423,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpInlineVariable = OMalloc<CIDEInlineVariable>(this);
 	mpIntroduceTypedef = OMalloc<CIDEIntroduceTypedef>(this);
 	mpExtractMethod = OMalloc<CIDEExtractMethod>(this);
+	mpInlineFunction = OMalloc<CIDEInlineFunction>(this);
 	mpUsages = OMalloc<CIDEUsages>(this);
 	mpFindInFiles = OMalloc<CIDEFindInFiles>(this);
 	mpOccurrences = OMalloc<CIDEOccurrences>(this);
@@ -1139,4 +1141,5 @@ Ptr<CIDEMoveClass> CIDEContent::GetMoveClass(void) { return mpMoveClass; }
 Ptr<CIDEInlineVariable> CIDEContent::GetInlineVariable(void) { return mpInlineVariable; }
 Ptr<CIDEIntroduceTypedef> CIDEContent::GetIntroduceTypedef(void) { return mpIntroduceTypedef; }
 Ptr<CIDEExtractMethod> CIDEContent::GetExtractMethod(void) { return mpExtractMethod; }
+Ptr<CIDEInlineFunction> CIDEContent::GetInlineFunction(void) { return mpInlineFunction; }
 Ptr<CIDECloseGuard> CIDEContent::GetCloseGuard(void) { return mpCloseGuard; }

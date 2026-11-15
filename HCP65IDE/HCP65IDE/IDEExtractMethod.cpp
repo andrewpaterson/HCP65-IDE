@@ -35,52 +35,6 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define IDE_EXTRACT_NO_TOKEN	0x7fffffff
 
 
-//How a run of statements leaves: by return, or some way a function made of them couldn't (a break or continue of a
-//loop it isn't all of, a goto, a label something may go to).
-class CIDEExitFinder : public CCPPSyntaxChildVisitor
-{
-public:
-	size	muiReturns;
-	bool	mbLeaves;
-	int		miLoops;
-	int		miSwitches;
-
-	void	Look(CCPPSyntax* pcNode)
-	{
-		ECPPSyntax	eKind;
-		bool		bLoop;
-		bool		bSwitch;
-
-		eKind = pcNode->GetKind();
-		bLoop = (eKind == CPPS_WhileStatement) || (eKind == CPPS_ForStatement) || (eKind == CPPS_DoStatement) || (eKind == CPPS_RangeForStatement);
-		bSwitch = (eKind == CPPS_SwitchStatement);
-		if (eKind == CPPS_ReturnStatement)
-		{
-			muiReturns++;
-		}
-		else if ((eKind == CPPS_GotoStatement) || (eKind == CPPS_LabelStatement))
-		{
-			mbLeaves = true;
-		}
-		else if (eKind == CPPS_BreakStatement)
-		{
-			mbLeaves = mbLeaves || ((miLoops == 0) && (miSwitches == 0));
-		}
-		else if (eKind == CPPS_ContinueStatement)
-		{
-			mbLeaves = mbLeaves || (miLoops == 0);
-		}
-		miLoops += bLoop ? 1 : 0;
-		miSwitches += bSwitch ? 1 : 0;
-		pcNode->VisitFields(this);
-		miLoops -= bLoop ? 1 : 0;
-		miSwitches -= bSwitch ? 1 : 0;
-	}
-
-	void	Visit(CCPPSyntax* pcChild) override	{ Look(pcChild); }
-};
-
-
 //////////////////////////////////////////////////////////////////////////
 //
 //

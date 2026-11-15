@@ -233,6 +233,10 @@ Phase 3 - flow
      Refused for a virtual or recursive function, and for a body with several returns where a statement is.
      In a template: a class template's member inlined into another of its members stays in the template's words;
      into code outside, its parameters are the instance's arguments there.
+     Done 2026-11-15 (the same Ctrl+Alt+N; IDEInlineFunction.h says what it does), on what Change Signature finds
+     of a function.  A function with statements is inlined where its call is a statement, or all of what one
+     assigns or returns; elsewhere the call stays and is said.  Also refused: one that changes a parameter, and a
+     function template (a class template's member is done).
  11. Extract Superclass, Extract Interface and Extract Class (members moved into a new class held as a field).
      Built on Move and Introduce Field.  From a class template the new class is one too if what moves uses the
      parameters.
@@ -330,6 +334,6 @@ Where it is
   8. Introduce Field, Constant and Parameter (7): done.
   9. Introduce Typedef (8): done (CIDEIntroduceTypedef).  Phase 2 is done.
  10. Extract Method (9), with F3 (flow): done (CIDEExtractMethod).
- 11. Inline Function (10): next.  Then Extract Superclass, Interface and Class (11), Encapsulate Field (12), and
-     Phase 4 from 15.
+ 11. Inline Function (10): done (CIDEInlineFunction).
+ 12. Extract Superclass, Interface and Class (11): next.  Then Encapsulate Field (12), and Phase 4 from 15.
 

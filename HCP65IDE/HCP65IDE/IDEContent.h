@@ -73,6 +73,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDEInlineVariable.h"
 #include "IDEIntroduceTypedef.h"
 #include "IDEExtractMethod.h"
+#include "IDEInlineFunction.h"
 #include "IDEUsages.h"
 #include "IDEFindInFiles.h"
 #include "IDEOccurrences.h"
@@ -184,6 +185,7 @@ protected:
 	Ptr<CIDEInlineVariable>		mpInlineVariable;		//Inline Variable.
 	Ptr<CIDEIntroduceTypedef>	mpIntroduceTypedef;		//Introduce Typedef.
 	Ptr<CIDEExtractMethod>		mpExtractMethod;		//Extract Method.
+	Ptr<CIDEInlineFunction>		mpInlineFunction;		//Inline, of a function.
 	Ptr<CIDEUsages>				mpUsages;			//Find Usages.
 	Ptr<CIDEFindInFiles>		mpFindInFiles;		//Find in Files and the Find tool window.
 	Ptr<CIDEOccurrences>		mpOccurrences;		//Next and Previous Occurrence through Find Usages or Build.
@@ -298,6 +300,7 @@ public:
 	Ptr<CIDEInlineVariable>		GetInlineVariable(void);
 	Ptr<CIDEIntroduceTypedef>	GetIntroduceTypedef(void);
 	Ptr<CIDEExtractMethod>		GetExtractMethod(void);
+	Ptr<CIDEInlineFunction>		GetInlineFunction(void);
 	Ptr<CIDECloseGuard>		GetCloseGuard(void);
 
 protected:

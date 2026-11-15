@@ -152,6 +152,7 @@ public:
 	bool	Move(SIDEMembersMove* psMove, CChars* pszStatus = NULL);
 	char*	PrintMove(SIDEMembersMove* psMove, CChars* pszDest);
 	bool	AddMember(const char* szClassKey, int32 iAccess, const char* szDeclaration, CIDEFileEdits* pcEdits, bool bLastPart = false);
+	int32	FindMemberAccess(const char* szMemberKey);
 
 protected:
 	void				ShowQueuedPullUp(void);
@@ -177,6 +178,8 @@ protected:
 
 
 size FindIDECommentStart(const char* szText, size uiAt);
+size FindIDENameColumn(const char* szText, size uiAt);
+void RealignIDEDeclaration(CChars* pszLines, size uiNameColumn);
 
 
 #endif // __IDE_MOVE_MEMBERS_H__

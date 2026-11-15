@@ -199,7 +199,7 @@ static size FindIDELineEnd(const char* szText, size uiAt)
 // is after something (a type).  0 if the line isn't such a declaration.
 //
 //////////////////////////////////////////////////////////////////////////
-static size FindIDENameColumn(const char* szText, size uiAt)
+size FindIDENameColumn(const char* szText, size uiAt)
 {
 	size	uiLineStart;
 	size	uiRunEnd;
@@ -243,7 +243,7 @@ static size FindIDENameColumn(const char* szText, size uiAt)
 // enough along.
 //
 //////////////////////////////////////////////////////////////////////////
-static void RealignIDEDeclaration(CChars* pszLines, size uiNameColumn)
+void RealignIDEDeclaration(CChars* pszLines, size uiNameColumn)
 {
 	CChars		szNew;
 	const char*	szText;
@@ -854,6 +854,53 @@ bool CIDEMoveMembers::AddMember(const char* szClassKey, int32 iAccess, const cha
 	sClass.Kill();
 	KillUnits();
 	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The access a class gives one of its members (IDE_ACCESS_), by where the
+// class declares it; public if the class or the member isn't found (so
+// nothing is said against it).
+//
+//////////////////////////////////////////////////////////////////////////
+int32 CIDEMoveMembers::FindMemberAccess(const char* szMemberKey)
+{
+	CIDECodeModel*		pcModel;
+	CArrayIDELocations	asLocations;
+	SIDEMoveClass		sClass;
+	SIDELocation*		psLocation;
+	CIDERefactorUnit*	pcUnit;
+	CChars				szScope;
+	size				i;
+	int32				iAccess;
+	uint8				uiKind;
+
+	pcModel = mpcContent->GetCodeModel();
+	iAccess = IDE_ACCESS_PUBLIC;
+	szScope.Init();
+	GetIDESymbolScope(szMemberKey, &szScope);
+	sClass.Init();
+	asLocations.Init();
+	if (!szScope.Empty() && ReadClass(szScope.Text(), &sClass) && pcModel->GetSymbolLocations(szMemberKey, &asLocations, &uiKind))
+	{
+		pcUnit = GetUnit(sClass.szFileName.Text());
+		for (i = 0; pcUnit && (i < asLocations.NumElements()); i++)
+		{
+			psLocation = asLocations.Get(i);
+			if ((psLocation->uiRole != CPPIR_Reference) && (StringInsensitiveCompare(psLocation->szFileName.Text(), sClass.szFileName.Text()) == 0) &&
+				(psLocation->iLine >= sClass.sRange.iLine) && (psLocation->iLine <= sClass.sRange.iEndLine))
+			{
+				ScanClass(&sClass, pcUnit->FindTokenAt(psLocation->iLine, psLocation->iColumn), -1, &iAccess, NULL, NULL);
+				break;
+			}
+		}
+	}
+	KillIDELocations(&asLocations);
+	sClass.Kill();
+	szScope.Kill();
+	KillUnits();
+	return iAccess;
 }
 
 

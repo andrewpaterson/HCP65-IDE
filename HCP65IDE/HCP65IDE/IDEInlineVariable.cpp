@@ -112,12 +112,13 @@ bool CIDEInlineVariable::Load(CObjectReader* pcFile) { return false; }
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Ctrl+Alt+N, as IntelliJ IDEA's.
+// Ctrl+Alt+N, as IntelliJ IDEA's: Inline, of a variable or of a function
+// (CIDEInlineFunction), whichever the caret is on.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEInlineVariable::AddCommands(Ptr<CCommandSet> pCommands)
 {
-	pCommands->Add("Refactor.InlineVariable", "Inline Variable...", "Control+Alt+N", Ptr<CImageCel>(), this, &CIDEInlineVariable::QueueInline)->SetEnabledCheck(this, &CIDEInlineVariable::CanInline);
+	pCommands->Add("Refactor.InlineVariable", "Inline...", "Control+Alt+N", Ptr<CImageCel>(), this, &CIDEInlineVariable::QueueInline)->SetEnabledCheck(this, &CIDEInlineVariable::CanInline);
 }
 
 
@@ -203,7 +204,10 @@ bool CIDEInlineVariable::IsWrapped(CCPPSyntax* pcValue, CCPPSyntax* pcUse)
 		{
 			//What is assigned is the whole of the right of an assignment.
 			eOperator = ((CCPPSyntaxBinaryExpression*)pcParent)->meOperator;
-			return !(((eOperator == CT_Assignment) || (eOperator == CT_Comma)) && (((CCPPSyntaxBinaryExpression*)pcParent)->mpcRight == pcUse));
+			return !(((eOperator == CT_Assignment) || (eOperator == CT_Comma) || (eOperator == CT_AssignmentAdd) || (eOperator == CT_AssignmentSubtract) || (eOperator == CT_AssignmentMultiply) ||
+					  (eOperator == CT_AssignmentDivide) || (eOperator == CT_AssignmentModulus) || (eOperator == CT_AssignmentBitwiseAnd) || (eOperator == CT_AssignmentBitwiseOr) ||
+					  (eOperator == CT_AssignmentBitwiseXor) || (eOperator == CT_AssignmentLeftShift) || (eOperator == CT_AssignmentRightShift)) &&
+					 (((CCPPSyntaxBinaryExpression*)pcParent)->mpcRight == pcUse));
 		}
 		return bObject || (eParent == CPPS_UnaryExpression) || (eParent == CPPS_CastExpression) || (eParent == CPPS_ConditionalExpression);
 	}
@@ -674,9 +678,9 @@ bool CIDEInlineVariable::ShowInline(void)
 	sInlining.Init();
 	if (!FindInlining(&sInlining))
 	{
-		mpcContent->ShowStatus("There is no variable at the caret to inline.");
+		//Not a variable: a function, then (the same key inlines either, as IntelliJ's does).
 		sInlining.Kill();
-		return false;
+		return mpcContent->GetInlineFunction()->ShowInline();
 	}
 	if (!sInlining.bPossible)
 	{

@@ -192,3 +192,18 @@ Open
 37. Extract Method doesn't look for other places the same statements are written (IntelliJ offers to replace
     duplicates), and a variable declared in the selection and used after it is only handled when it is the one
     thing returned.  It suggests no name.  Tell me which of these matter.
+
+38. Ctrl+Alt+N is now "Inline...": a variable or a function, whichever the caret is on (IntelliJ's is the same
+    key for both).  For a function a dialog asks: all calls and take the function out, all calls and keep it, or
+    this call only.
+
+39. Inline Function only inlines a function that returns once, at its end, and doesn't change its parameters;
+    IntelliJ rewrites the others with extra variables.  A function with statements is inlined only where its call
+    is a statement by itself, or all of what a statement assigns or returns; a call inside a bigger expression
+    stays a call (and then the function isn't taken out).  Its own variables are declared with the declarations
+    of the function it goes into, and a clash of names is a conflict, not a rename.  Enough, or do you want the
+    rewriting?
+
+40. Where a function's body names a member that isn't public and a call of it is outside the class, that is a
+    conflict (the inlined code wouldn't compile).  A call on "&cOther" inlines as "(&cOther)->Kind()", not
+    "cOther.Kind()".  Say if that matters.

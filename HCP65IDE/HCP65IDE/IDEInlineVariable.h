@@ -94,11 +94,11 @@ public:
 	bool	FindInlining(SIDEInlining* psDest);
 	bool	Inline(SIDEInlining* psInlining, CChars* pszStatus = NULL);
 	char*	PrintInlining(SIDEInlining* psInlining, CChars* pszDest);
+	bool	IsWrapped(CCPPSyntax* pcValue, CCPPSyntax* pcUse);
 
 protected:
 	void	ShowQueuedInline(void);
 	bool	Refuse(SIDEInlining* psDest, const char* szWhyNot, int32 iLine = -1);
-	bool	IsWrapped(CCPPSyntax* pcValue, CCPPSyntax* pcUse);
 	void	FindValueConflicts(CIDERefactorUnit* pcUnit, SCPPSyntaxRange* psValue, int32 iLastUseLine, size uiUses, bool bEffects, SIDEInlining* psDest);
 };
 

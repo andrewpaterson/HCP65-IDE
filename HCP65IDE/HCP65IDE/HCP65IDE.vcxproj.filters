@@ -51,6 +51,9 @@
     <ClCompile Include="IDERename.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="IDEInlineFunction.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="IDEExtractMethod.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -237,6 +240,9 @@
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDERename.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDEInlineFunction.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDEExtractMethod.h">

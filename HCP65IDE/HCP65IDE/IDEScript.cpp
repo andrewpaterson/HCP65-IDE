@@ -1644,6 +1644,49 @@ void CIDEScript::RunEditStep(const char* szStep)
 		szPrinted.Kill();
 		sMove.Kill();
 	}
+	else if ((strcmp(szStep, "inlinablefunction") == 0) || (strncmp(szStep, "inlinefunction:", 15) == 0))
+	{
+		//What Inline Function found for the function at the caret (inlinablefunction); or it inlined: at every call
+		//and taken out ("inlinefunction:all"), at every call and kept ("keep"), or at the call at the caret
+		//("this"), if nothing stands in the way; what does is printed, and "all:anyway" inlines all the same.
+		SIDEFunctionInlining	sInlining;
+		CArrayChars				aszConflicts;
+		CChars					szPrinted;
+		size					uiConflict;
+		int						iMode;
+
+		sInlining.Init();
+		szPrinted.Init();
+		if (!mpcContent->GetInlineFunction()->FindInlining(&sInlining))
+		{
+			printf("Inline Function: no function\n");
+		}
+		else
+		{
+			printf("%s", mpcContent->GetInlineFunction()->PrintInlining(&sInlining, &szPrinted));
+			if (sInlining.bPossible && (szStep[14] == ':'))
+			{
+				iMode = (szStep[15] == 'a') ? IDE_INLINE_ALL_AND_DELETE : ((szStep[15] == 'k') ? IDE_INLINE_ALL : IDE_INLINE_THIS);
+				aszConflicts.Init();
+				mpcContent->GetInlineFunction()->FindConflicts(&sInlining, iMode, &aszConflicts);
+				for (uiConflict = 0; uiConflict < aszConflicts.NumElements(); uiConflict++)
+				{
+					printf("Conflict: %s\n", aszConflicts.GetText(uiConflict));
+				}
+				if ((aszConflicts.NumElements() == 0) || (strstr(szStep, ":anyway") != NULL))
+				{
+					mpcContent->GetInlineFunction()->Inline(&sInlining, iMode);
+					if (gbIDEScriptRenameSaves)
+					{
+						mpcContent->GetDocuments()->SaveAllFiles();
+					}
+				}
+				aszConflicts.Kill();
+			}
+		}
+		szPrinted.Kill();
+		sInlining.Kill();
+	}
 	else if ((strcmp(szStep, "extractable") == 0) || (strncmp(szStep, "extract:", 8) == 0))
 	{
 		//What Extract Method found for the selection (extractable): the function it would be and each variable's part
