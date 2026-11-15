@@ -267,8 +267,11 @@ Answered
     Answered 2026-11-15: sorting is part of Optimise #includes and Sort #includes goes as a command of its own.
     The order: the lowest level libraries at the top, each library after those it depends on (StandardLib's
     COrderer can order the libraries by what they depend on, if need be).  An #include that is added goes in its
-    place in that order, not after the last.  Still to be said: the order inside one library, and where <>
-    #includes and a source file's own header go.
+    place in that order, not after the last.  And, the same day: <> #includes first, above the libraries, in the
+    order they have; inside one library the order there is kept (it isn't by name, and a header may need one
+    before it) and a new #include goes after the library's last; the headers of the file's own directory last,
+    after every library, in the order they have, a source file's own header where it is.  To do: all of it in
+    Optimise #includes, and Sort #includes taken out (its command, its menu item, its script step and check).
 
 48. Convert Macro and Inline Macro are built for ordinary macros (a #define of a value to a constant or, with the
     #defines beside it, an enum; a macro with parameters to an inline function, a template where its uses' types
