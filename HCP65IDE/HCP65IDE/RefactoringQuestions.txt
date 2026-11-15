@@ -324,6 +324,7 @@ Answered
     Answered 2026-11-15: show the files and ask first, then do it as it does now.  To do: Optimise #includes lists
     the files that would be given their own #include (as Problems Detected lists conflicts) before anything is
     changed.
+    Done 2026-11-15 (Optimise #includes asks through Problems Detected).
 
 46. Sort #includes puts the file's own header first, then keeps the directories in the order they first come
     ("BaseLib/..." before "WindowLib/..." if they are so now) and sorts by name inside each.  Your files look to be
@@ -337,6 +338,7 @@ Answered
     before it) and a new #include goes after the library's last; the headers of the file's own directory last,
     after every library, in the order they have, a source file's own header where it is.  To do: all of it in
     Optimise #includes, and Sort #includes taken out (its command, its menu item, its script step and check).
+    Done 2026-11-15 (CIDEIncludes::MakeOrderedEdits, OrderLibraries).
 
 48. Convert Macro and Inline Macro are built for ordinary macros (a #define of a value to a constant or, with the
     #defines beside it, an enum; a macro with parameters to an inline function, a template where its uses' types
@@ -386,6 +388,7 @@ Answered
     virtual and static.  To do in Convert Function to Member Function (and wherever CIDEMoveMembers::AddMember
     adds a function to such a class).  The parameter's name and the function's place after its class weren't
     answered, and stay as built.
+    Done 2026-11-15, the column (RetypeIDEDeclaration, in AddMember and Pull Members Up).
 
 52. The refactorings that check the files "as they would be" (Optimise #includes, Convert Macro, pointer to
     reference, const and static, function to member) ask the IDE's own checker, and it lets through some things
@@ -413,6 +416,7 @@ Answered
     is that instance's name; no warning in that class's own base list, in the template's own code, or for an
     instance that has no such class; and only where the class can be seen from the use.  To do: Extract Template
     Parameter on a class, and the warning in CppCompilerLib.
+    Done 2026-11-15 (CCPPUnit::ReportNamedInstances; CIDETemplateParameter::ExtractClass).
 
 54. The IDE has no Alt+Enter menu (IntelliJ's "show context actions": what can be done at the caret, offered in a
     small popup).  Every refactoring is in the Refactor menu and some have keys.  You asked for an Alt+Enter way

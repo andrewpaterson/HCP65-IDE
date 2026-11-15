@@ -321,6 +321,121 @@ void RealignIDEDeclaration(CChars* pszLines, size uiNameColumn)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Whether szText starts with one of the words a class keeps a column for
+// before its functions' types (virtual, static); its length, or 0.
+//
+//////////////////////////////////////////////////////////////////////////
+static size FindIDEColumnWord(const char* szText)
+{
+	if ((strncmp(szText, "virtual", 7) == 0) && ((szText[7] == '\t') || (szText[7] == ' ')))
+	{
+		return 7;
+	}
+	if ((strncmp(szText, "static", 6) == 0) && ((szText[6] == '\t') || (szText[6] == ' ')))
+	{
+		return 6;
+	}
+	return 0;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A function's declaration (its lines, comment lines first) for a class
+// that keeps a column for virtual and static before its functions' types
+// ("\t\t\tvoid\tInit(void);" under "\tvirtual\tint\t\tFill(...);"): its
+// type is put in the column the type of the function on the line above
+// uiAt is in, after its own virtual or static if it has one.  Nothing is
+// changed if either isn't a function, or the class keeps no such column.
+//
+//////////////////////////////////////////////////////////////////////////
+void RetypeIDEDeclaration(CChars* pszLines, const char* szText, size uiAt)
+{
+	CChars		szNew;
+	const char*	szLines;
+	size		uiLineStart;
+	size		uiTypeColumn;
+	size		uiDeclaration;
+	size		uiWord;
+	size		uiType;
+	size		i;
+
+	if (uiAt == 0)
+	{
+		return;
+	}
+	for (uiLineStart = uiAt - 1; (uiLineStart > 0) && (szText[uiLineStart - 1] != '\n'); uiLineStart--)
+	{
+	}
+	for (i = uiLineStart; (szText[i] == ' ') || (szText[i] == '\t'); i++)
+	{
+	}
+	if ((szText[i] == '/') || (szText[i] == '{') || (szText[i] == '}'))
+	{
+		return;
+	}
+	uiWord = FindIDEColumnWord(&szText[i]);
+	for (i += uiWord; (uiWord > 0) && ((szText[i] == ' ') || (szText[i] == '\t')); i++)
+	{
+	}
+	uiTypeColumn = FindIDEVisualColumn(szText, uiLineStart, i, 4);
+	for (; (i < uiAt) && (szText[i] != '(') && (szText[i] != ';'); i++)
+	{
+	}
+	if ((uiTypeColumn <= 4) || (szText[i] != '('))
+	{
+		return;
+	}
+
+	//The declaration's own line, after its comment's.
+	szLines = pszLines->Text();
+	uiDeclaration = 0;
+	for (;;)
+	{
+		for (i = uiDeclaration; (szLines[i] == ' ') || (szLines[i] == '\t'); i++)
+		{
+		}
+		if ((szLines[i] != '/') || (szLines[i + 1] != '/'))
+		{
+			break;
+		}
+		for (; (szLines[i] != '\0') && (szLines[i] != '\n'); i++)
+		{
+		}
+		if (szLines[i] == '\0')
+		{
+			return;
+		}
+		uiDeclaration = i + 1;
+	}
+	uiDeclaration = (FindIDEColumnWord(&szLines[i]) > 0) ? i + FindIDEColumnWord(&szLines[i]) : uiDeclaration;
+	uiWord = FindIDEColumnWord(&szLines[i]);
+	for (uiType = i + uiWord; (uiWord > 0) && ((szLines[uiType] == ' ') || (szLines[uiType] == '\t')); uiType++)
+	{
+	}
+	for (i = uiType; (szLines[i] != '\0') && (szLines[i] != '\n') && (szLines[i] != '(') && (szLines[i] != ';'); i++)
+	{
+	}
+	if (szLines[i] != '(')
+	{
+		return;
+	}
+
+	//To the end of its virtual or static, or of the lines before it; then tabs to the column.
+	for (i = uiDeclaration; (i > 0) && (szLines[i - 1] != '\n'); i--)
+	{
+	}
+	szNew.Init();
+	szNew.AppendSubString(szLines, 0, uiDeclaration);
+	AppendIDETabsTo(&szNew, FindIDEVisualColumn(szLines, i, uiDeclaration, 4), uiTypeColumn, 4);
+	szNew.Append(&szLines[uiType]);
+	pszLines->Set(szNew.Text());
+	szNew.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Text to go into a file at a place, gathered: what goes to one place (in
 // a class, with one access) is one insertion, szBefore written before the
 // first of it.
@@ -1023,6 +1138,7 @@ bool CIDEMoveMembers::AddMember(const char* szClassKey, int32 iAccess, const cha
 			{
 				szLine.Init(aszLines.GetText(i));
 				szLine.Append('\n');
+				RetypeIDEDeclaration(&szLine, szText, uiAt);
 				RealignIDEDeclaration(&szLine, FindIDENameColumn(szText, uiAt));
 				szBefore.Append(szLine);
 				szLine.Kill();
@@ -2159,6 +2275,7 @@ bool CIDEMoveMembers::Move(SIDEMembersMove* psMove, CChars* pszStatus)
 			{
 				AppendDeclarationText(psMove, psMember, psTo, &cEdits, &szDeclaration);
 			}
+			RetypeIDEDeclaration(&szDeclaration, szToText, uiAt);
 			RealignIDEDeclaration(&szDeclaration, FindIDENameColumn(szToText, uiAt));
 			AddIDEMoveInsert(&asInserts, psTo->szFileName.Text(), uiAt, psMember->iAccess, szBefore.Text())->Append(szDeclaration);
 			szDeclaration.Kill();

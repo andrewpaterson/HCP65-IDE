@@ -188,6 +188,7 @@ protected:
 size FindIDECommentStart(const char* szText, size uiAt);
 size FindIDENameColumn(const char* szText, size uiAt);
 void RealignIDEDeclaration(CChars* pszLines, size uiNameColumn);
+void RetypeIDEDeclaration(CChars* pszLines, const char* szText, size uiAt);
 
 
 #endif // __IDE_MOVE_MEMBERS_H__

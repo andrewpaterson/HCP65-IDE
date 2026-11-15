@@ -419,6 +419,7 @@ Where it is
      "Done" when it is):
        - a function that comes to override one is marked override (questions 21 and 43): done.
        - Convert Reference to Pointer on a field (question 50): done.
+       - a function added to a class goes in the column the class keeps for virtual and static (question 51): done.
 
 
 When the plan is done

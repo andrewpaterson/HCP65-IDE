@@ -2168,7 +2168,7 @@ CHECKS = [
 		'WAIT_INDEX': '1', 'OPEN': 'Vat.cpp',
 		'DEBUG': 'edit:renamesearch:---s,edit:caret:20:6,edit:functiontomember,edit:caret:108:6,edit:functiontomember,printdisklines:Vat.h,printdisklines:Vat.cpp'}),
 		[r'^Status: Converted Depth to the member function SLevel::Depth: 4 calls changed\.$', r'^Status: Converted Use to the member function CVat::Use: 0 calls changed\.$',
-		 r'^8\|\tint\t\tmiMark;$', r'^9\|\tint\t\tDepth\(void\);$', r'^10\|\};$', r'^13\|class CDeepVat;$', r'^16\|class CVat$', r'^\d+\|\tint\t+Use\(CDeepVat\* pcDeep\);$',
+		 r'^8\|\tint\t\tmiMark;$', r'^9\|\tint\t\tDepth\(void\);$', r'^10\|\};$', r'^13\|class CDeepVat;$', r'^16\|class CVat$', r'^28\|\t\t\tint\t\tUse\(CDeepVat\* pcDeep\);$',
 		 r'^20\|int SLevel::Depth\(void\)$', r'^22\|\treturn miDepth;$', r'^33\|\t\(\*psLevel\)\.miMark = psLevel->Depth\(\);$', r'^59\|\tmiCount = sLevel\.miDepth \+ msLevel\.Depth\(\);$',
 		 r'^108\|int CVat::Use\(CDeepVat\* pcDeep\)$', r'^112\|\tSLevel&\tsOther = msLevel;$', r'^118\|\tSLevel\*\tpsLocal = &msLevel;$', r'^119\|\tiTotal = Fill\(&sLevel, 1\);$',
 		 r'^120\|\tiTotal \+= pcDeep->Fill\(psMine, 2\);$', r'^124\|\tiTotal \+= psLocal->miDepth \+ \(\*psLocal\)\.miMark \+ psLocal->Depth\(\);$', r'^126\|\tiTotal \+= sOther\.Depth\(\) \+ sOther\.miMark;$',
