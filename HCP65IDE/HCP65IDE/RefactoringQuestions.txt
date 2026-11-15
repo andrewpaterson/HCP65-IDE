@@ -37,11 +37,6 @@ Open
     parameter: if the definition names it iR where the class says iRed, it still does afterwards (unless you rename
     it, which names it the same in both).  IntelliJ would have one name.  Is keeping each one's own text right?
 
-13. Change Signature of a constructor changes its declarations and definitions, but an object made with arguments
-    isn't written as a call (CFoo x(1, 2); new CFoo(1); a member's initialiser), and those places aren't changed
-    yet: they show as "named without being called" in Problems Detected.  Your code makes objects with Init, so I
-    left constructors until the rest of the plan is done.  Say if you want them sooner.
-
 14. Generate Definition, Generate Declaration and Move Definition out of / into Class are in the editor's Refactor
     menu.  Generate Definition has CLion's Ctrl+Shift+D; the other three have no keys.  What keys do you want?
 
@@ -219,6 +214,14 @@ Answered
     is changed in assembly at all.  Should it always do both processors' labels, whatever is selected?
     Answered 2026-11-15: yes, always both processors' labels, whatever configuration is selected.  To do in Change
     Signature (and wherever else a label is asked of the compiler for one target: Rename's assembly, Move).
+
+13. Change Signature of a constructor changes its declarations and definitions, but an object made with arguments
+    isn't written as a call (CFoo x(1, 2); new CFoo(1); a member's initialiser), and those places aren't changed
+    yet: they show as "named without being called" in Problems Detected.  Your code makes objects with Init, so I
+    left constructors until the rest of the plan is done.  Say if you want them sooner.
+    Answered 2026-11-15: leave it until the rest of the queue is done.  To do then: an object made with arguments
+    (CFoo x(1, 2); new CFoo(1); a member's initialiser) changed as a call is, in Change Signature of a
+    constructor.
 
 22. Move Class to Its Own Files (F6) makes the new files empty and fills them as an edit, so that one undo puts the
     class back and leaves the new files empty, in the projects.  Nothing breaks, but the empty files stay until you
