@@ -387,4 +387,26 @@ Where it is
  18. Function to member function and back (19): done (CIDEConvertMember).
  19. Extract template parameter (20): done, a function's, a class's and the inverse (CIDETemplateParameter).
  20. Phase 4 from 21 (namespaces): next.  Then 22 to 24 in their order.
+ 21. 2026-11-15, by day: the user answered questions (RefactoringQuestions.txt, Answered) and gave a queue to do
+     before 21: (1) an editable table in WindowLib and the dialogs made of it: done (CTable; Change Signature,
+     Pull Members Up, Push Members Down); (2) the checker stricter: a type nothing declares is an error in every
+     declaration: in hand; (3) the compiler warns where a template's instance is named and a class that only
+     derives from it is its name; (4) Extract Template Parameter on a class keeps the name by such a class, not a
+     typedef; (5) Optimise #includes sorts, and asks before it changes other files; (6) the smaller answers;
+     (7) 21 to 24.
 
+
+When the plan is done
+---------------------
+
+The user's, 2026-11-15: each is to be brought up with him when the refactoring plan and the queue above are
+finished, not started before.
+
+  a. A feature of its own: "Look for duplicates of selected text / function" (from question 37, where Extract
+     Method finds duplicates in its own file).
+  b. Every getter there is looked at for const, and for where it is written (question 44: one line at the bottom
+     of the class's .cpp, const).
+  c. G++'s -Wsuggest-override turned on, and every function it names fixed, in all his projects.
+  d. An optional warning in the HCP65 compiler for a function that overrides one of a base class and isn't marked
+     override (MSVC has it only in /analyze, C26433; G++ and Clang have -Wsuggest-override).
+  e. Asked and not yet answered: an Alt+Enter menu of what can be done at the caret (question 54).
