@@ -283,8 +283,11 @@ Answered
     and call) and on a local variable declared with its value; a field isn't done (its constructors would have to
     initialise it).  Is a field wanted?
     Answered 2026-11-15: it doesn't rename; renaming is a separate step for the user.  A reference has no prefix
-    of its own here: it is named as the object it refers to ("SLevel& sLevel", "CVat& cVat").  A field wasn't
-    answered, and isn't done.
+    of its own here: it is named as the object it refers to ("SLevel& sLevel", "CVat& cVat").  A field: a
+    reference to a pointer only.  To do: Convert Reference to Pointer on a field (its declaration, its
+    constructors' initialisers, and every use, those through another object too).  A pointer field made a
+    reference stays refused, and says why: a reference must be bound by every constructor and can't be set in
+    Init or assigned again, which the classes here do.
 
 51. Convert Member Function to Function names the new first parameter by your prefixes from the class's name
     ("CVat* pcVat", "SLevel* psLevel") and declares the function after its class in the class's header, two lines
