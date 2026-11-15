@@ -1898,15 +1898,17 @@ CHECKS = [
 		[r'^Conflict']),
 	('extract-class', dict(MakeMoveMembersCopy(), **{
 		#Extract Class: the members become CGauge, all public, and CDrum has a field of it where the first of them
-		#was; what CDrum still does with them goes through the field (mcGauge.miLevel, mcGauge.Fill(1)).
+		#was; what CDrum still does with them goes through the field (mcGauge.miLevel, mcGauge.Fill(1)).  CGauge has
+		#an Init of its own, empty, and CDrum's Init calls it after its base class's.
 		'WAIT_INDEX': '1', 'OPEN': 'Drum.h', 'CARET': '20:8',
 		'DEBUG': 'edit:renamesearch:---s,edit:extractclass:CGauge|miSecret|miLevel,edit:extractclass:CGauge|mcGauge|miLevel;GetLevel();Fill(int),'
 		         'printdisklines:Gauge.h,printdisklines:Gauge.cpp,printdisklines:Drum.h,printdisklines:Drum.cpp'}),
 		[r'^Extract Class: the class has a miSecret already$', r'^Status: Extracted the class CGauge from CDrum: 3 members, in Gauge\.h and Gauge\.cpp\.$',
-		 r'^6\|class CGauge$', r'^8\|public:$', r'^9\|\tint\t\tmiLevel;$', r'^10\|\t//How full it is\.$', r'^11\|\tint\t\tGetLevel\(void\) \{ return miLevel; \}$', r'^12\|\tvoid\tFill\(int iAmount\);$', r'^13\|\};$',
-		 r'^9\|void CGauge::Fill\(int iAmount\)$', r'^11\|\tmiLevel \+= iAmount;$',
+		 r'^6\|class CGauge$', r'^8\|public:$', r'^9\|\tint\t\tmiLevel;$', r'^10\|$', r'^11\|\tvoid\tInit\(void\);$', r'^12\|\t//How full it is\.$', r'^13\|\tint\t\tGetLevel\(void\) \{ return miLevel; \}$',
+		 r'^14\|\tvoid\tFill\(int iAmount\);$', r'^15\|\};$',
+		 r'^9\|void CGauge::Init\(void\)$', r'^10\|\{$', r'^11\|\}$', r'^18\|void CGauge::Fill\(int iAmount\)$', r'^20\|\tmiLevel \+= iAmount;$',
 		 r'^4\|#include "Gauge\.h"$', r'^7\|class CDrum : public CVessel$', r'^12\|protected:$', r'^13\|\tCGauge\tmcGauge;$', r'^14\|\tint\t\tmiRate, miStep;$', r'^17\|\tvoid\tInit\(int iVolume\);$', r'^18\|\tint\t\tSpare\(void\);$',
-		 r'^11\|\tmcGauge\.miLevel = 0;$', r'^31\|\tmcGauge\.Fill\(1\);$', r'^72 lines$'],
+		 r'^10\|\tCVessel::Init\(iVolume\);$', r'^11\|\tmcGauge\.Init\(\);$', r'^12\|\tmcGauge\.miLevel = 0;$', r'^32\|\tmcGauge\.Fill\(1\);$', r'^73 lines$'],
 		[r'^Conflict']),
 	('extract-superclass-template', dict(MakeMoveMembersCopy(), **{
 		#From a class template, where what moves names the template's parameter: the new class is a template of the

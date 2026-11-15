@@ -93,6 +93,7 @@ public:
 	bool	FindProblem(SIDEMembersMove* psMove, int iKind, const char* szName, const char* szField, CChars* pszDest);
 	void	FindConflicts(SIDEMembersMove* psMove, int iKind, const char* szName, CArrayChars* paszDest);
 	bool	Extract(SIDEMembersMove* psMove, int iKind, const char* szName, const char* szField, CChars* pszStatus = NULL);
+	void	AddInitCalls(SIDEMembersMove* psMove, const char* szField, CIDEFileEdits* pcFiles);
 
 protected:
 	void	ShowQueuedSuperclass(void);

@@ -468,6 +468,122 @@ bool CIDEExtractClass::NamesParameters(SIDEMembersMove* psMove, CIDEFileEdits* p
 }
 
 
+//What stands for the new class's Init among its public declarations until it is known how it is written.
+#define IDE_EXTRACT_INIT_PLACE	"\x01Init\x01\n"
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The class a class was extracted from calls the Init of the field it
+// has of it: "mcGauge.Init();" in each Init the class defines, after
+// what it starts with (its variables, PreInit() and the Init of a base
+// class).  Nothing, if the class has no Init.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEExtractClass::AddInitCalls(SIDEMembersMove* psMove, const char* szField, CIDEFileEdits* pcFiles)
+{
+	CIDECodeModel*					pcModel;
+	CIDERefactorUnit				cUnit;
+	CArrayIDEFileRanges				asRanges;
+	CArrayIDELocations				asLocations;
+	CArrayChars						aszKeys;
+	SIDELocation*					psLocation;
+	CCPPSyntaxFunctionDefinition*	pcFunction;
+	CCPPSyntaxCompoundStatement*	pcBody;
+	CCPPSyntax*						pcNode;
+	CCPPSyntax*						pcStatement;
+	SCPPSyntaxRange					sRange;
+	CChars							szScope;
+	CChars							szName;
+	CChars							szLine;
+	CChars							szStatement;
+	char*							szText;
+	size							uiAt;
+	size							uiIndent;
+	size							i;
+	size							j;
+	size							k;
+	int32							iToken;
+	uint8							uiKind;
+	bool							bPlaced;
+
+	pcModel = mpcContent->GetCodeModel();
+	asRanges.Init();
+	asRanges.Add()->Init(psMove->sClass.szFileName.Text(), psMove->sClass.sRange.iLine, psMove->sClass.sRange.iColumn, psMove->sClass.sRange.iEndLine, psMove->sClass.sRange.iEndColumn);
+	aszKeys.Init();
+	pcModel->FindSymbolsDeclaredIn(&asRanges, &aszKeys);
+	for (i = 0; i < aszKeys.NumElements(); i++)
+	{
+		szScope.Init();
+		szName.Init();
+		GetIDESymbolScope(aszKeys.GetText(i), &szScope);
+		GetIDESymbolName(aszKeys.GetText(i), &szName);
+		asLocations.Init();
+		if (szScope.Equals(psMove->sClass.szKey.Text()) && szName.Equals("Init") && pcModel->GetSymbolLocations(aszKeys.GetText(i), &asLocations, &uiKind) && (uiKind == CPPSK_Function))
+		{
+			for (j = 0; j < asLocations.NumElements(); j++)
+			{
+				psLocation = asLocations.Get(j);
+				szText = (psLocation->uiRole == CPPIR_Definition) ? pcFiles->GetText(psLocation->szFileName.Text()) : NULL;
+				cUnit.Init();
+				if (szText && cUnit.Parse(pcModel, &mpcContent->GetFindInFiles(), psLocation->szFileName.Text(), false))
+				{
+					iToken = cUnit.FindTokenAt(psLocation->iLine, psLocation->iColumn);
+					pcNode = (iToken != -1) ? cUnit.FindNodeOfTokens(iToken, iToken) : NULL;
+					pcFunction = pcNode ? (CCPPSyntaxFunctionDefinition*)cUnit.FindAncestor(pcNode, CPPS_FunctionDefinition) : NULL;
+					pcBody = (pcFunction && pcFunction->mpcBody && (pcFunction->mpcBody->GetKind() == CPPS_CompoundStatement)) ? (CCPPSyntaxCompoundStatement*)pcFunction->mpcBody : NULL;
+
+					//Before the first statement that isn't one it starts with; or before its closing brace.
+					bPlaced = false;
+					for (k = 0; pcBody && !bPlaced && (k < pcBody->macpStatements.NumElements()); k++)
+					{
+						pcStatement = pcBody->macpStatements.GetPtr(k);
+						if ((pcStatement->GetKind() == CPPS_DeclarationStatement) || !cUnit.GetRange(pcStatement, &sRange))
+						{
+							continue;
+						}
+						szStatement.Init();
+						AppendIDERangeText(szText, &sRange, &szStatement);
+						if (!szStatement.StartsWith("PreInit(") && !szStatement.Contains("::Init("))
+						{
+							uiAt = FindIDETextOffset(szText, sRange.iLine, 0);
+							for (uiIndent = uiAt; (szText[uiIndent] == ' ') || (szText[uiIndent] == '\t'); uiIndent++)
+							{
+							}
+							szLine.Init();
+							szLine.AppendSubString(szText, uiAt, uiIndent);
+							szLine.Append(szField)->Append(".Init();\n");
+							pcFiles->GetEdits(psLocation->szFileName.Text())->Insert(uiAt, szLine.Text());
+							szLine.Kill();
+							bPlaced = true;
+						}
+						szStatement.Kill();
+					}
+					if (pcBody && !bPlaced && cUnit.GetTokensRange(pcBody->miLastToken, pcBody->miLastToken, &sRange))
+					{
+						uiAt = FindIDETextOffset(szText, sRange.iLine, 0);
+						for (uiIndent = uiAt; (szText[uiIndent] == ' ') || (szText[uiIndent] == '\t'); uiIndent++)
+						{
+						}
+						szLine.Init();
+						szLine.AppendSubString(szText, uiAt, uiIndent);
+						szLine.Append('\t')->Append(szField)->Append(".Init();\n");
+						pcFiles->GetEdits(psLocation->szFileName.Text())->Insert(uiAt, szLine.Text());
+						szLine.Kill();
+					}
+				}
+				cUnit.Kill();
+			}
+		}
+		KillIDELocations(&asLocations);
+		szName.Kill();
+		szScope.Kill();
+	}
+	aszKeys.Kill();
+	KillIDEFileRanges(&asRanges);
+}
+
+
 //////////////////////////////////////////////////////////////////////////
 //
 // The new class made of the chosen members: see the class's comment.
@@ -521,12 +637,24 @@ bool CIDEExtractClass::Extract(SIDEMembersMove* psMove, int iKind, const char* s
 	bool				bPragma;
 	bool				bComment;
 	bool				bResult;
+	bool				bInit;
+	bool				bInitPlaced;
 
 	pcModel = mpcContent->GetCodeModel();
 	pcMembers = &mpcContent->GetMoveMembers();
 	pcMoveClass = &mpcContent->GetMoveClass();
 	mpcContent->GetDocuments()->UpdateEditedTabsNow();
 	SetTarget(psMove, iKind, szName);
+
+	//A class had as a field is given an Init of its own, empty, for the class it came from to call: unless one of
+	//the functions that move is an Init.
+	bInit = (iKind == IDE_EXTRACT_DELEGATE);
+	bInitPlaced = false;
+	for (i = 0; i < psMove->apsMembers.NumElements(); i++)
+	{
+		psMember = psMove->apsMembers.GetPtr(i);
+		bInit = bInit && !(psMember->bChosen && psMember->szWhyNot.Empty() && psMember->bFunction && psMember->szOwnName.Equals("Init"));
+	}
 	cFiles.Init(mpcContent);
 	szText = cFiles.GetText(psMove->sClass.szFileName.Text());
 	if (!szText)
@@ -572,6 +700,13 @@ bool CIDEExtractClass::Extract(SIDEMembersMove* psMove, int iKind, const char* s
 			pcMembers->AppendDeclarationText(psMove, psMember, psTo, &cFiles, &szDeclaration);
 		}
 		iAccess = (iKind == IDE_EXTRACT_DELEGATE) ? IDE_ACCESS_PUBLIC : psMember->iAccess;
+		if (bInit && !bInitPlaced && psMember->bFunction)
+		{
+			//Its Init goes before the first of its functions (how it is written is known once they are all read).
+			aszSections[IDE_ACCESS_PUBLIC].Append(aszSections[IDE_ACCESS_PUBLIC].Empty() ? "" : "\n");
+			aszSections[IDE_ACCESS_PUBLIC].Append(IDE_EXTRACT_INIT_PLACE);
+			bInitPlaced = true;
+		}
 		aszSections[iAccess].Append(szDeclaration);
 		szDeclaration.Kill();
 		if (psMember->bAbstract)
@@ -656,6 +791,29 @@ bool CIDEExtractClass::Extract(SIDEMembersMove* psMove, int iKind, const char* s
 			}
 			KillIDELocations(&asLocations);
 		}
+	}
+
+	if (bInit)
+	{
+		//Declared, and defined with the functions that have a source file; or in the class, if none has.
+		if (!bInitPlaced)
+		{
+			aszSections[IDE_ACCESS_PUBLIC].Append(aszSections[IDE_ACCESS_PUBLIC].Empty() ? "" : "\n");
+			aszSections[IDE_ACCESS_PUBLIC].Append(IDE_EXTRACT_INIT_PLACE);
+		}
+		if (szSourceFile.Empty())
+		{
+			aszSections[IDE_ACCESS_PUBLIC].Replace(IDE_EXTRACT_INIT_PLACE, "\tvoid\tInit(void) {}\n");
+		}
+		else
+		{
+			aszSections[IDE_ACCESS_PUBLIC].Replace(IDE_EXTRACT_INIT_PLACE, "\tvoid\tInit(void);\n");
+			szBlock.Init("\n\n//////////////////////////////////////////////////////////////////////////\n//\n//\n//////////////////////////////////////////////////////////////////////////\nvoid ");
+			szBlock.Append(szName)->Append("::Init(void)\n{\n}\n");
+			szSourceBlocks.Insert(0, szBlock.Text());
+			szBlock.Kill();
+		}
+		AddInitCalls(psMove, szField, &cFiles);
 	}
 
 	//The class derives from the new class (a superclass, an interface), and its header #includes the new one.

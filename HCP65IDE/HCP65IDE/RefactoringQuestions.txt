@@ -297,6 +297,7 @@ Answered
     Answered 2026-11-15: yes.  To do: Extract Class writes an empty Init(void) in the new class and a call of it
     from the Init of the class it came from, where that has one.  The members that move stay public (Encapsulate
     Field is for what comes after).
+    Done 2026-11-15 (CIDEExtractClass::AddInitCalls).
 
 43. An extracted interface's functions are pure virtual with no virtual destructor, and the class's own
     functions aren't marked override.  Right for your code?
