@@ -299,6 +299,16 @@ def MakeIntroduceTypedefCopy():
 	return {'SOLUTION': os.path.join(szFolder, 'IntroduceTypedef.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
 
 
+def MakeExtractMethodCopy():
+	#A copy of Input/ExtractMethod (CMix, whose functions have statements that read, change and return variables in
+	#every way; CPile, a class template; Larger, a function template), to extract methods in.
+	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
+	atexit.register(shutil.rmtree, szRoot, True)
+	szFolder = os.path.join(szRoot, 'ExtractMethod')
+	shutil.copytree(os.path.join(HERE, 'Input', 'ExtractMethod'), szFolder)
+	return {'SOLUTION': os.path.join(szFolder, 'ExtractMethod.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
+
+
 def MakeKeymapFile(szText=None):
 	#Where a scripted run keeps its keys, with szText in it if it's given.
 	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
@@ -1666,6 +1676,65 @@ CHECKS = [
 		[r"^Introduce Typedef: can't be: the selection isn't a type$", r"^Introduce Typedef: can't be: the selection isn't a type$", r'^Introduce Typedef: \[int\], 3 places, in the file$',
 		 r'^Dialog \[Introduce Typedef\] answered Cancel$'],
 		[r'^Status: Introduced']),
+	('extract-method', dict(MakeExtractMethodCopy(), **{
+		#Extract Method: what each variable is to the new function is worked out from how the selection uses it.  Two
+		#statements that give iSum its value from the function's parameters: they are parameters, iSum is returned and
+		#declared again in the new function, which is const as the one it came from is.  It is declared in a
+		#protected part made at the class's end, and defined after the function it came from.
+		'WAIT_INDEX': '1', 'OPEN': 'Mix.cpp',
+		'DEBUG': 'edit:renamesearch:---s,edit:selecttext:24:1-25:23,edit:extract:Blend,edit:extract:Scaled,printdisklines:Mix.h,printdisklines:Mix.cpp'}),
+		[r'^Extract Method: statements, \[int CMix::X\(int iA, int iB\) const\], called \[X\(iA, iB\)\]$', r'^  iA: a parameter$', r'^  iB: a parameter$', r'^  iSum: returned$',
+		 r'^Status: Extract Method: The file uses that name already\.$', r'^Status: Extracted int CMix::Scaled\(int iA, int iB\) const\.$',
+		 r'^25\|\tint\t\tTwice\(int iA\) \{ return iA \* 2 \+ miBase; \}$', r'^26\|$', r'^27\|protected:$', r'^28\|\tint\t\tScaled\(int iA, int iB\) const;$', r'^29\|\};$',
+		 r'^19\|int CMix::Blend\(int iA, int iB\) const$', r'^21\|\tint\tiSum;$', r'^22\|\tint\tiResult;$', r'^23\|$', r'^24\|\tiSum = Scaled\(iA, iB\);$', r'^25\|\tiResult = iSum \* 2;$', r'^27\|\}$',
+		 r'^28\|$', r'^29\|$', r'^30\|/{74}$', r'^34\|int CMix::Scaled\(int iA, int iB\) const$', r'^35\|\{$', r'^36\|\tint\tiSum;$', r'^37\|$', r'^38\|\tiSum = iA \+ iB;$',
+		 r'^39\|\tiSum = iSum \* miBase;$', r'^40\|\treturn iSum;$', r'^41\|\}$', r'^42\|$', r'^43\|$', r'^44\|/{74}$', r'^48\|int CMix::Sum\(int iLimit\)$'],
+		[]),
+	('extract-method-flow', dict(MakeExtractMethodCopy(), **{
+		#The other ways variables go: a loop's own counter moves into the new function with its declaration; two
+		#variables used afterwards are reference parameters; an object is given by reference, never copied; and a
+		#selection that ends by returning from the function becomes "return Name(...)".
+		'WAIT_INDEX': '1', 'OPEN': 'Mix.cpp',
+		'DEBUG': 'edit:renamesearch:---s,edit:selecttext:89:1-90:26,edit:extract:Swapped,edit:selecttext:73:1-77:15,edit:extract:Capped,edit:selecttext:58:1-59:17,edit:extract:Around,edit:selecttext:40:1-44:3,edit:extract:Totalled,printdisklines:Mix.h,printdisklines:Mix.cpp'}),
+		[r'^Extract Method: statements, \[void CMix::X\(SPoint\* psPoint, SPoint& sOther\)\], called \[X\(psPoint, sOther\)\]$', r'^  sOther: a reference parameter$',
+		 r'^Extract Method: statements that return, \[int CMix::X\(int iHalf\)\], called \[X\(iHalf\)\]$',
+		 r'^Extract Method: statements, \[void CMix::X\(int iA, int& iLow, int& iHigh\)\], called \[X\(iA, iLow, iHigh\)\]$', r'^  iLow: a reference parameter$',
+		 r'^Extract Method: statements, \[int CMix::X\(int iLimit\)\], called \[X\(iLimit\)\]$', r'^  i: moved in$', r'^  iTotal: returned$',
+		 r'^27\|protected:$', r'^28\|\tvoid\tSwapped\(SPoint\* psPoint, SPoint& sOther\);$', r'^29\|\tint\t\tCapped\(int iHalf\);$', r'^30\|\tvoid\tAround\(int iA, int& iLow, int& iHigh\);$',
+		 r'^31\|\tint\t\tTotalled\(int iLimit\);$',
+		 r'^\d+\|int CMix::Sum\(int iLimit\)$', r'^\d+\|\{$', r'^\d+\|\tint\tiTotal;$', r'^\d+\|$', r'^\d+\|\tiTotal = Totalled\(iLimit\);$', r'^\d+\|\treturn iTotal;$',
+		 r'^\d+\|int CMix::Totalled\(int iLimit\)$', r'^\d+\|\{$', r'^\d+\|\tint\ti;$', r'^\d+\|\tint\tiTotal;$', r'^\d+\|$', r'^\d+\|\tiTotal = 0;$', r'^\d+\|\tfor \(i = 0; i < iLimit; i\+\+\)$',
+		 r'^\d+\|\t\tiTotal \+= i \* miBase;$', r'^\d+\|\treturn iTotal;$',
+		 r'^\d+\|\tAround\(iA, iLow, iHigh\);$', r'^\d+\|\tmiCount = iLow \* iHigh;$', r'^\d+\|void CMix::Around\(int iA, int& iLow, int& iHigh\)$', r'^\d+\|\tiLow = iA - 1;$',
+		 r'^\d+\|\tiHalf = iA / 2;$', r'^\d+\|\treturn Capped\(iHalf\);$', r'^\d+\|int CMix::Capped\(int iHalf\)$', r'^\d+\|\tif \(iHalf > miBase\)$', r'^\d+\|\t\treturn miBase;$', r'^\d+\|\treturn iHalf;$',
+		 r'^\d+\|\tSPoint\tsOther;$', r'^\d+\|\tSwapped\(psPoint, sOther\);$', r'^\d+\|\tpsPoint->iX = sOther\.iY;$', r'^\d+\|void CMix::Swapped\(SPoint\* psPoint, SPoint& sOther\)$',
+		 r'^\d+\|\tsOther\.iX = psPoint->iX \+ miBase;$'],
+		[]),
+	('extract-method-template', dict(MakeExtractMethodCopy(), **{
+		#In templates (T4).  From a function template the new function is a template of the same parameters, defined
+		#before it, and the call names them.  A class template's member defined outside the class gets one defined the
+		#same way, under the class's template<...>, and declared in the class.  And an expression in a function defined
+		#in its class becomes a function defined there, on one line as that one is.
+		'WAIT_INDEX': '1', 'OPEN': 'Mix.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:selecttext:64:1-68:3,edit:extract:Chosen,edit:selecttext:49:1-50:23,edit:extract:Weighed,edit:selecttext:25:30-25:45,edit:extract:Doubled,printdisklines:Mix.h'}),
+		[r'^Extract Method: statements, \[M X\(M a, M b\)\], called \[X<M>\(a, b\)\]$', r'^  cResult: returned$',
+		 r'^Extract Method: statements, \[int CPile<M>::X\(int iScale\)\], called \[X\(iScale\)\]$', r'^Extract Method: an expression, \[int X\(int iA\)\], called \[X\(iA\)\]$',
+		 r'^25\|\tint\t\tTwice\(int iA\) \{ return Doubled\(iA\); \}$', r'^26\|\tint\t\tDoubled\(int iA\) \{ return iA \* 2 \+ miBase; \}$', r'^27\|\};$',
+		 r'^37\|\tint\t\tWeigh\(int iScale\);$', r'^38\|$', r'^39\|protected:$', r'^40\|\tint\t\tWeighed\(int iScale\);$', r'^41\|\};$',
+		 r'^\d+\|template<class M>$', r'^\d+\|int CPile<M>::Weigh\(int iScale\)$', r'^\d+\|\tiWeight = Weighed\(iScale\);$', r'^\d+\|\treturn iWeight;$',
+		 r'^\d+\|template<class M>$', r'^\d+\|int CPile<M>::Weighed\(int iScale\)$', r'^\d+\|\tint\tiWeight;$', r'^\d+\|\tiWeight = miDepth \* iScale;$', r'^\d+\|\tiWeight \+= sizeof\(M\);$', r'^\d+\|\treturn iWeight;$',
+		 r'^\d+\|template<class M>$', r'^\d+\|M Chosen\(M a, M b\)$', r'^\d+\|\tM\tcResult;$', r'^\d+\|\tcResult = a;$', r'^\d+\|\treturn cResult;$',
+		 r'^\d+\|template<class M>$', r'^\d+\|M Larger\(M a, M b\)$', r'^\d+\|\tcResult = Chosen<M>\(a, b\);$', r'^\d+\|\treturn cResult;$'],
+		[]),
+	('extract-method-refused', dict(MakeExtractMethodCopy(), **{
+		#What can't be a function: statements that return part of the way through; ones a break leaves; a part of a
+		#statement that isn't an expression.  The dialog (Ctrl+Alt+M's) shows the function it would be.
+		'WAIT_INDEX': '1', 'OPEN': 'Mix.cpp', 'SETTINGS': MakeSettingsFile(), 'DIALOG_ANSWER': 'Cancel',
+		'DEBUG': 'edit:selecttext:73:1-76:3,edit:extractable,edit:selecttext:110:1-114:4,edit:extractable,edit:selecttext:110:3-110:20,edit:extractable,edit:selecttext:24:1-25:23,extractmethod,answered:1,printstatus'}),
+		[r"^Extract Method: can't be: it returns from the function part of the way through: a selection that returns must end with a return$",
+		 r"^Extract Method: can't be: it leaves by a break, a continue or a goto that a function of it couldn't make \(or has a label\)$",
+		 r"^Extract Method: can't be: the selection isn't an expression, or whole statements of one block$", r'^Dialog \[Extract Method\] answered Cancel$'],
+		[r'^Status: Extracted']),
 	('rename-assembly-class', dict(MakeRenameAssemblyCopy(), **{
 		#A class renamed in hand written assembly's labels (_CEngine__Init, __0, __2), in parameter lists with its length
 		#(FPC7CEngine to FPC6CMotor), in generated layout constants (SIZEOF_CEngine, CEngine_miSpeed: in the assembly, the
@@ -2170,7 +2239,7 @@ CHECKS = [
 		 r'^Menu Debug: Start Debugging \[F5\], Start Without Debugging \[Ctrl\+F5\], Stop Debugging \[Shift\+F5\], Stop Running\(disabled\), Restart \[Ctrl\+Shift\+F5\], Break All \[Ctrl\+Pause/Break\], Attach to Emulator\.\.\., Step Into \[F11\], Step Over \[F10\], Step Out \[Shift\+F11\], Toggle Breakpoint \[F9\], ',
 		 r'^Menu Window: Reset Window Layout, Close All Documents$',
 		 r'^Menu Editor: Go to Source \[Ctrl\+B\], Find Usages \[Alt\+F7\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Rename\.\.\. \[Shift\+F6\], Refactor>, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\]$',
-		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Introduce Field\.\.\. \[Ctrl\+Alt\+F\](\(disabled\))?, Introduce Constant\.\.\. \[Ctrl\+Alt\+C\](\(disabled\))?, Introduce Parameter\.\.\. \[Ctrl\+Alt\+P\](\(disabled\))?, Introduce Typedef\.\.\. \[Ctrl\+Alt\+K\](\(disabled\))?, Inline Variable\.\.\. \[Ctrl\+Alt\+N\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\.(\(disabled\))?, Push Members Down\.\.\.(\(disabled\))?, Move\.\.\. \[F6\](\(disabled\))?, Copy Class\.\.\.(\(disabled\))?, Extract Method\.\.\.\(disabled\)$',
+		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Introduce Field\.\.\. \[Ctrl\+Alt\+F\](\(disabled\))?, Introduce Constant\.\.\. \[Ctrl\+Alt\+C\](\(disabled\))?, Introduce Parameter\.\.\. \[Ctrl\+Alt\+P\](\(disabled\))?, Introduce Typedef\.\.\. \[Ctrl\+Alt\+K\](\(disabled\))?, Inline Variable\.\.\. \[Ctrl\+Alt\+N\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\.(\(disabled\))?, Push Members Down\.\.\.(\(disabled\))?, Move\.\.\. \[F6\](\(disabled\))?, Copy Class\.\.\.(\(disabled\))?, Extract Method\.\.\. \[Ctrl\+Alt\+M\](\(disabled\))?$',
 		 r'^Menu Explorer: Set as Startup Solution, Set as Startup Project\(disabled\), Remove Solution, Rename\.\.\.(\(disabled\))?$',
 		 r'^Menu item \[View/Nope\] not found$'], []),
 	('menu-clicks', {

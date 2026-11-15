@@ -151,7 +151,7 @@ public:
 	void	FindConflicts(SIDEMembersMove* psMove, CArrayChars* paszDest);
 	bool	Move(SIDEMembersMove* psMove, CChars* pszStatus = NULL);
 	char*	PrintMove(SIDEMembersMove* psMove, CChars* pszDest);
-	bool	AddMember(const char* szClassKey, int32 iAccess, const char* szDeclaration, CIDEFileEdits* pcEdits);
+	bool	AddMember(const char* szClassKey, int32 iAccess, const char* szDeclaration, CIDEFileEdits* pcEdits, bool bLastPart = false);
 
 protected:
 	void				ShowQueuedPullUp(void);
@@ -165,7 +165,7 @@ protected:
 	void				ReadMembers(SIDEMembersMove* psMove, const char* szCaretKey);
 	bool				ReadMember(SIDEMembersMove* psMove, const char* szKey, SIDEMovedMember* psDest);
 	bool				ScanClass(SIDEMoveClass* psClass, int32 iAtToken, int32 iAccess, int32* piAccessAt, int32* piBoundaryToken, int32* piCloseToken);
-	bool				FindInsertPlace(SIDEMoveClass* psClass, const char* szText, int32 iAccess, size* puiAt, CChars* pszBefore);
+	bool				FindInsertPlace(SIDEMoveClass* psClass, const char* szText, int32 iAccess, size* puiAt, CChars* pszBefore, bool bLastPart = false);
 	void				FindSourceFile(SIDEMoveClass* psClass, CChars* pszDest);
 	bool				IsChosen(SIDEMembersMove* psMove, const char* szKey, bool bAbstractToo);
 	void				AppendMemberKeyIn(SIDEMovedMember* psMember, const char* szClassKey, CChars* pszDest);

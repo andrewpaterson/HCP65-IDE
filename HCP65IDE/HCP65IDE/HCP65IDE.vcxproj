@@ -315,6 +315,7 @@
     <ClCompile Include="IDEEdit.cpp" />
     <ClCompile Include="IDENavigator.cpp" />
     <ClCompile Include="IDERename.cpp" />
+    <ClCompile Include="IDEExtractMethod.cpp" />
     <ClCompile Include="IDEIntroduceTypedef.cpp" />
     <ClCompile Include="IDEInlineVariable.cpp" />
     <ClCompile Include="IDEMoveClass.cpp" />
@@ -378,6 +379,7 @@
     <ClInclude Include="IDEEdit.h" />
     <ClInclude Include="IDENavigator.h" />
     <ClInclude Include="IDERename.h" />
+    <ClInclude Include="IDEExtractMethod.h" />
     <ClInclude Include="IDEIntroduceTypedef.h" />
     <ClInclude Include="IDEInlineVariable.h" />
     <ClInclude Include="IDEMoveClass.h" />

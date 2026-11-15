@@ -225,6 +225,10 @@ Phase 3 - flow
      In a template: the parameters' types are their declarations' text (F2); a member of a class template is
      declared in the class and defined in the header as T4 writes it; from a function template the new function
      is a template of the parameters the selection uses.
+     Done 2026-11-15 (Ctrl+Alt+M; IDEExtractMethod.h says what it does, and what F3 is: which variables the
+     selection reads, changes and leaves used after it, by the syntax and the compiler's FindChanges).  From a
+     function template the new function has all of that template's parameters, and the call names them.  But
+     for: duplicates of the selection elsewhere; pointers in place of references (question 35).
  10. Inline Function (Ctrl+Alt+N on a function).  At one call or at all of them, the function deleted if asked.
      Refused for a virtual or recursive function, and for a body with several returns where a statement is.
      In a template: a class template's member inlined into another of its members stays in the template's words;
@@ -325,6 +329,7 @@ Where it is
   7. Inline Variable (6): done (CIDEInlineVariable).
   8. Introduce Field, Constant and Parameter (7): done.
   9. Introduce Typedef (8): done (CIDEIntroduceTypedef).  Phase 2 is done.
- 10. Extract Method (9), with F3 (flow): next.  Then Inline Function (10), Extract Superclass, Interface and Class
-     (11), Encapsulate Field (12), and Phase 4 from 15.
+ 10. Extract Method (9), with F3 (flow): done (CIDEExtractMethod).
+ 11. Inline Function (10): next.  Then Extract Superclass, Interface and Class (11), Encapsulate Field (12), and
+     Phase 4 from 15.
 

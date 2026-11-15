@@ -39,7 +39,7 @@ static bool			gbIDEScriptRenameSaves = false;  //rename: saves what it edited (r
 static bool			gbIDEScriptClassFiles = false;  //rename: renames a type's files too (renamesearch's f), never from the settings.
 
 
-static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printfindpreview", "printfindtoolbar", "findtool:", "printstartup", "printworkspace", "rename", "safedelete", "introducevariable", "introducefield", "introduceconstant", "introduceparameter", "changesignature", "pullmembersup", "pushmembersdown", "moveclass", "copyclass", "inlinevariable", "introducetypedef", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printsettings", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printprojectfiles", "printdiskfile:", "printdisklines:", "printedits", "printspans", "configuration:", "waitindex" };
+static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printfindpreview", "printfindtoolbar", "findtool:", "printstartup", "printworkspace", "rename", "safedelete", "introducevariable", "introducefield", "introduceconstant", "introduceparameter", "changesignature", "pullmembersup", "pushmembersdown", "moveclass", "copyclass", "inlinevariable", "introducetypedef", "extractmethod", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printsettings", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printprojectfiles", "printdiskfile:", "printdisklines:", "printedits", "printspans", "configuration:", "waitindex" };
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -288,6 +288,11 @@ void CIDEScript::RunCommand(const char* szCommand)
 	{
 		//Pull Members Up's or Push Members Down's dialogs for the class at the caret.
 		mpcContent->GetMoveMembers()->ShowMove(strcmp(szCommand, "pullmembersup") == 0);
+	}
+	else if (strcmp(szCommand, "extractmethod") == 0)
+	{
+		//Extract Method's dialog for the selection.
+		mpcContent->GetExtractMethod()->ShowExtract();
 	}
 	else if (strcmp(szCommand, "introducetypedef") == 0)
 	{
@@ -1638,6 +1643,34 @@ void CIDEScript::RunEditStep(const char* szStep)
 		}
 		szPrinted.Kill();
 		sMove.Kill();
+	}
+	else if ((strcmp(szStep, "extractable") == 0) || (strncmp(szStep, "extract:", 8) == 0))
+	{
+		//What Extract Method found for the selection (extractable): the function it would be and each variable's part
+		//in it; or the method extracted with a name (extract:<name>).
+		SIDEExtraction	sExtraction;
+		CChars			szPrinted;
+
+		sExtraction.Init();
+		if (!mpcContent->GetExtractMethod()->FindExtraction(&sExtraction))
+		{
+			printf("Extract Method: nothing is selected\n");
+		}
+		else
+		{
+			szPrinted.Init();
+			printf("%s", mpcContent->GetExtractMethod()->PrintExtraction(&sExtraction, &szPrinted));
+			szPrinted.Kill();
+			if (sExtraction.bPossible && (szStep[7] == ':'))
+			{
+				mpcContent->GetExtractMethod()->Extract(&sExtraction, &szStep[8]);
+				if (gbIDEScriptRenameSaves)
+				{
+					mpcContent->GetDocuments()->SaveAllFiles();
+				}
+			}
+		}
+		sExtraction.Kill();
 	}
 	else if ((strcmp(szStep, "typedefable") == 0) || (strncmp(szStep, "typedef:", 8) == 0) || (strncmp(szStep, "typedefone:", 11) == 0))
 	{

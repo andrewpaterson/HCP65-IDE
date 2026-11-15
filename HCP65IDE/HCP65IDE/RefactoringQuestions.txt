@@ -177,3 +177,18 @@ Open
 
 34. A typedef in a class template is written on the line before the member that first uses it, with no blank line
     after it, and one in a function at the very start of its body.  Is that where you want them?
+
+35. Extract Method gives a variable the new function changes, that is used afterwards, back by reference
+    ("int& iLow") where there is more than one, and an object (a variable whose type is a class) by reference
+    always, so nothing is copied and the statements are moved as they are written.  Your functions take pointers
+    for what they change ("size* puiAt"): pointers would mean rewriting each use in the moved statements (*piLow,
+    psOther->).  Do you want pointers, with the uses rewritten?
+
+36. The new function is a protected member, declared in a protected part at the class's end (one is made if the
+    class's last part isn't protected) and defined straight after the function it came from; from a function of
+    no class it is defined just before that function, not static.  IntelliJ would make it private (static if it
+    uses nothing of the object).  Right as it is?
+
+37. Extract Method doesn't look for other places the same statements are written (IntelliJ offers to replace
+    duplicates), and a variable declared in the selection and used after it is only handled when it is the one
+    thing returned.  It suggests no name.  Tell me which of these matter.

@@ -703,7 +703,7 @@ bool CIDEMoveMembers::ScanClass(SIDEMoveClass* psClass, int32 iAtToken, int32 iA
 // and *puiAt is in it.  False if the class can't be read.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEMoveMembers::FindInsertPlace(SIDEMoveClass* psClass, const char* szText, int32 iAccess, size* puiAt, CChars* pszBefore)
+bool CIDEMoveMembers::FindInsertPlace(SIDEMoveClass* psClass, const char* szText, int32 iAccess, size* puiAt, CChars* pszBefore, bool bLastPart)
 {
 	CIDERefactorUnit*	pcUnit;
 	SCPPSyntaxRange		sRange;
@@ -715,7 +715,17 @@ bool CIDEMoveMembers::FindInsertPlace(SIDEMoveClass* psClass, const char* szText
 	bool				bBlank;
 
 	pcUnit = GetUnit(psClass->szFileName.Text());
-	if (!pcUnit || !ScanClass(psClass, -1, iAccess, NULL, &iBoundary, &iClose) || !pcUnit->GetTokensRange((iBoundary >= 0) ? iBoundary : iClose, (iBoundary >= 0) ? iBoundary : iClose, &sRange))
+	if (!pcUnit || !ScanClass(psClass, -1, iAccess, NULL, &iBoundary, &iClose))
+	{
+		return false;
+	}
+	if (bLastPart && (iBoundary != iClose))
+	{
+		//Only the class's last part will do (a function's, after the parts its fields and public functions are in):
+		//a new part is made.
+		iBoundary = -1;
+	}
+	if (!pcUnit->GetTokensRange((iBoundary >= 0) ? iBoundary : iClose, (iBoundary >= 0) ? iBoundary : iClose, &sRange))
 	{
 		return false;
 	}
@@ -759,10 +769,12 @@ bool CIDEMoveMembers::FindInsertPlace(SIDEMoveClass* psClass, const char* szText
 // at the end of its protected part (a struct's public).  It is lined up
 // with the declaration above it, as an edit of the class's file.
 // Introduce Field adds its field so.  False if the class isn't defined in
-// the solution.
+// the solution.  bLastPart: only the class's last part will do, and one
+// is made if that hasn't iAccess (a function's own part, after the parts
+// its fields and its public functions are in).
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEMoveMembers::AddMember(const char* szClassKey, int32 iAccess, const char* szDeclaration, CIDEFileEdits* pcEdits)
+bool CIDEMoveMembers::AddMember(const char* szClassKey, int32 iAccess, const char* szDeclaration, CIDEFileEdits* pcEdits, bool bLastPart)
 {
 	CIDECodeModel*		pcModel;
 	SIDEMoveClass		sClass;
@@ -829,7 +841,7 @@ bool CIDEMoveMembers::AddMember(const char* szClassKey, int32 iAccess, const cha
 		}
 		iAccess = sClass.bStruct ? IDE_ACCESS_PUBLIC : IDE_ACCESS_PROTECTED;
 	}
-	bResult = szText && (bField || FindInsertPlace(&sClass, szText, iAccess, &uiAt, &szBefore));
+	bResult = szText && (bField || FindInsertPlace(&sClass, szText, iAccess, &uiAt, &szBefore, bLastPart));
 	if (bResult)
 	{
 		szLine.Init(szDeclaration);
