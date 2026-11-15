@@ -8,6 +8,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Flow.cpp" />
+    <ClCompile Include="Limits.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Limits.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{8E3F4051-0000-4000-8000-00000000000A}</ProjectGuid>

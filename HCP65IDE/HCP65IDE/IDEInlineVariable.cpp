@@ -26,6 +26,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDERename.h"
 #include "IDESafeDelete.h"
 #include "IDEChangeSignature.h"
+#include "IDEMemberQualifier.h"
+#include "IDEDefinitions.h"
 #include "IDEInlineVariable.h"
 #include "IDEContextActions.h"
 
@@ -91,6 +93,7 @@ void CIDEInlineVariable::Init(CIDEContent* pcContent)
 void CIDEInlineVariable::Class(void)
 {
 	U_Pointer(mpcContent);
+	M_Pointer(mpDialog);
 }
 
 
@@ -140,7 +143,7 @@ void CIDEInlineVariable::AddEditorItems(Ptr<CMenuContainer> pRefactor)
 //////////////////////////////////////////////////////////////////////////
 void CIDEInlineVariable::AddContextActions(SIDECaretContext* psContext)
 {
-	if ((psContext->bSymbol && (psContext->bFunction || (psContext->uiKind == CPPSK_Variable))) || psContext->bMacro)
+	if ((psContext->bSymbol && (psContext->bFunction || (psContext->uiKind == CPPSK_Variable) || ((psContext->uiKind == CPPSK_Field) && psContext->bStatic))) || psContext->bMacro)
 	{
 		psContext->Offer("Refactor.InlineVariable");
 	}
@@ -680,6 +683,441 @@ char* CIDEInlineVariable::PrintInlining(SIDEInlining* psInlining, CChars* pszDes
 
 //////////////////////////////////////////////////////////////////////////
 //
+//
+//////////////////////////////////////////////////////////////////////////
+void SIDEConstantInlining::Init(void)
+{
+	bPossible = false;
+	szWhyNot.Init();
+	szKey.Init();
+	szName.Init();
+	szValue.Init();
+	aszUseFiles.Init();
+	aiUseStarts.Init();
+	aiUseEnds.Init();
+	aiUseWrapped.Init();
+	uiCaretUse = MAX_SIZE;
+	aszDeclarationFiles.Init();
+	aiDeclarationStarts.Init();
+	aiDeclarationEnds.Init();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void SIDEConstantInlining::Kill(void)
+{
+	aiDeclarationEnds.Kill();
+	aiDeclarationStarts.Kill();
+	aszDeclarationFiles.Kill();
+	aiUseWrapped.Kill();
+	aiUseEnds.Kill();
+	aiUseStarts.Kill();
+	aszUseFiles.Kill();
+	szValue.Kill();
+	szName.Kill();
+	szKey.Kill();
+	szWhyNot.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// What Inline has to work with for the constant at the caret: a variable
+// of a file or of a class (not a function's own) that is declared const
+// with a value that is a constant: it does nothing (no call, no ++) and
+// names no variable that isn't const.  Its uses are found in every file
+// of the solution that names it, each file parsed and checked as its
+// project builds it.  False if there is no such variable at the caret;
+// psDest->bPossible says whether it can be inlined, szWhyNot why not.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEInlineVariable::FindConstantInlining(SIDEConstantInlining* psDest)
+{
+	CIDECodeModel*							pcModel;
+	Ptr<CIDEEditorTab>						pTab;
+	CArrayTemplatePtr<CIDERefactorUnit>		apcUnits;
+	CIDERefactorUnit*						pcUnit;
+	CArrayIDELocations						asLocations;
+	CArrayChars								aszFiles;
+	CTextFile								cFile;
+	SIDELocation*							psLocation;
+	CCPPSyntax*								pcNode;
+	CCPPSyntax*								pcUse;
+	CCPPSyntax*								pcValue;
+	CCPPSyntax*								pcParent;
+	CCPPSyntaxDeclarator*					pcDeclarator;
+	CCPPSyntaxInitDeclarator*				pcInit;
+	CCPPSyntaxSimpleDeclaration*			pcDeclaration;
+	CIDEEffectFinder						cEffects;
+	SPreprocessedToken*						psSource;
+	SCPPSyntaxRange							sRange;
+	CChars									szNamed;
+	CChars									szWhy;
+	char*									szText;
+	size									uiLength;
+	size									uiPass;
+	size									i;
+	size									j;
+	int										iLine;
+	int										iColumn;
+	int32									iToken;
+	uint8									uiRole;
+	uint8									uiKind;
+	bool									bConst;
+
+	pcModel = mpcContent->GetCodeModel();
+	pTab = mpcContent->GetDocuments()->GetActiveTab();
+	if (pTab.IsNull())
+	{
+		return false;
+	}
+	mpcContent->GetDocuments()->UpdateEditedTabsNow();
+	if (!mpcContent->GetDocuments()->FindSymbolPlace(&iLine, &iColumn, &uiRole) || !pcModel->GetSymbolAt(pTab->GetFileName(), iLine, iColumn, &psDest->szKey, &uiKind) ||
+		((uiKind != CPPSK_Variable) && (uiKind != CPPSK_Field)) || (psDest->szKey.Text()[0] == '@'))
+	{
+		return false;
+	}
+	GetIDESymbolName(psDest->szKey.Text(), &psDest->szName);
+	psDest->bPossible = true;
+
+	//The files that name it, each parsed once; the declarations first, for its value.
+	asLocations.Init();
+	pcModel->GetSymbolLocations(psDest->szKey.Text(), &asLocations, &uiKind);
+	aszFiles.Init();
+	apcUnits.Init();
+	pcValue = NULL;
+	for (uiPass = 0; psDest->bPossible && (uiPass < 2); uiPass++)
+	{
+		for (i = 0; psDest->bPossible && (i < asLocations.NumElements()); i++)
+		{
+			psLocation = asLocations.Get(i);
+			if ((psLocation->uiRole == CPPIR_Reference) != (uiPass == 1))
+			{
+				continue;
+			}
+			for (j = 0; (j < aszFiles.NumElements()) && (StringInsensitiveCompare(aszFiles.GetText(j), psLocation->szFileName.Text()) != 0); j++)
+			{
+			}
+			if (j == aszFiles.NumElements())
+			{
+				pcUnit = NewMalloc<CIDERefactorUnit>();
+				pcUnit->Init();
+				apcUnits.Add(pcUnit);
+				aszFiles.Add(psLocation->szFileName.Text());
+				if ((pcModel->FindProjectOfFile(psLocation->szFileName.Text()) == MAX_SIZE) || !pcUnit->Parse(pcModel, &mpcContent->GetFindInFiles(), psLocation->szFileName.Text(), true) || !pcUnit->IsChecked())
+				{
+					szWhy.Init(GetIDEFileNamePart(psLocation->szFileName.Text()));
+					szWhy.Append(", which names it, isn't the solution's or doesn't compile as it is");
+					psDest->bPossible = false;
+					psDest->szWhyNot.Set(szWhy);
+					szWhy.Kill();
+					break;
+				}
+			}
+			pcUnit = apcUnits.GetPtr(j);
+			cFile.Init();
+			szText = NULL;
+			mpcContent->GetFindInFiles()->GetFileText(psLocation->szFileName.Text(), &cFile, &szText, &uiLength);
+			iToken = pcUnit->FindTokenAt(psLocation->iLine, psLocation->iColumn);
+			pcNode = (iToken != -1) ? pcUnit->FindNodeOfTokens(iToken, iToken) : NULL;
+			szWhy.Init();
+			if (!pcNode || !szText)
+			{
+				szWhy.Set("a macro names it");
+			}
+			else if (uiPass == 0)
+			{
+				//A declaration: its own, const, and the one with a value gives the value.
+				pcDeclarator = (CCPPSyntaxDeclarator*)pcUnit->FindAncestor(pcNode, CPPS_Declarator);
+				while (pcDeclarator && pcDeclarator->mpcParent && (pcDeclarator->mpcParent->GetKind() == CPPS_Declarator))
+				{
+					pcDeclarator = (CCPPSyntaxDeclarator*)pcDeclarator->mpcParent;
+				}
+				pcInit = (pcDeclarator && pcDeclarator->mpcParent && (pcDeclarator->mpcParent->GetKind() == CPPS_InitDeclarator)) ? (CCPPSyntaxInitDeclarator*)pcDeclarator->mpcParent : NULL;
+				pcParent = pcInit ? pcInit->mpcParent : NULL;
+				pcDeclaration = (pcParent && (pcParent->GetKind() == CPPS_SimpleDeclaration)) ? (CCPPSyntaxSimpleDeclaration*)pcParent : NULL;
+				bConst = false;
+				for (iToken = (pcDeclaration && pcDeclaration->mpcSpecifiers) ? pcDeclaration->mpcSpecifiers->miFirstToken : 0;
+					 pcDeclaration && pcDeclaration->mpcSpecifiers && (iToken >= 0) && (iToken <= pcDeclaration->mpcSpecifiers->miLastToken); iToken++)
+				{
+					bConst |= pcUnit->IsToken(iToken, "const") || pcUnit->IsToken(iToken, "constexpr");
+				}
+				if (!pcDeclaration || (pcDeclaration->macpDeclarators.NumElements() != 1) || !pcUnit->GetRange(pcDeclaration, &sRange))
+				{
+					szWhy.Set("it is declared with others in one declaration, or its declaration can't be read");
+				}
+				else if (!bConst || (pcDeclarator->NumPointers() > 0))
+				{
+					szWhy.Set("it isn't a const variable (and not a pointer or a reference)");
+				}
+				else
+				{
+					psDest->aszDeclarationFiles.Add(psLocation->szFileName.Text());
+					psDest->aiDeclarationStarts.Add((int)FindIDETextOffset(szText, sRange.iLine, sRange.iColumn));
+					psDest->aiDeclarationEnds.Add((int)FindIDETextOffset(szText, sRange.iEndLine, sRange.iEndColumn));
+					if (pcInit->mpcInitializer && pcUnit->IsExpression(pcInit->mpcInitializer) && !pcValue && pcUnit->GetRange(pcInit->mpcInitializer, &sRange))
+					{
+						pcValue = pcInit->mpcInitializer;
+						psDest->szValue.AppendSubString(szText, FindIDETextOffset(szText, sRange.iLine, sRange.iColumn), FindIDETextOffset(szText, sRange.iEndLine, sRange.iEndColumn));
+						if (psDest->szValue.StartsWith("="))
+						{
+							psDest->szValue.RemoveFromStart(1);
+						}
+						psDest->szValue.StripWhitespace();
+
+						//A constant: it does nothing, and what it names isn't a variable that can change.
+						cEffects.mbEffects = false;
+						cEffects.Look(pcValue);
+						if (cEffects.mbEffects)
+						{
+							szWhy.Set("its value does something (a call, a ++): it isn't a constant");
+						}
+						for (iToken = pcValue->miFirstToken; szWhy.Empty() && (iToken <= pcValue->miLastToken); iToken++)
+						{
+							psSource = pcUnit->GetTokeniser()->GetSource(pcUnit->GetTokeniser()->Get((size)iToken));
+							szNamed.Init();
+							if (pcUnit->GetTokeniser()->Get((size)iToken)->IsIdentifier() && pcUnit->GetTokensRange(iToken, iToken, &sRange) &&
+								pcModel->GetSymbolAt(psLocation->szFileName.Text(), sRange.iLine, sRange.iColumn, &szNamed, &uiKind) &&
+								((uiKind == CPPSK_Variable) || (uiKind == CPPSK_Field) || (uiKind == CPPSK_Parameter)) && !mpcContent->GetMemberQualifier()->IsDeclaredWith(szNamed.Text(), "const"))
+							{
+								szWhy.Set("its value names ");
+								szWhy.Append(psSource->szText, psSource->uiLength);
+								szWhy.Append(", which isn't a constant");
+							}
+							szNamed.Kill();
+						}
+					}
+				}
+			}
+			else
+			{
+				//A use: the name, with what it is written after and in whatever parentheses.
+				pcUse = pcUnit->FindAncestor(pcNode, CPPS_IdExpression);
+				while (pcUse && pcUse->mpcParent && (pcUse->mpcParent->GetKind() == CPPS_ParenthesisedExpression))
+				{
+					pcUse = pcUse->mpcParent;
+				}
+				if (!pcUse || !pcUnit->GetRange(pcUse, &sRange))
+				{
+					szWhy.Set("it is named where no expression is, or by a macro");
+				}
+				else if (pcUnit->GetPass()->FindChanges(pcUse) & (CPPPC_ADDRESS | CPPPC_REFERENCE | CPPPC_ASSIGNED))
+				{
+					szWhy.Set("its address is taken, or it is given to a reference");
+				}
+				else
+				{
+					if ((StringInsensitiveCompare(psLocation->szFileName.Text(), pTab->GetFileName()) == 0) && (psLocation->iLine == iLine) && (iColumn >= psLocation->iColumn) &&
+						(iColumn <= psLocation->iColumn + (int)psDest->szName.Length()))
+					{
+						psDest->uiCaretUse = psDest->aszUseFiles.NumElements();
+					}
+					psDest->aszUseFiles.Add(psLocation->szFileName.Text());
+					psDest->aiUseStarts.Add((int)FindIDETextOffset(szText, sRange.iLine, sRange.iColumn));
+					psDest->aiUseEnds.Add((int)FindIDETextOffset(szText, sRange.iEndLine, sRange.iEndColumn));
+					psDest->aiUseWrapped.Add((pcValue && IsWrapped(pcValue, pcUse)) ? 1 : 0);
+				}
+			}
+			if (!szWhy.Empty())
+			{
+				psDest->bPossible = false;
+				psDest->szWhyNot.Set(szWhy);
+				psDest->szWhyNot.Append(" (")->Append(GetIDEFileNamePart(psLocation->szFileName.Text()))->Append(" line ")->Append((int32)(psLocation->iLine + 1))->Append(")");
+			}
+			szWhy.Kill();
+			cFile.Kill();
+		}
+		if (psDest->bPossible && (uiPass == 0) && !pcValue)
+		{
+			psDest->bPossible = false;
+			psDest->szWhyNot.Set("it isn't given a value where it is declared");
+		}
+	}
+	for (i = 0; i < apcUnits.NumElements(); i++)
+	{
+		apcUnits.GetPtr(i)->Kill();
+		free(apcUnits.GetPtr(i));
+	}
+	apcUnits.Kill();
+	aszFiles.Kill();
+	KillIDELocations(&asLocations);
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The constant inlined: its value in place of every use and its
+// declarations taken out; or, bThisOnly, in place of the use the caret is
+// on, the constant staying.  One undo across the files, which are checked
+// as they would be first.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEInlineVariable::InlineConstant(SIDEConstantInlining* psInlining, bool bThisOnly, CChars* pszStatus)
+{
+	CIDEFileEdits	cFiles;
+	CChars			szValue;
+	CChars			szMessage;
+	char*			szText;
+	size			uiStart;
+	size			uiEnd;
+	size			uiUses;
+	size			uiBefore;
+	size			i;
+	bool			bResult;
+
+	bResult = psInlining->bPossible && (!bThisOnly || (psInlining->uiCaretUse != MAX_SIZE));
+	cFiles.Init(mpcContent);
+	uiUses = 0;
+	for (i = 0; bResult && (i < psInlining->aszUseFiles.NumElements()); i++)
+	{
+		if (bThisOnly && (i != psInlining->uiCaretUse))
+		{
+			continue;
+		}
+		szText = cFiles.GetText(psInlining->aszUseFiles.GetText(i));
+		bResult = (szText != NULL);
+		if (bResult)
+		{
+			szValue.Init(psInlining->aiUseWrapped.GetValue(i) ? "(" : "");
+			szValue.Append(psInlining->szValue)->Append(psInlining->aiUseWrapped.GetValue(i) ? ")" : "");
+			cFiles.GetEdits(psInlining->aszUseFiles.GetText(i))->Replace((size)psInlining->aiUseStarts.GetValue(i), (size)psInlining->aiUseEnds.GetValue(i), szValue.Text());
+			szValue.Kill();
+			uiUses++;
+		}
+	}
+	for (i = 0; bResult && !bThisOnly && (i < psInlining->aszDeclarationFiles.NumElements()); i++)
+	{
+		szText = cFiles.GetText(psInlining->aszDeclarationFiles.GetText(i));
+		bResult = (szText != NULL);
+		if (bResult)
+		{
+			uiStart = (size)psInlining->aiDeclarationStarts.GetValue(i);
+			uiEnd = (size)psInlining->aiDeclarationEnds.GetValue(i);
+			ExtendIDEDeletion(szText, &uiStart, &uiEnd, true);
+			cFiles.GetEdits(psInlining->aszDeclarationFiles.GetText(i))->Replace(uiStart, uiEnd, "");
+		}
+	}
+	szMessage.Init();
+	if (bResult)
+	{
+		uiBefore = cFiles.CountErrors(false);
+		if (cFiles.CountErrors(true) > uiBefore)
+		{
+			bResult = false;
+			szMessage.Append("Can't inline ")->Append(psInlining->szName)->Append(": the code doesn't compile with its value where it is used.");
+		}
+	}
+	else
+	{
+		szMessage.Append("Can't inline ")->Append(psInlining->szName)->Append(": ")->Append(!psInlining->bPossible ? psInlining->szWhyNot.Text() : ((bThisOnly && (psInlining->uiCaretUse == MAX_SIZE)) ? "the caret isn't on a use of it" : "a file it is in couldn't be opened"))->Append('.');
+	}
+	if (bResult)
+	{
+		cFiles.Apply();
+		szMessage.Append("Inlined ")->Append(psInlining->szName)->Append(" = ")->Append(psInlining->szValue)->Append(": ")->Append((uint32)uiUses)->Append((uiUses == 1) ? " use" : " uses");
+		szMessage.Append(bThisOnly ? "; the constant stays." : ", and the constant is taken out.");
+	}
+	if (pszStatus)
+	{
+		pszStatus->Set(szMessage);
+	}
+	else
+	{
+		mpcContent->ShowStatus(szMessage.Text());
+	}
+	szMessage.Kill();
+	cFiles.Kill();
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// What was found, for the checks.
+//
+//////////////////////////////////////////////////////////////////////////
+char* CIDEInlineVariable::PrintConstantInlining(SIDEConstantInlining* psInlining, CChars* pszDest)
+{
+	CArrayChars	aszFiles;
+	size		i;
+
+	pszDest->Append("Inline Constant: ")->Append(psInlining->szName);
+	if (!psInlining->bPossible)
+	{
+		pszDest->Append(" can't be: ")->Append(psInlining->szWhyNot)->Append('\n');
+		return pszDest->Text();
+	}
+	aszFiles.Init();
+	for (i = 0; i < psInlining->aszUseFiles.NumElements(); i++)
+	{
+		aszFiles.AddIfUnique(psInlining->aszUseFiles.GetText(i));
+	}
+	pszDest->Append(" = [")->Append(psInlining->szValue)->Append("], ")->Append((uint32)psInlining->aszUseFiles.NumElements())->Append((psInlining->aszUseFiles.NumElements() == 1) ? " use in " : " uses in ");
+	pszDest->Append((uint32)aszFiles.NumElements())->Append((aszFiles.NumElements() == 1) ? " file, " : " files, ")->Append((uint32)psInlining->aszDeclarationFiles.NumElements());
+	pszDest->Append((psInlining->aszDeclarationFiles.NumElements() == 1) ? " declaration" : " declarations")->Append((psInlining->uiCaretUse != MAX_SIZE) ? ", the caret on a use\n" : "\n");
+	aszFiles.Kill();
+	return pszDest->Text();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Inline, for a constant at the caret: as Inline Function's dialog, every
+// use with the constant taken out, or (from a use) that use only.
+// *pbConstant is whether there is one at the caret; false if nothing
+// changed.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEInlineVariable::ShowInlineConstant(bool* pbConstant)
+{
+	SIDEConstantInlining	sInlining;
+	Ptr<CComboBox>			pMode;
+	CChars					szMessage;
+	const char*				aszModes[2];
+	bool					bResult;
+	bool					bThisOnly;
+
+	sInlining.Init();
+	*pbConstant = FindConstantInlining(&sInlining);
+	if (!*pbConstant)
+	{
+		sInlining.Kill();
+		return false;
+	}
+	if (!sInlining.bPossible)
+	{
+		szMessage.Init("Can't inline ");
+		szMessage.Append(sInlining.szName)->Append(": ")->Append(sInlining.szWhyNot)->Append(".");
+		mpcContent->ShowStatus(szMessage.Text());
+		szMessage.Kill();
+		sInlining.Kill();
+		return false;
+	}
+	szMessage.Init("Inline ");
+	szMessage.Append(sInlining.szName);
+	mpDialog = OMalloc<CDialog>(mpcContent->GetWindow(), mpcContent->GetDialogLook(), szMessage.Text());
+	szMessage.Kill();
+	aszModes[0] = "All uses, and take the constant out";
+	aszModes[1] = "This use only";
+	pMode = mpDialog->AddComboBox("Inline:", aszModes, (sInlining.uiCaretUse != MAX_SIZE) ? 2 : 1, 0);
+	mpDialog->SetOKCaption("Refactor");
+	mpcContent->GetScript()->WatchDialog(mpDialog);
+	bResult = mpDialog->Show(480);
+	bThisOnly = bResult && (pMode->GetSelected() == 1);
+	pMode = NULL;
+	mpDialog = NULL;
+	bResult = bResult && InlineConstant(&sInlining, bThisOnly);
+	sInlining.Kill();
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // IntelliJ's Inline Variable for the variable at the caret: Problems
 // Detected if anything stands in the way, then the inlining.  False if
 // nothing was changed.
@@ -691,7 +1129,14 @@ bool CIDEInlineVariable::ShowInline(void)
 	CChars			szMessage;
 	bool			bResult;
 	bool			bMacro;
+	bool			bConstant;
 
+	//A constant of a file or a class first: a function's own variable is the next thing looked for.
+	bResult = ShowInlineConstant(&bConstant);
+	if (bConstant)
+	{
+		return bResult;
+	}
 	sInlining.Init();
 	if (!FindInlining(&sInlining))
 	{

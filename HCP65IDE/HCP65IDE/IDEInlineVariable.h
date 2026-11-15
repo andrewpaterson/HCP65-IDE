@@ -58,6 +58,29 @@ struct SIDEInlining
 };
 
 
+//What Inline found for a constant: a const variable of a file or of a class, whose value is a constant.  It is
+//used in any of the solution's files.
+struct SIDEConstantInlining
+{
+	bool		bPossible;
+	CChars		szWhyNot;
+	CChars		szKey;
+	CChars		szName;
+	CChars		szValue;				//Its value, as it is written.
+	CArrayChars	aszUseFiles;			//Each place it is read: its file,
+	CArrayInt	aiUseStarts;			//its name's start there (with what it is written after: "CVat::"),
+	CArrayInt	aiUseEnds;				//its end,
+	CArrayInt	aiUseWrapped;			//and whether the value needs parentheses there.
+	size		uiCaretUse;				//The use the caret is on, MAX_SIZE if it is on a declaration.
+	CArrayChars	aszDeclarationFiles;	//Each declaration of it (a class's static one may be defined outside it too),
+	CArrayInt	aiDeclarationStarts;
+	CArrayInt	aiDeclarationEnds;
+
+	void	Init(void);
+	void	Kill(void);
+};
+
+
 //IntelliJ's Inline Variable (Ctrl+Alt+N; Refactorings.txt, 6): a function's own variable that has one value is taken
 //out, and its value written where it was used.  Its value is what its declaration gives it ("int iCount = Count();")
 //or, as the house style declares locals at the top of a function, what the one statement that assigns it gives it
@@ -79,6 +102,7 @@ CONSTRUCTABLE(CIDEInlineVariable);
 DESTRUCTABLE(CIDEInlineVariable);
 protected:
 	CIDEContent*	mpcContent;  //Not held: the content holds it.
+	Ptr<CDialog>	mpDialog;  //A constant's, while it is shown.
 
 public:
 	void	Init(CIDEContent* pcContent);
@@ -97,6 +121,10 @@ public:
 	bool	Inline(SIDEInlining* psInlining, CChars* pszStatus = NULL);
 	char*	PrintInlining(SIDEInlining* psInlining, CChars* pszDest);
 	bool	IsWrapped(CCPPSyntax* pcValue, CCPPSyntax* pcUse);
+	bool	ShowInlineConstant(bool* pbConstant);
+	bool	FindConstantInlining(SIDEConstantInlining* psDest);
+	bool	InlineConstant(SIDEConstantInlining* psInlining, bool bThisOnly, CChars* pszStatus = NULL);
+	char*	PrintConstantInlining(SIDEConstantInlining* psInlining, CChars* pszDest);
 
 protected:
 	void	ShowQueuedInline(void);
