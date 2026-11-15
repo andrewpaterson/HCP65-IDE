@@ -230,12 +230,6 @@ Open
     pointer to it and no setter.  Is that how you write accessors (in the class, or declared there and defined in
     the .cpp; const or not)?
 
-45. Optimise #includes (Ctrl+Alt+O) on a header: when an #include goes (nothing the header names comes from it, or
-    it becomes a forward declaration), the files that #include the header and got a name through it are each given
-    their own #include of that name's header, after their last #include.  That can change many files at once (one
-    undo).  Is that what you want, or should such an #include stay in the header, or should I show the files and
-    ask first?
-
 46. Sort #includes puts the file's own header first, then keeps the directories in the order they first come
     ("BaseLib/..." before "WindowLib/..." if they are so now) and sorts by name inside each.  Your files look to be
     in dependency order rather than by name: is there an order you want it to make (and should Optimise #includes
@@ -245,6 +239,19 @@ Open
     with any the file has there already.  Optimise #includes does this in .cpp files too, not only in headers.  It
     leaves <> #includes, #includes inside an #if, and a .cpp's #include of its own header alone.  Right?
 
+
+Answered
+--------
+
+45. Optimise #includes (Ctrl+Alt+O) on a header: when an #include goes (nothing the header names comes from it, or
+    it becomes a forward declaration), the files that #include the header and got a name through it are each given
+    their own #include of that name's header, after their last #include.  That can change many files at once (one
+    undo).  Is that what you want, or should such an #include stay in the header, or should I show the files and
+    ask first?
+    Answered 2026-11-15: show the files and ask first, then do it as it does now.  To do: Optimise #includes lists
+    the files that would be given their own #include (as Problems Detected lists conflicts) before anything is
+    changed.
+
 48. Convert Macro and Inline Macro are built for ordinary macros (a #define of a value to a constant or, with the
     #defines beside it, an enum; a macro with parameters to an inline function, a template where its uses' types
     differ; Inline... on a macro's name).  T6 is untouched: the classes a macro makes from a text included more
@@ -252,6 +259,10 @@ Open
     text as a template's body with the macro's uses as its instances (so Rename and the rest reach into it), or is
     that code going to become real templates, in which case the tool to build is "convert this macro-made class to
     a template"?
+    Answered 2026-11-15: they become real templates, which the refactorings then see as any other code; nothing
+    is built for T6 here.  The plan for it, for another session, is CommonLibraries
+    Libraries/BaseLib/ArrayTemplatesPlan.txt (d2816c752): each family written once with a size policy as a
+    template parameter, its old names kept by derived classes.
 
 49. Your own code keeps its constants as #defines ("#define IDE_INCLUDE_KEPT 0").  Convert Macro writes
     "const int NAME = 8;" where the #define was, an enum as
@@ -263,12 +274,17 @@ Open
     (values written only where they don't count up from 0), and a function on one line,
     "inline int SQUARE(int x) { return ((x) * (x)); }", keeping the macro's name and its brackets.  Is that the
     form you want (the brackets taken out, the function under a comment banner, the name changed to your case)?
+    Answered 2026-11-15: keep it as it is: the one-line form, the macro's name and its brackets.  Renaming is
+    Rename's, a step of the user's own.
 
 50. Convert Pointer to Reference (and back) keeps the variable's name: "SLevel* psLevel" becomes "SLevel& psLevel".
     Should it rename it too (to "sLevel", by your prefixes: which prefix does a reference to a struct or a class
     have here?), or is Rename afterwards what you want?  It works on a parameter (every declaration, override, use
     and call) and on a local variable declared with its value; a field isn't done (its constructors would have to
     initialise it).  Is a field wanted?
+    Answered 2026-11-15: it doesn't rename; renaming is a separate step for the user.  A reference has no prefix
+    of its own here: it is named as the object it refers to ("SLevel& sLevel", "CVat& cVat").  A field wasn't
+    answered, and isn't done.
 
 51. Convert Member Function to Function names the new first parameter by your prefixes from the class's name
     ("CVat* pcVat", "SLevel* psLevel") and declares the function after its class in the class's header, two lines
@@ -276,6 +292,10 @@ Open
     class's public part, lined up by its name with the line above but not put in the column your classes keep for
     virtual and static.  Are those the places and the names, and should the member's declaration go in that
     column?
+    Answered 2026-11-15, the last part: yes, the member's declaration goes in the column the class keeps for
+    virtual and static.  To do in Convert Function to Member Function (and wherever CIDEMoveMembers::AddMember
+    adds a function to such a class).  The parameter's name and the function's place after its class weren't
+    answered, and stay as built.
 
 52. The refactorings that check the files "as they would be" (Optimise #includes, Convert Macro, pointer to
     reference, const and static, function to member) ask the IDE's own checker, and it lets through some things
@@ -283,6 +303,10 @@ Open
     declared further down the header, and the checker had no error for it.  They are a net, not a proof.  Is it
     worth making the checker stricter for this (which errors matter most to you), or building the project in
     the background after such a refactoring and showing what broke?
+    Answered 2026-11-15: make the checker stricter; no build in the background ("the user can recompile after
+    they refactor").  First: a name used before it is declared, in every kind of declaration (a member's
+    parameter, a prototype, a field, a global, a local, what a function returns, a base class, a member held by
+    value; its class declared later, or never).  To do in CppCompilerLib, with tests.
 
 53. Extract Template Parameter on a class names the template "CTankTemplate" (asked, that is the suggestion) and
     its parameter "M", moves every member's definition from the .cpp to the header under the class with its
@@ -290,3 +314,11 @@ Open
     somewhere ("class CTank;") is refused, because a typedef can't be declared that way: most of your classes are
     forward declared.  Should it rewrite those forward declarations instead (to the template's and the typedef), or
     is the typedef not what you want at all, the uses of CTank becoming CTankTemplate<CGauge> everywhere?
+    Answered 2026-11-15: neither: the class's old name is kept by a class that derives from the template and
+    adds nothing but its constructors, "class CTank : public CTankTemplate<CGauge> {};", so every "class CTank;"
+    stays as it is and a class declared ahead is no longer refused.  And the compiler is to warn where the
+    template's instance is named directly ("CTankTemplate<CGauge> cTank;": use CTank).  The rule is inferred, with
+    no new syntax: a class whose only base is a template's instance and whose body is empty but for constructors
+    is that instance's name; no warning in that class's own base list, in the template's own code, or for an
+    instance that has no such class; and only where the class can be seen from the use.  To do: Extract Template
+    Parameter on a class, and the warning in CppCompilerLib.
