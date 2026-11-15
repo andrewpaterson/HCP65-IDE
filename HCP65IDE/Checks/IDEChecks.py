@@ -1710,6 +1710,15 @@ CHECKS = [
 		 r'^1\|#include "Calc\.h"$', r'^2\|$', r'^3\|$', r'^4\|#define DOUBLE\t2$', r'^5\|#define VALUE\t4$', r'^6\|',
 		 r'\tiResult = Scaled\(iExtra\) \+ miScale \* DOUBLE;$', r'\tif \(GetCount\(\) > VALUE\)$', r'\t\tiResult \+= miScale \* DOUBLE;$'],
 		[]),
+	('introduce-constant-file', dict(MakeIntroduceVariableCopy(), **{
+		#Introduce Constant for every occurrence in the file, when that is asked for: the number is in more functions
+		#than the one it is selected in.
+		'WAIT_INDEX': '1', 'OPEN': 'Calc.cpp',
+		'DEBUG': 'edit:renamesearch:---s,edit:selecttext:122:19-122:20,edit:introduceconstantfile:TWICE,printstatus,printdisklines:Calc.cpp'}),
+		[r'^Introduce Constant: 2 in the function, 4 in the file$', r'^Status: Introduced the constant TWICE = 2: 4 occurrences replaced\.$',
+		 r'^4\|#define TWICE\t2$', r'^69\|\tiResult = Scaled\(iExtra\) \+ miScale \* TWICE;$', r'^72\|\t\tiResult \+= miScale \* TWICE;$',
+		 r'^125\|\tiTotal = iBase \* TWICE;$', r'^127\|\tiTotal \+= iBase \* TWICE;$'],
+		[]),
 	('introduce-parameter', dict(MakeIntroduceVariableCopy(), **{
 		#Introduce Parameter: the number becomes a parameter of its function, added last where the class declares it
 		#and where it is defined (Change Signature), every call passes the number, and in the function it is the

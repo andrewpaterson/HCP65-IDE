@@ -240,6 +240,7 @@ Answered
     need?
     Answered 2026-11-15: a tick in its dialog to replace every occurrence in the file, not ticked to begin with.
     The header isn't offered: the #define is moved there by hand, or by Move.  To do: the tick.
+    Done 2026-11-15 (CIDEIntroduceVariable::FindFileOccurrences; the dialog's "in the file" tick).
 
 33. Introduce Typedef (Ctrl+Alt+K, CLion's key) replaces the type only in the file it is selected in.  A typedef
     written in a header could also replace the type in every file that #includes the header: not done.  Do you

@@ -87,6 +87,8 @@ struct SIDEIntroduction
 	bool					bUsesLocals;		//It names the function's own variables or parameters,
 	bool					bUsesMembers;		//or members of the function's class (or this): a call of the function can't give it.
 	CArrayChars				aszWarnings;		//What replacing every occurrence could change: shown first, as Problems Detected.
+	CArrayTextRange			asFileOccurrences;	//Every occurrence in the file, the function's among them: Introduce Constant's, if asked.
+	bool					bWholeFile;			//Set by who asks: a constant takes the place of every occurrence in the file.
 
 	void	Init(void);
 	void	Kill(void);
@@ -126,6 +128,7 @@ protected:
 	Ptr<CTextField>		mpNameField;
 	Ptr<CLabel>			mpError;
 	Ptr<CCheckBox>		mpAllBox;
+	Ptr<CCheckBox>		mpFileBox;  //Introduce Constant's "in the file", while its dialog is shown.
 	SIDEIntroduction	msShown;  //What the dialog is introducing.
 	bool				mbAll;  //Replace all occurrences, as last chosen.
 	int					miKind;  //What is being introduced (IDE_INTRODUCE_).
@@ -155,6 +158,7 @@ public:
 	bool	ChooseCandidate(size uiCandidate);
 	Ptr<CMenuContainer>	GetChooser(void);
 	bool	FindIntroduction(SIDEIntroduction* psDest);
+	void	FindFileOccurrences(CIDERefactorUnit* pcUnit, CCPPSyntax* pcSelected, const char* szText, SIDEIntroduction* psDest);
 	void	FindReplaceWarnings(CIDERefactorUnit* pcUnit, CCPPSyntax* pcBody, CCPPSyntax* pcSelected, CArraySyntax* papcNodes, SIDEIntroduction* psDest);
 	bool	Introduce(SIDEIntroduction* psIntroduction, const char* szName, bool bAll, CChars* pszStatus = NULL, int iKind = IDE_INTRODUCE_VARIABLE);
 	const char*	GetNameProblem(SIDEIntroduction* psIntroduction, const char* szName, int iKind = IDE_INTRODUCE_VARIABLE);

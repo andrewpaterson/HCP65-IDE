@@ -59,6 +59,8 @@ void SIDEIntroduction::Init(void)
 	asDeclared.Init();
 	aszUsed.Init();
 	aszWarnings.Init();
+	asFileOccurrences.Init();
+	bWholeFile = false;
 	szFunctionKey.Init();
 	iFunctionLine = 0;
 	iFunctionColumn = 0;
@@ -75,6 +77,7 @@ void SIDEIntroduction::Init(void)
 //////////////////////////////////////////////////////////////////////////
 void SIDEIntroduction::Kill(void)
 {
+	asFileOccurrences.Kill();
 	aszWarnings.Kill();
 	szClassKey.Kill();
 	szFunctionKey.Kill();
@@ -153,6 +156,7 @@ void CIDEIntroduceVariable::Class(void)
 	M_Pointer(mpNameField);
 	M_Pointer(mpError);
 	M_Pointer(mpAllBox);
+	M_Pointer(mpFileBox);
 	U_Unknown(SIDEIntroduction, msShown);
 	U_Bool(mbAll);
 	M_Pointer(mpChooser);
@@ -1022,6 +1026,7 @@ bool CIDEIntroduceVariable::FindIntroduction(SIDEIntroduction* psDest)
 		apcNodes.Init();
 		FindOccurrences(&cUnit, pcFunction->mpcBody, pcExpression, szText, psDest, &apcNodes);
 		FindReplaceWarnings(&cUnit, pcFunction->mpcBody, pcExpression, &apcNodes, psDest);
+		FindFileOccurrences(&cUnit, pcExpression, szText, psDest);
 		psDest->bPossible = apcNodes.NumElements() > 0;
 		if (!psDest->bPossible)
 		{
@@ -1193,6 +1198,52 @@ void CIDEIntroduceVariable::AppendSuggestedName(SIDEIntroduction* psIntroduction
 	{
 		pszDest->Append(szName);
 	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Every place in the file the expression is written, in any function or
+// outside them all (psDest->asFileOccurrences), as FindOccurrences finds
+// those of its own function: for a constant, which is the same wherever
+// it is written.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEIntroduceVariable::FindFileOccurrences(CIDERefactorUnit* pcUnit, CCPPSyntax* pcSelected, const char* szText, SIDEIntroduction* psDest)
+{
+	CIDEOccurrenceFinder	cFinder;
+	CArraySyntax			apcFound;
+	CChars					szTokens;
+	CCPPSyntax*				pcNode;
+	SCPPSyntaxRange			sRange;
+	STextRange				sTextRange;
+	size					i;
+
+	if (!pcUnit->GetTree()->GetRoot())
+	{
+		return;
+	}
+	szTokens.Init();
+	pcUnit->AppendTokens(pcSelected->miFirstToken, pcSelected->miLastToken, &szTokens);
+	apcFound.Init();
+	cFinder.mpcUnit = pcUnit;
+	cFinder.mszTokens = szTokens.Text();
+	cFinder.miTokens = pcSelected->miLastToken - pcSelected->miFirstToken + 1;
+	cFinder.mpapcFound = &apcFound;
+	pcUnit->GetTree()->GetRoot()->VisitFields(&cFinder);
+	szTokens.Kill();
+	for (i = 0; i < apcFound.NumElements(); i++)
+	{
+		pcNode = apcFound.GetPtr(i);
+		if (((pcNode->miFirstToken != pcSelected->miFirstToken) && (pcUnit->GetPass()->FindChanges(pcNode) != 0)) || !pcUnit->GetRange(pcNode, &sRange))
+		{
+			continue;
+		}
+		sTextRange.uiStart = FindIDETextOffset(szText, sRange.iLine, sRange.iColumn);
+		sTextRange.uiEnd = FindIDETextOffset(szText, sRange.iEndLine, sRange.iEndColumn);
+		psDest->asFileOccurrences.Add(&sTextRange);
+	}
+	apcFound.Kill();
 }
 
 
@@ -1515,7 +1566,14 @@ bool CIDEIntroduceVariable::IntroduceElsewhere(SIDEIntroduction* psIntroduction,
 			pcEdits->Insert(uiAt, szLine.Text());
 			szLine.Kill();
 		}
-		for (i = uiFirst; bResult && (i <= uiLast); i++)
+		for (i = 0; bResult && (iKind == IDE_INTRODUCE_CONSTANT) && psIntroduction->bWholeFile && (i < psIntroduction->asFileOccurrences.NumElements()); i++)
+		{
+			//A constant, everywhere in the file it is written.
+			psOccurrence = psIntroduction->asFileOccurrences.Get(i);
+			pcEdits->Replace(psOccurrence->uiStart, psOccurrence->uiEnd, szName);
+			uiReplaced++;
+		}
+		for (i = uiFirst; bResult && !((iKind == IDE_INTRODUCE_CONSTANT) && psIntroduction->bWholeFile) && (i <= uiLast); i++)
 		{
 			psOccurrence = psIntroduction->asOccurrences.Get(i);
 			if (bStatement && (i == uiFirst))
@@ -1892,6 +1950,16 @@ bool CIDEIntroduceVariable::ShowIntroduce(int iKind)
 		mpAllBox = mpDialog->AddCheckBox(szText.Text(), mbAll);
 		szText.Kill();
 	}
+	mpFileBox = NULL;
+	if ((miKind == IDE_INTRODUCE_CONSTANT) && (msShown.asFileOccurrences.NumElements() > msShown.asOccurrences.NumElements()))
+	{
+		//Every place in the file: not ticked until it is asked for.
+		szText.Init("Replace all ");
+		szText.Append((uint32)msShown.asFileOccurrences.NumElements());
+		szText.Append(" occurrences in the file");
+		mpFileBox = mpDialog->AddCheckBox(szText.Text(), false);
+		szText.Kill();
+	}
 	mpError = OMalloc<CLabel>(mpDialog->GetWindow(), mpcContent->GetDimFont(), "");
 	mpDialog->AddEditor("", mpError);
 	mpDialog->SetOKCaption("Refactor");
@@ -1907,6 +1975,8 @@ bool CIDEIntroduceVariable::ShowIntroduce(int iKind)
 			mbAll = mpAllBox->IsTicked();
 			bAll = mbAll;
 		}
+		msShown.bWholeFile = mpFileBox.IsNotNull() && mpFileBox->IsTicked();
+
 		//What replacing all of them could change is shown first: Cancel there introduces nothing.
 		if (!bAll || (msShown.aszWarnings.NumElements() == 0) || mpcContent->GetChangeSignature()->ShowConflicts(&msShown.aszWarnings))
 		{
@@ -1918,6 +1988,7 @@ bool CIDEIntroduceVariable::ShowIntroduce(int iKind)
 	mpNameField = NULL;
 	mpError = NULL;
 	mpAllBox = NULL;
+	mpFileBox = NULL;
 	mpDialog = NULL;
 	return bResult;
 }
