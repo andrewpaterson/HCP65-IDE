@@ -395,7 +395,7 @@ void TestGitCommand(void)
 //
 // Whether a file is tracked, and a tracked file renamed with git mv: the
 // rename staged, the file moved.  An untracked file, or a name taken,
-// isn't moved.
+// isn't moved.  A new file staged, and unstaged.
 //
 //////////////////////////////////////////////////////////////////////////
 void TestGitRepositoryMove(void)
@@ -444,6 +444,16 @@ void TestGitRepositoryMove(void)
 	AssertString("R  Engine.h -> CPPEngine.h\nR  Sub/Util.h -> Sub/Utility.h\n", cCommand.GetOutput()->Text());
 	cCommand.Kill();
 	aszArguments.Kill();
+
+	//A new file staged, and taken out of the index again: it is as it was on the disk.
+	AssertTrue(cRepository.Add(TestGitPath(&szPath, szRoot.Text(), "New.h")));
+	AssertTrue(cRepository.IsTracked(TestGitPath(&szPath, szRoot.Text(), "New.h")));
+	AssertTrue(cRepository.Unstage(TestGitPath(&szPath, szRoot.Text(), "New.h")));
+	AssertFalse(cRepository.IsTracked(TestGitPath(&szPath, szRoot.Text(), "New.h")));
+	AssertTrue(cFileUtil.Exists(TestGitPath(&szPath, szRoot.Text(), "New.h")));
+	AssertFalse(cRepository.Add(TestGitPath(&szPath, szRoot.Text(), "Missing.h")));
+	AssertFalse(cRepository.Unstage(TestGitPath(&szPath, szRoot.Text(), "New.h")));
+	AssertFalse(cRepository.Add("/no-such-folder-for-git/Engine.h"));
 
 	//Untracked, or onto a file that is there: nothing moves.
 	AssertFalse(cRepository.Move(TestGitPath(&szPath, szRoot.Text(), "New.h"), TestGitPath(&szNew, szRoot.Text(), "Newer.h")));

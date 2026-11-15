@@ -286,6 +286,59 @@ bool CGitRepository::ReadRevisionText(const char* szFullPath, const char* szRevi
 
 //////////////////////////////////////////////////////////////////////////
 //
+// A git command run on one file of the repository, with up to two
+// options before its path ("add -- <path>").  False if the file isn't in
+// the repository or git fails.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CGitRepository::RunOnPath(const char* szFullPath, const char* szCommand, const char* szOption1, const char* szOption2)
+{
+	CGitCommand	cCommand;
+	CArrayChars	aszArguments;
+	CChars		szPath;
+	bool		bResult;
+
+	szPath.Init();
+	if (!GetRelativePath(szFullPath, &szPath))
+	{
+		szPath.Kill();
+		return false;
+	}
+	aszArguments.Init();
+	aszArguments.Add(szCommand);
+	if (szOption1)
+	{
+		aszArguments.Add(szOption1);
+	}
+	if (szOption2)
+	{
+		aszArguments.Add(szOption2);
+	}
+	aszArguments.Add("--");
+	aszArguments.Add(szPath.Text());
+	cCommand.Init();
+	bResult = cCommand.Run(mszRoot.Text(), &aszArguments);
+	cCommand.Kill();
+	aszArguments.Kill();
+	szPath.Kill();
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A file staged as it is on the disk (git add): a new file is tracked
+// from then.  And a file taken out of the index, left as it is on the
+// disk (git rm --cached): one staged and never committed is as if it had
+// never been added.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CGitRepository::Add(const char* szFullPath) { return RunOnPath(szFullPath, "add", NULL, NULL); }
+bool CGitRepository::Unstage(const char* szFullPath) { return RunOnPath(szFullPath, "rm", "--cached", "--quiet"); }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Whether git tracks the file (it is in the index).
 //
 //////////////////////////////////////////////////////////////////////////

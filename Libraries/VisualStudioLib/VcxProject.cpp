@@ -796,6 +796,180 @@ bool CVcxProject::AddItemBeside(const char* szExistingPath, const char* szNewNam
 
 //////////////////////////////////////////////////////////////////////////
 //
+// The item whose file is szPath (a full path, any case) taken out of the
+// .vcxproj and its .vcxproj.filters, which are written, then the project
+// read again: what AddItemBeside added, taken away.  Only the item's own
+// elements go, with their lines; the rest of each file stays as it was,
+// byte for byte.  False if the project has no such item or a file can't
+// be written.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CVcxProject::RemoveItem(const char* szPath)
+{
+	CArrayChars	aszIncludes;
+	CChars		szItemPath;
+	CChars		szFilters;
+	CChars		szFileName;
+	size		i;
+	bool		bResult;
+
+	aszIncludes.Init();
+	for (i = 0; i < masItems.NumElements(); i++)
+	{
+		szItemPath.Init();
+		GetFullPath(masItems.Get(i), &szItemPath);
+		if (StringInsensitiveCompare(szItemPath.Text(), szPath) == 0)
+		{
+			aszIncludes.Add(masItems.Get(i)->GetInclude());
+		}
+		szItemPath.Kill();
+	}
+	if (aszIncludes.NumElements() == 0)
+	{
+		aszIncludes.Kill();
+		return false;
+	}
+
+	szFileName.Init(mszFileName);
+	szFilters.Init(mszFileName);
+	szFilters.Append(".filters");
+	bResult = RemoveIncludes(szFileName.Text(), &aszIncludes);
+	if (bResult && mbFilters)
+	{
+		RemoveIncludes(szFilters.Text(), &aszIncludes);
+	}
+	szFilters.Kill();
+	aszIncludes.Kill();
+
+	Kill();
+	Init();
+	if (!Read(szFileName.Text()))
+	{
+		bResult = false;
+	}
+	szFileName.Kill();
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Each element of szFileName's text with an Include="..." whose value is
+// one of paszIncludes (any case) taken out: from its line's start to the
+// end of the line its "/>" or its closing tag is on.  The file is
+// written.  False if it can't be read or written, or no element has such
+// a value.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CVcxProject::RemoveIncludes(const char* szFileName, CArrayChars* paszIncludes)
+{
+	CTextFile	cFile;
+	CChars		szText;
+	CChars		szValue;
+	CChars		szClose;
+	char*		szAttribute;
+	char*		szEnd;
+	char*		szClosing;
+	size		uiStart;
+	size		uiEnd;
+	size		uiElement;
+	size		uiLineStart;
+	size		uiElementEnd;
+	size		i;
+	bool		bFound;
+	bool		bRemoved;
+	bool		bResult;
+
+	cFile.Init();
+	if (!cFile.Read(szFileName))
+	{
+		cFile.Kill();
+		return false;
+	}
+	szText.Init();
+	szText.AppendSubString(cFile.Text(), (size)cFile.Length());
+	cFile.Kill();
+
+	bRemoved = false;
+	uiStart = 0;
+	for (;;)
+	{
+		szAttribute = strstr(&szText.Text()[uiStart], "Include=\"");
+		if (szAttribute == NULL)
+		{
+			break;
+		}
+		uiStart = (size)(szAttribute - szText.Text()) + 9;
+		szEnd = strchr(&szText.Text()[uiStart], '"');
+		if (szEnd == NULL)
+		{
+			break;
+		}
+		uiEnd = (size)(szEnd - szText.Text());
+
+		szValue.Init();
+		szValue.AppendSubString(szText.Text(), uiStart, uiEnd);
+		bFound = false;
+		for (i = 0; !bFound && (i < paszIncludes->NumElements()); i++)
+		{
+			bFound = StringInsensitiveCompare(szValue.Text(), paszIncludes->GetText(i)) == 0;
+		}
+		szValue.Kill();
+		if (!bFound)
+		{
+			uiStart = uiEnd + 1;
+			continue;
+		}
+
+		//The element: from its line's start to the end of the line its "/>" or its closing tag is on.
+		for (uiElement = uiStart; (uiElement > 0) && (szText.Text()[uiElement] != '<'); uiElement--)
+		{
+		}
+		for (uiLineStart = uiElement; (uiLineStart > 0) && (szText.Text()[uiLineStart - 1] != '\n'); uiLineStart--)
+		{
+		}
+		for (uiElementEnd = uiEnd; (szText.Text()[uiElementEnd] != '\0') && (szText.Text()[uiElementEnd] != '>'); uiElementEnd++)
+		{
+		}
+		if ((uiElementEnd > 0) && (szText.Text()[uiElementEnd - 1] != '/'))
+		{
+			szClose.Init("</");
+			for (i = uiElement + 1; (szText.Text()[i] != ' ') && (szText.Text()[i] != '>') && (szText.Text()[i] != '\0'); i++)
+			{
+				szClose.Append(szText.Text()[i]);
+			}
+			szClose.Append('>');
+			szClosing = strstr(&szText.Text()[uiElementEnd], szClose.Text());
+			uiElementEnd = szClosing ? (size)(szClosing - szText.Text()) + szClose.Length() - 1 : uiElementEnd;
+			szClose.Kill();
+		}
+		for (; (szText.Text()[uiElementEnd] != '\0') && (szText.Text()[uiElementEnd] != '\n'); uiElementEnd++)
+		{
+		}
+		if (szText.Text()[uiElementEnd] == '\n')
+		{
+			uiElementEnd++;
+		}
+		szText.Remove(uiLineStart, uiElementEnd);
+		uiStart = uiLineStart;
+		bRemoved = true;
+	}
+
+	bResult = bRemoved;
+	if (bRemoved)
+	{
+		cFile.Init();
+		cFile.mcText.AppendSubString(szText.Text(), (lsize)szText.Length());
+		bResult = cFile.Write(szFileName);
+		cFile.Kill();
+	}
+	szText.Kill();
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // After the first element of szFileName's text with an Include="..."
 // whose value is one of paszIncludes (any case), a copy of that element
 // with szNewName in place of the value's file name: all of it (bWhole: a

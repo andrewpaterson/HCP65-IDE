@@ -440,6 +440,29 @@ void TestVcxProjectAddItemBeside(void)
 	AssertTrue(cFile.mcText.Contains("    </ClCompile>\n    <ClCompile Include=\"Source\\Engine\\Piston.cpp\" />\n  </ItemGroup>\n"));
 	cFile.Kill();
 
+	//Taken out again, the project and its filters are as they were, byte for byte; an item with what it is built
+	//with in it goes whole.  What isn't an item isn't taken out.
+	ProjectPath(&cProject, "Piston.h", &szPath);
+	AssertTrue(cProject.RemoveItem(szPath.Text()));
+	AssertFalse(cProject.RemoveItem(szPath.Text()));
+	szPath.Kill();
+	ProjectPath(&cProject, "Source" _FS_ "Engine" _FS_ "Piston.cpp", &szPath);
+	AssertTrue(cProject.RemoveItem(szPath.Text()));
+	szPath.Kill();
+	AssertSize(5, cProject.NumItems());
+	AssertNull(cProject.FindItem("ClInclude", "Piston.h"));
+	AssertFile("Input" _FS_ "RenameItem" _FS_ "Before" _FS_ "RenameLib" _FS_ "RenameLib.vcxproj", "Output" _FS_ "AddItem" _FS_ "RenameLib" _FS_ "RenameLib.vcxproj");
+	AssertFile("Input" _FS_ "RenameItem" _FS_ "Before" _FS_ "RenameLib" _FS_ "RenameLib.vcxproj.filters", "Output" _FS_ "AddItem" _FS_ "RenameLib" _FS_ "RenameLib.vcxproj.filters");
+	ProjectPath(&cProject, "Source" _FS_ "Engine" _FS_ "Engine_Linux.cpp", &szPath);
+	AssertTrue(cProject.RemoveItem(szPath.Text()));
+	szPath.Kill();
+	AssertSize(4, cProject.NumItems());
+	AssertNull(cProject.FindItem("ClCompile", "Source\\Engine\\Engine_Linux.cpp"));
+	cFile.Init();
+	AssertTrue(cFile.Read("Output" _FS_ "AddItem" _FS_ "RenameLib" _FS_ "RenameLib.vcxproj"));
+	AssertFalse(cFile.mcText.Contains("Engine_Linux"));
+	cFile.Kill();
+
 	cProject.Kill();
 	cFileUtil.RemoveDir("Output" _FS_ "AddItem");
 }

@@ -59,6 +59,9 @@ public:
 	bool			ReadBranches(CArrayChars* paszDest);
 	bool			IsTracked(const char* szFullPath);
 	bool			Move(const char* szOldFullPath, const char* szNewFullPath);
+	bool			Add(const char* szFullPath);
+	bool			Unstage(const char* szFullPath);
+	bool			RunOnPath(const char* szFullPath, const char* szCommand, const char* szOption1, const char* szOption2);
 
 protected:
 	void			AddStatusArguments(CArrayChars* paszArguments);
