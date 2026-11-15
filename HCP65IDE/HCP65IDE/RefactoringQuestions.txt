@@ -109,12 +109,6 @@ Open
     that is used before the assignment.  It only inlines a function's own variables: not a parameter, a field or a
     constant outside a function (IntelliJ inlines constants).  Do you want constants?
 
-30. Introduce Constant makes a #define, since every constant in your code is one (530 #defines of a number or a
-    string in BaseLib, WindowLib and the IDE; no const variables), after the file's last #define or #include, and
-    replaces the expression in the one function.  IntelliJ would replace it in the whole class.  Should it look
-    through the whole file for the same expression, and should it offer the header for a constant other files
-    need?
-
 31. Introduce Field puts the field after the class's last field (with that field's access), or at the end of the
     protected part of a class that has no fields, and assigns it in the function where the variable would have
     been assigned.  IntelliJ can also initialise it in the constructor or at its declaration: with Init functions
@@ -231,6 +225,14 @@ Answered
     a refactoring made (Move Class to Its Own Files, Move to File where it makes one, Copy Class, Extract
     Superclass, Interface and Class): the files deleted and their items taken out of the projects, as Rename
     File's undo renames back; redo makes them again.
+
+30. Introduce Constant makes a #define, since every constant in your code is one (530 #defines of a number or a
+    string in BaseLib, WindowLib and the IDE; no const variables), after the file's last #define or #include, and
+    replaces the expression in the one function.  IntelliJ would replace it in the whole class.  Should it look
+    through the whole file for the same expression, and should it offer the header for a constant other files
+    need?
+    Answered 2026-11-15: a tick in its dialog to replace every occurrence in the file, not ticked to begin with.
+    The header isn't offered: the #define is moved there by hand, or by Move.  To do: the tick.
 
 35. Extract Method gives a variable the new function changes, that is used afterwards, back by reference
     ("int& iLow") where there is more than one, and an object (a variable whose type is a class) by reference
