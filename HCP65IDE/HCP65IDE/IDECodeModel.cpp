@@ -3328,35 +3328,12 @@ bool CIDECodeModel::FindIncludeFile(size uiProject, const char* szIncluder, cons
 {
 	CFileUtil			cFileUtil;
 	CArrayChars			aszDirectories;
-	CChars				szDirectory;
-	CChars				szFileName;
 	CChars				szPath;
-	CVcxConfiguration*	pcConfiguration;
 	size				i;
 	bool				bFound;
 
 	aszDirectories.Init();
-	if (!bSystem && szIncluder)
-	{
-		szFileName.Init();
-		szDirectory.Init();
-		cFileUtil.SplitPath(szIncluder, &szFileName, &szDirectory);
-		aszDirectories.Add(szDirectory.Text());
-		szDirectory.Kill();
-		szFileName.Kill();
-	}
-	if (uiProject < mpcWorkspace->NumProjects())
-	{
-		pcConfiguration = GetProjectConfiguration(uiProject);
-		if (pcConfiguration && mpcWorkspace->GetSolutionProject(uiProject)->GetProject())
-		{
-			mpcWorkspace->GetSolutionProject(uiProject)->GetProject()->GetIncludeDirectories(pcConfiguration, mpcWorkspace->GetProjectSolution(uiProject)->GetDirectory(), &aszDirectories);
-		}
-	}
-	for (i = 0; i < maszSystemDirectories.NumElements(); i++)
-	{
-		aszDirectories.Add(maszSystemDirectories.GetText(i));
-	}
+	GetIncludeDirectories(uiProject, szIncluder, bSystem, &aszDirectories);
 
 	bFound = false;
 	for (i = 0; (i < aszDirectories.NumElements()) && !bFound; i++)
@@ -3375,4 +3352,528 @@ bool CIDECodeModel::FindIncludeFile(size uiProject, const char* szIncluder, cons
 	}
 	aszDirectories.Kill();
 	return bFound;
+}
+
+
+bool IsIDENameChar(char c);
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Where an #include is looked for, in order: "" includes next to the
+// file that includes them first, then project uiProject's include
+// directories, then the compiler's.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDECodeModel::GetIncludeDirectories(size uiProject, const char* szIncluder, bool bSystem, CArrayChars* paszDest)
+{
+	CFileUtil			cFileUtil;
+	CChars				szDirectory;
+	CChars				szFileName;
+	CVcxConfiguration*	pcConfiguration;
+	size				i;
+
+	if (!bSystem && szIncluder)
+	{
+		szFileName.Init();
+		szDirectory.Init();
+		cFileUtil.SplitPath(szIncluder, &szFileName, &szDirectory);
+		paszDest->Add(szDirectory.Text());
+		szDirectory.Kill();
+		szFileName.Kill();
+	}
+	if (uiProject < mpcWorkspace->NumProjects())
+	{
+		pcConfiguration = GetProjectConfiguration(uiProject);
+		if (pcConfiguration && mpcWorkspace->GetSolutionProject(uiProject)->GetProject())
+		{
+			mpcWorkspace->GetSolutionProject(uiProject)->GetProject()->GetIncludeDirectories(pcConfiguration, mpcWorkspace->GetProjectSolution(uiProject)->GetDirectory(), paszDest);
+		}
+	}
+	for (i = 0; i < maszSystemDirectories.NumElements(); i++)
+	{
+		paszDest->Add(maszSystemDirectories.GetText(i));
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The project whose include directories a file's #includes are looked
+// for in: its own, or (a header no project has as an item) that of the
+// first unit indexed that included it.  MAX_SIZE if neither.
+//
+//////////////////////////////////////////////////////////////////////////
+size CIDECodeModel::FindIncludeProject(const char* szIncluder)
+{
+	CChars	szUnit;
+	size	uiProject;
+
+	uiProject = FindProjectOfFile(szIncluder);
+	if (uiProject == MAX_SIZE)
+	{
+		szUnit.Init();
+		if (!GetIncluder(szIncluder, &uiProject, &szUnit))
+		{
+			uiProject = MAX_SIZE;
+		}
+		szUnit.Kill();
+	}
+	return uiProject;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void KillIDEIncludes(CArrayIDEIncludes* pasIncludes)
+{
+	size	i;
+
+	for (i = 0; i < pasIncludes->NumElements(); i++)
+	{
+		pasIncludes->Get(i)->szFileName.Kill();
+	}
+	pasIncludes->Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void KillIDENeeds(CArrayIDENeeds* pasNeeds)
+{
+	size	i;
+
+	for (i = 0; i < pasNeeds->NumElements(); i++)
+	{
+		pasNeeds->Get(i)->szDeclared.Kill();
+		pasNeeds->Get(i)->szKey.Kill();
+		pasNeeds->Get(i)->szUser.Kill();
+	}
+	pasNeeds->Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The directive a line of a text starts with ("if", "include", "endif"),
+// its length; 0 if the line isn't a directive's.  *puiAfter is where what
+// follows the directive's name starts.
+//
+//////////////////////////////////////////////////////////////////////////
+static size FindIDEDirective(const char* szText, size uiLineStart, size* puiName, size* puiAfter)
+{
+	size	p;
+	size	uiLength;
+
+	for (p = uiLineStart; (szText[p] == ' ') || (szText[p] == '\t'); p++)
+	{
+	}
+	if (szText[p] != '#')
+	{
+		return 0;
+	}
+	for (p++; (szText[p] == ' ') || (szText[p] == '\t'); p++)
+	{
+	}
+	*puiName = p;
+	for (uiLength = 0; (szText[p + uiLength] >= 'a') && (szText[p + uiLength] <= 'z'); uiLength++)
+	{
+	}
+	for (p += uiLength; (szText[p] == ' ') || (szText[p] == '\t'); p++)
+	{
+	}
+	*puiAfter = p;
+	return uiLength;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Each #include a file's text writes (as FindIncludesOf reads them: one
+// an #if leaves out is one too), in the text's order, with the file it
+// finds and whether it is inside an #if.  The #ifndef of an include
+// guard (the text's first directive, with its #define next) isn't an #if
+// here.  The number found.
+//
+//////////////////////////////////////////////////////////////////////////
+size CIDECodeModel::FindIncludesIn(const char* szFileName, const char* szText, CArrayIDEIncludes* pasDest)
+{
+	CArrayIDEIncludeDirectives	asDirectives;
+	SIDEIncludeDirective*		psDirective;
+	SIDEInclude*				psInclude;
+	CChars						szName;
+	const char*					szNewLine;
+	size						uiProject;
+	size						uiLength;
+	size						uiLine;
+	size						uiNext;
+	size						uiName;
+	size						uiAfter;
+	size						uiDirective;
+	size						uiDirectives;
+	size						uiGuard;
+	size						i;
+	int							iDepth;
+	int							iGuardDepth;
+
+	uiLength = strlen(szText);
+	uiProject = FindIncludeProject(szFileName);
+	asDirectives.Init();
+	FindIDEIncludeDirectives(szText, uiLength, &asDirectives);
+
+	iDepth = 0;
+	iGuardDepth = 0;
+	uiDirectives = 0;
+	uiGuard = 0;
+	i = 0;
+	for (uiLine = 0; (uiLine < uiLength) && (i < asDirectives.NumElements()); uiLine = uiNext)
+	{
+		szNewLine = strchr(&szText[uiLine], '\n');
+		uiNext = szNewLine ? (size)(szNewLine - szText) + 1 : uiLength;
+		psDirective = asDirectives.Get(i);
+		if (psDirective->uiLineStart == uiLine)
+		{
+			psInclude = pasDest->Add();
+			psInclude->uiLineStart = uiLine;
+			psInclude->uiLineEnd = uiNext;
+			psInclude->uiNameStart = psDirective->uiNameStart;
+			psInclude->uiNameEnd = psDirective->uiNameEnd;
+			psInclude->iLine = psDirective->iLine;
+			psInclude->bSystem = psDirective->bSystem;
+			psInclude->bConditional = (iDepth > iGuardDepth);
+			psInclude->szFileName.Init();
+			szName.Init();
+			szName.AppendSubString(szText, psDirective->uiNameStart, psDirective->uiNameEnd);
+			szName.Replace('\\', '/');
+			FindIncludeFile(uiProject, szFileName, szName.Text(), psDirective->bSystem, &psInclude->szFileName);
+			szName.Kill();
+			i++;
+			uiDirectives++;
+			continue;
+		}
+
+		uiDirective = FindIDEDirective(szText, uiLine, &uiName, &uiAfter);
+		if (uiDirective == 0)
+		{
+			continue;
+		}
+		uiDirectives++;
+		if ((uiDirective >= 2) && (strncmp(&szText[uiName], "if", 2) == 0))
+		{
+			iDepth++;
+			if ((uiDirectives == 1) && (uiDirective == 6) && (strncmp(&szText[uiName], "ifndef", 6) == 0))
+			{
+				uiGuard = uiAfter;
+			}
+		}
+		else if ((uiDirective == 5) && (strncmp(&szText[uiName], "endif", 5) == 0))
+		{
+			iDepth--;
+		}
+		else if ((uiDirectives == 2) && (uiGuard != 0) && (uiDirective == 6) && (strncmp(&szText[uiName], "define", 6) == 0))
+		{
+			//The guard's #define: the same name as its #ifndef.
+			for (uiLength = 0; IsIDENameChar(szText[uiGuard + uiLength]) && (szText[uiGuard + uiLength] == szText[uiAfter + uiLength]); uiLength++)
+			{
+			}
+			if (!IsIDENameChar(szText[uiGuard + uiLength]) && !IsIDENameChar(szText[uiAfter + uiLength]))
+			{
+				iGuardDepth = 1;
+			}
+			uiLength = strlen(szText);
+		}
+	}
+	asDirectives.Kill();
+	return pasDest->NumElements();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// What an #include in szIncluder writes to find the file szTarget: its
+// path from the first of the directories #includes are looked for in
+// that it is under, the shortest there is ("Gauge.h" beside it,
+// "BaseLib/Chars.h" from a project's include directory).  False if it is
+// under none of them (pszDest is then its name alone).
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDECodeModel::MakeIncludeName(const char* szIncluder, const char* szTarget, CChars* pszDest)
+{
+	CFileUtil	cFileUtil;
+	CArrayChars	aszDirectories;
+	CChars		szName;
+	CChars		szFound;
+	CChars		szDirectory;
+	size		uiProject;
+	size		uiLength;
+	size		i;
+	bool		bFound;
+
+	uiProject = FindIncludeProject(szIncluder);
+	aszDirectories.Init();
+	GetIncludeDirectories(uiProject, szIncluder, false, &aszDirectories);
+	bFound = false;
+	for (i = 0; i < aszDirectories.NumElements(); i++)
+	{
+		szDirectory.Init(aszDirectories.GetText(i));
+		cFileUtil.FixSeparators(&szDirectory);
+		cFileUtil.FullPath(&szDirectory);
+		uiLength = szDirectory.Length();
+		if ((uiLength > 0) && (strlen(szTarget) > uiLength + 1) && (MemICmp(szDirectory.Text(), szTarget, uiLength) == 0) && ((szTarget[uiLength] == '/') || (szTarget[uiLength] == '\\')))
+		{
+			szName.Init(&szTarget[uiLength + 1]);
+			szName.Replace('\\', '/');
+			szFound.Init();
+			if ((!bFound || (szName.Length() < pszDest->Length())) && FindIncludeFile(uiProject, szIncluder, szName.Text(), false, &szFound) && (StringInsensitiveCompare(szFound.Text(), szTarget) == 0))
+			{
+				pszDest->Set(szName);
+				bFound = true;
+			}
+			szFound.Kill();
+			szName.Kill();
+		}
+		szDirectory.Kill();
+	}
+	aszDirectories.Kill();
+	if (!bFound)
+	{
+		for (i = strlen(szTarget); (i > 0) && (szTarget[i - 1] != '/') && (szTarget[i - 1] != '\\'); i--)
+		{
+		}
+		pszDest->Set(&szTarget[i]);
+	}
+	return bFound;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The file that declares a symbol, as the index numbers it: what a file
+// that names the symbol must #include.  A class's, a class template's or
+// an enum's is the one that defines it; anything else's is the first
+// header that declares it, or the first file if no header does.  -1 if
+// nothing declares it, or it is declared wherever it is named (a
+// namespace, a function's own names).  Call it with the index's mutex
+// held.
+//
+//////////////////////////////////////////////////////////////////////////
+int CIDECodeModel::FindDeclaringFile(CCPPIndexSymbol* pcSymbol)
+{
+	SCPPIndexLocation*	psLocation;
+	size				i;
+	int					iFirst;
+
+	if ((pcSymbol->mszKey.Text()[0] == '@') || (pcSymbol->meKind == CPPSK_Namespace) || (pcSymbol->meKind == CPPSK_TypeParameter) || (pcSymbol->meKind == CPPSK_Parameter) ||
+		(pcSymbol->meKind == CPPSK_ValueParameter) || (pcSymbol->meKind == CPPSK_Label) || (pcSymbol->meKind == CPPSK_BuiltinType))
+	{
+		return -1;
+	}
+	if ((pcSymbol->meKind == CPPSK_Class) || (pcSymbol->meKind == CPPSK_ClassTemplate) || (pcSymbol->meKind == CPPSK_Enum))
+	{
+		psLocation = pcSymbol->GetDefinition();
+		if (psLocation)
+		{
+			return (int)psLocation->uiFile;
+		}
+	}
+	iFirst = -1;
+	for (i = 0; i < pcSymbol->NumLocations(); i++)
+	{
+		psLocation = pcSymbol->GetLocation(i);
+		if (psLocation->uiRole == CPPIR_Reference)
+		{
+			continue;
+		}
+		if (CIDEIcons::GetFileType(mcIndex.GetFileName(psLocation->uiFile)) == IFT_Header)
+		{
+			return (int)psLocation->uiFile;
+		}
+		if (iFirst == -1)
+		{
+			iFirst = (int)psLocation->uiFile;
+		}
+	}
+	return iFirst;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// What files need of other files: each symbol that the file szUser (any
+// file, if NULL) names, or defines out of the header that declares it,
+// and that another file declares (one of paszDeclared, if not NULL), once
+// for each file that names it.  A name in a template's declaration that
+// only its instances resolve isn't a need of the template's file: the
+// #include goes where the instance is (Refactorings.txt, 15).  What a
+// file declares for itself it doesn't need, but a class it declares and
+// doesn't define it does (bDeclaredByUser).  The number added.
+//
+//////////////////////////////////////////////////////////////////////////
+size CIDECodeModel::FindNeeds(const char* szUser, CArrayChars* paszDeclared, CArrayIDENeeds* pasDest)
+{
+	CCPPIndexSymbol*	pcSymbol;
+	SCPPIndexLocation*	psLocation;
+	SIDENeed*			psNeed;
+	CArrayInt			aiUsers;
+	CArrayInt			aiDeclarers;
+	size				uiAdded;
+	size				i;
+	size				j;
+	size				k;
+	int					iUser;
+	int					iDeclared;
+	int					iFile;
+	bool				bClass;
+	bool				bWanted;
+
+	uiAdded = 0;
+	mcIndexMutex.Lock();
+	iUser = -1;
+	for (i = 0; szUser && (i < mcIndex.NumFiles()); i++)
+	{
+		if (StringInsensitiveCompare(mcIndex.GetFileName(i), szUser) == 0)
+		{
+			iUser = (int)i;
+			break;
+		}
+	}
+	if (szUser && (iUser == -1))
+	{
+		mcIndexMutex.Unlock();
+		return 0;
+	}
+
+	aiUsers.Init();
+	aiDeclarers.Init();
+	for (i = 0; i < mcIndex.NumSymbols(); i++)
+	{
+		pcSymbol = mcIndex.GetSymbol(i);
+		iDeclared = FindDeclaringFile(pcSymbol);
+		if (iDeclared == -1)
+		{
+			continue;
+		}
+		if (paszDeclared)
+		{
+			bWanted = false;
+			for (j = 0; (j < paszDeclared->NumElements()) && !bWanted; j++)
+			{
+				bWanted = StringInsensitiveCompare(mcIndex.GetFileName((size)iDeclared), paszDeclared->GetText(j)) == 0;
+			}
+			if (!bWanted)
+			{
+				continue;
+			}
+		}
+		bClass = (pcSymbol->meKind == CPPSK_Class) || (pcSymbol->meKind == CPPSK_ClassTemplate) || (pcSymbol->meKind == CPPSK_Enum);
+
+		//The files that name it, and those that declare it.
+		aiUsers.ReInit();
+		aiDeclarers.ReInit();
+		for (j = 0; j < pcSymbol->NumLocations(); j++)
+		{
+			psLocation = pcSymbol->GetLocation(j);
+			iFile = (int)psLocation->uiFile;
+			if ((iFile == iDeclared) || ((iUser != -1) && (iFile != iUser)))
+			{
+				continue;
+			}
+			if (psLocation->uiRole == CPPIR_Declaration)
+			{
+				aiDeclarers.AddIfUnique(iFile);
+			}
+			else if ((psLocation->uiRole == CPPIR_Definition) ? !bClass : !(psLocation->uiFlags & CPPIF_INSTANCE))
+			{
+				aiUsers.AddIfUnique(iFile);
+			}
+		}
+		for (j = 0; j < aiUsers.NumElements(); j++)
+		{
+			iFile = aiUsers.GetValue(j);
+			bWanted = true;
+			for (k = 0; k < aiDeclarers.NumElements(); k++)
+			{
+				if (aiDeclarers.GetValue(k) == iFile)
+				{
+					//It declares it for itself: enough, unless it is a class (it may need all of it).
+					bWanted = bClass;
+				}
+			}
+			if (!bWanted)
+			{
+				continue;
+			}
+			psNeed = pasDest->Add();
+			psNeed->szUser.Init(mcIndex.GetFileName((size)iFile));
+			psNeed->szKey.Init(pcSymbol->mszKey);
+			psNeed->uiKind = (uint8)pcSymbol->meKind;
+			psNeed->szDeclared.Init(mcIndex.GetFileName((size)iDeclared));
+			psNeed->bDeclaredByUser = false;
+			for (k = 0; k < aiDeclarers.NumElements(); k++)
+			{
+				psNeed->bDeclaredByUser |= (aiDeclarers.GetValue(k) == iFile);
+			}
+			uiAdded++;
+		}
+	}
+	aiDeclarers.Kill();
+	aiUsers.Kill();
+	mcIndexMutex.Unlock();
+	return uiAdded;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The headers that declare something named szName outside any class or
+// namespace (a class, a function whatever its parameters, a typedef, a
+// variable), each once.  The number added.
+//
+//////////////////////////////////////////////////////////////////////////
+size CIDECodeModel::FindHeadersDeclaring(const char* szName, CArrayChars* paszDest)
+{
+	CCPPIndexSymbol*	pcSymbol;
+	const char*			szKey;
+	const char*			szFile;
+	size				uiLength;
+	size				uiAdded;
+	size				i;
+	size				j;
+	int					iDeclared;
+	bool				bHas;
+
+	uiLength = strlen(szName);
+	uiAdded = 0;
+	mcIndexMutex.Lock();
+	for (i = 0; i < mcIndex.NumSymbols(); i++)
+	{
+		pcSymbol = mcIndex.GetSymbol(i);
+		szKey = pcSymbol->mszKey.Text();
+		if ((strncmp(szKey, szName, uiLength) != 0) || ((szKey[uiLength] != '\0') && (szKey[uiLength] != '(')))
+		{
+			continue;
+		}
+		iDeclared = FindDeclaringFile(pcSymbol);
+		szFile = (iDeclared != -1) ? mcIndex.GetFileName((size)iDeclared) : NULL;
+		if (!szFile || (CIDEIcons::GetFileType(szFile) != IFT_Header))
+		{
+			continue;
+		}
+		bHas = false;
+		for (j = 0; (j < paszDest->NumElements()) && !bHas; j++)
+		{
+			bHas = StringInsensitiveCompare(paszDest->GetText(j), szFile) == 0;
+		}
+		if (!bHas)
+		{
+			paszDest->Add(szFile);
+			uiAdded++;
+		}
+	}
+	mcIndexMutex.Unlock();
+	return uiAdded;
 }

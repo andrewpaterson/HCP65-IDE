@@ -74,6 +74,37 @@ struct SIDELocation
 typedef CArrayTemplate<SIDELocation>	CArrayIDELocations;
 
 
+//An #include a file writes (CIDECodeModel::FindIncludesIn), where it is in the file's text.
+struct SIDEInclude
+{
+	size	uiLineStart;	//Its line,
+	size	uiLineEnd;		//and the start of the next.
+	size	uiNameStart;	//The name it gives, between its quotes or angle brackets.
+	size	uiNameEnd;
+	int32	iLine;			//From 0.
+	bool	bSystem;		//<> rather than "".
+	bool	bConditional;	//Inside an #if, other than its file's include guard.
+	CChars	szFileName;		//The file it finds, empty if none.
+};
+
+
+typedef CArrayTemplate<SIDEInclude>	CArrayIDEIncludes;
+
+
+//A symbol a file names that another file declares (CIDECodeModel::FindNeeds).
+struct SIDENeed
+{
+	CChars	szUser;			//The file that names it,
+	CChars	szKey;
+	uint8	uiKind;			//ECPPSymbolKind.
+	CChars	szDeclared;		//the file that declares it (a class's or an enum's is the one that defines it),
+	bool	bDeclaredByUser;	//and whether the file that names it declares it too (a class's forward declaration).
+};
+
+
+typedef CArrayTemplate<SIDENeed>	CArrayIDENeeds;
+
+
 //What Rename found at a place in a file: the symbol (its key and name), every place its name is written (the
 //declarations, definitions and uses, a class's constructors and destructor too) and, if it can't be renamed, why.
 //Where the code model gets a file's text: its editor's if it is open, else the disk's (pcFile reads it and keeps it).
@@ -282,6 +313,10 @@ public:
 	void	GetUsageGroup(SIDELocation* psLocation, CChars* pszProject, CChars* pszClass);
 	bool	FindIncludeFile(size uiProject, const char* szIncluder, const char* szName, bool bSystem, CChars* pszDest);
 	size	FindIncludesOf(const char* szFileName, CIDEFileTexts* pcTexts, CArrayIDELocations* pasDest);
+	size	FindIncludesIn(const char* szFileName, const char* szText, CArrayIDEIncludes* pasDest);
+	bool	MakeIncludeName(const char* szIncluder, const char* szTarget, CChars* pszDest);
+	size	FindNeeds(const char* szUser, CArrayChars* paszDeclared, CArrayIDENeeds* pasDest);
+	size	FindHeadersDeclaring(const char* szName, CArrayChars* paszDest);
 
 	void	IndexUnit(SIDEIndexJob* psJob);
 	bool	IsIndexedByAnother(const char* szFileName, size uiJob);
@@ -289,6 +324,9 @@ public:
 protected:
 	bool				ParseUnit(size uiProject, const char* szFileName, const char* szContents, CIDEParsedUnit* pcDest, CChars* pszErrors);
 	SIDEIndexJob*		FindIncluder(const char* szFileName);
+	size				FindIncludeProject(const char* szIncluder);
+	void				GetIncludeDirectories(size uiProject, const char* szIncluder, bool bSystem, CArrayChars* paszDest);
+	int					FindDeclaringFile(CCPPIndexSymbol* pcSymbol);
 	CSourceFile*		FindFileInUnit(CIDEParsedUnit* pcUnit, const char* szFileName);
 	CTranslationUnit*	AddUnit(size uiProject, const char* szFileName);
 	CProject*			GetProject(size uiProject);
@@ -311,6 +349,8 @@ protected:
 
 
 void KillIDELocations(CArrayIDELocations* pasLocations);
+void KillIDEIncludes(CArrayIDEIncludes* pasIncludes);
+void KillIDENeeds(CArrayIDENeeds* pasNeeds);
 void KillIDEFileRanges(CArrayIDEFileRanges* pasRanges);
 void MoveIDELocation(SIDELocation* psDest, SIDELocation* psSource);
 const char* GetIDEFileNamePart(const char* szPath);

@@ -1343,6 +1343,7 @@ void CIDERename::AddEditorItems(Ptr<CMenuContainer> pMenu)
 	mpcContent->GetExtractMethod()->AddEditorItems(pRefactor);
 	mpcContent->GetExtractClass()->AddEditorItems(pRefactor);
 	mpcContent->GetEncapsulateField()->AddEditorItems(pRefactor);
+	mpcContent->GetIncludes()->AddEditorItems(pRefactor);
 	pMenu->AddItem("Refactor", NULL, pRefactor);
 }
 

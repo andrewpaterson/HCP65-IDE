@@ -76,6 +76,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDEInlineFunction.h"
 #include "IDEExtractClass.h"
 #include "IDEEncapsulateField.h"
+#include "IDEIncludes.h"
 #include "IDEUsages.h"
 #include "IDEFindInFiles.h"
 #include "IDEOccurrences.h"
@@ -190,6 +191,7 @@ protected:
 	Ptr<CIDEInlineFunction>		mpInlineFunction;		//Inline, of a function.
 	Ptr<CIDEExtractClass>		mpExtractClass;			//Extract Superclass, Interface and Class.
 	Ptr<CIDEEncapsulateField>	mpEncapsulateField;		//Encapsulate Field.
+	Ptr<CIDEIncludes>			mpIncludes;				//Optimise #includes, Sort #includes.
 	Ptr<CIDEUsages>				mpUsages;			//Find Usages.
 	Ptr<CIDEFindInFiles>		mpFindInFiles;		//Find in Files and the Find tool window.
 	Ptr<CIDEOccurrences>		mpOccurrences;		//Next and Previous Occurrence through Find Usages or Build.
@@ -307,6 +309,7 @@ public:
 	Ptr<CIDEInlineFunction>		GetInlineFunction(void);
 	Ptr<CIDEExtractClass>		GetExtractClass(void);
 	Ptr<CIDEEncapsulateField>	GetEncapsulateField(void);
+	Ptr<CIDEIncludes>			GetIncludes(void);
 	Ptr<CIDECloseGuard>		GetCloseGuard(void);
 
 protected:

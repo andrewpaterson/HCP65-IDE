@@ -145,6 +145,36 @@ bool CIDETextEdits::Apply(Ptr<CTextArea> pEditor)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// A text with the edits made, added to pszDest: what a refactoring would
+// leave, for checking it before the editor is changed.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDETextEdits::ApplyTo(const char* szText, CChars* pszDest)
+{
+	SIDETextEdit*	psEdit;
+	size			uiAt;
+	size			i;
+
+	uiAt = 0;
+	for (i = 0; i < masEdits.NumElements(); i++)
+	{
+		psEdit = masEdits.Get(i);
+		if (psEdit->uiStart > uiAt)
+		{
+			pszDest->AppendSubString(szText, uiAt, psEdit->uiStart);
+		}
+		pszDest->Append(psEdit->szText);
+		if (psEdit->uiEnd > uiAt)
+		{
+			uiAt = psEdit->uiEnd;
+		}
+	}
+	pszDest->Append(&szText[uiAt]);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Where a position of the text as it was is once the edits are made: a
 // position in what an edit replaces is the start of what replaces it.
 //
@@ -267,6 +297,31 @@ bool CIDERefactorUnit::Parse(CIDECodeModel* pcModel, CIDEFileTexts* pcTexts, con
 		mbChecked = true;
 	}
 	return mbParsed;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The errors of the unit the file was parsed in: its preprocessing's (a
+// line each), its parse's and, if it was checked, its check's.  A
+// refactoring that checks what it would leave compares this with what
+// there was.
+//
+//////////////////////////////////////////////////////////////////////////
+size CIDERefactorUnit::NumErrors(void)
+{
+	size	uiErrors;
+	size	i;
+
+	uiErrors = mcUnit.mcTree.NumErrors() + (mbChecked ? mcPass.GetErrors()->NumErrors() : 0);
+	for (i = 0; i < mszErrors.Length(); i++)
+	{
+		if ((mszErrors.Text()[i] == '\n') || ((i + 1 == mszErrors.Length()) && (mszErrors.Text()[i] != '\n')))
+		{
+			uiErrors++;
+		}
+	}
+	return uiErrors;
 }
 
 

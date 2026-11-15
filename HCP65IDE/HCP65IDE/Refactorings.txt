@@ -269,6 +269,14 @@ IntelliJ has none of these for Java.
  15. #includes added, removed and sorted: the #include a name newly used needs is added, those no name comes from
      removed, and an #include replaced by a forward declaration where only a pointer or reference is used.  A name
      a template's body uses through an instance needs the #include where the instance is, not in the template.
+     Done 2026-11-15 (IDEIncludes.h says what it does): Optimise #includes (Ctrl+Alt+O) and Sort #includes, for
+     the file in the editor.  What a file needs is the index's answer (CIDECodeModel::FindNeeds); which #include
+     brings it is read from the files' texts (CIDEIncludeGraph); macros are read from the texts too, the index
+     having none.  The file is checked as it would be before anything is changed, and an #include it doesn't
+     compile without stays.  Left: the compiler's own headers aren't followed, so <> #includes are never touched
+     and a header's #include that brings one to its includers stays; a class template is never forward declared;
+     the files given an #include aren't checked themselves (only the file's own unit is); not tried yet on a
+     solution the size of the libraries.
  16. Convert macro.  A #define of a constant to a const or an enumerator; a function-like macro to an inline
      function (a function template where its arguments' types differ between its uses) where each of its
      arguments is used once.  Inline macro, at one use.  With T6.
@@ -343,5 +351,6 @@ Where it is
  11. Inline Function (10): done (CIDEInlineFunction).
  12. Extract Superclass, Interface and Class (11): done (CIDEExtractClass).
  13. Encapsulate Field (12): done (CIDEEncapsulateField).  Phase 3 is done.
- 14. Phase 4 from 15 (#includes): next.  Then 16 to 24 in their order.
+ 14. #includes (15): done (CIDEIncludes).
+ 15. Phase 4 from 16 (Convert macro): next.  Then 17 to 24 in their order.
 

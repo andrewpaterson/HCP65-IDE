@@ -330,6 +330,18 @@ def MakeEncapsulateFieldCopy():
 	return {'SOLUTION': os.path.join(szFolder, 'EncapsulateField.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
 
 
+def MakeIncludesCopy():
+	#A copy of Input/Includes, to put #includes right in: CTank's header #includes a header it names nothing of, one
+	#it only needs a forward declaration from and one it only uses a macro of, and the files that #include it get
+	#names through those; CDrum's header #includes nothing and compiles where its source has what it needs first;
+	#Flow.cpp names a class whose header it hasn't; Sink.cpp has an #include only the header after it needs.
+	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
+	atexit.register(shutil.rmtree, szRoot, True)
+	szFolder = os.path.join(szRoot, 'Includes')
+	shutil.copytree(os.path.join(HERE, 'Input', 'Includes'), szFolder)
+	return {'SOLUTION': os.path.join(szFolder, 'Includes.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
+
+
 def MakeKeymapFile(szText=None):
 	#Where a scripted run keeps its keys, with szText in it if it's given.
 	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
@@ -1900,6 +1912,47 @@ CHECKS = [
 		 r"^Encapsulate Field: CDial::miRange can't be: it is declared with others in one declaration$", r'^Encapsulate Field: no field$', r'^Dial\.h|^Dialog \[Encapsulate CDial::miValue\] answered Cancel$',
 		 r'^15\|\tint\t\tmiStep;$', r'^36 lines$'],
 		[r'^Status: Encapsulated']),
+	('includes-optimise', dict(MakeIncludesCopy(), **{
+		#Optimise #includes on a header: the #include nothing it names comes from goes, the one only a class named as
+		#a pointer comes from becomes the class's forward declaration, the one whose macro it uses stays, and the files
+		#that got names through those that went are given their own #includes.
+		'WAIT_INDEX': '1', 'OPEN': 'Tank.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:includes,edit:optimiseincludes,printdisklines:Tank.h,printdisklines:Tank.cpp,printdisklines:Main.cpp'}),
+		[r'^Optimise #includes: Tank\.h$', r'^  "Gauge\.h" \(line 3\): a forward declaration: class CGauge;$', r'^  "Valve\.h" \(line 4\): kept, CValve comes from it$',
+		 r'^  "Spare\.h" \(line 5\): removed, nothing named here comes from it$', r'^  "Units\.h" \(line 6\): kept, its macro MAX_UNITS is used$',
+		 r'^  Tank\.cpp is given #include "Gauge\.h"$', r'^  Main\.cpp is given #include "Gauge\.h"$', r'^  Main\.cpp is given #include "Spare\.h"$',
+		 r'^Status: Optimised the #includes of Tank\.h: 1 removed, 1 made a forward declaration; 2 files that got names through it given their own #includes\.$',
+		 r'^2\|#define __TANK_H__$', r'^3\|#include "Valve\.h"$', r'^4\|#include "Units\.h"$', r'^5\|$', r'^6\|$', r'^7\|class CGauge;$', r'^8\|$', r'^9\|$', r'^10\|class CTank$',
+		 r'^1\|#include "Tank\.h"$', r'^2\|#include "Gauge\.h"$', r'^3\|#include "Holder\.h"$', r'^4\|#include "Gauge\.h"$', r'^5\|#include "Spare\.h"$'],
+		[r'^\d+\|#include "Spare\.h"\n(.*\n)*Disk lines Tank\.cpp']),
+	('includes-added', dict(MakeIncludesCopy(), **{
+		#A header that #includes nothing and compiles where its source has what it needs first: the header of the
+		#class it has a member of is given an #include, and the class it only points to a forward declaration.  Its
+		#source's #includes can then be sorted, its own header first.  A template's header isn't given the header of
+		#what its instances are made with.  A source that names a class whose header it hasn't is given the #include.
+		'WAIT_INDEX': '1', 'OPEN': 'Drum.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:includes,edit:optimiseincludes,edit:open:Drum.cpp,edit:sortincludes,edit:open:Holder.h,edit:optimiseincludes,edit:open:Flow.cpp,edit:optimiseincludes,printdisklines:Drum.h,printdisklines:Drum.cpp,printdisklines:Flow.cpp'}),
+		[r'^Optimise #includes: Drum\.h$', r'^  added: #include "Pipe\.h", CPipe comes from it$', r'^  added: class CGauge;$',
+		 r'^Status: Optimised the #includes of Drum\.h: 1 added, 1 forward declaration added\.$', r'^Status: Sorted the #includes of Drum\.cpp\.$',
+		 r'^Status: The #includes of Holder\.h are as they should be\.$', r'^Status: Optimised the #includes of Flow\.cpp: 1 added\.$', r'^  added: #include "Valve\.h", CValve comes from it$',
+		 r'^2\|#define __DRUM_H__$', r'^3\|#include "Pipe\.h"$', r'^6\|class CGauge;$', r'^9\|class CDrum$',
+		 r'^1\|#include "Drum\.h"$', r'^2\|#include "Gauge\.h"$', r'^3\|#include "Pipe\.h"$', r'^2\|#include "Valve\.h"$'],
+		[]),
+	('includes-needed', dict(MakeIncludesCopy(), **{
+		#An #include nothing the file names comes from, that the header after it needs: the file is checked as it
+		#would be, and it stays.  Sorting a file's #includes is refused the same way.  A <> #include, one inside an
+		#if and one whose file isn't found are left as they are.
+		'WAIT_INDEX': '1', 'OPEN': 'Sink.cpp',
+		'DEBUG': 'edit:renamesearch:---s,edit:includes,edit:optimiseincludes,edit:open:Drum.cpp,edit:sortincludes,edit:includes,edit:open:Wide.cpp,edit:includes,edit:optimiseincludes,printdisklines:Sink.cpp,printdisklines:Drum.cpp'}),
+		[r'^Optimise #includes: Sink\.cpp$', r'^  "Units\.h" \(line 1\): removed, nothing named here comes from it$', r'^  "Spare\.h" \(line 3\): removed, nothing named here comes from it$',
+		 r"^Status: Optimised the #includes of Sink\.cpp: 1 removed; 1 kept that nothing named here comes from: the file doesn't compile without it\.$",
+		 r"^  \"Units\.h\" \(line 1\): needed, the file doesn't compile without it$",
+		 r"^Status: The #includes of Drum\.cpp stay as they are: the file doesn't compile with them in order \(a header needs another before it\)\.$",
+		 r'^  "Drum\.h" \(line 3\): kept, the file\'s own header$',
+		 r'^  <string\.h> \(line 1\): left, a <> #include$', r'^  "Spare\.h" \(line 4\): left, inside an #if$', r"^  \"Missing\.h\" \(line 6\): left, its file isn't found$",
+		 r'^Status: The #includes of Wide\.cpp are as they should be\.$',
+		 r'^1\|#include "Units\.h"$', r'^2\|#include "Order\.h"$', r'^3\|$', r'^1\|#include "Pipe\.h"$', r'^3\|#include "Drum\.h"$'],
+		[]),
 	('rename-assembly-class', dict(MakeRenameAssemblyCopy(), **{
 		#A class renamed in hand written assembly's labels (_CEngine__Init, __0, __2), in parameter lists with its length
 		#(FPC7CEngine to FPC6CMotor), in generated layout constants (SIZEOF_CEngine, CEngine_miSpeed: in the assembly, the
@@ -2404,7 +2457,7 @@ CHECKS = [
 		 r'^Menu Debug: Start Debugging \[F5\], Start Without Debugging \[Ctrl\+F5\], Stop Debugging \[Shift\+F5\], Stop Running\(disabled\), Restart \[Ctrl\+Shift\+F5\], Break All \[Ctrl\+Pause/Break\], Attach to Emulator\.\.\., Step Into \[F11\], Step Over \[F10\], Step Out \[Shift\+F11\], Toggle Breakpoint \[F9\], ',
 		 r'^Menu Window: Reset Window Layout, Close All Documents$',
 		 r'^Menu Editor: Go to Source \[Ctrl\+B\], Find Usages \[Alt\+F7\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Rename\.\.\. \[Shift\+F6\], Refactor>, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\]$',
-		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Introduce Field\.\.\. \[Ctrl\+Alt\+F\](\(disabled\))?, Introduce Constant\.\.\. \[Ctrl\+Alt\+C\](\(disabled\))?, Introduce Parameter\.\.\. \[Ctrl\+Alt\+P\](\(disabled\))?, Introduce Typedef\.\.\. \[Ctrl\+Alt\+K\](\(disabled\))?, Inline\.\.\. \[Ctrl\+Alt\+N\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\.(\(disabled\))?, Push Members Down\.\.\.(\(disabled\))?, Move\.\.\. \[F6\](\(disabled\))?, Copy Class\.\.\.(\(disabled\))?, Extract Method\.\.\. \[Ctrl\+Alt\+M\](\(disabled\))?, Extract Superclass\.\.\.(\(disabled\))?, Extract Interface\.\.\.(\(disabled\))?, Extract Class\.\.\.(\(disabled\))?, Encapsulate Field\.\.\.(\(disabled\))?$',
+		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Introduce Field\.\.\. \[Ctrl\+Alt\+F\](\(disabled\))?, Introduce Constant\.\.\. \[Ctrl\+Alt\+C\](\(disabled\))?, Introduce Parameter\.\.\. \[Ctrl\+Alt\+P\](\(disabled\))?, Introduce Typedef\.\.\. \[Ctrl\+Alt\+K\](\(disabled\))?, Inline\.\.\. \[Ctrl\+Alt\+N\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\.(\(disabled\))?, Push Members Down\.\.\.(\(disabled\))?, Move\.\.\. \[F6\](\(disabled\))?, Copy Class\.\.\.(\(disabled\))?, Extract Method\.\.\. \[Ctrl\+Alt\+M\](\(disabled\))?, Extract Superclass\.\.\.(\(disabled\))?, Extract Interface\.\.\.(\(disabled\))?, Extract Class\.\.\.(\(disabled\))?, Encapsulate Field\.\.\.(\(disabled\))?, Optimise #includes \[Ctrl\+Alt\+O\], Sort #includes$',
 		 r'^Menu Explorer: Set as Startup Solution, Set as Startup Project\(disabled\), Remove Solution, Rename\.\.\.(\(disabled\))?$',
 		 r'^Menu item \[View/Nope\] not found$'], []),
 	('menu-clicks', {

@@ -58,6 +58,7 @@ public:
 	void	Insert(size uiAt, const char* szText);
 	size	NumEdits(void);
 	bool	Apply(Ptr<CTextArea> pEditor);
+	void	ApplyTo(const char* szText, CChars* pszDest);
 	size	AdjustPosition(size uiPosition);
 };
 
@@ -89,6 +90,7 @@ public:
 	bool			Parse(CIDECodeModel* pcModel, CIDEFileTexts* pcTexts, const char* szFileName, bool bCheck, ECPPTarget eTarget = CPPT_Host);
 	bool			IsParsed(void) { return mbParsed; }
 	bool			IsChecked(void) { return mbChecked; }
+	size			NumErrors(void);
 	char*			GetFileName(void) { return mszFileName.Text(); }
 	CCPPTokeniser*	GetTokeniser(void) { return &mcUnit.mcTokeniser; }
 	CCPPSyntaxTree*	GetTree(void) { return &mcUnit.mcTree; }

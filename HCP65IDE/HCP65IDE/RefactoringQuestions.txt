@@ -229,3 +229,18 @@ Open
     tick makes the class's own functions use them too.  A field that is an object gets a getter that gives a
     pointer to it and no setter.  Is that how you write accessors (in the class, or declared there and defined in
     the .cpp; const or not)?
+
+45. Optimise #includes (Ctrl+Alt+O) on a header: when an #include goes (nothing the header names comes from it, or
+    it becomes a forward declaration), the files that #include the header and got a name through it are each given
+    their own #include of that name's header, after their last #include.  That can change many files at once (one
+    undo).  Is that what you want, or should such an #include stay in the header, or should I show the files and
+    ask first?
+
+46. Sort #includes puts the file's own header first, then keeps the directories in the order they first come
+    ("BaseLib/..." before "WindowLib/..." if they are so now) and sorts by name inside each.  Your files look to be
+    in dependency order rather than by name: is there an order you want it to make (and should Optimise #includes
+    sort as well, as IntelliJ's does)?
+
+47. A forward declaration made from an #include is written after the #includes, two lines down ("class CGauge;"),
+    with any the file has there already.  Optimise #includes does this in .cpp files too, not only in headers.  It
+    leaves <> #includes, #includes inside an #if, and a .cpp's #include of its own header alone.  Right?

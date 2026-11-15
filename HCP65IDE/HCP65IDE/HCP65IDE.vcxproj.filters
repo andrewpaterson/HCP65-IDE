@@ -51,6 +51,9 @@
     <ClCompile Include="IDERename.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="IDEIncludes.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="IDEEncapsulateField.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -246,6 +249,9 @@
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDERename.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDEIncludes.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDEEncapsulateField.h">
