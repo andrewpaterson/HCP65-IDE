@@ -323,15 +323,17 @@ void RealignIDEDeclaration(CChars* pszLines, size uiNameColumn)
 //
 // Whether szText starts with one of the words a class keeps a column for
 // before its functions' types (virtual, static); its length, or 0.
+// bColumn: only where a tab follows it, as it does in such a column
+// ("static int\tCount(void);", with a space, is written with no column).
 //
 //////////////////////////////////////////////////////////////////////////
-static size FindIDEColumnWord(const char* szText)
+static size FindIDEColumnWord(const char* szText, bool bColumn)
 {
-	if ((strncmp(szText, "virtual", 7) == 0) && ((szText[7] == '\t') || (szText[7] == ' ')))
+	if ((strncmp(szText, "virtual", 7) == 0) && ((szText[7] == '\t') || (!bColumn && (szText[7] == ' '))))
 	{
 		return 7;
 	}
-	if ((strncmp(szText, "static", 6) == 0) && ((szText[6] == '\t') || (szText[6] == ' ')))
+	if ((strncmp(szText, "static", 6) == 0) && ((szText[6] == '\t') || (!bColumn && (szText[6] == ' '))))
 	{
 		return 6;
 	}
@@ -374,7 +376,7 @@ void RetypeIDEDeclaration(CChars* pszLines, const char* szText, size uiAt)
 	{
 		return;
 	}
-	uiWord = FindIDEColumnWord(&szText[i]);
+	uiWord = FindIDEColumnWord(&szText[i], true);
 	for (i += uiWord; (uiWord > 0) && ((szText[i] == ' ') || (szText[i] == '\t')); i++)
 	{
 	}
@@ -408,8 +410,8 @@ void RetypeIDEDeclaration(CChars* pszLines, const char* szText, size uiAt)
 		}
 		uiDeclaration = i + 1;
 	}
-	uiDeclaration = (FindIDEColumnWord(&szLines[i]) > 0) ? i + FindIDEColumnWord(&szLines[i]) : uiDeclaration;
-	uiWord = FindIDEColumnWord(&szLines[i]);
+	uiDeclaration = (FindIDEColumnWord(&szLines[i], false) > 0) ? i + FindIDEColumnWord(&szLines[i], false) : uiDeclaration;
+	uiWord = FindIDEColumnWord(&szLines[i], false);
 	for (uiType = i + uiWord; (uiWord > 0) && ((szLines[uiType] == ' ') || (szLines[uiType] == '\t')); uiType++)
 	{
 	}

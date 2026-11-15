@@ -46,11 +46,6 @@ Open
     tab that isn't pinned is used again, but not in its place).  Nothing I changed is in Find Usages' tabs.  Do
     they pass for you?
 
-20. Where a pulled-up member goes: the end of the base class's part with the same access (its last "public:" part
-    for a public one), lined up with the declaration above it; if the class has no such part, a new one before its
-    closing brace.  Your classes keep fields before functions in one part sometimes: say if a field should go after
-    the last field and not at the end of the part.
-
 24. The new files' names are the class's without its C (CKeg: Keg.h, Keg.cpp), in the directories of the files it
     leaves, and the include guard is the old header's with the name changed (__DRUM_H__ gives __KEG_H__,
     __IDE_MOVE_CLASS_H__ style for several words).  A CMakeLists.txt up to two directories above a project that
@@ -60,12 +55,6 @@ Open
     definitions into new files named for the new class (CBarrel: Barrel.h, Barrel.cpp), whether or not the class
     had files of its own.  What else is in the class's files (another class in its header) isn't copied.  The
     class's name in comments inside the copy is left as it was.  Is that what you want of it?
-
-28. Inline Variable (Ctrl+Alt+N) has no dialog: it inlines, and says how many uses in the status line; Problems
-    Detected comes up only if something is in the way.  IntelliJ asks "Inline local variable?" first unless told
-    not to.  A value that is a call is inlined without a word where the variable is used once (the call is still
-    made once, though later than it was), and is a conflict where it is used more than once.  Is that right, or
-    should a call always be asked about?
 
 31. Introduce Field puts the field after the class's last field (with that field's access), or at the end of the
     protected part of a class that has no fields, and assigns it in the function where the variable would have
@@ -190,6 +179,13 @@ Answered
     each function.  They have no keys, as in IntelliJ.  Is that enough until there is a table?
     Overtaken 2026-11-15: the table was built (WindowLib's CTable) and both dialogs are made of it.
 
+20. Where a pulled-up member goes: the end of the base class's part with the same access (its last "public:" part
+    for a public one), lined up with the declaration above it; if the class has no such part, a new one before its
+    closing brace.  Your classes keep fields before functions in one part sometimes: say if a field should go after
+    the last field and not at the end of the part.
+    Answered 2026-11-15: yes: a field that is pulled up goes after the base class's last field, as Introduce
+    Field puts one, not at the end of the part.  To do in Pull Members Up.
+
 21. Push Members Down gives every deriving class its own copy of a function's definition.  A deriving class that
     already overrides the function keeps its own and gets no copy.  What uses the member through the base class is
     a conflict (the type of the object is asked of the compiler, so cDrum.Seal() is not one where cDrum is a
@@ -237,6 +233,13 @@ Answered
     namespaces is coming, so moving into, out of and between namespaces is built in full, every use qualified
     again, and Move to File takes a function that is in one.  To do, as plan item 21.
 
+28. Inline Variable (Ctrl+Alt+N) has no dialog: it inlines, and says how many uses in the status line; Problems
+    Detected comes up only if something is in the way.  IntelliJ asks "Inline local variable?" first unless told
+    not to.  A value that is a call is inlined without a word where the variable is used once (the call is still
+    made once, though later than it was), and is a conflict where it is used more than once.  Is that right, or
+    should a call always be asked about?
+    Answered 2026-11-15: no dialog: it inlines, as it does, and undo is one key.  Nothing to do.
+
 29. Inline Variable takes a variable declared at the top and assigned by one statement (your style) as having one
     value, as well as "int x = value;".  It refuses one whose assignment is in a block its uses are outside, or
     that is used before the assignment.  It only inlines a function's own variables: not a parameter, a field or a
@@ -268,6 +271,8 @@ Answered
     Answered 2026-11-15: yes, pointers, as the default of an option in Extract Method's dialog (a tick, as IDEA's
     dialog has its options); references where it is unticked.  To do: the tick, and with it the uses in the moved
     statements rewritten (*piLow, psOther->) and the call passing addresses.
+    Done 2026-11-15 (the dialog's "Pass what it changes by pointer", ticked; CIDEExtractMethod::AppendPointerBody,
+    CIDEConvertPointer::ConvertUsesIn).  An expression that is selected keeps references: its uses aren't rewritten.
 
 36. The new function is a protected member, declared in a protected part at the class's end (one is made if the
     class's last part isn't protected) and defined straight after the function it came from; from a function of
@@ -279,6 +284,8 @@ Answered
     own if there is no Alt+Enter way to do it: there is, as a refactoring (Refactor's Make Member Function
     static, plan item 18); the IDE has no Alt+Enter menu of what can be done at the caret at all, which is asked
     of the user (question 54).
+    Done 2026-11-15 (the dialog's "Static", where the selection uses nothing of its object: FindObjectUse; where it
+    does, the dialog says so and has no tick, WindowLib's check box having no way to be shown and not ticked).
 
 37. Extract Method doesn't look for other places the same statements are written (IntelliJ offers to replace
     duplicates), and a variable declared in the selection and used after it is only handled when it is the one
@@ -287,6 +294,8 @@ Answered
     called) and offer to replace them with calls.  And when the refactoring plan is done, remind the user of a
     feature of its own to come back to: "Look for duplicates of selected text / function".  The one variable
     declared in the selection and used after it, and the name suggested, weren't answered.
+    Done 2026-11-15, the duplicates (CIDEExtractMethod::FindDuplicates, IsDuplicate, ChooseDuplicates): after the
+    name is given the other places are listed, a tick each, all ticked, and those ticked are made calls.
 
 39. Inline Function only inlines a function that returns once, at its end, and doesn't change its parameters;
     IntelliJ rewrites the others with extra variables.  A function with statements is inlined only where its call
@@ -449,3 +458,20 @@ Answered
     Answered 2026-11-15: yes, and first: "push the context aware Alt+Enter refactoring pop-up to the top of the
     queue".  Done: Show Context Actions (CIDEContextActions; Refactorings.txt, Where it is, 22).  What it offers
     is found cheaply, so a refactoring offered may still say why it can't be done once it has looked.
+
+55. Extract Method's pointers (question 35): what is a parameter that is a pointer called?  "int iLow" given by
+    pointer is "int* piLow", "SLevel sOther" is "SLevel* psOther": "p" before the name it has.  Where the file
+    has that name already the variable stays a reference.
+    Answered 2026-11-15: yes, "p" before its name.  Built so (CIDEExtractMethod::IsPointer).
+
+56. Extract Method's pointers: an object the new function only reads was given by reference, as one it changes
+    is.  With pointers asked for, is it a pointer, a const reference or a const pointer?
+    Answered 2026-11-15: a plain pointer, with no const, as the functions here take objects.  Built so: with the
+    tick everything that would be a reference is a pointer.
+
+57. Remove Template Parameter and the class that is the template's name.  After Extract Template Parameter there
+    is CTankTemplate<M> and "class CTank : public CTankTemplate<CGauge>".  If the template's last parameter is
+    then taken away, CTank is left deriving from a class CTankTemplate that is a template no longer.
+    Answered 2026-11-15: fold it back: where the class that is its name is all that derives from it and has
+    nothing but the constructors it hands on, the template takes the name again (CTank) and the name's class
+    goes.  To do in Remove Template Parameter.

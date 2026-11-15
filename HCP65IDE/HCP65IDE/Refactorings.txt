@@ -431,6 +431,8 @@ Where it is
        - Safe Delete deletes a class's files where they have nothing else (question 4): done.
        - Change Signature changes both processors' labels in assembly, whatever is selected (question 11): done.
        - the index checks templates in their own words: measured (6% more time), and on (question 5): done.
+       - Extract Method's ticks: pointers for what it would be given by reference, and static (questions 35, 36): done.
+       - Extract Method finds the other places the selection is written and makes them calls too (question 37): done.
 
 
 When the plan is done

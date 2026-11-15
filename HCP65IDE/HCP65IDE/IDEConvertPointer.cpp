@@ -786,6 +786,57 @@ bool CIDEConvertPointer::ConvertLocal(CIDERefactorUnit* pcUnit, CCPPSyntax* pcDe
 
 //////////////////////////////////////////////////////////////////////////
 //
+// The uses of the variable szKey in a part of a file's text (from
+// uiStart to uiEnd) changed to what a pointer's are (or a reference's),
+// as edits of pcFiles: for Extract Method, whose new function is given
+// by pointer what the statements it takes used by name.  False, with why
+// in pszWhyNot, if one of them can't be.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEConvertPointer::ConvertUsesIn(const char* szKey, const char* szFileName, size uiStart, size uiEnd, bool bToReference, CIDEFileEdits* pcFiles, CChars* pszWhyNot)
+{
+	CArrayIDELocations	asLocations;
+	SIDELocation*		psLocation;
+	char*				szText;
+	size				uiAt;
+	size				i;
+	uint8				uiKind;
+	bool				bResult;
+
+	mszProblem.Clear();
+	maszPendingFiles.ReInit();
+	maiPendingStarts.ReInit();
+	KillUnits();
+	szText = pcFiles->GetText(szFileName);
+	asLocations.Init();
+	mpcContent->GetCodeModel()->GetSymbolLocations(szKey, &asLocations, &uiKind);
+	for (i = 0; szText && mszProblem.Empty() && (i < asLocations.NumElements()); i++)
+	{
+		psLocation = asLocations.Get(i);
+		if ((psLocation->uiRole != CPPIR_Reference) || (StringInsensitiveCompare(psLocation->szFileName.Text(), szFileName) != 0))
+		{
+			continue;
+		}
+		uiAt = FindIDETextOffset(szText, psLocation->iLine, psLocation->iColumn);
+		if ((uiAt >= uiStart) && (uiAt < uiEnd))
+		{
+			ConvertUse(szFileName, psLocation->iLine, psLocation->iColumn, bToReference, pcFiles);
+		}
+	}
+	KillIDELocations(&asLocations);
+	KillUnits();
+	bResult = (szText != NULL) && mszProblem.Empty();
+	if (!bResult)
+	{
+		pszWhyNot->Set(mszProblem.Empty() ? "its file can't be read" : mszProblem.Text());
+	}
+	mszProblem.Clear();
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // A field that is a reference made a pointer: its declaration, what each
 // constructor's initialisers bind it to ("msLevel(sLevel)" is
 // "msLevel(&sLevel)"), and every use, those through another object too.

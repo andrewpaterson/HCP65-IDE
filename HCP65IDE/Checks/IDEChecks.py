@@ -1836,6 +1836,47 @@ CHECKS = [
 		 r'^\d+\|\tSPoint\tsOther;$', r'^\d+\|\tSwapped\(psPoint, sOther\);$', r'^\d+\|\tpsPoint->iX = sOther\.iY;$', r'^\d+\|void CMix::Swapped\(SPoint\* psPoint, SPoint& sOther\)$',
 		 r'^\d+\|\tsOther\.iX = psPoint->iX \+ miBase;$'],
 		[]),
+	('extract-method-pointers', dict(MakeExtractMethodCopy(), **{
+		#With the dialog's "by pointer" asked for, what the new function would be given by reference it is given by
+		#pointer, named p and its name: the statements' uses are a pointer's and the call gives addresses.  An object
+		#is a pointer too.
+		'WAIT_INDEX': '1', 'OPEN': 'Mix.cpp',
+		'DEBUG': 'edit:renamesearch:---s,edit:selecttext:89:1-90:26,edit:extractpointers:Swapped,edit:selecttext:58:1-59:17,edit:extractpointers:Around,printdisklines:Mix.h,printdisklines:Mix.cpp'}),
+		[r'^Status: Extracted void CMix::Swapped\(SPoint\* psPoint, SPoint\* psOther\)\.$', r'^Status: Extracted void CMix::Around\(int iA, int\* piLow, int\* piHigh\)\.$',
+		 r'^28\|\tvoid\tSwapped\(SPoint\* psPoint, SPoint\* psOther\);$', r'^29\|\tvoid\tAround\(int iA, int\* piLow, int\* piHigh\);$',
+		 r'^58\|\tAround\(iA, &iLow, &iHigh\);$', r'^59\|\tmiCount = iLow \* iHigh;$', r'^67\|void CMix::Around\(int iA, int\* piLow, int\* piHigh\)$', r'^69\|\t\*piLow = iA - 1;$',
+		 r'^70\|\t\*piHigh = iA \+ 1;$', r'^99\|\tSwapped\(psPoint, &sOther\);$', r'^100\|\tpsPoint->iX = sOther\.iY;$', r'^109\|void CMix::Swapped\(SPoint\* psPoint, SPoint\* psOther\)$',
+		 r'^111\|\tpsOther->iX = psPoint->iX \+ miBase;$', r'^112\|\tpsOther->iY = psPoint->iY;$'],
+		[]),
+	('extract-method-static', dict(MakeExtractMethodCopy(), **{
+		#Static, where the selection uses nothing of its object: declared static in the class, and not const.  Where
+		#it uses a field it can't be, and is as it would be without.
+		'WAIT_INDEX': '1', 'OPEN': 'Mix.cpp',
+		'DEBUG': 'edit:renamesearch:---s,edit:selecttext:58:1-59:17,edit:extractstatic:Around,edit:selecttext:24:1-25:23,edit:extractstatic:Scaled,printdisklines:Mix.h,printdisklines:Mix.cpp'}),
+		[r'^  it can be static$', r'^Status: Extracted void CMix::Around\(int iA, int& iLow, int& iHigh\)\.$',
+		 r'^Extract Method: statements, \[int CMix::X\(int iA, int iB\) const\], called \[X\(iA, iB\)\]$', r'^Status: Extracted int CMix::Scaled\(int iA, int iB\) const\.$',
+		 r'^28\|\tstatic void\tAround\(int iA, int& iLow, int& iHigh\);$', r'^29\|\tint\t\t\tScaled\(int iA, int iB\) const;$',
+		 r'^34\|int CMix::Scaled\(int iA, int iB\) const$', r'^71\|\tAround\(iA, iLow, iHigh\);$', r'^80\|void CMix::Around\(int iA, int& iLow, int& iHigh\)$'],
+		[r'^  it can be static\n(.*\n)*  it can be static']),
+	('extract-method-duplicates', dict(MakeExtractMethodCopy(), **{
+		#The other places in the file the selection is written, its variables' names apart, are found and made calls
+		#of the new function too, with their own names: Second's two statements are First's with other names; Third's
+		#subtract, and aren't.
+		'WAIT_INDEX': '1', 'OPEN': 'Mix.cpp',
+		'DEBUG': 'edit:renamesearch:---s,edit:selecttext:129:1-130:18,edit:extractduplicates:Tripled,printdisklines:Mix.cpp'}),
+		[r'^Duplicates: line 144 in Second$', r'^Status: Extracted int Tripled\(int iA, int iB\)\.  1 other place it was written is a call of it too\.$',
+		 r'^125\|int Tripled\(int iA, int iB\)$', r'^129\|\tiSum = iA \+ iB;$', r'^130\|\tiSum = iSum \* 3;$', r'^131\|\treturn iSum;$',
+		 r'^143\|\tiSum = Tripled\(iA, iB\);$', r'^157\|\tiAll = Tripled\(iX, iY\);$', r'^158\|\tiMore = iAll \+ 1;$', r'^171\|\tiAll = iX - iY;$', r'^172\|\tiAll = iAll \* 3;$',
+		 r'^174 lines$'],
+		[]),
+	('extract-method-dialog', dict(MakeExtractMethodCopy(), **{
+		#The dialog: the name typed.  Where the selection is written again, Duplicates Detected lists the places,
+		#ticked, and OK makes them calls too.
+		'WAIT_INDEX': '1', 'OPEN': 'Mix.cpp', 'SETTINGS': MakeSettingsFile(), 'DIALOG_KEYS': 'type:Made', 'DIALOG_ANSWER': 'OK|OK',
+		'DEBUG': 'edit:selecttext:129:1-130:18,extractmethod,answered:2,printstatus'}),
+		[r'^Dialog \[Extract Method\] answered OK$', r'^Dialog \[Duplicates Detected\] answered OK$',
+		 r'^Status: Extracted int Made\(int iA, int iB\)\.  1 other place it was written is a call of it too\.$'],
+		[]),
 	('extract-method-template', dict(MakeExtractMethodCopy(), **{
 		#In templates (T4).  From a function template the new function is a template of the same parameters, defined
 		#before it, and the call names them.  A class template's member defined outside the class gets one defined the

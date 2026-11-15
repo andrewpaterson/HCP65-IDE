@@ -76,6 +76,7 @@ public:
 	void	QueueToReference(void);
 	void	QueueToPointer(void);
 	bool	Convert(bool bToReference, CChars* pszStatus = NULL);
+	bool	ConvertUsesIn(const char* szKey, const char* szFileName, size uiStart, size uiEnd, bool bToReference, CIDEFileEdits* pcFiles, CChars* pszWhyNot);
 
 protected:
 	void				ToReferenceQueued(void);

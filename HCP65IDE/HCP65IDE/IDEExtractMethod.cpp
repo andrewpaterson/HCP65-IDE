@@ -28,6 +28,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDEIntroduceVariable.h"
 #include "IDEDefinitions.h"
 #include "IDEMoveMembers.h"
+#include "WindowLib/Table.h"
 #include "IDEExtractMethod.h"
 #include "IDEContextActions.h"
 
@@ -99,6 +100,9 @@ void SIDEExtraction::Init(void)
 	szTemplateArguments.Init();
 	bBefore = false;
 	aszUsed.Init();
+	bCanBeStatic = false;
+	bPointers = false;
+	bStatic = false;
 }
 
 
@@ -152,6 +156,8 @@ void CIDEExtractMethod::Class(void)
 	M_Pointer(mpNameField);
 	M_Pointer(mpSignature);
 	M_Pointer(mpError);
+	M_Pointer(mpPointersBox);
+	M_Pointer(mpStaticBox);
 	U_Pointer(mpsShown);
 }
 
@@ -777,6 +783,10 @@ bool CIDEExtractMethod::FindExtraction(SIDEExtraction* psDest)
 	}
 	if (psDest->bPossible)
 	{
+		psDest->bCanBeStatic = !psDest->szClassKey.Empty() && !FindObjectUse(psDest, szText);
+	}
+	if (psDest->bPossible)
+	{
 		for (iToken = 0; (size)iToken < cUnit.GetTokeniser()->NumTokens(); iToken++)
 		{
 			psSource = cUnit.GetTokeniser()->GetSource(cUnit.GetTokeniser()->Get((size)iToken));
@@ -810,6 +820,262 @@ const char* CIDEExtractMethod::GetNameProblem(SIDEExtraction* psExtraction, cons
 		return "The file uses that name already.";
 	}
 	return NULL;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether a variable is given to the new function by pointer: pointers
+// are asked for, it would be given by reference (it isn't an array,
+// which is a pointer already), statements are selected (an expression's
+// uses stay as they are written), and "p" before its name isn't a name
+// the file has.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEExtractMethod::IsPointer(SIDEExtraction* psExtraction, SIDEExtractVariable* psVariable)
+{
+	CChars	szName;
+	bool	bFree;
+
+	if (!psExtraction->bPointers || psExtraction->bExpression || (psVariable->iRole != IDE_EXTRACT_REFERENCE) || psVariable->bArray)
+	{
+		return false;
+	}
+	szName.Init("p");
+	szName.Append(psVariable->szName);
+	bFree = psExtraction->aszUsed.GetIndex(szName.Text()) == ARRAY_ELEMENT_NOT_FOUND;
+	szName.Kill();
+	return bFree;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether the new function is given anything by pointer; or, bIfAsked,
+// whether it would be if pointers were asked for (the dialog's tick is
+// for those).
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEExtractMethod::HasPointers(SIDEExtraction* psExtraction, bool bIfAsked)
+{
+	size	i;
+	bool	bAsked;
+	bool	bHas;
+
+	bAsked = psExtraction->bPointers;
+	psExtraction->bPointers = bAsked || bIfAsked;
+	bHas = false;
+	for (i = 0; !bHas && (i < psExtraction->asVariables.NumElements()); i++)
+	{
+		bHas = IsPointer(psExtraction, psExtraction->asVariables.Get(i));
+	}
+	psExtraction->bPointers = bAsked;
+	return bHas;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether the selection uses the object of the function it is in: it
+// names this, or a field or a member function of its class (or of a base
+// class) that isn't static.  A function that doesn't can be static.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEExtractMethod::FindObjectUse(SIDEExtraction* psDest, const char* szText)
+{
+	CIDECodeModel*		pcModel;
+	CArrayIDEFileRanges	asRanges;
+	CArrayIDELocations	asLocations;
+	CArrayChars			aszKeys;
+	CArrayChars			aszClasses;
+	CChars				szScope;
+	CChars				szName;
+	CChars				szScopeName;
+	const char*			szFound;
+	size				uiLineStart;
+	size				uiAt;
+	size				i;
+	int32				iLine;
+	int32				iColumn;
+	int32				iEndLine;
+	int32				iEndColumn;
+	uint8				uiKind;
+	bool				bUses;
+
+	//this, as a word of the selection.
+	bUses = false;
+	for (szFound = strstr(&szText[psDest->uiStart], "this"); szFound && ((size)(szFound - szText) + 4 <= psDest->uiEnd) && !bUses; szFound = strstr(szFound + 1, "this"))
+	{
+		bUses = !IsIDENameChar(szFound[-1]) && !IsIDENameChar(szFound[4]);
+	}
+	if (bUses)
+	{
+		return true;
+	}
+
+	//The selection's lines and columns, for the index.
+	iLine = 0;
+	uiLineStart = 0;
+	iColumn = 0;
+	iEndLine = 0;
+	iEndColumn = 0;
+	for (uiAt = 0; uiAt <= psDest->uiEnd; uiAt++)
+	{
+		if (uiAt == psDest->uiStart)
+		{
+			iColumn = (int32)(uiAt - uiLineStart);
+			iEndLine = iLine;
+			iLine = iEndLine;
+		}
+		if (uiAt == psDest->uiEnd)
+		{
+			iEndColumn = (int32)(uiAt - uiLineStart);
+			break;
+		}
+		if (szText[uiAt] == '\n')
+		{
+			iEndLine++;
+			if (uiAt < psDest->uiStart)
+			{
+				iLine++;
+			}
+			uiLineStart = uiAt + 1;
+		}
+	}
+
+	pcModel = mpcContent->GetCodeModel();
+	aszClasses.Init();
+	aszClasses.Add(psDest->szClassKey.Text());
+	pcModel->FindClassBases(psDest->szClassKey.Text(), true, &aszClasses);
+	asRanges.Init();
+	asRanges.Add()->Init(psDest->szFileName.Text(), iLine, iColumn, iEndLine, iEndColumn);
+	aszKeys.Init();
+	pcModel->FindSymbolsUsedIn(&asRanges, &aszKeys);
+	for (i = 0; !bUses && (i < aszKeys.NumElements()); i++)
+	{
+		szScope.Init();
+		szName.Init();
+		szScopeName.Init();
+		GetIDESymbolScope(aszKeys.GetText(i), &szScope);
+		GetIDESymbolName(aszKeys.GetText(i), &szName);
+		GetIDESymbolName(szScope.Text(), &szScopeName);
+		asLocations.Init();
+		if ((aszClasses.GetIndex(szScope.Text()) != ARRAY_ELEMENT_NOT_FOUND) && !szName.Equals(szScopeName.Text()) && pcModel->GetSymbolLocations(aszKeys.GetText(i), &asLocations, &uiKind) &&
+			((uiKind == CPPSK_Field) || (uiKind == CPPSK_Function) || (uiKind == CPPSK_FunctionTemplate)))
+		{
+			bUses = !mpcContent->GetMemberQualifier()->IsDeclaredWith(aszKeys.GetText(i), "static");
+		}
+		KillIDELocations(&asLocations);
+		szScopeName.Kill();
+		szName.Kill();
+		szScope.Kill();
+	}
+	aszKeys.Kill();
+	KillIDEFileRanges(&asRanges);
+	aszClasses.Kill();
+	return bUses;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A word of a text made another, where it stands alone and isn't a
+// member's name (after . or -> or ::).
+//
+//////////////////////////////////////////////////////////////////////////
+static void RenameIDEWord(CChars* pszText, const char* szOld, const char* szNew)
+{
+	CChars		szResult;
+	const char*	szText;
+	const char*	szFound;
+	size		uiOld;
+	size		uiFrom;
+	size		uiAt;
+	size		uiBefore;
+
+	uiOld = strlen(szOld);
+	szText = pszText->Text();
+	szResult.Init();
+	uiFrom = 0;
+	for (szFound = strstr(szText, szOld); szFound; szFound = strstr(szFound + 1, szOld))
+	{
+		uiAt = (size)(szFound - szText);
+		for (uiBefore = uiAt; (uiBefore > 0) && ((szText[uiBefore - 1] == ' ') || (szText[uiBefore - 1] == '\t')); uiBefore--)
+		{
+		}
+		if (((uiAt > 0) && IsIDENameChar(szText[uiAt - 1])) || IsIDENameChar(szText[uiAt + uiOld]) || ((uiBefore > 0) && (szText[uiBefore - 1] == '.')) ||
+			((uiBefore > 1) && (szText[uiBefore - 1] == '>') && (szText[uiBefore - 2] == '-')) || ((uiBefore > 1) && (szText[uiBefore - 1] == ':') && (szText[uiBefore - 2] == ':')))
+		{
+			continue;
+		}
+		szResult.AppendSubString(szText, uiFrom, uiAt);
+		szResult.Append(szNew);
+		uiFrom = uiAt + uiOld;
+	}
+	szResult.Append(&szText[uiFrom]);
+	pszText->Set(szResult.Text());
+	szResult.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The selected statements as the new function has them where it is given
+// variables by pointer: each use of one rewritten as a pointer's is
+// (CIDEConvertPointer::ConvertUsesIn: "iLow = 0" is "*piLow = 0",
+// "sOther.iAt" is "psOther->iAt", "&sOther" is "psOther") and named by
+// the pointer's name.  False, with why, if a use can't be.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEExtractMethod::AppendPointerBody(SIDEExtraction* psExtraction, CChars* pszSelected, CChars* pszWhyNot)
+{
+	CIDEFileEdits			cScratch;
+	CIDETextEdits*			pcEdits;
+	SIDEExtractVariable*	psVariable;
+	CChars					szConverted;
+	CChars					szPointer;
+	char*					szText;
+	size					i;
+	bool					bResult;
+
+	cScratch.Init(mpcContent);
+	szText = cScratch.GetText(psExtraction->szFileName.Text());
+	bResult = (szText != NULL);
+	for (i = 0; bResult && (i < psExtraction->asVariables.NumElements()); i++)
+	{
+		psVariable = psExtraction->asVariables.Get(i);
+		if (IsPointer(psExtraction, psVariable))
+		{
+			bResult = mpcContent->GetConvertPointer()->ConvertUsesIn(psVariable->szKey.Text(), psExtraction->szFileName.Text(), psExtraction->uiStart, psExtraction->uiEnd, false, &cScratch, pszWhyNot);
+			if (!bResult)
+			{
+				pszWhyNot->Insert(0, " can't be given by pointer: ");
+				pszWhyNot->Insert(0, psVariable->szName.Text());
+			}
+		}
+	}
+	if (bResult)
+	{
+		pcEdits = cScratch.GetEdits(psExtraction->szFileName.Text());
+		szConverted.Init();
+		pcEdits->ApplyTo(szText, &szConverted);
+		pszSelected->Clear();
+		pszSelected->AppendSubString(szConverted.Text(), pcEdits->AdjustPosition(psExtraction->uiStart), pcEdits->AdjustPosition(psExtraction->uiEnd));
+		szConverted.Kill();
+		for (i = 0; i < psExtraction->asVariables.NumElements(); i++)
+		{
+			psVariable = psExtraction->asVariables.Get(i);
+			if (IsPointer(psExtraction, psVariable))
+			{
+				szPointer.Init("p");
+				szPointer.Append(psVariable->szName);
+				RenameIDEWord(pszSelected, psVariable->szName.Text(), szPointer.Text());
+				szPointer.Kill();
+			}
+		}
+	}
+	cScratch.Kill();
+	return bResult;
 }
 
 
@@ -867,6 +1133,20 @@ void CIDEExtractMethod::AppendParameters(SIDEExtraction* psExtraction, bool bNam
 			continue;
 		}
 		pszDest->Append((uiParameters > 0) ? ", " : "");
+		if (IsPointer(psExtraction, psVariable))
+		{
+			//Given by pointer: declared "int* piLow", and the call gives its address.
+			if (bNamesOnly)
+			{
+				pszDest->Append('&')->Append(psVariable->szName);
+			}
+			else
+			{
+				pszDest->Append(psVariable->szBefore)->Append("* p")->Append(psVariable->szName);
+			}
+			uiParameters++;
+			continue;
+		}
 		if (!bNamesOnly)
 		{
 			pszDest->Append(psVariable->szBefore);
@@ -904,7 +1184,7 @@ void CIDEExtractMethod::AppendSignature(SIDEExtraction* psExtraction, const char
 	pszDest->Append('(');
 	AppendParameters(psExtraction, false, pszDest);
 	pszDest->Append(')');
-	pszDest->Append(psExtraction->sFunction.szQualifiers);
+	pszDest->Append((psExtraction->bStatic && psExtraction->bCanBeStatic) ? "" : psExtraction->sFunction.szQualifiers.Text());
 }
 
 
@@ -925,11 +1205,447 @@ void CIDEExtractMethod::AppendCall(SIDEExtraction* psExtraction, const char* szN
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The selection made a function of a name, and a call of it written
-// where it was: see the class's comment.  One undo across the files.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEExtractMethod::Extract(SIDEExtraction* psExtraction, const char* szName, CChars* pszStatus)
+void SIDEExtractDuplicate::Init(void)
+{
+	sExtraction.Init();
+	aszNames.Init();
+	iLine = 0;
+	bChosen = true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void SIDEExtractDuplicate::Kill(void)
+{
+	aszNames.Kill();
+	sExtraction.Kill();
+}
+
+
+//Finds where a run of tokens could be written again: an expression of as many tokens, or statements of one block
+//that are as many tokens together (CIDEExtractMethod::FindDuplicates).  The first token of each.
+class CIDEDuplicatePlaceFinder : public CCPPSyntaxChildVisitor
+{
+public:
+	CIDERefactorUnit*	mpcUnit;
+	CArrayInt*			mpaiFirsts;
+	int32				miTokens;
+	bool				mbExpression;
+
+	void	Visit(CCPPSyntax* pcChild) override
+	{
+		CCPPSyntaxCompoundStatement*	pcBlock;
+		int32							iLast;
+		size							i;
+		size							j;
+
+		if (mbExpression)
+		{
+			if (mpcUnit->IsExpression(pcChild) && (pcChild->miFirstToken >= 0) && (pcChild->miLastToken - pcChild->miFirstToken + 1 == miTokens))
+			{
+				mpaiFirsts->AddIfUnique(pcChild->miFirstToken);
+			}
+		}
+		else if (pcChild->GetKind() == CPPS_CompoundStatement)
+		{
+			pcBlock = (CCPPSyntaxCompoundStatement*)pcChild;
+			for (i = 0; i < pcBlock->macpStatements.NumElements(); i++)
+			{
+				iLast = pcBlock->macpStatements.GetPtr(i)->miFirstToken + miTokens - 1;
+				for (j = i; (j < pcBlock->macpStatements.NumElements()) && (pcBlock->macpStatements.GetPtr(j)->miLastToken <= iLast); j++)
+				{
+					if ((pcBlock->macpStatements.GetPtr(i)->miFirstToken >= 0) && (pcBlock->macpStatements.GetPtr(j)->miLastToken == iLast))
+					{
+						mpaiFirsts->AddIfUnique(pcBlock->macpStatements.GetPtr(i)->miFirstToken);
+					}
+				}
+			}
+		}
+		pcChild->VisitFields(this);
+	}
+};
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The other places in the file the selection is written again, for
+// Extract Method to make calls of the new function too: the same tokens,
+// but for the names of the selection's variables, which may be others
+// there (each always the same other).  What Extract Method finds for
+// each, where it is, must be what it found for the selection: the same
+// variables given and returned, of the same types, in a function of the
+// same class that can call the new one.  How many.
+//
+// The editor's selection is moved to each in turn (FindExtraction works
+// on what is selected) and put back.
+//
+//////////////////////////////////////////////////////////////////////////
+size CIDEExtractMethod::FindDuplicates(SIDEExtraction* psExtraction, CArrayIDEExtractDuplicates* papsDest)
+{
+	CIDERefactorUnit			cUnit;
+	CIDEDuplicatePlaceFinder	cFinder;
+	Ptr<CIDEEditorTab>			pTab;
+	Ptr<CTextArea>				pEditor;
+	SIDEExtractDuplicate*		psDuplicate;
+	SPreprocessedToken*			psSource;
+	SPreprocessedToken*			psOther;
+	SPreprocessedToken*			psBefore;
+	SCPPSyntaxRange				sRange;
+	CArrayInt					aiFirsts;
+	CArrayInt					aiStarts;
+	CArrayInt					aiEnds;
+	CChars						szName;
+	char*						szText;
+	size						uiSelectionStart;
+	size						uiSelectionEnd;
+	size						uiLine;
+	size						uiEndLine;
+	size						uiVariable;
+	size						i;
+	size						j;
+	size						k;
+	int32						iFirst;
+	int32						iLast;
+	int32						iTokens;
+	int32						iAt;
+	bool						bSame;
+	bool						bSelected;
+
+	pTab = mpcContent->GetDocuments()->FindTab(psExtraction->szFileName.Text());
+	if (pTab.IsNull() || !psExtraction->bPossible)
+	{
+		return 0;
+	}
+	pEditor = pTab->GetEditor();
+	szText = pEditor->GetText();
+	cUnit.Init();
+	uiLine = pEditor->FindLine(psExtraction->uiStart);
+	uiEndLine = pEditor->FindLine(psExtraction->uiEnd);
+	if (!cUnit.Parse(mpcContent->GetCodeModel(), &mpcContent->GetFindInFiles(), psExtraction->szFileName.Text(), false) || !cUnit.GetTree()->GetRoot() ||
+		!cUnit.FindTokensIn((int)uiLine, (int)(psExtraction->uiStart - pEditor->GetLineStart(uiLine)), (int)uiEndLine, (int)(psExtraction->uiEnd - pEditor->GetLineStart(uiEndLine)), &iFirst, &iLast))
+	{
+		cUnit.Kill();
+		return 0;
+	}
+	iTokens = iLast - iFirst + 1;
+	aiFirsts.Init();
+	cFinder.mpcUnit = &cUnit;
+	cFinder.mpaiFirsts = &aiFirsts;
+	cFinder.miTokens = iTokens;
+	cFinder.mbExpression = psExtraction->bExpression;
+	cUnit.GetTree()->GetRoot()->VisitFields(&cFinder);
+
+	//Those written as the selection is.
+	aiStarts.Init();
+	aiEnds.Init();
+	for (i = 0; i < aiFirsts.NumElements(); i++)
+	{
+		iAt = aiFirsts.GetValue(i);
+		if (((iAt <= iLast) && (iAt + iTokens - 1 >= iFirst)) || !cUnit.GetTokensRange(iAt, iAt + iTokens - 1, &sRange))
+		{
+			continue;
+		}
+		psDuplicate = NewMalloc<SIDEExtractDuplicate>();
+		psDuplicate->Init();
+		for (j = 0; j < psExtraction->asVariables.NumElements(); j++)
+		{
+			psDuplicate->aszNames.Add("");
+		}
+		bSame = true;
+		for (k = 0; bSame && (k < (size)iTokens); k++)
+		{
+			psSource = cUnit.GetTokeniser()->GetSource(cUnit.GetTokeniser()->Get((size)iFirst + k));
+			psOther = cUnit.GetTokeniser()->GetSource(cUnit.GetTokeniser()->Get((size)iAt + k));
+			psBefore = (k > 0) ? cUnit.GetTokeniser()->GetSource(cUnit.GetTokeniser()->Get((size)iFirst + k - 1)) : NULL;
+
+			//One of the selection's variables, named alone (not a member of that name)?
+			uiVariable = MAX_SIZE;
+			if (cUnit.GetTokeniser()->Get((size)iFirst + k)->IsIdentifier() && !(psBefore && (((psBefore->uiLength == 1) && (psBefore->szText[0] == '.')) ||
+				((psBefore->uiLength == 2) && (memcmp(psBefore->szText, "->", 2) == 0)) || ((psBefore->uiLength == 2) && (memcmp(psBefore->szText, "::", 2) == 0)))))
+			{
+				for (j = 0; (j < psExtraction->asVariables.NumElements()) && (uiVariable == MAX_SIZE); j++)
+				{
+					if ((psExtraction->asVariables.Get(j)->szName.Length() == psSource->uiLength) && (memcmp(psExtraction->asVariables.Get(j)->szName.Text(), psSource->szText, psSource->uiLength) == 0))
+					{
+						uiVariable = j;
+					}
+				}
+			}
+			if (uiVariable == MAX_SIZE)
+			{
+				bSame = (psSource->uiLength == psOther->uiLength) && (memcmp(psSource->szText, psOther->szText, psSource->uiLength) == 0);
+				continue;
+			}
+			szName.Init();
+			szName.Append(psOther->szText, psOther->uiLength);
+			bSame = cUnit.GetTokeniser()->Get((size)iAt + k)->IsIdentifier();
+			if (bSame && psDuplicate->aszNames.Get(uiVariable)->Empty())
+			{
+				//Its name there: one that isn't another of them's.
+				bSame = psDuplicate->aszNames.GetIndex(szName.Text()) == ARRAY_ELEMENT_NOT_FOUND;
+				psDuplicate->aszNames.Get(uiVariable)->Set(szName);
+			}
+			else if (bSame)
+			{
+				bSame = psDuplicate->aszNames.Get(uiVariable)->Equals(szName.Text());
+			}
+			szName.Kill();
+		}
+		if (bSame)
+		{
+			psDuplicate->iLine = sRange.iLine;
+			papsDest->Add(psDuplicate);
+			aiStarts.Add((int)FindIDETextOffset(szText, sRange.iLine, sRange.iColumn));
+			aiEnds.Add((int)FindIDETextOffset(szText, sRange.iEndLine, sRange.iEndColumn));
+		}
+		else
+		{
+			psDuplicate->Kill();
+			free(psDuplicate);
+		}
+	}
+	aiFirsts.Kill();
+	cUnit.Kill();
+
+	//What Extract Method finds for each, where it is.
+	bSelected = pEditor->GetSelection(&uiSelectionStart, &uiSelectionEnd);
+	for (i = papsDest->NumElements(); i > 0; i--)
+	{
+		psDuplicate = papsDest->GetPtr(i - 1);
+		pEditor->Select((size)aiStarts.GetValue(i - 1), (size)aiEnds.GetValue(i - 1));
+		if (!FindExtraction(&psDuplicate->sExtraction) || !IsDuplicate(psExtraction, psDuplicate))
+		{
+			psDuplicate->Kill();
+			free(psDuplicate);
+			papsDest->RemoveAt(i - 1);
+		}
+	}
+	if (bSelected)
+	{
+		pEditor->Select(uiSelectionStart, uiSelectionEnd);
+	}
+	aiEnds.Kill();
+	aiStarts.Kill();
+	return papsDest->NumElements();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEExtractMethod::KillDuplicates(CArrayIDEExtractDuplicates* papsDuplicates)
+{
+	size	i;
+
+	for (i = 0; i < papsDuplicates->NumElements(); i++)
+	{
+		papsDuplicates->GetPtr(i)->Kill();
+		free(papsDuplicates->GetPtr(i));
+	}
+	papsDuplicates->Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether a place written as the selection is can be a call of the
+// selection's new function: it can be extracted itself; it is the same
+// kind of thing, returning the same; each variable the function is given
+// or returns is there the same to it, and of the same type (the others
+// are its own there too); and its function is one that can call the new
+// one (of the same class, const only if the new one is, and after it if
+// it is declared nowhere).
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEExtractMethod::IsDuplicate(SIDEExtraction* psExtraction, SIDEExtractDuplicate* psDuplicate)
+{
+	SIDEExtraction*			psOther;
+	SIDEExtractVariable*	psVariable;
+	SIDEExtractVariable*	psThere;
+	size					i;
+	size					j;
+	bool					bGiven;
+	bool					bGivenThere;
+
+	psOther = &psDuplicate->sExtraction;
+	if (!psOther->bPossible || (psOther->bExpression != psExtraction->bExpression) || (psOther->bReturns != psExtraction->bReturns) || !psOther->szType.Equals(psExtraction->szType.Text()) ||
+		(psOther->bReturns && !psOther->szFunctionReturn.Equals(psExtraction->szFunctionReturn.Text())) || !psOther->szClassKey.Equals(psExtraction->szClassKey.Text()) ||
+		!psOther->szTemplateArguments.Equals(psExtraction->szTemplateArguments.Text()))
+	{
+		return false;
+	}
+	if (!(psExtraction->bStatic && psExtraction->bCanBeStatic) && psOther->sFunction.szQualifiers.Contains("const") && !psExtraction->sFunction.szQualifiers.Contains("const"))
+	{
+		return false;
+	}
+	if (psExtraction->szClassKey.Empty() && (psOther->uiStart < psExtraction->uiStart))
+	{
+		return false;
+	}
+	for (i = 0; i < psExtraction->asVariables.NumElements(); i++)
+	{
+		psVariable = psExtraction->asVariables.Get(i);
+		bGiven = (psVariable->iRole == IDE_EXTRACT_VALUE) || (psVariable->iRole == IDE_EXTRACT_REFERENCE) || (psVariable->iRole == IDE_EXTRACT_RETURNED);
+		if (psDuplicate->aszNames.Get(i)->Empty())
+		{
+			if (bGiven)
+			{
+				return false;
+			}
+			continue;
+		}
+		psThere = NULL;
+		for (j = 0; (j < psOther->asVariables.NumElements()) && !psThere; j++)
+		{
+			if (psOther->asVariables.Get(j)->szName.Equals(psDuplicate->aszNames.GetText(i)))
+			{
+				psThere = psOther->asVariables.Get(j);
+			}
+		}
+		if (!psThere)
+		{
+			return false;
+		}
+		bGivenThere = (psThere->iRole == IDE_EXTRACT_VALUE) || (psThere->iRole == IDE_EXTRACT_REFERENCE) || (psThere->iRole == IDE_EXTRACT_RETURNED);
+		if ((bGiven != bGivenThere) || (bGiven && ((psThere->iRole != psVariable->iRole) || !psThere->szBefore.Equals(psVariable->szBefore.Text()) || !psThere->szAfter.Equals(psVariable->szAfter.Text()) ||
+			(psThere->bArray != psVariable->bArray) || (psThere->bReadInside != psVariable->bReadInside) || (psThere->bDeclaredInside != psVariable->bDeclaredInside))))
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The call a duplicate becomes: the selection's call, with the
+// duplicate's names for the variables.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEExtractMethod::AppendDuplicateCall(SIDEExtraction* psExtraction, SIDEExtractDuplicate* psDuplicate, const char* szName, CChars* pszDest)
+{
+	SIDEExtractVariable*	psVariable;
+	size					uiParameters;
+	size					i;
+	bool					bValue;
+
+	bValue = !psExtraction->szFunctionReturn.Empty() && !psExtraction->szFunctionReturn.Equals("void");
+	if (!psExtraction->bExpression)
+	{
+		pszDest->Append(psDuplicate->sExtraction.szIndent);
+		for (i = 0; i < psExtraction->asVariables.NumElements(); i++)
+		{
+			psVariable = psExtraction->asVariables.Get(i);
+			if (psVariable->iRole == IDE_EXTRACT_RETURNED)
+			{
+				if (psVariable->bDeclaredInside)
+				{
+					pszDest->Append(psVariable->szBefore)->Append(' ');
+				}
+				pszDest->Append(psDuplicate->aszNames.GetText(i))->Append(" = ");
+			}
+		}
+		if (psExtraction->bReturns && bValue)
+		{
+			pszDest->Append("return ");
+		}
+	}
+	pszDest->Append(szName)->Append(psExtraction->szTemplateArguments)->Append('(');
+	uiParameters = 0;
+	for (i = 0; i < psExtraction->asVariables.NumElements(); i++)
+	{
+		psVariable = psExtraction->asVariables.Get(i);
+		if ((psVariable->iRole != IDE_EXTRACT_VALUE) && (psVariable->iRole != IDE_EXTRACT_REFERENCE) && !((psVariable->iRole == IDE_EXTRACT_RETURNED) && psVariable->bReadInside && !psVariable->bDeclaredInside))
+		{
+			continue;
+		}
+		pszDest->Append((uiParameters > 0) ? ", " : "")->Append(IsPointer(psExtraction, psVariable) ? "&" : "")->Append(psDuplicate->aszNames.GetText(i));
+		uiParameters++;
+	}
+	pszDest->Append(')');
+	if (!psExtraction->bExpression)
+	{
+		pszDest->Append(';');
+		if (psExtraction->bReturns && !bValue)
+		{
+			pszDest->Append('\n')->Append(psDuplicate->sExtraction.szIndent)->Append("return;");
+		}
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The other places the selection is written are shown, each with a tick
+// (all ticked): those left ticked are made calls of the new function
+// too.  False if the dialog is cancelled, when nothing is extracted.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEExtractMethod::ChooseDuplicates(CArrayIDEExtractDuplicates* papsDuplicates)
+{
+	Ptr<CTable>				pTable;
+	Ptr<CLabel>				pLabel;
+	SIDEExtractDuplicate*	psDuplicate;
+	CChars					szText;
+	size					i;
+	bool					bOK;
+
+	mpDialog = OMalloc<CDialog>(mpcContent->GetWindow(), mpcContent->GetDialogLook(), "Duplicates Detected");
+	szText.Init();
+	szText.Append((uint32)papsDuplicates->NumElements())->Append((papsDuplicates->NumElements() == 1) ? " other place in the file is written the same.  Make it a call too?" :
+																								  " other places in the file are written the same.  Make them calls too?");
+	pLabel = OMalloc<CLabel>(mpDialog->GetWindow(), mpcContent->GetTheme()->GetFont(), szText.Text());
+	pLabel->SetAlignment(CSH_Left, CSV_Center);
+	mpDialog->AddEditor("", pLabel);
+	pLabel = NULL;
+	szText.Kill();
+	pTable = OMalloc<CTable>(mpDialog->GetWindow(), mpDialog->GetLook()->pcTheme);
+	pTable->AddColumn("Replace", TCK_Tick, 0);
+	pTable->AddColumn("Where", TCK_Text, 1);
+	pTable->SetColumnEditable(1, false);
+	for (i = 0; i < papsDuplicates->NumElements(); i++)
+	{
+		psDuplicate = papsDuplicates->GetPtr(i);
+		szText.Init("Line ");
+		szText.Append((int32)(psDuplicate->iLine + 1))->Append(", in ")->Append(psDuplicate->sExtraction.szQualifier)->Append(psDuplicate->sExtraction.sFunction.szOwnName);
+		pTable->AddRow();
+		pTable->SetCellTicked((int32)i, 0, psDuplicate->bChosen);
+		pTable->SetCellText((int32)i, 1, szText.Text());
+		szText.Kill();
+	}
+	pTable->SetVisibleRows((papsDuplicates->NumElements() < 10) ? (int32)papsDuplicates->NumElements() : 10);
+	pTable->SetAlignment(CSH_Stretch, CSV_Top);
+	pTable->SelectCell(0, 0);
+	mpDialog->AddEditor(NULL, pTable);
+	mpDialog->SetOKCaption("Refactor");
+	mpcContent->GetScript()->WatchDialog(mpDialog);
+	bOK = mpDialog->Show(560);
+	for (i = 0; bOK && (i < papsDuplicates->NumElements()); i++)
+	{
+		papsDuplicates->GetPtr(i)->bChosen = pTable->IsCellTicked((int32)i, 0);
+	}
+	pTable = NULL;
+	mpDialog = NULL;
+	return bOK;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The selection made a function of a name, and a call of it written
+// where it was: see the class's comment.  The duplicates given that are
+// chosen (FindDuplicates) are made calls of it too.  One undo across the
+// files.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEExtractMethod::Extract(SIDEExtraction* psExtraction, const char* szName, CChars* pszStatus, CArrayIDEExtractDuplicates* papsDuplicates)
 {
 	CIDEFileEdits			cFiles;
 	CIDETextEdits*			pcEdits;
@@ -942,8 +1658,13 @@ bool CIDEExtractMethod::Extract(SIDEExtraction* psExtraction, const char* szName
 	CChars					szLine;
 	CChars					szMemberIndent;
 	CChars					szMessage;
+	CChars					szWhyNot;
+	SIDEExtractDuplicate*	psDuplicate;
+	CArrayInt				aiTaken;
 	const char*				szProblem;
 	char*					szText;
+	size					uiDuplicates;
+	size					j;
 	size					uiDeclared;
 	size					uiStart;
 	size					uiEnd;
@@ -952,6 +1673,7 @@ bool CIDEExtractMethod::Extract(SIDEExtraction* psExtraction, const char* szName
 	size					uiNameColumn;
 	size					i;
 	bool					bMember;
+	bool					bStatic;
 
 	szProblem = psExtraction->bPossible ? GetNameProblem(psExtraction, szName) : "It can't be extracted.";
 	if (szProblem)
@@ -999,6 +1721,28 @@ bool CIDEExtractMethod::Extract(SIDEExtraction* psExtraction, const char* szName
 	}
 	szSelected.Init();
 	szSelected.AppendSubString(szText, psExtraction->uiStart, psExtraction->uiEnd);
+	szWhyNot.Init();
+	if (HasPointers(psExtraction, false) && !AppendPointerBody(psExtraction, &szSelected, &szWhyNot))
+	{
+		szMessage.Init("Extract Method: ");
+		szMessage.Append(szWhyNot)->Append('.');
+		if (pszStatus)
+		{
+			pszStatus->Set(szMessage);
+		}
+		else
+		{
+			mpcContent->ShowStatus(szMessage.Text());
+		}
+		szMessage.Kill();
+		szWhyNot.Kill();
+		szSelected.Kill();
+		szBody.Kill();
+		cFiles.Kill();
+		return false;
+	}
+	szWhyNot.Kill();
+	bStatic = psExtraction->bStatic && psExtraction->bCanBeStatic;
 	if (psExtraction->bExpression)
 	{
 		szBody.Append("\treturn ")->Append(szSelected)->Append(";\n");
@@ -1061,7 +1805,7 @@ bool CIDEExtractMethod::Extract(SIDEExtraction* psExtraction, const char* szName
 		//In the class, as its members are written there: its name in the column the function it came from has its
 		//name in, and one statement on its line (CIDEDefinitions::AppendBodyInClass).
 		szDefinition.Append(szMemberIndent);
-		szLine.Init();
+		szLine.Init(bStatic ? "static " : "");
 		AppendReturnType(psExtraction, &szLine);
 		uiColumn = FindIDEVisualColumn(szMemberIndent.Text(), 0, szMemberIndent.Length(), 4) + szLine.Length();
 		uiNameColumn = FindIDEVisualColumn(szText, uiAt, FindIDETextOffset(szText, psExtraction->sFunction.sName.iLine, psExtraction->sFunction.sName.iColumn), 4);
@@ -1079,7 +1823,7 @@ bool CIDEExtractMethod::Extract(SIDEExtraction* psExtraction, const char* szName
 		szDefinition.Append('(');
 		AppendParameters(psExtraction, false, &szDefinition);
 		szDefinition.Append(')');
-		szDefinition.Append(psExtraction->sFunction.szQualifiers);
+		szDefinition.Append(bStatic ? "" : psExtraction->sFunction.szQualifiers.Text());
 		szLine.Init("{\n");
 		szLine.Append(szBody);
 		szLine.Append("}");
@@ -1119,14 +1863,14 @@ bool CIDEExtractMethod::Extract(SIDEExtraction* psExtraction, const char* szName
 	//Its declaration in the class, where the function it came from is defined outside it.
 	if (bMember && !psExtraction->sFunction.bInClass)
 	{
-		szLine.Init("\t");
+		szLine.Init(bStatic ? "\tstatic " : "\t");
 		AppendReturnType(psExtraction, &szLine);
 		szLine.Append('\t');
 		szLine.Append(szName);
 		szLine.Append('(');
 		AppendParameters(psExtraction, false, &szLine);
 		szLine.Append(')');
-		szLine.Append(psExtraction->sFunction.szQualifiers);
+		szLine.Append(bStatic ? "" : psExtraction->sFunction.szQualifiers.Text());
 		szLine.Append(";\n");
 		mpcContent->GetMoveMembers()->AddMember(psExtraction->szClassKey.Text(), IDE_ACCESS_PROTECTED, szLine.Text(), &cFiles, true);
 		szLine.Kill();
@@ -1165,11 +1909,45 @@ bool CIDEExtractMethod::Extract(SIDEExtraction* psExtraction, const char* szName
 		}
 	}
 	pcEdits->Replace(psExtraction->uiStart, psExtraction->uiEnd, szCall.Text());
+
+	//The duplicates chosen: each a call, with its own variables that only it used taken out as the selection's are.
+	uiDuplicates = 0;
+	aiTaken.Init();
+	for (i = 0; papsDuplicates && (i < papsDuplicates->NumElements()); i++)
+	{
+		psDuplicate = papsDuplicates->GetPtr(i);
+		if (!psDuplicate->bChosen)
+		{
+			continue;
+		}
+		for (j = 0; j < psDuplicate->sExtraction.asVariables.NumElements(); j++)
+		{
+			psVariable = psDuplicate->sExtraction.asVariables.Get(j);
+			if ((psVariable->iRole == IDE_EXTRACT_MOVED) && (aiTaken.Find((int)psVariable->uiDeclaration) == ARRAY_ELEMENT_NOT_FOUND))
+			{
+				aiTaken.Add((int)psVariable->uiDeclaration);
+				uiStart = psVariable->uiDeclaration;
+				uiEnd = psVariable->uiDeclarationEnd;
+				ExtendIDEDeletion(szText, &uiStart, &uiEnd, true);
+				pcEdits->Replace(uiStart, uiEnd, "");
+			}
+		}
+		szLine.Init();
+		AppendDuplicateCall(psExtraction, psDuplicate, szName, &szLine);
+		pcEdits->Replace(psDuplicate->sExtraction.uiStart, psDuplicate->sExtraction.uiEnd, szLine.Text());
+		szLine.Kill();
+		uiDuplicates++;
+	}
+	aiTaken.Kill();
 	cFiles.Apply();
 
 	szMessage.Init("Extracted ");
 	AppendSignature(psExtraction, szName, true, &szMessage);
 	szMessage.Append(".");
+	if (uiDuplicates > 0)
+	{
+		szMessage.Append("  ")->Append((uint32)uiDuplicates)->Append((uiDuplicates == 1) ? " other place it was written is a call of it too." : " other places it was written are calls of it too.");
+	}
 	if (pszStatus)
 	{
 		pszStatus->Set(szMessage);
@@ -1217,6 +1995,10 @@ char* CIDEExtractMethod::PrintExtraction(SIDEExtraction* psExtraction, CChars* p
 		psVariable = psExtraction->asVariables.Get(i);
 		pszDest->Append("  ")->Append(psVariable->szName)->Append(": ")->Append(aszRoles[psVariable->iRole])->Append('\n');
 	}
+	if (psExtraction->bCanBeStatic)
+	{
+		pszDest->Append("  it can be static\n");
+	}
 	return pszDest->Text();
 }
 
@@ -1237,6 +2019,29 @@ bool CIDEExtractMethod::ApproveName(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// A tick of the dialog changed (or it is being made): what is asked for
+// is the ticks', and the signature shown is what it will be.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEExtractMethod::TickChanged(CCheckBox* pcBox)
+{
+	CChars	szText;
+
+	if (!mpsShown)
+	{
+		return;
+	}
+	mpsShown->bPointers = mpPointersBox.IsNotNull() && mpPointersBox->IsTicked();
+	mpsShown->bStatic = mpStaticBox.IsNotNull() && mpStaticBox->IsTicked();
+	szText.Init((mpsShown->bStatic && mpsShown->bCanBeStatic) ? "static " : "");
+	AppendSignature(mpsShown, "...", true, &szText);
+	mpSignature->SetText(szText.Text());
+	szText.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // IntelliJ's Extract Method for the selection: its dialog (the name, and
 // the function as it will be declared), then the extraction.  False if
 // nothing changed.
@@ -1244,9 +2049,11 @@ bool CIDEExtractMethod::ApproveName(void)
 //////////////////////////////////////////////////////////////////////////
 bool CIDEExtractMethod::ShowExtract(void)
 {
-	SIDEExtraction	sExtraction;
-	CChars			szText;
-	bool			bResult;
+	SIDEExtraction				sExtraction;
+	CArrayIDEExtractDuplicates	apsDuplicates;
+	Ptr<CLabel>					pLabel;
+	CChars						szText;
+	bool						bResult;
 
 	sExtraction.Init();
 	if (!FindExtraction(&sExtraction))
@@ -1275,6 +2082,30 @@ bool CIDEExtractMethod::ShowExtract(void)
 	mpSignature->SetAlignment(CSH_Left, CSV_Center);
 	mpDialog->AddEditor("Signature:", mpSignature);
 	szText.Kill();
+
+	//Its options, as IntelliJ's dialog has them: pointers for what it would be given by reference, ticked; and
+	//static, for a class's function, where the selection uses nothing of the object.
+	mpPointersBox = NULL;
+	mpStaticBox = NULL;
+	if (HasPointers(&sExtraction, true))
+	{
+		mpPointersBox = mpDialog->AddCheckBox("Pass what it changes by pointer", true);
+		mpPointersBox->GetChangeEvent()->Add(this, &CIDEExtractMethod::TickChanged);
+	}
+	if (sExtraction.bCanBeStatic)
+	{
+		mpStaticBox = mpDialog->AddCheckBox("Static", false);
+		mpStaticBox->GetChangeEvent()->Add(this, &CIDEExtractMethod::TickChanged);
+	}
+	else if (!sExtraction.szClassKey.Empty())
+	{
+		//A check box can't be shown that can't be ticked: it says why there is none.
+		pLabel = OMalloc<CLabel>(mpDialog->GetWindow(), mpcContent->GetDimFont(), "It can't be static: it uses its object.");
+		pLabel->SetAlignment(CSH_Left, CSV_Center);
+		mpDialog->AddEditor("", pLabel);
+		pLabel = NULL;
+	}
+	TickChanged(NULL);
 	mpError = OMalloc<CLabel>(mpDialog->GetWindow(), mpcContent->GetDimFont(), "");
 	mpDialog->AddEditor("", mpError);
 	mpDialog->SetOKCaption("Refactor");
@@ -1284,12 +2115,30 @@ bool CIDEExtractMethod::ShowExtract(void)
 	szText.Init(bResult ? mpNameField->GetText() : "");
 	mpDialog->ClearApprover();
 	mpcContent->GetScript()->StopWatchingDialog();
+	if (mpPointersBox.IsNotNull())
+	{
+		mpPointersBox->GetChangeEvent()->Remove(this);
+	}
+	if (mpStaticBox.IsNotNull())
+	{
+		mpStaticBox->GetChangeEvent()->Remove(this);
+	}
+	mpPointersBox = NULL;
+	mpStaticBox = NULL;
 	mpNameField = NULL;
 	mpSignature = NULL;
 	mpError = NULL;
 	mpDialog = NULL;
 	mpsShown = NULL;
-	bResult = bResult && Extract(&sExtraction, szText.Text());
+
+	//The other places it is written, to be made calls too: shown with a tick each.
+	apsDuplicates.Init();
+	if (bResult && (FindDuplicates(&sExtraction, &apsDuplicates) > 0))
+	{
+		bResult = ChooseDuplicates(&apsDuplicates);
+	}
+	bResult = bResult && Extract(&sExtraction, szText.Text(), NULL, &apsDuplicates);
+	KillDuplicates(&apsDuplicates);
 	szText.Kill();
 	sExtraction.Kill();
 	return bResult;

@@ -98,10 +98,31 @@ struct SIDEExtraction
 	bool						bBefore;			//The new function is defined before the one it is in (a function of no class is
 													//declared nowhere else), not after it.
 	CArrayChars					aszUsed;			//The names the file writes.
+	bool						bCanBeStatic;		//It is a class's and the selection uses nothing of the object: the new function can be static.
+	bool						bPointers;			//Asked for: what the new function is given by reference it is given by pointer ("int* piLow"),
+													//the statements' uses of it rewritten (*piLow) and the call giving its address.
+	bool						bStatic;			//Asked for, where bCanBeStatic: the new function is static.
 
 	void	Init(void);
 	void	Kill(void);
 };
+
+
+//Another place in the file the selection's statements (or its expression) are written, the variables' names apart:
+//Extract Method can make it a call of the new function too.
+struct SIDEExtractDuplicate
+{
+	SIDEExtraction	sExtraction;	//What Extract Method finds for it, where it is.
+	CArrayChars		aszNames;		//What it calls each of the selection's variables, by their number; empty for one it doesn't name.
+	int32			iLine;			//Its first line, from 0.
+	bool			bChosen;		//It is made a call.
+
+	void	Init(void);
+	void	Kill(void);
+};
+
+
+typedef CArrayTemplatePtr<SIDEExtractDuplicate>	CArrayIDEExtractDuplicates;
 
 
 //IntelliJ's Extract Method (Ctrl+Alt+M; Refactorings.txt, 9): the selected statements, or expression, become a
@@ -133,6 +154,8 @@ protected:
 	Ptr<CTextField>		mpNameField;
 	Ptr<CLabel>			mpSignature;
 	Ptr<CLabel>			mpError;
+	Ptr<CCheckBox>		mpPointersBox;  //"Pass what it changes by pointer", where it is given anything by reference.
+	Ptr<CCheckBox>		mpStaticBox;  //"Static", for a class's function that can be.
 	SIDEExtraction*		mpsShown;  //What the dialog is extracting.  Not held.
 
 public:
@@ -150,7 +173,10 @@ public:
 	bool	ShowExtract(void);
 	bool	FindExtraction(SIDEExtraction* psDest);
 	const char*	GetNameProblem(SIDEExtraction* psExtraction, const char* szName);
-	bool	Extract(SIDEExtraction* psExtraction, const char* szName, CChars* pszStatus = NULL);
+	bool	Extract(SIDEExtraction* psExtraction, const char* szName, CChars* pszStatus = NULL, CArrayIDEExtractDuplicates* papsDuplicates = NULL);
+	size	FindDuplicates(SIDEExtraction* psExtraction, CArrayIDEExtractDuplicates* papsDest);
+	void	KillDuplicates(CArrayIDEExtractDuplicates* papsDuplicates);
+	bool	ChooseDuplicates(CArrayIDEExtractDuplicates* papsDuplicates);
 	void	AppendSignature(SIDEExtraction* psExtraction, const char* szName, bool bQualified, CChars* pszDest);
 	void	AppendCall(SIDEExtraction* psExtraction, const char* szName, CChars* pszDest);
 	char*	PrintExtraction(SIDEExtraction* psExtraction, CChars* pszDest);
@@ -164,6 +190,13 @@ protected:
 	void	ChooseRoles(SIDEExtraction* psDest);
 	void	AppendReturnType(SIDEExtraction* psExtraction, CChars* pszDest);
 	void	AppendParameters(SIDEExtraction* psExtraction, bool bNamesOnly, CChars* pszDest);
+	bool	IsPointer(SIDEExtraction* psExtraction, SIDEExtractVariable* psVariable);
+	bool	HasPointers(SIDEExtraction* psExtraction, bool bIfAsked);
+	bool	FindObjectUse(SIDEExtraction* psDest, const char* szText);
+	bool	AppendPointerBody(SIDEExtraction* psExtraction, CChars* pszSelected, CChars* pszWhyNot);
+	void	TickChanged(CCheckBox* pcBox);
+	bool	IsDuplicate(SIDEExtraction* psExtraction, SIDEExtractDuplicate* psDuplicate);
+	void	AppendDuplicateCall(SIDEExtraction* psExtraction, SIDEExtractDuplicate* psDuplicate, const char* szName, CChars* pszDest);
 };
 
 

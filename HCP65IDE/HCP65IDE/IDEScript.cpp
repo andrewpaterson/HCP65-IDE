@@ -2098,10 +2098,12 @@ void CIDEScript::RunEditStep(const char* szStep)
 		szPrinted.Kill();
 		sInlining.Kill();
 	}
-	else if ((strcmp(szStep, "extractable") == 0) || (strncmp(szStep, "extract:", 8) == 0))
+	else if ((strcmp(szStep, "extractable") == 0) || (strncmp(szStep, "extract:", 8) == 0) || (strncmp(szStep, "extractpointers:", 16) == 0) || (strncmp(szStep, "extractstatic:", 14) == 0) || (strncmp(szStep, "extractduplicates:", 18) == 0))
 	{
 		//What Extract Method found for the selection (extractable): the function it would be and each variable's part
-		//in it; or the method extracted with a name (extract:<name>).
+		//in it; or the method extracted with a name (extract:<name>), with what it would be given by reference given
+		//by pointer (extractpointers:<name>, the dialog's tick), or static (extractstatic:<name>), or with the other
+		//places it is written made calls too (extractduplicates:<name>: "Duplicates: line 40 in CMix::Sum, ...").
 		SIDEExtraction	sExtraction;
 		CChars			szPrinted;
 
@@ -2115,9 +2117,30 @@ void CIDEScript::RunEditStep(const char* szStep)
 			szPrinted.Init();
 			printf("%s", mpcContent->GetExtractMethod()->PrintExtraction(&sExtraction, &szPrinted));
 			szPrinted.Kill();
-			if (sExtraction.bPossible && (szStep[7] == ':'))
+			if (sExtraction.bPossible && strchr(szStep, ':'))
 			{
-				mpcContent->GetExtractMethod()->Extract(&sExtraction, &szStep[8]);
+				sExtraction.bPointers = (strncmp(szStep, "extractpointers:", 16) == 0);
+				sExtraction.bStatic = (strncmp(szStep, "extractstatic:", 14) == 0);
+				CArrayIDEExtractDuplicates	apsDuplicates;
+				size						uiDuplicate;
+
+				apsDuplicates.Init();
+				if (strncmp(szStep, "extractduplicates:", 18) == 0)
+				{
+					mpcContent->GetExtractMethod()->FindDuplicates(&sExtraction, &apsDuplicates);
+					printf("Duplicates:%s", (apsDuplicates.NumElements() == 0) ? " none" : "");
+					for (uiDuplicate = 0; uiDuplicate < apsDuplicates.NumElements(); uiDuplicate++)
+					{
+						printf("%s line %d in %s%s", (uiDuplicate > 0) ? "," : "", (int)apsDuplicates.GetPtr(uiDuplicate)->iLine + 1, apsDuplicates.GetPtr(uiDuplicate)->sExtraction.szQualifier.Text(),
+							   apsDuplicates.GetPtr(uiDuplicate)->sExtraction.sFunction.szOwnName.Text());
+					}
+					printf("\n");
+				}
+				szPrinted.Init();
+				mpcContent->GetExtractMethod()->Extract(&sExtraction, strchr(szStep, ':') + 1, &szPrinted, &apsDuplicates);
+				printf("Status: %s\n", szPrinted.Text());
+				szPrinted.Kill();
+				mpcContent->GetExtractMethod()->KillDuplicates(&apsDuplicates);
 				if (gbIDEScriptRenameSaves)
 				{
 					mpcContent->GetDocuments()->SaveAllFiles();
