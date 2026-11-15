@@ -627,6 +627,9 @@ bool CIDEExtractClass::Extract(SIDEMembersMove* psMove, int iKind, const char* s
 	size				uiAt;
 	size				uiBrace;
 	size				uiMoved;
+	size				uiLabels;
+	size				uiUnsure;
+	size				uiLeft;
 	size				i;
 	size				j;
 	int					iAccess;
@@ -646,6 +649,8 @@ bool CIDEExtractClass::Extract(SIDEMembersMove* psMove, int iKind, const char* s
 	pcMoveClass = &mpcContent->GetMoveClass();
 	mpcContent->GetDocuments()->UpdateEditedTabsNow();
 	SetTarget(psMove, iKind, szName);
+	uiLabels = 0;
+	uiLeft = 0;
 
 	//A class had as a field is given an Init of its own, empty, for the class it came from to call: unless one of
 	//the functions that move is an Init.
@@ -691,6 +696,20 @@ bool CIDEExtractClass::Extract(SIDEMembersMove* psMove, int iKind, const char* s
 			continue;
 		}
 		uiMoved++;
+		if (!psMember->bAbstract)
+		{
+			//Hand written assembly's labels for it get the class it goes to (CIDERename::MoveAssembly).
+			szLine.Init();
+			GetIDESymbolScope(psMove->sClass.szKey.Text(), &szLine);
+			if (!szLine.Empty())
+			{
+				szLine.Append("::");
+			}
+			szLine.Append(szName);
+			uiLabels += mpcContent->GetRename()->MoveAssembly(psMember->szKey.Text(), szLine.Text(), &cFiles, &uiUnsure);
+			uiLeft += uiUnsure;
+			szLine.Kill();
+		}
 		szDeclaration.Init();
 		if (psMember->bAbstract)
 		{
@@ -942,6 +961,14 @@ bool CIDEExtractClass::Extract(SIDEMembersMove* psMove, int iKind, const char* s
 		{
 			szMessage.Append(" and ");
 			szMessage.Append(GetIDEFileNamePart(szNewSource.Text()));
+		}
+		if (uiLabels > 0)
+		{
+			szMessage.Append("; ")->Append((uint32)uiLabels)->Append((uiLabels == 1) ? " label in assembly changed" : " labels in assembly changed");
+		}
+		if (uiLeft > 0)
+		{
+			szMessage.Append("; ")->Append((uint32)uiLeft)->Append((uiLeft == 1) ? " label that may be an overload's left" : " labels that may be an overload's left");
 		}
 		szMessage.Append(".");
 		if (pszStatus)

@@ -1486,6 +1486,13 @@ CHECKS = [
 		 r'^7\|\t\tjsr _CTun__Fill$', r'^8\|\t\tjsr _Stir__FPC4CTun$', r'^9\|\t\tjsr _CTun__Drain__Fi$',
 		 r'^Status: Converted Stir .*1 label in assembly\.$', r'^8\|\t\tjsr _CTun__Stir$'],
 		[]),
+	('extract-superclass-assembly', dict(MakeMoveAssemblyCopy(), **{
+		#Extract Superclass where hand written assembly names the members that go: their labels get the new class.
+		'WAIT_INDEX': '1', 'OPEN': 'Tun.h', 'CARET': '14:7',
+		'DEBUG': 'edit:renamesearch:---s,edit:extractsuperclass:CKettle|miLevel;Fill();Stir(),printdisklines:TunW65C816.asm'}),
+		[r'^Status: Extracted the superclass CKettle from CTun: 3 members, in Kettle\.h and Kettle\.cpp; 4 labels in assembly changed\.$',
+		 r'^6\|\t\tlda CKettle_miLevel,x$', r'^7\|\t\tjsr _CKettle__Fill$', r'^8\|\t\tjsr _CKettle__Stir$', r'^9\|\t\tjsr _CTun__Drain__Fi$', r'^12\|\t\tjsr _CVat__Init$', r'^13\|\t\tjsr _CKettle__Fill$'],
+		[]),
 	('pull-up-assembly', dict(MakeMoveAssemblyCopy(), **{
 		#Pull Members Up where hand written assembly names the members by the compiler's labels: a field's layout
 		#constant, a function's label (twice) and an overload's that is told by its parameters get the class they

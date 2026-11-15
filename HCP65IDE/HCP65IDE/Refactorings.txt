@@ -453,8 +453,9 @@ Where it is
      parameters tell it apart (one that fits another overload too is left and said).  Not where the members go
      down to more than one class, nor for what only its declaration goes up.  Convert to Member Function and
      Convert to Function change the function's label too: its class and its parameters are both in it, so the
-     compiler is asked for the label of its definition before and after.  Still to do: Extract Class and
-     Superclass, and Extract Template Parameter (a template instance's labels have its arguments in them).
+     compiler is asked for the label of its definition before and after.  Extract Superclass and Extract Class
+     change the labels of the members that go, as Pull Up does.  Still to do: Extract Template Parameter (a
+     template instance's labels have its arguments in them).
 
 
 When the plan is done
