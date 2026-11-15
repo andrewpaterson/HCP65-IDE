@@ -340,6 +340,17 @@ bool CIDEEdit::UndoLogGroup(size uiGroup, bool bShow)
 		psStep = mcUndoLog.Get(i - 1);
 		if ((psStep->uiGroup == uiGroup) && !mcUndoLog.IsUndone(i - 1))
 		{
+			if (psStep->bDeleted)
+			{
+				//A file Safe Delete deleted, made again as it was.
+				bRenames = true;
+				if (!mpcContent->GetMoveClass()->RecreateFile(psStep->szDocument.Text(), psStep->szRenamed.Text(), psStep->szContent.Text()))
+				{
+					ShowRenameNotMoved(psStep->szRenamed.Text(), psStep->szDocument.Text());
+				}
+				mcUndoLog.MarkUndone(i - 1);
+				continue;
+			}
 			if (psStep->bCreated)
 			{
 				//A file a refactoring made, taken away.  Its tab's closing forgets the tab's edits: the step is found
@@ -413,6 +424,18 @@ bool CIDEEdit::RedoLogGroup(size uiGroup, bool bShow)
 		psStep = mcUndoLog.Get(i);
 		if ((psStep->uiGroup == uiGroup) && mcUndoLog.IsUndone(i))
 		{
+			if (psStep->bDeleted)
+			{
+				//Deleted again.  Its tab's closing forgets the tab's edits: the steps are looked through from the start.
+				bRenames = true;
+				mcUndoLog.MarkRedone(i);
+				if (!RemoveCreatedFile(psStep))
+				{
+					ShowRenameNotMoved(psStep->szDocument.Text(), (char*)"nothing: it couldn't be deleted");
+				}
+				i = MAX_SIZE;
+				continue;
+			}
 			if (psStep->bCreated)
 			{
 				//Made again, with the text it had.
@@ -475,6 +498,7 @@ void CIDEEdit::FileClosed(char* szFileName) { mcUndoLog.RemoveDocument(szFileNam
 void CIDEEdit::FileRenamed(char* szOldFileName, char* szNewFileName) { mcUndoLog.RenameDocument(szOldFileName, szNewFileName); }
 void CIDEEdit::LogFileRenamed(char* szOldFileName, char* szNewFileName) { mcUndoLog.Renamed(szOldFileName, szNewFileName); }
 void CIDEEdit::LogFileCreated(char* szFileName, char* szBeside) { mcUndoLog.Created(szFileName, szBeside); }
+void CIDEEdit::LogFileDeleted(char* szFileName, char* szBeside, char* szContent) { mcUndoLog.Deleted(szFileName, szBeside, szContent); }
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -495,7 +519,7 @@ void CIDEEdit::KeepCreatedTexts(size uiGroup)
 	for (i = 0; i < mcUndoLog.NumSteps(); i++)
 	{
 		psStep = mcUndoLog.Get(i);
-		if ((psStep->uiGroup != uiGroup) || !psStep->bCreated || mcUndoLog.IsUndone(i))
+		if ((psStep->uiGroup != uiGroup) || !psStep->bCreated || psStep->bDeleted || mcUndoLog.IsUndone(i))
 		{
 			continue;
 		}
@@ -560,7 +584,7 @@ void CIDEEdit::RenamesChanged(size uiGroup)
 	for (i = 0; i < mcUndoLog.NumSteps(); i++)
 	{
 		psStep = mcUndoLog.Get(i);
-		if ((psStep->uiGroup == uiGroup) && !psStep->bRename && !psStep->bCreated)
+		if ((psStep->uiGroup == uiGroup) && !psStep->bRename && !psStep->bCreated && !psStep->bDeleted)
 		{
 			pTab = mpcContent->GetDocuments()->FindTab(psStep->szDocument.Text());
 			if (pTab.IsNotNull())

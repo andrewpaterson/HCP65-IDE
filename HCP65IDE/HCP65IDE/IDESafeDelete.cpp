@@ -49,6 +49,8 @@ void SIDESafeDeletion::Init(void)
 	uiText = 0;
 	bDeletable = false;
 	szWhyNot.Init();
+	aszFiles.Init();
+	bDeleteFiles = false;
 }
 
 
@@ -58,6 +60,7 @@ void SIDESafeDeletion::Init(void)
 //////////////////////////////////////////////////////////////////////////
 void SIDESafeDeletion::Kill(void)
 {
+	aszFiles.Kill();
 	szWhyNot.Kill();
 	KillIDELocations(&asUsages);
 	aiStatements.Kill();
@@ -278,6 +281,7 @@ void CIDESafeDelete::Class(void)
 	U_Pointer(mpcContent);
 	M_Pointer(mpDialog);
 	M_Pointer(mpCommentsBox);
+	M_Pointer(mpFilesBox);
 	M_Pointer(mpTextBox);
 	U_Unknown(CArrayIDERefactorUnits, mapcUnits);
 	U_Bool(mbComments);
@@ -951,6 +955,7 @@ bool CIDESafeDelete::FindDeletion(SIDESafeDeletion* psDest)
 		SearchFiles(psDest);
 	}
 	KillUnits();
+	FindEmptiedFiles(psDest);
 	return true;
 }
 
@@ -1004,6 +1009,10 @@ char* CIDESafeDelete::PrintDeletion(SIDESafeDeletion* psDeletion, CChars* pszDes
 			szFile.Kill();
 		}
 		cFile.Kill();
+	}
+	for (i = 0; i < psDeletion->aszFiles.NumElements(); i++)
+	{
+		pszDest->Append("  leaves nothing in ")->Append(GetIDEFileNamePart(psDeletion->aszFiles.GetText(i)))->AppendNewLine();
 	}
 	for (i = 0; i < psDeletion->asUsages.NumElements(); i++)
 	{
@@ -1098,6 +1107,7 @@ bool CIDESafeDelete::Delete(SIDESafeDeletion* psDeletion, CChars* pszStatus)
 	CChars				szMessage;
 	char*				szText;
 	size				uiFile;
+	size				uiDeleted;
 	size				i;
 	size				j;
 	bool				bOpened;
@@ -1111,7 +1121,7 @@ bool CIDESafeDelete::Delete(SIDESafeDeletion* psDeletion, CChars* pszStatus)
 		for (j = 0; (j < aszFiles.NumElements()) && (StringInsensitiveCompare(aszFiles.GetText(j), psRange->szFileName.Text()) != 0); j++)
 		{
 		}
-		if (j < aszFiles.NumElements())
+		if ((j < aszFiles.NumElements()) || (psDeletion->bDeleteFiles && (psDeletion->aszFiles.GetIndex(psRange->szFileName.Text()) != ARRAY_ELEMENT_NOT_FOUND)))
 		{
 			continue;
 		}
@@ -1179,6 +1189,7 @@ bool CIDESafeDelete::Delete(SIDESafeDeletion* psDeletion, CChars* pszStatus)
 			pEditor->ReplaceRanges(asTextRanges.GetData(), asTextRanges.NumElements(), "");
 			asTextRanges.Kill();
 		}
+		uiDeleted = psDeletion->bDeleteFiles ? DeleteFiles(psDeletion) : 0;
 		mpcContent->GetEdit()->EndUndoGroup();
 
 		szMessage.Init("Deleted ");
@@ -1188,6 +1199,16 @@ bool CIDESafeDelete::Delete(SIDESafeDeletion* psDeletion, CChars* pszStatus)
 		szMessage.Append(psDeletion->asRanges.NumElements() == 1 ? " declaration in " : " declarations and definitions in ");
 		szMessage.Append((uint32)aszFiles.NumElements());
 		szMessage.Append(aszFiles.NumElements() == 1 ? " file" : " files");
+		if (uiDeleted > 0)
+		{
+			szMessage.Clear();
+			szMessage.Append("Deleted ")->Append(psDeletion->szName)->Append(" and ");
+			for (i = 0; i < psDeletion->aszFiles.NumElements(); i++)
+			{
+				szMessage.Append((i == 0) ? "" : ((i + 1 == psDeletion->aszFiles.NumElements()) ? " and " : ", "))->Append(GetIDEFileNamePart(psDeletion->aszFiles.GetText(i)));
+			}
+			szMessage.Append(", which had nothing else");
+		}
 		if (psDeletion->aszKeys.NumElements() > 1)
 		{
 			szMessage.Append(", with ");
@@ -1211,6 +1232,350 @@ bool CIDESafeDelete::Delete(SIDESafeDeletion* psDeletion, CChars* pszStatus)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Whether a file's text has nothing in it once the ranges (in order, not
+// overlapping) are taken out: only comments, an include guard (#ifndef,
+// a #define of a name alone, #endif), #pragma and #includes.
+//
+//////////////////////////////////////////////////////////////////////////
+static bool IsIDEFileEmptied(const char* szText, CArrayTextRange* pasRanges)
+{
+	CChars	szLeft;
+	char*	sz;
+	size	uiAt;
+	size	i;
+	bool	bEmpty;
+	bool	bComment;
+
+	szLeft.Init();
+	uiAt = 0;
+	for (i = 0; i < pasRanges->NumElements(); i++)
+	{
+		szLeft.AppendSubString(szText, uiAt, pasRanges->Get(i)->uiStart);
+		szLeft.Append('\n');
+		uiAt = pasRanges->Get(i)->uiEnd;
+	}
+	szLeft.Append(&szText[uiAt]);
+
+	bEmpty = true;
+	bComment = false;
+	sz = szLeft.Text();
+	while (bEmpty && (*sz != '\0'))
+	{
+		//A line: its start, after white space.
+		for (; (*sz == ' ') || (*sz == '\t') || (*sz == '\r') || (*sz == '\n'); sz++)
+		{
+		}
+		if (bComment)
+		{
+			for (; (*sz != '\0') && !((sz[0] == '*') && (sz[1] == '/')); sz++)
+			{
+			}
+			sz += (*sz != '\0') ? 2 : 0;
+			bComment = false;
+			continue;
+		}
+		if (*sz == '\0')
+		{
+			break;
+		}
+		if ((sz[0] == '/') && (sz[1] == '*'))
+		{
+			bComment = true;
+			sz += 2;
+			continue;
+		}
+		if ((sz[0] == '/') && (sz[1] == '/'))
+		{
+		}
+		else if (*sz == '#')
+		{
+			for (sz++; (*sz == ' ') || (*sz == '\t'); sz++)
+			{
+			}
+			if (strncmp(sz, "define", 6) == 0)
+			{
+				//A guard's: a name and nothing after it.
+				for (sz += 6; (*sz == ' ') || (*sz == '\t'); sz++)
+				{
+				}
+				for (; IsIDENameChar(*sz); sz++)
+				{
+				}
+				for (; (*sz == ' ') || (*sz == '\t') || (*sz == '\r'); sz++)
+				{
+				}
+				bEmpty = (*sz == '\n') || (*sz == '\0') || ((sz[0] == '/') && (sz[1] == '/'));
+			}
+			else
+			{
+				bEmpty = (strncmp(sz, "include", 7) == 0) || (strncmp(sz, "ifndef", 6) == 0) || (strncmp(sz, "endif", 5) == 0) || (strncmp(sz, "pragma", 6) == 0);
+			}
+		}
+		else
+		{
+			bEmpty = false;
+		}
+		for (; (*sz != '\0') && (*sz != '\n'); sz++)
+		{
+		}
+	}
+	szLeft.Kill();
+	return bEmpty;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The files a class's deletion leaves with nothing in them
+// (psDeletion->aszFiles): its own header and source file, where nothing
+// else is declared or defined in them.  They are deleted with it
+// (bDeleteFiles) unless who asks says not.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDESafeDelete::FindEmptiedFiles(SIDESafeDeletion* psDeletion)
+{
+	CArrayChars		aszFiles;
+	CArrayTextRange	asTextRanges;
+	STextRange		sTextRange;
+	STextRange*		psTextRange;
+	SIDEFileRange*	psRange;
+	CTextFile		cFile;
+	char*			szText;
+	size			uiLength;
+	size			uiFile;
+	size			i;
+	size			j;
+
+	psDeletion->aszFiles.ReInit();
+	psDeletion->bDeleteFiles = false;
+	if (!psDeletion->bDeletable || ((psDeletion->uiKind != CPPSK_Class) && (psDeletion->uiKind != CPPSK_ClassTemplate)))
+	{
+		return;
+	}
+	aszFiles.Init();
+	for (i = 0; i < psDeletion->asRanges.NumElements(); i++)
+	{
+		aszFiles.AddIfUnique(psDeletion->asRanges.Get(i)->szFileName.Text());
+	}
+	for (uiFile = 0; uiFile < aszFiles.NumElements(); uiFile++)
+	{
+		cFile.Init();
+		if (mpcContent->GetFindInFiles()->GetFileText(aszFiles.GetText(uiFile), &cFile, &szText, &uiLength))
+		{
+			//The file's ranges in order, one inside or against another joined to it (as Delete takes them out).
+			asTextRanges.Init();
+			for (i = 0; i < psDeletion->asRanges.NumElements(); i++)
+			{
+				psRange = psDeletion->asRanges.Get(i);
+				if (StringInsensitiveCompare(psRange->szFileName.Text(), aszFiles.GetText(uiFile)) != 0)
+				{
+					continue;
+				}
+				sTextRange.uiStart = FindIDETextOffset(szText, psRange->iLine, psRange->iColumn);
+				sTextRange.uiEnd = FindIDETextOffset(szText, psRange->iEndLine, psRange->iEndColumn);
+				ExtendIDEDeletion(szText, &sTextRange.uiStart, &sTextRange.uiEnd, psDeletion->aiStatements.GetValue(i) != 0);
+				for (j = 0; (j < asTextRanges.NumElements()) && (asTextRanges.Get(j)->uiStart < sTextRange.uiStart); j++)
+				{
+				}
+				asTextRanges.InsertAt(&sTextRange, j);
+			}
+			for (j = 1; j < asTextRanges.NumElements(); )
+			{
+				psTextRange = asTextRanges.Get(j - 1);
+				if (asTextRanges.Get(j)->uiStart <= psTextRange->uiEnd)
+				{
+					if (asTextRanges.Get(j)->uiEnd > psTextRange->uiEnd)
+					{
+						psTextRange->uiEnd = asTextRanges.Get(j)->uiEnd;
+					}
+					asTextRanges.RemoveAt(j);
+				}
+				else
+				{
+					j++;
+				}
+			}
+			if (IsIDEFileEmptied(szText, &asTextRanges))
+			{
+				psDeletion->aszFiles.Add(aszFiles.GetText(uiFile));
+			}
+			asTextRanges.Kill();
+		}
+		cFile.Kill();
+	}
+	aszFiles.Kill();
+	psDeletion->bDeleteFiles = psDeletion->aszFiles.NumElements() > 0;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A file of the projects in the directory of szFileName that isn't one
+// of those going, of its extension if there is one: what the file is
+// made beside again if its deletion is undone.  False if there is none.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDESafeDelete::FindFileBeside(SIDESafeDeletion* psDeletion, const char* szFileName, CChars* pszDest)
+{
+	CIDECodeModel*	pcModel;
+	const char*		szFile;
+	const char*		szExtension;
+	const char*		szOther;
+	size			uiDirectory;
+	size			i;
+	bool			bSame;
+
+	pcModel = mpcContent->GetCodeModel();
+	uiDirectory = (size)(GetIDEFileNamePart(szFileName) - szFileName);
+	szExtension = strrchr(szFileName, '.');
+	pszDest->Clear();
+	for (i = 0; i < pcModel->NumProjectFiles(); i++)
+	{
+		szFile = pcModel->GetProjectFile(i);
+		if (((size)(GetIDEFileNamePart(szFile) - szFile) != uiDirectory) || (MemICmp(szFile, szFileName, uiDirectory) != 0) || (psDeletion->aszFiles.GetIndex(szFile) != ARRAY_ELEMENT_NOT_FOUND) ||
+			(StringInsensitiveCompare(szFile, szFileName) == 0))
+		{
+			continue;
+		}
+		szOther = strrchr(szFile, '.');
+		bSame = szExtension && szOther && (StringInsensitiveCompare(szExtension, szOther) == 0);
+		if (pszDest->Empty() || bSame)
+		{
+			pszDest->Set(szFile);
+			if (bSame)
+			{
+				break;
+			}
+		}
+	}
+	return !pszDest->Empty();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The class's files that have nothing else are deleted outright, with
+// their items in the projects and their lines in the CMakeLists.txt, and
+// each #include of one of them is taken out of the file that has it.
+// The deletions are steps of the undo log, in the group of the
+// deletion's edits: undo makes the files again as they were.  What is
+// edited is saved and the workspace indexed again, as Rename File does.
+// How many were deleted.
+//
+//////////////////////////////////////////////////////////////////////////
+size CIDESafeDelete::DeleteFiles(SIDESafeDeletion* psDeletion)
+{
+	CIDECodeModel*		pcModel;
+	CArrayIDELocations	asLocations;
+	CArrayIDEIncludes	asIncludes;
+	CArrayTextRange		asTextRanges;
+	CArrayChars			aszUsers;
+	STextRange			sTextRange;
+	Ptr<CIDEEditorTab>	pTab;
+	CTextFile			cFile;
+	CChars				szContent;
+	CChars				szBeside;
+	const char*			szFileName;
+	char*				szText;
+	size				uiLength;
+	size				uiDeleted;
+	size				i;
+	size				j;
+	size				k;
+
+	pcModel = mpcContent->GetCodeModel();
+	uiDeleted = 0;
+	for (i = 0; i < psDeletion->aszFiles.NumElements(); i++)
+	{
+		szFileName = psDeletion->aszFiles.GetText(i);
+
+		//Its #includes, out of the files that stay.
+		asLocations.Init();
+		aszUsers.Init();
+		pcModel->FindIncludesOf(szFileName, &mpcContent->GetFindInFiles(), &asLocations);
+		for (j = 0; j < asLocations.NumElements(); j++)
+		{
+			if (psDeletion->aszFiles.GetIndex(asLocations.Get(j)->szFileName.Text()) == ARRAY_ELEMENT_NOT_FOUND)
+			{
+				aszUsers.AddIfUnique(asLocations.Get(j)->szFileName.Text());
+			}
+		}
+		KillIDELocations(&asLocations);
+		for (j = 0; j < aszUsers.NumElements(); j++)
+		{
+			pTab = mpcContent->GetDocuments()->FindTab(aszUsers.GetText(j));
+			if (pTab.IsNull())
+			{
+				pTab = mpcContent->GetDocuments()->OpenFileTab(aszUsers.GetText(j), pcModel->FindProjectOfFile(aszUsers.GetText(j)), false);
+			}
+			if (pTab.IsNull())
+			{
+				continue;
+			}
+			szText = pTab->GetEditor()->GetText();
+			asIncludes.Init();
+			asTextRanges.Init();
+			pcModel->FindIncludesIn(aszUsers.GetText(j), szText, &asIncludes);
+			for (k = 0; k < asIncludes.NumElements(); k++)
+			{
+				if (StringInsensitiveCompare(asIncludes.Get(k)->szFileName.Text(), szFileName) == 0)
+				{
+					sTextRange.uiStart = asIncludes.Get(k)->uiLineStart;
+					sTextRange.uiEnd = asIncludes.Get(k)->uiLineEnd;
+					asTextRanges.Add(&sTextRange);
+				}
+			}
+			if (asTextRanges.NumElements() > 0)
+			{
+				pTab->GetEditor()->ReplaceRanges(asTextRanges.GetData(), asTextRanges.NumElements(), "");
+			}
+			asTextRanges.Kill();
+			KillIDEIncludes(&asIncludes);
+		}
+		aszUsers.Kill();
+		pTab = NULL;
+
+		//The file: its text kept for an undo, its tab closed without asking, and it taken away.
+		szContent.Init();
+		pTab = mpcContent->GetDocuments()->FindTab(szFileName);
+		if (pTab.IsNotNull())
+		{
+			szContent.Set(pTab->GetEditor()->GetText());
+			pTab->ForgetModified();
+			pTab = NULL;
+			mpcContent->GetDocuments()->CloseFile(szFileName);
+		}
+		else
+		{
+			cFile.Init();
+			if (mpcContent->GetFindInFiles()->GetFileText(szFileName, &cFile, &szText, &uiLength))
+			{
+				szContent.Set(szText);
+			}
+			cFile.Kill();
+		}
+		szBeside.Init();
+		FindFileBeside(psDeletion, szFileName, &szBeside);
+		if (mpcContent->GetMoveClass()->RemoveCreatedFile(szFileName))
+		{
+			mpcContent->GetEdit()->LogFileDeleted((char*)szFileName, szBeside.Text(), szContent.Text());
+			uiDeleted++;
+		}
+		szBeside.Kill();
+		szContent.Kill();
+	}
+	if (uiDeleted > 0)
+	{
+		mpcContent->GetDocuments()->SaveAllFiles();
+		mpcContent->GetCodeModel()->Reset();
+		mpcContent->GetSolutions()->WorkspaceChanged(true);
+	}
+	return uiDeleted;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // IntelliJ's Safe Delete for the symbol at the caret.  A dialog asks for
 // the deletion, with the two searches; if nothing uses the symbol it is
 // deleted.  If something does, a second dialog says how much, and
@@ -1222,9 +1587,12 @@ bool CIDESafeDelete::ShowSafeDelete(void)
 {
 	SIDESafeDeletion	sDeletion;
 	CChars				szMessage;
+	CChars				szFiles;
 	Ptr<CLabel>			pLabel;
+	size				i;
 	bool				bResult;
 	bool				bDelete;
+	bool				bFiles;
 
 	sDeletion.Init();
 	if (!FindDeletion(&sDeletion))
@@ -1256,14 +1624,29 @@ bool CIDESafeDelete::ShowSafeDelete(void)
 	pLabel = NULL;
 	mpCommentsBox = mpDialog->AddCheckBox("Search in comments and strings", mbComments);
 	mpTextBox = mpDialog->AddCheckBox("Search for text occurrences", mbText);
+	mpFilesBox = NULL;
+	if (sDeletion.aszFiles.NumElements() > 0)
+	{
+		//Its files have nothing else: they go with it, unless the tick is taken off.
+		szFiles.Init("Delete files (");
+		for (i = 0; i < sDeletion.aszFiles.NumElements(); i++)
+		{
+			szFiles.Append((i > 0) ? ", " : "")->Append(GetIDEFileNamePart(sDeletion.aszFiles.GetText(i)));
+		}
+		szFiles.Append(")");
+		mpFilesBox = mpDialog->AddCheckBox(szFiles.Text(), true);
+		szFiles.Kill();
+	}
 	mpDialog->SetOKCaption("Refactor");
 	szMessage.Kill();
 
 	bDelete = false;
+	bFiles = true;
 	mpcContent->GetScript()->WatchDialog(mpDialog);
 	if (mpDialog->Show(480))
 	{
 		bDelete = true;
+		bFiles = mpFilesBox.IsNull() || mpFilesBox->IsTicked();
 		if ((mbComments != mpCommentsBox->IsTicked()) || (mbText != mpTextBox->IsTicked()))
 		{
 			//The searches change what is found.
@@ -1276,7 +1659,9 @@ bool CIDESafeDelete::ShowSafeDelete(void)
 	}
 	mpCommentsBox = NULL;
 	mpTextBox = NULL;
+	mpFilesBox = NULL;
 	mpDialog = NULL;
+	sDeletion.bDeleteFiles = sDeletion.bDeleteFiles && bFiles;
 
 	if (bDelete && (sDeletion.NumUsages() > 0))
 	{

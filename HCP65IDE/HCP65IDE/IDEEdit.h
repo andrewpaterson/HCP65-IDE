@@ -85,6 +85,7 @@ public:
 	void				FileRenamed(char* szOldFileName, char* szNewFileName);
 	void				LogFileRenamed(char* szOldFileName, char* szNewFileName);
 	void				LogFileCreated(char* szFileName, char* szBeside);
+	void				LogFileDeleted(char* szFileName, char* szBeside, char* szContent);
 	void				PressUndo(bool bRedo) override;
 	bool				CanPressUndo(bool bRedo) override;
 	void				BeginUndoGroup(void);

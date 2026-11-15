@@ -112,6 +112,7 @@ Answered
     Answered 2026-11-15: yes, and the files are deleted outright.  To do: Safe Delete's "Delete files" box, ticked,
     where the class's files have nothing else in them: the files deleted, their items taken out of the projects,
     and the #includes of the header taken out of the files that have them.
+    Done 2026-11-15 (CIDESafeDelete::FindEmptiedFiles, DeleteFiles; CUndoLog::Deleted for its undo).
 
  5. Templates as themselves and the index (T3).  A kept check, which a refactoring makes for the one file it works
     on, now types a template's body in the template's own words.  The index's checks don't: so in a template nothing

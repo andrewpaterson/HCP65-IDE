@@ -52,6 +52,8 @@ struct SIDESafeDeletion
 	size				uiText;			//and as text the index doesn't have (and in the projects' text files).
 	bool				bDeletable;
 	CChars				szWhyNot;
+	CArrayChars			aszFiles;		//A class's files that are left with nothing in them (comments, an include guard, #includes).
+	bool				bDeleteFiles;	//They are deleted with it: set where there are any, and unset by who asks.
 
 	void	Init(void);
 	void	Kill(void);
@@ -84,6 +86,7 @@ protected:
 	CIDEContent*			mpcContent;  //Not held: the content holds it.
 	Ptr<CDialog>			mpDialog;  //While one is shown.
 	Ptr<CCheckBox>			mpCommentsBox;
+	Ptr<CCheckBox>			mpFilesBox;  //"Delete files", where the class's files have nothing else.
 	Ptr<CCheckBox>			mpTextBox;
 	CArrayIDERefactorUnits	mapcUnits;  //The files parsed for the deletion being found.
 	bool					mbComments;  //Search in comments and strings.
@@ -104,6 +107,9 @@ public:
 	bool	ShowSafeDelete(void);
 	bool	FindDeletion(SIDESafeDeletion* psDest);
 	bool	Delete(SIDESafeDeletion* psDeletion, CChars* pszStatus = NULL);
+	void	FindEmptiedFiles(SIDESafeDeletion* psDeletion);
+	size	DeleteFiles(SIDESafeDeletion* psDeletion);
+	bool	FindFileBeside(SIDESafeDeletion* psDeletion, const char* szFileName, CChars* pszDest);
 	void	SetSearches(bool bComments, bool bText);
 	char*	PrintDeletion(SIDESafeDeletion* psDeletion, CChars* pszDest);
 

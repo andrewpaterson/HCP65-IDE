@@ -898,6 +898,22 @@ CHECKS = [
 		 r'^35\|\};$', r'^36\|$', r'^37\|$', r'^38\|typedef int\tTSpare;$', r'^44 lines$',
 		 r'^67\|\}$', r'^68\|$', r'^69\|$', r'^70\|/+$', r'^75\|int UnusedFunction\(int iValue\)$'],
 		[r'\|.*CLonely', r'\|.*Nothing uses it but itself', r'not deleted']),
+	('safe-delete-files', dict(MakeSafeDeleteCopy(), **{
+		#A class whose files have nothing else: they are deleted with it, off the disk and out of the project, and
+		#the #include of its header goes from the file that has it.  Undo makes them again as they were and puts the
+		#include back; redo deletes them again.
+		'WAIT_INDEX': '1', 'OPEN': 'Lone.h', 'CARET': '6:8',
+		'DEBUG': 'edit:renamesearch:---s,edit:safedelete,printprojectfiles,printdisklines:Lone.h,printdisklines:Lone.cpp,printdisklines:LoneUser.cpp,edit:open:LoneUser.cpp,edit:undoall,edit:undoall,printprojectfiles,'
+				 'printdisklines:Lone.h,printdisklines:LoneUser.cpp,edit:redoall,edit:redoall,printprojectfiles,printdisklines:Lone.cpp,printdisklines:LoneUser.cpp'}),
+		[r'^Safe Delete: CLone \[CLone\], 4 symbols, no usages$', r'^  leaves nothing in Lone\.h$', r'^  leaves nothing in Lone\.cpp$',
+		 r'^Status: Deleted CLone and Lone\.h and Lone\.cpp, which had nothing else, with 3 things declared in it\.$',
+		 r'^Project files: Extra\.cpp LoneUser\.cpp Main\.cpp Shape\.cpp Extra\.h Shape\.h ShapeW65C816\.asm$',
+		 r'^Disk lines Lone\.h:$', r'^\(none\)$', r'^Disk lines Lone\.cpp:$', r'^\(none\)$', r'^1\|#include "Shape\.h"$', r'^2\|$', r'^11 lines$',
+		 r'^Project files: Extra\.cpp Lone\.cpp LoneUser\.cpp Main\.cpp Shape\.cpp Extra\.h Lone\.h Shape\.h ShapeW65C816\.asm$',
+		 r'^6\|class CLone$', r'^16 lines$', r'^1\|#include "Shape\.h"$', r'^2\|#include "Lone\.h"$', r'^12 lines$',
+		 r'^Project files: Extra\.cpp LoneUser\.cpp Main\.cpp Shape\.cpp Extra\.h Shape\.h ShapeW65C816\.asm$',
+		 r'^Disk lines Lone\.cpp:$', r'^\(none\)$', r'^11 lines$'],
+		[]),
 	('safe-delete-class-used', dict(MakeSafeDeleteCopy(), **{
 		#A class's usages are its members' too, and its labels in assembly; a class derived from it uses it.
 		'WAIT_INDEX': '1', 'OPEN': 'Shape.h', 'CARET': '17:8', 'DEBUG': 'edit:safedelete'}),

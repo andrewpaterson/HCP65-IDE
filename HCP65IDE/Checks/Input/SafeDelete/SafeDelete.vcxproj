@@ -8,11 +8,14 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Extra.cpp" />
+    <ClCompile Include="Lone.cpp" />
+    <ClCompile Include="LoneUser.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="Shape.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Extra.h" />
+    <ClInclude Include="Lone.h" />
     <ClInclude Include="Shape.h" />
   </ItemGroup>
   <ItemGroup>
