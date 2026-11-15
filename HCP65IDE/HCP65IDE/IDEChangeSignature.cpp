@@ -2036,17 +2036,14 @@ void CIDEChangeSignature::ShowChangeStatus(CChars* pszMessage, CChars* pszStatus
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Whether hand written assembly's labels are to be looked to: the
-// solution has assembly, and its build configuration is for a processor
-// (*peTarget), whose labels they are.
+// Whether the solution has hand written assembly, and its build
+// configuration is for a processor (*peTarget), whose labels the caret's
+// label is asked for.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEChangeSignature::GetAssemblyTarget(ECPPTarget* peTarget)
 {
-	CIDECodeModel*			pcModel;
 	CBuildConfiguration*	pcConfiguration;
-	size					i;
-	bool					bAssembly;
 
 	pcConfiguration = mpcContent->GetBuildConfigurations()->HasConfiguration() ? mpcContent->GetBuildConfigurations()->GetConfiguration() : NULL;
 	if (!pcConfiguration || ((pcConfiguration->GetToolchain() != BT_W65C816) && (pcConfiguration->GetToolchain() != BT_65C64)))
@@ -2054,6 +2051,22 @@ bool CIDEChangeSignature::GetAssemblyTarget(ECPPTarget* peTarget)
 		return false;
 	}
 	*peTarget = (pcConfiguration->GetToolchain() == BT_W65C816) ? CPPT_W65C816 : CPPT_65C64;
+	return HasAssembly();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether the solution has hand written assembly: its labels are looked
+// to whatever build configuration is selected.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEChangeSignature::HasAssembly(void)
+{
+	CIDECodeModel*	pcModel;
+	size			i;
+	bool			bAssembly;
+
 	pcModel = mpcContent->GetCodeModel();
 	bAssembly = false;
 	for (i = 0; !bAssembly && (i < pcModel->NumProjectFiles()); i++)
@@ -2061,6 +2074,38 @@ bool CIDEChangeSignature::GetAssemblyTarget(ECPPTarget* peTarget)
 		bAssembly = IsIDEAssemblyFile(pcModel->GetProjectFile(i));
 	}
 	return bAssembly;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The processor an assembly file is written for, where a label is
+// spelled one way for both and becomes two: by its name ("65C64",
+// "W65C816"), or by what only the W65C816 has in its text; else the
+// selected build configuration's, or the W65C816.
+//
+//////////////////////////////////////////////////////////////////////////
+ECPPTarget CIDEChangeSignature::FindAssemblyFileTarget(const char* szFileName, const char* szText)
+{
+	CChars		szName;
+	ECPPTarget	eTarget;
+	bool		bSmall;
+	bool		bLarge;
+
+	szName.Init(GetIDEFileNamePart(szFileName));
+	szName.UpperCase();
+	bSmall = szName.Contains("65C64") || szName.Contains("6502") || szName.Contains("65C02");
+	bLarge = szName.Contains("816");
+	szName.Kill();
+	if (bSmall != bLarge)
+	{
+		return bSmall ? CPPT_65C64 : CPPT_W65C816;
+	}
+	if (szText && (strstr(szText, "\trtl") || strstr(szText, "\tjsl") || strstr(szText, "\trep") || strstr(szText, "\tsep")))
+	{
+		return CPPT_W65C816;
+	}
+	return GetAssemblyTarget(&eTarget) ? eTarget : CPPT_W65C816;
 }
 
 
@@ -2098,14 +2143,13 @@ bool CIDEChangeSignature::AppendCaretLabel(CChars* pszDest)
 //////////////////////////////////////////////////////////////////////////
 //
 // The label of each symbol changed, asked of the compiler where the
-// symbol is first declared (a kept check of that file for eTarget): as
-// it is now, into the site (bNew false), or as it is once the change is
-// made, into paszNew, one for each site (empty where it has none), with
-// the file parsed from its editor's text and the name found where it now
-// is.
+// symbol is first declared (a kept check of that file for eTarget), into
+// paszDest, one for each site (empty where it has none): as it is now
+// (bNew false), or as it is once the change is made, with the file
+// parsed from its editor's text and the name found where it now is.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEChangeSignature::FindLabels(SIDESignature* psSignature, ECPPTarget eTarget, bool bNew, CArrayChars* paszNew)
+void CIDEChangeSignature::FindLabels(SIDESignature* psSignature, ECPPTarget eTarget, bool bNew, CArrayChars* paszDest)
 {
 	CIDERefactorUnit	cUnit;
 	SIDESignatureSite*	psSite;
@@ -2142,14 +2186,7 @@ void CIDEChangeSignature::FindLabels(SIDESignature* psSignature, ECPPTarget eTar
 			}
 			cUnit.Kill();
 		}
-		if (bNew)
-		{
-			paszNew->Add(szLabel.Text());
-		}
-		else
-		{
-			psSite->szLabel.Set(szLabel);
-		}
+		paszDest->Add(szLabel.Text());
 		szLabel.Kill();
 	}
 }
@@ -2160,16 +2197,23 @@ void CIDEChangeSignature::FindLabels(SIDESignature* psSignature, ECPPTarget eTar
 // Each symbol's old label changed to its new one in the solution's
 // assembly, where they differ: every place it is written as a whole
 // label, in each file's editor (opened, not shown, if it isn't open and
-// has one).  The number of places changed.
+// has one).  The labels are one processor's (paszOld to paszNew, by
+// site) and the other's (paszOtherOld to paszOtherNew), whatever build
+// configuration is selected: where the two spell the old label
+// differently each becomes its own, and where they spell it the same
+// and the new ones differ, it becomes the one of the processor its file
+// is written for (FindAssemblyFileTarget; paszOld's are the W65C816's).
+// The number of places changed.
 //
 //////////////////////////////////////////////////////////////////////////
-size CIDEChangeSignature::ChangeLabels(SIDESignature* psSignature, CArrayChars* paszNew)
+size CIDEChangeSignature::ChangeLabels(SIDESignature* psSignature, CArrayChars* paszOld, CArrayChars* paszNew, CArrayChars* paszOtherOld, CArrayChars* paszOtherNew)
 {
 	CIDECodeModel*		pcModel;
 	CIDETextEdits		cEdits;
 	CTextFile			cFile;
 	Ptr<CIDEEditorTab>	pTab;
-	SIDESignatureSite*	psSite;
+	CArrayChars*		paszFrom;
+	CArrayChars*		paszTo;
 	char*				szFileName;
 	char*				szText;
 	const char*			szFound;
@@ -2179,9 +2223,12 @@ size CIDEChangeSignature::ChangeLabels(SIDESignature* psSignature, CArrayChars* 
 	size				uiAt;
 	size				uiChanged;
 	size				uiInFile;
+	size				uiSite;
 	size				i;
 	size				j;
 	int					iPass;
+	bool				bOther;
+	bool				bSecond;
 
 	pcModel = mpcContent->GetCodeModel();
 	uiChanged = 0;
@@ -2212,12 +2259,18 @@ size CIDEChangeSignature::ChangeLabels(SIDESignature* psSignature, CArrayChars* 
 				szText = NULL;
 			}
 			uiInFile = 0;
-			for (j = 0; szText && (j < psSignature->apsSites.NumElements()); j++)
+			bOther = szText && (FindAssemblyFileTarget(szFileName, szText) != CPPT_W65C816);
+			for (j = 0; szText && (j < 2 * psSignature->apsSites.NumElements()); j++)
 			{
-				psSite = psSignature->apsSites.GetPtr(j);
-				szOld = psSite->szLabel.Text();
-				uiOldLength = psSite->szLabel.Length();
-				if ((uiOldLength == 0) || paszNew->Get(j)->Empty() || psSite->szLabel.Equals(paszNew->GetText(j)))
+				//Each site's label for the file's own processor, then for the other where that is spelled differently.
+				uiSite = j / 2;
+				bSecond = ((j & 1) != 0);
+				paszFrom = (bOther != bSecond) ? paszOtherOld : paszOld;
+				paszTo = (bOther != bSecond) ? paszOtherNew : paszNew;
+				szOld = paszFrom->GetText(uiSite);
+				uiOldLength = paszFrom->Get(uiSite)->Length();
+				if ((uiOldLength == 0) || paszTo->Get(uiSite)->Empty() || paszFrom->Get(uiSite)->Equals(paszTo->GetText(uiSite)) ||
+					(bSecond && paszOld->Get(uiSite)->Equals(paszOtherOld->GetText(uiSite))))
 				{
 					continue;
 				}
@@ -2226,7 +2279,7 @@ size CIDEChangeSignature::ChangeLabels(SIDESignature* psSignature, CArrayChars* 
 					uiAt = (size)(szFound - szText);
 					if (((uiAt == 0) || !IsIDENameChar(szText[uiAt - 1])) && !IsIDENameChar(szText[uiAt + uiOldLength]))
 					{
-						cEdits.Replace(uiAt, uiAt + uiOldLength, paszNew->GetText(j));
+						cEdits.Replace(uiAt, uiAt + uiOldLength, paszTo->GetText(uiSite));
 						uiInFile++;
 					}
 				}
@@ -2260,8 +2313,10 @@ size CIDEChangeSignature::ChangeLabels(SIDESignature* psSignature, CArrayChars* 
 //////////////////////////////////////////////////////////////////////////
 bool CIDEChangeSignature::Change(SIDESignature* psSignature, SIDESignatureChange* psChange, CChars* pszStatus)
 {
+	CArrayChars				aszOldLabels;
 	CArrayChars				aszNewLabels;
-	ECPPTarget				eTarget;
+	CArrayChars				aszOtherOldLabels;
+	CArrayChars				aszOtherNewLabels;
 	size					uiLabels;
 	bool					bLabels;
 	CArrayIDENewParameters*	pasNew;
@@ -2301,11 +2356,14 @@ bool CIDEChangeSignature::Change(SIDESignature* psSignature, SIDESignatureChange
 	bNameFound = false;
 	uiLabels = 0;
 
-	//The labels the assembly names them by, as they are now.
-	bLabels = GetAssemblyTarget(&eTarget);
+	//The labels the assembly names them by, as they are now: both processors', whatever is selected.
+	bLabels = HasAssembly();
+	aszOldLabels.Init();
+	aszOtherOldLabels.Init();
 	if (bLabels)
 	{
-		FindLabels(psSignature, eTarget, false, NULL);
+		FindLabels(psSignature, CPPT_W65C816, false, &aszOldLabels);
+		FindLabels(psSignature, CPPT_65C64, false, &aszOtherOldLabels);
 	}
 
 	//Every file's editor first: nothing is changed unless all can be.
@@ -2461,8 +2519,11 @@ bool CIDEChangeSignature::Change(SIDESignature* psSignature, SIDESignatureChange
 		if (bLabels)
 		{
 			aszNewLabels.Init();
-			FindLabels(psSignature, eTarget, true, &aszNewLabels);
-			uiLabels = ChangeLabels(psSignature, &aszNewLabels);
+			aszOtherNewLabels.Init();
+			FindLabels(psSignature, CPPT_W65C816, true, &aszNewLabels);
+			FindLabels(psSignature, CPPT_65C64, true, &aszOtherNewLabels);
+			uiLabels = ChangeLabels(psSignature, &aszOldLabels, &aszNewLabels, &aszOtherOldLabels, &aszOtherNewLabels);
+			aszOtherNewLabels.Kill();
 			aszNewLabels.Kill();
 		}
 
@@ -2513,6 +2574,8 @@ bool CIDEChangeSignature::Change(SIDESignature* psSignature, SIDESignatureChange
 		ShowChangeStatus(&szMessage, pszStatus);
 		szMessage.Kill();
 	}
+	aszOtherOldLabels.Kill();
+	aszOldLabels.Kill();
 	aszFiles.Kill();
 	mszExtraFile = NULL;
 	return bOpened;

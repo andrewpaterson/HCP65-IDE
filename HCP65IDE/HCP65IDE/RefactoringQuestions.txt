@@ -155,6 +155,10 @@ Answered
     is changed in assembly at all.  Should it always do both processors' labels, whatever is selected?
     Answered 2026-11-15: yes, always both processors' labels, whatever configuration is selected.  To do in Change
     Signature (and wherever else a label is asked of the compiler for one target: Rename's assembly, Move).
+    Done 2026-11-15 in Change Signature (ChangeLabels takes both processors' labels; where the two spell the old
+    label the same and the new ones differ, a file's processor is told by its name or by what only the W65C816
+    has).  Rename's assembly and Move don't ask the compiler for a label: they find the names in the assembly as
+    they are written, for either processor.
 
 12. Change Signature and each file's own words.  A declaration and a definition keep what they wrote for a kept
     parameter: if the definition names it iR where the class says iRed, it still does afterwards (unless you rename

@@ -426,6 +426,7 @@ Where it is
        - Encapsulate Field's getter is const, and both are a line each at the bottom of the class's .cpp (question 44): done.
        - undo takes away the files a refactoring made, and they are staged when they are made (questions 22, 23): done.
        - Safe Delete deletes a class's files where they have nothing else (question 4): done.
+       - Change Signature changes both processors' labels in assembly, whatever is selected (question 11): done.
 
 
 When the plan is done

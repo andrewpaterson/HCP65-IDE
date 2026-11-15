@@ -1292,17 +1292,19 @@ CHECKS = [
 		'WAIT_INDEX': '1', 'OPEN': 'Paint.h', 'CONFIGURATION': 'Debug|W65C816',
 		'DEBUG': 'edit:renamesearch:---s,edit:caret:24:7,edit:printlabel,edit:changesignature:0;1;+char|cMode|\'a\'|,edit:caret:24:7,edit:printlabel,'
 		         'edit:caret:11:9,edit:changesignature:2;0;1,printdisklines:PaintW65C816.asm,printdisklines:Main.cpp'}),
-		[r'^Label: _Blend__Fss$', r"^Status: Changed Blend's signature: 2 declarations and definitions, 1 call in 3 files\.  1 label in assembly\.$", r'^Label: _Blend__Fssc$',
+		[r'^Label: _Blend__Fss$', r"^Status: Changed Blend's signature: 2 declarations and definitions, 1 call in 3 files\.  2 labels in assembly\.$", r'^Label: _Blend__Fssc$',
 		 r"^Status: Changed CBrush::Mix's signature: 2 declarations and definitions, 1 call in 3 files\.$",
 		 r'^6\|\t\tjsr _CBrush__Init$', r'^7\|\t\tjsr _CBrush__Mix$', r'^8\|\t\tjsr _Blend__Fssc$', r'^9\|\t\tjsr _Blend__Fsss$', r'^10\|\t\tjsr _Next$',
 		 r"^21\|\treturn Blend\(1, 2, 'a'\) \+ Blend\(1, 2, 3\);$"],
 		[r'^Conflict']),
 	('change-signature-assembly-host', dict(MakeChangeSignatureCopy(), **{
-		#A configuration that isn't for a processor has no labels: the assembly is left.
+		#Whatever configuration is selected, both processors' labels are asked of the compiler and changed: the
+		#W65C816's in its assembly (an int is s there) and the 65C64's in its own (an int is i).
 		'WAIT_INDEX': '1', 'OPEN': 'Paint.h', 'CONFIGURATION': 'Debug|Win32', 'CARET': '24:7',
-		'DEBUG': 'edit:renamesearch:---s,edit:printlabel,edit:changesignature:0;1;+char|cMode|\'a\'|,printdisklines:PaintW65C816.asm'}),
-		[r'^Label: none$', r"^Status: Changed Blend's signature: 2 declarations and definitions, 1 call in 3 files\.$", r'^8\|\t\tjsr _Blend__Fss$'],
-		[r'label in assembly']),
+		'DEBUG': 'edit:renamesearch:---s,edit:printlabel,edit:changesignature:0;1;+char|cMode|\'a\'|,printdisklines:PaintW65C816.asm,printdisklines:Paint65C64.asm'}),
+		[r'^Label: none$', r"^Status: Changed Blend's signature: 2 declarations and definitions, 1 call in 3 files\.  2 labels in assembly\.$",
+		 r'^8\|\t\tjsr _Blend__Fssc$', r'^9\|\t\tjsr _Blend__Fsss$', r'^7\|\t\tjsr _Blend__Fiic$', r'^8\|\t\tjsr _Blend__Fiii$'],
+		[]),
 	('definitions-generate', dict(MakeDefinitionsCopy(), **{
 		#Generate Definition: Fill is declared in CTank and defined nowhere.  Its definition goes in the file CTank's
 		#others are in, after Init's (declared before it), two blank lines from what is around it, under a comment

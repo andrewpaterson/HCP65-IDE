@@ -244,8 +244,10 @@ protected:
 	void				AppendCallArguments(SIDESignature* psSignature, SIDESignatureCall* psCall, CArrayIDENewParameters* pasNew, const char* szText, CChars* pszDest);
 	void				ShowChangeStatus(CChars* pszMessage, CChars* pszStatus);
 	bool				GetAssemblyTarget(ECPPTarget* peTarget);
-	void				FindLabels(SIDESignature* psSignature, ECPPTarget eTarget, bool bNew, CArrayChars* paszNew);
-	size				ChangeLabels(SIDESignature* psSignature, CArrayChars* paszNew);
+	bool				HasAssembly(void);
+	ECPPTarget			FindAssemblyFileTarget(const char* szFileName, const char* szText);
+	void				FindLabels(SIDESignature* psSignature, ECPPTarget eTarget, bool bNew, CArrayChars* paszDest);
+	size				ChangeLabels(SIDESignature* psSignature, CArrayChars* paszOld, CArrayChars* paszNew, CArrayChars* paszOtherOld, CArrayChars* paszOtherNew);
 };
 
 
