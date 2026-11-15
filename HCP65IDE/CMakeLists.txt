@@ -148,6 +148,7 @@ set(IDE_SOURCES
 	"${IDE_DIR}/IDEEdit.cpp"
 	"${IDE_DIR}/IDENavigator.cpp"
 	"${IDE_DIR}/IDERename.cpp"
+	"${IDE_DIR}/IDETemplateInterface.cpp"
 	"${IDE_DIR}/IDEConvertEnum.cpp"
 	"${IDE_DIR}/IDESolutionFileChooser.cpp"
 	"${IDE_DIR}/IDEContextActions.cpp"

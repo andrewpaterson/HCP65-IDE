@@ -315,6 +315,7 @@
     <ClCompile Include="IDEEdit.cpp" />
     <ClCompile Include="IDENavigator.cpp" />
     <ClCompile Include="IDERename.cpp" />
+    <ClCompile Include="IDETemplateInterface.cpp" />
     <ClCompile Include="IDEConvertEnum.cpp" />
     <ClCompile Include="IDESolutionFileChooser.cpp" />
     <ClCompile Include="IDEContextActions.cpp" />
@@ -391,6 +392,7 @@
     <ClInclude Include="IDEEdit.h" />
     <ClInclude Include="IDENavigator.h" />
     <ClInclude Include="IDERename.h" />
+    <ClInclude Include="IDETemplateInterface.h" />
     <ClInclude Include="IDEConvertEnum.h" />
     <ClInclude Include="IDESolutionFileChooser.h" />
     <ClInclude Include="IDEContextActions.h" />

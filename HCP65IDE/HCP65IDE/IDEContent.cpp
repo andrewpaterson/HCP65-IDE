@@ -232,6 +232,7 @@ void CIDEContent::Class(void)
 	M_Pointer(mpConvertMacro);
 	M_Pointer(mpConvertPointer);
 	M_Pointer(mpConvertEnum);
+	M_Pointer(mpTemplateInterface);
 	M_Pointer(mpMemberQualifier);
 	M_Pointer(mpConvertMember);
 	M_Pointer(mpContextActions);
@@ -316,6 +317,7 @@ void CIDEContent::Free(void)
 		mpWindow->CancelPosted(&mpConvertMacro);
 		mpWindow->CancelPosted(&mpConvertPointer);
 		mpWindow->CancelPosted(&mpConvertEnum);
+		mpWindow->CancelPosted(&mpTemplateInterface);
 		mpWindow->CancelPosted(&mpMemberQualifier);
 		mpWindow->CancelPosted(&mpConvertMember);
 		mpWindow->CancelPosted(&mpTemplateParameter);
@@ -452,6 +454,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpConvertMacro = OMalloc<CIDEConvertMacro>(this);
 	mpConvertPointer = OMalloc<CIDEConvertPointer>(this);
 	mpConvertEnum = OMalloc<CIDEConvertEnum>(this);
+	mpTemplateInterface = OMalloc<CIDETemplateInterface>(this);
 	mpMemberQualifier = OMalloc<CIDEMemberQualifier>(this);
 	mpConvertMember = OMalloc<CIDEConvertMember>(this);
 	mpTemplateParameter = OMalloc<CIDETemplateParameter>(this);
@@ -667,6 +670,7 @@ void CIDEContent::AddCommands(void)
 	mpConvertMacro->AddCommands(mpCommands);
 	mpConvertPointer->AddCommands(mpCommands);
 	mpConvertEnum->AddCommands(mpCommands);
+	mpTemplateInterface->AddCommands(mpCommands);
 	mpMemberQualifier->AddCommands(mpCommands);
 	mpConvertMember->AddCommands(mpCommands);
 	mpTemplateParameter->AddCommands(mpCommands);
@@ -1191,6 +1195,7 @@ Ptr<CIDEIncludes> CIDEContent::GetIncludes(void) { return mpIncludes; }
 Ptr<CIDEConvertMacro> CIDEContent::GetConvertMacro(void) { return mpConvertMacro; }
 Ptr<CIDEConvertPointer> CIDEContent::GetConvertPointer(void) { return mpConvertPointer; }
 Ptr<CIDEConvertEnum> CIDEContent::GetConvertEnum(void) { return mpConvertEnum; }
+Ptr<CIDETemplateInterface> CIDEContent::GetTemplateInterface(void) { return mpTemplateInterface; }
 Ptr<CIDEMemberQualifier> CIDEContent::GetMemberQualifier(void) { return mpMemberQualifier; }
 Ptr<CIDEConvertMember> CIDEContent::GetConvertMember(void) { return mpConvertMember; }
 Ptr<CIDEContextActions> CIDEContent::GetContextActions(void) { return mpContextActions; }

@@ -456,6 +456,14 @@ Where it is
      compiler is asked for the label of its definition before and after.  Extract Superclass and Extract Class
      change the labels of the members that go, as Pull Up does.  Still to do: Extract Template Parameter (a
      template instance's labels have its arguments in them).
+ 28. Plan item 24: Write Template's Interface (CIDETemplateInterface).  For the class or function template the
+     caret is in, the members its body names through a value of a type parameter's type (mp->Init(), cItem.miCount,
+     this->mp->Start(4)) or by the parameter's name (M::Count), in the template and in its functions defined
+     outside it whatever they call the parameter; each with the declaration it has in a class the template is used
+     with, where the index knows one.  Shown in a dialog, and written as a comment over the template ("//M must
+     have:") or as an abstract class before it (functions only, one parameter, every declaration known).  The
+     classes the template is used with are left alone (question 59).  Only a member named through a name declared
+     with the parameter's type is found: not one reached through what another member returns.
 
 
 When the plan is done

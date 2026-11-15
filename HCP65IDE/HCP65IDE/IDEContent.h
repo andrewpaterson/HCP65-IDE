@@ -81,6 +81,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDEConvertMacro.h"
 #include "IDEConvertPointer.h"
 #include "IDEConvertEnum.h"
+#include "IDETemplateInterface.h"
 #include "IDEMemberQualifier.h"
 #include "IDEConvertMember.h"
 #include "IDEContextActions.h"
@@ -204,6 +205,7 @@ protected:
 	Ptr<CIDEConvertMacro>		mpConvertMacro;			//Convert Macro, Inline Macro.
 	Ptr<CIDEConvertPointer>		mpConvertPointer;		//Convert Pointer to Reference, and back.
 	Ptr<CIDEConvertEnum>		mpConvertEnum;			//Convert Enum to Enum Class.
+	Ptr<CIDETemplateInterface>	mpTemplateInterface;	//Write Template's Interface.
 	Ptr<CIDEMemberQualifier>	mpMemberQualifier;		//Make Member Function const, static.
 	Ptr<CIDEConvertMember>		mpConvertMember;		//Convert Function to Member Function, and back.
 	Ptr<CIDETemplateParameter>	mpTemplateParameter;	//Extract Template Parameter.
@@ -330,6 +332,7 @@ public:
 	Ptr<CIDEConvertMacro>		GetConvertMacro(void);
 	Ptr<CIDEConvertPointer>		GetConvertPointer(void);
 	Ptr<CIDEConvertEnum>		GetConvertEnum(void);
+	Ptr<CIDETemplateInterface>	GetTemplateInterface(void);
 	Ptr<CIDEMemberQualifier>	GetMemberQualifier(void);
 	Ptr<CIDEConvertMember>		GetConvertMember(void);
 	Ptr<CIDETemplateParameter>	GetTemplateParameter(void);

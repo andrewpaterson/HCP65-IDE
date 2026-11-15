@@ -88,6 +88,12 @@ Open
     Problems Detected's list, so nothing is refused for that.  Is that what you want, or should an enum used as
     flags or as an index stay an enum (refused, with the places listed)?
 
+59. Write Template's Interface (new; no key) writes what a template needs of its argument as a comment over it,
+    or as an abstract class before it (named C<Template>Interface unless you type another).  It leaves the
+    classes the template is used with alone.  Should the abstract class form also offer to make those classes
+    derive from it (": public CRunnable", their functions marked override)?  And is C...Interface the name you
+    want suggested, or have you a prefix for such classes?
+
 Answered
 --------
 

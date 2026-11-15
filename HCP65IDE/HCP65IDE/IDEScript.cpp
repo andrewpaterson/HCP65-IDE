@@ -1935,6 +1935,36 @@ void CIDEScript::RunEditStep(const char* szStep)
 		szPrinted.Kill();
 		sChange.Kill();
 	}
+	else if ((strcmp(szStep, "templateinterface") == 0) || (strcmp(szStep, "templateinterface:comment") == 0) || (strncmp(szStep, "templateinterface:class:", 24) == 0))
+	{
+		//What the template the caret is in needs of its parameters (templateinterface); or that written as a comment
+		//over it, or as an abstract class with a name.
+		SIDETemplateInterface	sInterface;
+		CChars					szPrinted;
+
+		sInterface.Init();
+		szPrinted.Init();
+		if (!mpcContent->GetTemplateInterface()->FindInterface(&sInterface))
+		{
+			printf("Template Interface: the caret isn't in a template\n");
+		}
+		else
+		{
+			printf("%s", mpcContent->GetTemplateInterface()->PrintInterface(&sInterface, &szPrinted));
+			if (szStep[17] == ':')
+			{
+				szPrinted.Clear();
+				mpcContent->GetTemplateInterface()->Write(&sInterface, (szStep[19] == 'l') ? IDE_INTERFACE_CLASS : IDE_INTERFACE_COMMENT, (szStep[19] == 'l') ? &szStep[24] : "", &szPrinted);
+				printf("Status: %s\n", szPrinted.Text());
+				if (gbIDEScriptRenameSaves)
+				{
+					mpcContent->GetDocuments()->SaveAllFiles();
+				}
+			}
+		}
+		szPrinted.Kill();
+		sInterface.Kill();
+	}
 	else if ((strcmp(szStep, "convertableenum") == 0) || (strcmp(szStep, "enumtoclass") == 0))
 	{
 		//What Convert Enum to Enum Class found for the enum at the caret (convertableenum); or it converted, with what

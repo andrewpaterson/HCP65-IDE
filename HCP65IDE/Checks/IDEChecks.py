@@ -375,6 +375,16 @@ def MakeEnumsCopy():
 	return {'SOLUTION': os.path.join(szFolder, 'Enums.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
 
 
+def MakeTemplateInterfaceCopy():
+	#A copy of Input/TemplateInterface: CRunner<M>, which calls three functions of M (one in a function defined
+	#outside it, where the parameter is T), used with CDiesel; and Poke<M>, which nothing uses.
+	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
+	atexit.register(shutil.rmtree, szRoot, True)
+	szFolder = os.path.join(szRoot, 'TemplateInterface')
+	shutil.copytree(os.path.join(HERE, 'Input', 'TemplateInterface'), szFolder)
+	return {'SOLUTION': os.path.join(szFolder, 'TemplateInterface.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
+
+
 def MakePointersCopy():
 	#A copy of Input/Pointers, to make pointers references in and back: CVat's functions take SLevel by pointer and
 	#by reference (one overridden, one that calls itself, one that tests its pointer, one that steps it), and Use
@@ -2325,6 +2335,39 @@ CHECKS = [
 		[r'^Dialog \[Convert Macro MAX_UNITS\] answered Cancel$', r'^Dialog \[Inline Macro TWICE\] answered Cancel$',
 		 r"^Status: Can't convert the macro BUMP: it changes its argument: a function would change its own copy\.$", r'^5\|#define MAX_UNITS\t8\t//The most there are\.$'],
 		[r'^Status: Converted', r'^Status: Inlined']),
+	('template-interface', dict(MakeRenameTemplateCopy(), **{
+		#Write Template's Interface: CHolder<M> calls mp->Init() and reads mp->miCount, which the classes it is used
+		#with declare.  Written as a comment over the template; as a class it is refused for the data member.
+		'WAIT_INDEX': '1', 'OPEN': 'Holder.h', 'CARET': '10:1',
+		'DEBUG': 'edit:renamesearch:---s,edit:templateinterface:class:CHolderItem,edit:templateinterface:comment,printdisklines:Holder.h'}),
+		[r'^Template Interface: CHolder, 2 members$', r'^  M: void\tInit\(void\)$', r'^  M: int\tmiCount$',
+		 r'^Status: Write Template.s Interface: A class can ask for functions only: the template needs a data member\.$',
+		 r'^Status: Wrote what CHolder needs of its parameters as a comment: 2 members\.$',
+		 r'^4\|$', r'^5\|//M must have:$', r'^6\|//\tvoid\tInit\(void\);$', r'^7\|//\tint\t\tmiCount;$', r'^8\|template<class M>$', r'^19 lines$'],
+		[]),
+	('template-interface-dialog', dict(MakeTemplateInterfaceCopy(), **{
+		#The command's dialog shows the members and asks how to write them; as it opens, a comment.
+		'WAIT_INDEX': '1', 'OPEN': 'Runner.h', 'CARET': '12:8', 'SETTINGS': MakeSettingsFile(), 'DIALOG_ANSWER': 'OK',
+		'DEBUG': 'command:Refactor.TemplateInterface,answered:1,printstatus'}),
+		[r'^Dialog \[What CRunner Needs of Its Parameters\] answered OK$', r'^Status line: Wrote what CRunner needs of its parameters as a comment: 3 members\.$'],
+		[]),
+	('template-interface-class', dict(MakeTemplateInterfaceCopy(), **{
+		#As an abstract class: what CRunner<M> calls of M, in the class and in its function defined outside it (which
+		#names the parameter T), each as CDiesel declares it (without its virtual and its body), before the comment
+		#over the template.  A function template nothing uses has no declarations to go by: only a comment.
+		'WAIT_INDEX': '1', 'OPEN': 'Runner.h', 'CARET': '12:8',
+		'DEBUG': 'edit:renamesearch:---s,edit:templateinterface:class:CDiesel,edit:templateinterface:class:CRunnable,edit:caret:36:3,edit:templateinterface:class:CPokeable,'
+				 'edit:templateinterface:comment,printdisklines:Runner.h'}),
+		[r'^Template Interface: CRunner, 3 members$', r'^  M: void\tStart\(int iSpeed\)$', r'^  M: void\tStop\(void\)$', r'^  M: int\tCount\(void\) const$',
+		 r'^Status: Write Template.s Interface: Something has that name already\.$',
+		 r'^Status: Wrote what CRunner needs of M as the class CRunnable: 3 members\.$',
+		 r'^Template Interface: Poke, 1 member$', r'^  M: Wake\(\?, \?\)$',
+		 r'^Status: Write Template.s Interface: A class needs each member.s declaration: no class the template is used with says how one is declared\.$',
+		 r'^Status: Wrote what Poke needs of its parameters as a comment: 1 member\.$',
+		 r'^5\|class CRunnable$', r'^7\|public:$', r'^8\|\tvirtual void\tStart\(int iSpeed\) =0;$', r'^9\|\tvirtual void\tStop\(void\) =0;$', r'^10\|\tvirtual int\t\tCount\(void\) const =0;$',
+		 r'^11\|\};$', r'^12\|$', r'^13\|$', r'^14\|//Runs what it is given\.$', r'^15\|template<class M>$',
+		 r'^34\|//M must have:$', r'^35\|//\tWake\(\?, \?\);$', r'^36\|template<class M>$', r'^43 lines$'],
+		[]),
 	('enum-to-class', dict(MakeEnumsCopy(), **{
 		#Convert Enum to Enum Class: EMode's enum becomes enum class and its enumerators get its name wherever they
 		#are named without it (not in its own list, nor where it is written already); from an enumerator, CMotor's
@@ -3106,7 +3149,7 @@ CHECKS = [
 		 r'^Menu Debug: Start Debugging \[F5\], Start Without Debugging \[Ctrl\+F5\], Stop Debugging \[Shift\+F5\], Stop Running\(disabled\), Restart \[Ctrl\+Shift\+F5\], Break All \[Ctrl\+Pause/Break\], Attach to Emulator\.\.\., Step Into \[F11\], Step Over \[F10\], Step Out \[Shift\+F11\], Toggle Breakpoint \[F9\], ',
 		 r'^Menu Window: Reset Window Layout, Close All Documents$',
 		 r'^Menu Editor: Go to Source \[Ctrl\+B\], Find Usages \[Alt\+F7\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Show Context Actions \[Alt\+Enter\], Rename\.\.\. \[Shift\+F6\], Refactor>, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\]$',
-		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Introduce Field\.\.\. \[Ctrl\+Alt\+F\](\(disabled\))?, Introduce Constant\.\.\. \[Ctrl\+Alt\+C\](\(disabled\))?, Introduce Parameter\.\.\. \[Ctrl\+Alt\+P\](\(disabled\))?, Introduce Typedef\.\.\. \[Ctrl\+Alt\+K\](\(disabled\))?, Inline\.\.\. \[Ctrl\+Alt\+N\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Unify Parameter Names(\(disabled\))?, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\.(\(disabled\))?, Push Members Down\.\.\.(\(disabled\))?, Move\.\.\. \[F6\](\(disabled\))?, Copy Class\.\.\.(\(disabled\))?, Extract Method\.\.\. \[Ctrl\+Alt\+M\](\(disabled\))?, Extract Superclass\.\.\.(\(disabled\))?, Extract Interface\.\.\.(\(disabled\))?, Extract Class\.\.\.(\(disabled\))?, Encapsulate Field\.\.\.(\(disabled\))?, Optimise #includes \[Ctrl\+Alt\+O\], Convert Macro\.\.\.(\(disabled\))?, Convert Pointer to Reference(\(disabled\))?, Convert Reference to Pointer(\(disabled\))?, Convert Enum to Enum Class(\(disabled\))?, Make Member Function const(\(disabled\))?, Make Member Function static(\(disabled\))?, Convert Function to Member Function(\(disabled\))?, Convert Member Function to Function(\(disabled\))?, Extract Template Parameter\.\.\., Remove Template Parameter$',
+		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Introduce Field\.\.\. \[Ctrl\+Alt\+F\](\(disabled\))?, Introduce Constant\.\.\. \[Ctrl\+Alt\+C\](\(disabled\))?, Introduce Parameter\.\.\. \[Ctrl\+Alt\+P\](\(disabled\))?, Introduce Typedef\.\.\. \[Ctrl\+Alt\+K\](\(disabled\))?, Inline\.\.\. \[Ctrl\+Alt\+N\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Unify Parameter Names(\(disabled\))?, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\.(\(disabled\))?, Push Members Down\.\.\.(\(disabled\))?, Move\.\.\. \[F6\](\(disabled\))?, Copy Class\.\.\.(\(disabled\))?, Extract Method\.\.\. \[Ctrl\+Alt\+M\](\(disabled\))?, Extract Superclass\.\.\.(\(disabled\))?, Extract Interface\.\.\.(\(disabled\))?, Extract Class\.\.\.(\(disabled\))?, Encapsulate Field\.\.\.(\(disabled\))?, Optimise #includes \[Ctrl\+Alt\+O\], Convert Macro\.\.\.(\(disabled\))?, Convert Pointer to Reference(\(disabled\))?, Convert Reference to Pointer(\(disabled\))?, Convert Enum to Enum Class(\(disabled\))?, Write Template.s Interface\.\.\.(\(disabled\))?, Make Member Function const(\(disabled\))?, Make Member Function static(\(disabled\))?, Convert Function to Member Function(\(disabled\))?, Convert Member Function to Function(\(disabled\))?, Extract Template Parameter\.\.\., Remove Template Parameter$',
 		 r'^Menu Explorer: Set as Startup Solution, Set as Startup Project\(disabled\), Remove Solution, Rename\.\.\.(\(disabled\))?$',
 		 r'^Menu item \[View/Nope\] not found$'], []),
 	('menu-clicks', {
