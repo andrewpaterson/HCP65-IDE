@@ -84,12 +84,12 @@ public:
 	bool	Show(bool bStatic);
 	bool	Find(bool bStatic, SIDEQualifierChange* psDest);
 	bool	Change(SIDEQualifierChange* psChange, CChars* pszStatus = NULL);
+	bool	IsDeclaredWith(const char* szKey, const char* szWord);
 
 protected:
 	void	MakeConstQueued(void);
 	void	MakeStaticQueued(void);
 	bool	Refuse(SIDEQualifierChange* psDest, const char* szWhyNot, const char* szFileName = NULL, int32 iLine = -1);
-	bool	IsDeclaredWith(const char* szKey, const char* szWord);
 	void	FindBodyUses(SIDEQualifierChange* psDest, SIDESignatureSite* psSite);
 	void	AddConflict(SIDEQualifierChange* psDest, const char* szWhat, const char* szKey, const char* szAfter, const char* szFileName, int32 iLine);
 };

@@ -231,6 +231,7 @@ void CIDEContent::Class(void)
 	M_Pointer(mpConvertMacro);
 	M_Pointer(mpConvertPointer);
 	M_Pointer(mpMemberQualifier);
+	M_Pointer(mpConvertMember);
 	M_Pointer(mpUsages);
 	M_Pointer(mpFindInFiles);
 	M_Pointer(mpOccurrences);
@@ -311,6 +312,7 @@ void CIDEContent::Free(void)
 		mpWindow->CancelPosted(&mpConvertMacro);
 		mpWindow->CancelPosted(&mpConvertPointer);
 		mpWindow->CancelPosted(&mpMemberQualifier);
+		mpWindow->CancelPosted(&mpConvertMember);
 		mpWindow->CancelPosted(&mpSolutions);
 		mpWindow->CancelPosted(&mpBuildConfigurations);
 		mpWindow->CancelPosted(&mpBuilding);
@@ -442,6 +444,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpConvertMacro = OMalloc<CIDEConvertMacro>(this);
 	mpConvertPointer = OMalloc<CIDEConvertPointer>(this);
 	mpMemberQualifier = OMalloc<CIDEMemberQualifier>(this);
+	mpConvertMember = OMalloc<CIDEConvertMember>(this);
 	mpUsages = OMalloc<CIDEUsages>(this);
 	mpFindInFiles = OMalloc<CIDEFindInFiles>(this);
 	mpOccurrences = OMalloc<CIDEOccurrences>(this);
@@ -653,6 +656,7 @@ void CIDEContent::AddCommands(void)
 	mpConvertMacro->AddCommands(mpCommands);
 	mpConvertPointer->AddCommands(mpCommands);
 	mpMemberQualifier->AddCommands(mpCommands);
+	mpConvertMember->AddCommands(mpCommands);
 	mpUsages->AddCommands(mpCommands);
 	mpFindInFiles->AddCommands(mpCommands);
 	mpOccurrences->AddCommands(mpCommands);
@@ -1172,4 +1176,5 @@ Ptr<CIDEIncludes> CIDEContent::GetIncludes(void) { return mpIncludes; }
 Ptr<CIDEConvertMacro> CIDEContent::GetConvertMacro(void) { return mpConvertMacro; }
 Ptr<CIDEConvertPointer> CIDEContent::GetConvertPointer(void) { return mpConvertPointer; }
 Ptr<CIDEMemberQualifier> CIDEContent::GetMemberQualifier(void) { return mpMemberQualifier; }
+Ptr<CIDEConvertMember> CIDEContent::GetConvertMember(void) { return mpConvertMember; }
 Ptr<CIDECloseGuard> CIDEContent::GetCloseGuard(void) { return mpCloseGuard; }

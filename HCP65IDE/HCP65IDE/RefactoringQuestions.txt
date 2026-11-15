@@ -269,3 +269,17 @@ Open
     have here?), or is Rename afterwards what you want?  It works on a parameter (every declaration, override, use
     and call) and on a local variable declared with its value; a field isn't done (its constructors would have to
     initialise it).  Is a field wanted?
+
+51. Convert Member Function to Function names the new first parameter by your prefixes from the class's name
+    ("CVat* pcVat", "SLevel* psLevel") and declares the function after its class in the class's header, two lines
+    down ("int	Sum(CVat* pcVat, ...);").  Convert Function to Member Function declares it at the end of the
+    class's public part, lined up by its name with the line above but not put in the column your classes keep for
+    virtual and static.  Are those the places and the names, and should the member's declaration go in that
+    column?
+
+52. The refactorings that check the files "as they would be" (Optimise #includes, Convert Macro, pointer to
+    reference, const and static, function to member) ask the IDE's own checker, and it lets through some things
+    a compiler wouldn't: in a check, a member function was declared in a class with a parameter of a class
+    declared further down the header, and the checker had no error for it.  They are a net, not a proof.  Is it
+    worth making the checker stricter for this (which errors matter most to you), or building the project in
+    the background after such a refactoring and showing what broke?

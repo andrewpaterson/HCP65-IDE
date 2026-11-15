@@ -1723,6 +1723,21 @@ void CIDEScript::RunEditStep(const char* szStep)
 		aszParts.Kill();
 		szSpec.Kill();
 	}
+	else if ((strcmp(szStep, "functiontomember") == 0) || (strcmp(szStep, "membertofunction") == 0))
+	{
+		//The function at the caret made a member function of its first parameter's class (or a member function a
+		//function), with what the status bar would say.
+		CChars	szPrinted;
+
+		szPrinted.Init();
+		mpcContent->GetConvertMember()->Convert(strcmp(szStep, "functiontomember") == 0, &szPrinted);
+		printf("Status: %s\n", szPrinted.Empty() ? "nothing at the caret" : szPrinted.Text());
+		if (gbIDEScriptRenameSaves)
+		{
+			mpcContent->GetDocuments()->SaveAllFiles();
+		}
+		szPrinted.Kill();
+	}
 	else if ((strncmp(szStep, "makeconst", 9) == 0) || (strcmp(szStep, "makestatic") == 0))
 	{
 		//The member function at the caret made const (makeconst; "makeconst:a" whatever its bodies do that a const

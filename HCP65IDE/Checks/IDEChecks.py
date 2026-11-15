@@ -2113,6 +2113,35 @@ CHECKS = [
 		 r'^22\|\tstatic\tint\t\tZero\(void\) \{ return 0; \}$', r'^27\|\tstatic\tint\t\tScale\(int iValue\);$', r'^85\|int CMeter::Scale\(int iValue\)$', r'^97\|\treturn Scale\(iValue\) \+ miLevel;$',
 		 r'^122\|\tiTotal = CMeter::Scale\(2\);$', r'^123\|\tiTotal \+= CMeter::Scale\(3\);$', r'^124\|\tiTotal \+= pcMeter->Find\(\)->Scale\(4\);$', r'^125\|\tiTotal \+= CMeter::Zero\(\) \+ cMeter\.Top\(\);$'],
 		[]),
+	('member-from-function', dict(MakePointersCopy(), **{
+		#Convert Function to Member Function: a function whose first parameter points to a struct becomes the
+		#struct's.  It is declared there, its own declaration goes, its definition is SLevel::Depth without the
+		#parameter, p->x in its body is x, and its calls name their object first: Depth(psLevel) is
+		#psLevel->Depth(), Depth(&msLevel) msLevel.Depth().  And one whose first parameter points to a class: what
+		#it named through the parameter it names alone.
+		'WAIT_INDEX': '1', 'OPEN': 'Vat.cpp',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:20:6,edit:functiontomember,edit:caret:108:6,edit:functiontomember,printdisklines:Vat.h,printdisklines:Vat.cpp'}),
+		[r'^Status: Converted Depth to the member function SLevel::Depth: 4 calls changed\.$', r'^Status: Converted Use to the member function CVat::Use: 0 calls changed\.$',
+		 r'^8\|\tint\t\tmiMark;$', r'^9\|\tint\t\tDepth\(void\);$', r'^10\|\};$', r'^\d+\|\tint\t+Use\(CDeepVat\* pcDeep\);$',
+		 r'^20\|int SLevel::Depth\(void\)$', r'^22\|\treturn miDepth;$', r'^33\|\t\(\*psLevel\)\.miMark = psLevel->Depth\(\);$', r'^59\|\tmiCount = sLevel\.miDepth \+ msLevel\.Depth\(\);$',
+		 r'^108\|int CVat::Use\(CDeepVat\* pcDeep\)$', r'^112\|\tSLevel&\tsOther = msLevel;$', r'^118\|\tSLevel\*\tpsLocal = &msLevel;$', r'^119\|\tiTotal = Fill\(&sLevel, 1\);$',
+		 r'^120\|\tiTotal \+= pcDeep->Fill\(psMine, 2\);$', r'^124\|\tiTotal \+= psLocal->miDepth \+ \(\*psLocal\)\.miMark \+ psLocal->Depth\(\);$', r'^126\|\tiTotal \+= sOther\.Depth\(\) \+ sOther\.miMark;$',
+		 r'^127\|\treturn iTotal \+ Sum\(psLate, 2\);$'],
+		[r'^\d+\|int\t\tDepth\(SLevel\* psLevel\);$']),
+	('member-to-function', dict(MakePointersCopy(), **{
+		#Convert Member Function to Function: its class's declaration of it goes and it is declared after its class,
+		#with a first parameter that points to the class; what its body names of its object is named through the
+		#parameter, a call of itself gives the parameter on, and a call on an object gives the object.  Refused: a
+		#virtual function, and what is no member function.
+		'WAIT_INDEX': '1', 'OPEN': 'Vat.cpp',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:94:12,edit:membertofunction,edit:caret:8:13,edit:membertofunction,edit:caret:30:12,edit:membertofunction,edit:caret:20:6,edit:membertofunction,printdisklines:Vat.h,printdisklines:Vat.cpp'}),
+		[r'^Status: Converted CVat::Sum to the function Sum\(CVat\* pcVat, \.\.\.\): 2 calls changed\.$', r'^Status: Converted CVat::Init to the function Init\(CVat\* pcVat, \.\.\.\): 0 calls changed\.$',
+		 r"^Status: Can't convert CVat::Fill to a function: it is virtual, or a template's body calls it on an object\.$",
+		 r"^Status: Can't convert Depth to a function: it isn't a member function of a class \(a class template's can't be\)\.$",
+		 r'^18\|\tvirtual\tint\t\tFill\(SLevel\* psLevel, int iAmount\);$', r'^\d+\|void\tInit\(CVat\* pcVat\);$', r'^\d+\|int\tSum\(CVat\* pcVat, SLevel\* psLevel, int iTimes\);$', r'^\d+\|class CDeepVat : public CVat$',
+		 r'^8\|void Init\(CVat\* pcVat\)$', r'^10\|\tpcVat->msLevel\.miDepth = 0;$', r'^12\|\tpcVat->miCount = 0;$', r'^94\|int Sum\(CVat\* pcVat, SLevel\* psLevel, int iTimes\)$',
+		 r'^100\|\treturn psLevel->miMark \+ Sum\(pcVat, psLevel, iTimes - 1\);$', r'^127\|\treturn iTotal \+ Sum\(pcVat, psLate, 2\);$'],
+		[r'^\d+\|\t+void\tInit\(void\);$', r'^\d+\|\t+int\t\tSum\(SLevel\* psLevel, int iTimes\);$']),
 	('rename-assembly-class', dict(MakeRenameAssemblyCopy(), **{
 		#A class renamed in hand written assembly's labels (_CEngine__Init, __0, __2), in parameter lists with its length
 		#(FPC7CEngine to FPC6CMotor), in generated layout constants (SIZEOF_CEngine, CEngine_miSpeed: in the assembly, the
@@ -2617,7 +2646,7 @@ CHECKS = [
 		 r'^Menu Debug: Start Debugging \[F5\], Start Without Debugging \[Ctrl\+F5\], Stop Debugging \[Shift\+F5\], Stop Running\(disabled\), Restart \[Ctrl\+Shift\+F5\], Break All \[Ctrl\+Pause/Break\], Attach to Emulator\.\.\., Step Into \[F11\], Step Over \[F10\], Step Out \[Shift\+F11\], Toggle Breakpoint \[F9\], ',
 		 r'^Menu Window: Reset Window Layout, Close All Documents$',
 		 r'^Menu Editor: Go to Source \[Ctrl\+B\], Find Usages \[Alt\+F7\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Rename\.\.\. \[Shift\+F6\], Refactor>, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\]$',
-		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Introduce Field\.\.\. \[Ctrl\+Alt\+F\](\(disabled\))?, Introduce Constant\.\.\. \[Ctrl\+Alt\+C\](\(disabled\))?, Introduce Parameter\.\.\. \[Ctrl\+Alt\+P\](\(disabled\))?, Introduce Typedef\.\.\. \[Ctrl\+Alt\+K\](\(disabled\))?, Inline\.\.\. \[Ctrl\+Alt\+N\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\.(\(disabled\))?, Push Members Down\.\.\.(\(disabled\))?, Move\.\.\. \[F6\](\(disabled\))?, Copy Class\.\.\.(\(disabled\))?, Extract Method\.\.\. \[Ctrl\+Alt\+M\](\(disabled\))?, Extract Superclass\.\.\.(\(disabled\))?, Extract Interface\.\.\.(\(disabled\))?, Extract Class\.\.\.(\(disabled\))?, Encapsulate Field\.\.\.(\(disabled\))?, Optimise #includes \[Ctrl\+Alt\+O\], Sort #includes, Convert Macro\.\.\.(\(disabled\))?, Convert Pointer to Reference(\(disabled\))?, Convert Reference to Pointer(\(disabled\))?, Make Member Function const(\(disabled\))?, Make Member Function static(\(disabled\))?$',
+		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Introduce Field\.\.\. \[Ctrl\+Alt\+F\](\(disabled\))?, Introduce Constant\.\.\. \[Ctrl\+Alt\+C\](\(disabled\))?, Introduce Parameter\.\.\. \[Ctrl\+Alt\+P\](\(disabled\))?, Introduce Typedef\.\.\. \[Ctrl\+Alt\+K\](\(disabled\))?, Inline\.\.\. \[Ctrl\+Alt\+N\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\.(\(disabled\))?, Push Members Down\.\.\.(\(disabled\))?, Move\.\.\. \[F6\](\(disabled\))?, Copy Class\.\.\.(\(disabled\))?, Extract Method\.\.\. \[Ctrl\+Alt\+M\](\(disabled\))?, Extract Superclass\.\.\.(\(disabled\))?, Extract Interface\.\.\.(\(disabled\))?, Extract Class\.\.\.(\(disabled\))?, Encapsulate Field\.\.\.(\(disabled\))?, Optimise #includes \[Ctrl\+Alt\+O\], Sort #includes, Convert Macro\.\.\.(\(disabled\))?, Convert Pointer to Reference(\(disabled\))?, Convert Reference to Pointer(\(disabled\))?, Make Member Function const(\(disabled\))?, Make Member Function static(\(disabled\))?, Convert Function to Member Function(\(disabled\))?, Convert Member Function to Function(\(disabled\))?$',
 		 r'^Menu Explorer: Set as Startup Solution, Set as Startup Project\(disabled\), Remove Solution, Rename\.\.\.(\(disabled\))?$',
 		 r'^Menu item \[View/Nope\] not found$'], []),
 	('menu-clicks', {

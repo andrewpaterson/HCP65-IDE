@@ -298,6 +298,10 @@ IntelliJ has none of these for Java.
  18. Make a member function const (and static), its overrides with it, checked against what it changes; its family
      with it where a template's body calls it (T2).
  19. A function to a member function and back: its first parameter is this.
+     Done 2026-11-15 (IDEConvertMember.h says what it does): Convert Function to Member Function and Convert
+     Member Function to Function.  Left: a class template's member; a function in a namespace; the files that
+     call it aren't given the class's #include if they only had its forward declaration (the check refuses, if
+     the checker sees it: question 52).
  20. Extract template parameter: a type used in a function or class becomes a parameter.  A typedef of the
      template with the type it had keeps the code that used it compiling (the ACCU article "Refactoring Towards
      Seams in C++").  Its inverse: a parameter every instance gives the same argument is removed.
@@ -370,5 +374,6 @@ Where it is
  16. Pointer to reference and back (17): done (CIDEConvertPointer).
  17. Make a member function const or static (18): done (CIDEMemberQualifier, IDEMemberQualifier.h says what it
      does; checks qualifier-const and qualifier-static).  The family (T2) case has no check input.
- 18. Phase 4 from 19 (a function to a member function and back): next.  Then 20 to 24 in their order.
+ 18. Function to member function and back (19): done (CIDEConvertMember).
+ 19. Phase 4 from 20 (extract template parameter): next.  Then 21 to 24 in their order.
 
