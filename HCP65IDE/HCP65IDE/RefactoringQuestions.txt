@@ -27,9 +27,6 @@ Open
     Get/Is/Has/Find/Calculate/Create/Make/Read.  Tell me any prefix I have wrong or missing (int64? float32 arrays
     "a"?  size as ui?) and I will put it right.
 
-14. Generate Definition, Generate Declaration and Move Definition out of / into Class are in the editor's Refactor
-    menu.  Generate Definition has CLion's Ctrl+Shift+D; the other three have no keys.  What keys do you want?
-
 15. Where a new definition goes: after the definition of the function declared before it in the class (so a .cpp
     stays in the class's order), under a comment copied from that one if it says nothing (your banner of slashes),
     two blank lines apart.  If none of the class's functions is defined outside it, at the end of the header's
@@ -54,11 +51,6 @@ Open
     closing brace.  Your classes keep fields before functions in one part sometimes: say if a field should go after
     the last field and not at the end of the part.
 
-23. The new header gets every #include the old header has, and the new source file every #include the old one
-    has (so it also #includes the old header).  That always compiles; what isn't needed is left for the #includes
-    refactoring (plan item 15).  The new files aren't added to git (Rename File stages its renames with git mv):
-    should they be?
-
 24. The new files' names are the class's without its C (CKeg: Keg.h, Keg.cpp), in the directories of the files it
     leaves, and the include guard is the old header's with the name changed (__DRUM_H__ gives __KEG_H__,
     __IDE_MOVE_CLASS_H__ style for several words).  A CMakeLists.txt up to two directories above a project that
@@ -78,11 +70,6 @@ Open
     made once, though later than it was), and is a conflict where it is used more than once.  Is that right, or
     should a call always be asked about?
 
-29. Inline Variable takes a variable declared at the top and assigned by one statement (your style) as having one
-    value, as well as "int x = value;".  It refuses one whose assignment is in a block its uses are outside, or
-    that is used before the assignment.  It only inlines a function's own variables: not a parameter, a field or a
-    constant outside a function (IntelliJ inlines constants).  Do you want constants?
-
 31. Introduce Field puts the field after the class's last field (with that field's access), or at the end of the
     protected part of a class that has no fields, and assigns it in the function where the variable would have
     been assigned.  IntelliJ can also initialise it in the constructor or at its declaration: with Init functions
@@ -91,11 +78,6 @@ Open
 32. Introduce Parameter adds the parameter last and makes every call pass the expression itself.  It refuses an
     expression that uses the function's variables, its parameters or its class's members.  IntelliJ would also let
     it replace a parameter that the expression is the only use of: not built.  Wanted?
-
-33. Introduce Typedef (Ctrl+Alt+K, CLion's key) replaces the type only in the file it is selected in.  A typedef
-    written in a header could also replace the type in every file that #includes the header: not done.  Do you
-    want that (it would be a search of the files that include it, as Rename File's is)?  It suggests no name: I
-    couldn't see a rule for one (CArrayIDELocations for CArrayTemplate<SIDELocation>).
 
 34. A typedef in a class template is written on the line before the member that first uses it, with no blank line
     after it, and one in a function at the very start of its body.  Is that where you want them?
@@ -192,6 +174,11 @@ Answered
     (CFoo x(1, 2); new CFoo(1); a member's initialiser) changed as a call is, in Change Signature of a
     constructor.
 
+14. Generate Definition, Generate Declaration and Move Definition out of / into Class are in the editor's Refactor
+    menu.  Generate Definition has CLion's Ctrl+Shift+D; the other three have no keys.  What keys do you want?
+    Answered 2026-11-15: none.  Show Context Actions (Alt+Enter) offers them where they apply, and the keymap can
+    give them keys.  Nothing to do.
+
 19. Pull Members Up and Push Members Down have a dialog of rows, not IntelliJ's table (question 10 again): the class
     to (or a tick for each deriving class), a tick for each member, and under "Make abstract" a second tick for
     each function.  They have no keys, as in IntelliJ.  Is that enough until there is a table?
@@ -216,6 +203,14 @@ Answered
     Superclass, Interface and Class): the files deleted and their items taken out of the projects, as Rename
     File's undo renames back; redo makes them again.
 
+23. The new header gets every #include the old header has, and the new source file every #include the old one
+    has (so it also #includes the old header).  That always compiles; what isn't needed is left for the #includes
+    refactoring (plan item 15).  The new files aren't added to git (Rename File stages its renames with git mv):
+    should they be?
+    Answered 2026-11-15: yes: the new files are staged (git add), where the project is in a git repository, and
+    unstaged when undo deletes them.  To do in Move Class, Copy Class, Extract Superclass, Extract Interface,
+    Extract Class and Move to File; with undo deleting the files a refactoring made (question 45).
+
 25. F6 is now "Move...": on a class (or a member of one) it is Move Class to Its Own Files; on a function or a
     variable that is in no class it is Move to File, which asks for the header it goes to (a text field: the name
     of a header of the solution).  Its definition goes to that header's source file.  The files it goes to get an
@@ -226,6 +221,13 @@ Answered
     of the solution's projects and files to pick one from.  To do in Move to File's dialog; the chooser of the
     solution's files is a piece of its own (WindowLib's file chooser shows the disk, not the solution).
 
+29. Inline Variable takes a variable declared at the top and assigned by one statement (your style) as having one
+    value, as well as "int x = value;".  It refuses one whose assignment is in a block its uses are outside, or
+    that is used before the assignment.  It only inlines a function's own variables: not a parameter, a field or a
+    constant outside a function (IntelliJ inlines constants).  Do you want constants?
+    Answered 2026-11-15: yes: a const variable of a file or a class whose value is a constant is inlined, with
+    Inline Function's choice (every use and the constant taken out, or this use only).  Not an enumerator.  To do.
+
 30. Introduce Constant makes a #define, since every constant in your code is one (530 #defines of a number or a
     string in BaseLib, WindowLib and the IDE; no const variables), after the file's last #define or #include, and
     replaces the expression in the one function.  IntelliJ would replace it in the whole class.  Should it look
@@ -233,6 +235,13 @@ Answered
     need?
     Answered 2026-11-15: a tick in its dialog to replace every occurrence in the file, not ticked to begin with.
     The header isn't offered: the #define is moved there by hand, or by Move.  To do: the tick.
+
+33. Introduce Typedef (Ctrl+Alt+K, CLion's key) replaces the type only in the file it is selected in.  A typedef
+    written in a header could also replace the type in every file that #includes the header: not done.  Do you
+    want that (it would be a search of the files that include it, as Rename File's is)?  It suggests no name: I
+    couldn't see a rule for one (CArrayIDELocations for CArrayTemplate<SIDELocation>).
+    Answered 2026-11-15: yes: where the typedef is written in a header, a tick "all files that include it", not
+    ticked to begin with, and the files that would change shown first (as Optimise #includes shows them).  To do.
 
 35. Extract Method gives a variable the new function changes, that is used afterwards, back by reference
     ("int& iLow") where there is more than one, and an object (a variable whose type is a class) by reference
@@ -365,6 +374,7 @@ Answered
     constructors' initialisers, and every use, those through another object too).  A pointer field made a
     reference stays refused, and says why: a reference must be bound by every constructor and can't be set in
     Init or assigned again, which the classes here do.
+    Done 2026-11-15 (CIDEConvertPointer::ConvertField).
 
 51. Convert Member Function to Function names the new first parameter by your prefixes from the class's name
     ("CVat* pcVat", "SLevel* psLevel") and declares the function after its class in the class's header, two lines

@@ -2115,6 +2115,18 @@ CHECKS = [
 		 r'^112\|\tSLevel\*\tsOther = &pcVat->msLevel;$', r'^118\|\tSLevel&\tpsLocal = pcVat->msLevel;$',
 		 r'^124\|\tiTotal \+= psLocal\.miDepth \+ psLocal\.miMark \+ Depth\(psLocal\);$', r'^125\|\tsOther->miDepth = iTotal;$', r'^126\|\tiTotal \+= Depth\(\*sOther\) \+ sOther->miMark;$'],
 		[]),
+	('pointer-field', dict(MakePointersCopy(), **{
+		#A field that is a reference made a pointer: its declaration, what its constructor binds it to, and its uses,
+		#alone, through this and through other objects.  A field that is a pointer isn't made a reference.
+		'WAIT_INDEX': '1', 'OPEN': 'Probe.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:10:11,edit:pointertoreference,edit:caret:9:11,edit:contextactions,edit:referencetopointer,printdisklines:Probe.h,printdisklines:Probe.cpp'}),
+		[r"^Status: Can't convert the field mpsSpare to a reference: a field that is a reference must be bound by every constructor, and can't be set in Init or assigned again\.$",
+		 r'^Context actions: Rename\.\.\. \| Convert Reference to Pointer \| Encapsulate Field\.\.\. \| Safe Delete\.\.\.$',
+		 r'^Status: Converted the field msLevel to a pointer: 9 uses changed\.$', r'^9\|\tSLevel\*\tmsLevel;$',
+		 r'^8\|CProbe::CProbe\(SLevel& sLevel\) : msLevel\(&sLevel\), miCount\(0\)$', r'^20\|\treturn msLevel->miDepth \+ Mark\(msLevel\) \+ mpsSpare->miMark;$',
+		 r'^30\|\tmsLevel->miDepth = iDepth;$', r'^31\|\tthis->msLevel->miMark = iDepth;$', r'^44\|\tsCopy = \*pcProbe->msLevel;$',
+		 r'^45\|\tpcProbe->msLevel->miMark = cOther\.msLevel->miDepth \+ sCopy\.miMark;$', r'^46\|\treturn Mark\(pcProbe->msLevel\) \+ \(cOther\.msLevel\)->miMark;$'],
+		[]),
 	('qualifier-const', dict(MakeQualifiersCopy(), **{
 		#Make Member Function const: const after its parameters in its declaration and definition, and in the function
 		#that overrides it.  What a body does that a const function can't is a conflict and nothing is changed: a

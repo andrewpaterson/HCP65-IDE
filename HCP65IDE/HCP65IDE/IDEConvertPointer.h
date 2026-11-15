@@ -92,6 +92,7 @@ protected:
 	bool				ConvertParameter(CIDERefactorUnit* pcUnit, CCPPSyntax* pcParameter, int32 iLine, int32 iColumn, bool bToReference, CIDEFileEdits* pcFiles, CChars* pszWhat, size* puiUses, size* puiCalls);
 	bool				ConvertLocal(CIDERefactorUnit* pcUnit, CCPPSyntax* pcDeclarator, const char* szKey, bool bToReference, CIDEFileEdits* pcFiles, CChars* pszWhat, size* puiUses);
 	size				ConvertUses(const char* szKey, bool bToReference, CIDEFileEdits* pcFiles);
+	bool				ConvertField(CIDERefactorUnit* pcUnit, CCPPSyntax* pcDeclarator, const char* szKey, bool bToReference, CIDEFileEdits* pcFiles, CChars* pszWhat, size* puiUses);
 	void				FlushPending(bool bToReference, CIDEFileEdits* pcFiles);
 };
 

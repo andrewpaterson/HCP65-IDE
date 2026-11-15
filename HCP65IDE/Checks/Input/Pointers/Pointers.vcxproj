@@ -7,9 +7,11 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Probe.cpp" />
     <ClCompile Include="Vat.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Probe.h" />
     <ClInclude Include="Vat.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

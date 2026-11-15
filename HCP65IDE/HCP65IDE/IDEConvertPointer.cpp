@@ -109,7 +109,8 @@ void CIDEConvertPointer::AddEditorItems(Ptr<CMenuContainer> pRefactor)
 //////////////////////////////////////////////////////////////////////////
 //
 // Show Context Actions: a variable or a parameter declared a pointer can
-// be made a reference, and one declared a reference a pointer.
+// be made a reference, and one declared a reference a pointer; a field
+// declared a reference too.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEConvertPointer::AddContextActions(SIDECaretContext* psContext)
@@ -124,6 +125,10 @@ void CIDEConvertPointer::AddContextActions(SIDECaretContext* psContext)
 		{
 			psContext->Offer("Refactor.ReferenceToPointer");
 		}
+	}
+	else if (psContext->bSymbol && (psContext->uiKind == CPPSK_Field) && psContext->bReference)
+	{
+		psContext->Offer("Refactor.ReferenceToPointer");
 	}
 }
 
@@ -310,8 +315,11 @@ bool CIDEConvertPointer::ConvertDeclarator(CIDERefactorUnit* pcUnit, const char*
 //
 // A place the variable is used, changed to what it is now: to a
 // reference, "p->x" is "p.x", "*p" is "p" and p alone is "&p"; to a
-// pointer, "r.x" is "r->x", "&r" is "r" and r alone is "*r".  False,
-// with why, if a reference (or a pointer) can't be used as it is there.
+// pointer, "r.x" is "r->x", "&r" is "r" and r alone is "*r".  A field
+// named through an object is that expression, all of it
+// ("pcVat->msLevel.miDepth" is "pcVat->msLevel->miDepth", and
+// "pcVat->msLevel" alone is "*pcVat->msLevel").  False, with why, if a
+// reference (or a pointer) can't be used as it is there.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEConvertPointer::ConvertUse(const char* szFileName, int32 iLine, int32 iColumn, bool bToReference, CIDEFileEdits* pcFiles)
@@ -344,7 +352,19 @@ bool CIDEConvertPointer::ConvertUse(const char* szFileName, int32 iLine, int32 i
 	for (; pcNode && (pcNode->GetKind() != CPPS_IdExpression) && pcNode->mpcParent && (pcNode->mpcParent->miFirstToken == iToken) && (pcNode->mpcParent->miLastToken == iToken); pcNode = pcNode->mpcParent)
 	{
 	}
-	if (!pcNode || (pcNode->GetKind() != CPPS_IdExpression) || !pcNode->mpcParent)
+	if (pcNode && (pcNode->GetKind() != CPPS_IdExpression))
+	{
+		//A member named through an object: the member expression it ends.
+		for (pcParent = pcNode; pcParent && (pcParent->GetKind() != CPPS_MemberExpression) && (pcParent->miLastToken == iToken); pcParent = pcParent->mpcParent)
+		{
+		}
+		if (pcParent && (pcParent->GetKind() == CPPS_MemberExpression) && (pcParent->miLastToken == iToken) && ((CCPPSyntaxMemberExpression*)pcParent)->mpcObject &&
+			(((CCPPSyntaxMemberExpression*)pcParent)->mpcObject->miLastToken < iToken) && GetTokenOffsets(pcUnit, szText, pcParent->miFirstToken, iToken, &uiStart, &uiEnd))
+		{
+			pcNode = pcParent;
+		}
+	}
+	if (!pcNode || ((pcNode->GetKind() != CPPS_IdExpression) && (pcNode->GetKind() != CPPS_MemberExpression)) || !pcNode->mpcParent)
 	{
 		return Refuse("it is named in a way that can't be read", szFileName, iLine);
 	}
@@ -766,6 +786,95 @@ bool CIDEConvertPointer::ConvertLocal(CIDERefactorUnit* pcUnit, CCPPSyntax* pcDe
 
 //////////////////////////////////////////////////////////////////////////
 //
+// A field that is a reference made a pointer: its declaration, what each
+// constructor's initialisers bind it to ("msLevel(sLevel)" is
+// "msLevel(&sLevel)"), and every use, those through another object too.
+// The other way is refused: a reference must be bound by every
+// constructor and can't be set in Init or assigned again, which is what
+// a class here does with a pointer.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEConvertPointer::ConvertField(CIDERefactorUnit* pcUnit, CCPPSyntax* pcDeclarator, const char* szKey, bool bToReference, CIDEFileEdits* pcFiles, CChars* pszWhat, size* puiUses)
+{
+	CCPPSyntaxInitDeclarator*		pcInit;
+	CCPPSyntaxMemberInitializer*	pcBound;
+	CIDERefactorUnit*				pcUseUnit;
+	CArrayIDELocations				asLocations;
+	SIDELocation*					psLocation;
+	CCPPSyntax*						pcNode;
+	CChars							szName;
+	size							i;
+	int32							iToken;
+	int32							iFirst;
+	int32							iLast;
+	uint8							uiKind;
+
+	pcInit = (CCPPSyntaxInitDeclarator*)pcDeclarator;
+	szName.Init();
+	GetIDESymbolName(szKey, &szName);
+	pszWhat->Append("the field ")->Append(szName);
+	szName.Kill();
+	if (bToReference)
+	{
+		return Refuse("a field that is a reference must be bound by every constructor, and can't be set in Init or assigned again");
+	}
+	if (!ConvertDeclarator(pcUnit, pcUnit->GetFileName(), pcInit->mpcDeclarator, bToReference, pcFiles))
+	{
+		return false;
+	}
+	if (pcInit->mpcInitializer)
+	{
+		iFirst = pcInit->mpcInitializer->miFirstToken + (pcUnit->IsToken(pcInit->mpcInitializer->miFirstToken, "=") ? 1 : 0);
+		iLast = pcInit->mpcInitializer->miLastToken;
+		if ((pcInit->mpcInitializer->GetKind() == CPPS_InitializerList) || (pcInit->mpcInitializer->GetKind() == CPPS_ParenthesisedInitializer) || (iFirst > iLast))
+		{
+			return Refuse("its value is given in brackets where it is declared");
+		}
+		if (!ConvertValue(pcUnit, pcUnit->GetFileName(), iFirst, iLast, bToReference, pcFiles))
+		{
+			return false;
+		}
+	}
+
+	asLocations.Init();
+	mpcContent->GetCodeModel()->GetSymbolLocations(szKey, &asLocations, &uiKind);
+	for (i = 0; mszProblem.Empty() && (i < asLocations.NumElements()); i++)
+	{
+		psLocation = asLocations.Get(i);
+		if (psLocation->uiRole != CPPIR_Reference)
+		{
+			continue;
+		}
+		pcUseUnit = GetUnit(psLocation->szFileName.Text());
+		iToken = pcUseUnit ? pcUseUnit->FindTokenAt(psLocation->iLine, psLocation->iColumn) : -1;
+		pcNode = (iToken != -1) ? pcUseUnit->FindNodeOfTokens(iToken, iToken) : NULL;
+		pcBound = pcNode ? (CCPPSyntaxMemberInitializer*)pcUseUnit->FindAncestor(pcNode, CPPS_MemberInitializer) : NULL;
+		if (pcBound && pcBound->mpcName && (iToken >= pcBound->mpcName->miFirstToken) && (iToken <= pcBound->mpcName->miLastToken))
+		{
+			//A constructor binds it: to the address of what it was bound to.
+			iFirst = pcBound->mpcInitializer ? pcBound->mpcInitializer->miFirstToken + 1 : 0;
+			iLast = pcBound->mpcInitializer ? pcBound->mpcInitializer->miLastToken - 1 : -1;
+			if (iFirst > iLast)
+			{
+				Refuse("a constructor binds it to nothing", psLocation->szFileName.Text(), psLocation->iLine);
+			}
+			else
+			{
+				ConvertValue(pcUseUnit, psLocation->szFileName.Text(), iFirst, iLast, bToReference, pcFiles);
+			}
+		}
+		else if (ConvertUse(psLocation->szFileName.Text(), psLocation->iLine, psLocation->iColumn, bToReference, pcFiles))
+		{
+			(*puiUses)++;
+		}
+	}
+	KillIDELocations(&asLocations);
+	return mszProblem.Empty();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // The parameter or local variable at the caret made a reference (or a
 // pointer), as one undo.  The files changed are checked as they would be
 // first: nothing is changed if they would have more errors than they
@@ -797,6 +906,7 @@ bool CIDEConvertPointer::Convert(bool bToReference, CChars* pszStatus)
 	uint8				uiKind;
 	bool				bResult;
 	bool				bParameter;
+	bool				bField;
 
 	if (!CanConvert())
 	{
@@ -818,7 +928,9 @@ bool CIDEConvertPointer::Convert(bool bToReference, CChars* pszStatus)
 
 	//Where it is declared: its parameter, or its declarator with its value.
 	bResult = mpcContent->GetDocuments()->FindSymbolPlace(&iLine, &iColumn, &uiRole) &&
-			  pcModel->GetSymbolAt(mpcContent->GetDocuments()->GetActiveTab()->GetFileName(), iLine, iColumn, &szKey, &uiKind) && ((uiKind == CPPSK_Parameter) || (uiKind == CPPSK_Variable));
+			  pcModel->GetSymbolAt(mpcContent->GetDocuments()->GetActiveTab()->GetFileName(), iLine, iColumn, &szKey, &uiKind) &&
+			  ((uiKind == CPPSK_Parameter) || (uiKind == CPPSK_Variable) || (uiKind == CPPSK_Field));
+	bField = bResult && (uiKind == CPPSK_Field);
 	if (bResult)
 	{
 		asLocations.Init();
@@ -839,7 +951,7 @@ bool CIDEConvertPointer::Convert(bool bToReference, CChars* pszStatus)
 	}
 	if (!bResult)
 	{
-		Refuse("only a parameter or a local variable can be");
+		Refuse("only a parameter, a local variable or a field can be");
 	}
 	else
 	{
@@ -853,13 +965,17 @@ bool CIDEConvertPointer::Convert(bool bToReference, CChars* pszStatus)
 			bParameter = true;
 			bResult = ConvertParameter(pcUnit, pcParameter, iLine, iColumn, bToReference, &cFiles, &szWhat, &uiUses, &uiCalls);
 		}
+		else if (pcInit && bField)
+		{
+			bResult = ConvertField(pcUnit, pcInit, szKey.Text(), bToReference, &cFiles, &szWhat, &uiUses);
+		}
 		else if (pcInit && (szKey.Text()[0] == '@'))
 		{
 			bResult = ConvertLocal(pcUnit, pcInit, szKey.Text(), bToReference, &cFiles, &szWhat, &uiUses);
 		}
 		else
 		{
-			bResult = Refuse(pcNode ? "only a parameter or a local variable can be" : "its declaration can't be read (a macro makes it)");
+			bResult = Refuse(pcNode ? "only a parameter, a local variable or a field can be" : "its declaration can't be read (a macro makes it)");
 		}
 	}
 	if (bResult)

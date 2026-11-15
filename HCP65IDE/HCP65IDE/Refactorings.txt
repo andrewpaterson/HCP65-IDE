@@ -418,6 +418,7 @@ Where it is
  25. The queue's (6), the smaller answers, one at a time (each is in RefactoringQuestions.txt, Answered, with
      "Done" when it is):
        - a function that comes to override one is marked override (questions 21 and 43): done.
+       - Convert Reference to Pointer on a field (question 50): done.
 
 
 When the plan is done
