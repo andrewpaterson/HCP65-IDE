@@ -10,11 +10,13 @@
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="Vessel.cpp" />
     <ClCompile Include="Drum.cpp" />
+    <ClCompile Include="Pair.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Vessel.h" />
     <ClInclude Include="Drum.h" />
     <ClInclude Include="Crate.h" />
+    <ClInclude Include="Pair.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{8E3F4051-0000-4000-8000-000000000009}</ProjectGuid>

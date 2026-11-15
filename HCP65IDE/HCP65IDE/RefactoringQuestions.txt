@@ -114,3 +114,18 @@ Open
     a conflict (the type of the object is asked of the compiler, so cDrum.Seal() is not one where cDrum is a
     CDrum); "Keep abstract" leaves it pure virtual in the base class and then nothing is in the way.  A pulled-up or
     pushed-down function isn't given "override" or "virtual" that it didn't have.  Should it be?
+
+22. Move Class to Its Own Files (F6) makes the new files empty and fills them as an edit, so that one undo puts the
+    class back and leaves the new files empty, in the projects.  Nothing breaks, but the empty files stay until you
+    delete them.  The alternative is an undo step that deletes files and project items (as Rename File's renames
+    back): do you want that?
+
+23. The new header gets every #include the old header has, and the new source file every #include the old one
+    has (so it also #includes the old header).  That always compiles; what isn't needed is left for the #includes
+    refactoring (plan item 15).  The new files aren't added to git (Rename File stages its renames with git mv):
+    should they be?
+
+24. The new files' names are the class's without its C (CKeg: Keg.h, Keg.cpp), in the directories of the files it
+    leaves, and the include guard is the old header's with the name changed (__DRUM_H__ gives __KEG_H__,
+    __IDE_MOVE_CLASS_H__ style for several words).  A CMakeLists.txt up to two directories above a project that
+    lists the old file gets a line for the new one after it.  Right?

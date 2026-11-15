@@ -164,6 +164,14 @@ Phase 1 - nothing new from the compiler
        - nested types and enums of the class, which aren't offered;
        - a member's use of the source template's parameters isn't checked where it goes to a class that isn't
          that template's.
+     A class to its own .h and .cpp is done, 2026-11-15: Move Class to Its Own Files (F6; IDEMoveClass.h says what
+     it does), a class template with what its header defines outside it.  But for:
+       - a class whose members are defined in more than one source file (Preprocessor_Linux.cpp and
+         Preprocessor_Windows.cpp), which is refused;
+       - a class and the rest of its header that each name the other, which is refused: one of them would have
+         to be declared ahead (a forward declaration) for it, which 15 will know how to do;
+       - a source file the class was all of is left with only its #includes;
+       - undo leaves the new files there, empty (question 22).
   4. Copy (F5).  A class and its files under a new name.  A class template the same.
 
 
@@ -292,6 +300,6 @@ Where it is
      Definition, Generate Declaration, Move Definition out of Class and into Class (CIDEDefinitions; a constructor
      defined outside its class needed CommonLibraries 4187b9af1); a declaration and a definition brought back
      into step, and a function outside a class moved into its header (inline) and back out (13, 14); Pull
-     Members Up and Push Members Down (CIDEMoveMembers).  Next: a class to its own files, a function to another
-     file.
+     Members Up and Push Members Down (CIDEMoveMembers); a class to its own files (CIDEMoveClass, with
+     CVcxProject::AddItemBeside).  Next: a function or a global to another file or namespace.
 

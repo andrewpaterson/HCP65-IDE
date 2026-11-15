@@ -1387,6 +1387,59 @@ CHECKS = [
 		[r'^Dialog \[Pull Members Up from CDrum\] answered OK$', r'^Status: Pulled Spare\(\) up from CDrum to CVessel\.$',
 		 r'^Dialog \[Pull Members Up from CDrum\] answered OK$', r'^Dialog \[Problems Detected\] answered Cancel$'],
 		[r'Pulled Fill']),
+	('move-class', dict(MakeMoveMembersCopy(), **{
+		#Move Class to Its Own Files: CKeg shares Drum.h with CDrum and Drum.cpp with its functions.  It gets Keg.h (a
+		#guard named as Drum.h's is, Drum.h's #includes, the class) and Keg.cpp (an #include of Keg.h, Drum.cpp's
+		#includes, its functions with the comments over them); they go out of Drum.h and Drum.cpp, which don't end with
+		#blank lines for it; Main.cpp, which names CKeg, #includes Keg.h beside its #include of Drum.h; and the project
+		#has the new files beside the old.
+		'WAIT_INDEX': '1', 'OPEN': 'Drum.h', 'CARET': '27:8',
+		'DEBUG': 'edit:renamesearch:---s,edit:movableclass,edit:moveclass:,printdisklines:Keg.h,printdisklines:Keg.cpp,printdisklines:Drum.h,printdisklines:Drum.cpp,'
+		         'printdisklines:Main.cpp,printdisklines:MoveMembers.vcxproj'}),
+		[r'^Move Class: CKeg from Drum\.h, 2 outside \(Drum\.cpp\), to Keg$', r'^Status: Moved CKeg to Keg\.h and Keg\.cpp: 2 definitions outside it, 1 #include added\.$', r'^Move Class: moved$',
+		 r'^1\|#ifndef __KEG_H__$', r'^2\|#define __KEG_H__$', r'^3\|#include "Vessel\.h"$', r'^4\|$', r'^5\|$', r'^6\|class CKeg : public CVessel$', r'^10\|\tvoid\tVent\(void\) override;$', r'^11\|\};$',
+		 r'^12\|$', r'^13\|$', r'^14\|#endif // __KEG_H__$', r'^14 lines$',
+		 r'^1\|#include "Keg\.h"$', r'^2\|#include "Drum\.h"$', r'^3\|$', r'^4\|$', r'^5\|/{74}$', r'^9\|void CKeg::Tap\(void\)$', r'^12\|\}$', r'^13\|$', r'^14\|$', r'^15\|/{74}$',
+		 r'^19\|void CKeg::Vent\(void\)$', r'^22\|\}$', r'^22 lines$',
+		 r'^23\|\tvoid\tHide\(void\);$', r'^24\|\};$', r'^25\|$', r'^26\|$', r'^27\|#endif // __DRUM_H__$', r'^27 lines$',
+		 r'^59\|void CDrum::Hide\(void\)$', r'^62\|\}$', r'^62 lines$',
+		 r'^1\|#include "Drum\.h"$', r'^2\|#include "Keg\.h"$', r'^3\|#include "Crate\.h"$',
+		 r'^\d+\|    <ClCompile Include="Drum\.cpp" />$', r'^\d+\|    <ClCompile Include="Keg\.cpp" />$', r'^\d+\|    <ClInclude Include="Drum\.h" />$', r'^\d+\|    <ClInclude Include="Keg\.h" />$'],
+		[]),
+	('move-class-template', dict(MakeMoveMembersCopy(), **{
+		#A class template: its member defined outside it in the header goes to the new header with it, there is no
+		#source file, and the new header #includes the old one, where the class it derives from stays.  A name that is
+		#taken, or isn't a file's, is refused.
+		'WAIT_INDEX': '1', 'OPEN': 'Crate.h', 'CARET': '16:8',
+		'DEBUG': 'edit:renamesearch:---s,edit:movableclass,edit:moveclass:Crate,edit:moveclass:Big Crate,edit:moveclass:BigCrate,printdisklines:BigCrate.h,printdisklines:Crate.h,printdisklines:Main.cpp'}),
+		[r'^Move Class: CCrate from Crate\.h, 1 outside, to Crate$', r'^Move Class: Crate\.h is there already$', r"^Move Class: the files' name is letters, digits, _ and -, without an extension$",
+		 r'^Status: Moved CCrate to BigCrate\.h: 1 definition outside it, 1 #include added\.$',
+		 r'^1\|#ifndef __BIG_CRATE_H__$', r'^2\|#define __BIG_CRATE_H__$', r'^3\|#include "Crate\.h"$', r'^4\|$', r'^5\|$', r'^6\|template<class M>$', r'^7\|class CCrate : public CBox<M>$', r'^11\|\};$',
+		 r'^12\|$', r'^13\|$', r'^14\|template<class M>$', r'^15\|int CCrate<M>::Size\(void\)$', r'^18\|\}$', r'^21\|#endif // __BIG_CRATE_H__$',
+		 r'^12\|\};$', r'^13\|$', r'^14\|$', r'^15\|#endif // __CRATE_H__$', r'^15 lines$',
+		 r'^2\|#include "Crate\.h"$', r'^3\|#include "BigCrate\.h"$'],
+		[]),
+	('move-class-refused', dict(MakeMoveMembersCopy(), **{
+		#A class that is all its header declares is renamed, not moved; one that needs what stays in its header, which
+		#needs it, can't have a header of its own; and no class at the caret.
+		'WAIT_INDEX': '1', 'OPEN': 'Vessel.h', 'CARET': '5:8',
+		'DEBUG': 'edit:renamesearch:---s,edit:movableclass,edit:caret:3:1,edit:movableclass,edit:open:Pair.h,edit:caret:17:8,edit:movableclass,edit:moveclass:'}),
+		[r"^Move Class: CVessel can't be moved: it is the only thing Vessel\.h declares: Rename File renames its files$", r'^Move Class: no class$',
+		 r"^Move Class: CRight can't be moved: it and what stays in Pair\.h each name the other: their headers would each have to #include the other$"],
+		[r'^Move Class: moved', r'^Status: Moved']),
+	('move-class-undo', dict(MakeMoveMembersCopy(), **{
+		#One undo puts the class back and empties the new files, which stay: what builds is what built before.
+		'WAIT_INDEX': '1', 'OPEN': 'Drum.h', 'CARET': '27:8',
+		'DEBUG': 'edit:renamesearch:---s,edit:moveclass:,edit:undoall,edit:undoall,edit:saveall,printdisklines:Keg.h,printdisklines:Keg.cpp,printdisklines:Drum.h,printdisklines:Drum.cpp,printdisklines:Main.cpp'}),
+		[r'^Status: Moved CKeg to Keg\.h and Keg\.cpp', r'^Disk lines Keg\.h:$', r'^0 lines$|^\(none\)$', r'^Disk lines Keg\.cpp:$', r'^0 lines$|^\(none\)$',
+		 r'^27\|class CKeg : public CVessel$', r'^35 lines$', r'^79\|void CKeg::Vent\(void\)$', r'^82 lines$', r'^1\|#include "Drum\.h"$', r'^2\|#include "Crate\.h"$'],
+		[r'#include "Keg\.h"']),
+	('move-class-dialog', dict(MakeMoveMembersCopy(), **{
+		#The dialog: the files' name, suggested from the class's.
+		'WAIT_INDEX': '1', 'OPEN': 'Drum.h', 'CARET': '27:8', 'SETTINGS': MakeSettingsFile(), 'DIALOG_ANSWER': 'OK',
+		'DEBUG': 'moveclass,answered:1,printstatus'}),
+		[r'^Dialog \[Move CKeg to Its Own Files\] answered OK$', r'^Status: Moved CKeg to Keg\.h and Keg\.cpp: 2 definitions outside it, 1 #include added\.$'],
+		[]),
 	('rename-assembly-class', dict(MakeRenameAssemblyCopy(), **{
 		#A class renamed in hand written assembly's labels (_CEngine__Init, __0, __2), in parameter lists with its length
 		#(FPC7CEngine to FPC6CMotor), in generated layout constants (SIZEOF_CEngine, CEngine_miSpeed: in the assembly, the
@@ -1891,7 +1944,7 @@ CHECKS = [
 		 r'^Menu Debug: Start Debugging \[F5\], Start Without Debugging \[Ctrl\+F5\], Stop Debugging \[Shift\+F5\], Stop Running\(disabled\), Restart \[Ctrl\+Shift\+F5\], Break All \[Ctrl\+Pause/Break\], Attach to Emulator\.\.\., Step Into \[F11\], Step Over \[F10\], Step Out \[Shift\+F11\], Toggle Breakpoint \[F9\], ',
 		 r'^Menu Window: Reset Window Layout, Close All Documents$',
 		 r'^Menu Editor: Go to Source \[Ctrl\+B\], Find Usages \[Alt\+F7\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Rename\.\.\. \[Shift\+F6\], Refactor>, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\]$',
-		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\.(\(disabled\))?, Push Members Down\.\.\.(\(disabled\))?, Extract Method\.\.\.\(disabled\)$',
+		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\.(\(disabled\))?, Push Members Down\.\.\.(\(disabled\))?, Move Class to Its Own Files\.\.\. \[F6\](\(disabled\))?, Extract Method\.\.\.\(disabled\)$',
 		 r'^Menu Explorer: Set as Startup Solution, Set as Startup Project\(disabled\), Remove Solution, Rename\.\.\.(\(disabled\))?$',
 		 r'^Menu item \[View/Nope\] not found$'], []),
 	('menu-clicks', {
