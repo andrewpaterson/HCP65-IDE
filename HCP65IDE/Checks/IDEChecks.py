@@ -289,6 +289,16 @@ def MakeInlineVariableCopy():
 	return {'SOLUTION': os.path.join(szFolder, 'InlineVariable.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
 
 
+def MakeIntroduceTypedefCopy():
+	#A copy of Input/IntroduceTypedef (CList, a class template whose members' types name its parameter; CItems, which
+	#writes CList<SItem> and unsigned long long several times), to introduce typedefs in.
+	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
+	atexit.register(shutil.rmtree, szRoot, True)
+	szFolder = os.path.join(szRoot, 'IntroduceTypedef')
+	shutil.copytree(os.path.join(HERE, 'Input', 'IntroduceTypedef'), szFolder)
+	return {'SOLUTION': os.path.join(szFolder, 'IntroduceTypedef.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
+
+
 def MakeKeymapFile(szText=None):
 	#Where a scripted run keeps its keys, with szText in it if it's given.
 	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
@@ -1616,6 +1626,46 @@ CHECKS = [
 		[r'^Dialog \[Introduce Constant\] answered OK$', r'^Status: Introduced the constant VALUE = 4: 1 occurrence replaced\.$',
 		 r"^Status: Can't introduce it: the expression isn't a constant: it names a variable or does something\.$"],
 		[]),
+	('introduce-typedef', dict(MakeIntroduceTypedefCopy(), **{
+		#Introduce Typedef: CList<SItem> is written three times in the header.  The typedef goes two blank lines
+		#before the class that first writes it (and the comment over that), written as typedefs are here, and each
+		#place becomes its name, what was lined up after it staying in its column.
+		'WAIT_INDEX': '1', 'OPEN': 'Types.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:selecttext:41:2-41:14,edit:typedef:SItem,edit:typedef:CItemList,printdisklines:Types.h'}),
+		[r'^Introduce Typedef: \[CList<SItem>\], 3 places, in the file$', r'^Status: Introduce Typedef: The file uses that name already\.$',
+		 r'^Status: Introduced typedef CList<SItem> CItemList: 3 places replaced\.$',
+		 r'^34\|\};$', r'^35\|$', r'^36\|$', r'^37\|typedef CList<SItem>\tCItemList;$', r'^38\|$', r'^39\|$', r'^40\|//The items of a thing\.$', r'^41\|class CItems$',
+		 r'^44\|\tCItemList\t\t\tmcItems;$', r'^45\|\tunsigned long long\tmulTotal;$', r'^47\|\tCItemList\*\t\t\tGetItems\(void\);$', r'^48\|\tunsigned long long\tTotal\(CItemList\* pcOther\);$'],
+		[]),
+	('introduce-typedef-keywords', dict(MakeIntroduceTypedefCopy(), **{
+		#A type of keywords, in a source file: what a function returns, a variable's type and a cast; the typedef goes
+		#before the function that first writes it, over its comment.  The selected place alone can be replaced.
+		'WAIT_INDEX': '1', 'OPEN': 'Types.cpp',
+		'DEBUG': 'edit:renamesearch:---s,edit:selecttext:20:2-20:20,edit:typedef:uint64,printdisklines:Types.cpp,edit:undo,edit:selecttext:20:2-20:20,edit:typedefone:ulong,printdisklines:Types.cpp'}),
+		[r'^Introduce Typedef: \[unsigned long long\], 3 places, in the file$', r'^Status: Introduced typedef unsigned long long uint64: 3 places replaced\.$',
+		 r'^11\|\}$', r'^12\|$', r'^13\|$', r'^14\|typedef unsigned long long\tuint64;$', r'^15\|$', r'^16\|$', r'^17\|/{74}$', r'^21\|uint64 CItems::Total\(CList<SItem>\* pcOther\)$',
+		 r'^23\|\tuint64\t\t\t\tulResult;$', r'^24\|\tCList<SItem>\*\t\tpcItems;$', r'^27\|\tulResult = \(uint64\)pcItems->miCount;$',
+		 r'^Status: Introduced typedef unsigned long long ulong: 1 place replaced\.$', r'^14\|typedef unsigned long long\tulong;$',
+		 r'^21\|unsigned long long CItems::Total\(CList<SItem>\* pcOther\)$', r'^23\|\tulong\t\t\t\tulResult;$', r'^27\|\tulResult = \(unsigned long long\)pcItems->miCount;$'],
+		[]),
+	('introduce-typedef-template', dict(MakeIntroduceTypedefCopy(), **{
+		#A type that names a template's parameter is named where the parameter is.  In the class template: a member
+		#typedef before the member that first writes it, and the places in the class.  In a function of the template
+		#outside the class: the function's own, at the start of its body.
+		'WAIT_INDEX': '1', 'OPEN': 'Types.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:selecttext:24:2-24:4,edit:typedef:PLast,edit:selecttext:9:2-9:4,edit:typedef:PItem,printdisklines:Types.h'}),
+		[r'^Introduce Typedef: \[M\*\], 1 place, in its function$', r'^Status: Introduced typedef M\* PLast: 1 place replaced\.$',
+		 r'^Introduce Typedef: \[M\*\], 3 places, in its class$', r'^Status: Introduced typedef M\* PItem: 3 places replaced\.$',
+		 r'^8\|public:$', r'^9\|\ttypedef M\*\tPItem;$', r'^10\|\tPItem\tmpFirst;$', r'^11\|\tint\t\tmiCount;$', r'^13\|\tPItem\tGet\(int iIndex\) \{ return mpFirst; \}$', r'^14\|\tPItem\tLast\(void\);$',
+		 r'^23\|M\* CList<M>::Last\(void\)$', r'^24\|\{$', r'^25\|\ttypedef M\*\tPLast;$', r'^26\|\tPLast\tpLast;$'],
+		[]),
+	('introduce-typedef-refused', dict(MakeIntroduceTypedefCopy(), **{
+		#What isn't a type: a field's name, an expression.  The dialog (Ctrl+Alt+K's) can't be OKed without a name.
+		'WAIT_INDEX': '1', 'OPEN': 'Types.h', 'SETTINGS': MakeSettingsFile(), 'DIALOG_ANSWER': 'Cancel',
+		'DEBUG': 'edit:selecttext:10:7-10:14,edit:typedefable,edit:selecttext:12:31-12:38,edit:typedefable,edit:selecttext:10:2-10:5,edit:typedefable,edit:selecttext:41:2-41:14,introducetypedef,answered:1,printstatus'}),
+		[r"^Introduce Typedef: can't be: the selection isn't a type$", r"^Introduce Typedef: can't be: the selection isn't a type$", r'^Introduce Typedef: \[int\], 3 places, in the file$',
+		 r'^Dialog \[Introduce Typedef\] answered Cancel$'],
+		[r'^Status: Introduced']),
 	('rename-assembly-class', dict(MakeRenameAssemblyCopy(), **{
 		#A class renamed in hand written assembly's labels (_CEngine__Init, __0, __2), in parameter lists with its length
 		#(FPC7CEngine to FPC6CMotor), in generated layout constants (SIZEOF_CEngine, CEngine_miSpeed: in the assembly, the
@@ -2120,7 +2170,7 @@ CHECKS = [
 		 r'^Menu Debug: Start Debugging \[F5\], Start Without Debugging \[Ctrl\+F5\], Stop Debugging \[Shift\+F5\], Stop Running\(disabled\), Restart \[Ctrl\+Shift\+F5\], Break All \[Ctrl\+Pause/Break\], Attach to Emulator\.\.\., Step Into \[F11\], Step Over \[F10\], Step Out \[Shift\+F11\], Toggle Breakpoint \[F9\], ',
 		 r'^Menu Window: Reset Window Layout, Close All Documents$',
 		 r'^Menu Editor: Go to Source \[Ctrl\+B\], Find Usages \[Alt\+F7\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Rename\.\.\. \[Shift\+F6\], Refactor>, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\]$',
-		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Introduce Field\.\.\. \[Ctrl\+Alt\+F\](\(disabled\))?, Introduce Constant\.\.\. \[Ctrl\+Alt\+C\](\(disabled\))?, Introduce Parameter\.\.\. \[Ctrl\+Alt\+P\](\(disabled\))?, Inline Variable\.\.\. \[Ctrl\+Alt\+N\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\.(\(disabled\))?, Push Members Down\.\.\.(\(disabled\))?, Move\.\.\. \[F6\](\(disabled\))?, Copy Class\.\.\.(\(disabled\))?, Extract Method\.\.\.\(disabled\)$',
+		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Introduce Field\.\.\. \[Ctrl\+Alt\+F\](\(disabled\))?, Introduce Constant\.\.\. \[Ctrl\+Alt\+C\](\(disabled\))?, Introduce Parameter\.\.\. \[Ctrl\+Alt\+P\](\(disabled\))?, Introduce Typedef\.\.\. \[Ctrl\+Alt\+K\](\(disabled\))?, Inline Variable\.\.\. \[Ctrl\+Alt\+N\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\.(\(disabled\))?, Push Members Down\.\.\.(\(disabled\))?, Move\.\.\. \[F6\](\(disabled\))?, Copy Class\.\.\.(\(disabled\))?, Extract Method\.\.\.\(disabled\)$',
 		 r'^Menu Explorer: Set as Startup Solution, Set as Startup Project\(disabled\), Remove Solution, Rename\.\.\.(\(disabled\))?$',
 		 r'^Menu item \[View/Nope\] not found$'], []),
 	('menu-clicks', {

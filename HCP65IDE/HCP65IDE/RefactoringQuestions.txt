@@ -169,3 +169,11 @@ Open
 32. Introduce Parameter adds the parameter last and makes every call pass the expression itself.  It refuses an
     expression that uses the function's variables, its parameters or its class's members.  IntelliJ would also let
     it replace a parameter that the expression is the only use of: not built.  Wanted?
+
+33. Introduce Typedef (Ctrl+Alt+K, CLion's key) replaces the type only in the file it is selected in.  A typedef
+    written in a header could also replace the type in every file that #includes the header: not done.  Do you
+    want that (it would be a search of the files that include it, as Rename File's is)?  It suggests no name: I
+    couldn't see a rule for one (CArrayIDELocations for CArrayTemplate<SIDELocation>).
+
+34. A typedef in a class template is written on the line before the member that first uses it, with no blank line
+    after it, and one in a function at the very start of its body.  Is that where you want them?

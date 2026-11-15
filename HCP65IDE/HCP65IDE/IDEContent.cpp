@@ -222,6 +222,7 @@ void CIDEContent::Class(void)
 	M_Pointer(mpMoveMembers);
 	M_Pointer(mpMoveClass);
 	M_Pointer(mpInlineVariable);
+	M_Pointer(mpIntroduceTypedef);
 	M_Pointer(mpUsages);
 	M_Pointer(mpFindInFiles);
 	M_Pointer(mpOccurrences);
@@ -294,6 +295,7 @@ void CIDEContent::Free(void)
 		mpWindow->CancelPosted(&mpMoveMembers);
 		mpWindow->CancelPosted(&mpMoveClass);
 		mpWindow->CancelPosted(&mpInlineVariable);
+		mpWindow->CancelPosted(&mpIntroduceTypedef);
 		mpWindow->CancelPosted(&mpSolutions);
 		mpWindow->CancelPosted(&mpBuildConfigurations);
 		mpWindow->CancelPosted(&mpBuilding);
@@ -416,6 +418,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpMoveMembers = OMalloc<CIDEMoveMembers>(this);
 	mpMoveClass = OMalloc<CIDEMoveClass>(this);
 	mpInlineVariable = OMalloc<CIDEInlineVariable>(this);
+	mpIntroduceTypedef = OMalloc<CIDEIntroduceTypedef>(this);
 	mpUsages = OMalloc<CIDEUsages>(this);
 	mpFindInFiles = OMalloc<CIDEFindInFiles>(this);
 	mpOccurrences = OMalloc<CIDEOccurrences>(this);
@@ -619,6 +622,7 @@ void CIDEContent::AddCommands(void)
 	mpMoveMembers->AddCommands(mpCommands);
 	mpMoveClass->AddCommands(mpCommands);
 	mpInlineVariable->AddCommands(mpCommands);
+	mpIntroduceTypedef->AddCommands(mpCommands);
 	mpUsages->AddCommands(mpCommands);
 	mpFindInFiles->AddCommands(mpCommands);
 	mpOccurrences->AddCommands(mpCommands);
@@ -1129,4 +1133,5 @@ Ptr<CIDEDefinitions> CIDEContent::GetDefinitions(void) { return mpDefinitions; }
 Ptr<CIDEMoveMembers> CIDEContent::GetMoveMembers(void) { return mpMoveMembers; }
 Ptr<CIDEMoveClass> CIDEContent::GetMoveClass(void) { return mpMoveClass; }
 Ptr<CIDEInlineVariable> CIDEContent::GetInlineVariable(void) { return mpInlineVariable; }
+Ptr<CIDEIntroduceTypedef> CIDEContent::GetIntroduceTypedef(void) { return mpIntroduceTypedef; }
 Ptr<CIDECloseGuard> CIDEContent::GetCloseGuard(void) { return mpCloseGuard; }

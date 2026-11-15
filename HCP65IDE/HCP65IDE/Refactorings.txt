@@ -210,6 +210,9 @@ These write a type, so in a template they need T3.
      is in the template's own words, as the variable's is (T3).
   8. Introduce Typedef.  The selected type is given a name, and the other uses of the type replaced.  In a
      template it may be a typedef of the class template's, written with its parameters.
+     Done 2026-11-15 (Ctrl+Alt+K; IDEIntroduceTypedef.h says what it does): in the file, in a class template (a
+     member typedef) or in a template's function (its own), by where the template's parameters it names can be
+     seen.  But for the other files that include a header a typedef is written in (question 33).
 
 
 Phase 3 - flow
@@ -321,6 +324,7 @@ Where it is
   6. Copy (4): done.
   7. Inline Variable (6): done (CIDEInlineVariable).
   8. Introduce Field, Constant and Parameter (7): done.
-  9. Introduce Typedef (8): next.  Then Extract Method (9), Inline Function (10), Extract Superclass, Interface and
-     Class (11), Encapsulate Field (12), and Phase 4 from 15.
+  9. Introduce Typedef (8): done (CIDEIntroduceTypedef).  Phase 2 is done.
+ 10. Extract Method (9), with F3 (flow): next.  Then Inline Function (10), Extract Superclass, Interface and Class
+     (11), Encapsulate Field (12), and Phase 4 from 15.
 

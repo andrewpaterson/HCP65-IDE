@@ -39,7 +39,7 @@ static bool			gbIDEScriptRenameSaves = false;  //rename: saves what it edited (r
 static bool			gbIDEScriptClassFiles = false;  //rename: renames a type's files too (renamesearch's f), never from the settings.
 
 
-static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printfindpreview", "printfindtoolbar", "findtool:", "printstartup", "printworkspace", "rename", "safedelete", "introducevariable", "introducefield", "introduceconstant", "introduceparameter", "changesignature", "pullmembersup", "pushmembersdown", "moveclass", "copyclass", "inlinevariable", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printsettings", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printprojectfiles", "printdiskfile:", "printdisklines:", "printedits", "printspans", "configuration:", "waitindex" };
+static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printfindpreview", "printfindtoolbar", "findtool:", "printstartup", "printworkspace", "rename", "safedelete", "introducevariable", "introducefield", "introduceconstant", "introduceparameter", "changesignature", "pullmembersup", "pushmembersdown", "moveclass", "copyclass", "inlinevariable", "introducetypedef", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printsettings", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printprojectfiles", "printdiskfile:", "printdisklines:", "printedits", "printspans", "configuration:", "waitindex" };
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -288,6 +288,11 @@ void CIDEScript::RunCommand(const char* szCommand)
 	{
 		//Pull Members Up's or Push Members Down's dialogs for the class at the caret.
 		mpcContent->GetMoveMembers()->ShowMove(strcmp(szCommand, "pullmembersup") == 0);
+	}
+	else if (strcmp(szCommand, "introducetypedef") == 0)
+	{
+		//Introduce Typedef's dialog for the selection.
+		mpcContent->GetIntroduceTypedef()->ShowIntroduce();
 	}
 	else if (strcmp(szCommand, "inlinevariable") == 0)
 	{
@@ -1633,6 +1638,38 @@ void CIDEScript::RunEditStep(const char* szStep)
 		}
 		szPrinted.Kill();
 		sMove.Kill();
+	}
+	else if ((strcmp(szStep, "typedefable") == 0) || (strncmp(szStep, "typedef:", 8) == 0) || (strncmp(szStep, "typedefone:", 11) == 0))
+	{
+		//What Introduce Typedef found for the selection (typedefable); or the typedef introduced with a name, for
+		//every place the type is written (typedef:<name>) or the selected one (typedefone:<name>).
+		SIDETypedef	sTypedef;
+		CChars		szPrinted;
+
+		sTypedef.Init();
+		if (!mpcContent->GetIntroduceTypedef()->FindTypedef(&sTypedef))
+		{
+			printf("Introduce Typedef: nothing is selected\n");
+		}
+		else
+		{
+			szPrinted.Init();
+			printf("%s", mpcContent->GetIntroduceTypedef()->PrintTypedef(&sTypedef, &szPrinted));
+			szPrinted.Kill();
+			if (sTypedef.bPossible && (szStep[7] == ':'))
+			{
+				mpcContent->GetIntroduceTypedef()->Introduce(&sTypedef, &szStep[8], true);
+			}
+			else if (sTypedef.bPossible && (szStep[7] == 'o'))
+			{
+				mpcContent->GetIntroduceTypedef()->Introduce(&sTypedef, &szStep[11], false);
+			}
+			if (gbIDEScriptRenameSaves && (szStep[7] != 'a'))
+			{
+				mpcContent->GetDocuments()->SaveAllFiles();
+			}
+		}
+		sTypedef.Kill();
 	}
 	else if ((strcmp(szStep, "inlinable") == 0) || (strcmp(szStep, "inlinevariable") == 0) || (strcmp(szStep, "inlinevariable:anyway") == 0))
 	{

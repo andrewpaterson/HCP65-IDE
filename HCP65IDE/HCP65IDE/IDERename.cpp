@@ -1334,6 +1334,7 @@ void CIDERename::AddEditorItems(Ptr<CMenuContainer> pMenu)
 	pRefactor->AddItem(mpcContent->GetCommands()->Find("Refactor.RenameFile"));
 	mpcContent->GetSafeDelete()->AddEditorItems(pRefactor);
 	mpcContent->GetIntroduceVariable()->AddEditorItems(pRefactor);
+	mpcContent->GetIntroduceTypedef()->AddEditorItems(pRefactor);
 	mpcContent->GetInlineVariable()->AddEditorItems(pRefactor);
 	mpcContent->GetChangeSignature()->AddEditorItems(pRefactor);
 	mpcContent->GetDefinitions()->AddEditorItems(pRefactor);
