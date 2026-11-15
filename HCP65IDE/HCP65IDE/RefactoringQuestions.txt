@@ -8,13 +8,6 @@ waits on an answer; an answer that differs is a change to make.  Answered ones a
 Open
 ----
 
- 1. Rename and a template's family (T2).  A member a template's body names (mp->Init() in CHolder<M>) is now always
-    renamed with the other classes' members of that name the template is instantiated with, and the dialog and
-    status line say so ("CHolder::Start names it and CBar::Init by one name: renamed together.").  There is no way
-    to rename one alone, because the template would stop compiling for the others.  IntelliJ asks about a base
-    method ("rename base method too?"); I didn't add a question here because "no" has no working outcome.  Is
-    all-or-cancel right, or do you want a choice that leaves the template for you to fix?
-
  2. HCP65IDERef (Reference|x64, the IDE drawn in memory for the checks) doesn't build on Windows:
     HCP65IDERef.cpp(84) warning C4007 "'main': must be '__cdecl'" is treated as an error.  The checks were run on
     the native Release|x64 IDE instead, as earlier sessions ran them.  Do you want main made __cdecl there (as the
@@ -158,13 +151,6 @@ Open
     key for both).  For a function a dialog asks: all calls and take the function out, all calls and keep it, or
     this call only.
 
-39. Inline Function only inlines a function that returns once, at its end, and doesn't change its parameters;
-    IntelliJ rewrites the others with extra variables.  A function with statements is inlined only where its call
-    is a statement by itself, or all of what a statement assigns or returns; a call inside a bigger expression
-    stays a call (and then the function isn't taken out).  Its own variables are declared with the declarations
-    of the function it goes into, and a clash of names is a conflict, not a rename.  Enough, or do you want the
-    rewriting?
-
 40. Where a function's body names a member that isn't public and a call of it is outside the class, that is a
     conflict (the inlined code wouldn't compile).  A call on "&cOther" inlines as "(&cOther)->Kind()", not
     "cOther.Kind()".  Say if that matters.
@@ -174,12 +160,6 @@ Open
     does.  Their dialog is a name (and the field's name for Extract Class) and a tick for each member; leaving a
     function in the class and only declaring it in the superclass (IntelliJ's "abstract" tick) can only be asked
     for from a script yet.  Do you want that tick in the dialog?
-
-42. Extract Class makes every member that moves public in the new class, because the class it came from uses them
-    through the field ("mcGauge.miLevel"); IntelliJ offers to generate getters and setters instead (which is
-    Encapsulate Field, next in the plan).  The new class gets no Init, and the class it came from doesn't
-    construct it: with your Init functions you would add CGauge::Init and call it.  Should Extract Class write an
-    empty Init and a call of it from the class's Init?
 
 43. An extracted interface's functions are pure virtual with no virtual destructor, and the class's own
     functions aren't marked override.  Right for your code?
@@ -198,6 +178,14 @@ Open
 
 Answered
 --------
+
+ 1. Rename and a template's family (T2).  A member a template's body names (mp->Init() in CHolder<M>) is now always
+    renamed with the other classes' members of that name the template is instantiated with, and the dialog and
+    status line say so ("CHolder::Start names it and CBar::Init by one name: renamed together.").  There is no way
+    to rename one alone, because the template would stop compiling for the others.  IntelliJ asks about a base
+    method ("rename base method too?"); I didn't add a question here because "no" has no working outcome.  Is
+    all-or-cancel right, or do you want a choice that leaves the template for you to fix?
+    Answered 2026-11-15: all-or-cancel is right; it stays as it is.  Nothing to do.
 
  4. Safe Delete and a class's files.  Deleting a class leaves its .h and .cpp there with their #includes and include
     guard, still in the projects and still #included.  IntelliJ deletes a class's file with it.  I mean to add it as
@@ -257,6 +245,25 @@ Answered
     called) and offer to replace them with calls.  And when the refactoring plan is done, remind the user of a
     feature of its own to come back to: "Look for duplicates of selected text / function".  The one variable
     declared in the selection and used after it, and the name suggested, weren't answered.
+
+39. Inline Function only inlines a function that returns once, at its end, and doesn't change its parameters;
+    IntelliJ rewrites the others with extra variables.  A function with statements is inlined only where its call
+    is a statement by itself, or all of what a statement assigns or returns; a call inside a bigger expression
+    stays a call (and then the function isn't taken out).  Its own variables are declared with the declarations
+    of the function it goes into, and a clash of names is a conflict, not a rename.  Enough, or do you want the
+    rewriting?
+    Answered 2026-11-15: some of the rewriting.  To do: a function that changes its parameters is inlined with
+    variables of its own for them, and a call inside a bigger expression is inlined with a variable for what it
+    gives, declared and assigned before the statement.  A function that returns before its end stays refused.
+
+42. Extract Class makes every member that moves public in the new class, because the class it came from uses them
+    through the field ("mcGauge.miLevel"); IntelliJ offers to generate getters and setters instead (which is
+    Encapsulate Field, next in the plan).  The new class gets no Init, and the class it came from doesn't
+    construct it: with your Init functions you would add CGauge::Init and call it.  Should Extract Class write an
+    empty Init and a call of it from the class's Init?
+    Answered 2026-11-15: yes.  To do: Extract Class writes an empty Init(void) in the new class and a call of it
+    from the Init of the class it came from, where that has one.  The members that move stay public (Encapsulate
+    Field is for what comes after).
 
 45. Optimise #includes (Ctrl+Alt+O) on a header: when an #include goes (nothing the header names comes from it, or
     it becomes a forward declaration), the files that #include the header and got a name through it are each given
