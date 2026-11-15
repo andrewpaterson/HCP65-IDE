@@ -99,3 +99,18 @@ Open
     usages-tabs gets "Usage tabs: >Evaluate, * IsParentheses" where it expects "* IsParentheses, >Evaluate" (the
     tab that isn't pinned is used again, but not in its place).  Nothing I changed is in Find Usages' tabs.  Do
     they pass for you?
+
+19. Pull Members Up and Push Members Down have a dialog of rows, not IntelliJ's table (question 10 again): the class
+    to (or a tick for each deriving class), a tick for each member, and under "Make abstract" a second tick for
+    each function.  They have no keys, as in IntelliJ.  Is that enough until there is a table?
+
+20. Where a pulled-up member goes: the end of the base class's part with the same access (its last "public:" part
+    for a public one), lined up with the declaration above it; if the class has no such part, a new one before its
+    closing brace.  Your classes keep fields before functions in one part sometimes: say if a field should go after
+    the last field and not at the end of the part.
+
+21. Push Members Down gives every deriving class its own copy of a function's definition.  A deriving class that
+    already overrides the function keeps its own and gets no copy.  What uses the member through the base class is
+    a conflict (the type of the object is asked of the compiler, so cDrum.Seal() is not one where cDrum is a
+    CDrum); "Keep abstract" leaves it pure virtual in the base class and then nothing is in the way.  A pulled-up or
+    pushed-down function isn't given "override" or "virtual" that it didn't have.  Should it be?

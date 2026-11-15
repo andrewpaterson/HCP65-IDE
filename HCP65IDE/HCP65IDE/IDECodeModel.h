@@ -270,6 +270,11 @@ public:
 	bool	GetSymbolAt(const char* szFileName, int iLine, int iColumn, CChars* pszKey, uint8* puiKind);
 	bool	GetSymbolLocations(const char* szKey, CArrayIDELocations* pasDest, uint8* puiKind);
 	size	FindSymbolsDeclaredIn(CArrayIDEFileRanges* pasRanges, CArrayChars* paszKeys);
+	size	FindSymbolsUsedIn(CArrayIDEFileRanges* pasRanges, CArrayChars* paszKeys);
+	size	FindSymbolsIn(CArrayIDEFileRanges* pasRanges, CArrayChars* paszKeys, bool bUsed);
+	size	FindClassBases(const char* szKey, bool bAll, CArrayChars* paszKeys);
+	size	FindClassDerived(const char* szKey, bool bAll, CArrayChars* paszKeys);
+	bool	GetSymbolKey(int32 iSymbol, CChars* pszKey, uint8* puiKind);
 	size	FindOverriders(const char* szKey, CArrayIDELocations* pasDest);
 	size	FindSiblingFunctions(const char* szKey, const char* szFileName, CArrayIDELocations* pasDeclared, CArrayIDELocations* pasDefined);
 	bool	FindAssemblyTarget(const char* szKey, SIDERenameTarget* psDest);

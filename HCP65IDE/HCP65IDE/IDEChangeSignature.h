@@ -225,8 +225,8 @@ protected:
 	void				ShowQueuedChangeSignature(void);
 public:
 	bool				ReadSite(CIDERefactorUnit* pcUnit, SIDELocation* psLocation, const char* szKey, SIDESignatureSite* psSite, const char** pszWhyNot);
-protected:
 	bool				ShowConflicts(CArrayChars* paszConflicts);
+protected:
 	CIDERefactorUnit*	GetUnit(const char* szFileName);
 	void				KillUnits(void);
 	bool				AddSite(SIDESignature* psSignature, SIDELocation* psLocation, const char* szKey, const char** pszWhyNot);

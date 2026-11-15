@@ -269,6 +269,16 @@ def MakeDefinitionsCopy():
 	return {'SOLUTION': os.path.join(szFolder, 'Definitions.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
 
 
+def MakeMoveMembersCopy():
+	#A copy of Input/MoveMembers (CVessel and the CDrum and CKeg that derive from it, with functions defined in and
+	#outside their classes, fields, and what uses what; CBox and CCrate, class templates), to move members in.
+	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
+	atexit.register(shutil.rmtree, szRoot, True)
+	szFolder = os.path.join(szRoot, 'MoveMembers')
+	shutil.copytree(os.path.join(HERE, 'Input', 'MoveMembers'), szFolder)
+	return {'SOLUTION': os.path.join(szFolder, 'MoveMembers.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
+
+
 def MakeKeymapFile(szText=None):
 	#Where a scripted run keeps its keys, with szText in it if it's given.
 	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
@@ -1286,6 +1296,97 @@ CHECKS = [
 		 r'^13\|\tvoid\t\t\tClose\(int iDelay\);$', r'^14\|\tint\t\t\t\tTurn\(int iAngle, bool bFast\) const;$', r'^18 lines$',
 		 r'^18\|long CValve::Open\(int iFlow, int iTime\)$', r'^28\|void CValve::Close\(int iDelay\)$', r'^38\|int CValve::Turn\(int iDegrees, bool bFast\) const$', r'^40\|\treturn iDegrees \+ miFlow;$', r'^41 lines$'],
 		[r'^Definitions: refused']),
+	('move-members-pull-up', dict(MakeMoveMembersCopy(), **{
+		#Pull Members Up: what is found for the class the caret is in (its members, their access, where each is
+		#defined, and its base classes), and the member at the caret moved: its declaration to the end of the base
+		#class's public part, lined up with the declarations there, and its definition to the base class's source
+		#file under the base class's name.
+		'WAIT_INDEX': '1', 'OPEN': 'Drum.h', 'CARET': '20:8',
+		'DEBUG': 'edit:renamesearch:---s,edit:pullable,edit:pullup:CVessel|Spare(),printdisklines:Vessel.h,printdisklines:Drum.h,printdisklines:Vessel.cpp,printdisklines:Drum.cpp'}),
+		[r'^Pull Members Up: CDrum to CVessel$', r'^  private field miSecret$', r'^  protected field miLevel$',
+		 r"^  protected field miRate, can't be moved: it is declared with miStep in one declaration$", r'^  public function Init\(int\), defined in Drum\.cpp$',
+		 r'^  public function GetLevel\(\)$', r'^  public function Spare\(\), defined in Drum\.cpp, chosen$',
+		 r'^Status: Pulled Spare\(\) up from CDrum to CVessel\.$', r'^Move members: moved$',
+		 r'^14\|\tvoid\t\t\tSeal\(void\);$', r'^15\|\tint\t\t\t\tSpare\(void\);$', r'^16\|\};$',
+		 r'^19\|\tvoid\tFill\(int iAmount\);$', r'^20\|\tvoid\tRoll\(void\);$',
+		 r'^31\|\}$', r'^32\|$', r'^33\|$', r'^34\|/{74}$', r'^38\|int CVessel::Spare\(void\)$', r'^40\|\treturn miVolume - 1;$', r'^41 lines$',
+		 r'^19\|void CDrum::Fill\(int iAmount\)$', r'^22\|\}$', r'^23\|$', r'^24\|$', r'^25\|/{74}$', r'^29\|void CDrum::Roll\(void\)$', r'^72 lines$'],
+		[r'^Conflict', r'CDrum::Spare']),
+	('move-members-pull-up-several', dict(MakeMoveMembersCopy(), **{
+		#Several at once: a field to the base class's protected part, a function defined in the class with the comment
+		#over it, and a static function with its definition.
+		'WAIT_INDEX': '1', 'OPEN': 'Drum.h', 'CARET': '20:8',
+		'DEBUG': 'edit:renamesearch:---s,edit:pullup:CVessel|miLevel;GetLevel();Count(),printdisklines:Vessel.h,printdisklines:Drum.h,printdisklines:Vessel.cpp'}),
+		[r'^Status: Pulled 3 members up from CDrum to CVessel\.$',
+		 r'^8\|\tint\t\tmiVolume;$', r'^9\|\tint\t\tmiLevel;$', r'^10\|$', r'^11\|public:$', r'^15\|\tvoid\t\t\tSeal\(void\);$', r'^16\|\t//How full it is\.$',
+		 r'^17\|\tint\t\t\t\tGetLevel\(void\) \{ return miLevel; \}$', r'^18\|\tstatic int\t\tCount\(void\);$', r'^19\|\};$',
+		 r'^11\|protected:$', r'^12\|\tint\t\tmiRate, miStep;$', r'^15\|\tvoid\tInit\(int iVolume\);$', r'^16\|\tvoid\tFill\(int iAmount\);$', r'^19\|\tvoid\tHide\(void\);$',
+		 r'^38\|int CVessel::Count\(void\)$'],
+		[r'^Conflict']),
+	('move-members-pull-up-conflicts', dict(MakeMoveMembersCopy(), **{
+		#What stands in the way: a member that uses one the base class won't have; a private one the class's others
+		#use; one declared with another; one the base class has already.  Nothing is moved.  Then a function pulled up
+		#abstract: the base class gets it pure virtual and the class keeps its own.
+		'WAIT_INDEX': '1', 'OPEN': 'Drum.h', 'CARET': '20:8',
+		'DEBUG': 'edit:renamesearch:---s,edit:pullup:CVessel|Fill(int),edit:pullup:CVessel|miSecret,edit:pullup:CVessel|miRate,edit:pullup:CVessel|Init(int),edit:pullup:CVessel|Nope,'
+		         'edit:pullup:CVessel|miLevel|Count(),edit:pullup:CVessel|Fill(int);miLevel,edit:undoall,edit:undoall,edit:pullup:CVessel||Roll(),printdisklines:Vessel.h,printdisklines:Drum.h'}),
+		[r"^Conflict: Fill\(int\) uses CDrum::miLevel, which CVessel doesn't have\.$", r'^Move members: not moved$',
+		 r'^Conflict: miSecret will be private in CVessel: CDrum::Hide uses it\.$', r"^Conflict: miRate can't be moved: it is declared with miStep in one declaration\.$",
+		 r'^Conflict: CVessel already has Init\(int\)\.$', r'^Move members: there is no Nope$',
+		 r"^Conflict: Count\(\) can't be abstract: only a function that isn't static or a template can be\.$",
+		 r'^Status: Pulled 2 members up from CDrum to CVessel\.$', r'^Status: Pulled Roll\(\) up from CDrum to CVessel\.$',
+		 r'^14\|\tvoid\t\t\tSeal\(void\);$', r'^15\|\tvirtual void\tRoll\(void\) =0;$', r'^16\|\};$', r'^12\|\tint\t\tmiLevel;$', r'^21\|\tvoid\tRoll\(void\);$', r'^35 lines$'],
+		[]),
+	('move-members-push-down', dict(MakeMoveMembersCopy(), **{
+		#Push Members Down: the classes that derive from the class each get the member and a copy of its definition
+		#under their own name, in the file their functions are defined in.  A use through the class itself stands in
+		#the way (pcVessel->Seal(), not cDrum.Seal(): the object's type is asked of the compiler); Continue pushes
+		#it down all the same.
+		'WAIT_INDEX': '1', 'OPEN': 'Vessel.h', 'CARET': '14:10',
+		'DEBUG': 'edit:renamesearch:---s,edit:pushable,edit:pushdown:*|Seal(),edit:pushdownanyway:*|Seal(),'
+		         'printdisklines:Vessel.h,printdisklines:Drum.h,printdisklines:Vessel.cpp,printdisklines:Drum.cpp'}),
+		[r'^Push Members Down: CVessel to CDrum, CKeg$', r'^  public function Seal\(\), defined in Vessel\.cpp, chosen$',
+		 r"^Conflict: main uses Seal\(\) \(Main\.cpp line 20\), which CVessel won't have\.$", r'^Move members: not moved$',
+		 r'^Status: Pushed Seal\(\) down from CVessel to CDrum, CKeg\.$',
+		 r'^13\|\tvirtual void\tVent\(void\);$', r'^14\|\};$',
+		 r'^23\|\tvoid\tHide\(void\);$', r'^24\|\tvoid\tSeal\(void\);$', r'^25\|\};$', r'^32\|\tvoid\tVent\(void\) override;$', r'^33\|\tvoid\tSeal\(void\);$', r'^34\|\};$',
+		 r'^18\|void CVessel::Vent\(void\)$', r'^21 lines$',
+		 r'^79\|void CKeg::Vent\(void\)$', r'^82\|\}$', r'^83\|$', r'^84\|$', r'^85\|/{74}$', r'^89\|void CDrum::Seal\(void\)$', r'^91\|\tmiVolume\+\+;$', r'^92\|\}$', r'^93\|$', r'^94\|$', r'^95\|/{74}$',
+		 r'^99\|void CKeg::Seal\(void\)$', r'^102 lines$'],
+		[r'Main\.cpp line 18', r'CVessel::Seal']),
+	('move-members-push-down-abstract', dict(MakeMoveMembersCopy(), **{
+		#Kept abstract: the class keeps the function pure virtual, so nothing that uses it is in the way; a class that
+		#overrides it already keeps its own.  A field that the class's own functions use can't go.
+		'WAIT_INDEX': '1', 'OPEN': 'Vessel.h', 'CARET': '14:10',
+		'DEBUG': 'edit:renamesearch:---s,edit:pushdown:*||Vent(),edit:pushdown:CDrum|miVolume,printdisklines:Vessel.h,printdisklines:Drum.h,printdisklines:Vessel.cpp,printdisklines:Drum.cpp'}),
+		[r'^Status: Pushed Vent\(\) down from CVessel to CDrum, CKeg\.$',
+		 r"^Conflict: CKeg::Tap uses miVolume \(Drum\.cpp line 71\), which CVessel won't have\.$", r"^Conflict: CVessel::Init uses miVolume \(Vessel\.cpp line 10\), which CVessel won't have\.$", r'^Move members: not moved$',
+		 r'^8\|\tint\t\tmiVolume;$', r'^13\|\tvirtual void\tVent\(void\) =0;$', r'^14\|\tvoid\t\t\tSeal\(void\);$',
+		 r'^23\|\tvoid\tHide\(void\);$', r'^24\|\tvirtual void\tVent\(void\);$', r'^25\|\};$', r'^31\|\tvoid\tTap\(void\);$', r'^32\|\tvoid\tVent\(void\) override;$', r'^33\|\};$',
+		 r'^18\|void CVessel::Seal\(void\)$', r'^21 lines$', r'^79\|void CKeg::Vent\(void\)$', r'^89\|void CDrum::Vent\(void\)$', r'^91\|\tmiVolume = 0;$', r'^92 lines$'],
+		[r'CVessel::Vent', r'CDrum::Spare uses']),
+	('move-members-template', dict(MakeMoveMembersCopy(), **{
+		#A class template's member defined outside it goes to the class template it derives from with its body in the
+		#class: it needs no template<...> and no class's name there.
+		'WAIT_INDEX': '1', 'OPEN': 'Crate.h', 'CARET': '19:8',
+		'DEBUG': 'edit:renamesearch:---s,edit:pullable,edit:pullup:CBox|Size(),printdisklines:Crate.h'}),
+		[r'^Pull Members Up: CCrate to CBox \(template\)$', r'^  public function Size\(\), defined in Crate\.h, chosen$', r'^Status: Pulled Size\(\) up from CCrate to CBox\.$',
+		 r'^11\|\tM\*\t\tGet\(void\) \{ return &mcItem; \}$', r'^12\|\tint\t\tSize\(void\) \{ return sizeof\(M\); \}$', r'^13\|\};$', r'^17\|class CCrate : public CBox<M>$', r'^23 lines$'],
+		[r'CCrate<M>::Size']),
+	('move-members-refused', dict(MakeMoveMembersCopy(), **{
+		#A class with nowhere for its members to go, and no class at the caret.
+		'WAIT_INDEX': '1', 'OPEN': 'Vessel.h', 'CARET': '14:10',
+		'DEBUG': 'edit:renamesearch:---s,edit:pullable,edit:open:Drum.h,edit:caret:20:8,edit:pushable,edit:caret:3:3,edit:pullable'}),
+		[r"^Pull Members Up: CVessel can't be: it has no base class in the solution$", r"^Push Members Down: CDrum can't be: no class in the solution derives from it$", r'^Pull Members Up: no class$'],
+		[]),
+	('move-members-dialog', dict(MakeMoveMembersCopy(), **{
+		#The dialogs: the member at the caret is the one ticked, and Refactor moves it; what stands in the way is shown
+		#in Problems Detected, where Cancel moves nothing.
+		'WAIT_INDEX': '1', 'OPEN': 'Drum.h', 'CARET': '20:8', 'SETTINGS': MakeSettingsFile(), 'DIALOG_ANSWER': 'OK|OK|Cancel',
+		'DEBUG': 'pullmembersup,answered:1,printstatus,edit:open:Drum.h,edit:caret:19:8,pullmembersup,answered:3,printstatus'}),
+		[r'^Dialog \[Pull Members Up from CDrum\] answered OK$', r'^Status: Pulled Spare\(\) up from CDrum to CVessel\.$',
+		 r'^Dialog \[Pull Members Up from CDrum\] answered OK$', r'^Dialog \[Problems Detected\] answered Cancel$'],
+		[r'Pulled Fill']),
 	('rename-assembly-class', dict(MakeRenameAssemblyCopy(), **{
 		#A class renamed in hand written assembly's labels (_CEngine__Init, __0, __2), in parameter lists with its length
 		#(FPC7CEngine to FPC6CMotor), in generated layout constants (SIZEOF_CEngine, CEngine_miSpeed: in the assembly, the
@@ -1790,7 +1891,7 @@ CHECKS = [
 		 r'^Menu Debug: Start Debugging \[F5\], Start Without Debugging \[Ctrl\+F5\], Stop Debugging \[Shift\+F5\], Stop Running\(disabled\), Restart \[Ctrl\+Shift\+F5\], Break All \[Ctrl\+Pause/Break\], Attach to Emulator\.\.\., Step Into \[F11\], Step Over \[F10\], Step Out \[Shift\+F11\], Toggle Breakpoint \[F9\], ',
 		 r'^Menu Window: Reset Window Layout, Close All Documents$',
 		 r'^Menu Editor: Go to Source \[Ctrl\+B\], Find Usages \[Alt\+F7\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Rename\.\.\. \[Shift\+F6\], Refactor>, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\]$',
-		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Extract Method\.\.\.\(disabled\)$',
+		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\.(\(disabled\))?, Push Members Down\.\.\.(\(disabled\))?, Extract Method\.\.\.\(disabled\)$',
 		 r'^Menu Explorer: Set as Startup Solution, Set as Startup Project\(disabled\), Remove Solution, Rename\.\.\.(\(disabled\))?$',
 		 r'^Menu item \[View/Nope\] not found$'], []),
 	('menu-clicks', {

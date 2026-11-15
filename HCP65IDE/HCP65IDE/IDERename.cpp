@@ -1336,6 +1336,7 @@ void CIDERename::AddEditorItems(Ptr<CMenuContainer> pMenu)
 	mpcContent->GetIntroduceVariable()->AddEditorItems(pRefactor);
 	mpcContent->GetChangeSignature()->AddEditorItems(pRefactor);
 	mpcContent->GetDefinitions()->AddEditorItems(pRefactor);
+	mpcContent->GetMoveMembers()->AddEditorItems(pRefactor);
 	pRefactor->AddItem("Extract Method...")->SetEnabled(false);
 	pMenu->AddItem("Refactor", NULL, pRefactor);
 }

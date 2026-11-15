@@ -39,7 +39,7 @@ static bool			gbIDEScriptRenameSaves = false;  //rename: saves what it edited (r
 static bool			gbIDEScriptClassFiles = false;  //rename: renames a type's files too (renamesearch's f), never from the settings.
 
 
-static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printfindpreview", "printfindtoolbar", "findtool:", "printstartup", "printworkspace", "rename", "safedelete", "introducevariable", "changesignature", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printsettings", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printprojectfiles", "printdiskfile:", "printdisklines:", "printedits", "printspans", "configuration:", "waitindex" };
+static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printfindpreview", "printfindtoolbar", "findtool:", "printstartup", "printworkspace", "rename", "safedelete", "introducevariable", "changesignature", "pullmembersup", "pushmembersdown", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printsettings", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printprojectfiles", "printdiskfile:", "printdisklines:", "printedits", "printspans", "configuration:", "waitindex" };
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -278,6 +278,11 @@ void CIDEScript::RunCommand(const char* szCommand)
 	{
 		//Introduce Variable's dialog for the selection.
 		mpcContent->GetIntroduceVariable()->ShowIntroduce();
+	}
+	else if ((strcmp(szCommand, "pullmembersup") == 0) || (strcmp(szCommand, "pushmembersdown") == 0))
+	{
+		//Pull Members Up's or Push Members Down's dialogs for the class at the caret.
+		mpcContent->GetMoveMembers()->ShowMove(strcmp(szCommand, "pullmembersup") == 0);
 	}
 	else if (strcmp(szCommand, "changesignature") == 0)
 	{
@@ -1502,6 +1507,68 @@ void CIDEScript::RunEditStep(const char* szStep)
 		{
 			mpcContent->GetDocuments()->SaveAllFiles();
 		}
+	}
+	else if ((strncmp(szStep, "pullable", 8) == 0) || (strncmp(szStep, "pushable", 8) == 0) || (strncmp(szStep, "pullup", 6) == 0) || (strncmp(szStep, "pushdown", 8) == 0))
+	{
+		//What Pull Members Up or Push Members Down found for the class at the caret (pullable, pushable); or the move
+		//made as "pullup:CVessel|Fill(int, int);miLevel|Vent()" asks (CIDEMoveMembers::ParseSpec: the class to, the
+		//members, those to be abstract), if nothing stands in the way: what does is printed, a line each, and
+		//"pullupanyway:" moves all the same, as Continue does in Problems Detected.
+		SIDEMembersMove	sMove;
+		CArrayChars		aszConflicts;
+		CChars			szPrinted;
+		CChars			szProblem;
+		const char*		szSpec;
+		size			uiConflict;
+		bool			bUp;
+		bool			bAnyway;
+
+		bUp = (strncmp(szStep, "pull", 4) == 0);
+		szSpec = strchr(szStep, ':');
+		bAnyway = (strstr(szStep, "anyway:") != NULL) && (strstr(szStep, "anyway:") < szSpec + 1);
+		sMove.Init();
+		szPrinted.Init();
+		if (!mpcContent->GetMoveMembers()->FindMove(bUp, &sMove))
+		{
+			printf("%s: no class\n", bUp ? "Pull Members Up" : "Push Members Down");
+		}
+		else if (!szSpec || !sMove.bMovable)
+		{
+			printf("%s", mpcContent->GetMoveMembers()->PrintMove(&sMove, &szPrinted));
+		}
+		else
+		{
+			szProblem.Init();
+			if (!mpcContent->GetMoveMembers()->ParseSpec(&sMove, szSpec + 1, &szProblem))
+			{
+				printf("Move members: %s\n", szProblem.Text());
+			}
+			else
+			{
+				aszConflicts.Init();
+				mpcContent->GetMoveMembers()->FindConflicts(&sMove, &aszConflicts);
+				for (uiConflict = 0; uiConflict < aszConflicts.NumElements(); uiConflict++)
+				{
+					printf("Conflict: %s\n", aszConflicts.GetText(uiConflict));
+				}
+				if ((aszConflicts.NumElements() == 0) || bAnyway)
+				{
+					printf("Move members: %s\n", mpcContent->GetMoveMembers()->Move(&sMove) ? "moved" : "nothing moved");
+					if (gbIDEScriptRenameSaves)
+					{
+						mpcContent->GetDocuments()->SaveAllFiles();
+					}
+				}
+				else
+				{
+					printf("Move members: not moved\n");
+				}
+				aszConflicts.Kill();
+			}
+			szProblem.Kill();
+		}
+		szPrinted.Kill();
+		sMove.Kill();
 	}
 	else if (strcmp(szStep, "printlabel") == 0)
 	{

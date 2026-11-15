@@ -68,6 +68,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDEIntroduceVariable.h"
 #include "IDEChangeSignature.h"
 #include "IDEDefinitions.h"
+#include "IDEMoveMembers.h"
 #include "IDEUsages.h"
 #include "IDEFindInFiles.h"
 #include "IDEOccurrences.h"
@@ -174,6 +175,7 @@ protected:
 	Ptr<CIDEIntroduceVariable>	mpIntroduceVariable;	//Introduce Variable.
 	Ptr<CIDEChangeSignature>	mpChangeSignature;		//Change Signature.
 	Ptr<CIDEDefinitions>		mpDefinitions;			//Generate Definition and Declaration, Move Definition.
+	Ptr<CIDEMoveMembers>		mpMoveMembers;			//Pull Members Up, Push Members Down.
 	Ptr<CIDEUsages>				mpUsages;			//Find Usages.
 	Ptr<CIDEFindInFiles>		mpFindInFiles;		//Find in Files and the Find tool window.
 	Ptr<CIDEOccurrences>		mpOccurrences;		//Next and Previous Occurrence through Find Usages or Build.
@@ -283,6 +285,7 @@ public:
 	Ptr<CIDEIntroduceVariable>	GetIntroduceVariable(void);
 	Ptr<CIDEChangeSignature>	GetChangeSignature(void);
 	Ptr<CIDEDefinitions>		GetDefinitions(void);
+	Ptr<CIDEMoveMembers>		GetMoveMembers(void);
 	Ptr<CIDECloseGuard>		GetCloseGuard(void);
 
 protected:

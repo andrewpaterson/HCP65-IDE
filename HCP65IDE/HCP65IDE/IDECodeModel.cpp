@@ -2583,6 +2583,122 @@ bool CIDECodeModel::GetSymbolLocations(const char* szKey, CArrayIDELocations* pa
 //////////////////////////////////////////////////////////////////////////
 size CIDECodeModel::FindSymbolsDeclaredIn(CArrayIDEFileRanges* pasRanges, CArrayChars* paszKeys)
 {
+	return FindSymbolsIn(pasRanges, paszKeys, false);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The symbols named in one of the ranges without being declared there:
+// what the text in them needs.  Their keys are added to paszKeys, those
+// not there already; the number added.
+//
+//////////////////////////////////////////////////////////////////////////
+size CIDECodeModel::FindSymbolsUsedIn(CArrayIDEFileRanges* pasRanges, CArrayChars* paszKeys)
+{
+	return FindSymbolsIn(pasRanges, paszKeys, true);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A class's base classes (all of them, however far up, or only those it
+// names itself), their keys added to paszKeys nearest first; the number.
+//
+//////////////////////////////////////////////////////////////////////////
+size CIDECodeModel::FindClassBases(const char* szKey, bool bAll, CArrayChars* paszKeys)
+{
+	CCPPIndexSymbol*	pcSymbol;
+	CCPPIndexSymbol*	pcBase;
+	size				uiFirst;
+	size				uiNext;
+	size				i;
+
+	uiFirst = paszKeys->NumElements();
+	mcIndexMutex.Lock();
+	pcSymbol = mcIndex.FindSymbol(szKey);
+	uiNext = uiFirst;
+	while (pcSymbol)
+	{
+		for (i = 0; i < pcSymbol->maiBases.NumElements(); i++)
+		{
+			pcBase = mcIndex.GetSymbol((size)pcSymbol->maiBases.GetValue(i));
+			paszKeys->AddIfUnique(pcBase->mszKey.Text());
+		}
+		pcSymbol = (bAll && (uiNext < paszKeys->NumElements())) ? mcIndex.FindSymbol(paszKeys->GetText(uiNext)) : NULL;
+		uiNext++;
+	}
+	mcIndexMutex.Unlock();
+	return paszKeys->NumElements() - uiFirst;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The classes that have a class as a base (all of them, however far
+// down, or only those that name it), their keys added to paszKeys; the
+// number.
+//
+//////////////////////////////////////////////////////////////////////////
+size CIDECodeModel::FindClassDerived(const char* szKey, bool bAll, CArrayChars* paszKeys)
+{
+	CCPPIndexSymbol*	pcSymbol;
+	CCPPIndexSymbol*	pcDerived;
+	size				uiFirst;
+	size				uiNext;
+	size				i;
+
+	uiFirst = paszKeys->NumElements();
+	mcIndexMutex.Lock();
+	pcSymbol = mcIndex.FindSymbol(szKey);
+	uiNext = uiFirst;
+	while (pcSymbol)
+	{
+		for (i = 0; i < pcSymbol->maiDerived.NumElements(); i++)
+		{
+			pcDerived = mcIndex.GetSymbol((size)pcSymbol->maiDerived.GetValue(i));
+			paszKeys->AddIfUnique(pcDerived->mszKey.Text());
+		}
+		pcSymbol = (bAll && (uiNext < paszKeys->NumElements())) ? mcIndex.FindSymbol(paszKeys->GetText(uiNext)) : NULL;
+		uiNext++;
+	}
+	mcIndexMutex.Unlock();
+	return paszKeys->NumElements() - uiFirst;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The key and kind of the index's symbol iSymbol (a location's
+// iContainer, say).  False if there is none.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDECodeModel::GetSymbolKey(int32 iSymbol, CChars* pszKey, uint8* puiKind)
+{
+	CCPPIndexSymbol*	pcSymbol;
+	bool				bFound;
+
+	mcIndexMutex.Lock();
+	bFound = (iSymbol >= 0) && ((size)iSymbol < mcIndex.NumSymbols());
+	if (bFound)
+	{
+		pcSymbol = mcIndex.GetSymbol((size)iSymbol);
+		pszKey->Set(pcSymbol->mszKey);
+		*puiKind = (uint8)pcSymbol->meKind;
+	}
+	mcIndexMutex.Unlock();
+	return bFound;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The symbols declared or defined (or, bUsed, only named) in one of the
+// ranges.
+//
+//////////////////////////////////////////////////////////////////////////
+size CIDECodeModel::FindSymbolsIn(CArrayIDEFileRanges* pasRanges, CArrayChars* paszKeys, bool bUsed)
+{
 	CMapStringInt		cKeys;
 	CArrayInt			aiRangeFiles;
 	CCPPIndexSymbol*	pcSymbol;
@@ -2626,7 +2742,7 @@ size CIDECodeModel::FindSymbolsDeclaredIn(CArrayIDEFileRanges* pasRanges, CArray
 		for (j = 0; (j < pcSymbol->NumLocations()) && !bIn; j++)
 		{
 			psLocation = pcSymbol->GetLocation(j);
-			if (psLocation->uiRole == CPPIR_Reference)
+			if ((psLocation->uiRole == CPPIR_Reference) != bUsed)
 			{
 				continue;
 			}

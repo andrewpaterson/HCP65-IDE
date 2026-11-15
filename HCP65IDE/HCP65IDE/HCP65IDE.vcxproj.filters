@@ -51,6 +51,9 @@
     <ClCompile Include="IDERename.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="IDEMoveMembers.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="IDEDefinitions.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -222,6 +225,9 @@
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDERename.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDEMoveMembers.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDEDefinitions.h">

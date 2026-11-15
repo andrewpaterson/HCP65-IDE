@@ -117,6 +117,8 @@ public:
 	bool	GenerateDeclaration(void);
 	bool	MoveDefinitionOut(void);
 	bool	MoveDefinitionIn(void);
+	void	AppendBodyOutside(const char* szBody, CChars* pszDest);
+	void	AppendBodyInClass(const char* szBody, const char* szIndent, CChars* pszDest);
 
 protected:
 	void				GenerateDefinitionCommand(void);
@@ -139,8 +141,6 @@ protected:
 	void				AppendParameters(SIDESignatureSite* psSite, const char* szText, bool bDefaults, CChars* pszDest);
 	void				AppendBanner(const char* szText, size uiDefinition, CChars* pszDest);
 	size				FindBannerStart(const char* szText, size uiDefinition);
-	void				AppendBodyOutside(const char* szBody, CChars* pszDest);
-	void				AppendBodyInClass(const char* szBody, const char* szIndent, CChars* pszDest);
 	void				ShowDefinition(const char* szFileName, size uiAt);
 };
 

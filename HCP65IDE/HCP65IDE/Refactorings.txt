@@ -156,6 +156,14 @@ Phase 1 - nothing new from the compiler
      for members that don't use the parameters.
      The first is done, 2026-11-15: Move Definition out of Class and into Class (IDEDefinitions.h says what they
      do), a class template's member too.
+     Pull Members Up and Push Members Down are done, 2026-11-15 (IDEMoveMembers.h says what they do): functions
+     and fields, static ones too, to any base class or to the deriving classes, a function up or kept abstract,
+     with what stands in the way shown first.  Where either class is a class template a function defined outside
+     goes with its body in the class.  But for:
+       - the #includes the class a member goes to then needs (15);
+       - nested types and enums of the class, which aren't offered;
+       - a member's use of the source template's parameters isn't checked where it goes to a class that isn't
+         that template's.
   4. Copy (F5).  A class and its files under a new name.  A class template the same.
 
 
@@ -283,6 +291,7 @@ Where it is
   5. Move, starting with what a declaration and its definition are to each other (F5).  Done 2026-11-15: Generate
      Definition, Generate Declaration, Move Definition out of Class and into Class (CIDEDefinitions; a constructor
      defined outside its class needed CommonLibraries 4187b9af1); a declaration and a definition brought back
-     into step, and a function outside a class moved into its header (inline) and back out (13, 14).  Next: Pull
-     Up and Push Down, a class to its own files, a function to another file.
+     into step, and a function outside a class moved into its header (inline) and back out (13, 14); Pull
+     Members Up and Push Members Down (CIDEMoveMembers).  Next: a class to its own files, a function to another
+     file.
 
