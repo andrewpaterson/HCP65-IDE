@@ -23,3 +23,6 @@ Log.txt
 /Tests/*/*/Post/
 *.layout.user
 *.hcp65workspace
+
+# What Python leaves beside the checks
+__pycache__/
