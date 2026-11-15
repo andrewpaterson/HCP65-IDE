@@ -58,6 +58,24 @@ struct SIDEClassMove
 };
 
 
+//What Move to File found for the function or variable outside any class at the caret.
+struct SIDEFunctionMove
+{
+	CChars					szKey;
+	CChars					szName;
+	bool					bMovable;
+	CChars					szWhyNot;
+	bool					bFunction;
+	CArrayIDEFileRanges		asDeclarations;	//Where it is declared and not defined: its prototypes, an extern.
+	SIDEFileRange			sDefinition;	//Where it is defined.
+	bool					bDefinition;
+	CArrayChars				aszUsers;		//The files that name it, outside those.
+
+	void	Init(void);
+	void	Kill(void);
+};
+
+
 //Move Class to Its Own Files (Refactorings.txt, 3; F6, IntelliJ's Move): a class that shares a header with other
 //things gets a header of its own and, if any of its members are defined in a source file, a source file of its own,
 //in the directories the files it leaves are in.
@@ -79,6 +97,14 @@ struct SIDEClassMove
 //lines of a CMakeLists.txt that lists the old ones.  They are made empty and filled as an edit: one undo empties them
 //again and puts the class back, so what builds before and after an undo is the same.  The files changed are saved and
 //the projects read again, as after Rename File.
+//
+//Move to File (the same F6, on a function or a variable that is in no class): it goes to another header of the
+//solution, named in the dialog.  Its declarations (prototypes, an extern) go to that header, after the last function
+//it declares, or before its #endif; its definition goes to the end of that header's source file, or, if a header
+//defines it (inline, a function template), to that header.  The files that name it #include the header it has gone
+//to, beside their #include of the one it left; and the files it goes to #include the headers that declare what its
+//text names, where they don't already (each named for the thing it declares: include what you use).  A static
+//function, and one in a namespace, are refused.
 class CIDEMoveClass : public CObject
 {
 CONSTRUCTABLE(CIDEMoveClass);
@@ -89,6 +115,7 @@ protected:
 	Ptr<CTextField>						mpNameField;
 	Ptr<CLabel>							mpError;
 	SIDEClassMove*						mpsMove;  //The move the dialog is shown for.  Not held.
+	SIDEFunctionMove*					mpsFunctionMove;  //...or this one.
 	CArrayTemplatePtr<CIDERefactorUnit>	mapcUnits;  //The files parsed for the move being found.
 
 public:
@@ -107,10 +134,22 @@ public:
 	bool	FindProblem(SIDEClassMove* psMove, const char* szStem, CChars* pszDest);
 	bool	Move(SIDEClassMove* psMove, const char* szStem, CChars* pszStatus = NULL);
 	char*	PrintMove(SIDEClassMove* psMove, CChars* pszDest);
+	bool	FindFunctionMove(SIDEFunctionMove* psDest);
+	bool	FindFunctionProblem(SIDEFunctionMove* psMove, const char* szHeaderName, CChars* pszHeader, CChars* pszSource, CChars* pszDest);
+	bool	MoveFunction(SIDEFunctionMove* psMove, const char* szHeader, const char* szSource, CChars* pszStatus = NULL);
+	char*	PrintFunctionMove(SIDEFunctionMove* psMove, CChars* pszDest);
 
 protected:
 	void				ShowQueuedMove(void);
 	bool				ApproveMove(void);
+	bool				ApproveFunctionMove(void);
+	bool				ShowFunctionMove(SIDEFunctionMove* psMove);
+	bool				IsFunctionMoved(SIDEFunctionMove* psMove, const char* szFileName, int32 iLine);
+	bool				FindPrototypePlace(const char* szHeader, const char* szText, size* puiAt);
+	size				FindEndPlace(const char* szText);
+	void				AddUsedIncludes(SIDEFileRange* psRange, const char* szTarget, const char* szOtherTarget, SIDEFunctionMove* psMove, CIDEFileEdits* pcEdits, CArrayIDEFileRanges* pasInserts, CArrayChars* paszTexts);
+	void				AddInclude(const char* szFileName, const char* szBeside, const char* szIncluded, CIDEFileEdits* pcEdits, CArrayIDEFileRanges* pasInserts, CArrayChars* paszTexts);
+	void				AddInsert(const char* szFileName, size uiAt, const char* szText, CArrayIDEFileRanges* pasInserts, CArrayChars* paszTexts);
 	CIDERefactorUnit*	GetUnit(const char* szFileName);
 	void				KillUnits(void);
 	void				AddOutside(SIDEClassMove* psMove, const char* szFileName, SCPPSyntaxRange* psRange);

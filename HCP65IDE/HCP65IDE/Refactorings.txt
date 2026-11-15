@@ -172,6 +172,11 @@ Phase 1 - nothing new from the compiler
          to be declared ahead (a forward declaration) for it, which 15 will know how to do;
        - a source file the class was all of is left with only its #includes;
        - undo leaves the new files there, empty (question 22).
+     A function or a global to another file is done, 2026-11-15: Move to File, the same F6 (IDEMoveClass.h).  But
+     for:
+       - another namespace (question 26), and a function that is in one;
+       - a static function, which only its file can use, is refused;
+       - it goes to a header that is there: no new file is made for it.
   4. Copy (F5).  A class and its files under a new name.  A class template the same.
 
 
@@ -301,5 +306,9 @@ Where it is
      defined outside its class needed CommonLibraries 4187b9af1); a declaration and a definition brought back
      into step, and a function outside a class moved into its header (inline) and back out (13, 14); Pull
      Members Up and Push Members Down (CIDEMoveMembers); a class to its own files (CIDEMoveClass, with
-     CVcxProject::AddItemBeside).  Next: a function or a global to another file or namespace.
+     CVcxProject::AddItemBeside); a function or a global to another file (the same F6).  Move is done but for
+     what is listed under 3.
+  6. Copy (4): next.  Then Inline Variable (6), Introduce Field, Constant and Parameter (7), Typedef (8), Extract
+     Method (9), Inline Function (10), Extract Superclass, Interface and Class (11), Encapsulate Field (12), and
+     Phase 4 from 15.
 

@@ -1575,6 +1575,50 @@ void CIDEScript::RunEditStep(const char* szStep)
 		szPrinted.Kill();
 		sMove.Kill();
 	}
+	else if ((strcmp(szStep, "movablefunction") == 0) || (strncmp(szStep, "movefunction:", 13) == 0))
+	{
+		//What Move to File found for the function or variable at the caret (movablefunction); or it moved to a
+		//header ("movefunction:Gauge.h"), if it can go there.
+		SIDEFunctionMove	sMove;
+		CChars				szPrinted;
+		CChars				szProblem;
+		CChars				szHeader;
+		CChars				szSource;
+
+		sMove.Init();
+		szPrinted.Init();
+		if (!mpcContent->GetMoveClass()->FindFunctionMove(&sMove))
+		{
+			printf("Move to File: no function\n");
+		}
+		else if ((strcmp(szStep, "movablefunction") == 0) || !sMove.bMovable)
+		{
+			printf("%s", mpcContent->GetMoveClass()->PrintFunctionMove(&sMove, &szPrinted));
+		}
+		else
+		{
+			szProblem.Init();
+			szHeader.Init();
+			szSource.Init();
+			if (mpcContent->GetMoveClass()->FindFunctionProblem(&sMove, &szStep[13], &szHeader, &szSource, &szProblem))
+			{
+				printf("Move to File: %s\n", szProblem.Text());
+			}
+			else
+			{
+				printf("Move to File: %s\n", mpcContent->GetMoveClass()->MoveFunction(&sMove, szHeader.Text(), szSource.Text()) ? "moved" : "not moved");
+				if (gbIDEScriptRenameSaves)
+				{
+					mpcContent->GetDocuments()->SaveAllFiles();
+				}
+			}
+			szSource.Kill();
+			szHeader.Kill();
+			szProblem.Kill();
+		}
+		szPrinted.Kill();
+		sMove.Kill();
+	}
 	else if ((strcmp(szStep, "movableclass") == 0) || (strncmp(szStep, "moveclass:", 10) == 0))
 	{
 		//What Move Class to Its Own Files found for the class at the caret (movableclass); or the class moved to

@@ -129,3 +129,12 @@ Open
     leaves, and the include guard is the old header's with the name changed (__DRUM_H__ gives __KEG_H__,
     __IDE_MOVE_CLASS_H__ style for several words).  A CMakeLists.txt up to two directories above a project that
     lists the old file gets a line for the new one after it.  Right?
+
+25. F6 is now "Move...": on a class (or a member of one) it is Move Class to Its Own Files; on a function or a
+    variable that is in no class it is Move to File, which asks for the header it goes to (a text field: the name
+    of a header of the solution).  Its definition goes to that header's source file.  The files it goes to get an
+    #include of the header that declares each thing its text names, where they have none ("include what you
+    use", by the file's name alone).  IntelliJ would let you pick the file from a tree: do you want a chooser?
+
+26. Moving to another namespace isn't built: your code has one file with a namespace in it, so I left it rather
+    than build it untried.  A function that is in a namespace is refused by Move to File.  Say if you want it.

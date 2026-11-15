@@ -1,4 +1,5 @@
 #include "Tank.h"
+#include "Gauge.h"
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -13,5 +14,5 @@ int main(void)
 	cStore.Init();
 	i = 3;
 	cStore.Set(&i);
-	return *cStore.Get();
+	return *cStore.Get() + ReadGauge(1) + ResetGauge(2);
 }

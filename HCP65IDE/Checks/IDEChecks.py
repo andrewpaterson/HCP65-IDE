@@ -1440,6 +1440,52 @@ CHECKS = [
 		'DEBUG': 'moveclass,answered:1,printstatus'}),
 		[r'^Dialog \[Move CKeg to Its Own Files\] answered OK$', r'^Status: Moved CKeg to Keg\.h and Keg\.cpp: 2 definitions outside it, 1 #include added\.$'],
 		[]),
+	('move-function', dict(MakeDefinitionsCopy(), **{
+		#Move to File (F6 on a function that is in no class): ReadGauge's prototype goes to Tank.h, after the function
+		#Tank.h declares, with its default value; its definition goes to the end of Tank.cpp with the comment over it;
+		#Tank.cpp #includes Gauge.h, which declares the ClampGauge its body calls; they go out of Gauge.h and
+		#Gauge.cpp.  Main.cpp, which calls it, #includes Tank.h already.
+		'WAIT_INDEX': '1', 'OPEN': 'Gauge.h', 'CARET': '5:8',
+		'DEBUG': 'edit:renamesearch:---s,edit:movablefunction,edit:movefunction:Tank.h,printdisklines:Gauge.h,printdisklines:Gauge.cpp,printdisklines:Tank.h,printdisklines:Tank.cpp,printdisklines:Main.cpp'}),
+		[r'^Move to File: ReadGauge\(int, int\), declared in Gauge\.h, defined in Gauge\.cpp, 1 file names it$', r'^Status: Moved ReadGauge to Tank\.h and Tank\.cpp: 4 files changed\.$', r'^Move to File: moved$',
+		 r'^5\|int\t\tResetGauge\(int iGauge\);$', r'^6\|$', r'^29 lines$',
+		 r'^1\|#include "Gauge\.h"$', r'^8\|int ResetGauge\(int iGauge\)$', r'^11 lines$',
+		 r'^49\|int\t\tMeasureTank\(CTank\* pcTank\);$', r'^50\|int\t\tReadGauge\(int iGauge, int iScale = 1\);$', r'^51\|$', r'^52\|$', r'^53\|#endif // __TANK_H__$',
+		 r'^1\|#include "Tank\.h"$', r'^2\|#include "Gauge\.h"$', r'^3\|$', r'^66\|\}$', r'^67\|$', r'^68\|$', r'^69\|/{74}$', r'^73\|int ReadGauge\(int iIndex, int iScale\)$',
+		 r'^75\|\treturn ClampGauge\(iIndex \* iScale, 100\);$', r'^76 lines$',
+		 r'^1\|#include "Tank\.h"$', r'^2\|#include "Gauge\.h"$', r'^3\|$', r'^18 lines$'],
+		[]),
+	('move-function-inline', dict(MakeDefinitionsCopy(), **{
+		#A function a header defines goes to the header it is sent to, before its #endif; the file that calls it
+		#(Gauge.cpp) #includes that header beside... Gauge.cpp has no #include of a header it was declared in but its
+		#own, so after it.
+		'WAIT_INDEX': '1', 'OPEN': 'Gauge.h', 'CARET': '13:14',
+		'DEBUG': 'edit:renamesearch:---s,edit:movablefunction,edit:movefunction:Valve.h,printdisklines:Gauge.h,printdisklines:Gauge.cpp,printdisklines:Valve.h'}),
+		[r'^Move to File: ClampGauge\(int, int\), defined in Gauge\.h, 1 file names it$', r'^Status: Moved ClampGauge to Valve\.h: 3 files changed\.$',
+		 r'^6\|int\t\tResetGauge\(int iGauge\);$', r'^7\|$', r'^8\|$', r'^9\|/{74}$', r'^13\|template<class M>$', r'^20 lines$',
+		 r'^1\|#include "Gauge\.h"$', r'^2\|#include "Valve\.h"$', r'^3\|$', r'^22 lines$',
+		 r'^15\|\};$', r'^16\|$', r'^17\|$', r'^18\|/{74}$', r'^22\|inline int ClampGauge\(int iValue, int iMax = 100\)$', r'^25\|\}$', r'^26\|$', r'^27\|$', r'^28\|#endif // __VALVE_H__$'],
+		[]),
+	('move-function-refused', dict(MakeDefinitionsCopy(), **{
+		#Where it can't go, and what isn't a function outside a class.
+		'WAIT_INDEX': '1', 'OPEN': 'Gauge.h', 'CARET': '6:8',
+		'DEBUG': 'edit:renamesearch:---s,edit:movefunction:Nope.h,edit:movefunction:Gauge.h,edit:movefunction:Tank.cpp,edit:caret:3:1,edit:movablefunction,edit:open:Tank.h,edit:caret:14:8,edit:movablefunction'}),
+		[r'^Move to File: there is no Nope\.h in the solution$', r'^Move to File: it is in Gauge\.h already$', r'^Move to File: it goes to a header: a \.h file of the solution$',
+		 r'^Move to File: no function$', r"^Move to File: CTank::Fill\(int, int\) can't be moved: it is in CTank$"],
+		[r'^Move to File: moved']),
+	('move-function-undo', dict(MakeDefinitionsCopy(), **{
+		#One undo across the four files.
+		'WAIT_INDEX': '1', 'OPEN': 'Gauge.h', 'CARET': '5:8',
+		'DEBUG': 'edit:renamesearch:---s,edit:movefunction:Tank.h,edit:undoall,edit:undoall,edit:saveall,printdisklines:Gauge.h,printdisklines:Gauge.cpp,printdisklines:Tank.h,printdisklines:Tank.cpp'}),
+		[r'^Status: Moved ReadGauge to Tank\.h and Tank\.cpp', r'^5\|int\t\tReadGauge\(int iGauge, int iScale = 1\);$', r'^30 lines$', r'^8\|int ReadGauge\(int iIndex, int iScale\)$', r'^21 lines$',
+		 r'^49\|int\t\tMeasureTank\(CTank\* pcTank\);$', r'^50\|$', r'^52 lines$', r'^1\|#include "Tank\.h"$', r'^2\|$', r'^65 lines$'],
+		[]),
+	('move-function-dialog', dict(MakeDefinitionsCopy(), **{
+		#The dialog asks for the header; the same F6 that moves a class.
+		'WAIT_INDEX': '1', 'OPEN': 'Gauge.h', 'CARET': '5:8', 'SETTINGS': MakeSettingsFile(), 'DIALOG_ANSWER': 'Cancel',
+		'DEBUG': 'moveclass,answered:1,printstatus'}),
+		[r'^Dialog \[Move ReadGauge to File\] answered Cancel$'],
+		[r'Moved ReadGauge']),
 	('rename-assembly-class', dict(MakeRenameAssemblyCopy(), **{
 		#A class renamed in hand written assembly's labels (_CEngine__Init, __0, __2), in parameter lists with its length
 		#(FPC7CEngine to FPC6CMotor), in generated layout constants (SIZEOF_CEngine, CEngine_miSpeed: in the assembly, the
@@ -1944,7 +1990,7 @@ CHECKS = [
 		 r'^Menu Debug: Start Debugging \[F5\], Start Without Debugging \[Ctrl\+F5\], Stop Debugging \[Shift\+F5\], Stop Running\(disabled\), Restart \[Ctrl\+Shift\+F5\], Break All \[Ctrl\+Pause/Break\], Attach to Emulator\.\.\., Step Into \[F11\], Step Over \[F10\], Step Out \[Shift\+F11\], Toggle Breakpoint \[F9\], ',
 		 r'^Menu Window: Reset Window Layout, Close All Documents$',
 		 r'^Menu Editor: Go to Source \[Ctrl\+B\], Find Usages \[Alt\+F7\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Rename\.\.\. \[Shift\+F6\], Refactor>, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\]$',
-		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\.(\(disabled\))?, Push Members Down\.\.\.(\(disabled\))?, Move Class to Its Own Files\.\.\. \[F6\](\(disabled\))?, Extract Method\.\.\.\(disabled\)$',
+		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\.(\(disabled\))?, Push Members Down\.\.\.(\(disabled\))?, Move\.\.\. \[F6\](\(disabled\))?, Extract Method\.\.\.\(disabled\)$',
 		 r'^Menu Explorer: Set as Startup Solution, Set as Startup Project\(disabled\), Remove Solution, Rename\.\.\.(\(disabled\))?$',
 		 r'^Menu item \[View/Nope\] not found$'], []),
 	('menu-clicks', {

@@ -211,6 +211,7 @@ void CIDEMoveClass::Init(CIDEContent* pcContent)
 	PreInit();
 	mpcContent = pcContent;
 	mpsMove = NULL;
+	mpsFunctionMove = NULL;
 	mapcUnits.Init();
 	PostInit();
 }
@@ -227,6 +228,7 @@ void CIDEMoveClass::Class(void)
 	M_Pointer(mpNameField);
 	M_Pointer(mpError);
 	U_Pointer(mpsMove);
+	U_Pointer(mpsFunctionMove);
 	U_Unknown(CArrayTemplatePtr<CIDERefactorUnit>, mapcUnits);
 }
 
@@ -257,7 +259,7 @@ bool CIDEMoveClass::Load(CObjectReader* pcFile) { return false; }
 //////////////////////////////////////////////////////////////////////////
 void CIDEMoveClass::AddCommands(Ptr<CCommandSet> pCommands)
 {
-	pCommands->Add("Refactor.MoveClass", "Move Class to Its Own Files...", "F6", Ptr<CImageCel>(), this, &CIDEMoveClass::QueueMove)->SetEnabledCheck(this, &CIDEMoveClass::CanMove);
+	pCommands->Add("Refactor.MoveClass", "Move...", "F6", Ptr<CImageCel>(), this, &CIDEMoveClass::QueueMove)->SetEnabledCheck(this, &CIDEMoveClass::CanMove);
 }
 
 
@@ -1495,23 +1497,799 @@ bool CIDEMoveClass::ApproveMove(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+//
+//////////////////////////////////////////////////////////////////////////
+void SIDEFunctionMove::Init(void)
+{
+	szKey.Init();
+	szName.Init();
+	bMovable = false;
+	szWhyNot.Init();
+	bFunction = true;
+	asDeclarations.Init();
+	sDefinition.Init("", 0, 0, 0, 0);
+	bDefinition = false;
+	aszUsers.Init();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void SIDEFunctionMove::Kill(void)
+{
+	aszUsers.Kill();
+	sDefinition.Kill();
+	KillIDEFileRanges(&asDeclarations);
+	szWhyNot.Kill();
+	szName.Kill();
+	szKey.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+static bool IsIDEMoveHeader(const char* szFileName)
+{
+	CChars	szName;
+	bool	bHeader;
+
+	szName.Init(szFileName);
+	bHeader = szName.EndsWithIgnoreCase(".h") || szName.EndsWithIgnoreCase(".hpp") || szName.EndsWithIgnoreCase(".hh") || szName.EndsWithIgnoreCase(".inl");
+	szName.Kill();
+	return bHeader;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether a line of a file is in what moves with a function: one of its
+// declarations, or its definition.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEMoveClass::IsFunctionMoved(SIDEFunctionMove* psMove, const char* szFileName, int32 iLine)
+{
+	SIDEFileRange*	psRange;
+	size			i;
+
+	for (i = 0; i < psMove->asDeclarations.NumElements() + (psMove->bDefinition ? 1 : 0); i++)
+	{
+		psRange = (i < psMove->asDeclarations.NumElements()) ? psMove->asDeclarations.Get(i) : &psMove->sDefinition;
+		if ((StringInsensitiveCompare(szFileName, psRange->szFileName.Text()) == 0) && (iLine >= psRange->iLine) && (iLine <= psRange->iEndLine))
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// What Move to File has to work with, for the function or variable at
+// the caret that is in no class.  False if there is none there;
+// psDest->bMovable says whether it can be moved, szWhyNot why not.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEMoveClass::FindFunctionMove(SIDEFunctionMove* psDest)
+{
+	CIDECodeModel*			pcModel;
+	CArrayIDELocations		asLocations;
+	SIDELocation*			psLocation;
+	CIDERefactorUnit*		pcUnit;
+	CCPPSyntaxDeclarator*	pcDeclarator;
+	CCPPSyntax*				pcOuter;
+	SIDESignatureSite		sSite;
+	SCPPSyntaxRange			sRange;
+	CChars					szScope;
+	const char*				szWhyNot;
+	int						iLine;
+	int						iColumn;
+	int32					iFirst;
+	int32					iLast;
+	size					i;
+	uint8					uiRole;
+	uint8					uiKind;
+	bool					bRead;
+	bool					bBody;
+
+	pcModel = mpcContent->GetCodeModel();
+	if (mpcContent->GetDocuments()->GetActiveTab().IsNull())
+	{
+		return false;
+	}
+	mpcContent->GetDocuments()->UpdateEditedTabsNow();
+	if (!mpcContent->GetDocuments()->FindSymbolPlace(&iLine, &iColumn, &uiRole) ||
+		!pcModel->GetSymbolAt(mpcContent->GetDocuments()->GetActiveTab()->GetFileName(), iLine, iColumn, &psDest->szKey, &uiKind) ||
+		((uiKind != CPPSK_Function) && (uiKind != CPPSK_FunctionTemplate) && (uiKind != CPPSK_Variable)))
+	{
+		return false;
+	}
+	psDest->bFunction = (uiKind != CPPSK_Variable);
+	GetIDEScopedName(psDest->szKey.Text(), &psDest->szName);
+	szScope.Init();
+	GetIDESymbolScope(psDest->szKey.Text(), &szScope);
+	if (szScope.Contains("("))
+	{
+		//A function's own variable.
+		szScope.Kill();
+		return false;
+	}
+	psDest->bMovable = true;
+	if (!szScope.Empty())
+	{
+		psDest->bMovable = false;
+		psDest->szWhyNot.Set("it is in ");
+		psDest->szWhyNot.Append(szScope);
+	}
+	szScope.Kill();
+
+	asLocations.Init();
+	pcModel->GetSymbolLocations(psDest->szKey.Text(), &asLocations, &uiKind);
+	for (i = 0; psDest->bMovable && (i < asLocations.NumElements()); i++)
+	{
+		psLocation = asLocations.Get(i);
+		if (psLocation->uiRole == CPPIR_Reference)
+		{
+			continue;
+		}
+		pcUnit = (pcModel->FindProjectOfFile(psLocation->szFileName.Text()) != MAX_SIZE) ? GetUnit(psLocation->szFileName.Text()) : NULL;
+		bRead = false;
+		bBody = (psLocation->uiRole == CPPIR_Definition);
+		if (pcUnit && psDest->bFunction)
+		{
+			sSite.Init();
+			bRead = mpcContent->GetChangeSignature()->ReadSite(pcUnit, psLocation, "", &sSite, &szWhyNot);
+			sRange = sSite.sAll;
+			bBody = sSite.bBody;
+			sSite.Kill();
+		}
+		else if (pcUnit)
+		{
+			pcDeclarator = (CCPPSyntaxDeclarator*)pcUnit->FindAncestor(pcUnit->FindNodeAt(psLocation->iLine, psLocation->iColumn), CPPS_Declarator);
+			while (pcDeclarator && pcDeclarator->mpcParent && (pcDeclarator->mpcParent->GetKind() == CPPS_Declarator))
+			{
+				pcDeclarator = (CCPPSyntaxDeclarator*)pcDeclarator->mpcParent;
+			}
+			pcOuter = pcDeclarator ? pcDeclarator->mpcParent : NULL;
+			if (pcOuter && (pcOuter->GetKind() == CPPS_InitDeclarator))
+			{
+				pcOuter = pcOuter->mpcParent;
+			}
+			bRead = pcOuter && pcUnit->GetRange(pcOuter, &sRange);
+		}
+		if (!bRead)
+		{
+			psDest->bMovable = false;
+			psDest->szWhyNot.Set("a declaration of it can't be read (it isn't in the solution, or a macro makes it)");
+			break;
+		}
+		if (pcUnit->FindTokensIn(sRange.iLine, sRange.iColumn, sRange.iEndLine, sRange.iEndColumn, &iFirst, &iLast) && pcUnit->IsToken(iFirst, "static"))
+		{
+			psDest->bMovable = false;
+			psDest->szWhyNot.Set("it is static: only ");
+			psDest->szWhyNot.Append(GetIDEFileNamePart(psLocation->szFileName.Text()));
+			psDest->szWhyNot.Append(" can use it");
+			break;
+		}
+		if (bBody && !psDest->bDefinition)
+		{
+			psDest->sDefinition.Kill();
+			psDest->sDefinition.Init(psLocation->szFileName.Text(), sRange.iLine, sRange.iColumn, sRange.iEndLine, sRange.iEndColumn);
+			psDest->bDefinition = true;
+		}
+		else if (!bBody)
+		{
+			psDest->asDeclarations.Add()->Init(psLocation->szFileName.Text(), sRange.iLine, sRange.iColumn, sRange.iEndLine, sRange.iEndColumn);
+		}
+	}
+	for (i = 0; psDest->bMovable && (i < asLocations.NumElements()); i++)
+	{
+		psLocation = asLocations.Get(i);
+		if ((psLocation->uiRole == CPPIR_Reference) && !IsFunctionMoved(psDest, psLocation->szFileName.Text(), psLocation->iLine) && (pcModel->FindProjectOfFile(psLocation->szFileName.Text()) != MAX_SIZE))
+		{
+			psDest->aszUsers.AddIfUnique(psLocation->szFileName.Text());
+		}
+	}
+	KillIDELocations(&asLocations);
+	KillUnits();
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The header a function is to go to, named as it is typed: its path and,
+// if the function is defined in a source file, the path of the header's
+// source file.  True, with why, if it can't go there: no such header in
+// the solution, or more than one, or it is there already, or the header
+// has no source file.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEMoveClass::FindFunctionProblem(SIDEFunctionMove* psMove, const char* szHeaderName, CChars* pszHeader, CChars* pszSource, CChars* pszDest)
+{
+	CArrayChars	aszFound;
+	CArrayChars	aszRelated;
+	size		i;
+	bool		bThere;
+
+	aszFound.Init();
+	if (!IsIDEMoveHeader(szHeaderName))
+	{
+		pszDest->Set("it goes to a header: a .h file of the solution");
+	}
+	else if (mpcContent->GetCodeModel()->FindFilesNamed(szHeaderName, &aszFound) == 0)
+	{
+		pszDest->Set("there is no ");
+		pszDest->Append(szHeaderName);
+		pszDest->Append(" in the solution");
+	}
+	else if (aszFound.NumElements() > 1)
+	{
+		pszDest->Set("there is more than one ");
+		pszDest->Append(szHeaderName);
+		pszDest->Append(" in the solution");
+	}
+	else
+	{
+		pszHeader->Set(aszFound.GetText(0));
+		bThere = psMove->bDefinition && (StringInsensitiveCompare(psMove->sDefinition.szFileName.Text(), pszHeader->Text()) == 0);
+		for (i = 0; i < psMove->asDeclarations.NumElements(); i++)
+		{
+			bThere = bThere || (StringInsensitiveCompare(psMove->asDeclarations.Get(i)->szFileName.Text(), pszHeader->Text()) == 0);
+		}
+		if (bThere)
+		{
+			pszDest->Set("it is in ");
+			pszDest->Append(szHeaderName);
+			pszDest->Append(" already");
+		}
+		else if (psMove->bDefinition && !IsIDEMoveHeader(psMove->sDefinition.szFileName.Text()))
+		{
+			aszRelated.Init();
+			mpcContent->GetFileRename()->FindRelatedFiles(pszHeader->Text(), &aszRelated);
+			for (i = 0; i < aszRelated.NumElements(); i++)
+			{
+				if ((aszRelated.Get(i)->EndsWithIgnoreCase(".cpp") || aszRelated.Get(i)->EndsWithIgnoreCase(".c")) && pszSource->Empty())
+				{
+					pszSource->Set(aszRelated.GetText(i));
+				}
+			}
+			aszRelated.Kill();
+			if (pszSource->Empty())
+			{
+				pszDest->Set(szHeaderName);
+				pszDest->Append(" has no source file in the solution for its definition");
+			}
+			else if (StringInsensitiveCompare(pszSource->Text(), psMove->sDefinition.szFileName.Text()) == 0)
+			{
+				pszDest->Set("it is defined in ");
+				pszDest->Append(GetIDEFileNamePart(pszSource->Text()));
+				pszDest->Append(" already");
+			}
+		}
+	}
+	aszFound.Kill();
+	return !pszDest->Empty();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Text to go into a file at a place, gathered: what goes to one place is
+// one insertion (the place is kept in the range's uiStart).
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEMoveClass::AddInsert(const char* szFileName, size uiAt, const char* szText, CArrayIDEFileRanges* pasInserts, CArrayChars* paszTexts)
+{
+	size	i;
+
+	for (i = 0; i < pasInserts->NumElements(); i++)
+	{
+		if ((pasInserts->Get(i)->uiStart == uiAt) && (StringInsensitiveCompare(pasInserts->Get(i)->szFileName.Text(), szFileName) == 0))
+		{
+			if (!paszTexts->Get(i)->Contains(szText))
+			{
+				paszTexts->Get(i)->Append(szText);
+			}
+			return;
+		}
+	}
+	pasInserts->Add()->Init(szFileName, 0, 0, 0, 0);
+	pasInserts->Get(pasInserts->NumElements() - 1)->uiStart = uiAt;
+	paszTexts->Add(szText);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A file given an #include of a header, if it has none: beside its
+// #include of szBeside (written as that one is), or after its last.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEMoveClass::AddInclude(const char* szFileName, const char* szBeside, const char* szIncluded, CIDEFileEdits* pcEdits, CArrayIDEFileRanges* pasInserts, CArrayChars* paszTexts)
+{
+	CChars	szLine;
+	char*	szText;
+	size	uiAt;
+
+	szText = (StringInsensitiveCompare(szFileName, szIncluded) != 0) ? pcEdits->GetText(szFileName) : NULL;
+	if (!szText)
+	{
+		return;
+	}
+	szLine.Init();
+	FindIncludePlace(szText, szBeside, GetIDEFileNamePart(szIncluded), &uiAt, &szLine);
+	if (!szLine.Empty())
+	{
+		AddInsert(szFileName, uiAt, szLine.Text(), pasInserts, paszTexts);
+	}
+	szLine.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The file that moved text goes to (szTarget) #includes the headers that
+// declare what the text names, where it doesn't already: each thing's,
+// by the header of the solution that declares it.  Nothing for what is
+// declared in the files the text goes to, or moves with it.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEMoveClass::AddUsedIncludes(SIDEFileRange* psRange, const char* szTarget, const char* szOtherTarget, SIDEFunctionMove* psMove, CIDEFileEdits* pcEdits, CArrayIDEFileRanges* pasInserts, CArrayChars* paszTexts)
+{
+	CIDECodeModel*		pcModel;
+	CArrayIDEFileRanges	asRanges;
+	CArrayIDELocations	asLocations;
+	CArrayChars			aszKeys;
+	SIDELocation*		psLocation;
+	CChars				szScope;
+	const char*			szDeclared;
+	size				i;
+	size				j;
+	uint8				uiKind;
+	bool				bLocal;
+
+	pcModel = mpcContent->GetCodeModel();
+	asRanges.Init();
+	asRanges.Add()->Init(psRange->szFileName.Text(), psRange->iLine, psRange->iColumn, psRange->iEndLine, psRange->iEndColumn);
+	aszKeys.Init();
+	pcModel->FindSymbolsUsedIn(&asRanges, &aszKeys);
+	KillIDEFileRanges(&asRanges);
+	for (i = 0; i < aszKeys.NumElements(); i++)
+	{
+		szScope.Init();
+		GetIDESymbolScope(aszKeys.GetText(i), &szScope);
+		bLocal = szScope.Contains("(") || aszKeys.Get(i)->Equals(psMove->szKey.Text());
+		szScope.Kill();
+		if (bLocal)
+		{
+			continue;
+		}
+		//The header that declares it: the first of the solution's; none if the text's own files do.
+		asLocations.Init();
+		pcModel->GetSymbolLocations(aszKeys.GetText(i), &asLocations, &uiKind);
+		szDeclared = NULL;
+		for (j = 0; j < asLocations.NumElements(); j++)
+		{
+			psLocation = asLocations.Get(j);
+			if ((psLocation->uiRole == CPPIR_Reference) || IsFunctionMoved(psMove, psLocation->szFileName.Text(), psLocation->iLine))
+			{
+				continue;
+			}
+			if ((StringInsensitiveCompare(psLocation->szFileName.Text(), szTarget) == 0) || (szOtherTarget && (StringInsensitiveCompare(psLocation->szFileName.Text(), szOtherTarget) == 0)))
+			{
+				szDeclared = NULL;
+				break;
+			}
+			if (!szDeclared && IsIDEMoveHeader(psLocation->szFileName.Text()) && (pcModel->FindProjectOfFile(psLocation->szFileName.Text()) != MAX_SIZE))
+			{
+				szDeclared = psLocation->szFileName.Text();
+			}
+		}
+		if (szDeclared)
+		{
+			AddInclude(szTarget, "", szDeclared, pcEdits, pasInserts, paszTexts);
+		}
+		KillIDELocations(&asLocations);
+	}
+	aszKeys.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Where a declaration goes in a header: after the last function it
+// declares without defining (true), so its prototypes stay together;
+// false if it has none.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEMoveClass::FindPrototypePlace(const char* szHeader, const char* szText, size* puiAt)
+{
+	CArrayIDELocations	asDeclared;
+	CArrayIDELocations	asDefined;
+	CIDERefactorUnit*	pcUnit;
+	SIDESignatureSite	sSite;
+	const char*			szWhyNot;
+	size				i;
+	bool				bFound;
+
+	asDeclared.Init();
+	asDefined.Init();
+	mpcContent->GetCodeModel()->FindSiblingFunctions("x", szHeader, &asDeclared, &asDefined);
+	pcUnit = GetUnit(szHeader);
+	bFound = false;
+	for (i = asDeclared.NumElements(); pcUnit && !bFound && (i > 0); i--)
+	{
+		sSite.Init();
+		if (mpcContent->GetChangeSignature()->ReadSite(pcUnit, asDeclared.Get(i - 1), "", &sSite, &szWhyNot) && !sSite.bBody && !sSite.bInClass && sSite.szOwnTemplate.Empty())
+		{
+			*puiAt = FindIDENextLine(szText, FindIDETextOffset(szText, sSite.sAll.iEndLine, sSite.sAll.iEndColumn));
+			bFound = true;
+		}
+		sSite.Kill();
+	}
+	KillIDELocations(&asDefined);
+	KillIDELocations(&asDeclared);
+	return bFound;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Where something goes at the end of a file: before a header's closing
+// #endif and the blank lines over it, or at the text's end.
+//
+//////////////////////////////////////////////////////////////////////////
+size CIDEMoveClass::FindEndPlace(const char* szText)
+{
+	size	uiAt;
+	size	uiLine;
+	size	uiPrevious;
+	size	i;
+	bool	bBlank;
+
+	uiAt = strlen(szText);
+	for (uiLine = uiAt; uiLine > 0; uiLine--)
+	{
+		if (((uiLine == 1) || (szText[uiLine - 2] == '\n')) && (strncmp(&szText[uiLine - 1], "#endif", 6) == 0))
+		{
+			uiAt = uiLine - 1;
+			break;
+		}
+	}
+	while (uiAt > 0)
+	{
+		for (uiPrevious = uiAt - 1; (uiPrevious > 0) && (szText[uiPrevious - 1] != '\n'); uiPrevious--)
+		{
+		}
+		bBlank = true;
+		for (i = uiPrevious; i < uiAt; i++)
+		{
+			bBlank = bBlank && ((szText[i] == ' ') || (szText[i] == '\t') || (szText[i] == '\r') || (szText[i] == '\n'));
+		}
+		if (!bBlank)
+		{
+			break;
+		}
+		uiAt = uiPrevious;
+	}
+	return uiAt;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The function or variable moved to a header (and its source file): see
+// the class's comment.  One undo across the files.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEMoveClass::MoveFunction(SIDEFunctionMove* psMove, const char* szHeader, const char* szSource, CChars* pszStatus)
+{
+	CIDEFileEdits		cEdits;
+	CArrayIDEFileRanges	asInserts;
+	CArrayIDEFileRanges	asTaken;
+	CArrayChars			aszTexts;
+	SIDEFileRange*		psRange;
+	SIDEFileRange*		psOther;
+	CChars				szBlock;
+	CChars				szMessage;
+	const char*			szTarget;
+	const char*			szOldHeader;
+	char*				szText;
+	char*				szTargetText;
+	size				uiAt;
+	size				uiStart;
+	size				uiEnd;
+	size				uiPieces;
+	size				i;
+	size				j;
+	bool				bMerged;
+	bool				bResult;
+
+	mpcContent->GetDocuments()->UpdateEditedTabsNow();
+	cEdits.Init(mpcContent);
+	asInserts.Init();
+	asTaken.Init();
+	aszTexts.Init();
+	szOldHeader = "";
+	bResult = true;
+	uiPieces = psMove->asDeclarations.NumElements() + (psMove->bDefinition ? 1 : 0);
+	for (i = 0; bResult && (i < uiPieces); i++)
+	{
+		//Its declarations to the header; its definition to the header's source file, or to the header if a
+		//header had it.
+		psRange = (i < psMove->asDeclarations.NumElements()) ? psMove->asDeclarations.Get(i) : &psMove->sDefinition;
+		szTarget = ((i < psMove->asDeclarations.NumElements()) || IsIDEMoveHeader(psRange->szFileName.Text())) ? szHeader : szSource;
+		szText = cEdits.GetText(psRange->szFileName.Text());
+		szTargetText = cEdits.GetText(szTarget);
+		if (!szText || !szTargetText)
+		{
+			bResult = false;
+			break;
+		}
+		if ((i < psMove->asDeclarations.NumElements()) && IsIDEMoveHeader(psRange->szFileName.Text()) && (szOldHeader[0] == '\0'))
+		{
+			szOldHeader = psRange->szFileName.Text();
+		}
+		szBlock.Init();
+		if ((i < psMove->asDeclarations.NumElements()) && FindPrototypePlace(szHeader, szTargetText, &uiAt))
+		{
+			AppendBlock(szText, psRange->iLine, psRange->iColumn, psRange->iEndLine, psRange->iEndColumn, &szBlock);
+		}
+		else
+		{
+			//Two blank lines from what is before it, and, before a header's #endif, the blank lines there stay.
+			uiAt = FindEndPlace(szTargetText);
+			szBlock.Append(((uiAt > 0) && (szTargetText[uiAt - 1] != '\n')) ? "\n\n\n" : "\n\n");
+			AppendBlock(szText, psRange->iLine, psRange->iColumn, psRange->iEndLine, psRange->iEndColumn, &szBlock);
+		}
+		AddInsert(szTarget, uiAt, szBlock.Text(), &asInserts, &aszTexts);
+		szBlock.Kill();
+		AddUsedIncludes(psRange, szTarget, (szTarget == szSource) ? szHeader : NULL, psMove, &cEdits, &asInserts, &aszTexts);
+
+		uiStart = FindIDETextOffset(szText, psRange->iLine, psRange->iColumn);
+		uiEnd = FindIDETextOffset(szText, psRange->iEndLine, psRange->iEndColumn);
+		ExtendIDEDeletion(szText, &uiStart, &uiEnd, true);
+		asTaken.Add()->Init(psRange->szFileName.Text(), 0, 0, 0, 0);
+		asTaken.Get(asTaken.NumElements() - 1)->uiStart = uiStart;
+		asTaken.Get(asTaken.NumElements() - 1)->uiEnd = uiEnd;
+	}
+	if (bResult)
+	{
+		//Its definition's file #includes the header it is declared in, and so does each file that names it.
+		if (psMove->bDefinition && !IsIDEMoveHeader(psMove->sDefinition.szFileName.Text()))
+		{
+			AddInclude(szSource, "", szHeader, &cEdits, &asInserts, &aszTexts);
+		}
+		for (i = 0; i < psMove->aszUsers.NumElements(); i++)
+		{
+			if (!szSource || (StringInsensitiveCompare(psMove->aszUsers.GetText(i), szSource) != 0))
+			{
+				AddInclude(psMove->aszUsers.GetText(i), szOldHeader, szHeader, &cEdits, &asInserts, &aszTexts);
+			}
+		}
+
+		bMerged = true;
+		while (bMerged)
+		{
+			bMerged = false;
+			for (i = 0; i < asTaken.NumElements(); i++)
+			{
+				psRange = asTaken.Get(i);
+				for (j = 0; (j < asTaken.NumElements()) && (psRange->uiEnd > psRange->uiStart); j++)
+				{
+					psOther = asTaken.Get(j);
+					if ((j != i) && (psOther->uiEnd > psOther->uiStart) && (psOther->uiStart >= psRange->uiStart) && (psOther->uiStart <= psRange->uiEnd) &&
+						(StringInsensitiveCompare(psOther->szFileName.Text(), psRange->szFileName.Text()) == 0))
+					{
+						psRange->uiEnd = (psOther->uiEnd > psRange->uiEnd) ? psOther->uiEnd : psRange->uiEnd;
+						psOther->uiEnd = psOther->uiStart;
+						bMerged = true;
+					}
+				}
+			}
+		}
+		for (i = 0; i < asTaken.NumElements(); i++)
+		{
+			psRange = asTaken.Get(i);
+			if (psRange->uiEnd > psRange->uiStart)
+			{
+				szText = cEdits.GetText(psRange->szFileName.Text());
+				ExtendIDEDeletionAtEnd(szText, &psRange->uiStart, psRange->uiEnd);
+				cEdits.GetEdits(psRange->szFileName.Text())->Replace(psRange->uiStart, psRange->uiEnd, "");
+			}
+		}
+		for (i = 0; i < asInserts.NumElements(); i++)
+		{
+			cEdits.GetEdits(asInserts.Get(i)->szFileName.Text())->Insert(asInserts.Get(i)->uiStart, aszTexts.GetText(i));
+		}
+		cEdits.Apply();
+
+		szMessage.Init("Moved ");
+		szMessage.Append(psMove->szName);
+		szMessage.Append(" to ");
+		szMessage.Append(GetIDEFileNamePart(szHeader));
+		if (szSource && (szSource[0] != '\0'))
+		{
+			szMessage.Append(" and ");
+			szMessage.Append(GetIDEFileNamePart(szSource));
+		}
+		szMessage.Append(": ");
+		szMessage.Append((uint32)cEdits.NumFiles());
+		szMessage.Append((cEdits.NumFiles() == 1) ? " file changed." : " files changed.");
+		if (pszStatus)
+		{
+			pszStatus->Set(szMessage.Text());
+		}
+		else
+		{
+			mpcContent->ShowStatus(szMessage.Text());
+		}
+		szMessage.Kill();
+	}
+	aszTexts.Kill();
+	KillIDEFileRanges(&asTaken);
+	KillIDEFileRanges(&asInserts);
+	cEdits.Kill();
+	KillUnits();
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// What was found, for the checks.
+//
+//////////////////////////////////////////////////////////////////////////
+char* CIDEMoveClass::PrintFunctionMove(SIDEFunctionMove* psMove, CChars* pszDest)
+{
+	size	i;
+
+	pszDest->Append("Move to File: ")->Append(psMove->szKey);
+	if (!psMove->bMovable)
+	{
+		pszDest->Append(" can't be moved: ")->Append(psMove->szWhyNot)->Append('\n');
+		return pszDest->Text();
+	}
+	for (i = 0; i < psMove->asDeclarations.NumElements(); i++)
+	{
+		pszDest->Append(", declared in ")->Append(GetIDEFileNamePart(psMove->asDeclarations.Get(i)->szFileName.Text()));
+	}
+	if (psMove->bDefinition)
+	{
+		pszDest->Append(", defined in ")->Append(GetIDEFileNamePart(psMove->sDefinition.szFileName.Text()));
+	}
+	pszDest->Append(", ");
+	pszDest->Append((uint32)psMove->aszUsers.NumElements());
+	pszDest->Append((psMove->aszUsers.NumElements() == 1) ? " file names it\n" : " files name it\n");
+	return pszDest->Text();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The dialog says why the header written can't be where it goes.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEMoveClass::ApproveFunctionMove(void)
+{
+	CChars	szProblem;
+	CChars	szHeader;
+	CChars	szSource;
+	bool	bProblem;
+
+	szProblem.Init();
+	szHeader.Init();
+	szSource.Init();
+	bProblem = FindFunctionProblem(mpsFunctionMove, mpNameField->GetText(), &szHeader, &szSource, &szProblem);
+	if (bProblem)
+	{
+		if ((szProblem.Text()[0] >= 'a') && (szProblem.Text()[0] <= 'z'))
+		{
+			szProblem.Text()[0] -= 'a' - 'A';
+		}
+		szProblem.Append('.');
+	}
+	mpError->SetText(szProblem.Text());
+	szSource.Kill();
+	szHeader.Kill();
+	szProblem.Kill();
+	return !bProblem;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Move to File's dialog (the header it goes to), then the move.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEMoveClass::ShowFunctionMove(SIDEFunctionMove* psMove)
+{
+	CChars	szMessage;
+	CChars	szName;
+	CChars	szHeader;
+	CChars	szSource;
+	CChars	szProblem;
+	bool	bResult;
+
+	if (!psMove->bMovable)
+	{
+		szMessage.Init("Can't move ");
+		szMessage.Append(psMove->szName);
+		szMessage.Append(" to another file: ");
+		szMessage.Append(psMove->szWhyNot);
+		szMessage.Append(".");
+		mpcContent->ShowStatus(szMessage.Text());
+		szMessage.Kill();
+		return false;
+	}
+	szMessage.Init("Move ");
+	szMessage.Append(psMove->szName);
+	szMessage.Append(" to File");
+	mpDialog = OMalloc<CDialog>(mpcContent->GetWindow(), mpcContent->GetDialogLook(), szMessage.Text());
+	szMessage.Kill();
+	mpsFunctionMove = psMove;
+	mpNameField = mpDialog->AddTextField("To header:", "");
+	mpError = OMalloc<CLabel>(mpDialog->GetWindow(), mpcContent->GetDimFont(), "");
+	mpDialog->AddEditor("", mpError);
+	mpDialog->SetOKCaption("Refactor");
+	mpDialog->SetApprover(this, &CIDEMoveClass::ApproveFunctionMove);
+	mpcContent->GetScript()->WatchDialog(mpDialog);
+	bResult = mpDialog->Show(560);
+	szName.Init(bResult ? mpNameField->GetText() : "");
+	mpDialog->ClearApprover();
+	mpcContent->GetScript()->StopWatchingDialog();
+	mpNameField = NULL;
+	mpError = NULL;
+	mpDialog = NULL;
+	mpsFunctionMove = NULL;
+	szHeader.Init();
+	szSource.Init();
+	szProblem.Init();
+	bResult = bResult && !FindFunctionProblem(psMove, szName.Text(), &szHeader, &szSource, &szProblem) && MoveFunction(psMove, szHeader.Text(), szSource.Text());
+	szProblem.Kill();
+	szSource.Kill();
+	szHeader.Kill();
+	szName.Kill();
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Move Class to Its Own Files for the class at the caret: its dialog (the
 // files' name), then the move.  False if nothing was moved.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEMoveClass::ShowMove(void)
 {
-	SIDEClassMove	sMove;
-	CChars			szMessage;
-	CChars			szStem;
-	bool			bResult;
+	SIDEClassMove		sMove;
+	SIDEFunctionMove	sFunctionMove;
+	CChars				szMessage;
+	CChars				szStem;
+	bool				bResult;
 
 	sMove.Init();
 	if (!FindMove(&sMove))
 	{
-		mpcContent->ShowStatus("There is no class at the caret to move to its own files.");
+		//Not a class: a function or a variable that is in none?
 		sMove.Kill();
-		return false;
+		sFunctionMove.Init();
+		bResult = FindFunctionMove(&sFunctionMove);
+		if (bResult)
+		{
+			bResult = ShowFunctionMove(&sFunctionMove);
+		}
+		else
+		{
+			mpcContent->ShowStatus("There is no class or function at the caret to move.");
+		}
+		sFunctionMove.Kill();
+		return bResult;
 	}
 	if (!sMove.bMovable)
 	{
