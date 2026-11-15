@@ -80,7 +80,10 @@ struct SIDETemplateExtraction
 //compiles as it did.  Refused: a class that is declared ahead of its definition somewhere (a typedef can't be), a
 //class in a class or a namespace, one with a static field defined outside it.
 //
-//The inverse (a parameter every instance gives the same argument taken out) is still to do.
+//Remove Template Parameter is the inverse, for a class template's parameter the caret is on: if every place the
+//template is used gives the parameter one argument, the argument takes its place throughout the template and the
+//parameter goes, from each template<...> and from every use (CIDETemplateParameter::RemoveParameter).  A function
+//template's can't be: its arguments aren't written at its calls.
 class CIDETemplateParameter : public CObject
 {
 CONSTRUCTABLE(CIDETemplateParameter);
@@ -106,9 +109,12 @@ public:
 	bool	Extract(SIDETemplateExtraction* psExtraction, const char* szName, CChars* pszStatus = NULL);
 	const char*	GetClassProblem(SIDETemplateExtraction* psExtraction, const char* szName, const char* szTemplateName);
 	bool	ExtractClass(SIDETemplateExtraction* psExtraction, const char* szName, const char* szTemplateName, CChars* pszStatus = NULL);
+	void	QueueRemove(void);
+	bool	RemoveParameter(CChars* pszStatus = NULL);
 
 protected:
 	void	ShowQueuedExtract(void);
+	void	RemoveQueued(void);
 	bool	Refuse(SIDETemplateExtraction* psDest, const char* szWhyNot);
 	void	FindTypePlaces(SIDETemplateExtraction* psExtraction, CIDERefactorUnit* pcUnit, const char* szFileName, const char* szText, SCPPSyntaxRange* psRange, CArrayInt* paiStarts, CArrayInt* paiTypenames);
 	void	AppendReplaced(SIDETemplateExtraction* psExtraction, const char* szName, const char* szText, size uiStart, size uiEnd, CArrayInt* paiStarts, CArrayInt* paiTypenames, CChars* pszDest);

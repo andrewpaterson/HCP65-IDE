@@ -8,10 +8,12 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Mix.cpp" />
+    <ClCompile Include="Pair.cpp" />
     <ClCompile Include="Tank.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Mix.h" />
+    <ClInclude Include="Pair.h" />
     <ClInclude Include="Tank.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

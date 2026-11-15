@@ -122,6 +122,7 @@ bool CIDETemplateParameter::Load(CObjectReader* pcFile) { return false; }
 void CIDETemplateParameter::AddCommands(Ptr<CCommandSet> pCommands)
 {
 	pCommands->Add("Refactor.ExtractTemplateParameter", "Extract Template Parameter...", "", Ptr<CImageCel>(), this, &CIDETemplateParameter::QueueExtract)->SetEnabledCheck(this, &CIDETemplateParameter::CanExtract);
+	pCommands->Add("Refactor.RemoveTemplateParameter", "Remove Template Parameter", "", Ptr<CImageCel>(), this, &CIDETemplateParameter::QueueRemove)->SetEnabledCheck(this, &CIDETemplateParameter::CanExtract);
 }
 
 
@@ -132,6 +133,7 @@ void CIDETemplateParameter::AddCommands(Ptr<CCommandSet> pCommands)
 void CIDETemplateParameter::AddEditorItems(Ptr<CMenuContainer> pRefactor)
 {
 	pRefactor->AddItem(mpcContent->GetCommands()->Find("Refactor.ExtractTemplateParameter"));
+	pRefactor->AddItem(mpcContent->GetCommands()->Find("Refactor.RemoveTemplateParameter"));
 }
 
 
@@ -155,6 +157,8 @@ bool CIDETemplateParameter::CanExtract(void)
 
 void CIDETemplateParameter::QueueExtract(void) { mpcContent->GetWindow()->Post(this, &CIDETemplateParameter::ShowQueuedExtract); }
 void CIDETemplateParameter::ShowQueuedExtract(void) { ShowExtract(); }
+void CIDETemplateParameter::QueueRemove(void) { mpcContent->GetWindow()->Post(this, &CIDETemplateParameter::RemoveQueued); }
+void CIDETemplateParameter::RemoveQueued(void) { RemoveParameter(); }
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -1366,5 +1370,541 @@ bool CIDETemplateParameter::ExtractClass(SIDETemplateExtraction* psExtraction, c
 	cFiles.Kill();
 	szClassName.Kill();
 	szTemplate.Kill();
+	return bResult;
+}
+
+
+//A declaration of a class template or of one of its members outside it, for Remove Template Parameter.
+struct SIDEOwnTemplate
+{
+	CChars	szFileName;
+	size	uiStart;			//Its template<...>,
+	size	uiHeaderEnd;		//what it declares,
+	size	uiEnd;				//and its end.
+	size	uiParameterStart;	//The parameter that goes, with the comma it is written with if it isn't the only one.
+	size	uiParameterEnd;
+	CChars	szParameter;		//Its name here.
+	bool	bMember;			//A member's definition, not the class.
+};
+
+
+typedef CArrayTemplate<SIDEOwnTemplate>	CArrayIDEOwnTemplates;
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The template arguments written after a name that ends at uiAt in a
+// text: where each starts and ends, and where the > that closes them is.
+// False if no < follows the name.
+//
+//////////////////////////////////////////////////////////////////////////
+static bool FindIDETemplateArguments(const char* szText, size uiAt, CArrayInt* paiStarts, CArrayInt* paiEnds, size* puiOpen, size* puiClose)
+{
+	size	uiStart;
+	int		iDepth;
+	int		iBrackets;
+
+	for (; (szText[uiAt] == ' ') || (szText[uiAt] == '\t'); uiAt++)
+	{
+	}
+	if (szText[uiAt] != '<')
+	{
+		return false;
+	}
+	*puiOpen = uiAt;
+	iDepth = 1;
+	iBrackets = 0;
+	uiStart = uiAt + 1;
+	for (uiAt++; (szText[uiAt] != '\0') && (iDepth > 0); uiAt++)
+	{
+		if (szText[uiAt] == '(')
+		{
+			iBrackets++;
+		}
+		else if (szText[uiAt] == ')')
+		{
+			iBrackets--;
+		}
+		else if ((szText[uiAt] == '<') && (iBrackets == 0))
+		{
+			iDepth++;
+		}
+		else if ((szText[uiAt] == '>') && (iBrackets == 0))
+		{
+			iDepth--;
+		}
+		else if ((szText[uiAt] == ';') || (szText[uiAt] == '{'))
+		{
+			//Not arguments: a comparison.
+			return false;
+		}
+		if ((iDepth == 0) || ((szText[uiAt] == ',') && (iDepth == 1) && (iBrackets == 0)))
+		{
+			paiStarts->Add((int)uiStart);
+			paiEnds->Add((int)uiAt);
+			uiStart = uiAt + 1;
+		}
+	}
+	*puiClose = uiAt - 1;
+	return iDepth == 0;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Remove Template Parameter (Refactorings.txt, 20, the inverse of Extract
+// Template Parameter), for the class template's parameter the caret is
+// on: if every place the template is used gives the parameter the same
+// argument, the argument takes the parameter's place throughout the
+// template and its members' definitions, the parameter goes from each
+// template<...> (the whole of it, if it was the only parameter: the class
+// is a template no longer, and a member defined outside it in a header
+// becomes inline), and the argument goes from every use.  The files
+// changed are checked as they would be first.  The status says what was
+// done, or why nothing was.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDETemplateParameter::RemoveParameter(CChars* pszStatus)
+{
+	CIDECodeModel*					pcModel;
+	CIDEFileEdits					cFiles;
+	CIDERefactorUnit				cUnit;
+	CIDERefactorUnit*				pcOther;
+	Ptr<CTextArea>					pEditor;
+	CArrayIDEOwnTemplates			asOwn;
+	CArrayIDEFileRanges				asRanges;
+	CArrayIDELocations				asLocations;
+	CArrayIDELocations				asDeclared;
+	CArrayChars						aszKeys;
+	CArrayChars						aszRemovedFiles;
+	CArrayInt						aiRemovedStarts;
+	CArrayInt						aiRemovedEnds;
+	CArrayInt						aiStarts;
+	CArrayInt						aiEnds;
+	SIDEOwnTemplate*				psOwn;
+	SIDELocation*					psLocation;
+	CCPPSyntax*						pcNode;
+	CCPPSyntaxTemplateDeclaration*	pcTemplate;
+	CCPPSyntaxTypeParameter*		pcParameter;
+	SCPPSyntaxRange					sRange;
+	SCPPSyntaxRange					sToken;
+	CChars							szWord;
+	CChars							szClassKey;
+	CChars							szKey;
+	CChars							szScope;
+	CChars							szArgument;
+	CChars							szOne;
+	CChars							szProblem;
+	CChars							szMessage;
+	const char*						szFileName;
+	char*							szText;
+	size							uiStart;
+	size							uiEnd;
+	size							uiLine;
+	size							uiParameter;
+	size							uiParameters;
+	size							uiOpen;
+	size							uiClose;
+	size							uiUses;
+	size							uiBefore;
+	size							i;
+	size							j;
+	size							k;
+	int32							iToken;
+	int32							iFirst;
+	int32							iLast;
+	uint8							uiKind;
+	bool							bResult;
+	bool							bOwn;
+	bool							bRemoved;
+
+	if (!CanExtract())
+	{
+		return false;
+	}
+	pcModel = mpcContent->GetCodeModel();
+	mpcContent->GetDocuments()->UpdateEditedTabsNow();
+	szFileName = mpcContent->GetDocuments()->GetActiveTab()->GetFileName();
+	pEditor = mpcContent->GetDocuments()->GetActiveTab()->GetEditor();
+	szText = pEditor->GetText();
+	if (!pEditor->GetSelection(&uiStart, &uiEnd))
+	{
+		uiStart = pEditor->GetCaretPosition();
+	}
+	if (!IsIDENameChar(szText[uiStart]) && (uiStart > 0) && IsIDENameChar(szText[uiStart - 1]))
+	{
+		uiStart--;
+	}
+	for (; (uiStart > 0) && IsIDENameChar(szText[uiStart - 1]); uiStart--)
+	{
+	}
+	for (uiEnd = uiStart; IsIDENameChar(szText[uiEnd]); uiEnd++)
+	{
+	}
+	szWord.Init();
+	szWord.AppendSubString(szText, uiStart, uiEnd);
+	uiLine = pEditor->FindLine(uiStart);
+	szProblem.Init();
+	szClassKey.Init();
+	szArgument.Init();
+	uiParameter = MAX_SIZE;
+	uiParameters = 0;
+	uiUses = 0;
+
+	//The template the caret's name is a parameter of, and the class template that is, or that its member is of.
+	cUnit.Init();
+	bResult = false;
+	if (cUnit.Parse(pcModel, &mpcContent->GetFindInFiles(), szFileName, false))
+	{
+		iToken = cUnit.FindTokenAt((int)uiLine, (int)(uiStart - pEditor->GetLineStart(uiLine)));
+		pcNode = (iToken != -1) ? cUnit.FindNodeOfTokens(iToken, iToken) : NULL;
+		pcTemplate = (CCPPSyntaxTemplateDeclaration*)cUnit.FindAncestor(pcNode, CPPS_TemplateDeclaration);
+		while (pcTemplate)
+		{
+			for (i = 0; i < pcTemplate->macpParameters.NumElements(); i++)
+			{
+				pcParameter = (CCPPSyntaxTypeParameter*)pcTemplate->macpParameters.GetPtr(i);
+				if ((pcParameter->GetKind() == CPPS_TypeParameter) && cUnit.IsToken(pcParameter->miName, szWord.Text()))
+				{
+					uiParameter = i;
+					uiParameters = pcTemplate->macpParameters.NumElements();
+				}
+			}
+			if (uiParameter != MAX_SIZE)
+			{
+				break;
+			}
+			pcTemplate = (CCPPSyntaxTemplateDeclaration*)cUnit.FindAncestor(pcTemplate->mpcParent, CPPS_TemplateDeclaration);
+		}
+		if (pcTemplate && (uiParameter != MAX_SIZE) && pcTemplate->mpcDeclaration)
+		{
+			//What it declares: "class CName", or a member "... CName<M>::Name(".
+			iToken = pcTemplate->mpcDeclaration->miFirstToken;
+			if ((cUnit.IsToken(iToken, "class") || cUnit.IsToken(iToken, "struct")) && cUnit.GetTokensRange(iToken + 1, iToken + 1, &sToken))
+			{
+				bResult = pcModel->GetSymbolAt(szFileName, sToken.iLine, sToken.iColumn, &szClassKey, &uiKind) && (uiKind == CPPSK_ClassTemplate);
+			}
+			else
+			{
+				for (; (iToken < pcTemplate->mpcDeclaration->miLastToken) && !cUnit.IsToken(iToken, "(") && !bResult; iToken++)
+				{
+					bResult = cUnit.GetTokensRange(iToken, iToken, &sToken) && pcModel->GetSymbolAt(szFileName, sToken.iLine, sToken.iColumn, &szClassKey, &uiKind) && (uiKind == CPPSK_ClassTemplate);
+				}
+			}
+		}
+	}
+	cUnit.Kill();
+	if (!bResult)
+	{
+		szProblem.Set((uiParameter == MAX_SIZE) ? "The caret isn't on a template's parameter." :
+					  "Only a class template's parameter can be removed: a function template's arguments aren't written at its calls.");
+	}
+
+	//Every declaration that is the template's: the class, and its members' definitions outside it.
+	asOwn.Init();
+	asDeclared.Init();
+	cFiles.Init(mpcContent);
+	if (bResult)
+	{
+		asLocations.Init();
+		pcModel->GetSymbolLocations(szClassKey.Text(), &asLocations, &uiKind);
+		for (i = 0; i < asLocations.NumElements(); i++)
+		{
+			psLocation = asLocations.Get(i);
+			szText = cFiles.GetText(psLocation->szFileName.Text());
+			uiStart = szText ? FindIDETextOffset(szText, psLocation->iLine, psLocation->iColumn) : 0;
+			if ((psLocation->uiRole != CPPIR_Reference) || ((uiStart >= 3) && (szText[uiStart - 1] == '~') && (szText[uiStart - 2] == ':')))
+			{
+				//The class, a declaration of it ahead, or its destructor's definition.
+				memcpy(asDeclared.Add(), psLocation, sizeof(SIDELocation));
+				asDeclared.Get(asDeclared.NumElements() - 1)->szFileName.Init(psLocation->szFileName);
+			}
+			if (psLocation->uiRole == CPPIR_Definition)
+			{
+				//Its members: what is declared from there on that is the template's.
+				asRanges.Init();
+				asRanges.Add()->Init(psLocation->szFileName.Text(), psLocation->iLine, 0, 0x7fffffff, 0);
+				aszKeys.Init();
+				pcModel->FindSymbolsDeclaredIn(&asRanges, &aszKeys);
+				for (j = 0; j < aszKeys.NumElements(); j++)
+				{
+					szScope.Init();
+					GetIDESymbolScope(aszKeys.GetText(j), &szScope);
+					if (szScope.Equals(szClassKey.Text()))
+					{
+						pcModel->GetSymbolLocations(aszKeys.GetText(j), &asDeclared, &uiKind);
+					}
+					szScope.Kill();
+				}
+				aszKeys.Kill();
+				KillIDEFileRanges(&asRanges);
+			}
+		}
+		KillIDELocations(&asLocations);
+
+		for (i = 0; bResult && (i < asDeclared.NumElements()); i++)
+		{
+			psLocation = asDeclared.Get(i);
+			if (psLocation->uiRole == CPPIR_Reference)
+			{
+				continue;
+			}
+			szText = cFiles.GetText(psLocation->szFileName.Text());
+			pcOther = NewMalloc<CIDERefactorUnit>();
+			pcOther->Init();
+			pcTemplate = NULL;
+			if (szText && pcOther->Parse(pcModel, &mpcContent->GetFindInFiles(), psLocation->szFileName.Text(), false))
+			{
+				iToken = pcOther->FindTokenAt(psLocation->iLine, psLocation->iColumn);
+				pcNode = (iToken != -1) ? pcOther->FindNodeOfTokens(iToken, iToken) : NULL;
+				pcTemplate = (CCPPSyntaxTemplateDeclaration*)pcOther->FindAncestor(pcNode, CPPS_TemplateDeclaration);
+				//The outermost that has the template's number of parameters: a member's own template<...> is inside it.
+				for (pcNode = pcTemplate ? pcTemplate->mpcParent : NULL; pcNode; pcNode = pcNode->mpcParent)
+				{
+					if (pcNode->GetKind() == CPPS_TemplateDeclaration)
+					{
+						pcTemplate = (CCPPSyntaxTemplateDeclaration*)pcNode;
+					}
+				}
+			}
+			if (pcTemplate && (pcTemplate->macpParameters.NumElements() == uiParameters) && pcTemplate->mpcDeclaration &&
+				pcOther->GetRange(pcTemplate, &sRange) && pcOther->GetTokensRange(pcTemplate->mpcDeclaration->miFirstToken, pcTemplate->mpcDeclaration->miFirstToken, &sToken))
+			{
+				uiStart = FindIDETextOffset(szText, sRange.iLine, sRange.iColumn);
+				bOwn = false;
+				for (j = 0; j < asOwn.NumElements(); j++)
+				{
+					bOwn |= (asOwn.Get(j)->uiStart == uiStart) && (StringInsensitiveCompare(asOwn.Get(j)->szFileName.Text(), psLocation->szFileName.Text()) == 0);
+				}
+				if (!bOwn)
+				{
+					psOwn = asOwn.Add();
+					psOwn->szFileName.Init(psLocation->szFileName);
+					psOwn->uiStart = uiStart;
+					psOwn->uiEnd = FindIDETextOffset(szText, sRange.iEndLine, sRange.iEndColumn);
+					psOwn->uiHeaderEnd = FindIDETextOffset(szText, sToken.iLine, sToken.iColumn);
+					psOwn->bMember = !pcOther->IsToken(pcTemplate->mpcDeclaration->miFirstToken, "class") && !pcOther->IsToken(pcTemplate->mpcDeclaration->miFirstToken, "struct");
+					pcParameter = (CCPPSyntaxTypeParameter*)pcTemplate->macpParameters.GetPtr(uiParameter);
+					psOwn->szParameter.Init();
+					pcOther->AppendTokens(pcParameter->miName, pcParameter->miName, &psOwn->szParameter);
+					iFirst = pcParameter->miFirstToken;
+					iLast = pcParameter->miLastToken;
+					if (uiParameter + 1 < uiParameters)
+					{
+						//To the next parameter: its comma with it.
+						iLast = pcTemplate->macpParameters.GetPtr(uiParameter + 1)->miFirstToken - 1;
+					}
+					else if (uiParameter > 0)
+					{
+						iFirst = pcTemplate->macpParameters.GetPtr(uiParameter - 1)->miLastToken + 1;
+					}
+					pcOther->GetTokensRange(iFirst, iFirst, &sToken);
+					psOwn->uiParameterStart = FindIDETextOffset(szText, sToken.iLine, sToken.iColumn);
+					if (uiParameter + 1 < uiParameters)
+					{
+						pcOther->GetTokensRange(iLast + 1, iLast + 1, &sToken);
+						psOwn->uiParameterEnd = FindIDETextOffset(szText, sToken.iLine, sToken.iColumn);
+					}
+					else
+					{
+						pcOther->GetTokensRange(iLast, iLast, &sToken);
+						psOwn->uiParameterEnd = FindIDETextOffset(szText, sToken.iEndLine, sToken.iEndColumn);
+					}
+				}
+			}
+			pcOther->Kill();
+			free(pcOther);
+		}
+	}
+
+	//Every place the template is named: its argument for the parameter, which goes, and outside its own
+	//declarations must be one argument.
+	aszRemovedFiles.Init();
+	aiRemovedStarts.Init();
+	aiRemovedEnds.Init();
+	if (bResult)
+	{
+		asLocations.Init();
+		pcModel->GetSymbolLocations(szClassKey.Text(), &asLocations, &uiKind);
+		szOne.Init();
+		GetIDESymbolName(szClassKey.Text(), &szOne);
+		for (i = 0; bResult && (i < asLocations.NumElements()); i++)
+		{
+			psLocation = asLocations.Get(i);
+			szText = cFiles.GetText(psLocation->szFileName.Text());
+			if (!szText)
+			{
+				continue;
+			}
+			uiStart = FindIDETextOffset(szText, psLocation->iLine, psLocation->iColumn);
+			bOwn = false;
+			for (j = 0; j < asOwn.NumElements(); j++)
+			{
+				psOwn = asOwn.Get(j);
+				bOwn |= (uiStart >= psOwn->uiStart) && (uiStart < psOwn->uiEnd) && (StringInsensitiveCompare(psOwn->szFileName.Text(), psLocation->szFileName.Text()) == 0);
+			}
+			aiStarts.Init();
+			aiEnds.Init();
+			if (!FindIDETemplateArguments(szText, uiStart + szOne.Length(), &aiStarts, &aiEnds, &uiOpen, &uiClose) || (aiStarts.NumElements() != uiParameters))
+			{
+				if (!bOwn)
+				{
+					szProblem.Set("It is named without its arguments in ");
+					szProblem.Append(GetIDEFileNamePart(psLocation->szFileName.Text()))->Append(" at line ")->Append((int32)(psLocation->iLine + 1))->Append('.');
+					bResult = false;
+				}
+				aiEnds.Kill();
+				aiStarts.Kill();
+				continue;
+			}
+			if (!bOwn)
+			{
+				szKey.Init();
+				szKey.AppendSubString(szText, (size)aiStarts.GetValue(uiParameter), (size)aiEnds.GetValue(uiParameter));
+				szKey.StripWhitespace();
+				if (uiUses == 0)
+				{
+					szArgument.Set(szKey);
+				}
+				else if (!szArgument.Equals(szKey.Text()))
+				{
+					szProblem.Set("It isn't given one argument everywhere: ");
+					szProblem.Append(szArgument)->Append(" and ")->Append(szKey)->Append(" (")->Append(GetIDEFileNamePart(psLocation->szFileName.Text()))->Append(" line ")->Append((int32)(psLocation->iLine + 1))->Append(").");
+					bResult = false;
+				}
+				szKey.Kill();
+				uiUses++;
+			}
+			//The argument out: all of <...> if it is the only one, else with its comma.
+			if (uiParameters == 1)
+			{
+				uiStart = uiOpen;
+				uiEnd = uiClose + 1;
+			}
+			else if (uiParameter + 1 < uiParameters)
+			{
+				uiStart = (size)aiStarts.GetValue(uiParameter);
+				uiEnd = (size)aiStarts.GetValue(uiParameter + 1);
+				for (; (szText[uiEnd] == ' ') || (szText[uiEnd] == '\t'); uiEnd++)
+				{
+				}
+			}
+			else
+			{
+				uiStart = (size)aiEnds.GetValue(uiParameter - 1);
+				uiEnd = (size)aiEnds.GetValue(uiParameter);
+			}
+			aszRemovedFiles.Add(psLocation->szFileName.Text());
+			aiRemovedStarts.Add((int)uiStart);
+			aiRemovedEnds.Add((int)uiEnd);
+			aiEnds.Kill();
+			aiStarts.Kill();
+		}
+		szOne.Kill();
+		KillIDELocations(&asLocations);
+		if (bResult && (uiUses == 0))
+		{
+			szProblem.Set("Nothing uses the template: there is no argument to put in the parameter's place.");
+			bResult = false;
+		}
+	}
+
+	if (bResult)
+	{
+		for (i = 0; i < aiRemovedStarts.NumElements(); i++)
+		{
+			cFiles.GetEdits(aszRemovedFiles.GetText(i))->Replace((size)aiRemovedStarts.GetValue(i), (size)aiRemovedEnds.GetValue(i), "");
+		}
+		for (i = 0; i < asOwn.NumElements(); i++)
+		{
+			psOwn = asOwn.Get(i);
+			szText = cFiles.GetText(psOwn->szFileName.Text());
+			if (uiParameters == 1)
+			{
+				//No template any more; a member defined in a header is inline, as every file that has it defines it.
+				cFiles.GetEdits(psOwn->szFileName.Text())->Replace(psOwn->uiStart, psOwn->uiHeaderEnd, (psOwn->bMember && (CIDEIcons::GetFileType(psOwn->szFileName.Text()) == IFT_Header)) ? "inline " : "");
+			}
+			else
+			{
+				cFiles.GetEdits(psOwn->szFileName.Text())->Replace(psOwn->uiParameterStart, psOwn->uiParameterEnd, "");
+			}
+			//The parameter's name, where it isn't in an argument that goes.
+			for (j = psOwn->uiHeaderEnd; j < psOwn->uiEnd; j++)
+			{
+				if (!IsIDENameChar(szText[j]) || IsIDENameChar(szText[j - 1]))
+				{
+					continue;
+				}
+				for (uiEnd = j; IsIDENameChar(szText[uiEnd]); uiEnd++)
+				{
+				}
+				if ((uiEnd - j == psOwn->szParameter.Length()) && (strncmp(&szText[j], psOwn->szParameter.Text(), uiEnd - j) == 0))
+				{
+					bRemoved = false;
+					for (k = 0; k < aiRemovedStarts.NumElements(); k++)
+					{
+						bRemoved |= (j >= (size)aiRemovedStarts.GetValue(k)) && (j < (size)aiRemovedEnds.GetValue(k)) && (StringInsensitiveCompare(aszRemovedFiles.GetText(k), psOwn->szFileName.Text()) == 0);
+					}
+					if (!bRemoved)
+					{
+						cFiles.GetEdits(psOwn->szFileName.Text())->Replace(j, uiEnd, szArgument.Text());
+					}
+				}
+				j = uiEnd;
+			}
+		}
+		uiBefore = cFiles.CountErrors(false);
+		if (cFiles.CountErrors(true) > uiBefore)
+		{
+			szProblem.Set("The code doesn't compile without it.");
+			bResult = false;
+		}
+	}
+
+	szMessage.Init();
+	if (bResult)
+	{
+		cFiles.Apply();
+		szOne.Init();
+		GetIDESymbolName(szClassKey.Text(), &szOne);
+		szMessage.Append("Removed the template parameter ")->Append(szWord)->Append(" from ")->Append(szOne)->Append(": it is ")->Append(szArgument);
+		if (uiUses == 1)
+		{
+			szMessage.Append(" in the one place the template is used.");
+		}
+		else
+		{
+			szMessage.Append(" in all ")->Append((uint32)uiUses)->Append(" places the template is used.");
+		}
+		szOne.Kill();
+	}
+	else
+	{
+		szMessage.Append("Can't remove the template parameter ")->Append(szWord)->Append(": ")->Append(szProblem);
+	}
+	if (pszStatus)
+	{
+		pszStatus->Set(szMessage);
+	}
+	else
+	{
+		mpcContent->ShowStatus(szMessage.Text());
+	}
+	szMessage.Kill();
+	aiRemovedEnds.Kill();
+	aiRemovedStarts.Kill();
+	aszRemovedFiles.Kill();
+	cFiles.Kill();
+	KillIDELocations(&asDeclared);
+	for (i = 0; i < asOwn.NumElements(); i++)
+	{
+		asOwn.Get(i)->szParameter.Kill();
+		asOwn.Get(i)->szFileName.Kill();
+	}
+	asOwn.Kill();
+	szArgument.Kill();
+	szClassKey.Kill();
+	szProblem.Kill();
+	szWord.Kill();
 	return bResult;
 }

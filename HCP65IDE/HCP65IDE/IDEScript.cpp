@@ -1728,6 +1728,20 @@ void CIDEScript::RunEditStep(const char* szStep)
 		aszParts.Kill();
 		szSpec.Kill();
 	}
+	else if (strcmp(szStep, "removetemplateparameter") == 0)
+	{
+		//Remove Template Parameter for the parameter at the caret, with what the status bar would say.
+		CChars	szPrinted;
+
+		szPrinted.Init();
+		mpcContent->GetTemplateParameter()->RemoveParameter(&szPrinted);
+		printf("Status: %s\n", szPrinted.Empty() ? "nothing at the caret" : szPrinted.Text());
+		if (gbIDEScriptRenameSaves)
+		{
+			mpcContent->GetDocuments()->SaveAllFiles();
+		}
+		szPrinted.Kill();
+	}
 	else if ((strcmp(szStep, "templateparameter") == 0) || (strncmp(szStep, "extracttemplate:", 16) == 0))
 	{
 		//What Extract Template Parameter found for the type at the caret (templateparameter): the type, its function

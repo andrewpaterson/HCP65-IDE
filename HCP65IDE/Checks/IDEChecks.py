@@ -2200,6 +2200,23 @@ CHECKS = [
 		 r'^\d+\|typedef CTankTemplate<CGauge> CTank;$', r'^\d+\|class CPipe;$', r'^\d+\|\tCGauge\*\tmpcGauge;$',
 		 r'^1\|#include "Tank\.h"$', r'^8\|int UseTank\(void\)$', r'^10\|\tCTank\tcTank;$', r'^16 lines$'],
 		[r'^\d+\|[a-z ]*CTank::']),
+	('template-remove', dict(MakeTemplatesCopy(), **{
+		#Remove Template Parameter: a class template's parameter that every use gives one argument.  The only
+		#parameter of a template: the class is a template no longer, its member defined outside it is inline, and
+		#its uses lose their <...>.  One of two: it goes from each template<...>, from the member's CPair<A, B>:: and
+		#from every use, and the argument is written where it was named.  Refused: a parameter given two arguments,
+		#and what is no parameter.
+		'WAIT_INDEX': '1', 'OPEN': 'Pair.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:45:22,edit:removetemplateparameter,edit:caret:6:26,edit:removetemplateparameter,edit:caret:6:17,edit:removetemplateparameter,edit:caret:7:8,edit:removetemplateparameter,printdisklines:Pair.h,printdisklines:Pair.cpp'}),
+		[r'^Status: Removed the template parameter M from CLone: it is CGauge in the one place the template is used\.$',
+		 r"^Status: Can't remove the template parameter B: It isn't given one argument everywhere: int and float \(Pair\.cpp line 11\)\.$",
+		 r'^Status: Removed the template parameter A from CPair: it is CGauge in all 2 places the template is used\.$',
+		 r"^Status: Can't remove the template parameter CPair: The caret isn't on a template's parameter\.$",
+		 r'^6\|template<class B>$', r'^7\|class CPair$', r'^10\|\tCGauge\*\t\tmpFirst;$', r'^11\|\tB\t\tmSecond;$', r'^13\|\tvoid\tSet\(CGauge\* pFirst, B second\);$',
+		 r'^22\|template<class B>$', r'^23\|void CPair<B>::Set\(CGauge\* pFirst, B second\)$', r'^30\|class CLone$', r'^33\|\tCGauge\*\t\tmp;$', r'^35\|\tvoid\tHold\(CGauge\* p\);$',
+		 r'^43\|inline void CLone::Hold\(CGauge\* p\)$',
+		 r'^10\|\tCPair<int>\t\tcPair;$', r'^11\|\tCPair<float>\tcOther;$', r'^12\|\tCLone\t\t\tcLone;$'],
+		[r'template<class M>', r'class A']),
 	('rename-assembly-class', dict(MakeRenameAssemblyCopy(), **{
 		#A class renamed in hand written assembly's labels (_CEngine__Init, __0, __2), in parameter lists with its length
 		#(FPC7CEngine to FPC6CMotor), in generated layout constants (SIZEOF_CEngine, CEngine_miSpeed: in the assembly, the
@@ -2704,7 +2721,7 @@ CHECKS = [
 		 r'^Menu Debug: Start Debugging \[F5\], Start Without Debugging \[Ctrl\+F5\], Stop Debugging \[Shift\+F5\], Stop Running\(disabled\), Restart \[Ctrl\+Shift\+F5\], Break All \[Ctrl\+Pause/Break\], Attach to Emulator\.\.\., Step Into \[F11\], Step Over \[F10\], Step Out \[Shift\+F11\], Toggle Breakpoint \[F9\], ',
 		 r'^Menu Window: Reset Window Layout, Close All Documents$',
 		 r'^Menu Editor: Go to Source \[Ctrl\+B\], Find Usages \[Alt\+F7\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Rename\.\.\. \[Shift\+F6\], Refactor>, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\]$',
-		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Introduce Field\.\.\. \[Ctrl\+Alt\+F\](\(disabled\))?, Introduce Constant\.\.\. \[Ctrl\+Alt\+C\](\(disabled\))?, Introduce Parameter\.\.\. \[Ctrl\+Alt\+P\](\(disabled\))?, Introduce Typedef\.\.\. \[Ctrl\+Alt\+K\](\(disabled\))?, Inline\.\.\. \[Ctrl\+Alt\+N\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\.(\(disabled\))?, Push Members Down\.\.\.(\(disabled\))?, Move\.\.\. \[F6\](\(disabled\))?, Copy Class\.\.\.(\(disabled\))?, Extract Method\.\.\. \[Ctrl\+Alt\+M\](\(disabled\))?, Extract Superclass\.\.\.(\(disabled\))?, Extract Interface\.\.\.(\(disabled\))?, Extract Class\.\.\.(\(disabled\))?, Encapsulate Field\.\.\.(\(disabled\))?, Optimise #includes \[Ctrl\+Alt\+O\], Sort #includes, Convert Macro\.\.\.(\(disabled\))?, Convert Pointer to Reference(\(disabled\))?, Convert Reference to Pointer(\(disabled\))?, Make Member Function const(\(disabled\))?, Make Member Function static(\(disabled\))?, Convert Function to Member Function(\(disabled\))?, Convert Member Function to Function(\(disabled\))?, Extract Template Parameter\.\.\.$',
+		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Introduce Field\.\.\. \[Ctrl\+Alt\+F\](\(disabled\))?, Introduce Constant\.\.\. \[Ctrl\+Alt\+C\](\(disabled\))?, Introduce Parameter\.\.\. \[Ctrl\+Alt\+P\](\(disabled\))?, Introduce Typedef\.\.\. \[Ctrl\+Alt\+K\](\(disabled\))?, Inline\.\.\. \[Ctrl\+Alt\+N\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\.(\(disabled\))?, Push Members Down\.\.\.(\(disabled\))?, Move\.\.\. \[F6\](\(disabled\))?, Copy Class\.\.\.(\(disabled\))?, Extract Method\.\.\. \[Ctrl\+Alt\+M\](\(disabled\))?, Extract Superclass\.\.\.(\(disabled\))?, Extract Interface\.\.\.(\(disabled\))?, Extract Class\.\.\.(\(disabled\))?, Encapsulate Field\.\.\.(\(disabled\))?, Optimise #includes \[Ctrl\+Alt\+O\], Sort #includes, Convert Macro\.\.\.(\(disabled\))?, Convert Pointer to Reference(\(disabled\))?, Convert Reference to Pointer(\(disabled\))?, Make Member Function const(\(disabled\))?, Make Member Function static(\(disabled\))?, Convert Function to Member Function(\(disabled\))?, Convert Member Function to Function(\(disabled\))?, Extract Template Parameter\.\.\., Remove Template Parameter$',
 		 r'^Menu Explorer: Set as Startup Solution, Set as Startup Project\(disabled\), Remove Solution, Rename\.\.\.(\(disabled\))?$',
 		 r'^Menu item \[View/Nope\] not found$'], []),
 	('menu-clicks', {
