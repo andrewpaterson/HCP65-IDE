@@ -77,8 +77,11 @@ compiler is ours, so the first is the type checker's own work and not a guesser 
       one name: Rename, Change Signature and Safe Delete take them together, as T2's families.
   T6. Classes a macro makes (ARRAY_BLOCK making CArrayBlock and CArrayLargeBlock from one text included twice) are
       templates in what they do and macros in what they are: none of the above reaches them, and code a macro made
-      has no source of its own.  Open: whether the included text is treated as a body with the macro's uses as its
-      instances.  To be looked at with the user before the refactorings that would meet them.
+      has no source of its own.  Done 2026-11-15, by making BaseLib's real templates (RefactoringQuestions.txt 48;
+      CommonLibraries' ArrayTemplatesPlan.txt): CArrayBlockBase<SIZE>, CArrayTemplateBase<M, BLOCK>,
+      CArrayTemplatePrimitiveBase<M, TEMPLATE>, CArrayCharBase<PRIMITIVE> and CCharsBase<STRING, TEXT>, their old
+      names kept by classes deriving from them.  The refactorings meet them as any other templates.  Nothing was
+      built for macro-made classes; one written elsewhere still has no source of its own.
 
 
 Foundations

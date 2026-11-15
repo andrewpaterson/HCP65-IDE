@@ -133,7 +133,8 @@ struct SIDEMacro
 //or ##, changes one of its arguments or names something that isn't declared where the macro is (the files are
 //checked as they would be, and must have no more errors than they had).
 //
-//Classes a macro makes from a text included more than once (ARRAY_BLOCK) are T6's, and not this.
+//Classes a macro makes from a text included more than once (as ARRAY_BLOCK made BaseLib's arrays) are T6's, and not
+//this; BaseLib's are real templates now (CommonLibraries' ArrayTemplatesPlan.txt).
 class CIDEConvertMacro : public CObject
 {
 CONSTRUCTABLE(CIDEConvertMacro);

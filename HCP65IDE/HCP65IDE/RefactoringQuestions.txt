@@ -370,6 +370,8 @@ Answered
     is built for T6 here.  The plan for it, for another session, is CommonLibraries
     Libraries/BaseLib/ArrayTemplatesPlan.txt (971a024df): each family written once with a size policy as a
     template parameter, its old names kept by derived classes.
+    Done 2026-11-15: BaseLib's array classes and CChars are templates (CommonLibraries a9a231457, a67dd6d2b,
+    2cb68a3a1, 69bb9c159, and step 5's clean up): ArraySize*.inl and the Class and Code .inl files are gone.
 
 49. Your own code keeps its constants as #defines ("#define IDE_INCLUDE_KEPT 0").  Convert Macro writes
     "const int NAME = 8;" where the #define was, an enum as
