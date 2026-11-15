@@ -221,7 +221,8 @@ Answered
     Answered 2026-11-15: yes, WindowLib gets an editable table, and it is built first, before the rest of the
     refactoring plan.  Done 2026-11-15: WindowLib's CTable (CommonLibraries 9ad8cfa79 and the commit after it),
     and Change Signature's dialog is made of it: a row for each parameter, its type, name, default value and
-    value in calls edited where they are.  Still to do: Pull Members Up's and Push Members Down's (question 19).
+    value in calls edited where they are.  Pull Members Up's and Push Members Down's members are a table too: a
+    tick to move each, its name, and a tick to make (or keep) a function abstract (question 19).
 
 11. Change Signature and the assembly's labels.  The label is asked of the compiler for the processor of the build
     configuration that is selected (W65C816 or 65C64: an int is "s" on one and "i" on the other), and only that

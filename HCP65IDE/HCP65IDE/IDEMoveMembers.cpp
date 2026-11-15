@@ -25,12 +25,20 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "CppCompilerLib/CPPSyntaxMemberExpression.h"
 #include "WindowLib/CheckBox.h"
 #include "WindowLib/ComboBox.h"
+#include "WindowLib/Table.h"
 #include "IDEContent.h"
 #include "IDERename.h"
 #include "IDEFileRename.h"
 #include "IDESafeDelete.h"
 #include "IDEIntroduceVariable.h"
 #include "IDEMoveMembers.h"
+
+
+//The columns of the members' table in the dialog, and the most rows it shows before it scrolls.
+#define IDE_MEMBERS_COLUMN_MOVE		0
+#define IDE_MEMBERS_COLUMN_NAME		1
+#define IDE_MEMBERS_COLUMN_ABSTRACT	2
+#define IDE_MEMBERS_VISIBLE_ROWS	12
 
 
 static const char*	gaszIDEAccess[] = { "public", "protected", "private" };
@@ -2031,17 +2039,17 @@ char* CIDEMoveMembers::PrintMove(SIDEMembersMove* psMove, CChars* pszDest)
 //////////////////////////////////////////////////////////////////////////
 //
 // The dialog: where the members go (Up: one of the base classes; Down:
-// the deriving classes, each ticked), the members, each ticked if it is
-// to be moved, and the functions again, each ticked if it is to be
-// abstract.  False if it is cancelled.
+// the deriving classes, each ticked), and the members in a table, as
+// IntelliJ's: a tick for each that is to be moved, its name, and for a
+// function a tick if it is to be abstract.  A member that can't be moved
+// says why after its name, and its tick can't be changed.  False if it
+// is cancelled.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEMoveMembers::ShowDialog(SIDEMembersMove* psMove)
 {
 	CArrayTemplatePtr<CCheckBox>	apcTargets;
-	CArrayTemplatePtr<CCheckBox>	apcMembers;
-	CArrayTemplatePtr<CCheckBox>	apcAbstract;
-	CArrayInt						aiAbstract;
+	Ptr<CTable>						pMembers;
 	Ptr<CComboBox>					pTarget;
 	Ptr<CCheckBox>					pBox;
 	SIDEMovedMember*				psMember;
@@ -2057,9 +2065,6 @@ bool CIDEMoveMembers::ShowDialog(SIDEMembersMove* psMove)
 	szTitle.Kill();
 
 	apcTargets.Init();
-	apcMembers.Init();
-	apcAbstract.Init();
-	aiAbstract.Init();
 	if (psMove->bUp)
 	{
 		aszTargets = (const char**)malloc(psMove->asTargets.NumElements() * sizeof(char*));
@@ -2080,6 +2085,11 @@ bool CIDEMoveMembers::ShowDialog(SIDEMembersMove* psMove)
 		}
 	}
 	mpDialog->AddDivider("Members");
+	pMembers = OMalloc<CTable>(mpDialog->GetWindow(), mpDialog->GetLook()->pcTheme);
+	pMembers->AddColumn("Move", TCK_Tick, 0);
+	pMembers->AddColumn("Member", TCK_Text, 1);
+	pMembers->AddColumn(psMove->bUp ? "Make abstract" : "Keep abstract", TCK_Tick, 0);
+	pMembers->SetColumnEditable(IDE_MEMBERS_COLUMN_NAME, false);
 	for (i = 0; i < psMove->apsMembers.NumElements(); i++)
 	{
 		psMember = psMove->apsMembers.GetPtr(i);
@@ -2088,21 +2098,21 @@ bool CIDEMoveMembers::ShowDialog(SIDEMembersMove* psMove)
 		{
 			szLabel.Append("  (")->Append(psMember->szWhyNot)->Append(")");
 		}
-		pBox = mpDialog->AddCheckBox(szLabel.Text(), psMember->bChosen);
-		apcMembers.Add(&pBox);
+		pMembers->AddRow();
+		pMembers->SetCellTicked((int32)i, IDE_MEMBERS_COLUMN_MOVE, psMember->bChosen);
+		pMembers->SetCellEditable((int32)i, IDE_MEMBERS_COLUMN_MOVE, psMember->szWhyNot.Empty());
+		pMembers->SetCellText((int32)i, IDE_MEMBERS_COLUMN_NAME, szLabel.Text());
+		pMembers->SetCellTicked((int32)i, IDE_MEMBERS_COLUMN_ABSTRACT, psMember->bAbstract);
+		pMembers->SetCellEditable((int32)i, IDE_MEMBERS_COLUMN_ABSTRACT, psMember->bFunction && psMember->szWhyNot.Empty());
 		szLabel.Kill();
 	}
-	mpDialog->AddDivider(psMove->bUp ? "Make abstract" : "Keep abstract");
-	for (i = 0; i < psMove->apsMembers.NumElements(); i++)
+	pMembers->SetVisibleRows((psMove->apsMembers.NumElements() < IDE_MEMBERS_VISIBLE_ROWS) ? (int32)psMove->apsMembers.NumElements() : IDE_MEMBERS_VISIBLE_ROWS);
+	pMembers->SetAlignment(CSH_Stretch, CSV_Top);
+	if (psMove->apsMembers.NumElements() > 0)
 	{
-		psMember = psMove->apsMembers.GetPtr(i);
-		aiAbstract.Add(psMember->bFunction ? (int)apcAbstract.NumElements() : -1);
-		if (psMember->bFunction)
-		{
-			pBox = mpDialog->AddCheckBox(psMember->szName.Text(), psMember->bAbstract);
-			apcAbstract.Add(&pBox);
-		}
+		pMembers->SelectCell(0, IDE_MEMBERS_COLUMN_MOVE);
 	}
+	mpDialog->AddEditor(NULL, pMembers);
 	pBox = NULL;
 	mpDialog->SetOKCaption("Refactor");
 	mpcContent->GetScript()->WatchDialog(mpDialog);
@@ -2120,14 +2130,12 @@ bool CIDEMoveMembers::ShowDialog(SIDEMembersMove* psMove)
 		for (i = 0; i < psMove->apsMembers.NumElements(); i++)
 		{
 			psMember = psMove->apsMembers.GetPtr(i);
-			psMember->bChosen = apcMembers.GetPtr(i)->IsTicked();
-			psMember->bAbstract = psMember->bChosen && (aiAbstract.GetValue(i) >= 0) && apcAbstract.GetPtr((size)aiAbstract.GetValue(i))->IsTicked();
+			psMember->bChosen = pMembers->IsCellTicked((int32)i, IDE_MEMBERS_COLUMN_MOVE);
+			psMember->bAbstract = psMember->bChosen && psMember->bFunction && pMembers->IsCellTicked((int32)i, IDE_MEMBERS_COLUMN_ABSTRACT);
 		}
 	}
-	aiAbstract.Kill();
-	apcAbstract.Kill();
-	apcMembers.Kill();
 	apcTargets.Kill();
+	pMembers = NULL;
 	pTarget = NULL;
 	mpDialog = NULL;
 	return bOK;
