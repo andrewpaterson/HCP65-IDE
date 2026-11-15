@@ -1537,10 +1537,14 @@ CHECKS = [
 	('extract-template-assembly', dict(MakeTemplateAssemblyCopy(), **{
 		#Extract Template Parameter from a class whose functions hand written assembly calls: they are the functions
 		#of the template's instance afterwards, and their labels have its argument in them.
+		#Remove Template Parameter takes the argument out of the labels again, and they follow the class back to the
+		#name it had.
 		'WAIT_INDEX': '1', 'OPEN': 'Tank.h', 'CARET': '9:3',
-		'DEBUG': 'edit:renamesearch:---s,edit:extracttemplate:M:CTankTemplate,printdisklines:TankW65C816.asm'}),
+		'DEBUG': 'edit:renamesearch:---s,edit:extracttemplate:M:CTankTemplate,printdisklines:TankW65C816.asm,edit:caret:6:17,edit:removetemplateparameter,printdisklines:TankW65C816.asm,printdisklines:Tank.h'}),
 		[r'^Status: Extracted the template parameter M from CGauge in CTank: .*; 2 labels in assembly changed\.$',
-		 r'^6\|\t\tjsr _CTankTemplate__T_C6CGauge__Init__FPC6CGauge$', r'^7\|\t\tjsr _CTankTemplate__T_C6CGauge__Level$', r'^8\|\t\tjsr _CGauge__Read$'],
+		 r'^6\|\t\tjsr _CTankTemplate__T_C6CGauge__Init__FPC6CGauge$', r'^7\|\t\tjsr _CTankTemplate__T_C6CGauge__Level$', r'^8\|\t\tjsr _CGauge__Read$',
+		 r'^Status: Removed the template parameter M from CTankTemplate: .*  2 labels in assembly changed\.  It is CTank again, which was the class that was its name\.$',
+		 r'^6\|\t\tjsr _CTank__Init__FPC6CGauge$', r'^7\|\t\tjsr _CTank__Level$', r'^8\|\t\tjsr _CGauge__Read$', r'^6\|class CTank$'],
 		[]),
 	('pull-up-assembly', dict(MakeMoveAssemblyCopy(), **{
 		#Pull Members Up where hand written assembly names the members by the compiler's labels: a field's layout

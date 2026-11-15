@@ -34,6 +34,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 class CIDEContent;
 class CIDEFileEdits;
+struct SIDEAssemblyRename;
 struct SIDECaretContext;
 struct SIDEPlace;
 typedef CArrayTemplate<SIDEPlace>	CArrayIDEPlaces;
@@ -125,7 +126,9 @@ public:
 	void	SetSearches(bool bComments, bool bText);
 	void	ReadSettings(CMarkupTag* pcSettings);
 	void	WriteSettings(CXMLWriter* pcWriter);
-	size	MoveAssembly(const char* szKey, const char* szNewScopeKey, CIDEFileEdits* pcFiles, size* puiUnsure);
+	size	MoveAssembly(const char* szKey, const char* szNewScopeKey, CIDEFileEdits* pcFiles, size* puiUnsure, bool bDropInstanceArguments = false);
+	size	RenameTypeInAssembly(const char* szOldName, const char* szNewName, const char* szScopeKey, CIDEFileEdits* pcFiles);
+	size	ApplyAssemblyRename(SIDEAssemblyRename* psRename, CIDEFileEdits* pcFiles, size* puiUnsure);
 
 protected:
 	void	ShowQueuedRename(void);

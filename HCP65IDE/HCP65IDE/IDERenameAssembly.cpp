@@ -48,6 +48,7 @@ void SIDEAssemblyRename::Init(EIDEAssemblyRename eRenameKind, const char* szOldN
 	aszOverloads.Init();
 	uiUnsure = 0;
 	bMoves = false;
+	bDropArguments = false;
 	szNewScope.Init();
 	szNewClass.Init();
 }
@@ -59,11 +60,12 @@ void SIDEAssemblyRename::Init(EIDEAssemblyRename eRenameKind, const char* szOldN
 // for none): its labels are written with those (Scope__Name, Class_field).
 //
 //////////////////////////////////////////////////////////////////////////
-void SIDEAssemblyRename::SetMove(const char* szNewScopeKey)
+void SIDEAssemblyRename::SetMove(const char* szNewScopeKey, bool bDropInstanceArguments)
 {
 	size	uiLast;
 
 	bMoves = true;
+	bDropArguments = bDropInstanceArguments;
 	szNewScope.Set(szNewScopeKey ? szNewScopeKey : "");
 	szNewScope.Replace("::", "__");
 	szNewClass.Set(szNewScope.Text());
@@ -806,7 +808,7 @@ static bool FindIDENamedLabelEdit(const char* szToken, size uiStart, size uiLeng
 	if (psRename->bMoves)
 	{
 		//Its scopes are the ones it has gone to; a class template's instance's arguments can't be carried over.
-		if (uiName != uiScopeEnd)
+		if ((uiName != uiScopeEnd) && !psRename->bDropArguments)
 		{
 			psRename->uiUnsure++;
 			return true;
@@ -816,7 +818,10 @@ static bool FindIDENamedLabelEdit(const char* szToken, size uiStart, size uiLeng
 		{
 			szScopes.Append("__");
 		}
-		AddIDEAssemblyEdit(pasDest, uiStart + 1, uiScopeEnd - 1, szScopes.Text(), bComment);
+		if ((szScopes.Length() != uiName - 1) || (memcmp(&szToken[1], szScopes.Text(), uiName - 1) != 0))
+		{
+			AddIDEAssemblyEdit(pasDest, uiStart + 1, uiName - 1, szScopes.Text(), bComment);
+		}
 		szScopes.Kill();
 		return true;
 	}

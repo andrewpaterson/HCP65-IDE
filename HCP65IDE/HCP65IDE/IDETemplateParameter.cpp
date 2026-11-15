@@ -1729,6 +1729,8 @@ bool CIDETemplateParameter::RemoveParameter(CChars* pszStatus)
 {
 	CIDECodeModel*					pcModel;
 	CIDEFileEdits					cFiles;
+	CIDEFileEdits					cFolded;
+	CChars							szWas;
 	CIDERefactorUnit				cUnit;
 	CIDERefactorUnit*				pcOther;
 	Ptr<CTextArea>					pEditor;
@@ -1737,6 +1739,7 @@ bool CIDETemplateParameter::RemoveParameter(CChars* pszStatus)
 	CArrayIDELocations				asLocations;
 	CArrayIDELocations				asDeclared;
 	CArrayChars						aszKeys;
+	CArrayChars						aszMemberKeys;
 	CArrayChars						aszRemovedFiles;
 	CArrayInt						aiRemovedStarts;
 	CArrayInt						aiRemovedEnds;
@@ -1768,6 +1771,8 @@ bool CIDETemplateParameter::RemoveParameter(CChars* pszStatus)
 	size							uiClose;
 	size							uiUses;
 	size							uiBefore;
+	size							uiLabels;
+	size							uiUnsure;
 	size							i;
 	size							j;
 	size							k;
@@ -1865,6 +1870,8 @@ bool CIDETemplateParameter::RemoveParameter(CChars* pszStatus)
 	asOwn.Init();
 	asDeclared.Init();
 	cFiles.Init(mpcContent);
+	aszMemberKeys.Init();
+	uiLabels = 0;
 	if (bResult)
 	{
 		asLocations.Init();
@@ -1894,6 +1901,10 @@ bool CIDETemplateParameter::RemoveParameter(CChars* pszStatus)
 					if (szScope.Equals(szClassKey.Text()))
 					{
 						pcModel->GetSymbolLocations(aszKeys.GetText(j), &asDeclared, &uiKind);
+						if ((uiKind == CPPSK_Function) || (uiKind == CPPSK_Variable))
+						{
+							aszMemberKeys.AddIfUnique(aszKeys.GetText(j));
+						}
 					}
 					szScope.Kill();
 				}
@@ -2126,6 +2137,12 @@ bool CIDETemplateParameter::RemoveParameter(CChars* pszStatus)
 	if (bResult)
 	{
 		mpcContent->GetEdit()->BeginUndoGroup();
+		for (i = 0; (uiParameters == 1) && (i < aszMemberKeys.NumElements()); i++)
+		{
+			//It was the template's only parameter: hand written assembly's labels for its functions lose the
+			//instance's argument ("_CTankTemplate__T_C6CGauge__Level" is "_CTankTemplate__Level").
+			uiLabels += mpcContent->GetRename()->MoveAssembly(aszMemberKeys.GetText(i), szClassKey.Text(), &cFiles, &uiUnsure, true);
+		}
 		cFiles.Apply();
 		szOne.Init();
 		GetIDESymbolName(szClassKey.Text(), &szOne);
@@ -2138,12 +2155,29 @@ bool CIDETemplateParameter::RemoveParameter(CChars* pszStatus)
 		{
 			szMessage.Append(" in all ")->Append((uint32)uiUses)->Append(" places the template is used.");
 		}
+		if (uiLabels > 0)
+		{
+			szMessage.Append("  ")->Append((uint32)uiLabels)->Append((uiLabels == 1) ? " label in assembly changed." : " labels in assembly changed.");
+		}
 		szOne.Kill();
 
 		//A template no longer: the class that was its name gives it the name back.
 		szOne.Init();
 		if ((uiParameters == 1) && FoldNameClass(szClassKey.Text(), &szOne))
 		{
+			//Its labels in assembly have the name it has again.
+			szScope.Init();
+			szWas.Init();
+			GetIDESymbolScope(szClassKey.Text(), &szScope);
+			GetIDESymbolName(szClassKey.Text(), &szWas);
+			cFolded.Init(mpcContent);
+			if (mpcContent->GetRename()->RenameTypeInAssembly(szWas.Text(), szOne.Text(), szScope.Text(), &cFolded) > 0)
+			{
+				cFolded.Apply();
+			}
+			cFolded.Kill();
+			szWas.Kill();
+			szScope.Kill();
 			szMessage.Append("  It is ")->Append(szOne)->Append(" again, which was the class that was its name.");
 		}
 		szOne.Kill();
@@ -2165,6 +2199,7 @@ bool CIDETemplateParameter::RemoveParameter(CChars* pszStatus)
 	aiRemovedEnds.Kill();
 	aiRemovedStarts.Kill();
 	aszRemovedFiles.Kill();
+	aszMemberKeys.Kill();
 	cFiles.Kill();
 	KillIDELocations(&asDeclared);
 	for (i = 0; i < asOwn.NumElements(); i++)

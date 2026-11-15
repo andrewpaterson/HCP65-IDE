@@ -56,9 +56,10 @@ struct SIDEAssemblyRename
 	bool				bMoves;			//It goes to another scope (SetMove): a member moved to another class, or made a function.
 	CChars				szNewScope;		//Then the scopes it goes to, as a label writes them; empty for none,
 	CChars				szNewClass;		//and the last of them.
+	bool				bDropArguments;	//...and a class template's instance's arguments in a label go: the class is no template now.
 
 	void	Init(EIDEAssemblyRename eKind, const char* szOldName, const char* szNewName, const char* szScopeKey);
-	void	SetMove(const char* szNewScopeKey);
+	void	SetMove(const char* szNewScopeKey, bool bDropInstanceArguments = false);
 	void	Kill(void);
 };
 

@@ -456,9 +456,10 @@ Where it is
      compiler is asked for the label of its definition before and after.  Extract Superclass and Extract Class
      change the labels of the members that go, as Pull Up does.  Extract Template Parameter on a class changes
      its functions' labels to the template's instance's ("_CTank__Level" to "_CTankTemplate__T_C6CGauge__Level"),
-     by the rule the labels are made by, where the argument is a class.  Not done: an argument that is one of the
-     language's own types (each processor writes those its own way), a function made a template, and Remove
-     Template Parameter's way back.
+     by the rule the labels are made by, where the argument is a class; Remove Template Parameter takes the
+     argument out of them again (a template's only parameter), and they follow the class to the name it gets
+     back.  Not done: an argument that is one of the language's own types (each processor writes those its own
+     way), and a function made a template.
  28. Plan item 24: Write Template's Interface (CIDETemplateInterface).  For the class or function template the
      caret is in, the members its body names through a value of a type parameter's type (mp->Init(), cItem.miCount,
      this->mp->Start(4)) or by the parameter's name (M::Count), in the template and in its functions defined

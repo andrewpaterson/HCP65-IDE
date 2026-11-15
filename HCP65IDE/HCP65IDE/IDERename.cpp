@@ -992,25 +992,17 @@ size CIDERename::RenameAssembly(SIDERenameTarget* psTarget, const char* szNewNam
 
 //////////////////////////////////////////////////////////////////////////
 //
-// A member or function that goes to other scopes (a member moved to
-// another class, szNewScopeKey that class's key; or made a function of no
-// class, szNewScopeKey empty), in hand written assembly: the labels the
-// compiler gives it, and a field's layout constants, are written with the
-// scopes it goes to (SIDEAssemblyRename::SetMove).  szKey is its symbol as
-// it is before it moves.  The edits are pcFiles', so they are undone with
-// the move; returns how many, and in *puiUnsure the labels that fit it and
-// an overload of it both, which are left.
+// A rename (or a move) as labels have it, made in every .asm of the
+// solutions that has one of the labels: the edits are pcFiles'.  Returns
+// how many; *puiUnsure is added to for the labels that fit an overload
+// of it too.
 //
 //////////////////////////////////////////////////////////////////////////
-size CIDERename::MoveAssembly(const char* szKey, const char* szNewScopeKey, CIDEFileEdits* pcFiles, size* puiUnsure)
+size CIDERename::ApplyAssemblyRename(SIDEAssemblyRename* psRename, CIDEFileEdits* pcFiles, size* puiUnsure)
 {
 	CIDECodeModel*			pcModel;
-	CArrayIDELocations		asLocations;
-	SIDERenameTarget		sTarget;
-	SIDEAssemblyRename		sRename;
 	CArrayIDEAssemblyEdits	asEdits;
 	SIDEAssemblyEdit*		psEdit;
-	SIDELocation*			psLocation;
 	CTextFile				cFile;
 	char*					szText;
 	char*					szFileName;
@@ -1018,6 +1010,97 @@ size CIDERename::MoveAssembly(const char* szKey, const char* szNewScopeKey, CIDE
 	size					uiEdits;
 	size					i;
 	size					j;
+	bool					bFound;
+
+	pcModel = mpcContent->GetCodeModel();
+	uiEdits = 0;
+	for (i = 0; i < pcModel->NumProjectFiles(); i++)
+	{
+		szFileName = pcModel->GetProjectFile(i);
+		if (!IsIDEAssemblyFile(szFileName))
+		{
+			continue;
+		}
+
+		//Looked in as it is first, so only a file that has one of the labels is opened.
+		cFile.Init();
+		asEdits.Init();
+		psRename->uiUnsure = 0;
+		if (mpcContent->GetFindInFiles()->GetFileText(szFileName, &cFile, &szText, &uiLength))
+		{
+			FindIDEAssemblyEdits(szText, uiLength, psRename, false, &asEdits);
+		}
+		cFile.Kill();
+		bFound = (asEdits.NumElements() > 0);
+		KillIDEAssemblyEdits(&asEdits);
+		szText = bFound ? pcFiles->GetText(szFileName) : NULL;
+		if (!szText)
+		{
+			//Nothing of it to change here; what may be an overload's is still said.
+			*puiUnsure += psRename->uiUnsure;
+			continue;
+		}
+		asEdits.Init();
+		psRename->uiUnsure = 0;
+		FindIDEAssemblyEdits(szText, strlen(szText), psRename, false, &asEdits);
+		for (j = 0; j < asEdits.NumElements(); j++)
+		{
+			psEdit = asEdits.Get(j);
+			pcFiles->GetEdits(szFileName)->Replace(psEdit->uiStart, psEdit->uiStart + psEdit->uiLength, psEdit->szReplacement.Text());
+			uiEdits++;
+		}
+		*puiUnsure += psRename->uiUnsure;
+		KillIDEAssemblyEdits(&asEdits);
+	}
+	return uiEdits;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A class's name changed (szScopeKey its scopes' key, empty for none), in
+// hand written assembly: its labels, its name in parameter lists and its
+// layout constants, as Rename changes them, but as a refactoring's own
+// edits.
+//
+//////////////////////////////////////////////////////////////////////////
+size CIDERename::RenameTypeInAssembly(const char* szOldName, const char* szNewName, const char* szScopeKey, CIDEFileEdits* pcFiles)
+{
+	SIDEAssemblyRename	sRename;
+	size				uiEdits;
+	size				uiUnsure;
+
+	uiUnsure = 0;
+	sRename.Init(IAR_Type, szOldName, szNewName, szScopeKey);
+	uiEdits = ApplyAssemblyRename(&sRename, pcFiles, &uiUnsure);
+	sRename.Kill();
+	return uiEdits;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A member or function that goes to other scopes (a member moved to
+// another class, szNewScopeKey that class's key; or made a function of no
+// class, szNewScopeKey empty), in hand written assembly: the labels the
+// compiler gives it, and a field's layout constants, are written with the
+// scopes it goes to (SIDEAssemblyRename::SetMove).  szKey is its symbol as
+// it is before it moves.  The edits are pcFiles', so they are undone with
+// the move; returns how many, and in *puiUnsure the labels that fit it and
+// an overload of it both, which are left.  With bDropInstanceArguments a
+// class template's instance's arguments go from the labels too
+// ("_CBox__T_i__Fill" to "_CBox__Fill"): the template is a class now.
+//
+//////////////////////////////////////////////////////////////////////////
+size CIDERename::MoveAssembly(const char* szKey, const char* szNewScopeKey, CIDEFileEdits* pcFiles, size* puiUnsure, bool bDropInstanceArguments)
+{
+	CIDECodeModel*			pcModel;
+	CArrayIDELocations		asLocations;
+	SIDERenameTarget		sTarget;
+	SIDEAssemblyRename		sRename;
+	SIDELocation*			psLocation;
+	size					uiEdits;
+	size					i;
 	uint8					uiKind;
 	bool					bFound;
 
@@ -1048,7 +1131,7 @@ size CIDERename::MoveAssembly(const char* szKey, const char* szNewScopeKey, CIDE
 	if (bFound && ((sTarget.uiAssembly == IAR_Member) || (sTarget.uiAssembly == IAR_Function) || (sTarget.uiAssembly == IAR_Field)))
 	{
 		sRename.Init((EIDEAssemblyRename)sTarget.uiAssembly, sTarget.szName.Text(), sTarget.szName.Text(), sTarget.szScope.Text());
-		sRename.SetMove(szNewScopeKey);
+		sRename.SetMove(szNewScopeKey, bDropInstanceArguments);
 		if (sTarget.bOverloaded)
 		{
 			sRename.szKey.Set(sTarget.szKey);
@@ -1057,44 +1140,7 @@ size CIDERename::MoveAssembly(const char* szKey, const char* szNewScopeKey, CIDE
 				sRename.aszOverloads.Add(sTarget.aszOverloads.GetText(i));
 			}
 		}
-		for (i = 0; i < pcModel->NumProjectFiles(); i++)
-		{
-			szFileName = pcModel->GetProjectFile(i);
-			if (!IsIDEAssemblyFile(szFileName))
-			{
-				continue;
-			}
-
-			//Looked in as it is first, so only a file that has one of the labels is opened.
-			cFile.Init();
-			asEdits.Init();
-			sRename.uiUnsure = 0;
-			if (mpcContent->GetFindInFiles()->GetFileText(szFileName, &cFile, &szText, &uiLength))
-			{
-				FindIDEAssemblyEdits(szText, uiLength, &sRename, false, &asEdits);
-			}
-			cFile.Kill();
-			bFound = (asEdits.NumElements() > 0);
-			KillIDEAssemblyEdits(&asEdits);
-			szText = bFound ? pcFiles->GetText(szFileName) : NULL;
-			if (!szText)
-			{
-				//Nothing of it to change here; what may be an overload's is still said.
-				*puiUnsure += sRename.uiUnsure;
-				continue;
-			}
-			asEdits.Init();
-			sRename.uiUnsure = 0;
-			FindIDEAssemblyEdits(szText, strlen(szText), &sRename, false, &asEdits);
-			for (j = 0; j < asEdits.NumElements(); j++)
-			{
-				psEdit = asEdits.Get(j);
-				pcFiles->GetEdits(szFileName)->Replace(psEdit->uiStart, psEdit->uiStart + psEdit->uiLength, psEdit->szReplacement.Text());
-				uiEdits++;
-			}
-			*puiUnsure += sRename.uiUnsure;
-			KillIDEAssemblyEdits(&asEdits);
-		}
+		uiEdits = ApplyAssemblyRename(&sRename, pcFiles, puiUnsure);
 		sRename.Kill();
 	}
 	sTarget.Kill();
