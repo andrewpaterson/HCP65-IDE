@@ -2181,6 +2181,25 @@ CHECKS = [
 		'DEBUG': 'edit:caret:8:12,extracttemplateparameter,answered:1,printdisklines:Mix.h'}),
 		[r'^Dialog \[Extract Template Parameter from CGauge\] answered Cancel$', r'^\d+\|int\t\tTotal\(CGauge\* pcGauge, int iCount\);$'],
 		[r'^Status: Extracted']),
+	('template-class', dict(MakeTemplatesCopy(), **{
+		#Extract Template Parameter for a type a class's field has: the class becomes a class template of another
+		#name, the type its parameter throughout it, its members' definitions (its constructor's and destructor's
+		#too) come to its header after it as the template's, and a typedef makes its old name the template with the
+		#type it had, so what uses it stays as it is.  Refused: a class declared ahead of its definition, a
+		#parameter name the class has, a template name that is taken.
+		'WAIT_INDEX': '1', 'OPEN': 'Tank.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:27:3,edit:templateparameter,edit:caret:9:3,edit:templateparameter,edit:extracttemplate:miCount:CTankTemplate,edit:extracttemplate:M:CGauge,edit:extracttemplate:M:CTankTemplate,printdisklines:Tank.h,printdisklines:Tank.cpp'}),
+		[r"^Extract Template Parameter: CGauge can't be: its class is declared ahead of its definition \(Tank\.h line 21\): its name would be a typedef, which can't be$",
+		 r'^Extract Template Parameter: CGauge in the class CTank, to be CTankTemplate$', r"^Extract Template Parameter: The class has something of the parameter's name already\.$",
+		 r"^Extract Template Parameter: There is something of the template's name already\.$",
+		 r'^Status: Extracted the template parameter M from CGauge in CTank: CTank is a typedef of CTankTemplate<CGauge>, and 4 definitions are in Tank\.h now\.$',
+		 r'^6\|template<class M>$', r'^7\|class CTankTemplate$', r'^10\|\tM\*\tmpcGauge;$', r'^11\|\tM\tmcSpare;$', r'^14\|\tCTankTemplate\(void\);$', r'^15\|\t~CTankTemplate\(void\);$',
+		 r'^16\|\tvoid\tInit\(M\* pcGauge\);$', r'^18\|\tCTankTemplate\*\tSame\(void\) \{ return this; \}$', r'^19\|\};$',
+		 r'^22\|//////////////////////////////////////////////////////////////////////////$', r'^26\|template<class M>$', r'^27\|CTankTemplate<M>::CTankTemplate\(void\)$',
+		 r'^\d+\|CTankTemplate<M>::~CTankTemplate\(void\)$', r'^\d+\|void CTankTemplate<M>::Init\(M\* pcGauge\)$', r'^\d+\|int CTankTemplate<M>::Level\(void\)$', r'^\d+\|\tM\*\tpcGauge;$',
+		 r'^\d+\|typedef CTankTemplate<CGauge> CTank;$', r'^\d+\|class CPipe;$', r'^\d+\|\tCGauge\*\tmpcGauge;$',
+		 r'^1\|#include "Tank\.h"$', r'^8\|int UseTank\(void\)$', r'^10\|\tCTank\tcTank;$', r'^16 lines$'],
+		[r'^\d+\|[a-z ]*CTank::']),
 	('rename-assembly-class', dict(MakeRenameAssemblyCopy(), **{
 		#A class renamed in hand written assembly's labels (_CEngine__Init, __0, __2), in parameter lists with its length
 		#(FPC7CEngine to FPC6CMotor), in generated layout constants (SIZEOF_CEngine, CEngine_miSpeed: in the assembly, the

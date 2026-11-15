@@ -8,9 +8,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Mix.cpp" />
+    <ClCompile Include="Tank.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Mix.h" />
+    <ClInclude Include="Tank.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{8E3F4051-0000-4000-8000-000000000013}</ProjectGuid>

@@ -307,9 +307,11 @@ IntelliJ has none of these for Java.
      Seams in C++").  Its inverse: a parameter every instance gives the same argument is removed.
      The function's half done 2026-11-15 (IDETemplateParameter.h says what it does): Extract Template
      Parameter... on a type in a function, which becomes a function template; a definition in a source file goes
-     to the header that declares it.  Still to do: the class's half (the class made a template, its members'
-     definitions moved to its header, a typedef of it with the type it had), the inverse, a function that is a
-     template already or a class template's (another parameter added), a type written with its namespace.
+     to the header that declares it.  The class's half done too: on a type a class's field has, the class
+     becomes a template of another name, its members' definitions come to its header, and a typedef of it with
+     the type it had is its old name.  Still to do: the inverse, a function or a class that is a template already
+     (another parameter added), a type written with its namespace, a class declared ahead of its definition
+     (its forward declarations would have to become the template's and the typedef).
  21. Move into or out of a namespace; a using added or removed, the names qualified or not to match.
  22. An enum to an enum class, every use of an enumerator qualified.
  23. Assembly.  Rename already changes hand written .asm by the compiler's labels; Change Signature and Move need
@@ -380,6 +382,6 @@ Where it is
  17. Make a member function const or static (18): done (CIDEMemberQualifier, IDEMemberQualifier.h says what it
      does; checks qualifier-const and qualifier-static).  The family (T2) case has no check input.
  18. Function to member function and back (19): done (CIDEConvertMember).
- 19. Extract template parameter (20): a function's done (CIDETemplateParameter); a class's and the inverse next.
+ 19. Extract template parameter (20): a function's and a class's done (CIDETemplateParameter); the inverse next.
      Then 21 to 24 in their order.
 

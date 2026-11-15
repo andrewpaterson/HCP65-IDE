@@ -36,7 +36,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 class CIDEContent;
 
 
-//What Extract Template Parameter found at the caret: a type named in a function.
+//What Extract Template Parameter found at the caret: a type named in a function, or in a class outside its
+//functions' declarations.
 struct SIDETemplateExtraction
 {
 	bool			bPossible;
@@ -46,6 +47,11 @@ struct SIDETemplateExtraction
 	SIDESignature	sSignature;		//The function: every declaration, definition and call.
 	CChars			szSuggested;	//A name for the parameter that the function hasn't: "M".
 	bool			bDeduced;		//The type is in the function's parameters: a call's arguments say what it is.
+	bool			bClass;			//It is named in a class, which is what becomes a template:
+	CChars			szClassKey;		//the class,
+	CChars			szClassFile;	//the file that defines it,
+	SCPPSyntaxRange	sClass;			//and its definition there, to its ;.
+	CChars			szSuggestedClass;	//A name for the template: "CTankTemplate".
 
 	void	Init(void);
 	void	Kill(void);
@@ -65,8 +71,16 @@ struct SIDETemplateExtraction
 //a template already or a class template's, one named without being called, a constructor or a destructor.  The
 //files changed are checked as they would be.
 //
-//The class's turn (a class made a template, a typedef of it with the type it had keeping its users compiling) and
-//the inverse (a parameter every instance gives the same argument taken out) are still to do.
+//
+//For a type named in a class outside its functions' declarations (a field's type), the class becomes a class
+//template, as "Refactoring Towards Seams in C++" has it: the class is given another name and "template<class M>",
+//the type is M throughout it and its members, its members' definitions go to its header after it (a template's
+//must be there) as "template<class M> ... CTankTemplate<M>::Fill(...)", and after them a typedef makes the class's
+//old name the template with the type it had, "typedef CTankTemplate<CGauge> CTank;": the code that uses CTank
+//compiles as it did.  Refused: a class that is declared ahead of its definition somewhere (a typedef can't be), a
+//class in a class or a namespace, one with a static field defined outside it.
+//
+//The inverse (a parameter every instance gives the same argument taken out) is still to do.
 class CIDETemplateParameter : public CObject
 {
 CONSTRUCTABLE(CIDETemplateParameter);
@@ -90,12 +104,18 @@ public:
 	bool	FindExtraction(SIDETemplateExtraction* psDest);
 	const char*	GetProblem(SIDETemplateExtraction* psExtraction, const char* szName);
 	bool	Extract(SIDETemplateExtraction* psExtraction, const char* szName, CChars* pszStatus = NULL);
+	const char*	GetClassProblem(SIDETemplateExtraction* psExtraction, const char* szName, const char* szTemplateName);
+	bool	ExtractClass(SIDETemplateExtraction* psExtraction, const char* szName, const char* szTemplateName, CChars* pszStatus = NULL);
 
 protected:
 	void	ShowQueuedExtract(void);
 	bool	Refuse(SIDETemplateExtraction* psDest, const char* szWhyNot);
 	void	FindTypePlaces(SIDETemplateExtraction* psExtraction, CIDERefactorUnit* pcUnit, const char* szFileName, const char* szText, SCPPSyntaxRange* psRange, CArrayInt* paiStarts, CArrayInt* paiTypenames);
 	void	AppendReplaced(SIDETemplateExtraction* psExtraction, const char* szName, const char* szText, size uiStart, size uiEnd, CArrayInt* paiStarts, CArrayInt* paiTypenames, CChars* pszDest);
+	void	FindClass(SIDETemplateExtraction* psDest, CIDERefactorUnit* pcUnit, CCPPSyntax* pcNode, const char* szFileName);
+	void	FindNamePlaces(CIDERefactorUnit* pcUnit, const char* szText, SCPPSyntaxRange* psRange, const char* szName, CArrayInt* paiStarts);
+	void	AppendClassText(SIDETemplateExtraction* psExtraction, CIDERefactorUnit* pcUnit, const char* szFileName, const char* szText, SCPPSyntaxRange* psRange, SCPPSyntaxRange* psQualified, const char* szOwnName,
+							const char* szName, const char* szTemplateName, CChars* pszDest);
 };
 
 

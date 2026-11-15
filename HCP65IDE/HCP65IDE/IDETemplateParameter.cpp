@@ -48,6 +48,11 @@ void SIDETemplateExtraction::Init(void)
 	sSignature.Init();
 	szSuggested.Init();
 	bDeduced = false;
+	bClass = false;
+	szClassKey.Init();
+	szClassFile.Init();
+	memset(&sClass, 0, sizeof(SCPPSyntaxRange));
+	szSuggestedClass.Init();
 }
 
 
@@ -57,6 +62,9 @@ void SIDETemplateExtraction::Init(void)
 //////////////////////////////////////////////////////////////////////////
 void SIDETemplateExtraction::Kill(void)
 {
+	szSuggestedClass.Kill();
+	szClassFile.Kill();
+	szClassKey.Kill();
 	szSuggested.Kill();
 	sSignature.Kill();
 	szTypeKey.Kill();
@@ -398,8 +406,18 @@ bool CIDETemplateParameter::FindExtraction(SIDETemplateExtraction* psDest)
 		pcName = pcDeclarator ? pcDeclarator->GetName() : NULL;
 		bFound = pcName && pcName->GetLast() && cUnit.GetTokensRange(pcName->GetLast()->miFirstToken, pcName->GetLast()->miFirstToken, &sRange) &&
 				 mpcContent->GetChangeSignature()->FindSignature(&psDest->sSignature, szFileName, sRange.iLine, sRange.iColumn);
+		if (!bFound && !pcDeclarator)
+		{
+			//Not in a function: in a class, then, which is what becomes a template.
+			FindClass(psDest, &cUnit, pcNode, szFileName);
+		}
 	}
 	cUnit.Kill();
+	if (psDest->bClass)
+	{
+		psDest->szSuggested.Set("M");
+		return true;
+	}
 	if (!bFound)
 	{
 		return false;
@@ -791,14 +809,16 @@ bool CIDETemplateParameter::ShowExtract(void)
 {
 	SIDETemplateExtraction	sExtraction;
 	Ptr<CTextField>			pName;
+	Ptr<CTextField>			pTemplateName;
 	CChars					szMessage;
 	CChars					szName;
+	CChars					szTemplateName;
 	bool					bResult;
 
 	sExtraction.Init();
 	if (!FindExtraction(&sExtraction))
 	{
-		mpcContent->ShowStatus("The caret isn't on a type in a function's declaration or body.");
+		mpcContent->ShowStatus("The caret isn't on a type in a function or a class.");
 		sExtraction.Kill();
 		return false;
 	}
@@ -815,19 +835,536 @@ bool CIDETemplateParameter::ShowExtract(void)
 	mpDialog = OMalloc<CDialog>(mpcContent->GetWindow(), mpcContent->GetDialogLook(), szMessage.Text());
 	szMessage.Kill();
 	pName = mpDialog->AddTextField("The parameter's name:", sExtraction.szSuggested.Text());
+	if (sExtraction.bClass)
+	{
+		//Its class becomes the template, and the class's name a typedef of it.
+		pTemplateName = mpDialog->AddTextField("The class template's name:", sExtraction.szSuggestedClass.Text());
+	}
 	mpDialog->SetOKCaption("Refactor");
 	mpcContent->GetScript()->WatchDialog(mpDialog);
 	bResult = mpDialog->Show(480);
 	szName.Init(pName->GetText());
+	szTemplateName.Init(pTemplateName.IsNotNull() ? pTemplateName->GetText() : "");
 	pName = NULL;
+	pTemplateName = NULL;
 	mpDialog = NULL;
-	if (bResult && GetProblem(&sExtraction, szName.Text()))
+	if (bResult && sExtraction.bClass)
 	{
-		mpcContent->ShowStatus(GetProblem(&sExtraction, szName.Text()));
-		bResult = false;
+		if (GetClassProblem(&sExtraction, szName.Text(), szTemplateName.Text()))
+		{
+			mpcContent->ShowStatus(GetClassProblem(&sExtraction, szName.Text(), szTemplateName.Text()));
+			bResult = false;
+		}
+		bResult = bResult && ExtractClass(&sExtraction, szName.Text(), szTemplateName.Text());
 	}
-	bResult = bResult && Extract(&sExtraction, szName.Text());
+	else if (bResult)
+	{
+		if (GetProblem(&sExtraction, szName.Text()))
+		{
+			mpcContent->ShowStatus(GetProblem(&sExtraction, szName.Text()));
+			bResult = false;
+		}
+		bResult = bResult && Extract(&sExtraction, szName.Text());
+	}
+	szTemplateName.Kill();
 	szName.Kill();
 	sExtraction.Kill();
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The class a node is in, for a type named in it outside its functions'
+// declarations: psDest is a class's extraction (bClass), with why the
+// class can't become a template if it can't.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDETemplateParameter::FindClass(SIDETemplateExtraction* psDest, CIDERefactorUnit* pcUnit, CCPPSyntax* pcNode, const char* szFileName)
+{
+	CIDECodeModel*				pcModel;
+	CArrayIDELocations			asLocations;
+	SIDELocation*				psLocation;
+	CCPPSyntaxClassSpecifier*	pcClass;
+	CCPPSyntax*					pcDeclaration;
+	SCPPSyntaxRange				sName;
+	CTextFile					cFile;
+	CChars						szWhy;
+	char*						szText;
+	size						uiLength;
+	size						uiAt;
+	size						uiAfter;
+	size						i;
+	uint8						uiKind;
+	bool						bAhead;
+
+	pcModel = mpcContent->GetCodeModel();
+	pcClass = (CCPPSyntaxClassSpecifier*)pcUnit->FindAncestor(pcNode, CPPS_ClassSpecifier);
+	pcDeclaration = pcClass ? pcUnit->FindAncestor(pcClass, CPPS_SimpleDeclaration) : NULL;
+	if (!pcDeclaration || !pcClass->mpcName || !pcUnit->GetRange(pcDeclaration, &psDest->sClass) || !pcUnit->GetTokensRange(pcClass->mpcName->miLastToken, pcClass->mpcName->miLastToken, &sName) ||
+		!pcModel->GetSymbolAt(szFileName, sName.iLine, sName.iColumn, &psDest->szClassKey, &uiKind))
+	{
+		return;
+	}
+	psDest->bClass = true;
+	psDest->bPossible = true;
+	psDest->szClassFile.Set(szFileName);
+	psDest->szSuggestedClass.Set(psDest->szClassKey);
+	psDest->szSuggestedClass.Append("Template");
+	if (uiKind != CPPSK_Class)
+	{
+		Refuse(psDest, "its class is a template already");
+	}
+	else if (strchr(psDest->szClassKey.Text(), ':'))
+	{
+		Refuse(psDest, "its class is in a class or a namespace");
+	}
+	else if (psDest->szClassKey.Equals(psDest->szTypeKey.Text()))
+	{
+		Refuse(psDest, "it is its class itself");
+	}
+	else if (pcUnit->FindAncestor(pcDeclaration, CPPS_TemplateDeclaration))
+	{
+		Refuse(psDest, "its class is a template already");
+	}
+	asLocations.Init();
+	pcModel->GetSymbolLocations(psDest->szClassKey.Text(), &asLocations, &uiKind);
+	for (i = 0; psDest->bPossible && (i < asLocations.NumElements()); i++)
+	{
+		//"class CTank;": its name after class or struct, and a ; after it.  (Its destructor's name is a declaration
+		//of it too, to the index.)
+		psLocation = asLocations.Get(i);
+		bAhead = false;
+		cFile.Init();
+		if ((psLocation->uiRole == CPPIR_Declaration) && mpcContent->GetFindInFiles()->GetFileText(psLocation->szFileName.Text(), &cFile, &szText, &uiLength))
+		{
+			uiAt = FindIDETextOffset(szText, psLocation->iLine, psLocation->iColumn);
+			for (uiAfter = uiAt; IsIDENameChar(szText[uiAfter]); uiAfter++)
+			{
+			}
+			for (; (szText[uiAfter] == ' ') || (szText[uiAfter] == '\t'); uiAfter++)
+			{
+			}
+			for (; (uiAt > 0) && ((szText[uiAt - 1] == ' ') || (szText[uiAt - 1] == '\t')); uiAt--)
+			{
+			}
+			bAhead = (szText[uiAfter] == ';') && (((uiAt >= 5) && (strncmp(&szText[uiAt - 5], "class", 5) == 0)) || ((uiAt >= 6) && (strncmp(&szText[uiAt - 6], "struct", 6) == 0)));
+		}
+		cFile.Kill();
+		if (bAhead)
+		{
+			szWhy.Init("its class is declared ahead of its definition (");
+			szWhy.Append(GetIDEFileNamePart(psLocation->szFileName.Text()))->Append(" line ")->Append((int32)(psLocation->iLine + 1))->Append("): its name would be a typedef, which can't be");
+			Refuse(psDest, szWhy.Text());
+			szWhy.Kill();
+		}
+	}
+	KillIDELocations(&asLocations);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Where a range of a file writes the name szName as a token, in the
+// file's text and in order: a class's own name, in itself and its
+// members.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDETemplateParameter::FindNamePlaces(CIDERefactorUnit* pcUnit, const char* szText, SCPPSyntaxRange* psRange, const char* szName, CArrayInt* paiStarts)
+{
+	SCPPSyntaxRange	sToken;
+	int32			iToken;
+	int32			iFirst;
+	int32			iLast;
+
+	if (!pcUnit->FindTokensIn(psRange->iLine, psRange->iColumn, psRange->iEndLine, psRange->iEndColumn, &iFirst, &iLast))
+	{
+		return;
+	}
+	for (iToken = iFirst; iToken <= iLast; iToken++)
+	{
+		if (pcUnit->IsToken(iToken, szName) && pcUnit->GetTokensRange(iToken, iToken, &sToken))
+		{
+			paiStarts->Add((int)FindIDETextOffset(szText, sToken.iLine, sToken.iColumn));
+		}
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A piece of the class (all of it, or one of its members' definitions) as
+// the template has it, added to pszDest: the type made the parameter
+// szName, the class's own name made szTemplateName, and, for a member
+// defined outside the class, the name it is defined by (psQualified,
+// "CTank::Fill") made "CTankTemplate<M>::Fill".
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDETemplateParameter::AppendClassText(SIDETemplateExtraction* psExtraction, CIDERefactorUnit* pcUnit, const char* szFileName, const char* szText, SCPPSyntaxRange* psRange, SCPPSyntaxRange* psQualified,
+											 const char* szOwnName, const char* szName, const char* szTemplateName, CChars* pszDest)
+{
+	CArrayInt	aiTypes;
+	CArrayInt	aiTypenames;
+	CArrayInt	aiNames;
+	CChars		szClassName;
+	CChars		szQualified;
+	size		uiStart;
+	size		uiEnd;
+	size		uiQualified;
+	size		uiQualifiedEnd;
+	size		uiAt;
+	size		uiType;
+	size		uiNamePlace;
+	size		uiNext;
+	size		i;
+	size		j;
+
+	szClassName.Init();
+	GetIDESymbolName(psExtraction->szClassKey.Text(), &szClassName);
+	uiStart = FindIDETextOffset(szText, psRange->iLine, psRange->iColumn);
+	uiEnd = FindIDETextOffset(szText, psRange->iEndLine, psRange->iEndColumn);
+	uiQualified = psQualified ? FindIDETextOffset(szText, psQualified->iLine, psQualified->iColumn) : MAX_SIZE;
+	uiQualifiedEnd = psQualified ? FindIDETextOffset(szText, psQualified->iEndLine, psQualified->iEndColumn) : MAX_SIZE;
+	aiTypes.Init();
+	aiTypenames.Init();
+	aiNames.Init();
+	FindTypePlaces(psExtraction, pcUnit, szFileName, szText, psRange, &aiTypes, &aiTypenames);
+	FindNamePlaces(pcUnit, szText, psRange, szClassName.Text(), &aiNames);
+
+	//Whichever comes next: the type, the class's name, or the name the member is defined by.
+	uiAt = uiStart;
+	i = 0;
+	j = 0;
+	while (uiAt < uiEnd)
+	{
+		for (; (i < aiTypes.NumElements()) && ((size)aiTypes.GetValue(i) < uiAt); i++)
+		{
+		}
+		for (; (j < aiNames.NumElements()) && ((size)aiNames.GetValue(j) < uiAt); j++)
+		{
+		}
+		uiType = (i < aiTypes.NumElements()) ? (size)aiTypes.GetValue(i) : MAX_SIZE;
+		uiNamePlace = (j < aiNames.NumElements()) ? (size)aiNames.GetValue(j) : MAX_SIZE;
+		uiNext = (uiType < uiNamePlace) ? uiType : uiNamePlace;
+		if ((uiQualified != MAX_SIZE) && (uiQualified >= uiAt) && (uiQualified <= uiNext))
+		{
+			pszDest->AppendSubString(szText, uiAt, uiQualified);
+			szQualified.Init(szOwnName);
+			if (szQualified.Equals(szClassName.Text()))
+			{
+				szQualified.Set(szTemplateName);
+			}
+			else if (szQualified.StartsWith("~") && (strcmp(&szQualified.Text()[1], szClassName.Text()) == 0))
+			{
+				szQualified.Set("~");
+				szQualified.Append(szTemplateName);
+			}
+			pszDest->Append(szTemplateName)->Append('<')->Append(szName)->Append(">::")->Append(szQualified);
+			szQualified.Kill();
+			uiAt = uiQualifiedEnd;
+			uiQualified = MAX_SIZE;
+		}
+		else if ((uiNext == MAX_SIZE) || (uiNext >= uiEnd))
+		{
+			break;
+		}
+		else if (uiNext == uiType)
+		{
+			pszDest->AppendSubString(szText, uiAt, uiType);
+			pszDest->Append(aiTypenames.GetValue(i) ? "typename " : "")->Append(szName);
+			uiAt = uiType + psExtraction->szType.Length();
+		}
+		else
+		{
+			pszDest->AppendSubString(szText, uiAt, uiNamePlace);
+			pszDest->Append(szTemplateName);
+			uiAt = uiNamePlace + szClassName.Length();
+		}
+	}
+	pszDest->AppendSubString(szText, uiAt, uiEnd);
+	aiNames.Kill();
+	aiTypenames.Kill();
+	aiTypes.Kill();
+	szClassName.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Why the class can't become the template szTemplateName with the
+// parameter szName, NULL if it can.
+//
+//////////////////////////////////////////////////////////////////////////
+const char* CIDETemplateParameter::GetClassProblem(SIDETemplateExtraction* psExtraction, const char* szName, const char* szTemplateName)
+{
+	CTextFile	cFile;
+	CChars		szClass;
+	const char*	szFound;
+	const char*	szProblem;
+	char*		szText;
+	size		uiLength;
+	size		uiName;
+
+	if (!IsIDEIdentifier(szName))
+	{
+		return "The parameter's name isn't a name.";
+	}
+	if (!IsIDEIdentifier(szTemplateName))
+	{
+		return "The template's name isn't a name.";
+	}
+	if (mpcContent->GetCodeModel()->HasSymbol(szTemplateName))
+	{
+		return "There is something of the template's name already.";
+	}
+	szProblem = NULL;
+	uiName = strlen(szName);
+	cFile.Init();
+	if (mpcContent->GetFindInFiles()->GetFileText(psExtraction->szClassFile.Text(), &cFile, &szText, &uiLength))
+	{
+		szClass.Init();
+		AppendIDERangeText(szText, &psExtraction->sClass, &szClass);
+		for (szFound = strstr(szClass.Text(), szName); szFound && !szProblem; szFound = strstr(szFound + 1, szName))
+		{
+			if (((szFound == szClass.Text()) || !IsIDENameChar(szFound[-1])) && !IsIDENameChar(szFound[uiName]))
+			{
+				szProblem = "The class has something of the parameter's name already.";
+			}
+		}
+		szClass.Kill();
+	}
+	cFile.Kill();
+	return szProblem;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The class made a class template named szTemplateName with the type its
+// parameter szName, as one undo: the class, then its members' definitions
+// (those outside it, brought to its header from wherever they are, in
+// their order), then a typedef of the class's old name as the template
+// with the type it had.  The files changed are checked as they would be
+// first.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDETemplateParameter::ExtractClass(SIDETemplateExtraction* psExtraction, const char* szName, const char* szTemplateName, CChars* pszStatus)
+{
+	CIDECodeModel*		pcModel;
+	CIDEFileEdits		cFiles;
+	CIDERefactorUnit	cUnit;
+	CIDERefactorUnit	cOther;
+	CArrayIDEFileRanges	asRanges;
+	CArrayIDELocations	asLocations;
+	CArrayIDELocations	asDefinitions;
+	CArrayChars			aszKeys;
+	CArrayChars			aszDefinitionKeys;
+	SIDELocation*		psLocation;
+	SIDELocation*		psDefinition;
+	SIDESignatureSite	sSite;
+	CChars				szScope;
+	CChars				szTemplate;
+	CChars				szClass;
+	CChars				szAfter;
+	CChars				szPiece;
+	CChars				szMessage;
+	CChars				szClassName;
+	const char*			szWhyNot;
+	const char*			szProblem;
+	char*				szText;
+	char*				szOther;
+	size				uiStart;
+	size				uiEnd;
+	size				uiAllStart;
+	size				uiMoved;
+	size				uiBefore;
+	size				i;
+	size				j;
+	uint8				uiKind;
+	bool				bResult;
+
+	if (!psExtraction->bPossible || !psExtraction->bClass || GetClassProblem(psExtraction, szName, szTemplateName))
+	{
+		return false;
+	}
+	uiBefore = 0;
+	pcModel = mpcContent->GetCodeModel();
+	szTemplate.Init("template<class ");
+	szTemplate.Append(szName)->Append(">\n");
+	szClassName.Init();
+	GetIDESymbolName(psExtraction->szClassKey.Text(), &szClassName);
+	szProblem = NULL;
+	cFiles.Init(mpcContent);
+	szText = cFiles.GetText(psExtraction->szClassFile.Text());
+	cUnit.Init();
+	bResult = szText && cUnit.Parse(pcModel, &mpcContent->GetFindInFiles(), psExtraction->szClassFile.Text(), false);
+
+	//Its members' definitions outside it, in their files' order.
+	asRanges.Init();
+	asRanges.Add()->Init(psExtraction->szClassFile.Text(), psExtraction->sClass.iLine, psExtraction->sClass.iColumn, psExtraction->sClass.iEndLine, psExtraction->sClass.iEndColumn);
+	aszKeys.Init();
+	pcModel->FindSymbolsDeclaredIn(&asRanges, &aszKeys);
+	asDefinitions.Init();
+	aszDefinitionKeys.Init();
+	for (i = 0; bResult && (i < aszKeys.NumElements()); i++)
+	{
+		szScope.Init();
+		GetIDESymbolScope(aszKeys.GetText(i), &szScope);
+		asLocations.Init();
+		if (szScope.Equals(psExtraction->szClassKey.Text()) && pcModel->GetSymbolLocations(aszKeys.GetText(i), &asLocations, &uiKind))
+		{
+			for (j = 0; j < asLocations.NumElements(); j++)
+			{
+				psLocation = asLocations.Get(j);
+				if ((psLocation->uiRole != CPPIR_Definition) || asRanges.Get(0)->Has(psLocation->szFileName.Text(), psLocation->iLine, psLocation->iColumn))
+				{
+					continue;
+				}
+				if ((uiKind != CPPSK_Function) && (uiKind != CPPSK_FunctionTemplate))
+				{
+					szProblem = "one of its fields is static and defined outside it";
+					bResult = false;
+					break;
+				}
+				psDefinition = asDefinitions.Add();
+				memcpy(psDefinition, psLocation, sizeof(SIDELocation));
+				psDefinition->szFileName.Init(psLocation->szFileName);
+				aszDefinitionKeys.Add(aszKeys.GetText(i));
+			}
+		}
+		KillIDELocations(&asLocations);
+		szScope.Kill();
+	}
+
+	//Its destructor's definition: the index has the destructor's name as its class's, so it is found by how it is
+	//written, "CTank::~CTank".
+	asLocations.Init();
+	pcModel->GetSymbolLocations(psExtraction->szClassKey.Text(), &asLocations, &uiKind);
+	for (j = 0; bResult && (j < asLocations.NumElements()); j++)
+	{
+		psLocation = asLocations.Get(j);
+		szOther = asRanges.Get(0)->Has(psLocation->szFileName.Text(), psLocation->iLine, psLocation->iColumn) ? NULL : cFiles.GetText(psLocation->szFileName.Text());
+		uiStart = szOther ? FindIDETextOffset(szOther, psLocation->iLine, psLocation->iColumn) : 0;
+		if ((uiStart >= 3) && (szOther[uiStart - 1] == '~') && (szOther[uiStart - 2] == ':') && (szOther[uiStart - 3] == ':'))
+		{
+			psDefinition = asDefinitions.Add();
+			memcpy(psDefinition, psLocation, sizeof(SIDELocation));
+			psDefinition->szFileName.Init(psLocation->szFileName);
+			psDefinition->uiRole = CPPIR_Definition;
+			psDefinition->iLength = (int32)szClassName.Length();
+			aszDefinitionKeys.Add(psExtraction->szClassKey.Text());
+		}
+	}
+	KillIDELocations(&asLocations);
+
+	//The class as the template has it.
+	szClass.Init(szTemplate);
+	szAfter.Init();
+	uiMoved = 0;
+	if (bResult)
+	{
+		AppendClassText(psExtraction, &cUnit, psExtraction->szClassFile.Text(), szText, &psExtraction->sClass, NULL, "", szName, szTemplateName, &szClass);
+	}
+	for (i = 0; bResult && (i < asDefinitions.NumElements()); i++)
+	{
+		//The first, by file and line, that isn't done.
+		psDefinition = NULL;
+		for (j = 0; j < asDefinitions.NumElements(); j++)
+		{
+			psLocation = asDefinitions.Get(j);
+			if ((psLocation->iLength >= 0) && (!psDefinition || (StringInsensitiveCompare(psLocation->szFileName.Text(), psDefinition->szFileName.Text()) < 0) ||
+				((StringInsensitiveCompare(psLocation->szFileName.Text(), psDefinition->szFileName.Text()) == 0) && (psLocation->iLine < psDefinition->iLine))))
+			{
+				psDefinition = psLocation;
+				uiBefore = j;
+			}
+		}
+		psDefinition->iLength = -1;
+		szOther = cFiles.GetText(psDefinition->szFileName.Text());
+		cOther.Init();
+		sSite.Init();
+		szWhyNot = NULL;
+		if (!szOther || !cOther.Parse(pcModel, &mpcContent->GetFindInFiles(), psDefinition->szFileName.Text(), false) ||
+			!mpcContent->GetChangeSignature()->ReadSite(&cOther, psDefinition, aszDefinitionKeys.GetText(uiBefore), &sSite, &szWhyNot) || !sSite.bBody)
+		{
+			szProblem = "one of its members' definitions can't be read (a macro makes it)";
+			bResult = false;
+		}
+		else if (!sSite.szOwnTemplate.Empty())
+		{
+			szProblem = "one of its members is a template";
+			bResult = false;
+		}
+		else
+		{
+			uiAllStart = FindIDETextOffset(szOther, sSite.sAll.iLine, sSite.sAll.iColumn);
+			uiStart = uiAllStart;
+			uiEnd = FindIDETextOffset(szOther, sSite.sAll.iEndLine, sSite.sAll.iEndColumn);
+			ExtendIDEDeletion(szOther, &uiStart, &uiEnd, true);
+			szPiece.Init();
+			if ((uiStart < uiAllStart) && (szOther[uiStart] == '/'))
+			{
+				szPiece.AppendSubString(szOther, uiStart, uiAllStart);
+			}
+			szPiece.Append(szTemplate);
+			AppendClassText(psExtraction, &cOther, psDefinition->szFileName.Text(), szOther, &sSite.sAll, &sSite.sName, sSite.szOwnName.Text(), szName, szTemplateName, &szPiece);
+			szAfter.Append("\n\n\n")->Append(szPiece);
+			szPiece.Kill();
+			cFiles.GetEdits(psDefinition->szFileName.Text())->Replace(uiStart, uiEnd, "");
+			uiMoved++;
+		}
+		sSite.Kill();
+		cOther.Kill();
+	}
+
+	szMessage.Init();
+	if (bResult)
+	{
+		//The class, its members' definitions, and the typedef that is its old name.
+		szClass.Append(szAfter);
+		szClass.Append("\n\n\ntypedef ")->Append(szTemplateName)->Append('<')->Append(psExtraction->szType)->Append("> ")->Append(szClassName)->Append(';');
+		cFiles.GetEdits(psExtraction->szClassFile.Text())->Replace(FindIDETextOffset(szText, psExtraction->sClass.iLine, psExtraction->sClass.iColumn),
+																 FindIDETextOffset(szText, psExtraction->sClass.iEndLine, psExtraction->sClass.iEndColumn), szClass.Text());
+		uiBefore = cFiles.CountErrors(false);
+		if (cFiles.CountErrors(true) > uiBefore)
+		{
+			szProblem = "the code doesn't compile with it a template";
+			bResult = false;
+		}
+	}
+	if (bResult)
+	{
+		cFiles.Apply();
+		szMessage.Append("Extracted the template parameter ")->Append(szName)->Append(" from ")->Append(psExtraction->szType)->Append(" in ")->Append(szClassName)->Append(": ")->Append(szClassName);
+		szMessage.Append(" is a typedef of ")->Append(szTemplateName)->Append('<')->Append(psExtraction->szType)->Append('>');
+		if (uiMoved > 0)
+		{
+			szMessage.Append(", and ")->Append((uint32)uiMoved)->Append((uiMoved == 1) ? " definition is in " : " definitions are in ")->Append(GetIDEFileNamePart(psExtraction->szClassFile.Text()))->Append(" now");
+		}
+		szMessage.Append('.');
+	}
+	else
+	{
+		szMessage.Append("Can't extract a template parameter from ")->Append(psExtraction->szType)->Append(" in ")->Append(szClassName)->Append(": ")->Append(szProblem ? szProblem : "its class can't be read")->Append('.');
+	}
+	if (pszStatus)
+	{
+		pszStatus->Set(szMessage);
+	}
+	else
+	{
+		mpcContent->ShowStatus(szMessage.Text());
+	}
+	szMessage.Kill();
+	szAfter.Kill();
+	szClass.Kill();
+	aszDefinitionKeys.Kill();
+	KillIDELocations(&asDefinitions);
+	aszKeys.Kill();
+	KillIDEFileRanges(&asRanges);
+	cUnit.Kill();
+	cFiles.Kill();
+	szClassName.Kill();
+	szTemplate.Kill();
 	return bResult;
 }

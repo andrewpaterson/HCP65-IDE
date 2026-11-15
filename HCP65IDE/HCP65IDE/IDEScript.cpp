@@ -1731,9 +1731,12 @@ void CIDEScript::RunEditStep(const char* szStep)
 	else if ((strcmp(szStep, "templateparameter") == 0) || (strncmp(szStep, "extracttemplate:", 16) == 0))
 	{
 		//What Extract Template Parameter found for the type at the caret (templateparameter): the type, its function
-		//and whether the calls' arguments say what it is; or it done with the parameter named ("extracttemplate:M").
+		//and whether the calls' arguments say what it is, or its class; or it done with the parameter named
+		//("extracttemplate:M"; "extracttemplate:M:CTankTemplate" for a class, with the template's name).
 		SIDETemplateExtraction	sExtraction;
 		CChars					szPrinted;
+		CChars					szParameter;
+		const char*				szColon;
 
 		sExtraction.Init();
 		szPrinted.Init();
@@ -1744,6 +1747,30 @@ void CIDEScript::RunEditStep(const char* szStep)
 		else if (!sExtraction.bPossible)
 		{
 			printf("Extract Template Parameter: %s can't be: %s\n", sExtraction.szType.Text(), sExtraction.szWhyNot.Text());
+		}
+		else if (sExtraction.bClass && (strcmp(szStep, "templateparameter") == 0))
+		{
+			printf("Extract Template Parameter: %s in the class %s, to be %s\n", sExtraction.szType.Text(), sExtraction.szClassKey.Text(), sExtraction.szSuggestedClass.Text());
+		}
+		else if (sExtraction.bClass)
+		{
+			szColon = strchr(&szStep[16], ':');
+			szParameter.Init();
+			szParameter.AppendSubString(szStep, 16, szColon ? (size)(szColon - szStep) : strlen(szStep));
+			if (mpcContent->GetTemplateParameter()->GetClassProblem(&sExtraction, szParameter.Text(), szColon ? szColon + 1 : ""))
+			{
+				printf("Extract Template Parameter: %s\n", mpcContent->GetTemplateParameter()->GetClassProblem(&sExtraction, szParameter.Text(), szColon ? szColon + 1 : ""));
+			}
+			else
+			{
+				mpcContent->GetTemplateParameter()->ExtractClass(&sExtraction, szParameter.Text(), szColon + 1, &szPrinted);
+				printf("Status: %s\n", szPrinted.Text());
+				if (gbIDEScriptRenameSaves)
+				{
+					mpcContent->GetDocuments()->SaveAllFiles();
+				}
+			}
+			szParameter.Kill();
 		}
 		else if (strcmp(szStep, "templateparameter") == 0)
 		{

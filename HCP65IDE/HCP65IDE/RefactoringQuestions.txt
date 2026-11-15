@@ -283,3 +283,10 @@ Open
     declared further down the header, and the checker had no error for it.  They are a net, not a proof.  Is it
     worth making the checker stricter for this (which errors matter most to you), or building the project in
     the background after such a refactoring and showing what broke?
+
+53. Extract Template Parameter on a class names the template "CTankTemplate" (asked, that is the suggestion) and
+    its parameter "M", moves every member's definition from the .cpp to the header under the class with its
+    banner, and leaves "typedef CTankTemplate<CGauge> CTank;" after them.  A class that is forward declared
+    somewhere ("class CTank;") is refused, because a typedef can't be declared that way: most of your classes are
+    forward declared.  Should it rewrite those forward declarations instead (to the template's and the typedef), or
+    is the typedef not what you want at all, the uses of CTank becoming CTankTemplate<CGauge> everywhere?
