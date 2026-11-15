@@ -1047,6 +1047,69 @@ void CIDEMoveMembers::AddForwardDeclarations(SIDEMoveClass* psClass, const char*
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Where a field goes in a class that has fields: after the last one it
+// declares (*puiAt, the end of that field's line), of any access, or of
+// iAccess (IDE_ACCESS_) if it isn't -1.  False if it has none.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEMoveMembers::FindLastFieldPlace(SIDEMoveClass* psClass, const char* szText, int32 iAccess, size* puiAt)
+{
+	CIDECodeModel*		pcModel;
+	CArrayIDEFileRanges	asRanges;
+	CArrayIDELocations	asLocations;
+	CArrayChars			aszKeys;
+	CChars				szScope;
+	size				uiAt;
+	size				i;
+	size				j;
+	int32				iLastLine;
+	int32				iLastColumn;
+	uint8				uiKind;
+
+	pcModel = mpcContent->GetCodeModel();
+	asRanges.Init();
+	asRanges.Add()->Init(psClass->szFileName.Text(), psClass->sRange.iLine, psClass->sRange.iColumn, psClass->sRange.iEndLine, psClass->sRange.iEndColumn);
+	aszKeys.Init();
+	pcModel->FindSymbolsDeclaredIn(&asRanges, &aszKeys);
+	iLastLine = -1;
+	iLastColumn = 0;
+	for (i = 0; i < aszKeys.NumElements(); i++)
+	{
+		szScope.Init();
+		GetIDESymbolScope(aszKeys.GetText(i), &szScope);
+		asLocations.Init();
+		if (szScope.Equals(psClass->szKey.Text()) && pcModel->GetSymbolLocations(aszKeys.GetText(i), &asLocations, &uiKind) && (uiKind == CPPSK_Field) &&
+			((iAccess < 0) || (FindMemberAccess(aszKeys.GetText(i)) == iAccess)))
+		{
+			for (j = 0; j < asLocations.NumElements(); j++)
+			{
+				if ((asLocations.Get(j)->uiRole != CPPIR_Reference) && (asLocations.Get(j)->iLine > iLastLine) && (asLocations.Get(j)->iLine >= psClass->sRange.iLine) &&
+					(asLocations.Get(j)->iLine <= psClass->sRange.iEndLine) && (StringInsensitiveCompare(asLocations.Get(j)->szFileName.Text(), psClass->szFileName.Text()) == 0))
+				{
+					iLastLine = asLocations.Get(j)->iLine;
+					iLastColumn = asLocations.Get(j)->iColumn;
+				}
+			}
+		}
+		KillIDELocations(&asLocations);
+		szScope.Kill();
+	}
+	aszKeys.Kill();
+	KillIDEFileRanges(&asRanges);
+	if (iLastLine < 0)
+	{
+		return false;
+	}
+	for (uiAt = FindIDETextOffset(szText, iLastLine, iLastColumn); (szText[uiAt] != '\0') && (szText[uiAt] != ';'); uiAt++)
+	{
+	}
+	*puiAt = FindIDELineEnd(szText, uiAt);
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // A member's declaration (its line, "\tint\tmiCount;\n") added to a
 // class: at the end of its part with iAccess (IDE_ACCESS_), or, for -1,
 // where its fields go: after the last field it has, or, if it has none,
@@ -1060,22 +1123,13 @@ void CIDEMoveMembers::AddForwardDeclarations(SIDEMoveClass* psClass, const char*
 //////////////////////////////////////////////////////////////////////////
 bool CIDEMoveMembers::AddMember(const char* szClassKey, int32 iAccess, const char* szDeclaration, CIDEFileEdits* pcEdits, bool bLastPart)
 {
-	CIDECodeModel*		pcModel;
 	SIDEMoveClass		sClass;
-	CArrayIDEFileRanges	asRanges;
-	CArrayIDELocations	asLocations;
-	CArrayChars			aszKeys;
 	CArrayChars			aszLines;
-	CChars				szScope;
 	CChars				szBefore;
 	CChars				szLine;
 	char*				szText;
 	size				uiAt;
 	size				i;
-	size				j;
-	int32				iLastLine;
-	int32				iLastColumn;
-	uint8				uiKind;
 	bool				bField;
 	bool				bResult;
 
@@ -1086,44 +1140,8 @@ bool CIDEMoveMembers::AddMember(const char* szClassKey, int32 iAccess, const cha
 	bField = false;
 	if (szText && (iAccess < 0))
 	{
-		//The class's last field.
-		pcModel = mpcContent->GetCodeModel();
-		asRanges.Init();
-		asRanges.Add()->Init(sClass.szFileName.Text(), sClass.sRange.iLine, sClass.sRange.iColumn, sClass.sRange.iEndLine, sClass.sRange.iEndColumn);
-		aszKeys.Init();
-		pcModel->FindSymbolsDeclaredIn(&asRanges, &aszKeys);
-		iLastLine = -1;
-		iLastColumn = 0;
-		for (i = 0; i < aszKeys.NumElements(); i++)
-		{
-			szScope.Init();
-			GetIDESymbolScope(aszKeys.GetText(i), &szScope);
-			asLocations.Init();
-			if (szScope.Equals(szClassKey) && pcModel->GetSymbolLocations(aszKeys.GetText(i), &asLocations, &uiKind) && (uiKind == CPPSK_Field))
-			{
-				for (j = 0; j < asLocations.NumElements(); j++)
-				{
-					if ((asLocations.Get(j)->uiRole != CPPIR_Reference) && (asLocations.Get(j)->iLine > iLastLine) && (asLocations.Get(j)->iLine >= sClass.sRange.iLine) &&
-						(asLocations.Get(j)->iLine <= sClass.sRange.iEndLine) && (StringInsensitiveCompare(asLocations.Get(j)->szFileName.Text(), sClass.szFileName.Text()) == 0))
-					{
-						iLastLine = asLocations.Get(j)->iLine;
-						iLastColumn = asLocations.Get(j)->iColumn;
-					}
-				}
-			}
-			KillIDELocations(&asLocations);
-			szScope.Kill();
-		}
-		aszKeys.Kill();
-		KillIDEFileRanges(&asRanges);
-		if (iLastLine >= 0)
-		{
-			for (uiAt = FindIDETextOffset(szText, iLastLine, iLastColumn); (szText[uiAt] != '\0') && (szText[uiAt] != ';'); uiAt++)
-			{
-			}
-			uiAt = FindIDELineEnd(szText, uiAt);
-			bField = true;
-		}
+		//After the class's last field.
+		bField = FindLastFieldPlace(&sClass, szText, -1, &uiAt);
 		iAccess = sClass.bStruct ? IDE_ACCESS_PUBLIC : IDE_ACCESS_PROTECTED;
 	}
 	bResult = szText && (bField || FindInsertPlace(&sClass, szText, iAccess, &uiAt, &szBefore, bLastPart));
@@ -2217,6 +2235,7 @@ bool CIDEMoveMembers::Move(SIDEMembersMove* psMove, CChars* pszStatus)
 	size					j;
 	bool					bInline;
 	bool					bResult;
+	bool					bField;
 
 	pcModel = mpcContent->GetCodeModel();
 	mpcContent->GetDocuments()->UpdateEditedTabsNow();
@@ -2262,7 +2281,11 @@ bool CIDEMoveMembers::Move(SIDEMembersMove* psMove, CChars* pszStatus)
 			szKey.Kill();
 			szToText = cEdits.GetText(psTo->szFileName.Text());
 			szBefore.Init();
-			if (!szToText || !FindInsertPlace(psTo, szToText, psMember->iAccess, &uiAt, &szBefore))
+
+			//A field that goes up goes after the class's last field of its access, as Introduce Field puts one; anything
+			//else, and a field of a class that has none, at the end of the part with its access.
+			bField = szToText && psMove->bUp && !psMember->bFunction && FindLastFieldPlace(psTo, szToText, psMember->iAccess, &uiAt);
+			if (!szToText || (!bField && !FindInsertPlace(psTo, szToText, psMember->iAccess, &uiAt, &szBefore)))
 			{
 				szBefore.Kill();
 				bResult = false;
@@ -2332,6 +2355,17 @@ bool CIDEMoveMembers::Move(SIDEMembersMove* psMove, CChars* pszStatus)
 			else
 			{
 				ExtendIDEDeletion(szText, &uiStart, &uiEnd, true);
+
+				//The first thing of its part, with an empty line after it: the line goes too, or the part would start
+				//with it ("public:", an empty line, the functions).
+				for (uiAt = uiStart; (uiAt > 0) && ((szText[uiAt - 1] == '\n') || (szText[uiAt - 1] == '\r') || (szText[uiAt - 1] == ' ') || (szText[uiAt - 1] == '\t')); uiAt--)
+				{
+				}
+				if ((uiAt > 0) && ((szText[uiAt - 1] == ':') || (szText[uiAt - 1] == '{')) && (uiStart > 0) && (szText[uiStart - 1] == '\n') &&
+					((szText[uiEnd] == '\n') || ((szText[uiEnd] == '\r') && (szText[uiEnd + 1] == '\n'))))
+				{
+					uiEnd += (szText[uiEnd] == '\r') ? 2 : 1;
+				}
 				cEdits.GetEdits(psMove->sClass.szFileName.Text())->Replace(uiStart, uiEnd, "");
 			}
 			if (szOutsideText)

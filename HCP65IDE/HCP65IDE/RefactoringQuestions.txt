@@ -185,6 +185,8 @@ Answered
     the last field and not at the end of the part.
     Answered 2026-11-15: yes: a field that is pulled up goes after the base class's last field, as Introduce
     Field puts one, not at the end of the part.  To do in Pull Members Up.
+    Done 2026-11-15 (CIDEMoveMembers::FindLastFieldPlace: after the last field of the same access, so what
+    could see it still can).
 
 21. Push Members Down gives every deriving class its own copy of a function's definition.  A deriving class that
     already overrides the function keeps its own and gets no copy.  What uses the member through the base class is
@@ -314,6 +316,8 @@ Answered
     for from a script yet.  Do you want that tick in the dialog?
     Answered 2026-11-15: yes: the dialog is refitted with the table (WindowLib's CTable, as Pull Members Up's),
     with a column for it.  To do in Extract Superclass, Extract Interface and Extract Class.
+    Done 2026-11-15: the three dialogs have the members in a table; Extract Superclass's has "Make abstract"
+    (an interface's functions are all abstract, and a class that is extracted has none).
 
 42. Extract Class makes every member that moves public in the new class, because the class it came from uses them
     through the field ("mcGauge.miLevel"); IntelliJ offers to generate getters and setters instead (which is

@@ -433,6 +433,8 @@ Where it is
        - the index checks templates in their own words: measured (6% more time), and on (question 5): done.
        - Extract Method's ticks: pointers for what it would be given by reference, and static (questions 35, 36): done.
        - Extract Method finds the other places the selection is written and makes them calls too (question 37): done.
+       - a field pulled up goes after the base class's last field (question 20): done.
+       - Extract Superclass, Interface and Class have their members in a table, with "Make abstract" (question 41): done.
 
 
 When the plan is done

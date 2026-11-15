@@ -1453,6 +1453,14 @@ CHECKS = [
 		 r'^31\|\}$', r'^32\|$', r'^33\|$', r'^34\|/{74}$', r'^38\|int CVessel::Spare\(void\)$', r'^40\|\treturn miVolume - 1;$', r'^41 lines$',
 		 r'^19\|void CDrum::Fill\(int iAmount\)$', r'^22\|\}$', r'^23\|$', r'^24\|$', r'^25\|/{74}$', r'^29\|void CDrum::Roll\(void\)$', r'^72 lines$'],
 		[r'^Conflict', r'CDrum::Spare']),
+	('move-members-pull-up-field', dict(MakeMoveMembersCopy(), **{
+		#A field pulled up goes after the base class's last field of its access, not after the functions at the end
+		#of the part.
+		'WAIT_INDEX': '1', 'OPEN': 'Rack.h', 'CARET': '18:8',
+		'DEBUG': 'edit:renamesearch:---s,edit:pullup:CRackBase|miDepth,printdisklines:Rack.h'}),
+		[r'^Status: Pulled miDepth up from CRack to CRackBase\.$', r'^8\|\tint\t\tmiSlots;$', r'^9\|\tint\t\tmiDepth;$', r'^10\|$', r'^11\|\tvoid\tInit\(void\) \{ miSlots = 0; \}$',
+		 r'^16\|class CRack : public CRackBase$', r'^18\|public:$', r'^19\|\tint\t\tDepth\(void\) \{ return miDepth; \}$', r'^23 lines$'],
+		[]),
 	('move-members-pull-up-several', dict(MakeMoveMembersCopy(), **{
 		#Several at once: a field to the base class's protected part, a function defined in the class with the comment
 		#over it, and a static function with its definition.
@@ -1574,11 +1582,11 @@ CHECKS = [
 		'WAIT_INDEX': '1', 'OPEN': 'Drum.h', 'CARET': '27:8',
 		'DEBUG': 'edit:renamesearch:---s,edit:moveclass:,printprojectfiles,edit:undoall,edit:undoall,edit:saveall,printprojectfiles,printdisklines:Keg.h,printdisklines:Keg.cpp,printdisklines:Drum.h,printdisklines:Drum.cpp,printdisklines:Main.cpp,'
 				 'edit:redoall,edit:redoall,printprojectfiles,printdisklines:Keg.h,printdisklines:Keg.cpp,printdisklines:Drum.h,printtabs'}),
-		[r'^Status: Moved CKeg to Keg\.h and Keg\.cpp', r'^Project files: Main\.cpp Vessel\.cpp Drum\.cpp Keg\.cpp Pair\.cpp Vessel\.h Drum\.h Keg\.h Crate\.h Pair\.h$',
-		 r'^Project files: Main\.cpp Vessel\.cpp Drum\.cpp Pair\.cpp Vessel\.h Drum\.h Crate\.h Pair\.h$',
+		[r'^Status: Moved CKeg to Keg\.h and Keg\.cpp', r'^Project files: Main\.cpp Rack\.cpp Vessel\.cpp Drum\.cpp Keg\.cpp Pair\.cpp Vessel\.h Drum\.h Keg\.h Crate\.h Pair\.h Rack\.h$',
+		 r'^Project files: Main\.cpp Rack\.cpp Vessel\.cpp Drum\.cpp Pair\.cpp Vessel\.h Drum\.h Crate\.h Pair\.h Rack\.h$',
 		 r'^Disk lines Keg\.h:$', r'^\(none\)$', r'^Disk lines Keg\.cpp:$', r'^\(none\)$',
 		 r'^27\|class CKeg : public CVessel$', r'^35 lines$', r'^79\|void CKeg::Vent\(void\)$', r'^82 lines$', r'^1\|#include "Drum\.h"$', r'^2\|#include "Crate\.h"$',
-		 r'^Project files: Main\.cpp Vessel\.cpp Drum\.cpp Keg\.cpp Pair\.cpp Vessel\.h Drum\.h Keg\.h Crate\.h Pair\.h$',
+		 r'^Project files: Main\.cpp Rack\.cpp Vessel\.cpp Drum\.cpp Keg\.cpp Pair\.cpp Vessel\.h Drum\.h Keg\.h Crate\.h Pair\.h Rack\.h$',
 		 r'^Disk lines Keg\.h:$', r'^6\|class CKeg : public CVessel$', r'^14 lines$', r'^Disk lines Keg\.cpp:$', r'^1\|#include "Keg\.h"$', r'^22 lines$', r'^27 lines$'],
 		[]),
 	('move-class-dialog', dict(MakeMoveMembersCopy(), **{
@@ -1998,6 +2006,13 @@ CHECKS = [
 		 r'^4\|#include "Gauge\.h"$', r'^7\|class CDrum : public CVessel$', r'^12\|protected:$', r'^13\|\tCGauge\tmcGauge;$', r'^14\|\tint\t\tmiRate, miStep;$', r'^17\|\tvoid\tInit\(int iVolume\);$', r'^18\|\tint\t\tSpare\(void\);$',
 		 r'^10\|\tCVessel::Init\(iVolume\);$', r'^11\|\tmcGauge\.Init\(\);$', r'^12\|\tmcGauge\.miLevel = 0;$', r'^32\|\tmcGauge\.Fill\(1\);$', r'^73 lines$'],
 		[r'^Conflict']),
+	('extract-superclass-dialog', dict(MakeMoveMembersCopy(), **{
+		#The dialog: the new class's name typed, and the members in a table, the one at the caret ticked; Refactor
+		#extracts it.
+		'WAIT_INDEX': '1', 'OPEN': 'Drum.h', 'CARET': '20:8', 'SETTINGS': MakeSettingsFile(), 'DIALOG_KEYS': 'type:CBarrel', 'DIALOG_ANSWER': 'OK',
+		'DEBUG': 'extractsuperclass,answered:1,printstatus'}),
+		[r'^Dialog \[Extract Superclass from CDrum\] answered OK$', r'^Status: Extracted the superclass CBarrel from CDrum: 1 member, in Barrel\.h and Barrel\.cpp\.$'],
+		[]),
 	('extract-superclass-template', dict(MakeMoveMembersCopy(), **{
 		#From a class template, where what moves names the template's parameter: the new class is a template of the
 		#same parameters, the class derives from it with them, and the function defined outside the class goes with

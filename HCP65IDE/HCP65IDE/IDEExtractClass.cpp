@@ -28,6 +28,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDERename.h"
 #include "IDESafeDelete.h"
 #include "IDEMoveClass.h"
+#include "WindowLib/Table.h"
 #include "IDEExtractClass.h"
 #include "IDEContextActions.h"
 
@@ -1015,9 +1016,10 @@ bool CIDEExtractClass::ApproveName(void)
 bool CIDEExtractClass::ShowExtract(int iKind)
 {
 	SIDEMembersMove					sMove;
-	CArrayTemplatePtr<CCheckBox>	apcMembers;
+	SIDEMovedMember*				psMember;
 	CArrayChars						aszConflicts;
-	Ptr<CCheckBox>					pBox;
+	Ptr<CTable>						pMembers;
+	CChars							szLabel;
 	CChars							szMessage;
 	CChars							szName;
 	CChars							szField;
@@ -1056,14 +1058,39 @@ bool CIDEExtractClass::ShowExtract(int iKind)
 	{
 		mpFieldField = mpDialog->AddTextField("Field:", "");
 	}
+	//The members in a table, as Pull Members Up's: a tick for each that goes and, for a superclass, a second for
+	//each function that stays in the class and is only declared, abstract, in the superclass (IntelliJ's column).
 	mpDialog->AddDivider("Members");
-	apcMembers.Init();
+	pMembers = OMalloc<CTable>(mpDialog->GetWindow(), mpDialog->GetLook()->pcTheme);
+	pMembers->AddColumn("Extract", TCK_Tick, 0);
+	pMembers->AddColumn("Member", TCK_Text, 1);
+	pMembers->SetColumnEditable(1, false);
+	if (iKind == IDE_EXTRACT_SUPERCLASS)
+	{
+		pMembers->AddColumn("Make abstract", TCK_Tick, 0);
+	}
 	for (i = 0; i < sMove.apsMembers.NumElements(); i++)
 	{
-		pBox = mpDialog->AddCheckBox(sMove.apsMembers.GetPtr(i)->szName.Text(), sMove.apsMembers.GetPtr(i)->bChosen);
-		apcMembers.Add(&pBox);
+		psMember = sMove.apsMembers.GetPtr(i);
+		szLabel.Init(psMember->szName);
+		if (!psMember->szWhyNot.Empty())
+		{
+			szLabel.Append("  (")->Append(psMember->szWhyNot)->Append(")");
+		}
+		pMembers->AddRow();
+		pMembers->SetCellTicked((int32)i, 0, psMember->bChosen);
+		pMembers->SetCellEditable((int32)i, 0, psMember->szWhyNot.Empty());
+		pMembers->SetCellText((int32)i, 1, szLabel.Text());
+		if (iKind == IDE_EXTRACT_SUPERCLASS)
+		{
+			pMembers->SetCellTicked((int32)i, 2, psMember->bAbstract);
+			pMembers->SetCellEditable((int32)i, 2, psMember->bFunction && psMember->szWhyNot.Empty());
+		}
+		szLabel.Kill();
 	}
-	pBox = NULL;
+	pMembers->SetVisibleRows((sMove.apsMembers.NumElements() < 12) ? (int32)sMove.apsMembers.NumElements() : 12);
+	pMembers->SetAlignment(CSH_Stretch, CSV_Top);
+	mpDialog->AddEditor(NULL, pMembers);
 	mpError = OMalloc<CLabel>(mpDialog->GetWindow(), mpcContent->GetDimFont(), "");
 	mpDialog->AddEditor("", mpError);
 	mpDialog->SetOKCaption("Refactor");
@@ -1072,11 +1099,16 @@ bool CIDEExtractClass::ShowExtract(int iKind)
 	bResult = mpDialog->Show(560);
 	szName.Init(bResult ? mpNameField->GetText() : "");
 	szField.Init((bResult && mpFieldField.IsNotNull()) ? mpFieldField->GetText() : "");
-	for (i = 0; bResult && (i < apcMembers.NumElements()); i++)
+	for (i = 0; bResult && (i < sMove.apsMembers.NumElements()); i++)
 	{
-		sMove.apsMembers.GetPtr(i)->bChosen = apcMembers.GetPtr(i)->IsTicked();
+		psMember = sMove.apsMembers.GetPtr(i);
+		psMember->bChosen = psMember->szWhyNot.Empty() && pMembers->IsCellTicked((int32)i, 0);
+		if (iKind == IDE_EXTRACT_SUPERCLASS)
+		{
+			psMember->bAbstract = psMember->bChosen && psMember->bFunction && pMembers->IsCellTicked((int32)i, 2);
+		}
 	}
-	apcMembers.Kill();
+	pMembers = NULL;
 	mpDialog->ClearApprover();
 	mpcContent->GetScript()->StopWatchingDialog();
 	mpNameField = NULL;
