@@ -157,6 +157,9 @@ public:
 	char*	PrintMove(SIDEMembersMove* psMove, CChars* pszDest);
 	bool	AddMember(const char* szClassKey, int32 iAccess, const char* szDeclaration, CIDEFileEdits* pcEdits, bool bLastPart = false);
 	int32	FindMemberAccess(const char* szMemberKey);
+	bool	MarkOverride(const char* szFunctionKey, CIDEFileEdits* pcEdits);
+	bool	IsDeclaredVirtual(SIDEMovedMember* psMember, const char* szText);
+	void	MarkOverriders(SIDEMovedMember* psMember, const char* szBaseKey, const char* szSkipClassKey, CIDEFileEdits* pcEdits);
 
 protected:
 	void				ShowQueuedPullUp(void);

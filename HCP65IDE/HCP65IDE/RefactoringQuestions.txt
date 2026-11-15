@@ -49,10 +49,6 @@ Open
     tab that isn't pinned is used again, but not in its place).  Nothing I changed is in Find Usages' tabs.  Do
     they pass for you?
 
-19. Pull Members Up and Push Members Down have a dialog of rows, not IntelliJ's table (question 10 again): the class
-    to (or a tick for each deriving class), a tick for each member, and under "Make abstract" a second tick for
-    each function.  They have no keys, as in IntelliJ.  Is that enough until there is a table?
-
 20. Where a pulled-up member goes: the end of the base class's part with the same access (its last "public:" part
     for a public one), lined up with the declaration above it; if the class has no such part, a new one before its
     closing brace.  Your classes keep fields before functions in one part sometimes: say if a field should go after
@@ -196,6 +192,11 @@ Answered
     (CFoo x(1, 2); new CFoo(1); a member's initialiser) changed as a call is, in Change Signature of a
     constructor.
 
+19. Pull Members Up and Push Members Down have a dialog of rows, not IntelliJ's table (question 10 again): the class
+    to (or a tick for each deriving class), a tick for each member, and under "Make abstract" a second tick for
+    each function.  They have no keys, as in IntelliJ.  Is that enough until there is a table?
+    Overtaken 2026-11-15: the table was built (WindowLib's CTable) and both dialogs are made of it.
+
 21. Push Members Down gives every deriving class its own copy of a function's definition.  A deriving class that
     already overrides the function keeps its own and gets no copy.  What uses the member through the base class is
     a conflict (the type of the object is asked of the compiler, so cDrum.Seal() is not one where cDrum is a
@@ -204,6 +205,7 @@ Answered
     Answered 2026-11-15: yes: a function that now overrides one in a base class is marked override.  To do in
     Pull Members Up (the class's function, where the base gets it abstract; a deriving class's own that the
     pulled-up one is now over) and Push Members Down (each copy, where the base keeps it abstract).
+    Done 2026-11-15 (CIDEMoveMembers::MarkOverride, MarkOverriders).
 
 22. Move Class to Its Own Files (F6) makes the new files empty and fills them as an edit, so that one undo puts the
     class back and leaves the new files empty, in the projects.  Nothing breaks, but the empty files stay until you
@@ -291,6 +293,7 @@ Answered
     functions aren't marked override.  Right for your code?
     Answered 2026-11-15, with 21: the class's own functions are marked override when an interface is extracted
     from them (Extract Superclass's too).  No virtual destructor is written.  To do.
+    Done 2026-11-15 (CIDEMoveMembers::MarkOverride, MarkOverriders).
 
 44. Encapsulate Field writes the getter and setter in the class, on one line each at the end of its public part
     ("int GetLevel(void) { return miLevel; }"), not const, and moves the field to the class's protected part (to

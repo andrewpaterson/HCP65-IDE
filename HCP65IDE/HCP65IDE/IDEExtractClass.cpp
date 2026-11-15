@@ -576,6 +576,8 @@ bool CIDEExtractClass::Extract(SIDEMembersMove* psMove, int iKind, const char* s
 		szDeclaration.Kill();
 		if (psMember->bAbstract)
 		{
+			//It stays, and overrides what the new class declares: it says so.
+			pcMembers->MarkOverride(psMember->szKey.Text(), &cFiles);
 			continue;
 		}
 

@@ -1798,23 +1798,39 @@ void CIDEMoveMembers::FindSourceFile(SIDEMoveClass* psClass, CChars* pszDest)
 //////////////////////////////////////////////////////////////////////////
 void CIDEMoveMembers::AppendDeclarationText(SIDEMembersMove* psMove, SIDEMovedMember* psMember, SIDEMoveClass* psTo, CIDEFileEdits* pcEdits, CChars* pszDest)
 {
-	CChars	szBody;
-	CChars	szOutside;
-	CChars	szIndent;
-	char*	szText;
-	char*	szOutsideText;
-	size	uiStart;
-	size	uiLineStart;
-	size	uiEnd;
-	size	i;
+	CChars		szBody;
+	CChars		szOutside;
+	CChars		szIndent;
+	CChars		szAfter;
+	const char*	szOverride;
+	char*		szText;
+	char*		szOutsideText;
+	size		uiStart;
+	size		uiLineStart;
+	size		uiEnd;
+	size		uiAfter;
+	size		i;
 
 	szText = pcEdits->GetText(psMove->sClass.szFileName.Text());
 	uiStart = FindIDETextOffset(szText, psMember->sDeclared.iLine, psMember->sDeclared.iColumn);
 	uiEnd = FindIDELineEnd(szText, FindIDETextOffset(szText, psMember->sDeclared.iEndLine, psMember->sDeclared.iEndColumn));
 	szOutsideText = (psMember->bFunction && psMember->bOutside && (psMove->sClass.bTemplate || psTo->bTemplate)) ? pcEdits->GetText(psMember->szOutsideFile.Text()) : NULL;
+
+	//Pushed down from a class that keeps it abstract: it overrides that, and says so.
+	uiAfter = psMember->bFunction ? FindIDETextOffset(szText, psMember->sDeclaration.sAfter.iEndLine, psMember->sDeclaration.sAfter.iEndColumn) : uiEnd;
+	szOverride = "";
+	if (psMember->bFunction && psMember->bAbstract && !psMove->bUp)
+	{
+		szAfter.Init();
+		szAfter.AppendSubString(szText, FindIDETextOffset(szText, psMember->sDeclaration.sAfter.iLine, psMember->sDeclaration.sAfter.iColumn), uiAfter);
+		szOverride = (szAfter.Contains("override") || szAfter.Contains("final")) ? "" : " override";
+		szAfter.Kill();
+	}
 	if (!szOutsideText)
 	{
-		pszDest->AppendSubString(szText, FindIDECommentStart(szText, uiStart), uiEnd);
+		pszDest->AppendSubString(szText, FindIDECommentStart(szText, uiStart), uiAfter);
+		pszDest->Append(szOverride);
+		pszDest->AppendSubString(szText, uiAfter, uiEnd);
 		if (!pszDest->EndsWith("\n"))
 		{
 			pszDest->Append('\n');
@@ -1832,12 +1848,141 @@ void CIDEMoveMembers::AppendDeclarationText(SIDEMembersMove* psMove, SIDEMovedMe
 	szOutside.Init();
 	AppendIDERangeText(szOutsideText, &psMember->sDefinition.sBody, &szBody);
 	mpcContent->GetDefinitions()->AppendBodyOutside(szBody.Text(), &szOutside);
-	pszDest->AppendSubString(szText, FindIDECommentStart(szText, uiStart), FindIDETextOffset(szText, psMember->sDeclaration.sAfter.iEndLine, psMember->sDeclaration.sAfter.iEndColumn));
+	pszDest->AppendSubString(szText, FindIDECommentStart(szText, uiStart), uiAfter);
+	pszDest->Append(szOverride);
 	mpcContent->GetDefinitions()->AppendBodyInClass(szOutside.Text(), szIndent.Text(), pszDest);
 	pszDest->Append('\n');
 	szOutside.Kill();
 	szBody.Kill();
 	szIndent.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether a function's declaration in its class says virtual.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEMoveMembers::IsDeclaredVirtual(SIDEMovedMember* psMember, const char* szText)
+{
+	CChars	szStart;
+	bool	bVirtual;
+
+	szStart.Init();
+	szStart.AppendSubString(szText, FindIDETextOffset(szText, psMember->sDeclared.iLine, psMember->sDeclared.iColumn), FindIDETextOffset(szText, psMember->sDeclaration.sName.iLine, psMember->sDeclaration.sName.iColumn));
+	bVirtual = szStart.Contains("virtual");
+	szStart.Kill();
+	return bVirtual;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A member function's declaration in its class is marked override, after
+// its parameters and what follows them ("int Fill(int iAmount) const
+// override;"), unless it is marked already (or final): it has come to
+// override one of a base class.  False if it isn't declared in a class of
+// the solution's, or was marked.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEMoveMembers::MarkOverride(const char* szFunctionKey, CIDEFileEdits* pcEdits)
+{
+	CIDECodeModel*		pcModel;
+	CArrayIDELocations	asLocations;
+	SIDELocation*		psLocation;
+	SIDEMoveClass		sClass;
+	SIDESignatureSite	sSite;
+	CIDERefactorUnit*	pcUnit;
+	CChars				szScope;
+	CChars				szAfter;
+	const char*			szWhyNot;
+	char*				szText;
+	size				uiStart;
+	size				uiEnd;
+	size				i;
+	uint8				uiKind;
+	bool				bMarked;
+
+	pcModel = mpcContent->GetCodeModel();
+	bMarked = false;
+	szScope.Init();
+	GetIDESymbolScope(szFunctionKey, &szScope);
+	sClass.Init();
+	asLocations.Init();
+	if (ReadClass(szScope.Text(), &sClass) && pcModel->GetSymbolLocations(szFunctionKey, &asLocations, &uiKind))
+	{
+		for (i = 0; i < asLocations.NumElements(); i++)
+		{
+			psLocation = asLocations.Get(i);
+			if ((psLocation->uiRole == CPPIR_Reference) || (StringInsensitiveCompare(psLocation->szFileName.Text(), sClass.szFileName.Text()) != 0) ||
+				(psLocation->iLine < sClass.sRange.iLine) || (psLocation->iLine > sClass.sRange.iEndLine))
+			{
+				continue;
+			}
+			pcUnit = GetUnit(psLocation->szFileName.Text());
+			szText = pcEdits->GetText(psLocation->szFileName.Text());
+			sSite.Init();
+			szWhyNot = NULL;
+			if (pcUnit && szText && mpcContent->GetChangeSignature()->ReadSite(pcUnit, psLocation, szFunctionKey, &sSite, &szWhyNot))
+			{
+				uiStart = FindIDETextOffset(szText, sSite.sAfter.iLine, sSite.sAfter.iColumn);
+				uiEnd = FindIDETextOffset(szText, sSite.sAfter.iEndLine, sSite.sAfter.iEndColumn);
+				szAfter.Init();
+				szAfter.AppendSubString(szText, uiStart, uiEnd);
+				if (!szAfter.Contains("override") && !szAfter.Contains("final"))
+				{
+					pcEdits->GetEdits(psLocation->szFileName.Text())->Insert(uiEnd, " override");
+					bMarked = true;
+				}
+				szAfter.Kill();
+			}
+			sSite.Kill();
+			break;
+		}
+	}
+	KillIDELocations(&asLocations);
+	sClass.Kill();
+	szScope.Kill();
+
+	//The files parsed are as they were before the edits: they aren't kept for whoever asks next.
+	KillUnits();
+	return bMarked;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A function is virtual in the class szBaseKey now (pulled up to it, or
+// left abstract in it): what each class under it has of that function
+// overrides it, and is marked override.  Not szSkipClassKey's, if it is
+// given: the class the function is leaving.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEMoveMembers::MarkOverriders(SIDEMovedMember* psMember, const char* szBaseKey, const char* szSkipClassKey, CIDEFileEdits* pcEdits)
+{
+	CIDECodeModel*	pcModel;
+	CArrayChars		aszClasses;
+	CChars			szKey;
+	size			i;
+
+	pcModel = mpcContent->GetCodeModel();
+	aszClasses.Init();
+	pcModel->FindClassDerived(szBaseKey, true, &aszClasses);
+	for (i = 0; i < aszClasses.NumElements(); i++)
+	{
+		if (szSkipClassKey && aszClasses.Get(i)->Equals(szSkipClassKey))
+		{
+			continue;
+		}
+		szKey.Init();
+		AppendMemberKeyIn(psMember, aszClasses.GetText(i), &szKey);
+		if (pcModel->HasSymbol(szKey.Text()))
+		{
+			MarkOverride(szKey.Text(), pcEdits);
+		}
+		szKey.Kill();
+	}
+	aszClasses.Kill();
 }
 
 
@@ -2043,6 +2188,14 @@ bool CIDEMoveMembers::Move(SIDEMembersMove* psMove, CChars* pszStatus)
 				szBlock.Kill();
 				szDest.Kill();
 			}
+		}
+
+		//Virtual in the base it is in now: what the classes under that have of it overrides it, and says so.  Up and
+		//abstract, its own class's does too (it stays); up with its body, its own class's leaves.
+		if (bResult && psMember->bFunction && (psMember->bAbstract || (psMove->bUp && IsDeclaredVirtual(psMember, szText))))
+		{
+			MarkOverriders(psMember, psMove->bUp ? psMove->asTargets.Get(psMove->uiTarget)->szKey.Text() : psMove->sClass.szKey.Text(),
+						   (psMove->bUp && !psMember->bAbstract) ? psMove->sClass.szKey.Text() : NULL, &cEdits);
 		}
 
 		//Out of its class, unless it goes up abstract (it stays) or stays abstract (pure).

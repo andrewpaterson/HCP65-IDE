@@ -1444,7 +1444,7 @@ CHECKS = [
 		 r'^Conflict: CVessel already has Init\(int\)\.$', r'^Move members: there is no Nope$',
 		 r"^Conflict: Count\(\) can't be abstract: only a function that isn't static or a template can be\.$",
 		 r'^Status: Pulled 2 members up from CDrum to CVessel\.$', r'^Status: Pulled Roll\(\) up from CDrum to CVessel\.$',
-		 r'^14\|\tvoid\t\t\tSeal\(void\);$', r'^15\|\tvirtual void\tRoll\(void\) =0;$', r'^16\|\};$', r'^12\|\tint\t\tmiLevel;$', r'^21\|\tvoid\tRoll\(void\);$', r'^35 lines$'],
+		 r'^14\|\tvoid\t\t\tSeal\(void\);$', r'^15\|\tvirtual void\tRoll\(void\) =0;$', r'^16\|\};$', r'^12\|\tint\t\tmiLevel;$', r'^21\|\tvoid\tRoll\(void\) override;$', r'^35 lines$'],
 		[]),
 	('move-members-push-down', dict(MakeMoveMembersCopy(), **{
 		#Push Members Down: the classes that derive from the class each get the member and a copy of its definition
@@ -1471,7 +1471,7 @@ CHECKS = [
 		[r'^Status: Pushed Vent\(\) down from CVessel to CDrum, CKeg\.$',
 		 r"^Conflict: CKeg::Tap uses miVolume \(Drum\.cpp line 71\), which CVessel won't have\.$", r"^Conflict: CVessel::Init uses miVolume \(Vessel\.cpp line 10\), which CVessel won't have\.$", r'^Move members: not moved$',
 		 r'^8\|\tint\t\tmiVolume;$', r'^13\|\tvirtual void\tVent\(void\) =0;$', r'^14\|\tvoid\t\t\tSeal\(void\);$',
-		 r'^23\|\tvoid\tHide\(void\);$', r'^24\|\tvirtual void\tVent\(void\);$', r'^25\|\};$', r'^31\|\tvoid\tTap\(void\);$', r'^32\|\tvoid\tVent\(void\) override;$', r'^33\|\};$',
+		 r'^23\|\tvoid\tHide\(void\);$', r'^24\|\tvirtual void\tVent\(void\) override;$', r'^25\|\};$', r'^31\|\tvoid\tTap\(void\);$', r'^32\|\tvoid\tVent\(void\) override;$', r'^33\|\};$',
 		 r'^18\|void CVessel::Seal\(void\)$', r'^21 lines$', r'^79\|void CKeg::Vent\(void\)$', r'^89\|void CDrum::Vent\(void\)$', r'^91\|\tmiVolume = 0;$', r'^92 lines$'],
 		[r'CVessel::Vent', r'CDrum::Spare uses']),
 	('move-members-template', dict(MakeMoveMembersCopy(), **{
@@ -1883,7 +1883,7 @@ CHECKS = [
 		 r'^12\|\t//How full it is\.$', r'^13\|\tint\t\tGetLevel\(void\) \{ return miLevel; \}$', r'^14\|\tvoid\tFill\(int iAmount\);$', r'^15\|\tvirtual void\tRoll\(void\) =0;$', r'^16\|\};$', r'^19\|#endif // __BARREL_H__$',
 		 r'^1\|#include "Barrel\.h"$', r'^2\|#include "Drum\.h"$', r'^9\|void CBarrel::Fill\(int iAmount\)$', r'^11\|\tmiLevel \+= iAmount;$', r'^12 lines$',
 		 r'^4\|#include "Barrel\.h"$', r'^7\|class CDrum : public CVessel, public CBarrel$', r'^13\|\tint\t\tmiRate, miStep;$', r'^16\|\tvoid\tInit\(int iVolume\);$', r'^17\|\tint\t\tSpare\(void\);$',
-		 r'^18\|\tvoid\tRoll\(void\);$', r'^32 lines$', r'^19\|int CDrum::Spare\(void\)$', r'^29\|void CDrum::Roll\(void\)$', r'^72 lines$',
+		 r'^18\|\tvoid\tRoll\(void\) override;$', r'^32 lines$', r'^19\|int CDrum::Spare\(void\)$', r'^29\|void CDrum::Roll\(void\)$', r'^72 lines$',
 		 r'^\d+\|    <ClCompile Include="Barrel\.cpp" />$', r'^\d+\|    <ClInclude Include="Barrel\.h" />$'],
 		[r'CDrum::Fill']),
 	('extract-interface', dict(MakeMoveMembersCopy(), **{
@@ -1893,7 +1893,7 @@ CHECKS = [
 		'DEBUG': 'edit:renamesearch:---s,edit:extractinterface:CFillable|Fill(int);miLevel,edit:extractinterface:CFillable|Fill(int);Roll(),printdisklines:Fillable.h,printdisklines:Drum.h,printdisklines:Drum.cpp'}),
 		[r"^Extract Class: an interface has only functions, and miLevel isn't one$", r'^Status: Extracted the interface CFillable from CDrum: 2 members, in Fillable\.h\.$',
 		 r'^6\|class CFillable$', r'^8\|public:$', r'^9\|\tvirtual void\tFill\(int iAmount\) =0;$', r'^10\|\tvirtual void\tRoll\(void\) =0;$', r'^11\|\};$', r'^14 lines$',
-		 r'^4\|#include "Fillable\.h"$', r'^7\|class CDrum : public CVessel, public CFillable$', r'^13\|\tint\t\tmiLevel;$', r'^20\|\tvoid\tFill\(int iAmount\);$', r'^22\|\tvoid\tRoll\(void\);$', r'^36 lines$',
+		 r'^4\|#include "Fillable\.h"$', r'^7\|class CDrum : public CVessel, public CFillable$', r'^13\|\tint\t\tmiLevel;$', r'^20\|\tvoid\tFill\(int iAmount\) override;$', r'^22\|\tvoid\tRoll\(void\) override;$', r'^36 lines$',
 		 r'^19\|void CDrum::Fill\(int iAmount\)$', r'^82 lines$'],
 		[r'^Conflict']),
 	('extract-class', dict(MakeMoveMembersCopy(), **{
