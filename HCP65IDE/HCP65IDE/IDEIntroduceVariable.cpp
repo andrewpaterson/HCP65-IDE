@@ -58,6 +58,7 @@ void SIDEIntroduction::Init(void)
 	szIndent.Init();
 	asDeclared.Init();
 	aszUsed.Init();
+	aszWarnings.Init();
 	szFunctionKey.Init();
 	iFunctionLine = 0;
 	iFunctionColumn = 0;
@@ -74,6 +75,7 @@ void SIDEIntroduction::Init(void)
 //////////////////////////////////////////////////////////////////////////
 void SIDEIntroduction::Kill(void)
 {
+	aszWarnings.Kill();
 	szClassKey.Kill();
 	szFunctionKey.Kill();
 	aszUsed.Kill();
@@ -239,6 +241,108 @@ bool CIDEIntroduceVariable::CanIntroduce(void)
 
 
 Ptr<CMenuContainer> CIDEIntroduceVariable::GetChooser(void) { return mpChooser; }
+
+
+//Finds what an expression names that can be changed (a variable, a member, an element), as it is written.
+class CIDENamedPartFinder : public CCPPSyntaxChildVisitor
+{
+public:
+	CIDERefactorUnit*	mpcUnit;
+	CArrayChars*		mpaszParts;
+
+	void	Look(CCPPSyntax* pcNode)
+	{
+		CChars	szTokens;
+
+		if ((pcNode->GetKind() == CPPS_IdExpression) || (pcNode->GetKind() == CPPS_MemberExpression) || (pcNode->GetKind() == CPPS_SubscriptExpression))
+		{
+			szTokens.Init();
+			mpcUnit->AppendTokens(pcNode->miFirstToken, pcNode->miLastToken, &szTokens);
+			mpaszParts->AddIfUnique(szTokens.Text());
+			szTokens.Kill();
+		}
+		pcNode->VisitFields(this);
+	}
+
+	void	Visit(CCPPSyntax* pcChild) override	{ Look(pcChild); }
+};
+
+
+//Finds where one of those is changed between two tokens (CIDEIntroduceVariable::FindReplaceWarnings).
+class CIDEChangeBetweenFinder : public CCPPSyntaxChildVisitor
+{
+public:
+	CIDERefactorUnit*	mpcUnit;
+	CArrayChars*		mpaszParts;
+	CArrayChars*		mpaszWarnings;
+	int32				miAfter;
+	int32				miBefore;
+
+	void	Visit(CCPPSyntax* pcChild) override
+	{
+		SCPPSyntaxRange	sRange;
+		CChars			szTokens;
+		CChars			szWarning;
+
+		if (mpcUnit->IsExpression(pcChild) && (pcChild->miFirstToken > miAfter) && (pcChild->miLastToken < miBefore) && (mpcUnit->GetPass()->FindChanges(pcChild) != 0) &&
+			mpcUnit->GetRange(pcChild, &sRange))
+		{
+			szTokens.Init();
+			mpcUnit->AppendTokens(pcChild->miFirstToken, pcChild->miLastToken, &szTokens);
+			if (mpaszParts->GetIndex(szTokens.Text()) != ARRAY_ELEMENT_NOT_FOUND)
+			{
+				szWarning.Init(szTokens);
+				szWarning.Append(", which the expression names, is changed at line ")->Append((int32)(sRange.iLine + 1))->Append(", between its first occurrence and its last: they may not all be the same value.");
+				mpaszWarnings->AddIfUnique(szWarning.Text());
+				szWarning.Kill();
+			}
+			szTokens.Kill();
+		}
+		pcChild->VisitFields(this);
+	}
+};
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// What replacing every occurrence of the expression with one variable
+// could change (psDest->aszWarnings), where it has more than one: the
+// expression does something each time it is worked out (a call, a ++, an
+// assignment), which would be done once; or something it names is
+// changed between its first occurrence and its last, so they aren't all
+// the same value.  A warning, shown before all are replaced: the user
+// may know better (a call that only reads; a loop isn't followed round).
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEIntroduceVariable::FindReplaceWarnings(CIDERefactorUnit* pcUnit, CCPPSyntax* pcBody, CCPPSyntax* pcSelected, CArraySyntax* papcNodes, SIDEIntroduction* psDest)
+{
+	CIDEEffectFinder		cEffects;
+	CIDENamedPartFinder		cParts;
+	CIDEChangeBetweenFinder	cChanges;
+	CArrayChars				aszParts;
+
+	if (papcNodes->NumElements() < 2)
+	{
+		return;
+	}
+	cEffects.mbEffects = false;
+	cEffects.Look(pcSelected);
+	if (cEffects.mbEffects)
+	{
+		psDest->aszWarnings.Add("The expression does something each time it is worked out (a call, a ++ or an assignment): one variable for every occurrence does it once.");
+	}
+	aszParts.Init();
+	cParts.mpcUnit = pcUnit;
+	cParts.mpaszParts = &aszParts;
+	cParts.Look(pcSelected);
+	cChanges.mpcUnit = pcUnit;
+	cChanges.mpaszParts = &aszParts;
+	cChanges.mpaszWarnings = &psDest->aszWarnings;
+	cChanges.miAfter = papcNodes->GetPtr(0)->miLastToken;
+	cChanges.miBefore = papcNodes->GetPtr(papcNodes->NumElements() - 1)->miFirstToken;
+	pcBody->VisitFields(&cChanges);
+	aszParts.Kill();
+}
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -917,6 +1021,7 @@ bool CIDEIntroduceVariable::FindIntroduction(SIDEIntroduction* psDest)
 
 		apcNodes.Init();
 		FindOccurrences(&cUnit, pcFunction->mpcBody, pcExpression, szText, psDest, &apcNodes);
+		FindReplaceWarnings(&cUnit, pcFunction->mpcBody, pcExpression, &apcNodes, psDest);
 		psDest->bPossible = apcNodes.NumElements() > 0;
 		if (!psDest->bPossible)
 		{
@@ -1470,6 +1575,8 @@ bool CIDEIntroduceVariable::IntroduceElsewhere(SIDEIntroduction* psIntroduction,
 //////////////////////////////////////////////////////////////////////////
 char* CIDEIntroduceVariable::PrintIntroduction(SIDEIntroduction* psIntroduction, CChars* pszDest)
 {
+	size	i;
+
 	pszDest->Append("Introduce Variable: ");
 	if (!psIntroduction->bPossible)
 	{
@@ -1478,6 +1585,10 @@ char* CIDEIntroduceVariable::PrintIntroduction(SIDEIntroduction* psIntroduction,
 	}
 	pszDest->Append('[')->Append(psIntroduction->szExpression)->Append("] is [")->Append(psIntroduction->szType)->Append("], named [")->Append(psIntroduction->szSuggested);
 	pszDest->Append("], ")->Append((uint32)psIntroduction->asOccurrences.NumElements())->Append(psIntroduction->asOccurrences.NumElements() == 1 ? " occurrence" : " occurrences")->AppendNewLine();
+	for (i = 0; i < psIntroduction->aszWarnings.NumElements(); i++)
+	{
+		pszDest->Append("  Replacing all: ")->Append(psIntroduction->aszWarnings.GetText(i))->AppendNewLine();
+	}
 	return pszDest->Text();
 }
 
@@ -1796,9 +1907,13 @@ bool CIDEIntroduceVariable::ShowIntroduce(int iKind)
 			mbAll = mpAllBox->IsTicked();
 			bAll = mbAll;
 		}
-		szText.Init(mpNameField->GetText());
-		bResult = Introduce(&msShown, szText.Text(), bAll, NULL, miKind);
-		szText.Kill();
+		//What replacing all of them could change is shown first: Cancel there introduces nothing.
+		if (!bAll || (msShown.aszWarnings.NumElements() == 0) || mpcContent->GetChangeSignature()->ShowConflicts(&msShown.aszWarnings))
+		{
+			szText.Init(mpNameField->GetText());
+			bResult = Introduce(&msShown, szText.Text(), bAll, NULL, miKind);
+			szText.Kill();
+		}
 	}
 	mpNameField = NULL;
 	mpError = NULL;

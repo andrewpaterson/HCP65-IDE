@@ -86,6 +86,7 @@ struct SIDEIntroduction
 	bool					bConstant;			//It names no variable and calls nothing: it can be a constant.
 	bool					bUsesLocals;		//It names the function's own variables or parameters,
 	bool					bUsesMembers;		//or members of the function's class (or this): a call of the function can't give it.
+	CArrayChars				aszWarnings;		//What replacing every occurrence could change: shown first, as Problems Detected.
 
 	void	Init(void);
 	void	Kill(void);
@@ -154,6 +155,7 @@ public:
 	bool	ChooseCandidate(size uiCandidate);
 	Ptr<CMenuContainer>	GetChooser(void);
 	bool	FindIntroduction(SIDEIntroduction* psDest);
+	void	FindReplaceWarnings(CIDERefactorUnit* pcUnit, CCPPSyntax* pcBody, CCPPSyntax* pcSelected, CArraySyntax* papcNodes, SIDEIntroduction* psDest);
 	bool	Introduce(SIDEIntroduction* psIntroduction, const char* szName, bool bAll, CChars* pszStatus = NULL, int iKind = IDE_INTRODUCE_VARIABLE);
 	const char*	GetNameProblem(SIDEIntroduction* psIntroduction, const char* szName, int iKind = IDE_INTRODUCE_VARIABLE);
 	char*	PrintIntroduction(SIDEIntroduction* psIntroduction, CChars* pszDest);

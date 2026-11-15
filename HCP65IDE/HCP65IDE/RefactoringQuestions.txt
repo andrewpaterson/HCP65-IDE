@@ -135,6 +135,7 @@ Answered
     Answered 2026-11-15: warn, in Problems Detected, and let the user go on.  To do: where something in the
     expression is changed between its first and last occurrence (FindChanges), or the expression does something
     (a call, a ++), replacing every occurrence shows that first.
+    Done 2026-11-15 (CIDEIntroduceVariable::FindReplaceWarnings).
 
 10. Change Signature's dialog isn't IntelliJ's table.  WindowLib has no table whose cells are edited, so it is in the
     Build Configurations dialog's way: the parameters in a list (with Add, Remove, Up and Down under it) and the

@@ -1015,7 +1015,7 @@ CHECKS = [
 		[r'^Introduce Variable: \[miScale \* 2\] is \[int\], named \[iScale\], 2 occurrences$', r'^Status: Introduced int iDouble = miScale \* 2: 2 occurrences replaced\.$',
 		 r'Calc\.cpp \(focus\) line 67: \[\tiDouble = miScale \* 2;\]$',
 		 r'^62\|\tint\t\tiResult;$', r'^63\|\tCCalc\*\tpcOther;$', r'^64\|\tint\t\tiDouble;$', r'^65\|$', r'^66\|\tpcOther = this;$', r'^67\|\tiDouble = miScale \* 2;$',
-		 r'^68\|\tiResult = Scaled\(iExtra\) \+ iDouble;$', r'^71\|\t\tiResult \+= iDouble;$', r'^102 lines$'],
+		 r'^68\|\tiResult = Scaled\(iExtra\) \+ iDouble;$', r'^71\|\t\tiResult \+= iDouble;$', r'^128 lines$'],
 		[r"can't"]),
 	('introduce-variable-one', dict(MakeIntroduceVariableCopy(), **{
 		#The selected occurrence alone: the other is left as it is written.
@@ -1039,7 +1039,7 @@ CHECKS = [
 		'WAIT_INDEX': '1', 'OPEN': 'Calc.cpp',
 		'DEBUG': 'edit:renamesearch:---s,edit:selecttext:72:2-72:11,edit:introduce:szName,printdisklines:Calc.cpp'}),
 		[r'^Introduce Variable: \[GetName\(\)\] is \[char\*\], named \[szName\], 1 occurrence$', r'^Status: Introduced char\* szName = GetName\(\): the statement is its assignment\.$',
-		 r'^64\|\tchar\*\tszName;$', r'^73\|\tszName = GetName\(\);$', r'^74\|\tInit\(\);$', r'^101 lines$'],
+		 r'^64\|\tchar\*\tszName;$', r'^73\|\tszName = GetName\(\);$', r'^74\|\tInit\(\);$', r'^127 lines$'],
 		[r"can't"]),
 	('introduce-variable-no-declarations', dict(MakeIntroduceVariableCopy(), **{
 		#A function with no declarations gets them: the variable's, and a blank line.  Its type is the compiler's where
@@ -1076,14 +1076,14 @@ CHECKS = [
 		         'edit:selecttext:66:29-66:40,edit:introduce:iExtra,edit:introduce:2bad,printdisklines:Calc.cpp'}),
 		[r'^Introduce Variable: nothing is selected$', r"^Introduce Variable: can't: it has no value \(its type is void\)$", r"^Introduce Variable: can't: the selection isn't an expression$",
 		 r'^Introduce Variable: \[iResult\] is \[int\], named \[iResult2\], 1 occurrence$',
-		 r'^Status: Introduce Variable: The function uses that name already\.$', r"^Status: Introduce Variable: It isn't a name\.$", r'^100 lines$'],
+		 r'^Status: Introduce Variable: The function uses that name already\.$', r"^Status: Introduce Variable: It isn't a name\.$", r'^126 lines$'],
 		[r'^Status: Introduced']),
 	('introduce-variable-undo', dict(MakeIntroduceVariableCopy(), **{
 		#One undo takes all of it back: the declaration, the assignment and the occurrences.
 		'WAIT_INDEX': '1', 'OPEN': 'Calc.cpp',
 		'DEBUG': 'edit:selecttext:66:29-66:40,edit:introduce:iDouble,edit:undo,edit:renamesearch:---s,edit:selecttext:72:2-72:11,edit:introduce:szName,printdisklines:Calc.cpp'}),
 		[r'^Status: Introduced int iDouble', r'^62\|\tint\t\tiResult;$', r'^63\|\tCCalc\*\tpcOther;$', r'^64\|\tchar\*\tszName;$', r'^65\|$',
-		 r'^67\|\tiResult = Scaled\(iExtra\) \+ miScale \* 2;$', r'^101 lines$'],
+		 r'^67\|\tiResult = Scaled\(iExtra\) \+ miScale \* 2;$', r'^127 lines$'],
 		[r'\|.*iDouble']),
 	('introduce-variable-dialog', dict(MakeIntroduceVariableCopy(), **{
 		#The dialog: the suggested name typed over, every occurrence replaced as its box says to start with.
@@ -1100,6 +1100,20 @@ CHECKS = [
 		 r'^Popup: Expressions \| miScale \| miScale \* 2 \| Scaled\(iExtra\) \+ miScale \* 2 \| iResult = Scaled\(iExtra\) \+ miScale \* 2$',
 		 r'^Selection: \[miScale \* 2\] on line 66', r'^Introduce Variable: \[miScale \* 2\] is \[int\], named \[iScale\], 2 occurrences$'],
 		[r"can't"]),
+	('introduce-variable-warnings', dict(MakeIntroduceVariableCopy(), **{
+		#What replacing every occurrence could change is found, and shown before all are replaced: something the
+		#expression names is changed between its occurrences; the expression is a call.  Cancel in Problems Detected
+		#introduces nothing; Continue replaces them all.
+		'WAIT_INDEX': '1', 'OPEN': 'Calc.cpp', 'SETTINGS': MakeSettingsFile(), 'DIALOG_ANSWER': 'OK|Cancel|OK|OK',
+		'DEBUG': 'edit:renamesearch:---s,edit:selecttext:122:11-122:20,edit:introducible,edit:selecttext:125:18-125:30,edit:introducible,edit:selecttext:122:11-122:20,introducevariable,answered:2,printstatus,'
+				 'edit:selecttext:122:11-122:20,introducevariable,answered:4,printstatus'}),
+		[r'^Introduce Variable: \[iBase \* 2\] is \[int\], named \[iBase2\], 2 occurrences$',
+		 r'^  Replacing all: iBase, which the expression names, is changed at line 123, between its first occurrence and its last: they may not all be the same value\.$',
+		 r'^Introduce Variable: \[Next\(&iStep\)\] is \[int\], named \[iNext\], 2 occurrences$',
+		 r'^  Replacing all: The expression does something each time it is worked out \(a call, a \+\+ or an assignment\): one variable for every occurrence does it once\.$',
+		 r'^Dialog \[Problems Detected\] answered Cancel$', r'^Status line: $', r'^Dialog \[Problems Detected\] answered OK$',
+		 r'^Status: Introduced int iBase2 = iBase \* 2: 2 occurrences replaced\.$'],
+		[]),
 	('change-signature-reorder', dict(MakeChangeSignatureCopy(), **{
 		#Change Signature (Refactorings.txt, 2): a function's parameters put in another order and one renamed.  The
 		#declaration and the definition each keep what they wrote (the definition names them iR, iG and iB), the renamed
