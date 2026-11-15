@@ -40,12 +40,6 @@ Open
     Get/Is/Has/Find/Calculate/Create/Make/Read.  Tell me any prefix I have wrong or missing (int64? float32 arrays
     "a"?  size as ui?) and I will put it right.
 
-10. Change Signature's dialog isn't IntelliJ's table.  WindowLib has no table whose cells are edited, so it is in the
-    Build Configurations dialog's way: the parameters in a list (with Add, Remove, Up and Down under it) and the
-    selected one's type, name, default value and value in calls in a form beside it, with the signature as it
-    would be declared shown under them as it is changed.  Everything IntelliJ's does can be done in it.  Do you want
-    an editable table built in WindowLib for it (and for whatever else would use one), or is this the way?
-
 12. Change Signature and each file's own words.  A declaration and a definition keep what they wrote for a kept
     parameter: if the definition names it iR where the class says iRed, it still does afterwards (unless you rename
     it, which names it the same in both).  IntelliJ would have one name.  Is keeping each one's own text right?
@@ -160,10 +154,6 @@ Open
     no class it is defined just before that function, not static.  IntelliJ would make it private (static if it
     uses nothing of the object).  Right as it is?
 
-37. Extract Method doesn't look for other places the same statements are written (IntelliJ offers to replace
-    duplicates), and a variable declared in the selection and used after it is only handled when it is the one
-    thing returned.  It suggests no name.  Tell me which of these matter.
-
 38. Ctrl+Alt+N is now "Inline...": a variable or a function, whichever the caret is on (IntelliJ's is the same
     key for both).  For a function a dialog asks: all calls and take the function out, all calls and keep it, or
     this call only.
@@ -235,6 +225,15 @@ Answered
     expression is changed between its first and last occurrence (FindChanges), or the expression does something
     (a call, a ++), replacing every occurrence shows that first.
 
+10. Change Signature's dialog isn't IntelliJ's table.  WindowLib has no table whose cells are edited, so it is in the
+    Build Configurations dialog's way: the parameters in a list (with Add, Remove, Up and Down under it) and the
+    selected one's type, name, default value and value in calls in a form beside it, with the signature as it
+    would be declared shown under them as it is changed.  Everything IntelliJ's does can be done in it.  Do you want
+    an editable table built in WindowLib for it (and for whatever else would use one), or is this the way?
+    Answered 2026-11-15: yes, WindowLib gets an editable table, and it is built first, before the rest of the
+    refactoring plan.  To do: the table as a WindowLib component of its own, then Change Signature's dialog (and
+    Pull Members Up's and Push Members Down's, question 19) made tables with it.
+
 11. Change Signature and the assembly's labels.  The label is asked of the compiler for the processor of the build
     configuration that is selected (W65C816 or 65C64: an int is "s" on one and "i" on the other), and only that
     processor's spelling is changed in the solution's assembly.  With an MSVC or GCC configuration selected nothing
@@ -250,6 +249,14 @@ Answered
     Answered 2026-11-15: yes, pointers, as the default of an option in Extract Method's dialog (a tick, as IDEA's
     dialog has its options); references where it is unticked.  To do: the tick, and with it the uses in the moved
     statements rewritten (*piLow, psOther->) and the call passing addresses.
+
+37. Extract Method doesn't look for other places the same statements are written (IntelliJ offers to replace
+    duplicates), and a variable declared in the selection and used after it is only handled when it is the one
+    thing returned.  It suggests no name.  Tell me which of these matter.
+    Answered 2026-11-15: find duplicates in the same file (the comparison not minding what the variables are
+    called) and offer to replace them with calls.  And when the refactoring plan is done, remind the user of a
+    feature of its own to come back to: "Look for duplicates of selected text / function".  The one variable
+    declared in the selection and used after it, and the name suggested, weren't answered.
 
 45. Optimise #includes (Ctrl+Alt+O) on a header: when an #include goes (nothing the header names comes from it, or
     it becomes a forward declaration), the files that #include the header and got a name through it are each given
