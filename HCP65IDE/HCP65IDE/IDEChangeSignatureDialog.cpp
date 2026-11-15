@@ -27,14 +27,18 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "StandardLib/Objects.h"
 #include "WindowLib/FillContainer.h"
 #include "WindowLib/GridContainer.h"
-#include "WindowLib/RoundedBoxCanvasDraw.h"
 #include "IDEChangeSignatureDialog.h"
 
 
 #define IDE_SIGNATURE_DIALOG_WIDTH		820
 #define IDE_SIGNATURE_DIALOG_HEIGHT		420
-#define IDE_SIGNATURE_DIALOG_LIST_WIDTH	320
 #define IDE_SIGNATURE_DIALOG_GAP		12
+
+//The parameters' table's columns.
+#define IDE_SIGNATURE_COLUMN_TYPE		0
+#define IDE_SIGNATURE_COLUMN_NAME		1
+#define IDE_SIGNATURE_COLUMN_DEFAULT	2
+#define IDE_SIGNATURE_COLUMN_VALUE		3
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -72,13 +76,10 @@ void CIDEChangeSignatureDialog::Init(Ptr<CWindow> pOwner, SDialogLook* psLook, C
 	mpDialog->SetOKCaption("Refactor");
 	mpDialog->SetApprover(this, &CIDEChangeSignatureDialog::Approve);
 
-	mpList->GetSelectionEvent()->Add(this, &CIDEChangeSignatureDialog::SelectionChanged);
+	mpTable->GetSelectionEvent()->Add(this, &CIDEChangeSignatureDialog::SelectionChanged);
+	mpTable->GetChangeEvent()->Add(this, &CIDEChangeSignatureDialog::CellChanged);
 	mpFunction->GetChangeEvent()->Add(this, &CIDEChangeSignatureDialog::FieldChanged);
 	mpReturn->GetChangeEvent()->Add(this, &CIDEChangeSignatureDialog::FieldChanged);
-	mpType->GetChangeEvent()->Add(this, &CIDEChangeSignatureDialog::FieldChanged);
-	mpName->GetChangeEvent()->Add(this, &CIDEChangeSignatureDialog::FieldChanged);
-	mpDefault->GetChangeEvent()->Add(this, &CIDEChangeSignatureDialog::FieldChanged);
-	mpCallValue->GetChangeEvent()->Add(this, &CIDEChangeSignatureDialog::FieldChanged);
 	mpAdd->GetClickEvent()->Add(this, &CIDEChangeSignatureDialog::AddClicked);
 	mpRemove->GetClickEvent()->Add(this, &CIDEChangeSignatureDialog::RemoveClicked);
 	mpUp->GetClickEvent()->Add(this, &CIDEChangeSignatureDialog::UpClicked);
@@ -88,8 +89,7 @@ void CIDEChangeSignatureDialog::Init(Ptr<CWindow> pOwner, SDialogLook* psLook, C
 	mpFunction->SetText(psSignature->szOldName.Text());
 	mpReturn->SetText(psSignature->szOldReturn.Text());
 	mbUpdating = false;
-	ShowList();
-	ShowSelected();
+	ShowTable();
 	ShowPreview();
 
 	PostInit();
@@ -105,16 +105,11 @@ void CIDEChangeSignatureDialog::Class(void)
 	M_Pointer(mpDialog);
 	M_Pointer(mpFunction);
 	M_Pointer(mpReturn);
-	M_Pointer(mpList);
-	M_Pointer(mpScrollPane);
+	M_Pointer(mpTable);
 	M_Pointer(mpAdd);
 	M_Pointer(mpRemove);
 	M_Pointer(mpUp);
 	M_Pointer(mpDown);
-	M_Pointer(mpType);
-	M_Pointer(mpName);
-	M_Pointer(mpDefault);
-	M_Pointer(mpCallValue);
 	M_Pointer(mpPreview);
 	M_Pointer(mpError);
 	U_Pointer(mpcOwner);
@@ -137,16 +132,13 @@ void CIDEChangeSignatureDialog::Free(void)
 	{
 		mpDialog->ClearApprover();
 	}
-	if (mpList.IsNotNull())
+	if (mpTable.IsNotNull())
 	{
-		mpList->GetSelectionEvent()->Remove(this);
+		mpTable->GetSelectionEvent()->Remove(this);
+		mpTable->GetChangeEvent()->Remove(this);
 	}
 	StopListening(mpFunction);
 	StopListening(mpReturn);
-	StopListening(mpType);
-	StopListening(mpName);
-	StopListening(mpDefault);
-	StopListening(mpCallValue);
 	StopListening(mpAdd);
 	StopListening(mpRemove);
 	StopListening(mpUp);
@@ -274,9 +266,8 @@ void CIDEChangeSignatureDialog::AddFormRow(Ptr<CGridContainer> pForm, int32* piR
 //////////////////////////////////////////////////////////////////////////
 //
 // The function's name and what it returns across the top; the
-// parameters' list with its buttons on the left and the selected one's
-// form on the right; the signature as it would be, and what is wrong
-// with it, across the bottom.
+// parameters' table with its buttons under it; the signature as it would
+// be, and what is wrong with it, across the bottom.
 //
 //////////////////////////////////////////////////////////////////////////
 Ptr<CComponent> CIDEChangeSignatureDialog::CreateBody(void)
@@ -286,12 +277,9 @@ Ptr<CComponent> CIDEChangeSignatureDialog::CreateBody(void)
 	Ptr<CGridContainer>		pBody;
 	Ptr<CGridContainer>		pTop;
 	Ptr<CGridContainer>		pMiddle;
-	Ptr<CGridContainer>		pLeft;
 	Ptr<CGridContainer>		pButtons;
-	Ptr<CGridContainer>		pForm;
 	Ptr<CGridContainer>		pBottom;
 	Ptr<CFillContainer>		pGap;
-	SInsets					sInsets;
 	int32					iRow;
 
 	pWindow = mpDialog->GetWindow();
@@ -305,14 +293,13 @@ Ptr<CComponent> CIDEChangeSignatureDialog::CreateBody(void)
 	AddFormRow(pTop, &iRow, "Name", mpFunction);
 	AddFormRow(pTop, &iRow, "Return type", mpReturn);
 
-	sInsets.Init(0, 0);
-	mpList = OMalloc<CListContainer>(pWindow, psLook->pcTheme);
-	mpList->SetHighlightDraws(OMalloc<CRoundedBoxCanvasDraw>(psLook->pcTheme->GetColour(TC_ListSelected), 4, &sInsets), OMalloc<CRoundedBoxCanvasDraw>(psLook->pcTheme->GetColour(TC_ListHover), 4, &sInsets));
-	mpList->SetAlignment(CSH_Stretch, CSV_Top);
-	mpScrollPane = OMalloc<CScrollPane>(pWindow, psLook->pcTheme);
-	mpScrollPane->SetContent(mpList);
-	mpScrollPane->SetAlignment(CSH_Stretch, CSV_Stretch);
-	mpScrollPane->SetDesiredSize(IDE_SIGNATURE_DIALOG_LIST_WIDTH, -1);
+	//The parameters: a row each, edited where they are.
+	mpTable = OMalloc<CTable>(pWindow, psLook->pcTheme);
+	mpTable->AddColumn("Type", TCK_Text, 3);
+	mpTable->AddColumn("Name", TCK_Text, 2);
+	mpTable->AddColumn("Default value", TCK_Text, 2);
+	mpTable->AddColumn("Value in calls", TCK_Text, 2);
+	mpTable->SetAlignment(CSH_Stretch, CSV_Stretch);
 
 	mpAdd = CreateButton("Add");
 	mpRemove = CreateButton("Remove");
@@ -329,36 +316,13 @@ Ptr<CComponent> CIDEChangeSignatureDialog::CreateBody(void)
 	pButtons->AddComponent(mpDown, 6, 0);
 	pButtons->AddComponent(OMalloc<CFillContainer>(pWindow), 7, 0, 1, 1, 1, 0);  //Keeps the buttons on the left.
 
-	pLeft = OMalloc<CGridContainer>(pWindow);
-	pLeft->SetAlignment(CSH_Stretch, CSV_Stretch);
-	pLeft->AddComponent(mpScrollPane, 0, 0, 1, 1, 1, 1);
-	pGap = OMalloc<CFillContainer>(pWindow);
-	pGap->SetDesiredSize(1, IDE_SIGNATURE_DIALOG_GAP / 2);
-	pLeft->AddComponent(pGap, 0, 1);
-	pLeft->AddComponent(pButtons, 0, 2, 1, 1, 1, 0);
-
-	mpType = CreateField();
-	mpName = CreateField();
-	mpDefault = CreateField();
-	mpCallValue = CreateField();
-	pForm = OMalloc<CGridContainer>(pWindow);
-	pForm->SetAlignment(CSH_Stretch, CSV_Top);
-	iRow = 0;
-	AddFormRow(pForm, &iRow, "Type", mpType);
-	AddFormRow(pForm, &iRow, "Name", mpName);
-	AddFormRow(pForm, &iRow, "Default value", mpDefault);
-	AddFormRow(pForm, &iRow, "Value in calls", mpCallValue);
-	//What is left over goes under the rows, which keeps them at the top.
-	pGap = OMalloc<CFillContainer>(pWindow);
-	pForm->AddComponent(pGap, 0, iRow, 2, 1, 1, 1);
-
 	pMiddle = OMalloc<CGridContainer>(pWindow);
 	pMiddle->SetAlignment(CSH_Stretch, CSV_Stretch);
-	pMiddle->AddComponent(pLeft, 0, 0, 1, 1, 0, 1);
+	pMiddle->AddComponent(mpTable, 0, 0, 1, 1, 1, 1);
 	pGap = OMalloc<CFillContainer>(pWindow);
-	pGap->SetDesiredSize(IDE_SIGNATURE_DIALOG_GAP, 1);
-	pMiddle->AddComponent(pGap, 1, 0);
-	pMiddle->AddComponent(pForm, 2, 0, 1, 1, 1, 1);
+	pGap->SetDesiredSize(1, IDE_SIGNATURE_DIALOG_GAP / 2);
+	pMiddle->AddComponent(pGap, 0, 1);
+	pMiddle->AddComponent(pButtons, 0, 2, 1, 1, 1, 0);
 
 	mpPreview = OMalloc<CLabel>(pWindow, psLook->pcDimFont, "");
 	mpPreview->SetAlignment(CSH_Left, CSV_Center);
@@ -405,51 +369,44 @@ void CIDEChangeSignatureDialog::AppendRow(SIDENewParameter* psRow, CChars* pszDe
 
 //////////////////////////////////////////////////////////////////////////
 //
-// A row for each parameter, the selected one selected.
+// A row of the table for each parameter, the selected one selected.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEChangeSignatureDialog::ShowList(void)
+void CIDEChangeSignatureDialog::ShowTable(void)
 {
-	Ptr<CLabel>	pLabel;
-	CChars		szText;
-	size		i;
+	size	i;
 
 	mbUpdating = true;
-	mpList->RemoveAllComponents();
+	mpTable->RemoveAllRows();
 	for (i = 0; i < masRows.NumElements(); i++)
 	{
-		szText.Init();
-		AppendRow(masRows.Get(i), &szText);
-		if (szText.Empty())
-		{
-			szText.Append("(new parameter)");
-		}
-		pLabel = OMalloc<CLabel>(mpDialog->GetWindow(), mpDialog->GetLook()->pcTheme->GetFont(), szText.Text());
-		pLabel->SetAlignment(CSH_Left, CSV_Center);
-		mpList->AddItem(pLabel);
-		szText.Kill();
+		mpTable->AddRow();
+		ShowRow((int32)i);
 	}
-	mpList->Select(miSelected);
+	if (miSelected >= 0)
+	{
+		mpTable->SelectCell(miSelected, (mpTable->GetSelectedColumn() >= 0) ? mpTable->GetSelectedColumn() : 0);
+	}
 	mbUpdating = false;
 }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The selected parameter in the form, which is empty if there are none.
+// A parameter's row of the table as its row here says it.  Only a new
+// parameter has a value in the calls there already are.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEChangeSignatureDialog::ShowSelected(void)
+void CIDEChangeSignatureDialog::ShowRow(int32 iRow)
 {
 	SIDENewParameter*	psRow;
 
-	mbUpdating = true;
-	psRow = (miSelected >= 0) ? masRows.Get(miSelected) : NULL;
-	mpType->SetText(psRow ? psRow->szType.Text() : "");
-	mpName->SetText(psRow ? psRow->szName.Text() : "");
-	mpDefault->SetText(psRow ? psRow->szDefault.Text() : "");
-	mpCallValue->SetText(psRow ? psRow->szCallValue.Text() : "");
-	mbUpdating = false;
+	psRow = masRows.Get((size)iRow);
+	mpTable->SetCellText(iRow, IDE_SIGNATURE_COLUMN_TYPE, psRow->szType.Text());
+	mpTable->SetCellText(iRow, IDE_SIGNATURE_COLUMN_NAME, psRow->szName.Text());
+	mpTable->SetCellText(iRow, IDE_SIGNATURE_COLUMN_DEFAULT, psRow->szDefault.Text());
+	mpTable->SetCellText(iRow, IDE_SIGNATURE_COLUMN_VALUE, psRow->szCallValue.Text());
+	mpTable->SetCellEditable(iRow, IDE_SIGNATURE_COLUMN_VALUE, psRow->iOld < 0);
 }
 
 
@@ -479,26 +436,41 @@ void CIDEChangeSignatureDialog::ShowPreview(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The form's fields kept in the selected row.
+// A cell of the table changed by the user: it is its parameter's type,
+// name, default value or value in calls, and the signature shown is as
+// it is now.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEChangeSignatureDialog::Keep(void)
+void CIDEChangeSignatureDialog::CellChanged(CTable* pcTable)
 {
 	SIDENewParameter*	psRow;
+	CChars*				pszField;
+	int32				iRow;
 
-	if (miSelected < 0)
+	iRow = pcTable->GetChangedRow();
+	if (mbUpdating || (iRow < 0) || (iRow >= (int32)masRows.NumElements()))
 	{
 		return;
 	}
-	psRow = masRows.Get(miSelected);
-	psRow->szType.Set(mpType->GetText());
-	psRow->szType.StripWhitespace();
-	psRow->szName.Set(mpName->GetText());
-	psRow->szName.StripWhitespace();
-	psRow->szDefault.Set(mpDefault->GetText());
-	psRow->szDefault.StripWhitespace();
-	psRow->szCallValue.Set(mpCallValue->GetText());
-	psRow->szCallValue.StripWhitespace();
+	psRow = masRows.Get((size)iRow);
+	switch (pcTable->GetChangedColumn())
+	{
+	case IDE_SIGNATURE_COLUMN_TYPE:
+		pszField = &psRow->szType;
+		break;
+	case IDE_SIGNATURE_COLUMN_NAME:
+		pszField = &psRow->szName;
+		break;
+	case IDE_SIGNATURE_COLUMN_DEFAULT:
+		pszField = &psRow->szDefault;
+		break;
+	default:
+		pszField = &psRow->szCallValue;
+		break;
+	}
+	pszField->Set(pcTable->GetCellText(iRow, pcTable->GetChangedColumn()));
+	pszField->StripWhitespace();
+	ShowPreview();
 }
 
 
@@ -574,7 +546,8 @@ bool CIDEChangeSignatureDialog::Approve(void)
 	CChars				szText;
 	bool				bProblem;
 
-	Keep();
+	//What is being typed in a cell is the cell's.
+	mpTable->EndEdit(true);
 	szProblem.Init();
 	szText.Init(mpFunction->GetText());
 	szText.StripWhitespace();
@@ -609,21 +582,20 @@ bool CIDEChangeSignatureDialog::Approve(void)
 // Another row selected.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEChangeSignatureDialog::SelectionChanged(void)
+void CIDEChangeSignatureDialog::SelectionChanged(CTable* pcTable)
 {
-	if (mbUpdating || (mpList->GetSelected() < 0))
+	if (mbUpdating || (pcTable->GetSelectedRow() < 0))
 	{
 		return;
 	}
-	Keep();
-	miSelected = mpList->GetSelected();
-	ShowSelected();
+	miSelected = pcTable->GetSelectedRow();
 }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// What is typed shows in the list and in the signature as it is typed.
+// The function's name or what it returns typed: the signature shown is
+// as it is typed.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEChangeSignatureDialog::FieldChanged(void)
@@ -632,8 +604,6 @@ void CIDEChangeSignatureDialog::FieldChanged(void)
 	{
 		return;
 	}
-	Keep();
-	ShowList();
 	ShowPreview();
 }
 
@@ -650,7 +620,8 @@ void CIDEChangeSignatureDialog::DownClicked(CButton* pcButton) { MoveParameter(1
 void CIDEChangeSignatureDialog::AddClicked(CButton* pcButton)
 {
 	AddParameter();
-	mpDialog->GetWindow()->GetFocus()->SetFocus(mpType);
+	mpDialog->GetWindow()->GetFocus()->SetFocus(mpTable->GetList());
+	mpTable->BeginEdit();
 }
 
 
@@ -664,12 +635,15 @@ void CIDEChangeSignatureDialog::AddParameter(void)
 {
 	SIDENewParameter	sRow;
 
-	Keep();
+	mpTable->EndEdit(true);
 	sRow.Init(-1);
 	miSelected = (miSelected >= 0) ? miSelected + 1 : (int32)masRows.NumElements();
 	masRows.InsertAt(&sRow, (size)miSelected);
-	ShowList();
-	ShowSelected();
+	mbUpdating = true;
+	mpTable->InsertRow(miSelected);
+	ShowRow(miSelected);
+	mpTable->SelectCell(miSelected, IDE_SIGNATURE_COLUMN_TYPE);
+	mbUpdating = false;
 	ShowPreview();
 }
 
@@ -682,18 +656,27 @@ void CIDEChangeSignatureDialog::AddParameter(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDEChangeSignatureDialog::RemoveParameter(void)
 {
+	int32	iRemoved;
+
 	if (miSelected < 0)
 	{
 		return;
 	}
+	mpTable->EndEdit(false);
+	iRemoved = miSelected;
 	masRows.Get(miSelected)->Kill();
 	masRows.RemoveAt((size)miSelected);
 	if (miSelected >= (int32)masRows.NumElements())
 	{
 		miSelected = (int32)masRows.NumElements() - 1;
 	}
-	ShowList();
-	ShowSelected();
+	mbUpdating = true;
+	mpTable->RemoveRow(iRemoved);
+	if (miSelected >= 0)
+	{
+		mpTable->SelectCell(miSelected, (mpTable->GetSelectedColumn() >= 0) ? mpTable->GetSelectedColumn() : 0);
+	}
+	mbUpdating = false;
 	ShowPreview();
 }
 
@@ -714,13 +697,39 @@ void CIDEChangeSignatureDialog::MoveParameter(int32 iBy)
 	{
 		return;
 	}
-	Keep();
+	mpTable->EndEdit(true);
 	sRow = *masRows.Get(miSelected);
 	*masRows.Get(miSelected) = *masRows.Get(iTo);
 	*masRows.Get(iTo) = sRow;
+	mbUpdating = true;
+	mpTable->MoveRow(miSelected, iTo);
 	miSelected = iTo;
-	ShowList();
-	ShowSelected();
+	mpTable->SelectCell(miSelected, (mpTable->GetSelectedColumn() >= 0) ? mpTable->GetSelectedColumn() : 0);
+	mbUpdating = false;
+	ShowPreview();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A cell of the selected parameter's row given a text as if the user had
+// typed it there (for the checks' edits).
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEChangeSignatureDialog::SetField(int32 iColumn, const char* szText)
+{
+	SIDENewParameter*	psRow;
+	CChars*				pszField;
+
+	if ((miSelected < 0) || !mpTable->IsCellEditable(miSelected, iColumn))
+	{
+		return;
+	}
+	psRow = masRows.Get((size)miSelected);
+	pszField = (iColumn == IDE_SIGNATURE_COLUMN_TYPE) ? &psRow->szType : ((iColumn == IDE_SIGNATURE_COLUMN_NAME) ? &psRow->szName : ((iColumn == IDE_SIGNATURE_COLUMN_DEFAULT) ? &psRow->szDefault : &psRow->szCallValue));
+	pszField->Set(szText);
+	pszField->StripWhitespace();
+	mpTable->SetCellText(miSelected, iColumn, pszField->Text());
 	ShowPreview();
 }
 
@@ -767,23 +776,23 @@ void CIDEChangeSignatureDialog::ApplyEdits(const char* szEdits)
 		}
 		else if (strncmp(sz, "select:", 7) == 0)
 		{
-			mpList->Select(atoi(&sz[7]));
+			mpTable->SelectCell(atoi(&sz[7]), 0);
 		}
 		else if (strncmp(sz, "type:", 5) == 0)
 		{
-			mpType->SetText(&sz[5]);
+			SetField(IDE_SIGNATURE_COLUMN_TYPE, &sz[5]);
 		}
 		else if (strncmp(sz, "name:", 5) == 0)
 		{
-			mpName->SetText(&sz[5]);
+			SetField(IDE_SIGNATURE_COLUMN_NAME, &sz[5]);
 		}
 		else if (strncmp(sz, "default:", 8) == 0)
 		{
-			mpDefault->SetText(&sz[8]);
+			SetField(IDE_SIGNATURE_COLUMN_DEFAULT, &sz[8]);
 		}
 		else if (strncmp(sz, "value:", 6) == 0)
 		{
-			mpCallValue->SetText(&sz[6]);
+			SetField(IDE_SIGNATURE_COLUMN_VALUE, &sz[6]);
 		}
 		else if (strncmp(sz, "function:", 9) == 0)
 		{
@@ -827,10 +836,7 @@ bool CIDEChangeSignatureDialog::Show(void)
 	bool	bResult;
 
 	bResult = mpDialog->Show(IDE_SIGNATURE_DIALOG_WIDTH, IDE_SIGNATURE_DIALOG_HEIGHT);
-	if (bResult)
-	{
-		Keep();
-	}
+	mpTable->EndEdit(bResult);
 	return bResult;
 }
 

@@ -1225,7 +1225,7 @@ CHECKS = [
 		 r'^16\|\tiMixed = cBrush\.Mix\(1, Next\(\), 3\);$'],
 		[r'^[0-9]+[|].*iR2']),
 	('change-signature-dialog', dict(MakeChangeSignatureCopy(), **{
-		#The dialog: the parameters in its list, the selected one's form, and the signature as it would be, as they are
+		#The dialog: the parameters in its table, edited where they are, and the signature as it would be, as they are
 		#changed (SIGNATURE_EDITS does what a user would); then the change.
 		'WAIT_INDEX': '1', 'OPEN': 'Paint.h', 'CARET': '10:9', 'SETTINGS': MakeSettingsFile(), 'DIALOG_ANSWER': 'OK',
 		'SIGNATURE_EDITS': 'print;select:0;name:iWidth;add;type:bool;name:bFast;value:true;print;check;function:Start;return:int;print',

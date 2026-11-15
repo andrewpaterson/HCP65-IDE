@@ -25,18 +25,17 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/Button.h"
 #include "WindowLib/Dialog.h"
 #include "WindowLib/Label.h"
-#include "WindowLib/ListContainer.h"
-#include "WindowLib/ScrollPane.h"
+#include "WindowLib/Table.h"
 #include "WindowLib/TextField.h"
 #include "IDEChangeSignature.h"
 
 
-//Change Signature's dialog, as IntelliJ's: the function's name and what it returns, its parameters in a list with
-//Add, Remove, Up and Down under it, the selected parameter's type, name, default value and (a new one's) value in
-//the calls there already are in a form beside it, and under them the signature as it would be declared, as it is
-//changed.  OK isn't allowed while what is written can't be the signature (CIDEChangeSignature::FindProblem says
-//why).  It works on rows of its own, so Cancel changes nothing; GetChange gives what was asked for, with only what
-//differs from the function as it is.
+//Change Signature's dialog, as IntelliJ's: the function's name and what it returns, its parameters in a table
+//whose cells are edited where they are (a parameter's type, its name, its default value and, a new one's, its
+//value in the calls there already are: WindowLib's CTable) with Add, Remove, Up and Down under it, and under them
+//the signature as it would be declared, as it is changed.  OK isn't allowed while what is written can't be the
+//signature (CIDEChangeSignature::FindProblem says why).  It works on rows of its own, so Cancel changes nothing;
+//GetChange gives what was asked for, with only what differs from the function as it is.
 class CIDEChangeSignatureDialog : public CObject
 {
 CONSTRUCTABLE(CIDEChangeSignatureDialog);
@@ -45,16 +44,11 @@ protected:
 	Ptr<CDialog>			mpDialog;
 	Ptr<CTextField>			mpFunction;
 	Ptr<CTextField>			mpReturn;
-	Ptr<CListContainer>		mpList;
-	Ptr<CScrollPane>		mpScrollPane;
+	Ptr<CTable>				mpTable;
 	Ptr<CButton>			mpAdd;
 	Ptr<CButton>			mpRemove;
 	Ptr<CButton>			mpUp;
 	Ptr<CButton>			mpDown;
-	Ptr<CTextField>			mpType;
-	Ptr<CTextField>			mpName;
-	Ptr<CTextField>			mpDefault;
-	Ptr<CTextField>			mpCallValue;
 	Ptr<CLabel>				mpPreview;
 	Ptr<CLabel>				mpError;
 	CIDEChangeSignature*	mpcOwner;  //Not held.
@@ -84,11 +78,11 @@ protected:
 	Ptr<CComponent>		CreateButtonGap(void);
 	void				StopListening(Ptr<CTextField> pField);
 	void				StopListening(Ptr<CButton> pButton);
-	void				ShowList(void);
-	void				ShowSelected(void);
+	void				ShowTable(void);
+	void				ShowRow(int32 iRow);
 	void				ShowPreview(void);
 	void				AppendRow(SIDENewParameter* psRow, CChars* pszDest);
-	void				Keep(void);
+	void				SetField(int32 iColumn, const char* szText);
 	void				AddParameter(void);
 	void				RemoveParameter(void);
 	void				MoveParameter(int32 iBy);
@@ -96,7 +90,8 @@ protected:
 	void				RemoveClicked(CButton* pcButton);
 	void				UpClicked(CButton* pcButton);
 	void				DownClicked(CButton* pcButton);
-	void				SelectionChanged(void);
+	void				SelectionChanged(CTable* pcTable);
+	void				CellChanged(CTable* pcTable);
 	void				FieldChanged(void);
 };
 
