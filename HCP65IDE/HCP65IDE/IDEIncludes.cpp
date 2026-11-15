@@ -771,6 +771,59 @@ void CIDEIncludes::AddPlanned(SIDEIncludePlan* psPlan, const char* szHeader, con
 
 //////////////////////////////////////////////////////////////////////////
 //
+// The files given #includes, in an order that is always the same: as
+// the solution lists the files, and each file's headers by name.  (The
+// index gives the needs in the order it happened to read the files.)
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEIncludes::SortDependants(SIDEIncludePlan* psPlan)
+{
+	CIDECodeModel*	pcModel;
+	CArrayInt		aiOrder;
+	CChars			szSwap;
+	size			uiFile;
+	size			i;
+	size			j;
+	int				iSwap;
+	bool			bAfter;
+
+	pcModel = mpcContent->GetCodeModel();
+	aiOrder.Init();
+	for (i = 0; i < psPlan->aszDependants.NumElements(); i++)
+	{
+		for (uiFile = 0; (uiFile < pcModel->NumProjectFiles()) && (StringInsensitiveCompare(pcModel->GetProjectFile(uiFile), psPlan->aszDependants.GetText(i)) != 0); uiFile++)
+		{
+		}
+		aiOrder.Add((int)uiFile);
+	}
+	for (i = 1; i < aiOrder.NumElements(); i++)
+	{
+		for (j = i; j > 0; j--)
+		{
+			bAfter = (aiOrder.GetValue(j - 1) > aiOrder.GetValue(j)) ||
+					 ((aiOrder.GetValue(j - 1) == aiOrder.GetValue(j)) && (StringInsensitiveCompare(psPlan->aszDependantHeaders.GetText(j - 1), psPlan->aszDependantHeaders.GetText(j)) > 0));
+			if (!bAfter)
+			{
+				break;
+			}
+			iSwap = aiOrder.GetValue(j - 1);
+			*aiOrder.Get(j - 1) = aiOrder.GetValue(j);
+			*aiOrder.Get(j) = iSwap;
+			szSwap.Init(psPlan->aszDependants.GetText(j - 1));
+			psPlan->aszDependants.Get(j - 1)->Set(psPlan->aszDependants.GetText(j));
+			psPlan->aszDependants.Get(j)->Set(szSwap);
+			szSwap.Set(psPlan->aszDependantHeaders.GetText(j - 1));
+			psPlan->aszDependantHeaders.Get(j - 1)->Set(psPlan->aszDependantHeaders.GetText(j));
+			psPlan->aszDependantHeaders.Get(j)->Set(szSwap);
+			szSwap.Kill();
+		}
+	}
+	aiOrder.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // The names the file doesn't know, that exactly one header of the
 // solution declares and the file doesn't reach: each header is given an
 // #include.  A name it doesn't know is one the index has nothing for
@@ -1190,6 +1243,7 @@ void CIDEIncludes::FindDependants(SIDEIncludePlan* psPlan)
 		}
 		KillIDENeeds(&asNeeds);
 		aszLost.Kill();
+		SortDependants(psPlan);
 	}
 	aiLost.Kill();
 	aiKept.Kill();

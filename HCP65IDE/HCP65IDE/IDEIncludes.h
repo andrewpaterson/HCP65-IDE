@@ -174,6 +174,7 @@ protected:
 	bool	AppendForwardDeclaration(const char* szKey, const char* szDeclared, CChars* pszDest);
 	bool	FindUsedMacro(CIDEIncludeGraph* pcGraph, int iInclude, const char* szText, CChars* pszDest);
 	void	FindUnknownNames(SIDEIncludePlan* psPlan, CIDERefactorUnit* pcUnit, CIDEIncludeGraph* pcGraph, const char* szText);
+	void	SortDependants(SIDEIncludePlan* psPlan);
 	void	FindDependants(SIDEIncludePlan* psPlan);
 	void	MakeEdits(SIDEIncludePlan* psPlan, const char* szText, CIDETextEdits* pcEdits);
 	bool	MakeOrderedEdits(const char* szFileName, const char* szText, CArrayIDEIncludes* pasIncludes, CArrayInt* paiGone, CArrayChars* paszAdded, bool bSort, CIDETextEdits* pcEdits, size* puiFirst, size* puiLast, bool* pbReordered);

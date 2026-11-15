@@ -2162,7 +2162,7 @@ CHECKS = [
 		'DEBUG': 'edit:renamesearch:---s,edit:includes,edit:optimiseincludes,printdisklines:Tank.h,printdisklines:Tank.cpp,printdisklines:Main.cpp'}),
 		[r'^Optimise #includes: Tank\.h$', r'^  "Gauge\.h" \(line 3\): a forward declaration: class CGauge;$', r'^  "Valve\.h" \(line 4\): kept, CValve comes from it$',
 		 r'^  "Spare\.h" \(line 5\): removed, nothing named here comes from it$', r'^  "Units\.h" \(line 6\): kept, its macro MAX_UNITS is used$',
-		 r'^  Tank\.cpp is given #include "Gauge\.h"$', r'^  Main\.cpp is given #include "Gauge\.h"$', r'^  Main\.cpp is given #include "Spare\.h"$',
+		 r'^  Main\.cpp is given #include "Gauge\.h"$', r'^  Main\.cpp is given #include "Spare\.h"$', r'^  Tank\.cpp is given #include "Gauge\.h"$',
 		 r'^Status: Optimised the #includes of Tank\.h: 1 removed, 1 made a forward declaration; 2 files that got names through it given their own #includes\.$',
 		 r'^2\|#define __TANK_H__$', r'^3\|#include "Valve\.h"$', r'^4\|#include "Units\.h"$', r'^5\|$', r'^6\|$', r'^7\|class CGauge;$', r'^8\|$', r'^9\|$', r'^10\|class CTank$',
 		 r'^1\|#include "Tank\.h"$', r'^2\|#include "Gauge\.h"$', r'^3\|#include "Holder\.h"$', r'^4\|#include "Gauge\.h"$', r'^5\|#include "Spare\.h"$'],
