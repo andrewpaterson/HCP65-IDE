@@ -22,20 +22,10 @@ Open
     an array of 1 inside the check.  Nothing I have built writes such an array's type; if a refactoring ever would,
     it has to write N.  Noted in case it surprises you; no answer needed unless you want it done another way.
 
- 7. Introduce Variable and where the variable is declared.  I followed what every function in your code does: the
-    variable is declared with the others at the top of the function, its name lined up in their column with tabs
-    (theirs are moved over if the new type is longer), and assigned on a line before the statement that first uses
-    it.  IntelliJ would write "int iDouble = miScale * 2;" at the use.  Is the top of the function always right, or
-    do you want a choice (a box in the dialog) for declaring it where it is used?
-
  8. Introduce Variable's suggested names follow the prefixes I see in your code (i, ui, b, f, sz, c, pc, s, ps, e, p,
     pv; CChars is sz; Ptr<> is p) with what the expression's last name says, without its own prefix or a leading
     Get/Is/Has/Find/Calculate/Create/Make/Read.  Tell me any prefix I have wrong or missing (int64? float32 arrays
     "a"?  size as ui?) and I will put it right.
-
-12. Change Signature and each file's own words.  A declaration and a definition keep what they wrote for a kept
-    parameter: if the definition names it iR where the class says iRed, it still does afterwards (unless you rename
-    it, which names it the same in both).  IntelliJ would have one name.  Is keeping each one's own text right?
 
 14. Generate Definition, Generate Declaration and Move Definition out of / into Class are in the editor's Refactor
     menu.  Generate Definition has CLion's Ctrl+Shift+D; the other three have no keys.  What keys do you want?
@@ -128,12 +118,6 @@ Open
     conflict (the inlined code wouldn't compile).  A call on "&cOther" inlines as "(&cOther)->Kind()", not
     "cOther.Kind()".  Say if that matters.
 
-41. Extract Superclass, Extract Interface and Extract Class each make the new class in a header of its own (and a
-    source file if a function that moves is defined in one), named for the class without its C, as Move Class
-    does.  Their dialog is a name (and the field's name for Extract Class) and a tick for each member; leaving a
-    function in the class and only declaring it in the superclass (IntelliJ's "abstract" tick) can only be asked
-    for from a script yet.  Do you want that tick in the dialog?
-
 47. A forward declaration made from an #include is written after the #includes, two lines down ("class CGauge;"),
     with any the file has there already.  Optimise #includes does this in .cpp files too, not only in headers.  It
     leaves <> #includes, #includes inside an #if, and a .cpp's #include of its own header alone.  Right?
@@ -143,6 +127,8 @@ Open
     to make an instance method static: Make Member Function static does it from the Refactor menu today.  Do you
     want the Alt+Enter popup built, listing the refactorings that apply at the caret (Make static, Make const,
     Convert Pointer to Reference, Introduce Variable, and the rest), as its own piece of work?
+    (2026-11-15: answering 12 he asked for a refactoring "as an Alt+Enter pop-up", so the popup is taken as
+    wanted; when it is built, before or after the queue, is still his to say.)
 
 
 Answered
@@ -174,6 +160,13 @@ Answered
     Answered 2026-11-15: yes, measure it.  To do: the indexing time with templates checked as themselves and
     without, on the libraries; turned on if it is cheap, and the numbers shown to the user either way.
 
+ 7. Introduce Variable and where the variable is declared.  I followed what every function in your code does: the
+    variable is declared with the others at the top of the function, its name lined up in their column with tabs
+    (theirs are moved over if the new type is longer), and assigned on a line before the statement that first uses
+    it.  IntelliJ would write "int iDouble = miScale * 2;" at the use.  Is the top of the function always right, or
+    do you want a choice (a box in the dialog) for declaring it where it is used?
+    Answered 2026-11-15: the top of the function, always, with no choice.  Nothing to do.
+
  9. Introduce Variable replaces every occurrence of the expression in the function when asked, as IntelliJ does,
     without checking that the expression's value is the same at each (a variable in it may have changed between
     them, or it may be a call with effects).  IntelliJ doesn't check either.  Do you want it to refuse, or to warn,
@@ -199,6 +192,15 @@ Answered
     is changed in assembly at all.  Should it always do both processors' labels, whatever is selected?
     Answered 2026-11-15: yes, always both processors' labels, whatever configuration is selected.  To do in Change
     Signature (and wherever else a label is asked of the compiler for one target: Rename's assembly, Move).
+
+12. Change Signature and each file's own words.  A declaration and a definition keep what they wrote for a kept
+    parameter: if the definition names it iR where the class says iRed, it still does afterwards (unless you rename
+    it, which names it the same in both).  IntelliJ would have one name.  Is keeping each one's own text right?
+    Answered 2026-11-15: no: it unifies.  To do: after Change Signature a parameter has one name in every
+    declaration and definition (the first declaration's, unless it is renamed in the dialog), its uses in each
+    body renamed with it.  And a refactoring of its own, offered from an Alt+Enter popup: the parameters' names
+    made the same from either side, the declaration's taken by the definition or the definition's by the
+    declaration, whichever the caret is on.
 
 13. Change Signature of a constructor changes its declarations and definitions, but an object made with arguments
     isn't written as a call (CFoo x(1, 2); new CFoo(1); a member's initialiser), and those places aren't changed
@@ -271,6 +273,14 @@ Answered
     Answered 2026-11-15: some of the rewriting.  To do: a function that changes its parameters is inlined with
     variables of its own for them, and a call inside a bigger expression is inlined with a variable for what it
     gives, declared and assigned before the statement.  A function that returns before its end stays refused.
+
+41. Extract Superclass, Extract Interface and Extract Class each make the new class in a header of its own (and a
+    source file if a function that moves is defined in one), named for the class without its C, as Move Class
+    does.  Their dialog is a name (and the field's name for Extract Class) and a tick for each member; leaving a
+    function in the class and only declaring it in the superclass (IntelliJ's "abstract" tick) can only be asked
+    for from a script yet.  Do you want that tick in the dialog?
+    Answered 2026-11-15: yes: the dialog is refitted with the table (WindowLib's CTable, as Pull Members Up's),
+    with a column for it.  To do in Extract Superclass, Extract Interface and Extract Class.
 
 42. Extract Class makes every member that moves public in the new class, because the class it came from uses them
     through the field ("mcGauge.miLevel"); IntelliJ offers to generate getters and setters instead (which is
