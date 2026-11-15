@@ -385,6 +385,16 @@ def MakeTemplateInterfaceCopy():
 	return {'SOLUTION': os.path.join(szFolder, 'TemplateInterface.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
 
 
+def MakeConstructorsCopy():
+	#A copy of Input/Constructors: CBox, whose constructor takes two arguments, made as a variable (with ( and with
+	#{), with new, as a temporary, as a base and as a member of CCrate.
+	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
+	atexit.register(shutil.rmtree, szRoot, True)
+	szFolder = os.path.join(szRoot, 'Constructors')
+	shutil.copytree(os.path.join(HERE, 'Input', 'Constructors'), szFolder)
+	return {'SOLUTION': os.path.join(szFolder, 'Constructors.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
+
+
 def MakePointersCopy():
 	#A copy of Input/Pointers, to make pointers references in and back: CVat's functions take SLevel by pointer and
 	#by reference (one overridden, one that calls itself, one that tests its pointer, one that steps it), and Use
@@ -1159,6 +1169,18 @@ CHECKS = [
 		 r'^  Replacing all: The expression does something each time it is worked out \(a call, a \+\+ or an assignment\): one variable for every occurrence does it once\.$',
 		 r'^Dialog \[Problems Detected\] answered Cancel$', r'^Status line: $', r'^Dialog \[Problems Detected\] answered OK$',
 		 r'^Status: Introduced int iBase2 = iBase \* 2: 2 occurrences replaced\.$'],
+		[]),
+	('change-signature-constructor', dict(MakeConstructorsCopy(), **{
+		#Change Signature of a constructor: an object made with arguments is changed as a call is, however it is
+		#made: a variable's ( and {, new, a temporary, a base's and a member's initialiser.
+		'WAIT_INDEX': '1', 'OPEN': 'Box.h', 'CARET': '11:3',
+		'DEBUG': 'edit:renamesearch:---s,edit:changeable,edit:changesignature:1;0;+int|iDepth|9|,printdisklines:Box.h,printdisklines:Box.cpp'}),
+		[r'^Change Signature: CBox::CBox \[CBox::CBox\(int, int\)\]  \(int iWidth, int iHeight\): 2 declarations and definitions, 0 overrides, 0 family, 7 calls, 0 other uses$',
+		 r'^Status: Changed CBox::CBox.s signature: 2 declarations and definitions, 7 calls in 2 files\.$',
+		 r'^11\|\tCBox\(int iHeight, int iWidth, int iDepth\);$',
+		 r'^8\|CBox::CBox\(int iHeight, int iWidth, int iDepth\)$', r'^19\|CCrate::CCrate\(int iSize\) : CBox\(iSize, iSize, 9\), mcInner\(2, 1, 9\)$',
+		 r'^30\|\tCBox\tcBox\(4, 3, 9\);$', r'^31\|\tCBox\tcOther\{6, 5, 9\};$', r'^33\|\tCBox\tcThird = CBox\(8, 7, 9\);$', r'^35\|\tpcBox = new CBox\(10, 9, 9\);$',
+		 r'CBox\(12, 11, 9\)\.miHeight;$'],
 		[]),
 	('unify-parameter-names', dict(MakeChangeSignatureCopy(), **{
 		#Unify Parameter Names: the definition calls its parameters iR, iG and iB where the class declares iRed, iGreen

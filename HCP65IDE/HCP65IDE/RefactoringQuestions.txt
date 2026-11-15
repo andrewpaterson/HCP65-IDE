@@ -183,6 +183,10 @@ Answered
     Answered 2026-11-15: leave it until the rest of the queue is done.  To do then: an object made with arguments
     (CFoo x(1, 2); new CFoo(1); a member's initialiser) changed as a call is, in Change Signature of a
     constructor.
+    Done 2026-11-15 (CIDEChangeSignature::AddConstructions): a variable's ( and {, new, a temporary, a base's
+    and a member's initialiser.  Which constructor an object is made with is told by how many arguments it has:
+    where another constructor takes as many, the object is left.  An object made with no arguments at all
+    ("CFoo x;") has nothing to change and isn't given a new parameter's value.
 
 14. Generate Definition, Generate Declaration and Move Definition out of / into Class are in the editor's Refactor
     menu.  Generate Definition has CLion's Ctrl+Shift+D; the other three have no keys.  What keys do you want?

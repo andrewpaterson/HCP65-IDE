@@ -244,6 +244,9 @@ protected:
 	void				KillUnits(void);
 	bool				AddSite(SIDESignature* psSignature, SIDELocation* psLocation, const char* szKey, const char** pszWhyNot);
 	bool				AddCall(SIDESignature* psSignature, SIDELocation* psLocation);
+	void				AddConstructions(SIDESignature* psSignature);
+	void				AddConstruction(SIDESignature* psSignature, SIDELocation* psLocation);
+	bool				AddInitializer(SIDESignature* psSignature, CIDERefactorUnit* pcUnit, CCPPSyntax* pcInitializer, const char* szFileName);
 	void				FindOldParameters(SIDESignature* psSignature);
 	void				AppendPlace(const char* szFileName, int32 iLine, CChars* pszDest);
 	void				AppendSiteParameters(SIDESignature* psSignature, SIDESignatureSite* psSite, bool bFirst, CArrayIDENewParameters* pasNew, const char* szText, CChars* pszDest);

@@ -1001,6 +1001,311 @@ bool CIDEChangeSignature::ReadSite(CIDERefactorUnit* pcUnit, SIDELocation* psLoc
 
 //////////////////////////////////////////////////////////////////////////
 //
+// How many parameters a function's key has ("CBox::CBox(int, int)" two,
+// "CBox::CBox()" none).
+//
+//////////////////////////////////////////////////////////////////////////
+static size CountIDEKeyParameters(const char* szKey)
+{
+	const char*	szOpen;
+	size		uiCount;
+	size		i;
+	int			iDepth;
+	bool		bAny;
+
+	szOpen = strchr(szKey, '(');
+	if (!szOpen)
+	{
+		return 0;
+	}
+	uiCount = 0;
+	iDepth = 0;
+	bAny = false;
+	for (i = 1; (szOpen[i] != '\0') && !((szOpen[i] == ')') && (iDepth == 0)); i++)
+	{
+		iDepth += ((szOpen[i] == '(') || (szOpen[i] == '<')) ? 1 : (((szOpen[i] == ')') || (szOpen[i] == '>')) ? -1 : 0);
+		uiCount += ((szOpen[i] == ',') && (iDepth == 0)) ? 1 : 0;
+		bAny = bAny || ((szOpen[i] != ' ') && (szOpen[i] != '\t'));
+	}
+	return bAny ? uiCount + 1 : 0;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// An object's initialiser, "(3, 4)" or "{3, 4}", as a call of the
+// constructor: its arguments are the call's.  Only if they are as many as
+// the constructor can take, and no other constructor of the class takes
+// that many (which one is meant is told by the count alone).  False if it
+// isn't taken as one.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEChangeSignature::AddInitializer(SIDESignature* psSignature, CIDERefactorUnit* pcUnit, CCPPSyntax* pcInitializer, const char* szFileName)
+{
+	CArraySyntax*		papcElements;
+	SIDESignatureSite*	psSite;
+	SIDESignatureCall*	psCall;
+	CIDEEffectFinder	cEffects;
+	SCPPSyntaxRange		sOpen;
+	SCPPSyntaxRange		sClose;
+	SCPPSyntaxRange		sRange;
+	size				uiTotal;
+	size				uiDefaults;
+	size				uiSiteDefaults;
+	size				i;
+	size				j;
+
+	if (!pcInitializer)
+	{
+		return false;
+	}
+	if (pcInitializer->GetKind() == CPPS_ParenthesisedInitializer)
+	{
+		papcElements = &((CCPPSyntaxParenthesisedInitializer*)pcInitializer)->macpElements;
+	}
+	else if (pcInitializer->GetKind() == CPPS_InitializerList)
+	{
+		papcElements = &((CCPPSyntaxInitializerList*)pcInitializer)->macpElements;
+	}
+	else
+	{
+		return false;
+	}
+	if (!(pcUnit->IsToken(pcInitializer->miFirstToken, "(") || pcUnit->IsToken(pcInitializer->miFirstToken, "{")) ||
+		!pcUnit->GetTokensRange(pcInitializer->miFirstToken, pcInitializer->miFirstToken, &sOpen) || !pcUnit->GetTokensRange(pcInitializer->miLastToken, pcInitializer->miLastToken, &sClose))
+	{
+		return false;
+	}
+
+	//As many arguments as it takes, with its default values or without.
+	uiTotal = (psSignature->apsSites.NumElements() > 0) ? psSignature->apsSites.GetPtr(0)->asParameters.NumElements() : 0;
+	uiDefaults = 0;
+	for (i = 0; i < psSignature->apsSites.NumElements(); i++)
+	{
+		psSite = psSignature->apsSites.GetPtr(i);
+		uiSiteDefaults = 0;
+		for (j = 0; j < psSite->asParameters.NumElements(); j++)
+		{
+			uiSiteDefaults += psSite->asParameters.Get(j)->bDefault ? 1 : 0;
+		}
+		uiDefaults = (uiSiteDefaults > uiDefaults) ? uiSiteDefaults : uiDefaults;
+	}
+	if ((papcElements->NumElements() > uiTotal) || (papcElements->NumElements() + uiDefaults < uiTotal))
+	{
+		return false;
+	}
+	for (i = 0; i < psSignature->aszOverloads.NumElements(); i++)
+	{
+		if (!psSignature->aszOverloads.Get(i)->Equals(psSignature->szKey) && (CountIDEKeyParameters(psSignature->aszOverloads.GetText(i)) == papcElements->NumElements()))
+		{
+			return false;
+		}
+	}
+	for (i = 0; i < psSignature->apsCalls.NumElements(); i++)
+	{
+		psCall = psSignature->apsCalls.GetPtr(i);
+		if ((psCall->sArguments.iLine == sOpen.iEndLine) && (psCall->sArguments.iColumn == sOpen.iEndColumn) && psCall->szFileName.Equals(szFileName))
+		{
+			return true;
+		}
+	}
+
+	psCall = (SIDESignatureCall*)malloc(sizeof(SIDESignatureCall));
+	psCall->Init();
+	psCall->szFileName.Set(szFileName);
+	psCall->iLine = sOpen.iLine;
+	psCall->iColumn = sOpen.iColumn;
+	psCall->sArguments.iLine = sOpen.iEndLine;
+	psCall->sArguments.iColumn = sOpen.iEndColumn;
+	psCall->sArguments.iEndLine = sClose.iLine;
+	psCall->sArguments.iEndColumn = sClose.iColumn;
+	for (i = 0; i < papcElements->NumElements(); i++)
+	{
+		if (!pcUnit->GetRange(papcElements->GetPtr(i), &sRange))
+		{
+			psCall->Kill();
+			free(psCall);
+			return false;
+		}
+		psCall->asArguments.Add(&sRange);
+		cEffects.mbEffects = false;
+		cEffects.Look(papcElements->GetPtr(i));
+		psCall->aiEffects.Add(cEffects.mbEffects ? 1 : 0);
+	}
+	psCall->bValueUsed = true;
+	psSignature->apsCalls.Add(psCall);
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A place the constructor's class is named: if an object is made there
+// with arguments, they are a call of the constructor (AddInitializer).
+// A variable ("CBox cBox(3, 4);", "CBox cBox{3, 4};"), new, a temporary,
+// a base's initialiser in a constructor, and, for a data member of the
+// class's type, its initialiser in each constructor that has one.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEChangeSignature::AddConstruction(SIDESignature* psSignature, SIDELocation* psLocation)
+{
+	CIDECodeModel*					pcModel;
+	CIDERefactorUnit*				pcUnit;
+	CIDERefactorUnit*				pcOtherUnit;
+	CArrayIDELocations				asLocations;
+	SIDELocation*					psUse;
+	CCPPSyntax*						pcNode;
+	CCPPSyntax*						pcUp;
+	CCPPSyntax*						pcType;
+	CCPPSyntax*						pcMember;
+	CCPPSyntaxSimpleDeclaration*	pcDeclaration;
+	CCPPSyntaxInitDeclarator*		pcInit;
+	CCPPSyntaxDeclarator*			pcDeclarator;
+	SCPPSyntaxRange					sRange;
+	CChars							szKey;
+	size							i;
+	size							j;
+	int32							iToken;
+	int32							iUse;
+	uint8							uiKind;
+
+	pcModel = mpcContent->GetCodeModel();
+	pcUnit = GetUnit(psLocation->szFileName.Text());
+	if (!pcUnit)
+	{
+		return;
+	}
+	iToken = pcUnit->FindTokenAt(psLocation->iLine, psLocation->iColumn);
+	pcNode = (iToken >= 0) ? pcUnit->FindNodeOfTokens(iToken, iToken) : NULL;
+	for (pcUp = pcNode; pcUp; pcUp = pcUp->mpcParent)
+	{
+		pcType = NULL;
+		switch (pcUp->GetKind())
+		{
+		case CPPS_ConstructExpression:
+			pcType = ((CCPPSyntaxConstructExpression*)pcUp)->mpcType;
+			if (pcType && (pcType->miFirstToken <= iToken) && (pcType->miLastToken >= iToken))
+			{
+				AddInitializer(psSignature, pcUnit, ((CCPPSyntaxConstructExpression*)pcUp)->mpcInitializer, psLocation->szFileName.Text());
+			}
+			return;
+		case CPPS_NewExpression:
+			pcType = ((CCPPSyntaxNewExpression*)pcUp)->mpcType;
+			if (pcType && (pcType->miFirstToken <= iToken) && (pcType->miLastToken >= iToken) && (((CCPPSyntaxNewExpression*)pcUp)->macpArraySizes.NumElements() == 0))
+			{
+				AddInitializer(psSignature, pcUnit, ((CCPPSyntaxNewExpression*)pcUp)->mpcInitializer, psLocation->szFileName.Text());
+			}
+			return;
+		case CPPS_MemberInitializer:
+			pcType = ((CCPPSyntaxMemberInitializer*)pcUp)->mpcName;
+			if (pcType && (pcType->miFirstToken <= iToken) && (pcType->miLastToken >= iToken))
+			{
+				AddInitializer(psSignature, pcUnit, ((CCPPSyntaxMemberInitializer*)pcUp)->mpcInitializer, psLocation->szFileName.Text());
+			}
+			return;
+		case CPPS_CallExpression:
+			//A temporary read as a call of the class's name.
+			if (((CCPPSyntaxCallExpression*)pcUp)->mpcCallee && (((CCPPSyntaxCallExpression*)pcUp)->mpcCallee->miLastToken == iToken))
+			{
+				AddCall(psSignature, psLocation);
+				return;
+			}
+			break;
+		case CPPS_SimpleDeclaration:
+			pcDeclaration = (CCPPSyntaxSimpleDeclaration*)pcUp;
+			if (!pcDeclaration->mpcSpecifiers || (pcDeclaration->mpcSpecifiers->miFirstToken > iToken) || (pcDeclaration->mpcSpecifiers->miLastToken < iToken))
+			{
+				return;
+			}
+			for (i = 0; i < pcDeclaration->macpDeclarators.NumElements(); i++)
+			{
+				pcInit = (pcDeclaration->macpDeclarators.GetPtr(i)->GetKind() == CPPS_InitDeclarator) ? (CCPPSyntaxInitDeclarator*)pcDeclaration->macpDeclarators.GetPtr(i) : NULL;
+				pcDeclarator = pcInit ? pcInit->mpcDeclarator : (CCPPSyntaxDeclarator*)pcDeclaration->macpDeclarators.GetPtr(i);
+				if (!pcDeclarator || (pcDeclarator->GetKind() != CPPS_Declarator) || (pcDeclarator->NumPointers() > 0) || pcDeclarator->IsFunction() || (pcDeclarator->macpSuffixes.NumElements() > 0) ||
+					!pcDeclarator->GetName())
+				{
+					continue;
+				}
+				if (pcInit && pcInit->mpcInitializer)
+				{
+					AddInitializer(psSignature, pcUnit, pcInit->mpcInitializer, psLocation->szFileName.Text());
+				}
+
+				//A data member: its initialiser in each constructor that names it.
+				szKey.Init();
+				asLocations.Init();
+				if (pcUnit->GetTokensRange(pcDeclarator->GetName()->miFirstToken, pcDeclarator->GetName()->miFirstToken, &sRange) &&
+					pcModel->GetSymbolAt(psLocation->szFileName.Text(), sRange.iLine, sRange.iColumn, &szKey, &uiKind) && (uiKind == CPPSK_Field))
+				{
+					pcModel->GetSymbolLocations(szKey.Text(), &asLocations, &uiKind);
+				}
+				for (j = 0; j < asLocations.NumElements(); j++)
+				{
+					psUse = asLocations.Get(j);
+					pcOtherUnit = (psUse->uiRole == CPPIR_Reference) ? GetUnit(psUse->szFileName.Text()) : NULL;
+					iUse = pcOtherUnit ? pcOtherUnit->FindTokenAt(psUse->iLine, psUse->iColumn) : -1;
+					pcMember = (iUse >= 0) ? pcOtherUnit->FindAncestor(pcOtherUnit->FindNodeOfTokens(iUse, iUse), CPPS_MemberInitializer) : NULL;
+					if (pcMember && ((CCPPSyntaxMemberInitializer*)pcMember)->mpcName && (((CCPPSyntaxMemberInitializer*)pcMember)->mpcName->miLastToken == iUse))
+					{
+						AddInitializer(psSignature, pcOtherUnit, ((CCPPSyntaxMemberInitializer*)pcMember)->mpcInitializer, psUse->szFileName.Text());
+					}
+				}
+				KillIDELocations(&asLocations);
+				szKey.Kill();
+			}
+			return;
+		case CPPS_FunctionDefinition:
+		case CPPS_ClassSpecifier:
+		case CPPS_CompoundStatement:
+			return;
+		default:
+			break;
+		}
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// For a constructor: where an object of its class is made with arguments,
+// which the index has as a place the class is named, not as a call.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEChangeSignature::AddConstructions(SIDESignature* psSignature)
+{
+	CArrayIDELocations	asLocations;
+	CChars				szClassKey;
+	CChars				szClassName;
+	CChars				szName;
+	size				i;
+	uint8				uiKind;
+
+	szClassKey.Init();
+	szClassName.Init();
+	szName.Init();
+	GetIDESymbolScope(psSignature->szKey.Text(), &szClassKey);
+	GetIDESymbolName(szClassKey.Text(), &szClassName);
+	GetIDESymbolName(psSignature->szKey.Text(), &szName);
+	asLocations.Init();
+	if (!szClassKey.Empty() && szName.Equals(szClassName) && mpcContent->GetCodeModel()->GetSymbolLocations(szClassKey.Text(), &asLocations, &uiKind))
+	{
+		for (i = 0; i < asLocations.NumElements(); i++)
+		{
+			if (asLocations.Get(i)->uiRole == CPPIR_Reference)
+			{
+				AddConstruction(psSignature, asLocations.Get(i));
+			}
+		}
+	}
+	KillIDELocations(&asLocations);
+	szName.Kill();
+	szClassName.Kill();
+	szClassKey.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // A call of a function whose name is written at psLocation: where its
 // arguments are, each of them, and whether each does something.  False if
 // the name isn't what a call calls there (its address is taken, it is
@@ -1266,6 +1571,10 @@ bool CIDEChangeSignature::FindSignature(SIDESignature* psDest, const char* szFil
 		{
 			MoveIDELocation(psDest->asOtherUses.Add(), psLocation);
 		}
+	}
+	if (!szWhyNot)
+	{
+		AddConstructions(psDest);
 	}
 	szKey.Kill();
 	sTarget.Kill();
