@@ -1801,6 +1801,55 @@ CHECKS = [
 		[r'^Dialog \[Inline CPump::GetRate\] answered OK$', r'^Dialog \[Problems Detected\] answered Cancel$', r"^Status: Can't inline CPump::Kind: it is virtual\.$",
 		 r'^Status: There is no variable or function at the caret to inline\.$'],
 		[r'^Status: Inlined']),
+	('extract-superclass', dict(MakeMoveMembersCopy(), **{
+		#Extract Superclass: a field and two functions of CDrum become CBarrel, in Barrel.h (a guard, Drum.h's
+		#includes, each under its access, with its comment) and Barrel.cpp (the function defined outside, renamed);
+		#Roll is only declared there, pure virtual, and stays CDrum's; CDrum derives from CBarrel too and its header
+		#includes Barrel.h; the files are in the project.
+		'WAIT_INDEX': '1', 'OPEN': 'Drum.h', 'CARET': '20:8',
+		'DEBUG': 'edit:renamesearch:---s,edit:extractsuperclass:CKeg|Fill(int),edit:extractsuperclass:CBarrel|Fill(int),edit:extractsuperclass:CBarrel|miLevel;GetLevel();Fill(int)|Roll(),'
+		         'printdisklines:Barrel.h,printdisklines:Barrel.cpp,printdisklines:Drum.h,printdisklines:Drum.cpp,printdisklines:MoveMembers.vcxproj'}),
+		[r'^Extract Class: there is a CKeg already$', r"^Conflict: Fill\(int\) uses CDrum::miLevel, which CBarrel doesn't have\.$", r'^Extract Class: not extracted$',
+		 r'^Status: Extracted the superclass CBarrel from CDrum: 4 members, in Barrel\.h and Barrel\.cpp\.$',
+		 r'^1\|#ifndef __BARREL_H__$', r'^3\|#include "Vessel\.h"$', r'^4\|$', r'^5\|$', r'^6\|class CBarrel$', r'^7\|\{$', r'^8\|protected:$', r'^9\|\tint\t\tmiLevel;$', r'^10\|$', r'^11\|public:$',
+		 r'^12\|\t//How full it is\.$', r'^13\|\tint\t\tGetLevel\(void\) \{ return miLevel; \}$', r'^14\|\tvoid\tFill\(int iAmount\);$', r'^15\|\tvirtual void\tRoll\(void\) =0;$', r'^16\|\};$', r'^19\|#endif // __BARREL_H__$',
+		 r'^1\|#include "Barrel\.h"$', r'^2\|#include "Drum\.h"$', r'^9\|void CBarrel::Fill\(int iAmount\)$', r'^11\|\tmiLevel \+= iAmount;$', r'^12 lines$',
+		 r'^4\|#include "Barrel\.h"$', r'^7\|class CDrum : public CVessel, public CBarrel$', r'^13\|\tint\t\tmiRate, miStep;$', r'^16\|\tvoid\tInit\(int iVolume\);$', r'^17\|\tint\t\tSpare\(void\);$',
+		 r'^18\|\tvoid\tRoll\(void\);$', r'^32 lines$', r'^19\|int CDrum::Spare\(void\)$', r'^29\|void CDrum::Roll\(void\)$', r'^72 lines$',
+		 r'^\d+\|    <ClCompile Include="Barrel\.cpp" />$', r'^\d+\|    <ClInclude Include="Barrel\.h" />$'],
+		[r'CDrum::Fill']),
+	('extract-interface', dict(MakeMoveMembersCopy(), **{
+		#Extract Interface: the functions chosen are declared pure virtual in the new class, CDrum keeps its own and
+		#derives from it.  A field can't go in one.
+		'WAIT_INDEX': '1', 'OPEN': 'Drum.h', 'CARET': '20:8',
+		'DEBUG': 'edit:renamesearch:---s,edit:extractinterface:CFillable|Fill(int);miLevel,edit:extractinterface:CFillable|Fill(int);Roll(),printdisklines:Fillable.h,printdisklines:Drum.h,printdisklines:Drum.cpp'}),
+		[r"^Extract Class: an interface has only functions, and miLevel isn't one$", r'^Status: Extracted the interface CFillable from CDrum: 2 members, in Fillable\.h\.$',
+		 r'^6\|class CFillable$', r'^8\|public:$', r'^9\|\tvirtual void\tFill\(int iAmount\) =0;$', r'^10\|\tvirtual void\tRoll\(void\) =0;$', r'^11\|\};$', r'^14 lines$',
+		 r'^4\|#include "Fillable\.h"$', r'^7\|class CDrum : public CVessel, public CFillable$', r'^13\|\tint\t\tmiLevel;$', r'^20\|\tvoid\tFill\(int iAmount\);$', r'^22\|\tvoid\tRoll\(void\);$', r'^36 lines$',
+		 r'^19\|void CDrum::Fill\(int iAmount\)$', r'^82 lines$'],
+		[r'^Conflict']),
+	('extract-class', dict(MakeMoveMembersCopy(), **{
+		#Extract Class: the members become CGauge, all public, and CDrum has a field of it where the first of them
+		#was; what CDrum still does with them goes through the field (mcGauge.miLevel, mcGauge.Fill(1)).
+		'WAIT_INDEX': '1', 'OPEN': 'Drum.h', 'CARET': '20:8',
+		'DEBUG': 'edit:renamesearch:---s,edit:extractclass:CGauge|miSecret|miLevel,edit:extractclass:CGauge|mcGauge|miLevel;GetLevel();Fill(int),'
+		         'printdisklines:Gauge.h,printdisklines:Gauge.cpp,printdisklines:Drum.h,printdisklines:Drum.cpp'}),
+		[r'^Extract Class: the class has a miSecret already$', r'^Status: Extracted the class CGauge from CDrum: 3 members, in Gauge\.h and Gauge\.cpp\.$',
+		 r'^6\|class CGauge$', r'^8\|public:$', r'^9\|\tint\t\tmiLevel;$', r'^10\|\t//How full it is\.$', r'^11\|\tint\t\tGetLevel\(void\) \{ return miLevel; \}$', r'^12\|\tvoid\tFill\(int iAmount\);$', r'^13\|\};$',
+		 r'^9\|void CGauge::Fill\(int iAmount\)$', r'^11\|\tmiLevel \+= iAmount;$',
+		 r'^4\|#include "Gauge\.h"$', r'^7\|class CDrum : public CVessel$', r'^12\|protected:$', r'^13\|\tCGauge\tmcGauge;$', r'^14\|\tint\t\tmiRate, miStep;$', r'^17\|\tvoid\tInit\(int iVolume\);$', r'^18\|\tint\t\tSpare\(void\);$',
+		 r'^11\|\tmcGauge\.miLevel = 0;$', r'^31\|\tmcGauge\.Fill\(1\);$', r'^72 lines$'],
+		[r'^Conflict']),
+	('extract-superclass-template', dict(MakeMoveMembersCopy(), **{
+		#From a class template, where what moves names the template's parameter: the new class is a template of the
+		#same parameters, the class derives from it with them, and the function defined outside the class goes with
+		#its body in the new class.  The dialog (Cancel) is Extract Superclass's.
+		'WAIT_INDEX': '1', 'OPEN': 'Crate.h', 'CARET': '19:8', 'SETTINGS': MakeSettingsFile(), 'DIALOG_ANSWER': 'Cancel',
+		'DEBUG': 'edit:renamesearch:---s,extractsuperclass,answered:1,edit:extractsuperclass:CSized|Size(),printdisklines:Sized.h,printdisklines:Crate.h'}),
+		[r'^Dialog \[Extract Superclass from CCrate\] answered Cancel$', r'^Status: Extracted the superclass CSized from CCrate: 1 member, in Sized\.h\.$',
+		 r'^5\|template<class M>$', r'^6\|class CSized$', r'^8\|public:$', r'^9\|\tint\t\tSize\(void\) \{ return sizeof\(M\); \}$', r'^13 lines$',
+		 r'^3\|#include "Sized\.h"$', r'^16\|template<class M>$', r'^17\|class CCrate : public CBox<M>, public CSized<M>$', r'^23 lines$'],
+		[r'CCrate<M>::Size']),
 	('rename-assembly-class', dict(MakeRenameAssemblyCopy(), **{
 		#A class renamed in hand written assembly's labels (_CEngine__Init, __0, __2), in parameter lists with its length
 		#(FPC7CEngine to FPC6CMotor), in generated layout constants (SIZEOF_CEngine, CEngine_miSpeed: in the assembly, the
@@ -2305,7 +2354,7 @@ CHECKS = [
 		 r'^Menu Debug: Start Debugging \[F5\], Start Without Debugging \[Ctrl\+F5\], Stop Debugging \[Shift\+F5\], Stop Running\(disabled\), Restart \[Ctrl\+Shift\+F5\], Break All \[Ctrl\+Pause/Break\], Attach to Emulator\.\.\., Step Into \[F11\], Step Over \[F10\], Step Out \[Shift\+F11\], Toggle Breakpoint \[F9\], ',
 		 r'^Menu Window: Reset Window Layout, Close All Documents$',
 		 r'^Menu Editor: Go to Source \[Ctrl\+B\], Find Usages \[Alt\+F7\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Rename\.\.\. \[Shift\+F6\], Refactor>, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\]$',
-		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Introduce Field\.\.\. \[Ctrl\+Alt\+F\](\(disabled\))?, Introduce Constant\.\.\. \[Ctrl\+Alt\+C\](\(disabled\))?, Introduce Parameter\.\.\. \[Ctrl\+Alt\+P\](\(disabled\))?, Introduce Typedef\.\.\. \[Ctrl\+Alt\+K\](\(disabled\))?, Inline\.\.\. \[Ctrl\+Alt\+N\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\.(\(disabled\))?, Push Members Down\.\.\.(\(disabled\))?, Move\.\.\. \[F6\](\(disabled\))?, Copy Class\.\.\.(\(disabled\))?, Extract Method\.\.\. \[Ctrl\+Alt\+M\](\(disabled\))?$',
+		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Introduce Field\.\.\. \[Ctrl\+Alt\+F\](\(disabled\))?, Introduce Constant\.\.\. \[Ctrl\+Alt\+C\](\(disabled\))?, Introduce Parameter\.\.\. \[Ctrl\+Alt\+P\](\(disabled\))?, Introduce Typedef\.\.\. \[Ctrl\+Alt\+K\](\(disabled\))?, Inline\.\.\. \[Ctrl\+Alt\+N\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\.(\(disabled\))?, Push Members Down\.\.\.(\(disabled\))?, Move\.\.\. \[F6\](\(disabled\))?, Copy Class\.\.\.(\(disabled\))?, Extract Method\.\.\. \[Ctrl\+Alt\+M\](\(disabled\))?, Extract Superclass\.\.\.(\(disabled\))?, Extract Interface\.\.\.(\(disabled\))?, Extract Class\.\.\.(\(disabled\))?$',
 		 r'^Menu Explorer: Set as Startup Solution, Set as Startup Project\(disabled\), Remove Solution, Rename\.\.\.(\(disabled\))?$',
 		 r'^Menu item \[View/Nope\] not found$'], []),
 	('menu-clicks', {

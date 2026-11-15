@@ -112,6 +112,7 @@ struct SIDEFunctionMove
 //function, and one in a namespace, are refused.
 class CIDEMoveClass : public CObject
 {
+friend class CIDEExtractClass;
 CONSTRUCTABLE(CIDEMoveClass);
 DESTRUCTABLE(CIDEMoveClass);
 protected:

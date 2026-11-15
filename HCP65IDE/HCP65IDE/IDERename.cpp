@@ -1341,6 +1341,7 @@ void CIDERename::AddEditorItems(Ptr<CMenuContainer> pMenu)
 	mpcContent->GetMoveMembers()->AddEditorItems(pRefactor);
 	mpcContent->GetMoveClass()->AddEditorItems(pRefactor);
 	mpcContent->GetExtractMethod()->AddEditorItems(pRefactor);
+	mpcContent->GetExtractClass()->AddEditorItems(pRefactor);
 	pMenu->AddItem("Refactor", NULL, pRefactor);
 }
 

@@ -39,7 +39,7 @@ static bool			gbIDEScriptRenameSaves = false;  //rename: saves what it edited (r
 static bool			gbIDEScriptClassFiles = false;  //rename: renames a type's files too (renamesearch's f), never from the settings.
 
 
-static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printfindpreview", "printfindtoolbar", "findtool:", "printstartup", "printworkspace", "rename", "safedelete", "introducevariable", "introducefield", "introduceconstant", "introduceparameter", "changesignature", "pullmembersup", "pushmembersdown", "moveclass", "copyclass", "inlinevariable", "introducetypedef", "extractmethod", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printsettings", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printprojectfiles", "printdiskfile:", "printdisklines:", "printedits", "printspans", "configuration:", "waitindex" };
+static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printfindpreview", "printfindtoolbar", "findtool:", "printstartup", "printworkspace", "rename", "safedelete", "introducevariable", "introducefield", "introduceconstant", "introduceparameter", "changesignature", "pullmembersup", "pushmembersdown", "moveclass", "copyclass", "inlinevariable", "introducetypedef", "extractmethod", "extractsuperclass", "extractinterface", "extractclass", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printsettings", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printprojectfiles", "printdiskfile:", "printdisklines:", "printedits", "printspans", "configuration:", "waitindex" };
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -288,6 +288,11 @@ void CIDEScript::RunCommand(const char* szCommand)
 	{
 		//Pull Members Up's or Push Members Down's dialogs for the class at the caret.
 		mpcContent->GetMoveMembers()->ShowMove(strcmp(szCommand, "pullmembersup") == 0);
+	}
+	else if ((strcmp(szCommand, "extractsuperclass") == 0) || (strcmp(szCommand, "extractinterface") == 0) || (strcmp(szCommand, "extractclass") == 0))
+	{
+		//Extract Superclass's, Interface's or Class's dialog for the class at the caret.
+		mpcContent->GetExtractClass()->ShowExtract((szCommand[7] == 's') ? IDE_EXTRACT_SUPERCLASS : ((szCommand[7] == 'i') ? IDE_EXTRACT_INTERFACE : IDE_EXTRACT_DELEGATE));
 	}
 	else if (strcmp(szCommand, "extractmethod") == 0)
 	{
@@ -1643,6 +1648,70 @@ void CIDEScript::RunEditStep(const char* szStep)
 		}
 		szPrinted.Kill();
 		sMove.Kill();
+	}
+	else if ((strncmp(szStep, "extractsuperclass:", 18) == 0) || (strncmp(szStep, "extractinterface:", 17) == 0) || (strncmp(szStep, "extractclass:", 13) == 0))
+	{
+		//A class extracted from the class at the caret: "extractsuperclass:CVessel|Fill(int);miLevel|Vent()" (the
+		//members, and those only declared in it, pure virtual), "extractinterface:IFillable|Fill(int)",
+		//"extractclass:CGauge|mcGauge|miLevel;GetLevel()" (the field too).  What stands in the way is printed and
+		//nothing done; with ":anyway" after the step's name it is done all the same.
+		SIDEMembersMove	sMove;
+		CArrayChars		aszParts;
+		CArrayChars		aszConflicts;
+		CChars			szSpec;
+		CChars			szProblem;
+		const char*		szField;
+		const char*		szMembers;
+		const char*		szAbstract;
+		size			uiConflict;
+		int				iKind;
+		bool			bAnyway;
+
+		iKind = (szStep[7] == 's') ? IDE_EXTRACT_SUPERCLASS : ((szStep[7] == 'i') ? IDE_EXTRACT_INTERFACE : IDE_EXTRACT_DELEGATE);
+		bAnyway = (strstr(szStep, ":anyway:") != NULL);
+		szSpec.Init(bAnyway ? strstr(szStep, ":anyway:") + 8 : strchr(szStep, ':') + 1);
+		aszParts.Init();
+		szSpec.Split(&aszParts, '|');
+		szField = ((iKind == IDE_EXTRACT_DELEGATE) && (aszParts.NumElements() > 1)) ? aszParts.GetText(1) : "";
+		szMembers = (aszParts.NumElements() > ((iKind == IDE_EXTRACT_DELEGATE) ? (size)2 : (size)1)) ? aszParts.GetText((iKind == IDE_EXTRACT_DELEGATE) ? 2 : 1) : "";
+		szAbstract = ((iKind == IDE_EXTRACT_SUPERCLASS) && (aszParts.NumElements() > 2)) ? aszParts.GetText(2) : "";
+		sMove.Init();
+		szProblem.Init();
+		if (!mpcContent->GetExtractClass()->FindExtraction(&sMove))
+		{
+			printf("Extract Class: no class\n");
+		}
+		else if (!sMove.bMovable)
+		{
+			printf("Extract Class: can't be: %s\n", sMove.szWhyNot.Text());
+		}
+		else if (!mpcContent->GetExtractClass()->ParseMembers(&sMove, szMembers, szAbstract, &szProblem) ||
+				 mpcContent->GetExtractClass()->FindProblem(&sMove, iKind, aszParts.GetText(0), szField, &szProblem))
+		{
+			printf("Extract Class: %s\n", szProblem.Text());
+		}
+		else
+		{
+			aszConflicts.Init();
+			mpcContent->GetExtractClass()->FindConflicts(&sMove, iKind, aszParts.GetText(0), &aszConflicts);
+			for (uiConflict = 0; uiConflict < aszConflicts.NumElements(); uiConflict++)
+			{
+				printf("Conflict: %s\n", aszConflicts.GetText(uiConflict));
+			}
+			if ((aszConflicts.NumElements() == 0) || bAnyway)
+			{
+				printf("Extract Class: %s\n", mpcContent->GetExtractClass()->Extract(&sMove, iKind, aszParts.GetText(0), szField) ? "extracted" : "not extracted");
+			}
+			else
+			{
+				printf("Extract Class: not extracted\n");
+			}
+			aszConflicts.Kill();
+		}
+		szProblem.Kill();
+		sMove.Kill();
+		aszParts.Kill();
+		szSpec.Kill();
 	}
 	else if ((strcmp(szStep, "inlinablefunction") == 0) || (strncmp(szStep, "inlinefunction:", 15) == 0))
 	{

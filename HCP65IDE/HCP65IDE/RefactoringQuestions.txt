@@ -207,3 +207,18 @@ Open
 40. Where a function's body names a member that isn't public and a call of it is outside the class, that is a
     conflict (the inlined code wouldn't compile).  A call on "&cOther" inlines as "(&cOther)->Kind()", not
     "cOther.Kind()".  Say if that matters.
+
+41. Extract Superclass, Extract Interface and Extract Class each make the new class in a header of its own (and a
+    source file if a function that moves is defined in one), named for the class without its C, as Move Class
+    does.  Their dialog is a name (and the field's name for Extract Class) and a tick for each member; leaving a
+    function in the class and only declaring it in the superclass (IntelliJ's "abstract" tick) can only be asked
+    for from a script yet.  Do you want that tick in the dialog?
+
+42. Extract Class makes every member that moves public in the new class, because the class it came from uses them
+    through the field ("mcGauge.miLevel"); IntelliJ offers to generate getters and setters instead (which is
+    Encapsulate Field, next in the plan).  The new class gets no Init, and the class it came from doesn't
+    construct it: with your Init functions you would add CGauge::Init and call it.  Should Extract Class write an
+    empty Init and a call of it from the class's Init?
+
+43. An extracted interface's functions are pure virtual with no virtual destructor, and the class's own
+    functions aren't marked override.  Right for your code?

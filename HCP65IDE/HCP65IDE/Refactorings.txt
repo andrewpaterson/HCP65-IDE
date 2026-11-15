@@ -240,6 +240,9 @@ Phase 3 - flow
  11. Extract Superclass, Extract Interface and Extract Class (members moved into a new class held as a field).
      Built on Move and Introduce Field.  From a class template the new class is one too if what moves uses the
      parameters.
+     Done 2026-11-15 (IDEExtractClass.h says what each does), on Pull Members Up's reading of a class's members
+     and Move Class's making of files.  But for the "abstract" tick in the dialog (question 41), and an Init for
+     an extracted class (question 42).
  12. Encapsulate Field.  A getter and a setter, the reads and writes replaced: FindChanges tells them apart.
 
 
@@ -335,5 +338,6 @@ Where it is
   9. Introduce Typedef (8): done (CIDEIntroduceTypedef).  Phase 2 is done.
  10. Extract Method (9), with F3 (flow): done (CIDEExtractMethod).
  11. Inline Function (10): done (CIDEInlineFunction).
- 12. Extract Superclass, Interface and Class (11): next.  Then Encapsulate Field (12), and Phase 4 from 15.
+ 12. Extract Superclass, Interface and Class (11): done (CIDEExtractClass).
+ 13. Encapsulate Field (12): next.  Then Phase 4 from 15.
 

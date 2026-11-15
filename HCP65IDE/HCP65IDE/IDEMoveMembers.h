@@ -125,6 +125,7 @@ struct SIDEMembersMove
 //x is a CDrum, is no use of the class's: the object's type is asked of a kept check of the file).
 class CIDEMoveMembers : public CObject
 {
+friend class CIDEExtractClass;
 CONSTRUCTABLE(CIDEMoveMembers);
 DESTRUCTABLE(CIDEMoveMembers);
 protected:
