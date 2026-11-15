@@ -1723,6 +1723,45 @@ void CIDEScript::RunEditStep(const char* szStep)
 		aszParts.Kill();
 		szSpec.Kill();
 	}
+	else if ((strncmp(szStep, "makeconst", 9) == 0) || (strcmp(szStep, "makestatic") == 0))
+	{
+		//The member function at the caret made const (makeconst; "makeconst:a" whatever its bodies do that a const
+		//function can't, which is printed) or static (makestatic), with what the status bar would say.
+		SIDEQualifierChange	sChange;
+		CChars				szPrinted;
+		size				uiConflict;
+		bool				bStatic;
+
+		bStatic = (strcmp(szStep, "makestatic") == 0);
+		sChange.Init();
+		szPrinted.Init();
+		if (!mpcContent->GetMemberQualifier()->Find(bStatic, &sChange))
+		{
+			printf("Status: There is no member function at the caret.\n");
+		}
+		else if (!sChange.bPossible)
+		{
+			printf("Status: Can't make %s %s: %s.\n", sChange.sSignature.szName.Text(), bStatic ? "static" : "const", sChange.szWhyNot.Text());
+		}
+		else
+		{
+			for (uiConflict = 0; uiConflict < sChange.aszConflicts.NumElements(); uiConflict++)
+			{
+				printf("Conflict: %s\n", sChange.aszConflicts.GetText(uiConflict));
+			}
+			if ((sChange.aszConflicts.NumElements() == 0) || (strcmp(szStep, "makeconst:a") == 0))
+			{
+				mpcContent->GetMemberQualifier()->Change(&sChange, &szPrinted);
+				printf("Status: %s\n", szPrinted.Text());
+				if (gbIDEScriptRenameSaves)
+				{
+					mpcContent->GetDocuments()->SaveAllFiles();
+				}
+			}
+		}
+		szPrinted.Kill();
+		sChange.Kill();
+	}
 	else if ((strcmp(szStep, "pointertoreference") == 0) || (strcmp(szStep, "referencetopointer") == 0))
 	{
 		//The parameter or local variable at the caret made a reference (or a pointer), with what the status bar

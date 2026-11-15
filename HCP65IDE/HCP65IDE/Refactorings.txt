@@ -368,5 +368,8 @@ Where it is
  14. #includes (15): done (CIDEIncludes).
  15. Convert macro (16): done but for T6 (CIDEConvertMacro; question 48).
  16. Pointer to reference and back (17): done (CIDEConvertPointer).
- 17. Phase 4 from 18 (make a member function const or static): next.  Then 19 to 24 in their order.
+ 17. Make a member function const or static (18): done (CIDEMemberQualifier, IDEMemberQualifier.h says what it
+     does).  Its checks, qualifier-p1 and qualifier-p2, only look for a status line yet: they want their expected
+     lines written out, as the others have.  The family (T2) case has no check input.
+ 18. Phase 4 from 19 (a function to a member function and back): next.  Then 20 to 24 in their order.
 

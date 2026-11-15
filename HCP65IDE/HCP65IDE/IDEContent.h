@@ -79,6 +79,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDEIncludes.h"
 #include "IDEConvertMacro.h"
 #include "IDEConvertPointer.h"
+#include "IDEMemberQualifier.h"
 #include "IDEUsages.h"
 #include "IDEFindInFiles.h"
 #include "IDEOccurrences.h"
@@ -196,6 +197,7 @@ protected:
 	Ptr<CIDEIncludes>			mpIncludes;				//Optimise #includes, Sort #includes.
 	Ptr<CIDEConvertMacro>		mpConvertMacro;			//Convert Macro, Inline Macro.
 	Ptr<CIDEConvertPointer>		mpConvertPointer;		//Convert Pointer to Reference, and back.
+	Ptr<CIDEMemberQualifier>	mpMemberQualifier;		//Make Member Function const, static.
 	Ptr<CIDEUsages>				mpUsages;			//Find Usages.
 	Ptr<CIDEFindInFiles>		mpFindInFiles;		//Find in Files and the Find tool window.
 	Ptr<CIDEOccurrences>		mpOccurrences;		//Next and Previous Occurrence through Find Usages or Build.
@@ -316,6 +318,7 @@ public:
 	Ptr<CIDEIncludes>			GetIncludes(void);
 	Ptr<CIDEConvertMacro>		GetConvertMacro(void);
 	Ptr<CIDEConvertPointer>		GetConvertPointer(void);
+	Ptr<CIDEMemberQualifier>	GetMemberQualifier(void);
 	Ptr<CIDECloseGuard>		GetCloseGuard(void);
 
 protected:

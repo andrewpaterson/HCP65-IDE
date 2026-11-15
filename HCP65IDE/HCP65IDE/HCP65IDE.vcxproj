@@ -315,6 +315,7 @@
     <ClCompile Include="IDEEdit.cpp" />
     <ClCompile Include="IDENavigator.cpp" />
     <ClCompile Include="IDERename.cpp" />
+    <ClCompile Include="IDEMemberQualifier.cpp" />
     <ClCompile Include="IDEConvertPointer.cpp" />
     <ClCompile Include="IDEConvertMacro.cpp" />
     <ClCompile Include="IDEIncludes.cpp" />
@@ -385,6 +386,7 @@
     <ClInclude Include="IDEEdit.h" />
     <ClInclude Include="IDENavigator.h" />
     <ClInclude Include="IDERename.h" />
+    <ClInclude Include="IDEMemberQualifier.h" />
     <ClInclude Include="IDEConvertPointer.h" />
     <ClInclude Include="IDEConvertMacro.h" />
     <ClInclude Include="IDEIncludes.h" />

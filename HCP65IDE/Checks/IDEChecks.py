@@ -366,6 +366,17 @@ def MakePointersCopy():
 	return {'SOLUTION': os.path.join(szFolder, 'Pointers.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
 
 
+def MakeQualifiersCopy():
+	#A copy of Input/Qualifiers, to make member functions const and static in: CMeter's functions read its fields,
+	#assign them (one an array's element, one a struct's member), call each other, change what a pointer field
+	#points to, and use nothing of the object at all; one is virtual and overridden.
+	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
+	atexit.register(shutil.rmtree, szRoot, True)
+	szFolder = os.path.join(szRoot, 'Qualifiers')
+	shutil.copytree(os.path.join(HERE, 'Input', 'Qualifiers'), szFolder)
+	return {'SOLUTION': os.path.join(szFolder, 'Qualifiers.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
+
+
 def MakeKeymapFile(szText=None):
 	#Where a scripted run keeps its keys, with szText in it if it's given.
 	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
@@ -2071,6 +2082,16 @@ CHECKS = [
 		 r'^112\|\tSLevel\*\tsOther = &pcVat->msLevel;$', r'^118\|\tSLevel&\tpsLocal = pcVat->msLevel;$',
 		 r'^124\|\tiTotal \+= psLocal\.miDepth \+ psLocal\.miMark \+ Depth\(psLocal\);$', r'^125\|\tsOther->miDepth = iTotal;$', r'^126\|\tiTotal \+= Depth\(\*sOther\) \+ sOther->miMark;$'],
 		[]),
+	('qualifier-p1', dict(MakeQualifiersCopy(), **{
+		'WAIT_INDEX': '1', 'OPEN': 'Meter.cpp',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:64:14,edit:makeconst,edit:caret:21:14,edit:makeconst,edit:caret:21:14,edit:makeconst,edit:caret:74:14,edit:makeconst,edit:caret:41:14,edit:makeconst,edit:caret:53:14,edit:makeconst,edit:caret:64:14,edit:makeconst,edit:caret:105:18,edit:makeconst:a,edit:caret:116:6,edit:makeconst,edit:open:Meter.h,edit:caret:21:10,edit:makeconst,printdisklines:Meter.h,printdisklines:Meter.cpp'}),
+		[r'^Status'],
+		[]),
+	('qualifier-p2', dict(MakeQualifiersCopy(), **{
+		'WAIT_INDEX': '1', 'OPEN': 'Meter.cpp',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:95:14,edit:makestatic,edit:caret:21:14,edit:makestatic,edit:caret:105:18,edit:makestatic,edit:caret:85:14,edit:makestatic,edit:caret:85:14,edit:makestatic,edit:open:Meter.h,edit:caret:22:10,edit:makestatic,printdisklines:Meter.h,printdisklines:Meter.cpp'}),
+		[r'^Status'],
+		[]),
 	('rename-assembly-class', dict(MakeRenameAssemblyCopy(), **{
 		#A class renamed in hand written assembly's labels (_CEngine__Init, __0, __2), in parameter lists with its length
 		#(FPC7CEngine to FPC6CMotor), in generated layout constants (SIZEOF_CEngine, CEngine_miSpeed: in the assembly, the
@@ -2575,7 +2596,7 @@ CHECKS = [
 		 r'^Menu Debug: Start Debugging \[F5\], Start Without Debugging \[Ctrl\+F5\], Stop Debugging \[Shift\+F5\], Stop Running\(disabled\), Restart \[Ctrl\+Shift\+F5\], Break All \[Ctrl\+Pause/Break\], Attach to Emulator\.\.\., Step Into \[F11\], Step Over \[F10\], Step Out \[Shift\+F11\], Toggle Breakpoint \[F9\], ',
 		 r'^Menu Window: Reset Window Layout, Close All Documents$',
 		 r'^Menu Editor: Go to Source \[Ctrl\+B\], Find Usages \[Alt\+F7\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Rename\.\.\. \[Shift\+F6\], Refactor>, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\]$',
-		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Introduce Field\.\.\. \[Ctrl\+Alt\+F\](\(disabled\))?, Introduce Constant\.\.\. \[Ctrl\+Alt\+C\](\(disabled\))?, Introduce Parameter\.\.\. \[Ctrl\+Alt\+P\](\(disabled\))?, Introduce Typedef\.\.\. \[Ctrl\+Alt\+K\](\(disabled\))?, Inline\.\.\. \[Ctrl\+Alt\+N\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\.(\(disabled\))?, Push Members Down\.\.\.(\(disabled\))?, Move\.\.\. \[F6\](\(disabled\))?, Copy Class\.\.\.(\(disabled\))?, Extract Method\.\.\. \[Ctrl\+Alt\+M\](\(disabled\))?, Extract Superclass\.\.\.(\(disabled\))?, Extract Interface\.\.\.(\(disabled\))?, Extract Class\.\.\.(\(disabled\))?, Encapsulate Field\.\.\.(\(disabled\))?, Optimise #includes \[Ctrl\+Alt\+O\], Sort #includes, Convert Macro\.\.\.(\(disabled\))?, Convert Pointer to Reference(\(disabled\))?, Convert Reference to Pointer(\(disabled\))?$',
+		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Introduce Field\.\.\. \[Ctrl\+Alt\+F\](\(disabled\))?, Introduce Constant\.\.\. \[Ctrl\+Alt\+C\](\(disabled\))?, Introduce Parameter\.\.\. \[Ctrl\+Alt\+P\](\(disabled\))?, Introduce Typedef\.\.\. \[Ctrl\+Alt\+K\](\(disabled\))?, Inline\.\.\. \[Ctrl\+Alt\+N\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\.(\(disabled\))?, Push Members Down\.\.\.(\(disabled\))?, Move\.\.\. \[F6\](\(disabled\))?, Copy Class\.\.\.(\(disabled\))?, Extract Method\.\.\. \[Ctrl\+Alt\+M\](\(disabled\))?, Extract Superclass\.\.\.(\(disabled\))?, Extract Interface\.\.\.(\(disabled\))?, Extract Class\.\.\.(\(disabled\))?, Encapsulate Field\.\.\.(\(disabled\))?, Optimise #includes \[Ctrl\+Alt\+O\], Sort #includes, Convert Macro\.\.\.(\(disabled\))?, Convert Pointer to Reference(\(disabled\))?, Convert Reference to Pointer(\(disabled\))?, Make Member Function const(\(disabled\))?, Make Member Function static(\(disabled\))?$',
 		 r'^Menu Explorer: Set as Startup Solution, Set as Startup Project\(disabled\), Remove Solution, Rename\.\.\.(\(disabled\))?$',
 		 r'^Menu item \[View/Nope\] not found$'], []),
 	('menu-clicks', {
