@@ -76,10 +76,14 @@ struct SIDETemplateExtraction
 //For a type named in a class outside its functions' declarations (a field's type), the class becomes a class
 //template, as "Refactoring Towards Seams in C++" has it: the class is given another name and "template<class M>",
 //the type is M throughout it and its members, its members' definitions go to its header after it (a template's
-//must be there) as "template<class M> ... CTankTemplate<M>::Fill(...)", and after them a typedef makes the class's
-//old name the template with the type it had, "typedef CTankTemplate<CGauge> CTank;": the code that uses CTank
-//compiles as it did.  Refused: a class that is declared ahead of its definition somewhere (a typedef can't be), a
-//class in a class or a namespace, one with a static field defined outside it.
+//must be there) as "template<class M> ... CTankTemplate<M>::Fill(...)", and after them the class's old name is a
+//class that derives from the template with the type it had, "class CTank : public CTankTemplate<CGauge>", with
+//nothing of its own but the class's constructors, each handing what it is given to the template's: the code that
+//uses CTank compiles as it did, CTank is still a type that can be declared ahead of its definition (a typedef
+//couldn't be), and the compiler warns where CTankTemplate<CGauge> is written out under it.  Refused: a class in a
+//class or a namespace, one with a static field defined outside it, a constructor with a parameter that has no
+//name; and whatever doesn't compile with its name another type than the template (a member that returns a
+//pointer to its own class, given to a pointer to the name).
 //
 //Remove Template Parameter is the inverse, for a class template's parameter the caret is on: if every place the
 //template is used gives the parameter one argument, the argument takes its place throughout the template and the

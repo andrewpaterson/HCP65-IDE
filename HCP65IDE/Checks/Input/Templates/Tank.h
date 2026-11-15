@@ -25,6 +25,10 @@ class CPipe
 {
 public:
 	CGauge*	mpcGauge;
+
+	CPipe(void) { mpcGauge = 0; }
+protected:
+	CPipe(CGauge* pcGauge, int iCount = 2) { mpcGauge = pcGauge + iCount; }
 };
 
 

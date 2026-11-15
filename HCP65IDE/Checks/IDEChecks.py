@@ -2185,20 +2185,26 @@ CHECKS = [
 	('template-class', dict(MakeTemplatesCopy(), **{
 		#Extract Template Parameter for a type a class's field has: the class becomes a class template of another
 		#name, the type its parameter throughout it, its members' definitions (its constructor's and destructor's
-		#too) come to its header after it as the template's, and a typedef makes its old name the template with the
-		#type it had, so what uses it stays as it is.  Refused: a class declared ahead of its definition, a
-		#parameter name the class has, a template name that is taken.
+		#too) come to its header after it as the template's, and its old name is a class that derives from the
+		#template with the type it had and hands its constructor on, so what uses it stays as it is.  A class
+		#declared ahead of its definition can be one too: its name is still a class, and its constructors are handed
+		#on with their access, their parameters and their default values.  Refused: a parameter name the
+		#class has, a template name that is taken.
 		'WAIT_INDEX': '1', 'OPEN': 'Tank.h',
-		'DEBUG': 'edit:renamesearch:---s,edit:caret:27:3,edit:templateparameter,edit:caret:9:3,edit:templateparameter,edit:extracttemplate:miCount:CTankTemplate,edit:extracttemplate:M:CGauge,edit:extracttemplate:M:CTankTemplate,printdisklines:Tank.h,printdisklines:Tank.cpp'}),
-		[r"^Extract Template Parameter: CGauge can't be: its class is declared ahead of its definition \(Tank\.h line 21\): its name would be a typedef, which can't be$",
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:27:3,edit:templateparameter,edit:extracttemplate:N:CPipeTemplate,edit:caret:9:3,edit:templateparameter,edit:extracttemplate:miCount:CTankTemplate,edit:extracttemplate:M:CGauge,edit:extracttemplate:M:CTankTemplate,printdisklines:Tank.h,printdisklines:Tank.cpp'}),
+		[r'^Extract Template Parameter: CGauge in the class CPipe, to be CPipeTemplate$',
+		 r'^Status: Extracted the template parameter N from CGauge in CPipe: CPipe is a class that derives from CPipeTemplate<CGauge>\.$',
 		 r'^Extract Template Parameter: CGauge in the class CTank, to be CTankTemplate$', r"^Extract Template Parameter: The class has something of the parameter's name already\.$",
 		 r"^Extract Template Parameter: There is something of the template's name already\.$",
-		 r'^Status: Extracted the template parameter M from CGauge in CTank: CTank is a typedef of CTankTemplate<CGauge>, and 4 definitions are in Tank\.h now\.$',
+		 r'^Status: Extracted the template parameter M from CGauge in CTank: CTank is a class that derives from CTankTemplate<CGauge>, and 4 definitions are in Tank\.h now\.$',
 		 r'^6\|template<class M>$', r'^7\|class CTankTemplate$', r'^10\|\tM\*\tmpcGauge;$', r'^11\|\tM\tmcSpare;$', r'^14\|\tCTankTemplate\(void\);$', r'^15\|\t~CTankTemplate\(void\);$',
 		 r'^16\|\tvoid\tInit\(M\* pcGauge\);$', r'^18\|\tCTankTemplate\*\tSame\(void\) \{ return this; \}$', r'^19\|\};$',
 		 r'^22\|//////////////////////////////////////////////////////////////////////////$', r'^26\|template<class M>$', r'^27\|CTankTemplate<M>::CTankTemplate\(void\)$',
 		 r'^\d+\|CTankTemplate<M>::~CTankTemplate\(void\)$', r'^\d+\|void CTankTemplate<M>::Init\(M\* pcGauge\)$', r'^\d+\|int CTankTemplate<M>::Level\(void\)$', r'^\d+\|\tM\*\tpcGauge;$',
-		 r'^\d+\|typedef CTankTemplate<CGauge> CTank;$', r'^\d+\|class CPipe;$', r'^\d+\|\tCGauge\*\tmpcGauge;$',
+		 r'^71\|class CTank : public CTankTemplate<CGauge>$', r'^72\|\{$', r'^73\|public:$', r'^74\|\tCTank\(void\) : CTankTemplate<CGauge>\(\) \{\}$', r'^75\|\};$',
+		 r'^78\|class CPipe;$', r'^81\|template<class N>$', r'^82\|class CPipeTemplate$', r'^\d+\|\tN\*\tmpcGauge;$', r'^\d+\|	CPipeTemplate\(N\* pcGauge, int iCount = 2\) \{ mpcGauge = pcGauge \+ iCount; \}$',
+		 r'^\d+\|class CPipe : public CPipeTemplate<CGauge>$', r'^\d+\|\{$', r'^\d+\|public:$', r'^\d+\|	CPipe\(void\) : CPipeTemplate<CGauge>\(\) \{\}$', r'^\d+\|protected:$',
+		 r'^\d+\|	CPipe\(CGauge\* pcGauge, int iCount = 2\) : CPipeTemplate<CGauge>\(pcGauge, iCount\) \{\}$', r'^\d+\|\};$',
 		 r'^1\|#include "Tank\.h"$', r'^8\|int UseTank\(void\)$', r'^10\|\tCTank\tcTank;$', r'^16 lines$'],
 		[r'^\d+\|[a-z ]*CTank::']),
 	('template-remove', dict(MakeTemplatesCopy(), **{

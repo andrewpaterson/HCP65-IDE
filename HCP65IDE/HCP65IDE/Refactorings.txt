@@ -400,7 +400,15 @@ Where it is
      says whether it is offered (its AddContextActions) from what was found there once (SIDECaretContext: the
      symbol's kind and how it is declared, from the index; what the caret is in and what the selection is, from
      the file's syntax).  It is in the editor's menu too.  A refactoring added from now on gets an
-     AddContextActions, and a line in CIDEContextActions::FindActions.  The queue goes on at (3).
+     AddContextActions, and a line in CIDEContextActions::FindActions.
+ 23. The queue's (3) and (4): done.  The compiler warns where a template's instance is written out under the
+     class that is its name (CCPPUnit::ReportNamedInstances: a class whose only base is the instance and that has
+     nothing but constructors), and Extract Template Parameter on a class leaves such a class for the old name,
+     "class CTank : public CTankTemplate<CGauge>", each constructor handed on with its access, parameters and
+     default values; a class declared ahead of its definition is no longer refused.  What a typedef allowed and
+     this doesn't is refused by the check of the files: a member that returns a pointer to its own class, given
+     to a pointer to the name.  Remove Template Parameter leaves the name class as it is, deriving from what is
+     then a plain class.  The queue goes on at (5).
 
 
 When the plan is done
