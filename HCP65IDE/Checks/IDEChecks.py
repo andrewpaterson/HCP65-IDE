@@ -377,6 +377,17 @@ def MakeQualifiersCopy():
 	return {'SOLUTION': os.path.join(szFolder, 'Qualifiers.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
 
 
+def MakeTemplatesCopy():
+	#A copy of Input/Templates, to extract template parameters in: functions that take a CGauge by pointer (one a
+	#header declares, one a class's, one virtual, one of its file alone), one that has a CGauge only in its body,
+	#one that names a type of CGauge's own, and one of ints.
+	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
+	atexit.register(shutil.rmtree, szRoot, True)
+	szFolder = os.path.join(szRoot, 'Templates')
+	shutil.copytree(os.path.join(HERE, 'Input', 'Templates'), szFolder)
+	return {'SOLUTION': os.path.join(szFolder, 'Templates.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
+
+
 def MakeKeymapFile(szText=None):
 	#Where a scripted run keeps its keys, with szText in it if it's given.
 	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
@@ -2142,6 +2153,34 @@ CHECKS = [
 		 r'^8\|void Init\(CVat\* pcVat\)$', r'^10\|\tpcVat->msLevel\.miDepth = 0;$', r'^12\|\tpcVat->miCount = 0;$', r'^94\|int Sum\(CVat\* pcVat, SLevel\* psLevel, int iTimes\)$',
 		 r'^100\|\treturn psLevel->miMark \+ Sum\(pcVat, psLevel, iTimes - 1\);$', r'^127\|\treturn iTotal \+ Sum\(pcVat, psLate, 2\);$'],
 		[r'^\d+\|\t+void\tInit\(void\);$', r'^\d+\|\t+int\t\tSum\(SLevel\* psLevel, int iTimes\);$']),
+	('template-parameter', dict(MakeTemplatesCopy(), **{
+		#Extract Template Parameter: the type at the caret becomes a parameter of its function, template<class M>
+		#over each declaration and definition.  A function a header declares has its definition put there (a
+		#member's after its class, with its banner); one of its file alone stays.  The calls stay where the type is
+		#in the parameters, and name it where it isn't (Make<CGauge>).  A type of the type's own gets typename.
+		#int is a type too.  Refused: a virtual function, a parameter name the function has, what is no type.
+		'WAIT_INDEX': '1', 'OPEN': 'Mix.cpp',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:90:6,edit:templateparameter,edit:caret:77:12,edit:templateparameter,edit:extracttemplate:M,edit:caret:67:19,edit:extracttemplate:M,edit:caret:57:20,edit:templateparameter,edit:caret:47:18,edit:extracttemplate:iTimes,edit:extracttemplate:G,edit:caret:34:13,edit:extracttemplate:M,edit:caret:23:3,edit:templateparameter,edit:extracttemplate:M,edit:caret:8:12,edit:templateparameter,edit:extracttemplate:M,printdisklines:Mix.h,printdisklines:Mix.cpp'}),
+		[r'^Extract Template Parameter: no type in a function$', r"^Extract Template Parameter: int in Twice, the calls' arguments say it$", r'^Status: Extracted the template parameter M from int in Twice\.$',
+		 r'^Status: Extracted the template parameter M from CGauge in Local\.$',
+		 r"^Extract Template Parameter: CGauge can't be: its function is virtual, or a template's body calls it with other classes' functions: a virtual function can't be a template$",
+		 r"^Extract Template Parameter: The function has something of the parameter's name already\.$",
+		 r'^Status: Extracted the template parameter G from CGauge in CMixer::Sum: its definition is in Mix\.h now\.$', r'^Status: Extracted the template parameter M from CGauge in Marked: its definition is in Mix\.h now\.$',
+		 r'^Extract Template Parameter: CGauge in Make, the calls must name it$', r'^Status: Extracted the template parameter M from CGauge in Make: its definition is in Mix\.h now, and 1 call names the type\.$',
+		 r'^Status: Extracted the template parameter M from CGauge in Total: its definition is in Mix\.h now\.$',
+		 r'^24\|\ttemplate<class G>$', r'^25\|\tint\t\tSum\(G\* pcGauge, int iTimes\);$', r'^26\|\tvirtual\tint\t\tBlend\(CGauge\* pcGauge\);$',
+		 r'^\d+\|//////////////////////////////////////////////////////////////////////////$', r'^34\|template<class G>$', r'^35\|int CMixer::Sum\(G\* pcGauge, int iTimes\)$',
+		 r'^\d+\|template<class M>$', r'^\d+\|int Total\(M\* pcGauge, int iCount\)$', r'^\d+\|\tM\*\tpcOther;$', r'^\d+\|\}$', r'^\d+\|$', r'^\d+\|$', r'^\d+\|template<class M>$', r'^\d+\|int Make\(int iSeed\)$', r'^\d+\|\tM\tcGauge;$',
+		 r'^\d+\|int Marked\(M\* pcGauge\)$', r'^\d+\|\ttypename M::SMark\tsMark;$', r'^\d+\|#endif // __MIX_H__$',
+		 r'^8\|int CMixer::Blend\(CGauge\* pcGauge\)$', r'^18\|template<class M>$', r'^19\|static int Local\(M\* pcGauge\)$', r'^29\|template<class M>$', r'^30\|M Twice\(M iValue\)$', r'^32\|\tM\t\tiResult;$',
+		 r'^50\|\treturn Total\(&cGauge, 2\) \+ Make<CGauge>\(3\) \+ Marked\(&cGauge\) \+ cMixer\.Sum\(&cGauge, 2\) \+ cMixer\.Blend\(&cGauge\) \+ Local\(&cGauge\) \+ Twice\(4\);$'],
+		[r'^\d+\|int\t\tTotal\(CGauge', r'^\d+\|int CMixer::Sum\(CGauge']),
+	('template-parameter-dialog', dict(MakeTemplatesCopy(), **{
+		#Its dialog asks the parameter's name.
+		'WAIT_INDEX': '1', 'OPEN': 'Mix.cpp', 'SETTINGS': MakeSettingsFile(), 'DIALOG_ANSWER': 'Cancel',
+		'DEBUG': 'edit:caret:8:12,extracttemplateparameter,answered:1,printdisklines:Mix.h'}),
+		[r'^Dialog \[Extract Template Parameter from CGauge\] answered Cancel$', r'^\d+\|int\t\tTotal\(CGauge\* pcGauge, int iCount\);$'],
+		[r'^Status: Extracted']),
 	('rename-assembly-class', dict(MakeRenameAssemblyCopy(), **{
 		#A class renamed in hand written assembly's labels (_CEngine__Init, __0, __2), in parameter lists with its length
 		#(FPC7CEngine to FPC6CMotor), in generated layout constants (SIZEOF_CEngine, CEngine_miSpeed: in the assembly, the
@@ -2646,7 +2685,7 @@ CHECKS = [
 		 r'^Menu Debug: Start Debugging \[F5\], Start Without Debugging \[Ctrl\+F5\], Stop Debugging \[Shift\+F5\], Stop Running\(disabled\), Restart \[Ctrl\+Shift\+F5\], Break All \[Ctrl\+Pause/Break\], Attach to Emulator\.\.\., Step Into \[F11\], Step Over \[F10\], Step Out \[Shift\+F11\], Toggle Breakpoint \[F9\], ',
 		 r'^Menu Window: Reset Window Layout, Close All Documents$',
 		 r'^Menu Editor: Go to Source \[Ctrl\+B\], Find Usages \[Alt\+F7\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Rename\.\.\. \[Shift\+F6\], Refactor>, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\]$',
-		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Introduce Field\.\.\. \[Ctrl\+Alt\+F\](\(disabled\))?, Introduce Constant\.\.\. \[Ctrl\+Alt\+C\](\(disabled\))?, Introduce Parameter\.\.\. \[Ctrl\+Alt\+P\](\(disabled\))?, Introduce Typedef\.\.\. \[Ctrl\+Alt\+K\](\(disabled\))?, Inline\.\.\. \[Ctrl\+Alt\+N\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\.(\(disabled\))?, Push Members Down\.\.\.(\(disabled\))?, Move\.\.\. \[F6\](\(disabled\))?, Copy Class\.\.\.(\(disabled\))?, Extract Method\.\.\. \[Ctrl\+Alt\+M\](\(disabled\))?, Extract Superclass\.\.\.(\(disabled\))?, Extract Interface\.\.\.(\(disabled\))?, Extract Class\.\.\.(\(disabled\))?, Encapsulate Field\.\.\.(\(disabled\))?, Optimise #includes \[Ctrl\+Alt\+O\], Sort #includes, Convert Macro\.\.\.(\(disabled\))?, Convert Pointer to Reference(\(disabled\))?, Convert Reference to Pointer(\(disabled\))?, Make Member Function const(\(disabled\))?, Make Member Function static(\(disabled\))?, Convert Function to Member Function(\(disabled\))?, Convert Member Function to Function(\(disabled\))?$',
+		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Introduce Field\.\.\. \[Ctrl\+Alt\+F\](\(disabled\))?, Introduce Constant\.\.\. \[Ctrl\+Alt\+C\](\(disabled\))?, Introduce Parameter\.\.\. \[Ctrl\+Alt\+P\](\(disabled\))?, Introduce Typedef\.\.\. \[Ctrl\+Alt\+K\](\(disabled\))?, Inline\.\.\. \[Ctrl\+Alt\+N\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\.(\(disabled\))?, Push Members Down\.\.\.(\(disabled\))?, Move\.\.\. \[F6\](\(disabled\))?, Copy Class\.\.\.(\(disabled\))?, Extract Method\.\.\. \[Ctrl\+Alt\+M\](\(disabled\))?, Extract Superclass\.\.\.(\(disabled\))?, Extract Interface\.\.\.(\(disabled\))?, Extract Class\.\.\.(\(disabled\))?, Encapsulate Field\.\.\.(\(disabled\))?, Optimise #includes \[Ctrl\+Alt\+O\], Sort #includes, Convert Macro\.\.\.(\(disabled\))?, Convert Pointer to Reference(\(disabled\))?, Convert Reference to Pointer(\(disabled\))?, Make Member Function const(\(disabled\))?, Make Member Function static(\(disabled\))?, Convert Function to Member Function(\(disabled\))?, Convert Member Function to Function(\(disabled\))?, Extract Template Parameter\.\.\.$',
 		 r'^Menu Explorer: Set as Startup Solution, Set as Startup Project\(disabled\), Remove Solution, Rename\.\.\.(\(disabled\))?$',
 		 r'^Menu item \[View/Nope\] not found$'], []),
 	('menu-clicks', {

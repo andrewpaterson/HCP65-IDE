@@ -39,7 +39,7 @@ static bool			gbIDEScriptRenameSaves = false;  //rename: saves what it edited (r
 static bool			gbIDEScriptClassFiles = false;  //rename: renames a type's files too (renamesearch's f), never from the settings.
 
 
-static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printfindpreview", "printfindtoolbar", "findtool:", "printstartup", "printworkspace", "rename", "safedelete", "introducevariable", "introducefield", "introduceconstant", "introduceparameter", "changesignature", "pullmembersup", "pushmembersdown", "moveclass", "copyclass", "inlinevariable", "introducetypedef", "extractmethod", "extractsuperclass", "extractinterface", "extractclass", "encapsulatefield", "convertmacro", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printsettings", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printprojectfiles", "printdiskfile:", "printdisklines:", "printedits", "printspans", "configuration:", "waitindex" };
+static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printfindpreview", "printfindtoolbar", "findtool:", "printstartup", "printworkspace", "rename", "safedelete", "introducevariable", "introducefield", "introduceconstant", "introduceparameter", "changesignature", "pullmembersup", "pushmembersdown", "moveclass", "copyclass", "inlinevariable", "introducetypedef", "extractmethod", "extractsuperclass", "extractinterface", "extractclass", "encapsulatefield", "convertmacro", "extracttemplateparameter", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printsettings", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printprojectfiles", "printdiskfile:", "printdisklines:", "printedits", "printspans", "configuration:", "waitindex" };
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -293,6 +293,11 @@ void CIDEScript::RunCommand(const char* szCommand)
 	{
 		//Extract Superclass's, Interface's or Class's dialog for the class at the caret.
 		mpcContent->GetExtractClass()->ShowExtract((szCommand[7] == 's') ? IDE_EXTRACT_SUPERCLASS : ((szCommand[7] == 'i') ? IDE_EXTRACT_INTERFACE : IDE_EXTRACT_DELEGATE));
+	}
+	else if (strcmp(szCommand, "extracttemplateparameter") == 0)
+	{
+		//Extract Template Parameter's dialog for the type at the caret.
+		mpcContent->GetTemplateParameter()->ShowExtract();
 	}
 	else if (strcmp(szCommand, "convertmacro") == 0)
 	{
@@ -1722,6 +1727,43 @@ void CIDEScript::RunEditStep(const char* szStep)
 		sMove.Kill();
 		aszParts.Kill();
 		szSpec.Kill();
+	}
+	else if ((strcmp(szStep, "templateparameter") == 0) || (strncmp(szStep, "extracttemplate:", 16) == 0))
+	{
+		//What Extract Template Parameter found for the type at the caret (templateparameter): the type, its function
+		//and whether the calls' arguments say what it is; or it done with the parameter named ("extracttemplate:M").
+		SIDETemplateExtraction	sExtraction;
+		CChars					szPrinted;
+
+		sExtraction.Init();
+		szPrinted.Init();
+		if (!mpcContent->GetTemplateParameter()->FindExtraction(&sExtraction))
+		{
+			printf("Extract Template Parameter: no type in a function\n");
+		}
+		else if (!sExtraction.bPossible)
+		{
+			printf("Extract Template Parameter: %s can't be: %s\n", sExtraction.szType.Text(), sExtraction.szWhyNot.Text());
+		}
+		else if (strcmp(szStep, "templateparameter") == 0)
+		{
+			printf("Extract Template Parameter: %s in %s, %s\n", sExtraction.szType.Text(), sExtraction.sSignature.szName.Text(), sExtraction.bDeduced ? "the calls' arguments say it" : "the calls must name it");
+		}
+		else if (mpcContent->GetTemplateParameter()->GetProblem(&sExtraction, &szStep[16]))
+		{
+			printf("Extract Template Parameter: %s\n", mpcContent->GetTemplateParameter()->GetProblem(&sExtraction, &szStep[16]));
+		}
+		else
+		{
+			mpcContent->GetTemplateParameter()->Extract(&sExtraction, &szStep[16], &szPrinted);
+			printf("Status: %s\n", szPrinted.Text());
+			if (gbIDEScriptRenameSaves)
+			{
+				mpcContent->GetDocuments()->SaveAllFiles();
+			}
+		}
+		szPrinted.Kill();
+		sExtraction.Kill();
 	}
 	else if ((strcmp(szStep, "functiontomember") == 0) || (strcmp(szStep, "membertofunction") == 0))
 	{

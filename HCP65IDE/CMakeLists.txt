@@ -148,6 +148,7 @@ set(IDE_SOURCES
 	"${IDE_DIR}/IDEEdit.cpp"
 	"${IDE_DIR}/IDENavigator.cpp"
 	"${IDE_DIR}/IDERename.cpp"
+	"${IDE_DIR}/IDETemplateParameter.cpp"
 	"${IDE_DIR}/IDEConvertMember.cpp"
 	"${IDE_DIR}/IDEMemberQualifier.cpp"
 	"${IDE_DIR}/IDEConvertPointer.cpp"
