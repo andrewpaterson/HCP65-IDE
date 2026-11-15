@@ -440,6 +440,7 @@ Where it is
        - Inline inlines a constant of a file or a class (question 29): done.
        - Introduce Typedef in a header names the type in the files that #include it too (question 33): done.
        - Inline Function gives a changed parameter a variable, and takes a call out of an expression (question 39): done.
+       - Move to File's field completes, and a button opens a chooser of the solution's files (question 25): done.
 
 
 When the plan is done

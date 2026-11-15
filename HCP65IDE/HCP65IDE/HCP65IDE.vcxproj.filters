@@ -51,6 +51,9 @@
     <ClCompile Include="IDERename.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="IDESolutionFileChooser.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="IDEContextActions.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -267,6 +270,9 @@
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDERename.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDESolutionFileChooser.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDEContextActions.h">

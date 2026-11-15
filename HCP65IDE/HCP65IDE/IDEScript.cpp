@@ -24,6 +24,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/Timer.h"
 #include "StandardLib/ClassDefines.h"
 #include "SupportLib/PNGWriter.h"
+#include "WindowLib/CompletionField.h"
+#include "WindowLib/TreeContainer.h"
 #include "IDEContent.h"
 #include "WindowLib/ComponentInput.h"
 #include "InputLib/ProgramDeviceDetail.h"
@@ -51,11 +53,13 @@ void CIDEScript::Init(CIDEContent* pcContent)
 	PreInit();
 	mpcContent = pcContent;
 	mpDialog = NULL;
+	mpOuterDialog = NULL;
 	miDialogTicks = 0;
 	mpcKeyboard = NULL;
 	mpcKeyboardInput = NULL;
 	muiSpans = 0;
 	muiAnswered = 0;
+	muiKeyed = 0;
 	msDialogDrawn.Clear();
 	PostInit();
 }
@@ -69,11 +73,13 @@ void CIDEScript::Class(void)
 {
 	U_Pointer(mpcContent);
 	M_Pointer(mpDialog);
+	M_Pointer(mpOuterDialog);
 	U_Int32(miDialogTicks);
 	U_Pointer(mpcKeyboard);
 	U_Pointer(mpcKeyboardInput);
 	U_Size(muiSpans);
 	U_Size(muiAnswered);
+	U_Size(muiKeyed);
 	U_Unknown(SMemberCall, msDialogDrawn);
 }
 
@@ -3254,6 +3260,11 @@ void CIDEScript::WatchDialog(Ptr<CDialog> pDialog)
 	{
 		return;
 	}
+	if (mpDialog.IsNotNull())
+	{
+		//A dialog opened from the watched one (a chooser its button opens): that one is watched again afterwards.
+		mpOuterDialog = mpDialog;
+	}
 	mpDialog = pDialog;
 	miDialogTicks = 0;
 	mpDialog->SetTicker(this, &CIDEScript::DialogTick);
@@ -3273,7 +3284,8 @@ void CIDEScript::StopWatchingDialog(void)
 	if (mpDialog.IsNotNull())
 	{
 		mpDialog->ClearTicker();
-		mpDialog = NULL;
+		mpDialog = mpOuterDialog;
+		mpOuterDialog = NULL;
 	}
 }
 
@@ -3379,8 +3391,11 @@ void CIDEScript::DialogTick(void)
 //
 // For checking, HCP65_IDE_DIALOG_KEYS, separated by commas, are pressed
 // before the dialog is answered, and what has the keys after each is
-// printed: tab, backtab, down, up, selectdown, delete, backspace, space and
-// type:<characters>.  With Choose Content to Paste open its rows are
+// printed: tab, backtab, down, up, selectdown, delete, backspace, space,
+// enter and type:<characters>.  Keys separated by | are the first
+// dialog's to open, the second's and so on (a later one has none); with
+// no | they are every dialog's.  A completing field's list, or a tree's
+// selected node, is printed after each.  With Choose Content to Paste open its rows are
 // printed after each too (PrintPasteHistoryDialog).  One with a plus, "Control+Shift+N", is a
 // command's keys: with the Go to dialog open its tab, text and results
 // are printed after them.
@@ -3389,8 +3404,12 @@ void CIDEScript::DialogTick(void)
 void CIDEScript::PressDialogKeys(Ptr<CWindow> pWindow)
 {
 	CArrayChars			aszKeys;
+	CArrayChars			aszDialogs;
 	Ptr<CComponent>		pFocussed;
 	Ptr<CGoToDialog>	pGoTo;
+	CCompletionField*	pcCompleting;
+	CTreeContainer*		pcTree;
+	CChars				szNode;
 	size				i;
 	size				j;
 	bool				bTaken;
@@ -3400,9 +3419,27 @@ void CIDEScript::PressDialogKeys(Ptr<CWindow> pWindow)
 		return;
 	}
 	aszKeys.Init();
-	aszKeys.Split(getenv("HCP65_IDE_DIALOG_KEYS"), ',');
+	if (strchr(getenv("HCP65_IDE_DIALOG_KEYS"), '|') != NULL)
+	{
+		aszDialogs.Init();
+		aszDialogs.Split(getenv("HCP65_IDE_DIALOG_KEYS"), '|');
+		if (muiKeyed < aszDialogs.NumElements())
+		{
+			aszKeys.Split(aszDialogs.GetText(muiKeyed), ',');
+		}
+		aszDialogs.Kill();
+	}
+	else
+	{
+		aszKeys.Split(getenv("HCP65_IDE_DIALOG_KEYS"), ',');
+	}
+	muiKeyed++;
 	for (i = 0; i < aszKeys.NumElements(); i++)
 	{
+		if (aszKeys.Get(i)->Empty())
+		{
+			continue;
+		}
 		if (aszKeys.Get(i)->Contains("+"))
 		{
 			bTaken = pWindow->InputKeys(aszKeys.Get(i)->Text());
@@ -3428,6 +3465,10 @@ void CIDEScript::PressDialogKeys(Ptr<CWindow> pWindow)
 		{
 			pWindow->InputCommand(CIC_Space, true);
 		}
+		else if (aszKeys.Get(i)->Equals("enter"))
+		{
+			pWindow->InputCommand(CIC_Enter, true);
+		}
 		else if (aszKeys.Get(i)->Equals("down") || aszKeys.Get(i)->Equals("up") || aszKeys.Get(i)->Equals("selectdown") || aszKeys.Get(i)->Equals("delete") || aszKeys.Get(i)->Equals("backspace"))
 		{
 			pWindow->InputCommand(aszKeys.Get(i)->Equals("down") ? CIC_Down : (aszKeys.Get(i)->Equals("up") ? CIC_Up : (aszKeys.Get(i)->Equals("selectdown") ? CIC_SelectDown : (aszKeys.Get(i)->Equals("delete") ? CIC_Delete : CIC_Backspace))), true);
@@ -3439,6 +3480,28 @@ void CIDEScript::PressDialogKeys(Ptr<CWindow> pWindow)
 		PrintPasteHistoryDialog(pWindow);
 		pFocussed = pWindow->GetFocus()->GetFocussedComponent();
 		printf("Focus: %s\n", pFocussed.IsNotNull() ? pFocussed.ClassName() : "(none)");
+		if (pFocussed.IsNotNull() && (strcmp(pFocussed.ClassName(), "CCompletionField") == 0))
+		{
+			pcCompleting = (CCompletionField*)&pFocussed;
+			printf("Field [%s]", pcCompleting->GetText());
+			if (pcCompleting->IsCompleting())
+			{
+				printf(" completes:");
+				for (j = 0; j < pcCompleting->NumCompletions(); j++)
+				{
+					printf("%s%s%s", (j == 0) ? " " : ", ", ((int32)j == pcCompleting->GetMenu()->GetSelected()) ? "*" : "", pcCompleting->GetCompletion(j));
+				}
+			}
+			printf("\n");
+		}
+		else if (pFocussed.IsNotNull() && (strcmp(pFocussed.ClassName(), "CTreeContainer") == 0))
+		{
+			//A tree's selected node.
+			pcTree = (CTreeContainer*)&pFocussed;
+			szNode.Init();
+			printf("Tree [%s]\n", (pcTree->GetSelectedNode() != TREE_NO_NODE) ? pcTree->GetNodeText(pcTree->GetSelectedNode(), &szNode) : "");
+			szNode.Kill();
+		}
 	}
 	fflush(stdout);
 	aszKeys.Kill();

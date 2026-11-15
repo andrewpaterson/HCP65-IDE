@@ -72,6 +72,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDEMoveClass.h"
 #include "IDEInlineVariable.h"
 #include "IDEIntroduceTypedef.h"
+#include "IDESolutionFileChooser.h"
 #include "IDEExtractMethod.h"
 #include "IDEInlineFunction.h"
 #include "IDEExtractClass.h"
@@ -193,6 +194,7 @@ protected:
 	Ptr<CIDEMoveClass>			mpMoveClass;			//Move Class to Its Own Files.
 	Ptr<CIDEInlineVariable>		mpInlineVariable;		//Inline Variable.
 	Ptr<CIDEIntroduceTypedef>	mpIntroduceTypedef;		//Introduce Typedef.
+	Ptr<CIDESolutionFileChooser>	mpSolutionFileChooser;	//The dialog a refactoring chooses one of the solutions' files from.
 	Ptr<CIDEExtractMethod>		mpExtractMethod;		//Extract Method.
 	Ptr<CIDEInlineFunction>		mpInlineFunction;		//Inline, of a function.
 	Ptr<CIDEExtractClass>		mpExtractClass;			//Extract Superclass, Interface and Class.
@@ -317,6 +319,7 @@ public:
 	Ptr<CIDEMoveClass>			GetMoveClass(void);
 	Ptr<CIDEInlineVariable>		GetInlineVariable(void);
 	Ptr<CIDEIntroduceTypedef>	GetIntroduceTypedef(void);
+	Ptr<CIDESolutionFileChooser>	GetSolutionFileChooser(void);
 	Ptr<CIDEExtractMethod>		GetExtractMethod(void);
 	Ptr<CIDEInlineFunction>		GetInlineFunction(void);
 	Ptr<CIDEExtractClass>		GetExtractClass(void);

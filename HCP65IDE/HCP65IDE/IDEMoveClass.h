@@ -28,6 +28,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/Label.h"
 #include "WindowLib/MenuContainer.h"
 #include "WindowLib/TextField.h"
+#include "WindowLib/CompletionField.h"
+#include "WindowLib/Button.h"
 #include "IDECodeModel.h"
 #include "IDERefactorUnit.h"
 #include "IDEDefinitions.h"
@@ -105,7 +107,10 @@ struct SIDEFunctionMove
 //it is copied from.  The new header #includes the old one if the copy names something that is declared there.
 //
 //Move to File (the same F6, on a function or a variable that is in no class): it goes to another header of the
-//solution, named in the dialog.  Its declarations (prototypes, an extern) go to that header, after the last function
+//solution, named in the dialog: the field completes over the solution's headers as it is typed in (Go to File's
+//matching; each with its folder beside it), and the button beside it opens a chooser of the solutions' projects and
+//files (CIDESolutionFileChooser).  A header whose name another of the solution's files has is written with its path.
+//Its declarations (prototypes, an extern) go to that header, after the last function
 //it declares, or before its #endif; its definition goes to the end of that header's source file, or, if a header
 //defines it (inline, a function template), to that header.  The files that name it #include the header it has gone
 //to, beside their #include of the one it left; and the files it goes to #include the headers that declare what its
@@ -120,6 +125,8 @@ protected:
 	CIDEContent*						mpcContent;  //Not held: the content holds it.
 	Ptr<CDialog>						mpDialog;  //While it is shown.
 	Ptr<CTextField>						mpNameField;
+	Ptr<CCompletionField>				mpHeaderField;  //Move to File's: mpNameField, completing.
+	Ptr<CButton>						mpChooseButton;  //...and the button beside it that opens the chooser.
 	Ptr<CLabel>							mpError;
 	SIDEClassMove*						mpsMove;  //The move the dialog is shown for.  Not held.
 	SIDEFunctionMove*					mpsFunctionMove;  //...or this one.
@@ -162,6 +169,9 @@ protected:
 	bool				ApproveCopy(void);
 	void				AppendMovedBlock(const char* szText, const char* szFileName, SCPPSyntaxRange* psRange, SIDERenameTarget* psTarget, const char* szOldName, const char* szNewName, CChars* pszDest);
 	bool				ApproveFunctionMove(void);
+	void	HeaderTyped(CTextField* pcField);
+	void	ChooseHeader(void);
+	void	AppendHeaderText(const char* szPath, CChars* pszDest);
 	bool				ShowFunctionMove(SIDEFunctionMove* psMove);
 	bool				IsFunctionMoved(SIDEFunctionMove* psMove, const char* szFileName, int32 iLine);
 	bool				FindPrototypePlace(const char* szHeader, const char* szText, size* puiAt);

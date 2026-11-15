@@ -223,6 +223,7 @@ void CIDEContent::Class(void)
 	M_Pointer(mpMoveClass);
 	M_Pointer(mpInlineVariable);
 	M_Pointer(mpIntroduceTypedef);
+	M_Pointer(mpSolutionFileChooser);
 	M_Pointer(mpExtractMethod);
 	M_Pointer(mpInlineFunction);
 	M_Pointer(mpExtractClass);
@@ -440,6 +441,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpMoveClass = OMalloc<CIDEMoveClass>(this);
 	mpInlineVariable = OMalloc<CIDEInlineVariable>(this);
 	mpIntroduceTypedef = OMalloc<CIDEIntroduceTypedef>(this);
+	mpSolutionFileChooser = OMalloc<CIDESolutionFileChooser>(this);
 	mpExtractMethod = OMalloc<CIDEExtractMethod>(this);
 	mpInlineFunction = OMalloc<CIDEInlineFunction>(this);
 	mpExtractClass = OMalloc<CIDEExtractClass>(this);
@@ -1176,6 +1178,7 @@ Ptr<CIDEMoveMembers> CIDEContent::GetMoveMembers(void) { return mpMoveMembers; }
 Ptr<CIDEMoveClass> CIDEContent::GetMoveClass(void) { return mpMoveClass; }
 Ptr<CIDEInlineVariable> CIDEContent::GetInlineVariable(void) { return mpInlineVariable; }
 Ptr<CIDEIntroduceTypedef> CIDEContent::GetIntroduceTypedef(void) { return mpIntroduceTypedef; }
+Ptr<CIDESolutionFileChooser> CIDEContent::GetSolutionFileChooser(void) { return mpSolutionFileChooser; }
 Ptr<CIDEExtractMethod> CIDEContent::GetExtractMethod(void) { return mpExtractMethod; }
 Ptr<CIDEInlineFunction> CIDEContent::GetInlineFunction(void) { return mpInlineFunction; }
 Ptr<CIDEExtractClass> CIDEContent::GetExtractClass(void) { return mpExtractClass; }

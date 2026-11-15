@@ -1591,12 +1591,19 @@ size CIDECodeModel::FindFilesNamed(const char* szName, CArrayChars* paszDest)
 {
 	CFileUtil	cFileUtil;
 	CChars		szFile;
+	CChars		szWanted;
 	size		uiFound;
 	size		i;
 	size		j;
 	bool		bHave;
+	bool		bPath;
+	bool		bFound;
 	char*		szPath;
 
+	//A name with some of its path ("Sub/User.h", or all of it) is the files whose paths end with it.
+	bPath = (strchr(szName, '/') != NULL) || (strchr(szName, '\\') != NULL);
+	szWanted.Init(szName);
+	szWanted.Replace('\\', '/');
 	FindProjectFiles();
 	uiFound = 0;
 	mcIndexMutex.Lock();
@@ -1604,8 +1611,19 @@ size CIDECodeModel::FindFilesNamed(const char* szName, CArrayChars* paszDest)
 	{
 		szPath = (i < maszProjectFiles.NumElements()) ? maszProjectFiles.GetText(i) : mcIndex.GetFileName(i - maszProjectFiles.NumElements());
 		szFile.Init();
-		cFileUtil.GetFileName(&szFile, szPath);
-		if (szFile.EqualsIgnoreCase(szName))
+		if (bPath)
+		{
+			szFile.Set(szPath);
+			szFile.Replace('\\', '/');
+			bFound = szFile.EqualsIgnoreCase(szWanted.Text()) || ((szFile.Length() > szWanted.Length()) && (szFile.Text()[szFile.Length() - szWanted.Length() - 1] == '/') &&
+																  (StringInsensitiveCompare(&szFile.Text()[szFile.Length() - szWanted.Length()], szWanted.Text()) == 0));
+		}
+		else
+		{
+			cFileUtil.GetFileName(&szFile, szPath);
+			bFound = szFile.EqualsIgnoreCase(szName);
+		}
+		if (bFound)
 		{
 			bHave = false;
 			for (j = paszDest->NumElements() - uiFound; j < paszDest->NumElements(); j++)
@@ -1621,6 +1639,7 @@ size CIDECodeModel::FindFilesNamed(const char* szName, CArrayChars* paszDest)
 		szFile.Kill();
 	}
 	mcIndexMutex.Unlock();
+	szWanted.Kill();
 	return uiFound;
 }
 

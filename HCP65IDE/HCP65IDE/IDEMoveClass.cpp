@@ -21,9 +21,11 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdlib.h>
 #include <string.h>
 #include "BaseLib/ConstructorCall.h"
+#include "BaseLib/NameMatcher.h"
 #include "BaseLib/FileUtil.h"
 #include "BaseLib/TextFile.h"
 #include "CppCompilerLib/CPPIndex.h"
+#include "WindowLib/GridContainer.h"
 #include "IDEContent.h"
 #include "IDERename.h"
 #include "IDEFileRename.h"
@@ -227,6 +229,8 @@ void CIDEMoveClass::Class(void)
 	U_Pointer(mpcContent);
 	M_Pointer(mpDialog);
 	M_Pointer(mpNameField);
+	M_Pointer(mpHeaderField);
+	M_Pointer(mpChooseButton);
 	M_Pointer(mpError);
 	U_Pointer(mpsMove);
 	U_Pointer(mpsFunctionMove);
@@ -1752,6 +1756,10 @@ void SIDEFunctionMove::Kill(void)
 }
 
 
+#define IDE_MOVE_COMPLETIONS			12
+#define IDE_MOVE_COMPLETION_TAKEN	(-2147483647 - 1)
+
+
 //////////////////////////////////////////////////////////////////////////
 //
 //
@@ -2428,17 +2436,169 @@ bool CIDEMoveClass::ApproveFunctionMove(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// A header as Move to File's field names it: its name, or its path if
+// another of the solution's files has the name.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEMoveClass::AppendHeaderText(const char* szPath, CChars* pszDest)
+{
+	CArrayChars	aszFound;
+	CChars		szText;
+
+	aszFound.Init();
+	if (mpcContent->GetCodeModel()->FindFilesNamed(GetIDEFileNamePart(szPath), &aszFound) > 1)
+	{
+		szText.Init(szPath);
+		szText.Replace('\\', '/');
+		pszDest->Append(szText);
+		szText.Kill();
+	}
+	else
+	{
+		pszDest->Append(GetIDEFileNamePart(szPath));
+	}
+	aszFound.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Move to File's field was typed in: the solution's headers that what is
+// in it could mean, as Go to File matches them, the best first, each
+// with its folder.  None once it names one of them in full.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEMoveClass::HeaderTyped(CTextField* pcField)
+{
+	CIDECodeModel*	pcModel;
+	CNameMatcher	cMatcher;
+	SNameMatch		sMatch;
+	CArrayChars		aszPaths;
+	CArrayInt		aiScores;
+	CArrayChars		aszTexts;
+	CArrayChars		aszNotes;
+	CFileUtil		cFileUtil;
+	CChars			szName;
+	CChars			szFolder;
+	char*			szPath;
+	size			uiBest;
+	size			i;
+
+	aszTexts.Init();
+	aszNotes.Init();
+	if (pcField->GetText()[0] != '\0')
+	{
+		pcModel = mpcContent->GetCodeModel();
+		cMatcher.Init(pcField->GetText());
+		aszPaths.Init();
+		aiScores.Init();
+		for (i = 0; i < pcModel->NumProjectFiles(); i++)
+		{
+			szPath = pcModel->GetProjectFile(i);
+			if (IsIDEMoveHeader(szPath) && !aszPaths.Contains(szPath) && cMatcher.MatchPath(szPath, &sMatch))
+			{
+				aszPaths.Add(szPath);
+				aiScores.Add((int)sMatch.iScore);
+			}
+		}
+		while (aszTexts.NumElements() < IDE_MOVE_COMPLETIONS)
+		{
+			uiBest = MAX_SIZE;
+			for (i = 0; i < aiScores.NumElements(); i++)
+			{
+				if ((aiScores.GetValue(i) != IDE_MOVE_COMPLETION_TAKEN) && ((uiBest == MAX_SIZE) || (aiScores.GetValue(i) > aiScores.GetValue(uiBest))))
+				{
+					uiBest = i;
+				}
+			}
+			if (uiBest == MAX_SIZE)
+			{
+				break;
+			}
+			*aiScores.Get(uiBest) = IDE_MOVE_COMPLETION_TAKEN;
+			szName.Init();
+			AppendHeaderText(aszPaths.GetText(uiBest), &szName);
+			aszTexts.Add(szName.Text());
+			szName.Clear();
+			szFolder.Init();
+			cFileUtil.SplitPath(aszPaths.GetText(uiBest), &szName, &szFolder);
+			aszNotes.Add(szFolder.Text());
+			szFolder.Kill();
+			szName.Kill();
+		}
+		aiScores.Kill();
+		aszPaths.Kill();
+		cMatcher.Kill();
+		if ((aszTexts.NumElements() == 1) && aszTexts.Get(0)->EqualsIgnoreCase(pcField->GetText()))
+		{
+			aszTexts.ReInit();
+			aszNotes.ReInit();
+		}
+	}
+	mpHeaderField->SetCompletions(&aszTexts, &aszNotes);
+	aszNotes.Kill();
+	aszTexts.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The button beside Move to File's field: the chooser of the solutions'
+// files, on the header the field names (or the file in the editor), and
+// the header chosen in it goes in the field.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEMoveClass::ChooseHeader(void)
+{
+	Ptr<CIDEEditorTab>	pTab;
+	CArrayChars			aszFound;
+	CChars				szSelected;
+	CChars				szPath;
+	CChars				szText;
+
+	mpHeaderField->CloseCompletions();
+	szSelected.Init();
+	aszFound.Init();
+	pTab = mpcContent->GetDocuments()->GetActiveTab();
+	if ((mpHeaderField->GetText()[0] != '\0') && (mpcContent->GetCodeModel()->FindFilesNamed(mpHeaderField->GetText(), &aszFound) == 1))
+	{
+		szSelected.Set(aszFound.GetText(0));
+	}
+	else if (pTab.IsNotNull())
+	{
+		szSelected.Set(pTab->GetFileName());
+	}
+	aszFound.Kill();
+	szPath.Init();
+	if (mpcContent->GetSolutionFileChooser()->Choose(mpDialog->GetWindow(), "Choose the Header", ".h;.hpp;.hh;.inl", szSelected.Text(), &szPath))
+	{
+		szText.Init();
+		AppendHeaderText(szPath.Text(), &szText);
+		mpHeaderField->SetText(szText.Text());
+		mpHeaderField->SetCaretPosition(szText.Length());
+		mpHeaderField->CloseCompletions();
+		szText.Kill();
+	}
+	mpDialog->GetWindow()->GetFocus()->SetFocus(mpHeaderField);
+	szPath.Kill();
+	szSelected.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Move to File's dialog (the header it goes to), then the move.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEMoveClass::ShowFunctionMove(SIDEFunctionMove* psMove)
 {
-	CChars	szMessage;
-	CChars	szName;
-	CChars	szHeader;
-	CChars	szSource;
-	CChars	szProblem;
-	bool	bResult;
+	Ptr<CGridContainer>	pRow;
+	CChars				szMessage;
+	CChars				szName;
+	CChars				szHeader;
+	CChars				szSource;
+	CChars				szProblem;
+	bool				bResult;
 
 	if (!psMove->bMovable)
 	{
@@ -2457,7 +2617,24 @@ bool CIDEMoveClass::ShowFunctionMove(SIDEFunctionMove* psMove)
 	mpDialog = OMalloc<CDialog>(mpcContent->GetWindow(), mpcContent->GetDialogLook(), szMessage.Text());
 	szMessage.Kill();
 	mpsFunctionMove = psMove;
-	mpNameField = mpDialog->AddTextField("To header:", "");
+
+	//The header's field, which completes, and the button beside it that opens the chooser.
+	pRow = OMalloc<CGridContainer>(mpDialog->GetWindow());
+	pRow->SetAlignment(CSH_Stretch, CSV_Center);
+	mpHeaderField = OMalloc<CCompletionField>(mpDialog->GetWindow(), mpDialog->GetLook()->pcTheme, "");
+	mpHeaderField->SetColumns(10);
+	mpHeaderField->SetAlignment(CSH_Stretch, CSV_Center);
+	pRow->AddComponent(mpHeaderField, 0, 0, 1, 1, 1, 0);
+	mpChooseButton = OMalloc<CButton>(mpDialog->GetWindow(), mpDialog->GetLook()->pcTheme, "...");
+	mpChooseButton->SetAlignment(CSH_Right, CSV_Center);
+	pRow->AddComponent(mpChooseButton, 1, 0);
+	mpDialog->AddEditor("To header:", pRow);
+	mpDialog->SetFirstEditor(mpHeaderField);
+	pRow = NULL;
+	mpNameField = mpHeaderField;
+	mpHeaderField->GetChangeEvent()->Add(this, &CIDEMoveClass::HeaderTyped);
+	mpChooseButton->GetClickEvent()->Add(this, &CIDEMoveClass::ChooseHeader);
+
 	mpError = OMalloc<CLabel>(mpDialog->GetWindow(), mpcContent->GetDimFont(), "");
 	mpDialog->AddEditor("", mpError);
 	mpDialog->SetOKCaption("Refactor");
@@ -2467,6 +2644,10 @@ bool CIDEMoveClass::ShowFunctionMove(SIDEFunctionMove* psMove)
 	szName.Init(bResult ? mpNameField->GetText() : "");
 	mpDialog->ClearApprover();
 	mpcContent->GetScript()->StopWatchingDialog();
+	mpHeaderField->GetChangeEvent()->Remove(this);
+	mpChooseButton->GetClickEvent()->Remove(this);
+	mpHeaderField = NULL;
+	mpChooseButton = NULL;
 	mpNameField = NULL;
 	mpError = NULL;
 	mpDialog = NULL;

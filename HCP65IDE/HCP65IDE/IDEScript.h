@@ -58,10 +58,12 @@ DESTRUCTABLE(CIDEScript);
 protected:
 	CIDEContent*	mpcContent;  //Not held: the content holds the script.
 	Ptr<CDialog>	mpDialog;  //The dialog being watched.
+	Ptr<CDialog>	mpOuterDialog;  //The one that opened it, watched again once it closes; NULL if none did.
 	int32			miDialogTicks;
 	CProgramDeviceDetail*	mpcKeyboard;  //Not held: the keyboard whose keys the steps press:, release: and tap: press, NULL for none.
 	CComponentInput*		mpcKeyboardInput;  //Not held: what hears it.
 	size			muiAnswered;  //Dialogs answered (DialogTick), for the debug script's answered:<n>.
+	size			muiKeyed;  //Dialogs given their keys (PressDialogKeys).
 	SMemberCall	msDialogDrawn;  //SetDialogDrawnCall\'s, not set if there is none.
 	size			muiSpans;  //The active editor's spans when printspans last looked.
 

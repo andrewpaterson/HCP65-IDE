@@ -1614,6 +1614,17 @@ CHECKS = [
 		'DEBUG': 'moveclass,answered:1,printstatus'}),
 		[r'^Dialog \[Move CKeg to Its Own Files\] answered OK$', r'^Status: Moved CKeg to Keg\.h and Keg\.cpp: 2 definitions outside it, 1 #include added\.$'],
 		[]),
+	('move-function-completion', dict(MakeDefinitionsCopy(), **{
+		#Move to File's dialog: the field completes over the solution's headers as it is typed in, down and enter take
+		#one; the button beside it opens the chooser of the solution's files on that header, where two downs choose
+		#the next header, which goes in the field; and the function moves there.
+		'WAIT_INDEX': '1', 'OPEN': 'Gauge.h', 'CARET': '5:8', 'SETTINGS': MakeSettingsFile(), 'DIALOG_KEYS': 'type:Ta,down,enter,tab,space|down,down', 'DIALOG_ANSWER': 'OK|OK',
+		'DEBUG': 'edit:renamesearch:---s,moveclass,answered:2,printstatus,edit:saveall,printdisklines:Valve.h'}),
+		[r'^Focus: CCompletionField$', r'^Field \[Ta\] completes: Tank\.h$', r'^Field \[Ta\] completes: \*Tank\.h$', r'^Field \[Tank\.h\]$', r'^Focus: CButton$',
+		 r'^Tree \[Valve\.cpp\]$', r'^Tree \[Valve\.h\]$', r'^Dialog \[Choose the Header\] answered OK$', r'^Field \[Valve\.h\]$',
+		 r'^Dialog \[Move ReadGauge to File\] answered OK$', r'^Status line: Moved ReadGauge to Valve\.h and Valve\.cpp: 5 files changed\.$',
+		 r'^\d+\|int\t+ReadGauge\(int iGauge, int iScale = 1\);$'],
+		[]),
 	('move-function', dict(MakeDefinitionsCopy(), **{
 		#Move to File (F6 on a function that is in no class): ReadGauge's prototype goes to Tank.h, after the function
 		#Tank.h declares, with its default value; its definition goes to the end of Tank.cpp with the comment over it;

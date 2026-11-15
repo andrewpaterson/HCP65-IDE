@@ -229,6 +229,8 @@ Answered
     in (Go to File's matching, in a dropdown that shows each one's path), and a button beside it opens a chooser
     of the solution's projects and files to pick one from.  To do in Move to File's dialog; the chooser of the
     solution's files is a piece of its own (WindowLib's file chooser shows the disk, not the solution).
+    Done 2026-11-15 (WindowLib's CCompletionField; CIDESolutionFileChooser; CIDEMoveClass::HeaderTyped and
+    ChooseHeader).  A header whose name another file of the solution has is written with its path.
 
 26. Moving to another namespace isn't built: your code has one file with a namespace in it, so I left it rather
     than build it untried.  A function that is in a namespace is refused by Move to File.  Say if you want it.
