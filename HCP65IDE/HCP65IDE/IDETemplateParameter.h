@@ -34,6 +34,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 class CIDEContent;
+struct SIDECaretContext;
 
 
 //What Extract Template Parameter found at the caret: a type named in a function, or in a class outside its
@@ -101,6 +102,7 @@ public:
 
 	void	AddCommands(Ptr<CCommandSet> pCommands);
 	void	AddEditorItems(Ptr<CMenuContainer> pRefactor);
+	void	AddContextActions(SIDECaretContext* psContext);
 	bool	CanExtract(void);
 	void	QueueExtract(void);
 	bool	ShowExtract(void);

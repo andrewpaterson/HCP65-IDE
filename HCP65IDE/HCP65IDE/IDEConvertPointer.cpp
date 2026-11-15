@@ -28,6 +28,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDESafeDelete.h"
 #include "IDEChangeSignature.h"
 #include "IDEConvertPointer.h"
+#include "IDEContextActions.h"
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -102,6 +103,28 @@ void CIDEConvertPointer::AddEditorItems(Ptr<CMenuContainer> pRefactor)
 {
 	pRefactor->AddItem(mpcContent->GetCommands()->Find("Refactor.PointerToReference"));
 	pRefactor->AddItem(mpcContent->GetCommands()->Find("Refactor.ReferenceToPointer"));
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Show Context Actions: a variable or a parameter declared a pointer can
+// be made a reference, and one declared a reference a pointer.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEConvertPointer::AddContextActions(SIDECaretContext* psContext)
+{
+	if (psContext->bSymbol && ((psContext->uiKind == CPPSK_Variable) || (psContext->uiKind == CPPSK_Parameter)))
+	{
+		if (psContext->bPointer)
+		{
+			psContext->Offer("Refactor.PointerToReference");
+		}
+		if (psContext->bReference)
+		{
+			psContext->Offer("Refactor.ReferenceToPointer");
+		}
+	}
 }
 
 

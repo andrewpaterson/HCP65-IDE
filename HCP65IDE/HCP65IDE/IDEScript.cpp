@@ -1806,6 +1806,25 @@ void CIDEScript::RunEditStep(const char* szStep)
 		szPrinted.Kill();
 		sExtraction.Kill();
 	}
+	else if (strcmp(szStep, "contextactions") == 0)
+	{
+		//Show Context Actions' refactorings for what is at the caret, as "Context actions: Rename... | Inline...", or
+		//"Context actions: none".
+		SIDECaretContext	sContext;
+		Ptr<CCommand>		pCommand;
+		size				uiAction;
+
+		sContext.Init();
+		mpcContent->GetContextActions()->FindActions(&sContext);
+		printf("Context actions:%s", (sContext.aszCommands.NumElements() == 0) ? " none" : "");
+		for (uiAction = 0; uiAction < sContext.aszCommands.NumElements(); uiAction++)
+		{
+			pCommand = mpcContent->GetCommands()->Find(sContext.aszCommands.GetText(uiAction));
+			printf("%s %s", (uiAction > 0) ? " |" : "", pCommand.IsNotNull() ? pCommand->GetCaption() : sContext.aszCommands.GetText(uiAction));
+		}
+		printf("\n");
+		sContext.Kill();
+	}
 	else if ((strcmp(szStep, "functiontomember") == 0) || (strcmp(szStep, "membertofunction") == 0))
 	{
 		//The function at the caret made a member function of its first parameter's class (or a member function a
@@ -2726,6 +2745,11 @@ void CIDEScript::RunEditStep(const char* szStep)
 		}
 		if (pPopup.IsNull() || !pPopup->IsOpen())
 		{
+			//Or Show Context Actions' refactorings.
+			pPopup = mpcContent->GetContextActions()->GetPopup();
+		}
+		if (pPopup.IsNull() || !pPopup->IsOpen())
+		{
 			printf("Popup: none\n");
 		}
 		else
@@ -2913,7 +2937,7 @@ void CIDEScript::RunEditStep(const char* szStep)
 	}
 	else if (strncmp(szStep, "key:", 4) == 0)
 	{
-		//key:f4, key:space, key:enter, key:escape, key:documentend or key:documenthome: what the key gives (Jump to
+		//key:f4, key:space, key:enter, key:escape, key:down, key:up, key:documentend or key:documenthome: what the key gives (Jump to
 		//Source for F4, Control+End and Control+Home in an editor) to the focussed component and its parents.
 		if (strcmp(&szStep[4], "f4") == 0)
 		{
@@ -2938,6 +2962,14 @@ void CIDEScript::RunEditStep(const char* szStep)
 		else if (strcmp(&szStep[4], "escape") == 0)
 		{
 			mpcContent->GetWindow()->InputCommand(CIC_ClearSelection, true);
+		}
+		else if (strcmp(&szStep[4], "down") == 0)
+		{
+			mpcContent->GetWindow()->InputCommand(CIC_Down, true);
+		}
+		else if (strcmp(&szStep[4], "up") == 0)
+		{
+			mpcContent->GetWindow()->InputCommand(CIC_Up, true);
 		}
 		else if (strcmp(&szStep[4], "documentend") == 0)
 		{

@@ -33,6 +33,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 class CIDEContent;
+struct SIDECaretContext;
 
 
 #define IDE_ACCESS_PUBLIC		0
@@ -144,6 +145,7 @@ public:
 
 	void	AddCommands(Ptr<CCommandSet> pCommands);
 	void	AddEditorItems(Ptr<CMenuContainer> pRefactor);
+	void	AddContextActions(SIDECaretContext* psContext);
 	bool	CanMove(void);
 	void	QueuePullUp(void);
 	void	QueuePushDown(void);

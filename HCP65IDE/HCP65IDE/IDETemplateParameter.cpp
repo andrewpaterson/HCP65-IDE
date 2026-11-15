@@ -28,6 +28,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDESafeDelete.h"
 #include "IDEMemberQualifier.h"
 #include "IDETemplateParameter.h"
+#include "IDEContextActions.h"
 
 
 //The language's own types that can be a parameter: one word, written by itself.
@@ -134,6 +135,25 @@ void CIDETemplateParameter::AddEditorItems(Ptr<CMenuContainer> pRefactor)
 {
 	pRefactor->AddItem(mpcContent->GetCommands()->Find("Refactor.ExtractTemplateParameter"));
 	pRefactor->AddItem(mpcContent->GetCommands()->Find("Refactor.RemoveTemplateParameter"));
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Show Context Actions: a type where it is used can be made a template
+// parameter, and a template's parameter taken away.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDETemplateParameter::AddContextActions(SIDECaretContext* psContext)
+{
+	if (psContext->bType)
+	{
+		psContext->Offer("Refactor.ExtractTemplateParameter");
+	}
+	if (psContext->bSymbol && ((psContext->uiKind == CPPSK_TypeParameter) || (psContext->uiKind == CPPSK_ValueParameter)))
+	{
+		psContext->Offer("Refactor.RemoveTemplateParameter");
+	}
 }
 
 

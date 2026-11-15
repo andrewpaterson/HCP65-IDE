@@ -28,6 +28,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDERename.h"
 #include "IDESafeDelete.h"
 #include "IDEConvertMacro.h"
+#include "IDEContextActions.h"
 
 
 //The files of one that Convert Macro checks as they would be: more than these aren't.
@@ -185,6 +186,20 @@ void CIDEConvertMacro::AddCommands(Ptr<CCommandSet> pCommands)
 void CIDEConvertMacro::AddEditorItems(Ptr<CMenuContainer> pRefactor)
 {
 	pRefactor->AddItem(mpcContent->GetCommands()->Find("Refactor.ConvertMacro"));
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Show Context Actions: Convert Macro is for a macro's name.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEConvertMacro::AddContextActions(SIDECaretContext* psContext)
+{
+	if (psContext->bMacro)
+	{
+		psContext->Offer("Refactor.ConvertMacro");
+	}
 }
 
 

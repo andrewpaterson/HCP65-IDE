@@ -116,14 +116,6 @@ Open
     with any the file has there already.  Optimise #includes does this in .cpp files too, not only in headers.  It
     leaves <> #includes, #includes inside an #if, and a .cpp's #include of its own header alone.  Right?
 
-54. The IDE has no Alt+Enter menu (IntelliJ's "show context actions": what can be done at the caret, offered in a
-    small popup).  Every refactoring is in the Refactor menu and some have keys.  You asked for an Alt+Enter way
-    to make an instance method static: Make Member Function static does it from the Refactor menu today.  Do you
-    want the Alt+Enter popup built, listing the refactorings that apply at the caret (Make static, Make const,
-    Convert Pointer to Reference, Introduce Variable, and the rest), as its own piece of work?
-    (2026-11-15: answering 12 he asked for a refactoring "as an Alt+Enter pop-up", so the popup is taken as
-    wanted; when it is built, before or after the queue, is still his to say.)
-
 
 Answered
 --------
@@ -392,6 +384,7 @@ Answered
     they refactor").  First: a name used before it is declared, in every kind of declaration (a member's
     parameter, a prototype, a field, a global, a local, what a function returns, a base class, a member held by
     value; its class declared later, or never).  To do in CppCompilerLib, with tests.
+    Done 2026-11-15 (CCPPUnit::ReportUndeclaredTypes, TestCppSemanticPassUndeclaredTypes).
 
 53. Extract Template Parameter on a class names the template "CTankTemplate" (asked, that is the suggestion) and
     its parameter "M", moves every member's definition from the .cpp to the header under the class with its
@@ -407,3 +400,14 @@ Answered
     is that instance's name; no warning in that class's own base list, in the template's own code, or for an
     instance that has no such class; and only where the class can be seen from the use.  To do: Extract Template
     Parameter on a class, and the warning in CppCompilerLib.
+
+54. The IDE has no Alt+Enter menu (IntelliJ's "show context actions": what can be done at the caret, offered in a
+    small popup).  Every refactoring is in the Refactor menu and some have keys.  You asked for an Alt+Enter way
+    to make an instance method static: Make Member Function static does it from the Refactor menu today.  Do you
+    want the Alt+Enter popup built, listing the refactorings that apply at the caret (Make static, Make const,
+    Convert Pointer to Reference, Introduce Variable, and the rest), as its own piece of work?
+    (2026-11-15: answering 12 he asked for a refactoring "as an Alt+Enter pop-up", so the popup is taken as
+    wanted; when it is built, before or after the queue, is still his to say.)
+    Answered 2026-11-15: yes, and first: "push the context aware Alt+Enter refactoring pop-up to the top of the
+    queue".  Done: Show Context Actions (CIDEContextActions; Refactorings.txt, Where it is, 22).  What it offers
+    is found cheaply, so a refactoring offered may still say why it can't be done once it has looked.

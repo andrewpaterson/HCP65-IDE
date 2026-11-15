@@ -34,6 +34,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 class CIDEContent;
+struct SIDECaretContext;
 
 
 //Where a macro's name is written, other than in its own #define.
@@ -150,6 +151,7 @@ public:
 
 	void	AddCommands(Ptr<CCommandSet> pCommands);
 	void	AddEditorItems(Ptr<CMenuContainer> pRefactor);
+	void	AddContextActions(SIDECaretContext* psContext);
 	bool	CanConvert(void);
 	void	QueueConvert(void);
 	bool	ShowConvert(void);

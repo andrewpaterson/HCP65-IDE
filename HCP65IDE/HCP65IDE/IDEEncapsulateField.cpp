@@ -30,6 +30,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDEDefinitions.h"
 #include "IDEMoveMembers.h"
 #include "IDEEncapsulateField.h"
+#include "IDEContextActions.h"
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -175,6 +176,20 @@ void CIDEEncapsulateField::AddCommands(Ptr<CCommandSet> pCommands)
 void CIDEEncapsulateField::AddEditorItems(Ptr<CMenuContainer> pRefactor)
 {
 	pRefactor->AddItem(mpcContent->GetCommands()->Find("Refactor.EncapsulateField"));
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Show Context Actions: Encapsulate Field is for a field.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEEncapsulateField::AddContextActions(SIDECaretContext* psContext)
+{
+	if (psContext->bSymbol && (psContext->uiKind == CPPSK_Field))
+	{
+		psContext->Offer("Refactor.EncapsulateField");
+	}
 }
 
 

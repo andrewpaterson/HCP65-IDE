@@ -31,6 +31,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDERenameAssembly.h"
 #include "IDEChangeSignatureDialog.h"
 #include "IDEChangeSignature.h"
+#include "IDEContextActions.h"
 
 
 #define IDE_SIGNATURE_CONFLICTS_SHOWN	12	//Problems Detected lists this many, and says how many more there are.
@@ -403,6 +404,21 @@ void CIDEChangeSignature::AddCommands(Ptr<CCommandSet> pCommands)
 void CIDEChangeSignature::AddEditorItems(Ptr<CMenuContainer> pRefactor)
 {
 	pRefactor->AddItem(mpcContent->GetCommands()->Find("Refactor.ChangeSignature"));
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Show Context Actions: Change Signature is for a function, wherever it
+// is named.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEChangeSignature::AddContextActions(SIDECaretContext* psContext)
+{
+	if (psContext->bFunction)
+	{
+		psContext->Offer("Refactor.ChangeSignature");
+	}
 }
 
 

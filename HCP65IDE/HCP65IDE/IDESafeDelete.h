@@ -32,6 +32,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 class CIDEContent;
+struct SIDECaretContext;
 
 
 //What Safe Delete found for a symbol: what would be taken out, and what would be left naming it.
@@ -97,6 +98,7 @@ public:
 
 	void	AddCommands(Ptr<CCommandSet> pCommands);
 	void	AddEditorItems(Ptr<CMenuContainer> pRefactor);
+	void	AddContextActions(SIDECaretContext* psContext);
 	bool	CanSafeDelete(void);
 	void	QueueSafeDelete(void);
 	bool	ShowSafeDelete(void);

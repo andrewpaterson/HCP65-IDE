@@ -29,6 +29,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDESafeDelete.h"
 #include "IDEIntroduceVariable.h"
 #include "IDEDefinitions.h"
+#include "IDEContextActions.h"
 
 
 #define IDE_DEFINITION_BANNER	"//////////////////////////////////////////////////////////////////////////\n//\n//\n//////////////////////////////////////////////////////////////////////////\n"
@@ -382,6 +383,44 @@ void CIDEDefinitions::AddEditorItems(Ptr<CMenuContainer> pRefactor)
 	pRefactor->AddItem(mpcContent->GetCommands()->Find("Refactor.GenerateDeclaration"));
 	pRefactor->AddItem(mpcContent->GetCommands()->Find("Refactor.MoveDefinitionOut"));
 	pRefactor->AddItem(mpcContent->GetCommands()->Find("Refactor.MoveDefinitionIn"));
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Show Context Actions: what a function has says which of these it can
+// have.  One only declared can be defined; one only defined can be
+// declared, if it is no class's (a class's is defined in the class, and
+// can be moved out), and so can a member defined that its class doesn't
+// declare; one defined in its class, or in a header, can be moved out,
+// and one declared and defined apart can be moved in.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDefinitions::AddContextActions(SIDECaretContext* psContext)
+{
+	if (psContext->bFunction)
+	{
+		if (psContext->bDeclared && !psContext->bDefined)
+		{
+			psContext->Offer("Refactor.GenerateDefinition");
+		}
+		if (psContext->bDefined && !psContext->bDeclared && !psContext->bMember)
+		{
+			psContext->Offer("Refactor.GenerateDeclaration");
+		}
+		if (psContext->bDefined && !psContext->bDeclared && (psContext->bMember || psContext->bHeaderDefined))
+		{
+			psContext->Offer("Refactor.MoveDefinitionOut");
+		}
+		if (psContext->bDefined && psContext->bDeclared)
+		{
+			psContext->Offer("Refactor.MoveDefinitionIn");
+		}
+	}
+	else if (psContext->bUndeclaredFunction)
+	{
+		psContext->Offer("Refactor.GenerateDeclaration");
+	}
 }
 
 

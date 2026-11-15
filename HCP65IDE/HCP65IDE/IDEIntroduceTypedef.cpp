@@ -28,6 +28,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDEMoveMembers.h"
 #include "IDEIntroduceVariable.h"
 #include "IDEIntroduceTypedef.h"
+#include "IDEContextActions.h"
 
 
 static const char*	gaszIDETypeKeywords[] = { "unsigned", "signed", "int", "char", "long", "short", "float", "double", "bool", "void", "const", "volatile", "struct", "class", "typename", "wchar_t" };
@@ -136,6 +137,20 @@ void CIDEIntroduceTypedef::AddCommands(Ptr<CCommandSet> pCommands)
 void CIDEIntroduceTypedef::AddEditorItems(Ptr<CMenuContainer> pRefactor)
 {
 	pRefactor->AddItem(mpcContent->GetCommands()->Find("Refactor.IntroduceTypedef"));
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Show Context Actions: Introduce Typedef is for a type selected.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEIntroduceTypedef::AddContextActions(SIDECaretContext* psContext)
+{
+	if (psContext->bTypeSelected)
+	{
+		psContext->Offer("Refactor.IntroduceTypedef");
+	}
 }
 
 

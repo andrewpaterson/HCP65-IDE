@@ -23,6 +23,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "StandardLib/ClassDefines.h"
 #include "IDEContent.h"
 #include "IDERename.h"
+#include "IDEContextActions.h"
 
 
 #define IDE_RENAME_SETTINGS_TAG			"Rename"
@@ -1329,6 +1330,7 @@ void CIDERename::AddEditorItems(Ptr<CMenuContainer> pMenu)
 {
 	Ptr<CMenuContainer>	pRefactor;
 
+	pMenu->AddItem(mpcContent->GetCommands()->Find("Refactor.ContextActions"));
 	pMenu->AddItem(mpcContent->GetCommands()->Find("Refactor.Rename"));
 	pRefactor = OMalloc<CMenuContainer>(mpcContent->GetWindow(), mpcContent->GetTheme());
 	pRefactor->AddItem(mpcContent->GetCommands()->Find("Refactor.RenameFile"));
@@ -1350,6 +1352,20 @@ void CIDERename::AddEditorItems(Ptr<CMenuContainer> pMenu)
 	mpcContent->GetConvertMember()->AddEditorItems(pRefactor);
 	mpcContent->GetTemplateParameter()->AddEditorItems(pRefactor);
 	pMenu->AddItem("Refactor", NULL, pRefactor);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Show Context Actions: Rename is for whatever can be renamed.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDERename::AddContextActions(SIDECaretContext* psContext)
+{
+	if (CanRename())
+	{
+		psContext->Offer("Refactor.Rename");
+	}
 }
 
 

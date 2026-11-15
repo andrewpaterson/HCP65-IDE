@@ -30,6 +30,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 class CIDEContent;
+struct SIDECaretContext;
 
 
 //What Inline Variable found for the local variable at the caret: its one value, where it is used, and what goes with
@@ -88,6 +89,7 @@ public:
 
 	void	AddCommands(Ptr<CCommandSet> pCommands);
 	void	AddEditorItems(Ptr<CMenuContainer> pRefactor);
+	void	AddContextActions(SIDECaretContext* psContext);
 	bool	CanInline(void);
 	void	QueueInline(void);
 	bool	ShowInline(void);

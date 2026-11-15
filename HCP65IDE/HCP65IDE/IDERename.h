@@ -33,6 +33,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 class CIDEContent;
+struct SIDECaretContext;
 struct SIDEPlace;
 typedef CArrayTemplate<SIDEPlace>	CArrayIDEPlaces;
 
@@ -113,6 +114,7 @@ public:
 
 	void	AddCommands(Ptr<CCommandSet> pCommands);
 	void	AddEditorItems(Ptr<CMenuContainer> pMenu);
+	void	AddContextActions(SIDECaretContext* psContext);
 	bool	CanRename(void);
 	bool	FindRenameTarget(SIDERenameTarget* psDest);
 	void	QueueRename(void);

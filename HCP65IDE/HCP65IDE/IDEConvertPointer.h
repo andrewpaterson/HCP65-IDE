@@ -32,6 +32,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 class CIDEContent;
+struct SIDECaretContext;
 
 
 typedef CArrayTemplatePtr<CIDERefactorUnit>	CArrayIDEPointerUnits;
@@ -70,6 +71,7 @@ public:
 
 	void	AddCommands(Ptr<CCommandSet> pCommands);
 	void	AddEditorItems(Ptr<CMenuContainer> pRefactor);
+	void	AddContextActions(SIDECaretContext* psContext);
 	bool	CanConvert(void);
 	void	QueueToReference(void);
 	void	QueueToPointer(void);

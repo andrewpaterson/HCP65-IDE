@@ -32,6 +32,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDESafeDelete.h"
 #include "IDEIntroduceVariable.h"
 #include "IDEMoveMembers.h"
+#include "IDEContextActions.h"
 
 
 //The columns of the members' table in the dialog, and the most rows it shows before it scrolls.
@@ -426,6 +427,25 @@ void CIDEMoveMembers::AddEditorItems(Ptr<CMenuContainer> pRefactor)
 {
 	pRefactor->AddItem(mpcContent->GetCommands()->Find("Refactor.PullMembersUp"));
 	pRefactor->AddItem(mpcContent->GetCommands()->Find("Refactor.PushMembersDown"));
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Show Context Actions: a class, or a member where it is declared, with
+// a class to pull members up to or to push them down to.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEMoveMembers::AddContextActions(SIDECaretContext* psContext)
+{
+	if (!psContext->szClassKey.Empty() && (psContext->uiBases > 0))
+	{
+		psContext->Offer("Refactor.PullMembersUp");
+	}
+	if (!psContext->szClassKey.Empty() && (psContext->uiDerived > 0))
+	{
+		psContext->Offer("Refactor.PushMembersDown");
+	}
 }
 
 

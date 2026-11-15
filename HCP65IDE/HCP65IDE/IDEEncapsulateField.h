@@ -34,6 +34,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 class CIDEContent;
+struct SIDECaretContext;
 
 
 //How a place uses the field, and so what it becomes.
@@ -126,6 +127,7 @@ public:
 
 	void	AddCommands(Ptr<CCommandSet> pCommands);
 	void	AddEditorItems(Ptr<CMenuContainer> pRefactor);
+	void	AddContextActions(SIDECaretContext* psContext);
 	bool	CanEncapsulate(void);
 	void	QueueEncapsulate(void);
 	bool	ShowEncapsulate(void);

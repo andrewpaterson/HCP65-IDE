@@ -81,6 +81,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDEConvertPointer.h"
 #include "IDEMemberQualifier.h"
 #include "IDEConvertMember.h"
+#include "IDEContextActions.h"
 #include "IDETemplateParameter.h"
 #include "IDEUsages.h"
 #include "IDEFindInFiles.h"
@@ -202,6 +203,7 @@ protected:
 	Ptr<CIDEMemberQualifier>	mpMemberQualifier;		//Make Member Function const, static.
 	Ptr<CIDEConvertMember>		mpConvertMember;		//Convert Function to Member Function, and back.
 	Ptr<CIDETemplateParameter>	mpTemplateParameter;	//Extract Template Parameter.
+	Ptr<CIDEContextActions>		mpContextActions;		//Show Context Actions: the refactorings for what is at the caret.
 	Ptr<CIDEUsages>				mpUsages;			//Find Usages.
 	Ptr<CIDEFindInFiles>		mpFindInFiles;		//Find in Files and the Find tool window.
 	Ptr<CIDEOccurrences>		mpOccurrences;		//Next and Previous Occurrence through Find Usages or Build.
@@ -325,6 +327,7 @@ public:
 	Ptr<CIDEMemberQualifier>	GetMemberQualifier(void);
 	Ptr<CIDEConvertMember>		GetConvertMember(void);
 	Ptr<CIDETemplateParameter>	GetTemplateParameter(void);
+	Ptr<CIDEContextActions>	GetContextActions(void);
 	Ptr<CIDECloseGuard>		GetCloseGuard(void);
 
 protected:

@@ -33,6 +33,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 class CIDEContent;
+struct SIDECaretContext;
 
 
 //What the expression becomes: a variable of its function, a field of its function's class, a constant of its file,
@@ -140,6 +141,7 @@ public:
 
 	void	AddCommands(Ptr<CCommandSet> pCommands);
 	void	AddEditorItems(Ptr<CMenuContainer> pRefactor);
+	void	AddContextActions(SIDECaretContext* psContext);
 	bool	CanIntroduce(void);
 	void	QueueIntroduce(void);
 	void	QueueIntroduceField(void);

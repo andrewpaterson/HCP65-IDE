@@ -27,6 +27,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDESafeDelete.h"
 #include "IDEChangeSignature.h"
 #include "IDEInlineVariable.h"
+#include "IDEContextActions.h"
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -129,6 +130,20 @@ void CIDEInlineVariable::AddCommands(Ptr<CCommandSet> pCommands)
 void CIDEInlineVariable::AddEditorItems(Ptr<CMenuContainer> pRefactor)
 {
 	pRefactor->AddItem(mpcContent->GetCommands()->Find("Refactor.InlineVariable"));
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Show Context Actions: Inline is for a variable, a function or a macro.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEInlineVariable::AddContextActions(SIDECaretContext* psContext)
+{
+	if ((psContext->bSymbol && (psContext->bFunction || (psContext->uiKind == CPPSK_Variable))) || psContext->bMacro)
+	{
+		psContext->Offer("Refactor.InlineVariable");
+	}
 }
 
 

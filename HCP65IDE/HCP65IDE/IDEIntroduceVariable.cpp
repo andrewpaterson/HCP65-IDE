@@ -29,6 +29,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDEDefinitions.h"
 #include "IDEMoveMembers.h"
 #include "IDEIntroduceVariable.h"
+#include "IDEContextActions.h"
 
 
 #define IDE_TAB_WIDTH	4	//The editors' tabs, for lining names up.
@@ -202,6 +203,28 @@ void CIDEIntroduceVariable::AddEditorItems(Ptr<CMenuContainer> pRefactor)
 	pRefactor->AddItem(mpcContent->GetCommands()->Find("Refactor.IntroduceField"));
 	pRefactor->AddItem(mpcContent->GetCommands()->Find("Refactor.IntroduceConstant"));
 	pRefactor->AddItem(mpcContent->GetCommands()->Find("Refactor.IntroduceParameter"));
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Show Context Actions: an expression selected in a function's body (or
+// a number or a string the caret is on) can be introduced; as a field in
+// a member function.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEIntroduceVariable::AddContextActions(SIDECaretContext* psContext)
+{
+	if (psContext->bExpression && psContext->bInFunction)
+	{
+		psContext->Offer("Refactor.IntroduceVariable");
+		if (psContext->bInMemberFunction)
+		{
+			psContext->Offer("Refactor.IntroduceField");
+		}
+		psContext->Offer("Refactor.IntroduceConstant");
+		psContext->Offer("Refactor.IntroduceParameter");
+	}
 }
 
 

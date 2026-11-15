@@ -31,6 +31,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 class CIDEContent;
+struct SIDECaretContext;
 
 
 //What Make const or Make static found for the member function at the caret.
@@ -78,6 +79,7 @@ public:
 
 	void	AddCommands(Ptr<CCommandSet> pCommands);
 	void	AddEditorItems(Ptr<CMenuContainer> pRefactor);
+	void	AddContextActions(SIDECaretContext* psContext);
 	bool	CanChange(void);
 	void	QueueMakeConst(void);
 	void	QueueMakeStatic(void);

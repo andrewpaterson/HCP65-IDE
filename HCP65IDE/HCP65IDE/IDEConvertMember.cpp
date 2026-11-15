@@ -29,6 +29,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDEMoveMembers.h"
 #include "IDEMemberQualifier.h"
 #include "IDEConvertMember.h"
+#include "IDEContextActions.h"
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -94,6 +95,26 @@ void CIDEConvertMember::AddEditorItems(Ptr<CMenuContainer> pRefactor)
 {
 	pRefactor->AddItem(mpcContent->GetCommands()->Find("Refactor.FunctionToMember"));
 	pRefactor->AddItem(mpcContent->GetCommands()->Find("Refactor.MemberToFunction"));
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Show Context Actions: a function with parameters that is no class's
+// can be made a member function (of its first parameter's class), and a
+// member function that isn't virtual a function.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEConvertMember::AddContextActions(SIDECaretContext* psContext)
+{
+	if (psContext->bFunction && !psContext->bMember && psContext->bParameters)
+	{
+		psContext->Offer("Refactor.FunctionToMember");
+	}
+	if (psContext->bFunction && psContext->bMember && !psContext->bSpecial && !psContext->bVirtual)
+	{
+		psContext->Offer("Refactor.MemberToFunction");
+	}
 }
 
 

@@ -29,6 +29,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDESafeDelete.h"
 #include "IDEMoveClass.h"
 #include "IDEExtractClass.h"
+#include "IDEContextActions.h"
 
 
 static const char*	gaszIDEExtractAccess[] = { "public", "protected", "private" };
@@ -103,6 +104,23 @@ void CIDEExtractClass::AddEditorItems(Ptr<CMenuContainer> pRefactor)
 	pRefactor->AddItem(mpcContent->GetCommands()->Find("Refactor.ExtractSuperclass"));
 	pRefactor->AddItem(mpcContent->GetCommands()->Find("Refactor.ExtractInterface"));
 	pRefactor->AddItem(mpcContent->GetCommands()->Find("Refactor.ExtractClass"));
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Show Context Actions: a class can have a superclass, an interface or a
+// class extracted from it.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEExtractClass::AddContextActions(SIDECaretContext* psContext)
+{
+	if (psContext->bClass)
+	{
+		psContext->Offer("Refactor.ExtractSuperclass");
+		psContext->Offer("Refactor.ExtractInterface");
+		psContext->Offer("Refactor.ExtractClass");
+	}
 }
 
 

@@ -34,6 +34,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 class CIDEContent;
+struct SIDECaretContext;
 
 
 //What Move Class to Its Own Files found for the class at the caret: where it is defined, and each definition of one
@@ -133,6 +134,7 @@ public:
 
 	void	AddCommands(Ptr<CCommandSet> pCommands);
 	void	AddEditorItems(Ptr<CMenuContainer> pRefactor);
+	void	AddContextActions(SIDECaretContext* psContext);
 	bool	CanMove(void);
 	void	QueueMove(void);
 	bool	ShowMove(void);

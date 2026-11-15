@@ -27,6 +27,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDERename.h"
 #include "IDERenameAssembly.h"
 #include "IDESafeDelete.h"
+#include "IDEContextActions.h"
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -323,6 +324,24 @@ void CIDESafeDelete::AddCommands(Ptr<CCommandSet> pCommands)
 void CIDESafeDelete::AddEditorItems(Ptr<CMenuContainer> pRefactor)
 {
 	pRefactor->AddItem(mpcContent->GetCommands()->Find("Refactor.SafeDelete"));
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Show Context Actions: Safe Delete is for what is declared at the caret.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDESafeDelete::AddContextActions(SIDECaretContext* psContext)
+{
+	bool	bDeletable;
+
+	bDeletable = (psContext->uiKind != CPPSK_Parameter) && (psContext->uiKind != CPPSK_TypeParameter) && (psContext->uiKind != CPPSK_ValueParameter) && (psContext->uiKind != CPPSK_Label) &&
+				 (psContext->uiKind != CPPSK_Enumerator) && (psContext->uiKind != CPPSK_BuiltinType);
+	if (psContext->bSymbol && (psContext->uiRole != CPPIR_Reference) && bDeletable)
+	{
+		psContext->Offer("Refactor.SafeDelete");
+	}
 }
 
 

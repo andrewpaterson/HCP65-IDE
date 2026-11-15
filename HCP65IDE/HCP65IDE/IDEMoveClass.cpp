@@ -30,6 +30,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDESafeDelete.h"
 #include "IDEMoveMembers.h"
 #include "IDEMoveClass.h"
+#include "IDEContextActions.h"
 
 
 #define IDE_MOVE_CLASS_END_LINE		0x3fffffff
@@ -272,6 +273,26 @@ void CIDEMoveClass::AddEditorItems(Ptr<CMenuContainer> pRefactor)
 {
 	pRefactor->AddItem(mpcContent->GetCommands()->Find("Refactor.MoveClass"));
 	pRefactor->AddItem(mpcContent->GetCommands()->Find("Refactor.CopyClass"));
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Show Context Actions: a class can be moved and copied, a function
+// that is no class's moved.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEMoveClass::AddContextActions(SIDECaretContext* psContext)
+{
+	if (psContext->bClass)
+	{
+		psContext->Offer("Refactor.MoveClass");
+		psContext->Offer("Refactor.CopyClass");
+	}
+	else if (psContext->bFunction && !psContext->bMember)
+	{
+		psContext->Offer("Refactor.MoveClass");
+	}
 }
 
 

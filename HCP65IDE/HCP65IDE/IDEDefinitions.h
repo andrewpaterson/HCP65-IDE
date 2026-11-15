@@ -32,6 +32,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 class CIDEContent;
+struct SIDECaretContext;
 
 
 //The function at the caret as its declaration and its definition write it (Refactorings.txt, F5: the two as one
@@ -113,6 +114,7 @@ public:
 
 	void	AddCommands(Ptr<CCommandSet> pCommands);
 	void	AddEditorItems(Ptr<CMenuContainer> pRefactor);
+	void	AddContextActions(SIDECaretContext* psContext);
 	bool	CanChange(void);
 	bool	FindFunction(SIDEFunction* psDest, CChars* pszWhyNot);
 	bool	FindUndeclaredFunction(SIDEFunction* psDest);

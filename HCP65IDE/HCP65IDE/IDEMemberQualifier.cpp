@@ -28,6 +28,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDERename.h"
 #include "IDESafeDelete.h"
 #include "IDEMemberQualifier.h"
+#include "IDEContextActions.h"
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -117,6 +118,29 @@ void CIDEMemberQualifier::AddEditorItems(Ptr<CMenuContainer> pRefactor)
 {
 	pRefactor->AddItem(mpcContent->GetCommands()->Find("Refactor.MakeConst"));
 	pRefactor->AddItem(mpcContent->GetCommands()->Find("Refactor.MakeStatic"));
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Show Context Actions: a member function that isn't const can be made
+// const, and one that isn't virtual static; not a constructor, a
+// destructor or one that is static already.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEMemberQualifier::AddContextActions(SIDECaretContext* psContext)
+{
+	if (psContext->bFunction && psContext->bMember && !psContext->bSpecial && !psContext->bStatic)
+	{
+		if (!psContext->bConst)
+		{
+			psContext->Offer("Refactor.MakeConst");
+		}
+		if (!psContext->bVirtual)
+		{
+			psContext->Offer("Refactor.MakeStatic");
+		}
+	}
 }
 
 

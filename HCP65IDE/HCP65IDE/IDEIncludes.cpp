@@ -27,6 +27,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDERename.h"
 #include "IDESafeDelete.h"
 #include "IDEIncludes.h"
+#include "IDEContextActions.h"
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -340,6 +341,20 @@ void CIDEIncludes::AddEditorItems(Ptr<CMenuContainer> pRefactor)
 {
 	pRefactor->AddItem(mpcContent->GetCommands()->Find("Refactor.OptimiseIncludes"));
 	pRefactor->AddItem(mpcContent->GetCommands()->Find("Refactor.SortIncludes"));
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Show Context Actions: Optimise #includes is offered on an #include.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEIncludes::AddContextActions(SIDECaretContext* psContext)
+{
+	if (psContext->bInclude)
+	{
+		psContext->Offer("Refactor.OptimiseIncludes");
+	}
 }
 
 

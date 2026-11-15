@@ -34,6 +34,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 class CIDEContent;
+struct SIDECaretContext;
 
 
 //Where a typedef is written: in the file, before what first uses it; in a class template, before the member that
@@ -97,6 +98,7 @@ public:
 
 	void	AddCommands(Ptr<CCommandSet> pCommands);
 	void	AddEditorItems(Ptr<CMenuContainer> pRefactor);
+	void	AddContextActions(SIDECaretContext* psContext);
 	bool	CanIntroduce(void);
 	void	QueueIntroduce(void);
 	bool	ShowIntroduce(void);

@@ -2218,6 +2218,71 @@ CHECKS = [
 		 r'^43\|inline void CLone::Hold\(CGauge\* p\)$',
 		 r'^10\|\tCPair<int>\t\tcPair;$', r'^11\|\tCPair<float>\tcOther;$', r'^12\|\tCLone\t\t\tcLone;$'],
 		[r'template<class M>', r'class A']),
+	('context-actions', dict(MakePointersCopy(), **{
+		#Show Context Actions (Alt+Enter): the refactorings for what the caret is on.  A member function's
+		#definition; a function that is no class's; a parameter that is a pointer, the type it is declared with, and
+		#one that is a reference; a field where it is used; a number; an #include; a comment, where there is nothing.
+		'WAIT_INDEX': '1', 'OPEN': 'Vat.cpp',
+		'DEBUG': 'edit:caret:8:12,edit:contextactions,edit:caret:20:6,edit:contextactions,edit:caret:30:24,edit:contextactions,edit:caret:30:17,edit:contextactions,'
+				 'edit:caret:54:32,edit:contextactions,edit:caret:12:3,edit:contextactions,edit:caret:10:20,edit:contextactions,edit:caret:1:5,edit:contextactions,'
+				 'edit:caret:5:2,edit:contextactions'}),
+		[r'^Context\ actions:\ Rename\.\.\.\ \|\ Change\ Signature\.\.\.\ \|\ Inline\.\.\.\ \|\ Move\ Definition\ into\ Class\ \|\ Make\ Member\ Function\ const\ \|\ Make\ Member\ Function\ static\ \|\ Convert\ Member\ Function\ to\ Function\ \|\ Push\ Members\ Down\.\.\.\ \|\ Safe\ Delete\.\.\.$',
+		 r'^Context\ actions:\ Rename\.\.\.\ \|\ Change\ Signature\.\.\.\ \|\ Inline\.\.\.\ \|\ Move\ Definition\ into\ Class\ \|\ Convert\ Function\ to\ Member\ Function\ \|\ Move\.\.\.\ \|\ Safe\ Delete\.\.\.$',
+		 r'^Context\ actions:\ Rename\.\.\.\ \|\ Convert\ Pointer\ to\ Reference$',
+		 r'^Context\ actions:\ Rename\.\.\.\ \|\ Move\.\.\.\ \|\ Copy\ Class\.\.\.\ \|\ Extract\ Superclass\.\.\.\ \|\ Extract\ Interface\.\.\.\ \|\ Extract\ Class\.\.\.\ \|\ Extract\ Template\ Parameter\.\.\.$',
+		 r'^Context\ actions:\ Rename\.\.\.\ \|\ Convert\ Reference\ to\ Pointer$',
+		 r'^Context\ actions:\ Rename\.\.\.\ \|\ Encapsulate\ Field\.\.\.$',
+		 r'^Context\ actions:\ Introduce\ Variable\.\.\.\ \|\ Introduce\ Field\.\.\.\ \|\ Introduce\ Constant\.\.\.\ \|\ Introduce\ Parameter\.\.\.$',
+		 r'^Context\ actions:\ Optimise\ \#includes$',
+		 r'^Context\ actions:\ none$'],
+		[]),
+	('context-actions-selection', dict(MakePointersCopy(), **{
+		#What is selected: an expression in a function's body, whole statements, and a type.
+		'WAIT_INDEX': '1', 'OPEN': 'Vat.cpp',
+		'DEBUG': 'edit:selecttext:33:22-33:36,edit:contextactions,edit:selecttext:32:2-33:37,edit:contextactions,edit:selecttext:56:2-56:15,edit:contextactions,'
+				 'edit:selecttext:33:25-33:30,edit:contextactions'}),
+		[r'^Context\ actions:\ Introduce\ Variable\.\.\.\ \|\ Introduce\ Field\.\.\.\ \|\ Introduce\ Constant\.\.\.\ \|\ Introduce\ Parameter\.\.\.\ \|\ Extract\ Method\.\.\.$',
+		 r'^Context\ actions:\ Extract\ Method\.\.\.$',
+		 r'^Context\ actions:\ Introduce\ Typedef\.\.\.$',
+		 r'^Context\ actions:\ none$'],
+		[]),
+	('context-actions-class', dict(MakePointersCopy(), **{
+		#A class with classes that derive from it, and one that derives; a member function declared in its class: one
+		#that is virtual, one that overrides and one that is neither.  A struct's field.
+		'WAIT_INDEX': '1', 'OPEN': 'Vat.h',
+		'DEBUG': 'edit:caret:12:8,edit:contextactions,edit:caret:27:8,edit:contextactions,edit:caret:19:16,edit:contextactions,edit:caret:30:8,edit:contextactions,'
+				 'edit:caret:20:14,edit:contextactions,edit:caret:7:8,edit:contextactions,edit:caret:34:8,edit:contextactions'}),
+		[r'^Context\ actions:\ Rename\.\.\.\ \|\ Move\.\.\.\ \|\ Copy\ Class\.\.\.\ \|\ Push\ Members\ Down\.\.\.\ \|\ Extract\ Superclass\.\.\.\ \|\ Extract\ Interface\.\.\.\ \|\ Extract\ Class\.\.\.\ \|\ Safe\ Delete\.\.\.$',
+		 r'^Context\ actions:\ Rename\.\.\.\ \|\ Move\.\.\.\ \|\ Copy\ Class\.\.\.\ \|\ Pull\ Members\ Up\.\.\.\ \|\ Extract\ Superclass\.\.\.\ \|\ Extract\ Interface\.\.\.\ \|\ Extract\ Class\.\.\.\ \|\ Safe\ Delete\.\.\.$',
+		 r'^Context\ actions:\ Rename\.\.\.\ \|\ Change\ Signature\.\.\.\ \|\ Inline\.\.\.\ \|\ Move\ Definition\ into\ Class\ \|\ Make\ Member\ Function\ const\ \|\ Push\ Members\ Down\.\.\.\ \|\ Safe\ Delete\.\.\.$',
+		 r'^Context\ actions:\ Rename\.\.\.\ \|\ Change\ Signature\.\.\.\ \|\ Inline\.\.\.\ \|\ Move\ Definition\ into\ Class\ \|\ Make\ Member\ Function\ const\ \|\ Pull\ Members\ Up\.\.\.\ \|\ Safe\ Delete\.\.\.$',
+		 r'^Context\ actions:\ Rename\.\.\.\ \|\ Change\ Signature\.\.\.\ \|\ Inline\.\.\.\ \|\ Move\ Definition\ into\ Class\ \|\ Make\ Member\ Function\ const\ \|\ Make\ Member\ Function\ static\ \|\ Convert\ Member\ Function\ to\ Function\ \|\ Push\ Members\ Down\.\.\.\ \|\ Safe\ Delete\.\.\.$',
+		 r'^Context\ actions:\ Rename\.\.\.\ \|\ Encapsulate\ Field\.\.\.\ \|\ Safe\ Delete\.\.\.$',
+		 r'^Context\ actions:\ Rename\.\.\.\ \|\ Change\ Signature\.\.\.\ \|\ Inline\.\.\.\ \|\ Move\ Definition\ into\ Class\ \|\ Convert\ Function\ to\ Member\ Function\ \|\ Move\.\.\.\ \|\ Safe\ Delete\.\.\.$'],
+		[]),
+	('context-actions-macro', dict(MakeMacrosCopy(), **{
+		#A macro where it is used and where it is #defined.
+		'WAIT_INDEX': '1', 'OPEN': 'Use.cpp',
+		'DEBUG': 'edit:caret:39:17,edit:contextactions,edit:open:Macros.h,edit:caret:6:10,edit:contextactions'}),
+		[r'^Context\ actions:\ Inline\.\.\.\ \|\ Convert\ Macro\.\.\.$',
+		 r'^Context\ actions:\ Inline\.\.\.\ \|\ Convert\ Macro\.\.\.$'],
+		[]),
+	('context-actions-popup', dict(MakePointersCopy(), **{
+		#The command shows them in a popup under the caret, and the one chosen (Down, Enter) is run: the pointer
+		#parameter is made a reference.  Where there is nothing the status line says so.
+		'WAIT_INDEX': '1', 'OPEN': 'Vat.cpp',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:30:24,command:Refactor.ContextActions,edit:printpopup,edit:key:down,edit:key:enter,edit:printpopup,edit:caret:5:2,command:Refactor.ContextActions,printstatus'}),
+		[r'^Popup:\ Rename\.\.\.\ \|\ Convert\ Pointer\ to\ Reference$',
+		 r'^Status:\ Converted\ the\ parameter\ psLevel\ of\ CVat::Fill\ to\ a\ reference:\ 7\ uses\ and\ 3\ calls\ changed\.$',
+		 r'^Popup:\ none$',
+		 r'^Status:\ There\ is\ nothing\ to\ refactor\ at\ the\ caret\.$'],
+		[]),
+	('context-actions-key', dict(MakePointersCopy(), **{
+		#Alt+Enter in the editor, pressed as the keyboard's keys: the popup opens.
+		'WAIT_INDEX': '1', 'OPEN': 'Vat.cpp',
+		'DEBUG': 'edit:caret:54:32,wait:300,edit:press:Left Alt,edit:tap:Enter,edit:release:Left Alt,wait:300,edit:printpopup,edit:key:escape,edit:printpopup,edit:print'}),
+		[r'^Popup: Rename\.\.\. \| Convert Reference to Pointer$', r'^Popup: none$'],
+		[]),
 	('rename-assembly-class', dict(MakeRenameAssemblyCopy(), **{
 		#A class renamed in hand written assembly's labels (_CEngine__Init, __0, __2), in parameter lists with its length
 		#(FPC7CEngine to FPC6CMotor), in generated layout constants (SIZEOF_CEngine, CEngine_miSpeed: in the assembly, the
@@ -2721,7 +2786,7 @@ CHECKS = [
 		 r'^Menu Build: Build \[Ctrl\+Shift\+B\], Edit Build Configurations\.\.\.$',
 		 r'^Menu Debug: Start Debugging \[F5\], Start Without Debugging \[Ctrl\+F5\], Stop Debugging \[Shift\+F5\], Stop Running\(disabled\), Restart \[Ctrl\+Shift\+F5\], Break All \[Ctrl\+Pause/Break\], Attach to Emulator\.\.\., Step Into \[F11\], Step Over \[F10\], Step Out \[Shift\+F11\], Toggle Breakpoint \[F9\], ',
 		 r'^Menu Window: Reset Window Layout, Close All Documents$',
-		 r'^Menu Editor: Go to Source \[Ctrl\+B\], Find Usages \[Alt\+F7\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Rename\.\.\. \[Shift\+F6\], Refactor>, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\]$',
+		 r'^Menu Editor: Go to Source \[Ctrl\+B\], Find Usages \[Alt\+F7\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Show Context Actions \[Alt\+Enter\], Rename\.\.\. \[Shift\+F6\], Refactor>, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\]$',
 		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Introduce Field\.\.\. \[Ctrl\+Alt\+F\](\(disabled\))?, Introduce Constant\.\.\. \[Ctrl\+Alt\+C\](\(disabled\))?, Introduce Parameter\.\.\. \[Ctrl\+Alt\+P\](\(disabled\))?, Introduce Typedef\.\.\. \[Ctrl\+Alt\+K\](\(disabled\))?, Inline\.\.\. \[Ctrl\+Alt\+N\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\.(\(disabled\))?, Push Members Down\.\.\.(\(disabled\))?, Move\.\.\. \[F6\](\(disabled\))?, Copy Class\.\.\.(\(disabled\))?, Extract Method\.\.\. \[Ctrl\+Alt\+M\](\(disabled\))?, Extract Superclass\.\.\.(\(disabled\))?, Extract Interface\.\.\.(\(disabled\))?, Extract Class\.\.\.(\(disabled\))?, Encapsulate Field\.\.\.(\(disabled\))?, Optimise #includes \[Ctrl\+Alt\+O\], Sort #includes, Convert Macro\.\.\.(\(disabled\))?, Convert Pointer to Reference(\(disabled\))?, Convert Reference to Pointer(\(disabled\))?, Make Member Function const(\(disabled\))?, Make Member Function static(\(disabled\))?, Convert Function to Member Function(\(disabled\))?, Convert Member Function to Function(\(disabled\))?, Extract Template Parameter\.\.\., Remove Template Parameter$',
 		 r'^Menu Explorer: Set as Startup Solution, Set as Startup Project\(disabled\), Remove Solution, Rename\.\.\.(\(disabled\))?$',
 		 r'^Menu item \[View/Nope\] not found$'], []),

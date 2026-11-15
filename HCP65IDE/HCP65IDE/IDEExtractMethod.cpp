@@ -29,6 +29,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDEDefinitions.h"
 #include "IDEMoveMembers.h"
 #include "IDEExtractMethod.h"
+#include "IDEContextActions.h"
 
 
 #define IDE_EXTRACT_BANNER	"//////////////////////////////////////////////////////////////////////////\n//\n//\n//////////////////////////////////////////////////////////////////////////\n"
@@ -190,6 +191,21 @@ void CIDEExtractMethod::AddCommands(Ptr<CCommandSet> pCommands)
 void CIDEExtractMethod::AddEditorItems(Ptr<CMenuContainer> pRefactor)
 {
 	pRefactor->AddItem(mpcContent->GetCommands()->Find("Refactor.ExtractMethod"));
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Show Context Actions: Extract Method is for an expression or whole
+// statements selected in a function's body.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEExtractMethod::AddContextActions(SIDECaretContext* psContext)
+{
+	if (psContext->bSelection && psContext->bInFunction && (psContext->bExpression || psContext->bStatements))
+	{
+		psContext->Offer("Refactor.ExtractMethod");
+	}
 }
 
 
