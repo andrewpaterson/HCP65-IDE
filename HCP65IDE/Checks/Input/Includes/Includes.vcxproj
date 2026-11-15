@@ -7,12 +7,15 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Build.cpp" />
     <ClCompile Include="Drum.cpp" />
     <ClCompile Include="Flow.cpp" />
     <ClCompile Include="Gauge.cpp" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="Odd.cpp" />
     <ClCompile Include="Sink.cpp" />
     <ClCompile Include="Tank.cpp" />
+    <ClCompile Include="Washer.cpp" />
     <ClCompile Include="Wide.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -25,6 +28,12 @@
     <ClInclude Include="Tank.h" />
     <ClInclude Include="Units.h" />
     <ClInclude Include="Valve.h" />
+    <ClInclude Include="Rig.h" />
+    <ClInclude Include="Low\Bolt.h" />
+    <ClInclude Include="Low\Nut.h" />
+    <ClInclude Include="Low\Washer.h" />
+    <ClInclude Include="High\Frame.h" />
+    <ClInclude Include="High\Span.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{8E3F4051-0000-4000-8000-00000000000F}</ProjectGuid>

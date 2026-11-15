@@ -1974,30 +1974,52 @@ CHECKS = [
 	('includes-added', dict(MakeIncludesCopy(), **{
 		#A header that #includes nothing and compiles where its source has what it needs first: the header of the
 		#class it has a member of is given an #include, and the class it only points to a forward declaration.  Its
-		#source's #includes can then be sorted, its own header first.  A template's header isn't given the header of
+		#source's #includes, all of its own directory, stay in the order they are, its own header where it is.  A
+		#template's header isn't given the header of
 		#what its instances are made with.  A source that names a class whose header it hasn't is given the #include.
 		'WAIT_INDEX': '1', 'OPEN': 'Drum.h',
-		'DEBUG': 'edit:renamesearch:---s,edit:includes,edit:optimiseincludes,edit:open:Drum.cpp,edit:sortincludes,edit:open:Holder.h,edit:optimiseincludes,edit:open:Flow.cpp,edit:optimiseincludes,printdisklines:Drum.h,printdisklines:Drum.cpp,printdisklines:Flow.cpp'}),
+		'DEBUG': 'edit:renamesearch:---s,edit:includes,edit:optimiseincludes,edit:open:Drum.cpp,edit:optimiseincludes,edit:open:Holder.h,edit:optimiseincludes,edit:open:Flow.cpp,edit:optimiseincludes,printdisklines:Drum.h,printdisklines:Drum.cpp,printdisklines:Flow.cpp'}),
 		[r'^Optimise #includes: Drum\.h$', r'^  added: #include "Pipe\.h", CPipe comes from it$', r'^  added: class CGauge;$',
-		 r'^Status: Optimised the #includes of Drum\.h: 1 added, 1 forward declaration added\.$', r'^Status: Sorted the #includes of Drum\.cpp\.$',
+		 r'^Status: Optimised the #includes of Drum\.h: 1 added, 1 forward declaration added\.$', r'^Status: The #includes of Drum\.cpp are as they should be\.$',
 		 r'^Status: The #includes of Holder\.h are as they should be\.$', r'^Status: Optimised the #includes of Flow\.cpp: 1 added\.$', r'^  added: #include "Valve\.h", CValve comes from it$',
 		 r'^2\|#define __DRUM_H__$', r'^3\|#include "Pipe\.h"$', r'^6\|class CGauge;$', r'^9\|class CDrum$',
-		 r'^1\|#include "Drum\.h"$', r'^2\|#include "Gauge\.h"$', r'^3\|#include "Pipe\.h"$', r'^2\|#include "Valve\.h"$'],
+		 r'^1\|#include "Pipe\.h"$', r'^2\|#include "Gauge\.h"$', r'^3\|#include "Drum\.h"$', r'^2\|#include "Valve\.h"$'],
 		[]),
 	('includes-needed', dict(MakeIncludesCopy(), **{
 		#An #include nothing the file names comes from, that the header after it needs: the file is checked as it
-		#would be, and it stays.  Sorting a file's #includes is refused the same way.  A <> #include, one inside an
+		#would be, and it stays.  A <> #include, one inside an
 		#if and one whose file isn't found are left as they are.
 		'WAIT_INDEX': '1', 'OPEN': 'Sink.cpp',
-		'DEBUG': 'edit:renamesearch:---s,edit:includes,edit:optimiseincludes,edit:open:Drum.cpp,edit:sortincludes,edit:includes,edit:open:Wide.cpp,edit:includes,edit:optimiseincludes,printdisklines:Sink.cpp,printdisklines:Drum.cpp'}),
+		'DEBUG': 'edit:renamesearch:---s,edit:includes,edit:optimiseincludes,edit:open:Drum.cpp,edit:optimiseincludes,edit:includes,edit:open:Wide.cpp,edit:includes,edit:optimiseincludes,printdisklines:Sink.cpp,printdisklines:Drum.cpp'}),
 		[r'^Optimise #includes: Sink\.cpp$', r'^  "Units\.h" \(line 1\): removed, nothing named here comes from it$', r'^  "Spare\.h" \(line 3\): removed, nothing named here comes from it$',
 		 r"^Status: Optimised the #includes of Sink\.cpp: 1 removed; 1 kept that nothing named here comes from: the file doesn't compile without it\.$",
 		 r"^  \"Units\.h\" \(line 1\): needed, the file doesn't compile without it$",
-		 r"^Status: The #includes of Drum\.cpp stay as they are: the file doesn't compile with them in order \(a header needs another before it\)\.$",
+		 r'^Status: The #includes of Drum\.cpp are as they should be\.$',
 		 r'^  "Drum\.h" \(line 3\): kept, the file\'s own header$',
 		 r'^  <string\.h> \(line 1\): left, a <> #include$', r'^  "Spare\.h" \(line 4\): left, inside an #if$', r"^  \"Missing\.h\" \(line 6\): left, its file isn't found$",
 		 r'^Status: The #includes of Wide\.cpp are as they should be\.$',
 		 r'^1\|#include "Units\.h"$', r'^2\|#include "Order\.h"$', r'^3\|$', r'^1\|#include "Pipe\.h"$', r'^3\|#include "Drum\.h"$'],
+		[]),
+	('includes-order', dict(MakeIncludesCopy(), **{
+		#Optimise #includes puts them in order: the <> one first, then each library's (the directory its name is
+		#written with), the library another's headers reach before it, then the file's own directory's; one added
+		#goes after the last of its library.  A file that doesn't compile with them in order (a header needs what
+		#the one before it declares) is left as it is.
+		'WAIT_INDEX': '1', 'OPEN': 'Build.cpp',
+		'DEBUG': 'edit:renamesearch:---s,edit:optimiseincludes,edit:open:Odd.cpp,edit:optimiseincludes,printdisklines:Build.cpp,printdisklines:Odd.cpp'}),
+		[r'^Status: Optimised the #includes of Build\.cpp: 1 added, put in order\.$', r'^  added: #include "Low/Washer\.h", SWasher comes from it$',
+		 r"^Status: The #includes of Odd\.cpp are as they should be; left in the order they are: the file doesn't compile with them in order \(a header needs another before it\); 1 kept ",
+		 r'^1\|#include <string\.h>$', r'^2\|#include "Low/Nut\.h"$', r'^3\|#include "Low/Washer\.h"$', r'^4\|#include "High/Frame\.h"$', r'^5\|#include "Rig\.h"$', r'^6\|$',
+		 r'^1\|#include "Units\.h"$', r'^2\|#include "High/Span\.h"$'],
+		[]),
+	('includes-ask', dict(MakeIncludesCopy(), **{
+		#The command asks before it changes other files than the one in the editor: what each is given is shown as
+		#Problems Detected.  Cancel changes nothing; Continue does it all.
+		'WAIT_INDEX': '1', 'OPEN': 'Tank.h', 'SETTINGS': MakeSettingsFile(), 'DIALOG_ANSWER': 'Cancel|OK',
+		'DEBUG': 'edit:renamesearch:---s,command:Refactor.OptimiseIncludes,answered:1,printstatus,printdisklines:Tank.h,command:Refactor.OptimiseIncludes,answered:2,printstatus,printdisklines:Tank.h'}),
+		[r'^Dialog \[Problems Detected\] answered Cancel$', r'^Status: The #includes of Tank\.h are left as they were\.$', r'^3\|#include "Gauge\.h"$',
+		 r'^Dialog \[Problems Detected\] answered OK$',
+		 r'^Status: Optimised the #includes of Tank\.h: 1 removed, 1 made a forward declaration; 2 files that got names through it given their own #includes\.$'],
 		[]),
 	('macro-found', dict(MakeMacrosCopy(), **{
 		#Convert Macro: the macro at the caret, its #define and every place its name is written, and what it would
@@ -2793,7 +2815,7 @@ CHECKS = [
 		 r'^Menu Debug: Start Debugging \[F5\], Start Without Debugging \[Ctrl\+F5\], Stop Debugging \[Shift\+F5\], Stop Running\(disabled\), Restart \[Ctrl\+Shift\+F5\], Break All \[Ctrl\+Pause/Break\], Attach to Emulator\.\.\., Step Into \[F11\], Step Over \[F10\], Step Out \[Shift\+F11\], Toggle Breakpoint \[F9\], ',
 		 r'^Menu Window: Reset Window Layout, Close All Documents$',
 		 r'^Menu Editor: Go to Source \[Ctrl\+B\], Find Usages \[Alt\+F7\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Show Context Actions \[Alt\+Enter\], Rename\.\.\. \[Shift\+F6\], Refactor>, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\]$',
-		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Introduce Field\.\.\. \[Ctrl\+Alt\+F\](\(disabled\))?, Introduce Constant\.\.\. \[Ctrl\+Alt\+C\](\(disabled\))?, Introduce Parameter\.\.\. \[Ctrl\+Alt\+P\](\(disabled\))?, Introduce Typedef\.\.\. \[Ctrl\+Alt\+K\](\(disabled\))?, Inline\.\.\. \[Ctrl\+Alt\+N\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\.(\(disabled\))?, Push Members Down\.\.\.(\(disabled\))?, Move\.\.\. \[F6\](\(disabled\))?, Copy Class\.\.\.(\(disabled\))?, Extract Method\.\.\. \[Ctrl\+Alt\+M\](\(disabled\))?, Extract Superclass\.\.\.(\(disabled\))?, Extract Interface\.\.\.(\(disabled\))?, Extract Class\.\.\.(\(disabled\))?, Encapsulate Field\.\.\.(\(disabled\))?, Optimise #includes \[Ctrl\+Alt\+O\], Sort #includes, Convert Macro\.\.\.(\(disabled\))?, Convert Pointer to Reference(\(disabled\))?, Convert Reference to Pointer(\(disabled\))?, Make Member Function const(\(disabled\))?, Make Member Function static(\(disabled\))?, Convert Function to Member Function(\(disabled\))?, Convert Member Function to Function(\(disabled\))?, Extract Template Parameter\.\.\., Remove Template Parameter$',
+		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Introduce Field\.\.\. \[Ctrl\+Alt\+F\](\(disabled\))?, Introduce Constant\.\.\. \[Ctrl\+Alt\+C\](\(disabled\))?, Introduce Parameter\.\.\. \[Ctrl\+Alt\+P\](\(disabled\))?, Introduce Typedef\.\.\. \[Ctrl\+Alt\+K\](\(disabled\))?, Inline\.\.\. \[Ctrl\+Alt\+N\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\.(\(disabled\))?, Push Members Down\.\.\.(\(disabled\))?, Move\.\.\. \[F6\](\(disabled\))?, Copy Class\.\.\.(\(disabled\))?, Extract Method\.\.\. \[Ctrl\+Alt\+M\](\(disabled\))?, Extract Superclass\.\.\.(\(disabled\))?, Extract Interface\.\.\.(\(disabled\))?, Extract Class\.\.\.(\(disabled\))?, Encapsulate Field\.\.\.(\(disabled\))?, Optimise #includes \[Ctrl\+Alt\+O\], Convert Macro\.\.\.(\(disabled\))?, Convert Pointer to Reference(\(disabled\))?, Convert Reference to Pointer(\(disabled\))?, Make Member Function const(\(disabled\))?, Make Member Function static(\(disabled\))?, Convert Function to Member Function(\(disabled\))?, Convert Member Function to Function(\(disabled\))?, Extract Template Parameter\.\.\., Remove Template Parameter$',
 		 r'^Menu Explorer: Set as Startup Solution, Set as Startup Project\(disabled\), Remove Solution, Rename\.\.\.(\(disabled\))?$',
 		 r'^Menu item \[View/Nope\] not found$'], []),
 	('menu-clicks', {

@@ -1966,40 +1966,31 @@ void CIDEScript::RunEditStep(const char* szStep)
 		szPrinted.Kill();
 		sMacro.Kill();
 	}
-	else if ((strcmp(szStep, "includes") == 0) || (strcmp(szStep, "optimiseincludes") == 0) || (strcmp(szStep, "sortincludes") == 0))
+	else if ((strcmp(szStep, "includes") == 0) || (strcmp(szStep, "optimiseincludes") == 0))
 	{
 		//What Optimise #includes found for the file in the editor (includes): what becomes of each of its #includes
-		//and what it is given; or it done (optimiseincludes), or Sort #includes (sortincludes), with what the status
-		//bar would say.
+		//and what it is given; or it done (optimiseincludes), with what the status bar would say.
 		SIDEIncludePlan	sPlan;
 		CChars			szPrinted;
 
 		szPrinted.Init();
-		if (strcmp(szStep, "sortincludes") == 0)
+		sPlan.Init();
+		if (!mpcContent->GetIncludes()->FindPlan(&sPlan))
 		{
-			mpcContent->GetIncludes()->Sort(&szPrinted);
-			printf("Status: %s\n", szPrinted.Text());
+			printf("Optimise #includes: no file\n");
+		}
+		else if (strcmp(szStep, "includes") == 0)
+		{
+			printf("%s", mpcContent->GetIncludes()->PrintPlan(&sPlan, &szPrinted));
 		}
 		else
 		{
-			sPlan.Init();
-			if (!mpcContent->GetIncludes()->FindPlan(&sPlan))
-			{
-				printf("Optimise #includes: no file\n");
-			}
-			else if (strcmp(szStep, "includes") == 0)
-			{
-				printf("%s", mpcContent->GetIncludes()->PrintPlan(&sPlan, &szPrinted));
-			}
-			else
-			{
-				mpcContent->GetIncludes()->Optimise(&sPlan, &szPrinted);
-				printf("Status: %s\n", szPrinted.Text());
-				szPrinted.Clear();
-				printf("%s", mpcContent->GetIncludes()->PrintPlan(&sPlan, &szPrinted));
-			}
-			sPlan.Kill();
+			mpcContent->GetIncludes()->Optimise(&sPlan, &szPrinted);
+			printf("Status: %s\n", szPrinted.Text());
+			szPrinted.Clear();
+			printf("%s", mpcContent->GetIncludes()->PrintPlan(&sPlan, &szPrinted));
 		}
+		sPlan.Kill();
 		if (gbIDEScriptRenameSaves)
 		{
 			mpcContent->GetDocuments()->SaveAllFiles();

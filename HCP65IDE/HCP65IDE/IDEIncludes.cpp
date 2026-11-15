@@ -22,6 +22,9 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/FileUtil.h"
 #include "BaseLib/StringHelper.h"
 #include "BaseLib/PointerFunctions.h"
+#include "StandardLib/Orderer.h"
+#include "StandardLib/String.h"
+#include "StandardLib/Array.h"
 #include "IDEContent.h"
 #include "IDEDefinitions.h"
 #include "IDERename.h"
@@ -70,6 +73,8 @@ void SIDEIncludePlan::Init(void)
 	aszDependants.Init();
 	aszDependantHeaders.Init();
 	uiErrors = 0;
+	bOrder = true;
+	bReordered = false;
 }
 
 
@@ -329,7 +334,6 @@ bool CIDEIncludes::Load(CObjectReader* pcFile) { return false; }
 void CIDEIncludes::AddCommands(Ptr<CCommandSet> pCommands)
 {
 	pCommands->Add("Refactor.OptimiseIncludes", "Optimise #includes", "Control+Alt+O", Ptr<CImageCel>(), this, &CIDEIncludes::QueueOptimise)->SetEnabledCheck(this, &CIDEIncludes::CanOptimise);
-	pCommands->Add("Refactor.SortIncludes", "Sort #includes", "", Ptr<CImageCel>(), this, &CIDEIncludes::QueueSort)->SetEnabledCheck(this, &CIDEIncludes::CanOptimise);
 }
 
 
@@ -340,7 +344,6 @@ void CIDEIncludes::AddCommands(Ptr<CCommandSet> pCommands)
 void CIDEIncludes::AddEditorItems(Ptr<CMenuContainer> pRefactor)
 {
 	pRefactor->AddItem(mpcContent->GetCommands()->Find("Refactor.OptimiseIncludes"));
-	pRefactor->AddItem(mpcContent->GetCommands()->Find("Refactor.SortIncludes"));
 }
 
 
@@ -377,8 +380,6 @@ bool CIDEIncludes::CanOptimise(void)
 
 
 void CIDEIncludes::QueueOptimise(void) { mpcContent->GetWindow()->Post(this, &CIDEIncludes::OptimiseQueued); }
-void CIDEIncludes::QueueSort(void) { mpcContent->GetWindow()->Post(this, &CIDEIncludes::SortQueued); }
-void CIDEIncludes::SortQueued(void) { Sort(); }
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -1197,33 +1198,408 @@ void CIDEIncludes::FindDependants(SIDEIncludePlan* psPlan)
 }
 
 
+//One of the #includes MakeOrderedEdits puts in order.
+struct SIDEOrderedInclude
+{
+	CChars	szLine;		//Its line, with its end.
+	CChars	szLibrary;	//The directory its name is written with, in lower case ("baselib/"); empty if none.
+	CChars	szFileName;	//The file it finds; empty if none.
+	int		iRank;		//Where its kind goes: 0 a <> one, then a library's by its library's place, then one of the file's own directory.
+	bool	bOwn;		//The file's own header: it stays where it is.
+};
+
+
+typedef CArrayTemplate<SIDEOrderedInclude>	CArrayIDEOrderedIncludes;
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Libraries (the directories #includes are written with) in the order
+// their #includes go: the lowest first, one whose headers reach another's
+// directory after it; those that don't reach each other in the order they
+// are given.  paszLibraryFiles has the files the #includes find and
+// paszFileLibraries the library of each.  COrderer orders them: each
+// fulfils its own name and requires the names of those it reaches; two
+// that reach each other can't be ordered and go last, as they are.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEIncludes::OrderLibraries(CArrayChars* paszLibraries, CArrayChars* paszLibraryFiles, CArrayChars* paszFileLibraries, CArrayChars* paszDest)
+{
+	CIDEIncludeGraph			cGraph;
+	Ptr<COrderer>				pOrderer;
+	Ptr<CArray<CString>>		pLibraries;
+	Ptr<CArray<CBaseObject>>	pOrdered;
+	Ptr<CArray<CBaseObject>>	pUnordered;
+	Ptr<CString>				pLibrary;
+	CArrayInt					aiReached;
+	CArrayChars					aszDirectories;
+	CChars						szDirectory;
+	const char*					szReached;
+	size						uiPass;
+	size						i;
+	size						j;
+	size						k;
+
+	if (paszLibraries->NumElements() < 2)
+	{
+		for (i = 0; i < paszLibraries->NumElements(); i++)
+		{
+			paszDest->Add(paszLibraries->GetText(i));
+		}
+		return;
+	}
+
+	//Each file's directory, as the library's.
+	aszDirectories.Init();
+	for (i = 0; i < paszLibraryFiles->NumElements(); i++)
+	{
+		szDirectory.Init(paszLibraryFiles->GetText(i));
+		szDirectory.RemoveEnd((size)(GetIDEFileNamePart(szDirectory.Text()) - szDirectory.Text()));
+		aszDirectories.Add(szDirectory.Text());
+		szDirectory.Kill();
+	}
+
+	cGraph.Init(mpcContent->GetCodeModel(), &mpcContent->GetFindInFiles());
+	pOrderer = OMalloc<COrderer>();
+	pLibraries = OMalloc<CArray<CString>>();
+	for (i = 0; i < paszLibraries->NumElements(); i++)
+	{
+		pLibrary = OMalloc<CString>(paszLibraries->GetText(i));
+		pLibraries->Add(pLibrary);
+		pOrderer->AddFulfilment(pLibrary, paszLibraries->GetText(i));
+	}
+	for (i = 0; i < paszLibraryFiles->NumElements(); i++)
+	{
+		aiReached.Init();
+		cGraph.FindReached(cGraph.Get(paszLibraryFiles->GetText(i)), -1, NULL, &aiReached);
+		for (j = 0; j < aiReached.NumElements(); j++)
+		{
+			szReached = cGraph.GetFileName(aiReached.GetValue(j));
+			for (k = 0; k < aszDirectories.NumElements(); k++)
+			{
+				if (!paszFileLibraries->Get(k)->Equals(paszFileLibraries->GetText(i)) && ((size)(GetIDEFileNamePart(szReached) - szReached) == aszDirectories.Get(k)->Length()) &&
+					(MemICmp(szReached, aszDirectories.GetText(k), aszDirectories.Get(k)->Length()) == 0))
+				{
+					pOrderer->AddRequirement(pLibraries->Get((size)paszLibraries->GetIndex(paszFileLibraries->GetText(i))), paszFileLibraries->GetText(k));
+				}
+			}
+		}
+		aiReached.Kill();
+	}
+	pOrdered = OMalloc<CArray<CBaseObject>>();
+	pUnordered = OMalloc<CArray<CBaseObject>>();
+	pOrderer->Order(pOrdered, pUnordered);
+	for (uiPass = 0; uiPass < 2; uiPass++)
+	{
+		for (i = 0; i < ((uiPass == 0) ? pOrdered->NumElements() : pUnordered->NumElements()); i++)
+		{
+			for (j = 0; j < pLibraries->NumElements(); j++)
+			{
+				if ((CBaseObject*)&pLibraries->Get(j) == ((uiPass == 0) ? &pOrdered->Get(i) : &pUnordered->Get(i)))
+				{
+					paszDest->Add(paszLibraries->GetText(j));
+				}
+			}
+		}
+	}
+	cGraph.Kill();
+	aszDirectories.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A file's #includes with some gone (paiGone, by their number; NULL for
+// none) and some added (paszAdded, the headers' files), in the order
+// they go, as an edit of the run of lines the file's last #include is in
+// (*puiFirst to *puiLast of them; the caller takes out those that go
+// elsewhere).  bSort: all of them are put in order, the <> ones, then
+// each library's from the lowest up (OrderLibraries), then the file's own
+// directory's, each kind in the order it is with those added after; the
+// file's own header stays where it is.  Without bSort those it has stay
+// as they are and each added goes after the last that it would come
+// after.  *pbReordered: those it had change their order.  False, with no
+// edit, if the file has no #include outside an #if.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEIncludes::MakeOrderedEdits(const char* szFileName, const char* szText, CArrayIDEIncludes* pasIncludes, CArrayInt* paiGone, CArrayChars* paszAdded, bool bSort, CIDETextEdits* pcEdits, size* puiFirst, size* puiLast,
+									bool* pbReordered)
+{
+	CIDECodeModel*				pcModel;
+	CArrayIDEOrderedIncludes	asEntries;
+	SIDEOrderedInclude*			psEntry;
+	SIDEInclude*				psInclude;
+	CArrayChars					aszLibraries;
+	CArrayChars					aszOrdered;
+	CArrayChars					aszLibraryFiles;
+	CArrayChars					aszFileLibraries;
+	CArrayInt					aiOrder;
+	CArrayInt					aiSorted;
+	CChars						szName;
+	CChars						szRun;
+	CChars						szOld;
+	size						uiFirst;
+	size						uiLast;
+	size						uiExisting;
+	size						uiSlash;
+	size						uiPlace;
+	size						uiNext;
+	size						i;
+	size						j;
+	int							iRank;
+	int							iRanks;
+	bool						bHeader;
+	bool						bSystem;
+
+	*pbReordered = false;
+	uiLast = MAX_SIZE;
+	for (i = pasIncludes->NumElements(); (i > 0) && (uiLast == MAX_SIZE); i--)
+	{
+		if (!pasIncludes->Get(i - 1)->bConditional)
+		{
+			uiLast = i - 1;
+		}
+	}
+	if (uiLast == MAX_SIZE)
+	{
+		return false;
+	}
+	for (uiFirst = uiLast; (uiFirst > 0) && !pasIncludes->Get(uiFirst - 1)->bConditional && (pasIncludes->Get(uiFirst - 1)->uiLineEnd == pasIncludes->Get(uiFirst)->uiLineStart); uiFirst--)
+	{
+	}
+	*puiFirst = uiFirst;
+	*puiLast = uiLast;
+
+	//Those that stay, then those added: each one's line, library and file.
+	pcModel = mpcContent->GetCodeModel();
+	bHeader = CIDEIcons::GetFileType(szFileName) == IFT_Header;
+	asEntries.Init();
+	uiExisting = 0;
+	for (i = uiFirst; i <= uiLast + paszAdded->NumElements(); i++)
+	{
+		psInclude = (i <= uiLast) ? pasIncludes->Get(i) : NULL;
+		if (psInclude && paiGone && (paiGone->GetValue(i) != 0))
+		{
+			continue;
+		}
+		psEntry = asEntries.Add();
+		psEntry->szLine.Init();
+		psEntry->szLibrary.Init();
+		psEntry->szFileName.Init();
+		psEntry->iRank = 0;
+		psEntry->bOwn = false;
+		szName.Init();
+		if (psInclude)
+		{
+			uiExisting++;
+			psEntry->szLine.AppendSubString(szText, psInclude->uiLineStart, psInclude->uiLineEnd);
+			if (!psEntry->szLine.EndsWith("\n"))
+			{
+				psEntry->szLine.Append('\n');
+			}
+			szName.AppendSubString(szText, psInclude->uiNameStart, psInclude->uiNameEnd);
+			psEntry->szFileName.Set(psInclude->szFileName);
+			psEntry->bOwn = !bHeader && !psInclude->szFileName.Empty() && IsIDEOwnHeader(szFileName, psInclude->szFileName.Text());
+			bSystem = psInclude->bSystem;
+		}
+		else
+		{
+			pcModel->MakeIncludeName(szFileName, paszAdded->GetText(i - uiLast - 1), &szName);
+			psEntry->szLine.Append("#include \"")->Append(szName)->Append("\"\n");
+			psEntry->szFileName.Set(paszAdded->GetText(i - uiLast - 1));
+			bSystem = false;
+		}
+		for (uiSlash = szName.Length(); (uiSlash > 0) && (szName.GetChar(uiSlash - 1) != '/') && (szName.GetChar(uiSlash - 1) != '\\'); uiSlash--)
+		{
+		}
+		if (bSystem)
+		{
+			psEntry->iRank = 0;
+		}
+		else if (uiSlash > 0)
+		{
+			psEntry->szLibrary.AppendSubString(szName.Text(), 0, uiSlash);
+			psEntry->szLibrary.LowerCase();
+			psEntry->szLibrary.Replace('\\', '/');
+			psEntry->iRank = 1;
+		}
+		else
+		{
+			psEntry->iRank = -1;
+		}
+		szName.Kill();
+	}
+
+	//The libraries' order, and each #include's rank by it.
+	aszLibraries.Init();
+	aszLibraryFiles.Init();
+	aszFileLibraries.Init();
+	for (i = 0; i < asEntries.NumElements(); i++)
+	{
+		psEntry = asEntries.Get(i);
+		if (psEntry->iRank == 1)
+		{
+			aszLibraries.AddIfUnique(psEntry->szLibrary.Text());
+			if (!psEntry->szFileName.Empty())
+			{
+				aszLibraryFiles.Add(psEntry->szFileName.Text());
+				aszFileLibraries.Add(psEntry->szLibrary.Text());
+			}
+		}
+	}
+	aszOrdered.Init();
+	OrderLibraries(&aszLibraries, &aszLibraryFiles, &aszFileLibraries, &aszOrdered);
+	iRanks = (int)aszOrdered.NumElements() + 2;
+	for (i = 0; i < asEntries.NumElements(); i++)
+	{
+		psEntry = asEntries.Get(i);
+		if (psEntry->iRank == 1)
+		{
+			psEntry->iRank = 1 + (int)aszOrdered.GetIndex(psEntry->szLibrary.Text());
+		}
+		else if (psEntry->iRank == -1)
+		{
+			psEntry->iRank = iRanks - 1;
+		}
+	}
+	aszOrdered.Kill();
+	aszFileLibraries.Kill();
+	aszLibraryFiles.Kill();
+	aszLibraries.Kill();
+
+	aiOrder.Init();
+	if (bSort)
+	{
+		//By rank, each rank's as they are; the file's own header keeps its place among them.
+		aiSorted.Init();
+		for (iRank = 0; iRank < iRanks; iRank++)
+		{
+			for (i = 0; i < asEntries.NumElements(); i++)
+			{
+				if ((asEntries.Get(i)->iRank == iRank) && !asEntries.Get(i)->bOwn)
+				{
+					aiSorted.Add((int)i);
+				}
+			}
+		}
+		uiNext = 0;
+		for (i = 0; i < asEntries.NumElements(); i++)
+		{
+			if (asEntries.Get(i)->bOwn)
+			{
+				aiOrder.Add((int)i);
+			}
+			else
+			{
+				aiOrder.Add(aiSorted.GetValue(uiNext));
+				uiNext++;
+			}
+		}
+		aiSorted.Kill();
+	}
+	else
+	{
+		//As they are; each added after the last it would come after (and after the file's own header at the top).
+		for (i = 0; i < uiExisting; i++)
+		{
+			aiOrder.Add((int)i);
+		}
+		for (i = uiExisting; i < asEntries.NumElements(); i++)
+		{
+			uiPlace = 0;
+			for (j = 0; j < aiOrder.NumElements(); j++)
+			{
+				psEntry = asEntries.Get((size)aiOrder.GetValue(j));
+				if ((psEntry->iRank <= asEntries.Get(i)->iRank) || (psEntry->bOwn && (j == 0)))
+				{
+					uiPlace = j + 1;
+				}
+			}
+			aiOrder.Add((int)i);
+			for (j = aiOrder.NumElements() - 1; j > uiPlace; j--)
+			{
+				aiOrder.SetValue(j, aiOrder.GetValue(j - 1));
+			}
+			aiOrder.SetValue(uiPlace, (int)i);
+		}
+	}
+
+	szRun.Init();
+	uiNext = 0;
+	for (i = 0; i < aiOrder.NumElements(); i++)
+	{
+		szRun.Append(asEntries.Get((size)aiOrder.GetValue(i))->szLine);
+		if ((size)aiOrder.GetValue(i) < uiExisting)
+		{
+			//Those it had, in the order they come now.
+			*pbReordered |= ((size)aiOrder.GetValue(i) < uiNext);
+			uiNext = (size)aiOrder.GetValue(i);
+		}
+	}
+	szOld.Init();
+	szOld.AppendSubString(szText, pasIncludes->Get(uiFirst)->uiLineStart, pasIncludes->Get(uiLast)->uiLineEnd);
+	if (!szOld.Equals(szRun.Text()))
+	{
+		pcEdits->Replace(pasIncludes->Get(uiFirst)->uiLineStart, pasIncludes->Get(uiLast)->uiLineEnd, szRun.Text());
+	}
+	szOld.Kill();
+	szRun.Kill();
+	aiOrder.Kill();
+	for (i = 0; i < asEntries.NumElements(); i++)
+	{
+		asEntries.Get(i)->szFileName.Kill();
+		asEntries.Get(i)->szLibrary.Kill();
+		asEntries.Get(i)->szLine.Kill();
+	}
+	asEntries.Kill();
+	return true;
+}
+
+
 //////////////////////////////////////////////////////////////////////////
 //
 // The plan's edits of the file's own text: the #includes that go taken
-// out, those added put after the last it has, and the forward
-// declarations after them (with those the text has there already, or two
-// lines down).
+// out, those added put where they belong with the rest in order
+// (MakeOrderedEdits; after the last it has, if the plan doesn't order
+// them), and the forward declarations after them (with those the text
+// has there already, or two lines down).
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEIncludes::MakeEdits(SIDEIncludePlan* psPlan, const char* szText, CIDETextEdits* pcEdits)
 {
 	CIDECodeModel*	pcModel;
 	CArrayChars		aszDeclared;
+	CArrayInt		aiGone;
 	SIDEIncludeUse*	psUse;
 	CChars			szAdded;
 	CChars			szName;
 	size			uiPlace;
 	size			uiAfter;
 	size			uiWord;
+	size			uiFirst;
+	size			uiLast;
 	size			i;
 	size			j;
+	bool			bOrdered;
 
 	pcModel = mpcContent->GetCodeModel();
+	aiGone.Init();
+	for (i = 0; i < psPlan->asIncludes.NumElements(); i++)
+	{
+		psUse = psPlan->asUses.Get(i);
+		aiGone.Add(((psUse->iWhat == IDE_INCLUDE_REMOVED) || (psUse->iWhat == IDE_INCLUDE_FORWARD)) ? 1 : 0);
+	}
+	uiFirst = 0;
+	uiLast = 0;
+	psPlan->bReordered = false;
+	bOrdered = psPlan->bOrder && MakeOrderedEdits(psPlan->szFileName.Text(), szText, &psPlan->asIncludes, &aiGone, &psPlan->aszAdded, true, pcEdits, &uiFirst, &uiLast, &psPlan->bReordered);
+	aiGone.Kill();
+
 	aszDeclared.Init();
 	for (i = 0; i < psPlan->asIncludes.NumElements(); i++)
 	{
 		psUse = psPlan->asUses.Get(i);
-		if ((psUse->iWhat == IDE_INCLUDE_REMOVED) || (psUse->iWhat == IDE_INCLUDE_FORWARD))
+		if (((psUse->iWhat == IDE_INCLUDE_REMOVED) || (psUse->iWhat == IDE_INCLUDE_FORWARD)) && !(bOrdered && (i >= uiFirst) && (i <= uiLast)))
 		{
 			pcEdits->Replace(psPlan->asIncludes.Get(i)->uiLineStart, psPlan->asIncludes.Get(i)->uiLineEnd, "");
 		}
@@ -1239,7 +1615,7 @@ void CIDEIncludes::MakeEdits(SIDEIncludePlan* psPlan, const char* szText, CIDETe
 
 	uiPlace = FindIDEIncludePlace(&psPlan->asIncludes, szText);
 	szAdded.Init();
-	for (i = 0; i < psPlan->aszAdded.NumElements(); i++)
+	for (i = 0; !bOrdered && (i < psPlan->aszAdded.NumElements()); i++)
 	{
 		szName.Init();
 		pcModel->MakeIncludeName(psPlan->szFileName.Text(), psPlan->aszAdded.GetText(i), &szName);
@@ -1282,23 +1658,30 @@ void CIDEIncludes::MakeEdits(SIDEIncludePlan* psPlan, const char* szText, CIDETe
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The #includes a file that depended on the header's is given, after its
-// last: the edits of its text.  False if it is given none.
+// The #includes a file that depended on the header's is given, each
+// after the last of its own that it would come after (MakeOrderedEdits;
+// its own stay in their order): the edits of its text.  False if it is
+// given none.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEIncludes::MakeDependantEdits(SIDEIncludePlan* psPlan, const char* szFileName, const char* szText, CIDETextEdits* pcEdits)
 {
 	CIDECodeModel*		pcModel;
 	CArrayIDEIncludes	asIncludes;
+	CArrayChars			aszAdded;
 	CChars				szAdded;
 	CChars				szName;
+	size				uiFirst;
+	size				uiLast;
 	size				i;
 	size				j;
 	bool				bHas;
+	bool				bReordered;
 
 	pcModel = mpcContent->GetCodeModel();
 	asIncludes.Init();
 	pcModel->FindIncludesIn(szFileName, szText, &asIncludes);
+	aszAdded.Init();
 	szAdded.Init();
 	for (i = 0; i < psPlan->aszDependants.NumElements(); i++)
 	{
@@ -1317,13 +1700,15 @@ bool CIDEIncludes::MakeDependantEdits(SIDEIncludePlan* psPlan, const char* szFil
 			pcModel->MakeIncludeName(szFileName, psPlan->aszDependantHeaders.GetText(i), &szName);
 			szAdded.Append("#include \"")->Append(szName)->Append("\"\n");
 			szName.Kill();
+			aszAdded.AddIfUnique(psPlan->aszDependantHeaders.GetText(i));
 		}
 	}
 	bHas = !szAdded.Empty();
-	if (bHas)
+	if (bHas && !MakeOrderedEdits(szFileName, szText, &asIncludes, NULL, &aszAdded, false, pcEdits, &uiFirst, &uiLast, &bReordered))
 	{
 		pcEdits->Insert(FindIDEIncludePlace(&asIncludes, szText), szAdded.Text());
 	}
+	aszAdded.Kill();
 	szAdded.Kill();
 	KillIDEIncludes(&asIncludes);
 	return bHas;
@@ -1402,16 +1787,23 @@ size CIDEIncludes::CountPlanErrors(SIDEIncludePlan* psPlan, const char* szText)
 // The plan done, as one undo.  The file is checked as it would be first:
 // if it would have more errors than it has, the #includes that go are
 // tried one at a time, and those it has more errors without are kept.
-// False if there was nothing to do.
+// Then its #includes are put in order, unless it would have more errors
+// so.  Where other files are given #includes, what each is given is
+// shown first (not to a script, which gives pszStatus), and Cancel
+// changes nothing.  False if there was nothing to do.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEIncludes::Optimise(SIDEIncludePlan* psPlan, CChars* pszStatus)
 {
 	CIDEFileEdits	cFiles;
+	CIDETextEdits	cTrial;
 	CArrayInt		aiWhats;
 	CArrayChars		aszEdited;
+	CArrayChars		aszAsked;
 	SIDEIncludeUse*	psUse;
 	CChars			szMessage;
+	CChars			szName;
+	CChars			szLine;
 	char*			szText;
 	char*			szOther;
 	size			uiRemoved;
@@ -1420,9 +1812,14 @@ bool CIDEIncludes::Optimise(SIDEIncludePlan* psPlan, CChars* pszStatus)
 	size			uiParts;
 	size			i;
 	bool			bResult;
+	bool			bTried;
+	bool			bUnordered;
+	bool			bReordered;
+	bool			bCancelled;
 
 	cFiles.Init(mpcContent);
 	szText = cFiles.GetText(psPlan->szFileName.Text());
+	psPlan->bOrder = false;
 	uiRemoved = 0;
 	for (i = 0; i < psPlan->asUses.NumElements(); i++)
 	{
@@ -1485,7 +1882,29 @@ bool CIDEIncludes::Optimise(SIDEIncludePlan* psPlan, CChars* pszStatus)
 		}
 		aiWhats.Kill();
 	}
-	if (szText && (uiRemoved > 0) && (CIDEIcons::GetFileType(psPlan->szFileName.Text()) == IFT_Header))
+
+	//In order, unless the file has more errors that way.
+	bTried = (uiRemoved > 0);
+	bUnordered = false;
+	if (szText)
+	{
+		psPlan->bOrder = true;
+		cTrial.Init();
+		MakeEdits(psPlan, szText, &cTrial);
+		cTrial.Kill();
+		if (psPlan->bReordered)
+		{
+			bTried = true;
+			if (CountPlanErrors(psPlan, szText) > psPlan->uiErrors)
+			{
+				psPlan->bOrder = false;
+				psPlan->bReordered = false;
+				bUnordered = true;
+			}
+		}
+	}
+	bReordered = psPlan->bReordered;
+	if (szText && bTried && (CIDEIcons::GetFileType(psPlan->szFileName.Text()) == IFT_Header))
 	{
 		//The checks gave the code model the header's text as it would be.
 		mpcContent->GetCodeModel()->SetHeaderText(psPlan->szFileName.Text(), szText);
@@ -1501,7 +1920,8 @@ bool CIDEIncludes::Optimise(SIDEIncludePlan* psPlan, CChars* pszStatus)
 		uiForward += (psUse->iWhat == IDE_INCLUDE_FORWARD) ? 1 : 0;
 		uiNeeded += (psUse->iWhat == IDE_INCLUDE_NEEDED) ? 1 : 0;
 	}
-	bResult = szText && ((uiRemoved + uiForward + psPlan->aszAdded.NumElements() + psPlan->aszDeclared.NumElements()) > 0);
+	bResult = szText && ((uiRemoved + uiForward + psPlan->aszAdded.NumElements() + psPlan->aszDeclared.NumElements() + (bReordered ? 1 : 0)) > 0);
+	bCancelled = false;
 	aszEdited.Init();
 	if (bResult)
 	{
@@ -1518,11 +1938,39 @@ bool CIDEIncludes::Optimise(SIDEIncludePlan* psPlan, CChars* pszStatus)
 				aszEdited.Add(psPlan->aszDependants.GetText(i));
 			}
 		}
-		cFiles.Apply();
+		if (!pszStatus && (aszEdited.NumElements() > 0))
+		{
+			//Other files than the one asked about: what each is given, first.
+			aszAsked.Init();
+			for (i = 0; i < psPlan->aszDependants.NumElements(); i++)
+			{
+				if (aszEdited.GetIndex(psPlan->aszDependants.GetText(i)) != ARRAY_ELEMENT_NOT_FOUND)
+				{
+					szName.Init();
+					mpcContent->GetCodeModel()->MakeIncludeName(psPlan->aszDependants.GetText(i), psPlan->aszDependantHeaders.GetText(i), &szName);
+					szLine.Init(GetIDEFileNamePart(psPlan->aszDependants.GetText(i)));
+					szLine.Append(" is given #include \"")->Append(szName)->Append("\": it got a name through an #include that goes.");
+					aszAsked.AddIfUnique(szLine.Text());
+					szLine.Kill();
+					szName.Kill();
+				}
+			}
+			bCancelled = !mpcContent->GetChangeSignature()->ShowConflicts(&aszAsked);
+			bResult = !bCancelled;
+			aszAsked.Kill();
+		}
+		if (bResult)
+		{
+			cFiles.Apply();
+		}
 	}
 
 	szMessage.Init();
-	if (bResult)
+	if (bCancelled)
+	{
+		szMessage.Append("The #includes of ")->Append(GetIDEFileNamePart(psPlan->szFileName.Text()))->Append(" are left as they were");
+	}
+	else if (bResult)
 	{
 		szMessage.Append("Optimised the #includes of ")->Append(GetIDEFileNamePart(psPlan->szFileName.Text()))->Append(": ");
 		uiParts = 0;
@@ -1545,6 +1993,11 @@ bool CIDEIncludes::Optimise(SIDEIncludePlan* psPlan, CChars* pszStatus)
 		{
 			szMessage.Append((uiParts > 0) ? ", " : "")->Append((uint32)psPlan->aszDeclared.NumElements());
 			szMessage.Append((psPlan->aszDeclared.NumElements() == 1) ? " forward declaration added" : " forward declarations added");
+			uiParts++;
+		}
+		if (bReordered)
+		{
+			szMessage.Append((uiParts > 0) ? ", " : "")->Append("put in order");
 		}
 		if (aszEdited.NumElements() > 0)
 		{
@@ -1554,6 +2007,10 @@ bool CIDEIncludes::Optimise(SIDEIncludePlan* psPlan, CChars* pszStatus)
 	else
 	{
 		szMessage.Append("The #includes of ")->Append(GetIDEFileNamePart(psPlan->szFileName.Text()))->Append(" are as they should be");
+	}
+	if (bUnordered)
+	{
+		szMessage.Append("; left in the order they are: the file doesn't compile with them in order (a header needs another before it)");
 	}
 	if (uiNeeded > 0)
 	{
@@ -1572,199 +2029,6 @@ bool CIDEIncludes::Optimise(SIDEIncludePlan* psPlan, CChars* pszStatus)
 	aszEdited.Kill();
 	cFiles.Kill();
 	return bResult;
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// Sort #includes, for the file in the editor: each run of #include lines
-// (one after another, nothing between) is put in order, the file's own
-// header first, then by directory in the order the directories first
-// come in the run ("BaseLib/..." before "WindowLib/..." if it is now),
-// by name in each.  Nothing is done if the file's check would have more
-// errors with them in order: a header needs another before it.  False if
-// nothing was changed.
-//
-//////////////////////////////////////////////////////////////////////////
-bool CIDEIncludes::Sort(CChars* pszStatus)
-{
-	CIDECodeModel*		pcModel;
-	CIDEFileEdits		cFiles;
-	CIDETextEdits		cTrial;
-	CIDETextEdits*		pcEdits;
-	CArrayIDEIncludes	asIncludes;
-	CArrayInt			aiOrder;
-	CArrayInt			aiGroups;
-	SIDEInclude*		psInclude;
-	SIDEInclude*		psOther;
-	CChars				szRun;
-	CChars				szNew;
-	CChars				szMessage;
-	CChars				szFileName;
-	char*				szText;
-	size				uiFirst;
-	size				uiLast;
-	size				uiSlash;
-	size				uiOtherSlash;
-	size				uiPass;
-	size				i;
-	size				j;
-	int					iMoved;
-	int					iCompare;
-	bool				bChanged;
-	bool				bHeader;
-	bool				bResult;
-
-	if (!CanOptimise())
-	{
-		return false;
-	}
-	pcModel = mpcContent->GetCodeModel();
-	mpcContent->GetDocuments()->UpdateEditedTabsNow();
-	szFileName.Init(mpcContent->GetDocuments()->GetActiveTab()->GetFileName());
-	bHeader = CIDEIcons::GetFileType(szFileName.Text()) == IFT_Header;
-	cFiles.Init(mpcContent);
-	szText = cFiles.GetText(szFileName.Text());
-	asIncludes.Init();
-	pcModel->FindIncludesIn(szFileName.Text(), szText, &asIncludes);
-	bChanged = false;
-	cTrial.Init();
-	for (uiPass = 0; uiPass < 2; uiPass++)
-	{
-		//Once for the check of what it would be, once for the editor.
-		pcEdits = (uiPass == 0) ? &cTrial : cFiles.GetEdits(szFileName.Text());
-		for (uiFirst = 0; uiFirst < asIncludes.NumElements(); uiFirst = uiLast + 1)
-		{
-			for (uiLast = uiFirst; (uiLast + 1 < asIncludes.NumElements()) && (asIncludes.Get(uiLast + 1)->uiLineStart == asIncludes.Get(uiLast)->uiLineEnd); uiLast++)
-			{
-			}
-			if (uiLast == uiFirst)
-			{
-				continue;
-			}
-
-			//Each one's directory's place among the run's directories, then an insertion sort.
-			aiOrder.Init();
-			aiGroups.Init();
-			for (i = uiFirst; i <= uiLast; i++)
-			{
-				psInclude = asIncludes.Get(i);
-				for (uiSlash = psInclude->uiNameEnd; (uiSlash > psInclude->uiNameStart) && (szText[uiSlash - 1] != '/') && (szText[uiSlash - 1] != '\\'); uiSlash--)
-				{
-				}
-				aiGroups.Add((int)i);
-				for (j = uiFirst; j < i; j++)
-				{
-					psOther = asIncludes.Get(j);
-					for (uiOtherSlash = psOther->uiNameEnd; (uiOtherSlash > psOther->uiNameStart) && (szText[uiOtherSlash - 1] != '/') && (szText[uiOtherSlash - 1] != '\\'); uiOtherSlash--)
-					{
-					}
-					if ((psOther->bSystem == psInclude->bSystem) && (uiOtherSlash - psOther->uiNameStart == uiSlash - psInclude->uiNameStart) &&
-						(MemICmp(&szText[psOther->uiNameStart], &szText[psInclude->uiNameStart], uiSlash - psInclude->uiNameStart) == 0))
-					{
-						aiGroups.SetValue(i - uiFirst, aiGroups.GetValue(j - uiFirst));
-						break;
-					}
-				}
-				if (!bHeader && !psInclude->szFileName.Empty() && IsIDEOwnHeader(szFileName.Text(), psInclude->szFileName.Text()))
-				{
-					aiGroups.SetValue(i - uiFirst, -1);
-				}
-				aiOrder.Add((int)i);
-			}
-			for (i = 1; i < aiOrder.NumElements(); i++)
-			{
-				iMoved = aiOrder.GetValue(i);
-				psInclude = asIncludes.Get((size)iMoved);
-				for (j = i; j > 0; j--)
-				{
-					psOther = asIncludes.Get((size)aiOrder.GetValue(j - 1));
-					iCompare = aiGroups.GetValue((size)aiOrder.GetValue(j - 1) - uiFirst) - aiGroups.GetValue((size)iMoved - uiFirst);
-					if (iCompare == 0)
-					{
-						szRun.Init();
-						szRun.AppendSubString(szText, psOther->uiNameStart, psOther->uiNameEnd);
-						szNew.Init();
-						szNew.AppendSubString(szText, psInclude->uiNameStart, psInclude->uiNameEnd);
-						iCompare = StringInsensitiveCompare(szRun.Text(), szNew.Text());
-						szNew.Kill();
-						szRun.Kill();
-					}
-					if (iCompare <= 0)
-					{
-						break;
-					}
-					aiOrder.SetValue(j, aiOrder.GetValue(j - 1));
-				}
-				aiOrder.SetValue(j, iMoved);
-			}
-
-			szRun.Init();
-			for (i = 0; i < aiOrder.NumElements(); i++)
-			{
-				psInclude = asIncludes.Get((size)aiOrder.GetValue(i));
-				szRun.AppendSubString(szText, psInclude->uiLineStart, psInclude->uiLineEnd);
-				if (!szRun.EndsWith("\n"))
-				{
-					szRun.Append('\n');
-				}
-				bChanged |= (aiOrder.GetValue(i) != (int)(uiFirst + i));
-			}
-			pcEdits->Replace(asIncludes.Get(uiFirst)->uiLineStart, asIncludes.Get(uiLast)->uiLineEnd, szRun.Text());
-			szRun.Kill();
-			aiGroups.Kill();
-			aiOrder.Kill();
-		}
-		if (!bChanged)
-		{
-			break;
-		}
-		if (uiPass == 0)
-		{
-			szNew.Init();
-			cTrial.ApplyTo(szText, &szNew);
-			bResult = CountErrors(szFileName.Text(), szNew.Text(), NULL, NULL) <= CountErrors(szFileName.Text(), NULL, NULL, NULL);
-			szNew.Kill();
-			if (bHeader)
-			{
-				pcModel->SetHeaderText(szFileName.Text(), szText);
-			}
-			if (!bResult)
-			{
-				break;
-			}
-		}
-	}
-	cTrial.Kill();
-
-	szMessage.Init();
-	if (!bChanged)
-	{
-		szMessage.Append("The #includes of ")->Append(GetIDEFileNamePart(szFileName.Text()))->Append(" are in order.");
-	}
-	else if (uiPass < 2)
-	{
-		szMessage.Append("The #includes of ")->Append(GetIDEFileNamePart(szFileName.Text()))->Append(" stay as they are: the file doesn't compile with them in order (a header needs another before it).");
-		bChanged = false;
-	}
-	else
-	{
-		cFiles.Apply();
-		szMessage.Append("Sorted the #includes of ")->Append(GetIDEFileNamePart(szFileName.Text()))->Append('.');
-	}
-	if (pszStatus)
-	{
-		pszStatus->Set(szMessage);
-	}
-	else
-	{
-		mpcContent->ShowStatus(szMessage.Text());
-	}
-	szMessage.Kill();
-	KillIDEIncludes(&asIncludes);
-	cFiles.Kill();
-	szFileName.Kill();
-	return bChanged;
 }
 
 

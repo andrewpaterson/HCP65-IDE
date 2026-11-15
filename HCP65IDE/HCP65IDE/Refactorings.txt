@@ -408,7 +408,13 @@ Where it is
      default values; a class declared ahead of its definition is no longer refused.  What a typedef allowed and
      this doesn't is refused by the check of the files: a member that returns a pointer to its own class, given
      to a pointer to the name.  Remove Template Parameter leaves the name class as it is, deriving from what is
-     then a plain class.  The queue goes on at (5).
+     then a plain class.
+ 24. The queue's (5): done.  Optimise #includes puts them in order too, and Sort #includes is gone: the <> ones
+     first, then each library's (the directory a name is written with), the lowest library first (COrderer, by
+     which library's headers reach which), then the file's own directory's; each kind in the order it is, one
+     added after the last of its library; the file's own header where it is.  If the file doesn't compile so
+     they are left as they are.  The command shows what other files are given before it changes them (Problems
+     Detected), and Cancel changes nothing.  The queue goes on at (6), the smaller answers.
 
 
 When the plan is done

@@ -69,6 +69,8 @@ struct SIDEIncludePlan
 	CArrayChars				aszDependants;	//The files that got a name through an #include that goes,
 	CArrayChars				aszDependantHeaders;	//and the header each is given an #include of for it.
 	size					uiErrors;		//The errors the file's check has as it is.
+	bool					bOrder;			//Its #includes are put in order too, and those added go where they belong.
+	bool					bReordered;		//Made with its edits: those it had change their order.
 
 	void	Init(void);
 	void	Kill(void);
@@ -131,8 +133,18 @@ protected:
 //that needs another before it).  <> #includes, those inside an #if, and a file's #include of its own header are
 //left as they are.
 //
-//Sort #includes puts each run of #include lines in order: the file's own header first, then by directory in the
-//order the directories first come, by name in each.
+//
+//And they are put in order (there is no command to sort them alone): the <> ones first, as they are; then each
+//library's ("BaseLib/Chars.h": the directory a name is written with is its library), the libraries from the lowest
+//up, one that another's headers reach before it (COrderer has them so), a library's own in the order they are
+//with one added after its last; then the headers of the file's own directory, as they are, one added last.  The
+//file's own header stays where it is.  The lines that are sorted are those of the run the file's last #include is
+//in, with nothing between them.  If the file has more errors with them in order (a header needs another before
+//it) they are left in the order they are, and one added goes after the last.
+//
+//The files that got a name through an #include that goes are other files than the one asked about: what each is
+//given is shown first (as IntelliJ's Problems Detected), and Cancel changes nothing.  Each is given its #include
+//after the last of the library it is of, its own #includes left in their order.
 class CIDEIncludes : public CObject
 {
 CONSTRUCTABLE(CIDEIncludes);
@@ -152,21 +164,20 @@ public:
 	void	AddContextActions(SIDECaretContext* psContext);
 	bool	CanOptimise(void);
 	void	QueueOptimise(void);
-	void	QueueSort(void);
 	bool	FindPlan(SIDEIncludePlan* psDest);
 	bool	Optimise(SIDEIncludePlan* psPlan, CChars* pszStatus = NULL);
-	bool	Sort(CChars* pszStatus = NULL);
 	char*	PrintPlan(SIDEIncludePlan* psPlan, CChars* pszDest);
 
 protected:
 	void	OptimiseQueued(void);
-	void	SortQueued(void);
 	bool	IsOnlyPointedTo(CIDERefactorUnit* pcUnit, const char* szFileName, const char* szKey);
 	bool	AppendForwardDeclaration(const char* szKey, const char* szDeclared, CChars* pszDest);
 	bool	FindUsedMacro(CIDEIncludeGraph* pcGraph, int iInclude, const char* szText, CChars* pszDest);
 	void	FindUnknownNames(SIDEIncludePlan* psPlan, CIDERefactorUnit* pcUnit, CIDEIncludeGraph* pcGraph, const char* szText);
 	void	FindDependants(SIDEIncludePlan* psPlan);
 	void	MakeEdits(SIDEIncludePlan* psPlan, const char* szText, CIDETextEdits* pcEdits);
+	bool	MakeOrderedEdits(const char* szFileName, const char* szText, CArrayIDEIncludes* pasIncludes, CArrayInt* paiGone, CArrayChars* paszAdded, bool bSort, CIDETextEdits* pcEdits, size* puiFirst, size* puiLast, bool* pbReordered);
+	void	OrderLibraries(CArrayChars* paszLibraries, CArrayChars* paszLibraryFiles, CArrayChars* paszFileLibraries, CArrayChars* paszDest);
 	bool	MakeDependantEdits(SIDEIncludePlan* psPlan, const char* szFileName, const char* szText, CIDETextEdits* pcEdits);
 	size	CountErrors(const char* szFileName, char* szText, const char* szUnit, char* szUnitText);
 	size	CountPlanErrors(SIDEIncludePlan* psPlan, const char* szText);
