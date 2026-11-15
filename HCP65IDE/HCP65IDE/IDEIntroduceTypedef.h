@@ -59,6 +59,11 @@ struct SIDETypedef
 	CArrayInt	aiTypedefAt;		//Where the typedef's line goes if that place is the first replaced (for each place),
 	CChars		szIndent;			//and its indentation.
 	CArrayChars	aszUsed;			//The names the file writes: the typedef's must not be one.
+	CArrayChars	aszTokens;			//The type, token by token.
+	bool		bHeader;			//It goes in a header, at the file's level: what #includes the header can use it.
+	CArrayChars	aszOtherFiles;		//Each place it is written in a file that #includes the header (FindIncluders),
+	CArrayInt	aiOtherStarts;		//a file's places together and in order:
+	CArrayInt	aiOtherEnds;		//where it starts and ends in that file's text.
 
 	void	Init(void);
 	void	Kill(void);
@@ -75,7 +80,13 @@ struct SIDETypedef
 //the start of its body, and the places are those in the function.
 //
 //A place the type is written before the typedef can't use it, so the typedef goes before the first of the places
-//replaced.  Places a macro makes, and other files', aren't looked at.
+//replaced.  Places a macro makes aren't looked at.
+//
+//A typedef written in a header, at the file's level, can be used by every file that #includes the header: the
+//dialog's tick (off until it is ticked) has the type's places in those files given the name too.  The files are the
+//solution's that reach the header through their #includes; they are listed, with how many places each has, before
+//anything is changed, and they are compiled with the name first: a place before the #include, or one where the
+//same words are another type, stops it.  It is one undo across the files.
 class CIDEIntroduceTypedef : public CObject
 {
 CONSTRUCTABLE(CIDEIntroduceTypedef);
@@ -86,6 +97,7 @@ protected:
 	Ptr<CTextField>		mpNameField;
 	Ptr<CLabel>			mpError;
 	Ptr<CCheckBox>		mpAllBox;
+	Ptr<CCheckBox>		mpIncludersBox;
 	SIDETypedef*		mpsShown;  //What the dialog is introducing.  Not held.
 	bool				mbAll;  //Replace all occurrences, as last chosen.
 
@@ -104,15 +116,20 @@ public:
 	bool	ShowIntroduce(void);
 	bool	FindTypedef(SIDETypedef* psDest);
 	const char*	GetNameProblem(SIDETypedef* psTypedef, const char* szName);
-	bool	Introduce(SIDETypedef* psTypedef, const char* szName, bool bAll, CChars* pszStatus = NULL);
+	void	FindIncluders(SIDETypedef* psTypedef);
+	bool	Introduce(SIDETypedef* psTypedef, const char* szName, bool bAll, bool bIncluders = false, CChars* pszStatus = NULL);
 	char*	PrintTypedef(SIDETypedef* psTypedef, CChars* pszDest);
+	char*	PrintIncluders(SIDETypedef* psTypedef, CChars* pszDest);
 
 protected:
 	void	ShowQueuedIntroduce(void);
 	bool	ApproveName(void);
 	bool	Refuse(SIDETypedef* psDest, const char* szWhyNot);
 	bool	IsTypeToken(CIDERefactorUnit* pcUnit, int32 iToken);
-	bool	IsSameTokens(CIDERefactorUnit* pcUnit, int32 iFirst, int32 iLast, int32 iAt);
+	bool	IsSameTokens(CIDERefactorUnit* pcUnit, CArrayChars* paszTokens, int32 iAt);
+	bool	IsTypeAt(CIDERefactorUnit* pcUnit, CArrayChars* paszTokens, int32 iToken);
+	void	AddReplacement(CIDETextEdits* pcEdits, char* szText, size uiStart, size uiEnd, const char* szName);
+	void	ListIncluders(SIDETypedef* psTypedef, CArrayChars* paszDest);
 };
 
 

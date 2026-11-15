@@ -2193,10 +2193,11 @@ void CIDEScript::RunEditStep(const char* szStep)
 		}
 		sExtraction.Kill();
 	}
-	else if ((strcmp(szStep, "typedefable") == 0) || (strncmp(szStep, "typedef:", 8) == 0) || (strncmp(szStep, "typedefone:", 11) == 0))
+	else if ((strcmp(szStep, "typedefable") == 0) || (strncmp(szStep, "typedef:", 8) == 0) || (strncmp(szStep, "typedefone:", 11) == 0) || (strncmp(szStep, "typedeffiles:", 13) == 0))
 	{
 		//What Introduce Typedef found for the selection (typedefable); or the typedef introduced with a name, for
-		//every place the type is written (typedef:<name>) or the selected one (typedefone:<name>).
+		//every place the type is written (typedef:<name>) or the selected one (typedefone:<name>); or for every place
+		//in the file and in the files that #include it, which are printed (typedeffiles:<name>).
 		SIDETypedef	sTypedef;
 		CChars		szPrinted;
 
@@ -2217,6 +2218,14 @@ void CIDEScript::RunEditStep(const char* szStep)
 			else if (sTypedef.bPossible && (szStep[7] == 'o'))
 			{
 				mpcContent->GetIntroduceTypedef()->Introduce(&sTypedef, &szStep[11], false);
+			}
+			else if (sTypedef.bPossible && (szStep[7] == 'f'))
+			{
+				mpcContent->GetIntroduceTypedef()->FindIncluders(&sTypedef);
+				szPrinted.Init();
+				printf("%s", mpcContent->GetIntroduceTypedef()->PrintIncluders(&sTypedef, &szPrinted));
+				szPrinted.Kill();
+				mpcContent->GetIntroduceTypedef()->Introduce(&sTypedef, &szStep[13], true, true);
 			}
 			if (gbIDEScriptRenameSaves && (szStep[7] != 'a'))
 			{
@@ -3370,7 +3379,7 @@ void CIDEScript::DialogTick(void)
 //
 // For checking, HCP65_IDE_DIALOG_KEYS, separated by commas, are pressed
 // before the dialog is answered, and what has the keys after each is
-// printed: tab, backtab, down, up, selectdown, delete, backspace and
+// printed: tab, backtab, down, up, selectdown, delete, backspace, space and
 // type:<characters>.  With Choose Content to Paste open its rows are
 // printed after each too (PrintPasteHistoryDialog).  One with a plus, "Control+Shift+N", is a
 // command's keys: with the Go to dialog open its tab, text and results
@@ -3414,6 +3423,10 @@ void CIDEScript::PressDialogKeys(Ptr<CWindow> pWindow)
 			{
 				pWindow->InputPrintable(aszKeys.Get(i)->Text()[j], true);
 			}
+		}
+		else if (aszKeys.Get(i)->Equals("space"))
+		{
+			pWindow->InputCommand(CIC_Space, true);
 		}
 		else if (aszKeys.Get(i)->Equals("down") || aszKeys.Get(i)->Equals("up") || aszKeys.Get(i)->Equals("selectdown") || aszKeys.Get(i)->Equals("delete") || aszKeys.Get(i)->Equals("backspace"))
 		{

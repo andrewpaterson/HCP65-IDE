@@ -266,7 +266,8 @@ Answered
     want that (it would be a search of the files that include it, as Rename File's is)?  It suggests no name: I
     couldn't see a rule for one (CArrayIDELocations for CArrayTemplate<SIDELocation>).
     Answered 2026-11-15: yes: where the typedef is written in a header, a tick "all files that include it", not
-    ticked to begin with, and the files that would change shown first (as Optimise #includes shows them).  To do.
+    ticked to begin with, and the files that would change shown first (as Optimise #includes shows them).
+    Done 2026-11-15 (CIDEIntroduceTypedef::FindIncluders; the files are compiled with the name first).
 
 35. Extract Method gives a variable the new function changes, that is used afterwards, back by reference
     ("int& iLow") where there is more than one, and an object (a variable whose type is a class) by reference

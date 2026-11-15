@@ -1836,6 +1836,33 @@ CHECKS = [
 		 r'^8\|public:$', r'^9\|\ttypedef M\*\tPItem;$', r'^10\|\tPItem\tmpFirst;$', r'^11\|\tint\t\tmiCount;$', r'^13\|\tPItem\tGet\(int iIndex\) \{ return mpFirst; \}$', r'^14\|\tPItem\tLast\(void\);$',
 		 r'^23\|M\* CList<M>::Last\(void\)$', r'^24\|\{$', r'^25\|\ttypedef M\*\tPLast;$', r'^26\|\tPLast\tpLast;$'],
 		[]),
+	('introduce-typedef-files', dict(MakeIntroduceTypedefCopy(), **{
+		#A typedef written in a header can name the type in the files that #include the header too (the dialog's
+		#tick): Types.cpp, and Report.h and Report.cpp which reach it.  What a macro writes is left.  One undo.
+		'WAIT_INDEX': '1', 'OPEN': 'Types.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:selecttext:41:2-41:14,edit:typedeffiles:CItemList,printdisklines:Types.h,printdisklines:Types.cpp,printdisklines:Report.h,printdisklines:Report.cpp,'
+				 'edit:undoall,edit:saveall,printdisklines:Report.cpp,printdisklines:Types.h'}),
+		[r'^Introduce Typedef: \[CList<SItem>\], 3 places, in the file$', r'^Introduce Typedef: 8 places in 3 files that #include it$',
+		 r'^  Report\.cpp: 3 places$', r'^  Types\.cpp: 3 places$', r'^  Report\.h: 2 places$',
+		 r'^Status: Introduced typedef CList<SItem> CItemList: 11 places replaced, in 4 files\.$',
+		 r'^37\|typedef CList<SItem>\tCItemList;$', r'^44\|\tCItemList\t\t\tmcItems;$', r'^48\|\tunsigned long long\tTotal\(CItemList\* pcOther\);$', r'^52 lines$',
+		 r'^8\|CItemList\* CItems::GetItems\(void\)$', r'^21\|\tCItemList\*\t\t\tpcItems;$', r'^26 lines$',
+		 r'^6\|#define REPORT_LIST\tCList<SItem>$', r'^9\|int\t\tCountItems\(CItemList\* pcList\);$', r'^10\|int\t\tCountBoth\(CItemList\* pcFirst, REPORT_LIST\* pcSecond\);$', r'^13 lines$',
+		 r'^8\|int CountItems\(CItemList\* pcList\)$', r'^20\|\tCItemList\*\t\tpcList;$', r'^24 lines$',
+		 r'^8\|int CountItems\(CList<SItem>\* pcList\)$', r'^20\|\tCList<SItem>\*\tpcList;$', r'^24 lines$', r'^41\|\tCList<SItem>\t\tmcItems;$', r'^49 lines$'],
+		[]),
+	('introduce-typedef-files-dialog', dict(MakeIntroduceTypedefCopy(), **{
+		#The dialog: the tick is there for a header, and off: OKed as it is, only the header changes.  Ticked (two
+		#tabs from the name, and space), the files are listed first, as Problems Detected's list; Cancel there
+		#changes nothing, Continue does it.
+		'WAIT_INDEX': '1', 'OPEN': 'Types.h', 'SETTINGS': MakeSettingsFile(), 'DIALOG_KEYS': 'type:CItemList,tab,tab,space', 'DIALOG_ANSWER': 'OK|Cancel|OK|OK',
+		'DEBUG': 'edit:renamesearch:---s,edit:selecttext:41:2-41:14,introducetypedef,answered:2,printstatus,printdisklines:Report.h,'
+				 'edit:selecttext:41:2-41:14,introducetypedef,answered:4,printstatus,edit:saveall,printdisklines:Report.h'}),
+		[r'^Focus: CTextField$', r'^Focus: CCheckBox$', r'^Focus: CCheckBox$', r'^Dialog \[Introduce Typedef\] answered OK$', r'^Dialog \[Problems Detected\] answered Cancel$',
+		 r'^Status line: Introduce Typedef: nothing was changed\.$', r'^9\|int\t\tCountItems\(CList<SItem>\* pcList\);$',
+		 r'^Dialog \[Introduce Typedef\] answered OK$', r'^Dialog \[Problems Detected\] answered OK$',
+		 r'^Status line: Introduced typedef CList<SItem> CItemList: 11 places replaced, in 4 files\.$', r'^9\|int\t\tCountItems\(CItemList\* pcList\);$'],
+		[]),
 	('introduce-typedef-refused', dict(MakeIntroduceTypedefCopy(), **{
 		#What isn't a type: a field's name, an expression.  The dialog (Ctrl+Alt+K's) can't be OKed without a name.
 		'WAIT_INDEX': '1', 'OPEN': 'Types.h', 'SETTINGS': MakeSettingsFile(), 'DIALOG_ANSWER': 'Cancel',

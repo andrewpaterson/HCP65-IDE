@@ -23,6 +23,9 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/ConstructorCall.h"
 #include "CppCompilerLib/CPPIndex.h"
 #include "IDEContent.h"
+#include "IDEChangeSignature.h"
+#include "IDEDefinitions.h"
+#include "IDEIncludes.h"
 #include "IDERename.h"
 #include "IDESafeDelete.h"
 #include "IDEMoveMembers.h"
@@ -52,6 +55,11 @@ void SIDETypedef::Init(void)
 	aiTypedefAt.Init();
 	szIndent.Init();
 	aszUsed.Init();
+	aszTokens.Init();
+	bHeader = false;
+	aszOtherFiles.Init();
+	aiOtherStarts.Init();
+	aiOtherEnds.Init();
 }
 
 
@@ -61,6 +69,10 @@ void SIDETypedef::Init(void)
 //////////////////////////////////////////////////////////////////////////
 void SIDETypedef::Kill(void)
 {
+	aiOtherEnds.Kill();
+	aiOtherStarts.Kill();
+	aszOtherFiles.Kill();
+	aszTokens.Kill();
 	aszUsed.Kill();
 	szIndent.Kill();
 	aiTypedefAt.Kill();
@@ -97,6 +109,7 @@ void CIDEIntroduceTypedef::Class(void)
 	M_Pointer(mpNameField);
 	M_Pointer(mpError);
 	M_Pointer(mpAllBox);
+	M_Pointer(mpIncludersBox);
 	U_Pointer(mpsShown);
 	U_Bool(mbAll);
 }
@@ -185,6 +198,20 @@ bool CIDEIntroduceTypedef::Refuse(SIDETypedef* psDest, const char* szWhyNot)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Whether a file is a header by its name: what other files #include.
+//
+//////////////////////////////////////////////////////////////////////////
+static bool IsIDEHeaderName(const char* szFileName)
+{
+	const char*	szDot;
+
+	szDot = strrchr(szFileName, '.');
+	return szDot && ((StringInsensitiveCompare(szDot, ".h") == 0) || (StringInsensitiveCompare(szDot, ".hpp") == 0) || (StringInsensitiveCompare(szDot, ".inl") == 0));
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Whether a token can be part of a type as it is written: a name, a
 // number (a template's argument), a type's keyword, or :: < > , * &.
 //
@@ -212,27 +239,66 @@ bool CIDEIntroduceTypedef::IsTypeToken(CIDERefactorUnit* pcUnit, int32 iToken)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Whether the tokens at iAt are, one for one, the tokens iFirst to iLast.
+// Whether the tokens at iAt are, one for one, the type's, and none of
+// them a macro's.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEIntroduceTypedef::IsSameTokens(CIDERefactorUnit* pcUnit, int32 iFirst, int32 iLast, int32 iAt)
+bool CIDEIntroduceTypedef::IsSameTokens(CIDERefactorUnit* pcUnit, CArrayChars* paszTokens, int32 iAt)
 {
-	SPreprocessedToken*	psSource;
 	SPreprocessedToken*	psOther;
-	int32				i;
+	CChars*				pszToken;
+	size				i;
 
-	if ((size)(iAt + (iLast - iFirst)) >= pcUnit->GetTokeniser()->NumTokens())
+	if ((size)iAt + paszTokens->NumElements() > pcUnit->GetTokeniser()->NumTokens())
 	{
 		return false;
 	}
-	for (i = 0; i <= iLast - iFirst; i++)
+	for (i = 0; i < paszTokens->NumElements(); i++)
 	{
-		psSource = pcUnit->GetTokeniser()->GetSource(pcUnit->GetTokeniser()->Get((size)(iFirst + i)));
-		psOther = pcUnit->GetTokeniser()->GetSource(pcUnit->GetTokeniser()->Get((size)(iAt + i)));
-		if ((psSource->uiLength != psOther->uiLength) || (memcmp(psSource->szText, psOther->szText, psSource->uiLength) != 0) || (psOther->iExpansion != -1))
+		pszToken = paszTokens->Get(i);
+		psOther = pcUnit->GetTokeniser()->GetSource(pcUnit->GetTokeniser()->Get((size)iAt + i));
+		if ((pszToken->Length() != psOther->uiLength) || (memcmp(pszToken->Text(), psOther->szText, psOther->uiLength) != 0) || (psOther->iExpansion != -1))
 		{
 			return false;
 		}
+	}
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether the type is written at a token of the unit's own file: its
+// tokens, not a macro's, and not a part of a longer name or type.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEIntroduceTypedef::IsTypeAt(CIDERefactorUnit* pcUnit, CArrayChars* paszTokens, int32 iToken)
+{
+	SPreprocessedToken*	psSource;
+	SCPPSyntaxRange		sRange;
+	int32				iSpan;
+
+	iSpan = (int32)paszTokens->NumElements() - 1;
+	if ((iSpan < 0) || ((size)(iToken + iSpan) >= pcUnit->GetTokeniser()->NumTokens()))
+	{
+		return false;
+	}
+	psSource = pcUnit->GetTokeniser()->GetSource(pcUnit->GetTokeniser()->Get((size)iToken));
+	if ((psSource->pcFile != pcUnit->GetFile()) || (psSource->iExpansion != -1) || !IsSameTokens(pcUnit, paszTokens, iToken) || !pcUnit->GetTokensRange(iToken, iToken + iSpan, &sRange))
+	{
+		return false;
+	}
+	//Not a part of a longer name or type: X in N::X, X::Y, X<...>; int in "long int"; nor a constructor's name.
+	if ((iToken > 0) && (pcUnit->IsToken(iToken - 1, "::") || pcUnit->IsToken(iToken - 1, ".") || pcUnit->IsToken(iToken - 1, "->") || pcUnit->IsToken(iToken - 1, "~") ||
+		 pcUnit->IsToken(iToken - 1, "unsigned") || pcUnit->IsToken(iToken - 1, "signed") || pcUnit->IsToken(iToken - 1, "long") || pcUnit->IsToken(iToken - 1, "short") ||
+		 pcUnit->IsToken(iToken - 1, "class") || pcUnit->IsToken(iToken - 1, "struct")))
+	{
+		return false;
+	}
+	if (pcUnit->IsToken(iToken + iSpan + 1, "::") || (!pcUnit->IsToken(iToken + iSpan, ">") && pcUnit->IsToken(iToken + iSpan + 1, "<")) ||
+		((iSpan == 0) && pcUnit->IsToken(iToken + 1, "(")) || pcUnit->IsToken(iToken + iSpan + 1, "long") || pcUnit->IsToken(iToken + iSpan + 1, "int"))
+	{
+		return false;
 	}
 	return true;
 }
@@ -357,6 +423,14 @@ bool CIDEIntroduceTypedef::FindTypedef(SIDETypedef* psDest)
 	cUnit.GetTokensRange(iFirst, iLast, &sRange);
 	psDest->szType.AppendSubString(szText, FindIDETextOffset(szText, sRange.iLine, sRange.iColumn), FindIDETextOffset(szText, sRange.iEndLine, sRange.iEndColumn));
 
+	for (iToken = iFirst; iToken <= iLast; iToken++)
+	{
+		szName.Init();
+		cUnit.AppendTokens(iToken, iToken, &szName);
+		psDest->aszTokens.Add(szName.Text());
+		szName.Kill();
+	}
+
 	//Does it name a template's parameter?  Then it is named where the parameter is.
 	aszParameters.Init();
 	for (pcParent = pcNode; pcParent; pcParent = pcParent->mpcParent)
@@ -426,22 +500,10 @@ bool CIDEIntroduceTypedef::FindTypedef(SIDETypedef* psDest)
 
 	//Every place it is written there, in this file and not by a macro, and where the typedef would go for each.
 	psDest->bPossible = true;
+	psDest->bHeader = (psDest->iPlace == IDE_TYPEDEF_FILE) && IsIDEHeaderName(pTab->GetFileName());
 	for (iToken = iScopeFirst; iToken + (iLast - iFirst) <= iScopeLast; iToken++)
 	{
-		psSource = cUnit.GetTokeniser()->GetSource(cUnit.GetTokeniser()->Get((size)iToken));
-		if ((psSource->pcFile != cUnit.GetFile()) || (psSource->iExpansion != -1) || !IsSameTokens(&cUnit, iFirst, iLast, iToken) || !cUnit.GetTokensRange(iToken, iToken + (iLast - iFirst), &sRange))
-		{
-			continue;
-		}
-		//Not a part of a longer name or type: X in N::X, X::Y, X<...>; int in "long int"; nor a constructor's name.
-		if ((iToken > 0) && (cUnit.IsToken(iToken - 1, "::") || cUnit.IsToken(iToken - 1, ".") || cUnit.IsToken(iToken - 1, "->") || cUnit.IsToken(iToken - 1, "~") ||
-			 cUnit.IsToken(iToken - 1, "unsigned") || cUnit.IsToken(iToken - 1, "signed") || cUnit.IsToken(iToken - 1, "long") || cUnit.IsToken(iToken - 1, "short") ||
-			 cUnit.IsToken(iToken - 1, "class") || cUnit.IsToken(iToken - 1, "struct")))
-		{
-			continue;
-		}
-		if (cUnit.IsToken(iToken + (iLast - iFirst) + 1, "::") || (!cUnit.IsToken(iToken + (iLast - iFirst), ">") && cUnit.IsToken(iToken + (iLast - iFirst) + 1, "<")) ||
-			((iFirst == iLast) && cUnit.IsToken(iToken + 1, "(")) || cUnit.IsToken(iToken + (iLast - iFirst) + 1, "long") || cUnit.IsToken(iToken + (iLast - iFirst) + 1, "int"))
+		if (!IsTypeAt(&cUnit, &psDest->aszTokens, iToken) || !cUnit.GetTokensRange(iToken, iToken + (iLast - iFirst), &sRange))
 		{
 			continue;
 		}
@@ -544,112 +606,221 @@ const char* CIDEIntroduceTypedef::GetNameProblem(SIDETypedef* psTypedef, const c
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The typedef written, and the places given its name (all of them, or
-// the selected one), as one edit.
+// The places the type is written in the files that #include the header
+// the typedef goes in: the solution's files that reach it, each parsed as
+// it is.  Nothing if the typedef isn't a header's.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEIntroduceTypedef::Introduce(SIDETypedef* psTypedef, const char* szName, bool bAll, CChars* pszStatus)
+void CIDEIntroduceTypedef::FindIncluders(SIDETypedef* psTypedef)
 {
-	Ptr<CIDEEditorTab>	pTab;
-	CIDETextEdits		cEdits;
-	CChars				szLine;
-	CChars				szMessage;
-	const char*			szProblem;
+	CIDECodeModel*		pcModel;
+	CIDEIncludeGraph	cGraph;
+	CIDERefactorUnit	cUnit;
+	CArrayChars			aszSeen;
+	CTextFile			cFile;
+	SCPPSyntaxRange		sRange;
+	char*				szFileName;
 	char*				szText;
-	size				uiFirst;
-	size				uiLast;
-	size				uiAt;
-	size				uiStart;
-	size				uiEnd;
-	size				uiRunEnd;
-	size				uiStars;
-	size				uiLineStart;
-	size				uiColumn;
-	size				uiNextColumn;
+	size				uiLength;
 	size				i;
+	int					iHeader;
+	int32				iToken;
+	int32				iSpan;
 
-	szProblem = psTypedef->bPossible ? GetNameProblem(psTypedef, szName) : "It can't be introduced.";
-	pTab = mpcContent->GetDocuments()->FindTab(psTypedef->szFileName.Text());
-	if (szProblem || pTab.IsNull())
+	psTypedef->aszOtherFiles.ReInit();
+	psTypedef->aiOtherStarts.ReInit();
+	psTypedef->aiOtherEnds.ReInit();
+	if (!psTypedef->bPossible || !psTypedef->bHeader || (psTypedef->aszTokens.NumElements() == 0))
 	{
-		szMessage.Init("Introduce Typedef: ");
-		szMessage.Append(szProblem ? szProblem : "The file isn't open.");
-		if (pszStatus)
+		return;
+	}
+	pcModel = mpcContent->GetCodeModel();
+	mpcContent->GetDocuments()->UpdateEditedTabsNow();
+	cGraph.Init(pcModel, &mpcContent->GetFindInFiles());
+	iHeader = cGraph.Get(psTypedef->szFileName.Text());
+	iSpan = (int32)psTypedef->aszTokens.NumElements() - 1;
+	aszSeen.Init();
+	for (i = 0; i < pcModel->NumProjectFiles(); i++)
+	{
+		szFileName = pcModel->GetProjectFile(i);
+		if ((StringInsensitiveCompare(szFileName, psTypedef->szFileName.Text()) == 0) || aszSeen.Contains(szFileName) || !cGraph.Reaches(cGraph.Get(szFileName), iHeader, -1, NULL))
 		{
-			pszStatus->Set(szMessage);
+			continue;
+		}
+		aszSeen.Add(szFileName);
+
+		//Only a file whose text has the type's first word is worth parsing.
+		cFile.Init();
+		szText = NULL;
+		if (mpcContent->GetFindInFiles()->GetFileText(szFileName, &cFile, &szText, &uiLength) && szText && strstr(szText, psTypedef->aszTokens.GetText(0)))
+		{
+			cUnit.Init();
+			if (cUnit.Parse(pcModel, &mpcContent->GetFindInFiles(), szFileName, false))
+			{
+				for (iToken = 0; (size)(iToken + iSpan) < cUnit.GetTokeniser()->NumTokens(); iToken++)
+				{
+					if (IsTypeAt(&cUnit, &psTypedef->aszTokens, iToken) && cUnit.GetTokensRange(iToken, iToken + iSpan, &sRange) && cUnit.FindNodeOfTokens(iToken, iToken + iSpan))
+					{
+						psTypedef->aszOtherFiles.Add(szFileName);
+						psTypedef->aiOtherStarts.Add((int)FindIDETextOffset(szText, sRange.iLine, sRange.iColumn));
+						psTypedef->aiOtherEnds.Add((int)FindIDETextOffset(szText, sRange.iEndLine, sRange.iEndColumn));
+						iToken += iSpan;
+					}
+				}
+			}
+			cUnit.Kill();
+		}
+		cFile.Kill();
+	}
+	aszSeen.Kill();
+	cGraph.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A place the type is written given the typedef's name.  A name can't
+// run into the name after it ("char*sz"); and what tabs lined up after
+// the type stays in its column.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEIntroduceTypedef::AddReplacement(CIDETextEdits* pcEdits, char* szText, size uiStart, size uiEnd, const char* szName)
+{
+	CChars	szLine;
+	size	uiRunEnd;
+	size	uiStars;
+	size	uiLineStart;
+	size	uiColumn;
+	size	uiNextColumn;
+
+	szLine.Init(szName);
+	for (uiStars = uiEnd; (szText[uiStars] == '*') || (szText[uiStars] == '&'); uiStars++)
+	{
+	}
+	for (uiRunEnd = uiStars; szText[uiRunEnd] == '\t'; uiRunEnd++)
+	{
+	}
+	if (IsIDENameChar(szText[uiEnd]))
+	{
+		szLine.Append(' ');
+	}
+	else if ((uiRunEnd > uiStars) && (szText[uiRunEnd] != ' ') && (szText[uiRunEnd] != '\r') && (szText[uiRunEnd] != '\n') && (szText[uiRunEnd] != '\0'))
+	{
+		//With the * or & after it, which the tabs follow.
+		szLine.AppendSubString(szText, uiEnd, uiStars);
+		for (uiLineStart = uiStart; (uiLineStart > 0) && (szText[uiLineStart - 1] != '\n'); uiLineStart--)
+		{
+		}
+		uiColumn = FindIDEVisualColumn(szText, uiLineStart, uiStart, 4) + szLine.Length();
+		uiNextColumn = FindIDEVisualColumn(szText, uiLineStart, uiRunEnd, 4);
+		if (uiNextColumn > uiColumn)
+		{
+			AppendIDETabsTo(&szLine, uiColumn, uiNextColumn, 4);
 		}
 		else
 		{
-			mpcContent->ShowStatus(szMessage.Text());
+			szLine.Append('\t');
 		}
-		szMessage.Kill();
-		return false;
+		uiEnd = uiRunEnd;
 	}
-	szText = pTab->GetEditor()->GetText();
-	uiFirst = bAll ? 0 : psTypedef->uiSelected;
-	uiLast = bAll ? psTypedef->aiStarts.NumElements() - 1 : psTypedef->uiSelected;
-
-	//The typedef, before the first place replaced: two blank lines from what follows it in the file, a line of its
-	//own in a class or a function.
-	uiAt = (size)psTypedef->aiTypedefAt.GetValue(uiFirst);
-	szLine.Init(psTypedef->szIndent);
-	szLine.Append("typedef ");
-	szLine.Append(psTypedef->szType);
-	szLine.Append('\t');
-	szLine.Append(szName);
-	szLine.Append((psTypedef->iPlace == IDE_TYPEDEF_FILE) ? ";\n\n\n" : ";\n");
-	cEdits.Init();
-	cEdits.Insert(uiAt, szLine.Text());
+	pcEdits->Replace(uiStart, uiEnd, szLine.Text());
 	szLine.Kill();
-	for (i = uiFirst; i <= uiLast; i++)
-	{
-		//A name can't run into the name after it ("char*sz"); and what tabs lined up after the type stays in its
-		//column.
-		uiStart = (size)psTypedef->aiStarts.GetValue(i);
-		uiEnd = (size)psTypedef->aiEnds.GetValue(i);
-		szLine.Init(szName);
-		for (uiStars = uiEnd; (szText[uiStars] == '*') || (szText[uiStars] == '&'); uiStars++)
-		{
-		}
-		for (uiRunEnd = uiStars; szText[uiRunEnd] == '\t'; uiRunEnd++)
-		{
-		}
-		if (IsIDENameChar(szText[uiEnd]))
-		{
-			szLine.Append(' ');
-		}
-		else if ((uiRunEnd > uiStars) && (szText[uiRunEnd] != ' ') && (szText[uiRunEnd] != '\r') && (szText[uiRunEnd] != '\n') && (szText[uiRunEnd] != '\0'))
-		{
-			//With the * or & after it, which the tabs follow.
-			szLine.AppendSubString(szText, uiEnd, uiStars);
-			for (uiLineStart = uiStart; (uiLineStart > 0) && (szText[uiLineStart - 1] != '\n'); uiLineStart--)
-			{
-			}
-			uiColumn = FindIDEVisualColumn(szText, uiLineStart, uiStart, 4) + szLine.Length();
-			uiNextColumn = FindIDEVisualColumn(szText, uiLineStart, uiRunEnd, 4);
-			if (uiNextColumn > uiColumn)
-			{
-				AppendIDETabsTo(&szLine, uiColumn, uiNextColumn, 4);
-			}
-			else
-			{
-				szLine.Append('\t');
-			}
-			uiEnd = uiRunEnd;
-		}
-		cEdits.Replace(uiStart, uiEnd, szLine.Text());
-		szLine.Kill();
-	}
-	cEdits.Apply(pTab->GetEditor());
-	cEdits.Kill();
+}
 
-	szMessage.Init("Introduced typedef ");
-	szMessage.Append(psTypedef->szType);
-	szMessage.Append(' ');
-	szMessage.Append(szName);
-	szMessage.Append(": ");
-	szMessage.Append((uint32)(uiLast - uiFirst + 1));
-	szMessage.Append((uiLast == uiFirst) ? " place replaced." : " places replaced.");
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The typedef written, and the places given its name (all of them, or
+// the selected one), as one edit.  With bIncluders the places found in
+// the files that #include the header are given it too (FindIncluders
+// first), if those files compile with it: one undo across them.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEIntroduceTypedef::Introduce(SIDETypedef* psTypedef, const char* szName, bool bAll, bool bIncluders, CChars* pszStatus)
+{
+	CIDEFileEdits	cFiles;
+	CIDETextEdits*	pcEdits;
+	CChars			szLine;
+	CChars			szMessage;
+	const char*		szProblem;
+	char*			szText;
+	size			uiFirst;
+	size			uiLast;
+	size			uiPlaces;
+	size			uiFiles;
+	size			i;
+	bool			bResult;
+
+	szProblem = psTypedef->bPossible ? GetNameProblem(psTypedef, szName) : "It can't be introduced.";
+	cFiles.Init(mpcContent);
+	szText = szProblem ? NULL : cFiles.GetText(psTypedef->szFileName.Text());
+	bResult = (szText != NULL);
+	szMessage.Init();
+	uiPlaces = 0;
+	uiFiles = 0;
+	if (!bResult)
+	{
+		szMessage.Append("Introduce Typedef: ")->Append(szProblem ? szProblem : "The file isn't open.");
+	}
+	else
+	{
+		uiFirst = bAll ? 0 : psTypedef->uiSelected;
+		uiLast = bAll ? psTypedef->aiStarts.NumElements() - 1 : psTypedef->uiSelected;
+
+		//The typedef, before the first place replaced: two blank lines from what follows it in the file, a line of
+		//its own in a class or a function.
+		szLine.Init(psTypedef->szIndent);
+		szLine.Append("typedef ");
+		szLine.Append(psTypedef->szType);
+		szLine.Append('\t');
+		szLine.Append(szName);
+		szLine.Append((psTypedef->iPlace == IDE_TYPEDEF_FILE) ? ";\n\n\n" : ";\n");
+		pcEdits = cFiles.GetEdits(psTypedef->szFileName.Text());
+		pcEdits->Insert((size)psTypedef->aiTypedefAt.GetValue(uiFirst), szLine.Text());
+		szLine.Kill();
+		for (i = uiFirst; i <= uiLast; i++)
+		{
+			AddReplacement(pcEdits, szText, (size)psTypedef->aiStarts.GetValue(i), (size)psTypedef->aiEnds.GetValue(i), szName);
+			uiPlaces++;
+		}
+
+		//The files that #include it: a file's places are together.
+		for (i = 0; bIncluders && bResult && (i < psTypedef->aszOtherFiles.NumElements()); i++)
+		{
+			szText = cFiles.GetText(psTypedef->aszOtherFiles.GetText(i));
+			bResult = (szText != NULL);
+			if (bResult)
+			{
+				AddReplacement(cFiles.GetEdits(psTypedef->aszOtherFiles.GetText(i)), szText, (size)psTypedef->aiOtherStarts.GetValue(i), (size)psTypedef->aiOtherEnds.GetValue(i), szName);
+				uiPlaces++;
+				if ((i == 0) || (StringInsensitiveCompare(psTypedef->aszOtherFiles.GetText(i), psTypedef->aszOtherFiles.GetText(i - 1)) != 0))
+				{
+					uiFiles++;
+				}
+			}
+		}
+		if (!bResult)
+		{
+			szMessage.Append("Can't introduce typedef ")->Append(szName)->Append(": a file that #includes ")->Append(GetIDEFileNamePart(psTypedef->szFileName.Text()))->Append(" couldn't be opened.");
+		}
+		else if ((uiFiles > 0) && (cFiles.CountErrors(true) > cFiles.CountErrors(false)))
+		{
+			bResult = false;
+			szMessage.Append("Can't introduce typedef ")->Append(szName)->Append(" in the files that #include ")->Append(GetIDEFileNamePart(psTypedef->szFileName.Text()));
+			szMessage.Append(": they don't compile with it (a place is before the #include, or the words are another type there).");
+		}
+	}
+	if (bResult)
+	{
+		cFiles.Apply();
+		szMessage.Append("Introduced typedef ")->Append(psTypedef->szType)->Append(' ')->Append(szName)->Append(": ")->Append((uint32)uiPlaces);
+		szMessage.Append((uiPlaces == 1) ? " place replaced" : " places replaced");
+		if (uiFiles > 0)
+		{
+			szMessage.Append(", in ")->Append((uint32)(uiFiles + 1))->Append(" files");
+		}
+		szMessage.Append('.');
+	}
 	if (pszStatus)
 	{
 		pszStatus->Set(szMessage);
@@ -659,7 +830,8 @@ bool CIDEIntroduceTypedef::Introduce(SIDETypedef* psTypedef, const char* szName,
 		mpcContent->ShowStatus(szMessage.Text());
 	}
 	szMessage.Kill();
-	return true;
+	cFiles.Kill();
+	return bResult;
 }
 
 
@@ -680,6 +852,57 @@ char* CIDEIntroduceTypedef::PrintTypedef(SIDETypedef* psTypedef, CChars* pszDest
 	pszDest->Append((uint32)psTypedef->aiStarts.NumElements());
 	pszDest->Append((psTypedef->aiStarts.NumElements() == 1) ? " place, " : " places, ");
 	pszDest->Append((psTypedef->iPlace == IDE_TYPEDEF_FILE) ? "in the file\n" : ((psTypedef->iPlace == IDE_TYPEDEF_CLASS) ? "in its class\n" : "in its function\n"));
+	return pszDest->Text();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The files that #include the header and how many places each has, a
+// line each.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEIntroduceTypedef::ListIncluders(SIDETypedef* psTypedef, CArrayChars* paszDest)
+{
+	CChars	szLine;
+	size	uiPlaces;
+	size	i;
+
+	uiPlaces = 0;
+	for (i = 0; i < psTypedef->aszOtherFiles.NumElements(); i++)
+	{
+		uiPlaces++;
+		if ((i + 1 == psTypedef->aszOtherFiles.NumElements()) || (StringInsensitiveCompare(psTypedef->aszOtherFiles.GetText(i), psTypedef->aszOtherFiles.GetText(i + 1)) != 0))
+		{
+			szLine.Init(GetIDEFileNamePart(psTypedef->aszOtherFiles.GetText(i)));
+			szLine.Append(": ")->Append((uint32)uiPlaces)->Append((uiPlaces == 1) ? " place" : " places");
+			paszDest->Add(szLine.Text());
+			szLine.Kill();
+			uiPlaces = 0;
+		}
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// What FindIncluders found, for the checks.
+//
+//////////////////////////////////////////////////////////////////////////
+char* CIDEIntroduceTypedef::PrintIncluders(SIDETypedef* psTypedef, CChars* pszDest)
+{
+	CArrayChars	aszLines;
+	size		i;
+
+	aszLines.Init();
+	ListIncluders(psTypedef, &aszLines);
+	pszDest->Append("Introduce Typedef: ")->Append((uint32)psTypedef->aiOtherStarts.NumElements())->Append((psTypedef->aiOtherStarts.NumElements() == 1) ? " place in " : " places in ");
+	pszDest->Append((uint32)aszLines.NumElements())->Append((aszLines.NumElements() == 1) ? " file that #includes it\n" : " files that #include it\n");
+	for (i = 0; i < aszLines.NumElements(); i++)
+	{
+		pszDest->Append("  ")->Append(aszLines.GetText(i))->Append('\n');
+	}
+	aszLines.Kill();
 	return pszDest->Text();
 }
 
@@ -708,9 +931,11 @@ bool CIDEIntroduceTypedef::ShowIntroduce(void)
 {
 	SIDETypedef	sTypedef;
 	Ptr<CLabel>	pLabel;
+	CArrayChars	aszAsked;
 	CChars		szText;
 	bool		bResult;
 	bool		bAll;
+	bool		bIncluders;
 
 	sTypedef.Init();
 	if (!FindTypedef(&sTypedef))
@@ -746,6 +971,12 @@ bool CIDEIntroduceTypedef::ShowIntroduce(void)
 		mpAllBox = mpDialog->AddCheckBox(szText.Text(), mbAll);
 		szText.Kill();
 	}
+	mpIncludersBox = NULL;
+	if (sTypedef.bHeader)
+	{
+		//Never ticked until it is asked for: it changes files that aren't in the editor.
+		mpIncludersBox = mpDialog->AddCheckBox("And in the files that #include this one (they are listed first)", false);
+	}
 	mpError = OMalloc<CLabel>(mpDialog->GetWindow(), mpcContent->GetDimFont(), "");
 	mpDialog->AddEditor("", mpError);
 	mpDialog->SetOKCaption("Refactor");
@@ -760,8 +991,25 @@ bool CIDEIntroduceTypedef::ShowIntroduce(void)
 			mbAll = mpAllBox->IsTicked();
 			bAll = mbAll;
 		}
+		bIncluders = mpIncludersBox.IsNotNull() && mpIncludersBox->IsTicked();
 		szText.Init(mpNameField->GetText());
-		bResult = Introduce(&sTypedef, szText.Text(), bAll);
+		if (bIncluders)
+		{
+			//The other files and what each has, first.
+			FindIncluders(&sTypedef);
+			aszAsked.Init();
+			ListIncluders(&sTypedef, &aszAsked);
+			if ((aszAsked.NumElements() > 0) && !mpcContent->GetChangeSignature()->ShowConflicts(&aszAsked))
+			{
+				bResult = false;
+				mpcContent->ShowStatus("Introduce Typedef: nothing was changed.");
+			}
+			aszAsked.Kill();
+		}
+		if (bResult)
+		{
+			bResult = Introduce(&sTypedef, szText.Text(), bAll, bIncluders);
+		}
 		szText.Kill();
 	}
 	mpDialog->ClearApprover();
@@ -769,6 +1017,7 @@ bool CIDEIntroduceTypedef::ShowIntroduce(void)
 	mpNameField = NULL;
 	mpError = NULL;
 	mpAllBox = NULL;
+	mpIncludersBox = NULL;
 	mpDialog = NULL;
 	mpsShown = NULL;
 	sTypedef.Kill();
