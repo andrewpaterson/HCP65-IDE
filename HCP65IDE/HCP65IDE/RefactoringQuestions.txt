@@ -142,11 +142,6 @@ Open
 34. A typedef in a class template is written on the line before the member that first uses it, with no blank line
     after it, and one in a function at the very start of its body.  Is that where you want them?
 
-36. The new function is a protected member, declared in a protected part at the class's end (one is made if the
-    class's last part isn't protected) and defined straight after the function it came from; from a function of
-    no class it is defined just before that function, not static.  IntelliJ would make it private (static if it
-    uses nothing of the object).  Right as it is?
-
 38. Ctrl+Alt+N is now "Inline...": a variable or a function, whichever the caret is on (IntelliJ's is the same
     key for both).  For a function a dialog asks: all calls and take the function out, all calls and keep it, or
     this call only.
@@ -167,6 +162,12 @@ Open
 47. A forward declaration made from an #include is written after the #includes, two lines down ("class CGauge;"),
     with any the file has there already.  Optimise #includes does this in .cpp files too, not only in headers.  It
     leaves <> #includes, #includes inside an #if, and a .cpp's #include of its own header alone.  Right?
+
+54. The IDE has no Alt+Enter menu (IntelliJ's "show context actions": what can be done at the caret, offered in a
+    small popup).  Every refactoring is in the Refactor menu and some have keys.  You asked for an Alt+Enter way
+    to make an instance method static: Make Member Function static does it from the Refactor menu today.  Do you
+    want the Alt+Enter popup built, listing the refactorings that apply at the caret (Make static, Make const,
+    Convert Pointer to Reference, Introduce Variable, and the rest), as its own piece of work?
 
 
 Answered
@@ -232,6 +233,17 @@ Answered
     Answered 2026-11-15: yes, pointers, as the default of an option in Extract Method's dialog (a tick, as IDEA's
     dialog has its options); references where it is unticked.  To do: the tick, and with it the uses in the moved
     statements rewritten (*piLow, psOther->) and the call passing addresses.
+
+36. The new function is a protected member, declared in a protected part at the class's end (one is made if the
+    class's last part isn't protected) and defined straight after the function it came from; from a function of
+    no class it is defined just before that function, not static.  IntelliJ would make it private (static if it
+    uses nothing of the object).  Right as it is?
+    Answered 2026-11-15: protected, as it is; and a tick in Extract Method's dialog to make it static, which can
+    only be ticked where the function uses nothing of the object, and isn't ticked to begin with (an instance
+    method is the default).  To do: the tick.  And an instance method made static must be a refactoring of its
+    own if there is no Alt+Enter way to do it: there is, as a refactoring (Refactor's Make Member Function
+    static, plan item 18); the IDE has no Alt+Enter menu of what can be done at the caret at all, which is asked
+    of the user (question 54).
 
 37. Extract Method doesn't look for other places the same statements are written (IntelliJ offers to replace
     duplicates), and a variable declared in the selection and used after it is only handled when it is the one
