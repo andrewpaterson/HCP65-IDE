@@ -387,8 +387,7 @@ IntelliJ has none of these for Java.
      ("Functions that take it"), ticked, and move with it (SIDENamespaceMove's aszTakers and aszWith; one undo).
      Checks move-namespace-class-with and -with-dialog.
      Move to File of a variable template, 2026-11-16: whole, with its template<...>, in a header, and its explicit
-     specialisations after it (found in the syntax of the files that declare it: the index has no place for their
-     names, so Rename and Find Usages miss them too; told to the CppCompilerLib session).  Checks
+     specialisations after it (each a declaration of it to the index, inside a template<> declaration).  Checks
      move-function-variable-template and -namespace, on Constants.h and Use.cpp in Input/Namespaces.
      A namespace itself, 2026-11-16: each of its blocks is a site (one in another namespace's block is taken out of
      it, as a declaration is), every name written with it is written from where it is, what its blocks name of

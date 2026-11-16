@@ -25,7 +25,6 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/FileUtil.h"
 #include "BaseLib/TextFile.h"
 #include "CppCompilerLib/CPPIndex.h"
-#include "CppCompilerLib/CPPSyntaxNamespace.h"
 #include "WindowLib/GridContainer.h"
 #include "IDEContent.h"
 #include "IDETemplateVariables.h"
@@ -1835,6 +1834,7 @@ bool CIDEMoveClass::FindFunctionMove(SIDEFunctionMove* psDest)
 	SIDESignatureSite		sSite;
 	SIDENamespaceSite		sNamespaceSite;
 	CIDEFileEdits			cFiles;
+	CCPPSyntax*				pcSpecialisation;
 	SCPPSyntaxRange			sRange;
 	CChars					szScope;
 	const char*				szWhyNot;
@@ -1894,9 +1894,15 @@ bool CIDEMoveClass::FindFunctionMove(SIDEFunctionMove* psDest)
 			continue;
 		}
 		pcUnit = (pcModel->FindProjectOfFile(psLocation->szFileName.Text()) != MAX_SIZE) ? GetUnit(psLocation->szFileName.Text()) : NULL;
-		if ((uiKind == CPPSK_VariableTemplate) && pcUnit && IsInExplicitSpecialisation(pcUnit, psLocation))
+		pcSpecialisation = ((uiKind == CPPSK_VariableTemplate) && pcUnit) ? FindExplicitSpecialisation(pcUnit, psLocation) : NULL;
+		if (pcSpecialisation)
 		{
-			//An explicit specialisation's name (if the index has it as a declaration): FindSpecialisations' to move.
+			//An explicit specialisation's name ("template<> int gmPi<int> = 3;", a declaration of it to the index): it
+			//goes after the template, whole.
+			if (pcUnit->GetRange(pcSpecialisation, &sRange))
+			{
+				psDest->asSpecialisations.Add()->Init(psLocation->szFileName.Text(), sRange.iLine, sRange.iColumn, sRange.iEndLine, sRange.iEndColumn);
+			}
 			continue;
 		}
 		bRead = false;
@@ -1974,15 +1980,6 @@ bool CIDEMoveClass::FindFunctionMove(SIDEFunctionMove* psDest)
 			psDest->asDeclarations.Add()->Init(psLocation->szFileName.Text(), sRange.iLine, sRange.iColumn, sRange.iEndLine, sRange.iEndColumn);
 		}
 	}
-	for (i = 0; psDest->bMovable && (uiKind == CPPSK_VariableTemplate) && (i < asLocations.NumElements()); i++)
-	{
-		//A variable template's explicit specialisations, with it in the files that declare it (found in their syntax,
-		//so the same whether or not the index has their names as its declarations).
-		if (asLocations.Get(i)->uiRole != CPPIR_Reference)
-		{
-			FindSpecialisations(asLocations.Get(i)->szFileName.Text(), psDest);
-		}
-	}
 	for (i = 0; psDest->bMovable && (i < asLocations.NumElements()); i++)
 	{
 		psLocation = asLocations.Get(i);
@@ -2000,111 +1997,22 @@ bool CIDEMoveClass::FindFunctionMove(SIDEFunctionMove* psDest)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Whether a place is in an explicit specialisation (a template<>
-// declaration).
+// The explicit specialisation (a template<> declaration) a place is in,
+// or NULL.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEMoveClass::IsInExplicitSpecialisation(CIDERefactorUnit* pcUnit, SIDELocation* psLocation)
+CCPPSyntax* CIDEMoveClass::FindExplicitSpecialisation(CIDERefactorUnit* pcUnit, SIDELocation* psLocation)
 {
 	CCPPSyntax*	pcTemplate;
 	int32		iToken;
 
 	iToken = pcUnit->FindTokenAt(psLocation->iLine, psLocation->iColumn);
 	pcTemplate = (iToken >= 0) ? pcUnit->FindAncestor(pcUnit->FindNodeOfTokens(iToken, iToken), CPPS_TemplateDeclaration) : NULL;
-	return pcTemplate && pcUnit->IsToken(pcTemplate->miFirstToken, "template") && pcUnit->IsToken(pcTemplate->miFirstToken + 1, "<") && pcUnit->IsToken(pcTemplate->miFirstToken + 2, ">");
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// A variable template's explicit specialisations in a file that declares
-// it ("template<> int gmPi<int> = 3;"), added to what moves: the index
-// doesn't have them as its places, so they are found in the file's
-// syntax, as template<> declarations of its name in its namespace.
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDEMoveClass::FindSpecialisations(const char* szFileName, SIDEFunctionMove* psDest)
-{
-	CIDERefactorUnit*		pcUnit;
-	CCPPSyntax*				pcTemplate;
-	CCPPSyntax*				pcNode;
-	CCPPSyntaxDeclarator*	pcDeclarator;
-	CCPPSyntaxName*			pcName;
-	SCPPSyntaxRange			sRange;
-	CChars					szName;
-	CChars					szNamespace;
-	CChars					szPart;
-	int32					iToken;
-	int32					iNamed;
-	int32					iLast;
-	size					i;
-
-	pcUnit = GetUnit(szFileName);
-	iLast = pcUnit ? (int32)pcUnit->GetTokeniser()->NumTokens() - 3 : -1;
-	szName.Init();
-	GetIDESymbolName(psDest->szKey.Text(), &szName);
-	for (iToken = 0; iToken < iLast; iToken++)
+	if (pcTemplate && pcUnit->IsToken(pcTemplate->miFirstToken, "template") && pcUnit->IsToken(pcTemplate->miFirstToken + 1, "<") && pcUnit->IsToken(pcTemplate->miFirstToken + 2, ">"))
 	{
-		if (!pcUnit->IsToken(iToken, "template") || !pcUnit->IsToken(iToken + 1, "<") || !pcUnit->IsToken(iToken + 2, ">"))
-		{
-			continue;
-		}
-		pcTemplate = pcUnit->FindAncestor(pcUnit->FindNodeOfTokens(iToken, iToken), CPPS_TemplateDeclaration);
-		if (!pcTemplate || (pcTemplate->miFirstToken != iToken))
-		{
-			continue;
-		}
-
-		//Its declared name: the template's, with <...> after it.
-		for (iNamed = iToken + 3; (iNamed + 1 <= pcTemplate->miLastToken) && !(pcUnit->IsToken(iNamed, szName.Text()) && pcUnit->IsToken(iNamed + 1, "<")); iNamed++)
-		{
-		}
-		pcNode = (iNamed + 1 <= pcTemplate->miLastToken) ? pcUnit->FindNodeOfTokens(iNamed, iNamed) : NULL;
-		pcDeclarator = pcNode ? (CCPPSyntaxDeclarator*)pcUnit->FindAncestor(pcNode, CPPS_Declarator) : NULL;
-		pcName = pcDeclarator ? pcDeclarator->GetName() : NULL;
-		if (!pcName || !pcName->GetLast() || (pcName->GetLast()->miFirstToken != iNamed))
-		{
-			continue;
-		}
-
-		//In its namespace: the blocks it is in, then what its name is written with.
-		szNamespace.Init();
-		for (pcNode = pcTemplate->mpcParent; pcNode; pcNode = pcNode->mpcParent)
-		{
-			if ((pcNode->GetKind() == CPPS_Namespace) && (((CCPPSyntaxNamespace*)pcNode)->miName >= 0))
-			{
-				szPart.Init();
-				pcUnit->AppendTokens(((CCPPSyntaxNamespace*)pcNode)->miName, ((CCPPSyntaxNamespace*)pcNode)->miName, &szPart);
-				szNamespace.Insert(0, szNamespace.Empty() ? "" : "::");
-				szNamespace.Insert(0, szPart.Text());
-				szPart.Kill();
-			}
-		}
-		if (iNamed - 1 > pcName->miFirstToken)
-		{
-			szPart.Init();
-			pcUnit->AppendTokens(pcName->miFirstToken, iNamed - 2, &szPart);
-			szNamespace.Append(szNamespace.Empty() || szPart.StartsWith("::") ? "" : "::")->Append(szPart);
-			szPart.Kill();
-		}
-		while (szNamespace.StartsWith("::"))
-		{
-			szNamespace.RemoveFromStart(2);
-		}
-		if (szNamespace.Equals(psDest->szNamespace) && pcUnit->GetRange(pcTemplate, &sRange))
-		{
-			for (i = 0; (i < psDest->asSpecialisations.NumElements()) && !((psDest->asSpecialisations.Get(i)->iLine == sRange.iLine) && (StringInsensitiveCompare(psDest->asSpecialisations.Get(i)->szFileName.Text(), szFileName) == 0)); i++)
-			{
-			}
-			if (i == psDest->asSpecialisations.NumElements())
-			{
-				psDest->asSpecialisations.Add()->Init(szFileName, sRange.iLine, sRange.iColumn, sRange.iEndLine, sRange.iEndColumn);
-			}
-		}
-		szNamespace.Kill();
-		iToken = pcTemplate->miLastToken;
+		return pcTemplate;
 	}
-	szName.Kill();
+	return NULL;
 }
 
 

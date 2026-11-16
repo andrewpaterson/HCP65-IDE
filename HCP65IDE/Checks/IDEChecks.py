@@ -1900,8 +1900,8 @@ CHECKS = [
 		[r'^[0-9]+[|].*CPoint::Sum']),
 	('move-function-variable-template', dict(MakeNamespacesCopy(), **{
 		#Move to File of a variable template (Refactorings.txt 21): gmPi goes to Drawing.h whole, with its
-		#template<class M>, and its explicit specialisation gmPi<int> after it (the index doesn't have that as its, so
-		#it is found in the file's syntax); Use.cpp, which names it, #includes Drawing.h.
+		#template<class M>, and its explicit specialisation gmPi<int> after it (a declaration of it to the index, in a
+		#template<> declaration); Use.cpp, which names it, #includes Drawing.h.
 		'WAIT_INDEX': '1', 'OPEN': 'Constants.h',
 		'DEBUG': 'edit:renamesearch:---s,edit:caret:6:3,edit:movablefunction,edit:movefunction:Drawing.h,printdisklines:Constants.h,printdisklines:Drawing.h,printdisklines:Use.cpp'}),
 		[r'^Move to File: gmPi, defined in Constants\.h, specialised in Constants\.h, 1 file names it$', r'^Status: Moved gmPi to Drawing\.h: 3 files changed\.$',
