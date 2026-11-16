@@ -41,6 +41,7 @@ public:
 	bool			mbNoFloats;
 	bool			mbMathTables;
 	bool			mbPreferSize;
+	bool			mbWarnMissingOverride;
 	CChars			mszCard;
 	CChars			mszCardPath;
 

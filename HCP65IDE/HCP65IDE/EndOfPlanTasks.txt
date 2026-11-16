@@ -112,6 +112,14 @@ hcp65build.exe's command line), and the IDE's build settings show warnings in it
 Done here 2026-11-16: the CppCompilerLib session (gameengine-3c) has taken it and is working on it; the user marked it
 done for this list.
 
+Done 2026-11-16, and the user changed it: on by default, and on in every project.  The compiler (CommonLibraries
+71d291c22): CCPPCompileOptions::mbWarnMissingOverride, true unless turned off, warns "The function overrides a virtual
+function of a base class but isn't declared override" (not for destructors), and two errors are new: override on a
+function that overrides nothing, and overriding a final function.  BuildLib: a configuration's WarnMissingOverride="false"
+turns it off (nothing written while on, so every .hcp65build has it on as it is), the Edit Build Configurations
+dialog's "Warn about overrides not declared override" tick, hcp65build's plain -no-override-warning (and -show-plain
+writes it), and the website's compiler/building.md and ide/building.md.
+
 
 f. Every project LGPL
 ---------------------

@@ -132,6 +132,7 @@ void CBuildPlain::Init(void)
 	mbNoFloats = false;
 	mbNoMathTables = false;
 	mbPreferSize = false;
+	mbNoOverrideWarning = false;
 	mszOutput.Init();
 	mszListings.Init();
 	mszExecutable.Init();
@@ -304,6 +305,11 @@ int CBuildPlain::ParseOption(CArrayChars* paszArguments, size* puiIndex, CChars*
 	if (BuildIsOption(szOption, "prefer-size"))
 	{
 		mbPreferSize = true;
+		return 1;
+	}
+	if (BuildIsOption(szOption, "no-override-warning"))
+	{
+		mbNoOverrideWarning = true;
 		return 1;
 	}
 	if (BuildIsOption(szOption, "o") || BuildIsOption(szOption, "listings") || BuildIsOption(szOption, "exe") || BuildIsOption(szOption, "entry") || BuildIsOption(szOption, "image") ||
@@ -570,6 +576,7 @@ bool CBuildPlain::MakeConfiguration(CBuildConfiguration* pcConfiguration, CChars
 	pcConfiguration->SetNoFloats(mbNoFloats);
 	pcConfiguration->SetMathTables(!mbNoMathTables);
 	pcConfiguration->SetPreferSize(mbPreferSize);
+	pcConfiguration->SetWarnMissingOverride(!mbNoOverrideWarning);
 	if (!mszExecutable.Empty())
 	{
 		pcExecutable = pcConfiguration->SetExecutable(mszExecutable.Text(), mszEntry.Text(), muiLimit);
@@ -692,6 +699,10 @@ bool CBuildPlain::Describe(CArrayChars* paszArguments, const char* szUnitsDirect
 	if (pcConfiguration->IsPreferSize())
 	{
 		paszArguments->Add("-prefer-size");
+	}
+	if (!pcConfiguration->IsWarnMissingOverride())
+	{
+		paszArguments->Add("-no-override-warning");
 	}
 	for (i = 0; i < pcDescription->mcIncludes.NumIncludes(); i++)
 	{

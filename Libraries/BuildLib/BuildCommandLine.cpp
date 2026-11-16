@@ -1020,6 +1020,7 @@ void CBuildCommandLine::WriteUsage(void)
 	WriteLine("  -target W65C816|65C64         The toolchain (default W65C816).");
 	WriteLine("  -nofloats, -no-mathtables     No floating point; no maths tables (MathMult).");
 	WriteLine("  -prefer-size                  Smaller code before faster, where the compiler has the choice.");
+	WriteLine("  -no-override-warning          No warning for an override not declared override.");
 	WriteLine("  -exe <file> -entry <symbol> [-limit <n>] [-symbol <name>=<n>]...");
 	WriteLine("                                Link an executable.");
 	WriteLine("  -image <file> -size <n> [-fill <n>] [-limit <n>] [-load <n>] [-text <n>] -region <start>,<end>,<offset>...");

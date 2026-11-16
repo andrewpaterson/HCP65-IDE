@@ -45,6 +45,7 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 #define BUILD_CONFIGURATION_NO_FLOATS	"NoFloats"
 #define BUILD_CONFIGURATION_MATH_TABLES	"MathTables"
 #define BUILD_CONFIGURATION_PREFER_SIZE	"PreferSize"
+#define BUILD_CONFIGURATION_WARN_MISSING_OVERRIDE	"WarnMissingOverride"
 
 
 //The toolchains' names, as saved, by EBuildToolchain.
@@ -64,6 +65,7 @@ void CBuildConfiguration::Init(const char* szName, EBuildToolchain eToolchain, c
 	mbNoFloats = false;
 	mbMathTables = true;
 	mbPreferSize = false;
+	mbWarnMissingOverride = true;
 	meProgram = BP_None;
 	mcImage.Init();
 	mcExecutable.Init();
@@ -141,6 +143,10 @@ void CBuildConfiguration::SaveXML(CXMLWriter* pcWriter)
 	{
 		pcWriter->Attribute(BUILD_CONFIGURATION_PREFER_SIZE, "true");
 	}
+	if (!mbWarnMissingOverride)
+	{
+		pcWriter->Attribute(BUILD_CONFIGURATION_WARN_MISSING_OVERRIDE, "false");
+	}
 	if (HasCard())
 	{
 		pcWriter->Attribute(BUILD_CONFIGURATION_CARD, mszCard.Text());
@@ -200,6 +206,7 @@ bool CBuildConfiguration::LoadXML(CMarkupTag* pcTag)
 	char*			szNoFloats;
 	char*			szMathTables;
 	char*			szPreferSize;
+	char*			szWarnMissingOverride;
 	EBuildToolchain	eToolchain;
 	CMarkupTag*		pcImage;
 	CMarkupTag*		pcExecutable;
@@ -231,6 +238,8 @@ bool CBuildConfiguration::LoadXML(CMarkupTag* pcTag)
 	SetMathTables((szMathTables == NULL) || (strcmp(szMathTables, "false") != 0));
 	szPreferSize = pcTag->GetAttribute((char*)BUILD_CONFIGURATION_PREFER_SIZE);
 	SetPreferSize((szPreferSize != NULL) && (strcmp(szPreferSize, "true") == 0));
+	szWarnMissingOverride = pcTag->GetAttribute((char*)BUILD_CONFIGURATION_WARN_MISSING_OVERRIDE);
+	SetWarnMissingOverride((szWarnMissingOverride == NULL) || (strcmp(szWarnMissingOverride, "false") != 0));
 
 	pcImage = pcTag->GetTag(BUILD_CONFIGURATION_IMAGE);
 	if (pcImage)
@@ -515,6 +524,29 @@ void CBuildConfiguration::SetPreferSize(bool bPreferSize)
 bool CBuildConfiguration::IsPreferSize(void)
 {
 	return mbPreferSize;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether the compiler warns about a function that overrides a base
+// class's virtual function and isn't declared override or final (true
+// unless set; CCPPCompileOptions::mbWarnMissingOverride).
+//
+//////////////////////////////////////////////////////////////////////////
+void CBuildConfiguration::SetWarnMissingOverride(bool bWarnMissingOverride)
+{
+	mbWarnMissingOverride = bWarnMissingOverride;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+bool CBuildConfiguration::IsWarnMissingOverride(void)
+{
+	return mbWarnMissingOverride;
 }
 
 

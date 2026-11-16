@@ -58,6 +58,7 @@ protected:
 	Ptr<CCheckBox>					mpNoFloats;
 	Ptr<CCheckBox>					mpMathTables;
 	Ptr<CCheckBox>					mpPreferSize;
+	Ptr<CCheckBox>					mpWarnMissingOverride;
 	Ptr<CTextField>					mpCard;
 	Ptr<CTextField>					mpCardPath;
 	Ptr<CLabel>						mpContents;

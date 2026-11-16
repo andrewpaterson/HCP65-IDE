@@ -3559,6 +3559,11 @@ CHECKS = [
 		 r'^<!-- A comment to keep\. -->$',
 		 r'<Configuration Name="Renamed\|W65C816" Toolchain="W65C816" .*BreakpointSpace="Kernal" NoFloats="true"',
 		 r'<Configuration Name="Copied\|W65C816" Toolchain="W65C816"'], [r'ERROR']),
+	('build-configuration-override-warning', dict(MakeSolutionCopy(), **{
+		#The override warning is on unless unticked, which is all that is written.
+		'DIALOG_ANSWER': 'OK', 'BUILD_EDITS': 'overridewarning:0',
+		'DEBUG': 'command:Build.EditConfigurations,answered:1,printbuildfile'}),
+		[r'<Configuration Name="[^"]*" Toolchain="W65C816" [^>]*WarnMissingOverride="false"'], [r'ERROR', r'WarnMissingOverride="true"']),
 	('build-configuration-cancel', dict(MakeSolutionCopy(), **{
 		#Cancel changes nothing.
 		'DIALOG_ANSWER': 'Cancel', 'BUILD_EDITS': 'name:Gone;remove',

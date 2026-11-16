@@ -65,7 +65,9 @@ enum EBuildProgram
 //point an error (the kernal has none: CCPP65Builder::SetNoFloats).  MathTables="false" builds it to run without the
 //maths tables in memory (CCPP65Builder::SetMathTables: the kernal, its drivers and the operating system, which loads
 //them).  PreferSize="true" has the compiler prefer smaller code to faster where it has the choice
-//(CCPPCompileOptions::mePrefer: a ROM's kernal).  Its BreakpointSpace is the emulator's space ("Kernel", "User") that debugging puts breakpoints in; without
+//(CCPPCompileOptions::mePrefer: a ROM's kernal).  WarnMissingOverride="false" stops the warning about a function
+//that overrides a base class's virtual function and isn't declared override (CCPPCompileOptions::mbWarnMissingOverride,
+//on unless so).  Its BreakpointSpace is the emulator's space ("Kernel", "User") that debugging puts breakpoints in; without
 //one they stop in every space.
 //
 //Debugging loads each <Load File Address/> into the waiting emulator first (a kernal for a program to run on), and
@@ -84,6 +86,7 @@ protected:
 	bool			mbNoFloats;
 	bool			mbMathTables;
 	bool			mbPreferSize;
+	bool			mbWarnMissingOverride;
 	EBuildProgram	meProgram;
 	CAsm65Image		mcImage;
 	CAsm65Executable	mcExecutable;
@@ -118,6 +121,8 @@ public:
 	bool			IsMathTables(void);
 	void			SetPreferSize(bool bPreferSize);
 	bool			IsPreferSize(void);
+	void			SetWarnMissingOverride(bool bWarnMissingOverride);
+	bool			IsWarnMissingOverride(void);
 
 	bool			HasImage(void);
 	CAsm65Image*	GetImage(void);

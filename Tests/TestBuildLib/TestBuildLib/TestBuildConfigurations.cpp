@@ -80,6 +80,7 @@ void TestBuildConfigurationsFile(void)
 	cConfigurations.GetConfiguration(0)->SetNoFloats(true);
 	cConfigurations.GetConfiguration(0)->SetMathTables(false);
 	cConfigurations.GetConfiguration(0)->SetPreferSize(true);
+	cConfigurations.GetConfiguration(0)->SetWarnMissingOverride(false);
 	cConfigurations.Add("Fast GCC", BT_GCC, "Release|x64");
 	AssertTrue(cConfigurations.Write("Output" _FS_ "Test.hcp65build"));
 
@@ -92,13 +93,15 @@ void TestBuildConfigurationsFile(void)
 	AssertString("User", cRead.GetConfiguration(0)->GetBreakpointSpace());
 	AssertString("", cRead.GetConfiguration(1)->GetBreakpointSpace());
 
-	//NoFloats, MathTables and PreferSize (written only when not the default) are kept.
+	//NoFloats, MathTables, PreferSize and WarnMissingOverride (written only when not the default) are kept.
 	AssertTrue(cRead.GetConfiguration(0)->IsNoFloats());
 	AssertFalse(cRead.GetConfiguration(0)->IsMathTables());
 	AssertTrue(cRead.GetConfiguration(0)->IsPreferSize());
 	AssertFalse(cRead.GetConfiguration(1)->IsNoFloats());
 	AssertTrue(cRead.GetConfiguration(1)->IsMathTables());
 	AssertFalse(cRead.GetConfiguration(1)->IsPreferSize());
+	AssertFalse(cRead.GetConfiguration(0)->IsWarnMissingOverride());
+	AssertTrue(cRead.GetConfiguration(1)->IsWarnMissingOverride());
 	AssertString("W65C816", cRead.GetConfiguration(0)->GetProcessorName());
 	AssertTrue(cRead.GetConfiguration(1)->GetProcessorName() == NULL);
 
@@ -549,15 +552,18 @@ void TestBuildConfigurationsEdits(void)
 	pcEdit = asEdits.Get(0);
 	pcEdit->mbNoFloats = false;
 	pcEdit->mbMathTables = false;
+	pcEdit->mbWarnMissingOverride = false;
 	pcEdit->mszBreakpointSpace.Set("");
 	AssertTrue(cConfigurations.ApplyEdits(TEST_EDIT_FILE, &asEdits));
-	AssertEditFile(TEST_EDIT_HEADER "\t<!-- The first. -->\n\t<Configuration Name=\"Debug|W65C816\" Toolchain=\"W65C816\" Solution=\"Debug|Win32\" MathTables=\"false\">\n\t\t<Image File=\"Kernal.rom\" Size=\"0x80000\" Fill=\"0xFF\" Limit=\"0x7FC00\" Load=\"0x0\">\n\t\t\t<!-- Inside. -->\n\t\t\t<Region Start=\"0x0\" End=\"0x40000\" Offset=\"0x0\"/>\n\t\t</Image>\n\t</Configuration>\n\t<Configuration Toolchain=\"GCC\" Name=\"Faster\" Solution=\"Release|x64\" BreakpointSpace=\"A&amp;B\"/>\n" TEST_EDIT_FOOTER, &asEdits);
+	AssertEditFile(TEST_EDIT_HEADER "\t<!-- The first. -->\n\t<Configuration Name=\"Debug|W65C816\" Toolchain=\"W65C816\" Solution=\"Debug|Win32\" MathTables=\"false\" WarnMissingOverride=\"false\">\n\t\t<Image File=\"Kernal.rom\" Size=\"0x80000\" Fill=\"0xFF\" Limit=\"0x7FC00\" Load=\"0x0\">\n\t\t\t<!-- Inside. -->\n\t\t\t<Region Start=\"0x0\" End=\"0x40000\" Offset=\"0x0\"/>\n\t\t</Image>\n\t</Configuration>\n\t<Configuration Toolchain=\"GCC\" Name=\"Faster\" Solution=\"Release|x64\" BreakpointSpace=\"A&amp;B\"/>\n" TEST_EDIT_FOOTER, &asEdits);
 
 	//And it is what is read back.
 	AssertString("Faster", cConfigurations.GetConfiguration(1)->GetName());
 	AssertString("A&B", cConfigurations.GetConfiguration(1)->GetBreakpointSpace());
 	AssertTrue(cConfigurations.GetConfiguration(0)->HasImage());
 	AssertFalse(cConfigurations.GetConfiguration(0)->IsMathTables());
+	AssertFalse(cConfigurations.GetConfiguration(0)->IsWarnMissingOverride());
+	AssertTrue(cConfigurations.GetConfiguration(1)->IsWarnMissingOverride());
 
 	//A card needs its path; both go in, and both go out.
 	ReadEditFile(TEST_EDIT_TEXT, &cConfigurations, &asEdits);
