@@ -893,6 +893,7 @@ void CIDESafeDelete::SearchFiles(SIDESafeDeletion* psDeletion)
 	pcModel = mpcContent->GetCodeModel();
 	szName.Init();
 	GetIDESymbolName(psDeletion->szKey.Text(), &szName);
+	szText = NULL;
 	for (i = 0; i < pcModel->NumProjectFiles(); i++)
 	{
 		szFileName = pcModel->GetProjectFile(i);

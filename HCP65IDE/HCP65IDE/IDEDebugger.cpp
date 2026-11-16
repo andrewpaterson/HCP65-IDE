@@ -816,6 +816,7 @@ void CIDEDebugger::SendBreakpoints(void)
 	//The own program's breakpoints are its process's, and wait while it isn't running.
 	bOwnRunning = GetOwnProcess(&uiOwnProcess);
 	asBreakpoints.Init();
+	psBreakpoint = NULL;
 	for (i = 0; bOwnRunning && (i < masBreakpoints.NumElements()); i++)
 	{
 		psBreakpoint = asBreakpoints.Add();
