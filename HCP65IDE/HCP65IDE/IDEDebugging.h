@@ -58,6 +58,8 @@ protected:
 	CChars						mszStoppedFile;		//The source file the debugger is stopped in, and its line
 	uint32						muiStoppedLine;		//(1 based), 0 if it isn't stopped in one.
 	CArrayChars					maszDebugScript;	//HCP65_IDE_DEBUG's commands still to do, for checking.
+	CArrayChars					maszImageFiles;		//The images whose line tables were read as they are (the kernal,
+	CArrayChars					maszImageCardPaths;	//OS.SYS), and each one's file on the card, "" if not checked.
 	int64						miDebugScriptTime;	//When the debugger was last seen not running, for a scripted break.
 	int64						miDebugScriptWait;	//When a scripted wait started, 0 if none is.
 public:
@@ -94,6 +96,9 @@ protected:
 	void				SaveBreakpoints(void);
 	void				ShowDebugMessages(void);
 	void				ResolveEmulatorPath(const char* szPath, CChars* pszDest);
+	void				AddImageLineTable(const char* szFile, const char* szSpace, const char* szCardPath);
+	void				CheckCardImages(const char* szCard, CArrayChars* paszLines);
+	void				PrintSourceBreakpoints(void);
 	void				ResolveRunPath(const char* szPath, CChars* pszDest);
 	bool				ShowAddressDialog(const char* szTitle, const char* szLabel, const char* szDefault, bool bHex, uint32* puiValue);
 	bool				StartDebugging(void);

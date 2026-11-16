@@ -64,6 +64,8 @@ void CIDEDebugging::Init(CIDEContent* pcContent)
 	mszStoppedFile.Init();
 	muiStoppedLine = 0;
 	maszDebugScript.Init();
+	maszImageFiles.Init();
+	maszImageCardPaths.Init();
 	miDebugScriptTime = 0;
 	miDebugScriptWait = 0;
 	PostInit();
@@ -87,6 +89,8 @@ void CIDEDebugging::Class(void)
 	U_String(mszStoppedFile);
 	U_UInt32(muiStoppedLine);
 	U_Unknown(CArrayChars, maszDebugScript);
+	U_Unknown(CArrayChars, maszImageFiles);
+	U_Unknown(CArrayChars, maszImageCardPaths);
 	U_Int64(miDebugScriptTime);
 	U_Int64(miDebugScriptWait);
 }
@@ -106,6 +110,8 @@ void CIDEDebugging::Free(void)
 	mszDefaultEmulatorDirectory.Kill();
 	mszDefaultEmulator.Kill();
 	maszDebugScript.Kill();
+	maszImageCardPaths.Kill();
+	maszImageFiles.Kill();
 }
 
 
@@ -197,6 +203,7 @@ void CIDEDebugging::ResolveEmulatorPath(const char* szPath, CChars* pszDest)
 	pszDest->Set("");
 	cFileUtil.SplitPath(szFile.Text(), &szName, pszDest);
 	cFileUtil.AppendToPath(pszDest, szPath);
+	cFileUtil.FixSeparators(pszDest);  //The configurations' paths are Windows' (..\Boot\Boot.rom).
 	cFileUtil.FullPath(pszDest);
 	szName.Kill();
 	szFile.Kill();
@@ -389,14 +396,16 @@ bool CIDEDebugging::ChooseDebugLoads(CBuildConfiguration* pcConfiguration, CChar
 	{
 		mcDebugger.AddLoad(szFile.Text(), pcConfiguration->GetImage()->GetLoad());
 	}
-	szCard.Kill();
 	szFile.Kill();
 
-	//What is loaded may have been built since the line tables were read.
+	//What is loaded may have been built since the line tables were read.  The images read as they are should be the
+	//ones on the card.
 	if (bResult)
 	{
 		ReadLineTables();
+		CheckCardImages(szCard.Text(), paszLines);
 	}
+	szCard.Kill();
 	return bResult;
 }
 
@@ -873,6 +882,40 @@ bool CIDEDebugging::IsDebugScriptRunning(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// For checking: each source breakpoint, the line it is bound to and its
+// addresses ("Breakpoint: File.cpp:12 -> 12 at $012345").
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDebugging::PrintSourceBreakpoints(void)
+{
+	SIDESourceBreakpoint*	psBreakpoint;
+	CFileUtil				cFileUtil;
+	CChars					szName;
+	CChars					szDirectory;
+	size					i;
+	size					j;
+
+	for (i = 0; i < mcDebugger.NumSourceBreakpoints(); i++)
+	{
+		psBreakpoint = mcDebugger.GetSourceBreakpoint(i);
+		szName.Init();
+		szDirectory.Init();
+		cFileUtil.SplitPath(psBreakpoint->szFile.Text(), &szName, &szDirectory);
+		printf("Breakpoint: %s:%u -> %u at", szName.Text(), (unsigned int)psBreakpoint->uiLine, (unsigned int)psBreakpoint->uiBoundLine);
+		for (j = 0; j < psBreakpoint->auiAddresses.NumElements(); j++)
+		{
+			printf(" $%06X", (unsigned int)psBreakpoint->auiAddresses.GetValue(j));
+		}
+		printf("\n");
+		szDirectory.Kill();
+		szName.Kill();
+	}
+	fflush(stdout);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEDebugging::RunDebugScript(void)
@@ -938,6 +981,17 @@ void CIDEDebugging::RunDebugScript(void)
 	else if (strcmp(szCommand, "built") == 0)
 	{
 		bDone = !mpcContent->GetBuilding()->IsBuilding();
+	}
+	else if (strcmp(szCommand, "printbreakpoints") == 0)
+	{
+		PrintSourceBreakpoints();
+		bDone = true;
+	}
+	else if (strcmp(szCommand, "printstopped") == 0)
+	{
+		printf("Stopped: %s, $%06X, %s:%u\n", mcDebugger.IsStopped() ? "yes" : "no", (unsigned int)mcDebugger.GetProgramAddress(), mszStoppedFile.Text(), (unsigned int)muiStoppedLine);
+		fflush(stdout);
+		bDone = true;
 	}
 	else if (strncmp(szCommand, "answered:", 9) == 0)
 	{
@@ -1050,6 +1104,87 @@ void CIDEDebugging::GlyphClicked(CCodeEditor* pcEditor, size uiLine)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// The line table of an image that runs where it is linked (the kernal the
+// boot loader loads from the card, OS.SYS), its source breakpoints in the
+// space szSpace in every process, unless it was read already (from a
+// <Lines> and the workspace both).  szCardPath is its file on the card,
+// for CheckCardImages ("" for none).
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDebugging::AddImageLineTable(const char* szFile, const char* szSpace, const char* szCardPath)
+{
+	CFileUtil	cFileUtil;
+	CChars		szFull;
+	size		i;
+
+	szFull.Init(szFile);
+	cFileUtil.FullPath(&szFull);
+	for (i = 0; i < maszImageFiles.NumElements(); i++)
+	{
+		if (szFull.Equals(maszImageFiles.GetText(i)))
+		{
+			szFull.Kill();
+			return;
+		}
+	}
+	if (mcDebugger.AddProcessLineTable(szFull.Text(), szSpace, ""))
+	{
+		maszImageFiles.Add(szFull.Text());
+		maszImageCardPaths.Add(szCardPath ? szCardPath : "");
+	}
+	szFull.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether each image whose line table was read is the one on the card
+// szCard the emulator boots (at its card path there): if it isn't there,
+// or isn't the same, its source lines can't be trusted, which a line in
+// paszLines says.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDebugging::CheckCardImages(const char* szCard, CArrayChars* paszLines)
+{
+	CFileUtil	cFileUtil;
+	CChars*		pszLine;
+	void*		pvOnCard;
+	void*		pvBuilt;
+	size		uiOnCard;
+	size		uiBuilt;
+	size		i;
+
+	if ((szCard == NULL) || (szCard[0] == '\0'))
+	{
+		return;
+	}
+	for (i = 0; i < maszImageFiles.NumElements(); i++)
+	{
+		if (maszImageCardPaths.GetText(i)[0] == '\0')
+		{
+			continue;
+		}
+		pvBuilt = cFileUtil.ReadAll(maszImageFiles.GetText(i), &uiBuilt);
+		if (!FatGetFileFromImage(szCard, maszImageCardPaths.GetText(i), &pvOnCard, &uiOnCard))
+		{
+			pszLine = paszLines->Add("The card ");
+			pszLine->Append(szCard)->Append(" has no ")->Append(maszImageCardPaths.GetText(i))->Append(": the source lines of ");
+			pszLine->Append(maszImageFiles.GetText(i))->Append(" aren't of what runs.");
+		}
+		else if (!pvBuilt || (uiBuilt != uiOnCard) || (memcmp(pvBuilt, pvOnCard, uiBuilt) != 0))
+		{
+			pszLine = paszLines->Add(maszImageCardPaths.GetText(i));
+			pszLine->Append(" on the card ")->Append(szCard)->Append(" isn't ")->Append(maszImageFiles.GetText(i));
+			pszLine->Append(": its source lines may be wrong.  Put the one built on the card (debug its configuration once).");
+		}
+		free(pvOnCard);
+		free(pvBuilt);
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // The line tables beside what the chosen configuration builds and loads
 // (<program>.lines) bind the source breakpoints: its own program's in its
 // breakpoint space, a load's (a kernal) in every space.  The programs of
@@ -1069,6 +1204,8 @@ void CIDEDebugging::ReadLineTables(void)
 	size					i;
 
 	mcDebugger.ClearLineTables();
+	maszImageFiles.ReInit();
+	maszImageCardPaths.ReInit();
 	pcConfiguration = mpcContent->GetBuildConfigurations()->GetConfiguration();
 	if ((pcConfiguration != NULL) && pcConfiguration->IsHCP65())
 	{
@@ -1077,6 +1214,11 @@ void CIDEDebugging::ReadLineTables(void)
 		{
 			ResolveEmulatorPath(pcConfiguration->GetLoadFile(i), &szFile);
 			mcDebugger.AddLineTable(szFile.Text(), false);
+		}
+		for (i = 0; i < pcConfiguration->NumLines(); i++)
+		{
+			ResolveEmulatorPath(pcConfiguration->GetLinesFile(i), &szFile);
+			AddImageLineTable(szFile.Text(), pcConfiguration->GetLinesSpace(i), pcConfiguration->GetLinesCardPath(i));
 		}
 		if (CBuild::GetProgramPath(mpcContent->GetWorkspace()->GetStartupSolution()->mcSolution.GetDirectory(), pcConfiguration, &szFile))
 		{
@@ -1110,6 +1252,19 @@ void CIDEDebugging::ReadLineTables(void)
 			if (pcOther->IsHCP65() && CBuild::GetProgramPath(mpcContent->GetWorkspace()->GetSolution(uiOther)->mcSolution.GetDirectory(), pcOther, &szFile))
 			{
 				mcDebugger.AddModuleLineTable(szFile.Text(), pcOther->GetBreakpointSpace(), pcOther->GetCardPath());
+			}
+		}
+
+		//An image on the card (the kernal, OS.SYS) runs where it is linked, in every process of its space.
+		aiOthers.ReInit();
+		mpcContent->GetWorkspace()->GetImagePrograms(mpcContent->GetBuildConfigurations()->GetConfigurationName(), &aiOthers);
+		for (i = 0; i < aiOthers.NumElements(); i++)
+		{
+			uiOther = (size)aiOthers.GetValue(i);
+			pcOther = mpcContent->GetWorkspace()->FindConfiguration(uiOther, mpcContent->GetBuildConfigurations()->GetConfigurationName());
+			if (pcOther->IsHCP65() && CBuild::GetProgramPath(mpcContent->GetWorkspace()->GetSolution(uiOther)->mcSolution.GetDirectory(), pcOther, &szFile))
+			{
+				AddImageLineTable(szFile.Text(), pcOther->GetBreakpointSpace(), pcOther->GetCardPath());
 			}
 		}
 		aiOthers.Kill();
