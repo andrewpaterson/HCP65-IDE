@@ -76,6 +76,7 @@ public:
 
 	void				AddCommands(Ptr<CCommandSet> pCommands);
 	Ptr<CMenuContainer>	GetFileMenu(void);
+	Ptr<CMenuContainer>	GetPopupMenu(void);
 	bool				CanCreate(void);
 	void				OpenPopupCommand(void);
 	bool				ShowNewDialog(const char* szTemplate);
@@ -88,7 +89,7 @@ public:
 	void				FindTemplateFiles(const char* szTemplate, CArrayChars* paszDest);
 
 protected:
-	void				FillMenu(Ptr<CMenuContainer> pMenu);
+	void				FillMenu(Ptr<CMenuContainer> pMenu, bool bRefactorings);
 	void				FileMenuOpening(CMenuContainer* pcMenu);
 	void				PopupMenuOpening(CMenuContainer* pcMenu);
 	void				ItemClicked(CMenuItem* pcItem);

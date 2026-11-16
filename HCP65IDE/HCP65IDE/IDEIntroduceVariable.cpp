@@ -61,6 +61,7 @@ void SIDEIntroduction::Init(void)
 	aszWarnings.Init();
 	asFileOccurrences.Init();
 	bWholeFile = false;
+	bInInit = false;
 	szFunctionKey.Init();
 	iFunctionLine = 0;
 	iFunctionColumn = 0;
@@ -138,6 +139,7 @@ void CIDEIntroduceVariable::Init(CIDEContent* pcContent)
 	mpcContent = pcContent;
 	msShown.Init();
 	mbAll = true;
+	mbInInit = false;
 	masCandidates.Init();
 	miKind = IDE_INTRODUCE_VARIABLE;
 	mszNameProblem.Init();
@@ -157,6 +159,8 @@ void CIDEIntroduceVariable::Class(void)
 	M_Pointer(mpError);
 	M_Pointer(mpAllBox);
 	M_Pointer(mpFileBox);
+	M_Pointer(mpInitBox);
+	U_Bool(mbInInit);
 	U_Unknown(SIDEIntroduction, msShown);
 	U_Bool(mbAll);
 	M_Pointer(mpChooser);
@@ -1507,7 +1511,27 @@ bool CIDEIntroduceVariable::IntroduceElsewhere(SIDEIntroduction* psIntroduction,
 				bResult = false;
 			}
 			szLine.Kill();
-			if (bResult && !bStatement)
+			if (bResult && psIntroduction->bInInit)
+			{
+				//Assigned in the class's Init (question 31), not where it was.
+				if (bStatement)
+				{
+					szProblem = "the expression is a statement of its own, so it is assigned where it is";
+					bResult = false;
+				}
+				else
+				{
+					szLine.Init(szName);
+					szLine.Append(" = ")->Append(psIntroduction->szExpression)->Append(';');
+					if (AddInitAssignments(psIntroduction->szClassKey.Text(), szLine.Text(), &cFiles) == 0)
+					{
+						szProblem = "its class defines no Init to assign it in";
+						bResult = false;
+					}
+					szLine.Kill();
+				}
+			}
+			else if (bResult && !bStatement)
 			{
 				szLine.Init();
 				for (i = uiAnchor; (szText[i] == ' ') || (szText[i] == '\t'); i++)
@@ -1960,6 +1984,12 @@ bool CIDEIntroduceVariable::ShowIntroduce(int iKind)
 		mpFileBox = mpDialog->AddCheckBox(szText.Text(), false);
 		szText.Kill();
 	}
+	mpInitBox = NULL;
+	if ((miKind == IDE_INTRODUCE_FIELD) && !msShown.bUsesLocals && (AddInitAssignments(msShown.szClassKey.Text(), "", NULL) > 0))
+	{
+		//The class's Init can assign it: the expression names nothing of the function's own.
+		mpInitBox = mpDialog->AddCheckBox("Assign it in Init", mbInInit);
+	}
 	mpError = OMalloc<CLabel>(mpDialog->GetWindow(), mpcContent->GetDimFont(), "");
 	mpDialog->AddEditor("", mpError);
 	mpDialog->SetOKCaption("Refactor");
@@ -1981,6 +2011,11 @@ bool CIDEIntroduceVariable::ShowIntroduce(int iKind)
 		if (!bAll || (msShown.aszWarnings.NumElements() == 0) || mpcContent->GetChangeSignature()->ShowConflicts(&msShown.aszWarnings))
 		{
 			szText.Init(mpNameField->GetText());
+			if (mpInitBox.IsNotNull())
+			{
+				mbInInit = mpInitBox->IsTicked();
+				msShown.bInInit = mbInInit;
+			}
 			bResult = Introduce(&msShown, szText.Text(), bAll, NULL, miKind);
 			szText.Kill();
 		}
@@ -1988,7 +2023,124 @@ bool CIDEIntroduceVariable::ShowIntroduce(int iKind)
 	mpNameField = NULL;
 	mpError = NULL;
 	mpAllBox = NULL;
+	mpInitBox = NULL;
 	mpFileBox = NULL;
 	mpDialog = NULL;
 	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Introduce Field's "Assign it in Init" (question 31): szStatement
+// ("miSize = 4;") at the end of each Init the class szClassKey defines,
+// before the PostInit() it ends with if it does, as an edit of pcFiles.
+// With pcFiles NULL nothing is written: how many Inits there are is what
+// is asked.  The number of Inits.
+//
+//////////////////////////////////////////////////////////////////////////
+size CIDEIntroduceVariable::AddInitAssignments(const char* szClassKey, const char* szStatement, CIDEFileEdits* pcFiles)
+{
+	CIDECodeModel*					pcModel;
+	CIDEMoveMembers*				pcMembers;
+	CIDERefactorUnit				cUnit;
+	CArrayIDEFileRanges				asRanges;
+	CArrayIDELocations				asLocations;
+	CArrayChars						aszKeys;
+	SIDEMoveClass					sClass;
+	SIDELocation*					psLocation;
+	CCPPSyntaxFunctionDefinition*	pcFunction;
+	CCPPSyntaxCompoundStatement*	pcBody;
+	CCPPSyntax*						pcNode;
+	CCPPSyntax*						pcLast;
+	SCPPSyntaxRange					sRange;
+	CChars							szScope;
+	CChars							szName;
+	CChars							szLine;
+	CChars							szLast;
+	char*							szText;
+	size							uiAt;
+	size							uiIndent;
+	size							uiInits;
+	size							i;
+	size							j;
+	int32							iToken;
+	uint8							uiKind;
+	bool							bBeforeLast;
+
+	pcModel = mpcContent->GetCodeModel();
+	pcMembers = &mpcContent->GetMoveMembers();
+	uiInits = 0;
+	sClass.Init();
+	if (!pcMembers->ReadClass(szClassKey, &sClass))
+	{
+		pcMembers->KillUnits();
+		sClass.Kill();
+		return 0;
+	}
+	pcMembers->KillUnits();
+	asRanges.Init();
+	asRanges.Add()->Init(sClass.szFileName.Text(), sClass.sRange.iLine, sClass.sRange.iColumn, sClass.sRange.iEndLine, sClass.sRange.iEndColumn);
+	sClass.Kill();
+	aszKeys.Init();
+	pcModel->FindSymbolsDeclaredIn(&asRanges, &aszKeys);
+	for (i = 0; i < aszKeys.NumElements(); i++)
+	{
+		szScope.Init();
+		szName.Init();
+		GetIDESymbolScope(aszKeys.GetText(i), &szScope);
+		GetIDESymbolName(aszKeys.GetText(i), &szName);
+		asLocations.Init();
+		if (szScope.Equals(szClassKey) && szName.Equals("Init") && pcModel->GetSymbolLocations(aszKeys.GetText(i), &asLocations, &uiKind) && (uiKind == CPPSK_Function))
+		{
+			for (j = 0; j < asLocations.NumElements(); j++)
+			{
+				psLocation = asLocations.Get(j);
+				if (psLocation->uiRole != CPPIR_Definition)
+				{
+					continue;
+				}
+				uiInits++;
+				szText = pcFiles ? pcFiles->GetText(psLocation->szFileName.Text()) : NULL;
+				cUnit.Init();
+				if (szText && cUnit.Parse(pcModel, &mpcContent->GetFindInFiles(), psLocation->szFileName.Text(), false))
+				{
+					iToken = cUnit.FindTokenAt(psLocation->iLine, psLocation->iColumn);
+					pcNode = (iToken != -1) ? cUnit.FindNodeOfTokens(iToken, iToken) : NULL;
+					pcFunction = pcNode ? (CCPPSyntaxFunctionDefinition*)cUnit.FindAncestor(pcNode, CPPS_FunctionDefinition) : NULL;
+					pcBody = (pcFunction && pcFunction->mpcBody && (pcFunction->mpcBody->GetKind() == CPPS_CompoundStatement)) ? (CCPPSyntaxCompoundStatement*)pcFunction->mpcBody : NULL;
+
+					//Before a PostInit() it ends with, in its indent; otherwise before its closing brace, a tab in from it.
+					bBeforeLast = false;
+					pcLast = (pcBody && (pcBody->macpStatements.NumElements() > 0)) ? pcBody->macpStatements.GetPtr(pcBody->macpStatements.NumElements() - 1) : NULL;
+					if (pcLast && cUnit.GetRange(pcLast, &sRange))
+					{
+						szLast.Init();
+						AppendIDERangeText(szText, &sRange, &szLast);
+						bBeforeLast = szLast.StartsWith("PostInit(");
+						szLast.Kill();
+					}
+					if (pcBody && (bBeforeLast || cUnit.GetTokensRange(pcBody->miLastToken, pcBody->miLastToken, &sRange)))
+					{
+						uiAt = FindIDETextOffset(szText, sRange.iLine, 0);
+						for (uiIndent = uiAt; (szText[uiIndent] == ' ') || (szText[uiIndent] == '\t'); uiIndent++)
+						{
+						}
+						szLine.Init();
+						szLine.AppendSubString(szText, uiAt, uiIndent);
+						szLine.Append(bBeforeLast ? "" : "\t")->Append(szStatement)->Append('\n');
+						pcFiles->GetEdits(psLocation->szFileName.Text())->Insert(uiAt, szLine.Text());
+						szLine.Kill();
+					}
+				}
+				cUnit.Kill();
+			}
+		}
+		KillIDELocations(&asLocations);
+		szName.Kill();
+		szScope.Kill();
+	}
+	aszKeys.Kill();
+	KillIDEFileRanges(&asRanges);
+	return uiInits;
 }

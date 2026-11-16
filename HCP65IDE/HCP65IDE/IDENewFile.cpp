@@ -70,7 +70,7 @@ void CIDENewFile::Init(CIDEContent* pcContent)
 	mpPopupMenu->GetOpeningEvent()->Add(this, &CIDENewFile::PopupMenuOpening);
 	mpFileMenu->GetItemClickEvent()->Add(this, &CIDENewFile::ItemClicked);
 	mpPopupMenu->GetItemClickEvent()->Add(this, &CIDENewFile::ItemClicked);
-	FillMenu(mpFileMenu);
+	FillMenu(mpFileMenu, false);
 	PostInit();
 }
 
@@ -121,6 +121,18 @@ Ptr<CMenuContainer> CIDENewFile::GetFileMenu(void) { return mpFileMenu; }
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Alt+Insert's menu, as it is when it opens.
+//
+//////////////////////////////////////////////////////////////////////////
+Ptr<CMenuContainer> CIDENewFile::GetPopupMenu(void)
+{
+	FillMenu(mpPopupMenu, true);
+	return mpPopupMenu;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Alt+Insert, as IntelliJ's New: the menu of Files templates, at what is
 // selected; and Save File as Template.
 //
@@ -145,10 +157,11 @@ bool CIDENewFile::CanCreate(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The menu: each Files template that isn't another's child.
+// The menu: each Files template that isn't another's child; Alt+Insert's
+// (bRefactorings) then Copy Class, for a class at the caret (question 27).
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDENewFile::FillMenu(Ptr<CMenuContainer> pMenu)
+void CIDENewFile::FillMenu(Ptr<CMenuContainer> pMenu, bool bRefactorings)
 {
 	CIDEFileTemplates*	pcTemplates;
 	SIDEFileTemplate*	psTemplate;
@@ -180,6 +193,11 @@ void CIDENewFile::FillMenu(Ptr<CMenuContainer> pMenu)
 		szCaption.Kill();
 	}
 	aszSeen.Kill();
+	if (bRefactorings)
+	{
+		pMenu->AddSeparator();
+		pMenu->AddItem(mpcContent->GetCommands()->Find("Refactor.CopyClass"));
+	}
 }
 
 
@@ -187,8 +205,8 @@ void CIDENewFile::FillMenu(Ptr<CMenuContainer> pMenu)
 //
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDENewFile::FileMenuOpening(CMenuContainer* pcMenu) { FillMenu(mpFileMenu); }
-void CIDENewFile::PopupMenuOpening(CMenuContainer* pcMenu) { FillMenu(mpPopupMenu); }
+void CIDENewFile::FileMenuOpening(CMenuContainer* pcMenu) { FillMenu(mpFileMenu, false); }
+void CIDENewFile::PopupMenuOpening(CMenuContainer* pcMenu) { FillMenu(mpPopupMenu, true); }
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -208,7 +226,7 @@ void CIDENewFile::OpenPopupCommand(void)
 	{
 		pOwner = pTab->GetEditor();
 	}
-	FillMenu(mpPopupMenu);
+	FillMenu(mpPopupMenu, true);
 	mpPopupMenu->Open(pOwner->GetContextMenuPosition(), pOwner, true);
 }
 

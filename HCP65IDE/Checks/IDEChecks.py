@@ -1906,6 +1906,16 @@ CHECKS = [
 		 r'^27\|// Whether it holds all it can\.$', r'^30\|bool CBarrel::IsFull\(void\) const$', r'^40\|void CBarrel::Empty\(void\)$', r'^46 lines$',
 		 r'^5\|class CTank$', r'^12\|\t\t\tCTank\(int iSize\);$', r'^52 lines$', r'^8\|CTank::CTank\(int iCapacity\) : miLevel\(0\), miSize\(iCapacity\)$', r'^65 lines$'],
 		[]),
+	('copy-class-comments', dict(MakeDefinitionsCopy(), **{
+		#Copy Class renames the class in the copy's comments too (question 27): a comment naming CTank names CBarrel in
+		#Barrel.h, a word that only starts with it (CTankLike) is left, and Tank.h keeps its own comment.  Alt+Insert's
+		#menu has Copy Class after the Files templates.
+		'WAIT_INDEX': '1', 'OPEN': 'Tank.h', 'CARET': '5:8',
+		'DEBUG': 'edit:replace:13|void\tInit(int iSize);|void\tInit(int iSize);  //A new CTank is empty: see CTankLike.,edit:renamesearch:---s,edit:copyclass:CBarrel,'
+				 'printdisklines:Barrel.h,edit:saveall,printdisklines:Tank.h,printmenus'}),
+		[r'^Status: Copied CTank as CBarrel to Barrel\.h and Barrel\.cpp', r'^5\|class CBarrel$', r'^13\|\tvoid\tInit\(int iSize\);  //A new CBarrel is empty: see CTankLike\.$',
+		 r'^13\|\tvoid\tInit\(int iSize\);  //A new CTank is empty: see CTankLike\.$', r'^Menu New: C\+\+ Class\.\.\., C\+\+ Header\.\.\., C\+\+ Source\.\.\., Copy Class\.\.\.'],
+		[r'CBarrelLike']),
 	('copy-class-template', dict(MakeMoveMembersCopy(), **{
 		#A class template, with the member its header defines outside it; the copy's header #includes the one it was
 		#copied from, where the class it derives from is.
@@ -1995,6 +2005,24 @@ CHECKS = [
 		 r'^13\|\tchar\*\tmszName;$', r'^14\|\tint\t\tmiDouble;$', r'^15\|$', r'^16\|\tvoid\t\t\t\tInit\(void\);$',
 		 r'^62\|\tint\t\tiResult;$', r'^63\|\tCCalc\*\tpcOther;$', r'^64\|$', r'^65\|\tpcOther = this;$', r'^66\|\tmiDouble = miScale \* 2;$', r'^67\|\tiResult = Scaled\(iExtra\) \+ miDouble;$',
 		 r'^70\|\t\tiResult \+= miDouble;$'],
+		[]),
+	('introduce-field-init', dict(MakeIntroduceVariableCopy(), **{
+		#Introduce Field with "Assign it in Init" (question 31): the field is declared as introduce-field's is, its
+		#assignment goes at the end of CCalc::Init, and the occurrences are replaced with no assignment before them.
+		'WAIT_INDEX': '1', 'OPEN': 'Calc.cpp',
+		'DEBUG': 'edit:renamesearch:---s,edit:selecttext:66:29-66:40,edit:introducefieldinit:miDouble,printdisklines:Calc.h,printdisklines:Calc.cpp'}),
+		[r'^Status: Introduced the field int miDouble = miScale \* 2: 2 occurrences replaced\.$', r'^14\|\tint\t\tmiDouble;$',
+		 r'^8\|void CCalc::Init\(void\)$', r'^12\|\tmszName = 0;$', r'^13\|\tmiDouble = miScale \* 2;$', r'^14\|\}$',
+		 r'^66\|\tpcOther = this;$', r'^67\|\tiResult = Scaled\(iExtra\) \+ miDouble;$', r'^70\|\t\tiResult \+= miDouble;$'],
+		[r'^\d+\|\tmiDouble = miScale \* 2;\n.*iResult = Scaled']),
+	('introduce-field-init-dialog', dict(MakeIntroduceVariableCopy(), **{
+		#Introduce Field's dialog offers "Assign it in Init" for an expression that names nothing of the function's own,
+		#in a class that has an Init: ticked, the field is assigned there.  The keys: the name, then the two ticks
+		#(Replace all, then Assign it in Init).
+		'WAIT_INDEX': '1', 'OPEN': 'Calc.cpp', 'DIALOG_KEYS': 'type:miDouble,tab,tab,space', 'DIALOG_ANSWER': 'OK',
+		'DEBUG': 'edit:renamesearch:---s,edit:selecttext:66:29-66:40,command:Refactor.IntroduceField,answered:1,printstatus,edit:saveall,printdisklines:Calc.cpp'}),
+		[r'^Dialog \[Introduce Field\] answered OK$', r'^Status: Introduced the field int miDouble = miScale \* 2: 2 occurrences replaced\.$',
+		 r'^13\|\tmiDouble = miScale \* 2;$', r'^14\|\}$', r'^67\|\tiResult = Scaled\(iExtra\) \+ miDouble;$'],
 		[]),
 	('introduce-constant', dict(MakeIntroduceVariableCopy(), **{
 		#Introduce Constant: a number becomes a #define after the file's #include, two blank lines from it, and each

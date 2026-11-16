@@ -129,6 +129,7 @@ class CIDEMoveMembers : public CObject
 friend class CIDEExtractClass;
 friend class CIDETemplateInterface;
 friend class CIDEEncapsulateField;
+friend class CIDEIntroduceVariable;
 CONSTRUCTABLE(CIDEMoveMembers);
 DESTRUCTABLE(CIDEMoveMembers);
 protected:

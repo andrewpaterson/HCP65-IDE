@@ -89,6 +89,7 @@ struct SIDEIntroduction
 	CArrayChars				aszWarnings;		//What replacing every occurrence could change: shown first, as Problems Detected.
 	CArrayTextRange			asFileOccurrences;	//Every occurrence in the file, the function's among them: Introduce Constant's, if asked.
 	bool					bWholeFile;			//Set by who asks: a constant takes the place of every occurrence in the file.
+	bool					bInInit;			//Set by who asks: a field is assigned at the end of its class's Init, not where it was.
 
 	void	Init(void);
 	void	Kill(void);
@@ -129,6 +130,8 @@ protected:
 	Ptr<CLabel>			mpError;
 	Ptr<CCheckBox>		mpAllBox;
 	Ptr<CCheckBox>		mpFileBox;  //Introduce Constant's "in the file", while its dialog is shown.
+	Ptr<CCheckBox>		mpInitBox;  //Introduce Field's "Assign it in Init", while its dialog is shown.
+	bool				mbInInit;  //What it was ticked as last.
 	SIDEIntroduction	msShown;  //What the dialog is introducing.
 	bool				mbAll;  //Replace all occurrences, as last chosen.
 	int					miKind;  //What is being introduced (IDE_INTRODUCE_).
@@ -149,6 +152,7 @@ public:
 	bool	CanIntroduce(void);
 	void	QueueIntroduce(void);
 	void	QueueIntroduceField(void);
+	size	AddInitAssignments(const char* szClassKey, const char* szStatement, CIDEFileEdits* pcFiles);
 	void	QueueIntroduceConstant(void);
 	void	QueueIntroduceParameter(void);
 	bool	ShowIntroduce(int iKind = -1);

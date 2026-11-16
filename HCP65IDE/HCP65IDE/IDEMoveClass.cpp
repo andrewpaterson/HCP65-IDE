@@ -2655,10 +2655,86 @@ bool CIDEMoveClass::ShowFunctionMove(SIDEFunctionMove* psMove)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// A place added to places kept in order, once.
+//
+//////////////////////////////////////////////////////////////////////////
+static void AddIDEMovedPlace(CArrayInt* paiPlaces, size uiPlace)
+{
+	size	j;
+
+	for (j = 0; (j < paiPlaces->NumElements()) && ((size)paiPlaces->GetValue(j) < uiPlace); j++)
+	{
+	}
+	if ((j == paiPlaces->NumElements()) || ((size)paiPlaces->GetValue(j) != uiPlace))
+	{
+		paiPlaces->InsertAt((int)uiPlace, j);
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The places szName is a word in the comments of szText from uiStart to
+// uiEnd (not in its strings or character literals: what a program says
+// isn't changed), added to paiPlaces.
+//
+//////////////////////////////////////////////////////////////////////////
+static void AddIDECommentPlaces(const char* szText, size uiStart, size uiEnd, const char* szName, CArrayInt* paiPlaces)
+{
+	SIDELineCounter				sLines;
+	CArrayIDENameOccurrences	asFound;
+	const char*					szClose;
+	size						uiNameLength;
+	size						i;
+	size						j;
+	char						cQuote;
+
+	uiNameLength = strlen(szName);
+	sLines.Init(szText);
+	asFound.Init();
+	for (i = uiStart; i < uiEnd; i++)
+	{
+		if ((szText[i] == '"') || (szText[i] == '\''))
+		{
+			cQuote = szText[i];
+			for (i++; (i < uiEnd) && (szText[i] != cQuote) && (szText[i] != '\n'); i++)
+			{
+				i += ((szText[i] == '\\') && (i + 1 < uiEnd)) ? 1 : 0;
+			}
+		}
+		else if ((szText[i] == '/') && (szText[i + 1] == '/'))
+		{
+			for (j = i; (j < uiEnd) && (szText[j] != '\n'); j++)
+			{
+			}
+			FindIDEWords(szText, i, j, szName, uiNameLength, true, &sLines, &asFound);
+			i = j;
+		}
+		else if ((szText[i] == '/') && (szText[i + 1] == '*'))
+		{
+			szClose = strstr(&szText[i + 2], "*/");
+			j = szClose ? (size)(szClose - szText) + 2 : uiEnd;
+			j = (j > uiEnd) ? uiEnd : j;
+			FindIDEWords(szText, i, j, szName, uiNameLength, true, &sLines, &asFound);
+			i = j - 1;
+		}
+	}
+	for (i = 0; i < asFound.NumElements(); i++)
+	{
+		AddIDEMovedPlace(paiPlaces, asFound.Get(i)->uiStart);
+	}
+	asFound.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // What is written at a range of a file as it goes to another
 // (AppendBlock); for a copy (psTarget isn't NULL), with szNewName in
 // place of the class's name at each place in it that Rename would change
-// (psTarget's places): its own name, its constructors', its destructor's.
+// (psTarget's places): its own name, its constructors', its destructor's;
+// and where its comments name the class (the copy's are about the new
+// class).
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEMoveClass::AppendMovedBlock(const char* szText, const char* szFileName, SCPPSyntaxRange* psRange, SIDERenameTarget* psTarget, const char* szOldName, const char* szNewName, CChars* pszDest)
@@ -2671,7 +2747,6 @@ void CIDEMoveClass::AppendMovedBlock(const char* szText, const char* szFileName,
 	size			uiPlace;
 	size			uiOldLength;
 	size			i;
-	size			j;
 
 	if (!psTarget)
 	{
@@ -2692,18 +2767,12 @@ void CIDEMoveClass::AppendMovedBlock(const char* szText, const char* szFileName,
 			continue;
 		}
 		uiPlace = FindIDETextOffset(szText, psLocation->iLine, psLocation->iColumn);
-		if ((uiPlace < uiStart) || (uiPlace + uiOldLength > uiEnd) || (strncmp(&szText[uiPlace], szOldName, uiOldLength) != 0))
+		if ((uiPlace >= uiStart) && (uiPlace + uiOldLength <= uiEnd) && (strncmp(&szText[uiPlace], szOldName, uiOldLength) == 0))
 		{
-			continue;
-		}
-		for (j = 0; (j < aiPlaces.NumElements()) && ((size)aiPlaces.GetValue(j) < uiPlace); j++)
-		{
-		}
-		if ((j == aiPlaces.NumElements()) || ((size)aiPlaces.GetValue(j) != uiPlace))
-		{
-			aiPlaces.InsertAt((int)uiPlace, j);
+			AddIDEMovedPlace(&aiPlaces, uiPlace);
 		}
 	}
+	AddIDECommentPlaces(szText, uiStart, uiEnd, szOldName, &aiPlaces);
 	uiAt = uiStart;
 	for (i = 0; i < aiPlaces.NumElements(); i++)
 	{
