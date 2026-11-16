@@ -279,16 +279,22 @@ def MakeChangeSignatureCopy():
 
 
 def WriteSchemeTemplates(szFolder, asTemplates):
-	#A Workspace scheme of file and code templates beside a solution: asTemplates are (tab, name, text), each a .ft in
-	#szFolder's fileTemplates and listed in its Templates.xml.  With none there is no scheme.
+	#A Workspace scheme of file and code templates beside a solution: asTemplates are (tab, name, text), or for a Files
+	#template (tab, name, text, extension, file name), each a .ft in szFolder's fileTemplates and listed in its
+	#Templates.xml.  With none there is no scheme.
 	if not asTemplates:
 		return
 	szTemplates = os.path.join(szFolder, 'fileTemplates')
 	szIndex = '<?xml version="1.0" encoding="utf-8"?>\n<FileTemplates>\n'
-	for szTab, szName, szText in asTemplates:
+	for asTemplate in asTemplates:
+		szTab, szName, szText = asTemplate[0], asTemplate[1], asTemplate[2]
+		szExtension = asTemplate[3] if len(asTemplate) > 3 else ''
 		os.makedirs(os.path.join(szTemplates, szTab), exist_ok=True)
-		open(os.path.join(szTemplates, szTab, szName + '.ft'), 'w', newline='').write(szText)
-		szIndex += '\t<Template Tab="%s" Name="%s"/>\n' % (szTab, szName)
+		open(os.path.join(szTemplates, szTab, szName + ('.' + szExtension if szExtension else '') + '.ft'), 'w', newline='').write(szText)
+		if len(asTemplate) > 3:
+			szIndex += '\t<Template Tab="%s" Name="%s" Extension="%s" FileName="%s"/>\n' % (szTab, szName, szExtension, asTemplate[4])
+		else:
+			szIndex += '\t<Template Tab="%s" Name="%s"/>\n' % (szTab, szName)
 	open(os.path.join(szTemplates, 'Templates.xml'), 'w', newline='').write(szIndex + '</FileTemplates>\n')
 
 
@@ -304,7 +310,7 @@ def MakeDefinitionsCopy(asTemplates=[]):
 	return {'SOLUTION': os.path.join(szFolder, 'Definitions.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
 
 
-def MakeMoveMembersCopy(szLicence=None):
+def MakeMoveMembersCopy(szLicence=None, asTemplates=[]):
 	#A copy of Input/MoveMembers (CVessel and the CDrum and CKeg that derive from it, with functions defined in and
 	#outside their classes, fields, and what uses what; CBox and CCrate, class templates), to move members in.  Its
 	#licence is None (MoveMembers.hcp65project), so the files made in it have no File Header, or szLicence.
@@ -314,6 +320,7 @@ def MakeMoveMembersCopy(szLicence=None):
 	shutil.copytree(os.path.join(HERE, 'Input', 'MoveMembers'), szFolder)
 	if szLicence:
 		open(os.path.join(szFolder, 'MoveMembers.hcp65project'), 'w', newline='').write('<?xml version="1.0" encoding="utf-8"?>\n<HCP65Project Licence="%s"/>\n' % szLicence)
+	WriteSchemeTemplates(szFolder, asTemplates)
 	return {'SOLUTION': os.path.join(szFolder, 'MoveMembers.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
 
 
@@ -1719,6 +1726,48 @@ CHECKS = [
 		 r'^1\|#include "Drum\.h"$', r'^2\|#include "Keg\.h"$', r'^3\|#include "Crate\.h"$',
 		 r'^\d+\|    <ClCompile Include="Drum\.cpp" />$', r'^\d+\|    <ClCompile Include="Keg\.cpp" />$', r'^\d+\|    <ClInclude Include="Drum\.h" />$', r'^\d+\|    <ClInclude Include="Keg\.h" />$'],
 		[]),
+	('new-class', dict(MakeMoveMembersCopy(), **{
+		#File, New, C++ Class with Drum.h open: CBarrel's Barrel.h and Barrel.cpp, from the C++ Class template and its
+		#C++ Class Source child, made beside Drum.h in its project (whose licence is None: no File Header), added to the
+		#project, and opened.
+		'WAIT_INDEX': '1', 'OPEN': 'Drum.h', 'DIALOG_KEYS': 'type:CBarrel', 'DIALOG_ANSWER': 'OK',
+		'DEBUG': 'clickmenu:File/New/C++ Class...,answered:1,printstatus,printdisklines:Barrel.h,printdisklines:Barrel.cpp,printdiskfile:MoveMembers.vcxproj,printtabs'}),
+		[r'^Dialog \[New C\+\+ Class\] answered OK$', r'^Status: Made Barrel\.h and Barrel\.cpp from the C\+\+ Class template\.$',
+		 r'^1\|#ifndef __BARREL_H__$', r'^2\|#define __BARREL_H__$', r'^3\|$', r'^4\|$', r'^5\|class CBarrel$', r'^6\|\{$', r'^7\|public:$', r'^8\|\tvoid\tInit\(void\);$',
+		 r'^10\|\};$', r'^11\|$', r'^12\|$', r'^13\|#endif // __BARREL_H__$', r'^13 lines$',
+		 r'^1\|#include "Barrel\.h"$', r'^2\|$', r'^3\|$', r'^4\|/{74}$', r'^8\|void CBarrel::Init\(void\)$', r'^9\|\{$', r'^10\|\}$', r'^17\|void CBarrel::Kill\(void\)$', r'^19\|\}$', r'^19 lines$',
+		 r'<ClCompile Include="Barrel\.cpp" />', r'<ClInclude Include="Barrel\.h" />', r'^Tabs: .*Barrel\.h Barrel\.cpp$'],
+		[r'COPYRIGHT', r'^Status: New:']),
+	('new-class-undo', dict(MakeMoveMembersCopy(), **{
+		#One undo takes New's files away, off the disk and out of the project; redo makes them again, in the project
+		#(where New put them: nothing beside them was copied), with what they had.  The first press of each shows it.
+		'WAIT_INDEX': '1', 'OPEN': 'Drum.h', 'DIALOG_KEYS': 'type:CBarrel', 'DIALOG_ANSWER': 'OK',
+		'DEBUG': 'clickmenu:File/New/C++ Class...,answered:1,printprojectfiles,edit:undoall,edit:undoall,edit:saveall,printprojectfiles,printdisklines:Barrel.h,'
+				 'edit:redoall,edit:redoall,printprojectfiles,printdisklines:Barrel.h'}),
+		[r'^Project files: Main\.cpp Rack\.cpp Vessel\.cpp Drum\.cpp Pair\.cpp Barrel\.cpp Vessel\.h Drum\.h Crate\.h Pair\.h Rack\.h Barrel\.h$',
+		 r'^Project files: Main\.cpp Rack\.cpp Vessel\.cpp Drum\.cpp Pair\.cpp Vessel\.h Drum\.h Crate\.h Pair\.h Rack\.h$', r'^Disk lines Barrel\.h:$', r'^\(none\)$',
+		 r'^Project files: Main\.cpp Rack\.cpp Vessel\.cpp Drum\.cpp Pair\.cpp Barrel\.cpp Vessel\.h Drum\.h Crate\.h Pair\.h Rack\.h Barrel\.h$',
+		 r'^5\|class CBarrel$', r'^13 lines$'],
+		[]),
+	('new-class-refused', dict(MakeMoveMembersCopy(), **{
+		#New with a name a file of the solution has (CDrum's Drum.h): refused, and nothing is made.
+		'WAIT_INDEX': '1', 'OPEN': 'Drum.h', 'DIALOG_KEYS': 'type:CDrum', 'DIALOG_ANSWER': 'OK',
+		'DEBUG': 'clickmenu:File/New/C++ Class...,answered:1,printstatus'}),
+		[r'^Status: New: a file of the solution is called Drum\.h already\.$'],
+		[r'^Status: Made']),
+	('new-asks-variables', dict(MakeMoveMembersCopy(None, [('Files', 'C++ Header', '// ${DESCRIPTION}\n#parse("Include Guard Open")\n#parse("Include Guard Close")\n', 'h', '${NAME}')]), **{
+		#A Workspace scheme's C++ Header that uses ${DESCRIPTION}, which nothing gives: New's dialog has a field for
+		#it after the name, and the file has what is written in it.
+		'WAIT_INDEX': '1', 'OPEN': 'Drum.h', 'DIALOG_KEYS': 'type:Pump,tab,type:A pump', 'DIALOG_ANSWER': 'OK',
+		'DEBUG': 'clickmenu:File/New/C++ Header...,answered:1,printstatus,printdisklines:Pump.h'}),
+		[r'^Status: Made Pump\.h from the C\+\+ Header template\.$', r'^1\|// A pump$', r'^2\|#ifndef __PUMP_H__$', r'^4\|#endif // __PUMP_H__$', r'^4 lines$'],
+		[r'^Status: New:']),
+	('new-header', dict(MakeMoveMembersCopy(), **{
+		#New C++ Header: one file named as written, from the C++ Header template.
+		'WAIT_INDEX': '1', 'OPEN': 'Drum.h', 'DIALOG_KEYS': 'type:Pump', 'DIALOG_ANSWER': 'OK',
+		'DEBUG': 'clickmenu:File/New/C++ Header...,answered:1,printstatus,printdisklines:Pump.h'}),
+		[r'^Status: Made Pump\.h from the C\+\+ Header template\.$', r'^1\|#ifndef __PUMP_H__$', r'^2\|#define __PUMP_H__$', r'^\d+\|#endif // __PUMP_H__$'],
+		[r'^Status: New:']),
 	('project-licence', dict(MakeMoveMembersCopy(), **{
 		#Properties... on a project in Solution Explorer: its licence (None, as its .hcp65project has it) made LGPL 3,
 		#written to the .hcp65project.
@@ -3283,7 +3332,7 @@ CHECKS = [
 		[r'^Tabs: .*>Kernal\.cpp'], []),
 	('menus', {
 		'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'CARET': '36:4', 'DEBUG': 'printmenus,clickmenu:View/Nope'},
-		[r'^Menu File: Open Project/Solution\.\.\., Add Solution\.\.\., Close Solution, Recent Solutions>, Clear Recent Solutions, Save \[Ctrl\+S\], Save All \[Ctrl\+Shift\+S\], Compare with File\.\.\., Settings\.\.\. \[Ctrl\+Alt\+S\], Exit$',
+		[r'^Menu File: New>, Open Project/Solution\.\.\., Add Solution\.\.\., Close Solution, Recent Solutions>, Clear Recent Solutions, Save \[Ctrl\+S\], Save All \[Ctrl\+Shift\+S\], Compare with File\.\.\., Settings\.\.\. \[Ctrl\+Alt\+S\], Exit$',
 		 r'^Menu File/Recent Solutions: 1 ',
 		 r'^Menu Edit: Undo \[Ctrl\+Z\]\(disabled\), Redo \[Ctrl\+Shift\+Z\]\(disabled\), Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\], Select All \[Ctrl\+A\], Extend Selection \[Ctrl\+W\], Shrink Selection \[Ctrl\+Shift\+W\], Find in Files\.\.\. \[Ctrl\+Shift\+F\]$',
 		 r'^Menu Navigate: Back \[Ctrl\+Alt\+Left\](\(disabled\))?, Forward \[Ctrl\+Alt\+Right\](\(disabled\))?, Class\.\.\. \[Ctrl\+N\], File\.\.\. \[Ctrl\+Shift\+N\], Symbol\.\.\. \[Ctrl\+Alt\+Shift\+N\]$',
@@ -3314,13 +3363,14 @@ CHECKS = [
 		[r'^Rename: IsParentheses \[CCalcExpression::IsParentheses\(\)\] at 7 places, 1 overrides$',
 		 r'^Rename: IsParentheses \[CCalcExpression::IsParentheses\(\)\] at 5 places, 0 overrides$'], []),
 	('settings-templates', dict(MakeDefinitionsCopy(), **{
-		#Settings' File and Code Templates: the Workspace scheme (a solution is open) and its Files templates, C++ Header
-		#first; the Code tab's; a template changed (marked) with an error shown under it, then reset; an added one
+		#Settings' File and Code Templates: the Workspace scheme (a solution is open) and its Files templates, C++ Class
+		#first with its child under it; the Code tab's; a template changed (marked) with an error shown under it, then reset; an added one
 		#renamed and removed; a built-in one can't be removed.  Cancel keeps nothing.
 		'WAIT_INDEX': '1', 'DIALOG_ANSWER': 'Cancel',
 		'TEMPLATE_EDITS': 'show;tab:Code;show;select:New Function Body;text:#if ($BODY)\nx\n;show;reset;show;add;name:Mine;show;remove;show;select:Getter Body;remove;show',
 		'DEBUG': 'clickmenu:File/Settings...,answered:1'}),
-		[r'^Templates row: C\+\+ Header$', r'^Templates row: C\+\+ Source$', r'^Templates selected: C\+\+ Header, error \[\], status \[\]$',
+		[r'^Templates row: C\+\+ Class$', r'^Templates row:   C\+\+ Class Source$', r'^Templates row: C\+\+ Header$', r'^Templates row: C\+\+ Source$',
+		 r'^Templates selected: C\+\+ Class, error \[\], status \[\]$',
 		 r'^Templates row: Definition Banner$', r'^Templates row: New Function Body \[changed\]$',
 		 r'^Templates selected: New Function Body, error \[Line 1, column 1: #if has no #end\], status \[\]$',
 		 r'^Templates selected: New Function Body, error \[\], status \[\]$', r'^Templates row: Mine \[changed\]$', r'^Templates selected: Mine, error \[\], status \[\]$',

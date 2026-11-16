@@ -51,6 +51,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/UndoLog.h"
 #include "IDECodeModel.h"
 #include "IDEFileTemplates.h"
+#include "IDENewFile.h"
 #include "IDEEditorTab.h"
 #include "IDEDiffTab.h"
 #include "IDEBuildPane.h"
@@ -195,6 +196,7 @@ protected:
 	Ptr<CIDEDefinitions>		mpDefinitions;			//Generate Definition and Declaration, Move Definition.
 	Ptr<CIDEMoveMembers>		mpMoveMembers;			//Pull Members Up, Push Members Down.
 	Ptr<CIDEMoveClass>			mpMoveClass;			//Move Class to Its Own Files.
+	Ptr<CIDENewFile>			mpNewFile;				//New, from the Files templates (Alt+Insert).
 	Ptr<CIDEInlineVariable>		mpInlineVariable;		//Inline Variable.
 	Ptr<CIDEIntroduceTypedef>	mpIntroduceTypedef;		//Introduce Typedef.
 	Ptr<CIDESolutionFileChooser>	mpSolutionFileChooser;	//The dialog a refactoring chooses one of the solutions' files from.
@@ -324,6 +326,7 @@ public:
 	Ptr<CIDEDefinitions>		GetDefinitions(void);
 	Ptr<CIDEMoveMembers>		GetMoveMembers(void);
 	Ptr<CIDEMoveClass>			GetMoveClass(void);
+	Ptr<CIDENewFile>			GetNewFile(void);
 	Ptr<CIDEInlineVariable>		GetInlineVariable(void);
 	Ptr<CIDEIntroduceTypedef>	GetIntroduceTypedef(void);
 	Ptr<CIDESolutionFileChooser>	GetSolutionFileChooser(void);

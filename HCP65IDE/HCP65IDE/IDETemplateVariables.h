@@ -33,12 +33,14 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 class CIDEContent;
+class CVcxProject;
 
 
 //The predefined variables of a new file's templates (IntelliJ's and CLion's, CodeTemplates.txt item 2), so every
 //refactoring and New fill them the same way: szFileName is the new file, szProjectOf a file of the project it goes in
 //(it is added to that one's), and szClassName the class it is made for, or NULL.
 void	SetIDETemplateFileVariables(CIDEContent* pcContent, const char* szFileName, const char* szProjectOf, const char* szClassName, CTemplateValues* pcDest);
+void	SetIDETemplateFileVariables(CIDEContent* pcContent, const char* szFileName, CVcxProject* pcProject, const char* szClassName, CTemplateValues* pcDest);
 void	SetIDETemplateDateVariables(CTemplateValues* pcDest);
 char*	ReadIDEProjectLicence(const char* szProjectFile, CChars* pszDest);
 bool	WriteIDEProjectLicence(const char* szProjectFile, const char* szLicence);

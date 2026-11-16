@@ -41,6 +41,44 @@ struct SIDEBuiltInTemplate
 
 static const SIDEBuiltInTemplate gasIDEBuiltInTemplates[] =
 {
+	{ ITT_Files, "C++ Class", "h", "${CLASS_STEM}", "",
+		"## New's C++ Class: the class's header (its source is the C++ Class Source under it).  ${CLASS_NAME} is the name the\n"
+		"## New dialog is given (\"CKeg\"), and the files are named by ${CLASS_STEM} (\"Keg\").\n"
+		"#parse(\"File Header\")\n"
+		"#parse(\"Include Guard Open\")\n"
+		"\n"
+		"\n"
+		"class ${CLASS_NAME}\n"
+		"{\n"
+		"public:\n"
+		"\tvoid\tInit(void);\n"
+		"\tvoid\tKill(void);\n"
+		"};\n"
+		"\n"
+		"\n"
+		"#parse(\"Include Guard Close\")\n" },
+	{ ITT_Files, "C++ Class Source", "cpp", "${CLASS_STEM}", "C++ Class",
+		"## New's C++ Class's source file, made with its header.\n"
+		"#parse(\"File Header\")\n"
+		"#include \"${HEADER_FILENAME}\"\n"
+		"\n"
+		"\n"
+		"//////////////////////////////////////////////////////////////////////////\n"
+		"//\n"
+		"//\n"
+		"//////////////////////////////////////////////////////////////////////////\n"
+		"void ${CLASS_NAME}::Init(void)\n"
+		"{\n"
+		"}\n"
+		"\n"
+		"\n"
+		"//////////////////////////////////////////////////////////////////////////\n"
+		"//\n"
+		"//\n"
+		"//////////////////////////////////////////////////////////////////////////\n"
+		"void ${CLASS_NAME}::Kill(void)\n"
+		"{\n"
+		"}\n" },
 	{ ITT_Files, "C++ Header", "h", "${NAME}", "",
 		"## A new header.  A refactoring gives ${INCLUDES} (its #includes, each line ended) and ${BODY} (the class, and what\n"
 		"## it defines outside the class); New gives neither.\n"

@@ -222,6 +222,7 @@ void CIDEContent::Class(void)
 	M_Pointer(mpDefinitions);
 	M_Pointer(mpMoveMembers);
 	M_Pointer(mpMoveClass);
+	M_Pointer(mpNewFile);
 	M_Pointer(mpInlineVariable);
 	M_Pointer(mpIntroduceTypedef);
 	M_Pointer(mpSolutionFileChooser);
@@ -446,6 +447,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpDefinitions = OMalloc<CIDEDefinitions>(this);
 	mpMoveMembers = OMalloc<CIDEMoveMembers>(this);
 	mpMoveClass = OMalloc<CIDEMoveClass>(this);
+	mpNewFile = OMalloc<CIDENewFile>(this);
 	mpInlineVariable = OMalloc<CIDEInlineVariable>(this);
 	mpIntroduceTypedef = OMalloc<CIDEIntroduceTypedef>(this);
 	mpSolutionFileChooser = OMalloc<CIDESolutionFileChooser>(this);
@@ -664,6 +666,7 @@ void CIDEContent::AddCommands(void)
 	mpDefinitions->AddCommands(mpCommands);
 	mpMoveMembers->AddCommands(mpCommands);
 	mpMoveClass->AddCommands(mpCommands);
+	mpNewFile->AddCommands(mpCommands);
 	mpInlineVariable->AddCommands(mpCommands);
 	mpIntroduceTypedef->AddCommands(mpCommands);
 	mpExtractMethod->AddCommands(mpCommands);
@@ -1188,6 +1191,7 @@ Ptr<CIDEChangeSignature> CIDEContent::GetChangeSignature(void) { return mpChange
 Ptr<CIDEDefinitions> CIDEContent::GetDefinitions(void) { return mpDefinitions; }
 Ptr<CIDEMoveMembers> CIDEContent::GetMoveMembers(void) { return mpMoveMembers; }
 Ptr<CIDEMoveClass> CIDEContent::GetMoveClass(void) { return mpMoveClass; }
+Ptr<CIDENewFile> CIDEContent::GetNewFile(void) { return mpNewFile; }
 Ptr<CIDEInlineVariable> CIDEContent::GetInlineVariable(void) { return mpInlineVariable; }
 Ptr<CIDEIntroduceTypedef> CIDEContent::GetIntroduceTypedef(void) { return mpIntroduceTypedef; }
 Ptr<CIDESolutionFileChooser> CIDEContent::GetSolutionFileChooser(void) { return mpSolutionFileChooser; }

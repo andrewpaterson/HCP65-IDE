@@ -232,6 +232,26 @@ void SetIDETemplateFileVariables(CIDEContent* pcContent, const char* szFileName,
 {
 	CBuildWorkspace*	pcWorkspace;
 	CVcxProject*		pcProject;
+	size				uiProject;
+
+	pcProject = NULL;
+	pcWorkspace = pcContent->GetWorkspace();
+	uiProject = pcContent->GetCodeModel()->FindProjectOfFile(szProjectOf ? szProjectOf : szFileName);
+	if ((uiProject != MAX_SIZE) && (uiProject < pcWorkspace->NumProjects()))
+	{
+		pcProject = pcWorkspace->GetSolutionProject(uiProject)->GetProject();
+	}
+	SetIDETemplateFileVariables(pcContent, szFileName, pcProject, szClassName, pcDest);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// SetIDETemplateFileVariables for a file of pcProject (NULL for none).
+//
+//////////////////////////////////////////////////////////////////////////
+void SetIDETemplateFileVariables(CIDEContent* pcContent, const char* szFileName, CVcxProject* pcProject, const char* szClassName, CTemplateValues* pcDest)
+{
 	CChars				szStem;
 	CChars				szDirectory;
 	CChars				sz;
@@ -239,7 +259,6 @@ void SetIDETemplateFileVariables(CIDEContent* pcContent, const char* szFileName,
 	const char*			szName;
 	const char*			szDot;
 	const char*			szUser;
-	size				uiProject;
 
 	szName = GetIDEFileNamePart(szFileName);
 	szDot = strrchr(szName, '.');
@@ -274,13 +293,6 @@ void SetIDETemplateFileVariables(CIDEContent* pcContent, const char* szFileName,
 
 	//The project's.
 	szLicence.Init(IDE_LICENCE_DEFAULT);
-	pcProject = NULL;
-	pcWorkspace = pcContent->GetWorkspace();
-	uiProject = pcContent->GetCodeModel()->FindProjectOfFile(szProjectOf ? szProjectOf : szFileName);
-	if ((uiProject != MAX_SIZE) && (uiProject < pcWorkspace->NumProjects()))
-	{
-		pcProject = pcWorkspace->GetSolutionProject(uiProject)->GetProject();
-	}
 	if (pcProject)
 	{
 		pcDest->Set("PROJECT_NAME", pcProject->GetName());

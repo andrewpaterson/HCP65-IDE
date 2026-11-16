@@ -216,6 +216,16 @@ Progress
         refusing; the page's edits kept and reset; the licence dialog.  Done with 3a-3c: step 3 is built.
 
 
+  Step 4 (New), built 2026-11-16: CIDENewFile (IDENewFile.h): File, New (a submenu of the Files templates that
+    aren't children, filled as it opens) and Alt+Insert (the same, popped up at Solution Explorer's selection or the
+    caret).  The built-in C++ Class (named by ${CLASS_STEM}) with its C++ Class Source child; C++ Header and C++
+    Source.  The files go where Solution Explorer's selection is (a project's directory; a filter's files' directory
+    and the filter; a file's directory and filter), or the active file's; CVcxProject::AddItem puts them in the
+    project and its filters, the CMakeLists.txt lines naming a file beside them get them, and git stages them.  One
+    undo takes them away; the undo log keeps New's place ("<project>\n<filter>\n<list beside>") for the redo.
+    Checks new-class, new-class-undo, new-class-refused, new-asks-variables, new-header.
+
+
 Questions (answered 2026-11-16)
 -------------------------------
 

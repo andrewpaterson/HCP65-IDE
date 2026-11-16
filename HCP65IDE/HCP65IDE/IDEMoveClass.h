@@ -149,6 +149,7 @@ public:
 	void	EndCreating(bool bWritten);
 	bool	RemoveCreatedFile(const char* szPath);
 	bool	RecreateFile(const char* szPath, const char* szBeside, const char* szContent);
+	bool	CreateNewFile(const char* szPath, CVcxProject* pcProject, const char* szFilter, const char* szListBeside);
 	void	QueueMove(void);
 	bool	ShowMove(void);
 	bool	FindMove(SIDEClassMove* psDest, bool bCopy = false);
@@ -193,6 +194,7 @@ protected:
 	bool				FindIncludePlace(const char* szText, const char* szIncluded, const char* szNewName, size* puiAt, CChars* pszLine);
 	bool				CreateFile(const char* szPath, const char* szBeside);
 	void				AddToListFiles(const char* szBeside, const char* szNewName);
+	void				PlaceFile(const char* szPath, const char* szBeside);
 };
 
 

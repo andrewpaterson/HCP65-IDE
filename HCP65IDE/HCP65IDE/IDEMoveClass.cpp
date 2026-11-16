@@ -1108,10 +1108,7 @@ bool CIDEMoveClass::RecreateFile(const char* szPath, const char* szBeside, const
 {
 	CFileUtil			cFileUtil;
 	CGitRepository*		pcRepository;
-	CBuildWorkspace*	pcWorkspace;
-	CVcxProject*		pcProject;
 	CTextFile			cFile;
-	size				i;
 	bool				bWritten;
 
 	if (cFileUtil.Exists(szPath))
@@ -1126,22 +1123,98 @@ bool CIDEMoveClass::RecreateFile(const char* szPath, const char* szBeside, const
 	{
 		return false;
 	}
-	pcWorkspace = mpcContent->GetWorkspace();
-	for (i = 0; i < pcWorkspace->NumProjects(); i++)
-	{
-		pcProject = pcWorkspace->GetSolutionProject(i)->GetProject();
-		if (pcProject)
-		{
-			pcProject->AddItemBeside(szBeside, GetIDEFileNamePart(szPath));
-		}
-	}
-	AddToListFiles(szBeside, GetIDEFileNamePart(szPath));
+	PlaceFile(szPath, szBeside);
 	pcRepository = mpcContent->GetGitStatus()->GetGit()->FindRepository(szPath);
 	if (pcRepository)
 	{
 		pcRepository->Add(szPath);
 	}
 	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A file made in its project's place (New's: nothing beside it to copy):
+// in pcProject, in szFilter, and in the CMakeLists.txt lines that name
+// szListBeside (if it isn't empty), staged when EndCreating says.  What
+// the undo log keeps for its redo is the place itself, "<project>\n
+// <filter>\n<list beside>".  False if it is there already or can't be
+// made or added.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEMoveClass::CreateNewFile(const char* szPath, CVcxProject* pcProject, const char* szFilter, const char* szListBeside)
+{
+	CFileUtil	cFileUtil;
+	CChars		szPlace;
+
+	if (!pcProject || cFileUtil.Exists(szPath) || !cFileUtil.Touch(szPath))
+	{
+		return false;
+	}
+	if (!pcProject->AddItem(szPath, szFilter))
+	{
+		cFileUtil.Delete(szPath);
+		return false;
+	}
+	if (szListBeside && (szListBeside[0] != '\0'))
+	{
+		AddToListFiles(szListBeside, GetIDEFileNamePart(szPath));
+	}
+	szPlace.Init(pcProject->GetFileName());
+	szPlace.Append('\n')->Append(szFilter ? szFilter : "")->Append('\n')->Append(szListBeside ? szListBeside : "");
+	mpcContent->GetEdit()->LogFileCreated((char*)szPath, szPlace.Text());
+	szPlace.Kill();
+	maszCreated.Add(szPath);
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A file made again put back where it was: beside the file it was made
+// beside (szBeside, a path), in that one's projects and CMakeLists.txt;
+// or, for one New made (szBeside "<project>\n<filter>\n<list beside>"),
+// in that project and filter.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEMoveClass::PlaceFile(const char* szPath, const char* szBeside)
+{
+	CBuildWorkspace*	pcWorkspace;
+	CVcxProject*		pcProject;
+	CArrayChars			aszPlace;
+	size				i;
+
+	pcWorkspace = mpcContent->GetWorkspace();
+	if (!strchr(szBeside, '\n'))
+	{
+		for (i = 0; i < pcWorkspace->NumProjects(); i++)
+		{
+			pcProject = pcWorkspace->GetSolutionProject(i)->GetProject();
+			if (pcProject)
+			{
+				pcProject->AddItemBeside(szBeside, GetIDEFileNamePart(szPath));
+			}
+		}
+		AddToListFiles(szBeside, GetIDEFileNamePart(szPath));
+		return;
+	}
+
+	aszPlace.Init();
+	aszPlace.Split(szBeside, '\n');
+	for (i = 0; i < pcWorkspace->NumProjects(); i++)
+	{
+		pcProject = pcWorkspace->GetSolutionProject(i)->GetProject();
+		if (pcProject && (aszPlace.NumElements() > 0) && (StringInsensitiveCompare(pcProject->GetFileName(), aszPlace.GetText(0)) == 0))
+		{
+			pcProject->AddItem(szPath, (aszPlace.NumElements() > 1) ? aszPlace.GetText(1) : NULL);
+		}
+	}
+	if ((aszPlace.NumElements() > 2) && !aszPlace.Get(2)->Empty())
+	{
+		AddToListFiles(aszPlace.GetText(2), GetIDEFileNamePart(szPath));
+	}
+	aszPlace.Kill();
 }
 
 
