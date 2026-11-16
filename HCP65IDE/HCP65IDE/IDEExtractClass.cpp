@@ -618,6 +618,7 @@ bool CIDEExtractClass::Extract(SIDEMembersMove* psMove, int iKind, const char* s
 	CChars				szBlock;
 	CChars				szLine;
 	CChars				szMessage;
+	CChars				szInitBody;
 	const char*			szStem;
 	char*				szText;
 	char*				szOutside;
@@ -635,6 +636,7 @@ bool CIDEExtractClass::Extract(SIDEMembersMove* psMove, int iKind, const char* s
 	int					iAccess;
 	uint8				uiKind;
 	bool				bTemplate;
+	bool				bTemplates;
 	bool				bInline;
 	bool				bFieldPut;
 	bool				bBases;
@@ -813,6 +815,7 @@ bool CIDEExtractClass::Extract(SIDEMembersMove* psMove, int iKind, const char* s
 		}
 	}
 
+	bTemplates = true;
 	if (bInit)
 	{
 		//Declared, and defined with the functions that have a source file; or in the class, if none has.
@@ -821,18 +824,28 @@ bool CIDEExtractClass::Extract(SIDEMembersMove* psMove, int iKind, const char* s
 			aszSections[IDE_ACCESS_PUBLIC].Append(aszSections[IDE_ACCESS_PUBLIC].Empty() ? "" : "\n");
 			aszSections[IDE_ACCESS_PUBLIC].Append(IDE_EXTRACT_INIT_PLACE);
 		}
+		//Its body is the New Function Body template's, and its banner the Definition Banner's.
+		szInitBody.Init("{\n");
+		bTemplates = mpcContent->GetFileTemplates()->ApplyCode(IDE_TEMPLATE_NEW_FUNCTION_BODY, &szInitBody, "FUNCTION_NAME", "Init", "BODY", "", NULL);
+		szInitBody.Append("}");
 		if (szSourceFile.Empty())
 		{
-			aszSections[IDE_ACCESS_PUBLIC].Replace(IDE_EXTRACT_INIT_PLACE, "\tvoid\tInit(void) {}\n");
+			szBlock.Init("\tvoid\tInit(void)");
+			mpcContent->GetDefinitions()->AppendBodyInClass(szInitBody.Text(), "\t", &szBlock);
+			szBlock.Append('\n');
+			aszSections[IDE_ACCESS_PUBLIC].Replace(IDE_EXTRACT_INIT_PLACE, szBlock.Text());
+			szBlock.Kill();
 		}
 		else
 		{
 			aszSections[IDE_ACCESS_PUBLIC].Replace(IDE_EXTRACT_INIT_PLACE, "\tvoid\tInit(void);\n");
-			szBlock.Init("\n\n//////////////////////////////////////////////////////////////////////////\n//\n//\n//////////////////////////////////////////////////////////////////////////\nvoid ");
-			szBlock.Append(szName)->Append("::Init(void)\n{\n}\n");
+			szBlock.Init("\n\n");
+			bTemplates = bTemplates && mpcContent->GetFileTemplates()->ApplyCode(IDE_TEMPLATE_DEFINITION_BANNER, &szBlock, NULL);
+			szBlock.Append("void ")->Append(szName)->Append("::Init(void)\n")->Append(szInitBody)->Append('\n');
 			szSourceBlocks.Insert(0, szBlock.Text());
 			szBlock.Kill();
 		}
+		szInitBody.Kill();
 		AddInitCalls(psMove, szField, &cFiles);
 	}
 
@@ -927,7 +940,7 @@ bool CIDEExtractClass::Extract(SIDEMembersMove* psMove, int iKind, const char* s
 	}
 
 	pcMoveClass->BeginCreating();
-	bResult = (uiMoved > 0) && pcMoveClass->CreateFile(szNewHeader.Text(), psMove->sClass.szFileName.Text());
+	bResult = bTemplates && (uiMoved > 0) && pcMoveClass->CreateFile(szNewHeader.Text(), psMove->sClass.szFileName.Text());
 	bResult = bResult && (szNewSource.Empty() || pcMoveClass->CreateFile(szNewSource.Text(), szSourceFile.Text()));
 	bResult = bResult && cFiles.GetText(szNewHeader.Text()) && (szNewSource.Empty() || cFiles.GetText(szNewSource.Text()));
 	if (!bResult)
@@ -971,6 +984,20 @@ bool CIDEExtractClass::Extract(SIDEMembersMove* psMove, int iKind, const char* s
 			szMessage.Append("; ")->Append((uint32)uiLeft)->Append((uiLeft == 1) ? " label that may be an overload's left" : " labels that may be an overload's left");
 		}
 		szMessage.Append(".");
+		if (pszStatus)
+		{
+			pszStatus->Set(szMessage);
+		}
+		else
+		{
+			mpcContent->ShowStatus(szMessage.Text());
+		}
+		szMessage.Kill();
+	}
+	else if (!bTemplates)
+	{
+		szMessage.Init((iKind == IDE_EXTRACT_SUPERCLASS) ? "Extract Superclass: " : ((iKind == IDE_EXTRACT_INTERFACE) ? "Extract Interface: " : "Extract Class: "));
+		szMessage.Append(mpcContent->GetFileTemplates()->GetError())->Append('.');
 		if (pszStatus)
 		{
 			pszStatus->Set(szMessage);

@@ -67,13 +67,13 @@ What is built
        Includes: File Header (the licence comment), Include Guard Open, Include Guard Close.
        Code:     what the IDE's generators write, each with the variables it is given:
                    Definition Banner        the //////// comment over a function's definition;
-                   New Function Body        Generate Definition's body, and Extract Method's around ${BODY};
-                   Overriding Function Body a function made to override one (Pull Up, Push Down, Extract
-                                            Interface's pure functions, Write Template's Interface);
-                   Getter, Setter           Encapsulate Field's, one line each, as now;
-                   Init Function            Extract Class's empty Init and its call;
-                   Forward Declaration      "class ${CLASS_NAME};";
+                   New Function Body        what goes between a new function's braces: Generate Definition's and
+                                            Extract Class's Init's (nothing), Extract Method's (${BODY});
+                   Getter Body, Setter Body Encapsulate Field's statement, the line laid out as now;
                    Template Interface Comment  Write Template's Interface's "//M must have:".
+                 (Overriding Function Body and Forward Declaration were planned and are not made: nothing writes
+                 an overriding body (Pull Up's and Extract Interface's pure functions copy their declarations), and
+                 "class CKeg;" is C++'s, with nothing in it to choose.  Init Function is New Function Body.)
      The defaults are written so each gives, byte for byte, what the IDE writes now: every check that passes now
      passes with them, which proves the generators were moved onto the templates without a change.
   4. Where they are kept: the defaults are built into the IDE.  A changed one is a file, as IntelliJ keeps them
@@ -166,10 +166,10 @@ Progress
                                 around ${BODY};
           Getter, Setter        IDEEncapsulateField.cpp (one line each, ${TYPE}, ${NAME}, ${FIELD}, ${PARAMETER},
                                 ${CONST} for "const" or nothing);
-          Init Function         IDEExtractClass.cpp's "void Init(void) {}" and "::Init(void)\n{\n}\n";
-          Template Interface Comment  IDETemplateInterface.cpp's "//M must have:" and its "//\t" lines;
-          Overriding Function Body    where Pull Up, Push Down and Extract Interface write one.
-        The checks pass unchanged: that is the proof.
+          Init                  IDEExtractClass.cpp's "void Init(void) {}" and "::Init(void)\n{\n}\n" with its
+                                banner (New Function Body and Definition Banner);
+          Template Interface Comment  IDETemplateInterface.cpp's "//M must have:" and its "//\t" lines.
+        The checks pass unchanged: that is the proof.  Committed 6b461d7 (all but Init), and Init after it.
     2c. The Files templates for the refactorings that make a file (Move Class, Copy Class, Extract Superclass,
         Interface and Class: CIDEMoveClass's new header and source, CIDEExtractClass's): C++ Header and C++ Source
         with ${INCLUDES} and ${BODY}, the guard from Include Guard Open/Close, the licence from File Header.
