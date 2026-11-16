@@ -360,13 +360,13 @@ bool CIDEScope::FindScope(const char* szName, EIDEScope* peScope)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Whether a scope is one to choose now: the startup solution's only
-// while the workspace has more than one solution.
+// Whether a scope is one to choose now: the startup solution's while the
+// workspace has a solution.  With only one, it is the startup solution.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEScope::IsOffered(CIDEContent* pcContent, EIDEScope eScope)
 {
-	return (eScope != IS_StartupSolution) || (pcContent->GetWorkspace()->NumSolutions() > 1);
+	return (eScope != IS_StartupSolution) || (pcContent->GetWorkspace()->NumSolutions() > 0);
 }
 
 

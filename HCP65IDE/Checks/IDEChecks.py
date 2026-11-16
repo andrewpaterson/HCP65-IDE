@@ -2944,7 +2944,7 @@ CHECKS = [
 		'EDIT': 'usagegroups:', 'DEBUG': 'command:Navigate.FindUsagesSettings,answered:1,edit:printusages'},
 		[r'^Dialog \[Find Usages Settings\] answered OK$', r'^Usages of IsParentheses and 1 override  3 usages$'], [r'ERROR']),
 	('usages-scope-menu', {
-		#The toolbar's Scope: a menu of the scopes (the startup solution's too, with two solutions open), the tab's saying so; one chosen shows the usages already found that are
+		#The toolbar's Scope: a menu of the scopes (the startup solution's too: with one solution open it is that one), the tab's saying so; one chosen shows the usages already found that are
 		#in it, as the IDE was when they were found, and choosing the solution's shows them all again.
 		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14',
 		'EDIT': 'usagegroups:,references,usagetool:Scope,usagescopemenu,usagescopemenu:3,printusages,usagetool:Scope,usagescopemenu,usagescopemenu:0,printusages'},

@@ -39,12 +39,6 @@ Open
     parser's resolution of X::X).  Nothing in the compiler's output changes, and the whole suite passes, but it is a
     change in CppCompilerLib made for the IDE: look at it when you look at the others.
 
-18. Two of the IDE's checks fail here that aren't in the list of known failures, and I don't think tonight's work
-    made them: usages-scope-menu expects "Startup Solution" in the menu, which needs a workspace of more than one
-    solution (I run the checks on HCP65ModPlay.sln alone, since HCP65ModPlay.hcp65workspace isn't on this disk);
-    usages-tabs gets "Usage tabs: >Evaluate, * IsParentheses" where it expects "* IsParentheses, >Evaluate" (the
-    tab that isn't pinned is used again, but not in its place).  Nothing I changed is in Find Usages' tabs.  Do
-    they pass for you?
 
 24. The new files' names are the class's without its C (CKeg: Keg.h, Keg.cpp), in the directories of the files it
     leaves, and the include guard is the old header's with the name changed (__DRUM_H__ gives __KEG_H__,
@@ -79,6 +73,17 @@ Open
 
 Answered
 --------
+
+18. Two of the IDE's checks fail here that aren't in the list of known failures, and I don't think tonight's work
+    made them: usages-scope-menu expects "Startup Solution" in the menu, which needs a workspace of more than one
+    solution (I run the checks on HCP65ModPlay.sln alone, since HCP65ModPlay.hcp65workspace isn't on this disk);
+    usages-tabs gets "Usage tabs: >Evaluate, * IsParentheses" where it expects "* IsParentheses, >Evaluate" (the
+    tab that isn't pinned is used again, but not in its place).  Nothing I changed is in Find Usages' tabs.  Do
+    they pass for you?
+    Answered 2026-11-16: with one solution it is implicitly the startup solution.  Done: Startup Solution is a
+    scope whenever there is a solution (CIDEScope::IsOffered), and usages-scope-menu passes.  usages-tabs was a
+    WindowLib bug: a tabbed container laid out in no width (a tool window not shown yet) moved the selected tab
+    to the front; it no longer does, and usages-tabs passes.
 
 40. Where a function's body names a member that isn't public and a call of it is outside the class, that is a
     conflict (the inlined code wouldn't compile).  A call on "&cOther" inlines as "(&cOther)->Kind()", not
