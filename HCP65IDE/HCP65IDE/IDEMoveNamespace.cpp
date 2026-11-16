@@ -858,7 +858,7 @@ bool CIDEMoveNamespace::FindMove(SIDENamespaceMove* psDest)
 	}
 	uiKind = psDest->uiKind;
 	if ((uiKind != CPPSK_Class) && (uiKind != CPPSK_Enum) && (uiKind != CPPSK_Typedef) && (uiKind != CPPSK_ClassTemplate) && (uiKind != CPPSK_AliasTemplate) &&
-		(uiKind != CPPSK_Function) && (uiKind != CPPSK_FunctionTemplate) && (uiKind != CPPSK_Variable))
+		(uiKind != CPPSK_Function) && (uiKind != CPPSK_FunctionTemplate) && (uiKind != CPPSK_Variable) && (uiKind != CPPSK_VariableTemplate))
 	{
 		return false;
 	}
@@ -2038,4 +2038,87 @@ void CIDEMoveNamespace::WidenToEmptyBlocks(SIDENamespaceSite* psSite, const char
 		*puiStart = psBlock->uiStart;
 		*puiEnd = psBlock->uiEnd;
 	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// szText's lines without up to uiStrip spaces or tabs before each, and
+// uiDepth tabs before each that isn't blank.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEMoveNamespace::AppendReindented(const char* szText, size uiStrip, size uiDepth, CChars* pszDest)
+{
+	size	uiLine;
+	size	uiAt;
+	size	uiEnd;
+	size	i;
+
+	for (uiLine = 0; szText[uiLine] != '\0'; uiLine = uiEnd)
+	{
+		for (uiEnd = uiLine; (szText[uiEnd] != '\0') && (szText[uiEnd] != '\n'); uiEnd++)
+		{
+		}
+		if (szText[uiEnd] == '\n')
+		{
+			uiEnd++;
+		}
+		for (uiAt = uiLine; (uiAt < uiLine + uiStrip) && ((szText[uiAt] == '\t') || (szText[uiAt] == ' ')); uiAt++)
+		{
+		}
+		if ((szText[uiAt] != '\n') && (szText[uiAt] != '\r') && (szText[uiAt] != '\0'))
+		{
+			for (i = 0; i < uiDepth; i++)
+			{
+				pszDest->Append('\t');
+			}
+		}
+		pszDest->AppendSubString(szText, uiAt, uiEnd);
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Where a use of a function that isn't a call is a using-declaration of
+// it (using Drawing::Plot;): from its line's start to after its ; and
+// the line's end.  False if it isn't one.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEMoveNamespace::FindUsingDeclaration(SIDELocation* psUse, CIDEFileEdits* pcFiles, size* puiStart, size* puiEnd)
+{
+	CIDERefactorUnit	cUnit;
+	SCPPSyntaxRange		sRange;
+	char*				szText;
+	int32				iToken;
+	size				uiEnd;
+	bool				bFound;
+
+	szText = pcFiles->GetText(psUse->szFileName.Text());
+	cUnit.Init();
+	bFound = szText && cUnit.Parse(mpcContent->GetCodeModel(), &mpcContent->GetFindInFiles(), psUse->szFileName.Text(), false);
+	iToken = bFound ? cUnit.FindTokenAt(psUse->iLine, psUse->iColumn) : -1;
+	iToken = (iToken >= 0) ? FindQualifier(&cUnit, iToken) : -1;
+	bFound = (iToken >= 1) && cUnit.IsToken(iToken - 1, "using") && !cUnit.IsToken(iToken, "namespace") && cUnit.GetTokensRange(iToken - 1, iToken - 1, &sRange);
+	if (bFound)
+	{
+		*puiStart = FindIDETextOffset(szText, sRange.iLine, sRange.iColumn);
+		uiEnd = FindIDETextOffset(szText, sRange.iEndLine, sRange.iEndColumn);
+		while ((*puiStart > 0) && (szText[*puiStart - 1] != '\n'))
+		{
+			(*puiStart)--;
+		}
+		for (*puiEnd = uiEnd; (szText[*puiEnd] != '\0') && (szText[*puiEnd] != ';'); (*puiEnd)++)
+		{
+		}
+		for (; (szText[*puiEnd] != '\0') && (szText[*puiEnd] != '\n'); (*puiEnd)++)
+		{
+		}
+		if (szText[*puiEnd] == '\n')
+		{
+			(*puiEnd)++;
+		}
+	}
+	cUnit.Kill();
+	return bFound;
 }

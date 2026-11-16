@@ -1825,6 +1825,59 @@ CHECKS = [
 		 r'^Disk lines Drawing\.h:$', r'^8\|$', r'^9\|\textern int\tgiCount;$', r'^10\|\}$',
 		 r'^Disk lines Drawing\.cpp:$', r'^13\|\t\}$', r'^14\|$', r'^15\|$', r'^16\|\tint\tgiCount = 1;$', r'^17\|\}$'],
 		[]),
+	('member-from-function-namespace', dict(MakeNamespacesCopy(), **{
+		#Convert Function to Member Function of a function in a namespace (Refactorings.txt 21 h): Geometry::Area is
+		#CPoint's; its definition, written with its namespace, is Geometry::CPoint::Area; Main.cpp's call, found
+		#through its using-directive, is cOther.Area(); its label is CPoint's.
+		'WAIT_INDEX': '1', 'OPEN': 'Shapes.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:21:10,edit:functiontomember,printdisklines:Shapes.h,printdisklines:Shapes.cpp,printdisklines:Main.cpp,printdisklines:ShapesW65C816.asm'}),
+		[r'^Status: Converted Geometry::Area to the member function Geometry::CPoint::Area: 1 call changed, 1 label in assembly\.$',
+		 r'^18\|\t\tTLength\tArea\(void\);$', r'^19\|\t\};$', r'^22\|\textern int\tgiCount;$',
+		 r'^35\|Geometry::TLength Geometry::CPoint::Area\(void\)$', r'^37\|\treturn Sum\(\) \* giCount;$',
+		 r'^21\|\ti = cOther\.Area\(\) \+ Geometry::Detail::Twice\(giCount\);$', r'^7\|_Geometry__CPoint__Area:$'],
+		[r'Area\(CPoint\*']),
+	('member-from-function-other-namespace', dict(MakeNamespacesCopy(), **{
+		#Drawing::Plot, whose parameter is a Geometry::CPoint*: Geometry::CPoint::Plot; the using-declaration of it in
+		#Main.cpp goes, and the call through it is cPoint.Plot().
+		'WAIT_INDEX': '1', 'OPEN': 'Shapes.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:35:9,edit:functiontomember,printdisklines:Shapes.h,printdisklines:Shapes.cpp,printdisklines:Main.cpp,printdisklines:ShapesW65C816.asm'}),
+		[r'^Status: Converted Drawing::Plot to the member function Geometry::CPoint::Plot: 1 call changed, 1 label in assembly\.$',
+		 r'^18\|\t\tvoid\tPlot\(void\);$', r'^34\|\ttypedef long\tTLength;$', r'^35\|$', r'^36\|\textern "C" void\tClear\(void\);$',
+		 r'^55\|void Geometry::CPoint::Plot\(void\)$', r'^57\|\tInit\(1, 2\);$',
+		 r'^4\|using namespace Geometry;$', r'^5\|$', r'^19\|\tcPoint\.Plot\(\);$', r'^13\|_Geometry__CPoint__Plot:$'],
+		[r'using Drawing::Plot', r'Plot\(Geometry::CPoint\*']),
+	('template-parameter-namespace', dict(MakeNamespacesCopy(), **{
+		#Extract Template Parameter of a function in a namespace (Refactorings.txt 21 h): Geometry::Area's declaration
+		#in the Geometry block stays, template<class M> over it; its definition, written with its namespace, comes to
+		#the header after the namespace's block (inside it, it couldn't be written with its namespace, and what it
+		#uses may be declared after it).
+		'WAIT_INDEX': '1', 'OPEN': 'Shapes.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:21:15,edit:templateparameter,edit:extracttemplate:M,printdisklines:Shapes.h,printdisklines:Shapes.cpp'}),
+		[r"^Extract Template Parameter: CPoint in Geometry::Area, the calls' arguments say it$",
+		 r'^Status: Extracted the template parameter M from CPoint in Geometry::Area: its definition is in Shapes\.h now\.$',
+		 r'^21\|\ttemplate<class M>$', r'^22\|\tTLength\tArea\(M\* pcPoint\);$', r'^23\|\textern int\tgiCount;$', r'^29\|\}$', r'^30\|$', r'^31\|$', r'^32\|///',
+		 r'^36\|template<class M>$', r'^37\|Geometry::TLength Geometry::Area\(M\* pcPoint\)$', r'^39\|\treturn pcPoint->Sum\(\) \* giCount;$', r'^40\|\}$', r'^41\|$', r'^42\|$', r'^43\|namespace Drawing$'],
+		[r'^\d+\|.*Area\(CPoint\*']),
+	('template-parameter-qualified', dict(MakeNamespacesCopy(), **{
+		#A type written with its namespace (Geometry::CPoint) is M as a whole; Main.cpp's using-declaration of Plot
+		#names the function template as well, so it doesn't stop it.
+		'WAIT_INDEX': '1', 'OPEN': 'Shapes.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:35:22,edit:templateparameter,edit:extracttemplate:M,printdisklines:Shapes.h,printdisklines:Shapes.cpp'}),
+		[r"^Extract Template Parameter: CPoint in Drawing::Plot, the calls' arguments say it$",
+		 r'^Status: Extracted the template parameter M from CPoint in Drawing::Plot: its definition is in Shapes\.h now\.$',
+		 r'^35\|\ttemplate<class M>$', r'^36\|\tvoid\tPlot\(M\* pcPoint\);$', r'^39\|\}$', r'^40\|$', r'^41\|$', r'^\d+\|template<class M>$', r'^\d+\|void Drawing::Plot\(M\* pcPoint\)$'],
+		[r'Geometry::M', r'^\d+\|void Drawing::Plot\(Geometry::CPoint']),
+	('member-to-function-namespace', dict(MakeNamespacesCopy(), **{
+		#Convert Member Function to Function of a class in a namespace: Geometry::CPoint::Sum is Geometry::Sum, declared
+		#after the class at its indent in the Geometry block, defined where it was in Shapes.cpp's block; its label is
+		#the function's.
+		'WAIT_INDEX': '1', 'OPEN': 'Shapes.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:17:11,edit:membertofunction,printdisklines:Shapes.h,printdisklines:Shapes.cpp,printdisklines:ShapesW65C816.asm'}),
+		[r'^Status: Converted Geometry::CPoint::Sum to the function Sum\(CPoint\* pcPoint, \.\.\.\): 1 call changed, 2 labels in assembly\.$',
+		 r'^17\|\t\};$', r'^18\|$', r'^19\|$', r'^20\|\tTLength\tSum\(CPoint\* pcPoint\);$',
+		 r'^24\|\tTLength Sum\(CPoint\* pcPoint\)$', r'^26\|\t\treturn pcPoint->miX \+ pcPoint->miY;$', r'^37\|\treturn Sum\(pcPoint\) \* giCount;$',
+		 r'^5\|_Geometry__Sum__FPC16Geometry__CPoint:$', r'^8\|\t\tjsr _Geometry__Sum__FPC16Geometry__CPoint$'],
+		[r'^[0-9]+[|].*CPoint::Sum']),
 	('move-namespace-refused', dict(MakeNamespacesCopy(), **{
 		#A member of a class isn't at namespace scope: there is nothing to move.
 		'WAIT_INDEX': '1', 'OPEN': 'Shapes.h',

@@ -27,6 +27,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDERename.h"
 #include "IDESafeDelete.h"
 #include "IDEMemberQualifier.h"
+#include "IDEMoveNamespace.h"
 #include "IDETemplateParameter.h"
 #include "IDEContextActions.h"
 
@@ -198,9 +199,29 @@ bool CIDETemplateParameter::Refuse(SIDETemplateExtraction* psDest, const char* s
 
 //////////////////////////////////////////////////////////////////////////
 //
+// What a place FindTypePlaces gives is: whether typename goes before it,
+// and how long the type's name is there with its qualifier.
+//
+//////////////////////////////////////////////////////////////////////////
+static bool IsIDETypenamePlace(int iForm)
+{
+	return (iForm & 1) != 0;
+}
+
+
+static size GetIDETypePlaceLength(SIDETemplateExtraction* psExtraction, int iForm)
+{
+	return psExtraction->szType.Length() + (size)(iForm >> 1);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Where a range of a file names the type, in the file's text and in
-// order; with each, whether typename must go before it there (a type of
-// its own is named through it: "CGauge::SMark" is "typename M::SMark").
+// order, from the namespaces it is written with ("Geometry::CPoint");
+// with each, its form: whether typename must go before it there (a type
+// of its own is named through it: "CGauge::SMark" is "typename M::SMark")
+// and its qualifier's length (IsIDETypenamePlace, GetIDETypePlaceLength).
 // A type of the solution's is found by the index; one of the language's
 // own by its word, where it is the whole of a type ("int", not "unsigned
 // int").
@@ -221,6 +242,9 @@ void CIDETemplateParameter::FindTypePlaces(SIDETemplateExtraction* psExtraction,
 	int32				iLast;
 	int					iStart;
 	int					iTypename;
+	int32				iQualifier;
+	size				uiName;
+	size				uiPlace;
 	uint8				uiKind;
 	bool				bPart;
 
@@ -247,8 +271,15 @@ void CIDETemplateParameter::FindTypePlaces(SIDETemplateExtraction* psExtraction,
 				iTypename = 1;
 			}
 			szKey.Kill();
-			paiStarts->Add((int)FindIDETextOffset(szText, psLocation->iLine, psLocation->iColumn));
-			paiTypenames->Add(iTypename);
+			uiName = FindIDETextOffset(szText, psLocation->iLine, psLocation->iColumn);
+			uiPlace = uiName;
+			iQualifier = (iToken != -1) ? mpcContent->GetMoveNamespace()->FindQualifier(pcUnit, iToken) : -1;
+			if ((iQualifier >= 0) && (iQualifier < iToken) && pcUnit->GetTokensRange(iQualifier, iQualifier, &sToken))
+			{
+				uiPlace = FindIDETextOffset(szText, sToken.iLine, sToken.iColumn);
+			}
+			paiStarts->Add((int)uiPlace);
+			paiTypenames->Add(iTypename | (int)((uiName - uiPlace) << 1));
 		}
 		KillIDELocations(&asLocations);
 	}
@@ -310,10 +341,35 @@ void CIDETemplateParameter::AppendReplaced(SIDETemplateExtraction* psExtraction,
 			continue;
 		}
 		pszDest->AppendSubString(szText, uiAt, uiPlace);
-		pszDest->Append(paiTypenames->GetValue(i) ? "typename " : "")->Append(szName);
-		uiAt = uiPlace + psExtraction->szType.Length();
+		pszDest->Append(IsIDETypenamePlace(paiTypenames->GetValue(i)) ? "typename " : "")->Append(szName);
+		uiAt = uiPlace + GetIDETypePlaceLength(psExtraction, paiTypenames->GetValue(i));
 	}
 	pszDest->AppendSubString(szText, uiAt, uiEnd);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether the function is named somewhere other than in a call or a
+// using-declaration (which names a function template as well).
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDETemplateParameter::HasOtherUse(SIDESignature* psSignature)
+{
+	CIDEFileEdits	cFiles;
+	size			uiStart;
+	size			uiEnd;
+	size			i;
+	bool			bOther;
+
+	cFiles.Init(mpcContent);
+	bOther = false;
+	for (i = 0; !bOther && (i < psSignature->asOtherUses.NumElements()); i++)
+	{
+		bOther = !mpcContent->GetMoveNamespace()->FindUsingDeclaration(psSignature->asOtherUses.Get(i), &cFiles, &uiStart, &uiEnd);
+	}
+	cFiles.Kill();
+	return bOther;
 }
 
 
@@ -460,7 +516,7 @@ bool CIDETemplateParameter::FindExtraction(SIDETemplateExtraction* psDest)
 	{
 		Refuse(psDest, "its function is virtual, or a template's body calls it with other classes' functions: a virtual function can't be a template");
 	}
-	else if (psDest->sSignature.asOtherUses.NumElements() > 0)
+	else if (HasOtherUse(&psDest->sSignature))
 	{
 		Refuse(psDest, "its function is named without being called");
 	}
@@ -580,12 +636,19 @@ bool CIDETemplateParameter::Extract(SIDETemplateExtraction* psExtraction, const 
 	CChars				szClassKey;
 	CChars				szMessage;
 	CChars				szArgument;
+	CChars				szPiece;
+	CChars				szNamespace;
+	CChars				szWhyNot;
+	SIDENamespaceSite	sHeaderSite;
+	SIDENamespaceSite	sDefinitionSite;
 	char*				szText;
 	size				uiStart;
 	size				uiEnd;
 	size				uiAllStart;
 	size				uiAllEnd;
 	size				uiLine;
+	size				uiStrip;
+	bool				bInBlocks;
 	size				uiCalls;
 	size				uiBefore;
 	size				i;
@@ -627,6 +690,15 @@ bool CIDETemplateParameter::Extract(SIDETemplateExtraction* psExtraction, const 
 	bResult = true;
 	szMoved.Init();
 	szBanner.Init();
+	szWhyNot.Init();
+	sHeaderSite.Init();
+	sDefinitionSite.Init();
+	szNamespace.Init();
+	GetIDESymbolScope(psExtraction->sSignature.szKey.Text(), &szNamespace);
+	bInBlocks = bMove && !psHeader->bInClass && !szNamespace.Empty() && mpcContent->GetMoveNamespace()->IsNamespace(szNamespace.Text()) &&
+				mpcContent->GetMoveNamespace()->FindSite(psHeader->szFileName.Text(), psHeader->sAll.iLine, psHeader->sAll.iColumn, false, &cFiles, &sHeaderSite, &szWhyNot) &&
+				!sHeaderSite.bQualified && (sHeaderSite.asBlocks.NumElements() > 0) &&
+				mpcContent->GetMoveNamespace()->FindSite(psDefinition->szFileName.Text(), psDefinition->sAll.iLine, psDefinition->sAll.iColumn, false, &cFiles, &sDefinitionSite, &szWhyNot);
 	if (bMove)
 	{
 		szText = cFiles.GetText(psDefinition->szFileName.Text());
@@ -672,7 +744,7 @@ bool CIDETemplateParameter::Extract(SIDETemplateExtraction* psExtraction, const 
 			FindTypePlaces(psExtraction, &cUnit, psSite->szFileName.Text(), szText, &psSite->sAll, &aiStarts, &aiTypenames);
 			uiAllStart = FindIDETextOffset(szText, psSite->sAll.iLine, psSite->sAll.iColumn);
 			uiAllEnd = FindIDETextOffset(szText, psSite->sAll.iEndLine, psSite->sAll.iEndColumn);
-			if (bMove && (psSite == psHeader) && !psSite->bInClass)
+			if (bMove && (psSite == psHeader) && !psSite->bInClass && !bInBlocks)
 			{
 				//The definition, in the declaration's place, two lines from what is above and below it.
 				for (uiLine = uiAllStart; (uiLine > 0) && (szText[uiLine - 1] != '\n'); uiLine--)
@@ -717,9 +789,9 @@ bool CIDETemplateParameter::Extract(SIDETemplateExtraction* psExtraction, const 
 				szArgument.Kill();
 				for (j = 0; j < aiStarts.NumElements(); j++)
 				{
-					szArgument.Init(aiTypenames.GetValue(j) ? "typename " : "");
+					szArgument.Init(IsIDETypenamePlace(aiTypenames.GetValue(j)) ? "typename " : "");
 					szArgument.Append(szName);
-					cFiles.GetEdits(psSite->szFileName.Text())->Replace((size)aiStarts.GetValue(j), (size)aiStarts.GetValue(j) + psExtraction->szType.Length(), szArgument.Text());
+					cFiles.GetEdits(psSite->szFileName.Text())->Replace((size)aiStarts.GetValue(j), (size)aiStarts.GetValue(j) + GetIDETypePlaceLength(psExtraction, aiTypenames.GetValue(j)), szArgument.Text());
 					szArgument.Kill();
 				}
 			}
@@ -765,7 +837,38 @@ bool CIDETemplateParameter::Extract(SIDETemplateExtraction* psExtraction, const 
 		bResult = bPlaced;
 	}
 
-	//The calls name the type where their arguments don't say it.
+	//A function its namespace's block declares: its definition after the namespace's outermost block there.
+	if (bResult && bInBlocks)
+	{
+		szText = cFiles.GetText(psHeader->szFileName.Text());
+		szArgument.Init("\n\n");
+		if (sDefinitionSite.bQualified || (sDefinitionSite.asBlocks.NumElements() == 0))
+		{
+			szArgument.Append(szBanner)->Append(szTemplate)->Append(szMoved)->Append('\n');
+		}
+		else
+		{
+			szPiece.Init(szBanner);
+			szPiece.Append(szTemplate)->Append(szMoved)->Append('\n');
+			for (uiLine = FindIDETextOffset(cFiles.GetText(psDefinition->szFileName.Text()), psDefinition->sAll.iLine, 0), uiStrip = 0;
+				 (cFiles.GetText(psDefinition->szFileName.Text())[uiLine + uiStrip] == '\t') || (cFiles.GetText(psDefinition->szFileName.Text())[uiLine + uiStrip] == ' '); uiStrip++)
+			{
+			}
+			mpcContent->GetMoveNamespace()->AppendBlockLines(szNamespace.Text(), 0, "\t", 0, true, &szArgument);
+			mpcContent->GetMoveNamespace()->AppendReindented(szPiece.Text(), uiStrip, sDefinitionSite.asBlocks.NumElements(), &szArgument);
+			mpcContent->GetMoveNamespace()->AppendBlockLines(szNamespace.Text(), 0, "\t", 0, false, &szArgument);
+			szPiece.Kill();
+		}
+		uiEnd = sHeaderSite.asBlocks.Get(0)->uiEnd;
+		if ((uiEnd > 0) && (szText[uiEnd - 1] != '\n'))
+		{
+			szArgument.Insert(0, "\n");
+		}
+		cFiles.GetEdits(psHeader->szFileName.Text())->Insert(uiEnd, szArgument.Text());
+		szArgument.Kill();
+	}
+
+	//The calls name the type where their arguments don't say it, with its namespaces.
 	uiCalls = 0;
 	for (i = 0; bResult && !psExtraction->bDeduced && (i < psExtraction->sSignature.apsCalls.NumElements()); i++)
 	{
@@ -774,7 +877,15 @@ bool CIDETemplateParameter::Extract(SIDETemplateExtraction* psExtraction, const 
 		if (szText)
 		{
 			szArgument.Init("<");
-			szArgument.Append(psExtraction->szType)->Append('>');
+			if (psExtraction->szTypeKey.Contains("::"))
+			{
+				GetIDEScopedName(psExtraction->szTypeKey.Text(), &szArgument);
+			}
+			else
+			{
+				szArgument.Append(psExtraction->szType);
+			}
+			szArgument.Append('>');
 			cFiles.GetEdits(psCall->szFileName.Text())->Insert(FindIDETextOffset(szText, psCall->iLine, psCall->iColumn) + psExtraction->sSignature.szOldName.Length(), szArgument.Text());
 			szArgument.Kill();
 			uiCalls++;
@@ -814,11 +925,16 @@ bool CIDETemplateParameter::Extract(SIDETemplateExtraction* psExtraction, const 
 		mpcContent->ShowStatus(szMessage.Text());
 	}
 	szMessage.Kill();
+	szNamespace.Kill();
+	sDefinitionSite.Kill();
+	sHeaderSite.Kill();
+	szWhyNot.Kill();
 	szBanner.Kill();
 	szMoved.Kill();
 	cFiles.Kill();
 	szClassKey.Kill();
 	szTemplate.Kill();
+	mpcContent->GetMoveNamespace()->KillUnits();
 	return bResult;
 }
 
@@ -1052,8 +1168,8 @@ void CIDETemplateParameter::AppendClassText(SIDETemplateExtraction* psExtraction
 		else if (uiNext == uiType)
 		{
 			pszDest->AppendSubString(szText, uiAt, uiType);
-			pszDest->Append(aiTypenames.GetValue(i) ? "typename " : "")->Append(szName);
-			uiAt = uiType + psExtraction->szType.Length();
+			pszDest->Append(IsIDETypenamePlace(aiTypenames.GetValue(i)) ? "typename " : "")->Append(szName);
+			uiAt = uiType + GetIDETypePlaceLength(psExtraction, aiTypenames.GetValue(i));
 		}
 		else
 		{

@@ -162,18 +162,20 @@ public:
 	bool	FindBlockIn(const char* szFileName, const char* szNamespace, CIDEFileEdits* pcFiles, SIDENamespaceBlock* psDest);
 	void	WidenToEmptyBlocks(SIDENamespaceSite* psSite, const char* szText, size* puiStart, size* puiEnd);
 	void	AppendBlockLines(const char* szNamespace, size uiFrom, const char* szIndent, size uiDepth, bool bOpen, CChars* pszDest);
+	void	AppendQualifier(const char* szFrom, const char* szTo, CChars* pszDest);
+	int32	FindQualifier(CIDERefactorUnit* pcUnit, int32 iName);
+	void	AppendReindented(const char* szText, size uiStrip, size uiDepth, CChars* pszDest);
+	bool	FindUsingDeclaration(SIDELocation* psUse, CIDEFileEdits* pcFiles, size* puiStart, size* puiEnd);
 
 protected:
 	CIDERefactorUnit*	GetUnit(const char* szFileName);
 	void				FindBlocks(CIDERefactorUnit* pcUnit, const char* szText, CCPPSyntax* pcNode, CArrayIDENamespaceBlocks* pasDest, bool* pbUnnamed);
 	void				FindScopeAt(CIDERefactorUnit* pcUnit, const char* szText, int32 iToken, CChars* pszDest);
 	void				NamespaceOf(const char* szKey, CChars* pszDest);
-	int32				FindQualifier(CIDERefactorUnit* pcUnit, int32 iName);
 	bool				HasUsingDirective(CIDERefactorUnit* pcUnit, int32 iBefore, const char* szNamespace);
 	void				FindUsingDirectives(CIDERefactorUnit* pcUnit, int32 iBefore, CArrayChars* paszDest);
 	void				AppendShortestQualifier(CIDERefactorUnit* pcUnit, int32 iName, const char* szFrom, const char* szTo, CChars* pszDest);
 	size				FindNeighbourBlock(const char* szText, size uiStart, size uiEnd, CArrayChars* paszNew, size uiShared);
-	void				AppendQualifier(const char* szFrom, const char* szTo, CChars* pszDest);
 	size				FindIndent(const char* szText, size uiLine);
 	void				MoveSite(SIDENamespaceSite* psSite, const char* szOld, const char* szNew, CIDEFileEdits* pcFiles, CArrayIDENamespaceEdits* pasDest);
 	void				QualifyInside(SIDENamespaceMove* psMove, SIDENamespaceSite* psSite, const char* szNew, CIDEFileEdits* pcFiles, CArrayIDENamespaceEdits* pasDest);

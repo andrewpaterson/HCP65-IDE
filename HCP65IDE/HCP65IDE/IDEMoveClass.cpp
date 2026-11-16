@@ -2336,43 +2336,6 @@ static void TrimIDEBlockEdges(const char* szText, size* puiStart, size* puiEnd)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// szText's lines without up to uiStrip spaces or tabs before each, and
-// uiDepth tabs before each that isn't blank.
-//
-//////////////////////////////////////////////////////////////////////////
-static void AppendIDEReindented(const char* szText, size uiStrip, size uiDepth, CChars* pszDest)
-{
-	size	uiLine;
-	size	uiAt;
-	size	uiEnd;
-	size	i;
-
-	for (uiLine = 0; szText[uiLine] != '\0'; uiLine = uiEnd)
-	{
-		for (uiEnd = uiLine; (szText[uiEnd] != '\0') && (szText[uiEnd] != '\n'); uiEnd++)
-		{
-		}
-		if (szText[uiEnd] == '\n')
-		{
-			uiEnd++;
-		}
-		for (uiAt = uiLine; (uiAt < uiLine + uiStrip) && ((szText[uiAt] == '\t') || (szText[uiAt] == ' ')); uiAt++)
-		{
-		}
-		if ((szText[uiAt] != '\n') && (szText[uiAt] != '\r') && (szText[uiAt] != '\0'))
-		{
-			for (i = 0; i < uiDepth; i++)
-			{
-				pszDest->Append('\t');
-			}
-		}
-		pszDest->AppendSubString(szText, uiAt, uiEnd);
-	}
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
 // The function or variable moved to a header (and its source file): see
 // the class's comment.  One undo across the files.
 //
@@ -2623,7 +2586,7 @@ void CIDEMoveClass::AppendNamespacedBlock(const char* szNamespace, const char* s
 			pszDest->Append(IsIDEMoveHeader(szTarget) ? "\n" : "\n\n");
 		}
 		mpcContent->GetMoveNamespace()->AppendBlockLines(szNamespace, uiFound, "\t", uiFound, true, pszDest);
-		AppendIDEReindented(szMoved.Text(), uiStrip, uiDepth, pszDest);
+		mpcContent->GetMoveNamespace()->AppendReindented(szMoved.Text(), uiStrip, uiDepth, pszDest);
 		mpcContent->GetMoveNamespace()->AppendBlockLines(szNamespace, uiFound, "\t", uiFound, false, pszDest);
 	}
 	else
@@ -2631,7 +2594,7 @@ void CIDEMoveClass::AppendNamespacedBlock(const char* szNamespace, const char* s
 		*puiAt = FindEndPlace(szTargetText);
 		pszDest->Append(((*puiAt > 0) && (szTargetText[*puiAt - 1] != '\n')) ? "\n\n\n" : "\n\n");
 		mpcContent->GetMoveNamespace()->AppendBlockLines(szNamespace, 0, "\t", 0, true, pszDest);
-		AppendIDEReindented(szMoved.Text(), uiStrip, uiDepth, pszDest);
+		mpcContent->GetMoveNamespace()->AppendReindented(szMoved.Text(), uiStrip, uiDepth, pszDest);
 		mpcContent->GetMoveNamespace()->AppendBlockLines(szNamespace, 0, "\t", 0, false, pszDest);
 	}
 	sBlock.Kill();

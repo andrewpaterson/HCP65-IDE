@@ -111,6 +111,7 @@ public:
 	void	QueueExtract(void);
 	bool	ShowExtract(void);
 	bool	FindExtraction(SIDETemplateExtraction* psDest);
+	bool	HasOtherUse(SIDESignature* psSignature);
 	const char*	GetProblem(SIDETemplateExtraction* psExtraction, const char* szName);
 	bool	Extract(SIDETemplateExtraction* psExtraction, const char* szName, CChars* pszStatus = NULL);
 	const char*	GetClassProblem(SIDETemplateExtraction* psExtraction, const char* szName, const char* szTemplateName);

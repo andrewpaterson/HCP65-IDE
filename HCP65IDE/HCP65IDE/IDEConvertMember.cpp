@@ -28,6 +28,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDESafeDelete.h"
 #include "IDEMoveMembers.h"
 #include "IDEMemberQualifier.h"
+#include "IDEMoveNamespace.h"
 #include "IDEConvertMember.h"
 #include "IDEContextActions.h"
 
@@ -345,6 +346,7 @@ bool CIDEConvertMember::ToMemberCall(SIDESignature* psSignature, SIDESignatureCa
 	size				uiEnd;
 	size				uiNext;
 	int32				iToken;
+	int32				iQualifier;
 	int32				iFirst;
 	int32				iLast;
 	bool				bResult;
@@ -360,13 +362,14 @@ bool CIDEConvertMember::ToMemberCall(SIDESignature* psSignature, SIDESignatureCa
 	cUnit.Init();
 	bResult = szText && cUnit.Parse(mpcContent->GetCodeModel(), &mpcContent->GetFindInFiles(), psCall->szFileName.Text(), false);
 	iToken = bResult ? cUnit.FindTokenAt(psCall->iLine, psCall->iColumn) : -1;
-	if ((iToken == -1) || cUnit.IsToken(iToken - 1, "::") || !cUnit.FindTokensIn(psRange->iLine, psRange->iColumn, psRange->iEndLine, psRange->iEndColumn, &iFirst, &iLast) ||
-		!TokenOffsets(&cUnit, szText, iFirst, iLast, &uiStart, &uiEnd))
+	//Its namespace before its name (Geometry::Area) goes too: a member is named through its object.
+	iQualifier = (iToken >= 0) ? mpcContent->GetMoveNamespace()->FindQualifier(&cUnit, iToken) : -1;
+	if ((iToken == -1) || !cUnit.FindTokensIn(psRange->iLine, psRange->iColumn, psRange->iEndLine, psRange->iEndColumn, &iFirst, &iLast) ||
+		!TokenOffsets(&cUnit, szText, iFirst, iLast, &uiStart, &uiEnd) || !TokenOffsets(&cUnit, szText, iQualifier, iQualifier, &uiName, &uiNext))
 	{
 		cUnit.Kill();
-		return Refuse("a call of it can't be read (a macro makes it, or it names it with ::)", psCall->szFileName.Text(), psCall->iLine);
+		return Refuse("a call of it can't be read (a macro makes it)", psCall->szFileName.Text(), psCall->iLine);
 	}
-	uiName = Offset(szText, psCall->iLine, psCall->iColumn);
 	pcNode = cUnit.FindNodeOfTokens(iFirst, iLast);
 	pcObject = pcNode;
 	bArrow = bPointer;
@@ -417,6 +420,7 @@ bool CIDEConvertMember::ToMember(SIDESignature* psSignature, CIDEFileEdits* pcFi
 	SCPPSyntaxRange			sType;
 	CChars					szScope;
 	CChars					szClassKey;
+	CChars					szClassScope;
 	CChars					szKey;
 	CChars					szLine;
 	CChars					szReturn;
@@ -425,6 +429,8 @@ bool CIDEConvertMember::ToMember(SIDESignature* psSignature, CIDEFileEdits* pcFi
 	size					uiEnd;
 	size					uiDefinitions;
 	size					i;
+	size					j;
+	bool					bQualified;
 	int32					iFirst;
 	int32					iLast;
 	int32					iToken;
@@ -436,11 +442,11 @@ bool CIDEConvertMember::ToMember(SIDESignature* psSignature, CIDEFileEdits* pcFi
 	pcModel = mpcContent->GetCodeModel();
 	szScope.Init();
 	GetIDESymbolScope(psSignature->szKey.Text(), &szScope);
-	bResult = szScope.Empty();
-	szScope.Kill();
+	bResult = szScope.Empty() || mpcContent->GetMoveNamespace()->IsNamespace(szScope.Text());
 	if (!bResult)
 	{
-		return Refuse("it is in a class or a namespace already");
+		szScope.Kill();
+		return Refuse("it is in a class already");
 	}
 	psDefinition = NULL;
 	psDeclared = NULL;
@@ -548,12 +554,39 @@ bool CIDEConvertMember::ToMember(SIDESignature* psSignature, CIDEFileEdits* pcFi
 			pcFiles->GetEdits(psSite->szFileName.Text())->Replace(uiStart, uiEnd, "");
 			continue;
 		}
-		//Its definition: its class before its name, its first parameter out, const if what it pointed to was.
+		//Its definition: its class before its name (with the class's namespaces from where the definition is: all of
+		//them where its name is written with its namespace, the ones inside its namespace's block where it isn't),
+		//its first parameter out, const if what it pointed to was.
+		uiStart = Offset(szText, psSite->sName.iLine, psSite->sName.iColumn);
+		uiEnd = Offset(szText, psSite->sName.iEndLine, psSite->sName.iEndColumn);
+		bQualified = false;
+		for (j = uiStart; j + 1 < uiEnd; j++)
+		{
+			bQualified |= (szText[j] == ':') && (szText[j + 1] == ':');
+		}
+		szClassScope.Init();
+		GetIDESymbolScope(szClassKey.Text(), &szClassScope);
 		szLine.Init();
-		GetIDESymbolName(szClassKey.Text(), &szLine);
-		szLine.Append("::");
-		pcFiles->GetEdits(psSite->szFileName.Text())->Insert(Offset(szText, psSite->sName.iLine, psSite->sName.iColumn), szLine.Text());
+		if (bQualified)
+		{
+			GetIDEScopedName(szClassKey.Text(), &szLine);
+		}
+		else if (szScope.Empty() || szClassScope.Equals(szScope) || (szClassScope.StartsWith(szScope.Text()) && (szClassScope.Text()[szScope.Length()] == ':')))
+		{
+			mpcContent->GetMoveNamespace()->AppendQualifier(szScope.Text(), szClassScope.Text(), &szLine);
+			GetIDESymbolName(szClassKey.Text(), &szLine);
+		}
+		else
+		{
+			szLine.Kill();
+			szClassScope.Kill();
+			bResult = Refuse("it is defined in a block of its namespace, which its class isn't in: Move to Namespace can move it to its class's first", psSite->szFileName.Text(), psSite->iLine);
+			break;
+		}
+		szLine.Append("::")->Append(psSignature->szOldName);
+		pcFiles->GetEdits(psSite->szFileName.Text())->Replace(uiStart, uiEnd, szLine.Text());
 		szLine.Kill();
+		szClassScope.Kill();
 		uiStart = Offset(szText, psSite->asParameters.Get(0)->sAll.iLine, psSite->asParameters.Get(0)->sAll.iColumn);
 		if (psSite->asParameters.NumElements() > 1)
 		{
@@ -581,14 +614,23 @@ bool CIDEConvertMember::ToMember(SIDESignature* psSignature, CIDEFileEdits* pcFi
 		bResult = ToMemberCall(psSignature, psSignature->apsCalls.GetPtr(i), bPointer, pcFiles);
 		(*puiCalls)++;
 	}
+	for (i = 0; bResult && (i < psSignature->asOtherUses.NumElements()); i++)
+	{
+		//A using-declaration of it (the only use that isn't a call it can have): a member isn't named so.
+		if (mpcContent->GetMoveNamespace()->FindUsingDeclaration(psSignature->asOtherUses.Get(i), pcFiles, &uiStart, &uiEnd))
+		{
+			pcFiles->GetEdits(psSignature->asOtherUses.Get(i)->szFileName.Text())->Replace(uiStart, uiEnd, "");
+		}
+	}
 	if (bResult)
 	{
 		pszDone->Append("Converted ")->Append(psSignature->szName)->Append(" to the member function ");
-		GetIDESymbolName(szClassKey.Text(), &szKey);
+		GetIDEScopedName(szClassKey.Text(), &szKey);
 		pszDone->Append(szKey)->Append("::")->Append(psSignature->szOldName);
 	}
 	szKey.Kill();
 	szClassKey.Kill();
+	szScope.Kill();
 	cUnit.Kill();
 	return bResult;
 }
@@ -804,12 +846,14 @@ bool CIDEConvertMember::ToFunction(SIDESignature* psSignature, CIDEFileEdits* pc
 	CChars				szLine;
 	CChars				szReturn;
 	CChars				szRest;
+	CChars				szIndent;
 	const char*			szConst;
 	char*				szText;
 	size				uiStart;
 	size				uiEnd;
 	size				uiAt;
 	size				i;
+	size				j;
 	int32				iToken;
 	uint8				uiKind;
 	bool				bConst;
@@ -931,6 +975,15 @@ bool CIDEConvertMember::ToFunction(SIDESignature* psSignature, CIDEFileEdits* pc
 					for (; (szText[uiEnd] != '\0') && (szText[uiEnd] != '\n'); uiEnd++)
 					{
 					}
+					//At the class's indent (a tab in, in a namespace's block).
+					uiStart = Offset(szText, sClass.iLine, 0);
+					szIndent.Init();
+					for (j = uiStart; (szText[j] == '\t') || (szText[j] == ' '); j++)
+					{
+						szIndent.Append(szText[j]);
+					}
+					szLine.Insert(2, szIndent.Text());
+					szIndent.Kill();
 					pcFiles->GetEdits(psSite->szFileName.Text())->Insert((szText[uiEnd] == '\n') ? uiEnd + 1 : uiEnd, szLine.Text());
 					bResult = true;
 				}
@@ -1006,6 +1059,8 @@ bool CIDEConvertMember::Convert(bool bToMember, CChars* pszStatus)
 	size				uiCalls;
 	size				uiBefore;
 	size				uiLabels;
+	size				uiStart;
+	size				uiEnd;
 	size				i;
 	bool				bResult;
 	bool				bFound;
@@ -1030,9 +1085,15 @@ bool CIDEConvertMember::Convert(bool bToMember, CChars* pszStatus)
 	{
 		bResult = Refuse(sSignature.szWhyNot.Text());
 	}
-	else if (sSignature.asOtherUses.NumElements() > 0)
+	else
 	{
-		bResult = Refuse("it is named without being called: a pointer to it wouldn't fit it", sSignature.asOtherUses.Get(0)->szFileName.Text(), sSignature.asOtherUses.Get(0)->iLine);
+		for (i = 0; bResult && (i < sSignature.asOtherUses.NumElements()); i++)
+		{
+			if (!bToMember || !mpcContent->GetMoveNamespace()->FindUsingDeclaration(sSignature.asOtherUses.Get(i), &cFiles, &uiStart, &uiEnd))
+			{
+				bResult = Refuse("it is named without being called: a pointer to it wouldn't fit it", sSignature.asOtherUses.Get(i)->szFileName.Text(), sSignature.asOtherUses.Get(i)->iLine);
+			}
+		}
 	}
 	if (bResult)
 	{

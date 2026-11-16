@@ -302,7 +302,7 @@ IntelliJ has none of these for Java.
      with it where a template's body calls it (T2).
  19. A function to a member function and back: its first parameter is this.
      Done 2026-11-15 (IDEConvertMember.h says what it does): Convert Function to Member Function and Convert
-     Member Function to Function.  Left: a class template's member; a function in a namespace; the files that
+     Member Function to Function.  Left: a class template's member; the files that
      call it aren't given the class's #include if they only had its forward declaration (the check refuses, if
      the checker sees it: question 52).
  20. Extract template parameter: a type used in a function or class becomes a parameter.  A typedef of the
@@ -314,7 +314,7 @@ IntelliJ has none of these for Java.
      becomes a template of another name, its members' definitions come to its header, and a typedef of it with
      the type it had is its old name.  The inverse done too: Remove Template Parameter, for a class template's
      parameter that every use gives one argument.  Still to do: a function or a class that is a template already
-     (another parameter added), a type written with its namespace, a class declared ahead of its definition
+     (another parameter added), a class declared ahead of its definition
      (its forward declarations would have to become the template's and the typedef), the inverse for a function
      template (its arguments aren't written at its calls: the compiler's instances would have to say them), and
      a template made a class again by it has its members inline in its header, not back in a source file.
@@ -370,8 +370,21 @@ IntelliJ has none of these for Java.
      block's brace with it.  Found doing g: a variable's definition (declared without extern) was taken for a
      declaration, so it went to the header; it goes to the source file now.  Checks move-namespace-c-linkage,
      -completion, move-function-namespace, -nested and -variable; the move-namespace checks look at
-     Checks/Input/Namespaces/ShapesW65C816.asm.  Left: h, moving a namespace itself, and anything in an unnamed or
-     inline namespace (refused, with why).
+     Checks/Input/Namespaces/ShapesW65C816.asm.
+     h built 2026-11-16.  Convert Function to Member Function takes a function in a namespace: a definition written
+     with its namespace is named with the class's (Geometry::CPoint::Area), one in a block of its namespace with the
+     class's name from there; a call loses its qualifier with its first argument; a using-declaration of it goes.  A
+     definition in a block of a namespace its class isn't in is refused (Move to Namespace first).  Extract Template
+     Parameter: a type written with its namespace (Geometry::CPoint) is the parameter as a whole; a using-declaration
+     of the function doesn't stop it; a function its namespace's block declares keeps the declaration there (the
+     template's) and has its definition after the namespace's outermost block, as it is written or in blocks of its
+     own; a call that names the type names it with its namespaces.  Move to Namespace takes a variable template
+     (CPPSK_VariableTemplate, new in CppCompilerLib).  Convert Member Function to Function of a class in a namespace
+     declares the function after the class at the class's indent (it was put at the line's start).  Checks
+     member-from-function-namespace, -other-namespace, member-to-function-namespace, template-parameter-namespace,
+     -qualified.
+     Left: moving a namespace itself, and anything in an unnamed or inline namespace (refused, with why); Move to File
+     of a variable template.
  22. An enum to an enum class, every use of an enumerator qualified.
  23. Assembly.  Rename already changes hand written .asm by the compiler's labels; Change Signature and Move need
      the same rules where they change a label.  A template instance's labels have its arguments in them.
