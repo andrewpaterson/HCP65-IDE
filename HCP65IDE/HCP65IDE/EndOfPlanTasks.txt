@@ -60,6 +60,10 @@ The user's answers (2026-11-16):
   4. Literals must match by default.  A check box in the Find Duplicates dialog, remembered in Settings, lets
      literals of the same kind differ (number with number, string with string), as IntelliJ's anonymize literals.
 
+Done 2026-11-16 (f8289bc; website 273e08e in HCP65): CIDEDuplicates (IDEDuplicates.h/.cpp), the Duplicates tool
+window, Settings' Find Duplicates page (IDEDuplicatesPage), and CIDEDuplicateMatcher (IDEDuplicateMatcher.h/.cpp),
+the comparison Extract Method's duplicates now use too.  Checks find-duplicates-* (Input/FindDuplicates).
+
 
 b. Every getter: const, and where it is written
 -----------------------------------------------
@@ -81,6 +85,15 @@ was made and reverted (aliasing; it exposed a write-through bug, since fixed).  
 only: don't change what a getter returns.  A getter that returns a non-const pointer or reference into the object
 (&mcThing) can't simply be const: list those for the user instead.  Do it a library at a time, build and run its
 tests (the 23 suites and build-only projects in the memory's test sweep) after each, and commit each.
+
+Started 2026-11-16.  Found: the code has almost no const member functions (28), so about 1,376 getters in the four
+repositories (CppCompilerLib skipped: the other session does its own at the end of its plan).  Making them const is
+decided by the compiler a library at a time, from BaseLib up (a getter above is held back by BaseLib's: CChars's
+Empty and Length, the arrays' NumElements): const added to every non-virtual getter, the library and what
+instantiates its templates built (Debug x64 while working), and each getter an error is in or names (a member
+callback's type) given its const back, until the build is clean.  What couldn't be const is listed for the user
+with its first error; most hand out a writable pointer into their object (CChars::Text's char*, &mcThing), which
+this task doesn't change.  Virtual getters (a family across libraries) come after, in one pass.
 
 
 c. G++'s -Wsuggest-override turned on, and what it names fixed
