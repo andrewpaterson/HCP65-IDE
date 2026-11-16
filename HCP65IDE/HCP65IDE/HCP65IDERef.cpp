@@ -21,6 +21,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdlib.h>
 #include "BaseLib/GlobalMemory.h"
 #include "BaseLib/StringHelper.h"
+#include "StandardLib/Objects.h"
 #include "WinRefLib/WinRefWindowFactory.h"
 #include "WinRefLib/WinRefInput.h"
 #include "IDEMain.h"
@@ -96,18 +97,21 @@ int main(int argc, char* argv[])
 	}
 
 	{
-		CWinRefWindowFactory	cNativeFactory;
-		CWinRefInput			cRefInput;
+		Ptr<CWinRefWindowFactory>	pNativeFactory;
+		CWinRefInput				cRefInput;
 
-		cNativeFactory.Init(&gcMemoryAllocator, IDE_REF_WINDOW_WIDTH, IDE_REF_WINDOW_HEIGHT, getenv("HCP65_IDE_FRAMES"));
-		bResult = SetUpReferenceScreen(&cNativeFactory);
+		//Rooted while the IDE runs.  Its windows hold it too, so it's freed after the last of them.
+		pNativeFactory = OMalloc<CWinRefWindowFactory>(&gcMemoryAllocator, IDE_REF_WINDOW_WIDTH, IDE_REF_WINDOW_HEIGHT, getenv("HCP65_IDE_FRAMES"));
+		ORoot()->Add(pNativeFactory);
+		bResult = SetUpReferenceScreen(&pNativeFactory);
 		if (bResult)
 		{
 			cRefInput.Init();
-			bResult = RunIDE(&cNativeFactory, &cRefInput, &aszSolutions);
+			bResult = RunIDE(&pNativeFactory, &cRefInput, &aszSolutions);
 			cRefInput.Kill();
 		}
-		cNativeFactory.Kill();
+		ORoot()->Remove(pNativeFactory);
+		pNativeFactory = NULL;
 	}
 
 	aszSolutions.Kill();

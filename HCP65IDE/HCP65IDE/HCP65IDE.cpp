@@ -21,6 +21,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include <windows.h>
 #include "BaseLib/LeakDetector.h"
 #include "BaseLib/GlobalMemory.h"
+#include "StandardLib/Objects.h"
 #include "WinGdiLib/WinGDIWindowFactory.h"
 #include "WinInputLib/WinInput.h"
 #include "IDEMain.h"
@@ -89,24 +90,27 @@ int PASCAL WinMain(HINSTANCE hInstance,	HINSTANCE hPrevInstance, LPTSTR lpCmdLin
 	SplitIDECommandLine((lpCmdLine != NULL) ? lpCmdLine : "", &aszSolutions);
 
 	{
-		CWinGDIWindowFactory	cNativeFactory;
-		CWinInput				cWinInput;
+		Ptr<CWinGDIWindowFactory>	pNativeFactory;
+		CWinInput					cWinInput;
 
-		cNativeFactory.Init(&gcMemoryAllocator,
+		//Rooted while the IDE runs.  Its windows hold it too, so it's freed after the last of them.
+		pNativeFactory = OMalloc<CWinGDIWindowFactory>(&gcMemoryAllocator,
 			hInstance,
 			hPrevInstance,
 			nCmdShow,
 			"HCP65IDE");
+		ORoot()->Add(pNativeFactory);
 
 		//The app's input reads the devices from the XML, then adds these.
 		cWinInput.Init(NULL, false);
-		cNativeFactory.SetRawInput(WinRawInputCallback, cWinInput.GetRaw());
+		pNativeFactory->SetRawInput(WinRawInputCallback, cWinInput.GetRaw());
 
-		bResult = RunIDE(&cNativeFactory, &cWinInput, &aszSolutions);
+		bResult = RunIDE(&pNativeFactory, &cWinInput, &aszSolutions);
 
-		cNativeFactory.SetRawInput(NULL, NULL);
+		pNativeFactory->SetRawInput(NULL, NULL);
 		cWinInput.Kill();
-		cNativeFactory.Kill();
+		ORoot()->Remove(pNativeFactory);
+		pNativeFactory = NULL;
 	}
 
 	aszSolutions.Kill();

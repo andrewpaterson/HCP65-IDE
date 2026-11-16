@@ -19,6 +19,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 ** ------------------------------------------------------------------------ **/
 #include "BaseLib/GlobalMemory.h"
+#include "StandardLib/Objects.h"
 #include "X11Lib/X11WindowFactory.h"
 #include "X11Lib/X11Input.h"
 #include "IDEMain.h"
@@ -50,22 +51,26 @@ int main(int argc, char* argv[])
 	}
 
 	{
-		CX11WindowFactory	cNativeFactory;
-		CX11Input			cX11Input;
+		Ptr<CX11WindowFactory>	pNativeFactory;
+		CX11Input				cX11Input;
 
-		bResult = cNativeFactory.Init(&gcMemoryAllocator, NULL);
+		//Rooted while the IDE runs.  Its windows hold it too, so it's freed after the last of them.
+		pNativeFactory = OMalloc<CX11WindowFactory>(&gcMemoryAllocator, (const char*)NULL);
+		ORoot()->Add(pNativeFactory);
+		bResult = pNativeFactory->IsOpen();
 		if (bResult)
 		{
 			//The app's input reads the devices from the XML, then adds these.
 			cX11Input.Init();
-			cNativeFactory.SetInput(&cX11Input);
+			pNativeFactory->SetInput(&cX11Input);
 
-			bResult = RunIDE(&cNativeFactory, &cX11Input, &aszSolutions);
+			bResult = RunIDE(&pNativeFactory, &cX11Input, &aszSolutions);
 
-			cNativeFactory.SetInput(NULL);
+			pNativeFactory->SetInput(NULL);
 			cX11Input.Kill();
 		}
-		cNativeFactory.Kill();
+		ORoot()->Remove(pNativeFactory);
+		pNativeFactory = NULL;
 	}
 
 	aszSolutions.Kill();
