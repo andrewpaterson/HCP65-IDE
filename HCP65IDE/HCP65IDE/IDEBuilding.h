@@ -51,7 +51,7 @@ struct SIDEBuildMessage
 typedef CArrayTemplate<SIDEBuildMessage>	CArrayIDEBuildMessages;
 
 
-//Build (Control+Shift+B, or the toolbar's Build): the solutions a build configuration builds, in order, one build
+//Build (Control+Shift+B, or Build, Build): the solutions a build configuration builds, in order, one build
 //step after another while the IDE goes on, the Build tab's output and progress, and the HCP65 listings the last build
 //wrote, shown in the editors' gutters.
 class CIDEBuilding : public CObject, public CIDESteppable
