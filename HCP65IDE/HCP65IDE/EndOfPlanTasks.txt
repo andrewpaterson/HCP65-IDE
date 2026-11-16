@@ -99,6 +99,9 @@ so it is theirs to build or to agree to; raise it with them (and the user) rathe
 under them.  Where it would be turned on: the compiler's options (the HCP65 build's configuration, .hcp65build, and
 hcp65build.exe's command line), and the IDE's build settings show warnings in its Error List.
 
+Done here 2026-11-16: the CppCompilerLib session (gameengine-3c) has taken it and is working on it; the user marked it
+done for this list.
+
 
 f. Every project LGPL
 ---------------------
