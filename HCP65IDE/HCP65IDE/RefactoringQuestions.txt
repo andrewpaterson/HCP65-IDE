@@ -8,61 +8,74 @@ waits on an answer; an answer that differs is a change to make.  Answered ones a
 Open
 ----
 
+None.
+
+
+Answered
+--------
+
  2. HCP65IDERef (Reference|x64, the IDE drawn in memory for the checks) doesn't build on Windows:
     HCP65IDERef.cpp(84) warning C4007 "'main': must be '__cdecl'" is treated as an error.  The checks were run on
     the native Release|x64 IDE instead, as earlier sessions ran them.  Do you want main made __cdecl there (as the
     test projects' mains are), so the checks can run with no window on Windows too?
+    Answered 2026-11-16: make main __cdecl, so the checks can run with no window on Windows.
 
  3. TestCppCompilerLib in Debug stops at TestProject.cpp:249: AddIncludeDirectory("NoSuchDirectory") logs a fatal
     error the test expects, and a Debug build breaks on any logged error.  It isn't mine (the test is from
     2026-11-13) and I left it; the suite was proved in Release|x64.  Should the test silence the logger around
     that line?
+    Answered 2026-11-16: silence the logger around that line.
 
  8. Introduce Variable's suggested names follow the prefixes I see in your code (i, ui, b, f, sz, c, pc, s, ps, e, p,
     pv; CChars is sz; Ptr<> is p) with what the expression's last name says, without its own prefix or a leading
     Get/Is/Has/Find/Calculate/Create/Make/Read.  Tell me any prefix I have wrong or missing (int64? float32 arrays
     "a"?  size as ui?) and I will put it right.
+    Answered 2026-11-16: they are right; no change.
 
 15. Where a new definition goes: after the definition of the function declared before it in the class (so a .cpp
     stays in the class's order), under a comment copied from that one if it says nothing (your banner of slashes),
     two blank lines apart.  If none of the class's functions is defined outside it, at the end of the header's
     .cpp; a class template's member in the header, before its #endif.  Is that where you would put them?
+    Answered 2026-11-16: no change.
 
 32. Introduce Parameter adds the parameter last and makes every call pass the expression itself.  It refuses an
     expression that uses the function's variables, its parameters or its class's members.  IntelliJ would also let
     it replace a parameter that the expression is the only use of: not built.  Wanted?
+    Answered 2026-11-16: build it (a parameter the expression is the only use of can be replaced by the new one).
 
 34. A typedef in a class template is written on the line before the member that first uses it, with no blank line
     after it, and one in a function at the very start of its body.  Is that where you want them?
+    Answered 2026-11-16: a class template's typedefs go together at the top of the class.
 
 38. Ctrl+Alt+N is now "Inline...": a variable or a function, whichever the caret is on (IntelliJ's is the same
     key for both).  For a function a dialog asks: all calls and take the function out, all calls and keep it, or
     this call only.
+    Answered 2026-11-16: no change.
 
 47. A forward declaration made from an #include is written after the #includes, two lines down ("class CGauge;"),
     with any the file has there already.  Optimise #includes does this in .cpp files too, not only in headers.  It
     leaves <> #includes, #includes inside an #if, and a .cpp's #include of its own header alone.  Right?
-
+    Answered 2026-11-16: no change.
 
 60. Move to Namespace (plan item 21, a) is a command of its own, Move to Namespace..., in the Refactor menu and on
     Alt+Enter, with no key: F6's Move dialog is for files.  Or would you rather F6's dialog offered "to a namespace"
     beside "to its own files" (Move Class) and "to another header" (Move to File)?
+    Answered 2026-11-16: a command of its own, as it is.
 
 61. A use outside the new namespace is qualified (New::X) by default; "Add using-declarations" in the dialog gives a
     file one using New::X; instead (plan item 21, c).  Qualifying is the default because it says where the name is
     from, as your code does now; is that the default you want?
+    Answered 2026-11-16: qualify by default, as it is.
 
 62. A block of the new namespace that is made is written as the file's other namespace blocks are, or, in a file
     with none, as Aardvark.cpp writes them: namespace Name, { on the next line, the body a tab in (plan item 21,
     b).  Is that your style for namespaces?
+    Answered 2026-11-16: that style, as it is.
 
 63. A class moved out of a namespace loses argument dependent lookup of that namespace's functions and operators
     that take it (operator+(X, X) in Old).  I warn of them (Problems Detected) and leave them where they are; should
     they be offered to move with it?
-
-
-Answered
---------
+    Answered 2026-11-16: offer to move them: listed in the dialog, ticked, to go to the new namespace with the class.
 
  6. A value parameter of a template as itself has no value, and is 1 where the check needs one: "M maItems[N]" is
     an array of 1 inside the check.  Nothing I have built writes such an array's type; if a refactoring ever would,
