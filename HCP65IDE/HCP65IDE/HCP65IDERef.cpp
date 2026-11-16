@@ -82,7 +82,7 @@ static bool SetUpReferenceScreen(CWinRefWindowFactory* pcFactory)
 // key or move the pointer.
 //
 //////////////////////////////////////////////////////////////////////////
-int main(int argc, char* argv[])
+int __cdecl main(int argc, char* argv[])
 {
 	bool		bResult;
 	CArrayChars	aszSolutions;

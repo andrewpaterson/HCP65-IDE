@@ -19,6 +19,7 @@ Answered
     the native Release|x64 IDE instead, as earlier sessions ran them.  Do you want main made __cdecl there (as the
     test projects' mains are), so the checks can run with no window on Windows too?
     Answered 2026-11-16: make main __cdecl, so the checks can run with no window on Windows.
+    Done: HCP65IDERef's main is __cdecl; Reference|x64 builds, and the checks run on x64/Reference/HCP65IDERef.exe.
 
  3. TestCppCompilerLib in Debug stops at TestProject.cpp:249: AddIncludeDirectory("NoSuchDirectory") logs a fatal
     error the test expects, and a Debug build breaks on any logged error.  It isn't mine (the test is from
