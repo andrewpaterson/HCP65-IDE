@@ -1,0 +1,30 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source">
+      <UniqueIdentifier>{EA3766AB-F966-4A85-9EA7-52CD2B147D4B}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="TemplateStrings.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="TemplateText.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="TemplateValues.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="TemplateStrings.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="TemplateText.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="TemplateValues.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
