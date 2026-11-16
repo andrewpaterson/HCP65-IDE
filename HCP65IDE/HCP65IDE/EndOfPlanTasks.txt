@@ -50,6 +50,16 @@ Questions to ask the user before building: the menu and key (IntelliJ has no def
 is its menu); whether a match must be whole statements or can be part of an expression; how small a duplicate is
 worth listing; whether literals must match.
 
+The user's answers (2026-11-16):
+  1. "Find Duplicates..." on the Edit menu, after Find in Files, on Control+Alt+Shift+D.
+  2. Expressions too, as IntelliJ: a selected expression matches the same expression inside any statement (x * x + y
+     * y is found in d = sqrt(a * a + b * b);), and a run of statements matches a run of statements.
+  3. A selection is searched for whole.  For the function at the caret, copies of its whole body are listed first,
+     then runs of its statements found elsewhere, longest first.  The smallest run listed is a Settings value,
+     defaulting to 3 statements and 20 tokens.
+  4. Literals must match by default.  A check box in the Find Duplicates dialog, remembered in Settings, lets
+     literals of the same kind differ (number with number, string with string), as IntelliJ's anonymize literals.
+
 
 b. Every getter: const, and where it is written
 -----------------------------------------------
