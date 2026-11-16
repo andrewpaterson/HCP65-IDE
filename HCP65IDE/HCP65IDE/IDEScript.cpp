@@ -2557,10 +2557,10 @@ void CIDEScript::RunEditStep(const char* szStep)
 		}
 		aszCandidates.Kill();
 	}
-	else if ((strncmp(szStep, "introducefield:", 15) == 0) || (strncmp(szStep, "introducefieldinit:", 19) == 0) || (strncmp(szStep, "introduceconstant:", 18) == 0) || (strncmp(szStep, "introduceconstantfile:", 22) == 0) || (strncmp(szStep, "introduceparameter:", 19) == 0) || (strcmp(szStep, "introduciblekinds") == 0))
+	else if ((strncmp(szStep, "introducefield:", 15) == 0) || (strncmp(szStep, "introducefieldinit:", 19) == 0) || (strncmp(szStep, "introduceconstant:", 18) == 0) || (strncmp(szStep, "introduceconstantfile:", 22) == 0) || (strncmp(szStep, "introduceparameter:", 19) == 0) || (strncmp(szStep, "introduceparameterkeep:", 23) == 0) || (strcmp(szStep, "introduciblekinds") == 0))
 	{
 		//The selection introduced as a field, a constant or a parameter with a name, for every occurrence of it
-		//("introducefield:miCount"; introducefieldinit: assigned in the class's Init; no name: the one suggested; introduceconstantfile: for every occurrence in the
+		//("introducefield:miCount"; introducefieldinit: assigned in the class's Init; introduceparameterkeep: no parameter removed; no name: the one suggested; introduceconstantfile: for every occurrence in the
 		//file, with how many the function and the file have); or what each kind would be called and why it
 		//can't be one (introduciblekinds).
 		SIDEIntroduction	sIntroduction;
@@ -2595,6 +2595,7 @@ void CIDEScript::RunEditStep(const char* szStep)
 			iKind = (szStep[9] == 'f') ? IDE_INTRODUCE_FIELD : ((szStep[9] == 'c') ? IDE_INTRODUCE_CONSTANT : IDE_INTRODUCE_PARAMETER);
 			szGiven = strchr(szStep, ':') + 1;
 			sIntroduction.bInInit = (strncmp(szStep, "introducefieldinit:", 19) == 0);
+			sIntroduction.bRemoveParameters = (strncmp(szStep, "introduceparameterkeep:", 23) != 0);
 			if (strncmp(szStep, "introduceconstantfile:", 22) == 0)
 			{
 				sIntroduction.bWholeFile = true;

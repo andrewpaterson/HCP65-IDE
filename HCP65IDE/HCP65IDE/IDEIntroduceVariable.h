@@ -85,11 +85,14 @@ struct SIDEIntroduction
 	CChars					szClassKey;			//The class the function is a member of, empty if it is none's: Introduce Field's.
 	bool					bConstant;			//It names no variable and calls nothing: it can be a constant.
 	bool					bUsesLocals;		//It names the function's own variables or parameters,
+	bool					bUsesOtherLocals;	//...variables that aren't its parameters (which a call can't give),
+	CArrayChars				aszParameters;		//...and these parameters' keys (a call gives them: Introduce Parameter),
 	bool					bUsesMembers;		//or members of the function's class (or this): a call of the function can't give it.
 	CArrayChars				aszWarnings;		//What replacing every occurrence could change: shown first, as Problems Detected.
 	CArrayTextRange			asFileOccurrences;	//Every occurrence in the file, the function's among them: Introduce Constant's, if asked.
 	bool					bWholeFile;			//Set by who asks: a constant takes the place of every occurrence in the file.
 	bool					bInInit;			//Set by who asks: a field is assigned at the end of its class's Init, not where it was.
+	bool					bRemoveParameters;	//Set by who asks: a parameter the replaced expression was all the uses of goes.
 
 	void	Init(void);
 	void	Kill(void);
@@ -118,7 +121,11 @@ struct SIDEIntroduction
 //    thing.  Its name is suggested in capitals.
 //  - Introduce Parameter (Ctrl+Alt+P): the expression becomes a parameter of its function, added last by Change
 //    Signature (every declaration, definition and override of it), and every call of the function passes the
-//    expression: so it can't use the function's own variables or parameters, or its class's members.
+//    expression: so it can't use the function's own variables, or its class's members.  It can use its parameters:
+//    each call passes the expression with its arguments for them in their places (in brackets if they are more
+//    than a name), and a parameter the replaced occurrences were all the uses of is removed (question 32;
+//    "Remove the parameters only it uses", ticked).  Refused where the function changes such a parameter, or a
+//    call's argument that does something would be worked out twice.
 class CIDEIntroduceVariable : public CObject
 {
 CONSTRUCTABLE(CIDEIntroduceVariable);
@@ -131,6 +138,8 @@ protected:
 	Ptr<CCheckBox>		mpAllBox;
 	Ptr<CCheckBox>		mpFileBox;  //Introduce Constant's "in the file", while its dialog is shown.
 	Ptr<CCheckBox>		mpInitBox;  //Introduce Field's "Assign it in Init", while its dialog is shown.
+	Ptr<CCheckBox>		mpRemoveBox;  //Introduce Parameter's "Remove the parameters only it uses", while its dialog is shown.
+	bool				mbRemoveParameters;  //What it was ticked as last.
 	bool				mbInInit;  //What it was ticked as last.
 	SIDEIntroduction	msShown;  //What the dialog is introducing.
 	bool				mbAll;  //Replace all occurrences, as last chosen.
@@ -174,6 +183,7 @@ protected:
 	void		PostIntroduce(void);
 	void		FindContext(CIDERefactorUnit* pcUnit, CCPPSyntaxFunctionDefinition* pcFunction, CCPPSyntax* pcExpression, SIDEIntroduction* psDest);
 	bool		IntroduceElsewhere(SIDEIntroduction* psIntroduction, const char* szName, bool bAll, CChars* pszStatus, int iKind);
+	bool		FindParameterChange(SIDEIntroduction* psIntroduction, SIDESignature* psSignature, size uiFirst, size uiLast, SIDESignatureChange* psChange, CChars* pszRemoved, CChars* pszProblem);
 	bool		FindDefinePlace(const char* szText, size* puiAt);
 	void		ChooserClicked(CMenuItem* pcItem);
 	bool		ApproveName(void);

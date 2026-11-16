@@ -26,6 +26,7 @@ Answered
     2026-11-13) and I left it; the suite was proved in Release|x64.  Should the test silence the logger around
     that line?
     Answered 2026-11-16: silence the logger around that line.
+    Done by the CppCompilerLib session (master 705b03267): the call is wrapped in gcLogger.SetSilent(), and a Debug x64 run gets through TestProject.cpp.
 
  8. Introduce Variable's suggested names follow the prefixes I see in your code (i, ui, b, f, sz, c, pc, s, ps, e, p,
     pv; CChars is sz; Ptr<> is p) with what the expression's last name says, without its own prefix or a leading
@@ -43,6 +44,10 @@ Answered
     expression that uses the function's variables, its parameters or its class's members.  IntelliJ would also let
     it replace a parameter that the expression is the only use of: not built.  Wanted?
     Answered 2026-11-16: build it (a parameter the expression is the only use of can be replaced by the new one).
+    Done: the expression can use the function's parameters; each call passes it with its arguments in their places
+    (bracketed if more than a name), and with "Remove the parameters only it uses" (ticked) a parameter the replaced
+    occurrences were all the uses of goes.  Refused where the function changes such a parameter, or an argument that
+    does something would be worked out twice.  A name that replaces what brackets held alone takes their place too.
 
 34. A typedef in a class template is written on the line before the member that first uses it, with no blank line
     after it, and one in a function at the very start of its body.  Is that where you want them?

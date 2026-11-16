@@ -68,6 +68,9 @@ void SIDEIntroduction::Init(void)
 	szClassKey.Init();
 	bConstant = false;
 	bUsesLocals = false;
+	bUsesOtherLocals = false;
+	aszParameters.Init();
+	bRemoveParameters = true;
 	bUsesMembers = false;
 }
 
@@ -78,6 +81,7 @@ void SIDEIntroduction::Init(void)
 //////////////////////////////////////////////////////////////////////////
 void SIDEIntroduction::Kill(void)
 {
+	aszParameters.Kill();
 	asFileOccurrences.Kill();
 	aszWarnings.Kill();
 	szClassKey.Kill();
@@ -140,6 +144,7 @@ void CIDEIntroduceVariable::Init(CIDEContent* pcContent)
 	msShown.Init();
 	mbAll = true;
 	mbInInit = false;
+	mbRemoveParameters = true;
 	masCandidates.Init();
 	miKind = IDE_INTRODUCE_VARIABLE;
 	mszNameProblem.Init();
@@ -160,7 +165,9 @@ void CIDEIntroduceVariable::Class(void)
 	M_Pointer(mpAllBox);
 	M_Pointer(mpFileBox);
 	M_Pointer(mpInitBox);
+	M_Pointer(mpRemoveBox);
 	U_Bool(mbInInit);
+	U_Bool(mbRemoveParameters);
 	U_Unknown(SIDEIntroduction, msShown);
 	U_Bool(mbAll);
 	M_Pointer(mpChooser);
@@ -1149,9 +1156,9 @@ const char* CIDEIntroduceVariable::GetKindProblem(SIDEIntroduction* psIntroducti
 	{
 		return "the function it is in isn't one the index knows";
 	}
-	if ((iKind == IDE_INTRODUCE_PARAMETER) && psIntroduction->bUsesLocals)
+	if ((iKind == IDE_INTRODUCE_PARAMETER) && psIntroduction->bUsesOtherLocals)
 	{
-		return "the expression uses the function's own variables or parameters, which a call of it can't give";
+		return "the expression uses the function's own variables, which a call of it can't give";
 	}
 	if ((iKind == IDE_INTRODUCE_PARAMETER) && psIntroduction->bUsesMembers)
 	{
@@ -1317,6 +1324,14 @@ void CIDEIntroduceVariable::FindContext(CIDERefactorUnit* pcUnit, CCPPSyntaxFunc
 			if (aszKeys.GetText(i)[0] == '@')
 			{
 				psDest->bUsesLocals = true;
+				if (uiKind == CPPSK_Parameter)
+				{
+					psDest->aszParameters.AddIfUnique(aszKeys.GetText(i));
+				}
+				else
+				{
+					psDest->bUsesOtherLocals = true;
+				}
 			}
 			szScope.Init();
 			GetIDESymbolScope(aszKeys.GetText(i), &szScope);
@@ -1404,6 +1419,45 @@ bool CIDEIntroduceVariable::FindDefinePlace(const char* szText, size* puiAt)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// An occurrence a name takes the place of, with the brackets round it if
+// they hold only it and are an expression's (not a call's, a cast's or
+// an if's): "(pcCalc->miScale + 7) * iWidth" is "iScale * iWidth".
+//
+//////////////////////////////////////////////////////////////////////////
+static void WidenIDEToBrackets(const char* szText, size* puiStart, size* puiEnd)
+{
+	size	uiBefore;
+	size	uiWord;
+
+	if ((*puiStart == 0) || (szText[*puiStart - 1] != '(') || (szText[*puiEnd] != ')'))
+	{
+		return;
+	}
+	for (uiBefore = *puiStart - 1; (uiBefore > 0) && ((szText[uiBefore - 1] == ' ') || (szText[uiBefore - 1] == '\t')); uiBefore--)
+	{
+	}
+	if ((uiBefore > 0) && IsIDENameChar(szText[uiBefore - 1]))
+	{
+		//Only after return: a name before the brackets makes them a call's, or an if's or a while's.
+		for (uiWord = uiBefore; (uiWord > 0) && IsIDENameChar(szText[uiWord - 1]); uiWord--)
+		{
+		}
+		if ((uiBefore - uiWord != 6) || (strncmp(&szText[uiWord], "return", 6) != 0) || (uiBefore == *puiStart - 1))
+		{
+			return;
+		}
+	}
+	else if ((uiBefore > 0) && !strchr("=+-*/%<>&|^!~?:,(;{}[", szText[uiBefore - 1]))
+	{
+		return;
+	}
+	(*puiStart)--;
+	(*puiEnd)++;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // The expression made a field, a constant or a parameter: see the
 // class's comment.  One undo across the files it changes.
 //
@@ -1422,6 +1476,8 @@ bool CIDEIntroduceVariable::IntroduceElsewhere(SIDEIntroduction* psIntroduction,
 	STextRange*			psOccurrence;
 	CChars				szMessage;
 	CChars				szLine;
+	CChars				szRemoved;
+	CChars				szProblemText;
 	const char*			szText;
 	const char*			szProblem;
 	size				uiFirst;
@@ -1429,6 +1485,8 @@ bool CIDEIntroduceVariable::IntroduceElsewhere(SIDEIntroduction* psIntroduction,
 	size				uiAnchor;
 	size				uiAt;
 	size				uiReplaced;
+	size				uiStart;
+	size				uiEnd;
 	size				i;
 	bool				bStatement;
 	bool				bAfter;
@@ -1443,6 +1501,8 @@ bool CIDEIntroduceVariable::IntroduceElsewhere(SIDEIntroduction* psIntroduction,
 	uiReplaced = 0;
 	bResult = true;
 	szProblem = NULL;
+	szRemoved.Init();
+	szProblemText.Init();
 
 	if (iKind == IDE_INTRODUCE_PARAMETER)
 	{
@@ -1457,34 +1517,41 @@ bool CIDEIntroduceVariable::IntroduceElsewhere(SIDEIntroduction* psIntroduction,
 			szProblem = "its function's signature can't be changed";
 			bResult = false;
 		}
+		else if (!FindParameterChange(psIntroduction, &sSignature, uiFirst, uiLast, &sChange, &szRemoved, &szProblemText))
+		{
+			szProblem = szProblemText.Text();
+			bResult = false;
+		}
 		else
 		{
-			for (i = 0; i < sSignature.aszOldTypes.NumElements(); i++)
-			{
-				sChange.asParameters.Add()->Init((int32)i);
-			}
-			psNew = sChange.asParameters.Add();
-			psNew->Init(-1);
+			psNew = sChange.asParameters.Get(sChange.asParameters.NumElements() - 1);
 			psNew->szType.Set(psIntroduction->szType);
 			psNew->szName.Set(szName);
-			psNew->szCallValue.Set(psIntroduction->szExpression);
 			for (i = uiFirst; i <= uiLast; i++)
 			{
 				psOccurrence = psIntroduction->asOccurrences.Get(i);
-				aiStarts.Add((int)psOccurrence->uiStart);
-				aiEnds.Add((int)psOccurrence->uiEnd);
+				uiStart = psOccurrence->uiStart;
+				uiEnd = psOccurrence->uiEnd;
+				WidenIDEToBrackets(szText, &uiStart, &uiEnd);
+				aiStarts.Add((int)uiStart);
+				aiEnds.Add((int)uiEnd);
 				uiReplaced++;
 			}
+			//The expression's replacement is known to the conflicts (a removed parameter's uses in it go with it).
+			mpcContent->GetChangeSignature()->SetExtraEdits(psIntroduction->szFileName.Text(), &aiStarts, &aiEnds, szName);
 			aszConflicts.Init();
 			mpcContent->GetChangeSignature()->FindConflicts(&sSignature, &sChange, &aszConflicts);
 			bResult = (aszConflicts.NumElements() == 0) || mpcContent->GetChangeSignature()->ShowConflicts(&aszConflicts);
 			aszConflicts.Kill();
 			if (bResult)
 			{
-				mpcContent->GetChangeSignature()->SetExtraEdits(psIntroduction->szFileName.Text(), &aiStarts, &aiEnds, szName);
 				szMessage.Init();
 				bResult = mpcContent->GetChangeSignature()->Change(&sSignature, &sChange, &szMessage);
 				szMessage.Kill();
+			}
+			else
+			{
+				mpcContent->GetChangeSignature()->SetExtraEdits(NULL, NULL, NULL, NULL);
 			}
 		}
 		aiEnds.Kill();
@@ -1594,7 +1661,10 @@ bool CIDEIntroduceVariable::IntroduceElsewhere(SIDEIntroduction* psIntroduction,
 		{
 			//A constant, everywhere in the file it is written.
 			psOccurrence = psIntroduction->asFileOccurrences.Get(i);
-			pcEdits->Replace(psOccurrence->uiStart, psOccurrence->uiEnd, szName);
+			uiStart = psOccurrence->uiStart;
+			uiEnd = psOccurrence->uiEnd;
+			WidenIDEToBrackets(szText, &uiStart, &uiEnd);
+			pcEdits->Replace(uiStart, uiEnd, szName);
 			uiReplaced++;
 		}
 		for (i = uiFirst; bResult && !((iKind == IDE_INTRODUCE_CONSTANT) && psIntroduction->bWholeFile) && (i <= uiLast); i++)
@@ -1610,7 +1680,10 @@ bool CIDEIntroduceVariable::IntroduceElsewhere(SIDEIntroduction* psIntroduction,
 			}
 			else
 			{
-				pcEdits->Replace(psOccurrence->uiStart, psOccurrence->uiEnd, szName);
+				uiStart = psOccurrence->uiStart;
+				uiEnd = psOccurrence->uiEnd;
+				WidenIDEToBrackets(szText, &uiStart, &uiEnd);
+				pcEdits->Replace(uiStart, uiEnd, szName);
 				uiReplaced++;
 			}
 		}
@@ -1635,7 +1708,12 @@ bool CIDEIntroduceVariable::IntroduceElsewhere(SIDEIntroduction* psIntroduction,
 		szMessage.Append(psIntroduction->szExpression);
 		szMessage.Append(": ");
 		szMessage.Append((uint32)uiReplaced);
-		szMessage.Append(uiReplaced == 1 ? " occurrence replaced." : " occurrences replaced.");
+		szMessage.Append(uiReplaced == 1 ? " occurrence replaced" : " occurrences replaced");
+		if (!szRemoved.Empty())
+		{
+			szMessage.Append(", and ")->Append(szRemoved)->Append(" removed");
+		}
+		szMessage.Append('.');
 		ShowIntroduceStatus(&szMessage, pszStatus);
 	}
 	else if (szProblem)
@@ -1646,6 +1724,221 @@ bool CIDEIntroduceVariable::IntroduceElsewhere(SIDEIntroduction* psIntroduction,
 		ShowIntroduceStatus(&szMessage, pszStatus);
 	}
 	szMessage.Kill();
+	szProblemText.Kill();
+	szRemoved.Kill();
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether an argument's text does something (a call, ++, --, an
+// assignment): worked out twice it would do it twice.
+//
+//////////////////////////////////////////////////////////////////////////
+static bool HasIDEArgumentEffects(const char* szArgument)
+{
+	size	i;
+
+	for (i = 0; szArgument[i] != '\0'; i++)
+	{
+		if ((szArgument[i] == '(') && (i > 0) && (IsIDENameChar(szArgument[i - 1]) || (szArgument[i - 1] == ')') || (szArgument[i - 1] == ' ')))
+		{
+			return true;
+		}
+		if (((szArgument[i] == '+') && (szArgument[i + 1] == '+')) || ((szArgument[i] == '-') && (szArgument[i + 1] == '-')))
+		{
+			return true;
+		}
+		if ((szArgument[i] == '=') && (szArgument[i + 1] != '=') && ((i == 0) || !strchr("=!<>", szArgument[i - 1])))
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Introduce Parameter's change of the function's signature for the
+// occurrences uiFirst to uiLast: its parameters but those the expression
+// was all the uses of (if bRemoveParameters; their names in pszRemoved),
+// and the new one last (its type and name are the caller's), whose value
+// in each call is the expression with the call's arguments for the
+// parameters it names in their places.  False, with why, where the
+// function changes such a parameter, or a call's argument that does
+// something would be worked out more than once.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEIntroduceVariable::FindParameterChange(SIDEIntroduction* psIntroduction, SIDESignature* psSignature, size uiFirst, size uiLast, SIDESignatureChange* psChange, CChars* pszRemoved, CChars* pszProblem)
+{
+	CIDECodeModel*			pcModel;
+	CIDEFileEdits			cFiles;
+	CArrayIDELocations		asLocations;
+	CArrayInt				aiUsed;
+	CArrayInt				aiRemoved;
+	CArrayInt				aiCounts;
+	SIDESignatureSite*		psDefinition;
+	SIDESignatureCall*		psCall;
+	SIDELocation*			psLocation;
+	SIDENewParameter		sNew;
+	SIDENewParameter*		psNew;
+	STextRange*				psSelected;
+	STextRange*				psOccurrence;
+	CChars					szArgument;
+	const char*				szText;
+	const char*				szCallText;
+	size					uiAt;
+	size					uiParameter;
+	size					i;
+	size					j;
+	size					k;
+	uint8					uiKind;
+	bool					bAll;
+	bool					bInside;
+	bool					bResult;
+
+	pcModel = mpcContent->GetCodeModel();
+	szText = mpcContent->GetDocuments()->FindTab(psIntroduction->szFileName.Text())->GetEditor()->GetText();
+	psSelected = psIntroduction->asOccurrences.Get(psIntroduction->uiSelected);
+	psDefinition = NULL;
+	for (i = 0; i < psSignature->apsSites.NumElements(); i++)
+	{
+		if (psSignature->apsSites.GetPtr(i)->bBody && (StringInsensitiveCompare(psSignature->apsSites.GetPtr(i)->szFileName.Text(), psIntroduction->szFileName.Text()) == 0))
+		{
+			psDefinition = psSignature->apsSites.GetPtr(i);
+		}
+	}
+	psNew = NULL;
+	aiUsed.Init();
+	aiRemoved.Init();
+	aiCounts.Init();
+	bResult = (psIntroduction->aszParameters.NumElements() == 0) || (psDefinition != NULL);
+	if (!bResult)
+	{
+		pszProblem->Set("its function's definition can't be read");
+	}
+
+	//Each parameter it names: which it is, that the function doesn't change it, where the expression names it, and
+	//whether the occurrences are all its uses.
+	sNew.Init(-1);
+	psNew = &sNew;
+	psNew->szCallValue.Set(psIntroduction->szExpression);
+	for (i = 0; bResult && (i < psIntroduction->aszParameters.NumElements()); i++)
+	{
+		uiParameter = MAX_SIZE;
+		for (j = 0; j < psDefinition->asParameters.NumElements(); j++)
+		{
+			if (psDefinition->asParameters.Get(j)->szKey.Equals(psIntroduction->aszParameters.GetText(i)))
+			{
+				uiParameter = j;
+			}
+		}
+		if (uiParameter == MAX_SIZE)
+		{
+			pszProblem->Set("a parameter it names can't be read");
+			bResult = false;
+			break;
+		}
+		aiUsed.Add((int)uiParameter);
+		aiCounts.Add(0);
+		bAll = true;
+		asLocations.Init();
+		pcModel->GetSymbolLocations(psIntroduction->aszParameters.GetText(i), &asLocations, &uiKind);
+		for (j = 0; bResult && (j < asLocations.NumElements()); j++)
+		{
+			psLocation = asLocations.Get(j);
+			if (psLocation->uiRole != CPPIR_Reference)
+			{
+				continue;
+			}
+			if (psLocation->uiUsage == CPPUT_Write)
+			{
+				pszProblem->Set("the function changes ");
+				pszProblem->Append(psSignature->aszOldNames.GetText(uiParameter));
+				pszProblem->Append(", so a call can't give what the expression is there");
+				bResult = false;
+				break;
+			}
+			uiAt = FindIDETextOffset(szText, psLocation->iLine, psLocation->iColumn);
+			if ((uiAt >= psSelected->uiStart) && (uiAt < psSelected->uiEnd))
+			{
+				//In the expression's own text: where each call's argument goes.
+				for (k = 0; (k < psNew->aiValueStarts.NumElements()) && ((size)psNew->aiValueStarts.GetValue(k) < uiAt - psSelected->uiStart); k++)
+				{
+				}
+				psNew->aiValueStarts.InsertAt((int)(uiAt - psSelected->uiStart), k);
+				psNew->aiValueEnds.InsertAt((int)(uiAt - psSelected->uiStart + (size)psLocation->iLength), k);
+				psNew->aiValueParameters.InsertAt((int)uiParameter, k);
+				aiCounts.SetValue(aiCounts.NumElements() - 1, aiCounts.GetValue(aiCounts.NumElements() - 1) + 1);
+			}
+			bInside = false;
+			for (k = uiFirst; !bInside && (k <= uiLast); k++)
+			{
+				psOccurrence = psIntroduction->asOccurrences.Get(k);
+				bInside = (StringInsensitiveCompare(psLocation->szFileName.Text(), psIntroduction->szFileName.Text()) == 0) && (uiAt >= psOccurrence->uiStart) && (uiAt < psOccurrence->uiEnd);
+			}
+			bAll = bAll && bInside;
+		}
+		KillIDELocations(&asLocations);
+		if (bResult && bAll && psIntroduction->bRemoveParameters)
+		{
+			aiRemoved.Add((int)uiParameter);
+			pszRemoved->Append(pszRemoved->Empty() ? "" : ", ")->Append(psSignature->aszOldNames.GetText(uiParameter));
+		}
+	}
+
+	//A call's argument that does something, that would be worked out more than once.
+	cFiles.Init(mpcContent);
+	for (i = 0; bResult && (i < aiUsed.NumElements()); i++)
+	{
+		uiParameter = (size)aiUsed.GetValue(i);
+		if ((aiCounts.GetValue(i) + ((aiRemoved.Find((int)uiParameter) == ARRAY_ELEMENT_NOT_FOUND) ? 1 : 0)) <= 1)
+		{
+			continue;
+		}
+		for (j = 0; bResult && (j < psSignature->apsCalls.NumElements()); j++)
+		{
+			psCall = psSignature->apsCalls.GetPtr(j);
+			szCallText = cFiles.GetText(psCall->szFileName.Text());
+			if (!szCallText || (uiParameter >= psCall->asArguments.NumElements()))
+			{
+				continue;
+			}
+			szArgument.Init();
+			AppendIDERangeText(szCallText, psCall->asArguments.Get(uiParameter), &szArgument);
+			if (HasIDEArgumentEffects(szArgument.Text()))
+			{
+				pszProblem->Set("a call's argument for ");
+				pszProblem->Append(psSignature->aszOldNames.GetText(uiParameter));
+				pszProblem->Append(" (")->Append(szArgument)->Append(") does something, and would be worked out more than once");
+				bResult = false;
+			}
+			szArgument.Kill();
+		}
+	}
+	cFiles.Kill();
+
+	//The parameters it keeps, then the new one (the change owns it from there).
+	if (bResult)
+	{
+		for (i = 0; i < psSignature->aszOldTypes.NumElements(); i++)
+		{
+			if (aiRemoved.Find((int)i) == ARRAY_ELEMENT_NOT_FOUND)
+			{
+				psChange->asParameters.Add()->Init((int32)i);
+			}
+		}
+		memcpy(psChange->asParameters.Add(), &sNew, sizeof(SIDENewParameter));
+	}
+	else
+	{
+		sNew.Kill();
+	}
+	aiCounts.Kill();
+	aiRemoved.Kill();
+	aiUsed.Kill();
 	return bResult;
 }
 
@@ -1721,6 +2014,8 @@ bool CIDEIntroduceVariable::Introduce(SIDEIntroduction* psIntroduction, const ch
 	size				uiLast;
 	size				uiCaret;
 	size				uiReplaced;
+	size				uiStart;
+	size				uiEnd;
 	size				i;
 	bool				bStatement;
 	bool				bUniform;
@@ -1829,7 +2124,10 @@ bool CIDEIntroduceVariable::Introduce(SIDEIntroduction* psIntroduction, const ch
 		}
 		else
 		{
-			cEdits.Replace(psOccurrence->uiStart, psOccurrence->uiEnd, szName);
+			uiStart = psOccurrence->uiStart;
+			uiEnd = psOccurrence->uiEnd;
+			WidenIDEToBrackets(pEditor->GetText(), &uiStart, &uiEnd);
+			cEdits.Replace(uiStart, uiEnd, szName);
 			uiReplaced++;
 		}
 	}
@@ -1990,6 +2288,12 @@ bool CIDEIntroduceVariable::ShowIntroduce(int iKind)
 		//The class's Init can assign it: the expression names nothing of the function's own.
 		mpInitBox = mpDialog->AddCheckBox("Assign it in Init", mbInInit);
 	}
+	mpRemoveBox = NULL;
+	if ((miKind == IDE_INTRODUCE_PARAMETER) && (msShown.aszParameters.NumElements() > 0))
+	{
+		//The expression names parameters: one it is all the uses of can go.
+		mpRemoveBox = mpDialog->AddCheckBox("Remove the parameters only it uses", mbRemoveParameters);
+	}
 	mpError = OMalloc<CLabel>(mpDialog->GetWindow(), mpcContent->GetDimFont(), "");
 	mpDialog->AddEditor("", mpError);
 	mpDialog->SetOKCaption("Refactor");
@@ -2016,6 +2320,11 @@ bool CIDEIntroduceVariable::ShowIntroduce(int iKind)
 				mbInInit = mpInitBox->IsTicked();
 				msShown.bInInit = mbInInit;
 			}
+			if (mpRemoveBox.IsNotNull())
+			{
+				mbRemoveParameters = mpRemoveBox->IsTicked();
+				msShown.bRemoveParameters = mbRemoveParameters;
+			}
 			bResult = Introduce(&msShown, szText.Text(), bAll, NULL, miKind);
 			szText.Kill();
 		}
@@ -2024,6 +2333,7 @@ bool CIDEIntroduceVariable::ShowIntroduce(int iKind)
 	mpError = NULL;
 	mpAllBox = NULL;
 	mpInitBox = NULL;
+	mpRemoveBox = NULL;
 	mpFileBox = NULL;
 	mpDialog = NULL;
 	return bResult;

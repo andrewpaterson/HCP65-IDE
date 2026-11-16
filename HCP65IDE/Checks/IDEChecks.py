@@ -1116,7 +1116,7 @@ CHECKS = [
 		[r'^Introduce Variable: \[miScale \* 2\] is \[int\], named \[iScale\], 2 occurrences$', r'^Status: Introduced int iDouble = miScale \* 2: 2 occurrences replaced\.$',
 		 r'Calc\.cpp \(focus\) line 67: \[\tiDouble = miScale \* 2;\]$',
 		 r'^62\|\tint\t\tiResult;$', r'^63\|\tCCalc\*\tpcOther;$', r'^64\|\tint\t\tiDouble;$', r'^65\|$', r'^66\|\tpcOther = this;$', r'^67\|\tiDouble = miScale \* 2;$',
-		 r'^68\|\tiResult = Scaled\(iExtra\) \+ iDouble;$', r'^71\|\t\tiResult \+= iDouble;$', r'^128 lines$'],
+		 r'^68\|\tiResult = Scaled\(iExtra\) \+ iDouble;$', r'^71\|\t\tiResult \+= iDouble;$', r'^158 lines$'],
 		[r"can't"]),
 	('introduce-variable-one', dict(MakeIntroduceVariableCopy(), **{
 		#The selected occurrence alone: the other is left as it is written.
@@ -1140,7 +1140,7 @@ CHECKS = [
 		'WAIT_INDEX': '1', 'OPEN': 'Calc.cpp',
 		'DEBUG': 'edit:renamesearch:---s,edit:selecttext:72:2-72:11,edit:introduce:szName,printdisklines:Calc.cpp'}),
 		[r'^Introduce Variable: \[GetName\(\)\] is \[char\*\], named \[szName\], 1 occurrence$', r'^Status: Introduced char\* szName = GetName\(\): the statement is its assignment\.$',
-		 r'^64\|\tchar\*\tszName;$', r'^73\|\tszName = GetName\(\);$', r'^74\|\tInit\(\);$', r'^127 lines$'],
+		 r'^64\|\tchar\*\tszName;$', r'^73\|\tszName = GetName\(\);$', r'^74\|\tInit\(\);$', r'^157 lines$'],
 		[r"can't"]),
 	('introduce-variable-no-declarations', dict(MakeIntroduceVariableCopy(), **{
 		#A function with no declarations gets them: the variable's, and a blank line.  Its type is the compiler's where
@@ -1177,14 +1177,14 @@ CHECKS = [
 		         'edit:selecttext:66:29-66:40,edit:introduce:iExtra,edit:introduce:2bad,printdisklines:Calc.cpp'}),
 		[r'^Introduce Variable: nothing is selected$', r"^Introduce Variable: can't: it has no value \(its type is void\)$", r"^Introduce Variable: can't: the selection isn't an expression$",
 		 r'^Introduce Variable: \[iResult\] is \[int\], named \[iResult2\], 1 occurrence$',
-		 r'^Status: Introduce Variable: The function uses that name already\.$', r"^Status: Introduce Variable: It isn't a name\.$", r'^126 lines$'],
+		 r'^Status: Introduce Variable: The function uses that name already\.$', r"^Status: Introduce Variable: It isn't a name\.$", r'^156 lines$'],
 		[r'^Status: Introduced']),
 	('introduce-variable-undo', dict(MakeIntroduceVariableCopy(), **{
 		#One undo takes all of it back: the declaration, the assignment and the occurrences.
 		'WAIT_INDEX': '1', 'OPEN': 'Calc.cpp',
 		'DEBUG': 'edit:selecttext:66:29-66:40,edit:introduce:iDouble,edit:undo,edit:renamesearch:---s,edit:selecttext:72:2-72:11,edit:introduce:szName,printdisklines:Calc.cpp'}),
 		[r'^Status: Introduced int iDouble', r'^62\|\tint\t\tiResult;$', r'^63\|\tCCalc\*\tpcOther;$', r'^64\|\tchar\*\tszName;$', r'^65\|$',
-		 r'^67\|\tiResult = Scaled\(iExtra\) \+ miScale \* 2;$', r'^127 lines$'],
+		 r'^67\|\tiResult = Scaled\(iExtra\) \+ miScale \* 2;$', r'^157 lines$'],
 		[r'\|.*iDouble']),
 	('introduce-variable-dialog', dict(MakeIntroduceVariableCopy(), **{
 		#The dialog: the suggested name typed over, every occurrence replaced as its box says to start with.
@@ -2162,12 +2162,12 @@ CHECKS = [
 		[r'Inlined iScaled']),
 	('introduce-kinds', dict(MakeIntroduceVariableCopy(), **{
 		#What the selection can be introduced as, and the name suggested for each: a field's with m before the
-		#variable's, a constant's in capitals.  A call with the function's parameter can't be a constant or a
-		#parameter; a member can't be passed by a call; a number can be anything.
+		#variable's, a constant's in capitals.  A call with the function's parameter can't be a constant, and a
+		#member (Scaled is one) can't be passed by a call; a number can be anything.
 		'WAIT_INDEX': '1', 'OPEN': 'Calc.cpp',
 		'DEBUG': 'edit:selecttext:66:12-66:26,edit:introduciblekinds,edit:selecttext:66:29-66:40,edit:introduciblekinds,edit:selecttext:67:19-67:20,edit:introduciblekinds'}),
 		[r'^Introduce Field: miScaled$', r"^Introduce Constant: SCALED, can't be: the expression isn't a constant: it names a variable or does something$",
-		 r"^Introduce Parameter: iScaled, can't be: the expression uses the function's own variables or parameters, which a call of it can't give$",
+		 r"^Introduce Parameter: iScaled, can't be: the expression uses its class's members, which a call of the function names another way$",
 		 r'^Introduce Field: miScale$', r"^Introduce Parameter: iScale, can't be: the expression uses its class's members, which a call of the function names another way$",
 		 r'^Introduce Field: miValue$', r'^Introduce Constant: VALUE$', r'^Introduce Parameter: iValue$'],
 		[]),
@@ -2232,6 +2232,33 @@ CHECKS = [
 		 r'^20\|\tint\t\t\t\t\tTotal\(int iExtra, int iLimit\);$', r'^60\|int CCalc::Total\(int iExtra, int iLimit\)$', r'^67\|\tif \(GetCount\(\) > iLimit\)$',
 		 r'^12\|\treturn cCalc\.Total\(2, 4\) \+ cStack\.Depth\(\);$', r'^20\|\tint\t\t\t\t\tTotal\(int iExtra\);$'],
 		[r'^Conflict']),
+	('introduce-parameter-replace', dict(MakeIntroduceVariableCopy(), **{
+		#Introduce Parameter of an expression of the function's parameters (question 32): each call passes the
+		#expression with its arguments in their places (bracketed if they are more than a name: (pcCalc + 1)), and
+		#pcCalc, which the expression was all the uses of, goes; the brackets round the expression go with it.
+		'WAIT_INDEX': '1', 'OPEN': 'Calc.cpp',
+		'DEBUG': 'edit:renamesearch:---s,edit:selecttext:135:10-135:29,edit:introduceparameter:iScale,printdisklines:Calc.cpp'}),
+		[r'^Status: Introduced the parameter int iScale = pcCalc->miScale \+ 7: 1 occurrence replaced, and pcCalc removed\.$',
+		 r'^133\|int Area\(int iWidth, int iScale\)$', r'^135\|\treturn iScale \* iWidth;$',
+		 r'^155\|\treturn Area\(3, pcCalc->miScale \+ 7\) \+ Area\(i, \(pcCalc \+ 1\)->miScale \+ 7\) \+ Wide\(Next\(&i\)\);$'],
+		[r'Problems Detected']),
+	('introduce-parameter-keep', dict(MakeIntroduceVariableCopy(), **{
+		#With "Remove the parameters only it uses" not ticked, pcCalc stays and the calls pass both.
+		'WAIT_INDEX': '1', 'OPEN': 'Calc.cpp',
+		'DEBUG': 'edit:renamesearch:---s,edit:selecttext:135:10-135:29,edit:introduceparameterkeep:iScale,printdisklines:Calc.cpp'}),
+		[r'^Status: Introduced the parameter int iScale = pcCalc->miScale \+ 7: 1 occurrence replaced\.$',
+		 r'^133\|int Area\(CCalc\* pcCalc, int iWidth, int iScale\)$',
+		 r'^155\|\treturn Area\(pcCalc, 3, pcCalc->miScale \+ 7\) \+ Area\(pcCalc \+ 1, i, \(pcCalc \+ 1\)->miScale \+ 7\) \+ Wide\(Next\(&i\)\);$'],
+		[]),
+	('introduce-parameter-refused', dict(MakeIntroduceVariableCopy(), **{
+		#Refused: a call's argument that does something would be worked out twice (iWidth is in the expression twice);
+		#and the function changes iBase, so no call can give what iBase * 2 is where it is.
+		'WAIT_INDEX': '1', 'OPEN': 'Calc.cpp',
+		'DEBUG': 'edit:renamesearch:---s,edit:selecttext:145:9-145:24,edit:introduceparameter:iSquare,edit:selecttext:122:11-122:20,edit:introduceparameter:iDouble,printdisklines:Calc.cpp'}),
+		[r"^Status: Can't introduce it: a call's argument for iWidth \(Next\(&i\)\) does something, and would be worked out more than once\.$",
+		 r"^Status: Can't introduce it: the function changes iBase, so a call can't give what the expression is there\.$",
+		 r'^118\|int Drift\(int iBase, int iStep\)$', r'^143\|int Wide\(int iWidth\)$'],
+		[]),
 	('introduce-constant-dialog', dict(MakeIntroduceVariableCopy(), **{
 		#The dialog for a kind (Ctrl+Alt+C's): its title and the name it suggests; and the status line says why a
 		#selection can't be one.

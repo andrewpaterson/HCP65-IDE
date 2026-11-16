@@ -120,6 +120,9 @@ struct SIDENewParameter
 							//old one's, if bDefaultChanged.
 	bool	bDefaultChanged;	//An old one's default value is to be szDefault (none, if that is empty).
 	CChars	szCallValue;	//A new one's argument in the calls there already are; empty to leave it to the default.
+	CArrayInt	aiValueStarts;		//Where szCallValue names old parameters (from aiValueStarts to aiValueEnds): each call
+	CArrayInt	aiValueEnds;		//puts its argument for that parameter (aiValueParameters, from 0) there, in brackets
+	CArrayInt	aiValueParameters;	//if it is more than a name (Introduce Parameter of an expression of parameters).
 
 	void	Init(int32 iOldIndex);
 	void	Kill(void);
@@ -224,6 +227,7 @@ public:
 	bool	IsUnchanged(SIDESignature* psSignature, SIDESignatureChange* psChange);
 	bool	FindSignature(SIDESignature* psDest, const char* szFileName = NULL, int iAtLine = -1, int iAtColumn = -1);
 	void	SetExtraEdits(const char* szFileName, CArrayInt* paiStarts, CArrayInt* paiEnds, const char* szText);
+	bool	IsInExtraEdits(const char* szFileName, int32 iLine, int32 iColumn);
 	bool	AppendCaretLabel(CChars* pszDest);
 	bool	ParseChange(SIDESignature* psSignature, const char* szSpec, SIDESignatureChange* psDest, CChars* pszProblem);
 	bool	FindProblem(SIDESignature* psSignature, SIDESignatureChange* psChange, CChars* pszProblem);
@@ -255,6 +259,7 @@ protected:
 	void				AppendPlace(const char* szFileName, int32 iLine, CChars* pszDest);
 	void				AppendSiteParameters(SIDESignature* psSignature, SIDESignatureSite* psSite, bool bFirst, CArrayIDENewParameters* pasNew, const char* szText, CChars* pszDest);
 	void				AppendCallArguments(SIDESignature* psSignature, SIDESignatureCall* psCall, CArrayIDENewParameters* pasNew, const char* szText, CChars* pszDest);
+	void	AppendCallValue(SIDESignature* psSignature, SIDESignatureCall* psCall, SIDENewParameter* psNew, const char* szText, CChars* pszDest);
 	void				ShowChangeStatus(CChars* pszMessage, CChars* pszStatus);
 	bool				GetAssemblyTarget(ECPPTarget* peTarget);
 	ECPPTarget			FindAssemblyFileTarget(const char* szFileName, const char* szText);

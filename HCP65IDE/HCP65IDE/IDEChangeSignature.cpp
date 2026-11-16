@@ -158,6 +158,9 @@ void SIDENewParameter::Init(int32 iOldIndex)
 	szDefault.Init();
 	bDefaultChanged = false;
 	szCallValue.Init();
+	aiValueStarts.Init();
+	aiValueEnds.Init();
+	aiValueParameters.Init();
 }
 
 
@@ -167,6 +170,9 @@ void SIDENewParameter::Init(int32 iOldIndex)
 //////////////////////////////////////////////////////////////////////////
 void SIDENewParameter::Kill(void)
 {
+	aiValueParameters.Kill();
+	aiValueEnds.Kill();
+	aiValueStarts.Kill();
 	szCallValue.Kill();
 	szDefault.Kill();
 	szName.Kill();
@@ -547,6 +553,40 @@ void CIDEChangeSignature::SetExtraEdits(const char* szFileName, CArrayInt* paiSt
 	mpaiExtraStarts = paiStarts;
 	mpaiExtraEnds = paiEnds;
 	mszExtraText = szText;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether a place in a file is in a range the extra edits replace.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEChangeSignature::IsInExtraEdits(const char* szFileName, int32 iLine, int32 iColumn)
+{
+	Ptr<CIDEEditorTab>	pTab;
+	const char*			szText;
+	size				uiAt;
+	size				i;
+
+	if (!mszExtraFile || (StringInsensitiveCompare(mszExtraFile, szFileName) != 0))
+	{
+		return false;
+	}
+	pTab = mpcContent->GetDocuments()->FindTab(szFileName);
+	szText = pTab.IsNotNull() ? pTab->GetEditor()->GetText() : NULL;
+	if (!szText)
+	{
+		return false;
+	}
+	uiAt = FindIDETextOffset(szText, iLine, iColumn);
+	for (i = 0; i < mpaiExtraStarts->NumElements(); i++)
+	{
+		if ((uiAt >= (size)mpaiExtraStarts->GetValue(i)) && (uiAt < (size)mpaiExtraEnds->GetValue(i)))
+		{
+			return true;
+		}
+	}
+	return false;
 }
 
 
@@ -1992,6 +2032,7 @@ void CIDEChangeSignature::FindConflicts(SIDESignature* psSignature, SIDESignatur
 	bool					bKept;
 	bool					bDefault;
 	bool					bAfterDefault;
+	bool					bMoved;
 
 	pcModel = mpcContent->GetCodeModel();
 	pasNew = &psChange->asParameters;
@@ -2022,7 +2063,8 @@ void CIDEChangeSignature::FindConflicts(SIDESignature* psSignature, SIDESignatur
 			uiUses = 0;
 			for (k = 0; k < asLocations.NumElements(); k++)
 			{
-				if (asLocations.Get(k)->uiRole == CPPIR_Reference)
+				//A use the extra edits replace (Introduce Parameter's expression) isn't one any more.
+				if ((asLocations.Get(k)->uiRole == CPPIR_Reference) && !IsInExtraEdits(asLocations.Get(k)->szFileName.Text(), asLocations.Get(k)->iLine, asLocations.Get(k)->iColumn))
 				{
 					if (uiUses == 0)
 					{
@@ -2050,8 +2092,14 @@ void CIDEChangeSignature::FindConflicts(SIDESignature* psSignature, SIDESignatur
 			}
 			KillIDELocations(&asLocations);
 		}
-		for (j = 0; j < psSignature->apsCalls.NumElements(); j++)
+		bMoved = false;
+		for (j = 0; j < pasNew->NumElements(); j++)
 		{
+			bMoved |= (pasNew->Get(j)->aiValueParameters.Find((int)i) != ARRAY_ELEMENT_NOT_FOUND);
+		}
+		for (j = 0; !bMoved && (j < psSignature->apsCalls.NumElements()); j++)
+		{
+			//An argument a new parameter's value takes in (bMoved) isn't lost.
 			psCall = psSignature->apsCalls.GetPtr(j);
 			if ((i < psCall->aiEffects.NumElements()) && (psCall->aiEffects.GetValue(i) != 0))
 			{
@@ -2328,6 +2376,81 @@ void CIDEChangeSignature::AppendNewSignature(SIDESignature* psSignature, SIDESig
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Whether an argument's text can go into an expression as it is: a name,
+// or names joined by . and -> ("pcCalc->miScale"), with no operator that
+// could bind to what is round it.
+//
+//////////////////////////////////////////////////////////////////////////
+static bool IsIDESimpleArgument(const char* szArgument)
+{
+	size	i;
+
+	if (szArgument[0] == '\0')
+	{
+		return false;
+	}
+	for (i = 0; szArgument[i] != '\0'; i++)
+	{
+		if ((szArgument[i] == '-') && (szArgument[i + 1] == '>'))
+		{
+			i++;
+		}
+		else if (!IsIDENameChar(szArgument[i]) && (szArgument[i] != '.'))
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A new parameter's value in one call: its szCallValue, with the call's
+// argument for each old parameter it names put in (aiValueStarts), in
+// brackets if it is more than a name; a parameter the call leaves to its
+// default value has that.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEChangeSignature::AppendCallValue(SIDESignature* psSignature, SIDESignatureCall* psCall, SIDENewParameter* psNew, const char* szText, CChars* pszDest)
+{
+	CChars	szArgument;
+	size	uiAt;
+	size	uiParameter;
+	size	i;
+
+	uiAt = 0;
+	for (i = 0; i < psNew->aiValueStarts.NumElements(); i++)
+	{
+		pszDest->AppendSubString(psNew->szCallValue.Text(), uiAt, (size)psNew->aiValueStarts.GetValue(i));
+		uiParameter = (size)psNew->aiValueParameters.GetValue(i);
+		szArgument.Init();
+		if (uiParameter < psCall->asArguments.NumElements())
+		{
+			AppendIDERangeText(szText, psCall->asArguments.Get(uiParameter), &szArgument);
+		}
+		else if (uiParameter < psSignature->aszOldDefaults.NumElements())
+		{
+			szArgument.Append(psSignature->aszOldDefaults.GetText(uiParameter));
+		}
+		szArgument.StripWhitespace();
+		if (IsIDESimpleArgument(szArgument.Text()))
+		{
+			pszDest->Append(szArgument);
+		}
+		else
+		{
+			pszDest->Append('(')->Append(szArgument)->Append(')');
+		}
+		szArgument.Kill();
+		uiAt = (size)psNew->aiValueEnds.GetValue(i);
+	}
+	pszDest->Append(&psNew->szCallValue.Text()[uiAt]);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // A call's arguments as they are to be, from what it writes now: each
 // kept parameter's argument, each new one's value.  An argument the call
 // left to a default value, and a new parameter with no value given, are
@@ -2368,7 +2491,7 @@ void CIDEChangeSignature::AppendCallArguments(SIDESignature* psSignature, SIDESi
 		}
 		else if (!psNew->szCallValue.Empty())
 		{
-			szArgument.Append(psNew->szCallValue);
+			AppendCallValue(psSignature, psCall, psNew, szText, &szArgument);
 			aiGiven.Add(1);
 		}
 		else
