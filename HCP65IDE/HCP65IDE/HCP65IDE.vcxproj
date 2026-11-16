@@ -334,6 +334,9 @@
     <ClCompile Include="IDEExtractClass.cpp" />
     <ClCompile Include="IDEInlineFunction.cpp" />
     <ClCompile Include="IDEExtractMethod.cpp" />
+    <ClCompile Include="IDEDuplicateMatcher.cpp" />
+    <ClCompile Include="IDEDuplicates.cpp" />
+    <ClCompile Include="IDEDuplicatesPage.cpp" />
     <ClCompile Include="IDEIntroduceTypedef.cpp" />
     <ClCompile Include="IDEInlineVariable.cpp" />
     <ClCompile Include="IDEMoveClass.cpp" />
@@ -416,6 +419,9 @@
     <ClInclude Include="IDEExtractClass.h" />
     <ClInclude Include="IDEInlineFunction.h" />
     <ClInclude Include="IDEExtractMethod.h" />
+    <ClInclude Include="IDEDuplicateMatcher.h" />
+    <ClInclude Include="IDEDuplicates.h" />
+    <ClInclude Include="IDEDuplicatesPage.h" />
     <ClInclude Include="IDEIntroduceTypedef.h" />
     <ClInclude Include="IDEInlineVariable.h" />
     <ClInclude Include="IDEMoveClass.h" />

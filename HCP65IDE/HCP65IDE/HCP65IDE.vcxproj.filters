@@ -108,6 +108,15 @@
     <ClCompile Include="IDEExtractMethod.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="IDEDuplicateMatcher.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="IDEDuplicates.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="IDEDuplicatesPage.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="IDEIntroduceTypedef.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -348,6 +357,15 @@
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDEExtractMethod.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDEDuplicateMatcher.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDEDuplicates.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDEDuplicatesPage.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDEIntroduceTypedef.h">

@@ -91,6 +91,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDETemplateParameter.h"
 #include "IDEUsages.h"
 #include "IDEFindInFiles.h"
+#include "IDEDuplicates.h"
 #include "IDEOccurrences.h"
 #include "IDENavigationHistory.h"
 #include "IDECaretUsages.h"
@@ -117,6 +118,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define IDE_CLAUDE_ID			"Claude"
 #define IDE_USAGES_ID			"FindUsages"
 #define IDE_FIND_ID				"Find"
+#define IDE_DUPLICATES_ID		"Duplicates"
 #define IDE_INDEXING_ID			"Indexing"
 
 
@@ -217,6 +219,7 @@ protected:
 	Ptr<CIDEContextActions>		mpContextActions;		//Show Context Actions: the refactorings for what is at the caret.
 	Ptr<CIDEUsages>				mpUsages;			//Find Usages.
 	Ptr<CIDEFindInFiles>		mpFindInFiles;		//Find in Files and the Find tool window.
+	Ptr<CIDEDuplicates>			mpDuplicates;		//Find Duplicates and the Duplicates tool window.
 	Ptr<CIDEOccurrences>		mpOccurrences;		//Next and Previous Occurrence through Find Usages or Build.
 	Ptr<CIDENavigationHistory>	mpNavigationHistory;	//Back and Forward.
 	Ptr<CIDECaretUsages>		mpCaretUsages;			//The usages of the symbol at the caret, highlighted.
@@ -319,6 +322,7 @@ public:
 	Ptr<CIDEEdit>			GetEdit(void);
 	Ptr<CIDEUsages>			GetUsages(void);
 	Ptr<CIDEFindInFiles>	GetFindInFiles(void);
+	Ptr<CIDEDuplicates>		GetDuplicates(void);
 	Ptr<CIDEIndexing>		GetIndexing(void);
 	Ptr<CIDERename>			GetRename(void);
 	Ptr<CIDEFileRename>		GetFileRename(void);

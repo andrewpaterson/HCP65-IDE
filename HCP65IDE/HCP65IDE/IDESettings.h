@@ -27,6 +27,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/SettingsDialog.h"
 #include "WindowLib/KeymapPage.h"
 #include "IDEFileTemplatesPage.h"
+#include "IDEDuplicatesPage.h"
 
 
 class CIDEContent;
@@ -50,6 +51,7 @@ protected:
 	Ptr<CSettingsDialog>		mpDialog;  //While it's shown.
 	Ptr<CKeymapPage>			mpKeymapPage;
 	Ptr<CIDEFileTemplatesPage>	mpTemplatesPage;
+	Ptr<CIDEDuplicatesPage>		mpDuplicatesPage;
 
 public:
 	void	Init(CIDEContent* pcContent);

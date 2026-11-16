@@ -242,6 +242,7 @@ void CIDEContent::Class(void)
 	M_Pointer(mpTemplateParameter);
 	M_Pointer(mpUsages);
 	M_Pointer(mpFindInFiles);
+	M_Pointer(mpDuplicates);
 	M_Pointer(mpOccurrences);
 	M_Pointer(mpNavigationHistory);
 	M_Pointer(mpCaretUsages);
@@ -304,6 +305,7 @@ void CIDEContent::Free(void)
 		mpWindow->CancelPosted(&mpCloseGuard);  //The modules' posted calls too.
 		mpWindow->CancelPosted(&mpNavigator);
 		mpWindow->CancelPosted(&mpFindInFiles);
+		mpWindow->CancelPosted(&mpDuplicates);
 		mpWindow->CancelPosted(&mpUsages);
 		mpWindow->CancelPosted(&mpRename);
 		mpWindow->CancelPosted(&mpFileRename);
@@ -468,6 +470,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpContextActions = OMalloc<CIDEContextActions>(this);
 	mpUsages = OMalloc<CIDEUsages>(this);
 	mpFindInFiles = OMalloc<CIDEFindInFiles>(this);
+	mpDuplicates = OMalloc<CIDEDuplicates>(this);
 	mpOccurrences = OMalloc<CIDEOccurrences>(this);
 	mpNavigationHistory = OMalloc<CIDENavigationHistory>(this);
 	mpCaretUsages = OMalloc<CIDECaretUsages>(this);
@@ -500,6 +503,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 
 	sPlace.WithPane(IDE_USAGES_ID);
 	mpFindInFiles->CreatePane(&sPlace);
+	mpDuplicates->CreatePane(&sPlace);
 	mpBuilding->CreatePane(&sPlace);
 	mpIndexing->CreatePane(&sPlace);
 	mpRunning->CreatePane(&sPlace);
@@ -686,6 +690,7 @@ void CIDEContent::AddCommands(void)
 	mpContextActions->AddCommands(mpCommands);
 	mpUsages->AddCommands(mpCommands);
 	mpFindInFiles->AddCommands(mpCommands);
+	mpDuplicates->AddCommands(mpCommands);
 	mpOccurrences->AddCommands(mpCommands);
 	mpNavigationHistory->AddCommands(mpCommands);
 	mpBuilding->AddCommands(mpCommands);
@@ -876,6 +881,13 @@ void CIDEContent::Tick(Ptr<CWindow> pWindow)
 		iSoonest = iWait;
 	}
 	iWait = mpFindInFiles->Poll(iNow);
+	if ((iWait >= 0) && ((iSoonest < 0) || (iWait < iSoonest)))
+	{
+		iSoonest = iWait;
+	}
+
+	//Find Duplicates searches a little at each tick, and shows its places as they are now once edits have stopped.
+	iWait = mpDuplicates->Poll(iNow);
 	if ((iWait >= 0) && ((iSoonest < 0) || (iWait < iSoonest)))
 	{
 		iSoonest = iWait;
@@ -1183,6 +1195,7 @@ Ptr<CIDENavigator> CIDEContent::GetNavigator(void) { return mpNavigator; }
 Ptr<CIDEEdit> CIDEContent::GetEdit(void) { return mpEdit; }
 Ptr<CIDEUsages> CIDEContent::GetUsages(void) { return mpUsages; }
 Ptr<CIDEFindInFiles> CIDEContent::GetFindInFiles(void) { return mpFindInFiles; }
+Ptr<CIDEDuplicates> CIDEContent::GetDuplicates(void) { return mpDuplicates; }
 Ptr<CIDEOccurrences> CIDEContent::GetOccurrences(void) { return mpOccurrences; }
 Ptr<CIDENavigationHistory> CIDEContent::GetNavigationHistory(void) { return mpNavigationHistory; }
 Ptr<CIDEIndexing> CIDEContent::GetIndexing(void) { return mpIndexing; }

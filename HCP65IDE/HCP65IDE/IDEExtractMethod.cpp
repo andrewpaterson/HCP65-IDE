@@ -30,6 +30,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDEMoveMembers.h"
 #include "WindowLib/Table.h"
 #include "IDEExtractMethod.h"
+#include "IDEDuplicateMatcher.h"
 #include "IDEContextActions.h"
 
 
@@ -1226,56 +1227,13 @@ void SIDEExtractDuplicate::Kill(void)
 }
 
 
-//Finds where a run of tokens could be written again: an expression of as many tokens, or statements of one block
-//that are as many tokens together (CIDEExtractMethod::FindDuplicates).  The first token of each.
-class CIDEDuplicatePlaceFinder : public CCPPSyntaxChildVisitor
-{
-public:
-	CIDERefactorUnit*	mpcUnit;
-	CArrayInt*			mpaiFirsts;
-	int32				miTokens;
-	bool				mbExpression;
-
-	void	Visit(CCPPSyntax* pcChild) override
-	{
-		CCPPSyntaxCompoundStatement*	pcBlock;
-		int32							iLast;
-		size							i;
-		size							j;
-
-		if (mbExpression)
-		{
-			if (mpcUnit->IsExpression(pcChild) && (pcChild->miFirstToken >= 0) && (pcChild->miLastToken - pcChild->miFirstToken + 1 == miTokens))
-			{
-				mpaiFirsts->AddIfUnique(pcChild->miFirstToken);
-			}
-		}
-		else if (pcChild->GetKind() == CPPS_CompoundStatement)
-		{
-			pcBlock = (CCPPSyntaxCompoundStatement*)pcChild;
-			for (i = 0; i < pcBlock->macpStatements.NumElements(); i++)
-			{
-				iLast = pcBlock->macpStatements.GetPtr(i)->miFirstToken + miTokens - 1;
-				for (j = i; (j < pcBlock->macpStatements.NumElements()) && (pcBlock->macpStatements.GetPtr(j)->miLastToken <= iLast); j++)
-				{
-					if ((pcBlock->macpStatements.GetPtr(i)->miFirstToken >= 0) && (pcBlock->macpStatements.GetPtr(j)->miLastToken == iLast))
-					{
-						mpaiFirsts->AddIfUnique(pcBlock->macpStatements.GetPtr(i)->miFirstToken);
-					}
-				}
-			}
-		}
-		pcChild->VisitFields(this);
-	}
-};
-
-
 //////////////////////////////////////////////////////////////////////////
 //
 // The other places in the file the selection is written again, for
 // Extract Method to make calls of the new function too: the same tokens,
 // but for the names of the selection's variables, which may be others
-// there (each always the same other).  What Extract Method finds for
+// there (each always the same other; CIDEDuplicateMatcher, with the
+// variables as its free names).  What Extract Method finds for
 // each, where it is, must be what it found for the selection: the same
 // variables given and returned, of the same types, in a function of the
 // same class that can call the new one.  How many.
@@ -1288,31 +1246,25 @@ size CIDEExtractMethod::FindDuplicates(SIDEExtraction* psExtraction, CArrayIDEEx
 {
 	CIDERefactorUnit			cUnit;
 	CIDEDuplicatePlaceFinder	cFinder;
+	CIDEDuplicateMatcher		cMatcher;
 	Ptr<CIDEEditorTab>			pTab;
 	Ptr<CTextArea>				pEditor;
 	SIDEExtractDuplicate*		psDuplicate;
-	SPreprocessedToken*			psSource;
-	SPreprocessedToken*			psOther;
-	SPreprocessedToken*			psBefore;
 	SCPPSyntaxRange				sRange;
 	CArrayInt					aiFirsts;
 	CArrayInt					aiStarts;
 	CArrayInt					aiEnds;
-	CChars						szName;
+	CArrayChars					aszVariables;
 	char*						szText;
 	size						uiSelectionStart;
 	size						uiSelectionEnd;
 	size						uiLine;
 	size						uiEndLine;
-	size						uiVariable;
 	size						i;
-	size						j;
-	size						k;
 	int32						iFirst;
 	int32						iLast;
 	int32						iTokens;
 	int32						iAt;
-	bool						bSame;
 	bool						bSelected;
 
 	pTab = mpcContent->GetDocuments()->FindTab(psExtraction->szFileName.Text());
@@ -1340,6 +1292,12 @@ size CIDEExtractMethod::FindDuplicates(SIDEExtraction* psExtraction, CArrayIDEEx
 	cUnit.GetTree()->GetRoot()->VisitFields(&cFinder);
 
 	//Those written as the selection is.
+	aszVariables.Init();
+	for (i = 0; i < psExtraction->asVariables.NumElements(); i++)
+	{
+		aszVariables.Add(psExtraction->asVariables.Get(i)->szName.Text());
+	}
+	cMatcher.Init(&cUnit, &aszVariables, false);
 	aiStarts.Init();
 	aiEnds.Init();
 	for (i = 0; i < aiFirsts.NumElements(); i++)
@@ -1351,51 +1309,8 @@ size CIDEExtractMethod::FindDuplicates(SIDEExtraction* psExtraction, CArrayIDEEx
 		}
 		psDuplicate = NewMalloc<SIDEExtractDuplicate>();
 		psDuplicate->Init();
-		for (j = 0; j < psExtraction->asVariables.NumElements(); j++)
-		{
-			psDuplicate->aszNames.Add("");
-		}
-		bSame = true;
-		for (k = 0; bSame && (k < (size)iTokens); k++)
-		{
-			psSource = cUnit.GetTokeniser()->GetSource(cUnit.GetTokeniser()->Get((size)iFirst + k));
-			psOther = cUnit.GetTokeniser()->GetSource(cUnit.GetTokeniser()->Get((size)iAt + k));
-			psBefore = (k > 0) ? cUnit.GetTokeniser()->GetSource(cUnit.GetTokeniser()->Get((size)iFirst + k - 1)) : NULL;
-
-			//One of the selection's variables, named alone (not a member of that name)?
-			uiVariable = MAX_SIZE;
-			if (cUnit.GetTokeniser()->Get((size)iFirst + k)->IsIdentifier() && !(psBefore && (((psBefore->uiLength == 1) && (psBefore->szText[0] == '.')) ||
-				((psBefore->uiLength == 2) && (memcmp(psBefore->szText, "->", 2) == 0)) || ((psBefore->uiLength == 2) && (memcmp(psBefore->szText, "::", 2) == 0)))))
-			{
-				for (j = 0; (j < psExtraction->asVariables.NumElements()) && (uiVariable == MAX_SIZE); j++)
-				{
-					if ((psExtraction->asVariables.Get(j)->szName.Length() == psSource->uiLength) && (memcmp(psExtraction->asVariables.Get(j)->szName.Text(), psSource->szText, psSource->uiLength) == 0))
-					{
-						uiVariable = j;
-					}
-				}
-			}
-			if (uiVariable == MAX_SIZE)
-			{
-				bSame = (psSource->uiLength == psOther->uiLength) && (memcmp(psSource->szText, psOther->szText, psSource->uiLength) == 0);
-				continue;
-			}
-			szName.Init();
-			szName.Append(psOther->szText, psOther->uiLength);
-			bSame = cUnit.GetTokeniser()->Get((size)iAt + k)->IsIdentifier();
-			if (bSame && psDuplicate->aszNames.Get(uiVariable)->Empty())
-			{
-				//Its name there: one that isn't another of them's.
-				bSame = psDuplicate->aszNames.GetIndex(szName.Text()) == ARRAY_ELEMENT_NOT_FOUND;
-				psDuplicate->aszNames.Get(uiVariable)->Set(szName);
-			}
-			else if (bSame)
-			{
-				bSame = psDuplicate->aszNames.Get(uiVariable)->Equals(szName.Text());
-			}
-			szName.Kill();
-		}
-		if (bSame)
+		cMatcher.StartNames(&psDuplicate->aszNames);
+		if (cMatcher.Match(iFirst, iTokens, &cUnit, iAt, NULL, &psDuplicate->aszNames))
 		{
 			psDuplicate->iLine = sRange.iLine;
 			papsDest->Add(psDuplicate);
@@ -1408,6 +1323,8 @@ size CIDEExtractMethod::FindDuplicates(SIDEExtraction* psExtraction, CArrayIDEEx
 			free(psDuplicate);
 		}
 	}
+	cMatcher.Kill();
+	aszVariables.Kill();
 	aiFirsts.Kill();
 	cUnit.Kill();
 

@@ -2776,6 +2776,58 @@ void CIDEScript::RunEditStep(const char* szStep)
 		//declarations if :d follows; its directory is HCP65_IDE_FIND_DIRECTORY.
 		mpcContent->GetUsages()->SetScopeSettings(GetScriptScope(&szStep[11]), getenv("HCP65_IDE_FIND_DIRECTORY"), strstr(&szStep[11], ":d") != NULL);
 	}
+	else if ((strcmp(szStep, "duplicates") == 0) || (strcmp(szStep, "printduplicates") == 0))
+	{
+		//Find Duplicates of the active editor's selection, or of the function its caret is in, with its settings
+		//(searched to the end at once), and the Duplicates tree printed as "usages" prints Find Usages'; printduplicates
+		//prints the tree as it is.
+		Ptr<CTreeContainer>	pTree;
+		int32				iNode;
+		int32				iDepth;
+		CChars				szNode;
+
+		if (szStep[0] == 'd')
+		{
+			if (mpcContent->GetDuplicates()->TakeWhat())
+			{
+				mpcContent->GetDuplicates()->Start(false, true);
+			}
+		}
+		pTree = mpcContent->GetDuplicates()->GetTree();
+		for (iNode = 0; iNode < pTree->NumNodes(); iNode++)
+		{
+			szNode.Init();
+			pTree->GetNodeText(iNode, &szNode);
+			for (iDepth = pTree->GetNodeDepth(iNode); iDepth > 0; iDepth--)
+			{
+				printf("  ");
+			}
+			printf("%s\n", szNode.Text());
+			szNode.Kill();
+		}
+	}
+	else if (strncmp(szStep, "duplicatescope:", 15) == 0)
+	{
+		//duplicatescope:<scope>[:l]: Find Duplicates' scope, as the script numbers them (GetScriptScope), with literals
+		//that may differ if :l follows; its directory is HCP65_IDE_FIND_DIRECTORY.
+		mpcContent->GetDuplicates()->SetSettings(GetScriptScope(&szStep[15]), getenv("HCP65_IDE_FIND_DIRECTORY"), strstr(&szStep[15], ":l") != NULL);
+	}
+	else if (strncmp(szStep, "duplicatesize:", 14) == 0)
+	{
+		//duplicatesize:<statements>:<tokens>: the smallest run of a function's statements Find Duplicates lists.
+		mpcContent->GetDuplicates()->SetMinimums((size)atoi(&szStep[14]), strchr(&szStep[14], ':') ? (size)atoi(strchr(&szStep[14], ':') + 1) : 1);
+	}
+	else if (strcmp(szStep, "printduplicatesettings") == 0)
+	{
+		//Find Duplicates' settings, as the Settings page and the dialog leave them.
+		printf("Duplicates settings: %s, literals %s, at least %d statements and %d tokens\n", CIDEScope::GetScopeName(mpcContent->GetDuplicates()->GetScope()),
+			   mpcContent->GetDuplicates()->IsLiteralsFree() ? "may differ" : "the same", (int)mpcContent->GetDuplicates()->GetMinimumStatements(), (int)mpcContent->GetDuplicates()->GetMinimumTokens());
+	}
+	else if (strcmp(szStep, "duplicateopen") == 0)
+	{
+		//The Duplicates tree's first place opened, as a click opens it.
+		mpcContent->GetDuplicates()->GetResultsPane()->OpenResult(mpcContent->GetDuplicates()->GetResultsPane()->FindResultNode(0), true);
+	}
 	else if (strcmp(szStep, "usagesonly") == 0)
 	{
 		//Alt+F7 itself: Find Usages with its settings (the usages step never has the declarations).

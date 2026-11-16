@@ -1313,6 +1313,7 @@ void CIDEDocuments::DocumentChanged(const char* szFileName, STextDocumentChange*
 	mpcContent->GetNavigationHistory()->AdjustPlaces(szFileName, &sChange);
 	mpcContent->GetUsages()->AdjustPlaces(szFileName, &sChange);
 	mpcContent->GetFindInFiles()->AdjustPlaces(szFileName, &sChange);
+	mpcContent->GetDuplicates()->AdjustPlaces(szFileName, &sChange);
 }
 
 

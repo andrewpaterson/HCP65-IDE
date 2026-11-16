@@ -364,6 +364,17 @@ def MakeExtractMethodCopy():
 	return {'SOLUTION': os.path.join(szFolder, 'ExtractMethod.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
 
 
+def MakeFindDuplicatesCopy():
+	#A copy of Input/FindDuplicates (CLedger, in Ledger.cpp, and CBook, in Book.cpp, whose functions are written again
+	#in each other with other names: a whole body, a run of statements, an expression and one with other literals), to
+	#find duplicates in.
+	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
+	atexit.register(shutil.rmtree, szRoot, True)
+	szFolder = os.path.join(szRoot, 'FindDuplicates')
+	shutil.copytree(os.path.join(HERE, 'Input', 'FindDuplicates'), szFolder)
+	return {'SOLUTION': os.path.join(szFolder, 'FindDuplicates.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
+
+
 def MakeInlineFunctionCopy():
 	#A copy of Input/InlineFunction (CPump, with functions that return an expression, have statements, and can't be
 	#inlined each for its own reason; CSlot, a class template; Twice and Report, functions of no class), to inline
@@ -2488,6 +2499,56 @@ CHECKS = [
 		'DEBUG': 'edit:selecttext:129:1-130:18,extractmethod,answered:2,printstatus'}),
 		[r'^Dialog \[Extract Method\] answered OK$', r'^Dialog \[Duplicates Detected\] answered OK$',
 		 r'^Status: Extracted int Made\(int iA, int iB\)\.  1 other place it was written is a call of it too\.$'],
+		[]),
+	('find-duplicates-function', dict(MakeFindDuplicatesCopy(), **{
+		#With nothing selected, the function the caret is in (CLedger::Add): the places its whole body is written, its
+		#variables and parameters with other names (CBook::Merge).
+		'WAIT_INDEX': '1', 'OPEN': 'Ledger.cpp',
+		'DEBUG': 'edit:caret:15:2,edit:duplicates'}),
+		[r'^Status: Find Duplicates: 1 place found\.$', r'^Duplicates of CLedger::Add in the solution  1 place, 1 part$',
+		 r'^  The whole body, 5 statements, 22 tokens  1 place$', r'^    Book\.cpp  1 place$', r'^      6: int iJoined;$'],
+		[r'Ledger\.cpp  ']),
+	('find-duplicates-runs', dict(MakeFindDuplicatesCopy(), **{
+		#A function whose body isn't written whole anywhere (CLedger::Tally): the run of its first three statements is
+		#(CBook::Recount's, which does more after them), listed once, not again for the loop's block inside it.  With
+		#a minimum it is bigger than, nothing.
+		'WAIT_INDEX': '1', 'OPEN': 'Ledger.cpp',
+		'DEBUG': 'edit:caret:27:2,edit:duplicates,edit:duplicatesize:30:200,edit:duplicates'}),
+		[r'^Status: Find Duplicates: 1 place found\.$', r'^Duplicates of CLedger::Tally in the solution  1 place, 1 part$',
+		 r'^  Lines 24 to 33, 7 statements, 42 tokens  1 place$', r'^    Book\.cpp  1 place$', r'^      17: int j;$',
+		 r'^Status: Find Duplicates: no duplicates found\.$', r'^Duplicates of CLedger::Tally in the solution  0 places, 0 parts$'],
+		[r'iEvery \+= psItem', r'The whole body']),
+	('find-duplicates-selected', dict(MakeFindDuplicatesCopy(), **{
+		#Selected statements (Add's first two) are found as a run of statements; a selected expression (Distance's) is
+		#found inside another statement (Scaled's assignment).  In the current file only, neither is.
+		'WAIT_INDEX': '1', 'OPEN': 'Ledger.cpp',
+		'DEBUG': 'edit:selecttext:15:2-16:23,edit:duplicates,edit:selecttext:40:9-40:26,edit:duplicates,edit:duplicatescope:4,edit:duplicates'}),
+		[r'^Duplicates of the statements at line 15 to 16 in the solution  1 place$', r'^  Book\.cpp  1 place$', r'^    8: iJoined = iP \+ iQ;$',
+		 r"^Duplicates of 'iX \* iX \+ iY \* iY' in the solution  1 place$", r'^    36: iLength = iX \* iX \+ iY \* iY;$',
+		 r"^Duplicates of 'iX \* iX \+ iY \* iY' in Ledger\.cpp  0 places$"],
+		[]),
+	('find-duplicates-literals', dict(MakeFindDuplicatesCopy(), **{
+		#Literals must be the same (Offset's iA * 4 + 16 isn't Shift's iZ * 8 + 32), unless they may differ, when a
+		#number is any number; a name is never a literal (Kept's iA * 4 + miRate isn't found either way).
+		'WAIT_INDEX': '1', 'OPEN': 'Ledger.cpp',
+		'DEBUG': 'edit:selecttext:46:9-46:20,edit:duplicates,edit:duplicatescope:0:l,edit:duplicates'}),
+		[r'^Status: Find Duplicates: no duplicates found\.$', r"^Duplicates of 'iA \* 4 \+ 16' in the solution  0 places$",
+		 r"^Duplicates of 'iA \* 4 \+ 16' in the solution  1 place$", r'^    43: return iZ \* 8 \+ 32;$'],
+		[r'miRate;$']),
+	('find-duplicates-settings', dict(MakeFindDuplicatesCopy(), **{
+		#Settings' Find Duplicates page: the minimums and the tick, kept by OK and written with the settings.
+		'SETTINGS': MakeSettingsFile(), 'DUPLICATES_EDITS': 'statements:4;tokens:12;literals:on', 'DIALOG_ANSWER': 'OK',
+		'DEBUG': 'edit:printduplicatesettings,clickmenu:File/Settings...,answered:1,edit:printduplicatesettings'}),
+		[r'^Duplicates settings: Solution, literals the same, at least 3 statements and 20 tokens$', r'^Dialog \[Settings\] answered OK$',
+		 r'^Duplicates settings: Solution, literals may differ, at least 4 statements and 12 tokens$'],
+		[]),
+	('find-duplicates-dialog', dict(MakeFindDuplicatesCopy(), **{
+		#Control+Alt+Shift+D on the Edit menu: the dialog says what it looks for, and Find lists what it found in the
+		#Duplicates tool window; its first place opens with a click.
+		'WAIT_INDEX': '1', 'OPEN': 'Ledger.cpp', 'SETTINGS': MakeSettingsFile(), 'DIALOG_ANSWER': 'OK',
+		'DEBUG': 'edit:caret:15:2,command:Edit.FindDuplicates,answered:1,wait:2000,edit:printduplicates,edit:duplicateopen,printtabs'}),
+		[r'^Dialog \[Find Duplicates\] answered OK$', r'^Duplicates of CLedger::Add in the solution  1 place, 1 part$', r'^      6: int iJoined;$',
+		 r'^Tabs: Ledger\.cpp >Book\.cpp$'],
 		[]),
 	('extract-method-template', dict(MakeExtractMethodCopy(), **{
 		#In templates (T4).  From a function template the new function is a template of the same parameters, defined
