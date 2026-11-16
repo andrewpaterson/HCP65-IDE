@@ -110,6 +110,44 @@ Order (each built, checked and committed):
   5. Save File as Template.
 
 
+How it is made (planned again 2026-11-16, before building)
+----------------------------------------------------------
+
+  TemplateLib (HCP65-IDE\Libraries\TemplateLib, BaseLib only; built on Windows and Linux, in HCP65IDE.sln and its
+  CMakeLists.txt; TestTemplateLib in HCP65-IDE\Tests as TestClaudeLib is):
+    - CTemplateText: a template's text parsed once into a tree (Parse), or an error with its line and column.  Its
+      nodes (STemplateNode): text; a reference ($name, ${name}, $!name, $!{name}, each with a chain of method
+      calls); #set; #if with its #elseif and #else branches; #foreach; #parse.  Expressions (STemplateExpression):
+      string literals ("..." with references in it, '...' as it is), whole numbers, true and false, references,
+      ( ), !, &&, ||, ==, !=, <, <=, >, >=, + and -.  Velocity's words for them (and, or, not, eq, ne, lt, le, gt,
+      ge) too.  #{if} and the like with braces, for a directive against text.
+    - Its whitespace is Velocity 2's "lines": a line that has only directives and whitespace on it goes from the
+      output altogether, so a template can be laid out without its #if lines leaving blank ones.
+    - CTemplateValues: the variables, each a string or a list of strings (#foreach's), set by whoever applies
+      the template and by #set, looked up innermost first (a #foreach's own variable, then the template's).
+    - CTemplateIncludes: what #parse "File Header" finds, given by whoever applies the template (an interface
+      with one virtual: the include's text by its name).
+    - CTemplateText::Evaluate(values, includes, dest): the output.  A reference with no value is written as it
+      is ("$NAME", as Velocity writes one), and $! writes nothing; FindMissing lists the variables a template uses
+      that have no value, for the New dialog to ask.  An include that #parses itself, or a #foreach over a list of
+      more than 10,000, stops with an error rather than running for ever.
+    - String methods, as Java's: toUpperCase(), toLowerCase(), trim(), length(), isEmpty(), substring(i[, j]),
+      replace(a, b), startsWith(s), endsWith(s), contains(s), equals(s), indexOf(s); and the IDE's own:
+      toUpperSnakeCase(), toLowerSnakeCase(), withoutPrefix().
+  In the IDE:
+    - CIDEFileTemplates (IDEFileTemplates.h): every template by its tab and name, the built-in ones compiled in,
+      the IDE's and the workspace's changes read from their fileTemplates directories (scheme lookup: workspace,
+      then IDE, then built in), and saved back by the settings page.  Apply(name, values) gives a template's text
+      for each file it makes (the parent and its children) with their names.
+    - CIDETemplateVariables: the predefined variables for a file of a project (the date, ${AUTHOR}, the project's
+      name and licence, the guard, the class names), so every caller fills them the same way.
+    - The project's licence: a property kept beside the .vcxproj (its .vcxproj.user is the user's own, so a file
+      of the IDE's: <Project>.hcp65project, as .hcp65build is beside a solution), shown in the project's
+      properties; LGPL 3 unless set.
+    - The generators and refactorings call CIDEFileTemplates instead of writing text, one by one, each checked
+      by the IDE checks as it moves.
+
+
 Questions (answered 2026-11-16)
 -------------------------------
 
