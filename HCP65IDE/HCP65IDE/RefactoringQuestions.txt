@@ -72,14 +72,18 @@ Open
     key for both).  For a function a dialog asks: all calls and take the function out, all calls and keep it, or
     this call only.
 
-40. Where a function's body names a member that isn't public and a call of it is outside the class, that is a
-    conflict (the inlined code wouldn't compile).  A call on "&cOther" inlines as "(&cOther)->Kind()", not
-    "cOther.Kind()".  Say if that matters.
-
 47. A forward declaration made from an #include is written after the #includes, two lines down ("class CGauge;"),
     with any the file has there already.  Optimise #includes does this in .cpp files too, not only in headers.  It
     leaves <> #includes, #includes inside an #if, and a .cpp's #include of its own header alone.  Right?
 
+
+Answered
+--------
+
+40. Where a function's body names a member that isn't public and a call of it is outside the class, that is a
+    conflict (the inlined code wouldn't compile).  A call on "&cOther" inlines as "(&cOther)->Kind()", not
+    "cOther.Kind()".  Say if that matters.
+    Answered 2026-11-16: as recommended: a call on "&cOther" inlines as "cOther.Kind()".  To do.
 
 58. Convert Enum to Enum Class (new, on an enum or one of its enumerators; no key) gives every use of an enumerator
     the enum's name, and refuses if the code then doesn't compile: an enum class's value is no integer, so
@@ -87,15 +91,16 @@ Open
     casts instead now ("(int)eLevel + 1", "(EFlags)((int)FLAG_A | (int)FLAG_B)") and shows the places first as
     Problems Detected's list, so nothing is refused for that (only ++ and --).  Is that what you want, or should
     an enum used as flags or as an index stay an enum (refused, with the places listed)?
+    Answered 2026-11-16: as recommended: the casts stay, with a tick "refuse if casts are needed" for when the
+    places are to be seen and decided on instead.  To do.
 
 59. Write Template's Interface (new; no key) writes what a template needs of its argument as a comment over it,
     or as an abstract class before it (named C<Template>Interface unless you type another).  It leaves the
     classes the template is used with alone.  Should the abstract class form also offer to make those classes
     derive from it (": public CRunnable", their functions marked override)?  And is C...Interface the name you
     want suggested, or have you a prefix for such classes?
-
-Answered
---------
+    Answered 2026-11-16: as recommended: the class form offers, unticked, to make the classes the template is
+    used with derive from it (their functions marked override); C<Template>Interface stays the name.  To do.
 
  1. Rename and a template's family (T2).  A member a template's body names (mp->Init() in CHolder<M>) is now always
     renamed with the other classes' members of that name the template is instantiated with, and the dialog and
