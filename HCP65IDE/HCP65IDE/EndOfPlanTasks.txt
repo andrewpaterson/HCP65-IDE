@@ -98,6 +98,8 @@ also says virtual keeps virtual only if the house style does there; look at what
 Windows too after (MSVC must still be happy), run the tests, and commit a repository at a time.  CppCompilerLib's
 files are the other session's: send it the list for them, or ask before touching them.
 
+Done 2026-11-16 by the CppCompilerLib session (gameengine-3c), the user said.
+
 
 d. An optional warning in the HCP65 compiler for a missing override
 -------------------------------------------------------------------
