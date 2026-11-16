@@ -1965,6 +1965,16 @@ void CIDEScript::RunEditStep(const char* szStep)
 		szPrinted.Kill();
 		sInterface.Kill();
 	}
+	else if (strcmp(szStep, "enumtoclass:nocasts") == 0)
+	{
+		//Convert Enum to Enum Class with its dialog's tick off: an enum whose values are used as integers is refused.
+		CChars	szPrinted;
+
+		szPrinted.Init();
+		mpcContent->GetConvertEnum()->ConvertAtCaret(&szPrinted, false);
+		printf("Status: %s\n", szPrinted.Text());
+		szPrinted.Kill();
+	}
 	else if ((strcmp(szStep, "convertableenum") == 0) || (strcmp(szStep, "enumtoclass") == 0))
 	{
 		//What Convert Enum to Enum Class found for the enum at the caret (convertableenum); or it converted, with what

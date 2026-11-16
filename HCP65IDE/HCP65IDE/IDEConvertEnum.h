@@ -26,6 +26,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/ArrayInt.h"
 #include "WindowLib/CommandSet.h"
 #include "WindowLib/MenuContainer.h"
+#include "WindowLib/Dialog.h"
+#include "WindowLib/CheckBox.h"
 #include "IDECodeModel.h"
 #include "IDERefactorUnit.h"
 
@@ -76,6 +78,9 @@ struct SIDEEnumConversion
 //"eFlags = (EFlags)((int)eFlags | (int)EFlags::FLAG_B)".  The command shows the places first.  ++ and -- on its
 //value have no cast: the enum is refused.  The files are then checked as they would be, and nothing is changed
 //if they have more errors than they had.
+//
+//The command's dialog has a tick, "Write casts where its values are used as integers", on until it is taken off
+//(question 58): off, an enum whose values are used as integers is refused, with the places it would need them.
 //Refused: an enum with no name, one that is an enum class already, a declaration or an enumerator's use that a
 //macro makes, a file that isn't one of the solutions'.  One undo across the files.
 class CIDEConvertEnum : public CObject
@@ -84,6 +89,8 @@ CONSTRUCTABLE(CIDEConvertEnum);
 DESTRUCTABLE(CIDEConvertEnum);
 protected:
 	CIDEContent*	mpcContent;  //Not held: the content holds it.
+	Ptr<CDialog>	mpDialog;  //While it is shown.
+	bool			mbWriteCasts;  //The dialog's tick, as last chosen: casts are written where its values are used as integers.
 
 public:
 	void	Init(CIDEContent* pcContent);
@@ -100,7 +107,8 @@ public:
 	bool	FindConversion(SIDEEnumConversion* psDest);
 	void	FindCasts(SIDEEnumConversion* psDest);
 	bool	Convert(SIDEEnumConversion* psConversion, CChars* pszStatus = NULL);
-	bool	ConvertAtCaret(CChars* pszStatus = NULL);
+	bool	ConvertAtCaret(CChars* pszStatus = NULL, bool bWriteCasts = true);
+	bool	ShowConvert(void);
 	char*	PrintConversion(SIDEEnumConversion* psConversion, CChars* pszDest);
 
 protected:

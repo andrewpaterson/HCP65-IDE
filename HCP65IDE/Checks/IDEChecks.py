@@ -2420,11 +2420,22 @@ CHECKS = [
 		 r'^11\|\};$', r'^12\|$', r'^13\|$', r'^14\|//Runs what it is given\.$', r'^15\|template<class M>$',
 		 r'^34\|//M must have:$', r'^35\|//\tWake\(\?, \?\);$', r'^36\|template<class M>$', r'^43 lines$'],
 		[]),
+	('enum-to-class-no-casts', dict(MakeEnumsCopy(), **{
+		#With the dialog's tick off ("Write casts where its values are used as integers") an enum whose values are
+		#used as integers is refused, with the places; one whose aren't is converted.  The dialog's tick is the
+		#first thing in it: space takes it off.
+		'WAIT_INDEX': '1', 'OPEN': 'Modes.h', 'SETTINGS': MakeSettingsFile(), 'DIALOG_KEYS': 'space', 'DIALOG_ANSWER': 'OK',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:13:7,edit:enumtoclass:nocasts,edit:caret:25:4,edit:enumtoclass:nocasts,edit:caret:13:7,command:Refactor.EnumToEnumClass,answered:1,printstatus'}),
+		[r"^Status: Can't make ELevel an enum class: its values are used as integers, and casts aren't to be written: Use\.cpp line 16 and 4 other places\.$",
+		 r'^Status: Made EState an enum class: 3 uses of its enumerators given its name, in 3 files\.$',
+		 r'^Focus: CCheckBox$', r'^Dialog \[Convert ELevel to Enum Class\] answered OK$',
+		 r"^Status line: Can't make ELevel an enum class: its values are used as integers, and casts aren't to be written: Use\.cpp line 16 and 4 other places\.$"],
+		[r'^Dialog \[Problems Detected\]']),
 	('enum-to-class-casts-shown', dict(MakeEnumsCopy(), **{
 		#The command shows where casts are written before it changes anything: Cancel there changes nothing, Continue
 		#does it.
-		'WAIT_INDEX': '1', 'OPEN': 'Modes.h', 'CARET': '13:7', 'SETTINGS': MakeSettingsFile(), 'DIALOG_ANSWER': 'Cancel|OK',
-		'DEBUG': 'edit:renamesearch:---s,command:Refactor.EnumToEnumClass,answered:1,printstatus,command:Refactor.EnumToEnumClass,answered:2,printstatus'}),
+		'WAIT_INDEX': '1', 'OPEN': 'Modes.h', 'CARET': '13:7', 'SETTINGS': MakeSettingsFile(), 'DIALOG_ANSWER': 'OK|Cancel|OK|OK',
+		'DEBUG': 'edit:renamesearch:---s,command:Refactor.EnumToEnumClass,answered:2,printstatus,command:Refactor.EnumToEnumClass,answered:4,printstatus'}),
 		[r'^Dialog \[Problems Detected\] answered Cancel$', r'^Status line: Convert Enum to Enum Class: nothing was changed\.$',
 		 r'^Dialog \[Problems Detected\] answered OK$',
 		 r'^Status line: Made ELevel an enum class: 5 uses of its enumerators given its name, in 3 files; casts written at 5 places\.$'],
@@ -3220,7 +3231,7 @@ CHECKS = [
 		 r'^Menu Debug: Start Debugging \[F5\], Start Without Debugging \[Ctrl\+F5\], Stop Debugging \[Shift\+F5\], Stop Running\(disabled\), Restart \[Ctrl\+Shift\+F5\], Break All \[Ctrl\+Pause/Break\], Attach to Emulator\.\.\., Step Into \[F11\], Step Over \[F10\], Step Out \[Shift\+F11\], Toggle Breakpoint \[F9\], ',
 		 r'^Menu Window: Reset Window Layout, Close All Documents$',
 		 r'^Menu Editor: Go to Source \[Ctrl\+B\], Find Usages \[Alt\+F7\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Show Context Actions \[Alt\+Enter\], Rename\.\.\. \[Shift\+F6\], Refactor>, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\]$',
-		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Introduce Field\.\.\. \[Ctrl\+Alt\+F\](\(disabled\))?, Introduce Constant\.\.\. \[Ctrl\+Alt\+C\](\(disabled\))?, Introduce Parameter\.\.\. \[Ctrl\+Alt\+P\](\(disabled\))?, Introduce Typedef\.\.\. \[Ctrl\+Alt\+K\](\(disabled\))?, Inline\.\.\. \[Ctrl\+Alt\+N\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Unify Parameter Names(\(disabled\))?, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\.(\(disabled\))?, Push Members Down\.\.\.(\(disabled\))?, Move\.\.\. \[F6\](\(disabled\))?, Copy Class\.\.\.(\(disabled\))?, Extract Method\.\.\. \[Ctrl\+Alt\+M\](\(disabled\))?, Extract Superclass\.\.\.(\(disabled\))?, Extract Interface\.\.\.(\(disabled\))?, Extract Class\.\.\.(\(disabled\))?, Encapsulate Field\.\.\.(\(disabled\))?, Optimise #includes \[Ctrl\+Alt\+O\], Convert Macro\.\.\.(\(disabled\))?, Convert Pointer to Reference(\(disabled\))?, Convert Reference to Pointer(\(disabled\))?, Convert Enum to Enum Class(\(disabled\))?, Write Template.s Interface\.\.\.(\(disabled\))?, Make Member Function const(\(disabled\))?, Make Member Function static(\(disabled\))?, Convert Function to Member Function(\(disabled\))?, Convert Member Function to Function(\(disabled\))?, Extract Template Parameter\.\.\., Remove Template Parameter$',
+		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Introduce Field\.\.\. \[Ctrl\+Alt\+F\](\(disabled\))?, Introduce Constant\.\.\. \[Ctrl\+Alt\+C\](\(disabled\))?, Introduce Parameter\.\.\. \[Ctrl\+Alt\+P\](\(disabled\))?, Introduce Typedef\.\.\. \[Ctrl\+Alt\+K\](\(disabled\))?, Inline\.\.\. \[Ctrl\+Alt\+N\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Unify Parameter Names(\(disabled\))?, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\.(\(disabled\))?, Push Members Down\.\.\.(\(disabled\))?, Move\.\.\. \[F6\](\(disabled\))?, Copy Class\.\.\.(\(disabled\))?, Extract Method\.\.\. \[Ctrl\+Alt\+M\](\(disabled\))?, Extract Superclass\.\.\.(\(disabled\))?, Extract Interface\.\.\.(\(disabled\))?, Extract Class\.\.\.(\(disabled\))?, Encapsulate Field\.\.\.(\(disabled\))?, Optimise #includes \[Ctrl\+Alt\+O\], Convert Macro\.\.\.(\(disabled\))?, Convert Pointer to Reference(\(disabled\))?, Convert Reference to Pointer(\(disabled\))?, Convert Enum to Enum Class\.\.\.(\(disabled\))?, Write Template.s Interface\.\.\.(\(disabled\))?, Make Member Function const(\(disabled\))?, Make Member Function static(\(disabled\))?, Convert Function to Member Function(\(disabled\))?, Convert Member Function to Function(\(disabled\))?, Extract Template Parameter\.\.\., Remove Template Parameter$',
 		 r'^Menu Explorer: Set as Startup Solution, Set as Startup Project\(disabled\), Remove Solution, Rename\.\.\.(\(disabled\))?$',
 		 r'^Menu item \[View/Nope\] not found$'], []),
 	('menu-clicks', {

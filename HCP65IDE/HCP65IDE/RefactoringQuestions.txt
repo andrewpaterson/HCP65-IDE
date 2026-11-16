@@ -103,7 +103,8 @@ Answered
     Problems Detected's list, so nothing is refused for that (only ++ and --).  Is that what you want, or should
     an enum used as flags or as an index stay an enum (refused, with the places listed)?
     Answered 2026-11-16: as recommended: the casts stay, with a tick "refuse if casts are needed" for when the
-    places are to be seen and decided on instead.  To do.
+    places are to be seen and decided on instead.  Done 2026-11-16: the command's dialog has the tick "Write casts
+    where its values are used as integers", on until it is taken off; off, such an enum is refused with its places.
 
 59. Write Template's Interface (new; no key) writes what a template needs of its argument as a comment over it,
     or as an abstract class before it (named C<Template>Interface unless you type another).  It leaves the

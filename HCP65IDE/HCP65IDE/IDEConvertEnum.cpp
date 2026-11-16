@@ -33,6 +33,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDEIncludes.h"
 #include "IDEChangeSignature.h"
 #include "IDEContextActions.h"
+#include "IDEScript.h"
 #include "IDEConvertEnum.h"
 
 
@@ -98,6 +99,7 @@ void CIDEConvertEnum::Init(CIDEContent* pcContent)
 {
 	PreInit();
 	mpcContent = pcContent;
+	mbWriteCasts = true;
 	PostInit();
 }
 
@@ -109,6 +111,8 @@ void CIDEConvertEnum::Init(CIDEContent* pcContent)
 void CIDEConvertEnum::Class(void)
 {
 	U_Pointer(mpcContent);
+	M_Pointer(mpDialog);
+	U_Bool(mbWriteCasts);
 }
 
 
@@ -132,7 +136,7 @@ bool CIDEConvertEnum::Load(CObjectReader* pcFile) { return false; }
 //////////////////////////////////////////////////////////////////////////
 void CIDEConvertEnum::AddCommands(Ptr<CCommandSet> pCommands)
 {
-	pCommands->Add("Refactor.EnumToEnumClass", "Convert Enum to Enum Class", "", Ptr<CImageCel>(), this, &CIDEConvertEnum::QueueConvert)->SetEnabledCheck(this, &CIDEConvertEnum::CanConvert);
+	pCommands->Add("Refactor.EnumToEnumClass", "Convert Enum to Enum Class...", "", Ptr<CImageCel>(), this, &CIDEConvertEnum::QueueConvert)->SetEnabledCheck(this, &CIDEConvertEnum::CanConvert);
 }
 
 
@@ -179,7 +183,7 @@ bool CIDEConvertEnum::CanConvert(void)
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEConvertEnum::QueueConvert(void) { mpcContent->GetWindow()->Post(this, &CIDEConvertEnum::ConvertQueued); }
-void CIDEConvertEnum::ConvertQueued(void) { ConvertAtCaret(); }
+void CIDEConvertEnum::ConvertQueued(void) { ShowConvert(); }
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -933,7 +937,7 @@ bool CIDEConvertEnum::Convert(SIDEEnumConversion* psConversion, CChars* pszStatu
 // pszStatus left empty, if there is none there.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEConvertEnum::ConvertAtCaret(CChars* pszStatus)
+bool CIDEConvertEnum::ConvertAtCaret(CChars* pszStatus, bool bWriteCasts)
 {
 	SIDEEnumConversion	sConversion;
 	CArrayChars			aszAsked;
@@ -952,6 +956,18 @@ bool CIDEConvertEnum::ConvertAtCaret(CChars* pszStatus)
 		return false;
 	}
 	FindCasts(&sConversion);
+	if (!bWriteCasts && sConversion.bPossible && (sConversion.aszCastPlaces.NumElements() > 0))
+	{
+		//Casts aren't to be written: the places that would need them say why not.
+		szLine.Init("its values are used as integers, and casts aren't to be written: ");
+		szLine.Append(sConversion.aszCastPlaces.GetText(0));
+		if (sConversion.aszCastPlaces.NumElements() > 1)
+		{
+			szLine.Append(" and ")->Append((uint32)(sConversion.aszCastPlaces.NumElements() - 1))->Append((sConversion.aszCastPlaces.NumElements() == 2) ? " other place" : " other places");
+		}
+		Refuse(&sConversion, szLine.Text());
+		szLine.Kill();
+	}
 	bResult = true;
 	if (!pszStatus && sConversion.bPossible && (sConversion.aszCastPlaces.NumElements() > 0))
 	{
@@ -974,6 +990,43 @@ bool CIDEConvertEnum::ConvertAtCaret(CChars* pszStatus)
 	bResult = bResult && Convert(&sConversion, pszStatus);
 	sConversion.Kill();
 	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The command: its dialog (whether casts are written), then the
+// conversion.  False if nothing changed.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEConvertEnum::ShowConvert(void)
+{
+	SIDEEnumConversion	sConversion;
+	Ptr<CCheckBox>		pCasts;
+	CChars				szTitle;
+	bool				bResult;
+
+	sConversion.Init();
+	if (!FindConversion(&sConversion))
+	{
+		mpcContent->ShowStatus("There is no enum at the caret to make an enum class.");
+		sConversion.Kill();
+		return false;
+	}
+	szTitle.Init("Convert ");
+	szTitle.Append(sConversion.szName)->Append(" to Enum Class");
+	sConversion.Kill();
+	mpDialog = OMalloc<CDialog>(mpcContent->GetWindow(), mpcContent->GetDialogLook(), szTitle.Text());
+	szTitle.Kill();
+	pCasts = mpDialog->AddCheckBox("Write casts where its values are used as integers", mbWriteCasts);
+	mpDialog->SetOKCaption("Refactor");
+	mpcContent->GetScript()->WatchDialog(mpDialog);
+	bResult = mpDialog->Show(480);
+	mpcContent->GetScript()->StopWatchingDialog();
+	mbWriteCasts = pCasts->IsTicked();
+	pCasts = NULL;
+	mpDialog = NULL;
+	return bResult && ConvertAtCaret(NULL, mbWriteCasts);
 }
 
 
