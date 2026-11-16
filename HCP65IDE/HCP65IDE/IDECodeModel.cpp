@@ -3724,7 +3724,7 @@ int CIDECodeModel::FindDeclaringFile(CCPPIndexSymbol* pcSymbol)
 	int					iFirst;
 
 	if ((pcSymbol->mszKey.Text()[0] == '@') || (pcSymbol->meKind == CPPSK_Namespace) || (pcSymbol->meKind == CPPSK_TypeParameter) || (pcSymbol->meKind == CPPSK_Parameter) ||
-		(pcSymbol->meKind == CPPSK_ValueParameter) || (pcSymbol->meKind == CPPSK_Label) || (pcSymbol->meKind == CPPSK_BuiltinType))
+		(pcSymbol->meKind == CPPSK_ValueParameter) || (pcSymbol->meKind == CPPSK_TemplateTemplateParameter) || (pcSymbol->meKind == CPPSK_Label) || (pcSymbol->meKind == CPPSK_BuiltinType))
 	{
 		return -1;
 	}

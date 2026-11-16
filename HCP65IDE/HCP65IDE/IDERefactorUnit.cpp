@@ -843,7 +843,7 @@ bool CIDERefactorUnit::AppendDeclaredTypeOf(CCPPSyntaxDeclSpecifiers* pcSpecifie
 		psSymbol = mcUnit.mcTree.GetTokenSymbol(i);
 		if (psSymbol && psSymbol->pcSymbol)
 		{
-			if ((psSymbol->pcSymbol->meKind == CPPSK_TypeParameter) || (psSymbol->pcSymbol->meKind == CPPSK_ValueParameter) ||
+			if ((psSymbol->pcSymbol->meKind == CPPSK_TypeParameter) || (psSymbol->pcSymbol->meKind == CPPSK_ValueParameter) || (psSymbol->pcSymbol->meKind == CPPSK_TemplateTemplateParameter) ||
 				(psSymbol->pcSymbol->mpcScope && (psSymbol->pcSymbol->mpcScope->meKind == CPPSC_Class)))
 			{
 				szSpecifiers.Kill();

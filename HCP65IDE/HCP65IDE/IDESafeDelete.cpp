@@ -340,7 +340,7 @@ void CIDESafeDelete::AddContextActions(SIDECaretContext* psContext)
 {
 	bool	bDeletable;
 
-	bDeletable = (psContext->uiKind != CPPSK_Parameter) && (psContext->uiKind != CPPSK_TypeParameter) && (psContext->uiKind != CPPSK_ValueParameter) && (psContext->uiKind != CPPSK_Label) &&
+	bDeletable = (psContext->uiKind != CPPSK_Parameter) && (psContext->uiKind != CPPSK_TypeParameter) && (psContext->uiKind != CPPSK_ValueParameter) && (psContext->uiKind != CPPSK_TemplateTemplateParameter) && (psContext->uiKind != CPPSK_Label) &&
 				 (psContext->uiKind != CPPSK_Enumerator) && (psContext->uiKind != CPPSK_BuiltinType);
 	if (psContext->bSymbol && (psContext->uiRole != CPPIR_Reference) && bDeletable)
 	{
