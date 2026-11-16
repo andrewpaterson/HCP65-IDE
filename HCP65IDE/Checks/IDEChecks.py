@@ -278,13 +278,29 @@ def MakeChangeSignatureCopy():
 	return {'SOLUTION': os.path.join(szFolder, 'ChangeSignature.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
 
 
-def MakeDefinitionsCopy():
+def WriteSchemeTemplates(szFolder, asTemplates):
+	#A Workspace scheme of file and code templates beside a solution: asTemplates are (tab, name, text), each a .ft in
+	#szFolder's fileTemplates and listed in its Templates.xml.  With none there is no scheme.
+	if not asTemplates:
+		return
+	szTemplates = os.path.join(szFolder, 'fileTemplates')
+	szIndex = '<?xml version="1.0" encoding="utf-8"?>\n<FileTemplates>\n'
+	for szTab, szName, szText in asTemplates:
+		os.makedirs(os.path.join(szTemplates, szTab), exist_ok=True)
+		open(os.path.join(szTemplates, szTab, szName + '.ft'), 'w', newline='').write(szText)
+		szIndex += '\t<Template Tab="%s" Name="%s"/>\n' % (szTab, szName)
+	open(os.path.join(szTemplates, 'Templates.xml'), 'w', newline='').write(szIndex + '</FileTemplates>\n')
+
+
+def MakeDefinitionsCopy(asTemplates=[]):
 	#A copy of Input/Definitions (CTank, with functions declared and not defined, defined in the class, and defined
 	#outside it; CStore, a class template; functions outside any class), to make declarations and definitions in.
+	#asTemplates are its Workspace scheme's templates (WriteSchemeTemplates).
 	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
 	atexit.register(shutil.rmtree, szRoot, True)
 	szFolder = os.path.join(szRoot, 'Definitions')
 	shutil.copytree(os.path.join(HERE, 'Input', 'Definitions'), szFolder)
+	WriteSchemeTemplates(szFolder, asTemplates)
 	return {'SOLUTION': os.path.join(szFolder, 'Definitions.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
 
 
@@ -1408,6 +1424,20 @@ CHECKS = [
 		 r'^21\|\}$', r'^22\|$', r'^23\|$', r'^24\|/{74}$', r'^25\|//$', r'^26\|//$', r'^27\|/{74}$', r'^28\|void CTank::Fill\(int iAmount, int iRate\)$', r'^29\|\{$', r'^30\|\}$',
 		 r'^31\|$', r'^32\|$', r'^33\|/{74}$', r'^35\|// Whether it holds all it can\.$', r'^38\|bool CTank::IsFull\(void\) const$'],
 		[r'^Definitions: refused']),
+	('definitions-generate-scheme', dict(MakeDefinitionsCopy([('Code', 'New Function Body', '## A comment of the template\'s.\n\t//To do: $FUNCTION_NAME.\n')]), **{
+		#Generate Definition with the Workspace scheme's New Function Body (fileTemplates beside the solution): Fill's
+		#body is that template's, its ## comment not written.
+		'WAIT_INDEX': '1', 'OPEN': 'Tank.h', 'CARET': '14:8',
+		'DEBUG': 'edit:renamesearch:---s,edit:generatedefinition,printdisklines:Tank.cpp'}),
+		[r'^Status: Defined CTank::Fill in Tank\.cpp\.$', r'^28\|void CTank::Fill\(int iAmount, int iRate\)$', r'^29\|\{$', r'^30\|\t//To do: (CTank::)?Fill\.$', r'^31\|\}$'],
+		[r'^Definitions: refused', r'A comment']),
+	('definitions-generate-scheme-error', dict(MakeDefinitionsCopy([('Code', 'New Function Body', '#if ($BODY)\n$BODY\n')]), **{
+		#A template with an error (an #if with no #end) stops Generate Definition, which says where the error is, and
+		#nothing is written.
+		'WAIT_INDEX': '1', 'OPEN': 'Tank.h', 'CARET': '14:8',
+		'DEBUG': 'edit:renamesearch:---s,edit:generatedefinition,printdisklines:Tank.cpp'}),
+		[r'The New Function Body template has an error: Line 1, column 1: #if has no #end', r'^21\|\}$'],
+		[r'^Status: Defined', r'void CTank::Fill']),
 	('definitions-generate-template', dict(MakeDefinitionsCopy(), **{
 		#A function outside any class goes at the end of its header's source file; a class template's member in the
 		#header, under the class's template<...>, after the member defined before it.

@@ -186,6 +186,29 @@ Progress
         checks the File Header of an LGPL 3 project.  ${AUTHOR} is git's user.name until Settings has its field.
 
 
+  Step 3, broken down (2026-11-16):
+    3a. Kept templates: CIDEFileTemplates reads and writes a scheme's directory, <dir>\fileTemplates: a template's
+        text in <Tab>\<Name>.ft (a Files template's <Name>.<extension>.ft, as IntelliJ names them) and every
+        template of the scheme in Templates.xml (<Template Tab= Name= Extension= FileName= Parent=/>).  The Default
+        scheme's <dir> is the IDE settings file's (not read when a check doesn't keep settings), the Workspace
+        scheme's the .hcp65workspace's (the startup solution's, with none).  Each template says where its text is
+        from (built in, Default, Workspace); Reset gives a built-in one its text back.  Read when a solution or
+        workspace opens.
+        Built: CIDEFileTemplates keeps each scheme's entry apart (Get takes the latest, Remove gives the one under
+        it back), Read and Write as above, CIDESolutions::ReadFileTemplates on opening.  Checks
+        definitions-generate-scheme (a Workspace New Function Body used) and -scheme-error (refused, with the
+        template's line and column).
+    3b. The Settings page, File and Code Templates (CIDEFileTemplatesPage, a CSettingsPage): the scheme, the three
+        tabs, the list (a changed one in blue, a child under its parent), Add, Remove, Copy and Reset, the name,
+        extension and file name, the text in a code editor colouring ${...} and #directives with the error at the
+        caret, and the variables it can use.  Author: a field on it (empty: git's user.name, T4).  Keep writes the
+        schemes' files.  Scripted for the checks as the keymap page is (ApplyEdits).
+    3c. A project's licence in Solution Explorer's Properties... on a project: a dialog with the licence (LGPL 3,
+        AGPL 3, None), written to its .hcp65project.
+    3d. Checks: a Workspace scheme's changed Definition Banner used by Generate Definition; a template with an
+        error refusing; the page's edits kept and reset; the licence dialog.
+
+
 Questions (answered 2026-11-16)
 -------------------------------
 

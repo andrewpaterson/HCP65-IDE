@@ -96,6 +96,7 @@ public:
 protected:
 	Ptr<CMenuContainer>	CreateExplorerMenu(void);
 	void				WriteRecent(void);
+	void				ReadFileTemplates(const char* szFileName);
 	void				LetGoOfWorkspace(void);
 	CRecentFiles*		GetRecent(void);
 	void				OpenQueuedSolution(void);

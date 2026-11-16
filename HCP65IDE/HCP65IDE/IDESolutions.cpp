@@ -236,6 +236,7 @@ bool CIDESolutions::OpenSolution(const char* szFileName)
 	WriteRecent();
 
 	mpcContent->GetGitStatus()->FindRepositories();
+	ReadFileTemplates(szFileName);
 
 	//The breakpoints saved beside it, bound once its configuration's line tables are read.
 	szName.Init();
@@ -742,6 +743,48 @@ void CIDESolutions::ClearRecentSolutions(void)
 {
 	mcRecent.Clear();
 	WriteRecent();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The file and code templates for what was opened (szFileName): the
+// built-in ones, the user's Default scheme's (beside their settings,
+// when they are kept) and the Workspace scheme's (beside the
+// .hcp65workspace, or the solution opened on its own).
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDESolutions::ReadFileTemplates(const char* szFileName)
+{
+	CFileUtil	cFileUtil;
+	CChars		szName;
+	CChars		szDefault;
+	CChars		szWorkspace;
+	char*		szSettings;
+	char*		szWorkspaceFile;
+
+	szName.Init();
+	szDefault.Init();
+	szWorkspace.Init();
+	szSettings = mpcContent->GetSettings()->GetSettingsFile();
+	if (szSettings && (szSettings[0] != '\0'))
+	{
+		cFileUtil.SplitPath(szSettings, &szName, &szDefault);
+	}
+	szWorkspaceFile = mpcContent->GetWorkspace()->GetFile();
+	szName.Clear();
+	cFileUtil.SplitPath((szWorkspaceFile && (szWorkspaceFile[0] != '\0')) ? szWorkspaceFile : szFileName, &szName, &szWorkspace);
+	if (szWorkspace.Empty())
+	{
+		szWorkspace.Set(".");
+	}
+	if (!mpcContent->GetFileTemplates()->Read(szDefault.Text(), szWorkspace.Text()))
+	{
+		mpcContent->ShowStatus(mpcContent->GetFileTemplates()->GetError());
+	}
+	szWorkspace.Kill();
+	szDefault.Kill();
+	szName.Kill();
 }
 
 
