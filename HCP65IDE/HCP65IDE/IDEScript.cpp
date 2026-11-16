@@ -1411,6 +1411,7 @@ void CIDEScript::RunEditStep(const char* szStep)
 	size					uiLine;
 	size					uiEnd;
 	size					i;
+	bool					bFound;
 
 	pTab = mpcContent->GetDocuments()->GetActiveTab();
 	if (strncmp(szStep, "open:", 5) == 0)
@@ -3148,6 +3149,22 @@ void CIDEScript::RunEditStep(const char* szStep)
 	else if (strcmp(szStep, "explorer") == 0)
 	{
 		mpcContent->GetSolutions()->ShowActiveFileInExplorer();
+	}
+	else if (strncmp(szStep, "explorerselect:", 15) == 0)
+	{
+		//explorerselect:<text>: the first node of Solution Explorer showing it selected (a project, by its name).
+		for (iNode = 0; iNode < mpcContent->GetExplorer()->GetTree()->NumNodes(); iNode++)
+		{
+			szLine.Init();
+			mpcContent->GetExplorer()->GetTree()->GetNodeText(iNode, &szLine);
+			bFound = szLine.Equals(&szStep[15]);
+			szLine.Kill();
+			if (bFound)
+			{
+				mpcContent->GetExplorer()->GetTree()->SelectNode(iNode);
+				break;
+			}
+		}
 	}
 	else if (strncmp(szStep, "caret:", 6) == 0)
 	{

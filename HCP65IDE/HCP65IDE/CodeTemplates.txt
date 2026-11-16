@@ -210,8 +210,10 @@ Progress
         and settings-templates-keep (OK writes the Workspace scheme, and Generate Definition uses it).
     3c. A project's licence in Solution Explorer's Properties... on a project: a dialog with the licence (LGPL 3,
         AGPL 3, None), written to its .hcp65project.
-    3d. Checks: a Workspace scheme's changed Definition Banner used by Generate Definition; a template with an
-        error refusing; the page's edits kept and reset; the licence dialog.
+        Built: Explorer.ProjectProperties ("Properties...", Solution Explorer's menu, for a project), check
+        project-licence (and the explorerselect:<name> script step); the menus checks expect the new item.
+    3d. Checks: a Workspace scheme's changed template used by Generate Definition; a template with an error
+        refusing; the page's edits kept and reset; the licence dialog.  Done with 3a-3c: step 3 is built.
 
 
 Questions (answered 2026-11-16)

@@ -805,7 +805,7 @@ CHECKS = [
 		#Engine.h's (Other/OtherUser.cpp's) or in a comment (Commented.cpp's /* */).
 		'WAIT_INDEX': '1', 'OPEN': 'Engine.h', 'SETTINGS': MakeSettingsFile(), 'DIALOG_KEYS': 'type:CPPEngine', 'DIALOG_ANSWER': 'OK',
 		'DEBUG': 'printmenus,command:Refactor.RenameFile,answered:1,printprojectfiles,printdiskfile:Commented.cpp,printdiskfile:Other/OtherUser.cpp'}),
-		[r'^Menu Editor/Refactor: Rename File\.\.\., .*Extract Method', r'^Menu Explorer: .*, Rename\.\.\.(\(disabled\))?$',
+		[r'^Menu Editor/Refactor: Rename File\.\.\., .*Extract Method', r'^Menu Explorer: .*, Rename\.\.\.(\(disabled\))?, Properties\.\.\.(\(disabled\))?$',
 		 r'^Dialog \[Rename File\] answered OK$',
 		 r'^Status: Renamed Engine\.h to CPPEngine\.h and 2 more files: 7 #includes, 1 in comments and strings in 7 files, 2 projects\.$',
 		 r'^Project files: Commented\.cpp CPPEngine\.cpp CPPEngine_Linux\.cpp ', r'^//#include "CPPEngine\.h"$', r'^#include "Engine\.h"$'],
@@ -1719,6 +1719,14 @@ CHECKS = [
 		 r'^1\|#include "Drum\.h"$', r'^2\|#include "Keg\.h"$', r'^3\|#include "Crate\.h"$',
 		 r'^\d+\|    <ClCompile Include="Drum\.cpp" />$', r'^\d+\|    <ClCompile Include="Keg\.cpp" />$', r'^\d+\|    <ClInclude Include="Drum\.h" />$', r'^\d+\|    <ClInclude Include="Keg\.h" />$'],
 		[]),
+	('project-licence', dict(MakeMoveMembersCopy(), **{
+		#Properties... on a project in Solution Explorer: its licence (None, as its .hcp65project has it) made LGPL 3,
+		#written to the .hcp65project.
+		'WAIT_INDEX': '1', 'DIALOG_KEYS': 'up,up', 'DIALOG_ANSWER': 'OK',
+		'DEBUG': 'edit:explorerselect:MoveMembers,command:Explorer.ProjectProperties,answered:1,printdisklines:MoveMembers.hcp65project'}),
+		[r'^Dialog \[MoveMembers Properties\] answered OK$', r"^Status: MoveMembers's new files are written with the licence LGPL 3\.$",
+		 r'^\d+\|<HCP65Project Licence="LGPL 3"/>$'],
+		[r'Licence="None"']),
 	('move-class-licence', dict(MakeMoveMembersCopy('LGPL 3'), **{
 		#Move Class with the project's licence LGPL 3 (its .hcp65project): Keg.h and Keg.cpp start with the File Header
 		#template's licence comment, naming the project, the year and the author, and then are as move-class's.
@@ -3286,7 +3294,7 @@ CHECKS = [
 		 r'^Menu Window: Reset Window Layout, Close All Documents$',
 		 r'^Menu Editor: Go to Source \[Ctrl\+B\], Find Usages \[Alt\+F7\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Show Context Actions \[Alt\+Enter\], Rename\.\.\. \[Shift\+F6\], Refactor>, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\]$',
 		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Introduce Field\.\.\. \[Ctrl\+Alt\+F\](\(disabled\))?, Introduce Constant\.\.\. \[Ctrl\+Alt\+C\](\(disabled\))?, Introduce Parameter\.\.\. \[Ctrl\+Alt\+P\](\(disabled\))?, Introduce Typedef\.\.\. \[Ctrl\+Alt\+K\](\(disabled\))?, Inline\.\.\. \[Ctrl\+Alt\+N\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Unify Parameter Names(\(disabled\))?, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\.(\(disabled\))?, Push Members Down\.\.\.(\(disabled\))?, Move\.\.\. \[F6\](\(disabled\))?, Copy Class\.\.\.(\(disabled\))?, Extract Method\.\.\. \[Ctrl\+Alt\+M\](\(disabled\))?, Extract Superclass\.\.\.(\(disabled\))?, Extract Interface\.\.\.(\(disabled\))?, Extract Class\.\.\.(\(disabled\))?, Encapsulate Field\.\.\.(\(disabled\))?, Optimise #includes \[Ctrl\+Alt\+O\], Convert Macro\.\.\.(\(disabled\))?, Convert Pointer to Reference(\(disabled\))?, Convert Reference to Pointer(\(disabled\))?, Convert Enum to Enum Class\.\.\.(\(disabled\))?, Write Template.s Interface\.\.\.(\(disabled\))?, Make Member Function const(\(disabled\))?, Make Member Function static(\(disabled\))?, Convert Function to Member Function(\(disabled\))?, Convert Member Function to Function(\(disabled\))?, Extract Template Parameter\.\.\., Remove Template Parameter$',
-		 r'^Menu Explorer: Set as Startup Solution, Set as Startup Project\(disabled\), Remove Solution, Rename\.\.\.(\(disabled\))?$',
+		 r'^Menu Explorer: Set as Startup Solution, Set as Startup Project\(disabled\), Remove Solution, Rename\.\.\.(\(disabled\))?, Properties\.\.\.(\(disabled\))?$',
 		 r'^Menu item \[View/Nope\] not found$'], []),
 	('menu-clicks', {
 		'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'CARET': '36:4', 'DIALOG_ANSWER': 'Cancel',

@@ -23,6 +23,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include <time.h>
 #include "BaseLib/FileUtil.h"
 #include "BaseLib/XMLFile.h"
+#include "BaseLib/XMLWriter.h"
 #include "GitLib/GitCommand.h"
 #include "TemplateLib/TemplateStrings.h"
 #include "IDEContent.h"
@@ -96,6 +97,31 @@ char* ReadIDEProjectLicence(const char* szProjectFile, CChars* pszDest)
 	szName.Kill();
 	szPath.Kill();
 	return pszDest->Text();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A project's licence written to its properties file (Properties... in
+// Solution Explorer).  False if it couldn't be.
+//
+//////////////////////////////////////////////////////////////////////////
+bool WriteIDEProjectLicence(const char* szProjectFile, const char* szLicence)
+{
+	CXMLWriter	cWriter;
+	CChars		szPath;
+	bool		bResult;
+
+	szPath.Init();
+	AppendIDEProjectPropertiesFile(szProjectFile, &szPath);
+	cWriter.Init();
+	cWriter.Begin(IDE_PROJECT_PROPERTIES_TAG);
+	cWriter.Attribute(IDE_PROJECT_LICENCE_ATTRIBUTE, szLicence);
+	cWriter.End();
+	bResult = cWriter.Write(szPath.Text());
+	cWriter.Kill();
+	szPath.Kill();
+	return bResult;
 }
 
 

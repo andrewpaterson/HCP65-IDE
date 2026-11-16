@@ -24,6 +24,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/Timer.h"
 #include "BaseLib/StringHelper.h"
 #include "BaseLib/TextFile.h"
+#include "IDETemplateVariables.h"
 #include "StandardLib/Objects.h"
 #include "StandardLib/ObjectReader.h"
 #include "StandardLib/ObjectWriter.h"
@@ -545,6 +546,97 @@ bool CIDESolutions::SetStartupProject(size uiSolution, size uiProject)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Properties... is for a project selected in Solution Explorer.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDESolutions::CanShowProjectProperties(void)
+{
+	SSolutionExplorerNode*	psNode;
+
+	psNode = mpExplorer.IsNotNull() ? mpExplorer->GetNode(mpExplorer->GetTree()->GetSelectedNode()) : NULL;
+	return psNode && (psNode->eType == SENT_Project) && (psNode->uiSolution < mpcContent->GetWorkspace()->NumSolutions());
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The selected project's properties: its licence, what the File Header
+// template writes at the top of the files made in it (LGPL 3, AGPL 3 or
+// None), kept in its .hcp65project.  False if nothing was changed.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDESolutions::ShowProjectProperties(void)
+{
+	static const char*		aszLicences[] = { IDE_LICENCE_LGPL, IDE_LICENCE_AGPL, IDE_LICENCE_NONE };
+	SSolutionExplorerNode*	psNode;
+	CVcxSolutionProject*	pcSolutionProject;
+	CVcxProject*			pcProject;
+	Ptr<CDialog>			pDialog;
+	Ptr<CComboBox>			pLicence;
+	CChars					szFile;
+	CChars					szLicence;
+	CChars					szText;
+	int32					iSelected;
+	size					i;
+	bool					bResult;
+
+	if (!CanShowProjectProperties())
+	{
+		mpcContent->ShowStatus("Select a project in Solution Explorer to see its properties.");
+		return false;
+	}
+	psNode = mpExplorer->GetNode(mpExplorer->GetTree()->GetSelectedNode());
+	pcSolutionProject = mpcContent->GetWorkspace()->GetSolution(psNode->uiSolution)->mcSolution.GetProject(psNode->uiProject);
+	pcProject = pcSolutionProject ? pcSolutionProject->GetProject() : NULL;
+	if (!pcProject)
+	{
+		mpcContent->ShowStatus("The project couldn't be read.");
+		return false;
+	}
+	szFile.Init(pcProject->GetFileName());
+	szLicence.Init();
+	ReadIDEProjectLicence(szFile.Text(), &szLicence);
+	iSelected = 0;
+	for (i = 0; i < 3; i++)
+	{
+		iSelected = szLicence.Equals(aszLicences[i]) ? (int32)i : iSelected;
+	}
+
+	szText.Init(pcProject->GetName());
+	szText.Append(" Properties");
+	pDialog = OMalloc<CDialog>(mpcContent->GetWindow(), mpcContent->GetDialogLook(), szText.Text());
+	pLicence = pDialog->AddComboBox("Licence of its new files:", aszLicences, 3, iSelected);
+	mpcContent->GetScript()->WatchDialog(pDialog);
+	bResult = pDialog->Show(420);
+	mpcContent->GetScript()->StopWatchingDialog();
+	iSelected = pLicence->GetSelected();
+	pLicence = NULL;
+	pDialog = NULL;
+
+	bResult = bResult && (iSelected >= 0) && !szLicence.Equals(aszLicences[iSelected]);
+	if (bResult)
+	{
+		szText.Set(pcProject->GetName());
+		if (WriteIDEProjectLicence(szFile.Text(), aszLicences[iSelected]))
+		{
+			szText.Append("'s new files are written with the licence ")->Append(aszLicences[iSelected])->Append('.');
+		}
+		else
+		{
+			szText.Append("'s licence couldn't be written.");
+			bResult = false;
+		}
+		mpcContent->ShowStatus(szText.Text());
+	}
+	szText.Kill();
+	szLicence.Kill();
+	szFile.Kill();
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Whether Solution Explorer's selected node is a project that could be
 // made its solution's startup project: an application that isn't it.
 //
@@ -930,6 +1022,8 @@ Ptr<CMenuContainer> CIDESolutions::CreateExplorerMenu(void)
 	mpExplorerMenu->AddItem(mpcContent->GetCommands()->Find("Explorer.RemoveSolution"));
 	mpExplorerMenu->AddSeparator();
 	mpExplorerMenu->AddItem(mpcContent->GetCommands()->Find("Explorer.RenameFile"));
+	mpExplorerMenu->AddSeparator();
+	mpExplorerMenu->AddItem(mpcContent->GetCommands()->Find("Explorer.ProjectProperties"));
 	return mpExplorerMenu;
 }
 
@@ -967,6 +1061,7 @@ void CIDESolutions::AddCommands(Ptr<CCommandSet> pCommands)
 	pCommands->Add("Explorer.SetStartupSolution", "Set as Startup Solution", "", Ptr<CImageCel>(), this, &CIDESolutions::QueueCommand);
 	pCommands->Add("Explorer.SetStartupProject", "Set as Startup Project", "", Ptr<CImageCel>(), this, &CIDESolutions::QueueCommand)->SetEnabledCheck(this, &CIDESolutions::CanSetStartupProject);
 	pCommands->Add("Explorer.RemoveSolution", "Remove Solution", "", Ptr<CImageCel>(), this, &CIDESolutions::QueueCommand);
+	pCommands->Add("Explorer.ProjectProperties", "Properties...", "", Ptr<CImageCel>(), this, &CIDESolutions::QueueCommand)->SetEnabledCheck(this, &CIDESolutions::CanShowProjectProperties);
 	pCommands->Add("View.SolutionExplorer", "Solution Explorer", "Alt+1", Ptr<CImageCel>(), this, &CIDESolutions::ShowActiveFileInExplorer);
 }
 
@@ -1081,5 +1176,9 @@ void CIDESolutions::RunQueuedCommand(void)
 	else if (mszQueuedCommand.Equals("Explorer.RemoveSolution"))
 	{
 		RemoveSolution(mpExplorer->GetNodeSolution(mpExplorer->GetTree()->GetSelectedNode()));
+	}
+	else if (mszQueuedCommand.Equals("Explorer.ProjectProperties"))
+	{
+		ShowProjectProperties();
 	}
 }
