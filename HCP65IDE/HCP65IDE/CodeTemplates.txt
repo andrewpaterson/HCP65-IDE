@@ -1,0 +1,128 @@
+File and Code Templates in the HCP65 IDE (plan, 2026-11-16)
+============================================================
+
+The intent (the user, 2026-11-16): the IDE has file and code templates as IntelliJ IDEA has them (Settings, Editor,
+File and Code Templates), and every file a refactoring makes is written from them, always, so new files come out
+consistent ("templates always").  Refactorings.txt, "When the plan is done", e; RefactoringQuestions.txt 24.
+
+Not Live Templates.  IntelliJ's Live Templates (an abbreviation typed in the editor and expanded with Tab) are a
+feature of their own; this plan is the templates new files and generated code are made from.  The engine below is
+the one Live Templates would use if they come later.
+
+What IntelliJ IDEA has (and CLion, for C++), looked up 2026-11-16:
+  - One settings page with four tabs: Files (a template for each kind of new file), Includes (pieces other
+    templates pull in with #parse: "File Header" is the licence and author), Code (the snippets the IDE's own
+    generators write: a new method's body, an overridden method's body; these can be edited but not added to) and
+    Other.  A template has a name, an extension, a file name (which can use variables) and its text; a file
+    template can have child templates, so one template makes several files (CLion's C++ Class makes the .h and
+    the .cpp).
+  - Two schemes: Default (the IDE's, for every project) and Project (kept with the project, shared through version
+    control).  A template the project changes is the project's; Reset gives the default back.
+  - The language is Apache Velocity: ${NAME} or $NAME, #set, #if/#elseif/#else/#end, #foreach, #parse, ## comments,
+    and Java String methods on a variable (${NAME.toUpperCase()}).  A variable a template uses that has no value
+    is asked for when the template is applied, in the New dialog.
+  - Predefined variables: ${NAME}, ${USER}, ${DATE}, ${TIME}, ${YEAR}, ${MONTH}, ${MONTH_NAME_SHORT},
+    ${MONTH_NAME_FULL}, ${DAY}, ${DAY_NAME_SHORT}, ${DAY_NAME_FULL}, ${HOUR}, ${MINUTE}, ${PROJECT_NAME},
+    ${PRODUCT_NAME}; CLion adds ${INCLUDE_GUARD}, ${HEADER_FILENAME}, ${NAMESPACES_OPEN}, ${NAMESPACES_CLOSE},
+    ${CLASS_NAME}, ${FILE_NAME}.
+  - "Save File as Template" makes a template of the file in the editor.
+
+What the IDE has now: no templates.  A refactoring that makes a file copies the layout of the file the code comes
+from: the comment the old header starts with (the licence), its include guard's form (__DRUM_H__ gives __KEG_H__,
+words split as __IDE_MOVE_CLASS_H__, #pragma once kept), its blank lines (CIDEMoveClass::AppendGuard, used by Move
+Class, Copy Class, Extract Superclass, Interface and Class).  Code the generators write (an empty body, the banner
+of slashes over a definition, a getter, an Init) is written in each generator.
+
+The licence differs by library: WindowLib and the CommonLibraries are LGPL, the IDE is AGPL, Libc65's headers have
+none, and each names its library ("This file is part of The Codaphela Project: Codaphela WindowLib").  With
+"templates always", the File Header has to know which: see question T1.
+
+
+What is built
+-------------
+
+  1. The engine (a library of its own, TemplateLib in HCP65-IDE\Libraries, with TestTemplateLib): a Velocity
+     subset, so a template written for IntelliJ or CLion works here and the other way: ${NAME} and $NAME, $!{NAME}
+     (nothing where it has no value), #set, #if/#elseif/#else/#end with ==, !=, &&, || and !, #foreach over a list,
+     #parse of an include, ## and #* *# comments, \$ and \# for themselves.  String methods on a value:
+     toUpperCase(), toLowerCase(), replace(a, b), substring(i[, j]), length(), startsWith(s), endsWith(s), trim(),
+     and three of the IDE's own that Velocity has no word for: toUpperSnakeCase() ("IDEMoveClass" gives
+     "IDE_MOVE_CLASS", the rule the guards are made by now), toLowerSnakeCase(), withoutPrefix() ("CKeg" gives
+     "Keg").  An error in a template (an #if without #end, an unknown method) is reported at its line and column,
+     in Settings as it is typed, never as wrong text in a file.
+  2. The variables: IntelliJ's and CLion's above, with what the IDE knows:
+       ${NAME}            the file's name without its extension;
+       ${CLASS_NAME}      the class's ("CKeg"), and ${CLASS_STEM} without its prefix ("Keg");
+       ${FILE_NAME}, ${HEADER_FILENAME}, ${INCLUDE_GUARD} ("__KEG_H__", made from the file's name as now);
+       ${PROJECT_NAME}    the .vcxproj's name ("WindowLib"), ${SOLUTION_NAME}, ${DIRECTORY};
+       ${USER}, ${AUTHOR} (from Settings; your name), ${YEAR} and the other dates;
+       ${NAMESPACES_OPEN}, ${NAMESPACES_CLOSE} (empty until namespaces are done, plan item 21);
+       ${BASE_CLASS}, ${BASE_INCLUDE}, ${INCLUDES}, ${FORWARD_DECLARATIONS}, ${BODY}: what a refactoring hands the
+       template (a class's members, its #includes), so the template lays out what goes round them.
+  3. The templates, in three tabs as IntelliJ's (Other has nothing here):
+       Files:    C++ Class (C++ Header with a C++ Source child), C++ Header, C++ Source, C++ Class Template (the
+                 header alone, its members in it), Assembly (W65C816), Assembly (65C64), Text.
+       Includes: File Header (the licence comment), Include Guard Open, Include Guard Close.
+       Code:     what the IDE's generators write, each with the variables it is given:
+                   Definition Banner        the //////// comment over a function's definition;
+                   New Function Body        Generate Definition's body, and Extract Method's around ${BODY};
+                   Overriding Function Body a function made to override one (Pull Up, Push Down, Extract
+                                            Interface's pure functions, Write Template's Interface);
+                   Getter, Setter           Encapsulate Field's, one line each, as now;
+                   Init Function            Extract Class's empty Init and its call;
+                   Forward Declaration      "class ${CLASS_NAME};";
+                   Template Interface Comment  Write Template's Interface's "//M must have:".
+     The defaults are written so each gives, byte for byte, what the IDE writes now: every check that passes now
+     passes with them, which proves the generators were moved onto the templates without a change.
+  4. Where they are kept: the defaults are built into the IDE.  A changed one is a file, as IntelliJ keeps them
+     (fileTemplates\<Tab>\<Name>.ft, readable and diffable): the Default scheme's in the IDE's settings
+     directory, the Workspace scheme's beside the .hcp65workspace (fileTemplates\, in version control with the
+     code), per question T2.  A template is looked for in the workspace's, then the IDE's, then the built-in one.
+  5. The settings page (File, Settings, Editor, File and Code Templates): the scheme (Default or Workspace); the
+     three tabs; a list of the templates with Add, Remove, Copy and Reset (a changed default shown in blue, as
+     IntelliJ does); and for the one chosen its name, extension, file name and its text in a code editor that
+     colours ${...} and #directives, with the error at the caret if it has one.  Under it, the list of the
+     variables it can use and what each is.  A child template (the C++ Class's .cpp) is under its parent in the
+     list.  OK saves the changed files; Cancel throws them away.
+  6. New (Solution Explorer's menu on a project or a filter, and File, New): C++ Class..., C++ Header..., C++
+     Source..., and any Files template added.  Its dialog asks the name, and a field for each variable the
+     template uses that has no value (IntelliJ's way); the files are made in the project's directory (or the
+     filter's), added to the .vcxproj and its filters and to a CMakeLists.txt that lists its files, staged in git,
+     opened, and one undo takes them away (CIDEMoveClass::BeginCreating's machinery).  A name a file of the
+     solution has already is refused.
+  7. The refactorings write their files from the templates: Move Class to Its Own Files, Copy Class, Extract
+     Superclass, Interface and Class (C++ Class, with ${BODY} the class and ${INCLUDES} what it needs), Extract
+     Template Parameter's header when a class becomes a template, and any later refactoring that makes a file.
+     Each generator writes its code from the Code tab.  The layout inferred from the old file goes; what is still
+     taken from the old file is only what a template can't know (the class's text, its #includes).
+  8. Save File as Template (the editor's tab menu): the file in the editor becomes a new Files template, its
+     class's name and the like replaced by their variables where they are found, for the user to finish.
+
+
+Order (each built, checked and committed):
+  1. The engine with its tests (TestTemplateLib): no change to the IDE.
+  2. The built-in defaults, and the generators moved onto the Code templates and the refactorings onto the Files
+     templates; the IDE checks show nothing changed.
+  3. Kept templates (the schemes) and the settings page, with checks that a changed template is used.
+  4. New C++ Class, Header and Source.
+  5. Save File as Template.
+
+
+Questions
+---------
+
+  T1. The licence.  The File Header can't be one text: the libraries are LGPL, the IDE AGPL, Libc65's headers have
+      none, and each names its project.  I propose ${PROJECT_NAME} in it for the name, and the licence as a
+      project's setting ("Licence: LGPL 3, AGPL 3, none") that the File Header's #if picks, set once per project
+      in its properties and kept beside the .vcxproj.  Or would you rather have a File Header per workspace
+      scheme, or per directory?
+  T2. The schemes: Default (yours, every workspace) and Workspace (kept beside the .hcp65workspace, in version
+      control).  IntelliJ calls the second Project; here a workspace holds several solutions, so a workspace's is
+      the nearer match.  Right, or should it be per solution?
+  T3. The language: a Velocity subset so templates move between IntelliJ, CLion and here.  The guard rule and
+      the C-less stem need methods Velocity hasn't (toUpperSnakeCase(), withoutPrefix()); I add them as methods
+      rather than as your ToSnakeCase(ToUpperCase(...)) functions, so the syntax stays Velocity's.  All right?
+  T4. ${AUTHOR}: from a Settings field, empty until you fill it in (the IDE never reads it from git or Windows),
+      or from git's user.name?
+  T5. Keys: IntelliJ's New is Alt+Insert in the Project window.  Visual Studio's Add New Item is Ctrl+Shift+A.
+      Which, or both?
