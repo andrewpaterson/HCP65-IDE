@@ -10,8 +10,10 @@
     <ClCompile Include="Drawing.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="Shapes.cpp" />
+    <ClCompile Include="Use.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Constants.h" />
     <ClInclude Include="Drawing.h" />
     <ClInclude Include="Shapes.h" />
   </ItemGroup>

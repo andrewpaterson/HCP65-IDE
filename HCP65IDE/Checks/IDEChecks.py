@@ -1898,6 +1898,26 @@ CHECKS = [
 		 r'^24\|\tTLength Sum\(CPoint\* pcPoint\)$', r'^26\|\t\treturn pcPoint->miX \+ pcPoint->miY;$', r'^37\|\treturn Sum\(pcPoint\) \* giCount;$',
 		 r'^5\|_Geometry__Sum__FPC16Geometry__CPoint:$', r'^8\|\t\tjsr _Geometry__Sum__FPC16Geometry__CPoint$'],
 		[r'^[0-9]+[|].*CPoint::Sum']),
+	('move-function-variable-template', dict(MakeNamespacesCopy(), **{
+		#Move to File of a variable template (Refactorings.txt 21): gmPi goes to Drawing.h whole, with its
+		#template<class M>, and its explicit specialisation gmPi<int> after it (the index doesn't have that as its, so
+		#it is found in the file's syntax); Use.cpp, which names it, #includes Drawing.h.
+		'WAIT_INDEX': '1', 'OPEN': 'Constants.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:6:3,edit:movablefunction,edit:movefunction:Drawing.h,printdisklines:Constants.h,printdisklines:Drawing.h,printdisklines:Use.cpp'}),
+		[r'^Move to File: gmPi, defined in Constants\.h, specialised in Constants\.h, 1 file names it$', r'^Status: Moved gmPi to Drawing\.h: 3 files changed\.$',
+		 r'^Disk lines Constants\.h:$', r'^5\|namespace Geometry$', r'^12 lines$',
+		 r'^Disk lines Drawing\.h:$', r'^8\|\}$', r'^9\|$', r'^10\|$', r'^11\|template<class M>$', r'^12\|M\tgmPi = M\(3\.14159265\);$', r'^13\|$', r'^14\|$', r'^15\|template<>$', r'^16\|int\tgmPi<int> = 3;$', r'^19\|#endif',
+		 r'^Disk lines Use\.cpp:$', r'^1\|#include "Constants\.h"$', r'^2\|#include "Drawing\.h"$'],
+		[]),
+	('move-function-variable-template-namespace', dict(MakeNamespacesCopy(), **{
+		#Geometry::gmTau into Drawing.h's Geometry block, with its template<class M>; gmPi's specialisation, which isn't
+		#gmTau's, stays.
+		'WAIT_INDEX': '1', 'OPEN': 'Constants.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:16:4,edit:movablefunction,edit:movefunction:Drawing.h,printdisklines:Constants.h,printdisklines:Drawing.h,printdisklines:Use.cpp'}),
+		[r'^Move to File: Geometry::gmTau, defined in Constants\.h, 1 file names it$',
+		 r'^Disk lines Constants\.h:$', r'^9\|template<>$', r'^10\|int\tgmPi<int> = 3;$', r'^13\|#endif',
+		 r'^Disk lines Drawing\.h:$', r'^7\|\tint\tHalf\(int i\);$', r'^8\|$', r'^9\|\ttemplate<class M>$', r'^10\|\tM\tgmTau = M\(6\.2831853\);$', r'^11\|\}$'],
+		[r'^\d+\|namespace Geometry\n(?s:.*)namespace Geometry\n(?s:.*)Disk lines Use']),
 	('move-namespace-refused', dict(MakeNamespacesCopy(), **{
 		#A member of a class isn't at namespace scope: there is nothing to move.
 		'WAIT_INDEX': '1', 'OPEN': 'Shapes.h',

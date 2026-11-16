@@ -25,6 +25,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/FileUtil.h"
 #include "BaseLib/TextFile.h"
 #include "CppCompilerLib/CPPIndex.h"
+#include "CppCompilerLib/CPPSyntaxNamespace.h"
 #include "WindowLib/GridContainer.h"
 #include "IDEContent.h"
 #include "IDETemplateVariables.h"
@@ -1715,6 +1716,44 @@ void SIDEFunctionMove::Init(void)
 	bDefinition = false;
 	aszUsers.Init();
 	szNamespace.Init();
+	asSpecialisations.Init();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// What moves: its declarations, its definition, then its explicit
+// specialisations (each after what it specialises).
+//
+//////////////////////////////////////////////////////////////////////////
+size SIDEFunctionMove::NumPieces(void)
+{
+	return asDeclarations.NumElements() + (bDefinition ? 1 : 0) + asSpecialisations.NumElements();
+}
+
+
+SIDEFileRange* SIDEFunctionMove::GetPiece(size uiPiece)
+{
+	if (uiPiece < asDeclarations.NumElements())
+	{
+		return asDeclarations.Get(uiPiece);
+	}
+	uiPiece -= asDeclarations.NumElements();
+	if (bDefinition)
+	{
+		if (uiPiece == 0)
+		{
+			return &sDefinition;
+		}
+		uiPiece--;
+	}
+	return asSpecialisations.Get(uiPiece);
+}
+
+
+bool SIDEFunctionMove::IsDeclarationPiece(size uiPiece)
+{
+	return uiPiece < asDeclarations.NumElements();
 }
 
 
@@ -1724,6 +1763,7 @@ void SIDEFunctionMove::Init(void)
 //////////////////////////////////////////////////////////////////////////
 void SIDEFunctionMove::Kill(void)
 {
+	KillIDEFileRanges(&asSpecialisations);
 	szNamespace.Kill();
 	aszUsers.Kill();
 	sDefinition.Kill();
@@ -1757,7 +1797,7 @@ static bool IsIDEMoveHeader(const char* szFileName)
 //////////////////////////////////////////////////////////////////////////
 //
 // Whether a line of a file is in what moves with a function: one of its
-// declarations, or its definition.
+// declarations, its definition, or a specialisation of it.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEMoveClass::IsFunctionMoved(SIDEFunctionMove* psMove, const char* szFileName, int32 iLine)
@@ -1765,9 +1805,9 @@ bool CIDEMoveClass::IsFunctionMoved(SIDEFunctionMove* psMove, const char* szFile
 	SIDEFileRange*	psRange;
 	size			i;
 
-	for (i = 0; i < psMove->asDeclarations.NumElements() + (psMove->bDefinition ? 1 : 0); i++)
+	for (i = 0; i < psMove->NumPieces(); i++)
 	{
-		psRange = (i < psMove->asDeclarations.NumElements()) ? psMove->asDeclarations.Get(i) : &psMove->sDefinition;
+		psRange = psMove->GetPiece(i);
 		if ((StringInsensitiveCompare(szFileName, psRange->szFileName.Text()) == 0) && (iLine >= psRange->iLine) && (iLine <= psRange->iEndLine))
 		{
 			return true;
@@ -1816,11 +1856,11 @@ bool CIDEMoveClass::FindFunctionMove(SIDEFunctionMove* psDest)
 	mpcContent->GetDocuments()->UpdateEditedTabsNow();
 	if (!mpcContent->GetDocuments()->FindSymbolPlace(&iLine, &iColumn, &uiRole) ||
 		!pcModel->GetSymbolAt(mpcContent->GetDocuments()->GetActiveTab()->GetFileName(), iLine, iColumn, &psDest->szKey, &uiKind) ||
-		((uiKind != CPPSK_Function) && (uiKind != CPPSK_FunctionTemplate) && (uiKind != CPPSK_Variable)))
+		((uiKind != CPPSK_Function) && (uiKind != CPPSK_FunctionTemplate) && (uiKind != CPPSK_Variable) && (uiKind != CPPSK_VariableTemplate)))
 	{
 		return false;
 	}
-	psDest->bFunction = (uiKind != CPPSK_Variable);
+	psDest->bFunction = (uiKind != CPPSK_Variable) && (uiKind != CPPSK_VariableTemplate);
 	GetIDEScopedName(psDest->szKey.Text(), &psDest->szName);
 	szScope.Init();
 	GetIDESymbolScope(psDest->szKey.Text(), &szScope);
@@ -1876,6 +1916,11 @@ bool CIDEMoveClass::FindFunctionMove(SIDEFunctionMove* psDest)
 			{
 				pcOuter = pcOuter->mpcParent;
 			}
+			while (pcOuter && pcOuter->mpcParent && (pcOuter->mpcParent->GetKind() == CPPS_TemplateDeclaration))
+			{
+				//A variable template's: with its template<...> (and an explicit specialisation's template<>).
+				pcOuter = pcOuter->mpcParent;
+			}
 			bRead = pcOuter && pcUnit->GetRange(pcOuter, &sRange);
 			if (bRead && pcUnit->FindTokensIn(sRange.iLine, sRange.iColumn, sRange.iEndLine, sRange.iEndColumn, &iFirst, &iLast))
 			{
@@ -1924,6 +1969,14 @@ bool CIDEMoveClass::FindFunctionMove(SIDEFunctionMove* psDest)
 			psDest->asDeclarations.Add()->Init(psLocation->szFileName.Text(), sRange.iLine, sRange.iColumn, sRange.iEndLine, sRange.iEndColumn);
 		}
 	}
+	for (i = 0; psDest->bMovable && (uiKind == CPPSK_VariableTemplate) && (i < asLocations.NumElements()); i++)
+	{
+		//A variable template's explicit specialisations, with it in the files that declare it.
+		if (asLocations.Get(i)->uiRole != CPPIR_Reference)
+		{
+			FindSpecialisations(asLocations.Get(i)->szFileName.Text(), psDest);
+		}
+	}
 	for (i = 0; psDest->bMovable && (i < asLocations.NumElements()); i++)
 	{
 		psLocation = asLocations.Get(i);
@@ -1936,6 +1989,99 @@ bool CIDEMoveClass::FindFunctionMove(SIDEFunctionMove* psDest)
 	KillUnits();
 	mpcContent->GetMoveNamespace()->KillUnits();
 	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A variable template's explicit specialisations in a file that declares
+// it ("template<> int gmPi<int> = 3;"), added to what moves: the index
+// doesn't have them as its places, so they are found in the file's
+// syntax, as template<> declarations of its name in its namespace.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEMoveClass::FindSpecialisations(const char* szFileName, SIDEFunctionMove* psDest)
+{
+	CIDERefactorUnit*		pcUnit;
+	CCPPSyntax*				pcTemplate;
+	CCPPSyntax*				pcNode;
+	CCPPSyntaxDeclarator*	pcDeclarator;
+	CCPPSyntaxName*			pcName;
+	SCPPSyntaxRange			sRange;
+	CChars					szName;
+	CChars					szNamespace;
+	CChars					szPart;
+	int32					iToken;
+	int32					iNamed;
+	int32					iLast;
+	size					i;
+
+	pcUnit = GetUnit(szFileName);
+	iLast = pcUnit ? (int32)pcUnit->GetTokeniser()->NumTokens() - 3 : -1;
+	szName.Init();
+	GetIDESymbolName(psDest->szKey.Text(), &szName);
+	for (iToken = 0; iToken < iLast; iToken++)
+	{
+		if (!pcUnit->IsToken(iToken, "template") || !pcUnit->IsToken(iToken + 1, "<") || !pcUnit->IsToken(iToken + 2, ">"))
+		{
+			continue;
+		}
+		pcTemplate = pcUnit->FindAncestor(pcUnit->FindNodeOfTokens(iToken, iToken), CPPS_TemplateDeclaration);
+		if (!pcTemplate || (pcTemplate->miFirstToken != iToken))
+		{
+			continue;
+		}
+
+		//Its declared name: the template's, with <...> after it.
+		for (iNamed = iToken + 3; (iNamed + 1 <= pcTemplate->miLastToken) && !(pcUnit->IsToken(iNamed, szName.Text()) && pcUnit->IsToken(iNamed + 1, "<")); iNamed++)
+		{
+		}
+		pcNode = (iNamed + 1 <= pcTemplate->miLastToken) ? pcUnit->FindNodeOfTokens(iNamed, iNamed) : NULL;
+		pcDeclarator = pcNode ? (CCPPSyntaxDeclarator*)pcUnit->FindAncestor(pcNode, CPPS_Declarator) : NULL;
+		pcName = pcDeclarator ? pcDeclarator->GetName() : NULL;
+		if (!pcName || !pcName->GetLast() || (pcName->GetLast()->miFirstToken != iNamed))
+		{
+			continue;
+		}
+
+		//In its namespace: the blocks it is in, then what its name is written with.
+		szNamespace.Init();
+		for (pcNode = pcTemplate->mpcParent; pcNode; pcNode = pcNode->mpcParent)
+		{
+			if ((pcNode->GetKind() == CPPS_Namespace) && (((CCPPSyntaxNamespace*)pcNode)->miName >= 0))
+			{
+				szPart.Init();
+				pcUnit->AppendTokens(((CCPPSyntaxNamespace*)pcNode)->miName, ((CCPPSyntaxNamespace*)pcNode)->miName, &szPart);
+				szNamespace.Insert(0, szNamespace.Empty() ? "" : "::");
+				szNamespace.Insert(0, szPart.Text());
+				szPart.Kill();
+			}
+		}
+		if (iNamed - 1 > pcName->miFirstToken)
+		{
+			szPart.Init();
+			pcUnit->AppendTokens(pcName->miFirstToken, iNamed - 2, &szPart);
+			szNamespace.Append(szNamespace.Empty() || szPart.StartsWith("::") ? "" : "::")->Append(szPart);
+			szPart.Kill();
+		}
+		while (szNamespace.StartsWith("::"))
+		{
+			szNamespace.RemoveFromStart(2);
+		}
+		if (szNamespace.Equals(psDest->szNamespace) && pcUnit->GetRange(pcTemplate, &sRange))
+		{
+			for (i = 0; (i < psDest->asSpecialisations.NumElements()) && !((psDest->asSpecialisations.Get(i)->iLine == sRange.iLine) && (StringInsensitiveCompare(psDest->asSpecialisations.Get(i)->szFileName.Text(), szFileName) == 0)); i++)
+			{
+			}
+			if (i == psDest->asSpecialisations.NumElements())
+			{
+				psDest->asSpecialisations.Add()->Init(szFileName, sRange.iLine, sRange.iColumn, sRange.iEndLine, sRange.iEndColumn);
+			}
+		}
+		szNamespace.Kill();
+		iToken = pcTemplate->miLastToken;
+	}
+	szName.Kill();
 }
 
 
@@ -2361,13 +2507,13 @@ bool CIDEMoveClass::MoveFunction(SIDEFunctionMove* psMove, const char* szHeader,
 	aszTexts.Init();
 	szOldHeader = "";
 	bResult = true;
-	uiPieces = psMove->asDeclarations.NumElements() + (psMove->bDefinition ? 1 : 0);
+	uiPieces = psMove->NumPieces();
 	for (i = 0; bResult && (i < uiPieces); i++)
 	{
 		//Its declarations to the header; its definition to the header's source file, or to the header if a
 		//header had it.
-		psRange = (i < psMove->asDeclarations.NumElements()) ? psMove->asDeclarations.Get(i) : &psMove->sDefinition;
-		szTarget = ((i < psMove->asDeclarations.NumElements()) || IsIDEMoveHeader(psRange->szFileName.Text())) ? szHeader : szSource;
+		psRange = psMove->GetPiece(i);
+		szTarget = (psMove->IsDeclarationPiece(i) || IsIDEMoveHeader(psRange->szFileName.Text())) ? szHeader : szSource;
 		szText = cEdits.GetText(psRange->szFileName.Text());
 		szTargetText = cEdits.GetText(szTarget);
 		if (!szText || !szTargetText)
@@ -2375,7 +2521,7 @@ bool CIDEMoveClass::MoveFunction(SIDEFunctionMove* psMove, const char* szHeader,
 			bResult = false;
 			break;
 		}
-		if ((i < psMove->asDeclarations.NumElements()) && IsIDEMoveHeader(psRange->szFileName.Text()) && (szOldHeader[0] == '\0'))
+		if (psMove->IsDeclarationPiece(i) && IsIDEMoveHeader(psRange->szFileName.Text()) && (szOldHeader[0] == '\0'))
 		{
 			szOldHeader = psRange->szFileName.Text();
 		}
@@ -2388,7 +2534,7 @@ bool CIDEMoveClass::MoveFunction(SIDEFunctionMove* psMove, const char* szHeader,
 			//In its namespace's blocks: into the last block of the namespace there, or one of its own at the end.
 			AppendNamespacedBlock(psMove->szNamespace.Text(), szText, psRange, szTarget, szTargetText, &cEdits, &uiAt, &szBlock);
 		}
-		else if ((i < psMove->asDeclarations.NumElements()) && FindPrototypePlace(szHeader, szTargetText, &uiAt))
+		else if (psMove->IsDeclarationPiece(i) && FindPrototypePlace(szHeader, szTargetText, &uiAt))
 		{
 			AppendBlock(szText, psRange->iLine, psRange->iColumn, psRange->iEndLine, psRange->iEndColumn, &szBlock);
 		}
@@ -2610,6 +2756,10 @@ char* CIDEMoveClass::PrintFunctionMove(SIDEFunctionMove* psMove, CChars* pszDest
 	if (psMove->bDefinition)
 	{
 		pszDest->Append(", defined in ")->Append(GetIDEFileNamePart(psMove->sDefinition.szFileName.Text()));
+	}
+	for (i = 0; i < psMove->asSpecialisations.NumElements(); i++)
+	{
+		pszDest->Append(", specialised in ")->Append(GetIDEFileNamePart(psMove->asSpecialisations.Get(i)->szFileName.Text()));
 	}
 	pszDest->Append(", ");
 	pszDest->Append((uint32)psMove->aszUsers.NumElements());

@@ -386,8 +386,11 @@ IntelliJ has none of these for Java.
      Question 63's answer, 2026-11-16: a class's old namespace's functions that take it are listed in the dialog
      ("Functions that take it"), ticked, and move with it (SIDENamespaceMove's aszTakers and aszWith; one undo).
      Checks move-namespace-class-with and -with-dialog.
-     Left: moving a namespace itself, and anything in an unnamed or inline namespace (refused, with why); Move to File
-     of a variable template.
+     Move to File of a variable template, 2026-11-16: whole, with its template<...>, in a header, and its explicit
+     specialisations after it (found in the syntax of the files that declare it: the index has no place for their
+     names, so Rename and Find Usages miss them too; told to the CppCompilerLib session).  Checks
+     move-function-variable-template and -namespace, on Constants.h and Use.cpp in Input/Namespaces.
+     Left: moving a namespace itself, and anything in an unnamed or inline namespace (refused, with why).
  22. An enum to an enum class, every use of an enumerator qualified.
  23. Assembly.  Rename already changes hand written .asm by the compiler's labels; Change Signature and Move need
      the same rules where they change a label.  A template instance's labels have its arguments in them.

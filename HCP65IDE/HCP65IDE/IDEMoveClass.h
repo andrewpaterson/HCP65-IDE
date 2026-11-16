@@ -74,9 +74,13 @@ struct SIDEFunctionMove
 	bool					bDefinition;
 	CArrayChars				aszUsers;		//The files that name it, outside those.
 	CChars					szNamespace;	//The namespace it is in ("A::B"), empty for none: it goes into a block of it.
+	CArrayIDEFileRanges		asSpecialisations;	//A variable template's explicit specialisations: they go after it.
 
-	void	Init(void);
-	void	Kill(void);
+	void			Init(void);
+	void			Kill(void);
+	size			NumPieces(void);
+	SIDEFileRange*	GetPiece(size uiPiece);
+	bool			IsDeclarationPiece(size uiPiece);
 };
 
 
@@ -161,6 +165,7 @@ public:
 	bool	FindCopyProblem(SIDEClassMove* psMove, const char* szNewName, CChars* pszStem, CChars* pszDest);
 	char*	PrintMove(SIDEClassMove* psMove, CChars* pszDest);
 	bool	FindFunctionMove(SIDEFunctionMove* psDest);
+	void	FindSpecialisations(const char* szFileName, SIDEFunctionMove* psDest);
 	void	AppendNamespacedBlock(const char* szNamespace, const char* szText, SIDEFileRange* psRange, const char* szTarget, const char* szTargetText, CIDEFileEdits* pcEdits, size* puiAt, CChars* pszDest);
 	bool	FindFunctionProblem(SIDEFunctionMove* psMove, const char* szHeaderName, CChars* pszHeader, CChars* pszSource, CChars* pszDest);
 	bool	MoveFunction(SIDEFunctionMove* psMove, const char* szHeader, const char* szSource, CChars* pszStatus = NULL);
