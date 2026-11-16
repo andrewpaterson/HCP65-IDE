@@ -267,7 +267,11 @@ void SetIDETemplateFileVariables(CIDEContent* pcContent, const char* szFileName,
 	szUser = szUser ? szUser : getenv("USER");
 	szUser = szUser ? szUser : "";
 	pcDest->Set("USER", szUser);
-	if (!szLicence.Equals(IDE_LICENCE_NONE))
+	if (pcContent->GetFileTemplates()->GetAuthor()[0] != '\0')
+	{
+		pcDest->Set("AUTHOR", pcContent->GetFileTemplates()->GetAuthor());
+	}
+	else if (!szLicence.Equals(IDE_LICENCE_NONE))
 	{
 		SetIDETemplateAuthor(szDirectory.Empty() ? "." : szDirectory.Text(), szUser, pcDest);
 	}

@@ -203,6 +203,11 @@ Progress
         extension and file name, the text in a code editor colouring ${...} and #directives with the error at the
         caret, and the variables it can use.  Author: a field on it (empty: git's user.name, T4).  Keep writes the
         schemes' files.  Scripted for the checks as the keymap page is (ApplyEdits).
+        Built: CIDEFileTemplatesPage (IDEFileTemplatesPage.h), on Settings after the keymap; the author is kept in the
+        user's settings (<FileTemplates Author=.../>) and is ${AUTHOR} when it is set.  Remove takes away only a
+        template the scheme added; Reset a scheme's change; a built-in template can't be renamed.  Checks
+        settings-templates (HCP65_IDE_TEMPLATE_EDITS: the list, a change and its error, reset, add, rename, remove)
+        and settings-templates-keep (OK writes the Workspace scheme, and Generate Definition uses it).
     3c. A project's licence in Solution Explorer's Properties... on a project: a dialog with the licence (LGPL 3,
         AGPL 3, None), written to its .hcp65project.
     3d. Checks: a Workspace scheme's changed Definition Banner used by Generate Definition; a template with an

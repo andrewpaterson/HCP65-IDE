@@ -174,6 +174,7 @@ void CIDEFileTemplates::Init(void)
 
 	masTemplates.Init();
 	mszError.Init();
+	mszAuthor.Init();
 	for (i = 0; i < 3; i++)
 	{
 		maszDirectories[i].Init();
@@ -196,6 +197,7 @@ void CIDEFileTemplates::Kill(void)
 	{
 		maszDirectories[i].Kill();
 	}
+	mszAuthor.Kill();
 	mszError.Kill();
 }
 
@@ -237,6 +239,7 @@ void CIDEFileTemplates::Copy(CIDEFileTemplates* pcSource)
 	{
 		maszDirectories[i].Set(pcSource->maszDirectories[i]);
 	}
+	mszAuthor.Set(pcSource->mszAuthor);
 }
 
 
@@ -326,6 +329,37 @@ bool CIDEFileTemplates::Read(const char* szDefaultDirectory, const char* szWorks
 //
 //////////////////////////////////////////////////////////////////////////
 char* CIDEFileTemplates::GetDirectory(EIDETemplateScheme eScheme) { return maszDirectories[eScheme].Text(); }
+char* CIDEFileTemplates::GetAuthor(void) { return mszAuthor.Text(); }
+void CIDEFileTemplates::SetAuthor(const char* szAuthor) { mszAuthor.Set(szAuthor ? szAuthor : ""); }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// What the user's settings keep of the templates: the author
+// (<FileTemplates Author="..."/>).  The templates are their schemes'.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEFileTemplates::ReadSettings(CMarkupTag* pcSettings)
+{
+	CMarkupTag*	pcTag;
+	char*		szAuthor;
+
+	pcTag = pcSettings->GetTag("FileTemplates");
+	szAuthor = pcTag ? pcTag->GetStringAttribute("Author") : NULL;
+	mszAuthor.Set(szAuthor ? szAuthor : "");
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEFileTemplates::WriteSettings(CXMLWriter* pcWriter)
+{
+	pcWriter->Begin("FileTemplates");
+	pcWriter->Attribute("Author", mszAuthor.Text());
+	pcWriter->End();
+}
 
 
 //////////////////////////////////////////////////////////////////////////

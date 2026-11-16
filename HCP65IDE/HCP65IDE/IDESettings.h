@@ -26,6 +26,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/CommandSet.h"
 #include "WindowLib/SettingsDialog.h"
 #include "WindowLib/KeymapPage.h"
+#include "IDEFileTemplatesPage.h"
 
 
 class CIDEContent;
@@ -48,6 +49,7 @@ protected:
 	CChars						mszSettingsFile;  //Empty if how the IDE was left isn't kept.
 	Ptr<CSettingsDialog>		mpDialog;  //While it's shown.
 	Ptr<CKeymapPage>			mpKeymapPage;
+	Ptr<CIDEFileTemplatesPage>	mpTemplatesPage;
 
 public:
 	void	Init(CIDEContent* pcContent);

@@ -3305,6 +3305,29 @@ CHECKS = [
 		'EDIT': 'edit:renamable,replace:37|virtual |,caret:37:9,renamable'},
 		[r'^Rename: IsParentheses \[CCalcExpression::IsParentheses\(\)\] at 7 places, 1 overrides$',
 		 r'^Rename: IsParentheses \[CCalcExpression::IsParentheses\(\)\] at 5 places, 0 overrides$'], []),
+	('settings-templates', dict(MakeDefinitionsCopy(), **{
+		#Settings' File and Code Templates: the Workspace scheme (a solution is open) and its Files templates, C++ Header
+		#first; the Code tab's; a template changed (marked) with an error shown under it, then reset; an added one
+		#renamed and removed; a built-in one can't be removed.  Cancel keeps nothing.
+		'WAIT_INDEX': '1', 'DIALOG_ANSWER': 'Cancel',
+		'TEMPLATE_EDITS': 'show;tab:Code;show;select:New Function Body;text:#if ($BODY)\nx\n;show;reset;show;add;name:Mine;show;remove;show;select:Getter Body;remove;show',
+		'DEBUG': 'clickmenu:File/Settings...,answered:1'}),
+		[r'^Templates row: C\+\+ Header$', r'^Templates row: C\+\+ Source$', r'^Templates selected: C\+\+ Header, error \[\], status \[\]$',
+		 r'^Templates row: Definition Banner$', r'^Templates row: New Function Body \[changed\]$',
+		 r'^Templates selected: New Function Body, error \[Line 1, column 1: #if has no #end\], status \[\]$',
+		 r'^Templates selected: New Function Body, error \[\], status \[\]$', r'^Templates row: Mine \[changed\]$', r'^Templates selected: Mine, error \[\], status \[\]$',
+		 r'^Templates selected: Getter Body, error \[\], status \[A built-in template can.t be removed: Reset gives it back as it was\.\]$',
+		 r'^Dialog \[Settings\] answered Cancel$'],
+		[r'^Templates: kept']),
+	('settings-templates-keep', dict(MakeDefinitionsCopy(), **{
+		#OK keeps the Workspace scheme's change: its fileTemplates beside the solution have it, and Generate Definition
+		#writes it.
+		'WAIT_INDEX': '1', 'DIALOG_ANSWER': 'OK', 'OPEN': 'Tank.h', 'CARET': '14:8',
+		'TEMPLATE_EDITS': 'tab:Code;select:New Function Body;text:\t//Kept.\n',
+		'DEBUG': 'clickmenu:File/Settings...,answered:1,edit:renamesearch:---s,edit:generatedefinition,printdisklines:Tank.cpp,printdisklines:fileTemplates/Templates.xml'}),
+		[r'^Dialog \[Settings\] answered OK$', r'^Templates: kept$', r'^Status: Defined CTank::Fill in Tank\.cpp\.$', r'^29\|\{$', r'^30\|\t//Kept\.$', r'^31\|\}$',
+		 r'^\d+\|\s*<Template Tab="Code" Name="New Function Body"/>$'],
+		[]),
 	('settings-list', {
 		#Every command, grouped and filtered; the keys are as they were and nothing is kept.
 		'DIALOG_ANSWER': 'Cancel', 'KEYMAP_EDITS': 'select:Edit.Copy;show;filter:delete;show',

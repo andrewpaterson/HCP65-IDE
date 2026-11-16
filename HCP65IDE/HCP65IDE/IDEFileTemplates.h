@@ -22,6 +22,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define __IDE_FILE_TEMPLATES_H__
 #include "BaseLib/ArrayTemplate.h"
 #include "BaseLib/Chars.h"
+#include "BaseLib/MarkupTag.h"
+#include "BaseLib/XMLWriter.h"
 #include "TemplateLib/TemplateText.h"
 #include "TemplateLib/TemplateValues.h"
 
@@ -97,6 +99,7 @@ protected:
 	CArrayIDEFileTemplates	masTemplates;
 	CChars					mszError;					//Why the last Apply, Read or Write failed.
 	CChars					maszDirectories[3];			//Each scheme's directory (ITS_), empty for none.
+	CChars					mszAuthor;					//Settings' ${AUTHOR}; empty for git's user.name.
 
 public:
 	void				Init(void);
@@ -106,6 +109,10 @@ public:
 	bool				Read(const char* szDefaultDirectory, const char* szWorkspaceDirectory);
 	bool				Write(EIDETemplateScheme eScheme);
 	char*				GetDirectory(EIDETemplateScheme eScheme);
+	char*				GetAuthor(void);
+	void				SetAuthor(const char* szAuthor);
+	void				ReadSettings(CMarkupTag* pcSettings);
+	void				WriteSettings(CXMLWriter* pcWriter);
 
 	size				NumTemplates(void);
 	SIDEFileTemplate*	GetTemplate(size uiIndex);

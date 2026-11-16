@@ -73,6 +73,7 @@ void CIDESettings::Class(void)
 	U_String(mszSettingsFile);
 	M_Pointer(mpDialog);
 	M_Pointer(mpKeymapPage);
+	M_Pointer(mpTemplatesPage);
 }
 
 
@@ -172,6 +173,7 @@ void CIDESettings::ReadSettings(const char* szFile)
 		mpcContent->GetFindInFiles()->ReadSettings(pcRoot);
 		mpcContent->GetRename()->ReadSettings(pcRoot);
 		mpcContent->GetFileRename()->ReadSettings(pcRoot);
+		mpcContent->GetFileTemplates()->ReadSettings(pcRoot);
 	}
 	else
 	{
@@ -206,6 +208,7 @@ bool CIDESettings::WriteSettings(void)
 	mpcContent->GetFindInFiles()->WriteSettings(&cWriter);
 	mpcContent->GetRename()->WriteSettings(&cWriter);
 	mpcContent->GetFileRename()->WriteSettings(&cWriter);
+	mpcContent->GetFileTemplates()->WriteSettings(&cWriter);
 	cWriter.End();
 	bResult = cWriter.Write(mszSettingsFile.Text());
 	cWriter.Kill();
@@ -235,20 +238,29 @@ void CIDESettings::RequestDialog(void)
 void CIDESettings::ShowDialog(void)
 {
 	Ptr<CWindow>	pWindow;
+	CChars			szProblem;
 	bool			bOK;
 
 	pWindow = mpcContent->GetWindow();
 	mpDialog = OMalloc<CSettingsDialog>(pWindow, mpcContent->GetDialogLook());
 	mpKeymapPage = OMalloc<CKeymapPage>(mpDialog->GetDialog(), mpcContent->GetCommands(), pWindow->GetComponentInput(), gasIDEKeymapGroups, sizeof(gasIDEKeymapGroups) / sizeof(gasIDEKeymapGroups[0]), this);
 	mpDialog->AddPage(mpKeymapPage);
+	mpTemplatesPage = OMalloc<CIDEFileTemplatesPage>(mpcContent, mpDialog->GetDialog());
+	mpDialog->AddPage(mpTemplatesPage);
 	if (getenv("HCP65_IDE_KEYMAP_EDITS") != NULL)
 	{
 		mpKeymapPage->ApplyEdits(getenv("HCP65_IDE_KEYMAP_EDITS"));
 	}
+	if (getenv("HCP65_IDE_TEMPLATE_EDITS") != NULL)
+	{
+		mpTemplatesPage->ApplyEdits(getenv("HCP65_IDE_TEMPLATE_EDITS"));
+	}
 	mpcContent->GetScript()->WatchDialog(mpDialog->GetDialog());
 	bOK = mpDialog->Show();
 	mpcContent->GetScript()->StopWatchingDialog();
+	szProblem.Init(mpTemplatesPage->GetKeepProblem());
 	mpKeymapPage = NULL;
+	mpTemplatesPage = NULL;
 	mpDialog = NULL;
 
 	if (bOK)
@@ -266,6 +278,11 @@ void CIDESettings::ShowDialog(void)
 		{
 			mpcContent->ShowStatus("Changed the keymap, but it couldn't be saved for next time.");
 		}
+		if (!szProblem.Empty())
+		{
+			mpcContent->ShowStatus(szProblem.Text());
+		}
 	}
+	szProblem.Kill();
 }
 
