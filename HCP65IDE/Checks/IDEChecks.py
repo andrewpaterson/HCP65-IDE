@@ -2122,7 +2122,7 @@ CHECKS = [
 		 r'^12\|\tint\t\tBytes\(void\) \{ return miUsed \* sizeof\(M\); \}$', r'^28\|\tvoid\t\tStep\(int iBy\);$', r'^37\|int\t\tTwice\(int iValue\);$', r'^40 lines$',
 		 r'^35\|\tint\ti;$', r'^36\|\tint\tiNext;$', r'^37\|$', r'^38\|\tfor \(i = 0; i < iTimes; i\+\+\)$', r'^40\|\t\tiNext = miCount \+ \(i \+ 1\);$', r'^41\|\t\tmiCount = iNext;$', r'^42\|\t\}$',
 		 r'^114\|\tint\t\t\tiTotal;$', r'^115\|\tint\t\t\tiNext;$', r'^116\|$', r'^117\|\tcOther\.Init\(3\);$', r'^118\|\tiNext = cOther\.miCount \+ 2;$', r'^119\|\tcOther\.miCount = iNext;$',
-		 r'^122\|\t\(&cOther\)->Kind\(\);$', r'^123\|\t\(&cOther\)->miLimit = iTotal;$', r'^125\|\tiTotal = cSlot\.miUsed \* sizeof\(long\);$', r'^149 lines$'],
+		 r'^122\|\tcOther\.Kind\(\);$', r'^123\|\tcOther\.miLimit = iTotal;$', r'^125\|\tiTotal = cSlot\.miUsed \* sizeof\(long\);$', r'^149 lines$'],
 		[r'Report\(']),
 	('inline-function-refused', dict(MakeInlineFunctionCopy(), **{
 		#What can't be inlined: a virtual function, one that returns part of the way through.  A member that isn't public named where the call is outside the class is a conflict: nothing is

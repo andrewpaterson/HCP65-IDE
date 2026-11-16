@@ -783,6 +783,8 @@ bool CIDEInlineFunction::ReadCall(SIDESignatureCall* psCall, CCPPSyntax* pcValue
 	CCPPSyntax*						pcStatement;
 	CCPPSyntaxCallExpression*		pcCall;
 	CCPPSyntaxMemberExpression*		pcMember;
+	CCPPSyntax*						pcObject;
+	CCPPSyntax*						pcAddressOf;
 	CCPPSyntaxBinaryExpression*		pcBinary;
 	CCPPSyntaxFunctionDefinition*	pcFunction;
 	CCPPSyntaxCompoundStatement*	pcBody;
@@ -803,6 +805,7 @@ bool CIDEInlineFunction::ReadCall(SIDESignatureCall* psCall, CCPPSyntax* pcValue
 	uint8							uiKind;
 	bool							bChecked;
 	bool							bResult;
+	bool							bArrow;
 
 	pcModel = mpcContent->GetCodeModel();
 	bChecked = (psDest->aszTemplateParameters.NumElements() > 0);
@@ -846,17 +849,31 @@ bool CIDEInlineFunction::ReadCall(SIDESignatureCall* psCall, CCPPSyntax* pcValue
 		psInline->aiEffects.Add(psCall->aiEffects.GetValue(i));
 	}
 
-	//What it is called on.
+	//What it is called on.  Through an address taken there ("(&cOther)->Kind()") it is the object itself, by ".".
 	pcMember = (pcCallee->GetKind() == CPPS_MemberExpression) ? (CCPPSyntaxMemberExpression*)pcCallee : NULL;
-	if (pcMember && pcMember->mpcObject && cUnit.GetRange(pcMember->mpcObject, &sRange))
+	pcObject = pcMember ? pcMember->mpcObject : NULL;
+	bArrow = pcMember && pcMember->mbArrow;
+	pcAddressOf = (pcObject && bArrow) ? pcObject->WithoutParentheses() : NULL;
+	if (pcAddressOf && (pcAddressOf->GetKind() == CPPS_UnaryExpression) && (((CCPPSyntaxUnaryExpression*)pcAddressOf)->meOperator == CT_BitwiseAnd) &&
+		((CCPPSyntaxUnaryExpression*)pcAddressOf)->mpcOperand)
+	{
+		pcObject = ((CCPPSyntaxUnaryExpression*)pcAddressOf)->mpcOperand;
+		bArrow = false;
+	}
+	if (pcObject && cUnit.GetRange(pcObject, &sRange))
 	{
 		szText.Init();
 		AppendIDERangeText(szFile, &sRange, &szText);
+		if (!bArrow && IsIDECompoundText(szText.Text()))
+		{
+			szText.Insert(0, "(");
+			szText.Append(')');
+		}
 		if (!szText.Equals("this"))
 		{
 			psInline->szObject.Set(szText);
-			psInline->szObject.Append(pcMember->mbArrow ? "->" : ".");
-			psInline->szThis.Set(pcMember->mbArrow ? "" : "&");
+			psInline->szObject.Append(bArrow ? "->" : ".");
+			psInline->szThis.Set(bArrow ? "" : "&");
 			psInline->szThis.Append(szText);
 			cEffects.mbEffects = false;
 			cEffects.Look(pcMember->mpcObject);
@@ -1398,6 +1415,7 @@ void CIDEInlineFunction::AppendBody(SIDEFunctionInlining* psInlining, SIDEInline
 	SIDEInlineReplace*	psReplace;
 	const char*			szArgument;
 	size				uiAt;
+	size				uiArrow;
 	size				i;
 
 	uiAt = uiStart;
@@ -1415,7 +1433,17 @@ void CIDEInlineFunction::AppendBody(SIDEFunctionInlining* psInlining, SIDEInline
 			//The argument, or the parameter's default value where the call leaves it out.
 			szArgument = ((size)psReplace->iIndex < psCall->aszArguments.NumElements()) ? psCall->aszArguments.GetText((size)psReplace->iIndex) :
 						 (((size)psReplace->iIndex < psInlining->sSignature.aszOldDefaults.NumElements()) ? psInlining->sSignature.aszOldDefaults.GetText((size)psReplace->iIndex) : "");
-			if (psReplace->bOperand && IsIDECompoundText(szArgument))
+			for (uiArrow = psReplace->uiEnd; (uiArrow < uiEnd) && ((szText[uiArrow] == ' ') || (szText[uiArrow] == '\t')); uiArrow++)
+			{
+			}
+			if ((szArgument[0] == '&') && !IsIDECompoundText(&szArgument[1]) && (uiArrow + 1 < uiEnd) && (szText[uiArrow] == '-') && (szText[uiArrow + 1] == '>'))
+			{
+				//A pointer given as an object's address, used through ->: the object, by "." ("cOther.Kind()", not
+				//"(&cOther)->Kind()").
+				pszDest->Append(&szArgument[1])->Append('.');
+				uiAt = uiArrow + 2;
+			}
+			else if (psReplace->bOperand && IsIDECompoundText(szArgument))
 			{
 				pszDest->Append('(')->Append(szArgument)->Append(')');
 			}

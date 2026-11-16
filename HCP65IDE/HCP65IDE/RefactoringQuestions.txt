@@ -93,7 +93,8 @@ Answered
 40. Where a function's body names a member that isn't public and a call of it is outside the class, that is a
     conflict (the inlined code wouldn't compile).  A call on "&cOther" inlines as "(&cOther)->Kind()", not
     "cOther.Kind()".  Say if that matters.
-    Answered 2026-11-16: as recommended: a call on "&cOther" inlines as "cOther.Kind()".  To do.
+    Answered 2026-11-16: as recommended: a call on "&cOther" inlines as "cOther.Kind()".  Done 2026-11-16, for a
+    pointer parameter given an address and for a call made through one.
 
 58. Convert Enum to Enum Class (new, on an enum or one of its enumerators; no key) gives every use of an enumerator
     the enum's name, and refuses if the code then doesn't compile: an enum class's value is no integer, so
