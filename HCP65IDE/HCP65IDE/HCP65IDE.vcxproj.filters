@@ -51,6 +51,9 @@
     <ClCompile Include="IDERename.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="IDEMoveNamespace.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="IDENewFile.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -288,6 +291,9 @@
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDERename.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDEMoveNamespace.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDENewFile.h">

@@ -2355,6 +2355,39 @@ void CIDEScript::RunEditStep(const char* szStep)
 		szPrinted.Kill();
 		sInlining.Kill();
 	}
+	else if ((strcmp(szStep, "movablenamespace") == 0) || (strncmp(szStep, "movetonamespace:", 16) == 0) || (strncmp(szStep, "movetonamespaceusings:", 22) == 0))
+	{
+		//What Move to Namespace finds at the caret (movablenamespace), or it moved to a namespace ("movetonamespace:A::B",
+		//"movetonamespace:" for the global one; movetonamespaceusings: with using-declarations).
+		SIDENamespaceMove	sMove;
+		CChars				szPrinted;
+		CChars				szStatus;
+
+		sMove.Init();
+		szPrinted.Init();
+		szStatus.Init();
+		if (!mpcContent->GetMoveNamespace()->FindMove(&sMove))
+		{
+			printf("Move to Namespace: nothing\n");
+		}
+		else
+		{
+			printf("%s", mpcContent->GetMoveNamespace()->PrintMove(&sMove, &szPrinted));
+			if (sMove.bMovable && (strcmp(szStep, "movablenamespace") != 0))
+			{
+				mpcContent->GetMoveNamespace()->Move(&sMove, strchr(szStep, ':') + 1, strncmp(szStep, "movetonamespaceusings:", 22) == 0, &szStatus);
+				printf("Move to Namespace status: %s\n", szStatus.Text());
+				if (gbIDEScriptRenameSaves)
+				{
+					mpcContent->GetDocuments()->SaveAllFiles();
+				}
+			}
+		}
+		mpcContent->GetMoveNamespace()->KillUnits();
+		szStatus.Kill();
+		szPrinted.Kill();
+		sMove.Kill();
+	}
 	else if (strncmp(szStep, "copyclass:", 10) == 0)
 	{
 		//The class at the caret copied under a name ("copyclass:CDrum"), if it can be.

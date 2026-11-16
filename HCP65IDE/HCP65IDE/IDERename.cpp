@@ -1501,6 +1501,7 @@ void CIDERename::AddEditorItems(Ptr<CMenuContainer> pMenu)
 	mpcContent->GetDefinitions()->AddEditorItems(pRefactor);
 	mpcContent->GetMoveMembers()->AddEditorItems(pRefactor);
 	mpcContent->GetMoveClass()->AddEditorItems(pRefactor);
+	mpcContent->GetMoveNamespace()->AddEditorItems(pRefactor);
 	mpcContent->GetExtractMethod()->AddEditorItems(pRefactor);
 	mpcContent->GetExtractClass()->AddEditorItems(pRefactor);
 	mpcContent->GetEncapsulateField()->AddEditorItems(pRefactor);

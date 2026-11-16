@@ -218,6 +218,16 @@ def MakeRenameAssemblyCopy():
 	return {'SOLUTION': os.path.join(szFolder, 'RenameAssembly.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
 
 
+def MakeNamespacesCopy():
+	#A copy of Input/Namespaces (Geometry's CPoint, TLength, Area, giCount and Detail::Twice; Drawing::Plot; Main.cpp
+	#names them through a using-directive, a using-declaration and qualified names), to move things between namespaces.
+	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
+	atexit.register(shutil.rmtree, szRoot, True)
+	szFolder = os.path.join(szRoot, 'Namespaces')
+	shutil.copytree(os.path.join(HERE, 'Input', 'Namespaces'), szFolder)
+	return {'SOLUTION': os.path.join(szFolder, 'Namespaces.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
+
+
 def MakeMoveAssemblyCopy():
 	#A copy of Input/MoveAssembly (CTun, which derives from CVat, and W65C816 assembly that names CTun's members by
 	#the compiler's labels), to move members in.
@@ -1706,6 +1716,74 @@ CHECKS = [
 		[r'^Dialog \[Pull Members Up from CDrum\] answered OK$', r'^Status: Pulled Spare\(\) up from CDrum to CVessel\.$',
 		 r'^Dialog \[Pull Members Up from CDrum\] answered OK$', r'^Dialog \[Problems Detected\] answered Cancel$'],
 		[r'Pulled Fill']),
+	('move-namespace-class', dict(MakeNamespacesCopy(), **{
+		#Move to Namespace (Refactorings.txt 21): CPoint from Geometry to a new namespace Shapes.  Problems Detected says
+		#Geometry's Area takes it (argument dependent lookup).  Its declaration and its members' definitions in
+		#Geometry's blocks go into Shapes blocks where they are (Geometry's closed before and opened after); what they
+		#name of Geometry is qualified; every use names Shapes::CPoint.
+		'WAIT_INDEX': '1', 'OPEN': 'Shapes.h', 'DIALOG_ANSWER': 'OK',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:10:9,edit:movetonamespace:Shapes,printdisklines:Shapes.h,printdisklines:Shapes.cpp,printdisklines:Main.cpp'}),
+		[r'^Move to Namespace: Geometry::CPoint from \[Geometry\], 3 declarations: Shapes\.h\[1\] Shapes\.cpp\[1\] Shapes\.cpp\[1\]$', r'^Dialog \[Problems Detected\] answered OK$',
+		 r'^Move to Namespace status: Moved Geometry::CPoint to Shapes: 8 uses\.$',
+		 r'^7\|\ttypedef int\tTLength;$', r'^8\|\}$', r'^11\|namespace Shapes$', r'^12\|\{$', r'^13\|\tclass CPoint$', r'^16\|\t\tGeometry::TLength\tmiX;$',
+		 r'^19\|\t\tvoid\tInit\(Geometry::TLength iX, Geometry::TLength iY\);$', r'^21\|\t\};$', r'^22\|\}$', r'^25\|namespace Geometry$', r'^27\|\tTLength\tArea\(Shapes::CPoint\* pcPoint\);$',
+		 r'^\d+\|\tvoid\tPlot\(Shapes::CPoint\* pcPoint\);$',
+		 r'^6\|\tint\tgiCount = 1;$', r'^7\|\}$', r'^10\|namespace Shapes$', r'^16\|\tvoid CPoint::Init\(Geometry::TLength iX, Geometry::TLength iY\)$', r'^19\|\t\tmiY = Geometry::Detail::Twice\(iY\);$',
+		 r'^27\|\tGeometry::TLength CPoint::Sum\(void\)$', r'^31\|\}$', r'^38\|Geometry::TLength Geometry::Area\(Shapes::CPoint\* pcPoint\)$', r'^58\|void Drawing::Plot\(Shapes::CPoint\* pcPoint\)$',
+		 r'^14\|\tShapes::CPoint\t\t\t\tcPoint;$', r'^15\|\tShapes::CPoint\tcOther;$'],
+		[r'^\d+\|.*Geometry::CPoint']),
+	('move-namespace-function', dict(MakeNamespacesCopy(), **{
+		#Area from Geometry to Shapes: its declaration in a Shapes block where it was, its definition outside the
+		#namespaces renamed Shapes::Area with what it names of Geometry qualified, and Main.cpp's call (found through
+		#its using-directive of Geometry) Shapes::Area.
+		'WAIT_INDEX': '1', 'OPEN': 'Shapes.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:21:10,edit:movetonamespace:Shapes,printdisklines:Shapes.h,printdisklines:Shapes.cpp,printdisklines:Main.cpp'}),
+		[r'^Move to Namespace: Geometry::Area\(Geometry::CPoint\*\) from \[Geometry\], 2 declarations: Shapes\.h\[1\] Shapes\.cpp\(qualified\)\[0\]$',
+		 r'^Move to Namespace status: Moved Geometry::Area to Shapes: 1 use\.$', r'^18\|\t\};$', r'^19\|\}$', r'^22\|namespace Shapes$', r'^24\|\tGeometry::TLength\tArea\(Geometry::CPoint\* pcPoint\);$',
+		 r'^25\|\}$', r'^28\|namespace Geometry$', r'^30\|\textern int\tgiCount;$', r'^35\|Geometry::TLength Shapes::Area\(Geometry::CPoint\* pcPoint\)$', r'^37\|\treturn pcPoint->Sum\(\) \* Geometry::giCount;$',
+		 r'^21\|\ti = Shapes::Area\(&cOther\) \+ Geometry::Detail::Twice\(giCount\);$'],
+		[r'Problems Detected']),
+	('move-namespace-global', dict(MakeNamespacesCopy(), **{
+		#Geometry::Detail::Twice to the global namespace: Detail's block, which it was alone in, goes, and it follows
+		#Geometry's block; its definition is Twice, and its uses lose Detail:: and Geometry::Detail::.
+		'WAIT_INDEX': '1', 'OPEN': 'Shapes.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:26:7,edit:movetonamespace:,printdisklines:Shapes.h,printdisklines:Shapes.cpp,printdisklines:Main.cpp'}),
+		[r'^Move to Namespace status: Moved Geometry::Detail::Twice to the global namespace: 2 uses\.$', r'^22\|\textern int\tgiCount;$', r'^23\|\}$', r'^26\|int\tTwice\(int i\);$', r'^29\|namespace Drawing$',
+		 r'^16\|\t\tmiY = Twice\(iY\);$', r'^45\|int Twice\(int i\)$', r'^21\|\ti = Area\(&cOther\) \+ Twice\(giCount\);$'],
+		[r'^\d+\|.*namespace Detail', r'^\d+\|.*Detail::']),
+	('move-namespace-nested', dict(MakeNamespacesCopy(), **{
+		#giCount from Geometry to Geometry::Detail: it goes into the Detail block next to it, and Main.cpp (with its
+		#using-directive of Geometry) names it Detail::giCount.
+		'WAIT_INDEX': '1', 'OPEN': 'Shapes.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:22:13,edit:movetonamespace:Geometry::Detail,printdisklines:Shapes.h,printdisklines:Shapes.cpp,printdisklines:Main.cpp'}),
+		[r'^Move to Namespace status: Moved Geometry::giCount to Geometry::Detail: 2 uses\.$', r'^21\|\tTLength\tArea\(CPoint\* pcPoint\);$', r'^22\|$', r'^23\|\tnamespace Detail$', r'^25\|\t\textern int\tgiCount;$',
+		 r'^26\|$', r'^27\|\t\tint\tTwice\(int i\);$', r'^\d+\|\treturn pcPoint->Sum\(\) \* Detail::giCount;$', r'^21\|\ti = Area\(&cOther\) \+ Geometry::Detail::Twice\(Detail::giCount\);$'],
+		[r'^\d+\|\tnamespace Detail\n.*\n.*\n\tnamespace Detail']),
+	('move-namespace-usings', dict(MakeNamespacesCopy(), **{
+		#With "Add using-declarations": Main.cpp gets using Shapes::Area; with its other using lines and its call is
+		#left as it is written.
+		'WAIT_INDEX': '1', 'OPEN': 'Shapes.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:21:10,edit:movetonamespaceusings:Shapes,printdisklines:Shapes.h,printdisklines:Shapes.cpp,printdisklines:Main.cpp'}),
+		[r'^Move to Namespace status: Moved Geometry::Area to Shapes: 1 use, with using-declarations\.$', r'^4\|using namespace Geometry;$', r'^5\|using Drawing::Plot;$', r'^6\|using Shapes::Area;$',
+		 r'^\d+\|\ti = Area\(&cOther\) \+ Geometry::Detail::Twice\(giCount\);$'],
+		[r'Shapes::Area\(&cOther']),
+	('move-namespace-conflict', dict(MakeNamespacesCopy(), **{
+		#Geometry::TLength to Drawing, which has a TLength: Problems Detected, and Cancel moves nothing.
+		'WAIT_INDEX': '1', 'OPEN': 'Shapes.h', 'DIALOG_ANSWER': 'Cancel',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:7:15,edit:movetonamespace:Drawing,printdisklines:Shapes.h'}),
+		[r'^Dialog \[Problems Detected\] answered Cancel$', r'^Move to Namespace status: Move to Namespace: nothing was moved\.$', r'^7\|\ttypedef int\tTLength;$'],
+		[r'Moved']),
+	('move-namespace-dialog', dict(MakeNamespacesCopy(), **{
+		#Refactor, Move to Namespace...: its dialog has the namespace it is in, selected, to type over.
+		'WAIT_INDEX': '1', 'OPEN': 'Shapes.h', 'CARET': '21:10', 'DIALOG_KEYS': 'type:Shapes', 'DIALOG_ANSWER': 'OK',
+		'DEBUG': 'edit:renamesearch:---s,command:Refactor.MoveToNamespace,answered:1,printstatus,edit:saveall,printdisklines:Main.cpp'}),
+		[r'^Dialog \[Move Geometry::Area to Namespace\] answered OK$', r'^Status: Moved Geometry::Area to Shapes: 1 use\.$', r'^21\|\ti = Shapes::Area\(&cOther\)'],
+		[]),
+	('move-namespace-refused', dict(MakeNamespacesCopy(), **{
+		#A member of a class isn't at namespace scope: there is nothing to move.
+		'WAIT_INDEX': '1', 'OPEN': 'Shapes.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:16:9,edit:movablenamespace'}),
+		[r'^Move to Namespace: nothing$'], [r'declarations']),
 	('move-class', dict(MakeMoveMembersCopy(), **{
 		#Move Class to Its Own Files: CKeg shares Drum.h with CDrum and Drum.cpp with its functions.  It gets Keg.h (the
 		#C++ Header template's: the Include Guard template's guard, Drum.h's #includes, the class) and Keg.cpp (the C++
@@ -2803,9 +2881,9 @@ CHECKS = [
 				 'edit:caret:54:32,edit:contextactions,edit:caret:12:3,edit:contextactions,edit:caret:10:20,edit:contextactions,edit:caret:1:5,edit:contextactions,'
 				 'edit:caret:5:2,edit:contextactions'}),
 		[r'^Context\ actions:\ Rename\.\.\.\ \|\ Change\ Signature\.\.\.\ \|\ Inline\.\.\.\ \|\ Move\ Definition\ into\ Class\ \|\ Make\ Member\ Function\ const\ \|\ Make\ Member\ Function\ static\ \|\ Convert\ Member\ Function\ to\ Function\ \|\ Push\ Members\ Down\.\.\.\ \|\ Safe\ Delete\.\.\.$',
-		 r'^Context\ actions:\ Rename\.\.\.\ \|\ Change\ Signature\.\.\.\ \|\ Unify\ Parameter\ Names\ \|\ Inline\.\.\.\ \|\ Move\ Definition\ into\ Class\ \|\ Convert\ Function\ to\ Member\ Function\ \|\ Move\.\.\.\ \|\ Safe\ Delete\.\.\.$',
+		 r'^Context\ actions:\ Rename\.\.\.\ \|\ Change\ Signature\.\.\.\ \|\ Unify\ Parameter\ Names\ \|\ Inline\.\.\.\ \|\ Move\ Definition\ into\ Class\ \|\ Convert\ Function\ to\ Member\ Function\ \|\ Move\.\.\.\ \|\ Move\ to\ Namespace\.\.\.\ \|\ Safe\ Delete\.\.\.$',
 		 r'^Context\ actions:\ Rename\.\.\.\ \|\ Convert\ Pointer\ to\ Reference$',
-		 r'^Context\ actions:\ Rename\.\.\.\ \|\ Move\.\.\.\ \|\ Copy\ Class\.\.\.\ \|\ Extract\ Superclass\.\.\.\ \|\ Extract\ Interface\.\.\.\ \|\ Extract\ Class\.\.\.\ \|\ Extract\ Template\ Parameter\.\.\.$',
+		 r'^Context\ actions:\ Rename\.\.\.\ \|\ Move\.\.\.\ \|\ Copy\ Class\.\.\.\ \|\ Move\ to\ Namespace\.\.\.\ \|\ Extract\ Superclass\.\.\.\ \|\ Extract\ Interface\.\.\.\ \|\ Extract\ Class\.\.\.\ \|\ Extract\ Template\ Parameter\.\.\.$',
 		 r'^Context\ actions:\ Rename\.\.\.\ \|\ Convert\ Reference\ to\ Pointer$',
 		 r'^Context\ actions:\ Rename\.\.\.\ \|\ Encapsulate\ Field\.\.\.$',
 		 r'^Context\ actions:\ Introduce\ Variable\.\.\.\ \|\ Introduce\ Field\.\.\.\ \|\ Introduce\ Constant\.\.\.\ \|\ Introduce\ Parameter\.\.\.$',
@@ -2828,13 +2906,13 @@ CHECKS = [
 		'WAIT_INDEX': '1', 'OPEN': 'Vat.h',
 		'DEBUG': 'edit:caret:12:8,edit:contextactions,edit:caret:27:8,edit:contextactions,edit:caret:19:16,edit:contextactions,edit:caret:30:8,edit:contextactions,'
 				 'edit:caret:20:14,edit:contextactions,edit:caret:7:8,edit:contextactions,edit:caret:34:8,edit:contextactions'}),
-		[r'^Context\ actions:\ Rename\.\.\.\ \|\ Move\.\.\.\ \|\ Copy\ Class\.\.\.\ \|\ Push\ Members\ Down\.\.\.\ \|\ Extract\ Superclass\.\.\.\ \|\ Extract\ Interface\.\.\.\ \|\ Extract\ Class\.\.\.\ \|\ Safe\ Delete\.\.\.$',
-		 r'^Context\ actions:\ Rename\.\.\.\ \|\ Move\.\.\.\ \|\ Copy\ Class\.\.\.\ \|\ Pull\ Members\ Up\.\.\.\ \|\ Extract\ Superclass\.\.\.\ \|\ Extract\ Interface\.\.\.\ \|\ Extract\ Class\.\.\.\ \|\ Safe\ Delete\.\.\.$',
+		[r'^Context\ actions:\ Rename\.\.\.\ \|\ Move\.\.\.\ \|\ Copy\ Class\.\.\.\ \|\ Move\ to\ Namespace\.\.\.\ \|\ Push\ Members\ Down\.\.\.\ \|\ Extract\ Superclass\.\.\.\ \|\ Extract\ Interface\.\.\.\ \|\ Extract\ Class\.\.\.\ \|\ Safe\ Delete\.\.\.$',
+		 r'^Context\ actions:\ Rename\.\.\.\ \|\ Move\.\.\.\ \|\ Copy\ Class\.\.\.\ \|\ Move\ to\ Namespace\.\.\.\ \|\ Pull\ Members\ Up\.\.\.\ \|\ Extract\ Superclass\.\.\.\ \|\ Extract\ Interface\.\.\.\ \|\ Extract\ Class\.\.\.\ \|\ Safe\ Delete\.\.\.$',
 		 r'^Context\ actions:\ Rename\.\.\.\ \|\ Change\ Signature\.\.\.\ \|\ Unify\ Parameter\ Names\ \|\ Inline\.\.\.\ \|\ Move\ Definition\ into\ Class\ \|\ Make\ Member\ Function\ const\ \|\ Push\ Members\ Down\.\.\.\ \|\ Safe\ Delete\.\.\.$',
 		 r'^Context\ actions:\ Rename\.\.\.\ \|\ Change\ Signature\.\.\.\ \|\ Unify\ Parameter\ Names\ \|\ Inline\.\.\.\ \|\ Move\ Definition\ into\ Class\ \|\ Make\ Member\ Function\ const\ \|\ Pull\ Members\ Up\.\.\.\ \|\ Safe\ Delete\.\.\.$',
 		 r'^Context\ actions:\ Rename\.\.\.\ \|\ Change\ Signature\.\.\.\ \|\ Unify\ Parameter\ Names\ \|\ Inline\.\.\.\ \|\ Move\ Definition\ into\ Class\ \|\ Make\ Member\ Function\ const\ \|\ Make\ Member\ Function\ static\ \|\ Convert\ Member\ Function\ to\ Function\ \|\ Push\ Members\ Down\.\.\.\ \|\ Safe\ Delete\.\.\.$',
 		 r'^Context\ actions:\ Rename\.\.\.\ \|\ Encapsulate\ Field\.\.\.\ \|\ Safe\ Delete\.\.\.$',
-		 r'^Context\ actions:\ Rename\.\.\.\ \|\ Change\ Signature\.\.\.\ \|\ Unify\ Parameter\ Names\ \|\ Inline\.\.\.\ \|\ Move\ Definition\ into\ Class\ \|\ Convert\ Function\ to\ Member\ Function\ \|\ Move\.\.\.\ \|\ Safe\ Delete\.\.\.$'],
+		 r'^Context\ actions:\ Rename\.\.\.\ \|\ Change\ Signature\.\.\.\ \|\ Unify\ Parameter\ Names\ \|\ Inline\.\.\.\ \|\ Move\ Definition\ into\ Class\ \|\ Convert\ Function\ to\ Member\ Function\ \|\ Move\.\.\.\ \|\ Move\ to\ Namespace\.\.\.\ \|\ Safe\ Delete\.\.\.$'],
 		[]),
 	('context-actions-macro', dict(MakeMacrosCopy(), **{
 		#A macro where it is used and where it is #defined.
@@ -3379,7 +3457,7 @@ CHECKS = [
 		 r'^Menu Debug: Start Debugging \[F5\], Start Without Debugging \[Ctrl\+F5\], Stop Debugging \[Shift\+F5\], Stop Running\(disabled\), Restart \[Ctrl\+Shift\+F5\], Break All \[Ctrl\+Pause/Break\], Attach to Emulator\.\.\., Step Into \[F11\], Step Over \[F10\], Step Out \[Shift\+F11\], Toggle Breakpoint \[F9\], ',
 		 r'^Menu Window: Reset Window Layout, Close All Documents$',
 		 r'^Menu Editor: Go to Source \[Ctrl\+B\], Find Usages \[Alt\+F7\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Show Context Actions \[Alt\+Enter\], Rename\.\.\. \[Shift\+F6\], Refactor>, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\]$',
-		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Introduce Field\.\.\. \[Ctrl\+Alt\+F\](\(disabled\))?, Introduce Constant\.\.\. \[Ctrl\+Alt\+C\](\(disabled\))?, Introduce Parameter\.\.\. \[Ctrl\+Alt\+P\](\(disabled\))?, Introduce Typedef\.\.\. \[Ctrl\+Alt\+K\](\(disabled\))?, Inline\.\.\. \[Ctrl\+Alt\+N\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Unify Parameter Names(\(disabled\))?, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\.(\(disabled\))?, Push Members Down\.\.\.(\(disabled\))?, Move\.\.\. \[F6\](\(disabled\))?, Copy Class\.\.\.(\(disabled\))?, Extract Method\.\.\. \[Ctrl\+Alt\+M\](\(disabled\))?, Extract Superclass\.\.\.(\(disabled\))?, Extract Interface\.\.\.(\(disabled\))?, Extract Class\.\.\.(\(disabled\))?, Encapsulate Field\.\.\.(\(disabled\))?, Optimise #includes \[Ctrl\+Alt\+O\], Convert Macro\.\.\.(\(disabled\))?, Convert Pointer to Reference(\(disabled\))?, Convert Reference to Pointer(\(disabled\))?, Convert Enum to Enum Class\.\.\.(\(disabled\))?, Write Template.s Interface\.\.\.(\(disabled\))?, Make Member Function const(\(disabled\))?, Make Member Function static(\(disabled\))?, Convert Function to Member Function(\(disabled\))?, Convert Member Function to Function(\(disabled\))?, Extract Template Parameter\.\.\., Remove Template Parameter$',
+		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Introduce Field\.\.\. \[Ctrl\+Alt\+F\](\(disabled\))?, Introduce Constant\.\.\. \[Ctrl\+Alt\+C\](\(disabled\))?, Introduce Parameter\.\.\. \[Ctrl\+Alt\+P\](\(disabled\))?, Introduce Typedef\.\.\. \[Ctrl\+Alt\+K\](\(disabled\))?, Inline\.\.\. \[Ctrl\+Alt\+N\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Unify Parameter Names(\(disabled\))?, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\.(\(disabled\))?, Push Members Down\.\.\.(\(disabled\))?, Move\.\.\. \[F6\](\(disabled\))?, Copy Class\.\.\.(\(disabled\))?, Move to Namespace\.\.\.(\(disabled\))?, Extract Method\.\.\. \[Ctrl\+Alt\+M\](\(disabled\))?, Extract Superclass\.\.\.(\(disabled\))?, Extract Interface\.\.\.(\(disabled\))?, Extract Class\.\.\.(\(disabled\))?, Encapsulate Field\.\.\.(\(disabled\))?, Optimise #includes \[Ctrl\+Alt\+O\], Convert Macro\.\.\.(\(disabled\))?, Convert Pointer to Reference(\(disabled\))?, Convert Reference to Pointer(\(disabled\))?, Convert Enum to Enum Class\.\.\.(\(disabled\))?, Write Template.s Interface\.\.\.(\(disabled\))?, Make Member Function const(\(disabled\))?, Make Member Function static(\(disabled\))?, Convert Function to Member Function(\(disabled\))?, Convert Member Function to Function(\(disabled\))?, Extract Template Parameter\.\.\., Remove Template Parameter$',
 		 r'^Menu Explorer: Set as Startup Solution, Set as Startup Project\(disabled\), Remove Solution, Rename\.\.\.(\(disabled\))?, Properties\.\.\.(\(disabled\))?$',
 		 r'^Menu item \[View/Nope\] not found$'], []),
 	('menu-clicks', {

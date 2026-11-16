@@ -151,6 +151,7 @@ set(IDE_SOURCES
 	"${IDE_DIR}/IDEEdit.cpp"
 	"${IDE_DIR}/IDENavigator.cpp"
 	"${IDE_DIR}/IDERename.cpp"
+	"${IDE_DIR}/IDEMoveNamespace.cpp"
 	"${IDE_DIR}/IDENewFile.cpp"
 	"${IDE_DIR}/IDEFileTemplatesPage.cpp"
 	"${IDE_DIR}/IDETemplateVariables.cpp"

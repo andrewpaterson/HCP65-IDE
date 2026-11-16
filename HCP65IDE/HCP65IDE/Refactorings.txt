@@ -353,6 +353,14 @@ IntelliJ has none of these for Java.
        h. The leftovers of 19 and 20 that are namespaces': Convert Function to Member Function of a function in a
           namespace, and Extract Template Parameter of a type written with its namespace.
      Checks for each, on Input/Namespaces (a solution of classes, functions, templates and assembly in namespaces).
+     Built 2026-11-16 (CIDEMoveNamespace, IDEMoveNamespace.h says what it does): a to e, for a class (its members'
+     definitions in the old namespace's blocks with it), enum, typedef, function, variable and template; a block it is
+     alone in goes, one it starts or ends goes before or after it, a neighbouring block of the new namespace takes it,
+     otherwise the old block is split round it; a use is named from its namespace or a namespace one of its file's
+     using-directives opens, whichever is shorter.  Checks move-namespace-class, -function, -global, -nested,
+     -usings, -conflict, -refused and -dialog on Input/Namespaces.  Left: f (assembly labels), g (Move to File), h,
+     moving a namespace itself, and anything in an unnamed or inline namespace (refused, with why).  A declaration
+     that a longer qualified name puts out of line with the ones round it isn't lined up again (Rename doesn't either).
  22. An enum to an enum class, every use of an enumerator qualified.
  23. Assembly.  Rename already changes hand written .asm by the compiler's labels; Change Signature and Move need
      the same rules where they change a label.  A template instance's labels have its arguments in them.
