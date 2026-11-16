@@ -120,6 +120,11 @@ bool CHCP65Build::Start(CArrayChars* paszLines)
 		{
 			mcBuilder.SetLimit(uiLimit);
 		}
+		if (mpcConfiguration->HasImage() && (mpcConfiguration->GetImage()->GetText() != 0))
+		{
+			//An image that runs from elsewhere, such as the boot loader's ROM (run from MPU RAM's bank 4).
+			mcBuilder.SetTextAddress(mpcConfiguration->GetImage()->GetText());
+		}
 		if (!mszLibc65.Empty())
 		{
 			mcBuilder.AddLibc65(mszLibc65.Text());

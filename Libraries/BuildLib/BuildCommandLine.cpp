@@ -1022,8 +1022,8 @@ void CBuildCommandLine::WriteUsage(void)
 	WriteLine("  -prefer-size                  Smaller code before faster, where the compiler has the choice.");
 	WriteLine("  -exe <file> -entry <symbol> [-limit <n>] [-symbol <name>=<n>]...");
 	WriteLine("                                Link an executable.");
-	WriteLine("  -image <file> -size <n> [-fill <n>] [-limit <n>] [-load <n>] -region <start>,<end>,<offset>...");
-	WriteLine("                                Link an image.");
+	WriteLine("  -image <file> -size <n> [-fill <n>] [-limit <n>] [-load <n>] [-text <n>] -region <start>,<end>,<offset>...");
+	WriteLine("                                Link an image (-text: where its code starts, if not $10000).");
 	WriteLine("  -module <file> -entry <symbol> [-limit <n>]");
 	WriteLine("                                Link a module (a driver).  Without -exe, -image or -module the units");
 	WriteLine("                                are only compiled.");

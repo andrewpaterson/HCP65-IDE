@@ -185,7 +185,22 @@ void TestBuildConfigurationsImage(void)
 	pcImage = cConfigurations.GetConfiguration(0)->GetImage();
 	AssertTrue(cConfigurations.GetConfiguration(0)->HasImage());
 	AssertIntHex(0x7FC00, pcImage->GetLimit());
+	AssertIntHex(0, pcImage->GetText());
 	AssertSize(2, pcImage->NumRegions());
+
+	//An image that runs from elsewhere (Text, where its code starts), written back the same.
+	cFile.Init("<BuildConfigurations>\n\t<Configuration Name=\"Release|W65C816\" Toolchain=\"W65C816\" Solution=\"Release|Win32\">\n\t\t<Image File=\"Boot.rom\" Size=\"0x80000\" Limit=\"0x60000\" Text=\"0x40000\">\n\t\t\t<Region Start=\"0x40000\" End=\"0x60000\" Offset=\"0x40000\"/>\n\t\t</Image>\n\t</Configuration>\n</BuildConfigurations>\n");
+	AssertTrue(cFile.Write("Output" _FS_ "TextImage.hcp65build"));
+	cFile.Kill();
+	cConfigurations.Kill();
+	cConfigurations.Init();
+	AssertTrue(cConfigurations.Read("Output" _FS_ "TextImage.hcp65build"));
+	AssertIntHex(0x40000, cConfigurations.GetConfiguration(0)->GetImage()->GetText());
+	AssertTrue(cConfigurations.Write("Output" _FS_ "TextImageAgain.hcp65build"));
+	cFile.Init();
+	AssertTrue(cFile.Read("Output" _FS_ "TextImageAgain.hcp65build"));
+	AssertTrue(strstr(cFile.Text(), "Load=\"0x0\" Text=\"0x40000\">") != NULL);
+	cFile.Kill();
 
 	//No regions; a region past the image's end; not a number; MSVC.
 	cFile.Init("<BuildConfigurations>\n\t<Configuration Name=\"Debug|W65C816\" Toolchain=\"W65C816\" Solution=\"Debug|Win32\">\n\t\t<Image File=\"A.rom\" Size=\"0x100\"/>\n\t</Configuration>\n</BuildConfigurations>\n");

@@ -84,10 +84,12 @@ protected:
 	uint32					muiSize;
 	uint32					muiFill;
 	uint32					muiLoad;
+	uint32					muiText;
 	uint32					muiLimit;
 	bool					mbSize;
 	bool					mbFill;
 	bool					mbLoad;
+	bool					mbText;
 	bool					mbLimit;
 	CArrayChars				maszRegions;		//"Start,End,Offset", checked.
 

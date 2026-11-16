@@ -142,10 +142,12 @@ void CBuildPlain::Init(void)
 	muiSize = 0;
 	muiFill = 0xFF;
 	muiLoad = 0;
+	muiText = 0;
 	muiLimit = 0;
 	mbSize = false;
 	mbFill = false;
 	mbLoad = false;
+	mbText = false;
 	mbLimit = false;
 	maszRegions.Init();
 }
@@ -338,7 +340,7 @@ int CBuildPlain::ParseOption(CArrayChars* paszArguments, size* puiIndex, CChars*
 		}
 		return 1;
 	}
-	if (BuildIsOption(szOption, "limit") || BuildIsOption(szOption, "size") || BuildIsOption(szOption, "fill") || BuildIsOption(szOption, "load"))
+	if (BuildIsOption(szOption, "limit") || BuildIsOption(szOption, "size") || BuildIsOption(szOption, "fill") || BuildIsOption(szOption, "load") || BuildIsOption(szOption, "text"))
 	{
 		if (!NeedValue(paszArguments, puiIndex, szOption, pszError))
 		{
@@ -368,6 +370,11 @@ int CBuildPlain::ParseOption(CArrayChars* paszArguments, size* puiIndex, CChars*
 		{
 			muiFill = (uint32)iValue;
 			mbFill = true;
+		}
+		else if (BuildIsOption(szOption, "text"))
+		{
+			muiText = (uint32)iValue;
+			mbText = true;
 		}
 		else
 		{
@@ -488,9 +495,9 @@ bool CBuildPlain::Finish(CChars* pszError)
 		pszError->Set(mszExecutable.Empty() ? "-module needs its entry symbol (-entry)." : "-exe needs its entry symbol (-entry).");
 		return false;
 	}
-	if (mszImage.Empty() && (mbSize || mbFill || mbLoad || (maszRegions.NumElements() > 0)))
+	if (mszImage.Empty() && (mbSize || mbFill || mbLoad || mbText || (maszRegions.NumElements() > 0)))
 	{
-		pszError->Set("-size, -fill, -load and -region are for an image: they need -image.");
+		pszError->Set("-size, -fill, -load, -text and -region are for an image: they need -image.");
 		return false;
 	}
 	if ((NumPrograms() == 0) && mbLimit)
@@ -586,6 +593,7 @@ bool CBuildPlain::MakeConfiguration(CBuildConfiguration* pcConfiguration, CChars
 	else if (!mszImage.Empty())
 	{
 		pcImage = pcConfiguration->SetImage(mszImage.Text(), muiSize, (uint8)muiFill, muiLimit, muiLoad);
+		pcImage->SetText(muiText);
 		for (i = 0; i < maszRegions.NumElements(); i++)
 		{
 			ParseRegion(maszRegions.GetText(i), &uiStart, &uiEnd, &uiOffset);
@@ -791,6 +799,12 @@ bool CBuildPlain::Describe(CArrayChars* paszArguments, const char* szUnitsDirect
 		snprintf(szNumber, sizeof(szNumber), "0x%X", (unsigned int)pcImage->GetLoad());
 		paszArguments->Add("-load");
 		paszArguments->Add(szNumber);
+		if (pcImage->GetText() != 0)
+		{
+			snprintf(szNumber, sizeof(szNumber), "0x%X", (unsigned int)pcImage->GetText());
+			paszArguments->Add("-text");
+			paszArguments->Add(szNumber);
+		}
 		for (i = 0; i < pcImage->NumRegions(); i++)
 		{
 			psRegion = pcImage->GetRegion(i);

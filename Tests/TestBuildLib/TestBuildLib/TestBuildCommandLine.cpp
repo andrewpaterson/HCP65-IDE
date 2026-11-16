@@ -514,9 +514,9 @@ void TestBuildCommandLinePlainParse(void)
 	cCommandLine.Kill();
 
 	//An image, for the 65C64.
-	const char* aszImage[] = { "hcp65build", "-target", "65C64", "-program", "Rom", "Rom.cpp", "-image", "k.rom", "-size", "0x100", "-fill", "0", "-load", "$8000", "-region", "0,0x80,0", "-region", "0x100,0x180,0x80", "-no-mathtables", "-prefer-size" };
+	const char* aszImage[] = { "hcp65build", "-target", "65C64", "-program", "Rom", "Rom.cpp", "-image", "k.rom", "-size", "0x100", "-fill", "0", "-load", "$8000", "-text", "0x40000", "-region", "0,0x80,0", "-region", "0x100,0x180,0x80", "-no-mathtables", "-prefer-size" };
 	cCommandLine.Init();
-	AssertTrue(cCommandLine.Parse(20, aszImage));
+	AssertTrue(cCommandLine.Parse(22, aszImage));
 	szError.Init();
 	AssertTrue(cCommandLine.GetPlain()->MakeConfiguration(&cConfiguration, &szError));
 	AssertString("Plain|65C64", cConfiguration.GetName());
@@ -527,6 +527,7 @@ void TestBuildCommandLinePlainParse(void)
 	AssertIntHex(0x100, cConfiguration.GetImage()->GetSize());
 	AssertIntHex(0, cConfiguration.GetImage()->GetFill());
 	AssertIntHex(0x8000, cConfiguration.GetImage()->GetLoad());
+	AssertIntHex(0x40000, cConfiguration.GetImage()->GetText());
 	AssertSize(2, cConfiguration.GetImage()->NumRegions());
 	AssertIntHex(0x100, cConfiguration.GetImage()->GetRegion(1)->uiStart);
 	AssertIntHex(0x80, cConfiguration.GetImage()->GetRegion(1)->uiOffset);
