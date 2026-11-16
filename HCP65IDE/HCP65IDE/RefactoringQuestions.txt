@@ -52,6 +52,7 @@ Answered
 34. A typedef in a class template is written on the line before the member that first uses it, with no blank line
     after it, and one in a function at the very start of its body.  Is that where you want them?
     Answered 2026-11-16: a class template's typedefs go together at the top of the class.
+    Done: at the top of the class, after its opening brace, the access that starts it and the typedefs there are.
 
 38. Ctrl+Alt+N is now "Inline...": a variable or a function, whichever the caret is on (IntelliJ's is the same
     key for both).  For a function a dialog asks: all calls and take the function out, all calls and keep it, or

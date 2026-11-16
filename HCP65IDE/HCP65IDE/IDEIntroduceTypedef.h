@@ -37,8 +37,9 @@ class CIDEContent;
 struct SIDECaretContext;
 
 
-//Where a typedef is written: in the file, before what first uses it; in a class template, before the member that
-//first uses it; or in a function, at the start of its body.
+//Where a typedef is written: in the file, before what first uses it; in a class template, at the top of the class
+//with its other typedefs (after its opening brace and the access that starts it); or in a function, at the start of
+//its body.
 #define IDE_TYPEDEF_FILE		0
 #define IDE_TYPEDEF_CLASS		1
 #define IDE_TYPEDEF_FUNCTION	2

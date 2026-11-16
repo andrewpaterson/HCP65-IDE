@@ -563,6 +563,37 @@ bool CIDEIntroduceTypedef::FindTypedef(SIDETypedef* psDest)
 		psDest->szIndent.AppendSubString(szText, uiAt, i);
 		psDest->szIndent.Append('\t');
 	}
+	if ((psDest->iPlace == IDE_TYPEDEF_CLASS) && (psDest->aiStarts.NumElements() > 0))
+	{
+		//In a class template, with its other typedefs at the top of the class (question 34): after its opening brace,
+		//the access that starts it, and the typedefs there are.
+		for (iToken = pcScope->miFirstToken; (iToken <= pcScope->miLastToken) && !cUnit.IsToken(iToken, "{"); iToken++)
+		{
+		}
+		if ((iToken <= pcScope->miLastToken) && cUnit.GetTokensRange(iToken, iToken, &sRange))
+		{
+			uiAt = FindIDENextLine(szText, FindIDETextOffset(szText, sRange.iLine, sRange.iColumn));
+			for (;;)
+			{
+				for (i = uiAt; (szText[i] == ' ') || (szText[i] == '\t'); i++)
+				{
+				}
+				if ((strncmp(&szText[i], "public:", 7) == 0) || (strncmp(&szText[i], "protected:", 10) == 0) || (strncmp(&szText[i], "private:", 8) == 0) ||
+					((strncmp(&szText[i], "typedef", 7) == 0) && !IsIDENameChar(szText[i + 7])))
+				{
+					uiAt = FindIDENextLine(szText, i);
+				}
+				else
+				{
+					break;
+				}
+			}
+			for (i = 0; i < psDest->aiTypedefAt.NumElements(); i++)
+			{
+				psDest->aiTypedefAt.SetValue(i, (int)uiAt);
+			}
+		}
+	}
 
 	//Every name the file's tokens write.
 	for (iToken = 0; (size)iToken < cUnit.GetTokeniser()->NumTokens(); iToken++)

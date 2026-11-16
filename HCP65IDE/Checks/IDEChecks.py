@@ -2291,7 +2291,7 @@ CHECKS = [
 		[]),
 	('introduce-typedef-template', dict(MakeIntroduceTypedefCopy(), **{
 		#A type that names a template's parameter is named where the parameter is.  In the class template: a member
-		#typedef before the member that first writes it, and the places in the class.  In a function of the template
+		#typedef at the top of the class (question 34), and the places in the class.  In a function of the template
 		#outside the class: the function's own, at the start of its body.
 		'WAIT_INDEX': '1', 'OPEN': 'Types.h',
 		'DEBUG': 'edit:renamesearch:---s,edit:selecttext:24:2-24:4,edit:typedef:PLast,edit:selecttext:9:2-9:4,edit:typedef:PItem,printdisklines:Types.h'}),
@@ -2299,6 +2299,14 @@ CHECKS = [
 		 r'^Introduce Typedef: \[M\*\], 3 places, in its class$', r'^Status: Introduced typedef M\* PItem: 3 places replaced\.$',
 		 r'^8\|public:$', r'^9\|\ttypedef M\*\tPItem;$', r'^10\|\tPItem\tmpFirst;$', r'^11\|\tint\t\tmiCount;$', r'^13\|\tPItem\tGet\(int iIndex\) \{ return mpFirst; \}$', r'^14\|\tPItem\tLast\(void\);$',
 		 r'^23\|M\* CList<M>::Last\(void\)$', r'^24\|\{$', r'^25\|\ttypedef M\*\tPLast;$', r'^26\|\tPLast\tpLast;$'],
+		[]),
+	('introduce-typedef-template-top', dict(MakeIntroduceTypedefCopy(), **{
+		#A class template's typedef goes at the top of the class, after the access that starts it, even where the
+		#member that first uses it is further down (Last), and a second goes after the first.
+		'WAIT_INDEX': '1', 'OPEN': 'Types.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:selecttext:13:2-13:4,edit:typedefone:PLast,edit:selecttext:10:2-10:4,edit:typedefone:PItem,printdisklines:Types.h'}),
+		[r'^Status: Introduced typedef M\* PLast: 1 place replaced\.$', r'^Status: Introduced typedef M\* PItem: 1 place replaced\.$',
+		 r'^7\|\{$', r'^8\|public:$', r'^9\|\ttypedef M\*\tPLast;$', r'^10\|\ttypedef M\*\tPItem;$', r'^11\|\tPItem\t+mpFirst;$', r'^15\|\tPLast\t+Last\(void\);$'],
 		[]),
 	('introduce-typedef-files', dict(MakeIntroduceTypedefCopy(), **{
 		#A typedef written in a header can name the type in the files that #include the header too (the dialog's
