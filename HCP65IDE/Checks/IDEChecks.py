@@ -2397,6 +2397,16 @@ CHECKS = [
 		 r'^Status: Wrote what CHolder needs of its parameters as a comment: 2 members\.$',
 		 r'^4\|$', r'^5\|//M must have:$', r'^6\|//\tvoid\tInit\(void\);$', r'^7\|//\tint\t\tmiCount;$', r'^8\|template<class M>$', r'^19 lines$'],
 		[]),
+	('template-interface-derive', dict(MakeTemplateInterfaceCopy(), **{
+		#As an abstract class, with the classes the template is used with made to derive from it: CDiesel gets
+		#": public CRunnable", its three functions override, and Diesel.h an #include of Runner.h.
+		'WAIT_INDEX': '1', 'OPEN': 'Runner.h', 'CARET': '12:8',
+		'DEBUG': 'edit:renamesearch:---s,edit:templateinterface:derive:CRunnable,printdisklines:Diesel.h,printdisklines:Runner.h'}),
+		[r'^Status: Wrote what CRunner needs of M as the class CRunnable: 3 members; CDiesel derives from it\.$',
+		 r'^3\|#include "Runner\.h"$', r'^6\|class CDiesel : public CRunnable$', r'^11\|\tvoid\t\t\tStart\(int iSpeed\) override \{ miRuns = iSpeed; \}$',
+		 r'^12\|\tvirtual void\tStop\(void\) override \{ miRuns = 0; \}$', r'^13\|\tint\t\t\t\tCount\(void\) const override \{ return miRuns; \}$', r'^17 lines$',
+		 r'^5\|class CRunnable$', r'^8\|\tvirtual void\tStart\(int iSpeed\) =0;$'],
+		[]),
 	('template-interface-dialog', dict(MakeTemplateInterfaceCopy(), **{
 		#The command's dialog shows the members and asks how to write them; as it opens, a comment.
 		'WAIT_INDEX': '1', 'OPEN': 'Runner.h', 'CARET': '12:8', 'SETTINGS': MakeSettingsFile(), 'DIALOG_ANSWER': 'OK',

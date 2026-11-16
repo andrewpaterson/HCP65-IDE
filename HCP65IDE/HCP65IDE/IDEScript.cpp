@@ -1935,7 +1935,8 @@ void CIDEScript::RunEditStep(const char* szStep)
 		szPrinted.Kill();
 		sChange.Kill();
 	}
-	else if ((strcmp(szStep, "templateinterface") == 0) || (strcmp(szStep, "templateinterface:comment") == 0) || (strncmp(szStep, "templateinterface:class:", 24) == 0))
+	else if ((strcmp(szStep, "templateinterface") == 0) || (strcmp(szStep, "templateinterface:comment") == 0) || (strncmp(szStep, "templateinterface:class:", 24) == 0) ||
+			 (strncmp(szStep, "templateinterface:derive:", 25) == 0))
 	{
 		//What the template the caret is in needs of its parameters (templateinterface); or that written as a comment
 		//over it, or as an abstract class with a name.
@@ -1954,7 +1955,15 @@ void CIDEScript::RunEditStep(const char* szStep)
 			if (szStep[17] == ':')
 			{
 				szPrinted.Clear();
-				mpcContent->GetTemplateInterface()->Write(&sInterface, (szStep[19] == 'l') ? IDE_INTERFACE_CLASS : IDE_INTERFACE_COMMENT, (szStep[19] == 'l') ? &szStep[24] : "", &szPrinted);
+				if (szStep[18] == 'd')
+				{
+					//templateinterface:derive:<Name>: as a class, the classes it is used with made to derive from it.
+					mpcContent->GetTemplateInterface()->Write(&sInterface, IDE_INTERFACE_CLASS, &szStep[25], &szPrinted, true);
+				}
+				else
+				{
+					mpcContent->GetTemplateInterface()->Write(&sInterface, (szStep[19] == 'l') ? IDE_INTERFACE_CLASS : IDE_INTERFACE_COMMENT, (szStep[19] == 'l') ? &szStep[24] : "", &szPrinted);
+				}
 				printf("Status: %s\n", szPrinted.Text());
 				if (gbIDEScriptRenameSaves)
 				{

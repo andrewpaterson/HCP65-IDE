@@ -127,6 +127,7 @@ struct SIDEMembersMove
 class CIDEMoveMembers : public CObject
 {
 friend class CIDEExtractClass;
+friend class CIDETemplateInterface;
 friend class CIDEEncapsulateField;
 CONSTRUCTABLE(CIDEMoveMembers);
 DESTRUCTABLE(CIDEMoveMembers);

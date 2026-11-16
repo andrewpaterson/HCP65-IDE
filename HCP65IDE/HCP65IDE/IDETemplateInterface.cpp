@@ -28,6 +28,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDESafeDelete.h"
 #include "IDEDefinitions.h"
 #include "IDEMoveMembers.h"
+#include "IDEMoveClass.h"
+#include "IDEIncludes.h"
 #include "IDEScript.h"
 #include "IDEContextActions.h"
 #include "IDETemplateInterface.h"
@@ -49,6 +51,7 @@ void SIDETemplateInterface::Init(void)
 	aiMemberCalled.Init();
 	aszMemberDeclarations.Init();
 	aiMemberFunctions.Init();
+	aszMemberKeys.Init();
 	uiAt = 0;
 	szIndent.Init();
 }
@@ -61,6 +64,7 @@ void SIDETemplateInterface::Init(void)
 void SIDETemplateInterface::Kill(void)
 {
 	szIndent.Kill();
+	aszMemberKeys.Kill();
 	aiMemberFunctions.Kill();
 	aszMemberDeclarations.Kill();
 	aiMemberCalled.Kill();
@@ -95,6 +99,7 @@ void CIDETemplateInterface::Class(void)
 	U_Pointer(mpcContent);
 	M_Pointer(mpDialog);
 	M_Pointer(mpKindBox);
+	M_Pointer(mpDeriveBox);
 	M_Pointer(mpNameField);
 	M_Pointer(mpError);
 	U_Pointer(mpsShown);
@@ -327,7 +332,7 @@ static size FindIDEDeclaredParameter(CIDERefactorUnit* pcUnit, CCPPSyntaxTemplat
 // "void	Init(void)", "int	miCount".  False if the index knows of none.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDETemplateInterface::FindDeclaration(const char* szFileName, int32 iLine, int32 iColumn, CChars* pszDest, bool* pbFunction)
+bool CIDETemplateInterface::FindDeclaration(const char* szFileName, int32 iLine, int32 iColumn, CChars* pszDest, bool* pbFunction, CChars* pszKey)
 {
 	static const char*	aszLeading[] = { "virtual", "static", "inline" };
 	static const char*	aszTrailing[] = { "override", "final", "= 0", "=0" };
@@ -353,6 +358,7 @@ bool CIDETemplateInterface::FindDeclaration(const char* szFileName, int32 iLine,
 		return false;
 	}
 	*pbFunction = (uiKind == CPPSK_Function);
+	pszKey->Set(szKey);
 	asLocations.Init();
 	pcModel->GetSymbolLocations(szKey.Text(), &asLocations, &uiKind);
 	szKey.Kill();
@@ -433,6 +439,7 @@ bool CIDETemplateInterface::FindDeclaration(const char* szFileName, int32 iLine,
 void CIDETemplateInterface::AddMember(SIDETemplateInterface* psDest, const char* szParameter, const char* szName, int iCalled, const char* szFileName, int32 iLine, int32 iColumn)
 {
 	CChars	szDeclaration;
+	CChars	szKey;
 	size	i;
 	bool	bFunction;
 
@@ -444,16 +451,20 @@ void CIDETemplateInterface::AddMember(SIDETemplateInterface* psDest, const char*
 		}
 	}
 	szDeclaration.Init();
+	szKey.Init();
 	bFunction = (iCalled != 0);
-	if (!FindDeclaration(szFileName, iLine, iColumn, &szDeclaration, &bFunction))
+	if (!FindDeclaration(szFileName, iLine, iColumn, &szDeclaration, &bFunction, &szKey))
 	{
 		szDeclaration.Clear();
+		szKey.Clear();
 	}
 	psDest->aszMemberParameters.Add(szParameter);
 	psDest->aszMemberNames.Add(szName);
 	psDest->aiMemberCalled.Add(iCalled);
 	psDest->aszMemberDeclarations.Add(szDeclaration.Text());
 	psDest->aiMemberFunctions.Add(bFunction ? 1 : 0);
+	psDest->aszMemberKeys.Add(szKey.Text());
+	szKey.Kill();
 	szDeclaration.Kill();
 }
 
@@ -757,7 +768,7 @@ const char* CIDETemplateInterface::GetProblem(SIDETemplateInterface* psInterface
 // class before it (and before the comment over it).
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDETemplateInterface::Write(SIDETemplateInterface* psInterface, int iKind, const char* szName, CChars* pszStatus)
+bool CIDETemplateInterface::Write(SIDETemplateInterface* psInterface, int iKind, const char* szName, CChars* pszStatus, bool bDerive)
 {
 	CIDEFileEdits	cFiles;
 	CChars			szBlock;
@@ -768,6 +779,8 @@ bool CIDETemplateInterface::Write(SIDETemplateInterface* psInterface, int iKind,
 	size			j;
 	bool			bResult;
 	bool			bFirst;
+	CArrayChars		aszClasses;
+	CChars			szDerived;
 
 	szProblem = GetProblem(psInterface, iKind, szName);
 	cFiles.Init(mpcContent);
@@ -818,12 +831,43 @@ bool CIDETemplateInterface::Write(SIDETemplateInterface* psInterface, int iKind,
 		cFiles.GetEdits(psInterface->szFileName.Text())->Insert(FindIDECommentStart(szText, psInterface->uiAt), szBlock.Text());
 		szBlock.Kill();
 		szMessage.Append("Wrote what ")->Append(psInterface->szTemplate)->Append(" needs of ")->Append(psInterface->aszMemberParameters.GetText(0))->Append(" as the class ")->Append(szName)->Append(": ");
+		if (bDerive)
+		{
+			aszClasses.Init();
+			bResult = Derive(psInterface, szName, &cFiles, &aszClasses);
+			if (!bResult)
+			{
+				szMessage.Set("Write Template's Interface: the classes it is used with can't be made to derive from it (a class's definition can't be read, or isn't the solution's).");
+			}
+			else if (cFiles.CountErrors(true) > cFiles.CountErrors(false))
+			{
+				bResult = false;
+				szMessage.Set("Write Template's Interface: the code doesn't compile with the classes it is used with derived from it.");
+			}
+			else
+			{
+				szDerived.Init();
+				for (i = 0; i < aszClasses.NumElements(); i++)
+				{
+					szDerived.Append((i == 0) ? "" : ((i + 1 == aszClasses.NumElements()) ? " and " : ", "));
+					GetIDESymbolName(aszClasses.GetText(i), &szDerived);
+				}
+				szDerived.Append((aszClasses.NumElements() == 1) ? " derives from it" : " derive from it");
+			}
+			aszClasses.Kill();
+		}
 	}
 	if (bResult)
 	{
 		cFiles.Apply();
 		i = psInterface->aszMemberNames.NumElements();
-		szMessage.Append((uint32)i)->Append((i == 1) ? " member." : " members.");
+		szMessage.Append((uint32)i)->Append((i == 1) ? " member" : " members");
+		if (bDerive && (iKind == IDE_INTERFACE_CLASS))
+		{
+			szMessage.Append("; ")->Append(szDerived);
+			szDerived.Kill();
+		}
+		szMessage.Append('.');
 	}
 	if (pszStatus)
 	{
@@ -835,6 +879,123 @@ bool CIDETemplateInterface::Write(SIDETemplateInterface* psInterface, int iKind,
 	}
 	szMessage.Kill();
 	cFiles.Kill();
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The classes the template is used with (those its members' declarations
+// are in) made to derive from the interface: ": public szName" after the
+// class's name, or ", public szName" after its bases; each function the
+// interface has marked override in it; and the class's file given an
+// #include of the template's header if it doesn't reach it.  The classes'
+// keys into paszClasses.  False if a class's definition can't be read.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDETemplateInterface::Derive(SIDETemplateInterface* psInterface, const char* szName, CIDEFileEdits* pcFiles, CArrayChars* paszClasses)
+{
+	CIDECodeModel*			pcModel;
+	CIDEIncludeGraph		cGraph;
+	CArrayIDELocations		asLocations;
+	SIDELocation*			psLocation;
+	SIDELocation*			psDefinition;
+	CArrayIDEFileRanges		asInserts;
+	CArrayChars				aszInsertTexts;
+	CChars					szScope;
+	CChars					szBase;
+	char*					szText;
+	size					uiAt;
+	size					uiBrace;
+	size					uiColon;
+	size					i;
+	size					j;
+	uint8					uiKind;
+	bool					bResult;
+
+	pcModel = mpcContent->GetCodeModel();
+	for (i = 0; i < psInterface->aszMemberKeys.NumElements(); i++)
+	{
+		szScope.Init();
+		GetIDESymbolScope(psInterface->aszMemberKeys.GetText(i), &szScope);
+		if (!szScope.Empty())
+		{
+			paszClasses->AddIfUnique(szScope.Text());
+		}
+		szScope.Kill();
+	}
+	bResult = (paszClasses->NumElements() > 0);
+	cGraph.Init(pcModel, &mpcContent->GetFindInFiles());
+	asInserts.Init();
+	aszInsertTexts.Init();
+	for (i = 0; bResult && (i < paszClasses->NumElements()); i++)
+	{
+		//Its definition: the name, then its bases or its brace.
+		asLocations.Init();
+		psDefinition = NULL;
+		pcModel->GetSymbolLocations(paszClasses->GetText(i), &asLocations, &uiKind);
+		for (j = 0; j < asLocations.NumElements(); j++)
+		{
+			psLocation = asLocations.Get(j);
+			if (psLocation->uiRole == CPPIR_Definition)
+			{
+				psDefinition = psLocation;
+			}
+		}
+		szText = (psDefinition && (pcModel->FindProjectOfFile(psDefinition->szFileName.Text()) != MAX_SIZE)) ? pcFiles->GetText(psDefinition->szFileName.Text()) : NULL;
+		bResult = (szText != NULL);
+		if (bResult)
+		{
+			uiAt = FindIDETextOffset(szText, psDefinition->iLine, psDefinition->iColumn) + (size)psDefinition->iLength;
+			uiColon = MAX_SIZE;
+			for (uiBrace = uiAt; (szText[uiBrace] != '\0') && (szText[uiBrace] != '{') && (szText[uiBrace] != ';'); uiBrace++)
+			{
+				uiColon = ((szText[uiBrace] == ':') && (uiColon == MAX_SIZE)) ? uiBrace : uiColon;
+			}
+			bResult = (szText[uiBrace] == '{');
+		}
+		if (bResult)
+		{
+			szBase.Init();
+			if (uiColon != MAX_SIZE)
+			{
+				//After the last base, before the space and line the brace is on.
+				for (; (uiBrace > uiAt) && ((szText[uiBrace - 1] == ' ') || (szText[uiBrace - 1] == '\t') || (szText[uiBrace - 1] == '\r') || (szText[uiBrace - 1] == '\n')); uiBrace--)
+				{
+				}
+				szBase.Append(", public ")->Append(szName);
+				pcFiles->GetEdits(psDefinition->szFileName.Text())->Insert(uiBrace, szBase.Text());
+			}
+			else
+			{
+				szBase.Append(" : public ")->Append(szName);
+				pcFiles->GetEdits(psDefinition->szFileName.Text())->Insert(uiAt, szBase.Text());
+			}
+			szBase.Kill();
+			if (!cGraph.Reaches(cGraph.Get(psDefinition->szFileName.Text()), cGraph.Get(psInterface->szFileName.Text()), -1, NULL))
+			{
+				mpcContent->GetMoveClass()->AddInclude(psDefinition->szFileName.Text(), "", psInterface->szFileName.Text(), pcFiles, &asInserts, &aszInsertTexts);
+			}
+		}
+		KillIDELocations(&asLocations);
+	}
+	for (i = 0; bResult && (i < asInserts.NumElements()); i++)
+	{
+		pcFiles->GetEdits(asInserts.Get(i)->szFileName.Text())->Insert(asInserts.Get(i)->uiStart, aszInsertTexts.GetText(i));
+	}
+
+	//Its functions in each class, marked override.
+	for (i = 0; bResult && (i < psInterface->aszMemberKeys.NumElements()); i++)
+	{
+		if (!psInterface->aszMemberKeys.Get(i)->Empty())
+		{
+			mpcContent->GetMoveMembers()->MarkOverride(psInterface->aszMemberKeys.GetText(i), pcFiles);
+		}
+	}
+	mpcContent->GetMoveMembers()->KillUnits();
+	aszInsertTexts.Kill();
+	KillIDEFileRanges(&asInserts);
+	cGraph.Kill();
 	return bResult;
 }
 
@@ -895,6 +1056,7 @@ bool CIDETemplateInterface::Show(void)
 	size					i;
 	int						iKind;
 	bool					bResult;
+	bool					bDerive;
 
 	sInterface.Init();
 	if (!FindInterface(&sInterface))
@@ -936,6 +1098,7 @@ bool CIDETemplateInterface::Show(void)
 	szText.Append((sInterface.szTemplate.Text()[0] == 'C') ? &sInterface.szTemplate.Text()[1] : sInterface.szTemplate.Text())->Append("Interface");
 	mpNameField = mpDialog->AddTextField("Class's name:", szText.Text());
 	szText.Kill();
+	mpDeriveBox = mpDialog->AddCheckBox("Make the classes it is used with derive from it (each has a virtual table then)", false);
 	mpError = OMalloc<CLabel>(mpDialog->GetWindow(), mpcContent->GetDimFont(), "");
 	mpDialog->AddEditor("", mpError);
 	mpDialog->SetOKCaption("Write");
@@ -943,15 +1106,17 @@ bool CIDETemplateInterface::Show(void)
 	mpcContent->GetScript()->WatchDialog(mpDialog);
 	bResult = mpDialog->Show(560);
 	iKind = (int)mpKindBox->GetSelected();
+	bDerive = mpDeriveBox->IsTicked();
 	szText.Init(mpNameField->GetText());
 	mpDialog->ClearApprover();
 	mpcContent->GetScript()->StopWatchingDialog();
 	mpKindBox = NULL;
+	mpDeriveBox = NULL;
 	mpNameField = NULL;
 	mpError = NULL;
 	mpDialog = NULL;
 	mpsShown = NULL;
-	bResult = bResult && Write(&sInterface, iKind, szText.Text());
+	bResult = bResult && Write(&sInterface, iKind, szText.Text(), NULL, bDerive && (iKind == IDE_INTERFACE_CLASS));
 	szText.Kill();
 	sInterface.Kill();
 	return bResult;

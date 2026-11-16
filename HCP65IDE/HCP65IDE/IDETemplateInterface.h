@@ -25,6 +25,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/ArrayChars.h"
 #include "BaseLib/ArrayInt.h"
 #include "WindowLib/ComboBox.h"
+#include "WindowLib/CheckBox.h"
 #include "WindowLib/CommandSet.h"
 #include "WindowLib/Dialog.h"
 #include "WindowLib/Label.h"
@@ -59,6 +60,8 @@ struct SIDETemplateInterface
 	CArrayChars	aszMemberDeclarations;	//and how one of the classes the template is used with declares it ("void	Init(void);");
 										//empty where no instance of the template says.
 	CArrayInt	aiMemberFunctions;	//Whether that declaration is a function's.
+	CArrayChars	aszMemberKeys;		//The symbol that declaration is of (empty where there is none): its class is one the
+									//template is used with.
 	size		uiAt;				//Where the template's line starts, in the file's text.
 	CChars		szIndent;			//Its indentation.
 
@@ -74,8 +77,11 @@ struct SIDETemplateInterface
 //They are shown, and written if asked:
 //  - as a comment over the template, "//M must have:" and each member's declaration; or
 //  - as an abstract class before the template, each function pure virtual: what an argument can derive from to be
-//    held to it.  Only if every member is a function with a known declaration, and for one parameter.
-//Nothing else is changed: the classes the template is used with are left as they are.
+//    held to it.  Only if every member is a function with a known declaration, and for one parameter.  Asked
+//    (a tick, off to begin with: question 59), the classes the template is used with derive from it, their
+//    functions marked override, and each #includes the template's header if it doesn't reach it; the files are
+//    checked as they would be first.  Each such class has a virtual table then.
+//Otherwise nothing else is changed: the classes the template is used with are left as they are.
 class CIDETemplateInterface : public CObject
 {
 CONSTRUCTABLE(CIDETemplateInterface);
@@ -84,6 +90,7 @@ protected:
 	CIDEContent*			mpcContent;  //Not held: the content holds it.
 	Ptr<CDialog>			mpDialog;  //While it is shown.
 	Ptr<CComboBox>			mpKindBox;
+	Ptr<CCheckBox>			mpDeriveBox;
 	Ptr<CTextField>			mpNameField;
 	Ptr<CLabel>				mpError;
 	SIDETemplateInterface*	mpsShown;  //What the dialog shows.  Not held.
@@ -103,7 +110,7 @@ public:
 	bool	Show(void);
 	bool	FindInterface(SIDETemplateInterface* psDest);
 	const char*	GetProblem(SIDETemplateInterface* psInterface, int iKind, const char* szName);
-	bool	Write(SIDETemplateInterface* psInterface, int iKind, const char* szName, CChars* pszStatus = NULL);
+	bool	Write(SIDETemplateInterface* psInterface, int iKind, const char* szName, CChars* pszStatus = NULL, bool bDerive = false);
 	char*	PrintInterface(SIDETemplateInterface* psInterface, CChars* pszDest);
 
 protected:
@@ -111,7 +118,8 @@ protected:
 	bool	Approve(void);
 	bool	Refuse(SIDETemplateInterface* psDest, const char* szWhyNot);
 	void	AddMember(SIDETemplateInterface* psDest, const char* szParameter, const char* szName, int iCalled, const char* szFileName, int32 iLine, int32 iColumn);
-	bool	FindDeclaration(const char* szFileName, int32 iLine, int32 iColumn, CChars* pszDest, bool* pbFunction);
+	bool	FindDeclaration(const char* szFileName, int32 iLine, int32 iColumn, CChars* pszDest, bool* pbFunction, CChars* pszKey);
+	bool	Derive(SIDETemplateInterface* psInterface, const char* szName, CIDEFileEdits* pcFiles, CArrayChars* paszClasses);
 	void	AppendMember(SIDETemplateInterface* psInterface, size uiMember, CChars* pszDest);
 	void	AppendAligned(SIDETemplateInterface* psInterface, size uiMember, const char* szBefore, CChars* pszDest);
 };

@@ -112,7 +112,9 @@ Answered
     derive from it (": public CRunnable", their functions marked override)?  And is C...Interface the name you
     want suggested, or have you a prefix for such classes?
     Answered 2026-11-16: as recommended: the class form offers, unticked, to make the classes the template is
-    used with derive from it (their functions marked override); C<Template>Interface stays the name.  To do.
+    used with derive from it (their functions marked override); C<Template>Interface stays the name.  Done
+    2026-11-16: each such class gets ": public CName" (or ", public CName" after its bases), its functions
+    override, and an #include of the template's header where it doesn't reach it; the files are checked first.
 
  1. Rename and a template's family (T2).  A member a template's body names (mp->Init() in CHolder<M>) is now always
     renamed with the other classes' members of that name the template is instantiated with, and the dialog and

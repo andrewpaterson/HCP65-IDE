@@ -119,6 +119,7 @@ struct SIDEFunctionMove
 class CIDEMoveClass : public CObject
 {
 friend class CIDEExtractClass;
+friend class CIDETemplateInterface;
 CONSTRUCTABLE(CIDEMoveClass);
 DESTRUCTABLE(CIDEMoveClass);
 protected:
