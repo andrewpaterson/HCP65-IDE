@@ -389,7 +389,8 @@ Where it is
      does; checks qualifier-const and qualifier-static).  The family (T2) case has no check input.
  18. Function to member function and back (19): done (CIDEConvertMember).
  19. Extract template parameter (20): done, a function's, a class's and the inverse (CIDETemplateParameter).
- 20. Phase 4 from 21 (namespaces): next.  Then 22 to 24 in their order.
+ 20. Phase 4 from 21 (namespaces).  Then 22 to 24 in their order.  (22 to 24 are done: 26 to 28 below.  21 is
+     left until the user comes back to it.)
  21. 2026-11-15, by day: the user answered questions (RefactoringQuestions.txt, Answered) and gave a queue to do
      before 21: (1) an editable table in WindowLib and the dialogs made of it: done (CTable; Change Signature,
      Pull Members Up, Push Members Down); (2) the checker stricter: a type nothing declares is an error in every
@@ -446,9 +447,9 @@ Where it is
      refuse an enum class's value as an integer (it took any).  Where the enum's value is used as an integer the
      casts are written: the compiler's check takes one named enum as an enum class and records each place it
      would refuse (CCPPSemanticPass::SetRecordedEnum), and the refactoring writes what each needs, shown first as
-     Problems Detected's list (question 58).  ++ and -- on its value refuse it.  A compiler hole is left:
-     arithmetic on an enum class's enumerator in an arm of ?: ("c ? E::A + 1 : 0") isn't reported, so no cast
-     is written there.
+     Problems Detected's list (question 58).  ++ and -- on its value refuse it.  What is wrong in an arm of ?:
+     ("c ? E::A + 1 : 0") wasn't reported by the check, so no cast was written there: fixed 2026-11-16
+     (CommonLibraries 91466a4bf).
  27. Plan item 23, assembly: Pull Members Up and Push Members Down change the labels hand written assembly names a
      moved member by (CIDERename::MoveAssembly, SIDEAssemblyRename::SetMove): a function's or static member's
      "_CTun__Fill" and a field's layout constant "CTun_miLevel" get the class it went to, an overload's where its
