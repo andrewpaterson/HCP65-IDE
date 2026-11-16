@@ -80,20 +80,6 @@ void SIDEClassMove::Kill(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The start of the line after the one uiAt is on.
-//
-//////////////////////////////////////////////////////////////////////////
-static size FindIDENextLine(const char* szText, size uiAt)
-{
-	for (; (szText[uiAt] != '\0') && (szText[uiAt] != '\n'); uiAt++)
-	{
-	}
-	return (szText[uiAt] == '\n') ? uiAt + 1 : uiAt;
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
 // What is taken out of a file, where it is the last thing in it: the
 // blank lines before it go too, so the file doesn't end with them.
 //

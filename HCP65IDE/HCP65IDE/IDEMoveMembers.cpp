@@ -188,21 +188,6 @@ size FindIDECommentStart(const char* szText, size uiAt)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The start of the line after the one uiAt is on (the text's end if it
-// is the last).
-//
-//////////////////////////////////////////////////////////////////////////
-static size FindIDELineEnd(const char* szText, size uiAt)
-{
-	for (; (szText[uiAt] != '\0') && (szText[uiAt] != '\n'); uiAt++)
-	{
-	}
-	return (szText[uiAt] == '\n') ? uiAt + 1 : uiAt;
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
 // The column the names of a class's declarations are lined up in, by the
 // line above uiAt: the column its last run of tabs ends in, where that
 // is after something (a type).  0 if the line isn't such a declaration.
@@ -1103,7 +1088,7 @@ bool CIDEMoveMembers::FindLastFieldPlace(SIDEMoveClass* psClass, const char* szT
 	for (uiAt = FindIDETextOffset(szText, iLastLine, iLastColumn); (szText[uiAt] != '\0') && (szText[uiAt] != ';'); uiAt++)
 	{
 	}
-	*puiAt = FindIDELineEnd(szText, uiAt);
+	*puiAt = FindIDENextLine(szText, uiAt);
 	return true;
 }
 
@@ -1949,7 +1934,7 @@ void CIDEMoveMembers::AppendDeclarationText(SIDEMembersMove* psMove, SIDEMovedMe
 
 	szText = pcEdits->GetText(psMove->sClass.szFileName.Text());
 	uiStart = FindIDETextOffset(szText, psMember->sDeclared.iLine, psMember->sDeclared.iColumn);
-	uiEnd = FindIDELineEnd(szText, FindIDETextOffset(szText, psMember->sDeclared.iEndLine, psMember->sDeclared.iEndColumn));
+	uiEnd = FindIDENextLine(szText, FindIDETextOffset(szText, psMember->sDeclared.iEndLine, psMember->sDeclared.iEndColumn));
 	szOutsideText = (psMember->bFunction && psMember->bOutside && (psMove->sClass.bTemplate || psTo->bTemplate)) ? pcEdits->GetText(psMember->szOutsideFile.Text()) : NULL;
 
 	//Pushed down from a class that keeps it abstract: it overrides that, and says so.
@@ -2368,7 +2353,7 @@ bool CIDEMoveMembers::Move(SIDEMembersMove* psMove, CChars* pszStatus)
 			{
 				szDeclaration.Init();
 				AppendPureText(psMember, szText, &szDeclaration);
-				cEdits.GetEdits(psMove->sClass.szFileName.Text())->Replace(FindIDETextOffset(szText, psMember->sDeclared.iLine, 0), FindIDELineEnd(szText, uiEnd), szDeclaration.Text());
+				cEdits.GetEdits(psMove->sClass.szFileName.Text())->Replace(FindIDETextOffset(szText, psMember->sDeclared.iLine, 0), FindIDENextLine(szText, uiEnd), szDeclaration.Text());
 				szDeclaration.Kill();
 			}
 			else
@@ -2402,7 +2387,7 @@ bool CIDEMoveMembers::Move(SIDEMembersMove* psMove, CChars* pszStatus)
 					for (; (szOutsideText[uiEnd] == ' ') || (szOutsideText[uiEnd] == '\t') || (szOutsideText[uiEnd] == ';'); uiEnd++)
 					{
 					}
-					cEdits.GetEdits(psMember->szOutsideFile.Text())->Replace(FindIDECommentStart(szOutsideText, uiStart), FindIDELineEnd(szOutsideText, uiEnd), szCopies.Text());
+					cEdits.GetEdits(psMember->szOutsideFile.Text())->Replace(FindIDECommentStart(szOutsideText, uiStart), FindIDENextLine(szOutsideText, uiEnd), szCopies.Text());
 				}
 			}
 		}

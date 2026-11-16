@@ -448,20 +448,6 @@ static bool HasIDEWord(const char* szText, const char* szName)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Where the next line of a text starts.
-//
-//////////////////////////////////////////////////////////////////////////
-static size FindIDELineAfter(const char* szText, size uiAt)
-{
-	for (; (szText[uiAt] != '\0') && (szText[uiAt] != '\n'); uiAt++)
-	{
-	}
-	return (szText[uiAt] == '\n') ? uiAt + 1 : uiAt;
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
 // Whether a line of a text starts with a word (after any white space, and
 // after its # if it starts with one), followed by something that isn't
 // part of a name.
@@ -521,11 +507,11 @@ static size FindIDEIncludeTop(const char* szText)
 			{
 				return 0;
 			}
-			uiAt = FindIDELineAfter(szText, (size)(szEnd - szText));
+			uiAt = FindIDENextLine(szText, (size)(szEnd - szText));
 		}
 		else if ((szText[uiAt] == '/') && (szText[uiAt + 1] == '/'))
 		{
-			uiAt = FindIDELineAfter(szText, uiAt);
+			uiAt = FindIDENextLine(szText, uiAt);
 		}
 		else
 		{
@@ -534,15 +520,15 @@ static size FindIDEIncludeTop(const char* szText)
 	}
 	if (IsIDELineOf(szText, uiAt, "#ifndef", &uiAfter))
 	{
-		uiNext = FindIDELineAfter(szText, uiAt);
+		uiNext = FindIDENextLine(szText, uiAt);
 		if (IsIDELineOf(szText, uiNext, "#define", &uiAfter))
 		{
-			return FindIDELineAfter(szText, uiNext);
+			return FindIDENextLine(szText, uiNext);
 		}
 	}
 	else if (IsIDELineOf(szText, uiAt, "#pragma", &uiAfter))
 	{
-		return FindIDELineAfter(szText, uiAt);
+		return FindIDENextLine(szText, uiAt);
 	}
 	return uiAt;
 }
@@ -716,7 +702,7 @@ bool CIDEIncludes::FindUsedMacro(CIDEIncludeGraph* pcGraph, int iInclude, const 
 		cFile.Init();
 		if (mpcContent->GetFindInFiles()->GetFileText(pcGraph->GetFileName(aiFiles.GetValue(i)), &cFile, &szFile, &uiLength))
 		{
-			for (uiLine = 0; (szFile[uiLine] != '\0') && !bFound; uiLine = FindIDELineAfter(szFile, uiLine))
+			for (uiLine = 0; (szFile[uiLine] != '\0') && !bFound; uiLine = FindIDENextLine(szFile, uiLine))
 			{
 				if (!IsIDELineOf(szFile, uiLine, "#define", &uiAfter))
 				{

@@ -331,30 +331,9 @@ void CIDEMoveNamespace::NamespaceOf(const char* szKey, CChars* pszDest)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The start of the line uiAt is on, its first character after its indent
-// from there.
+// Whether szText from uiStart to uiEnd is only white space.
 //
 //////////////////////////////////////////////////////////////////////////
-static size FindIDELineStart(const char* szText, size uiAt)
-{
-	while ((uiAt > 0) && (szText[uiAt - 1] != '\n'))
-	{
-		uiAt--;
-	}
-	return uiAt;
-}
-
-
-static size FindIDELineEnd(const char* szText, size uiAt)
-{
-	while ((szText[uiAt] != '\0') && (szText[uiAt] != '\n'))
-	{
-		uiAt++;
-	}
-	return (szText[uiAt] == '\n') ? uiAt + 1 : uiAt;
-}
-
-
 static bool IsIDEBlank(const char* szText, size uiStart, size uiEnd)
 {
 	size	i;
@@ -441,10 +420,10 @@ void CIDEMoveNamespace::FindBlocks(CIDERefactorUnit* pcUnit, const char* szText,
 		psBlock->Init();
 		pcUnit->AppendTokens(pcNamespace->miName, pcNamespace->miName, &psBlock->szName);
 		psBlock->uiStart = FindIDELineStart(szText, FindIDETextOffset(szText, sRange.iLine, sRange.iColumn));
-		psBlock->uiOpenEnd = FindIDELineEnd(szText, FindIDETextOffset(szText, sOpen.iLine, sOpen.iColumn));
+		psBlock->uiOpenEnd = FindIDENextLine(szText, FindIDETextOffset(szText, sOpen.iLine, sOpen.iColumn));
 		uiAt = FindIDETextOffset(szText, sRange.iEndLine, sRange.iEndColumn);
 		psBlock->uiCloseStart = FindIDELineStart(szText, (uiAt > 0) ? uiAt - 1 : 0);
-		psBlock->uiEnd = FindIDELineEnd(szText, (uiAt > 0) ? uiAt - 1 : 0);
+		psBlock->uiEnd = FindIDENextLine(szText, (uiAt > 0) ? uiAt - 1 : 0);
 	}
 }
 
@@ -785,7 +764,7 @@ bool CIDEMoveNamespace::FindSite(const char* szFileName, int32 iLine, int32 iCol
 	}
 	psDest->szFileName.Set(szFileName);
 	psDest->uiStart = FindIDECommentStart(szText, FindIDELineStart(szText, FindIDETextOffset(szText, sRange.iLine, sRange.iColumn)));
-	psDest->uiEnd = FindIDELineEnd(szText, FindIDETextOffset(szText, sRange.iEndLine, sRange.iEndColumn));
+	psDest->uiEnd = FindIDENextLine(szText, FindIDETextOffset(szText, sRange.iEndLine, sRange.iEndColumn));
 	bUnnamed = false;
 	FindBlocks(pcUnit, szText, pcDeclaration->mpcParent, &psDest->asBlocks, &bUnnamed);
 	if (bUnnamed)
@@ -1156,7 +1135,7 @@ void CIDEMoveNamespace::MoveSite(SIDENamespaceSite* psSite, const char* szOld, c
 	if (uiLevels > 0)
 	{
 		psBlock = psSite->asBlocks.Get(uiLevels - 1);
-		for (i = psBlock->uiOpenEnd; (i < psBlock->uiCloseStart) && IsIDEBlank(szFile, i, FindIDELineEnd(szFile, i)); i = FindIDELineEnd(szFile, i))
+		for (i = psBlock->uiOpenEnd; (i < psBlock->uiCloseStart) && IsIDEBlank(szFile, i, FindIDENextLine(szFile, i)); i = FindIDENextLine(szFile, i))
 		{
 		}
 		if (i < psBlock->uiCloseStart)
@@ -1309,9 +1288,9 @@ void CIDEMoveNamespace::MoveSite(SIDENamespaceSite* psSite, const char* szOld, c
 		{
 			uiDeleteStart = FindIDELineStart(szFile, uiDeleteStart - 1);
 		}
-		while ((szFile[uiDeleteEnd] != '\0') && IsIDEBlank(szFile, uiDeleteEnd, FindIDELineEnd(szFile, uiDeleteEnd)))
+		while ((szFile[uiDeleteEnd] != '\0') && IsIDEBlank(szFile, uiDeleteEnd, FindIDENextLine(szFile, uiDeleteEnd)))
 		{
-			uiDeleteEnd = FindIDELineEnd(szFile, uiDeleteEnd);
+			uiDeleteEnd = FindIDENextLine(szFile, uiDeleteEnd);
 		}
 	}
 	if (bAnchored && bAfter)
@@ -1325,9 +1304,9 @@ void CIDEMoveNamespace::MoveSite(SIDENamespaceSite* psSite, const char* szOld, c
 	else if (bAnchored)
 	{
 		//The block's first: the blank lines after it go, so what stays starts after the block's opening brace.
-		while ((szFile[uiDeleteEnd] != '\0') && IsIDEBlank(szFile, uiDeleteEnd, FindIDELineEnd(szFile, uiDeleteEnd)))
+		while ((szFile[uiDeleteEnd] != '\0') && IsIDEBlank(szFile, uiDeleteEnd, FindIDENextLine(szFile, uiDeleteEnd)))
 		{
-			uiDeleteEnd = FindIDELineEnd(szFile, uiDeleteEnd);
+			uiDeleteEnd = FindIDENextLine(szFile, uiDeleteEnd);
 		}
 	}
 	uiInto = bSplit ? MAX_SIZE : FindNeighbourBlock(szFile, bAnchored ? uiAnchor : uiDeleteStart, bAnchored ? uiAnchor : uiDeleteEnd, &aszNew, uiShared);
@@ -1337,9 +1316,9 @@ void CIDEMoveNamespace::MoveSite(SIDENamespaceSite* psSite, const char* szOld, c
 		//with it only where there are some before it too, so what was on either side stays apart.
 		if ((uiDeleteStart > 0) && IsIDEBlank(szFile, FindIDELineStart(szFile, uiDeleteStart - 1), uiDeleteStart))
 		{
-			while ((szFile[uiDeleteEnd] != '\0') && IsIDEBlank(szFile, uiDeleteEnd, FindIDELineEnd(szFile, uiDeleteEnd)) && (uiDeleteEnd < uiInto))
+			while ((szFile[uiDeleteEnd] != '\0') && IsIDEBlank(szFile, uiDeleteEnd, FindIDENextLine(szFile, uiDeleteEnd)) && (uiDeleteEnd < uiInto))
 			{
-				uiDeleteEnd = FindIDELineEnd(szFile, uiDeleteEnd);
+				uiDeleteEnd = FindIDENextLine(szFile, uiDeleteEnd);
 			}
 		}
 		szText.Append('\n');
@@ -1564,7 +1543,7 @@ bool CIDEMoveNamespace::Move(SIDENamespaceMove* psMove, const char* szNamespace,
 			{
 				pcUnit->GetTokensRange(iQualifier - 1, iName, &sRange);
 				uiAt = FindIDELineStart(szText, FindIDETextOffset(szText, sRange.iLine, sRange.iColumn));
-				asEdits.Add()->Init(psLocation->szFileName.Text(), uiAt, FindIDELineEnd(szText, uiAt), "");
+				asEdits.Add()->Init(psLocation->szFileName.Text(), uiAt, FindIDENextLine(szText, uiAt), "");
 			}
 			else
 			{
@@ -1598,15 +1577,15 @@ bool CIDEMoveNamespace::Move(SIDENamespaceMove* psMove, const char* szNamespace,
 		szText = cFiles.GetText(aszUsingFiles.GetText(i));
 		uiAt = 0;
 		bAfterUsing = false;
-		for (j = 0; szText && (szText[j] != '\0'); j = FindIDELineEnd(szText, j))
+		for (j = 0; szText && (szText[j] != '\0'); j = FindIDENextLine(szText, j))
 		{
 			if ((strncmp(&szText[j], "#include", 8) == 0) && !bAfterUsing)
 			{
-				uiAt = FindIDELineEnd(szText, j);
+				uiAt = FindIDENextLine(szText, j);
 			}
 			else if (strncmp(&szText[j], "using ", 6) == 0)
 			{
-				uiAt = FindIDELineEnd(szText, j);
+				uiAt = FindIDENextLine(szText, j);
 				bAfterUsing = true;
 			}
 		}
@@ -1889,17 +1868,17 @@ size CIDEMoveNamespace::FindNeighbourBlock(const char* szText, size uiStart, siz
 	szOpen.Append(paszNew->GetText(uiShared));
 
 	//The one after.
-	for (uiLine = uiEnd; (szText[uiLine] != '\0') && IsIDEBlank(szText, uiLine, FindIDELineEnd(szText, uiLine)); uiLine = FindIDELineEnd(szText, uiLine))
+	for (uiLine = uiEnd; (szText[uiLine] != '\0') && IsIDEBlank(szText, uiLine, FindIDENextLine(szText, uiLine)); uiLine = FindIDENextLine(szText, uiLine))
 	{
 	}
 	uiAt = uiLine + FindIndent(szText, uiLine);
 	if ((strncmp(&szText[uiAt], szOpen.Text(), szOpen.Length()) == 0) && !IsIDENameChar(szText[uiAt + szOpen.Length()]))
 	{
-		uiLine = FindIDELineEnd(szText, uiLine);
+		uiLine = FindIDENextLine(szText, uiLine);
 		if (szText[uiLine + FindIndent(szText, uiLine)] == '{')
 		{
 			szOpen.Kill();
-			return FindIDELineEnd(szText, uiLine);
+			return FindIDENextLine(szText, uiLine);
 		}
 	}
 

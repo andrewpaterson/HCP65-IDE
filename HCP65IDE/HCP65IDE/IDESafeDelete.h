@@ -129,6 +129,8 @@ protected:
 
 
 size	FindIDETextOffset(const char* szText, int32 iLine, int32 iColumn);
+size	FindIDENextLine(const char* szText, size uiAt);
+size	FindIDELineStart(const char* szText, size uiAt);
 void	ExtendIDEDeletion(const char* szText, size* puiStart, size* puiEnd, bool bStatement);
 
 

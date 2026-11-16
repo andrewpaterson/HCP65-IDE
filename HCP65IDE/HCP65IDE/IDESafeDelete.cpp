@@ -73,6 +73,36 @@ void SIDESafeDeletion::Kill(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// The start of the line after the one uiAt is on (the text's end if it
+// is the last).
+//
+//////////////////////////////////////////////////////////////////////////
+size FindIDENextLine(const char* szText, size uiAt)
+{
+	for (; (szText[uiAt] != '\0') && (szText[uiAt] != '\n'); uiAt++)
+	{
+	}
+	return (szText[uiAt] == '\n') ? uiAt + 1 : uiAt;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The start of the line uiAt is on.
+//
+//////////////////////////////////////////////////////////////////////////
+size FindIDELineStart(const char* szText, size uiAt)
+{
+	while ((uiAt > 0) && (szText[uiAt - 1] != '\n'))
+	{
+		uiAt--;
+	}
+	return uiAt;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Where a line and column (from 0) are in szText; its length if the text
 // ends first.
 //
