@@ -366,13 +366,10 @@ bool CIDEDebugging::ChooseDebugLoads(CBuildConfiguration* pcConfiguration, CChar
 	}
 
 	bResult = true;
-	if (pcConfiguration->HasImage())
+	if (pcConfiguration->IsOnCard())
 	{
-		mcDebugger.AddLoad(szFile.Text(), pcConfiguration->GetImage()->GetLoad());
-	}
-	else if (pcConfiguration->IsOnCard())
-	{
-		//The program (or driver) goes on the card the emulator boots from, where the kernal finds it.
+		//The program, driver or kernal goes on the card the emulator boots from, where the boot loader or the kernal
+		//finds it.
 		bResult = FatPutDiskFileOnImage(szCard.Text(), pcConfiguration->GetCardPath(), szFile.Text());
 		if (bResult)
 		{
@@ -387,6 +384,10 @@ bool CIDEDebugging::ChooseDebugLoads(CBuildConfiguration* pcConfiguration, CChar
 			pszMessage->Append(szCard);
 			pszMessage->Append(" (an SD card image with a FAT volume).");
 		}
+	}
+	else if (pcConfiguration->HasImage())
+	{
+		mcDebugger.AddLoad(szFile.Text(), pcConfiguration->GetImage()->GetLoad());
 	}
 	szCard.Kill();
 	szFile.Kill();

@@ -702,12 +702,13 @@ char* CBuildConfiguration::GetCardPath(void)	{ return mszCardPath.Text(); }
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Whether what it builds is put on its card for the kernal to run: an
-// executable (a program) or a module (a driver), with a Card.
+// Whether what it builds is put on its card for the HCP65 to load: an
+// executable (a program), a module (a driver) or an image (the kernal,
+// \OS\OS.SYS, which the boot loader loads), with a Card.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CBuildConfiguration::IsOnCard(void)
 {
-	return ((meProgram == BP_Executable) || (meProgram == BP_Module)) && HasCard();
+	return ((meProgram == BP_Executable) || (meProgram == BP_Module) || (meProgram == BP_Image)) && HasCard();
 }
 
