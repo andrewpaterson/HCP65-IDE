@@ -10,6 +10,7 @@
 #define TEST_WORKSPACE_KERNEL		"Input" _FS_ "Workspace" _FS_ "Kernel" _FS_ "Kernel.sln"
 #define TEST_WORKSPACE_DRIVER		"Input" _FS_ "Workspace" _FS_ "Driver" _FS_ "Driver.sln"
 #define TEST_WORKSPACE_TOOLS		"Input" _FS_ "Workspace" _FS_ "Tools" _FS_ "Tools.sln"
+#define TEST_WORKSPACE_OS			"Input" _FS_ "Workspace" _FS_ "OS" _FS_ "OS.sln"
 #define TEST_WORKSPACE_FILE			"Output" _FS_ "Test" BUILD_WORKSPACE_EXTENSION
 
 
@@ -241,6 +242,63 @@ void TestBuildWorkspaceModules(void)
 	AssertSize(1, aiOrder.NumElements());
 	AssertInt(0, aiOrder.GetValue(0));
 	aiOrder.Kill();
+
+	cWorkspace.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// An image put on a card (the HCP65's kernal, OS.SYS, which the boot
+// loader in the ROM loads where it is linked) beside a program and the
+// ROM: debugging the program or the ROM, the image's line table is read.
+// Without a card (Debug) it isn't one, nor is the startup solution's own.
+//
+//////////////////////////////////////////////////////////////////////////
+void TestBuildWorkspaceImages(void)
+{
+	CBuildWorkspace			cWorkspace;
+	CArrayInt				aiImages;
+	CBuildConfiguration*	pcOS;
+	size					uiKernel;
+	size					uiOS;
+
+	cWorkspace.Init();
+	AssertTrue(cWorkspace.Open(TEST_WORKSPACE_PROGRAM));
+	uiKernel = cWorkspace.AddSolution(TEST_WORKSPACE_KERNEL);
+	uiOS = cWorkspace.AddSolution(TEST_WORKSPACE_OS);
+	AssertSize(2, uiOS);
+
+	pcOS = cWorkspace.FindConfiguration(uiOS, "Release|W65C816");
+	AssertTrue(pcOS->HasImage());
+	AssertInt(BP_Image, pcOS->GetProgram());
+	AssertString("\\OS\\OS.SYS", pcOS->GetCardPath());
+	AssertTrue(pcOS->IsOnCard());
+	AssertFalse(cWorkspace.FindConfiguration(uiOS, "Debug|W65C816")->IsOnCard());
+
+	//Debugging the program: OS.SYS is an image, not a module; the ROM isn't on a card.
+	aiImages.Init();
+	cWorkspace.GetImagePrograms("Release|W65C816", &aiImages);
+	AssertSize(1, aiImages.NumElements());
+	AssertInt((int)uiOS, aiImages.GetValue(0));
+	aiImages.ReInit();
+	cWorkspace.GetModulePrograms("Release|W65C816", &aiImages);
+	AssertSize(0, aiImages.NumElements());
+	aiImages.ReInit();
+	cWorkspace.GetImagePrograms("Debug|W65C816", &aiImages);
+	AssertSize(0, aiImages.NumElements());
+
+	//Debugging the ROM it is too; debugging OS.SYS itself, it isn't one of the others.
+	cWorkspace.SetStartup(uiKernel);
+	aiImages.ReInit();
+	cWorkspace.GetImagePrograms("Release|W65C816", &aiImages);
+	AssertSize(1, aiImages.NumElements());
+	AssertInt((int)uiOS, aiImages.GetValue(0));
+	cWorkspace.SetStartup(uiOS);
+	aiImages.ReInit();
+	cWorkspace.GetImagePrograms("Release|W65C816", &aiImages);
+	AssertSize(0, aiImages.NumElements());
+	aiImages.Kill();
 
 	cWorkspace.Kill();
 }
@@ -502,6 +560,7 @@ void TestBuildWorkspace(void)
 	TestBuildWorkspaceRelativePath();
 	TestBuildWorkspaceSolutions();
 	TestBuildWorkspaceModules();
+	TestBuildWorkspaceImages();
 	TestBuildWorkspaceFile();
 	TestBuildWorkspaceRunConfigurations();
 	TestBuildWorkspaceStartupProject();

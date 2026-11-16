@@ -79,7 +79,7 @@ void CBuildConfigurationEdit::Init(CBuildConfiguration* pcConfiguration, size ui
 	Init(pcConfiguration->GetName(), pcConfiguration->GetToolchain(), pcConfiguration->GetSolutionConfiguration());
 	muiSource = uiSource;
 	mbNew = false;
-	mbNeedsHCP65 = (pcConfiguration->GetProgram() != BP_None) || (pcConfiguration->NumLoads() > 0);
+	mbNeedsHCP65 = (pcConfiguration->GetProgram() != BP_None) || (pcConfiguration->NumLoads() > 0) || (pcConfiguration->NumLines() > 0);
 	mszBreakpointSpace.Set(pcConfiguration->GetBreakpointSpace());
 	mbNoFloats = pcConfiguration->IsNoFloats();
 	mbMathTables = pcConfiguration->IsMathTables();

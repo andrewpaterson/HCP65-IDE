@@ -202,6 +202,30 @@ void TestBuildConfigurationsImage(void)
 	AssertTrue(strstr(cFile.Text(), "Load=\"0x0\" Text=\"0x40000\">") != NULL);
 	cFile.Kill();
 
+	//Line tables to read without loading them: the kernal OS.SYS, in Kernel space (the default) and checked against the
+	//card; another in User space, not checked.  Written back the same, the default space left out.
+	cFile.Init("<BuildConfigurations>\n\t<Configuration Name=\"Release|W65C816\" Toolchain=\"W65C816\" Solution=\"Release|Win32\" BreakpointSpace=\"User\">\n\t\t<Executable File=\"p.exe\" Entry=\"UserStart\"/>\n\t\t<Lines File=\"..\\Kernal\\OS.SYS\" CardPath=\"\\OS\\OS.SYS\"/>\n\t\t<Lines File=\"Other.exe\" Space=\"User\"/>\n\t</Configuration>\n</BuildConfigurations>\n");
+	AssertTrue(cFile.Write("Output" _FS_ "Lines.hcp65build"));
+	cFile.Kill();
+	cConfigurations.Kill();
+	cConfigurations.Init();
+	AssertTrue(cConfigurations.Read("Output" _FS_ "Lines.hcp65build"));
+	pcConfiguration = cConfigurations.GetConfiguration(0);
+	AssertSize(2, pcConfiguration->NumLines());
+	AssertSize(0, pcConfiguration->NumLoads());
+	AssertString("..\\Kernal\\OS.SYS", pcConfiguration->GetLinesFile(0));
+	AssertString("Kernel", pcConfiguration->GetLinesSpace(0));
+	AssertString("\\OS\\OS.SYS", pcConfiguration->GetLinesCardPath(0));
+	AssertString("Other.exe", pcConfiguration->GetLinesFile(1));
+	AssertString("User", pcConfiguration->GetLinesSpace(1));
+	AssertString("", pcConfiguration->GetLinesCardPath(1));
+	AssertTrue(cConfigurations.Write("Output" _FS_ "LinesAgain.hcp65build"));
+	cFile.Init();
+	AssertTrue(cFile.Read("Output" _FS_ "LinesAgain.hcp65build"));
+	AssertTrue(strstr(cFile.Text(), "<Lines File=\"..\\Kernal\\OS.SYS\" CardPath=\"\\OS\\OS.SYS\"/>") != NULL);
+	AssertTrue(strstr(cFile.Text(), "<Lines File=\"Other.exe\" Space=\"User\"/>") != NULL);
+	cFile.Kill();
+
 	//No regions; a region past the image's end; not a number; MSVC.
 	cFile.Init("<BuildConfigurations>\n\t<Configuration Name=\"Debug|W65C816\" Toolchain=\"W65C816\" Solution=\"Debug|Win32\">\n\t\t<Image File=\"A.rom\" Size=\"0x100\"/>\n\t</Configuration>\n</BuildConfigurations>\n");
 	AssertTrue(cFile.Write("Output" _FS_ "BadImage.hcp65build"));

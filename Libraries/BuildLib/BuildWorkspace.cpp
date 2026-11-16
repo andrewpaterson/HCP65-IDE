@@ -1072,6 +1072,19 @@ void CBuildWorkspace::GetModulePrograms(const char* szConfiguration, CArrayInt* 
 
 //////////////////////////////////////////////////////////////////////////
 //
+// The same for an image put on a card, which the boot loader loads where
+// it is linked (the HCP65's kernal, \OS\OS.SYS): its source breakpoints
+// are bound by its line table as it is, in its own breakpoint space.
+//
+//////////////////////////////////////////////////////////////////////////
+void CBuildWorkspace::GetImagePrograms(const char* szConfiguration, CArrayInt* paiDest)
+{
+	GetCardPrograms(szConfiguration, BP_Image, paiDest);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // The solutions other than the startup one whose configuration
 // szConfiguration builds an eProgram onto a card, and that the startup
 // solution's doesn't load.

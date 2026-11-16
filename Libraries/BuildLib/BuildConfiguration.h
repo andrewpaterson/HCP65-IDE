@@ -69,7 +69,10 @@ enum EBuildProgram
 //one they stop in every space.
 //
 //Debugging loads each <Load File Address/> into the waiting emulator first (a kernal for a program to run on), and
-//its own image.  A program is written onto the emulator's SD card image, Card, as CardPath ("\boot.exe") on its FAT
+//its own image.  Each <Lines File Space CardPath/> is a program whose line table debugging reads without loading it, its
+//source breakpoints in the breakpoint space Space (default "Kernel"): the kernal the boot loader loads from the card,
+//OS.SYS, which runs where it is linked.  CardPath, if given, is the file on the card that should be it ("\OS\OS.SYS"):
+//debugging says if it isn't.  A program is written onto the emulator's SD card image, Card, as CardPath ("\boot.exe") on its FAT
 //volume, for the kernal to run.  Paths are relative to the configurations' file.
 class CBuildConfiguration
 {
@@ -87,6 +90,9 @@ protected:
 	CAsm65Module	mcModule;
 	CArrayChars		maszLoadFiles;
 	CArrayUint32	mauiLoadAddresses;
+	CArrayChars		maszLinesFiles;
+	CArrayChars		maszLinesSpaces;
+	CArrayChars		maszLinesCardPaths;
 	CChars			mszCard;
 	CChars			mszCardPath;
 
@@ -131,6 +137,11 @@ public:
 	size			NumLoads(void);
 	char*			GetLoadFile(size uiIndex);
 	uint32			GetLoadAddress(size uiIndex);
+	void			AddLines(const char* szFile, const char* szSpace, const char* szCardPath);
+	size			NumLines(void);
+	char*			GetLinesFile(size uiIndex);
+	char*			GetLinesSpace(size uiIndex);
+	char*			GetLinesCardPath(size uiIndex);
 	void			SetCard(const char* szCard, const char* szPath);
 	bool			HasCard(void);
 	char*			GetCard(void);

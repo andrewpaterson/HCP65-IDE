@@ -34,6 +34,11 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 #define BUILD_CONFIGURATION_LOAD		"Load"
 #define BUILD_CONFIGURATION_LOAD_FILE	"File"
 #define BUILD_CONFIGURATION_LOAD_ADDRESS	"Address"
+#define BUILD_CONFIGURATION_LINES		"Lines"
+#define BUILD_CONFIGURATION_LINES_FILE	"File"
+#define BUILD_CONFIGURATION_LINES_SPACE	"Space"
+#define BUILD_CONFIGURATION_LINES_CARD_PATH	"CardPath"
+#define BUILD_CONFIGURATION_LINES_DEFAULT_SPACE	"Kernel"
 #define BUILD_CONFIGURATION_CARD		"Card"
 #define BUILD_CONFIGURATION_CARD_PATH	"CardPath"
 #define BUILD_CONFIGURATION_BREAKPOINT_SPACE	"BreakpointSpace"
@@ -65,6 +70,9 @@ void CBuildConfiguration::Init(const char* szName, EBuildToolchain eToolchain, c
 	mcModule.Init();
 	maszLoadFiles.Init();
 	mauiLoadAddresses.Init();
+	maszLinesFiles.Init();
+	maszLinesSpaces.Init();
+	maszLinesCardPaths.Init();
 	mszCard.Init();
 	mszCardPath.Init();
 }
@@ -89,6 +97,9 @@ void CBuildConfiguration::Kill(void)
 {
 	mszCardPath.Kill();
 	mszCard.Kill();
+	maszLinesCardPaths.Kill();
+	maszLinesSpaces.Kill();
+	maszLinesFiles.Kill();
 	mauiLoadAddresses.Kill();
 	maszLoadFiles.Kill();
 	mcModule.Kill();
@@ -152,6 +163,20 @@ void CBuildConfiguration::SaveXML(CXMLWriter* pcWriter)
 		pcWriter->Begin(BUILD_CONFIGURATION_LOAD);
 		pcWriter->Attribute(BUILD_CONFIGURATION_LOAD_FILE, maszLoadFiles.GetText(i));
 		Asm65WriteHexAttribute(pcWriter, BUILD_CONFIGURATION_LOAD_ADDRESS, *mauiLoadAddresses.Get(i));
+		pcWriter->End();
+	}
+	for (i = 0; i < maszLinesFiles.NumElements(); i++)
+	{
+		pcWriter->Begin(BUILD_CONFIGURATION_LINES);
+		pcWriter->Attribute(BUILD_CONFIGURATION_LINES_FILE, maszLinesFiles.GetText(i));
+		if (strcmp(maszLinesSpaces.GetText(i), BUILD_CONFIGURATION_LINES_DEFAULT_SPACE) != 0)
+		{
+			pcWriter->Attribute(BUILD_CONFIGURATION_LINES_SPACE, maszLinesSpaces.GetText(i));
+		}
+		if (maszLinesCardPaths.GetText(i)[0] != '\0')
+		{
+			pcWriter->Attribute(BUILD_CONFIGURATION_LINES_CARD_PATH, maszLinesCardPaths.GetText(i));
+		}
 		pcWriter->End();
 	}
 	pcWriter->End();
@@ -243,6 +268,15 @@ bool CBuildConfiguration::LoadXML(CMarkupTag* pcTag)
 			return false;
 		}
 		AddLoad(szFile, uiAddress);
+	}
+	for (pcLoad = pcTag->GetTag(BUILD_CONFIGURATION_LINES, &sIterator); pcLoad; pcLoad = pcTag->GetNextTag(&sIterator))
+	{
+		szFile = pcLoad->GetStringAttribute(BUILD_CONFIGURATION_LINES_FILE);
+		if (!IsHCP65() || !szFile || (szFile[0] == '\0'))
+		{
+			return false;
+		}
+		AddLines(szFile, pcLoad->GetStringAttribute(BUILD_CONFIGURATION_LINES_SPACE), pcLoad->GetStringAttribute(BUILD_CONFIGURATION_LINES_CARD_PATH));
 	}
 
 	SetCard(pcTag->GetAttribute((char*)BUILD_CONFIGURATION_CARD), pcTag->GetAttribute((char*)BUILD_CONFIGURATION_CARD_PATH));
@@ -676,6 +710,27 @@ void CBuildConfiguration::AddLoad(const char* szFile, uint32 uiAddress)
 }
 
 
+//////////////////////////////////////////////////////////////////////////
+//
+// A program whose line table debugging reads without loading it (the
+// kernal, OS.SYS, that the boot loader loads from the card), its source
+// breakpoints in the space szSpace ("Kernel" if NULL or empty), and the
+// file on the card that should be it (szCardPath, NULL or empty for none
+// to check).  Relative to the configurations' file.
+//
+//////////////////////////////////////////////////////////////////////////
+void CBuildConfiguration::AddLines(const char* szFile, const char* szSpace, const char* szCardPath)
+{
+	maszLinesFiles.Add(szFile);
+	maszLinesSpaces.Add((szSpace && szSpace[0]) ? szSpace : BUILD_CONFIGURATION_LINES_DEFAULT_SPACE);
+	maszLinesCardPaths.Add(szCardPath ? szCardPath : "");
+}
+
+
+size CBuildConfiguration::NumLines(void)						{ return maszLinesFiles.NumElements(); }
+char* CBuildConfiguration::GetLinesFile(size uiIndex)			{ return maszLinesFiles.GetText(uiIndex); }
+char* CBuildConfiguration::GetLinesSpace(size uiIndex)			{ return maszLinesSpaces.GetText(uiIndex); }
+char* CBuildConfiguration::GetLinesCardPath(size uiIndex)		{ return maszLinesCardPaths.GetText(uiIndex); }
 size CBuildConfiguration::NumLoads(void)						{ return maszLoadFiles.NumElements(); }
 char* CBuildConfiguration::GetLoadFile(size uiIndex)			{ return maszLoadFiles.GetText(uiIndex); }
 uint32 CBuildConfiguration::GetLoadAddress(size uiIndex)		{ return *mauiLoadAddresses.Get(uiIndex); }

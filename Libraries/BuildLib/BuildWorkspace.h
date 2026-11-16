@@ -151,6 +151,7 @@ public:
 	bool					Loads(size uiSolution, size uiOther, const char* szConfiguration);
 	void					GetProcessPrograms(const char* szConfiguration, CArrayInt* paiDest);
 	void					GetModulePrograms(const char* szConfiguration, CArrayInt* paiDest);
+	void					GetImagePrograms(const char* szConfiguration, CArrayInt* paiDest);
 
 protected:
 	void					IndexProjects(void);
