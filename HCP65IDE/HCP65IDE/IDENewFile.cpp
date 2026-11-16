@@ -122,12 +122,13 @@ Ptr<CMenuContainer> CIDENewFile::GetFileMenu(void) { return mpFileMenu; }
 //////////////////////////////////////////////////////////////////////////
 //
 // Alt+Insert, as IntelliJ's New: the menu of Files templates, at what is
-// selected.
+// selected; and Save File as Template.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDENewFile::AddCommands(Ptr<CCommandSet> pCommands)
 {
 	pCommands->Add("File.New", "New...", "Alt+Insert", Ptr<CImageCel>(), this, &CIDENewFile::OpenPopupCommand)->SetEnabledCheck(this, &CIDENewFile::CanCreate);
+	pCommands->Add("File.SaveAsTemplate", "Save File as Template...", "", Ptr<CImageCel>(), this, &CIDENewFile::SaveAsTemplateCommand)->SetEnabledCheck(this, &CIDENewFile::CanSaveAsTemplate);
 }
 
 
@@ -686,4 +687,277 @@ bool CIDENewFile::Create(const char* szTemplate, const char* szName, CTemplateVa
 	aszFiles.Kill();
 	sPlace.Kill();
 	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Save File as Template is for a file open in the editor.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDENewFile::CanSaveAsTemplate(void)
+{
+	return mpcContent->GetDocuments()->GetActiveTab().IsNotNull();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// File, Save File as Template...: its name asked (the file's, to begin
+// with), then the template made.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDENewFile::SaveAsTemplateCommand(void)
+{
+	Ptr<CIDEEditorTab>	pTab;
+	Ptr<CDialog>		pDialog;
+	Ptr<CTextField>		pName;
+	CChars				szName;
+	CChars				szStatus;
+	const char*			szFile;
+	const char*			szDot;
+	bool				bResult;
+
+	pTab = mpcContent->GetDocuments()->GetActiveTab();
+	if (pTab.IsNull())
+	{
+		mpcContent->ShowStatus("Open a file to save it as a template.");
+		return false;
+	}
+	szFile = GetIDEFileNamePart(pTab->GetFileName());
+	szDot = strrchr(szFile, '.');
+	szName.Init();
+	if (szDot)
+	{
+		szName.AppendSubString(szFile, szDot);
+	}
+	else
+	{
+		szName.Append(szFile);
+	}
+	pDialog = OMalloc<CDialog>(mpcContent->GetWindow(), mpcContent->GetDialogLook(), "Save File as Template");
+	pName = pDialog->AddTextField("Template name:", szName.Text());
+	pDialog->SetOKCaption("Save");
+	mpcContent->GetScript()->WatchDialog(pDialog);
+	bResult = pDialog->Show(420);
+	mpcContent->GetScript()->StopWatchingDialog();
+	szName.Set(pName->GetText());
+	pName = NULL;
+	pDialog = NULL;
+	szStatus.Init();
+	bResult = bResult && SaveAsTemplate(pTab->GetFileName(), pTab->GetEditor()->GetText(), szName.Text(), &szStatus);
+	if (!szStatus.Empty())
+	{
+		mpcContent->ShowStatus(szStatus.Text());
+	}
+	szStatus.Kill();
+	szName.Kill();
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A file's text (szFileName's) as a new Files template called szName,
+// the Workspace scheme's (or, with no workspace, the Default scheme's),
+// written: what Velocity would read in it escaped, and its include
+// guard, its header's name and its class's name (C and its stem) made
+// their variables, for the user to finish in Settings.  A class's
+// template names its files by ${CLASS_STEM}, any other by ${NAME}.
+// False, with why in pszStatus, if the name is a Files template's
+// already or there is no scheme to keep it.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDENewFile::SaveAsTemplate(const char* szFileName, const char* szText, const char* szName, CChars* pszStatus)
+{
+	CIDEFileTemplates*	pcTemplates;
+	EIDETemplateScheme	eScheme;
+	CChars				szTemplate;
+	CChars				szStem;
+	CChars				szExtension;
+	const char*			szFile;
+	const char*			szDot;
+	bool				bClass;
+	bool				bResult;
+
+	pcTemplates = mpcContent->GetFileTemplates();
+	if (!szName || (szName[0] == '\0'))
+	{
+		pszStatus->Set("Save File as Template: a name is needed.");
+		return false;
+	}
+	if (pcTemplates->Get(ITT_Files, szName))
+	{
+		pszStatus->Set("Save File as Template: a Files template is called ");
+		pszStatus->Append(szName)->Append(" already.");
+		return false;
+	}
+	eScheme = (pcTemplates->GetDirectory(ITS_Workspace)[0] != '\0') ? ITS_Workspace : ITS_Default;
+	if (pcTemplates->GetDirectory(eScheme)[0] == '\0')
+	{
+		pszStatus->Set("Save File as Template: there is no workspace, and the IDE keeps no settings, to keep it in.");
+		return false;
+	}
+
+	szFile = GetIDEFileNamePart(szFileName);
+	szDot = strrchr(szFile, '.');
+	szStem.Init();
+	szExtension.Init();
+	if (szDot)
+	{
+		szStem.AppendSubString(szFile, szDot);
+		szExtension.Append(szDot + 1);
+	}
+	else
+	{
+		szStem.Append(szFile);
+	}
+	szTemplate.Init();
+	MakeTemplateText(szText, szStem.Text(), &szTemplate, &bClass);
+	pcTemplates->Set(eScheme, ITT_Files, szName, szExtension.Text(), bClass ? "${CLASS_STEM}" : "${NAME}", "", szTemplate.Text());
+	bResult = pcTemplates->Write(eScheme);
+	if (bResult)
+	{
+		pszStatus->Set("Saved ");
+		pszStatus->Append(szFile)->Append(" as the ")->Append((eScheme == ITS_Workspace) ? "Workspace" : "Default")->Append(" scheme's template ")->Append(szName);
+		pszStatus->Append(": finish it in Settings, File and Code Templates.");
+	}
+	else
+	{
+		pszStatus->Set("Save File as Template: ");
+		pszStatus->Append(pcTemplates->GetError());
+	}
+	szTemplate.Kill();
+	szExtension.Kill();
+	szStem.Kill();
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether the source at sz starts a word that Velocity would take as a
+// directive or a comment after a '#'.
+//
+//////////////////////////////////////////////////////////////////////////
+static bool IsIDETemplateDirectiveAt(const char* sz)
+{
+	static const char*	aszWords[] = { "set", "if", "elseif", "else", "end", "foreach", "parse", "include", "break" };
+	size				i;
+	size				uiLength;
+
+	if ((sz[0] == '#') || (sz[0] == '*') || (sz[0] == '{'))
+	{
+		return true;
+	}
+	for (i = 0; i < sizeof(aszWords) / sizeof(char*); i++)
+	{
+		uiLength = strlen(aszWords[i]);
+		if ((strncmp(sz, aszWords[i], uiLength) == 0) && !IsIDENameChar(sz[uiLength]))
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Each whole word szWord in pszText made szReplacement.
+//
+//////////////////////////////////////////////////////////////////////////
+static bool ReplaceIDETemplateWord(CChars* pszText, const char* szWord, const char* szReplacement)
+{
+	CChars		szResult;
+	const char*	sz;
+	size		uiLength;
+	size		i;
+	bool		bFound;
+
+	uiLength = strlen(szWord);
+	if (uiLength == 0)
+	{
+		return false;
+	}
+	sz = pszText->Text();
+	szResult.Init();
+	bFound = false;
+	for (i = 0; sz[i] != '\0'; i++)
+	{
+		if ((strncmp(&sz[i], szWord, uiLength) == 0) && ((i == 0) || !IsIDENameChar(sz[i - 1])) && !IsIDENameChar(sz[i + uiLength]))
+		{
+			szResult.Append(szReplacement);
+			i += uiLength - 1;
+			bFound = true;
+		}
+		else
+		{
+			szResult.Append(sz[i]);
+		}
+	}
+	pszText->Set(szResult);
+	szResult.Kill();
+	return bFound;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A file's text as a template's (SaveAsTemplate): a $ or # Velocity would
+// read written \$ or \#, then the file's include guard ${INCLUDE_GUARD},
+// its header's name (szStem.h) ${HEADER_FILENAME} and its class (C and
+// szStem) ${CLASS_NAME}; *pbClass if it has that class.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDENewFile::MakeTemplateText(const char* szText, const char* szStem, CChars* pszDest, bool* pbClass)
+{
+	CChars		szGuard;
+	CChars		szWord;
+	const char*	szIfndef;
+	size		i;
+	char		c;
+	char		cNext;
+
+	for (i = 0; szText[i] != '\0'; i++)
+	{
+		c = szText[i];
+		cNext = szText[i + 1];
+		if ((c == '$') && ((cNext == '{') || (cNext == '!') || IsIDENameChar(cNext) || ((i > 0) && (szText[i - 1] == '\\'))))
+		{
+			pszDest->Append("\\$");
+		}
+		else if ((c == '#') && (IsIDETemplateDirectiveAt(&szText[i + 1]) || ((i > 0) && (szText[i - 1] == '\\'))))
+		{
+			pszDest->Append("\\#");
+		}
+		else if (c != '\r')
+		{
+			pszDest->Append(c);
+		}
+	}
+
+	//The guard: the name after the first #ifndef.
+	szGuard.Init();
+	szIfndef = strstr(pszDest->Text(), "#ifndef ");
+	if (szIfndef)
+	{
+		for (i = 8; IsIDENameChar(szIfndef[i]); i++)
+		{
+			szGuard.Append(szIfndef[i]);
+		}
+	}
+	if (!szGuard.Empty())
+	{
+		ReplaceIDETemplateWord(pszDest, szGuard.Text(), "${INCLUDE_GUARD}");
+	}
+	szGuard.Kill();
+
+	szWord.Init(szStem);
+	szWord.Append(".h");
+	pszDest->Replace(szWord.Text(), "${HEADER_FILENAME}");
+	szWord.Set("C");
+	szWord.Append(szStem);
+	*pbClass = ReplaceIDETemplateWord(pszDest, szWord.Text(), "${CLASS_NAME}");
+	szWord.Kill();
 }

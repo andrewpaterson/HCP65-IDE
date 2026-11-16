@@ -1762,6 +1762,15 @@ CHECKS = [
 		'DEBUG': 'clickmenu:File/New/C++ Header...,answered:1,printstatus,printdisklines:Pump.h'}),
 		[r'^Status: Made Pump\.h from the C\+\+ Header template\.$', r'^1\|// A pump$', r'^2\|#ifndef __PUMP_H__$', r'^4\|#endif // __PUMP_H__$', r'^4 lines$'],
 		[r'^Status: New:']),
+	('save-file-as-template', dict(MakeMoveMembersCopy(), **{
+		#File, Save File as Template with Drum.h open: a Workspace scheme's Files template called Drum, its guard and
+		#its class made their variables and its files named by the class's stem; New from it makes CTun's Tun.h.
+		'WAIT_INDEX': '1', 'OPEN': 'Drum.h', 'DIALOG_KEYS': '|type:CTun', 'DIALOG_ANSWER': 'OK',
+		'DEBUG': 'command:File.SaveAsTemplate,answered:1,printstatus,printdisklines:fileTemplates/Files/Drum.h.ft,clickmenu:File/New/Drum...,answered:2,printstatus,printdisklines:Tun.h'}),
+		[r"^Status: Saved Drum\.h as the Workspace scheme's template Drum: finish it in Settings, File and Code Templates\.$",
+		 r'^1\|#ifndef \$\{INCLUDE_GUARD\}$', r'^2\|#define \$\{INCLUDE_GUARD\}$', r'^6\|class \$\{CLASS_NAME\} : public CVessel$', r'^27\|class CKeg : public CVessel$',
+		 r'^Status: Made Tun\.h from the Drum template\.$', r'^1\|#ifndef __TUN_H__$', r'^6\|class CTun : public CVessel$'],
+		[r'^Status: New:', r'Save File as Template:']),
 	('new-header', dict(MakeMoveMembersCopy(), **{
 		#New C++ Header: one file named as written, from the C++ Header template.
 		'WAIT_INDEX': '1', 'OPEN': 'Drum.h', 'DIALOG_KEYS': 'type:Pump', 'DIALOG_ANSWER': 'OK',
@@ -3332,7 +3341,7 @@ CHECKS = [
 		[r'^Tabs: .*>Kernal\.cpp'], []),
 	('menus', {
 		'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'CARET': '36:4', 'DEBUG': 'printmenus,clickmenu:View/Nope'},
-		[r'^Menu File: New>, Open Project/Solution\.\.\., Add Solution\.\.\., Close Solution, Recent Solutions>, Clear Recent Solutions, Save \[Ctrl\+S\], Save All \[Ctrl\+Shift\+S\], Compare with File\.\.\., Settings\.\.\. \[Ctrl\+Alt\+S\], Exit$',
+		[r'^Menu File: New>, Save File as Template\.\.\., Open Project/Solution\.\.\., Add Solution\.\.\., Close Solution, Recent Solutions>, Clear Recent Solutions, Save \[Ctrl\+S\], Save All \[Ctrl\+Shift\+S\], Compare with File\.\.\., Settings\.\.\. \[Ctrl\+Alt\+S\], Exit$',
 		 r'^Menu File/Recent Solutions: 1 ',
 		 r'^Menu Edit: Undo \[Ctrl\+Z\]\(disabled\), Redo \[Ctrl\+Shift\+Z\]\(disabled\), Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\], Select All \[Ctrl\+A\], Extend Selection \[Ctrl\+W\], Shrink Selection \[Ctrl\+Shift\+W\], Find in Files\.\.\. \[Ctrl\+Shift\+F\]$',
 		 r'^Menu Navigate: Back \[Ctrl\+Alt\+Left\](\(disabled\))?, Forward \[Ctrl\+Alt\+Right\](\(disabled\))?, Class\.\.\. \[Ctrl\+N\], File\.\.\. \[Ctrl\+Shift\+N\], Symbol\.\.\. \[Ctrl\+Alt\+Shift\+N\]$',

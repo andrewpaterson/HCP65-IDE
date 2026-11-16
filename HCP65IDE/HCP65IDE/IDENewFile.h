@@ -56,7 +56,7 @@ struct SIDENewPlace
 //"CKeg", and its files are named by its stem, "Keg") and a field for each variable the template uses that has no
 //value.  The files are made, added to the project and its filters and to the CMakeLists.txt that list the files
 //beside them, staged in git and opened; one undo takes them away.  A name a file of the solution has already is
-//refused.
+//refused.  Save File as Template (File) makes a Files template of the file in the editor.
 class CIDENewFile : public CObject
 {
 CONSTRUCTABLE(CIDENewFile);
@@ -81,6 +81,10 @@ public:
 	bool				ShowNewDialog(const char* szTemplate);
 	bool				Create(const char* szTemplate, const char* szName, CTemplateValues* pcGiven, CChars* pszStatus);
 	bool				FindPlace(SIDENewPlace* psDest, const char** pszWhyNot);
+	bool				CanSaveAsTemplate(void);
+	bool				SaveAsTemplateCommand(void);
+	bool				SaveAsTemplate(const char* szFileName, const char* szText, const char* szName, CChars* pszStatus);
+	void				MakeTemplateText(const char* szText, const char* szStem, CChars* pszDest, bool* pbClass);
 	void				FindTemplateFiles(const char* szTemplate, CArrayChars* paszDest);
 
 protected:

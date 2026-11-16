@@ -1115,6 +1115,7 @@ void CIDESolutions::AddFileItems(Ptr<CMenuContainer> pFile)
 
 	pCommands = mpcContent->GetCommands();
 	pFile->AddItem("New", NULL, mpcContent->GetNewFile()->GetFileMenu());
+	pFile->AddItem(pCommands->Find("File.SaveAsTemplate"));
 	pFile->AddSeparator();
 	pFile->AddItem(pCommands->Find("File.OpenSolution"));
 	pFile->AddItem(pCommands->Find("File.AddSolution"));
