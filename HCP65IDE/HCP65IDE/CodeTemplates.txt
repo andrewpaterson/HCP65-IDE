@@ -225,6 +225,12 @@ Progress
     undo takes them away; the undo log keeps New's place ("<project>\n<filter>\n<list beside>") for the redo.
     Checks new-class, new-class-undo, new-class-refused, new-asks-variables, new-header.
 
+  Step 5 (Save File as Template), built 2026-11-16: in the File menu, where IntelliJ has it (the editor tab's menu is
+    WindowLib's CDockGroup's).  The file becomes a Files template of the Workspace scheme (the Default with no
+    workspace): $ and # that Velocity would read escaped, its guard ${INCLUDE_GUARD}, <stem>.h ${HEADER_FILENAME}, and
+    C<stem> ${CLASS_NAME} (its files then named by ${CLASS_STEM}).  Check save-file-as-template (and New from it).
+    The plan's five steps are built.
+
 
 Questions (answered 2026-11-16)
 -------------------------------
