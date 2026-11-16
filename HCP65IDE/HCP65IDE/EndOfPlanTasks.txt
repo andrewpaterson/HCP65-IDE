@@ -123,3 +123,9 @@ changes (the three lines keep their wrapping: compare with any of CommonLibrarie
 Check with git grep -l "Affero" that none are left, build, and commit a repository at a time.  The licence each
 repository shows on GitHub is set there: tell the user it is theirs to change.  The IDE writes new files' notices
 from its file templates, which are LGPL already (TemplateLib's TemplateStrings.cpp, IDEFileTemplates.cpp).
+
+Done 2026-11-16.  The user said yes to both: every LICENSE is GNU's lgpl-3.0.txt and has GNU's gpl-3.0.txt beside it
+as COPYING, CommonLibraries included (at its root).  Two counts above were off: HCP65-Tester's and LogiCim's LICENSE
+were the GPL 3's text, not the AGPL's, and the notices were in 212 files (IDEFileTemplates.cpp's Affero line is the
+template's AGPL choice, which stays, as does TestTemplateText.cpp's test of it).  BaseLib's gpl.txt and lgpl.txt are
+older copies (http links) and gpl.txt was caught by a short-to-int16 rename ("output a int16"): left for the user.
