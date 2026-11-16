@@ -128,4 +128,5 @@ Done 2026-11-16.  The user said yes to both: every LICENSE is GNU's lgpl-3.0.txt
 as COPYING, CommonLibraries included (at its root).  Two counts above were off: HCP65-Tester's and LogiCim's LICENSE
 were the GPL 3's text, not the AGPL's, and the notices were in 212 files (IDEFileTemplates.cpp's Affero line is the
 template's AGPL choice, which stays, as does TestTemplateText.cpp's test of it).  BaseLib's gpl.txt and lgpl.txt are
-older copies (http links) and gpl.txt was caught by a short-to-int16 rename ("output a int16"): left for the user.
+older copies (http links) and gpl.txt was caught by a short-to-int16 rename ("output a int16"): the user had them
+deleted (CommonLibraries ccf25e2bb added the root's two files).
