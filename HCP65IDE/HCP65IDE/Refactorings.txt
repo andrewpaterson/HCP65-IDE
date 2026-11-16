@@ -549,16 +549,16 @@ Where it is
      have:") or as an abstract class before it (functions only, one parameter, every declaration known).  The
      classes the template is used with are left alone (question 59).  Only a member named through a name declared
      with the parameter's type is found: not one reached through what another member returns.
- 30. Plan item 21, namespaces, 2026-11-16: Move to Namespace (CIDEMoveNamespace) for a class, enum, typedef,
-     function, variable, template or namespace, with the functions that take a class (question 63), the assembly's
-     labels, Move to File of what is in a namespace and of a variable template, and 19's and 20's leftovers that
-     were namespaces'.  See 21 above.
  29. After the queue, question 13: Change Signature of a constructor changes where objects are made with arguments
      (a variable's ( and {, new, a temporary, a base's and a member's initialiser): the index has those as places
      the class is named, so they are found from the class's places (AddConstructions).  By the number of
      arguments.  An object made with no brackets ("CLid cLid;", "new CLid") is given them when it gets an
      argument; a data member that no constructor initialises isn't given an initialiser.
 
+ 30. Plan item 21, namespaces, 2026-11-16: Move to Namespace (CIDEMoveNamespace) for a class, enum, typedef,
+     function, variable, template or namespace, with the functions that take a class (question 63), the assembly's
+     labels, Move to File of what is in a namespace and of a variable template, and 19's and 20's leftovers that
+     were namespaces'.  See 21 above.
 
 When the plan is done
 ---------------------
