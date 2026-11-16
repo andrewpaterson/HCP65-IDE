@@ -44,6 +44,23 @@ Open
     leaves <> #includes, #includes inside an #if, and a .cpp's #include of its own header alone.  Right?
 
 
+60. Move to Namespace (plan item 21, a) is a command of its own, Move to Namespace..., in the Refactor menu and on
+    Alt+Enter, with no key: F6's Move dialog is for files.  Or would you rather F6's dialog offered "to a namespace"
+    beside "to its own files" (Move Class) and "to another header" (Move to File)?
+
+61. A use outside the new namespace is qualified (New::X) by default; "Add using-declarations" in the dialog gives a
+    file one using New::X; instead (plan item 21, c).  Qualifying is the default because it says where the name is
+    from, as your code does now; is that the default you want?
+
+62. A block of the new namespace that is made is written as the file's other namespace blocks are, or, in a file
+    with none, as Aardvark.cpp writes them: namespace Name, { on the next line, the body a tab in (plan item 21,
+    b).  Is that your style for namespaces?
+
+63. A class moved out of a namespace loses argument dependent lookup of that namespace's functions and operators
+    that take it (operator+(X, X) in Old).  I warn of them (Problems Detected) and leave them where they are; should
+    they be offered to move with it?
+
+
 Answered
 --------
 
