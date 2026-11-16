@@ -383,6 +383,9 @@ IntelliJ has none of these for Java.
      declares the function after the class at the class's indent (it was put at the line's start).  Checks
      member-from-function-namespace, -other-namespace, member-to-function-namespace, template-parameter-namespace,
      -qualified.
+     Question 63's answer, 2026-11-16: a class's old namespace's functions that take it are listed in the dialog
+     ("Functions that take it"), ticked, and move with it (SIDENamespaceMove's aszTakers and aszWith; one undo).
+     Checks move-namespace-class-with and -with-dialog.
      Left: moving a namespace itself, and anything in an unnamed or inline namespace (refused, with why); Move to File
      of a variable template.
  22. An enum to an enum class, every use of an enumerator qualified.

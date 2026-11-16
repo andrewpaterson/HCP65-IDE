@@ -1717,13 +1717,13 @@ CHECKS = [
 		 r'^Dialog \[Pull Members Up from CDrum\] answered OK$', r'^Dialog \[Problems Detected\] answered Cancel$'],
 		[r'Pulled Fill']),
 	('move-namespace-class', dict(MakeNamespacesCopy(), **{
-		#Move to Namespace (Refactorings.txt 21): CPoint from Geometry to a new namespace Shapes.  Problems Detected says
-		#Geometry's Area takes it (argument dependent lookup).  Its declaration and its members' definitions in
+		#Move to Namespace (Refactorings.txt 21): CPoint from Geometry to a new namespace Shapes, alone (Area, which takes
+		#it, not ticked to go with it).  Problems Detected says Geometry's Area takes it (argument dependent lookup).  Its declaration and its members' definitions in
 		#Geometry's blocks go into Shapes blocks where they are (Geometry's closed before and opened after); what they
 		#name of Geometry is qualified; every use names Shapes::CPoint.
 		'WAIT_INDEX': '1', 'OPEN': 'Shapes.h', 'DIALOG_ANSWER': 'OK',
-		'DEBUG': 'edit:renamesearch:---s,edit:caret:10:9,edit:movetonamespace:Shapes,printdisklines:Shapes.h,printdisklines:Shapes.cpp,printdisklines:Main.cpp,printdisklines:ShapesW65C816.asm'}),
-		[r'^Move to Namespace: Geometry::CPoint from \[Geometry\], 3 declarations: Shapes\.h\[1\] Shapes\.cpp\[1\] Shapes\.cpp\[1\]$', r'^Dialog \[Problems Detected\] answered OK$',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:10:9,edit:movetonamespacealone:Shapes,printdisklines:Shapes.h,printdisklines:Shapes.cpp,printdisklines:Main.cpp,printdisklines:ShapesW65C816.asm'}),
+		[r'^Move to Namespace: Geometry::CPoint from \[Geometry\], 3 declarations: Shapes\.h\[1\] Shapes\.cpp\[1\] Shapes\.cpp\[1\], taken by: Geometry::Area\(Geometry::CPoint\*\)$', r'^Dialog \[Problems Detected\] answered OK$',
 		 r'^Move to Namespace status: Moved Geometry::CPoint to Shapes: 8 uses; 4 labels in assembly changed\.$',
 		 r'^7\|\ttypedef int\tTLength;$', r'^8\|\}$', r'^11\|namespace Shapes$', r'^12\|\{$', r'^13\|\tclass CPoint$', r'^16\|\t\tGeometry::TLength\tmiX;$',
 		 r'^19\|\t\tvoid\tInit\(Geometry::TLength iX, Geometry::TLength iY\);$', r'^21\|\t\};$', r'^22\|\}$', r'^25\|namespace Geometry$', r'^27\|\tTLength\tArea\(Shapes::CPoint\* pcPoint\);$',
@@ -1733,6 +1733,26 @@ CHECKS = [
 		 r'^14\|\tShapes::CPoint\t\t\t\tcPoint;$', r'^15\|\tShapes::CPoint\tcOther;$',
 		 r'^5\|_Shapes__CPoint__Sum:$', r'^7\|_Geometry__Area__FPC14Shapes__CPoint:$', r'^8\|\t\tjsr _Shapes__CPoint__Sum$', r'^13\|_Drawing__Plot__FPC14Shapes__CPoint:$'],
 		[r'^\d+\|.*Geometry::CPoint']),
+	('move-namespace-class-with', dict(MakeNamespacesCopy(), **{
+		#Move to Namespace of a class offers its old namespace's functions that take it, ticked, to go with it
+		#(question 63): Area goes to Shapes with CPoint, into the same block, its definition Shapes::Area and its call
+		#Shapes::Area, and both their labels change; nothing that takes CPoint stays, so there is no warning.
+		'WAIT_INDEX': '1', 'OPEN': 'Shapes.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:10:9,edit:movetonamespace:Shapes,printdisklines:Shapes.h,printdisklines:Shapes.cpp,printdisklines:Main.cpp,printdisklines:ShapesW65C816.asm'}),
+		[r'^Move to Namespace: Geometry::CPoint from \[Geometry\], 3 declarations: Shapes\.h\[1\] Shapes\.cpp\[1\] Shapes\.cpp\[1\], taken by: Geometry::Area\(Geometry::CPoint\*\)$',
+		 r'^Move to Namespace status: Moved Geometry::CPoint and Geometry::Area to Shapes: 9 uses; 5 labels in assembly changed\.$',
+		 r'^8\|\}$', r'^11\|namespace Shapes$', r'^13\|\tclass CPoint$', r'^21\|\t\};$', r'^24\|\tGeometry::TLength\tArea\(CPoint\* pcPoint\);$', r'^25\|\}$', r'^28\|namespace Geometry$', r'^30\|\textern int\tgiCount;$',
+		 r'^38\|Geometry::TLength Shapes::Area\(Shapes::CPoint\* pcPoint\)$', r'^40\|\treturn pcPoint->Sum\(\) \* Geometry::giCount;$',
+		 r'^21\|\ti = Shapes::Area\(&cOther\) \+ Geometry::Detail::Twice\(giCount\);$',
+		 r'^7\|_Shapes__Area__FPC14Shapes__CPoint:$', r'^13\|_Drawing__Plot__FPC14Shapes__CPoint:$'],
+		[r'Problems Detected', r'^\d+\|.*Geometry::Area']),
+	('move-namespace-class-with-dialog', dict(MakeNamespacesCopy(), **{
+		#The dialog lists Area under "Functions that take it", ticked; space unticks it, and it stays (Problems Detected
+		#says so).
+		'WAIT_INDEX': '1', 'OPEN': 'Shapes.h', 'CARET': '10:9', 'DIALOG_KEYS': 'type:Shapes,tab,tab,space|', 'DIALOG_ANSWER': 'OK|OK',
+		'DEBUG': 'edit:renamesearch:---s,command:Refactor.MoveToNamespace,answered:2,printstatus'}),
+		[r'^Dialog \[Move Geometry::CPoint to Namespace\] answered OK$', r'^Dialog \[Problems Detected\] answered OK$', r'^Status: Moved Geometry::CPoint to Shapes: 8 uses; 4 labels in assembly changed\.$'],
+		[]),
 	('move-namespace-function', dict(MakeNamespacesCopy(), **{
 		#Area from Geometry to Shapes: its declaration in a Shapes block where it was, its definition outside the
 		#namespaces renamed Shapes::Area with what it names of Geometry qualified, and Main.cpp's call (found through

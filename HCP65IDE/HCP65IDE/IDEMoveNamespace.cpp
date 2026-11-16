@@ -31,10 +31,14 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDEDefinitions.h"
 #include "IDEChangeSignature.h"
 #include "IDEContextActions.h"
+#include "WindowLib/Table.h"
 #include "IDEMoveNamespace.h"
 
 
 #define IDE_NAMESPACE_COMPLETIONS		12
+#define IDE_NAMESPACE_COLUMN_MOVE		0
+#define IDE_NAMESPACE_COLUMN_NAME		1
+#define IDE_NAMESPACE_VISIBLE_ROWS		6
 #define IDE_NAMESPACE_COMPLETION_TAKEN	(-2147483647 - 1)
 
 
@@ -121,6 +125,8 @@ void SIDENamespaceMove::Init(void)
 	szWhyNot.Init();
 	asSites.Init();
 	aszMembers.Init();
+	aszTakers.Init();
+	aszWith.Init();
 }
 
 
@@ -128,6 +134,8 @@ void SIDENamespaceMove::Kill(void)
 {
 	size	i;
 
+	aszWith.Kill();
+	aszTakers.Kill();
 	aszMembers.Kill();
 	for (i = 0; i < asSites.NumElements(); i++)
 	{
@@ -801,7 +809,6 @@ bool CIDEMoveNamespace::FindMove(SIDENamespaceMove* psDest)
 {
 	CIDECodeModel*			pcModel;
 	CIDEFileEdits			cFiles;
-	CArrayIDELocations		asLocations;
 	CArrayIDELocations		asMembers;
 	CArrayIDEFileRanges		asRanges;
 	SIDELocation*			psLocation;
@@ -856,30 +863,8 @@ bool CIDEMoveNamespace::FindMove(SIDENamespaceMove* psDest)
 	cFiles.Init(mpcContent);
 
 	//Every declaration of it, and for a class its members' definitions in its namespace's blocks.
-	asLocations.Init();
-	pcModel->GetSymbolLocations(psDest->szKey.Text(), &asLocations, &uiKind);
 	szWhyNot.Init();
-	for (i = 0; psDest->bMovable && (i < asLocations.NumElements()); i++)
-	{
-		psLocation = asLocations.Get(i);
-		if (psLocation->uiRole == CPPIR_Reference)
-		{
-			continue;
-		}
-		sSite.Init();
-		if (FindSite(psLocation->szFileName.Text(), psLocation->iLine, psLocation->iColumn, false, &cFiles, &sSite, &szWhyNot))
-		{
-			psSite = psDest->asSites.Add();
-			memcpy(psSite, &sSite, sizeof(SIDENamespaceSite));
-		}
-		else
-		{
-			psDest->bMovable = false;
-			psDest->szWhyNot.Set(szWhyNot);
-			sSite.Kill();
-		}
-	}
-	KillIDELocations(&asLocations);
+	AddSites(psDest, psDest->szKey.Text(), &cFiles);
 
 	if (psDest->bMovable && ((psDest->uiKind == CPPSK_Class) || (psDest->uiKind == CPPSK_ClassTemplate)))
 	{
@@ -935,10 +920,89 @@ bool CIDEMoveNamespace::FindMove(SIDENamespaceMove* psDest)
 			}
 			KillIDELocations(&asMembers);
 		}
+
+		//The old namespace's functions that take it: offered to go with it (FindConflicts warns of those left).
+		FindTakers(psDest, &cFiles, &psDest->aszTakers);
 	}
 	szWhyNot.Kill();
 	cFiles.Kill();
 	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The sites of every declaration of szKey added to the move's.  False,
+// with why (bMovable and szWhyNot), if one can't be read.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEMoveNamespace::AddSites(SIDENamespaceMove* psMove, const char* szKey, CIDEFileEdits* pcFiles)
+{
+	CArrayIDELocations	asLocations;
+	SIDELocation*		psLocation;
+	SIDENamespaceSite*	psSite;
+	SIDENamespaceSite	sSite;
+	CChars				szWhyNot;
+	size				i;
+	uint8				uiKind;
+
+	asLocations.Init();
+	mpcContent->GetCodeModel()->GetSymbolLocations(szKey, &asLocations, &uiKind);
+	szWhyNot.Init();
+	for (i = 0; psMove->bMovable && (i < asLocations.NumElements()); i++)
+	{
+		psLocation = asLocations.Get(i);
+		if (psLocation->uiRole == CPPIR_Reference)
+		{
+			continue;
+		}
+		sSite.Init();
+		if (FindSite(psLocation->szFileName.Text(), psLocation->iLine, psLocation->iColumn, false, pcFiles, &sSite, &szWhyNot))
+		{
+			psSite = psMove->asSites.Add();
+			memcpy(psSite, &sSite, sizeof(SIDENamespaceSite));
+		}
+		else
+		{
+			psMove->bMovable = false;
+			psMove->szWhyNot.Set(szWhyNot);
+			sSite.Kill();
+		}
+	}
+	KillIDELocations(&asLocations);
+	szWhyNot.Kill();
+	return psMove->bMovable;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Every one of the functions that take the class going with it: what the
+// dialog starts with, ticked.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEMoveNamespace::TakeAllWith(SIDENamespaceMove* psMove)
+{
+	size	i;
+
+	psMove->aszWith.ReInit();
+	for (i = 0; i < psMove->aszTakers.NumElements(); i++)
+	{
+		psMove->aszWith.Add(psMove->aszTakers.GetText(i));
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether a symbol (szKey, in the scope szScope) goes with the move: it,
+// one of its members, or a function that goes with it.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEMoveNamespace::IsMoved(SIDENamespaceMove* psMove, const char* szKey, const char* szScope)
+{
+	return (strcmp(szKey, psMove->szKey.Text()) == 0) || (strcmp(szScope, psMove->szKey.Text()) == 0) ||
+		   ((strncmp(szScope, psMove->szKey.Text(), psMove->szKey.Length()) == 0) && (szScope[psMove->szKey.Length()] == ':')) || psMove->aszWith.Contains(szKey);
 }
 
 
@@ -962,6 +1026,10 @@ char* CIDEMoveNamespace::PrintMove(SIDENamespaceMove* psMove, CChars* pszDest)
 	{
 		psSite = psMove->asSites.Get(i);
 		pszDest->Append(' ')->Append(GetIDEFileNamePart(psSite->szFileName.Text()))->Append(psSite->bQualified ? "(qualified)" : "")->Append('[')->Append((uint32)psSite->asBlocks.NumElements())->Append(']');
+	}
+	for (i = 0; i < psMove->aszTakers.NumElements(); i++)
+	{
+		pszDest->Append((i == 0) ? ", taken by: " : ", ")->Append(psMove->aszTakers.GetText(i));
 	}
 	return pszDest->Append('\n')->Text();
 }
@@ -1026,7 +1094,7 @@ void CIDEMoveNamespace::QualifyInside(SIDENamespaceMove* psMove, SIDENamespaceSi
 		{
 			szScope.Init();
 			GetIDESymbolScope(szKey.Text(), &szScope);
-			bMoved = szKey.Equals(psMove->szKey) || szScope.Equals(psMove->szKey) || szScope.StartsWith(psMove->szKey.Text());
+			bMoved = IsMoved(psMove, szKey.Text(), szScope.Text());
 			if (!bMoved && !szScope.Contains("(") && (szScope.Empty() || IsNamespace(szScope.Text())))
 			{
 				//At namespace scope: seen from szNew if its namespace is szNew or one szNew is in.
@@ -1354,17 +1422,8 @@ void CIDEMoveNamespace::FindConflicts(SIDENamespaceMove* psMove, const char* szN
 {
 	CIDECodeModel*		pcModel;
 	CArrayIDELocations	asLocations;
-	CArrayIDEFileRanges	asRanges;
-	CArrayChars			aszKeys;
-	SIDELocation*		psLocation;
-	CIDERefactorUnit*	pcUnit;
-	CCPPSyntax*			pcNode;
-	SCPPSyntaxRange		sRange;
 	CChars				szNewKey;
 	CChars				szLine;
-	CChars				szScope;
-	const char*			szText;
-	const char*			szParameters;
 	size				i;
 	uint8				uiKind;
 
@@ -1382,13 +1441,66 @@ void CIDEMoveNamespace::FindConflicts(SIDENamespaceMove* psMove, const char* szN
 	KillIDELocations(&asLocations);
 	szNewKey.Kill();
 
+	for (i = 0; i < psMove->aszTakers.NumElements(); i++)
+	{
+		if (!psMove->aszWith.Contains(psMove->aszTakers.GetText(i)))
+		{
+			szLine.Init();
+			GetIDEScopedName(psMove->aszTakers.GetText(i), &szLine);
+			szLine.Append(" takes ")->Append(psMove->szName)->Append(" and stays in ")->Append(psMove->szNamespace)->Append(": a call that found it through ")->Append(psMove->szName)->Append("'s namespace won't.");
+			paszDest->AddIfUnique(szLine);
+			szLine.Kill();
+		}
+	}
+	for (i = 0; i < psMove->aszWith.NumElements(); i++)
+	{
+		szNewKey.Init(szNew);
+		szNewKey.Append(szNew[0] ? "::" : "")->Append(&psMove->aszWith.GetText(i)[psMove->szNamespace.Empty() ? 0 : psMove->szNamespace.Length() + 2]);
+		asLocations.Init();
+		if (pcModel->GetSymbolLocations(szNewKey.Text(), &asLocations, &uiKind) && (asLocations.NumElements() > 0))
+		{
+			szLine.Init(szNew[0] ? szNew : "The global namespace");
+			szLine.Append(" has a ");
+			GetIDESymbolName(psMove->aszWith.GetText(i), &szLine);
+			szLine.Append(" already.");
+			paszDest->AddIfUnique(szLine);
+			szLine.Kill();
+		}
+		KillIDELocations(&asLocations);
+		szNewKey.Kill();
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A class's old namespace's functions that take it (a parameter of its
+// type): argument dependent lookup finds them from it.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEMoveNamespace::FindTakers(SIDENamespaceMove* psMove, CIDEFileEdits* pcFiles, CArrayChars* paszDest)
+{
+	CIDECodeModel*		pcModel;
+	CArrayIDELocations	asLocations;
+	CArrayIDEFileRanges	asRanges;
+	CArrayChars			aszKeys;
+	SIDELocation*		psLocation;
+	CIDERefactorUnit*	pcUnit;
+	CCPPSyntax*			pcNode;
+	SCPPSyntaxRange		sRange;
+	CChars				szScope;
+	const char*			szText;
+	const char*			szParameters;
+	size				i;
+	uint8				uiKind;
+
 	if (((psMove->uiKind != CPPSK_Class) && (psMove->uiKind != CPPSK_ClassTemplate)) || psMove->szNamespace.Empty())
 	{
 		return;
 	}
+	pcModel = mpcContent->GetCodeModel();
 	asLocations.Init();
-	asRanges.Init();
-	pcModel->GetSymbolLocations(psMove->szNamespace.Text(), &asLocations, &uiKind);
+	asRanges.Init();	pcModel->GetSymbolLocations(psMove->szNamespace.Text(), &asLocations, &uiKind);
 	for (i = 0; i < asLocations.NumElements(); i++)
 	{
 		psLocation = asLocations.Get(i);
@@ -1412,10 +1524,7 @@ void CIDEMoveNamespace::FindConflicts(SIDENamespaceMove* psMove, const char* szN
 		GetIDESymbolScope(aszKeys.GetText(i), &szScope);
 		if (szParameters && szScope.Equals(psMove->szNamespace) && strstr(szParameters, psMove->szKey.Text()))
 		{
-			szLine.Init();
-			GetIDEScopedName(aszKeys.GetText(i), &szLine);
-			szLine.Append(" takes ")->Append(psMove->szName)->Append(" and stays in ")->Append(psMove->szNamespace)->Append(": a call that found it through ")->Append(psMove->szName)->Append("'s namespace won't.");
-			paszDest->AddIfUnique(szLine);
+			paszDest->AddIfUnique(aszKeys.GetText(i));
 		}
 		szScope.Kill();
 	}
@@ -1436,15 +1545,10 @@ bool CIDEMoveNamespace::Move(SIDENamespaceMove* psMove, const char* szNamespace,
 	CIDECodeModel*			pcModel;
 	CIDEFileEdits			cFiles;
 	CArrayIDENamespaceEdits	asEdits;
-	CArrayIDELocations		asLocations;
 	CArrayChars				aszConflicts;
 	CArrayChars				aszUsingFiles;
-	CArrayChars				aszKeys;
-	SIDELocation*			psLocation;
 	SIDENamespaceSite*		psSite;
 	SIDENamespaceEdit*		psEdit;
-	CIDERefactorUnit*		pcUnit;
-	SCPPSyntaxRange			sRange;
 	CChars					szNew;
 	CChars					szScope;
 	CChars					szQualifier;
@@ -1453,13 +1557,11 @@ bool CIDEMoveNamespace::Move(SIDENamespaceMove* psMove, const char* szNamespace,
 	size					uiUses;
 	size					uiLabels;
 	size					uiUnsure;
+	size					uiMore;
+	CChars					szUsingName;
 	size					uiAt;
 	size					i;
 	size					j;
-	int32					iName;
-	int32					iQualifier;
-	uint8					uiKind;
-	bool					bInside;
 	bool					bAfterUsing;
 	bool					bResult;
 
@@ -1484,6 +1586,19 @@ bool CIDEMoveNamespace::Move(SIDENamespaceMove* psMove, const char* szNamespace,
 	}
 
 	cFiles.Init(mpcContent);
+	for (i = 0; i < psMove->aszWith.NumElements(); i++)
+	{
+		//What goes with it: its declarations are sites of the move too.
+		if (!AddSites(psMove, psMove->aszWith.GetText(i), &cFiles))
+		{
+			pszStatus->Set("Move to Namespace: ");
+			GetIDEScopedName(psMove->aszWith.GetText(i), pszStatus);
+			pszStatus->Append(" can't go with it: ")->Append(psMove->szWhyNot)->Append('.');
+			cFiles.Kill();
+			szNew.Kill();
+			return false;
+		}
+	}
 	aszConflicts.Init();
 	FindConflicts(psMove, szNew.Text(), &cFiles, &aszConflicts);
 	bResult = (aszConflicts.NumElements() == 0) || mpcContent->GetChangeSignature()->ShowConflicts(&aszConflicts);
@@ -1499,82 +1614,20 @@ bool CIDEMoveNamespace::Move(SIDENamespaceMove* psMove, const char* szNamespace,
 	asEdits.Init();
 	aszUsingFiles.Init();
 
-	//The uses, each named from where it is.
+	//The uses of it and of what goes with it, each named from where it is.
 	uiUses = 0;
-	aszKeys.Init();
-	aszKeys.Add(psMove->szKey.Text());
-	asLocations.Init();
-	pcModel->GetSymbolLocations(psMove->szKey.Text(), &asLocations, &uiKind);
-	for (i = 0; i < asLocations.NumElements(); i++)
+	MoveUses(psMove, psMove->szKey.Text(), szNew.Text(), bUsings, &cFiles, &asEdits, &aszUsingFiles, &uiUses);
+	for (i = 0; i < psMove->aszWith.NumElements(); i++)
 	{
-		psLocation = asLocations.Get(i);
-		if (psLocation->uiRole != CPPIR_Reference)
-		{
-			continue;
-		}
-		pcUnit = GetUnit(psLocation->szFileName.Text());
-		szText = cFiles.GetText(psLocation->szFileName.Text());
-		iName = pcUnit ? pcUnit->FindTokenAt(psLocation->iLine, psLocation->iColumn) : -1;
-		if (!szText || (iName < 0))
-		{
-			continue;
-		}
-		iQualifier = FindQualifier(pcUnit, iName);
-		szScope.Init();
-		FindScopeAt(pcUnit, szText, iName, &szScope);
-		bInside = false;
-		for (j = 0; j < psMove->asSites.NumElements(); j++)
-		{
-			psSite = psMove->asSites.Get(j);
-			uiAt = FindIDETextOffset(szText, psLocation->iLine, psLocation->iColumn);
-			bInside = bInside || (!psSite->bQualified && (StringInsensitiveCompare(psSite->szFileName.Text(), psLocation->szFileName.Text()) == 0) && (uiAt >= psSite->uiStart) && (uiAt < psSite->uiEnd));
-		}
-		if (bInside)
-		{
-			//In what moves: it is in the new namespace with it.
-			szScope.Set(szNew);
-		}
-		szQualifier.Init();
-		if ((iQualifier > 0) && pcUnit->IsToken(iQualifier - 1, "using") && !pcUnit->IsToken(iQualifier, "namespace"))
-		{
-			//A using-declaration of it: of the new namespace, or gone where it isn't needed.
-			AppendQualifier(szScope.Text(), szNew.Text(), &szQualifier);
-			if (szQualifier.Empty() && !szNew.Empty())
-			{
-				pcUnit->GetTokensRange(iQualifier - 1, iName, &sRange);
-				uiAt = FindIDELineStart(szText, FindIDETextOffset(szText, sRange.iLine, sRange.iColumn));
-				asEdits.Add()->Init(psLocation->szFileName.Text(), uiAt, FindIDENextLine(szText, uiAt), "");
-			}
-			else
-			{
-				pcUnit->GetTokensRange(iQualifier, iName, &sRange);
-				szLine.Init(szQualifier.Empty() ? "::" : szQualifier.Text());
-				asEdits.Add()->Init(psLocation->szFileName.Text(), FindIDETextOffset(szText, sRange.iLine, sRange.iColumn), FindIDETextOffset(szText, psLocation->iLine, psLocation->iColumn), szLine.Text());
-				szLine.Kill();
-			}
-		}
-		else
-		{
-			AppendShortestQualifier(pcUnit, iName, szScope.Text(), szNew.Text(), &szQualifier);
-			if (bUsings && !szQualifier.Empty() && !bInside && (psLocation->szFileName.EndsWithIgnoreCase(".cpp") || psLocation->szFileName.EndsWithIgnoreCase(".c")))
-			{
-				szQualifier.Clear();
-				aszUsingFiles.AddIfUnique((char*)psLocation->szFileName.Text());
-			}
-			pcUnit->GetTokensRange(iQualifier, iQualifier, &sRange);
-			asEdits.Add()->Init(psLocation->szFileName.Text(), FindIDETextOffset(szText, sRange.iLine, sRange.iColumn), FindIDETextOffset(szText, psLocation->iLine, psLocation->iColumn), szQualifier.Text());
-		}
-		uiUses++;
-		szQualifier.Kill();
-		szScope.Kill();
+		MoveUses(psMove, psMove->aszWith.GetText(i), szNew.Text(), bUsings, &cFiles, &asEdits, &aszUsingFiles, &uiUses);
 	}
-	KillIDELocations(&asLocations);
-	aszKeys.Kill();
 
-	//A file given a using-declaration: after its #includes.
+	//A file given a using-declaration (aszUsingFiles has "name|file"): after its #includes and using lines.
 	for (i = 0; i < aszUsingFiles.NumElements(); i++)
 	{
-		szText = cFiles.GetText(aszUsingFiles.GetText(i));
+		szUsingName.Init(aszUsingFiles.GetText(i));
+		szUsingName.SetLength(szUsingName.Find('|'));
+		szText = cFiles.GetText(&aszUsingFiles.GetText(i)[szUsingName.Length() + 1]);
 		uiAt = 0;
 		bAfterUsing = false;
 		for (j = 0; szText && (szText[j] != '\0'); j = FindIDENextLine(szText, j))
@@ -1590,9 +1643,10 @@ bool CIDEMoveNamespace::Move(SIDENamespaceMove* psMove, const char* szNamespace,
 			}
 		}
 		szLine.Init((uiAt > 0) && !bAfterUsing ? "\n\n" : "");
-		szLine.Append("using ")->Append(szNew.Empty() ? "" : szNew.Text())->Append("::")->Append(psMove->szName)->Append(";\n");
-		asEdits.Add()->Init(aszUsingFiles.GetText(i), uiAt, uiAt, szLine.Text());
+		szLine.Append("using ")->Append(szNew.Empty() ? "" : szNew.Text())->Append("::")->Append(szUsingName)->Append(";\n");
+		asEdits.Add()->Init(&aszUsingFiles.GetText(i)[szUsingName.Length() + 1], uiAt, uiAt, szLine.Text());
 		szLine.Kill();
+		szUsingName.Kill();
 	}
 
 	//Its declarations: a qualified one's qualifier, the names in them qualified, then each moved.
@@ -1636,6 +1690,11 @@ bool CIDEMoveNamespace::Move(SIDENamespaceMove* psMove, const char* szNamespace,
 		cFiles.GetEdits(psEdit->szFileName.Text())->Replace(psEdit->uiStart, psEdit->uiEnd, psEdit->szText.Text());
 	}
 	uiLabels = mpcContent->GetRename()->MoveAssembly(psMove->szKey.Text(), szNew.Text(), &cFiles, &uiUnsure);
+	for (i = 0; i < psMove->aszWith.NumElements(); i++)
+	{
+		uiLabels += mpcContent->GetRename()->MoveAssembly(psMove->aszWith.GetText(i), szNew.Text(), &cFiles, &uiMore);
+		uiUnsure += uiMore;
+	}
 	cFiles.Apply();
 	for (i = 0; i < asEdits.NumElements(); i++)
 	{
@@ -1647,6 +1706,11 @@ bool CIDEMoveNamespace::Move(SIDENamespaceMove* psMove, const char* szNamespace,
 
 	pszStatus->Set("Moved ");
 	GetIDEScopedName(psMove->szKey.Text(), pszStatus);
+	for (i = 0; i < psMove->aszWith.NumElements(); i++)
+	{
+		pszStatus->Append((i + 1 == psMove->aszWith.NumElements()) ? " and " : ", ");
+		GetIDEScopedName(psMove->aszWith.GetText(i), pszStatus);
+	}
 	pszStatus->Append(" to ")->Append(szNew.Empty() ? "the global namespace" : szNew.Text())->Append(": ")->Append((uint32)uiUses)->Append((uiUses == 1) ? " use" : " uses");
 	pszStatus->Append(aszUsingFiles.NumElements() ? ", with using-declarations" : "");
 	if (uiLabels > 0)
@@ -1742,6 +1806,8 @@ void CIDEMoveNamespace::NamespaceTyped(CTextField* pcField)
 //////////////////////////////////////////////////////////////////////////
 void CIDEMoveNamespace::ShowMove(void)
 {
+	Ptr<CTable>			pTakers;
+	size				i;
 	SIDENamespaceMove	sMove;
 	CChars				szTitle;
 	CChars				szStatus;
@@ -1778,6 +1844,30 @@ void CIDEMoveNamespace::ShowMove(void)
 	mpNamespaceField->SelectAll();
 	mpNamespaceField->GetChangeEvent()->Add(this, &CIDEMoveNamespace::NamespaceTyped);
 	mpUsingBox = mpDialog->AddCheckBox("Add using-declarations in source files instead of qualifying", mbUsings);
+	pTakers = NULL;
+	if (sMove.aszTakers.NumElements() > 0)
+	{
+		//Its old namespace's functions that take it, which calls find through it: ticked to go with it (question 63).
+		mpDialog->AddDivider("Functions that take it");
+		pTakers = OMalloc<CTable>(mpDialog->GetWindow(), mpDialog->GetLook()->pcTheme);
+		pTakers->AddColumn("Move", TCK_Tick, 0);
+		pTakers->AddColumn("Function", TCK_Text, 1);
+		pTakers->SetColumnEditable(IDE_NAMESPACE_COLUMN_NAME, false);
+		for (i = 0; i < sMove.aszTakers.NumElements(); i++)
+		{
+			szTitle.Init();
+			GetIDEScopedName(sMove.aszTakers.GetText(i), &szTitle);
+			szTitle.Append(&strchr(sMove.aszTakers.GetText(i), '(')[0]);
+			pTakers->AddRow();
+			pTakers->SetCellTicked((int32)i, IDE_NAMESPACE_COLUMN_MOVE, true);
+			pTakers->SetCellText((int32)i, IDE_NAMESPACE_COLUMN_NAME, szTitle.Text());
+			szTitle.Kill();
+		}
+		pTakers->SetVisibleRows((sMove.aszTakers.NumElements() < IDE_NAMESPACE_VISIBLE_ROWS) ? (int32)sMove.aszTakers.NumElements() : IDE_NAMESPACE_VISIBLE_ROWS);
+		pTakers->SetAlignment(CSH_Stretch, CSV_Top);
+		pTakers->SelectCell(0, IDE_NAMESPACE_COLUMN_MOVE);
+		mpDialog->AddEditor(NULL, pTakers);
+	}
 	mpDialog->SetOKCaption("Refactor");
 	mpcContent->GetScript()->WatchDialog(mpDialog);
 	bShown = mpDialog->Show(480);
@@ -1785,6 +1875,13 @@ void CIDEMoveNamespace::ShowMove(void)
 	if (bShown)
 	{
 		mbUsings = mpUsingBox->IsTicked();
+		for (i = 0; pTakers.IsNotNull() && (i < sMove.aszTakers.NumElements()); i++)
+		{
+			if (pTakers->IsCellTicked((int32)i, IDE_NAMESPACE_COLUMN_MOVE))
+			{
+				sMove.aszWith.Add(sMove.aszTakers.GetText(i));
+			}
+		}
 		szStatus.Init();
 		szTitle.Init(mpNamespaceField->GetText());
 		Move(&sMove, szTitle.Text(), mbUsings, &szStatus);
@@ -1793,6 +1890,7 @@ void CIDEMoveNamespace::ShowMove(void)
 		szStatus.Kill();
 	}
 	mpNamespaceField->GetChangeEvent()->Remove(this);
+	pTakers = NULL;
 	mpUsingBox = NULL;
 	mpNamespaceField = NULL;
 	mpDialog = NULL;
@@ -2100,4 +2198,109 @@ bool CIDEMoveNamespace::FindUsingDeclaration(SIDELocation* psUse, CIDEFileEdits*
 	}
 	cUnit.Kill();
 	return bFound;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The uses of szKey (the move's, or a function's that goes with it), each
+// named from where it is, as edits; a source file that would qualify one
+// with bUsings is added to paszUsings ("name|file") to have a
+// using-declaration instead.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEMoveNamespace::MoveUses(SIDENamespaceMove* psMove, const char* szKey, const char* szNew, bool bUsings, CIDEFileEdits* pcFiles, CArrayIDENamespaceEdits* pasDest, CArrayChars* paszUsings, size* puiUses)
+{
+	CIDECodeModel*		pcModel;
+	CArrayIDELocations	asLocations;
+	SIDELocation*		psLocation;
+	SIDENamespaceSite*	psSite;
+	CIDERefactorUnit*	pcUnit;
+	SCPPSyntaxRange		sRange;
+	CChars				szName;
+	CChars				szScope;
+	CChars				szQualifier;
+	CChars				szLine;
+	const char*			szText;
+	size				uiAt;
+	size				i;
+	size				j;
+	int32				iName;
+	int32				iQualifier;
+	uint8				uiKind;
+	bool				bInside;
+
+	szName.Init();
+	pcModel = mpcContent->GetCodeModel();
+	GetIDESymbolName(szKey, &szName);
+	asLocations.Init();
+	pcModel->GetSymbolLocations(szKey, &asLocations, &uiKind);
+	for (i = 0; i < asLocations.NumElements(); i++)
+	{
+		psLocation = asLocations.Get(i);
+		if (psLocation->uiRole != CPPIR_Reference)
+		{
+			continue;
+		}
+		pcUnit = GetUnit(psLocation->szFileName.Text());
+		szText = pcFiles->GetText(psLocation->szFileName.Text());
+		iName = pcUnit ? pcUnit->FindTokenAt(psLocation->iLine, psLocation->iColumn) : -1;
+		if (!szText || (iName < 0))
+		{
+			continue;
+		}
+		iQualifier = FindQualifier(pcUnit, iName);
+		szScope.Init();
+		FindScopeAt(pcUnit, szText, iName, &szScope);
+		bInside = false;
+		for (j = 0; j < psMove->asSites.NumElements(); j++)
+		{
+			psSite = psMove->asSites.Get(j);
+			uiAt = FindIDETextOffset(szText, psLocation->iLine, psLocation->iColumn);
+			bInside = bInside || (!psSite->bQualified && (StringInsensitiveCompare(psSite->szFileName.Text(), psLocation->szFileName.Text()) == 0) && (uiAt >= psSite->uiStart) && (uiAt < psSite->uiEnd));
+		}
+		if (bInside)
+		{
+			//In what moves: it is in the new namespace with it.
+			szScope.Set(szNew);
+		}
+		szQualifier.Init();
+		if ((iQualifier > 0) && pcUnit->IsToken(iQualifier - 1, "using") && !pcUnit->IsToken(iQualifier, "namespace"))
+		{
+			//A using-declaration of it: of the new namespace, or gone where it isn't needed.
+			AppendQualifier(szScope.Text(), szNew, &szQualifier);
+			if (szQualifier.Empty() && (szNew[0] != '\0'))
+			{
+				pcUnit->GetTokensRange(iQualifier - 1, iName, &sRange);
+				uiAt = FindIDELineStart(szText, FindIDETextOffset(szText, sRange.iLine, sRange.iColumn));
+				pasDest->Add()->Init(psLocation->szFileName.Text(), uiAt, FindIDENextLine(szText, uiAt), "");
+			}
+			else
+			{
+				pcUnit->GetTokensRange(iQualifier, iName, &sRange);
+				szLine.Init(szQualifier.Empty() ? "::" : szQualifier.Text());
+				pasDest->Add()->Init(psLocation->szFileName.Text(), FindIDETextOffset(szText, sRange.iLine, sRange.iColumn), FindIDETextOffset(szText, psLocation->iLine, psLocation->iColumn), szLine.Text());
+				szLine.Kill();
+			}
+		}
+		else
+		{
+			AppendShortestQualifier(pcUnit, iName, szScope.Text(), szNew, &szQualifier);
+			if (bUsings && !szQualifier.Empty() && !bInside && (psLocation->szFileName.EndsWithIgnoreCase(".cpp") || psLocation->szFileName.EndsWithIgnoreCase(".c")))
+			{
+				szQualifier.Clear();
+				szLine.Init(szName);
+				szLine.Append('|')->Append(psLocation->szFileName);
+				paszUsings->AddIfUnique(szLine);
+				szLine.Kill();
+			}
+			pcUnit->GetTokensRange(iQualifier, iQualifier, &sRange);
+			pasDest->Add()->Init(psLocation->szFileName.Text(), FindIDETextOffset(szText, sRange.iLine, sRange.iColumn), FindIDETextOffset(szText, psLocation->iLine, psLocation->iColumn), szQualifier.Text());
+		}
+		(*puiUses)++;
+		szQualifier.Kill();
+		szScope.Kill();
+	}
+	KillIDELocations(&asLocations);
+	szName.Kill();
 }

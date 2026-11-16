@@ -103,6 +103,8 @@ struct SIDENamespaceMove
 	CChars					szWhyNot;
 	CArrayIDENamespaceSites	asSites;
 	CArrayChars				aszMembers;		//A class's members' keys, whose definitions move with it.
+	CArrayChars				aszTakers;		//A class's old namespace's functions that take it (argument dependent lookup finds them
+	CArrayChars				aszWith;		//through it), and those of them that go with it (question 63: the dialog's, ticked).
 
 	void	Init(void);
 	void	Kill(void);
@@ -152,6 +154,7 @@ public:
 	void	NamespaceTyped(CTextField* pcField);
 
 	bool	FindMove(SIDENamespaceMove* psDest);
+	void	TakeAllWith(SIDENamespaceMove* psMove);
 	bool	Move(SIDENamespaceMove* psMove, const char* szNamespace, bool bUsings, CChars* pszStatus);
 	char*	PrintMove(SIDENamespaceMove* psMove, CChars* pszDest);
 	void	KillUnits(void);
@@ -181,6 +184,10 @@ protected:
 	void				QualifyInside(SIDENamespaceMove* psMove, SIDENamespaceSite* psSite, const char* szNew, CIDEFileEdits* pcFiles, CArrayIDENamespaceEdits* pasDest);
 	void				FindConflicts(SIDENamespaceMove* psMove, const char* szNew, CIDEFileEdits* pcFiles, CArrayChars* paszDest);
 	void				JoinSites(SIDENamespaceMove* psMove, CIDEFileEdits* pcFiles);
+	bool				AddSites(SIDENamespaceMove* psMove, const char* szKey, CIDEFileEdits* pcFiles);
+	void				FindTakers(SIDENamespaceMove* psMove, CIDEFileEdits* pcFiles, CArrayChars* paszDest);
+	bool				IsMoved(SIDENamespaceMove* psMove, const char* szKey, const char* szScope);
+	void				MoveUses(SIDENamespaceMove* psMove, const char* szKey, const char* szNew, bool bUsings, CIDEFileEdits* pcFiles, CArrayIDENamespaceEdits* pasDest, CArrayChars* paszUsings, size* puiUses);
 };
 
 

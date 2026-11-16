@@ -83,6 +83,8 @@ Answered
     that take it (operator+(X, X) in Old).  I warn of them (Problems Detected) and leave them where they are; should
     they be offered to move with it?
     Answered 2026-11-16: offer to move them: listed in the dialog, ticked, to go to the new namespace with the class.
+    Done: the dialog's "Functions that take it" table, each ticked; those ticked move with the class as one undo
+    (their declarations, uses and labels), and Problems Detected warns only of those left.
 
  6. A value parameter of a template as itself has no value, and is 1 where the check needs one: "M maItems[N]" is
     an array of 1 inside the check.  Nothing I have built writes such an array's type; if a refactoring ever would,
