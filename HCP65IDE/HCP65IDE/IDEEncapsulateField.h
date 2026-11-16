@@ -98,10 +98,11 @@ struct SIDEEncapsulation
 
 
 //IntelliJ's Encapsulate Fields (Refactorings.txt, 12), for the field at the caret: the class gets a getter and a
-//setter for it, written in the class at the end of its public part as its short functions are
-//("int GetLevel(void) { return miLevel; }", "void SetLevel(int iLevel) { miLevel = iLevel; }"), and the places that
-//name the field outside the class's own functions (in them too, if asked) call those instead.  The field can be
-//made protected, which is what it is for.
+//setter for it, declared at the end of its public part and defined on one line each at the bottom of the class's
+//.cpp, where the one-line functions are ("int CTank::GetLevel(void) const { return miLevel; }"), the getter const
+//(question 44); in the class itself where it has no .cpp or is a template.  The places that name the field outside
+//the class's own functions (in them too, if asked) call those instead.  The field can be made protected, which is
+//what it is for.
 //
 //How each place uses the field is the compiler's answer (CCPPSemanticPass::FindChanges, from a kept check of its
 //file): a read becomes the getter; all of what an = assigns becomes the setter; a += or a ++ that is a statement by

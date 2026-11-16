@@ -76,9 +76,9 @@ struct SIDETypedef
 //
 //The typedef is written as they are here, "typedef CArrayTemplate<SIDEThing>	CArrayThings;", two blank lines before
 //whatever in the file first uses it (a function, a class, with the comment over it).  A type that names a template's
-//parameter can only be named where the parameter is: in a class template, the typedef is a member of the class,
-//before the member that first uses it, and the places are those in the class; otherwise it is a function's own, at
-//the start of its body, and the places are those in the function.
+//parameter can only be named where the parameter is: in a class template, the typedef is a member of the class, at
+//the top of the class with its other typedefs (question 34), and the places are those in the class; otherwise it is
+//a function's own, at the start of its body, and the places are those in the function.
 //
 //A place the type is written before the typedef can't use it, so the typedef goes before the first of the places
 //replaced.  Places a macro makes aren't looked at.

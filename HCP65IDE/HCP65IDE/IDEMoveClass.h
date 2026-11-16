@@ -119,8 +119,9 @@ struct SIDEFunctionMove
 //it declares, or before its #endif; its definition goes to the end of that header's source file, or, if a header
 //defines it (inline, a function template), to that header.  The files that name it #include the header it has gone
 //to, beside their #include of the one it left; and the files it goes to #include the headers that declare what its
-//text names, where they don't already (each named for the thing it declares: include what you use).  A static
-//function, and one in a namespace, are refused.
+//text names, where they don't already (each named for the thing it declares: include what you use).  One in a
+//namespace goes into a block of its namespace there (or one of its own); a variable template goes whole, with its
+//explicit specialisations after it.  A static function is refused.
 class CIDEMoveClass : public CObject
 {
 friend class CIDEExtractClass;
