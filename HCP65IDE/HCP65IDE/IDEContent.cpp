@@ -170,6 +170,7 @@ void CIDEContent::Init(void)
 
 	mcWorkspace.Init();
 	mcCodeModel.Init(&mcWorkspace);
+	mcFileTemplates.Init();
 	memset(&msDialogLook, 0, sizeof(msDialogLook));
 	maFileIcons.Init();
 	maSymbolIcons.Init();
@@ -257,6 +258,7 @@ void CIDEContent::Class(void)
 	M_Pointer(mpEditorMenu);
 	U_Unknown(CBuildWorkspace, mcWorkspace);
 	U_Unknown(CIDECodeModel, mcCodeModel);
+	U_Unknown(CIDEFileTemplates, mcFileTemplates);
 	M_Pointer(mpStatusBar);
 	M_Pointer(mpProgressLabel);
 	U_Bool(mbKeepSettings);
@@ -334,6 +336,7 @@ void CIDEContent::Free(void)
 	{
 		mpBuilding->StopBuild();
 	}
+	mcFileTemplates.Kill();
 	mcCodeModel.Kill();
 	mcWorkspace.Kill();
 }
@@ -1092,6 +1095,7 @@ Ptr<CDockPane> CIDEContent::GetClaudeTool(void) { return mpAskClaude->GetTool();
 
 
 CIDECodeModel* CIDEContent::GetCodeModel(void) { return &mcCodeModel; }
+CIDEFileTemplates* CIDEContent::GetFileTemplates(void) { return &mcFileTemplates; }
 Ptr<CIDEScript> CIDEContent::GetScript(void) { return mpScript; }
 CSolutionExplorer* CIDEContent::GetExplorer(void) { return &mpSolutions->GetExplorer(); }
 

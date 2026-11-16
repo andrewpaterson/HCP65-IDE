@@ -670,6 +670,7 @@ bool CIDEEncapsulateField::Encapsulate(SIDEEncapsulation* psEncapsulation, CChar
 	int32				iFirst;
 	int32				iLast;
 	bool				bResult;
+	bool				bTemplates;
 
 	if (!psEncapsulation->bPossible || GetProblem(psEncapsulation))
 	{
@@ -734,12 +735,14 @@ bool CIDEEncapsulateField::Encapsulate(SIDEEncapsulation* psEncapsulation, CChar
 	GetIDEScopedName(psEncapsulation->szClassKey.Text(), &szScoped);
 	szText.Init();
 	szLine.Init();
+	bTemplates = true;
 	if (psEncapsulation->bGetter)
 	{
 		szText.Append('\t')->Append(psEncapsulation->szType)->Append(psEncapsulation->bObject ? "*\t" : "\t")->Append(psEncapsulation->szGetter)->Append(psEncapsulation->bObject ? "(void)" : "(void) const");
 		szLine.Append(psEncapsulation->szType)->Append(psEncapsulation->bObject ? "* " : " ")->Append(szScoped)->Append("::")->Append(psEncapsulation->szGetter)->Append(psEncapsulation->bObject ? "(void)" : "(void) const");
-		szBody.Init(" { return ");
-		szBody.Append(psEncapsulation->bObject ? "&" : "")->Append(psEncapsulation->szName)->Append("; }\n");
+		szBody.Init(" { ");
+		bTemplates = mpcContent->GetFileTemplates()->ApplyCode(IDE_TEMPLATE_GETTER_BODY, &szBody, "FIELD", psEncapsulation->szName.Text(), "IS_OBJECT", psEncapsulation->bObject ? "true" : "", NULL);
+		szBody.Append(" }\n");
 		szText.Append(szFile ? ";\n" : szBody.Text());
 		szLine.Append(szBody);
 		szBody.Kill();
@@ -749,12 +752,13 @@ bool CIDEEncapsulateField::Encapsulate(SIDEEncapsulation* psEncapsulation, CChar
 		szText.Append("\tvoid\t")->Append(psEncapsulation->szSetter)->Append('(')->Append(psEncapsulation->szType)->Append(' ')->Append(psEncapsulation->szParameter)->Append(")");
 		szLine.Append("void ")->Append(szScoped)->Append("::")->Append(psEncapsulation->szSetter)->Append('(')->Append(psEncapsulation->szType)->Append(' ')->Append(psEncapsulation->szParameter)->Append(")");
 		szBody.Init(" { ");
-		szBody.Append(psEncapsulation->szName)->Append(" = ")->Append(psEncapsulation->szParameter)->Append("; }\n");
+		bTemplates = bTemplates && mpcContent->GetFileTemplates()->ApplyCode(IDE_TEMPLATE_SETTER_BODY, &szBody, "FIELD", psEncapsulation->szName.Text(), "PARAMETER", psEncapsulation->szParameter.Text(), NULL);
+		szBody.Append(" }\n");
 		szText.Append(szFile ? ";\n" : szBody.Text());
 		szLine.Append(szBody);
 		szBody.Kill();
 	}
-	bResult = pcMembers->AddMember(psEncapsulation->szClassKey.Text(), IDE_ACCESS_PUBLIC, szText.Text(), &cFiles);
+	bResult = bTemplates && pcMembers->AddMember(psEncapsulation->szClassKey.Text(), IDE_ACCESS_PUBLIC, szText.Text(), &cFiles);
 	if (bResult && szFile)
 	{
 		//Under the one-line functions the file ends with, or two lines under whatever else it ends with.
@@ -841,6 +845,20 @@ bool CIDEEncapsulateField::Encapsulate(SIDEEncapsulation* psEncapsulation, CChar
 		szMessage.Append(", ");
 		szMessage.Append((uint32)uiChanged);
 		szMessage.Append((uiChanged == 1) ? " place changed." : " places changed.");
+		if (pszStatus)
+		{
+			pszStatus->Set(szMessage);
+		}
+		else
+		{
+			mpcContent->ShowStatus(szMessage.Text());
+		}
+		szMessage.Kill();
+	}
+	else if (!bTemplates)
+	{
+		szMessage.Init("Encapsulate Field: ");
+		szMessage.Append(mpcContent->GetFileTemplates()->GetError())->Append('.');
 		if (pszStatus)
 		{
 			pszStatus->Set(szMessage);

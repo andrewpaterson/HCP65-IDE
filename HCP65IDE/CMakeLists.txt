@@ -1,5 +1,5 @@
 # Linux build of the HCP65 IDE (BaseLib + StandardLib + SupportLib + InputLib +
-# WindowLib + X11Lib + VisualStudioLib + BuildLib + GitLib + ClaudeLib + the IDE's window sources).
+# WindowLib + X11Lib + VisualStudioLib + BuildLib + GitLib + ClaudeLib + TemplateLib + the IDE's window sources).
 # HCP65IDE shows its window on the X display; HCP65IDERef draws it on WinRefLib's reference screen, in
 # memory, for the checks (Checks/IDEChecks.py) to run without a display.
 #
@@ -51,6 +51,7 @@ set(VISUALSTUDIOLIB_DIR "${IDE_ROOT}/Libraries/VisualStudioLib")
 set(BUILDLIB_DIR "${IDE_ROOT}/Libraries/BuildLib")
 set(GITLIB_DIR "${IDE_ROOT}/Libraries/GitLib")
 set(CLAUDELIB_DIR "${IDE_ROOT}/Libraries/ClaudeLib")
+set(TEMPLATELIB_DIR "${IDE_ROOT}/Libraries/TemplateLib")
 set(IDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/HCP65IDE")
 
 
@@ -125,6 +126,8 @@ vcxproj_sources(GITLIB_SOURCES "${GITLIB_DIR}/GitLib.vcxproj")
 
 vcxproj_sources(CLAUDELIB_SOURCES "${CLAUDELIB_DIR}/ClaudeLib.vcxproj")
 
+vcxproj_sources(TEMPLATELIB_SOURCES "${TEMPLATELIB_DIR}/TemplateLib.vcxproj")
+
 # Everything but a main: HCP65IDE.cpp (WinMain) is Windows only, HCP65IDELinux.cpp is the X11 IDE's and
 # HCP65IDERef.cpp the reference screen's.
 set(IDE_SOURCES
@@ -148,6 +151,7 @@ set(IDE_SOURCES
 	"${IDE_DIR}/IDEEdit.cpp"
 	"${IDE_DIR}/IDENavigator.cpp"
 	"${IDE_DIR}/IDERename.cpp"
+	"${IDE_DIR}/IDEFileTemplates.cpp"
 	"${IDE_DIR}/IDETemplateInterface.cpp"
 	"${IDE_DIR}/IDEConvertEnum.cpp"
 	"${IDE_DIR}/IDESolutionFileChooser.cpp"
@@ -287,13 +291,17 @@ target_link_libraries(GitLib PUBLIC StandardLib ThreadLib BaseLib)
 add_library(ClaudeLib STATIC ${CLAUDELIB_SOURCES})
 target_link_libraries(ClaudeLib PUBLIC ThreadLib BaseLib)
 
+# TemplateLib applies the file and code templates.
+add_library(TemplateLib STATIC ${TEMPLATELIB_SOURCES})
+target_link_libraries(TemplateLib PUBLIC BaseLib)
+
 add_library(WinRefLib STATIC ${WINREFLIB_SOURCES})
 target_link_libraries(WinRefLib PUBLIC WindowLib InputLib SupportLib StandardLib BaseLib)
 
 # The IDE, whichever window it is shown in.
 add_library(HCP65IDELib STATIC ${IDE_SOURCES})
 target_include_directories(HCP65IDELib PUBLIC "${IDE_DIR}")
-target_link_libraries(HCP65IDELib PUBLIC WindowLib InputLib BuildLib GitLib ClaudeLib VisualStudioLib CppCompilerLib Assembler65Lib EmulatorDebugLib MicroprocessorLib ThreadLib SupportLib StandardLib BaseLib)
+target_link_libraries(HCP65IDELib PUBLIC WindowLib InputLib BuildLib GitLib ClaudeLib TemplateLib VisualStudioLib CppCompilerLib Assembler65Lib EmulatorDebugLib MicroprocessorLib ThreadLib SupportLib StandardLib BaseLib)
 
 add_executable(HCP65IDE "${IDE_DIR}/HCP65IDELinux.cpp")
 target_link_libraries(HCP65IDE PRIVATE HCP65IDELib X11Lib)

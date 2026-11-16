@@ -144,7 +144,8 @@ protected:
 	bool				MoveFunctionToSource(SIDEFunction* psFunction, CIDEFileEdits* pcEdits, CChars* pszFileName, const char** pszWhyNot);
 	bool				MoveFunctionToHeader(SIDEFunction* psFunction, CIDEFileEdits* pcEdits, CChars* pszFileName, const char** pszWhyNot);
 	void				AppendParameters(SIDESignatureSite* psSite, const char* szText, bool bDefaults, CChars* pszDest);
-	void				AppendBanner(const char* szText, size uiDefinition, CChars* pszDest);
+	void				AppendBanner(const char* szText, size uiDefinition, CChars* pszDest, const char** pszWhyNot);
+	bool				AppendNewBanner(CChars* pszDest, const char** pszWhyNot);
 	size				FindBannerStart(const char* szText, size uiDefinition);
 	void				ShowDefinition(const char* szFileName, size uiAt);
 };

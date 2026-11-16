@@ -778,9 +778,11 @@ bool CIDETemplateInterface::Write(SIDETemplateInterface* psInterface, int iKind,
 	size			i;
 	size			j;
 	bool			bResult;
-	bool			bFirst;
 	CArrayChars		aszClasses;
+	CArrayChars		aszMembers;
 	CChars			szDerived;
+	CChars			szMember;
+	CTemplateValues	cValues;
 
 	szProblem = GetProblem(psInterface, iKind, szName);
 	cFiles.Init(mpcContent);
@@ -793,29 +795,42 @@ bool CIDETemplateInterface::Write(SIDETemplateInterface* psInterface, int iKind,
 	}
 	else if (iKind == IDE_INTERFACE_COMMENT)
 	{
+		//For each parameter, the Template Interface Comment template with the members it must have.
 		szBlock.Init();
-		for (i = 0; i < psInterface->aszParameters.NumElements(); i++)
+		for (i = 0; bResult && (i < psInterface->aszParameters.NumElements()); i++)
 		{
-			bFirst = true;
+			aszMembers.Init();
 			for (j = 0; j < psInterface->aszMemberNames.NumElements(); j++)
 			{
-				if (!psInterface->aszMemberParameters.Get(j)->Equals(psInterface->aszParameters.GetText(i)))
+				if (psInterface->aszMemberParameters.Get(j)->Equals(psInterface->aszParameters.GetText(i)))
 				{
-					continue;
+					szMember.Init();
+					AppendAligned(psInterface, j, "", &szMember);
+					aszMembers.Add(szMember.Text());
+					szMember.Kill();
 				}
-				if (bFirst)
-				{
-					szBlock.Append(psInterface->szIndent)->Append("//")->Append(psInterface->aszParameters.GetText(i))->Append(" must have:\n");
-					bFirst = false;
-				}
-				szBlock.Append(psInterface->szIndent)->Append("//\t");
-				AppendAligned(psInterface, j, "", &szBlock);
-				szBlock.Append(";\n");
 			}
+			if (aszMembers.NumElements() > 0)
+			{
+				cValues.Init();
+				cValues.Set("INDENT", psInterface->szIndent.Text());
+				cValues.Set("PARAMETER", psInterface->aszParameters.GetText(i));
+				cValues.SetList("MEMBERS", &aszMembers);
+				bResult = mpcContent->GetFileTemplates()->Apply(ITT_Code, IDE_TEMPLATE_INTERFACE_COMMENT, &cValues, &szBlock);
+				cValues.Kill();
+			}
+			aszMembers.Kill();
 		}
-		cFiles.GetEdits(psInterface->szFileName.Text())->Insert(psInterface->uiAt, szBlock.Text());
+		if (bResult)
+		{
+			cFiles.GetEdits(psInterface->szFileName.Text())->Insert(psInterface->uiAt, szBlock.Text());
+			szMessage.Append("Wrote what ")->Append(psInterface->szTemplate)->Append(" needs of its parameters as a comment: ");
+		}
+		else
+		{
+			szMessage.Append("Write Template's Interface: ")->Append(mpcContent->GetFileTemplates()->GetError())->Append('.');
+		}
 		szBlock.Kill();
-		szMessage.Append("Wrote what ")->Append(psInterface->szTemplate)->Append(" needs of its parameters as a comment: ");
 	}
 	else
 	{

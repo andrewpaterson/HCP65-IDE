@@ -50,6 +50,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "ClaudeLib/ClaudeCommand.h"
 #include "BaseLib/UndoLog.h"
 #include "IDECodeModel.h"
+#include "IDEFileTemplates.h"
 #include "IDEEditorTab.h"
 #include "IDEDiffTab.h"
 #include "IDEBuildPane.h"
@@ -229,6 +230,7 @@ protected:
 	Ptr<CIDEAskClaude>			mpAskClaude;		//The Claude tab's requests.
 	CBuildWorkspace				mcWorkspace;		//The solutions open, one the startup solution.
 	CIDECodeModel				mcCodeModel;		//Uses mcWorkspace; initialised when a solution is opened.
+	CIDEFileTemplates			mcFileTemplates;	//The file and code templates new files and generated code are written from.
 
 	Ptr<CStatusBar>				mpStatusBar;		//Along the bottom: what last went wrong, or was done, for a while,
 	Ptr<CLabel>					mpProgressLabel;	//and on its right what is being done in the background (indexing).
@@ -268,6 +270,7 @@ public:
 	Ptr<CDockPane>		GetDebugTool(void);
 	Ptr<CDockPane>		GetClaudeTool(void);
 	CIDECodeModel*		GetCodeModel(void);
+	CIDEFileTemplates*	GetFileTemplates(void);
 
 	CSolutionExplorer*	GetExplorer(void);
 	CBuildWorkspace*	GetWorkspace(void);

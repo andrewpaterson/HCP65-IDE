@@ -32,7 +32,6 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDEContextActions.h"
 
 
-#define IDE_DEFINITION_BANNER	"//////////////////////////////////////////////////////////////////////////\n//\n//\n//////////////////////////////////////////////////////////////////////////\n"
 #define IDE_DEFINITION_ONE_LINE	60	//A body of one statement this long or shorter stays on its declaration's line in a class.
 
 #define IDE_PLACE_AFTER		0	//After the definition of the function declared before it.
@@ -789,10 +788,11 @@ size CIDEDefinitions::FindBannerStart(const char* szText, size uiDefinition)
 // The comment to go over a new definition, like the one over the
 // definition at uiDefinition of szText: that one's lines, if they say
 // nothing (a banner of slashes with nothing written in it, as most of a
-// file's are); otherwise the plain banner.
+// file's are); otherwise the Definition Banner template's.  *pszWhyNot is
+// set if that has an error.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEDefinitions::AppendBanner(const char* szText, size uiDefinition, CChars* pszDest)
+void CIDEDefinitions::AppendBanner(const char* szText, size uiDefinition, CChars* pszDest, const char** pszWhyNot)
 {
 	size	uiStart;
 	size	uiEnd;
@@ -820,8 +820,25 @@ void CIDEDefinitions::AppendBanner(const char* szText, size uiDefinition, CChars
 	}
 	else
 	{
-		pszDest->Append(IDE_DEFINITION_BANNER);
+		AppendNewBanner(pszDest, pszWhyNot);
 	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The comment over a new definition with nothing to copy it from: the
+// Definition Banner template's.  False, with why, if it has an error.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEDefinitions::AppendNewBanner(CChars* pszDest, const char** pszWhyNot)
+{
+	if (!mpcContent->GetFileTemplates()->ApplyCode(IDE_TEMPLATE_DEFINITION_BANNER, pszDest, NULL))
+	{
+		*pszWhyNot = mpcContent->GetFileTemplates()->GetError();
+		return false;
+	}
+	return true;
 }
 
 
@@ -1018,7 +1035,7 @@ bool CIDEDefinitions::FindDefinitionPlace(SIDEFunction* psFunction, CIDEFileEdit
 		}
 		else if (*piWhere == IDE_PLACE_AFTER)
 		{
-			AppendBanner(szText, FindIDETextOffset(szText, sSibling.sAll.iLine, sSibling.sAll.iColumn), pszBanner);
+			AppendBanner(szText, FindIDETextOffset(szText, sSibling.sAll.iLine, sSibling.sAll.iColumn), pszBanner, pszWhyNot);
 			for (*puiAt = FindIDETextOffset(szText, sSibling.sAll.iEndLine, sSibling.sAll.iEndColumn); (szText[*puiAt] != '\0') && (szText[*puiAt] != '\n'); (*puiAt)++)
 			{
 			}
@@ -1029,7 +1046,7 @@ bool CIDEDefinitions::FindDefinitionPlace(SIDEFunction* psFunction, CIDEFileEdit
 		}
 		else
 		{
-			AppendBanner(szText, FindIDETextOffset(szText, sSibling.sAll.iLine, sSibling.sAll.iColumn), pszBanner);
+			AppendBanner(szText, FindIDETextOffset(szText, sSibling.sAll.iLine, sSibling.sAll.iColumn), pszBanner, pszWhyNot);
 			*puiAt = FindBannerStart(szText, FindIDETextOffset(szText, sSibling.sAll.iLine, sSibling.sAll.iColumn));
 		}
 		sSibling.Kill();
@@ -1039,7 +1056,7 @@ bool CIDEDefinitions::FindDefinitionPlace(SIDEFunction* psFunction, CIDEFileEdit
 		//Before the header's closing #endif, or at its end.
 		pszFileName->Set(psDeclared->szFileName);
 		szText = pcEdits->GetText(psDeclared->szFileName.Text());
-		pszBanner->Append(IDE_DEFINITION_BANNER);
+		AppendNewBanner(pszBanner, pszWhyNot);
 		if (!szText)
 		{
 			*pszWhyNot = "its header couldn't be opened";
@@ -1074,7 +1091,7 @@ bool CIDEDefinitions::FindDefinitionPlace(SIDEFunction* psFunction, CIDEFileEdit
 		}
 		aszRelated.Kill();
 		szText = pszFileName->Empty() ? NULL : pcEdits->GetText(pszFileName->Text());
-		pszBanner->Append(IDE_DEFINITION_BANNER);
+		AppendNewBanner(pszBanner, pszWhyNot);
 		if (!szText)
 		{
 			*pszWhyNot = psDeclared->bInClass ? "none of its class's functions is defined outside it, and its header has no source file in the solution to define it in" :
@@ -1162,6 +1179,7 @@ bool CIDEDefinitions::PutDefinition(SIDEFunction* psFunction, CIDEFileEdits* pcE
 	SIDESignatureSite*	psDeclared;
 	CChars				szBanner;
 	CChars				szDefinition;
+	CChars				szNewBody;
 	char*				szDeclarationText;
 	char*				szText;
 	int					iWhere;
@@ -1183,6 +1201,22 @@ bool CIDEDefinitions::PutDefinition(SIDEFunction* psFunction, CIDEFileEdits* pcE
 		return false;
 	}
 
+	//A new function's body, with none given: the New Function Body template's between its braces.
+	szNewBody.Init();
+	if (!szBody)
+	{
+		szNewBody.Append("{\n");
+		if (!mpcContent->GetFileTemplates()->ApplyCode(IDE_TEMPLATE_NEW_FUNCTION_BODY, &szNewBody, "FUNCTION_NAME", psFunction->szName.Text(), "BODY", "", NULL))
+		{
+			*pszWhyNot = mpcContent->GetFileTemplates()->GetError();
+			szNewBody.Kill();
+			szBanner.Kill();
+			return false;
+		}
+		szNewBody.Append("}");
+		szBody = szNewBody.Text();
+	}
+
 	szDefinition.Init();
 	if (iWhere != IDE_PLACE_BEFORE)
 	{
@@ -1196,6 +1230,7 @@ bool CIDEDefinitions::PutDefinition(SIDEFunction* psFunction, CIDEFileEdits* pcE
 	}
 	pcEdits->GetEdits(pszFileName->Text())->Insert(*puiAt, szDefinition.Text());
 	szDefinition.Kill();
+	szNewBody.Kill();
 	szBanner.Kill();
 	return true;
 }

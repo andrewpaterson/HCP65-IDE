@@ -148,6 +148,37 @@ How it is made (planned again 2026-11-16, before building)
       by the IDE checks as it moves.
 
 
+Progress
+--------
+
+  Step 1 (the engine): committed fa2314a, 2026-11-16.  TestTemplateLib, 74 tests, passes on Windows and Linux.
+  A C++ #else or #end in a template is written \#else, since both are Velocity's directives.
+
+  Step 2, broken down (2026-11-16), each part committed with the IDE checks run:
+    2a. CIDEFileTemplates (IDEFileTemplates.h): the built-in templates by tab and name, and Apply(tab, name,
+        values, dest) with the Includes as #parse's; HCP65IDE links TemplateLib (HCP65IDE.vcxproj and the
+        CMakeLists.txt).  No caller yet.
+    2b. The Code templates, byte for byte what is written now, each generator moved onto its template:
+          Definition Banner     IDEDefinitions.cpp IDE_DEFINITION_BANNER (AppendBanner keeps copying a sibling's
+                                banner that says nothing, as now: the template is the banner when there is none),
+                                IDEExtractMethod.cpp IDE_EXTRACT_BANNER;
+          New Function Body     IDEDefinitions.cpp's empty body ({ and } on lines of their own), IDEExtractMethod's
+                                around ${BODY};
+          Getter, Setter        IDEEncapsulateField.cpp (one line each, ${TYPE}, ${NAME}, ${FIELD}, ${PARAMETER},
+                                ${CONST} for "const" or nothing);
+          Init Function         IDEExtractClass.cpp's "void Init(void) {}" and "::Init(void)\n{\n}\n";
+          Template Interface Comment  IDETemplateInterface.cpp's "//M must have:" and its "//\t" lines;
+          Overriding Function Body    where Pull Up, Push Down and Extract Interface write one.
+        The checks pass unchanged: that is the proof.
+    2c. The Files templates for the refactorings that make a file (Move Class, Copy Class, Extract Superclass,
+        Interface and Class: CIDEMoveClass's new header and source, CIDEExtractClass's): C++ Header and C++ Source
+        with ${INCLUDES} and ${BODY}, the guard from Include Guard Open/Close, the licence from File Header.
+        What is inferred from the old file goes (plan item 7): its opening comment, its guard's form, #pragma once.
+        The project's licence comes in here (<Project>.hcp65project beside the .vcxproj, LGPL 3 unless set), so
+        the checks' projects, whose files have no licence comment, are made with "Licence: none".  A check whose
+        output changes is listed in the commit with why.
+
+
 Questions (answered 2026-11-16)
 -------------------------------
 

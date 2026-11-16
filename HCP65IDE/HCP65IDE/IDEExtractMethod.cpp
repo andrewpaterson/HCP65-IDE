@@ -33,7 +33,6 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDEContextActions.h"
 
 
-#define IDE_EXTRACT_BANNER	"//////////////////////////////////////////////////////////////////////////\n//\n//\n//////////////////////////////////////////////////////////////////////////\n"
 #define IDE_EXTRACT_NO_TOKEN	0x7fffffff
 
 
@@ -1659,6 +1658,8 @@ bool CIDEExtractMethod::Extract(SIDEExtraction* psExtraction, const char* szName
 	CChars					szMemberIndent;
 	CChars					szMessage;
 	CChars					szWhyNot;
+	CChars					szApplied;
+	CChars					szBanner;
 	SIDEExtractDuplicate*	psDuplicate;
 	CArrayInt				aiTaken;
 	const char*				szProblem;
@@ -1779,6 +1780,33 @@ bool CIDEExtractMethod::Extract(SIDEExtraction* psExtraction, const char* szName
 		}
 	}
 
+	//The body as the New Function Body template has it, and the banner over a definition outside the class.
+	szApplied.Init();
+	szBanner.Init();
+	if (!mpcContent->GetFileTemplates()->ApplyCode(IDE_TEMPLATE_NEW_FUNCTION_BODY, &szApplied, "FUNCTION_NAME", szName, "BODY", szBody.Text(), NULL) ||
+		(!psExtraction->sFunction.bInClass && !mpcContent->GetFileTemplates()->ApplyCode(IDE_TEMPLATE_DEFINITION_BANNER, &szBanner, NULL)))
+	{
+		szMessage.Init("Extract Method: ");
+		szMessage.Append(mpcContent->GetFileTemplates()->GetError())->Append('.');
+		if (pszStatus)
+		{
+			pszStatus->Set(szMessage);
+		}
+		else
+		{
+			mpcContent->ShowStatus(szMessage.Text());
+		}
+		szMessage.Kill();
+		szBanner.Kill();
+		szApplied.Kill();
+		szSelected.Kill();
+		szBody.Kill();
+		cFiles.Kill();
+		return false;
+	}
+	szBody.Set(szApplied);
+	szApplied.Kill();
+
 	//Its definition: in the class if the function it came from is defined there, otherwise outside with what that
 	//one writes before its name.
 	szDefinition.Init();
@@ -1794,7 +1822,7 @@ bool CIDEExtractMethod::Extract(SIDEExtraction* psExtraction, const char* szName
 	}
 	else
 	{
-		szDefinition.Append(IDE_EXTRACT_BANNER);
+		szDefinition.Append(szBanner);
 		if (!psExtraction->sFunction.szOwnTemplate.Empty())
 		{
 			szDefinition.Append(psExtraction->sFunction.szOwnTemplate)->Append('\n');
@@ -1960,6 +1988,7 @@ bool CIDEExtractMethod::Extract(SIDEExtraction* psExtraction, const char* szName
 	szCall.Kill();
 	szMemberIndent.Kill();
 	szDefinition.Kill();
+	szBanner.Kill();
 	szSelected.Kill();
 	szBody.Kill();
 	cFiles.Kill();

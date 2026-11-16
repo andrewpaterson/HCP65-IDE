@@ -315,6 +315,7 @@
     <ClCompile Include="IDEEdit.cpp" />
     <ClCompile Include="IDENavigator.cpp" />
     <ClCompile Include="IDERename.cpp" />
+    <ClCompile Include="IDEFileTemplates.cpp" />
     <ClCompile Include="IDETemplateInterface.cpp" />
     <ClCompile Include="IDEConvertEnum.cpp" />
     <ClCompile Include="IDESolutionFileChooser.cpp" />
@@ -392,6 +393,7 @@
     <ClInclude Include="IDEEdit.h" />
     <ClInclude Include="IDENavigator.h" />
     <ClInclude Include="IDERename.h" />
+    <ClInclude Include="IDEFileTemplates.h" />
     <ClInclude Include="IDETemplateInterface.h" />
     <ClInclude Include="IDEConvertEnum.h" />
     <ClInclude Include="IDESolutionFileChooser.h" />
@@ -493,6 +495,9 @@
     </ProjectReference>
     <ProjectReference Include="..\..\Libraries\ClaudeLib\ClaudeLib.vcxproj">
       <Project>{3c7a1e52-8f4b-4d6a-9e2c-5b1d7f0a4c93}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Libraries\TemplateLib\TemplateLib.vcxproj">
+      <Project>{195e10aa-f7af-4785-b8b4-44fceb3433a6}</Project>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
