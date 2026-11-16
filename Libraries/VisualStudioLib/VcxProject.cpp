@@ -970,6 +970,212 @@ bool CVcxProject::RemoveIncludes(const char* szFileName, CArrayChars* paszInclud
 
 //////////////////////////////////////////////////////////////////////////
 //
+// The kind of item a file is: a ClInclude for a header, a ClCompile for a
+// C or C++ source file, None for anything else.
+//
+//////////////////////////////////////////////////////////////////////////
+const char* CVcxProject::GetItemElement(const char* szFileName)
+{
+	const char*	szDot;
+
+	szDot = strrchr(szFileName, '.');
+	if (szDot && ((StringInsensitiveCompare(szDot, ".h") == 0) || (StringInsensitiveCompare(szDot, ".hpp") == 0) || (StringInsensitiveCompare(szDot, ".inl") == 0)))
+	{
+		return "ClInclude";
+	}
+	if (szDot && ((StringInsensitiveCompare(szDot, ".cpp") == 0) || (StringInsensitiveCompare(szDot, ".c") == 0) || (StringInsensitiveCompare(szDot, ".cc") == 0)))
+	{
+		return "ClCompile";
+	}
+	return "None";
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A new item for the file at szPath, which is in the project's directory
+// or under it: its kind (GetItemElement) after the last item of that kind
+// (in an ItemGroup of its own if there is none) and, in its .filters, in
+// szFilter (NULL or "" for none).  For a file with no other to go beside
+// (AddItemBeside): New's.  The project is read again.  False if the
+// project has an item for it already, or it isn't under the project's
+// directory.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CVcxProject::AddItem(const char* szPath, const char* szFilter)
+{
+	CChars		szInclude;
+	CChars		szItemPath;
+	CChars		szFileName;
+	CChars		szFilters;
+	CChars		szDirectory;
+	CChars		szStart;
+	const char*	szElement;
+	size		uiDirectory;
+	size		i;
+	bool		bResult;
+
+	//Under the project's directory, either separator.
+	uiDirectory = mszDirectory.Length();
+	szDirectory.Init(mszDirectory);
+	szDirectory.Replace('/', '\\');
+	szStart.Init();
+	if (strlen(szPath) > uiDirectory)
+	{
+		szStart.Append(szPath, uiDirectory);
+		szStart.Replace('/', '\\');
+	}
+	bResult = (uiDirectory > 0) && !szStart.Empty() && (StringInsensitiveCompare(szStart.Text(), szDirectory.Text()) == 0);
+	szStart.Kill();
+	szDirectory.Kill();
+	if (!bResult)
+	{
+		return false;
+	}
+	szInclude.Init(&szPath[uiDirectory]);
+	while (szInclude.StartsWith("\\") || szInclude.StartsWith("/"))
+	{
+		szInclude.RemoveCharacter(0);
+	}
+	szInclude.Replace('/', '\\');
+	bResult = !szInclude.Empty();
+	for (i = 0; bResult && (i < masItems.NumElements()); i++)
+	{
+		szItemPath.Init();
+		GetFullPath(masItems.Get(i), &szItemPath);
+		bResult = (StringInsensitiveCompare(szItemPath.Text(), szPath) != 0);
+		szItemPath.Kill();
+	}
+	if (!bResult)
+	{
+		szInclude.Kill();
+		return false;
+	}
+
+	szElement = GetItemElement(szInclude.Text());
+	szFileName.Init(mszFileName);
+	szFilters.Init(mszFileName);
+	szFilters.Append(".filters");
+	bResult = AddElement(szFileName.Text(), szElement, szInclude.Text(), NULL);
+	if (bResult && mbFilters)
+	{
+		bResult = AddElement(szFilters.Text(), szElement, szInclude.Text(), (szFilter && (szFilter[0] != '\0')) ? szFilter : NULL);
+	}
+	szFilters.Kill();
+	szInclude.Kill();
+
+	Kill();
+	Init();
+	if (!Read(szFileName.Text()))
+	{
+		bResult = false;
+	}
+	szFileName.Kill();
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// An element <szElement Include="szInclude" /> in szFileName's text (a
+// .vcxproj or its .filters), with a <Filter> in it if szFilter isn't
+// NULL: after the last element of its kind, or in an ItemGroup of its own
+// before the .vcxproj's Microsoft.Cpp.targets import (or the end of the
+// project).  The file is written.  False if it can't be read or written.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CVcxProject::AddElement(const char* szFileName, const char* szElement, const char* szInclude, const char* szFilter)
+{
+	CTextFile	cFile;
+	CChars		szText;
+	CChars		szOpen;
+	CChars		szClose;
+	CChars		szLine;
+	const char*	szNewLine;
+	const char*	szFound;
+	const char*	szLast;
+	const char*	szClosing;
+	size		uiAt;
+	bool		bResult;
+
+	cFile.Init();
+	if (!cFile.Read(szFileName))
+	{
+		cFile.Kill();
+		return false;
+	}
+	szText.Init();
+	szText.AppendSubString(cFile.Text(), (size)cFile.Length());
+	cFile.Kill();
+	szNewLine = strstr(szText.Text(), "\r\n") ? "\r\n" : "\n";
+
+	szLine.Init("    <");
+	szLine.Append(szElement)->Append(" Include=\"")->Append(szInclude)->Append('"');
+	if (szFilter)
+	{
+		szLine.Append('>')->Append(szNewLine)->Append("      <Filter>")->Append(szFilter)->Append("</Filter>")->Append(szNewLine);
+		szLine.Append("    </")->Append(szElement)->Append('>')->Append(szNewLine);
+	}
+	else
+	{
+		szLine.Append(" />")->Append(szNewLine);
+	}
+
+	//After the last of its kind: the end of the line its element ends on.
+	szOpen.Init("<");
+	szOpen.Append(szElement)->Append(" Include=\"");
+	szClose.Init("</");
+	szClose.Append(szElement)->Append('>');
+	szLast = NULL;
+	for (szFound = strstr(szText.Text(), szOpen.Text()); szFound; szFound = strstr(szFound + 1, szOpen.Text()))
+	{
+		szLast = szFound;
+	}
+	if (szLast)
+	{
+		for (szFound = szLast; (*szFound != '\0') && (*szFound != '>'); szFound++)
+		{
+		}
+		if ((szFound > szLast) && (szFound[-1] != '/'))
+		{
+			szClosing = strstr(szFound, szClose.Text());
+			szFound = szClosing ? szClosing + szClose.Length() - 1 : szFound;
+		}
+		for (; (*szFound != '\0') && (*szFound != '\n'); szFound++)
+		{
+		}
+		uiAt = (size)(szFound - szText.Text()) + ((*szFound == '\n') ? 1 : 0);
+	}
+	else
+	{
+		//In an ItemGroup of its own, on the line before the targets' import or the project's end.
+		szFound = strstr(szText.Text(), "<Import Project=\"$(VCTargetsPath)\\Microsoft.Cpp.targets\"");
+		szFound = szFound ? szFound : strstr(szText.Text(), "</Project>");
+		uiAt = szFound ? (size)(szFound - szText.Text()) : szText.Length();
+		while ((uiAt > 0) && (szText.Text()[uiAt - 1] != '\n'))
+		{
+			uiAt--;
+		}
+		szLine.Insert(0, szNewLine);
+		szLine.Insert(0, "  <ItemGroup>");
+		szLine.Append("  </ItemGroup>")->Append(szNewLine);
+	}
+	szText.Insert(uiAt, szLine.Text());
+	szClose.Kill();
+	szOpen.Kill();
+	szLine.Kill();
+
+	cFile.Init();
+	cFile.mcText.AppendSubString(szText.Text(), (lsize)szText.Length());
+	bResult = cFile.Write(szFileName);
+	cFile.Kill();
+	szText.Kill();
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // After the first element of szFileName's text with an Include="..."
 // whose value is one of paszIncludes (any case), a copy of that element
 // with szNewName in place of the value's file name: all of it (bWhole: a

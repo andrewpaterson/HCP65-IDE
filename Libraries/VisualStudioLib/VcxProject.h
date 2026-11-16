@@ -70,6 +70,8 @@ public:
 	void					GetFullPath(CVcxItem* pcItem, CChars* pszDest);
 	bool					RenameItem(const char* szOldPath, const char* szNewName);
 	bool					AddItemBeside(const char* szExistingPath, const char* szNewName);
+	bool					AddItem(const char* szPath, const char* szFilter);
+	static const char*		GetItemElement(const char* szFileName);
 	bool					RemoveItem(const char* szPath);
 
 	size					NumFilters(void);
@@ -89,6 +91,7 @@ protected:
 	bool					ReadFilters(CMarkupTag* pcProject);
 	bool					RenameIncludes(const char* szFileName, CArrayChars* paszIncludes, const char* szNewName);
 	bool					AddIncludesBeside(const char* szFileName, CArrayChars* paszIncludes, const char* szNewName, bool bWhole);
+	bool					AddElement(const char* szFileName, const char* szElement, const char* szInclude, const char* szFilter);
 	bool					RemoveIncludes(const char* szFileName, CArrayChars* paszIncludes);
 	void					ReadItemGroup(CMarkupTag* pcItemGroup);
 	void					ReadPropertyGroup(CMarkupTag* pcPropertyGroup);

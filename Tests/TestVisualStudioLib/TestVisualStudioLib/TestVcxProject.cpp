@@ -470,6 +470,73 @@ void TestVcxProjectAddItemBeside(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Items added with nothing to go beside (New's), in a copy of
+// Input/RenameItem/Before: each the kind its extension says, after the
+// last of its kind, in the filter given or none; a kind the project has
+// none of yet in an ItemGroup of its own.  Nothing is added for a file
+// that is an item already, or isn't under the project's directory.
+//
+//////////////////////////////////////////////////////////////////////////
+void TestVcxProjectAddItem(void)
+{
+	CVcxProject	cProject;
+	CVcxItem*	pcItem;
+	CChars		szPath;
+	CTextFile	cFile;
+	CFileUtil	cFileUtil;
+
+	cFileUtil.RemoveDir("Output" _FS_ "AddNewItem");
+	AssertTrue(cFileUtil.TouchDir("Output" _FS_ "AddNewItem"));
+	AssertTrue(cFileUtil.CopyDir("Input" _FS_ "RenameItem" _FS_ "Before", "Output" _FS_ "AddNewItem"));
+
+	cProject.Init();
+	AssertTrue(cProject.Read("Output" _FS_ "AddNewItem" _FS_ "RenameLib" _FS_ "RenameLib.vcxproj"));
+	AssertSize(5, cProject.NumItems());
+
+	ProjectPath(&cProject, "Piston.h", &szPath);
+	AssertTrue(cProject.AddItem(szPath.Text(), "Header Files"));
+	AssertFalse(cProject.AddItem(szPath.Text(), "Header Files"));
+	szPath.Kill();
+	ProjectPath(&cProject, "Source" _FS_ "Valve.cpp", &szPath);
+	AssertTrue(cProject.AddItem(szPath.Text(), NULL));
+	szPath.Kill();
+	ProjectPath(&cProject, "Notes.txt", &szPath);
+	AssertTrue(cProject.AddItem(szPath.Text(), ""));
+	szPath.Kill();
+	ProjectPath(&cProject, "Engine.h", &szPath);
+	AssertFalse(cProject.AddItem(szPath.Text(), NULL));
+	szPath.Kill();
+	AssertFalse(cProject.AddItem("Elsewhere" _FS_ "Other.h", NULL));
+
+	AssertSize(8, cProject.NumItems());
+	pcItem = cProject.FindItem("ClInclude", "Piston.h");
+	AssertNotNull(pcItem);
+	AssertString("Header Files", pcItem->GetFilter());
+	pcItem = cProject.FindItem("ClCompile", "Source\\Valve.cpp");
+	AssertNotNull(pcItem);
+	AssertString("", pcItem->GetFilter());
+	AssertNotNull(cProject.FindItem("None", "Notes.txt"));
+
+	cFile.Init();
+	AssertTrue(cFile.Read("Output" _FS_ "AddNewItem" _FS_ "RenameLib" _FS_ "RenameLib.vcxproj"));
+	cFile.mcText.Replace("\r", "");
+	AssertTrue(cFile.mcText.Contains("    <ClInclude Include=\"Piston.h\" />\n"));
+	AssertTrue(cFile.mcText.Contains("    <None Include=\"Notes.txt\" />\n  </ItemGroup>\n"));
+	cFile.Kill();
+	cFile.Init();
+	AssertTrue(cFile.Read("Output" _FS_ "AddNewItem" _FS_ "RenameLib" _FS_ "RenameLib.vcxproj.filters"));
+	cFile.mcText.Replace("\r", "");
+	AssertTrue(cFile.mcText.Contains("    <ClInclude Include=\"Piston.h\">\n      <Filter>Header Files</Filter>\n    </ClInclude>\n"));
+	AssertTrue(cFile.mcText.Contains("    <ClCompile Include=\"Source\\Valve.cpp\" />\n"));
+	cFile.Kill();
+
+	cProject.Kill();
+	cFileUtil.RemoveDir("Output" _FS_ "AddNewItem");
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 //
 //////////////////////////////////////////////////////////////////////////
 void TestVcxProject(void)
@@ -482,6 +549,7 @@ void TestVcxProject(void)
 	TestVcxProjectBad();
 	TestVcxProjectRenameItem();
 	TestVcxProjectAddItemBeside();
+	TestVcxProjectAddItem();
 
 	TestStatistics();
 }
