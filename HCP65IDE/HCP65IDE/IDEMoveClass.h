@@ -166,6 +166,7 @@ public:
 	char*	PrintMove(SIDEClassMove* psMove, CChars* pszDest);
 	bool	FindFunctionMove(SIDEFunctionMove* psDest);
 	void	FindSpecialisations(const char* szFileName, SIDEFunctionMove* psDest);
+	bool	IsInExplicitSpecialisation(CIDERefactorUnit* pcUnit, SIDELocation* psLocation);
 	void	AppendNamespacedBlock(const char* szNamespace, const char* szText, SIDEFileRange* psRange, const char* szTarget, const char* szTargetText, CIDEFileEdits* pcEdits, size* puiAt, CChars* pszDest);
 	bool	FindFunctionProblem(SIDEFunctionMove* psMove, const char* szHeaderName, CChars* pszHeader, CChars* pszSource, CChars* pszDest);
 	bool	MoveFunction(SIDEFunctionMove* psMove, const char* szHeader, const char* szSource, CChars* pszStatus = NULL);

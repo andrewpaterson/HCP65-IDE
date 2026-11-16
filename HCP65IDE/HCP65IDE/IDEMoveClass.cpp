@@ -1894,6 +1894,11 @@ bool CIDEMoveClass::FindFunctionMove(SIDEFunctionMove* psDest)
 			continue;
 		}
 		pcUnit = (pcModel->FindProjectOfFile(psLocation->szFileName.Text()) != MAX_SIZE) ? GetUnit(psLocation->szFileName.Text()) : NULL;
+		if ((uiKind == CPPSK_VariableTemplate) && pcUnit && IsInExplicitSpecialisation(pcUnit, psLocation))
+		{
+			//An explicit specialisation's name (if the index has it as a declaration): FindSpecialisations' to move.
+			continue;
+		}
 		bRead = false;
 		bBody = (psLocation->uiRole == CPPIR_Definition);
 		if (pcUnit && psDest->bFunction)
@@ -1971,7 +1976,8 @@ bool CIDEMoveClass::FindFunctionMove(SIDEFunctionMove* psDest)
 	}
 	for (i = 0; psDest->bMovable && (uiKind == CPPSK_VariableTemplate) && (i < asLocations.NumElements()); i++)
 	{
-		//A variable template's explicit specialisations, with it in the files that declare it.
+		//A variable template's explicit specialisations, with it in the files that declare it (found in their syntax,
+		//so the same whether or not the index has their names as its declarations).
 		if (asLocations.Get(i)->uiRole != CPPIR_Reference)
 		{
 			FindSpecialisations(asLocations.Get(i)->szFileName.Text(), psDest);
@@ -1989,6 +1995,23 @@ bool CIDEMoveClass::FindFunctionMove(SIDEFunctionMove* psDest)
 	KillUnits();
 	mpcContent->GetMoveNamespace()->KillUnits();
 	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether a place is in an explicit specialisation (a template<>
+// declaration).
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEMoveClass::IsInExplicitSpecialisation(CIDERefactorUnit* pcUnit, SIDELocation* psLocation)
+{
+	CCPPSyntax*	pcTemplate;
+	int32		iToken;
+
+	iToken = pcUnit->FindTokenAt(psLocation->iLine, psLocation->iColumn);
+	pcTemplate = (iToken >= 0) ? pcUnit->FindAncestor(pcUnit->FindNodeOfTokens(iToken, iToken), CPPS_TemplateDeclaration) : NULL;
+	return pcTemplate && pcUnit->IsToken(pcTemplate->miFirstToken, "template") && pcUnit->IsToken(pcTemplate->miFirstToken + 1, "<") && pcUnit->IsToken(pcTemplate->miFirstToken + 2, ">");
 }
 
 
