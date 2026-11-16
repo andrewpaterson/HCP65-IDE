@@ -33,9 +33,11 @@ words split as __IDE_MOVE_CLASS_H__, #pragma once kept), its blank lines (CIDEMo
 Class, Copy Class, Extract Superclass, Interface and Class).  Code the generators write (an empty body, the banner
 of slashes over a definition, a getter, an Init) is written in each generator.
 
-The licence differs by library: WindowLib and the CommonLibraries are LGPL, the IDE is AGPL, Libc65's headers have
-none, and each names its library ("This file is part of The Codaphela Project: Codaphela WindowLib").  With
-"templates always", the File Header has to know which: see question T1.
+The licence differs by library today: WindowLib and the CommonLibraries are LGPL, the IDE is AGPL, Libc65's headers
+have none, and each names its library ("This file is part of The Codaphela Project: Codaphela WindowLib").  They are
+all meant to be LGPL (the user, 2026-11-16: the AGPL was chosen by mistake on GitHub; putting it right is
+Refactorings.txt's "When the plan is done", f).  The File Header still has to know a project's licence, since
+some have none (T1).
 
 
 What is built
@@ -55,7 +57,7 @@ What is built
        ${CLASS_NAME}      the class's ("CKeg"), and ${CLASS_STEM} without its prefix ("Keg");
        ${FILE_NAME}, ${HEADER_FILENAME}, ${INCLUDE_GUARD} ("__KEG_H__", made from the file's name as now);
        ${PROJECT_NAME}    the .vcxproj's name ("WindowLib"), ${SOLUTION_NAME}, ${DIRECTORY};
-       ${USER}, ${AUTHOR} (from Settings; your name), ${YEAR} and the other dates;
+       ${USER}, ${AUTHOR} (Settings' field, or git's user.name where it is empty), ${YEAR} and the other dates;
        ${NAMESPACES_OPEN}, ${NAMESPACES_CLOSE} (empty until namespaces are done, plan item 21);
        ${BASE_CLASS}, ${BASE_INCLUDE}, ${INCLUDES}, ${FORWARD_DECLARATIONS}, ${BODY}: what a refactoring hands the
        template (a class's members, its #includes), so the template lays out what goes round them.
@@ -84,7 +86,7 @@ What is built
      colours ${...} and #directives, with the error at the caret if it has one.  Under it, the list of the
      variables it can use and what each is.  A child template (the C++ Class's .cpp) is under its parent in the
      list.  OK saves the changed files; Cancel throws them away.
-  6. New (Solution Explorer's menu on a project or a filter, and File, New): C++ Class..., C++ Header..., C++
+  6. New (Alt+Insert, as IntelliJ's, in Solution Explorer on a project or a filter; and File, New): C++ Class..., C++ Header..., C++
      Source..., and any Files template added.  Its dialog asks the name, and a field for each variable the
      template uses that has no value (IntelliJ's way); the files are made in the project's directory (or the
      filter's), added to the .vcxproj and its filters and to a CMakeLists.txt that lists its files, staged in git,
@@ -108,21 +110,26 @@ Order (each built, checked and committed):
   5. Save File as Template.
 
 
-Questions
----------
+Questions (answered 2026-11-16)
+-------------------------------
 
   T1. The licence.  The File Header can't be one text: the libraries are LGPL, the IDE AGPL, Libc65's headers have
       none, and each names its project.  I propose ${PROJECT_NAME} in it for the name, and the licence as a
       project's setting ("Licence: LGPL 3, AGPL 3, none") that the File Header's #if picks, set once per project
       in its properties and kept beside the .vcxproj.  Or would you rather have a File Header per workspace
       scheme, or per directory?
+      Answered: as proposed.  (And every project is to be LGPL: see above.)
   T2. The schemes: Default (yours, every workspace) and Workspace (kept beside the .hcp65workspace, in version
       control).  IntelliJ calls the second Project; here a workspace holds several solutions, so a workspace's is
       the nearer match.  Right, or should it be per solution?
+      Answered: per workspace.
   T3. The language: a Velocity subset so templates move between IntelliJ, CLion and here.  The guard rule and
       the C-less stem need methods Velocity hasn't (toUpperSnakeCase(), withoutPrefix()); I add them as methods
       rather than as your ToSnakeCase(ToUpperCase(...)) functions, so the syntax stays Velocity's.  All right?
+      Answered: Velocity's syntax (the user's was only an example).
   T4. ${AUTHOR}: from a Settings field, empty until you fill it in (the IDE never reads it from git or Windows),
       or from git's user.name?
+      Answered: the Settings field, and git's user.name where the field is empty.
   T5. Keys: IntelliJ's New is Alt+Insert in the Project window.  Visual Studio's Add New Item is Ctrl+Shift+A.
       Which, or both?
+      Answered: Alt+Insert.
