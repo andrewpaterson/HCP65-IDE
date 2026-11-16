@@ -492,3 +492,9 @@ finished, not started before.
      he cares about has a working Linux build).
   d. An optional warning in the HCP65 compiler for a function that overrides one of a base class and isn't marked
      override (MSVC has it only in /analyze, C26433; G++ and Clang have -Wsuggest-override).
+  e. File and code templates (the user, 2026-11-16; question 24), as IntelliJ's and CLion's: a Settings page of
+     templates (C++ Header, C++ Source, C++ Class, and a File Header with the licence that the others include),
+     with variables (${NAME}, ${CLASS_NAME}, ${INCLUDE_GUARD}, ${YEAR}, ${AUTHOR}, ${PROJECT}) and filters such as
+     ${CLASS_NAME|upper_snake}; a New C++ Class, Header and Source command; and every refactoring that makes a
+     file (Move Class, Copy Class, Extract Superclass, Interface and Class, Extract Template Parameter) writes it
+     from them, always: new files come out consistent.  The default templates are laid out as files are made now.

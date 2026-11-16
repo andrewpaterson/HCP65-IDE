@@ -40,10 +40,6 @@ Open
     change in CppCompilerLib made for the IDE: look at it when you look at the others.
 
 
-24. The new files' names are the class's without its C (CKeg: Keg.h, Keg.cpp), in the directories of the files it
-    leaves, and the include guard is the old header's with the name changed (__DRUM_H__ gives __KEG_H__,
-    __IDE_MOVE_CLASS_H__ style for several words).  A CMakeLists.txt up to two directories above a project that
-    lists the old file gets a line for the new one after it.  Right?
 
 27. Copy Class has no key: IntelliJ's is F5, which is Start Debugging here.  It copies the class and its members'
     definitions into new files named for the new class (CBarrel: Barrel.h, Barrel.cpp), whether or not the class
@@ -73,6 +69,15 @@ Open
 
 Answered
 --------
+
+24. The new files' names are the class's without its C (CKeg: Keg.h, Keg.cpp), in the directories of the files it
+    leaves, and the include guard is the old header's with the name changed (__DRUM_H__ gives __KEG_H__,
+    __IDE_MOVE_CLASS_H__ style for several words).  A CMakeLists.txt up to two directories above a project that
+    lists the old file gets a line for the new one after it.  Right?
+    Answered 2026-11-16: the IDE gets file and code templates, as IntelliJ's and CLion's (Settings, Editor, File
+    and Code Templates): a refactoring that makes a file always writes it from them, so new files come out
+    consistent, and the default templates are laid out as the files are made now.  To do (Refactorings.txt,
+    "When the plan is done", e).
 
 18. Two of the IDE's checks fail here that aren't in the list of known failures, and I don't think tonight's work
     made them: usages-scope-menu expects "Startup Solution" in the menu, which needs a workspace of more than one
