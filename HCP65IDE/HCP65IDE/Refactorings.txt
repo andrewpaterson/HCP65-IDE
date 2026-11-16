@@ -358,9 +358,20 @@ IntelliJ has none of these for Java.
      alone in goes, one it starts or ends goes before or after it, a neighbouring block of the new namespace takes it,
      otherwise the old block is split round it; a use is named from its namespace or a namespace one of its file's
      using-directives opens, whichever is shorter.  Checks move-namespace-class, -function, -global, -nested,
-     -usings, -conflict, -refused and -dialog on Input/Namespaces.  Left: f (assembly labels), g (Move to File), h,
-     moving a namespace itself, and anything in an unnamed or inline namespace (refused, with why).  A declaration
-     that a longer qualified name puts out of line with the ones round it isn't lined up again (Rename doesn't either).
+     -usings, -conflict, -refused and -dialog on Input/Namespaces.  A declaration that a longer qualified name puts
+     out of line with the ones round it isn't lined up again (Rename doesn't either).
+     f and g built 2026-11-16, and a's completion.  f: CIDERename::MoveAssembly takes a class or enum (its name with
+     its scopes, "Geometry__CPoint", changed where a name starts in a label: its own labels, its members' and the
+     length-prefixed names of it, SIDEAssemblyRename::SetTypeMove) and leaves a function or variable inside
+     extern "C" (labelled by its name alone); the status says how many labels changed.  g: Move to File takes a
+     function or variable in a namespace: a declaration in its namespace's blocks goes into the target's last block
+     of the namespace (or of the outermost of its parts the target has, the rest opened in it), or a block of its own
+     at the end; one written with its namespace goes as it is; a block it leaves empty goes, and the blank lines at a
+     block's brace with it.  Found doing g: a variable's definition (declared without extern) was taken for a
+     declaration, so it went to the header; it goes to the source file now.  Checks move-namespace-c-linkage,
+     -completion, move-function-namespace, -nested and -variable; the move-namespace checks look at
+     Checks/Input/Namespaces/ShapesW65C816.asm.  Left: h, moving a namespace itself, and anything in an unnamed or
+     inline namespace (refused, with why).
  22. An enum to an enum class, every use of an enumerator qualified.
  23. Assembly.  Rename already changes hand written .asm by the compiler's labels; Change Signature and Move need
      the same rules where they change a label.  A template instance's labels have its arguments in them.

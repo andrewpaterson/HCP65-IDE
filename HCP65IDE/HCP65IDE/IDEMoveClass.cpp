@@ -33,6 +33,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDESafeDelete.h"
 #include "IDEMoveMembers.h"
 #include "IDEMoveClass.h"
+#include "IDEMoveNamespace.h"
 #include "IDEContextActions.h"
 
 
@@ -1727,6 +1728,7 @@ void SIDEFunctionMove::Init(void)
 	sDefinition.Init("", 0, 0, 0, 0);
 	bDefinition = false;
 	aszUsers.Init();
+	szNamespace.Init();
 }
 
 
@@ -1736,6 +1738,7 @@ void SIDEFunctionMove::Init(void)
 //////////////////////////////////////////////////////////////////////////
 void SIDEFunctionMove::Kill(void)
 {
+	szNamespace.Kill();
 	aszUsers.Kill();
 	sDefinition.Kill();
 	KillIDEFileRanges(&asDeclarations);
@@ -1804,6 +1807,8 @@ bool CIDEMoveClass::FindFunctionMove(SIDEFunctionMove* psDest)
 	CCPPSyntaxDeclarator*	pcDeclarator;
 	CCPPSyntax*				pcOuter;
 	SIDESignatureSite		sSite;
+	SIDENamespaceSite		sNamespaceSite;
+	CIDEFileEdits			cFiles;
 	SCPPSyntaxRange			sRange;
 	CChars					szScope;
 	const char*				szWhyNot;
@@ -1840,7 +1845,12 @@ bool CIDEMoveClass::FindFunctionMove(SIDEFunctionMove* psDest)
 		return false;
 	}
 	psDest->bMovable = true;
-	if (!szScope.Empty())
+	if (!szScope.Empty() && mpcContent->GetMoveNamespace()->IsNamespace(szScope.Text()))
+	{
+		//In a namespace: it goes into a block of it.
+		psDest->szNamespace.Set(szScope);
+	}
+	else if (!szScope.Empty())
 	{
 		psDest->bMovable = false;
 		psDest->szWhyNot.Set("it is in ");
@@ -1881,12 +1891,33 @@ bool CIDEMoveClass::FindFunctionMove(SIDEFunctionMove* psDest)
 				pcOuter = pcOuter->mpcParent;
 			}
 			bRead = pcOuter && pcUnit->GetRange(pcOuter, &sRange);
+			if (bRead && pcUnit->FindTokensIn(sRange.iLine, sRange.iColumn, sRange.iEndLine, sRange.iEndColumn, &iFirst, &iLast))
+			{
+				//A variable is defined where it is declared without extern.
+				bBody = !pcUnit->IsToken(iFirst, "extern");
+			}
 		}
 		if (!bRead)
 		{
 			psDest->bMovable = false;
 			psDest->szWhyNot.Set("a declaration of it can't be read (it isn't in the solution, or a macro makes it)");
 			break;
+		}
+		if (!psDest->szNamespace.Empty())
+		{
+			//Its namespace's blocks have to be read too, and none of them unnamed or inline.
+			sNamespaceSite.Init();
+			cFiles.Init(mpcContent);
+			if (!mpcContent->GetMoveNamespace()->FindSite(psLocation->szFileName.Text(), psLocation->iLine, psLocation->iColumn, false, &cFiles, &sNamespaceSite, &psDest->szWhyNot))
+			{
+				psDest->bMovable = false;
+			}
+			cFiles.Kill();
+			sNamespaceSite.Kill();
+			if (!psDest->bMovable)
+			{
+				break;
+			}
 		}
 		if (pcUnit->FindTokensIn(sRange.iLine, sRange.iColumn, sRange.iEndLine, sRange.iEndColumn, &iFirst, &iLast) && pcUnit->IsToken(iFirst, "static"))
 		{
@@ -1917,6 +1948,7 @@ bool CIDEMoveClass::FindFunctionMove(SIDEFunctionMove* psDest)
 	}
 	KillIDELocations(&asLocations);
 	KillUnits();
+	mpcContent->GetMoveNamespace()->KillUnits();
 	return true;
 }
 
@@ -2204,6 +2236,143 @@ size CIDEMoveClass::FindEndPlace(const char* szText)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Whether the line that ends just before uiAt (a line's start) is blank.
+//
+//////////////////////////////////////////////////////////////////////////
+static bool IsIDEBlankLineBefore(const char* szText, size uiAt)
+{
+	size	i;
+
+	if (uiAt == 0)
+	{
+		return false;
+	}
+	for (i = uiAt - 1; i > 0; i--)
+	{
+		if (szText[i - 1] == '\n')
+		{
+			break;
+		}
+		if ((szText[i - 1] != ' ') && (szText[i - 1] != '\t') && (szText[i - 1] != '\r'))
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// What is taken out from *puiStart to *puiEnd (whole lines) made to take
+// the blank lines between it and a block's braces: after it if it was
+// first in its block, before it if it was last, so what stays starts
+// after the opening brace and ends at the closing one.
+//
+//////////////////////////////////////////////////////////////////////////
+static void TrimIDEBlockEdges(const char* szText, size* puiStart, size* puiEnd)
+{
+	size	uiAt;
+	size	uiLine;
+
+	//The first line before it that isn't blank: an opening brace's?
+	uiLine = *puiStart;
+	while ((uiLine > 0) && IsIDEBlankLineBefore(szText, uiLine))
+	{
+		for (uiLine--; (uiLine > 0) && (szText[uiLine - 1] != '\n'); uiLine--)
+		{
+		}
+	}
+	if (uiLine > 0)
+	{
+		for (uiAt = uiLine - 1; (uiAt > 0) && ((szText[uiAt - 1] == ' ') || (szText[uiAt - 1] == '\t') || (szText[uiAt - 1] == '\r')); uiAt--)
+		{
+		}
+		if ((uiAt > 0) && (szText[uiAt - 1] == '{'))
+		{
+			*puiStart = uiLine;
+			while (szText[*puiEnd] != '\0')
+			{
+				for (uiAt = *puiEnd; (szText[uiAt] == ' ') || (szText[uiAt] == '\t') || (szText[uiAt] == '\r'); uiAt++)
+				{
+				}
+				if (szText[uiAt] != '\n')
+				{
+					break;
+				}
+				*puiEnd = uiAt + 1;
+			}
+			return;
+		}
+	}
+
+	//The first line after it that isn't blank: a closing brace's?
+	for (uiAt = *puiEnd; (szText[uiAt] == ' ') || (szText[uiAt] == '\t') || (szText[uiAt] == '\r') || (szText[uiAt] == '\n'); uiAt++)
+	{
+	}
+	if (szText[uiAt] == '}')
+	{
+		while ((*puiStart > 0) && IsIDEBlankLineBefore(szText, *puiStart))
+		{
+			for ((*puiStart)--; (*puiStart > 0) && (szText[*puiStart - 1] != '\n'); (*puiStart)--)
+			{
+			}
+		}
+		for (uiAt = *puiEnd; szText[uiAt] != '\0'; )
+		{
+			for (uiLine = uiAt; (szText[uiLine] == ' ') || (szText[uiLine] == '\t') || (szText[uiLine] == '\r'); uiLine++)
+			{
+			}
+			if (szText[uiLine] != '\n')
+			{
+				break;
+			}
+			uiAt = uiLine + 1;
+		}
+		*puiEnd = uiAt;
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// szText's lines without up to uiStrip spaces or tabs before each, and
+// uiDepth tabs before each that isn't blank.
+//
+//////////////////////////////////////////////////////////////////////////
+static void AppendIDEReindented(const char* szText, size uiStrip, size uiDepth, CChars* pszDest)
+{
+	size	uiLine;
+	size	uiAt;
+	size	uiEnd;
+	size	i;
+
+	for (uiLine = 0; szText[uiLine] != '\0'; uiLine = uiEnd)
+	{
+		for (uiEnd = uiLine; (szText[uiEnd] != '\0') && (szText[uiEnd] != '\n'); uiEnd++)
+		{
+		}
+		if (szText[uiEnd] == '\n')
+		{
+			uiEnd++;
+		}
+		for (uiAt = uiLine; (uiAt < uiLine + uiStrip) && ((szText[uiAt] == '\t') || (szText[uiAt] == ' ')); uiAt++)
+		{
+		}
+		if ((szText[uiAt] != '\n') && (szText[uiAt] != '\r') && (szText[uiAt] != '\0'))
+		{
+			for (i = 0; i < uiDepth; i++)
+			{
+				pszDest->Append('\t');
+			}
+		}
+		pszDest->AppendSubString(szText, uiAt, uiEnd);
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // The function or variable moved to a header (and its source file): see
 // the class's comment.  One undo across the files.
 //
@@ -2226,12 +2395,17 @@ bool CIDEMoveClass::MoveFunction(SIDEFunctionMove* psMove, const char* szHeader,
 	size				uiStart;
 	size				uiEnd;
 	size				uiPieces;
+	size				uiBefore;
 	size				i;
 	size				j;
 	bool				bMerged;
 	bool				bResult;
+	bool				bInBlocks;
+	SIDENamespaceSite	sNamespaceSite;
+	CChars				szWhyNot;
 
 	mpcContent->GetDocuments()->UpdateEditedTabsNow();
+	szWhyNot.Init();
 	cEdits.Init(mpcContent);
 	asInserts.Init();
 	asTaken.Init();
@@ -2257,7 +2431,15 @@ bool CIDEMoveClass::MoveFunction(SIDEFunctionMove* psMove, const char* szHeader,
 			szOldHeader = psRange->szFileName.Text();
 		}
 		szBlock.Init();
-		if ((i < psMove->asDeclarations.NumElements()) && FindPrototypePlace(szHeader, szTargetText, &uiAt))
+		sNamespaceSite.Init();
+		bInBlocks = !psMove->szNamespace.Empty() && mpcContent->GetMoveNamespace()->FindSite(psRange->szFileName.Text(), psRange->iLine, psRange->iColumn, false, &cEdits, &sNamespaceSite, &szWhyNot) &&
+					!sNamespaceSite.bQualified && (sNamespaceSite.asBlocks.NumElements() > 0);
+		if (bInBlocks)
+		{
+			//In its namespace's blocks: into the last block of the namespace there, or one of its own at the end.
+			AppendNamespacedBlock(psMove->szNamespace.Text(), szText, psRange, szTarget, szTargetText, &cEdits, &uiAt, &szBlock);
+		}
+		else if ((i < psMove->asDeclarations.NumElements()) && FindPrototypePlace(szHeader, szTargetText, &uiAt))
 		{
 			AppendBlock(szText, psRange->iLine, psRange->iColumn, psRange->iEndLine, psRange->iEndColumn, &szBlock);
 		}
@@ -2275,6 +2457,18 @@ bool CIDEMoveClass::MoveFunction(SIDEFunctionMove* psMove, const char* szHeader,
 		uiStart = FindIDETextOffset(szText, psRange->iLine, psRange->iColumn);
 		uiEnd = FindIDETextOffset(szText, psRange->iEndLine, psRange->iEndColumn);
 		ExtendIDEDeletion(szText, &uiStart, &uiEnd, true);
+		if (bInBlocks)
+		{
+			//A block it leaves empty goes with it.
+			uiBefore = uiStart;
+			mpcContent->GetMoveNamespace()->WidenToEmptyBlocks(&sNamespaceSite, szText, &uiStart, &uiEnd);
+			if (uiStart != uiBefore)
+			{
+				ExtendIDEDeletion(szText, &uiStart, &uiEnd, true);
+			}
+			TrimIDEBlockEdges(szText, &uiStart, &uiEnd);
+		}
+		sNamespaceSite.Kill();
 		asTaken.Add()->Init(psRange->szFileName.Text(), 0, 0, 0, 0);
 		asTaken.Get(asTaken.NumElements() - 1)->uiStart = uiStart;
 		asTaken.Get(asTaken.NumElements() - 1)->uiEnd = uiEnd;
@@ -2357,7 +2551,91 @@ bool CIDEMoveClass::MoveFunction(SIDEFunctionMove* psMove, const char* szHeader,
 	KillIDEFileRanges(&asInserts);
 	cEdits.Kill();
 	KillUnits();
+	mpcContent->GetMoveNamespace()->KillUnits();
+	szWhyNot.Kill();
 	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// What is at psRange of szText (a function's declaration or definition
+// in szNamespace's blocks) as it goes to szTarget: into the last block of
+// szNamespace there, before its closing brace, or else a block of its own
+// at the end (before a header's #endif), indented as the block is.  The
+// place it goes is *puiAt.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEMoveClass::AppendNamespacedBlock(const char* szNamespace, const char* szText, SIDEFileRange* psRange, const char* szTarget, const char* szTargetText, CIDEFileEdits* pcEdits, size* puiAt, CChars* pszDest)
+{
+	SIDENamespaceBlock	sBlock;
+	CChars				szMoved;
+	size				uiLine;
+	size				uiStrip;
+	size				uiDepth;
+	size				uiFound;
+	size				uiCut;
+	CChars				szOuter;
+	size				i;
+
+	szMoved.Init();
+	AppendBlock(szText, psRange->iLine, psRange->iColumn, psRange->iEndLine, psRange->iEndColumn, &szMoved);
+	for (uiLine = FindIDETextOffset(szText, psRange->iLine, psRange->iColumn); (uiLine > 0) && (szText[uiLine - 1] != '\n'); uiLine--)
+	{
+	}
+	for (uiStrip = 0; (szText[uiLine + uiStrip] == '\t') || (szText[uiLine + uiStrip] == ' '); uiStrip++)
+	{
+	}
+	uiDepth = 1;
+	for (i = 0; szNamespace[i] != '\0'; i++)
+	{
+		if ((szNamespace[i] == ':') && (szNamespace[i + 1] == ':'))
+		{
+			uiDepth++;
+			i++;
+		}
+	}
+
+	sBlock.Init();
+	szOuter.Init(szNamespace);
+	for (uiFound = uiDepth; uiFound > 0; uiFound--)
+	{
+		if (mpcContent->GetMoveNamespace()->FindBlockIn(szTarget, szOuter.Text(), pcEdits, &sBlock))
+		{
+			break;
+		}
+		uiCut = szOuter.FindFromEnd("::");
+		if (uiCut == ARRAY_ELEMENT_NOT_FOUND)
+		{
+			uiFound = 1;
+			continue;
+		}
+		szOuter.SetLength(uiCut);
+	}
+	szOuter.Kill();
+	if (uiFound > 0)
+	{
+		//The block of the namespace, or of the outermost uiFound of its parts, before its closing brace; the parts
+		//it doesn't have opened in it.
+		*puiAt = sBlock.uiCloseStart;
+		if (sBlock.uiCloseStart > sBlock.uiOpenEnd)
+		{
+			pszDest->Append(IsIDEMoveHeader(szTarget) ? "\n" : "\n\n");
+		}
+		mpcContent->GetMoveNamespace()->AppendBlockLines(szNamespace, uiFound, "\t", uiFound, true, pszDest);
+		AppendIDEReindented(szMoved.Text(), uiStrip, uiDepth, pszDest);
+		mpcContent->GetMoveNamespace()->AppendBlockLines(szNamespace, uiFound, "\t", uiFound, false, pszDest);
+	}
+	else
+	{
+		*puiAt = FindEndPlace(szTargetText);
+		pszDest->Append(((*puiAt > 0) && (szTargetText[*puiAt - 1] != '\n')) ? "\n\n\n" : "\n\n");
+		mpcContent->GetMoveNamespace()->AppendBlockLines(szNamespace, 0, "\t", 0, true, pszDest);
+		AppendIDEReindented(szMoved.Text(), uiStrip, uiDepth, pszDest);
+		mpcContent->GetMoveNamespace()->AppendBlockLines(szNamespace, 0, "\t", 0, false, pszDest);
+	}
+	sBlock.Kill();
+	szMoved.Kill();
 }
 
 

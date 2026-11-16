@@ -1722,51 +1722,58 @@ CHECKS = [
 		#Geometry's blocks go into Shapes blocks where they are (Geometry's closed before and opened after); what they
 		#name of Geometry is qualified; every use names Shapes::CPoint.
 		'WAIT_INDEX': '1', 'OPEN': 'Shapes.h', 'DIALOG_ANSWER': 'OK',
-		'DEBUG': 'edit:renamesearch:---s,edit:caret:10:9,edit:movetonamespace:Shapes,printdisklines:Shapes.h,printdisklines:Shapes.cpp,printdisklines:Main.cpp'}),
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:10:9,edit:movetonamespace:Shapes,printdisklines:Shapes.h,printdisklines:Shapes.cpp,printdisklines:Main.cpp,printdisklines:ShapesW65C816.asm'}),
 		[r'^Move to Namespace: Geometry::CPoint from \[Geometry\], 3 declarations: Shapes\.h\[1\] Shapes\.cpp\[1\] Shapes\.cpp\[1\]$', r'^Dialog \[Problems Detected\] answered OK$',
-		 r'^Move to Namespace status: Moved Geometry::CPoint to Shapes: 8 uses\.$',
+		 r'^Move to Namespace status: Moved Geometry::CPoint to Shapes: 8 uses; 4 labels in assembly changed\.$',
 		 r'^7\|\ttypedef int\tTLength;$', r'^8\|\}$', r'^11\|namespace Shapes$', r'^12\|\{$', r'^13\|\tclass CPoint$', r'^16\|\t\tGeometry::TLength\tmiX;$',
 		 r'^19\|\t\tvoid\tInit\(Geometry::TLength iX, Geometry::TLength iY\);$', r'^21\|\t\};$', r'^22\|\}$', r'^25\|namespace Geometry$', r'^27\|\tTLength\tArea\(Shapes::CPoint\* pcPoint\);$',
 		 r'^\d+\|\tvoid\tPlot\(Shapes::CPoint\* pcPoint\);$',
 		 r'^6\|\tint\tgiCount = 1;$', r'^7\|\}$', r'^10\|namespace Shapes$', r'^16\|\tvoid CPoint::Init\(Geometry::TLength iX, Geometry::TLength iY\)$', r'^19\|\t\tmiY = Geometry::Detail::Twice\(iY\);$',
 		 r'^27\|\tGeometry::TLength CPoint::Sum\(void\)$', r'^31\|\}$', r'^38\|Geometry::TLength Geometry::Area\(Shapes::CPoint\* pcPoint\)$', r'^58\|void Drawing::Plot\(Shapes::CPoint\* pcPoint\)$',
-		 r'^14\|\tShapes::CPoint\t\t\t\tcPoint;$', r'^15\|\tShapes::CPoint\tcOther;$'],
+		 r'^14\|\tShapes::CPoint\t\t\t\tcPoint;$', r'^15\|\tShapes::CPoint\tcOther;$',
+		 r'^5\|_Shapes__CPoint__Sum:$', r'^7\|_Geometry__Area__FPC14Shapes__CPoint:$', r'^8\|\t\tjsr _Shapes__CPoint__Sum$', r'^13\|_Drawing__Plot__FPC14Shapes__CPoint:$'],
 		[r'^\d+\|.*Geometry::CPoint']),
 	('move-namespace-function', dict(MakeNamespacesCopy(), **{
 		#Area from Geometry to Shapes: its declaration in a Shapes block where it was, its definition outside the
 		#namespaces renamed Shapes::Area with what it names of Geometry qualified, and Main.cpp's call (found through
 		#its using-directive of Geometry) Shapes::Area.
 		'WAIT_INDEX': '1', 'OPEN': 'Shapes.h',
-		'DEBUG': 'edit:renamesearch:---s,edit:caret:21:10,edit:movetonamespace:Shapes,printdisklines:Shapes.h,printdisklines:Shapes.cpp,printdisklines:Main.cpp'}),
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:21:10,edit:movetonamespace:Shapes,printdisklines:Shapes.h,printdisklines:Shapes.cpp,printdisklines:Main.cpp,printdisklines:ShapesW65C816.asm'}),
 		[r'^Move to Namespace: Geometry::Area\(Geometry::CPoint\*\) from \[Geometry\], 2 declarations: Shapes\.h\[1\] Shapes\.cpp\(qualified\)\[0\]$',
-		 r'^Move to Namespace status: Moved Geometry::Area to Shapes: 1 use\.$', r'^18\|\t\};$', r'^19\|\}$', r'^22\|namespace Shapes$', r'^24\|\tGeometry::TLength\tArea\(Geometry::CPoint\* pcPoint\);$',
+		 r'^Move to Namespace status: Moved Geometry::Area to Shapes: 1 use; 1 label in assembly changed\.$', r'^18\|\t\};$', r'^19\|\}$', r'^22\|namespace Shapes$', r'^24\|\tGeometry::TLength\tArea\(Geometry::CPoint\* pcPoint\);$',
 		 r'^25\|\}$', r'^28\|namespace Geometry$', r'^30\|\textern int\tgiCount;$', r'^35\|Geometry::TLength Shapes::Area\(Geometry::CPoint\* pcPoint\)$', r'^37\|\treturn pcPoint->Sum\(\) \* Geometry::giCount;$',
-		 r'^21\|\ti = Shapes::Area\(&cOther\) \+ Geometry::Detail::Twice\(giCount\);$'],
+		 r'^21\|\ti = Shapes::Area\(&cOther\) \+ Geometry::Detail::Twice\(giCount\);$', r'^7\|_Shapes__Area__FPC16Geometry__CPoint:$', r'^13\|_Drawing__Plot__FPC16Geometry__CPoint:$'],
 		[r'Problems Detected']),
 	('move-namespace-global', dict(MakeNamespacesCopy(), **{
 		#Geometry::Detail::Twice to the global namespace: Detail's block, which it was alone in, goes, and it follows
 		#Geometry's block; its definition is Twice, and its uses lose Detail:: and Geometry::Detail::.
 		'WAIT_INDEX': '1', 'OPEN': 'Shapes.h',
-		'DEBUG': 'edit:renamesearch:---s,edit:caret:26:7,edit:movetonamespace:,printdisklines:Shapes.h,printdisklines:Shapes.cpp,printdisklines:Main.cpp'}),
-		[r'^Move to Namespace status: Moved Geometry::Detail::Twice to the global namespace: 2 uses\.$', r'^22\|\textern int\tgiCount;$', r'^23\|\}$', r'^26\|int\tTwice\(int i\);$', r'^29\|namespace Drawing$',
-		 r'^16\|\t\tmiY = Twice\(iY\);$', r'^45\|int Twice\(int i\)$', r'^21\|\ti = Area\(&cOther\) \+ Twice\(giCount\);$'],
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:26:7,edit:movetonamespace:,printdisklines:Shapes.h,printdisklines:Shapes.cpp,printdisklines:Main.cpp,printdisklines:ShapesW65C816.asm'}),
+		[r'^Move to Namespace status: Moved Geometry::Detail::Twice to the global namespace: 2 uses; 2 labels in assembly changed\.$', r'^22\|\textern int\tgiCount;$', r'^23\|\}$', r'^26\|int\tTwice\(int i\);$', r'^29\|namespace Drawing$',
+		 r'^16\|\t\tmiY = Twice\(iY\);$', r'^45\|int Twice\(int i\)$', r'^21\|\ti = Area\(&cOther\) \+ Twice\(giCount\);$', r'^11\|_Twice__Fi:$', r'^14\|\t\tjsr _Twice__Fi$'],
 		[r'^\d+\|.*namespace Detail', r'^\d+\|.*Detail::']),
 	('move-namespace-nested', dict(MakeNamespacesCopy(), **{
 		#giCount from Geometry to Geometry::Detail: it goes into the Detail block next to it, and Main.cpp (with its
 		#using-directive of Geometry) names it Detail::giCount.
 		'WAIT_INDEX': '1', 'OPEN': 'Shapes.h',
-		'DEBUG': 'edit:renamesearch:---s,edit:caret:22:13,edit:movetonamespace:Geometry::Detail,printdisklines:Shapes.h,printdisklines:Shapes.cpp,printdisklines:Main.cpp'}),
-		[r'^Move to Namespace status: Moved Geometry::giCount to Geometry::Detail: 2 uses\.$', r'^21\|\tTLength\tArea\(CPoint\* pcPoint\);$', r'^22\|$', r'^23\|\tnamespace Detail$', r'^25\|\t\textern int\tgiCount;$',
-		 r'^26\|$', r'^27\|\t\tint\tTwice\(int i\);$', r'^\d+\|\treturn pcPoint->Sum\(\) \* Detail::giCount;$', r'^21\|\ti = Area\(&cOther\) \+ Geometry::Detail::Twice\(Detail::giCount\);$'],
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:22:13,edit:movetonamespace:Geometry::Detail,printdisklines:Shapes.h,printdisklines:Shapes.cpp,printdisklines:Main.cpp,printdisklines:ShapesW65C816.asm'}),
+		[r'^Move to Namespace status: Moved Geometry::giCount to Geometry::Detail: 2 uses; 1 label in assembly changed\.$', r'^21\|\tTLength\tArea\(CPoint\* pcPoint\);$', r'^22\|$', r'^23\|\tnamespace Detail$', r'^25\|\t\textern int\tgiCount;$',
+		 r'^26\|$', r'^27\|\t\tint\tTwice\(int i\);$', r'^\d+\|\treturn pcPoint->Sum\(\) \* Detail::giCount;$', r'^21\|\ti = Area\(&cOther\) \+ Geometry::Detail::Twice\(Detail::giCount\);$', r'^9\|\t\tlda _Geometry__Detail__giCount$'],
 		[r'^\d+\|\tnamespace Detail\n.*\n.*\n\tnamespace Detail']),
 	('move-namespace-usings', dict(MakeNamespacesCopy(), **{
 		#With "Add using-declarations": Main.cpp gets using Shapes::Area; with its other using lines and its call is
 		#left as it is written.
 		'WAIT_INDEX': '1', 'OPEN': 'Shapes.h',
-		'DEBUG': 'edit:renamesearch:---s,edit:caret:21:10,edit:movetonamespaceusings:Shapes,printdisklines:Shapes.h,printdisklines:Shapes.cpp,printdisklines:Main.cpp'}),
-		[r'^Move to Namespace status: Moved Geometry::Area to Shapes: 1 use, with using-declarations\.$', r'^4\|using namespace Geometry;$', r'^5\|using Drawing::Plot;$', r'^6\|using Shapes::Area;$',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:21:10,edit:movetonamespaceusings:Shapes,printdisklines:Shapes.h,printdisklines:Shapes.cpp,printdisklines:Main.cpp,printdisklines:ShapesW65C816.asm'}),
+		[r'^Move to Namespace status: Moved Geometry::Area to Shapes: 1 use, with using-declarations; 1 label in assembly changed\.$', r'^4\|using namespace Geometry;$', r'^5\|using Drawing::Plot;$', r'^6\|using Shapes::Area;$',
 		 r'^\d+\|\ti = Area\(&cOther\) \+ Geometry::Detail::Twice\(giCount\);$'],
 		[r'Shapes::Area\(&cOther']),
+	('move-namespace-c-linkage', dict(MakeNamespacesCopy(), **{
+		#A function declared inside extern "C" is labelled by its name alone: moving it changes no label.
+		'WAIT_INDEX': '1', 'OPEN': 'Shapes.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:37:18,edit:movetonamespace:Shapes,printdisklines:Shapes.h,printdisklines:ShapesW65C816.asm'}),
+		[r'^Move to Namespace status: Moved Drawing::Clear to Shapes: 0 uses\.$', r'^\d+\|namespace Shapes$', r'^\d+\|\textern "C" void\tClear\(void\);$', r'^16\|_Clear:$'],
+		[r'_Shapes__Clear']),
 	('move-namespace-conflict', dict(MakeNamespacesCopy(), **{
 		#Geometry::TLength to Drawing, which has a TLength: Problems Detected, and Cancel moves nothing.
 		'WAIT_INDEX': '1', 'OPEN': 'Shapes.h', 'DIALOG_ANSWER': 'Cancel',
@@ -1777,7 +1784,46 @@ CHECKS = [
 		#Refactor, Move to Namespace...: its dialog has the namespace it is in, selected, to type over.
 		'WAIT_INDEX': '1', 'OPEN': 'Shapes.h', 'CARET': '21:10', 'DIALOG_KEYS': 'type:Shapes', 'DIALOG_ANSWER': 'OK',
 		'DEBUG': 'edit:renamesearch:---s,command:Refactor.MoveToNamespace,answered:1,printstatus,edit:saveall,printdisklines:Main.cpp'}),
-		[r'^Dialog \[Move Geometry::Area to Namespace\] answered OK$', r'^Status: Moved Geometry::Area to Shapes: 1 use\.$', r'^21\|\ti = Shapes::Area\(&cOther\)'],
+		[r'^Dialog \[Move Geometry::Area to Namespace\] answered OK$', r'^Status: Moved Geometry::Area to Shapes: 1 use; 1 label in assembly changed\.$', r'^21\|\ti = Shapes::Area\(&cOther\)'],
+		[]),
+	('move-namespace-completion', dict(MakeNamespacesCopy(), **{
+		#The dialog's field completes over the solution's namespaces as it is typed in; down and enter take one.
+		'WAIT_INDEX': '1', 'OPEN': 'Shapes.h', 'CARET': '21:10', 'DIALOG_KEYS': 'type:Det,down,enter', 'DIALOG_ANSWER': 'OK',
+		'DEBUG': 'edit:renamesearch:---s,command:Refactor.MoveToNamespace,answered:1,printstatus'}),
+		[r'^Field \[Det\] completes: Geometry::Detail$', r'^Field \[Det\] completes: \*Geometry::Detail$', r'^Field \[Geometry::Detail\]$',
+		 r'^Status: Moved Geometry::Area to Geometry::Detail: 1 use; 1 label in assembly changed\.$'],
+		[]),
+	('move-function-namespace', dict(MakeNamespacesCopy(), **{
+		#Move to File of a function in a namespace (Refactorings.txt 21 g): Area's prototype goes into Drawing.h's
+		#Geometry block, after what is in it; its definition, written with its namespace, goes to the end of
+		#Drawing.cpp as it is.
+		'WAIT_INDEX': '1', 'OPEN': 'Shapes.h', 'CARET': '21:10',
+		'DEBUG': 'edit:renamesearch:---s,edit:movablefunction,edit:movefunction:Drawing.h,printdisklines:Shapes.h,printdisklines:Shapes.cpp,printdisklines:Drawing.h,printdisklines:Drawing.cpp'}),
+		[r'^Move to File: Geometry::Area\(Geometry::CPoint\*\), declared in Shapes\.h, defined in Shapes\.cpp, 1 file names it$', r'^Move to File: moved$',
+		 r'^Disk lines Shapes\.h:$', r'^18\|\t\};$', r'^19\|$', r'^20\|$', r'^21\|\textern int\tgiCount;$',
+		 r'^Disk lines Drawing\.h:$', r'^6\|namespace Geometry$', r'^8\|\tint\tHalf\(int i\);$', r'^9\|$', r'^10\|\tTLength\tArea\(CPoint\* pcPoint\);$', r'^11\|\}$', r'^14\|#endif',
+		 r'^Disk lines Drawing\.cpp:$', r'^15\|\}$', r'^22\|Geometry::TLength Geometry::Area\(CPoint\* pcPoint\)$', r'^25 lines$'],
+		[]),
+	('move-function-namespace-nested', dict(MakeNamespacesCopy(), **{
+		#Geometry::Detail::Twice to Drawing.h, which has a Geometry block and no Detail block: a Detail block in the
+		#Geometry one; the Detail block it leaves empty in Shapes.h goes, with the blank line before it.
+		'WAIT_INDEX': '1', 'OPEN': 'Shapes.h', 'CARET': '26:7',
+		'DEBUG': 'edit:renamesearch:---s,edit:movablefunction,edit:movefunction:Drawing.h,printdisklines:Shapes.h,printdisklines:Shapes.cpp,printdisklines:Drawing.h,printdisklines:Drawing.cpp'}),
+		[r'^Move to File: moved$', r'^Disk lines Shapes\.h:$', r'^22\|\textern int\tgiCount;$', r'^23\|\}$', r'^24\|$', r'^25\|$', r'^26\|namespace Drawing$',
+		 r'^Disk lines Drawing\.h:$', r'^7\|\tint\tHalf\(int i\);$', r'^8\|$', r'^9\|\tnamespace Detail$', r'^10\|\t\{$', r'^11\|\t\tint\tTwice\(int i\);$', r'^12\|\t\}$', r'^13\|\}$',
+		 r'^16\|#endif', r'^Disk lines Drawing\.cpp:$', r'^22\|int Geometry::Detail::Twice\(int i\)$'],
+		[r'^\d+\|namespace Geometry\n\d+\|\{\n\d+\|\tnamespace Detail']),
+	('move-function-namespace-variable', dict(MakeNamespacesCopy(), **{
+		#giCount: its extern into Drawing.h's Geometry block, and its definition (a variable's is where it is declared
+		#without extern) from the start of Shapes.cpp's Geometry block, with the blank lines after it, into the end of
+		#Drawing.cpp's, a tab in.
+		'WAIT_INDEX': '1', 'OPEN': 'Shapes.h', 'CARET': '22:13',
+		'DEBUG': 'edit:renamesearch:---s,edit:movablefunction,edit:movefunction:Drawing.h,printdisklines:Shapes.h,printdisklines:Shapes.cpp,printdisklines:Drawing.h,printdisklines:Drawing.cpp'}),
+		[r'^Move to File: Geometry::giCount, declared in Shapes\.h, defined in Shapes\.cpp, 2 files name it$', r'^Status: Moved Geometry::giCount to Drawing\.h and Drawing\.cpp: 5 files changed\.$',
+		 r'^Disk lines Shapes\.h:$', r'^21\|\tTLength\tArea\(CPoint\* pcPoint\);$', r'^22\|$', r'^23\|\tnamespace Detail$',
+		 r'^Disk lines Shapes\.cpp:$', r'^5\|namespace Geometry$', r'^6\|\{$', r'^7\|\t///',
+		 r'^Disk lines Drawing\.h:$', r'^8\|$', r'^9\|\textern int\tgiCount;$', r'^10\|\}$',
+		 r'^Disk lines Drawing\.cpp:$', r'^13\|\t\}$', r'^14\|$', r'^15\|$', r'^16\|\tint\tgiCount = 1;$', r'^17\|\}$'],
 		[]),
 	('move-namespace-refused', dict(MakeNamespacesCopy(), **{
 		#A member of a class isn't at namespace scope: there is nothing to move.

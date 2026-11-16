@@ -29,6 +29,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/Dialog.h"
 #include "WindowLib/MenuContainer.h"
 #include "WindowLib/TextField.h"
+#include "WindowLib/CompletionField.h"
 #include "IDECodeModel.h"
 #include "IDERefactorUnit.h"
 #include "IDEDefinitions.h"
@@ -130,7 +131,7 @@ DESTRUCTABLE(CIDEMoveNamespace);
 protected:
 	CIDEContent*						mpcContent;  //Not held: the content holds it.
 	Ptr<CDialog>						mpDialog;  //While it is shown.
-	Ptr<CTextField>						mpNamespaceField;
+	Ptr<CCompletionField>				mpNamespaceField;  //Completing over the solution's namespaces.
 	Ptr<CCheckBox>						mpUsingBox;
 	bool								mbUsings;  //What the box was ticked as last.
 	CArrayTemplatePtr<CIDERefactorUnit>	mapcUnits;  //The files parsed for the move being found.
@@ -148,18 +149,24 @@ public:
 	bool	CanMove(void);
 	void	QueueMove(void);
 	void	ShowMove(void);
+	void	NamespaceTyped(CTextField* pcField);
 
 	bool	FindMove(SIDENamespaceMove* psDest);
 	bool	Move(SIDENamespaceMove* psMove, const char* szNamespace, bool bUsings, CChars* pszStatus);
 	char*	PrintMove(SIDENamespaceMove* psMove, CChars* pszDest);
 	void	KillUnits(void);
 
+	//For Move to File, which moves what is in a namespace into a block of it.
+	bool	FindSite(const char* szFileName, int32 iLine, int32 iColumn, bool bClassMember, CIDEFileEdits* pcFiles, SIDENamespaceSite* psDest, CChars* pszWhyNot);
+	bool	IsNamespace(const char* szKey);
+	bool	FindBlockIn(const char* szFileName, const char* szNamespace, CIDEFileEdits* pcFiles, SIDENamespaceBlock* psDest);
+	void	WidenToEmptyBlocks(SIDENamespaceSite* psSite, const char* szText, size* puiStart, size* puiEnd);
+	void	AppendBlockLines(const char* szNamespace, size uiFrom, const char* szIndent, size uiDepth, bool bOpen, CChars* pszDest);
+
 protected:
 	CIDERefactorUnit*	GetUnit(const char* szFileName);
-	bool				FindSite(const char* szFileName, int32 iLine, int32 iColumn, bool bClassMember, CIDEFileEdits* pcFiles, SIDENamespaceSite* psDest, CChars* pszWhyNot);
 	void				FindBlocks(CIDERefactorUnit* pcUnit, const char* szText, CCPPSyntax* pcNode, CArrayIDENamespaceBlocks* pasDest, bool* pbUnnamed);
 	void				FindScopeAt(CIDERefactorUnit* pcUnit, const char* szText, int32 iToken, CChars* pszDest);
-	bool				IsNamespace(const char* szKey);
 	void				NamespaceOf(const char* szKey, CChars* pszDest);
 	int32				FindQualifier(CIDERefactorUnit* pcUnit, int32 iName);
 	bool				HasUsingDirective(CIDERefactorUnit* pcUnit, int32 iBefore, const char* szNamespace);
@@ -168,7 +175,6 @@ protected:
 	size				FindNeighbourBlock(const char* szText, size uiStart, size uiEnd, CArrayChars* paszNew, size uiShared);
 	void				AppendQualifier(const char* szFrom, const char* szTo, CChars* pszDest);
 	size				FindIndent(const char* szText, size uiLine);
-	void				AppendBlockLines(const char* szNamespace, size uiFrom, const char* szIndent, size uiDepth, bool bOpen, CChars* pszDest);
 	void				MoveSite(SIDENamespaceSite* psSite, const char* szOld, const char* szNew, CIDEFileEdits* pcFiles, CArrayIDENamespaceEdits* pasDest);
 	void				QualifyInside(SIDENamespaceMove* psMove, SIDENamespaceSite* psSite, const char* szNew, CIDEFileEdits* pcFiles, CArrayIDENamespaceEdits* pasDest);
 	void				FindConflicts(SIDENamespaceMove* psMove, const char* szNew, CIDEFileEdits* pcFiles, CArrayChars* paszDest);

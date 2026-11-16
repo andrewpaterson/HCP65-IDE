@@ -22,6 +22,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdlib.h>
 #include <string.h>
 #include "BaseLib/StringHelper.h"
+#include "BaseLib/NameMatcher.h"
 #include "CppCompilerLib/CPPIndex.h"
 #include "CppCompilerLib/CPPSyntaxNamespace.h"
 #include "IDEContent.h"
@@ -31,6 +32,10 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDEChangeSignature.h"
 #include "IDEContextActions.h"
 #include "IDEMoveNamespace.h"
+
+
+#define IDE_NAMESPACE_COMPLETIONS		12
+#define IDE_NAMESPACE_COMPLETION_TAKEN	(-2147483647 - 1)
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -1467,6 +1472,8 @@ bool CIDEMoveNamespace::Move(SIDENamespaceMove* psMove, const char* szNamespace,
 	CChars					szLine;
 	const char*				szText;
 	size					uiUses;
+	size					uiLabels;
+	size					uiUnsure;
 	size					uiAt;
 	size					i;
 	size					j;
@@ -1643,12 +1650,13 @@ bool CIDEMoveNamespace::Move(SIDENamespaceMove* psMove, const char* szNamespace,
 		}
 	}
 
-	//The edits, latest first in each file.
+	//The edits, latest first in each file; then hand written assembly's labels of it.
 	for (i = 0; i < asEdits.NumElements(); i++)
 	{
 		psEdit = asEdits.Get(i);
 		cFiles.GetEdits(psEdit->szFileName.Text())->Replace(psEdit->uiStart, psEdit->uiEnd, psEdit->szText.Text());
 	}
+	uiLabels = mpcContent->GetRename()->MoveAssembly(psMove->szKey.Text(), szNew.Text(), &cFiles, &uiUnsure);
 	cFiles.Apply();
 	for (i = 0; i < asEdits.NumElements(); i++)
 	{
@@ -1661,10 +1669,89 @@ bool CIDEMoveNamespace::Move(SIDENamespaceMove* psMove, const char* szNamespace,
 	pszStatus->Set("Moved ");
 	GetIDEScopedName(psMove->szKey.Text(), pszStatus);
 	pszStatus->Append(" to ")->Append(szNew.Empty() ? "the global namespace" : szNew.Text())->Append(": ")->Append((uint32)uiUses)->Append((uiUses == 1) ? " use" : " uses");
-	pszStatus->Append(aszUsingFiles.NumElements() ? ", with using-declarations." : ".");
+	pszStatus->Append(aszUsingFiles.NumElements() ? ", with using-declarations" : "");
+	if (uiLabels > 0)
+	{
+		pszStatus->Append("; ")->Append((uint32)uiLabels)->Append((uiLabels == 1) ? " label in assembly changed" : " labels in assembly changed");
+	}
+	if (uiUnsure > 0)
+	{
+		pszStatus->Append("; ")->Append((uint32)uiUnsure)->Append((uiUnsure == 1) ? " label that may be an overload's left" : " labels that may be an overload's left");
+	}
+	pszStatus->Append(".");
 	aszUsingFiles.Kill();
 	szNew.Kill();
 	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The dialog's field was typed in: the solution's namespaces that what is
+// in it could mean, as Go to Symbol matches names, the best first.  None
+// once it names one of them in full.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEMoveNamespace::NamespaceTyped(CTextField* pcField)
+{
+	CNameMatcher	cMatcher;
+	SNameMatch		sMatch;
+	CArrayChars		aszNamespaces;
+	CArrayChars		aszFound;
+	CArrayInt		aiScores;
+	CArrayChars		aszTexts;
+	CArrayChars		aszNotes;
+	size			uiBest;
+	size			i;
+
+	aszTexts.Init();
+	aszNotes.Init();
+	if (pcField->GetText()[0] != '\0')
+	{
+		aszNamespaces.Init();
+		mpcContent->GetCodeModel()->FindNamespaces(&aszNamespaces);
+		cMatcher.Init(pcField->GetText());
+		aszFound.Init();
+		aiScores.Init();
+		for (i = 0; i < aszNamespaces.NumElements(); i++)
+		{
+			if (cMatcher.Match(aszNamespaces.GetText(i), &sMatch))
+			{
+				aszFound.Add(aszNamespaces.GetText(i));
+				aiScores.Add((int)sMatch.iScore);
+			}
+		}
+		while (aszTexts.NumElements() < IDE_NAMESPACE_COMPLETIONS)
+		{
+			uiBest = MAX_SIZE;
+			for (i = 0; i < aiScores.NumElements(); i++)
+			{
+				if ((aiScores.GetValue(i) != IDE_NAMESPACE_COMPLETION_TAKEN) && ((uiBest == MAX_SIZE) || (aiScores.GetValue(i) > aiScores.GetValue(uiBest))))
+				{
+					uiBest = i;
+				}
+			}
+			if (uiBest == MAX_SIZE)
+			{
+				break;
+			}
+			*aiScores.Get(uiBest) = IDE_NAMESPACE_COMPLETION_TAKEN;
+			aszTexts.Add(aszFound.GetText(uiBest));
+			aszNotes.Add("namespace");
+		}
+		aiScores.Kill();
+		aszFound.Kill();
+		cMatcher.Kill();
+		aszNamespaces.Kill();
+		if ((aszTexts.NumElements() == 1) && aszTexts.Get(0)->Equals(pcField->GetText()))
+		{
+			aszTexts.ReInit();
+			aszNotes.ReInit();
+		}
+	}
+	mpNamespaceField->SetCompletions(&aszTexts, &aszNotes);
+	aszNotes.Kill();
+	aszTexts.Kill();
 }
 
 
@@ -1704,8 +1791,13 @@ void CIDEMoveNamespace::ShowMove(void)
 	szTitle.Append(" to Namespace");
 	mpDialog = OMalloc<CDialog>(mpcContent->GetWindow(), mpcContent->GetDialogLook(), szTitle.Text());
 	szTitle.Kill();
-	mpNamespaceField = mpDialog->AddTextField("Namespace (empty for the global one):", sMove.szNamespace.Text());
+	mpNamespaceField = OMalloc<CCompletionField>(mpDialog->GetWindow(), mpDialog->GetLook()->pcTheme, sMove.szNamespace.Text());
+	mpNamespaceField->SetColumns(10);
+	mpNamespaceField->SetAlignment(CSH_Stretch, CSV_Center);
+	mpDialog->AddEditor("Namespace (empty for the global one):", mpNamespaceField);
+	mpDialog->SetFirstEditor(mpNamespaceField);
 	mpNamespaceField->SelectAll();
+	mpNamespaceField->GetChangeEvent()->Add(this, &CIDEMoveNamespace::NamespaceTyped);
 	mpUsingBox = mpDialog->AddCheckBox("Add using-declarations in source files instead of qualifying", mbUsings);
 	mpDialog->SetOKCaption("Refactor");
 	mpcContent->GetScript()->WatchDialog(mpDialog);
@@ -1721,6 +1813,7 @@ void CIDEMoveNamespace::ShowMove(void)
 		szTitle.Kill();
 		szStatus.Kill();
 	}
+	mpNamespaceField->GetChangeEvent()->Remove(this);
 	mpUsingBox = NULL;
 	mpNamespaceField = NULL;
 	mpDialog = NULL;
@@ -1844,4 +1937,105 @@ size CIDEMoveNamespace::FindNeighbourBlock(const char* szText, size uiStart, siz
 	}
 	szOpen.Kill();
 	return MAX_SIZE;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The last block of szNamespace ("A::B") in a file, by the index's
+// places of the namespace's name there.  False if the file has none (or
+// none that is named all the way out).
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEMoveNamespace::FindBlockIn(const char* szFileName, const char* szNamespace, CIDEFileEdits* pcFiles, SIDENamespaceBlock* psDest)
+{
+	CArrayIDELocations			asLocations;
+	CArrayIDENamespaceBlocks	asBlocks;
+	SIDELocation*				psLocation;
+	SIDENamespaceBlock*			psBlock;
+	CIDERefactorUnit*			pcUnit;
+	CCPPSyntax*					pcNode;
+	CChars						szChain;
+	const char*					szText;
+	int32						iName;
+	uint8						uiKind;
+	size						i;
+	size						j;
+	bool						bUnnamed;
+	bool						bFound;
+
+	bFound = false;
+	asLocations.Init();
+	mpcContent->GetCodeModel()->GetSymbolLocations(szNamespace, &asLocations, &uiKind);
+	for (i = 0; i < asLocations.NumElements(); i++)
+	{
+		psLocation = asLocations.Get(i);
+		if ((psLocation->uiRole == CPPIR_Reference) || (StringInsensitiveCompare(psLocation->szFileName.Text(), szFileName) != 0))
+		{
+			continue;
+		}
+		pcUnit = GetUnit(szFileName);
+		szText = pcUnit ? pcFiles->GetText(szFileName) : NULL;
+		iName = pcUnit ? pcUnit->FindTokenAt(psLocation->iLine, psLocation->iColumn) : -1;
+		pcNode = (iName >= 0) ? pcUnit->FindNodeOfTokens(iName, iName) : NULL;
+		if (!szText || !pcNode)
+		{
+			continue;
+		}
+		asBlocks.Init();
+		bUnnamed = false;
+		FindBlocks(pcUnit, szText, pcNode, &asBlocks, &bUnnamed);
+		szChain.Init();
+		for (j = 0; j < asBlocks.NumElements(); j++)
+		{
+			szChain.Append((j == 0) ? "" : "::")->Append(asBlocks.Get(j)->szName);
+		}
+		if (!bUnnamed && szChain.Equals(szNamespace))
+		{
+			psBlock = asBlocks.Get(asBlocks.NumElements() - 1);
+			if (!bFound || (psBlock->uiStart > psDest->uiStart))
+			{
+				psDest->szName.Set(psBlock->szName);
+				psDest->uiStart = psBlock->uiStart;
+				psDest->uiOpenEnd = psBlock->uiOpenEnd;
+				psDest->uiCloseStart = psBlock->uiCloseStart;
+				psDest->uiEnd = psBlock->uiEnd;
+				bFound = true;
+			}
+		}
+		szChain.Kill();
+		for (j = 0; j < asBlocks.NumElements(); j++)
+		{
+			asBlocks.Get(j)->Kill();
+		}
+		asBlocks.Kill();
+	}
+	KillIDELocations(&asLocations);
+	return bFound;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// What is taken out from *puiStart to *puiEnd of a site's file made to
+// take the site's blocks too, innermost first, that would be left with
+// nothing in them.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEMoveNamespace::WidenToEmptyBlocks(SIDENamespaceSite* psSite, const char* szText, size* puiStart, size* puiEnd)
+{
+	SIDENamespaceBlock*	psBlock;
+	size				i;
+
+	for (i = psSite->asBlocks.NumElements(); i > 0; i--)
+	{
+		psBlock = psSite->asBlocks.Get(i - 1);
+		if ((*puiStart < psBlock->uiOpenEnd) || (*puiEnd > psBlock->uiCloseStart) ||
+			!IsIDEBlank(szText, psBlock->uiOpenEnd, *puiStart) || !IsIDEBlank(szText, *puiEnd, psBlock->uiCloseStart))
+		{
+			break;
+		}
+		*puiStart = psBlock->uiStart;
+		*puiEnd = psBlock->uiEnd;
+	}
 }

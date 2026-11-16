@@ -136,6 +136,7 @@ struct SIDERenameTarget
 										//assembly, without its places (which are in asLocations).
 	uint8				uiAssembly;		//How hand written assembly's labels name it (EIDEAssemblyRename).
 	CChars				szScope;		//The scopes its name is in, as its key has them ("NS::CFat"), empty for none.
+	bool				bCLinkage;		//A function or variable declared inside extern "C": its label is its name alone.
 	bool				bOverloaded;	//A function with others of its name in its scope.
 	CArrayChars			aszOverloads;	//Then every one's key, its own too: assembly labels are told apart by their parameters.
 
@@ -309,6 +310,7 @@ public:
 	size	FindClassBases(const char* szKey, bool bAll, CArrayChars* paszKeys);
 	size	FindClassDerived(const char* szKey, bool bAll, CArrayChars* paszKeys);
 	bool	GetSymbolKey(int32 iSymbol, CChars* pszKey, uint8* puiKind);
+	void	FindNamespaces(CArrayChars* paszDest);
 	size	FindOverriders(const char* szKey, CArrayIDELocations* pasDest);
 	size	FindSiblingFunctions(const char* szKey, const char* szFileName, CArrayIDELocations* pasDeclared, CArrayIDELocations* pasDefined);
 	bool	FindAssemblyTarget(const char* szKey, SIDERenameTarget* psDest);

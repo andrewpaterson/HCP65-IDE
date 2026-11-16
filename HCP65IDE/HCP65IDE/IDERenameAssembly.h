@@ -57,9 +57,12 @@ struct SIDEAssemblyRename
 	CChars				szNewScope;		//Then the scopes it goes to, as a label writes them; empty for none,
 	CChars				szNewClass;		//and the last of them.
 	bool				bDropArguments;	//...and a class template's instance's arguments in a label go: the class is no template now.
+	bool				bWhole;			//A type that goes to other scopes (SetTypeMove): szOld and szNew are its name with its
+										//scopes ("NS__CFat"), only changed where a name starts, not after another's "__".
 
 	void	Init(EIDEAssemblyRename eKind, const char* szOldName, const char* szNewName, const char* szScopeKey);
 	void	SetMove(const char* szNewScopeKey, bool bDropInstanceArguments = false);
+	void	SetTypeMove(const char* szOldScopeKey, const char* szNewScopeKey);
 	void	Kill(void);
 };
 

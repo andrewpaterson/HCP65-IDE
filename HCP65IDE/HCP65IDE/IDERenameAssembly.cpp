@@ -49,6 +49,7 @@ void SIDEAssemblyRename::Init(EIDEAssemblyRename eRenameKind, const char* szOldN
 	uiUnsure = 0;
 	bMoves = false;
 	bDropArguments = false;
+	bWhole = false;
 	szNewScope.Init();
 	szNewClass.Init();
 }
@@ -74,6 +75,31 @@ void SIDEAssemblyRename::SetMove(const char* szNewScopeKey, bool bDropInstanceAr
 	{
 		szNewClass.RemoveFromStart(uiLast + 2);
 	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A class or enum (eKind IAR_Type, szOld its name) that goes from the
+// scopes szOldScopeKey to szNewScopeKey, as the index has them ("NS",
+// empty for none): its name with its scopes is what changes, in its own
+// labels, its members' and every length-prefixed name of it
+// ("_NS__CFat__Init", "PC8NS__CFat").  A layout constant has no scopes.
+//
+//////////////////////////////////////////////////////////////////////////
+void SIDEAssemblyRename::SetTypeMove(const char* szOldScopeKey, const char* szNewScopeKey)
+{
+	CChars	szName;
+
+	szName.Init(szOld);
+	bWhole = true;
+	szOld.Set(szOldScopeKey ? szOldScopeKey : "");
+	szOld.Replace("::", "__");
+	szOld.Append(szOld.Empty() ? "" : "__")->Append(szName);
+	szNew.Set(szNewScopeKey ? szNewScopeKey : "");
+	szNew.Replace("::", "__");
+	szNew.Append(szNew.Empty() ? "" : "__")->Append(szName);
+	szName.Kill();
 }
 
 
@@ -310,7 +336,7 @@ static int FindIDETypePartEdits(const char* szToken, size uiStart, size uiFrom, 
 			}
 			asInner.Kill();
 		}
-		if ((((i == uiFrom) && bStarts) || ((i >= uiFrom + 2) && (szToken[i - 1] == '_') && (szToken[i - 2] == '_'))) && (i + uiOld <= uiEnd) &&
+		if ((((i == uiFrom) && bStarts) || (!psRename->bWhole && (i >= uiFrom + 2) && (szToken[i - 1] == '_') && (szToken[i - 2] == '_'))) && (i + uiOld <= uiEnd) &&
 			(memcmp(&szToken[i], psRename->szOld.Text(), uiOld) == 0) && ((i + uiOld == uiEnd) || ((i + uiOld + 2 <= uiEnd) && (szToken[i + uiOld] == '_') && (szToken[i + uiOld + 1] == '_'))))
 		{
 			AddIDEAssemblyEdit(pasDest, uiStart + i, uiOld, psRename->szNew.Text(), bComment);
@@ -341,7 +367,7 @@ static bool FindIDETypeLabelEdits(const char* szToken, size uiStart, size uiLeng
 	size	uiBefore;
 
 	uiOld = psRename->szOld.Length();
-	if ((psRename->eKind == IAR_Type) && (szToken[0] != '_'))
+	if ((psRename->eKind == IAR_Type) && (szToken[0] != '_') && !psRename->bWhole)
 	{
 		//A generated layout constant (BaseLib's FatW65C816.inc): "SIZEOF_CFat", and "CFat_muiID" before one of its members.
 		if ((uiLength == 7 + uiOld) && (memcmp(szToken, "SIZEOF_", 7) == 0) && (memcmp(&szToken[7], psRename->szOld.Text(), uiOld) == 0))
@@ -892,7 +918,7 @@ void FindIDEAssemblyEdits(const char* szText, size uiLength, SIDEAssemblyRename*
 				{
 					bLabel = FindIDEFieldLabelEdit(&szText[i], i, j - i, psRename, bComment, pasDest);
 				}
-				if (!bLabel && bComment && !psRename->bMoves && (j - i == psRename->szOld.Length()) && (memcmp(&szText[i], psRename->szOld.Text(), j - i) == 0))
+				if (!bLabel && bComment && !psRename->bMoves && !psRename->bWhole && (j - i == psRename->szOld.Length()) && (memcmp(&szText[i], psRename->szOld.Text(), j - i) == 0))
 				{
 					AddIDEAssemblyEdit(pasDest, i, j - i, psRename->szNew.Text(), true);
 				}

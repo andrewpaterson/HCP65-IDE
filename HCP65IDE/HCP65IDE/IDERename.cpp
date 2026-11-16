@@ -1047,7 +1047,10 @@ size CIDERename::ApplyAssemblyRename(SIDEAssemblyRename* psRename, CIDEFileEdits
 		{
 			psEdit = asEdits.Get(j);
 			pcFiles->GetEdits(szFileName)->Replace(psEdit->uiStart, psEdit->uiStart + psEdit->uiLength, psEdit->szReplacement.Text());
-			uiEdits++;
+			if (!psEdit->bLength)
+			{
+				uiEdits++;
+			}
 		}
 		*puiUnsure += psRename->uiUnsure;
 		KillIDEAssemblyEdits(&asEdits);
@@ -1089,7 +1092,11 @@ size CIDERename::RenameTypeInAssembly(const char* szOldName, const char* szNewNa
 // the move; returns how many, and in *puiUnsure the labels that fit it and
 // an overload of it both, which are left.  With bDropInstanceArguments a
 // class template's instance's arguments go from the labels too
-// ("_CBox__T_i__Fill" to "_CBox__Fill"): the template is a class now.
+// ("_CBox__T_i__Fill" to "_CBox__Fill"): the template is a class now.  A
+// class or enum that goes to other scopes (Move to Namespace) has its name
+// with its scopes changed wherever a label names it (SetTypeMove).  A
+// function or variable inside extern "C" is labelled by its name alone,
+// so nothing changes.
 //
 //////////////////////////////////////////////////////////////////////////
 size CIDERename::MoveAssembly(const char* szKey, const char* szNewScopeKey, CIDEFileEdits* pcFiles, size* puiUnsure, bool bDropInstanceArguments)
@@ -1128,7 +1135,14 @@ size CIDERename::MoveAssembly(const char* szKey, const char* szNewScopeKey, CIDE
 	}
 	KillIDELocations(&asLocations);
 	uiEdits = 0;
-	if (bFound && ((sTarget.uiAssembly == IAR_Member) || (sTarget.uiAssembly == IAR_Function) || (sTarget.uiAssembly == IAR_Field)))
+	if (bFound && (sTarget.uiAssembly == IAR_Type))
+	{
+		sRename.Init(IAR_Type, sTarget.szName.Text(), sTarget.szName.Text(), "");
+		sRename.SetTypeMove(sTarget.szScope.Text(), szNewScopeKey);
+		uiEdits = ApplyAssemblyRename(&sRename, pcFiles, puiUnsure);
+		sRename.Kill();
+	}
+	else if (bFound && !sTarget.bCLinkage && ((sTarget.uiAssembly == IAR_Member) || (sTarget.uiAssembly == IAR_Function) || (sTarget.uiAssembly == IAR_Field)))
 	{
 		sRename.Init((EIDEAssemblyRename)sTarget.uiAssembly, sTarget.szName.Text(), sTarget.szName.Text(), sTarget.szScope.Text());
 		sRename.SetMove(szNewScopeKey, bDropInstanceArguments);

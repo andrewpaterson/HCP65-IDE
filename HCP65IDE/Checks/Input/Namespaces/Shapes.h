@@ -33,6 +33,8 @@ namespace Drawing
 	typedef long	TLength;
 
 	void	Plot(Geometry::CPoint* pcPoint);
+
+	extern "C" void	Clear(void);
 }
 
 

@@ -2058,6 +2058,7 @@ void SIDERenameTarget::Init(void)
 	bType = false;
 	uiAssembly = IAR_None;
 	szScope.Init();
+	bCLinkage = false;
 	bOverloaded = false;
 	aszOverloads.Init();
 }
@@ -2268,6 +2269,7 @@ void CIDECodeModel::FindAssemblyRename(CCPPIndexSymbol* pcSymbol, SIDERenameTarg
 		//Declared inside extern "C": its label is its name alone, without its namespace or parameters ("_Read").
 		psDest->uiAssembly = IAR_Function;
 		psDest->szScope.Clear();
+		psDest->bCLinkage = true;
 	}
 	else if ((pcSymbol->meKind == CPPSK_Function) || (pcSymbol->meKind == CPPSK_Variable))
 	{
@@ -2719,6 +2721,29 @@ bool CIDECodeModel::GetSymbolKey(int32 iSymbol, CChars* pszKey, uint8* puiKind)
 	}
 	mcIndexMutex.Unlock();
 	return bFound;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The solution's named namespaces' keys ("Geometry::Detail"), each once.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDECodeModel::FindNamespaces(CArrayChars* paszDest)
+{
+	CCPPIndexSymbol*	pcSymbol;
+	size				i;
+
+	mcIndexMutex.Lock();
+	for (i = 0; i < mcIndex.NumSymbols(); i++)
+	{
+		pcSymbol = mcIndex.GetSymbol(i);
+		if ((pcSymbol->meKind == CPPSK_Namespace) && !pcSymbol->mszKey.Contains('@'))
+		{
+			paszDest->AddIfUnique(pcSymbol->mszKey.Text());
+		}
+	}
+	mcIndexMutex.Unlock();
 }
 
 

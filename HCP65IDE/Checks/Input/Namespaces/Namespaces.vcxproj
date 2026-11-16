@@ -7,11 +7,16 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Drawing.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="Shapes.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Drawing.h" />
     <ClInclude Include="Shapes.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ShapesW65C816.asm" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{8E3F4051-0000-4000-8000-000000000021}</ProjectGuid>
