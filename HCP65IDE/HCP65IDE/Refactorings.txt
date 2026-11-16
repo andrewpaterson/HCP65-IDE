@@ -390,7 +390,13 @@ IntelliJ has none of these for Java.
      specialisations after it (found in the syntax of the files that declare it: the index has no place for their
      names, so Rename and Find Usages miss them too; told to the CppCompilerLib session).  Checks
      move-function-variable-template and -namespace, on Constants.h and Use.cpp in Input/Namespaces.
-     Left: moving a namespace itself, and anything in an unnamed or inline namespace (refused, with why).
+     A namespace itself, 2026-11-16: each of its blocks is a site (one in another namespace's block is taken out of
+     it, as a declaration is), every name written with it is written from where it is, what its blocks name of
+     the namespace round them is qualified, and its labels' scopes change.  Refused: into itself or a namespace in
+     it, and an inline namespace; a namespace of the name there already is said (Problems Detected: the two will be
+     one).  Checks move-namespace-namespace, -into and -top.  Moving into the end of a block before it now leaves a
+     blank line before it, not after.
+     Item 21 is done.  Not done, and refused with why: what is in an unnamed or inline namespace.
  22. An enum to an enum class, every use of an enumerator qualified.
  23. Assembly.  Rename already changes hand written .asm by the compiler's labels; Change Signature and Move need
      the same rules where they change a label.  A template instance's labels have its arguments in them.
@@ -543,6 +549,10 @@ Where it is
      have:") or as an abstract class before it (functions only, one parameter, every declaration known).  The
      classes the template is used with are left alone (question 59).  Only a member named through a name declared
      with the parameter's type is found: not one reached through what another member returns.
+ 30. Plan item 21, namespaces, 2026-11-16: Move to Namespace (CIDEMoveNamespace) for a class, enum, typedef,
+     function, variable, template or namespace, with the functions that take a class (question 63), the assembly's
+     labels, Move to File of what is in a namespace and of a variable template, and 19's and 20's leftovers that
+     were namespaces'.  See 21 above.
  29. After the queue, question 13: Change Signature of a constructor changes where objects are made with arguments
      (a variable's ( and {, new, a temporary, a base's and a member's initialiser): the index has those as places
      the class is named, so they are found from the class's places (AddConstructions).  By the number of

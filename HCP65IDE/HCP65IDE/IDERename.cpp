@@ -1090,7 +1090,9 @@ size CIDERename::RenameTypeInAssembly(const char* szOldName, const char* szNewNa
 // scopes it goes to (SIDEAssemblyRename::SetMove).  szKey is its symbol as
 // it is before it moves.  The edits are pcFiles', so they are undone with
 // the move; returns how many, and in *puiUnsure the labels that fit it and
-// an overload of it both, which are left.  With bDropInstanceArguments a
+// an overload of it both, which are left.  A class, enum or namespace
+// that moves has its name with its scopes changed in every label that
+// names it.  With bDropInstanceArguments a
 // class template's instance's arguments go from the labels too
 // ("_CBox__T_i__Fill" to "_CBox__Fill"): the template is a class now.  A
 // class or enum that goes to other scopes (Move to Namespace) has its name
@@ -1135,9 +1137,9 @@ size CIDERename::MoveAssembly(const char* szKey, const char* szNewScopeKey, CIDE
 	}
 	KillIDELocations(&asLocations);
 	uiEdits = 0;
-	if (bFound && (sTarget.uiAssembly == IAR_Type))
+	if (bFound && ((sTarget.uiAssembly == IAR_Type) || (sTarget.uiAssembly == IAR_Namespace)))
 	{
-		sRename.Init(IAR_Type, sTarget.szName.Text(), sTarget.szName.Text(), "");
+		sRename.Init((EIDEAssemblyRename)sTarget.uiAssembly, sTarget.szName.Text(), sTarget.szName.Text(), "");
 		sRename.SetTypeMove(sTarget.szScope.Text(), szNewScopeKey);
 		uiEdits = ApplyAssemblyRename(&sRename, pcFiles, puiUnsure);
 		sRename.Kill();

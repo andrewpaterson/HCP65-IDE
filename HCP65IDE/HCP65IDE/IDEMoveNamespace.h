@@ -187,6 +187,7 @@ protected:
 	bool				AddSites(SIDENamespaceMove* psMove, const char* szKey, CIDEFileEdits* pcFiles);
 	void				FindTakers(SIDENamespaceMove* psMove, CIDEFileEdits* pcFiles, CArrayChars* paszDest);
 	bool				IsMoved(SIDENamespaceMove* psMove, const char* szKey, const char* szScope);
+	bool				IsInlineNamespace(SIDENamespaceMove* psMove, CIDEFileEdits* pcFiles);
 	void				MoveUses(SIDENamespaceMove* psMove, const char* szKey, const char* szNew, bool bUsings, CIDEFileEdits* pcFiles, CArrayIDENamespaceEdits* pasDest, CArrayChars* paszUsings, size* puiUses);
 };
 

@@ -844,7 +844,7 @@ bool CIDEMoveNamespace::FindMove(SIDENamespaceMove* psDest)
 	}
 	uiKind = psDest->uiKind;
 	if ((uiKind != CPPSK_Class) && (uiKind != CPPSK_Enum) && (uiKind != CPPSK_Typedef) && (uiKind != CPPSK_ClassTemplate) && (uiKind != CPPSK_AliasTemplate) &&
-		(uiKind != CPPSK_Function) && (uiKind != CPPSK_FunctionTemplate) && (uiKind != CPPSK_Variable) && (uiKind != CPPSK_VariableTemplate))
+		(uiKind != CPPSK_Function) && (uiKind != CPPSK_FunctionTemplate) && (uiKind != CPPSK_Variable) && (uiKind != CPPSK_VariableTemplate) && (uiKind != CPPSK_Namespace))
 	{
 		return false;
 	}
@@ -862,9 +862,15 @@ bool CIDEMoveNamespace::FindMove(SIDENamespaceMove* psDest)
 	psDest->bMovable = true;
 	cFiles.Init(mpcContent);
 
-	//Every declaration of it, and for a class its members' definitions in its namespace's blocks.
+	//Every declaration of it (a namespace's every block), and for a class its members' definitions in its namespace's
+	//blocks.
 	szWhyNot.Init();
 	AddSites(psDest, psDest->szKey.Text(), &cFiles);
+	if (psDest->bMovable && (psDest->uiKind == CPPSK_Namespace) && IsInlineNamespace(psDest, &cFiles))
+	{
+		psDest->bMovable = false;
+		psDest->szWhyNot.Set("it is an inline namespace");
+	}
 
 	if (psDest->bMovable && ((psDest->uiKind == CPPSK_Class) || (psDest->uiKind == CPPSK_ClassTemplate)))
 	{
@@ -1380,16 +1386,29 @@ void CIDEMoveNamespace::MoveSite(SIDENamespaceSite* psSite, const char* szOld, c
 	uiInto = bSplit ? MAX_SIZE : FindNeighbourBlock(szFile, bAnchored ? uiAnchor : uiDeleteStart, bAnchored ? uiAnchor : uiDeleteEnd, &aszNew, uiShared);
 	if (uiInto != MAX_SIZE)
 	{
-		//A block of the new namespace is next to it: it goes in at that block's start.  The blank lines after it go
-		//with it only where there are some before it too, so what was on either side stays apart.
-		if ((uiDeleteStart > 0) && IsIDEBlank(szFile, FindIDELineStart(szFile, uiDeleteStart - 1), uiDeleteStart))
+		if (uiInto < uiDeleteStart)
 		{
-			while ((szFile[uiDeleteEnd] != '\0') && IsIDEBlank(szFile, uiDeleteEnd, FindIDENextLine(szFile, uiDeleteEnd)) && (uiDeleteEnd < uiInto))
+			//A block of the new namespace is before it: it goes in at that block's end, a blank line from what is
+			//there, and the blank lines between them go.
+			while ((uiDeleteStart > uiInto) && IsIDEBlank(szFile, FindIDELineStart(szFile, uiDeleteStart - 1), uiDeleteStart) && (FindIDELineStart(szFile, uiDeleteStart - 1) >= FindIDENextLine(szFile, uiInto)))
 			{
-				uiDeleteEnd = FindIDENextLine(szFile, uiDeleteEnd);
+				uiDeleteStart = FindIDELineStart(szFile, uiDeleteStart - 1);
 			}
+			szText.Insert(0, "\n");
 		}
-		szText.Append('\n');
+		else
+		{
+			//A block of the new namespace is after it: it goes in at that block's start.  The blank lines after it go
+			//with it only where there are some before it too, so what was on either side stays apart.
+			if ((uiDeleteStart > 0) && IsIDEBlank(szFile, FindIDELineStart(szFile, uiDeleteStart - 1), uiDeleteStart))
+			{
+				while ((szFile[uiDeleteEnd] != '\0') && IsIDEBlank(szFile, uiDeleteEnd, FindIDENextLine(szFile, uiDeleteEnd)) && (uiDeleteEnd < uiInto))
+				{
+					uiDeleteEnd = FindIDENextLine(szFile, uiDeleteEnd);
+				}
+			}
+			szText.Append('\n');
+		}
 		pasDest->Add()->Init(psSite->szFileName.Text(), uiDeleteStart, uiDeleteEnd, "");
 		pasDest->Add()->Init(psSite->szFileName.Text(), uiInto, uiInto, szText.Text());
 	}
@@ -1434,7 +1453,14 @@ void CIDEMoveNamespace::FindConflicts(SIDENamespaceMove* psMove, const char* szN
 	if (!szNewKey.Equals(psMove->szKey) && pcModel->GetSymbolLocations(szNewKey.Text(), &asLocations, &uiKind) && (asLocations.NumElements() > 0))
 	{
 		szLine.Init(szNew[0] ? szNew : "The global namespace");
-		szLine.Append(" has a ")->Append(psMove->szName)->Append(" already.");
+		if (psMove->uiKind == CPPSK_Namespace)
+		{
+			szLine.Append(" has a namespace ")->Append(psMove->szName)->Append(" already: the two will be one namespace, and what they declare mustn't clash.");
+		}
+		else
+		{
+			szLine.Append(" has a ")->Append(psMove->szName)->Append(" already.");
+		}
 		paszDest->Add(szLine.Text());
 		szLine.Kill();
 	}
@@ -1575,6 +1601,12 @@ bool CIDEMoveNamespace::Move(SIDENamespaceMove* psMove, const char* szNamespace,
 	if (szNew.Equals(psMove->szNamespace))
 	{
 		pszStatus->Set("Move to Namespace: it is in that namespace already.");
+		szNew.Kill();
+		return false;
+	}
+	if ((psMove->uiKind == CPPSK_Namespace) && (szNew.Equals(psMove->szKey) || (szNew.StartsWith(psMove->szKey.Text()) && (szNew.Text()[psMove->szKey.Length()] == ':'))))
+	{
+		pszStatus->Set("Move to Namespace: a namespace can't go into itself.");
 		szNew.Kill();
 		return false;
 	}
@@ -2303,4 +2335,38 @@ void CIDEMoveNamespace::MoveUses(SIDENamespaceMove* psMove, const char* szKey, c
 	}
 	KillIDELocations(&asLocations);
 	szName.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether a namespace being moved is declared inline in one of its
+// blocks (moving it would change what its enclosing namespace has).
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEMoveNamespace::IsInlineNamespace(SIDENamespaceMove* psMove, CIDEFileEdits* pcFiles)
+{
+	CArrayIDELocations	asLocations;
+	SIDELocation*		psLocation;
+	CIDERefactorUnit*	pcUnit;
+	CCPPSyntax*			pcNode;
+	int32				iToken;
+	size				i;
+	uint8				uiKind;
+	bool				bInline;
+
+	bInline = false;
+	asLocations.Init();
+	mpcContent->GetCodeModel()->GetSymbolLocations(psMove->szKey.Text(), &asLocations, &uiKind);
+	for (i = 0; !bInline && (i < asLocations.NumElements()); i++)
+	{
+		//Each block's namespace name.
+		psLocation = asLocations.Get(i);
+		pcUnit = (psLocation->uiRole != CPPIR_Reference) ? GetUnit(psLocation->szFileName.Text()) : NULL;
+		iToken = pcUnit ? pcUnit->FindTokenAt(psLocation->iLine, psLocation->iColumn) : -1;
+		pcNode = (iToken >= 0) ? pcUnit->FindAncestor(pcUnit->FindNodeOfTokens(iToken, iToken), CPPS_Namespace) : NULL;
+		bInline = pcNode && ((CCPPSyntaxNamespace*)pcNode)->mbInline;
+	}
+	KillIDELocations(&asLocations);
+	return bInline;
 }

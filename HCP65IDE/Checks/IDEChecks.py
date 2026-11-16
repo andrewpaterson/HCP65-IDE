@@ -1918,6 +1918,38 @@ CHECKS = [
 		 r'^Disk lines Constants\.h:$', r'^9\|template<>$', r'^10\|int\tgmPi<int> = 3;$', r'^13\|#endif',
 		 r'^Disk lines Drawing\.h:$', r'^7\|\tint\tHalf\(int i\);$', r'^8\|$', r'^9\|\ttemplate<class M>$', r'^10\|\tM\tgmTau = M\(6\.2831853\);$', r'^11\|\}$'],
 		[r'^\d+\|namespace Geometry\n(?s:.*)namespace Geometry\n(?s:.*)Disk lines Use']),
+	('move-namespace-namespace', dict(MakeNamespacesCopy(), **{
+		#Move to Namespace of a namespace (Refactorings.txt 21 a): Geometry::Detail to the global namespace.  Its block,
+		#alone at the end of Geometry's, follows it; Geometry::Detail::Twice is Detail::Twice where it was written so,
+		#and Detail::Twice in Geometry is still that; its labels lose Geometry.
+		'WAIT_INDEX': '1', 'OPEN': 'Shapes.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:24:13,edit:movetonamespace:,printdisklines:Shapes.h,printdisklines:Shapes.cpp,printdisklines:Main.cpp,printdisklines:ShapesW65C816.asm'}),
+		[r'^Move to Namespace: Geometry::Detail from \[Geometry\], 1 declarations: Shapes\.h\[1\]$',
+		 r'^Move to Namespace status: Moved Geometry::Detail to the global namespace: 3 uses; 2 labels in assembly changed\.$',
+		 r'^22\|\textern int\tgiCount;$', r'^23\|\}$', r'^26\|namespace Detail$', r'^27\|\{$', r'^28\|\tint\tTwice\(int i\);$', r'^29\|\}$', r'^32\|namespace Drawing$',
+		 r'^16\|\t\tmiY = Detail::Twice\(iY\);$', r'^45\|int Detail::Twice\(int i\)$',
+		 r'^21\|\ti = Area\(&cOther\) \+ Detail::Twice\(giCount\);$', r'^11\|_Detail__Twice__Fi:$', r'^14\|\t\tjsr _Detail__Twice__Fi$'],
+		[r'Geometry::Detail::Twice\(', r'Geometry__Detail']),
+	('move-namespace-namespace-into', dict(MakeNamespacesCopy(), **{
+		#Geometry::Detail into Drawing: into the Drawing block next to it, at its start; every use Drawing::Detail.
+		'WAIT_INDEX': '1', 'OPEN': 'Shapes.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:24:13,edit:movetonamespace:Drawing,printdisklines:Shapes.h,printdisklines:Shapes.cpp,printdisklines:Main.cpp,printdisklines:ShapesW65C816.asm'}),
+		[r'^Move to Namespace status: Moved Geometry::Detail to Drawing: 3 uses; 2 labels in assembly changed\.$',
+		 r'^23\|\}$', r'^26\|namespace Drawing$', r'^27\|\{$', r'^28\|\tnamespace Detail$', r'^29\|\t\{$', r'^30\|\t\tint\tTwice\(int i\);$', r'^31\|\t\}$', r'^32\|$', r'^33\|\ttypedef long\tTLength;$',
+		 r'^16\|\t\tmiY = Drawing::Detail::Twice\(iY\);$', r'^45\|int Drawing::Detail::Twice\(int i\)$',
+		 r'^21\|\ti = Area\(&cOther\) \+ Drawing::Detail::Twice\(giCount\);$', r'^11\|_Drawing__Detail__Twice__Fi:$'],
+		[]),
+	('move-namespace-namespace-top', dict(MakeNamespacesCopy(), **{
+		#Drawing, a namespace of the file's, into Geometry: into the end of the Geometry block before it, a blank line
+		#from Detail, and its qualified definition and using-declaration name Geometry::Drawing.  Geometry can't go
+		#into its own Detail.
+		'WAIT_INDEX': '1', 'OPEN': 'Shapes.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:31:11,edit:movetonamespace:Geometry,edit:caret:5:11,edit:movetonamespace:Geometry::Detail,printdisklines:Shapes.h,printdisklines:Shapes.cpp,printdisklines:Main.cpp,printdisklines:ShapesW65C816.asm'}),
+		[r'^Move to Namespace status: Moved Drawing to Geometry: 2 uses; 1 label in assembly changed\.$',
+		 r"^Move to Namespace status: Move to Namespace: a namespace can't go into itself\.$",
+		 r'^27\|\t\}$', r'^28\|$', r'^29\|\tnamespace Drawing$', r'^30\|\t\{$', r'^31\|\t\ttypedef long\tTLength;$', r'^36\|\t\}$', r'^37\|\}$', r'^38\|$', r'^39\|$', r'^40\|#endif',
+		 r'^55\|void Geometry::Drawing::Plot\(Geometry::CPoint\* pcPoint\)$', r'^5\|using Geometry::Drawing::Plot;$', r'^13\|_Geometry__Drawing__Plot__FPC16Geometry__CPoint:$'],
+		[]),
 	('move-namespace-refused', dict(MakeNamespacesCopy(), **{
 		#A member of a class isn't at namespace scope: there is nothing to move.
 		'WAIT_INDEX': '1', 'OPEN': 'Shapes.h',
