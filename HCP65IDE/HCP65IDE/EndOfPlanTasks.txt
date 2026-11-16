@@ -1,0 +1,125 @@
+The end-of-plan tasks, handed over (2026-11-16)
+===============================================
+
+The refactoring plan (Refactorings.txt, items 1 to 30) is done.  These are the tasks the user set aside on 2026-11-15
+for "when the plan is done" (Refactorings.txt, "When the plan is done"), written up so another session can take them
+over while this one goes on with other work.  Each is the user's to start: bring it up with them first, say how you
+mean to do it, and go on when they say.  e (file and code templates) is done already (CodeTemplates.txt, deb7d73).
+
+
+How work is done here
+---------------------
+
+  - Builds are Release|x64 (MSBuild, the solution's .sln).  Debug only to debug something.  Warnings are errors.
+  - Another session (gameengine-3c, in the worktree D:\gameengine\CommonLibrariesPartB) works on CppCompilerLib and
+    fast-forwards CommonLibraries' master.  Tell it before Release x64 builds and test runs of CommonLibraries, and
+    leave CppCompilerLib's own files to it (ask it, through a cross-session message).
+  - Commits: no Co-Authored-By line (the user's rule).  Commit through a temporary index, so nothing staged by
+    another session is swept in:  export GIT_INDEX_FILE=<scratchpad>/tmpindex; git read-tree HEAD; git add <files>;
+    git commit -F <message file>; rm the index; unset GIT_INDEX_FILE; git reset -q.  Nothing is pushed unless asked.
+  - Edits by script: write the script to a file and run it.  A script with backslashes sent through a bash heredoc or
+    python -c loses them (a "\n" in C became a newline, once a NUL); check edited files for NUL bytes after.  Sources
+    are LF (.gitattributes), .vcxproj files CRLF; don't use sed -i on sources.
+  - House style: Hungarian prefixes (Ptr<> and CPointer are p), the own primitive types (int32, size, uint8; not
+    UINT or DWORD), tabs, a ////// banner over each function, locals declared at the top of each function, names
+    lined up in their column with tabs, one-line functions at the bottom of a class's .cpp.
+  - The IDE's checks: HCP65-IDE\HCP65IDE\Checks\IDEChecks.py, run from HCP65IDE\HCP65IDE with
+    D:\claude-tmp\claude\runchecks.py (a wrapper that strips CRs) against ..\x64\Release\HCP65IDE.exe, or with no
+    window against ..\x64\Reference\HCP65IDERef.exe (build Reference|x64 first), with
+    "-open D:/gameengine/HCP65/ModPlay/HCP65ModPlay.sln" and the checks' names, about 30 at a time.  A check is
+    (name, settings, [lines expected, in order], [lines that mustn't be there]).
+
+
+a. Find duplicates: "Look for duplicates of selected text / function"
+--------------------------------------------------------------------
+
+What the user asked for (question 37, RefactoringQuestions.txt): a feature of its own, as IntelliJ's Locate
+Duplicates: for the selected text, or the function at the caret, find the places in the solution that are the same
+code, the comparison not minding what the variables are called, and list them (in the Find window, as Find Usages
+lists, each one opened by a click).
+
+What there is to build on: Extract Method already finds duplicates of its selection, in its own file only:
+CIDEExtractMethod::FindDuplicates, IsDuplicate and ChooseDuplicates (IDEExtractMethod.h/.cpp).  It compares token
+for token, with each local variable of the selection allowed to be a different one at the duplicate (consistently).
+The new feature needs: the whole solution (each project's files, parsed with CIDERefactorUnit; the index's file
+list is CIDECodeModel::NumProjectFiles/GetProjectFile); a whole function as the thing looked for (its body, its
+parameters free like locals); statements that are the same sequence anywhere in a body, not only a whole body;
+and a result list.  Find Usages' window (IDEFindUsages*) is where results are shown elsewhere.
+
+Questions to ask the user before building: the menu and key (IntelliJ has no default key; Code, Locate Duplicates
+is its menu); whether a match must be whole statements or can be part of an expression; how small a duplicate is
+worth listing; whether literals must match.
+
+
+b. Every getter: const, and where it is written
+-----------------------------------------------
+
+What the user asked for (question 44): a getter is declared in the class and defined on one line at the bottom of
+the class's .cpp, where the one-line functions are ("int32 CListContainer::GetSelected(void) { return miSelected; }"),
+and it is const.  "There is a pattern for it, not kept to everywhere": all the getters there are need looking at,
+in all of the user's code (CommonLibraries, HCP65-IDE, HCP65, LogiCim).  Encapsulate Field writes new ones so
+already (2026-11-15); the old ones are this task.
+
+How: find the getters (a member function named Get..., Is..., Has..., that takes nothing and returns a member, or
+something worked out from members without changing them).  For each, make it const with the IDE's own Make Member
+Function const (CIDEMemberQualifier; it changes its overrides with it, and refuses what changes the object), and
+move a one-line definition written in the class out to the bottom of the .cpp (Move Definition out of Class,
+CIDEDefinitions), but in a class template or a class with no .cpp, where it stays in the class.
+
+Careful: on 2026-11-07 a bulk change of Ptr<> and CPointer parameters to const& and of getters to return references
+was made and reverted (aliasing; it exposed a write-through bug, since fixed).  This task is const on the function
+only: don't change what a getter returns.  A getter that returns a non-const pointer or reference into the object
+(&mcThing) can't simply be const: list those for the user instead.  Do it a library at a time, build and run its
+tests (the 23 suites and build-only projects in the memory's test sweep) after each, and commit each.
+
+
+c. G++'s -Wsuggest-override turned on, and what it names fixed
+--------------------------------------------------------------
+
+What the user asked for: -Wsuggest-override in every project they care about, every function it names marked
+override.  Each has a working Linux build with CMake: CommonLibraries (18 CMakeLists.txt), HCP65-IDE (6), HCP65
+(6), LogiCim (3).  Builds on Linux are in WSL: Ubuntu at D:\WSL\Ubuntu with the build tools (wsl.exe needs the
+sandbox off).
+
+How: add -Wsuggest-override to each CMake build's flags (look for where the projects set their warnings, so it is
+said once per repository, not per CMakeLists.txt if a shared one exists), build each on Linux, and put override on
+every function it names, in the house style ("void	Class(void) override;").  A function marked override that
+also says virtual keeps virtual only if the house style does there; look at what the files round it do.  Build on
+Windows too after (MSVC must still be happy), run the tests, and commit a repository at a time.  CppCompilerLib's
+files are the other session's: send it the list for them, or ask before touching them.
+
+
+d. An optional warning in the HCP65 compiler for a missing override
+-------------------------------------------------------------------
+
+What the user asked for: the HCP65 C++ compiler (CppCompilerLib) to warn, when asked, where a member function
+overrides a base class's virtual function and isn't marked override (as G++'s and Clang's -Wsuggest-override; MSVC
+has it only in /analyze, C26433).  Off unless turned on.  This is CppCompilerLib's: it is the other session's area,
+so it is theirs to build or to agree to; raise it with them (and the user) rather than editing CppCompilerLib
+under them.  Where it would be turned on: the compiler's options (the HCP65 build's configuration, .hcp65build, and
+hcp65build.exe's command line), and the IDE's build settings show warnings in its Error List.
+
+
+f. Every project LGPL
+---------------------
+
+What the user asked for (2026-11-16): the AGPL was chosen by mistake on GitHub, and the user is the only
+contributor, so every project becomes LGPL 3, as CommonLibraries is.  What says AGPL now (counted 2026-11-16):
+
+  - HCP65-IDE: LICENSE (the AGPL's text), and the notice in 213 source files ("GNU Affero General Public License",
+    three times in each header comment: HCP65IDE\HCP65IDE 150, Libraries\BuildLib 28, VisualStudioLib 16, GitLib 10,
+    ClaudeLib 8, HCP65Build 1).
+  - HCP65: LICENSE, HCP65-Emulator\LICENSE and HCP65-Tester\HCP65Tester\LICENSE.  Its sources' notices are LGPL
+    already (63 files).
+  - LogiCim: LogiCim\LICENSE.  Its sources' notices are LGPL already (143 files).
+  - CommonLibraries: only Libraries\BaseLib\gpl.txt mentions the Affero licence (it is the GPL's own text, which
+    names it: leave it).
+
+How: each LICENSE gets the LGPL 3's text, from the GNU (lgpl-3.0.txt; CommonLibraries has no LICENSE file to copy),
+with the GPL 3's text beside it as COPYING, since the LGPL is a set of permissions on top of the GPL; ask the user
+whether they want COPYING too, and whether CommonLibraries should get the two files as well.
+In the notices, "GNU Affero General Public License" becomes "GNU Lesser General Public License" and nothing else
+changes (the three lines keep their wrapping: compare with any of CommonLibraries' headers, e.g. BaseLib\Chars.h).
+Check with git grep -l "Affero" that none are left, build, and commit a repository at a time.  The licence each
+repository shows on GitHub is set there: tell the user it is theirs to change.  The IDE writes new files' notices
+from its file templates, which are LGPL already (TemplateLib's TemplateStrings.cpp, IDEFileTemplates.cpp).

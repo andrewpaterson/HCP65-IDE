@@ -562,7 +562,7 @@ When the plan is done
 ---------------------
 
 The user's, 2026-11-15: each is to be brought up with him when the refactoring plan and the queue above are
-finished, not started before.
+finished, not started before.  Written up for another session to take over on 2026-11-16: EndOfPlanTasks.txt.
 
   a. A feature of its own: "Look for duplicates of selected text / function" (from question 37, where Extract
      Method finds duplicates in its own file).
