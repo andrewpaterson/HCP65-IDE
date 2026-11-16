@@ -554,7 +554,6 @@ Where it is
      the class is named, so they are found from the class's places (AddConstructions).  By the number of
      arguments.  An object made with no brackets ("CLid cLid;", "new CLid") is given them when it gets an
      argument; a data member that no constructor initialises isn't given an initialiser.
-
  30. Plan item 21, namespaces, 2026-11-16: Move to Namespace (CIDEMoveNamespace) for a class, enum, typedef,
      function, variable, template or namespace, with the functions that take a class (question 63), the assembly's
      labels, Move to File of what is in a namespace and of a variable template, and 19's and 20's leftovers that
