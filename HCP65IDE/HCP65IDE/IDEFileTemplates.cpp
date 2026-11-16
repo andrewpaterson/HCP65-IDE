@@ -36,6 +36,22 @@ struct SIDEBuiltInTemplate
 
 static const SIDEBuiltInTemplate gasIDEBuiltInTemplates[] =
 {
+	{ ITT_Files, "C++ Header", "h", "${NAME}", "",
+		"## A new header.  A refactoring gives ${INCLUDES} (its #includes, each line ended) and ${BODY} (the class, and what\n"
+		"## it defines outside the class); New gives neither.\n"
+		"#parse(\"File Header\")\n"
+		"#parse(\"Include Guard Open\")\n"
+		"$!{INCLUDES}\n"
+		"\n"
+		"$!{BODY}\n"
+		"\n"
+		"#parse(\"Include Guard Close\")\n" },
+	{ ITT_Files, "C++ Source", "cpp", "${NAME}", "",
+		"## A new source file: its header's #include, then a refactoring's ${INCLUDES} and ${BODY} (its definitions, each\n"
+		"## after two blank lines).\n"
+		"#parse(\"File Header\")\n"
+		"#include \"${HEADER_FILENAME}\"\n"
+		"$!{INCLUDES}$!{BODY}" },
 	{ ITT_Includes, "File Header", "", "", "",
 		"## The licence comment a new file starts with: the project's licence (its properties), or none.\n"
 		"#if ($LICENCE == \"LGPL 3\" || $LICENCE == \"AGPL 3\")\n"

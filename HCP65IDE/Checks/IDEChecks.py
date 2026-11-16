@@ -288,13 +288,16 @@ def MakeDefinitionsCopy():
 	return {'SOLUTION': os.path.join(szFolder, 'Definitions.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
 
 
-def MakeMoveMembersCopy():
+def MakeMoveMembersCopy(szLicence=None):
 	#A copy of Input/MoveMembers (CVessel and the CDrum and CKeg that derive from it, with functions defined in and
-	#outside their classes, fields, and what uses what; CBox and CCrate, class templates), to move members in.
+	#outside their classes, fields, and what uses what; CBox and CCrate, class templates), to move members in.  Its
+	#licence is None (MoveMembers.hcp65project), so the files made in it have no File Header, or szLicence.
 	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
 	atexit.register(shutil.rmtree, szRoot, True)
 	szFolder = os.path.join(szRoot, 'MoveMembers')
 	shutil.copytree(os.path.join(HERE, 'Input', 'MoveMembers'), szFolder)
+	if szLicence:
+		open(os.path.join(szFolder, 'MoveMembers.hcp65project'), 'w', newline='').write('<?xml version="1.0" encoding="utf-8"?>\n<HCP65Project Licence="%s"/>\n' % szLicence)
 	return {'SOLUTION': os.path.join(szFolder, 'MoveMembers.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
 
 
@@ -1667,9 +1670,10 @@ CHECKS = [
 		 r'^Dialog \[Pull Members Up from CDrum\] answered OK$', r'^Dialog \[Problems Detected\] answered Cancel$'],
 		[r'Pulled Fill']),
 	('move-class', dict(MakeMoveMembersCopy(), **{
-		#Move Class to Its Own Files: CKeg shares Drum.h with CDrum and Drum.cpp with its functions.  It gets Keg.h (a
-		#guard named as Drum.h's is, Drum.h's #includes, the class) and Keg.cpp (an #include of Keg.h, Drum.cpp's
-		#includes, its functions with the comments over them); they go out of Drum.h and Drum.cpp, which don't end with
+		#Move Class to Its Own Files: CKeg shares Drum.h with CDrum and Drum.cpp with its functions.  It gets Keg.h (the
+		#C++ Header template's: the Include Guard template's guard, Drum.h's #includes, the class) and Keg.cpp (the C++
+		#Source template's: an #include of Keg.h, Drum.cpp's includes, its functions with the comments over them); the
+		#project's licence is None, so neither has a File Header.  They go out of Drum.h and Drum.cpp, which don't end with
 		#blank lines for it; Main.cpp, which names CKeg, #includes Keg.h beside its #include of Drum.h; and the project
 		#has the new files beside the old.
 		'WAIT_INDEX': '1', 'OPEN': 'Drum.h', 'CARET': '27:8',
@@ -1685,6 +1689,16 @@ CHECKS = [
 		 r'^1\|#include "Drum\.h"$', r'^2\|#include "Keg\.h"$', r'^3\|#include "Crate\.h"$',
 		 r'^\d+\|    <ClCompile Include="Drum\.cpp" />$', r'^\d+\|    <ClCompile Include="Keg\.cpp" />$', r'^\d+\|    <ClInclude Include="Drum\.h" />$', r'^\d+\|    <ClInclude Include="Keg\.h" />$'],
 		[]),
+	('move-class-licence', dict(MakeMoveMembersCopy('LGPL 3'), **{
+		#Move Class with the project's licence LGPL 3 (its .hcp65project): Keg.h and Keg.cpp start with the File Header
+		#template's licence comment, naming the project, the year and the author, and then are as move-class's.
+		'WAIT_INDEX': '1', 'OPEN': 'Drum.h', 'CARET': '27:8',
+		'DEBUG': 'edit:renamesearch:---s,edit:movableclass,edit:moveclass:,printdisklines:Keg.h,printdisklines:Keg.cpp'}),
+		[r'^Status: Moved CKeg to Keg\.h and Keg\.cpp: 2 definitions outside it, 1 #include added\.$',
+		 r'^1\|/\*\* -+ COPYRIGHT NOTICE, DISCLAIMER, and LICENSE -+ \*\*$', r'^3\|Copyright \(c\) \d{4} \S.*$', r'^5\|This file is part of The Codaphela Project: Codaphela MoveMembers$',
+		 r'^8\|it under the terms of the GNU Lesser General Public License as published by$', r'^20\|\*\* -+ \*\*/$', r'^21\|#ifndef __KEG_H__$', r'^22\|#define __KEG_H__$',
+		 r'^23\|#include "Vessel\.h"$', r'^26\|class CKeg : public CVessel$', r'^34\|#endif // __KEG_H__$', r'^34 lines$',
+		 r'^20\|\*\* -+ \*\*/$', r'^21\|#include "Keg\.h"$', r'^22\|#include "Drum\.h"$', r'^29\|void CKeg::Tap\(void\)$', r'^42 lines$'], []),
 	('move-class-template', dict(MakeMoveMembersCopy(), **{
 		#A class template: its member defined outside it in the header goes to the new header with it, there is no
 		#source file, and the new header #includes the old one, where the class it derives from stays.  A name that is

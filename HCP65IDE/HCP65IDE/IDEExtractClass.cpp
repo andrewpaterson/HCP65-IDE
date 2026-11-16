@@ -613,7 +613,8 @@ bool CIDEExtractClass::Extract(SIDEMembersMove* psMove, int iKind, const char* s
 	CChars				szNewSource;
 	CChars				szHeaderText;
 	CChars				szSourceText;
-	CChars				szGuard;
+	CChars				szHeaderIncludes;
+	CChars				szHeaderBody;
 	CChars				szDeclaration;
 	CChars				szBlock;
 	CChars				szLine;
@@ -640,8 +641,6 @@ bool CIDEExtractClass::Extract(SIDEMembersMove* psMove, int iKind, const char* s
 	bool				bInline;
 	bool				bFieldPut;
 	bool				bBases;
-	bool				bPragma;
-	bool				bComment;
 	bool				bResult;
 	bool				bInit;
 	bool				bInitPlaced;
@@ -884,59 +883,42 @@ bool CIDEExtractClass::Extract(SIDEMembersMove* psMove, int iKind, const char* s
 	}
 	szLine.Kill();
 
-	//The new header: the class's header's opening comment, a guard, its #includes, and the new class.
-	szHeaderText.Init();
-	szGuard.Init();
-	pcMoveClass->AppendGuard(szText, psMove->sClass.szFileName.Text(), szStem, &szGuard, &bPragma, &bComment);
-	szHeaderText.AppendSubString(szText, 0, pcMoveClass->FindOpeningEnd(szText));
-	if (bPragma)
-	{
-		szHeaderText.Append("#pragma once\n");
-	}
-	else
-	{
-		szHeaderText.Append("#ifndef ")->Append(szGuard)->Append("\n#define ")->Append(szGuard)->Append('\n');
-	}
-	pcMoveClass->AppendIncludes(szText, &szHeaderText);
-	szHeaderText.Append("\n\n");
+	//The new header, from the C++ Header template: the class's header's #includes, and the new class.
+	szHeaderIncludes.Init();
+	pcMoveClass->AppendIncludes(szText, &szHeaderIncludes);
+	szHeaderBody.Init();
 	if (bTemplate)
 	{
-		szHeaderText.Append(szTemplate)->Append('\n');
+		szHeaderBody.Append(szTemplate)->Append('\n');
 	}
-	szHeaderText.Append("class ")->Append(szName)->Append("\n{\n");
+	szHeaderBody.Append("class ")->Append(szName)->Append("\n{\n");
 	bInline = false;
 	for (i = 3; i > 0; i--)
 	{
 		//Private, protected, public: as classes here are written.
 		if (!aszSections[i - 1].Empty())
 		{
-			szHeaderText.Append(bInline ? "\n" : "");
-			szHeaderText.Append(gaszIDEExtractAccess[i - 1])->Append(":\n")->Append(aszSections[i - 1]);
+			szHeaderBody.Append(bInline ? "\n" : "");
+			szHeaderBody.Append(gaszIDEExtractAccess[i - 1])->Append(":\n")->Append(aszSections[i - 1]);
 			bInline = true;
 		}
 	}
-	szHeaderText.Append("};\n");
-	szHeaderText.Append(szHeaderBlocks);
-	if (!bPragma)
-	{
-		szHeaderText.Append("\n\n#endif");
-		if (bComment)
-		{
-			szHeaderText.Append(" // ")->Append(szGuard);
-		}
-		szHeaderText.Append('\n');
-	}
-	szGuard.Kill();
+	szHeaderBody.Append("};\n");
+	szHeaderBody.Append(szHeaderBlocks);
+	szHeaderText.Init();
+	bTemplates = bTemplates && pcMoveClass->AppendNewFileText(IDE_TEMPLATE_CPP_HEADER, szNewHeader.Text(), psMove->sClass.szFileName.Text(), szName, szHeaderIncludes.Text(), szHeaderBody.Text(), &szHeaderText);
+	szHeaderBody.Kill();
+	szHeaderIncludes.Kill();
 
 	//Its source file, if anything of it is defined in one.
 	szSourceText.Init();
 	szOutside = szNewSource.Empty() ? NULL : cFiles.GetText(szSourceFile.Text());
 	if (szOutside)
 	{
-		szSourceText.AppendSubString(szOutside, 0, pcMoveClass->FindOpeningEnd(szOutside));
-		szSourceText.Append("#include \"")->Append(GetIDEFileNamePart(szNewHeader.Text()))->Append("\"\n");
-		pcMoveClass->AppendIncludes(szOutside, &szSourceText);
-		szSourceText.Append(szSourceBlocks);
+		szHeaderIncludes.Init();
+		pcMoveClass->AppendIncludes(szOutside, &szHeaderIncludes);
+		bTemplates = bTemplates && pcMoveClass->AppendNewFileText(IDE_TEMPLATE_CPP_SOURCE, szNewSource.Text(), szSourceFile.Text(), szName, szHeaderIncludes.Text(), szSourceBlocks.Text(), &szSourceText);
+		szHeaderIncludes.Kill();
 	}
 
 	pcMoveClass->BeginCreating();

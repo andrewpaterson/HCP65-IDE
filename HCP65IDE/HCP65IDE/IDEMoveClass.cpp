@@ -27,6 +27,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "CppCompilerLib/CPPIndex.h"
 #include "WindowLib/GridContainer.h"
 #include "IDEContent.h"
+#include "IDETemplateVariables.h"
 #include "IDERename.h"
 #include "IDEFileRename.h"
 #include "IDESafeDelete.h"
@@ -73,38 +74,6 @@ void SIDEClassMove::Kill(void)
 	szWhyNot.Kill();
 	szName.Kill();
 	szKey.Kill();
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// A file's name as an include guard has it: its words in capitals with
-// an underscore between them ("IDEMoveClass" is "IDE_MOVE_CLASS"), or,
-// not bWords, only in capitals.
-//
-//////////////////////////////////////////////////////////////////////////
-static void AppendIDEGuardName(const char* szStem, bool bWords, CChars* pszDest)
-{
-	size	i;
-	char	c;
-	bool	bUpper;
-	bool	bPreviousLower;
-	bool	bPreviousUpper;
-	bool	bNextLower;
-
-	for (i = 0; szStem[i] != '\0'; i++)
-	{
-		c = szStem[i];
-		bUpper = (c >= 'A') && (c <= 'Z');
-		bPreviousLower = (i > 0) && (((szStem[i - 1] >= 'a') && (szStem[i - 1] <= 'z')) || ((szStem[i - 1] >= '0') && (szStem[i - 1] <= '9')));
-		bPreviousUpper = (i > 0) && (szStem[i - 1] >= 'A') && (szStem[i - 1] <= 'Z');
-		bNextLower = (szStem[i + 1] >= 'a') && (szStem[i + 1] <= 'z');
-		if (bWords && bUpper && (bPreviousLower || (bPreviousUpper && bNextLower)))
-		{
-			pszDest->Append('_');
-		}
-		pszDest->Append(((c >= 'a') && (c <= 'z')) ? (char)(c - 'a' + 'A') : (IsIDENameChar(c) ? c : '_'));
-	}
 }
 
 
@@ -903,83 +872,25 @@ void CIDEMoveClass::AppendIncludes(const char* szText, CChars* pszDest)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The include guard of a new header, named as the header it comes from
-// names its own: that one's with the new file's name where the old file's
-// is ("__TANK_H__" gives "__DRUM_H__"), or, if it has none of that shape,
-// "__NAME_H__".  *pbPragma if the old header has #pragma once and no
-// guard, and *pbComment if its #endif says the guard's name after it.
+// A new header's or source file's text from a Files template (C++ Header,
+// C++ Source): szIncludes its #includes (each line ended) and szBody
+// what goes in it, with the file's variables (SetIDETemplateFileVariables;
+// szProjectOf is a file of the project it is added to).  False, with the
+// template's error (GetFileTemplates()->GetError()), if it has one.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEMoveClass::AppendGuard(const char* szText, const char* szOldPath, const char* szStem, CChars* pszGuard, bool* pbPragma, bool* pbComment)
+bool CIDEMoveClass::AppendNewFileText(const char* szTemplate, const char* szPath, const char* szProjectOf, const char* szClassName, const char* szIncludes, const char* szBody, CChars* pszDest)
 {
-	CChars		szOld;
-	CChars		szOldStem;
-	CChars		szOldName;
-	CChars		szNewName;
-	const char*	szIfndef;
-	const char*	szEndif;
-	size		uiAt;
-	size		i;
-	int			iForm;
+	CTemplateValues	cValues;
+	bool			bResult;
 
-	*pbPragma = false;
-	*pbComment = true;
-	szOld.Init();
-	uiAt = FindOpeningEnd(szText);
-	for (; (szText[uiAt] == ' ') || (szText[uiAt] == '\t') || (szText[uiAt] == '\r') || (szText[uiAt] == '\n'); uiAt++)
-	{
-	}
-	szIfndef = (strncmp(&szText[uiAt], "#ifndef", 7) == 0) ? &szText[uiAt + 7] : NULL;
-	if (szIfndef)
-	{
-		for (; (*szIfndef == ' ') || (*szIfndef == '\t'); szIfndef++)
-		{
-		}
-		for (i = 0; IsIDENameChar(szIfndef[i]); i++)
-		{
-			szOld.Append(szIfndef[i]);
-		}
-		szEndif = NULL;
-		for (szIfndef = strstr(szText, "#endif"); szIfndef; szIfndef = strstr(szIfndef + 1, "#endif"))
-		{
-			szEndif = szIfndef;
-		}
-		*pbComment = szEndif && (strstr(szEndif, "//") != NULL);
-	}
-	else if (strstr(szText, "#pragma once"))
-	{
-		*pbPragma = true;
-		szOld.Kill();
-		return;
-	}
-
-	szOldStem.Init(GetIDEFileNamePart(szOldPath));
-	for (i = 0; (i < szOldStem.Length()) && (szOldStem.Text()[i] != '.'); i++)
-	{
-	}
-	szOldStem.SetLength(i);
-	for (iForm = 0; pszGuard->Empty() && (iForm < 2) && !szOld.Empty(); iForm++)
-	{
-		szOldName.Init();
-		szNewName.Init();
-		AppendIDEGuardName(szOldStem.Text(), iForm == 0, &szOldName);
-		AppendIDEGuardName(szStem, iForm == 0, &szNewName);
-		if (szOld.Contains(szOldName.Text()))
-		{
-			pszGuard->Set(szOld);
-			pszGuard->Replace(szOldName.Text(), szNewName.Text());
-		}
-		szNewName.Kill();
-		szOldName.Kill();
-	}
-	if (pszGuard->Empty())
-	{
-		pszGuard->Append("__");
-		AppendIDEGuardName(szStem, true, pszGuard);
-		pszGuard->Append("_H__");
-	}
-	szOldStem.Kill();
-	szOld.Kill();
+	cValues.Init();
+	SetIDETemplateFileVariables(mpcContent, szPath, szProjectOf, szClassName, &cValues);
+	cValues.Set("INCLUDES", szIncludes);
+	cValues.Set("BODY", szBody);
+	bResult = mpcContent->GetFileTemplates()->Apply(ITT_Files, szTemplate, &cValues, pszDest);
+	cValues.Kill();
+	return bResult;
 }
 
 
@@ -1375,7 +1286,11 @@ bool CIDEMoveClass::Move(SIDEClassMove* psMove, const char* szStem, CChars* pszS
 	CChars				szNewSource;
 	CChars				szHeaderText;
 	CChars				szSourceText;
-	CChars				szGuard;
+	CChars				szHeaderIncludes;
+	CChars				szHeaderBody;
+	CChars				szSourceIncludes;
+	CChars				szSourceBody;
+	const char*			szClassName;
 	CChars				szLine;
 	CChars				szMessage;
 	CChars				szNewName;
@@ -1390,8 +1305,7 @@ bool CIDEMoveClass::Move(SIDEClassMove* psMove, const char* szStem, CChars* pszS
 	size				i;
 	size				j;
 	uint8				uiKind;
-	bool				bPragma;
-	bool				bComment;
+	bool				bTemplates;
 	bool				bMerged;
 	bool				bResult;
 
@@ -1431,6 +1345,7 @@ bool CIDEMoveClass::Move(SIDEClassMove* psMove, const char* szStem, CChars* pszS
 		bResult = (psTarget != NULL);
 	}
 
+	bTemplates = true;
 	//The new files, empty, in the projects: one undo with the edits that write them.
 	BeginCreating();
 	bResult = bResult && CreateFile(szNewHeader.Text(), psMove->szHeader.Text());
@@ -1440,46 +1355,34 @@ bool CIDEMoveClass::Move(SIDEClassMove* psMove, const char* szStem, CChars* pszS
 	asTaken.Init();
 	if (bResult)
 	{
-		//The new header: the old one's opening comment, a guard, its #includes, the class, and what it defines
-		//of the class's outside it.
-		szHeaderText.Init();
-		szGuard.Init();
-		AppendGuard(szText, psMove->szHeader.Text(), szStem, &szGuard, &bPragma, &bComment);
-		szHeaderText.AppendSubString(szText, 0, FindOpeningEnd(szText));
-		if (bPragma)
-		{
-			szHeaderText.Append("#pragma once\n");
-		}
-		else
-		{
-			szHeaderText.Append("#ifndef ")->Append(szGuard)->Append("\n#define ")->Append(szGuard)->Append('\n');
-		}
-		AppendIncludes(szText, &szHeaderText);
+		//The new header's #includes (the old one's) and what goes in it: the class, and what it defines of the
+		//class's outside it; the new source file's the same.  The C++ Header and C++ Source templates lay them out.
+		szHeaderIncludes.Init();
+		AppendIncludes(szText, &szHeaderIncludes);
 		if (psMove->bNeedsHeader)
 		{
-			szHeaderText.Append("#include \"")->Append(GetIDEFileNamePart(psMove->szHeader.Text()))->Append("\"\n");
+			szHeaderIncludes.Append("#include \"")->Append(GetIDEFileNamePart(psMove->szHeader.Text()))->Append("\"\n");
 		}
-		szHeaderText.Append("\n\n");
-		AppendMovedBlock(szText, psMove->szHeader.Text(), &psMove->sClass, psTarget, szOldName.Text(), szCopyName, &szHeaderText);
+		szHeaderBody.Init();
+		AppendMovedBlock(szText, psMove->szHeader.Text(), &psMove->sClass, psTarget, szOldName.Text(), szCopyName, &szHeaderBody);
 
-		szSourceText.Init();
+		szSourceIncludes.Init();
+		szSourceBody.Init();
 		if (szOldSource)
 		{
-			szSourceText.AppendSubString(szOldSource, 0, FindOpeningEnd(szOldSource));
-			szSourceText.Append("#include \"")->Append(szNewName)->Append("\"\n");
-			AppendIncludes(szOldSource, &szSourceText);
+			AppendIncludes(szOldSource, &szSourceIncludes);
 		}
 		for (i = 0; i < psMove->asOutside.NumElements(); i++)
 		{
 			psRange = psMove->asOutside.Get(i);
 			if (StringInsensitiveCompare(psRange->szFileName.Text(), psMove->szHeader.Text()) == 0)
 			{
-				szHeaderText.Append("\n\n");
+				szHeaderBody.Append("\n\n");
 				sRange.iLine = psRange->iLine;
 				sRange.iColumn = psRange->iColumn;
 				sRange.iEndLine = psRange->iEndLine;
 				sRange.iEndColumn = psRange->iEndColumn;
-				AppendMovedBlock(szText, psRange->szFileName.Text(), &sRange, psTarget, szOldName.Text(), szCopyName, &szHeaderText);
+				AppendMovedBlock(szText, psRange->szFileName.Text(), &sRange, psTarget, szOldName.Text(), szCopyName, &szHeaderBody);
 				uiStart = FindIDETextOffset(szText, psRange->iLine, psRange->iColumn);
 				uiEnd = FindIDETextOffset(szText, psRange->iEndLine, psRange->iEndColumn);
 				ExtendIDEDeletion(szText, &uiStart, &uiEnd, true);
@@ -1489,12 +1392,12 @@ bool CIDEMoveClass::Move(SIDEClassMove* psMove, const char* szStem, CChars* pszS
 			}
 			else
 			{
-				szSourceText.Append("\n\n");
+				szSourceBody.Append("\n\n");
 				sRange.iLine = psRange->iLine;
 				sRange.iColumn = psRange->iColumn;
 				sRange.iEndLine = psRange->iEndLine;
 				sRange.iEndColumn = psRange->iEndColumn;
-				AppendMovedBlock(szOldSource, psRange->szFileName.Text(), &sRange, psTarget, szOldName.Text(), szCopyName, &szSourceText);
+				AppendMovedBlock(szOldSource, psRange->szFileName.Text(), &sRange, psTarget, szOldName.Text(), szCopyName, &szSourceBody);
 				uiStart = FindIDETextOffset(szOldSource, psRange->iLine, psRange->iColumn);
 				uiEnd = FindIDETextOffset(szOldSource, psRange->iEndLine, psRange->iEndColumn);
 				ExtendIDEDeletion(szOldSource, &uiStart, &uiEnd, true);
@@ -1504,16 +1407,15 @@ bool CIDEMoveClass::Move(SIDEClassMove* psMove, const char* szStem, CChars* pszS
 			}
 			uiOutside++;
 		}
-		if (!bPragma)
-		{
-			szHeaderText.Append("\n\n#endif");
-			if (bComment)
-			{
-				szHeaderText.Append(" // ")->Append(szGuard);
-			}
-			szHeaderText.Append('\n');
-		}
-		szGuard.Kill();
+		szHeaderText.Init();
+		szSourceText.Init();
+		szClassName = szCopyName ? szCopyName : szOldName.Text();
+		bTemplates = AppendNewFileText(IDE_TEMPLATE_CPP_HEADER, szNewHeader.Text(), psMove->szHeader.Text(), szClassName, szHeaderIncludes.Text(), szHeaderBody.Text(), &szHeaderText);
+		bTemplates = bTemplates && (szNewSource.Empty() || AppendNewFileText(IDE_TEMPLATE_CPP_SOURCE, szNewSource.Text(), psMove->szSource.Text(), szClassName, szSourceIncludes.Text(), szSourceBody.Text(), &szSourceText));
+		szSourceBody.Kill();
+		szSourceIncludes.Kill();
+		szHeaderBody.Kill();
+		szHeaderIncludes.Kill();
 
 		//The class out of the old header.
 		uiStart = FindIDETextOffset(szText, psMove->sClass.iLine, psMove->sClass.iColumn);
@@ -1596,7 +1498,7 @@ bool CIDEMoveClass::Move(SIDEClassMove* psMove, const char* szStem, CChars* pszS
 
 		//The new files filled, as edits, so undo empties them.
 		szUser = cEdits.GetText(szNewHeader.Text());
-		bResult = (szUser != NULL);
+		bResult = bTemplates && (szUser != NULL);
 		if (bResult)
 		{
 			cEdits.GetEdits(szNewHeader.Text())->Insert(0, szHeaderText.Text());
@@ -1649,6 +1551,20 @@ bool CIDEMoveClass::Move(SIDEClassMove* psMove, const char* szStem, CChars* pszS
 			szMessage.Append((uiIncludes == 1) ? " #include added" : " #includes added");
 		}
 		szMessage.Append(".");
+		if (pszStatus)
+		{
+			pszStatus->Set(szMessage.Text());
+		}
+		else
+		{
+			mpcContent->ShowStatus(szMessage.Text());
+		}
+		szMessage.Kill();
+	}
+	else if (!bTemplates)
+	{
+		szMessage.Init(szCopyName ? "Copy Class: " : "Move Class: ");
+		szMessage.Append(mpcContent->GetFileTemplates()->GetError())->Append('.');
 		if (pszStatus)
 		{
 			pszStatus->Set(szMessage.Text());

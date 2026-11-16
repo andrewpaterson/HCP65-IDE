@@ -36,6 +36,11 @@ enum EIDETemplateTab
 };
 
 
+//The Files templates the refactorings that make files write them from.
+#define IDE_TEMPLATE_CPP_HEADER				"C++ Header"
+#define IDE_TEMPLATE_CPP_SOURCE				"C++ Source"
+
+
 //The Code templates the generators write from.
 #define IDE_TEMPLATE_DEFINITION_BANNER		"Definition Banner"
 #define IDE_TEMPLATE_NEW_FUNCTION_BODY		"New Function Body"

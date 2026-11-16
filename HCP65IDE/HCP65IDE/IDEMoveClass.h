@@ -188,7 +188,7 @@ protected:
 	void				AppendNewPath(const char* szBeside, const char* szStem, const char* szExtension, CChars* pszDest);
 	void				AppendBlock(const char* szText, int32 iLine, int32 iColumn, int32 iEndLine, int32 iEndColumn, CChars* pszDest);
 	void				AppendIncludes(const char* szText, CChars* pszDest);
-	void				AppendGuard(const char* szText, const char* szOldPath, const char* szStem, CChars* pszGuard, bool* pbPragma, bool* pbComment);
+	bool				AppendNewFileText(const char* szTemplate, const char* szPath, const char* szProjectOf, const char* szClassName, const char* szIncludes, const char* szBody, CChars* pszDest);
 	size				FindOpeningEnd(const char* szText);
 	bool				FindIncludePlace(const char* szText, const char* szIncluded, const char* szNewName, size* puiAt, CChars* pszLine);
 	bool				CreateFile(const char* szPath, const char* szBeside);

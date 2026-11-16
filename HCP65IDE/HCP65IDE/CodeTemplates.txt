@@ -177,6 +177,13 @@ Progress
         The project's licence comes in here (<Project>.hcp65project beside the .vcxproj, LGPL 3 unless set), so
         the checks' projects, whose files have no licence comment, are made with "Licence: none".  A check whose
         output changes is listed in the commit with why.
+        Built: the C++ Header and C++ Source templates (${INCLUDES}, ${BODY}); IDETemplateVariables.h fills a new
+        file's variables (SetIDETemplateFileVariables) and reads the licence (<HCP65Project Licence="None"/>, LGPL 3
+        when there is no file); CIDEMoveClass::AppendNewFileText applies them for Move Class, Copy Class and Extract
+        Superclass, Interface and Class (the only refactorings that make files: Extract Template Parameter makes
+        none).  AppendGuard and the old file's opening comment and #pragma once are gone.  Each project in
+        Checks\Input has a .hcp65project with Licence="None"; no check's output changed, and move-class-licence
+        checks the File Header of an LGPL 3 project.  ${AUTHOR} is git's user.name until Settings has its field.
 
 
 Questions (answered 2026-11-16)
