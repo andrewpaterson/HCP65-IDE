@@ -144,7 +144,7 @@ void STemplateValue::Copy(STemplateValue* psSource)
 //
 //
 //////////////////////////////////////////////////////////////////////////
-bool STemplateValue::IsNull(void)
+bool STemplateValue::IsNull(void) const
 {
 	return eKind == TV_Null;
 }
@@ -156,7 +156,7 @@ bool STemplateValue::IsNull(void)
 // nothing, not false, not 0, not an empty string or list.
 //
 //////////////////////////////////////////////////////////////////////////
-bool STemplateValue::IsTrue(void)
+bool STemplateValue::IsTrue(void) const
 {
 	switch (eKind)
 	{
@@ -446,5 +446,5 @@ STemplateValue* CTemplateValues::Get(const char* szName)
 //
 //////////////////////////////////////////////////////////////////////////
 bool CTemplateValues::Has(const char* szName) { return Find(szName) != ARRAY_ELEMENT_NOT_FOUND; }
-size CTemplateValues::NumValues(void) { return maszNames.NumElements(); }
+size CTemplateValues::NumValues(void) const { return maszNames.NumElements(); }
 char* CTemplateValues::GetName(size uiIndex) { return maszNames.GetText(uiIndex); }

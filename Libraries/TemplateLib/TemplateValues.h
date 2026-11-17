@@ -53,8 +53,8 @@ struct STemplateValue
 	void	SetBool(bool bTrue);
 	void	SetList(CArrayChars* paszItems);
 	void	Copy(STemplateValue* psSource);
-	bool	IsNull(void);
-	bool	IsTrue(void);
+	bool	IsNull(void) const;
+	bool	IsTrue(void) const;
 	bool	GetNumber(int64* plliValue);
 	char*	AppendText(CChars* pszDest);
 };
@@ -86,7 +86,7 @@ public:
 	void			Release(size uiMark);
 	STemplateValue*	Get(const char* szName);
 	bool			Has(const char* szName);
-	size			NumValues(void);
+	size			NumValues(void) const;
 	char*			GetName(size uiIndex);
 
 protected:
