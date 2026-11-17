@@ -854,10 +854,12 @@ void CIDEDebugging::UpdateDebugView(bool bKeepCaret)
 // toggle (F9 at the disassembly's caret), buildtab (the Build tab shown),
 // line:<line> (a source breakpoint toggled on the open file's line, 1
 // based), built (until HCP65_IDE_BUILD's build has finished),
-// answered:<n> (until the script has answered n dialogs) and
-// wait:<milliseconds>.  Each but bp, buildtab, line, built, answered and
-// wait waits for the debugger to be stopped (or not debugging, for
-// start).
+// answered:<n> (until the script has answered n dialogs),
+// wait:<milliseconds>, printbreakpoints (each source breakpoint, the line
+// it is bound to and its addresses) and printstopped (whether it is
+// stopped, the program address and the source line shown).  Each but bp,
+// buildtab, line, built, answered, wait and the prints waits for the
+// debugger to be stopped (or not debugging, for start).
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEDebugging::SetDebugScript(const char* szCommands)
