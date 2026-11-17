@@ -35,23 +35,40 @@ How work is done here
 1. A tree that makes components only for the rows in view (WindowLib)
 --------------------------------------------------------------------
 
-The user: do this first (2026-11-17).
+DONE 2026-11-17 (gameengine-37): CommonLibraries 9d972b678 and a344c2175; HCP65-IDE e635fc9, 1054cc8 and 51ca843;
+HCP65 6525229 (the website's navigation page).
 
-What is wrong: CTreeContainer::AddNodeRow makes a grid, indent, chevron, icon and label for every row that can be
-seen, and UpdateRows makes them all again when a node opens or closes.  Find Usages of 20,004 places in one file
-took 1.7s to build and 2.5s more to lay out and paint, so Find Usages' files start closed past 1000 usages
-(IDE_USAGES_OPEN_FILES_MAXIMUM, IDEUsages.cpp).
+What was wrong: CTreeContainer::AddNodeRow made a grid, indent, chevron, icon and label for every row that could be
+seen, and UpdateRows made them all again when a node opened or closed, so Find Usages' files started closed past
+1000 usages (IDE_USAGES_OPEN_FILES_MAXIMUM), and Find in Files' the same (IDE_FIND_OPEN_FILES_MAXIMUM).
 
-The design the user agreed on 2026-11-10 ("Only visible components (active) sounds like the right solution"):
-  - rows are worked out, not laid out: one row height, row i at i x height (maiRowNodes already lists the rows);
-  - CListContainer's selection, keys, hover and highlights ask through three virtuals (how many rows, where row i is,
-    which row is at y) instead of reading its grid; menus, combo boxes and dialog lists keep the grid;
-  - the tree keeps a pool of about 50 row components for what its scroll view shows, bound again as it scrolls;
-  - a row's width from CFont::CalculateWidth, kept per node, not from its label;
-  - TestTree.cpp and TestList.cpp may look at row components: add a 100,000-node test that the components stay few.
-The tree's public interface shouldn't change.  Measure the 20,004-usage case before and after.  Then the 1000-usage
-rule goes.  Every tree in the IDE (Solution Explorer, Find Usages, Duplicates, Find, Git) and LogiCim's use it: run
-their checks and LogiCim's build.
+What was built, the design the user agreed on 2026-11-10 with the three differences the user accepted 2026-11-17:
+  - rows are worked out, not laid out: one row height, row i at i x height;
+  - CListContainer's selection, keys, hover, highlights, ShowRow, page and context menu's place ask through two
+    virtuals, GetRowBounds (where row i is) and FindRowAtY (which row is at y), not three: how many rows there are
+    stays in the list's bit arrays (SetNumRows); menus, combo boxes, dialog lists and tables keep the grid;
+  - the tree keeps a CTreeRow (TreeRow.h: chevron, icon, the name's labels) for each row in view, as many as the
+    scroll pane's view, the window and the tree's own area show (not a fixed 50), made eight at a time; row i's is
+    the one at i modulo how many there are, so scrolling only changes those of the rows that come into view;
+  - a row's width from CFont::CalculateWidth over the node's pieces, kept per node;
+  - the tree's public functions are as they were (GetRowComponent and NumRowComponents are new, for tests); TestTree
+    and TestMenu ask a tree for its rows with GetRowBounds, not the grid's GetTrackBounds.
+Both rules are gone: every file starts open.
+
+Measured in Release x64, 20,004 usages (20,000 in one file), from every node closed (the script's edit step
+timeusagetree; Checks' usages-thousands-open keeps each under a second):
+                         before      after
+  opening every node     4800 ms     1-3 ms
+  laying the window out   240 ms     3-5 ms
+  painting                157 ms     1 ms
+  scrolling to the end    377 ms     3-5 ms
+
+Checked: TestWindowLib Release and Debug x64 (21211, TestTree 82 to 181: the rows' components, the tree's width
+against what its labels need, 100,000 open nodes in a scroll pane); the IDE's 69 checks whose names have usage,
+explorer, find, duplicat, git, gotosource, result, step, solution or workspace on Reference|x64, all passing once
+five stale expectations were put right (CalcParentheses.h's lines are declared override since CommonLibraries
+72445027c: 51ca843); HCP65IDE, LogiCim, WindowInputTester, HCP65Emulator and HCP65Tester build in Release x64.  Not
+run: the IDE's other 323 checks, LogiCim's own tests, and Linux.
 
 
 2. Find and Replace in the file, and the regular expression engine
