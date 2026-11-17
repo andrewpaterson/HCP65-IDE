@@ -9,6 +9,10 @@ hands out a writable pointer or reference into its object stays as it is: they a
     non-const function returns (most often CChars::Text's char*), C2440 and C2663.
   - Calls something of its object's that isn't const: another function that changes the object, or one that
     hands out a pointer (an array's Get(i), a list's GetHead), C2662.
+  - Takes the address of a Ptr<> member, (CPins*)&mpPins: Ptr<>'s operator& (the address of what it points to) isn't
+    const, so in a const getter &mpPins is the Ptr's own address, which the cast takes with no error.  Kept back
+    without asking the compiler (found when TestMicroprocessorLib crashed).  Ptr<> keeps its operator& as it is: a
+    const one was tried before and skipped the copy constructor's memory management (the user, 2026-11-17).
   - Other: anything else the compiler said.
 
 BaseLib: 409 made const, 237 couldn't be
@@ -804,3 +808,275 @@ Calls something of its object's that isn't const (7):
   CSharedMemoryQueue::NumElements  C2662: 'bool CInterProcessMutex::Lock(void)': cannot convert 'this' pointer from 'const CInterProcessMutex' to 'CInterProcessMutex &' (sharedmemoryqueue.cpp:345)
   CSharedMemoryQueue::PeekSize  C2662: 'bool CInterProcessMutex::Lock(void)': cannot convert 'this' pointer from 'const CInterProcessMutex' to 'CInterProcessMutex &' (sharedmemoryqueue.cpp:287)
   CWorkerThreadPool::NumIdleThreads  C2662: 'void CMutex::Lock(void)': cannot convert 'this' pointer from 'const CMutex' to 'CMutex &' (workerthreadpool.cpp:161)
+
+MicroprocessorLib: 301 made const, 123 couldn't be
+--------------------------------------------------
+
+Hands out a writable pointer into its object (70):
+  C65C64::GetDecoded  C2440: 'return': cannot convert from 'const S65C64Decoded *' to 'S65C64Decoded *' (65c64.cpp:754)
+  C65C64::GetTarget  C2440: '=': cannot convert from 'const S65C64Operand *' to 'S65C64Operand *' (65c64.cpp:1573)
+  C65C64BusCycle::GetOperations  C2440: 'return': cannot convert from 'const C65OperationArray *' to 'C65OperationArray *' (65c64buscycle.cpp:277)
+  C65C64Chip::GetMPU  C2440: 'return': cannot convert from 'const C65C64 *' to 'C65C64 *' (65c64chip.cpp:108)
+  C65C64ChipPins::GetAddress  C2440: 'return': cannot convert from 'const CLogicPortBus *' to 'CLogicPortBus *' (65c64chippins.cpp:146)
+  C65C64ChipPins::GetData  C2440: 'return': cannot convert from 'const CLogicPortBus *' to 'CLogicPortBus *' (65c64chippins.cpp:147)
+  C65C64Instruction::GetDescription  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (65c64instruction.cpp:78)
+  C65C64Instruction::GetName  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (65c64instruction.cpp:68)
+  C65C64Meta::GetAddress  C2440: 'return': cannot convert from 'const CMetaBus32 *' to 'CMetaBus32 *' (65c64meta.cpp:290)
+  C65C64Meta::GetData  C2440: 'return': cannot convert from 'const CMetaBus16 *' to 'CMetaBus16 *' (65c64meta.cpp:291)
+  C65C64Meta::GetLIRQB  C2440: 'return': cannot convert from 'const CMetaTrace *' to 'CMetaTrace *' (65c64meta.cpp:302)
+  C65C64Meta::GetLowerByte  C2440: 'return': cannot convert from 'const CMetaTrace *' to 'CMetaTrace *' (65c64meta.cpp:295)
+  C65C64Meta::GetMPU  C2440: 'return': cannot convert from 'const C65C64 *' to 'C65C64 *' (65c64meta.cpp:289)
+  C65C64Meta::GetOPV  C2440: 'return': cannot convert from 'const CMetaTrace *' to 'CMetaTrace *' (65c64meta.cpp:297)
+  C65C64Meta::GetPHI2  C2440: 'return': cannot convert from 'const CMetaTrace *' to 'CMetaTrace *' (65c64meta.cpp:292)
+  C65C64Meta::GetRESB  C2440: 'return': cannot convert from 'const CMetaTrace *' to 'CMetaTrace *' (65c64meta.cpp:293)
+  C65C64Meta::GetRWB  C2440: 'return': cannot convert from 'const CMetaTrace *' to 'CMetaTrace *' (65c64meta.cpp:294)
+  C65C64Meta::GetUpperByte  C2440: 'return': cannot convert from 'const CMetaTrace *' to 'CMetaTrace *' (65c64meta.cpp:296)
+  C65C64Meta::GetVDA  C2440: 'return': cannot convert from 'const CMetaTrace *' to 'CMetaTrace *' (65c64meta.cpp:299)
+  C65C64Meta::GetVPA  C2440: 'return': cannot convert from 'const CMetaTrace *' to 'CMetaTrace *' (65c64meta.cpp:298)
+  C65C64Meta::GetVPB  C2440: 'return': cannot convert from 'const CMetaTrace *' to 'CMetaTrace *' (65c64meta.cpp:300)
+  CAndGatePins::GetInputs  C2440: 'return': cannot convert from 'const CArrayLogicPortPtr *' to 'CArrayLogicPortPtr *' (andgatepins.cpp:87)
+  CBufferPins::GetInputs  C2440: 'return': cannot convert from 'const CArrayLogicPortPtr *' to 'CArrayLogicPortPtr *' (bufferpins.cpp:91)
+  CBufferPins::GetOutputs  C2440: 'return': cannot convert from 'const CArrayLogicPortPtr *' to 'CArrayLogicPortPtr *' (bufferpins.cpp:92)
+  CCircuitSimulation::GetCircuit  C2440: 'return': cannot convert from 'const Ptr<CCircuit> *' to 'CCircuit *' (circuitsimulation.cpp:259)
+  CCircuitSimulation::GetTimeline  C2440: 'return': cannot convert from 'const CTimeline *' to 'CTimeline *' (circuitsimulation.cpp:260)
+  CConstantPins::GetOutputs  C2440: 'return': cannot convert from 'const CArrayLogicPortPtr *' to 'CArrayLogicPortPtr *' (constantpins.cpp:81)
+  CCounterPins::GetData  C2440: 'return': cannot convert from 'const CArrayLogicPortPtr *' to 'CArrayLogicPortPtr *' (counterpins.cpp:158)
+  CCounterPins::GetOutput  C2440: 'return': cannot convert from 'const CArrayLogicPortPtr *' to 'CArrayLogicPortPtr *' (counterpins.cpp:161)
+  CFamilyVoltageConfiguration::GetFamily  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (familyvoltageconfiguration.cpp:491)
+  CFast65C64::GetBreakpoints  C2440: 'return': cannot convert from 'const CBreakpoints *' to 'CBreakpoints *' (fast65c64.cpp:505)
+  CFastW65C816::GetBreakpoints  C2440: 'return': cannot convert from 'const CBreakpoints *' to 'CBreakpoints *' (fastw65c816.cpp:472)
+  CIntegratedCircuit::GetPins  C2440: 'return': cannot convert from 'const Ptr<CPins> *' to 'CPins *' (integratedcircuit.cpp:292)
+  CLogicPort::GetOutput  C2440: 'return': cannot convert from 'const CPortOutput *' to 'CPortOutput *' (logicport.cpp:665)
+  COrGatePins::GetInputs  C2440: 'return': cannot convert from 'const CArrayLogicPortPtr *' to 'CArrayLogicPortPtr *' (orgatepins.cpp:87)
+  COscilloscopePins::GetInputs  C2440: 'return': cannot convert from 'const CArrayLogicPortPtr *' to 'CArrayLogicPortPtr *' (oscilloscopepins.cpp:81)
+  CPort::GetName  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (port.cpp:310)
+  CProbePins::GetInputs  C2440: 'return': cannot convert from 'const CArrayLogicPortPtr *' to 'CArrayLogicPortPtr *' (probepins.cpp:81)
+  CW65BusCycle::GetOperations  C2440: 'return': cannot convert from 'const CW65OperationArray *' to 'CW65OperationArray *' (w65buscycle.cpp:258)
+  CW65C02Meta::GetMPU  C2440: 'return': cannot convert from 'const CW65C02 *' to 'CW65C02 *' (w65c02meta.cpp:108)
+  CW65C02Meta::GetSOB  C2440: 'return': cannot convert from 'const CMetaTrace *' to 'CMetaTrace *' (w65c02meta.cpp:111)
+  CW65C02Meta::GetSYNC  C2440: 'return': cannot convert from 'const CMetaTrace *' to 'CMetaTrace *' (w65c02meta.cpp:110)
+  CW65C816Chip::GetMPU  C2440: 'return': cannot convert from 'const CW65C816 *' to 'CW65C816 *' (w65c816chip.cpp:105)
+  CW65C816ChipPins::GetAddress  C2440: 'return': cannot convert from 'const CLogicPortBus *' to 'CLogicPortBus *' (w65c816chippins.cpp:131)
+  CW65C816ChipPins::GetData  C2440: 'return': cannot convert from 'const CLogicPortBus *' to 'CLogicPortBus *' (w65c816chippins.cpp:132)
+  CW65C816Meta::GetABORTB  C2440: 'return': cannot convert from 'const CMetaTrace *' to 'CMetaTrace *' (w65c816meta.cpp:359)
+  CW65C816Meta::GetE  C2440: 'return': cannot convert from 'const CMetaTrace *' to 'CMetaTrace *' (w65c816meta.cpp:363)
+  CW65C816Meta::GetMPU  C2440: 'return': cannot convert from 'const CW65C816 *' to 'CW65C816 *' (w65c816meta.cpp:357)
+  CW65C816Meta::GetMX  C2440: 'return': cannot convert from 'const CMetaTrace *' to 'CMetaTrace *' (w65c816meta.cpp:362)
+  CW65C816Meta::GetVDA  C2440: 'return': cannot convert from 'const CMetaTrace *' to 'CMetaTrace *' (w65c816meta.cpp:361)
+  CW65C816Meta::GetVPA  C2440: 'return': cannot convert from 'const CMetaTrace *' to 'CMetaTrace *' (w65c816meta.cpp:360)
+  CW65CCore::GetAddress  C2440: 'return': cannot convert from 'const CW65Address *' to 'CW65Address *' (w65ccore.cpp:2341)
+  CW65CCore::GetNewProgramCounter  C2440: 'return': cannot convert from 'const CW65Address *' to 'CW65Address *' (w65ccore.cpp:2361)
+  CW65CCore::GetOpcode  C2663: 'CW65CCore::GetInstruction': 2 overloads have no legal conversion for 'this' pointer (w65ccore.cpp:2351)
+  CW65CCore::GetProgramCounter  C2440: 'return': cannot convert from 'const CW65Address *' to 'CW65Address *' (w65ccore.cpp:1959)
+  CW65CMeta::GetAddress  C2440: 'return': cannot convert from 'const CMetaBus16 *' to 'CMetaBus16 *' (w65cmeta.cpp:204)
+  CW65CMeta::GetBE  C2440: 'return': cannot convert from 'const CMetaTrace *' to 'CMetaTrace *' (w65cmeta.cpp:213)
+  CW65CMeta::GetData  C2440: 'return': cannot convert from 'const CMetaBus8 *' to 'CMetaBus8 *' (w65cmeta.cpp:205)
+  CW65CMeta::GetIRQB  C2440: 'return': cannot convert from 'const CMetaTrace *' to 'CMetaTrace *' (w65cmeta.cpp:208)
+  CW65CMeta::GetMLB  C2440: 'return': cannot convert from 'const CMetaTrace *' to 'CMetaTrace *' (w65cmeta.cpp:210)
+  CW65CMeta::GetNMIB  C2440: 'return': cannot convert from 'const CMetaTrace *' to 'CMetaTrace *' (w65cmeta.cpp:209)
+  CW65CMeta::GetPHI2  C2440: 'return': cannot convert from 'const CMetaTrace *' to 'CMetaTrace *' (w65cmeta.cpp:212)
+  CW65CMeta::GetRDY  C2440: 'return': cannot convert from 'const CMetaTrace *' to 'CMetaTrace *' (w65cmeta.cpp:207)
+  CW65CMeta::GetRESB  C2440: 'return': cannot convert from 'const CMetaTrace *' to 'CMetaTrace *' (w65cmeta.cpp:211)
+  CW65CMeta::GetRWB  C2440: 'return': cannot convert from 'const CMetaTrace *' to 'CMetaTrace *' (w65cmeta.cpp:214)
+  CW65CMeta::GetVPB  C2440: 'return': cannot convert from 'const CMetaTrace *' to 'CMetaTrace *' (w65cmeta.cpp:206)
+  CW65CompoundAddress::GetAddressOffsets  C2440: 'return': cannot convert from 'const CW65AddressOffsetArray *' to 'CW65AddressOffsetArray *' (w65compoundaddress.cpp:33)
+  CW65Instruction::GetDescription  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (w65instruction.cpp:58)
+  CW65Instruction::GetName  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (w65instruction.cpp:48)
+  CXorGatePins::GetInputs  C2440: 'return': cannot convert from 'const CArrayLogicPortPtr *' to 'CArrayLogicPortPtr *' (xorgatepins.cpp:87)
+
+Calls something of its object's that isn't const (32):
+  C65C64::GetBitIndex  C2662: 'uint64 C65C64::GetRegister(E65Register)': cannot convert 'this' pointer from 'const C65C64' to 'C65C64 &' (65c64.cpp:2202)
+  C65C64::GetNumReadWords  C2662: 'size C65C64::CountTransferWords(bool)': cannot convert 'this' pointer from 'const C65C64' to 'C65C64 &' (65c64.cpp:981)
+  C65C64::GetNumWriteWords  C2662: 'size C65C64::CountTransferWords(bool)': cannot convert 'this' pointer from 'const C65C64' to 'C65C64 &' (65c64.cpp:1042)
+  C65C64AddressOffsetArray::IsProgramCounter  C2662: 'M *CArrayTemplatePtr<M>::GetPtr(size)': cannot convert 'this' pointer from 'const C65C64AddressOffsetArray' to 'CArrayTemplatePtr<C65C64AddressOffset> &' (65c64addressoffsetarray.cpp:83)
+  C65C64BusCycle::IsProgramAddress  C2662: 'bool C65C64AddressOffsetArray::IsProgramCounter(void)': cannot convert 'this' pointer from 'const C65C64AddressOffsetArray' to 'C65C64AddressOffsetArray &' (65c64buscycle.cpp:207)
+  C65C64Operation::IsTrailingSide  C2662: 'bool C65C64Operation::IsInitialSide(void)': cannot convert 'this' pointer from 'const C65C64Operation' to 'C65C64Operation &' (65c64operation.cpp:92)
+  CCircuit::IsEmpty  C2662: 'size CArrayCommonObject::NumElements(void)': cannot convert 'this' pointer from 'const CArray<CIntegratedCircuit>' to 'CArrayCommonObject &' (circuit.cpp:305)
+  CCircuit::NumIntegratedCircuits  C2662: 'size CArrayCommonObject::NumElements(void)': cannot convert 'this' pointer from 'const CArray<CIntegratedCircuit>' to 'CArrayCommonObject &' (circuit.cpp:306)
+  CCircuit::NumPassives  C2662: 'size CArrayCommonObject::NumElements(void)': cannot convert 'this' pointer from 'const CArray<CPassive>' to 'CArrayCommonObject &' (circuit.cpp:309)
+  CClockOscillator::HasTickEvent  C2662: 'M *CArrayTemplatePtr<M>::GetPtr(size)': cannot convert 'this' pointer from 'const CArrayEventPtr' to 'CArrayTemplatePtr<CEvent> &' (clockoscillator.cpp:188)
+  CFamilyVoltageConfigurationStore::GetDefaultFamily  C2662: 'CFamilyVoltageConfiguration *CFamilyVoltageConfigurationStore::Get(const char *)': cannot convert 'this' pointer from 'const CFamilyVoltageConfigurationStore' to 'CFamilyVoltageConfigurationStore &' (familyvoltageconfigurationstore.cpp:549)
+  CFast65C64::IsBreakpointNext  C2662: 'bool CBreakpoints::AnyEnabled(void)': cannot convert 'this' pointer from 'const CBreakpoints' to 'CBreakpoints &' (fast65c64.cpp:344)
+  CFastW65C816::IsBreakpointNext  C2662: 'bool CFastW65C816::AnyBreakpoints(void)': cannot convert 'this' pointer from 'const CFastW65C816' to 'CFastW65C816 &' (fastw65c816.cpp:226)
+  CSimultaneousEvents::GetFirst  C2662: 'M *CArrayTemplatePtr<M>::GetPtr(size)': cannot convert 'this' pointer from 'const CArrayEventPtr' to 'CArrayTemplatePtr<CEvent> &' (simultaneousevents.cpp:153)
+  CSlewEvent::GetEndTime  C2662: 'void CSlewEvent::CopyOutput(CPortOutput *)': cannot convert 'this' pointer from 'const CSlewEvent' to 'CSlewEvent &' (slewevent.cpp:253)
+  CTimeline::GetFirstSimultaneousEvents  C2662: 'M *CRedBlackTreeTemplate<M>::GetFirst(void)': cannot convert 'this' pointer from 'const CSimultaneousEventsTree' to 'CRedBlackTreeTemplate<CSimultaneousEvents> &' (timeline.cpp:379)
+  CTimeline::IsValid  C2662: 'bool CRedBlackTree::IsValid(void)': cannot convert 'this' pointer from 'const CSimultaneousEventsTree' to 'CRedBlackTree &' (timeline.cpp:401)
+  CVoltageConfiguration::GetVoltsPerTimeHighToLow  C2662: 'float32 CVoltageConfiguration::GetVoltsPerTime(int64)': cannot convert 'this' pointer from 'const CVoltageConfiguration' to 'CVoltageConfiguration &' (voltageconfiguration.cpp:324)
+  CVoltageConfiguration::GetVoltsPerTimeLowToHigh  C2662: 'float32 CVoltageConfiguration::GetVoltsPerTime(int64)': cannot convert 'this' pointer from 'const CVoltageConfiguration' to 'CVoltageConfiguration &' (voltageconfiguration.cpp:323)
+  CW65BusCycle::GetDone16  C2662: 'M *CArrayTemplatePtr<M>::GetPtr(size)': cannot convert 'this' pointer from 'const CW65OperationArray' to 'CArrayTemplatePtr<M> &' (w65buscycle.cpp:146)
+  CW65BusCycle::GetDone8  C2662: 'M *CArrayTemplatePtr<M>::GetPtr(size)': cannot convert 'this' pointer from 'const CW65OperationArray' to 'CArrayTemplatePtr<M> &' (w65buscycle.cpp:124)
+  CW65BusCycle::IsProgramAddress  C2662: 'M *CArrayTemplatePtr<M>::GetPtr(size)': cannot convert 'this' pointer from 'const CW65AddressOffsetArray' to 'CArrayTemplatePtr<CW65AddressOffset> &' (w65buscycle.cpp:275)
+  CW65C02Meta::IsResetInstruction  C2662: 'bool CW65CMeta::IsInstruction(CW65Instruction *)': cannot convert 'this' pointer from 'const CW65C02Meta' to 'CW65CMeta &' (w65c02meta.cpp:49)
+  CW65C02Meta::IsStopInstruction  C2662: 'bool CW65CMeta::IsInstruction(CW65Instruction *)': cannot convert 'this' pointer from 'const CW65C02Meta' to 'CW65CMeta &' (w65c02meta.cpp:59)
+  CW65C816Meta::IsResetInstruction  C2662: 'bool CW65CMeta::IsInstruction(CW65Instruction *)': cannot convert 'this' pointer from 'const CW65C816Meta' to 'CW65CMeta &' (w65c816meta.cpp:55)
+  CW65C816Meta::IsStopInstruction  C2662: 'bool CW65CMeta::IsInstruction(CW65Instruction *)': cannot convert 'this' pointer from 'const CW65C816Meta' to 'CW65CMeta &' (w65c816meta.cpp:65)
+  CW65CCore::GetData16BitOffset  C2662: 'bool CW65CCore::Is16bitValueNegative(uint16)': cannot convert 'this' pointer from 'const CW65CCore' to 'CW65CCore &' (w65ccore.cpp:3634)
+  CW65CCore::GetData8BitOffset  C2662: 'bool CW65CCore::Is8bitValueNegative(uint16)': cannot convert 'this' pointer from 'const CW65CCore' to 'CW65CCore &' (w65ccore.cpp:3654)
+  CW65CCore::GetInstruction  C2662: 'CW65Instruction *CW65CCore::GetOpcode(void)': cannot convert 'this' pointer from 'const CW65CCore' to 'CW65CCore &' (w65ccore.cpp:737)
+  CW65CCore::IsRead  C2662: 'bool CW65CCore::IsReadCycle(CW65DataOperation *)': cannot convert 'this' pointer from 'const CW65CCore' to 'CW65CCore &' (w65ccore.cpp:1631)
+  CW65CMeta::IsFetchOpcodeCycle  C2662: 'CW65CCore *CW65CMeta::GetCore(void)': cannot convert 'this' pointer from 'const CW65CMeta' to 'CW65CMeta &' (w65cmeta.cpp:168)
+  CW65Operation::IsTrailingSide  C2662: 'bool CW65Operation::IsInitialSide(void)': cannot convert 'this' pointer from 'const CW65Operation' to 'CW65Operation &' (w65operation.cpp:92)
+
+Takes the address of a Ptr<> member (its operator& isn't const: no error, a wrong pointer) (21):
+  C65C64Chip::GetChipPins  Takes &mpPins, a Ptr<> or CPointer member: their operator& isn't const, so in a const function it would give the pointer's own address, without an error (65c64chip.cpp:109)
+  CAdder::GetGroupPins  Takes &mpPins, a Ptr<> or CPointer member: their operator& isn't const, so in a const function it would give the pointer's own address, without an error (adder.cpp:143)
+  CAndGate::GetAndGatePins  Takes &mpPins, a Ptr<> or CPointer member: their operator& isn't const, so in a const function it would give the pointer's own address, without an error (andgate.cpp:99)
+  CBuffer::GetBufferPins  Takes &mpPins, a Ptr<> or CPointer member: their operator& isn't const, so in a const function it would give the pointer's own address, without an error (buffer.cpp:91)
+  CBusBuffer::GetGroupPins  Takes &mpPins, a Ptr<> or CPointer member: their operator& isn't const, so in a const function it would give the pointer's own address, without an error (busbuffer.cpp:203)
+  CBusTransceiver::GetGroupPins  Takes &mpPins, a Ptr<> or CPointer member: their operator& isn't const, so in a const function it would give the pointer's own address, without an error (bustransceiver.cpp:189)
+  CClockOscillator::GetClockOscillatorPins  Takes &mpPins, a Ptr<> or CPointer member: their operator& isn't const, so in a const function it would give the pointer's own address, without an error (clockoscillator.cpp:215)
+  CComparator::GetGroupPins  Takes &mpPins, a Ptr<> or CPointer member: their operator& isn't const, so in a const function it would give the pointer's own address, without an error (comparator.cpp:133)
+  CConstant::GetConstantPins  Takes &mpPins, a Ptr<> or CPointer member: their operator& isn't const, so in a const function it would give the pointer's own address, without an error (constant.cpp:103)
+  CCounter::GetCounterPins  Takes &mpPins, a Ptr<> or CPointer member: their operator& isn't const, so in a const function it would give the pointer's own address, without an error (counter.cpp:183)
+  CDTypeFlipFlop::GetDTypeFlipFlopPins  Takes &mpPins, a Ptr<> or CPointer member: their operator& isn't const, so in a const function it would give the pointer's own address, without an error (dtypeflipflop.cpp:165)
+  CDecoder::GetGroupPins  Takes &mpPins, a Ptr<> or CPointer member: their operator& isn't const, so in a const function it would give the pointer's own address, without an error (decoder.cpp:185)
+  CFlipFlopArray::GetGroupPins  Takes &mpPins, a Ptr<> or CPointer member: their operator& isn't const, so in a const function it would give the pointer's own address, without an error (flipfloparray.cpp:188)
+  CGateArray::GetGateArrayPins  Takes &mpPins, a Ptr<> or CPointer member: their operator& isn't const, so in a const function it would give the pointer's own address, without an error (gatearray.cpp:200)
+  CMultiplexer::GetGroupPins  Takes &mpPins, a Ptr<> or CPointer member: their operator& isn't const, so in a const function it would give the pointer's own address, without an error (multiplexer.cpp:201)
+  COrGate::GetOrGatePins  Takes &mpPins, a Ptr<> or CPointer member: their operator& isn't const, so in a const function it would give the pointer's own address, without an error (orgate.cpp:104)
+  COscilloscope::GetOscilloscopePins  Takes &mpPins, a Ptr<> or CPointer member: their operator& isn't const, so in a const function it would give the pointer's own address, without an error (oscilloscope.cpp:155)
+  CProbe::GetProbePins  Takes &mpPins, a Ptr<> or CPointer member: their operator& isn't const, so in a const function it would give the pointer's own address, without an error (probe.cpp:89)
+  CRegister::GetGroupPins  Takes &mpPins, a Ptr<> or CPointer member: their operator& isn't const, so in a const function it would give the pointer's own address, without an error (register.cpp:223)
+  CW65C816Chip::GetChipPins  Takes &mpPins, a Ptr<> or CPointer member: their operator& isn't const, so in a const function it would give the pointer's own address, without an error (w65c816chip.cpp:106)
+  CXorGate::GetXorGatePins  Takes &mpPins, a Ptr<> or CPointer member: their operator& isn't const, so in a const function it would give the pointer's own address, without an error (xorgate.cpp:100)
+
+RasterLib: 12 made const, 4 couldn't be
+---------------------------------------
+
+Hands out a writable pointer into its object (4):
+  CRasterCamera::GetPan  C2440: 'return': cannot convert from 'const SInt32Vec2 *' to 'SInt32Vec2 *' (rastercamera.cpp:658)
+  CRasterCamera::GetPivot  C2440: 'return': cannot convert from 'const SInt32Vec3 *' to 'SInt32Vec3 *' (rastercamera.cpp:648)
+  CRasterCamera::GetRotation  C2440: 'return': cannot convert from 'const SFloat4x4 *' to 'SFloat4x4 *' (rastercamera.cpp:638)
+  CRasteriser::GetLights  C2440: 'return': cannot convert from 'const CRasterLights *' to 'CRasterLights *' (rasteriser.cpp:190)
+
+ProceduralLib: 1 made const, 1 couldn't be
+------------------------------------------
+
+Calls something of its object's that isn't const (1):
+  CIsosurfaceOctree::NumLeaves  C2662: 'M *CArrayTemplateBase<M,CArrayLargeBlock>::Get(unsigned __int64)': cannot convert 'this' pointer from 'const CArrayIsosurfaceNode' to 'CArrayTemplateBase<M,CArrayLargeBlock> &' (isosurfaceoctree.cpp:692)
+
+VulkanLib: 12 made const, 2 couldn't be
+---------------------------------------
+
+Hands out a writable pointer into its object (2):
+  CVulkanRenderer::GetDeviceName  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (vulkanrenderer.cpp:1539)
+  CVulkanRenderer::GetFunctions  C2440: 'return': cannot convert from 'const CVulkanFunctions *' to 'CVulkanFunctions *' (vulkanrenderer.cpp:1540)
+
+GerberLib: 93 made const, 69 couldn't be
+----------------------------------------
+
+Hands out a writable pointer into its object (55):
+  CExcellonCommandCoordinate::GetX  C2440: 'return': cannot convert from 'const CNumber *' to 'CNumber *' (excelloncommandcoordinate.cpp:75)
+  CExcellonCommandCoordinate::GetY  C2440: 'return': cannot convert from 'const CNumber *' to 'CNumber *' (excelloncommandcoordinate.cpp:85)
+  CExcellonCommandSlot::GetEndX  C2440: 'return': cannot convert from 'const CNumber *' to 'CNumber *' (excelloncommandslot.cpp:141)
+  CExcellonCommandSlot::GetEndY  C2440: 'return': cannot convert from 'const CNumber *' to 'CNumber *' (excelloncommandslot.cpp:151)
+  CExcellonCommandSlot::GetStartX  C2440: 'return': cannot convert from 'const CNumber *' to 'CNumber *' (excelloncommandslot.cpp:121)
+  CExcellonCommandSlot::GetStartY  C2440: 'return': cannot convert from 'const CNumber *' to 'CNumber *' (excelloncommandslot.cpp:131)
+  CExcellonCommandToolDefine::GetDiameter  C2440: 'return': cannot convert from 'const CNumber *' to 'CNumber *' (excelloncommandtooldefine.cpp:41)
+  CGerberAperture::GetPrimitives  C2440: 'return': cannot convert from 'const CGerberEvaluatedPrimitives *' to 'CGerberEvaluatedPrimitives *' (gerberaperture.cpp:143)
+  CGerberApertureMacroCenterLine::GetExposure  C2440: 'return': cannot convert from 'const CGerberExpression *' to 'CGerberExpression *' (gerberaperturemacrocenterline.cpp:42)
+  CGerberApertureMacroCenterLine::GetHeight  C2440: 'return': cannot convert from 'const CGerberExpression *' to 'CGerberExpression *' (gerberaperturemacrocenterline.cpp:62)
+  CGerberApertureMacroCenterLine::GetRotation  C2440: 'return': cannot convert from 'const CGerberExpression *' to 'CGerberExpression *' (gerberaperturemacrocenterline.cpp:92)
+  CGerberApertureMacroCenterLine::GetWidth  C2440: 'return': cannot convert from 'const CGerberExpression *' to 'CGerberExpression *' (gerberaperturemacrocenterline.cpp:52)
+  CGerberApertureMacroCircle::GetDiameter  C2440: 'return': cannot convert from 'const CGerberExpression *' to 'CGerberExpression *' (gerberaperturemacrocircle.cpp:50)
+  CGerberApertureMacroCircle::GetExposure  C2440: 'return': cannot convert from 'const CGerberExpression *' to 'CGerberExpression *' (gerberaperturemacrocircle.cpp:40)
+  CGerberApertureMacroCircle::GetRotation  C2440: 'return': cannot convert from 'const CGerberExpression *' to 'CGerberExpression *' (gerberaperturemacrocircle.cpp:80)
+  CGerberApertureMacroOutline::GetExposure  C2440: 'return': cannot convert from 'const CGerberExpression *' to 'CGerberExpression *' (gerberaperturemacrooutline.cpp:40)
+  CGerberApertureMacroOutline::GetRotation  C2440: 'return': cannot convert from 'const CGerberExpression *' to 'CGerberExpression *' (gerberaperturemacrooutline.cpp:50)
+  CGerberApertureMacroPolygon::GetDiameter  C2440: 'return': cannot convert from 'const CGerberExpression *' to 'CGerberExpression *' (gerberaperturemacropolygon.cpp:62)
+  CGerberApertureMacroPolygon::GetExposure  C2440: 'return': cannot convert from 'const CGerberExpression *' to 'CGerberExpression *' (gerberaperturemacropolygon.cpp:42)
+  CGerberApertureMacroPolygon::GetNumberOfVertices  C2440: 'return': cannot convert from 'const CGerberExpression *' to 'CGerberExpression *' (gerberaperturemacropolygon.cpp:52)
+  CGerberApertureMacroPolygon::GetRotation  C2440: 'return': cannot convert from 'const CGerberExpression *' to 'CGerberExpression *' (gerberaperturemacropolygon.cpp:92)
+  CGerberApertureMacroThermal::GetGapThickness  C2440: 'return': cannot convert from 'const CGerberExpression *' to 'CGerberExpression *' (gerberaperturemacrothermal.cpp:82)
+  CGerberApertureMacroThermal::GetInnerDiameter  C2440: 'return': cannot convert from 'const CGerberExpression *' to 'CGerberExpression *' (gerberaperturemacrothermal.cpp:72)
+  CGerberApertureMacroThermal::GetOuterDiameter  C2440: 'return': cannot convert from 'const CGerberExpression *' to 'CGerberExpression *' (gerberaperturemacrothermal.cpp:62)
+  CGerberApertureMacroThermal::GetRotation  C2440: 'return': cannot convert from 'const CGerberExpression *' to 'CGerberExpression *' (gerberaperturemacrothermal.cpp:92)
+  CGerberApertureMacroVariableDefinition::GetExpression  C2440: 'return': cannot convert from 'const CGerberExpression *' to 'CGerberExpression *' (gerberaperturemacrovariabledefinition.cpp:55)
+  CGerberApertureMacroVectorLine::GetExposure  C2440: 'return': cannot convert from 'const CGerberExpression *' to 'CGerberExpression *' (gerberaperturemacrovectorline.cpp:42)
+  CGerberApertureMacroVectorLine::GetRotation  C2440: 'return': cannot convert from 'const CGerberExpression *' to 'CGerberExpression *' (gerberaperturemacrovectorline.cpp:102)
+  CGerberApertureMacroVectorLine::GetWidth  C2440: 'return': cannot convert from 'const CGerberExpression *' to 'CGerberExpression *' (gerberaperturemacrovectorline.cpp:52)
+  CGerberCommandLoadRotation::GetRotation  C2440: 'return': cannot convert from 'const CNumber *' to 'CNumber *' (gerbercommandloadrotation.cpp:40)
+  CGerberCommandLoadScaling::GetScaling  C2440: 'return': cannot convert from 'const CNumber *' to 'CNumber *' (gerbercommandloadscaling.cpp:40)
+  CGerberCommandOperation::GetI  C2440: 'return': cannot convert from 'const CNumber *' to 'CNumber *' (gerbercommandoperation.cpp:181)
+  CGerberCommandOperation::GetJ  C2440: 'return': cannot convert from 'const CNumber *' to 'CNumber *' (gerbercommandoperation.cpp:191)
+  CGerberCommandOperation::GetX  C2440: 'return': cannot convert from 'const CNumber *' to 'CNumber *' (gerbercommandoperation.cpp:161)
+  CGerberCommandOperation::GetY  C2440: 'return': cannot convert from 'const CNumber *' to 'CNumber *' (gerbercommandoperation.cpp:171)
+  CGerberCommandStepAndRepeat::GetXStep  C2440: 'return': cannot convert from 'const CNumber *' to 'CNumber *' (gerbercommandstepandrepeat.cpp:54)
+  CGerberCommandStepAndRepeat::GetYStep  C2440: 'return': cannot convert from 'const CNumber *' to 'CNumber *' (gerbercommandstepandrepeat.cpp:64)
+  CGerberDrillFile::GetCommands  C2440: 'return': cannot convert from 'const CExcellonCommands *' to 'CExcellonCommands *' (gerberdrillfile.cpp:116)
+  CGerberDrillFile::GetFileName  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (gerberdrillfile.cpp:115)
+  CGerberExpression::GetCalculator  C2440: 'return': cannot convert from 'const CCalculator *' to 'CCalculator *' (gerberexpression.cpp:50)
+  CGerberExpressionPosition::GetX  C2440: 'return': cannot convert from 'const CGerberExpression *' to 'CGerberExpression *' (gerberexpressionposition.cpp:32)
+  CGerberExpressionPosition::GetY  C2440: 'return': cannot convert from 'const CGerberExpression *' to 'CGerberExpression *' (gerberexpressionposition.cpp:42)
+  CGerberFileSet::GetDirectory  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (gerberfileset.cpp:268)
+  CGerberFileSet::GetName  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (gerberfileset.cpp:267)
+  CGerberFileSet::GetOutlineBounds  C2440: 'return': cannot convert from 'const CFloat64Rect *' to 'CFloat64Rect *' (gerberfileset.cpp:274)
+  CGerberInterpreter::GetApertures  C2440: 'return': cannot convert from 'const CGerberApertures *' to 'CGerberApertures *' (gerberinterpreter.cpp:60)
+  CGerberInterpreter::GetGraphicsState  C2440: 'return': cannot convert from 'const CGerberGraphicsState *' to 'CGerberGraphicsState *' (gerberinterpreter.cpp:50)
+  CGerberLayerFile::GetCommands  C2440: 'return': cannot convert from 'const CGerberCommands *' to 'CGerberCommands *' (gerberlayerfile.cpp:176)
+  CGerberLayerFile::GetFileName  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (gerberlayerfile.cpp:175)
+  CGerberPanel::GetSize  C2440: 'return': cannot convert from 'const SFloat64Vec2 *' to 'SFloat64Vec2 *' (gerberpanel.cpp:258)
+  CGerberPanelFiles::GetEdgeCuts  C2440: 'return': cannot convert from 'const CGerberPanelEdgeCuts *' to 'CGerberPanelEdgeCuts *' (gerberpanelfiles.cpp:250)
+  CGerberPanelFiles::GetOutlines  C2440: 'return': cannot convert from 'const CGerberPanelOutlines *' to 'CGerberPanelOutlines *' (gerberpanelfiles.cpp:248)
+  CGerberPanelFiles::GetTabs  C2440: 'return': cannot convert from 'const CGerberPanelTabs *' to 'CGerberPanelTabs *' (gerberpanelfiles.cpp:249)
+  CGerberRaster::GetOrigin  C2440: 'return': cannot convert from 'const SFloat64Vec2 *' to 'SFloat64Vec2 *' (gerberrasteriser.cpp:116)
+  CGerberVectoriser::GetError  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (gerbervectoriser.cpp:69)
+
+Calls something of its object's that isn't const (14):
+  CExcellonDrillMerger::NumHoles  C2662: 'M *CArrayTemplatePtr<M>::GetPtr(size)': cannot convert 'this' pointer from 'const CArrayExcellonMergeToolPtr' to 'CArrayTemplatePtr<CExcellonMergeTool> &' (excellondrillmerger.cpp:535)
+  CExcellonDrillMerger::NumSlots  C2662: 'M *CArrayTemplatePtr<M>::GetPtr(size)': cannot convert 'this' pointer from 'const CArrayExcellonMergeToolPtr' to 'CArrayTemplatePtr<CExcellonMergeTool> &' (excellondrillmerger.cpp:553)
+  CGerberApertureMacroCenterLine::GetCenterX  C2662: 'CGerberExpression *CGerberExpressionPosition::GetX(void)': cannot convert 'this' pointer from 'const CGerberExpressionPosition' to 'CGerberExpressionPosition &' (gerberaperturemacrocenterline.cpp:72)
+  CGerberApertureMacroCenterLine::GetCenterY  C2662: 'CGerberExpression *CGerberExpressionPosition::GetY(void)': cannot convert 'this' pointer from 'const CGerberExpressionPosition' to 'CGerberExpressionPosition &' (gerberaperturemacrocenterline.cpp:82)
+  CGerberApertureMacroCircle::GetCenterX  C2662: 'CGerberExpression *CGerberExpressionPosition::GetX(void)': cannot convert 'this' pointer from 'const CGerberExpressionPosition' to 'CGerberExpressionPosition &' (gerberaperturemacrocircle.cpp:60)
+  CGerberApertureMacroCircle::GetCenterY  C2662: 'CGerberExpression *CGerberExpressionPosition::GetY(void)': cannot convert 'this' pointer from 'const CGerberExpressionPosition' to 'CGerberExpressionPosition &' (gerberaperturemacrocircle.cpp:70)
+  CGerberApertureMacroPolygon::GetCenterX  C2662: 'CGerberExpression *CGerberExpressionPosition::GetX(void)': cannot convert 'this' pointer from 'const CGerberExpressionPosition' to 'CGerberExpressionPosition &' (gerberaperturemacropolygon.cpp:72)
+  CGerberApertureMacroPolygon::GetCenterY  C2662: 'CGerberExpression *CGerberExpressionPosition::GetY(void)': cannot convert 'this' pointer from 'const CGerberExpressionPosition' to 'CGerberExpressionPosition &' (gerberaperturemacropolygon.cpp:82)
+  CGerberApertureMacroThermal::GetCenterX  C2662: 'CGerberExpression *CGerberExpressionPosition::GetX(void)': cannot convert 'this' pointer from 'const CGerberExpressionPosition' to 'CGerberExpressionPosition &' (gerberaperturemacrothermal.cpp:42)
+  CGerberApertureMacroThermal::GetCenterY  C2662: 'CGerberExpression *CGerberExpressionPosition::GetY(void)': cannot convert 'this' pointer from 'const CGerberExpressionPosition' to 'CGerberExpressionPosition &' (gerberaperturemacrothermal.cpp:52)
+  CGerberApertureMacroVectorLine::GetEndX  C2662: 'CGerberExpression *CGerberExpressionPosition::GetX(void)': cannot convert 'this' pointer from 'const CGerberExpressionPosition' to 'CGerberExpressionPosition &' (gerberaperturemacrovectorline.cpp:82)
+  CGerberApertureMacroVectorLine::GetEndY  C2662: 'CGerberExpression *CGerberExpressionPosition::GetY(void)': cannot convert 'this' pointer from 'const CGerberExpressionPosition' to 'CGerberExpressionPosition &' (gerberaperturemacrovectorline.cpp:92)
+  CGerberApertureMacroVectorLine::GetStartX  C2662: 'CGerberExpression *CGerberExpressionPosition::GetX(void)': cannot convert 'this' pointer from 'const CGerberExpressionPosition' to 'CGerberExpressionPosition &' (gerberaperturemacrovectorline.cpp:62)
+  CGerberApertureMacroVectorLine::GetStartY  C2662: 'CGerberExpression *CGerberExpressionPosition::GetY(void)': cannot convert 'this' pointer from 'const CGerberExpressionPosition' to 'CGerberExpressionPosition &' (gerberaperturemacrovectorline.cpp:72)
+
+OldDragonLib: 3 made const, 0 couldn't be
+-----------------------------------------
+
+RenderLib: 9 made const, 2 couldn't be
+--------------------------------------
+
+Calls something of its object's that isn't const (1):
+  CRenderScene::NumMeshes  C2662: 'size CArrayCommonObject::NumElements(void)': cannot convert 'this' pointer from 'const CArray<CRenderSceneMesh>' to 'CArrayCommonObject &' (renderscene.cpp:262)
+
+Other (1):
+  CRenderSceneMesh::IsOutOfDate  C2678: binary '->': no operator found which takes a left-hand operand of type 'const Ptr<CMeshEditor>' (or there is no acceptable conversion) (renderscene.cpp:75)
+
+RasterRenderLib: 4 made const, 1 couldn't be
+--------------------------------------------
+
+Hands out a writable pointer into its object (1):
+  CRasterFrame::GetCamera  C2440: 'return': cannot convert from 'const CRasterCamera *' to 'CRasterCamera *' (rasterframe.cpp:679)
+
+WinGdiLib: 3 made const, 0 couldn't be
+--------------------------------------
+
+WinRefLib: 11 made const, 5 couldn't be
+---------------------------------------
+
+Hands out a writable pointer into its object (5):
+  CWinRefScreen::GetPixels  C2440: 'return': cannot convert from 'const CWinRefPixels *' to 'CWinRefPixels *' (winrefscreen.cpp:369)
+  CWinRefWindow::GetPresented  C2440: 'return': cannot convert from 'const CDamageArea *' to 'CDamageArea *' (winrefwindow.cpp:246)
+  CWinRefWindow::GetShown  C2440: 'return': cannot convert from 'const CWinRefPixels *' to 'CWinRefPixels *' (winrefwindow.cpp:312)
+  CWinRefWindowFactory::GetClipboardText  C2440: 'return': cannot convert from 'const CChars *' to 'CChars *' (winrefwindowfactory.cpp:138)
+  CWinRefWindowFactory::GetScreen  C2440: 'return': cannot convert from 'const CWinRefScreen *' to 'CWinRefScreen *' (winrefwindowfactory.cpp:244)
+
+WinInputLib: 4 made const, 3 couldn't be
+----------------------------------------
+
+Hands out a writable pointer into its object (3):
+  CWinInput::GetJoystick  C2440: 'return': cannot convert from 'const CDirectInput *' to 'CDirectInput *' (wininput.cpp:95)
+  CWinInput::GetRaw  C2440: 'return': cannot convert from 'const CWinRawInput *' to 'CWinRawInput *' (wininput.cpp:96)
+  CWinInput::GetXInput  C2440: 'return': cannot convert from 'const CWinXInput *' to 'CWinXInput *' (wininput.cpp:97)
+
+TestLib: 1 made const, 0 couldn't be
+------------------------------------
