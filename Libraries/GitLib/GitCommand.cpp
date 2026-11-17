@@ -168,7 +168,7 @@ void SetGitExecutable(const char* szExecutable)
 
 
 bool CGitCommand::IsRunning(void) { return mcProcess.IsRunning(); }
-int CGitCommand::GetExitCode(void) { return mcProcess.GetExitCode(); }
+int CGitCommand::GetExitCode(void) const { return mcProcess.GetExitCode(); }
 CChars* CGitCommand::GetOutput(void) { return &mszOutput; }  //Byte for byte: its Length counts '\0's in it.
 CChars* CGitCommand::GetErrors(void) { return &mszErrors; }
 char* GetGitExecutable(void) { return gszGitExecutable; }

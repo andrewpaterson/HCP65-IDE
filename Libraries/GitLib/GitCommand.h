@@ -52,7 +52,7 @@ public:
 
 	bool	IsRunning(void);
 	bool	Succeeded(void);
-	int		GetExitCode(void);
+	int		GetExitCode(void) const;
 	CChars*	GetOutput(void);
 	CChars*	GetErrors(void);
 };

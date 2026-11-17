@@ -588,7 +588,7 @@ bool IsGitPathIn(const char* szPath, const char* szFolder)
 
 
 char* CGitRepository::GetRoot(void) { return mszRoot.Text(); }
-bool CGitRepository::IsReadingStatus(void) { return mbReadingStatus; }
+bool CGitRepository::IsReadingStatus(void) const { return mbReadingStatus; }
 CGitStatus* CGitRepository::GetStatus(void) { return &mcStatus; }
-size CGitRepository::GetStatusVersion(void) { return muiStatusVersion; }
+size CGitRepository::GetStatusVersion(void) const { return muiStatusVersion; }
 

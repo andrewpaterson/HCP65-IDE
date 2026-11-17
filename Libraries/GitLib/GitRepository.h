@@ -49,9 +49,9 @@ public:
 	bool			PollStatus(void);
 	bool			ReadStatus(void);
 	void			RefreshStatus(void);
-	bool			IsReadingStatus(void);
+	bool			IsReadingStatus(void) const;
 	CGitStatus*		GetStatus(void);
-	size			GetStatusVersion(void);
+	size			GetStatusVersion(void) const;
 	EGitFileState	GetFileState(const char* szFullPath);
 
 	bool			ReadHeadText(const char* szFullPath, CChars* pszDest);

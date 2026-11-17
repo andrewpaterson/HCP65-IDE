@@ -77,7 +77,7 @@ public:
 
 	bool			Parse(const char* szOutput, size uiLength);
 
-	size			NumFiles(void);
+	size			NumFiles(void) const;
 	SGitFileStatus*	GetFile(size uiIndex);
 	char*			GetPath(SGitFileStatus* psFile);
 	char*			GetOriginalPath(SGitFileStatus* psFile);
@@ -87,9 +87,9 @@ public:
 	char*			GetBranch(void);
 	char*			GetHead(void);
 	char*			GetUpstream(void);
-	bool			IsDetached(void);
-	int32			GetAhead(void);
-	int32			GetBehind(void);
+	bool			IsDetached(void) const;
+	int32			GetAhead(void) const;
+	int32			GetBehind(void) const;
 
 protected:
 	bool			ParseHeader(const char* szLine);

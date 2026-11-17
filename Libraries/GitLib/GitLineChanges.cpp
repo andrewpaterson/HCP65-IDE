@@ -100,6 +100,6 @@ void CGitLineChanges::Clear(void)
 }
 
 
-size CGitLineChanges::NumChanges(void) { return masChanges.NumElements(); }
+size CGitLineChanges::NumChanges(void) const { return masChanges.NumElements(); }
 SGitLineChange* CGitLineChanges::GetChange(size uiIndex) { return masChanges.SafeGet(uiIndex); }
 

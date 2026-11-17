@@ -258,6 +258,6 @@ EGitFileState CGitRepositories::GetFileState(const char* szFileName)
 }
 
 
-size CGitRepositories::NumRepositories(void) { return mapcRepositories.NumElements(); }
+size CGitRepositories::NumRepositories(void) const { return mapcRepositories.NumElements(); }
 CGitRepository* CGitRepositories::GetRepository(size uiIndex) { return mapcRepositories.SafeGetPtr(uiIndex); }
 

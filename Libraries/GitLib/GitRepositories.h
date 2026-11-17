@@ -44,7 +44,7 @@ public:
 	void			RemoveAll(void);
 
 	CGitRepository*	FindRepository(const char* szFileName);
-	size			NumRepositories(void);
+	size			NumRepositories(void) const;
 	CGitRepository*	GetRepository(size uiIndex);
 
 	void			StartStatus(void);

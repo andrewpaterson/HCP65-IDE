@@ -409,14 +409,14 @@ const char* GetGitFileStateName(EGitFileState eState)
 }
 
 
-size CGitStatus::NumFiles(void) { return masFiles.NumElements(); }
+size CGitStatus::NumFiles(void) const { return masFiles.NumElements(); }
 SGitFileStatus* CGitStatus::GetFile(size uiIndex) { return masFiles.SafeGet(uiIndex); }
 char* CGitStatus::GetPath(SGitFileStatus* psFile) { return mszPaths.Text(psFile->uiPath); }
 char* CGitStatus::GetOriginalPath(SGitFileStatus* psFile) { return (psFile->uiOriginalPath != MAX_SIZE) ? mszPaths.Text(psFile->uiOriginalPath) : NULL; }
 char* CGitStatus::GetBranch(void) { return mszBranch.Text(); }
 char* CGitStatus::GetHead(void) { return mszHead.Text(); }
 char* CGitStatus::GetUpstream(void) { return mszUpstream.Text(); }
-bool CGitStatus::IsDetached(void) { return mszBranch.Empty() && !mszHead.Empty(); }
-int32 CGitStatus::GetAhead(void) { return miAhead; }
-int32 CGitStatus::GetBehind(void) { return miBehind; }
+bool CGitStatus::IsDetached(void) const { return mszBranch.Empty() && !mszHead.Empty(); }
+int32 CGitStatus::GetAhead(void) const { return miAhead; }
+int32 CGitStatus::GetBehind(void) const { return miBehind; }
 

@@ -66,7 +66,7 @@ public:
 	void			Compare(const char* szBase, size uiBaseLength, const char* szText, size uiTextLength);
 	void			Clear(void);
 
-	size			NumChanges(void);
+	size			NumChanges(void) const;
 	SGitLineChange*	GetChange(size uiIndex);
 };
 
