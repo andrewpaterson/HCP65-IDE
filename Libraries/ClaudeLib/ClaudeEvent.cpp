@@ -90,13 +90,13 @@ void CClaudeEvent::SetTool(const char* szTool) { mszTool.Clear(); mszTool.Append
 void CClaudeEvent::SetDetail(const char* szDetail) { mszDetail.Clear(); mszDetail.Append(szDetail); }
 void CClaudeEvent::SetFile(const char* szFile) { mszFile.Clear(); mszFile.Append(szFile); }
 void CClaudeEvent::SetError(bool bError) { mbError = bError; }
-EClaudeEventType CClaudeEvent::GetType(void) { return meType; }
+EClaudeEventType CClaudeEvent::GetType(void) const { return meType; }
 char* CClaudeEvent::GetText(void) { return mszText.Text(); }
 char* CClaudeEvent::GetTool(void) { return mszTool.Text(); }
 char* CClaudeEvent::GetDetail(void) { return mszDetail.Text(); }
 char* CClaudeEvent::GetFile(void) { return mszFile.Text(); }
 char* CClaudeEvent::GetDenied(void) { return mszDenied.Text(); }
-bool CClaudeEvent::IsError(void) { return mbError; }
+bool CClaudeEvent::IsError(void) const { return mbError; }
 
 
 //////////////////////////////////////////////////////////////////////////

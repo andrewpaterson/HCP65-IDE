@@ -252,8 +252,8 @@ void SetClaudeExecutable(const char* szExecutable)
 
 
 bool CClaudeCommand::IsRunning(void) { return mcProcess.IsRunning(); }
-bool CClaudeCommand::IsFinished(void) { return mcStream.IsFinished(); }  //Claude said it had finished the last request, well or not.
-int CClaudeCommand::GetExitCode(void) { return mcProcess.GetExitCode(); }
+bool CClaudeCommand::IsFinished(void) const { return mcStream.IsFinished(); }  //Claude said it had finished the last request, well or not.
+int CClaudeCommand::GetExitCode(void) const { return mcProcess.GetExitCode(); }
 char* CClaudeCommand::GetSessionId(void) { return mcStream.GetSessionId(); }  //"" for a new conversation.
 void CClaudeCommand::SetSessionId(const char* szSessionId) { mcStream.SetSessionId(szSessionId); }  //To carry on a conversation from before.
 CArrayChars* CClaudeCommand::GetChangedFiles(void) { return mcStream.GetChangedFiles(); }  //By the last request.

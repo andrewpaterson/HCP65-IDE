@@ -79,7 +79,7 @@ public:
 	bool		Parse(const char* szText);
 	void		Clear(void);
 
-	size		GetRoot(void);
+	size		GetRoot(void) const;
 	EJSONType	GetType(size uiNode);
 	char*		GetName(size uiNode);
 	char*		GetText(size uiNode);

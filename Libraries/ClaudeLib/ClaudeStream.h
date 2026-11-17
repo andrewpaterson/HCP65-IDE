@@ -56,7 +56,7 @@ public:
 	char*			GetSessionId(void);
 	void			SetSessionId(const char* szSessionId);
 	CArrayChars*	GetChangedFiles(void);
-	bool			IsFinished(void);
+	bool			IsFinished(void) const;
 	bool			Succeeded(void);
 
 protected:

@@ -537,6 +537,6 @@ bool IsClaudeEditTool(const char* szTool)
 
 char* CClaudeStream::GetSessionId(void) { return mszSessionId.Text(); }  //"" before a run has started.
 CArrayChars* CClaudeStream::GetChangedFiles(void) { return &maszChangedFiles; }  //As Claude named them: full paths.
-bool CClaudeStream::IsFinished(void) { return mbFinished; }  //Once the result has been read.
+bool CClaudeStream::IsFinished(void) const { return mbFinished; }  //Once the result has been read.
 bool CClaudeStream::Succeeded(void) { return mbSucceeded; }
 

@@ -59,13 +59,13 @@ public:
 	void				AddDenied(const char* szTool);
 	void				SetError(bool bError);
 
-	EClaudeEventType	GetType(void);
+	EClaudeEventType	GetType(void) const;
 	char*				GetText(void);
 	char*				GetTool(void);
 	char*				GetDetail(void);
 	char*				GetFile(void);
 	char*				GetDenied(void);
-	bool				IsError(void);
+	bool				IsError(void) const;
 };
 
 

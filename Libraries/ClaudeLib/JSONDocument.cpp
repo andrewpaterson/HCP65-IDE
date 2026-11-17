@@ -121,7 +121,7 @@ bool CJSONDocument::Parse(const char* szText)
 // The value the text is, JSON_NONE if none was read.
 //
 //////////////////////////////////////////////////////////////////////////
-size CJSONDocument::GetRoot(void)
+size CJSONDocument::GetRoot(void) const
 {
 	return (masNodes.NumElements() > 0) ? 0 : JSON_NONE;
 }

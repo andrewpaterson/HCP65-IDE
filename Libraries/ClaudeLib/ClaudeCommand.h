@@ -66,9 +66,9 @@ public:
 	void			Forget(void);
 
 	bool			IsRunning(void);
-	bool			IsFinished(void);
+	bool			IsFinished(void) const;
 	bool			Succeeded(void);
-	int				GetExitCode(void);
+	int				GetExitCode(void) const;
 	char*			GetSessionId(void);
 	void			SetSessionId(const char* szSessionId);
 	CArrayChars*	GetChangedFiles(void);
