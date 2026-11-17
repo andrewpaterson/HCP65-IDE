@@ -30,7 +30,6 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 #define IDE_USAGES_POPUP_MAXIMUM		100		//The most usages Control+B's popup shows; Find Usages shows the rest.
-#define IDE_USAGES_OPEN_FILES_MAXIMUM	1000	//With more usages than this the tree's files start closed.
 #define IDE_USAGES_REFRESH				500		//Milliseconds after the last edit that moved a usage until the tree shows it.
 
 //Find Usages' part of the settings' file.
@@ -824,7 +823,6 @@ void CIDEUsages::ShowUsages(bool bKeepSelected)
 	int32				iFile;
 	bool				bByType;
 	bool				bByProject;
-	bool				bOpenFiles;
 
 	if (mpSearch.IsNull())
 	{
@@ -893,9 +891,7 @@ void CIDEUsages::ShowUsages(bool bKeepSelected)
 	mpSearch->mpPane->GetTree()->SetExpanded(iRoot, true);
 	szText.Kill();
 
-	//The tree has a row for each line that can be seen, which thousands of make it slow: past
-	//IDE_USAGES_OPEN_FILES_MAXIMUM usages the files start closed, but for the selected line's.
-	bOpenFiles = (uiRows <= IDE_USAGES_OPEN_FILES_MAXIMUM);
+	//Every file starts open, however many usages there are: the tree only has components for the rows in view.
 	szWhat = mpSearch->msFound.bDeclarations ? " reference" : " usage";
 	iType = iRoot;
 	iProject = iRoot;
@@ -914,7 +910,7 @@ void CIDEUsages::ShowUsages(bool bKeepSelected)
 		}
 		uiFile = CountIDEUsageGroup(psRow, uiRows - i, IUL_File);
 		iFile = AddFileNode(iProject, asRows.GetData(), uiRows, i, uiFile);
-		mpSearch->mpPane->GetTree()->SetExpanded(iFile, bOpenFiles);
+		mpSearch->mpPane->GetTree()->SetExpanded(iFile, true);
 		AddFileUsages(iFile, psRow, uiFile, &cLines);
 	}
 	cLines.Kill();

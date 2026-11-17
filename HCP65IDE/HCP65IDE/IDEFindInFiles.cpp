@@ -32,7 +32,6 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define IDE_FIND_FILE_MAXIMUM			(8 MB)	//Bigger files aren't searched.
 #define IDE_FIND_BINARY_CHECK			4096	//A file with a zero in its first bytes isn't text, and isn't searched.
 #define IDE_FIND_RESULTS_MAXIMUM		10000	//The most results the Find tool window lists.
-#define IDE_FIND_OPEN_FILES_MAXIMUM		1000	//With more results than this the tree's files start closed.
 #define IDE_FIND_SETTINGS_TAG			"FindInFiles"
 #define IDE_FIND_SCOPE_ATTRIBUTE			"Scope"
 #define IDE_FIND_DIRECTORY_ATTRIBUTE		"Directory"
@@ -952,7 +951,6 @@ void CIDEFindInFiles::ShowResults(bool bKeepSelected)
 	int64				iSelectedData;
 	int32				iRoot;
 	int32				iFile;
-	bool				bOpenFiles;
 
 	if (mpPane.IsNull())
 	{
@@ -968,9 +966,7 @@ void CIDEFindInFiles::ShowResults(bool bKeepSelected)
 	iRoot = pTree->AddNode(TREE_NO_NODE, mszFoundTitle.Text(), NULL, 0);
 	pTree->SetExpanded(iRoot, true);
 
-	//The tree has a row for each line that can be seen, which thousands of make it slow: past
-	//IDE_FIND_OPEN_FILES_MAXIMUM results the files start closed.
-	bOpenFiles = (masFound.NumElements() <= IDE_FIND_OPEN_FILES_MAXIMUM);
+	//Every file starts open, however many results there are: the tree only has components for the rows in view.
 	uiCommon = GetCommonDirectoryLength();
 	cLines.Init(&mpcContent->GetDocuments());
 	for (i = 0; i < masFound.NumElements(); i += uiCount)
@@ -990,7 +986,7 @@ void CIDEFindInFiles::ShowResults(bool bKeepSelected)
 			szText.AppendSubString(&szFile[uiCommon], szName - 1);
 		}
 		iFile = mpPane->AddGroup(iRoot, szName, szText.Text(), szFile);
-		pTree->SetExpanded(iFile, bOpenFiles);
+		pTree->SetExpanded(iFile, true);
 		szText.Kill();
 
 		for (j = i; j < i + uiCount; j++)

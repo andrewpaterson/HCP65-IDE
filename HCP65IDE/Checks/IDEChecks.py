@@ -705,13 +705,21 @@ CHECKS = [
 		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp', 'CARET': '1:5', 'EDIT': 'usages',
 		'SETTINGS': MakeSettingsFile('<Settings>\n  <FindUsages GroupByProject="false" GroupByClass="false"/>\n</Settings>\n')}),
 		[r'^Usages of F  4 usages$', r'^  Call  4 usages$', r'^    Kernel\.cpp  4$', r'^      2: class CA'], [r'^\s+Kernel  4 usages$', r'^\s+CA  2$']),
-	('usages-many-files-closed', dict(MakeUsagesKernel(USAGES_KERNEL, {'Aaa.cpp': ManyUsages('A', 600), 'Bbb.cpp': ManyUsages('B', 600)}), **{
-		#Past 1000 usages (1204 here) the tree's files start closed, but for the first line's: the top, the three files
-		#and Aaa.cpp's 600 lines can be seen.  A step from Aaa.cpp's last line opens Bbb.cpp for its first.
+	('usages-many-files-open', dict(MakeUsagesKernel(USAGES_KERNEL, {'Aaa.cpp': ManyUsages('A', 600), 'Bbb.cpp': ManyUsages('B', 600)}), **{
+		#However many usages there are (1204 here) the tree's files start open: the top, the three files and every line
+		#can be seen (the tree only has components for the rows in view).  A step from Aaa.cpp's last line goes to
+		#Bbb.cpp's first.
 		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp', 'CARET': '1:5', 'EDIT': 'usagegroups:,usages,printrows,printselected,select:601',
 		'DEBUG': 'edit:focus:usages,command:Navigate.NextOccurrence,edit:printselected,edit:printrows'}),
-		[r'^Usages of F  1204 usages$', r'^  Aaa\.cpp  600$', r'^  Bbb\.cpp  600$', r'^  Kernel\.cpp  4$', r'^Rows: 604$',
-		 r'^Selected: 2: int A0\(void\)', r'^Selected: 2: int B0\(void\)', r'^Rows: 1204$'], [r'not enabled']),
+		[r'^Usages of F  1204 usages$', r'^  Aaa\.cpp  600$', r'^  Bbb\.cpp  600$', r'^  Kernel\.cpp  4$', r'^Rows: 1208$',
+		 r'^Selected: 2: int A0\(void\)', r'^Selected: 2: int B0\(void\)', r'^Rows: 1208$'], [r'not enabled']),
+	('usages-thousands-open', dict(MakeUsagesKernel(USAGES_KERNEL, {'Big.cpp': ManyUsages('A', 20000)}), **{
+		#20,004 usages, 20,000 of them in one file: closed and opened again, laid out, painted and scrolled to the
+		#end, each in under a second (timeusagetree).  Before the tree only had components for the rows in view,
+		#opening them took 4.8 seconds.  Closing them left the top node selected, the open node the selected line was in.
+		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp', 'CARET': '1:5', 'EDIT': 'usagegroups:,usages,printrows,timeusagetree,printselected'}),
+		[r'^Usages of F  20004 usages$', r'^  Big\.cpp  20000$', r'^Rows: 20007$',
+		 r'^Usage tree: 20007 rows, open \d{1,3} ms, layout \d{1,3} ms, paint \d{1,3} ms, scroll \d{1,3} ms$', r'^Selected: Usages of F  20004 usages$'], []),
 	('gotosource-popup-more', dict(MakeUsagesKernel(USAGES_KERNEL, {'Aaa.cpp': ManyUsages('A', 150)}), **{
 		#Control+B's popup shows 100 usages; its last row says how many more there are, and opens them all in Find
 		#Usages.
