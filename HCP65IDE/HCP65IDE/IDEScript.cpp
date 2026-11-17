@@ -2991,6 +2991,36 @@ void CIDEScript::RunEditStep(const char* szStep)
 		//How many of the Find Usages tree's nodes can be seen (those in open nodes), as "Rows: <count>".
 		printf("Rows: %d\n", (int)mpcContent->GetUsages()->GetUsagesTree()->NumRows());
 	}
+	else if (strcmp(szStep, "timeusagetree") == 0)
+	{
+		//How long the Find Usages tree takes with every node open, to measure the tree by: "Usage tree: 20006 rows,
+		//open 1700 ms, layout 1200 ms, paint 1300 ms, scroll 900 ms": from every node closed (and painted so), every
+		//node opened, the window laid out, the window painted, then the last row shown (laid out and painted again).
+		Ptr<CTreeContainer>	pTree;
+		int64				iStart;
+		int64				iOpened;
+		int64				iLaidOut;
+		int64				iPainted;
+		int64				iScrolled;
+
+		pTree = mpcContent->GetUsages()->GetUsagesTree();
+		pTree->CollapseAll();
+		mpcContent->GetWindow()->Layout();
+		mpcContent->GetWindow()->PaintNow();
+		iStart = GetDebugTickCount();
+		pTree->ExpandAll();
+		iOpened = GetDebugTickCount();
+		mpcContent->GetWindow()->Layout();
+		iLaidOut = GetDebugTickCount();
+		mpcContent->GetWindow()->PaintNow();
+		iPainted = GetDebugTickCount();
+		pTree->ShowRow(pTree->NumRows() - 1);
+		mpcContent->GetWindow()->Layout();
+		mpcContent->GetWindow()->PaintNow();
+		iScrolled = GetDebugTickCount();
+		printf("Usage tree: %d rows, open %d ms, layout %d ms, paint %d ms, scroll %d ms\n", (int)pTree->NumRows(), (int)(iOpened - iStart), (int)(iLaidOut - iOpened), (int)(iPainted - iLaidOut), (int)(iScrolled - iPainted));
+		fflush(stdout);
+	}
 	else if (strcmp(szStep, "printpopup") == 0)
 	{
 		//Control+B's usages popup's rows, "Popup: <row> | <row> ...", or "Popup: none" if it isn't open.
