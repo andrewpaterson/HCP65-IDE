@@ -653,9 +653,9 @@ char* CVcxSolution::GetFormatVersion(void) { return mszFormatVersion.Text(); }
 char* CVcxSolution::GetVisualStudioVersion(void) { return mszVisualStudioVersion.Text(); }
 char* CVcxSolution::GetMinimumVisualStudioVersion(void) { return mszMinimumVisualStudioVersion.Text(); }
 char* CVcxSolution::GetSolutionGuid(void) { return mszSolutionGuid.Text(); }
-bool CVcxSolution::IsHideSolutionNode(void) { return mbHideSolutionNode; }
-size CVcxSolution::NumConfigurations(void) { return maszConfigurations.NumElements(); }
+bool CVcxSolution::IsHideSolutionNode(void) const { return mbHideSolutionNode; }
+size CVcxSolution::NumConfigurations(void) const { return maszConfigurations.NumElements(); }
 char* CVcxSolution::GetConfiguration(size uiIndex) { return maszConfigurations.GetText(uiIndex); }
-size CVcxSolution::NumProjects(void) { return mapcProjects.NumElements(); }
+size CVcxSolution::NumProjects(void) const { return mapcProjects.NumElements(); }
 CVcxSolutionProject* CVcxSolution::GetProject(size uiIndex) { return mapcProjects.GetPtr(uiIndex); }
 

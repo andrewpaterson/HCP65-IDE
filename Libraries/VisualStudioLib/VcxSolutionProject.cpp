@@ -52,9 +52,9 @@ void CVcxSolutionProjectConfiguration::Kill(void)
 char* CVcxSolutionProjectConfiguration::GetSolutionConfiguration(void) { return mszSolutionConfiguration.Text(); }
 char* CVcxSolutionProjectConfiguration::GetProjectConfiguration(void) { return mszProjectConfiguration.Text(); }
 void CVcxSolutionProjectConfiguration::SetProjectConfiguration(const char* szProjectConfiguration) { mszProjectConfiguration.Set(szProjectConfiguration); }
-bool CVcxSolutionProjectConfiguration::IsBuild(void) { return mbBuild; }
+bool CVcxSolutionProjectConfiguration::IsBuild(void) const { return mbBuild; }
 void CVcxSolutionProjectConfiguration::SetBuild(bool bBuild) { mbBuild = bBuild; }
-bool CVcxSolutionProjectConfiguration::IsDeploy(void) { return mbDeploy; }
+bool CVcxSolutionProjectConfiguration::IsDeploy(void) const { return mbDeploy; }
 void CVcxSolutionProjectConfiguration::SetDeploy(bool bDeploy) { mbDeploy = bDeploy; }
 
 
@@ -209,14 +209,14 @@ char* CVcxSolutionProject::GetGuid(void) { return mszGuid.Text(); }
 void CVcxSolutionProject::SetGuid(const char* szGuid) { mszGuid.Set(szGuid); }
 char* CVcxSolutionProject::GetParentGuid(void) { return mszParentGuid.Text(); }
 void CVcxSolutionProject::SetParentGuid(const char* szParentGuid) { mszParentGuid.Set(szParentGuid); }
-bool CVcxSolutionProject::IsLoaded(void) { return mpcProject != NULL; }
+bool CVcxSolutionProject::IsLoaded(void) const { return mpcProject != NULL; }
 CVcxProject* CVcxSolutionProject::GetProject(void) { return mpcProject; }
 void CVcxSolutionProject::AddSolutionItem(const char* szItem) { maszSolutionItems.Add(szItem); }
-size CVcxSolutionProject::NumSolutionItems(void) { return maszSolutionItems.NumElements(); }
+size CVcxSolutionProject::NumSolutionItems(void) const { return maszSolutionItems.NumElements(); }
 char* CVcxSolutionProject::GetSolutionItem(size uiIndex) { return maszSolutionItems.GetText(uiIndex); }
 void CVcxSolutionProject::AddDependency(const char* szGuid) { maszDependencies.Add(szGuid); }
-size CVcxSolutionProject::NumDependencies(void) { return maszDependencies.NumElements(); }
+size CVcxSolutionProject::NumDependencies(void) const { return maszDependencies.NumElements(); }
 char* CVcxSolutionProject::GetDependency(size uiIndex) { return maszDependencies.GetText(uiIndex); }
-size CVcxSolutionProject::NumConfigurations(void) { return masConfigurations.NumElements(); }
+size CVcxSolutionProject::NumConfigurations(void) const { return masConfigurations.NumElements(); }
 CVcxSolutionProjectConfiguration* CVcxSolutionProject::GetConfiguration(size uiIndex) { return masConfigurations.Get(uiIndex); }
 

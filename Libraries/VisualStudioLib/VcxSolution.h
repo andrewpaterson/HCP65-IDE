@@ -71,12 +71,12 @@ public:
 	char*					GetVisualStudioVersion(void);
 	char*					GetMinimumVisualStudioVersion(void);
 	char*					GetSolutionGuid(void);
-	bool					IsHideSolutionNode(void);
+	bool					IsHideSolutionNode(void) const;
 
-	size					NumConfigurations(void);
+	size					NumConfigurations(void) const;
 	char*					GetConfiguration(size uiIndex);
 
-	size					NumProjects(void);
+	size					NumProjects(void) const;
 	CVcxSolutionProject*	GetProject(size uiIndex);
 	CVcxSolutionProject*	FindProject(const char* szGuid);
 	CVcxSolutionProject*	FindProjectByName(const char* szName);

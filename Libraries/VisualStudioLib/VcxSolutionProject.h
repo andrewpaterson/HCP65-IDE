@@ -47,9 +47,9 @@ public:
 	char*	GetSolutionConfiguration(void);
 	char*	GetProjectConfiguration(void);
 	void	SetProjectConfiguration(const char* szProjectConfiguration);
-	bool	IsBuild(void);
+	bool	IsBuild(void) const;
 	void	SetBuild(bool bBuild);
-	bool	IsDeploy(void);
+	bool	IsDeploy(void) const;
 	void	SetDeploy(bool bDeploy);
 };
 
@@ -88,19 +88,19 @@ public:
 	void								SetParentGuid(const char* szParentGuid);
 	bool								IsFolder(void);
 	bool								IsVcxProject(void);
-	bool								IsLoaded(void);
+	bool								IsLoaded(void) const;
 	CVcxProject*						GetProject(void);
 
 	void								AddSolutionItem(const char* szItem);
-	size								NumSolutionItems(void);
+	size								NumSolutionItems(void) const;
 	char*								GetSolutionItem(size uiIndex);
 	void								AddDependency(const char* szGuid);
-	size								NumDependencies(void);
+	size								NumDependencies(void) const;
 	char*								GetDependency(size uiIndex);
 
 	CVcxSolutionProjectConfiguration*	GetOrAddConfiguration(const char* szSolutionConfiguration);
 	CVcxSolutionProjectConfiguration*	FindConfiguration(const char* szSolutionConfiguration);
-	size								NumConfigurations(void);
+	size								NumConfigurations(void) const;
 	CVcxSolutionProjectConfiguration*	GetConfiguration(size uiIndex);
 };
 

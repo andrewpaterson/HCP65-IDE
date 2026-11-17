@@ -57,13 +57,13 @@ public:
 	char*					GetName(void);
 	char*					GetGuid(void);
 	char*					GetRootNamespace(void);
-	bool					HasFilters(void);
+	bool					HasFilters(void) const;
 
-	size					NumConfigurations(void);
+	size					NumConfigurations(void) const;
 	CVcxConfiguration*		GetConfiguration(size uiIndex);
 	CVcxConfiguration*		FindConfiguration(const char* szName);
 
-	size					NumItems(void);
+	size					NumItems(void) const;
 	CVcxItem*				GetItem(size uiIndex);
 	CVcxItem*				FindItem(const char* szElement, const char* szInclude);
 	void					GetItemsInFilter(const char* szFilter, CArrayInt* paiItems);
@@ -74,12 +74,12 @@ public:
 	static const char*		GetItemElement(const char* szFileName);
 	bool					RemoveItem(const char* szPath);
 
-	size					NumFilters(void);
+	size					NumFilters(void) const;
 	CVcxFilter*				GetFilter(size uiIndex);
 	CVcxFilter*				FindFilter(const char* szName);
 	void					GetChildFilters(const char* szParent, CArrayInt* paiFilters);
 
-	size					NumReferences(void);
+	size					NumReferences(void) const;
 	CVcxProjectReference*	GetReference(size uiIndex);
 
 	void					ExpandMacros(const char* szValue, CVcxConfiguration* pcConfiguration, const char* szSolutionDirectory, CChars* pszDest);

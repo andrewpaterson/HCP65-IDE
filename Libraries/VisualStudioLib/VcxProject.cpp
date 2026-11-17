@@ -1582,13 +1582,13 @@ char* CVcxProject::GetDirectory(void) { return mszDirectory.Text(); }
 char* CVcxProject::GetName(void) { return mszName.Text(); }
 char* CVcxProject::GetGuid(void) { return mszGuid.Text(); }
 char* CVcxProject::GetRootNamespace(void) { return mszRootNamespace.Text(); }
-bool CVcxProject::HasFilters(void) { return mbFilters; }
-size CVcxProject::NumConfigurations(void) { return masConfigurations.NumElements(); }
+bool CVcxProject::HasFilters(void) const { return mbFilters; }
+size CVcxProject::NumConfigurations(void) const { return masConfigurations.NumElements(); }
 CVcxConfiguration* CVcxProject::GetConfiguration(size uiIndex) { return masConfigurations.Get(uiIndex); }
-size CVcxProject::NumItems(void) { return masItems.NumElements(); }
+size CVcxProject::NumItems(void) const { return masItems.NumElements(); }
 CVcxItem* CVcxProject::GetItem(size uiIndex) { return masItems.Get(uiIndex); }
-size CVcxProject::NumFilters(void) { return masFilters.NumElements(); }
+size CVcxProject::NumFilters(void) const { return masFilters.NumElements(); }
 CVcxFilter* CVcxProject::GetFilter(size uiIndex) { return masFilters.Get(uiIndex); }
-size CVcxProject::NumReferences(void) { return masReferences.NumElements(); }
+size CVcxProject::NumReferences(void) const { return masReferences.NumElements(); }
 CVcxProjectReference* CVcxProject::GetReference(size uiIndex) { return masReferences.Get(uiIndex); }
 

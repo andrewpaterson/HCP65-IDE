@@ -53,7 +53,7 @@ public:
 	void				Init(const char* szElement, const char* szInclude);
 	void				Kill(void);
 
-	EVcxItemType		GetType(void);
+	EVcxItemType		GetType(void) const;
 	char*				GetElement(void);
 	char*				GetInclude(void);
 	char*				GetFilter(void);
