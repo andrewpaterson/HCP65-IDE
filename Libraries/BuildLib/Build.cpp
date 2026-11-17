@@ -210,7 +210,7 @@ void CBuild::Finish(EBuildState eState, CArrayChars* paszLines)
 }
 
 
-EBuildState CBuild::GetState(void) { return meState; }
+EBuildState CBuild::GetState(void) const { return meState; }
 bool CBuild::IsRunning(void) { return meState == BS_Running; }
 char* CBuild::GetProgress(void) { return mszProgress.Text(); }  //How the build is going, a line.
 void CBuild::SetProgress(const char* szProgress) { mszProgress.Set(szProgress); }
@@ -223,7 +223,7 @@ void CBuild::SetSteps(size uiDone, size uiSteps) { muiDone = uiDone; muiSteps = 
 // it has said how many it has.
 //
 //////////////////////////////////////////////////////////////////////////
-float CBuild::GetFraction(void)
+float CBuild::GetFraction(void) const
 {
 	if (muiSteps == 0)
 	{

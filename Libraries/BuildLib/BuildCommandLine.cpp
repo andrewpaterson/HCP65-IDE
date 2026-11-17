@@ -1117,9 +1117,9 @@ char* CBuildCommandLine::GetFile(void) { return mszFile.Text(); }
 char* CBuildCommandLine::GetConfiguration(void) { return mszConfiguration.Text(); }
 char* CBuildCommandLine::GetStartupProject(void) { return mszStartupProject.Text(); }
 char* CBuildCommandLine::GetLibc65(void) { return mszLibc65.Text(); }
-bool CBuildCommandLine::IsCard(void) { return mbCard; }
-bool CBuildCommandLine::IsQuiet(void) { return mbQuiet; }
-bool CBuildCommandLine::IsHelp(void) { return mbHelp; }
-bool CBuildCommandLine::IsPlain(void) { return mbPlain; }
+bool CBuildCommandLine::IsCard(void) const { return mbCard; }
+bool CBuildCommandLine::IsQuiet(void) const { return mbQuiet; }
+bool CBuildCommandLine::IsHelp(void) const { return mbHelp; }
+bool CBuildCommandLine::IsPlain(void) const { return mbPlain; }
 CBuildPlain* CBuildCommandLine::GetPlain(void) { return &mcPlain; }
 

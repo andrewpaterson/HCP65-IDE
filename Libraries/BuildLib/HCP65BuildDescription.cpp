@@ -54,7 +54,7 @@ void CHCP65BuildIncludes::Add(const char* szDirectory, bool bSubDirectories)
 }
 
 
-size CHCP65BuildIncludes::NumIncludes(void) { return maszDirectories.NumElements(); }
+size CHCP65BuildIncludes::NumIncludes(void) const { return maszDirectories.NumElements(); }
 char* CHCP65BuildIncludes::GetDirectory(size uiIndex) { return maszDirectories.GetText(uiIndex); }
 bool CHCP65BuildIncludes::HasSubDirectories(size uiIndex) { return maiSubDirectories.GetValue(uiIndex) != 0; }
 
@@ -150,7 +150,7 @@ CHCP65BuildProject* CHCP65BuildDescription::AddProject(const char* szName, const
 }
 
 
-size CHCP65BuildDescription::NumProjects(void) { return macProjects.NumElements(); }
+size CHCP65BuildDescription::NumProjects(void) const { return macProjects.NumElements(); }
 CHCP65BuildProject* CHCP65BuildDescription::GetProject(size uiIndex) { return macProjects.Get(uiIndex); }
 CHCP65BuildProject* CHCP65BuildDescription::GetLastProject(void) { return (macProjects.NumElements() > 0) ? macProjects.Tail() : NULL; }
 

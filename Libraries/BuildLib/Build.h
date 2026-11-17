@@ -81,10 +81,10 @@ public:
 	virtual	bool		Poll(CArrayChars* paszLines) =0;
 	virtual	void		Cancel(void) =0;
 
-			EBuildState	GetState(void);
+			EBuildState	GetState(void) const;
 			bool		IsRunning(void);
 			char*		GetProgress(void);
-			float		GetFraction(void);
+			float		GetFraction(void) const;
 			void		SetOutputDirectory(const char* szDirectory);
 			void		SetListingDirectory(const char* szDirectory);
 			void		GetOutputDirectory(CChars* pszDest);

@@ -44,11 +44,11 @@ public:
 	bool			Poll(CArrayChars* paszLines);
 	void			Cancel(void);
 
-	EBuildState		GetState(void);
+	EBuildState		GetState(void) const;
 	bool			IsRunning(void);
-	char*			GetProgress(void);
-	float			GetFraction(void);
-	CBuild*			GetBuild(void);
+	char*			GetProgress(void) const;
+	float			GetFraction(void) const;
+	CBuild*			GetBuild(void) const;
 
 protected:
 	void			End(void);

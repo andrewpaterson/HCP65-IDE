@@ -51,7 +51,7 @@ public:
 	bool					Write(const char* szFileName);
 	bool					ApplyEdits(const char* szFileName, CArrayBuildConfigurationEdits* pasEdits);
 
-	size					NumConfigurations(void);
+	size					NumConfigurations(void) const;
 	CBuildConfiguration*	GetConfiguration(size uiIndex);
 	CBuildConfiguration*	FindConfiguration(const char* szName);
 	CBuildConfiguration*	FindConfiguration(const char* szConfiguration, const char* szPlatform);

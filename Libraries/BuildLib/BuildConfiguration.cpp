@@ -302,7 +302,7 @@ bool CBuildConfiguration::LoadXML(CMarkupTag* pcTag)
 // Whether it is built by the HCP65 compiler, which writes listings.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CBuildConfiguration::IsHCP65(void)
+bool CBuildConfiguration::IsHCP65(void) const
 {
 	return (meToolchain == BT_W65C816) || (meToolchain == BT_65C64);
 }
@@ -314,7 +314,7 @@ bool CBuildConfiguration::IsHCP65(void)
 // "65C64"); NULL for this computer's (MSVC, GCC).
 //
 //////////////////////////////////////////////////////////////////////////
-const char* CBuildConfiguration::GetProcessorName(void)
+const char* CBuildConfiguration::GetProcessorName(void) const
 {
 	return IsHCP65() ? GetToolchainName(meToolchain) : NULL;
 }
@@ -412,7 +412,7 @@ bool CBuildConfiguration::FindToolchain(const char* szName, EBuildToolchain* peT
 
 
 char* CBuildConfiguration::GetName(void) { return mszName.Text(); }
-EBuildToolchain CBuildConfiguration::GetToolchain(void) { return meToolchain; }
+EBuildToolchain CBuildConfiguration::GetToolchain(void) const { return meToolchain; }
 char* CBuildConfiguration::GetSolutionConfiguration(void) { return mszSolutionConfiguration.Text(); }
 
 
@@ -421,7 +421,7 @@ char* CBuildConfiguration::GetSolutionConfiguration(void) { return mszSolutionCo
 // Whether a build links what it compiles into an image (GetImage).
 //
 //////////////////////////////////////////////////////////////////////////
-bool CBuildConfiguration::HasImage(void)
+bool CBuildConfiguration::HasImage(void) const
 {
 	return meProgram == BP_Image;
 }
@@ -475,7 +475,7 @@ void CBuildConfiguration::SetNoFloats(bool bNoFloats)
 //
 //
 //////////////////////////////////////////////////////////////////////////
-bool CBuildConfiguration::IsNoFloats(void)
+bool CBuildConfiguration::IsNoFloats(void) const
 {
 	return mbNoFloats;
 }
@@ -498,7 +498,7 @@ void CBuildConfiguration::SetMathTables(bool bMathTables)
 //
 //
 //////////////////////////////////////////////////////////////////////////
-bool CBuildConfiguration::IsMathTables(void)
+bool CBuildConfiguration::IsMathTables(void) const
 {
 	return mbMathTables;
 }
@@ -521,7 +521,7 @@ void CBuildConfiguration::SetPreferSize(bool bPreferSize)
 //
 //
 //////////////////////////////////////////////////////////////////////////
-bool CBuildConfiguration::IsPreferSize(void)
+bool CBuildConfiguration::IsPreferSize(void) const
 {
 	return mbPreferSize;
 }
@@ -544,7 +544,7 @@ void CBuildConfiguration::SetWarnMissingOverride(bool bWarnMissingOverride)
 //
 //
 //////////////////////////////////////////////////////////////////////////
-bool CBuildConfiguration::IsWarnMissingOverride(void)
+bool CBuildConfiguration::IsWarnMissingOverride(void) const
 {
 	return mbWarnMissingOverride;
 }
@@ -556,7 +556,7 @@ bool CBuildConfiguration::IsWarnMissingOverride(void)
 // kernal loads (GetExecutable).
 //
 //////////////////////////////////////////////////////////////////////////
-bool CBuildConfiguration::HasExecutable(void)
+bool CBuildConfiguration::HasExecutable(void) const
 {
 	return meProgram == BP_Executable;
 }
@@ -612,7 +612,7 @@ CAsm65Image* CBuildConfiguration::SetImage(const char* szFile, uint32 uiSize, ui
 // driver a kernal loads (GetModule).
 //
 //////////////////////////////////////////////////////////////////////////
-bool CBuildConfiguration::HasModule(void)
+bool CBuildConfiguration::HasModule(void) const
 {
 	return meProgram == BP_Module;
 }
@@ -668,7 +668,7 @@ void CBuildConfiguration::ClearProgram(void)
 // compiles.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CBuildConfiguration::IsLinked(void)
+bool CBuildConfiguration::IsLinked(void) const
 {
 	return meProgram != BP_None;
 }
@@ -678,7 +678,7 @@ bool CBuildConfiguration::IsLinked(void)
 //
 //
 //////////////////////////////////////////////////////////////////////////
-EBuildProgram CBuildConfiguration::GetProgram(void)
+EBuildProgram CBuildConfiguration::GetProgram(void) const
 {
 	return meProgram;
 }
@@ -759,11 +759,11 @@ void CBuildConfiguration::AddLines(const char* szFile, const char* szSpace, cons
 }
 
 
-size CBuildConfiguration::NumLines(void)						{ return maszLinesFiles.NumElements(); }
+size CBuildConfiguration::NumLines(void) const						{ return maszLinesFiles.NumElements(); }
 char* CBuildConfiguration::GetLinesFile(size uiIndex)			{ return maszLinesFiles.GetText(uiIndex); }
 char* CBuildConfiguration::GetLinesSpace(size uiIndex)			{ return maszLinesSpaces.GetText(uiIndex); }
 char* CBuildConfiguration::GetLinesCardPath(size uiIndex)		{ return maszLinesCardPaths.GetText(uiIndex); }
-size CBuildConfiguration::NumLoads(void)						{ return maszLoadFiles.NumElements(); }
+size CBuildConfiguration::NumLoads(void) const						{ return maszLoadFiles.NumElements(); }
 char* CBuildConfiguration::GetLoadFile(size uiIndex)			{ return maszLoadFiles.GetText(uiIndex); }
 uint32 CBuildConfiguration::GetLoadAddress(size uiIndex)		{ return *mauiLoadAddresses.Get(uiIndex); }
 
@@ -782,7 +782,7 @@ void CBuildConfiguration::SetCard(const char* szCard, const char* szPath)
 }
 
 
-bool CBuildConfiguration::HasCard(void)		{ return !mszCard.Empty() && !mszCardPath.Empty(); }
+bool CBuildConfiguration::HasCard(void) const		{ return !mszCard.Empty() && !mszCardPath.Empty(); }
 char* CBuildConfiguration::GetCard(void)	{ return mszCard.Text(); }
 char* CBuildConfiguration::GetCardPath(void)	{ return mszCardPath.Text(); }
 
@@ -794,7 +794,7 @@ char* CBuildConfiguration::GetCardPath(void)	{ return mszCardPath.Text(); }
 // \OS\OS.SYS, which the boot loader loads), with a Card.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CBuildConfiguration::IsOnCard(void)
+bool CBuildConfiguration::IsOnCard(void) const
 {
 	return ((meProgram == BP_Executable) || (meProgram == BP_Module) || (meProgram == BP_Image)) && HasCard();
 }

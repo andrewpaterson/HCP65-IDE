@@ -544,7 +544,7 @@ bool CBuildPlain::Finish(CChars* pszError)
 // How many of -exe, -image and -module were given.
 //
 //////////////////////////////////////////////////////////////////////////
-size CBuildPlain::NumPrograms(void)
+size CBuildPlain::NumPrograms(void) const
 {
 	return (mszExecutable.Empty() ? 0 : 1) + (mszImage.Empty() ? 0 : 1) + (mszModule.Empty() ? 0 : 1);
 }
@@ -999,6 +999,6 @@ void CBuildPlain::MakeWrittenPath(const char* szPath, CChars* pszDest)
 
 char* CBuildPlain::GetOutput(void) { return mszOutput.Text(); }
 char* CBuildPlain::GetListings(void) { return mszListings.Text(); }
-EBuildToolchain CBuildPlain::GetToolchain(void) { return meToolchain; }
+EBuildToolchain CBuildPlain::GetToolchain(void) const { return meToolchain; }
 CHCP65BuildDescription* CBuildPlain::GetDescription(void) { return &mcDescription; }
 

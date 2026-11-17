@@ -55,7 +55,7 @@ public:
 	char*	GetTool(void);
 	char*	GetDirectory(void);
 	char*	GetArguments(void);
-	bool	HasTool(void);
+	bool	HasTool(void) const;
 	bool	IsDefault(void);
 
 	void	SetName(const char* szName);

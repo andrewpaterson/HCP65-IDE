@@ -774,7 +774,7 @@ void CBuildWorkspace::SetStartup(size uiSolution)
 }
 
 
-size CBuildWorkspace::GetStartup(void)										{ return muiStartup; }
+size CBuildWorkspace::GetStartup(void) const										{ return muiStartup; }
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -804,9 +804,9 @@ void CBuildWorkspace::SetConfiguration(const char* szConfiguration)		{ mszConfig
 char* CBuildWorkspace::GetConfiguration(void)								{ return mszConfiguration.Text(); }
 void CBuildWorkspace::SetRunConfigurationName(const char* szName)			{ mszRunConfiguration.Set(szName ? szName : ""); }
 char* CBuildWorkspace::GetRunConfigurationName(void)						{ return mszRunConfiguration.Text(); }
-size CBuildWorkspace::NumRunConfigurations(void)							{ return masRunConfigurations.NumElements(); }
+size CBuildWorkspace::NumRunConfigurations(void) const							{ return masRunConfigurations.NumElements(); }
 CRunConfiguration* CBuildWorkspace::GetRunConfiguration(size uiIndex)		{ return masRunConfigurations.SafeGet(uiIndex); }
-size CBuildWorkspace::NumSolutions(void)									{ return mapcSolutions.NumElements(); }
+size CBuildWorkspace::NumSolutions(void) const									{ return mapcSolutions.NumElements(); }
 CBuildWorkspaceSolution* CBuildWorkspace::GetSolution(size uiSolution)		{ return (uiSolution < mapcSolutions.NumElements()) ? *mapcSolutions.Get(uiSolution) : NULL; }
 CBuildWorkspaceSolution* CBuildWorkspace::GetStartupSolution(void)			{ return GetSolution(muiStartup); }
 
@@ -855,7 +855,7 @@ void CBuildWorkspace::IndexProjects(void)
 }
 
 
-size CBuildWorkspace::NumProjects(void)									{ return masProjects.NumElements(); }
+size CBuildWorkspace::NumProjects(void) const									{ return masProjects.NumElements(); }
 SBuildWorkspaceProject* CBuildWorkspace::GetProject(size uiIndex)		{ return masProjects.SafeGet(uiIndex); }
 
 

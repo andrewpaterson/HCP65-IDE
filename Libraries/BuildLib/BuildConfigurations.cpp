@@ -376,6 +376,6 @@ void CBuildConfigurations::GetFileName(const char* szSolutionFile, CChars* pszDe
 }
 
 
-size CBuildConfigurations::NumConfigurations(void) { return masConfigurations.NumElements(); }
+size CBuildConfigurations::NumConfigurations(void) const { return masConfigurations.NumElements(); }
 CBuildConfiguration* CBuildConfigurations::GetConfiguration(size uiIndex) { return masConfigurations.Get(uiIndex); }
 

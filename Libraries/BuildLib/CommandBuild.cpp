@@ -220,6 +220,6 @@ void CCommandBuild::Cancel(void)
 }
 
 
-size CCommandBuild::NumCommands(void) { return masCommands.NumElements(); }
+size CCommandBuild::NumCommands(void) const { return masCommands.NumElements(); }
 SBuildCommand* CCommandBuild::GetCommand(size uiIndex) { return masCommands.Get(uiIndex); }
 

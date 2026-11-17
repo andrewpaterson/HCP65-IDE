@@ -38,7 +38,7 @@ public:
 	void	Kill(void);
 
 	void	Add(const char* szDirectory, bool bSubDirectories);
-	size	NumIncludes(void);
+	size	NumIncludes(void) const;
 	char*	GetDirectory(size uiIndex);
 	bool	HasSubDirectories(size uiIndex);
 };
@@ -83,7 +83,7 @@ public:
 	void				Clear(void);
 
 	CHCP65BuildProject*	AddProject(const char* szName, const char* szDirectory, const char* szLabel, bool bLibrary);
-	size				NumProjects(void);
+	size				NumProjects(void) const;
 	CHCP65BuildProject*	GetProject(size uiIndex);
 	CHCP65BuildProject*	GetLastProject(void);
 };

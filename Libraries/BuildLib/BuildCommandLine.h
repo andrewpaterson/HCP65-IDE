@@ -82,10 +82,10 @@ public:
 			char*	GetConfiguration(void);
 			char*	GetStartupProject(void);
 			char*	GetLibc65(void);
-			bool	IsCard(void);
-			bool	IsQuiet(void);
-			bool	IsHelp(void);
-			bool	IsPlain(void);
+			bool	IsCard(void) const;
+			bool	IsQuiet(void) const;
+			bool	IsHelp(void) const;
+			bool	IsPlain(void) const;
 			CBuildPlain*	GetPlain(void);
 
 	static	bool	FindLibc65(const char* szDirectory, CChars* pszDest);

@@ -114,7 +114,7 @@ public:
 	bool					RemoveSolution(size uiSolution);
 	size					FindSolution(const char* szFile);
 	void					SetStartup(size uiSolution);
-	size					GetStartup(void);
+	size					GetStartup(void) const;
 	bool					SetStartupProject(size uiSolution, size uiProject);
 	size					GetStartupProject(size uiSolution);
 	char*					GetStartupProjectName(size uiSolution);
@@ -123,7 +123,7 @@ public:
 	void					SetRunConfigurationName(const char* szName);
 	char*					GetRunConfigurationName(void);
 
-	size					NumRunConfigurations(void);
+	size					NumRunConfigurations(void) const;
 	CRunConfiguration*		GetRunConfiguration(size uiIndex);
 	CRunConfiguration*		FindRunConfiguration(const char* szName);
 	CRunConfiguration*		FindRunConfigurationBuilding(const char* szConfiguration);
@@ -132,11 +132,11 @@ public:
 	void					SetRunConfigurations(CArrayRunConfigurations* pasConfigurations);
 	void					AddDefaultRunConfigurations(void);
 
-	size					NumSolutions(void);
+	size					NumSolutions(void) const;
 	CBuildWorkspaceSolution*	GetSolution(size uiSolution);
 	CBuildWorkspaceSolution*	GetStartupSolution(void);
 
-	size					NumProjects(void);
+	size					NumProjects(void) const;
 	SBuildWorkspaceProject*	GetProject(size uiIndex);
 	CVcxSolutionProject*	GetSolutionProject(size uiIndex);
 	CVcxSolution*			GetProjectSolution(size uiIndex);

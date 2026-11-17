@@ -119,9 +119,9 @@ void CSolutionBuild::Cancel(void)
 }
 
 
-EBuildState CSolutionBuild::GetState(void) { return mpcBuild ? mpcBuild->GetState() : BS_NotStarted; }
+EBuildState CSolutionBuild::GetState(void) const { return mpcBuild ? mpcBuild->GetState() : BS_NotStarted; }
 bool CSolutionBuild::IsRunning(void) { return mpcBuild && mpcBuild->IsRunning(); }
-char* CSolutionBuild::GetProgress(void) { return mpcBuild ? mpcBuild->GetProgress() : (char*)""; }
-float CSolutionBuild::GetFraction(void) { return mpcBuild ? mpcBuild->GetFraction() : 0.0f; }
-CBuild* CSolutionBuild::GetBuild(void) { return mpcBuild; }  //The last build, NULL before the first.
+char* CSolutionBuild::GetProgress(void) const { return mpcBuild ? mpcBuild->GetProgress() : (char*)""; }
+float CSolutionBuild::GetFraction(void) const { return mpcBuild ? mpcBuild->GetFraction() : 0.0f; }
+CBuild* CSolutionBuild::GetBuild(void) const { return mpcBuild; }  //The last build, NULL before the first.
 

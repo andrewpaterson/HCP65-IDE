@@ -55,7 +55,7 @@ public:
 			void			Cancel(void) override;
 
 			SBuildCommand*	AddCommand(const char* szExecutable, const char* szDirectory, const char* szDescription);
-			size			NumCommands(void);
+			size			NumCommands(void) const;
 			SBuildCommand*	GetCommand(size uiIndex);
 
 protected:

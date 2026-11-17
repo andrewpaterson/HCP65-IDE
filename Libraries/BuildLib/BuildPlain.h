@@ -102,13 +102,13 @@ public:
 	int			ParseOption(CArrayChars* paszArguments, size* puiIndex, CChars* pszError);
 	bool		AddSource(const char* szSource, CChars* pszError);
 	bool		Finish(CChars* pszError);
-	size		NumPrograms(void);
+	size		NumPrograms(void) const;
 
 	bool		MakeConfiguration(CBuildConfiguration* pcConfiguration, CChars* pszError);
 	void		MakeDescription(CHCP65BuildDescription* pcDest);
 	char*		GetOutput(void);
 	char*		GetListings(void);
-	EBuildToolchain	GetToolchain(void);
+	EBuildToolchain	GetToolchain(void) const;
 	CHCP65BuildDescription*	GetDescription(void);
 
 	static bool	Describe(CArrayChars* paszArguments, const char* szUnitsDirectory, CHCP65BuildDescription* pcDescription, CBuildConfiguration* pcConfiguration, const char* szLibc65, CArrayChars* paszWritten);
