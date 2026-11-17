@@ -1080,3 +1080,79 @@ Hands out a writable pointer into its object (3):
 
 TestLib: 1 made const, 0 couldn't be
 ------------------------------------
+
+EmulatorDebugLib: 34 made const, 10 couldn't be
+-----------------------------------------------
+
+Hands out a writable pointer into its object (3):
+  CDebugClient::GetError  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (debugclient.cpp:976)
+  CFlat65C64DebugTarget::GetMPU  C2440: 'return': cannot convert from 'const CFast65C64 *' to 'CFast65C64 *' (flat65c64debugtarget.cpp:57)
+  CFlatW65C816DebugTarget::GetMPU  C2440: 'return': cannot convert from 'const CFastW65C816 *' to 'CFastW65C816 *' (flatw65c816debugtarget.cpp:57)
+
+Other (7):
+  CDebugClient::NumDisassemblies  C2664: 'bool TestDebugWait(STestDebugLink *,size (__cdecl CDebugClient::* )(void),size)': cannot convert argument 2 from 'size (__cdecl CDebugClient::* )(void) const' to 'size (__cdecl CDebugClient::* )(void)' (testdebugserver.cpp:369)
+  CDebugClient::NumErrors  C2664: 'bool TestDebugWait(STestDebugLink *,size (__cdecl CDebugClient::* )(void),size)': cannot convert argument 2 from 'size (__cdecl CDebugClient::* )(void) const' to 'size (__cdecl CDebugClient::* )(void)' (testdebugserver.cpp:458)
+  CDebugClient::NumMemoryReplies  C2664: 'bool TestDebugWait(STestDebugLink *,size (__cdecl CDebugClient::* )(void),size)': cannot convert argument 2 from 'size (__cdecl CDebugClient::* )(void) const' to 'size (__cdecl CDebugClient::* )(void)' (testdebugserver.cpp:304)
+  CDebugClient::NumModuleChanges  C2664: a caller's member-function type, size (CDebugClient::*)(void), names it with getters that can't be const (HCP65's testhcp65debugger.cpp:47)
+  CDebugClient::NumProcessEvents  C2664: a caller's member-function type, size (CDebugClient::*)(void), names it with getters that can't be const (HCP65's testhcp65debugger.cpp:47)
+  CDebugClient::NumRegisterReplies  C2664: 'bool TestDebugWait(STestDebugLink *,size (__cdecl CDebugClient::* )(void),size)': cannot convert argument 2 from 'size (__cdecl CDebugClient::* )(void) const' to 'size (__cdecl CDebugClient::* )(void)' (testdebugserver.cpp:229)
+  CDebugClient::NumStops  C2664: 'bool TestDebugWait(STestDebugLink *,size (__cdecl CDebugClient::* )(void),size)': cannot convert argument 2 from 'size (__cdecl CDebugClient::* )(void) const' to 'size (__cdecl CDebugClient::* )(void)' (testdebugserver.cpp:192)
+
+KicadLib: 65 made const, 52 couldn't be
+---------------------------------------
+
+Hands out a writable pointer into its object (46):
+  CKicadSchemBus::GetSubnet  C2440: 'return': cannot convert from 'const CKicadSchemSubnet *' to 'CKicadSchemSubnet *' (kicadschembus.cpp:166)
+  CKicadSchemBusEntry::GetPosition  C2440: 'return': cannot convert from 'const SFloat64Vec2 *' to 'SFloat64Vec2 *' (kicadschembusentry.cpp:50)
+  CKicadSchemBusEntry::GetSize  C2440: 'return': cannot convert from 'const SFloat64Vec2 *' to 'SFloat64Vec2 *' (kicadschembusentry.cpp:60)
+  CKicadSchemExpression::GetText  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (kicadschemexpression.cpp:149)
+  CKicadSchemFile::GetCompany  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (kicadschemfile.cpp:461)
+  CKicadSchemFile::GetDate  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (kicadschemfile.cpp:441)
+  CKicadSchemFile::GetFileName  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (kicadschemfile.cpp:371)
+  CKicadSchemFile::GetGenerator  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (kicadschemfile.cpp:391)
+  CKicadSchemFile::GetGeneratorVersion  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (kicadschemfile.cpp:401)
+  CKicadSchemFile::GetPaper  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (kicadschemfile.cpp:421)
+  CKicadSchemFile::GetRevision  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (kicadschemfile.cpp:451)
+  CKicadSchemFile::GetTitle  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (kicadschemfile.cpp:431)
+  CKicadSchemFile::GetUuid  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (kicadschemfile.cpp:411)
+  CKicadSchemJunction::GetPosition  C2440: 'return': cannot convert from 'const SFloat64Vec2 *' to 'SFloat64Vec2 *' (kicadschemjunction.cpp:50)
+  CKicadSchemLabel::GetPosition  C2440: 'return': cannot convert from 'const SFloat64Vec2 *' to 'SFloat64Vec2 *' (kicadschemlabel.cpp:95)
+  CKicadSchemLabel::GetText  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (kicadschemlabel.cpp:85)
+  CKicadSchemLibPin::GetGraphicStyle  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (kicadschemlibpin.cpp:122)
+  CKicadSchemLibPin::GetName  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (kicadschemlibpin.cpp:132)
+  CKicadSchemLibPin::GetNumber  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (kicadschemlibpin.cpp:142)
+  CKicadSchemLibPin::GetPosition  C2440: 'return': cannot convert from 'const SFloat64Vec2 *' to 'SFloat64Vec2 *' (kicadschemlibpin.cpp:152)
+  CKicadSchemLibSymbol::GetExtends  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (kicadschemlibsymbol.cpp:137)
+  CKicadSchemLibSymbol::GetName  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (kicadschemlibsymbol.cpp:127)
+  CKicadSchemLibSymbol::GetProperties  C2440: 'return': cannot convert from 'const CKicadSchemProperties *' to 'CKicadSchemProperties *' (kicadschemlibsymbol.cpp:147)
+  CKicadSchemNet::GetName  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (kicadschemnet.cpp:92)
+  CKicadSchemNoConnect::GetPosition  C2440: 'return': cannot convert from 'const SFloat64Vec2 *' to 'SFloat64Vec2 *' (kicadschemnoconnect.cpp:49)
+  CKicadSchemProperty::GetName  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (kicadschemproperty.cpp:76)
+  CKicadSchemProperty::GetPosition  C2440: 'return': cannot convert from 'const SFloat64Vec2 *' to 'SFloat64Vec2 *' (kicadschemproperty.cpp:96)
+  CKicadSchemProperty::GetValue  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (kicadschemproperty.cpp:86)
+  CKicadSchemSheet::GetPosition  C2440: 'return': cannot convert from 'const SFloat64Vec2 *' to 'SFloat64Vec2 *' (kicadschemsheet.cpp:89)
+  CKicadSchemSheet::GetProperties  C2440: 'return': cannot convert from 'const CKicadSchemProperties *' to 'CKicadSchemProperties *' (kicadschemsheet.cpp:119)
+  CKicadSchemSheet::GetSize  C2440: 'return': cannot convert from 'const SFloat64Vec2 *' to 'SFloat64Vec2 *' (kicadschemsheet.cpp:99)
+  CKicadSchemSheet::GetUuid  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (kicadschemsheet.cpp:109)
+  CKicadSchemSheetPin::GetName  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (kicadschemsheetpin.cpp:64)
+  CKicadSchemSheetPin::GetPosition  C2440: 'return': cannot convert from 'const SFloat64Vec2 *' to 'SFloat64Vec2 *' (kicadschemsheetpin.cpp:84)
+  CKicadSchemSymbol::GetLibId  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (kicadschemsymbol.cpp:180)
+  CKicadSchemSymbol::GetLibName  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (kicadschemsymbol.cpp:190)
+  CKicadSchemSymbol::GetLibSymbolName  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (kicadschemsymbol.cpp:202)
+  CKicadSchemSymbol::GetPosition  C2440: 'return': cannot convert from 'const SFloat64Vec2 *' to 'SFloat64Vec2 *' (kicadschemsymbol.cpp:224)
+  CKicadSchemSymbol::GetProperties  C2440: 'return': cannot convert from 'const CKicadSchemProperties *' to 'CKicadSchemProperties *' (kicadschemsymbol.cpp:316)
+  CKicadSchemSymbol::GetUuid  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (kicadschemsymbol.cpp:214)
+  CKicadSchemSymbolInstance::GetPath  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (kicadschemsymbolinstance.cpp:65)
+  CKicadSchemSymbolInstance::GetProject  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (kicadschemsymbolinstance.cpp:55)
+  CKicadSchemSymbolInstance::GetReference  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (kicadschemsymbolinstance.cpp:75)
+  CKicadSchemWire::GetEnd  C2440: 'return': cannot convert from 'const SFloat64Vec2 *' to 'SFloat64Vec2 *' (kicadschemwire.cpp:73)
+  CKicadSchemWire::GetStart  C2440: 'return': cannot convert from 'const SFloat64Vec2 *' to 'SFloat64Vec2 *' (kicadschemwire.cpp:63)
+  CKicadSchemWire::GetUuid  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (kicadschemwire.cpp:93)
+
+Calls something of its object's that isn't const (6):
+  CKicadSchemBus::GetName  C2662: 'M *CArrayTemplatePtr<M>::GetPtr(size)': cannot convert 'this' pointer from 'const CArrayKicadSchemLabelPtr' to 'CArrayTemplatePtr<CKicadSchemLabel> &' (kicadschembus.cpp:124)
+  CKicadSchemNet::NumPins  C2662: 'M *CArrayTemplatePtr<M>::GetPtr(size)': cannot convert 'this' pointer from 'const CArrayTemplatePtr<CKicadSchemSubnet>' to 'CArrayTemplatePtr<CKicadSchemSubnet> &' (kicadschemnet.cpp:82)
+  CKicadSchemSheet::GetSheetFile  C2662: 'char *CKicadSchemProperties::GetValue(const char *)': cannot convert 'this' pointer from 'const CKicadSchemProperties' to 'CKicadSchemProperties &' (kicadschemsheet.cpp:149)
+  CKicadSchemSheet::GetSheetName  C2662: 'char *CKicadSchemProperties::GetValue(const char *)': cannot convert 'this' pointer from 'const CKicadSchemProperties' to 'CKicadSchemProperties &' (kicadschemsheet.cpp:132)
+  CKicadSchemSymbol::GetReference  C2662: 'char *CKicadSchemProperties::GetValue(const char *)': cannot convert 'this' pointer from 'const CKicadSchemProperties' to 'CKicadSchemProperties &' (kicadschemsymbol.cpp:326)
+  CKicadSchemSymbol::GetValue  C2662: 'char *CKicadSchemProperties::GetValue(const char *)': cannot convert 'this' pointer from 'const CKicadSchemProperties' to 'CKicadSchemProperties &' (kicadschemsymbol.cpp:336)
