@@ -1156,3 +1156,44 @@ Calls something of its object's that isn't const (6):
   CKicadSchemSheet::GetSheetName  C2662: 'char *CKicadSchemProperties::GetValue(const char *)': cannot convert 'this' pointer from 'const CKicadSchemProperties' to 'CKicadSchemProperties &' (kicadschemsheet.cpp:132)
   CKicadSchemSymbol::GetReference  C2662: 'char *CKicadSchemProperties::GetValue(const char *)': cannot convert 'this' pointer from 'const CKicadSchemProperties' to 'CKicadSchemProperties &' (kicadschemsymbol.cpp:326)
   CKicadSchemSymbol::GetValue  C2662: 'char *CKicadSchemProperties::GetValue(const char *)': cannot convert 'this' pointer from 'const CKicadSchemProperties' to 'CKicadSchemProperties &' (kicadschemsymbol.cpp:336)
+
+WindowLib (again, for what it gained since 468a2bc70): 21 made const, 14 couldn't be
+------------------------------------------------------------------------------------
+
+Hands out a writable pointer into its object (7):
+  CColourField::GetChangeEvent  C2440: 'return': cannot convert from 'const CComponentEvent<CColourField> *' to 'CComponentEvent<CColourField> *' (colourfield.cpp:372)
+  CColourField::GetColour  C2440: 'return': cannot convert from 'const float32 [3]' to 'float32 *' (colourfield.cpp:371)
+  CColourPicker::GetChangeEvent  C2440: 'return': cannot convert from 'const CComponentEvent<CColourPicker> *' to 'CComponentEvent<CColourPicker> *' (colourfield.cpp:139)
+  CColourPicker::GetColour  C2440: 'return': cannot convert from 'const float32 [3]' to 'float32 *' (colourfield.cpp:138)
+  CColourRampBar::GetChangeEvent  C2440: 'return': cannot convert from 'const CComponentEvent<CColourRampBar> *' to 'CComponentEvent<CColourRampBar> *' (colourrampbar.cpp:206)
+  CColourRampBar::GetChoiceEvent  C2440: 'return': cannot convert from 'const CComponentEvent<CColourRampBar> *' to 'CComponentEvent<CColourRampBar> *' (colourrampbar.cpp:207)
+  CNumberField::GetChangeEvent  C2440: 'return': cannot convert from 'const CComponentEvent<CNumberField> *' to 'CComponentEvent<CNumberField> *' (numberfield.cpp:279)
+
+Calls something of its object's that isn't const (3):
+  CNodeEditor::NumNodes  C2662: 'size CArrayCommonObject::NumElements(void)': cannot convert 'this' pointer from 'const CArray<CNodeBox>' to 'CArrayCommonObject &' (nodeeditor.cpp:282)
+  CNodeEditor::NumSelected  C2662: 'size CArrayCommonObject::NumElements(void)': cannot convert 'this' pointer from 'const CArray<CNodeBox>' to 'CArrayCommonObject &' (nodeeditor.cpp:512)
+  CTreeContainer::NumRowComponents  C2662: 'size CArrayCommonObject::NumElements(void)': cannot convert 'this' pointer from 'const CArray<CTreeRow>' to 'CArrayCommonObject &' (treecontainer.cpp:1158)
+
+Other (4):
+  CNodeBox::GetHeaderHeight  C2678: binary '->': no operator found which takes a left-hand operand of type 'const Ptr<CLabel>' (or there is no acceptable conversion) (nodebox.cpp:412)
+  CNodeBox::GetTitle  C2678: binary '->': no operator found which takes a left-hand operand of type 'const Ptr<CLabel>' (or there is no acceptable conversion) (nodebox.cpp:448)
+  CNodeEditor::IsShift  C2678: binary '->': no operator found which takes a left-hand operand of type 'const Ptr<CWindow>' (or there is no acceptable conversion) (nodeeditor.cpp:642)
+  CNumberField::GetNumberText  C2678: binary '->': no operator found which takes a left-hand operand of type 'const Ptr<CLabel>' (or there is no acceptable conversion) (numberfield.cpp:278)
+
+SceneViewLib: 3 made const, 1 couldn't be
+-----------------------------------------
+
+Hands out a writable pointer into its object (1):
+  CSceneView::GetClickEvent  C2440: 'return': cannot convert from 'const CComponentEvent<CSceneView> *' to 'CComponentEvent<CSceneView> *' (sceneview.cpp:106)
+
+ProceduralLib (again, for what it gained since): 0 made const, 1 couldn't be
+----------------------------------------------------------------------------
+
+Calls something of its object's that isn't const (1):
+  CIsosurfaceOctree::NumLeaves  C2662: 'M *CArrayTemplateBase<M,CArrayLargeBlock>::Get(unsigned __int64)': cannot convert 'this' pointer from 'const CArrayIsosurfaceNode' to 'CArrayTemplateBase<M,CArrayLargeBlock> &' (isosurfaceoctree.cpp:692)
+
+X11Lib: 7 made const, 1 couldn't be
+-----------------------------------
+
+Hands out a writable pointer into its object (1):
+  CX11WindowFactory::GetSelection  C2440 (g++): invalid conversion from 'const CX11Selection*' to 'CX11Selection*' (x11windowfactory.cpp:242)
