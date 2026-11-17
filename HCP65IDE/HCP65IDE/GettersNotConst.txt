@@ -1346,3 +1346,239 @@ Calls something of its object's that isn't const (66):
 
 Other (1):
   CCPPScope::IsInlineNamespace  C2664: 'size CArrayTemplatePtr<CCPPScope>::Find(M *)': cannot convert argument 1 from 'const CCPPScope *' to 'M *' (cppscope.cpp:518)
+
+VisualStudioLib: 15 made const, 39 couldn't be
+----------------------------------------------
+
+Hands out a writable pointer into its object (36):
+  CVcxConfiguration::GetConfiguration  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (vcxconfiguration.cpp:86)
+  CVcxConfiguration::GetName  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (vcxconfiguration.cpp:85)
+  CVcxConfiguration::GetPlatform  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (vcxconfiguration.cpp:87)
+  CVcxFilter::GetDepth  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (vcxfilter.cpp:73)
+  CVcxFilter::GetExtensions  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (vcxfilter.cpp:126)
+  CVcxFilter::GetLeafName  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (vcxfilter.cpp:57)
+  CVcxFilter::GetName  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (vcxfilter.cpp:124)
+  CVcxFilter::GetUniqueIdentifier  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (vcxfilter.cpp:125)
+  CVcxItem::GetElement  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (vcxitem.cpp:137)
+  CVcxItem::GetFileName  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (vcxitem.cpp:103)
+  CVcxItem::GetFilter  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (vcxitem.cpp:139)
+  CVcxItem::GetInclude  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (vcxitem.cpp:138)
+  CVcxProject::GetDirectory  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (vcxproject.cpp:1581)
+  CVcxProject::GetFileName  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (vcxproject.cpp:1580)
+  CVcxProject::GetGuid  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (vcxproject.cpp:1583)
+  CVcxProject::GetName  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (vcxproject.cpp:1582)
+  CVcxProject::GetRootNamespace  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (vcxproject.cpp:1584)
+  CVcxProjectReference::GetInclude  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (vcxprojectreference.cpp:57)
+  CVcxProjectReference::GetProject  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (vcxprojectreference.cpp:58)
+  CVcxSolution::GetDirectory  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (vcxsolution.cpp:650)
+  CVcxSolution::GetFileName  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (vcxsolution.cpp:649)
+  CVcxSolution::GetFormatVersion  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (vcxsolution.cpp:652)
+  CVcxSolution::GetMinimumVisualStudioVersion  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (vcxsolution.cpp:654)
+  CVcxSolution::GetName  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (vcxsolution.cpp:651)
+  CVcxSolution::GetSolutionGuid  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (vcxsolution.cpp:655)
+  CVcxSolution::GetVisualStudioVersion  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (vcxsolution.cpp:653)
+  CVcxSolutionProject::GetFullPath  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (vcxsolutionproject.cpp:207)
+  CVcxSolutionProject::GetGuid  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (vcxsolutionproject.cpp:208)
+  CVcxSolutionProject::GetName  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (vcxsolutionproject.cpp:205)
+  CVcxSolutionProject::GetParentGuid  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (vcxsolutionproject.cpp:210)
+  CVcxSolutionProject::GetPath  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (vcxsolutionproject.cpp:206)
+  CVcxSolutionProject::GetTypeGuid  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (vcxsolutionproject.cpp:204)
+  CVcxSolutionProject::IsFolder  C2663: 'CCharsBase<CChars,CArrayChar>::EqualsIgnoreCase': 2 overloads have no legal conversion for 'this' pointer (vcxsolutionproject.cpp:158)
+  CVcxSolutionProject::IsVcxProject  C2663: 'CCharsBase<CChars,CArrayChar>::EqualsIgnoreCase': 2 overloads have no legal conversion for 'this' pointer (vcxsolutionproject.cpp:148)
+  CVcxSolutionProjectConfiguration::GetProjectConfiguration  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (vcxsolutionproject.cpp:53)
+  CVcxSolutionProjectConfiguration::GetSolutionConfiguration  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (vcxsolutionproject.cpp:52)
+
+Calls something of its object's that isn't const (3):
+  CVcxConfiguration::NumProperties  C2662: 'size CMapBlock::NumElements(void)': cannot convert 'this' pointer from 'const CMapStringString' to 'CMapBlock &' (vcxconfiguration.cpp:88)
+  CVcxSolution::NumLoadedProjects  C2662: 'M *CArrayTemplatePtr<M>::GetPtr(size)': cannot convert 'this' pointer from 'const CArrayVcxSolutionProject' to 'CArrayTemplatePtr<CVcxSolutionProject> &' (vcxsolution.cpp:640)
+  CVcxSolutionProject::GetProject  C2662: 'CVcxSolutionProject *CVcxSolution::GetProject(size)': cannot convert 'this' pointer from 'const CVcxSolution' to 'CVcxSolution &' (buildworkspace.cpp:629)
+
+BuildLib: 37 made const, 37 couldn't be
+---------------------------------------
+
+Hands out a writable pointer into its object (28):
+  CBuild::GetProgress  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (build.cpp:215)
+  CBuild::GetStartupProject  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (build.cpp:181)
+  CBuildCommandLine::GetConfiguration  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (buildcommandline.cpp:1117)
+  CBuildCommandLine::GetFile  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (buildcommandline.cpp:1116)
+  CBuildCommandLine::GetLibc65  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (buildcommandline.cpp:1119)
+  CBuildCommandLine::GetPlain  C2440: 'return': cannot convert from 'const CBuildPlain *' to 'CBuildPlain *' (buildcommandline.cpp:1124)
+  CBuildCommandLine::GetStartupProject  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (buildcommandline.cpp:1118)
+  CBuildConfiguration::GetBreakpointSpace  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (buildconfiguration.cpp:458)
+  CBuildConfiguration::GetCard  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (buildconfiguration.cpp:786)
+  CBuildConfiguration::GetCardPath  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (buildconfiguration.cpp:787)
+  CBuildConfiguration::GetExecutable  C2440: 'return': cannot convert from 'const CAsm65Executable *' to 'CAsm65Executable *' (buildconfiguration.cpp:571)
+  CBuildConfiguration::GetImage  C2440: 'return': cannot convert from 'const CAsm65Image *' to 'CAsm65Image *' (buildconfiguration.cpp:436)
+  CBuildConfiguration::GetModule  C2440: 'return': cannot convert from 'const CAsm65Module *' to 'CAsm65Module *' (buildconfiguration.cpp:627)
+  CBuildConfiguration::GetName  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (buildconfiguration.cpp:414)
+  CBuildConfiguration::GetSolutionConfiguration  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (buildconfiguration.cpp:416)
+  CBuildPlain::GetDescription  C2440: 'return': cannot convert from 'const CHCP65BuildDescription *' to 'CHCP65BuildDescription *' (buildplain.cpp:1003)
+  CBuildPlain::GetListings  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (buildplain.cpp:1001)
+  CBuildPlain::GetOutput  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (buildplain.cpp:1000)
+  CBuildWorkspace::GetConfiguration  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (buildworkspace.cpp:804)
+  CBuildWorkspace::GetFile  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (buildworkspace.cpp:550)
+  CBuildWorkspace::GetRunConfigurationName  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (buildworkspace.cpp:806)
+  CHCP65Build::GetDescription  C2440: 'return': cannot convert from 'const CHCP65BuildDescription *' to 'CHCP65BuildDescription *' (hcp65build.cpp:287)
+  CRunConfiguration::GetArguments  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (runconfiguration.cpp:143)
+  CRunConfiguration::GetConfiguration  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (runconfiguration.cpp:140)
+  CRunConfiguration::GetDirectory  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (runconfiguration.cpp:142)
+  CRunConfiguration::GetName  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (runconfiguration.cpp:139)
+  CRunConfiguration::GetTool  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (runconfiguration.cpp:141)
+  CRunConfiguration::IsDefault  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (runconfiguration.cpp:145)
+
+Calls something of its object's that isn't const (7):
+  CBuildConfiguration::GetProgramFile  C2662: 'char *CAsm65Image::GetFile(void)': cannot convert 'this' pointer from 'const CAsm65Image' to 'CAsm65Image &' (buildconfiguration.cpp:698)
+  CBuildConfiguration::GetProgramLimit  C2662: 'uint32 CAsm65Image::GetLimit(void)': cannot convert 'this' pointer from 'const CAsm65Image' to 'CAsm65Image &' (buildconfiguration.cpp:720)
+  CBuildWorkspace::GetStartupSolution  C2662: 'CBuildWorkspaceSolution *CBuildWorkspace::GetSolution(size)': cannot convert 'this' pointer from 'const CBuildWorkspace' to 'CBuildWorkspace &' (buildworkspace.cpp:811)
+  CBuildWorkspaceSolution::GetStartupProject  C2662: 'bool CBuildWorkspaceSolution::IsApplication(size)': cannot convert 'this' pointer from 'const CBuildWorkspaceSolution' to 'CBuildWorkspaceSolution &' (buildworkspace.cpp:627)
+  CBuildWorkspaceSolution::GetStartupProjectName  C2662: 'CVcxSolutionProject *CVcxSolution::GetProject(size)': cannot convert 'this' pointer from 'const CVcxSolution' to 'CVcxSolution &' (buildworkspace.cpp:653)
+  CBuildWorkspaceSolution::NumApplications  C2662: 'bool CBuildWorkspaceSolution::IsApplication(size)': cannot convert 'this' pointer from 'const CBuildWorkspaceSolution' to 'CBuildWorkspaceSolution &' (buildworkspace.cpp:605)
+  CHCP65BuildDescription::GetLastProject  C2662: 'M *CArrayTemplateBase<M,CArrayBlock>::Tail(void)': cannot convert 'this' pointer from 'const CArrayHCP65BuildProjects' to 'CArrayTemplateBase<M,CArrayBlock> &' (hcp65builddescription.cpp:155)
+
+Other (2):
+  CBuild::IsRunning  C2672: 'CCommand::SetEnabledCheck': no matching overloaded function found (iderunning.cpp:102)
+  CSolutionBuild::IsRunning  C2672: 'CCommand::SetEnabledCheck': no matching overloaded function found (iderunning.cpp:102)
+
+GitLib: 9 made const, 10 couldn't be
+------------------------------------
+
+Hands out a writable pointer into its object (7):
+  CGitCommand::GetErrors  C2440: 'return': cannot convert from 'const CChars *' to 'CChars *' (gitcommand.cpp:173)
+  CGitCommand::GetOutput  C2440: 'return': cannot convert from 'const CChars *' to 'CChars *' (gitcommand.cpp:172)
+  CGitRepository::GetRoot  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (gitrepository.cpp:590)
+  CGitRepository::GetStatus  C2440: 'return': cannot convert from 'const CGitStatus *' to 'CGitStatus *' (gitrepository.cpp:592)
+  CGitStatus::GetBranch  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (gitstatus.cpp:416)
+  CGitStatus::GetHead  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (gitstatus.cpp:417)
+  CGitStatus::GetUpstream  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (gitstatus.cpp:418)
+
+Calls something of its object's that isn't const (2):
+  CGitRepositories::GetStatusVersion  C2662: 'M *CArrayTemplatePtr<M>::GetPtr(size)': cannot convert 'this' pointer from 'const CArrayGitRepositoryPtr' to 'CArrayTemplatePtr<CGitRepository> &' (gitrepositories.cpp:236)
+  CGitRepositories::IsReadingStatus  C2662: 'M *CArrayTemplatePtr<M>::GetPtr(size)': cannot convert 'this' pointer from 'const CArrayGitRepositoryPtr' to 'CArrayTemplatePtr<CGitRepository> &' (gitrepositories.cpp:213)
+
+Other (1):
+  CGitCommand::IsRunning  C2672: 'CCommand::SetEnabledCheck': no matching overloaded function found (iderunning.cpp:102)
+
+ClaudeLib: 6 made const, 13 couldn't be
+---------------------------------------
+
+Hands out a writable pointer into its object (8):
+  CClaudeCommand::GetErrors  C2440: 'return': cannot convert from 'const CChars *' to 'CChars *' (claudecommand.cpp:260)
+  CClaudeEvent::GetDenied  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (claudeevent.cpp:98)
+  CClaudeEvent::GetDetail  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (claudeevent.cpp:96)
+  CClaudeEvent::GetText  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (claudeevent.cpp:94)
+  CClaudeEvent::GetTool  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (claudeevent.cpp:95)
+  CClaudeStream::GetChangedFiles  C2440: 'return': cannot convert from 'const CArrayChars *' to 'CArrayChars *' (claudestream.cpp:539)
+  CClaudeStream::GetSessionId  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (claudestream.cpp:538)
+  CJSONDocument::GetError  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (jsondocument.cpp:818)
+
+Calls something of its object's that isn't const (4):
+  CArrayClaudeEvents::NumElements  C2662: 'size CMapBlock::NumElements(void)': cannot convert 'this' pointer from 'const CMapStringString' to 'CMapBlock &' (vcxconfiguration.cpp:88)
+  CClaudeCommand::GetChangedFiles  C2662: 'CArrayChars *CClaudeStream::GetChangedFiles(void)': cannot convert 'this' pointer from 'const CClaudeStream' to 'CClaudeStream &' (claudecommand.cpp:259)
+  CClaudeCommand::GetSessionId  C2662: 'char *CClaudeStream::GetSessionId(void)': cannot convert 'this' pointer from 'const CClaudeStream' to 'CClaudeStream &' (claudecommand.cpp:257)
+  CClaudeEvent::GetFile  C2662: 'char *CAsm65Image::GetFile(void)': cannot convert 'this' pointer from 'const CAsm65Image' to 'CAsm65Image &' (buildconfiguration.cpp:698)
+
+Other (1):
+  CClaudeCommand::IsRunning  C2672: 'CCommand::SetEnabledCheck': no matching overloaded function found (iderunning.cpp:102)
+
+TemplateLib: 3 made const, 1 couldn't be
+----------------------------------------
+
+Hands out a writable pointer into its object (1):
+  CTemplateText::GetError  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (templatetext.cpp:70)
+
+HCP65IDE: 166 made const, 88 couldn't be
+----------------------------------------
+
+Hands out a writable pointer into its object (33):
+  CIDEAskClaude::GetClaude  C2440: 'return': cannot convert from 'const CClaudeCommand *' to 'CClaudeCommand *' (ideaskclaude.cpp:520)
+  CIDEBuildConfigurationsDialog::GetEdits  C2440: 'return': cannot convert from 'const CArrayBuildConfigurationEdits *' to 'CArrayBuildConfigurationEdits *' (idebuildconfigurationsdialog.cpp:777)
+  CIDEBuilding::GetListings  C2440: 'return': cannot convert from 'const CCPP65ListingIndex *' to 'CCPP65ListingIndex *' (idebuilding.cpp:447)
+  CIDECodeModel::GetConfiguration  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (idecodemodel.cpp:1838)
+  CIDECodeModel::GetSystemDirectories  C2440: 'return': cannot convert from 'const CArrayChars *' to 'CArrayChars *' (idecodemodel.cpp:1842)
+  CIDEConfigurations::GetConfiguration  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (ideconfigurations.cpp:329)
+  CIDEConfigurations::GetConfigurationName  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (ideconfigurations.cpp:340)
+  CIDEConfigurations::GetRunConfiguration  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (ideconfigurations.cpp:351)
+  CIDEConfigurations::GetRunConfigurationName  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (ideconfigurations.cpp:355)
+  CIDEContent::GetCodeModel  C2440: 'return': cannot convert from 'const CIDECodeModel *' to 'CIDECodeModel *' (idecontent.cpp:1115)
+  CIDEContent::GetDialogLook  C2440: 'return': cannot convert from 'const SDialogLook *' to 'SDialogLook *' (idecontent.cpp:1178)
+  CIDEContent::GetFileTemplates  C2440: 'return': cannot convert from 'const CIDEFileTemplates *' to 'CIDEFileTemplates *' (idecontent.cpp:1116)
+  CIDEContent::GetWorkspace  C2440: 'return': cannot convert from 'const CBuildWorkspace *' to 'CBuildWorkspace *' (idecontent.cpp:1174)
+  CIDEDebugger::GetClient  C2440: 'return': cannot convert from 'const CDebugClient *' to 'CDebugClient *' (idedebugger.cpp:1752)
+  CIDEDebugger::GetEmulator  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (idedebugger.cpp:1753)
+  CIDEDebugger::GetStatus  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (idedebugger.cpp:1751)
+  CIDEDebugging::GetDebugger  C2440: 'return': cannot convert from 'const CIDEDebugger *' to 'CIDEDebugger *' (idedebugging.cpp:1057)
+  CIDEDuplicates::GetDirectory  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (ideduplicates.cpp:1915)
+  CIDEEditorTab::GetBaseHead  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (ideeditortab.cpp:569)
+  CIDEEditorTab::GetBaseText  C2440: 'return': cannot convert from 'const CChars *' to 'CChars *' (ideeditortab.cpp:568)
+  CIDEEditorTab::GetFileName  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (ideeditortab.cpp:758)
+  CIDEEditorTab::GetSyntaxBehindEvent  C2440: 'return': cannot convert from 'const CComponentEvent<CIDEEditorTab> *' to 'CComponentEvent<CIDEEditorTab> *' (ideeditortab.cpp:222)
+  CIDEFileTemplatesPage::GetKeepProblem  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (idefiletemplatespage.cpp:145)
+  CIDEGitStatus::GetGit  C2440: 'return': cannot convert from 'const CGitRepositories *' to 'CGitRepositories *' (idegitstatus.cpp:745)
+  CIDERefactorUnit::GetFileName  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (compiling source file IDENewFile.cpp) (iderefactorunit.h:95)
+  CIDERefactorUnit::GetPass  C2440: 'return': cannot convert from 'const CCPPSemanticPass *' to 'CCPPSemanticPass *' (compiling source file IDENewFile.cpp) (iderefactorunit.h:98)
+  CIDERefactorUnit::GetTokeniser  C2440: 'return': cannot convert from 'const CCPPTokeniser *' to 'CCPPTokeniser *' (compiling source file IDENewFile.cpp) (iderefactorunit.h:96)
+  CIDERefactorUnit::GetTree  C2440: 'return': cannot convert from 'const CCPPSyntaxTree *' to 'CCPPSyntaxTree *' (compiling source file IDENewFile.cpp) (iderefactorunit.h:97)
+  CIDERunConfigurationsDialog::GetEdited  C2440: 'return': cannot convert from 'const CArrayRunConfigurations *' to 'CArrayRunConfigurations *' (iderunconfigurationsdialog.cpp:646)
+  CIDEScope::GetDirectory  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (idescope.cpp:375)
+  CIDESettings::GetKeymapFile  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (idesettings.cpp:92)
+  CIDESettings::GetSettingsFile  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (idesettings.cpp:222)
+  CIDESolutions::GetRecent  C2440: 'return': cannot convert from 'const CRecentFiles *' to 'CRecentFiles *' (idesolutions.cpp:809)
+
+Calls something of its object's that isn't const (20):
+  CIDEAskClaude::IsClaudeRunning  C2662: 'bool CClaudeCommand::IsRunning(void)': cannot convert 'this' pointer from 'const CClaudeCommand' to 'CClaudeCommand &' (ideaskclaude.cpp:553)
+  CIDEBuilding::IsBuilding  C2662: 'bool CSolutionBuild::IsRunning(void)': cannot convert 'this' pointer from 'const CSolutionBuild' to 'CSolutionBuild &' (idebuilding.cpp:444)
+  CIDECodeModel::GetIndexingMilliseconds  C2662: 'void CMutex::Lock(void)': cannot convert 'this' pointer from 'const CMutex' to 'CMutex &' (idecodemodel.cpp:1321)
+  CIDECodeModel::IsIndexing  C2662: 'void CIDECodeModel::GetIndexingProgress(size *,size *)': cannot convert 'this' pointer from 'const CIDECodeModel' to 'CIDECodeModel &' (idecodemodel.cpp:1242)
+  CIDECodeModel::IsProcessingEditedFiles  C2662: 'void CMutex::Lock(void)': cannot convert 'this' pointer from 'const CMutex' to 'CMutex &' (idecodemodeledits.cpp:220)
+  CIDECodeModel::NumIndexingProblemUnits  C2662: 'void CMutex::Lock(void)': cannot convert 'this' pointer from 'const CMutex' to 'CMutex &' (idecodemodel.cpp:1305)
+  CIDECodeModel::NumProjectFiles  C2662: 'void CIDECodeModel::FindProjectFiles(void)': cannot convert 'this' pointer from 'const CIDECodeModel' to 'CIDECodeModel &' (idecodemodel.cpp:1571)
+  CIDEContent::NumFileTypeIcons  C2662: 'size CArrayCommonObject::NumElements(void)': cannot convert 'this' pointer from 'const CArray<CImageCel>' to 'CArrayCommonObject &' (idecontent.cpp:1187)
+  CIDEDiffs::NumDiffs  C2662: 'size CArrayCommonObject::NumElements(void)': cannot convert 'this' pointer from 'const CArray<CIDEDiffTab>' to 'CArrayCommonObject &' (idediffs.cpp:666)
+  CIDEDocuments::NumTabs  C2662: 'size CArrayCommonObject::NumElements(void)': cannot convert 'this' pointer from 'const CArray<CIDEEditorTab>' to 'CArrayCommonObject &' (idedocuments.cpp:825)
+  CIDEEditorTab::GetProject  C2662: 'CVcxSolutionProject *CVcxSolution::GetProject(size)': cannot convert 'this' pointer from 'const CVcxSolution' to 'CVcxSolution &' (buildworkspace.cpp:629)
+  CIDEFileTemplatesPage::GetSelected  C2662: 'SIDEFileTemplate *CIDEFileTemplates::Get(EIDETemplateTab,const char *,EIDETemplateScheme)': cannot convert 'this' pointer from 'const CIDEFileTemplates' to 'CIDEFileTemplates &' (idefiletemplatespage.cpp:546)
+  CIDEFindInFiles::GetCommonDirectoryLength  C2662: 'char *CArrayChars::GetText(size)': cannot convert 'this' pointer from 'const CArrayChars' to 'CArrayChars &' (idefindinfiles.cpp:914)
+  CIDENewFile::GetPopupMenu  C2662: 'void CIDENewFile::FillMenu(Ptr<CMenuContainer>,bool)': cannot convert 'this' pointer from 'const CIDENewFile' to 'CIDENewFile &' (idenewfile.cpp:129)
+  CIDERefactorUnit::GetFile  C2662: 'char *CAsm65Image::GetFile(void)': cannot convert 'this' pointer from 'const CAsm65Image' to 'CAsm65Image &' (buildconfiguration.cpp:698)
+  CIDERefactorUnit::NumErrors  C2662: 'CCPPErrors *CCPPSemanticPass::GetErrors(void)': cannot convert 'this' pointer from 'const CCPPSemanticPass' to 'CCPPSemanticPass &' (iderefactorunit.cpp:316)
+  CIDERunConfigurationsDialog::GetSelectedName  C2662: 'M *CArrayTemplateBase<M,CArrayBlock>::Get(unsigned __int64)': cannot convert 'this' pointer from 'const CArrayRunConfigurations' to 'CArrayTemplateBase<M,CArrayBlock> &' (iderunconfigurationsdialog.cpp:647)
+  CIDEScope::GetFile  C2662: 'char *CAsm65Image::GetFile(void)': cannot convert 'this' pointer from 'const CAsm65Image' to 'CAsm65Image &' (buildconfiguration.cpp:698)
+  CIDEScope::GetProject  C2662: 'CVcxSolutionProject *CVcxSolution::GetProject(size)': cannot convert 'this' pointer from 'const CVcxSolution' to 'CVcxSolution &' (buildworkspace.cpp:629)
+  CIDEUsages::NumSearches  C2662: 'size CArrayCommonObject::NumElements(void)': cannot convert 'this' pointer from 'const CArray<CIDEUsagesSearch>' to 'CArrayCommonObject &' (ideusages.cpp:1318)
+
+Other (35):
+  CIDEBuildPane::GetOutput  C2678: binary '->': no operator found which takes a left-hand operand of type 'const Ptr<CTextArea>' (or there is no acceptable conversion) (idebuildpane.cpp:170)
+  CIDEClaudePane::GetConversation  C2678: binary '->': no operator found which takes a left-hand operand of type 'const Ptr<CTextArea>' (or there is no acceptable conversion) (ideclaudepane.cpp:463)
+  CIDEClaudePane::GetRequest  C2678: binary '->': no operator found which takes a left-hand operand of type 'const Ptr<CTextArea>' (or there is no acceptable conversion) (ideclaudepane.cpp:462)
+  CIDEClaudePane::GetStatus  C2678: binary '->': no operator found which takes a left-hand operand of type 'const Ptr<CLabel>' (or there is no acceptable conversion) (ideclaudepane.cpp:464)
+  CIDEContent::GetClaudeTool  C2678: binary '->': no operator found which takes a left-hand operand of type 'const Ptr<CIDEAskClaude>' (or there is no acceptable conversion) (idecontent.cpp:1112)
+  CIDEContent::GetDebugTool  C2678: binary '->': no operator found which takes a left-hand operand of type 'const Ptr<CIDEDebugging>' (or there is no acceptable conversion) (idecontent.cpp:1111)
+  CIDEContent::GetExplorer  C2678: binary '->': no operator found which takes a left-hand operand of type 'const Ptr<CIDESolutions>' (or there is no acceptable conversion) (idecontent.cpp:1118)
+  CIDEContent::GetExplorerTool  C2678: binary '->': no operator found which takes a left-hand operand of type 'const Ptr<CIDESolutions>' (or there is no acceptable conversion) (idecontent.cpp:1110)
+  CIDEContent::GetStatus  C2678: binary '->': no operator found which takes a left-hand operand of type 'const Ptr<CStatusBar>' (or there is no acceptable conversion) (idecontent.cpp:768)
+  CIDEDebugView::GetDisassemblyText  C2678: binary '->': no operator found which takes a left-hand operand of type 'const Ptr<CTextArea>' (or there is no acceptable conversion) (idedebugview.cpp:332)
+  CIDEDebugView::GetRegistersText  C2678: binary '->': no operator found which takes a left-hand operand of type 'const Ptr<CTextArea>' (or there is no acceptable conversion) (idedebugview.cpp:331)
+  CIDEDebugging::IsDisassemblyFocussed  C2678: binary '->': no operator found which takes a left-hand operand of type 'const Ptr<CIDEDebugView>' (or there is no acceptable conversion) (idedebugging.cpp:647)
+  CIDEDiffs::GetComparedTab  C2678: binary '->': no operator found which takes a left-hand operand of type 'const Ptr<M>' (or there is no acceptable conversion) (idediffs.cpp:632)
+  CIDEDocuments::GetEditor  C2678: binary '->': no operator found which takes a left-hand operand of type 'const Ptr<M>' (or there is no acceptable conversion) (idedocuments.cpp:794)
+  CIDEDocuments::GetEditorPane  C2678: binary '->': no operator found which takes a left-hand operand of type 'const Ptr<M>' (or there is no acceptable conversion) (idedocuments.cpp:797)
+  CIDEDuplicates::GetTree  C2678: binary '->': no operator found which takes a left-hand operand of type 'const Ptr<CIDEResultsPane>' (or there is no acceptable conversion) (ideduplicates.cpp:1919)
+  CIDEEditorTab::IsIndexCurrent  C2678: binary '->': no operator found which takes a left-hand operand of type 'const Ptr<CTextArea>' (or there is no acceptable conversion) (ideeditortab.cpp:436)
+  CIDEEditorTab::IsModified  C2678: binary '->': no operator found which takes a left-hand operand of type 'const Ptr<CTextArea>' (or there is no acceptable conversion) (ideeditortab.cpp:674)
+  CIDEFileTemplates::GetAuthor  C2511: 'char *CIDEFileTemplates::GetAuthor(void)': overloaded member function not found in 'CIDEFileTemplates' (idefiletemplates.cpp:370)
+  CIDEFileTemplates::GetError  C2511: 'char *CIDEFileTemplates::GetError(void)': overloaded member function not found in 'CIDEFileTemplates' (idefiletemplates.cpp:812)
+  CIDEFileTemplates::NumTemplates  C2511: 'size CIDEFileTemplates::NumTemplates(void)': overloaded member function not found in 'CIDEFileTemplates' (idefiletemplates.cpp:625)
+  CIDEFileTemplatesPage::GetSelectedName  C2678: binary '->': no operator found which takes a left-hand operand of type 'const Ptr<CListContainer>' (or there is no acceptable conversion) (idefiletemplatespage.cpp:558)
+  CIDEFindInFiles::GetFindTree  C2678: binary '->': no operator found which takes a left-hand operand of type 'const Ptr<CIDEResultsPane>' (or there is no acceptable conversion) (idefindinfiles.cpp:1158)
+  CIDEResultsPane::HasResults  C2664: 'void CIDEResultsPane::AddCommand(const char *,const char *,EIDEToolIcon,void (__cdecl CIDEResultsPane::* )(void),bool (__cdecl CIDEResultsPane::* )(void),bool (__cdecl CIDEResultsPane::* )(void))': cannot convert argument 5 from 'bool (__cdecl CIDEResultsPane::* )(void) const' to 'bool (__cdecl CIDEResultsPane::* )(void)' (ideresultspane.cpp:97)
+  CIDEResultsPane::IsNavigateOnSelect  C2664: 'void CIDEResultsPane::AddCommand(const char *,const char *,EIDEToolIcon,void (__cdecl CIDEResultsPane::* )(void),bool (__cdecl CIDEResultsPane::* )(void),bool (__cdecl CIDEResultsPane::* )(void))': cannot convert argument 6 from 'bool (__cdecl CIDEResultsPane::* )(void) const' to 'bool (__cdecl CIDEResultsPane::* )(void)' (ideresultspane.cpp:787)
+  CIDEResultsPane::IsPreviewShown  C2664: 'void CIDEResultsPane::AddCommand(const char *,const char *,EIDEToolIcon,void (__cdecl CIDEResultsPane::* )(void),bool (__cdecl CIDEResultsPane::* )(void),bool (__cdecl CIDEResultsPane::* )(void))': cannot convert argument 6 from 'bool (__cdecl CIDEResultsPane::* )(void) const' to 'bool (__cdecl CIDEResultsPane::* )(void)' (ideresultspane.cpp:786)
+  CIDERunning::IsRunning  C2672: 'CCommand::SetEnabledCheck': no matching overloaded function found (iderunning.cpp:102)
+  CIDEUsages::GetResultsPane  C2678: binary '->': no operator found which takes a left-hand operand of type 'const Ptr<M>' (or there is no acceptable conversion) (ideusages.cpp:1827)
+  CIDEUsages::GetUsagesTree  C2678: binary '->': no operator found which takes a left-hand operand of type 'const Ptr<M>' (or there is no acceptable conversion) (ideusages.cpp:1826)
+  CIDEUsages::IsByClass  C2664: 'void CIDEUsages::AddPaneCommand(Ptr<CIDEResultsPane>,const char *,const char *,EIDEToolIcon,void (__cdecl CIDEUsages::* )(void),bool (__cdecl CIDEUsages::* )(void))': cannot convert argument 6 from 'bool (__cdecl CIDEUsages::* )(void) const' to 'bool (__cdecl CIDEUsages::* )(void)' (ideusages.cpp:1150)
+  CIDEUsages::IsByProject  C2664: 'void CIDEUsages::AddPaneCommand(Ptr<CIDEResultsPane>,const char *,const char *,EIDEToolIcon,void (__cdecl CIDEUsages::* )(void),bool (__cdecl CIDEUsages::* )(void))': cannot convert argument 6 from 'bool (__cdecl CIDEUsages::* )(void) const' to 'bool (__cdecl CIDEUsages::* )(void)' (ideusages.cpp:1149)
+  CIDEUsages::IsByType  C2664: 'void CIDEUsages::AddPaneCommand(Ptr<CIDEResultsPane>,const char *,const char *,EIDEToolIcon,void (__cdecl CIDEUsages::* )(void),bool (__cdecl CIDEUsages::* )(void))': cannot convert argument 6 from 'bool (__cdecl CIDEUsages::* )(void) const' to 'bool (__cdecl CIDEUsages::* )(void)' (ideusages.cpp:1148)
+  CIDEUsages::IsPinned  C2664: 'void CIDEUsages::AddPaneCommand(Ptr<CIDEResultsPane>,const char *,const char *,EIDEToolIcon,void (__cdecl CIDEUsages::* )(void),bool (__cdecl CIDEUsages::* )(void))': cannot convert argument 6 from 'bool (__cdecl CIDEUsages::* )(void) const' to 'bool (__cdecl CIDEUsages::* )(void)' (ideusages.cpp:1155)
+  CIDEUsages::IsShowRead  C2664: 'void CIDEUsages::AddPaneCommand(Ptr<CIDEResultsPane>,const char *,const char *,EIDEToolIcon,void (__cdecl CIDEUsages::* )(void),bool (__cdecl CIDEUsages::* )(void))': cannot convert argument 6 from 'bool (__cdecl CIDEUsages::* )(void) const' to 'bool (__cdecl CIDEUsages::* )(void)' (ideusages.cpp:1152)
+  CIDEUsages::IsShowWrite  C2664: 'void CIDEUsages::AddPaneCommand(Ptr<CIDEResultsPane>,const char *,const char *,EIDEToolIcon,void (__cdecl CIDEUsages::* )(void),bool (__cdecl CIDEUsages::* )(void))': cannot convert argument 6 from 'bool (__cdecl CIDEUsages::* )(void) const' to 'bool (__cdecl CIDEUsages::* )(void)' (ideusages.cpp:1153)
