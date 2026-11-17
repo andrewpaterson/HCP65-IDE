@@ -255,7 +255,7 @@ bool CIDEIntroduceVariable::CanIntroduce(void)
 }
 
 
-Ptr<CMenuContainer> CIDEIntroduceVariable::GetChooser(void) { return mpChooser; }
+Ptr<CMenuContainer> CIDEIntroduceVariable::GetChooser(void) const { return mpChooser; }
 
 
 //Finds what an expression names that can be changed (a variable, a member, an element), as it is written.

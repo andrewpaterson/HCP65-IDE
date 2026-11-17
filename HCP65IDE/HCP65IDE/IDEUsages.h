@@ -172,9 +172,9 @@ public:
 	bool				CanFindUsages(void);
 	void				CreatePane(SDockPlace* psPlace);
 	bool				FindUsages(bool bDeclarations);
-	bool				IsOnOwnDeclaration(void);
+	bool				IsOnOwnDeclaration(void) const;
 	bool				ShowUsagesPopup(void);
-	Ptr<CMenuContainer>	GetUsagesPopup(void);
+	Ptr<CMenuContainer>	GetUsagesPopup(void) const;
 	void				Clear(void);
 	void				AdjustPlaces(const char* szFile, SIDEPlaceChange* psChange);
 	int64				Poll(int64 iNow);
@@ -182,20 +182,20 @@ public:
 	void				SetAccessShown(bool bRead, bool bWrite);
 	void				SetPinned(bool bPinned);
 	void				SetScopeSettings(EIDEScope eScope, const char* szDirectory, bool bDeclarations);
-	EIDEScope			GetScope(void);
+	EIDEScope			GetScope(void) const;
 	bool				ShowSettings(void);
 	void				SetSearchScope(EIDEScope eScope);
 	void				OpenScopeMenu(void);
 	void				ScopeMenuClicked(CMenuItem* pcItem);
-	Ptr<CMenuContainer>	GetScopeMenu(void);
+	Ptr<CMenuContainer>	GetScopeMenu(void) const;
 	size				NumSearches(void);
-	Ptr<CTabbedContainer>	GetTabs(void);
+	Ptr<CTabbedContainer>	GetTabs(void) const;
 	void				ReadSettings(CMarkupTag* pcSettings);
 	void				WriteSettings(CXMLWriter* pcWriter);
-	uint8				GetGrouping(void);
+	uint8				GetGrouping(void) const;
 	Ptr<CTreeContainer>	GetUsagesTree(void);
 	Ptr<CIDEResultsPane>	GetResultsPane(void);
-	Ptr<CDockPane>		GetTool(void);
+	Ptr<CDockPane>		GetTool(void) const;
 
 	Ptr<CDockPane>		GetSteppablePane(void) override;
 	const char*			GetSteppableName(void) override;

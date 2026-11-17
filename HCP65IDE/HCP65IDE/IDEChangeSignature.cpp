@@ -2574,7 +2574,7 @@ bool CIDEChangeSignature::GetAssemblyTarget(ECPPTarget* peTarget)
 // to whatever build configuration is selected.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEChangeSignature::HasAssembly(void)
+bool CIDEChangeSignature::HasAssembly(void) const
 {
 	CIDECodeModel*	pcModel;
 	size			i;

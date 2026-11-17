@@ -56,8 +56,8 @@ public:
 
 	bool				AskClaude(const char* szRequest);
 	bool				IsClaudeRunning(void);
-	Ptr<CIDEClaudePane>	GetClaudePane(void);
-	Ptr<CDockPane>		GetTool(void);
+	Ptr<CIDEClaudePane>	GetClaudePane(void) const;
+	Ptr<CDockPane>		GetTool(void) const;
 	void				CreatePane(SDockPlace* psPlace);
 	void				ScrollToEnd(void);
 	void				PollClaude(Ptr<CWindow> pWindow);

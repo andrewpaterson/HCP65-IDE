@@ -655,7 +655,7 @@ Ptr<CIDEDiffTab> CIDEDiffs::FindDiffTab(CDockPane* pcPane)
 }
 
 
-Ptr<CIDEDiffTab> CIDEDiffs::GetActiveDiff(void) { return mpActiveDiff; }
+Ptr<CIDEDiffTab> CIDEDiffs::GetActiveDiff(void) const { return mpActiveDiff; }
 
 
 //////////////////////////////////////////////////////////////////////////

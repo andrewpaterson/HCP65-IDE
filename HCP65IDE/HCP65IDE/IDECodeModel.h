@@ -266,7 +266,7 @@ public:
 	void	AddSystemDirectory(const char* szDirectory);
 	void	AddDefaultSystemDirectories(void);
 	CArrayChars*	GetSystemDirectories(void);
-	bool	IsMissingSystemDirectories(void);
+	bool	IsMissingSystemDirectories(void) const;
 
 	bool	Highlight(size uiProject, const char* szFileName, const char* szContents, CArrayHighlights* pacDest, CChars* pszErrors);
 
@@ -277,12 +277,12 @@ public:
 	size	NumIndexingProblemUnits(void);
 	int64	GetIndexingMilliseconds(void);
 	bool	IsIndexing(void);
-	size	NumIndexings(void);
+	size	NumIndexings(void) const;
 	void	SetHeaderText(const char* szFileName, const char* szText);
 	bool	GetIncluder(const char* szFileName, size* puiProject, CChars* pszUnit);
 	void	ReindexAll(void);
 	void	SetIndexTemplates(bool bIndexTemplates);
-	bool	IsIndexingTemplates(void);
+	bool	IsIndexingTemplates(void) const;
 	void	ProcessEditedFiles(CArrayIDEEditedFiles* papsFiles, bool bNow);
 	bool	TakeEditedFiles(CArrayIDEEditedFiles* papsDest, bool bWait);
 	bool	IsProcessingEditedFiles(void);

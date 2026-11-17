@@ -57,7 +57,7 @@ public:
 
 	void				AddCommands(Ptr<CCommandSet> pCommands);
 	Ptr<CComboBox>		CreateComboBox(void);
-	Ptr<CComboBox>		GetRunConfigurationBox(void);
+	Ptr<CComboBox>		GetRunConfigurationBox(void) const;
 	bool			SetRunConfiguration(const char* szName);
 	CRunConfiguration*	GetRunConfiguration(void);
 	char*			GetRunConfigurationName(void);
@@ -66,7 +66,7 @@ public:
 	CBuildConfiguration*	GetConfiguration(void);
 	char*			GetConfigurationName(void);
 	void			SetConfigurationName(const char* szName);
-	bool			HasConfiguration(void);
+	bool			HasConfiguration(void) const;
 	void				ShowConfigurations(void);
 
 protected:

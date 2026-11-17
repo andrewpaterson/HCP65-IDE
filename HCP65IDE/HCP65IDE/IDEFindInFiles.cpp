@@ -1154,9 +1154,9 @@ void CIDEFindInFiles::WriteSettings(CXMLWriter* pcWriter)
 }
 
 
-Ptr<CFindInFilesDialog> CIDEFindInFiles::GetFind(void) { return mpDialog; }
+Ptr<CFindInFilesDialog> CIDEFindInFiles::GetFind(void) const { return mpDialog; }
 Ptr<CTreeContainer> CIDEFindInFiles::GetFindTree(void) { return mpPane.IsNotNull() ? mpPane->GetTree() : Ptr<CTreeContainer>(); }
-Ptr<CIDEResultsPane> CIDEFindInFiles::GetResultsPane(void) { return mpPane; }
-Ptr<CDockPane> CIDEFindInFiles::GetTool(void) { return mpTool; }
-size CIDEFindInFiles::NumFound(void) { return masFound.NumElements(); }
+Ptr<CIDEResultsPane> CIDEFindInFiles::GetResultsPane(void) const { return mpPane; }
+Ptr<CDockPane> CIDEFindInFiles::GetTool(void) const { return mpTool; }
+size CIDEFindInFiles::NumFound(void) const { return masFound.NumElements(); }
 

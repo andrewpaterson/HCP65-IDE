@@ -370,7 +370,7 @@ Ptr<CComboBox> CIDEConfigurations::CreateComboBox(void)
 }
 
 
-Ptr<CComboBox> CIDEConfigurations::GetRunConfigurationBox(void) { return mpRunConfigurations; }
+Ptr<CComboBox> CIDEConfigurations::GetRunConfigurationBox(void) const { return mpRunConfigurations; }
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -381,4 +381,4 @@ Ptr<CComboBox> CIDEConfigurations::GetRunConfigurationBox(void) { return mpRunCo
 //////////////////////////////////////////////////////////////////////////
 void CIDEConfigurations::SetConfigurationName(const char* szName) { mszConfiguration.Set(szName); }
 void CIDEConfigurations::SetRunConfigurationName(const char* szName) { mszRunConfiguration.Set(szName); }
-bool CIDEConfigurations::HasConfiguration(void) { return !mszConfiguration.Empty(); }
+bool CIDEConfigurations::HasConfiguration(void) const { return !mszConfiguration.Empty(); }

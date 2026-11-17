@@ -50,8 +50,8 @@ public:
 	bool	Load(CObjectReader* pcFile) override;
 
 	bool	ChooseContent(Ptr<CWindow> pOwner, Ptr<CClipboardHistory> pHistory, CChars* pszDest) override;
-	Ptr<CPasteHistoryDialog>	GetDialog(void);
-	Ptr<CClipboardHistory>		GetHistory(void);
+	Ptr<CPasteHistoryDialog>	GetDialog(void) const;
+	Ptr<CClipboardHistory>		GetHistory(void) const;
 };
 
 

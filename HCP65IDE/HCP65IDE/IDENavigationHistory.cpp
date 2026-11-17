@@ -153,8 +153,8 @@ void CIDENavigationHistory::NavigateBack(void) { GoBack(); }
 void CIDENavigationHistory::NavigateForward(void) { GoForward(); }
 bool CIDENavigationHistory::CanGoBack(void) { return masBack.NumElements() > 0; }
 bool CIDENavigationHistory::CanGoForward(void) { return masForward.NumElements() > 0; }
-size CIDENavigationHistory::NumBack(void) { return masBack.NumElements(); }
-size CIDENavigationHistory::NumForward(void) { return masForward.NumElements(); }
+size CIDENavigationHistory::NumBack(void) const { return masBack.NumElements(); }
+size CIDENavigationHistory::NumForward(void) const { return masForward.NumElements(); }
 
 
 //////////////////////////////////////////////////////////////////////////

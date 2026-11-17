@@ -496,7 +496,7 @@ bool CIDEDocuments::TakePreview(SIDEEditedFile* psFile)
 }
 
 
-bool CIDEDocuments::IsHighlightingPreview(void) { return masPreviews.NumElements() > 0; }
+bool CIDEDocuments::IsHighlightingPreview(void) const { return masPreviews.NumElements() > 0; }
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -797,7 +797,7 @@ Ptr<CTextArea> CIDEDocuments::GetEditor(void) { return mpActive.IsNotNull() ? mp
 Ptr<CScrollPane> CIDEDocuments::GetEditorPane(void) { return mpActive.IsNotNull() ? mpActive->GetPane() : Ptr<CScrollPane>(); }
 
 
-Ptr<CIDEEditorTab> CIDEDocuments::GetActiveTab(void) { return mpActive; }
+Ptr<CIDEEditorTab> CIDEDocuments::GetActiveTab(void) const { return mpActive; }
 
 
 //////////////////////////////////////////////////////////////////////////

@@ -132,7 +132,7 @@ public:
 
 protected:
 	void	ShowQueuedRename(void);
-	bool	IsExplorerFocussed(void);
+	bool	IsExplorerFocussed(void) const;
 	void	ShowRenameStatus(CChars* pszMessage, CChars* pszStatus);
 	size	RenameAssembly(SIDERenameTarget* psTarget, const char* szNewName, CArrayChars* paszFiles, size* puiUnsure);
 	size	RenameAssemblyOf(SIDERenameTarget* psTarget, const char* szNewName, bool bComments, CArrayChars* paszFiles, size* puiUnsure);

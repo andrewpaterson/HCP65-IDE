@@ -195,7 +195,7 @@ public:
 	bool					ToggleBreakpoint(uint32 uiAddress);
 	bool					AddBreakpoint(uint32 uiAddress);
 	void					DeleteAllBreakpoints(void);
-	size					NumBreakpoints(void);
+	size					NumBreakpoints(void) const;
 	SIDEBreakpoint*			GetBreakpoint(size uiIndex);
 	SIDEBreakpoint*			FindBreakpoint(uint32 uiAddress);
 
@@ -203,25 +203,25 @@ public:
 	bool					AddLineTable(const char* szProgram, bool bOwnSpace);
 	bool					AddProcessLineTable(const char* szProgram, const char* szSpace, const char* szProcess);
 	bool					AddModuleLineTable(const char* szProgram, const char* szSpace, const char* szModule);
-	size					NumLineTables(void);
+	size					NumLineTables(void) const;
 	CAsm65LineTable*		GetLineTable(size uiIndex);
 	bool					FindSourceLine(uint32 uiAddress, CChars* pszFile, uint32* puiLine);
 	bool					ToggleSourceBreakpoint(const char* szFile, uint32 uiLine);
 	SIDESourceBreakpoint*	AddSourceBreakpoint(const char* szFile, uint32 uiLine, bool bEnabled);
 	SIDESourceBreakpoint*	FindSourceBreakpoint(const char* szFile, uint32 uiLine);
-	size					NumSourceBreakpoints(void);
+	size					NumSourceBreakpoints(void) const;
 	SIDESourceBreakpoint*	GetSourceBreakpoint(size uiIndex);
 	bool					WriteSourceBreakpoints(const char* szFileName);
 	bool					ReadSourceBreakpoints(const char* szFileName);
 
 	bool					Poll(CArrayChars* paszOutput);
 
-	EIDEDebugState			GetState(void);
-	bool					IsDebugging(void);
-	bool					IsStopped(void);
+	EIDEDebugState			GetState(void) const;
+	bool					IsDebugging(void) const;
+	bool					IsStopped(void) const;
 	char*					GetStatus(void);
 	CDebugClient*			GetClient(void);
-	uint32					GetProgramAddress(void);
+	uint32					GetProgramAddress(void) const;
 	void					AppendAddress(CChars* psz, uint32 uiAddress);
 
 protected:

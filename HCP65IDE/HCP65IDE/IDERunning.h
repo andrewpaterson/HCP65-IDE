@@ -58,8 +58,8 @@ public:
 	void			CreatePane(SDockPlace* psPlace);
 	void			AddCommands(Ptr<CCommandSet> pCommands);
 	Ptr<CButton>	CreateStartButton(void);
-	Ptr<CButton>	GetStartButton(void);
-	Ptr<CIDEBuildPane>	GetRunPane(void);
+	Ptr<CButton>	GetStartButton(void) const;
+	Ptr<CIDEBuildPane>	GetRunPane(void) const;
 	bool			IsRunning(void);
 	void			PollRun(Ptr<CWindow> pWindow);
 

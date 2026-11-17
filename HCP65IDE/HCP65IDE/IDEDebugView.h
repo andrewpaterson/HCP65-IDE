@@ -63,8 +63,8 @@ public:
 	bool				GetCaretAddress(uint32* puiAddress);
 	bool				SetCaretAddress(uint32 uiAddress);
 
-	Ptr<CComponent>		GetComponent(void);
-	Ptr<CTextArea>		GetDisassembly(void);
+	Ptr<CComponent>		GetComponent(void) const;
+	Ptr<CTextArea>		GetDisassembly(void) const;
 	char*				GetRegistersText(void);
 	char*				GetDisassemblyText(void);
 

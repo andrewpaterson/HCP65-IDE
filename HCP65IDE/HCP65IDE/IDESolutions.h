@@ -66,9 +66,9 @@ public:
 	void					ExplorerActivated(void);
 	bool					ShowActiveFileInExplorer(void);
 	void					AddCommands(Ptr<CCommandSet> pCommands);
-	Ptr<CSolutionExplorer>	GetExplorer(void);
-	Ptr<CDockPane>			GetExplorerTool(void);
-	Ptr<CMenuContainer>		GetExplorerMenu(void);
+	Ptr<CSolutionExplorer>	GetExplorer(void) const;
+	Ptr<CDockPane>			GetExplorerTool(void) const;
+	Ptr<CMenuContainer>		GetExplorerMenu(void) const;
 	bool					OpenSolution(const char* szFileName);
 	bool					OpenSolutions(CArrayChars* paszFileNames);
 	bool					AddSolution(const char* szFileName);
@@ -86,11 +86,11 @@ public:
 	void					SetRecentFile(const char* szFile);
 	void					ClearRecentSolutions(void);
 	bool					OpenRecentSolution(size uiIndex);
-	bool					IsSolutionOpen(void);
+	bool					IsSolutionOpen(void) const;
 	bool					WriteWorkspace(void);
 	void					WorkspaceChanged(bool bReindex);
 	bool					GetSettingsBaseFile(CChars* pszDest);
-	char*					GetStartupFile(void);
+	char*					GetStartupFile(void) const;
 	void					ShowRecentMenu(void);
 
 protected:

@@ -564,11 +564,11 @@ void CIDEEditorTab::SetChangeBars(CGitLineChanges* pcChanges)
 }
 
 
-bool CIDEEditorTab::HasBaseText(void) { return mbBase; }
+bool CIDEEditorTab::HasBaseText(void) const { return mbBase; }
 CChars* CIDEEditorTab::GetBaseText(void) { return &mszBaseText; }
 char* CIDEEditorTab::GetBaseHead(void) { return mszBaseHead.Text(); }
 void CIDEEditorTab::SetGitState(EGitFileState eState) { meGitState = eState; }
-EGitFileState CIDEEditorTab::GetGitState(void) { return meGitState; }
+EGitFileState CIDEEditorTab::GetGitState(void) const { return meGitState; }
 //////////////////////////////////////////////////////////////////////////
 //
 // Writes the text to the file.  In a file whose lines ended with carriage
@@ -750,15 +750,15 @@ bool UsesIDECarriageReturns(const char* szText)
 
 bool CIDEEditorTab::UsesCarriageReturns(void) { return mbCarriageReturns; }
 void CIDEEditorTab::SetDockPane(Ptr<CDockPane> pPane) { mpDockPane = pPane; }
-Ptr<CLineZones> CIDEEditorTab::GetZones(void) { return mpZones; }
-Ptr<CTextArea> CIDEEditorTab::GetEditor(void) { return mpEditor; }
-Ptr<CCodeEditor> CIDEEditorTab::GetCodeEditor(void) { return mpCodeEditor; }
-Ptr<CScrollPane> CIDEEditorTab::GetPane(void) { return mpPane; }
-Ptr<CDockPane> CIDEEditorTab::GetDockPane(void) { return mpDockPane; }
+Ptr<CLineZones> CIDEEditorTab::GetZones(void) const { return mpZones; }
+Ptr<CTextArea> CIDEEditorTab::GetEditor(void) const { return mpEditor; }
+Ptr<CCodeEditor> CIDEEditorTab::GetCodeEditor(void) const { return mpCodeEditor; }
+Ptr<CScrollPane> CIDEEditorTab::GetPane(void) const { return mpPane; }
+Ptr<CDockPane> CIDEEditorTab::GetDockPane(void) const { return mpDockPane; }
 char* CIDEEditorTab::GetFileName(void) { return mszFileName.Text(); }
 size CIDEEditorTab::GetProject(void) { return muiProject; }
 void CIDEEditorTab::SetProject(size uiProject) { muiProject = uiProject; }
-bool CIDEEditorTab::IsEdited(void) { return mbEdited; }
+bool CIDEEditorTab::IsEdited(void) const { return mbEdited; }
 
 
 //////////////////////////////////////////////////////////////////////////

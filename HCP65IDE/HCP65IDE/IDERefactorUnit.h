@@ -56,7 +56,7 @@ public:
 
 	void	Replace(size uiStart, size uiEnd, const char* szText);
 	void	Insert(size uiAt, const char* szText);
-	size	NumEdits(void);
+	size	NumEdits(void) const;
 	bool	Apply(Ptr<CTextArea> pEditor);
 	void	ApplyTo(const char* szText, CChars* pszDest);
 	size	AdjustPosition(size uiPosition);
@@ -89,15 +89,15 @@ public:
 
 	bool			Parse(CIDECodeModel* pcModel, CIDEFileTexts* pcTexts, const char* szFileName, bool bCheck, ECPPTarget eTarget = CPPT_Host);
 	void			SetRecordedEnum(const char* szQualifiedName) { mcPass.SetRecordedEnum(szQualifiedName); }  //Before Parse: see CCPPSemanticPass.
-	bool			IsParsed(void) { return mbParsed; }
-	bool			IsChecked(void) { return mbChecked; }
+	bool			IsParsed(void) const;
+	bool			IsChecked(void) const;
 	size			NumErrors(void);
-	char*			GetFileName(void) { return mszFileName.Text(); }
-	CCPPTokeniser*	GetTokeniser(void) { return &mcUnit.mcTokeniser; }
-	CCPPSyntaxTree*	GetTree(void) { return &mcUnit.mcTree; }
-	CCPPSemanticPass*	GetPass(void) { return &mcPass; }
+	char*			GetFileName(void);
+	CCPPTokeniser*	GetTokeniser(void);
+	CCPPSyntaxTree*	GetTree(void);
+	CCPPSemanticPass*	GetPass(void);
 
-	CSourceFile*	GetFile(void) { return mpcFile; }
+	CSourceFile*	GetFile(void);
 
 	int32			FindTokenAt(int iLine, int iColumn);
 	bool			FindTokensIn(int iLine, int iColumn, int iEndLine, int iEndColumn, int32* piFirstToken, int32* piLastToken);

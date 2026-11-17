@@ -169,7 +169,7 @@ public:
 	void	AppendSuggestedName(SIDEIntroduction* psIntroduction, int iKind, CChars* pszDest);
 	size	FindCandidates(CArrayChars* paszTexts);
 	bool	ChooseCandidate(size uiCandidate);
-	Ptr<CMenuContainer>	GetChooser(void);
+	Ptr<CMenuContainer>	GetChooser(void) const;
 	bool	FindIntroduction(SIDEIntroduction* psDest);
 	void	FindFileOccurrences(CIDERefactorUnit* pcUnit, CCPPSyntax* pcSelected, const char* szText, SIDEIntroduction* psDest);
 	void	FindReplaceWarnings(CIDERefactorUnit* pcUnit, CCPPSyntax* pcBody, CCPPSyntax* pcSelected, CArraySyntax* papcNodes, SIDEIntroduction* psDest);

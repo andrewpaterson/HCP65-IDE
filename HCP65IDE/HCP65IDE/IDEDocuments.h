@@ -154,7 +154,7 @@ public:
 	bool				CloseFile(const char* szFileName);
 	Ptr<CTextArea>		GetEditor(void);
 	Ptr<CScrollPane>	GetEditorPane(void);
-	Ptr<CIDEEditorTab>	GetActiveTab(void);
+	Ptr<CIDEEditorTab>	GetActiveTab(void) const;
 	bool				FocusActiveEditor(void);
 	bool				FindSymbolPlace(int* piLine, int* piColumn, uint8* puiRole);
 	bool				FindSymbolAtCaret(CArrayIDELocations* pasDest, CChars* pszKey);
@@ -172,7 +172,7 @@ public:
 	void				RequestHighlight(Ptr<CIDEEditorTab> pTab);
 	void				HighlightPreview(CIDEPreviewAsker* pcAsker, const char* szFileName, const char* szText);
 	void				ForgetPreviewAsker(CIDEPreviewAsker* pcAsker);
-	bool				IsHighlightingPreview(void);
+	bool				IsHighlightingPreview(void) const;
 	void				ReloadTab(Ptr<CIDEEditorTab> pTab, const char* szText);
 	void				DocumentChanged(const char* szFileName, STextDocumentChange* psChange);
 

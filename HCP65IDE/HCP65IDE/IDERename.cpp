@@ -419,7 +419,7 @@ void CIDERename::QueueRename(void)
 // Whether Solution Explorer has the keys: Rename is Rename File there.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDERename::IsExplorerFocussed(void)
+bool CIDERename::IsExplorerFocussed(void) const
 {
 	return mpcContent->GetWindow()->GetFocus()->GetFocussedComponent() == mpcContent->GetSolutions()->GetExplorer()->GetTree();
 }

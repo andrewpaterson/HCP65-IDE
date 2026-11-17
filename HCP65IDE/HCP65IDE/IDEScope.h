@@ -64,7 +64,7 @@ public:
 
 	void		Capture(CIDEContent* pcContent, EIDEScope eScope, const char* szDirectory);
 	void		SetScope(EIDEScope eScope);
-	EIDEScope	GetScope(void);
+	EIDEScope	GetScope(void) const;
 	char*		GetDirectory(void);
 	size		GetProject(void);
 	char*		GetFile(void);

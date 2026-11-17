@@ -44,7 +44,7 @@ public:
 	void	Init(const char* szFile, const char* szRevision, size uiProject);
 	void	Kill(void);
 
-	bool	IsWorkingCopy(void);
+	bool	IsWorkingCopy(void) const;
 };
 
 
@@ -72,8 +72,8 @@ public:
 	bool				Load(CObjectReader* pcFile) override;
 
 	void				SetDockPane(Ptr<CDockPane> pPane);
-	Ptr<CDockPane>		GetDockPane(void);
-	Ptr<CDiffView>		GetView(void);
+	Ptr<CDockPane>		GetDockPane(void) const;
+	Ptr<CDiffView>		GetView(void) const;
 	CIDEDiffSide*		GetSide(ETextDiffSide eSide);
 
 	void				Changed(int64 iNow);

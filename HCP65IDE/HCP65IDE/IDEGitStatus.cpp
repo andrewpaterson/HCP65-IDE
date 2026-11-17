@@ -741,9 +741,9 @@ void CIDEGitStatus::QueueChange(size uiLine, int iAction)
 
 void CIDEGitStatus::RollbackClicked(void) { RollbackChange(); }
 void CIDEGitStatus::ShowDiffClicked(void) { ShowChangeDiff(); }
-Ptr<CGridContainer> CIDEGitStatus::GetChangePopup(void) { return mpChangePopup; }
+Ptr<CGridContainer> CIDEGitStatus::GetChangePopup(void) const { return mpChangePopup; }
 CGitRepositories* CIDEGitStatus::GetGit(void) { return &mcGit; }
-Ptr<CLabel> CIDEGitStatus::GetBranchLabel(void) { return mpBranchLabel; }
+Ptr<CLabel> CIDEGitStatus::GetBranchLabel(void) const { return mpBranchLabel; }
 
 
 //////////////////////////////////////////////////////////////////////////

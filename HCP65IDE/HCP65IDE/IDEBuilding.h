@@ -81,8 +81,8 @@ public:
 	void				CreatePane(SDockPlace* psPlace);
 	void				AddCommands(Ptr<CCommandSet> pCommands);
 	Ptr<CMenuContainer>	CreateBuildMenu(void);
-	Ptr<CDockPane>		GetBuildTool(void);
-	Ptr<CIDEBuildPane>	GetBuildPane(void);
+	Ptr<CDockPane>		GetBuildTool(void) const;
+	Ptr<CIDEBuildPane>	GetBuildPane(void) const;
 	void				SetLibc65Directory(const char* szDirectory);
 	bool				Build(void);
 	void				StopBuild(void);

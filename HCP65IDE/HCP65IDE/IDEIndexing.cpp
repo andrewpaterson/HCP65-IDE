@@ -162,6 +162,6 @@ bool CIDEIndexing::Update(void)
 }
 
 
-Ptr<CIDEBuildPane> CIDEIndexing::GetPane(void) { return mpPane; }
-Ptr<CDockPane> CIDEIndexing::GetTool(void) { return mpTool; }
+Ptr<CIDEBuildPane> CIDEIndexing::GetPane(void) const { return mpPane; }
+Ptr<CDockPane> CIDEIndexing::GetTool(void) const { return mpTool; }
 

@@ -80,7 +80,7 @@ public:
 	void				ApplyEdits(const char* szEdits);
 	bool				Approve(void);
 
-	Ptr<CDialog>		GetDialog(void);
+	Ptr<CDialog>		GetDialog(void) const;
 	CArrayBuildConfigurationEdits*	GetEdits(void);
 
 protected:

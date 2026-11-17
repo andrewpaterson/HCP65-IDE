@@ -135,7 +135,7 @@ bool CIDEContextActions::CanShow(void)
 
 void CIDEContextActions::QueueShow(void) { mpcContent->GetWindow()->Post(this, &CIDEContextActions::ShowQueued); }
 void CIDEContextActions::ShowQueued(void) { Show(); }
-Ptr<CMenuContainer> CIDEContextActions::GetPopup(void) { return mpPopup; }
+Ptr<CMenuContainer> CIDEContextActions::GetPopup(void) const { return mpPopup; }
 
 
 //////////////////////////////////////////////////////////////////////////

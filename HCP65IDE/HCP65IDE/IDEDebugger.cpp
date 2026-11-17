@@ -1338,9 +1338,9 @@ void CIDEDebugger::BindSourceBreakpoint(SIDESourceBreakpoint* psBreakpoint)
 }
 
 
-size CIDEDebugger::NumLineTables(void) { return muiLineTables; }
+size CIDEDebugger::NumLineTables(void) const { return muiLineTables; }
 CAsm65LineTable* CIDEDebugger::GetLineTable(size uiIndex) { return (uiIndex < muiLineTables) ? &macLineTables[uiIndex] : NULL; }
-size CIDEDebugger::NumSourceBreakpoints(void) { return masSourceBreakpoints.NumElements(); }
+size CIDEDebugger::NumSourceBreakpoints(void) const { return masSourceBreakpoints.NumElements(); }
 SIDESourceBreakpoint* CIDEDebugger::GetSourceBreakpoint(size uiIndex) { return masSourceBreakpoints.SafeGet(uiIndex); }
 
 
@@ -1688,7 +1688,7 @@ void CIDEDebugger::Stopped(void)
 // emulator has said (stepping while a step it was asked for isn't done).
 //
 //////////////////////////////////////////////////////////////////////////
-EIDEDebugState CIDEDebugger::GetState(void)
+EIDEDebugState CIDEDebugger::GetState(void) const
 {
 	if (mbStarting)
 	{
@@ -1740,18 +1740,18 @@ void CIDEDebugger::AppendAddress(CChars* psz, uint32 uiAddress)
 //
 //
 //////////////////////////////////////////////////////////////////////////
-uint32 CIDEDebugger::GetProgramAddress(void)
+uint32 CIDEDebugger::GetProgramAddress(void) const
 {
 	return mbClient ? mcClient.GetStopAddress() : 0;
 }
 
 
-bool CIDEDebugger::IsDebugging(void) { return mbStarting || mbClient; }
-bool CIDEDebugger::IsStopped(void) { return GetState() == IDS_Stopped; }
+bool CIDEDebugger::IsDebugging(void) const { return mbStarting || mbClient; }
+bool CIDEDebugger::IsStopped(void) const { return GetState() == IDS_Stopped; }
 char* CIDEDebugger::GetStatus(void) { return mszStatus.Text(); }
 CDebugClient* CIDEDebugger::GetClient(void) { return mbClient ? &mcClient : NULL; }
 char* CIDEDebugger::GetEmulator(void) { return mszEmulator.Text(); }
-size CIDEDebugger::NumBreakpoints(void) { return masBreakpoints.NumElements(); }
+size CIDEDebugger::NumBreakpoints(void) const { return masBreakpoints.NumElements(); }
 SIDEBreakpoint* CIDEDebugger::GetBreakpoint(size uiIndex) { return masBreakpoints.Get(uiIndex); }
 
 

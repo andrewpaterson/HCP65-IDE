@@ -242,7 +242,7 @@ protected:
 public:
 	bool				ReadSite(CIDERefactorUnit* pcUnit, SIDELocation* psLocation, const char* szKey, SIDESignatureSite* psSite, const char** pszWhyNot);
 	bool				ShowConflicts(CArrayChars* paszConflicts);
-	bool				HasAssembly(void);
+	bool				HasAssembly(void) const;
 	void				FindLabels(SIDESignature* psSignature, ECPPTarget eTarget, bool bNew, CArrayChars* paszDest, bool bDefinitions = false);
 	size				ChangeLabels(SIDESignature* psSignature, CArrayChars* paszOld, CArrayChars* paszNew, CArrayChars* paszOtherOld, CArrayChars* paszOtherNew);
 protected:

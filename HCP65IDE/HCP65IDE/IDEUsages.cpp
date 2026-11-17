@@ -612,7 +612,7 @@ bool CIDEUsages::FindUsages(bool bDeclarations)
 // IntelliJ's does, rather than go to the definition it is on.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEUsages::IsOnOwnDeclaration(void)
+bool CIDEUsages::IsOnOwnDeclaration(void) const
 {
 	int		iLine;
 	int		iColumn;
@@ -788,7 +788,7 @@ void CIDEUsages::PopupUsageClicked(CMenuItem* pcItem)
 }
 
 
-Ptr<CMenuContainer> CIDEUsages::GetUsagesPopup(void) { return mpPopup; }
+Ptr<CMenuContainer> CIDEUsages::GetUsagesPopup(void) const { return mpPopup; }
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -1316,7 +1316,7 @@ void CIDEUsages::SetPinned(bool bPinned)
 
 bool CIDEUsages::IsPinned(void) { return mpSearch.IsNotNull() && mpSearch->mbPinned; }
 size CIDEUsages::NumSearches(void) { return maSearches.NumElements(); }
-Ptr<CTabbedContainer> CIDEUsages::GetTabs(void) { return mpTabs; }
+Ptr<CTabbedContainer> CIDEUsages::GetTabs(void) const { return mpTabs; }
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -1336,7 +1336,7 @@ void CIDEUsages::SetScopeSettings(EIDEScope eScope, const char* szDirectory, boo
 }
 
 
-EIDEScope CIDEUsages::GetScope(void) { return meScope; }
+EIDEScope CIDEUsages::GetScope(void) const { return meScope; }
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -1513,7 +1513,7 @@ void CIDEUsages::ScopeMenuClicked(CMenuItem* pcItem)
 }
 
 
-Ptr<CMenuContainer> CIDEUsages::GetScopeMenu(void) { return mpScopeMenu; }
+Ptr<CMenuContainer> CIDEUsages::GetScopeMenu(void) const { return mpScopeMenu; }
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -1822,10 +1822,10 @@ void CIDEUsages::WriteSettings(CXMLWriter* pcWriter)
 //
 //
 //////////////////////////////////////////////////////////////////////////
-uint8 CIDEUsages::GetGrouping(void) { return muiGrouping; }
+uint8 CIDEUsages::GetGrouping(void) const { return muiGrouping; }
 Ptr<CTreeContainer> CIDEUsages::GetUsagesTree(void) { return mpSearch.IsNotNull() ? mpSearch->mpPane->GetTree() : Ptr<CTreeContainer>(); }
 Ptr<CIDEResultsPane> CIDEUsages::GetResultsPane(void) { return mpSearch->mpPane; }
-Ptr<CDockPane> CIDEUsages::GetTool(void) { return mpUsagesTool; }
+Ptr<CDockPane> CIDEUsages::GetTool(void) const { return mpUsagesTool; }
 
 
 //////////////////////////////////////////////////////////////////////////

@@ -841,4 +841,4 @@ bool CIDEChangeSignatureDialog::Show(void)
 }
 
 
-Ptr<CDialog> CIDEChangeSignatureDialog::GetDialog(void) { return mpDialog; }
+Ptr<CDialog> CIDEChangeSignatureDialog::GetDialog(void) const { return mpDialog; }

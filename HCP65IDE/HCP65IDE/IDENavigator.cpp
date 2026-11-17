@@ -310,7 +310,7 @@ bool CIDENavigator::OpenGoToChoice(void)
 //
 //
 //////////////////////////////////////////////////////////////////////////
-Ptr<CGoToDialog> CIDENavigator::GetGoTo(void) { return mpGoTo; }
+Ptr<CGoToDialog> CIDENavigator::GetGoTo(void) const { return mpGoTo; }
 
 
 

@@ -3492,7 +3492,7 @@ void CIDEScript::WatchDialog(Ptr<CDialog> pDialog)
 }
 
 
-bool CIDEScript::IsWatchingDialog(void) { return mpDialog.IsNotNull(); }
+bool CIDEScript::IsWatchingDialog(void) const { return mpDialog.IsNotNull(); }
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -3765,7 +3765,7 @@ void CIDEScript::PrintPasteHistoryDialog(Ptr<CWindow> pWindow)
 // How many dialogs the script has answered since the IDE started.
 //
 //////////////////////////////////////////////////////////////////////////
-size CIDEScript::NumAnsweredDialogs(void)
+size CIDEScript::NumAnsweredDialogs(void) const
 {
 	return muiAnswered;
 }

@@ -127,7 +127,7 @@ public:
 	bool					CreateFind(void);
 	bool					OpenFindChoice(void);
 	size					OpenInFindWindow(bool bRerun = false);
-	Ptr<CFindInFilesDialog>	GetFind(void);
+	Ptr<CFindInFilesDialog>	GetFind(void) const;
 
 	void					FindStart(SFindInFilesQuery* psQuery) override;
 	bool					FindStep(CFindInFilesItems* pcDest) override;
@@ -143,9 +143,9 @@ public:
 	void					WriteSettings(CXMLWriter* pcWriter);
 	int64					Poll(int64 iNow);
 	Ptr<CTreeContainer>		GetFindTree(void);
-	Ptr<CIDEResultsPane>	GetResultsPane(void);
-	Ptr<CDockPane>			GetTool(void);
-	size					NumFound(void);
+	Ptr<CIDEResultsPane>	GetResultsPane(void) const;
+	Ptr<CDockPane>			GetTool(void) const;
+	size					NumFound(void) const;
 
 	Ptr<CDockPane>			GetSteppablePane(void) override;
 	const char*				GetSteppableName(void) override;

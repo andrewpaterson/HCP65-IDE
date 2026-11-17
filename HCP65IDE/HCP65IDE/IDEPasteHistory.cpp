@@ -94,6 +94,6 @@ bool CIDEPasteHistory::ChooseContent(Ptr<CWindow> pOwner, Ptr<CClipboardHistory>
 }
 
 
-Ptr<CPasteHistoryDialog> CIDEPasteHistory::GetDialog(void) { return mpDialog; }
-Ptr<CClipboardHistory> CIDEPasteHistory::GetHistory(void) { return mpcContent->GetWindow()->GetClipboard()->GetHistory(); }
+Ptr<CPasteHistoryDialog> CIDEPasteHistory::GetDialog(void) const { return mpDialog; }
+Ptr<CClipboardHistory> CIDEPasteHistory::GetHistory(void) const { return mpcContent->GetWindow()->GetClipboard()->GetHistory(); }
 

@@ -876,7 +876,7 @@ void CIDEDebugging::SetDebugScript(const char* szCommands)
 //
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEDebugging::IsDebugScriptRunning(void)
+bool CIDEDebugging::IsDebugScriptRunning(void) const
 {
 	return maszDebugScript.NumElements() != 0;
 }
@@ -1055,8 +1055,8 @@ void CIDEDebugging::RunDebugScript(void)
 
 
 CIDEDebugger* CIDEDebugging::GetDebugger(void) { return &mcDebugger; }
-Ptr<CIDEDebugView> CIDEDebugging::GetDebugView(void) { return mpDebugView; }
-Ptr<CDockPane> CIDEDebugging::GetTool(void) { return mpDebugTool; }
+Ptr<CIDEDebugView> CIDEDebugging::GetDebugView(void) const { return mpDebugView; }
+Ptr<CDockPane> CIDEDebugging::GetTool(void) const { return mpDebugTool; }
 
 
 //////////////////////////////////////////////////////////////////////////

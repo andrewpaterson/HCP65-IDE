@@ -96,8 +96,8 @@ public:
 
 	void			AdjustPlaces(const char* szFile, SIDEPlaceChange* psChange);
 
-	size			NumBack(void);
-	size			NumForward(void);
+	size			NumBack(void) const;
+	size			NumForward(void) const;
 	void			Print(CChars* pszDest);
 
 protected:

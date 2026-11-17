@@ -1910,16 +1910,16 @@ size CIDEDuplicates::NumBlockStatements(size uiBlock)
 
 bool CIDEDuplicates::Save(CObjectWriter* pcFile) { return false; }
 bool CIDEDuplicates::Load(CObjectReader* pcFile) { return false; }
-bool CIDEDuplicates::IsSearching(void) { return mbSearching; }
-EIDEScope CIDEDuplicates::GetScope(void) { return meScope; }
+bool CIDEDuplicates::IsSearching(void) const { return mbSearching; }
+EIDEScope CIDEDuplicates::GetScope(void) const { return meScope; }
 char* CIDEDuplicates::GetDirectory(void) { return mszDirectory.Text(); }
-bool CIDEDuplicates::IsLiteralsFree(void) { return mbLiteralsFree; }
-size CIDEDuplicates::GetMinimumStatements(void) { return muiMinimumStatements; }
-size CIDEDuplicates::GetMinimumTokens(void) { return muiMinimumTokens; }
+bool CIDEDuplicates::IsLiteralsFree(void) const { return mbLiteralsFree; }
+size CIDEDuplicates::GetMinimumStatements(void) const { return muiMinimumStatements; }
+size CIDEDuplicates::GetMinimumTokens(void) const { return muiMinimumTokens; }
 Ptr<CTreeContainer> CIDEDuplicates::GetTree(void) { return mpPane.IsNotNull() ? mpPane->GetTree() : Ptr<CTreeContainer>(); }
-Ptr<CIDEResultsPane> CIDEDuplicates::GetResultsPane(void) { return mpPane; }
-Ptr<CDockPane> CIDEDuplicates::GetTool(void) { return mpTool; }
-size CIDEDuplicates::NumPlaces(void) { return masPlaces.NumElements(); }
+Ptr<CIDEResultsPane> CIDEDuplicates::GetResultsPane(void) const { return mpPane; }
+Ptr<CDockPane> CIDEDuplicates::GetTool(void) const { return mpTool; }
+size CIDEDuplicates::NumPlaces(void) const { return masPlaces.NumElements(); }
 Ptr<CDockPane> CIDEDuplicates::GetSteppablePane(void) { return mpTool; }
 const char* CIDEDuplicates::GetSteppableName(void) { return "Duplicates"; }
 bool CIDEDuplicates::HasSteps(void) { return mbFound && (masPlaces.NumElements() > 0) && mpPane.IsNotNull(); }

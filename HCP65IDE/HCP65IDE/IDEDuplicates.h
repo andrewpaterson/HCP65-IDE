@@ -193,16 +193,16 @@ public:
 	bool					ShowDialog(void);
 	bool					TakeWhat(void);
 	bool					Start(bool bRerun, bool bWait);
-	bool					IsSearching(void);
+	bool					IsSearching(void) const;
 	void					WaitForSearch(void);
 
 	void					SetSettings(EIDEScope eScope, const char* szDirectory, bool bLiteralsFree);
 	void					SetMinimums(size uiStatements, size uiTokens);
-	EIDEScope				GetScope(void);
+	EIDEScope				GetScope(void) const;
 	char*					GetDirectory(void);
-	bool					IsLiteralsFree(void);
-	size					GetMinimumStatements(void);
-	size					GetMinimumTokens(void);
+	bool					IsLiteralsFree(void) const;
+	size					GetMinimumStatements(void) const;
+	size					GetMinimumTokens(void) const;
 	void					ReadSettings(CMarkupTag* pcSettings);
 	void					WriteSettings(CXMLWriter* pcWriter);
 
@@ -210,9 +210,9 @@ public:
 	void					AdjustPlaces(const char* szFile, SIDEPlaceChange* psChange);
 	int64					Poll(int64 iNow);
 	Ptr<CTreeContainer>		GetTree(void);
-	Ptr<CIDEResultsPane>	GetResultsPane(void);
-	Ptr<CDockPane>			GetTool(void);
-	size					NumPlaces(void);
+	Ptr<CIDEResultsPane>	GetResultsPane(void) const;
+	Ptr<CDockPane>			GetTool(void) const;
+	size					NumPlaces(void) const;
 
 	Ptr<CDockPane>			GetSteppablePane(void) override;
 	const char*				GetSteppableName(void) override;

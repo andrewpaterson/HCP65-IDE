@@ -281,7 +281,7 @@ void CIDERunning::ShowMessage(const char* szMessage)
 }
 
 
-Ptr<CButton> CIDERunning::GetStartButton(void) { return mpStartButton; }
-Ptr<CIDEBuildPane> CIDERunning::GetRunPane(void) { return mpRunPane; }
+Ptr<CButton> CIDERunning::GetStartButton(void) const { return mpStartButton; }
+Ptr<CIDEBuildPane> CIDERunning::GetRunPane(void) const { return mpRunPane; }
 bool CIDERunning::IsRunning(void) { return mcProcess.IsRunning(); }
 

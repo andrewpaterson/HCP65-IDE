@@ -57,10 +57,10 @@ public:
 	void				AppendLines(CArrayChars* paszLines);
 	void				SetProgress(float fFraction, ARGB32 sColour);
 
-	Ptr<CComponent>		GetComponent(void);
+	Ptr<CComponent>		GetComponent(void) const;
 	char*				GetOutput(void);
-	Ptr<CTextArea>		GetOutputArea(void);
-	Ptr<CProgressBar>	GetProgressBar(void);
+	Ptr<CTextArea>		GetOutputArea(void) const;
+	Ptr<CProgressBar>	GetProgressBar(void) const;
 };
 
 

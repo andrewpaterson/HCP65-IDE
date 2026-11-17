@@ -114,8 +114,8 @@ public:
 	bool	Save(CObjectWriter* pcFile) override;
 	bool	Load(CObjectReader* pcFile) override;
 
-	Ptr<CTreeContainer>	GetTree(void);
-	Ptr<CComponent>		GetComponent(void);
+	Ptr<CTreeContainer>	GetTree(void) const;
+	Ptr<CComponent>		GetComponent(void) const;
 
 	int64				BeginShow(bool bKeepSelected);
 	void				EndShow(int64 iSelectedData);
@@ -131,8 +131,8 @@ public:
 	void				Focus(void);
 	void				Detach(void);
 
-	Ptr<CCommandSet>	GetCommands(void);
-	Ptr<CToolbar>		GetToolbar(void);
+	Ptr<CCommandSet>	GetCommands(void) const;
+	Ptr<CToolbar>		GetToolbar(void) const;
 	void				AddToolbarCommand(Ptr<CCommand> pCommand, EIDEToolIcon eIcon);
 	void				AddToolbarSeparator(void);
 	void				AddViewCommands(void);
@@ -143,8 +143,8 @@ public:
 	bool				IsNavigateOnSelect(void);
 	void				SetPreviewShown(bool bShown);
 	bool				IsPreviewShown(void);
-	Ptr<CCodePreview>	GetPreview(void);
-	Ptr<CSplitContainer>	GetSplit(void);
+	Ptr<CCodePreview>	GetPreview(void) const;
+	Ptr<CSplitContainer>	GetSplit(void) const;
 	void				ShowPreview(void);
 	void				PreviewHighlighted(const char* szFileName, CArrayHighlights* pacHighlights) override;
 	void				ReadSettings(CMarkupTag* pcTag);

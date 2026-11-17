@@ -68,7 +68,7 @@ public:
 	void				ApplyEdits(const char* szEdits);
 	bool				Approve(void);
 	void				GetChange(SIDESignatureChange* psDest);
-	Ptr<CDialog>		GetDialog(void);
+	Ptr<CDialog>		GetDialog(void) const;
 
 protected:
 	Ptr<CComponent>		CreateBody(void);

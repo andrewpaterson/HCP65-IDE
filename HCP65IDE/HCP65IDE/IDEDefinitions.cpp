@@ -201,7 +201,7 @@ CIDETextEdits* CIDEFileEdits::GetEdits(const char* szFileName)
 //
 //
 //////////////////////////////////////////////////////////////////////////
-size CIDEFileEdits::NumFiles(void)
+size CIDEFileEdits::NumFiles(void) const
 {
 	return maszFiles.NumElements();
 }

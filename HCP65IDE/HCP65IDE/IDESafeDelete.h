@@ -57,7 +57,7 @@ struct SIDESafeDeletion
 
 	void	Init(void);
 	void	Kill(void);
-	size	NumUsages(void) { return asUsages.NumElements() + uiAssembly + uiComments + uiText; }
+	size	NumUsages(void) const;
 };
 
 

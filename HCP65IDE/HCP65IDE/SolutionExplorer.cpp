@@ -812,5 +812,5 @@ Ptr<CFont> CSolutionExplorer::GetFolderFont(int32 iNode, bool bChanged, Ptr<CFon
 }
 
 
-Ptr<CTreeContainer> CSolutionExplorer::GetTree(void) { return mpTree; }
-Ptr<CComponent> CSolutionExplorer::GetComponent(void) { return mpScrollPane; }
+Ptr<CTreeContainer> CSolutionExplorer::GetTree(void) const { return mpTree; }
+Ptr<CComponent> CSolutionExplorer::GetComponent(void) const { return mpScrollPane; }

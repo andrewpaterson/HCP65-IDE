@@ -101,7 +101,7 @@ public:
 
 	void	WatchDialog(Ptr<CDialog> pDialog);
 	void	StopWatchingDialog(void);
-	bool	IsWatchingDialog(void);
+	bool	IsWatchingDialog(void) const;
 	void	DialogTick(void);
 	void	SetKeyboard(CProgramDeviceDetail* pcKeyboard, CComponentInput* pcInput);
 	void	PressKey(const char* szKey, bool bDown);
@@ -109,7 +109,7 @@ public:
 	void	PressDialogKeys(Ptr<CWindow> pWindow);
 	template<class M, class O>
 	void	SetDialogDrawnCall(O* pcObject, void(M::*fFunction)(void));
-	size	NumAnsweredDialogs(void);
+	size	NumAnsweredDialogs(void) const;
 };
 
 

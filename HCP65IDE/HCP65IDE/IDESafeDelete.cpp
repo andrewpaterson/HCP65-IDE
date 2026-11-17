@@ -1723,3 +1723,6 @@ bool CIDESafeDelete::ShowSafeDelete(void)
 	sDeletion.Kill();
 	return bResult;
 }
+
+
+size SIDESafeDeletion::NumUsages(void) const { return asUsages.NumElements() + uiAssembly + uiComments + uiText; }

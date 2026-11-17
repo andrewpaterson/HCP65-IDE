@@ -1106,7 +1106,7 @@ bool CIDEContent::LoadLayout(void)
 }
 
 
-Ptr<CDockManager> CIDEContent::GetDock(void) { return mpDock; }
+Ptr<CDockManager> CIDEContent::GetDock(void) const { return mpDock; }
 Ptr<CDockPane> CIDEContent::GetExplorerTool(void) { return mpSolutions->GetExplorerTool(); }
 Ptr<CDockPane> CIDEContent::GetDebugTool(void) { return mpDebugging->GetTool(); }
 Ptr<CDockPane> CIDEContent::GetClaudeTool(void) { return mpAskClaude->GetTool(); }
@@ -1114,7 +1114,7 @@ Ptr<CDockPane> CIDEContent::GetClaudeTool(void) { return mpAskClaude->GetTool();
 
 CIDECodeModel* CIDEContent::GetCodeModel(void) { return &mcCodeModel; }
 CIDEFileTemplates* CIDEContent::GetFileTemplates(void) { return &mcFileTemplates; }
-Ptr<CIDEScript> CIDEContent::GetScript(void) { return mpScript; }
+Ptr<CIDEScript> CIDEContent::GetScript(void) const { return mpScript; }
 CSolutionExplorer* CIDEContent::GetExplorer(void) { return &mpSolutions->GetExplorer(); }
 
 
@@ -1149,21 +1149,21 @@ Ptr<CMenuContainer> CIDEContent::CreateEditorMenu(void)
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEContent::SetKeepSettings(bool bKeep) { mbKeepSettings = bKeep; }
-Ptr<CIDEAskClaude> CIDEContent::GetAskClaude(void) { return mpAskClaude; }
-Ptr<CIDEDiffs> CIDEContent::GetDiffs(void) { return mpDiffs; }
+Ptr<CIDEAskClaude> CIDEContent::GetAskClaude(void) const { return mpAskClaude; }
+Ptr<CIDEDiffs> CIDEContent::GetDiffs(void) const { return mpDiffs; }
 
 
-Ptr<CIDEGitStatus> CIDEContent::GetGitStatus(void) { return mpGitStatus; }
+Ptr<CIDEGitStatus> CIDEContent::GetGitStatus(void) const { return mpGitStatus; }
 
 
-Ptr<CIDEDebugging> CIDEContent::GetDebugging(void) { return mpDebugging; }
-Ptr<CIDEConfigurations> CIDEContent::GetBuildConfigurations(void) { return mpBuildConfigurations; }
-Ptr<CIDERunning> CIDEContent::GetRunning(void) { return mpRunning; }
-Ptr<CIDESettings> CIDEContent::GetSettings(void) { return mpSettings; }
-Ptr<CStatusBar> CIDEContent::GetStatusBar(void) { return mpStatusBar; }
-Ptr<CIDEBuilding> CIDEContent::GetBuilding(void) { return mpBuilding; }
-Ptr<CIDESolutions> CIDEContent::GetSolutions(void) { return mpSolutions; }
-Ptr<CIDEDocuments> CIDEContent::GetDocuments(void) { return mpDocuments; }
+Ptr<CIDEDebugging> CIDEContent::GetDebugging(void) const { return mpDebugging; }
+Ptr<CIDEConfigurations> CIDEContent::GetBuildConfigurations(void) const { return mpBuildConfigurations; }
+Ptr<CIDERunning> CIDEContent::GetRunning(void) const { return mpRunning; }
+Ptr<CIDESettings> CIDEContent::GetSettings(void) const { return mpSettings; }
+Ptr<CStatusBar> CIDEContent::GetStatusBar(void) const { return mpStatusBar; }
+Ptr<CIDEBuilding> CIDEContent::GetBuilding(void) const { return mpBuilding; }
+Ptr<CIDESolutions> CIDEContent::GetSolutions(void) const { return mpSolutions; }
+Ptr<CIDEDocuments> CIDEContent::GetDocuments(void) const { return mpDocuments; }
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -1172,57 +1172,57 @@ Ptr<CIDEDocuments> CIDEContent::GetDocuments(void) { return mpDocuments; }
 //
 //////////////////////////////////////////////////////////////////////////
 CBuildWorkspace* CIDEContent::GetWorkspace(void) { return &mcWorkspace; }
-bool CIDEContent::IsKeepingSettings(void) { return mbKeepSettings; }
-Ptr<CWindow> CIDEContent::GetWindow(void) { return mpWindow; }
-Ptr<CWindowTheme> CIDEContent::GetTheme(void) { return mpTheme; }
+bool CIDEContent::IsKeepingSettings(void) const { return mbKeepSettings; }
+Ptr<CWindow> CIDEContent::GetWindow(void) const { return mpWindow; }
+Ptr<CWindowTheme> CIDEContent::GetTheme(void) const { return mpTheme; }
 SDialogLook* CIDEContent::GetDialogLook(void) { return &msDialogLook; }
-Ptr<CIDEPasteHistory> CIDEContent::GetPasteHistory(void) { return mpPasteHistory; }
-Ptr<CFontColours> CIDEContent::GetFontColours(void) { return mpFontColours; }
-Ptr<CFontColours> CIDEContent::GetBoldColours(void) { return mpBoldColours; }
-Ptr<CFontFamily> CIDEContent::GetCodeFamily(void) { return mpCodeFamily; }
-Ptr<CFont> CIDEContent::GetDimFont(void) { return mpDimFont; }
-Ptr<CFont> CIDEContent::GetMatchFont(void) { return mpMatchFont; }
-Ptr<CImageCel> CIDEContent::GetFolderIcon(void) { return mpFolderIcon; }
-Ptr<CImageCel> CIDEContent::GetFileIcon(void) { return mpFileIcon; }
+Ptr<CIDEPasteHistory> CIDEContent::GetPasteHistory(void) const { return mpPasteHistory; }
+Ptr<CFontColours> CIDEContent::GetFontColours(void) const { return mpFontColours; }
+Ptr<CFontColours> CIDEContent::GetBoldColours(void) const { return mpBoldColours; }
+Ptr<CFontFamily> CIDEContent::GetCodeFamily(void) const { return mpCodeFamily; }
+Ptr<CFont> CIDEContent::GetDimFont(void) const { return mpDimFont; }
+Ptr<CFont> CIDEContent::GetMatchFont(void) const { return mpMatchFont; }
+Ptr<CImageCel> CIDEContent::GetFolderIcon(void) const { return mpFolderIcon; }
+Ptr<CImageCel> CIDEContent::GetFileIcon(void) const { return mpFileIcon; }
 size CIDEContent::NumFileTypeIcons(void) { return maFileIcons.NumElements(); }
 Ptr<CImageCel> CIDEContent::GetFileTypeIcon(size uiType) { return maFileIcons.Get(uiType); }
 Ptr<CImageCel> CIDEContent::GetSymbolIcon(size uiType) { return maSymbolIcons.Get(uiType); }
 Ptr<CImageCel> CIDEContent::GetToolIcon(size uiIcon, bool bDim) { return maToolIcons.Get(uiIcon + (bDim ? (size)ITI_Count : 0)); }
-Ptr<CMenuBar> CIDEContent::GetMenuBar(void) { return mpMenuBar; }
-Ptr<CCommandSet> CIDEContent::GetCommands(void) { return mpCommands; }
-Ptr<CMenuContainer> CIDEContent::GetEditorMenu(void) { return mpEditorMenu; }
-Ptr<CIDENavigator> CIDEContent::GetNavigator(void) { return mpNavigator; }
-Ptr<CIDEEdit> CIDEContent::GetEdit(void) { return mpEdit; }
-Ptr<CIDEUsages> CIDEContent::GetUsages(void) { return mpUsages; }
-Ptr<CIDEFindInFiles> CIDEContent::GetFindInFiles(void) { return mpFindInFiles; }
-Ptr<CIDEDuplicates> CIDEContent::GetDuplicates(void) { return mpDuplicates; }
-Ptr<CIDEOccurrences> CIDEContent::GetOccurrences(void) { return mpOccurrences; }
-Ptr<CIDENavigationHistory> CIDEContent::GetNavigationHistory(void) { return mpNavigationHistory; }
-Ptr<CIDEIndexing> CIDEContent::GetIndexing(void) { return mpIndexing; }
-Ptr<CIDERename> CIDEContent::GetRename(void) { return mpRename; }
-Ptr<CIDEFileRename> CIDEContent::GetFileRename(void) { return mpFileRename; }
-Ptr<CIDESafeDelete> CIDEContent::GetSafeDelete(void) { return mpSafeDelete; }
-Ptr<CIDEIntroduceVariable> CIDEContent::GetIntroduceVariable(void) { return mpIntroduceVariable; }
-Ptr<CIDEChangeSignature> CIDEContent::GetChangeSignature(void) { return mpChangeSignature; }
-Ptr<CIDEDefinitions> CIDEContent::GetDefinitions(void) { return mpDefinitions; }
-Ptr<CIDEMoveMembers> CIDEContent::GetMoveMembers(void) { return mpMoveMembers; }
-Ptr<CIDEMoveClass> CIDEContent::GetMoveClass(void) { return mpMoveClass; }
-Ptr<CIDENewFile> CIDEContent::GetNewFile(void) { return mpNewFile; }
-Ptr<CIDEMoveNamespace> CIDEContent::GetMoveNamespace(void) { return mpMoveNamespace; }
-Ptr<CIDEInlineVariable> CIDEContent::GetInlineVariable(void) { return mpInlineVariable; }
-Ptr<CIDEIntroduceTypedef> CIDEContent::GetIntroduceTypedef(void) { return mpIntroduceTypedef; }
-Ptr<CIDESolutionFileChooser> CIDEContent::GetSolutionFileChooser(void) { return mpSolutionFileChooser; }
-Ptr<CIDEExtractMethod> CIDEContent::GetExtractMethod(void) { return mpExtractMethod; }
-Ptr<CIDEInlineFunction> CIDEContent::GetInlineFunction(void) { return mpInlineFunction; }
-Ptr<CIDEExtractClass> CIDEContent::GetExtractClass(void) { return mpExtractClass; }
-Ptr<CIDEEncapsulateField> CIDEContent::GetEncapsulateField(void) { return mpEncapsulateField; }
-Ptr<CIDEIncludes> CIDEContent::GetIncludes(void) { return mpIncludes; }
-Ptr<CIDEConvertMacro> CIDEContent::GetConvertMacro(void) { return mpConvertMacro; }
-Ptr<CIDEConvertPointer> CIDEContent::GetConvertPointer(void) { return mpConvertPointer; }
-Ptr<CIDEConvertEnum> CIDEContent::GetConvertEnum(void) { return mpConvertEnum; }
-Ptr<CIDETemplateInterface> CIDEContent::GetTemplateInterface(void) { return mpTemplateInterface; }
-Ptr<CIDEMemberQualifier> CIDEContent::GetMemberQualifier(void) { return mpMemberQualifier; }
-Ptr<CIDEConvertMember> CIDEContent::GetConvertMember(void) { return mpConvertMember; }
-Ptr<CIDEContextActions> CIDEContent::GetContextActions(void) { return mpContextActions; }
-Ptr<CIDETemplateParameter> CIDEContent::GetTemplateParameter(void) { return mpTemplateParameter; }
-Ptr<CIDECloseGuard> CIDEContent::GetCloseGuard(void) { return mpCloseGuard; }
+Ptr<CMenuBar> CIDEContent::GetMenuBar(void) const { return mpMenuBar; }
+Ptr<CCommandSet> CIDEContent::GetCommands(void) const { return mpCommands; }
+Ptr<CMenuContainer> CIDEContent::GetEditorMenu(void) const { return mpEditorMenu; }
+Ptr<CIDENavigator> CIDEContent::GetNavigator(void) const { return mpNavigator; }
+Ptr<CIDEEdit> CIDEContent::GetEdit(void) const { return mpEdit; }
+Ptr<CIDEUsages> CIDEContent::GetUsages(void) const { return mpUsages; }
+Ptr<CIDEFindInFiles> CIDEContent::GetFindInFiles(void) const { return mpFindInFiles; }
+Ptr<CIDEDuplicates> CIDEContent::GetDuplicates(void) const { return mpDuplicates; }
+Ptr<CIDEOccurrences> CIDEContent::GetOccurrences(void) const { return mpOccurrences; }
+Ptr<CIDENavigationHistory> CIDEContent::GetNavigationHistory(void) const { return mpNavigationHistory; }
+Ptr<CIDEIndexing> CIDEContent::GetIndexing(void) const { return mpIndexing; }
+Ptr<CIDERename> CIDEContent::GetRename(void) const { return mpRename; }
+Ptr<CIDEFileRename> CIDEContent::GetFileRename(void) const { return mpFileRename; }
+Ptr<CIDESafeDelete> CIDEContent::GetSafeDelete(void) const { return mpSafeDelete; }
+Ptr<CIDEIntroduceVariable> CIDEContent::GetIntroduceVariable(void) const { return mpIntroduceVariable; }
+Ptr<CIDEChangeSignature> CIDEContent::GetChangeSignature(void) const { return mpChangeSignature; }
+Ptr<CIDEDefinitions> CIDEContent::GetDefinitions(void) const { return mpDefinitions; }
+Ptr<CIDEMoveMembers> CIDEContent::GetMoveMembers(void) const { return mpMoveMembers; }
+Ptr<CIDEMoveClass> CIDEContent::GetMoveClass(void) const { return mpMoveClass; }
+Ptr<CIDENewFile> CIDEContent::GetNewFile(void) const { return mpNewFile; }
+Ptr<CIDEMoveNamespace> CIDEContent::GetMoveNamespace(void) const { return mpMoveNamespace; }
+Ptr<CIDEInlineVariable> CIDEContent::GetInlineVariable(void) const { return mpInlineVariable; }
+Ptr<CIDEIntroduceTypedef> CIDEContent::GetIntroduceTypedef(void) const { return mpIntroduceTypedef; }
+Ptr<CIDESolutionFileChooser> CIDEContent::GetSolutionFileChooser(void) const { return mpSolutionFileChooser; }
+Ptr<CIDEExtractMethod> CIDEContent::GetExtractMethod(void) const { return mpExtractMethod; }
+Ptr<CIDEInlineFunction> CIDEContent::GetInlineFunction(void) const { return mpInlineFunction; }
+Ptr<CIDEExtractClass> CIDEContent::GetExtractClass(void) const { return mpExtractClass; }
+Ptr<CIDEEncapsulateField> CIDEContent::GetEncapsulateField(void) const { return mpEncapsulateField; }
+Ptr<CIDEIncludes> CIDEContent::GetIncludes(void) const { return mpIncludes; }
+Ptr<CIDEConvertMacro> CIDEContent::GetConvertMacro(void) const { return mpConvertMacro; }
+Ptr<CIDEConvertPointer> CIDEContent::GetConvertPointer(void) const { return mpConvertPointer; }
+Ptr<CIDEConvertEnum> CIDEContent::GetConvertEnum(void) const { return mpConvertEnum; }
+Ptr<CIDETemplateInterface> CIDEContent::GetTemplateInterface(void) const { return mpTemplateInterface; }
+Ptr<CIDEMemberQualifier> CIDEContent::GetMemberQualifier(void) const { return mpMemberQualifier; }
+Ptr<CIDEConvertMember> CIDEContent::GetConvertMember(void) const { return mpConvertMember; }
+Ptr<CIDEContextActions> CIDEContent::GetContextActions(void) const { return mpContextActions; }
+Ptr<CIDETemplateParameter> CIDEContent::GetTemplateParameter(void) const { return mpTemplateParameter; }
+Ptr<CIDECloseGuard> CIDEContent::GetCloseGuard(void) const { return mpCloseGuard; }

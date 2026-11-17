@@ -642,7 +642,7 @@ bool CIDERunConfigurationsDialog::Show(void)
 }
 
 
-Ptr<CDialog> CIDERunConfigurationsDialog::GetDialog(void) { return mpDialog; }
+Ptr<CDialog> CIDERunConfigurationsDialog::GetDialog(void) const { return mpDialog; }
 CArrayRunConfigurations* CIDERunConfigurationsDialog::GetEdited(void) { return &masEdited; }
 char* CIDERunConfigurationsDialog::GetSelectedName(void) { return (miSelected >= 0) ? masEdited.Get(miSelected)->GetName() : (char*)""; }
 

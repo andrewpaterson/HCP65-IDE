@@ -773,6 +773,6 @@ bool CIDEBuildConfigurationsDialog::Show(void)
 }
 
 
-Ptr<CDialog> CIDEBuildConfigurationsDialog::GetDialog(void) { return mpDialog; }
+Ptr<CDialog> CIDEBuildConfigurationsDialog::GetDialog(void) const { return mpDialog; }
 CArrayBuildConfigurationEdits* CIDEBuildConfigurationsDialog::GetEdits(void) { return &masEdits; }
 

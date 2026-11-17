@@ -78,9 +78,9 @@ public:
 	void				ShowBreakpoints(Ptr<CIDEEditorTab> pTab);
 	bool				AttachDebugger(int iPort);
 	void				SetDebugScript(const char* szCommands);
-	bool				IsDebugScriptRunning(void);
+	bool				IsDebugScriptRunning(void) const;
 	CIDEDebugger*		GetDebugger(void);
-	Ptr<CDockPane>		GetTool(void);
+	Ptr<CDockPane>		GetTool(void) const;
 	void				CreatePane(SDockPlace* psPlace);
 	bool				ChooseTool(CChars* pszExecutable, CChars* pszDirectory, CChars* pszArguments, CChars* pszMessage);
 	void				GetUserSettingsFileName(CChars* pszDest);
@@ -112,7 +112,7 @@ protected:
 	bool				IsDisassemblyFocussed(void);
 	bool				ShowNewBreakpointDialog(void);
 	bool				ShowAttachDialog(void);
-	Ptr<CIDEDebugView>	GetDebugView(void);
+	Ptr<CIDEDebugView>	GetDebugView(void) const;
 	void				DeleteAllBreakpoints(void);
 };
 

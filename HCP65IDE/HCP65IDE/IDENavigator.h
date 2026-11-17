@@ -70,7 +70,7 @@ public:
 	void				QueueGoTo(size uiTab);
 	bool				CreateGoTo(size uiTab);
 	bool				OpenGoToChoice(void);
-	Ptr<CGoToDialog>	GetGoTo(void);
+	Ptr<CGoToDialog>	GetGoTo(void) const;
 	bool				GoToSource(void);
 	bool				CanGoToSource(void);
 	bool				SwitchHeaderSource(void);

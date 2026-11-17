@@ -75,7 +75,7 @@ public:
 	bool				Load(CObjectReader* pcFile) override;
 
 	void				AddCommands(Ptr<CCommandSet> pCommands);
-	Ptr<CMenuContainer>	GetFileMenu(void);
+	Ptr<CMenuContainer>	GetFileMenu(void) const;
 	Ptr<CMenuContainer>	GetPopupMenu(void);
 	bool				CanCreate(void);
 	void				OpenPopupCommand(void);

@@ -100,8 +100,8 @@ public:
 
 	void					SetBoldColours(Ptr<CFontColours> pBoldColours);
 	void					ShowWorkspace(CBuildWorkspace* pcWorkspace);
-	Ptr<CTreeContainer>		GetTree(void);
-	Ptr<CComponent>			GetComponent(void);
+	Ptr<CTreeContainer>		GetTree(void) const;
+	Ptr<CComponent>			GetComponent(void) const;
 	SSolutionExplorerNode*	GetNode(int32 iNode);
 	bool					GetNodeFilePath(int32 iNode, CChars* pszDest);
 	bool					GetSelectedFilePath(CChars* pszDest);

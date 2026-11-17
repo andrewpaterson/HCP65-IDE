@@ -326,7 +326,7 @@ bool CIDEDebugView::SetCaretAddress(uint32 uiAddress)
 }
 
 
-Ptr<CComponent> CIDEDebugView::GetComponent(void) { return mpPanel; }
-Ptr<CTextArea> CIDEDebugView::GetDisassembly(void) { return mpDisassembly; }
+Ptr<CComponent> CIDEDebugView::GetComponent(void) const { return mpPanel; }
+Ptr<CTextArea> CIDEDebugView::GetDisassembly(void) const { return mpDisassembly; }
 char* CIDEDebugView::GetRegistersText(void) { return mpRegisters->GetText(); }
 char* CIDEDebugView::GetDisassemblyText(void) { return mpDisassembly->GetText(); }

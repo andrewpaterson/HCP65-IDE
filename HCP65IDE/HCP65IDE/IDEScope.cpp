@@ -371,7 +371,7 @@ bool CIDEScope::IsOffered(CIDEContent* pcContent, EIDEScope eScope)
 
 
 void CIDEScope::SetScope(EIDEScope eScope) { meScope = eScope; }  //The kind alone: what was captured is kept.
-EIDEScope CIDEScope::GetScope(void) { return meScope; }
+EIDEScope CIDEScope::GetScope(void) const { return meScope; }
 char* CIDEScope::GetDirectory(void) { return mszDirectory.Text(); }
 size CIDEScope::GetProject(void) { return muiProject; }
 char* CIDEScope::GetFile(void) { return mszFile.Text(); }

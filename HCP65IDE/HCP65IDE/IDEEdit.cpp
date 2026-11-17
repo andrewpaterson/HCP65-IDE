@@ -486,7 +486,7 @@ bool CIDEEdit::RedoLogGroup(size uiGroup, bool bShow)
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEEdit::BeginUndoGroup(void) { mcUndoLog.BeginGroup(); }
-Ptr<CMenuContainer> CIDEEdit::GetEditMenu(void) { return mpEditMenu; }
+Ptr<CMenuContainer> CIDEEdit::GetEditMenu(void) const { return mpEditMenu; }
 void CIDEEdit::EndUndoGroup(void) { mcUndoLog.EndGroup(); }
 
 

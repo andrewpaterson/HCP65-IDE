@@ -88,7 +88,7 @@ void CIDETextEdits::Insert(size uiAt, const char* szText)
 //
 //
 //////////////////////////////////////////////////////////////////////////
-size CIDETextEdits::NumEdits(void)
+size CIDETextEdits::NumEdits(void) const
 {
 	return masEdits.NumElements();
 }
@@ -1003,3 +1003,11 @@ bool CIDERefactorUnit::AppendFunctionLabel(int iLine, int iColumn, CChars* pszDe
 	return pcDeclarator && mcPass.AppendFunctionLabel(pcDeclarator, pszDest);
 }
 
+
+bool CIDERefactorUnit::IsParsed(void) const { return mbParsed; }
+bool CIDERefactorUnit::IsChecked(void) const { return mbChecked; }
+char* CIDERefactorUnit::GetFileName(void) { return mszFileName.Text(); }
+CCPPTokeniser* CIDERefactorUnit::GetTokeniser(void) { return &mcUnit.mcTokeniser; }
+CCPPSyntaxTree* CIDERefactorUnit::GetTree(void) { return &mcUnit.mcTree; }
+CCPPSemanticPass* CIDERefactorUnit::GetPass(void) { return &mcPass; }
+CSourceFile* CIDERefactorUnit::GetFile(void) { return mpcFile; }

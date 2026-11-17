@@ -78,7 +78,7 @@ struct SIDEFunctionMove
 
 	void			Init(void);
 	void			Kill(void);
-	size			NumPieces(void);
+	size			NumPieces(void) const;
 	SIDEFileRange*	GetPiece(size uiPiece);
 	bool			IsDeclarationPiece(size uiPiece);
 };

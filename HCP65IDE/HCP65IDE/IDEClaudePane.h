@@ -77,11 +77,11 @@ public:
 	char*				GetRequest(void);
 	void				SetRequest(const char* szRequest);
 
-	Ptr<CComponent>		GetComponent(void);
-	Ptr<CTextArea>		GetRequestArea(void);
-	Ptr<CButton>		GetSendButton(void);
-	Ptr<CButton>		GetStopButton(void);
-	Ptr<CButton>		GetNewButton(void);
+	Ptr<CComponent>		GetComponent(void) const;
+	Ptr<CTextArea>		GetRequestArea(void) const;
+	Ptr<CButton>		GetSendButton(void) const;
+	Ptr<CButton>		GetStopButton(void) const;
+	Ptr<CButton>		GetNewButton(void) const;
 	char*				GetConversation(void);
 	char*				GetStatus(void);
 

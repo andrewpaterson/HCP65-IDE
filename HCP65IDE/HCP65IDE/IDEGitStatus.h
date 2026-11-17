@@ -73,8 +73,8 @@ public:
 	void				ChangeBarClicked(CCodeEditor* pcEditor, size uiLine);
 	void				WindowActivated(void);
 	void				QueueChange(size uiLine, int iAction);
-	Ptr<CGridContainer>	GetChangePopup(void);
-	Ptr<CLabel>			GetBranchLabel(void);
+	Ptr<CGridContainer>	GetChangePopup(void) const;
+	Ptr<CLabel>			GetBranchLabel(void) const;
 	void				GitFileSaved(const char* szFileName);
 	void				ReadGitBase(Ptr<CIDEEditorTab> pTab);
 	void				ShowBranch(void);

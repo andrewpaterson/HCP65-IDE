@@ -764,7 +764,7 @@ bool CIDESolutions::WriteWorkspace(void)
 // The startup solution is there and could be read.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDESolutions::IsSolutionOpen(void)
+bool CIDESolutions::IsSolutionOpen(void) const
 {
 	return (mpcContent->GetWorkspace()->GetStartupSolution() != NULL) && mpcContent->GetWorkspace()->GetStartupSolution()->mbRead;
 }
@@ -775,7 +775,7 @@ bool CIDESolutions::IsSolutionOpen(void)
 // The startup solution's file (a .sln or .vcxproj), "" if none is open.
 //
 //////////////////////////////////////////////////////////////////////////
-char* CIDESolutions::GetStartupFile(void)
+char* CIDESolutions::GetStartupFile(void) const
 {
 	return (mpcContent->GetWorkspace()->GetStartupSolution() != NULL) ? mpcContent->GetWorkspace()->GetStartupSolution()->mszFile.Text() : (char*)"";
 }
@@ -1098,9 +1098,9 @@ bool CIDESolutions::ShowActiveFileInExplorer(void)
 }
 
 
-Ptr<CSolutionExplorer> CIDESolutions::GetExplorer(void) { return mpExplorer; }
-Ptr<CDockPane> CIDESolutions::GetExplorerTool(void) { return mpExplorerTool; }
-Ptr<CMenuContainer> CIDESolutions::GetExplorerMenu(void) { return mpExplorerMenu; }
+Ptr<CSolutionExplorer> CIDESolutions::GetExplorer(void) const { return mpExplorer; }
+Ptr<CDockPane> CIDESolutions::GetExplorerTool(void) const { return mpExplorerTool; }
+Ptr<CMenuContainer> CIDESolutions::GetExplorerMenu(void) const { return mpExplorerMenu; }
 
 
 //////////////////////////////////////////////////////////////////////////

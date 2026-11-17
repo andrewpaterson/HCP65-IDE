@@ -1226,7 +1226,7 @@ void CIDECodeModel::ReindexAll(void)
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDECodeModel::SetIndexTemplates(bool bIndexTemplates) { mbIndexTemplates = bIndexTemplates; }
-bool CIDECodeModel::IsIndexingTemplates(void) { return mbIndexTemplates; }
+bool CIDECodeModel::IsIndexingTemplates(void) const { return mbIndexTemplates; }
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -1837,10 +1837,10 @@ void CIDECodeModel::Reset(void)
 
 char* CIDECodeModel::GetConfiguration(void) { return mszConfiguration.Text(); }
 void CIDECodeModel::SetEditsDelay(int iMilliseconds) { miEditsDelay = iMilliseconds; }
-size CIDECodeModel::NumIndexings(void) { return muiIndexings; }
+size CIDECodeModel::NumIndexings(void) const { return muiIndexings; }
 void CIDECodeModel::AddSystemDirectory(const char* szDirectory) { maszSystemDirectories.Add(szDirectory); }
 CArrayChars* CIDECodeModel::GetSystemDirectories(void) { return &maszSystemDirectories; }
-bool CIDECodeModel::IsMissingSystemDirectories(void) { return mbSystemDirectoriesMissing; }
+bool CIDECodeModel::IsMissingSystemDirectories(void) const { return mbSystemDirectoriesMissing; }
 
 
 //////////////////////////////////////////////////////////////////////////

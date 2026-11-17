@@ -53,8 +53,8 @@ public:
 	void				CreatePane(SDockPlace* psPlace);
 	bool				Update(void);
 
-	Ptr<CIDEBuildPane>	GetPane(void);
-	Ptr<CDockPane>		GetTool(void);
+	Ptr<CIDEBuildPane>	GetPane(void) const;
+	Ptr<CDockPane>		GetTool(void) const;
 };
 
 

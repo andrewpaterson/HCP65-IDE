@@ -67,7 +67,7 @@ public:
 	bool				ShowCompareWithRevisionDialog(void);
 	bool				ShowCompareWithFileDialog(void);
 	bool				OpenDiff(const char* szLeftFile, const char* szLeftRevision, const char* szRightFile, const char* szRightRevision);
-	Ptr<CIDEDiffTab>	GetActiveDiff(void);
+	Ptr<CIDEDiffTab>	GetActiveDiff(void) const;
 	void				SetActiveDiff(Ptr<CIDEDiffTab> pDiff);
 	size				NumDiffs(void);
 	Ptr<CIDEDiffTab>	GetDiff(size uiIndex);

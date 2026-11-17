@@ -53,7 +53,7 @@ void CIDEDiffSide::Kill(void)
 }
 
 
-bool CIDEDiffSide::IsWorkingCopy(void) { return mszRevision.Empty(); }
+bool CIDEDiffSide::IsWorkingCopy(void) const { return mszRevision.Empty(); }
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -158,7 +158,7 @@ bool CIDEDiffTab::NeedsRefresh(int64 iNow, int64* piWait)
 
 void CIDEDiffTab::Refreshed(void) { mbRefresh = false; }
 void CIDEDiffTab::SetDockPane(Ptr<CDockPane> pPane) { mpDockPane = pPane; }
-Ptr<CDockPane> CIDEDiffTab::GetDockPane(void) { return mpDockPane; }
-Ptr<CDiffView> CIDEDiffTab::GetView(void) { return mpView; }
+Ptr<CDockPane> CIDEDiffTab::GetDockPane(void) const { return mpDockPane; }
+Ptr<CDiffView> CIDEDiffTab::GetView(void) const { return mpView; }
 CIDEDiffSide* CIDEDiffTab::GetSide(ETextDiffSide eSide) { return (eSide == TDS_Left) ? &mcLeft : &mcRight; }
 

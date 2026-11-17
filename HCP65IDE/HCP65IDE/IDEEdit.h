@@ -79,7 +79,7 @@ public:
 
 	void				AddCommands(Ptr<CCommandSet> pCommands);
 	Ptr<CMenuContainer>	CreateEditMenu(void);
-	Ptr<CMenuContainer>	GetEditMenu(void);
+	Ptr<CMenuContainer>	GetEditMenu(void) const;
 	void				EditorUndoChanged(CTextArea* pcEditor, STextUndoChange* psUndo);
 	void				FileClosed(char* szFileName);
 	void				FileRenamed(char* szOldFileName, char* szNewFileName);

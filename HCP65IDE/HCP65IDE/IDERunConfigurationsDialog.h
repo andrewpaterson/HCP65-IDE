@@ -69,7 +69,7 @@ public:
 	void				Keep(void);
 	bool				Approve(void);
 
-	Ptr<CDialog>		GetDialog(void);
+	Ptr<CDialog>		GetDialog(void) const;
 	CArrayRunConfigurations*	GetEdited(void);
 	char*				GetSelectedName(void);
 

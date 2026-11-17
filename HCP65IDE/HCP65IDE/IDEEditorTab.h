@@ -101,27 +101,27 @@ public:
 
 	void				SetListings(CCPP65ListingIndex* pcListings);
 	bool				ToggleListing(size uiLine);
-	Ptr<CLineZones>		GetZones(void);
+	Ptr<CLineZones>		GetZones(void) const;
 
 	void				SetBaseText(const char* szText, size uiLength, const char* szHead);
 	void				ClearBaseText(void);
-	bool				HasBaseText(void);
+	bool				HasBaseText(void) const;
 	CChars*				GetBaseText(void);
 	char*				GetBaseHead(void);
 	void				SetGitState(EGitFileState eState);
-	EGitFileState		GetGitState(void);
+	EGitFileState		GetGitState(void) const;
 	bool				NeedsChangeBars(void);
 	void				SetChangeBars(CGitLineChanges* pcChanges);
 
-	Ptr<CTextArea>		GetEditor(void);
-	Ptr<CCodeEditor>	GetCodeEditor(void);
-	Ptr<CScrollPane>	GetPane(void);
-	Ptr<CDockPane>		GetDockPane(void);
+	Ptr<CTextArea>		GetEditor(void) const;
+	Ptr<CCodeEditor>	GetCodeEditor(void) const;
+	Ptr<CScrollPane>	GetPane(void) const;
+	Ptr<CDockPane>		GetDockPane(void) const;
 	char*				GetFileName(void);
 	void				SetFileName(const char* szFileName);
 	size				GetProject(void);
 	void				SetProject(size uiProject);
-	bool				IsEdited(void);
+	bool				IsEdited(void) const;
 	void				SeeChanges(int64 iNow);
 
 	bool				SaveFile(void);

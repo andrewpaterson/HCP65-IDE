@@ -886,11 +886,11 @@ void CIDEResultsPane::ReturnToEditor(void)
 }
 
 
-Ptr<CTreeContainer> CIDEResultsPane::GetTree(void) { return mpTree; }
-Ptr<CComponent> CIDEResultsPane::GetComponent(void) { return mpPanel; }
-Ptr<CCommandSet> CIDEResultsPane::GetCommands(void) { return mpCommands; }
-Ptr<CToolbar> CIDEResultsPane::GetToolbar(void) { return mpToolbar; }
-Ptr<CCodePreview> CIDEResultsPane::GetPreview(void) { return mpPreview; }
-Ptr<CSplitContainer> CIDEResultsPane::GetSplit(void) { return mpSplit; }
+Ptr<CTreeContainer> CIDEResultsPane::GetTree(void) const { return mpTree; }
+Ptr<CComponent> CIDEResultsPane::GetComponent(void) const { return mpPanel; }
+Ptr<CCommandSet> CIDEResultsPane::GetCommands(void) const { return mpCommands; }
+Ptr<CToolbar> CIDEResultsPane::GetToolbar(void) const { return mpToolbar; }
+Ptr<CCodePreview> CIDEResultsPane::GetPreview(void) const { return mpPreview; }
+Ptr<CSplitContainer> CIDEResultsPane::GetSplit(void) const { return mpSplit; }
 bool CIDEResultsPane::IsPreviewShown(void) { return mpSplit->IsSecondShown(); }
 

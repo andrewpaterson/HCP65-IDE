@@ -71,7 +71,7 @@ public:
 	Ptr<CTextArea>	GetEditor(const char* szFileName);
 	char*			GetText(const char* szFileName);
 	CIDETextEdits*	GetEdits(const char* szFileName);
-	size			NumFiles(void);
+	size			NumFiles(void) const;
 	size			CountErrors(bool bEdited);
 	void			Apply(void);
 	bool			NoteOnce(const char* szNote);

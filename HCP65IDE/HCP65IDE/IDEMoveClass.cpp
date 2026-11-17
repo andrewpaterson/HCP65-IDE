@@ -1725,7 +1725,7 @@ void SIDEFunctionMove::Init(void)
 // specialisations (each after what it specialises).
 //
 //////////////////////////////////////////////////////////////////////////
-size SIDEFunctionMove::NumPieces(void)
+size SIDEFunctionMove::NumPieces(void) const
 {
 	return asDeclarations.NumElements() + (bDefinition ? 1 : 0) + asSpecialisations.NumElements();
 }

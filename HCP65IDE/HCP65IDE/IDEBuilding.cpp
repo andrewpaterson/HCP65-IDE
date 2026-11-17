@@ -453,10 +453,10 @@ CCPP65ListingIndex* CIDEBuilding::GetListings(void) { return &mcListings; }  //T
 //////////////////////////////////////////////////////////////////////////
 
 
-Ptr<CIDEBuildPane> CIDEBuilding::GetBuildPane(void) { return mpBuildPane; }
+Ptr<CIDEBuildPane> CIDEBuilding::GetBuildPane(void) const { return mpBuildPane; }
 
 
-Ptr<CDockPane> CIDEBuilding::GetBuildTool(void) { return mpBuildTool; }
+Ptr<CDockPane> CIDEBuilding::GetBuildTool(void) const { return mpBuildTool; }
 
 
 //////////////////////////////////////////////////////////////////////////

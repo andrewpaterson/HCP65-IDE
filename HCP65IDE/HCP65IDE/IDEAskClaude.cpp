@@ -518,8 +518,8 @@ void CIDEAskClaude::ShowClaudeTab(void)
 
 
 CClaudeCommand* CIDEAskClaude::GetClaude(void) { return &mcClaude; }
-Ptr<CIDEClaudePane> CIDEAskClaude::GetClaudePane(void) { return mpClaudePane; }
-Ptr<CDockPane> CIDEAskClaude::GetTool(void) { return mpClaudeTool; }
+Ptr<CIDEClaudePane> CIDEAskClaude::GetClaudePane(void) const { return mpClaudePane; }
+Ptr<CDockPane> CIDEAskClaude::GetTool(void) const { return mpClaudeTool; }
 
 
 //////////////////////////////////////////////////////////////////////////

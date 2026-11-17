@@ -114,7 +114,7 @@ public:
 	bool				Show(void);
 	bool				FindContext(SIDECaretContext* psDest);
 	size				FindActions(SIDECaretContext* psDest);
-	Ptr<CMenuContainer>	GetPopup(void);
+	Ptr<CMenuContainer>	GetPopup(void) const;
 
 protected:
 	void	ShowQueued(void);

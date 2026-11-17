@@ -116,7 +116,7 @@ void CIDENewFile::Free(void)
 //////////////////////////////////////////////////////////////////////////
 bool CIDENewFile::Save(CObjectWriter* pcFile) { return false; }
 bool CIDENewFile::Load(CObjectReader* pcFile) { return false; }
-Ptr<CMenuContainer> CIDENewFile::GetFileMenu(void) { return mpFileMenu; }
+Ptr<CMenuContainer> CIDENewFile::GetFileMenu(void) const { return mpFileMenu; }
 
 
 //////////////////////////////////////////////////////////////////////////
