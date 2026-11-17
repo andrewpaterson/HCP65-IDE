@@ -1582,3 +1582,107 @@ Other (35):
   CIDEUsages::IsPinned  C2664: 'void CIDEUsages::AddPaneCommand(Ptr<CIDEResultsPane>,const char *,const char *,EIDEToolIcon,void (__cdecl CIDEUsages::* )(void),bool (__cdecl CIDEUsages::* )(void))': cannot convert argument 6 from 'bool (__cdecl CIDEUsages::* )(void) const' to 'bool (__cdecl CIDEUsages::* )(void)' (ideusages.cpp:1155)
   CIDEUsages::IsShowRead  C2664: 'void CIDEUsages::AddPaneCommand(Ptr<CIDEResultsPane>,const char *,const char *,EIDEToolIcon,void (__cdecl CIDEUsages::* )(void),bool (__cdecl CIDEUsages::* )(void))': cannot convert argument 6 from 'bool (__cdecl CIDEUsages::* )(void) const' to 'bool (__cdecl CIDEUsages::* )(void)' (ideusages.cpp:1152)
   CIDEUsages::IsShowWrite  C2664: 'void CIDEUsages::AddPaneCommand(Ptr<CIDEResultsPane>,const char *,const char *,EIDEToolIcon,void (__cdecl CIDEUsages::* )(void),bool (__cdecl CIDEUsages::* )(void))': cannot convert argument 6 from 'bool (__cdecl CIDEUsages::* )(void) const' to 'bool (__cdecl CIDEUsages::* )(void)' (ideusages.cpp:1153)
+
+Assembler65Lib: 45 made const, 23 couldn't be
+---------------------------------------------
+
+Hands out a writable pointer into its object (16):
+  CAsm65BaseAssembler::GetOutput  C2440: 'return': cannot convert from 'const CAsm65Output *' to 'CAsm65Output *' (asm65baseassembler.cpp:1778)
+  CAsm65C64Lockstep::GetDifferences  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (asm65c64lockstep.cpp:155)
+  CAsm65Executable::GetEntry  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (asm65executable.cpp:262)
+  CAsm65Executable::GetFile  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (asm65executable.cpp:261)
+  CAsm65Image::GetFile  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (asm65image.cpp:297)
+  CAsm65IncludeSource::GetFile  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (asm65source.cpp:274)
+  CAsm65Library::GetName  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (asm65library.cpp:65)
+  CAsm65Linker::GetLazyImage  C2440: 'return': cannot convert from 'const CArrayUint8 *' to 'CArrayUint8 *' (asm65linkerlazy.cpp:169)
+  CAsm65Linker::GetLineTable  C2440: 'return': cannot convert from 'const CAsm65LineTable *' to 'CAsm65LineTable *' (asm65linker.cpp:1945)
+  CAsm65Linker::GetMap  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (asm65linker.cpp:1955)
+  CAsm65Linker::GetOutput  C2440: 'return': cannot convert from 'const CAsm65Output *' to 'CAsm65Output *' (asm65linker.cpp:1933)
+  CAsm65Module::GetEntry  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (asm65module.cpp:268)
+  CAsm65Module::GetFile  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (asm65module.cpp:267)
+  CAsm65Object::GetName  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (asm65object.cpp:182)
+  CAsmW65C816FrameCheck::GetWrites  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (asmw65c816framecheck.cpp:257)
+  CAsmW65C816Lockstep::GetDifferences  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (asmw65c816lockstep.cpp:174)
+
+Calls something of its object's that isn't const (7):
+  CAsm65BaseAssembler::GetErrors  C2662: 'char *CAsm65Errors::Text(void)': cannot convert 'this' pointer from 'const CAsm65Errors' to 'CAsm65Errors &' (asm65baseassembler.cpp:1788)
+  CAsm65BaseAssembler::GetMinimumLength  C2662: 'M CArrayTemplatePrimitiveBase<M,CArrayTemplate<M>>::GetValue(unsigned __int64)': cannot convert 'this' pointer from 'const CArrayUint8' to 'CArrayTemplatePrimitiveBase<M,CArrayTemplate<M>> &' (asm65baseassembler.cpp:1547)
+  CAsm65BaseAssembler::GetWarnings  C2662: 'char *CAsm65Errors::Text(void)': cannot convert 'this' pointer from 'const CAsm65Errors' to 'CAsm65Errors &' (asm65baseassembler.cpp:1808)
+  CAsm65C64Assembler::GetWidth  C2662: 'bool CAsm65C64Assembler::Register(E65Register *,const char *)': cannot convert 'this' pointer from 'const CAsm65C64Assembler' to 'CAsm65C64Assembler &' (asm65c64instructions.cpp:1673)
+  CAsm65Linker::GetErrors  C2662: 'char *CAsm65Errors::Text(void)': cannot convert 'this' pointer from 'const CAsm65Errors' to 'CAsm65Errors &' (asm65linker.cpp:1965)
+  CAsm65Output::NumBytes  C2662: 'M *CArrayTemplateBase<M,CArrayBlock>::Get(unsigned __int64)': cannot convert 'this' pointer from 'const CArrayAsm65Segments' to 'CArrayTemplateBase<M,CArrayBlock> &' (asm65output.cpp:113)
+  CAsm65Symbols::NumSymbols  C2662: 'size CMapBlock::NumElements(void)': cannot convert 'this' pointer from 'const CMapStringTemplate<SAsm65Symbol>' to 'CMapBlock &' (asm65symbols.cpp:118)
+
+DeviceRomLib: 5 made const, 4 couldn't be
+-----------------------------------------
+
+Hands out a writable pointer into its object (4):
+  CDeviceROM::GetROM  C2440: 'return': cannot convert from 'const uint8 [1024]' to 'uint8 *' (devicerom.cpp:148)
+  CDeviceROMSchematic::GetDriver  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (deviceromschematic.cpp:714)
+  CDeviceROMSchematic::GetManufacturer  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (deviceromschematic.cpp:713)
+  CDeviceROMSchematic::GetName  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (deviceromschematic.cpp:712)
+
+HCP65Lib: 76 made const, 19 couldn't be
+---------------------------------------
+
+Hands out a writable pointer into its object (6):
+  CHCP65::GetDebugPort  C2440: 'return': cannot convert from 'const CHCP65DebugPort *' to 'CHCP65DebugPort *' (hcp65.cpp:1127)
+  CHCP65::GetMPU  C2440: 'return': cannot convert from 'const CFastW65C816 *' to 'CFastW65C816 *' (hcp65.cpp:1107)
+  CHCP65::GetMemoryChannel  C2440: 'return': cannot convert from 'const CHCP65MemoryChannel *' to 'CHCP65MemoryChannel *' (hcp65.cpp:1148)
+  CHCP65::GetRegisters  C2440: 'return': cannot convert from 'const CHCP65Registers *' to 'CHCP65Registers *' (hcp65.cpp:1117)
+  CHCP65UARTBoard::GetRS232  C2440: 'return': cannot convert from 'const CHCP65UART *' to 'CHCP65UART *' (hcp65uart.cpp:876)
+  CHCP65UARTBoard::GetTTL  C2440: 'return': cannot convert from 'const CHCP65UART *' to 'CHCP65UART *' (hcp65uart.cpp:875)
+
+Calls something of its object's that isn't const (13):
+  CHCP65Audio::NumDroppedFrames  C2662: 'void CMutex::Lock(void)': cannot convert 'this' pointer from 'const CMutex' to 'CMutex &' (hcp65audio.cpp:472)
+  CHCP65Audio::NumFrames  C2662: 'void CMutex::Lock(void)': cannot convert 'this' pointer from 'const CMutex' to 'CMutex &' (hcp65audio.cpp:457)
+  CHCP65UART::IsInterrupting  C2662: 'uint8 CHCP65UART::Identify(void)': cannot convert 'this' pointer from 'const CHCP65UART' to 'CHCP65UART &' (hcp65uart.cpp:641)
+  CHCP65UART::IsRTSOn  C2662: 'uint8 CHCP65UART::TriggerLevel(void)': cannot convert 'this' pointer from 'const CHCP65UART' to 'CHCP65UART &' (hcp65uart.cpp:717)
+  CHCP65UART::IsTimedOut  C2662: 'uint64 CHCP65UART::TimeoutTick(void)': cannot convert 'this' pointer from 'const CHCP65UART' to 'CHCP65UART &' (hcp65uart.cpp:392)
+  CHCP65VIA::GetCA2  C2662: 'uint8 CHCP65VIA::CA2Mode(void)': cannot convert 'this' pointer from 'const CHCP65VIA' to 'CHCP65VIA &' (hcp65via.cpp:648)
+  CHCP65VIA::GetCB1  C2662: 'bool CHCP65VIA::IsCB1Output(void)': cannot convert 'this' pointer from 'const CHCP65VIA' to 'CHCP65VIA &' (hcp65via.cpp:670)
+  CHCP65VIA::GetCB2  C2662: 'uint8 CHCP65VIA::SRMode(void)': cannot convert 'this' pointer from 'const CHCP65VIA' to 'CHCP65VIA &' (hcp65via.cpp:680)
+  CHCP65VIA::GetT1Counter  C2662: 'uint16 CHCP65VIA::T1Value(uint64)': cannot convert 'this' pointer from 'const CHCP65VIA' to 'CHCP65VIA &' (hcp65via.cpp:708)
+  CHCP65VIA::GetT2Counter  C2662: 'uint16 CHCP65VIA::T2Value(uint64)': cannot convert 'this' pointer from 'const CHCP65VIA' to 'CHCP65VIA &' (hcp65via.cpp:709)
+  CHCP65VIA::IsCB1Output  C2662: 'uint8 CHCP65VIA::SRMode(void)': cannot convert 'this' pointer from 'const CHCP65VIA' to 'CHCP65VIA &' (hcp65via.cpp:823)
+  CHCP65VIA::IsCB2Output  C2662: 'uint8 CHCP65VIA::SRMode(void)': cannot convert 'this' pointer from 'const CHCP65VIA' to 'CHCP65VIA &' (hcp65via.cpp:834)
+  CHCP65VideoBoard::GetPixelAddress  C2662: 'uint32 CHCP65VideoBoard::RowStart(uint16)': cannot convert 'this' pointer from 'const CHCP65VideoBoard' to 'CHCP65VideoBoard &' (hcp65video.cpp:809)
+
+HCP65Emulator: 3 made const, 1 couldn't be
+------------------------------------------
+
+Calls something of its object's that isn't const (1):
+  CHCP65EmulatorRunner::IsFinished  C2662: 'void CMutex::Lock(void)': cannot convert 'this' pointer from 'const CMutex' to 'CMutex &' (hcp65emulatorrunner.cpp:151)
+
+TestHCP65Lib: 7 made const, 5 couldn't be
+-----------------------------------------
+
+Hands out a writable pointer into its object (4):
+  CHCP65DriverBuilder::GetErrors  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (hcp65driverbuilder.cpp:59)
+  CHCP65ExeBuilder::GetErrors  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (hcp65exebuilder.cpp:127)
+  CHCP65KernalBuilder::GetBuilder  C2440: 'return': cannot convert from 'const CCPP65Builder *' to 'CCPP65Builder *' (hcp65kernalbuilder.cpp:227)
+  CHCP65KernalBuilder::GetErrors  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (hcp65kernalbuilder.cpp:217)
+
+Calls something of its object's that isn't const (1):
+  CHCP65DriverBuilder::GetLinker  C2662: 'CAsm65Linker *CCPP65Builder::GetLinker(void)': cannot convert 'this' pointer from 'const CCPP65Builder' to 'CCPP65Builder &' (hcp65driverbuilder.cpp:58)
+
+HCP65Tester: 1 made const, 4 couldn't be
+----------------------------------------
+
+Calls something of its object's that isn't const (4):
+  CBoardPins::Is5VStyleB  C2662: 'D *CMapPrimitiveTemplate<int,D>::Get(M)': cannot convert 'this' pointer from 'const CMapIntInt' to 'CMapPrimitiveTemplate<int,D> &' (boardpins.cpp:764)
+  CBoardPins::Is5VStyleC  C2662: 'D *CMapPrimitiveTemplate<int,D>::Get(M)': cannot convert 'this' pointer from 'const CMapIntInt' to 'CMapPrimitiveTemplate<int,D> &' (boardpins.cpp:717)
+  CBoardPins::IsGroundStyleC  C2662: 'D *CMapPrimitiveTemplate<int,D>::Get(M)': cannot convert 'this' pointer from 'const CMapIntInt' to 'CMapPrimitiveTemplate<int,D> &' (boardpins.cpp:674)
+  CBoardPins::IsGroundStyleD  C2662: 'D *CMapPrimitiveTemplate<int,D>::Get(M)': cannot convert 'this' pointer from 'const CMapIntInt' to 'CMapPrimitiveTemplate<int,D> &' (boardpins.cpp:614)
+
+Kernal: 6 made const, 1 couldn't be
+-----------------------------------
+
+Other (1):
+  CKernalDriver::IsOpen  HCP65 compiler: No function matches the arguments (short): it takes (unsigned char) [IsOpenByOther] (kernaldriver.cpp:151)
+
+Drivers: 2 made const, 1 couldn't be
+------------------------------------
+
+Other (1):
+  CKernalUARTPort::IsSent  HCP65 compiler: it calls ReadLineStatus, which isn't const (uartboard.cpp:447)
