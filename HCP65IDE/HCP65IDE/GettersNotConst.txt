@@ -1686,3 +1686,121 @@ Drivers: 2 made const, 1 couldn't be
 
 Other (1):
   CKernalUARTPort::IsSent  HCP65 compiler: it calls ReadLineStatus, which isn't const (uartboard.cpp:447)
+
+LogicimLib: 129 made const, 39 couldn't be
+------------------------------------------
+
+Hands out a writable pointer into its object (22):
+  CCircuitEditor::GetSelection  C2440: 'return': cannot convert from 'const CCircuitSelection *' to 'CCircuitSelection *' (circuiteditor.cpp:459)
+  CCircuitEditor::GetTabs  C2440: 'return': cannot convert from 'const CArrayCircuitPlace *' to 'CArrayCircuitPlace *' (circuiteditorproject.cpp:199)
+  CCircuitEditor::GetUndoStack  C2440: 'return': cannot convert from 'const CUndoStack *' to 'CUndoStack *' (circuiteditor.cpp:458)
+  CCircuitSelection::GetComponents  C2440: 'return': cannot convert from 'const CArrayComponentViewPtr *' to 'CArrayComponentViewPtr *' (circuitselection.cpp:254)
+  CCircuitSelection::GetTraces  C2440: 'return': cannot convert from 'const CArrayTraceViewPtr *' to 'CArrayTraceViewPtr *' (circuitselection.cpp:257)
+  CCircuitTextLine::GetText  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (circuitfonts.cpp:311)
+  CCircuitView::GetPlaceKeys  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (circuitview.cpp:814)
+  CCircuitView::GetTypeName  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (circuitview.cpp:688)
+  CCircuitViews::GetViewPaths  C2440: 'return': cannot convert from 'const CViewPaths *' to 'CViewPaths *' (circuitviews.cpp:118)
+  CComponentView::GetName  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (componentview.cpp:676)
+  CComponentView::GetShapes  C2440: 'return': cannot convert from 'const CComponentShapes *' to 'CComponentShapes *' (componentview.cpp:686)
+  CIntegratedCircuitView::GetFamily  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (integratedcircuitview.cpp:518)
+  CLogic74PackageView::GetPartType  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (logic74view.cpp:505)
+  CLogic74UnitView::GetPartType  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (logic74view.cpp:836)
+  CLogicBlockView::GetParams  C2440: 'return': cannot convert from 'const SLogicBlockParams *' to 'SLogicBlockParams *' (logicblockview.cpp:756)
+  CPortView::GetClockNotch  C2440: 'return': cannot convert from 'const SFloat64Vec2 [3]' to 'SFloat64Vec2 *' (portview.cpp:366)
+  CPortView::GetText  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (portview.cpp:367)
+  CSplitterView::GetStartPortView  C2663: 'CComponentView::GetPortView': 2 overloads have no legal conversion for 'this' pointer (splitterview.cpp:615)
+  CSubcircuitInstanceView::GetComment  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (subcircuitinstanceview.cpp:1284)
+  CSubcircuitInstanceView::GetLayout  C2440: 'return': cannot convert from 'const SSubcircuitInstanceLayout *' to 'SSubcircuitInstanceLayout *' (subcircuitinstanceview.cpp:1285)
+  CSubcircuitInstanceView::GetTypeName  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (subcircuitinstanceview.cpp:1283)
+  CViewPath::GetTop  C2440: '=': cannot convert from 'const CViewPath *' to 'CViewPath *' (viewpath.cpp:319)
+
+Calls something of its object's that isn't const (12):
+  CCircuitEditor::GetPropertiesComponent  C2662: 'CComponentView *CCircuitSelection::GetSingleComponent(void)': cannot convert 'this' pointer from 'const CCircuitSelection' to 'CCircuitSelection &' (circuiteditorchanges.cpp:391)
+  CCircuitSelection::GetSingleComponent  C2662: 'M *CArrayTemplatePtr<M>::GetPtr(size)': cannot convert 'this' pointer from 'const CArrayComponentViewPtr' to 'CArrayTemplatePtr<CComponentView> &' (circuitselection.cpp:270)
+  CCircuitTextLine::GetOverlineTop  C2662: 'size CCircuitTextLine::FindDecorated(uint8,size,size *)': cannot convert 'this' pointer from 'const CCircuitTextLine' to 'CCircuitTextLine &' (circuitfonts.cpp:477)
+  CCircuitViewport::GetDefaultLineWidth  C2662: 'float64 CCircuitViewport::GetLineWidth(float64)': cannot convert 'this' pointer from 'const CCircuitViewport' to 'CCircuitViewport &' (circuitviewport.cpp:252)
+  CComponentSpriteCache::NumPages  C2662: 'size CArrayCommonObject::NumElements(void)': cannot convert 'this' pointer from 'const CArray<CComponentSpritePage>' to 'CArrayCommonObject &' (componentspritecache.cpp:675)
+  CComponentSpriteCache::NumSprites  C2662: 'size CMapBlock::NumElements(void)': cannot convert 'this' pointer from 'const CMapBlock' to 'CMapBlock &' (componentspritecache.cpp:674)
+  CComponentSpritePage::NumCels  C2662: 'size CArrayCommonObject::NumElements(void)': cannot convert 'this' pointer from 'const CArray<CImageCel>' to 'CArrayCommonObject &' (componentspritecache.cpp:197)
+  CSplitterView::GetBarPosition  C2662: 'SFloat64Vec2 CSplitterView::GetFanPosition(int32,float64)': cannot convert 'this' pointer from 'const CSplitterView' to 'CSplitterView &' (splitterview.cpp:379)
+  CTraceAutoConnector::NumUnconnected  C2662: 'M *CArrayTemplateBase<M,CArrayBlock>::Get(unsigned __int64)': cannot convert 'this' pointer from 'const CArrayTraceAutoConnection' to 'CArrayTemplateBase<M,CArrayBlock> &' (traceautoconnector.cpp:2041)
+  CViewPath::GetCircuitView  C2662: 'CCircuitInstanceView *CViewPath::GetLast(void)': cannot convert 'this' pointer from 'const CViewPath' to 'CViewPath &' (viewpath.cpp:257)
+  CViewPath::GetFirst  C2662: 'M *CArrayTemplatePtr<M>::SafeGetPtr(size)': cannot convert 'this' pointer from 'const CArrayCircuitInstanceViewPtr' to 'CArrayTemplatePtr<CCircuitInstanceView> &' (viewpath.cpp:230)
+  CViewPath::GetLast  C2662: 'M *CArrayTemplatePtr<M>::GetPtr(size)': cannot convert 'this' pointer from 'const CArrayCircuitInstanceViewPtr' to 'CArrayTemplatePtr<CCircuitInstanceView> &' (viewpath.cpp:244)
+
+Takes the address of a Ptr<> member (its operator& isn't const: no error, a wrong pointer) (2):
+  CCircuitEditor::GetFonts  Takes &mpFonts, a Ptr<> or CPointer member: their operator& isn't const, so in a const function it would give the pointer's own address, without an error (circuiteditor.cpp:457)
+  CCircuitEditor::GetSimulation  Takes &mpSimulation, a Ptr<> or CPointer member: their operator& isn't const, so in a const function it would give the pointer's own address, without an error (circuiteditor.cpp:456)
+
+Other (3):
+  CCircuitGrid::GetTileHeight  C2678: binary '->': no operator found which takes a left-hand operand of type 'const Ptr<CImage>' (or there is no acceptable conversion) (circuitgrid.cpp:372)
+  CCircuitGrid::GetTileWidth  C2678: binary '->': no operator found which takes a left-hand operand of type 'const Ptr<CImage>' (or there is no acceptable conversion) (circuitgrid.cpp:371)
+  CComponentSpritePage::GetBytes  C2678: binary '->': no operator found which takes a left-hand operand of type 'const Ptr<CImage>' (or there is no acceptable conversion) (componentspritecache.cpp:198)
+
+KicadImporterLib: 15 made const, 6 couldn't be
+----------------------------------------------
+
+Hands out a writable pointer into its object (5):
+  CKicadSchemBoard::GetCounts  C2440: 'return': cannot convert from 'const SKicadSchemLogicimCounts *' to 'SKicadSchemLogicimCounts *' (kicadschemboards.cpp:198)
+  CKicadSchemBoard::GetSchematic  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (kicadschemboards.cpp:194)
+  CKicadSchemBoardConnector::GetReference  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (kicadschemboards.cpp:88)
+  CKicadSchemLogicimConverter::GetCounts  C2440: 'return': cannot convert from 'const SKicadSchemLogicimCounts *' to 'SKicadSchemLogicimCounts *' (kicadschemlogicimconverter.cpp:405)
+  CKicadSchemLogicimConverter::GetModel  C2440: 'return': cannot convert from 'const CKicadSchemLogicimModel *' to 'CKicadSchemLogicimModel *' (kicadschemlogicimconverter.cpp:406)
+
+Calls something of its object's that isn't const (1):
+  CKicadSchemBoardConnector::NumCircuitPins  C2662: 'size CMapBlock::NumElements(void)': cannot convert 'this' pointer from 'const CMapStringTemplate<CPinView *>' to 'CMapBlock &' (kicadschemboards.cpp:90)
+
+LogiCim: 12 made const, 20 couldn't be
+--------------------------------------
+
+Hands out a writable pointer into its object (8):
+  CCircuitCanvasDraw::GetOwnPlace  C2440: 'return': cannot convert from 'const SCircuitPlace *' to 'SCircuitPlace *' (circuitcanvasdraw.cpp:278)
+  CCircuitCanvasDraw::GetViewport  C2440: 'return': cannot convert from 'const CCircuitViewport *' to 'CCircuitViewport *' (circuitcanvasdraw.cpp:206)
+  CLogicimCircuit::GetColours  C2440: 'return': cannot convert from 'const CCircuitColours *' to 'CCircuitColours *' (logicimcircuit.cpp:319)
+  CLogicimSettings::GetKicadImport  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (logicimsettings.cpp:185)
+  CLogicimSettings::GetProjectLoad  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (logicimsettings.cpp:186)
+  CLogicimSettings::GetRecent  C2440: 'return': cannot convert from 'const CRecentFiles *' to 'CRecentFiles *' (logicimsettings.cpp:265)
+  CLogicimWindowContent::GetHistory  C2440: 'return': cannot convert from 'const CLogicimNavigationHistory *' to 'CLogicimNavigationHistory *' (logicimwindowcontentnavigation.cpp:167)
+  CLogicimWindowContent::GetSettings  C2440: 'return': cannot convert from 'const CLogicimSettings *' to 'CLogicimSettings *' (logicimwindowcontent.cpp:979)
+
+Calls something of its object's that isn't const (3):
+  CLogicimCircuit::GetFilename  C2662: 'SLogicimProjectStart *CLogicimCircuit::GetProject(void)': cannot convert 'this' pointer from 'const CLogicimCircuit' to 'CLogicimCircuit &' (logicimcircuit.cpp:472)
+  CLogicimCircuit::IsModified  C2662: 'SLogicimProjectStart *CLogicimCircuit::GetProject(void)': cannot convert 'this' pointer from 'const CLogicimCircuit' to 'CLogicimCircuit &' (logicimcircuit.cpp:488)
+  CLogicimWindowContent::NumTabs  C2662: 'size CArrayCommonObject::NumElements(void)': cannot convert 'this' pointer from 'const CArray<CDockPane>' to 'CArrayCommonObject &' (logicimwindowcontenttabs.cpp:570)
+
+Takes the address of a Ptr<> member (its operator& isn't const: no error, a wrong pointer) (2):
+  CLogicimCircuit::GetEditor  Takes &mpEditor, a Ptr<> or CPointer member: their operator& isn't const, so in a const function it would give the pointer's own address, without an error (logicimcircuit.cpp:318)
+  CLogicimWindowContent::GetLogicimCircuit  Takes &mpLogicimCircuit, a Ptr<> or CPointer member: their operator& isn't const, so in a const function it would give the pointer's own address, without an error (logicimwindowcontent.cpp:981)
+
+Other (7):
+  CLogicimCircuit::GetChangeId  C2678: binary '->': no operator found which takes a left-hand operand of type 'const Ptr<CCircuitEditor>' (or there is no acceptable conversion) (logicimcircuit.cpp:388)
+  CLogicimCircuit::GetFonts  C2678: binary '->': no operator found which takes a left-hand operand of type 'const Ptr<CCircuitEditor>' (or there is no acceptable conversion) (logicimcircuit.cpp:320)
+  CLogicimCircuit::GetProject  C2678: binary '->': no operator found which takes a left-hand operand of type 'const Ptr<CCircuitEditor>' (or there is no acceptable conversion) (logicimcircuit.cpp:344)
+  CLogicimCircuit::GetTime  C2678: binary '->': no operator found which takes a left-hand operand of type 'const Ptr<CCircuitEditor>' (or there is no acceptable conversion) (logicimcircuit.cpp:491)
+  CLogicimWindowContent::GetEditedCircuitName  C2678: binary '->': no operator found which takes a left-hand operand of type 'const Ptr<CLogicimCircuit>' (or there is no acceptable conversion) (logicimwindowcontenttrees.cpp:142)
+  CLogicimWindowContent::GetMessage  C2678: binary '->': no operator found which takes a left-hand operand of type 'const Ptr<CLabel>' (or there is no acceptable conversion) (logicimwindowcontentnavigation.cpp:386)
+  CLogicimWindowContent::GetZoom  C2678: binary '->': no operator found which takes a left-hand operand of type 'const Ptr<CCircuitCanvas>' (or there is no acceptable conversion) (logicimwindowcontent.cpp:984)
+
+SculptLib: 17 made const, 13 couldn't be
+----------------------------------------
+
+Hands out a writable pointer into its object (2):
+  CSculptNodes::GetChangeEvent  C2440: 'return': cannot convert from 'const CComponentEvent<CSculptNodes> *' to 'CComponentEvent<CSculptNodes> *' (sculptnodes.cpp:103)
+  CSculptPanel::GetChangeEvent  C2440: 'return': cannot convert from 'const CComponentEvent<CSculptPanel> *' to 'CComponentEvent<CSculptPanel> *' (sculptpanel.cpp:166)
+
+Calls something of its object's that isn't const (3):
+  CSculptGraph::GetOutput  C2662: 'Ptr<M> CArray<M>::Get(size)': cannot convert 'this' pointer from 'const CArray<CSculptNode>' to 'CArray<CSculptNode> &' (sculptgraph.cpp:192)
+  CSculptGraph::NumNodes  C2662: 'size CArrayCommonObject::NumElements(void)': cannot convert 'this' pointer from 'const CArray<CSculptNode>' to 'CArrayCommonObject &' (sculptgraph.cpp:190)
+  CSculptNodes::NumFields  C2662: 'size CArrayCommonObject::NumElements(void)': cannot convert 'this' pointer from 'const CArray<CSculptField>' to 'CArrayCommonObject &' (sculptnodes.cpp:105)
+
+Takes the address of a Ptr<> member (its operator& isn't const: no error, a wrong pointer) (2):
+  CSculptField::Get  Takes &mpTexture, a Ptr<> or CPointer member: their operator& isn't const, so in a const function it would give the pointer's own address, without an error (sculptfield.cpp:107)
+  CSculptValue::GetFlat  Takes &mpNode, a Ptr<> or CPointer member: their operator& isn't const, so in a const function it would give the pointer's own address, without an error (sculptvalue.cpp:91)
+
+Other (6):
+  CSculptPage::GetShape  C2678: binary '->': no operator found which takes a left-hand operand of type 'const Ptr<CSculptPanel>' (or there is no acceptable conversion) (sculptpage.cpp:231)
+  CSculptPage::GetShown  C2678: binary '->': no operator found which takes a left-hand operand of type 'const Ptr<CSculptNodes>' (or there is no acceptable conversion) (sculptpage.cpp:274)
+  CSculptPanel::GetRelief  C2678: binary '->': no operator found which takes a left-hand operand of type 'const Ptr<CNumberField>' (or there is no acceptable conversion) (sculptpanel.cpp:165)
+  CSculptPanel::GetSamples  C2678: binary '->': no operator found which takes a left-hand operand of type 'const Ptr<CNumberField>' (or there is no acceptable conversion) (sculptpanel.cpp:164)
+  CSculptPanel::GetShape  C2678: binary '->': no operator found which takes a left-hand operand of type 'const Ptr<CComboBox>' (or there is no acceptable conversion) (sculptpanel.cpp:160)
+  CSculptPanel::GetShow  C2678: binary '->': no operator found which takes a left-hand operand of type 'const Ptr<CComboBox>' (or there is no acceptable conversion) (sculptpanel.cpp:162)
