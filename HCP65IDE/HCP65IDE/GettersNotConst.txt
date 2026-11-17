@@ -745,3 +745,62 @@ Other (106):
   CToolTips::GetText  C2678: binary '->': no operator found which takes a left-hand operand of type 'const Ptr<CLabel>' (or there is no acceptable conversion) (tooltips.cpp:273)
   CWindow::GetColourOrder  C2678: binary '->': no operator found which takes a left-hand operand of type 'const Ptr<CCanvas>' (or there is no acceptable conversion) (window.cpp:1586)
   CWindow::GetContainer  C2678: binary '->': no operator found which takes a left-hand operand of type 'const Ptr<CCanvas>' (or there is no acceptable conversion) (window.cpp:1584)
+
+InputLib: 60 made const, 37 couldn't be
+---------------------------------------
+
+Hands out a writable pointer into its object (32):
+  CInput::GetActions  C2440: 'return': cannot convert from 'const CInputActions *' to 'CInputActions *' (input.cpp:356)
+  CInput::GetDevices  C2440: 'return': cannot convert from 'const Ptr<CInputDevices> *' to 'CInputDevices *' (input.cpp:355)
+  CInput::GetProgramInput  C2440: 'return': cannot convert from 'const CProgramInput *' to 'CProgramInput *' (input.cpp:354)
+  CInputCategory::GetCategoryName  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (inputcategory.cpp:168)
+  CInputChord::GetActionCriteria  C2440: 'return': cannot convert from 'const UInputChordCriteria *' to 'UInputChordCriteria *' (inputchord.cpp:925)
+  CInputChordDesc::GetActionName  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (inputchorddesc.cpp:163)
+  CInputChords::GetEvents  C2440: 'return': cannot convert from 'const CArrayInputChordsEvent *' to 'CArrayInputChordsEvent *' (inputchords.cpp:658)
+  CInputDataFormat::GetCommonName  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (inputdataformat.cpp:227)
+  CInputDevice::GetInputValues  C2440: 'return': cannot convert from 'const CInputDeviceValues *' to 'CInputDeviceValues *' (inputdevice.cpp:389)
+  CInputDeviceDesc::GetFriendlyName  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (inputdevicedesc.cpp:557)
+  CInputDeviceDesc::GetID  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (inputdevicedesc.cpp:556)
+  CInputDeviceDesc::GetUnusedID  C2663: 'CArrayTemplatePtr<CInputDevice>::Get': 2 overloads have no legal conversion for 'this' pointer (inputdevicedesc.cpp:422)
+  CInputDeviceDesc::GetVariableChordDescs  C2440: 'return': cannot convert from 'const CInputChordDescs *' to 'CInputChordDescs *' (inputdevicedesc.cpp:555)
+  CInputDeviceVariableDesc::GetName  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (inputdevicevariabledesc.cpp:161)
+  CInputDeviceVariableValueDesc::GetConditions  C2440: 'return': cannot convert from 'const CArrayInputDeviceVariableValueConditionDesc *' to 'CArrayInputDeviceVariableValueConditionDesc *' (inputdevicevariablevaluedesc.cpp:143)
+  CInputDeviceVariableValueDesc::GetName  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (inputdevicevariablevaluedesc.cpp:125)
+  CInputSouceChannel::GetTest  C2440: 'return': cannot convert from 'const char [8]' to 'char *' (inputsourcechannel.cpp:128)
+  CInputSourceDesc::GetFriendlyName  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (inputsourcedesc.cpp:200)
+  CInputSourceDesc::GetGenerics  C2440: 'return': cannot convert from 'const CArrayInputCategoryGenericPtr *' to 'CArrayInputCategoryGenericPtr *' (inputsourcedesc.cpp:197)
+  CInputSourceEvaluator::GetConfig  C2440: 'return': cannot convert from 'const UInputConfig *' to 'UInputConfig *' (inputsourceevaluator.cpp:279)
+  CInputSourceEvaluator::GetDeviceAny  C2440: 'return': cannot convert from 'const SInputConfigAnyToggleSource *' to 'SInputConfigAnyToggleSource *' (inputsourceevaluator.cpp:284)
+  CInputSourceEvaluator::GetDeviceGeneric  C2440: 'return': cannot convert from 'const SInputConfigGenericSource *' to 'SInputConfigGenericSource *' (inputsourceevaluator.cpp:283)
+  CInputSourceEvaluator::GetDeviceSource  C2440: 'return': cannot convert from 'const SInputConfigSpecificSource *' to 'SInputConfigSpecificSource *' (inputsourceevaluator.cpp:282)
+  CInputVirtualDevice::GetChords  C2440: 'return': cannot convert from 'const CInputChords *' to 'CInputChords *' (inputvirtualdevice.cpp:459)
+  CInputVirtualDevice::GetDefaultDevice  C2663: 'CArrayTemplatePtr<CInputDevice>::Get': 2 overloads have no legal conversion for 'this' pointer (inputvirtualdevice.cpp:447)
+  CInputVirtualDevice::GetName  C2440: 'return': cannot convert from 'const CChars *' to 'CChars *' (inputvirtualdevice.cpp:646)
+  CInputVirtualDeviceDesc::GetChordDescs  C2440: 'return': cannot convert from 'const CInputChordDescs *' to 'CInputChordDescs *' (inputvirtualdevicedesc.cpp:260)
+  CInputVirtualDeviceDesc::GetName  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (inputvirtualdevicedesc.cpp:257)
+  CInputVirtualDeviceSource::GetSource  C2440: 'return': cannot convert from 'const SInputDeviceValueSource *' to 'SInputDeviceValueSource *' (inputvirtualdevicesource.cpp:77)
+  COrderedInputChordCriteria::Size  C2663: 'COrderedInputChordCriteria::Size': 2 overloads have no legal conversion for 'this' pointer (inputchordcriteria.cpp:377)
+  CProgramDeviceDetail::GetFriendlyName  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (programdevicedetail.cpp:148)
+  CProgramDeviceDetail::GetID  C2663: 'CCharsBase<CChars,CArrayChar>::Text': 2 overloads have no legal conversion for 'this' pointer (programdevicedetail.cpp:149)
+
+Calls something of its object's that isn't const (5):
+  CInputChords::IsAnyStillDown  C2662: 'bool CInputChords::IsStillDown(size)': cannot convert 'this' pointer from 'const CInputChords' to 'CInputChords &' (inputchords.cpp:207)
+  CInputChords::NumCarried  C2662: 'M *CArrayTemplateBase<M,CArrayBlock>::Get(unsigned __int64)': cannot convert 'this' pointer from 'const CArrayInputDeviceTimeValue' to 'CArrayTemplateBase<M,CArrayBlock> &' (inputchords.cpp:229)
+  CInputDevices::GetFirstKeyboard  C2662: 'CInputVirtualDevice *CInputDevices::GetFirstVirtualDeviceInCategoryKeyboard(const char *,bool)': cannot convert 'this' pointer from 'const CInputDevices' to 'CInputDevices &' (inputdevices.cpp:798)
+  CInputVirtualDevice::GetInputDevices  C2662: 'bool CSetType<CInputVirtualDeviceSource>::StartIteration(SSetIterator *,M **)': cannot convert 'this' pointer from 'const CSetInputVirtualDeviceSource' to 'CSetType<CInputVirtualDeviceSource> &' (inputvirtualdevice.cpp:349)
+  CKeyboardKeyList::GetCurrent  C2662: 'CChars *CArrayChars::Get(size)': cannot convert 'this' pointer from 'const CArrayChars' to 'CArrayChars &' (keyboardkeylist.cpp:169)
+
+ThreadLib: 19 made const, 8 couldn't be
+---------------------------------------
+
+Hands out a writable pointer into its object (1):
+  CSharedMemoryFile::GetName  C2440: 'return': cannot convert from 'const char [64]' to 'char *' (sharedmemoryfile.cpp:47)
+
+Calls something of its object's that isn't const (7):
+  CSharedMemory::GetName  C2662: 'char *CSharedMemoryFile::GetName(void)': cannot convert 'this' pointer from 'const CSharedMemoryFile' to 'CSharedMemoryFile &' (sharedmemory.cpp:39)
+  CSharedMemoryQueue::GetAllocatedSize  C2662: 'bool CInterProcessMutex::Lock(void)': cannot convert 'this' pointer from 'const CInterProcessMutex' to 'CInterProcessMutex &' (sharedmemoryqueue.cpp:383)
+  CSharedMemoryQueue::GetCacheSize  C2662: 'bool CInterProcessMutex::Lock(void)': cannot convert 'this' pointer from 'const CInterProcessMutex' to 'CInterProcessMutex &' (sharedmemoryqueue.cpp:364)
+  CSharedMemoryQueue::IsEmpty  C2662: 'bool CInterProcessMutex::Lock(void)': cannot convert 'this' pointer from 'const CInterProcessMutex' to 'CInterProcessMutex &' (sharedmemoryqueue.cpp:326)
+  CSharedMemoryQueue::NumElements  C2662: 'bool CInterProcessMutex::Lock(void)': cannot convert 'this' pointer from 'const CInterProcessMutex' to 'CInterProcessMutex &' (sharedmemoryqueue.cpp:345)
+  CSharedMemoryQueue::PeekSize  C2662: 'bool CInterProcessMutex::Lock(void)': cannot convert 'this' pointer from 'const CInterProcessMutex' to 'CInterProcessMutex &' (sharedmemoryqueue.cpp:287)
+  CWorkerThreadPool::NumIdleThreads  C2662: 'void CMutex::Lock(void)': cannot convert 'this' pointer from 'const CMutex' to 'CMutex &' (workerthreadpool.cpp:161)
