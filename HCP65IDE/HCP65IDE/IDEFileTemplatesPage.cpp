@@ -141,10 +141,10 @@ void CIDEFileTemplatesPage::Free(void)
 //////////////////////////////////////////////////////////////////////////
 bool CIDEFileTemplatesPage::Save(CObjectWriter* pcFile) { return false; }
 bool CIDEFileTemplatesPage::Load(CObjectReader* pcFile) { return false; }
-const char* CIDEFileTemplatesPage::GetTitle(void) { return "File and Code Templates"; }
+const char* CIDEFileTemplatesPage::GetTitle(void) const { return "File and Code Templates"; }
 char* CIDEFileTemplatesPage::GetKeepProblem(void) { return mszKeepProblem.Text(); }
-Ptr<CComponent> CIDEFileTemplatesPage::GetBody(void) { return mpBody; }
-Ptr<CComponent> CIDEFileTemplatesPage::GetFirstEditor(void) { return mpList; }
+Ptr<CComponent> CIDEFileTemplatesPage::GetBody(void) const { return mpBody; }
+Ptr<CComponent> CIDEFileTemplatesPage::GetFirstEditor(void) const { return mpList; }
 
 
 //////////////////////////////////////////////////////////////////////////

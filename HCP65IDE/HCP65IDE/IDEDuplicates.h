@@ -214,7 +214,7 @@ public:
 	Ptr<CDockPane>			GetTool(void) const;
 	size					NumPlaces(void) const;
 
-	Ptr<CDockPane>			GetSteppablePane(void) override;
+	Ptr<CDockPane>			GetSteppablePane(void) const override;
 	const char*				GetSteppableName(void) override;
 	bool					HasSteps(void) override;
 	bool					Step(bool bNext, bool bKeepKeys) override;

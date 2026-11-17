@@ -29,7 +29,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 class CIDESteppable
 {
 public:
-	virtual Ptr<CDockPane>	GetSteppablePane(void) =0;
+	virtual Ptr<CDockPane>	GetSteppablePane(void) const =0;
 	virtual const char*		GetSteppableName(void) =0;  //As the status line names it: "Find Usages".
 	virtual bool			HasSteps(void) =0;  //Whether it has anything to step to.
 

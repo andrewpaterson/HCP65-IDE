@@ -1920,7 +1920,7 @@ Ptr<CTreeContainer> CIDEDuplicates::GetTree(void) { return mpPane.IsNotNull() ? 
 Ptr<CIDEResultsPane> CIDEDuplicates::GetResultsPane(void) const { return mpPane; }
 Ptr<CDockPane> CIDEDuplicates::GetTool(void) const { return mpTool; }
 size CIDEDuplicates::NumPlaces(void) const { return masPlaces.NumElements(); }
-Ptr<CDockPane> CIDEDuplicates::GetSteppablePane(void) { return mpTool; }
+Ptr<CDockPane> CIDEDuplicates::GetSteppablePane(void) const { return mpTool; }
 const char* CIDEDuplicates::GetSteppableName(void) { return "Duplicates"; }
 bool CIDEDuplicates::HasSteps(void) { return mbFound && (masPlaces.NumElements() > 0) && mpPane.IsNotNull(); }
 

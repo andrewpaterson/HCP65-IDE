@@ -1013,7 +1013,7 @@ bool CIDEFindInFiles::Step(bool bNext, bool bKeepKeys)
 }
 
 
-Ptr<CDockPane> CIDEFindInFiles::GetSteppablePane(void) { return mpTool; }
+Ptr<CDockPane> CIDEFindInFiles::GetSteppablePane(void) const { return mpTool; }
 const char* CIDEFindInFiles::GetSteppableName(void) { return "Find"; }
 bool CIDEFindInFiles::HasSteps(void) { return mbFound && (masFound.NumElements() > 0) && mpPane.IsNotNull(); }
 

@@ -174,7 +174,7 @@ void CIDEDuplicatesPage::ApplyEdits(const char* szEdits)
 
 bool CIDEDuplicatesPage::Save(CObjectWriter* pcFile) { return false; }
 bool CIDEDuplicatesPage::Load(CObjectReader* pcFile) { return false; }
-const char* CIDEDuplicatesPage::GetTitle(void) { return "Find Duplicates"; }
-Ptr<CComponent> CIDEDuplicatesPage::GetBody(void) { return mpBody; }
-Ptr<CComponent> CIDEDuplicatesPage::GetFirstEditor(void) { return mpStatements; }
+const char* CIDEDuplicatesPage::GetTitle(void) const { return "Find Duplicates"; }
+Ptr<CComponent> CIDEDuplicatesPage::GetBody(void) const { return mpBody; }
+Ptr<CComponent> CIDEDuplicatesPage::GetFirstEditor(void) const { return mpStatements; }
 

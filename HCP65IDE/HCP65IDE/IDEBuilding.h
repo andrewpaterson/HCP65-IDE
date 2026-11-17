@@ -93,7 +93,7 @@ public:
 	void				PollBuild(Ptr<CWindow> pWindow);
 	bool				CanEditConfigurations(void);
 
-	Ptr<CDockPane>		GetSteppablePane(void) override;
+	Ptr<CDockPane>		GetSteppablePane(void) const override;
 	const char*			GetSteppableName(void) override;
 	bool				HasSteps(void) override;
 	bool				Step(bool bNext, bool bKeepKeys) override;

@@ -82,9 +82,9 @@ public:
 	bool			Save(CObjectWriter* pcFile) override;
 	bool			Load(CObjectReader* pcFile) override;
 
-	const char*		GetTitle(void) override;
-	Ptr<CComponent>	GetBody(void) override;
-	Ptr<CComponent>	GetFirstEditor(void) override;
+	const char*		GetTitle(void) const override;
+	Ptr<CComponent>	GetBody(void) const override;
+	Ptr<CComponent>	GetFirstEditor(void) const override;
 	void			Keep(void) override;
 
 	void			ApplyEdits(const char* szEdits);

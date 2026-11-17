@@ -813,7 +813,7 @@ void CIDEBuilding::StopBuild(void)
 // the Build tab, and whether it has a message with a place to go to.
 //
 //////////////////////////////////////////////////////////////////////////
-Ptr<CDockPane> CIDEBuilding::GetSteppablePane(void) { return mpBuildTool; }
+Ptr<CDockPane> CIDEBuilding::GetSteppablePane(void) const { return mpBuildTool; }
 const char* CIDEBuilding::GetSteppableName(void) { return "Build"; }
 
 

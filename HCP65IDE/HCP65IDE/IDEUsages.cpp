@@ -1707,7 +1707,7 @@ void CIDEUsages::RerunResults(CIDEResultsPane* pcPane)
 // pane, and whether it has a usage to go to.
 //
 //////////////////////////////////////////////////////////////////////////
-Ptr<CDockPane> CIDEUsages::GetSteppablePane(void) { return mpUsagesTool; }
+Ptr<CDockPane> CIDEUsages::GetSteppablePane(void) const { return mpUsagesTool; }
 const char* CIDEUsages::GetSteppableName(void) { return "Find Usages"; }
 bool CIDEUsages::HasSteps(void) { return mpSearch->mbFound && (mpSearch->msFound.asUsages.NumElements() > 0) && mpSearch.IsNotNull(); }
 
