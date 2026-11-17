@@ -3,9 +3,10 @@ The IDE's next work, for another session (2026-11-17)
 
 The refactoring plan (Refactorings.txt) is done, and so are its end-of-plan tasks (EndOfPlanTasks.txt) but b, the
 getters const, which gameengine-3c took over from gameengine-d1 on 2026-11-17.  These are what the IDE is missing or
-has left open, in an order to do them in, so another session can take them on.  Each is the user's to start: bring it up with them first, with how you mean to do
-it and the questions below for it, and go on when they say.  The user's rule for the IDE: build the whole feature, as
-IntelliJ IDEA has it, not a cut-down version, and don't order the work by what is cheapest.
+has left open, in an order to do them in, so another session can take them on.  Each is the user's to start: bring
+it up with them first, with how you mean to do it and the questions below for it, and go on when they say.  The
+user's rule for the IDE: build the whole feature, as IntelliJ IDEA has it, not a cut-down version, and don't order
+the work by what is cheapest.
 
 The website documents the IDE (HCP65\Website\docs\ide, MkDocs) and is how the user learns it: each item here ends
 with its pages brought up to date, written from what the code does, and editor.md's "Not there yet" and
