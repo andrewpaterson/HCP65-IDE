@@ -134,6 +134,7 @@ void CBuildPlain::Init(void)
 	mbPreferSize = false;
 	mbNoOverrideWarning = false;
 	mbExceptions = false;
+	mbKeepUnusedObjects = false;
 	mszOutput.Init();
 	mszListings.Init();
 	mszExecutable.Init();
@@ -316,6 +317,10 @@ int CBuildPlain::ParseOption(CArrayChars* paszArguments, size* puiIndex, CChars*
 	if (BuildIsOption(szOption, "exceptions"))
 	{
 		mbExceptions = true;
+	}
+	if (BuildIsOption(szOption, "keep-unused-objects"))
+	{
+		mbKeepUnusedObjects = true;
 		return 1;
 	}
 	if (BuildIsOption(szOption, "o") || BuildIsOption(szOption, "listings") || BuildIsOption(szOption, "exe") || BuildIsOption(szOption, "entry") || BuildIsOption(szOption, "image") ||
@@ -584,6 +589,7 @@ bool CBuildPlain::MakeConfiguration(CBuildConfiguration* pcConfiguration, CChars
 	pcConfiguration->SetPreferSize(mbPreferSize);
 	pcConfiguration->SetWarnMissingOverride(!mbNoOverrideWarning);
 	pcConfiguration->SetExceptions(mbExceptions);
+	pcConfiguration->SetKeepUnusedObjects(mbKeepUnusedObjects);
 	if (!mszExecutable.Empty())
 	{
 		pcExecutable = pcConfiguration->SetExecutable(mszExecutable.Text(), mszEntry.Text(), muiLimit);
@@ -714,6 +720,10 @@ bool CBuildPlain::Describe(CArrayChars* paszArguments, const char* szUnitsDirect
 	if (pcConfiguration->IsExceptions())
 	{
 		paszArguments->Add("-exceptions");
+	}
+	if (pcConfiguration->IsKeepUnusedObjects())
+	{
+		paszArguments->Add("-keep-unused-objects");
 	}
 	for (i = 0; i < pcDescription->mcIncludes.NumIncludes(); i++)
 	{

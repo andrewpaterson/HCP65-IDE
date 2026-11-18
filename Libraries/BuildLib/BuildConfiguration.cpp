@@ -47,6 +47,7 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 #define BUILD_CONFIGURATION_PREFER_SIZE	"PreferSize"
 #define BUILD_CONFIGURATION_WARN_MISSING_OVERRIDE	"WarnMissingOverride"
 #define BUILD_CONFIGURATION_EXCEPTIONS	"Exceptions"
+#define BUILD_CONFIGURATION_KEEP_UNUSED_OBJECTS	"KeepUnusedObjects"
 
 
 //The toolchains' names, as saved, by EBuildToolchain.
@@ -68,6 +69,7 @@ void CBuildConfiguration::Init(const char* szName, EBuildToolchain eToolchain, c
 	mbPreferSize = false;
 	mbWarnMissingOverride = true;
 	mbExceptions = false;
+	mbKeepUnusedObjects = false;
 	meProgram = BP_None;
 	mcImage.Init();
 	mcExecutable.Init();
@@ -153,6 +155,10 @@ void CBuildConfiguration::SaveXML(CXMLWriter* pcWriter)
 	{
 		pcWriter->Attribute(BUILD_CONFIGURATION_EXCEPTIONS, "true");
 	}
+	if (mbKeepUnusedObjects)
+	{
+		pcWriter->Attribute(BUILD_CONFIGURATION_KEEP_UNUSED_OBJECTS, "true");
+	}
 	if (HasCard())
 	{
 		pcWriter->Attribute(BUILD_CONFIGURATION_CARD, mszCard.Text());
@@ -214,6 +220,7 @@ bool CBuildConfiguration::LoadXML(CMarkupTag* pcTag)
 	char*			szPreferSize;
 	char*			szWarnMissingOverride;
 	char*			szExceptions;
+	char*			szKeepUnusedObjects;
 	EBuildToolchain	eToolchain;
 	CMarkupTag*		pcImage;
 	CMarkupTag*		pcExecutable;
@@ -249,6 +256,8 @@ bool CBuildConfiguration::LoadXML(CMarkupTag* pcTag)
 	SetWarnMissingOverride((szWarnMissingOverride == NULL) || (strcmp(szWarnMissingOverride, "false") != 0));
 	szExceptions = pcTag->GetAttribute((char*)BUILD_CONFIGURATION_EXCEPTIONS);
 	SetExceptions((szExceptions != NULL) && (strcmp(szExceptions, "true") == 0));
+	szKeepUnusedObjects = pcTag->GetAttribute((char*)BUILD_CONFIGURATION_KEEP_UNUSED_OBJECTS);
+	SetKeepUnusedObjects((szKeepUnusedObjects != NULL) && (strcmp(szKeepUnusedObjects, "true") == 0));
 
 	pcImage = pcTag->GetTag(BUILD_CONFIGURATION_IMAGE);
 	if (pcImage)
@@ -574,11 +583,34 @@ void CBuildConfiguration::SetExceptions(bool bExceptions)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Whether a global whose making or destroying runs code is linked though
+// nothing refers to it (false unless set; CCPPCompileOptions::
+// mbKeepUnusedObjects).  [basic.stc.static] 2
+//
+//////////////////////////////////////////////////////////////////////////
+void CBuildConfiguration::SetKeepUnusedObjects(bool bKeepUnusedObjects)
+{
+	mbKeepUnusedObjects = bKeepUnusedObjects;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 //
 //////////////////////////////////////////////////////////////////////////
 bool CBuildConfiguration::IsExceptions(void) const
 {
 	return mbExceptions;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+bool CBuildConfiguration::IsKeepUnusedObjects(void) const
+{
+	return mbKeepUnusedObjects;
 }
 
 

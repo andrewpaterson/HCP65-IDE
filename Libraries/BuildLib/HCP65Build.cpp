@@ -91,6 +91,7 @@ bool CHCP65Build::Start(CArrayChars* paszLines)
 	mcBuilder.GetOptions()->mePrefer = mpcConfiguration->IsPreferSize() ? CPPP_Size : CPPP_Speed;
 	mcBuilder.GetOptions()->mbWarnMissingOverride = mpcConfiguration->IsWarnMissingOverride();
 	mcBuilder.GetOptions()->mbExceptions = mpcConfiguration->IsExceptions();
+	mcBuilder.GetOptions()->mbKeepUnusedObjects = mpcConfiguration->IsKeepUnusedObjects();
 	mcBuilder.SetJobs(&mcJobs);
 	mcBuilder.SetHeaderCache(true);
 	mcBuilder.SetLineTable(true);

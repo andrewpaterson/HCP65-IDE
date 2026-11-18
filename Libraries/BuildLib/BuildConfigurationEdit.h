@@ -43,6 +43,7 @@ public:
 	bool			mbPreferSize;
 	bool			mbWarnMissingOverride;
 	bool			mbExceptions;
+	bool			mbKeepUnusedObjects;
 	CChars			mszCard;
 	CChars			mszCardPath;
 

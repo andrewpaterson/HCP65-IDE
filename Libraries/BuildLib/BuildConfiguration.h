@@ -68,7 +68,9 @@ enum EBuildProgram
 //(CCPPCompileOptions::mePrefer: a ROM's kernal).  WarnMissingOverride="false" stops the warning about a function
 //that overrides a base class's virtual function and isn't declared override (CCPPCompileOptions::mbWarnMissingOverride,
 //on unless so).  Exceptions="true" compiles the program with C++ exceptions (CCPPCompileOptions::mbExceptions: throw,
-//try and catch are errors without it).  Its BreakpointSpace is the emulator's space ("Kernel", "User") that debugging puts breakpoints in; without
+//try and catch are errors without it).  KeepUnusedObjects="true" links a global whose making or destroying runs code (a constructor, a
+//destructor, an initialiser that isn't a constant) though nothing refers to it ([basic.stc.static] 2;
+//CCPPCompileOptions::mbKeepUnusedObjects); without it such a global goes with the rest of what is unused.  Its BreakpointSpace is the emulator's space ("Kernel", "User") that debugging puts breakpoints in; without
 //one they stop in every space.
 //
 //Debugging loads each <Load File Address/> into the waiting emulator first (a kernal for a program to run on), and
@@ -89,6 +91,7 @@ protected:
 	bool			mbPreferSize;
 	bool			mbWarnMissingOverride;
 	bool			mbExceptions;
+	bool			mbKeepUnusedObjects;
 	EBuildProgram	meProgram;
 	CAsm65Image		mcImage;
 	CAsm65Executable	mcExecutable;
@@ -127,6 +130,8 @@ public:
 	bool			IsWarnMissingOverride(void) const;
 	void			SetExceptions(bool bExceptions);
 	bool			IsExceptions(void) const;
+	void			SetKeepUnusedObjects(bool bKeepUnusedObjects);
+	bool			IsKeepUnusedObjects(void) const;
 
 	bool			HasImage(void) const;
 	CAsm65Image*	GetImage(void);

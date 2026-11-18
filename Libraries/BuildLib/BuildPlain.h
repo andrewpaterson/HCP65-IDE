@@ -57,6 +57,7 @@ bool	BuildParseUint32(const char* szNumber, uint32* puiValue);
 //	-prefer-size						As a configuration's PreferSize="true": smaller code before faster.
 //	-no-override-warning				As a configuration's WarnMissingOverride="false".
 //	-exceptions							As a configuration's Exceptions="true": throw, try and catch are compiled.
+//	-keep-unused-objects				As a configuration's KeepUnusedObjects="true".
 //	-exe <file> -entry <symbol> [-limit <n>] [-symbol <name>=<value>]...
 //										Link an executable, as an <Executable>.
 //	-image <file> -size <n> [-fill <n>] [-limit <n>] [-load <n>] -region <start>,<end>,<offset> [-region ...]
@@ -78,6 +79,7 @@ protected:
 	bool					mbPreferSize;
 	bool					mbNoOverrideWarning;
 	bool					mbExceptions;
+	bool					mbKeepUnusedObjects;
 	CChars					mszOutput;
 	CChars					mszListings;
 	CChars					mszExecutable;

@@ -1022,6 +1022,7 @@ void CBuildCommandLine::WriteUsage(void)
 	WriteLine("  -prefer-size                  Smaller code before faster, where the compiler has the choice.");
 	WriteLine("  -no-override-warning          No warning for an override not declared override.");
 	WriteLine("  -exceptions                   C++ exceptions: throw, try and catch are compiled.");
+	WriteLine("  -keep-unused-objects          Link a global that is made or destroyed by code though nothing uses it.");
 	WriteLine("  -exe <file> -entry <symbol> [-limit <n>] [-symbol <name>=<n>]...");
 	WriteLine("                                Link an executable.");
 	WriteLine("  -image <file> -size <n> [-fill <n>] [-limit <n>] [-load <n>] [-text <n>] -region <start>,<end>,<offset>...");

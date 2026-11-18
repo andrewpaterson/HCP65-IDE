@@ -60,6 +60,7 @@ protected:
 	Ptr<CCheckBox>					mpPreferSize;
 	Ptr<CCheckBox>					mpWarnMissingOverride;
 	Ptr<CCheckBox>					mpExceptions;
+	Ptr<CCheckBox>					mpKeepUnusedObjects;
 	Ptr<CTextField>					mpCard;
 	Ptr<CTextField>					mpCardPath;
 	Ptr<CLabel>						mpContents;

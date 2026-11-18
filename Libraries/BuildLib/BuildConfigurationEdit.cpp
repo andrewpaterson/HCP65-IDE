@@ -66,6 +66,7 @@ void CBuildConfigurationEdit::Init(const char* szName, EBuildToolchain eToolchai
 	mbPreferSize = false;
 	mbWarnMissingOverride = true;
 	mbExceptions = false;
+	mbKeepUnusedObjects = false;
 	mszCard.Init();
 	mszCardPath.Init();
 }
@@ -88,6 +89,7 @@ void CBuildConfigurationEdit::Init(CBuildConfiguration* pcConfiguration, size ui
 	mbPreferSize = pcConfiguration->IsPreferSize();
 	mbWarnMissingOverride = pcConfiguration->IsWarnMissingOverride();
 	mbExceptions = pcConfiguration->IsExceptions();
+	mbKeepUnusedObjects = pcConfiguration->IsKeepUnusedObjects();
 	if (pcConfiguration->HasCard())
 	{
 		mszCard.Set(pcConfiguration->GetCard());
@@ -112,6 +114,7 @@ void CBuildConfigurationEdit::Init(CBuildConfigurationEdit* pcCopied, const char
 	mbPreferSize = pcCopied->mbPreferSize;
 	mbWarnMissingOverride = pcCopied->mbWarnMissingOverride;
 	mbExceptions = pcCopied->mbExceptions;
+	mbKeepUnusedObjects = pcCopied->mbKeepUnusedObjects;
 	mszCard.Set(pcCopied->mszCard);
 	mszCardPath.Set(pcCopied->mszCardPath);
 }
@@ -434,6 +437,10 @@ static void SetEditAttributes(CChars* pszTag, CBuildConfigurationEdit* pcEdit, C
 	if ((pcSource == NULL) || (pcEdit->mbExceptions != pcSource->IsExceptions()))
 	{
 		SetEditAttribute(pszTag, "Exceptions", pcEdit->mbExceptions ? "true" : NULL);
+	}
+	if ((pcSource == NULL) || (pcEdit->mbKeepUnusedObjects != pcSource->IsKeepUnusedObjects()))
+	{
+		SetEditAttribute(pszTag, "KeepUnusedObjects", pcEdit->mbKeepUnusedObjects ? "true" : NULL);
 	}
 	if ((pcSource == NULL) || !pcEdit->mszCard.Equals(pcSource->GetCard()))
 	{
