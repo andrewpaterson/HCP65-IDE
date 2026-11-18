@@ -3633,6 +3633,11 @@ CHECKS = [
 		'DIALOG_ANSWER': 'OK', 'BUILD_EDITS': 'overridewarning:0',
 		'DEBUG': 'command:Build.EditConfigurations,answered:1,printbuildfile'}),
 		[r'<Configuration Name="[^"]*" Toolchain="W65C816" [^>]*WarnMissingOverride="false"'], [r'ERROR', r'WarnMissingOverride="true"']),
+	('build-configuration-exceptions', dict(MakeSolutionCopy(), **{
+		#C++ exceptions are off unless ticked, which is all that is written.
+		'DIALOG_ANSWER': 'OK', 'BUILD_EDITS': 'exceptions:1',
+		'DEBUG': 'command:Build.EditConfigurations,answered:1,printbuildfile'}),
+		[r'<Configuration Name="[^"]*" Toolchain="W65C816" [^>]*Exceptions="true"'], [r'ERROR', r'Exceptions="false"']),
 	('build-configuration-cancel', dict(MakeSolutionCopy(), **{
 		#Cancel changes nothing.
 		'DIALOG_ANSWER': 'Cancel', 'BUILD_EDITS': 'name:Gone;remove',

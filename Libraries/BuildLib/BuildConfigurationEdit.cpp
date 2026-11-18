@@ -65,6 +65,7 @@ void CBuildConfigurationEdit::Init(const char* szName, EBuildToolchain eToolchai
 	mbMathTables = true;
 	mbPreferSize = false;
 	mbWarnMissingOverride = true;
+	mbExceptions = false;
 	mszCard.Init();
 	mszCardPath.Init();
 }
@@ -86,6 +87,7 @@ void CBuildConfigurationEdit::Init(CBuildConfiguration* pcConfiguration, size ui
 	mbMathTables = pcConfiguration->IsMathTables();
 	mbPreferSize = pcConfiguration->IsPreferSize();
 	mbWarnMissingOverride = pcConfiguration->IsWarnMissingOverride();
+	mbExceptions = pcConfiguration->IsExceptions();
 	if (pcConfiguration->HasCard())
 	{
 		mszCard.Set(pcConfiguration->GetCard());
@@ -109,6 +111,7 @@ void CBuildConfigurationEdit::Init(CBuildConfigurationEdit* pcCopied, const char
 	mbMathTables = pcCopied->mbMathTables;
 	mbPreferSize = pcCopied->mbPreferSize;
 	mbWarnMissingOverride = pcCopied->mbWarnMissingOverride;
+	mbExceptions = pcCopied->mbExceptions;
 	mszCard.Set(pcCopied->mszCard);
 	mszCardPath.Set(pcCopied->mszCardPath);
 }
@@ -427,6 +430,10 @@ static void SetEditAttributes(CChars* pszTag, CBuildConfigurationEdit* pcEdit, C
 	if ((pcSource == NULL) || (pcEdit->mbWarnMissingOverride != pcSource->IsWarnMissingOverride()))
 	{
 		SetEditAttribute(pszTag, "WarnMissingOverride", pcEdit->mbWarnMissingOverride ? NULL : "false");
+	}
+	if ((pcSource == NULL) || (pcEdit->mbExceptions != pcSource->IsExceptions()))
+	{
+		SetEditAttribute(pszTag, "Exceptions", pcEdit->mbExceptions ? "true" : NULL);
 	}
 	if ((pcSource == NULL) || !pcEdit->mszCard.Equals(pcSource->GetCard()))
 	{

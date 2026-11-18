@@ -67,7 +67,8 @@ enum EBuildProgram
 //them).  PreferSize="true" has the compiler prefer smaller code to faster where it has the choice
 //(CCPPCompileOptions::mePrefer: a ROM's kernal).  WarnMissingOverride="false" stops the warning about a function
 //that overrides a base class's virtual function and isn't declared override (CCPPCompileOptions::mbWarnMissingOverride,
-//on unless so).  Its BreakpointSpace is the emulator's space ("Kernel", "User") that debugging puts breakpoints in; without
+//on unless so).  Exceptions="true" compiles the program with C++ exceptions (CCPPCompileOptions::mbExceptions: throw,
+//try and catch are errors without it).  Its BreakpointSpace is the emulator's space ("Kernel", "User") that debugging puts breakpoints in; without
 //one they stop in every space.
 //
 //Debugging loads each <Load File Address/> into the waiting emulator first (a kernal for a program to run on), and
@@ -87,6 +88,7 @@ protected:
 	bool			mbMathTables;
 	bool			mbPreferSize;
 	bool			mbWarnMissingOverride;
+	bool			mbExceptions;
 	EBuildProgram	meProgram;
 	CAsm65Image		mcImage;
 	CAsm65Executable	mcExecutable;
@@ -123,6 +125,8 @@ public:
 	bool			IsPreferSize(void) const;
 	void			SetWarnMissingOverride(bool bWarnMissingOverride);
 	bool			IsWarnMissingOverride(void) const;
+	void			SetExceptions(bool bExceptions);
+	bool			IsExceptions(void) const;
 
 	bool			HasImage(void) const;
 	CAsm65Image*	GetImage(void);

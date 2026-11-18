@@ -46,6 +46,7 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 #define BUILD_CONFIGURATION_MATH_TABLES	"MathTables"
 #define BUILD_CONFIGURATION_PREFER_SIZE	"PreferSize"
 #define BUILD_CONFIGURATION_WARN_MISSING_OVERRIDE	"WarnMissingOverride"
+#define BUILD_CONFIGURATION_EXCEPTIONS	"Exceptions"
 
 
 //The toolchains' names, as saved, by EBuildToolchain.
@@ -66,6 +67,7 @@ void CBuildConfiguration::Init(const char* szName, EBuildToolchain eToolchain, c
 	mbMathTables = true;
 	mbPreferSize = false;
 	mbWarnMissingOverride = true;
+	mbExceptions = false;
 	meProgram = BP_None;
 	mcImage.Init();
 	mcExecutable.Init();
@@ -147,6 +149,10 @@ void CBuildConfiguration::SaveXML(CXMLWriter* pcWriter)
 	{
 		pcWriter->Attribute(BUILD_CONFIGURATION_WARN_MISSING_OVERRIDE, "false");
 	}
+	if (mbExceptions)
+	{
+		pcWriter->Attribute(BUILD_CONFIGURATION_EXCEPTIONS, "true");
+	}
 	if (HasCard())
 	{
 		pcWriter->Attribute(BUILD_CONFIGURATION_CARD, mszCard.Text());
@@ -207,6 +213,7 @@ bool CBuildConfiguration::LoadXML(CMarkupTag* pcTag)
 	char*			szMathTables;
 	char*			szPreferSize;
 	char*			szWarnMissingOverride;
+	char*			szExceptions;
 	EBuildToolchain	eToolchain;
 	CMarkupTag*		pcImage;
 	CMarkupTag*		pcExecutable;
@@ -240,6 +247,8 @@ bool CBuildConfiguration::LoadXML(CMarkupTag* pcTag)
 	SetPreferSize((szPreferSize != NULL) && (strcmp(szPreferSize, "true") == 0));
 	szWarnMissingOverride = pcTag->GetAttribute((char*)BUILD_CONFIGURATION_WARN_MISSING_OVERRIDE);
 	SetWarnMissingOverride((szWarnMissingOverride == NULL) || (strcmp(szWarnMissingOverride, "false") != 0));
+	szExceptions = pcTag->GetAttribute((char*)BUILD_CONFIGURATION_EXCEPTIONS);
+	SetExceptions((szExceptions != NULL) && (strcmp(szExceptions, "true") == 0));
 
 	pcImage = pcTag->GetTag(BUILD_CONFIGURATION_IMAGE);
 	if (pcImage)
@@ -547,6 +556,29 @@ void CBuildConfiguration::SetWarnMissingOverride(bool bWarnMissingOverride)
 bool CBuildConfiguration::IsWarnMissingOverride(void) const
 {
 	return mbWarnMissingOverride;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether the program is compiled with C++ exceptions: throw, try and
+// catch (false unless set; CCPPCompileOptions::mbExceptions).  Without
+// them they are errors and no code pays for them.
+//
+//////////////////////////////////////////////////////////////////////////
+void CBuildConfiguration::SetExceptions(bool bExceptions)
+{
+	mbExceptions = bExceptions;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+bool CBuildConfiguration::IsExceptions(void) const
+{
+	return mbExceptions;
 }
 
 
