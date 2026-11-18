@@ -515,7 +515,7 @@ CHECKS = [
 		 r'^References to IsParentheses and 1 override  7 references$',
 		 r'^  Definition  2 references$', r'^  Declaration  2 references$', r'^      CalcParentheses\.h  1$', r'^          38: ',
 		 r'^  Call  3 references$',
-		 r'^Rename: IsParentheses \[CCalcParentheses::IsParentheses\(\)\] at 7 places, 1 overrides$'], [r'\[declaration\]']),
+		 r'^Rename: IsParentheses \[CCalcParentheses::IsParentheses\(\) const\] at 7 places, 1 overrides$'], [r'\[declaration\]']),
 	('usages-files-only', {
 		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,references,usagegroups:c,usages'},
 		[r'^References to IsParentheses and 1 override  7 references$',
@@ -3393,7 +3393,7 @@ CHECKS = [
 		#A usage's row has its line number dim and the usage's own text in the match font; a group's count is dim, a file
 		#has its icon, and what is noted of a usage is dim.
 		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,references,usageparts'},
-		[r'^  CalcParentheses\.h\{d:  1\} \(icon\)$', r'^    \{d:38: \}bool  \{m:IsParentheses\}\(void\) override;\{d:  \[declaration\]\}$',
+		[r'^  CalcParentheses\.h\{d:  1\} \(icon\)$', r'^    \{d:38: \}bool  \{m:IsParentheses\}\(void\) const override;\{d:  \[declaration\]\}$',
 		 r'^  Calculator\.cpp\{d:  3\} \(icon\)$', r'^    \{d:391: \}if \(pcExpression->\{m:IsParentheses\}\(\)\)$'], [r'\{\?:', r'ERROR']),
 	('usages-preview', {
 		#Beside the tree the selected usage's file is shown at its line, coloured as an editor is; stepping to another
@@ -3435,7 +3435,7 @@ CHECKS = [
 		#The symbol is declared in CalcParentheses.h and only used in Calculator.cpp.
 		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usagescope:4,usages,usagescope:4,references'},
 		[r'^No usages of IsParentheses and 1 override in CalcParentheses\.h$',
-		 r'^References to IsParentheses and 1 override in CalcParentheses\.h  1 reference$', r'^    38: bool  IsParentheses\(void\) override;'],
+		 r'^References to IsParentheses and 1 override in CalcParentheses\.h  1 reference$', r'^    38: bool  IsParentheses\(void\) const override;'],
 		[r'Calculator\.cpp', r'hidden', r'ERROR']),
 	('usages-scope-project', {
 		#The Project scope is the active file's project; Find All References uses the scope too.
@@ -3525,7 +3525,7 @@ CHECKS = [
 	('find-in-current-file', {
 		#The Current File scope: only the active file is searched, though others have the text.
 		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'FIND': '4:-:IsParentheses'},
-		[r'^Find \[IsParentheses\]: 1 match in 1 file', r'^  bool  IsParentheses\(void\) override;  \[CalcParentheses\.h 38\]  match 6\+13$',
+		[r'^Find \[IsParentheses\]: 1 match in 1 file', r'^  bool  IsParentheses\(void\) const override;  \[CalcParentheses\.h 38\]  match 6\+13$',
 		 r"^Occurrences of 'IsParentheses' in CalcParentheses\.h  1 match in 1 file$"], [r'Calculator\.cpp', r'ERROR']),
 	('find-in-open-files', {
 		#The Open Files scope: the files with an editor's tab.
@@ -3750,13 +3750,13 @@ CHECKS = [
 	('hierarchy-after-edits', {
 		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14',
 		'EDIT': 'edit:renamable,replace:29| : public CCalcExpression|,renamable'},
-		[r'^Rename: IsParentheses \[CCalcParentheses::IsParentheses\(\)\] at 7 places, 1 overrides$',
-		 r'^Rename: IsParentheses \[CCalcParentheses::IsParentheses\(\)\] at 2 places, 0 overrides$'], []),
+		[r'^Rename: IsParentheses \[CCalcParentheses::IsParentheses\(\) const\] at 7 places, 1 overrides$',
+		 r'^Rename: IsParentheses \[CCalcParentheses::IsParentheses\(\) const\] at 2 places, 0 overrides$'], []),
 	('virtual-after-edits', {
 		'WAIT_INDEX': '1', 'OPEN': 'CalcExpression.h', 'CARET': '37:18',
 		'EDIT': 'edit:renamable,replace:37|virtual |,caret:37:9,renamable'},
-		[r'^Rename: IsParentheses \[CCalcExpression::IsParentheses\(\)\] at 7 places, 1 overrides$',
-		 r'^Rename: IsParentheses \[CCalcExpression::IsParentheses\(\)\] at 5 places, 0 overrides$'], []),
+		[r'^Rename: IsParentheses \[CCalcExpression::IsParentheses\(\) const\] at 7 places, 1 overrides$',
+		 r'^Rename: IsParentheses \[CCalcExpression::IsParentheses\(\) const\] at 5 places, 0 overrides$'], []),
 	('settings-templates', dict(MakeDefinitionsCopy(), **{
 		#Settings' File and Code Templates: the Workspace scheme (a solution is open) and its Files templates, C++ Class
 		#first with its child under it; the Code tab's; a template changed (marked) with an error shown under it, then reset; an added one
@@ -3876,7 +3876,7 @@ CHECKS = [
 		#caret then on the next line).  Real presses through the window, column 10 being the P of IsParentheses.
 		'OPEN': 'CalcParentheses.h', 'CARET': '38:1',
 		'DEBUG': 'wait:1500,edit:doubleclick:38:10,edit:printselection,wait:1000,edit:tripleclick:38:10,edit:printselection'},
-		[r'^Selection: \[IsParentheses\] on line 38, caret line 38$', r'^Selection: \[\tbool\t\tIsParentheses\(void\) override;$', r'^\] on line 39, caret line 39$'], []),
+		[r'^Selection: \[IsParentheses\] on line 38, caret line 38$', r'^Selection: \[\tbool\t\tIsParentheses\(void\) const override;$', r'^\] on line 39, caret line 39$'], []),
 	('editor-drag-text', {
 		#Dragging the selected text moves it: IsParentheses, selected by a double click, is pressed on and dropped at
 		#the start of line 39's "void", where it stays selected.  Real presses through the window.
@@ -3928,7 +3928,7 @@ CHECKS = [
 		#the window.
 		'OPEN': 'CalcParentheses.h', 'CARET': '38:1',
 		'DEBUG': 'wait:1500,edit:gutterclick:38,edit:printselection,wait:1000,edit:shiftgutterclick:36,edit:printselection'},
-		[r'^Selection: \[\tbool\t\tIsParentheses\(void\) override;$', r'^\] on line 39, caret line 39$', r'^Selection: \[\tCNumber\t\tEvaluate\(void\) override;$', r'^\tvoid\t\tSetExpression\(CCalcExpression\* pcExpression\);$', r'^\] on line 38, caret line 36$'], []),	('editor-paste-history', {
+		[r'^Selection: \[\tbool\t\tIsParentheses\(void\) const override;$', r'^\] on line 39, caret line 39$', r'^Selection: \[\tCNumber\t\tEvaluate\(void\) override;$', r'^\tvoid\t\tSetExpression\(CCalcExpression\* pcExpression\);$', r'^\] on line 38, caret line 36$'], []),	('editor-paste-history', {
 		#Paste from History (Control+Shift+V), as IntelliJ IDEA's: three words copied from line 38 are the clipboard's
 		#history, newest first; Choose Content to Paste lists them, down selects and previews the second, and OK pastes
 		#it at the caret and makes it the newest, so a plain Control+V pastes it again.  The run's clipboard is its own,
