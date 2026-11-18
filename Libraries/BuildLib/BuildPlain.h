@@ -56,6 +56,7 @@ bool	BuildParseUint32(const char* szNumber, uint32* puiValue);
 //	-nofloats, -no-mathtables			As a configuration's NoFloats="true" and MathTables="false".
 //	-prefer-size						As a configuration's PreferSize="true": smaller code before faster.
 //	-no-override-warning				As a configuration's WarnMissingOverride="false".
+//	-keep-unused-objects				As a configuration's KeepUnusedObjects="true".
 //	-exe <file> -entry <symbol> [-limit <n>] [-symbol <name>=<value>]...
 //										Link an executable, as an <Executable>.
 //	-image <file> -size <n> [-fill <n>] [-limit <n>] [-load <n>] -region <start>,<end>,<offset> [-region ...]
@@ -76,6 +77,7 @@ protected:
 	bool					mbNoMathTables;
 	bool					mbPreferSize;
 	bool					mbNoOverrideWarning;
+	bool					mbKeepUnusedObjects;
 	CChars					mszOutput;
 	CChars					mszListings;
 	CChars					mszExecutable;

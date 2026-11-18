@@ -108,6 +108,7 @@ void CIDEBuildConfigurationsDialog::Class(void)
 	M_Pointer(mpMathTables);
 	M_Pointer(mpPreferSize);
 	M_Pointer(mpWarnMissingOverride);
+	M_Pointer(mpKeepUnusedObjects);
 	M_Pointer(mpCard);
 	M_Pointer(mpCardPath);
 	M_Pointer(mpContents);
@@ -240,6 +241,8 @@ Ptr<CComponent> CIDEBuildConfigurationsDialog::CreateBody(void)
 	mpPreferSize->SetAlignment(CSH_Left, CSV_Center);
 	mpWarnMissingOverride = OMalloc<CCheckBox>(pWindow, psLook->pcTheme, "Warn about overrides not declared override");
 	mpWarnMissingOverride->SetAlignment(CSH_Left, CSV_Center);
+	mpKeepUnusedObjects = OMalloc<CCheckBox>(pWindow, psLook->pcTheme, "Keep unused globals that are made or destroyed");
+	mpKeepUnusedObjects->SetAlignment(CSH_Left, CSV_Center);
 	mpCard = CreateField();
 	mpCardPath = CreateField();
 	mpContents = OMalloc<CLabel>(pWindow, psLook->pcDimFont, "");
@@ -258,6 +261,7 @@ Ptr<CComponent> CIDEBuildConfigurationsDialog::CreateBody(void)
 	AddFormRow(pForm, &iRow, "", mpMathTables);
 	AddFormRow(pForm, &iRow, "", mpPreferSize);
 	AddFormRow(pForm, &iRow, "", mpWarnMissingOverride);
+	AddFormRow(pForm, &iRow, "", mpKeepUnusedObjects);
 	AddFormRow(pForm, &iRow, "Card", mpCard);
 	AddFormRow(pForm, &iRow, "Path on card", mpCardPath);
 	AddFormRow(pForm, &iRow, NULL, mpContents);
@@ -373,6 +377,7 @@ void CIDEBuildConfigurationsDialog::ShowSelected(void)
 	mpMathTables->SetTicked(pcEdit ? pcEdit->mbMathTables : true);
 	mpPreferSize->SetTicked(pcEdit ? pcEdit->mbPreferSize : false);
 	mpWarnMissingOverride->SetTicked(pcEdit ? pcEdit->mbWarnMissingOverride : true);
+	mpKeepUnusedObjects->SetTicked(pcEdit ? pcEdit->mbKeepUnusedObjects : false);
 	if (pcEdit)
 	{
 		SelectItem(mpToolchain, CBuildConfiguration::GetToolchainName(pcEdit->meToolchain));
@@ -472,6 +477,7 @@ void CIDEBuildConfigurationsDialog::Keep(void)
 	pcEdit->mbMathTables = mpMathTables->IsTicked();
 	pcEdit->mbPreferSize = mpPreferSize->IsTicked();
 	pcEdit->mbWarnMissingOverride = mpWarnMissingOverride->IsTicked();
+	pcEdit->mbKeepUnusedObjects = mpKeepUnusedObjects->IsTicked();
 	pcEdit->mszCard.Set(mpCard->GetText());
 	pcEdit->mszCardPath.Set(mpCardPath->GetText());
 }
@@ -675,8 +681,8 @@ bool CIDEBuildConfigurationsDialog::Approve(void)
 // For checking, what a user would do in the dialog, separated by
 // semicolons: add, remove, select:<row>, name:<text>, toolchain:<text>,
 // solution:<text>, breakpoint:<text>, nofloats:<0 or 1>, mathtables:<0 or
-// 1>, prefersize:<0 or 1>, overridewarning:<0 or 1>, card:<text>,
-// cardpath:<text>, and check, which prints whether OK
+// 1>, prefersize:<0 or 1>, overridewarning:<0 or 1>, keepunused:<0 or
+// 1>, card:<text>, cardpath:<text>, and check, which prints whether OK
 // would close it and why not.
 //
 //////////////////////////////////////////////////////////////////////////
@@ -735,6 +741,10 @@ void CIDEBuildConfigurationsDialog::ApplyEdits(const char* szEdits)
 		else if (strncmp(sz, "overridewarning:", 16) == 0)
 		{
 			mpWarnMissingOverride->SetTicked(sz[16] == '1');
+		}
+		else if (strncmp(sz, "keepunused:", 11) == 0)
+		{
+			mpKeepUnusedObjects->SetTicked(sz[11] == '1');
 		}
 		else if (strncmp(sz, "card:", 5) == 0)
 		{

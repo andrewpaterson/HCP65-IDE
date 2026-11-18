@@ -67,7 +67,9 @@ enum EBuildProgram
 //them).  PreferSize="true" has the compiler prefer smaller code to faster where it has the choice
 //(CCPPCompileOptions::mePrefer: a ROM's kernal).  WarnMissingOverride="false" stops the warning about a function
 //that overrides a base class's virtual function and isn't declared override (CCPPCompileOptions::mbWarnMissingOverride,
-//on unless so).  Its BreakpointSpace is the emulator's space ("Kernel", "User") that debugging puts breakpoints in; without
+//on unless so).  KeepUnusedObjects="true" links a global whose making or destroying runs code (a constructor, a
+//destructor, an initialiser that isn't a constant) though nothing refers to it ([basic.stc.static] 2;
+//CCPPCompileOptions::mbKeepUnusedObjects); without it such a global goes with the rest of what is unused.  Its BreakpointSpace is the emulator's space ("Kernel", "User") that debugging puts breakpoints in; without
 //one they stop in every space.
 //
 //Debugging loads each <Load File Address/> into the waiting emulator first (a kernal for a program to run on), and
@@ -87,6 +89,7 @@ protected:
 	bool			mbMathTables;
 	bool			mbPreferSize;
 	bool			mbWarnMissingOverride;
+	bool			mbKeepUnusedObjects;
 	EBuildProgram	meProgram;
 	CAsm65Image		mcImage;
 	CAsm65Executable	mcExecutable;
@@ -123,6 +126,8 @@ public:
 	bool			IsPreferSize(void) const;
 	void			SetWarnMissingOverride(bool bWarnMissingOverride);
 	bool			IsWarnMissingOverride(void) const;
+	void			SetKeepUnusedObjects(bool bKeepUnusedObjects);
+	bool			IsKeepUnusedObjects(void) const;
 
 	bool			HasImage(void) const;
 	CAsm65Image*	GetImage(void);

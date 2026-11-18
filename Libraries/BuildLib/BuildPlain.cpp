@@ -133,6 +133,7 @@ void CBuildPlain::Init(void)
 	mbNoMathTables = false;
 	mbPreferSize = false;
 	mbNoOverrideWarning = false;
+	mbKeepUnusedObjects = false;
 	mszOutput.Init();
 	mszListings.Init();
 	mszExecutable.Init();
@@ -310,6 +311,11 @@ int CBuildPlain::ParseOption(CArrayChars* paszArguments, size* puiIndex, CChars*
 	if (BuildIsOption(szOption, "no-override-warning"))
 	{
 		mbNoOverrideWarning = true;
+		return 1;
+	}
+	if (BuildIsOption(szOption, "keep-unused-objects"))
+	{
+		mbKeepUnusedObjects = true;
 		return 1;
 	}
 	if (BuildIsOption(szOption, "o") || BuildIsOption(szOption, "listings") || BuildIsOption(szOption, "exe") || BuildIsOption(szOption, "entry") || BuildIsOption(szOption, "image") ||
@@ -577,6 +583,7 @@ bool CBuildPlain::MakeConfiguration(CBuildConfiguration* pcConfiguration, CChars
 	pcConfiguration->SetMathTables(!mbNoMathTables);
 	pcConfiguration->SetPreferSize(mbPreferSize);
 	pcConfiguration->SetWarnMissingOverride(!mbNoOverrideWarning);
+	pcConfiguration->SetKeepUnusedObjects(mbKeepUnusedObjects);
 	if (!mszExecutable.Empty())
 	{
 		pcExecutable = pcConfiguration->SetExecutable(mszExecutable.Text(), mszEntry.Text(), muiLimit);
@@ -703,6 +710,10 @@ bool CBuildPlain::Describe(CArrayChars* paszArguments, const char* szUnitsDirect
 	if (!pcConfiguration->IsWarnMissingOverride())
 	{
 		paszArguments->Add("-no-override-warning");
+	}
+	if (pcConfiguration->IsKeepUnusedObjects())
+	{
+		paszArguments->Add("-keep-unused-objects");
 	}
 	for (i = 0; i < pcDescription->mcIncludes.NumIncludes(); i++)
 	{

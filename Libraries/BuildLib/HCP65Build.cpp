@@ -90,6 +90,7 @@ bool CHCP65Build::Start(CArrayChars* paszLines)
 	mcBuilder.SetTarget((mpcConfiguration->GetToolchain() == BT_W65C816) ? CPPT_W65C816 : CPPT_65C64);
 	mcBuilder.GetOptions()->mePrefer = mpcConfiguration->IsPreferSize() ? CPPP_Size : CPPP_Speed;
 	mcBuilder.GetOptions()->mbWarnMissingOverride = mpcConfiguration->IsWarnMissingOverride();
+	mcBuilder.GetOptions()->mbKeepUnusedObjects = mpcConfiguration->IsKeepUnusedObjects();
 	mcBuilder.SetJobs(&mcJobs);
 	mcBuilder.SetHeaderCache(true);
 	mcBuilder.SetLineTable(true);
