@@ -815,6 +815,7 @@ bool CIDEMoveNamespace::FindMove(SIDENamespaceMove* psDest)
 	SIDENamespaceSite*		psSite;
 	SIDENamespaceSite		sSite;
 	SIDENamespaceSite*		psClass;
+	size					uiClass;
 	CChars					szScope;
 	CChars					szWhyNot;
 	CChars					szMemberScope;
@@ -874,13 +875,17 @@ bool CIDEMoveNamespace::FindMove(SIDENamespaceMove* psDest)
 
 	if (psDest->bMovable && ((psDest->uiKind == CPPSK_Class) || (psDest->uiKind == CPPSK_ClassTemplate)))
 	{
+		//The class's own site is the biggest.  It's kept by index: the sites found below are added to asSites, which
+		//moves it.
 		psClass = NULL;
+		uiClass = 0;
 		for (i = 0; i < psDest->asSites.NumElements(); i++)
 		{
 			psSite = psDest->asSites.Get(i);
 			if (!psClass || (psSite->uiEnd - psSite->uiStart > psClass->uiEnd - psClass->uiStart))
 			{
 				psClass = psSite;
+				uiClass = i;
 			}
 		}
 		asRanges.Init();
@@ -912,8 +917,9 @@ bool CIDEMoveNamespace::FindMove(SIDENamespaceMove* psDest)
 					continue;
 				}
 				sSite.Init();
+				psClass = (psDest->asSites.NumElements() > 0) ? psDest->asSites.Get(uiClass) : NULL;
 				if (FindSite(psLocation->szFileName.Text(), psLocation->iLine, psLocation->iColumn, true, &cFiles, &sSite, &szWhyNot) && (sSite.asBlocks.NumElements() > 0) &&
-					!((StringInsensitiveCompare(sSite.szFileName.Text(), psClass->szFileName.Text()) == 0) && (sSite.uiStart >= psClass->uiStart) && (sSite.uiEnd <= psClass->uiEnd)))
+					!(psClass && (StringInsensitiveCompare(sSite.szFileName.Text(), psClass->szFileName.Text()) == 0) && (sSite.uiStart >= psClass->uiStart) && (sSite.uiEnd <= psClass->uiEnd)))
 				{
 					//Defined outside the class in a block of its namespace: it goes with it.
 					psSite = psDest->asSites.Add();
