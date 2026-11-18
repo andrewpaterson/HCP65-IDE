@@ -317,6 +317,7 @@ int CBuildPlain::ParseOption(CArrayChars* paszArguments, size* puiIndex, CChars*
 	if (BuildIsOption(szOption, "exceptions"))
 	{
 		mbExceptions = true;
+		return 1;
 	}
 	if (BuildIsOption(szOption, "keep-unused-objects"))
 	{
