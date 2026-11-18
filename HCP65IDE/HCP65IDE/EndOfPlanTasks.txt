@@ -95,6 +95,18 @@ callback's type) given its const back, until the build is clean.  What couldn't 
 with its first error; most hand out a writable pointer into their object (CChars::Text's char*, &mcThing), which
 this task doesn't change.  Virtual getters (a family across libraries) come after, in one pass.
 
+Done 2026-11-18.  Every getter the compiler allows is const, in CommonLibraries (CppCompilerLib too), HCP65-IDE,
+HCP65 (the kernal and drivers with the HCP65 compiler), LogiCim and HCP65-Sculpt: 2,703 getters and 586 virtual ones
+(185 families, each const whole, base and every override).  A library at a time, each its own commit, with its tests
+and the other repositories built against it; the last are CommonLibraries b7a53d6a4, HCP65 27bf39d, HCP65-IDE 2be21f4
+and LogiCim 30b3830.  A one-line getter written in its class moved to the bottom of the .cpp, except in templates,
+classes with no .cpp and the FAT classes (kept small for the ROM).  A rebuild with C4263 on found two overrides lost
+(LogiCim's LOGIC_BLOCK_KIND_VIEW and CCTUserLiteral::IsUserString), both fixed.  The HCP65 compiler now says "The
+object is const and the function that takes these arguments isn't a const member function" (42ccec6b4).
+GettersNotConst.txt lists the 1,497 getters and 132 families that couldn't be, each with its first error, and
+starts with the totals and what keeps most of them back, for the user to decide: CChars::Text has no const overload,
+Ptr<>'s operator->, getters handing out writable pointers, the containers' element getters, locks and lazy work.
+
 
 c. G++'s -Wsuggest-override turned on, and what it names fixed
 --------------------------------------------------------------
