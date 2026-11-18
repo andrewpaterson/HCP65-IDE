@@ -15,6 +15,54 @@ hands out a writable pointer or reference into its object stays as it is: they a
     const one was tried before and skipped the copy constructor's memory management (the user, 2026-11-17).
   - Other: anything else the compiler said.
 
+Totals
+------
+
+                    Getters                      Virtual getters (declarations)
+                    made const   couldn't be     made const   couldn't be
+  CommonLibraries         2149          1173            510           304
+  HCP65-IDE                236           188             11             9
+  HCP65                    145            58             32            16
+  LogiCim                  156            65             33            47
+  HCP65-Sculpt              17            13              0             0
+  WindowInputTester          0             0              0             0
+  All                     2703          1497            586           376
+
+The virtual getters are 185 families made const and 132 kept as they were (a family is const whole or not at all).
+Of the getters that couldn't be, 696 hand out a writable pointer, 570 call something that isn't const, 27 take a
+Ptr<>'s address and 204 are other.
+
+
+For you to decide
+-----------------
+
+What keeps most of the 1497 back is a few things, each the first error of many getters.  Each is a change to what a
+getter returns or to a class's members, which b doesn't make.  Once one is decided, the loop (add const, build, give
+back what breaks) can be run again over what it frees.
+
+  1. CChars::Text (and CCharsImmutable's) has no const overload: char* Text(void) only.  221 getters' first error is
+     calling it, GetName's family among them.  A const char* Text(void) const beside it would free those that only
+     read the text; those that return its char* would need to return const char*, and their callers to take it.
+  2. Ptr<>'s operator-> isn't const: 169 getters' first error (C2678).  You ruled out a const operator-> and
+     operator& on 2026-11-17 (it skipped the copy constructor's memory management), so these stay unless Ptr<> is
+     given another way to read through a const Ptr.
+  3. Getters that hand out a pointer or a reference into their object: 444 (C2440: GetData, GetArray, GetFiles and
+     the like).  Either a const pair (const X* GetX(void) const beside X* GetX(void)) or const returns, which change
+     their callers.
+  4. The containers' element getters aren't const: CArrayTemplate's Get(i), GetPtr(i) and Tail, CLinkedList's
+     GetHead and GetNext, CMapBlock's, 98 first errors.  Const overloads on the containers would free them and,
+     through them, chains of getters: CArrayTemplate::Get keeps CArrayBlockSorted::GetHoldingSize back, which keeps
+     CArrayBlockSorted::NumElements, then CMapBlock::NumElements, then the NumElements family of CArrayCommonObject,
+     CCollection, CIndexObject and CMapObject, which keeps 47 more.
+  5. Getters that lock: CMutex::Lock and CInterProcessMutex::Lock, 27 first errors.  The mutex as a mutable member
+     would let them be const.
+  6. Getters that do work when asked: CSceneFileReader's NumElements, NumChunks and GetInt32 read the file (48 first
+     errors); CNumber::GetLastNonZeroDigit (the scan didn't take it for a getter) keeps IsEven, IsOdd, IsInteger and
+     GetDecimals back.  Either they're not getters, or what they work out is a mutable cache.
+  7. A virtual family stays as it is when any member can't be const: 132 families.  Overrides that macros write
+     (CONSTRUCTABLE's ClassSize, CPPSyntax's GetKind) are in a family with the classes the macro is used in.
+
+
 BaseLib: 409 made const, 237 couldn't be
 ----------------------------------------
 
