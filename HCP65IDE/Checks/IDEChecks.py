@@ -100,6 +100,16 @@ def OpenedForCheck(aszFiles):
 	return {'RECENT': szRecent}
 
 
+#The checks that wait for BaseLib's index and look at its Calc files open a small solution of just those files
+#(Checks/Input/Calculator: a project named BaseLib with the real files by relative path), not ModPlay: indexing
+#all of BaseLib was 90% of each one's time (CommonLibraries Tests/TestSpeedPlan.txt step 2).  Those about indexing at
+#ModPlay's scale (rename-while-reindexing, recolour-off-ui-thread, usages-typing, usages-step-behind-build), and those
+#whose results are ModPlay's (gotosource-popup-scrolls, find-jump-to-source, find-preview, find-row-parts,
+#find-in-solution), still open what the run opens.
+CALCULATOR = os.path.join(HERE, 'Input', 'Calculator', 'Calculator.sln')
+CALCULATOR_RECENT = MakeRecentSolutions([CALCULATOR])
+
+
 def RestoreUserFiles(asContents):
 	#The user's recent solutions, workspaces and layouts as they were when the checks started (asContents: each file's
 	#bytes, None if it wasn't there), put back if they aren't.
@@ -508,7 +518,7 @@ def MakeSettingsFile(szText=None):
 #lines it mustn't have.
 CHECKS = [
 	('usages-rename', {
-		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usages,references,renamable'},
+		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usages,references,renamable'},
 		[r'^Usages of IsParentheses and 1 override  3 usages$',
 		 r'^  Call  3 usages$', r'^    BaseLib  3 usages$', r'^      Calculator\.cpp  3$', r'^        CCalculator  3$', r'^          367: ',
 		 r'^          391: ', r'^          421: ',
@@ -517,7 +527,7 @@ CHECKS = [
 		 r'^  Call  3 references$',
 		 r'^Rename: IsParentheses \[CCalcParentheses::IsParentheses\(\) const\] at 7 places, 1 overrides$'], [r'\[declaration\]']),
 	('usages-files-only', {
-		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,references,usagegroups:c,usages'},
+		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,references,usagegroups:c,usages'},
 		[r'^References to IsParentheses and 1 override  7 references$',
 		 r'^  CalcExpression\.cpp  1$', r'^    60: .*\[definition\]$', r'^  CalcExpression\.h  1$', r'^    37: .*\[declaration\]$',
 		 r'^  CalcParentheses\.cpp  1$', r'^  CalcParentheses\.h  1$', r'^  Calculator\.cpp  3$', r'^    367: ', r'^    391: ', r'^    421: ',
@@ -525,24 +535,24 @@ CHECKS = [
 		[r'BaseLib  ', r'Call  ']),
 	('usages-enter', {
 		#Enter in the Find Usages tree goes to the selected usage, as double clicking it does: the second of Calculator.cpp's.
-		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usages,focus:usages,select:3,key:enter'},
+		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usages,focus:usages,select:3,key:enter'},
 		[r'^  Calculator\.cpp  3$', r'^    391: ', r'Calculator\.cpp \(focus\) line 391: '], []),
 	('usages-jump-to-declaration', {
 		#F4 in the Find Usages tree goes to the symbol's definition, as IntelliJ's goes to the declaration, whichever usage
 		#is selected.
-		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usages,focus:usages,select:3,key:f4'},
+		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usages,focus:usages,select:3,key:f4'},
 		[r'^    391: ', r'CalcParentheses\.cpp \(focus\) line 72: '], [r'Calculator\.cpp \(focus\)']),
 	('usages-first-selected', {
 		#Find Usages selects the first usage and gives the tree the keys, for enter to go to it; grouped again, the usage
 		#selected stays selected.
-		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14',
+		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14',
 		'EDIT': 'usagegroups:,usages,printselected,select:3,usagegroups:c,printselected,usagegroups:,usages,key:enter'},
 		[r'^Selected: 367: ', r'^Selected: 391: ', r'Calculator\.cpp \(focus\) line 367: '], [r'^Selected: none']),
 	('usages-next-occurrence', {
 		#Control+Alt+Down and Up in the Find Usages tree go to the next and previous usage, each opened in its editor with
 		#the tree keeping the keys; past the last nothing moves.  (The editor opened has the keys by the time the script
 		#runs, so the tree is given them again.)
-		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usages',
+		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usages',
 		'DEBUG': 'edit:focus:usages,command:Navigate.NextOccurrence,edit:printselected,edit:printselection,command:Navigate.NextOccurrence,edit:printselected,'
 		         'command:Navigate.NextOccurrence,printstatus,edit:printselected,command:Navigate.PreviousOccurrence,edit:printselected,edit:print'},
 		[r'^Selected: 391: ', r'^Selection: \[IsParentheses\] on line 391, caret line 391$', r'^Selected: 421: ',
@@ -551,7 +561,7 @@ CHECKS = [
 	('usages-step-from-editor', {
 		#From a source editor, Control+Alt+Down steps through Find Usages, the one tool window seen with something to step
 		#to, from the usage selected; the editor opened has the keys, so it goes on from there.
-		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usages',
+		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usages',
 		'DEBUG': 'edit:focus:editor,command:Navigate.NextOccurrence,edit:printselected,command:Navigate.NextOccurrence,'
 		         'edit:printselected,edit:printselection,command:Navigate.PreviousOccurrence,edit:printselected,edit:print'},
 		[r'^Selected: 391: ', r'^Selected: 421: ', r'^Selection: \[IsParentheses\] on line 421, caret line 421$', r'^Selected: 391: ',
@@ -587,7 +597,7 @@ CHECKS = [
 	('nav-back-forward', {
 		#A jump (enter in Find Usages) puts where it left on Back; Back goes there and puts where it was on Forward; Forward
 		#goes back again.  (The tabs the user's layout opens can be on Back before them.)
-		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usages',
+		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usages',
 		'DEBUG': 'edit:focus:usages,edit:key:enter,edit:printhistory,command:Navigate.Back,edit:printhistory,edit:print,'
 		         'command:Navigate.Forward,edit:printhistory,edit:print'},
 		[r'^History: back \[(.*, )?CalcParentheses\.h:38\] forward \[\]$', r'^History: back \[.*\] forward \[Calculator\.cpp:367\]$',
@@ -595,26 +605,26 @@ CHECKS = [
 		 r'Calculator\.cpp \(focus\) line 367: '], [r'not enabled']),
 	('nav-steps', {
 		#Each Next Occurrence step is a place: Back goes back through them one at a time.
-		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usages',
+		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usages',
 		'DEBUG': 'edit:focus:editor,command:Navigate.NextOccurrence,command:Navigate.NextOccurrence,edit:printhistory,'
 		         'command:Navigate.Back,edit:print,command:Navigate.Back,edit:print'},
 		[r'^History: back \[(.*, )?CalcParentheses\.h:38, Calculator\.cpp:391\] forward \[\]$', r'Calculator\.cpp \(focus\) line 391: ',
 		 r'CalcParentheses\.h \(focus\) line 38: '], [r'not enabled']),
 	('nav-closed-file', {
 		#Back to a place whose file has been closed opens it again, its caret there.
-		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usages',
+		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usages',
 		'DEBUG': 'edit:focus:usages,edit:key:enter,closeall,command:Navigate.Back,edit:print'},
 		[r'CalcParentheses\.h \(focus\) line 38: '], [r'not enabled', r'Calculator\.cpp.* line \d+: \[']),
 	('nav-jump-clears-forward', {
 		#A new jump after Back clears Forward, as a browser's does.
-		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usages',
+		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usages',
 		'DEBUG': 'edit:focus:usages,edit:key:enter,command:Navigate.Back,edit:printhistory,edit:focus:usages,edit:select:3,edit:key:enter,'
 		         'edit:printhistory,command:Navigate.Forward'},
 		[r'^History: back \[.*\] forward \[Calculator\.cpp:367\]$', r'^History: back \[(.*, )?CalcParentheses\.h:38\] forward \[\]$',
 		 r'^Command \[Navigate\.Forward\] not found, not enabled or did nothing\.$'], []),
 	('nav-edit-follows', {
 		#A place in an open file moves with its line: two lines put in above it move it down two.
-		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usages',
+		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usages',
 		'DEBUG': 'edit:focus:usages,edit:key:enter,edit:focus:usages,edit:select:4,edit:key:enter,edit:printhistory,'
 		         'edit:focus:editor,edit:caret:1:1,edit:key:enter,edit:key:enter,edit:printhistory,command:Navigate.Back,edit:print'},
 		[r'^History: back \[(.*, )?CalcParentheses\.h:38, Calculator\.cpp:367\] forward \[\]$',
@@ -628,7 +638,7 @@ CHECKS = [
 	('gotosource-usages-popup', {
 		#Control+B on a symbol's own declaration shows a popup of its usages, as IntelliJ's, the first selected; Enter
 		#goes to it and the popup closes.
-		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14',
+		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14',
 		'DEBUG': 'gotosource,edit:printpopup,edit:key:enter,edit:printpopup,edit:print'},
 		[r'^Popup: Usages of IsParentheses and 1 override  3 usages \| Calculator\.cpp:367  if \(\(\*ppcExpression\)->IsParentheses\(\)\) \| '
 		 r'Calculator\.cpp:391  if \(pcExpression->IsParentheses\(\)\) \| Calculator\.cpp:421  if \(pcExpression->IsParentheses\(\)\)$',
@@ -640,7 +650,7 @@ CHECKS = [
 		[r'^Popup: Usages of CCodabase  \d\d+ usages \| ', r'^Popup height: \d+ scrolling, the menu \d+$'], [r'all shown']),
 	('gotosource-on-usage', {
 		#Control+B on a usage still goes to the definition (CCalcExpression's, as pcExpression is one), with no popup.
-		'WAIT_INDEX': '1', 'OPEN': 'Calculator.cpp', 'CARET': '391:22',
+		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'Calculator.cpp', 'CARET': '391:22',
 		'DEBUG': 'gotosource,edit:printpopup,edit:print'},
 		[r'^Popup: none$', r'CalcExpression\.cpp \(focus\) line 60: '], []),
 	('gotosource-after-name', dict(MakeUsagesKernel(), **{
@@ -742,7 +752,7 @@ CHECKS = [
 	('usages-single-click', {
 		#With Navigate with Single Click a usage is opened as it is selected, and the tree keeps the keys; without, selecting
 		#one opens nothing.
-		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14',
+		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14',
 		'EDIT': 'usagegroups:,usages,focus:usages,select:3,print,usagesingleclick:on,select:4,print'},
 		[r'CalcParentheses\.h line 38: ', r'Calculator\.cpp line 421: '], [r'line 391: \[', r'Calculator\.cpp \(focus\)']),
 	('find-jump-to-source', {
@@ -751,10 +761,10 @@ CHECKS = [
 		[r'CalculatorParser\.h \(focus\) line 29: '], [r'ERROR']),
 	('usages-escape', {
 		#Escape in the Find Usages tree gives the keys back to the editor, where they were.
-		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usages,focus:usages,select:3,key:escape'},
+		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usages,focus:usages,select:3,key:escape'},
 		[r'^    391: ', r'CalcParentheses\.h \(focus\) line 38: '], [r'Calculator\.cpp.* line \d+: \[']),
 	('rename-after-edits', {
-		'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'CARET': '36:2',
+		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'CARET': '36:2',
 		'EDIT': 'type:int i; ,rename:mpcCalc2,rename:mpcCalc3,renamable'},
 		[r'^Status: Renamed mpcCalculator to mpcCalc2: 19 places in 2 files\.$',
 		 r'^Status: Renamed mpcCalc2 to mpcCalc3: 19 places in 2 files\.$',
@@ -762,7 +772,7 @@ CHECKS = [
 	('rename-class-twice', {
 		#A class renamed (its header, its constructor and destructor, files opened as hidden tabs) and renamed again: the
 		#second rename finds every place by the new name, as the renamed files are indexed again before it looks.
-		'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'CARET': '33:8',
+		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'CARET': '33:8',
 		'EDIT': 'rename:CCalcParser2,rename:CCalcParser3,renamable'},
 		[r'^Status: Renamed CCalculatorParser to CCalcParser2: 12 places in 2 files\.$',
 		 r'^Status: Renamed CCalcParser2 to CCalcParser3: 12 places in 2 files\.$',
@@ -3345,17 +3355,17 @@ CHECKS = [
 	('header-edit-in-unit', {
 		#A header opened is coloured a moment later, and its edits are worked out in the unit that includes it: its new
 		#member is indexed as the class's.
-		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:2', 'TYPE': 'int miTypedMember; ',
+		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:2', 'TYPE': 'int miTypedMember; ',
 		'DEBUG': 'printspans,wait:1500,printedits,printspans,edit:caret:38:7,edit:renamable'},
 		[r'^Spans: same$', r'^Edits thread: idle$', r'^Spans: changed$',
 		 r'^Rename: miTypedMember \[CCalcParentheses::miTypedMember\] at 1 places, 0 overrides$'], []),
 	('edits-kept-after-configuration', {
 		#The index built again for another configuration has the open files' edits, not just their files.
-		'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'CARET': '36:2', 'TYPE': 'int iTypedName; ',
+		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'CARET': '36:2', 'TYPE': 'int iTypedName; ',
 		'DEBUG': 'wait:1500,configuration:Debug|W65C816,waitindex,edit:caret:36:7,edit:renamable'},
 		[r'^Rename: iTypedName \[.*CalculatorParser\.cpp:36:6:iTypedName\] at 1 places'], []),
 	('nothing-at-caret', {
-		'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'CARET': '1:1', 'EDIT': 'usages,renamable'},
+		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'CARET': '1:1', 'EDIT': 'usages,renamable'},
 		[r'^Status: No usages found at the caret\.$', r'^Rename: nothing at the caret$'], []),
 	('undo-out-of-view', {
 		#Ctrl+Z in an editor undoes an edit in view at once; one scrolled out of view is shown by the first press, which
@@ -3379,12 +3389,12 @@ CHECKS = [
 		[r'^Edit menu: Undo\(disabled\) Redo\(disabled\) Cut\(disabled\) Copy Paste\(disabled\) Paste from History\.\.\.\(disabled\) Select All',
 		 r'^Edit menu: Undo\(disabled\) Redo\(disabled\) Cut Copy Paste Paste from History\.\.\. Select All'], []),
 	('go-to-file', {
-		'WAIT_INDEX': '1', 'GOTO': '1:bl/csym'},
+		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'GOTO': '1:bl/csym'},
 		[r'^Go to \[bl/csym\]: 2 results', r'^  CalculatorSymbols\.h ', r'^  CalculatorSymbols\.cpp ',
 		 r'^Opened .*[/\\]CalculatorSymbols\.h$'], []),
 	('go-to-keys-change-tab', {
 		#With the dialog open its own keys change its tab, searching for what is typed in it.
-		'WAIT_INDEX': '1', 'DIALOG_ANSWER': 'Cancel', 'DIALOG_KEYS': 'Control+Shift+N,Control+Alt+Shift+N,Control+N',
+		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'DIALOG_ANSWER': 'Cancel', 'DIALOG_KEYS': 'Control+Shift+N,Control+Alt+Shift+N,Control+N',
 		'DEBUG': 'goto:0:calcpars,answered:1'},
 		[r'^Keys Control\+Shift\+N: taken$', r'^Go to tab 1 \[calcpars\]: 2 results$', r'^  CalculatorParser\.h ',
 		 r'^Keys Control\+Alt\+Shift\+N: taken$', r'^Go to tab 2 \[calcpars\]: 1 results$', r'^  CCalculatorParser ',
@@ -3392,13 +3402,13 @@ CHECKS = [
 	('usages-row-parts', {
 		#A usage's row has its line number dim and the usage's own text in the match font; a group's count is dim, a file
 		#has its icon, and what is noted of a usage is dim.
-		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,references,usageparts'},
+		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,references,usageparts'},
 		[r'^  CalcParentheses\.h\{d:  1\} \(icon\)$', r'^    \{d:38: \}bool  \{m:IsParentheses\}\(void\) const override;\{d:  \[declaration\]\}$',
 		 r'^  Calculator\.cpp\{d:  3\} \(icon\)$', r'^    \{d:391: \}if \(pcExpression->\{m:IsParentheses\}\(\)\)$'], [r'\{\?:', r'ERROR']),
 	('usages-preview', {
 		#Beside the tree the selected usage's file is shown at its line, coloured as an editor is; stepping to another
 		#usage shows that; with the preview off nothing is shown.
-		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14',
+		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14',
 		'EDIT': 'usagegroups:,usages,usagepreview,focus:usages', 'DEBUG': 'command:Navigate.NextOccurrence,edit:usagepreview,edit:usagepreview:off,edit:usagepreview,edit:usagepreview:on,edit:usagepreview'},
 		[r'^Preview: Calculator\.cpp line 367 of \d+ \[if \(\(\*ppcExpression\)->IsParentheses\(\)\)\] coloured$',
 		 r'^Preview: Calculator\.cpp line 391 of \d+ \[if \(pcExpression->IsParentheses\(\)\)\] coloured$', r'^Preview: hidden$',
@@ -3411,7 +3421,7 @@ CHECKS = [
 		#The tool window's toolbar: Previous Occurrence is dim on the first usage; Next Occurrence steps and the tree keeps
 		#the keys; a grouping's button turns the group on, and is on while it is; Preview and Navigate with Single Click
 		#turn on and off; Rerun finds the usages again.
-		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14',
+		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14',
 		'EDIT': 'usagegroups:,usages,usagetoolbar,usagetool:Next Occurrence,printselected,usagetoolbar,usagetool:Group by Project,usagetoolbar,printusages,'
 		        'usagetool:Preview,usagetool:Navigate with Single Click,usagetoolbar,usagetool:Collapse All,printrows,usagetool:Expand All,printrows,usagetool:Rerun,printusages'},
 		[r'^Toolbar: Rerun, Previous Occurrence\(disabled\), Next Occurrence, Expand All, Collapse All, Group by Usage Type, Group by Project, Group by Class, Show Read Access\(on\), Show Write Access\(on\), Preview\(on\), Navigate with Single Click, Pin Tab, Scope$',
@@ -3422,7 +3432,7 @@ CHECKS = [
 		#Find Usages shows what it finds in the tab chosen unless it is pinned: then in a new tab, the pinned one kept.  A
 		#tab that isn't pinned is used again, in its place.  A tab chosen shows its own usages; its cross closes it, pinned
 		#or not.
-		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14',
+		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14',
 		'EDIT': 'usagegroups:,usages,usagetabs,usagetool:Pin Tab,usagetoolbar,usagetabs,focus:editor,caret:37:14,usages,usagetabs,usagetoolbar,'
 		        'focus:editor,caret:36:14,usages,usagetabs,usagetab:* IsParentheses,usagetabs,printusages,usageclosetab:* IsParentheses,usagetabs,printusages'},
 		[r'^Usage tabs: >IsParentheses$', r'Navigate with Single Click, Pin Tab\(on\), Scope$', r'^Usage tabs: >\* IsParentheses$',
@@ -3433,32 +3443,32 @@ CHECKS = [
 	('usages-scope-current-file', {
 		#Find Usages' scope: with Current File the usages in other files aren't in the tree, whose first row says the scope.
 		#The symbol is declared in CalcParentheses.h and only used in Calculator.cpp.
-		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usagescope:4,usages,usagescope:4,references'},
+		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usagescope:4,usages,usagescope:4,references'},
 		[r'^No usages of IsParentheses and 1 override in CalcParentheses\.h$',
 		 r'^References to IsParentheses and 1 override in CalcParentheses\.h  1 reference$', r'^    38: bool  IsParentheses\(void\) const override;'],
 		[r'Calculator\.cpp', r'hidden', r'ERROR']),
 	('usages-scope-project', {
 		#The Project scope is the active file's project; Find All References uses the scope too.
-		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usagescope:1,references'},
+		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usagescope:1,references'},
 		[r'^References to IsParentheses and 1 override in BaseLib  7 references$', r'^  Calculator\.cpp  3$'], [r'ERROR']),
 	('usages-scope-directory', {
 		#A directory's scope: nothing of the symbol's is in a directory it isn't used in.
-		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'FIND_DIRECTORY': os.path.join(ROOT, 'CommonLibraries', 'Libraries', 'WindowLib'),
+		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'FIND_DIRECTORY': os.path.join(ROOT, 'CommonLibraries', 'Libraries', 'WindowLib'),
 		'EDIT': 'usagegroups:,usagescope:2,usages'},
 		[r'^No usages of IsParentheses and 1 override in .*WindowLib$'], [r'Calculator\.cpp', r'ERROR']),
 	('usages-settings-declarations', {
 		#Find Usages (Alt+F7) has the declarations with the usages when its settings say so.
-		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usagescope:0:d,usagesonly,printusages'},
+		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usagescope:0:d,usagesonly,printusages'},
 		[r'^References to IsParentheses and 1 override  7 references$'], [r'ERROR']),
 	('usages-settings-dialog', {
 		#Find Usages Settings: its dialog, answered Find, finds the usages of the symbol at the caret.
-		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'DIALOG_ANSWER': 'OK',
+		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'DIALOG_ANSWER': 'OK',
 		'EDIT': 'usagegroups:', 'DEBUG': 'command:Navigate.FindUsagesSettings,answered:1,edit:printusages'},
 		[r'^Dialog \[Find Usages Settings\] answered OK$', r'^Usages of IsParentheses and 1 override  3 usages$'], [r'ERROR']),
 	('usages-scope-menu', {
 		#The toolbar's Scope: a menu of the scopes (the startup solution's too: with one solution open it is that one), the tab's saying so; one chosen shows the usages already found that are
 		#in it, as the IDE was when they were found, and choosing the solution's shows them all again.
-		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14',
+		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14',
 		'EDIT': 'usagegroups:,references,usagetool:Scope,usagescopemenu,usagescopemenu:3,printusages,usagetool:Scope,usagescopemenu,usagescopemenu:0,printusages'},
 		[r'^References to IsParentheses and 1 override  7 references$', r'^Scope menu \(open\): Solution  \(shown\), Startup Solution, Project, Current File, Open Files, Directory$',
 		 r'^References to IsParentheses and 1 override in CalcParentheses\.h  1 reference$',
@@ -3467,7 +3477,7 @@ CHECKS = [
 	('usages-access-filters', {
 		#Show Read Access and Show Write Access, both on to start with: off, a field's usages that read it, or write it, are
 		#left out of the tree, whose first row says how many are hidden.
-		'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.h', 'CARET': '32:17',
+		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.h', 'CARET': '32:17',
 		'EDIT': 'usagegroups:t,usages,usagetoolbar,usagetool:Show Read Access,printusages,usagetoolbar,usagetool:Show Read Access,usagetool:Show Write Access,printusages'},
 		[r'^Usages of mpcCalculator  18 usages$', r'^  Value read  16 usages$', r'^  Value write  2 usages$', r'Show Read Access\(on\), Show Write Access\(on\), Preview',
 		 r'^Usages of mpcCalculator  18 usages  \(16 hidden\)$', r'^  Value write  2 usages$', r'^      36: mpcCalculator = pcCalculator;$',
@@ -3475,7 +3485,7 @@ CHECKS = [
 		[r'No tool button', r'ERROR']),
 	('find-toolbar', {
 		#The Find tool window's toolbar has no groupings; Rerun finds the text again.
-		'WAIT_INDEX': '1', 'DIALOG_ANSWER': 'Open in Find Window', 'DEBUG': 'find:0:calculatorparser,answered:1,printfindtoolbar,findtool:Rerun,printfind'},
+		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'DIALOG_ANSWER': 'Open in Find Window', 'DEBUG': 'find:0:calculatorparser,answered:1,printfindtoolbar,findtool:Rerun,printfind'},
 		[r'^Toolbar: Rerun, Previous Occurrence\(disabled\), Next Occurrence, Expand All, Collapse All, Preview\(on\), Navigate with Single Click$',
 		 r"^Occurrences of 'calculatorparser' in the solution  13 matches in 2 files$"], [r'No tool button', r'ERROR']),
 	('find-row-parts', {
@@ -3510,31 +3520,31 @@ CHECKS = [
 		 r'^Opened CalculatorParser\.h 29:24$', r'^Find window: 13 results', r"^Occurrences of 'calculatorparser' in the solution  13 matches in 2 files$",
 		 r'^  CalculatorParser\.h  1 match$', r'^    29: class CCalculatorParser$', r'^  CalculatorParser\.cpp  12 matches$'], [r'ERROR']),
 	('find-match-case', {
-		'WAIT_INDEX': '1', 'FIND': '0:c:calculatorparser'},
+		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'FIND': '0:c:calculatorparser'},
 		[r'^Find \[calculatorparser\]: Nothing found', r'^Find window: 0 results'], [r'^Opened ', r'ERROR']),
 	('find-in-project-words', {
 		#In the active file's project, whole words with their case: not CCalculatorParser's.
-		'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'FIND': '1:cw:Parse'},
+		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'FIND': '1:cw:Parse'},
 		[r'^Find \[Parse\]: \d+\+? matches in \d+\+? files', r'^  CCalcObject\* CCalculatorParser::Parse\(const char\* szText\)  \[CalculatorParser\.cpp 57\]  match 32\+5$',
 		 r"^Occurrences of 'Parse' in BaseLib  \d+ matches in \d+ files"], [r'\[CalculatorParser\.cpp 33\]', r'ERROR']),
 	('find-in-directory', {
 		#In a directory and under it, whatever is in a project.
-		'WAIT_INDEX': '1', 'FIND': '2:-:class CCalculatorParser', 'FIND_DIRECTORY': os.path.join(ROOT, 'CommonLibraries', 'Libraries')},
+		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'FIND': '2:-:class CCalculatorParser', 'FIND_DIRECTORY': os.path.join(ROOT, 'CommonLibraries', 'Libraries')},
 		[r'^Find \[class CCalculatorParser\]: 1 match in 1 file', r'^  class CCalculatorParser  \[CalculatorParser\.h 29\]  match 0\+23$',
 		 r"^Occurrences of 'class CCalculatorParser' in .*Libraries  1 match in 1 file$", r'^  CalculatorParser\.h  1 match$'], [r'ERROR']),
 	('find-in-current-file', {
 		#The Current File scope: only the active file is searched, though others have the text.
-		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'FIND': '4:-:IsParentheses'},
+		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'FIND': '4:-:IsParentheses'},
 		[r'^Find \[IsParentheses\]: 1 match in 1 file', r'^  bool  IsParentheses\(void\) const override;  \[CalcParentheses\.h 38\]  match 6\+13$',
 		 r"^Occurrences of 'IsParentheses' in CalcParentheses\.h  1 match in 1 file$"], [r'Calculator\.cpp', r'ERROR']),
 	('find-in-open-files', {
 		#The Open Files scope: the files with an editor's tab.
-		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'FIND': '5:-:IsParentheses'},
+		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'FIND': '5:-:IsParentheses'},
 		[r'^Find \[IsParentheses\]: \d+ match(es)? in \d+ files?', r'\[CalcParentheses\.h 38\]', r"^Occurrences of 'IsParentheses' in the open files  "],
 		[r'\[Calculator\.cpp ', r'ERROR']),
 	('find-dialog-open-in-find-window', {
 		#The dialog shown, and Open in Find Window clicked.
-		'WAIT_INDEX': '1', 'DIALOG_ANSWER': 'Open in Find Window', 'DEBUG': 'find:0:calculatorparser,answered:1,printfind'},
+		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'DIALOG_ANSWER': 'Open in Find Window', 'DEBUG': 'find:0:calculatorparser,answered:1,printfind'},
 		[r'^Dialog \[Find in Files\] answered Open in Find Window$', r"^Occurrences of 'calculatorparser' in the solution  13 matches in 2 files$",
 		 r'^    29: class CCalculatorParser$'], [r'ERROR']),
 	('close-cancel-and-navigate', {
@@ -3731,7 +3741,7 @@ CHECKS = [
 		'OPEN': 'Kernal.cpp', 'DEBUG': 'line:20,buildtab,wait:300,printtabs'},
 		[r'^Tabs: .*>Kernal\.cpp'], []),
 	('menus', {
-		'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'CARET': '36:4', 'DEBUG': 'printmenus,clickmenu:View/Nope'},
+		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'CARET': '36:4', 'DEBUG': 'printmenus,clickmenu:View/Nope'},
 		[r'^Menu File: New>, Save File as Template\.\.\., Open Project/Solution\.\.\., Add Solution\.\.\., Close Solution, Recent Solutions>, Clear Recent Solutions, Save \[Ctrl\+S\], Save All \[Ctrl\+Shift\+S\], Compare with File\.\.\., Settings\.\.\. \[Ctrl\+Alt\+S\], Exit$',
 		 r'^Menu File/Recent Solutions: 1 ',
 		 r'^Menu Edit: Undo \[Ctrl\+Z\]\(disabled\), Redo \[Ctrl\+Shift\+Z\]\(disabled\), Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\], Select All \[Ctrl\+A\], Extend Selection \[Ctrl\+W\], Shrink Selection \[Ctrl\+Shift\+W\], Find in Files\.\.\. \[Ctrl\+Shift\+F\]$',
@@ -3746,19 +3756,19 @@ CHECKS = [
 		 r'^Menu Explorer: Set as Startup Solution, Set as Startup Project\(disabled\), Remove Solution, Rename\.\.\.(\(disabled\))?, Properties\.\.\.(\(disabled\))?$',
 		 r'^Menu item \[View/Nope\] not found$'], []),
 	('menu-clicks', {
-		'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'CARET': '36:4', 'DIALOG_ANSWER': 'Cancel',
+		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'CARET': '36:4', 'DIALOG_ANSWER': 'Cancel',
 		'DEBUG': 'clickmenu:Editor/Rename...,answered:1,clickmenu:Navigate/File...,answered:2,clickmenu:Editor/Find Usages,'
 			'clickmenu:Editor/Go to Source,printtabs,clickmenu:Edit/Select All,clickmenu:View/Build,'
 			'clickmenu:Window/Reset Window Layout,clickmenu:Explorer/Set as Startup Solution,clickmenu:File/Save All,printtabs'},
 		[r'^Dialog \[Rename\] answered Cancel$', r'^Dialog \[Go To\] answered Cancel$',
 		 r'^Tabs: .*>CalculatorParser\.h$', r'^Tabs: .*>CalculatorParser\.h$'], [r'not found', r'disabled']),
 	('hierarchy-after-edits', {
-		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14',
+		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14',
 		'EDIT': 'edit:renamable,replace:29| : public CCalcExpression|,renamable'},
 		[r'^Rename: IsParentheses \[CCalcParentheses::IsParentheses\(\) const\] at 7 places, 1 overrides$',
 		 r'^Rename: IsParentheses \[CCalcParentheses::IsParentheses\(\) const\] at 2 places, 0 overrides$'], []),
 	('virtual-after-edits', {
-		'WAIT_INDEX': '1', 'OPEN': 'CalcExpression.h', 'CARET': '37:18',
+		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'CalcExpression.h', 'CARET': '37:18',
 		'EDIT': 'edit:renamable,replace:37|virtual |,caret:37:9,renamable'},
 		[r'^Rename: IsParentheses \[CCalcExpression::IsParentheses\(\) const\] at 7 places, 1 overrides$',
 		 r'^Rename: IsParentheses \[CCalcExpression::IsParentheses\(\) const\] at 5 places, 0 overrides$'], []),
@@ -3899,7 +3909,7 @@ CHECKS = [
 		#Calculator.cpp's StripParentheses.  Moved within one they stay; moved off, or the file edited, they go at once;
 		#after an edit they come back once the index has the edited text (where the edit moved one, there).  Only this
 		#file's: StripParentheses' definition and uses, not its declaration in Calculator.h.
-		'WAIT_INDEX': '1', 'OPEN': 'Calculator.cpp', 'CARET': '363:21',
+		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'Calculator.cpp', 'CARET': '363:21',
 		'DEBUG': 'wait:1000,edit:printcaretusages,edit:caret:369:5,edit:printcaretusages,edit:caret:365:3,edit:printcaretusages,'
 		         'edit:caret:363:21,wait:50,edit:printcaretusages,wait:1000,edit:printcaretusages,edit:replace:370|= pcChild|=  pcChild,edit:printcaretusages,'
 		         'wait:3000,edit:printcaretusages,edit:caret:361:20,wait:1000,edit:printcaretusages'},
