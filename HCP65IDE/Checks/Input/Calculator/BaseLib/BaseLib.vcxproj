@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\..\..\..\CommonLibraries\Libraries\BaseLib\CalcBinaryExpression.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\CommonLibraries\Libraries\BaseLib\CalcConstExpression.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\CommonLibraries\Libraries\BaseLib\CalcExpression.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\CommonLibraries\Libraries\BaseLib\CalcObject.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\CommonLibraries\Libraries\BaseLib\CalcObjectArray.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\CommonLibraries\Libraries\BaseLib\CalcOperator.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\CommonLibraries\Libraries\BaseLib\CalcParentheses.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\CommonLibraries\Libraries\BaseLib\CalcUnaryExpression.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\CommonLibraries\Libraries\BaseLib\CalcVariable.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\CommonLibraries\Libraries\BaseLib\CalcVariableDefinition.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\CommonLibraries\Libraries\BaseLib\Calculator.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\CommonLibraries\Libraries\BaseLib\CalculatorError.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\CommonLibraries\Libraries\BaseLib\CalculatorOperator.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\CommonLibraries\Libraries\BaseLib\CalculatorParser.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\CommonLibraries\Libraries\BaseLib\CalculatorSymbols.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\CommonLibraries\Libraries\BaseLib\CalculatorVariables.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\..\..\..\CommonLibraries\Libraries\BaseLib\CalcBinaryExpression.h" />
+    <ClInclude Include="..\..\..\..\..\..\CommonLibraries\Libraries\BaseLib\CalcConstExpression.h" />
+    <ClInclude Include="..\..\..\..\..\..\CommonLibraries\Libraries\BaseLib\CalcExpression.h" />
+    <ClInclude Include="..\..\..\..\..\..\CommonLibraries\Libraries\BaseLib\CalcObject.h" />
+    <ClInclude Include="..\..\..\..\..\..\CommonLibraries\Libraries\BaseLib\CalcObjectArray.h" />
+    <ClInclude Include="..\..\..\..\..\..\CommonLibraries\Libraries\BaseLib\CalcOperator.h" />
+    <ClInclude Include="..\..\..\..\..\..\CommonLibraries\Libraries\BaseLib\CalcParentheses.h" />
+    <ClInclude Include="..\..\..\..\..\..\CommonLibraries\Libraries\BaseLib\CalcUnaryExpression.h" />
+    <ClInclude Include="..\..\..\..\..\..\CommonLibraries\Libraries\BaseLib\CalcVariable.h" />
+    <ClInclude Include="..\..\..\..\..\..\CommonLibraries\Libraries\BaseLib\CalcVariableDefinition.h" />
+    <ClInclude Include="..\..\..\..\..\..\CommonLibraries\Libraries\BaseLib\Calculator.h" />
+    <ClInclude Include="..\..\..\..\..\..\CommonLibraries\Libraries\BaseLib\CalculatorError.h" />
+    <ClInclude Include="..\..\..\..\..\..\CommonLibraries\Libraries\BaseLib\CalculatorOperator.h" />
+    <ClInclude Include="..\..\..\..\..\..\CommonLibraries\Libraries\BaseLib\CalculatorParser.h" />
+    <ClInclude Include="..\..\..\..\..\..\CommonLibraries\Libraries\BaseLib\CalculatorSymbols.h" />
+    <ClInclude Include="..\..\..\..\..\..\CommonLibraries\Libraries\BaseLib\CalculatorVariables.h" />
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{5C1D2E3F-0000-4000-8000-00000000CA1C}</ProjectGuid>
+    <RootNamespace>BaseLib</RootNamespace>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <IncludePath>$(ProjectDir)..\..\..\..\..\..\CommonLibraries\Libraries\;$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>
