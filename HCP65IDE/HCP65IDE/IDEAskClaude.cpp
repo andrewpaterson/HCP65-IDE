@@ -72,6 +72,7 @@ void CIDEAskClaude::Free(void)
 		mpClaudePane->GetSendButton()->GetClickEvent()->Remove(this);
 		mpClaudePane->GetStopButton()->GetClickEvent()->Remove(this);
 		mpClaudePane->GetNewButton()->GetClickEvent()->Remove(this);
+		mpClaudePane->GetRequestArea()->GetEnterEvent()->Remove(this);
 	}
 	//A request Claude is still working on is stopped.
 	mcClaude.Kill();
@@ -88,8 +89,9 @@ bool CIDEAskClaude::Load(CObjectReader* pcFile) { return false; }
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Send: the request typed in the Claude tab is sent.  The keys go back
-// to the request's box from the button, so the next can be typed.
+// Send, or Enter in the request's box: the request typed in the Claude
+// tab is sent.  The keys go back to the request's box from the button, so
+// the next can be typed.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEAskClaude::ClaudeSendClicked(void)
@@ -536,6 +538,9 @@ void CIDEAskClaude::CreatePane(SDockPlace* psPlace)
 	mpClaudePane->GetSendButton()->GetClickEvent()->Add(this, &CIDEAskClaude::ClaudeSendClicked);
 	mpClaudePane->GetStopButton()->GetClickEvent()->Add(this, &CIDEAskClaude::ClaudeStopClicked);
 	mpClaudePane->GetNewButton()->GetClickEvent()->Add(this, &CIDEAskClaude::ClaudeNewClicked);
+	//Enter sends the request as Send does, and Shift+Enter starts a line in it, as IntelliJ IDEA's chat.
+	mpClaudePane->GetRequestArea()->SetEnterEvent(true);
+	mpClaudePane->GetRequestArea()->GetEnterEvent()->Add(this, &CIDEAskClaude::ClaudeSendClicked);
 	mpClaudeTool = mpcContent->GetDock()->AddPane(IDE_CLAUDE_ID, "Claude", NULL, mpClaudePane->GetComponent(), DPK_Tool, psPlace);
 }
 

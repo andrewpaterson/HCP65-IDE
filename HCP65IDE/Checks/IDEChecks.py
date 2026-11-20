@@ -3978,12 +3978,16 @@ if os.name != 'nt':
 		#was no pixels wide, the press missed it and nothing could be typed), what is typed goes in it, and a press on
 		#Send sends it: the request, the tool's line (the file named from Claude's folder) and the answer are in the
 		#conversation, the box is empty and has the keys again, so the next request is typed without another press.
+		#Shift+Enter, pressed on the script's keyboard, starts a line in the request and Enter sends it, both lines.
 		'SOLUTION': RENAME_FILE, 'OPEN': 'Engine.h', 'CLAUDE_EXECUTABLE': os.path.join(HERE, 'Input', 'Claude', 'claude'),
 		'DEBUG': 'wait:500,clickmenu:View/Claude,edit:claudeclick:request,edit:printclaude,edit:claudetype:Hello there,edit:printclaude,'
-		         'edit:claudeclick:send,wait:1500,edit:printclaude,edit:claudetype:Second,edit:printclaude'},
+		         'edit:claudeclick:send,wait:1500,edit:printclaude,edit:claudetype:Second,edit:press:Left Shift,edit:tap:Enter,'
+		         'edit:release:Left Shift,edit:claudetype:line,edit:printclaude,edit:tap:Enter,wait:1500,edit:printclaude'},
 		[r'^Claude: .* keys request$', r'^Claude request: \[\]$', r'^Claude request: \[Hello there\]$',
 		 r'^Claude: .* keys request$', r'^Claude status: \[Done, \$0\.01\.\]$', r'^Claude request: \[\]$',
-		 r'^Claude conversation: \[> Hello there$', r'^  Read Engine\.h$', r'^Asked: Hello there\]$', r'^Claude request: \[Second\]$'],
+		 r'^Claude conversation: \[> Hello there$', r'^  Read Engine\.h$', r'^Asked: Hello there\]$',
+		 r'^Claude request: \[Second$', r'^line\]$',
+		 r'^Claude: .* keys request$', r'^Claude request: \[\]$', r'^> Second$', r'^> line$', r'^Asked: Second\]$'],
 		[r'^Claude: .* keys nothing$']))
 
 

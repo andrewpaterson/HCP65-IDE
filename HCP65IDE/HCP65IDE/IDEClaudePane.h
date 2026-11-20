@@ -33,7 +33,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 //The Claude tab under the editor: the conversation with Claude Code over the box a request is typed in, with Send,
-//Stop and New Conversation beside it, and a line saying how the request is going.  What Claude writes is shown whole;
+//Stop and New Conversation beside it, and a line saying how the request is going.  Enter in the box sends the request
+//too; Shift+Enter (Enter at Line End's keys) starts a line in it.  What Claude writes is shown whole;
 //its tools are a line each (the tool and what it was used on, a file in Claude's folder named from there), and their
 //results only when they fail.
 //
