@@ -180,6 +180,7 @@ void CIDESettings::ReadSettings(const char* szFile)
 		mpcContent->GetFileTemplates()->ReadSettings(pcRoot);
 		mpcContent->GetAskClaude()->ReadSettings(pcRoot);
 		mpcContent->GetStructure()->ReadSettings(pcRoot);
+		mpcContent->GetFind()->ReadSettings(pcRoot);
 	}
 	else
 	{
@@ -218,6 +219,7 @@ bool CIDESettings::WriteSettings(void)
 	mpcContent->GetFileTemplates()->WriteSettings(&cWriter);
 	mpcContent->GetAskClaude()->WriteSettings(&cWriter);
 	mpcContent->GetStructure()->WriteSettings(&cWriter);
+	mpcContent->GetFind()->WriteSettings(&cWriter);
 	cWriter.End();
 	bResult = cWriter.Write(mszSettingsFile.Text());
 	cWriter.Kill();

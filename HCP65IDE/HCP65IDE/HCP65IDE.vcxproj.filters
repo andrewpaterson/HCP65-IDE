@@ -186,6 +186,9 @@
     <ClCompile Include="IDEResultsPane.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="IDEFind.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="IDEFindInFiles.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -459,6 +462,9 @@
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDEResultsPane.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDEFind.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDEFindInFiles.h">

@@ -50,7 +50,7 @@ Stage B, moving in a file: built 2026-11-20.
     CommonLibraries 8a979f91f and 2e6098028 (CPromptPopup; the bracket commands), 6c5f6f5b5 (typing finds a row:
     CListContainer::SetTypeToFind, CScrollPane::SetNote), 211ca9a7e (a chooser with no field finds rows so),
     cba8c98cc (CChooserPopup::SetOpensAbove); HCP65-IDE 3a83cf8 (the outline, File Structure, Next and Previous
-    Method), 8696cee (the braces' check), 782afa5 (Go to Line), and the commit after it (breadcrumbs, sticky lines,
+    Method), 8696cee (the braces' check), 782afa5 (Go to Line), 95b7648 (breadcrumbs, sticky lines,
     Settings' Editor page, the Structure tool window, typing to find a row in the IDE's trees).  Checks nav-outline*,
     nav-file-structure, nav-next-method, nav-braces, nav-go-to-line, nav-breadcrumbs, nav-sticky-lines,
     nav-editor-settings*, nav-structure-*, nav-type-to-find*; Checks/Input/Navigation has Long.cpp for what needs a

@@ -3261,6 +3261,87 @@ void CIDEScript::RunEditStep(const char* szStep)
 			pStructure->GetStructurePane()->ActivateRow(atoi(&szStep[15]));
 		}
 	}
+	else if (((strcmp(szStep, "printfindbar") == 0) || (strncmp(szStep, "findbar:", 8) == 0)) && pTab.IsNotNull())
+	{
+		//The active editor's Find bar as it is once the window has ticked ("Find bar: [text] 2 of 5 case", or "Find
+		//bar: closed"), with its marks on the scroll bar counted; findbar:text:<text> and findbar:replace:<text> set
+		//its fields as if typed, findbar:case, :words, :regex and :selection click its ticks, findbar:replaceone and
+		//findbar:replaceall its buttons.
+		Ptr<CIDEFindBar>	pBar;
+		CChars				szShown;
+
+		pBar = pTab->GetFindBar();
+		mpcContent->GetWindow()->Layout();
+		mpcContent->GetFind()->Poll();
+		if (strcmp(szStep, "printfindbar") == 0)
+		{
+			szShown.Init();
+			if (pBar.IsNotNull())
+			{
+				pBar->Print(&szShown);
+			}
+			else
+			{
+				szShown.Append("Find bar: closed");
+			}
+			printf("%s, %d marks\n", szShown.Text(), (int)pTab->GetPane()->GetScrollBar(SBO_Vertical)->NumMarks());
+			szShown.Kill();
+			fflush(stdout);
+		}
+		else if (pBar.IsNull())
+		{
+		}
+		else if (strncmp(szStep, "findbar:text:", 13) == 0)
+		{
+			pBar->SetFindText(&szStep[13]);
+		}
+		else if (strncmp(szStep, "findbar:replace:", 16) == 0)
+		{
+			pBar->SetReplaceText(&szStep[16]);
+		}
+		else if (strcmp(szStep, "findbar:replaceone") == 0)
+		{
+			pBar->ReplaceCurrent();
+		}
+		else if (strcmp(szStep, "findbar:replaceall") == 0)
+		{
+			pBar->ReplaceAll();
+		}
+		else if (pBar->GetTick(&szStep[8]).IsNotNull())
+		{
+			pBar->GetTick(&szStep[8])->Toggle();
+		}
+	}
+	else if ((strncmp(szStep, "printline:", 10) == 0) && pTab.IsNotNull())
+	{
+		//printline:<line>: that line of the active editor's text, from 1, as "Line 23: [its text]".
+		Ptr<CTextArea>	pEditor;
+		CChars			szLine;
+		size			uiLine;
+
+		pEditor = pTab->GetEditor();
+		uiLine = (size)atoi(&szStep[10]);
+		szLine.Init();
+		if ((uiLine >= 1) && (uiLine <= pEditor->NumLines()))
+		{
+			szLine.Append(&pEditor->GetText()[pEditor->GetLineStart(uiLine - 1)], pEditor->GetLineEnd(uiLine - 1) - pEditor->GetLineStart(uiLine - 1));
+		}
+		printf("Line %d: [%s]\n", (int)uiLine, szLine.Text());
+		szLine.Kill();
+		fflush(stdout);
+	}
+	else if ((strncmp(szStep, "selectto:", 9) == 0) && pTab.IsNotNull())
+	{
+		//selectto:<line>:<column>: the active editor's text selected from its caret to that place, both from 1.
+		Ptr<CTextArea>	pEditor;
+		const char*		szColumn;
+		size			uiTo;
+
+		pEditor = pTab->GetEditor();
+		szColumn = strchr(&szStep[9], ':');
+		uiTo = pTab->FindPosition(atoi(&szStep[9]) - 1, szColumn ? atoi(&szColumn[1]) - 1 : 0);
+		pEditor->Select(pEditor->GetCaretPosition(), uiTo);
+	}
 	else if (strncmp(szStep, "scroll:", 7) == 0)
 	{
 		//scroll:<line>: the active editor's view scrolled so that line is its first, and laid out so.

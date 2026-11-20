@@ -112,6 +112,7 @@ Ptr<CMenuContainer> CIDEEdit::CreateEditMenu(void)
 	mpEditMenu->AddItem(pCommands->Find("Editor.ExtendSelection"));
 	mpEditMenu->AddItem(pCommands->Find("Editor.ShrinkSelection"));
 	mpEditMenu->AddSeparator();
+	mpcContent->GetFind()->AddEditItems(mpEditMenu);
 	mpcContent->GetFindInFiles()->AddEditItems(mpEditMenu);
 	mpcContent->GetDuplicates()->AddEditItems(mpEditMenu);
 	return mpEditMenu;

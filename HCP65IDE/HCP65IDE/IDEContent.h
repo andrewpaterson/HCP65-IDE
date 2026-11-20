@@ -222,6 +222,7 @@ protected:
 	Ptr<CIDEContextActions>		mpContextActions;		//Show Context Actions: the refactorings for what is at the caret.
 	Ptr<CIDEUsages>				mpUsages;			//Find Usages.
 	Ptr<CIDEFindInFiles>		mpFindInFiles;		//Find in Files and the Find tool window.
+	Ptr<CIDEFind>				mpFind;				//Find and Replace in the active editor.
 	Ptr<CIDEDuplicates>			mpDuplicates;		//Find Duplicates and the Duplicates tool window.
 	Ptr<CIDEOccurrences>		mpOccurrences;		//Next and Previous Occurrence through Find Usages or Build.
 	Ptr<CIDENavigationHistory>	mpNavigationHistory;	//Back and Forward.
@@ -326,6 +327,7 @@ public:
 	Ptr<CIDEEdit>			GetEdit(void) const;
 	Ptr<CIDEUsages>			GetUsages(void) const;
 	Ptr<CIDEFindInFiles>	GetFindInFiles(void) const;
+	Ptr<CIDEFind>			GetFind(void) const;
 	Ptr<CIDEDuplicates>		GetDuplicates(void) const;
 	Ptr<CIDEIndexing>		GetIndexing(void) const;
 	Ptr<CIDERename>			GetRename(void) const;

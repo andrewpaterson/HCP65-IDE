@@ -3699,7 +3699,9 @@ CHECKS = [
 		 r'^Keys: Navigate\.GoToTypeDeclaration Control\+Shift\+B bound$', r'^Keys: Navigate\.GoToRelatedSymbol Control\+Alt\+Home bound$',
 		 r'^Keys: Navigate\.GoToLine Control\+G bound$', r'^Keys: Navigate\.FileStructure Control\+F12 bound$', r'^Keys: Navigate\.NextMethod Alt\+Cursor Down bound$',
 		 r'^Keys: Navigate\.PreviousMethod Alt\+Cursor Up bound$', r'^Keys: View\.Structure Alt\+7 bound$',
-		 r'^Keys: Navigate\.ShowUsages Control\+Alt\+F7 bound$', r'^Keys: Build\.Build Control\+F9 bound$', r'^Keys: Run\.Start Control\+F5 bound$', r'^Keys: Debug\.Start F5 bound$',
+		 r'^Keys: Navigate\.ShowUsages Control\+Alt\+F7 bound$', r'^Keys: Edit\.Find Control\+F bound$', r'^Keys: Edit\.Replace Control\+R bound$',
+		 r'^Keys: Edit\.FindNext F3 bound$', r'^Keys: Edit\.FindPrevious Shift\+F3 bound$', r'^Keys: Edit\.FindWordAtCaret Control\+F3 bound$',
+		 r'^Keys: Build\.Build Control\+F9 bound$', r'^Keys: Run\.Start Control\+F5 bound$', r'^Keys: Debug\.Start F5 bound$',
 		 r'^Keys: Debug\.BreakAll Control\+Pause/Break bound$',
 		 r'^Buttons: Start \[Run\.Start\]$'], [r'NOT BOUND', r'\[none\]']),
 	('configuration', {
@@ -3856,7 +3858,7 @@ CHECKS = [
 		[r'^Menu File: New>, Save File as Template\.\.\., Open Project/Solution\.\.\., Add Solution\.\.\., Close Solution, Recent Solutions>, Clear Recent Solutions, Save \[Ctrl\+S\], Save All \[Ctrl\+Shift\+S\], Compare with File\.\.\., Settings\.\.\. \[Ctrl\+Alt\+S\], Exit$',
 		 r'^Menu File/New: C\+\+ Class\.\.\., C\+\+ Header\.\.\., C\+\+ Source\.\.\.$',
 		 r'^Menu File/Recent Solutions: 1 ',
-		 r'^Menu Edit: Undo \[Ctrl\+Z\](\(disabled\))?, Redo \[Ctrl\+Shift\+Z\](\(disabled\))?, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\], Select All \[Ctrl\+A\], Extend Selection \[Ctrl\+W\], Shrink Selection \[Ctrl\+Shift\+W\], Find in Files\.\.\. \[Ctrl\+Shift\+F\], Find Duplicates\.\.\. \[Ctrl\+Alt\+Shift\+D\]$',
+		 r'^Menu Edit: Undo \[Ctrl\+Z\](\(disabled\))?, Redo \[Ctrl\+Shift\+Z\](\(disabled\))?, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\], Select All \[Ctrl\+A\], Extend Selection \[Ctrl\+W\], Shrink Selection \[Ctrl\+Shift\+W\], Find\.\.\. \[Ctrl\+F\], Replace\.\.\. \[Ctrl\+R\], Find Next \[F3\], Find Previous \[Shift\+F3\], Find Word at Caret \[Ctrl\+F3\], Find in Files\.\.\. \[Ctrl\+Shift\+F\], Find Duplicates\.\.\. \[Ctrl\+Alt\+Shift\+D\]$',
 		 r'^Menu Navigate: Back \[Ctrl\+Alt\+Left\](\(disabled\))?, Forward \[Ctrl\+Alt\+Right\](\(disabled\))?, Class\.\.\. \[Ctrl\+N\], File\.\.\. \[Ctrl\+Shift\+N\], Symbol\.\.\. \[Ctrl\+Alt\+Shift\+N\], Line:Column\.\.\. \[Ctrl\+G\], Go to Source \[Ctrl\+B\], Go to Definition \[F12\], Go to Implementation\(s\) \[Ctrl\+Alt\+B\], Go to Type Declaration \[Ctrl\+Shift\+B\], Go to Super Method \[Ctrl\+U\], Go to Related Symbol \[Ctrl\+Alt\+Home\], Switch Header/Source \[Alt\+O\], File Structure \[Ctrl\+F12\], Next Method \[Alt\+Down\], Previous Method \[Alt\+Up\], Find Usages \[Alt\+F7\], Show Usages \[Ctrl\+Alt\+F7\], Find All References \[Shift\+F12\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Next Occurrence \[Ctrl\+Alt\+Down\], Previous Occurrence \[Ctrl\+Alt\+Up\]$',
 		 r'^Menu View: Solution Explorer, Structure, Find Usages, Find, Duplicates, Build, Indexing, Run, Debug, Claude$',
 		 r'^Menu Git: Compare with HEAD, Compare with Branch\.\.\., Compare with Revision\.\.\.$',
@@ -4298,6 +4300,57 @@ CHECKS = [
 		'EDIT': 'usagegroups:,usages,focus:usages,printselected,key:type:squ,printselected,key:escape,print,key:escape,print'},
 		[r'^Usages of Draw and 3 overrides  4 usages$', r'^Selected: 12: pcShape->Draw\(\);$', r'^Selected: 29: CSquare::Draw\(\);$',
 		 r'Shape\.h line 14: \[\tvirtual void\tDraw\(void\);\]$', r'Shape\.h \(focus\) line 14: '], []),
+	('find-bar', {
+		#Find (Control+F): a bar over the code, its field the word at the caret.  Every match is counted and marked on
+		#the scroll bar (a mark for each line with one), the first from the caret selected.  Enter goes to the next and
+		#Shift+Enter to the previous, round the ends.  What is typed is searched for as it is typed; Match Case, Words
+		#and Regex change what matches, and are written with the settings; what isn't a regular expression is said to
+		#be wrong.  Escape closes the bar and leaves the match selected, the editor with the keys.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Shapes.cpp', 'CARET': '10:16', 'SETTINGS': MakeSettingsFile(),
+		'DEBUG': 'edit:printfindbar,command:Edit.Find,edit:printfindbar,edit:printselection,edit:key:enter,edit:printfindbar,edit:printselection,'
+		         'edit:keys:Shift+Enter,edit:keys:Shift+Enter,edit:printfindbar,edit:findbar:text:draw,edit:printfindbar,edit:findbar:case,edit:printfindbar,'
+		         'edit:findbar:case,edit:findbar:words,edit:findbar:text:Squ,edit:printfindbar,edit:findbar:words,edit:printfindbar,'
+		         'edit:findbar:regex,edit:findbar:text:C\\w+::A,edit:printfindbar,edit:printselection,edit:findbar:text:a(,edit:printfindbar,printsettings,'
+		         'edit:key:escape,edit:printfindbar,edit:print'},
+		[r'^Find bar: closed, 0 marks$', r'^Find bar: \[Area\] 1 of 2, 2 marks$', r'^Selection: \[Area\] on line 10, caret line 10$',
+		 r'^Find bar: \[Area\] 2 of 2, 2 marks$', r'^Selection: \[Area\] on line 21, caret line 21$', r'^Find bar: \[Area\] 2 of 2, 2 marks$',
+		 r'^Find bar: \[draw\] 3 of 4, 4 marks$', r'^Find bar: \[draw\] 0 results case, 0 marks$', r'^Find bar: \[Squ\] 0 results words, 0 marks$',
+		 r'^Find bar: \[Squ\] 3 of 4, 4 marks$', r'^Find bar: \[C\\w\+::A\] 1 of 2 regex, 2 marks$', r'^Selection: \[CCircle::A\] on line 10, caret line 10$',
+		 r'^Find bar: \[a\(\] Not a regular expression: A \( has no \) after it\. regex, 0 marks$', r'<Find MatchCase="false" Words="false" Regex="true"/>',
+		 r'^Find bar: closed, 0 marks$', r'Shapes\.cpp \(focus\) line 10: \[int CCircle::Area\(void\)\]'], []),
+	('find-bar-replace', {
+		#Replace (Control+R): the bar with a second row.  Replace changes the current match and goes on to the next;
+		#Replace All changes every match as one edit, which one undo puts back, and the status line says how many.
+		#With Regex the replacement's $1 and $2 are the match's groups, and a group the expression hasn't replaces
+		#nothing.  Opened with more than a line selected, In Selection is ticked and only what was selected is
+		#searched: the field keeps what it had.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Shapes.cpp', 'CARET': '1:1',
+		'DEBUG': 'command:Edit.Replace,edit:findbar:text:miSide,edit:findbar:replace:miEdge,edit:printfindbar,edit:findbar:replaceone,edit:printfindbar,edit:printline:23,'
+		         'edit:findbar:replaceall,edit:printfindbar,edit:printline:23,printstatus,edit:undo,edit:printline:23,edit:undo,edit:printline:23,'
+		         'edit:findbar:regex,edit:findbar:text:C(\\w+)::(\\w+),edit:findbar:replace:$2_$1,edit:findbar:replaceall,edit:printline:4,edit:printline:27,printstatus,'
+		         'edit:findbar:text:D(r)aw,edit:findbar:replace:$3,edit:findbar:replaceall,printstatus,'
+		         'edit:caret:6:1,edit:selectto:13:1,command:Edit.Replace,edit:printfindbar,edit:findbar:regex,edit:findbar:text:mi,edit:findbar:replace:m_,edit:printfindbar,edit:findbar:replaceall,edit:printline:12,edit:printline:23'},
+		[r'^Find bar: \[miSide\] 1 of 2 replace \[miEdge\], 1 marks$', r'^Find bar: \[miSide\] 1 of 1 replace \[miEdge\], 1 marks$', r'^Line 23: \[\treturn miEdge \* miSide;\]$',
+		 r'^Find bar: \[miSide\] 0 results replace \[miEdge\], 0 marks$', r'^Line 23: \[\treturn miEdge \* miEdge;\]$', r'^Status line: Replaced 1 occurrence\.$',
+		 r'^Line 23: \[\treturn miEdge \* miSide;\]$', r'^Line 23: \[\treturn miSide \* miSide;\]$',
+		 r'^Line 4: \[void Draw_Circle\(void\)\]$', r'^Line 27: \[void Draw_RoundedSquare\(void\)\]$', r'^Status line: Replaced 6 occurrences\.$',
+		 r"^Status line: Nothing was replaced: The replacement names group \$3, which the pattern doesn't have\.$",
+		 r'^Find bar: \[D\(r\)aw\] 0 results regex selection replace \[\$3\], 0 marks$', r'^Find bar: \[mi\] 1 of 2 selection replace \[m_\], 1 marks$',
+		 r'^Line 12: \[\treturn 3 \* m_Radius \* m_Radius;\]$', r'^Line 23: \[\treturn miSide \* miSide;\]$'], []),
+	('find-next', {
+		#Find Next (F3) with nothing searched for says so.  Find Word at Caret (Control+F3) selects the word's next
+		#place, and F3 and Shift+F3 go on from there, round the ends, with no bar.  With the bar open they step its
+		#matches.  The bar searches again after the file is edited: a match typed into the file is counted.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Shapes.cpp', 'CARET': '4:8',
+		'DEBUG': 'command:Edit.FindNext,printstatus,command:Edit.FindWordAtCaret,edit:printselection,command:Edit.FindNext,edit:printselection,command:Edit.FindNext,edit:printselection,'
+		         'command:Edit.FindPrevious,edit:printselection,command:Edit.FindPrevious,edit:printselection,'
+		         'command:Edit.Find,edit:printfindbar,command:Edit.FindNext,edit:printfindbar,command:Edit.FindPrevious,edit:printfindbar,edit:key:escape,'
+		         'edit:focus:editor,edit:caret:6:3,edit:type:x,edit:printline:6,command:Edit.Find,edit:findbar:text:Move,edit:printfindbar,edit:focus:editor,edit:caret:1:1,edit:type:Move ,edit:printfindbar'},
+		[r'^Status line: There is nothing to find again: Find \(Control\+F\) or Find Word at Caret \(Control\+F3\) first\.$',
+		 r'^Selection: \[CCircle\] on line 10, caret line 10$', r'^Selection: \[CCircle\] on line 4, caret line 4$', r'^Selection: \[CCircle\] on line 10, caret line 10$',
+		 r'^Selection: \[CCircle\] on line 4, caret line 4$', r'^Selection: \[CCircle\] on line 10, caret line 10$',
+		 r'^Find bar: \[CCircle\] 2 of 2, 2 marks$', r'^Find bar: \[CCircle\] 1 of 2, 2 marks$', r'^Find bar: \[CCircle\] 2 of 2, 2 marks$',
+		 r'^Line 6: \[\tMxove\(0, 0\);\]$', r'^Find bar: \[Move\] 0 results, 0 marks$', r'^Find bar: \[Move\] 1 of 1, 1 marks$'], []),
 	('nav-type-declaration', {
 		#Go to Type Declaration (Control+Shift+B): from a parameter and from a local variable, the class each is declared
 		#with; from a field of a built in type, the status line says its type has nothing to go to.

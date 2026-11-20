@@ -22,6 +22,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define __IDE_EDITOR_TAB_H__
 #include "IDEOutline.h"
 #include "IDEBreadcrumbs.h"
+#include "IDEFind.h"
 #include "StandardLib/Object.h"
 #include "StandardLib/Pointer.h"
 #include "SupportLib/FontFamily.h"
@@ -64,6 +65,7 @@ protected:
 	Ptr<CComponent>		mpOverlay;
 	Ptr<CIDEBreadcrumbs>	mpBreadcrumbs;	//Made when breadcrumbs are first shown.
 	Ptr<CIDEStickyLines>	mpStickyLines;	//Made when sticky lines are first shown.
+	Ptr<CIDEFindBar>	mpFindBar;		//Made when Find is first opened in it.
 	Ptr<CDockPane>		mpDockPane;  //The document pane it is shown in.
 	CChars				mszFileName;
 	size				muiProject;		//The workspace's project it is in, MAX_SIZE if none.
@@ -114,6 +116,8 @@ public:
 	void				ShowStickyLines(CIDEContent* pcContent, bool bShown);
 	Ptr<CIDEBreadcrumbs>	GetBreadcrumbs(void) const;
 	Ptr<CIDEStickyLines>	GetStickyLines(void) const;
+	void				SetFindBar(Ptr<CIDEFindBar> pFindBar);
+	Ptr<CIDEFindBar>	GetFindBar(void) const;
 	CComponentEvent<CIDEEditorTab>*	GetSyntaxBehindEvent(void);
 	void				AddSelectionRanges(size uiStart, size uiEnd, CArrayTextRange* pasDest) override;
 	bool				GetCaretPlace(int* piLine, int* piColumn);

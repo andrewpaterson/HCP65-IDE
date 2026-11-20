@@ -360,6 +360,7 @@
     <ClCompile Include="IDEUsages.cpp" />
     <ClCompile Include="IDEScope.cpp" />
     <ClCompile Include="IDEResultsPane.cpp" />
+    <ClCompile Include="IDEFind.cpp" />
     <ClCompile Include="IDEFindInFiles.cpp" />
     <ClCompile Include="IDEIndexing.cpp" />
     <ClCompile Include="IDENavigationHistory.cpp" />
@@ -453,6 +454,7 @@
     <ClInclude Include="IDEUsages.h" />
     <ClInclude Include="IDEScope.h" />
     <ClInclude Include="IDEResultsPane.h" />
+    <ClInclude Include="IDEFind.h" />
     <ClInclude Include="IDEFindInFiles.h" />
     <ClInclude Include="IDEIndexing.h" />
     <ClInclude Include="IDENavigationHistory.h" />

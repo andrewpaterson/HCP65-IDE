@@ -243,6 +243,7 @@ void CIDEContent::Class(void)
 	M_Pointer(mpTemplateParameter);
 	M_Pointer(mpUsages);
 	M_Pointer(mpFindInFiles);
+	M_Pointer(mpFind);
 	M_Pointer(mpDuplicates);
 	M_Pointer(mpOccurrences);
 	M_Pointer(mpNavigationHistory);
@@ -472,6 +473,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpContextActions = OMalloc<CIDEContextActions>(this);
 	mpUsages = OMalloc<CIDEUsages>(this);
 	mpFindInFiles = OMalloc<CIDEFindInFiles>(this);
+	mpFind = OMalloc<CIDEFind>(this);
 	mpDuplicates = OMalloc<CIDEDuplicates>(this);
 	mpOccurrences = OMalloc<CIDEOccurrences>(this);
 	mpNavigationHistory = OMalloc<CIDENavigationHistory>(this);
@@ -697,6 +699,7 @@ void CIDEContent::AddCommands(void)
 	mpTemplateParameter->AddCommands(mpCommands);
 	mpContextActions->AddCommands(mpCommands);
 	mpUsages->AddCommands(mpCommands);
+	mpFind->AddCommands(mpCommands);
 	mpFindInFiles->AddCommands(mpCommands);
 	mpDuplicates->AddCommands(mpCommands);
 	mpOccurrences->AddCommands(mpCommands);
@@ -870,6 +873,9 @@ void CIDEContent::Tick(Ptr<CWindow> pWindow)
 
 	//Each editor's breadcrumbs and sticky lines follow its caret, its scrolling and its outline.
 	mpStructure->Poll();
+
+	//An open Find bar searches again after its file is edited.
+	mpFind->Poll();
 
 	//A caret moved far from where it stayed is a place to come back to.
 	iWait = mpNavigationHistory->Poll(iNow);
@@ -1208,6 +1214,7 @@ Ptr<CIDEStructure> CIDEContent::GetStructure(void) const { return mpStructure; }
 Ptr<CIDEEdit> CIDEContent::GetEdit(void) const { return mpEdit; }
 Ptr<CIDEUsages> CIDEContent::GetUsages(void) const { return mpUsages; }
 Ptr<CIDEFindInFiles> CIDEContent::GetFindInFiles(void) const { return mpFindInFiles; }
+Ptr<CIDEFind> CIDEContent::GetFind(void) const { return mpFind; }
 Ptr<CIDEDuplicates> CIDEContent::GetDuplicates(void) const { return mpDuplicates; }
 Ptr<CIDEOccurrences> CIDEContent::GetOccurrences(void) const { return mpOccurrences; }
 Ptr<CIDENavigationHistory> CIDEContent::GetNavigationHistory(void) const { return mpNavigationHistory; }

@@ -142,6 +142,7 @@ void CIDEEditorTab::Class(void)
 	M_Pointer(mpOverlay);
 	M_Pointer(mpBreadcrumbs);
 	M_Pointer(mpStickyLines);
+	M_Pointer(mpFindBar);
 	U_Size(muiOutlineChanges);
 	U_Unknown(CComponentEvent<CIDEEditorTab>, mcSyntaxBehind);
 	M_Pointer(mpZones);
@@ -377,6 +378,8 @@ Ptr<CComponent> CIDEEditorTab::GetHolder(void) const { return mpHolder; }
 size CIDEEditorTab::GetOutlineChanges(void) const { return muiOutlineChanges; }
 Ptr<CIDEBreadcrumbs> CIDEEditorTab::GetBreadcrumbs(void) const { return mpBreadcrumbs; }
 Ptr<CIDEStickyLines> CIDEEditorTab::GetStickyLines(void) const { return mpStickyLines; }
+void CIDEEditorTab::SetFindBar(Ptr<CIDEFindBar> pFindBar) { mpFindBar = pFindBar; }
+Ptr<CIDEFindBar> CIDEEditorTab::GetFindBar(void) const { return mpFindBar; }
 
 
 //////////////////////////////////////////////////////////////////////////
