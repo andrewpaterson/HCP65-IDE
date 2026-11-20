@@ -34,17 +34,17 @@ protected:
 	CChars	mszExtensions;
 
 public:
-	void	Init(const char* szName);
-	void	Kill(void);
+	void		Init(const char* szName);
+	void		Kill(void);
 
-	char*	GetName(void);
-	char*	GetLeafName(void);
-	size	GetDepth(void);
-	bool	GetParentName(CChars* pszDest);
-	char*	GetUniqueIdentifier(void);
-	char*	GetExtensions(void);
-	void	SetUniqueIdentifier(const char* szUniqueIdentifier);
-	void	SetExtensions(const char* szExtensions);
+	const char*	GetName(void) const;
+	const char*	GetLeafName(void) const;
+	size		GetDepth(void) const;
+	bool		GetParentName(CChars* pszDest);
+	const char*	GetUniqueIdentifier(void) const;
+	const char*	GetExtensions(void) const;
+	void		SetUniqueIdentifier(const char* szUniqueIdentifier);
+	void		SetExtensions(const char* szExtensions);
 };
 
 

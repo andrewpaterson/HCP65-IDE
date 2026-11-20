@@ -41,16 +41,16 @@ protected:
 	bool	mbDeploy;
 
 public:
-	void	Init(const char* szSolutionConfiguration);
-	void	Kill(void);
+	void		Init(const char* szSolutionConfiguration);
+	void		Kill(void);
 
-	char*	GetSolutionConfiguration(void);
-	char*	GetProjectConfiguration(void);
-	void	SetProjectConfiguration(const char* szProjectConfiguration);
-	bool	IsBuild(void) const;
-	void	SetBuild(bool bBuild);
-	bool	IsDeploy(void) const;
-	void	SetDeploy(bool bDeploy);
+	const char*	GetSolutionConfiguration(void) const;
+	const char*	GetProjectConfiguration(void) const;
+	void		SetProjectConfiguration(const char* szProjectConfiguration);
+	bool		IsBuild(void) const;
+	void		SetBuild(bool bBuild);
+	bool		IsDeploy(void) const;
+	void		SetDeploy(bool bDeploy);
 };
 
 
@@ -78,13 +78,13 @@ public:
 
 	bool								Load(const char* szSolutionDirectory);
 
-	char*								GetTypeGuid(void);
-	char*								GetName(void);
-	char*								GetPath(void);
-	char*								GetFullPath(void);
-	char*								GetGuid(void);
+	const char*							GetTypeGuid(void) const;
+	const char*							GetName(void) const;
+	const char*							GetPath(void) const;
+	const char*							GetFullPath(void) const;
+	const char*							GetGuid(void) const;
 	void								SetGuid(const char* szGuid);
-	char*								GetParentGuid(void);
+	const char*							GetParentGuid(void) const;
 	void								SetParentGuid(const char* szParentGuid);
 	bool								IsFolder(void);
 	bool								IsVcxProject(void);

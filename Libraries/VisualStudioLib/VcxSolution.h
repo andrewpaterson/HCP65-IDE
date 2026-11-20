@@ -64,13 +64,13 @@ public:
 	bool					Read(const char* szFileName, bool bLoadProjects = true);
 	bool					ReadProject(const char* szProjectFile);
 
-	char*					GetFileName(void);
-	char*					GetDirectory(void);
-	char*					GetName(void);
-	char*					GetFormatVersion(void);
-	char*					GetVisualStudioVersion(void);
-	char*					GetMinimumVisualStudioVersion(void);
-	char*					GetSolutionGuid(void);
+	const char*				GetFileName(void) const;
+	const char*				GetDirectory(void) const;
+	const char*				GetName(void) const;
+	const char*				GetFormatVersion(void) const;
+	const char*				GetVisualStudioVersion(void) const;
+	const char*				GetMinimumVisualStudioVersion(void) const;
+	const char*				GetSolutionGuid(void) const;
 	bool					IsHideSolutionNode(void) const;
 
 	size					NumConfigurations(void) const;

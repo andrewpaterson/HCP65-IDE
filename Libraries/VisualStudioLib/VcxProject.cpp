@@ -1577,11 +1577,11 @@ void CVcxProject::GetPropertyList(const char* szProperty, CVcxConfiguration* pcC
 }
 
 
-char* CVcxProject::GetFileName(void) { return mszFileName.Text(); }
-char* CVcxProject::GetDirectory(void) { return mszDirectory.Text(); }
-char* CVcxProject::GetName(void) { return mszName.Text(); }
-char* CVcxProject::GetGuid(void) { return mszGuid.Text(); }
-char* CVcxProject::GetRootNamespace(void) { return mszRootNamespace.Text(); }
+const char* CVcxProject::GetFileName(void) const { return mszFileName.Text(); }
+const char* CVcxProject::GetDirectory(void) const { return mszDirectory.Text(); }
+const char* CVcxProject::GetName(void) const { return mszName.Text(); }
+const char* CVcxProject::GetGuid(void) const { return mszGuid.Text(); }
+const char* CVcxProject::GetRootNamespace(void) const { return mszRootNamespace.Text(); }
 bool CVcxProject::HasFilters(void) const { return mbFilters; }
 size CVcxProject::NumConfigurations(void) const { return masConfigurations.NumElements(); }
 CVcxConfiguration* CVcxProject::GetConfiguration(size uiIndex) { return masConfigurations.Get(uiIndex); }

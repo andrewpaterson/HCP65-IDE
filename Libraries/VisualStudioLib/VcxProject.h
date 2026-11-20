@@ -52,11 +52,11 @@ public:
 
 	bool					Read(const char* szFileName);
 
-	char*					GetFileName(void);
-	char*					GetDirectory(void);
-	char*					GetName(void);
-	char*					GetGuid(void);
-	char*					GetRootNamespace(void);
+	const char*				GetFileName(void) const;
+	const char*				GetDirectory(void) const;
+	const char*				GetName(void) const;
+	const char*				GetGuid(void) const;
+	const char*				GetRootNamespace(void) const;
 	bool					HasFilters(void) const;
 
 	size					NumConfigurations(void) const;

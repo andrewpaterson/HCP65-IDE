@@ -49,8 +49,8 @@ void CVcxSolutionProjectConfiguration::Kill(void)
 }
 
 
-char* CVcxSolutionProjectConfiguration::GetSolutionConfiguration(void) { return mszSolutionConfiguration.Text(); }
-char* CVcxSolutionProjectConfiguration::GetProjectConfiguration(void) { return mszProjectConfiguration.Text(); }
+const char* CVcxSolutionProjectConfiguration::GetSolutionConfiguration(void) const { return mszSolutionConfiguration.Text(); }
+const char* CVcxSolutionProjectConfiguration::GetProjectConfiguration(void) const { return mszProjectConfiguration.Text(); }
 void CVcxSolutionProjectConfiguration::SetProjectConfiguration(const char* szProjectConfiguration) { mszProjectConfiguration.Set(szProjectConfiguration); }
 bool CVcxSolutionProjectConfiguration::IsBuild(void) const { return mbBuild; }
 void CVcxSolutionProjectConfiguration::SetBuild(bool bBuild) { mbBuild = bBuild; }
@@ -201,13 +201,13 @@ CVcxSolutionProjectConfiguration* CVcxSolutionProject::FindConfiguration(const c
 }
 
 
-char* CVcxSolutionProject::GetTypeGuid(void) { return mszTypeGuid.Text(); }
-char* CVcxSolutionProject::GetName(void) { return mszName.Text(); }
-char* CVcxSolutionProject::GetPath(void) { return mszPath.Text(); }
-char* CVcxSolutionProject::GetFullPath(void) { return mszFullPath.Text(); }
-char* CVcxSolutionProject::GetGuid(void) { return mszGuid.Text(); }
+const char* CVcxSolutionProject::GetTypeGuid(void) const { return mszTypeGuid.Text(); }
+const char* CVcxSolutionProject::GetName(void) const { return mszName.Text(); }
+const char* CVcxSolutionProject::GetPath(void) const { return mszPath.Text(); }
+const char* CVcxSolutionProject::GetFullPath(void) const { return mszFullPath.Text(); }
+const char* CVcxSolutionProject::GetGuid(void) const { return mszGuid.Text(); }
 void CVcxSolutionProject::SetGuid(const char* szGuid) { mszGuid.Set(szGuid); }
-char* CVcxSolutionProject::GetParentGuid(void) { return mszParentGuid.Text(); }
+const char* CVcxSolutionProject::GetParentGuid(void) const { return mszParentGuid.Text(); }
 void CVcxSolutionProject::SetParentGuid(const char* szParentGuid) { mszParentGuid.Set(szParentGuid); }
 bool CVcxSolutionProject::IsLoaded(void) const { return mpcProject != NULL; }
 CVcxProject* CVcxSolutionProject::GetProject(void) { return mpcProject; }

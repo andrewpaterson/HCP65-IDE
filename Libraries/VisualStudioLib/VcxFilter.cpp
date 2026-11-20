@@ -50,9 +50,9 @@ void CVcxFilter::Kill(void)
 // The last part of the name: Map for Source\Map.
 //
 //////////////////////////////////////////////////////////////////////////
-char* CVcxFilter::GetLeafName(void)
+const char* CVcxFilter::GetLeafName(void) const
 {
-	char*	szBackslash;
+	const char*	szBackslash;
 
 	szBackslash = strrchr(mszName.Text(), '\\');
 	return (szBackslash != NULL) ? szBackslash + 1 : mszName.Text();
@@ -64,10 +64,10 @@ char* CVcxFilter::GetLeafName(void)
 // 0 for a filter at the top of the project, 1 for one in it and so on.
 //
 //////////////////////////////////////////////////////////////////////////
-size CVcxFilter::GetDepth(void)
+size CVcxFilter::GetDepth(void) const
 {
-	size	uiDepth;
-	char*	sz;
+	size		uiDepth;
+	const char*	sz;
 
 	uiDepth = 0;
 	for (sz = mszName.Text(); *sz != '\0'; sz++)
@@ -121,7 +121,7 @@ void CVcxFilter::SetExtensions(const char* szExtensions)
 }
 
 
-char* CVcxFilter::GetName(void) { return mszName.Text(); }
-char* CVcxFilter::GetUniqueIdentifier(void) { return mszUniqueIdentifier.Text(); }
-char* CVcxFilter::GetExtensions(void) { return mszExtensions.Text(); }
+const char* CVcxFilter::GetName(void) const { return mszName.Text(); }
+const char* CVcxFilter::GetUniqueIdentifier(void) const { return mszUniqueIdentifier.Text(); }
+const char* CVcxFilter::GetExtensions(void) const { return mszExtensions.Text(); }
 

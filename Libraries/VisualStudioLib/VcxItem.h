@@ -54,11 +54,11 @@ public:
 	void				Kill(void);
 
 	EVcxItemType		GetType(void) const;
-	char*				GetElement(void);
-	char*				GetInclude(void);
-	char*				GetFilter(void);
+	const char*			GetElement(void) const;
+	const char*			GetInclude(void) const;
+	const char*			GetFilter(void) const;
 	void				SetFilter(const char* szFilter);
-	char*				GetFileName(void);
+	const char*			GetFileName(void) const;
 	bool				Is(const char* szElement, const char* szInclude);
 
 	static EVcxItemType	TypeOf(const char* szElement);

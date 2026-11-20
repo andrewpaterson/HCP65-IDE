@@ -37,15 +37,15 @@ protected:
 	CMapStringString	mcProperties;
 
 public:
-	void	Init(const char* szName);
-	void	Kill(void);
+	void		Init(const char* szName);
+	void		Kill(void);
 
-	char*	GetName(void);
-	char*	GetConfiguration(void);
-	char*	GetPlatform(void);
-	void	SetProperty(const char* szName, const char* szValue);
-	char*	GetProperty(const char* szName);
-	size	NumProperties(void);
+	const char*	GetName(void) const;
+	const char*	GetConfiguration(void) const;
+	const char*	GetPlatform(void) const;
+	void		SetProperty(const char* szName, const char* szValue);
+	char*		GetProperty(const char* szName);
+	size		NumProperties(void);
 };
 
 

@@ -94,11 +94,11 @@ EVcxItemType CVcxItem::TypeOf(const char* szElement)
 // The last part of the item's path: its file's name.
 //
 //////////////////////////////////////////////////////////////////////////
-char* CVcxItem::GetFileName(void)
+const char* CVcxItem::GetFileName(void) const
 {
-	char*	szInclude;
-	char*	szSlash;
-	char*	szBackslash;
+	const char*	szInclude;
+	const char*	szSlash;
+	const char*	szBackslash;
 
 	szInclude = mszInclude.Text();
 	szSlash = strrchr(szInclude, '/');
@@ -134,7 +134,7 @@ void CVcxItem::SetFilter(const char* szFilter)
 
 
 EVcxItemType CVcxItem::GetType(void) const { return meType; }
-char* CVcxItem::GetElement(void) { return mszElement.Text(); }
-char* CVcxItem::GetInclude(void) { return mszInclude.Text(); }
-char* CVcxItem::GetFilter(void) { return mszFilter.Text(); }
+const char* CVcxItem::GetElement(void) const { return mszElement.Text(); }
+const char* CVcxItem::GetInclude(void) const { return mszInclude.Text(); }
+const char* CVcxItem::GetFilter(void) const { return mszFilter.Text(); }
 

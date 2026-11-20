@@ -646,13 +646,13 @@ size CVcxSolution::NumLoadedProjects(void)
 }
 
 
-char* CVcxSolution::GetFileName(void) { return mszFileName.Text(); }
-char* CVcxSolution::GetDirectory(void) { return mszDirectory.Text(); }
-char* CVcxSolution::GetName(void) { return mszName.Text(); }
-char* CVcxSolution::GetFormatVersion(void) { return mszFormatVersion.Text(); }
-char* CVcxSolution::GetVisualStudioVersion(void) { return mszVisualStudioVersion.Text(); }
-char* CVcxSolution::GetMinimumVisualStudioVersion(void) { return mszMinimumVisualStudioVersion.Text(); }
-char* CVcxSolution::GetSolutionGuid(void) { return mszSolutionGuid.Text(); }
+const char* CVcxSolution::GetFileName(void) const { return mszFileName.Text(); }
+const char* CVcxSolution::GetDirectory(void) const { return mszDirectory.Text(); }
+const char* CVcxSolution::GetName(void) const { return mszName.Text(); }
+const char* CVcxSolution::GetFormatVersion(void) const { return mszFormatVersion.Text(); }
+const char* CVcxSolution::GetVisualStudioVersion(void) const { return mszVisualStudioVersion.Text(); }
+const char* CVcxSolution::GetMinimumVisualStudioVersion(void) const { return mszMinimumVisualStudioVersion.Text(); }
+const char* CVcxSolution::GetSolutionGuid(void) const { return mszSolutionGuid.Text(); }
 bool CVcxSolution::IsHideSolutionNode(void) const { return mbHideSolutionNode; }
 size CVcxSolution::NumConfigurations(void) const { return maszConfigurations.NumElements(); }
 char* CVcxSolution::GetConfiguration(size uiIndex) { return maszConfigurations.GetText(uiIndex); }

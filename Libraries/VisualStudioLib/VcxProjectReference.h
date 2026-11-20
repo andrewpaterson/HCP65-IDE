@@ -32,12 +32,12 @@ protected:
 	CChars	mszProject;
 
 public:
-	void	Init(const char* szInclude);
-	void	Kill(void);
+	void		Init(const char* szInclude);
+	void		Kill(void);
 
-	char*	GetInclude(void);
-	char*	GetProject(void);
-	void	SetProject(const char* szProject);
+	const char*	GetInclude(void) const;
+	const char*	GetProject(void) const;
+	void		SetProject(const char* szProject);
 };
 
 

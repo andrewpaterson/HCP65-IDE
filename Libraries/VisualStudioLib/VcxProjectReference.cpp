@@ -54,6 +54,6 @@ void CVcxProjectReference::SetProject(const char* szProject)
 }
 
 
-char* CVcxProjectReference::GetInclude(void) { return mszInclude.Text(); }
-char* CVcxProjectReference::GetProject(void) { return mszProject.Text(); }
+const char* CVcxProjectReference::GetInclude(void) const { return mszInclude.Text(); }
+const char* CVcxProjectReference::GetProject(void) const { return mszProject.Text(); }
 

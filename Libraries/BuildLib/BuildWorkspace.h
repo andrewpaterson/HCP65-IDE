@@ -49,15 +49,15 @@ public:
 	CBuildConfigurations	mcConfigurations;
 	CChars					mszStartupProject;	//The name of the project chosen, empty if none was.
 
-	void	Init(void);
-	void	Kill(void);
-	bool	Open(const char* szFile);
+	void		Init(void);
+	void		Kill(void);
+	bool		Open(const char* szFile);
 
-	bool	IsApplication(size uiProject);
-	size	NumApplications(void);
-	size	GetStartupProject(void);
-	char*	GetStartupProjectName(void);
-	bool	SetStartupProject(size uiProject);
+	bool		IsApplication(size uiProject);
+	size		NumApplications(void);
+	size		GetStartupProject(void);
+	const char*	GetStartupProjectName(void);
+	bool		SetStartupProject(size uiProject);
 };
 
 
@@ -117,7 +117,7 @@ public:
 	size					GetStartup(void) const;
 	bool					SetStartupProject(size uiSolution, size uiProject);
 	size					GetStartupProject(size uiSolution);
-	char*					GetStartupProjectName(size uiSolution);
+	const char*				GetStartupProjectName(size uiSolution);
 	void					SetConfiguration(const char* szConfiguration);
 	char*					GetConfiguration(void);
 	void					SetRunConfigurationName(const char* szName);

@@ -645,7 +645,7 @@ size CBuildWorkspaceSolution::GetStartupProject(void)
 // The startup project's name, "" if the solution has no application.
 //
 //////////////////////////////////////////////////////////////////////////
-char* CBuildWorkspaceSolution::GetStartupProjectName(void)
+const char* CBuildWorkspaceSolution::GetStartupProjectName(void)
 {
 	size	uiProject;
 
@@ -796,7 +796,7 @@ size CBuildWorkspace::GetStartupProject(size uiSolution)
 }
 
 
-char* CBuildWorkspace::GetStartupProjectName(size uiSolution)
+const char* CBuildWorkspace::GetStartupProjectName(size uiSolution)
 {
 	return (uiSolution < mapcSolutions.NumElements()) ? GetSolution(uiSolution)->GetStartupProjectName() : (char*)"";
 }

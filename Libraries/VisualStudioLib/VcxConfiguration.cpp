@@ -82,8 +82,8 @@ char* CVcxConfiguration::GetProperty(const char* szName)
 }
 
 
-char* CVcxConfiguration::GetName(void) { return mszName.Text(); }
-char* CVcxConfiguration::GetConfiguration(void) { return mszConfiguration.Text(); }
-char* CVcxConfiguration::GetPlatform(void) { return mszPlatform.Text(); }
+const char* CVcxConfiguration::GetName(void) const { return mszName.Text(); }
+const char* CVcxConfiguration::GetConfiguration(void) const { return mszConfiguration.Text(); }
+const char* CVcxConfiguration::GetPlatform(void) const { return mszPlatform.Text(); }
 size CVcxConfiguration::NumProperties(void) { return mcProperties.NumElements(); }
 
