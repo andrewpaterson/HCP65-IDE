@@ -5,7 +5,9 @@ Written 2026-11-12 from the IDE's commands and the Find Usages, Go to and Find i
 date 2026-11-20 against IntelliJ's Navigate menu and its editor's navigation, from the commands, the code and the
 website's pages (HCP65\Website\docs\ide), not by trying each one.  The gaps are a list to choose from, not a list to
 finish: only what is planned is to be built.  "Planned" below is an item of NextIDEWork.txt, which says how the user
-wants it; the plan further down, the Find Usages tool window's, is all built.
+wants it; the plan further down, the Find Usages tool window's, is all built.  NavigationPlan.txt (2026-11-20) plans
+the gaps In a file, Between files, Symbols and those of the search dialogs and results, by what they can share; none
+of it is built or agreed to yet.
 
 
 What there is
@@ -139,6 +141,9 @@ the shared pane of step 1.
    results have no declaration, so there F4 stays the same as Enter.
    Space isn't a key of the tree's: like any other key that types a character it goes to the active editor, which
    gets the keys and has it typed in it.
+   (Wrong, 2026-11-20: the user's answer was only that Space doesn't open a usage as Enter does.  Characters typed
+   in the tree going to the editor was this plan's own widening of it, taken out of the code that day: they do
+   nothing now, and find a row when typing to find one is built: NavigationPlan.txt, S3.)
    A single click, or the arrow keys, only select (and so preview).  "Navigate with Single Click" (off to start
    with) opens each usage as it is selected, the tree keeping the keys.
    (Decided 2026-11-12.)
@@ -195,7 +200,8 @@ the shared pane of step 1.
 Decided 2026-11-12:
    - step 3: a new CSplitContainer in WindowLib; the preview right of the tree.
    - step 4: Enter does what F4 does today; F4 goes to the declaration whichever line is selected.
-   - step 4: space, as any key that types a character, is typed in the active editor.
+   - step 4: space doesn't open a usage as Enter does.  (Written here at the time as "space, as any key that types
+     a character, is typed in the active editor", which was more than the user said: see step 4.)
    - step 7: each search in its own tab that can be pinned.
    - step 8: the scopes are Solution, Startup Solution, Project, Current File, Open Files and Directory, one list
      shared with Find in Files; chosen in a settings dialog and on the tool window's toolbar; remembered between

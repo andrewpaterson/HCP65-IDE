@@ -1,0 +1,528 @@
+The navigation plan: in a file, between files, symbols, and the search dialogs and results (2026-11-20)
+======================================================================================================
+
+Navigation.txt lists what IntelliJ IDEA's navigation has that the IDE hasn't.  This plans four of its groups (In a
+file, Between files, Symbols, and the search dialogs and their results; not Tool windows), written so another session
+can take it over.  The user asked for it with "a focus on keeping code reusable" and added "a lot of the refactoring
+code might be similar and reusable", so it is arranged by what is shared: first what is there to build on, then the
+few shared pieces to build, then the features, each of which should come out as a thin user of those.
+
+Nothing here is built, and writing it was not a go-ahead.  Each stage is the user's to start: bring it up with them,
+say how you mean to do it, and go on when they say (NextIDEWork.txt's rule, and the user's: build the whole feature
+as IntelliJ has it, not a cut-down one, and don't order the work by what is cheapest).  The stages are in an order
+that builds each shared piece once, before its second user; the user chooses the order (decision 1).
+
+NextIDEWork.txt already has four of these as items the user has answered questions on: 2 (Find and Replace in the
+file, with CRegex in BaseLib), 3 (Find in Files: regular expressions, file masks, Replace in Files), 4 (Go to Line)
+and 7 (Bookmarks, with the user's keys).  They are placed in the stages here and what they share is said, but where
+the two files differ NextIDEWork.txt's answers are the user's and win.
+
+The facts about the code below were read from it on 2026-11-20 (commits HCP65-IDE 2cf7031, CommonLibraries
+2267e5ece and the CTextArea enter event after it).  Lines move: find things by name.
+
+
+How work is done here
+---------------------
+
+  - EndOfPlanTasks.txt's and NextIDEWork.txt's "How work is done here" hold: Release x64 builds, commits with no
+    Co-Authored-By and only the files meant (other sessions leave files changed and staged in the shared trees),
+    LF sources and CRLF .vcxproj files, the house style, new files added to CMakeLists.txt, the .vcxproj and its
+    .filters.
+  - On Linux: cmake --build build/HCP65IDERelease --target HCP65IDERef HCP65IDE (from ~/Codaphela), then
+    cd HCP65-IDE/HCP65IDE/Checks && python3 IDEChecks.py <check names> (it runs HCP65IDERef, which draws in memory);
+    delete Checks/__pycache__ after.  TestWindowLib and TestBaseLib are run from a private copy of their folder
+    (other sessions run them in place and the runs delete each other's Output).
+  - CommonLibraries is shared with the compiler's sessions (CppCompilerLib) and with every application: find the
+    sessions with ListAgents and say before changing CCPPIndex, the highlighter or a WindowLib class others use, and
+    leave nothing uncommitted in a shared library overnight.  LogiCim, HCP65-Sculpt, the emulator and the tester use
+    WindowLib too: a change to a widget is built in them as well.
+  - Every command is a named command in the keymap with IntelliJ's keys (CCommandSet::Add, in the feature's
+    AddCommands), so the user can change them; check a key is free first (the keys in use are listed under "Keys").
+  - Every feature gets IDE checks (Checks/IDEChecks.py, script steps in IDEScript.cpp, a small solution under
+    Checks/Input) and, for what goes in a library, that library's tests.  Checks/Input/MoveMembers (Vessel, Drum,
+    Rack, Pair, Crate) already has base and derived classes with overridden functions: use it for the symbol stages
+    rather than writing another.
+  - Each stage ends with the website's pages brought up to date from what the code does (HCP65/Website/docs/ide:
+    navigation.md, editor.md's "Not there yet", settings.md's keys) and its gaps taken out of Navigation.txt.
+  - The user decides what isn't IntelliJ's to decide.  Ask one question at a time, with what it means for them.
+    The questions known now are under "For the user to decide".
+
+
+What there is to build on
+-------------------------
+
+All in HCP65-IDE/HCP65IDE/HCP65IDE unless a library is named.  WindowLib, BaseLib and CppCompilerLib are in
+CommonLibraries/Libraries.
+
+The symbol at the caret
+  - CIDEDocuments::FindSymbolPlace(line, column, role): "Every command that works on the symbol at the caret finds
+    it here, so they all agree on where that is."  Then CIDECodeModel::GetSymbolAt (its key and kind), FindRoleAt,
+    FindDefinition (the definition, else the declaration), GetSymbolLocations (every place of a key, each an
+    SIDELocation: file, line, column, length, role, flags, usage, container), FindFileReferences (the caret
+    usages' highlight) and FindRenameTarget.  CIDEDocuments::UpdateEditedTabsNow brings the index up to date first
+    (CIDEEditorTab::IsIndexCurrent says whether it is).
+  - CIDEContextActions::FindContext (Alt+Enter) already works out everything about the caret that a navigation
+    command needs to know to be offered: SIDECaretContext has the symbol's key, kind and class, how many base and
+    derived classes it has, whether it is declared, defined and virtual (FindSymbol, from the index), and whether
+    the caret is in a function, a member function, an expression, a type or a macro (FindSyntax, from an unchecked
+    parse).
+
+What the index knows (CppCompilerLib's CCPPIndex, through CIDECodeModel)
+  - Base and derived classes: CCPPIndexSymbol::maiBases and maiDerived; CIDECodeModel::FindClassBases(key, bAll,
+    keys) and FindClassDerived(key, bAll, keys).
+  - Overrides: CCPPIndex::FindOverrides; CIDECodeModel::FindOverriders(key, locations) (the derived classes' only)
+    and FindOverrideLocations(key, locations) (both ways).  mbVirtual on the symbol.
+  - Where each use is: SCPPIndexLocation::iContainer is the function or class definition the name is in (-1 at
+    namespace scope; a lambda isn't one), and uiUsage says how it is used (CPPUT_Call, Read, Write, BaseClass...).
+    CIDECodeModel::GetSymbolKey(iContainer, key, kind) names it.  Find Usages' grouping uses this (GetUsageGroup);
+    nothing lists callers from it yet.
+  - Declaration against definition: uiRole (CPPIR_Declaration, CPPIR_Definition, CPPIR_Reference).
+  - What it doesn't know: where a declaration ends (only the name's place and length are kept); what a variable's,
+    field's, parameter's or result's type is as a symbol (the type's name is only a reference at that place); a
+    file's symbols in order (FindGoToSymbols and FindSymbolsDeclaredIn scan every symbol); the comment over a
+    declaration; a symbol by its short name without a scan.
+
+The syntax of a file
+  - CIDERefactorUnit (IDERefactorUnit.h): a file parsed as its project builds it, from the text its editor has.
+    FindTokenAt, FindNodeAt(line, column), FindAncestor(node, kind), GetRange(node, range), GetTree, and with
+    bCheck a kept check for types (GetPass()->GetType(expression), AppendDeclaredType).  It parses each time; the
+    refactorings each keep their own units for one operation (GetUnit and KillUnits, written seven times: Change
+    Signature, Definitions, Safe Delete, Move Members, Move Class, Move Namespace, Convert Pointer).
+  - "The function the caret is in" is FindAncestor(FindNodeAt(line, column), CPPS_FunctionDefinition), written out
+    in five refactorings; its key is GetSymbolAt on the declarator's last name token.
+  - CIDEChangeSignature::ReadSite fills an SIDESignatureSite for a function's declaration or definition: the
+    ranges of its return type, its name, each parameter (all of it, its name, its default) and its body.
+    CIDEDefinitions::FindFunction gives a function's declaration and definition as written (SIDEFunction).
+    CIDEMoveMembers::ReadClass and ReadMembers (protected) give a class's range and each member's ranges and
+    access.  CIDECodeModel::FindSiblingFunctions lists the functions declared beside one, in order.
+  - The comment over a declaration: FindIDECommentStart(text, at) (IDEMoveMembers.h) is the start of the // lines
+    directly above; CIDEDefinitions::FindBannerStart is the same for a definition's banner.  Neither handles /* */.
+  - The edits thread (IDECodeModelEdits.cpp, ProcessEditedFile) parses an edited file once and makes its
+    highlights, its index places and its syntax ranges, then throws the tree away.  A tab keeps the ranges
+    (CIDEEditorTab::masSyntaxRanges, from CCPPHighlighter::FindSyntaxRanges) for Extend Selection; they have no
+    kinds, so a tab can't tell a function's range from an expression's.  When they are behind the text,
+    Extend Selection asks for the parse there and then (mcSyntaxBehind, to UpdateEditedTabsNow).
+  - Brackets from the text alone: BaseLib's CTextNavigation::FindBracketsAround and FindClosingBracket (forwards
+    only), and FindWordAround.
+
+Going to a place
+  - CIDEDocuments::OpenLocation(location, bSelectName) and OpenFile; both tell CIDENavigationHistory (BeginJump,
+    EndJump), so anything that goes through them is on Back.  SetCaretPlace is a move the history doesn't record.
+  - Places that follow edits: each open file has a CIDEDocumentAnchor; CIDEDocuments::DocumentChanged makes an
+    SIDEPlaceChange and calls AdjustPlaces on the history, Find Usages, Find in Files and Duplicates, by name; each
+    moves its places with AdjustIDEPlace(line, column, change).
+  - CIDENavigationHistory keeps Back and Forward as SIDENavigationPlace (file, project, line, column), a hundred
+    of them, for the session.
+
+Lists of places
+  - CIDEResultsPane: a tree, a CCodePreview across a CSplitContainer, and a toolbar down its left.  Filled with
+    BeginShow, AddGroup, AddResult and EndShow; it asks its CIDEResultsSource where a result is and how to run
+    again.  Find Usages, Find and Duplicates each use one.  CIDEFileLines reads the lines' text for the rows.
+  - The tab for each search, and the pin, are in CIDEUsages (AddSearch, RemoveSearch, TabSelected, SetPinned), not
+    in the pane, so Find has neither.
+  - Next and Previous Occurrence: CIDEOccurrences steps whichever CIDESteppable has the keys or can be seen; the
+    four of them are named in GetSteppables (IDE_NUM_STEPPABLES).
+  - CIDEScope: the scopes, shared by Find Usages, Find in Files and Find Duplicates.
+
+Popups and choosers
+  - CIDEUsages::OpenCaretPopup(menu, selected) opens a CMenuContainer under the caret, no taller than a third of
+    the screen; Control+B's usages popup, Introduce Variable's expression chooser and Alt+Enter's list all use it.
+    A menu's rows are text: no filter, no preview, no parts.
+  - WindowLib's CPopup holds any component (CWindow::OpenPopup(content, point, owner)); git's change bar popup is
+    a grid of labels and a text area.  It is opened at a point, the caller working that out.
+  - CGoToDialog draws a row as an icon, the name in labels with the matched runs in another font, and where it is,
+    dimmer (AddRow and CreateName, inside the dialog); its items are CGoToItems (name, location, icon, data,
+    match) and its matching is BaseLib's CNameMatcher (camel humps, * and space, MatchPath), which is separate.
+  - CCodePreview (SetCode, ShowPlace) and CSplitContainer are components of their own.  CCompletionField is a
+    field with a list under it, the keys staying with the field.
+
+The editor
+  - CTextArea: SetOccurrenceRanges (ranges drawn while nothing is selected, gone when the text changes), the
+    selection's other occurrences, AddBackground, AddLineBackground, AddSpan, SetCaretLine, FindPositionAt and
+    FindCharacterAt (a point to a position), GetCaretBounds, GetLineBounds, ShowCaret, ReplaceRanges (several
+    places as one edit), the change event, and now the enter event.
+  - CCodeEditor's gutter: a glyph column (SetLineGlyph: a character and its colours; the breakpoints), a mark
+    column (SetLineMark; CLineZones' listings), change bars and bands, a click event for each, and
+    AddLineComponent (a component in a gap under a line).  Marks and glyphs are by line number and don't move
+    with edits; each user is special-cased.
+  - CIDECaretUsages highlights the caret's symbol's usages once the caret has rested, polled from the tick.
+  - BaseLib's CTextSearch (a text, whatever its case or not, whole words or not) is what Find in Files searches
+    with.
+  - Git's changed lines for a tab: CGitLineChanges, shown by CIDEEditorTab::SetChangeBars.
+
+The rest
+  - Tool windows: a feature's CreatePane calls CDockManager::AddPane(id, title, icon, content, DPK_Tool, place);
+    View lists every tool pane.  CIDEContent hears the dock (DocumentSelected, PaneClosing, PaneClosed).
+  - Settings: CIDESettings::ReadSettings and WriteSettings call each feature's by name (seven of them).  Per
+    workspace: <workspace>.layout.user (the dock and the open files) and <workspace>.hcp65user, which
+    CIDEDebugger writes whole with the breakpoints alone.
+  - CIDEIcons: file, symbol and toolbar glyphs; a toolbar glyph is a list of lines on a 16 by 16 grid.
+  - Refactorings that change several files: CIDEFileEdits (each file's edits as one, all as one undo group).
+
+What no library has yet, found by looking for it: a pointer-rests-here or pointer-moved event on a text area; a
+press on text that says Control was held (the text's press actions get a point only, and Control+Button 1 is bound
+to starting a selection drag); a tool tip for part of a component, at a point, or of more than a line; typing to
+find a row in a list or tree; an image in the gutter; marks on a scroll bar; a caret-moved event on a text area; a
+regular expression; a one-field prompt that isn't a dialog.
+
+
+The shared pieces
+-----------------
+
+Each is built with its first user, in that user's stage, and written for the others named.  The names are
+suggestions.
+
+S1. Targets (IDE, in CIDENavigator).
+    GoToTargets(title, locations): none, and the status line says so; one, and OpenLocation goes to it; several,
+    and the chooser (S2) lists them under the caret with a preview.  Every "go to" that can have more than one
+    answer ends here: Go to Implementation, Super Method, Type Declaration, Related Symbol, Control+click, the
+    gutter's override icons, and the usages popup.  Go to Source keeps its own rule for which one place it wants.
+
+S2. The chooser (WindowLib, CChooserPopup; its rows shared with CGoToDialog).
+    A popup with an optional filter field, a list of rows drawn as Go to's are, an optional CCodePreview beside
+    it, and an optional row of buttons.  CGoToDialog's AddRow and CreateName move into a component of their own
+    (CNameRow: icon, name with its matched runs, location) that both use; the items are CGoToItems as they are;
+    the filter is CNameMatcher.  The keys stay with the field (as CCompletionField's); with no field, typing
+    filters all the same (S3's code).  Enter or a click chooses; a selection event feeds the preview; Escape or a
+    press outside closes.  It opens under the caret, at a point or in the middle of the window:
+    CIDEUsages::OpenCaretPopup becomes a function for any component (a small CIDEPopups, as three features that
+    aren't Find Usages already call it), the menu callers unchanged.
+    Users: S1; the usages popup; File Structure; Recent Files; Recent Locations; the Switcher; the bookmarks'
+    list; Select In; the navigation bar's lists.
+
+S3. Typing to find a row (WindowLib, on CListContainer and so CTreeContainer and CMenuContainer).
+    Off unless asked for (SetTypeToFind): typed characters make a pattern shown over the list's corner, the next
+    row whose text CNameMatcher matches is selected, with the matched runs highlighted, Up and Down going between
+    matches and Escape ending it.  Users: Solution Explorer, the results trees (Find Usages, Find, Duplicates),
+    the Structure and Hierarchy trees, the chooser without a field.
+    The results trees gave typed characters to the active editor until 2026-11-20, which typed them into the
+    file.  That was never the user's: their ruling of 2026-11-12 was only that Space doesn't open a usage as
+    Enter does (the user, 2026-11-20), and the session that built it widened it to every character.  It was taken
+    out that day (CIDEResultsPane; the check usages-typing; navigation.md's row): Space and a character typed in
+    a results tree now do nothing.  When this is built a character typed there finds a row, as in every other
+    tree, and Space still opens nothing.
+
+S4. A file's outline (CppCompilerLib to gather it, a tab to keep it).
+    What a file declares, in order, nested: for each entry its kind (namespace, class, enum, function, field,
+    variable, typedef, macro), its name and what follows it (a function's parameters, a variable's type), the
+    index's key, the place of the name, the range of all of it (from its first token to its closing brace or
+    semicolon), whether it is a declaration or a definition, its access in a class, and its parent's entry.
+    Gathered in the edits thread's one parse, beside the highlights and the syntax ranges, before the tree is
+    thrown away: CCPPIndex::Gather already finds each declared name, its key and its container there, so the
+    outline is those with their nodes' ranges added (the same token-to-range working out as FindSyntaxRanges),
+    not a second walk that works the keys out again.  A tab keeps it with the change count it was parsed at, as
+    it keeps the syntax ranges, and asks for the parse there and then when it is behind and something needs it
+    now (as Extend Selection does); what only shows it (breadcrumbs, sticky lines, the Structure window) waits
+    for the thread.
+    Users: File Structure and the Structure tool window; Next and Previous Method; breadcrumbs; sticky lines; the
+    gutter's override icons and the usage counts (which need each function of the file); the line a bookmark or a
+    recent location says it is in.  The refactorings' five copies of "the function the caret is in" could ask it
+    too, without a parse, but leave them as they are unless the user asks (decision 17).
+
+S5. Relations between symbols (IDE, in CIDECodeModel beside FindOverriders).
+      - FindSuperMethods(key, locations): what a function overrides, nearest class first: FindOverrideLocations
+        kept to the classes FindClassBases(class, true) gives, as FindOverriders keeps to the derived ones.
+      - FindImplementations(key, locations): a function's overriders, each one's definition if it has one; a
+        class's derived classes; a declaration's definition.
+      - FindTypeOf(file, line, column, key): the class, enum or typedef that is the type of the variable, field,
+        parameter or function at a place.  The index doesn't link a symbol to its type.  Add the link in
+        CCPPIndex::Gather (a symbol's type's symbol, where the type names one, through pointers, references and
+        const): completion (NextIDEWork.txt's item 5) needs the members of a variable's type and would use the
+        same link.  For an expression with no symbol of its own, the checked parse's type, as Introduce Variable's
+        FindType (GetPass()->GetType, AppendType), its text looked up as a key the way
+        CIDEMoveMembers::IsUsedThrough does.
+      - FindCallers(key, callers): GetSymbolLocations' places with CPPUT_Call, by iContainer, each caller's key
+        from GetSymbolKey, with its calls' places under it.
+      - FindCallees(key, callees): the CPPUT_Call places whose container is the function.  The index has no list
+        of a file's places (only place to symbol, mcLocations): either scan the symbols once and keep the answer
+        for the hierarchy's life, or give CCPPIndex a list of each file's places, which RemoveFile would use too.
+        Measure the scan on the ModPlay workspace before choosing.
+    Enabling the commands: CIDEContextActions::FindContext's symbol half (FindSymbol) is made a function others
+    can call, so Go to Implementation is offered exactly when Alt+Enter would say the symbol is virtual or a
+    class with derived classes.
+
+S6. What a symbol is, in words (IDE, CIDESymbolInfo).
+    For a key: its declaration as it is written (CIDEChangeSignature::ReadSite's ranges for a function, the
+    class's head from ReadClass, a variable's declaration), the comment over it (FindIDECommentStart, taught
+    /* */ blocks and to skip a banner of slashes), where it is (its scope, its file and line), its kind's icon;
+    for a function also each parameter's text and name, and its body's range.  It needs the declaring file
+    parsed: a small cache of CIDERefactorUnits by file and change count (CIDEUnitCache), unchecked, which is also
+    what the seven GetUnit and KillUnits copies in the refactorings are; they can move to it later (decision 17).
+    Users: Quick Documentation, Quick Definition, the declaration shown with Control held, a name's tool tip,
+    Parameter Info, the chooser's and the Go to dialog's previews, the Structure rows' details, and completion's
+    list when that is built.
+
+S7. Pointing at text (WindowLib).
+      - CTextArea gets a caret event (the caret or the selection moved) and a hover event (the pointer has rested
+        over a character: the position, the point; and that it has left), the resting timed the way CToolTips
+        times it.  CIC_Hover exists and nothing makes it: either make it there or leave it.
+      - A link press: Control+Button 1 on text is a command of its own, given to the text under the pointer with
+        its point, and CTextArea calls a link event with the position.  It is bound to starting a selection drag
+        today (decision 5).  While Control is held over a name the IDE can go to, the name is drawn as a link (a
+        span with an underline) and the pointer is a hand.
+      - CInfoPopup: a popup that shows a few lines of coloured code and plain text (a read only CTextArea in a
+        CScrollPane, as git's change popup is made), at the pointer, under a range of text or over the caret;
+        either the pointer passes through it and it goes when the pointer leaves the range, or it takes the keys
+        (to scroll, to copy) and goes on Escape.  CToolTips stays as it is for buttons.
+    Users: Control+click; the tool tip and Quick Documentation; Parameter Info (which follows the caret event);
+    breadcrumbs, sticky lines and Autoscroll from Source (the caret event, in place of each polling the caret as
+    CIDENavigationHistory and CIDECaretUsages do now: they can move to it, their behaviour the same).
+
+S8. The gutter's marks, and stepping through lines (WindowLib and IDE).
+      - CCodeEditor's glyph column takes an image (a CIDEIcons glyph) as well as a character, and more than one
+        glyph on a line (a breakpoint, a bookmark and an override icon can share a line); its click event says
+        which.  A glyph can have a tool tip (CInfoPopup at the glyph).
+      - CIDEGutter, one for a tab: the features that mark lines (breakpoints, the stopped line, bookmarks,
+        override icons) each give it their marks and what a click does; it sets the glyphs.  Marks that are kept
+        (bookmarks, breakpoints) are places moved by AdjustIDEPlace and set again after an edit; marks that are
+        worked out (override icons) are set again from each outline.  CIDEDebugging::ShowBreakpoints and
+        GlyphClicked become the first of them, unchanged to look at.
+      - One function for "the next of these lines after the caret, or the previous, wrapping or not", and one
+        way of going there (the caret put, the place on Back, the line shown): Next and Previous Change,
+        Bookmark, Method and highlighted usage, and later errors, are each a list of lines given to it.
+
+S9. Searching a text (BaseLib and WindowLib).
+      - CRegex in BaseLib, as NextIDEWork.txt's item 2 says (the user's answer Q1).
+      - CTextSearch takes it as a third option beside case and words, and gives a match's length and groups, so
+        the Find bar, Find in Files, Replace (with $1) and Find Word at Caret search with one class.
+      - CTextArea's occurrence drawing becomes layers, each with its colours and whether it outlives a selection
+        and an edit: the selection's occurrences and the caret's usages (as now), the Find bar's matches, and the
+        usages kept by Highlight Usages in File.  A layer says how many it has and which is current, and steps
+        (with S8's function).
+      - Marks on the scroll bar (WindowLib's CScrollBar has only a thumb): a mark for each of a layer's matches,
+        each changed line and each bookmark, as IntelliJ's stripe, a press on one going there (decision 7).
+
+S10. Bars round an editor, and a prompt (IDE and WindowLib).
+      - CIDEEditorTab gets a strip above its editor and one below, each empty until something is put in it: the
+        Find bar above, breadcrumbs below.  Sticky lines are a component over the top of the text's view.
+      - CPromptPopup (WindowLib): a caption, a text field, a line for what is wrong with what was typed; Enter
+        accepts if the approver says so, Escape closes; opened over the editor.  Go to Line and the bookmark's
+        mnemonic use it.  Rename's, Introduce Variable's and the breakpoint address's dialogs stay dialogs.
+
+S11. Where the user has been (IDE, CIDERecent).
+      - Files, most recently shown first, the closed ones kept (heard from CIDEContent::DocumentSelected and
+        PaneClosed): Recent Files, the Switcher, Reopen Closed Tab, and the Go to dialog's list while its field
+        is empty.  Kept with the workspace (decision 13).
+      - Places visited: CIDENavigationHistory's own (give it a way to list them) with their lines' text from
+        CIDEFileLines: Recent Locations.
+      - Places edited: from CIDEDocuments::DocumentChanged, one for each run of edits near each other: Last and
+        Next Edit Location, and Recent Locations' "changed only".
+    Its places follow edits as the others' do.  Three things CIDEDocuments, CIDEOccurrences and CIDESettings do
+    by naming each feature are worth making lists that a feature adds itself to, as this plan adds five or six
+    more to each: who follows edits (AdjustPlaces: an interface, CIDEPlaceFollower), who can be stepped through
+    (GetSteppables), and who has settings (ReadSettings, WriteSettings).  The workspace's .hcp65user becomes a
+    file several features write a part of (CIDEUserFile: breakpoints as now, bookmarks, recent files), where
+    CIDEDebugger writes it whole today.
+
+S12. Results windows (IDE).
+      - CIDEResultsTabs: the tab for each search and the pin, taken out of CIDEUsages (AddSearch, RemoveSearch,
+        TabSelected, TabCloseRequested, SetPinned) so that Find and the Hierarchy window have them by using it.
+      - On CIDEResultsPane, for every window that uses one: Export (the tree as it is shown, to a text file or
+        the clipboard); Autoscroll from Source (the caret event selects the result nearest the caret in its
+        file); a row's code coloured (keywords, literals and comments, by the tokeniser on the line's text:
+        CIDEDocuments::HighlightPreview's semantic colours need a parse of the file and stay the preview's).
+      - A tree that asks for a node's children when it is opened, for the Call Hierarchy (callers of callers
+        without end): look whether CTreeContainer says when a node opens; no such event was found in its header.
+
+
+The stages
+----------
+
+Each line under a stage is a feature: what IntelliJ's does, its keys, and what it is made of.  "New:" is what
+isn't one of the shared pieces.
+
+A. Going from a symbol (Symbols)
+   Builds S1, S2 and S5; uses FindSymbolPlace, the index's bases and overrides, OpenLocation.
+     - Go to Implementation (Control+Alt+B): a virtual function's overriders, a class's derived classes; on a
+       declaration with one definition, that.  S5 FindImplementations, S1.
+     - Go to Super Method (Control+U): what the function at the caret, or the one the caret is in, overrides; in
+       a class, its base classes.  S5 FindSuperMethods, S1.
+     - Go to Type Declaration (Control+Shift+B in IntelliJ, which is Build here: decision 2): the class, enum or
+       typedef of the variable, field, parameter, function or expression at the caret.  S5 FindTypeOf, S1.
+     - Go to Related Symbol (Control+Alt+Home): the chooser with the file's other half (Alt+O's), the symbol's
+       declaration or definition, its super methods and its implementations, each under a heading row.  S1, S2.
+       Go to Test is left out unless the user names a rule for which file tests which (decision 8).
+     - Control+click on a name: Go to Source at that name (so on a declaration, its usages).  S7's link press.
+       A middle click the same, or not (decision 4).
+     - The usages popup (Control+B on a declaration; Show Usages, Control+Alt+F7, anywhere on a name): the
+       chooser in place of the menu, with the usage's text matched as it is typed, the preview, the count in its
+       title, and Open in Find Window where "... and N more" is now.  S2; CIDEUsages::ShowUsagesPopup's finding
+       of the usages stays.
+     - Navigate's menu gets all of these and the ones it lacks now (Go to Definition, Go to Source, Find Usages).
+   Checks: on Checks/Input/MoveMembers; script steps to print the chooser's rows and preview and to choose one.
+
+B. Moving in a file (In a file)
+   Builds S4, S10 and S8's stepping.
+     - File Structure (Control+F12): the chooser with the outline, nested, each row its icon, name and details;
+       typing filters; Enter goes to it; the entry the caret is in selected to begin with.  S4, S2.
+     - The Structure tool window (Alt+7): the outline as a tree that follows the caret, sorted by place or by
+       name, with fields shown or not; a click goes there.  S4, S3; new: CIDEStructure and its pane (a tree, no
+       preview).
+     - Next and Previous Method (Alt+Down, Alt+Up): the next or previous function's name in the outline.  S4, S8.
+     - Matching brace (Control+Shift+M) and the block's start and end (Control+[ and Control+], with Shift to
+       select): from the text, CTextNavigation::FindBracketsAround and FindClosingBracket, which need a
+       FindOpeningBracket; brackets in strings and comments are left out by asking the tab's highlights what is
+       code.  New: three commands in WindowLib's edit commands, so every text area has them.
+     - Go to Line:Column (Control+G): NextIDEWork.txt's item 4.  S10's prompt, "Line[:column]" with the caret's
+       place in it; the place goes on Back.
+     - Breadcrumbs (under the editor): the outline's entries round the caret, namespace to function; a click on
+       one goes to it, and opens the chooser with its siblings.  S4, S10, S7's caret event.
+     - Sticky lines: the first line of each entry the top of the view is inside, kept at the top; a click goes
+       to it.  S4, S10.  Both, or one (decision 10).
+
+C. Marks on lines (In a file, Symbols)
+   Builds S8 and S9's layers and scroll bar marks; uses S4 and S5.
+     - Bookmarks: NextIDEWork.txt's item 7 (Control+F11 toggles, Control+Shift+F11 a mnemonic one, F2 and
+       Shift+F2 the next and previous, Control+0 to 9 to a mnemonic one), a Bookmarks tool window by file with
+       the preview, kept in .hcp65user and moved by edits.  S8, S10's prompt, S2 for IntelliJ's Show Bookmarks
+       popup (Shift+F11 there, Step Out here: decision 3), S11's user file; the window is a CIDEResultsPane.
+     - Next and Previous Change (Control+Alt+Shift+Down and Up): the tab's CGitLineChanges' lines.  S8.
+     - Highlight Usages in File (Control+Shift+F7): the caret's symbol's usages kept highlighted until Escape,
+       F3 and Shift+F3 stepping through them, the status line saying how many.  S9's kept layer, filled by
+       CIDECodeModel::FindFileReferences as CIDECaretUsages fills its own.
+     - Gutter icons for a function that overrides (a click: Go to Super Method) and one that is overridden (a
+       click: Go to Implementation), and for a class with derived classes.  S4 for the file's functions, S5, S8,
+       stage A's commands.  Worked out on the edits thread with the outline, not at each paint.
+     - The count of a declaration's usages over it ("3 usages", a click showing them): wanted or not (decision
+       9).  CCodeEditor::AddLineComponent puts a component under a line, not over it, so this needs a gap over
+       a line as well.
+
+D. Finding text (In a file, the search dialogs)
+   Builds S9's CRegex and search; uses S10's strip and S12's tabs.
+     - Find and Replace in the file (Control+F, Control+R, F3, Shift+F3; Find Word at Caret, Control+F3):
+       NextIDEWork.txt's item 2.  The bar is S10's upper strip; its matches are an S9 layer.
+     - Find in Files: a Regex tick, a file mask, Replace in Files (Control+Shift+R): NextIDEWork.txt's item 3.
+       Also a button to choose the directory (CFileChooser).  Replace across files is CIDEFileEdits, as the
+       refactorings change several files as one undo.
+     - The Find tool window: a tab for each search and the pin.  S12's CIDEResultsTabs.
+
+E. Between files
+   Builds S11 and S3.
+     - Recent Files (Control+E): the chooser, the last file before this one selected so Control+E, Enter goes
+       back to it; typing filters; closed files after the open ones.  S11, S2.
+     - Recent Locations (Control+Shift+E): the chooser, each row a few lines of code with its file and the
+       function it is in over them; a tick for the changed ones only.  S11, S2, S4 for the function.
+     - The Switcher (Control+Tab, and with Shift backwards): held open while Control is down, each Tab moving
+       on, letting go choosing; the open files most recent first, and the tool windows beside them.  S11, S2;
+       new: a popup that hears a key let go.
+     - The next and previous tab (Alt+Right, Alt+Left), and Reopen Closed Tab (no key in IntelliJ), which opens
+       it where its caret was.  S11; the dock's tab order.
+     - Last Edit Location (Control+Shift+Backspace) and Next Edit Location.  S11.
+     - The navigation bar (Alt+Home), if wanted beside breadcrumbs and Solution Explorer (decision 16): the
+       active file's solution, project, folders and file; a press on one lists what is in it, in the chooser.
+     - Select In (Alt+F1): a menu of where the active file or symbol can be shown: Solution Explorer (Alt+1's),
+       the Structure window.
+     - Solution Explorer: Always Select Opened File and Open Files with Single Click, on its toolbar or menu and
+       kept in the settings (the results panes' Navigate with Single Click is the same idea the other way
+       round); typing to find a row (S3).
+     - Splitting the editor and moving between the halves as commands, if wanted (decision 15): the dock puts
+       documents side by side by dragging; no call for it was found in CDockManager's header.
+
+F. What a name is (Symbols)
+   Builds S6 and S7's hover and CInfoPopup.
+     - Quick Documentation (Control+Q): the declaration, coloured, the comment over it, and where it is; with
+       the keys, so it scrolls; Escape closes.  S6, S7.  The comment is shown as it is written (decision 11).
+     - The same as a tool tip when the pointer rests on a name, and the declaration alone while Control is held
+       over it.  S6, S7.
+     - Quick Definition (Control+Shift+I): the symbol's definition's code in a popup (a CCodePreview), with the
+       chooser's list beside it if there are several.  S6, S2.
+     - Parameter Info (Control+P, and by itself after "(" once completion is there): the parameters of the call
+       the caret is in, each overload a row, the caret's argument bold, following the caret.  S6's parameters;
+       the call the caret is in from the tab's syntax ranges and the text's brackets; S7.
+     - Type Info (Control+Shift+P): the type of the selected expression, or the one at the caret.  The checked
+       parse, as Introduce Variable's FindType; measure it on a large unit first (NextIDEWork.txt's item 5 asks
+       the same question for completion: under about 100 ms from the key).
+
+G. Hierarchies (Symbols)
+   Uses S5 and S12; one Hierarchy tool window with a tab for each (decision 14).
+     - Type Hierarchy (Control+H): the class at the caret with its derived classes under it, its base classes
+       over it, or both, by a toolbar choice; a click goes to the class.  FindClassBases and FindClassDerived
+       with bAll false, a level at a time.
+     - Method Hierarchy (Control+Shift+H): the same tree of classes, each marked as defining the function,
+       inheriting it, or leaving it undefined though it should have it.  CIDECodeModel::FindOverrideLocations and
+       CIDECodeModel::HasSymbol for the function's key in each class, as CIDEMoveMembers::MarkOverriders does.
+     - Call Hierarchy (Control+Alt+H): the function's callers, and their callers under them as each is opened,
+       with the calls' lines and the preview; or its callees, by a toolbar choice.  S5 FindCallers and
+       FindCallees; S12's tree that asks for children.
+   Each is a CIDEResultsSource filling a CIDEResultsPane, stepped through by Next and Previous Occurrence.
+
+H. The dialogs and the results (the search dialogs and results)
+     - Go to Class, File and Symbol: a preview of the selected item (a CCodePreview in CGoToDialog, filled as
+       Find in Files' is), and the recent files or symbols while the field is empty (S11).
+     - The results panes: Export, Autoscroll from Source, coloured rows.  S12.
+     - Left out, as the user ruled when Go to was built: an All tab, Shift Shift, and things outside the
+       solution.  An Actions tab (Control+Shift+A) was not ruled on (decision 12).
+
+
+Keys
+----
+
+In use now (find a command's with CCommandSet; WindowLib's editor keys are in EditCommands.cpp):
+  F4, F5, F7, F9, F10, F11, F12 and their Shift forms where the debugger or a diff has them (Shift+F5, Shift+F7,
+  Shift+F10, Shift+F11, Shift+F12); Shift+F6; Control+F4, F5, F6; Control+Shift+F5; Alt+F7; Control+Alt+Shift+F7;
+  Control+A, B, C, D, N, S, V, W, X, Y, Z; Control+Shift+B, D, F, N, S, V, W, Z; Control+Alt+C, F, K, M, N, O, P,
+  S, V; Control+Alt+Shift+D, N; Alt+1; Alt+O; Alt+Enter; Alt+Insert; Alt+Delete; Control+Alt+the four arrows;
+  Control+ and Alt+Shift+ the arrows, Home and End; Control+Pause; Shift+Escape.
+Free, and wanted here with IntelliJ's meaning:
+  Control+E, F, G, H, P, Q, R, U; Control+Shift+E, H, I, M, P, R; Control+Alt+B, H; Control+[ and Control+] (the
+  key is named "["); Control+Tab; Control+F3, F11, F12; Control+Shift+F7, F11; Control+Alt+F7; Control+Alt+Home;
+  Control+Alt+Shift+Up and Down; Control+Shift+Backspace; Alt+Up, Down, Left, Right; Alt+Home; Alt+F1; Alt+7; F2,
+  Shift+F2, F3, Shift+F3; Control+0 to 9.
+Taken, so to be decided: Control+Shift+B (Type Declaration; Build has it) and Shift+F11 (Show Bookmarks; Step Out
+has it).  F2 and Shift+F2 are IntelliJ's next and previous error; the user gave them to bookmarks.
+
+
+For the user to decide
+----------------------
+
+Ask each when its stage comes up, one at a time, saying what it changes for them.  The recommendation is this
+plan's writer's, not the user's.
+
+   1. The order of the stages, and where they come among NextIDEWork.txt's items still to do (2 to 10).
+      Recommended: A, B, D, C, E, F, G, H; D is that file's items 2 and 3 and the user put them first there.
+   2. Go to Type Declaration's key, as Control+Shift+B is Build.  Recommended: no key to begin with, the user
+      giving it one in Settings.
+   3. Show Bookmarks' key, as Shift+F11 is Step Out.  Recommended: none, the Bookmarks tool window doing.
+   4. Whether a middle click on a name goes to its declaration.  The middle button drags the view to scroll
+      today.  Recommended: no.
+   5. Control+click going to the declaration, which takes Control+Button 1 from starting a selection drag
+      (Shift+click and a plain drag still select).  Recommended: yes, it is what IntelliJ does.
+   6. Decided 2026-11-20: typing finds a row in every tree, the results trees too, as IntelliJ's; see S3.  The
+      results trees typing into the editor was a misreading of the user's answer about Space.
+   7. Marks on the scroll bar for matches, usages, changed lines and bookmarks.  Recommended: yes, with the Find
+      bar, as four features feed them.
+   8. Go to Test: whether a rule says which file tests which (TestTextAreaEdit.cpp and TextArea.cpp).
+      Recommended: leave it out.
+   9. The count of usages over each declaration.  It is worked out for every declaration of the open file after
+      each parse.  Recommended: ask; it is the one feature here that changes how every file looks.
+  10. Breadcrumbs, sticky lines, or both.  Recommended: both, each with a setting to turn it off.
+  11. Quick Documentation showing the comment as it is written, with no markup read from it.  Recommended: so.
+  12. An Actions tab (Control+Shift+A: finding a command by its name) in Go to.  Recommended: yes, it is small on
+      the chooser and the keymap's commands; All and Shift Shift stay out as ruled.
+  13. What is kept with the workspace: bookmarks (decided: .hcp65user) and recent files; Back and Forward and
+      the edit locations for the session only, as Back is now.  Recommended: so.
+  14. One Hierarchy tool window with a tab for each hierarchy, as Find Usages has a tab for each search.
+      Recommended: so.
+  15. Commands to split the editor and move between the halves.  Recommended: not until asked for.
+  16. The navigation bar.  Recommended: not with breadcrumbs and Solution Explorer there; ask.
+  17. Moving the refactorings onto the shared pieces once those exist: the seven GetUnit and KillUnits onto the
+      unit cache, the five "function the caret is in" onto the outline, CIDEUsages::OpenCaretPopup's callers
+      onto CIDEPopups.  It makes no difference to see and touches code that works.  Recommended: only the
+      popup, which moves anyway; the others when a refactoring is next changed.
+
+
+To find out before building
+---------------------------
+
+  - How long the outline adds to the edits thread's parse of a large unit, and how long working out a file's
+    override icons takes (each function of the file asked of FindOverriders): on the ModPlay workspace.
+  - How long FindCallers and a scan for FindCallees take there, and whether CCPPIndex needs a list of each
+    file's places.
+  - How long a checked parse of a large unit takes (Type Info; the same number completion needs).
+  - Whether CTreeContainer can say a node was opened, for a tree filled as it is opened.
+  - Whether CDockManager can split the document well from a call, for decision 15.
+  - Whether the tab's highlights can say "this position is in a string or a comment" for the brace commands, or
+    whether that needs the tokens kept.
+  - Before changing CCPPIndex (the outline's ranges, the type link, a file's places): who is working in
+    CppCompilerLib, and whether the index's saved form or its tests (TestCppCompilerLib's TestCppIndex*) pin
+    its layout.
