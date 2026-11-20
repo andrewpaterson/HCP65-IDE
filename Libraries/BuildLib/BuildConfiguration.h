@@ -158,7 +158,7 @@ public:
 	CAsm65Module*	SetModule(const char* szFile, const char* szEntry, uint32 uiLimit);
 	EBuildProgram	GetProgram(void) const;
 	bool			IsLinked(void) const;
-	char*			GetProgramFile(void);
+	const char*		GetProgramFile(void);
 	uint32			GetProgramLimit(void);
 
 	void			AddLoad(const char* szFile, uint32 uiAddress);

@@ -851,7 +851,7 @@ EBuildProgram CBuildConfiguration::GetProgram(void) const
 // "" if it doesn't link.
 //
 //////////////////////////////////////////////////////////////////////////
-char* CBuildConfiguration::GetProgramFile(void)
+const char* CBuildConfiguration::GetProgramFile(void)
 {
 	switch (meProgram)
 	{
