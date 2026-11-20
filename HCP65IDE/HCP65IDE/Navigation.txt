@@ -26,6 +26,11 @@ Find Duplicates (Control+Alt+Shift+D), Jump to Source from a tool window (F4), N
 (Shift+Escape).  The editor highlights the selection's other occurrences and, with the caret left on a name, that
 symbol's usages in the file.
 
+Finding text: Find and Replace in the file (Control+F, Control+R; a bar over the code, every match highlighted and
+marked on the scroll bar), Find Next and Previous (F3, Shift+F3), Find Word at Caret (Control+F3); Find in Files with
+regular expressions and a file mask, Replace in Files (Control+Shift+R), a button to choose the directory, and the
+Find tool window's tabs and pin.
+
 In a file: File Structure (Control+F12) and the Structure tool window (Alt+7), Next and Previous Method (Alt+Down,
 Alt+Up), Go to Line:Column (Control+G), Move Caret to Matching Brace (Control+Shift+M) and to Code Block Start and End
 (Control+[ and Control+], with Shift to select), breadcrumbs under the code and sticky lines over it (each turned off
@@ -37,8 +42,6 @@ Gaps
 ----
 
 In a file
-  - Find and Replace (Control+F, Control+R) with every match highlighted, Find Next and Previous (F3, Shift+F3) and
-    Find Word at Caret (Control+F3).  Planned: item 2, with the regular expression engine.
   - Last Edit Location (Control+Shift+Backspace) and Next Edit Location.
   - Bookmarks: a toggle, mnemonic ones, their list, next and previous.  Planned: item 7, with the user's keys.
   - Next and Previous Change (Control+Alt+Shift+Down and Up): the change bars are there, with no key to step between
@@ -71,9 +74,8 @@ Symbols
   - Go to Test (ruled out, 2026-11-20).
 
 Find in Files
-  - Regular expressions, a file mask, Replace in Files (Control+Shift+R).  Planned: item 3.
-  - A button to choose the directory.
-  - The Find tool window has one result at a time, without tabs or a pin.
+  - Replace in Files has no tick for each result: the Find tool window replaces the selected result, a selected
+    file's, or all of them.
 
 Find Usages tool window
   - No export of the results; the tree doesn't follow the editor's caret (IntelliJ's Autoscroll from Source); and a

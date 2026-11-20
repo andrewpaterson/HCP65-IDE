@@ -79,6 +79,38 @@ Stage B, moving in a file: built 2026-11-20.
       - The Structure tree's sorting and Hide Fields are in its context menu, not a toolbar; it has no option for
         inherited members.  Every node is open after each parse: what was closed isn't remembered.
 
+Stage D, finding text: built 2026-11-20 and 21.
+    CommonLibraries 520acf5fd (BaseLib's CRegex), e9844be14 (CTextSearch by regular expression, and what replaces
+    a find), 9a5d2c11b (CTextArea's highlight layers), aecdeb310 (CScrollBar's marks), f4d1022b9 (ReplaceRanges
+    with a text for each range), 0c6150bf4 (CFindInFilesDialog: Regex, the file mask, the replacing form),
+    c9784f60a (CFileChooser chooses a folder), b48848970 (the dialog's directory button); HCP65-IDE 2580dfc (the
+    Find bar: IDEFind.h), 37edcc5 (Find in Files' regular expressions and mask, Replace in Files), and the commit
+    after it (the Find tool window's tabs and pin: IDEResultsTabs.h; the directory chooser).  Checks find-bar,
+    find-bar-replace, find-next, find-regex-mask, find-regex-problem, replace-in-files, replace-in-files-dialog,
+    find-tabs.
+    As built it differs from the plan in these:
+      - S9: the layers are on CTextAreaOccurrences beside the selection's occurrences and the given ranges, which
+        are as they were: a layer is a set of ranges with a colour and a current one (CTextArea::
+        AddHighlightLayer), dropped when the text changes and given again by its owner.  Of a layer with very many
+        ranges the two thousand nearest the current one are drawn.  The search itself is BaseLib's CTextSearch,
+        given a text and its length, not a function of CTextDocument.
+      - The Find bar is one for each editor tab, made when first opened (CIDEFindBar, the tab's upper strip); its
+        ticks are every bar's (CIDEFind).  It searches again after an edit by polling at each tick.  Find Next
+        with no bar open looks for what was last searched for, without highlighting the others.
+      - S12: CIDEResultsTabs is the tabs and the pin as a class of their own, and the Find tool window uses it;
+        Find Usages still has its own copy of the same code (CIDEUsages::AddSearch, RemoveSearch, TabSelected,
+        SetPinned), not yet moved onto it: its search would derive from CIDEResultsSearch.  The Hierarchy window
+        (stage G) uses the shared one.
+      - Replace in Files' results have no tick each: Replace Selected replaces the selected result, or every
+        result under the selected file; Replace All the lot.  The files changed are opened in editors and left
+        unsaved, as Rename leaves its files; the edits are one undo group (CIDEEdit::BeginUndoGroup), not
+        CIDEFileEdits.
+      - The file mask is matched against a file's name, not its path.
+      - The directory button's chooser isn't driven by the IDE's checks (a file chooser isn't a dialog the script
+        watches): CFileChooser's folder mode and the dialog's button are tested in TestWindowLib.
+      - CRegex has no look-ahead or look-behind, no named groups and no Unicode classes: bytes, as the rest of
+        the text code.
+
 
 How work is done here
 ---------------------
