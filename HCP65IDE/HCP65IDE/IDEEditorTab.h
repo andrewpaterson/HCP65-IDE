@@ -21,6 +21,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __IDE_EDITOR_TAB_H__
 #define __IDE_EDITOR_TAB_H__
 #include "IDEOutline.h"
+#include "IDEBreadcrumbs.h"
 #include "StandardLib/Object.h"
 #include "StandardLib/Pointer.h"
 #include "SupportLib/FontFamily.h"
@@ -53,7 +54,16 @@ protected:
 	Ptr<CWindow>		mpWindow;
 	Ptr<CCodeEditor>	mpCodeEditor;
 	Ptr<CTextArea>		mpEditor;		//The code editor's text area.
-	Ptr<CScrollPane>	mpPane;			//The tab's page.
+	Ptr<CScrollPane>	mpPane;			//The code, scrolled.
+	Ptr<CGridContainer>	mpHolder;		//The tab's page: a strip, the view with the code in it, and a strip.
+	Ptr<CFillContainer>	mpTopStrip;		//Over the code, empty and no height until something is put in it (SetTopBar).
+	Ptr<CFillContainer>	mpView;			//The code, and what is laid over it (SetOverlay).
+	Ptr<CFillContainer>	mpBottomStrip;	//Under the code (SetBottomBar).
+	Ptr<CComponent>		mpTopBar;
+	Ptr<CComponent>		mpBottomBar;
+	Ptr<CComponent>		mpOverlay;
+	Ptr<CIDEBreadcrumbs>	mpBreadcrumbs;	//Made when breadcrumbs are first shown.
+	Ptr<CIDEStickyLines>	mpStickyLines;	//Made when sticky lines are first shown.
 	Ptr<CDockPane>		mpDockPane;  //The document pane it is shown in.
 	CChars				mszFileName;
 	size				muiProject;		//The workspace's project it is in, MAX_SIZE if none.
@@ -95,6 +105,15 @@ public:
 	CIDEOutline*		GetOutline(void);
 	CIDEOutline*		GetLastOutline(void);
 	bool				IsOutlineCurrent(void);
+	size				GetOutlineChanges(void) const;
+	Ptr<CComponent>		GetHolder(void) const;
+	void				SetTopBar(Ptr<CComponent> pBar);
+	void				SetBottomBar(Ptr<CComponent> pBar);
+	void				SetOverlay(Ptr<CComponent> pOverlay);
+	void				ShowBreadcrumbs(CIDEContent* pcContent, bool bShown);
+	void				ShowStickyLines(CIDEContent* pcContent, bool bShown);
+	Ptr<CIDEBreadcrumbs>	GetBreadcrumbs(void) const;
+	Ptr<CIDEStickyLines>	GetStickyLines(void) const;
 	CComponentEvent<CIDEEditorTab>*	GetSyntaxBehindEvent(void);
 	void				AddSelectionRanges(size uiStart, size uiEnd, CArrayTextRange* pasDest) override;
 	bool				GetCaretPlace(int* piLine, int* piColumn);

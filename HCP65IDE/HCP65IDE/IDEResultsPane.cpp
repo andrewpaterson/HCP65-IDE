@@ -66,12 +66,16 @@ void CIDEResultsPane::Init(CIDEContent* pcContent, CIDEResultsSource* pcSource, 
 	mpTree->GetActivationEvent()->Add(this, &CIDEResultsPane::ResultActivated);
 
 	//As IntelliJ's: enter and double clicking go to a result (the list's own actions), Jump to Source (F4) goes to the
-	//declaration, and escape goes back to the editor.  Space doesn't open a result as a list's does: it, and a
-	//character typed, do nothing here.
+	//declaration, and escape goes back to the editor.  Space doesn't open a result as a list's does: it does
+	//nothing here.
 	mpTree->SetInputActionsEnabled(CIC_Space, false);
 	mpTree->SetInputActionsEnabled(CIC_JumpToSource, false);
 	mpEscapeAction = mpTree->AddInputAction(CIC_ClearSelection, this, &CIDEResultsPane::ReturnToEditor);
 	mpJumpAction = mpTree->AddInputAction(CIC_JumpToSource, this, &CIDEResultsPane::JumpToSource);
+
+	//Typing finds a row, as in every tree.  Asked for after the escape action above is added, so that one is called
+	//first and can leave the keys here when escape only ends a find (ReturnToEditor).
+	mpTree->SetTypeToFind(true);
 	mpScrollPane = OMalloc<CScrollPane>(mpcContent->GetWindow(), mpcContent->GetTheme());
 	mpScrollPane->SetContent(mpTree);
 	mpScrollPane->SetAlignment(CSH_Stretch, CSV_Stretch);
@@ -772,6 +776,12 @@ void CIDEResultsPane::Detach(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDEResultsPane::ReturnToEditor(void)
 {
+	if (mpTree->IsFinding())
+	{
+		//Escape ends finding a row by what was typed; the next one goes back to the editor.
+		mpTree->StopFinding();
+		return;
+	}
 	mpcContent->GetDocuments()->FocusActiveEditor();
 }
 

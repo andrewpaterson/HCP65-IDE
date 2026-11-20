@@ -3187,6 +3187,91 @@ void CIDEScript::RunEditStep(const char* szStep)
 	{
 		PrintChooser();
 	}
+	else if (((strcmp(szStep, "printcrumbs") == 0) || (strncmp(szStep, "crumbclick:", 11) == 0) || (strcmp(szStep, "printsticky") == 0) || (strncmp(szStep, "stickyclick:", 12) == 0)) && pTab.IsNotNull())
+	{
+		//The active editor's breadcrumbs ("Breadcrumbs: CShape > Move") and sticky lines ("Sticky lines: [...] [...]"),
+		//as they are once the window has ticked; crumbclick:<n> and stickyclick:<n> press one, from 0.
+		CChars	szShown;
+
+		pTab->GetOutline();
+		mpcContent->GetWindow()->Layout();
+		mpcContent->GetStructure()->Poll();
+		szShown.Init();
+		if (strcmp(szStep, "printcrumbs") == 0)
+		{
+			if (pTab->GetBreadcrumbs().IsNotNull())
+			{
+				pTab->GetBreadcrumbs()->Print(&szShown);
+			}
+			printf("Breadcrumbs: %s\n", pTab->GetBreadcrumbs().IsNotNull() ? szShown.Text() : "off");
+		}
+		else if (strcmp(szStep, "printsticky") == 0)
+		{
+			if (pTab->GetStickyLines().IsNotNull())
+			{
+				pTab->GetStickyLines()->Print(&szShown);
+			}
+			printf("Sticky lines: %s\n", pTab->GetStickyLines().IsNotNull() ? szShown.Text() : "off");
+		}
+		else if ((szStep[0] == 'c') && pTab->GetBreadcrumbs().IsNotNull())
+		{
+			mpcContent->GetWindow()->Layout();
+			pTab->GetBreadcrumbs()->Click((size)atoi(&szStep[11]));
+		}
+		else if ((szStep[0] == 's') && pTab->GetStickyLines().IsNotNull())
+		{
+			pTab->GetStickyLines()->Click((size)atoi(&szStep[12]));
+		}
+		szShown.Kill();
+		fflush(stdout);
+	}
+	else if ((strcmp(szStep, "printstructure") == 0) || (strncmp(szStep, "structureclick:", 15) == 0) || (strcmp(szStep, "structure:sort") == 0) || (strcmp(szStep, "structure:fields") == 0))
+	{
+		//The Structure tool window's tree as it is once the window has ticked ("Structure: 3 rows" and a line for
+		//each row, "> " before the selected one); structureclick:<row> as a click on a row, from 0; structure:sort and
+		//structure:fields as its menu's items.
+		Ptr<CIDEStructure>	pStructure;
+		CChars				szShown;
+
+		pStructure = mpcContent->GetStructure();
+		if (strcmp(szStep, "structure:sort") == 0)
+		{
+			pStructure->SetStructureSettings(!pStructure->GetStructurePane()->IsSortByName(), pStructure->GetStructurePane()->IsShowFields());
+		}
+		else if (strcmp(szStep, "structure:fields") == 0)
+		{
+			pStructure->SetStructureSettings(pStructure->GetStructurePane()->IsSortByName(), !pStructure->GetStructurePane()->IsShowFields());
+		}
+		if (pTab.IsNotNull())
+		{
+			pTab->GetOutline();
+		}
+		mpcContent->GetWindow()->Layout();
+		pStructure->Poll();
+		if (strcmp(szStep, "printstructure") == 0)
+		{
+			szShown.Init();
+			pStructure->GetStructurePane()->Print(&szShown);
+			printf("%s", szShown.Text());
+			szShown.Kill();
+			fflush(stdout);
+		}
+		else if (szStep[9] == 'c')
+		{
+			pStructure->GetStructurePane()->ActivateRow(atoi(&szStep[15]));
+		}
+	}
+	else if (strncmp(szStep, "scroll:", 7) == 0)
+	{
+		//scroll:<line>: the active editor's view scrolled so that line is its first, and laid out so.
+		CInt32Rect	cLine;
+
+		if (pTab.IsNotNull() && pTab->GetEditor()->GetLineBounds((size)(atoi(&szStep[7]) - 1), &cLine))
+		{
+			pTab->GetPane()->SetScrollPosition(0, cLine.GetTop());
+			mpcContent->GetWindow()->Layout();
+		}
+	}
 	else if (strcmp(szStep, "printprompt") == 0)
 	{
 		//Go to Line's prompt: "Prompt: <caption> [<text>] <what is wrong>", or "Prompt: none" if it isn't open.
@@ -3273,7 +3358,7 @@ void CIDEScript::RunEditStep(const char* szStep)
 
 		mpcContent->GetWindow()->Layout();
 		pTab->GetPane()->GetActualBounds(&cBounds);
-		mpcContent->GetWindow()->PointerMoved((cBounds.GetLeft() + cBounds.GetRight()) / 2, cBounds.GetBottom() - 40);
+		mpcContent->GetWindow()->PointerMoved((cBounds.GetLeft() + cBounds.GetRight()) / 2, cBounds.GetBottom() - 12);
 		pUnder = mpcContent->GetWindow()->GetFocus()->GetMouseOverComponent();
 		printf("Pressed: %s\n", (pUnder.IsNotNull() && pUnder->IsWithin(pTab->GetEditor())) ? "the editor" : "something else");
 		mpcContent->GetWindow()->ClosePopupsOutside(pUnder);

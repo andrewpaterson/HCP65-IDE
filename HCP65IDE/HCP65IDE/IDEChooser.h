@@ -71,6 +71,7 @@ public:
 	size			AddTarget(SIDETarget* psTarget);
 	void			SetSelectName(bool bSelectName);
 	void			SetGoesToChosen(bool bGoesToChosen);
+	void			SetOpensAbove(bool bOpensAbove);
 	void			SetSortMatches(bool bSortMatches);
 	bool			OpenAtCaret(size uiSelectedPlace = 0);
 	bool			OpenAt(SInt32Vec2 sPosition, Ptr<CComponent> pOwner, size uiSelectedPlace = 0);

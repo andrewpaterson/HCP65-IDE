@@ -57,6 +57,7 @@ void CSolutionExplorer::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme)
 
 	mpTree = OMalloc<CTreeContainer>(pWindow, pTheme);
 	mpTree->SetAlignment(CSH_Stretch, CSV_Top);
+	mpTree->SetTypeToFind(true);
 	mpScrollPane = OMalloc<CScrollPane>(pWindow, pTheme);
 	mpScrollPane->SetContent(mpTree);
 	mpScrollPane->SetAlignment(CSH_Stretch, CSV_Stretch);

@@ -498,6 +498,11 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	sPlace.BesideWell(DS_Left, IDE_EXPLORER_WIDTH);
 	mpSolutions->CreateExplorerPane(&sPlace);
 
+	//With it, as IntelliJ IDEA has Structure with Project: the active file's outline.
+	sPlace.WithPane(IDE_EXPLORER_ID);
+	mpStructure->CreatePane(&sPlace);
+	mpDock->Show(mpSolutions->GetExplorerTool());
+
 	//Under the well, tabbed together: what Find Usages (and Find All References) found, what the build wrote, how the
 	//index is getting on, what the run configuration's tool wrote, the debugger's view and Claude.
 	sPlace.BesideWell(DS_Bottom, IDE_BOTTOM_HEIGHT);
@@ -862,6 +867,9 @@ void CIDEContent::Tick(Ptr<CWindow> pWindow)
 	{
 		iSoonest = iWait;
 	}
+
+	//Each editor's breadcrumbs and sticky lines follow its caret, its scrolling and its outline.
+	mpStructure->Poll();
 
 	//A caret moved far from where it stayed is a place to come back to.
 	iWait = mpNavigationHistory->Poll(iNow);

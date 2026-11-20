@@ -193,7 +193,7 @@ Ptr<CIDEEditorTab> CIDEDocuments::OpenFileTab(const char* szFileName, size uiPro
 	cFileUtil.GetFileName(&szName, (char*)szFileName);
 	szID.Init(IDE_DOCUMENT_PREFIX);
 	szID.Append(szFileName);
-	pPane = mpcContent->GetDock()->AddPane(szID.Text(), szName.Text(), mpcContent->GetFileTypeIcon(CIDEIcons::GetFileType(szFileName)), pTab->GetPane(), DPK_Document, NULL, bShow);
+	pPane = mpcContent->GetDock()->AddPane(szID.Text(), szName.Text(), mpcContent->GetFileTypeIcon(CIDEIcons::GetFileType(szFileName)), pTab->GetHolder(), DPK_Document, NULL, bShow);
 	szID.Kill();
 	szName.Kill();
 	pTab->SetDockPane(pPane);

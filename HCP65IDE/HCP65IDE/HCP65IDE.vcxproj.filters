@@ -129,7 +129,16 @@
     <ClCompile Include="IDEStructure.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="IDEStructurePane.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="IDEBreadcrumbs.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="IDEClaudePage.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="IDEEditorPage.cpp">
       <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="IDEIntroduceTypedef.cpp">
@@ -395,7 +404,16 @@
     <ClInclude Include="IDEStructure.h">
       <Filter>Source</Filter>
     </ClInclude>
+    <ClInclude Include="IDEStructurePane.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDEBreadcrumbs.h">
+      <Filter>Source</Filter>
+    </ClInclude>
     <ClInclude Include="IDEClaudePage.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDEEditorPage.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDEIntroduceTypedef.h">

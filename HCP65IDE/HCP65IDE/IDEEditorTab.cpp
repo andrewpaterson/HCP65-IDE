@@ -19,6 +19,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 ** ------------------------------------------------------------------------ **/
 #include <string.h>
+#include "WindowLib/FillContainer.h"
+#include "WindowLib/GridContainer.h"
 #include "BaseLib/FileUtil.h"
 #include "BaseLib/TextFile.h"
 #include "StandardLib/Objects.h"
@@ -67,6 +69,20 @@ void CIDEEditorTab::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CFo
 	mpPane = OMalloc<CScrollPane>(pWindow, pTheme);
 	mpPane->SetContent(mpCodeEditor);
 	mpPane->SetAlignment(CSH_Stretch, CSV_Stretch);
+
+	//The page: a strip over the code and one under it, each no height until it is given something.
+	mpTopStrip = OMalloc<CFillContainer>(pWindow);
+	mpTopStrip->SetAlignment(CSH_Stretch, CSV_Top);
+	mpView = OMalloc<CFillContainer>(pWindow);
+	mpView->SetAlignment(CSH_Stretch, CSV_Stretch);
+	mpView->AddComponent(mpPane);
+	mpBottomStrip = OMalloc<CFillContainer>(pWindow);
+	mpBottomStrip->SetAlignment(CSH_Stretch, CSV_Bottom);
+	mpHolder = OMalloc<CGridContainer>(pWindow);
+	mpHolder->SetAlignment(CSH_Stretch, CSV_Stretch);
+	mpHolder->AddComponent(mpTopStrip, 0, 0, 1, 1, 1, 0);
+	mpHolder->AddComponent(mpView, 0, 1, 1, 1, 1, 1);
+	mpHolder->AddComponent(mpBottomStrip, 0, 2, 1, 1, 1, 0);
 	mszFileName.Init(szFileName);
 	muiProject = uiProject;
 	muiSeenChanges = mpEditor->GetChangeCount();
@@ -117,6 +133,15 @@ void CIDEEditorTab::Class(void)
 	U_Unknown(CArrayTextRange, masSyntaxRanges);
 	U_Size(muiSyntaxChanges);
 	U_Unknown(CIDEOutline, mcOutline);
+	M_Pointer(mpHolder);
+	M_Pointer(mpTopStrip);
+	M_Pointer(mpView);
+	M_Pointer(mpBottomStrip);
+	M_Pointer(mpTopBar);
+	M_Pointer(mpBottomBar);
+	M_Pointer(mpOverlay);
+	M_Pointer(mpBreadcrumbs);
+	M_Pointer(mpStickyLines);
 	U_Size(muiOutlineChanges);
 	U_Unknown(CComponentEvent<CIDEEditorTab>, mcSyntaxBehind);
 	M_Pointer(mpZones);
@@ -252,6 +277,106 @@ CIDEOutline* CIDEEditorTab::GetOutline(void)
 
 CIDEOutline* CIDEEditorTab::GetLastOutline(void) { return &mcOutline; }
 bool CIDEEditorTab::IsOutlineCurrent(void) { return muiOutlineChanges == mpEditor->GetChangeCount(); }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// What is shown in the strip over the code (a Find bar), or under it
+// (breadcrumbs): pBar takes the place of what was there; NULL for
+// nothing, and the strip has no height.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEEditorTab::SetTopBar(Ptr<CComponent> pBar)
+{
+	if (mpTopBar.IsNotNull())
+	{
+		mpTopStrip->RemoveComponent(mpTopBar);
+	}
+	mpTopBar = pBar;
+	if (pBar.IsNotNull())
+	{
+		mpTopStrip->AddComponent(pBar);
+	}
+	mpWindow->InvalidateLayout();
+}
+
+
+void CIDEEditorTab::SetBottomBar(Ptr<CComponent> pBar)
+{
+	if (mpBottomBar.IsNotNull())
+	{
+		mpBottomStrip->RemoveComponent(mpBottomBar);
+	}
+	mpBottomBar = pBar;
+	if (pBar.IsNotNull())
+	{
+		mpBottomStrip->AddComponent(pBar);
+	}
+	mpWindow->InvalidateLayout();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// What is laid over the code, by its own alignment (sticky lines, at the
+// top): pOverlay takes the place of what was there; NULL for nothing.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEEditorTab::SetOverlay(Ptr<CComponent> pOverlay)
+{
+	if (mpOverlay.IsNotNull())
+	{
+		mpView->RemoveComponent(mpOverlay);
+	}
+	mpOverlay = pOverlay;
+	if (pOverlay.IsNotNull())
+	{
+		mpView->AddComponent(pOverlay);
+	}
+	mpWindow->InvalidateLayout();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The tab's breadcrumbs, under its code, and its sticky lines, over the
+// top of it, shown or not (the settings' choice): each is made when it is
+// first shown, and updated by whoever ticks the tab.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEEditorTab::ShowBreadcrumbs(CIDEContent* pcContent, bool bShown)
+{
+	if (bShown && mpBreadcrumbs.IsNull())
+	{
+		mpBreadcrumbs = OMalloc<CIDEBreadcrumbs>(pcContent, this);
+		SetBottomBar(mpBreadcrumbs->GetComponent());
+	}
+	else if (!bShown && mpBreadcrumbs.IsNotNull())
+	{
+		SetBottomBar(Ptr<CComponent>());
+		mpBreadcrumbs = NULL;
+	}
+}
+
+
+void CIDEEditorTab::ShowStickyLines(CIDEContent* pcContent, bool bShown)
+{
+	if (bShown && mpStickyLines.IsNull())
+	{
+		mpStickyLines = OMalloc<CIDEStickyLines>(pcContent, this);
+	}
+	else if (!bShown && mpStickyLines.IsNotNull())
+	{
+		mpStickyLines->Hide();
+		mpStickyLines = NULL;
+	}
+}
+
+
+Ptr<CComponent> CIDEEditorTab::GetHolder(void) const { return mpHolder; }
+size CIDEEditorTab::GetOutlineChanges(void) const { return muiOutlineChanges; }
+Ptr<CIDEBreadcrumbs> CIDEEditorTab::GetBreadcrumbs(void) const { return mpBreadcrumbs; }
+Ptr<CIDEStickyLines> CIDEEditorTab::GetStickyLines(void) const { return mpStickyLines; }
 
 
 //////////////////////////////////////////////////////////////////////////

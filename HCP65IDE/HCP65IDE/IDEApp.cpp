@@ -58,6 +58,7 @@ static const char*	gaszIDEScriptVariables[] =
 	"HCP65_IDE_DIALOG_SNAPSHOT",
 	"HCP65_IDE_DOCK",
 	"HCP65_IDE_EDIT",
+	"HCP65_IDE_EDITOR_EDITS",
 	"HCP65_IDE_EXPAND",
 	"HCP65_IDE_GOTO",
 	"HCP65_IDE_STARTUP_PROJECT",
@@ -256,6 +257,7 @@ static void GetIDEUserFile(CChars* pszDest, const char* szFile, const char* szVa
 // HCP65_IDE_REFERENCES, HCP65_IDE_DEFINITION, HCP65_IDE_REOPEN,
 // HCP65_IDE_DEBUG (CIDEContent::SetDebugScript's commands),
 // HCP65_IDE_RUN_EDITS (CIDERunConfigurationsDialog::ApplyEdits),
+// HCP65_IDE_EDITOR_EDITS (CIDEEditorPage::ApplyEdits),
 // HCP65_IDE_BUILD_EDITS (CIDEBuildConfigurationsDialog::ApplyEdits),
 // HCP65_IDE_ATTACH (a port to attach the debugger to) and
 // HCP65_IDE_CLAUDE (a request sent to Claude Code), and

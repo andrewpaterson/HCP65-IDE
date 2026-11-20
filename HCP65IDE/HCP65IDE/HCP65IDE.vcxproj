@@ -341,7 +341,10 @@
     <ClCompile Include="IDEChooser.cpp" />
     <ClCompile Include="IDEOutline.cpp" />
     <ClCompile Include="IDEStructure.cpp" />
+    <ClCompile Include="IDEStructurePane.cpp" />
+    <ClCompile Include="IDEBreadcrumbs.cpp" />
     <ClCompile Include="IDEClaudePage.cpp" />
+    <ClCompile Include="IDEEditorPage.cpp" />
     <ClCompile Include="IDEIntroduceTypedef.cpp" />
     <ClCompile Include="IDEInlineVariable.cpp" />
     <ClCompile Include="IDEMoveClass.cpp" />
@@ -431,7 +434,10 @@
     <ClInclude Include="IDEChooser.h" />
     <ClInclude Include="IDEOutline.h" />
     <ClInclude Include="IDEStructure.h" />
+    <ClInclude Include="IDEStructurePane.h" />
+    <ClInclude Include="IDEBreadcrumbs.h" />
     <ClInclude Include="IDEClaudePage.h" />
+    <ClInclude Include="IDEEditorPage.h" />
     <ClInclude Include="IDEIntroduceTypedef.h" />
     <ClInclude Include="IDEInlineVariable.h" />
     <ClInclude Include="IDEMoveClass.h" />

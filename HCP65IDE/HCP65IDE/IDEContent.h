@@ -117,6 +117,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define IDE_RUN_ID				"Run"
 #define IDE_DEBUG_ID			"Debug"
 #define IDE_CLAUDE_ID			"Claude"
+#define IDE_STRUCTURE_ID			"Structure"
 #define IDE_USAGES_ID			"FindUsages"
 #define IDE_FIND_ID				"Find"
 #define IDE_DUPLICATES_ID		"Duplicates"

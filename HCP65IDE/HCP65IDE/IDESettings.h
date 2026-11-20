@@ -29,6 +29,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDEFileTemplatesPage.h"
 #include "IDEDuplicatesPage.h"
 #include "IDEClaudePage.h"
+#include "IDEEditorPage.h"
 
 
 class CIDEContent;
@@ -54,6 +55,7 @@ protected:
 	Ptr<CIDEFileTemplatesPage>	mpTemplatesPage;
 	Ptr<CIDEDuplicatesPage>		mpDuplicatesPage;
 	Ptr<CIDEClaudePage>			mpClaudePage;
+	Ptr<CIDEEditorPage>			mpEditorPage;
 
 public:
 	void	Init(CIDEContent* pcContent);

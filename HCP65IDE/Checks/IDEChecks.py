@@ -763,9 +763,9 @@ CHECKS = [
 		 r'^Keys: Navigate\.Back Control\+Alt\+Cursor Left bound$', r'^Keys: Navigate\.Forward Control\+Alt\+Cursor Right bound$'],
 		[r'NOT BOUND']),
 	('usages-typing', {
-		#Space, and a character typed, in the Find Usages tree do nothing: space doesn't go to the usage as enter does
-		#(the user, 2026-11-12), and neither is given to the editor, whose file they were once typed into: the editor
-		#doesn't get the keys and its line is as it was.
+		#Space in the Find Usages tree does nothing: it doesn't go to the usage as enter does (the user, 2026-11-12).
+		#A character typed finds a row of the tree (nav-type-to-find-usages); neither is given to the editor, whose file
+		#they were once typed into: the editor doesn't get the keys and its line is as it was.
 		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usages,focus:usages,select:3,key:space,key:type:ab'},
 		[r'^    391: ', r'CalcParentheses\.h line 38: \[\tbool\t\tIsParentheses\(void\) const override;\]$'],
 		[r'Calculator\.cpp.* line \d+: \[', r'CalcParentheses\.h.*\(focus\)', r'CalcParentheses\.h \*', r' ab\]']),
@@ -3698,7 +3698,7 @@ CHECKS = [
 		 r'^Keys: Navigate\.GoToImplementation Control\+Alt\+B bound$', r'^Keys: Navigate\.GoToSuperMethod Control\+U bound$',
 		 r'^Keys: Navigate\.GoToTypeDeclaration Control\+Shift\+B bound$', r'^Keys: Navigate\.GoToRelatedSymbol Control\+Alt\+Home bound$',
 		 r'^Keys: Navigate\.GoToLine Control\+G bound$', r'^Keys: Navigate\.FileStructure Control\+F12 bound$', r'^Keys: Navigate\.NextMethod Alt\+Cursor Down bound$',
-		 r'^Keys: Navigate\.PreviousMethod Alt\+Cursor Up bound$',
+		 r'^Keys: Navigate\.PreviousMethod Alt\+Cursor Up bound$', r'^Keys: View\.Structure Alt\+7 bound$',
 		 r'^Keys: Navigate\.ShowUsages Control\+Alt\+F7 bound$', r'^Keys: Build\.Build Control\+F9 bound$', r'^Keys: Run\.Start Control\+F5 bound$', r'^Keys: Debug\.Start F5 bound$',
 		 r'^Keys: Debug\.BreakAll Control\+Pause/Break bound$',
 		 r'^Buttons: Start \[Run\.Start\]$'], [r'NOT BOUND', r'\[none\]']),
@@ -3858,7 +3858,7 @@ CHECKS = [
 		 r'^Menu File/Recent Solutions: 1 ',
 		 r'^Menu Edit: Undo \[Ctrl\+Z\](\(disabled\))?, Redo \[Ctrl\+Shift\+Z\](\(disabled\))?, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\], Select All \[Ctrl\+A\], Extend Selection \[Ctrl\+W\], Shrink Selection \[Ctrl\+Shift\+W\], Find in Files\.\.\. \[Ctrl\+Shift\+F\], Find Duplicates\.\.\. \[Ctrl\+Alt\+Shift\+D\]$',
 		 r'^Menu Navigate: Back \[Ctrl\+Alt\+Left\](\(disabled\))?, Forward \[Ctrl\+Alt\+Right\](\(disabled\))?, Class\.\.\. \[Ctrl\+N\], File\.\.\. \[Ctrl\+Shift\+N\], Symbol\.\.\. \[Ctrl\+Alt\+Shift\+N\], Line:Column\.\.\. \[Ctrl\+G\], Go to Source \[Ctrl\+B\], Go to Definition \[F12\], Go to Implementation\(s\) \[Ctrl\+Alt\+B\], Go to Type Declaration \[Ctrl\+Shift\+B\], Go to Super Method \[Ctrl\+U\], Go to Related Symbol \[Ctrl\+Alt\+Home\], Switch Header/Source \[Alt\+O\], File Structure \[Ctrl\+F12\], Next Method \[Alt\+Down\], Previous Method \[Alt\+Up\], Find Usages \[Alt\+F7\], Show Usages \[Ctrl\+Alt\+F7\], Find All References \[Shift\+F12\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Next Occurrence \[Ctrl\+Alt\+Down\], Previous Occurrence \[Ctrl\+Alt\+Up\]$',
-		 r'^Menu View: Solution Explorer, Find Usages, Find, Duplicates, Build, Indexing, Run, Debug, Claude$',
+		 r'^Menu View: Solution Explorer, Structure, Find Usages, Find, Duplicates, Build, Indexing, Run, Debug, Claude$',
 		 r'^Menu Git: Compare with HEAD, Compare with Branch\.\.\., Compare with Revision\.\.\.$',
 		 r'^Menu Build: Build \[Ctrl\+F9\], Edit Build Configurations\.\.\.$',
 		 r'^Menu Debug: Start Debugging \[F5\], Start Without Debugging \[Ctrl\+F5\], Stop Debugging \[Shift\+F5\], Stop Running(\(disabled\))?, Restart \[Ctrl\+Shift\+F5\], Break All \[Ctrl\+Pause/Break\], Attach to Emulator\.\.\., Step Into \[F11\], Step Over \[F10\], Step Out \[Shift\+F11\], Toggle Breakpoint \[F9\], New Breakpoint at Address\.\.\., Delete All Breakpoints, Edit Configurations\.\.\.$',
@@ -4223,6 +4223,81 @@ CHECKS = [
 		[r'^Prompt: Line\[:column\]: \[4:6\] $', r'^Prompt: Line\[:column\]: \[x\] Type a line, or a line and a column: 120 or 120:8\.$', r'^Prompt: none$',
 		 r'Shapes\.cpp \(focus\) line 16: \[void CSquare::Draw\(void\)\]', r'^Prompt: Line\[:column\]: \[16:6\] $', r'Shapes\.cpp \(focus\) line 31: \[\]',
 		 r'^Prompt: none$', r'Shapes\.cpp \(focus\) line 31: \[\]'], []),
+	('nav-breadcrumbs', {
+		#Breadcrumbs: under the code, what the caret is in, outermost first (a namespace, a class in it, a function
+		#defined in the class), following the caret: only the namespace after the class's closing brace, a function
+		#outside both, nothing between them.  A press on a crumb puts the caret on its name, and opens a chooser of what
+		#is beside it when anything is: the class has nothing beside it, the function has the class's other members.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Long.cpp', 'CARET': '20:5',
+		'DEBUG': 'edit:printcrumbs,edit:caret:100:5,edit:printcrumbs,edit:caret:124:3,edit:printcrumbs,edit:caret:127:1,edit:printcrumbs,'
+		         'edit:caret:130:2,edit:printcrumbs,edit:caret:20:5,edit:crumbclick:1,edit:print,edit:printcrumbs,edit:printchooser,'
+		         'edit:caret:20:5,edit:crumbclick:2,edit:printchooser,edit:key:down,edit:key:enter,edit:print,edit:printcrumbs'},
+		[r'^Breadcrumbs: Deep > CLadder > Climb$', r'^Breadcrumbs: Deep > CLadder > Descend$', r'^Breadcrumbs: Deep$', r'^Breadcrumbs: \(none\)$',
+		 r'^Breadcrumbs: Outside$', r'Long\.cpp \(focus\) line 4: \[class CLadder\]', r'^Breadcrumbs: Deep > CLadder$', r'^Chooser: none$',
+		 r'^Chooser: In CLadder$', r'^   miRungs \| 7$', r'^  >Climb\(int iSteps\) \| 9$', r'^   Descend\(int iSteps\) \| 77$',
+		 r'Long\.cpp \(focus\) line 77: ', r'^Breadcrumbs: Deep > CLadder > Descend$'], []),
+	('nav-sticky-lines', {
+		#Sticky lines: none while the view is at the top; scrolled into the class, the namespace's and the class's
+		#first lines are kept over the code; into a function, its first line too, and the next function's once that
+		#is what the top of the view is in.  A press on a line puts the caret on what it starts.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Long.cpp', 'CARET': '1:1',
+		'DEBUG': 'edit:printsticky,edit:scroll:4,edit:printsticky,edit:scroll:30,edit:printsticky,edit:scroll:80,edit:printsticky,'
+		         'edit:stickyclick:2,edit:print'},
+		[r'^Sticky lines: \(none\)$', r'^Sticky lines: \[namespace Deep\] \[class CLadder\]$',
+		 r'^Sticky lines: \[namespace Deep\] \[class CLadder\] \[\tint Climb\(int iSteps\)\]$',
+		 r'^Sticky lines: \[namespace Deep\] \[class CLadder\] \[\tint Descend\(int iSteps\)\]$',
+		 r'Long\.cpp \(focus\) line 77: \[\tint Descend\(int iSteps\)\]'], []),
+	('nav-editor-settings', {
+		#Settings' Editor page: breadcrumbs and sticky lines are shown until each is unticked and kept by OK, which
+		#takes them off the open editors and is written with the settings.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Long.cpp', 'CARET': '40:5',
+		'SETTINGS': MakeSettingsFile(), 'EDITOR_EDITS': 'breadcrumbs:false;sticky:false', 'DIALOG_ANSWER': 'OK',
+		'DEBUG': 'edit:scroll:30,edit:printcrumbs,edit:printsticky,clickmenu:File/Settings...,answered:1,printsettings,edit:printcrumbs,edit:printsticky'},
+		[r'^Breadcrumbs: Deep > CLadder > Climb$', r'^Sticky lines: \[namespace Deep\] \[class CLadder\] \[\tint Climb\(int iSteps\)\]$',
+		 r'^Dialog \[Settings\] answered OK$', r'<Editor Breadcrumbs="false" StickyLines="false"/>', r'^Breadcrumbs: off$', r'^Sticky lines: off$'], []),
+	('nav-editor-settings-read', {
+		#The settings as they were written: no breadcrumbs, sticky lines.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Long.cpp', 'CARET': '40:5',
+		'SETTINGS': MakeSettingsFile('<?xml version="1.0" encoding="UTF-8"?>\n<Settings>\n  <Editor Breadcrumbs="false" StickyLines="true"/>\n</Settings>\n'),
+		'DEBUG': 'edit:scroll:30,edit:printcrumbs,edit:printsticky'},
+		[r'^Breadcrumbs: off$', r'^Sticky lines: \[namespace Deep\] \[class CLadder\] \[\tint Climb\(int iSteps\)\]$'], []),
+	('nav-structure-window', {
+		#The Structure tool window: the active file's outline as a tree, the entry the caret is in selected as the
+		#caret moves.  A click on a row puts the caret on its entry.  Its menu's Hide Fields leaves fields out (a caret
+		#in one selects its class) and Sort by Name orders each node's entries; both are written with the settings.
+		#View lists it after Solution Explorer, which it is tabbed with.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Shapes.h', 'CARET': '20:5', 'SETTINGS': MakeSettingsFile(),
+		'DEBUG': 'edit:printstructure,edit:caret:12:10,edit:printstructure,edit:structureclick:5,edit:print,edit:structure:fields,edit:printstructure,'
+		         'edit:structure:sort,edit:printstructure,printsettings,printmenus'},
+		[r'^Structure: 10 rows$', r'^  CCircle$', r'^    miRadius$', r'^    Draw\(void\) override$', r'^  CSquare$', r'^>   miSide$', r'^  CRoundedSquare$',
+		 r'^Structure: 10 rows$', r'^>   Draw\(void\) override$', r'^  CSquare$', r'Shapes\.h \(focus\) line 20: \[\tint\t\tmiSide;\]',
+		 r'^Structure: 8 rows, no fields$', r'^  CCircle$', r'^    Draw\(void\) override$', r'^> CSquare$',
+		 r'^Structure: 8 rows, by name, no fields$', r'^  CCircle$', r'^    Area\(void\) override$', r'^    Draw\(void\) override$', r'^  CRoundedSquare$', r'^> CSquare$',
+		 r'<Structure SortByName="true" ShowFields="false"/>', r'^Menu View: Solution Explorer, Structure, Find Usages, '], []),
+	('nav-structure-settings-read', {
+		#The Structure tree's choices as they were written.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Shapes.h', 'CARET': '20:5',
+		'SETTINGS': MakeSettingsFile('<?xml version="1.0" encoding="UTF-8"?>\n<Settings>\n  <Structure SortByName="true" ShowFields="true"/>\n</Settings>\n'),
+		'DEBUG': 'edit:printstructure'},
+		[r'^Structure: 10 rows, by name$', r'^  CCircle$', r'^    Area\(void\) override$', r'^    Draw\(void\) override$', r'^    miRadius$', r'^  CRoundedSquare$', r'^>   miSide$'], []),
+	('nav-type-to-find', {
+		#Typing finds a row.  Structure (Alt+7) has the keys: "are" selects the next entry from the selected one with
+		#it, CSquare's Area, and Enter puts the caret there.  In Solution Explorer "sha" selects the first file from the
+		#selected one with it, Down the next round the end, and Escape ends the find and leaves that one selected, for
+		#Enter to open.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Shapes.h', 'CARET': '20:5',
+		'DEBUG': 'command:View.Structure,edit:printstructure,edit:key:type:are,edit:printstructure,edit:key:enter,edit:print,'
+		         'edit:focus:explorer,edit:key:type:sha,printexplorer,edit:key:down,printexplorer,edit:key:escape,edit:key:enter,edit:print'},
+		[r'^>   miSide$', r'^Structure: 10 rows$', r'^  CSquare$', r'^    Draw\(void\) override$', r'^>   Area\(void\) override$', r'^  CRoundedSquare$',
+		 r'Shapes\.h \(focus\) line 24: \[\tint\t\tArea\(void\) override;\]', r'^Explorer: \[.*Navigation/Shapes\.h\]$', r'^Explorer: \[.*Navigation/Shape\.cpp\]$',
+		 r'Shape\.cpp \(focus\) line 1: '], []),
+	('nav-type-to-find-usages', {
+		#In the Find Usages tree too: characters typed find a row, where once they did nothing.  Escape ends the find
+		#and the keys stay in the tree; Escape again goes back to the editor.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Shape.h', 'CARET': '14:17',
+		'EDIT': 'usagegroups:,usages,focus:usages,printselected,key:type:squ,printselected,key:escape,print,key:escape,print'},
+		[r'^Usages of Draw and 3 overrides  4 usages$', r'^Selected: 12: pcShape->Draw\(\);$', r'^Selected: 29: CSquare::Draw\(\);$',
+		 r'Shape\.h line 14: \[\tvirtual void\tDraw\(void\);\]$', r'Shape\.h \(focus\) line 14: '], []),
 	('nav-type-declaration', {
 		#Go to Type Declaration (Control+Shift+B): from a parameter and from a local variable, the class each is declared
 		#with; from a field of a built in type, the status line says its type has nothing to go to.

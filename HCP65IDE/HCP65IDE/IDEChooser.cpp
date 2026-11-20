@@ -155,6 +155,7 @@ void CIDEChooser::Begin(const char* szTitle, bool bFilter, bool bPreview, const 
 
 	mpPopup = OMalloc<CChooserPopup>(mpcContent->GetWindow(), mpcContent->GetDialogLook(), mpcContent->GetMatchFont());
 	mpPopup->SetTitle(szTitle);
+	mpPopup->SetOpensAbove(false);
 	if (bFilter)
 	{
 		mpPopup->AddFilter();
@@ -437,6 +438,7 @@ SIDELocation* CIDEChooser::GetChosenPlace(void)
 
 void CIDEChooser::SetSelectName(bool bSelectName) { mbSelectName = bSelectName; }  //The place's name (its length) is selected when it is gone to.
 void CIDEChooser::SetGoesToChosen(bool bGoesToChosen) { mbGoesToChosen = bGoesToChosen; }
+void CIDEChooser::SetOpensAbove(bool bOpensAbove) { mpPopup->SetOpensAbove(bOpensAbove); }
 void CIDEChooser::SetSortMatches(bool bSortMatches) { mpPopup->SetSortMatches(bSortMatches); }
 bool CIDEChooser::IsOpen(void) { return mpPopup.IsNotNull() && mpPopup->IsOpen(); }
 size CIDEChooser::NumPlaces(void) const { return masPlaces.NumElements(); }
