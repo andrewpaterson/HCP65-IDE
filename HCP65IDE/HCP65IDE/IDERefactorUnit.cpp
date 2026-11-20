@@ -293,6 +293,7 @@ bool CIDERefactorUnit::Parse(CIDECodeModel* pcModel, CIDEFileTexts* pcTexts, con
 	mbParsed = bResult && (mpcFile != NULL);
 	if (mbParsed && bCheck)
 	{
+		mcPass.SetOptions(&mcUnit.mcOptions);
 		mcPass.Check(&mcUnit.mcTree, eTarget, true);
 		mbChecked = true;
 	}
@@ -1010,4 +1011,6 @@ char* CIDERefactorUnit::GetFileName(void) { return mszFileName.Text(); }
 CCPPTokeniser* CIDERefactorUnit::GetTokeniser(void) { return &mcUnit.mcTokeniser; }
 CCPPSyntaxTree* CIDERefactorUnit::GetTree(void) { return &mcUnit.mcTree; }
 CCPPSemanticPass* CIDERefactorUnit::GetPass(void) { return &mcPass; }
+//Whether the file's build configuration compiles it with exceptions (CCPPCompileOptions::mbExceptions).
+bool CIDERefactorUnit::IsExceptions(void) const { return mcUnit.mcOptions.mbExceptions; }
 CSourceFile* CIDERefactorUnit::GetFile(void) { return mpcFile; }

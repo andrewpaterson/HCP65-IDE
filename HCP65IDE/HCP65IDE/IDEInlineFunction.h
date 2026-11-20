@@ -196,6 +196,7 @@ public:
 
 protected:
 	bool	Refuse(SIDEFunctionInlining* psDest, const char* szWhyNot);
+	static bool	IsExceptionSpecified(CCPPSyntaxFunctionDefinition* pcFunction);
 	bool	ReadBody(CIDERefactorUnit* pcUnit, SIDESignatureSite* psSite, const char* szText, SIDEFunctionInlining* psDest, CCPPSyntax** ppcValue);
 	void	ReadReplaces(CIDERefactorUnit* pcUnit, SIDESignatureSite* psSite, const char* szText, SIDEFunctionInlining* psDest);
 	void	AddReplace(SIDEFunctionInlining* psDest, size uiStart, size uiEnd, int iKind, int iIndex, bool bOperand);

@@ -28,6 +28,7 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 #include "Assembler65Lib/Asm65Module.h"
 #include "BaseLib/ArrayChars.h"
 #include "BaseLib/ArrayUint32.h"
+#include "CppCompilerLib/CPPCompileOptions.h"
 
 
 //What a configuration is built with: the HCP65 compiler for one of its processors, or a compiler for this computer.
@@ -146,6 +147,7 @@ public:
 	bool			IsWarnStringToPointer(void) const;
 	bool			IsMultiWordCasts(void) const;
 	bool			IsCConversions(void) const;
+	void			SetCompileOptions(CCPPCompileOptions* pcDest) const;
 
 	bool			HasImage(void) const;
 	CAsm65Image*	GetImage(void);

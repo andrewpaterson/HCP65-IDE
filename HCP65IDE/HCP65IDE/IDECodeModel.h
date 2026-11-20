@@ -51,6 +51,7 @@ public:
 	CCPPSyntaxTree		mcTree;
 	bool				mbTree;		//The tree is made once the unit is tokenised.
 	bool				mbContents;	//Its contents were given, not read from its file.
+	CCPPCompileOptions	mcOptions;	//How its project's build configuration compiles it: a check of it is made with them.
 
 	void	Init(void);
 	void	Kill(void);
@@ -337,6 +338,7 @@ protected:
 	CProject*			GetProject(size uiProject);
 	CVcxConfiguration*	GetProjectConfiguration(size uiProject);
 	const char*			GetSolutionConfiguration(size uiSolution);
+	CBuildConfiguration*	FindBuildConfiguration(size uiSolution);
 	void				AddCompilerDefines(CVcxConfiguration* pcConfiguration, CConfig* pcConfig);
 	void				KillProjects(void);
 	void				FindProjectFiles(void);

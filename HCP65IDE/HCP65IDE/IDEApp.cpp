@@ -459,7 +459,8 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 				//undoall, redoall (Ctrl+Z and Ctrl+Shift+Z in an editor, across files), group and endgroup (the edits between as one),
 				//menu (Edit opened), explorer (Alt+1, the active file selected in Solution Explorer), renamable (what
 				//Rename would rename at the caret), rename:<name> (renamed, without its dialog), renamesearch:<c|-><t|-> (its
-				//searches in comments and for text), printincludes (the #includes that find the active file),
+				//searches in comments and for text), printincludes (the #includes that find the active file), printcheckerrors (the
+				//active file checked as a refactoring checks it, and the check's errors),
 				//renamefile:<name> and renamefilerelated:<name> (Rename File on the active file, with its related files), usages (Alt+F7, the tree printed), usagegroups:<tpc> (Find Usages grouped by usage type, project and class, or none of them),
 				//focus:usages (its tree focussed), select:<node> (its row of that node selected), printselected (the
 				//selected row printed), printselection (the active editor's selected text and caret line), printhistory

@@ -346,6 +346,28 @@ void CIDEInlineFunction::AddReplace(SIDEFunctionInlining* psDest, size uiStart, 
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Whether the function's definition is written with an exception
+// specification that stops what its body throws (noexcept, throw(),
+// throw(A, B)): Microsoft's throw(...) stops nothing.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEInlineFunction::IsExceptionSpecified(CCPPSyntaxFunctionDefinition* pcFunction)
+{
+	CCPPSyntaxFunctionSuffix*			pcSuffix;
+	CCPPSyntaxExceptionSpecification*	pcSpecification;
+
+	pcSuffix = pcFunction->mpcDeclarator ? pcFunction->mpcDeclarator->GetFunctionSuffix() : NULL;
+	if (!pcSuffix || !pcSuffix->mpcExceptionSpecification || (pcSuffix->mpcExceptionSpecification->GetKind() != CPPS_ExceptionSpecification))
+	{
+		return false;
+	}
+	pcSpecification = (CCPPSyntaxExceptionSpecification*)pcSuffix->mpcExceptionSpecification;
+	return !pcSpecification->mbAnything;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // The function's body, as its definition writes it: an expression it
 // returns and nothing else, or its own variables' declarations, its
 // statements, and what its last statement returns.  False, with why in
@@ -362,6 +384,7 @@ bool CIDEInlineFunction::ReadBody(CIDERefactorUnit* pcUnit, SIDESignatureSite* p
 	CCPPSyntax*						pcNode;
 	CIDEExitFinder					cExits;
 	CIDEEffectFinder				cEffects;
+	CIDEThrowFinder					cThrows;
 	SCPPSyntaxRange					sRange;
 	CChars							szLine;
 	size							uiStatements;
@@ -373,9 +396,22 @@ bool CIDEInlineFunction::ReadBody(CIDERefactorUnit* pcUnit, SIDESignatureSite* p
 
 	*ppcValue = NULL;
 	pcFunction = (CCPPSyntaxFunctionDefinition*)pcUnit->FindAncestor(pcUnit->FindNodeAt(psSite->iLine, psSite->iColumn), CPPS_FunctionDefinition);
+	if (pcFunction && pcFunction->mpcBody && (pcFunction->mpcBody->GetKind() == CPPS_TryStatement))
+	{
+		return !Refuse(psDest, "its body is a function-try-block: its handlers can't be written where it is called");
+	}
 	if (!pcFunction || !pcFunction->mpcBody || (pcFunction->mpcBody->GetKind() != CPPS_CompoundStatement))
 	{
 		return !Refuse(psDest, "its body can't be read (a macro makes it)");
+	}
+	if (pcUnit->IsExceptions() && IsExceptionSpecified(pcFunction))
+	{
+		cThrows.mbMayThrow = false;
+		cThrows.Look(pcFunction->mpcBody);
+		if (cThrows.mbMayThrow)
+		{
+			return !Refuse(psDest, "it has an exception specification (noexcept or throw()) and its body may throw: inlined, an exception would no longer stop at it");
+		}
 	}
 	if (pcFunction->macpMemberInitializers.NumElements() > 0)
 	{

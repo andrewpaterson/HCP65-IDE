@@ -764,9 +764,9 @@ bool CIDEExtractMethod::FindExtraction(SIDEExtraction* psDest)
 			{
 				Refuse(psDest, "it leaves by a break, a continue or a goto that a function of it couldn't make (or has a label)");
 			}
-			else if ((cExits.muiReturns > 0) && (pcBlock->macpStatements.GetPtr(uiLastStatement)->GetKind() != CPPS_ReturnStatement))
+			else if ((cExits.muiReturns > 0) && !CIDEExitFinder::EndsLeaving(pcBlock->macpStatements.GetPtr(uiLastStatement)))
 			{
-				Refuse(psDest, "it returns from the function part of the way through: a selection that returns must end with a return");
+				Refuse(psDest, "it returns from the function part of the way through: a selection that returns must end with a return (or a throw)");
 			}
 			psDest->bReturns = (cExits.muiReturns > 0);
 		}

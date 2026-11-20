@@ -713,6 +713,26 @@ bool CBuildConfiguration::IsCConversions(void) const
 
 //////////////////////////////////////////////////////////////////////////
 //
+// The compiler's options for what this configuration chooses, set into
+// pcDest (what it doesn't choose is left as it was).  The build and the
+// IDE's code model both take them from here, so the code model reads a
+// program as it is built (ExceptionsPlan.txt question 17).
+//
+//////////////////////////////////////////////////////////////////////////
+void CBuildConfiguration::SetCompileOptions(CCPPCompileOptions* pcDest) const
+{
+	pcDest->mePrefer = mbPreferSize ? CPPP_Size : CPPP_Speed;
+	pcDest->mbWarnMissingOverride = mbWarnMissingOverride;
+	pcDest->mbExceptions = mbExceptions;
+	pcDest->mbKeepUnusedObjects = mbKeepUnusedObjects;
+	pcDest->mbWarnStringToPointer = mbWarnStringToPointer;
+	pcDest->mbMultiWordCasts = mbMultiWordCasts;
+	pcDest->mbCConversions = mbCConversions;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Whether a build links what it compiles into an executable, a program a
 // kernal loads (GetExecutable).
 //

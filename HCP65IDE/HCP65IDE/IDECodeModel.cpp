@@ -58,6 +58,7 @@ void CIDEParsedUnit::Init(void)
 	mcTokeniser.Init();
 	mbTree = false;
 	mbContents = false;
+	mcOptions = *GetDefaultCPPCompileOptions();
 }
 
 
@@ -696,14 +697,17 @@ void CIDECodeModel::HighlightFile(CIDEParsedUnit* pcUnit, CSourceFile* pcFile, C
 //////////////////////////////////////////////////////////////////////////
 //
 // The file (or szContents as it, if they aren't NULL) preprocessed with
-// its project's include directories and defines, and parsed into pcDest.
-// False if the project isn't loaded.
+// its project's include directories and defines, and parsed into pcDest,
+// with the compile options its build configuration has (CBuildConfiguration
+// ::SetCompileOptions) for checking it.  False if the project isn't
+// loaded.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDECodeModel::ParseUnit(size uiProject, const char* szFileName, const char* szContents, CIDEParsedUnit* pcDest, CChars* pszErrors)
 {
-	CProject*	pcProject;
-	CCPPParser	cParser;
+	CProject*				pcProject;
+	CCPPParser				cParser;
+	CBuildConfiguration*	pcConfiguration;
 
 	pcDest->mpcUnit = AddUnit(uiProject, szFileName);
 	if (pcDest->mpcUnit == NULL)
@@ -718,6 +722,11 @@ bool CIDECodeModel::ParseUnit(size uiProject, const char* szFileName, const char
 
 	mcProjectsMutex.Lock();
 	pcProject = GetProject(uiProject);
+	pcConfiguration = FindBuildConfiguration(mpcWorkspace->GetProject(uiProject)->uiSolution);
+	if (pcConfiguration != NULL)
+	{
+		pcConfiguration->SetCompileOptions(&pcDest->mcOptions);
+	}
 	mcProjectsMutex.Unlock();
 	pcProject->ProcessUnit(pcDest->mpcUnit, mszConfiguration.Text(), pszErrors);
 
@@ -1126,6 +1135,7 @@ void CIDECodeModel::GatherUnit(CIDEParsedUnit* pcUnit, CCPPIndexUnit* pcDest, CC
 
 	cPass.Init();
 	cPass.SetTemplatesAsThemselves(mbIndexTemplates);
+	cPass.SetOptions(&pcUnit->mcOptions);
 	cPass.Check(&pcUnit->mcTree);
 	CCPPIndex::Gather(&pcUnit->mcTokeniser, &pcUnit->mcTree, pcDest, &cPass, pcIndexed);
 	cPass.Kill();
@@ -1748,16 +1758,34 @@ const char* CIDECodeModel::GetSolutionConfiguration(size uiSolution)
 	CBuildConfiguration*		pcConfiguration;
 
 	pcSolution = mpcWorkspace->GetSolution(uiSolution);
-	pcConfiguration = mpcWorkspace->FindConfiguration(uiSolution, mszConfiguration.Text());
-	if ((pcConfiguration == NULL) && (pcSolution->mcConfigurations.NumConfigurations() > 0))
-	{
-		pcConfiguration = pcSolution->mcConfigurations.GetConfiguration(0);
-	}
+	pcConfiguration = FindBuildConfiguration(uiSolution);
 	if (pcConfiguration != NULL)
 	{
 		return pcConfiguration->GetSolutionConfiguration();
 	}
 	return (pcSolution->mcSolution.NumConfigurations() > 0) ? pcSolution->mcSolution.GetConfiguration(0) : NULL;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The build configuration a solution is read with: its build configuration
+// of the code model's configuration's name, or its first if it hasn't one.
+// NULL if it has none.
+//
+//////////////////////////////////////////////////////////////////////////
+CBuildConfiguration* CIDECodeModel::FindBuildConfiguration(size uiSolution)
+{
+	CBuildWorkspaceSolution*	pcSolution;
+	CBuildConfiguration*		pcConfiguration;
+
+	pcSolution = mpcWorkspace->GetSolution(uiSolution);
+	pcConfiguration = mpcWorkspace->FindConfiguration(uiSolution, mszConfiguration.Text());
+	if ((pcConfiguration == NULL) && (pcSolution->mcConfigurations.NumConfigurations() > 0))
+	{
+		pcConfiguration = pcSolution->mcConfigurations.GetConfiguration(0);
+	}
+	return pcConfiguration;
 }
 
 

@@ -30,6 +30,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/ComponentInput.h"
 #include "InputLib/ProgramDeviceDetail.h"
 #include "WindowLib/ComponentInput.h"
+#include "IDERefactorUnit.h"
 #include "IDEScript.h"
 
 
@@ -1591,6 +1592,32 @@ void CIDEScript::RunEditStep(const char* szStep)
 		mpcContent->GetFileRename()->RenameFiles(&asRenames, gbIDEScriptFileComments, gbIDEScriptFileText);
 		KillIDEFileRenames(&asRenames);
 		szFileName.Kill();
+	}
+	else if ((strcmp(szStep, "printcheckerrors") == 0) && pTab.IsNotNull())
+	{
+		//The active file's unit checked as a refactoring checks it (with its build configuration's compile options), and
+		//the check's errors in it printed: its line and message.
+		CIDERefactorUnit	cUnit;
+		CCPPErrors*			pcErrors;
+		char*				szMessage;
+		size				i;
+
+		cUnit.Init();
+		if (cUnit.Parse(mpcContent->GetCodeModel(), &mpcContent->GetFindInFiles(), pTab->GetFileName(), true))
+		{
+			pcErrors = cUnit.GetPass()->GetErrors();
+			printf("Check errors: %d\n", (int)pcErrors->NumErrors());
+			for (i = 0; i < pcErrors->NumErrors(); i++)
+			{
+				szMessage = strstr(pcErrors->Get(i), "): ");
+				printf("  line %d: %s\n", pcErrors->GetLine(i) + 1,szMessage ? szMessage + 3 : pcErrors->Get(i));
+			}
+		}
+		else
+		{
+			printf("Check errors: not parsed\n");
+		}
+		cUnit.Kill();
 	}
 	else if ((strcmp(szStep, "printincludes") == 0) && pTab.IsNotNull())
 	{

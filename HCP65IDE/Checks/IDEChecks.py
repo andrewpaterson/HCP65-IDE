@@ -385,6 +385,20 @@ def MakeFindDuplicatesCopy():
 	return {'SOLUTION': os.path.join(szFolder, 'FindDuplicates.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
 
 
+def MakeExceptionsCopy(bExceptions=True):
+	#A copy of Input/Exceptions (ExceptionsPlan.txt stage 10), a solution whose build configuration has Exceptions="true"
+	#(taken out without bExceptions): CFault is thrown by Check (declared throw(CFault)) and Choose, caught by Guarded,
+	#Wrapped's body is a function-try-block, Promise is noexcept and calls Check, Safe is noexcept and calls nothing.
+	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
+	atexit.register(shutil.rmtree, szRoot, True)
+	szFolder = os.path.join(szRoot, 'Exceptions')
+	shutil.copytree(os.path.join(HERE, 'Input', 'Exceptions'), szFolder)
+	if not bExceptions:
+		szFile = os.path.join(szFolder, 'Exceptions.hcp65build')
+		open(szFile, 'w', newline='').write(open(szFile, newline='').read().replace(' Exceptions="true"', ''))
+	return {'SOLUTION': os.path.join(szFolder, 'Exceptions.sln'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
+
+
 def MakeInlineFunctionCopy():
 	#A copy of Input/InlineFunction (CPump, with functions that return an expression, have statements, and can't be
 	#inlined each for its own reason; CSlot, a class template; Twice and Report, functions of no class), to inline
@@ -2595,6 +2609,73 @@ CHECKS = [
 		 r"^Extract Method: can't be: it leaves by a break, a continue or a goto that a function of it couldn't make \(or has a label\)$",
 		 r"^Extract Method: can't be: the selection isn't an expression, or whole statements of one block$", r'^Dialog \[Extract Method\] answered Cancel$'],
 		[r'^Status: Extracted']),
+	('exceptions-check-options', dict(MakeExceptionsCopy(), **{
+		#The code model checks a file with its build configuration's compile options, made by the code the build makes
+		#them with (CBuildConfiguration::SetCompileOptions; ExceptionsPlan.txt 10a, question 17): with Exceptions="true"
+		#the throws are no errors.
+		'WAIT_INDEX': '1', 'OPEN': 'Fault.cpp', 'DEBUG': 'edit:printcheckerrors'}),
+		[r'^Check errors: 0$'],
+		[r"can't be used"]),
+	('exceptions-check-options-off', dict(MakeExceptionsCopy(False), **{
+		#The same solution built without exceptions: each throw is the error the build reports.
+		'WAIT_INDEX': '1', 'OPEN': 'Fault.cpp', 'DEBUG': 'edit:printcheckerrors'}),
+		[r'^Check errors: 2$', r"^  line 20: throw can't be used: the program is built without exceptions", r"^  line 49: throw can't be used"],
+		[]),
+	('exceptions-usages-throw', dict(MakeExceptionsCopy(), **{
+		#A program built with exceptions is read as it is built (ExceptionsPlan.txt 10a): a throw's operand is checked,
+		#so what it names are usages.  iLimit is used in Check's throw, and CFault is named in two throws, a handler and
+		#a throw(CFault).
+		'WAIT_INDEX': '1', 'OPEN': 'Fault.cpp', 'CARET': '16:15', 'EDIT': 'usages'}),
+		[r'^Usages of iLimit  3 usages$', r'^\s+20: throw CFault\(iLimit\);$'],
+		[]),
+	('exceptions-usages-class', dict(MakeExceptionsCopy(), **{
+		#CFault, named in throws, a handler's type and throw(CFault) lists: each is a usage.
+		'WAIT_INDEX': '1', 'OPEN': 'Fault.h', 'CARET': '5:8', 'EDIT': 'usages'}),
+		[r'^Usages of CFault  7 usages$', r'^\s+34: catch \(CFault& cFault\)$', r'^\s+16: int Check\(int iLimit\) throw\(CFault\)$',
+		 r'^\s+15: int Check\(int iLimit\) throw\(CFault\);$', r'^\s+20: throw CFault\(iLimit\);$', r'^\s+49: throw CFault\(iValue\);$'],
+		[]),
+	('exceptions-rename-handler', dict(MakeExceptionsCopy(), **{
+		#A handler's parameter is a local of the handler: renamed where it is declared and where it is used.
+		'WAIT_INDEX': '1', 'OPEN': 'Fault.cpp', 'CARET': '34:18',
+		'DEBUG': 'edit:renamesearch:---s,edit:rename:cError,printdisklines:Fault.cpp'}),
+		[r'^34\|\tcatch \(CFault& cError\)$', r'^36\|\t\tiResult = cError\.GetCode\(\) \+ 1;$'],
+		[r'^\d+\|.*cFault']),
+	('exceptions-extract-method', dict(MakeExceptionsCopy(), **{
+		#Extract Method (ExceptionsPlan.txt 10b): statements that return and end with a throw leave on every path, so
+		#they are extracted and called as return Picked(iValue);.  Statements in a handler that use its parameter are
+		#given it, as a local is.
+		'WAIT_INDEX': '1', 'OPEN': 'Fault.cpp',
+		'DEBUG': 'edit:renamesearch:---s,edit:selecttext:45:1-49:23,edit:extract:Picked,edit:selecttext:36:1-37:25,edit:extract:Recovered,printdisklines:Fault.cpp'}),
+		[r'^Extract Method: statements that return, \[int X\(int iValue\)\], called \[X\(iValue\)\]$', r'^Status: Extracted int Picked\(int iValue\)\.$',
+		 r'^Extract Method: statements, \[int X\(CFault& cFault\)\], called \[X\(cFault\)\]$', r'^  cFault: a parameter$',
+		 r'^Status: Extracted int Recovered\(CFault& cFault\)\.$',
+		 r'^\d+\|int Recovered\(CFault& cFault\)$', r'^\d+\|\tiResult = cFault\.GetCode\(\) \+ 1;$', r'^\d+\|\tcatch \(CFault& cFault\)$',
+		 r'^\d+\|\t\tiResult = Recovered\(cFault\);$', r'^\d+\|int Picked\(int iValue\)$', r'^\d+\|\tthrow CFault\(iValue\);$', r'^\d+\|\treturn Picked\(iValue\);$'],
+		[r"can't be"]),
+	('exceptions-inline-refused', dict(MakeExceptionsCopy(), **{
+		#Inline Function (ExceptionsPlan.txt 10c): a function-try-block can't be inlined, nor a noexcept function whose
+		#body may throw; a noexcept one whose body can't (Safe) can.
+		'WAIT_INDEX': '1', 'OPEN': 'Fault.cpp',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:53:6,edit:inlinablefunction,edit:caret:64:6,edit:inlinablefunction,edit:caret:70:6,edit:inlinablefunction'}),
+		[r"^Inline Function: Wrapped can't be inlined: its body is a function-try-block: its handlers can't be written where it is called$",
+		 r"^Inline Function: Promise can't be inlined: it has an exception specification \(noexcept or throw\(\)\) and its body may throw: inlined, an exception would no longer stop at it$",
+		 r'^Inline Function: Safe, an expression, 1 call$'],
+		[r"Safe can't be"]),
+	('exceptions-change-signature', dict(MakeExceptionsCopy(), **{
+		#Change Signature (ExceptionsPlan.txt 10e) keeps what comes after the parameters: throw(CFault) on Check's
+		#declaration and definition.
+		'WAIT_INDEX': '1', 'OPEN': 'Fault.h',
+		'DEBUG': 'edit:renamesearch:---s,edit:caret:15:6,edit:changesignature:0;+int|iBase|0|,printdisklines:Fault.h,printdisklines:Fault.cpp'}),
+		[r'^15\|int\tCheck\(int iLimit, int iBase\) throw\(CFault\);$', r'^16\|int Check\(int iLimit, int iBase\) throw\(CFault\)$', r'^\d+\|\t\tiResult = Check\(iValue, 0\);$'],
+		[r'^Conflict']),
+	('exceptions-introduce-variable', dict(MakeExceptionsCopy(), **{
+		#Introduce Variable inside a handler, on an expression that uses the handler's parameter: declared with the
+		#function's declarations and given its value in the handler, before the statement that used it.
+		'WAIT_INDEX': '1', 'OPEN': 'Fault.cpp',
+		'DEBUG': 'edit:renamesearch:---s,edit:selecttext:36:13-36:29,edit:introduce:iCode,printdisklines:Fault.cpp'}),
+		[r'^Status: Introduced int iCode = cFault\.GetCode\(\): 1 occurrence replaced\.$', r'^\d+\|\tint\tiCode;$', r'^35\|\tcatch \(CFault& cFault\)$',
+		 r'^37\|\t\tiCode = cFault\.GetCode\(\);$', r'^38\|\t\tiResult = iCode \+ 1;$'],
+		[]),
 	('inline-function', dict(MakeInlineFunctionCopy(), **{
 		#Inline Function, for functions that return an expression: every call becomes the expression, each parameter
 		#the call's argument (in parentheses where it is more than one thing and an operand), the whole in parentheses
