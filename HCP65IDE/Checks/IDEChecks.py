@@ -3697,7 +3697,7 @@ CHECKS = [
 		[r'^Keys: Navigate\.GoToDefinition F12 bound$', r'^Keys: Navigate\.GoToClass Control\+N bound$',
 		 r'^Keys: Navigate\.GoToImplementation Control\+Alt\+B bound$', r'^Keys: Navigate\.GoToSuperMethod Control\+U bound$',
 		 r'^Keys: Navigate\.GoToTypeDeclaration Control\+Shift\+B bound$', r'^Keys: Navigate\.GoToRelatedSymbol Control\+Alt\+Home bound$',
-		 r'^Keys: Navigate\.FileStructure Control\+F12 bound$', r'^Keys: Navigate\.NextMethod Alt\+Cursor Down bound$',
+		 r'^Keys: Navigate\.GoToLine Control\+G bound$', r'^Keys: Navigate\.FileStructure Control\+F12 bound$', r'^Keys: Navigate\.NextMethod Alt\+Cursor Down bound$',
 		 r'^Keys: Navigate\.PreviousMethod Alt\+Cursor Up bound$',
 		 r'^Keys: Navigate\.ShowUsages Control\+Alt\+F7 bound$', r'^Keys: Build\.Build Control\+F9 bound$', r'^Keys: Run\.Start Control\+F5 bound$', r'^Keys: Debug\.Start F5 bound$',
 		 r'^Keys: Debug\.BreakAll Control\+Pause/Break bound$',
@@ -3857,7 +3857,7 @@ CHECKS = [
 		 r'^Menu File/New: C\+\+ Class\.\.\., C\+\+ Header\.\.\., C\+\+ Source\.\.\.$',
 		 r'^Menu File/Recent Solutions: 1 ',
 		 r'^Menu Edit: Undo \[Ctrl\+Z\](\(disabled\))?, Redo \[Ctrl\+Shift\+Z\](\(disabled\))?, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\], Select All \[Ctrl\+A\], Extend Selection \[Ctrl\+W\], Shrink Selection \[Ctrl\+Shift\+W\], Find in Files\.\.\. \[Ctrl\+Shift\+F\], Find Duplicates\.\.\. \[Ctrl\+Alt\+Shift\+D\]$',
-		 r'^Menu Navigate: Back \[Ctrl\+Alt\+Left\](\(disabled\))?, Forward \[Ctrl\+Alt\+Right\](\(disabled\))?, Class\.\.\. \[Ctrl\+N\], File\.\.\. \[Ctrl\+Shift\+N\], Symbol\.\.\. \[Ctrl\+Alt\+Shift\+N\], Go to Source \[Ctrl\+B\], Go to Definition \[F12\], Go to Implementation\(s\) \[Ctrl\+Alt\+B\], Go to Type Declaration \[Ctrl\+Shift\+B\], Go to Super Method \[Ctrl\+U\], Go to Related Symbol \[Ctrl\+Alt\+Home\], Switch Header/Source \[Alt\+O\], File Structure \[Ctrl\+F12\], Next Method \[Alt\+Down\], Previous Method \[Alt\+Up\], Find Usages \[Alt\+F7\], Show Usages \[Ctrl\+Alt\+F7\], Find All References \[Shift\+F12\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Next Occurrence \[Ctrl\+Alt\+Down\], Previous Occurrence \[Ctrl\+Alt\+Up\]$',
+		 r'^Menu Navigate: Back \[Ctrl\+Alt\+Left\](\(disabled\))?, Forward \[Ctrl\+Alt\+Right\](\(disabled\))?, Class\.\.\. \[Ctrl\+N\], File\.\.\. \[Ctrl\+Shift\+N\], Symbol\.\.\. \[Ctrl\+Alt\+Shift\+N\], Line:Column\.\.\. \[Ctrl\+G\], Go to Source \[Ctrl\+B\], Go to Definition \[F12\], Go to Implementation\(s\) \[Ctrl\+Alt\+B\], Go to Type Declaration \[Ctrl\+Shift\+B\], Go to Super Method \[Ctrl\+U\], Go to Related Symbol \[Ctrl\+Alt\+Home\], Switch Header/Source \[Alt\+O\], File Structure \[Ctrl\+F12\], Next Method \[Alt\+Down\], Previous Method \[Alt\+Up\], Find Usages \[Alt\+F7\], Show Usages \[Ctrl\+Alt\+F7\], Find All References \[Shift\+F12\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Next Occurrence \[Ctrl\+Alt\+Down\], Previous Occurrence \[Ctrl\+Alt\+Up\]$',
 		 r'^Menu View: Solution Explorer, Find Usages, Find, Duplicates, Build, Indexing, Run, Debug, Claude$',
 		 r'^Menu Git: Compare with HEAD, Compare with Branch\.\.\., Compare with Revision\.\.\.$',
 		 r'^Menu Build: Build \[Ctrl\+F9\], Edit Build Configurations\.\.\.$',
@@ -4212,6 +4212,17 @@ CHECKS = [
 		         'edit:caret:6:3,edit:keys:Control+],edit:print,edit:caret:6:3,edit:keys:Control+Shift+],edit:printselection'},
 		[r'Shapes\.cpp.* line 7: \[\}\]', r'Shapes\.cpp.* line 5: \[\{\]', r'Shapes\.cpp.* line 5: \[\{\]', r'Shapes\.cpp.* line 7: \[\}\]',
 		 r'^Selection: \[ove\(0, 0\);$', r'^\}\] on line 7, caret line 7$'], []),
+	('nav-go-to-line', {
+		#Go to Line (Control+G): a prompt over the editor with the caret's line and column in it.  What isn't a line is
+		#said to be wrong and the prompt stays; a line and a column put the caret there and close it; a line past the
+		#last is the last (the empty one after the last line feed), and Escape leaves the caret alone.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Shapes.cpp', 'CARET': '4:6',
+		'DEBUG': 'command:Navigate.GoToLine,edit:printprompt,edit:key:type:x,edit:key:enter,edit:printprompt,edit:key:backspace,edit:key:type:16:6,edit:key:enter,'
+		         'edit:printprompt,edit:print,command:Navigate.GoToLine,edit:printprompt,edit:key:type:999,edit:key:enter,edit:print,'
+		         'command:Navigate.GoToLine,edit:key:type:2,edit:key:escape,edit:printprompt,edit:print'},
+		[r'^Prompt: Line\[:column\]: \[4:6\] $', r'^Prompt: Line\[:column\]: \[x\] Type a line, or a line and a column: 120 or 120:8\.$', r'^Prompt: none$',
+		 r'Shapes\.cpp \(focus\) line 16: \[void CSquare::Draw\(void\)\]', r'^Prompt: Line\[:column\]: \[16:6\] $', r'Shapes\.cpp \(focus\) line 31: \[\]',
+		 r'^Prompt: none$', r'Shapes\.cpp \(focus\) line 31: \[\]'], []),
 	('nav-type-declaration', {
 		#Go to Type Declaration (Control+Shift+B): from a parameter and from a local variable, the class each is declared
 		#with; from a field of a built in type, the status line says its type has nothing to go to.

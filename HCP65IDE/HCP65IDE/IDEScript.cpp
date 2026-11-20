@@ -3187,6 +3187,22 @@ void CIDEScript::RunEditStep(const char* szStep)
 	{
 		PrintChooser();
 	}
+	else if (strcmp(szStep, "printprompt") == 0)
+	{
+		//Go to Line's prompt: "Prompt: <caption> [<text>] <what is wrong>", or "Prompt: none" if it isn't open.
+		Ptr<CPromptPopup>	pPrompt;
+
+		pPrompt = mpcContent->GetStructure()->GetPrompt();
+		if (pPrompt.IsNull() || !pPrompt->IsOpen())
+		{
+			printf("Prompt: none\n");
+		}
+		else
+		{
+			printf("Prompt: %s [%s] %s\n", pPrompt->GetCaption(), pPrompt->GetText(), pPrompt->GetProblem());
+		}
+		fflush(stdout);
+	}
 	else if ((strcmp(szStep, "printoutline") == 0) && pTab.IsNotNull())
 	{
 		//What the active file declares, parsed now if it has been edited: "Outline: 12 entries" and a line for each
@@ -3540,6 +3556,10 @@ void CIDEScript::RunEditStep(const char* szStep)
 		else if (strcmp(&szStep[4], "enter") == 0)
 		{
 			mpcContent->GetWindow()->InputCommand(CIC_Enter, true);
+		}
+		else if (strcmp(&szStep[4], "backspace") == 0)
+		{
+			mpcContent->GetWindow()->InputCommand(CIC_Backspace, true);
 		}
 		else if (strcmp(&szStep[4], "escape") == 0)
 		{

@@ -23,6 +23,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "StandardLib/Object.h"
 #include "WindowLib/CommandSet.h"
 #include "WindowLib/MenuContainer.h"
+#include "WindowLib/PromptPopup.h"
 #include "IDEChooser.h"
 #include "IDEOutline.h"
 
@@ -36,7 +37,8 @@ class CIDEEditorTab;
 //and its line, filtered as it is typed in, the entry the caret is in selected to begin with; and Next and Previous
 //Method (Alt+Down and Alt+Up), the caret put on the name of the next function the file declares or defines after
 //the caret, or the last before it.  They read the active tab's outline (CIDEOutline, parsed now if the file was
-//edited since).
+//edited since).  And Go to Line (Control+G): a prompt over the editor, "Line[:column]" with the caret's place in it,
+//that puts the caret there.
 class CIDEStructure : public CObject
 {
 CONSTRUCTABLE(CIDEStructure);
@@ -44,6 +46,7 @@ DESTRUCTABLE(CIDEStructure);
 protected:
 	CIDEContent*		mpcContent;  //Not held: the content holds it.
 	Ptr<CIDEChooser>	mpChooser;  //File Structure's, made when it is first shown.
+	Ptr<CPromptPopup>	mpPrompt;  //Go to Line's, made when it is first shown.
 
 public:
 	void	Init(CIDEContent* pcContent);
@@ -57,6 +60,9 @@ public:
 	bool	ShowFileStructure(void);
 	bool	NextMethod(void);
 	bool	PreviousMethod(void);
+	bool	ShowGoToLine(void);
+	bool	GoToLine(const char* szPlace);
+	Ptr<CPromptPopup>	GetPrompt(void) const;
 	bool	HasEditor(void);
 	bool	GoToEntry(Ptr<CIDEEditorTab> pTab, SIDEOutlineEntry* psEntry, bool bSelectName);
 	uint8	GetEntrySymbolKind(SIDEOutlineEntry* psEntry);
@@ -64,7 +70,11 @@ public:
 
 protected:
 	bool	StepMethod(bool bNext);
+	void	LineAccepted(void);
 };
+
+
+bool ParseIDELinePlace(const char* szPlace, size* puiLine, size* puiColumn);
 
 
 #endif // __IDE_STRUCTURE_H__

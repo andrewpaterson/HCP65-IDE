@@ -153,6 +153,7 @@ Ptr<CMenuContainer> CIDENavigator::CreateNavigateMenu(void)
 	mpNavigateMenu->AddItem(pCommands->Find("Navigate.GoToClass"));
 	mpNavigateMenu->AddItem(pCommands->Find("Navigate.GoToFile"));
 	mpNavigateMenu->AddItem(pCommands->Find("Navigate.GoToSymbol"));
+	mpNavigateMenu->AddItem(pCommands->Find("Navigate.GoToLine"));
 	mpNavigateMenu->AddSeparator();
 	mpNavigateMenu->AddItem(pCommands->Find("Navigate.GoToSource"));
 	mpNavigateMenu->AddItem(pCommands->Find("Navigate.GoToDefinition"));
