@@ -992,6 +992,7 @@ void CIDEContent::PaneClosed(CDockPane* pcPane)
 	pTab->GetCodeEditor()->GetChangeBarClickEvent()->Remove(&mpGitStatus);
 	pTab->GetCodeEditor()->GetGlyphClickEvent()->Remove(&mpDebugging);
 	pTab->GetEditor()->GetUndoEvent()->Remove(&mpEdit);
+	pTab->GetEditor()->GetLinkEvent()->Remove(&mpNavigator);
 	mpEdit->FileClosed(pTab->GetFileName());
 	if (pTab->IsModified())
 	{

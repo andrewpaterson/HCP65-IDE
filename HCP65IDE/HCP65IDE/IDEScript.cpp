@@ -1446,6 +1446,33 @@ void CIDEScript::PrintClaude(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// controlclick:<line>:<column>, from 1: the pointer is put over that
+// character of the active editor and button one pressed and released
+// through the window with the script's keyboard's Left Control held, as
+// a Control+click is.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEScript::ControlClickEditor(const char* szPlace)
+{
+	int32	x;
+	int32	y;
+
+	//Laid out first: a caret just put somewhere has scrolled the view, and the text is where it was until then.
+	mpcContent->GetWindow()->Layout();
+	if (!FindEditorPoint(szPlace, false, &x, &y))
+	{
+		return;
+	}
+	PressKey("Left Control", true);
+	mpcContent->GetWindow()->PointerMoved(x, y);
+	mpcContent->GetWindow()->InputCommand(CIC_StartDragSelect, true);
+	mpcContent->GetWindow()->InputCommand(CIC_StopDragSelect, true);
+	PressKey("Left Control", false);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // gutterclick:<line> and shiftgutterclick:<line>, from 1: the pointer is
 // put over the last digit of the line's number in the active editor's
 // gutter, which should be in view, and button one pressed and released
@@ -3549,6 +3576,10 @@ void CIDEScript::RunEditStep(const char* szStep)
 	else if (strncmp(szStep, "tripleclick:", 12) == 0)
 	{
 		ClickEditor(3, &szStep[12]);
+	}
+	else if (strncmp(szStep, "controlclick:", 13) == 0)
+	{
+		ControlClickEditor(&szStep[13]);
 	}
 	else if (strncmp(szStep, "gutterclick:", 12) == 0)
 	{

@@ -43,7 +43,8 @@ class CIDEContent;
 //And the "go to"s that can have more than one answer (NavigationPlan.txt, S1): Go to Implementation (Control+Alt+B)
 //Go to Super Method (Control+U) and Go to Type Declaration (Control+Shift+B).  Each finds its targets from the symbol
 //at the caret and ends in GoToTargets; Go to Related Symbol (Control+Alt+Home) lists them all under headings, with
-//the file's other half and the symbol's other declarations:
+//the file's other half and the symbol's other declarations.  Control+click on a name in an editor (the text area's
+//link event) puts the caret on it and goes where Go to Source would from there.  A "go to" ends in GoToTargets:
 //none, and the status line says so; one, and it is gone to; several, and a chooser under the caret lists them with a
 //preview of each (CIDEChooser).
 class CIDENavigator : public CObject, public CGoToSearcher
@@ -87,6 +88,7 @@ public:
 	bool				GoToSuperMethod(void);
 	bool				GoToTypeDeclaration(void);
 	bool				GoToRelatedSymbol(void);
+	void				LinkPressed(CTextArea* pcEditor, size uiPosition);
 	bool				FindHeaderSource(CChars* pszDest);
 	bool				FindTypeOf(const char* szKey, uint8 uiKind, CChars* pszTypeKey);
 	bool				CanGoToImplementation(void);

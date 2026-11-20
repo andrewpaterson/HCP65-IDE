@@ -1153,6 +1153,34 @@ bool CIDENavigator::GoToRelatedSymbol(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Control+click on the character at uiPosition of an editor, as
+// IntelliJ's: the caret is put on it and Go to Source goes from there (an
+// #include's file, a symbol's definition, or on its own declaration the
+// chooser of its usages).  Where nothing is named the status line says
+// no definition was found, as Go to Source's does; the caret stays where
+// it was put.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDENavigator::LinkPressed(CTextArea* pcEditor, size uiPosition)
+{
+	Ptr<CIDEEditorTab>	pTab;
+
+	pTab = mpcContent->GetDocuments()->FindTab(pcEditor);
+	if (pTab.IsNull())
+	{
+		return;
+	}
+	if (pTab != mpcContent->GetDocuments()->GetActiveTab())
+	{
+		mpcContent->GetDocuments()->SetActiveTab(pTab);
+	}
+	pTab->GetEditor()->SetCaretPosition(uiPosition);
+	GoToSource();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Both are offered where a symbol is named at the caret; Go to Super
 // Method anywhere in an editor too, as the caret may be in a function.
 //

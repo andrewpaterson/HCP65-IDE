@@ -4156,6 +4156,18 @@ CHECKS = [
 		 r'^   Draw\(\); \| Shape\.cpp:20$', r'^   CSquare::Draw\(\); \| Shapes\.cpp:29$', r'^Chooser preview: Main\.cpp$',
 		 r'^  >pcCircle->Draw\(\); \| Main\.cpp:13$', r'^Chooser filter: \[circ\]$', r'^Selection: \[Draw\] on line 13',
 		 r'Main\.cpp \(focus\) line 13: '], []),
+	('nav-control-click', {
+		#Control+click on a name goes where Go to Source would from it: from a use of CShape's Draw to its definition;
+		#from that, its own definition, the chooser of its usages; and off any name, nowhere, which the status line says.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Main.cpp', 'CARET': '1:1',
+		'DEBUG': 'edit:controlclick:12:12,edit:print,edit:controlclick:11:15,edit:printchooser,edit:key:escape,edit:controlclick:12:1,printstatus,edit:printselection'},
+		[r'Shape\.cpp \(focus\) line 11: \[void CShape::Draw\(void\)\]', r'^Chooser: Usages of Draw and 3 overrides  4 usages$',
+		 r'^Status: No definition found at the caret\.$', r'^Selection: none'], []),
+	('nav-control-click-include', {
+		#Control+click on an #include's file opens it.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Shapes.cpp', 'CARET': '2:1',
+		'DEBUG': 'edit:controlclick:1:13,edit:print'},
+		[r'Shapes\.h \(focus\) line 1: '], []),
 	('nav-type-declaration', {
 		#Go to Type Declaration (Control+Shift+B): from a parameter and from a local variable, the class each is declared
 		#with; from a field of a built in type, the status line says its type has nothing to go to.

@@ -207,6 +207,10 @@ Ptr<CIDEEditorTab> CIDEDocuments::OpenFileTab(const char* szFileName, size uiPro
 	pTab->GetCodeEditor()->GetGlyphClickEvent()->Add(&mpcContent->GetDebugging(), &CIDEDebugging::GlyphClicked);
 	pTab->GetEditor()->GetUndoEvent()->Add(&mpcContent->GetEdit(), &CIDEEdit::EditorUndoChanged);
 	pTab->GetEditor()->SetUndoPresser(&mpcContent->GetEdit());
+
+	//Control+click on a name goes where Go to Source would from it, as IntelliJ's.
+	pTab->GetEditor()->SetLinkEvent(true);
+	pTab->GetEditor()->GetLinkEvent()->Add(&mpcContent->GetNavigator(), &CIDENavigator::LinkPressed);
 	mpcContent->GetDebugging()->ShowBreakpoints(pTab);
 	mpcContent->GetGitStatus()->ReadGitBase(pTab);
 	mpcContent->GetGitStatus()->UpdateChangeBars(pTab);
