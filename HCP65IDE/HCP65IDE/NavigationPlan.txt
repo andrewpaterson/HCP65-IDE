@@ -111,6 +111,30 @@ Stage D, finding text: built 2026-11-20 and 21.
       - CRegex has no look-ahead or look-behind, no named groups and no Unicode classes: bytes, as the rest of
         the text code.
 
+Stage C, marks on lines: built 2026-11-21.
+    CommonLibraries afc67aec6 (CCodeEditor's icon columns); HCP65-IDE 460e197 (CIDEUserFile,
+    CIDEBookmarks, CIDEMarks).  Checks bookmarks, bookmarks-read, nav-next-change, nav-highlight-usages,
+    nav-override-marks; the checks that write a user's file use a copy of Checks/Input/Navigation
+    (MakeNavigationCopy).
+    As built it differs from the plan in these:
+      - S8: the gutter's icons are characters, not images: CCodeEditor has columns of icons after the debugger's
+        glyph column (SetIconColumns), one for each kind of mark, so a line can have a breakpoint, a bookmark and
+        an override mark; a press says which column.  There is no CIDEGutter: each feature sets its own column
+        (IDE_GUTTER_BOOKMARKS, IDE_GUTTER_OVERRIDES) and the debugger's glyphs are as they were.  A mark has no
+        tool tip.
+      - The override marks are ^ (overrides), v (is overridden, or a class with derived classes) and x (both), and
+        are worked out on the main thread when the active tab's outline or the index changes (CIDEMarks::Poll),
+        for at most two thousand of a file's functions and classes, not on the edits thread.
+      - S11's user file is CIDEUserFile, with parts (CIDEUserPart: WriteUser, ReadUser) that the debugging and the
+        bookmarks are; CIDEDebugger still has the functions that read and write a file of its own breakpoints.
+      - Bookmarks: F2 and Shift+F2 stay in the active file, round its ends.  Letters are given in the mnemonic's
+        prompt and have no key to go to them.  A press on a bookmark's cell takes it off.  The Bookmarks tool
+        window is one CIDEResultsPane, listed by file name.
+      - Highlight Usages in File: the kept usages are a second highlight layer of the editor's, in the search
+        match colour; an edit ends it (the layer's ranges are of the text as it was), as Escape does.
+      - The scroll bar has marks for Find's matches, bookmarks, changed lines (in their bars' colours) and kept
+        usages; a mark is on the scroll bar's own track, under the thumb, not in a stripe beside it.
+
 
 How work is done here
 ---------------------

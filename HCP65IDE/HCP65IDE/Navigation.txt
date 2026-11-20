@@ -31,6 +31,12 @@ marked on the scroll bar), Find Next and Previous (F3, Shift+F3), Find Word at C
 regular expressions and a file mask, Replace in Files (Control+Shift+R), a button to choose the directory, and the
 Find tool window's tabs and pin.
 
+Marks on lines: bookmarks (Control+F11 toggles, Control+Shift+F11 with a mnemonic, F2 and Shift+F2 the next and
+previous, Control+0 to 9 to a mnemonic one, a Bookmarks tool window, kept in the workspace's .hcp65user), Next and
+Previous Change (Control+Alt+Shift+Down and Up), Highlight Usages in File (Control+Shift+F7, stepped with F3 and
+Shift+F3), marks in the gutter beside functions that override or are overridden, and marks on the scroll bar for
+Find's matches, bookmarks, changed lines and kept usages.
+
 In a file: File Structure (Control+F12) and the Structure tool window (Alt+7), Next and Previous Method (Alt+Down,
 Alt+Up), Go to Line:Column (Control+G), Move Caret to Matching Brace (Control+Shift+M) and to Code Block Start and End
 (Control+[ and Control+], with Shift to select), breadcrumbs under the code and sticky lines over it (each turned off
@@ -43,14 +49,8 @@ Gaps
 
 In a file
   - Last Edit Location (Control+Shift+Backspace) and Next Edit Location.
-  - Bookmarks: a toggle, mnemonic ones, their list, next and previous.  Planned: item 7, with the user's keys.
-  - Next and Previous Change (Control+Alt+Shift+Down and Up): the change bars are there, with no key to step between
-    them.
-  - Next and Previous Highlighted Error (F2, Shift+F2): nothing to go to yet, as the editor shows no errors; the
-    Build tab's are stepped through with Next Occurrence.  F2 and Shift+F2 are the user's keys for the next and
-    previous bookmark.
-  - Highlight Usages in File (Control+Shift+F7): the symbol at the caret is highlighted by itself, but the highlights
-    can't be kept while the caret moves, or stepped through.
+  - Next and Previous Highlighted Error: nothing to go to yet, as the editor shows no errors; the Build tab's are
+    stepped through with Next Occurrence.  (IntelliJ's keys for it, F2 and Shift+F2, are the bookmarks' here.)
 
 Between files
   - Recent Files (Control+E), Recent Locations (Control+Shift+E).
@@ -67,7 +67,6 @@ Symbols
   - Go to Type Declaration from an expression with no name of its own (a call's result, pcA->GetB()): it goes from a
     declared name's type only.
   - The Type, Method and Call Hierarchies (Control+H, Control+Shift+H, Control+Alt+H).
-  - Gutter icons for overriding and overridden functions.
   - Quick Definition (Control+Shift+I), Quick Documentation (Control+Q), Parameter Info (Control+P) and Type Info
     (Control+Shift+P); no tool tip for a name either.
   - The count of a declaration's usages shown above it.
