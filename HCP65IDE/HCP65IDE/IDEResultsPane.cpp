@@ -66,13 +66,12 @@ void CIDEResultsPane::Init(CIDEContent* pcContent, CIDEResultsSource* pcSource, 
 	mpTree->GetActivationEvent()->Add(this, &CIDEResultsPane::ResultActivated);
 
 	//As IntelliJ's: enter and double clicking go to a result (the list's own actions), Jump to Source (F4) goes to the
-	//declaration, space is typed in the editor as any character is, and escape goes back to the editor.
+	//declaration, and escape goes back to the editor.  Space doesn't open a result as a list's does: it, and a
+	//character typed, do nothing here.
 	mpTree->SetInputActionsEnabled(CIC_Space, false);
 	mpTree->SetInputActionsEnabled(CIC_JumpToSource, false);
 	mpEscapeAction = mpTree->AddInputAction(CIC_ClearSelection, this, &CIDEResultsPane::ReturnToEditor);
 	mpJumpAction = mpTree->AddInputAction(CIC_JumpToSource, this, &CIDEResultsPane::JumpToSource);
-	mpSpaceAction = mpTree->AddInputAction(CIC_Space, this, &CIDEResultsPane::TypeSpace);
-	mpTypeAction = mpTree->AddInputAction(IAF_Printable, NULL, this, &CIDEResultsPane::TypeCharacter);
 	mpScrollPane = OMalloc<CScrollPane>(mpcContent->GetWindow(), mpcContent->GetTheme());
 	mpScrollPane->SetContent(mpTree);
 	mpScrollPane->SetAlignment(CSH_Stretch, CSV_Stretch);
@@ -118,8 +117,6 @@ void CIDEResultsPane::Class(void)
 	M_Pointer(mpScrollPane);
 	M_Pointer(mpEscapeAction);
 	M_Pointer(mpJumpAction);
-	M_Pointer(mpSpaceAction);
-	M_Pointer(mpTypeAction);
 	M_Pointer(mpPanel);
 	M_Pointer(mpToolbar);
 	M_Pointer(mpCommands);
@@ -153,12 +150,8 @@ void CIDEResultsPane::Free(void)
 		{
 			mpTree->RemoveInputAction(mpEscapeAction);
 			mpTree->RemoveInputAction(mpJumpAction);
-			mpTree->RemoveInputAction(mpSpaceAction);
-			mpTree->RemoveInputAction(mpTypeAction);
 			mpEscapeAction = NULL;
 			mpJumpAction = NULL;
-			mpSpaceAction = NULL;
-			mpTypeAction = NULL;
 		}
 	}
 	mszNoun.Kill();
@@ -474,31 +467,6 @@ void CIDEResultsPane::JumpToSource(void)
 	else
 	{
 		OpenResult(mpTree->GetSelectedNode(), mbSelectOnOpen);
-	}
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// A character typed in the tree, or space, isn't the tree's: the active
-// editor gets the keys and has it typed in it.  With no editor it is
-// lost.
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDEResultsPane::TypeCharacter(SComponentInputEvent* psEvent)
-{
-	if (mpcContent->GetDocuments()->FocusActiveEditor())
-	{
-		mpcContent->GetWindow()->InputPrintable(psEvent->cPrintable, psEvent->bInsert);
-	}
-}
-
-
-void CIDEResultsPane::TypeSpace(void)
-{
-	if (mpcContent->GetDocuments()->FocusActiveEditor())
-	{
-		mpcContent->GetWindow()->InputCommand(CIC_Space, true);
 	}
 }
 

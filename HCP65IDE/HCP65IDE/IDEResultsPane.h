@@ -63,9 +63,10 @@ public:
 //enter is pressed on it, steps through the results for Next and Previous Occurrence, and gives the keys back to the
 //editor on escape.  As IntelliJ's, Jump to Source (F4) goes to where what the results are of is declared, whichever
 //row is selected (or, for results of nothing declared, opens the selected one as enter does); a click or the arrow
-//keys only select; and a character typed, space too, isn't the tree's: the active editor gets the keys and has it
-//typed in it.  With Navigate with Single Click (SetNavigateOnSelect, off to start with) a result is opened as it is
-//selected, by a click or the arrow keys, the tree keeping the keys.
+//keys only select; and space doesn't open a result as enter does (the user, 2026-11-12).  Space and a character typed
+//in the tree do nothing: they aren't given to the editor, which once had them typed into its file.  With Navigate with
+//Single Click (SetNavigateOnSelect, off to start with) a result is opened as it is selected, by a click or the arrow
+//keys, the tree keeping the keys.
 //
 //Its rows are made as IntelliJ's are (AddGroup, AddResult): a group's name with what is said of it after (how many
 //are in it, its directory) dim, a file's with its file type's icon, and a result's line with its line number dim, the
@@ -94,8 +95,6 @@ protected:
 	Ptr<CScrollPane>	mpScrollPane;
 	Ptr<CInputAction>	mpEscapeAction;  //Escape in the tree goes back to the editor.
 	Ptr<CInputAction>	mpJumpAction;  //F4 in it goes to the declaration.
-	Ptr<CInputAction>	mpSpaceAction;  //Space, and a character typed, in it are typed in the editor.
-	Ptr<CInputAction>	mpTypeAction;
 	Ptr<CGridContainer>	mpPanel;  //The toolbar and, right of it, the split.
 	Ptr<CToolbar>		mpToolbar;
 	Ptr<CCommandSet>	mpCommands;  //The toolbar's.
@@ -168,8 +167,6 @@ protected:
 	void				ToggleNavigateOnSelect(void);
 	void				ReturnToEditor(void);
 	void				JumpToSource(void);
-	void				TypeSpace(void);
-	void				TypeCharacter(SComponentInputEvent* psEvent);
 };
 
 

@@ -745,10 +745,12 @@ CHECKS = [
 		 r'^Keys: Navigate\.Back Control\+Alt\+Cursor Left bound$', r'^Keys: Navigate\.Forward Control\+Alt\+Cursor Right bound$'],
 		[r'NOT BOUND']),
 	('usages-typing', {
-		#Space, and a character typed, in the Find Usages tree are typed in the active editor, which gets the keys: no
-		#usage is gone to.
+		#Space, and a character typed, in the Find Usages tree do nothing: space doesn't go to the usage as enter does
+		#(the user, 2026-11-12), and neither is given to the editor, whose file they were once typed into: the editor
+		#doesn't get the keys and its line is as it was.
 		'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,usages,focus:usages,select:3,key:space,key:type:ab'},
-		[r'^    391: ', r'CalcParentheses\.h.*\(focus\) line 38: \[.* ab'], [r'Calculator\.cpp.* line \d+: \[']),
+		[r'^    391: ', r'CalcParentheses\.h line 38: \[\tbool\t\tIsParentheses\(void\) const override;\]$'],
+		[r'Calculator\.cpp.* line \d+: \[', r'CalcParentheses\.h.*\(focus\)', r'CalcParentheses\.h \*', r' ab\]']),
 	('usages-single-click', {
 		#With Navigate with Single Click a usage is opened as it is selected, and the tree keeps the keys; without, selecting
 		#one opens nothing.
