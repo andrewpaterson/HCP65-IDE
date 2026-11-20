@@ -78,3 +78,20 @@ int Use(int iValue)
 	return Wrapped(iValue) + Promise(iValue) + Safe(iValue) + Guarded(iValue) + Choose(iValue);
 }
 
+
+int Waited(int iValue)
+{
+	try
+	{
+		if (iValue == 0)
+		{
+			throw CTimeout();
+		}
+	}
+	catch (CTimeout& cTimeout)
+	{
+		return cTimeout.miAfter;
+	}
+	return 0;
+}
+

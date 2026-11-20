@@ -2676,6 +2676,21 @@ CHECKS = [
 		[r'^Status: Introduced int iCode = cFault\.GetCode\(\): 1 occurrence replaced\.$', r'^\d+\|\tint\tiCode;$', r'^35\|\tcatch \(CFault& cFault\)$',
 		 r'^37\|\t\tiCode = cFault\.GetCode\(\);$', r'^38\|\t\tiResult = iCode \+ 1;$'],
 		[]),
+	('exceptions-safe-delete', dict(MakeExceptionsCopy(), **{
+		#Safe Delete (ExceptionsPlan.txt 10e): a class that is only thrown and caught is used: its throw and its handler
+		#are its usages.
+		'WAIT_INDEX': '1', 'OPEN': 'Fault.h', 'CARET': '25:8', 'DEBUG': 'edit:safedelete'}),
+		[r'^Safe Delete: CTimeout \[CTimeout\]', r'^  used at Fault\.cpp 88:10$', r'^  used at Fault\.cpp 91:9$', r'^Safe Delete: not deleted, it is used$'],
+		[r'^Status: Deleted']),
+	('exceptions-move-function', dict(MakeExceptionsCopy(), **{
+		#Move to File (ExceptionsPlan.txt 10e) on a function whose body is a function-try-block: its definition goes
+		#whole, the handler too, and the declaration with it.
+		'WAIT_INDEX': '1', 'OPEN': 'Fault.h', 'CARET': '18:6',
+		'DEBUG': 'edit:renamesearch:---s,edit:movefunction:Other.h,printdisklines:Other.h,printdisklines:Other.cpp,printdisklines:Fault.cpp'}),
+		[r'^Status: Moved Wrapped to Other\.h and Other\.cpp', r'^Disk lines Other\.h:$', r'^\d+\|int\tWrapped\(int iValue\);$',
+		 r'^Disk lines Other\.cpp:$', r'^\d+\|int Wrapped\(int iValue\)$', r'^\d+\|try$', r'^\d+\|\treturn Check\(iValue\);$', r'^\d+\|catch \(\.\.\.\)$', r'^\d+\|\treturn 0;$',
+		 r'^Disk lines Fault\.cpp:$'],
+		[r'^Move to File: can']),
 	('inline-function', dict(MakeInlineFunctionCopy(), **{
 		#Inline Function, for functions that return an expression: every call becomes the expression, each parameter
 		#the call's argument (in parentheses where it is more than one thing and an operand), the whole in parentheses

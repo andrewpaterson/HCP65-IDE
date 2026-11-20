@@ -15,8 +15,10 @@
   </PropertyGroup>
   <ItemGroup>
     <ClCompile Include="Fault.cpp" />
+    <ClCompile Include="Other.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Fault.h" />
+    <ClInclude Include="Other.h" />
   </ItemGroup>
 </Project>
