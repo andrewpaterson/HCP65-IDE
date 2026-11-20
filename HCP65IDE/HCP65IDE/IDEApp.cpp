@@ -558,7 +558,7 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 			}
 			if (getenv("HCP65_IDE_BUILD") != NULL)
 			{
-				//As Control+Shift+B: the chosen configuration is built, its output in the Build tab.
+				//As Control+F9: the chosen configuration is built, its output in the Build tab.
 				mpContent->GetBuilding()->Build();
 			}
 			if (getenv("HCP65_IDE_ATTACH") != NULL)

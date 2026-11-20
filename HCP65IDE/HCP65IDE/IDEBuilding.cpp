@@ -473,13 +473,14 @@ void CIDEBuilding::CreatePane(SDockPlace* psPlace)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Build (Control+Shift+B, as Visual Studio's) and Edit Build
-// Configurations.
+// Build (Control+F9, as IntelliJ IDEA's Build Project: the user,
+// 2026-11-20, as Control+Shift+B is IntelliJ's Go to Type Declaration) and
+// Edit Build Configurations.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEBuilding::AddCommands(Ptr<CCommandSet> pCommands)
 {
-	pCommands->Add("Build.Build", "Build", "Control+Shift+B", Ptr<CImageCel>(), this, &CIDEBuilding::Build);
+	pCommands->Add("Build.Build", "Build", "Control+F9", Ptr<CImageCel>(), this, &CIDEBuilding::Build);
 	pCommands->Add("Build.EditConfigurations", "Edit Build Configurations...", "", Ptr<CImageCel>(), this, &CIDEBuilding::RequestEditDialog)->SetEnabledCheck(this, &CIDEBuilding::CanEditConfigurations);
 }
 
