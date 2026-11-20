@@ -84,8 +84,8 @@ Stage D, finding text: built 2026-11-20 and 21.
     a find), 9a5d2c11b (CTextArea's highlight layers), aecdeb310 (CScrollBar's marks), f4d1022b9 (ReplaceRanges
     with a text for each range), 0c6150bf4 (CFindInFilesDialog: Regex, the file mask, the replacing form),
     c9784f60a (CFileChooser chooses a folder), b48848970 (the dialog's directory button); HCP65-IDE 2580dfc (the
-    Find bar: IDEFind.h), 37edcc5 (Find in Files' regular expressions and mask, Replace in Files), and the commit
-    after it (the Find tool window's tabs and pin: IDEResultsTabs.h; the directory chooser).  Checks find-bar,
+    Find bar: IDEFind.h), 37edcc5 (Find in Files' regular expressions and mask, Replace in Files), e94aaf5 (the Find
+    tool window's tabs and pin: IDEResultsTabs.h; the directory chooser).  Checks find-bar,
     find-bar-replace, find-next, find-regex-mask, find-regex-problem, replace-in-files, replace-in-files-dialog,
     find-tabs.
     As built it differs from the plan in these:
