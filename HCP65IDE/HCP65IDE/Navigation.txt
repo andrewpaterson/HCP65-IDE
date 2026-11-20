@@ -26,17 +26,19 @@ Find Duplicates (Control+Alt+Shift+D), Jump to Source from a tool window (F4), N
 (Shift+Escape).  The editor highlights the selection's other occurrences and, with the caret left on a name, that
 symbol's usages in the file.
 
+In a file: File Structure (Control+F12) and the Structure tool window (Alt+7), Next and Previous Method (Alt+Down,
+Alt+Up), Go to Line:Column (Control+G), Move Caret to Matching Brace (Control+Shift+M) and to Code Block Start and End
+(Control+[ and Control+], with Shift to select), breadcrumbs under the code and sticky lines over it (each turned off
+in Settings, Editor).  Typing finds a row in Solution Explorer, the Structure tree, the results trees and a chooser
+with no field.
+
 
 Gaps
 ----
 
 In a file
-  - Go to Line:Column (Control+G).  Planned: item 4.  Control+G is free.
   - Find and Replace (Control+F, Control+R) with every match highlighted, Find Next and Previous (F3, Shift+F3) and
     Find Word at Caret (Control+F3).  Planned: item 2, with the regular expression engine.
-  - File Structure popup (Control+F12) and a Structure tool window.
-  - Next and Previous Method (Alt+Down, Alt+Up).
-  - Matching brace (Control+Shift+M), and the start and end of the block (Control+[ and Control+]).
   - Last Edit Location (Control+Shift+Backspace) and Next Edit Location.
   - Bookmarks: a toggle, mnemonic ones, their list, next and previous.  Planned: item 7, with the user's keys.
   - Next and Previous Change (Control+Alt+Shift+Down and Up): the change bars are there, with no key to step between
@@ -46,7 +48,6 @@ In a file
     previous bookmark.
   - Highlight Usages in File (Control+Shift+F7): the symbol at the caret is highlighted by itself, but the highlights
     can't be kept while the caret moves, or stepped through.
-  - Breadcrumbs, and sticky lines (the enclosing class and function kept at the top of the view).
 
 Between files
   - Recent Files (Control+E), Recent Locations (Control+Shift+E).
@@ -54,8 +55,7 @@ Between files
   - Reopen Closed Tab.
   - A navigation bar (Alt+Home).
   - Select In (Alt+F1): only Solution Explorer, by Alt+1.
-  - In Solution Explorer: Always Select Opened File, Open Files with Single Click, and typing to find a row (speed
-    search), which no tree here has.
+  - In Solution Explorer: Always Select Opened File and Open Files with Single Click.
   - Splitting the editor and moving between the splits as commands: docking puts documents side by side, by hand.
 
 Symbols

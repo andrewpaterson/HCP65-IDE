@@ -46,6 +46,39 @@ Stage A, going from a symbol: built 2026-11-20.
         of what the filter leaves.
       - The menus check, which had been failing, expects every menu as it is.
 
+Stage B, moving in a file: built 2026-11-20.
+    CommonLibraries 8a979f91f and 2e6098028 (CPromptPopup; the bracket commands), 6c5f6f5b5 (typing finds a row:
+    CListContainer::SetTypeToFind, CScrollPane::SetNote), 211ca9a7e (a chooser with no field finds rows so),
+    cba8c98cc (CChooserPopup::SetOpensAbove); HCP65-IDE 3a83cf8 (the outline, File Structure, Next and Previous
+    Method), 8696cee (the braces' check), 782afa5 (Go to Line), and the commit after it (breadcrumbs, sticky lines,
+    Settings' Editor page, the Structure tool window, typing to find a row in the IDE's trees).  Checks nav-outline*,
+    nav-file-structure, nav-next-method, nav-braces, nav-go-to-line, nav-breadcrumbs, nav-sticky-lines,
+    nav-editor-settings*, nav-structure-*, nav-type-to-find*; Checks/Input/Navigation has Long.cpp for what needs a
+    file longer than the view.
+    As built it differs from the plan in these:
+      - S4: the outline is gathered in the IDE (CIDEOutline::Gather, a walk of the syntax tree the edits thread has
+        already), not by CCPPIndex::Gather: nothing in CppCompilerLib changed.  Its entries have no index keys and
+        no access (public, private): nothing built so far needs them; the gutter's override icons (stage C) will
+        want each function's key and can look it up by the name's place.  Macros aren't in it.
+      - S3: the matched characters aren't drawn differently in the row found; what is typed is shown in a note over
+        the scroll pane's top right corner (CScrollPane::SetNote), its border the failure colour while nothing
+        matches.  A row is found by CNameMatcher or, failing that, by the pattern anywhere in its text.  Menus
+        (CMenuContainer) don't ask for it.  In a results tree Space still does nothing, so a pattern there can't
+        have a space in it.
+      - S8: the stepping is FindIDEStepPlace (IDEStructure.h), places with a line and a column: Next and Previous
+        Method use it; the gutter's marks are stage C's.
+      - S10: the bars round an editor are CIDEEditorTab's (GetHolder is what the dock is given; SetTopBar,
+        SetBottomBar, SetOverlay): breadcrumbs are the bottom bar, sticky lines an overlay, and stage D's Find bar
+        will be the top bar.  GetPane is still the scroll pane.
+      - The brace commands are text-level (BaseLib's CTextNavigation and CTextEditing), in every text area; they
+        don't ask the highlights what is code, so a bracket in a string or a comment counts.
+      - Breadcrumbs and sticky lines are brought up to date by polling at each tick (CIDEStructure::Poll), not from
+        the caret event, and wait for the edits thread's outline as planned.  A press on a crumb goes to it and
+        opens the chooser of what is beside it, above the crumb.  Sticky lines are plain text in the code's font,
+        not highlighted, and have no line numbers.
+      - The Structure tree's sorting and Hide Fields are in its context menu, not a toolbar; it has no option for
+        inherited members.  Every node is open after each parse: what was closed isn't remembered.
+
 
 How work is done here
 ---------------------
