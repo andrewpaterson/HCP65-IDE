@@ -3594,7 +3594,7 @@ CHECKS = [
 		#The Find tool window's toolbar has no groupings, and its Replace buttons are for Replace in Files' results; Rerun
 		#finds the text again.
 		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'DIALOG_ANSWER': 'Open in Find Window', 'DEBUG': 'find:0:calculatorparser,answered:1,printfindtoolbar,findtool:Rerun,printfind'},
-		[r'^Toolbar: Rerun, Previous Occurrence\(disabled\), Next Occurrence, Expand All, Collapse All, Replace All\(disabled\), Replace Selected\(disabled\), Preview\(on\), Navigate with Single Click$',
+		[r'^Toolbar: Rerun, Previous Occurrence\(disabled\), Next Occurrence, Expand All, Collapse All, Replace All\(disabled\), Replace Selected\(disabled\), Preview\(on\), Navigate with Single Click, Pin Tab$',
 		 r"^Occurrences of 'calculatorparser' in the solution  13 matches in 2 files$"], [r'No tool button', r'ERROR']),
 	('find-row-parts', {
 		#The Find tool window's rows: the text found is in the match font whatever its case.
@@ -4372,7 +4372,7 @@ CHECKS = [
 		'DEBUG': 'printfindtoolbar,findselect:3,findtool:Replace Selected,printstatus,printfind,printtabs,findtool:Replace All,printstatus,printfind,printtabs,edit:printline:13,edit:undo,edit:printline:13'},
 		[r'^Find \[Area\]: 3 matches in 2 files', r"^Replace 'Area' with 'Size' in the solution  3 matches in 2 files$", r'^  Shape\.h  1 match$',
 		 r'^    15: virtual int  Area\(void\) = 0;  ->  Size$', r'^  Shapes\.h  2 matches$', r'^    24: int  Area\(void\) override;  ->  Size$',
-		 r'^Toolbar: Rerun, .*Collapse All, Replace All, Replace Selected, Preview\(on\), Navigate with Single Click$',
+		 r'^Toolbar: Rerun, .*Collapse All, Replace All, Replace Selected, Preview\(on\), Navigate with Single Click, Pin Tab$',
 		 r'^Status line: Replaced 2 occurrences in 1 file\.  Save All keeps them\.$', r"^Replace 'Area' with 'Size' in the solution  1 match in 1 file$",
 		 r'^    15: virtual int  Area\(void\) = 0;  ->  Size$', r'^Tabs: Shape\.h >Shapes\.h\*$',
 		 r'^Status line: Replaced 1 occurrence in 1 file\.  Save All keeps them\.$', r"^Replace 'Area' with 'Size' in the solution  0 matches in 0 files$",
@@ -4387,6 +4387,16 @@ CHECKS = [
 		 r'^Status line: Replaced 4 occurrences in 3 files\.  Save All keeps them\.$', r"^Replace 'Draw\(\\\(\\\)\)' with 'Paint_\$1' in the solution  0 matches in 0 files$",
 		 r'^Tabs: Main\.cpp\* Shape\.cpp\* >Shapes\.cpp\*$', r'^Line 29: \[\tCSquare::Paint_\(\);\]$', r'<FindInFiles Scope="Solution" .*MatchCase="true" Words="false" Regex="true" FileMask=""'],
 		[r'ERROR']),
+	('find-tabs', {
+		#The Find tool window's tabs, as Find Usages': a find is shown in the chosen tab, named for its text, unless
+		#that tab is pinned (Pin Tab: a pin before its name), when a new tab is made.  A tab keeps its own results, and
+		#Rerun looks again for its own text, not what was typed last.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'DIALOG_ANSWER': 'Open in Find Window',
+		'DEBUG': 'find:0:Draw,answered:1,edit:findtabs,findtool:Pin Tab,edit:findtabs,printfindtoolbar,find:0:Area,answered:2,edit:findtabs,printfind,'
+		         'edit:findtab:* Draw,edit:findtabs,printfind,findtool:Rerun,printfind,edit:findtab:Area,find:0:miSide,answered:3,edit:findtabs'},
+		[r'^Find tabs: >Draw$', r'^Find tabs: >\* Draw$', r'^Toolbar: Rerun, .*Navigate with Single Click, Pin Tab\(on\)$', r'^Find tabs: \* Draw, >Area$',
+		 r"^Occurrences of 'Area' in the solution  9 matches in 4 files$", r'^Find tabs: >\* Draw, Area$', r"^Occurrences of 'Draw' in the solution  15 matches in 5 files$",
+		 r"^Occurrences of 'Draw' in the solution  15 matches in 5 files$", r'^Find tabs: \* Draw, >miSide$'], [r'No tool button', r'ERROR']),
 	('nav-type-declaration', {
 		#Go to Type Declaration (Control+Shift+B): from a parameter and from a local variable, the class each is declared
 		#with; from a field of a built in type, the status line says its type has nothing to go to.

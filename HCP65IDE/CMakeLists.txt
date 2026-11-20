@@ -196,6 +196,7 @@ set(IDE_SOURCES
 	"${IDE_DIR}/IDEUsages.cpp"
 	"${IDE_DIR}/IDEScope.cpp"
 	"${IDE_DIR}/IDEResultsPane.cpp"
+	"${IDE_DIR}/IDEResultsTabs.cpp"
 	"${IDE_DIR}/IDEFind.cpp"
 	"${IDE_DIR}/IDEFindInFiles.cpp"
 	"${IDE_DIR}/IDEIndexing.cpp"

@@ -3135,6 +3135,33 @@ void CIDEScript::RunEditStep(const char* szStep)
 		}
 		printf("\n");
 	}
+	else if (strcmp(szStep, "findtabs") == 0)
+	{
+		//The Find tool window's tabs, the chosen one after a '>': "Find tabs: * Draw, >Area".
+		Ptr<CTabbedContainer>	pTabs;
+
+		pTabs = mpcContent->GetFindInFiles()->GetTabs()->GetTabs();
+		printf("Find tabs:");
+		for (i = 0; i < pTabs->NumTabs(); i++)
+		{
+			printf("%s %s%s", (i > 0) ? "," : "", (pTabs->GetTab(i) == pTabs->GetSelected()) ? ">" : "", pTabs->GetTab(i)->GetText());
+		}
+		printf("\n");
+	}
+	else if (strncmp(szStep, "findtab:", 8) == 0)
+	{
+		//findtab:<name>: the tab of the Find tool window with that name chosen.
+		Ptr<CTabbedContainer>	pTabs;
+
+		pTabs = mpcContent->GetFindInFiles()->GetTabs()->GetTabs();
+		for (i = 0; i < pTabs->NumTabs(); i++)
+		{
+			if (strcmp(pTabs->GetTab(i)->GetText(), &szStep[8]) == 0)
+			{
+				pTabs->Select(pTabs->GetTab(i));
+			}
+		}
+	}
 	else if (strncmp(szStep, "usagetab:", 9) == 0)
 	{
 		//usagetab:<name>: the tab of the Find Usages tool window with that name chosen.

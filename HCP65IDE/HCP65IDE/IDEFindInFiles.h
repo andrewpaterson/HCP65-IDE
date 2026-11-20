@@ -30,6 +30,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/ArrayInt.h"
 #include "WindowLib/TreeContainer.h"
 #include "IDEResultsPane.h"
+#include "IDEResultsTabs.h"
+#include "WindowLib/FileChooser.h"
 #include "WindowLib/DockManager.h"
 #include "WindowLib/MenuContainer.h"
 #include "WindowLib/CommandSet.h"
@@ -59,12 +61,51 @@ struct SIDEFindPlace
 typedef CArrayTemplate<SIDEFindPlace>	CArrayIDEFindPlaces;
 
 
+//One Find in Files, in a tab of the Find tool window: its results pane (CIDEResultsSearch's), the files it found the
+//text in and where, its tree's first row, what it was found with (the text, how it had to match, the file mask and
+//the scope, for Rerun and for what a result is replaced with), whether it is Replace in Files' and with what, and
+//whether edits have moved its results since its tree was made.
+class CIDEFindSearch : public CIDEResultsSearch
+{
+CONSTRUCTABLE(CIDEFindSearch);
+DESTRUCTABLE(CIDEFindSearch);
+public:
+	CArrayChars				maszFoundFiles;  //The files the tree's results are in.
+	CArrayIDEFindPlaces		masFound;  //The tree's results, each line's by its node's data less one.
+	CChars					mszFoundTitle;  //The tree's first row.
+	bool					mbFound;  //Something has been looked for.
+	bool					mbMoved;  //Edits have moved results since the tree was shown, the last at miMoved.
+	int64					miMoved;
+	CTextSearch				mcFoundSearch;  //What the results were found with: what each is replaced with comes from it.
+	bool					mbFoundSearch;  //mcFoundSearch is made.
+	bool					mbFoundReplacing;  //The results are Replace in Files': each shows what it becomes.
+	CChars					mszFoundReplace;  //With this.
+	CChars					mszFoundText;  //What was looked for, and how, for Rerun.
+	CChars					mszFoundMask;
+	CIDEScope				mcFoundScope;
+	bool					mbFoundMatchCase;
+	bool					mbFoundWholeWords;
+	bool					mbFoundRegex;
+
+	void	Init(Ptr<CIDEResultsPane> pPane);
+	void	Class(void) override;
+	void	Free(void) override;
+	bool	Save(CObjectWriter* pcFile) override;
+	bool	Load(CObjectReader* pcFile) override;
+};
+
+
 //IntelliJ IDEA's Find in Files (Control+Shift+F): the text typed is looked for in a scope's files (CIDEScope: the
 //solutions', the startup solution's, the active file's project's, the active file, the open files, or those in a
 //directory and under it; a tab of the dialog each), whatever its case unless Match case, and as whole words with Words.  Its dialog (CFindInFilesDialog, whose searcher it is) previews the first results as the text is
 //typed, each with its file's code under them; enter opens the selected one.  An open file is searched as its editor has
 //it.  What was typed, and how, is remembered for the next time; text selected in the editor (on one line) is what is
 //looked for instead.
+//
+//Each Open in Find Window shows what it finds in the Find tool window's tab that is chosen, named for the text, unless
+//that tab is pinned (Pin Tab, on the toolbar): then a new tab is made (CIDEResultsTabs, as Find Usages' window has).
+//Rerun looks again for a tab's own text, in its own scope.  The button beside the dialog's directory opens a chooser
+//of folders.
 //
 //Open in Find Window lists every result (up to IDE_FIND_RESULTS_MAXIMUM) in the Find tool window beside Find Usages: a
 //tree of the files and under each its lines, which opens the place (a results pane, CIDEResultsPane: a line's node's
@@ -86,7 +127,7 @@ typedef CArrayTemplate<SIDEFindPlace>	CArrayIDEFindPlaces;
 //
 //The search is a little at a time (SearchSome): a directory's files are listed, or a file is searched, until the time
 //is up, so the dialog is never kept from the keys.
-class CIDEFindInFiles : public CObject, public CFindInFilesSearcher, public CIDESteppable, public CIDEResultsSource, public CIDEPreviewAsker, public CIDEFileTexts
+class CIDEFindInFiles : public CObject, public CFindInFilesSearcher, public CIDESteppable, public CIDEResultsSource, public CIDEPreviewAsker, public CIDEFileTexts, public CIDEResultsTabsOwner
 {
 friend class CIDEScript;
 CONSTRUCTABLE(CIDEFindInFiles);
@@ -119,19 +160,11 @@ protected:
 	CArrayIDEFindPlaces		masPlaces;  //What was found, a dialog's item's by its data.
 
 	//The Find tool window.
-	Ptr<CIDEResultsPane>	mpPane;  //The tree of what was found.
+	Ptr<CIDEResultsTabs>	mpTabs;  //A tab for each search.
+	Ptr<CIDEFindSearch>		mpSearch;  //The chosen tab's: what the tool window shows.
 	Ptr<CDockPane>			mpTool;
-	CArrayChars				maszFoundFiles;  //The files the tree's results are in.
-	CArrayIDEFindPlaces		masFound;  //The tree's results, each line's by its node's data less one.
-	CChars					mszFoundTitle;  //The tree's first row.
-	bool					mbFound;  //Something has been looked for.
-	CTextSearch				mcFoundSearch;  //What the tree's results were found with: what each is replaced with comes from it.
-	bool					mbFoundSearch;  //mcFoundSearch is made.
-	bool					mbFoundReplacing;  //The tree's results are Replace in Files': each shows what it becomes.
-	CChars					mszFoundReplace;  //With this.
 	Ptr<CMessageDialog>		mpReplaceDialog;  //While Replace All's question is shown.
-	bool					mbMoved;  //Edits have moved results since the tree was shown, the last at miMoved.
-	int64					miMoved;
+	Ptr<CFileChooser>		mpDirectoryChooser;  //While the dialog's directory is being chosen.
 
 public:
 	void	Init(CIDEContent* pcContent);
@@ -162,6 +195,10 @@ public:
 	bool					FindPreviewText(SFindInFilesItem* psItem, CChars* pszText) override;
 	void					FindPreviewShown(SFindInFilesItem* psItem, Ptr<CTextArea> pPreview, bool bNewText) override;
 	bool					FindProblem(CChars* pszDest) override;
+	bool					FindChooseDirectory(const char* szDirectory, CChars* pszDest) override;
+	Ptr<CIDEResultsSearch>	CreateResultsSearch(void) override;
+	void					ResultsSearchChosen(Ptr<CIDEResultsSearch> pSearch) override;
+	Ptr<CIDEResultsTabs>	GetTabs(void) const;
 	void					PreviewHighlighted(const char* szFileName, CArrayHighlights* pacHighlights) override;
 	void					DialogTick(void);
 
@@ -171,9 +208,9 @@ public:
 	void					WriteSettings(CXMLWriter* pcWriter);
 	int64					Poll(int64 iNow);
 	Ptr<CTreeContainer>		GetFindTree(void);
-	Ptr<CIDEResultsPane>	GetResultsPane(void) const;
+	Ptr<CIDEResultsPane>	GetResultsPane(void);
 	Ptr<CDockPane>			GetTool(void) const;
-	size					NumFound(void) const;
+	size					NumFound(void);
 
 	Ptr<CDockPane>			GetSteppablePane(void) const override;
 	const char*				GetSteppableName(void) override;
