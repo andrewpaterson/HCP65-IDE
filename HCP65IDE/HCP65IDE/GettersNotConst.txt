@@ -49,6 +49,154 @@ back what breaks) can be run again over what it frees.
   3. Getters that hand out a pointer or a reference into their object: 444 (C2440: GetData, GetArray, GetFiles and
      the like).  Either a const pair (const X* GetX(void) const beside X* GetX(void)) or const returns, which change
      their callers.
+     Tried 2026-11-20 (the user: every one const X*, not pairs, and give up or ask if it breaks too much): the 435
+     that return a plain pointer were all made const X* ... const.  The first build broke in 3,155 places, most of them
+     callers writing through what they were given: editing through CTextField::GetEditing, the IDE through
+     GetCodeModel, events' listeners added and removed through GetChangeEvent and GetClickEvent, errors added through
+     GetErrors, a list node handed to MoveToHead.  The user chose to keep only those nothing writes through: 39 are
+     const now (CommonLibraries 55dbc7639, HCP65-IDE 3f493d9, LogiCim 5985072), mostly the processors' pin getters.
+     The other 396 are accessors: something writes through what they return, directly or after handing it on.  They
+     are as they were; each wants a const pair, a name that says it gives the object to change, or nothing.  The 10
+     of the 445 that don't return a plain pointer (bool, uint32, Ptr<>) weren't tried.  The accessors, by library:
+       BaseLib (40): CArrayBit::GetData, CArrayBlockSorted::GetSortedArray, CArrayTemplateEmbedded::GetData,
+         CCalcConstExpression::GetNumber, CCalculator::GetErrors, CCalculator::GetVariables,
+         CCalculatorSymbols::GetOperators, CCodabase::GetLockManager, CDataMemoryAllocator::GetMemory,
+         CDurableFileController::GetDurableSet, CFatVolume::GetSectorCache, CFileIterator::GetCurrent,
+         CFileSystem::GetFullDirectoryName, CFilenames::GetRoot, CFreeListAllocator::GetFreeList,
+         CGeneralMemory::GetFreeListParams, CIndexTreeDataNode::GetListNode, CIndexTreeEvicting::GetIndexTree,
+         CIndexTreeEvictionStrategyRandom::GetRandom, CIndexTreeFile::GetIndexFiles, CIndexTreeIterator::GetData,
+         CIndexTreeNodeFile::GetFileIndex, CLine::GetEnd, CLine::GetStart, CLineBucket::GetLine,
+         CLineBucket::GetLines, CLineRow::GetLines, CMapBlock::GetArray, CMarkup::GetMemory,
+         CMemoryAllocator::GetMemory, CScratchPadAllocator::GetScratchPad, CSetBlock::GetArray,
+         CStackMemory::GetStackData, CTextDocument::GetNavigation, CTextDocument::GetUndo, CTextEditing::GetBox,
+         SRedBlackNode::GetLeftmost, SRedBlackNode::GetNext, SRedBlackNode::GetPrevious, SRedBlackNode::GetRightmost
+       StandardLib (29): CChannels::GetChannelOffsets, CChannelsAccessor::GetAccessors,
+         CChannelsAccessorCreatorParams::GetAccessors, CClass::GetEmbeddedObjectFields, CClass::GetPointerFields,
+         CClass::GetPrimitiveFields, CClass::GetUnmanagedFields, CClass::GetWeakPointerFields,
+         CClasses::GetPrimitiveClasses, CClasses::GetUnmanagedClasses, CDistCalculator::GetCompletelyDetachedArray,
+         CEmbeddedObject::GetEmbeddingContainer, CExternalObjectDeserialiser::GetArrayIndexNewOld,
+         CHuffmanEncoder::GetLengths, CIndexObject::GetIndexForTesting, CMapObject::GetUnknownMap,
+         CMapUnknownUnknown::GetPointerMap, CNamedIndexedObjects::GetNames, CNamedIndexedObjects::GetObjects,
+         CObjects::GetClasses, CObjects::GetMemory, CObjects::GetWeakFroms, COrdererHolder::GetFulfilments,
+         COrdererHolder::GetRequirements, CRemovalPointerContainer::GetKilled, CSerialisedObject::GetName,
+         CSimpleTextDiff::GetContent1, CSimpleTextDiff::GetContent2, CString::GetChars
+       SupportLib (16): CGlyphListFontDraw::GetGlyphs, CGlyphListFontDraw::GetRectangles, CImage::GetChannels,
+         CImageCel::GetSubImage, CImageCelsSource::GetCelFileNames, CMesh::GetConnectivity, CModSong::GetTitle,
+         CRectangleBestPacker::GetPackAttempts, CRectangleBestPacker::GetSourceRectangles,
+         CRectangleLinePacker::GetRectangles, CSound::GetChannels, CTileMapGenerator::GetRandom,
+         CTrueTypeFace::GetFont, CTrueTypeFont::GetVariations, CVectorPath::GetMaximum, CVectorPath::GetMinimum
+       WindowLib (59): CButton::GetClickEvent, CCheckBox::GetChangeEvent, CCodeEditor::GetChangeBarClickEvent,
+         CCodeEditor::GetChangeEvent, CCodeEditor::GetGlyphClickEvent, CCodeEditor::GetGutterClickEvent,
+         CComboBox::GetSelectionEvent, CCommand::GetKeyList, CDiffView::GetDiff, CDockDrag::GetTarget,
+         CDockPane::GetRestore, CDockState::GetFloating, CDockState::GetMover, CDockState::GetPanes,
+         CDockState::GetRestorer, CDockState::GetTree, CDockTitleBar::GetDoubleClickEvent,
+         CDockTitleBar::GetDragEvent, CFocus::GetFocusChangeEvent, CKeyCaptureField::GetCapturedEvent,
+         CListContainer::GetActivationEvent, CListContainer::GetSelectionEvent, CMenuBar::GetItemClickEvent,
+         CMenuContainer::GetItemClickEvent, CMenuContainer::GetOpeningEvent, CMenuItem::GetClickEvent,
+         CMenuStyle::GetMenuInsets, CPopup::GetClosedEvent, CScrollPane::GetScrollEvent,
+         CSplitContainer::GetShareEvent, CTabbedContainer::GetClickEvent, CTabbedContainer::GetCloseRequestEvent,
+         CTabbedContainer::GetDoubleClickEvent, CTabbedContainer::GetDragEvent, CTabbedContainer::GetRemovalEvent,
+         CTabbedContainer::GetSelectionEvent, CTable::GetChangeEvent, CTable::GetOrderEvent,
+         CTable::GetSelectionEvent, CTextArea::GetChangeEvent, CTextArea::GetEditing, CTextArea::GetUndoEvent,
+         CTextArea::GetUndoMessageEvent, CTextAreaLayout::GetGaps, CTextAreaLayout::GetStyle,
+         CTextField::GetChangeEvent, CTextField::GetEditing, CTextLineGaps::GetGaps, CWindow::GetActivationEvent,
+         CWindow::GetClosedEvent, CWindow::GetPaintedDamage, CWindowTheme::GetChangeEvent,
+         CColourField::GetChangeEvent, CColourField::GetColour, CColourPicker::GetChangeEvent,
+         CColourPicker::GetColour, CColourRampBar::GetChangeEvent, CColourRampBar::GetChoiceEvent,
+         CNumberField::GetChangeEvent
+       InputLib (15): CInput::GetActions, CInput::GetDevices, CInput::GetProgramInput,
+         CInputChord::GetActionCriteria, CInputChords::GetEvents, CInputDevice::GetInputValues,
+         CInputDeviceDesc::GetVariableChordDescs, CInputDeviceVariableValueDesc::GetConditions,
+         CInputSourceDesc::GetGenerics, CInputSourceEvaluator::GetDeviceGeneric,
+         CInputSourceEvaluator::GetDeviceSource, CInputVirtualDevice::GetChords, CInputVirtualDevice::GetName,
+         CInputVirtualDeviceDesc::GetChordDescs, CInputVirtualDeviceSource::GetSource
+       ThreadLib (1): CSharedMemoryFile::GetName
+       MicroprocessorLib (41): C65C64::GetDecoded, C65C64BusCycle::GetOperations, C65C64Chip::GetMPU,
+         C65C64ChipPins::GetAddress, C65C64ChipPins::GetData, C65C64Meta::GetAddress, C65C64Meta::GetData,
+         C65C64Meta::GetLIRQB, C65C64Meta::GetMPU, C65C64Meta::GetRESB, CAndGatePins::GetInputs,
+         CBufferPins::GetInputs, CBufferPins::GetOutputs, CCircuitSimulation::GetCircuit,
+         CCircuitSimulation::GetTimeline, CConstantPins::GetOutputs, CCounterPins::GetData, CCounterPins::GetOutput,
+         CFast65C64::GetBreakpoints, CFastW65C816::GetBreakpoints, CIntegratedCircuit::GetPins,
+         CLogicPort::GetOutput, COrGatePins::GetInputs, COscilloscopePins::GetInputs, CProbePins::GetInputs,
+         CW65BusCycle::GetOperations, CW65C02Meta::GetMPU, CW65C02Meta::GetSOB, CW65C816Chip::GetMPU,
+         CW65C816ChipPins::GetAddress, CW65C816ChipPins::GetData, CW65C816Meta::GetMPU, CW65CCore::GetAddress,
+         CW65CCore::GetProgramCounter, CW65CMeta::GetAddress, CW65CMeta::GetData, CW65CMeta::GetIRQB,
+         CW65CMeta::GetNMIB, CW65CMeta::GetRESB, CW65CompoundAddress::GetAddressOffsets, CXorGatePins::GetInputs
+       RasterLib (4): CRasterCamera::GetPan, CRasterCamera::GetPivot, CRasterCamera::GetRotation,
+         CRasteriser::GetLights
+       GerberLib (50): CExcellonCommandCoordinate::GetX, CExcellonCommandCoordinate::GetY,
+         CExcellonCommandSlot::GetEndX, CExcellonCommandSlot::GetEndY, CExcellonCommandSlot::GetStartX,
+         CExcellonCommandSlot::GetStartY, CExcellonCommandToolDefine::GetDiameter, CGerberAperture::GetPrimitives,
+         CGerberApertureMacroCenterLine::GetExposure, CGerberApertureMacroCenterLine::GetHeight,
+         CGerberApertureMacroCenterLine::GetRotation, CGerberApertureMacroCenterLine::GetWidth,
+         CGerberApertureMacroCircle::GetDiameter, CGerberApertureMacroCircle::GetExposure,
+         CGerberApertureMacroCircle::GetRotation, CGerberApertureMacroOutline::GetExposure,
+         CGerberApertureMacroOutline::GetRotation, CGerberApertureMacroPolygon::GetDiameter,
+         CGerberApertureMacroPolygon::GetExposure, CGerberApertureMacroPolygon::GetNumberOfVertices,
+         CGerberApertureMacroPolygon::GetRotation, CGerberApertureMacroThermal::GetGapThickness,
+         CGerberApertureMacroThermal::GetInnerDiameter, CGerberApertureMacroThermal::GetOuterDiameter,
+         CGerberApertureMacroThermal::GetRotation, CGerberApertureMacroVariableDefinition::GetExpression,
+         CGerberApertureMacroVectorLine::GetExposure, CGerberApertureMacroVectorLine::GetRotation,
+         CGerberApertureMacroVectorLine::GetWidth, CGerberCommandLoadRotation::GetRotation,
+         CGerberCommandLoadScaling::GetScaling, CGerberCommandOperation::GetI, CGerberCommandOperation::GetJ,
+         CGerberCommandOperation::GetX, CGerberCommandOperation::GetY, CGerberCommandStepAndRepeat::GetXStep,
+         CGerberCommandStepAndRepeat::GetYStep, CGerberDrillFile::GetCommands, CGerberExpression::GetCalculator,
+         CGerberExpressionPosition::GetX, CGerberExpressionPosition::GetY, CGerberFileSet::GetOutlineBounds,
+         CGerberInterpreter::GetApertures, CGerberInterpreter::GetGraphicsState, CGerberLayerFile::GetCommands,
+         CGerberPanel::GetSize, CGerberPanelFiles::GetEdgeCuts, CGerberPanelFiles::GetOutlines,
+         CGerberPanelFiles::GetTabs, CGerberRaster::GetOrigin
+       RasterRenderLib (1): CRasterFrame::GetCamera
+       WinRefLib (5): CWinRefScreen::GetPixels, CWinRefWindow::GetPresented, CWinRefWindow::GetShown,
+         CWinRefWindowFactory::GetClipboardText, CWinRefWindowFactory::GetScreen
+       EmulatorDebugLib (2): CFlat65C64DebugTarget::GetMPU, CFlatW65C816DebugTarget::GetMPU
+       KicadLib (17): CKicadSchemBus::GetSubnet, CKicadSchemBusEntry::GetPosition, CKicadSchemBusEntry::GetSize,
+         CKicadSchemJunction::GetPosition, CKicadSchemLabel::GetPosition, CKicadSchemLibPin::GetPosition,
+         CKicadSchemLibSymbol::GetProperties, CKicadSchemNoConnect::GetPosition, CKicadSchemProperty::GetPosition,
+         CKicadSchemSheet::GetPosition, CKicadSchemSheet::GetProperties, CKicadSchemSheet::GetSize,
+         CKicadSchemSheetPin::GetPosition, CKicadSchemSymbol::GetPosition, CKicadSchemSymbol::GetProperties,
+         CKicadSchemWire::GetEnd, CKicadSchemWire::GetStart
+       SceneViewLib (1): CSceneView::GetClickEvent
+       X11Lib (1): CX11WindowFactory::GetSelection
+       CppCompilerLib (53): CCPP65Assembly::GetText, CCPP65Builder::GetIncludeDirectories, CCPP65Builder::GetLinker,
+         CCPP65Builder::GetOptions, CCPP65Builder::GetStatistics, CCPP65IRFrontEnd::GetMissingCallees,
+         CCPP65IRFrontEnd::GetModule, CCPP65IRFrontEnd::GetNotImported, CCPP65Types::Size,
+         CCPP65UnitWorkspace::GetCPPTokensMallocator, CCPP65UnitWorkspace::GetPreprocessedTokensMallocators,
+         CCPP65UnitWorkspace::GetSyntaxTreeMallocators, CCPPDeduction::GetTypes, CCPPDeduction::GetValues,
+         CCPPPreprocessor::GetErrors, CCPPPreprocessor::GetTokenMemory, CCPPPreprocessor::GetWarnings,
+         CCPPScope::GetDeclarationScope, CCPPScope::GetEnclosingNamespace, CCPPSemanticPass::GetErrors,
+         CCPPSyntaxTree::GetErrors, CCPPSyntaxTree::GetMemory, CCPPSyntaxTree::GetSymbols, CCPPTokeniser::GetErrors,
+         CCPPUnit::GetBackendScratch, CCPPUnit::GetBinder, CCPPUnit::GetCode, CCPPUnit::GetCodePieces,
+         CCPPUnit::GetContext, CCPPUnit::GetData, CCPPUnit::GetDeclarators, CCPPUnit::GetErrors,
+         CCPPUnit::GetLabelCounter, CCPPUnit::GetLocals, CCPPUnit::GetMangler, CCPPUnit::GetTemplates,
+         CCPPUnit::GetTypeChecker, CCPPUnit::GetTypes, CCPPUnit::GetWarnings, CCPPUnitData::GetText,
+         CDefine::GetArguments, CDefine::GetBody, CDefine::GetReplacement, CIRBackend::GetRuntime,
+         CIRImports::GetModule, CIRInterpreter::GetTrail, CLibrary::GetHeaderFiles, CPPBlockSet::GetUnprocssedTokens,
+         CPPTokenListHolder::GetTokenList, CSourceFile::GetBlockSets, CSourceFile::GetComments,
+         CSourceFile::GetTokenMemory, CTranslationUnit::GetTokens
+       BuildLib (6): CBuildCommandLine::GetPlain, CBuildConfiguration::GetExecutable, CBuildConfiguration::GetImage,
+         CBuildConfiguration::GetModule, CBuildPlain::GetDescription, CHCP65Build::GetDescription
+       GitLib (3): CGitCommand::GetErrors, CGitCommand::GetOutput, CGitRepository::GetStatus
+       ClaudeLib (2): CClaudeCommand::GetErrors, CClaudeStream::GetChangedFiles
+       HCP65IDE (17): CIDEBuildConfigurationsDialog::GetEdits, CIDEBuilding::GetListings,
+         CIDECodeModel::GetSystemDirectories, CIDEContent::GetCodeModel, CIDEContent::GetDialogLook,
+         CIDEContent::GetFileTemplates, CIDEContent::GetWorkspace, CIDEDebugger::GetClient,
+         CIDEDebugging::GetDebugger, CIDEEditorTab::GetBaseText, CIDEEditorTab::GetSyntaxBehindEvent,
+         CIDEGitStatus::GetGit, CIDERefactorUnit::GetPass, CIDERefactorUnit::GetTokeniser, CIDERefactorUnit::GetTree,
+         CIDERunConfigurationsDialog::GetEdited, CIDESolutions::GetRecent
+       Assembler65Lib (4): CAsm65BaseAssembler::GetOutput, CAsm65Linker::GetLazyImage, CAsm65Linker::GetLineTable,
+         CAsm65Linker::GetOutput
+       DeviceRomLib (1): CDeviceROM::GetROM
+       HCP65Lib (6): CHCP65::GetDebugPort, CHCP65::GetMPU, CHCP65::GetMemoryChannel, CHCP65::GetRegisters,
+         CHCP65UARTBoard::GetRS232, CHCP65UARTBoard::GetTTL
+       TestHCP65Lib (1): CHCP65KernalBuilder::GetBuilder
+       LogicimLib (10): CCircuitEditor::GetSelection, CCircuitEditor::GetTabs, CCircuitEditor::GetUndoStack,
+         CCircuitSelection::GetComponents, CCircuitSelection::GetTraces, CCircuitViews::GetViewPaths,
+         CComponentView::GetShapes, CPortView::GetClockNotch, CSubcircuitInstanceView::GetLayout, CViewPath::GetTop
+       KicadImporterLib (3): CKicadSchemBoard::GetCounts, CKicadSchemLogicimConverter::GetCounts,
+         CKicadSchemLogicimConverter::GetModel
+       LogiCim (6): CCircuitCanvasDraw::GetOwnPlace, CCircuitCanvasDraw::GetViewport, CLogicimCircuit::GetColours,
+         CLogicimSettings::GetRecent, CLogicimWindowContent::GetHistory, CLogicimWindowContent::GetSettings
+       SculptLib (2): CSculptNodes::GetChangeEvent, CSculptPanel::GetChangeEvent
   4. The containers' element getters aren't const: CArrayTemplate's Get(i), GetPtr(i) and Tail, CLinkedList's
      GetHead and GetNext, CMapBlock's, 98 first errors.  Const overloads on the containers would free them and,
      through them, chains of getters: CArrayTemplate::Get keeps CArrayBlockSorted::GetHoldingSize back, which keeps
