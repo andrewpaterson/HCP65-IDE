@@ -14,7 +14,10 @@ What there is
 -------------
 
 Go to Class, File and Symbol (Control+N, Control+Shift+N, Control+Alt+Shift+N; a file with ":line"), Go to Definition
-(F12), Go to Source (Control+B; on an #include, its file), Find Usages (Alt+F7) and Find All References (Shift+F12)
+(F12), Go to Source (Control+B and Control+click; on an #include, its file), Go to Implementation (Control+Alt+B),
+Super Method (Control+U), Type Declaration (Control+Shift+B) and Related Symbol (Control+Alt+Home), each with a
+chooser when it has several places to go, Show Usages (Control+Alt+F7), Find Usages (Alt+F7) and Find All References
+(Shift+F12)
 in a tool window with tabs, a preview, a toolbar, filters and scopes, Find Usages Settings (Control+Alt+Shift+F7), the
 usages popup (Control+B on a declaration), Back and Forward, Next and Previous Occurrence (the tool windows' results
 and the Build tab's errors), Switch Header/Source (Alt+O), Find in Files (Control+Shift+F) with its Find tool window,
@@ -56,17 +59,16 @@ Between files
   - Splitting the editor and moving between the splits as commands: docking puts documents side by side, by hand.
 
 Symbols
-  - Control+click and a middle click on a name, and its declaration shown with Control held over it.
-  - Go to Implementation (Control+Alt+B), Super Method (Control+U), Type Declaration (Control+Shift+B).
+  - A name drawn as a link, and its declaration shown, with Control held over it.  (Control+click is built; a middle
+    click was ruled out.)
+  - Go to Type Declaration from an expression with no name of its own (a call's result, pcA->GetB()): it goes from a
+    declared name's type only.
   - The Type, Method and Call Hierarchies (Control+H, Control+Shift+H, Control+Alt+H).
   - Gutter icons for overriding and overridden functions.
   - Quick Definition (Control+Shift+I), Quick Documentation (Control+Q), Parameter Info (Control+P) and Type Info
     (Control+Shift+P); no tool tip for a name either.
   - The count of a declaration's usages shown above it.
-  - Go to Related Symbol (Control+Alt+Home) and Go to Test: Switch Header/Source is the only one.
-  The index links a virtual function to what it overrides and what overrides it since Rename follows them
-  (CCPPIndex::FindOverrides), which Go to Implementation, Super Method, the gutter icons and the Method Hierarchy were
-  waiting for.
+  - Go to Test (ruled out, 2026-11-20).
 
 Find in Files
   - Regular expressions, a file mask, Replace in Files (Control+Shift+R).  Planned: item 3.
@@ -76,9 +78,6 @@ Find in Files
 Find Usages tool window
   - No export of the results; the tree doesn't follow the editor's caret (IntelliJ's Autoscroll from Source); and a
     result's row isn't coloured as code, only its preview is.
-
-Usages popup
-  - A menu of text rows: no code preview, no typing to filter, no Open in Find Window, no highlighted match.
 
 Go to dialogs
   - No preview of the selected class or symbol; no recent items while the field is empty.

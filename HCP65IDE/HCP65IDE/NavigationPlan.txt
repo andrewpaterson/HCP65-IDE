@@ -22,6 +22,31 @@ The facts about the code below were read from it on 2026-11-20 (commits HCP65-ID
 2267e5ece and the CTextArea enter event after it).  Lines move: find things by name.
 
 
+What is built
+-------------
+
+The user said to build all of it on 2026-11-20 ("Implement everything from 1 through to 66"), in the order decided.
+What is built is taken out of Navigation.txt's gaps and put on the website's pages as each stage ends.
+
+Stage A, going from a symbol: built 2026-11-20.
+    CommonLibraries 98fda656f and b99c4ff7d (CChooserPopup, NameRow.h), d07918407 (CTextArea's link event);
+    HCP65-IDE 997b19d (the targets, CIDEChooser, CIDELocationPreview, Go to Implementation and Super Method),
+    80e319e (Go to Type Declaration), e31b265 (Related Symbol, Show Usages, the usages chooser, Navigate's menu),
+    069f314 (Control+click).  Checks nav-*, on Checks/Input/Navigation (CShape, CCircle, CSquare, CRoundedSquare).
+    As built it differs from the plan in these:
+      - S2: there is no CIDEPopups.  The point under the caret and the menu opened there are CIDEDocuments'
+        (GetCaretPoint, OpenCaretMenu); CIDEChooser opens itself there.
+      - S5: FindTypeOf reads the type from the declaration's syntax (CIDERefactorUnit::FindDeclaredTypeName), the
+        way Extract Method does, and is CIDENavigator's.  The index has no link from a symbol to its type yet, and
+        an expression with no name of its own has no type to go to: both wait for whoever needs them (completion).
+        FindCallers and FindCallees are stage G's.
+      - S7: only the link press is built (CTextArea::SetLinkEvent).  A name isn't drawn as a link with Control held
+        over it; that, the hover event and the caret event are stage F's and B's.
+      - The usages chooser is given up to a thousand usages to filter among, and lists the first three hundred rows
+        of what the filter leaves.
+      - The menus check, which had been failing, expects every menu as it is.
+
+
 How work is done here
 ---------------------
 
