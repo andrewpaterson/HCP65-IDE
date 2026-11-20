@@ -135,6 +135,30 @@ Stage C, marks on lines: built 2026-11-21.
       - The scroll bar has marks for Find's matches, bookmarks, changed lines (in their bars' colours) and kept
         usages; a mark is on the scroll bar's own track, under the thumb, not in a stripe beside it.
 
+Stage E, between files: built 2026-11-21.
+    HCP65-IDE 1f63ee1 (CIDERecent, Solution Explorer's two options).  Checks recent-files, recent-files-read,
+    recent-files-not-kept, recent-locations, edit-locations, switcher, switcher-keys (the script's keyboard: Control
+    held, Tab, Control let go), select-in, explorer-options, explorer-options-read.
+    As built it differs from the plan in these:
+      - S11: CIDERecent hears of the editor in front from CIDEDocuments::SetActiveTab, which every change of the
+        active tab now goes through (CIDEContent::DocumentSelected isn't called for a file the IDE opens itself),
+        of a closing tab from CIDEContent::PaneClosed and of edits from CIDEDocuments::DocumentChanged.  The lists
+        of who follows edits, who is stepped through and who has settings weren't made: each is still named where
+        it is called (CIDEDocuments::DocumentChanged, CIDESettings).
+      - The recent files are a part of CIDEUserFile, written a couple of seconds after they change and as the
+        workspace closes, and only where settings are kept (CIDEContent::IsKeepingSettings): a run that is being
+        checked on a solution in the repository leaves no .hcp65user beside it.  The fifty most recent are kept.
+      - Recent Locations: a row is the place's line with its file and line number, and the chooser's preview shows
+        the code; no function over each row.  The places edited are listed by its button (Show Changed Only, Show
+        All), not a tick.  A place edited is where an edit ended, an edit within three lines of the last one being
+        the same place.
+      - The Switcher's tool windows are in the same list, after the files under a heading, not beside them.  It is
+        CIDEChooser with nothing to type in; the popup's list hears Control let go (IAF_KeyUp) and Control+Up and
+        Control+Down as chords.  Opened with Control not down (from the menu) it goes straight to the file before.
+      - Reopen Closed Tab is disabled while no closed tab is left to open.  Next Edit Location has no key.
+      - Select In is a chooser of Solution Explorer and Structure, for the file only.
+      - Solution Explorer's two options are in its context menu, ticked, and in Settings.xml as <Explorer>.
+
 
 How work is done here
 ---------------------

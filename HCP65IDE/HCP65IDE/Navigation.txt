@@ -37,6 +37,11 @@ Previous Change (Control+Alt+Shift+Down and Up), Highlight Usages in File (Contr
 Shift+F3), marks in the gutter beside functions that override or are overridden, and marks on the scroll bar for
 Find's matches, bookmarks, changed lines and kept usages.
 
+Between files: Recent Files (Control+E, kept in the workspace's .hcp65user), Recent Locations (Control+Shift+E, with
+the places edited alone), the Switcher (Control+Tab, held), Select Next and Previous Tab (Alt+Right, Alt+Left), Reopen
+Closed Tab, Last and Next Edit Location (Control+Shift+Backspace), Select In (Alt+F1), and Solution Explorer's Always
+Select Opened File and Open Files with Single Click.
+
 In a file: File Structure (Control+F12) and the Structure tool window (Alt+7), Next and Previous Method (Alt+Down,
 Alt+Up), Go to Line:Column (Control+G), Move Caret to Matching Brace (Control+Shift+M) and to Code Block Start and End
 (Control+[ and Control+], with Shift to select), breadcrumbs under the code and sticky lines over it (each turned off
@@ -48,17 +53,13 @@ Gaps
 ----
 
 In a file
-  - Last Edit Location (Control+Shift+Backspace) and Next Edit Location.
   - Next and Previous Highlighted Error: nothing to go to yet, as the editor shows no errors; the Build tab's are
     stepped through with Next Occurrence.  (IntelliJ's keys for it, F2 and Shift+F2, are the bookmarks' here.)
 
 Between files
-  - Recent Files (Control+E), Recent Locations (Control+Shift+E).
-  - The Switcher (Control+Tab), and the next and previous tab (Alt+Right, Alt+Left).
-  - Reopen Closed Tab.
   - A navigation bar (Alt+Home).
-  - Select In (Alt+F1): only Solution Explorer, by Alt+1.
-  - In Solution Explorer: Always Select Opened File and Open Files with Single Click.
+  - Select In (Alt+F1) offers Solution Explorer and Structure only.
+  - Recent Files has no "Show edited only", and the Switcher's Delete and Backspace don't close a file from it.
   - Splitting the editor and moving between the splits as commands: docking puts documents side by side, by hand.
 
 Symbols
