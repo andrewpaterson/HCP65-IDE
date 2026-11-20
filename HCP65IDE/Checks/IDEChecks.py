@@ -4203,6 +4203,15 @@ CHECKS = [
 		         'command:Navigate.PreviousMethod,edit:print,command:Navigate.PreviousMethod,printstatus'},
 		[r'Shapes\.cpp \(focus\) line 16: \[void CSquare::Draw\(void\)\]', r'Shapes\.cpp \(focus\) line 21: \[int CSquare::Area\(void\)\]',
 		 r'Shapes\.cpp \(focus\) line 4: \[void CCircle::Draw\(void\)\]', r'^Status: There is no method before the caret\.$'], []),
+	('nav-braces', {
+		#Move Caret to Matching Brace (Control+Shift+M): from before a function's opening brace to its closing one and
+		#back.  Move Caret to Code Block Start and End (Control+[ and Control+]): from inside the body to before its
+		#opening brace, and to after its closing one; with Shift the text between is selected.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Shapes.cpp', 'CARET': '5:1',
+		'DEBUG': 'edit:keys:Control+Shift+M,edit:print,edit:keys:Control+Shift+M,edit:print,edit:caret:6:3,edit:keys:Control+[,edit:print,'
+		         'edit:caret:6:3,edit:keys:Control+],edit:print,edit:caret:6:3,edit:keys:Control+Shift+],edit:printselection'},
+		[r'Shapes\.cpp.* line 7: \[\}\]', r'Shapes\.cpp.* line 5: \[\{\]', r'Shapes\.cpp.* line 5: \[\{\]', r'Shapes\.cpp.* line 7: \[\}\]',
+		 r'^Selection: \[ove\(0, 0\);$', r'^\}\] on line 7, caret line 7$'], []),
 	('nav-type-declaration', {
 		#Go to Type Declaration (Control+Shift+B): from a parameter and from a local variable, the class each is declared
 		#with; from a field of a built in type, the status line says its type has nothing to go to.
