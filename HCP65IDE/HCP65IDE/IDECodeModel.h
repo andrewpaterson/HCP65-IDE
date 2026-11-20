@@ -328,6 +328,7 @@ public:
 	size	FindOverriders(const char* szKey, CArrayIDELocations* pasDest);
 	size	FindImplementations(const char* szKey, CArrayIDETargets* pasDest);
 	size	FindSuperMethods(const char* szKey, CArrayIDETargets* pasDest);
+	bool	FindTarget(const char* szKey, CArrayIDETargets* pasDest);
 	size	FindSiblingFunctions(const char* szKey, const char* szFileName, CArrayIDELocations* pasDeclared, CArrayIDELocations* pasDefined);
 	bool	FindAssemblyTarget(const char* szKey, SIDERenameTarget* psDest);
 	size	FindOverrideLocations(const char* szKey, CArrayIDELocations* pasDest);

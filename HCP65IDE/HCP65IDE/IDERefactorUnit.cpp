@@ -23,6 +23,14 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "CppCompilerLib/TranslationUnit.h"
 #include "CppCompilerLib/CPPScope.h"
 #include "CppCompilerLib/CPPSymbol.h"
+#include "CppCompilerLib/CPPSyntaxNamedTypeSpecifier.h"
+#include "CppCompilerLib/CPPSyntaxElaboratedTypeSpecifier.h"
+#include "CppCompilerLib/CPPSyntaxParameter.h"
+#include "CppCompilerLib/CPPSyntaxSimpleDeclaration.h"
+#include "CppCompilerLib/CPPSyntaxFunctionDefinition.h"
+#include "CppCompilerLib/CPPSyntaxDeclSpecifiers.h"
+#include "CppCompilerLib/CPPSyntaxDeclarator.h"
+#include "CppCompilerLib/CPPSyntaxName.h"
 #include "IDERename.h"
 #include "IDERefactorUnit.h"
 
@@ -873,6 +881,70 @@ bool CIDERefactorUnit::AppendDeclaredTypeOf(CCPPSyntaxDeclSpecifiers* pcSpecifie
 	szSpecifiers.Kill();
 	szPointers.Kill();
 	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Where the type is named that what is declared at a place (a variable's,
+// a field's, a parameter's or a function's name, in a declaration of it)
+// is declared with: the name its declaration's specifiers have, its last
+// part if it is qualified ("CTank" of "const Plant::CTank*").  False if
+// the place isn't a declared name or its type has no name of its own (a
+// built in type, auto, decltype, a class written there).
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDERefactorUnit::FindDeclaredTypeName(int iLine, int iColumn, SCPPSyntaxRange* psDest)
+{
+	CCPPSyntaxDeclarator*		pcDeclarator;
+	CCPPSyntaxDeclSpecifiers*	pcSpecifiers;
+	CCPPSyntaxName*				pcName;
+	CCPPSyntax*					pcNode;
+	CCPPSyntax*					pcParent;
+	int32						iToken;
+
+	iToken = FindTokenAt(iLine, iColumn);
+	pcNode = (iToken != -1) ? FindNodeOfTokens(iToken, iToken) : NULL;
+	pcDeclarator = pcNode ? (CCPPSyntaxDeclarator*)FindAncestor(pcNode, CPPS_Declarator) : NULL;
+	while (pcDeclarator && pcDeclarator->mpcParent && (pcDeclarator->mpcParent->GetKind() == CPPS_Declarator))
+	{
+		pcDeclarator = (CCPPSyntaxDeclarator*)pcDeclarator->mpcParent;
+	}
+	pcName = pcDeclarator ? pcDeclarator->GetName() : NULL;
+	if (!pcName || (iToken < pcName->miFirstToken) || (iToken > pcName->miLastToken))
+	{
+		return false;
+	}
+
+	pcParent = pcDeclarator->mpcParent;
+	if (pcParent && (pcParent->GetKind() == CPPS_InitDeclarator))
+	{
+		pcParent = pcParent->mpcParent;
+	}
+	pcSpecifiers = NULL;
+	if (pcParent && (pcParent->GetKind() == CPPS_SimpleDeclaration))
+	{
+		pcSpecifiers = ((CCPPSyntaxSimpleDeclaration*)pcParent)->mpcSpecifiers;
+	}
+	else if (pcParent && (pcParent->GetKind() == CPPS_Parameter))
+	{
+		pcSpecifiers = ((CCPPSyntaxParameter*)pcParent)->mpcSpecifiers;
+	}
+	else if (pcParent && (pcParent->GetKind() == CPPS_FunctionDefinition))
+	{
+		pcSpecifiers = ((CCPPSyntaxFunctionDefinition*)pcParent)->mpcSpecifiers;
+	}
+
+	pcName = NULL;
+	if (pcSpecifiers && pcSpecifiers->mpcType && (pcSpecifiers->mpcType->GetKind() == CPPS_NamedTypeSpecifier))
+	{
+		pcName = ((CCPPSyntaxNamedTypeSpecifier*)pcSpecifiers->mpcType)->mpcName;
+	}
+	else if (pcSpecifiers && pcSpecifiers->mpcType && (pcSpecifiers->mpcType->GetKind() == CPPS_ElaboratedTypeSpecifier))
+	{
+		pcName = ((CCPPSyntaxElaboratedTypeSpecifier*)pcSpecifiers->mpcType)->mpcName;
+	}
+	return pcName && pcName->GetLast() && GetTokensRange(pcName->GetLast()->miFirstToken, pcName->GetLast()->miFirstToken, psDest);
 }
 
 

@@ -3695,7 +3695,8 @@ CHECKS = [
 	('keys-and-buttons', {
 		'DEBUG': 'printkeys,printbuttons'},
 		[r'^Keys: Navigate\.GoToDefinition F12 bound$', r'^Keys: Navigate\.GoToClass Control\+N bound$',
-		 r'^Keys: Build\.Build Control\+F9 bound$', r'^Keys: Run\.Start Control\+F5 bound$', r'^Keys: Debug\.Start F5 bound$',
+		 r'^Keys: Navigate\.GoToImplementation Control\+Alt\+B bound$', r'^Keys: Navigate\.GoToSuperMethod Control\+U bound$',
+		 r'^Keys: Navigate\.GoToTypeDeclaration Control\+Shift\+B bound$', r'^Keys: Build\.Build Control\+F9 bound$', r'^Keys: Run\.Start Control\+F5 bound$', r'^Keys: Debug\.Start F5 bound$',
 		 r'^Keys: Debug\.BreakAll Control\+Pause/Break bound$',
 		 r'^Buttons: Start \[Run\.Start\]$'], [r'NOT BOUND', r'\[none\]']),
 	('configuration', {
@@ -4129,6 +4130,19 @@ CHECKS = [
 		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Shapes.h', 'CARET': '28:8',
 		'DEBUG': 'command:Navigate.GoToSuperMethod,edit:print,edit:open:Shape.h,edit:caret:14:17,command:Navigate.GoToSuperMethod,printstatus'},
 		[r'Shapes\.h \(focus\) line 17: \[class CSquare : public CShape\]', r'^Status: No super methods of CShape::Draw\.$'], []),
+	('nav-type-declaration', {
+		#Go to Type Declaration (Control+Shift+B): from a parameter and from a local variable, the class each is declared
+		#with; from a field of a built in type, the status line says its type has nothing to go to.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Main.cpp', 'CARET': '6:10',
+		'DEBUG': 'command:Navigate.GoToTypeDeclaration,edit:print,edit:open:Main.cpp,edit:caret:23:3,command:Navigate.GoToTypeDeclaration,edit:print,'
+		         'edit:open:Shapes.cpp,edit:caret:12:14,command:Navigate.GoToTypeDeclaration,printstatus'},
+		[r'Shape\.h \(focus\) line 6: \[class CShape\]', r'Shapes\.h \(focus\) line 28: \[class CRoundedSquare : public CSquare\]',
+		 r'^Status: The type of CCircle::miRadius has no declaration to go to\.$'], []),
+	('nav-type-declaration-second', {
+		#The second of two parameters has its own type, not the first's; a class is its own type.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Main.cpp', 'CARET': '13:5',
+		'DEBUG': 'command:Navigate.GoToTypeDeclaration,edit:print,edit:open:Main.cpp,edit:caret:20:5,command:Navigate.GoToTypeDeclaration,edit:print'},
+		[r'Shapes\.h \(focus\) line 6: \[class CCircle : public CShape\]', r'Shapes\.h \(focus\) line 28: \[class CRoundedSquare : public CSquare\]'], []),
 ]
 
 if os.name != 'nt':

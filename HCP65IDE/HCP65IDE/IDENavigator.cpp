@@ -174,6 +174,7 @@ void CIDENavigator::AddCommands(Ptr<CCommandSet> pCommands)
 	pCommands->Add("Navigate.SwitchHeaderSource", "Switch Header/Source", "Alt+O", Ptr<CImageCel>(), this, &CIDENavigator::SwitchHeaderSource);
 	pCommands->Add("Navigate.GoToImplementation", "Go to Implementation(s)", "Control+Alt+B", Ptr<CImageCel>(), this, &CIDENavigator::GoToImplementation)->SetEnabledCheck(this, &CIDENavigator::CanGoToImplementation);
 	pCommands->Add("Navigate.GoToSuperMethod", "Go to Super Method", "Control+U", Ptr<CImageCel>(), this, &CIDENavigator::GoToSuperMethod)->SetEnabledCheck(this, &CIDENavigator::CanGoToSuperMethod);
+	pCommands->Add("Navigate.GoToTypeDeclaration", "Go to Type Declaration", "Control+Shift+B", Ptr<CImageCel>(), this, &CIDENavigator::GoToTypeDeclaration)->SetEnabledCheck(this, &CIDENavigator::CanGoToImplementation);
 }
 
 
@@ -864,6 +865,105 @@ bool CIDENavigator::GoToSuperMethod(void)
 	{
 		mpcContent->ShowStatus("The caret isn't in a member function or on a class to go to the super of.");
 	}
+	szKey.Kill();
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The type of the variable, field, parameter or function szKey, as its
+// declaration names it: the class, enum or typedef written there, found
+// in the file that declares it, parsed as it is now (CIDERefactorUnit::
+// FindDeclaredTypeName).  A class, an enum or a typedef is its own.
+// False if its type has no name of its own (int, auto) or isn't in the
+// index.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDENavigator::FindTypeOf(const char* szKey, uint8 uiKind, CChars* pszTypeKey)
+{
+	CIDECodeModel*		pcModel;
+	CArrayIDELocations	asLocations;
+	CIDERefactorUnit	cUnit;
+	SIDELocation*		psLocation;
+	SCPPSyntaxRange		sRange;
+	size				i;
+	uint8				uiFoundKind;
+	uint8				uiTypeKind;
+	bool				bFound;
+
+	if ((uiKind == CPPSK_Class) || (uiKind == CPPSK_ClassTemplate) || (uiKind == CPPSK_Enum) || (uiKind == CPPSK_Typedef) || (uiKind == CPPSK_AliasTemplate))
+	{
+		pszTypeKey->Set(szKey);
+		return true;
+	}
+
+	pcModel = mpcContent->GetCodeModel();
+	asLocations.Init();
+	bFound = false;
+	if (pcModel->GetSymbolLocations(szKey, &asLocations, &uiFoundKind))
+	{
+		//Its declarations in turn, until one names a type the index has: a function's may be written in two files.
+		for (i = 0; (i < asLocations.NumElements()) && !bFound; i++)
+		{
+			psLocation = asLocations.Get(i);
+			if (psLocation->uiRole == CPPIR_Reference)
+			{
+				continue;
+			}
+			cUnit.Init();
+			if (cUnit.Parse(pcModel, &mpcContent->GetFindInFiles(), psLocation->szFileName.Text(), false) &&
+				cUnit.FindDeclaredTypeName(psLocation->iLine, psLocation->iColumn, &sRange))
+			{
+				bFound = pcModel->GetSymbolAt(psLocation->szFileName.Text(), sRange.iLine, sRange.iColumn, pszTypeKey, &uiTypeKind);
+			}
+			cUnit.Kill();
+		}
+	}
+	KillIDELocations(&asLocations);
+	return bFound;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Go to Type Declaration (Control+Shift+B), as IntelliJ's: the class,
+// enum or typedef that is the type of the variable, field, parameter or
+// function named at the caret.  False if no symbol is named there.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDENavigator::GoToTypeDeclaration(void)
+{
+	CArrayIDETargets	asTargets;
+	CChars				szKey;
+	CChars				szTypeKey;
+	CChars				szText;
+	uint8				uiKind;
+	bool				bResult;
+
+	szKey.Init();
+	szTypeKey.Init();
+	bResult = FindCaretSymbol(&szKey, &uiKind);
+	if (!bResult)
+	{
+		mpcContent->ShowStatus("There is no symbol at the caret to go to the type of.");
+	}
+	else if (!FindTypeOf(szKey.Text(), uiKind, &szTypeKey))
+	{
+		szText.Init("The type of ");
+		GetIDEScopedName(szKey.Text(), &szText);
+		szText.Append(" has no declaration to go to.");
+		mpcContent->ShowStatus(szText.Text());
+		szText.Kill();
+	}
+	else
+	{
+		asTargets.Init();
+		mpcContent->GetCodeModel()->FindTarget(szTypeKey.Text(), &asTargets);
+		GoToTargets("type declarations", szKey.Text(), &asTargets);
+		KillIDETargets(&asTargets);
+	}
+	szTypeKey.Kill();
 	szKey.Kill();
 	return bResult;
 }

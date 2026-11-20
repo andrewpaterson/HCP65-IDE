@@ -3032,6 +3032,26 @@ CCPPIndexSymbol* CIDECodeModel::FindScopeClass(const char* szKey)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// The symbol szKey added to pasDest as somewhere to go: its definition,
+// or else its declaration.  False if the index hasn't it, or only its
+// uses.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDECodeModel::FindTarget(const char* szKey, CArrayIDETargets* pasDest)
+{
+	CCPPIndexSymbol*	pcSymbol;
+	bool				bFound;
+
+	mcIndexMutex.Lock();
+	pcSymbol = mcIndex.FindSymbol(szKey);
+	bFound = pcSymbol && AddTarget(pcSymbol, pasDest);
+	mcIndexMutex.Unlock();
+	return bFound;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // What IntelliJ's Go to Implementation goes to from szKey, added to
 // pasDest; how many.  For a virtual member function, the functions that
 // override it in the classes derived from its class, the nearest classes
