@@ -154,7 +154,7 @@ public:
 	bool					GetResultLocation(CIDEResultsPane* pcPane, int64 iData, SIDELocation* psDest) override;
 	bool					CanRerunResults(CIDEResultsPane* pcPane) override;
 	void					RerunResults(CIDEResultsPane* pcPane) override;
-	bool					GetFileText(const char* szFileName, CTextFile* pcFile, char** pszText, size* puiLength) override;
+	bool					GetFileText(const char* szFileName, CTextFile* pcFile, const char** pszText, size* puiLength) override;
 
 protected:
 	void				ShowQueuedFind(void);

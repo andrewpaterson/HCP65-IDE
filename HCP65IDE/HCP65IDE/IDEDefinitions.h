@@ -69,7 +69,7 @@ public:
 	void			Kill(void);
 
 	Ptr<CTextArea>	GetEditor(const char* szFileName);
-	char*			GetText(const char* szFileName);
+	const char*		GetText(const char* szFileName);
 	CIDETextEdits*	GetEdits(const char* szFileName);
 	size			NumFiles(void) const;
 	size			CountErrors(bool bEdited);

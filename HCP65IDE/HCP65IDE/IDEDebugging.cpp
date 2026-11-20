@@ -702,7 +702,7 @@ bool CIDEDebugging::ToggleBreakpoint(void)
 bool CIDEDebugging::ShowAddressDialog(const char* szTitle, const char* szLabel, const char* szDefault, bool bHex, uint32* puiValue)
 {
 	CTextField*	pcField;
-	char*		szText;
+	const char*	szText;
 	char*		szEnd;
 	bool		bResult;
 

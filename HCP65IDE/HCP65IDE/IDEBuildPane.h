@@ -58,7 +58,7 @@ public:
 	void				SetProgress(float fFraction, ARGB32 sColour);
 
 	Ptr<CComponent>		GetComponent(void) const;
-	char*				GetOutput(void);
+	const char*			GetOutput(void);
 	Ptr<CTextArea>		GetOutputArea(void) const;
 	Ptr<CProgressBar>	GetProgressBar(void) const;
 };

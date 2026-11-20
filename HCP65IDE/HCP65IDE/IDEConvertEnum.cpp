@@ -273,7 +273,7 @@ void CIDEConvertEnum::FindUses(const char* szEnumeratorKey, const char* szEnumer
 	CArrayIDELocations	asLocations;
 	SIDELocation*		psLocation;
 	CTextFile			cFile;
-	char*				szText;
+	const char*			szText;
 	size				uiLength;
 	size				uiAt;
 	size				i;
@@ -348,7 +348,7 @@ bool CIDEConvertEnum::FindConversion(SIDEEnumConversion* psDest)
 	CChars						szEnumFile;
 	CChars						szEnumeratorKey;
 	CChars						szEnumerator;
-	char*						szText;
+	const char*					szText;
 	size						uiLength;
 	size						uiListStart;
 	size						uiListEnd;
@@ -594,7 +594,7 @@ void CIDEConvertEnum::FindFileCasts(const char* szFileName, SIDEEnumConversion* 
 	CChars						szEnum;
 	CChars						szCast;
 	CChars						szOperator;
-	char*						szText;
+	const char*					szText;
 	size						uiLength;
 	size						uiStart;
 	size						uiEnd;

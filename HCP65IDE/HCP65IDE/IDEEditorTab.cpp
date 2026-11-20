@@ -580,7 +580,7 @@ bool CIDEEditorTab::SaveFile(void)
 {
 	CTextFile	cFile;
 	CChars		szText;
-	char*		szSource;
+	const char*	szSource;
 	size		i;
 	bool		bResult;
 

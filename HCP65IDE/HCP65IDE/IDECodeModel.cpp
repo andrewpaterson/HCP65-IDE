@@ -3295,7 +3295,7 @@ size CIDECodeModel::FindIncludesOf(const char* szFileName, CIDEFileTexts* pcText
 	SIDELocation*				psLocation;
 	EIDEFileType				eType;
 	char*						szIncluder;
-	char*						szText;
+	const char*					szText;
 	size						uiLength;
 	size						uiProject;
 	size						uiNamePart;

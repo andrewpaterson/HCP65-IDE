@@ -280,7 +280,7 @@ void CIDEConvertPointer::RemoveBrackets(CIDERefactorUnit* pcUnit, const char* sz
 bool CIDEConvertPointer::ConvertDeclarator(CIDERefactorUnit* pcUnit, const char* szFileName, CCPPSyntaxDeclarator* pcDeclarator, bool bToReference, CIDEFileEdits* pcFiles)
 {
 	CCPPSyntaxPointerOperator*	pcOperator;
-	char*						szText;
+	const char*					szText;
 	size						uiStart;
 	size						uiEnd;
 	size						i;
@@ -330,7 +330,7 @@ bool CIDEConvertPointer::ConvertUse(const char* szFileName, int32 iLine, int32 i
 	CCPPSyntax*					pcParent;
 	CCPPSyntaxUnaryExpression*	pcUnary;
 	CCPPSyntaxBinaryExpression*	pcBinary;
-	char*						szText;
+	const char*					szText;
 	size						uiStart;
 	size						uiEnd;
 	size						i;
@@ -499,7 +499,7 @@ bool CIDEConvertPointer::ConvertValue(CIDERefactorUnit* pcUnit, const char* szFi
 	CIDETextEdits*	pcEdits;
 	CCPPSyntax*		pcNode;
 	SCPPSyntaxRange	sRange;
-	char*			szText;
+	const char*		szText;
 	size			uiStart;
 	size			uiEnd;
 	bool			bExact;
@@ -618,7 +618,7 @@ bool CIDEConvertPointer::ConvertParameter(CIDERefactorUnit* pcUnit, CCPPSyntax* 
 	CCPPSyntax*				pcNode;
 	CCPPSyntaxName*			pcName;
 	CChars					szArgument;
-	char*					szText;
+	const char*				szText;
 	size					uiParameter;
 	size					i;
 	size					j;
@@ -797,7 +797,7 @@ bool CIDEConvertPointer::ConvertUsesIn(const char* szKey, const char* szFileName
 {
 	CArrayIDELocations	asLocations;
 	SIDELocation*		psLocation;
-	char*				szText;
+	const char*			szText;
 	size				uiAt;
 	size				i;
 	uint8				uiKind;

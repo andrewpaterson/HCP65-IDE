@@ -785,7 +785,7 @@ void CIDESafeDelete::FindUsages(SIDESafeDeletion* psDeletion)
 	SIDEAssemblyRename		sRename;
 	CArrayIDEAssemblyEdits	asEdits;
 	CTextFile				cFile;
-	char*					szText;
+	const char*				szText;
 	size					uiLength;
 	uint8					uiKind;
 	size					i;
@@ -879,7 +879,7 @@ void CIDESafeDelete::SearchFiles(SIDESafeDeletion* psDeletion)
 	CTextFile					cFile;
 	CChars						szName;
 	char*						szFileName;
-	char*						szText;
+	const char*					szText;
 	size						uiLength;
 	EIDEFileType				eType;
 	uint8						uiRole;
@@ -1006,7 +1006,7 @@ char* CIDESafeDelete::PrintDeletion(SIDESafeDeletion* psDeletion, CChars* pszDes
 	SIDEFileRange*	psRange;
 	SIDELocation*	psLocation;
 	SIDELineCounter	sLines;
-	char*			szText;
+	const char*		szText;
 	size			uiLength;
 	size			uiStart;
 	size			uiEnd;
@@ -1136,7 +1136,7 @@ bool CIDESafeDelete::Delete(SIDESafeDeletion* psDeletion, CChars* pszStatus)
 	Ptr<CIDEEditorTab>	pTab;
 	Ptr<CTextArea>		pEditor;
 	CChars				szMessage;
-	char*				szText;
+	const char*			szText;
 	size				uiFile;
 	size				uiDeleted;
 	size				i;
@@ -1371,7 +1371,7 @@ void CIDESafeDelete::FindEmptiedFiles(SIDESafeDeletion* psDeletion)
 	STextRange*		psTextRange;
 	SIDEFileRange*	psRange;
 	CTextFile		cFile;
-	char*			szText;
+	const char*		szText;
 	size			uiLength;
 	size			uiFile;
 	size			i;
@@ -1507,7 +1507,7 @@ size CIDESafeDelete::DeleteFiles(SIDESafeDeletion* psDeletion)
 	CChars				szContent;
 	CChars				szBeside;
 	const char*			szFileName;
-	char*				szText;
+	const char*			szText;
 	size				uiLength;
 	size				uiDeleted;
 	size				i;

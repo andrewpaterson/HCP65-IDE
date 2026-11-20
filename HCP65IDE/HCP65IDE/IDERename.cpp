@@ -577,7 +577,7 @@ bool CIDERename::ShowRename(void)
 //////////////////////////////////////////////////////////////////////////
 bool CIDERename::ApproveRename(void)
 {
-	char*		szName;
+	const char*	szName;
 	size		i;
 	const char*	szProblem;
 	CChars		szNewKey;
@@ -695,7 +695,7 @@ bool CIDERename::SearchRenameFiles(const char* szName, bool bComments, bool bTex
 	EIDEFileType				eType;
 	bool						bCpp;
 	CTextFile					cFile;
-	char*						szText;
+	const char*					szText;
 	size						uiLength;
 	SIDELineCounter				sLines;
 	CArrayIDENameOccurrences	asFound;
@@ -703,7 +703,7 @@ bool CIDERename::SearchRenameFiles(const char* szName, bool bComments, bool bTex
 	size						i;
 	uint8						uiRole;
 	size						uiFile;
-	char*						szEditorText;
+	const char*					szEditorText;
 	SIDEPlace*					psPlace;
 	size						uiNameLength;
 	bool						bResult;
@@ -788,7 +788,7 @@ bool CIDERename::RenameSymbol(SIDERenameTarget* psTarget, const char* szNewName,
 	size				uiFile;
 	size				uiStart;
 	size				uiLength;
-	char*				szText;
+	const char*			szText;
 	bool				bChanged;
 	CChars				szMessage;
 	CChars				szChanged;
@@ -1004,7 +1004,7 @@ size CIDERename::ApplyAssemblyRename(SIDEAssemblyRename* psRename, CIDEFileEdits
 	CArrayIDEAssemblyEdits	asEdits;
 	SIDEAssemblyEdit*		psEdit;
 	CTextFile				cFile;
-	char*					szText;
+	const char*				szText;
 	char*					szFileName;
 	size					uiLength;
 	size					uiEdits;
@@ -1177,7 +1177,7 @@ size CIDERename::RenameAssemblyOf(SIDERenameTarget* psTarget, const char* szNewN
 	EIDEAssemblyRename		eKind;
 	CArrayIDEAssemblyEdits	asEdits;
 	CTextFile				cFile;
-	char*					szText;
+	const char*				szText;
 	char*					szFileName;
 	size					uiLength;
 	size					uiFile;

@@ -261,7 +261,7 @@ bool CIDEConvertMacro::Refuse(SIDEMacro* psMacro, const char* szWhyNot, SIDEMacr
 bool CIDEConvertMacro::FindWordAtCaret(CChars* pszWord, size* puiStart)
 {
 	Ptr<CTextArea>	pEditor;
-	char*			szText;
+	const char*		szText;
 	size			uiStart;
 	size			uiEnd;
 
@@ -548,7 +548,7 @@ void CIDEConvertMacro::FindUses(const char* szName, SIDEMacro* psDest, size* pui
 	CChars						szArgument;
 	EIDEFileType				eType;
 	const char*					szFileName;
-	char*						szText;
+	const char*					szText;
 	size						uiLength;
 	size						uiNameLength;
 	size						uiLine;
@@ -834,7 +834,7 @@ size CIDEConvertMacro::CountErrors(SIDEMacro* psMacro, char* szNewText)
 	CIDEFileTexts*	pcTexts;
 	CArrayChars		aszFiles;
 	CTextFile		cFile;
-	char*			szText;
+	const char*		szText;
 	size			uiLength;
 	size			uiErrors;
 	size			uiFile;
@@ -896,7 +896,7 @@ bool CIDEConvertMacro::CheckConverted(SIDEMacro* psMacro, size uiStart, size uiE
 {
 	CTextFile	cFile;
 	CChars		szNew;
-	char*		szText;
+	const char*	szText;
 	size		uiLength;
 	size		uiBefore;
 	bool		bResult;
@@ -938,7 +938,7 @@ void CIDEConvertMacro::FindConstantConversion(SIDEMacro* psMacro)
 	CTextFile			cFile;
 	CChars				szNew;
 	CChars				szType;
-	char*				szText;
+	const char*			szText;
 	size				uiLength;
 	size				uiBefore;
 	size				uiAfter;
@@ -1137,7 +1137,7 @@ void CIDEConvertMacro::FindFunctionConversion(SIDEMacro* psMacro)
 	CChars				szType;
 	CChars				szConflict;
 	CChars				szBody;
-	char*				szText;
+	const char*			szText;
 	size				uiLength;
 	size				uiParameters;
 	size				uiUses;
@@ -1515,7 +1515,7 @@ void CIDEConvertMacro::FindRun(SIDEMacro* psMacro)
 	SIDEMacro			sOther;
 	SIDEMacroConstant*	psConstant;
 	CTextFile			cFile;
-	char*				szText;
+	const char*			szText;
 	size				uiLength;
 	size				uiLine;
 	size				uiFirst;

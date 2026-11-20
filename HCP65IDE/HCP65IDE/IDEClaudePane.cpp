@@ -459,7 +459,7 @@ Ptr<CTextArea> CIDEClaudePane::GetRequestArea(void) const { return mpRequest; }
 Ptr<CButton> CIDEClaudePane::GetSendButton(void) const { return mpSendButton; }
 Ptr<CButton> CIDEClaudePane::GetStopButton(void) const { return mpStopButton; }
 Ptr<CButton> CIDEClaudePane::GetNewButton(void) const { return mpNewButton; }
-char* CIDEClaudePane::GetRequest(void) { return mpRequest->GetText(); }
-char* CIDEClaudePane::GetConversation(void) { return mpConversation->GetText(); }
-char* CIDEClaudePane::GetStatus(void) { return mpStatus->GetText(); }
+const char* CIDEClaudePane::GetRequest(void) { return mpRequest->GetText(); }
+const char* CIDEClaudePane::GetConversation(void) { return mpConversation->GetText(); }
+const char* CIDEClaudePane::GetStatus(void) { return mpStatus->GetText(); }
 

@@ -195,7 +195,7 @@ bool CIDEMemberQualifier::IsDeclaredWith(const char* szKey, const char* szWord)
 	SIDELocation*		psLocation;
 	CTextFile			cFile;
 	const char*			szFound;
-	char*				szText;
+	const char*			szText;
 	size				uiLength;
 	size				uiWord;
 	size				uiName;
@@ -430,7 +430,7 @@ bool CIDEMemberQualifier::Find(bool bStatic, SIDEQualifierChange* psDest)
 	CChars				szName;
 	CChars				szClassName;
 	CChars				szAfter;
-	char*				szText;
+	const char*			szText;
 	size				uiLength;
 	size				i;
 	uint8				uiKind;
@@ -534,7 +534,7 @@ bool CIDEMemberQualifier::Change(SIDEQualifierChange* psChange, CChars* pszStatu
 	CChars						szMessage;
 	CChars						szClass;
 	const char*					szConst;
-	char*						szText;
+	const char*					szText;
 	size						uiStart;
 	size						uiEnd;
 	size						uiLine;

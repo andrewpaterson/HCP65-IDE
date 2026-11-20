@@ -226,7 +226,7 @@ bool CIDEContextActions::FindContext(SIDECaretContext* psDest)
 	Ptr<CIDEEditorTab>	pTab;
 	Ptr<CTextArea>		pEditor;
 	EIDEFileType		eType;
-	char*				szText;
+	const char*			szText;
 	size				uiStart;
 	size				uiEnd;
 	size				uiLine;
@@ -303,7 +303,7 @@ void CIDEContextActions::FindSymbol(SIDECaretContext* psDest)
 	CChars				szName;
 	CChars				szScopeName;
 	CTextFile			cFile;
-	char*				szText;
+	const char*			szText;
 	size				uiLength;
 	size				uiName;
 	size				i;

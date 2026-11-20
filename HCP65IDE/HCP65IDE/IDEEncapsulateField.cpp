@@ -255,7 +255,7 @@ void CIDEEncapsulateField::ReadUses(SIDEEncapsulation* psDest)
 	SCPPSyntaxRange					sName;
 	CChars							szKey;
 	CChars							szScope;
-	char*							szText;
+	const char*						szText;
 	size							uiLength;
 	size							uiAt;
 	size							i;
@@ -428,7 +428,7 @@ bool CIDEEncapsulateField::FindEncapsulation(SIDEEncapsulation* psDest)
 	SCPPSyntaxRange					sRange;
 	CChars							szType;
 	const char*						szName;
-	char*							szText;
+	const char*						szText;
 	size							uiLength;
 	size							i;
 	int								iLine;
@@ -659,7 +659,7 @@ bool CIDEEncapsulateField::Encapsulate(SIDEEncapsulation* psEncapsulation, CChar
 	CChars				szSource;
 	CChars				szScoped;
 	CChars				szBody;
-	char*				szFile;
+	const char*			szFile;
 	size				uiChanged;
 	size				uiStart;
 	size				uiEnd;

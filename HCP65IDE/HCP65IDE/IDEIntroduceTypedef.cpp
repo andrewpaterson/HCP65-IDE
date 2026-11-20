@@ -326,7 +326,7 @@ bool CIDEIntroduceTypedef::FindTypedef(SIDETypedef* psDest)
 	SCPPSyntaxRange					sRange;
 	CArrayChars						aszParameters;
 	CChars							szName;
-	char*							szText;
+	const char*						szText;
 	size							uiStart;
 	size							uiEnd;
 	size							uiLine;
@@ -651,7 +651,7 @@ void CIDEIntroduceTypedef::FindIncluders(SIDETypedef* psTypedef)
 	CTextFile			cFile;
 	SCPPSyntaxRange		sRange;
 	char*				szFileName;
-	char*				szText;
+	const char*			szText;
 	size				uiLength;
 	size				i;
 	int					iHeader;
@@ -715,7 +715,7 @@ void CIDEIntroduceTypedef::FindIncluders(SIDETypedef* psTypedef)
 // the type stays in its column.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEIntroduceTypedef::AddReplacement(CIDETextEdits* pcEdits, char* szText, size uiStart, size uiEnd, const char* szName)
+void CIDEIntroduceTypedef::AddReplacement(CIDETextEdits* pcEdits, const char* szText, size uiStart, size uiEnd, const char* szName)
 {
 	CChars	szLine;
 	size	uiRunEnd;
@@ -774,7 +774,7 @@ bool CIDEIntroduceTypedef::Introduce(SIDETypedef* psTypedef, const char* szName,
 	CChars			szLine;
 	CChars			szMessage;
 	const char*		szProblem;
-	char*			szText;
+	const char*		szText;
 	size			uiFirst;
 	size			uiLast;
 	size			uiPlaces;

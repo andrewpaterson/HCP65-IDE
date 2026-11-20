@@ -342,7 +342,7 @@ bool CIDETemplateInterface::FindDeclaration(const char* szFileName, int32 iLine,
 	SIDELocation*		psDeclared;
 	CTextFile			cFile;
 	CChars				szKey;
-	char*				szText;
+	const char*			szText;
 	size				uiLength;
 	size				uiStart;
 	size				uiEnd;
@@ -492,7 +492,7 @@ bool CIDETemplateInterface::FindInterface(SIDETemplateInterface* psDest)
 	CChars							szOwner;
 	CChars							szType;
 	CChars							szName;
-	char*							szText;
+	const char*						szText;
 	size							uiCaret;
 	size							uiLine;
 	size							uiParameter;
@@ -774,7 +774,7 @@ bool CIDETemplateInterface::Write(SIDETemplateInterface* psInterface, int iKind,
 	CChars			szBlock;
 	CChars			szMessage;
 	const char*		szProblem;
-	char*			szText;
+	const char*		szText;
 	size			i;
 	size			j;
 	bool			bResult;
@@ -919,7 +919,7 @@ bool CIDETemplateInterface::Derive(SIDETemplateInterface* psInterface, const cha
 	CArrayChars				aszInsertTexts;
 	CChars					szScope;
 	CChars					szBase;
-	char*					szText;
+	const char*				szText;
 	size					uiAt;
 	size					uiBrace;
 	size					uiColon;

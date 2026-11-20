@@ -979,7 +979,7 @@ bool CIDEIntroduceVariable::FindIntroduction(SIDEIntroduction* psDest)
 	SPreprocessedToken*				psSource;
 	SCPPSyntaxRange					sRange;
 	CChars							szUsed;
-	char*							szText;
+	const char*						szText;
 	size							uiStart;
 	size							uiEnd;
 	size							uiLine;
@@ -2368,7 +2368,7 @@ size CIDEIntroduceVariable::AddInitAssignments(const char* szClassKey, const cha
 	CChars							szName;
 	CChars							szLine;
 	CChars							szLast;
-	char*							szText;
+	const char*						szText;
 	size							uiAt;
 	size							uiIndent;
 	size							uiInits;

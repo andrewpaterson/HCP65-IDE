@@ -376,8 +376,8 @@ bool CIDEExtractClass::NamesParameters(SIDEMembersMove* psMove, CIDEFileEdits* p
 	CChars				szPiece;
 	CChars				szMoved;
 	const char*			szFound;
-	char*				szText;
-	char*				szOutside;
+	const char*			szText;
+	const char*			szOutside;
 	size				uiClass;
 	size				uiEnd;
 	size				uiStart;
@@ -498,7 +498,7 @@ void CIDEExtractClass::AddInitCalls(SIDEMembersMove* psMove, const char* szField
 	CChars							szName;
 	CChars							szLine;
 	CChars							szStatement;
-	char*							szText;
+	const char*						szText;
 	size							uiAt;
 	size							uiIndent;
 	size							i;
@@ -621,9 +621,9 @@ bool CIDEExtractClass::Extract(SIDEMembersMove* psMove, int iKind, const char* s
 	CChars				szMessage;
 	CChars				szInitBody;
 	const char*			szStem;
-	char*				szText;
-	char*				szOutside;
-	char*				szUser;
+	const char*			szText;
+	const char*			szOutside;
+	const char*			szUser;
 	size				uiStart;
 	size				uiEnd;
 	size				uiAt;

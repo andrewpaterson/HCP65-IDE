@@ -260,7 +260,7 @@ public:
 	bool				GoToDefinition(void);
 	bool				FindReferences(void);
 	void				ShowStatus(const char* szText);
-	char*				GetStatus(void);
+	const char*			GetStatus(void);
 	int64				UpdateStatusLine(int64 iNow);
 	void				Tick(Ptr<CWindow> pWindow);
 	bool				PaneClosing(CDockPane* pcPane) override;

@@ -459,7 +459,7 @@ bool CIDEDuplicates::FindSelected(int32 iFirst, int32 iLast, CChars* pszWhyNot)
 	SCPPSyntaxRange					sRange;
 	CTextFile						cFile;
 	CChars							szText;
-	char*							szFileText;
+	const char*						szFileText;
 	size							uiLength;
 	size							i;
 	size							j;
@@ -947,7 +947,7 @@ void CIDEDuplicates::SearchFile(const char* szFileName)
 {
 	CIDERefactorUnit	cUnit;
 	CTextFile			cFile;
-	char*				szText;
+	const char*			szText;
 	size				uiLength;
 	bool				bMight;
 

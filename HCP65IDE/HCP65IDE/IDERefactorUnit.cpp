@@ -106,7 +106,7 @@ bool CIDETextEdits::Apply(Ptr<CTextArea> pEditor)
 	CChars			szNew;
 	STextRange		sRange;
 	SIDETextEdit*	psEdit;
-	char*			szText;
+	const char*		szText;
 	size			uiAt;
 	size			i;
 	bool			bResult;
@@ -251,8 +251,8 @@ bool CIDERefactorUnit::Parse(CIDECodeModel* pcModel, CIDEFileTexts* pcTexts, con
 {
 	CTextFile	cFile;
 	CTextFile	cUnitFile;
-	char*		szText;
-	char*		szUnitText;
+	const char*	szText;
+	const char*	szUnitText;
 	size		uiLength;
 	size		uiProject;
 	size		uiUnitProject;
@@ -621,7 +621,7 @@ bool CIDERefactorUnit::FindSpelledTokens(int iLine, int iColumn, int iEndLine, i
 //
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDETrialTexts::GetFileText(const char* szFileName, CTextFile* pcFile, char** pszText, size* puiLength)
+bool CIDETrialTexts::GetFileText(const char* szFileName, CTextFile* pcFile, const char** pszText, size* puiLength)
 {
 	if (mszText && (StringInsensitiveCompare(szFileName, mszFileName) == 0))
 	{

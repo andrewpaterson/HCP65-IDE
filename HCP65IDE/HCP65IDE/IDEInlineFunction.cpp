@@ -255,10 +255,10 @@ static CCPPSyntax* FindIDEHoistStatement(CIDERefactorUnit* pcUnit, CCPPSyntax* p
 // A file's text as its editor has it, or the disk (pcFile keeps it).
 //
 //////////////////////////////////////////////////////////////////////////
-static char* GetIDEInlineText(CIDEContent* pcContent, const char* szFileName, CTextFile* pcFile)
+static const char* GetIDEInlineText(CIDEContent* pcContent, const char* szFileName, CTextFile* pcFile)
 {
 	CIDEFileTexts*	pcTexts;
-	char*			szText;
+	const char*		szText;
 	size			uiLength;
 
 	pcTexts = &pcContent->GetFindInFiles();
@@ -797,7 +797,7 @@ bool CIDEInlineFunction::ReadCall(SIDESignatureCall* psCall, CCPPSyntax* pcValue
 	CChars							szText;
 	CChars							szKey;
 	CChars							szScope;
-	char*							szFile;
+	const char*						szFile;
 	size							uiAt;
 	size							i;
 	int32							iToken;
@@ -1098,8 +1098,8 @@ bool CIDEInlineFunction::FindInlining(SIDEFunctionInlining* psDest)
 	CCPPSyntax*			pcValue;
 	CChars				szScope;
 	CChars				szText;
-	char*				szFile;
-	char*				szSite;
+	const char*			szFile;
+	const char*			szSite;
 	size				uiBody;
 	size				uiBodyEnd;
 	size				uiAt;
@@ -1549,8 +1549,8 @@ bool CIDEInlineFunction::Inline(SIDEFunctionInlining* psInlining, int iMode, CCh
 	CChars				szMessage;
 	CChars				szVariable;
 	const char*			szArgument;
-	char*				szDefinition;
-	char*				szFile;
+	const char*			szDefinition;
+	const char*			szFile;
 	size				uiInlined;
 	size				uiStayed;
 	size				uiStart;

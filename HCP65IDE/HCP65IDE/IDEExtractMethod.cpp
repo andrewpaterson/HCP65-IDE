@@ -645,7 +645,7 @@ bool CIDEExtractMethod::FindExtraction(SIDEExtraction* psDest)
 	SPreprocessedToken*				psSource;
 	SCPPSyntaxRange					sRange;
 	CChars							szName;
-	char*							szText;
+	const char*						szText;
 	size							uiStart;
 	size							uiEnd;
 	size							uiLine;
@@ -1034,7 +1034,7 @@ bool CIDEExtractMethod::AppendPointerBody(SIDEExtraction* psExtraction, CChars* 
 	SIDEExtractVariable*	psVariable;
 	CChars					szConverted;
 	CChars					szPointer;
-	char*					szText;
+	const char*				szText;
 	size					i;
 	bool					bResult;
 
@@ -1255,7 +1255,7 @@ size CIDEExtractMethod::FindDuplicates(SIDEExtraction* psExtraction, CArrayIDEEx
 	CArrayInt					aiStarts;
 	CArrayInt					aiEnds;
 	CArrayChars					aszVariables;
-	char*						szText;
+	const char*					szText;
 	size						uiSelectionStart;
 	size						uiSelectionEnd;
 	size						uiLine;
@@ -1580,7 +1580,7 @@ bool CIDEExtractMethod::Extract(SIDEExtraction* psExtraction, const char* szName
 	SIDEExtractDuplicate*	psDuplicate;
 	CArrayInt				aiTaken;
 	const char*				szProblem;
-	char*					szText;
+	const char*				szText;
 	size					uiDuplicates;
 	size					j;
 	size					uiDeclared;

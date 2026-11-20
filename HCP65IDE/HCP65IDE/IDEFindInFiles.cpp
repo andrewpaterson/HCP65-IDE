@@ -651,7 +651,7 @@ void CIDEFindInFiles::ListDirectory(const char* szDirectory)
 // text.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEFindInFiles::GetFileText(const char* szFileName, CTextFile* pcFile, char** pszText, size* puiLength)
+bool CIDEFindInFiles::GetFileText(const char* szFileName, CTextFile* pcFile, const char** pszText, size* puiLength)
 {
 	Ptr<CIDEEditorTab>	pTab;
 	CFileUtil			cFileUtil;
@@ -685,7 +685,7 @@ void CIDEFindInFiles::SearchFile(size uiFile, CFindInFilesItems* pcDest)
 {
 	CTextFile		cFile;
 	SIDEFindPlace*	psPlace;
-	char*			szText;
+	const char*		szText;
 	const char*		szNewLine;
 	const char*		szLineEnd;
 	size			uiLength;
@@ -823,7 +823,7 @@ bool CIDEFindInFiles::FindPreviewPlace(SFindInFilesItem* psItem, CChars* pszTitl
 bool CIDEFindInFiles::FindPreviewText(SFindInFilesItem* psItem, CChars* pszText)
 {
 	CTextFile	cFile;
-	char*		szText;
+	const char*	szText;
 	size		uiLength;
 	bool		bResult;
 

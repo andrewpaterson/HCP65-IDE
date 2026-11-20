@@ -74,7 +74,7 @@ public:
 	void				SetDirectory(const char* szDirectory);
 	void				ScrollToEnd(void);
 
-	char*				GetRequest(void);
+	const char*			GetRequest(void);
 	void				SetRequest(const char* szRequest);
 
 	Ptr<CComponent>		GetComponent(void) const;
@@ -82,8 +82,8 @@ public:
 	Ptr<CButton>		GetSendButton(void) const;
 	Ptr<CButton>		GetStopButton(void) const;
 	Ptr<CButton>		GetNewButton(void) const;
-	char*				GetConversation(void);
-	char*				GetStatus(void);
+	const char*			GetConversation(void);
+	const char*			GetStatus(void);
 
 protected:
 	void				Append(const char* szText, ARGB32 sColour);

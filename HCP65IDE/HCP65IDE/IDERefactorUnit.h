@@ -131,7 +131,7 @@ public:
 	const char*		mszUnit;
 	char*			mszUnitText;
 
-	bool	GetFileText(const char* szFileName, CTextFile* pcFile, char** pszText, size* puiLength) override;
+	bool	GetFileText(const char* szFileName, CTextFile* pcFile, const char** pszText, size* puiLength) override;
 };
 
 

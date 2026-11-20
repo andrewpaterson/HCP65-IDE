@@ -111,7 +111,7 @@ typedef CArrayTemplate<SIDENeed>	CArrayIDENeeds;
 class CIDEFileTexts
 {
 public:
-	virtual bool	GetFileText(const char* szFileName, CTextFile* pcFile, char** pszText, size* puiLength) =0;
+	virtual bool	GetFileText(const char* szFileName, CTextFile* pcFile, const char** pszText, size* puiLength) =0;
 };
 
 

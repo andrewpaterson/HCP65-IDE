@@ -1354,9 +1354,9 @@ bool CIDEMoveClass::Move(SIDEClassMove* psMove, const char* szStem, CChars* pszS
 	CChars				szLine;
 	CChars				szMessage;
 	CChars				szNewName;
-	char*				szText;
-	char*				szOldSource;
-	char*				szUser;
+	const char*			szText;
+	const char*			szOldSource;
+	const char*			szUser;
 	size				uiStart;
 	size				uiEnd;
 	size				uiAt;
@@ -2128,9 +2128,9 @@ void CIDEMoveClass::AddInsert(const char* szFileName, size uiAt, const char* szT
 //////////////////////////////////////////////////////////////////////////
 void CIDEMoveClass::AddInclude(const char* szFileName, const char* szBeside, const char* szIncluded, CIDEFileEdits* pcEdits, CArrayIDEFileRanges* pasInserts, CArrayChars* paszTexts)
 {
-	CChars	szLine;
-	char*	szText;
-	size	uiAt;
+	CChars		szLine;
+	const char*	szText;
+	size		uiAt;
 
 	szText = (StringInsensitiveCompare(szFileName, szIncluded) != 0) ? pcEdits->GetText(szFileName) : NULL;
 	if (!szText)
@@ -2415,8 +2415,8 @@ bool CIDEMoveClass::MoveFunction(SIDEFunctionMove* psMove, const char* szHeader,
 	CChars				szMessage;
 	const char*			szTarget;
 	const char*			szOldHeader;
-	char*				szText;
-	char*				szTargetText;
+	const char*			szText;
+	const char*			szTargetText;
 	size				uiAt;
 	size				uiStart;
 	size				uiEnd;

@@ -1112,7 +1112,7 @@ bool CIDEMoveMembers::AddMember(const char* szClassKey, int32 iAccess, const cha
 	CArrayChars			aszLines;
 	CChars				szBefore;
 	CChars				szLine;
-	char*				szText;
+	const char*			szText;
 	size				uiAt;
 	size				i;
 	bool				bField;
@@ -1924,8 +1924,8 @@ void CIDEMoveMembers::AppendDeclarationText(SIDEMembersMove* psMove, SIDEMovedMe
 	CChars		szIndent;
 	CChars		szAfter;
 	const char*	szOverride;
-	char*		szText;
-	char*		szOutsideText;
+	const char*	szText;
+	const char*	szOutsideText;
 	size		uiStart;
 	size		uiLineStart;
 	size		uiEnd;
@@ -2017,7 +2017,7 @@ bool CIDEMoveMembers::MarkOverride(const char* szFunctionKey, CIDEFileEdits* pcE
 	CChars				szScope;
 	CChars				szAfter;
 	const char*			szWhyNot;
-	char*				szText;
+	const char*			szText;
 	size				uiStart;
 	size				uiEnd;
 	size				i;
@@ -2207,10 +2207,10 @@ bool CIDEMoveMembers::Move(SIDEMembersMove* psMove, CChars* pszStatus)
 	CChars					szKey;
 	CChars					szMessage;
 	CChars					szLast;
-	char*					szText;
-	char*					szToText;
-	char*					szOutsideText;
-	char*					szDestText;
+	const char*				szText;
+	const char*				szToText;
+	const char*				szOutsideText;
+	const char*				szDestText;
 	size					uiStart;
 	size					uiEnd;
 	size					uiAt;

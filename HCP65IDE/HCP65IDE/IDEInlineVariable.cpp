@@ -340,7 +340,7 @@ bool CIDEInlineVariable::FindInlining(SIDEInlining* psDest)
 	CIDEEffectFinder				cEffects;
 	SCPPSyntaxRange					sRange;
 	SCPPSyntaxRange					sValue;
-	char*							szText;
+	const char*						szText;
 	int								iLine;
 	int								iColumn;
 	int32							iToken;
@@ -584,7 +584,7 @@ bool CIDEInlineVariable::Inline(SIDEInlining* psInlining, CChars* pszStatus)
 	CIDETextEdits		cEdits;
 	CChars				szWrapped;
 	CChars				szMessage;
-	char*				szText;
+	const char*			szText;
 	size				uiStart;
 	size				uiEnd;
 	size				i;
@@ -756,7 +756,7 @@ bool CIDEInlineVariable::FindConstantInlining(SIDEConstantInlining* psDest)
 	SCPPSyntaxRange							sRange;
 	CChars									szNamed;
 	CChars									szWhy;
-	char*									szText;
+	const char*								szText;
 	size									uiLength;
 	size									uiPass;
 	size									i;
@@ -961,7 +961,7 @@ bool CIDEInlineVariable::InlineConstant(SIDEConstantInlining* psInlining, bool b
 	CIDEFileEdits	cFiles;
 	CChars			szValue;
 	CChars			szMessage;
-	char*			szText;
+	const char*		szText;
 	size			uiStart;
 	size			uiEnd;
 	size			uiUses;

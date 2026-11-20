@@ -765,7 +765,7 @@ void CIDEContent::ShowStatus(const char* szText)
 //
 //
 //////////////////////////////////////////////////////////////////////////
-char* CIDEContent::GetStatus(void) { return mpStatusBar->GetMessage(); }
+const char* CIDEContent::GetStatus(void) { return mpStatusBar->GetMessage(); }
 
 
 //////////////////////////////////////////////////////////////////////////

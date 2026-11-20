@@ -129,7 +129,7 @@ protected:
 	bool	IsTypeToken(CIDERefactorUnit* pcUnit, int32 iToken);
 	bool	IsSameTokens(CIDERefactorUnit* pcUnit, CArrayChars* paszTokens, int32 iAt);
 	bool	IsTypeAt(CIDERefactorUnit* pcUnit, CArrayChars* paszTokens, int32 iToken);
-	void	AddReplacement(CIDETextEdits* pcEdits, char* szText, size uiStart, size uiEnd, const char* szName);
+	void	AddReplacement(CIDETextEdits* pcEdits, const char* szText, size uiStart, size uiEnd, const char* szName);
 	void	ListIncluders(SIDETypedef* psTypedef, CArrayChars* paszDest);
 };
 

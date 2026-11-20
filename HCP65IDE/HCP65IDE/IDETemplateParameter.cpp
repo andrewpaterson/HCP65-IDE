@@ -398,7 +398,7 @@ bool CIDETemplateParameter::FindExtraction(SIDETemplateExtraction* psDest)
 	CChars							szClassName;
 	CTextFile						cFile;
 	const char*						szFileName;
-	char*							szText;
+	const char*						szText;
 	size							uiLength;
 	size							uiStart;
 	size							uiEnd;
@@ -571,7 +571,7 @@ const char* CIDETemplateParameter::GetProblem(SIDETemplateExtraction* psExtracti
 	CChars				szSite;
 	const char*			szFound;
 	const char*			szProblem;
-	char*				szText;
+	const char*			szText;
 	size				uiLength;
 	size				i;
 
@@ -641,7 +641,7 @@ bool CIDETemplateParameter::Extract(SIDETemplateExtraction* psExtraction, const 
 	CChars				szWhyNot;
 	SIDENamespaceSite	sHeaderSite;
 	SIDENamespaceSite	sDefinitionSite;
-	char*				szText;
+	const char*			szText;
 	size				uiStart;
 	size				uiEnd;
 	size				uiAllStart;
@@ -1198,7 +1198,7 @@ const char* CIDETemplateParameter::GetClassProblem(SIDETemplateExtraction* psExt
 	CChars		szClass;
 	const char*	szFound;
 	const char*	szProblem;
-	char*		szText;
+	const char*	szText;
 	size		uiLength;
 	size		uiName;
 
@@ -1274,8 +1274,8 @@ bool CIDETemplateParameter::ExtractClass(SIDETemplateExtraction* psExtraction, c
 	CChars				szNameClass;
 	const char*			szWhyNot;
 	const char*			szProblem;
-	char*				szText;
-	char*				szOther;
+	const char*			szText;
+	const char*			szOther;
 	size				uiStart;
 	size				uiEnd;
 	size				uiAllStart;
@@ -1690,7 +1690,7 @@ bool CIDETemplateParameter::FoldNameClass(const char* szClassKey, CChars* pszNam
 	CChars						szFileName;
 	CChars						szName;
 	CChars						szOldName;
-	char*						szText;
+	const char*					szText;
 	size						uiStart;
 	size						uiEnd;
 	size						uiAt;
@@ -1877,7 +1877,7 @@ bool CIDETemplateParameter::RemoveParameter(CChars* pszStatus)
 	CChars							szProblem;
 	CChars							szMessage;
 	const char*						szFileName;
-	char*							szText;
+	const char*						szText;
 	size							uiStart;
 	size							uiEnd;
 	size							uiLine;

@@ -65,8 +65,8 @@ public:
 
 	Ptr<CComponent>		GetComponent(void) const;
 	Ptr<CTextArea>		GetDisassembly(void) const;
-	char*				GetRegistersText(void);
-	char*				GetDisassemblyText(void);
+	const char*			GetRegistersText(void);
+	const char*			GetDisassemblyText(void);
 
 protected:
 	void				UpdateRegisters(CIDEDebugger* pcDebugger);

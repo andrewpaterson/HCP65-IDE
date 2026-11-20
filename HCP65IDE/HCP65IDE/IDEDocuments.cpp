@@ -910,10 +910,10 @@ void CIDEDocuments::SelectAtCaret(size uiLength)
 //////////////////////////////////////////////////////////////////////////
 void CIDEDocuments::SelectWordAtCaret(void)
 {
-	char*	szText;
-	size	uiStart;
-	size	uiEnd;
-	char	c;
+	const char*	szText;
+	size		uiStart;
+	size		uiEnd;
+	char		c;
 
 	if (mpActive.IsNull())
 	{

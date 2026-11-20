@@ -2204,7 +2204,7 @@ bool CIDEMoveNamespace::FindUsingDeclaration(SIDELocation* psUse, CIDEFileEdits*
 {
 	CIDERefactorUnit	cUnit;
 	SCPPSyntaxRange		sRange;
-	char*				szText;
+	const char*			szText;
 	int32				iToken;
 	size				uiEnd;
 	bool				bFound;

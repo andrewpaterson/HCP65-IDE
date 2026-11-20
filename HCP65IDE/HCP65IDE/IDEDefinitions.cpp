@@ -163,7 +163,7 @@ Ptr<CTextArea> CIDEFileEdits::GetEditor(const char* szFileName)
 // A file's text as its editor has it, NULL if it can't be opened.
 //
 //////////////////////////////////////////////////////////////////////////
-char* CIDEFileEdits::GetText(const char* szFileName)
+const char* CIDEFileEdits::GetText(const char* szFileName)
 {
 	Ptr<CTextArea>	pEditor;
 
@@ -224,7 +224,7 @@ size CIDEFileEdits::CountErrors(bool bEdited)
 	CArrayChars		aszTexts;
 	CChars			szNew;
 	CChars			szUnit;
-	char*			szText;
+	const char*		szText;
 	size			uiErrors;
 	size			uiFile;
 	size			uiProject;
@@ -974,7 +974,7 @@ bool CIDEDefinitions::FindDefinitionPlace(SIDEFunction* psFunction, CIDEFileEdit
 	SIDELocation*		psDefined;
 	CIDERefactorUnit*	pcUnit;
 	const char*			szWhyNot;
-	char*				szText;
+	const char*			szText;
 	size				uiOwn;
 	size				uiSibling;
 	size				uiLength;
@@ -1180,8 +1180,8 @@ bool CIDEDefinitions::PutDefinition(SIDEFunction* psFunction, CIDEFileEdits* pcE
 	CChars				szBanner;
 	CChars				szDefinition;
 	CChars				szNewBody;
-	char*				szDeclarationText;
-	char*				szText;
+	const char*			szDeclarationText;
+	const char*			szText;
 	int					iWhere;
 
 	psDeclared = psFunction->bDeclaration ? &psFunction->sDeclaration : &psFunction->sDefinition;
@@ -1268,7 +1268,7 @@ bool CIDEDefinitions::GenerateDefinition(void)
 	CChars				szFileName;
 	CChars				szMessage;
 	const char*			szWhyNot;
-	char*				szText;
+	const char*			szText;
 	size				uiAt;
 	bool				bResult;
 
@@ -1375,8 +1375,8 @@ bool CIDEDefinitions::GenerateDeclaration(void)
 	CChars				szReturn;
 	CChars				szMessage;
 	const char*			szWhyNot;
-	char*				szText;
-	char*				szDefinitionText;
+	const char*			szText;
+	const char*			szDefinitionText;
 	size				uiAt;
 	size				uiLineStart;
 	size				uiNameColumn;
@@ -1686,7 +1686,7 @@ bool CIDEDefinitions::FindUndeclaredDefinition(SIDEFunction* psFunction, CIDEFil
 	CChars				szKey;
 	const char*			szWhyNot;
 	const char*			szFound;
-	char*				szText;
+	const char*			szText;
 	size				uiFound;
 	size				uiName;
 	size				uiLineStart;
@@ -2025,7 +2025,7 @@ bool CIDEDefinitions::MoveFunctionToSource(SIDEFunction* psFunction, CIDEFileEdi
 	CChars				szOutside;
 	CChars				szDeclaration;
 	CChars				szPart;
-	char*				szText;
+	const char*			szText;
 	size				uiStart;
 	size				uiEnd;
 	size				uiAt;
@@ -2105,8 +2105,8 @@ bool CIDEDefinitions::MoveFunctionToHeader(SIDEFunction* psFunction, CIDEFileEdi
 	CChars				szDefinition;
 	CChars				szBody;
 	CChars				szOutside;
-	char*				szText;
-	char*				szHeaderText;
+	const char*			szText;
+	const char*			szHeaderText;
 	size				uiStart;
 	size				uiEnd;
 	size				uiAt;
@@ -2180,7 +2180,7 @@ bool CIDEDefinitions::MoveDefinitionOut(void)
 	CChars				szInitialisers;
 	CChars				szMessage;
 	const char*			szWhyNot;
-	char*				szText;
+	const char*			szText;
 	size				uiAt;
 	bool				bResult;
 
@@ -2299,8 +2299,8 @@ bool CIDEDefinitions::MoveDefinitionIn(void)
 	CChars					szName;
 	CChars					szMessage;
 	const char*				szWhyNot;
-	char*					szText;
-	char*					szDefinitionText;
+	const char*				szText;
+	const char*				szDefinitionText;
 	size					uiStart;
 	size					uiEnd;
 	size					uiLineStart;

@@ -227,7 +227,7 @@ bool CIDEConvertMember::ToMemberBody(CIDERefactorUnit* pcUnit, SIDESignatureSite
 	CCPPSyntax*					pcParent;
 	CCPPSyntaxMemberExpression*	pcMember;
 	CChars						szMember;
-	char*						szText;
+	const char*					szText;
 	size						uiStart;
 	size						uiEnd;
 	size						uiMemberStart;
@@ -340,7 +340,7 @@ bool CIDEConvertMember::ToMemberCall(SIDESignature* psSignature, SIDESignatureCa
 	CCPPSyntax*			pcObject;
 	SCPPSyntaxRange*	psRange;
 	CChars				szCall;
-	char*				szText;
+	const char*			szText;
 	size				uiName;
 	size				uiStart;
 	size				uiEnd;
@@ -424,7 +424,7 @@ bool CIDEConvertMember::ToMember(SIDESignature* psSignature, CIDEFileEdits* pcFi
 	CChars					szKey;
 	CChars					szLine;
 	CChars					szReturn;
-	char*					szText;
+	const char*				szText;
 	size					uiStart;
 	size					uiEnd;
 	size					uiDefinitions;
@@ -658,7 +658,7 @@ bool CIDEConvertMember::ToFunctionBody(CIDERefactorUnit* pcUnit, SIDESignatureSi
 	CChars				szName;
 	CChars				szThrough;
 	const char*			szKey;
-	char*				szText;
+	const char*			szText;
 	size				uiStart;
 	size				uiEnd;
 	size				i;
@@ -762,7 +762,7 @@ bool CIDEConvertMember::ToFunctionCall(SIDESignature* psSignature, SIDESignature
 	CCPPSyntax*					pcNode;
 	CCPPSyntaxMemberExpression*	pcMember;
 	CChars						szCall;
-	char*						szText;
+	const char*					szText;
 	size						uiStart;
 	size						uiEnd;
 	size						uiArguments;
@@ -848,7 +848,7 @@ bool CIDEConvertMember::ToFunction(SIDESignature* psSignature, CIDEFileEdits* pc
 	CChars				szRest;
 	CChars				szIndent;
 	const char*			szConst;
-	char*				szText;
+	const char*			szText;
 	size				uiStart;
 	size				uiEnd;
 	size				uiAt;
@@ -1055,7 +1055,7 @@ bool CIDEConvertMember::Convert(bool bToMember, CChars* pszStatus)
 	CArrayChars			aszOtherNewLabels;
 	CChars				szMessage;
 	CChars				szName;
-	char*				szText;
+	const char*			szText;
 	size				uiCalls;
 	size				uiBefore;
 	size				uiLabels;

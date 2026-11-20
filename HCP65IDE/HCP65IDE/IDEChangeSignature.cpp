@@ -1524,7 +1524,7 @@ void CIDEChangeSignature::FindOldParameters(SIDESignature* psSignature)
 	SCPPSyntaxRange			sRange;
 	CTextFile				cFile;
 	CChars					szPart;
-	char*					szText;
+	const char*				szText;
 	size					uiLength;
 	size					i;
 
@@ -2729,7 +2729,7 @@ size CIDEChangeSignature::ChangeLabels(SIDESignature* psSignature, CArrayChars* 
 	CArrayChars*		paszFrom;
 	CArrayChars*		paszTo;
 	char*				szFileName;
-	char*				szText;
+	const char*			szText;
 	const char*			szFound;
 	const char*			szOld;
 	size				uiLength;
@@ -2843,7 +2843,7 @@ bool CIDEChangeSignature::UnifyNames(CChars* pszStatus)
 	CArrayChars				aszNames;
 	CChars					szName;
 	CChars					szMessage;
-	char*					szText;
+	const char*				szText;
 	size					uiLength;
 	size					uiDifferent;
 	size					i;
@@ -2997,7 +2997,7 @@ bool CIDEChangeSignature::Change(SIDESignature* psSignature, SIDESignatureChange
 	CChars					szMessage;
 	CChars					szNew;
 	CChars					szOldName;
-	char*					szText;
+	const char*				szText;
 	const char*				szFileName;
 	size					uiFile;
 	size					uiStart;

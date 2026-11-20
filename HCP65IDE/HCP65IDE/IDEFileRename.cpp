@@ -522,7 +522,7 @@ bool CIDEFileRename::AddEdit(CArrayChars* paszFiles, CArrayIDEFileEdits* pasEdit
 	size			uiFile;
 	size			uiLength;
 	size			i;
-	char*			szText;
+	const char*		szText;
 	bool			bSame;
 	SIDEFileEdit*	psEdit;
 
@@ -577,7 +577,7 @@ bool CIDEFileRename::SearchFiles(CArrayChars* paszOldNames, bool bComments, bool
 	EIDEFileType				eType;
 	bool						bCpp;
 	CTextFile					cFile;
-	char*						szText;
+	const char*					szText;
 	size						uiLength;
 	SIDELineCounter				sLines;
 	CArrayIDENameOccurrences	asFound;

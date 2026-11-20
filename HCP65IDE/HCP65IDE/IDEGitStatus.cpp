@@ -330,8 +330,8 @@ void CIDEGitStatus::ReadGitBase(Ptr<CIDEEditorTab> pTab)
 //////////////////////////////////////////////////////////////////////////
 void CIDEGitStatus::UpdateChangeBars(Ptr<CIDEEditorTab> pTab)
 {
-	CChars*	pszBase;
-	char*	szText;
+	CChars*		pszBase;
+	const char*	szText;
 
 	if (!pTab->HasBaseText())
 	{
@@ -416,7 +416,7 @@ void CIDEGitStatus::ChangeBarClicked(CCodeEditor* pcEditor, size uiLine)
 bool CIDEGitStatus::ShowChange(Ptr<CIDEEditorTab> pTab, size uiLine)
 {
 	CChars*					pszBase;
-	char*					szText;
+	const char*				szText;
 	SGitLineChange*			psChange;
 	size					i;
 	size					uiLines;

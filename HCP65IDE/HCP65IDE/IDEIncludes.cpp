@@ -171,7 +171,7 @@ void CIDEIncludeGraph::Read(int iFile)
 	CArrayIDEIncludes	asIncludes;
 	SIDEInclude*		psInclude;
 	CChars				szFileName;
-	char*				szText;
+	const char*			szText;
 	size				uiLength;
 	size				i;
 	int					iIncluded;
@@ -619,7 +619,7 @@ bool CIDEIncludes::AppendForwardDeclaration(const char* szKey, const char* szDec
 	SIDELocation*		psLocation;
 	CTextFile			cFile;
 	const char*			szWord;
-	char*				szText;
+	const char*			szText;
 	size				uiLength;
 	size				uiAt;
 	size				i;
@@ -681,7 +681,7 @@ bool CIDEIncludes::FindUsedMacro(CIDEIncludeGraph* pcGraph, int iInclude, const 
 	CArrayInt	aiFiles;
 	CTextFile	cFile;
 	CChars		szName;
-	char*		szFile;
+	const char*	szFile;
 	size		uiLength;
 	size		uiLine;
 	size		uiAfter;
@@ -900,7 +900,7 @@ bool CIDEIncludes::FindPlan(SIDEIncludePlan* psDest)
 	SIDEIncludeUse*		psUse;
 	CChars				szLine;
 	CChars				szMacro;
-	char*				szText;
+	const char*			szText;
 	size				uiLength;
 	size				i;
 	size				j;
@@ -1783,7 +1783,7 @@ size CIDEIncludes::CountPlanErrors(SIDEIncludePlan* psPlan, const char* szText)
 	CChars			szNew;
 	CChars			szUnitNew;
 	CChars			szUnit;
-	char*			szUnitText;
+	const char*		szUnitText;
 	size			uiLength;
 	size			uiProject;
 	size			uiErrors;
@@ -1844,8 +1844,8 @@ bool CIDEIncludes::Optimise(SIDEIncludePlan* psPlan, CChars* pszStatus)
 	CChars			szMessage;
 	CChars			szName;
 	CChars			szLine;
-	char*			szText;
-	char*			szOther;
+	const char*		szText;
+	const char*		szOther;
 	size			uiRemoved;
 	size			uiForward;
 	size			uiNeeded;
