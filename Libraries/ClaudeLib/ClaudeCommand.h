@@ -38,6 +38,10 @@ along with Codaphela ClaudeLib.  If not, see <http://www.gnu.org/licenses/>.
 //to use (such as running a command) is refused, which the finished event lists.  Tools named with SetAllowedTools are
 //allowed as well.
 //
+//Claude Code only reads, searches and changes files in the folder it is run in and the folders added with
+//AddDirectory: anything outside them is refused.  A solution whose projects are beside its folder, or in other
+//repositories, needs those added.
+//
 //The request is passed on the command line, which Windows limits to 32767 characters, so send where things are (a
 //file and its lines) rather than their text.
 class CClaudeCommand
@@ -50,6 +54,7 @@ protected:
 	CChars			mszPermissionMode;
 	CChars			mszAllowedTools;	//Comma separated, "" for none more.
 	CChars			mszModel;			//"" for the user's own choice.
+	CArrayChars		maszDirectories;	//Folders Claude may work in as well as the one it is run in.
 	bool			mbStarted;			//Since Init: whether there is a result.
 
 public:
@@ -59,6 +64,9 @@ public:
 	void			SetPermissionMode(const char* szMode);
 	void			SetAllowedTools(const char* szTools);
 	void			SetModel(const char* szModel);
+	void			ClearDirectories(void);
+	void			AddDirectory(const char* szDirectory);
+	CArrayChars*	GetDirectories(void);
 
 	bool			Start(const char* szDirectory, const char* szRequest);
 	bool			Poll(CArrayClaudeEvents* paEvents);

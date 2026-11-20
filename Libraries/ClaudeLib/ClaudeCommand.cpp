@@ -42,6 +42,7 @@ void CClaudeCommand::Init(void)
 	mszPermissionMode.Init("acceptEdits");
 	mszAllowedTools.Init();
 	mszModel.Init();
+	maszDirectories.Init();
 	mbStarted = false;
 }
 
@@ -53,6 +54,7 @@ void CClaudeCommand::Init(void)
 //////////////////////////////////////////////////////////////////////////
 void CClaudeCommand::Kill(void)
 {
+	maszDirectories.Kill();
 	mszModel.Kill();
 	mszAllowedTools.Kill();
 	mszPermissionMode.Kill();
@@ -103,13 +105,39 @@ void CClaudeCommand::SetModel(const char* szModel)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// A folder Claude may read, search and change files in as well as the one
+// it is run in (Claude Code's --add-dir), for the requests after.  One
+// already added isn't added again.
+//
+//////////////////////////////////////////////////////////////////////////
+void CClaudeCommand::AddDirectory(const char* szDirectory)
+{
+	maszDirectories.AddIfUnique(szDirectory);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Only the folder Claude is run in.
+//
+//////////////////////////////////////////////////////////////////////////
+void CClaudeCommand::ClearDirectories(void)
+{
+	maszDirectories.ReInit();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // The arguments after the program: the request first, so an option
-// taking a list (--allowedTools) can't take it as one of its own.
+// taking a list (--allowedTools, --add-dir) can't take it as one of its
+// own.
 //
 //////////////////////////////////////////////////////////////////////////
 void CClaudeCommand::GetArguments(const char* szRequest, CArrayChars* paszArguments)
 {
 	CChars*	pszRequest;
+	size	i;
 
 	paszArguments->Add("-p");
 
@@ -140,6 +168,14 @@ void CClaudeCommand::GetArguments(const char* szRequest, CArrayChars* paszArgume
 	{
 		paszArguments->Add("--allowedTools");
 		paszArguments->Add(mszAllowedTools.Text());
+	}
+	if (maszDirectories.NumElements() > 0)
+	{
+		paszArguments->Add("--add-dir");
+		for (i = 0; i < maszDirectories.NumElements(); i++)
+		{
+			paszArguments->Add(maszDirectories.GetText(i));
+		}
 	}
 }
 
@@ -258,5 +294,6 @@ char* CClaudeCommand::GetSessionId(void) { return mcStream.GetSessionId(); }  //
 void CClaudeCommand::SetSessionId(const char* szSessionId) { mcStream.SetSessionId(szSessionId); }  //To carry on a conversation from before.
 CArrayChars* CClaudeCommand::GetChangedFiles(void) { return mcStream.GetChangedFiles(); }  //By the last request.
 CChars* CClaudeCommand::GetErrors(void) { return &mszErrors; }
+CArrayChars* CClaudeCommand::GetDirectories(void) { return &maszDirectories; }
 char* GetClaudeExecutable(void) { return gszClaudeExecutable; }
 

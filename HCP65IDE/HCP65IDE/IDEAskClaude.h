@@ -35,6 +35,10 @@ class CIDEContent;
 //The Claude tab under the editor: requests, such as refactorings, sent to Claude Code run headless in the solution's
 //folder (see CClaudeCommand), saying where the caret and selection are.  Files are saved before a request, and the
 //open files Claude changes are read again as it changes them.
+//
+//Claude Code refuses to read or search outside the folders it is given, and a solution's projects are mostly outside
+//its folder (libraries beside it, and in other repositories).  So it is also given the repository of each solution
+//and project in the workspace, or the project's folder if it is in none (AddClaudeDirectories).
 class CIDEAskClaude : public CObject
 {
 friend class CIDEScript;
@@ -64,6 +68,8 @@ public:
 
 protected:
 	bool				GetClaudeDirectory(CChars* pszDirectory);
+	void				AddClaudeDirectories(const char* szDirectory);
+	void				AddClaudeDirectory(const char* szFolder, const char* szDirectory);
 	void				AppendClaudeContext(CChars* pszRequest);
 	void				ReloadClaudeFiles(bool bAll);
 	bool				ReloadClaudeFile(Ptr<CIDEEditorTab> pTab);

@@ -3985,9 +3985,10 @@ if os.name != 'nt':
 		         'edit:release:Left Shift,edit:claudetype:line,edit:printclaude,edit:tap:Enter,wait:1500,edit:printclaude'},
 		[r'^Claude: .* keys request$', r'^Claude request: \[\]$', r'^Claude request: \[Hello there\]$',
 		 r'^Claude: .* keys request$', r'^Claude status: \[Done, \$0\.01\.\]$', r'^Claude request: \[\]$',
-		 r'^Claude conversation: \[> Hello there$', r'^  Read Engine\.h$', r'^Asked: Hello there\]$',
-		 r'^Claude request: \[Second$', r'^line\]$',
-		 r'^Claude: .* keys request$', r'^Claude request: \[\]$', r'^> Second$', r'^> line$', r'^Asked: Second\]$'],
+		 r'^Claude conversation: \[> Hello there$', r'^  Read Engine\.h$', r'^Started in RenameFile \(new\), also given: HCP65-IDE$',
+		 r'^Asked: Hello there\]$', r'^Claude request: \[Second$', r'^line\]$',
+		 r'^Claude: .* keys request$', r'^Claude request: \[\]$', r'^> Second$', r'^> line$',
+		 r'^Started in RenameFile \(carried on\), also given: HCP65-IDE$', r'^Asked: Second\]$'],
 		[r'^Claude: .* keys nothing$']))
 
 

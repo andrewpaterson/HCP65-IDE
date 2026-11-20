@@ -62,6 +62,26 @@ void TestClaudeCommandArguments(void)
 	aszArguments.Init();
 	cCommand.GetArguments("Again", &aszArguments);
 	AssertSize(MAX_SIZE, aszArguments.GetIndex("--resume"));
+	AssertSize(MAX_SIZE, aszArguments.GetIndex("--add-dir"));
+	aszArguments.Kill();
+
+	//The folders Claude may work in as well as the one it is run in follow one --add-dir, each added once.
+	cCommand.AddDirectory("/home/me/Libraries");
+	cCommand.AddDirectory("/home/me/Other Code");
+	cCommand.AddDirectory("/home/me/Libraries");
+	AssertSize(2, cCommand.GetDirectories()->NumElements());
+	aszArguments.Init();
+	cCommand.GetArguments("Again", &aszArguments);
+	sz.Init();
+	JoinTestArguments(&aszArguments, &sz);
+	AssertString("-p | Again | --output-format | stream-json | --verbose | --permission-mode | plan | --model | sonnet | --allowedTools | Bash(git diff:*),Read | --add-dir | /home/me/Libraries | /home/me/Other Code", sz.Text());
+	sz.Kill();
+	aszArguments.Kill();
+
+	cCommand.ClearDirectories();
+	aszArguments.Init();
+	cCommand.GetArguments("Again", &aszArguments);
+	AssertSize(MAX_SIZE, aszArguments.GetIndex("--add-dir"));
 	aszArguments.Kill();
 
 	AssertFalse(cCommand.IsRunning());

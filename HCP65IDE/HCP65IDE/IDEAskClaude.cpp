@@ -185,6 +185,7 @@ bool CIDEAskClaude::AskClaude(const char* szRequest)
 	mpClaudePane->AppendRequest(szRequest);
 	muiClaudeReloaded = 0;
 	muiClaudeTools = 0;
+	AddClaudeDirectories(szDirectory.Text());
 	bResult = mcClaude.Start(szDirectory.Text(), szFull.Text());
 	szFull.Kill();
 	szDirectory.Kill();
@@ -226,6 +227,70 @@ bool CIDEAskClaude::GetClaudeDirectory(CChars* pszDirectory)
 	cFileUtil.FullPath(pszDirectory);
 	cFileUtil.RemoveLastFromPath(pszDirectory);
 	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The folders Claude may work in as well as szDirectory, the one it is run
+// in: the repository of each solution and project in the workspace, as
+// they are now.  Without them it can't read or search the projects that
+// aren't under the startup solution's folder, which is most of them.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEAskClaude::AddClaudeDirectories(const char* szDirectory)
+{
+	CBuildWorkspace*	pcWorkspace;
+	CVcxProject*		pcProject;
+	size				i;
+
+	mcClaude.ClearDirectories();
+	pcWorkspace = mpcContent->GetWorkspace();
+	for (i = 0; i < pcWorkspace->NumSolutions(); i++)
+	{
+		AddClaudeDirectory(pcWorkspace->GetSolution(i)->mcSolution.GetDirectory(), szDirectory);
+	}
+	for (i = 0; i < pcWorkspace->NumProjects(); i++)
+	{
+		pcProject = pcWorkspace->GetSolutionProject(i)->GetProject();
+		if (pcProject)
+		{
+			AddClaudeDirectory(pcProject->GetDirectory(), szDirectory);
+		}
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Claude may work in szFolder's repository, or in szFolder if it is in
+// none; not added if that is szDirectory (where it is run) or in it.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEAskClaude::AddClaudeDirectory(const char* szFolder, const char* szDirectory)
+{
+	CChars	szAdded;
+	CChars	szRun;
+
+	if (szFolder[0] == '\0')
+	{
+		return;
+	}
+
+	szAdded.Init();
+	if (!FindGitRoot(szFolder, &szAdded))
+	{
+		szAdded.Set(szFolder);
+		MakeFullGitPath(&szAdded);
+	}
+	szRun.Init(szDirectory);
+	MakeFullGitPath(&szRun);
+	if (!IsGitPathIn(szAdded.Text(), szRun.Text()))
+	{
+		mcClaude.AddDirectory(szAdded.Text());
+	}
+	szRun.Kill();
+	szAdded.Kill();
 }
 
 
