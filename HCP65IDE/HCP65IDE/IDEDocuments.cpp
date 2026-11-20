@@ -974,6 +974,75 @@ bool CIDEDocuments::SetCaretPlace(int iLine, int iColumn)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// The point of the window under the active editor's caret, its left and
+// its bottom: where a popup about what is at the caret opens.  False if
+// there is no editor.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEDocuments::GetCaretPoint(SInt32Vec2* psPoint)
+{
+	Ptr<CTextArea>	pEditor;
+	CInt32Rect		cBounds;
+	CInt32Rect		cCaret;
+
+	if (mpActive.IsNull())
+	{
+		return false;
+	}
+	pEditor = mpActive->GetEditor();
+	pEditor->GetActualBounds(&cBounds);
+	pEditor->GetCaretBounds(&cCaret);
+	psPoint->Init(cBounds.GetLeft() + cCaret.GetLeft(), cBounds.GetTop() + cCaret.GetBottom());
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A menu opened as a popup under the active editor's caret, its item
+// uiSelected selected: Alt+Enter's actions, or a chooser that is a menu
+// (Introduce Variable's expressions).  It is at most a third of the
+// screen's height and no taller than the editor's view: more rows scroll.
+// A press anywhere outside it closes it, in the editor too.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDocuments::OpenCaretMenu(Ptr<CMenuContainer> pMenu, size uiSelected)
+{
+	Ptr<CPopup>		pPopup;
+	CInt32Rect		cScreen;
+	SInt32Vec2		sPosition;
+	int32			iMaximum;
+	int32			iView;
+
+	if (!GetCaretPoint(&sPosition))
+	{
+		return;
+	}
+	pPopup = pMenu->Open(sPosition, mpActive->GetEditor(), true);
+
+	//Its owner is the editor, most of the window: a press there closes it, as one anywhere else outside it does.
+	pPopup->SetOwnerPressKeepsOpen(false);
+
+	iMaximum = -1;
+	if (mpcContent->GetWindow()->GetScreenArea(&cScreen) && (cScreen.GetHeight() > 0))
+	{
+		iMaximum = cScreen.GetHeight() / 3;
+	}
+	iView = mpActive->GetPane()->GetActualSize().y;
+	if ((iView > 0) && ((iMaximum < 0) || (iView < iMaximum)))
+	{
+		iMaximum = iView;
+	}
+	if (iMaximum > 0)
+	{
+		pPopup->SetMaximumHeight(iMaximum, mpcContent->GetTheme());
+	}
+	pMenu->Select((int32)uiSelected);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Where a symbol is named in the active editor: at its caret, or just
 // before it (as after the name is typed), or where its selection starts.
 // Its line and a column in the name (0 based), and how it is named there

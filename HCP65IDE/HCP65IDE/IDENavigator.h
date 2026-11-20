@@ -29,6 +29,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/MenuContainer.h"
 #include "WindowLib/CommandSet.h"
 #include "IDEIcons.h"
+#include "IDEChooser.h"
 
 
 class CIDEContent;
@@ -38,6 +39,11 @@ class CIDEContent;
 //(Control+Alt+Shift+N), whose dialog's searcher it is; Go to Source (Control+B), the file an #include names or a
 //definition; and Alt+O, between a .cpp and its header.  The files it searches are the code model's list of the
 //projects' files (CIDECodeModel::GetProjectFile).
+//
+//And the "go to"s that can have more than one answer (NavigationPlan.txt, S1): Go to Implementation (Control+Alt+B)
+//and Go to Super Method (Control+U).  Each finds its targets from the symbol at the caret and ends in GoToTargets:
+//none, and the status line says so; one, and it is gone to; several, and a chooser under the caret lists them with a
+//preview of each (CIDEChooser).
 class CIDENavigator : public CObject, public CGoToSearcher
 {
 friend class CIDEScript;
@@ -51,6 +57,7 @@ protected:
 	int32				miGoToFileIcon;  //The dialog's first file icon, by EIDEFileType from it.
 	int32				maiGoToSymbolIcons[IST_Count];
 	int32				miQueuedGoTo;  //The Go to tab posted to be shown at the next tick (ShowQueuedGoTo).
+	Ptr<CIDEChooser>	mpTargets;  //The chooser of a "go to" with several targets.
 
 public:
 	void	Init(CIDEContent* pcContent);
@@ -74,6 +81,15 @@ public:
 	bool				GoToSource(void);
 	bool				CanGoToSource(void);
 	bool				SwitchHeaderSource(void);
+	bool				GoToImplementation(void);
+	bool				GoToSuperMethod(void);
+	bool				CanGoToImplementation(void);
+	bool				CanGoToSuperMethod(void);
+	bool				FindCaretSymbol(CChars* pszKey, uint8* puiKind);
+	bool				FindCaretFunction(CChars* pszKey, uint8* puiKind);
+	bool				GoToTargets(const char* szWhat, const char* szOf, CArrayIDETargets* pasTargets);
+	Ptr<CIDEChooser>	GetTargetsChooser(void) const;
+	void				Detach(void);
 
 protected:
 	bool				GetIncludeAtCaret(CChars* pszName, bool* pbSystem);

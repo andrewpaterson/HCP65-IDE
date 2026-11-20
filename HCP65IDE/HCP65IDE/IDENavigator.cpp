@@ -18,11 +18,18 @@ You should have received a copy of the GNU Lesser General Public License
 along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 ** ------------------------------------------------------------------------ **/
+#include <ctype.h>
 #include "BaseLib/FileUtil.h"
+#include "BaseLib/StringHelper.h"
+#include "CppCompilerLib/CPPIndex.h"
+#include "CppCompilerLib/CPPSyntaxFunctionDefinition.h"
+#include "CppCompilerLib/CPPSyntaxDeclarator.h"
+#include "CppCompilerLib/CPPSyntaxName.h"
 #include "SupportLib/PNGWriter.h"
 #include "StandardLib/ClassDefines.h"
 #include "IDEContent.h"
 #include "IDENavigator.h"
+#include "IDERefactorUnit.h"
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -52,6 +59,7 @@ void CIDENavigator::Class(void)
 	U_Pointer(mpcContent);
 	M_Pointer(mpNavigateMenu);
 	M_Pointer(mpGoTo);
+	M_Pointer(mpTargets);
 	U_String(mszGoToPattern);
 	U_Int32(miGoToFileIcon);
 	U_Int32(miQueuedGoTo);
@@ -164,6 +172,8 @@ void CIDENavigator::AddCommands(Ptr<CCommandSet> pCommands)
 	pCommands->Add("Navigate.GoToSymbol", "Symbol...", "Control+Alt+Shift+N", Ptr<CImageCel>(), this, &CIDENavigator::GoToSymbol);
 	pCommands->Add("Navigate.GoToSource", "Go to Source", "Control+B", Ptr<CImageCel>(), this, &CIDENavigator::GoToSource)->SetEnabledCheck(this, &CIDENavigator::CanGoToSource);
 	pCommands->Add("Navigate.SwitchHeaderSource", "Switch Header/Source", "Alt+O", Ptr<CImageCel>(), this, &CIDENavigator::SwitchHeaderSource);
+	pCommands->Add("Navigate.GoToImplementation", "Go to Implementation(s)", "Control+Alt+B", Ptr<CImageCel>(), this, &CIDENavigator::GoToImplementation)->SetEnabledCheck(this, &CIDENavigator::CanGoToImplementation);
+	pCommands->Add("Navigate.GoToSuperMethod", "Go to Super Method", "Control+U", Ptr<CImageCel>(), this, &CIDENavigator::GoToSuperMethod)->SetEnabledCheck(this, &CIDENavigator::CanGoToSuperMethod);
 }
 
 
@@ -637,3 +647,263 @@ void CIDENavigator::AddEditorItems(Ptr<CMenuContainer> pMenu)
 {
 	pMenu->AddItem(mpcContent->GetCommands()->Find("Navigate.GoToSource"));
 }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The symbol named at the active editor's caret (CIDEDocuments::
+// FindSymbolPlace), once the index has what was typed: its key and kind.
+// False if none is.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDENavigator::FindCaretSymbol(CChars* pszKey, uint8* puiKind)
+{
+	Ptr<CIDEEditorTab>	pTab;
+	int					iLine;
+	int					iColumn;
+	uint8				uiRole;
+
+	pTab = mpcContent->GetDocuments()->GetActiveTab();
+	if (pTab.IsNull())
+	{
+		return false;
+	}
+	mpcContent->GetDocuments()->UpdateEditedTabsNow();
+	return mpcContent->GetDocuments()->FindSymbolPlace(&iLine, &iColumn, &uiRole) &&
+		   mpcContent->GetCodeModel()->GetSymbolAt(pTab->GetFileName(), iLine, iColumn, pszKey, puiKind);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The function whose definition the active editor's caret is in, as the
+// refactorings find it: the file parsed as it is now, the function
+// definition round the caret, and the symbol its name is.  False if the
+// caret isn't in one.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDENavigator::FindCaretFunction(CChars* pszKey, uint8* puiKind)
+{
+	Ptr<CIDEEditorTab>				pTab;
+	CIDERefactorUnit				cUnit;
+	CCPPSyntaxFunctionDefinition*	pcFunction;
+	CCPPSyntax*						pcNode;
+	CCPPSyntaxName*					pcName;
+	SCPPSyntaxRange					sRange;
+	int								iLine;
+	int								iColumn;
+	bool							bFound;
+
+	pTab = mpcContent->GetDocuments()->GetActiveTab();
+	if (pTab.IsNull() || !pTab->GetCaretPlace(&iLine, &iColumn))
+	{
+		return false;
+	}
+	mpcContent->GetDocuments()->UpdateEditedTabsNow();
+	cUnit.Init();
+	bFound = false;
+	if (cUnit.Parse(mpcContent->GetCodeModel(), &mpcContent->GetFindInFiles(), pTab->GetFileName(), false))
+	{
+		pcNode = cUnit.FindNodeAt(iLine, iColumn);
+		pcFunction = pcNode ? (CCPPSyntaxFunctionDefinition*)cUnit.FindAncestor(pcNode, CPPS_FunctionDefinition) : NULL;
+		pcName = (pcFunction && pcFunction->mpcDeclarator) ? pcFunction->mpcDeclarator->GetName() : NULL;
+		bFound = pcName && pcName->GetLast() && cUnit.GetTokensRange(pcName->GetLast()->miFirstToken, pcName->GetLast()->miFirstToken, &sRange) &&
+				 mpcContent->GetCodeModel()->GetSymbolAt(pTab->GetFileName(), sRange.iLine, sRange.iColumn, pszKey, puiKind);
+	}
+	cUnit.Kill();
+	return bFound;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Where every "go to" with several answers ends.  With no target the
+// status line says there are none ("No implementations of CVat::Fill.");
+// one is gone to, its name selected; several are listed in a chooser
+// under the caret, with a preview of each, for one to be chosen.  A
+// target that is where the caret already is isn't one.  szWhat is what
+// they are, in the plural ("implementations"); szOf is the key of what
+// they are of.  True if there was anywhere to go.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDENavigator::GoToTargets(const char* szWhat, const char* szOf, CArrayIDETargets* pasTargets)
+{
+	Ptr<CIDEEditorTab>	pTab;
+	SIDETarget*			psTarget;
+	CChars				szText;
+	CChars				szName;
+	size				i;
+	size				uiTargets;
+	int					iLine;
+	int					iColumn;
+
+	//Where the caret is isn't somewhere to go.
+	pTab = mpcContent->GetDocuments()->GetActiveTab();
+	if (pTab.IsNotNull() && pTab->GetCaretPlace(&iLine, &iColumn))
+	{
+		for (i = pasTargets->NumElements(); i > 0; i--)
+		{
+			psTarget = pasTargets->Get(i - 1);
+			if ((psTarget->sLocation.iLine == iLine) && (iColumn >= psTarget->sLocation.iColumn) && (iColumn <= psTarget->sLocation.iColumn + psTarget->sLocation.iLength) &&
+				(StringCompare(psTarget->sLocation.szFileName.Text(), pTab->GetFileName()) == 0))
+			{
+				psTarget->szKey.Kill();
+				psTarget->sLocation.szFileName.Kill();
+				pasTargets->RemoveAt(i - 1);
+			}
+		}
+	}
+
+	szName.Init();
+	GetIDEScopedName(szOf, &szName);
+	uiTargets = pasTargets->NumElements();
+	if (uiTargets == 0)
+	{
+		szText.Init("No ");
+		szText.Append(szWhat);
+		szText.Append(" of ");
+		szText.Append(szName);
+		szText.Append(".");
+		mpcContent->ShowStatus(szText.Text());
+		szText.Kill();
+	}
+	else if (uiTargets == 1)
+	{
+		mpcContent->GetDocuments()->OpenLocation(&pasTargets->Get(0)->sLocation, true);
+	}
+	else
+	{
+		//"Implementations of CVat::Fill  3".
+		szText.Init(szWhat);
+		szText.SetChar(0, (char)toupper((unsigned char)szWhat[0]));
+		szText.Append(" of ");
+		szText.Append(szName);
+		szText.Append("  ");
+		szText.Append((uint32)uiTargets);
+		if (mpTargets.IsNull())
+		{
+			mpTargets = OMalloc<CIDEChooser>(mpcContent);
+		}
+		mpTargets->Begin(szText.Text(), true, true, NULL);
+		szText.Kill();
+		mpTargets->SetSelectName(true);
+		for (i = 0; i < uiTargets; i++)
+		{
+			mpTargets->AddTarget(pasTargets->Get(i));
+		}
+		mpTargets->OpenAtCaret();
+	}
+	szName.Kill();
+	return uiTargets > 0;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Go to Implementation (Control+Alt+B), as IntelliJ's: from a virtual
+// member function, the functions that override it; from a class, the
+// classes derived from it; from a function's declaration, its definition.
+// False if no symbol is named at the caret.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDENavigator::GoToImplementation(void)
+{
+	CArrayIDETargets	asTargets;
+	CChars				szKey;
+	uint8				uiKind;
+	bool				bResult;
+
+	szKey.Init();
+	bResult = FindCaretSymbol(&szKey, &uiKind);
+	if (bResult)
+	{
+		asTargets.Init();
+		mpcContent->GetCodeModel()->FindImplementations(szKey.Text(), &asTargets);
+		GoToTargets("implementations", szKey.Text(), &asTargets);
+		KillIDETargets(&asTargets);
+	}
+	else
+	{
+		mpcContent->ShowStatus("There is no symbol at the caret to go to the implementations of.");
+	}
+	szKey.Kill();
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Go to Super Method (Control+U), as IntelliJ's: from a member function
+// (named at the caret, or the one the caret is in), the functions it
+// overrides in its class's base classes; from a class, its base classes.
+// False if the caret is in neither.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDENavigator::GoToSuperMethod(void)
+{
+	CArrayIDETargets	asTargets;
+	CChars				szKey;
+	uint8				uiKind;
+	bool				bResult;
+
+	szKey.Init();
+	bResult = FindCaretSymbol(&szKey, &uiKind) && ((uiKind == CPPSK_Function) || (uiKind == CPPSK_Class) || (uiKind == CPPSK_ClassTemplate));
+	if (!bResult)
+	{
+		szKey.Clear();
+		bResult = FindCaretFunction(&szKey, &uiKind);
+	}
+	if (bResult)
+	{
+		asTargets.Init();
+		mpcContent->GetCodeModel()->FindSuperMethods(szKey.Text(), &asTargets);
+		GoToTargets(((uiKind == CPPSK_Function) || (uiKind == CPPSK_FunctionTemplate)) ? "super methods" : "base classes", szKey.Text(), &asTargets);
+		KillIDETargets(&asTargets);
+	}
+	else
+	{
+		mpcContent->ShowStatus("The caret isn't in a member function or on a class to go to the super of.");
+	}
+	szKey.Kill();
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Both are offered where a symbol is named at the caret; Go to Super
+// Method anywhere in an editor too, as the caret may be in a function.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDENavigator::CanGoToImplementation(void)
+{
+	int		iLine;
+	int		iColumn;
+	uint8	uiRole;
+
+	return mpcContent->GetDocuments()->GetActiveTab().IsNotNull() && mpcContent->GetDocuments()->FindSymbolPlace(&iLine, &iColumn, &uiRole);
+}
+
+
+bool CIDENavigator::CanGoToSuperMethod(void)
+{
+	return mpcContent->GetDocuments()->GetActiveTab().IsNotNull();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The IDE is closing: the chooser's preview isn't to be given anything.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDENavigator::Detach(void)
+{
+	if (mpTargets.IsNotNull())
+	{
+		mpTargets->Detach();
+	}
+}
+
+
+Ptr<CIDEChooser> CIDENavigator::GetTargetsChooser(void) const { return mpTargets; }
+

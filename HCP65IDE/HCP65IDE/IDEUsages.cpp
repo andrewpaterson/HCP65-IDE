@@ -706,56 +706,7 @@ bool CIDEUsages::ShowUsagesPopup(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDEUsages::OpenPopup(void)
 {
-	OpenCaretPopup(mpPopup, 1);
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// A menu opened as a popup under the active editor's caret, its item
-// uiSelected selected: the usages', or another chooser's (Introduce
-// Variable's expressions).  It is at most a third of the screen's height
-// and no taller than the editor's view: more rows scroll.  A press
-// anywhere outside it closes it, in the editor too.
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDEUsages::OpenCaretPopup(Ptr<CMenuContainer> pMenu, size uiSelected)
-{
-	Ptr<CIDEEditorTab>	pTab;
-	Ptr<CTextArea>		pEditor;
-	Ptr<CPopup>			pPopup;
-	CInt32Rect			cBounds;
-	CInt32Rect			cCaret;
-	CInt32Rect			cScreen;
-	SInt32Vec2			sPosition;
-	int32				iMaximum;
-	int32				iView;
-
-	pTab = mpcContent->GetDocuments()->GetActiveTab();
-	pEditor = pTab->GetEditor();
-	pEditor->GetActualBounds(&cBounds);
-	pEditor->GetCaretBounds(&cCaret);
-	sPosition.Init(cBounds.GetLeft() + cCaret.GetLeft(), cBounds.GetTop() + cCaret.GetBottom());
-	pPopup = pMenu->Open(sPosition, pEditor, true);
-
-	//Its owner is the editor, most of the window: a press there closes it, as one anywhere else outside it does.
-	pPopup->SetOwnerPressKeepsOpen(false);
-
-	iMaximum = -1;
-	if (mpcContent->GetWindow()->GetScreenArea(&cScreen) && (cScreen.GetHeight() > 0))
-	{
-		iMaximum = cScreen.GetHeight() / 3;
-	}
-	iView = pTab->GetPane()->GetActualSize().y;
-	if ((iView > 0) && ((iMaximum < 0) || (iView < iMaximum)))
-	{
-		iMaximum = iView;
-	}
-	if (iMaximum > 0)
-	{
-		pPopup->SetMaximumHeight(iMaximum, mpcContent->GetTheme());
-	}
-	pMenu->Select((int32)uiSelected);
+	mpcContent->GetDocuments()->OpenCaretMenu(mpPopup, 1);
 }
 
 

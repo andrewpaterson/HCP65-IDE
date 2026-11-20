@@ -171,7 +171,7 @@ bool CIDEContextActions::Show(void)
 		}
 	}
 	sContext.Kill();
-	mpcContent->GetUsages()->OpenCaretPopup(mpPopup, 0);
+	mpcContent->GetDocuments()->OpenCaretMenu(mpPopup, 0);
 	return true;
 }
 

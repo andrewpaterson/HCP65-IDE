@@ -33,6 +33,10 @@ IDE_DIR = os.path.join(HERE, '..', 'HCP65IDE')
 RENAME_SEARCH = os.path.join(HERE, 'Input', 'RenameSearch', 'RenameSearch.vcxproj')
 #Rename File is checked on a solution of its own (Input/RenameFile): Engine.h, the #includes that find it and some that don't.
 RENAME_FILE = os.path.join(HERE, 'Input', 'RenameFile', 'RenameFile.sln')
+#The navigation commands are checked on a project of their own (Input/Navigation): CShape, with virtual Draw and Area,
+#the CCircle and CSquare derived from it, CRoundedSquare from CSquare, and a Main.cpp that uses them.  Nothing is
+#changed in it.
+NAVIGATION = os.path.join(HERE, 'Input', 'Navigation', 'Navigation.vcxproj')
 #A unit including <windows.h> (Input/WindowsHeaders), with Win32 and x64 configurations.
 WINDOWS_HEADERS = os.path.join(HERE, 'Input', 'WindowsHeaders', 'WindowsHeaders.vcxproj')
 ROOT = os.path.abspath(os.path.join(HERE, '..', '..', '..'))
@@ -4071,6 +4075,60 @@ CHECKS = [
 		'OPEN': 'CalculatorParser.cpp',
 		'DEBUG': 'wait:1500,edit:printview,edit:press:Left Control,edit:tap:End,edit:release:Left Control,wait:300,edit:printview,edit:press:Left Control,edit:tap:Home,edit:release:Left Control,wait:300,edit:printview'},
 		[r'^View: lines 1 to \d+, caret line 1$', r'^View: lines \d+ to 420, caret line 420$', r'^View: lines 1 to \d+, caret line 1$'], []),
+	('nav-implementations-chooser', {
+		#Go to Implementation (Control+Alt+B) on a virtual function with several overrides: a chooser under the caret lists
+		#them, the nearest classes' first, each with where it is and a preview of its code, the first selected; down and
+		#enter go to the second, its name selected.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Shape.h', 'CARET': '14:17',
+		'DEBUG': 'command:Navigate.GoToImplementation,edit:printchooser,edit:key:down,edit:printchooser,edit:key:enter,edit:printchooser,edit:printselection,edit:print'},
+		[r'^Chooser: Implementations of CShape::Draw  3$', r'^  >CCircle::Draw \| Shapes\.cpp:4$', r'^   CSquare::Draw \| Shapes\.cpp:16$',
+		 r'^   CRoundedSquare::Draw \| Shapes\.cpp:27$', r'^Chooser filter: \[\]$', r'^Chooser preview: Shapes\.cpp$',
+		 r'^  >CSquare::Draw \| Shapes\.cpp:16$', r'^Chooser: none$', r'^Selection: \[Draw\] on line 16',
+		 r'Shapes\.cpp \(focus\) line 16: \[void CSquare::Draw\(void\)\]'], []),
+	('nav-implementations-filter', {
+		#Typing in the chooser filters its rows as Go to matches; escape closes it and the editor has the keys again, the
+		#caret where it was.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Shape.h', 'CARET': '14:17',
+		'DEBUG': 'command:Navigate.GoToImplementation,edit:key:type:squ,edit:printchooser,edit:key:escape,edit:printchooser,edit:print'},
+		[r'^Chooser: Implementations of CShape::Draw  3$', r'^  >CSquare::Draw \| Shapes\.cpp:16$', r'^   CRoundedSquare::Draw \| Shapes\.cpp:27$',
+		 r'^Chooser filter: \[squ\]$', r'^Chooser: none$', r'Shape\.h \(focus\) line 14: '], [r'CCircle::Draw \|']),
+	('nav-implementation-one', {
+		#With one override it is gone to without a chooser.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Shapes.h', 'CARET': '23:8',
+		'DEBUG': 'command:Navigate.GoToImplementation,edit:printchooser,edit:print'},
+		[r'^Chooser: none$', r'Shapes\.cpp \(focus\) line 27: \[void CRoundedSquare::Draw\(void\)\]'], []),
+	('nav-implementation-definition', {
+		#From the declaration of a function nothing overrides, its definition.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Shape.h', 'CARET': '16:10',
+		'DEBUG': 'command:Navigate.GoToImplementation,edit:print'},
+		[r'Shape\.cpp \(focus\) line 16: \[void CShape::Move\(int iX, int iY\)\]'], []),
+	('nav-implementations-class', {
+		#From a class, the classes derived from it, however far down, the nearest first.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Shape.h', 'CARET': '6:8',
+		'DEBUG': 'command:Navigate.GoToImplementation,edit:printchooser,edit:key:escape'},
+		[r'^Chooser: Implementations of CShape  3$', r'^  >CCircle \| Shapes\.h:6$', r'^   CSquare \| Shapes\.h:17$', r'^   CRoundedSquare \| Shapes\.h:28$'], []),
+	('nav-implementations-none', {
+		#A class nothing derives from, and a function defined where the caret is: the status line says there are none.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Shapes.h', 'CARET': '28:8',
+		'DEBUG': 'command:Navigate.GoToImplementation,printstatus,edit:open:Shapes.cpp,edit:caret:27:22,command:Navigate.GoToImplementation,printstatus'},
+		[r'^Status: No implementations of CRoundedSquare\.$', r'^Status: No implementations of CRoundedSquare::Draw\.$'], []),
+	('nav-super-methods', {
+		#Go to Super Method (Control+U) from inside a function's body, where no symbol is named: what the function overrides
+		#in its class's base classes, the nearest class's first.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Shapes.cpp', 'CARET': '28:1',
+		'DEBUG': 'command:Navigate.GoToSuperMethod,edit:printchooser,edit:key:enter,edit:print'},
+		[r'^Chooser: Super methods of CRoundedSquare::Draw  2$', r'^  >CSquare::Draw \| Shapes\.cpp:16$', r'^   CShape::Draw \| Shape\.cpp:11$',
+		 r'Shapes\.cpp \(focus\) line 16: \[void CSquare::Draw\(void\)\]'], []),
+	('nav-super-method-one', {
+		#One super method is gone to: a pure virtual function's declaration, as it has no definition.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Shapes.cpp', 'CARET': '10:14',
+		'DEBUG': 'command:Navigate.GoToSuperMethod,edit:print'},
+		[r'Shape\.h \(focus\) line 15: \[\tvirtual int\t\tArea\(void\) = 0;\]'], []),
+	('nav-super-class', {
+		#From a class, its base class; from a function that overrides nothing, the status line says so.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Shapes.h', 'CARET': '28:8',
+		'DEBUG': 'command:Navigate.GoToSuperMethod,edit:print,edit:open:Shape.h,edit:caret:14:17,command:Navigate.GoToSuperMethod,printstatus'},
+		[r'Shapes\.h \(focus\) line 17: \[class CSquare : public CShape\]', r'^Status: No super methods of CShape::Draw\.$'], []),
 ]
 
 if os.name != 'nt':

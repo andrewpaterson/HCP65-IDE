@@ -2220,7 +2220,7 @@ bool CIDEIntroduceVariable::ShowIntroduce(int iKind)
 			{
 				mpChooser->AddItem(aszCandidates.GetText(i));
 			}
-			mpcContent->GetUsages()->OpenCaretPopup(mpChooser, 1);
+			mpcContent->GetDocuments()->OpenCaretMenu(mpChooser, 1);
 			aszCandidates.Kill();
 			return false;
 		}

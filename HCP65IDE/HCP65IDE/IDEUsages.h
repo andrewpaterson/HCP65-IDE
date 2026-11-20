@@ -215,7 +215,6 @@ protected:
 	void				AddUsageLine(int32 iParent, SIDEUsageRow* psRow, CIDEFileLines* pcLines);
 	void				OpenPopup(void);
 public:
-	void				OpenCaretPopup(Ptr<CMenuContainer> pMenu, size uiSelected);
 protected:
 	void				PopupUsageClicked(CMenuItem* pcItem);
 	void				ShowGrouping(uint8 uiGrouping);

@@ -1906,6 +1906,21 @@ static EIDESymbolType GetIDESymbolType(ECPPSymbolKind eKind)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// The EIDESymbolType of the icon a symbol of kind uiKind (ECPPSymbolKind)
+// has, -1 for a kind without one.
+//
+//////////////////////////////////////////////////////////////////////////
+int GetIDESymbolIconType(uint8 uiKind)
+{
+	EIDESymbolType	eType;
+
+	eType = GetIDESymbolType((ECPPSymbolKind)uiKind);
+	return (eType == IST_Count) ? -1 : (int)eType;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Splits a symbol's key, "CChars::Append(char const*)", into where it is
 // declared ("CChars", "" at file scope), its name ("Append") and its
 // parameters ("(char const*)", "" if it isn't a function).
@@ -2943,6 +2958,235 @@ size CIDECodeModel::FindOverriders(const char* szKey, CArrayIDELocations* pasDes
 	}
 	mcIndexMutex.Unlock();
 	return uiOverriders;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void KillIDETargets(CArrayIDETargets* pasTargets)
+{
+	size	i;
+
+	for (i = 0; i < pasTargets->NumElements(); i++)
+	{
+		pasTargets->Get(i)->szKey.Kill();
+		pasTargets->Get(i)->sLocation.szFileName.Kill();
+	}
+	pasTargets->Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// pcSymbol added to pasDest with the place a "go to" goes to (its
+// definition, or else its declaration).  False, and it isn't added, if it
+// is only used.  Called with the index locked.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDECodeModel::AddTarget(CCPPIndexSymbol* pcSymbol, CArrayIDETargets* pasDest)
+{
+	SCPPIndexLocation*	psLocation;
+	SIDETarget*			psTarget;
+
+	psLocation = GetIDESymbolPlace(pcSymbol);
+	if (psLocation == NULL)
+	{
+		return false;
+	}
+	psTarget = pasDest->Add();
+	psTarget->szKey.Init(pcSymbol->mszKey);
+	psTarget->uiKind = (uint8)pcSymbol->meKind;
+	CopyLocation(psLocation, &psTarget->sLocation);
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The class a member's key is scoped by (CVat of CVat::Fill(int)), NULL
+// if it has no scope or its scope isn't a class the index has.  Called
+// with the index locked.
+//
+//////////////////////////////////////////////////////////////////////////
+CCPPIndexSymbol* CIDECodeModel::FindScopeClass(const char* szKey)
+{
+	CCPPIndexSymbol*	pcClass;
+	CChars				szScope;
+	CChars				szName;
+	CChars				szParameters;
+
+	SplitIDESymbolKey(szKey, &szScope, &szName, &szParameters);
+	pcClass = szScope.Empty() ? NULL : mcIndex.FindSymbol(szScope.Text());
+	szParameters.Kill();
+	szName.Kill();
+	szScope.Kill();
+	if (pcClass && (pcClass->meKind != CPPSK_Class) && (pcClass->meKind != CPPSK_ClassTemplate))
+	{
+		pcClass = NULL;
+	}
+	return pcClass;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// What IntelliJ's Go to Implementation goes to from szKey, added to
+// pasDest; how many.  For a virtual member function, the functions that
+// override it in the classes derived from its class, the nearest classes
+// first.  For a class, the classes derived from it, however far down,
+// nearest first.  For a function nothing overrides, its own definition
+// (its implementation, seen from its declaration).
+//
+//////////////////////////////////////////////////////////////////////////
+size CIDECodeModel::FindImplementations(const char* szKey, CArrayIDETargets* pasDest)
+{
+	CCPPIndexSymbol*	pcSymbol;
+	CCPPIndexSymbol*	pcClass;
+	CCPPIndexSymbol*	pcOther;
+	CCPPIndexSymbol*	pcDerived;
+	CArrayInt			aiOverrides;
+	CArrayInt			aiClasses;
+	size				uiFirst;
+	size				uiNext;
+	size				i;
+	size				j;
+	int					iDerived;
+
+	uiFirst = pasDest->NumElements();
+	mcIndexMutex.Lock();
+	pcSymbol = mcIndex.FindSymbol(szKey);
+	if (pcSymbol && ((pcSymbol->meKind == CPPSK_Class) || (pcSymbol->meKind == CPPSK_ClassTemplate) || (pcSymbol->meKind == CPPSK_Function)))
+	{
+		//The classes under the symbol's class (or under it, if it is one), a level at a time.
+		pcClass = (pcSymbol->meKind == CPPSK_Function) ? FindScopeClass(szKey) : pcSymbol;
+		aiClasses.Init();
+		aiOverrides.Init();
+		if (pcSymbol->meKind == CPPSK_Function)
+		{
+			FindOverrides(pcSymbol, &aiOverrides);
+		}
+		uiNext = 0;
+		pcDerived = pcClass;
+		while (pcDerived)
+		{
+			for (i = 0; i < pcDerived->maiDerived.NumElements(); i++)
+			{
+				iDerived = pcDerived->maiDerived.GetValue(i);
+				if (aiClasses.Find(iDerived) == ARRAY_ELEMENT_NOT_FOUND)
+				{
+					aiClasses.Add(iDerived);
+				}
+			}
+			pcDerived = (uiNext < aiClasses.NumElements()) ? mcIndex.GetSymbol((size)aiClasses.GetValue(uiNext)) : NULL;
+			uiNext++;
+		}
+
+		for (i = 0; i < aiClasses.NumElements(); i++)
+		{
+			pcDerived = mcIndex.GetSymbol((size)aiClasses.GetValue(i));
+			if (pcSymbol->meKind != CPPSK_Function)
+			{
+				AddTarget(pcDerived, pasDest);
+			}
+			else
+			{
+				for (j = 0; j < aiOverrides.NumElements(); j++)
+				{
+					pcOther = mcIndex.GetSymbol((size)aiOverrides.GetValue(j));
+					if ((pcOther != pcSymbol) && (FindScopeClass(pcOther->mszKey.Text()) == pcDerived))
+					{
+						AddTarget(pcOther, pasDest);
+					}
+				}
+			}
+		}
+		aiOverrides.Kill();
+		aiClasses.Kill();
+
+		if ((pasDest->NumElements() == uiFirst) && (pcSymbol->meKind == CPPSK_Function) && pcSymbol->GetDefinition())
+		{
+			AddTarget(pcSymbol, pasDest);
+		}
+	}
+	mcIndexMutex.Unlock();
+	return pasDest->NumElements() - uiFirst;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// What IntelliJ's Go to Super Method goes to from szKey, added to
+// pasDest; how many.  For a member function, the functions it overrides
+// in its class's base classes, the nearest classes first.  For a class,
+// the base classes it names.
+//
+//////////////////////////////////////////////////////////////////////////
+size CIDECodeModel::FindSuperMethods(const char* szKey, CArrayIDETargets* pasDest)
+{
+	CCPPIndexSymbol*	pcSymbol;
+	CCPPIndexSymbol*	pcClass;
+	CCPPIndexSymbol*	pcOther;
+	CCPPIndexSymbol*	pcBase;
+	CArrayInt			aiOverrides;
+	CArrayInt			aiClasses;
+	size				uiFirst;
+	size				uiNext;
+	size				i;
+	size				j;
+	int					iBase;
+
+	uiFirst = pasDest->NumElements();
+	mcIndexMutex.Lock();
+	pcSymbol = mcIndex.FindSymbol(szKey);
+	if (pcSymbol && ((pcSymbol->meKind == CPPSK_Class) || (pcSymbol->meKind == CPPSK_ClassTemplate)))
+	{
+		for (i = 0; i < pcSymbol->maiBases.NumElements(); i++)
+		{
+			AddTarget(mcIndex.GetSymbol((size)pcSymbol->maiBases.GetValue(i)), pasDest);
+		}
+	}
+	else if (pcSymbol && (pcSymbol->meKind == CPPSK_Function))
+	{
+		//The classes over the function's class, a level at a time.
+		pcClass = FindScopeClass(szKey);
+		aiClasses.Init();
+		aiOverrides.Init();
+		FindOverrides(pcSymbol, &aiOverrides);
+		uiNext = 0;
+		pcBase = pcClass;
+		while (pcBase)
+		{
+			for (i = 0; i < pcBase->maiBases.NumElements(); i++)
+			{
+				iBase = pcBase->maiBases.GetValue(i);
+				if (aiClasses.Find(iBase) == ARRAY_ELEMENT_NOT_FOUND)
+				{
+					aiClasses.Add(iBase);
+				}
+			}
+			pcBase = (uiNext < aiClasses.NumElements()) ? mcIndex.GetSymbol((size)aiClasses.GetValue(uiNext)) : NULL;
+			uiNext++;
+		}
+
+		for (i = 0; i < aiClasses.NumElements(); i++)
+		{
+			pcBase = mcIndex.GetSymbol((size)aiClasses.GetValue(i));
+			for (j = 0; j < aiOverrides.NumElements(); j++)
+			{
+				pcOther = mcIndex.GetSymbol((size)aiOverrides.GetValue(j));
+				if ((pcOther != pcSymbol) && (FindScopeClass(pcOther->mszKey.Text()) == pcBase))
+				{
+					AddTarget(pcOther, pasDest);
+				}
+			}
+		}
+		aiOverrides.Kill();
+		aiClasses.Kill();
+	}
+	mcIndexMutex.Unlock();
+	return pasDest->NumElements() - uiFirst;
 }
 
 

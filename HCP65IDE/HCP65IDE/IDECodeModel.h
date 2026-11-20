@@ -75,6 +75,19 @@ struct SIDELocation
 typedef CArrayTemplate<SIDELocation>	CArrayIDELocations;
 
 
+//A symbol a "go to" can go to (Go to Implementation, Super Method...): its key and kind, and the one place of it
+//that is gone to, its definition or else its declaration.
+struct SIDETarget
+{
+	CChars			szKey;
+	uint8			uiKind;		//ECPPSymbolKind.
+	SIDELocation	sLocation;
+};
+
+
+typedef CArrayTemplate<SIDETarget>	CArrayIDETargets;
+
+
 //An #include a file writes (CIDECodeModel::FindIncludesIn), where it is in the file's text.
 struct SIDEInclude
 {
@@ -313,6 +326,8 @@ public:
 	bool	GetSymbolKey(int32 iSymbol, CChars* pszKey, uint8* puiKind);
 	void	FindNamespaces(CArrayChars* paszDest);
 	size	FindOverriders(const char* szKey, CArrayIDELocations* pasDest);
+	size	FindImplementations(const char* szKey, CArrayIDETargets* pasDest);
+	size	FindSuperMethods(const char* szKey, CArrayIDETargets* pasDest);
 	size	FindSiblingFunctions(const char* szKey, const char* szFileName, CArrayIDELocations* pasDeclared, CArrayIDELocations* pasDefined);
 	bool	FindAssemblyTarget(const char* szKey, SIDERenameTarget* psDest);
 	size	FindOverrideLocations(const char* szKey, CArrayIDELocations* pasDest);
@@ -352,10 +367,14 @@ protected:
 	void				CopyLocationsInFile(CCPPIndexSymbol* pcSymbol, const char* szFileName, CArrayIDELocations* pasDest);
 	void				FindOverrides(CCPPIndexSymbol* pcSymbol, CArrayInt* paiDest);
 	bool				IsDerivedClass(CCPPIndexSymbol* pcClass, CCPPIndexSymbol* pcBase, int iDepth);
+	bool				AddTarget(CCPPIndexSymbol* pcSymbol, CArrayIDETargets* pasDest);
+	CCPPIndexSymbol*	FindScopeClass(const char* szKey);
 };
 
 
 void KillIDELocations(CArrayIDELocations* pasLocations);
+void KillIDETargets(CArrayIDETargets* pasTargets);
+int GetIDESymbolIconType(uint8 uiKind);
 void KillIDEIncludes(CArrayIDEIncludes* pasIncludes);
 void KillIDENeeds(CArrayIDENeeds* pasNeeds);
 void KillIDEFileRanges(CArrayIDEFileRanges* pasRanges);

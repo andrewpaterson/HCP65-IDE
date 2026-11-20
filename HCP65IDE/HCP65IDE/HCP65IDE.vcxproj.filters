@@ -117,6 +117,12 @@
     <ClCompile Include="IDEDuplicatesPage.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="IDELocationPreview.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="IDEChooser.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="IDEClaudePage.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -369,6 +375,12 @@
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDEDuplicatesPage.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDELocationPreview.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDEChooser.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDEClaudePage.h">

@@ -26,6 +26,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/ScrollPane.h"
 #include "WindowLib/SplitContainer.h"
 #include "WindowLib/CodePreview.h"
+#include "IDELocationPreview.h"
 #include "WindowLib/Toolbar.h"
 #include "WindowLib/CommandSet.h"
 #include "IDEIcons.h"
@@ -84,7 +85,7 @@ public:
 //can't be used.
 //
 //Whatever lets go of a pane before the IDE closes calls Detach first.
-class CIDEResultsPane : public CObject, public CIDEPreviewAsker
+class CIDEResultsPane : public CObject
 {
 CONSTRUCTABLE(CIDEResultsPane);
 DESTRUCTABLE(CIDEResultsPane);
@@ -100,7 +101,7 @@ protected:
 	Ptr<CCommandSet>	mpCommands;  //The toolbar's.
 	Ptr<CSplitContainer>	mpSplit;  //The tree and, right of it, the preview.
 	Ptr<CCodePreview>	mpPreview;
-	size				muiPreviewChanges;  //The previewed file's editor's change count when its text was taken, MAX_SIZE if it wasn't open.
+	Ptr<CIDELocationPreview>	mpLocationPreview;  //Fills the preview from a result's place.
 	CChars				mszNoun;  //What a result is called in the status line: "usages", "matches".
 	bool				mbSelectOnOpen;  //A result opened from the tree has its text selected in its editor.
 	bool				mbNavigateOnSelect;  //A result is opened as it is selected.
@@ -145,7 +146,6 @@ public:
 	Ptr<CCodePreview>	GetPreview(void) const;
 	Ptr<CSplitContainer>	GetSplit(void) const;
 	void				ShowPreview(void);
-	void				PreviewHighlighted(const char* szFileName, CArrayHighlights* pacHighlights) override;
 	void				ReadSettings(CMarkupTag* pcTag);
 	void				CopySettings(Ptr<CIDEResultsPane> pSource);
 	void				WriteSettings(CXMLWriter* pcWriter);

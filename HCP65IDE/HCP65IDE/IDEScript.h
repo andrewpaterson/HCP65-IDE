@@ -30,6 +30,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 class CIDEContent;
+class CIDEChooser;
 
 
 class CProgramDeviceDetail;
@@ -66,6 +67,7 @@ protected:
 	size			muiKeyed;  //Dialogs given their keys (PressDialogKeys).
 	SMemberCall	msDialogDrawn;  //SetDialogDrawnCall\'s, not set if there is none.
 	size			muiSpans;  //The active editor's spans when printspans last looked.
+	CIDEChooser*			mpcChooser;  //Not held: the chooser of places that is open (CIDEChooser::OpenAt), NULL for none.
 
 public:
 	void	Init(CIDEContent* pcContent);
@@ -86,6 +88,9 @@ public:
 	void		ClickGutter(bool bShift, bool bChangeBar, const char* szLine);
 	void		DragText(const char* szPlaces);
 	void		ClickClaude(const char* szPart);
+	void		PrintChooser(void);
+	void		ChooserOpened(CIDEChooser* pcChooser);
+	void		ChooserClosed(CIDEChooser* pcChooser);
 	void		PrintClaude(void);
 	bool		FindEditorPoint(const char* szPlace, bool bGap, int32* px, int32* py);
 	void		PrintPlace(Ptr<CTextArea> pEditor, size uiPosition);

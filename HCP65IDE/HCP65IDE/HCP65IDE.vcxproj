@@ -337,6 +337,8 @@
     <ClCompile Include="IDEDuplicateMatcher.cpp" />
     <ClCompile Include="IDEDuplicates.cpp" />
     <ClCompile Include="IDEDuplicatesPage.cpp" />
+    <ClCompile Include="IDELocationPreview.cpp" />
+    <ClCompile Include="IDEChooser.cpp" />
     <ClCompile Include="IDEClaudePage.cpp" />
     <ClCompile Include="IDEIntroduceTypedef.cpp" />
     <ClCompile Include="IDEInlineVariable.cpp" />
@@ -423,6 +425,8 @@
     <ClInclude Include="IDEDuplicateMatcher.h" />
     <ClInclude Include="IDEDuplicates.h" />
     <ClInclude Include="IDEDuplicatesPage.h" />
+    <ClInclude Include="IDELocationPreview.h" />
+    <ClInclude Include="IDEChooser.h" />
     <ClInclude Include="IDEClaudePage.h" />
     <ClInclude Include="IDEIntroduceTypedef.h" />
     <ClInclude Include="IDEInlineVariable.h" />

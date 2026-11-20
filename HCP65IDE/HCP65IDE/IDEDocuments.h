@@ -157,6 +157,8 @@ public:
 	Ptr<CIDEEditorTab>	GetActiveTab(void) const;
 	bool				FocusActiveEditor(void);
 	bool				FindSymbolPlace(int* piLine, int* piColumn, uint8* puiRole);
+	bool				GetCaretPoint(SInt32Vec2* psPoint);
+	void				OpenCaretMenu(Ptr<CMenuContainer> pMenu, size uiSelected);
 	bool				FindSymbolAtCaret(CArrayIDELocations* pasDest, CChars* pszKey);
 	void				GetFileLine(const char* szFileName, int iLine, CChars* pszDest);
 	size				NumTabs(void);

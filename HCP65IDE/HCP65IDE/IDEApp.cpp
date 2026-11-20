@@ -466,8 +466,9 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 				//selected row printed), printselection (the active editor's selected text and caret line), printhistory
 				//(Back and Forward's places), printpopup (Control+B's usages popup), key:<f4|space|enter|escape|documentend|documenthome> (what the key
 				//gives, Jump to Source for F4), claudeclick:<request|conversation|send|stop|new> (that part of the Claude
-				//tab pressed, through the window), claudetype:<text> (typed to whatever has the keys) and printclaude (where
-				//the Claude tab's parts are, which has the keys, and its texts).
+				//tab pressed, through the window), claudetype:<text> (typed to whatever has the keys), printclaude (where
+				//the Claude tab's parts are, which has the keys, and its texts) and printchooser (the open chooser of
+				//places: its title, its rows with the selected one marked, its filter and its preview's file).
 				//What each open file's caret line then is is printed.
 				aszOpen.Init();
 				aszOpen.Split(getenv("HCP65_IDE_EDIT"), ',');

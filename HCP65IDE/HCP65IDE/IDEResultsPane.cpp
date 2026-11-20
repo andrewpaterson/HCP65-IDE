@@ -77,8 +77,8 @@ void CIDEResultsPane::Init(CIDEContent* pcContent, CIDEResultsSource* pcSource, 
 	mpScrollPane->SetAlignment(CSH_Stretch, CSV_Stretch);
 
 	//The selected result's code, right of the tree.
-	muiPreviewChanges = MAX_SIZE;
 	mpPreview = OMalloc<CCodePreview>(mpcContent->GetWindow(), mpcContent->GetTheme(), mpcContent->GetDimFont(), mpcContent->GetCodeFamily());
+	mpLocationPreview = OMalloc<CIDELocationPreview>(mpcContent, mpPreview);
 	mpSplit = OMalloc<CSplitContainer>(mpcContent->GetWindow(), mpcContent->GetTheme(), true);
 	mpSplit->SetAlignment(CSH_Stretch, CSV_Stretch);
 	mpSplit->SetComponents(mpScrollPane, mpPreview);
@@ -122,7 +122,7 @@ void CIDEResultsPane::Class(void)
 	M_Pointer(mpCommands);
 	M_Pointer(mpSplit);
 	M_Pointer(mpPreview);
-	U_Size(muiPreviewChanges);
+	M_Pointer(mpLocationPreview);
 	U_String(mszNoun);
 	U_Bool(mbSelectOnOpen);
 	U_Bool(mbNavigateOnSelect);
@@ -492,34 +492,6 @@ void CIDEResultsPane::ResultSelected(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Where a line and column (from 0, the column in bytes) are in szText.
-//
-//////////////////////////////////////////////////////////////////////////
-static size FindIDEResultPosition(const char* szText, size uiLength, int32 iLine, int32 iColumn)
-{
-	const char*	szNewLine;
-	size		uiPosition;
-	size		uiLineEnd;
-
-	uiPosition = 0;
-	for (; iLine > 0; iLine--)
-	{
-		szNewLine = (const char*)memchr(&szText[uiPosition], '\n', uiLength - uiPosition);
-		if (szNewLine == NULL)
-		{
-			return uiLength;
-		}
-		uiPosition = (size)(szNewLine - szText) + 1;
-	}
-	szNewLine = (const char*)memchr(&szText[uiPosition], '\n', uiLength - uiPosition);
-	uiLineEnd = szNewLine ? (size)(szNewLine - szText) : uiLength;
-	uiPosition += (iColumn > 0) ? (size)iColumn : 0;
-	return (uiPosition < uiLineEnd) ? uiPosition : uiLineEnd;
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
 // The preview shows the selected result: its file's code (as its editor
 // has it if it is open, else as it is on the disk), at its place, the
 // text found coloured.  The code is only taken again when the file isn't
@@ -529,13 +501,8 @@ static size FindIDEResultPosition(const char* szText, size uiLength, int32 iLine
 //////////////////////////////////////////////////////////////////////////
 void CIDEResultsPane::ShowPreview(void)
 {
-	Ptr<CIDEEditorTab>	pTab;
-	SIDELocation		sLocation;
-	CTextFile			cFile;
-	const char*			szText;
-	size				uiLength;
-	size				uiChanges;
-	int64				iData;
+	SIDELocation	sLocation;
+	int64			iData;
 
 	if (!IsPreviewShown())
 	{
@@ -547,53 +514,8 @@ void CIDEResultsPane::ShowPreview(void)
 		mpPreview->Clear();
 		return;
 	}
-
-	pTab = mpcContent->GetDocuments()->FindTab(sLocation.szFileName.Text());
-	uiChanges = pTab.IsNotNull() ? pTab->GetEditor()->GetChangeCount() : MAX_SIZE;
-	if (!mpPreview->IsShowing(sLocation.szFileName.Text()) || (uiChanges != muiPreviewChanges))
-	{
-		cFile.Init();
-		szText = NULL;
-		if (pTab.IsNotNull())
-		{
-			szText = pTab->GetEditor()->GetText();
-		}
-		else if (cFile.Read(sLocation.szFileName.Text()))
-		{
-			szText = cFile.Text();
-		}
-		if (szText == NULL)
-		{
-			cFile.Kill();
-			sLocation.szFileName.Kill();
-			mpPreview->Clear();
-			return;
-		}
-		mpPreview->SetCode(sLocation.szFileName.Text(), szText);
-		muiPreviewChanges = uiChanges;
-		mpcContent->GetDocuments()->HighlightPreview(this, sLocation.szFileName.Text(), szText);
-		cFile.Kill();
-	}
-
-	szText = mpPreview->GetTextArea()->GetText();
-	uiLength = strlen(szText);
-	mpPreview->ShowPlace(FindIDEResultPosition(szText, uiLength, sLocation.iLine, sLocation.iColumn), (sLocation.iLength > 0) ? (size)sLocation.iLength : 0);
+	mpLocationPreview->ShowLocation(&sLocation);
 	sLocation.szFileName.Kill();
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// The edits thread highlighted a file for the preview: if the preview
-// still shows it, it is coloured as its editor would be.
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDEResultsPane::PreviewHighlighted(const char* szFileName, CArrayHighlights* pacHighlights)
-{
-	if (mpPreview->IsShowing(szFileName))
-	{
-		ApplyIDEHighlights(mpPreview->GetTextArea(), pacHighlights);
-	}
 }
 
 
@@ -838,7 +760,7 @@ bool CIDEResultsPane::CanStep(bool bNext)
 //////////////////////////////////////////////////////////////////////////
 void CIDEResultsPane::Detach(void)
 {
-	mpcContent->GetDocuments()->ForgetPreviewAsker(this);
+	mpLocationPreview->Detach();
 }
 
 

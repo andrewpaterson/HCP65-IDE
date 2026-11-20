@@ -59,6 +59,7 @@ void CIDEScript::Init(CIDEContent* pcContent)
 	mpcKeyboard = NULL;
 	mpcKeyboardInput = NULL;
 	muiSpans = 0;
+	mpcChooser = NULL;
 	muiAnswered = 0;
 	muiKeyed = 0;
 	msDialogDrawn.Clear();
@@ -79,6 +80,7 @@ void CIDEScript::Class(void)
 	U_Pointer(mpcKeyboard);
 	U_Pointer(mpcKeyboardInput);
 	U_Size(muiSpans);
+	U_Pointer(mpcChooser);
 	U_Size(muiAnswered);
 	U_Size(muiKeyed);
 	U_Unknown(SMemberCall, msDialogDrawn);
@@ -1267,6 +1269,74 @@ void CIDEScript::ClickEditor(int32 iClicks, const char* szPlace)
 	{
 		mpcContent->GetWindow()->InputCommand(CIC_ActivateComponent, true);
 		mpcContent->GetWindow()->InputCommand(CIC_ExecuteComponent, true);
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// printchooser: the chooser of places that is open (a "go to"'s targets,
+// a symbol's usages...): "Chooser: <its title>", then a line for each row,
+// "  >CDrum::Fill | Drum.cpp:22" ('>' before the selected one, a heading
+// in brackets), "Chooser filter: [<what is typed in it>]" if it has a
+// field and "Chooser preview: <the file its preview shows>" if it has a
+// preview; "Chooser: none" if none is open.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEScript::PrintChooser(void)
+{
+	Ptr<CChooserPopup>	pPopup;
+	SGoToItem*			psItem;
+	size				i;
+
+	if ((mpcChooser == NULL) || !mpcChooser->IsOpen())
+	{
+		printf("Chooser: none\n");
+		fflush(stdout);
+		return;
+	}
+	pPopup = mpcChooser->GetPopup();
+	printf("Chooser: %s\n", pPopup->GetTitle());
+	for (i = 0; i < pPopup->NumRows(); i++)
+	{
+		psItem = pPopup->GetRowItem(i);
+		if (psItem->uiData == CHOOSER_HEADING)
+		{
+			printf("   [%s]\n", psItem->szName.Text());
+		}
+		else
+		{
+			printf("  %s%s | %s\n", ((int32)i == pPopup->GetSelectedRow()) ? ">" : " ", psItem->szName.Text(), psItem->szLocation.Text());
+		}
+	}
+	if (pPopup->GetField().IsNotNull())
+	{
+		printf("Chooser filter: [%s]\n", pPopup->GetFilterText());
+	}
+	if (pPopup->GetPreview().IsNotNull())
+	{
+		printf("Chooser preview: %s\n", GetIDEFileNamePart(pPopup->GetPreview()->GetTitle()));
+	}
+	fflush(stdout);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A chooser of places says it has opened, or closed, for printchooser.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEScript::ChooserOpened(CIDEChooser* pcChooser)
+{
+	mpcChooser = pcChooser;
+}
+
+
+void CIDEScript::ChooserClosed(CIDEChooser* pcChooser)
+{
+	if (mpcChooser == pcChooser)
+	{
+		mpcChooser = NULL;
 	}
 }
 
@@ -3085,6 +3155,10 @@ void CIDEScript::RunEditStep(const char* szStep)
 		{
 			mpcContent->GetDocuments()->FocusActiveEditor();
 		}
+	}
+	else if (strcmp(szStep, "printchooser") == 0)
+	{
+		PrintChooser();
 	}
 	else if (strncmp(szStep, "claudeclick:", 12) == 0)
 	{
