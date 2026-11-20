@@ -88,7 +88,8 @@ bool CIDEAskClaude::Load(CObjectReader* pcFile) { return false; }
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Send: the request typed in the Claude tab is sent.
+// Send: the request typed in the Claude tab is sent.  The keys go back
+// to the request's box from the button, so the next can be typed.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEAskClaude::ClaudeSendClicked(void)
@@ -102,6 +103,7 @@ void CIDEAskClaude::ClaudeSendClicked(void)
 		mpClaudePane->SetRequest("");
 	}
 	szRequest.Kill();
+	mpcContent->GetWindow()->GetFocus()->SetFocus(mpClaudePane->GetRequestArea());
 }
 
 

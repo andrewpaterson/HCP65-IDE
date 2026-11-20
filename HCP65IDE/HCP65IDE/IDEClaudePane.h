@@ -79,6 +79,9 @@ public:
 
 	Ptr<CComponent>		GetComponent(void) const;
 	Ptr<CTextArea>		GetRequestArea(void) const;
+	Ptr<CScrollPane>	GetRequestPane(void) const;
+	Ptr<CTextArea>		GetConversationArea(void) const;
+	Ptr<CScrollPane>	GetConversationPane(void) const;
 	Ptr<CButton>		GetSendButton(void) const;
 	Ptr<CButton>		GetStopButton(void) const;
 	Ptr<CButton>		GetNewButton(void) const;

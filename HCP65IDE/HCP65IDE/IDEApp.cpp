@@ -45,6 +45,7 @@ static const char*	gaszIDEScriptVariables[] =
 	"HCP65_IDE_CARET",
 	"HCP65_IDE_CHANGE",
 	"HCP65_IDE_CLAUDE",
+	"HCP65_IDE_CLAUDE_EXECUTABLE",
 	"HCP65_IDE_CLOSE",
 	"HCP65_IDE_CLOSE_SOLUTION",
 	"HCP65_IDE_COMPARE",
@@ -256,7 +257,8 @@ static void GetIDEUserFile(CChars* pszDest, const char* szFile, const char* szVa
 // HCP65_IDE_RUN_EDITS (CIDERunConfigurationsDialog::ApplyEdits),
 // HCP65_IDE_BUILD_EDITS (CIDEBuildConfigurationsDialog::ApplyEdits),
 // HCP65_IDE_ATTACH (a port to attach the debugger to) and
-// HCP65_IDE_CLAUDE (a request sent to Claude Code) are for
+// HCP65_IDE_CLAUDE (a request sent to Claude Code), and
+// HCP65_IDE_CLAUDE_EXECUTABLE (a program run in Claude Code's place) are for
 // checking it: a snapshot of the window, every folder expanded, files
 // opened (a comma separated list, each in a tab), the
 // editor scrolled down that many pixels, the indexing finished, the caret
@@ -445,6 +447,11 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 					mpWindow->InputPrintable(*szTyped, true);
 				}
 			}
+			if (getenv("HCP65_IDE_CLAUDE_EXECUTABLE") != NULL)
+			{
+				//A stand-in for Claude Code, so the Claude tab is checked without asking Claude anything.
+				SetClaudeExecutable(getenv("HCP65_IDE_CLAUDE_EXECUTABLE"));
+			}
 			if (getenv("HCP65_IDE_EDIT") != NULL)
 			{
 				//A comma separated list of edits: open:<file>, type:<text>, undo, redo (Edit, Undo and Redo),
@@ -455,8 +462,10 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 				//renamefile:<name> and renamefilerelated:<name> (Rename File on the active file, with its related files), usages (Alt+F7, the tree printed), usagegroups:<tpc> (Find Usages grouped by usage type, project and class, or none of them),
 				//focus:usages (its tree focussed), select:<node> (its row of that node selected), printselected (the
 				//selected row printed), printselection (the active editor's selected text and caret line), printhistory
-				//(Back and Forward's places), printpopup (Control+B's usages popup) and key:<f4|space|enter|escape|documentend|documenthome> (what the key
-				//gives, Jump to Source for F4).
+				//(Back and Forward's places), printpopup (Control+B's usages popup), key:<f4|space|enter|escape|documentend|documenthome> (what the key
+				//gives, Jump to Source for F4), claudeclick:<request|conversation|send|stop|new> (that part of the Claude
+				//tab pressed, through the window), claudetype:<text> (typed to whatever has the keys) and printclaude (where
+				//the Claude tab's parts are, which has the keys, and its texts).
 				//What each open file's caret line then is is printed.
 				aszOpen.Init();
 				aszOpen.Split(getenv("HCP65_IDE_EDIT"), ',');

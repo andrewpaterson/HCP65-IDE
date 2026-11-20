@@ -22,6 +22,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "StandardLib/Objects.h"
 #include "StandardLib/ClassDefines.h"
 #include "BaseLib/StringHelper.h"
+#include "WindowLib/ClearCanvasDraw.h"
 #include "IDEClaudePane.h"
 
 
@@ -65,6 +66,7 @@ const char* gaszIDEClaudeASCII[] =
 void CIDEClaudePane::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CFont> pStatusFont, Ptr<CFontFamily> pFamily)
 {
 	Ptr<CGridContainer>	pRequestRow;
+	Ptr<CCanvas>		pLine;
 
 	PreInit();
 
@@ -80,7 +82,8 @@ void CIDEClaudePane::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CF
 	mpConversation->SetEditable(false);
 	mpConversation->SetTiledText(true);
 	mpConversation->SetColour(msText);
-	mpConversation->SetAlignment(CSH_Left, CSV_Top);
+	//It fills its view, so a press beside or below what has been said is in it: text can be selected from there.
+	mpConversation->SetAlignment(CSH_Stretch, CSV_Stretch);
 	mpConversationPane = OMalloc<CScrollPane>(pWindow, pTheme);
 	mpConversationPane->SetContent(mpConversation);
 	mpConversationPane->SetAlignment(CSH_Stretch, CSV_Stretch);
@@ -88,7 +91,9 @@ void CIDEClaudePane::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CF
 	mpRequest = OMalloc<CTextArea>(pWindow, pTheme, pFamily, "");
 	mpRequest->SetTiledText(true);
 	mpRequest->SetColour(msText);
-	mpRequest->SetAlignment(CSH_Left, CSV_Top);
+	//The request fills its box.  Sized by its text an empty one is no pixels wide, and a press in the box missed it:
+	//nothing had the keys and nothing could be typed.
+	mpRequest->SetAlignment(CSH_Stretch, CSV_Stretch);
 	mpRequestPane = OMalloc<CScrollPane>(pWindow, pTheme);
 	mpRequestPane->SetContent(mpRequest);
 	mpRequestPane->SetDesiredSize(-1, IDE_CLAUDE_REQUEST_HEIGHT);
@@ -101,6 +106,11 @@ void CIDEClaudePane::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CF
 	mpNewButton = OMalloc<CButton>(pWindow, pTheme, "New Conversation");
 	mpNewButton->SetAlignment(CSH_Left, CSV_Top);
 
+	//A line over the request's box shows where it is: the box and the conversation are the same colour.
+	pLine = OMalloc<CCanvas>(pWindow, OMalloc<CClearCanvasDraw>(pTheme->GetColour(TC_Separator)));
+	pLine->SetDesiredSize(-1, 1);
+	pLine->SetAlignment(CSH_Stretch, CSV_Stretch);
+
 	pRequestRow = OMalloc<CGridContainer>(pWindow);
 	pRequestRow->SetAlignment(CSH_Stretch, CSV_Stretch);
 	pRequestRow->AddComponent(mpRequestPane, 0, 0, 1, 1, 1, 1);
@@ -112,7 +122,8 @@ void CIDEClaudePane::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CF
 	mpPanel->SetAlignment(CSH_Stretch, CSV_Stretch);
 	mpPanel->AddComponent(mpStatus, 0, 0, 1, 1, 1, 0);
 	mpPanel->AddComponent(mpConversationPane, 0, 1, 1, 1, 1, 1);
-	mpPanel->AddComponent(pRequestRow, 0, 2, 1, 1, 1, 0);
+	mpPanel->AddComponent(pLine, 0, 2, 1, 1, 1, 0);
+	mpPanel->AddComponent(pRequestRow, 0, 3, 1, 1, 1, 0);
 
 	PostInit();
 }
@@ -193,13 +204,14 @@ void CIDEClaudePane::AppendRequest(const char* szRequest)
 	CChars	sz;
 
 	sz.Init();
-	if (mpConversation->GetText()[0] != '\0')
-	{
-		sz.Append('\n');
-	}
 	sz.Append("> ");
 	sz.Append(szRequest);
 	sz.Replace("\n", "\n> ");
+	if (mpConversation->GetText()[0] != '\0')
+	{
+		//The blank line goes in once the request's lines are marked, or it would be marked as one of them.
+		sz.Insert(0, "\n");
+	}
 	Append(sz.Text(), IDE_CLAUDE_REQUEST);
 	sz.Kill();
 }
@@ -341,12 +353,21 @@ void CIDEClaudePane::ScrollToEnd(void)
 void CIDEClaudePane::AppendDetail(const char* szDetail, CChars* pszDest)
 {
 	const char*	szEnd;
+	CChars		szStart;
 	size		uiLength;
 
+	//Claude names a file with the slashes of where it runs, the folder's are '\'.
 	uiLength = mszDirectory.Length();
-	if ((uiLength > 0) && (strlen(szDetail) > uiLength) && (MemICmp(mszDirectory.Text(), szDetail, uiLength) == 0))
+	if ((uiLength > 0) && (strlen(szDetail) > uiLength))
 	{
-		szDetail += uiLength;
+		szStart.Init();
+		szStart.Append(szDetail, uiLength);
+		szStart.Replace('/', '\\');
+		if (MemICmp(mszDirectory.Text(), szStart.Text(), uiLength) == 0)
+		{
+			szDetail += uiLength;
+		}
+		szStart.Kill();
 	}
 
 	szEnd = strchr(szDetail, '\n');
@@ -456,6 +477,9 @@ void ToIDEText(const char* szUTF8, CChars* pszDest)
 
 Ptr<CComponent> CIDEClaudePane::GetComponent(void) const { return mpPanel; }
 Ptr<CTextArea> CIDEClaudePane::GetRequestArea(void) const { return mpRequest; }
+Ptr<CScrollPane> CIDEClaudePane::GetRequestPane(void) const { return mpRequestPane; }
+Ptr<CTextArea> CIDEClaudePane::GetConversationArea(void) const { return mpConversation; }
+Ptr<CScrollPane> CIDEClaudePane::GetConversationPane(void) const { return mpConversationPane; }
 Ptr<CButton> CIDEClaudePane::GetSendButton(void) const { return mpSendButton; }
 Ptr<CButton> CIDEClaudePane::GetStopButton(void) const { return mpStopButton; }
 Ptr<CButton> CIDEClaudePane::GetNewButton(void) const { return mpNewButton; }

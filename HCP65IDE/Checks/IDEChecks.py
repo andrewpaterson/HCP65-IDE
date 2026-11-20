@@ -3970,6 +3970,22 @@ CHECKS = [
 		[r'^View: lines 1 to \d+, caret line 1$', r'^View: lines \d+ to 420, caret line 420$', r'^View: lines 1 to \d+, caret line 1$'], []),
 ]
 
+if os.name != 'nt':
+	#The stand-in for Claude Code is a shell script, which Windows can't start as a program.
+	CHECKS.append(('claude-request', {
+		#The Claude tab used as it is by hand, with a stand-in for Claude Code (Input/Claude/claude) that reads Engine.h
+		#and answers with what it was asked.  A press in the request's empty box gives it the keys (sized by its text it
+		#was no pixels wide, the press missed it and nothing could be typed), what is typed goes in it, and a press on
+		#Send sends it: the request, the tool's line (the file named from Claude's folder) and the answer are in the
+		#conversation, the box is empty and has the keys again, so the next request is typed without another press.
+		'SOLUTION': RENAME_FILE, 'OPEN': 'Engine.h', 'CLAUDE_EXECUTABLE': os.path.join(HERE, 'Input', 'Claude', 'claude'),
+		'DEBUG': 'wait:500,clickmenu:View/Claude,edit:claudeclick:request,edit:printclaude,edit:claudetype:Hello there,edit:printclaude,'
+		         'edit:claudeclick:send,wait:1500,edit:printclaude,edit:claudetype:Second,edit:printclaude'},
+		[r'^Claude: .* keys request$', r'^Claude request: \[\]$', r'^Claude request: \[Hello there\]$',
+		 r'^Claude: .* keys request$', r'^Claude status: \[Done, \$0\.01\.\]$', r'^Claude request: \[\]$',
+		 r'^Claude conversation: \[> Hello there$', r'^  Read Engine\.h$', r'^Asked: Hello there\]$', r'^Claude request: \[Second\]$'],
+		[r'^Claude: .* keys nothing$']))
+
 
 def Hashes():
 	asHashes = {}

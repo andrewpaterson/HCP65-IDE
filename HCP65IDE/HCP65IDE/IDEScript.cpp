@@ -1272,6 +1272,109 @@ void CIDEScript::ClickEditor(int32 iClicks, const char* szPlace)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// claudeclick:<request|conversation|send|stop|new>: the pointer is put
+// over the middle of that part of the Claude tab (the request's and the
+// conversation's are their scroll panes, as they are what is seen) and
+// button one pressed and released through the window.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEScript::ClickClaude(const char* szPart)
+{
+	Ptr<CIDEClaudePane>	pPane;
+	Ptr<CComponent>		pPart;
+	CInt32Rect			cBounds;
+
+	pPane = mpcContent->GetAskClaude()->GetClaudePane();
+	if (strcmp(szPart, "request") == 0)
+	{
+		pPart = pPane->GetRequestPane();
+	}
+	else if (strcmp(szPart, "conversation") == 0)
+	{
+		pPart = pPane->GetConversationPane();
+	}
+	else if (strcmp(szPart, "send") == 0)
+	{
+		pPart = pPane->GetSendButton();
+	}
+	else if (strcmp(szPart, "stop") == 0)
+	{
+		pPart = pPane->GetStopButton();
+	}
+	else if (strcmp(szPart, "new") == 0)
+	{
+		pPart = pPane->GetNewButton();
+	}
+	else
+	{
+		return;
+	}
+
+	mpcContent->GetWindow()->Layout();
+	pPart->GetActualBounds(&cBounds);
+	mpcContent->GetWindow()->PointerMoved((cBounds.GetLeft() + cBounds.GetRight()) / 2, (cBounds.GetTop() + cBounds.GetBottom()) / 2);
+	mpcContent->GetWindow()->InputCommand(CIC_ActivateComponent, true);
+	mpcContent->GetWindow()->InputCommand(CIC_ExecuteComponent, true);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// printclaude: where the Claude tab's parts are in the window (left, top,
+// right, bottom), which of them has the keys, and its texts:
+// "Claude: status 324,622-1280,643 conversation ... keys request",
+// "Claude status: [...]", "Claude request: [...]" and
+// "Claude conversation: [...]".
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEScript::PrintClaude(void)
+{
+	Ptr<CIDEClaudePane>	pPane;
+	Ptr<CComponent>		pFocus;
+	CInt32Rect			cBounds;
+	const char*			szKeys;
+
+	pPane = mpcContent->GetAskClaude()->GetClaudePane();
+	mpcContent->GetWindow()->Layout();
+
+	printf("Claude:");
+	pPane->GetConversationPane()->GetActualBounds(&cBounds);
+	printf(" conversation %d,%d-%d,%d", (int)cBounds.GetLeft(), (int)cBounds.GetTop(), (int)cBounds.GetRight(), (int)cBounds.GetBottom());
+	pPane->GetRequestPane()->GetActualBounds(&cBounds);
+	printf(" request %d,%d-%d,%d", (int)cBounds.GetLeft(), (int)cBounds.GetTop(), (int)cBounds.GetRight(), (int)cBounds.GetBottom());
+	pPane->GetRequestArea()->GetActualBounds(&cBounds);
+	printf(" text %d,%d-%d,%d", (int)cBounds.GetLeft(), (int)cBounds.GetTop(), (int)cBounds.GetRight(), (int)cBounds.GetBottom());
+	pPane->GetSendButton()->GetActualBounds(&cBounds);
+	printf(" send %d,%d-%d,%d", (int)cBounds.GetLeft(), (int)cBounds.GetTop(), (int)cBounds.GetRight(), (int)cBounds.GetBottom());
+
+	pFocus = mpcContent->GetWindow()->GetFocus()->GetFocussedComponent();
+	szKeys = "something else";
+	if (pFocus.IsNull())
+	{
+		szKeys = "nothing";
+	}
+	else if (pFocus->IsWithin(pPane->GetRequestPane()))
+	{
+		szKeys = "request";
+	}
+	else if (pFocus->IsWithin(pPane->GetConversationPane()))
+	{
+		szKeys = "conversation";
+	}
+	else if (mpcContent->GetDocuments()->GetActiveTab().IsNotNull() && pFocus->IsWithin(mpcContent->GetDocuments()->GetActiveTab()->GetPane()))
+	{
+		szKeys = "editor";
+	}
+	printf(" keys %s\n", szKeys);
+	printf("Claude status: [%s]\n", pPane->GetStatus());
+	printf("Claude request: [%s]\n", pPane->GetRequest());
+	printf("Claude conversation: [%s]\n", pPane->GetConversation());
+	fflush(stdout);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // gutterclick:<line> and shiftgutterclick:<line>, from 1: the pointer is
 // put over the last digit of the line's number in the active editor's
 // gutter, which should be in view, and button one pressed and released
@@ -2955,6 +3058,22 @@ void CIDEScript::RunEditStep(const char* szStep)
 		{
 			mpcContent->GetDocuments()->FocusActiveEditor();
 		}
+	}
+	else if (strncmp(szStep, "claudeclick:", 12) == 0)
+	{
+		ClickClaude(&szStep[12]);
+	}
+	else if (strncmp(szStep, "claudetype:", 11) == 0)
+	{
+		//Typed to whatever has the keys, as a keyboard types: nothing is given them first.
+		for (szTyped = &szStep[11]; *szTyped != '\0'; szTyped++)
+		{
+			mpcContent->GetWindow()->InputPrintable(*szTyped, true);
+		}
+	}
+	else if (strcmp(szStep, "printclaude") == 0)
+	{
+		PrintClaude();
 	}
 	else if (strcmp(szStep, "printselected") == 0)
 	{
