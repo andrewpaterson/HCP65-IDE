@@ -1,25 +1,78 @@
 Navigation in the HCP65 IDE against IntelliJ IDEA
 ==================================================
 
-Written 2026-11-12 from the IDE's commands and the Find Usages, Go to and Find in Files code.  The gaps are a list
-to choose from, not a list to finish: only what is planned below is to be built.
+Written 2026-11-12 from the IDE's commands and the Find Usages, Go to and Find in Files code; the gaps brought up to
+date 2026-11-20 against IntelliJ's Navigate menu and its editor's navigation, from the commands, the code and the
+website's pages (HCP65\Website\docs\ide), not by trying each one.  The gaps are a list to choose from, not a list to
+finish: only what is planned is to be built.  "Planned" below is an item of NextIDEWork.txt, which says how the user
+wants it; the plan further down, the Find Usages tool window's, is all built.
 
 
 What there is
 -------------
 
-Go to Class, File and Symbol (Control+N, Control+Shift+N, Control+Alt+Shift+N), Go to Definition (F12), Go to Source
-(Control+B), Find Usages (Alt+F7) and Find All References (Shift+F12) in a tool window, the usages popup (Control+B on
-a declaration), Back and Forward, Next and Previous Occurrence, Switch Header/Source (Alt+O), Find in Files
-(Control+Shift+F) with its Find tool window, and Solution Explorer with the active file selected (Alt+1).
+Go to Class, File and Symbol (Control+N, Control+Shift+N, Control+Alt+Shift+N; a file with ":line"), Go to Definition
+(F12), Go to Source (Control+B; on an #include, its file), Find Usages (Alt+F7) and Find All References (Shift+F12)
+in a tool window with tabs, a preview, a toolbar, filters and scopes, Find Usages Settings (Control+Alt+Shift+F7), the
+usages popup (Control+B on a declaration), Back and Forward, Next and Previous Occurrence (the tool windows' results
+and the Build tab's errors), Switch Header/Source (Alt+O), Find in Files (Control+Shift+F) with its Find tool window,
+Find Duplicates (Control+Alt+Shift+D), Jump to Source from a tool window (F4), Next and Previous Difference in a diff
+(F7, Shift+F7), Solution Explorer with the active file selected (Alt+1), and Hide the tool window with the keys
+(Shift+Escape).  The editor highlights the selection's other occurrences and, with the caret left on a name, that
+symbol's usages in the file.
 
 
 Gaps
 ----
 
-Find Usages tool window (built 2026-11-12, see the plan below)
-  - What is left: the Find tool window (Find in Files') has one result at a time, without tabs or a pin; there is no
-    export of the results; the tree doesn't follow the editor's caret (IntelliJ's Autoscroll from Source); and a
+In a file
+  - Go to Line:Column (Control+G).  Planned: item 4.  Control+G is free.
+  - Find and Replace (Control+F, Control+R) with every match highlighted, Find Next and Previous (F3, Shift+F3) and
+    Find Word at Caret (Control+F3).  Planned: item 2, with the regular expression engine.
+  - File Structure popup (Control+F12) and a Structure tool window.
+  - Next and Previous Method (Alt+Down, Alt+Up).
+  - Matching brace (Control+Shift+M), and the start and end of the block (Control+[ and Control+]).
+  - Last Edit Location (Control+Shift+Backspace) and Next Edit Location.
+  - Bookmarks: a toggle, mnemonic ones, their list, next and previous.  Planned: item 7, with the user's keys.
+  - Next and Previous Change (Control+Alt+Shift+Down and Up): the change bars are there, with no key to step between
+    them.
+  - Next and Previous Highlighted Error (F2, Shift+F2): nothing to go to yet, as the editor shows no errors; the
+    Build tab's are stepped through with Next Occurrence.  F2 and Shift+F2 are the user's keys for the next and
+    previous bookmark.
+  - Highlight Usages in File (Control+Shift+F7): the symbol at the caret is highlighted by itself, but the highlights
+    can't be kept while the caret moves, or stepped through.
+  - Breadcrumbs, and sticky lines (the enclosing class and function kept at the top of the view).
+
+Between files
+  - Recent Files (Control+E), Recent Locations (Control+Shift+E).
+  - The Switcher (Control+Tab), and the next and previous tab (Alt+Right, Alt+Left).
+  - Reopen Closed Tab.
+  - A navigation bar (Alt+Home).
+  - Select In (Alt+F1): only Solution Explorer, by Alt+1.
+  - In Solution Explorer: Always Select Opened File, Open Files with Single Click, and typing to find a row (speed
+    search), which no tree here has.
+  - Splitting the editor and moving between the splits as commands: docking puts documents side by side, by hand.
+
+Symbols
+  - Control+click and a middle click on a name, and its declaration shown with Control held over it.
+  - Go to Implementation (Control+Alt+B), Super Method (Control+U), Type Declaration (Control+Shift+B).
+  - The Type, Method and Call Hierarchies (Control+H, Control+Shift+H, Control+Alt+H).
+  - Gutter icons for overriding and overridden functions.
+  - Quick Definition (Control+Shift+I), Quick Documentation (Control+Q), Parameter Info (Control+P) and Type Info
+    (Control+Shift+P); no tool tip for a name either.
+  - The count of a declaration's usages shown above it.
+  - Go to Related Symbol (Control+Alt+Home) and Go to Test: Switch Header/Source is the only one.
+  The index links a virtual function to what it overrides and what overrides it since Rename follows them
+  (CCPPIndex::FindOverrides), which Go to Implementation, Super Method, the gutter icons and the Method Hierarchy were
+  waiting for.
+
+Find in Files
+  - Regular expressions, a file mask, Replace in Files (Control+Shift+R).  Planned: item 3.
+  - A button to choose the directory.
+  - The Find tool window has one result at a time, without tabs or a pin.
+
+Find Usages tool window
+  - No export of the results; the tree doesn't follow the editor's caret (IntelliJ's Autoscroll from Source); and a
     result's row isn't coloured as code, only its preview is.
 
 Usages popup
@@ -30,28 +83,14 @@ Go to dialogs
   - No "include non-solution items", no All tab, no Shift Shift, no Actions tab (the first three were ruled out
     when it was built).
 
-In a file
-  - Find and Replace (Control+F, Control+R) with every match highlighted, and F3 for the next.
-  - Go to Line (Control+G).
-  - File Structure popup (Control+F12) and a Structure tool window.
-  - Matching brace, next and previous method, last edit location (Control+Shift+Backspace).
-  - The other occurrences of the identifier at the caret highlighted.
-  - Bookmarks.
+Tool windows
+  - A key for each (Alt+1 to Alt+9): only Solution Explorer has one; the rest are on View without keys.
+  - Jump to Last Tool Window (F12, which is Go to Definition here) and Hide All Tool Windows (Control+Shift+F12).
+  - TODO and Problems tool windows.
 
-Between files
-  - Recent Files (Control+E), Recent Locations (Control+Shift+E), the Switcher (Control+Tab).
-  - A navigation bar or breadcrumbs.
-
-Symbols
-  - Control+click on an identifier; a tool tip, Quick Documentation (Control+Q) and Quick Definition
-    (Control+Shift+I) for it.
-  - Go to Implementation (Control+Alt+B), Super Method (Control+U), Type Declaration, the Type and Call Hierarchies,
-    and gutter icons for overridden and overriding methods.  The index doesn't link a virtual function to its
-    overrides, which most of these need first.
-  - Go to Related Symbol, Go to Test.
-
-Find in Files
-  - Regular expressions, a file mask, a button to choose the directory, Replace in Files.
+The smallest of those that aren't planned, should any be wanted: Control+click, Go to Implementation and Super
+Method use what Go to Source and FindOverrides already have; Recent Files, the Switcher and Last Edit Location need
+nothing new from the index.
 
 
 Plan: completing the Find Usages tool window (all eight steps built 2026-11-12)
