@@ -188,8 +188,8 @@ S2. The chooser (WindowLib, CChooserPopup; its rows shared with CGoToDialog).
     press outside closes.  It opens under the caret, at a point or in the middle of the window:
     CIDEUsages::OpenCaretPopup becomes a function for any component (a small CIDEPopups, as three features that
     aren't Find Usages already call it), the menu callers unchanged.
-    Users: S1; the usages popup; File Structure; Recent Files; Recent Locations; the Switcher; the bookmarks'
-    list; Select In; the navigation bar's lists.
+    Users: S1; the usages popup; File Structure; Recent Files; Recent Locations; the Switcher; Select In; the
+    Go to dialog's Actions tab's rows.
 
 S3. Typing to find a row (WindowLib, on CListContainer and so CTreeContainer and CMenuContainer).
     Off unless asked for (SetTypeToFind): typed characters make a pattern shown over the list's corner, the next
@@ -216,9 +216,9 @@ S4. A file's outline (CppCompilerLib to gather it, a tab to keep it).
     now (as Extend Selection does); what only shows it (breadcrumbs, sticky lines, the Structure window) waits
     for the thread.
     Users: File Structure and the Structure tool window; Next and Previous Method; breadcrumbs; sticky lines; the
-    gutter's override icons and the usage counts (which need each function of the file); the line a bookmark or a
-    recent location says it is in.  The refactorings' five copies of "the function the caret is in" could ask it
-    too, without a parse, but leave them as they are unless the user asks (decision 17).
+    gutter's override icons (which need each function of the file); the line a bookmark or a recent location
+    says it is in.  The refactorings' five copies of "the function the caret is in" could ask it too, without a
+    parse; they move to it when a refactoring is next changed, not before (decision 17).
 
 S5. Relations between symbols (IDE, in CIDECodeModel beside FindOverriders).
       - FindSuperMethods(key, locations): what a function overrides, nearest class first: FindOverrideLocations
@@ -248,10 +248,11 @@ S6. What a symbol is, in words (IDE, CIDESymbolInfo).
     /* */ blocks and to skip a banner of slashes), where it is (its scope, its file and line), its kind's icon;
     for a function also each parameter's text and name, and its body's range.  It needs the declaring file
     parsed: a small cache of CIDERefactorUnits by file and change count (CIDEUnitCache), unchecked, which is also
-    what the seven GetUnit and KillUnits copies in the refactorings are; they can move to it later (decision 17).
-    Users: Quick Documentation, Quick Definition, the declaration shown with Control held, a name's tool tip,
-    Parameter Info, the chooser's and the Go to dialog's previews, the Structure rows' details, and completion's
-    list when that is built.
+    what the seven GetUnit and KillUnits copies in the refactorings are; each moves to it when its refactoring is
+    next changed (decision 17).
+    Users: Quick Definition, the declaration shown with Control held, Parameter Info, the chooser's and the Go to
+    dialog's previews, the Structure rows' details, and completion's list when that is built; Quick
+    Documentation and a name's tool tip if they are built (decision 11), which are what need the comment.
 
 S7. Pointing at text (WindowLib).
       - CTextArea gets a caret event (the caret or the selection moved) and a hover event (the pointer has rested
@@ -265,7 +266,7 @@ S7. Pointing at text (WindowLib).
         CScrollPane, as git's change popup is made), at the pointer, under a range of text or over the caret;
         either the pointer passes through it and it goes when the pointer leaves the range, or it takes the keys
         (to scroll, to copy) and goes on Escape.  CToolTips stays as it is for buttons.
-    Users: Control+click; the tool tip and Quick Documentation; Parameter Info (which follows the caret event);
+    Users: Control+click; the declaration shown with Control held; Parameter Info (which follows the caret event);
     breadcrumbs, sticky lines and Autoscroll from Source (the caret event, in place of each polling the caret as
     CIDENavigationHistory and CIDECaretUsages do now: they can move to it, their behaviour the same).
 
@@ -291,7 +292,8 @@ S9. Searching a text (BaseLib and WindowLib).
         usages kept by Highlight Usages in File.  A layer says how many it has and which is current, and steps
         (with S8's function).
       - Marks on the scroll bar (WindowLib's CScrollBar has only a thumb): a mark for each of a layer's matches,
-        each changed line and each bookmark, as IntelliJ's stripe, a press on one going there (decision 7).
+        each changed line and each bookmark, as IntelliJ's stripe, a press on one going there (wanted: decision
+        7).
 
 S10. Bars round an editor, and a prompt (IDE and WindowLib).
       - CIDEEditorTab gets a strip above its editor and one below, each empty until something is put in it: the
@@ -303,7 +305,8 @@ S10. Bars round an editor, and a prompt (IDE and WindowLib).
 S11. Where the user has been (IDE, CIDERecent).
       - Files, most recently shown first, the closed ones kept (heard from CIDEContent::DocumentSelected and
         PaneClosed): Recent Files, the Switcher, Reopen Closed Tab, and the Go to dialog's list while its field
-        is empty.  Kept with the workspace (decision 13).
+        is empty.  Kept with the workspace, as bookmarks are; Back and Forward and the places edited are the
+        session's (decision 13).
       - Places visited: CIDENavigationHistory's own (give it a way to list them) with their lines' text from
         CIDEFileLines: Recent Locations.
       - Places edited: from CIDEDocuments::DocumentChanged, one for each run of edits near each other: Last and
@@ -369,14 +372,15 @@ B. Moving in a file (In a file)
      - Breadcrumbs (under the editor): the outline's entries round the caret, namespace to function; a click on
        one goes to it, and opens the chooser with its siblings.  S4, S10, S7's caret event.
      - Sticky lines: the first line of each entry the top of the view is inside, kept at the top; a click goes
-       to it.  S4, S10.  Both, or one (decision 10).
+       to it.  S4, S10.  Both are built, each with a setting that turns it off (decision 10).
 
 C. Marks on lines (In a file, Symbols)
    Builds S8 and S9's layers and scroll bar marks; uses S4 and S5.
      - Bookmarks: NextIDEWork.txt's item 7 (Control+F11 toggles, Control+Shift+F11 a mnemonic one, F2 and
        Shift+F2 the next and previous, Control+0 to 9 to a mnemonic one), a Bookmarks tool window by file with
-       the preview, kept in .hcp65user and moved by edits.  S8, S10's prompt, S2 for IntelliJ's Show Bookmarks
-       popup (Shift+F11 there, Step Out here: decision 3), S11's user file; the window is a CIDEResultsPane.
+       the preview, kept in .hcp65user and moved by edits.  S8, S10's prompt, S11's user file; the window is a
+       CIDEResultsPane.  IntelliJ's Show Bookmarks popup (Shift+F11 there, Step Out here) has no key and isn't
+       built: the tool window is the list (decision 3).
      - Next and Previous Change (Control+Alt+Shift+Down and Up): the tab's CGitLineChanges' lines.  S8.
      - Highlight Usages in File (Control+Shift+F7): the caret's symbol's usages kept highlighted until Escape,
        F3 and Shift+F3 stepping through them, the status line saying how many.  S9's kept layer, filled by
@@ -384,9 +388,7 @@ C. Marks on lines (In a file, Symbols)
      - Gutter icons for a function that overrides (a click: Go to Super Method) and one that is overridden (a
        click: Go to Implementation), and for a class with derived classes.  S4 for the file's functions, S5, S8,
        stage A's commands.  Worked out on the edits thread with the outline, not at each paint.
-     - The count of a declaration's usages over it ("3 usages", a click showing them): wanted or not (decision
-       9).  CCodeEditor::AddLineComponent puts a component under a line, not over it, so this needs a gap over
-       a line as well.
+     - The count of a declaration's usages over it ("3 usages") is left out (decision 9).
 
 D. Finding text (In a file, the search dialogs)
    Builds S9's CRegex and search; uses S10's strip and S12's tabs.
@@ -409,22 +411,22 @@ E. Between files
      - The next and previous tab (Alt+Right, Alt+Left), and Reopen Closed Tab (no key in IntelliJ), which opens
        it where its caret was.  S11; the dock's tab order.
      - Last Edit Location (Control+Shift+Backspace) and Next Edit Location.  S11.
-     - The navigation bar (Alt+Home), if wanted beside breadcrumbs and Solution Explorer (decision 16): the
-       active file's solution, project, folders and file; a press on one lists what is in it, in the chooser.
+     - The navigation bar (Alt+Home) is left out: breadcrumbs and Solution Explorer are there (decision 16).
      - Select In (Alt+F1): a menu of where the active file or symbol can be shown: Solution Explorer (Alt+1's),
        the Structure window.
      - Solution Explorer: Always Select Opened File and Open Files with Single Click, on its toolbar or menu and
        kept in the settings (the results panes' Navigate with Single Click is the same idea the other way
        round); typing to find a row (S3).
-     - Splitting the editor and moving between the halves as commands, if wanted (decision 15): the dock puts
-       documents side by side by dragging; no call for it was found in CDockManager's header.
+     - Splitting the editor and moving between the halves as commands: not until the user asks (decision 15).
+       The dock puts documents side by side by dragging; no call for it was found in CDockManager's header.
 
 F. What a name is (Symbols)
    Builds S6 and S7's hover and CInfoPopup.
      - Quick Documentation (Control+Q): the declaration, coloured, the comment over it, and where it is; with
-       the keys, so it scrolls; Escape closes.  S6, S7.  The comment is shown as it is written (decision 11).
-     - The same as a tool tip when the pointer rests on a name, and the declaration alone while Control is held
-       over it.  S6, S7.
+       the keys, so it scrolls; Escape closes.  S6, S7.  Put off, "later if at all" (decision 11), and with it
+       the tool tip that would show the same when the pointer rests on a name.  S6 need not read comments until
+       then.
+     - The declaration alone, shown while Control is held over a name.  S6, S7.
      - Quick Definition (Control+Shift+I): the symbol's definition's code in a popup (a CCodePreview), with the
        chooser's list beside it if there are several.  S6, S2.
      - Parameter Info (Control+P, and by itself after "(" once completion is there): the parameters of the call
@@ -451,8 +453,10 @@ H. The dialogs and the results (the search dialogs and results)
      - Go to Class, File and Symbol: a preview of the selected item (a CCodePreview in CGoToDialog, filled as
        Find in Files' is), and the recent files or symbols while the field is empty (S11).
      - The results panes: Export, Autoscroll from Source, coloured rows.  S12.
+     - An Actions tab (Control+Shift+A): a command found by its name and run, from the keymap's commands, each
+       row with its keys (decision 12).
      - Left out, as the user ruled when Go to was built: an All tab, Shift Shift, and things outside the
-       solution.  An Actions tab (Control+Shift+A) was not ruled on (decision 12).
+       solution.
 
 
 Keys
@@ -478,40 +482,40 @@ are IntelliJ's next and previous error; the user gave them to bookmarks.
 For the user to decide
 ----------------------
 
-Ask each when its stage comes up, one at a time, saying what it changes for them.  The recommendation is this
-plan's writer's, not the user's.
+All but one were answered on 2026-11-20; 11 was put off.  What comes up while building is asked one at a time,
+saying what it changes for the user.
 
    1. Decided 2026-11-20: the stages in the order A, B, D, C, E, F, G, H.  (D is NextIDEWork.txt's items 2 and 3,
       which the user had put first there; where these stages come among that file's other items wasn't asked.)
    2. Decided 2026-11-20: "Change Build to Ctrl+F9".  Build is on Control+F9 (done that day, IDEBuilding.cpp), so
       Go to Type Declaration takes Control+Shift+B, IntelliJ's key for it.  That it takes the key is this plan's
       reading of the answer: say so when stage A is brought up.
-   3. Show Bookmarks' key, as Shift+F11 is Step Out.  Recommended: none, the Bookmarks tool window doing.
+   3. Decided 2026-11-20: Show Bookmarks has no key, as Shift+F11 is Step Out; the Bookmarks tool window does.
    4. Decided 2026-11-20: a middle click on a name does not go to its declaration; the middle button still drags
       the view to scroll.
    5. Decided 2026-11-20: Control+click goes to the declaration, taking Control+Button 1 from starting a
       selection drag (Shift+click and a plain drag still select).
    6. Decided 2026-11-20: typing finds a row in every tree, the results trees too, as IntelliJ's; see S3.  The
       results trees typing into the editor was a misreading of the user's answer about Space.
-   7. Marks on the scroll bar for matches, usages, changed lines and bookmarks.  Recommended: yes, with the Find
-      bar, as four features feed them.
+   7. Decided 2026-11-20: marks on the scroll bar for matches, usages, changed lines and bookmarks, built with
+      the Find bar.
    8. Decided 2026-11-20: Go to Test is left out.
-   9. The count of usages over each declaration.  It is worked out for every declaration of the open file after
-      each parse.  Recommended: ask; it is the one feature here that changes how every file looks.
-  10. Breadcrumbs, sticky lines, or both.  Recommended: both, each with a setting to turn it off.
-  11. Quick Documentation showing the comment as it is written, with no markup read from it.  Recommended: so.
-  12. An Actions tab (Control+Shift+A: finding a command by its name) in Go to.  Recommended: yes, it is small on
-      the chooser and the keymap's commands; All and Shift Shift stay out as ruled.
-  13. What is kept with the workspace: bookmarks (decided: .hcp65user) and recent files; Back and Forward and
-      the edit locations for the session only, as Back is now.  Recommended: so.
-  14. One Hierarchy tool window with a tab for each hierarchy, as Find Usages has a tab for each search.
-      Recommended: so.
-  15. Commands to split the editor and move between the halves.  Recommended: not until asked for.
-  16. The navigation bar.  Recommended: not with breadcrumbs and Solution Explorer there; ask.
-  17. Moving the refactorings onto the shared pieces once those exist: the seven GetUnit and KillUnits onto the
-      unit cache, the five "function the caret is in" onto the outline, CIDEUsages::OpenCaretPopup's callers
-      onto CIDEPopups.  It makes no difference to see and touches code that works.  Recommended: only the
-      popup, which moves anyway; the others when a refactoring is next changed.
+   9. Decided 2026-11-20: the count of usages over each declaration is left out.
+  10. Decided 2026-11-20: breadcrumbs and sticky lines both, each with a setting to turn it off.
+  11. Put off 2026-11-20: "later if at all".  The question was whether Quick Documentation shows the comment as
+      it is written, with no markup read from it.  This plan reads the answer as Quick Documentation itself
+      waiting, and the name's tool tip with it (stage F): say so when stage F is brought up.
+  12. Decided 2026-11-20: an Actions tab (Control+Shift+A: finding a command by its name) in Go to.  All and
+      Shift Shift stay out as ruled.
+  13. Decided 2026-11-20: bookmarks (.hcp65user) and recent files are kept with the workspace; Back and Forward
+      and the edit locations are the session's, as Back is now.
+  14. Decided 2026-11-20: one Hierarchy tool window with a tab for each hierarchy, as Find Usages has a tab for
+      each search.
+  15. Decided 2026-11-20: no commands to split the editor until the user asks.
+  16. Decided 2026-11-20: no navigation bar.
+  17. Decided 2026-11-20: of the refactorings, only CIDEUsages::OpenCaretPopup's callers move onto the shared
+      pieces with this plan (onto CIDEPopups, which moves anyway).  The seven GetUnit and KillUnits go onto the
+      unit cache, and the five "function the caret is in" onto the outline, when a refactoring is next changed.
 
 
 To find out before building
@@ -523,7 +527,6 @@ To find out before building
     file's places.
   - How long a checked parse of a large unit takes (Type Info; the same number completion needs).
   - Whether CTreeContainer can say a node was opened, for a tree filled as it is opened.
-  - Whether CDockManager can split the document well from a call, for decision 15.
   - Whether the tab's highlights can say "this position is in a string or a comment" for the brace commands, or
     whether that needs the tokens kept.
   - Before changing CCPPIndex (the outline's ranges, the type link, a file's places): who is working in
