@@ -48,6 +48,9 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 #define BUILD_CONFIGURATION_WARN_MISSING_OVERRIDE	"WarnMissingOverride"
 #define BUILD_CONFIGURATION_EXCEPTIONS	"Exceptions"
 #define BUILD_CONFIGURATION_KEEP_UNUSED_OBJECTS	"KeepUnusedObjects"
+#define BUILD_CONFIGURATION_WARN_STRING_TO_POINTER	"WarnStringToPointer"
+#define BUILD_CONFIGURATION_MULTI_WORD_CASTS	"MultiWordCasts"
+#define BUILD_CONFIGURATION_C_CONVERSIONS	"CConversions"
 
 
 //The toolchains' names, as saved, by EBuildToolchain.
@@ -70,6 +73,9 @@ void CBuildConfiguration::Init(const char* szName, EBuildToolchain eToolchain, c
 	mbWarnMissingOverride = true;
 	mbExceptions = false;
 	mbKeepUnusedObjects = false;
+	mbWarnStringToPointer = false;
+	mbMultiWordCasts = false;
+	mbCConversions = false;
 	meProgram = BP_None;
 	mcImage.Init();
 	mcExecutable.Init();
@@ -159,6 +165,18 @@ void CBuildConfiguration::SaveXML(CXMLWriter* pcWriter)
 	{
 		pcWriter->Attribute(BUILD_CONFIGURATION_KEEP_UNUSED_OBJECTS, "true");
 	}
+	if (mbWarnStringToPointer)
+	{
+		pcWriter->Attribute(BUILD_CONFIGURATION_WARN_STRING_TO_POINTER, "true");
+	}
+	if (mbMultiWordCasts)
+	{
+		pcWriter->Attribute(BUILD_CONFIGURATION_MULTI_WORD_CASTS, "true");
+	}
+	if (mbCConversions)
+	{
+		pcWriter->Attribute(BUILD_CONFIGURATION_C_CONVERSIONS, "true");
+	}
 	if (HasCard())
 	{
 		pcWriter->Attribute(BUILD_CONFIGURATION_CARD, mszCard.Text());
@@ -221,6 +239,9 @@ bool CBuildConfiguration::LoadXML(CMarkupTag* pcTag)
 	char*			szWarnMissingOverride;
 	char*			szExceptions;
 	char*			szKeepUnusedObjects;
+	char*			szWarnStringToPointer;
+	char*			szMultiWordCasts;
+	char*			szCConversions;
 	EBuildToolchain	eToolchain;
 	CMarkupTag*		pcImage;
 	CMarkupTag*		pcExecutable;
@@ -257,7 +278,13 @@ bool CBuildConfiguration::LoadXML(CMarkupTag* pcTag)
 	szExceptions = pcTag->GetAttribute((char*)BUILD_CONFIGURATION_EXCEPTIONS);
 	SetExceptions((szExceptions != NULL) && (strcmp(szExceptions, "true") == 0));
 	szKeepUnusedObjects = pcTag->GetAttribute((char*)BUILD_CONFIGURATION_KEEP_UNUSED_OBJECTS);
+	szWarnStringToPointer = pcTag->GetAttribute((char*)BUILD_CONFIGURATION_WARN_STRING_TO_POINTER);
+	szMultiWordCasts = pcTag->GetAttribute((char*)BUILD_CONFIGURATION_MULTI_WORD_CASTS);
+	szCConversions = pcTag->GetAttribute((char*)BUILD_CONFIGURATION_C_CONVERSIONS);
 	SetKeepUnusedObjects((szKeepUnusedObjects != NULL) && (strcmp(szKeepUnusedObjects, "true") == 0));
+	SetWarnStringToPointer((szWarnStringToPointer != NULL) && (strcmp(szWarnStringToPointer, "true") == 0));
+	SetMultiWordCasts((szMultiWordCasts != NULL) && (strcmp(szMultiWordCasts, "true") == 0));
+	SetCConversions((szCConversions != NULL) && (strcmp(szCConversions, "true") == 0));
 
 	pcImage = pcTag->GetTag(BUILD_CONFIGURATION_IMAGE);
 	if (pcImage)
@@ -611,6 +638,76 @@ bool CBuildConfiguration::IsExceptions(void) const
 bool CBuildConfiguration::IsKeepUnusedObjects(void) const
 {
 	return mbKeepUnusedObjects;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether the compiler warns about a string literal, which is const, that
+// becomes a char* (false unless set; CCPPCompileOptions::
+// mbWarnStringToPointer).  C++14 has no such conversion; it is still made.
+//
+//////////////////////////////////////////////////////////////////////////
+void CBuildConfiguration::SetWarnStringToPointer(bool bWarnStringToPointer)
+{
+	mbWarnStringToPointer = bWarnStringToPointer;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+bool CBuildConfiguration::IsWarnStringToPointer(void) const
+{
+	return mbWarnStringToPointer;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether unsigned int(3), a cast written as a type of more than one word
+// and brackets, is accepted as the Microsoft compiler accepts it (false
+// unless set: it is an error; CCPPCompileOptions::mbMultiWordCasts).
+// [expr.type.conv] 1
+//
+//////////////////////////////////////////////////////////////////////////
+void CBuildConfiguration::SetMultiWordCasts(bool bMultiWordCasts)
+{
+	mbMultiWordCasts = bMultiWordCasts;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+bool CBuildConfiguration::IsMultiWordCasts(void) const
+{
+	return mbMultiWordCasts;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether the sources are C: a void* becomes any object's pointer and a
+// number an enum's value with no cast (false unless set; CCPPCompileOptions
+// ::mbCConversions).
+//
+//////////////////////////////////////////////////////////////////////////
+void CBuildConfiguration::SetCConversions(bool bCConversions)
+{
+	mbCConversions = bCConversions;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+bool CBuildConfiguration::IsCConversions(void) const
+{
+	return mbCConversions;
 }
 
 

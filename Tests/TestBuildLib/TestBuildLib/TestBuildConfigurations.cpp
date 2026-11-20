@@ -83,6 +83,9 @@ void TestBuildConfigurationsFile(void)
 	cConfigurations.GetConfiguration(0)->SetWarnMissingOverride(false);
 	cConfigurations.GetConfiguration(0)->SetExceptions(true);
 	cConfigurations.GetConfiguration(0)->SetKeepUnusedObjects(true);
+	cConfigurations.GetConfiguration(0)->SetWarnStringToPointer(true);
+	cConfigurations.GetConfiguration(0)->SetMultiWordCasts(true);
+	cConfigurations.GetConfiguration(0)->SetCConversions(true);
 	cConfigurations.Add("Fast GCC", BT_GCC, "Release|x64");
 	AssertTrue(cConfigurations.Write("Output" _FS_ "Test.hcp65build"));
 
@@ -95,8 +98,8 @@ void TestBuildConfigurationsFile(void)
 	AssertString("User", cRead.GetConfiguration(0)->GetBreakpointSpace());
 	AssertString("", cRead.GetConfiguration(1)->GetBreakpointSpace());
 
-	//NoFloats, MathTables, PreferSize, WarnMissingOverride, Exceptions and KeepUnusedObjects (written only when not the
-	//default) are kept.
+	//NoFloats, MathTables, PreferSize, WarnMissingOverride, Exceptions, KeepUnusedObjects, WarnStringToPointer,
+	//MultiWordCasts and CConversions (written only when not the default) are kept.
 	AssertTrue(cRead.GetConfiguration(0)->IsNoFloats());
 	AssertFalse(cRead.GetConfiguration(0)->IsMathTables());
 	AssertTrue(cRead.GetConfiguration(0)->IsPreferSize());
@@ -108,7 +111,13 @@ void TestBuildConfigurationsFile(void)
 	AssertTrue(cRead.GetConfiguration(0)->IsExceptions());
 	AssertFalse(cRead.GetConfiguration(1)->IsExceptions());
 	AssertTrue(cRead.GetConfiguration(0)->IsKeepUnusedObjects());
+	AssertTrue(cRead.GetConfiguration(0)->IsWarnStringToPointer());
+	AssertTrue(cRead.GetConfiguration(0)->IsMultiWordCasts());
+	AssertTrue(cRead.GetConfiguration(0)->IsCConversions());
 	AssertFalse(cRead.GetConfiguration(1)->IsKeepUnusedObjects());
+	AssertFalse(cRead.GetConfiguration(1)->IsWarnStringToPointer());
+	AssertFalse(cRead.GetConfiguration(1)->IsMultiWordCasts());
+	AssertFalse(cRead.GetConfiguration(1)->IsCConversions());
 	AssertString("W65C816", cRead.GetConfiguration(0)->GetProcessorName());
 	AssertTrue(cRead.GetConfiguration(1)->GetProcessorName() == NULL);
 

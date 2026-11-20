@@ -1023,6 +1023,9 @@ void CBuildCommandLine::WriteUsage(void)
 	WriteLine("  -no-override-warning          No warning for an override not declared override.");
 	WriteLine("  -exceptions                   C++ exceptions: throw, try and catch are compiled.");
 	WriteLine("  -keep-unused-objects          Link a global that is made or destroyed by code though nothing uses it.");
+	WriteLine("  -warn-string-to-pointer       Warn when a string literal, which is const, becomes a char*.");
+	WriteLine("  -multi-word-casts             Accept unsigned int(3), a cast whose type is more than one word.");
+	WriteLine("  -c-conversions                The sources are C: a void* and a number convert as C has them.");
 	WriteLine("  -exe <file> -entry <symbol> [-limit <n>] [-symbol <name>=<n>]...");
 	WriteLine("                                Link an executable.");
 	WriteLine("  -image <file> -size <n> [-fill <n>] [-limit <n>] [-load <n>] [-text <n>] -region <start>,<end>,<offset>...");

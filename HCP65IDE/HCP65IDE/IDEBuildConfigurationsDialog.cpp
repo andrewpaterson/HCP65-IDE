@@ -110,6 +110,9 @@ void CIDEBuildConfigurationsDialog::Class(void)
 	M_Pointer(mpWarnMissingOverride);
 	M_Pointer(mpExceptions);
 	M_Pointer(mpKeepUnusedObjects);
+	M_Pointer(mpWarnStringToPointer);
+	M_Pointer(mpMultiWordCasts);
+	M_Pointer(mpCConversions);
 	M_Pointer(mpCard);
 	M_Pointer(mpCardPath);
 	M_Pointer(mpContents);
@@ -245,7 +248,13 @@ Ptr<CComponent> CIDEBuildConfigurationsDialog::CreateBody(void)
 	mpExceptions = OMalloc<CCheckBox>(pWindow, psLook->pcTheme, "C++ exceptions");
 	mpExceptions->SetAlignment(CSH_Left, CSV_Center);
 	mpKeepUnusedObjects = OMalloc<CCheckBox>(pWindow, psLook->pcTheme, "Keep unused globals that are made or destroyed");
+	mpWarnStringToPointer = OMalloc<CCheckBox>(pWindow, psLook->pcTheme, "Warn when a string literal becomes a char*");
+	mpMultiWordCasts = OMalloc<CCheckBox>(pWindow, psLook->pcTheme, "Accept casts like unsigned int(3)");
+	mpCConversions = OMalloc<CCheckBox>(pWindow, psLook->pcTheme, "C sources: void* and numbers convert as in C");
 	mpKeepUnusedObjects->SetAlignment(CSH_Left, CSV_Center);
+	mpWarnStringToPointer->SetAlignment(CSH_Left, CSV_Center);
+	mpMultiWordCasts->SetAlignment(CSH_Left, CSV_Center);
+	mpCConversions->SetAlignment(CSH_Left, CSV_Center);
 	mpCard = CreateField();
 	mpCardPath = CreateField();
 	mpContents = OMalloc<CLabel>(pWindow, psLook->pcDimFont, "");
@@ -266,6 +275,9 @@ Ptr<CComponent> CIDEBuildConfigurationsDialog::CreateBody(void)
 	AddFormRow(pForm, &iRow, "", mpWarnMissingOverride);
 	AddFormRow(pForm, &iRow, "", mpExceptions);
 	AddFormRow(pForm, &iRow, "", mpKeepUnusedObjects);
+	AddFormRow(pForm, &iRow, "", mpWarnStringToPointer);
+	AddFormRow(pForm, &iRow, "", mpMultiWordCasts);
+	AddFormRow(pForm, &iRow, "", mpCConversions);
 	AddFormRow(pForm, &iRow, "Card", mpCard);
 	AddFormRow(pForm, &iRow, "Path on card", mpCardPath);
 	AddFormRow(pForm, &iRow, NULL, mpContents);
@@ -383,6 +395,9 @@ void CIDEBuildConfigurationsDialog::ShowSelected(void)
 	mpWarnMissingOverride->SetTicked(pcEdit ? pcEdit->mbWarnMissingOverride : true);
 	mpExceptions->SetTicked(pcEdit ? pcEdit->mbExceptions : false);
 	mpKeepUnusedObjects->SetTicked(pcEdit ? pcEdit->mbKeepUnusedObjects : false);
+	mpWarnStringToPointer->SetTicked(pcEdit ? pcEdit->mbWarnStringToPointer : false);
+	mpMultiWordCasts->SetTicked(pcEdit ? pcEdit->mbMultiWordCasts : false);
+	mpCConversions->SetTicked(pcEdit ? pcEdit->mbCConversions : false);
 	if (pcEdit)
 	{
 		SelectItem(mpToolchain, CBuildConfiguration::GetToolchainName(pcEdit->meToolchain));
@@ -484,6 +499,9 @@ void CIDEBuildConfigurationsDialog::Keep(void)
 	pcEdit->mbWarnMissingOverride = mpWarnMissingOverride->IsTicked();
 	pcEdit->mbExceptions = mpExceptions->IsTicked();
 	pcEdit->mbKeepUnusedObjects = mpKeepUnusedObjects->IsTicked();
+	pcEdit->mbWarnStringToPointer = mpWarnStringToPointer->IsTicked();
+	pcEdit->mbMultiWordCasts = mpMultiWordCasts->IsTicked();
+	pcEdit->mbCConversions = mpCConversions->IsTicked();
 	pcEdit->mszCard.Set(mpCard->GetText());
 	pcEdit->mszCardPath.Set(mpCardPath->GetText());
 }
@@ -688,7 +706,8 @@ bool CIDEBuildConfigurationsDialog::Approve(void)
 // semicolons: add, remove, select:<row>, name:<text>, toolchain:<text>,
 // solution:<text>, breakpoint:<text>, nofloats:<0 or 1>, mathtables:<0 or
 // 1>, prefersize:<0 or 1>, overridewarning:<0 or 1>, exceptions:<0 or
-// 1>, keepunused:<0 or 1>, card:<text>, cardpath:<text>, and check,
+// 1>, keepunused:<0 or 1>, stringwarning:<0 or 1>, multiwordcasts:<0 or 1>, cconversions:<0 or 1>, card:<text>,
+// cardpath:<text>, and check,
 // which prints whether OK
 // would close it and why not.
 //
@@ -756,6 +775,18 @@ void CIDEBuildConfigurationsDialog::ApplyEdits(const char* szEdits)
 		else if (strncmp(sz, "keepunused:", 11) == 0)
 		{
 			mpKeepUnusedObjects->SetTicked(sz[11] == '1');
+		}
+		else if (strncmp(sz, "stringwarning:", 14) == 0)
+		{
+			mpWarnStringToPointer->SetTicked(sz[14] == '1');
+		}
+		else if (strncmp(sz, "multiwordcasts:", 15) == 0)
+		{
+			mpMultiWordCasts->SetTicked(sz[15] == '1');
+		}
+		else if (strncmp(sz, "cconversions:", 13) == 0)
+		{
+			mpCConversions->SetTicked(sz[13] == '1');
 		}
 		else if (strncmp(sz, "card:", 5) == 0)
 		{

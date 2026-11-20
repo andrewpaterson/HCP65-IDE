@@ -67,6 +67,9 @@ void CBuildConfigurationEdit::Init(const char* szName, EBuildToolchain eToolchai
 	mbWarnMissingOverride = true;
 	mbExceptions = false;
 	mbKeepUnusedObjects = false;
+	mbWarnStringToPointer = false;
+	mbMultiWordCasts = false;
+	mbCConversions = false;
 	mszCard.Init();
 	mszCardPath.Init();
 }
@@ -90,6 +93,9 @@ void CBuildConfigurationEdit::Init(CBuildConfiguration* pcConfiguration, size ui
 	mbWarnMissingOverride = pcConfiguration->IsWarnMissingOverride();
 	mbExceptions = pcConfiguration->IsExceptions();
 	mbKeepUnusedObjects = pcConfiguration->IsKeepUnusedObjects();
+	mbWarnStringToPointer = pcConfiguration->IsWarnStringToPointer();
+	mbMultiWordCasts = pcConfiguration->IsMultiWordCasts();
+	mbCConversions = pcConfiguration->IsCConversions();
 	if (pcConfiguration->HasCard())
 	{
 		mszCard.Set(pcConfiguration->GetCard());
@@ -115,6 +121,9 @@ void CBuildConfigurationEdit::Init(CBuildConfigurationEdit* pcCopied, const char
 	mbWarnMissingOverride = pcCopied->mbWarnMissingOverride;
 	mbExceptions = pcCopied->mbExceptions;
 	mbKeepUnusedObjects = pcCopied->mbKeepUnusedObjects;
+	mbWarnStringToPointer = pcCopied->mbWarnStringToPointer;
+	mbMultiWordCasts = pcCopied->mbMultiWordCasts;
+	mbCConversions = pcCopied->mbCConversions;
 	mszCard.Set(pcCopied->mszCard);
 	mszCardPath.Set(pcCopied->mszCardPath);
 }
@@ -441,6 +450,18 @@ static void SetEditAttributes(CChars* pszTag, CBuildConfigurationEdit* pcEdit, C
 	if ((pcSource == NULL) || (pcEdit->mbKeepUnusedObjects != pcSource->IsKeepUnusedObjects()))
 	{
 		SetEditAttribute(pszTag, "KeepUnusedObjects", pcEdit->mbKeepUnusedObjects ? "true" : NULL);
+	}
+	if ((pcSource == NULL) || (pcEdit->mbWarnStringToPointer != pcSource->IsWarnStringToPointer()))
+	{
+		SetEditAttribute(pszTag, "WarnStringToPointer", pcEdit->mbWarnStringToPointer ? "true" : NULL);
+	}
+	if ((pcSource == NULL) || (pcEdit->mbMultiWordCasts != pcSource->IsMultiWordCasts()))
+	{
+		SetEditAttribute(pszTag, "MultiWordCasts", pcEdit->mbMultiWordCasts ? "true" : NULL);
+	}
+	if ((pcSource == NULL) || (pcEdit->mbCConversions != pcSource->IsCConversions()))
+	{
+		SetEditAttribute(pszTag, "CConversions", pcEdit->mbCConversions ? "true" : NULL);
 	}
 	if ((pcSource == NULL) || !pcEdit->mszCard.Equals(pcSource->GetCard()))
 	{

@@ -135,6 +135,9 @@ void CBuildPlain::Init(void)
 	mbNoOverrideWarning = false;
 	mbExceptions = false;
 	mbKeepUnusedObjects = false;
+	mbWarnStringToPointer = false;
+	mbMultiWordCasts = false;
+	mbCConversions = false;
 	mszOutput.Init();
 	mszListings.Init();
 	mszExecutable.Init();
@@ -322,6 +325,21 @@ int CBuildPlain::ParseOption(CArrayChars* paszArguments, size* puiIndex, CChars*
 	if (BuildIsOption(szOption, "keep-unused-objects"))
 	{
 		mbKeepUnusedObjects = true;
+		return 1;
+	}
+	if (BuildIsOption(szOption, "warn-string-to-pointer"))
+	{
+		mbWarnStringToPointer = true;
+		return 1;
+	}
+	if (BuildIsOption(szOption, "multi-word-casts"))
+	{
+		mbMultiWordCasts = true;
+		return 1;
+	}
+	if (BuildIsOption(szOption, "c-conversions"))
+	{
+		mbCConversions = true;
 		return 1;
 	}
 	if (BuildIsOption(szOption, "o") || BuildIsOption(szOption, "listings") || BuildIsOption(szOption, "exe") || BuildIsOption(szOption, "entry") || BuildIsOption(szOption, "image") ||
@@ -591,6 +609,9 @@ bool CBuildPlain::MakeConfiguration(CBuildConfiguration* pcConfiguration, CChars
 	pcConfiguration->SetWarnMissingOverride(!mbNoOverrideWarning);
 	pcConfiguration->SetExceptions(mbExceptions);
 	pcConfiguration->SetKeepUnusedObjects(mbKeepUnusedObjects);
+	pcConfiguration->SetWarnStringToPointer(mbWarnStringToPointer);
+	pcConfiguration->SetMultiWordCasts(mbMultiWordCasts);
+	pcConfiguration->SetCConversions(mbCConversions);
 	if (!mszExecutable.Empty())
 	{
 		pcExecutable = pcConfiguration->SetExecutable(mszExecutable.Text(), mszEntry.Text(), muiLimit);
@@ -725,6 +746,18 @@ bool CBuildPlain::Describe(CArrayChars* paszArguments, const char* szUnitsDirect
 	if (pcConfiguration->IsKeepUnusedObjects())
 	{
 		paszArguments->Add("-keep-unused-objects");
+	}
+	if (pcConfiguration->IsWarnStringToPointer())
+	{
+		paszArguments->Add("-warn-string-to-pointer");
+	}
+	if (pcConfiguration->IsMultiWordCasts())
+	{
+		paszArguments->Add("-multi-word-casts");
+	}
+	if (pcConfiguration->IsCConversions())
+	{
+		paszArguments->Add("-c-conversions");
 	}
 	for (i = 0; i < pcDescription->mcIncludes.NumIncludes(); i++)
 	{

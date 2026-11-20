@@ -70,7 +70,12 @@ enum EBuildProgram
 //on unless so).  Exceptions="true" compiles the program with C++ exceptions (CCPPCompileOptions::mbExceptions: throw,
 //try and catch are errors without it).  KeepUnusedObjects="true" links a global whose making or destroying runs code (a constructor, a
 //destructor, an initialiser that isn't a constant) though nothing refers to it ([basic.stc.static] 2;
-//CCPPCompileOptions::mbKeepUnusedObjects); without it such a global goes with the rest of what is unused.  Its BreakpointSpace is the emulator's space ("Kernel", "User") that debugging puts breakpoints in; without
+//CCPPCompileOptions::mbKeepUnusedObjects); without it such a global goes with the rest of what is unused.
+//WarnStringToPointer="true" warns about a string literal, which is const, that becomes a char*
+//(CCPPCompileOptions::mbWarnStringToPointer).  MultiWordCasts="true" accepts unsigned int(3), a cast written as a
+//type of more than one word and brackets, which is an error without it (CCPPCompileOptions::mbMultiWordCasts).
+//CConversions="true" says the sources are C: a void* becomes any object's pointer and a number an enum's value with
+//no cast (CCPPCompileOptions::mbCConversions).  Its BreakpointSpace is the emulator's space ("Kernel", "User") that debugging puts breakpoints in; without
 //one they stop in every space.
 //
 //Debugging loads each <Load File Address/> into the waiting emulator first (a kernal for a program to run on), and
@@ -92,6 +97,9 @@ protected:
 	bool			mbWarnMissingOverride;
 	bool			mbExceptions;
 	bool			mbKeepUnusedObjects;
+	bool			mbWarnStringToPointer;
+	bool			mbMultiWordCasts;
+	bool			mbCConversions;
 	EBuildProgram	meProgram;
 	CAsm65Image		mcImage;
 	CAsm65Executable	mcExecutable;
@@ -131,7 +139,13 @@ public:
 	void			SetExceptions(bool bExceptions);
 	bool			IsExceptions(void) const;
 	void			SetKeepUnusedObjects(bool bKeepUnusedObjects);
+	void			SetWarnStringToPointer(bool bWarnStringToPointer);
+	void			SetMultiWordCasts(bool bMultiWordCasts);
+	void			SetCConversions(bool bCConversions);
 	bool			IsKeepUnusedObjects(void) const;
+	bool			IsWarnStringToPointer(void) const;
+	bool			IsMultiWordCasts(void) const;
+	bool			IsCConversions(void) const;
 
 	bool			HasImage(void) const;
 	CAsm65Image*	GetImage(void);

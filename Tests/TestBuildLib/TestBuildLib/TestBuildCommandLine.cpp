@@ -504,6 +504,9 @@ void TestBuildCommandLinePlainParse(void)
 	AssertTrue(cConfiguration.IsWarnMissingOverride());
 	AssertFalse(cConfiguration.IsExceptions());
 	AssertFalse(cConfiguration.IsKeepUnusedObjects());
+	AssertFalse(cConfiguration.IsWarnStringToPointer());
+	AssertFalse(cConfiguration.IsMultiWordCasts());
+	AssertFalse(cConfiguration.IsCConversions());
 	AssertTrue(cConfiguration.HasExecutable());
 	AssertFalse(cConfiguration.HasImage());
 	AssertString("main.exe", cConfiguration.GetExecutable()->GetFile());
@@ -517,9 +520,9 @@ void TestBuildCommandLinePlainParse(void)
 	cCommandLine.Kill();
 
 	//An image, for the 65C64.
-	const char* aszImage[] = { "hcp65build", "-target", "65C64", "-program", "Rom", "Rom.cpp", "-image", "k.rom", "-size", "0x100", "-fill", "0", "-load", "$8000", "-text", "0x40000", "-region", "0,0x80,0", "-region", "0x100,0x180,0x80", "-no-mathtables", "-prefer-size", "-no-override-warning", "-exceptions", "-keep-unused-objects" };
+	const char* aszImage[] = { "hcp65build", "-target", "65C64", "-program", "Rom", "Rom.cpp", "-image", "k.rom", "-size", "0x100", "-fill", "0", "-load", "$8000", "-text", "0x40000", "-region", "0,0x80,0", "-region", "0x100,0x180,0x80", "-no-mathtables", "-prefer-size", "-no-override-warning", "-exceptions", "-keep-unused-objects", "-warn-string-to-pointer", "-multi-word-casts", "-c-conversions" };
 	cCommandLine.Init();
-	AssertTrue(cCommandLine.Parse(25, aszImage));
+	AssertTrue(cCommandLine.Parse(28, aszImage));
 	szError.Init();
 	AssertTrue(cCommandLine.GetPlain()->MakeConfiguration(&cConfiguration, &szError));
 	AssertString("Plain|65C64", cConfiguration.GetName());
@@ -528,6 +531,9 @@ void TestBuildCommandLinePlainParse(void)
 	AssertFalse(cConfiguration.IsWarnMissingOverride());
 	AssertTrue(cConfiguration.IsExceptions());
 	AssertTrue(cConfiguration.IsKeepUnusedObjects());
+	AssertTrue(cConfiguration.IsWarnStringToPointer());
+	AssertTrue(cConfiguration.IsMultiWordCasts());
+	AssertTrue(cConfiguration.IsCConversions());
 	AssertTrue(cConfiguration.HasImage());
 	AssertString("k.rom", cConfiguration.GetImage()->GetFile());
 	AssertIntHex(0x100, cConfiguration.GetImage()->GetSize());

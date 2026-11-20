@@ -61,6 +61,9 @@ protected:
 	Ptr<CCheckBox>					mpWarnMissingOverride;
 	Ptr<CCheckBox>					mpExceptions;
 	Ptr<CCheckBox>					mpKeepUnusedObjects;
+	Ptr<CCheckBox>					mpWarnStringToPointer;
+	Ptr<CCheckBox>					mpMultiWordCasts;
+	Ptr<CCheckBox>					mpCConversions;
 	Ptr<CTextField>					mpCard;
 	Ptr<CTextField>					mpCardPath;
 	Ptr<CLabel>						mpContents;

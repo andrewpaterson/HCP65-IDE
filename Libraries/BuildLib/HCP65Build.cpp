@@ -92,6 +92,9 @@ bool CHCP65Build::Start(CArrayChars* paszLines)
 	mcBuilder.GetOptions()->mbWarnMissingOverride = mpcConfiguration->IsWarnMissingOverride();
 	mcBuilder.GetOptions()->mbExceptions = mpcConfiguration->IsExceptions();
 	mcBuilder.GetOptions()->mbKeepUnusedObjects = mpcConfiguration->IsKeepUnusedObjects();
+	mcBuilder.GetOptions()->mbWarnStringToPointer = mpcConfiguration->IsWarnStringToPointer();
+	mcBuilder.GetOptions()->mbMultiWordCasts = mpcConfiguration->IsMultiWordCasts();
+	mcBuilder.GetOptions()->mbCConversions = mpcConfiguration->IsCConversions();
 	mcBuilder.SetJobs(&mcJobs);
 	mcBuilder.SetHeaderCache(true);
 	mcBuilder.SetLineTable(true);

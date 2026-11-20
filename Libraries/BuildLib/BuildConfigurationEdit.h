@@ -44,6 +44,9 @@ public:
 	bool			mbWarnMissingOverride;
 	bool			mbExceptions;
 	bool			mbKeepUnusedObjects;
+	bool			mbWarnStringToPointer;
+	bool			mbMultiWordCasts;
+	bool			mbCConversions;
 	CChars			mszCard;
 	CChars			mszCardPath;
 
