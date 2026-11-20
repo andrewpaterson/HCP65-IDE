@@ -10,7 +10,8 @@ few shared pieces to build, then the features, each of which should come out as 
 Nothing here is built, and writing it was not a go-ahead.  Each stage is the user's to start: bring it up with them,
 say how you mean to do it, and go on when they say (NextIDEWork.txt's rule, and the user's: build the whole feature
 as IntelliJ has it, not a cut-down one, and don't order the work by what is cheapest).  The stages are in an order
-that builds each shared piece once, before its second user; the user chooses the order (decision 1).
+that builds each shared piece once, before its second user.  The user chose the order on 2026-11-20: A, B, D, C,
+E, F, G, H (decision 1).
 
 NextIDEWork.txt already has four of these as items the user has answered questions on: 2 (Find and Replace in the
 file, with CRegex in BaseLib), 3 (Find in Files: regular expressions, file masks, Replace in Files), 4 (Go to Line)
@@ -258,8 +259,8 @@ S7. Pointing at text (WindowLib).
         times it.  CIC_Hover exists and nothing makes it: either make it there or leave it.
       - A link press: Control+Button 1 on text is a command of its own, given to the text under the pointer with
         its point, and CTextArea calls a link event with the position.  It is bound to starting a selection drag
-        today (decision 5).  While Control is held over a name the IDE can go to, the name is drawn as a link (a
-        span with an underline) and the pointer is a hand.
+        today, which it stops being (decision 5).  While Control is held over a name the IDE can go to, the name
+        is drawn as a link (a span with an underline) and the pointer is a hand.
       - CInfoPopup: a popup that shows a few lines of coloured code and plain text (a read only CTextArea in a
         CScrollPane, as git's change popup is made), at the pointer, under a range of text or over the caret;
         either the pointer passes through it and it goes when the pointer leaves the range, or it takes the keys
@@ -337,13 +338,13 @@ A. Going from a symbol (Symbols)
        declaration with one definition, that.  S5 FindImplementations, S1.
      - Go to Super Method (Control+U): what the function at the caret, or the one the caret is in, overrides; in
        a class, its base classes.  S5 FindSuperMethods, S1.
-     - Go to Type Declaration (Control+Shift+B in IntelliJ, which is Build here: decision 2): the class, enum or
+     - Go to Type Declaration (Control+Shift+B, free since Build went to Control+F9: decision 2): the class, enum or
        typedef of the variable, field, parameter, function or expression at the caret.  S5 FindTypeOf, S1.
      - Go to Related Symbol (Control+Alt+Home): the chooser with the file's other half (Alt+O's), the symbol's
        declaration or definition, its super methods and its implementations, each under a heading row.  S1, S2.
-       Go to Test is left out unless the user names a rule for which file tests which (decision 8).
+       Go to Test is left out (decision 8).
      - Control+click on a name: Go to Source at that name (so on a declaration, its usages).  S7's link press.
-       A middle click the same, or not (decision 4).
+       Not a middle click, which still drags the view (decisions 4 and 5).
      - The usages popup (Control+B on a declaration; Show Usages, Control+Alt+F7, anywhere on a name): the
        chooser in place of the menu, with the usage's text matched as it is typed, the preview, the count in its
        title, and Open in Find Window where "... and N more" is now.  S2; CIDEUsages::ShowUsagesPopup's finding
@@ -460,16 +461,18 @@ Keys
 In use now (find a command's with CCommandSet; WindowLib's editor keys are in EditCommands.cpp):
   F4, F5, F7, F9, F10, F11, F12 and their Shift forms where the debugger or a diff has them (Shift+F5, Shift+F7,
   Shift+F10, Shift+F11, Shift+F12); Shift+F6; Control+F4, F5, F6; Control+Shift+F5; Alt+F7; Control+Alt+Shift+F7;
-  Control+A, B, C, D, N, S, V, W, X, Y, Z; Control+Shift+B, D, F, N, S, V, W, Z; Control+Alt+C, F, K, M, N, O, P,
+  Control+F9 (Build); Control+A, B, C, D, N, S, V, W, X, Y, Z; Control+Shift+D, F, N, S, V, W, Z; Control+Alt+C, F,
+  K, M, N, O, P,
   S, V; Control+Alt+Shift+D, N; Alt+1; Alt+O; Alt+Enter; Alt+Insert; Alt+Delete; Control+Alt+the four arrows;
   Control+ and Alt+Shift+ the arrows, Home and End; Control+Pause; Shift+Escape.
 Free, and wanted here with IntelliJ's meaning:
-  Control+E, F, G, H, P, Q, R, U; Control+Shift+E, H, I, M, P, R; Control+Alt+B, H; Control+[ and Control+] (the
+  Control+E, F, G, H, P, Q, R, U; Control+Shift+B, E, H, I, M, P, R; Control+Alt+B, H; Control+[ and Control+] (the
   key is named "["); Control+Tab; Control+F3, F11, F12; Control+Shift+F7, F11; Control+Alt+F7; Control+Alt+Home;
   Control+Alt+Shift+Up and Down; Control+Shift+Backspace; Alt+Up, Down, Left, Right; Alt+Home; Alt+F1; Alt+7; F2,
   Shift+F2, F3, Shift+F3; Control+0 to 9.
-Taken, so to be decided: Control+Shift+B (Type Declaration; Build has it) and Shift+F11 (Show Bookmarks; Step Out
-has it).  F2 and Shift+F2 are IntelliJ's next and previous error; the user gave them to bookmarks.
+Taken, so to be decided: Shift+F11 (Show Bookmarks; Step Out has it).  Control+Shift+B was Build's; the user moved
+Build to Control+F9, IntelliJ's Build Project, on 2026-11-20, so Type Declaration has IntelliJ's key.  F2 and Shift+F2
+are IntelliJ's next and previous error; the user gave them to bookmarks.
 
 
 For the user to decide
@@ -478,21 +481,21 @@ For the user to decide
 Ask each when its stage comes up, one at a time, saying what it changes for them.  The recommendation is this
 plan's writer's, not the user's.
 
-   1. The order of the stages, and where they come among NextIDEWork.txt's items still to do (2 to 10).
-      Recommended: A, B, D, C, E, F, G, H; D is that file's items 2 and 3 and the user put them first there.
-   2. Go to Type Declaration's key, as Control+Shift+B is Build.  Recommended: no key to begin with, the user
-      giving it one in Settings.
+   1. Decided 2026-11-20: the stages in the order A, B, D, C, E, F, G, H.  (D is NextIDEWork.txt's items 2 and 3,
+      which the user had put first there; where these stages come among that file's other items wasn't asked.)
+   2. Decided 2026-11-20: "Change Build to Ctrl+F9".  Build is on Control+F9 (done that day, IDEBuilding.cpp), so
+      Go to Type Declaration takes Control+Shift+B, IntelliJ's key for it.  That it takes the key is this plan's
+      reading of the answer: say so when stage A is brought up.
    3. Show Bookmarks' key, as Shift+F11 is Step Out.  Recommended: none, the Bookmarks tool window doing.
-   4. Whether a middle click on a name goes to its declaration.  The middle button drags the view to scroll
-      today.  Recommended: no.
-   5. Control+click going to the declaration, which takes Control+Button 1 from starting a selection drag
-      (Shift+click and a plain drag still select).  Recommended: yes, it is what IntelliJ does.
+   4. Decided 2026-11-20: a middle click on a name does not go to its declaration; the middle button still drags
+      the view to scroll.
+   5. Decided 2026-11-20: Control+click goes to the declaration, taking Control+Button 1 from starting a
+      selection drag (Shift+click and a plain drag still select).
    6. Decided 2026-11-20: typing finds a row in every tree, the results trees too, as IntelliJ's; see S3.  The
       results trees typing into the editor was a misreading of the user's answer about Space.
    7. Marks on the scroll bar for matches, usages, changed lines and bookmarks.  Recommended: yes, with the Find
       bar, as four features feed them.
-   8. Go to Test: whether a rule says which file tests which (TestTextAreaEdit.cpp and TextArea.cpp).
-      Recommended: leave it out.
+   8. Decided 2026-11-20: Go to Test is left out.
    9. The count of usages over each declaration.  It is worked out for every declaration of the open file after
       each parse.  Recommended: ask; it is the one feature here that changes how every file looks.
   10. Breadcrumbs, sticky lines, or both.  Recommended: both, each with a setting to turn it off.
