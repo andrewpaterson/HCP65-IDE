@@ -3591,9 +3591,10 @@ CHECKS = [
 		 r'Show Read Access, Show Write Access\(on\), Preview', r'^Usages of mpcCalculator  18 usages  \(2 hidden\)$', r'^  Value read  16 usages$'],
 		[r'No tool button', r'ERROR']),
 	('find-toolbar', {
-		#The Find tool window's toolbar has no groupings; Rerun finds the text again.
+		#The Find tool window's toolbar has no groupings, and its Replace buttons are for Replace in Files' results; Rerun
+		#finds the text again.
 		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'DIALOG_ANSWER': 'Open in Find Window', 'DEBUG': 'find:0:calculatorparser,answered:1,printfindtoolbar,findtool:Rerun,printfind'},
-		[r'^Toolbar: Rerun, Previous Occurrence\(disabled\), Next Occurrence, Expand All, Collapse All, Preview\(on\), Navigate with Single Click$',
+		[r'^Toolbar: Rerun, Previous Occurrence\(disabled\), Next Occurrence, Expand All, Collapse All, Replace All\(disabled\), Replace Selected\(disabled\), Preview\(on\), Navigate with Single Click$',
 		 r"^Occurrences of 'calculatorparser' in the solution  13 matches in 2 files$"], [r'No tool button', r'ERROR']),
 	('find-row-parts', {
 		#The Find tool window's rows: the text found is in the match font whatever its case.
@@ -3701,6 +3702,7 @@ CHECKS = [
 		 r'^Keys: Navigate\.PreviousMethod Alt\+Cursor Up bound$', r'^Keys: View\.Structure Alt\+7 bound$',
 		 r'^Keys: Navigate\.ShowUsages Control\+Alt\+F7 bound$', r'^Keys: Edit\.Find Control\+F bound$', r'^Keys: Edit\.Replace Control\+R bound$',
 		 r'^Keys: Edit\.FindNext F3 bound$', r'^Keys: Edit\.FindPrevious Shift\+F3 bound$', r'^Keys: Edit\.FindWordAtCaret Control\+F3 bound$',
+		 r'^Keys: Edit\.FindInFiles Control\+Shift\+F bound$', r'^Keys: Edit\.ReplaceInFiles Control\+Shift\+R bound$',
 		 r'^Keys: Build\.Build Control\+F9 bound$', r'^Keys: Run\.Start Control\+F5 bound$', r'^Keys: Debug\.Start F5 bound$',
 		 r'^Keys: Debug\.BreakAll Control\+Pause/Break bound$',
 		 r'^Buttons: Start \[Run\.Start\]$'], [r'NOT BOUND', r'\[none\]']),
@@ -3858,7 +3860,7 @@ CHECKS = [
 		[r'^Menu File: New>, Save File as Template\.\.\., Open Project/Solution\.\.\., Add Solution\.\.\., Close Solution, Recent Solutions>, Clear Recent Solutions, Save \[Ctrl\+S\], Save All \[Ctrl\+Shift\+S\], Compare with File\.\.\., Settings\.\.\. \[Ctrl\+Alt\+S\], Exit$',
 		 r'^Menu File/New: C\+\+ Class\.\.\., C\+\+ Header\.\.\., C\+\+ Source\.\.\.$',
 		 r'^Menu File/Recent Solutions: 1 ',
-		 r'^Menu Edit: Undo \[Ctrl\+Z\](\(disabled\))?, Redo \[Ctrl\+Shift\+Z\](\(disabled\))?, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\], Select All \[Ctrl\+A\], Extend Selection \[Ctrl\+W\], Shrink Selection \[Ctrl\+Shift\+W\], Find\.\.\. \[Ctrl\+F\], Replace\.\.\. \[Ctrl\+R\], Find Next \[F3\], Find Previous \[Shift\+F3\], Find Word at Caret \[Ctrl\+F3\], Find in Files\.\.\. \[Ctrl\+Shift\+F\], Find Duplicates\.\.\. \[Ctrl\+Alt\+Shift\+D\]$',
+		 r'^Menu Edit: Undo \[Ctrl\+Z\](\(disabled\))?, Redo \[Ctrl\+Shift\+Z\](\(disabled\))?, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\], Select All \[Ctrl\+A\], Extend Selection \[Ctrl\+W\], Shrink Selection \[Ctrl\+Shift\+W\], Find\.\.\. \[Ctrl\+F\], Replace\.\.\. \[Ctrl\+R\], Find Next \[F3\], Find Previous \[Shift\+F3\], Find Word at Caret \[Ctrl\+F3\], Find in Files\.\.\. \[Ctrl\+Shift\+F\], Replace in Files\.\.\. \[Ctrl\+Shift\+R\], Find Duplicates\.\.\. \[Ctrl\+Alt\+Shift\+D\]$',
 		 r'^Menu Navigate: Back \[Ctrl\+Alt\+Left\](\(disabled\))?, Forward \[Ctrl\+Alt\+Right\](\(disabled\))?, Class\.\.\. \[Ctrl\+N\], File\.\.\. \[Ctrl\+Shift\+N\], Symbol\.\.\. \[Ctrl\+Alt\+Shift\+N\], Line:Column\.\.\. \[Ctrl\+G\], Go to Source \[Ctrl\+B\], Go to Definition \[F12\], Go to Implementation\(s\) \[Ctrl\+Alt\+B\], Go to Type Declaration \[Ctrl\+Shift\+B\], Go to Super Method \[Ctrl\+U\], Go to Related Symbol \[Ctrl\+Alt\+Home\], Switch Header/Source \[Alt\+O\], File Structure \[Ctrl\+F12\], Next Method \[Alt\+Down\], Previous Method \[Alt\+Up\], Find Usages \[Alt\+F7\], Show Usages \[Ctrl\+Alt\+F7\], Find All References \[Shift\+F12\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Next Occurrence \[Ctrl\+Alt\+Down\], Previous Occurrence \[Ctrl\+Alt\+Up\]$',
 		 r'^Menu View: Solution Explorer, Structure, Find Usages, Find, Duplicates, Build, Indexing, Run, Debug, Claude$',
 		 r'^Menu Git: Compare with HEAD, Compare with Branch\.\.\., Compare with Revision\.\.\.$',
@@ -4351,6 +4353,40 @@ CHECKS = [
 		 r'^Selection: \[CCircle\] on line 4, caret line 4$', r'^Selection: \[CCircle\] on line 10, caret line 10$',
 		 r'^Find bar: \[CCircle\] 2 of 2, 2 marks$', r'^Find bar: \[CCircle\] 1 of 2, 2 marks$', r'^Find bar: \[CCircle\] 2 of 2, 2 marks$',
 		 r'^Line 6: \[\tMxove\(0, 0\);\]$', r'^Find bar: \[Move\] 0 results, 0 marks$', r'^Find bar: \[Move\] 1 of 1, 1 marks$'], []),
+	('find-regex-mask', {
+		#Find in Files with Regex and a file mask: the expression's matches, each as long as what it matched, in the
+		#source files but for Shape.cpp, which has a CShape::Draw too.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'FIND': '0:r:C\\w+::Draw', 'FIND_MASK': '*.cpp, !Shape.cpp'},
+		[r'^Find \[C\\w\+::Draw\]: 4 matches in 1 file', r'^  void CCircle::Draw\(void\)  \[Shapes\.cpp 4\]  match 5\+13$',
+		 r'^  void CRoundedSquare::Draw\(void\)  \[Shapes\.cpp 27\]  match 5\+20$', r'^Opened Shapes\.cpp 4:19$',
+		 r"^Occurrences of 'C\\w\+::Draw' in the solution  4 matches in 1 file$", r'^    29: CSquare::Draw\(\);$'], [r'Shape\.cpp', r'Shapes\.h', r'ERROR']),
+	('find-regex-problem', {
+		#What isn't a regular expression finds nothing, and the dialog says what is wrong with it.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'FIND': '0:r:a('},
+		[r'^Find \[a\(\]: Not a regular expression: A \( has no \) after it\. in ', r'^Find window: 0 results'], [r'^Opened ', r'ERROR']),
+	('replace-in-files', {
+		#Replace in Files, listed in the Find tool window: each result shows what it becomes.  Replace Selected on a
+		#file's row replaces that file's, as one undo; Replace All the rest; what is left is found again each time,
+		#and the files are open and changed, not saved.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'FIND': '0:cw:Area', 'FIND_REPLACE': 'Size', 'FIND_MASK': '*.h',
+		'DEBUG': 'printfindtoolbar,findselect:3,findtool:Replace Selected,printstatus,printfind,printtabs,findtool:Replace All,printstatus,printfind,printtabs,edit:printline:13,edit:undo,edit:printline:13'},
+		[r'^Find \[Area\]: 3 matches in 2 files', r"^Replace 'Area' with 'Size' in the solution  3 matches in 2 files$", r'^  Shape\.h  1 match$',
+		 r'^    15: virtual int  Area\(void\) = 0;  ->  Size$', r'^  Shapes\.h  2 matches$', r'^    24: int  Area\(void\) override;  ->  Size$',
+		 r'^Toolbar: Rerun, .*Collapse All, Replace All, Replace Selected, Preview\(on\), Navigate with Single Click$',
+		 r'^Status line: Replaced 2 occurrences in 1 file\.  Save All keeps them\.$', r"^Replace 'Area' with 'Size' in the solution  1 match in 1 file$",
+		 r'^    15: virtual int  Area\(void\) = 0;  ->  Size$', r'^Tabs: Shape\.h >Shapes\.h\*$',
+		 r'^Status line: Replaced 1 occurrence in 1 file\.  Save All keeps them\.$', r"^Replace 'Area' with 'Size' in the solution  0 matches in 0 files$",
+		 r'^Tabs: Shape\.h\* >Shapes\.h\*$', r'^Line 13: \[\tint\t\tSize\(void\) override;\]$', r'^Line 13: \[\tint\t\tArea\(void\) override;\]$',
+		 r'^Unsaved at exit: 1 file: .*Shape\.h$'], [r'ERROR']),
+	('replace-in-files-dialog', {
+		#Replace in Files (Control+Shift+R)'s dialog, and its Replace All: it asks, then every match is replaced, a
+		#regular expression's group in each, in three files that are opened for it.  Regex is written with the settings.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'FIND_REPLACE': 'Paint_$1', 'DIALOG_ANSWER': 'Replace All|OK', 'SETTINGS': MakeSettingsFile(),
+		'DEBUG': 'findoptions:cr,replace:0:Draw(\\(\\)),answered:2,printstatus,printfind,printtabs,edit:printline:29,printsettings'},
+		[r'^Dialog \[Replace in Files\] answered Replace All$', r'^Dialog \[Replace in Files\] answered OK$',
+		 r'^Status line: Replaced 4 occurrences in 3 files\.  Save All keeps them\.$', r"^Replace 'Draw\(\\\(\\\)\)' with 'Paint_\$1' in the solution  0 matches in 0 files$",
+		 r'^Tabs: Main\.cpp\* Shape\.cpp\* >Shapes\.cpp\*$', r'^Line 29: \[\tCSquare::Paint_\(\);\]$', r'<FindInFiles Scope="Solution" .*MatchCase="true" Words="false" Regex="true" FileMask=""'],
+		[r'ERROR']),
 	('nav-type-declaration', {
 		#Go to Type Declaration (Control+Shift+B): from a parameter and from a local variable, the class each is declared
 		#with; from a field of a built in type, the status line says its type has nothing to go to.

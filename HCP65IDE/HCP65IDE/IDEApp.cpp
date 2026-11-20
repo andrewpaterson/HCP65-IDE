@@ -63,6 +63,8 @@ static const char*	gaszIDEScriptVariables[] =
 	"HCP65_IDE_GOTO",
 	"HCP65_IDE_STARTUP_PROJECT",
 	"HCP65_IDE_FIND",
+	"HCP65_IDE_FIND_MASK",
+	"HCP65_IDE_FIND_REPLACE",
 	"HCP65_IDE_LISTING",
 	"HCP65_IDE_OPEN",
 	"HCP65_IDE_RECENT",
@@ -490,7 +492,8 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 			if (getenv("HCP65_IDE_FIND") != NULL)
 			{
 				//<scope>:<options>:<text>, as Find in Files in the solution (0), the active file's project (1),
-				//HCP65_IDE_FIND_DIRECTORY (2), the startup solution (3), the current file (4) or the open files (5), with Match case (c) and Words (w) or neither (-): the first results and
+				//HCP65_IDE_FIND_DIRECTORY (2), the startup solution (3), the current file (4) or the open files (5), with Match case (c), Words (w)
+				//and Regex (r) or none (-), HCP65_IDE_FIND_MASK the file mask, and with HCP65_IDE_FIND_REPLACE as Replace in Files: the first results and
 				//the preview are printed, the first opened, and all of them listed in the Find tool window.
 				mpContent->GetScript()->RunFind(getenv("HCP65_IDE_FIND"));
 			}

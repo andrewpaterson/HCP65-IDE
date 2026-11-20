@@ -318,6 +318,21 @@ static const float64 gafSettings[] =
 	3.8, 12.2, 4.9, 11.1,
 	11.1, 4.9, 12.2, 3.8,
 };
+static const float64 gafReplace[] =
+{
+	2.5, 8.0, 13.0, 8.0,
+	9.5, 4.5, 13.0, 8.0,
+	9.5, 11.5, 13.0, 8.0,
+};
+static const float64 gafReplaceAll[] =
+{
+	2.5, 5.0, 13.0, 5.0,
+	10.5, 2.5, 13.0, 5.0,
+	10.5, 7.5, 13.0, 5.0,
+	2.5, 11.0, 13.0, 11.0,
+	10.5, 8.5, 13.0, 11.0,
+	10.5, 13.5, 13.0, 11.0,
+};
 
 
 struct SIDEToolIconLines
@@ -346,6 +361,8 @@ static const SIDEToolIconLines	gasIDEToolIcons[] =
 	IDE_TOOL_ICON(WriteAccess),
 	IDE_TOOL_ICON(Pin),
 	IDE_TOOL_ICON(Settings),
+	IDE_TOOL_ICON(Replace),
+	IDE_TOOL_ICON(ReplaceAll),
 };
 static_assert(sizeof(gasIDEToolIcons) / sizeof(SIDEToolIconLines) == ITI_Count, "Each EIDEToolIcon needs its lines in gasIDEToolIcons.");
 

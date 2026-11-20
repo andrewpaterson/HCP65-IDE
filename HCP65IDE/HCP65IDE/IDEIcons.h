@@ -69,6 +69,8 @@ enum EIDEToolIcon
 	ITI_WriteAccess,	//A W.
 	ITI_Pin,			//A pin.
 	ITI_Settings,		//A cog.
+	ITI_Replace,		//An arrow to the right.
+	ITI_ReplaceAll,		//Two arrows to the right.
 	ITI_Count
 };
 

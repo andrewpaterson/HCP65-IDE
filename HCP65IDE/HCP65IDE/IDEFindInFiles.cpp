@@ -37,6 +37,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define IDE_FIND_DIRECTORY_ATTRIBUTE		"Directory"
 #define IDE_FIND_MATCH_CASE_ATTRIBUTE	"MatchCase"
 #define IDE_FIND_WORDS_ATTRIBUTE			"Words"
+#define IDE_FIND_REGEX_ATTRIBUTE			"Regex"
+#define IDE_FIND_FILE_MASK_ATTRIBUTE		"FileMask"
 #define IDE_FIND_REFRESH				500		//Milliseconds after the last edit that moved a result until the tree shows it.
 
 
@@ -70,6 +72,14 @@ void CIDEFindInFiles::Init(CIDEContent* pcContent)
 	mbFound = false;
 	mbMoved = false;
 	miMoved = 0;
+	mbRegex = false;
+	mszFileMask.Init();
+	mszReplace.Init();
+	mbReplacing = false;
+	mszSearchMask.Init();
+	mbFoundSearch = false;
+	mbFoundReplacing = false;
+	mszFoundReplace.Init();
 	PostInit();
 }
 
@@ -105,6 +115,16 @@ void CIDEFindInFiles::Class(void)
 	U_Bool(mbFound);
 	U_Bool(mbMoved);
 	U_Int64(miMoved);
+	U_Bool(mbRegex);
+	U_String(mszFileMask);
+	U_String(mszReplace);
+	U_Bool(mbReplacing);
+	U_String(mszSearchMask);
+	U_Unknown(CTextSearch, mcFoundSearch);
+	U_Bool(mbFoundSearch);
+	U_Bool(mbFoundReplacing);
+	U_String(mszFoundReplace);
+	M_Pointer(mpReplaceDialog);
 }
 
 
@@ -120,6 +140,14 @@ void CIDEFindInFiles::Free(void)
 	{
 		mcSearch.Kill();
 	}
+	if (mbFoundSearch)
+	{
+		mcFoundSearch.Kill();
+	}
+	mszFoundReplace.Kill();
+	mszSearchMask.Kill();
+	mszReplace.Kill();
+	mszFileMask.Kill();
 	mszFoundTitle.Kill();
 	masFound.Kill();
 	maszFoundFiles.Kill();
@@ -149,6 +177,7 @@ bool CIDEFindInFiles::Load(CObjectReader* pcFile) { return false; }
 void CIDEFindInFiles::AddCommands(Ptr<CCommandSet> pCommands)
 {
 	pCommands->Add("Edit.FindInFiles", "Find in Files...", "Control+Shift+F", Ptr<CImageCel>(), this, &CIDEFindInFiles::FindInFiles);
+	pCommands->Add("Edit.ReplaceInFiles", "Replace in Files...", "Control+Shift+R", Ptr<CImageCel>(), this, &CIDEFindInFiles::ReplaceInFiles);
 }
 
 
@@ -161,6 +190,7 @@ void CIDEFindInFiles::AddEditItems(Ptr<CMenuContainer> pMenu)
 {
 	pMenu->AddSeparator();
 	pMenu->AddItem(mpcContent->GetCommands()->Find("Edit.FindInFiles"));
+	pMenu->AddItem(mpcContent->GetCommands()->Find("Edit.ReplaceInFiles"));
 }
 
 
@@ -171,7 +201,19 @@ void CIDEFindInFiles::AddEditItems(Ptr<CMenuContainer> pMenu)
 //////////////////////////////////////////////////////////////////////////
 void CIDEFindInFiles::CreatePane(SDockPlace* psPlace)
 {
+	Ptr<CCommand>	pCommand;
+
 	mpPane = OMalloc<CIDEResultsPane>(mpcContent, this, "matches", true);
+
+	//Replace in Files' results are replaced from here: all of them, or what is selected.
+	mpPane->AddToolbarSeparator();
+	pCommand = mpPane->GetCommands()->Add("Find.ReplaceAll", "Replace All", "", mpcContent->GetToolIcon(ITI_ReplaceAll), this, &CIDEFindInFiles::ReplaceAllClicked);
+	pCommand->SetEnabledCheck(this, &CIDEFindInFiles::CanReplaceFound);
+	mpPane->AddToolbarCommand(pCommand, ITI_ReplaceAll);
+	pCommand = mpPane->GetCommands()->Add("Find.ReplaceSelected", "Replace Selected", "", mpcContent->GetToolIcon(ITI_Replace), this, &CIDEFindInFiles::ReplaceSelectedClicked);
+	pCommand->SetEnabledCheck(this, &CIDEFindInFiles::CanReplaceFound);
+	mpPane->AddToolbarCommand(pCommand, ITI_Replace);
+	mpPane->AddToolbarSeparator();
 	mpPane->AddViewCommands();
 	mpTool = mpcContent->GetDock()->AddPane(IDE_FIND_ID, "Find", NULL, mpPane->GetComponent(), DPK_Tool, psPlace);
 }
@@ -199,7 +241,28 @@ void CIDEFindInFiles::FindInFiles(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDEFindInFiles::ShowQueuedFind(void)
 {
-	ShowFind();
+	ShowFind(false);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Replace in Files (Control+Shift+R): the dialog with what to replace
+// with, shown at the next tick as Find in Files' is.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEFindInFiles::ReplaceInFiles(void)
+{
+	if (mpDialog.IsNull())
+	{
+		mpcContent->GetWindow()->Post(this, &CIDEFindInFiles::ShowQueuedReplace);
+	}
+}
+
+
+void CIDEFindInFiles::ShowQueuedReplace(void)
+{
+	ShowFind(true);
 }
 
 
@@ -207,15 +270,17 @@ void CIDEFindInFiles::ShowQueuedFind(void)
 //
 // The dialog shown, and what it was closed for done: the result chosen
 // is opened, or every result is listed in the Find tool window.  What was
-// typed is kept.  False if nothing came of it.
+// typed is kept.  With bReplace it is Replace in Files': listed, the
+// results show what each becomes, and its Replace All replaces them all.
+// False if nothing came of it.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEFindInFiles::ShowFind(void)
+bool CIDEFindInFiles::ShowFind(bool bReplace)
 {
 	EFindInFilesResult	eResult;
 	bool				bResult;
 
-	if (!CreateFind())
+	if (!CreateFind(bReplace))
 	{
 		return false;
 	}
@@ -234,6 +299,12 @@ bool CIDEFindInFiles::ShowFind(void)
 	meScope = (mpDialog->GetScope() < muiDialogScopes) ? maeDialogScopes[mpDialog->GetScope()] : IS_Solution;
 	mbMatchCase = mpDialog->IsMatchCase();
 	mbWholeWords = mpDialog->IsWholeWords();
+	mbRegex = mpDialog->IsRegex();
+	mszFileMask.Set(mpDialog->GetFileMask());
+	if (bReplace)
+	{
+		mszReplace.Set(mpDialog->GetReplaceText());
+	}
 	mpcContent->GetSettings()->WriteSettings();
 
 	bResult = false;
@@ -242,9 +313,14 @@ bool CIDEFindInFiles::ShowFind(void)
 		bResult = OpenFindChoice();
 	}
 	mpDialog = NULL;
+	mbReplacing = false;
 	if (eResult == FIFR_FindWindow)
 	{
-		bResult = OpenInFindWindow() > 0;
+		bResult = OpenInFindWindow(false, bReplace) > 0;
+	}
+	else if (eResult == FIFR_ReplaceAll)
+	{
+		bResult = (OpenInFindWindow(false, true) > 0) && (ReplaceAllFound(true) > 0);
 	}
 	return bResult;
 }
@@ -256,7 +332,7 @@ bool CIDEFindInFiles::ShowFind(void)
 // text selected in the editor), not shown.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEFindInFiles::CreateFind(void)
+bool CIDEFindInFiles::CreateFind(bool bReplace)
 {
 	static const char*	aszTabs[] = { "In Solution", "In Startup Solution", "In Project", "Current File", "Open Files", "Directory" };
 	CIDEScope			cScope;
@@ -271,7 +347,8 @@ bool CIDEFindInFiles::CreateFind(void)
 	GetInitialDirectory(&szDirectory);
 
 	//A tab for each scope there is to choose, saying what it would look in now.
-	mpDialog = OMalloc<CFindInFilesDialog>(mpcContent->GetWindow(), mpcContent->GetDialogLook(), "Find in Files", this, mpcContent->GetMatchFont(), mpcContent->GetCodeFamily());
+	mbReplacing = bReplace;
+	mpDialog = OMalloc<CFindInFilesDialog>(mpcContent->GetWindow(), mpcContent->GetDialogLook(), bReplace ? "Replace in Files" : "Find in Files", this, mpcContent->GetMatchFont(), mpcContent->GetCodeFamily());
 	muiDialogScopes = 0;
 	cScope.Init();
 	for (i = 0; i < IS_Count; i++)
@@ -296,7 +373,12 @@ bool CIDEFindInFiles::CreateFind(void)
 		}
 	}
 	cScope.Kill();
-	mpDialog->SetOptions(mbMatchCase, mbWholeWords);
+	mpDialog->SetOptions(mbMatchCase, mbWholeWords, mbRegex);
+	mpDialog->SetFileMask(mszFileMask.Text());
+	if (bReplace)
+	{
+		mpDialog->SetReplacing(mszReplace.Text());
+	}
 	mpDialog->Start(FindDialogScope(meScope), szText.Text());
 
 	szDirectory.Kill();
@@ -425,7 +507,7 @@ bool CIDEFindInFiles::OpenFindChoice(void)
 // found.
 //
 //////////////////////////////////////////////////////////////////////////
-size CIDEFindInFiles::OpenInFindWindow(bool bRerun)
+size CIDEFindInFiles::OpenInFindWindow(bool bRerun, bool bReplace)
 {
 	SIDEFindPlace*	psPlace;
 	SIDEFindPlace*	psFound;
@@ -441,8 +523,18 @@ size CIDEFindInFiles::OpenInFindWindow(bool bRerun)
 	if (!bRerun)
 	{
 		mcScope.Capture(mpcContent, meScope, mszDirectory.Text());
+		mbFoundReplacing = bReplace;
+		mszFoundReplace.Set(bReplace ? mszReplace.Text() : "");
 	}
-	StartSearch(mszText.Text(), mbMatchCase, mbWholeWords);
+	StartSearch(mszText.Text(), mbMatchCase, mbWholeWords, mbRegex, mszFileMask.Text());
+
+	//What finds them is kept with them: what each is replaced with is worked out from it.
+	if (mbFoundSearch)
+	{
+		mcFoundSearch.Kill();
+	}
+	mcFoundSearch.Init(mszText.Text(), mbMatchCase, mbWholeWords, mbRegex);
+	mbFoundSearch = true;
 	bMore = true;
 	while (bMore && (masPlaces.NumElements() < IDE_FIND_RESULTS_MAXIMUM))
 	{
@@ -468,8 +560,13 @@ size CIDEFindInFiles::OpenInFindWindow(bool bRerun)
 		psFound->uiFile = uiFiles - 1;
 	}
 
-	mszFoundTitle.Set("Occurrences of '");
+	mszFoundTitle.Set(mbFoundReplacing ? "Replace '" : "Occurrences of '");
 	mszFoundTitle.Append(mszText);
+	if (mbFoundReplacing)
+	{
+		mszFoundTitle.Append("' with '");
+		mszFoundTitle.Append(mszFoundReplace);
+	}
 	mszFoundTitle.Append("' ");
 	mcScope.AppendName(mpcContent, &mszFoundTitle);
 	mszFoundTitle.Append("  ");
@@ -510,7 +607,7 @@ void CIDEFindInFiles::RerunResults(CIDEResultsPane* pcPane)
 {
 	if (CanRerunResults(pcPane))
 	{
-		OpenInFindWindow(true);
+		OpenInFindWindow(true, mbFoundReplacing);
 	}
 }
 
@@ -523,7 +620,24 @@ void CIDEFindInFiles::RerunResults(CIDEResultsPane* pcPane)
 void CIDEFindInFiles::FindStart(SFindInFilesQuery* psQuery)
 {
 	mcScope.Capture(mpcContent, (psQuery->uiScope < muiDialogScopes) ? maeDialogScopes[psQuery->uiScope] : IS_Solution, psQuery->szDirectory);
-	StartSearch(psQuery->szText, psQuery->bMatchCase, psQuery->bWholeWords);
+	StartSearch(psQuery->szText, psQuery->bMatchCase, psQuery->bWholeWords, psQuery->bRegex, psQuery->szFileMask);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The dialog's searcher: what is wrong with what is being looked for.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEFindInFiles::FindProblem(CChars* pszDest)
+{
+	if (!mbSearch || mcSearch.IsValid())
+	{
+		return false;
+	}
+	pszDest->Append("Not a regular expression: ");
+	pszDest->Append(mcSearch.GetError());
+	return true;
 }
 
 
@@ -554,19 +668,20 @@ bool CIDEFindInFiles::FindStep(CFindInFilesItems* pcDest)
 // list, and nothing found yet.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEFindInFiles::StartSearch(const char* szText, bool bMatchCase, bool bWholeWords)
+void CIDEFindInFiles::StartSearch(const char* szText, bool bMatchCase, bool bWholeWords, bool bRegex, const char* szFileMask)
 {
 	if (mbSearch)
 	{
 		mcSearch.Kill();
 	}
-	mcSearch.Init(szText, bMatchCase, bWholeWords);
+	mcSearch.Init(szText, bMatchCase, bWholeWords, bRegex);
 	mbSearch = true;
+	mszSearchMask.Set(szFileMask ? szFileMask : "");
 	maszFiles.ReInit();
 	maszDirectories.ReInit();
 	masPlaces.ReInit();
 	muiNextFile = 0;
-	if (!mcSearch.IsEmpty())
+	if (!mcSearch.IsEmpty() && mcSearch.IsValid())
 	{
 		mcScope.ListFiles(mpcContent, &maszFiles, &maszDirectories);
 	}
@@ -693,6 +808,12 @@ void CIDEFindInFiles::SearchFile(size uiFile, CFindInFilesItems* pcDest)
 	size			uiLineStart;
 	int32			iLine;
 
+	//Only the files the mask lets through.
+	if (!IsIDEFileMaskMatch(mszSearchMask.Text(), GetIDEFileNamePart(maszFiles.GetText(uiFile))))
+	{
+		return;
+	}
+
 	cFile.Init();
 	if (!GetFileText(maszFiles.GetText(uiFile), &cFile, &szText, &uiLength))
 	{
@@ -722,13 +843,13 @@ void CIDEFindInFiles::SearchFile(size uiFile, CFindInFilesItems* pcDest)
 		psPlace->uiPosition = uiPosition;
 		psPlace->iLine = iLine;
 		psPlace->iColumn = (int32)(uiPosition - uiLineStart);
-		psPlace->iLength = (int32)mcSearch.Length();
+		psPlace->iLength = (int32)mcSearch.GetFoundLength();
 		if (pcDest)
 		{
 			szLineEnd = (const char*)memchr(&szText[uiPosition], '\n', uiLength - uiPosition);
 			AddItem(pcDest, uiFile, psPlace, &szText[uiLineStart], szLineEnd ? szLineEnd : &szText[uiLength], masPlaces.NumElements() - 1);
 		}
-		uiPosition = mcSearch.Find(szText, uiLength, uiPosition + mcSearch.Length());
+		uiPosition = mcSearch.Find(szText, uiLength, uiPosition + mcSearch.GetFoundLength());
 	}
 	cFile.Kill();
 }
@@ -940,8 +1061,13 @@ void CIDEFindInFiles::ShowResults(bool bKeepSelected)
 {
 	Ptr<CTreeContainer>	pTree;
 	CIDEFileLines		cLines;
+	CTextFile			cFile;
 	SIDEFindPlace*		psPlace;
 	CChars				szText;
+	CChars				szNote;
+	const char*			szFileText;
+	size				uiFileLength;
+	bool				bFileText;
 	const char*			szFile;
 	const char*			szName;
 	size				uiCommon;
@@ -989,11 +1115,25 @@ void CIDEFindInFiles::ShowResults(bool bKeepSelected)
 		pTree->SetExpanded(iFile, true);
 		szText.Kill();
 
+		//Replace in Files' results say what each becomes, from the file's text as it is.
+		cFile.Init();
+		bFileText = mbFoundReplacing && GetFileText(szFile, &cFile, &szFileText, &uiFileLength);
 		for (j = i; j < i + uiCount; j++)
 		{
 			psPlace = masFound.Get(j);
-			mpPane->AddResult(iFile, &cLines, szFile, psPlace->iLine, psPlace->iColumn, psPlace->iLength, NULL, (int64)j + 1);
+			szNote.Init();
+			if (bFileText)
+			{
+				szNote.Append("  ->  ");
+				if (!GetReplacement(szFileText, uiFileLength, psPlace, &szNote))
+				{
+					szNote.Set("  (changed since it was found)");
+				}
+			}
+			mpPane->AddResult(iFile, &cLines, szFile, psPlace->iLine, psPlace->iColumn, psPlace->iLength, szNote.Empty() ? NULL : szNote.Text(), (int64)j + 1);
+			szNote.Kill();
 		}
+		cFile.Kill();
 	}
 	cLines.Kill();
 
@@ -1132,6 +1272,13 @@ void CIDEFindInFiles::ReadSettings(CMarkupTag* pcSettings)
 	mbMatchCase = szValue && (StringCompare(szValue, "true") == 0);
 	szValue = pcTag->GetStringAttribute(IDE_FIND_WORDS_ATTRIBUTE);
 	mbWholeWords = szValue && (StringCompare(szValue, "true") == 0);
+	szValue = pcTag->GetStringAttribute(IDE_FIND_REGEX_ATTRIBUTE);
+	mbRegex = szValue && (StringCompare(szValue, "true") == 0);
+	szValue = pcTag->GetStringAttribute(IDE_FIND_FILE_MASK_ATTRIBUTE);
+	if (szValue)
+	{
+		mszFileMask.Set(szValue);
+	}
 	if (mpPane.IsNotNull())
 	{
 		mpPane->ReadSettings(pcTag);
@@ -1146,11 +1293,395 @@ void CIDEFindInFiles::WriteSettings(CXMLWriter* pcWriter)
 	pcWriter->Attribute(IDE_FIND_DIRECTORY_ATTRIBUTE, mszDirectory.Text());
 	pcWriter->Attribute(IDE_FIND_MATCH_CASE_ATTRIBUTE, mbMatchCase);
 	pcWriter->Attribute(IDE_FIND_WORDS_ATTRIBUTE, mbWholeWords);
+	pcWriter->Attribute(IDE_FIND_REGEX_ATTRIBUTE, mbRegex);
+	pcWriter->Attribute(IDE_FIND_FILE_MASK_ATTRIBUTE, mszFileMask.Text());
 	if (mpPane.IsNotNull())
 	{
 		mpPane->WriteSettings(pcWriter);
 	}
 	pcWriter->End();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// What a result is replaced with, appended to pszDest: the replacement
+// as it is, or what a regular expression's groups make of it there.  The
+// result is found again where it says it is, in szText (its file's text
+// now): false if it isn't there any more, or the replacement names a
+// group the expression hasn't.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEFindInFiles::GetReplacement(const char* szText, size uiLength, SIDEFindPlace* psPlace, CChars* pszDest)
+{
+	size	uiPosition;
+
+	if (!mbFoundSearch || !mcFoundSearch.CheckReplacement(mszFoundReplace.Text()))
+	{
+		return false;
+	}
+	uiPosition = FindIDETextPosition(szText, uiLength, psPlace->iLine, psPlace->iColumn);
+	if ((uiPosition + (size)psPlace->iLength > uiLength) || (mcFoundSearch.Find(szText, uiPosition + (size)psPlace->iLength, uiPosition) != uiPosition) || (mcFoundSearch.GetFoundLength() != (size)psPlace->iLength))
+	{
+		return false;
+	}
+	mcFoundSearch.AppendReplacement(szText, mszFoundReplace.Text(), pszDest);
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether the Find tool window's results can be replaced: they are
+// Replace in Files', and there are some.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEFindInFiles::CanReplaceFound(void)
+{
+	return mbFound && mbFoundReplacing && (masFound.NumElements() > 0) && mpDialog.IsNull();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The results given (their indices in what was found, in order; NULL for
+// all of them) are replaced: each file is opened and its results changed
+// in its editor as one edit, and every file's are one undo.  A result
+// that isn't where it was found any more is left.  The files are left
+// changed, for Save All.  The status line says how many were replaced in
+// how many files, and what is left is found again.  How many were
+// replaced.
+//
+//////////////////////////////////////////////////////////////////////////
+size CIDEFindInFiles::ReplaceFound(CArrayInt* paiResults)
+{
+	Ptr<CIDEEditorTab>	pTab;
+	Ptr<CTextArea>		pEditor;
+	CArrayTextRange		asRanges;
+	CArrayChars			aszTexts;
+	SIDEFindPlace*		psPlace;
+	STextRange*			psRange;
+	CChars				szReplacement;
+	CChars				szStatus;
+	const char*			szFile;
+	const char*			szText;
+	size				uiLength;
+	size				uiNumResults;
+	size				uiResult;
+	size				uiFile;
+	size				uiReplaced;
+	size				uiFiles;
+	size				uiLeft;
+	size				i;
+	size				j;
+
+	if (!CanReplaceFound())
+	{
+		return 0;
+	}
+	if (!mcFoundSearch.CheckReplacement(mszFoundReplace.Text()))
+	{
+		szStatus.Init("Nothing was replaced: ");
+		szStatus.Append(mcFoundSearch.GetError());
+		mpcContent->ShowStatus(szStatus.Text());
+		szStatus.Kill();
+		return 0;
+	}
+
+	uiNumResults = paiResults ? paiResults->NumElements() : masFound.NumElements();
+	uiReplaced = 0;
+	uiFiles = 0;
+	uiLeft = 0;
+	mpcContent->GetEdit()->BeginUndoGroup();
+	for (i = 0; i < uiNumResults; i = j)
+	{
+		//A file's results are together, in the order they are in it.
+		uiResult = paiResults ? (size)paiResults->GetValue(i) : i;
+		uiFile = masFound.Get(uiResult)->uiFile;
+		for (j = i + 1; (j < uiNumResults) && (masFound.Get(paiResults ? (size)paiResults->GetValue(j) : j)->uiFile == uiFile); j++)
+		{
+		}
+		szFile = maszFoundFiles.GetText(uiFile);
+		pTab = mpcContent->GetDocuments()->FindTab(szFile);
+		if (pTab.IsNull() && mpcContent->GetDocuments()->OpenFile(szFile, mpcContent->GetCodeModel()->FindProjectOfFile(szFile)))
+		{
+			pTab = mpcContent->GetDocuments()->FindTab(szFile);
+		}
+		if (pTab.IsNull())
+		{
+			uiLeft += j - i;
+			continue;
+		}
+
+		pEditor = pTab->GetEditor();
+		szText = pEditor->GetText();
+		uiLength = strlen(szText);
+		asRanges.Init();
+		aszTexts.Init();
+		for (; i < j; i++)
+		{
+			psPlace = masFound.Get(paiResults ? (size)paiResults->GetValue(i) : i);
+			szReplacement.Init();
+			if (GetReplacement(szText, uiLength, psPlace, &szReplacement))
+			{
+				psRange = asRanges.Add();
+				psRange->uiStart = FindIDETextPosition(szText, uiLength, psPlace->iLine, psPlace->iColumn);
+				psRange->uiEnd = psRange->uiStart + (size)psPlace->iLength;
+				aszTexts.Add(szReplacement.Text());
+			}
+			else
+			{
+				uiLeft++;
+			}
+			szReplacement.Kill();
+		}
+		if ((asRanges.NumElements() > 0) && pEditor->ReplaceRanges(asRanges.Get(0), asRanges.NumElements(), &aszTexts))
+		{
+			uiReplaced += asRanges.NumElements();
+			uiFiles++;
+		}
+		else
+		{
+			uiLeft += asRanges.NumElements();
+		}
+		aszTexts.Kill();
+		asRanges.Kill();
+	}
+	mpcContent->GetEdit()->EndUndoGroup();
+
+	//What is left to replace, if anything, is found again.
+	OpenInFindWindow(true, true);
+
+	szStatus.Init("Replaced ");
+	szStatus.Append((uint32)uiReplaced);
+	szStatus.Append((uiReplaced == 1) ? " occurrence in " : " occurrences in ");
+	szStatus.Append((uint32)uiFiles);
+	szStatus.Append((uiFiles == 1) ? " file." : " files.");
+	if (uiLeft > 0)
+	{
+		szStatus.Append("  ");
+		szStatus.Append((uint32)uiLeft);
+		szStatus.Append((uiLeft == 1) ? " was left: its text has changed, or its file can't be edited." : " were left: their text has changed, or their files can't be edited.");
+	}
+	if (uiReplaced > 0)
+	{
+		szStatus.Append("  Save All keeps them.");
+	}
+	mpcContent->ShowStatus(szStatus.Text());
+	szStatus.Kill();
+	return uiReplaced;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Every result replaced.  With bAsk the user is asked first, how many
+// there are in how many files said: the dialog's Replace All, which
+// hasn't shown them.
+//
+//////////////////////////////////////////////////////////////////////////
+size CIDEFindInFiles::ReplaceAllFound(bool bAsk)
+{
+	CChars	szQuestion;
+	bool	bReplace;
+
+	if (!CanReplaceFound())
+	{
+		return 0;
+	}
+	if (bAsk)
+	{
+		szQuestion.Init("Replace ");
+		szQuestion.Append((uint32)masFound.NumElements());
+		szQuestion.Append((masFound.NumElements() == 1) ? " occurrence of '" : " occurrences of '");
+		szQuestion.Append(mszText);
+		szQuestion.Append("' with '");
+		szQuestion.Append(mszFoundReplace);
+		szQuestion.Append("' in ");
+		szQuestion.Append((uint32)maszFoundFiles.NumElements());
+		szQuestion.Append((maszFoundFiles.NumElements() == 1) ? " file?" : " files?");
+		mpReplaceDialog = OMalloc<CMessageDialog>(mpcContent->GetWindow(), mpcContent->GetDialogLook(), "Replace in Files", szQuestion.Text());
+		szQuestion.Kill();
+		mpReplaceDialog->GetDialog()->SetOKCaption("Replace");
+		mpcContent->GetScript()->WatchDialog(mpReplaceDialog->GetDialog());
+		bReplace = mpReplaceDialog->Show();
+		mpcContent->GetScript()->StopWatchingDialog();
+		mpReplaceDialog = NULL;
+		if (!bReplace)
+		{
+			return 0;
+		}
+	}
+	return ReplaceFound(NULL);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The results of the tree's selected row replaced: the result it is, or
+// every result under it (a file's, or all of them from the first row).
+//
+//////////////////////////////////////////////////////////////////////////
+size CIDEFindInFiles::ReplaceSelectedFound(void)
+{
+	CArrayInt	aiResults;
+	size		uiReplaced;
+	int32		iNode;
+
+	if (!CanReplaceFound())
+	{
+		return 0;
+	}
+	iNode = mpPane->GetTree()->GetSelectedNode();
+	if (iNode == TREE_NO_NODE)
+	{
+		mpcContent->ShowStatus("Select the result to replace, or a file to replace every result in it.");
+		return 0;
+	}
+	aiResults.Init();
+	AddNodeResults(iNode, &aiResults);
+	uiReplaced = (aiResults.NumElements() > 0) ? ReplaceFound(&aiResults) : 0;
+	aiResults.Kill();
+	return uiReplaced;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The results that are a node or under it, in the tree's order, which is
+// the order they were found in.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEFindInFiles::AddNodeResults(int32 iNode, CArrayInt* paiResults)
+{
+	Ptr<CTreeContainer>	pTree;
+	int64				iData;
+	int32				iChild;
+
+	pTree = mpPane->GetTree();
+	iData = mpPane->GetResultData(iNode);
+	if ((iData > 0) && ((size)iData <= masFound.NumElements()))
+	{
+		paiResults->Add((int)(iData - 1));
+	}
+	for (iChild = pTree->GetFirstChild(iNode); iChild != TREE_NO_NODE; iChild = pTree->GetNextSibling(iChild))
+	{
+		AddNodeResults(iChild, paiResults);
+	}
+}
+
+
+void CIDEFindInFiles::ReplaceAllClicked(void) { ReplaceAllFound(false); }
+void CIDEFindInFiles::ReplaceSelectedClicked(void) { ReplaceSelectedFound(); }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A name against one piece of a mask: * is any characters and ? any one,
+// letters whatever their case.
+//
+//////////////////////////////////////////////////////////////////////////
+static bool IsIDEMaskPieceMatch(const char* szPiece, size uiPiece, const char* szName)
+{
+	size	uiStar;
+	size	uiStarName;
+	size	i;
+	size	j;
+
+	uiStar = MAX_SIZE;
+	uiStarName = 0;
+	i = 0;
+	j = 0;
+	while (szName[j] != '\0')
+	{
+		if ((i < uiPiece) && ((szPiece[i] == '?') || (ToLower(szPiece[i]) == ToLower(szName[j]))))
+		{
+			i++;
+			j++;
+		}
+		else if ((i < uiPiece) && (szPiece[i] == '*'))
+		{
+			uiStar = i;
+			uiStarName = j;
+			i++;
+		}
+		else if (uiStar != MAX_SIZE)
+		{
+			i = uiStar + 1;
+			uiStarName++;
+			j = uiStarName;
+		}
+		else
+		{
+			return false;
+		}
+	}
+	while ((i < uiPiece) && (szPiece[i] == '*'))
+	{
+		i++;
+	}
+	return i == uiPiece;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether a file's name is one a file mask lets through: the mask is
+// names with * and ?, parted by commas or semicolons ("*.cpp, *.h"); the
+// name must be one of them, unless there are none, and none of those
+// with a ! before them ("*.h, !Test*").  An empty mask lets every file
+// through.
+//
+//////////////////////////////////////////////////////////////////////////
+bool IsIDEFileMaskMatch(const char* szMask, const char* szFileName)
+{
+	const char*	szPiece;
+	const char*	szEnd;
+	bool		bAny;
+	bool		bMatched;
+	bool		bNot;
+
+	bAny = false;
+	bMatched = false;
+	for (szPiece = szMask; *szPiece != '\0'; szPiece = (*szEnd == '\0') ? szEnd : szEnd + 1)
+	{
+		while ((*szPiece == ' ') || (*szPiece == '\t'))
+		{
+			szPiece++;
+		}
+		for (szEnd = szPiece; (*szEnd != '\0') && (*szEnd != ',') && (*szEnd != ';'); szEnd++)
+		{
+		}
+		bNot = (*szPiece == '!');
+		if (bNot)
+		{
+			szPiece++;
+		}
+		while ((szEnd > szPiece) && ((szEnd[-1] == ' ') || (szEnd[-1] == '\t')))
+		{
+			szEnd--;
+		}
+		if (szEnd > szPiece)
+		{
+			if (bNot)
+			{
+				if (IsIDEMaskPieceMatch(szPiece, (size)(szEnd - szPiece), szFileName))
+				{
+					return false;
+				}
+			}
+			else
+			{
+				bAny = true;
+				bMatched = bMatched || IsIDEMaskPieceMatch(szPiece, (size)(szEnd - szPiece), szFileName);
+			}
+		}
+		while ((*szEnd == ' ') || (*szEnd == '\t'))
+		{
+			szEnd++;
+		}
+	}
+	return !bAny || bMatched;
 }
 
 

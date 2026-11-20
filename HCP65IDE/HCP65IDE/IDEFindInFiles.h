@@ -26,6 +26,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/TextSearch.h"
 #include "BaseLib/TextFile.h"
 #include "WindowLib/FindInFilesDialog.h"
+#include "WindowLib/MessageDialog.h"
+#include "BaseLib/ArrayInt.h"
 #include "WindowLib/TreeContainer.h"
 #include "IDEResultsPane.h"
 #include "WindowLib/DockManager.h"
@@ -72,6 +74,16 @@ typedef CArrayTemplate<SIDEFindPlace>	CArrayIDEFindPlaces;
 //The preview is coloured as an editor is, by the edits thread (CIDEDocuments::HighlightPreview), a moment after it is
 //shown: the dialog's ticks ask for what it made.
 //
+//The text can be a regular expression (Regex: BaseLib's CRegex; one that isn't is said to be wrong, where the count
+//is), and a file mask keeps the search to some of the scope's files: "*.cpp, *.h", names with * and ?, whatever
+//their case, parted by commas, a ! before one leaving its files out ("*.h, !Test*").  Both are remembered.
+//
+//Replace in Files (Control+Shift+R) is the same dialog with what to replace with (a regular expression's $1 is a
+//group).  Its Replace All asks, then replaces everything found; its Open in Find Window lists what was found with
+//what each becomes after it, and the Find tool window's Replace All and Replace Selected (the selected result, or
+//those under the selected file) do it from there.  The files are opened and edited in their editors, all as one undo
+//(the refactorings' group), and left for Save All.  A result whose text has changed since it was found is left.
+//
 //The search is a little at a time (SearchSome): a directory's files are listed, or a file is searched, until the time
 //is up, so the dialog is never kept from the keys.
 class CIDEFindInFiles : public CObject, public CFindInFilesSearcher, public CIDESteppable, public CIDEResultsSource, public CIDEPreviewAsker, public CIDEFileTexts
@@ -89,10 +101,15 @@ protected:
 	EIDEScope				meScope;
 	bool					mbMatchCase;
 	bool					mbWholeWords;
+	bool					mbRegex;
+	CChars					mszFileMask;
+	CChars					mszReplace;  //What Replace in Files last replaced with.
+	bool					mbReplacing;  //The dialog shown is Replace in Files'.
 
 	//The search under way: the dialog's, or Open in Find Window's.
 	CTextSearch				mcSearch;
 	bool					mbSearch;  //mcSearch is made.
+	CChars					mszSearchMask;  //Its file mask.
 	CIDEScope				mcScope;  //Where it looks: as the IDE was when it started.
 	EIDEScope				maeDialogScopes[IS_Count];  //The scope of each of the dialog's tabs.
 	size					muiDialogScopes;
@@ -108,6 +125,11 @@ protected:
 	CArrayIDEFindPlaces		masFound;  //The tree's results, each line's by its node's data less one.
 	CChars					mszFoundTitle;  //The tree's first row.
 	bool					mbFound;  //Something has been looked for.
+	CTextSearch				mcFoundSearch;  //What the tree's results were found with: what each is replaced with comes from it.
+	bool					mbFoundSearch;  //mcFoundSearch is made.
+	bool					mbFoundReplacing;  //The tree's results are Replace in Files': each shows what it becomes.
+	CChars					mszFoundReplace;  //With this.
+	Ptr<CMessageDialog>		mpReplaceDialog;  //While Replace All's question is shown.
 	bool					mbMoved;  //Edits have moved results since the tree was shown, the last at miMoved.
 	int64					miMoved;
 
@@ -123,10 +145,15 @@ public:
 	void					CreatePane(SDockPlace* psPlace);
 
 	void					FindInFiles(void);
-	bool					ShowFind(void);
-	bool					CreateFind(void);
+	void					ReplaceInFiles(void);
+	bool					ShowFind(bool bReplace = false);
+	bool					CreateFind(bool bReplace = false);
 	bool					OpenFindChoice(void);
-	size					OpenInFindWindow(bool bRerun = false);
+	size					OpenInFindWindow(bool bRerun = false, bool bReplace = false);
+	size					ReplaceAllFound(bool bAsk);
+	size					ReplaceSelectedFound(void);
+	size					ReplaceFound(CArrayInt* paiResults);
+	bool					CanReplaceFound(void);
 	Ptr<CFindInFilesDialog>	GetFind(void) const;
 
 	void					FindStart(SFindInFilesQuery* psQuery) override;
@@ -134,6 +161,7 @@ public:
 	bool					FindPreviewPlace(SFindInFilesItem* psItem, CChars* pszTitle, size* puiStart, size* puiLength) override;
 	bool					FindPreviewText(SFindInFilesItem* psItem, CChars* pszText) override;
 	void					FindPreviewShown(SFindInFilesItem* psItem, Ptr<CTextArea> pPreview, bool bNewText) override;
+	bool					FindProblem(CChars* pszDest) override;
 	void					PreviewHighlighted(const char* szFileName, CArrayHighlights* pacHighlights) override;
 	void					DialogTick(void);
 
@@ -158,10 +186,15 @@ public:
 
 protected:
 	void				ShowQueuedFind(void);
+	void				ShowQueuedReplace(void);
+	void				ReplaceAllClicked(void);
+	void				ReplaceSelectedClicked(void);
+	void				AddNodeResults(int32 iNode, CArrayInt* paiResults);
+	bool				GetReplacement(const char* szText, size uiLength, SIDEFindPlace* psPlace, CChars* pszDest);
 	void				GetInitialText(CChars* pszDest);
 	void				GetInitialDirectory(CChars* pszDest);
 	size				FindDialogScope(EIDEScope eScope);
-	void				StartSearch(const char* szText, bool bMatchCase, bool bWholeWords);
+	void				StartSearch(const char* szText, bool bMatchCase, bool bWholeWords, bool bRegex, const char* szFileMask);
 	bool				SearchSome(CFindInFilesItems* pcDest);
 	void				ListDirectory(const char* szDirectory);
 	void				SearchFile(size uiFile, CFindInFilesItems* pcDest);
@@ -170,6 +203,9 @@ protected:
 	size				GetCommonDirectoryLength(void);
 	bool				GetPlaceLocation(CArrayChars* paszFiles, SIDEFindPlace* psPlace, SIDELocation* psDest);
 };
+
+
+bool IsIDEFileMaskMatch(const char* szMask, const char* szFileName);
 
 
 #endif // __IDE_FIND_IN_FILES_H__

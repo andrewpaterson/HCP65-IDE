@@ -42,7 +42,7 @@ static bool			gbIDEScriptRenameSaves = false;  //rename: saves what it edited (r
 static bool			gbIDEScriptClassFiles = false;  //rename: renames a type's files too (renamesearch's f), never from the settings.
 
 
-static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printfindpreview", "printfindtoolbar", "findtool:", "printstartup", "printworkspace", "rename", "safedelete", "introducevariable", "introducefield", "introduceconstant", "introduceparameter", "changesignature", "pullmembersup", "pushmembersdown", "moveclass", "copyclass", "inlinevariable", "introducetypedef", "extractmethod", "extractsuperclass", "extractinterface", "extractclass", "encapsulatefield", "convertmacro", "extracttemplateparameter", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printsettings", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printprojectfiles", "printdiskfile:", "printdisklines:", "printedits", "printspans", "configuration:", "waitindex", "indextemplates:" };
+static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printfindpreview", "printfindtoolbar", "findtool:", "replace:", "findoptions:", "findselect:", "printstartup", "printworkspace", "rename", "safedelete", "introducevariable", "introducefield", "introduceconstant", "introduceparameter", "changesignature", "pullmembersup", "pushmembersdown", "moveclass", "copyclass", "inlinevariable", "introducetypedef", "extractmethod", "extractsuperclass", "extractinterface", "extractclass", "encapsulatefield", "convertmacro", "extracttemplateparameter", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printsettings", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printprojectfiles", "printdiskfile:", "printdisklines:", "printedits", "printspans", "configuration:", "waitindex", "indextemplates:" };
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -227,7 +227,33 @@ void CIDEScript::RunCommand(const char* szCommand)
 		{
 			mpcContent->GetFindInFiles()->mszDirectory.Set(getenv("HCP65_IDE_FIND_DIRECTORY"));
 		}
+		mpcContent->GetFindInFiles()->mszFileMask.Set((getenv("HCP65_IDE_FIND_MASK") != NULL) ? getenv("HCP65_IDE_FIND_MASK") : "");
 		mpcContent->GetFindInFiles()->ShowFind();
+	}
+	else if (strncmp(szCommand, "replace:", 8) == 0)
+	{
+		//Replace in Files' dialog shown on that scope, as find: shows Find in Files': replace:<scope>:<text>, replacing
+		//with HCP65_IDE_FIND_REPLACE in the files of HCP65_IDE_FIND_MASK.
+		mpcContent->GetFindInFiles()->meScope = GetScriptScope(&szCommand[8]);
+		if (strchr(&szCommand[8], ':') != NULL)
+		{
+			mpcContent->GetFindInFiles()->mszText.Set(strchr(&szCommand[8], ':') + 1);
+		}
+		mpcContent->GetFindInFiles()->mszReplace.Set((getenv("HCP65_IDE_FIND_REPLACE") != NULL) ? getenv("HCP65_IDE_FIND_REPLACE") : "");
+		mpcContent->GetFindInFiles()->mszFileMask.Set((getenv("HCP65_IDE_FIND_MASK") != NULL) ? getenv("HCP65_IDE_FIND_MASK") : "");
+		mpcContent->GetFindInFiles()->ShowFind(true);
+	}
+	else if (strncmp(szCommand, "findoptions:", 12) == 0)
+	{
+		//findoptions:<letters>: Find in Files' Match case (c), Words (w) and Regex (r) as the letters say, - for none.
+		mpcContent->GetFindInFiles()->mbMatchCase = strchr(&szCommand[12], 'c') != NULL;
+		mpcContent->GetFindInFiles()->mbWholeWords = strchr(&szCommand[12], 'w') != NULL;
+		mpcContent->GetFindInFiles()->mbRegex = strchr(&szCommand[12], 'r') != NULL;
+	}
+	else if (strncmp(szCommand, "findselect:", 11) == 0)
+	{
+		//findselect:<row>: that row of the Find tool window's tree selected, from 0 as printfind prints them.
+		mpcContent->GetFindInFiles()->GetFindTree()->Select(atoi(&szCommand[11]));
 	}
 	else if (strcmp(szCommand, "printstartup") == 0)
 	{
@@ -998,6 +1024,7 @@ void CIDEScript::RunFind(const char* szFind)
 	int64					iStart;
 	int						iLine;
 	int						iColumn;
+	bool					bReplace;
 
 	szOptions = strchr(szFind, ':');
 	szText = szOptions ? strchr(&szOptions[1], ':') : NULL;
@@ -1009,6 +1036,13 @@ void CIDEScript::RunFind(const char* szFind)
 	pFindInFiles->meScope = GetScriptScope(szFind);
 	pFindInFiles->mbMatchCase = (memchr(szOptions, 'c', (size)(szText - szOptions)) != NULL);
 	pFindInFiles->mbWholeWords = (memchr(szOptions, 'w', (size)(szText - szOptions)) != NULL);
+	pFindInFiles->mbRegex = (memchr(szOptions, 'r', (size)(szText - szOptions)) != NULL);
+	pFindInFiles->mszFileMask.Set((getenv("HCP65_IDE_FIND_MASK") != NULL) ? getenv("HCP65_IDE_FIND_MASK") : "");
+	bReplace = getenv("HCP65_IDE_FIND_REPLACE") != NULL;
+	if (bReplace)
+	{
+		pFindInFiles->mszReplace.Set(getenv("HCP65_IDE_FIND_REPLACE"));
+	}
 	pFindInFiles->mszText.Set(&szText[1]);
 	if (getenv("HCP65_IDE_FIND_DIRECTORY") != NULL)
 	{
@@ -1016,7 +1050,7 @@ void CIDEScript::RunFind(const char* szFind)
 	}
 
 	iStart = GetDebugTickCount();
-	pFindInFiles->CreateFind();
+	pFindInFiles->CreateFind(bReplace);
 	pFind = pFindInFiles->GetFind();
 	pFind->Finish();
 	printf("Find [%s]: %s in %d ms\n", pFind->GetText(), pFind->GetStatus(), (int)(GetDebugTickCount() - iStart));
@@ -1033,10 +1067,11 @@ void CIDEScript::RunFind(const char* szFind)
 		printf("Opened %s %d:%d\n", GetIDEFileNamePart(mpcContent->GetDocuments()->GetActiveTab()->GetFileName()), iLine + 1, iColumn + 1);
 	}
 	pFindInFiles->mpDialog = NULL;
+	pFindInFiles->mbReplacing = false;
 	pFind = NULL;
 
 	iStart = GetDebugTickCount();
-	printf("Find window: %d results in %d ms\n", (int)pFindInFiles->OpenInFindWindow(), (int)(GetDebugTickCount() - iStart));
+	printf("Find window: %d results in %d ms\n", (int)pFindInFiles->OpenInFindWindow(false, bReplace), (int)(GetDebugTickCount() - iStart));
 	PrintFindTree(12);
 	fflush(stdout);
 }
@@ -4072,6 +4107,12 @@ void CIDEScript::DialogTick(void)
 	printf("Dialog [%s] answered %s\n", pWindow->GetWindowTitle(), szAnswer);
 	fflush(stdout);
 	muiAnswered++;
+	if ((strcmp(szAnswer, "Replace All") == 0) && mpcContent->GetFindInFiles()->GetFind().IsNotNull())
+	{
+		mpcContent->GetFindInFiles()->GetFind()->ReplaceAll();
+		szThisAnswer.Kill();
+		return;
+	}
 	if ((strcmp(szAnswer, "Open in Find Window") == 0) && mpcContent->GetFindInFiles()->GetFind().IsNotNull())
 	{
 		mpcContent->GetFindInFiles()->GetFind()->OpenInFindWindow();
