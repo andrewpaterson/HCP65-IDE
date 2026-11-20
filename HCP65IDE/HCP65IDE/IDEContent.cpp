@@ -247,6 +247,7 @@ void CIDEContent::Class(void)
 	M_Pointer(mpUserFile);
 	M_Pointer(mpBookmarks);
 	M_Pointer(mpMarks);
+	M_Pointer(mpRecent);
 	M_Pointer(mpDuplicates);
 	M_Pointer(mpOccurrences);
 	M_Pointer(mpNavigationHistory);
@@ -480,6 +481,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpUserFile = OMalloc<CIDEUserFile>(this);
 	mpBookmarks = OMalloc<CIDEBookmarks>(this);
 	mpMarks = OMalloc<CIDEMarks>(this);
+	mpRecent = OMalloc<CIDERecent>(this);
 	mpDuplicates = OMalloc<CIDEDuplicates>(this);
 	mpOccurrences = OMalloc<CIDEOccurrences>(this);
 	mpNavigationHistory = OMalloc<CIDENavigationHistory>(this);
@@ -497,6 +499,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	//What is kept in the workspace's per-user file, in the order it is written.
 	mpUserFile->AddPart(&mpDebugging);
 	mpUserFile->AddPart(&mpBookmarks);
+	mpUserFile->AddPart(&mpRecent);
 	mpGitStatus = OMalloc<CIDEGitStatus>(this);
 	mpDiffs = OMalloc<CIDEDiffs>(this);
 	mpAskClaude = OMalloc<CIDEAskClaude>(this);
@@ -593,6 +596,7 @@ Ptr<CMenuBar> CIDEContent::CreateMenuBar(void)
 	pWindowMenu = OMalloc<CMenuContainer>(mpWindow, mpTheme);
 	pWindowMenu->AddItem(mpCommands->Find("Window.ResetLayout"));
 	mpDocuments->AddWindowItems(pWindowMenu);
+	mpRecent->AddWindowItems(pWindowMenu);
 
 	mpMenuBar = OMalloc<CMenuBar>(mpWindow, mpTheme);
 	mpMenuBar->AddMenu("File", pFile);
@@ -687,6 +691,7 @@ void CIDEContent::AddCommands(void)
 	mpStructure->AddCommands(mpCommands);
 	mpBookmarks->AddCommands(mpCommands);
 	mpMarks->AddCommands(mpCommands);
+	mpRecent->AddCommands(mpCommands);
 	mpRename->AddCommands(mpCommands);
 	mpFileRename->AddCommands(mpCommands);
 	mpSafeDelete->AddCommands(mpCommands);
@@ -919,6 +924,13 @@ void CIDEContent::Tick(Ptr<CWindow> pWindow)
 		iSoonest = iWait;
 	}
 
+	//The recent files are written with the user's file a while after they change.
+	iWait = mpRecent->Poll(iNow);
+	if ((iWait >= 0) && ((iSoonest < 0) || (iWait < iSoonest)))
+	{
+		iSoonest = iWait;
+	}
+
 	//Bookmarks that edits moved are shown where they are, and listed and written once the edits stop.
 	iWait = mpBookmarks->Poll(iNow);
 	if ((iWait >= 0) && ((iSoonest < 0) || (iWait < iSoonest)))
@@ -1034,6 +1046,7 @@ void CIDEContent::PaneClosed(CDockPane* pcPane)
 	pTab->GetCodeEditor()->GetIconClickEvent()->Remove(&mpBookmarks);
 	pTab->GetCodeEditor()->GetIconClickEvent()->Remove(&mpMarks);
 	mpMarks->TabClosed(pTab);
+	mpRecent->FileClosed(pTab);
 	pTab->GetEditor()->GetUndoEvent()->Remove(&mpEdit);
 	pTab->GetEditor()->GetLinkEvent()->Remove(&mpNavigator);
 	mpEdit->FileClosed(pTab->GetFileName());
@@ -1244,6 +1257,7 @@ Ptr<CIDEFind> CIDEContent::GetFind(void) const { return mpFind; }
 Ptr<CIDEUserFile> CIDEContent::GetUserFile(void) const { return mpUserFile; }
 Ptr<CIDEBookmarks> CIDEContent::GetBookmarks(void) const { return mpBookmarks; }
 Ptr<CIDEMarks> CIDEContent::GetMarks(void) const { return mpMarks; }
+Ptr<CIDERecent> CIDEContent::GetRecent(void) const { return mpRecent; }
 Ptr<CIDEDuplicates> CIDEContent::GetDuplicates(void) const { return mpDuplicates; }
 Ptr<CIDEOccurrences> CIDEContent::GetOccurrences(void) const { return mpOccurrences; }
 Ptr<CIDENavigationHistory> CIDEContent::GetNavigationHistory(void) const { return mpNavigationHistory; }

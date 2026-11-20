@@ -266,6 +266,8 @@ void CIDEScript::RunCommand(const char* szCommand)
 		CTextFile	cUserFile;
 		CChars		szUserFile;
 
+		//The recent files are written a while after they change: now, for the check.
+		mpcContent->GetRecent()->Poll(GetDebugTickCount() + IDE_RECENT_WRITE);
 		szUserFile.Init();
 		mpcContent->GetUserFile()->GetFileName(&szUserFile);
 		cUserFile.Init();
@@ -735,6 +737,10 @@ void CIDEScript::RunCommand(const char* szCommand)
 		szPath.Init();
 		mpcContent->GetSolutions()->GetExplorer()->GetSelectedFilePath(&szPath);
 		printf("Explorer: [%s]\n", szPath.Text());
+		if (mpcContent->GetSolutions()->IsAlwaysSelect() || mpcContent->GetSolutions()->IsSingleClick())
+		{
+			printf("Explorer options:%s%s\n", mpcContent->GetSolutions()->IsAlwaysSelect() ? " always select" : "", !mpcContent->GetSolutions()->GetExplorer()->GetTree()->IsDoubleClickActivates() ? " single click" : "");
+		}
 		szPath.Kill();
 		fflush(stdout);
 	}
@@ -3479,6 +3485,31 @@ void CIDEScript::RunEditStep(const char* szStep)
 
 		sIcon.Init(IDE_GUTTER_OVERRIDES, atoi(&szStep[14]) - 1);
 		mpcContent->GetMarks()->IconClicked(&pTab->GetCodeEditor(), sIcon);
+	}
+	else if (strcmp(szStep, "printrecent") == 0)
+	{
+		//The recent files, most recent first, and the edit locations: "Recent files: Shapes.cpp, Main.cpp:1 (closed)",
+		//"Edit locations: 2 at 1".
+		CChars	szShown;
+
+		szShown.Init();
+		mpcContent->GetRecent()->Print(&szShown);
+		printf("%s", szShown.Text());
+		szShown.Kill();
+		fflush(stdout);
+	}
+	else if (strcmp(szStep, "switcher:hold") == 0)
+	{
+		//The Switcher as Control+Tab with Control held: it stays open (command:Window.Switcher then steps it on).
+		mpcContent->GetRecent()->OpenSwitcher(false, true);
+	}
+	else if (strcmp(szStep, "switcher:release") == 0)
+	{
+		//Control let go: the Switcher's selected row is chosen.
+		if (mpcContent->GetRecent()->GetChooser().IsNotNull() && mpcContent->GetRecent()->GetChooser()->IsOpen())
+		{
+			mpcContent->GetRecent()->GetChooser()->GetPopup()->ChooseSelected();
+		}
 	}
 	else if (strcmp(szStep, "printbookmarks") == 0)
 	{

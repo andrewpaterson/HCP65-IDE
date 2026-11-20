@@ -142,7 +142,7 @@ bool CIDEDocuments::OpenFile(const char* szFileName, size uiProject)
 		return false;
 	}
 	mpcContent->GetDock()->Activate(pTab->GetDockPane());
-	mpActive = pTab;
+	SetActiveTab(pTab);
 	mpcContent->GetDiffs()->SetActiveDiff(NULL);
 	mpcContent->GetGitStatus()->ShowBranch();
 	mpcContent->GetNavigationHistory()->EndJump(&sFrom, bRecord);
@@ -1280,7 +1280,24 @@ void CIDEFileLines::Read(const char* szFileName)
 // The tab whose file was selected last, NULL if none is (a diff is).
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEDocuments::SetActiveTab(Ptr<CIDEEditorTab> pTab) { mpActive = pTab; }
+//////////////////////////////////////////////////////////////////////////
+//
+// The editor in front, NULL for none (a diff is): its file is the most
+// recent, and Solution Explorer selects it if it is set to.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDocuments::SetActiveTab(Ptr<CIDEEditorTab> pTab)
+{
+	bool	bChanged;
+
+	bChanged = mpActive != pTab;
+	mpActive = pTab;
+	if (bChanged && pTab.IsNotNull() && mpcContent->GetRecent().IsNotNull())
+	{
+		mpcContent->GetRecent()->FileShown(pTab);
+		mpcContent->GetSolutions()->FileShown();
+	}
+}
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -1393,6 +1410,8 @@ void CIDEDocuments::DocumentChanged(const char* szFileName, STextDocumentChange*
 	mpcContent->GetFindInFiles()->AdjustPlaces(szFileName, &sChange);
 	mpcContent->GetDuplicates()->AdjustPlaces(szFileName, &sChange);
 	mpcContent->GetBookmarks()->AdjustPlaces(szFileName, &sChange);
+	mpcContent->GetRecent()->AdjustPlaces(szFileName, &sChange);
+	mpcContent->GetRecent()->FileEdited(szFileName, &sChange);
 }
 
 

@@ -345,6 +345,7 @@
     <ClCompile Include="IDEBreadcrumbs.cpp" />
     <ClCompile Include="IDEBookmarks.cpp" />
     <ClCompile Include="IDEMarks.cpp" />
+    <ClCompile Include="IDERecent.cpp" />
     <ClCompile Include="IDEUserFile.cpp" />
     <ClCompile Include="IDEClaudePage.cpp" />
     <ClCompile Include="IDEEditorPage.cpp" />
@@ -443,6 +444,7 @@
     <ClInclude Include="IDEBreadcrumbs.h" />
     <ClInclude Include="IDEBookmarks.h" />
     <ClInclude Include="IDEMarks.h" />
+    <ClInclude Include="IDERecent.h" />
     <ClInclude Include="IDEUserFile.h" />
     <ClInclude Include="IDEClaudePage.h" />
     <ClInclude Include="IDEEditorPage.h" />

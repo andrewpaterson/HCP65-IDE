@@ -62,6 +62,9 @@ void CIDESolutions::Init(CIDEContent* pcContent)
 	mcRecent.Init();
 	mszRecentFile.Init();
 	mszQueuedOpen.Init();
+	mbAlwaysSelect = false;
+	mbSingleClick = false;
+	mbSelectPosted = false;
 	PostInit();
 }
 
@@ -82,6 +85,9 @@ void CIDESolutions::Class(void)
 	U_Unknown(CRecentFiles, mcRecent);
 	U_String(mszRecentFile);
 	U_String(mszQueuedOpen);
+	U_Bool(mbAlwaysSelect);
+	U_Bool(mbSingleClick);
+	U_Bool(mbSelectPosted);
 }
 
 
@@ -666,11 +672,13 @@ void CIDESolutions::LetGoOfWorkspace(void)
 
 	mpcContent->GetBuilding()->StopBuild();
 	mpcContent->GetBuilding()->SetListings(false);
+	mpcContent->GetRecent()->LetGo();
 	mpcContent->GetDocuments()->CloseAllFiles();
 	mpcContent->GetUsages()->Clear();
 	mpcContent->GetFindInFiles()->Clear();
 	mpcContent->GetDuplicates()->Clear();
 	mpcContent->GetBookmarks()->Clear();
+	mpcContent->GetRecent()->Clear();
 
 	mpcContent->GetCodeModel()->Kill();
 	mpcContent->GetWorkspace()->Clear();
@@ -1024,6 +1032,9 @@ Ptr<CMenuContainer> CIDESolutions::CreateExplorerMenu(void)
 	mpExplorerMenu->AddItem(mpcContent->GetCommands()->Find("Explorer.RenameFile"));
 	mpExplorerMenu->AddSeparator();
 	mpExplorerMenu->AddItem(mpcContent->GetCommands()->Find("Explorer.ProjectProperties"));
+	mpExplorerMenu->AddSeparator();
+	mpExplorerMenu->AddItem(mpcContent->GetCommands()->Find("Explorer.AlwaysSelectOpenedFile"));
+	mpExplorerMenu->AddItem(mpcContent->GetCommands()->Find("Explorer.OpenFilesWithSingleClick"));
 	return mpExplorerMenu;
 }
 
@@ -1063,6 +1074,131 @@ void CIDESolutions::AddCommands(Ptr<CCommandSet> pCommands)
 	pCommands->Add("Explorer.RemoveSolution", "Remove Solution", "", Ptr<CImageCel>(), this, &CIDESolutions::QueueCommand);
 	pCommands->Add("Explorer.ProjectProperties", "Properties...", "", Ptr<CImageCel>(), this, &CIDESolutions::QueueCommand)->SetEnabledCheck(this, &CIDESolutions::CanShowProjectProperties);
 	pCommands->Add("View.SolutionExplorer", "Solution Explorer", "Alt+1", Ptr<CImageCel>(), this, &CIDESolutions::ShowActiveFileInExplorer);
+	pCommands->Add("Explorer.AlwaysSelectOpenedFile", "Always Select Opened File", "", Ptr<CImageCel>(), this, &CIDESolutions::ToggleAlwaysSelect)->SetCheckedCheck(this, &CIDESolutions::IsAlwaysSelect);
+	pCommands->Add("Explorer.OpenFilesWithSingleClick", "Open Files with Single Click", "", Ptr<CImageCel>(), this, &CIDESolutions::ToggleSingleClick)->SetCheckedCheck(this, &CIDESolutions::IsSingleClick);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Solution Explorer's two ways, in its menu, as IntelliJ IDEA's Project
+// tool window's: Always Select Opened File (the file of the editor shown
+// is selected in the tree as tabs are chosen, without Alt+1) and Open
+// Files with Single Click (one click on a file opens it; two, otherwise).
+// Both off to begin with; kept in the settings.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDESolutions::SetExplorerOptions(bool bAlwaysSelect, bool bSingleClick)
+{
+	mbAlwaysSelect = bAlwaysSelect;
+	mbSingleClick = bSingleClick;
+	if (mpExplorer.IsNotNull())
+	{
+		mpExplorer->GetTree()->SetDoubleClickActivates(!mbSingleClick);
+	}
+	if (mbAlwaysSelect)
+	{
+		FileShown();
+	}
+}
+
+
+void CIDESolutions::ToggleAlwaysSelect(void)
+{
+	SetExplorerOptions(!mbAlwaysSelect, mbSingleClick);
+	mpcContent->GetSettings()->WriteSettings();
+}
+
+
+void CIDESolutions::ToggleSingleClick(void)
+{
+	SetExplorerOptions(mbAlwaysSelect, !mbSingleClick);
+	mpcContent->GetSettings()->WriteSettings();
+}
+
+
+bool CIDESolutions::IsAlwaysSelect(void) { return mbAlwaysSelect; }
+bool CIDESolutions::IsSingleClick(void) { return mbSingleClick; }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// An editor's tab was chosen (CIDEContent::DocumentSelected): with
+// Always Select Opened File its file is selected in the tree at the next
+// tick, once whatever chose the tab is done.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDESolutions::FileShown(void)
+{
+	if (mbAlwaysSelect && !mbSelectPosted)
+	{
+		mbSelectPosted = true;
+		mpcContent->GetWindow()->Post(this, &CIDESolutions::SelectActiveFile);
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The active file's node is selected, its folders opened and its row in
+// view; the tool window isn't brought forward and the keys stay where
+// they are.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDESolutions::SelectActiveFile(void)
+{
+	Ptr<CTreeContainer>	pTree;
+	Ptr<CIDEEditorTab>	pTab;
+	int32				iNode;
+
+	mbSelectPosted = false;
+	pTab = mpcContent->GetDocuments()->GetActiveTab();
+	if (!mbAlwaysSelect || pTab.IsNull() || mpExplorer.IsNull())
+	{
+		return;
+	}
+	pTree = mpExplorer->GetTree();
+	iNode = mpExplorer->FindFilePathNode(pTab->GetFileName(), pTab->GetProject());
+	if ((iNode != TREE_NO_NODE) && (iNode != pTree->GetSelectedNode()))
+	{
+		pTree->SelectNode(iNode);
+		mpcContent->GetWindow()->Layout();
+		pTree->ShowRow(pTree->FindNodeRow(iNode));
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// <Explorer AlwaysSelect="true" SingleClick="true"/> in the settings,
+// written only when one is on.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDESolutions::ReadSettings(CMarkupTag* pcSettings)
+{
+	CMarkupTag*	pcTag;
+	char*		szAlwaysSelect;
+	char*		szSingleClick;
+
+	pcTag = pcSettings->GetTag("Explorer");
+	if (pcTag != NULL)
+	{
+		szAlwaysSelect = pcTag->GetStringAttribute("AlwaysSelect");
+		szSingleClick = pcTag->GetStringAttribute("SingleClick");
+		SetExplorerOptions((szAlwaysSelect != NULL) && (StringCompare(szAlwaysSelect, "true") == 0), (szSingleClick != NULL) && (StringCompare(szSingleClick, "true") == 0));
+	}
+}
+
+
+void CIDESolutions::WriteSettings(CXMLWriter* pcWriter)
+{
+	if (mbAlwaysSelect || mbSingleClick)
+	{
+		pcWriter->Begin("Explorer");
+		pcWriter->Attribute("AlwaysSelect", mbAlwaysSelect);
+		pcWriter->Attribute("SingleClick", mbSingleClick);
+		pcWriter->End();
+	}
 }
 
 

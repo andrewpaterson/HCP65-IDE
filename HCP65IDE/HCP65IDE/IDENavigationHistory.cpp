@@ -154,6 +154,7 @@ void CIDENavigationHistory::NavigateForward(void) { GoForward(); }
 bool CIDENavigationHistory::CanGoBack(void) { return masBack.NumElements() > 0; }
 bool CIDENavigationHistory::CanGoForward(void) { return masForward.NumElements() > 0; }
 size CIDENavigationHistory::NumBack(void) const { return masBack.NumElements(); }
+SIDENavigationPlace* CIDENavigationHistory::GetBackPlace(size uiIndex) { return masBack.Get(uiIndex); }  //The oldest is 0.
 size CIDENavigationHistory::NumForward(void) const { return masForward.NumElements(); }
 
 

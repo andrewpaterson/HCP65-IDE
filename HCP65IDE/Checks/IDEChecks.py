@@ -884,7 +884,7 @@ CHECKS = [
 		#Engine.h's (Other/OtherUser.cpp's) or in a comment (Commented.cpp's /* */).
 		'WAIT_INDEX': '1', 'OPEN': 'Engine.h', 'SETTINGS': MakeSettingsFile(), 'DIALOG_KEYS': 'type:CPPEngine', 'DIALOG_ANSWER': 'OK',
 		'DEBUG': 'printmenus,command:Refactor.RenameFile,answered:1,printprojectfiles,printdiskfile:Commented.cpp,printdiskfile:Other/OtherUser.cpp'}),
-		[r'^Menu Editor/Refactor: Rename File\.\.\., .*Extract Method', r'^Menu Explorer: .*, Rename\.\.\.(\(disabled\))?, Properties\.\.\.(\(disabled\))?$',
+		[r'^Menu Editor/Refactor: Rename File\.\.\., .*Extract Method', r'^Menu Explorer: .*, Rename\.\.\.(\(disabled\))?, Properties\.\.\.(\(disabled\))?, Always Select Opened File, Open Files with Single Click$',
 		 r'^Dialog \[Rename File\] answered OK$',
 		 r'^Status: Renamed Engine\.h to CPPEngine\.h and 2 more files: 7 #includes, 1 in comments and strings in 7 files, 2 projects\.$',
 		 r'^Project files: Commented\.cpp CPPEngine\.cpp CPPEngine_Linux\.cpp ', r'^//#include "CPPEngine\.h"$', r'^#include "Engine\.h"$'],
@@ -3717,6 +3717,10 @@ CHECKS = [
 		 r'^Keys: Bookmarks\.Previous Shift\+F2 bound$', r'^Keys: Bookmarks\.GoTo0 Control\+0 bound$', r'^Keys: Bookmarks\.GoTo9 Control\+9 bound$',
 		 r'^Keys: Navigate\.NextChange Control\+Alt\+Shift\+Cursor Down bound$', r'^Keys: Navigate\.PreviousChange Control\+Alt\+Shift\+Cursor Up bound$',
 		 r'^Keys: Navigate\.HighlightUsages Control\+Shift\+F7 bound$',
+		 r'^Keys: Navigate\.RecentFiles Control\+E bound$', r'^Keys: Navigate\.RecentLocations Control\+Shift\+E bound$',
+		 r'^Keys: Navigate\.LastEditLocation Control\+Shift\+Backspace bound$', r'^Keys: Navigate\.SelectIn Alt\+F1 bound$',
+		 r'^Keys: Window\.Switcher Control\+Tab bound$', r'^Keys: Window\.SwitcherBackward Control\+Shift\+Tab bound$',
+		 r'^Keys: Window\.NextTab Alt\+Cursor Right bound$', r'^Keys: Window\.PreviousTab Alt\+Cursor Left bound$',
 		 r'^Keys: Navigate\.ShowUsages Control\+Alt\+F7 bound$', r'^Keys: Edit\.Find Control\+F bound$', r'^Keys: Edit\.Replace Control\+R bound$',
 		 r'^Keys: Edit\.FindNext F3 bound$', r'^Keys: Edit\.FindPrevious Shift\+F3 bound$', r'^Keys: Edit\.FindWordAtCaret Control\+F3 bound$',
 		 r'^Keys: Edit\.FindInFiles Control\+Shift\+F bound$', r'^Keys: Edit\.ReplaceInFiles Control\+Shift\+R bound$',
@@ -3878,15 +3882,15 @@ CHECKS = [
 		 r'^Menu File/New: C\+\+ Class\.\.\., C\+\+ Header\.\.\., C\+\+ Source\.\.\.$',
 		 r'^Menu File/Recent Solutions: 1 ',
 		 r'^Menu Edit: Undo \[Ctrl\+Z\](\(disabled\))?, Redo \[Ctrl\+Shift\+Z\](\(disabled\))?, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\], Select All \[Ctrl\+A\], Extend Selection \[Ctrl\+W\], Shrink Selection \[Ctrl\+Shift\+W\], Find\.\.\. \[Ctrl\+F\], Replace\.\.\. \[Ctrl\+R\], Find Next \[F3\], Find Previous \[Shift\+F3\], Find Word at Caret \[Ctrl\+F3\], Find in Files\.\.\. \[Ctrl\+Shift\+F\], Replace in Files\.\.\. \[Ctrl\+Shift\+R\], Find Duplicates\.\.\. \[Ctrl\+Alt\+Shift\+D\]$',
-		 r'^Menu Navigate: Back \[Ctrl\+Alt\+Left\](\(disabled\))?, Forward \[Ctrl\+Alt\+Right\](\(disabled\))?, Class\.\.\. \[Ctrl\+N\], File\.\.\. \[Ctrl\+Shift\+N\], Symbol\.\.\. \[Ctrl\+Alt\+Shift\+N\], Line:Column\.\.\. \[Ctrl\+G\], Go to Source \[Ctrl\+B\], Go to Definition \[F12\], Go to Implementation\(s\) \[Ctrl\+Alt\+B\], Go to Type Declaration \[Ctrl\+Shift\+B\], Go to Super Method \[Ctrl\+U\], Go to Related Symbol \[Ctrl\+Alt\+Home\], Switch Header/Source \[Alt\+O\], File Structure \[Ctrl\+F12\], Next Method \[Alt\+Down\], Previous Method \[Alt\+Up\], Toggle Bookmark \[Ctrl\+F11\], Toggle Bookmark with Mnemonic\.\.\. \[Ctrl\+Shift\+F11\], Next Bookmark \[F2\], Previous Bookmark \[Shift\+F2\], Next Change \[Ctrl\+Alt\+Shift\+Down\], Previous Change \[Ctrl\+Alt\+Shift\+Up\], Highlight Usages in File \[Ctrl\+Shift\+F7\], Find Usages \[Alt\+F7\], Show Usages \[Ctrl\+Alt\+F7\], Find All References \[Shift\+F12\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Next Occurrence \[Ctrl\+Alt\+Down\], Previous Occurrence \[Ctrl\+Alt\+Up\]$',
+		 r'^Menu Navigate: Back \[Ctrl\+Alt\+Left\](\(disabled\))?, Forward \[Ctrl\+Alt\+Right\](\(disabled\))?, Class\.\.\. \[Ctrl\+N\], File\.\.\. \[Ctrl\+Shift\+N\], Symbol\.\.\. \[Ctrl\+Alt\+Shift\+N\], Line:Column\.\.\. \[Ctrl\+G\], Go to Source \[Ctrl\+B\], Go to Definition \[F12\], Go to Implementation\(s\) \[Ctrl\+Alt\+B\], Go to Type Declaration \[Ctrl\+Shift\+B\], Go to Super Method \[Ctrl\+U\], Go to Related Symbol \[Ctrl\+Alt\+Home\], Switch Header/Source \[Alt\+O\], File Structure \[Ctrl\+F12\], Next Method \[Alt\+Down\], Previous Method \[Alt\+Up\], Toggle Bookmark \[Ctrl\+F11\], Toggle Bookmark with Mnemonic\.\.\. \[Ctrl\+Shift\+F11\], Next Bookmark \[F2\], Previous Bookmark \[Shift\+F2\], Next Change \[Ctrl\+Alt\+Shift\+Down\], Previous Change \[Ctrl\+Alt\+Shift\+Up\], Highlight Usages in File \[Ctrl\+Shift\+F7\], Recent Files \[Ctrl\+E\], Recent Locations \[Ctrl\+Shift\+E\], Last Edit Location \[Ctrl\+Shift\+Backspace\], Next Edit Location, Select In\.\.\. \[Alt\+F1\], Find Usages \[Alt\+F7\], Show Usages \[Ctrl\+Alt\+F7\], Find All References \[Shift\+F12\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Next Occurrence \[Ctrl\+Alt\+Down\], Previous Occurrence \[Ctrl\+Alt\+Up\]$',
 		 r'^Menu View: Solution Explorer, Structure, Find Usages, Find, Duplicates, Bookmarks, Build, Indexing, Run, Debug, Claude$',
 		 r'^Menu Git: Compare with HEAD, Compare with Branch\.\.\., Compare with Revision\.\.\.$',
 		 r'^Menu Build: Build \[Ctrl\+F9\], Edit Build Configurations\.\.\.$',
 		 r'^Menu Debug: Start Debugging \[F5\], Start Without Debugging \[Ctrl\+F5\], Stop Debugging \[Shift\+F5\], Stop Running(\(disabled\))?, Restart \[Ctrl\+Shift\+F5\], Break All \[Ctrl\+Pause/Break\], Attach to Emulator\.\.\., Step Into \[F11\], Step Over \[F10\], Step Out \[Shift\+F11\], Toggle Breakpoint \[F9\], New Breakpoint at Address\.\.\., Delete All Breakpoints, Edit Configurations\.\.\.$',
-		 r'^Menu Window: Reset Window Layout, Close All Documents$',
+		 r'^Menu Window: Reset Window Layout, Close All Documents, Switcher \[Ctrl\+Tab\], Select Next Tab \[Alt\+Right\], Select Previous Tab \[Alt\+Left\], Reopen Closed Tab(\(disabled\))?$',
 		 r'^Menu Editor: Go to Source \[Ctrl\+B\], Find Usages \[Alt\+F7\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Show Context Actions \[Alt\+Enter\], Rename\.\.\. \[Shift\+F6\], Refactor>, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\]$',
 		 r"^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\], Introduce Field\.\.\. \[Ctrl\+Alt\+F\], Introduce Constant\.\.\. \[Ctrl\+Alt\+C\], Introduce Parameter\.\.\. \[Ctrl\+Alt\+P\], Introduce Typedef\.\.\. \[Ctrl\+Alt\+K\](\(disabled\))?, Inline\.\.\. \[Ctrl\+Alt\+N\], Change Signature\.\.\. \[Ctrl\+F6\], Unify Parameter Names, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\., Push Members Down\.\.\., Move\.\.\. \[F6\], Copy Class\.\.\., Move to Namespace\.\.\., Extract Method\.\.\. \[Ctrl\+Alt\+M\](\(disabled\))?, Extract Superclass\.\.\., Extract Interface\.\.\., Extract Class\.\.\., Encapsulate Field\.\.\., Optimise \#includes \[Ctrl\+Alt\+O\], Convert Macro\.\.\., Convert Pointer to Reference, Convert Reference to Pointer, Convert Enum to Enum Class\.\.\., Write Template's Interface\.\.\., Make Member Function const, Make Member Function static, Convert Function to Member Function, Convert Member Function to Function, Extract Template Parameter\.\.\., Remove Template Parameter$",
-		 r'^Menu Explorer: Set as Startup Solution, Set as Startup Project(\(disabled\))?, Remove Solution, Rename\.\.\., Properties\.\.\.(\(disabled\))?$',
+		 r'^Menu Explorer: Set as Startup Solution, Set as Startup Project(\(disabled\))?, Remove Solution, Rename\.\.\., Properties\.\.\.(\(disabled\))?, Always Select Opened File, Open Files with Single Click$',
 		 r'^Menu New: C\+\+ Class\.\.\., C\+\+ Header\.\.\., C\+\+ Source\.\.\., Copy Class\.\.\.$',
 		 r'^Menu item \[View/Nope\] not found$'], []),
 	('menu-clicks', {
@@ -4476,6 +4480,120 @@ CHECKS = [
 		         'command:Navigate.PreviousChange,edit:print,command:Navigate.PreviousChange,printstatus,edit:printmarks,exit'},
 		[r'CalculatorParser\.cpp \* \(focus\) line 36: ', r'CalculatorParser\.cpp \* \(focus\) line 60: ', r'^Status line: There is no change after the caret\.$',
 		 r'CalculatorParser\.cpp \* \(focus\) line 36: ', r'^Status line: There is no change before the caret\.$', r'^Marks: 0 usages kept, overrides, 2 scroll marks$'], []),
+	('recent-files', dict(MakeNavigationCopy(), **{
+		#Recent Files (Control+E): the files shown in editors but the active one, the one shown before it first, so
+		#Enter goes back to it; a closed one is listed after the open ones and opens where its caret was; typing
+		#filters.  Reopen Closed Tab opens the tab closed last where its caret was, and is disabled with none.  The
+		#workspace's user's file gets them, most recent first, each with its caret's place.
+		'WAIT_INDEX': '1', 'OPEN': 'Shapes.cpp', 'CARET': '12:5', 'SAVE_LAYOUT': '1',
+		'DEBUG': 'edit:printrecent,command:Navigate.RecentFiles,printstatus,edit:open:Shapes.h,edit:caret:6:2,edit:open:Main.cpp,edit:printrecent,command:Navigate.RecentFiles,edit:printchooser,edit:key:enter,edit:print,'
+		         'command:Navigate.RecentFiles,edit:printchooser,edit:key:escape,closetab,edit:printrecent,printtabs,command:Navigate.RecentFiles,edit:printchooser,edit:key:type:sha,edit:printchooser,edit:key:escape,'
+		         'command:Window.ReopenClosedTab,edit:print,printtabs,command:Window.ReopenClosedTab,printstatus,edit:printrecent,printuserfile'}),
+		[r'^Recent files: Shapes\.cpp$', r'^Status line: There are no other recent files\.$', r'^Recent files: Main\.cpp, Shapes\.h, Shapes\.cpp$',
+		 r'^Chooser: Recent Files$', r'^  >Shapes\.h \| .*Navigation$', r'^   Shapes\.cpp \| .*Navigation$', r'Shapes\.h \(focus\) line 6: ',
+		 r'^Chooser: Recent Files$', r'^  >Main\.cpp \| ', r'^   Shapes\.cpp \| ', r'^Recent files: Main\.cpp, Shapes\.h:6 \(closed\), Shapes\.cpp$', r'^Tabs: Shapes\.cpp >Main\.cpp$',
+		 r'^Chooser: Recent Files$', r'^  >Shapes\.cpp \| ', r'^   Shapes\.h \| ', r'^Chooser: Recent Files$', r'^  >Shapes\.cpp \| ', r'^   Shapes\.h \| ', r'^Chooser filter: \[sha\]$',
+		 r'Shapes\.h \(focus\) line 6: ', r'^Tabs: Shapes\.cpp Main\.cpp >Shapes\.h$', r'^Command \[Window\.ReopenClosedTab\] not found, not enabled or did nothing\.$',
+		 r'^Recent files: Shapes\.h, Main\.cpp, Shapes\.cpp$',
+		 r'^  <RecentFile File=".*Navigation/Shapes\.h" Line="6" Column="2"/>$', r'^  <RecentFile File=".*Navigation/Main\.cpp" Line="1" Column="1"/>$',
+		 r'^  <RecentFile File=".*Navigation/Shapes\.cpp" Line="12" Column="5"/>$'], [r'ERROR']),
+	('recent-files-read', dict(MakeNavigationCopy('  <RecentFile File="{folder}/Shapes.h" Line="6" Column="2"/>\n  <RecentFile File="{folder}/Shapes.cpp" Line="12" Column="5"/>\n  <RecentFile File="{folder}/Main.cpp" Line="2" Column="1"/>\n'), **{
+		#A workspace's recent files are read from its user's file when it opens: with no file open Recent Files lists
+		#them all, and one chosen opens where its caret was.
+		'WAIT_INDEX': '1', 'SAVE_LAYOUT': '1',
+		'DEBUG': 'edit:printrecent,command:Navigate.RecentFiles,edit:printchooser,edit:key:down,edit:key:enter,edit:print,edit:printrecent,printuserfile'}),
+		[r'^Recent files: Shapes\.h:6 \(closed\), Shapes\.cpp:12 \(closed\), Main\.cpp:2 \(closed\)$',
+		 r'^Chooser: Recent Files$', r'^  >Shapes\.h \| ', r'^   Shapes\.cpp \| ', r'^   Main\.cpp \| ', r'Shapes\.cpp \(focus\) line 12: ',
+		 r'^Recent files: Shapes\.cpp, Shapes\.h:6 \(closed\), Main\.cpp:2 \(closed\)$',
+		 r'^  <RecentFile File=".*Navigation/Shapes\.cpp" Line="12" Column="5"/>$', r'^  <RecentFile File=".*Navigation/Shapes\.h" Line="6" Column="2"/>$',
+		 r'^  <RecentFile File=".*Navigation/Main\.cpp" Line="2" Column="1"/>$'], [r'ERROR']),
+	('recent-files-not-kept', {
+		#A run that doesn't keep settings leaves no user's file beside the solution for the files it showed.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Shapes.cpp', 'CARET': '12:5',
+		'DEBUG': 'edit:open:Shapes.h,edit:printrecent,printuserfile'},
+		[r'^Recent files: Shapes\.h, Shapes\.cpp$', r'^User file: none$'], [r'RecentFile']),
+	('recent-locations', dict(MakeNavigationCopy(), **{
+		#Recent Locations (Control+Shift+E): the places Back has, the newest first, each its line's text with its file
+		#and line, previewed; typing filters.  Its button lists only the places edited (all of them, the status line
+		#saying so, while nothing has been), and back; one chosen is gone to, which Back remembers.
+		'WAIT_INDEX': '1', 'OPEN': 'Main.cpp', 'CARET': '1:1',
+		'DEBUG': 'command:Navigate.RecentLocations,printstatus,edit:caret:6:19,gotosource,edit:open:Main.cpp,edit:caret:24:3,gotosource,edit:printhistory,command:Navigate.RecentLocations,edit:printchooser,'
+		         'edit:chooserbutton,printstatus,edit:printchooser,edit:key:type:area,edit:printchooser,edit:key:escape,'
+		         'edit:caret:20:1,edit:tap:Enter,edit:caret:2:1,edit:key:type:x,edit:printrecent,command:Navigate.RecentLocations,edit:chooserbutton,edit:printchooser,edit:key:down,edit:key:enter,edit:print,edit:printhistory,'
+		         'command:Navigate.RecentLocations,edit:printchooser,edit:chooserbutton,edit:printchooser,edit:key:escape'}),
+		[r'^Status line: There are no recent locations yet\.$', r'^History: back \[Main\.cpp:6, Shape\.h:15, Main\.cpp:24\] forward \[\]$',
+		 r'^Chooser: Recent Locations$', r'^  >DrawAll\(&cCircle, &cCircle\); \| Main\.cpp:24$', r'^   virtual int Area\(void\) = 0; \| Shape\.h:15$',
+		 r'^   return pcFirst->Area\(\) \+ pcSecond->Area\(\); \| Main\.cpp:6$', r'^Chooser preview: Main\.cpp$',
+		 r'^Status line: Nothing has been edited yet: every recent location is listed\.$', r'^Chooser: Recent Locations$', r'^  >DrawAll',
+		 r'^Chooser: Recent Locations$', r'^  >virtual int Area\(void\) = 0; \| Shape\.h:15$', r'^   return pcFirst', r'^Chooser filter: \[area\]$', r'^Chooser preview: Shape\.h$',
+		 r'^Edit locations: 2 at 2$', r'^Chooser: Recent Locations: Changed$', r'^  >x \| Main\.cpp:2$', r'^   CRoundedSquare cSquare; \| Main\.cpp:21$',
+		 r'Main\.cpp \* \(focus\) line 21: ', r'^History: back \[Main\.cpp:6, Shape\.h:15, Main\.cpp:25, Main\.cpp:2\] forward \[\]$',
+		 r'^Chooser: Recent Locations: Changed$', r'^  >x \| Main\.cpp:2$', r'^Chooser: Recent Locations$', r'^  >x \| Main\.cpp:2$', r'^   DrawAll\(&cCircle, &cCircle\); \| Main\.cpp:25$',
+		 r'^   virtual int Area\(void\) = 0; \| Shape\.h:15$'], [r'ERROR', r'not found, not enabled']),
+	('edit-locations', dict(MakeNavigationCopy(), **{
+		#Last Edit Location (Control+Shift+Backspace) goes back through the places edited, an edit near the last one
+		#being the same place, skipping the newest while the caret is still on it; Next Edit Location comes forward.
+		#Each says so at its end.  Back returns from one.
+		'WAIT_INDEX': '1', 'OPEN': 'Main.cpp', 'CARET': '1:1',
+		'DEBUG': 'command:Navigate.LastEditLocation,printstatus,edit:caret:6:1,edit:tap:Enter,edit:caret:8:1,edit:tap:Enter,edit:printrecent,edit:caret:20:1,edit:tap:Enter,edit:open:Shapes.cpp,edit:caret:12:1,edit:tap:Enter,edit:printrecent,'
+		         'command:Navigate.LastEditLocation,edit:print,command:Navigate.LastEditLocation,edit:print,command:Navigate.LastEditLocation,printstatus,'
+		         'command:Navigate.NextEditLocation,edit:print,command:Navigate.NextEditLocation,edit:print,command:Navigate.NextEditLocation,printstatus,edit:printrecent,command:Navigate.Back,edit:print'}),
+		[r'^Status line: Nothing has been edited yet\.$', r'^Edit locations: 1 at 1$', r'^Edit locations: 3 at 3$',
+		 r'Main\.cpp \* \(focus\) line 21: ', r'Main\.cpp \* \(focus\) line 9: ', r'^Status line: There is no edit location before this one\.$',
+		 r'Main\.cpp \* \(focus\) line 21: ', r'Shapes\.cpp \* \(focus\) line 13: ', r'^Status line: There is no edit location after this one\.$',
+		 r'^Edit locations: 3 at 2$', r'Main\.cpp \* \(focus\) line 21: '], [r'ERROR']),
+	('switcher', {
+		#The Switcher (Control+Tab): held open, the open files most recent first then the tool windows, the file before
+		#this one selected; each Control+Tab moves on and Control+Shift+Tab back, round the ends, and letting Control go
+		#chooses.  A quick Control+Tab goes straight to the file before this one.  Select Next Tab and Select Previous
+		#Tab (Alt+Right, Alt+Left) go along the tabs, round the ends.  A tool window chosen is shown.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Shapes.cpp', 'CARET': '12:5',
+		'DEBUG': 'edit:open:Shapes.h,edit:open:Main.cpp,edit:switcher:hold,edit:printchooser,command:Window.Switcher,edit:printchooser,command:Window.SwitcherBackward,command:Window.SwitcherBackward,edit:printchooser,'
+		         'command:Window.Switcher,edit:switcher:release,printtabs,command:Window.Switcher,printtabs,command:Window.Switcher,printtabs,'
+		         'command:Window.NextTab,printtabs,command:Window.NextTab,printtabs,command:Window.PreviousTab,printtabs,'
+		         'edit:switcher:hold,command:Window.SwitcherBackward,command:Window.SwitcherBackward,edit:printchooser,edit:switcher:release,edit:print,edit:printrecent'},
+		[r'^Chooser: Switcher$', r'^   Main\.cpp \| ', r'^  >Shapes\.h \| ', r'^   Shapes\.cpp \| ', r'^   \[Tool Windows\]$', r'^   Solution Explorer \| $', r'^   Structure \| $', r'^   Claude \| $',
+		 r'^Chooser: Switcher$', r'^  >Shapes\.cpp \| ', r'^   \[Tool Windows\]$', r'^Chooser: Switcher$', r'^  >Main\.cpp \| ',
+		 r'^Tabs: Shapes\.cpp >Shapes\.h Main\.cpp$', r'^Tabs: Shapes\.cpp Shapes\.h >Main\.cpp$', r'^Tabs: Shapes\.cpp >Shapes\.h Main\.cpp$',
+		 r'^Tabs: Shapes\.cpp Shapes\.h >Main\.cpp$', r'^Tabs: >Shapes\.cpp Shapes\.h Main\.cpp$', r'^Tabs: Shapes\.cpp Shapes\.h >Main\.cpp$',
+		 r'^Chooser: Switcher$', r'^   Main\.cpp \| ', r'^   \[Tool Windows\]$', r'^  >Claude \| $', r'Main\.cpp line 1: ', r'^Recent files: Main\.cpp, Shapes\.cpp, Shapes\.h$'],
+		[r'ERROR', r'not found, not enabled', r'\(focus\) line']),
+	('switcher-keys', {
+		#The Switcher with real keys: Control+Tab opens it and it stays while Control is down, Tab and Control+Up moving
+		#the selection; letting Control go chooses.  Control+Tab let go at once goes to the file before.  Control+Shift+
+		#Tab opens it at its last row, a tool window, which is shown: no editor has the keys.  Alt+Left is the tab to the
+		#left, and Control+E lists the recent files.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Shapes.cpp', 'CARET': '12:5',
+		'DEBUG': 'edit:open:Shapes.h,edit:open:Main.cpp,edit:press:Left Control,edit:tap:Tab,edit:printchooser,edit:tap:Tab,edit:tap:Cursor Up,edit:release:Left Control,edit:printchooser,printtabs,edit:print,'
+		         'edit:press:Left Control,edit:tap:Tab,edit:release:Left Control,printtabs,edit:press:Left Control,edit:press:Left Shift,edit:tap:Tab,edit:release:Left Shift,edit:tap:Cursor Up,edit:tap:Cursor Up,edit:printchooser,'
+		         'edit:release:Left Control,printtabs,edit:press:Left Alt,edit:tap:Cursor Left,edit:release:Left Alt,printtabs,edit:press:Left Control,edit:tap:E,edit:release:Left Control,edit:printchooser,edit:tap:Enter,edit:print'},
+		[r'^Chooser: Switcher$', r'^  >Shapes\.h \| ', r'^Chooser: none$', r'^Tabs: Shapes\.cpp >Shapes\.h Main\.cpp$', r'Shapes\.h \(focus\) line 1: ',
+		 r'^Tabs: Shapes\.cpp Shapes\.h >Main\.cpp$', r'^Chooser: Switcher$', r'^  >Run \| $', r'^Tabs: Shapes\.cpp Shapes\.h >Main\.cpp$', r'^Tabs: Shapes\.cpp >Shapes\.h Main\.cpp$',
+		 r'^Chooser: Recent Files$', r'^  >Main\.cpp \| ', r'^   Shapes\.cpp \| ', r'Main\.cpp \(focus\) line 1: '], [r'ERROR']),
+	('select-in', {
+		#Select In (Alt+F1): a chooser of where the active file can be shown selected.  Solution Explorer selects it
+		#in the tree, which gets the keys; Structure shows the file's outline with the caret's entry selected.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Shapes.cpp', 'CARET': '12:5',
+		'DEBUG': 'command:Navigate.SelectIn,edit:printchooser,edit:key:enter,printexplorer,edit:print,edit:focus:editor,command:Navigate.SelectIn,edit:key:down,edit:key:enter,edit:printstructure'},
+		[r'^Chooser: Select In$', r'^  >Solution Explorer \| $', r'^   Structure \| $', r'^Explorer: \[.*Navigation/Shapes\.cpp\]$', r'Shapes\.cpp line 12: ',
+		 r'^Structure: 5 rows$', r'^> CCircle::Area\(void\)$'], [r'ERROR', r'not found, not enabled']),
+	('explorer-options', {
+		#Solution Explorer's menu's Always Select Opened File selects the file of the editor shown in the tree as tabs
+		#are chosen (the checks' own opening of a file selects it there anyway), and Open Files with Single Click has
+		#one click open a file; both are written with the settings, and neither once both are off.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Shapes.cpp', 'CARET': '12:5', 'SETTINGS': MakeSettingsFile(),
+		'DEBUG': 'edit:open:Shapes.h,edit:open:Main.cpp,command:Window.PreviousTab,printtabs,printexplorer,command:Explorer.AlwaysSelectOpenedFile,printexplorer,command:Window.PreviousTab,printexplorer,'
+		         'command:Explorer.OpenFilesWithSingleClick,printexplorer,edit:print,printsettings,command:Explorer.AlwaysSelectOpenedFile,command:Explorer.OpenFilesWithSingleClick,command:Window.NextTab,printtabs,printexplorer,printsettings'},
+		[r'^Tabs: Shapes\.cpp >Shapes\.h Main\.cpp$', r'^Explorer: \[.*Navigation/Main\.cpp\]$', r'^Explorer: \[.*Navigation/Shapes\.h\]$', r'^Explorer options: always select$',
+		 r'^Explorer: \[.*Navigation/Shapes\.cpp\]$', r'^Explorer options: always select$', r'^Explorer: \[.*Navigation/Shapes\.cpp\]$', r'^Explorer options: always select single click$',
+		 r'Shapes\.cpp \(focus\) line 12: ', r'<Explorer AlwaysSelect="true" SingleClick="true"/>', r'^Tabs: Shapes\.cpp >Shapes\.h Main\.cpp$',
+		 r'^Explorer: \[.*Navigation/Shapes\.cpp\]$', r'^Settings file:$', r'^</Settings>$'], [r'ERROR', r'not found, not enabled']),
+	('explorer-options-read', {
+		#The settings as they were written: the tree follows the editor shown and opens with one click.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Shapes.cpp', 'CARET': '12:5',
+		'SETTINGS': MakeSettingsFile('<?xml version="1.0" encoding="UTF-8"?>\n<Settings>\n  <Explorer AlwaysSelect="true" SingleClick="true"/>\n</Settings>\n'),
+		'DEBUG': 'edit:open:Shapes.h,edit:open:Main.cpp,command:Window.PreviousTab,printexplorer'},
+		[r'^Explorer: \[.*Navigation/Shapes\.h\]$', r'^Explorer options: always select single click$'], [r'ERROR']),
 	('nav-type-declaration', {
 		#Go to Type Declaration (Control+Shift+B): from a parameter and from a local variable, the class each is declared
 		#with; from a field of a built in type, the status line says its type has nothing to go to.

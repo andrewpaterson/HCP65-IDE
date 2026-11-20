@@ -97,6 +97,7 @@ public:
 	void			AdjustPlaces(const char* szFile, SIDEPlaceChange* psChange);
 
 	size			NumBack(void) const;
+	SIDENavigationPlace*	GetBackPlace(size uiIndex);
 	size			NumForward(void) const;
 	void			Print(CChars* pszDest);
 

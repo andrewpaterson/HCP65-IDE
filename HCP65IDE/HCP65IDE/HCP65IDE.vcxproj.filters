@@ -132,6 +132,9 @@
     <ClCompile Include="IDEStructurePane.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="IDERecent.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="IDEMarks.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -420,6 +423,9 @@
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDEStructurePane.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDERecent.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDEMarks.h">

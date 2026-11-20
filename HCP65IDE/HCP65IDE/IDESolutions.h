@@ -32,6 +32,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/RecentFiles.h"
 
 
+class CXMLWriter;
+class CMarkupTag;
 class CIDEContent;
 
 
@@ -54,6 +56,9 @@ protected:
 	CChars					mszRecentFile;		//Where they are kept, empty if they aren't.
 	CChars					mszQueuedCommand;	//The name of the command to run at the next tick.
 	CChars					mszQueuedOpen;		//A recent one chosen, opened at the next tick (OpenQueuedSolution).
+	bool					mbAlwaysSelect;		//Solution Explorer selects the file of the editor shown.
+	bool					mbSingleClick;		//Solution Explorer opens a file with one click.
+	bool					mbSelectPosted;		//SelectActiveFile is posted.
 public:
 	void	Init(CIDEContent* pcContent);
 	void	Class(void) override;
@@ -65,6 +70,15 @@ public:
 	void					CreateExplorerPane(SDockPlace* psPlace);
 	void					ExplorerActivated(void);
 	bool					ShowActiveFileInExplorer(void);
+	void					FileShown(void);
+	void					SelectActiveFile(void);
+	void					ToggleAlwaysSelect(void);
+	void					ToggleSingleClick(void);
+	bool					IsAlwaysSelect(void);
+	bool					IsSingleClick(void);
+	void					SetExplorerOptions(bool bAlwaysSelect, bool bSingleClick);
+	void					ReadSettings(CMarkupTag* pcSettings);
+	void					WriteSettings(CXMLWriter* pcWriter);
 	void					AddCommands(Ptr<CCommandSet> pCommands);
 	Ptr<CSolutionExplorer>	GetExplorer(void) const;
 	Ptr<CDockPane>			GetExplorerTool(void) const;
