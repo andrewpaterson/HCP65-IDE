@@ -123,6 +123,12 @@
     <ClCompile Include="IDEChooser.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="IDEOutline.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="IDEStructure.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="IDEClaudePage.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -381,6 +387,12 @@
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDEChooser.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDEOutline.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDEStructure.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDEClaudePage.h">

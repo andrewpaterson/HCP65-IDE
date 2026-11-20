@@ -65,6 +65,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDECloseGuard.h"
 #include "IDEEdit.h"
 #include "IDENavigator.h"
+#include "IDEStructure.h"
 #include "IDERename.h"
 #include "IDEFileRename.h"
 #include "IDESafeDelete.h"
@@ -191,6 +192,7 @@ protected:
 	Ptr<CIDECloseGuard>			mpCloseGuard;		//Asks to save files with changes before they close.
 	Ptr<CIDEEdit>				mpEdit;				//The Edit menu and undo across files.
 	Ptr<CIDENavigator>			mpNavigator;		//Go to, Go to Source and Alt+O.
+	Ptr<CIDEStructure>			mpStructure;		//File Structure, Next and Previous Method.
 	Ptr<CIDERename>				mpRename;			//Rename.
 	Ptr<CIDEFileRename>			mpFileRename;		//Rename File.
 	Ptr<CIDESafeDelete>			mpSafeDelete;		//Safe Delete.
@@ -319,6 +321,7 @@ public:
 	Ptr<CIDEDiffs>			GetDiffs(void) const;
 	Ptr<CIDEAskClaude>		GetAskClaude(void) const;
 	Ptr<CIDENavigator>		GetNavigator(void) const;
+	Ptr<CIDEStructure>		GetStructure(void) const;
 	Ptr<CIDEEdit>			GetEdit(void) const;
 	Ptr<CIDEUsages>			GetUsages(void) const;
 	Ptr<CIDEFindInFiles>	GetFindInFiles(void) const;

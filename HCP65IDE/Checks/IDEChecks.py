@@ -3697,6 +3697,8 @@ CHECKS = [
 		[r'^Keys: Navigate\.GoToDefinition F12 bound$', r'^Keys: Navigate\.GoToClass Control\+N bound$',
 		 r'^Keys: Navigate\.GoToImplementation Control\+Alt\+B bound$', r'^Keys: Navigate\.GoToSuperMethod Control\+U bound$',
 		 r'^Keys: Navigate\.GoToTypeDeclaration Control\+Shift\+B bound$', r'^Keys: Navigate\.GoToRelatedSymbol Control\+Alt\+Home bound$',
+		 r'^Keys: Navigate\.FileStructure Control\+F12 bound$', r'^Keys: Navigate\.NextMethod Alt\+Cursor Down bound$',
+		 r'^Keys: Navigate\.PreviousMethod Alt\+Cursor Up bound$',
 		 r'^Keys: Navigate\.ShowUsages Control\+Alt\+F7 bound$', r'^Keys: Build\.Build Control\+F9 bound$', r'^Keys: Run\.Start Control\+F5 bound$', r'^Keys: Debug\.Start F5 bound$',
 		 r'^Keys: Debug\.BreakAll Control\+Pause/Break bound$',
 		 r'^Buttons: Start \[Run\.Start\]$'], [r'NOT BOUND', r'\[none\]']),
@@ -3855,7 +3857,7 @@ CHECKS = [
 		 r'^Menu File/New: C\+\+ Class\.\.\., C\+\+ Header\.\.\., C\+\+ Source\.\.\.$',
 		 r'^Menu File/Recent Solutions: 1 ',
 		 r'^Menu Edit: Undo \[Ctrl\+Z\](\(disabled\))?, Redo \[Ctrl\+Shift\+Z\](\(disabled\))?, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\], Select All \[Ctrl\+A\], Extend Selection \[Ctrl\+W\], Shrink Selection \[Ctrl\+Shift\+W\], Find in Files\.\.\. \[Ctrl\+Shift\+F\], Find Duplicates\.\.\. \[Ctrl\+Alt\+Shift\+D\]$',
-		 r'^Menu Navigate: Back \[Ctrl\+Alt\+Left\](\(disabled\))?, Forward \[Ctrl\+Alt\+Right\](\(disabled\))?, Class\.\.\. \[Ctrl\+N\], File\.\.\. \[Ctrl\+Shift\+N\], Symbol\.\.\. \[Ctrl\+Alt\+Shift\+N\], Go to Source \[Ctrl\+B\], Go to Definition \[F12\], Go to Implementation\(s\) \[Ctrl\+Alt\+B\], Go to Type Declaration \[Ctrl\+Shift\+B\], Go to Super Method \[Ctrl\+U\], Go to Related Symbol \[Ctrl\+Alt\+Home\], Switch Header/Source \[Alt\+O\], Find Usages \[Alt\+F7\], Show Usages \[Ctrl\+Alt\+F7\], Find All References \[Shift\+F12\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Next Occurrence \[Ctrl\+Alt\+Down\], Previous Occurrence \[Ctrl\+Alt\+Up\]$',
+		 r'^Menu Navigate: Back \[Ctrl\+Alt\+Left\](\(disabled\))?, Forward \[Ctrl\+Alt\+Right\](\(disabled\))?, Class\.\.\. \[Ctrl\+N\], File\.\.\. \[Ctrl\+Shift\+N\], Symbol\.\.\. \[Ctrl\+Alt\+Shift\+N\], Go to Source \[Ctrl\+B\], Go to Definition \[F12\], Go to Implementation\(s\) \[Ctrl\+Alt\+B\], Go to Type Declaration \[Ctrl\+Shift\+B\], Go to Super Method \[Ctrl\+U\], Go to Related Symbol \[Ctrl\+Alt\+Home\], Switch Header/Source \[Alt\+O\], File Structure \[Ctrl\+F12\], Next Method \[Alt\+Down\], Previous Method \[Alt\+Up\], Find Usages \[Alt\+F7\], Show Usages \[Ctrl\+Alt\+F7\], Find All References \[Shift\+F12\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Next Occurrence \[Ctrl\+Alt\+Down\], Previous Occurrence \[Ctrl\+Alt\+Up\]$',
 		 r'^Menu View: Solution Explorer, Find Usages, Find, Duplicates, Build, Indexing, Run, Debug, Claude$',
 		 r'^Menu Git: Compare with HEAD, Compare with Branch\.\.\., Compare with Revision\.\.\.$',
 		 r'^Menu Build: Build \[Ctrl\+F9\], Edit Build Configurations\.\.\.$',
@@ -4168,6 +4170,39 @@ CHECKS = [
 		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Shapes.cpp', 'CARET': '2:1',
 		'DEBUG': 'edit:controlclick:1:13,edit:print'},
 		[r'Shapes\.h \(focus\) line 1: '], []),
+	('nav-outline', {
+		#A file's outline: what it declares, in order, each class's members under it, a function's parameters and
+		#qualifiers after its name, a definition marked, with its name's line and all of its range.  A line typed is in
+		#it at once: the file is parsed there and then when the outline is asked for.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Shapes.h', 'CARET': '16:1',
+		'DEBUG': 'edit:printoutline,edit:type:int Extra(CShape* pcShape);,edit:printoutline'},
+		[r'^Outline: 10 entries$', r'^class\* CCircle 6 \[6:1-14:2\]$', r'^  field miRadius 9 \[9:2-9:16\]$', r'^  function Draw\(void\) override 12 \[12:2-12:27\]$',
+		 r'^class\* CSquare 17 \[17:1-25:2\]$', r'^class\* CRoundedSquare 28 \[28:1-32:2\]$', r'^  function Draw\(void\) override 31 ',
+		 r'^Outline: 11 entries$', r'^function Extra\(CShape\* pcShape\) 16 \[16:1-16:28\]$', r'^class\* CSquare 17 '], []),
+	('nav-outline-definitions', {
+		#Functions defined outside their classes are named as they are written, and marked as definitions with their
+		#bodies' ranges; nothing declared in a body is in the outline.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Main.cpp', 'CARET': '1:1',
+		'DEBUG': 'edit:printoutline,edit:open:Shapes.cpp,edit:printoutline'},
+		[r'^Outline: 3 entries$', r'^function\* TotalArea\(CShape\* pcFirst, CShape\* pcSecond\) 4 \[4:1-7:2\]$', r'^function\* main\(void\) 17 \[17:1-26:2\]$',
+		 r'^Outline: 5 entries$', r'^function\* CCircle::Draw\(void\) 4 \[4:1-7:2\]$', r'^function\* CRoundedSquare::Draw\(void\) 27 \[27:1-30:2\]$'],
+		[r'cCircle;', r'cSquare;', r'^variable ']),
+	('nav-file-structure', {
+		#File Structure (Control+F12): a chooser of the file's outline, each entry indented under the one it is in, with
+		#its line; the entry the caret is in is selected.  Typing filters by name; Down and Enter go to the second left.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Shapes.h', 'CARET': '20:5',
+		'DEBUG': 'command:Navigate.FileStructure,edit:printchooser,edit:key:type:dra,edit:printchooser,edit:key:down,edit:key:enter,edit:printchooser,edit:print'},
+		[r'^Chooser: Structure of Shapes\.h$', r'^   CCircle \| 6$', r'^       Draw\(void\) override \| 12$', r'^   CSquare \| 17$', r'^  >    miSide \| 20$',
+		 r'^   CRoundedSquare \| 28$', r'^Chooser filter: \[\]$', r'^  >    Draw\(void\) override \| 12$', r'^       Draw\(void\) override \| 23$',
+		 r'^       Draw\(void\) override \| 31$', r'^Chooser filter: \[dra\]$', r'^Chooser: none$', r'Shapes\.h \(focus\) line 23: '], [r'miSide \| 20\n.*\[dra\]']),
+	('nav-next-method', {
+		#Next Method (Alt+Down) and Previous Method (Alt+Up) put the caret on the next function's name after the caret, or
+		#the last before it; with none that way the status line says so.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Shapes.cpp', 'CARET': '12:5',
+		'DEBUG': 'command:Navigate.NextMethod,edit:print,command:Navigate.NextMethod,edit:print,command:Navigate.PreviousMethod,command:Navigate.PreviousMethod,'
+		         'command:Navigate.PreviousMethod,edit:print,command:Navigate.PreviousMethod,printstatus'},
+		[r'Shapes\.cpp \(focus\) line 16: \[void CSquare::Draw\(void\)\]', r'Shapes\.cpp \(focus\) line 21: \[int CSquare::Area\(void\)\]',
+		 r'Shapes\.cpp \(focus\) line 4: \[void CCircle::Draw\(void\)\]', r'^Status: There is no method before the caret\.$'], []),
 	('nav-type-declaration', {
 		#Go to Type Declaration (Control+Shift+B): from a parameter and from a local variable, the class each is declared
 		#with; from a field of a built in type, the status line says its type has nothing to go to.

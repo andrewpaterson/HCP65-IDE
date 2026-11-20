@@ -3187,6 +3187,27 @@ void CIDEScript::RunEditStep(const char* szStep)
 	{
 		PrintChooser();
 	}
+	else if ((strcmp(szStep, "printoutline") == 0) && pTab.IsNotNull())
+	{
+		//What the active file declares, parsed now if it has been edited: "Outline: 12 entries" and a line for each
+		//(CIDEOutline::Print), or "Outline: none" if it couldn't be parsed.
+		CIDEOutline*	pcOutline;
+		CChars			szOutline;
+
+		pcOutline = pTab->GetOutline();
+		if (pcOutline == NULL)
+		{
+			printf("Outline: none\n");
+		}
+		else
+		{
+			szOutline.Init();
+			pcOutline->Print(&szOutline);
+			printf("Outline: %d entries\n%s", (int)pcOutline->NumEntries(), szOutline.Text());
+			szOutline.Kill();
+		}
+		fflush(stdout);
+	}
 	else if (strcmp(szStep, "chooserbutton") == 0)
 	{
 		//The open chooser's button clicked ("Open in Find Window").

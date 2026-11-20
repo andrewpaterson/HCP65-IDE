@@ -707,6 +707,7 @@ bool CIDEDocuments::TakeEditedFiles(bool bWait)
 		{
 			pTab->SetHighlights(&psFile->acHighlights);
 			pTab->SetSyntaxRanges(&psFile->asSyntaxRanges, psFile->uiChanges);
+			pTab->SetOutline(&psFile->cOutline, psFile->uiChanges);
 		}
 	}
 	KillIDEEditedFiles(&apsFiles);

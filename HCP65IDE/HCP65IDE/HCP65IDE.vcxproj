@@ -339,6 +339,8 @@
     <ClCompile Include="IDEDuplicatesPage.cpp" />
     <ClCompile Include="IDELocationPreview.cpp" />
     <ClCompile Include="IDEChooser.cpp" />
+    <ClCompile Include="IDEOutline.cpp" />
+    <ClCompile Include="IDEStructure.cpp" />
     <ClCompile Include="IDEClaudePage.cpp" />
     <ClCompile Include="IDEIntroduceTypedef.cpp" />
     <ClCompile Include="IDEInlineVariable.cpp" />
@@ -427,6 +429,8 @@
     <ClInclude Include="IDEDuplicatesPage.h" />
     <ClInclude Include="IDELocationPreview.h" />
     <ClInclude Include="IDEChooser.h" />
+    <ClInclude Include="IDEOutline.h" />
+    <ClInclude Include="IDEStructure.h" />
     <ClInclude Include="IDEClaudePage.h" />
     <ClInclude Include="IDEIntroduceTypedef.h" />
     <ClInclude Include="IDEInlineVariable.h" />

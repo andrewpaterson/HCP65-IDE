@@ -47,6 +47,7 @@ void SIDEEditedFile::Init(size uiProject, const char* szFileName, const char* sz
 	acHighlights.Init();
 	bHighlighted = false;
 	asSyntaxRanges.Init();
+	cOutline.Init();
 }
 
 
@@ -72,6 +73,7 @@ void SIDEEditedFile::SetUnit(size uiProject, const char* szUnit, const char* szT
 //////////////////////////////////////////////////////////////////////////
 void SIDEEditedFile::Kill(void)
 {
+	cOutline.Kill();
 	asSyntaxRanges.Kill();
 	acHighlights.Kill();
 	szUnitText.Kill();
@@ -274,6 +276,7 @@ void CIDECodeModel::ProcessEditedFile(SIDEEditedFile* psFile)
 		if (pcFile)
 		{
 			HighlightFile(&cUnit, pcFile, &psFile->acHighlights, &psFile->asSyntaxRanges);
+			psFile->cOutline.Gather(pcFile, &cUnit.mcTokeniser, &cUnit.mcTree);
 			psFile->bHighlighted = true;
 		}
 	}
@@ -298,6 +301,7 @@ void CIDECodeModel::ProcessEditedFile(SIDEEditedFile* psFile)
 		if (ParseUnit(psFile->uiProject, psFile->szFileName.Text(), szText, &cUnit, &szErrors))
 		{
 			HighlightFile(&cUnit, cUnit.mpcUnit, &psFile->acHighlights, &psFile->asSyntaxRanges);
+			psFile->cOutline.Gather(cUnit.mpcUnit, &cUnit.mcTokeniser, &cUnit.mcTree);
 			psFile->bHighlighted = true;
 		}
 		cUnit.Kill();

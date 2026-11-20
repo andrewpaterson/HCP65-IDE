@@ -33,6 +33,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "CppCompilerLib/CPPSyntaxName.h"
 #include "IDERename.h"
 #include "IDERefactorUnit.h"
+#include "IDEOutline.h"
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -752,28 +753,9 @@ bool CIDERefactorUnit::IsExpression(CCPPSyntax* pcNode)
 //////////////////////////////////////////////////////////////////////////
 void CIDERefactorUnit::AppendTokens(int32 iFirstToken, int32 iLastToken, CChars* pszDest)
 {
-	SPreprocessedToken*	psSource;
-	int32				i;
-	char				cLast;
-	char				cFirst;
-
-	for (i = iFirstToken; mbParsed && (i >= 0) && (i <= iLastToken) && ((size)i < mcUnit.mcTokeniser.NumTokens()); i++)
+	if (mbParsed)
 	{
-		psSource = mcUnit.mcTokeniser.GetSource(mcUnit.mcTokeniser.Get((size)i));
-		if (psSource->uiLength == 0)
-		{
-			continue;
-		}
-		if (!pszDest->Empty() && (i > iFirstToken))
-		{
-			cLast = pszDest->Text()[pszDest->Length() - 1];
-			cFirst = psSource->szText[0];
-			if ((IsIDENameChar(cLast) && IsIDENameChar(cFirst)) || (cLast == ','))
-			{
-				pszDest->Append(' ');
-			}
-		}
-		pszDest->Append(psSource->szText, psSource->uiLength);
+		AppendIDETokens(&mcUnit.mcTokeniser, iFirstToken, iLastToken, pszDest);
 	}
 }
 

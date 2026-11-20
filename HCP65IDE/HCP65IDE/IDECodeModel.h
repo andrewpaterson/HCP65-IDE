@@ -40,6 +40,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/GoToDialog.h"
 #include "IDEIcons.h"
 #include "IDERenameAssembly.h"
+#include "IDEOutline.h"
 
 
 //A file preprocessed and parsed as its project builds it.
@@ -216,6 +217,7 @@ struct SIDEEditedFile
 	CArrayHighlights	acHighlights;	//Made: the file's highlights, if bHighlighted.
 	bool				bHighlighted;
 	CArrayCPPSyntaxRanges	asSyntaxRanges;	//Made with the highlights: what each node of its syntax was parsed from.
+	CIDEOutline				cOutline;		//Made with the highlights: what the file declares.
 	bool				bIndexed;		//Made: the index has the file from szText (or the file's own text).
 
 	void	Init(size uiProject, const char* szFileName, const char* szText, size uiChanges, bool bHighlight, bool bIndex);

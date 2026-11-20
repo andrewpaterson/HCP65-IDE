@@ -175,6 +175,8 @@ set(IDE_SOURCES
 	"${IDE_DIR}/IDEDuplicatesPage.cpp"
 	"${IDE_DIR}/IDELocationPreview.cpp"
 	"${IDE_DIR}/IDEChooser.cpp"
+	"${IDE_DIR}/IDEOutline.cpp"
+	"${IDE_DIR}/IDEStructure.cpp"
 	"${IDE_DIR}/IDEClaudePage.cpp"
 	"${IDE_DIR}/IDEIntroduceTypedef.cpp"
 	"${IDE_DIR}/IDEInlineVariable.cpp"

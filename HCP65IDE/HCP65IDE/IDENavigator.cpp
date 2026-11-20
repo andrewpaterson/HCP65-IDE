@@ -162,6 +162,8 @@ Ptr<CMenuContainer> CIDENavigator::CreateNavigateMenu(void)
 	mpNavigateMenu->AddItem(pCommands->Find("Navigate.GoToRelatedSymbol"));
 	mpNavigateMenu->AddItem(pCommands->Find("Navigate.SwitchHeaderSource"));
 	mpNavigateMenu->AddSeparator();
+	mpcContent->GetStructure()->AddNavigateItems(mpNavigateMenu);
+	mpNavigateMenu->AddSeparator();
 	mpNavigateMenu->AddItem(pCommands->Find("Navigate.FindUsages"));
 	mpNavigateMenu->AddItem(pCommands->Find("Navigate.ShowUsages"));
 	mpNavigateMenu->AddItem(pCommands->Find("Navigate.FindReferences"));

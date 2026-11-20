@@ -20,6 +20,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 ** ------------------------------------------------------------------------ **/
 #ifndef __IDE_EDITOR_TAB_H__
 #define __IDE_EDITOR_TAB_H__
+#include "IDEOutline.h"
 #include "StandardLib/Object.h"
 #include "StandardLib/Pointer.h"
 #include "SupportLib/FontFamily.h"
@@ -75,6 +76,8 @@ protected:
 	size				muiBarChanges;	//The editor's change count when the change bars were worked out, MAX_SIZE for again.
 	CArrayTextRange		masSyntaxRanges;	//What each node of the text's syntax was parsed from, by start then end, for Extend Selection.
 	size				muiSyntaxChanges;	//The editor's change count they were parsed at, MAX_SIZE for none.
+	CIDEOutline			mcOutline;			//What the text declares, as it was last parsed.
+	size				muiOutlineChanges;	//The editor's change count it was parsed at, MAX_SIZE for none.
 	CComponentEvent<CIDEEditorTab>	mcSyntaxBehind;	//Extend Selection wants the syntax and the ranges are behind the text.
 
 public:
@@ -88,6 +91,10 @@ public:
 	void				SetDockPane(Ptr<CDockPane> pPane);
 	void				SetHighlights(CArrayHighlights* pacHighlights);
 	void				SetSyntaxRanges(CArrayCPPSyntaxRanges* pasRanges, size uiChanges);
+	void				SetOutline(CIDEOutline* pcOutline, size uiChanges);
+	CIDEOutline*		GetOutline(void);
+	CIDEOutline*		GetLastOutline(void);
+	bool				IsOutlineCurrent(void);
 	CComponentEvent<CIDEEditorTab>*	GetSyntaxBehindEvent(void);
 	void				AddSelectionRanges(size uiStart, size uiEnd, CArrayTextRange* pasDest) override;
 	bool				GetCaretPlace(int* piLine, int* piColumn);

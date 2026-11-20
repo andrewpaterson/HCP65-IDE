@@ -214,6 +214,7 @@ void CIDEContent::Class(void)
 	M_Pointer(mpCloseGuard);
 	M_Pointer(mpEdit);
 	M_Pointer(mpNavigator);
+	M_Pointer(mpStructure);
 	M_Pointer(mpRename);
 	M_Pointer(mpFileRename);
 	M_Pointer(mpSafeDelete);
@@ -442,6 +443,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpCloseGuard = OMalloc<CIDECloseGuard>(this);
 	mpEdit = OMalloc<CIDEEdit>(this);
 	mpNavigator = OMalloc<CIDENavigator>(this);
+	mpStructure = OMalloc<CIDEStructure>(this);
 	mpRename = OMalloc<CIDERename>(this);
 	mpFileRename = OMalloc<CIDEFileRename>(this);
 	mpSafeDelete = OMalloc<CIDESafeDelete>(this);
@@ -664,6 +666,7 @@ void CIDEContent::AddCommands(void)
 	mpCommands->Add("Window.ResetLayout", "Reset Window Layout", "", Ptr<CImageCel>(), this, &CIDEContent::ResetLayout);
 
 	mpNavigator->AddCommands(mpCommands);
+	mpStructure->AddCommands(mpCommands);
 	mpRename->AddCommands(mpCommands);
 	mpFileRename->AddCommands(mpCommands);
 	mpSafeDelete->AddCommands(mpCommands);
@@ -1193,6 +1196,7 @@ Ptr<CMenuBar> CIDEContent::GetMenuBar(void) const { return mpMenuBar; }
 Ptr<CCommandSet> CIDEContent::GetCommands(void) const { return mpCommands; }
 Ptr<CMenuContainer> CIDEContent::GetEditorMenu(void) const { return mpEditorMenu; }
 Ptr<CIDENavigator> CIDEContent::GetNavigator(void) const { return mpNavigator; }
+Ptr<CIDEStructure> CIDEContent::GetStructure(void) const { return mpStructure; }
 Ptr<CIDEEdit> CIDEContent::GetEdit(void) const { return mpEdit; }
 Ptr<CIDEUsages> CIDEContent::GetUsages(void) const { return mpUsages; }
 Ptr<CIDEFindInFiles> CIDEContent::GetFindInFiles(void) const { return mpFindInFiles; }

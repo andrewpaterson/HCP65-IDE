@@ -78,6 +78,8 @@ void CIDEEditorTab::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CFo
 	muiIndexedChanges = muiSeenChanges;
 	masSyntaxRanges.Init();
 	muiSyntaxChanges = MAX_SIZE;
+	mcOutline.Init();
+	muiOutlineChanges = MAX_SIZE;
 	mcSyntaxBehind.Init();
 	mbCarriageReturns = UsesIDECarriageReturns(szText);
 	muiSavedUndo = mpEditor->GetUndoId();
@@ -114,6 +116,8 @@ void CIDEEditorTab::Class(void)
 	U_Size(muiIndexedChanges);
 	U_Unknown(CArrayTextRange, masSyntaxRanges);
 	U_Size(muiSyntaxChanges);
+	U_Unknown(CIDEOutline, mcOutline);
+	U_Size(muiOutlineChanges);
 	U_Unknown(CComponentEvent<CIDEEditorTab>, mcSyntaxBehind);
 	M_Pointer(mpZones);
 	U_Unknown(CIDEListingSource, mcListings);
@@ -139,6 +143,7 @@ void CIDEEditorTab::Free(void)
 		mpEditor->SetSelectionRanges(NULL);
 	}
 	mcSyntaxBehind.Kill();
+	mcOutline.Kill();
 	masSyntaxRanges.Kill();
 	mszBaseHead.Kill();
 	mszBaseText.Kill();
@@ -210,6 +215,43 @@ void CIDEEditorTab::SetSyntaxRanges(CArrayCPPSyntaxRanges* pasRanges, size uiCha
 	}
 	muiSyntaxChanges = uiChanges;
 }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// What the text declares, parsed with the editor's text as it is now at
+// change count uiChanges: pcOutline's entries are taken.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEEditorTab::SetOutline(CIDEOutline* pcOutline, size uiChanges)
+{
+	mcOutline.TakeFrom(pcOutline);
+	muiOutlineChanges = uiChanges;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// What the text declares as it is now, for what goes by it (File
+// Structure, Next Method): if the text has changed since it was parsed it
+// is parsed now, as Extend Selection's syntax is (GetSyntaxBehindEvent).
+// NULL if it couldn't be: a text that isn't C or C++, or isn't in a
+// project.  GetLastOutline is what it declared when last parsed, for what
+// only shows it and can wait for the edits thread.
+//
+//////////////////////////////////////////////////////////////////////////
+CIDEOutline* CIDEEditorTab::GetOutline(void)
+{
+	if (muiOutlineChanges != mpEditor->GetChangeCount())
+	{
+		mcSyntaxBehind.Call(this);
+	}
+	return (muiOutlineChanges == mpEditor->GetChangeCount()) ? &mcOutline : NULL;
+}
+
+
+CIDEOutline* CIDEEditorTab::GetLastOutline(void) { return &mcOutline; }
+bool CIDEEditorTab::IsOutlineCurrent(void) { return muiOutlineChanges == mpEditor->GetChangeCount(); }
 
 
 //////////////////////////////////////////////////////////////////////////
