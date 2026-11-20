@@ -751,7 +751,7 @@ const char* GetIDEClaudeDirectoryName(EIDEClaudeDirectory eDirectory) { return g
 const char* GetIDEClaudeDirectoryText(EIDEClaudeDirectory eDirectory) { return gaszIDEClaudeDirectoryTexts[eDirectory]; }  //On the settings page.
 EIDEClaudeDirectory CIDEAskClaude::GetDirectorySetting(void) const { return meDirectory; }
 const char* CIDEAskClaude::GetFolderSetting(void) const { return mszFolder.Text(); }
-CClaudeCommand* CIDEAskClaude::GetClaude(void) { return &mcClaude; }
+const CClaudeCommand* CIDEAskClaude::GetClaude(void) const { return &mcClaude; }
 Ptr<CIDEClaudePane> CIDEAskClaude::GetClaudePane(void) const { return mpClaudePane; }
 Ptr<CDockPane> CIDEAskClaude::GetTool(void) const { return mpClaudeTool; }
 

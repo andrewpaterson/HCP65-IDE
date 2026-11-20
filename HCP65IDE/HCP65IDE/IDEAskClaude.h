@@ -78,34 +78,34 @@ public:
 	bool	Save(CObjectWriter* pcFile) override;
 	bool	Load(CObjectReader* pcFile) override;
 
-	bool				AskClaude(const char* szRequest);
-	bool				IsClaudeRunning(void);
-	Ptr<CIDEClaudePane>	GetClaudePane(void) const;
-	Ptr<CDockPane>		GetTool(void) const;
-	void				CreatePane(SDockPlace* psPlace);
-	void				ScrollToEnd(void);
-	void				PollClaude(Ptr<CWindow> pWindow);
+	bool					AskClaude(const char* szRequest);
+	bool					IsClaudeRunning(void);
+	Ptr<CIDEClaudePane>		GetClaudePane(void) const;
+	Ptr<CDockPane>			GetTool(void) const;
+	void					CreatePane(SDockPlace* psPlace);
+	void					ScrollToEnd(void);
+	void					PollClaude(Ptr<CWindow> pWindow);
 
-	EIDEClaudeDirectory	GetDirectorySetting(void) const;
-	const char*			GetFolderSetting(void) const;
-	void				SetDirectorySettings(EIDEClaudeDirectory eDirectory, const char* szFolder);
-	void				ReadSettings(CMarkupTag* pcSettings);
-	void				WriteSettings(CXMLWriter* pcWriter);
+	EIDEClaudeDirectory		GetDirectorySetting(void) const;
+	const char*				GetFolderSetting(void) const;
+	void					SetDirectorySettings(EIDEClaudeDirectory eDirectory, const char* szFolder);
+	void					ReadSettings(CMarkupTag* pcSettings);
+	void					WriteSettings(CXMLWriter* pcWriter);
 
 protected:
-	bool				GetClaudeDirectory(CChars* pszDirectory);
-	bool				GetSolutionDirectory(CChars* pszDirectory);
-	void				AddClaudeDirectories(const char* szDirectory);
-	void				AddClaudeDirectory(const char* szFolder, const char* szDirectory);
-	void				AppendClaudeContext(CChars* pszRequest);
-	void				ReloadClaudeFiles(bool bAll);
-	bool				ReloadClaudeFile(Ptr<CIDEEditorTab> pTab);
-	Ptr<CIDEEditorTab>	FindClaudeTab(const char* szFileName);
-	void				ClaudeSendClicked(void);
-	void				ClaudeStopClicked(void);
-	void				ClaudeNewClicked(void);
-	void				ShowClaudeTab(void);
-	CClaudeCommand*		GetClaude(void);
+	bool					GetClaudeDirectory(CChars* pszDirectory);
+	bool					GetSolutionDirectory(CChars* pszDirectory);
+	void					AddClaudeDirectories(const char* szDirectory);
+	void					AddClaudeDirectory(const char* szFolder, const char* szDirectory);
+	void					AppendClaudeContext(CChars* pszRequest);
+	void					ReloadClaudeFiles(bool bAll);
+	bool					ReloadClaudeFile(Ptr<CIDEEditorTab> pTab);
+	Ptr<CIDEEditorTab>		FindClaudeTab(const char* szFileName);
+	void					ClaudeSendClicked(void);
+	void					ClaudeStopClicked(void);
+	void					ClaudeNewClicked(void);
+	void					ShowClaudeTab(void);
+	const CClaudeCommand*	GetClaude(void) const;
 };
 
 
