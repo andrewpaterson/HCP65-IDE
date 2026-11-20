@@ -97,6 +97,9 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDENavigationHistory.h"
 #include "IDECaretUsages.h"
 #include "IDEPasteHistory.h"
+#include "IDEUserFile.h"
+#include "IDEBookmarks.h"
+#include "IDEMarks.h"
 #include "IDEIndexing.h"
 #include "IDEDocuments.h"
 #include "IDESolutions.h"
@@ -118,6 +121,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define IDE_DEBUG_ID			"Debug"
 #define IDE_CLAUDE_ID			"Claude"
 #define IDE_STRUCTURE_ID			"Structure"
+#define IDE_BOOKMARKS_ID			"Bookmarks"
 #define IDE_USAGES_ID			"FindUsages"
 #define IDE_FIND_ID				"Find"
 #define IDE_DUPLICATES_ID		"Duplicates"
@@ -223,6 +227,9 @@ protected:
 	Ptr<CIDEUsages>				mpUsages;			//Find Usages.
 	Ptr<CIDEFindInFiles>		mpFindInFiles;		//Find in Files and the Find tool window.
 	Ptr<CIDEFind>				mpFind;				//Find and Replace in the active editor.
+	Ptr<CIDEUserFile>			mpUserFile;			//The workspace's per-user file: breakpoints, bookmarks.
+	Ptr<CIDEBookmarks>			mpBookmarks;		//Bookmarks and their tool window.
+	Ptr<CIDEMarks>				mpMarks;			//Changed lines, kept usages and override marks.
 	Ptr<CIDEDuplicates>			mpDuplicates;		//Find Duplicates and the Duplicates tool window.
 	Ptr<CIDEOccurrences>		mpOccurrences;		//Next and Previous Occurrence through Find Usages or Build.
 	Ptr<CIDENavigationHistory>	mpNavigationHistory;	//Back and Forward.
@@ -328,6 +335,9 @@ public:
 	Ptr<CIDEUsages>			GetUsages(void) const;
 	Ptr<CIDEFindInFiles>	GetFindInFiles(void) const;
 	Ptr<CIDEFind>			GetFind(void) const;
+	Ptr<CIDEUserFile>		GetUserFile(void) const;
+	Ptr<CIDEBookmarks>		GetBookmarks(void) const;
+	Ptr<CIDEMarks>			GetMarks(void) const;
 	Ptr<CIDEDuplicates>		GetDuplicates(void) const;
 	Ptr<CIDEIndexing>		GetIndexing(void) const;
 	Ptr<CIDERename>			GetRename(void) const;

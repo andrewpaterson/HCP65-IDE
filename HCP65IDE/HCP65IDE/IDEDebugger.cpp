@@ -1766,28 +1766,41 @@ SIDEBreakpoint* CIDEDebugger::GetBreakpoint(size uiIndex) { return masBreakpoint
 //////////////////////////////////////////////////////////////////////////
 bool CIDEDebugger::WriteSourceBreakpoints(const char* szFileName)
 {
-	CXMLWriter				cWriter;
-	SIDESourceBreakpoint*	psBreakpoint;
-	char					szLine[16];
-	size					ui;
-	bool					bResult;
+	CXMLWriter	cWriter;
+	bool		bResult;
 
 	cWriter.Init();
 	cWriter.Begin(IDE_USER_SETTINGS_TAG);
-	for (ui = 0; ui < masSourceBreakpoints.NumElements(); ui++)
-	{
-		psBreakpoint = masSourceBreakpoints.Get(ui);
-		snprintf(szLine, sizeof(szLine), "%u", (unsigned int)psBreakpoint->uiLine);
-		cWriter.Begin(IDE_BREAKPOINT_TAG);
-		cWriter.Attribute("File", psBreakpoint->szFile.Text());
-		cWriter.Attribute("Line", szLine);
-		cWriter.Attribute("Enabled", psBreakpoint->bEnabled ? "true" : "false");
-		cWriter.End();
-	}
+	WriteSourceBreakpoints(&cWriter);
 	cWriter.End();
 	bResult = cWriter.Write(szFileName);
 	cWriter.Kill();
 	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The source breakpoints' tags, into the per-user file's root (the IDE's
+// CIDEUserFile writes the file, with other features' tags beside them).
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDebugger::WriteSourceBreakpoints(CXMLWriter* pcWriter)
+{
+	SIDESourceBreakpoint*	psBreakpoint;
+	char					szLine[16];
+	size					ui;
+
+	for (ui = 0; ui < masSourceBreakpoints.NumElements(); ui++)
+	{
+		psBreakpoint = masSourceBreakpoints.Get(ui);
+		snprintf(szLine, sizeof(szLine), "%u", (unsigned int)psBreakpoint->uiLine);
+		pcWriter->Begin(IDE_BREAKPOINT_TAG);
+		pcWriter->Attribute("File", psBreakpoint->szFile.Text());
+		pcWriter->Attribute("Line", szLine);
+		pcWriter->Attribute("Enabled", psBreakpoint->bEnabled ? "true" : "false");
+		pcWriter->End();
+	}
 }
 
 
@@ -1805,17 +1818,8 @@ bool CIDEDebugger::ReadSourceBreakpoints(const char* szFileName)
 	CChars			szName;
 	CChars			szDirectory;
 	CMarkupTag*		pcRoot;
-	CMarkupTag*		pcTag;
-	STagIterator	sIterator;
-	char*			szFile;
-	char*			szLine;
-	char*			szEnabled;
 	bool			bResult;
 
-	while (masSourceBreakpoints.NumElements() > 0)
-	{
-		RemoveSourceBreakpointAt(masSourceBreakpoints.NumElements() - 1);
-	}
 	szName.Init();
 	szDirectory.Init();
 	cFileUtil.SplitPath(szFileName, &szName, &szDirectory);
@@ -1827,26 +1831,46 @@ bool CIDEDebugger::ReadSourceBreakpoints(const char* szFileName)
 	bResult = cFileUtil.Exists(szFileName) && cFile.Read(szName.Text(), szDirectory.Text()) && cFile.mcMarkup.mpcDoc;
 	pcRoot = bResult ? cFile.mcMarkup.mpcDoc->GetRootTag() : NULL;
 	bResult = pcRoot && (StringCompare(pcRoot->GetName(), IDE_USER_SETTINGS_TAG) == 0);
-	if (bResult)
-	{
-		for (pcTag = pcRoot->GetTag(&sIterator); pcTag; pcTag = pcRoot->GetNextTag(&sIterator))
-		{
-			if (StringCompare(pcTag->GetName(), IDE_BREAKPOINT_TAG) != 0)
-			{
-				continue;
-			}
-			szFile = pcTag->GetAttribute((char*)"File");
-			szLine = pcTag->GetAttribute((char*)"Line");
-			szEnabled = pcTag->GetAttribute((char*)"Enabled");
-			if (szFile && szLine && (atoi(szLine) > 0))
-			{
-				AddSourceBreakpoint(szFile, (uint32)atoi(szLine), (szEnabled == NULL) || (StringCompare(szEnabled, "false") != 0));
-			}
-		}
-	}
+	ReadSourceBreakpoints(bResult ? pcRoot : NULL);
 	cFile.Kill();
 	szDirectory.Kill();
 	szName.Kill();
-	BreakpointsChanged();
 	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The source breakpoints among the per-user file's root's tags, in place
+// of these, bound with the line tables there are; none for NULL (no
+// file).
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDebugger::ReadSourceBreakpoints(CMarkupTag* pcRoot)
+{
+	CMarkupTag*		pcTag;
+	STagIterator	sIterator;
+	char*			szFile;
+	char*			szLine;
+	char*			szEnabled;
+
+	while (masSourceBreakpoints.NumElements() > 0)
+	{
+		RemoveSourceBreakpointAt(masSourceBreakpoints.NumElements() - 1);
+	}
+	for (pcTag = pcRoot ? pcRoot->GetTag(&sIterator) : NULL; pcTag; pcTag = pcRoot->GetNextTag(&sIterator))
+	{
+		if (StringCompare(pcTag->GetName(), IDE_BREAKPOINT_TAG) != 0)
+		{
+			continue;
+		}
+		szFile = pcTag->GetAttribute((char*)"File");
+		szLine = pcTag->GetAttribute((char*)"Line");
+		szEnabled = pcTag->GetAttribute((char*)"Enabled");
+		if (szFile && szLine && (atoi(szLine) > 0))
+		{
+			AddSourceBreakpoint(szFile, (uint32)atoi(szLine), (szEnabled == NULL) || (StringCompare(szEnabled, "false") != 0));
+		}
+	}
+	BreakpointsChanged();
 }

@@ -24,6 +24,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/ArrayUint32.h"
 #include "BaseLib/ArrayTemplate.h"
 #include "BaseLib/Chars.h"
+#include "BaseLib/MarkupTag.h"
+#include "BaseLib/XMLWriter.h"
 #include "ThreadLib/Process.h"
 #include "ThreadLib/NetworkConnection.h"
 #include "ThreadLib/SharedMemoryChannel.h"
@@ -212,6 +214,8 @@ public:
 	size					NumSourceBreakpoints(void) const;
 	SIDESourceBreakpoint*	GetSourceBreakpoint(size uiIndex);
 	bool					WriteSourceBreakpoints(const char* szFileName);
+	void					WriteSourceBreakpoints(CXMLWriter* pcWriter);
+	void					ReadSourceBreakpoints(CMarkupTag* pcRoot);
 	bool					ReadSourceBreakpoints(const char* szFileName);
 
 	bool					Poll(CArrayChars* paszOutput);

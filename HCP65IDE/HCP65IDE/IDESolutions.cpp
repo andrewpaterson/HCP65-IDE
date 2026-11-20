@@ -239,11 +239,9 @@ bool CIDESolutions::OpenSolution(const char* szFileName)
 	mpcContent->GetGitStatus()->FindRepositories();
 	ReadFileTemplates(szFileName);
 
-	//The breakpoints saved beside it, bound once its configuration's line tables are read.
-	szName.Init();
-	mpcContent->GetDebugging()->GetUserSettingsFileName(&szName);
-	mpcContent->GetDebugging()->GetDebugger()->ReadSourceBreakpoints(szName.Text());
-	szName.Kill();
+	//What its user left beside it: the breakpoints, bound once its configuration's line tables are read, and the
+	//bookmarks.
+	mpcContent->GetUserFile()->Read();
 
 	//The configuration chosen last time, if a solution still has it; chosen before the combo boxes tell of it, so it
 	//isn't indexed twice.
@@ -672,6 +670,7 @@ void CIDESolutions::LetGoOfWorkspace(void)
 	mpcContent->GetUsages()->Clear();
 	mpcContent->GetFindInFiles()->Clear();
 	mpcContent->GetDuplicates()->Clear();
+	mpcContent->GetBookmarks()->Clear();
 
 	mpcContent->GetCodeModel()->Kill();
 	mpcContent->GetWorkspace()->Clear();

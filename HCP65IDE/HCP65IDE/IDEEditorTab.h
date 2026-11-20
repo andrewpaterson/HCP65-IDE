@@ -22,6 +22,20 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define __IDE_EDITOR_TAB_H__
 #include "IDEOutline.h"
 #include "IDEBreadcrumbs.h"
+
+
+//The columns of icons in an editor's gutter (CCodeEditor::SetIconColumns), after the debugger's glyphs.
+#define IDE_GUTTER_BOOKMARKS	0	//A bookmark's.
+#define IDE_GUTTER_OVERRIDES	1	//What a function overrides, or is overridden by.
+#define IDE_GUTTER_ICON_COLUMNS	2
+
+
+//The colours of a changed line's bar in the gutter and of its mark on the scroll bar, as IntelliJ IDEA's.
+#define IDE_CHANGE_ADDED		Set32BitColour((uint8)0x54, (uint8)0x91, (uint8)0x59)
+#define IDE_CHANGE_MODIFIED		Set32BitColour((uint8)0x37, (uint8)0x5F, (uint8)0xAD)
+#define IDE_CHANGE_REMOVED		Set32BitColour((uint8)0x86, (uint8)0x8A, (uint8)0x91)
+
+
 #include "IDEFind.h"
 #include "StandardLib/Object.h"
 #include "StandardLib/Pointer.h"
@@ -66,6 +80,7 @@ protected:
 	Ptr<CIDEBreadcrumbs>	mpBreadcrumbs;	//Made when breadcrumbs are first shown.
 	Ptr<CIDEStickyLines>	mpStickyLines;	//Made when sticky lines are first shown.
 	Ptr<CIDEFindBar>	mpFindBar;		//Made when Find is first opened in it.
+	size				muiKeptUsagesLayer;	//The editor's layer of highlights for usages kept highlighted, MAX_SIZE until made.
 	Ptr<CDockPane>		mpDockPane;  //The document pane it is shown in.
 	CChars				mszFileName;
 	size				muiProject;		//The workspace's project it is in, MAX_SIZE if none.
@@ -118,6 +133,8 @@ public:
 	Ptr<CIDEStickyLines>	GetStickyLines(void) const;
 	void				SetFindBar(Ptr<CIDEFindBar> pFindBar);
 	Ptr<CIDEFindBar>	GetFindBar(void) const;
+	size				GetKeptUsagesLayer(ARGB32 sColour);
+	size				GetBarChanges(void) const;
 	CComponentEvent<CIDEEditorTab>*	GetSyntaxBehindEvent(void);
 	void				AddSelectionRanges(size uiStart, size uiEnd, CArrayTextRange* pasDest) override;
 	bool				GetCaretPlace(int* piLine, int* piColumn);

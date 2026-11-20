@@ -42,7 +42,7 @@ static bool			gbIDEScriptRenameSaves = false;  //rename: saves what it edited (r
 static bool			gbIDEScriptClassFiles = false;  //rename: renames a type's files too (renamesearch's f), never from the settings.
 
 
-static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printfindpreview", "printfindtoolbar", "findtool:", "replace:", "findoptions:", "findselect:", "printstartup", "printworkspace", "rename", "safedelete", "introducevariable", "introducefield", "introduceconstant", "introduceparameter", "changesignature", "pullmembersup", "pushmembersdown", "moveclass", "copyclass", "inlinevariable", "introducetypedef", "extractmethod", "extractsuperclass", "extractinterface", "extractclass", "encapsulatefield", "convertmacro", "extracttemplateparameter", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printsettings", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printprojectfiles", "printdiskfile:", "printdisklines:", "printedits", "printspans", "configuration:", "waitindex", "indextemplates:" };
+static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printfindpreview", "printfindtoolbar", "findtool:", "replace:", "findoptions:", "findselect:", "printstartup", "printworkspace", "printuserfile", "rename", "safedelete", "introducevariable", "introducefield", "introduceconstant", "introduceparameter", "changesignature", "pullmembersup", "pushmembersdown", "moveclass", "copyclass", "inlinevariable", "introducetypedef", "extractmethod", "extractsuperclass", "extractinterface", "extractclass", "encapsulatefield", "convertmacro", "extracttemplateparameter", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printsettings", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printprojectfiles", "printdiskfile:", "printdisklines:", "printedits", "printspans", "configuration:", "waitindex", "indextemplates:" };
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -259,6 +259,27 @@ void CIDEScript::RunCommand(const char* szCommand)
 	{
 		//Each solution's startup project, and what Start would run.
 		PrintStartupProjects();
+	}
+	else if (strcmp(szCommand, "printuserfile") == 0)
+	{
+		//The workspace's per-user file, as it is on the disk.
+		CTextFile	cUserFile;
+		CChars		szUserFile;
+
+		szUserFile.Init();
+		mpcContent->GetUserFile()->GetFileName(&szUserFile);
+		cUserFile.Init();
+		if (!szUserFile.Empty() && cUserFile.Read(szUserFile.Text()))
+		{
+			printf("User file:\n%s\n", cUserFile.Text());
+		}
+		else
+		{
+			printf("User file: none\n");
+		}
+		cUserFile.Kill();
+		szUserFile.Kill();
+		fflush(stdout);
 	}
 	else if (strcmp(szCommand, "printworkspace") == 0)
 	{
@@ -1004,6 +1025,30 @@ EIDEScope CIDEScript::GetScriptScope(const char* szScope)
 
 	iScope = atoi(szScope);
 	return ((iScope >= 0) && (iScope < IS_Count)) ? aeScopes[iScope] : IS_Solution;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// How many of a tab's scroll bar's marks are one source's.
+//
+//////////////////////////////////////////////////////////////////////////
+static size CountScrollMarks(Ptr<CIDEEditorTab> pTab, uint16 uiSource)
+{
+	Ptr<CScrollBar>	pBar;
+	size			uiCount;
+	size			i;
+
+	pBar = pTab->GetPane()->GetScrollBar(SBO_Vertical);
+	uiCount = 0;
+	for (i = 0; i < pBar->NumMarks(); i++)
+	{
+		if (pBar->GetMark(i)->uiSource == uiSource)
+		{
+			uiCount++;
+		}
+	}
+	return uiCount;
 }
 
 
@@ -3346,7 +3391,7 @@ void CIDEScript::RunEditStep(const char* szStep)
 			{
 				szShown.Append("Find bar: closed");
 			}
-			printf("%s, %d marks\n", szShown.Text(), (int)pTab->GetPane()->GetScrollBar(SBO_Vertical)->NumMarks());
+			printf("%s, %d marks\n", szShown.Text(), (int)CountScrollMarks(pTab, IDE_FIND_MARKS));
 			szShown.Kill();
 			fflush(stdout);
 		}
@@ -3404,6 +3449,66 @@ void CIDEScript::RunEditStep(const char* szStep)
 		uiTo = pTab->FindPosition(atoi(&szStep[9]) - 1, szColumn ? atoi(&szColumn[1]) - 1 : 0);
 		pEditor->Select(pEditor->GetCaretPosition(), uiTo);
 	}
+	else if ((strcmp(szStep, "printmarks") == 0) && pTab.IsNotNull())
+	{
+		//The active editor's line marks, once the window has ticked: "Marks: 3 usages kept, overrides 12[^] 23[v],
+		//7 scroll marks": the usages kept highlighted, its gutter's override column and its scroll bar's marks.
+		SCodeEditorGlyph*	psIcon;
+		size				uiLine;
+
+		pTab->GetOutline();
+		mpcContent->GetDocuments()->UpdateEditedTabsNow();
+		mpcContent->GetWindow()->Layout();
+		mpcContent->GetMarks()->Poll();
+		printf("Marks: %d usages kept, overrides", mpcContent->GetMarks()->HasKeptUsages(pTab) ? (int)mpcContent->GetMarks()->NumKeptUsages() : 0);
+		for (uiLine = 0; uiLine < pTab->GetEditor()->NumLines(); uiLine++)
+		{
+			psIcon = pTab->GetCodeEditor()->GetLineIcon(IDE_GUTTER_OVERRIDES, uiLine);
+			if (psIcon)
+			{
+				printf(" %d[%c]", (int)uiLine + 1, psIcon->cGlyph);
+			}
+		}
+		printf(", %d scroll marks\n", (int)(CountScrollMarks(pTab, IDE_USAGES_MARKS) + CountScrollMarks(pTab, IDE_CHANGE_ADDED_MARKS) + CountScrollMarks(pTab, IDE_CHANGE_MODIFIED_MARKS) + CountScrollMarks(pTab, IDE_CHANGE_REMOVED_MARKS)));
+		fflush(stdout);
+	}
+	else if ((strncmp(szStep, "overrideclick:", 14) == 0) && pTab.IsNotNull())
+	{
+		//overrideclick:<line>: as a press on the gutter's override mark beside that line, from 1.
+		SInt32Vec2	sIcon;
+
+		sIcon.Init(IDE_GUTTER_OVERRIDES, atoi(&szStep[14]) - 1);
+		mpcContent->GetMarks()->IconClicked(&pTab->GetCodeEditor(), sIcon);
+	}
+	else if (strcmp(szStep, "printbookmarks") == 0)
+	{
+		//The bookmarks as the Bookmarks tool window lists them ("Bookmarks: 2", "  Shapes.cpp:12 [1]"), then the
+		//active editor's gutter's bookmark column ("Bookmark gutter: 4[ ] 12[1]") and how many marks its scroll bar has.
+		CChars				szShown;
+		SCodeEditorGlyph*	psIcon;
+		size				uiLine;
+
+		mpcContent->GetWindow()->Layout();
+		mpcContent->GetBookmarks()->Poll(GetDebugTickCount());
+		szShown.Init();
+		mpcContent->GetBookmarks()->Print(&szShown);
+		printf("%s", szShown.Text());
+		szShown.Kill();
+		if (pTab.IsNotNull())
+		{
+			printf("Bookmark gutter:");
+			for (uiLine = 0; uiLine < pTab->GetEditor()->NumLines(); uiLine++)
+			{
+				psIcon = pTab->GetCodeEditor()->GetLineIcon(IDE_GUTTER_BOOKMARKS, uiLine);
+				if (psIcon)
+				{
+					printf(" %d[%c]", (int)uiLine + 1, psIcon->cGlyph);
+				}
+			}
+			printf(", %d marks\n", (int)CountScrollMarks(pTab, IDE_BOOKMARK_MARKS));
+		}
+		fflush(stdout);
+	}
 	else if (strncmp(szStep, "scroll:", 7) == 0)
 	{
 		//scroll:<line>: the active editor's view scrolled so that line is its first, and laid out so.
@@ -3417,10 +3522,15 @@ void CIDEScript::RunEditStep(const char* szStep)
 	}
 	else if (strcmp(szStep, "printprompt") == 0)
 	{
-		//Go to Line's prompt: "Prompt: <caption> [<text>] <what is wrong>", or "Prompt: none" if it isn't open.
+		//The prompt that is open, Go to Line's or a bookmark's mnemonic's: "Prompt: <caption> [<text>] <what is
+		//wrong>", or "Prompt: none" if neither is.
 		Ptr<CPromptPopup>	pPrompt;
 
 		pPrompt = mpcContent->GetStructure()->GetPrompt();
+		if (pPrompt.IsNull() || !pPrompt->IsOpen())
+		{
+			pPrompt = mpcContent->GetBookmarks()->GetPrompt();
+		}
 		if (pPrompt.IsNull() || !pPrompt->IsOpen())
 		{
 			printf("Prompt: none\n");

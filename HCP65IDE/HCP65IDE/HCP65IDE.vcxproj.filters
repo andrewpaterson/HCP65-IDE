@@ -132,6 +132,15 @@
     <ClCompile Include="IDEStructurePane.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="IDEMarks.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="IDEBookmarks.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="IDEUserFile.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="IDEBreadcrumbs.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -411,6 +420,15 @@
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDEStructurePane.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDEMarks.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDEBookmarks.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDEUserFile.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDEBreadcrumbs.h">

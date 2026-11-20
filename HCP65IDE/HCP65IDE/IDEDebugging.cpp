@@ -1360,21 +1360,31 @@ void CIDEDebugging::GetUserSettingsFileName(CChars* pszDest)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The source breakpoints to the per-user file, when a solution is open.
+// The source breakpoints have changed: the per-user file is written,
+// when a solution is open (CIDEUserFile).
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEDebugging::SaveBreakpoints(void)
 {
-	CChars	szFile;
+	mpcContent->GetUserFile()->Write();
+}
 
-	if (!mpcContent->GetSolutions()->IsSolutionOpen())
-	{
-		return;
-	}
-	szFile.Init();
-	GetUserSettingsFileName(&szFile);
-	mcDebugger.WriteSourceBreakpoints(szFile.Text());
-	szFile.Kill();
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The per-user file's part that is the debugger's: its source
+// breakpoints.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDebugging::WriteUser(CXMLWriter* pcWriter)
+{
+	mcDebugger.WriteSourceBreakpoints(pcWriter);
+}
+
+
+void CIDEDebugging::ReadUser(CMarkupTag* pcRoot)
+{
+	mcDebugger.ReadSourceBreakpoints(pcRoot);
 }
 
 

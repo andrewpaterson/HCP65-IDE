@@ -34,11 +34,6 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define IDE_LISTING_TEXT		Set32BitColour((uint8)0xE6, (uint8)0xDF, (uint8)0xB8)	//A line's assembly: the editor's text, a little yellow.
 #define IDE_LISTING_BACKGROUND	Set32BitColour((uint8)0x14, (uint8)0x15, (uint8)0x17)	//Under a line's assembly: darker than the editor's background (the theme's editor colour, the document well's).
 
-//IntelliJ IDEA's (dark theme) change bars in the gutter.
-#define IDE_CHANGE_ADDED		Set32BitColour((uint8)0x54, (uint8)0x91, (uint8)0x59)
-#define IDE_CHANGE_MODIFIED		Set32BitColour((uint8)0x37, (uint8)0x5F, (uint8)0xAD)
-#define IDE_CHANGE_REMOVED		Set32BitColour((uint8)0x86, (uint8)0x8A, (uint8)0x91)
-
 
 //////////////////////////////////////////////////////////////////////////
 //
@@ -54,6 +49,7 @@ void CIDEEditorTab::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CFo
 	mcListings.Init();
 	mpCodeEditor = OMalloc<CCodeEditor>(pWindow, pTheme, pFamily, szText);
 	mpCodeEditor->SetGlyphColumn(true);
+	mpCodeEditor->SetIconColumns(IDE_GUTTER_ICON_COLUMNS);
 	//The editor fills the view so a press right of the text, or below it, is in the editor: the caret goes to the
 	//nearest text, the end of the line or of the last line, as IntelliJ's.
 	mpCodeEditor->SetAlignment(CSH_Stretch, CSV_Stretch);
@@ -96,6 +92,7 @@ void CIDEEditorTab::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CFo
 	muiSyntaxChanges = MAX_SIZE;
 	mcOutline.Init();
 	muiOutlineChanges = MAX_SIZE;
+	muiKeptUsagesLayer = MAX_SIZE;
 	mcSyntaxBehind.Init();
 	mbCarriageReturns = UsesIDECarriageReturns(szText);
 	muiSavedUndo = mpEditor->GetUndoId();
@@ -143,6 +140,7 @@ void CIDEEditorTab::Class(void)
 	M_Pointer(mpBreadcrumbs);
 	M_Pointer(mpStickyLines);
 	M_Pointer(mpFindBar);
+	U_Size(muiKeptUsagesLayer);
 	U_Size(muiOutlineChanges);
 	U_Unknown(CComponentEvent<CIDEEditorTab>, mcSyntaxBehind);
 	M_Pointer(mpZones);
@@ -380,6 +378,23 @@ Ptr<CIDEBreadcrumbs> CIDEEditorTab::GetBreadcrumbs(void) const { return mpBreadc
 Ptr<CIDEStickyLines> CIDEEditorTab::GetStickyLines(void) const { return mpStickyLines; }
 void CIDEEditorTab::SetFindBar(Ptr<CIDEFindBar> pFindBar) { mpFindBar = pFindBar; }
 Ptr<CIDEFindBar> CIDEEditorTab::GetFindBar(void) const { return mpFindBar; }
+size CIDEEditorTab::GetBarChanges(void) const { return muiBarChanges; }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The editor's layer of highlights for the usages kept highlighted in it
+// (Highlight Usages in File), made the first time it is asked for.
+//
+//////////////////////////////////////////////////////////////////////////
+size CIDEEditorTab::GetKeptUsagesLayer(ARGB32 sColour)
+{
+	if (muiKeptUsagesLayer == MAX_SIZE)
+	{
+		muiKeptUsagesLayer = mpEditor->AddHighlightLayer(sColour, sColour);
+	}
+	return muiKeptUsagesLayer;
+}
 
 
 //////////////////////////////////////////////////////////////////////////

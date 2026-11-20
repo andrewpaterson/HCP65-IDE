@@ -244,6 +244,9 @@ void CIDEContent::Class(void)
 	M_Pointer(mpUsages);
 	M_Pointer(mpFindInFiles);
 	M_Pointer(mpFind);
+	M_Pointer(mpUserFile);
+	M_Pointer(mpBookmarks);
+	M_Pointer(mpMarks);
 	M_Pointer(mpDuplicates);
 	M_Pointer(mpOccurrences);
 	M_Pointer(mpNavigationHistory);
@@ -474,6 +477,9 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpUsages = OMalloc<CIDEUsages>(this);
 	mpFindInFiles = OMalloc<CIDEFindInFiles>(this);
 	mpFind = OMalloc<CIDEFind>(this);
+	mpUserFile = OMalloc<CIDEUserFile>(this);
+	mpBookmarks = OMalloc<CIDEBookmarks>(this);
+	mpMarks = OMalloc<CIDEMarks>(this);
 	mpDuplicates = OMalloc<CIDEDuplicates>(this);
 	mpOccurrences = OMalloc<CIDEOccurrences>(this);
 	mpNavigationHistory = OMalloc<CIDENavigationHistory>(this);
@@ -487,6 +493,10 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpRunning = OMalloc<CIDERunning>(this);
 	mpSettings = OMalloc<CIDESettings>(this);
 	mpDebugging = OMalloc<CIDEDebugging>(this);
+
+	//What is kept in the workspace's per-user file, in the order it is written.
+	mpUserFile->AddPart(&mpDebugging);
+	mpUserFile->AddPart(&mpBookmarks);
 	mpGitStatus = OMalloc<CIDEGitStatus>(this);
 	mpDiffs = OMalloc<CIDEDiffs>(this);
 	mpAskClaude = OMalloc<CIDEAskClaude>(this);
@@ -513,6 +523,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	sPlace.WithPane(IDE_USAGES_ID);
 	mpFindInFiles->CreatePane(&sPlace);
 	mpDuplicates->CreatePane(&sPlace);
+	mpBookmarks->CreatePane(&sPlace);
 	mpBuilding->CreatePane(&sPlace);
 	mpIndexing->CreatePane(&sPlace);
 	mpRunning->CreatePane(&sPlace);
@@ -674,6 +685,8 @@ void CIDEContent::AddCommands(void)
 
 	mpNavigator->AddCommands(mpCommands);
 	mpStructure->AddCommands(mpCommands);
+	mpBookmarks->AddCommands(mpCommands);
+	mpMarks->AddCommands(mpCommands);
 	mpRename->AddCommands(mpCommands);
 	mpFileRename->AddCommands(mpCommands);
 	mpSafeDelete->AddCommands(mpCommands);
@@ -877,6 +890,9 @@ void CIDEContent::Tick(Ptr<CWindow> pWindow)
 	//An open Find bar searches again after its file is edited.
 	mpFind->Poll();
 
+	//The active editor's changed lines' marks, kept usages and override marks keep up with it.
+	mpMarks->Poll();
+
 	//A caret moved far from where it stayed is a place to come back to.
 	iWait = mpNavigationHistory->Poll(iNow);
 	if ((iWait >= 0) && ((iSoonest < 0) || (iWait < iSoonest)))
@@ -898,6 +914,13 @@ void CIDEContent::Tick(Ptr<CWindow> pWindow)
 		iSoonest = iWait;
 	}
 	iWait = mpFindInFiles->Poll(iNow);
+	if ((iWait >= 0) && ((iSoonest < 0) || (iWait < iSoonest)))
+	{
+		iSoonest = iWait;
+	}
+
+	//Bookmarks that edits moved are shown where they are, and listed and written once the edits stop.
+	iWait = mpBookmarks->Poll(iNow);
 	if ((iWait >= 0) && ((iSoonest < 0) || (iWait < iSoonest)))
 	{
 		iSoonest = iWait;
@@ -1008,6 +1031,9 @@ void CIDEContent::PaneClosed(CDockPane* pcPane)
 	mpGitStatus->TabClosing(pTab);
 	pTab->GetCodeEditor()->GetChangeBarClickEvent()->Remove(&mpGitStatus);
 	pTab->GetCodeEditor()->GetGlyphClickEvent()->Remove(&mpDebugging);
+	pTab->GetCodeEditor()->GetIconClickEvent()->Remove(&mpBookmarks);
+	pTab->GetCodeEditor()->GetIconClickEvent()->Remove(&mpMarks);
+	mpMarks->TabClosed(pTab);
 	pTab->GetEditor()->GetUndoEvent()->Remove(&mpEdit);
 	pTab->GetEditor()->GetLinkEvent()->Remove(&mpNavigator);
 	mpEdit->FileClosed(pTab->GetFileName());
@@ -1215,6 +1241,9 @@ Ptr<CIDEEdit> CIDEContent::GetEdit(void) const { return mpEdit; }
 Ptr<CIDEUsages> CIDEContent::GetUsages(void) const { return mpUsages; }
 Ptr<CIDEFindInFiles> CIDEContent::GetFindInFiles(void) const { return mpFindInFiles; }
 Ptr<CIDEFind> CIDEContent::GetFind(void) const { return mpFind; }
+Ptr<CIDEUserFile> CIDEContent::GetUserFile(void) const { return mpUserFile; }
+Ptr<CIDEBookmarks> CIDEContent::GetBookmarks(void) const { return mpBookmarks; }
+Ptr<CIDEMarks> CIDEContent::GetMarks(void) const { return mpMarks; }
 Ptr<CIDEDuplicates> CIDEContent::GetDuplicates(void) const { return mpDuplicates; }
 Ptr<CIDEOccurrences> CIDEContent::GetOccurrences(void) const { return mpOccurrences; }
 Ptr<CIDENavigationHistory> CIDEContent::GetNavigationHistory(void) const { return mpNavigationHistory; }

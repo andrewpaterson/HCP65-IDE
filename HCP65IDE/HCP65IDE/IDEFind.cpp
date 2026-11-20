@@ -1105,6 +1105,12 @@ bool CIDEFind::Step(bool bNext)
 	{
 		return bNext ? pBar->Next() : pBar->Previous();
 	}
+
+	//Usages kept highlighted (Highlight Usages in File) are what there is to step through.
+	if (mpcContent->GetMarks()->HasKeptUsages(pTab))
+	{
+		return mpcContent->GetMarks()->StepUsage(bNext);
+	}
 	if (mszLast.Empty())
 	{
 		mpcContent->ShowStatus("There is nothing to find again: Find (Control+F) or Find Word at Caret (Control+F3) first.");

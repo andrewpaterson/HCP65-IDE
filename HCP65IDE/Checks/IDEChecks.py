@@ -204,6 +204,19 @@ def MakeUsagesKernel(szKernel=USAGES_KERNEL, asFiles={}):
 	return {'SOLUTION': os.path.join(szFolder, 'Kernel.sln'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
 
 
+def MakeNavigationCopy(szUser=None):
+	#A copy of the navigation checks' project (Input/Navigation), for checks that write beside the solution: its
+	#user's file (bookmarks, recent files).  Its recent solutions are apart from the user's.  szUser is what its user's
+	#file has to begin with, between its root's tags, with {folder} for the copy's folder.
+	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
+	atexit.register(shutil.rmtree, szRoot, True)
+	szFolder = os.path.join(szRoot, 'Navigation')
+	shutil.copytree(os.path.join(HERE, 'Input', 'Navigation'), szFolder)
+	if szUser is not None:
+		open(os.path.join(szFolder, 'Navigation.hcp65user'), 'w').write('<?xml version="1.0" encoding="UTF-8"?>\n<UserSettings>\n' + szUser.replace('{folder}', szFolder) + '</UserSettings>\n')
+	return {'SOLUTION': os.path.join(szFolder, 'Navigation.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
+
+
 def MakeRenameFileCopy():
 	#A copy of Rename File's solution (Input/RenameFile), which a check can rename files in.  Its recent solutions are
 	#apart from the user's.
@@ -3700,6 +3713,10 @@ CHECKS = [
 		 r'^Keys: Navigate\.GoToTypeDeclaration Control\+Shift\+B bound$', r'^Keys: Navigate\.GoToRelatedSymbol Control\+Alt\+Home bound$',
 		 r'^Keys: Navigate\.GoToLine Control\+G bound$', r'^Keys: Navigate\.FileStructure Control\+F12 bound$', r'^Keys: Navigate\.NextMethod Alt\+Cursor Down bound$',
 		 r'^Keys: Navigate\.PreviousMethod Alt\+Cursor Up bound$', r'^Keys: View\.Structure Alt\+7 bound$',
+		 r'^Keys: Bookmarks\.Toggle Control\+F11 bound$', r'^Keys: Bookmarks\.ToggleMnemonic Control\+Shift\+F11 bound$', r'^Keys: Bookmarks\.Next F2 bound$',
+		 r'^Keys: Bookmarks\.Previous Shift\+F2 bound$', r'^Keys: Bookmarks\.GoTo0 Control\+0 bound$', r'^Keys: Bookmarks\.GoTo9 Control\+9 bound$',
+		 r'^Keys: Navigate\.NextChange Control\+Alt\+Shift\+Cursor Down bound$', r'^Keys: Navigate\.PreviousChange Control\+Alt\+Shift\+Cursor Up bound$',
+		 r'^Keys: Navigate\.HighlightUsages Control\+Shift\+F7 bound$',
 		 r'^Keys: Navigate\.ShowUsages Control\+Alt\+F7 bound$', r'^Keys: Edit\.Find Control\+F bound$', r'^Keys: Edit\.Replace Control\+R bound$',
 		 r'^Keys: Edit\.FindNext F3 bound$', r'^Keys: Edit\.FindPrevious Shift\+F3 bound$', r'^Keys: Edit\.FindWordAtCaret Control\+F3 bound$',
 		 r'^Keys: Edit\.FindInFiles Control\+Shift\+F bound$', r'^Keys: Edit\.ReplaceInFiles Control\+Shift\+R bound$',
@@ -3861,8 +3878,8 @@ CHECKS = [
 		 r'^Menu File/New: C\+\+ Class\.\.\., C\+\+ Header\.\.\., C\+\+ Source\.\.\.$',
 		 r'^Menu File/Recent Solutions: 1 ',
 		 r'^Menu Edit: Undo \[Ctrl\+Z\](\(disabled\))?, Redo \[Ctrl\+Shift\+Z\](\(disabled\))?, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\], Select All \[Ctrl\+A\], Extend Selection \[Ctrl\+W\], Shrink Selection \[Ctrl\+Shift\+W\], Find\.\.\. \[Ctrl\+F\], Replace\.\.\. \[Ctrl\+R\], Find Next \[F3\], Find Previous \[Shift\+F3\], Find Word at Caret \[Ctrl\+F3\], Find in Files\.\.\. \[Ctrl\+Shift\+F\], Replace in Files\.\.\. \[Ctrl\+Shift\+R\], Find Duplicates\.\.\. \[Ctrl\+Alt\+Shift\+D\]$',
-		 r'^Menu Navigate: Back \[Ctrl\+Alt\+Left\](\(disabled\))?, Forward \[Ctrl\+Alt\+Right\](\(disabled\))?, Class\.\.\. \[Ctrl\+N\], File\.\.\. \[Ctrl\+Shift\+N\], Symbol\.\.\. \[Ctrl\+Alt\+Shift\+N\], Line:Column\.\.\. \[Ctrl\+G\], Go to Source \[Ctrl\+B\], Go to Definition \[F12\], Go to Implementation\(s\) \[Ctrl\+Alt\+B\], Go to Type Declaration \[Ctrl\+Shift\+B\], Go to Super Method \[Ctrl\+U\], Go to Related Symbol \[Ctrl\+Alt\+Home\], Switch Header/Source \[Alt\+O\], File Structure \[Ctrl\+F12\], Next Method \[Alt\+Down\], Previous Method \[Alt\+Up\], Find Usages \[Alt\+F7\], Show Usages \[Ctrl\+Alt\+F7\], Find All References \[Shift\+F12\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Next Occurrence \[Ctrl\+Alt\+Down\], Previous Occurrence \[Ctrl\+Alt\+Up\]$',
-		 r'^Menu View: Solution Explorer, Structure, Find Usages, Find, Duplicates, Build, Indexing, Run, Debug, Claude$',
+		 r'^Menu Navigate: Back \[Ctrl\+Alt\+Left\](\(disabled\))?, Forward \[Ctrl\+Alt\+Right\](\(disabled\))?, Class\.\.\. \[Ctrl\+N\], File\.\.\. \[Ctrl\+Shift\+N\], Symbol\.\.\. \[Ctrl\+Alt\+Shift\+N\], Line:Column\.\.\. \[Ctrl\+G\], Go to Source \[Ctrl\+B\], Go to Definition \[F12\], Go to Implementation\(s\) \[Ctrl\+Alt\+B\], Go to Type Declaration \[Ctrl\+Shift\+B\], Go to Super Method \[Ctrl\+U\], Go to Related Symbol \[Ctrl\+Alt\+Home\], Switch Header/Source \[Alt\+O\], File Structure \[Ctrl\+F12\], Next Method \[Alt\+Down\], Previous Method \[Alt\+Up\], Toggle Bookmark \[Ctrl\+F11\], Toggle Bookmark with Mnemonic\.\.\. \[Ctrl\+Shift\+F11\], Next Bookmark \[F2\], Previous Bookmark \[Shift\+F2\], Next Change \[Ctrl\+Alt\+Shift\+Down\], Previous Change \[Ctrl\+Alt\+Shift\+Up\], Highlight Usages in File \[Ctrl\+Shift\+F7\], Find Usages \[Alt\+F7\], Show Usages \[Ctrl\+Alt\+F7\], Find All References \[Shift\+F12\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Next Occurrence \[Ctrl\+Alt\+Down\], Previous Occurrence \[Ctrl\+Alt\+Up\]$',
+		 r'^Menu View: Solution Explorer, Structure, Find Usages, Find, Duplicates, Bookmarks, Build, Indexing, Run, Debug, Claude$',
 		 r'^Menu Git: Compare with HEAD, Compare with Branch\.\.\., Compare with Revision\.\.\.$',
 		 r'^Menu Build: Build \[Ctrl\+F9\], Edit Build Configurations\.\.\.$',
 		 r'^Menu Debug: Start Debugging \[F5\], Start Without Debugging \[Ctrl\+F5\], Stop Debugging \[Shift\+F5\], Stop Running(\(disabled\))?, Restart \[Ctrl\+Shift\+F5\], Break All \[Ctrl\+Pause/Break\], Attach to Emulator\.\.\., Step Into \[F11\], Step Over \[F10\], Step Out \[Shift\+F11\], Toggle Breakpoint \[F9\], New Breakpoint at Address\.\.\., Delete All Breakpoints, Edit Configurations\.\.\.$',
@@ -4397,6 +4414,68 @@ CHECKS = [
 		[r'^Find tabs: >Draw$', r'^Find tabs: >\* Draw$', r'^Toolbar: Rerun, .*Navigate with Single Click, Pin Tab\(on\)$', r'^Find tabs: \* Draw, >Area$',
 		 r"^Occurrences of 'Area' in the solution  9 matches in 4 files$", r'^Find tabs: >\* Draw, Area$', r"^Occurrences of 'Draw' in the solution  15 matches in 5 files$",
 		 r"^Occurrences of 'Draw' in the solution  15 matches in 5 files$", r'^Find tabs: \* Draw, >miSide$'], [r'No tool button', r'ERROR']),
+	('bookmarks', dict(MakeNavigationCopy(), **{
+		#Toggle Bookmark (Control+F11) marks the caret's line: it is listed, shown in the gutter and marked on the
+		#scroll bar.  Toggle Bookmark with Mnemonic (Control+Shift+F11) asks for a digit or a letter in a prompt, and
+		#says what it wants of anything else.  Next and Previous Bookmark (F2, Shift+F2) go through the file's, round
+		#its ends; Control+3 goes to bookmark 3 from another file.  They move with their lines as the file is edited,
+		#and are written in the workspace's user's file.
+		'WAIT_INDEX': '1', 'OPEN': 'Shapes.cpp', 'CARET': '12:5',
+		'DEBUG': 'edit:printbookmarks,command:Bookmarks.Toggle,edit:printbookmarks,edit:caret:23:3,command:Bookmarks.ToggleMnemonic,edit:printprompt,edit:key:type:xx,edit:key:enter,edit:printprompt,'
+		         'edit:key:backspace,edit:key:backspace,edit:key:type:3,edit:key:enter,edit:printprompt,edit:printbookmarks,edit:caret:4:1,command:Bookmarks.Toggle,edit:printbookmarks,'
+		         'command:Bookmarks.Next,edit:print,command:Bookmarks.Next,edit:print,command:Bookmarks.Next,edit:print,command:Bookmarks.Previous,edit:print,'
+		         'edit:open:Shapes.h,command:Bookmarks.Next,printstatus,command:Bookmarks.GoTo5,printstatus,command:Bookmarks.GoTo3,edit:print,'
+		         'edit:caret:1:1,edit:tap:Enter,edit:printbookmarks,edit:caret:5:1,command:Bookmarks.Toggle,edit:printbookmarks,printuserfile'}),
+		[r'^Bookmarks: 0$', r'^Bookmark gutter:, 0 marks$', r'^Bookmarks: 1$', r'^  Shapes\.cpp:12$', r'^Bookmark gutter: 12\[ \], 1 marks$',
+		 r'^Prompt: Mnemonic \(0-9, A-Z\): \[\] $', r'^Prompt: Mnemonic \(0-9, A-Z\): \[xx\] Type one digit or one letter\.$', r'^Prompt: none$',
+		 r'^Bookmarks: 2$', r'^  Shapes\.cpp:23 \[3\]$', r'^Bookmark gutter: 12\[ \] 23\[3\], 2 marks$',
+		 r'^Bookmarks: 3$', r'^  Shapes\.cpp:4$', r'^  Shapes\.cpp:12$', r'^Bookmark gutter: 4\[ \] 12\[ \] 23\[3\], 3 marks$',
+		 r'Shapes\.cpp \(focus\) line 12: ', r'Shapes\.cpp \(focus\) line 23: ', r'Shapes\.cpp \(focus\) line 4: ', r'Shapes\.cpp \(focus\) line 23: ',
+		 r'^Status line: This file has no bookmarks: Toggle Bookmark \(Control\+F11\) makes one\.$',
+		 r'^Status line: There is no bookmark 5: Toggle Bookmark with Mnemonic \(Control\+Shift\+F11\) makes one\.$', r'Shapes\.cpp \(focus\) line 23: ',
+		 r'^Bookmarks: 3$', r'^  Shapes\.cpp:5$', r'^  Shapes\.cpp:13$', r'^  Shapes\.cpp:24 \[3\]$', r'^Bookmark gutter: 5\[ \] 13\[ \] 24\[3\], 3 marks$',
+		 r'^Bookmarks: 2$', r'^Bookmark gutter: 13\[ \] 24\[3\], 2 marks$',
+		 r'^  <Bookmark File=".*Navigation/Shapes\.cpp" Line="13"/>$', r'^  <Bookmark File=".*Navigation/Shapes\.cpp" Line="24" Mnemonic="3"/>$'], []),
+	('bookmarks-read', dict(MakeNavigationCopy('  <Breakpoint File="{folder}/Start.asm" Line="42" Enabled="true"/>\n  <Bookmark File="{folder}/Shapes.cpp" Line="16" Mnemonic="A"/>\n  <Bookmark File="{folder}/Shapes.h" Line="6"/>\n'), **{
+		#A workspace's bookmarks are read from its user's file when it opens, beside the breakpoints that are there;
+		#a mnemonic given to another line leaves the line that had it, and both parts are written again.
+		'WAIT_INDEX': '1', 'OPEN': 'Shapes.cpp', 'CARET': '4:1',
+		'DEBUG': 'edit:printbookmarks,command:Bookmarks.ToggleMnemonic,edit:key:type:a,edit:key:enter,edit:printbookmarks,printuserfile'}),
+		[r'^Bookmarks: 2$', r'^  Shapes\.cpp:16 \[A\]$', r'^  Shapes\.h:6$', r'^Bookmark gutter: 16\[A\], 1 marks$',
+		 r'^Bookmarks: 2$', r'^  Shapes\.cpp:4 \[A\]$', r'^  Shapes\.h:6$', r'^Bookmark gutter: 4\[A\], 1 marks$',
+		 r'^  <Breakpoint File=".*Navigation/Start\.asm" Line="42" Enabled="true"/>$', r'^  <Bookmark File=".*Navigation/Shapes\.h" Line="6"/>$',
+		 r'^  <Bookmark File=".*Navigation/Shapes\.cpp" Line="4" Mnemonic="A"/>$'], [r'Line="16"']),
+	('nav-override-marks', {
+		#The gutter's override marks, from the file's outline and the index: ^ beside a function that overrides, v
+		#beside one that is overridden and a class with derived classes, x beside one that does both.  A press on ^
+		#goes to the super method, on v to the implementation, and on x opens Go to Related Symbol's chooser.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Shapes.h', 'CARET': '1:1',
+		'DEBUG': 'edit:printmarks,edit:overrideclick:12,edit:print,edit:open:Shapes.h,edit:overrideclick:17,edit:print,edit:open:Shapes.h,edit:overrideclick:23,edit:printchooser,edit:key:escape,edit:open:Shape.h,edit:printmarks'},
+		[r'^Marks: 0 usages kept, overrides 12\[\^\] 13\[\^\] 17\[v\] 23\[x\] 24\[\^\] 31\[\^\], 0 scroll marks$',
+		 r'Shape\.cpp \(focus\) line 11: \[void CShape::Draw\(void\)\]', r'Shapes\.h \(focus\) line 28: \[class CRoundedSquare : public CSquare\]',
+		 r'^Chooser: CSquare::Draw$', r'^   \[Super methods\]$', r'^   CShape::Draw \| Shape\.cpp:11$', r'^   \[Implementations\]$', r'^   CRoundedSquare::Draw \| Shapes\.cpp:27$',
+		 r'^Marks: 0 usages kept, overrides 6\[v\] 14\[v\] 15\[v\], 0 scroll marks$'], []),
+	('nav-highlight-usages', {
+		#Highlight Usages in File (Control+Shift+F7): the caret's symbol's usages in the file are kept highlighted and
+		#marked on the scroll bar while the caret goes elsewhere, and the status line says how many.  F3 and Shift+F3
+		#step through them; Escape ends it, and F3 has nothing to find again.  On no name, the status line says so.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Shapes.cpp', 'CARET': '23:10',
+		'DEBUG': 'command:Navigate.HighlightUsages,printstatus,edit:printmarks,edit:caret:1:1,edit:printmarks,command:Edit.FindNext,edit:printselection,command:Edit.FindNext,edit:printselection,'
+		         'command:Edit.FindNext,edit:printselection,command:Edit.FindPrevious,edit:printselection,edit:key:escape,edit:printmarks,command:Edit.FindNext,printstatus,'
+		         'edit:caret:2:1,command:Navigate.HighlightUsages,printstatus'},
+		[r'^Status line: 2 usages highlighted: F3 and Shift\+F3 step through them, Escape ends it\.$', r'^Marks: 2 usages kept, .*, 1 scroll marks$',
+		 r'^Marks: 2 usages kept, .*, 1 scroll marks$', r'^Selection: \[miSide\] on line 23, caret line 23$', r'^Selection: \[miSide\] on line 23, caret line 23$',
+		 r'^Marks: 0 usages kept, .*, 0 scroll marks$', r'^Status line: There is nothing to find again: ',
+		 r"^Status line: The caret isn't on a name whose usages in this file are known\.$"], []),
+	('nav-next-change', {
+		#Next Change and Previous Change (Control+Alt+Shift+Down and Up): the caret goes to the next line changed since
+		#the last commit, or the one before; with none that way the status line says so.  The changed lines are marked
+		#on the scroll bar.
+		'OPEN': 'CalculatorParser.cpp', 'CARET': '36:2', 'TYPE': 'X', 'DIALOG_ANSWER': "Don't Save",
+		'DEBUG': 'edit:caret:60:1,edit:type:Y,edit:caret:1:1,command:Navigate.NextChange,edit:print,command:Navigate.NextChange,edit:print,command:Navigate.NextChange,printstatus,'
+		         'command:Navigate.PreviousChange,edit:print,command:Navigate.PreviousChange,printstatus,edit:printmarks,exit'},
+		[r'CalculatorParser\.cpp \* \(focus\) line 36: ', r'CalculatorParser\.cpp \* \(focus\) line 60: ', r'^Status line: There is no change after the caret\.$',
+		 r'CalculatorParser\.cpp \* \(focus\) line 36: ', r'^Status line: There is no change before the caret\.$', r'^Marks: 0 usages kept, overrides, 2 scroll marks$'], []),
 	('nav-type-declaration', {
 		#Go to Type Declaration (Control+Shift+B): from a parameter and from a local variable, the class each is declared
 		#with; from a field of a built in type, the status line says its type has nothing to go to.

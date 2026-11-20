@@ -211,7 +211,11 @@ Ptr<CIDEEditorTab> CIDEDocuments::OpenFileTab(const char* szFileName, size uiPro
 	//Control+click on a name goes where Go to Source would from it, as IntelliJ's.
 	pTab->GetEditor()->SetLinkEvent(true);
 	pTab->GetEditor()->GetLinkEvent()->Add(&mpcContent->GetNavigator(), &CIDENavigator::LinkPressed);
+	pTab->GetCodeEditor()->GetIconClickEvent()->Add(&mpcContent->GetBookmarks(), &CIDEBookmarks::IconClicked);
+	pTab->GetCodeEditor()->GetIconClickEvent()->Add(&mpcContent->GetMarks(), &CIDEMarks::IconClicked);
+	pTab->GetEditor()->AddInputAction(CIC_ClearSelection, &mpcContent->GetMarks(), &CIDEMarks::EscapeAction);
 	mpcContent->GetDebugging()->ShowBreakpoints(pTab);
+	mpcContent->GetBookmarks()->ShowBookmarks(pTab);
 	mpcContent->GetGitStatus()->ReadGitBase(pTab);
 	mpcContent->GetGitStatus()->UpdateChangeBars(pTab);
 	pPane->SetTabFont(GetGitStateFont(mpcContent->GetFontColours(), pTab->GetGitState()));
@@ -1388,6 +1392,7 @@ void CIDEDocuments::DocumentChanged(const char* szFileName, STextDocumentChange*
 	mpcContent->GetUsages()->AdjustPlaces(szFileName, &sChange);
 	mpcContent->GetFindInFiles()->AdjustPlaces(szFileName, &sChange);
 	mpcContent->GetDuplicates()->AdjustPlaces(szFileName, &sChange);
+	mpcContent->GetBookmarks()->AdjustPlaces(szFileName, &sChange);
 }
 
 

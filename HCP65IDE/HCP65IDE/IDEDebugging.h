@@ -20,6 +20,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 ** ------------------------------------------------------------------------ **/
 #ifndef __IDE_DEBUGGING_H__
 #define __IDE_DEBUGGING_H__
+#include "IDEUserFile.h"
 #include "StandardLib/Object.h"
 #include "StandardLib/Pointer.h"
 #include "WindowLib/Dialog.h"
@@ -41,7 +42,7 @@ class CIDEContent;
 //The Debug menu (and Visual Studio's keys) debugging the HCP65 emulator at the instruction level, see CIDEDebugger:
 //the Debug tab under the editor shows its disassembly and registers, and breakpoints are set in the editors'
 //gutters.  It also runs HCP65_IDE_DEBUG's script (CIDEScript's commands), which waits for the debugger.
-class CIDEDebugging : public CObject
+class CIDEDebugging : public CObject, public CIDEUserPart
 {
 friend class CIDEScript;
 CONSTRUCTABLE(CIDEDebugging);
@@ -94,6 +95,8 @@ protected:
 	bool				ChooseEmulator(bool bLaunch);
 	bool				ChooseDebugLoads(CBuildConfiguration* pcConfiguration, CChars* pszMessage, CArrayChars* paszLines);
 	void				SaveBreakpoints(void);
+	void				WriteUser(CXMLWriter* pcWriter) override;
+	void				ReadUser(CMarkupTag* pcRoot) override;
 	void				ShowDebugMessages(void);
 	void				ResolveEmulatorPath(const char* szPath, CChars* pszDest);
 	void				AddImageLineTable(const char* szFile, const char* szSpace, const char* szCardPath);
