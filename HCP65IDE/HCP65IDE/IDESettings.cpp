@@ -75,6 +75,7 @@ void CIDESettings::Class(void)
 	M_Pointer(mpKeymapPage);
 	M_Pointer(mpTemplatesPage);
 	M_Pointer(mpDuplicatesPage);
+	M_Pointer(mpClaudePage);
 }
 
 
@@ -176,6 +177,7 @@ void CIDESettings::ReadSettings(const char* szFile)
 		mpcContent->GetRename()->ReadSettings(pcRoot);
 		mpcContent->GetFileRename()->ReadSettings(pcRoot);
 		mpcContent->GetFileTemplates()->ReadSettings(pcRoot);
+		mpcContent->GetAskClaude()->ReadSettings(pcRoot);
 	}
 	else
 	{
@@ -212,6 +214,7 @@ bool CIDESettings::WriteSettings(void)
 	mpcContent->GetRename()->WriteSettings(&cWriter);
 	mpcContent->GetFileRename()->WriteSettings(&cWriter);
 	mpcContent->GetFileTemplates()->WriteSettings(&cWriter);
+	mpcContent->GetAskClaude()->WriteSettings(&cWriter);
 	cWriter.End();
 	bResult = cWriter.Write(mszSettingsFile.Text());
 	cWriter.Kill();
@@ -252,6 +255,8 @@ void CIDESettings::ShowDialog(void)
 	mpDialog->AddPage(mpTemplatesPage);
 	mpDuplicatesPage = OMalloc<CIDEDuplicatesPage>(mpcContent, mpDialog->GetDialog());
 	mpDialog->AddPage(mpDuplicatesPage);
+	mpClaudePage = OMalloc<CIDEClaudePage>(mpcContent, mpDialog->GetDialog());
+	mpDialog->AddPage(mpClaudePage);
 	if (getenv("HCP65_IDE_KEYMAP_EDITS") != NULL)
 	{
 		mpKeymapPage->ApplyEdits(getenv("HCP65_IDE_KEYMAP_EDITS"));
@@ -264,6 +269,10 @@ void CIDESettings::ShowDialog(void)
 	{
 		mpDuplicatesPage->ApplyEdits(getenv("HCP65_IDE_DUPLICATES_EDITS"));
 	}
+	if (getenv("HCP65_IDE_CLAUDE_EDITS") != NULL)
+	{
+		mpClaudePage->ApplyEdits(getenv("HCP65_IDE_CLAUDE_EDITS"));
+	}
 	mpcContent->GetScript()->WatchDialog(mpDialog->GetDialog());
 	bOK = mpDialog->Show();
 	mpcContent->GetScript()->StopWatchingDialog();
@@ -271,6 +280,7 @@ void CIDESettings::ShowDialog(void)
 	mpKeymapPage = NULL;
 	mpTemplatesPage = NULL;
 	mpDuplicatesPage = NULL;
+	mpClaudePage = NULL;
 	mpDialog = NULL;
 
 	if (bOK)

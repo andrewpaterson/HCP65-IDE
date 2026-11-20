@@ -28,6 +28,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/KeymapPage.h"
 #include "IDEFileTemplatesPage.h"
 #include "IDEDuplicatesPage.h"
+#include "IDEClaudePage.h"
 
 
 class CIDEContent;
@@ -52,6 +53,7 @@ protected:
 	Ptr<CKeymapPage>			mpKeymapPage;
 	Ptr<CIDEFileTemplatesPage>	mpTemplatesPage;
 	Ptr<CIDEDuplicatesPage>		mpDuplicatesPage;
+	Ptr<CIDEClaudePage>			mpClaudePage;
 
 public:
 	void	Init(CIDEContent* pcContent);

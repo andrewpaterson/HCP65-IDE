@@ -21,12 +21,23 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/FileUtil.h"
 #include "BaseLib/TextFile.h"
 #include "BaseLib/StringHelper.h"
+#include "BaseLib/MarkupTag.h"
+#include "BaseLib/XMLWriter.h"
 #include "StandardLib/ClassDefines.h"
 #include "IDEContent.h"
 #include "IDEAskClaude.h"
 
 
 #define IDE_CLAUDE_POLL		50		//Milliseconds between looks at Claude while it works.
+
+#define IDE_CLAUDE_SETTINGS_TAG			"Claude"
+#define IDE_CLAUDE_DIRECTORY_ATTRIBUTE	"Directory"
+#define IDE_CLAUDE_FOLDER_ATTRIBUTE		"Folder"
+
+
+//Where Claude is started, by EIDEClaudeDirectory: its name in the settings file and what the settings page shows.
+static const char*	gaszIDEClaudeDirectoryNames[ICD_NumDirectories] = { "Solution", "Repository", "Folder" };
+static const char*	gaszIDEClaudeDirectoryTexts[ICD_NumDirectories] = { "The startup solution's folder", "The startup solution's repository", "The folder below" };
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -40,6 +51,9 @@ void CIDEAskClaude::Init(CIDEContent* pcContent)
 	mcClaude.Init();
 	muiClaudeReloaded = 0;
 	muiClaudeTools = 0;
+	meDirectory = ICD_Solution;
+	mszFolder.Init();
+	mszAskedDirectory.Init();
 	PostInit();
 }
 
@@ -56,6 +70,9 @@ void CIDEAskClaude::Class(void)
 	U_Unknown(CClaudeCommand, mcClaude);
 	U_Size(muiClaudeReloaded);
 	U_Size(muiClaudeTools);
+	U_Enum(meDirectory);
+	U_String(mszFolder);
+	U_String(mszAskedDirectory);
 }
 
 
@@ -76,6 +93,8 @@ void CIDEAskClaude::Free(void)
 	}
 	//A request Claude is still working on is stopped.
 	mcClaude.Kill();
+	mszAskedDirectory.Kill();
+	mszFolder.Kill();
 }
 
 
@@ -138,6 +157,7 @@ void CIDEAskClaude::ClaudeNewClicked(void)
 		return;
 	}
 	mcClaude.Forget();
+	mszAskedDirectory.Clear();
 	mpClaudePane->Clear();
 	mpClaudePane->SetStatus("New conversation.");
 }
@@ -168,8 +188,17 @@ bool CIDEAskClaude::AskClaude(const char* szRequest)
 	szDirectory.Init();
 	if (!GetClaudeDirectory(&szDirectory))
 	{
+		if (szDirectory.Empty())
+		{
+			mpClaudePane->SetStatus("Open a solution or a file first: Claude works in its folder.");
+		}
+		else
+		{
+			szDirectory.Insert(0, "Claude wasn't asked: its folder [");
+			szDirectory.Append("] isn't there.  It is set in File, Settings, Claude.");
+			mpClaudePane->SetStatus(szDirectory.Text());
+		}
 		szDirectory.Kill();
-		mpClaudePane->SetStatus("Open a solution or a file first: Claude works in its folder.");
 		return false;
 	}
 	if (!mpcContent->GetDocuments()->SaveAllFiles())
@@ -182,6 +211,13 @@ bool CIDEAskClaude::AskClaude(const char* szRequest)
 	szFull.Init(szRequest);
 	AppendClaudeContext(&szFull);
 	mpClaudePane->SetDirectory(szDirectory.Text());
+	if (!mszAskedDirectory.Empty() && !mszAskedDirectory.Equals(szDirectory.Text()))
+	{
+		//Claude Code keeps a conversation with the folder it was started in, and can't carry it on from another.
+		mcClaude.Forget();
+		mpClaudePane->AppendNote("Claude's folder changed: a new conversation.", false);
+	}
+	mszAskedDirectory.Set(szDirectory.Text());
 	mpClaudePane->AppendRequest(szRequest);
 	muiClaudeReloaded = 0;
 	muiClaudeTools = 0;
@@ -204,11 +240,57 @@ bool CIDEAskClaude::AskClaude(const char* szRequest)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The folder Claude works in: the startup solution's, or the open file's
-// if no solution is open.  False if neither is.
+// The folder Claude is started in, as the settings have it: the startup
+// solution's (the open file's if no solution is open), the repository
+// that is in (itself if it is in none), or the settings' folder, from the
+// solution's if it isn't a full path.  False with pszDirectory empty if
+// neither a solution nor a file is open, and with the folder in it if the
+// settings' folder isn't there.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEAskClaude::GetClaudeDirectory(CChars* pszDirectory)
+{
+	CFileUtil	cFileUtil;
+	CChars		szRoot;
+
+	if (!GetSolutionDirectory(pszDirectory))
+	{
+		return false;
+	}
+
+	if (meDirectory == ICD_Repository)
+	{
+		szRoot.Init();
+		if (FindGitRoot(pszDirectory->Text(), &szRoot))
+		{
+			pszDirectory->Set(szRoot.Text());
+		}
+		szRoot.Kill();
+	}
+	else if ((meDirectory == ICD_Folder) && !mszFolder.Empty())
+	{
+		if (cFileUtil.IsAbsolutePath(mszFolder.Text()))
+		{
+			pszDirectory->Set(mszFolder.Text());
+		}
+		else
+		{
+			cFileUtil.AppendToPath(pszDirectory, mszFolder.Text());
+		}
+		MakeFullGitPath(pszDirectory);
+		return cFileUtil.IsDirectory(pszDirectory->Text());
+	}
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The startup solution's folder, or the open file's if no solution is
+// open.  False if neither is.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEAskClaude::GetSolutionDirectory(CChars* pszDirectory)
 {
 	CFileUtil	cFileUtil;
 
@@ -586,6 +668,89 @@ void CIDEAskClaude::ShowClaudeTab(void)
 }
 
 
+//////////////////////////////////////////////////////////////////////////
+//
+// The Settings page's: where Claude is started, written with the
+// settings.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEAskClaude::SetDirectorySettings(EIDEClaudeDirectory eDirectory, const char* szFolder)
+{
+	meDirectory = eDirectory;
+	mszFolder.Set(szFolder);
+	mszFolder.StripWhitespace(true);
+	mpcContent->GetSettings()->WriteSettings();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// <Claude Directory="Repository" Folder=""/> in the settings.  Without it
+// Claude is started in the startup solution's folder.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEAskClaude::ReadSettings(CMarkupTag* pcSettings)
+{
+	CMarkupTag*	pcTag;
+	char*		szValue;
+
+	pcTag = pcSettings->GetTag(IDE_CLAUDE_SETTINGS_TAG);
+	if (pcTag == NULL)
+	{
+		return;
+	}
+	FindIDEClaudeDirectory(pcTag->GetStringAttribute(IDE_CLAUDE_DIRECTORY_ATTRIBUTE), &meDirectory);
+	szValue = pcTag->GetStringAttribute(IDE_CLAUDE_FOLDER_ATTRIBUTE);
+	if (szValue)
+	{
+		mszFolder.Set(szValue);
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEAskClaude::WriteSettings(CXMLWriter* pcWriter)
+{
+	pcWriter->Begin(IDE_CLAUDE_SETTINGS_TAG);
+	pcWriter->Attribute(IDE_CLAUDE_DIRECTORY_ATTRIBUTE, GetIDEClaudeDirectoryName(meDirectory));
+	pcWriter->Attribute(IDE_CLAUDE_FOLDER_ATTRIBUTE, mszFolder.Text());
+	pcWriter->End();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The directory named szName in the settings file.  False, with
+// peDirectory as it was, if it is NULL or none is.
+//
+//////////////////////////////////////////////////////////////////////////
+bool FindIDEClaudeDirectory(const char* szName, EIDEClaudeDirectory* peDirectory)
+{
+	size	i;
+
+	if (szName == NULL)
+	{
+		return false;
+	}
+	for (i = 0; i < ICD_NumDirectories; i++)
+	{
+		if (StringCompare(szName, gaszIDEClaudeDirectoryNames[i]) == 0)
+		{
+			*peDirectory = (EIDEClaudeDirectory)i;
+			return true;
+		}
+	}
+	return false;
+}
+
+
+const char* GetIDEClaudeDirectoryName(EIDEClaudeDirectory eDirectory) { return gaszIDEClaudeDirectoryNames[eDirectory]; }  //In the settings file.
+const char* GetIDEClaudeDirectoryText(EIDEClaudeDirectory eDirectory) { return gaszIDEClaudeDirectoryTexts[eDirectory]; }  //On the settings page.
+EIDEClaudeDirectory CIDEAskClaude::GetDirectorySetting(void) const { return meDirectory; }
+const char* CIDEAskClaude::GetFolderSetting(void) const { return mszFolder.Text(); }
 CClaudeCommand* CIDEAskClaude::GetClaude(void) { return &mcClaude; }
 Ptr<CIDEClaudePane> CIDEAskClaude::GetClaudePane(void) const { return mpClaudePane; }
 Ptr<CDockPane> CIDEAskClaude::GetTool(void) const { return mpClaudeTool; }

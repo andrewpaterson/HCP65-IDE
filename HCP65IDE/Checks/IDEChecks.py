@@ -3990,6 +3990,35 @@ if os.name != 'nt':
 		 r'^Claude: .* keys request$', r'^Claude request: \[\]$', r'^> Second$', r'^> line$',
 		 r'^Started in RenameFile \(carried on\), also given: HCP65-IDE$', r'^Asked: Second\]$'],
 		[r'^Claude: .* keys nothing$']))
+	CHECKS.append(('claude-directory-repository', {
+		#Settings' Claude page's "The startup solution's repository": Claude is started in the repository the startup
+		#solution's folder is in, which every project of this solution is in too, so it is given no other folder.
+		'SOLUTION': RENAME_FILE, 'OPEN': 'Engine.h', 'CLAUDE_EXECUTABLE': os.path.join(HERE, 'Input', 'Claude', 'claude'),
+		'SETTINGS': MakeSettingsFile('<?xml version="1.0" encoding="UTF-8"?>\n<Settings>\n  <Claude Directory="Repository" Folder=""/>\n</Settings>\n'),
+		'DEBUG': 'wait:500,clickmenu:View/Claude,edit:claudeclick:request,edit:claudetype:Where,edit:tap:Enter,wait:1500,edit:printclaude'},
+		[r'^Claude status: \[Done, \$0\.01\.\]$', r'^Claude conversation: \[> Where$', r'^Started in HCP65-IDE \(new\), also given:$', r'^Asked: Where\]$'],
+		[]))
+	CHECKS.append(('claude-directory-setting', {
+		#Settings' Claude page: a request is sent from the startup solution's folder, the page's "The folder below" is
+		#chosen with Sub typed (a folder of the solution's, as it isn't a full path) and kept by OK, and the next request
+		#is started in Sub as a new conversation, which the conversation says: Claude Code keeps a conversation with the
+		#folder it was started in.  The setting is written with the settings.
+		'SOLUTION': RENAME_FILE, 'OPEN': 'Engine.h', 'CLAUDE_EXECUTABLE': os.path.join(HERE, 'Input', 'Claude', 'claude'),
+		'SETTINGS': MakeSettingsFile(), 'CLAUDE_EDITS': 'directory:Folder;folder:Sub', 'DIALOG_ANSWER': 'OK',
+		'DEBUG': 'wait:500,clickmenu:View/Claude,edit:claudeclick:request,edit:claudetype:One,edit:tap:Enter,wait:1500,'
+		         'clickmenu:File/Settings...,answered:1,printsettings,edit:claudeclick:request,edit:claudetype:Two,edit:tap:Enter,wait:1500,edit:printclaude'},
+		[r'^Dialog \[Settings\] answered OK$', r'<Claude Directory="Folder" Folder="Sub"/>', r'^Claude conversation: \[> One$',
+		 r'^Started in RenameFile \(new\), also given: HCP65-IDE$', r"^Claude's folder changed: a new conversation\.$", r'^> Two$',
+		 r'^Started in Sub \(new\), also given: HCP65-IDE$', r'^Asked: Two\]$'],
+		[]))
+	CHECKS.append(('claude-directory-missing', {
+		#A folder of the settings' that isn't there: Claude isn't asked, and the status says where the folder is set.
+		'SOLUTION': RENAME_FILE, 'OPEN': 'Engine.h', 'CLAUDE_EXECUTABLE': os.path.join(HERE, 'Input', 'Claude', 'claude'),
+		'SETTINGS': MakeSettingsFile('<?xml version="1.0" encoding="UTF-8"?>\n<Settings>\n  <Claude Directory="Folder" Folder="Nowhere"/>\n</Settings>\n'),
+		'DEBUG': 'wait:500,clickmenu:View/Claude,edit:claudeclick:request,edit:claudetype:Where,edit:tap:Enter,wait:500,edit:printclaude'},
+		[r"^Claude status: \[Claude wasn't asked: its folder \[.*RenameFile/Nowhere\] isn't there\.  It is set in File, Settings, Claude\.\]$",
+		 r'^Claude request: \[Where\]$', r'^Claude conversation: \[\]$'],
+		[]))
 
 
 def Hashes():

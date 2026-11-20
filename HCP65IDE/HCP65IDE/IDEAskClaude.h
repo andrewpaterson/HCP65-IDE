@@ -30,6 +30,19 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 class CIDEContent;
+class CMarkupTag;
+class CXMLWriter;
+
+
+//Where Claude Code is started for a request, chosen on Settings' Claude page.
+enum EIDEClaudeDirectory
+{
+	ICD_Solution,		//The startup solution's folder (the open file's, with no solution).
+	ICD_Repository,		//The repository that folder is in; the folder itself if it is in none.
+	ICD_Folder,			//The folder typed in the settings.
+
+	ICD_NumDirectories
+};
 
 
 //The Claude tab under the editor: requests, such as refactorings, sent to Claude Code run headless in the solution's
@@ -39,6 +52,10 @@ class CIDEContent;
 //Claude Code refuses to read or search outside the folders it is given, and a solution's projects are mostly outside
 //its folder (libraries beside it, and in other repositories).  So it is also given the repository of each solution
 //and project in the workspace, or the project's folder if it is in none (AddClaudeDirectories).
+//
+//The folder it is started in is a setting (EIDEClaudeDirectory, Settings' Claude page): it is where Claude Code looks
+//for its CLAUDE.md and keeps its conversations, so a request sent from another folder than the last starts a new
+//conversation.
 class CIDEAskClaude : public CObject
 {
 friend class CIDEScript;
@@ -51,6 +68,9 @@ protected:
 	CClaudeCommand				mcClaude;			//The request Claude is working on, or the last.
 	size						muiClaudeReloaded;	//How many of the files Claude changed have been looked at.
 	size						muiClaudeTools;		//How many tools Claude has used on the request.
+	EIDEClaudeDirectory			meDirectory;		//Where Claude is started.
+	CChars						mszFolder;			//The folder typed in the settings, for ICD_Folder.
+	CChars						mszAskedDirectory;	//Where the conversation's last request was started, "" before the first.
 public:
 	void	Init(CIDEContent* pcContent);
 	void	Class(void) override;
@@ -66,8 +86,15 @@ public:
 	void				ScrollToEnd(void);
 	void				PollClaude(Ptr<CWindow> pWindow);
 
+	EIDEClaudeDirectory	GetDirectorySetting(void) const;
+	const char*			GetFolderSetting(void) const;
+	void				SetDirectorySettings(EIDEClaudeDirectory eDirectory, const char* szFolder);
+	void				ReadSettings(CMarkupTag* pcSettings);
+	void				WriteSettings(CXMLWriter* pcWriter);
+
 protected:
 	bool				GetClaudeDirectory(CChars* pszDirectory);
+	bool				GetSolutionDirectory(CChars* pszDirectory);
 	void				AddClaudeDirectories(const char* szDirectory);
 	void				AddClaudeDirectory(const char* szFolder, const char* szDirectory);
 	void				AppendClaudeContext(CChars* pszRequest);
@@ -80,6 +107,11 @@ protected:
 	void				ShowClaudeTab(void);
 	CClaudeCommand*		GetClaude(void);
 };
+
+
+const char* GetIDEClaudeDirectoryName(EIDEClaudeDirectory eDirectory);
+const char* GetIDEClaudeDirectoryText(EIDEClaudeDirectory eDirectory);
+bool FindIDEClaudeDirectory(const char* szName, EIDEClaudeDirectory* peDirectory);
 
 
 #endif // __IDE_ASK_CLAUDE_H__

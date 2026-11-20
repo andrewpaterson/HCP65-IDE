@@ -173,6 +173,7 @@ set(IDE_SOURCES
 	"${IDE_DIR}/IDEDuplicateMatcher.cpp"
 	"${IDE_DIR}/IDEDuplicates.cpp"
 	"${IDE_DIR}/IDEDuplicatesPage.cpp"
+	"${IDE_DIR}/IDEClaudePage.cpp"
 	"${IDE_DIR}/IDEIntroduceTypedef.cpp"
 	"${IDE_DIR}/IDEInlineVariable.cpp"
 	"${IDE_DIR}/IDEMoveClass.cpp"
