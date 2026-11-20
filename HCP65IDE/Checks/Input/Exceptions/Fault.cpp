@@ -95,3 +95,9 @@ int Waited(int iValue)
 	return 0;
 }
 
+
+int Relayed(int iValue) noexcept(noexcept(Safe(iValue)))
+{
+	return Safe(iValue);
+}
+

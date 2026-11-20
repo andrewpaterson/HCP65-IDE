@@ -2605,7 +2605,7 @@ CHECKS = [
 		#statement that isn't an expression.  The dialog (Ctrl+Alt+M's) shows the function it would be.
 		'WAIT_INDEX': '1', 'OPEN': 'Mix.cpp', 'SETTINGS': MakeSettingsFile(), 'DIALOG_ANSWER': 'Cancel',
 		'DEBUG': 'edit:selecttext:73:1-76:3,edit:extractable,edit:selecttext:110:1-114:4,edit:extractable,edit:selecttext:110:3-110:20,edit:extractable,edit:selecttext:24:1-25:23,extractmethod,answered:1,printstatus'}),
-		[r"^Extract Method: can't be: it returns from the function part of the way through: a selection that returns must end with a return$",
+		[r"^Extract Method: can't be: it returns from the function part of the way through: a selection that returns must end with a return \(or a throw\)$",
 		 r"^Extract Method: can't be: it leaves by a break, a continue or a goto that a function of it couldn't make \(or has a label\)$",
 		 r"^Extract Method: can't be: the selection isn't an expression, or whole statements of one block$", r'^Dialog \[Extract Method\] answered Cancel$'],
 		[r'^Status: Extracted']),
@@ -2619,7 +2619,7 @@ CHECKS = [
 	('exceptions-check-options-off', dict(MakeExceptionsCopy(False), **{
 		#The same solution built without exceptions: each throw is the error the build reports.
 		'WAIT_INDEX': '1', 'OPEN': 'Fault.cpp', 'DEBUG': 'edit:printcheckerrors'}),
-		[r'^Check errors: 2$', r"^  line 20: throw can't be used: the program is built without exceptions", r"^  line 49: throw can't be used"],
+		[r'^Check errors: 3$', r"^  line 20: throw can't be used: the program is built without exceptions", r"^  line 49: throw can't be used", r"^  line 88: throw can't be used"],
 		[]),
 	('exceptions-usages-throw', dict(MakeExceptionsCopy(), **{
 		#A program built with exceptions is read as it is built (ExceptionsPlan.txt 10a): a throw's operand is checked,
@@ -2659,7 +2659,7 @@ CHECKS = [
 		'DEBUG': 'edit:renamesearch:---s,edit:caret:53:6,edit:inlinablefunction,edit:caret:64:6,edit:inlinablefunction,edit:caret:70:6,edit:inlinablefunction'}),
 		[r"^Inline Function: Wrapped can't be inlined: its body is a function-try-block: its handlers can't be written where it is called$",
 		 r"^Inline Function: Promise can't be inlined: it has an exception specification \(noexcept or throw\(\)\) and its body may throw: inlined, an exception would no longer stop at it$",
-		 r'^Inline Function: Safe, an expression, 1 call$'],
+		 r'^Inline Function: Safe, an expression, 3 calls$', r'^  Fault\.cpp line 99: in an expression$'],
 		[r"Safe can't be"]),
 	('exceptions-change-signature', dict(MakeExceptionsCopy(), **{
 		#Change Signature (ExceptionsPlan.txt 10e) keeps what comes after the parameters: throw(CFault) on Check's
@@ -2675,6 +2675,11 @@ CHECKS = [
 		'DEBUG': 'edit:renamesearch:---s,edit:selecttext:36:13-36:29,edit:introduce:iCode,printdisklines:Fault.cpp'}),
 		[r'^Status: Introduced int iCode = cFault\.GetCode\(\): 1 occurrence replaced\.$', r'^\d+\|\tint\tiCode;$', r'^35\|\tcatch \(CFault& cFault\)$',
 		 r'^37\|\t\tiCode = cFault\.GetCode\(\);$', r'^38\|\t\tiResult = iCode \+ 1;$'],
+		[]),
+	('exceptions-usages-noexcept', dict(MakeExceptionsCopy(), **{
+		#A function named in noexcept(e), which isn't run, is still a usage of it (ExceptionsPlan.txt 10d).
+		'WAIT_INDEX': '1', 'OPEN': 'Fault.h', 'CARET': '20:6', 'EDIT': 'usages'}),
+		[r'^Usages of Safe  ', r'^\s+99: int Relayed\(int iValue\) noexcept\(noexcept\(Safe\(iValue\)\)\)$', r'^\s+101: return Safe\(iValue\);$'],
 		[]),
 	('exceptions-safe-delete', dict(MakeExceptionsCopy(), **{
 		#Safe Delete (ExceptionsPlan.txt 10e): a class that is only thrown and caught is used: its throw and its handler
