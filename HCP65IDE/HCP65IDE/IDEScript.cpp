@@ -3160,6 +3160,14 @@ void CIDEScript::RunEditStep(const char* szStep)
 	{
 		PrintChooser();
 	}
+	else if (strcmp(szStep, "chooserbutton") == 0)
+	{
+		//The open chooser's button clicked ("Open in Find Window").
+		if (mpcChooser && mpcChooser->IsOpen() && mpcChooser->GetPopup()->GetButton().IsNotNull())
+		{
+			mpcChooser->GetPopup()->GetButton()->Click();
+		}
+	}
 	else if (strncmp(szStep, "claudeclick:", 12) == 0)
 	{
 		ClickClaude(&szStep[12]);
@@ -3243,16 +3251,32 @@ void CIDEScript::RunEditStep(const char* szStep)
 	}
 	else if (strcmp(szStep, "printpopup") == 0)
 	{
-		//Control+B's usages popup's rows, "Popup: <row> | <row> ...", or "Popup: none" if it isn't open.
+		//Control+B's usages chooser's rows, "Popup: <title> | <File.cpp:367>  <line> | ...", with how tall its rows'
+		//view and its rows are; or a menu's rows, "Popup: <row> | <row> ..."; or "Popup: none" if none is open.
 		Ptr<CMenuContainer>	pPopup;
+		Ptr<CIDEChooser>	pUsages;
+		Ptr<CChooserPopup>	pChooser;
 		size				i;
 
-		pPopup = mpcContent->GetUsages()->GetUsagesPopup();
-		if (pPopup.IsNull() || !pPopup->IsOpen())
+		pUsages = mpcContent->GetUsages()->GetUsagesPopup();
+		if (pUsages.IsNotNull() && pUsages->IsOpen())
 		{
-			//Or Introduce Variable's expressions.
-			pPopup = mpcContent->GetIntroduceVariable()->GetChooser();
+			pChooser = pUsages->GetPopup();
+			printf("Popup: %s", pChooser->GetTitle());
+			for (i = 0; i < pChooser->NumRows(); i++)
+			{
+				printf(" | %s  %s", pChooser->GetRowItem(i)->szLocation.Text(), pChooser->GetRowItem(i)->szName.Text());
+			}
+			printf("\n");
+			mpcContent->GetWindow()->Layout();
+			printf("Popup height: %d %s, the rows %d\n", pChooser->GetList()->GetParent()->GetActualSize().y,
+				   (pChooser->GetList()->GetParent()->GetActualSize().y < pChooser->GetList()->GetActualSize().y) ? "scrolling" : "all shown", pChooser->GetList()->GetActualSize().y);
+			fflush(stdout);
+			return;
 		}
+
+		//Introduce Variable's expressions.
+		pPopup = mpcContent->GetIntroduceVariable()->GetChooser();
 		if (pPopup.IsNull() || !pPopup->IsOpen())
 		{
 			//Or Show Context Actions' refactorings.

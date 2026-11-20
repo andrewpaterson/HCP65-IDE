@@ -654,18 +654,18 @@ CHECKS = [
 		'DEBUG': 'wait:1500,edit:focus:editor,edit:key:documentend,wait:1500,edit:printhistory,command:Navigate.Back,edit:print'},
 		[r'^History: back \[(.*, )?Calculator\.cpp:10\] forward \[\]$', r'Calculator\.cpp \(focus\) line 10: '], [r'not enabled']),
 	('gotosource-usages-popup', {
-		#Control+B on a symbol's own declaration shows a popup of its usages, as IntelliJ's, the first selected; Enter
-		#goes to it and the popup closes.
+		#Control+B on a symbol's own declaration shows a chooser of its usages, as IntelliJ's, the first selected; Enter
+		#goes to it and the chooser closes.
 		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14',
 		'DEBUG': 'gotosource,edit:printpopup,edit:key:enter,edit:printpopup,edit:print'},
 		[r'^Popup: Usages of IsParentheses and 1 override  3 usages \| Calculator\.cpp:367  if \(\(\*ppcExpression\)->IsParentheses\(\)\) \| '
 		 r'Calculator\.cpp:391  if \(pcExpression->IsParentheses\(\)\) \| Calculator\.cpp:421  if \(pcExpression->IsParentheses\(\)\)$',
 		 r'^Popup: none$', r'Calculator\.cpp \(focus\) line 367: '], []),
 	('gotosource-popup-scrolls', {
-		#CCodabase's many usages: the popup is no taller than a third of the screen or the editor's view, and scrolls.
+		#CCodabase's many usages: the chooser's rows are no taller than the theme's most rows, and scroll.
 		'WAIT_INDEX': '1', 'OPEN': 'Codabase.h', 'CARET': '27:8',
 		'DEBUG': 'gotosource,edit:printpopup'},
-		[r'^Popup: Usages of CCodabase  \d\d+ usages \| ', r'^Popup height: \d+ scrolling, the menu \d+$'], [r'all shown']),
+		[r'^Popup: Usages of CCodabase  \d\d+ usages \| ', r'^Popup height: \d+ scrolling, the rows \d+$'], [r'all shown']),
 	('gotosource-on-usage', {
 		#Control+B on a usage still goes to the definition (CCalcExpression's, as pcExpression is one), with no popup.
 		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'Calculator.cpp', 'CARET': '391:22',
@@ -749,12 +749,12 @@ CHECKS = [
 		[r'^Usages of F  20004 usages$', r'^  Big\.cpp  20000$', r'^Rows: 20007$',
 		 r'^Usage tree: 20007 rows, open \d{1,3} ms, layout \d{1,3} ms, paint \d{1,3} ms, scroll \d{1,3} ms$', r'^Selected: Usages of F  20004 usages$'], []),
 	('gotosource-popup-more', dict(MakeUsagesKernel(USAGES_KERNEL, {'Aaa.cpp': ManyUsages('A', 150)}), **{
-		#Control+B's popup shows 100 usages; its last row says how many more there are, and opens them all in Find
-		#Usages.
+		#Control+B's chooser lists every usage, up to a thousand; its Open in Find Window button closes it and lists
+		#them all in Find Usages.
 		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp', 'CARET': '1:5',
-		'DEBUG': 'gotosource,edit:printpopup,edit:key:documentend,edit:key:enter,edit:printpopup,edit:printusages'}),
-		[r'^Popup: Usages of F  154 usages \| Aaa\.cpp:2  int A0\(void\).* \| Aaa\.cpp:101  int A99\(void\) \{ return F\(\); \} \| '
-		 r'\.\.\. and 54 more: show them all in Find Usages$', r'^Popup: none$', r'^Usages of F  154 usages$'], [r'A100\(void\).* \| ']),
+		'DEBUG': 'gotosource,edit:printpopup,edit:chooserbutton,edit:printpopup,edit:printusages'}),
+		[r'^Popup: Usages of F  154 usages \| Aaa\.cpp:2  int A0\(void\).* \| Aaa\.cpp:151  int A149\(void\) \{ return F\(\); \}',
+		 r'^Popup height: \d+ scrolling, the rows \d+$', r'^Popup: none$', r'^Usages of F  154 usages$'], [r'and 54 more']),
 	('usages-keys', {
 		#Find Usages' keys, and Jump to Source's, are bound: F4, Alt+F7 and Control+Alt+Down and Up.
 		'DEBUG': 'printkeys'},
@@ -3696,7 +3696,8 @@ CHECKS = [
 		'DEBUG': 'printkeys,printbuttons'},
 		[r'^Keys: Navigate\.GoToDefinition F12 bound$', r'^Keys: Navigate\.GoToClass Control\+N bound$',
 		 r'^Keys: Navigate\.GoToImplementation Control\+Alt\+B bound$', r'^Keys: Navigate\.GoToSuperMethod Control\+U bound$',
-		 r'^Keys: Navigate\.GoToTypeDeclaration Control\+Shift\+B bound$', r'^Keys: Build\.Build Control\+F9 bound$', r'^Keys: Run\.Start Control\+F5 bound$', r'^Keys: Debug\.Start F5 bound$',
+		 r'^Keys: Navigate\.GoToTypeDeclaration Control\+Shift\+B bound$', r'^Keys: Navigate\.GoToRelatedSymbol Control\+Alt\+Home bound$',
+		 r'^Keys: Navigate\.ShowUsages Control\+Alt\+F7 bound$', r'^Keys: Build\.Build Control\+F9 bound$', r'^Keys: Run\.Start Control\+F5 bound$', r'^Keys: Debug\.Start F5 bound$',
 		 r'^Keys: Debug\.BreakAll Control\+Pause/Break bound$',
 		 r'^Buttons: Start \[Run\.Start\]$'], [r'NOT BOUND', r'\[none\]']),
 	('configuration', {
@@ -3851,17 +3852,19 @@ CHECKS = [
 	('menus', {
 		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'CARET': '36:4', 'DEBUG': 'printmenus,clickmenu:View/Nope'},
 		[r'^Menu File: New>, Save File as Template\.\.\., Open Project/Solution\.\.\., Add Solution\.\.\., Close Solution, Recent Solutions>, Clear Recent Solutions, Save \[Ctrl\+S\], Save All \[Ctrl\+Shift\+S\], Compare with File\.\.\., Settings\.\.\. \[Ctrl\+Alt\+S\], Exit$',
+		 r'^Menu File/New: C\+\+ Class\.\.\., C\+\+ Header\.\.\., C\+\+ Source\.\.\.$',
 		 r'^Menu File/Recent Solutions: 1 ',
-		 r'^Menu Edit: Undo \[Ctrl\+Z\]\(disabled\), Redo \[Ctrl\+Shift\+Z\]\(disabled\), Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\], Select All \[Ctrl\+A\], Extend Selection \[Ctrl\+W\], Shrink Selection \[Ctrl\+Shift\+W\], Find in Files\.\.\. \[Ctrl\+Shift\+F\]$',
-		 r'^Menu Navigate: Back \[Ctrl\+Alt\+Left\](\(disabled\))?, Forward \[Ctrl\+Alt\+Right\](\(disabled\))?, Class\.\.\. \[Ctrl\+N\], File\.\.\. \[Ctrl\+Shift\+N\], Symbol\.\.\. \[Ctrl\+Alt\+Shift\+N\]$',
-		 r'^Menu View: Solution Explorer, Find Usages, Find, Build, Indexing, Run, Debug, Claude$',
+		 r'^Menu Edit: Undo \[Ctrl\+Z\](\(disabled\))?, Redo \[Ctrl\+Shift\+Z\](\(disabled\))?, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\], Select All \[Ctrl\+A\], Extend Selection \[Ctrl\+W\], Shrink Selection \[Ctrl\+Shift\+W\], Find in Files\.\.\. \[Ctrl\+Shift\+F\], Find Duplicates\.\.\. \[Ctrl\+Alt\+Shift\+D\]$',
+		 r'^Menu Navigate: Back \[Ctrl\+Alt\+Left\](\(disabled\))?, Forward \[Ctrl\+Alt\+Right\](\(disabled\))?, Class\.\.\. \[Ctrl\+N\], File\.\.\. \[Ctrl\+Shift\+N\], Symbol\.\.\. \[Ctrl\+Alt\+Shift\+N\], Go to Source \[Ctrl\+B\], Go to Definition \[F12\], Go to Implementation\(s\) \[Ctrl\+Alt\+B\], Go to Type Declaration \[Ctrl\+Shift\+B\], Go to Super Method \[Ctrl\+U\], Go to Related Symbol \[Ctrl\+Alt\+Home\], Switch Header/Source \[Alt\+O\], Find Usages \[Alt\+F7\], Show Usages \[Ctrl\+Alt\+F7\], Find All References \[Shift\+F12\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Next Occurrence \[Ctrl\+Alt\+Down\], Previous Occurrence \[Ctrl\+Alt\+Up\]$',
+		 r'^Menu View: Solution Explorer, Find Usages, Find, Duplicates, Build, Indexing, Run, Debug, Claude$',
 		 r'^Menu Git: Compare with HEAD, Compare with Branch\.\.\., Compare with Revision\.\.\.$',
 		 r'^Menu Build: Build \[Ctrl\+F9\], Edit Build Configurations\.\.\.$',
-		 r'^Menu Debug: Start Debugging \[F5\], Start Without Debugging \[Ctrl\+F5\], Stop Debugging \[Shift\+F5\], Stop Running\(disabled\), Restart \[Ctrl\+Shift\+F5\], Break All \[Ctrl\+Pause/Break\], Attach to Emulator\.\.\., Step Into \[F11\], Step Over \[F10\], Step Out \[Shift\+F11\], Toggle Breakpoint \[F9\], ',
+		 r'^Menu Debug: Start Debugging \[F5\], Start Without Debugging \[Ctrl\+F5\], Stop Debugging \[Shift\+F5\], Stop Running(\(disabled\))?, Restart \[Ctrl\+Shift\+F5\], Break All \[Ctrl\+Pause/Break\], Attach to Emulator\.\.\., Step Into \[F11\], Step Over \[F10\], Step Out \[Shift\+F11\], Toggle Breakpoint \[F9\], New Breakpoint at Address\.\.\., Delete All Breakpoints, Edit Configurations\.\.\.$',
 		 r'^Menu Window: Reset Window Layout, Close All Documents$',
 		 r'^Menu Editor: Go to Source \[Ctrl\+B\], Find Usages \[Alt\+F7\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Show Context Actions \[Alt\+Enter\], Rename\.\.\. \[Shift\+F6\], Refactor>, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\]$',
-		 r'^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\](\(disabled\))?, Introduce Field\.\.\. \[Ctrl\+Alt\+F\](\(disabled\))?, Introduce Constant\.\.\. \[Ctrl\+Alt\+C\](\(disabled\))?, Introduce Parameter\.\.\. \[Ctrl\+Alt\+P\](\(disabled\))?, Introduce Typedef\.\.\. \[Ctrl\+Alt\+K\](\(disabled\))?, Inline\.\.\. \[Ctrl\+Alt\+N\](\(disabled\))?, Change Signature\.\.\. \[Ctrl\+F6\](\(disabled\))?, Unify Parameter Names(\(disabled\))?, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\.(\(disabled\))?, Push Members Down\.\.\.(\(disabled\))?, Move\.\.\. \[F6\](\(disabled\))?, Copy Class\.\.\.(\(disabled\))?, Move to Namespace\.\.\.(\(disabled\))?, Extract Method\.\.\. \[Ctrl\+Alt\+M\](\(disabled\))?, Extract Superclass\.\.\.(\(disabled\))?, Extract Interface\.\.\.(\(disabled\))?, Extract Class\.\.\.(\(disabled\))?, Encapsulate Field\.\.\.(\(disabled\))?, Optimise #includes \[Ctrl\+Alt\+O\], Convert Macro\.\.\.(\(disabled\))?, Convert Pointer to Reference(\(disabled\))?, Convert Reference to Pointer(\(disabled\))?, Convert Enum to Enum Class\.\.\.(\(disabled\))?, Write Template.s Interface\.\.\.(\(disabled\))?, Make Member Function const(\(disabled\))?, Make Member Function static(\(disabled\))?, Convert Function to Member Function(\(disabled\))?, Convert Member Function to Function(\(disabled\))?, Extract Template Parameter\.\.\., Remove Template Parameter$',
-		 r'^Menu Explorer: Set as Startup Solution, Set as Startup Project\(disabled\), Remove Solution, Rename\.\.\.(\(disabled\))?, Properties\.\.\.(\(disabled\))?$',
+		 r"^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\], Introduce Field\.\.\. \[Ctrl\+Alt\+F\], Introduce Constant\.\.\. \[Ctrl\+Alt\+C\], Introduce Parameter\.\.\. \[Ctrl\+Alt\+P\], Introduce Typedef\.\.\. \[Ctrl\+Alt\+K\](\(disabled\))?, Inline\.\.\. \[Ctrl\+Alt\+N\], Change Signature\.\.\. \[Ctrl\+F6\], Unify Parameter Names, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\., Push Members Down\.\.\., Move\.\.\. \[F6\], Copy Class\.\.\., Move to Namespace\.\.\., Extract Method\.\.\. \[Ctrl\+Alt\+M\](\(disabled\))?, Extract Superclass\.\.\., Extract Interface\.\.\., Extract Class\.\.\., Encapsulate Field\.\.\., Optimise \#includes \[Ctrl\+Alt\+O\], Convert Macro\.\.\., Convert Pointer to Reference, Convert Reference to Pointer, Convert Enum to Enum Class\.\.\., Write Template's Interface\.\.\., Make Member Function const, Make Member Function static, Convert Function to Member Function, Convert Member Function to Function, Extract Template Parameter\.\.\., Remove Template Parameter$",
+		 r'^Menu Explorer: Set as Startup Solution, Set as Startup Project(\(disabled\))?, Remove Solution, Rename\.\.\., Properties\.\.\.(\(disabled\))?$',
+		 r'^Menu New: C\+\+ Class\.\.\., C\+\+ Header\.\.\., C\+\+ Source\.\.\., Copy Class\.\.\.$',
 		 r'^Menu item \[View/Nope\] not found$'], []),
 	('menu-clicks', {
 		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'CARET': '36:4', 'DIALOG_ANSWER': 'Cancel',
@@ -4130,6 +4133,29 @@ CHECKS = [
 		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Shapes.h', 'CARET': '28:8',
 		'DEBUG': 'command:Navigate.GoToSuperMethod,edit:print,edit:open:Shape.h,edit:caret:14:17,command:Navigate.GoToSuperMethod,printstatus'},
 		[r'Shapes\.h \(focus\) line 17: \[class CSquare : public CShape\]', r'^Status: No super methods of CShape::Draw\.$'], []),
+	('nav-related-symbol', {
+		#Go to Related Symbol (Control+Alt+Home): everything the caret has a way to, under headings: the file's header,
+		#the function's other declaration, what it overrides and what overrides it.  Down and Enter go to the second.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Shapes.cpp', 'CARET': '16:15',
+		'DEBUG': 'command:Navigate.GoToRelatedSymbol,edit:printchooser,edit:key:down,edit:key:enter,edit:print'},
+		[r'^Chooser: CSquare::Draw$', r'^   \[Header\]$', r'^  >Shapes\.h \| $', r'^   \[Declarations and definition\]$', r'^   CSquare::Draw \| Shapes\.h:23$',
+		 r'^   \[Super methods\]$', r'^   CShape::Draw \| Shape\.cpp:11$', r'^   \[Implementations\]$', r'^   CRoundedSquare::Draw \| Shapes\.cpp:27$',
+		 r'Shapes\.h \(focus\) line 23: \[\tvoid\tDraw\(void\) override;\]'], []),
+	('nav-related-none', {
+		#Where nothing is related (a file with no other half, no symbol at the caret) the status line says so.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Main.cpp', 'CARET': '1:1',
+		'DEBUG': 'command:Navigate.GoToRelatedSymbol,edit:printchooser,printstatus'},
+		[r'^Status: Nothing is related to what is at the caret\.$', r'^Chooser: none$'], []),
+	('nav-show-usages', {
+		#Show Usages (Control+Alt+F7) on a use of a name, not only its declaration: the chooser of its usages, each row
+		#its line with where it is, the preview showing its file; typing filters by the lines' text and Enter goes to the
+		#one left, its name selected.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Main.cpp', 'CARET': '12:12',
+		'DEBUG': 'command:Navigate.ShowUsages,edit:printchooser,edit:key:type:circ,edit:printchooser,edit:key:enter,edit:printselection,edit:print'},
+		[r'^Chooser: Usages of Draw and 3 overrides  4 usages$', r'^  >pcShape->Draw\(\); \| Main\.cpp:12$', r'^   pcCircle->Draw\(\); \| Main\.cpp:13$',
+		 r'^   Draw\(\); \| Shape\.cpp:20$', r'^   CSquare::Draw\(\); \| Shapes\.cpp:29$', r'^Chooser preview: Main\.cpp$',
+		 r'^  >pcCircle->Draw\(\); \| Main\.cpp:13$', r'^Chooser filter: \[circ\]$', r'^Selection: \[Draw\] on line 13',
+		 r'Main\.cpp \(focus\) line 13: '], []),
 	('nav-type-declaration', {
 		#Go to Type Declaration (Control+Shift+B): from a parameter and from a local variable, the class each is declared
 		#with; from a field of a built in type, the status line says its type has nothing to go to.

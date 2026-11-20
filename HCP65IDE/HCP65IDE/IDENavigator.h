@@ -42,7 +42,8 @@ class CIDEContent;
 //
 //And the "go to"s that can have more than one answer (NavigationPlan.txt, S1): Go to Implementation (Control+Alt+B)
 //Go to Super Method (Control+U) and Go to Type Declaration (Control+Shift+B).  Each finds its targets from the symbol
-//at the caret and ends in GoToTargets:
+//at the caret and ends in GoToTargets; Go to Related Symbol (Control+Alt+Home) lists them all under headings, with
+//the file's other half and the symbol's other declarations:
 //none, and the status line says so; one, and it is gone to; several, and a chooser under the caret lists them with a
 //preview of each (CIDEChooser).
 class CIDENavigator : public CObject, public CGoToSearcher
@@ -85,6 +86,8 @@ public:
 	bool				GoToImplementation(void);
 	bool				GoToSuperMethod(void);
 	bool				GoToTypeDeclaration(void);
+	bool				GoToRelatedSymbol(void);
+	bool				FindHeaderSource(CChars* pszDest);
 	bool				FindTypeOf(const char* szKey, uint8 uiKind, CChars* pszTypeKey);
 	bool				CanGoToImplementation(void);
 	bool				CanGoToSuperMethod(void);

@@ -24,6 +24,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "StandardLib/Pointer.h"
 #include "WindowLib/TreeContainer.h"
 #include "WindowLib/TabbedContainer.h"
+#include "IDEChooser.h"
 #include "IDEResultsPane.h"
 #include "WindowLib/DockManager.h"
 #include "WindowLib/CommandSet.h"
@@ -148,7 +149,7 @@ protected:
 	CArray<CIDEUsagesSearch>	maSearches;
 	Ptr<CIDEUsagesSearch>	mpSearch;  //The search whose tab is chosen: never NULL once the tool window is made.
 	Ptr<CDockPane>		mpUsagesTool;
-	Ptr<CMenuContainer>	mpPopup;  //Control+B's usages on a declaration, made when it is first shown.
+	Ptr<CIDEChooser>	mpPopup;  //Control+B's usages on a declaration, and Show Usages': made when first shown.
 	SIDEFoundUsages		msPopupFound;  //What the popup shows: each row's usage by its row less one (the first is its title).
 	uint8				muiGrouping;  //IDE_USAGES_BY_*.
 	EIDEScope			meScope;  //Find Usages Settings': where usages are looked for, the directory for a directory's,
@@ -174,7 +175,8 @@ public:
 	bool				FindUsages(bool bDeclarations);
 	bool				IsOnOwnDeclaration(void) const;
 	bool				ShowUsagesPopup(void);
-	Ptr<CMenuContainer>	GetUsagesPopup(void) const;
+	Ptr<CIDEChooser>	GetUsagesPopup(void) const;
+	bool				ShowUsages(void);
 	void				Clear(void);
 	void				AdjustPlaces(const char* szFile, SIDEPlaceChange* psChange);
 	int64				Poll(int64 iNow);
@@ -213,10 +215,9 @@ protected:
 	int32				AddFileNode(int32 iParent, SIDEUsageRow* pasRows, size uiRows, size uiFirst, size uiCount);
 	void				AddFileUsages(int32 iFile, SIDEUsageRow* pasRows, size uiCount, CIDEFileLines* pcLines);
 	void				AddUsageLine(int32 iParent, SIDEUsageRow* psRow, CIDEFileLines* pcLines);
-	void				OpenPopup(void);
 public:
 protected:
-	void				PopupUsageClicked(CMenuItem* pcItem);
+	void				PopupFindWindow(void);
 	void				ShowGrouping(uint8 uiGrouping);
 	void				AddPaneCommand(Ptr<CIDEResultsPane> pPane, const char* szName, const char* szCaption, EIDEToolIcon eIcon, void(CIDEUsages::*fToggle)(void), bool(CIDEUsages::*fIsOn)(void));
 	Ptr<CIDEUsagesSearch>	AddSearch(void);

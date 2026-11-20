@@ -29,7 +29,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDEUsages.h"
 
 
-#define IDE_USAGES_POPUP_MAXIMUM		100		//The most usages Control+B's popup shows; Find Usages shows the rest.
+#define IDE_USAGES_POPUP_MAXIMUM		1000	//The most usages the usages chooser is given (it filters among them); Find Usages shows the rest.
 #define IDE_USAGES_REFRESH				500		//Milliseconds after the last edit that moved a usage until the tree shows it.
 
 //Find Usages' part of the settings' file.
@@ -434,7 +434,7 @@ void CIDEUsages::Free(void)
 	}
 	if (mpPopup.IsNotNull())
 	{
-		mpPopup->GetItemClickEvent()->Remove(this);
+		mpPopup->GetButtonClickEvent()->Remove(this);
 	}
 	if (mpScopeMenu.IsNotNull())
 	{
@@ -625,19 +625,23 @@ bool CIDEUsages::IsOnOwnDeclaration(void) const
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Control+B on a declaration or the definition, as IntelliJ's: a small
-// popup under the caret of the symbol's usages (and its overrides', as
-// Find Usages has), the first selected, "Calculator.cpp:367  the line";
-// Enter or a click goes to one.  It shows IDE_USAGES_POPUP_MAXIMUM of
-// them: with more, its last row says how many more there are, and opens
-// them all in Find Usages.  With only one usage it is gone to; with none
-// the status line says so.  False if no symbol is named at the caret.
+// Control+B on a declaration or the definition, and Show Usages
+// (Control+Alt+F7) anywhere on a name, as IntelliJ's: a chooser under
+// the caret of the symbol's usages (and its overrides', as Find Usages
+// has), each row the usage's line with "Calculator.cpp:367" after it and
+// its code in the preview beside them, the first selected.  Typing
+// filters them by their lines' text; Enter or a click goes to one, its
+// name selected; Open in Find Window lists them all in Find Usages.  The
+// chooser lists IDE_USAGES_POPUP_MAXIMUM of them, which its title says
+// when there are more.  With only one usage it is gone to; with none the
+// status line says so.  False if no symbol is named at the caret.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEUsages::ShowUsagesPopup(void)
 {
 	CIDEFileLines	cLines;
 	CChars			szText;
+	CChars			szLine;
 	SIDEUsage*		psUsage;
 	size			uiUsages;
 	size			i;
@@ -663,83 +667,67 @@ bool CIDEUsages::ShowUsagesPopup(void)
 
 	if (mpPopup.IsNull())
 	{
-		mpPopup = OMalloc<CMenuContainer>(mpcContent->GetWindow(), mpcContent->GetTheme());
-		mpPopup->GetItemClickEvent()->Add(this, &CIDEUsages::PopupUsageClicked);
+		mpPopup = OMalloc<CIDEChooser>(mpcContent);
+		mpPopup->GetButtonClickEvent()->Add(this, &CIDEUsages::PopupFindWindow);
 	}
-	mpPopup->RemoveAllItems();
+	uiUsages = msPopupFound.asUsages.NumElements();
 	szText.Init();
 	msPopupFound.AppendTitle(&szText);
-	mpPopup->AddItem(szText.Text())->SetEnabled(false);
+	if (uiUsages > IDE_USAGES_POPUP_MAXIMUM)
+	{
+		szText.Append(", the first ");
+		szText.Append((int)IDE_USAGES_POPUP_MAXIMUM);
+		szText.Append(" listed");
+	}
+	mpPopup->Begin(szText.Text(), true, true, "Open in Find Window");
 	szText.Kill();
-	uiUsages = msPopupFound.asUsages.NumElements();
+	mpPopup->SetSelectName(true);
 	cLines.Init(&mpcContent->GetDocuments());
 	for (i = 0; (i < uiUsages) && (i < IDE_USAGES_POPUP_MAXIMUM); i++)
 	{
 		psUsage = msPopupFound.asUsages.Get(i);
-		szText.Init(GetIDEFileNamePart(psUsage->sLocation.szFileName.Text()));
-		szText.Append(':');
-		szText.Append(psUsage->sLocation.iLine + 1);
-		szText.Append("  ");
-		cLines.AppendLine(psUsage->sLocation.szFileName.Text(), psUsage->sLocation.iLine, &szText);
-		mpPopup->AddItem(szText.Text());
-		szText.Kill();
+		szLine.Init();
+		cLines.AppendLine(psUsage->sLocation.szFileName.Text(), psUsage->sLocation.iLine, &szLine);
+		mpPopup->AddPlace(szLine.Text(), NULL, mpPopup->GetFileIcon(psUsage->sLocation.szFileName.Text()), &psUsage->sLocation);
+		szLine.Kill();
 	}
 	cLines.Kill();
-	if (uiUsages > IDE_USAGES_POPUP_MAXIMUM)
-	{
-		szText.Init("... and ");
-		szText.Append((int)(uiUsages - IDE_USAGES_POPUP_MAXIMUM));
-		szText.Append(" more: show them all in Find Usages");
-		mpPopup->AddItem(szText.Text());
-		szText.Kill();
-	}
-	OpenPopup();
+	mpPopup->OpenAtCaret();
 	return true;
 }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The popup opened under the active editor's caret, as IntelliJ's, its
-// first usage selected.
+// Show Usages (Control+Alt+F7): the chooser of the usages of the symbol
+// at the caret, wherever it is named.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEUsages::OpenPopup(void)
+bool CIDEUsages::ShowUsages(void)
 {
-	mpcContent->GetDocuments()->OpenCaretMenu(mpPopup, 1);
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// A usage chosen in Control+B's popup is gone to, its name selected.  The
-// row after the last usage it shows opens them all in Find Usages: the
-// caret is still on the declaration they were found from.
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDEUsages::PopupUsageClicked(CMenuItem* pcItem)
-{
-	size	i;
-
-	for (i = 1; i < mpPopup->NumItems(); i++)
+	if (!ShowUsagesPopup())
 	{
-		if (&mpPopup->GetItem(i) == pcItem)
-		{
-			if (i - 1 == IDE_USAGES_POPUP_MAXIMUM)
-			{
-				FindUsages(false);
-			}
-			else if (i - 1 < msPopupFound.asUsages.NumElements())
-			{
-				mpcContent->GetDocuments()->OpenLocation(&msPopupFound.asUsages.Get(i - 1)->sLocation, true);
-			}
-			return;
-		}
+		mpcContent->ShowStatus("There is no symbol at the caret to show the usages of.");
+		return false;
 	}
+	return true;
 }
 
 
-Ptr<CMenuContainer> CIDEUsages::GetUsagesPopup(void) const { return mpPopup; }
+//////////////////////////////////////////////////////////////////////////
+//
+// Open in Find Window: the usages the chooser listed, and those it had
+// no room for, in Find Usages.  The caret is still on the name they were
+// found from.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEUsages::PopupFindWindow(void)
+{
+	FindUsages(false);
+}
+
+
+Ptr<CIDEChooser> CIDEUsages::GetUsagesPopup(void) const { return mpPopup; }
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -1863,6 +1851,7 @@ void CIDEUsages::Clear(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDEUsages::AddCommands(Ptr<CCommandSet> pCommands)
 {
+	pCommands->Add("Navigate.ShowUsages", "Show Usages", "Control+Alt+F7", Ptr<CImageCel>(), this, &CIDEUsages::ShowUsages)->SetEnabledCheck(this, &CIDEUsages::CanFindUsages);
 	pCommands->Add("Navigate.FindUsages", "Find Usages", "Alt+F7", Ptr<CImageCel>(), this, &CIDEUsages::FindUsagesOnly)->SetEnabledCheck(this, &CIDEUsages::CanFindUsages);
 	pCommands->Add("Navigate.FindUsagesSettings", "Find Usages Settings...", "Control+Alt+Shift+F7", Ptr<CImageCel>(), this, &CIDEUsages::QueueSettings)->SetEnabledCheck(this, &CIDEUsages::CanFindUsages);
 }

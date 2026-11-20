@@ -153,6 +153,22 @@ Ptr<CMenuContainer> CIDENavigator::CreateNavigateMenu(void)
 	mpNavigateMenu->AddItem(pCommands->Find("Navigate.GoToClass"));
 	mpNavigateMenu->AddItem(pCommands->Find("Navigate.GoToFile"));
 	mpNavigateMenu->AddItem(pCommands->Find("Navigate.GoToSymbol"));
+	mpNavigateMenu->AddSeparator();
+	mpNavigateMenu->AddItem(pCommands->Find("Navigate.GoToSource"));
+	mpNavigateMenu->AddItem(pCommands->Find("Navigate.GoToDefinition"));
+	mpNavigateMenu->AddItem(pCommands->Find("Navigate.GoToImplementation"));
+	mpNavigateMenu->AddItem(pCommands->Find("Navigate.GoToTypeDeclaration"));
+	mpNavigateMenu->AddItem(pCommands->Find("Navigate.GoToSuperMethod"));
+	mpNavigateMenu->AddItem(pCommands->Find("Navigate.GoToRelatedSymbol"));
+	mpNavigateMenu->AddItem(pCommands->Find("Navigate.SwitchHeaderSource"));
+	mpNavigateMenu->AddSeparator();
+	mpNavigateMenu->AddItem(pCommands->Find("Navigate.FindUsages"));
+	mpNavigateMenu->AddItem(pCommands->Find("Navigate.ShowUsages"));
+	mpNavigateMenu->AddItem(pCommands->Find("Navigate.FindReferences"));
+	mpNavigateMenu->AddItem(pCommands->Find("Navigate.FindUsagesSettings"));
+	mpNavigateMenu->AddSeparator();
+	mpNavigateMenu->AddItem(pCommands->Find("Navigate.NextOccurrence"));
+	mpNavigateMenu->AddItem(pCommands->Find("Navigate.PreviousOccurrence"));
 	return mpNavigateMenu;
 }
 
@@ -175,6 +191,7 @@ void CIDENavigator::AddCommands(Ptr<CCommandSet> pCommands)
 	pCommands->Add("Navigate.GoToImplementation", "Go to Implementation(s)", "Control+Alt+B", Ptr<CImageCel>(), this, &CIDENavigator::GoToImplementation)->SetEnabledCheck(this, &CIDENavigator::CanGoToImplementation);
 	pCommands->Add("Navigate.GoToSuperMethod", "Go to Super Method", "Control+U", Ptr<CImageCel>(), this, &CIDENavigator::GoToSuperMethod)->SetEnabledCheck(this, &CIDENavigator::CanGoToSuperMethod);
 	pCommands->Add("Navigate.GoToTypeDeclaration", "Go to Type Declaration", "Control+Shift+B", Ptr<CImageCel>(), this, &CIDENavigator::GoToTypeDeclaration)->SetEnabledCheck(this, &CIDENavigator::CanGoToImplementation);
+	pCommands->Add("Navigate.GoToRelatedSymbol", "Go to Related Symbol", "Control+Alt+Home", Ptr<CImageCel>(), this, &CIDENavigator::GoToRelatedSymbol)->SetEnabledCheck(this, &CIDENavigator::CanGoToSuperMethod);
 }
 
 
@@ -563,6 +580,26 @@ bool CIDENavigator::CanGoToSource(void)
 //////////////////////////////////////////////////////////////////////////
 bool CIDENavigator::SwitchHeaderSource(void)
 {
+	CChars	szFound;
+	bool	bFound;
+
+	szFound.Init();
+	bFound = FindHeaderSource(&szFound) && OpenProjectFile(szFound.Text());
+	szFound.Kill();
+	return bFound;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The active file's other half: a .cpp's (.c's, .cc's, .cxx's) header
+// (.h, .hpp, .hxx, .inl) of the same name, or a header's .cpp: the one in
+// the same folder, else a solution file of that name.  False if there
+// isn't one.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDENavigator::FindHeaderSource(CChars* pszDest)
+{
 	static const char*	aszSources[] = { "cpp", "c", "cc", "cxx" };
 	static const char*	aszHeaders[] = { "h", "hpp", "hxx", "inl" };
 	const char**		aszWanted;
@@ -571,7 +608,6 @@ bool CIDENavigator::SwitchHeaderSource(void)
 	CChars				szBase;
 	CChars				szPath;
 	CChars				szName;
-	CChars				szFound;
 	EIDEFileType		eType;
 	size				i;
 	bool				bFound;
@@ -599,7 +635,6 @@ bool CIDENavigator::SwitchHeaderSource(void)
 	//The same name, beside it.
 	szBase.Init(mpcContent->GetDocuments()->GetActiveTab()->GetFileName());
 	cFileUtil.RemoveExtension(&szBase);
-	szFound.Init();
 	bFound = false;
 	for (i = 0; (i < uiWanted) && !bFound; i++)
 	{
@@ -608,7 +643,7 @@ bool CIDENavigator::SwitchHeaderSource(void)
 		szPath.Append(aszWanted[i]);
 		if (cFileUtil.Exists(szPath.Text()))
 		{
-			szFound.Set(szPath);
+			pszDest->Set(szPath);
 			bFound = true;
 		}
 		szPath.Kill();
@@ -625,15 +660,12 @@ bool CIDENavigator::SwitchHeaderSource(void)
 			szPath.Append(szName);
 			szPath.Append('.');
 			szPath.Append(aszWanted[i]);
-			bFound = FindProjectFileEnding(szPath.Text(), &szFound);
+			bFound = FindProjectFileEnding(szPath.Text(), pszDest);
 			szPath.Kill();
 		}
 		szName.Kill();
 	}
 	szBase.Kill();
-
-	bFound = bFound && OpenProjectFile(szFound.Text());
-	szFound.Kill();
 	return bFound;
 }
 
@@ -966,6 +998,156 @@ bool CIDENavigator::GoToTypeDeclaration(void)
 	szTypeKey.Kill();
 	szKey.Kill();
 	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Go to Related Symbol (Control+Alt+Home), as IntelliJ's: a chooser of
+// everything the caret has a way to, under headings: the file's other
+// half (its header, or its source); the other declarations and the
+// definition of the symbol at the caret; what it overrides, or its base
+// classes; and what overrides it, or the classes derived from it.  With
+// one thing related it is gone to; with none the status line says so.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDENavigator::GoToRelatedSymbol(void)
+{
+	Ptr<CIDEEditorTab>	pTab;
+	CArrayIDETargets	asSupers;
+	CArrayIDETargets	asImplementations;
+	CArrayIDELocations	asLocations;
+	SIDELocation		sFile;
+	SIDELocation*		psLocation;
+	CChars				szKey;
+	CChars				szOther;
+	CChars				szName;
+	size				i;
+	size				uiPlaces;
+	size				uiDeclarations;
+	int					iLine;
+	int					iColumn;
+	uint8				uiKind;
+	bool				bSymbol;
+	bool				bOther;
+	bool				bFunction;
+
+	pTab = mpcContent->GetDocuments()->GetActiveTab();
+	if (pTab.IsNull() || !pTab->GetCaretPlace(&iLine, &iColumn))
+	{
+		return false;
+	}
+	szKey.Init();
+	szOther.Init();
+	szName.Init();
+	asSupers.Init();
+	asImplementations.Init();
+	asLocations.Init();
+	bOther = FindHeaderSource(&szOther);
+	bSymbol = FindCaretSymbol(&szKey, &uiKind);
+	if (!bSymbol)
+	{
+		szKey.Clear();
+		bSymbol = FindCaretFunction(&szKey, &uiKind);
+	}
+	bFunction = bSymbol && ((uiKind == CPPSK_Function) || (uiKind == CPPSK_FunctionTemplate));
+	uiDeclarations = 0;
+	if (bSymbol)
+	{
+		GetIDEScopedName(szKey.Text(), &szName);
+		mpcContent->GetCodeModel()->FindSuperMethods(szKey.Text(), &asSupers);
+		mpcContent->GetCodeModel()->FindImplementations(szKey.Text(), &asImplementations);
+		mpcContent->GetCodeModel()->GetSymbolLocations(szKey.Text(), &asLocations, &uiKind);
+
+		//Its declarations and its definition, but the one the caret is on.
+		for (i = asLocations.NumElements(); i > 0; i--)
+		{
+			psLocation = asLocations.Get(i - 1);
+			if ((psLocation->uiRole == CPPIR_Reference) ||
+				((psLocation->iLine == iLine) && (StringCompare(psLocation->szFileName.Text(), pTab->GetFileName()) == 0)))
+			{
+				psLocation->szFileName.Kill();
+				asLocations.RemoveAt(i - 1);
+			}
+		}
+		uiDeclarations = asLocations.NumElements();
+
+		//A function nothing overrides has its own definition as its implementation: it is among its declarations here.
+		if ((asImplementations.NumElements() == 1) && asImplementations.Get(0)->szKey.Equals(szKey.Text()))
+		{
+			KillIDETargets(&asImplementations);
+			asImplementations.Init();
+		}
+	}
+
+	uiPlaces = (bOther ? 1 : 0) + uiDeclarations + asSupers.NumElements() + asImplementations.NumElements();
+	if (uiPlaces == 0)
+	{
+		mpcContent->ShowStatus("Nothing is related to what is at the caret.");
+	}
+	else
+	{
+		if (mpTargets.IsNull())
+		{
+			mpTargets = OMalloc<CIDEChooser>(mpcContent);
+		}
+		mpTargets->Begin(bSymbol ? szName.Text() : GetIDEFileNamePart(pTab->GetFileName()), true, true, NULL);
+		mpTargets->SetSelectName(true);
+		if (bOther)
+		{
+			mpTargets->AddHeading((CIDEIcons::GetFileType(szOther.Text()) == IFT_Header) ? "Header" : "Source");
+			sFile.szFileName.Init(szOther);
+			sFile.iLine = 0;
+			sFile.iColumn = 0;
+			sFile.iLength = 0;
+			sFile.uiRole = CPPIR_Declaration;
+			sFile.uiFlags = 0;
+			sFile.uiUsage = 0;
+			sFile.iContainer = -1;
+			mpTargets->AddPlace(GetIDEFileNamePart(szOther.Text()), "", mpTargets->GetFileIcon(szOther.Text()), &sFile);
+			sFile.szFileName.Kill();
+		}
+		if (uiDeclarations > 0)
+		{
+			mpTargets->AddHeading("Declarations and definition");
+			for (i = 0; i < uiDeclarations; i++)
+			{
+				mpTargets->AddPlace(szName.Text(), NULL, mpTargets->GetSymbolIcon(uiKind), asLocations.Get(i));
+			}
+		}
+		if (asSupers.NumElements() > 0)
+		{
+			mpTargets->AddHeading(bFunction ? "Super methods" : "Base classes");
+			for (i = 0; i < asSupers.NumElements(); i++)
+			{
+				mpTargets->AddTarget(asSupers.Get(i));
+			}
+		}
+		if (asImplementations.NumElements() > 0)
+		{
+			mpTargets->AddHeading(bFunction ? "Implementations" : "Derived classes");
+			for (i = 0; i < asImplementations.NumElements(); i++)
+			{
+				mpTargets->AddTarget(asImplementations.Get(i));
+			}
+		}
+
+		if (uiPlaces == 1)
+		{
+			mpcContent->GetDocuments()->OpenLocation(mpTargets->GetPlace(0), !bOther);
+		}
+		else
+		{
+			mpTargets->OpenAtCaret();
+		}
+	}
+	KillIDELocations(&asLocations);
+	KillIDETargets(&asImplementations);
+	KillIDETargets(&asSupers);
+	szName.Kill();
+	szOther.Kill();
+	szKey.Kill();
+	return uiPlaces > 0;
 }
 
 
