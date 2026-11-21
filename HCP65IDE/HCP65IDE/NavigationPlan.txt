@@ -159,6 +159,36 @@ Stage E, between files: built 2026-11-21.
       - Select In is a chooser of Solution Explorer and Structure, for the file only.
       - Solution Explorer's two options are in its context menu, ticked, and in Settings.xml as <Explorer>.
 
+Stage F, what a name is: built 2026-11-21.
+    CommonLibraries b653be85f (CInfoPopup, CTextArea::AddUnderlineLayer, CWindow::CloseOnePopup); HCP65-IDE
+    2a55e45 (IDESymbolInfo, CIDEQuickInfo).  Checks quick-link, quick-link-pointer (the pointer and the Control key
+    themselves), quick-parameters, quick-type, quick-definition, quick-definition-several, on a project of their
+    own, Checks/Input/QuickInfo (CPainter with two Rects, an enum, a typedef, a macro).
+    Quick Documentation and the tool tip for a name the pointer rests on are not built: put off, "later if at all"
+    (decision 11), as read.
+    As built it differs from the plan in these:
+      - S6: a symbol's declaration is read from its file's text, not from a parse (ReadIDEDeclaration: the
+        statement its name is in, from the ; { or } before it to its body or semicolon; a parameter's between the
+        commas round it; an enumerator's between its commas; a macro's would be its #define's line).  No unit
+        cache was made and no refactoring moved: reading the text takes no parse, so it is done as the pointer
+        moves.  The comment over a declaration isn't read (only Quick Documentation would show it).  The index
+        has no macros, so a macro's name shows nothing.
+      - S7: there is no hover event and no caret event used: CIDEQuickInfo::Poll, each window tick, asks the
+        focus where the pointer is and whether Control is down, and the editor where its caret is, as the
+        breadcrumbs do.  The link is a highlight layer of the editor's that underlines (AddUnderlineLayer); the
+        pointer doesn't become a hand (WindowLib has no pointer shapes).  CInfoPopup always lets the pointer
+        through and never takes the keys: Escape is heard by the editor (CIC_ClearSelection), as kept usages' is.
+      - Quick Definition is CIDEChooser with its preview and nothing to type in: the definition (its declaration if
+        it has none) and, after it, what FindImplementations gives; Enter goes to the one selected.
+      - Parameter Info: the call is found from the text before the caret (FindIDECall: the innermost open bracket
+        after a name that isn't a statement's), the function called is the symbol at that name, and the other
+        rows are the functions of its name that FindSiblingFunctions gives (its class's, or its file's).  The
+        caret's parameter is in the text's colour and the rest dim, not bold: the code font's family has no bold
+        face.  It isn't shown by itself after "(": that waits for completion.
+      - Type Info: a name's type is its declaration without its name (and a function's what it returns), as it is
+        written; a selected expression's is Introduce Variable's (FindIntroduction, the checked parse), which
+        wasn't measured on a large unit: it runs only when asked for, on a selection.
+
 
 How work is done here
 ---------------------
