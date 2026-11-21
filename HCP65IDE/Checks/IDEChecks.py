@@ -4619,14 +4619,17 @@ CHECKS = [
 	('quick-link-pointer', {
 		#The same with the pointer and the keys themselves: nothing until Control is down, then the name under the
 		#pointer as it moves (the one just before it, on a comma), nothing once Shift is down too or Control is let
-		#go; and Control+click still goes to the name's source.
+		#go; and Control+click still goes to the name's source.  The pointer is a hand while a name is a link, and
+		#the text's I-beam otherwise.
 		'SOLUTION': QUICK_INFO, 'WAIT_INDEX': '1', 'OPEN': 'Paint.cpp', 'CARET': '51:1',
 		'DEBUG': 'edit:printcrumbs,edit:pointer:51:15,edit:printinfo,edit:press:Left Control,edit:printinfo,edit:pointer:51:23,edit:printinfo,edit:pointer:51:20,edit:printinfo,edit:pointer:52:25,edit:printinfo,'
 		         'edit:press:Left Shift,edit:printinfo,edit:release:Left Shift,edit:printinfo,edit:release:Left Control,edit:printinfo,'
 		         'edit:press:Left Control,edit:controlclick:51:23,edit:release:Left Control,edit:printinfo,edit:print'},
-		[r'^Link: none$', r'^Link: \[Rect\] void Rect\(int iX, int iY, int iWidth, int iHeight, EPaintMode eMode = PM_Fill\) \| CPainter, Paint\.h:28$',
+		[r'^Link: none$', r'^Pointer: text, text over it$',
+		 r'^Link: \[Rect\] void Rect\(int iX, int iY, int iWidth, int iHeight, EPaintMode eMode = PM_Fill\) \| CPainter, Paint\.h:28$', r'^Pointer: hand, hand over it$',
 		 r'^Link: \[Blend\] int Blend\(int iFirst, int iSecond, float fAmount\) \| Paint\.h:34$', r'^Link: \[i\] int i \| Paint\.cpp:46$',
-		 r'^Link: \[Count\] int Count\(void\) const \| CPainter, Paint\.h:29$', r'^Link: none$', r'^Link: \[Count\] int Count\(void\) const \| CPainter, Paint\.h:29$', r'^Link: none$',
+		 r'^Link: \[Count\] int Count\(void\) const \| CPainter, Paint\.h:29$', r'^Link: none$', r'^Pointer: text, text over it$',
+		 r'^Link: \[Count\] int Count\(void\) const \| CPainter, Paint\.h:29$', r'^Pointer: hand, hand over it$', r'^Link: none$', r'^Pointer: text, text over it$',
 		 r'^Link: none$', r'Paint\.cpp \(focus\) line 37: \[int Blend\(int iFirst, int iSecond, float fAmount\)\]'], [r'ERROR', r'^Info: (parameters|type)']),
 	('quick-parameters', {
 		#Parameter Info (Control+P): the parameters of the call the caret is in, the function called first and the

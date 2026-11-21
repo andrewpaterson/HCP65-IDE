@@ -45,6 +45,7 @@ void CIDEQuickInfo::Init(CIDEContent* pcContent)
 	muiLinkEnd = 0;
 	muiLinkChanges = 0;
 	mszLinkName.Init();
+	meLinkCursor = NC_Text;
 	muiAskedPosition = MAX_SIZE;
 	muiAskedChanges = 0;
 	mbLinkHeld = false;
@@ -77,6 +78,7 @@ void CIDEQuickInfo::Class(void)
 	U_Size(muiLinkEnd);
 	U_Size(muiLinkChanges);
 	U_String(mszLinkName);
+	U_Enum(meLinkCursor);
 	M_Pointer(mpAskedTab);
 	U_Size(muiAskedPosition);
 	U_Size(muiAskedChanges);
@@ -223,9 +225,9 @@ void CIDEQuickInfo::PollLink(void)
 //////////////////////////////////////////////////////////////////////////
 //
 // The name at uiPosition of pTab's text, if it is a symbol the index has
-// declared somewhere, is underlined, and its declaration shown under it
-// with where it is declared.  False, with nothing underlined, if it
-// isn't one.
+// declared somewhere, is underlined, the pointer is a hand over the
+// editor, and its declaration is shown under it with where it is
+// declared.  False, with nothing underlined, if it isn't one.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEQuickInfo::ShowLinkAt(Ptr<CIDEEditorTab> pTab, size uiPosition)
@@ -261,6 +263,8 @@ bool CIDEQuickInfo::ShowLinkAt(Ptr<CIDEEditorTab> pTab, size uiPosition)
 		sRange.uiStart = uiStart;
 		sRange.uiEnd = uiEnd;
 		pEditor->SetHighlightRanges(pTab->GetLinkLayer(IDE_LINK_COLOUR), &sRange, 1);
+		meLinkCursor = pEditor->GetCursor();
+		pEditor->SetCursor(NC_Hand);
 		mpLinkTab = pTab;
 		muiLinkStart = uiStart;
 		muiLinkEnd = uiEnd;
@@ -305,7 +309,8 @@ void CIDEQuickInfo::HoldLink(bool bHeld)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Nothing is underlined and no declaration shown.  False if none was.
+// Nothing is underlined, no declaration is shown and the pointer is the
+// editor's own shape again.  False if nothing was.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEQuickInfo::ClearLink(void)
@@ -315,6 +320,10 @@ bool CIDEQuickInfo::ClearLink(void)
 		return false;
 	}
 	mpLinkTab->GetEditor()->ClearHighlightRanges(mpLinkTab->GetLinkLayer(IDE_LINK_COLOUR));
+	if (mpLinkTab->GetEditor()->GetCursor() == NC_Hand)
+	{
+		mpLinkTab->GetEditor()->SetCursor(meLinkCursor);
+	}
 	mpLinkTab = NULL;
 	mpLinkPopup->Hide();
 	return true;
@@ -827,6 +836,12 @@ bool CIDEQuickInfo::ShowQuickDefinition(void)
 }
 
 
+static const char* GetIDECursorName(ENativeCursor eCursor)
+{
+	return (eCursor == NC_Hand) ? "hand" : ((eCursor == NC_Text) ? "text" : ((eCursor == NC_Arrow) ? "arrow" : "other"));
+}
+
+
 //////////////////////////////////////////////////////////////////////////
 //
 // For checking: "Link: [Area] virtual int Area(void) = 0 | CShape,
@@ -836,8 +851,9 @@ bool CIDEQuickInfo::ShowQuickDefinition(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDEQuickInfo::Print(CChars* pszDest)
 {
-	CChars	szText;
-	size	i;
+	Ptr<CIDEEditorTab>	pTab;
+	CChars				szText;
+	size				i;
 
 	pszDest->Append("Link: ");
 	if (IsLinkShown())
@@ -853,6 +869,19 @@ void CIDEQuickInfo::Print(CChars* pszDest)
 	else
 	{
 		pszDest->Append("none");
+	}
+	//"Pointer: hand" while a link has the editor's pointer, "Pointer: hand, hand over it" with the pointer there too.
+	pTab = mpcContent->GetDocuments()->GetActiveTab();
+	if (pTab.IsNotNull())
+	{
+		pszDest->Append("\nPointer: ");
+		pszDest->Append(GetIDECursorName(pTab->GetEditor()->GetCursor()));
+		if (mpcContent->GetWindow()->GetFocus()->GetMouseOverComponent() == pTab->GetEditor())
+		{
+			pszDest->Append(", ");
+			pszDest->Append(GetIDECursorName(mpcContent->GetWindow()->GetNativeWindow()->GetCursor()));
+			pszDest->Append(" over it");
+		}
 	}
 	pszDest->Append("\nInfo: ");
 	if (IsInfoShown())

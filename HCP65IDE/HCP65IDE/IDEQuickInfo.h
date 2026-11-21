@@ -43,9 +43,9 @@ enum EIDEQuickInfo
 
 //What a name is, shown where it is written (NavigationPlan.txt's stage F), as IntelliJ IDEA's:
 //
-//  - With Control held, the name under the pointer that Control+click would go from is underlined as a link, and
-//    its declaration is shown under it with where it is declared.  Letting Control go, or moving off the name,
-//    takes both away.
+//  - With Control held, the name under the pointer that Control+click would go from is underlined as a link, the
+//    pointer is a hand over the editor, and the name's declaration is shown under it with where it is declared.
+//    Letting Control go, or moving off the name, takes them away.
 //  - Quick Definition (Control+Shift+I): the definition of the symbol at the caret, its code previewed in a chooser
 //    with its implementations if it has them; Enter goes to the one selected, Escape closes it.
 //  - Parameter Info (Control+P): the parameters of the call the caret is in, a row for each function of that name
@@ -71,6 +71,7 @@ protected:
 	size					muiLinkEnd;
 	size					muiLinkChanges;  //and its editor's change count then.
 	CChars					mszLinkName;
+	ENativeCursor			meLinkCursor;  //The editor's pointer shape before the hand: put back when the link goes.
 	Ptr<CIDEEditorTab>		mpAskedTab;  //Where the pointer was when the name under it was last looked for.
 	size					muiAskedPosition;
 	size					muiAskedChanges;
