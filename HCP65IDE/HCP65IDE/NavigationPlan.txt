@@ -342,7 +342,9 @@ Each says what there is, what would be done, how it would be checked, and what t
             Debug, 6 Problems, 9 Git.)
           - A new key shows its window and puts the keys in it; pressed while its window has the keys, it hides the
             window, as IntelliJ's does.  Alt+1 stays as it is (the active file selected, the keys left in the
-            editor).  Alt+7 and Alt+8 weren't spoken of: left as they are unless the user says.
+            editor).  Alt+7 (Structure) and Alt+8 (Hierarchy) toggle like the new ones
+            (the user, 2026-11-21: "Alt+7 Structure and Alt+8 toggle like the new ones"): today each shows its
+            window with the keys and a second press does nothing.
           - The View menu shows each window's keys beside its name.
           - Hide All Tool Windows on Control+Shift+F12; what it hid is remembered for the session only.
           - Jump to Last Tool Window has no key of its own (F12 is Go to Definition here); one can be given in the
