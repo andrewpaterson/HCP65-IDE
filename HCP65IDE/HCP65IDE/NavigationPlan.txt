@@ -318,8 +318,9 @@ Each says what there is, what would be done, how it would be checked, and what t
 3. The smaller shortfalls in Navigation.txt's Gaps.  Each stands alone; in the order recommended.
      a. Call Hierarchy: the callers of a virtual function include the calls of what it overrides, as a call through
         the base class may land in it.  FindSuperMethods of the function, FindCallers of each, their rows saying
-        which ("via CShape::Draw").  Callees stay what the function's text calls.  Small.  To decide: yes or no
-        (recommended: yes, marked).  A scope for the hierarchy, as Find Usages has (CIDEScope, its Scope button's
+        which ("via CShape::Draw").  Callees stay what the function's text calls.  Small.  Decided 2026-11-21
+        ("3a. as you suggest"): yes, the "via" rows always shown and marked, no toolbar button for them; only the
+        functions it overrides are followed, not its siblings'.  Decided, not asked to be built.  A scope for the hierarchy, as Find Usages has (CIDEScope, its Scope button's
         menu), is a second step: later.
      b. Type Hierarchy's class view, a class with several base classes: its row says the others ("also: CSecond"),
         dim, and Supertypes still has them all.  The other way, every path from every topmost base, repeats the
