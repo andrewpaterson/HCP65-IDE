@@ -101,6 +101,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDEBookmarks.h"
 #include "IDEMarks.h"
 #include "IDERecent.h"
+#include "IDEQuickInfo.h"
 #include "IDEIndexing.h"
 #include "IDEDocuments.h"
 #include "IDESolutions.h"
@@ -232,6 +233,7 @@ protected:
 	Ptr<CIDEBookmarks>			mpBookmarks;		//Bookmarks and their tool window.
 	Ptr<CIDEMarks>				mpMarks;			//Changed lines, kept usages and override marks.
 	Ptr<CIDERecent>				mpRecent;			//Recent files and locations, the switcher, edit locations.
+	Ptr<CIDEQuickInfo>			mpQuickInfo;		//A name's declaration, Quick Definition, Parameter Info, Type Info.
 	Ptr<CIDEDuplicates>			mpDuplicates;		//Find Duplicates and the Duplicates tool window.
 	Ptr<CIDEOccurrences>		mpOccurrences;		//Next and Previous Occurrence through Find Usages or Build.
 	Ptr<CIDENavigationHistory>	mpNavigationHistory;	//Back and Forward.
@@ -341,6 +343,7 @@ public:
 	Ptr<CIDEBookmarks>		GetBookmarks(void) const;
 	Ptr<CIDEMarks>			GetMarks(void) const;
 	Ptr<CIDERecent>			GetRecent(void) const;
+	Ptr<CIDEQuickInfo>		GetQuickInfo(void) const;
 	Ptr<CIDEDuplicates>		GetDuplicates(void) const;
 	Ptr<CIDEIndexing>		GetIndexing(void) const;
 	Ptr<CIDERename>			GetRename(void) const;

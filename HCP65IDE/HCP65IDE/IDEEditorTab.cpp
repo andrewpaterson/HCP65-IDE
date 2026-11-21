@@ -93,6 +93,7 @@ void CIDEEditorTab::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CFo
 	mcOutline.Init();
 	muiOutlineChanges = MAX_SIZE;
 	muiKeptUsagesLayer = MAX_SIZE;
+	muiLinkLayer = MAX_SIZE;
 	mcSyntaxBehind.Init();
 	mbCarriageReturns = UsesIDECarriageReturns(szText);
 	muiSavedUndo = mpEditor->GetUndoId();
@@ -141,6 +142,7 @@ void CIDEEditorTab::Class(void)
 	M_Pointer(mpStickyLines);
 	M_Pointer(mpFindBar);
 	U_Size(muiKeptUsagesLayer);
+	U_Size(muiLinkLayer);
 	U_Size(muiOutlineChanges);
 	U_Unknown(CComponentEvent<CIDEEditorTab>, mcSyntaxBehind);
 	M_Pointer(mpZones);
@@ -394,6 +396,22 @@ size CIDEEditorTab::GetKeptUsagesLayer(ARGB32 sColour)
 		muiKeptUsagesLayer = mpEditor->AddHighlightLayer(sColour, sColour);
 	}
 	return muiKeptUsagesLayer;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The editor's layer for the name underlined as a link while Control is
+// held over it, made when first asked for.
+//
+//////////////////////////////////////////////////////////////////////////
+size CIDEEditorTab::GetLinkLayer(ARGB32 sColour)
+{
+	if (muiLinkLayer == MAX_SIZE)
+	{
+		muiLinkLayer = mpEditor->AddUnderlineLayer(sColour);
+	}
+	return muiLinkLayer;
 }
 
 

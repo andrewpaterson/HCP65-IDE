@@ -248,6 +248,7 @@ void CIDEContent::Class(void)
 	M_Pointer(mpBookmarks);
 	M_Pointer(mpMarks);
 	M_Pointer(mpRecent);
+	M_Pointer(mpQuickInfo);
 	M_Pointer(mpDuplicates);
 	M_Pointer(mpOccurrences);
 	M_Pointer(mpNavigationHistory);
@@ -482,6 +483,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpBookmarks = OMalloc<CIDEBookmarks>(this);
 	mpMarks = OMalloc<CIDEMarks>(this);
 	mpRecent = OMalloc<CIDERecent>(this);
+	mpQuickInfo = OMalloc<CIDEQuickInfo>(this);
 	mpDuplicates = OMalloc<CIDEDuplicates>(this);
 	mpOccurrences = OMalloc<CIDEOccurrences>(this);
 	mpNavigationHistory = OMalloc<CIDENavigationHistory>(this);
@@ -649,6 +651,7 @@ void CIDEContent::ViewMenuOpening(CMenuContainer* pcMenu)
 			mpViewMenu->AddItem(pPane->GetTitle())->SetTag((int32)i);
 		}
 	}
+	mpQuickInfo->AddViewItems(mpViewMenu);
 }
 
 
@@ -692,6 +695,7 @@ void CIDEContent::AddCommands(void)
 	mpBookmarks->AddCommands(mpCommands);
 	mpMarks->AddCommands(mpCommands);
 	mpRecent->AddCommands(mpCommands);
+	mpQuickInfo->AddCommands(mpCommands);
 	mpRename->AddCommands(mpCommands);
 	mpFileRename->AddCommands(mpCommands);
 	mpSafeDelete->AddCommands(mpCommands);
@@ -898,6 +902,9 @@ void CIDEContent::Tick(Ptr<CWindow> pWindow)
 	//The active editor's changed lines' marks, kept usages and override marks keep up with it.
 	mpMarks->Poll();
 
+	//The name Control is held over, and the popup over the caret's line.
+	mpQuickInfo->Poll();
+
 	//A caret moved far from where it stayed is a place to come back to.
 	iWait = mpNavigationHistory->Poll(iNow);
 	if ((iWait >= 0) && ((iSoonest < 0) || (iWait < iSoonest)))
@@ -1046,6 +1053,7 @@ void CIDEContent::PaneClosed(CDockPane* pcPane)
 	pTab->GetCodeEditor()->GetIconClickEvent()->Remove(&mpBookmarks);
 	pTab->GetCodeEditor()->GetIconClickEvent()->Remove(&mpMarks);
 	mpMarks->TabClosed(pTab);
+	mpQuickInfo->TabClosed(pTab);
 	mpRecent->FileClosed(pTab);
 	pTab->GetEditor()->GetUndoEvent()->Remove(&mpEdit);
 	pTab->GetEditor()->GetLinkEvent()->Remove(&mpNavigator);
@@ -1258,6 +1266,7 @@ Ptr<CIDEUserFile> CIDEContent::GetUserFile(void) const { return mpUserFile; }
 Ptr<CIDEBookmarks> CIDEContent::GetBookmarks(void) const { return mpBookmarks; }
 Ptr<CIDEMarks> CIDEContent::GetMarks(void) const { return mpMarks; }
 Ptr<CIDERecent> CIDEContent::GetRecent(void) const { return mpRecent; }
+Ptr<CIDEQuickInfo> CIDEContent::GetQuickInfo(void) const { return mpQuickInfo; }
 Ptr<CIDEDuplicates> CIDEContent::GetDuplicates(void) const { return mpDuplicates; }
 Ptr<CIDEOccurrences> CIDEContent::GetOccurrences(void) const { return mpOccurrences; }
 Ptr<CIDENavigationHistory> CIDEContent::GetNavigationHistory(void) const { return mpNavigationHistory; }

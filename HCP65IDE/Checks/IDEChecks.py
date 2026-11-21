@@ -37,6 +37,7 @@ RENAME_FILE = os.path.join(HERE, 'Input', 'RenameFile', 'RenameFile.sln')
 #the CCircle and CSquare derived from it, CRoundedSquare from CSquare, and a Main.cpp that uses them.  Nothing is
 #changed in it.
 NAVIGATION = os.path.join(HERE, 'Input', 'Navigation', 'Navigation.vcxproj')
+QUICK_INFO = os.path.join(HERE, 'Input', 'QuickInfo', 'QuickInfo.vcxproj')
 #A unit including <windows.h> (Input/WindowsHeaders), with Win32 and x64 configurations.
 WINDOWS_HEADERS = os.path.join(HERE, 'Input', 'WindowsHeaders', 'WindowsHeaders.vcxproj')
 ROOT = os.path.abspath(os.path.join(HERE, '..', '..', '..'))
@@ -3721,6 +3722,7 @@ CHECKS = [
 		 r'^Keys: Navigate\.LastEditLocation Control\+Shift\+Backspace bound$', r'^Keys: Navigate\.SelectIn Alt\+F1 bound$',
 		 r'^Keys: Window\.Switcher Control\+Tab bound$', r'^Keys: Window\.SwitcherBackward Control\+Shift\+Tab bound$',
 		 r'^Keys: Window\.NextTab Alt\+Cursor Right bound$', r'^Keys: Window\.PreviousTab Alt\+Cursor Left bound$',
+		 r'^Keys: View\.QuickDefinition Control\+Shift\+I bound$', r'^Keys: View\.ParameterInfo Control\+P bound$', r'^Keys: View\.TypeInfo Control\+Shift\+P bound$',
 		 r'^Keys: Navigate\.ShowUsages Control\+Alt\+F7 bound$', r'^Keys: Edit\.Find Control\+F bound$', r'^Keys: Edit\.Replace Control\+R bound$',
 		 r'^Keys: Edit\.FindNext F3 bound$', r'^Keys: Edit\.FindPrevious Shift\+F3 bound$', r'^Keys: Edit\.FindWordAtCaret Control\+F3 bound$',
 		 r'^Keys: Edit\.FindInFiles Control\+Shift\+F bound$', r'^Keys: Edit\.ReplaceInFiles Control\+Shift\+R bound$',
@@ -3883,7 +3885,7 @@ CHECKS = [
 		 r'^Menu File/Recent Solutions: 1 ',
 		 r'^Menu Edit: Undo \[Ctrl\+Z\](\(disabled\))?, Redo \[Ctrl\+Shift\+Z\](\(disabled\))?, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\], Select All \[Ctrl\+A\], Extend Selection \[Ctrl\+W\], Shrink Selection \[Ctrl\+Shift\+W\], Find\.\.\. \[Ctrl\+F\], Replace\.\.\. \[Ctrl\+R\], Find Next \[F3\], Find Previous \[Shift\+F3\], Find Word at Caret \[Ctrl\+F3\], Find in Files\.\.\. \[Ctrl\+Shift\+F\], Replace in Files\.\.\. \[Ctrl\+Shift\+R\], Find Duplicates\.\.\. \[Ctrl\+Alt\+Shift\+D\]$',
 		 r'^Menu Navigate: Back \[Ctrl\+Alt\+Left\](\(disabled\))?, Forward \[Ctrl\+Alt\+Right\](\(disabled\))?, Class\.\.\. \[Ctrl\+N\], File\.\.\. \[Ctrl\+Shift\+N\], Symbol\.\.\. \[Ctrl\+Alt\+Shift\+N\], Line:Column\.\.\. \[Ctrl\+G\], Go to Source \[Ctrl\+B\], Go to Definition \[F12\], Go to Implementation\(s\) \[Ctrl\+Alt\+B\], Go to Type Declaration \[Ctrl\+Shift\+B\], Go to Super Method \[Ctrl\+U\], Go to Related Symbol \[Ctrl\+Alt\+Home\], Switch Header/Source \[Alt\+O\], File Structure \[Ctrl\+F12\], Next Method \[Alt\+Down\], Previous Method \[Alt\+Up\], Toggle Bookmark \[Ctrl\+F11\], Toggle Bookmark with Mnemonic\.\.\. \[Ctrl\+Shift\+F11\], Next Bookmark \[F2\], Previous Bookmark \[Shift\+F2\], Next Change \[Ctrl\+Alt\+Shift\+Down\], Previous Change \[Ctrl\+Alt\+Shift\+Up\], Highlight Usages in File \[Ctrl\+Shift\+F7\], Recent Files \[Ctrl\+E\], Recent Locations \[Ctrl\+Shift\+E\], Last Edit Location \[Ctrl\+Shift\+Backspace\], Next Edit Location, Select In\.\.\. \[Alt\+F1\], Find Usages \[Alt\+F7\], Show Usages \[Ctrl\+Alt\+F7\], Find All References \[Shift\+F12\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Next Occurrence \[Ctrl\+Alt\+Down\], Previous Occurrence \[Ctrl\+Alt\+Up\]$',
-		 r'^Menu View: Solution Explorer, Structure, Find Usages, Find, Duplicates, Bookmarks, Build, Indexing, Run, Debug, Claude$',
+		 r'^Menu View: Solution Explorer, Structure, Find Usages, Find, Duplicates, Bookmarks, Build, Indexing, Run, Debug, Claude, Quick Definition \[Ctrl\+Shift\+I\], Parameter Info \[Ctrl\+P\], Type Info \[Ctrl\+Shift\+P\]$',
 		 r'^Menu Git: Compare with HEAD, Compare with Branch\.\.\., Compare with Revision\.\.\.$',
 		 r'^Menu Build: Build \[Ctrl\+F9\], Edit Build Configurations\.\.\.$',
 		 r'^Menu Debug: Start Debugging \[F5\], Start Without Debugging \[Ctrl\+F5\], Stop Debugging \[Shift\+F5\], Stop Running(\(disabled\))?, Restart \[Ctrl\+Shift\+F5\], Break All \[Ctrl\+Pause/Break\], Attach to Emulator\.\.\., Step Into \[F11\], Step Over \[F10\], Step Out \[Shift\+F11\], Toggle Breakpoint \[F9\], New Breakpoint at Address\.\.\., Delete All Breakpoints, Edit Configurations\.\.\.$',
@@ -4594,6 +4596,72 @@ CHECKS = [
 		'SETTINGS': MakeSettingsFile('<?xml version="1.0" encoding="UTF-8"?>\n<Settings>\n  <Explorer AlwaysSelect="true" SingleClick="true"/>\n</Settings>\n'),
 		'DEBUG': 'edit:open:Shapes.h,edit:open:Main.cpp,command:Window.PreviousTab,printexplorer'},
 		[r'^Explorer: \[.*Navigation/Shapes\.h\]$', r'^Explorer options: always select single click$'], [r'ERROR']),
+	('quick-link', {
+		#With Control held over a name the name is underlined and its declaration shown under it, as it is written,
+		#with where it is declared: a member function's as its class declares it (the one of two of a name that the
+		#call is of), a function's, an enumerator's, a parameter's, a local variable's, a class's, a field's with its
+		#array's bounds, a typedef's and a static variable's.  A macro, a keyword and a number have none.
+		'SOLUTION': QUICK_INFO, 'WAIT_INDEX': '1', 'OPEN': 'Paint.cpp', 'CARET': '1:1',
+		'DEBUG': 'edit:printinfo,edit:linkhover:51:15,edit:printinfo,edit:linkhover:54:15,edit:printinfo,edit:linkhover:51:23,edit:printinfo,edit:linkhover:51:53,edit:printinfo,edit:linkhover:51:4,edit:printinfo,'
+		         'edit:linkhover:45:8,edit:printinfo,edit:linkhover:43:14,edit:printinfo,edit:linkhover:21:3,edit:printinfo,edit:linkhover:7:21,edit:printinfo,edit:linkhover:4:20,edit:printinfo,'
+		         'edit:linkhover:31:22,edit:printinfo,edit:linkhover:27:9,edit:printinfo,edit:linkhover:49:3,edit:printinfo,edit:linkhover:51:46,edit:printinfo,edit:linkhover:9:3,edit:printinfo,edit:linkhover:off,edit:printinfo'},
+		[r'^Link: none$', r'^Link: \[Rect\] void Rect\(int iX, int iY, int iWidth, int iHeight, EPaintMode eMode = PM_Fill\) \| CPainter, Paint\.h:28$',
+		 r'^Link: \[Rect\] void Rect\(int iX, int iY\) \| CPainter, Paint\.h:27$', r'^Link: \[Blend\] int Blend\(int iFirst, int iSecond, float fAmount\) \| Paint\.h:34$',
+		 r'^Link: \[PM_Outline\] PM_Outline = 4 \| EPaintMode, Paint\.h:11$', r'^Link: \[pcPainter\] CPainter\* pcPainter \| Paint\.cpp:43$', r'^Link: \[iTotal\] int iTotal \| Paint\.cpp:45$',
+		 r'^Link: \[CPainter\] class CPainter \| Paint\.h:19$', r'^Link: \[maiSizes\] int maiSizes\[PAINT_MAXIMUM\] \| CPainter, Paint\.h:23$',
+		 r'^Link: \[PaintColour\] typedef unsigned int PaintColour \| Paint\.h:15$', r'^Link: \[gcDefaultPainter\] static CPainter gcDefaultPainter \| Paint\.cpp:4$',
+		 r'^Link: \[Default\] static CPainter\* Default\(void\) \| CPainter, Paint\.h:30$', r'^Link: none$', r'^Link: none$', r'^Link: none$',
+		 r'^Link: \[muiColour\] PaintColour muiColour \| CPainter, Paint\.h:22$', r'^Link: none$'], [r'ERROR', r'^Info: (parameters|type)']),
+	('quick-link-pointer', {
+		#The same with the pointer and the keys themselves: nothing until Control is down, then the name under the
+		#pointer as it moves (the one just before it, on a comma), nothing once Shift is down too or Control is let
+		#go; and Control+click still goes to the name's source.
+		'SOLUTION': QUICK_INFO, 'WAIT_INDEX': '1', 'OPEN': 'Paint.cpp', 'CARET': '51:1',
+		'DEBUG': 'edit:printcrumbs,edit:pointer:51:15,edit:printinfo,edit:press:Left Control,edit:printinfo,edit:pointer:51:23,edit:printinfo,edit:pointer:51:20,edit:printinfo,edit:pointer:52:25,edit:printinfo,'
+		         'edit:press:Left Shift,edit:printinfo,edit:release:Left Shift,edit:printinfo,edit:release:Left Control,edit:printinfo,'
+		         'edit:press:Left Control,edit:controlclick:51:23,edit:release:Left Control,edit:printinfo,edit:print'},
+		[r'^Link: none$', r'^Link: \[Rect\] void Rect\(int iX, int iY, int iWidth, int iHeight, EPaintMode eMode = PM_Fill\) \| CPainter, Paint\.h:28$',
+		 r'^Link: \[Blend\] int Blend\(int iFirst, int iSecond, float fAmount\) \| Paint\.h:34$', r'^Link: \[i\] int i \| Paint\.cpp:46$',
+		 r'^Link: \[Count\] int Count\(void\) const \| CPainter, Paint\.h:29$', r'^Link: none$', r'^Link: \[Count\] int Count\(void\) const \| CPainter, Paint\.h:29$', r'^Link: none$',
+		 r'^Link: none$', r'Paint\.cpp \(focus\) line 37: \[int Blend\(int iFirst, int iSecond, float fAmount\)\]'], [r'ERROR', r'^Info: (parameters|type)']),
+	('quick-parameters', {
+		#Parameter Info (Control+P): the parameters of the call the caret is in, the function called first and the
+		#other of its name after it, the caret's argument's parameter marked; it follows the caret into a call
+		#inside the call, on along the arguments and to another call, stays as an argument is typed, and goes when
+		#the caret leaves every call or on Escape.  Outside a call, and in a for's brackets, the status line says so.
+		'SOLUTION': QUICK_INFO, 'WAIT_INDEX': '1', 'OPEN': 'Paint.cpp', 'CARET': '51:19',
+		'DEBUG': 'command:View.ParameterInfo,edit:printinfo,edit:caret:51:31,edit:printinfo,edit:caret:51:46,edit:printinfo,edit:caret:51:52,edit:printinfo,edit:caret:54:27,edit:printinfo,'
+		         'edit:key:type:1,edit:printinfo,edit:key:backspace,edit:caret:52:30,edit:printinfo,edit:caret:48:5,edit:printinfo,command:View.ParameterInfo,printstatus,edit:caret:49:8,command:View.ParameterInfo,printstatus,'
+		         'edit:caret:15:7,command:View.ParameterInfo,edit:printinfo,edit:key:escape,edit:printinfo,edit:print'},
+		[r'^Info: parameters$', r'^  \[int iX\], int iY, int iWidth, int iHeight, EPaintMode eMode = PM_Fill$', r'^  \[int iX\], int iY$',
+		 r'^Info: parameters$', r'^  int iFirst, \[int iSecond\], float fAmount$', r'^Info: parameters$', r'^  int iX, int iY, \[int iWidth\], int iHeight, EPaintMode eMode = PM_Fill$', r'^  int iX, int iY$',
+		 r'^Info: parameters$', r'^  int iX, int iY, int iWidth, int iHeight, \[EPaintMode eMode = PM_Fill\]$', r'^Info: parameters$', r'^  int iX, \[int iY\]$',
+		 r'^  int iX, \[int iY\], int iWidth, int iHeight, EPaintMode eMode = PM_Fill$', r'^Info: parameters$', r'^  int iX, \[int iY\]$', r'^Info: parameters$', r'^  <no parameters>$',
+		 r'^Info: none$', r"^Status line: The caret isn.t among a call.s arguments\.$", r"^Status line: The caret isn.t among a call.s arguments\.$",
+		 r'^Info: parameters$', r'^  \[int iX\], int iY, int iWidth, int iHeight, EPaintMode eMode = PM_Fill$', r'^Info: none$', r'Paint\.cpp \* \(focus\) line 15: '], [r'ERROR', r'^Link: \[']),
+	('quick-type', {
+		#Type Info (Control+Shift+P): the type the symbol at the caret is declared with (a local variable's, a
+		#parameter's, what a function returns, a field's with its array's bounds, a class as it is declared), or the
+		#selected expression's; it goes when the caret moves.  With neither, the status line says so.
+		'SOLUTION': QUICK_INFO, 'WAIT_INDEX': '1', 'OPEN': 'Paint.cpp', 'CARET': '52:5',
+		'DEBUG': 'command:View.TypeInfo,edit:printinfo,edit:caret:51:5,edit:printinfo,command:View.TypeInfo,edit:printinfo,edit:caret:52:25,command:View.TypeInfo,edit:printinfo,edit:caret:21:3,command:View.TypeInfo,edit:printinfo,'
+		         'edit:caret:31:22,command:View.TypeInfo,edit:printinfo,edit:caret:52:13,edit:selectto:52:31,command:View.TypeInfo,edit:printinfo,edit:caret:43:14,command:View.TypeInfo,edit:printinfo,'
+		         'edit:caret:47:1,command:View.TypeInfo,printstatus,edit:printinfo'},
+		[r'^Info: type$', r'^  int$', r'^Info: none$', r'^Info: type$', r'^  CPainter\*$', r'^Info: type$', r'^  int$', r'^Info: type$', r'^  int\[PAINT_MAXIMUM\]$', r'^Info: type$', r'^  CPainter\*$',
+		 r'^Info: type$', r'^  int$', r'^Info: type$', r'^  class CPainter$', r'^Status line: No type is known for what is at the caret\.$', r'^Info: none$'], [r'ERROR', r'^Link: \[']),
+	('quick-definition', {
+		#Quick Definition (Control+Shift+I): the definition of the symbol at the caret in a chooser that previews its
+		#code; Enter goes to it.  With no symbol there the status line says so.
+		'SOLUTION': QUICK_INFO, 'WAIT_INDEX': '1', 'OPEN': 'Paint.cpp', 'CARET': '51:15',
+		'DEBUG': 'command:View.QuickDefinition,edit:printchooser,edit:key:escape,edit:print,command:View.QuickDefinition,edit:key:enter,edit:print,edit:caret:47:1,command:View.QuickDefinition,printstatus'},
+		[r'^Chooser: Definition of CPainter::Rect$', r'^  >CPainter::Rect \| Paint\.cpp:19$', r'^Chooser preview: Paint\.cpp$', r'Paint\.cpp \(focus\) line 51: ',
+		 r'Paint\.cpp \(focus\) line 19: \[void CPainter::Rect\(int iX, int iY, int iWidth, int iHeight, EPaintMode eMode\)\]',
+		 r'^Status line: There is no symbol at the caret to show the definition of\.$'], [r'ERROR']),
+	('quick-definition-several', {
+		#Quick Definition of a virtual function lists its definition and what implements it.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Main.cpp', 'CARET': '12:12',
+		'DEBUG': 'command:View.QuickDefinition,edit:printchooser,edit:key:escape'},
+		[r'^Chooser: Definition of CShape::Draw  4$', r'^  >CShape::Draw \| Shape\.cpp:\d+$', r'CCircle::Draw \| Shapes\.cpp:4$', r'CSquare::Draw \| Shapes\.cpp:16$', r'CRoundedSquare::Draw \| Shapes\.cpp:27$'], [r'ERROR']),
 	('nav-type-declaration', {
 		#Go to Type Declaration (Control+Shift+B): from a parameter and from a local variable, the class each is declared
 		#with; from a field of a built in type, the status line says its type has nothing to go to.

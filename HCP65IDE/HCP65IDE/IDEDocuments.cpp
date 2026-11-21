@@ -214,6 +214,7 @@ Ptr<CIDEEditorTab> CIDEDocuments::OpenFileTab(const char* szFileName, size uiPro
 	pTab->GetCodeEditor()->GetIconClickEvent()->Add(&mpcContent->GetBookmarks(), &CIDEBookmarks::IconClicked);
 	pTab->GetCodeEditor()->GetIconClickEvent()->Add(&mpcContent->GetMarks(), &CIDEMarks::IconClicked);
 	pTab->GetEditor()->AddInputAction(CIC_ClearSelection, &mpcContent->GetMarks(), &CIDEMarks::EscapeAction);
+	pTab->GetEditor()->AddInputAction(CIC_ClearSelection, &mpcContent->GetQuickInfo(), &CIDEQuickInfo::EscapeAction);
 	mpcContent->GetDebugging()->ShowBreakpoints(pTab);
 	mpcContent->GetBookmarks()->ShowBookmarks(pTab);
 	mpcContent->GetGitStatus()->ReadGitBase(pTab);

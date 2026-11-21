@@ -3486,6 +3486,49 @@ void CIDEScript::RunEditStep(const char* szStep)
 		sIcon.Init(IDE_GUTTER_OVERRIDES, atoi(&szStep[14]) - 1);
 		mpcContent->GetMarks()->IconClicked(&pTab->GetCodeEditor(), sIcon);
 	}
+	else if (strcmp(szStep, "printinfo") == 0)
+	{
+		//The name underlined as a link with its declaration, and the popup over the caret's line: "Link: [Area] ...",
+		//"Info: parameters" and its rows, what is bold in square brackets.
+		CChars	szShown;
+
+		mpcContent->GetQuickInfo()->Poll();
+		szShown.Init();
+		mpcContent->GetQuickInfo()->Print(&szShown);
+		printf("%s", szShown.Text());
+		szShown.Kill();
+		fflush(stdout);
+	}
+	else if (strncmp(szStep, "pointer:", 8) == 0)
+	{
+		//pointer:<line>:<column>, from 1: the pointer put over the active editor's character there, which should be
+		//in view, as a person would move it (nothing pressed).
+		int32	x;
+		int32	y;
+
+		if (FindEditorPoint(&szStep[8], false, &x, &y))
+		{
+			mpcContent->GetWindow()->PointerMoved(x, y);
+		}
+	}
+	else if ((strncmp(szStep, "linkhover:", 10) == 0) && pTab.IsNotNull())
+	{
+		//linkhover:<line>:<column>, from 1: as Control held with the pointer on that character; linkhover:off lets go.
+		if (strcmp(&szStep[10], "off") == 0)
+		{
+			mpcContent->GetQuickInfo()->HoldLink(false);
+		}
+		else if (strchr(&szStep[10], ':') != NULL)
+		{
+			pEditor = pTab->GetEditor();
+			uiLine = (size)(atoi(&szStep[10]) - 1);
+			if (uiLine < pEditor->NumLines())
+			{
+				mpcContent->GetQuickInfo()->HoldLink(true);
+				mpcContent->GetQuickInfo()->ShowLinkAt(pTab, pEditor->GetLineStart(uiLine) + (size)(atoi(strchr(&szStep[10], ':') + 1) - 1));
+			}
+		}
+	}
 	else if (strcmp(szStep, "printrecent") == 0)
 	{
 		//The recent files, most recent first, and the edit locations: "Recent files: Shapes.cpp, Main.cpp:1 (closed)",

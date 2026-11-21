@@ -81,6 +81,7 @@ protected:
 	Ptr<CIDEStickyLines>	mpStickyLines;	//Made when sticky lines are first shown.
 	Ptr<CIDEFindBar>	mpFindBar;		//Made when Find is first opened in it.
 	size				muiKeptUsagesLayer;	//The editor's layer of highlights for usages kept highlighted, MAX_SIZE until made.
+	size				muiLinkLayer;		//Its layer for the name underlined as a link, MAX_SIZE until made.
 	Ptr<CDockPane>		mpDockPane;  //The document pane it is shown in.
 	CChars				mszFileName;
 	size				muiProject;		//The workspace's project it is in, MAX_SIZE if none.
@@ -134,6 +135,7 @@ public:
 	void				SetFindBar(Ptr<CIDEFindBar> pFindBar);
 	Ptr<CIDEFindBar>	GetFindBar(void) const;
 	size				GetKeptUsagesLayer(ARGB32 sColour);
+	size				GetLinkLayer(ARGB32 sColour);
 	size				GetBarChanges(void) const;
 	CComponentEvent<CIDEEditorTab>*	GetSyntaxBehindEvent(void);
 	void				AddSelectionRanges(size uiStart, size uiEnd, CArrayTextRange* pasDest) override;

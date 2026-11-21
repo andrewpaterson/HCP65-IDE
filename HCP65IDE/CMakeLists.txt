@@ -182,6 +182,8 @@ set(IDE_SOURCES
 	"${IDE_DIR}/IDEBookmarks.cpp"
 	"${IDE_DIR}/IDEMarks.cpp"
 	"${IDE_DIR}/IDERecent.cpp"
+	"${IDE_DIR}/IDEQuickInfo.cpp"
+	"${IDE_DIR}/IDESymbolInfo.cpp"
 	"${IDE_DIR}/IDEUserFile.cpp"
 	"${IDE_DIR}/IDEClaudePage.cpp"
 	"${IDE_DIR}/IDEEditorPage.cpp"
