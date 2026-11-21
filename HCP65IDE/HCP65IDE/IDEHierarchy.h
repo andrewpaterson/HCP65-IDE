@@ -108,7 +108,8 @@ public:
 //
 //  - Type Hierarchy (Control+H): the class at the caret (a class named there, the class of a member named there, a
 //    variable's type) with its base classes over it and the classes derived from it under it; its toolbar also shows
-//    the base classes alone, all of them, or the derived classes alone.
+//    the base classes alone, all of them, or the derived classes alone.  Over it is its first base class, and that
+//    one's first: a class with more says which after its name ("also: CNamed").
 //  - Method Hierarchy (Control+Shift+H): the same classes for the member function at the caret (or the one the caret
 //    is in), each saying whether it defines the function (+), inherits it (-), declares it without a body (abstract)
 //    or should define it and doesn't (!).  Enter on a class that defines it goes to its function.
@@ -190,6 +191,7 @@ protected:
 	void	Build(Ptr<CIDEHierarchySearch> pSearch);
 	int32	AddClass(Ptr<CIDEHierarchySearch> pSearch, int32 iParent, const char* szKey);
 	void	AddClasses(Ptr<CIDEHierarchySearch> pSearch, int32 iNode, bool bDerived, int32 iDepth);
+	void	NoteOtherBases(Ptr<CIDEHierarchySearch> pSearch, int32 iNode);
 	void	MarkMethod(Ptr<CIDEHierarchySearch> pSearch);
 	void	FindCalls(Ptr<CIDEHierarchySearch> pSearch, int32 iNode);
 	void	AddCallRows(Ptr<CIDEHierarchySearch> pSearch, int32 iNode, CArrayIDECallRelations* pasRelations, const char* szVia);

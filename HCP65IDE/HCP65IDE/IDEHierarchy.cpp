@@ -628,6 +628,7 @@ void CIDEHierarchy::Build(Ptr<CIDEHierarchySearch> pSearch)
 		for (i = aszChain.NumElements(); i > 0; i--)
 		{
 			iNode = AddClass(pSearch, iNode, aszChain.GetText(i - 1));
+			NoteOtherBases(pSearch, iNode);
 		}
 		aszChain.Kill();
 		pSearch->miSubject = iNode;
@@ -671,6 +672,42 @@ int32 CIDEHierarchy::AddClass(Ptr<CIDEHierarchySearch> pSearch, int32 iParent, c
 	}
 	KillIDETargets(&asTargets);
 	return (int32)pSearch->masNodes.NumElements() - 1;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The class view goes up by a class's first base class alone.  A class of
+// its chain with more says what the others are after its name ("also:
+// CNamed, CCounted"), before its file: the Supertypes view has them all.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEHierarchy::NoteOtherBases(Ptr<CIDEHierarchySearch> pSearch, int32 iNode)
+{
+	CArrayChars	aszBases;
+	CChars		szNote;
+	CChars		szKey;
+	size		i;
+
+	szKey.Init(pSearch->masNodes.Get((size)iNode)->szKey);
+	aszBases.Init();
+	mpcContent->GetCodeModel()->FindClassBases(szKey.Text(), false, &aszBases);
+	if (aszBases.NumElements() > 1)
+	{
+		szNote.Init("  also: ");
+		for (i = 1; i < aszBases.NumElements(); i++)
+		{
+			if (i > 1)
+			{
+				szNote.Append(", ");
+			}
+			GetIDEScopedName(aszBases.GetText(i), &szNote);
+		}
+		pSearch->masNodes.Get((size)iNode)->szDetail.Insert(0, szNote.Text());
+		szNote.Kill();
+	}
+	aszBases.Kill();
+	szKey.Kill();
 }
 
 

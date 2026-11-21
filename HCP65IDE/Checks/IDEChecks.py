@@ -38,6 +38,7 @@ RENAME_FILE = os.path.join(HERE, 'Input', 'RenameFile', 'RenameFile.sln')
 #changed in it.
 NAVIGATION = os.path.join(HERE, 'Input', 'Navigation', 'Navigation.vcxproj')
 QUICK_INFO = os.path.join(HERE, 'Input', 'QuickInfo', 'QuickInfo.vcxproj')
+BASES = os.path.join(HERE, 'Input', 'Bases', 'Bases.vcxproj')
 #A unit including <windows.h> (Input/WindowsHeaders), with Win32 and x64 configurations.
 WINDOWS_HEADERS = os.path.join(HERE, 'Input', 'WindowsHeaders', 'WindowsHeaders.vcxproj')
 ROOT = os.path.abspath(os.path.join(HERE, '..', '..', '..'))
@@ -4774,6 +4775,19 @@ CHECKS = [
 		 r'^    \+ DrawAll  via CShape::Draw  Main\.cpp:12$', r'^    \+ CShape::Move  via CShape::Draw  Shape\.cpp:20$',
 		 r'^Hierarchy: Calls: CSquare::Draw \(callers\)$', r'^    \+ CRoundedSquare::Draw  Shapes\.cpp:29$', r'^    \+ DrawAll  via CShape::Draw  Main\.cpp:12$',
 		 r'^Hierarchy: Calls: CShape::Draw \(callers\)$', r'^ >CShape::Draw$', r'^    \+ DrawAll  Main\.cpp:12$', r'^    \+ CShape::Move  Shape\.cpp:20$'], [r'ERROR', r'via CSquare::Draw', r'No hierarchy row']),
+	('hierarchy-other-bases', {
+		#The class view of Type Hierarchy goes up by each class's first base class.  A class of that chain with more base
+		#classes says which after its name (the class asked about, and any over it): a class under it doesn't, and the
+		#Supertypes view, which has every base as a row, says none.  Method Hierarchy's rows are the class view's.
+		'SOLUTION': BASES, 'WAIT_INDEX': '1', 'OPEN': 'Bases.h', 'CARET': '44:8',
+		'DEBUG': 'command:Navigate.TypeHierarchy,edit:printhierarchy,edit:hierarchytool:Supertypes Hierarchy,edit:printhierarchy,'
+		         'edit:open:Bases.h,edit:caret:39:8,command:Navigate.TypeHierarchy,edit:printhierarchy,'
+		         'edit:open:Bases.cpp,edit:caret:15:14,command:Navigate.MethodHierarchy,edit:printhierarchy'},
+		[r'^Hierarchy: Type: CLamp \(class hierarchy\)$', r'^  CCounted  Bases\.h$', r'^    CThing  Bases\.h$', r'^      CWidget  also: CNamed  Bases\.h$', r'^        CDial  Bases\.h$',
+		 r'^ >        CLamp  also: CSwitchable, CNamed  Bases\.h$', r'^Hierarchy: Type: CLamp \(supertypes\)$', r'^ >CLamp  Bases\.h$', r'^    CDial  Bases\.h$', r'^      CWidget  Bases\.h$',
+		 r'^        CNamed  Bases\.h$', r'^    CSwitchable  Bases\.h$', r'^    CNamed  Bases\.h$',
+		 r'^Hierarchy: Type: CDial \(class hierarchy\)$', r'^      CWidget  also: CNamed  Bases\.h$', r'^ >      CDial  Bases\.h$', r'^          CLamp  Bases\.h$',
+		 r'^Hierarchy: Method: CLamp::Switch \(class hierarchy\)$', r'^      CWidget  also: CNamed  Bases\.h$', r'^ >        CLamp  \+  also: CSwitchable, CNamed  Bases\.h$'], [r'ERROR']),
 	('nav-type-declaration', {
 		#Go to Type Declaration (Control+Shift+B): from a parameter and from a local variable, the class each is declared
 		#with; from a field of a built in type, the status line says its type has nothing to go to.
