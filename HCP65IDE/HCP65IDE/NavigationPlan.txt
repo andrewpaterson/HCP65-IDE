@@ -311,8 +311,9 @@ Each says what there is, what would be done, how it would be checked, and what t
      c. Checked by: TestWindowLib (a component's shape reaches the native window, and goes back, on WinRef); the
         IDE's quick-link-pointer, with printinfo saying the pointer's shape; the Windows sources through MinGW.
      d. navigation.md's sentence, Navigation.txt's gap, stage F's note.
-   To decide: an I-beam over text (NC_Text), which IntelliJ has and no text area here does, is a separate change to
-   every text area and field.  Recommended: not with this.
+   The I-beam over text was asked for by itself and is built (2026-11-21, CommonLibraries 10b5b10b3): NC_Text, which a
+   selectable text area and a text field have.  So the editor's shape that ClearLink puts back is NC_Text, and the
+   hand is one more shape beside it (a and b above are still to do).
 
 3. The smaller shortfalls in Navigation.txt's Gaps.  Each stands alone; in the order recommended.
      a. Call Hierarchy: the callers of a virtual function include the calls of what it overrides, as a call through
