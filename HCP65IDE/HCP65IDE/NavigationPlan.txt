@@ -324,7 +324,8 @@ Each says what there is, what would be done, how it would be checked, and what t
         menu), is a second step: later.
      b. Type Hierarchy's class view, a class with several base classes: its row says the others ("also: CSecond"),
         dim, and Supertypes still has them all.  The other way, every path from every topmost base, repeats the
-        class and what is under it once for each path.  Small.  To decide: which (recommended: the note).
+        class and what is under it once for each path.  Small.  Decided 2026-11-21 ("3b. Option 1"): the note on the
+        row, for the class and for any class over it that has more than one base.  Decided, not asked to be built.
      c. Recent Files' "Show edited only" (the files CIDERecent has edit places in, by the chooser's button, as
         Recent Locations has Show Changed Only), and Delete or Backspace in the Switcher closing the selected file
         and leaving the Switcher open (a key heard by the popup's list, as Control let go is).  Small.
