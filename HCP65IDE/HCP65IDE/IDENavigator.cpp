@@ -337,7 +337,7 @@ void CIDENavigator::AddCommands(Ptr<CCommandSet> pCommands)
 	pCommands->Add("Navigate.SwitchHeaderSource", "Switch Header/Source", "Alt+O", Ptr<CImageCel>(), this, &CIDENavigator::SwitchHeaderSource);
 	pCommands->Add("Navigate.GoToImplementation", "Go to Implementation(s)", "Control+Alt+B", Ptr<CImageCel>(), this, &CIDENavigator::GoToImplementation)->SetEnabledCheck(this, &CIDENavigator::CanGoToImplementation);
 	pCommands->Add("Navigate.GoToSuperMethod", "Go to Super Method", "Control+U", Ptr<CImageCel>(), this, &CIDENavigator::GoToSuperMethod)->SetEnabledCheck(this, &CIDENavigator::CanGoToSuperMethod);
-	pCommands->Add("Navigate.GoToTypeDeclaration", "Go to Type Declaration", "Control+Shift+B", Ptr<CImageCel>(), this, &CIDENavigator::GoToTypeDeclaration)->SetEnabledCheck(this, &CIDENavigator::CanGoToImplementation);
+	pCommands->Add("Navigate.GoToTypeDeclaration", "Go to Type Declaration", "Control+Shift+B", Ptr<CImageCel>(), this, &CIDENavigator::GoToTypeDeclaration)->SetEnabledCheck(this, &CIDENavigator::CanGoToSuperMethod);
 	pCommands->Add("Navigate.GoToRelatedSymbol", "Go to Related Symbol", "Control+Alt+Home", Ptr<CImageCel>(), this, &CIDENavigator::GoToRelatedSymbol)->SetEnabledCheck(this, &CIDENavigator::CanGoToSuperMethod);
 }
 
@@ -1423,7 +1423,10 @@ bool CIDENavigator::FindTypeOf(const char* szKey, uint8 uiKind, CChars* pszTypeK
 //
 // Go to Type Declaration (Control+Shift+B), as IntelliJ's: the class,
 // enum or typedef that is the type of the variable, field, parameter or
-// function named at the caret.  False if no symbol is named there.
+// function named at the caret.  Where no symbol is named there, or its
+// declaration names no type to go to, the type of the expression the
+// caret is in (a call's result, with the caret on its bracket), which is
+// the file's checked parse.  False if neither has a type to go to.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDENavigator::GoToTypeDeclaration(void)
@@ -1432,12 +1435,47 @@ bool CIDENavigator::GoToTypeDeclaration(void)
 	CChars				szKey;
 	CChars				szTypeKey;
 	CChars				szText;
+	CChars				szExpression;
 	uint8				uiKind;
 	bool				bResult;
 
 	szKey.Init();
 	szTypeKey.Init();
 	bResult = FindCaretSymbol(&szKey, &uiKind);
+	if (!bResult || !FindTypeOf(szKey.Text(), uiKind, &szTypeKey))
+	{
+		//The expression's type, if it is one the index has.
+		szText.Init();
+		szExpression.Init();
+		szTypeKey.Clear();
+		if (mpcContent->GetIntroduceVariable()->FindCaretExpressionType(&szExpression, &szText, &szTypeKey) && !szTypeKey.Empty())
+		{
+			asTargets.Init();
+			mpcContent->GetCodeModel()->FindTarget(szTypeKey.Text(), &asTargets);
+			GoToTargets("type declarations", szExpression.Text(), &asTargets);
+			KillIDETargets(&asTargets);
+			szExpression.Kill();
+			szText.Kill();
+			szTypeKey.Kill();
+			szKey.Kill();
+			return true;
+		}
+		szTypeKey.Clear();
+		if (!bResult && !szText.Empty())
+		{
+			//An expression with a type the index has no declaration of (int).
+			szText.Insert(0, "The type of the expression at the caret, ");
+			szText.Append(", has no declaration to go to.");
+			mpcContent->ShowStatus(szText.Text());
+			szExpression.Kill();
+			szText.Kill();
+			szTypeKey.Kill();
+			szKey.Kill();
+			return false;
+		}
+		szExpression.Kill();
+		szText.Kill();
+	}
 	if (!bResult)
 	{
 		mpcContent->ShowStatus("There is no symbol at the caret to go to the type of.");
@@ -1643,8 +1681,9 @@ void CIDENavigator::LinkPressed(CTextArea* pcEditor, size uiPosition)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Both are offered where a symbol is named at the caret; Go to Super
-// Method anywhere in an editor too, as the caret may be in a function.
+// Go to Implementation is offered where a symbol is named at the caret;
+// Go to Super Method anywhere in an editor, as the caret may be in a
+// function, and Go to Type Declaration too, as it may be in an expression.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDENavigator::CanGoToImplementation(void)

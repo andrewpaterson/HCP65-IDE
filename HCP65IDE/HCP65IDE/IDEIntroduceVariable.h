@@ -168,6 +168,7 @@ public:
 	const char*	GetKindProblem(SIDEIntroduction* psIntroduction, int iKind);
 	void	AppendSuggestedName(SIDEIntroduction* psIntroduction, int iKind, CChars* pszDest);
 	size	FindCandidates(CArrayChars* paszTexts);
+	bool	FindCaretExpressionType(CChars* pszExpression, CChars* pszType, CChars* pszTypeKey);
 	bool	ChooseCandidate(size uiCandidate);
 	Ptr<CMenuContainer>	GetChooser(void) const;
 	bool	FindIntroduction(SIDEIntroduction* psDest);

@@ -4920,6 +4920,21 @@ CHECKS = [
 		 r'Macros\.h \(focus\) line 16: \[#define BIGGER\(a, b\)', r'Macros\.h \(focus\) line 7: \[#define TITLE\t\t"Units"\]',
 		 r'Macros\.h \(focus\) line 5: \[#define MAX_UNITS\t8', r'^Command \[Navigate\.GoToSource\] not found, not enabled or did nothing\.$',
 		 r'^Status line: There is no symbol at the caret to show the definition of\.$'], [r'ERROR']),
+	('type-of-expression', {
+		#Where the caret is on no symbol with a type, Type Info is the type of the expression it is in: the & of an
+		#address, an operator, a call's bracket, a number.  A name's is still its declared type, and outside any
+		#expression there is none.  Go to Type Declaration goes to that type's class, says so when the type has no
+		#declaration (int), and says there is no symbol where there is no expression either.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Main.cpp', 'CARET': '24:10',
+		'DEBUG': 'command:View.TypeInfo,edit:printinfo,edit:caret:6:25,command:View.TypeInfo,edit:printinfo,edit:caret:6:22,command:View.TypeInfo,edit:printinfo,'
+		         'edit:caret:22:15,command:View.TypeInfo,edit:printinfo,edit:caret:6:10,command:View.TypeInfo,edit:printinfo,edit:caret:18:1,command:View.TypeInfo,printstatus,'
+		         'edit:caret:24:10,command:Navigate.GoToTypeDeclaration,edit:print,edit:open:Main.cpp,edit:caret:25:29,command:Navigate.GoToTypeDeclaration,edit:print,'
+		         'edit:open:Main.cpp,edit:caret:6:25,command:Navigate.GoToTypeDeclaration,printstatus,edit:caret:18:1,command:Navigate.GoToTypeDeclaration,printstatus'},
+		[r'^Info: type$', r'^  CCircle\*$', r'^Info: type$', r'^  int$', r'^Info: type$', r'^  int$', r'^Info: type$', r'^  int$', r'^Info: type$', r'^  CShape\*$',
+		 r'^Status line: No type is known for what is at the caret\.$',
+		 r'Shapes\.h \(focus\) line 6: \[class CCircle : public CShape\]', r'Shapes\.h \(focus\) line 28: \[class CRoundedSquare : public CSquare\]',
+		 r'^Status line: The type of the expression at the caret, int, has no declaration to go to\.$',
+		 r'^Status line: There is no symbol at the caret to go to the type of\.$'], [r'ERROR']),
 	('nav-type-declaration', {
 		#Go to Type Declaration (Control+Shift+B): from a parameter and from a local variable, the class each is declared
 		#with; from a field of a built in type, the status line says its type has nothing to go to.

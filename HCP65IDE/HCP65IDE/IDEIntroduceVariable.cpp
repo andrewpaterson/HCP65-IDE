@@ -444,6 +444,109 @@ size CIDEIntroduceVariable::FindCandidates(CArrayChars* paszTexts)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// The type of the expression the active editor's caret is in, with
+// nothing selected: of the innermost one that has a value (a function's
+// name has none: the call it is in has), as FindType writes it for a
+// variable.  pszExpression is how it is written, on one line, and
+// pszTypeKey the index's key of the class, enum or typedef the type is,
+// through its pointers, references and arrays, empty if it is none the
+// index has (int).  It is the checked parse of the file.  False if the
+// caret is in no expression with a type.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEIntroduceVariable::FindCaretExpressionType(CChars* pszExpression, CChars* pszType, CChars* pszTypeKey)
+{
+	CIDERefactorUnit	cUnit;
+	Ptr<CIDEEditorTab>	pTab;
+	Ptr<CTextArea>		pEditor;
+	SIDEIntroduction	sIntroduction;
+	CCPPSyntax*			pcNode;
+	SCPP65Type*			psType;
+	SCPPSyntaxRange		sRange;
+	CChars				szKey;
+	size				uiCaret;
+	size				uiLine;
+	size				uiStart;
+	size				uiEnd;
+	size				i;
+	bool				bFound;
+	char				c;
+
+	pTab = mpcContent->GetDocuments()->GetActiveTab();
+	if (pTab.IsNull())
+	{
+		return false;
+	}
+	pEditor = pTab->GetEditor();
+	mpcContent->GetDocuments()->UpdateEditedTabsNow();
+	bFound = false;
+	cUnit.Init();
+	if (cUnit.Parse(mpcContent->GetCodeModel(), &mpcContent->GetFindInFiles(), pTab->GetFileName(), true))
+	{
+		uiCaret = pEditor->GetCaretPosition();
+		uiLine = pEditor->FindLine(uiCaret);
+		for (pcNode = cUnit.FindNodeAt((int)uiLine, (int)(uiCaret - pEditor->GetLineStart(uiLine))); pcNode && !bFound; pcNode = pcNode->mpcParent)
+		{
+			if ((pcNode->GetKind() >= CPPS_CompoundStatement) && (pcNode->GetKind() <= CPPS_SkippedStatement))
+			{
+				break;
+			}
+			if (!cUnit.IsExpression(pcNode) || !cUnit.GetRange(pcNode, &sRange))
+			{
+				continue;
+			}
+			sIntroduction.Init();
+			if (FindType(&cUnit, pcNode, &sIntroduction))
+			{
+				bFound = true;
+				pszType->Append(sIntroduction.szType);
+
+				//As it is written, on one line: each run of white space is one space.
+				uiStart = FindIDETextOffset(pEditor->GetText(), sRange.iLine, sRange.iColumn);
+				uiEnd = FindIDETextOffset(pEditor->GetText(), sRange.iEndLine, sRange.iEndColumn);
+				for (i = uiStart; i < uiEnd; i++)
+				{
+					c = pEditor->GetText()[i];
+					if ((c == ' ') || (c == '\t') || (c == '\r') || (c == '\n'))
+					{
+						if (!pszExpression->Empty() && (pszExpression->Text()[pszExpression->Length() - 1] != ' '))
+						{
+							pszExpression->Append(' ');
+						}
+					}
+					else
+					{
+						pszExpression->Append(c);
+					}
+				}
+
+				//What the type is of: the class a pointer to it points at.
+				psType = cUnit.GetPass()->GetType(pcNode);
+				while (psType && (psType->IsReference() || psType->IsPointer() || psType->IsArray()) && psType->psBase)
+				{
+					psType = psType->psBase;
+				}
+				szKey.Init();
+				if (psType && cUnit.GetPass()->AppendType(psType->Unqualified(), &szKey))
+				{
+					szKey.StripWhitespace();
+					if (mpcContent->GetCodeModel()->FindSymbolIndex(szKey.Text()) >= 0)
+					{
+						pszTypeKey->Append(szKey);
+					}
+				}
+				szKey.Kill();
+			}
+			sIntroduction.Kill();
+		}
+	}
+	cUnit.Kill();
+	return bFound;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // A candidate chosen: it is selected in the editor, and introduced at
 // the next tick (the dialog can't be shown from the click).
 //

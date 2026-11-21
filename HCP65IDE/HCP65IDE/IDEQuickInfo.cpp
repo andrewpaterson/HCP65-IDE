@@ -706,8 +706,11 @@ void CIDEQuickInfo::ShowParameters(void)
 //
 // Type Info (Control+Shift+P): the type of the selected expression, as
 // Introduce Variable would declare a variable for it, or with nothing
-// selected the type the symbol at the caret is declared with.  False, the
-// status line saying so, if neither gives one.
+// selected the type the symbol at the caret is declared with.  Where the
+// caret is on no symbol with a type (a call's bracket, an operator, a
+// number), the type of the expression it is in, which is the file's
+// checked parse: only then.  False, the status line saying so, if none
+// gives one.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEQuickInfo::ShowTypeInfo(void)
@@ -717,6 +720,7 @@ bool CIDEQuickInfo::ShowTypeInfo(void)
 	SIDESymbolInfo		sInfo;
 	CChars				szType;
 	CChars				szKey;
+	CChars				szExpression;
 	size				uiStart;
 	size				uiEnd;
 	uint8				uiKind;
@@ -746,6 +750,14 @@ bool CIDEQuickInfo::ShowTypeInfo(void)
 			AppendIDEDeclaredType(&sInfo, &szType);
 		}
 		sInfo.Kill();
+		szKey.Kill();
+	}
+	if (szType.Empty() && !pTab->GetEditor()->GetSelection(&uiStart, &uiEnd))
+	{
+		szKey.Init();
+		szExpression.Init();
+		mpcContent->GetIntroduceVariable()->FindCaretExpressionType(&szExpression, &szType, &szKey);
+		szExpression.Kill();
 		szKey.Kill();
 	}
 	if (szType.Empty())
