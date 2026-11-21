@@ -863,18 +863,21 @@ static bool IsIDECallBefore(SIDECallRelation* psLeft, SIDECallRelation* psRight)
 // over itself here (it calls itself, perhaps through others) says so and
 // has none.
 //
+// A virtual function's callers are also the callers of each function it
+// overrides, as a call through a base class may land in it: their rows
+// come after its own and say which ("via CShape::Draw").  Only what it
+// overrides is followed, not what else overrides that: a call on another
+// derived class can't land here.  Nor can a call that names the class
+// (CSquare::Draw()), which is of that class's function and no other.
+//
 //////////////////////////////////////////////////////////////////////////
 void CIDEHierarchy::FindCalls(Ptr<CIDEHierarchySearch> pSearch, int32 iNode)
 {
 	CArrayIDECallRelations	asRelations;
-	SIDECallRelation*		psRelation;
-	SIDEHierarchyNode*		psNode;
-	SIDELocation*			psCall;
+	CArrayIDETargets		asSupers;
 	CChars					szKey;
+	CChars					szVia;
 	size					i;
-	size					j;
-	int32					iAncestor;
-	bool					bOver;
 
 	szKey.Init(pSearch->masNodes.Get((size)iNode)->szKey);
 	pSearch->masNodes.Get((size)iNode)->bChildrenFound = true;
@@ -887,18 +890,111 @@ void CIDEHierarchy::FindCalls(Ptr<CIDEHierarchySearch> pSearch, int32 iNode)
 	{
 		mpcContent->GetCodeModel()->FindCallers(szKey.Text(), &asRelations);
 	}
+	AddCallRows(pSearch, iNode, &asRelations, NULL);
+	KillIDECallRelations(&asRelations);
 
-	//In the order of their first calls: what a function calls, as it calls them.
-	for (i = 1; i < asRelations.NumElements(); i++)
+	if (pSearch->meMode == IHM_Callers)
 	{
-		for (j = i; (j > 0) && IsIDECallBefore(asRelations.Get(j), asRelations.Get(j - 1)); j--)
+		asSupers.Init();
+		mpcContent->GetCodeModel()->FindSuperMethods(szKey.Text(), &asSupers);
+		for (i = 0; i < asSupers.NumElements(); i++)
 		{
-			asRelations.Swap(j, j - 1);
+			asRelations.Init();
+			mpcContent->GetCodeModel()->FindCallers(asSupers.Get(i)->szKey.Text(), &asRelations);
+			RemoveQualifiedCalls(&asRelations);
+			szVia.Init();
+			GetIDEScopedName(asSupers.Get(i)->szKey.Text(), &szVia);
+			AddCallRows(pSearch, iNode, &asRelations, szVia.Text());
+			szVia.Kill();
+			KillIDECallRelations(&asRelations);
+		}
+		KillIDETargets(&asSupers);
+	}
+	szKey.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The calls written with their class before them (CSquare::Draw()) are
+// taken out, and the functions left with none: such a call isn't
+// virtual, so it is of the function it names alone.  It is told from the
+// call's line: "::" before the name.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEHierarchy::RemoveQualifiedCalls(CArrayIDECallRelations* pasRelations)
+{
+	CIDEFileLines		cLines;
+	SIDECallRelation*	psRelation;
+	SIDELocation*		psCall;
+	CChars				szLine;
+	size				uiTrimmed;
+	size				i;
+	size				j;
+	int32				iAt;
+
+	cLines.Init(&mpcContent->GetDocuments());
+	for (i = pasRelations->NumElements(); i > 0; i--)
+	{
+		psRelation = pasRelations->Get(i - 1);
+		for (j = psRelation->asCalls.NumElements(); j > 0; j--)
+		{
+			psCall = psRelation->asCalls.Get(j - 1);
+			szLine.Init();
+			uiTrimmed = 0;
+			cLines.AppendLine(psCall->szFileName.Text(), psCall->iLine, &szLine, &uiTrimmed);
+			iAt = psCall->iColumn - (int32)uiTrimmed;
+			while ((iAt > 0) && ((size)iAt <= szLine.Length()) && ((szLine.GetChar((size)iAt - 1) == ' ') || (szLine.GetChar((size)iAt - 1) == '\t')))
+			{
+				iAt--;
+			}
+			if ((iAt >= 2) && ((size)iAt <= szLine.Length()) && (szLine.GetChar((size)iAt - 1) == ':') && (szLine.GetChar((size)iAt - 2) == ':'))
+			{
+				psCall->szFileName.Kill();
+				psRelation->asCalls.RemoveAt(j - 1);
+			}
+			szLine.Kill();
+		}
+		if (psRelation->asCalls.NumElements() == 0)
+		{
+			psRelation->asCalls.Kill();
+			psRelation->sPlace.szFileName.Kill();
+			psRelation->szKey.Kill();
+			pasRelations->RemoveAt(i - 1);
 		}
 	}
-	for (i = 0; (i < asRelations.NumElements()) && (pSearch->masNodes.NumElements() < IDE_HIERARCHY_NODES); i++)
+	cLines.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A row under the row iNode for each function of pasRelations, in the
+// order of their first calls (what a function calls, as it calls them).
+// With szVia the calls are of that function, one the row's overrides,
+// and each row says so.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEHierarchy::AddCallRows(Ptr<CIDEHierarchySearch> pSearch, int32 iNode, CArrayIDECallRelations* pasRelations, const char* szVia)
+{
+	SIDECallRelation*	psRelation;
+	SIDEHierarchyNode*	psNode;
+	SIDELocation*		psCall;
+	size				i;
+	size				j;
+	int32				iAncestor;
+	bool				bOver;
+
+	for (i = 1; i < pasRelations->NumElements(); i++)
 	{
-		psRelation = asRelations.Get(i);
+		for (j = i; (j > 0) && IsIDECallBefore(pasRelations->Get(j), pasRelations->Get(j - 1)); j--)
+		{
+			pasRelations->Swap(j, j - 1);
+		}
+	}
+	for (i = 0; (i < pasRelations->NumElements()) && (pSearch->masNodes.NumElements() < IDE_HIERARCHY_NODES); i++)
+	{
+		psRelation = pasRelations->Get(i);
 		bOver = false;
 		for (iAncestor = iNode; (iAncestor >= 0) && !bOver; iAncestor = pSearch->masNodes.Get((size)iAncestor)->iParent)
 		{
@@ -908,6 +1004,11 @@ void CIDEHierarchy::FindCalls(Ptr<CIDEHierarchySearch> pSearch, int32 iNode)
 		psNode = pSearch->AddNode(iNode, psRelation->szKey.Text(), psRelation->uiKind);
 		psNode->bChildrenFound = bOver;
 		psNode->bExpanded = false;
+		if (szVia)
+		{
+			psNode->szDetail.Append("  via ");
+			psNode->szDetail.Append(szVia);
+		}
 		if (psRelation->asCalls.NumElements() > 0)
 		{
 			psCall = psRelation->asCalls.Get(0);
@@ -931,8 +1032,6 @@ void CIDEHierarchy::FindCalls(Ptr<CIDEHierarchySearch> pSearch, int32 iNode)
 			psNode->szDetail.Append("  recursive");
 		}
 	}
-	KillIDECallRelations(&asRelations);
-	szKey.Kill();
 }
 
 

@@ -4759,6 +4759,21 @@ CHECKS = [
 		 r'^Find selected: 4: int TotalArea', r'^Toolbar: Rerun, .*Autoscroll from Source\(on\), Export\.\.\., Pin Tab$', r'^Find selected: 10: int CCircle::Area\(void\)$',
 		 r'^Find selected: 21: int CSquare::Area\(void\)$', r'^Find selected: 10: int CCircle::Area\(void\)$', r'^Find selected: 25: return TotalArea\(&cCircle, &cSquare\);$',
 		 r'Main\.cpp \(focus\) line 26: ', r'<FindInFiles .*AutoscrollFromSource="true"'], [r'ERROR']),
+	('hierarchy-calls-via', {
+		#The callers of a function that overrides another have after them the callers of what it overrides, each
+		#saying which, as a call through the base class may land in it; a caller that is the function itself says
+		#recursive.  A call that names its class (CSquare::Draw()) is that class's function's alone: it isn't a caller
+		#of what overrides it, and is one of the function it names.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Shapes.cpp', 'CARET': '4:15',
+		'DEBUG': 'command:Navigate.CallHierarchy,edit:printhierarchy,edit:hierarchyexpand:CShape::Move,edit:printhierarchy,edit:key:enter,edit:print,'
+		         'edit:open:Shapes.cpp,edit:caret:27:25,command:Navigate.CallHierarchy,edit:printhierarchy,edit:open:Shapes.cpp,edit:caret:16:15,command:Navigate.CallHierarchy,edit:printhierarchy,'
+		         'edit:open:Shape.cpp,edit:caret:11:15,command:Navigate.CallHierarchy,edit:printhierarchy'},
+		[r'^Hierarchy: Calls: CCircle::Draw \(callers\)$', r'^ >CCircle::Draw$', r'^    \+ DrawAll  Main\.cpp:13$', r'^    \+ DrawAll  via CShape::Draw  Main\.cpp:12$',
+		 r'^    \+ CShape::Move  via CShape::Draw  Shape\.cpp:20$', r'^ >  CShape::Move  via CShape::Draw  Shape\.cpp:20$', r'^      CCircle::Draw  Shapes\.cpp:6  recursive$',
+		 r'Shape\.cpp \(focus\) line 20: \[\tDraw\(\);\]', r'^Hierarchy: Calls: CRoundedSquare::Draw \(callers\)$', r'^ >CRoundedSquare::Draw$',
+		 r'^    \+ DrawAll  via CShape::Draw  Main\.cpp:12$', r'^    \+ CShape::Move  via CShape::Draw  Shape\.cpp:20$',
+		 r'^Hierarchy: Calls: CSquare::Draw \(callers\)$', r'^    \+ CRoundedSquare::Draw  Shapes\.cpp:29$', r'^    \+ DrawAll  via CShape::Draw  Main\.cpp:12$',
+		 r'^Hierarchy: Calls: CShape::Draw \(callers\)$', r'^ >CShape::Draw$', r'^    \+ DrawAll  Main\.cpp:12$', r'^    \+ CShape::Move  Shape\.cpp:20$'], [r'ERROR', r'via CSquare::Draw', r'No hierarchy row']),
 	('nav-type-declaration', {
 		#Go to Type Declaration (Control+Shift+B): from a parameter and from a local variable, the class each is declared
 		#with; from a field of a built in type, the status line says its type has nothing to go to.

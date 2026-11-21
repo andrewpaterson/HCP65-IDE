@@ -114,7 +114,9 @@ public:
 //    or should define it and doesn't (!).  Enter on a class that defines it goes to its function.
 //  - Call Hierarchy (Control+Alt+H): the function at the caret (or the one the caret is in) with the functions that
 //    call it under it, and theirs under them as each is opened, without end but for a function that calls itself;
-//    or, by the toolbar, the functions it calls.  Enter goes to the call.
+//    or, by the toolbar, the functions it calls.  Enter goes to the call.  The callers of a virtual function have
+//    after them the callers of what it overrides, each saying which ("via CShape::Draw"): a call through the base
+//    class may land in it.
 //
 //Each tab is a results pane (CIDEResultsPane): the preview shows the selected row's place, enter or a double click
 //goes there (a row's chevron and the left and right keys open and close it), Rerun makes it again from the index,
@@ -190,6 +192,8 @@ protected:
 	void	AddClasses(Ptr<CIDEHierarchySearch> pSearch, int32 iNode, bool bDerived, int32 iDepth);
 	void	MarkMethod(Ptr<CIDEHierarchySearch> pSearch);
 	void	FindCalls(Ptr<CIDEHierarchySearch> pSearch, int32 iNode);
+	void	AddCallRows(Ptr<CIDEHierarchySearch> pSearch, int32 iNode, CArrayIDECallRelations* pasRelations, const char* szVia);
+	void	RemoveQualifiedCalls(CArrayIDECallRelations* pasRelations);
 	void	ShowTree(Ptr<CIDEHierarchySearch> pSearch, int64 iSelectedData);
 	void	AddTreeRows(Ptr<CIDEHierarchySearch> pSearch, int32 iParent, int32 iParentNode);
 	void	KeepExpanded(Ptr<CIDEHierarchySearch> pSearch);
