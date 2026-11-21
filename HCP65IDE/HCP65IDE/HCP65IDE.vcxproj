@@ -347,6 +347,7 @@
     <ClCompile Include="IDEMarks.cpp" />
     <ClCompile Include="IDERecent.cpp" />
     <ClCompile Include="IDEQuickInfo.cpp" />
+    <ClCompile Include="IDEHierarchy.cpp" />
     <ClCompile Include="IDESymbolInfo.cpp" />
     <ClCompile Include="IDEUserFile.cpp" />
     <ClCompile Include="IDEClaudePage.cpp" />
@@ -448,6 +449,7 @@
     <ClInclude Include="IDEMarks.h" />
     <ClInclude Include="IDERecent.h" />
     <ClInclude Include="IDEQuickInfo.h" />
+    <ClInclude Include="IDEHierarchy.h" />
     <ClInclude Include="IDESymbolInfo.h" />
     <ClInclude Include="IDEUserFile.h" />
     <ClInclude Include="IDEClaudePage.h" />

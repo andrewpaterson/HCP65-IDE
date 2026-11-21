@@ -171,6 +171,8 @@ Ptr<CMenuContainer> CIDENavigator::CreateNavigateMenu(void)
 	mpNavigateMenu->AddSeparator();
 	mpcContent->GetRecent()->AddNavigateItems(mpNavigateMenu);
 	mpNavigateMenu->AddSeparator();
+	mpcContent->GetHierarchy()->AddNavigateItems(mpNavigateMenu);
+	mpNavigateMenu->AddSeparator();
 	mpNavigateMenu->AddItem(pCommands->Find("Navigate.FindUsages"));
 	mpNavigateMenu->AddItem(pCommands->Find("Navigate.ShowUsages"));
 	mpNavigateMenu->AddItem(pCommands->Find("Navigate.FindReferences"));
@@ -718,10 +720,11 @@ bool CIDENavigator::FindCaretSymbol(CChars* pszKey, uint8* puiKind)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The function whose definition the active editor's caret is in, as the
-// refactorings find it: the file parsed as it is now, the function
-// definition round the caret, and the symbol its name is.  False if the
-// caret isn't in one.
+// The function whose definition the active editor's caret is in: the one
+// the file's outline has round the caret (anywhere in it, between its
+// tokens too), or failing that as the refactorings find it, the file
+// parsed as it is now and the function definition round the caret; and
+// the symbol its name is.  False if the caret isn't in one.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDENavigator::FindCaretFunction(CChars* pszKey, uint8* puiKind)
@@ -732,6 +735,9 @@ bool CIDENavigator::FindCaretFunction(CChars* pszKey, uint8* puiKind)
 	CCPPSyntax*						pcNode;
 	CCPPSyntaxName*					pcName;
 	SCPPSyntaxRange					sRange;
+	CIDEOutline*					pcOutline;
+	SIDEOutlineEntry*				psEntry;
+	int32							iEntry;
 	int								iLine;
 	int								iColumn;
 	bool							bFound;
@@ -742,6 +748,20 @@ bool CIDENavigator::FindCaretFunction(CChars* pszKey, uint8* puiKind)
 		return false;
 	}
 	mpcContent->GetDocuments()->UpdateEditedTabsNow();
+
+	//The file's outline knows the function a place is in, between its tokens too: the symbol is its name's last part.
+	pcOutline = pTab->GetOutline();
+	iEntry = pcOutline ? pcOutline->FindFunctionAt(iLine, iColumn) : -1;
+	if (iEntry >= 0)
+	{
+		psEntry = pcOutline->Get((size)iEntry);
+		if (psEntry->bDefinition && (psEntry->sName.iEndColumn > 0) &&
+			mpcContent->GetCodeModel()->GetSymbolAt(pTab->GetFileName(), psEntry->sName.iEndLine, psEntry->sName.iEndColumn - 1, pszKey, puiKind))
+		{
+			return true;
+		}
+	}
+
 	cUnit.Init();
 	bFound = false;
 	if (cUnit.Parse(mpcContent->GetCodeModel(), &mpcContent->GetFindInFiles(), pTab->GetFileName(), false))

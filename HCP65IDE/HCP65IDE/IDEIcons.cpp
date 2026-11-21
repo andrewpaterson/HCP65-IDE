@@ -333,6 +333,44 @@ static const float64 gafReplaceAll[] =
 	10.5, 8.5, 13.0, 11.0,
 	10.5, 13.5, 13.0, 11.0,
 };
+static const float64 gafClassHierarchy[] =
+{
+	8.0, 2.5, 8.0, 7.5,
+	3.5, 7.5, 12.5, 7.5,
+	3.5, 7.5, 3.5, 12.5,
+	12.5, 7.5, 12.5, 12.5,
+	6.0, 2.5, 10.0, 2.5,
+	1.5, 12.5, 5.5, 12.5,
+	10.5, 12.5, 14.5, 12.5,
+};
+static const float64 gafSupertypes[] =
+{
+	8.0, 13.5, 8.0, 5.0,
+	8.0, 5.0, 4.5, 8.5,
+	8.0, 5.0, 11.5, 8.5,
+	3.5, 2.5, 12.5, 2.5,
+};
+static const float64 gafSubtypes[] =
+{
+	8.0, 2.5, 8.0, 11.0,
+	8.0, 11.0, 4.5, 7.5,
+	8.0, 11.0, 11.5, 7.5,
+	3.5, 13.5, 12.5, 13.5,
+};
+static const float64 gafCallers[] =
+{
+	13.5, 8.0, 5.0, 8.0,
+	5.0, 8.0, 8.5, 4.5,
+	5.0, 8.0, 8.5, 11.5,
+	2.5, 3.5, 2.5, 12.5,
+};
+static const float64 gafCallees[] =
+{
+	5.0, 8.0, 13.5, 8.0,
+	13.5, 8.0, 10.0, 4.5,
+	13.5, 8.0, 10.0, 11.5,
+	2.5, 3.5, 2.5, 12.5,
+};
 
 
 struct SIDEToolIconLines
@@ -363,6 +401,11 @@ static const SIDEToolIconLines	gasIDEToolIcons[] =
 	IDE_TOOL_ICON(Settings),
 	IDE_TOOL_ICON(Replace),
 	IDE_TOOL_ICON(ReplaceAll),
+	IDE_TOOL_ICON(ClassHierarchy),
+	IDE_TOOL_ICON(Supertypes),
+	IDE_TOOL_ICON(Subtypes),
+	IDE_TOOL_ICON(Callers),
+	IDE_TOOL_ICON(Callees),
 };
 static_assert(sizeof(gasIDEToolIcons) / sizeof(SIDEToolIconLines) == ITI_Count, "Each EIDEToolIcon needs its lines in gasIDEToolIcons.");
 

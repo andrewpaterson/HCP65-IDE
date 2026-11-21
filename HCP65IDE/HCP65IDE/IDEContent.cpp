@@ -249,6 +249,7 @@ void CIDEContent::Class(void)
 	M_Pointer(mpMarks);
 	M_Pointer(mpRecent);
 	M_Pointer(mpQuickInfo);
+	M_Pointer(mpHierarchy);
 	M_Pointer(mpDuplicates);
 	M_Pointer(mpOccurrences);
 	M_Pointer(mpNavigationHistory);
@@ -484,6 +485,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpMarks = OMalloc<CIDEMarks>(this);
 	mpRecent = OMalloc<CIDERecent>(this);
 	mpQuickInfo = OMalloc<CIDEQuickInfo>(this);
+	mpHierarchy = OMalloc<CIDEHierarchy>(this);
 	mpDuplicates = OMalloc<CIDEDuplicates>(this);
 	mpOccurrences = OMalloc<CIDEOccurrences>(this);
 	mpNavigationHistory = OMalloc<CIDENavigationHistory>(this);
@@ -529,6 +531,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpFindInFiles->CreatePane(&sPlace);
 	mpDuplicates->CreatePane(&sPlace);
 	mpBookmarks->CreatePane(&sPlace);
+	mpHierarchy->CreatePane(&sPlace);
 	mpBuilding->CreatePane(&sPlace);
 	mpIndexing->CreatePane(&sPlace);
 	mpRunning->CreatePane(&sPlace);
@@ -696,6 +699,7 @@ void CIDEContent::AddCommands(void)
 	mpMarks->AddCommands(mpCommands);
 	mpRecent->AddCommands(mpCommands);
 	mpQuickInfo->AddCommands(mpCommands);
+	mpHierarchy->AddCommands(mpCommands);
 	mpRename->AddCommands(mpCommands);
 	mpFileRename->AddCommands(mpCommands);
 	mpSafeDelete->AddCommands(mpCommands);
@@ -1267,6 +1271,7 @@ Ptr<CIDEBookmarks> CIDEContent::GetBookmarks(void) const { return mpBookmarks; }
 Ptr<CIDEMarks> CIDEContent::GetMarks(void) const { return mpMarks; }
 Ptr<CIDERecent> CIDEContent::GetRecent(void) const { return mpRecent; }
 Ptr<CIDEQuickInfo> CIDEContent::GetQuickInfo(void) const { return mpQuickInfo; }
+Ptr<CIDEHierarchy> CIDEContent::GetHierarchy(void) const { return mpHierarchy; }
 Ptr<CIDEDuplicates> CIDEContent::GetDuplicates(void) const { return mpDuplicates; }
 Ptr<CIDEOccurrences> CIDEContent::GetOccurrences(void) const { return mpOccurrences; }
 Ptr<CIDENavigationHistory> CIDEContent::GetNavigationHistory(void) const { return mpNavigationHistory; }

@@ -3486,6 +3486,49 @@ void CIDEScript::RunEditStep(const char* szStep)
 		sIcon.Init(IDE_GUTTER_OVERRIDES, atoi(&szStep[14]) - 1);
 		mpcContent->GetMarks()->IconClicked(&pTab->GetCodeEditor(), sIcon);
 	}
+	else if (strcmp(szStep, "printhierarchy") == 0)
+	{
+		//The Hierarchy tool window's chosen tab: "Hierarchy: Type: CShape (class hierarchy)" and its rows that can be
+		//seen, the selected one after a '>', a closed one with rows after a '+'.
+		CChars	szShown;
+
+		szShown.Init();
+		mpcContent->GetHierarchy()->Print(&szShown);
+		printf("%s", szShown.Text());
+		szShown.Kill();
+		fflush(stdout);
+	}
+	else if (strncmp(szStep, "hierarchyexpand:", 16) == 0)
+	{
+		//hierarchyexpand:<name>: the first closed row with that name opened, as its chevron's press opens it.
+		if (!mpcContent->GetHierarchy()->ExpandRow(&szStep[16]))
+		{
+			printf("No hierarchy row [%s] to open.\n", &szStep[16]);
+		}
+	}
+	else if (strncmp(szStep, "hierarchytool:", 14) == 0)
+	{
+		//hierarchytool:<caption>: that button of the Hierarchy tool window's toolbar clicked.
+		ClickPaneTool(mpcContent->GetHierarchy()->GetResultsPane(), &szStep[14]);
+	}
+	else if (strcmp(szStep, "printhierarchytoolbar") == 0)
+	{
+		PrintPaneToolbar(mpcContent->GetHierarchy()->GetResultsPane());
+		fflush(stdout);
+	}
+	else if (strcmp(szStep, "hierarchytabs") == 0)
+	{
+		//The Hierarchy tool window's tabs, the chosen one after a '>'.
+		Ptr<CTabbedContainer>	pTabs;
+
+		pTabs = mpcContent->GetHierarchy()->GetTabs()->GetTabs();
+		printf("Hierarchy tabs:");
+		for (i = 0; i < pTabs->NumTabs(); i++)
+		{
+			printf("%s %s%s", (i > 0) ? "," : "", (pTabs->GetTab(i) == pTabs->GetSelected()) ? ">" : "", pTabs->GetTab(i)->GetText());
+		}
+		printf("\n");
+	}
 	else if (strcmp(szStep, "printinfo") == 0)
 	{
 		//The name underlined as a link with its declaration, and the popup over the caret's line: "Link: [Area] ...",

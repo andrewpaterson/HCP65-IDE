@@ -102,6 +102,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDEMarks.h"
 #include "IDERecent.h"
 #include "IDEQuickInfo.h"
+#include "IDEHierarchy.h"
 #include "IDEIndexing.h"
 #include "IDEDocuments.h"
 #include "IDESolutions.h"
@@ -124,6 +125,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define IDE_CLAUDE_ID			"Claude"
 #define IDE_STRUCTURE_ID			"Structure"
 #define IDE_BOOKMARKS_ID			"Bookmarks"
+#define IDE_HIERARCHY_ID			"Hierarchy"
 #define IDE_USAGES_ID			"FindUsages"
 #define IDE_FIND_ID				"Find"
 #define IDE_DUPLICATES_ID		"Duplicates"
@@ -234,6 +236,7 @@ protected:
 	Ptr<CIDEMarks>				mpMarks;			//Changed lines, kept usages and override marks.
 	Ptr<CIDERecent>				mpRecent;			//Recent files and locations, the switcher, edit locations.
 	Ptr<CIDEQuickInfo>			mpQuickInfo;		//A name's declaration, Quick Definition, Parameter Info, Type Info.
+	Ptr<CIDEHierarchy>			mpHierarchy;		//The Hierarchy tool window: type, method and call hierarchies.
 	Ptr<CIDEDuplicates>			mpDuplicates;		//Find Duplicates and the Duplicates tool window.
 	Ptr<CIDEOccurrences>		mpOccurrences;		//Next and Previous Occurrence through Find Usages or Build.
 	Ptr<CIDENavigationHistory>	mpNavigationHistory;	//Back and Forward.
@@ -344,6 +347,7 @@ public:
 	Ptr<CIDEMarks>			GetMarks(void) const;
 	Ptr<CIDERecent>			GetRecent(void) const;
 	Ptr<CIDEQuickInfo>		GetQuickInfo(void) const;
+	Ptr<CIDEHierarchy>		GetHierarchy(void) const;
 	Ptr<CIDEDuplicates>		GetDuplicates(void) const;
 	Ptr<CIDEIndexing>		GetIndexing(void) const;
 	Ptr<CIDERename>			GetRename(void) const;

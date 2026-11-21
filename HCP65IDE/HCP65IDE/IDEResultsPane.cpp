@@ -257,6 +257,39 @@ int32 CIDEResultsPane::AddGroup(int32 iParent, const char* szName, const char* s
 
 //////////////////////////////////////////////////////////////////////////
 //
+// A result that is a symbol, not a line (a class in a hierarchy, a
+// function that calls another): its name with its kind's icon, then
+// szDetail (with the spaces that part it from the name; NULL for none)
+// dim.  It can have results under it.  iData, above 0, is what its source
+// knows it by.
+//
+//////////////////////////////////////////////////////////////////////////
+int32 CIDEResultsPane::AddSymbol(int32 iParent, const char* szName, const char* szDetail, uint8 uiKind, int64 iData)
+{
+	Ptr<CImageCel>	pIcon;
+	CChars			szText;
+	int32			iNode;
+	int				iType;
+
+	iType = GetIDESymbolIconType(uiKind);
+	if (iType >= 0)
+	{
+		pIcon = mpcContent->GetSymbolIcon((size)iType);
+	}
+	szText.Init(szName);
+	szText.Append(szDetail ? szDetail : "");
+	iNode = mpTree->AddNode(iParent, szText.Text(), pIcon, iData);
+	if (szText.Length() > strlen(szName))
+	{
+		mpTree->AddNodeRange(iNode, strlen(szName), szText.Length() - strlen(szName), mpcContent->GetDimFont());
+	}
+	szText.Kill();
+	return iNode;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // A result's node: its line's number, dim, and the line as it is now
 // (from pcLines, without the white space at its ends), the text found
 // (iLength of the line from iColumn) in the match font; then szNote (with

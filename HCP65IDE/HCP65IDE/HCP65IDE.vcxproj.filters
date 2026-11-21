@@ -132,6 +132,9 @@
     <ClCompile Include="IDEStructurePane.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="IDEHierarchy.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="IDEQuickInfo.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -429,6 +432,9 @@
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDEStructurePane.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDEHierarchy.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDEQuickInfo.h">

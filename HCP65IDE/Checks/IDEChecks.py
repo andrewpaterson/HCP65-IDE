@@ -3723,6 +3723,8 @@ CHECKS = [
 		 r'^Keys: Window\.Switcher Control\+Tab bound$', r'^Keys: Window\.SwitcherBackward Control\+Shift\+Tab bound$',
 		 r'^Keys: Window\.NextTab Alt\+Cursor Right bound$', r'^Keys: Window\.PreviousTab Alt\+Cursor Left bound$',
 		 r'^Keys: View\.QuickDefinition Control\+Shift\+I bound$', r'^Keys: View\.ParameterInfo Control\+P bound$', r'^Keys: View\.TypeInfo Control\+Shift\+P bound$',
+		 r'^Keys: Navigate\.TypeHierarchy Control\+H bound$', r'^Keys: Navigate\.MethodHierarchy Control\+Shift\+H bound$', r'^Keys: Navigate\.CallHierarchy Control\+Alt\+H bound$',
+		 r'^Keys: View\.Hierarchy Alt\+8 bound$',
 		 r'^Keys: Navigate\.ShowUsages Control\+Alt\+F7 bound$', r'^Keys: Edit\.Find Control\+F bound$', r'^Keys: Edit\.Replace Control\+R bound$',
 		 r'^Keys: Edit\.FindNext F3 bound$', r'^Keys: Edit\.FindPrevious Shift\+F3 bound$', r'^Keys: Edit\.FindWordAtCaret Control\+F3 bound$',
 		 r'^Keys: Edit\.FindInFiles Control\+Shift\+F bound$', r'^Keys: Edit\.ReplaceInFiles Control\+Shift\+R bound$',
@@ -3884,8 +3886,8 @@ CHECKS = [
 		 r'^Menu File/New: C\+\+ Class\.\.\., C\+\+ Header\.\.\., C\+\+ Source\.\.\.$',
 		 r'^Menu File/Recent Solutions: 1 ',
 		 r'^Menu Edit: Undo \[Ctrl\+Z\](\(disabled\))?, Redo \[Ctrl\+Shift\+Z\](\(disabled\))?, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\], Select All \[Ctrl\+A\], Extend Selection \[Ctrl\+W\], Shrink Selection \[Ctrl\+Shift\+W\], Find\.\.\. \[Ctrl\+F\], Replace\.\.\. \[Ctrl\+R\], Find Next \[F3\], Find Previous \[Shift\+F3\], Find Word at Caret \[Ctrl\+F3\], Find in Files\.\.\. \[Ctrl\+Shift\+F\], Replace in Files\.\.\. \[Ctrl\+Shift\+R\], Find Duplicates\.\.\. \[Ctrl\+Alt\+Shift\+D\]$',
-		 r'^Menu Navigate: Back \[Ctrl\+Alt\+Left\](\(disabled\))?, Forward \[Ctrl\+Alt\+Right\](\(disabled\))?, Class\.\.\. \[Ctrl\+N\], File\.\.\. \[Ctrl\+Shift\+N\], Symbol\.\.\. \[Ctrl\+Alt\+Shift\+N\], Line:Column\.\.\. \[Ctrl\+G\], Go to Source \[Ctrl\+B\], Go to Definition \[F12\], Go to Implementation\(s\) \[Ctrl\+Alt\+B\], Go to Type Declaration \[Ctrl\+Shift\+B\], Go to Super Method \[Ctrl\+U\], Go to Related Symbol \[Ctrl\+Alt\+Home\], Switch Header/Source \[Alt\+O\], File Structure \[Ctrl\+F12\], Next Method \[Alt\+Down\], Previous Method \[Alt\+Up\], Toggle Bookmark \[Ctrl\+F11\], Toggle Bookmark with Mnemonic\.\.\. \[Ctrl\+Shift\+F11\], Next Bookmark \[F2\], Previous Bookmark \[Shift\+F2\], Next Change \[Ctrl\+Alt\+Shift\+Down\], Previous Change \[Ctrl\+Alt\+Shift\+Up\], Highlight Usages in File \[Ctrl\+Shift\+F7\], Recent Files \[Ctrl\+E\], Recent Locations \[Ctrl\+Shift\+E\], Last Edit Location \[Ctrl\+Shift\+Backspace\], Next Edit Location, Select In\.\.\. \[Alt\+F1\], Find Usages \[Alt\+F7\], Show Usages \[Ctrl\+Alt\+F7\], Find All References \[Shift\+F12\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Next Occurrence \[Ctrl\+Alt\+Down\], Previous Occurrence \[Ctrl\+Alt\+Up\]$',
-		 r'^Menu View: Solution Explorer, Structure, Find Usages, Find, Duplicates, Bookmarks, Build, Indexing, Run, Debug, Claude, Quick Definition \[Ctrl\+Shift\+I\], Parameter Info \[Ctrl\+P\], Type Info \[Ctrl\+Shift\+P\]$',
+		 r'^Menu Navigate: Back \[Ctrl\+Alt\+Left\](\(disabled\))?, Forward \[Ctrl\+Alt\+Right\](\(disabled\))?, Class\.\.\. \[Ctrl\+N\], File\.\.\. \[Ctrl\+Shift\+N\], Symbol\.\.\. \[Ctrl\+Alt\+Shift\+N\], Line:Column\.\.\. \[Ctrl\+G\], Go to Source \[Ctrl\+B\], Go to Definition \[F12\], Go to Implementation\(s\) \[Ctrl\+Alt\+B\], Go to Type Declaration \[Ctrl\+Shift\+B\], Go to Super Method \[Ctrl\+U\], Go to Related Symbol \[Ctrl\+Alt\+Home\], Switch Header/Source \[Alt\+O\], File Structure \[Ctrl\+F12\], Next Method \[Alt\+Down\], Previous Method \[Alt\+Up\], Toggle Bookmark \[Ctrl\+F11\], Toggle Bookmark with Mnemonic\.\.\. \[Ctrl\+Shift\+F11\], Next Bookmark \[F2\], Previous Bookmark \[Shift\+F2\], Next Change \[Ctrl\+Alt\+Shift\+Down\], Previous Change \[Ctrl\+Alt\+Shift\+Up\], Highlight Usages in File \[Ctrl\+Shift\+F7\], Recent Files \[Ctrl\+E\], Recent Locations \[Ctrl\+Shift\+E\], Last Edit Location \[Ctrl\+Shift\+Backspace\], Next Edit Location, Select In\.\.\. \[Alt\+F1\], Type Hierarchy \[Ctrl\+H\], Method Hierarchy \[Ctrl\+Shift\+H\], Call Hierarchy \[Ctrl\+Alt\+H\], Find Usages \[Alt\+F7\], Show Usages \[Ctrl\+Alt\+F7\], Find All References \[Shift\+F12\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Next Occurrence \[Ctrl\+Alt\+Down\], Previous Occurrence \[Ctrl\+Alt\+Up\]$',
+		 r'^Menu View: Solution Explorer, Structure, Find Usages, Find, Duplicates, Bookmarks, Hierarchy, Build, Indexing, Run, Debug, Claude, Quick Definition \[Ctrl\+Shift\+I\], Parameter Info \[Ctrl\+P\], Type Info \[Ctrl\+Shift\+P\]$',
 		 r'^Menu Git: Compare with HEAD, Compare with Branch\.\.\., Compare with Revision\.\.\.$',
 		 r'^Menu Build: Build \[Ctrl\+F9\], Edit Build Configurations\.\.\.$',
 		 r'^Menu Debug: Start Debugging \[F5\], Start Without Debugging \[Ctrl\+F5\], Stop Debugging \[Shift\+F5\], Stop Running(\(disabled\))?, Restart \[Ctrl\+Shift\+F5\], Break All \[Ctrl\+Pause/Break\], Attach to Emulator\.\.\., Step Into \[F11\], Step Over \[F10\], Step Out \[Shift\+F11\], Toggle Breakpoint \[F9\], New Breakpoint at Address\.\.\., Delete All Breakpoints, Edit Configurations\.\.\.$',
@@ -4662,6 +4664,53 @@ CHECKS = [
 		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Main.cpp', 'CARET': '12:12',
 		'DEBUG': 'command:View.QuickDefinition,edit:printchooser,edit:key:escape'},
 		[r'^Chooser: Definition of CShape::Draw  4$', r'^  >CShape::Draw \| Shape\.cpp:\d+$', r'CCircle::Draw \| Shapes\.cpp:4$', r'CSquare::Draw \| Shapes\.cpp:16$', r'CRoundedSquare::Draw \| Shapes\.cpp:27$'], [r'ERROR']),
+	('hierarchy-type', {
+		#Type Hierarchy (Control+H): the class at the caret under its base class with the classes derived from it under
+		#it, in the Hierarchy tool window; the toolbar shows its base classes alone or its derived classes alone, the
+		#buttons for calls dim.  Enter goes to the selected class.  From a member, its class's; a pinned tab is left
+		#and a new one made.  Where there is no class the status line says so.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Shapes.h', 'CARET': '17:8',
+		'DEBUG': 'edit:printhierarchy,command:Navigate.TypeHierarchy,edit:printhierarchy,edit:printhierarchytoolbar,edit:hierarchytool:Supertypes Hierarchy,edit:printhierarchy,edit:hierarchytool:Subtypes Hierarchy,'
+		         'edit:printhierarchy,edit:key:down,edit:key:enter,edit:print,edit:hierarchytabs,edit:hierarchytool:Pin Tab,edit:open:Main.cpp,edit:caret:6:19,command:Navigate.TypeHierarchy,edit:printhierarchy,edit:hierarchytabs,'
+		         'edit:focus:editor,edit:caret:1:1,command:Navigate.TypeHierarchy,printstatus'},
+		[r'^Hierarchy: none$', r'^Hierarchy: Type: CSquare \(class hierarchy\)$', r'^  CShape  Shape\.h$', r'^ >  CSquare  Shapes\.h$', r'^      CRoundedSquare  Shapes\.h$',
+		 r'^Toolbar: Rerun, Previous Occurrence, Next Occurrence, Expand All, Collapse All, Class Hierarchy\(on\), Supertypes Hierarchy, Subtypes Hierarchy, Caller Hierarchy\(disabled\), Callee Hierarchy\(disabled\), Preview\(on\), Navigate with Single Click, Pin Tab$',
+		 r'^Hierarchy: Type: CSquare \(supertypes\)$', r'^ >CSquare  Shapes\.h$', r'^    CShape  Shape\.h$', r'^Hierarchy: Type: CSquare \(subtypes\)$', r'^ >CSquare  Shapes\.h$', r'^    CRoundedSquare  Shapes\.h$',
+		 r'Shapes\.h \(focus\) line 28: \[class CRoundedSquare : public CSquare\]', r'^Hierarchy tabs: >Type: CSquare$',
+		 r'^Hierarchy: Type: CShape \(class hierarchy\)$', r'^ >CShape  Shape\.h$', r'^    CCircle  Shapes\.h$', r'^    CSquare  Shapes\.h$', r'^      CRoundedSquare  Shapes\.h$',
+		 r'^Hierarchy tabs: \* Type: CSquare, >Type: CShape$', r'^Status line: There is no class at the caret to show the hierarchy of\.$'], [r'ERROR', r'not found, not enabled']),
+	('hierarchy-method', {
+		#Method Hierarchy (Control+Shift+H): the classes of the member function at the caret, each saying whether it
+		#only declares it (abstract), defines it (+) or inherits it (-); Enter on a class that defines it goes to its
+		#function, on one that doesn't to the class.  From anywhere inside a function, that function's.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Shapes.cpp', 'CARET': '21:15',
+		'DEBUG': 'command:Navigate.MethodHierarchy,edit:printhierarchy,edit:key:enter,edit:print,command:View.Hierarchy,edit:key:down,edit:key:enter,edit:print,'
+		         'edit:open:Shapes.cpp,edit:caret:28:1,command:Navigate.MethodHierarchy,edit:printhierarchy,edit:key:up,edit:key:up,edit:key:enter,edit:print,'
+		         'edit:open:Main.cpp,edit:caret:11:1,command:Navigate.MethodHierarchy,printstatus'},
+		[r'^Hierarchy: Method: CSquare::Area \(class hierarchy\)$', r'^  CShape  abstract  Shape\.h$', r'^ >  CSquare  \+  Shapes\.h$', r'^      CRoundedSquare  -  Shapes\.h$',
+		 r'Shapes\.cpp \(focus\) line 21: \[int CSquare::Area\(void\)\]', r'Shapes\.h \(focus\) line 28: \[class CRoundedSquare : public CSquare\]',
+		 r'^Hierarchy: Method: CRoundedSquare::Draw \(class hierarchy\)$', r'^  CShape  \+  Shape\.h$', r'^    CSquare  \+  Shapes\.h$', r'^ >    CRoundedSquare  \+  Shapes\.h$',
+		 r'Shape\.cpp \(focus\) line 11: \[void CShape::Draw\(void\)\]', r'^Status line: There is no member function at the caret to show the hierarchy of\.$'], [r'ERROR']),
+	('hierarchy-calls', {
+		#Call Hierarchy (Control+Alt+H): the function at the caret, or the one the caret is in, with the functions that
+		#call it under it, each closed until it is opened, when its own callers are found; Enter goes to the call.
+		#The toolbar turns it to what the function calls, in the order it calls them, with how many calls of each.
+		#Expand All shows a row standing for what hasn't been looked for, and Enter on it looks.  Next Occurrence steps
+		#through the rows; Rerun makes it again.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Shapes.cpp', 'CARET': '4:15',
+		'DEBUG': 'command:Navigate.CallHierarchy,edit:printhierarchy,edit:hierarchyexpand:DrawAll,edit:printhierarchy,edit:hierarchyexpand:main,edit:printhierarchy,edit:key:enter,edit:print,'
+		         'edit:caret:19:1,command:Navigate.CallHierarchy,edit:printhierarchy,edit:printhierarchytoolbar,edit:hierarchytool:Callee Hierarchy,edit:printhierarchy,edit:hierarchyexpand:DrawAll,edit:printhierarchy,'
+		         'edit:focus:editor,command:Navigate.NextOccurrence,edit:print,edit:open:Shape.cpp,edit:caret:18:1,command:Navigate.CallHierarchy,edit:hierarchytool:Expand All,edit:printhierarchy,'
+		         'edit:key:down,edit:key:down,edit:key:enter,edit:printhierarchy,edit:hierarchytool:Rerun,edit:printhierarchy,edit:open:Shapes.h,edit:caret:9:7,command:Navigate.CallHierarchy,printstatus'},
+		[r'^Hierarchy: Calls: CCircle::Draw \(callers\)$', r'^ >CCircle::Draw$', r'^    \+ DrawAll  Main\.cpp:13$', r'^ >  DrawAll  Main\.cpp:13$', r'^      \+ main  Main\.cpp:24$',
+		 r'^  CCircle::Draw$', r'^    DrawAll  Main\.cpp:13$', r'^ >    main  Main\.cpp:24$', r'Main\.cpp \(focus\) line 24: \[\tDrawAll\(&cCircle, &cCircle\);\]',
+		 r'^Hierarchy: Calls: main \(callers\)$', r'^ >main$',
+		 r'^Toolbar: Rerun, Previous Occurrence\(disabled\), Next Occurrence\(disabled\), Expand All, Collapse All, Class Hierarchy\(disabled\), Supertypes Hierarchy\(disabled\), Subtypes Hierarchy\(disabled\), Caller Hierarchy\(on\), Callee Hierarchy, Preview\(on\), Navigate with Single Click, Pin Tab$',
+		 r'^Hierarchy: Calls: main \(callees\)$', r'^ >main$', r'^    \+ CShape::Init  2 calls  Main\.cpp:22$', r'^    \+ DrawAll  Main\.cpp:24$', r'^    \+ TotalArea  Main\.cpp:25$',
+		 r'^ >  DrawAll  Main\.cpp:24$', r'^      \+ CShape::Draw  Main\.cpp:12$', r'^      \+ CCircle::Draw  Main\.cpp:13$', r'^    \+ TotalArea  Main\.cpp:25$', r'Main\.cpp \(focus\) line 12: \[\tpcShape->Draw\(\);\]',
+		 r'^Hierarchy: Calls: CShape::Move \(callers\)$', r'^ >CShape::Move$', r'^    CCircle::Draw  Shapes\.cpp:6$', r'^      \.\.\.$',
+		 r'^Hierarchy: Calls: CShape::Move \(callers\)$', r'^ >  CCircle::Draw  Shapes\.cpp:6$', r'^      \+ DrawAll  Main\.cpp:13$',
+		 r'^Hierarchy: Calls: CShape::Move \(callers\)$', r'^ >CShape::Move$', r'^    \+ CCircle::Draw  Shapes\.cpp:6$', r'^Status line: There is no function at the caret to show the calls of\.$'], [r'ERROR', r'No hierarchy row']),
 	('nav-type-declaration', {
 		#Go to Type Declaration (Control+Shift+B): from a parameter and from a local variable, the class each is declared
 		#with; from a field of a built in type, the status line says its type has nothing to go to.

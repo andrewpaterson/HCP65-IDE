@@ -89,6 +89,21 @@ struct SIDETarget
 typedef CArrayTemplate<SIDETarget>	CArrayIDETargets;
 
 
+//A function that calls another, or that another calls (CIDECodeModel::FindCallers, FindCallees): its key and kind,
+//where it is (its definition, or else its declaration; its file name empty if the index has neither) and the calls,
+//in the order the index has them.
+struct SIDECallRelation
+{
+	CChars				szKey;
+	uint8				uiKind;		//ECPPSymbolKind.
+	SIDELocation		sPlace;
+	CArrayIDELocations	asCalls;
+};
+
+
+typedef CArrayTemplate<SIDECallRelation>	CArrayIDECallRelations;
+
+
 //An #include a file writes (CIDECodeModel::FindIncludesIn), where it is in the file's text.
 struct SIDEInclude
 {
@@ -331,6 +346,8 @@ public:
 	size	FindImplementations(const char* szKey, CArrayIDETargets* pasDest);
 	size	FindSuperMethods(const char* szKey, CArrayIDETargets* pasDest);
 	bool	FindTarget(const char* szKey, CArrayIDETargets* pasDest);
+	size	FindCallers(const char* szKey, CArrayIDECallRelations* pasDest);
+	size	FindCallees(const char* szKey, CArrayIDECallRelations* pasDest);
 	size	FindSiblingFunctions(const char* szKey, const char* szFileName, CArrayIDELocations* pasDeclared, CArrayIDELocations* pasDefined);
 	bool	FindAssemblyTarget(const char* szKey, SIDERenameTarget* psDest);
 	size	FindOverrideLocations(const char* szKey, CArrayIDELocations* pasDest);
@@ -371,12 +388,14 @@ protected:
 	void				FindOverrides(CCPPIndexSymbol* pcSymbol, CArrayInt* paiDest);
 	bool				IsDerivedClass(CCPPIndexSymbol* pcClass, CCPPIndexSymbol* pcBase, int iDepth);
 	bool				AddTarget(CCPPIndexSymbol* pcSymbol, CArrayIDETargets* pasDest);
+	void				AddCall(CCPPIndexSymbol* pcFunction, SCPPIndexLocation* psCall, CArrayIDECallRelations* pasDest);
 	CCPPIndexSymbol*	FindScopeClass(const char* szKey);
 };
 
 
 void KillIDELocations(CArrayIDELocations* pasLocations);
 void KillIDETargets(CArrayIDETargets* pasTargets);
+void KillIDECallRelations(CArrayIDECallRelations* pasRelations);
 int GetIDESymbolIconType(uint8 uiKind);
 void KillIDEIncludes(CArrayIDEIncludes* pasIncludes);
 void KillIDENeeds(CArrayIDENeeds* pasNeeds);

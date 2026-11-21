@@ -71,6 +71,11 @@ enum EIDEToolIcon
 	ITI_Settings,		//A cog.
 	ITI_Replace,		//An arrow to the right.
 	ITI_ReplaceAll,		//Two arrows to the right.
+	ITI_ClassHierarchy,	//A box over two boxes, joined.
+	ITI_Supertypes,		//An arrow up to a bar.
+	ITI_Subtypes,		//An arrow down to a bar.
+	ITI_Callers,		//An arrow in from the right to a bar.
+	ITI_Callees,		//An arrow out to the right from a bar.
 	ITI_Count
 };
 

@@ -26,7 +26,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDESteppable.h"
 
 
-#define IDE_NUM_STEPPABLES	4
+#define IDE_NUM_STEPPABLES	5
 
 
 class CIDEContent;

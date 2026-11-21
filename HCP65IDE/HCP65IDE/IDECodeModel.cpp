@@ -2978,6 +2978,152 @@ void KillIDETargets(CArrayIDETargets* pasTargets)
 }
 
 
+void KillIDECallRelations(CArrayIDECallRelations* pasRelations)
+{
+	SIDECallRelation*	psRelation;
+	size				i;
+
+	for (i = 0; i < pasRelations->NumElements(); i++)
+	{
+		psRelation = pasRelations->Get(i);
+		KillIDELocations(&psRelation->asCalls);
+		psRelation->sPlace.szFileName.Kill();
+		psRelation->szKey.Kill();
+	}
+	pasRelations->Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A call (psCall) noted against the function pcFunction in pasDest: the
+// function is added, with where it is, the first time.  Called with the
+// index locked.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDECodeModel::AddCall(CCPPIndexSymbol* pcFunction, SCPPIndexLocation* psCall, CArrayIDECallRelations* pasDest)
+{
+	SIDECallRelation*	psRelation;
+	SCPPIndexLocation*	psPlace;
+	size				i;
+
+	psRelation = NULL;
+	for (i = 0; (i < pasDest->NumElements()) && (psRelation == NULL); i++)
+	{
+		if (pasDest->Get(i)->szKey.Equals(pcFunction->mszKey))
+		{
+			psRelation = pasDest->Get(i);
+		}
+	}
+	if (psRelation == NULL)
+	{
+		psRelation = pasDest->Add();
+		psRelation->szKey.Init(pcFunction->mszKey);
+		psRelation->uiKind = (uint8)pcFunction->meKind;
+		psRelation->asCalls.Init();
+		psPlace = GetIDESymbolPlace(pcFunction);
+		if (psPlace)
+		{
+			CopyLocation(psPlace, &psRelation->sPlace);
+		}
+		else
+		{
+			memset(&psRelation->sPlace, 0, sizeof(SIDELocation));
+			psRelation->sPlace.szFileName.Init();
+			psRelation->sPlace.iContainer = -1;
+		}
+	}
+	CopyLocation(psCall, psRelation->asCalls.Add());
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The functions that call the function szKey, added to pasDest in the
+// order the index has their calls, each with its calls of it: the
+// function's places that are calls, by the function each is in.  A call
+// outside any function (a variable's initialiser) has no caller.  The
+// number added.
+//
+//////////////////////////////////////////////////////////////////////////
+size CIDECodeModel::FindCallers(const char* szKey, CArrayIDECallRelations* pasDest)
+{
+	CCPPIndexSymbol*	pcSymbol;
+	CCPPIndexSymbol*	pcCaller;
+	SCPPIndexLocation*	psLocation;
+	size				uiBefore;
+	size				i;
+
+	uiBefore = pasDest->NumElements();
+	mcIndexMutex.Lock();
+	pcSymbol = mcIndex.FindSymbol(szKey);
+	for (i = 0; pcSymbol && (i < pcSymbol->NumLocations()); i++)
+	{
+		psLocation = pcSymbol->GetLocation(i);
+		if ((psLocation->uiRole == CPPIR_Reference) && (psLocation->uiUsage == CPPUT_Call) && (psLocation->iContainer >= 0) && ((size)psLocation->iContainer < mcIndex.NumSymbols()))
+		{
+			pcCaller = mcIndex.GetSymbol((size)psLocation->iContainer);
+			if ((pcCaller->meKind == CPPSK_Function) || (pcCaller->meKind == CPPSK_FunctionTemplate))
+			{
+				AddCall(pcCaller, psLocation, pasDest);
+			}
+		}
+	}
+	mcIndexMutex.Unlock();
+	return pasDest->NumElements() - uiBefore;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The functions the function szKey calls, added to pasDest, each with
+// its calls from it: every function's places that are calls inside szKey.
+// The index keeps places by symbol, not by where they are, so every
+// function's places are looked through.  The number added.
+//
+//////////////////////////////////////////////////////////////////////////
+size CIDECodeModel::FindCallees(const char* szKey, CArrayIDECallRelations* pasDest)
+{
+	CCPPIndexSymbol*	pcSymbol;
+	CCPPIndexSymbol*	pcCallee;
+	SCPPIndexLocation*	psLocation;
+	size				uiBefore;
+	size				i;
+	size				j;
+	int32				iFunction;
+
+	uiBefore = pasDest->NumElements();
+	mcIndexMutex.Lock();
+	pcSymbol = mcIndex.FindSymbol(szKey);
+	iFunction = -1;
+	for (i = 0; pcSymbol && (i < mcIndex.NumSymbols()) && (iFunction < 0); i++)
+	{
+		if (mcIndex.GetSymbol(i) == pcSymbol)
+		{
+			iFunction = (int32)i;
+		}
+	}
+	for (i = 0; (iFunction >= 0) && (i < mcIndex.NumSymbols()); i++)
+	{
+		pcCallee = mcIndex.GetSymbol(i);
+		if ((pcCallee->meKind != CPPSK_Function) && (pcCallee->meKind != CPPSK_FunctionTemplate))
+		{
+			continue;
+		}
+		for (j = 0; j < pcCallee->NumLocations(); j++)
+		{
+			psLocation = pcCallee->GetLocation(j);
+			if ((psLocation->iContainer == iFunction) && (psLocation->uiRole == CPPIR_Reference) && (psLocation->uiUsage == CPPUT_Call))
+			{
+				AddCall(pcCallee, psLocation, pasDest);
+			}
+		}
+	}
+	mcIndexMutex.Unlock();
+	return pasDest->NumElements() - uiBefore;
+}
+
+
 //////////////////////////////////////////////////////////////////////////
 //
 // pcSymbol added to pasDest with the place a "go to" goes to (its

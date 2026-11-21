@@ -679,6 +679,7 @@ void CIDESolutions::LetGoOfWorkspace(void)
 	mpcContent->GetDuplicates()->Clear();
 	mpcContent->GetBookmarks()->Clear();
 	mpcContent->GetRecent()->Clear();
+	mpcContent->GetHierarchy()->Clear();
 
 	mpcContent->GetCodeModel()->Kill();
 	mpcContent->GetWorkspace()->Clear();
