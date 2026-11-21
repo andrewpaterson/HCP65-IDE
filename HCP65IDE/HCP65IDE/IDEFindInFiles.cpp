@@ -1248,6 +1248,7 @@ void CIDEFindInFiles::ShowResults(bool bKeepSelected)
 
 		//Replace in Files' results say what each becomes, from the file's text as it is.
 		cFile.Init();
+		szFileText = NULL;
 		bFileText = mpSearch->mbFoundReplacing && GetFileText(szFile, &cFile, &szFileText, &uiFileLength);
 		for (j = i; j < i + uiCount; j++)
 		{

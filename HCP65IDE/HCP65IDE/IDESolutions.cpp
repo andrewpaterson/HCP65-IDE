@@ -197,7 +197,6 @@ bool CIDESolutions::OpenSolution(const char* szFileName)
 {
 	CFileUtil	cFileUtil;
 	CChars		szFile;
-	CChars		szName;
 	bool		bResult;
 
 	//The files with changes of what is open are asked about first; it opens afterwards.
