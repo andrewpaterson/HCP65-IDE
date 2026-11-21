@@ -143,6 +143,14 @@ protected:
 	CIDEContent*	mpcContent;  //Not held: the content holds it.
 	Ptr<CDialog>	mpDialog;  //While it is shown.
 
+	//The name FindDefine was asked for last and what it found, while the index is as it was then.
+	CChars			mszDefineName;
+	CChars			mszDefineFile;
+	int32			miDefineLine;
+	int32			miDefineColumn;
+	bool			mbDefineFound;
+	size			muiDefineIndexings;
+
 public:
 	void	Init(CIDEContent* pcContent);
 	void	Class(void) override;
@@ -158,6 +166,9 @@ public:
 	bool	ShowConvert(void);
 	bool	ShowInline(bool* pbMacro);
 	bool	FindMacro(SIDEMacro* psDest);
+	bool	FindDefine(const char* szName, SIDELocation* psDest);
+	bool	FindDefineAtCaret(CChars* pszName, SIDELocation* psDest);
+	bool	ReadDefineInfo(SIDELocation* psDefine, CChars* pszDeclaration, CChars* pszWhere);
 	void	FindConversion(SIDEMacro* psMacro);
 	bool	Convert(SIDEMacro* psMacro, CChars* pszStatus = NULL);
 	const char*	GetEnumProblem(SIDEMacro* psMacro, const char* szEnumName);

@@ -4631,7 +4631,8 @@ CHECKS = [
 		#With Control held over a name the name is underlined and its declaration shown under it, as it is written,
 		#with where it is declared: a member function's as its class declares it (the one of two of a name that the
 		#call is of), a function's, an enumerator's, a parameter's, a local variable's, a class's, a field's with its
-		#array's bounds, a typedef's and a static variable's.  A macro, a keyword and a number have none.
+		#array's bounds, a typedef's and a static variable's.  A macro has its #define's line; a keyword and a number
+		#have none.
 		'SOLUTION': QUICK_INFO, 'WAIT_INDEX': '1', 'OPEN': 'Paint.cpp', 'CARET': '1:1',
 		'DEBUG': 'edit:printinfo,edit:linkhover:51:15,edit:printinfo,edit:linkhover:54:15,edit:printinfo,edit:linkhover:51:23,edit:printinfo,edit:linkhover:51:53,edit:printinfo,edit:linkhover:51:4,edit:printinfo,'
 		         'edit:linkhover:45:8,edit:printinfo,edit:linkhover:43:14,edit:printinfo,edit:linkhover:21:3,edit:printinfo,edit:linkhover:7:21,edit:printinfo,edit:linkhover:4:20,edit:printinfo,'
@@ -4641,7 +4642,7 @@ CHECKS = [
 		 r'^Link: \[PM_Outline\] PM_Outline = 4 \| EPaintMode, Paint\.h:11$', r'^Link: \[pcPainter\] CPainter\* pcPainter \| Paint\.cpp:43$', r'^Link: \[iTotal\] int iTotal \| Paint\.cpp:45$',
 		 r'^Link: \[CPainter\] class CPainter \| Paint\.h:19$', r'^Link: \[maiSizes\] int maiSizes\[PAINT_MAXIMUM\] \| CPainter, Paint\.h:23$',
 		 r'^Link: \[PaintColour\] typedef unsigned int PaintColour \| Paint\.h:15$', r'^Link: \[gcDefaultPainter\] static CPainter gcDefaultPainter \| Paint\.cpp:4$',
-		 r'^Link: \[Default\] static CPainter\* Default\(void\) \| CPainter, Paint\.h:30$', r'^Link: none$', r'^Link: none$', r'^Link: none$',
+		 r'^Link: \[Default\] static CPainter\* Default\(void\) \| CPainter, Paint\.h:30$', r'^Link: \[PAINT_MAXIMUM\] #define PAINT_MAXIMUM 8 \| Paint\.h:5$', r'^Link: none$', r'^Link: none$',
 		 r'^Link: \[muiColour\] PaintColour muiColour \| CPainter, Paint\.h:22$', r'^Link: none$'], [r'ERROR', r'^Info: (parameters|type)']),
 	('quick-link-pointer', {
 		#The same with the pointer and the keys themselves: nothing until Control is down, then the name under the
@@ -4904,6 +4905,21 @@ CHECKS = [
 		 r'^Tool windows: .*Bookmarks 4, Hierarchy 5, Build \(hidden\), Indexing 6 \(front\), ', r'^Last tool window: Build$', r'Main\.cpp \(focus\) line 6: ',
 		 r'^Tool windows: .*Bookmarks 4, Hierarchy 5, Build 6 \(front, keys\), ', r'^Tool windows: .*Build \(hidden\), ', r'^Last tool window: Build$',
 		 r'^Tool windows: .*Hierarchy \(hidden\), Build \(front, keys\), Indexing \(hidden\), ', r'^Tool window areas: Build 0,596 1280x180$'], [r'ERROR']),
+	('macro-define-link', dict(MakeMacrosCopy(), **{
+		#A macro's name is no symbol of the index's, and its #define is its declaration: with Control held over it the
+		#name is a link, the pointer a hand, and the #define's first line is shown with where it is; Quick Definition
+		#previews it; Go to Source, Go to Definition and Control+click go to it.  A variable's name is still the
+		#index's, and a name that is neither does what it did.
+		'WAIT_INDEX': '1', 'OPEN': 'Use.cpp', 'CARET': '21:20',
+		'DEBUG': 'edit:printcrumbs,edit:linkhover:21:18,edit:printinfo,edit:linkhover:off,edit:caret:29:10,edit:linkhover:29:10,edit:printinfo,edit:linkhover:off,edit:linkhover:27:3,edit:printinfo,edit:linkhover:off,'
+		         'command:View.QuickDefinition,edit:printchooser,edit:key:escape,command:Navigate.GoToSource,edit:print,edit:open:Use.cpp,edit:caret:28:14,command:Navigate.GoToDefinition,edit:print,'
+		         'edit:open:Use.cpp,edit:caret:21:3,edit:controlclick:21:20,edit:print,edit:open:Use.cpp,edit:caret:19:2,command:Navigate.GoToSource,command:View.QuickDefinition,printstatus'}),
+		[r'^Link: \[MAX_UNITS\] #define MAX_UNITS 8 \| Macros\.h:5$', r'^Pointer: hand',
+		 r'^Link: \[BIGGER\] #define BIGGER\(a, b\) \(\(a\) > \(b\) \? \(a\) : \(b\)\) \| Macros\.h:16$', r'^Link: \[fRate\] float fRate \| Use\.cpp:24$',
+		 r'^Chooser: Definition of BIGGER$', r'^  >BIGGER \| Macros\.h:16$', r'^Chooser preview: Macros\.h$',
+		 r'Macros\.h \(focus\) line 16: \[#define BIGGER\(a, b\)', r'Macros\.h \(focus\) line 7: \[#define TITLE\t\t"Units"\]',
+		 r'Macros\.h \(focus\) line 5: \[#define MAX_UNITS\t8', r'^Command \[Navigate\.GoToSource\] not found, not enabled or did nothing\.$',
+		 r'^Status line: There is no symbol at the caret to show the definition of\.$'], [r'ERROR']),
 	('nav-type-declaration', {
 		#Go to Type Declaration (Control+Shift+B): from a parameter and from a local variable, the class each is declared
 		#with; from a field of a built in type, the status line says its type has nothing to go to.

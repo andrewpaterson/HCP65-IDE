@@ -764,6 +764,7 @@ bool CIDEContent::GoToDefinition(void)
 	int				iColumn;
 	uint8			uiRole;
 	SIDELocation	sLocation;
+	CChars			szName;
 	bool			bResult;
 
 	if (mpDocuments->GetActiveTab().IsNull())
@@ -773,8 +774,15 @@ bool CIDEContent::GoToDefinition(void)
 	mpDocuments->UpdateEditedTabsNow();
 	if (!mpDocuments->FindSymbolPlace(&iLine, &iColumn, &uiRole) || !mcCodeModel.FindDefinition(mpDocuments->GetActiveTab()->GetFileName(), iLine, iColumn, &sLocation))
 	{
-		ShowStatus("No definition found at the caret.");
-		return false;
+		//Not a symbol of the index's: a macro's name goes to its #define.
+		szName.Init();
+		if (!mpConvertMacro->FindDefineAtCaret(&szName, &sLocation))
+		{
+			szName.Kill();
+			ShowStatus("No definition found at the caret.");
+			return false;
+		}
+		szName.Kill();
 	}
 	bResult = mpDocuments->OpenLocation(&sLocation);
 	sLocation.szFileName.Kill();

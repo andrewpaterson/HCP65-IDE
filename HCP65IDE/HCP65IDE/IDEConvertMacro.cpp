@@ -136,6 +136,12 @@ void CIDEConvertMacro::Init(CIDEContent* pcContent)
 {
 	PreInit();
 	mpcContent = pcContent;
+	mszDefineName.Init();
+	mszDefineFile.Init();
+	miDefineLine = 0;
+	miDefineColumn = 0;
+	mbDefineFound = false;
+	muiDefineIndexings = MAX_SIZE;
 	PostInit();
 }
 
@@ -148,6 +154,12 @@ void CIDEConvertMacro::Class(void)
 {
 	U_Pointer(mpcContent);
 	M_Pointer(mpDialog);
+	U_String(mszDefineName);
+	U_String(mszDefineFile);
+	U_Int32(miDefineLine);
+	U_Int32(miDefineColumn);
+	U_Bool(mbDefineFound);
+	U_Size(muiDefineIndexings);
 }
 
 
@@ -157,6 +169,8 @@ void CIDEConvertMacro::Class(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDEConvertMacro::Free(void)
 {
+	mszDefineFile.Kill();
+	mszDefineName.Kill();
 }
 
 
@@ -691,6 +705,177 @@ void CIDEConvertMacro::FindUses(const char* szName, SIDEMacro* psDest, size* pui
 		}
 		cFile.Kill();
 	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Where szName is #defined in the solution's C and C++ files: its first
+// #define, at its name.  The index has no macros, so it is read from the
+// files' text, without parsing it: each place the name is written is a
+// #define's if "# define" is all that is before it on its line.  That is
+// quick enough to ask as the pointer moves over a name (the declaration
+// shown with Control held), and what was asked last is kept while the
+// index is as it was, as the pointer asks for the same name again and
+// again.  psDest's file name is Init'ed here if it is found.  False if it
+// isn't #defined.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEConvertMacro::FindDefine(const char* szName, SIDELocation* psDest)
+{
+	CIDECodeModel*	pcModel;
+	CIDEFileTexts*	pcTexts;
+	CTextFile		cFile;
+	EIDEFileType	eType;
+	const char*		szFileName;
+	const char*		szText;
+	const char*		szFound;
+	size			uiLength;
+	size			uiNameLength;
+	size			uiAt;
+	size			p;
+	size			i;
+
+	pcModel = mpcContent->GetCodeModel();
+	uiNameLength = strlen(szName);
+	if ((uiNameLength == 0) || !IsIDEIdentifier(szName))
+	{
+		return false;
+	}
+	if (!mszDefineName.Equals(szName) || (muiDefineIndexings != pcModel->NumIndexings()))
+	{
+		mszDefineName.Set(szName);
+		muiDefineIndexings = pcModel->NumIndexings();
+		mbDefineFound = false;
+		pcTexts = &mpcContent->GetFindInFiles();
+		for (i = 0; !mbDefineFound && (i < pcModel->NumProjectFiles()); i++)
+		{
+			szFileName = pcModel->GetProjectFile(i);
+			eType = CIDEIcons::GetFileType(szFileName);
+			if ((eType != IFT_CPP) && (eType != IFT_C) && (eType != IFT_Header))
+			{
+				continue;
+			}
+			cFile.Init();
+			if (pcTexts->GetFileText(szFileName, &cFile, &szText, &uiLength))
+			{
+				for (szFound = strstr(szText, szName); szFound && !mbDefineFound; szFound = strstr(szFound + uiNameLength, szName))
+				{
+					uiAt = (size)(szFound - szText);
+					if (IsIDENameChar(szText[uiAt + uiNameLength]) || (uiAt < 8))
+					{
+						continue;
+					}
+
+					//Back over the gap to "define", over the gap to '#', and over the gap to the line's start.
+					for (p = uiAt; (p > 0) && ((szText[p - 1] == ' ') || (szText[p - 1] == '\t')); p--)
+					{
+					}
+					if ((p == uiAt) || (p < 6) || (strncmp(&szText[p - 6], "define", 6) != 0))
+					{
+						continue;
+					}
+					for (p -= 6; (p > 0) && ((szText[p - 1] == ' ') || (szText[p - 1] == '\t')); p--)
+					{
+					}
+					if ((p == 0) || (szText[p - 1] != '#'))
+					{
+						continue;
+					}
+					for (p--; (p > 0) && ((szText[p - 1] == ' ') || (szText[p - 1] == '\t')); p--)
+					{
+					}
+					if ((p > 0) && (szText[p - 1] != '\n'))
+					{
+						continue;
+					}
+
+					mbDefineFound = true;
+					mszDefineFile.Set(szFileName);
+					miDefineLine = 0;
+					miDefineColumn = 0;
+					for (p = 0; p < uiAt; p++)
+					{
+						if (szText[p] == '\n')
+						{
+							miDefineLine++;
+							miDefineColumn = 0;
+						}
+						else
+						{
+							miDefineColumn++;
+						}
+					}
+				}
+			}
+			cFile.Kill();
+		}
+	}
+
+	if (!mbDefineFound)
+	{
+		return false;
+	}
+	memset(psDest, 0, sizeof(SIDELocation));
+	psDest->szFileName.Init(mszDefineFile);
+	psDest->iLine = miDefineLine;
+	psDest->iColumn = miDefineColumn;
+	psDest->iLength = (int32)uiNameLength;
+	psDest->uiRole = CPPIR_Definition;
+	psDest->iContainer = -1;
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The #define of the name the active editor's caret is on, or just after,
+// with the name.  False if there is no editor, no name there, or it isn't
+// #defined.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEConvertMacro::FindDefineAtCaret(CChars* pszName, SIDELocation* psDest)
+{
+	size	uiStart;
+
+	if (mpcContent->GetDocuments()->GetActiveTab().IsNull() || !FindWordAtCaret(pszName, &uiStart))
+	{
+		return false;
+	}
+	mpcContent->GetDocuments()->UpdateEditedTabsNow();
+	return FindDefine(pszName->Text(), psDest);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// What a #define found by FindDefine is, in words: its first line as it
+// is written ("#define IDE_RECENT_FILES 50") and where it is
+// ("IDERecent.h:36").  False if its file can't be read.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEConvertMacro::ReadDefineInfo(SIDELocation* psDefine, CChars* pszDeclaration, CChars* pszWhere)
+{
+	CTextFile	cFile;
+	const char*	szText;
+	size		uiLength;
+	size		uiName;
+	size		uiNameInDest;
+	bool		bResult;
+
+	cFile.Init();
+	bResult = false;
+	if (mpcContent->GetFindInFiles()->GetFileText(psDefine->szFileName.Text(), &cFile, &szText, &uiLength))
+	{
+		uiName = FindIDETextPosition(szText, uiLength, psDefine->iLine, psDefine->iColumn);
+		bResult = ReadIDEDeclaration(szText, uiLength, uiName, (size)psDefine->iLength, 0, pszDeclaration, &uiNameInDest, NULL);
+	}
+	cFile.Kill();
+	if (bResult)
+	{
+		AppendIDEPlaceName(psDefine, pszWhere);
+	}
+	return bResult;
 }
 
 

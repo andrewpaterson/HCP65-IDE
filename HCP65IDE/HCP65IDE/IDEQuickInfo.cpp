@@ -227,19 +227,23 @@ void CIDEQuickInfo::PollLink(void)
 // The name at uiPosition of pTab's text, if it is a symbol the index has
 // declared somewhere, is underlined, the pointer is a hand over the
 // editor, and its declaration is shown under it with where it is
-// declared.  False, with nothing underlined, if it isn't one.
+// declared.  A name the index hasn't that is a macro's shows its #define
+// the same way (CIDEConvertMacro::FindDefine).  False, with nothing
+// underlined, if it is neither.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEQuickInfo::ShowLinkAt(Ptr<CIDEEditorTab> pTab, size uiPosition)
 {
 	Ptr<CTextArea>	pEditor;
 	SIDESymbolInfo	sInfo;
+	SIDELocation	sDefine;
 	STextRange		sRange;
 	CInt32Rect		cBounds;
 	CInt32Rect		cLine;
 	SInt32Vec2		sPoint;
 	CChars			szKey;
 	CChars			szText;
+	CChars			szName;
 	size			uiStart;
 	size			uiEnd;
 	size			uiLine;
@@ -258,6 +262,20 @@ bool CIDEQuickInfo::ShowLinkAt(Ptr<CIDEEditorTab> pTab, size uiPosition)
 	sInfo.Init();
 	bResult = mpcContent->GetCodeModel()->GetSymbolAt(pTab->GetFileName(), (int)uiLine, (int)(uiStart - pEditor->GetLineStart(uiLine)), &szKey, &uiKind) &&
 			  ReadIDESymbolInfo(mpcContent, szKey.Text(), &sInfo);
+	if (!bResult)
+	{
+		//Not a symbol: a macro, perhaps, whose #define is its declaration.
+		szName.Init();
+		szName.Append(&pEditor->GetText()[uiStart], uiEnd - uiStart);
+		if (mpcContent->GetConvertMacro()->FindDefine(szName.Text(), &sDefine))
+		{
+			sInfo.szDeclaration.Clear();
+			sInfo.szWhere.Clear();
+			bResult = mpcContent->GetConvertMacro()->ReadDefineInfo(&sDefine, &sInfo.szDeclaration, &sInfo.szWhere);
+			sDefine.szFileName.Kill();
+		}
+		szName.Kill();
+	}
 	if (bResult)
 	{
 		sRange.uiStart = uiStart;
@@ -753,6 +771,7 @@ bool CIDEQuickInfo::ShowTypeInfo(void)
 // Quick Definition (Control+Shift+I): the definition of the symbol at the
 // caret (its declaration if it has none) and what implements it, in a
 // chooser that previews the code of the one selected; Enter goes to it.
+// A macro's name, which is no symbol of the index's, has its #define.
 // False, the status line saying so, if there is no symbol there or the
 // index has it declared nowhere.
 //
@@ -773,16 +792,27 @@ bool CIDEQuickInfo::ShowQuickDefinition(void)
 		return false;
 	}
 	szKey.Init();
-	if (!mpcContent->GetNavigator()->FindCaretSymbol(&szKey, &uiKind))
-	{
-		szKey.Kill();
-		mpcContent->ShowStatus("There is no symbol at the caret to show the definition of.");
-		return false;
-	}
-
 	asTargets.Init();
-	mpcContent->GetCodeModel()->FindTarget(szKey.Text(), &asTargets);
-	mpcContent->GetCodeModel()->FindImplementations(szKey.Text(), &asTargets);
+	if (mpcContent->GetNavigator()->FindCaretSymbol(&szKey, &uiKind))
+	{
+		mpcContent->GetCodeModel()->FindTarget(szKey.Text(), &asTargets);
+		mpcContent->GetCodeModel()->FindImplementations(szKey.Text(), &asTargets);
+	}
+	else
+	{
+		psTarget = asTargets.Add();
+		psTarget->szKey.Init();
+		psTarget->uiKind = 0;
+		if (!mpcContent->GetConvertMacro()->FindDefineAtCaret(&szKey, &psTarget->sLocation))
+		{
+			psTarget->szKey.Kill();
+			asTargets.Kill();
+			szKey.Kill();
+			mpcContent->ShowStatus("There is no symbol at the caret to show the definition of.");
+			return false;
+		}
+		psTarget->szKey.Set(szKey);
+	}
 
 	//One place once.
 	for (i = asTargets.NumElements(); i > 1; i--)

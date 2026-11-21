@@ -952,8 +952,8 @@ bool CIDENavigator::FindIncludedFile(CChars* pszDest)
 //
 // Control+B, as IntelliJ's: on an #include the file it names is opened;
 // on a symbol's own declaration or definition, a popup of its usages;
-// anywhere else, the definition of what is at the caret (as F12).  False
-// if there's nothing to go to.
+// anywhere else, the definition of what is at the caret (as F12), which
+// for a macro's name is its #define.  False if there's nothing to go to.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDENavigator::GoToSource(void)
@@ -985,26 +985,32 @@ bool CIDENavigator::GoToSource(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Whether Go to Source has somewhere to go: an #include's file, or a
-// symbol at the caret.
+// Whether Go to Source has somewhere to go: an #include's file, a symbol
+// at the caret, or a macro's name there (its #define).
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDENavigator::CanGoToSource(void)
 {
-	CChars	szFile;
-	int		iLine;
-	int		iColumn;
-	uint8	uiRole;
-	bool	bResult;
+	SIDELocation	sDefine;
+	CChars			szFile;
+	int				iLine;
+	int				iColumn;
+	uint8			uiRole;
+	bool			bResult;
 
 	if (mpcContent->GetDocuments()->GetActiveTab().IsNull())
 	{
 		return false;
 	}
 	szFile.Init();
-	bResult = FindIncludedFile(&szFile);
+	bResult = FindIncludedFile(&szFile) || mpcContent->GetDocuments()->FindSymbolPlace(&iLine, &iColumn, &uiRole);
+	if (!bResult && mpcContent->GetConvertMacro()->FindDefineAtCaret(&szFile, &sDefine))
+	{
+		sDefine.szFileName.Kill();
+		bResult = true;
+	}
 	szFile.Kill();
-	return bResult || mpcContent->GetDocuments()->FindSymbolPlace(&iLine, &iColumn, &uiRole);
+	return bResult;
 }
 
 
