@@ -5,9 +5,10 @@ Written 2026-11-12 from the IDE's commands and the Find Usages, Go to and Find i
 date 2026-11-20 against IntelliJ's Navigate menu and its editor's navigation, from the commands, the code and the
 website's pages (HCP65\Website\docs\ide), not by trying each one.  The gaps are a list to choose from, not a list to
 finish: only what is planned is to be built.  "Planned" below is an item of NextIDEWork.txt, which says how the user
-wants it; the plan further down, the Find Usages tool window's, is all built.  NavigationPlan.txt (2026-11-20) plans
-the gaps In a file, Between files, Symbols and those of the search dialogs and results, by what they can share; none
-of it is built or agreed to yet.
+wants it; the plan further down, the Find Usages tool window's, is all built.  NavigationPlan.txt (2026-11-20) planned
+the gaps In a file, Between files, Symbols and those of the search dialogs and results, by what they can share; the
+user said to build all of it, and its stages A to H were built on 2026-11-20 and 21 (its "What is built" says how each
+differs from the plan).  What is left below is what was ruled out, put off, or found short while building.
 
 
 What there is
@@ -39,6 +40,10 @@ Find's matches, bookmarks, changed lines and kept usages.
 
 What a name is: with Control held over a name it is underlined and its declaration shown under it; Quick Definition
 (Control+Shift+I), Parameter Info (Control+P) and Type Info (Control+Shift+P), in the View menu.
+
+The search dialogs and results: the Go to dialog previews its selected result, lists what was gone to last first
+while nothing is typed, and has an Actions tab (Control+Shift+A); every results tool window has Export (to a text
+file or the clipboard) and Autoscroll from Source, and its rows' code is coloured.
 
 Hierarchies: the Hierarchy tool window (Alt+8), with tabs and a pin: Type Hierarchy (Control+H; class, supertypes
 or subtypes), Method Hierarchy (Control+Shift+H) and Call Hierarchy (Control+Alt+H; callers or callees, found as
@@ -89,22 +94,18 @@ Find in Files
     file's, or all of them.
 
 Find Usages tool window
-  - No export of the results; the tree doesn't follow the editor's caret (IntelliJ's Autoscroll from Source); and a
-    result's row isn't coloured as code, only its preview is.
+  - A result's row is coloured by its own text (keywords, numbers, strings, comments), not by what its names are:
+    that is the preview's.
 
 Go to dialogs
-  - No preview of the selected class or symbol; no recent items while the field is empty.
-  - No "include non-solution items", no All tab, no Shift Shift, no Actions tab (the first three were ruled out
-    when it was built).
+  - The recent classes and symbols shown with nothing typed are the session's, not kept; recent actions aren't.
+  - No "include non-solution items", no All tab, no Shift Shift (ruled out when it was built).
 
 Tool windows
-  - A key for each (Alt+1 to Alt+9): only Solution Explorer has one; the rest are on View without keys.
+  - A key for each (Alt+1 to Alt+9): Solution Explorer (Alt+1), Structure (Alt+7) and Hierarchy (Alt+8) have one;
+    the rest are on View without keys.
   - Jump to Last Tool Window (F12, which is Go to Definition here) and Hide All Tool Windows (Control+Shift+F12).
   - TODO and Problems tool windows.
-
-The smallest of those that aren't planned, should any be wanted: Control+click, Go to Implementation and Super
-Method use what Go to Source and FindOverrides already have; Recent Files, the Switcher and Last Edit Location need
-nothing new from the index.
 
 
 Plan: completing the Find Usages tool window (all eight steps built 2026-11-12)
@@ -112,7 +113,8 @@ Plan: completing the Find Usages tool window (all eight steps built 2026-11-12)
 
 As built it differs from the plan in these:
   - step 5: the toolbar's commands are each pane's own and have no keys.
-  - step 7: a pinned tab's name has "* " before it; only Find Usages has tabs, the Find tool window hasn't.
+  - step 7: a pinned tab's name has "* " before it; only Find Usages had tabs then (the Find tool window has them
+    since NavigationPlan.txt's stage D, and the Hierarchy window since stage G).
   - step 8d: Scope on the toolbar opens a menu of the scopes beside its button, not a combo box, which a toolbar down
     the side has no room for.
   - step 8: Find in Files' Match case and Words are kept in the settings too.

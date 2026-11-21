@@ -217,6 +217,59 @@ Stage G, hierarchies: built 2026-11-21.
       - CIDENavigator::FindCaretFunction asks the file's outline first (the function round the caret, between
         its tokens too), then parses as before: Go to Super Method gains from it.
 
+Stage H, the dialogs and the results: built 2026-11-21.
+    CommonLibraries 15a254812 (CGoToDialog's preview and selected event); HCP65-IDE c0713df (the Go to dialog's
+    preview, recent items and Actions tab; the results panes' coloured rows, Export and Autoscroll from Source).
+    Checks goto-recent-preview, goto-actions, results-coloured-rows, results-export-autoscroll; the script's
+    gotolist:, printclipboard and printfindselected steps.
+    As built it differs from the plan in these:
+      - The Go to dialog's preview is under its results (a CCodePreview, filled by a CIDELocationPreview as a
+        chooser's is), for every tab but Actions.  With nothing typed everything is still listed, as before, with
+        what was gone to last given the highest scores: the recent files (CIDERecent's, the active one left out)
+        on the Files tab, and on the Classes and Symbols tabs the keys of what each went to (thirty, the
+        session's: CIDENavigator keeps them).
+      - The Actions tab lists CIDEContent's commands by caption, with the part of a command's name before its dot
+        as its menu and its keys after it; the editors' own commands (Up, Tab) are among them.  The one chosen
+        is run at the next tick; one that isn't enabled says so in the status line instead.  Recent actions
+        aren't put first.
+      - Export is a button on every results pane: a dialog (Save to File..., Copy to Clipboard, Cancel), then for a
+        file CFileChooser's save form, which the IDE's checks don't drive; the rows are the tree's as it is shown.
+      - Autoscroll from Source is a button on every results pane, kept with the pane's settings.  CIDEOccurrences
+        tells the five results windows' panes when the active editor's caret is on another line (Poll, each
+        window tick); a pane selects its result of that file at or before the line, else the first after, and
+        opens nothing.  No caret event was made.
+      - A result's row is coloured by a scan of its own line (FindIDELineColours: a directive, comments, strings,
+        characters, numbers and keywords), in C and C++ files only, with the theme font in the editor's colours
+        (CFontColours); the text found keeps the match font.  A line inside a block comment that started on
+        another line isn't known to be one.
+      - S12: Find Usages still has its own tabs code, not CIDEResultsTabs.
+
+
+What is left
+------------
+
+Every stage is built.  What wasn't, and why:
+  - Ruled out by the user (the decisions below): a middle click that goes to a declaration, Go to Test, the count of
+    usages over a declaration, a key or a popup for Show Bookmarks, the navigation bar, commands that split the
+    editor, an All tab and Shift Shift in Go to.
+  - Put off, "later if at all" (decision 11): Quick Documentation, and the tool tip for a name the pointer rests
+    on.  Read as both being put off; the user hasn't been asked again.
+  - Decision 2 was read as: Build on Control+F9, so Go to Type Declaration has Control+Shift+B.  Not confirmed.
+  - Not moved onto shared code, as decision 17 allows: the refactorings' own "function the caret is in" and unit
+    caches; Find Usages' tabs (S12); the lists of who follows edits, who is stepped through and who has settings
+    (S11), which are still named where they are called.
+  - Checked at the end, beyond the IDE's checks, TestWindowLib and TestBaseLib (64 bit Debug): BaseLib and
+    WindowLib compile with MinGW, 32 and 64 bit, with no warnings (the 557 files their projects list);
+    TestBaseLib passes in the 16 bit size host build (BASELIB_SIZE16); and TestBaseLib's text and regex tests
+    (TestRegex, TestTextSearch, TestTextEditing, TestTextNavigation, TestTextDocument) pass on the 65C64 and the
+    W65C816 (TestBaseLib65 with TEST_PROJECT65_ONLY).  The W65C816 run found CRegex asking an array for more bytes
+    than a 16 bit size counts (its program and its stack): CommonLibraries 589cdfc34 keeps both to what a size can
+    count.
+  - Not checked: an MSVC build (the .vcxproj files and their filters have every new file, by hand); the IDE on
+    Windows; the rest of the 65 suites, which take none of this stage's code but BaseLib's; and anything by hand
+    with a real pointer beyond what the checks' script keyboard and pointer do.
+  Navigation.txt's Gaps has what is short in what was built.
+
 
 How work is done here
 ---------------------
