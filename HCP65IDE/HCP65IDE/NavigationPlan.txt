@@ -272,11 +272,12 @@ Every stage is built.  What wasn't, and why:
   Navigation.txt's Gaps has what is short in what was built.
 
 
-Follow-ups: planned 2026-11-21; 1, 2, 3a, 3b and 3e built that day
-------------------------------------------------------------------
+Follow-ups: planned 2026-11-21; all built that day but 3f, which its own rule kept out
+--------------------------------------------------------------------------------------
 
 The user asked for these three to be planned ("plan out the 3 optionals"), then decided 3a, 3b and 3e, then asked
-for 1, 2, 3a, 3b and 3e to be built ("all of them", of that list).  3c, 3d, 3f and 3g have no go-ahead.
+for 1, 2, 3a, 3b and 3e to be built ("all of them", of that list), then for the rest ("Please continue with all
+the planned items": 3c, 3d, 3f and 3g).
 Each says what there was, what was to be done, how it was to be checked, and what the user had to decide; "Built"
 at the end of this section says what was done and where it differs.
 
@@ -413,6 +414,40 @@ Built (2026-11-21), in that order:
          and tool-windows-jump-to-last.
      "No tool windows are docked" on the status line is only reached with every tool window hidden by other
      means and nothing of Hide All's to put back; no check reaches it.
+  3c. Recent Files' Show Edited Only, and the Switcher's Delete (HCP65-IDE 2eb5e89).  The button is Recent
+     Locations' made to serve both (ButtonClicked); a file is edited if a place edited this session is in it.  With
+     none of the others edited, all are listed and the status line says so.  Delete or Backspace (with Control
+     held, as it is in the Switcher, and without) closes the selected file: the Switcher closes, the file is
+     closed at the next tick (the popup may be over the editor that goes) and the Switcher opens again, held, on
+     the row that took its place.  A file with changes is asked about as any closing is, and the Switcher isn't
+     opened over the question.  If Control was let go in that tick the Switcher stays until a key or a press.
+     Found on the way: Select In's Structure ran the Alt+7 command, which since 3e hides the window when it has
+     the keys; it calls ShowStructureWindow, and the command is ToggleStructureWindow.  Checks switcher-close (the
+     script's switcher:close and the keys) and recent-files-edited.
+  3d. Go to's recents kept (HCP65-IDE abdf919).  CIDENavigator is a CIDEUserPart: <RecentClass Key=""/> and
+     <RecentSymbol Key=""/> in the workspace's .hcp65user, the oldest first, written as Go to goes somewhere.  The
+     commands Go to Action ran, the last fifteen, are the settings' (<GoTo> with a <RecentAction Name=""/> each):
+     they are the IDE's, not a workspace's.  With nothing typed the Actions tab lists them first.  A key or a
+     name that is no longer there puts nothing first.  Checks goto-recent-kept and goto-recent-read.
+  3f. NOT built: measured, and its own rule keeps it out.  It was written as planned
+     (CIDEIntroduceVariable::FindCaretExpressionType: the checked parse, the innermost expression at the caret
+     that FindType gives a type, and its class's key through pointers and references; Type Info and Go to Type
+     Declaration falling back to it only where the symbol at the caret gives nothing) and it works: CCircle* on
+     the & of &cCircle, int on a + and on a call's bracket.  The checked parse took 47 ms for BaseLib's
+     CalculatorParser.cpp and 1.7 s for this IDE's IDEUsages.cpp, each press (nothing keeps the parse).  The
+     plan's rule is about 100 ms from the key, "and if it is too slow Type Info stays as it is"; the files worked
+     on here are the large kind, so it stays.  For comparison, Go to Type Declaration from a variable takes 0.3 s
+     in that file (an unchecked parse).  The change was taken out again and isn't kept.  What would make it fit:
+     the parse on a thread with the popup filled when it is done, or a parse kept between presses (the first
+     still waits), or the user accepting the wait where today's answer is "No type is known".  Not decided.
+  3g. A macro's #define (HCP65-IDE 7567e03).  CIDEConvertMacro::FindDefine: from the files' text, no parse; a
+     place the name is written is its #define's if "# define" is all before it on its line; the last name asked is
+     kept while the index is as it was.  Measured as the plan asked: 2 to 3 ms for a name that isn't a macro's
+     over this IDE's 190 files, so the pointer asks it too.  Where the index has no symbol: ShowLinkAt shows the
+     #define's line (ReadIDEDeclaration) with the hand; Quick Definition previews it; Go to Definition goes to
+     it, and through it Go to Source and Control+click (the plan named Go to Source; F12 has it too).  It finds
+     the first #define of the name: one #defined twice goes to the first, by the files' order.  Check
+     macro-define-link; quick-link's macro now shows its #define.
 
 
 How work is done here

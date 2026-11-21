@@ -42,7 +42,8 @@ What a name is: with Control held over a name it is underlined and its declarati
 (Control+Shift+I), Parameter Info (Control+P) and Type Info (Control+Shift+P), in the View menu.
 
 The search dialogs and results: the Go to dialog previews its selected result, lists what was gone to last first
-while nothing is typed, and has an Actions tab (Control+Shift+A); every results tool window has Export (to a text
+while nothing is typed (classes and symbols kept in the workspace's .hcp65user, actions in the settings), and has an
+Actions tab (Control+Shift+A); every results tool window has Export (to a text
 file or the clipboard) and Autoscroll from Source, and its rows' code is coloured.
 
 Hierarchies: the Hierarchy tool window (Alt+8), with tabs and a pin: Type Hierarchy (Control+H; class, supertypes
@@ -55,8 +56,9 @@ Alt+6 Build, Alt+7 Structure, Alt+8 Hierarchy, Alt+9 Find), which shows the wind
 Alt+1, pressed there hides it; View has them with their keys; Hide All Tool Windows (Control+Shift+F12, and again
 to put them back as they were) and Jump to Last Tool Window (no key).  CIDEToolWindows.
 
-Between files: Recent Files (Control+E, kept in the workspace's .hcp65user), Recent Locations (Control+Shift+E, with
-the places edited alone), the Switcher (Control+Tab, held), Select Next and Previous Tab (Alt+Right, Alt+Left), Reopen
+Between files: Recent Files (Control+E, kept in the workspace's .hcp65user, with the files edited alone), Recent
+Locations (Control+Shift+E, with the places edited alone), the Switcher (Control+Tab, held; Delete closes the
+selected file), Select Next and Previous Tab (Alt+Right, Alt+Left), Reopen
 Closed Tab, Last and Next Edit Location (Control+Shift+Backspace), Select In (Alt+F1), and Solution Explorer's Always
 Select Opened File and Open Files with Single Click.
 
@@ -77,14 +79,15 @@ In a file
 Between files
   - A navigation bar (Alt+Home).
   - Select In (Alt+F1) offers Solution Explorer and Structure only.
-  - Recent Files has no "Show edited only", and the Switcher's Delete and Backspace don't close a file from it.
   - Splitting the editor and moving between the splits as commands: docking puts documents side by side, by hand.
 
 Symbols
-  - A macro's name has no declaration to show with Control held: the index has no macros.  (A middle click was
-    ruled out.)
+  - A macro is no symbol of the index's: its #define is shown with Control held and gone to (the first #define
+    of its name), but it has no usages, hierarchy or rename through the navigation.  (A middle click was ruled
+    out.)
   - Go to Type Declaration from an expression with no name of its own (a call's result, pcA->GetB()): it goes from a
-    declared name's type only.
+    declared name's type only.  Written and measured 2026-11-21, and left out: the checked parse it needs took
+    1.7 s in a large file (NavigationPlan.txt's follow-up 3f).
   - Method Hierarchy's classes are the class view's, which goes up by a class's first base class: a function that
     overrides one of another base class doesn't have that class among its rows (the class is named on the row,
     "also:").  The Call Hierarchy has no scope to keep it to, and its "via" callers are those of the functions the
@@ -93,7 +96,7 @@ Symbols
   - Parameter Info lists the functions of the name that the called one's class (or file) declares beside it.  A
     base class's of that name are hidden by them in C++, so they aren't ways the call could go: only one brought in
     by a using-declaration (using CBase::Set;) is missed.  Type Info gives a name's declared type as it is written,
-    and an expression's only when it is selected.
+    and an expression's only when it is selected (the same follow-up 3f).
   - The count of a declaration's usages shown above it.
   - Go to Test (ruled out, 2026-11-20).
 
@@ -106,7 +109,8 @@ Find Usages tool window
     that is the preview's.
 
 Go to dialogs
-  - The recent classes and symbols shown with nothing typed are the session's, not kept; recent actions aren't.
+  - The recent actions are the IDE's (the settings'), the recent classes and symbols the workspace's: neither is
+    shared with the other tab's, and the Files tab's are Recent Files'.
   - No "include non-solution items", no All tab, no Shift Shift (ruled out when it was built).
 
 Tool windows
