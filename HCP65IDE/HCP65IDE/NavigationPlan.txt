@@ -176,7 +176,8 @@ Stage F, what a name is: built 2026-11-21.
       - S7: there is no hover event and no caret event used: CIDEQuickInfo::Poll, each window tick, asks the
         focus where the pointer is and whether Control is down, and the editor where its caret is, as the
         breadcrumbs do.  The link is a highlight layer of the editor's that underlines (AddUnderlineLayer); the
-        pointer doesn't become a hand (WindowLib has no pointer shapes).  CInfoPopup always lets the pointer
+        pointer doesn't become a hand (not done; the note that WindowLib has no pointer shapes was wrong: it has,
+        ENativeCursor and CComponent::SetCursor, see follow-up 2).  CInfoPopup always lets the pointer
         through and never takes the keys: Escape is heard by the editor (CIC_ClearSelection), as kept usages' is.
       - Quick Definition is CIDEChooser with its preview and nothing to type in: the definition (its declaration if
         it has none) and, after it, what FindImplementations gives; Enter goes to the one selected.
@@ -269,6 +270,90 @@ Every stage is built.  What wasn't, and why:
     Windows; the rest of the 65 suites, which take none of this stage's code but BaseLib's; and anything by hand
     with a real pointer beyond what the checks' script keyboard and pointer do.
   Navigation.txt's Gaps has what is short in what was built.
+
+
+Follow-ups: planned 2026-11-21, not built
+-----------------------------------------
+
+The user asked for these three to be planned ("plan out the 3 optionals"), not built: nothing here has a go-ahead.
+Each says what there is, what would be done, how it would be checked, and what the user would have to decide.
+
+1. Find Usages on the shared results tabs (S12's last part).  No change to what the user sees.
+   What there is: CIDEUsages has its own tabs (mpTabs, a CTabbedContainer; maSearches; mpSearch; AddSearch,
+   RemoveSearch, FindSearch twice, TabSelected, TabCloseRequested, TogglePinned, SetPinned, IsPinned,
+   IDE_USAGES_PINNED_PREFIX; IDEUsages.cpp 1074 to 1256, and the "chosen tab unless pinned" at 593), which is what
+   CIDEResultsTabs was made from; CIDEUsagesSearch is a CObject with its own mpPane, mpTab and mbPinned.
+     a. CIDEUsagesSearch derives from CIDEResultsSearch (InitSearch between its PreInit and PostInit; its Class and
+        Free call the base's), losing the three fields.
+     b. CIDEUsages is a CIDEResultsTabsOwner: CreateResultsSearch is what AddSearch makes now (the pane, the
+        groupings, the two access filters, the view commands, then mpTabs->AddPinCommand, then Scope, so the toolbar
+        keeps its order); ResultsSearchChosen is TabSelected's body (a stale or moved search shown again).
+     c. mpTabs becomes a Ptr<CIDEResultsTabs> ("Find Usages" its empty name); CreatePane gives the dock its
+        GetComponent(); line 593's code becomes GetSearchForNew and SetName; Clear, Detach and the loops over
+        maSearches use NumSearches and GetSearch(i); the functions in the list above and the prefix go.  The
+        script's usagetabs and usagetab: read mpTabs->GetTabs().
+   To check before starting: the pin's command is named Usages.PinTab now and would be Results.PinTab (a pane's
+   commands have no keys and shouldn't be in the keymap page: confirm); CIDEResultsTabs::AddSearch copies the last
+   pane's settings as AddSearch does.
+   Checked by: every usages-* check, unchanged (usages-tabs and usages-toolbar most of all), then the whole run.
+   About 150 lines go.  Nothing to decide.
+
+2. The pointer is a hand over a name with Control held.
+   What there is: WindowLib has pointer shapes.  ENativeCursor (NativeCursor.h: the arrow, four sizing shapes, move),
+   CComponent::SetCursor (the shape over a component and its children that have none), CWindow::UpdateCursor (the
+   dragged component's, else the one under the pointer's, up through its parents), CX11Window::SetCursor (the
+   cursor font, a table with an entry for each shape) and CWinGDIWindow::ShowCursor (IDC_*).  A sash and a number
+   field use them.  A text area's is the arrow.
+     a. NC_Hand: XC_hand2 in CX11Window's table, IDC_HAND in CWinGDIWindow's switch; WinRef only keeps it.
+     b. CIDEQuickInfo::ShowLinkAt gives the editor NC_Hand and ClearLink puts back what it had.  CTextEditingInput
+        keeps and puts back the component's shape round a drag of selected text (meCursor): a link is never shown
+        during one, as Control with a press is the link's press, but ClearLink is to run before a drag starts.
+     c. Checked by: TestWindowLib (a component's shape reaches the native window, and goes back, on WinRef); the
+        IDE's quick-link-pointer, with printinfo saying the pointer's shape; the Windows sources through MinGW.
+     d. navigation.md's sentence, Navigation.txt's gap, stage F's note.
+   To decide: an I-beam over text (NC_Text), which IntelliJ has and no text area here does, is a separate change to
+   every text area and field.  Recommended: not with this.
+
+3. The smaller shortfalls in Navigation.txt's Gaps.  Each stands alone; in the order recommended.
+     a. Call Hierarchy: the callers of a virtual function include the calls of what it overrides, as a call through
+        the base class may land in it.  FindSuperMethods of the function, FindCallers of each, their rows saying
+        which ("via CShape::Draw").  Callees stay what the function's text calls.  Small.  To decide: yes or no
+        (recommended: yes, marked).  A scope for the hierarchy, as Find Usages has (CIDEScope, its Scope button's
+        menu), is a second step: later.
+     b. Type Hierarchy's class view, a class with several base classes: its row says the others ("also: CSecond"),
+        dim, and Supertypes still has them all.  The other way, every path from every topmost base, repeats the
+        class and what is under it once for each path.  Small.  To decide: which (recommended: the note).
+     c. Recent Files' "Show edited only" (the files CIDERecent has edit places in, by the chooser's button, as
+        Recent Locations has Show Changed Only), and Delete or Backspace in the Switcher closing the selected file
+        and leaving the Switcher open (a key heard by the popup's list, as Control let go is).  Small.
+     d. Go to: the recent classes and symbols kept with the workspace (a CIDEUserPart of CIDENavigator's:
+        <RecentClass Key=""/>, <RecentSymbol Key=""/>), and the actions run last listed first with nothing typed
+        (their names, in Settings.xml).  Small.
+     e. Tool windows: a key for more of them, Hide All Tool Windows (Control+Shift+F12: every tool pane hidden, and
+        again to put back the ones it hid), Jump to Last Tool Window (no key: IntelliJ's F12 is Go to Definition
+        here).  CDockManager has Show, Hide and AutoHide; it needs to say whether a pane is shown.  Small to
+        medium.  To decide: the numbers.  IntelliJ's that fit: Alt+2 Bookmarks, Alt+3 Find, Alt+4 Run, Alt+5 Debug;
+        suggested with them Alt+6 Build and Alt+9 Find Usages (IntelliJ's 6 is Problems and 9 is Git).
+     f. Type Info, and Go to Type Declaration, for the expression at the caret with nothing selected:
+        CIDEIntroduceVariable::FindCandidates has the expressions round the caret, the innermost first, and FindType
+        types one; the type's text is looked up as a key the way CIDEMoveMembers::IsUsedThrough does.  It is the
+        checked parse: the time it takes on a large unit is measured first (the plan's own rule: about 100 ms from
+        the key), and if it is too slow Type Info stays as it is.  Medium.
+     g. A macro's #define shown with Control held, in Quick Definition and gone to by Control+click.  The index has
+        no macros; CIDEConvertMacro::FindMacro finds the macro at the caret and where it is defined.  Its finding
+        is made a function others can call, and ShowLinkAt, Quick Definition and Go to Source fall back to it where
+        GetSymbolAt has nothing; ReadIDEDeclaration already reads a #define's line.  To check first: what FindMacro
+        costs (it mustn't parse as the pointer moves; if it does, only the two commands use it).  Small to medium.
+   Not a gap after all: "Parameter Info lists only the functions of the name that the called one's class declares,
+   not a base class's".  A name a class declares hides its base classes' of that name, so those aren't ways the
+   call could go; and a call of an inherited function is the base class's symbol, whose own class's are listed.
+   What is missed is a using-declaration (using CBase::Set;), which is rare here.  Navigation.txt's line is to say
+   so.
+   Left as they are: a tick for each result of Replace in Files (CTreeContainer has no check boxes; Replace
+   Selected does it); more Select In targets; a result's row coloured by what its names are (a parse of each
+   file); and what was ruled out or put off (the plan's "What is left").
+
+Order suggested: 1 (it changes nothing seen, and is checked by what there is), 2, then 3a to 3g as wanted.
 
 
 How work is done here
