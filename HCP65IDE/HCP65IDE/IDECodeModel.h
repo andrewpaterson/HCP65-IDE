@@ -395,6 +395,7 @@ protected:
 
 
 void KillIDELocations(CArrayIDELocations* pasLocations);
+void SortIDELocations(CArrayIDELocations* pasLocations);
 void KillIDETargets(CArrayIDETargets* pasTargets);
 void KillIDECallRelations(CArrayIDECallRelations* pasRelations);
 int GetIDESymbolIconType(uint8 uiKind);

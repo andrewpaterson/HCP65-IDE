@@ -1796,8 +1796,10 @@ void CIDEMoveMembers::FindConflicts(SIDEMembersMove* psMove, CArrayChars* paszDe
 		{
 			//Who uses it and won't be able to: up, the class's others once it is the base class's private; down,
 			//everything but the classes it goes to.
+			//In the order of their files, not the order the index happened to get them in: the list is the same each time.
 			asLocations.Init();
 			pcModel->GetSymbolLocations(psMember->szKey.Text(), &asLocations, &uiKind);
+			SortIDELocations(&asLocations);
 			for (j = 0; j < asLocations.NumElements(); j++)
 			{
 				psLocation = asLocations.Get(j);

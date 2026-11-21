@@ -108,6 +108,50 @@ void KillIDELocations(CArrayIDELocations* pasLocations)
 
 //////////////////////////////////////////////////////////////////////////
 //
+//
+//////////////////////////////////////////////////////////////////////////
+static int CompareIDELocations(const void* pvLeft, const void* pvRight)
+{
+	SIDELocation*	psLeft;
+	SIDELocation*	psRight;
+	int				iCompare;
+
+	psLeft = (SIDELocation*)pvLeft;
+	psRight = (SIDELocation*)pvRight;
+	iCompare = StringCompare(psLeft->szFileName.Text(), psRight->szFileName.Text());
+	if (iCompare != 0)
+	{
+		return iCompare;
+	}
+	if (psLeft->iLine != psRight->iLine)
+	{
+		return (psLeft->iLine < psRight->iLine) ? -1 : 1;
+	}
+	if (psLeft->iColumn != psRight->iColumn)
+	{
+		return (psLeft->iColumn < psRight->iColumn) ? -1 : 1;
+	}
+	return (int)psLeft->uiRole - (int)psRight->uiRole;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Places put in the order of their files' names, and in a file of where
+// they are.  The index has a symbol's places in the order its units were
+// indexed, which is whichever worker thread finished first: what is shown
+// to the user from them, one after another, is sorted first, so that it
+// is the same each time.
+//
+//////////////////////////////////////////////////////////////////////////
+void SortIDELocations(CArrayIDELocations* pasLocations)
+{
+	pasLocations->QuickSort(&CompareIDELocations);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // psSource's place given to psDest with its file's name, which psSource
 // is left without: it is still to be killed, as it would have been.
 //
