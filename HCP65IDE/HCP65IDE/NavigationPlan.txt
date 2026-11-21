@@ -335,8 +335,19 @@ Each says what there is, what would be done, how it would be checked, and what t
      e. Tool windows: a key for more of them, Hide All Tool Windows (Control+Shift+F12: every tool pane hidden, and
         again to put back the ones it hid), Jump to Last Tool Window (no key: IntelliJ's F12 is Go to Definition
         here).  CDockManager has Show, Hide and AutoHide; it needs to say whether a pane is shown.  Small to
-        medium.  To decide: the numbers.  IntelliJ's that fit: Alt+2 Bookmarks, Alt+3 Find, Alt+4 Run, Alt+5 Debug;
-        suggested with them Alt+6 Build and Alt+9 Find Usages (IntelliJ's 6 is Problems and 9 is Git).
+        medium.  Decided 2026-11-21 ("3e, as suggested", of what was put to the user that day, which is not the
+        first suggestion written here):
+          - Alt+2 Bookmarks, Alt+3 Find Usages, Alt+4 Run, Alt+5 Debug, Alt+6 Build, Alt+9 Find.  Duplicates,
+            Indexing and Claude stay on the View menu without keys.  (IntelliJ's own: 2 Bookmarks, 3 Find, 4 Run, 5
+            Debug, 6 Problems, 9 Git.)
+          - A new key shows its window and puts the keys in it; pressed while its window has the keys, it hides the
+            window, as IntelliJ's does.  Alt+1 stays as it is (the active file selected, the keys left in the
+            editor).  Alt+7 and Alt+8 weren't spoken of: left as they are unless the user says.
+          - The View menu shows each window's keys beside its name.
+          - Hide All Tool Windows on Control+Shift+F12; what it hid is remembered for the session only.
+          - Jump to Last Tool Window has no key of its own (F12 is Go to Definition here); one can be given in the
+            keymap.
+        CDockPane::IsShown and GetState already say whether a pane is shown.  Decided, not asked to be built.
      f. Type Info, and Go to Type Declaration, for the expression at the caret with nothing selected:
         CIDEIntroduceVariable::FindCandidates has the expressions round the caret, the innermost first, and FindType
         types one; the type's text is looked up as a key the way CIDEMoveMembers::IsUsedThrough does.  It is the
