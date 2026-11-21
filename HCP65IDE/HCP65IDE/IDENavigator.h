@@ -31,6 +31,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDEIcons.h"
 #include "IDELocationPreview.h"
 #include "IDEChooser.h"
+#include "IDEUserFile.h"
 
 
 class CIDEContent;
@@ -49,10 +50,16 @@ class CIDEContent;
 //none, and the status line says so; one, and it is gone to; several, and a chooser under the caret lists them with a
 //preview of each (CIDEChooser).
 #define IDE_GO_TO_RECENT			30			//The most of a tab's choices kept to show first.
+#define IDE_GO_TO_RECENT_ACTIONS	15			//And of the commands Go to Action ran.
 #define IDE_GO_TO_RECENT_SCORE	1000000		//What puts an item before those only matched.
 
+#define IDE_GO_TO_TAG			"GoTo"			//In the settings, with the commands Go to Action ran in it,
+#define IDE_GO_TO_ACTION_TAG	"RecentAction"	//each one of these.
+#define IDE_RECENT_CLASS_TAG	"RecentClass"	//In the workspace's user's file: what Go to Class went to,
+#define IDE_RECENT_SYMBOL_TAG	"RecentSymbol"	//and Go to Symbol.
 
-class CIDENavigator : public CObject, public CGoToSearcher
+
+class CIDENavigator : public CObject, public CGoToSearcher, public CIDEUserPart
 {
 friend class CIDEScript;
 CONSTRUCTABLE(CIDENavigator);
@@ -68,7 +75,8 @@ protected:
 	Ptr<CIDEChooser>	mpTargets;  //The chooser of a "go to" with several targets.
 	Ptr<CIDELocationPreview>	mpGoToPreview;  //Fills the Go to dialog's preview, while it is shown.
 	CArrayChars			maszRecentClasses;  //The keys of what Go to Class went to, the last one last,
-	CArrayChars			maszRecentSymbols;  //and Go to Symbol.
+	CArrayChars			maszRecentSymbols;  //and Go to Symbol: the workspace's user's (its .hcp65user).
+	CArrayChars			maszRecentActions;  //The names of the commands Go to Action ran, the last one last: the settings'.
 	CChars				mszQueuedAction;  //The command Go to Action chose, run at the next tick.
 
 public:
@@ -88,6 +96,11 @@ public:
 	void				GoToSelected(void);
 	void				RunQueuedAction(void);
 	void				RememberGoTo(size uiTab, size uiSymbol);
+	void				RememberAction(const char* szCommand);
+	void				ReadSettings(CMarkupTag* pcSettings);
+	void				WriteSettings(CXMLWriter* pcWriter);
+	void				WriteUser(CXMLWriter* pcWriter) override;
+	void				ReadUser(CMarkupTag* pcRoot) override;
 	void				ReleaseGoTo(void);
 	void				PutGoToFirst(CGoToItems* pcDest, size uiData, size uiRank);
 	void				FindGoToActions(CNameMatcher* pcMatcher, CGoToItems* pcDest);

@@ -20,6 +20,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 ** ------------------------------------------------------------------------ **/
 #include <ctype.h>
 #include "BaseLib/FileUtil.h"
+#include "BaseLib/MarkupTag.h"
+#include "BaseLib/XMLWriter.h"
 #include "BaseLib/StringHelper.h"
 #include "CppCompilerLib/CPPIndex.h"
 #include "CppCompilerLib/CPPSyntaxFunctionDefinition.h"
@@ -48,6 +50,7 @@ void CIDENavigator::Init(CIDEContent* pcContent)
 	memset(maiGoToSymbolIcons, 0, sizeof(maiGoToSymbolIcons));
 	maszRecentClasses.Init();
 	maszRecentSymbols.Init();
+	maszRecentActions.Init();
 	mszQueuedAction.Init();
 	PostInit();
 }
@@ -66,6 +69,7 @@ void CIDENavigator::Class(void)
 	M_Pointer(mpGoToPreview);
 	U_Unknown(CArrayChars, maszRecentClasses);
 	U_Unknown(CArrayChars, maszRecentSymbols);
+	U_Unknown(CArrayChars, maszRecentActions);
 	U_String(mszQueuedAction);
 	U_String(mszGoToPattern);
 	U_Int32(miGoToFileIcon);
@@ -83,6 +87,7 @@ void CIDENavigator::Class(void)
 void CIDENavigator::Free(void)
 {
 	mszQueuedAction.Kill();
+	maszRecentActions.Kill();
 	maszRecentSymbols.Kill();
 	maszRecentClasses.Kill();
 	mszGoToPattern.Kill();
@@ -227,6 +232,7 @@ void CIDENavigator::FindGoToActions(CNameMatcher* pcMatcher, CGoToItems* pcDest)
 	CChars				szName;
 	CChars				szWhere;
 	const char*			szDot;
+	size				uiRecent;
 	size				i;
 
 	pCommands = mpcContent->GetCommands();
@@ -240,6 +246,12 @@ void CIDENavigator::FindGoToActions(CNameMatcher* pcMatcher, CGoToItems* pcDest)
 		}
 		if (!szName.Empty() && pcMatcher->Match(szName.Text(), &sMatch))
 		{
+			//With nothing typed, the commands it ran last come first.
+			uiRecent = pcMatcher->IsEmpty() ? maszRecentActions.GetIndex(pCommand->GetName()) : ARRAY_ELEMENT_NOT_FOUND;
+			if (uiRecent != ARRAY_ELEMENT_NOT_FOUND)
+			{
+				sMatch.iScore = IDE_GO_TO_RECENT_SCORE - (int32)(maszRecentActions.NumElements() - 1 - uiRecent);
+			}
 			szWhere.Init();
 			szDot = strchr(pCommand->GetName(), '.');
 			if (szDot)
@@ -442,7 +454,7 @@ void CIDENavigator::GoToSelected(void)
 //
 // Go to Class or Symbol went to the index's symbol uiSymbol: it is the
 // last of that tab's recent ones (their keys, the most recent last), of
-// which thirty are kept, for the session.
+// which thirty are kept, in the workspace's user's file.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDENavigator::RememberGoTo(size uiTab, size uiSymbol)
@@ -464,8 +476,143 @@ void CIDENavigator::RememberGoTo(size uiTab, size uiSymbol)
 		{
 			paszRecent->Remove((size)0);
 		}
+		if (mpcContent->IsKeepingSettings())
+		{
+			mpcContent->GetUserFile()->Write();
+		}
 	}
 	szKey.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Go to Action chose the command: it is the last of the recent ones (their
+// names, the most recent last), which the Actions tab lists first with
+// nothing typed.  They are the IDE's, not a workspace's: kept with the
+// settings.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDENavigator::RememberAction(const char* szCommand)
+{
+	if (maszRecentActions.Contains(szCommand))
+	{
+		maszRecentActions.Remove(szCommand);
+	}
+	maszRecentActions.Add(szCommand);
+	while (maszRecentActions.NumElements() > IDE_GO_TO_RECENT_ACTIONS)
+	{
+		maszRecentActions.Remove((size)0);
+	}
+	mpcContent->GetSettings()->WriteSettings();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The settings' <GoTo>, with a <RecentAction Name=""/> for each command
+// Go to Action ran, the oldest first.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDENavigator::WriteSettings(CXMLWriter* pcWriter)
+{
+	size	i;
+
+	pcWriter->Begin(IDE_GO_TO_TAG);
+	for (i = 0; i < maszRecentActions.NumElements(); i++)
+	{
+		pcWriter->Begin(IDE_GO_TO_ACTION_TAG);
+		pcWriter->Attribute("Name", maszRecentActions.GetText(i));
+		pcWriter->End();
+	}
+	pcWriter->End();
+}
+
+
+void CIDENavigator::ReadSettings(CMarkupTag* pcSettings)
+{
+	CMarkupTag*		pcGoTo;
+	CMarkupTag*		pcTag;
+	STagIterator	sIterator;
+	char*			szName;
+
+	pcGoTo = pcSettings->GetTag(IDE_GO_TO_TAG);
+	if (pcGoTo == NULL)
+	{
+		return;
+	}
+	maszRecentActions.ReInit();
+	for (pcTag = pcGoTo->GetTag(&sIterator); pcTag; pcTag = pcGoTo->GetNextTag(&sIterator))
+	{
+		szName = (StringCompare(pcTag->GetName(), IDE_GO_TO_ACTION_TAG) == 0) ? pcTag->GetAttribute((char*)"Name") : NULL;
+		if (szName && (szName[0] != '\0') && !maszRecentActions.Contains(szName) && (maszRecentActions.NumElements() < IDE_GO_TO_RECENT_ACTIONS))
+		{
+			maszRecentActions.Add(szName);
+		}
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The workspace's user's file's <RecentClass Key=""/> and <RecentSymbol
+// Key=""/>: what Go to Class and Go to Symbol went to, the oldest first.
+// A key is the index's (CShape::Area(void)); one whose symbol has gone
+// since is kept, and puts nothing first.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDENavigator::WriteUser(CXMLWriter* pcWriter)
+{
+	size	i;
+
+	if (!mpcContent->IsKeepingSettings())
+	{
+		return;
+	}
+	for (i = 0; i < maszRecentClasses.NumElements(); i++)
+	{
+		pcWriter->Begin(IDE_RECENT_CLASS_TAG);
+		pcWriter->Attribute("Key", maszRecentClasses.GetText(i));
+		pcWriter->End();
+	}
+	for (i = 0; i < maszRecentSymbols.NumElements(); i++)
+	{
+		pcWriter->Begin(IDE_RECENT_SYMBOL_TAG);
+		pcWriter->Attribute("Key", maszRecentSymbols.GetText(i));
+		pcWriter->End();
+	}
+}
+
+
+void CIDENavigator::ReadUser(CMarkupTag* pcRoot)
+{
+	CMarkupTag*		pcTag;
+	STagIterator	sIterator;
+	CArrayChars*	paszRecent;
+	char*			szKey;
+
+	maszRecentClasses.ReInit();
+	maszRecentSymbols.ReInit();
+	for (pcTag = pcRoot ? pcRoot->GetTag(&sIterator) : NULL; pcTag; pcTag = pcRoot->GetNextTag(&sIterator))
+	{
+		if (StringCompare(pcTag->GetName(), IDE_RECENT_CLASS_TAG) == 0)
+		{
+			paszRecent = &maszRecentClasses;
+		}
+		else if (StringCompare(pcTag->GetName(), IDE_RECENT_SYMBOL_TAG) == 0)
+		{
+			paszRecent = &maszRecentSymbols;
+		}
+		else
+		{
+			continue;
+		}
+		szKey = pcTag->GetAttribute((char*)"Key");
+		if (szKey && (szKey[0] != '\0') && !paszRecent->Contains(szKey) && (paszRecent->NumElements() < IDE_GO_TO_RECENT))
+		{
+			paszRecent->Add(szKey);
+		}
+	}
 }
 
 
@@ -591,6 +738,7 @@ bool CIDENavigator::OpenGoToChoice(void)
 			return false;
 		}
 		mszQueuedAction.Set(mpcContent->GetCommands()->GetCommand(psItem->uiData)->GetName());
+		RememberAction(mszQueuedAction.Text());
 		mpcContent->GetWindow()->Post(this, &CIDENavigator::RunQueuedAction);
 		return true;
 	}

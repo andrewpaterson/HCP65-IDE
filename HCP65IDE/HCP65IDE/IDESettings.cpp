@@ -182,6 +182,7 @@ void CIDESettings::ReadSettings(const char* szFile)
 		mpcContent->GetStructure()->ReadSettings(pcRoot);
 		mpcContent->GetFind()->ReadSettings(pcRoot);
 		mpcContent->GetSolutions()->ReadSettings(pcRoot);
+		mpcContent->GetNavigator()->ReadSettings(pcRoot);
 	}
 	else
 	{
@@ -222,6 +223,7 @@ bool CIDESettings::WriteSettings(void)
 	mpcContent->GetStructure()->WriteSettings(&cWriter);
 	mpcContent->GetFind()->WriteSettings(&cWriter);
 	mpcContent->GetSolutions()->WriteSettings(&cWriter);
+	mpcContent->GetNavigator()->WriteSettings(&cWriter);
 	cWriter.End();
 	bResult = cWriter.Write(mszSettingsFile.Text());
 	cWriter.Kill();

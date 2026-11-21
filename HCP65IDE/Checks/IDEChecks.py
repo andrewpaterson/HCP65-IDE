@@ -4755,6 +4755,26 @@ CHECKS = [
 		 r'^  CShape  \[Shape\.h:6\]  score 999999$', r'^Go to \[Area\]: 4 results', r'^  Area\(\)  \[CCircle  Shapes\.cpp:10\]', r'^Go to preview: Shapes\.cpp$',
 		 r'^Go to \[\]: 26 results', r'^  Area\(\)  \[CCircle  Shapes\.cpp:10\]  score 1000000$', r'^Go to \[Shape\.h:15\]: 1 results', r'^Go to preview: Shape\.h$',
 		 r'Shape\.h \(focus\) line 15: \[\tvirtual int\t\tArea\(void\) = 0;\]'], [r'ERROR']),
+	('goto-recent-kept', dict(MakeNavigationCopy(), **{
+		#What Go to Class and Go to Symbol went to is written to the workspace's user's file, the oldest first, and the
+		#commands Go to Action ran to the settings; with nothing typed the Actions tab lists those first, the last run
+		#at the top.
+		'WAIT_INDEX': '1', 'OPEN': 'Shapes.cpp', 'CARET': '12:5', 'SAVE_LAYOUT': '1', 'SETTINGS': MakeSettingsFile(),
+		'DEBUG': 'edit:gotolist:0:CSquare,edit:gotolist:0:CShape,edit:gotolist:2:Area,edit:gotolist:2:DrawAll,printuserfile,'
+		         'edit:gotolist:3:recfil,edit:key:escape,edit:caret:6:8,edit:gotolist:3:typhie,edit:gotolist:3:,printsettings'}),
+		[r'^  <RecentClass Key="CSquare"/>$', r'^  <RecentClass Key="CShape"/>$', r'^  <RecentSymbol Key="CCircle::Area\(\)"/>$', r'^  <RecentSymbol Key="DrawAll\(CShape\*, CCircle\*\)"/>$',
+		 r'^Go to \[\]: 2\d\d results', r'^  Type Hierarchy  \[Navigate  Ctrl\+H\]  score 1000000$', r'^  Recent Files  \[Navigate  Ctrl\+E\]  score 999999$',
+		 r'^  <GoTo>$', r'^    <RecentAction Name="Navigate\.RecentFiles"/>$', r'^    <RecentAction Name="Navigate\.TypeHierarchy"/>$', r'^  </GoTo>$'], [r'ERROR']),
+	('goto-recent-read', dict(MakeNavigationCopy('  <RecentClass Key="CGone"/>\n  <RecentClass Key="CCircle"/>\n  <RecentClass Key="CSquare"/>\n  <RecentSymbol Key="DrawAll(CShape*, CCircle*)"/>\n'), **{
+		#A workspace's recent classes and symbols are read from its user's file when it opens, and the recent actions
+		#from the settings: with nothing typed each tab lists its own first, the last gone to at the top.  A class that
+		#isn't there any more puts nothing first.
+		'WAIT_INDEX': '1', 'OPEN': 'Shapes.cpp', 'CARET': '12:5', 'SAVE_LAYOUT': '1',
+		'SETTINGS': MakeSettingsFile('<Settings>\n  <GoTo>\n    <RecentAction Name="Navigate.RecentLocations"/>\n    <RecentAction Name="No.SuchCommand"/>\n    <RecentAction Name="Navigate.SelectIn"/>\n  </GoTo>\n</Settings>\n'),
+		'DEBUG': 'edit:gotolist:0:,edit:gotolist:2:,edit:key:escape,edit:gotolist:3:,edit:key:escape'}),
+		[r'^Go to \[\]: 5 results', r'^  CSquare  \[Shapes\.h:17\]  score 1000000$', r'^  CCircle  \[Shapes\.h:6\]  score 999999$',
+		 r'^Go to \[\]: 26 results', r'^  DrawAll\(CShape\*, CCircle\*\)  \[Main\.cpp:10\]  score 1000000$',
+		 r'^Go to \[\]: 2\d\d results', r'^  Select In  \[Navigate  Alt\+F1\]  score 1000000$', r'^  Recent Locations  \[Navigate  Ctrl\+Shift\+E\]  score 99999\d$'], [r'ERROR', r'CGone']),
 	('goto-actions', {
 		#Go to Action (Control+Shift+A), the dialog's Actions tab: a command found by its caption, with its menu and its
 		#keys after it and nothing to preview; choosing it runs it (Recent Files opens its chooser).  With nothing typed

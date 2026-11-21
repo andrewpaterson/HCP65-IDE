@@ -506,6 +506,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpUserFile->AddPart(&mpDebugging);
 	mpUserFile->AddPart(&mpBookmarks);
 	mpUserFile->AddPart(&mpRecent);
+	mpUserFile->AddPart(&mpNavigator);
 	mpGitStatus = OMalloc<CIDEGitStatus>(this);
 	mpDiffs = OMalloc<CIDEDiffs>(this);
 	mpAskClaude = OMalloc<CIDEAskClaude>(this);
