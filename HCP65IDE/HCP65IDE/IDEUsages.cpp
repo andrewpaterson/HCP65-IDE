@@ -34,7 +34,6 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 //Find Usages' part of the settings' file.
 #define IDE_USAGES_SETTINGS_TAG			"FindUsages"
-#define IDE_USAGES_PINNED_PREFIX			"* "	//Before a pinned tab's name.
 #define IDE_USAGES_BY_TYPE_ATTRIBUTE	"GroupByType"
 #define IDE_USAGES_BY_PROJECT_ATTRIBUTE	"GroupByProject"
 #define IDE_USAGES_BY_CLASS_ATTRIBUTE	"GroupByClass"
@@ -382,7 +381,6 @@ void CIDEUsages::Init(CIDEContent* pcContent)
 {
 	PreInit();
 	mpcContent = pcContent;
-	maSearches.Init();
 	msPopupFound.Init();
 	muiGrouping = IDE_USAGES_BY_ALL;
 	meScope = IS_Solution;
@@ -402,7 +400,6 @@ void CIDEUsages::Class(void)
 {
 	U_Pointer(mpcContent);
 	M_Pointer(mpTabs);
-	M_Embedded(maSearches);
 	M_Pointer(mpSearch);
 	M_Pointer(mpUsagesTool);
 	M_Pointer(mpPopup);
@@ -427,11 +424,6 @@ void CIDEUsages::Class(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDEUsages::Free(void)
 {
-	if (mpTabs.IsNotNull())
-	{
-		mpTabs->GetSelectionEvent()->Remove(this);
-		mpTabs->GetCloseRequestEvent()->Remove(this);
-	}
 	if (mpPopup.IsNotNull())
 	{
 		mpPopup->GetButtonClickEvent()->Remove(this);
@@ -455,20 +447,16 @@ bool CIDEUsages::Load(CObjectReader* pcFile) { return false; }
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The Find Usages tool window, beside Build, as IntelliJ's Find window: a
-// results pane, with the groupings and the access filters on its
-// toolbar.
+// The Find Usages tool window, beside Build, as IntelliJ's Find window:
+// tabs of results panes (CIDEResultsTabs), each with the groupings and
+// the access filters on its toolbar.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEUsages::CreatePane(SDockPlace* psPlace)
 {
-	mpTabs = OMalloc<CTabbedContainer>(mpcContent->GetWindow(), mpcContent->GetTheme());
-	mpTabs->SetAlignment(CSH_Stretch, CSV_Stretch);
-	mpTabs->SetHideSingleTab(true);
-	mpTabs->GetSelectionEvent()->Add(this, &CIDEUsages::TabSelected);
-	mpTabs->GetCloseRequestEvent()->Add(this, &CIDEUsages::TabCloseRequested);
-	AddSearch();
-	mpUsagesTool = mpcContent->GetDock()->AddPane(IDE_USAGES_ID, "Find Usages", NULL, mpTabs, DPK_Tool, psPlace);
+	mpTabs = OMalloc<CIDEResultsTabs>(mpcContent, this, "Find Usages");
+	mpSearch = Ptr<CIDEUsagesSearch>((CIDEUsagesSearch*)&mpTabs->AddSearch());
+	mpUsagesTool = mpcContent->GetDock()->AddPane(IDE_USAGES_ID, "Find Usages", NULL, mpTabs->GetComponent(), DPK_Tool, psPlace);
 }
 
 
@@ -590,13 +578,10 @@ bool CIDEUsages::FindUsages(bool bDeclarations)
 	}
 
 	//In the tab shown, unless it is pinned: then in a new one.
-	if (mpSearch->mbPinned)
-	{
-		AddSearch();
-	}
+	mpSearch = Ptr<CIDEUsagesSearch>((CIDEUsagesSearch*)&mpTabs->GetSearchForNew());
 	mpSearch->SetFound(&sFound);
 	mpSearch->mcScope.Capture(mpcContent, meScope, mszDirectory.Text());
-	mpSearch->mpTab->SetText(mpSearch->msFound.szName.Text());
+	mpTabs->SetName(mpSearch, mpSearch->msFound.szName.Text());
 
 	ShowUsages(false);
 	mpcContent->GetDock()->Show(mpUsagesTool);
@@ -1012,29 +997,26 @@ bool CIDEUsages::Step(bool bNext, bool bKeepKeys)
 void CIDEUsagesSearch::Init(Ptr<CIDEResultsPane> pPane)
 {
 	PreInit();
-	mpPane = pPane;
+	InitSearch(pPane);
 	msFound.Init();
 	mcScope.Init();
 	mbFound = false;
 	mbMoved = false;
 	miMoved = 0;
 	mbStale = false;
-	mbPinned = false;
 	PostInit();
 }
 
 
 void CIDEUsagesSearch::Class(void)
 {
-	M_Pointer(mpPane);
-	M_Pointer(mpTab);
+	CIDEResultsSearch::Class();
 	U_Unknown(SIDEFoundUsages, msFound);
 	U_Unknown(CIDEScope, mcScope);
 	U_Bool(mbFound);
 	U_Bool(mbMoved);
 	U_Int64(miMoved);
 	U_Bool(mbStale);
-	U_Bool(mbPinned);
 }
 
 
@@ -1042,6 +1024,7 @@ void CIDEUsagesSearch::Free(void)
 {
 	mcScope.Kill();
 	msFound.Kill();
+	CIDEResultsSearch::Free();
 }
 
 
@@ -1066,23 +1049,16 @@ void CIDEUsagesSearch::SetFound(SIDEFoundUsages* psFound)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// A new, empty search in a tab of its own, which is chosen: a results
-// pane with the groupings, the filters and Pin Tab on its toolbar, and
-// the settings of the pane before it.
+// The tabs' owner: a new, empty search with its results pane, which has
+// the groupings, the filters, the pane's view commands, Pin Tab and Scope
+// on its toolbar.
 //
 //////////////////////////////////////////////////////////////////////////
-Ptr<CIDEUsagesSearch> CIDEUsages::AddSearch(void)
+Ptr<CIDEResultsSearch> CIDEUsages::CreateResultsSearch(void)
 {
-	Ptr<CIDEUsagesSearch>	pSearch;
 	Ptr<CIDEResultsPane>	pPane;
-	Ptr<CIDEResultsPane>	pLast;
 
-	pLast = mpSearch.IsNotNull() ? mpSearch->mpPane : Ptr<CIDEResultsPane>();
 	pPane = OMalloc<CIDEResultsPane>(mpcContent, this, "usages", false);
-	pSearch = OMalloc<CIDEUsagesSearch>(pPane);
-	maSearches.Add(pSearch);
-	mpSearch = pSearch;
-
 	pPane->AddToolbarSeparator();
 	AddPaneCommand(pPane, "Usages.GroupByType", "Group by Usage Type", ITI_GroupByType, &CIDEUsages::ToggleByType, &CIDEUsages::IsByType);
 	AddPaneCommand(pPane, "Usages.GroupByProject", "Group by Project", ITI_GroupByProject, &CIDEUsages::ToggleByProject, &CIDEUsages::IsByProject);
@@ -1091,59 +1067,24 @@ Ptr<CIDEUsagesSearch> CIDEUsages::AddSearch(void)
 	AddPaneCommand(pPane, "Usages.ShowReadAccess", "Show Read Access", ITI_ReadAccess, &CIDEUsages::ToggleShowRead, &CIDEUsages::IsShowRead);
 	AddPaneCommand(pPane, "Usages.ShowWriteAccess", "Show Write Access", ITI_WriteAccess, &CIDEUsages::ToggleShowWrite, &CIDEUsages::IsShowWrite);
 	pPane->AddViewCommands();
-	AddPaneCommand(pPane, "Usages.PinTab", "Pin Tab", ITI_Pin, &CIDEUsages::TogglePinned, &CIDEUsages::IsPinned);
+	mpTabs->AddPinCommand(pPane);
 	pPane->AddToolbarCommand(pPane->GetCommands()->Add("Usages.Scope", "Scope", "", mpcContent->GetToolIcon(ITI_Settings), this, &CIDEUsages::OpenScopeMenu), ITI_Settings);
-	if (pLast.IsNotNull())
-	{
-		pPane->CopySettings(pLast);
-	}
-
-	//The tab is chosen without TabSelected being told: the search is the one shown already.
-	mpTabs->GetSelectionEvent()->Remove(this);
-	pSearch->mpTab = mpTabs->AddTab("Find Usages", pPane->GetComponent(), Ptr<CImageCel>(), true);
-	mpTabs->Select(pSearch->mpTab);
-	mpTabs->GetSelectionEvent()->Add(this, &CIDEUsages::TabSelected);
-	return pSearch;
+	return OMalloc<CIDEUsagesSearch>(pPane);
 }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// A search and its tab go.  With bKeepOne, as closing a tab does, the
-// last to go is replaced by an empty one, so the tool window always has
-// a tab; the tab left of it (or the first) is chosen.
+// The tabs' owner: another tab is the chosen one (it was clicked, the
+// chosen one was closed, or an empty one took the last one's place).  Its
+// search is the one shown, with its tree made again if the groupings or
+// filters changed, or edits moved its usages, while it wasn't.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEUsages::RemoveSearch(Ptr<CIDEUsagesSearch> pSearch, bool bKeepOne)
+void CIDEUsages::ResultsSearchChosen(Ptr<CIDEResultsSearch> pSearch)
 {
-	size	uiIndex;
-
-	for (uiIndex = 0; (uiIndex < maSearches.NumElements()) && (maSearches.Get(uiIndex) != pSearch); uiIndex++)
-	{
-	}
-	if (uiIndex == maSearches.NumElements())
-	{
-		return;
-	}
-	pSearch->mpPane->Detach();
-	mpTabs->GetSelectionEvent()->Remove(this);
-	mpTabs->RemoveTab(pSearch->mpTab);
-	maSearches.RemoveAt(uiIndex);
-	if (mpSearch == pSearch)
-	{
-		mpSearch = NULL;
-		if (maSearches.NumElements() > 0)
-		{
-			mpSearch = maSearches.Get((uiIndex > 0) ? uiIndex - 1 : 0);
-			mpTabs->Select(mpSearch->mpTab);
-		}
-	}
-	mpTabs->GetSelectionEvent()->Add(this, &CIDEUsages::TabSelected);
-	if (mpSearch.IsNull() && bKeepOne)
-	{
-		AddSearch();
-	}
-	else if (mpSearch.IsNotNull() && (mpSearch->mbStale || mpSearch->mbMoved))
+	mpSearch = Ptr<CIDEUsagesSearch>((CIDEUsagesSearch*)&pSearch);
+	if (mpSearch.IsNotNull() && (mpSearch->mbStale || mpSearch->mbMoved))
 	{
 		ShowUsages(true);
 	}
@@ -1152,78 +1093,19 @@ void CIDEUsages::RemoveSearch(Ptr<CIDEUsagesSearch> pSearch, bool bKeepOne)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The search whose pane or tab it is, NULL if none's.
+// The search whose pane it is, NULL if none's; and the tabs' searches as
+// what they are.
 //
 //////////////////////////////////////////////////////////////////////////
 Ptr<CIDEUsagesSearch> CIDEUsages::FindSearch(CIDEResultsPane* pcPane)
 {
-	size	i;
-
-	for (i = 0; i < maSearches.NumElements(); i++)
-	{
-		if (&maSearches.Get(i)->mpPane == pcPane)
-		{
-			return maSearches.Get(i);
-		}
-	}
-	return NULL;
+	return Ptr<CIDEUsagesSearch>((CIDEUsagesSearch*)&mpTabs->FindSearch(pcPane));
 }
 
 
-Ptr<CIDEUsagesSearch> CIDEUsages::FindSearch(CTabComponent* pcTab)
+Ptr<CIDEUsagesSearch> CIDEUsages::GetUsagesSearch(size uiIndex)
 {
-	size	i;
-
-	for (i = 0; i < maSearches.NumElements(); i++)
-	{
-		if (&maSearches.Get(i)->mpTab == pcTab)
-		{
-			return maSearches.Get(i);
-		}
-	}
-	return NULL;
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// Another tab was chosen: its search is the one shown, with its tree made
-// again if the groupings or filters changed, or edits moved its usages,
-// while it wasn't.
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDEUsages::TabSelected(CTabComponent* pcTab)
-{
-	Ptr<CIDEUsagesSearch>	pSearch;
-
-	pSearch = FindSearch(mpTabs->GetSelected().IsNotNull() ? &mpTabs->GetSelected() : pcTab);
-	if (pSearch.IsNull() || (pSearch == mpSearch))
-	{
-		return;
-	}
-	mpSearch = pSearch;
-	if (mpSearch->mbStale || mpSearch->mbMoved)
-	{
-		ShowUsages(true);
-	}
-	mpSearch->mpPane->RefreshToolbar();
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// A tab's cross was pressed: its search goes, pinned or not.
-//
-//////////////////////////////////////////////////////////////////////////
-void CIDEUsages::TabCloseRequested(CTabComponent* pcTab)
-{
-	Ptr<CIDEUsagesSearch>	pSearch;
-
-	pSearch = FindSearch(pcTab);
-	if (pSearch.IsNotNull())
-	{
-		RemoveSearch(pSearch, true);
-	}
+	return Ptr<CIDEUsagesSearch>((CIDEUsagesSearch*)&mpTabs->GetSearch(uiIndex));
 }
 
 
@@ -1231,31 +1113,17 @@ void CIDEUsages::TabCloseRequested(CTabComponent* pcTab)
 //
 // Pin Tab, as IntelliJ's: the next Find Usages leaves a pinned tab as it
 // is and shows what it finds in a new one.  A pinned tab's name has a pin
-// before it.
+// before it.  The tabs keep it.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEUsages::TogglePinned(void)
-{
-	SetPinned(!mpSearch->mbPinned);
-}
-
-
 void CIDEUsages::SetPinned(bool bPinned)
 {
-	CChars	szName;
-
-	mpSearch->mbPinned = bPinned;
-	szName.Init(bPinned ? IDE_USAGES_PINNED_PREFIX : "");
-	szName.Append(mpSearch->mbFound ? mpSearch->msFound.szName.Text() : "Find Usages");
-	mpSearch->mpTab->SetText(szName.Text());
-	szName.Kill();
-	mpSearch->mpPane->RefreshToolbar();
+	mpTabs->SetPinned(bPinned);
 }
 
 
-bool CIDEUsages::IsPinned(void) { return mpSearch.IsNotNull() && mpSearch->mbPinned; }
-size CIDEUsages::NumSearches(void) { return maSearches.NumElements(); }
-Ptr<CTabbedContainer> CIDEUsages::GetTabs(void) const { return mpTabs; }
+size CIDEUsages::NumSearches(void) { return mpTabs->NumSearches(); }
+Ptr<CTabbedContainer> CIDEUsages::GetTabs(void) { return mpTabs->GetTabs(); }
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -1465,9 +1333,9 @@ void CIDEUsages::ShowAllUsages(void)
 {
 	size	i;
 
-	for (i = 0; i < maSearches.NumElements(); i++)
+	for (i = 0; i < mpTabs->NumSearches(); i++)
 	{
-		maSearches.Get(i)->mbStale = true;
+		GetUsagesSearch(i)->mbStale = true;
 	}
 	if (mpSearch.IsNotNull())
 	{
@@ -1781,9 +1649,9 @@ void CIDEUsages::AdjustPlaces(const char* szFile, SIDEPlaceChange* psChange)
 	size					i;
 
 	msPopupFound.AdjustPlaces(szFile, psChange);
-	for (i = 0; i < maSearches.NumElements(); i++)
+	for (i = 0; mpTabs.IsNotNull() && (i < mpTabs->NumSearches()); i++)
 	{
-		pSearch = maSearches.Get(i);
+		pSearch = GetUsagesSearch(i);
 		if (pSearch->msFound.AdjustPlaces(szFile, psChange))
 		{
 			pSearch->mbMoved = true;
@@ -1834,11 +1702,11 @@ void CIDEUsages::Clear(void)
 	if (mpTabs.IsNotNull())
 	{
 		//Every tab goes, pinned or not, but for an empty one.
-		while (maSearches.NumElements() > 0)
+		while (mpTabs->NumSearches() > 0)
 		{
-			RemoveSearch(maSearches.Get(maSearches.NumElements() - 1), false);
+			mpTabs->RemoveSearch(mpTabs->GetSearch(mpTabs->NumSearches() - 1), false);
 		}
-		AddSearch();
+		mpSearch = Ptr<CIDEUsagesSearch>((CIDEUsagesSearch*)&mpTabs->AddSearch());
 	}
 }
 

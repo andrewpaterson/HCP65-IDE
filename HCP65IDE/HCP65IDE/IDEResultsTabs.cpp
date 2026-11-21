@@ -157,7 +157,8 @@ Ptr<CIDEResultsSearch> CIDEResultsTabs::AddSearch(void)
 //
 // A search and its tab go.  With bKeepOne, as closing a tab does, the
 // last to go is replaced by an empty one, so the tool window always has
-// a tab; the tab left of it (or the first) is chosen, and the owner told.
+// a tab; the tab left of it (or the first) is chosen, and the owner told
+// which is chosen now.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEResultsTabs::RemoveSearch(Ptr<CIDEResultsSearch> pSearch, bool bKeepOne)
@@ -190,7 +191,9 @@ void CIDEResultsTabs::RemoveSearch(Ptr<CIDEResultsSearch> pSearch, bool bKeepOne
 	mpTabs->GetSelectionEvent()->Add(this, &CIDEResultsTabs::TabSelected);
 	if (mpSearch.IsNull() && bKeepOne)
 	{
+		//The empty one that takes its place is the chosen one: an owner that keeps the chosen search hears of it.
 		AddSearch();
+		mpcOwner->ResultsSearchChosen(mpSearch);
 	}
 	else if (bChosen)
 	{

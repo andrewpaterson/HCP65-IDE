@@ -26,6 +26,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/TabbedContainer.h"
 #include "IDEChooser.h"
 #include "IDEResultsPane.h"
+#include "IDEResultsTabs.h"
 #include "WindowLib/DockManager.h"
 #include "WindowLib/CommandSet.h"
 #include "IDECodeModel.h"
@@ -89,20 +90,17 @@ struct SIDEFoundUsages
 //hasn't), whether edits have moved its usages since its tree was made, whether the groupings or filters have changed
 //since (it is made again when its tab is chosen), and whether it is pinned.  It keeps every usage it found; its tree
 //shows those in its scope, which is the tool window's as the IDE was when it was found.
-class CIDEUsagesSearch : public CObject
+class CIDEUsagesSearch : public CIDEResultsSearch
 {
 CONSTRUCTABLE(CIDEUsagesSearch);
 DESTRUCTABLE(CIDEUsagesSearch);
 public:
-	Ptr<CIDEResultsPane>	mpPane;
-	Ptr<CTabComponent>		mpTab;
 	SIDEFoundUsages			msFound;  //What was found, if mbFound: each line's usage by its node's data less one.
 	CIDEScope				mcScope;  //Its scope: the tree shows the usages found that are in it.
 	bool					mbFound;
 	bool					mbMoved;  //Edits have moved usages since the tree was shown, the last at miMoved.
 	int64					miMoved;
 	bool					mbStale;
-	bool					mbPinned;
 
 	void	Init(Ptr<CIDEResultsPane> pPane);
 	void	Class(void) override;
@@ -126,6 +124,7 @@ struct SIDEUsageRow;
 //Each Find Usages shows what it finds in the tool window's tab that is chosen, named for the symbol, unless that tab
 //is pinned (Pin Tab, on the toolbar): then it is left as it is and a new tab is made.  A tab is closed by its cross;
 //the tool window always has one, empty until something is found, and its tab bar is only shown with more than one.
+//The tabs and the pin are CIDEResultsTabs', whose owner this is, as the Find and Hierarchy tool windows' are.
 //The groupings and filters are the tool window's, the same for every tab.
 //
 //Find Usages Settings (Control+Alt+Shift+F7) chooses the scope usages are looked for in (CIDEScope), the directory for
@@ -139,15 +138,14 @@ struct SIDEUsageRow;
 //All References (Shift+F12) shows its declarations and definition there too.  Control+B on a declaration shows the
 //usages in a popup under the caret.  The tree is a results pane's (CIDEResultsPane), which opens and steps through
 //the usages: a line's node's data is its usage's index in what was found, and one.
-class CIDEUsages : public CObject, public CIDESteppable, public CIDEResultsSource
+class CIDEUsages : public CObject, public CIDESteppable, public CIDEResultsSource, public CIDEResultsTabsOwner
 {
 CONSTRUCTABLE(CIDEUsages);
 DESTRUCTABLE(CIDEUsages);
 protected:
 	CIDEContent*		mpcContent;  //Not held: the content holds it.
-	Ptr<CTabbedContainer>	mpTabs;  //A tab for each search, its page the search's results pane.
-	CArray<CIDEUsagesSearch>	maSearches;
-	Ptr<CIDEUsagesSearch>	mpSearch;  //The search whose tab is chosen: never NULL once the tool window is made.
+	Ptr<CIDEResultsTabs>	mpTabs;  //A tab for each search, its page the search's results pane, and the pin: the tabs Find and Hierarchy have.
+	Ptr<CIDEUsagesSearch>	mpSearch;  //The search whose tab is chosen (the tabs', as what it is): never NULL once the tool window is made.
 	Ptr<CDockPane>		mpUsagesTool;
 	Ptr<CIDEChooser>	mpPopup;  //Control+B's usages on a declaration, and Show Usages': made when first shown.
 	SIDEFoundUsages		msPopupFound;  //What the popup shows: each row's usage by its row less one (the first is its title).
@@ -191,7 +189,7 @@ public:
 	void				ScopeMenuClicked(CMenuItem* pcItem);
 	Ptr<CMenuContainer>	GetScopeMenu(void) const;
 	size				NumSearches(void);
-	Ptr<CTabbedContainer>	GetTabs(void) const;
+	Ptr<CTabbedContainer>	GetTabs(void);
 	void				ReadSettings(CMarkupTag* pcSettings);
 	void				WriteSettings(CXMLWriter* pcWriter);
 	uint8				GetGrouping(void) const;
@@ -207,6 +205,8 @@ public:
 	bool				GetDeclarationLocation(CIDEResultsPane* pcPane, SIDELocation* psDest) override;
 	bool				CanRerunResults(CIDEResultsPane* pcPane) override;
 	void				RerunResults(CIDEResultsPane* pcPane) override;
+	Ptr<CIDEResultsSearch>	CreateResultsSearch(void) override;
+	void				ResultsSearchChosen(Ptr<CIDEResultsSearch> pSearch) override;
 
 protected:
 	bool				Find(bool bDeclarations, SIDEFoundUsages* psDest);
@@ -220,14 +220,8 @@ protected:
 	void				PopupFindWindow(void);
 	void				ShowGrouping(uint8 uiGrouping);
 	void				AddPaneCommand(Ptr<CIDEResultsPane> pPane, const char* szName, const char* szCaption, EIDEToolIcon eIcon, void(CIDEUsages::*fToggle)(void), bool(CIDEUsages::*fIsOn)(void));
-	Ptr<CIDEUsagesSearch>	AddSearch(void);
-	void				RemoveSearch(Ptr<CIDEUsagesSearch> pSearch, bool bKeepOne);
 	Ptr<CIDEUsagesSearch>	FindSearch(CIDEResultsPane* pcPane);
-	Ptr<CIDEUsagesSearch>	FindSearch(CTabComponent* pcTab);
-	void				TabSelected(CTabComponent* pcTab);
-	void				TabCloseRequested(CTabComponent* pcTab);
-	void				TogglePinned(void);
-	bool				IsPinned(void);
+	Ptr<CIDEUsagesSearch>	GetUsagesSearch(size uiIndex);
 	void				ShowAllUsages(void);
 	void				ToggleByType(void);
 	void				ToggleByProject(void);
