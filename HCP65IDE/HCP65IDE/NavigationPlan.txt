@@ -189,6 +189,34 @@ Stage F, what a name is: built 2026-11-21.
         written; a selected expression's is Introduce Variable's (FindIntroduction, the checked parse), which
         wasn't measured on a large unit: it runs only when asked for, on a selection.
 
+Stage G, hierarchies: built 2026-11-21.
+    CommonLibraries b0d5ad9eb (CTreeContainer's expanded event and SetActivationToggles); HCP65-IDE 7103bc9
+    (CIDEHierarchy, CIDECodeModel::FindCallers and FindCallees, CIDEResultsPane::AddSymbol).  Checks
+    hierarchy-type, hierarchy-method, hierarchy-calls.
+    As built it differs from the plan in these:
+      - One Hierarchy tool window (Alt+8, IntelliJ's key) on CIDEResultsTabs, as decided; a tab is a
+        CIDEHierarchySearch that keeps its rows (SIDEHierarchyNode) and makes its pane's tree from them, in the
+        order they are seen.  A row is a results pane's result (AddSymbol: a name, its kind's icon, what is said of
+        it dim), so the preview, enter, Rerun and Next and Previous Occurrence are the pane's.  Enter doesn't
+        open and close a row here (SetActivationToggles(false)): the chevron and Left and Right do.
+      - Type Hierarchy's class view follows the class's first base class upwards, and that one's first; the
+        Supertypes view has every base class.  The toolbar's five buttons are on every tab, those of the other
+        kind dim.
+      - Method Hierarchy's marks are words after the class's name: + (defines it), - (inherits it), abstract
+        (declares it with = 0, read from its declaration's text), ! (a base class only declares it).  The family
+        is FindTarget, FindImplementations and FindSuperMethods of the function, each one's class its key's scope.
+      - S5: FindCallers is the function's places that are calls, by the function each is in (iContainer);
+        FindCallees looks through every function's places for calls inside the function, a scan of the index for
+        each row opened.  It wasn't measured on the ModPlay workspace: it is one pass over the symbols, as
+        FindSymbolsIn's is, and only when a row is opened.  Calls of a function that overrides or is overridden
+        by the one asked for aren't counted as its.
+      - S12's tree that asks for children: CTreeContainer now says when a node is opened (GetExpandedEvent).  A
+        caller not yet looked into has a row "..." under it so that it can be opened; opening it finds its
+        callers and the tree is made again at the next tick.  Expand All shows those rows; Enter on one looks.
+        A function already over itself in the tree says "recursive" and has no rows.
+      - CIDENavigator::FindCaretFunction asks the file's outline first (the function round the caret, between
+        its tokens too), then parses as before: Go to Super Method gains from it.
+
 
 How work is done here
 ---------------------

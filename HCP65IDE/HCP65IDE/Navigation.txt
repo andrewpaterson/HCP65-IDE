@@ -40,6 +40,10 @@ Find's matches, bookmarks, changed lines and kept usages.
 What a name is: with Control held over a name it is underlined and its declaration shown under it; Quick Definition
 (Control+Shift+I), Parameter Info (Control+P) and Type Info (Control+Shift+P), in the View menu.
 
+Hierarchies: the Hierarchy tool window (Alt+8), with tabs and a pin: Type Hierarchy (Control+H; class, supertypes
+or subtypes), Method Hierarchy (Control+Shift+H) and Call Hierarchy (Control+Alt+H; callers or callees, found as
+each row is opened).
+
 Between files: Recent Files (Control+E, kept in the workspace's .hcp65user), Recent Locations (Control+Shift+E, with
 the places edited alone), the Switcher (Control+Tab, held), Select Next and Previous Tab (Alt+Right, Alt+Left), Reopen
 Closed Tab, Last and Next Edit Location (Control+Shift+Backspace), Select In (Alt+F1), and Solution Explorer's Always
@@ -70,7 +74,9 @@ Symbols
     a macro's name has no declaration to show: the index has no macros.  (A middle click was ruled out.)
   - Go to Type Declaration from an expression with no name of its own (a call's result, pcA->GetB()): it goes from a
     declared name's type only.
-  - The Type, Method and Call Hierarchies (Control+H, Control+Shift+H, Control+Alt+H).
+  - The Type Hierarchy's class view follows only a class's first base class upwards (Supertypes shows them all);
+    the Call Hierarchy has the calls of the function itself, not those made through a function it overrides, and
+    no scope to keep it to.
   - Quick Documentation (Control+Q), and a tool tip for a name the pointer rests on: put off, "later if at all".
   - Parameter Info lists only the functions of the name that the called one's class (or file) declares beside it,
     not a base class's; Type Info gives a name's declared type as it is written, and an expression's only when it
