@@ -29,7 +29,7 @@ The user said to build all of it on 2026-11-20 ("Implement everything from 1 thr
 What is built is taken out of Navigation.txt's gaps and put on the website's pages as each stage ends.
 
 Stage A, going from a symbol: built 2026-11-20.
-    CommonLibraries 98fda656f and b99c4ff7d (CChooserPopup, NameRow.h), d07918407 (CTextArea's link event);
+    CommonLibraries c8c3c0626 and 738b20b1b (CChooserPopup, NameRow.h), aca2e2b83 (CTextArea's link event);
     HCP65-IDE 997b19d (the targets, CIDEChooser, CIDELocationPreview, Go to Implementation and Super Method),
     80e319e (Go to Type Declaration), e31b265 (Related Symbol, Show Usages, the usages chooser, Navigate's menu),
     069f314 (Control+click).  Checks nav-*, on Checks/Input/Navigation (CShape, CCircle, CSquare, CRoundedSquare).
@@ -47,9 +47,9 @@ Stage A, going from a symbol: built 2026-11-20.
       - The menus check, which had been failing, expects every menu as it is.
 
 Stage B, moving in a file: built 2026-11-20.
-    CommonLibraries 8a979f91f and 2e6098028 (CPromptPopup; the bracket commands), 6c5f6f5b5 (typing finds a row:
-    CListContainer::SetTypeToFind, CScrollPane::SetNote), 211ca9a7e (a chooser with no field finds rows so),
-    cba8c98cc (CChooserPopup::SetOpensAbove); HCP65-IDE 3a83cf8 (the outline, File Structure, Next and Previous
+    CommonLibraries 39e33708e and f8bb67760 (CPromptPopup; the bracket commands), b7e50ff0c (typing finds a row:
+    CListContainer::SetTypeToFind, CScrollPane::SetNote), 297ff33cb (a chooser with no field finds rows so),
+    05d9ca299 (CChooserPopup::SetOpensAbove); HCP65-IDE 3a83cf8 (the outline, File Structure, Next and Previous
     Method), 8696cee (the braces' check), 782afa5 (Go to Line), 95b7648 (breadcrumbs, sticky lines,
     Settings' Editor page, the Structure tool window, typing to find a row in the IDE's trees).  Checks nav-outline*,
     nav-file-structure, nav-next-method, nav-braces, nav-go-to-line, nav-breadcrumbs, nav-sticky-lines,
@@ -80,10 +80,10 @@ Stage B, moving in a file: built 2026-11-20.
         inherited members.  Every node is open after each parse: what was closed isn't remembered.
 
 Stage D, finding text: built 2026-11-20 and 21.
-    CommonLibraries 520acf5fd (BaseLib's CRegex), e9844be14 (CTextSearch by regular expression, and what replaces
-    a find), 9a5d2c11b (CTextArea's highlight layers), aecdeb310 (CScrollBar's marks), f4d1022b9 (ReplaceRanges
-    with a text for each range), 0c6150bf4 (CFindInFilesDialog: Regex, the file mask, the replacing form),
-    c9784f60a (CFileChooser chooses a folder), b48848970 (the dialog's directory button); HCP65-IDE 2580dfc (the
+    CommonLibraries b7ce1b83a (BaseLib's CRegex), 08d3d8700 (CTextSearch by regular expression, and what replaces
+    a find), 719464229 (CTextArea's highlight layers), 918ac99b1 (CScrollBar's marks), ce5c3df65 (ReplaceRanges
+    with a text for each range), 97a0b759c (CFindInFilesDialog: Regex, the file mask, the replacing form),
+    06b8e1046 (CFileChooser chooses a folder), 79d3d166d (the dialog's directory button); HCP65-IDE 2580dfc (the
     Find bar: IDEFind.h), 37edcc5 (Find in Files' regular expressions and mask, Replace in Files), e94aaf5 (the Find
     tool window's tabs and pin: IDEResultsTabs.h; the directory chooser).  Checks find-bar,
     find-bar-replace, find-next, find-regex-mask, find-regex-problem, replace-in-files, replace-in-files-dialog,
@@ -112,7 +112,7 @@ Stage D, finding text: built 2026-11-20 and 21.
         the text code.
 
 Stage C, marks on lines: built 2026-11-21.
-    CommonLibraries afc67aec6 (CCodeEditor's icon columns); HCP65-IDE 460e197 (CIDEUserFile,
+    CommonLibraries 4a2a6275c (CCodeEditor's icon columns); HCP65-IDE 460e197 (CIDEUserFile,
     CIDEBookmarks, CIDEMarks).  Checks bookmarks, bookmarks-read, nav-next-change, nav-highlight-usages,
     nav-override-marks; the checks that write a user's file use a copy of Checks/Input/Navigation
     (MakeNavigationCopy).
@@ -160,7 +160,7 @@ Stage E, between files: built 2026-11-21.
       - Solution Explorer's two options are in its context menu, ticked, and in Settings.xml as <Explorer>.
 
 Stage F, what a name is: built 2026-11-21.
-    CommonLibraries b653be85f (CInfoPopup, CTextArea::AddUnderlineLayer, CWindow::CloseOnePopup); HCP65-IDE
+    CommonLibraries 962b05f48 (CInfoPopup, CTextArea::AddUnderlineLayer, CWindow::CloseOnePopup); HCP65-IDE
     2a55e45 (IDESymbolInfo, CIDEQuickInfo).  Checks quick-link, quick-link-pointer (the pointer and the Control key
     themselves), quick-parameters, quick-type, quick-definition, quick-definition-several, on a project of their
     own, Checks/Input/QuickInfo (CPainter with two Rects, an enum, a typedef, a macro).
@@ -190,7 +190,7 @@ Stage F, what a name is: built 2026-11-21.
         wasn't measured on a large unit: it runs only when asked for, on a selection.
 
 Stage G, hierarchies: built 2026-11-21.
-    CommonLibraries b0d5ad9eb (CTreeContainer's expanded event and SetActivationToggles); HCP65-IDE 7103bc9
+    CommonLibraries 3df4ac100 (CTreeContainer's expanded event and SetActivationToggles); HCP65-IDE 7103bc9
     (CIDEHierarchy, CIDECodeModel::FindCallers and FindCallees, CIDEResultsPane::AddSymbol).  Checks
     hierarchy-type, hierarchy-method, hierarchy-calls.
     As built it differs from the plan in these:
@@ -218,7 +218,7 @@ Stage G, hierarchies: built 2026-11-21.
         its tokens too), then parses as before: Go to Super Method gains from it.
 
 Stage H, the dialogs and the results: built 2026-11-21.
-    CommonLibraries 15a254812 (CGoToDialog's preview and selected event); HCP65-IDE c0713df (the Go to dialog's
+    CommonLibraries 761940002 (CGoToDialog's preview and selected event); HCP65-IDE c0713df (the Go to dialog's
     preview, recent items and Actions tab; the results panes' coloured rows, Export and Autoscroll from Source).
     Checks goto-recent-preview, goto-actions, results-coloured-rows, results-export-autoscroll; the script's
     gotolist:, printclipboard and printfindselected steps.
@@ -263,7 +263,7 @@ Every stage is built.  What wasn't, and why:
     TestBaseLib passes in the 16 bit size host build (BASELIB_SIZE16); and TestBaseLib's text and regex tests
     (TestRegex, TestTextSearch, TestTextEditing, TestTextNavigation, TestTextDocument) pass on the 65C64 and the
     W65C816 (TestBaseLib65 with TEST_PROJECT65_ONLY).  The W65C816 run found CRegex asking an array for more bytes
-    than a 16 bit size counts (its program and its stack): CommonLibraries 589cdfc34 keeps both to what a size can
+    than a 16 bit size counts (its program and its stack): CommonLibraries a3c499857 keeps both to what a size can
     count.
   - Not checked: an MSVC build (the .vcxproj files and their filters have every new file, by hand); the IDE on
     Windows; the rest of the 65 suites, which take none of this stage's code but BaseLib's; and anything by hand
