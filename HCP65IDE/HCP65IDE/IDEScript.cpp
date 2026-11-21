@@ -1735,13 +1735,8 @@ void CIDEScript::RunEditStep(const char* szStep)
 	int32					iNode;
 	const char*				szTyped;
 	Ptr<CIDEEditorTab>		pTab;
-	Ptr<CMenuContainer>		pMenu;
 	Ptr<CTextArea>			pEditor;
-	CChars					szLine;
 	size					uiLine;
-	size					uiEnd;
-	size					i;
-	bool					bFound;
 
 	pTab = mpcContent->GetDocuments()->GetActiveTab();
 	if (strncmp(szStep, "open:", 5) == 0)
@@ -3084,7 +3079,25 @@ void CIDEScript::RunEditStep(const char* szStep)
 		}
 		sTarget.Kill();
 	}
-	else if ((strcmp(szStep, "usages") == 0) || (strcmp(szStep, "references") == 0) || (strcmp(szStep, "printusages") == 0))
+	else
+	{
+		RunUsagesStep(szStep);
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// One of HCP65_IDE_EDIT's steps that RunEditStep doesn't take: Find Usages,
+// Find Duplicates and the find tabs.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEScript::RunUsagesStep(const char* szStep)
+{
+	Ptr<CMenuContainer>		pMenu;
+	size					i;
+
+	if ((strcmp(szStep, "usages") == 0) || (strcmp(szStep, "references") == 0) || (strcmp(szStep, "printusages") == 0))
 	{
 		//Alt+F7 (or Shift+F12, with the declarations), the Find Usages tree printed, each node indented by its depth, in
 		//the order the tree shows them; printusages prints the tree as it is.
@@ -3338,7 +3351,34 @@ void CIDEScript::RunEditStep(const char* szStep)
 			mpcContent->GetDocuments()->FocusActiveEditor();
 		}
 	}
-	else if (strcmp(szStep, "printchooser") == 0)
+	else
+	{
+		RunViewStep(szStep);
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// One of HCP65_IDE_EDIT's steps that RunUsagesStep doesn't take: what is
+// printed, the pointer, keys and the rest.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEScript::RunViewStep(const char* szStep)
+{
+	int32					iNode;
+	const char*				szTyped;
+	Ptr<CIDEEditorTab>		pTab;
+	Ptr<CMenuContainer>		pMenu;
+	Ptr<CTextArea>			pEditor;
+	CChars					szLine;
+	size					uiLine;
+	size					uiEnd;
+	size					i;
+	bool					bFound;
+
+	pTab = mpcContent->GetDocuments()->GetActiveTab();
+	if (strcmp(szStep, "printchooser") == 0)
 	{
 		PrintChooser();
 	}

@@ -84,6 +84,8 @@ public:
 	const char*	GetCommandName(Ptr<CButton> pButton);
 	void		ClickMenu(const char* szPath);
 	void		RunEditStep(const char* szStep);
+	void		RunUsagesStep(const char* szStep);
+	void		RunViewStep(const char* szStep);
 	void		ClickEditor(int32 iClicks, const char* szPlace);
 	void		ClickGutter(bool bShift, bool bChangeBar, const char* szLine);
 	void		ControlClickEditor(const char* szPlace);
