@@ -110,13 +110,18 @@ void CIDEStructure::CreatePane(SDockPlace* psPlace)
 //////////////////////////////////////////////////////////////////////////
 //
 // Alt+7, as IntelliJ IDEA's Structure tool window: it is shown, as the
-// active editor's outline is now, and its tree has the keys.
+// active editor's outline is now, and its tree has the keys.  Pressed
+// while it has them, it is hidden (CIDEToolWindows).
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEStructure::ShowStructureWindow(void)
 {
 	Ptr<CIDEEditorTab>	pTab;
 
+	if (mpcContent->GetToolWindows()->HideWithKeys(IDE_STRUCTURE_ID))
+	{
+		return true;
+	}
 	pTab = mpcContent->GetDocuments()->GetActiveTab();
 	if (pTab.IsNotNull())
 	{

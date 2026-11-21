@@ -215,7 +215,8 @@ void CIDEHierarchy::AddCommands(Ptr<CCommandSet> pCommands)
 //////////////////////////////////////////////////////////////////////////
 //
 // Alt+8, as IntelliJ IDEA's: the Hierarchy tool window is shown and its
-// tree has the keys.
+// tree has the keys.  Pressed while it has them, it is hidden
+// (CIDEToolWindows).
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEHierarchy::ShowHierarchyWindow(void)
@@ -223,6 +224,10 @@ bool CIDEHierarchy::ShowHierarchyWindow(void)
 	if (mpTool.IsNull() || GetSearch().IsNull())
 	{
 		return false;
+	}
+	if (mpcContent->GetToolWindows()->HideWithKeys(IDE_HIERARCHY_ID))
+	{
+		return true;
 	}
 	mpcContent->GetDock()->Activate(mpTool);
 	GetSearch()->mpPane->Focus();

@@ -250,6 +250,7 @@ void CIDEContent::Class(void)
 	M_Pointer(mpRecent);
 	M_Pointer(mpQuickInfo);
 	M_Pointer(mpHierarchy);
+	M_Pointer(mpToolWindows);
 	M_Pointer(mpDuplicates);
 	M_Pointer(mpOccurrences);
 	M_Pointer(mpNavigationHistory);
@@ -486,6 +487,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpRecent = OMalloc<CIDERecent>(this);
 	mpQuickInfo = OMalloc<CIDEQuickInfo>(this);
 	mpHierarchy = OMalloc<CIDEHierarchy>(this);
+	mpToolWindows = OMalloc<CIDEToolWindows>(this);
 	mpDuplicates = OMalloc<CIDEDuplicates>(this);
 	mpOccurrences = OMalloc<CIDEOccurrences>(this);
 	mpNavigationHistory = OMalloc<CIDENavigationHistory>(this);
@@ -637,13 +639,16 @@ void CIDEContent::ResetLayout(void) { mpDock->ResetLayout(); }
 
 //////////////////////////////////////////////////////////////////////////
 //
-// View: an item for each tool window, as the dock has them, which shows it.
+// View: an item for each tool window, as the dock has them, which shows it
+// and has beside it the keys that do (see CIDEToolWindows).
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEContent::ViewMenuOpening(CMenuContainer* pcMenu)
 {
 	size			i;
 	Ptr<CDockPane>	pPane;
+	Ptr<CMenuItem>	pItem;
+	const char*		szKeys;
 
 	mpViewMenu->RemoveAllItems();
 	for (i = 0; i < mpDock->NumPanes(); i++)
@@ -651,9 +656,16 @@ void CIDEContent::ViewMenuOpening(CMenuContainer* pcMenu)
 		pPane = mpDock->GetPane(i);
 		if (pPane->GetKind() == DPK_Tool)
 		{
-			mpViewMenu->AddItem(pPane->GetTitle())->SetTag((int32)i);
+			pItem = mpViewMenu->AddItem(pPane->GetTitle());
+			pItem->SetTag((int32)i);
+			szKeys = mpToolWindows->GetPaneKeys(pPane->GetID());
+			if (szKeys)
+			{
+				pItem->SetShortcut(szKeys);
+			}
 		}
 	}
+	mpToolWindows->AddViewItems(mpViewMenu);
 	mpQuickInfo->AddViewItems(mpViewMenu);
 }
 
@@ -700,6 +712,7 @@ void CIDEContent::AddCommands(void)
 	mpRecent->AddCommands(mpCommands);
 	mpQuickInfo->AddCommands(mpCommands);
 	mpHierarchy->AddCommands(mpCommands);
+	mpToolWindows->AddCommands(mpCommands);
 	mpRename->AddCommands(mpCommands);
 	mpFileRename->AddCommands(mpCommands);
 	mpSafeDelete->AddCommands(mpCommands);
@@ -908,6 +921,9 @@ void CIDEContent::Tick(Ptr<CWindow> pWindow)
 
 	//The name Control is held over, and the popup over the caret's line.
 	mpQuickInfo->Poll();
+
+	//The tool window that has the keys is the one Jump to Last Tool Window goes back to.
+	mpToolWindows->Poll();
 
 	//Autoscroll from Source: the results windows follow the active editor's caret.
 	mpOccurrences->Poll();
@@ -1272,6 +1288,7 @@ Ptr<CIDEFind> CIDEContent::GetFind(void) const { return mpFind; }
 Ptr<CIDEUserFile> CIDEContent::GetUserFile(void) const { return mpUserFile; }
 Ptr<CIDEBookmarks> CIDEContent::GetBookmarks(void) const { return mpBookmarks; }
 Ptr<CIDEMarks> CIDEContent::GetMarks(void) const { return mpMarks; }
+Ptr<CIDEToolWindows> CIDEContent::GetToolWindows(void) const { return mpToolWindows; }
 Ptr<CIDERecent> CIDEContent::GetRecent(void) const { return mpRecent; }
 Ptr<CIDEQuickInfo> CIDEContent::GetQuickInfo(void) const { return mpQuickInfo; }
 Ptr<CIDEHierarchy> CIDEContent::GetHierarchy(void) const { return mpHierarchy; }

@@ -3686,6 +3686,18 @@ void CIDEScript::RunViewStep(const char* szStep)
 			}
 		}
 	}
+	else if (strcmp(szStep, "printtoolwindows") == 0)
+	{
+		//The tool windows, where each is and which has the keys, the docked groups' places and sizes, the last to
+		//have had the keys and what Hide All Tool Windows hid (CIDEToolWindows::Print).
+		CChars	szShown;
+
+		szShown.Init();
+		mpcContent->GetToolWindows()->Print(&szShown);
+		printf("%s", szShown.Text());
+		szShown.Kill();
+		fflush(stdout);
+	}
 	else if (strcmp(szStep, "printrecent") == 0)
 	{
 		//The recent files, most recent first, and the edit locations: "Recent files: Shapes.cpp, Main.cpp:1 (closed)",

@@ -3727,7 +3727,8 @@ CHECKS = [
 		 r'^Keys: Window\.NextTab Alt\+Cursor Right bound$', r'^Keys: Window\.PreviousTab Alt\+Cursor Left bound$',
 		 r'^Keys: View\.QuickDefinition Control\+Shift\+I bound$', r'^Keys: View\.ParameterInfo Control\+P bound$', r'^Keys: View\.TypeInfo Control\+Shift\+P bound$',
 		 r'^Keys: Navigate\.TypeHierarchy Control\+H bound$', r'^Keys: Navigate\.MethodHierarchy Control\+Shift\+H bound$', r'^Keys: Navigate\.CallHierarchy Control\+Alt\+H bound$',
-		 r'^Keys: View\.Hierarchy Alt\+8 bound$',
+		 r'^Keys: View\.Hierarchy Alt\+8 bound$', r'^Keys: View\.Bookmarks Alt\+2 bound$', r'^Keys: View\.FindUsages Alt\+3 bound$', r'^Keys: View\.Run Alt\+4 bound$',
+		 r'^Keys: View\.Debug Alt\+5 bound$', r'^Keys: View\.Build Alt\+6 bound$', r'^Keys: View\.Find Alt\+9 bound$', r'^Keys: View\.HideAllToolWindows Control\+Shift\+F12 bound$',
 		 r'^Keys: Navigate\.ShowUsages Control\+Alt\+F7 bound$', r'^Keys: Edit\.Find Control\+F bound$', r'^Keys: Edit\.Replace Control\+R bound$',
 		 r'^Keys: Edit\.FindNext F3 bound$', r'^Keys: Edit\.FindPrevious Shift\+F3 bound$', r'^Keys: Edit\.FindWordAtCaret Control\+F3 bound$',
 		 r'^Keys: Edit\.FindInFiles Control\+Shift\+F bound$', r'^Keys: Edit\.ReplaceInFiles Control\+Shift\+R bound$',
@@ -3890,7 +3891,7 @@ CHECKS = [
 		 r'^Menu File/Recent Solutions: 1 ',
 		 r'^Menu Edit: Undo \[Ctrl\+Z\](\(disabled\))?, Redo \[Ctrl\+Shift\+Z\](\(disabled\))?, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\], Select All \[Ctrl\+A\], Extend Selection \[Ctrl\+W\], Shrink Selection \[Ctrl\+Shift\+W\], Find\.\.\. \[Ctrl\+F\], Replace\.\.\. \[Ctrl\+R\], Find Next \[F3\], Find Previous \[Shift\+F3\], Find Word at Caret \[Ctrl\+F3\], Find in Files\.\.\. \[Ctrl\+Shift\+F\], Replace in Files\.\.\. \[Ctrl\+Shift\+R\], Find Duplicates\.\.\. \[Ctrl\+Alt\+Shift\+D\]$',
 		 r'^Menu Navigate: Back \[Ctrl\+Alt\+Left\](\(disabled\))?, Forward \[Ctrl\+Alt\+Right\](\(disabled\))?, Class\.\.\. \[Ctrl\+N\], File\.\.\. \[Ctrl\+Shift\+N\], Symbol\.\.\. \[Ctrl\+Alt\+Shift\+N\], Action\.\.\. \[Ctrl\+Shift\+A\], Line:Column\.\.\. \[Ctrl\+G\], Go to Source \[Ctrl\+B\], Go to Definition \[F12\], Go to Implementation\(s\) \[Ctrl\+Alt\+B\], Go to Type Declaration \[Ctrl\+Shift\+B\], Go to Super Method \[Ctrl\+U\], Go to Related Symbol \[Ctrl\+Alt\+Home\], Switch Header/Source \[Alt\+O\], File Structure \[Ctrl\+F12\], Next Method \[Alt\+Down\], Previous Method \[Alt\+Up\], Toggle Bookmark \[Ctrl\+F11\], Toggle Bookmark with Mnemonic\.\.\. \[Ctrl\+Shift\+F11\], Next Bookmark \[F2\], Previous Bookmark \[Shift\+F2\], Next Change \[Ctrl\+Alt\+Shift\+Down\], Previous Change \[Ctrl\+Alt\+Shift\+Up\], Highlight Usages in File \[Ctrl\+Shift\+F7\], Recent Files \[Ctrl\+E\], Recent Locations \[Ctrl\+Shift\+E\], Last Edit Location \[Ctrl\+Shift\+Backspace\], Next Edit Location, Select In\.\.\. \[Alt\+F1\], Type Hierarchy \[Ctrl\+H\], Method Hierarchy \[Ctrl\+Shift\+H\], Call Hierarchy \[Ctrl\+Alt\+H\], Find Usages \[Alt\+F7\], Show Usages \[Ctrl\+Alt\+F7\], Find All References \[Shift\+F12\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Next Occurrence \[Ctrl\+Alt\+Down\], Previous Occurrence \[Ctrl\+Alt\+Up\]$',
-		 r'^Menu View: Solution Explorer, Structure, Find Usages, Find, Duplicates, Bookmarks, Hierarchy, Build, Indexing, Run, Debug, Claude, Quick Definition \[Ctrl\+Shift\+I\], Parameter Info \[Ctrl\+P\], Type Info \[Ctrl\+Shift\+P\]$',
+		 r'^Menu View: Solution Explorer \[Alt\+1\], Structure \[Alt\+7\], Find Usages \[Alt\+3\], Find \[Alt\+9\], Duplicates, Bookmarks \[Alt\+2\], Hierarchy \[Alt\+8\], Build \[Alt\+6\], Indexing, Run \[Alt\+4\], Debug \[Alt\+5\], Claude, Hide All Tool Windows \[Ctrl\+Shift\+F12\], Jump to Last Tool Window(\(disabled\))?, Quick Definition \[Ctrl\+Shift\+I\], Parameter Info \[Ctrl\+P\], Type Info \[Ctrl\+Shift\+P\]$',
 		 r'^Menu Git: Compare with HEAD, Compare with Branch\.\.\., Compare with Revision\.\.\.$',
 		 r'^Menu Build: Build \[Ctrl\+F9\], Edit Build Configurations\.\.\.$',
 		 r'^Menu Debug: Start Debugging \[F5\], Start Without Debugging \[Ctrl\+F5\], Stop Debugging \[Shift\+F5\], Stop Running(\(disabled\))?, Restart \[Ctrl\+Shift\+F5\], Break All \[Ctrl\+Pause/Break\], Attach to Emulator\.\.\., Step Into \[F11\], Step Over \[F10\], Step Out \[Shift\+F11\], Toggle Breakpoint \[F9\], New Breakpoint at Address\.\.\., Delete All Breakpoints, Edit Configurations\.\.\.$',
@@ -4305,7 +4306,7 @@ CHECKS = [
 		 r'^Structure: 10 rows$', r'^>   Draw\(void\) override$', r'^  CSquare$', r'Shapes\.h \(focus\) line 20: \[\tint\t\tmiSide;\]',
 		 r'^Structure: 8 rows, no fields$', r'^  CCircle$', r'^    Draw\(void\) override$', r'^> CSquare$',
 		 r'^Structure: 8 rows, by name, no fields$', r'^  CCircle$', r'^    Area\(void\) override$', r'^    Draw\(void\) override$', r'^  CRoundedSquare$', r'^> CSquare$',
-		 r'<Structure SortByName="true" ShowFields="false"/>', r'^Menu View: Solution Explorer, Structure, Find Usages, '], []),
+		 r'<Structure SortByName="true" ShowFields="false"/>', r'^Menu View: Solution Explorer \[Alt\+1\], Structure \[Alt\+7\], Find Usages \[Alt\+3\], '], []),
 	('nav-structure-settings-read', {
 		#The Structure tree's choices as they were written.
 		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Shapes.h', 'CARET': '20:5',
@@ -4788,6 +4789,76 @@ CHECKS = [
 		 r'^        CNamed  Bases\.h$', r'^    CSwitchable  Bases\.h$', r'^    CNamed  Bases\.h$',
 		 r'^Hierarchy: Type: CDial \(class hierarchy\)$', r'^      CWidget  also: CNamed  Bases\.h$', r'^ >      CDial  Bases\.h$', r'^          CLamp  Bases\.h$',
 		 r'^Hierarchy: Method: CLamp::Switch \(class hierarchy\)$', r'^      CWidget  also: CNamed  Bases\.h$', r'^ >        CLamp  \+  also: CSwitchable, CNamed  Bases\.h$'], [r'ERROR']),
+	('tool-window-keys', {
+		#A tool window's key (Alt+2 Bookmarks ... Alt+9 Find, and Structure's and Hierarchy's): the window is shown, in
+		#front of its group's tabs, and has the keys; run again while it has them, it is hidden and the editor has the
+		#keys.  A window shown that hasn't the keys is given them, not hidden.  Jump to Last Tool Window shows the one
+		#that last had the keys, hidden since or not.  View has each window's keys beside its name.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Main.cpp', 'CARET': '6:10',
+		'DEBUG': 'edit:printtoolwindows,command:View.Bookmarks,edit:printtoolwindows,command:View.Bookmarks,edit:printtoolwindows,edit:print,'
+		         'command:View.Build,command:View.FindUsages,edit:printtoolwindows,command:View.Build,edit:printtoolwindows,'
+		         'command:View.Structure,edit:printtoolwindows,command:View.Structure,edit:printtoolwindows,edit:print,command:View.JumpToLastToolWindow,edit:printtoolwindows,'
+		         'command:Navigate.TypeHierarchy,edit:printtoolwindows,command:View.Hierarchy,edit:printtoolwindows,command:View.Hierarchy,edit:printtoolwindows,'
+		         'command:View.Run,command:View.Debug,command:View.Find,edit:printtoolwindows,printmenus'},
+		[r'^Tool windows: Solution Explorer 1 \(front\), Structure 2, Find Usages 1 \(front\), Find 2, Duplicates 3, Bookmarks 4, Hierarchy 5, Build 6, Indexing 7, Run 8, Debug 9, Claude 10$', r'^Last tool window: none$',
+		 r'^Tool windows: .*Find Usages 1, .*Bookmarks 4 \(front, keys\), ', r'^Last tool window: Bookmarks$',
+		 r'^Tool windows: .*Bookmarks \(hidden\), Hierarchy 4 \(front\), ', r'^Last tool window: Bookmarks$', r'Main\.cpp \(focus\) line 6: ',
+		 r'^Tool windows: .*Find Usages 1 \(front, keys\), .*Build 5, ', r'^Tool windows: .*Find Usages 1, .*Build 5 \(front, keys\), ', r'^Last tool window: Build$',
+		 r'^Tool windows: Solution Explorer 1, Structure 2 \(front, keys\), ', r'^Tool windows: Solution Explorer \(front\), Structure \(hidden\), ', r'^Last tool window: Structure$', r'Main\.cpp \(focus\) line 6: ',
+		 r'^Tool windows: Solution Explorer 1, Structure 2 \(front, keys\), ',
+		 r'^Tool windows: .*Hierarchy 4 \(front, keys\), ', r'^Tool windows: .*Hierarchy \(hidden\), ', r'^Tool windows: .*Hierarchy 4 \(front, keys\), ',
+		 r'^Tool windows: .*Find 2 \(front, keys\), ', r'^Last tool window: Find$',
+		 r'^Menu View: Solution Explorer \[Alt\+1\], Structure \[Alt\+7\], Find Usages \[Alt\+3\], Find \[Alt\+9\], Duplicates, Bookmarks \[Alt\+2\], Hierarchy \[Alt\+8\], Build \[Alt\+6\], Indexing, Run \[Alt\+4\], Debug \[Alt\+5\], Claude, '
+		 r'Hide All Tool Windows \[Ctrl\+Shift\+F12\], Jump to Last Tool Window, Quick Definition'], [r'ERROR']),
+	('tool-window-real-keys', {
+		#The tool windows' keys as a keyboard's presses: Alt+2 from the editor shows Bookmarks with the keys, and Alt+2
+		#again, pressed in Bookmarks, hides it; Alt+7 the same for Structure, from its tree; Control+Shift+F12 hides
+		#every tool window and, again, puts them back.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Main.cpp', 'CARET': '6:10',
+		'DEBUG': 'edit:printcrumbs,edit:press:Left Alt,edit:tap:2,edit:release:Left Alt,edit:printtoolwindows,edit:press:Left Alt,edit:tap:2,edit:release:Left Alt,edit:printtoolwindows,edit:print,'
+		         'edit:press:Left Alt,edit:tap:7,edit:release:Left Alt,edit:printtoolwindows,edit:press:Left Alt,edit:tap:7,edit:release:Left Alt,edit:printtoolwindows,'
+		         'edit:press:Left Control,edit:press:Left Shift,edit:tap:F12,edit:release:Left Shift,edit:release:Left Control,edit:printtoolwindows,'
+		         'edit:press:Left Control,edit:press:Left Shift,edit:tap:F12,edit:release:Left Shift,edit:release:Left Control,edit:printtoolwindows,edit:print'},
+		[r'^Tool windows: .*Bookmarks 4 \(front, keys\), ', r'^Tool windows: .*Bookmarks \(hidden\), ', r'Main\.cpp \(focus\) line 6: ',
+		 r'^Tool windows: Solution Explorer 1, Structure 2 \(front, keys\), ', r'^Tool windows: Solution Explorer \(front\), Structure \(hidden\), ',
+		 r'^Tool windows: Solution Explorer \(hidden\), Structure \(hidden\), Find Usages \(hidden\), .*Claude \(hidden\)$',
+		 r'^Hidden by Hide All: Solution Explorer, Claude, Debug, Run, Indexing, Build, Hierarchy, Duplicates, Find, Find Usages$',
+		 r'^Tool windows: Solution Explorer \(front\), Structure \(hidden\), Find Usages 1, Find 2, Duplicates 3, Bookmarks \(hidden\), Hierarchy 4 \(front\), Build 5, Indexing 6, Run 7, Debug 8, Claude 9$',
+		 r'^Hidden by Hide All: none$', r'Main\.cpp \(focus\) line 6: '], [r'ERROR']),
+	('tool-windows-hide-all', {
+		#Hide All Tool Windows: every docked tool window is hidden and the editor has the keys; again, they are back
+		#where they were, each group as large, its tabs in their order and the same tab in front.  Windows shown by
+		#themselves in between (and hidden by their keys or by the command) don't take the others' place: what was
+		#hidden is kept until it is put back, and a window goes back to where it was the first time.  With nothing
+		#docked and nothing hidden by it, the status line says so.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Main.cpp', 'CARET': '6:10',
+		'DEBUG': 'command:View.Structure,command:View.Build,edit:printtoolwindows,command:View.HideAllToolWindows,edit:printtoolwindows,edit:print,'
+		         'command:View.HideAllToolWindows,edit:printtoolwindows,command:View.HideAllToolWindows,command:View.Find,edit:printtoolwindows,command:View.Find,'
+		         'command:View.Run,command:View.Bookmarks,edit:printtoolwindows,command:View.HideAllToolWindows,edit:printtoolwindows,command:View.HideAllToolWindows,edit:printtoolwindows'},
+		[r'^Tool windows: Solution Explorer 1, Structure 2 \(front\), Find Usages 1, Find 2, Duplicates 3, Bookmarks 4, Hierarchy 5, Build 6 \(front, keys\), Indexing 7, Run 8, Debug 9, Claude 10$',
+		 r'^Tool window areas: Structure 0,67 320x709, Build 324,596 956x180$', r'^Hidden by Hide All: none$',
+		 r'^Tool windows: Solution Explorer \(hidden\), Structure \(hidden\), Find Usages \(hidden\), Find \(hidden\), Duplicates \(hidden\), Bookmarks \(hidden\), Hierarchy \(hidden\), Build \(hidden\), Indexing \(hidden\), Run \(hidden\), Debug \(hidden\), Claude \(hidden\)$',
+		 r'^Tool window areas: none$', r'^Last tool window: Build$', r'^Hidden by Hide All: Structure, Solution Explorer, Claude, Debug, Run, Indexing, Build, Hierarchy, Bookmarks, Duplicates, Find, Find Usages$',
+		 r'Main\.cpp \(focus\) line 6: ',
+		 r'^Tool windows: Solution Explorer 1, Structure 2 \(front\), Find Usages 1, Find 2, Duplicates 3, Bookmarks 4, Hierarchy 5, Build 6 \(front\), Indexing 7, Run 8, Debug 9, Claude 10$',
+		 r'^Tool window areas: Structure 0,67 320x709, Build 324,596 956x180$', r'^Hidden by Hide All: none$',
+		 r'^Tool windows: Solution Explorer \(hidden\), .*Find \(front, keys\), Duplicates \(hidden\), ', r'^Tool window areas: Find 0,596 1280x180$',
+		 r'^Tool windows: .*Find \(hidden\), Duplicates \(hidden\), Bookmarks 2 \(front, keys\), Hierarchy \(hidden\), Build \(hidden\), Indexing \(hidden\), Run 1, ',
+		 r'^Hidden by Hide All: Structure, Solution Explorer, Claude, Debug, Run, Indexing, Build, Hierarchy, Bookmarks, Duplicates, Find, Find Usages$',
+		 r'^Tool window areas: none$', r'^Hidden by Hide All: Structure, Solution Explorer, Claude, Debug, Run, Indexing, Build, Hierarchy, Bookmarks, Duplicates, Find, Find Usages$',
+		 r'^Tool windows: Solution Explorer 1, Structure 2 \(front\), Find Usages 1, Find 2, Duplicates 3, Bookmarks 4, Hierarchy 5, Build 6 \(front\), Indexing 7, Run 8, Debug 9, Claude 10$',
+		 r'^Tool window areas: Structure 0,67 320x709, Build 324,596 956x180$', r'^Last tool window: Bookmarks$', r'^Hidden by Hide All: none$'], [r'ERROR']),
+	('tool-windows-jump-to-last', {
+		#Jump to Last Tool Window does nothing until a tool window has had the keys.  Then it shows the last that had
+		#them and gives them back: one hidden by its own key, and one hidden with the rest by Hide All Tool Windows,
+		#which comes back by itself.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Main.cpp', 'CARET': '6:10',
+		'DEBUG': 'command:View.JumpToLastToolWindow,edit:printtoolwindows,command:View.Bookmarks,command:View.Build,command:View.Build,edit:printtoolwindows,edit:print,'
+		         'command:View.JumpToLastToolWindow,edit:printtoolwindows,command:View.HideAllToolWindows,edit:printtoolwindows,command:View.JumpToLastToolWindow,edit:printtoolwindows'},
+		[r'^Command \[View\.JumpToLastToolWindow\] not found, not enabled or did nothing\.$', r'^Last tool window: none$',
+		 r'^Tool windows: .*Bookmarks 4, Hierarchy 5, Build \(hidden\), Indexing 6 \(front\), ', r'^Last tool window: Build$', r'Main\.cpp \(focus\) line 6: ',
+		 r'^Tool windows: .*Bookmarks 4, Hierarchy 5, Build 6 \(front, keys\), ', r'^Tool windows: .*Build \(hidden\), ', r'^Last tool window: Build$',
+		 r'^Tool windows: .*Hierarchy \(hidden\), Build \(front, keys\), Indexing \(hidden\), ', r'^Tool window areas: Build 0,596 1280x180$'], [r'ERROR']),
 	('nav-type-declaration', {
 		#Go to Type Declaration (Control+Shift+B): from a parameter and from a local variable, the class each is declared
 		#with; from a field of a built in type, the status line says its type has nothing to go to.
