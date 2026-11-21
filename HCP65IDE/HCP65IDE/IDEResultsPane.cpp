@@ -25,6 +25,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 #define IDE_RESULTS_NAVIGATE_ATTRIBUTE	"NavigateWithSingleClick"
+#define IDE_RESULTS_AUTOSCROLL_ATTRIBUTE	"AutoscrollFromSource"
+#define IDE_RESULTS_LINE_COLOURS		64		//The most coloured parts a result's line has.
 #define IDE_RESULTS_PREVIEW_ATTRIBUTE	"Preview"
 #define IDE_RESULTS_SHARE_ATTRIBUTE		"PreviewShare"
 #define IDE_RESULTS_TREE_SHARE			450		//Of the pane, out of SPLIT_CONTAINER_WHOLE, until the sash is dragged.
@@ -60,6 +62,7 @@ void CIDEResultsPane::Init(CIDEContent* pcContent, CIDEResultsSource* pcSource, 
 	mbSelectOnOpen = bSelectOnOpen;
 	mbNavigateOnSelect = false;
 	mbShowing = false;
+	mbAutoscroll = false;
 
 	mpTree = OMalloc<CTreeContainer>(mpcContent->GetWindow(), mpcContent->GetTheme());
 	mpTree->SetAlignment(CSH_Stretch, CSV_Top);
@@ -131,6 +134,9 @@ void CIDEResultsPane::Class(void)
 	U_Bool(mbSelectOnOpen);
 	U_Bool(mbNavigateOnSelect);
 	U_Bool(mbShowing);
+	U_Bool(mbAutoscroll);
+	M_Pointer(mpExportDialog);
+	M_Pointer(mpExportChooser);
 }
 
 
@@ -288,23 +294,173 @@ int32 CIDEResultsPane::AddSymbol(int32 iParent, const char* szName, const char* 
 }
 
 
+//A part of a line of code that has a colour of its own: where it is in the line and what it is.
+struct SIDELineColour
+{
+	size			uiStart;
+	size			uiLength;
+	ECPPHighlight	eKind;
+};
+
+
+//A part of a result's row in a font of its own.
+struct SIDERowRange
+{
+	size		uiStart;
+	size		uiLength;
+	CFont*		pcFont;
+};
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The parts of a line of C or C++ that its own text says the colour of:
+// a directive at its start, comments, strings, characters, numbers and
+// keywords, in order.  What a name is takes a parse of its file, and a
+// line inside a comment that started on another doesn't know it is.  At
+// most uiMaximum are found; how many.
+//
+//////////////////////////////////////////////////////////////////////////
+static size FindIDELineColours(const char* szLine, size uiLength, SIDELineColour* asDest, size uiMaximum)
+{
+	static const char*	aszKeywords[] = { "alignas", "alignof", "auto", "bool", "break", "case", "catch", "char", "char16_t", "char32_t", "class", "const", "const_cast", "constexpr",
+										  "continue", "decltype", "default", "delete", "do", "double", "dynamic_cast", "else", "enum", "explicit", "extern", "false", "final", "float",
+										  "for", "friend", "goto", "if", "inline", "int", "long", "mutable", "namespace", "new", "noexcept", "nullptr", "operator", "override",
+										  "private", "protected", "public", "register", "reinterpret_cast", "return", "short", "signed", "sizeof", "static", "static_assert",
+										  "static_cast", "struct", "switch", "template", "this", "throw", "true", "try", "typedef", "typeid", "typename", "union", "unsigned",
+										  "using", "virtual", "void", "volatile", "wchar_t", "while" };
+	size			uiFound;
+	size			i;
+	size			j;
+	size			k;
+	ECPPHighlight	eKind;
+	bool			bKeyword;
+	char			cQuote;
+
+	uiFound = 0;
+	i = 0;
+	while ((i < uiLength) && ((szLine[i] == ' ') || (szLine[i] == '\t')))
+	{
+		i++;
+	}
+	if ((i < uiLength) && (szLine[i] == '#'))
+	{
+		j = i + 1;
+		while ((j < uiLength) && ((szLine[j] == ' ') || (szLine[j] == '\t')))
+		{
+			j++;
+		}
+		while ((j < uiLength) && IsIDENameChar(szLine[j]))
+		{
+			j++;
+		}
+		asDest[uiFound].uiStart = i;
+		asDest[uiFound].uiLength = j - i;
+		asDest[uiFound].eKind = CPPH_Directive;
+		uiFound++;
+		i = j;
+	}
+	while ((i < uiLength) && (uiFound < uiMaximum))
+	{
+		j = i;
+		eKind = CPPH_Identifier;
+		if ((szLine[i] == '/') && (i + 1 < uiLength) && (szLine[i + 1] == '/'))
+		{
+			j = uiLength;
+			eKind = CPPH_Comment;
+		}
+		else if ((szLine[i] == '/') && (i + 1 < uiLength) && (szLine[i + 1] == '*'))
+		{
+			j = i + 2;
+			while ((j + 1 < uiLength) && !((szLine[j] == '*') && (szLine[j + 1] == '/')))
+			{
+				j++;
+			}
+			j = (j + 2 <= uiLength) ? j + 2 : uiLength;
+			eKind = CPPH_Comment;
+		}
+		else if ((szLine[i] == '"') || (szLine[i] == '\''))
+		{
+			cQuote = szLine[i];
+			j = i + 1;
+			while ((j < uiLength) && (szLine[j] != cQuote))
+			{
+				j += ((szLine[j] == '\\') && (j + 1 < uiLength)) ? 2 : 1;
+			}
+			j = (j < uiLength) ? j + 1 : uiLength;
+			eKind = (cQuote == '"') ? CPPH_String : CPPH_Character;
+		}
+		else if ((szLine[i] >= '0') && (szLine[i] <= '9'))
+		{
+			while ((j < uiLength) && (IsIDENameChar(szLine[j]) || (szLine[j] == '.')))
+			{
+				j++;
+			}
+			eKind = CPPH_Number;
+		}
+		else if (IsIDENameChar(szLine[i]))
+		{
+			while ((j < uiLength) && IsIDENameChar(szLine[j]))
+			{
+				j++;
+			}
+			bKeyword = false;
+			for (k = 0; (k < sizeof(aszKeywords) / sizeof(const char*)) && !bKeyword; k++)
+			{
+				bKeyword = (strlen(aszKeywords[k]) == j - i) && (memcmp(aszKeywords[k], &szLine[i], j - i) == 0);
+			}
+			if (bKeyword)
+			{
+				eKind = CPPH_Keyword;
+			}
+		}
+		else
+		{
+			j = i + 1;
+		}
+		if (eKind != CPPH_Identifier)
+		{
+			asDest[uiFound].uiStart = i;
+			asDest[uiFound].uiLength = j - i;
+			asDest[uiFound].eKind = eKind;
+			uiFound++;
+		}
+		i = j;
+	}
+	return uiFound;
+}
+
+
 //////////////////////////////////////////////////////////////////////////
 //
 // A result's node: its line's number, dim, and the line as it is now
 // (from pcLines, without the white space at its ends), the text found
-// (iLength of the line from iColumn) in the match font; then szNote (with
-// the spaces that part it from the line; NULL for none) dim.  iData,
-// above 0, is what its source knows it by.
+// (iLength of the line from iColumn) in the match font and, in a C or C++
+// file, the rest coloured as code where its own text says how
+// (FindIDELineColours); then szNote (with the spaces that part it from
+// the line; NULL for none) dim.  iData, above 0, is what its source knows
+// it by.
 //
 //////////////////////////////////////////////////////////////////////////
 int32 CIDEResultsPane::AddResult(int32 iParent, CIDEFileLines* pcLines, const char* szFileName, int32 iLine, int32 iColumn, int32 iLength, const char* szNote, int64 iData)
 {
-	CChars	szText;
-	size	uiNumber;
-	size	uiTrimmed;
-	size	uiLineEnd;
-	size	uiMatch;
-	int32	iNode;
+	SIDELineColour	asColours[IDE_RESULTS_LINE_COLOURS];
+	SIDERowRange	asRanges[IDE_RESULTS_LINE_COLOURS * 2 + 1];
+	SIDERowRange	sRange;
+	EIDEFileType	eType;
+	CChars			szText;
+	size			uiNumber;
+	size			uiTrimmed;
+	size			uiLineEnd;
+	size			uiMatch;
+	size			uiMatchEnd;
+	size			uiColours;
+	size			uiRanges;
+	size			uiStart;
+	size			uiEnd;
+	size			i;
+	size			j;
+	int32			iNode;
 
 	szText.Init();
 	szText.Append(iLine + 1);
@@ -316,13 +472,68 @@ int32 CIDEResultsPane::AddResult(int32 iParent, CIDEFileLines* pcLines, const ch
 	iNode = mpTree->AddNode(iParent, szText.Text(), NULL, iData);
 
 	mpTree->AddNodeRange(iNode, 0, uiNumber, mpcContent->GetDimFont());
+
+	//The text found.
+	uiRanges = 0;
+	uiMatch = uiLineEnd;
+	uiMatchEnd = uiLineEnd;
 	if ((iColumn >= 0) && ((size)iColumn >= uiTrimmed) && (iLength > 0))
 	{
 		uiMatch = uiNumber + (size)iColumn - uiTrimmed;
 		if ((uiMatch < uiLineEnd) && ((size)iLength <= uiLineEnd - uiMatch))
 		{
-			mpTree->AddNodeRange(iNode, uiMatch, (size)iLength, mpcContent->GetMatchFont());
+			uiMatchEnd = uiMatch + (size)iLength;
+			asRanges[uiRanges].uiStart = uiMatch;
+			asRanges[uiRanges].uiLength = (size)iLength;
+			asRanges[uiRanges].pcFont = &mpcContent->GetMatchFont();
+			uiRanges++;
 		}
+		else
+		{
+			uiMatch = uiLineEnd;
+		}
+	}
+
+	//The line's colours, round the text found.
+	eType = CIDEIcons::GetFileType(szFileName);
+	if ((eType == IFT_CPP) || (eType == IFT_C) || (eType == IFT_Header))
+	{
+		uiColours = FindIDELineColours(&szText.Text()[uiNumber], uiLineEnd - uiNumber, asColours, IDE_RESULTS_LINE_COLOURS);
+		for (i = 0; i < uiColours; i++)
+		{
+			uiStart = uiNumber + asColours[i].uiStart;
+			uiEnd = uiStart + asColours[i].uiLength;
+			sRange.pcFont = &mpcContent->GetFontColours()->GetFont(GetHighlightColour(asColours[i].eKind));
+			if ((uiStart < uiMatch) && (uiRanges < IDE_RESULTS_LINE_COLOURS * 2))
+			{
+				sRange.uiStart = uiStart;
+				sRange.uiLength = ((uiEnd < uiMatch) ? uiEnd : uiMatch) - uiStart;
+				asRanges[uiRanges] = sRange;
+				uiRanges++;
+			}
+			if ((uiEnd > uiMatchEnd) && (uiRanges < IDE_RESULTS_LINE_COLOURS * 2))
+			{
+				sRange.uiStart = (uiStart > uiMatchEnd) ? uiStart : uiMatchEnd;
+				sRange.uiLength = uiEnd - sRange.uiStart;
+				asRanges[uiRanges] = sRange;
+				uiRanges++;
+			}
+		}
+	}
+
+	//In the order of the text, as a node's ranges must be.
+	for (i = 1; i < uiRanges; i++)
+	{
+		for (j = i; (j > 0) && (asRanges[j].uiStart < asRanges[j - 1].uiStart); j--)
+		{
+			sRange = asRanges[j];
+			asRanges[j] = asRanges[j - 1];
+			asRanges[j - 1] = sRange;
+		}
+	}
+	for (i = 0; i < uiRanges; i++)
+	{
+		mpTree->AddNodeRange(iNode, asRanges[i].uiStart, asRanges[i].uiLength, asRanges[i].pcFont);
 	}
 	if (szText.Length() > uiLineEnd)
 	{
@@ -622,6 +833,11 @@ void CIDEResultsPane::ReadSettings(CMarkupTag* pcTag)
 	{
 		mbNavigateOnSelect = (StringCompare(szValue, "true") == 0);
 	}
+	szValue = pcTag->GetStringAttribute(IDE_RESULTS_AUTOSCROLL_ATTRIBUTE);
+	if (szValue)
+	{
+		mbAutoscroll = (StringCompare(szValue, "true") == 0);
+	}
 	szValue = pcTag->GetStringAttribute(IDE_RESULTS_PREVIEW_ATTRIBUTE);
 	if (szValue)
 	{
@@ -648,6 +864,7 @@ void CIDEResultsPane::ReadSettings(CMarkupTag* pcTag)
 void CIDEResultsPane::CopySettings(Ptr<CIDEResultsPane> pSource)
 {
 	mbNavigateOnSelect = pSource->mbNavigateOnSelect;
+	mbAutoscroll = pSource->mbAutoscroll;
 	SetPreviewShown(pSource->IsPreviewShown());
 	mpSplit->SetShare(pSource->mpSplit->GetShare());
 	RefreshToolbar();
@@ -657,6 +874,10 @@ void CIDEResultsPane::CopySettings(Ptr<CIDEResultsPane> pSource)
 void CIDEResultsPane::WriteSettings(CXMLWriter* pcWriter)
 {
 	pcWriter->Attribute(IDE_RESULTS_NAVIGATE_ATTRIBUTE, mbNavigateOnSelect);
+	if (mbAutoscroll)
+	{
+		pcWriter->Attribute(IDE_RESULTS_AUTOSCROLL_ATTRIBUTE, mbAutoscroll);
+	}
 	pcWriter->Attribute(IDE_RESULTS_PREVIEW_ATTRIBUTE, IsPreviewShown());
 	pcWriter->Attribute(IDE_RESULTS_SHARE_ATTRIBUTE, mpSplit->GetShare());
 }
@@ -712,6 +933,235 @@ void CIDEResultsPane::AddViewCommands(void)
 	mpToolbar->AddSeparator();
 	AddCommand("Results.Preview", "Preview", ITI_Preview, &CIDEResultsPane::TogglePreview, NULL, &CIDEResultsPane::IsPreviewShown);
 	AddCommand("Results.NavigateWithSingleClick", "Navigate with Single Click", ITI_SingleClick, &CIDEResultsPane::ToggleNavigateOnSelect, NULL, &CIDEResultsPane::IsNavigateOnSelect);
+	AddCommand("Results.AutoscrollFromSource", "Autoscroll from Source", ITI_Autoscroll, &CIDEResultsPane::ToggleAutoscroll, NULL, &CIDEResultsPane::IsAutoscrollFromSource);
+	AddCommand("Results.Export", "Export...", ITI_Export, &CIDEResultsPane::Export, &CIDEResultsPane::CanExport, NULL);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Autoscroll from Source, as IntelliJ's: while it is on, the result
+// nearest the active editor's caret in its file is the selected one.  The
+// setting is its owner's to keep, as Navigate with Single Click is.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEResultsPane::ToggleAutoscroll(void)
+{
+	Ptr<CIDEEditorTab>	pTab;
+	int					iLine;
+	int					iColumn;
+
+	mbAutoscroll = !mbAutoscroll;
+	RefreshToolbar();
+	mpcContent->GetSettings()->WriteSettings();
+	pTab = mpcContent->GetDocuments()->GetActiveTab();
+	if (mbAutoscroll && pTab.IsNotNull() && pTab->GetCaretPlace(&iLine, &iColumn))
+	{
+		AutoscrollFromSource(pTab->GetFileName(), iLine);
+	}
+}
+
+
+void CIDEResultsPane::SetAutoscrollFromSource(bool bAutoscroll) { mbAutoscroll = bAutoscroll; RefreshToolbar(); }
+bool CIDEResultsPane::IsAutoscrollFromSource(void) { return mbAutoscroll; }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The caret of the editor of szFileName is on iLine: with Autoscroll from
+// Source the result of that file nearest it is selected and shown (the
+// last at or before the line; with none, the first after it), without
+// being opened and without the keys.  False if nothing was selected: it
+// is off, the file has no result here, or that one is selected already.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEResultsPane::AutoscrollFromSource(const char* szFileName, int32 iLine)
+{
+	SIDELocation	sLocation;
+	int32			iNode;
+	int32			iBefore;
+	int32			iAfter;
+	int32			iBeforeLine;
+	int32			iAfterLine;
+	int64			iData;
+
+	if (!mbAutoscroll || mbShowing)
+	{
+		return false;
+	}
+	iBefore = TREE_NO_NODE;
+	iAfter = TREE_NO_NODE;
+	iBeforeLine = -1;
+	iAfterLine = 0;
+	for (iNode = 0; iNode < mpTree->NumNodes(); iNode++)
+	{
+		iData = mpTree->GetNodeData(iNode);
+		if ((iData <= 0) || !mpcSource->GetResultLocation(this, iData, &sLocation))
+		{
+			continue;
+		}
+		if (StringCompare(sLocation.szFileName.Text(), szFileName) == 0)
+		{
+			if ((sLocation.iLine <= iLine) && (sLocation.iLine > iBeforeLine))
+			{
+				iBefore = iNode;
+				iBeforeLine = sLocation.iLine;
+			}
+			else if ((sLocation.iLine > iLine) && ((iAfter == TREE_NO_NODE) || (sLocation.iLine < iAfterLine)))
+			{
+				iAfter = iNode;
+				iAfterLine = sLocation.iLine;
+			}
+		}
+		sLocation.szFileName.Kill();
+	}
+	iNode = (iBefore != TREE_NO_NODE) ? iBefore : iAfter;
+	if ((iNode == TREE_NO_NODE) || (iNode == mpTree->GetSelectedNode()))
+	{
+		return false;
+	}
+	mbShowing = true;
+	mpTree->SelectNode(iNode);
+	mbShowing = false;
+	mpcContent->GetWindow()->Layout();
+	ShowSelected();
+	ShowPreview();
+	RefreshToolbar();
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The tree's rows as they are shown (the open nodes' and no others),
+// appended as text: each on a line, two spaces in for each depth.  How
+// many.
+//
+//////////////////////////////////////////////////////////////////////////
+size CIDEResultsPane::AppendShownText(CChars* pszDest)
+{
+	CChars	szNode;
+	int32	iRow;
+	int32	iNode;
+	int32	iDepth;
+
+	mpTree->UpdateRows();
+	for (iRow = 0; iRow < mpTree->NumRows(); iRow++)
+	{
+		iNode = mpTree->GetRowNode(iRow);
+		for (iDepth = mpTree->GetNodeDepth(iNode); iDepth > 0; iDepth--)
+		{
+			pszDest->Append("  ");
+		}
+		szNode.Init();
+		mpTree->GetNodeText(iNode, &szNode);
+		pszDest->Append(szNode);
+		szNode.Kill();
+		pszDest->Append('\n');
+	}
+	return (size)mpTree->NumRows();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Export, on the toolbar: its dialog is shown at the next tick, as a
+// dialog must be.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEResultsPane::Export(void)
+{
+	mpcContent->GetWindow()->Post(this, &CIDEResultsPane::ShowQueuedExport);
+}
+
+
+void CIDEResultsPane::ShowQueuedExport(void) { ShowExport(); }
+bool CIDEResultsPane::CanExport(void) { return mpTree->NumNodes() > 0; }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Export, as IntelliJ's Export to Text File: a dialog asks whether the
+// rows shown are to be saved to a file (a file chooser then asks which)
+// or copied to the clipboard.  The status line says what was done.  False
+// if nothing was.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEResultsPane::ShowExport(void)
+{
+	static SFileChooserType	asTypes[] =
+	{
+		{ "Text Files", "*.txt" },
+		{ "All Files", NULL },
+	};
+	CTextFile	cFile;
+	CChars		szText;
+	CChars		szMessage;
+	CChars		szClicked;
+	CChars		szChosen;
+	size		uiRows;
+	bool		bSave;
+	bool		bResult;
+
+	szText.Init();
+	uiRows = AppendShownText(&szText);
+	if (uiRows == 0)
+	{
+		szText.Kill();
+		return false;
+	}
+
+	szMessage.Init("Export the ");
+	szMessage.Append((uint32)uiRows);
+	szMessage.Append((uiRows == 1) ? " row shown, as text." : " rows shown, as text.");
+	mpExportDialog = OMalloc<CMessageDialog>(mpcContent->GetWindow(), mpcContent->GetDialogLook(), "Export Results", szMessage.Text());
+	mpExportDialog->GetDialog()->SetOKCaption("Save to File...");
+	mpExportDialog->GetDialog()->AddExtraButton("Copy to Clipboard");
+	mpcContent->GetScript()->WatchDialog(mpExportDialog->GetDialog());
+	bSave = mpExportDialog->Show();
+	szClicked.Init(mpExportDialog->GetClicked());
+	mpcContent->GetScript()->StopWatchingDialog();
+	mpExportDialog = NULL;
+
+	bResult = false;
+	szMessage.Clear();
+	if (szClicked.Equals("Copy to Clipboard"))
+	{
+		bResult = mpcContent->GetWindow()->GetClipboard()->SetText(szText.Text());
+		szMessage.Append(bResult ? "Copied " : "Couldn't copy ");
+		szMessage.Append((uint32)uiRows);
+		szMessage.Append((uiRows == 1) ? " row to the clipboard." : " rows to the clipboard.");
+	}
+	else if (bSave)
+	{
+		szChosen.Init();
+		mpExportChooser = OMalloc<CFileChooser>(mpcContent->GetWindow(), mpcContent->GetDialogLook(), "Export to Text File", true, "", asTypes, sizeof(asTypes) / sizeof(SFileChooserType), mpcContent->GetFolderIcon(), mpcContent->GetFileIcon());
+		if (mpExportChooser->Show())
+		{
+			szChosen.Append(mpExportChooser->GetChosen());
+		}
+		mpExportChooser = NULL;
+		if (!szChosen.Empty())
+		{
+			cFile.Init(szText.Text());
+			bResult = cFile.Write(szChosen.Text());
+			cFile.Kill();
+			szMessage.Append(bResult ? "Exported " : "Couldn't export ");
+			szMessage.Append((uint32)uiRows);
+			szMessage.Append((uiRows == 1) ? " row to " : " rows to ");
+			szMessage.Append(szChosen);
+			szMessage.Append('.');
+		}
+		szChosen.Kill();
+	}
+	if (!szMessage.Empty())
+	{
+		mpcContent->ShowStatus(szMessage.Text());
+	}
+	szClicked.Kill();
+	szMessage.Kill();
+	szText.Kill();
+	return bResult;
 }
 
 

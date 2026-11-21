@@ -2769,6 +2769,34 @@ bool CIDECodeModel::GetSymbolKey(int32 iSymbol, CChars* pszKey, uint8* puiKind)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// The index's number for the symbol szKey (what GetSymbolLocation and a
+// Go to item's data take), -1 if it hasn't it.  It is the symbol's for as
+// long as the index isn't changed.
+//
+//////////////////////////////////////////////////////////////////////////
+int32 CIDECodeModel::FindSymbolIndex(const char* szKey)
+{
+	CCPPIndexSymbol*	pcSymbol;
+	size				i;
+	int32				iSymbol;
+
+	iSymbol = -1;
+	mcIndexMutex.Lock();
+	pcSymbol = mcIndex.FindSymbol(szKey);
+	for (i = 0; pcSymbol && (i < mcIndex.NumSymbols()) && (iSymbol < 0); i++)
+	{
+		if (mcIndex.GetSymbol(i) == pcSymbol)
+		{
+			iSymbol = (int32)i;
+		}
+	}
+	mcIndexMutex.Unlock();
+	return iSymbol;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // The solution's named namespaces' keys ("Geometry::Detail"), each once.
 //
 //////////////////////////////////////////////////////////////////////////

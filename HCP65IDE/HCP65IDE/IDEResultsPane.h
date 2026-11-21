@@ -34,6 +34,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/MarkupTag.h"
 #include "IDECodeModel.h"
 #include "IDEDocuments.h"
+#include "WindowLib/FileChooser.h"
+#include "WindowLib/MessageDialog.h"
 
 
 class CIDEContent;
@@ -78,9 +80,14 @@ public:
 //moment after.  Whether it is shown, and the tree's share of the pane, are settings its owner keeps (ReadSettings,
 //WriteSettings) and are written when they change.
 //
+//A result's line is coloured as code is, as far as its own text says (keywords, numbers, strings, comments and
+//directives; not what a name is, which takes a parse), except the text found, which keeps the match font.
+//
 //Down its left is a toolbar, as IntelliJ's: Rerun (its source looks again), Previous and Next Occurrence, Expand All
-//and Collapse All, then whatever its source adds (Find Usages' groupings; AddToolbarCommand), then Preview and
-//Navigate with Single Click (AddViewCommands, called by its owner after its own).  Their commands are the pane's own
+//and Collapse All, then whatever its source adds (Find Usages' groupings; AddToolbarCommand), then Preview,
+//Navigate with Single Click, Autoscroll from Source (as the active editor's caret moves, the result nearest it in
+//its file is selected: the last at or before its line, or the first after) and Export (the rows as they are shown,
+//indented, saved as a text file or copied to the clipboard) (AddViewCommands, called by its owner after its own).  Their commands are the pane's own
 //(GetCommands), not the application's: they have no keys.  A button is on while what it turns on is, and dim while it
 //can't be used.
 //
@@ -106,6 +113,9 @@ protected:
 	bool				mbSelectOnOpen;  //A result opened from the tree has its text selected in its editor.
 	bool				mbNavigateOnSelect;  //A result is opened as it is selected.
 	bool				mbShowing;  //The tree is being made, or stepped through: what is selected isn't the user's doing.
+	bool				mbAutoscroll;  //The result nearest the active editor's caret is selected as the caret moves.
+	Ptr<CMessageDialog>	mpExportDialog;  //Export's, while it is shown.
+	Ptr<CFileChooser>	mpExportChooser;
 
 public:
 	void	Init(CIDEContent* pcContent, CIDEResultsSource* pcSource, const char* szNoun, bool bSelectOnOpen);
@@ -129,6 +139,11 @@ public:
 	bool				OpenResult(int32 iNode, bool bSelect);
 	bool				Step(bool bNext, bool bKeepKeys);
 	void				ShowSelected(void);
+	bool				AutoscrollFromSource(const char* szFileName, int32 iLine);
+	void				SetAutoscrollFromSource(bool bAutoscroll);
+	bool				IsAutoscrollFromSource(void);
+	size				AppendShownText(CChars* pszDest);
+	bool				ShowExport(void);
 	void				Focus(void);
 	void				Detach(void);
 
@@ -166,6 +181,10 @@ protected:
 	void				CollapseAll(void);
 	void				TogglePreview(void);
 	void				ToggleNavigateOnSelect(void);
+	void				ToggleAutoscroll(void);
+	void				Export(void);
+	void				ShowQueuedExport(void);
+	bool				CanExport(void);
 	void				ReturnToEditor(void);
 	void				JumpToSource(void);
 };

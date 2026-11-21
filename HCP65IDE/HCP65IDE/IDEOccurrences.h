@@ -39,6 +39,8 @@ CONSTRUCTABLE(CIDEOccurrences);
 DESTRUCTABLE(CIDEOccurrences);
 protected:
 	CIDEContent*	mpcContent;  //Not held: the content holds it.
+	CChars			mszAutoscrollFile;  //Where the active editor's caret was when the results windows were last told,
+	int32			miAutoscrollLine;   //for Autoscroll from Source.
 
 public:
 	void			Init(CIDEContent* pcContent);
@@ -48,6 +50,7 @@ public:
 	bool			Load(CObjectReader* pcFile) override;
 
 	void			AddCommands(Ptr<CCommandSet> pCommands);
+	void			Poll(void);
 	CIDESteppable*	FindSteppable(bool* pbKeepKeys, bool bSay);
 	CIDESteppable*	FindFocussedSteppable(void);
 

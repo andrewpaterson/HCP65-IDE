@@ -76,6 +76,8 @@ enum EIDEToolIcon
 	ITI_Subtypes,		//An arrow down to a bar.
 	ITI_Callers,		//An arrow in from the right to a bar.
 	ITI_Callees,		//An arrow out to the right from a bar.
+	ITI_Autoscroll,		//An arrow into a box.
+	ITI_Export,			//An arrow up out of a tray.
 	ITI_Count
 };
 

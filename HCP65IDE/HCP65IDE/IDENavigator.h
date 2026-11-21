@@ -29,6 +29,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/MenuContainer.h"
 #include "WindowLib/CommandSet.h"
 #include "IDEIcons.h"
+#include "IDELocationPreview.h"
 #include "IDEChooser.h"
 
 
@@ -47,6 +48,10 @@ class CIDEContent;
 //link event) puts the caret on it and goes where Go to Source would from there.  A "go to" ends in GoToTargets:
 //none, and the status line says so; one, and it is gone to; several, and a chooser under the caret lists them with a
 //preview of each (CIDEChooser).
+#define IDE_GO_TO_RECENT			30			//The most of a tab's choices kept to show first.
+#define IDE_GO_TO_RECENT_SCORE	1000000		//What puts an item before those only matched.
+
+
 class CIDENavigator : public CObject, public CGoToSearcher
 {
 friend class CIDEScript;
@@ -61,6 +66,10 @@ protected:
 	int32				maiGoToSymbolIcons[IST_Count];
 	int32				miQueuedGoTo;  //The Go to tab posted to be shown at the next tick (ShowQueuedGoTo).
 	Ptr<CIDEChooser>	mpTargets;  //The chooser of a "go to" with several targets.
+	Ptr<CIDELocationPreview>	mpGoToPreview;  //Fills the Go to dialog's preview, while it is shown.
+	CArrayChars			maszRecentClasses;  //The keys of what Go to Class went to, the last one last,
+	CArrayChars			maszRecentSymbols;  //and Go to Symbol.
+	CChars				mszQueuedAction;  //The command Go to Action chose, run at the next tick.
 
 public:
 	void	Init(CIDEContent* pcContent);
@@ -75,6 +84,13 @@ public:
 	void				GoToClass(void);
 	void				GoToFile(void);
 	void				GoToSymbol(void);
+	void				GoToAction(void);
+	void				GoToSelected(void);
+	void				RunQueuedAction(void);
+	void				RememberGoTo(size uiTab, size uiSymbol);
+	void				ReleaseGoTo(void);
+	void				PutGoToFirst(CGoToItems* pcDest, size uiData, size uiRank);
+	void				FindGoToActions(CNameMatcher* pcMatcher, CGoToItems* pcDest);
 	void				GoToSearch(size uiTab, CNameMatcher* pcMatcher, CGoToItems* pcDest) override;
 	bool				ShowGoTo(size uiTab);
 	void				QueueGoTo(size uiTab);

@@ -909,6 +909,9 @@ void CIDEContent::Tick(Ptr<CWindow> pWindow)
 	//The name Control is held over, and the popup over the caret's line.
 	mpQuickInfo->Poll();
 
+	//Autoscroll from Source: the results windows follow the active editor's caret.
+	mpOccurrences->Poll();
+
 	//A caret moved far from where it stayed is a place to come back to.
 	iWait = mpNavigationHistory->Poll(iNow);
 	if ((iWait >= 0) && ((iSoonest < 0) || (iWait < iSoonest)))

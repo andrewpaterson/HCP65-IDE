@@ -1218,7 +1218,9 @@ void CIDEScript::PrintPanePreview(Ptr<CIDEResultsPane> pPane)
 //
 // A results tree's nodes, each indented by its depth, with the parts of
 // its name that have fonts of their own marked: {d:...} for the dim font,
-// {m:...} for the match font (the text found), {?:...} for any other; and
+// {m:...} for the match font (the text found), {k:...} a keyword's
+// colour, {n:...} a number's, {s:...} a string's or a character's,
+// {c:...} a comment's, {p:...} a directive's, {?:...} for any other; and
 // "(icon)" after a node that has one.
 //
 //////////////////////////////////////////////////////////////////////////
@@ -1245,7 +1247,42 @@ void CIDEScript::PrintTreeParts(Ptr<CTreeContainer> pTree)
 			pTree->GetNodeRange(iNode, i, &uiStart, &uiLength);
 			pFont = pTree->GetNodeRangeFont(iNode, i);
 			szLine.AppendSubString(szNode.Text(), uiPosition, uiStart);
-			szLine.Append((pFont == mpcContent->GetDimFont()) ? "{d:" : ((pFont == mpcContent->GetMatchFont()) ? "{m:" : "{?:"));
+			if (pFont == mpcContent->GetDimFont())
+			{
+				szLine.Append("{d:");
+			}
+			else if (pFont == mpcContent->GetMatchFont())
+			{
+				szLine.Append("{m:");
+			}
+			else if (pFont == mpcContent->GetFontColours()->GetFont(GetHighlightColour(CPPH_Keyword)))
+			{
+				szLine.Append("{k:");
+			}
+			else if (pFont == mpcContent->GetFontColours()->GetFont(GetHighlightColour(CPPH_Number)))
+			{
+				szLine.Append("{n:");
+			}
+			else if (pFont == mpcContent->GetFontColours()->GetFont(GetHighlightColour(CPPH_String)))
+			{
+				szLine.Append("{s:");
+			}
+			else if (pFont == mpcContent->GetFontColours()->GetFont(GetHighlightColour(CPPH_Character)))
+			{
+				szLine.Append("{s:");
+			}
+			else if (pFont == mpcContent->GetFontColours()->GetFont(GetHighlightColour(CPPH_Comment)))
+			{
+				szLine.Append("{c:");
+			}
+			else if (pFont == mpcContent->GetFontColours()->GetFont(GetHighlightColour(CPPH_Directive)))
+			{
+				szLine.Append("{p:");
+			}
+			else
+			{
+				szLine.Append("{?:");
+			}
 			szLine.AppendSubString(szNode.Text(), uiStart, uiStart + uiLength);
 			szLine.Append("}");
 			uiPosition = uiStart + uiLength;
@@ -1318,6 +1355,11 @@ void CIDEScript::RunGoTo(const char* szGoTo)
 	{
 		psItem = pGoTo->GetResult(i);
 		printf("  %s  [%s]  score %d\n", psItem->szName.Text(), psItem->szLocation.Text(), psItem->sMatch.iScore);
+	}
+	if (pGoTo->GetPreview().IsNotNull())
+	{
+		//The selected (the first) result's preview: its file, "none" if it has no place.
+		printf("Go to preview: %s\n", (pGoTo->GetPreview()->GetTitle() && pGoTo->GetPreview()->GetTitle()[0]) ? GetIDEFileNamePart(pGoTo->GetPreview()->GetTitle()) : "none");
 	}
 	if (pGoTo->Approve())
 	{
@@ -3485,6 +3527,38 @@ void CIDEScript::RunEditStep(const char* szStep)
 
 		sIcon.Init(IDE_GUTTER_OVERRIDES, atoi(&szStep[14]) - 1);
 		mpcContent->GetMarks()->IconClicked(&pTab->GetCodeEditor(), sIcon);
+	}
+	else if (strncmp(szStep, "gotolist:", 9) == 0)
+	{
+		//gotolist:<tab>:<pattern>: as HCP65_IDE_GOTO, here: the Go to dialog's results for the pattern on that tab are
+		//printed, with what its preview shows, and the first is chosen.
+		RunGoTo(&szStep[9]);
+	}
+	else if (strcmp(szStep, "printclipboard") == 0)
+	{
+		//What the clipboard has as text.
+		CChars	szClip;
+
+		szClip.Init();
+		mpcContent->GetWindow()->GetClipboard()->GetText(&szClip);
+		printf("Clipboard:\n%s\n", szClip.Text());
+		szClip.Kill();
+		fflush(stdout);
+	}
+	else if (strcmp(szStep, "printfindselected") == 0)
+	{
+		//The Find tool window's selected row.
+		Ptr<CTreeContainer>	pFindTree;
+
+		pFindTree = mpcContent->GetFindInFiles()->GetFindTree();
+		szLine.Init();
+		if (pFindTree.IsNotNull() && (pFindTree->GetSelectedNode() != TREE_NO_NODE))
+		{
+			pFindTree->GetNodeText(pFindTree->GetSelectedNode(), &szLine);
+		}
+		printf("Find selected: %s\n", szLine.Text());
+		szLine.Kill();
+		fflush(stdout);
 	}
 	else if (strcmp(szStep, "printhierarchy") == 0)
 	{

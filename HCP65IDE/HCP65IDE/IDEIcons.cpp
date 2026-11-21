@@ -371,6 +371,24 @@ static const float64 gafCallees[] =
 	13.5, 8.0, 10.0, 11.5,
 	2.5, 3.5, 2.5, 12.5,
 };
+static const float64 gafAutoscroll[] =
+{
+	7.0, 3.0, 13.5, 3.0,
+	13.5, 3.0, 13.5, 13.0,
+	13.5, 13.0, 7.0, 13.0,
+	2.0, 8.0, 10.0, 8.0,
+	10.0, 8.0, 7.5, 5.5,
+	10.0, 8.0, 7.5, 10.5,
+};
+static const float64 gafExport[] =
+{
+	3.0, 13.0, 13.0, 13.0,
+	3.0, 13.0, 3.0, 9.5,
+	13.0, 13.0, 13.0, 9.5,
+	8.0, 10.0, 8.0, 2.5,
+	8.0, 2.5, 5.0, 5.5,
+	8.0, 2.5, 11.0, 5.5,
+};
 
 
 struct SIDEToolIconLines
@@ -406,6 +424,8 @@ static const SIDEToolIconLines	gasIDEToolIcons[] =
 	IDE_TOOL_ICON(Subtypes),
 	IDE_TOOL_ICON(Callers),
 	IDE_TOOL_ICON(Callees),
+	IDE_TOOL_ICON(Autoscroll),
+	IDE_TOOL_ICON(Export),
 };
 static_assert(sizeof(gasIDEToolIcons) / sizeof(SIDEToolIconLines) == ITI_Count, "Each EIDEToolIcon needs its lines in gasIDEToolIcons.");
 

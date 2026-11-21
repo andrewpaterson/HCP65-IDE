@@ -341,6 +341,7 @@ public:
 	size	FindClassBases(const char* szKey, bool bAll, CArrayChars* paszKeys);
 	size	FindClassDerived(const char* szKey, bool bAll, CArrayChars* paszKeys);
 	bool	GetSymbolKey(int32 iSymbol, CChars* pszKey, uint8* puiKind);
+	int32	FindSymbolIndex(const char* szKey);
 	void	FindNamespaces(CArrayChars* paszDest);
 	size	FindOverriders(const char* szKey, CArrayIDELocations* pasDest);
 	size	FindImplementations(const char* szKey, CArrayIDETargets* pasDest);

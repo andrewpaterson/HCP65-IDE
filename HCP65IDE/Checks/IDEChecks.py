@@ -3521,11 +3521,11 @@ CHECKS = [
 		 r'^Keys Control\+Alt\+Shift\+N: taken$', r'^Go to tab 2 \[calcpars\]: 1 results$', r'^  CCalculatorParser ',
 		 r'^Keys Control\+N: taken$', r'^Go to tab 0 \[calcpars\]: 1 results$', r'^Focus: CTextField$'], [r'not taken']),
 	('usages-row-parts', {
-		#A usage's row has its line number dim and the usage's own text in the match font; a group's count is dim, a file
-		#has its icon, and what is noted of a usage is dim.
+		#A usage's row has its line number dim, the usage's own text in the match font and the rest of its line's
+		#keywords coloured; a group's count is dim, a file has its icon, and what is noted of a usage is dim.
 		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14', 'EDIT': 'usagegroups:,references,usageparts'},
-		[r'^  CalcParentheses\.h\{d:  1\} \(icon\)$', r'^    \{d:38: \}bool  \{m:IsParentheses\}\(void\) const override;\{d:  \[declaration\]\}$',
-		 r'^  Calculator\.cpp\{d:  3\} \(icon\)$', r'^    \{d:391: \}if \(pcExpression->\{m:IsParentheses\}\(\)\)$'], [r'\{\?:', r'ERROR']),
+		[r'^  CalcParentheses\.h\{d:  1\} \(icon\)$', r'^    \{d:38: \}\{k:bool\}  \{m:IsParentheses\}\(\{k:void\}\) \{k:const\} \{k:override\};\{d:  \[declaration\]\}$',
+		 r'^  Calculator\.cpp\{d:  3\} \(icon\)$', r'^    \{d:391: \}\{k:if\} \(pcExpression->\{m:IsParentheses\}\(\)\)$'], [r'\{\?:', r'ERROR']),
 	('usages-preview', {
 		#Beside the tree the selected usage's file is shown at its line, coloured as an editor is; stepping to another
 		#usage shows that; with the preview off nothing is shown.
@@ -3545,9 +3545,9 @@ CHECKS = [
 		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14',
 		'EDIT': 'usagegroups:,usages,usagetoolbar,usagetool:Next Occurrence,printselected,usagetoolbar,usagetool:Group by Project,usagetoolbar,printusages,'
 		        'usagetool:Preview,usagetool:Navigate with Single Click,usagetoolbar,usagetool:Collapse All,printrows,usagetool:Expand All,printrows,usagetool:Rerun,printusages'},
-		[r'^Toolbar: Rerun, Previous Occurrence\(disabled\), Next Occurrence, Expand All, Collapse All, Group by Usage Type, Group by Project, Group by Class, Show Read Access\(on\), Show Write Access\(on\), Preview\(on\), Navigate with Single Click, Pin Tab, Scope$',
+		[r'^Toolbar: Rerun, Previous Occurrence\(disabled\), Next Occurrence, Expand All, Collapse All, Group by Usage Type, Group by Project, Group by Class, Show Read Access\(on\), Show Write Access\(on\), Preview\(on\), Navigate with Single Click, Autoscroll from Source, Export\.\.\., Pin Tab, Scope$',
 		 r'^Selected: 391: ', r'^Toolbar: Rerun, Previous Occurrence, Next Occurrence, ', r'Group by Project\(on\), Group by Class, Show Read Access\(on\), Show Write Access\(on\), Preview\(on\)',
-		 r'^  BaseLib  3 usages$', r'Preview, Navigate with Single Click\(on\), Pin Tab, Scope$', r'^Rows: 1$', r'^Rows: 6$',
+		 r'^  BaseLib  3 usages$', r'Preview, Navigate with Single Click\(on\), Autoscroll from Source, Export\.\.\., Pin Tab, Scope$', r'^Rows: 1$', r'^Rows: 6$',
 		 r'^Usages of IsParentheses and 1 override  3 usages$', r'^  BaseLib  3 usages$', r'^      391: '], [r'No tool button', r'ERROR']),
 	('usages-tabs', {
 		#Find Usages shows what it finds in the tab chosen unless it is pinned: then in a new tab, the pinned one kept.  A
@@ -3556,8 +3556,8 @@ CHECKS = [
 		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14',
 		'EDIT': 'usagegroups:,usages,usagetabs,usagetool:Pin Tab,usagetoolbar,usagetabs,focus:editor,caret:37:14,usages,usagetabs,usagetoolbar,'
 		        'focus:editor,caret:36:14,usages,usagetabs,usagetab:* IsParentheses,usagetabs,printusages,usageclosetab:* IsParentheses,usagetabs,printusages'},
-		[r'^Usage tabs: >IsParentheses$', r'Navigate with Single Click, Pin Tab\(on\), Scope$', r'^Usage tabs: >\* IsParentheses$',
-		 r'^Usages of SetExpression', r'^Usage tabs: \* IsParentheses, >SetExpression$', r'Navigate with Single Click, Pin Tab, Scope$',
+		[r'^Usage tabs: >IsParentheses$', r'Navigate with Single Click, Autoscroll from Source, Export\.\.\., Pin Tab\(on\), Scope$', r'^Usage tabs: >\* IsParentheses$',
+		 r'^Usages of SetExpression', r'^Usage tabs: \* IsParentheses, >SetExpression$', r'Navigate with Single Click, Autoscroll from Source, Export\.\.\., Pin Tab, Scope$',
 		 r'^Usages of Evaluate', r'^Usage tabs: \* IsParentheses, >Evaluate$',
 		 r'^Usage tabs: >\* IsParentheses, Evaluate$',
 		 r'^Usages of IsParentheses and 1 override  3 usages$', r'^Usage tabs: >Evaluate$', r'^Usages of Evaluate'], [r'ERROR', r'SetExpression, .*Evaluate|Evaluate, .*SetExpression']),
@@ -3608,13 +3608,15 @@ CHECKS = [
 		#The Find tool window's toolbar has no groupings, and its Replace buttons are for Replace in Files' results; Rerun
 		#finds the text again.
 		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'DIALOG_ANSWER': 'Open in Find Window', 'DEBUG': 'find:0:calculatorparser,answered:1,printfindtoolbar,findtool:Rerun,printfind'},
-		[r'^Toolbar: Rerun, Previous Occurrence\(disabled\), Next Occurrence, Expand All, Collapse All, Replace All\(disabled\), Replace Selected\(disabled\), Preview\(on\), Navigate with Single Click, Pin Tab$',
+		[r'^Toolbar: Rerun, Previous Occurrence\(disabled\), Next Occurrence, Expand All, Collapse All, Replace All\(disabled\), Replace Selected\(disabled\), Preview\(on\), Navigate with Single Click, Autoscroll from Source, Export\.\.\., Pin Tab$',
 		 r"^Occurrences of 'calculatorparser' in the solution  13 matches in 2 files$"], [r'No tool button', r'ERROR']),
 	('find-row-parts', {
-		#The Find tool window's rows: the text found is in the match font whatever its case.
+		#The Find tool window's rows: the text found is in the match font whatever its case, and the rest of the line
+		#is coloured as code where its own text says how: a directive, a string, keywords, a number.
 		'WAIT_INDEX': '1', 'DIALOG_ANSWER': 'Open in Find Window', 'DEBUG': 'find:0:calculatorparser,answered:1,printfindparts'},
-		[r'^  CalculatorParser\.h\{d:  1 match\} \(icon\)$', r'^    \{d:29: \}class C\{m:CalculatorParser\}$',
-		 r'^    \{d:35: \}memset\(this, 0, sizeof\(C\{m:CalculatorParser\}\)\);$'], [r'\{\?:', r'ERROR']),
+		[r'^  CalculatorParser\.h\{d:  1 match\} \(icon\)$', r'^    \{d:29: \}\{k:class\} C\{m:CalculatorParser\}$',
+		 r'^    \{d:26: \}\{p:#include\} \{s:"\}\{m:CalculatorParser\}\{s:\.h"\}$',
+		 r'^    \{d:35: \}memset\(\{k:this\}, \{n:0\}, \{k:sizeof\}\(C\{m:CalculatorParser\}\)\);$'], [r'\{\?:', r'ERROR']),
 	('startup-project-default', dict(MakeToolsCopy(), **{
 		#A solution with two applications: its first is its startup project, bold in Solution Explorer.
 		'DEBUG': 'printstartup'}),
@@ -3709,7 +3711,7 @@ CHECKS = [
 		[r'^Tabs: .*>Kernal\.cpp', r'^Tabs:\s*$', r'^Command \[No\.Such\] not found'], []),
 	('keys-and-buttons', {
 		'DEBUG': 'printkeys,printbuttons'},
-		[r'^Keys: Navigate\.GoToDefinition F12 bound$', r'^Keys: Navigate\.GoToClass Control\+N bound$',
+		[r'^Keys: Navigate\.GoToDefinition F12 bound$', r'^Keys: Navigate\.GoToClass Control\+N bound$', r'^Keys: Navigate\.GoToAction Control\+Shift\+A bound$',
 		 r'^Keys: Navigate\.GoToImplementation Control\+Alt\+B bound$', r'^Keys: Navigate\.GoToSuperMethod Control\+U bound$',
 		 r'^Keys: Navigate\.GoToTypeDeclaration Control\+Shift\+B bound$', r'^Keys: Navigate\.GoToRelatedSymbol Control\+Alt\+Home bound$',
 		 r'^Keys: Navigate\.GoToLine Control\+G bound$', r'^Keys: Navigate\.FileStructure Control\+F12 bound$', r'^Keys: Navigate\.NextMethod Alt\+Cursor Down bound$',
@@ -3886,7 +3888,7 @@ CHECKS = [
 		 r'^Menu File/New: C\+\+ Class\.\.\., C\+\+ Header\.\.\., C\+\+ Source\.\.\.$',
 		 r'^Menu File/Recent Solutions: 1 ',
 		 r'^Menu Edit: Undo \[Ctrl\+Z\](\(disabled\))?, Redo \[Ctrl\+Shift\+Z\](\(disabled\))?, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\], Select All \[Ctrl\+A\], Extend Selection \[Ctrl\+W\], Shrink Selection \[Ctrl\+Shift\+W\], Find\.\.\. \[Ctrl\+F\], Replace\.\.\. \[Ctrl\+R\], Find Next \[F3\], Find Previous \[Shift\+F3\], Find Word at Caret \[Ctrl\+F3\], Find in Files\.\.\. \[Ctrl\+Shift\+F\], Replace in Files\.\.\. \[Ctrl\+Shift\+R\], Find Duplicates\.\.\. \[Ctrl\+Alt\+Shift\+D\]$',
-		 r'^Menu Navigate: Back \[Ctrl\+Alt\+Left\](\(disabled\))?, Forward \[Ctrl\+Alt\+Right\](\(disabled\))?, Class\.\.\. \[Ctrl\+N\], File\.\.\. \[Ctrl\+Shift\+N\], Symbol\.\.\. \[Ctrl\+Alt\+Shift\+N\], Line:Column\.\.\. \[Ctrl\+G\], Go to Source \[Ctrl\+B\], Go to Definition \[F12\], Go to Implementation\(s\) \[Ctrl\+Alt\+B\], Go to Type Declaration \[Ctrl\+Shift\+B\], Go to Super Method \[Ctrl\+U\], Go to Related Symbol \[Ctrl\+Alt\+Home\], Switch Header/Source \[Alt\+O\], File Structure \[Ctrl\+F12\], Next Method \[Alt\+Down\], Previous Method \[Alt\+Up\], Toggle Bookmark \[Ctrl\+F11\], Toggle Bookmark with Mnemonic\.\.\. \[Ctrl\+Shift\+F11\], Next Bookmark \[F2\], Previous Bookmark \[Shift\+F2\], Next Change \[Ctrl\+Alt\+Shift\+Down\], Previous Change \[Ctrl\+Alt\+Shift\+Up\], Highlight Usages in File \[Ctrl\+Shift\+F7\], Recent Files \[Ctrl\+E\], Recent Locations \[Ctrl\+Shift\+E\], Last Edit Location \[Ctrl\+Shift\+Backspace\], Next Edit Location, Select In\.\.\. \[Alt\+F1\], Type Hierarchy \[Ctrl\+H\], Method Hierarchy \[Ctrl\+Shift\+H\], Call Hierarchy \[Ctrl\+Alt\+H\], Find Usages \[Alt\+F7\], Show Usages \[Ctrl\+Alt\+F7\], Find All References \[Shift\+F12\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Next Occurrence \[Ctrl\+Alt\+Down\], Previous Occurrence \[Ctrl\+Alt\+Up\]$',
+		 r'^Menu Navigate: Back \[Ctrl\+Alt\+Left\](\(disabled\))?, Forward \[Ctrl\+Alt\+Right\](\(disabled\))?, Class\.\.\. \[Ctrl\+N\], File\.\.\. \[Ctrl\+Shift\+N\], Symbol\.\.\. \[Ctrl\+Alt\+Shift\+N\], Action\.\.\. \[Ctrl\+Shift\+A\], Line:Column\.\.\. \[Ctrl\+G\], Go to Source \[Ctrl\+B\], Go to Definition \[F12\], Go to Implementation\(s\) \[Ctrl\+Alt\+B\], Go to Type Declaration \[Ctrl\+Shift\+B\], Go to Super Method \[Ctrl\+U\], Go to Related Symbol \[Ctrl\+Alt\+Home\], Switch Header/Source \[Alt\+O\], File Structure \[Ctrl\+F12\], Next Method \[Alt\+Down\], Previous Method \[Alt\+Up\], Toggle Bookmark \[Ctrl\+F11\], Toggle Bookmark with Mnemonic\.\.\. \[Ctrl\+Shift\+F11\], Next Bookmark \[F2\], Previous Bookmark \[Shift\+F2\], Next Change \[Ctrl\+Alt\+Shift\+Down\], Previous Change \[Ctrl\+Alt\+Shift\+Up\], Highlight Usages in File \[Ctrl\+Shift\+F7\], Recent Files \[Ctrl\+E\], Recent Locations \[Ctrl\+Shift\+E\], Last Edit Location \[Ctrl\+Shift\+Backspace\], Next Edit Location, Select In\.\.\. \[Alt\+F1\], Type Hierarchy \[Ctrl\+H\], Method Hierarchy \[Ctrl\+Shift\+H\], Call Hierarchy \[Ctrl\+Alt\+H\], Find Usages \[Alt\+F7\], Show Usages \[Ctrl\+Alt\+F7\], Find All References \[Shift\+F12\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Next Occurrence \[Ctrl\+Alt\+Down\], Previous Occurrence \[Ctrl\+Alt\+Up\]$',
 		 r'^Menu View: Solution Explorer, Structure, Find Usages, Find, Duplicates, Bookmarks, Hierarchy, Build, Indexing, Run, Debug, Claude, Quick Definition \[Ctrl\+Shift\+I\], Parameter Info \[Ctrl\+P\], Type Info \[Ctrl\+Shift\+P\]$',
 		 r'^Menu Git: Compare with HEAD, Compare with Branch\.\.\., Compare with Revision\.\.\.$',
 		 r'^Menu Build: Build \[Ctrl\+F9\], Edit Build Configurations\.\.\.$',
@@ -4397,7 +4399,7 @@ CHECKS = [
 		'DEBUG': 'printfindtoolbar,findselect:3,findtool:Replace Selected,printstatus,printfind,printtabs,findtool:Replace All,printstatus,printfind,printtabs,edit:printline:13,edit:undo,edit:printline:13'},
 		[r'^Find \[Area\]: 3 matches in 2 files', r"^Replace 'Area' with 'Size' in the solution  3 matches in 2 files$", r'^  Shape\.h  1 match$',
 		 r'^    15: virtual int  Area\(void\) = 0;  ->  Size$', r'^  Shapes\.h  2 matches$', r'^    24: int  Area\(void\) override;  ->  Size$',
-		 r'^Toolbar: Rerun, .*Collapse All, Replace All, Replace Selected, Preview\(on\), Navigate with Single Click, Pin Tab$',
+		 r'^Toolbar: Rerun, .*Collapse All, Replace All, Replace Selected, Preview\(on\), Navigate with Single Click, Autoscroll from Source, Export\.\.\., Pin Tab$',
 		 r'^Status line: Replaced 2 occurrences in 1 file\.  Save All keeps them\.$', r"^Replace 'Area' with 'Size' in the solution  1 match in 1 file$",
 		 r'^    15: virtual int  Area\(void\) = 0;  ->  Size$', r'^Tabs: Shape\.h >Shapes\.h\*$',
 		 r'^Status line: Replaced 1 occurrence in 1 file\.  Save All keeps them\.$', r"^Replace 'Area' with 'Size' in the solution  0 matches in 0 files$",
@@ -4419,7 +4421,7 @@ CHECKS = [
 		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'DIALOG_ANSWER': 'Open in Find Window',
 		'DEBUG': 'find:0:Draw,answered:1,edit:findtabs,findtool:Pin Tab,edit:findtabs,printfindtoolbar,find:0:Area,answered:2,edit:findtabs,printfind,'
 		         'edit:findtab:* Draw,edit:findtabs,printfind,findtool:Rerun,printfind,edit:findtab:Area,find:0:miSide,answered:3,edit:findtabs'},
-		[r'^Find tabs: >Draw$', r'^Find tabs: >\* Draw$', r'^Toolbar: Rerun, .*Navigate with Single Click, Pin Tab\(on\)$', r'^Find tabs: \* Draw, >Area$',
+		[r'^Find tabs: >Draw$', r'^Find tabs: >\* Draw$', r'^Toolbar: Rerun, .*Navigate with Single Click, Autoscroll from Source, Export\.\.\., Pin Tab\(on\)$', r'^Find tabs: \* Draw, >Area$',
 		 r"^Occurrences of 'Area' in the solution  9 matches in 4 files$", r'^Find tabs: >\* Draw, Area$', r"^Occurrences of 'Draw' in the solution  15 matches in 5 files$",
 		 r"^Occurrences of 'Draw' in the solution  15 matches in 5 files$", r'^Find tabs: \* Draw, >miSide$'], [r'No tool button', r'ERROR']),
 	('bookmarks', dict(MakeNavigationCopy(), **{
@@ -4674,7 +4676,7 @@ CHECKS = [
 		         'edit:printhierarchy,edit:key:down,edit:key:enter,edit:print,edit:hierarchytabs,edit:hierarchytool:Pin Tab,edit:open:Main.cpp,edit:caret:6:19,command:Navigate.TypeHierarchy,edit:printhierarchy,edit:hierarchytabs,'
 		         'edit:focus:editor,edit:caret:1:1,command:Navigate.TypeHierarchy,printstatus'},
 		[r'^Hierarchy: none$', r'^Hierarchy: Type: CSquare \(class hierarchy\)$', r'^  CShape  Shape\.h$', r'^ >  CSquare  Shapes\.h$', r'^      CRoundedSquare  Shapes\.h$',
-		 r'^Toolbar: Rerun, Previous Occurrence, Next Occurrence, Expand All, Collapse All, Class Hierarchy\(on\), Supertypes Hierarchy, Subtypes Hierarchy, Caller Hierarchy\(disabled\), Callee Hierarchy\(disabled\), Preview\(on\), Navigate with Single Click, Pin Tab$',
+		 r'^Toolbar: Rerun, Previous Occurrence, Next Occurrence, Expand All, Collapse All, Class Hierarchy\(on\), Supertypes Hierarchy, Subtypes Hierarchy, Caller Hierarchy\(disabled\), Callee Hierarchy\(disabled\), Preview\(on\), Navigate with Single Click, Autoscroll from Source, Export\.\.\., Pin Tab$',
 		 r'^Hierarchy: Type: CSquare \(supertypes\)$', r'^ >CSquare  Shapes\.h$', r'^    CShape  Shape\.h$', r'^Hierarchy: Type: CSquare \(subtypes\)$', r'^ >CSquare  Shapes\.h$', r'^    CRoundedSquare  Shapes\.h$',
 		 r'Shapes\.h \(focus\) line 28: \[class CRoundedSquare : public CSquare\]', r'^Hierarchy tabs: >Type: CSquare$',
 		 r'^Hierarchy: Type: CShape \(class hierarchy\)$', r'^ >CShape  Shape\.h$', r'^    CCircle  Shapes\.h$', r'^    CSquare  Shapes\.h$', r'^      CRoundedSquare  Shapes\.h$',
@@ -4705,12 +4707,55 @@ CHECKS = [
 		[r'^Hierarchy: Calls: CCircle::Draw \(callers\)$', r'^ >CCircle::Draw$', r'^    \+ DrawAll  Main\.cpp:13$', r'^ >  DrawAll  Main\.cpp:13$', r'^      \+ main  Main\.cpp:24$',
 		 r'^  CCircle::Draw$', r'^    DrawAll  Main\.cpp:13$', r'^ >    main  Main\.cpp:24$', r'Main\.cpp \(focus\) line 24: \[\tDrawAll\(&cCircle, &cCircle\);\]',
 		 r'^Hierarchy: Calls: main \(callers\)$', r'^ >main$',
-		 r'^Toolbar: Rerun, Previous Occurrence\(disabled\), Next Occurrence\(disabled\), Expand All, Collapse All, Class Hierarchy\(disabled\), Supertypes Hierarchy\(disabled\), Subtypes Hierarchy\(disabled\), Caller Hierarchy\(on\), Callee Hierarchy, Preview\(on\), Navigate with Single Click, Pin Tab$',
+		 r'^Toolbar: Rerun, Previous Occurrence\(disabled\), Next Occurrence\(disabled\), Expand All, Collapse All, Class Hierarchy\(disabled\), Supertypes Hierarchy\(disabled\), Subtypes Hierarchy\(disabled\), Caller Hierarchy\(on\), Callee Hierarchy, Preview\(on\), Navigate with Single Click, Autoscroll from Source, Export\.\.\., Pin Tab$',
 		 r'^Hierarchy: Calls: main \(callees\)$', r'^ >main$', r'^    \+ CShape::Init  2 calls  Main\.cpp:22$', r'^    \+ DrawAll  Main\.cpp:24$', r'^    \+ TotalArea  Main\.cpp:25$',
 		 r'^ >  DrawAll  Main\.cpp:24$', r'^      \+ CShape::Draw  Main\.cpp:12$', r'^      \+ CCircle::Draw  Main\.cpp:13$', r'^    \+ TotalArea  Main\.cpp:25$', r'Main\.cpp \(focus\) line 12: \[\tpcShape->Draw\(\);\]',
 		 r'^Hierarchy: Calls: CShape::Move \(callers\)$', r'^ >CShape::Move$', r'^    CCircle::Draw  Shapes\.cpp:6$', r'^      \.\.\.$',
 		 r'^Hierarchy: Calls: CShape::Move \(callers\)$', r'^ >  CCircle::Draw  Shapes\.cpp:6$', r'^      \+ DrawAll  Main\.cpp:13$',
 		 r'^Hierarchy: Calls: CShape::Move \(callers\)$', r'^ >CShape::Move$', r'^    \+ CCircle::Draw  Shapes\.cpp:6$', r'^Status line: There is no function at the caret to show the calls of\.$'], [r'ERROR', r'No hierarchy row']),
+	('goto-recent-preview', {
+		#The Go to dialog previews its selected result's code, and with nothing typed lists what was gone to last
+		#first: on the Files tab the recent files, the one shown before this one at the top; on the Classes and
+		#Symbols tabs what each went to before.  A line typed after a file's name is the line previewed and gone to.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Shapes.cpp', 'CARET': '12:5',
+		'DEBUG': 'edit:open:Shapes.h,edit:open:Main.cpp,edit:gotolist:1:,printtabs,edit:gotolist:0:,edit:gotolist:0:CSquare,edit:gotolist:0:,edit:gotolist:2:Area,edit:gotolist:2:,edit:gotolist:1:Shape.h:15,edit:print'},
+		[r'^Go to \[\]: 6 results', r'^  Shapes\.h  \[.*Navigation\]  score 1000000$', r'^  Shapes\.cpp  \[.*Navigation\]  score 999999$', r'^Go to preview: Shapes\.h$',
+		 r'^Tabs: Shapes\.cpp >Shapes\.h Main\.cpp$', r'^Go to \[\]: 5 results', r'^  CShape  \[Shape\.h:6\]  score -\d+$', r'^Go to preview: Shape\.h$',
+		 r'^Go to \[CSquare\]: 2 results', r'^  CSquare  \[Shapes\.h:17\]', r'^Go to preview: Shapes\.h$', r'^Go to \[\]: 5 results', r'^  CSquare  \[Shapes\.h:17\]  score 1000000$',
+		 r'^  CShape  \[Shape\.h:6\]  score 999999$', r'^Go to \[Area\]: 4 results', r'^  Area\(\)  \[CCircle  Shapes\.cpp:10\]', r'^Go to preview: Shapes\.cpp$',
+		 r'^Go to \[\]: 26 results', r'^  Area\(\)  \[CCircle  Shapes\.cpp:10\]  score 1000000$', r'^Go to \[Shape\.h:15\]: 1 results', r'^Go to preview: Shape\.h$',
+		 r'Shape\.h \(focus\) line 15: \[\tvirtual int\t\tArea\(void\) = 0;\]'], [r'ERROR']),
+	('goto-actions', {
+		#Go to Action (Control+Shift+A), the dialog's Actions tab: a command found by its caption, with its menu and its
+		#keys after it and nothing to preview; choosing it runs it (Recent Files opens its chooser).  With nothing typed
+		#every command is listed.  One that can't be run where the caret is says so.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Shapes.cpp', 'CARET': '12:5',
+		'DEBUG': 'edit:open:Shapes.h,edit:gotolist:3:recfil,edit:printchooser,edit:key:escape,edit:gotolist:3:,edit:caret:6:8,edit:gotolist:3:typhie,edit:printhierarchy,closeall,edit:gotolist:3:quickdef,printstatus'},
+		[r'^Go to \[recfil\]: 1 results', r'^  Recent Files  \[Navigate  Ctrl\+E\]', r'^Go to preview: none$', r'^Chooser: Recent Files$', r'^  >Shapes\.cpp \| ',
+		 r'^Go to \[\]: 2\d\d results', r'^Go to \[typhie\]: 1 results', r'^  Type Hierarchy  \[Navigate  Ctrl\+H\]', r'^Hierarchy: Type: CCircle \(class hierarchy\)$',
+		 r'^Go to \[quickdef\]: 1 results', r'^  Quick Definition  \[View  Ctrl\+Shift\+I\]', r"^Status line: Quick Definition isn.t available here\.$"], [r'ERROR']),
+	('results-coloured-rows', {
+		#A result's line is coloured as code where its own text says how: keywords, numbers, strings, comments and a
+		#directive, round the text found, which keeps the match font; the line's number is dim.
+		'SOLUTION': QUICK_INFO, 'WAIT_INDEX': '1', 'OPEN': 'Paint.cpp', 'CARET': '1:1', 'DIALOG_ANSWER': 'Open in Find Window',
+		'DEBUG': 'find:0:Paint,answered:1,printfindparts'},
+		[r'^    \{d:1: \}\{p:#include\} \{s:"\}\{m:Paint\}\{s:\.h"\}$', r'^    \{d:4: \}\{k:static\} C\{m:Paint\}er gcDefaultPainter;$',
+		 r'^    \{d:27: \}\{k:return\} \{m:PAINT\}_MAXIMUM;$', r'^    \{d:43: \}\{k:int\} \{m:Paint\}All\(CPainter\* pcPainter, \{k:int\} iCount\)$',
+		 r'^    \{d:51: \}pc\{m:Paint\}er->Rect\(i, Blend\(i, iCount, \{n:0\.5f\}\), \{n:2\}, \{n:2\}, PM_Outline\);$',
+		 r'^    \{d:5: \}\{p:#define\} \{m:PAINT\}_MAXIMUM \{n:8\}$', r'^    \{d:15: \}\{k:typedef\} \{k:unsigned\} \{k:int\} \{m:Paint\}Colour;$', r'^    \{d:18: \}\{c://\}\{m:Paint\}\{c:s rectangles\.\}$'], [r'ERROR', r'\{\?:']),
+	('results-export-autoscroll', {
+		#A results pane's Export copies its rows as they are shown to the clipboard (or saves them to a file).  With
+		#Autoscroll from Source the result nearest the active editor's caret in its file is selected as the caret moves
+		#(the last at or before its line, else the first after), the editor keeping the keys; the setting is kept.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Shapes.cpp', 'CARET': '1:1', 'DIALOG_ANSWER': 'Open in Find Window|Copy to Clipboard', 'SETTINGS': MakeSettingsFile(),
+		'DEBUG': 'find:0:Area,answered:1,printfindtoolbar,findtool:Export...,answered:2,printstatus,edit:printclipboard,edit:printfindselected,findtool:Autoscroll from Source,printfindtoolbar,edit:printfindselected,'
+		         'edit:focus:editor,edit:caret:22:1,edit:printfindselected,edit:caret:2:1,edit:printfindselected,edit:open:Main.cpp,edit:caret:26:1,edit:printfindselected,edit:print,printsettings'},
+		[r'^Toolbar: Rerun, .*Preview\(on\), Navigate with Single Click, Autoscroll from Source, Export\.\.\., Pin Tab$', r'^Dialog \[Export Results\] answered Copy to Clipboard$',
+		 r'^Status line: Copied 14 rows to the clipboard\.$', r'^Clipboard:$', r"^Occurrences of 'Area' in the solution  9 matches in 4 files$", r'^  Main\.cpp  4 matches$',
+		 r'^    4: int TotalArea\(CShape\* pcFirst, CShape\* pcSecond\)$', r'^  Shapes\.h  2 matches$', r'^    24: int  Area\(void\) override;$',
+		 r'^Find selected: 4: int TotalArea', r'^Toolbar: Rerun, .*Autoscroll from Source\(on\), Export\.\.\., Pin Tab$', r'^Find selected: 10: int CCircle::Area\(void\)$',
+		 r'^Find selected: 21: int CSquare::Area\(void\)$', r'^Find selected: 10: int CCircle::Area\(void\)$', r'^Find selected: 25: return TotalArea\(&cCircle, &cSquare\);$',
+		 r'Main\.cpp \(focus\) line 26: ', r'<FindInFiles .*AutoscrollFromSource="true"'], [r'ERROR']),
 	('nav-type-declaration', {
 		#Go to Type Declaration (Control+Shift+B): from a parameter and from a local variable, the class each is declared
 		#with; from a field of a built in type, the status line says its type has nothing to go to.

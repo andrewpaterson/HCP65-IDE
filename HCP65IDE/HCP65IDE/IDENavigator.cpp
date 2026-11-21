@@ -46,6 +46,9 @@ void CIDENavigator::Init(CIDEContent* pcContent)
 	miGoToFileIcon = -1;
 	miQueuedGoTo = -1;
 	memset(maiGoToSymbolIcons, 0, sizeof(maiGoToSymbolIcons));
+	maszRecentClasses.Init();
+	maszRecentSymbols.Init();
+	mszQueuedAction.Init();
 	PostInit();
 }
 
@@ -60,6 +63,10 @@ void CIDENavigator::Class(void)
 	M_Pointer(mpNavigateMenu);
 	M_Pointer(mpGoTo);
 	M_Pointer(mpTargets);
+	M_Pointer(mpGoToPreview);
+	U_Unknown(CArrayChars, maszRecentClasses);
+	U_Unknown(CArrayChars, maszRecentSymbols);
+	U_String(mszQueuedAction);
 	U_String(mszGoToPattern);
 	U_Int32(miGoToFileIcon);
 	U_Int32(miQueuedGoTo);
@@ -75,6 +82,9 @@ void CIDENavigator::Class(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDENavigator::Free(void)
 {
+	mszQueuedAction.Kill();
+	maszRecentSymbols.Kill();
+	maszRecentClasses.Kill();
 	mszGoToPattern.Kill();
 }
 
@@ -97,8 +107,12 @@ bool CIDENavigator::Load(CObjectReader* pcFile) { return false; }
 //////////////////////////////////////////////////////////////////////////
 void CIDENavigator::GoToSearch(size uiTab, CNameMatcher* pcMatcher, CGoToItems* pcDest)
 {
-	CIDECodeModel*	pcCodeModel;
+	CIDECodeModel*		pcCodeModel;
+	Ptr<CIDEEditorTab>	pActive;
+	CArrayChars*		paszRecent;
 	size		i;
+	size		j;
+	size		uiRank;
 	SNameMatch	sMatch;
 	char*		szPath;
 	CChars		szFolder;
@@ -108,10 +122,24 @@ void CIDENavigator::GoToSearch(size uiTab, CNameMatcher* pcMatcher, CGoToItems* 
 	size		uiHome;
 
 	pcCodeModel = mpcContent->GetCodeModel();
+	if (uiTab == IDE_GO_TO_ACTION)
+	{
+		FindGoToActions(pcMatcher, pcDest);
+		return;
+	}
 	if (uiTab != IDE_GO_TO_FILE)
 	{
 		mpcContent->GetDocuments()->UpdateEditedTabsNow();
 		pcCodeModel->FindGoToSymbols(pcMatcher, uiTab == IDE_GO_TO_CLASS, maiGoToSymbolIcons, pcDest);
+		if (pcMatcher->IsEmpty())
+		{
+			//With nothing typed, what Go to went to last comes first.
+			paszRecent = (uiTab == IDE_GO_TO_CLASS) ? &maszRecentClasses : &maszRecentSymbols;
+			for (i = paszRecent->NumElements(); i > 0; i--)
+			{
+				PutGoToFirst(pcDest, (size)pcCodeModel->FindSymbolIndex(paszRecent->GetText(i - 1)), paszRecent->NumElements() - i);
+			}
+		}
 		return;
 	}
 
@@ -134,6 +162,100 @@ void CIDENavigator::GoToSearch(size uiTab, CNameMatcher* pcMatcher, CGoToItems* 
 			szName.Kill();
 		}
 	}
+
+	//With nothing typed, the recent files come first, the last shown before the active one at the top.
+	if (pcMatcher->IsEmpty())
+	{
+		pActive = mpcContent->GetDocuments()->GetActiveTab();
+		uiRank = 0;
+		for (i = 0; i < mpcContent->GetRecent()->NumFiles(); i++)
+		{
+			szPath = mpcContent->GetRecent()->GetFile(i)->szFile.Text();
+			if (pActive.IsNotNull() && (StringCompare(szPath, pActive->GetFileName()) == 0))
+			{
+				continue;
+			}
+			for (j = 0; j < pcCodeModel->NumProjectFiles(); j++)
+			{
+				if (StringCompare(pcCodeModel->GetProjectFile(j), szPath) == 0)
+				{
+					PutGoToFirst(pcDest, j, uiRank);
+					uiRank++;
+					break;
+				}
+			}
+		}
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The item of pcDest whose data is uiData is given a score that puts it
+// before those not asked for, and after those asked for with a lower
+// uiRank.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDENavigator::PutGoToFirst(CGoToItems* pcDest, size uiData, size uiRank)
+{
+	size	i;
+
+	for (i = 0; i < pcDest->NumItems(); i++)
+	{
+		if (pcDest->Get(i)->uiData == uiData)
+		{
+			pcDest->Get(i)->sMatch.iScore = IDE_GO_TO_RECENT_SCORE - (int32)uiRank;
+			return;
+		}
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Go to Action (Control+Shift+A): the IDE's commands, each found by its
+// caption as a name is found, with its menu (its name's first part) and
+// its keys after it; its data is its place in the command set.  Commands
+// with no caption (those a tab's menu makes for itself) aren't listed.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDENavigator::FindGoToActions(CNameMatcher* pcMatcher, CGoToItems* pcDest)
+{
+	Ptr<CCommandSet>	pCommands;
+	Ptr<CCommand>		pCommand;
+	SNameMatch			sMatch;
+	CChars				szName;
+	CChars				szWhere;
+	const char*			szDot;
+	size				i;
+
+	pCommands = mpcContent->GetCommands();
+	for (i = 0; i < pCommands->NumCommands(); i++)
+	{
+		pCommand = pCommands->GetCommand(i);
+		szName.Init(pCommand->GetCaption() ? pCommand->GetCaption() : "");
+		if (szName.EndsWith("..."))
+		{
+			szName.SetLength(szName.Length() - 3);
+		}
+		if (!szName.Empty() && pcMatcher->Match(szName.Text(), &sMatch))
+		{
+			szWhere.Init();
+			szDot = strchr(pCommand->GetName(), '.');
+			if (szDot)
+			{
+				szWhere.Append(pCommand->GetName(), (size)(szDot - pCommand->GetName()));
+			}
+			if (pCommand->NumKeys() > 0)
+			{
+				szWhere.Append("  ");
+				pCommand->AppendKeysText(&szWhere, mpcContent->GetWindow()->GetComponentInput());
+			}
+			pcDest->Add(szName.Text(), szWhere.Text(), -1, i, &sMatch);
+			szWhere.Kill();
+		}
+		szName.Kill();
+	}
 }
 
 
@@ -153,6 +275,7 @@ Ptr<CMenuContainer> CIDENavigator::CreateNavigateMenu(void)
 	mpNavigateMenu->AddItem(pCommands->Find("Navigate.GoToClass"));
 	mpNavigateMenu->AddItem(pCommands->Find("Navigate.GoToFile"));
 	mpNavigateMenu->AddItem(pCommands->Find("Navigate.GoToSymbol"));
+	mpNavigateMenu->AddItem(pCommands->Find("Navigate.GoToAction"));
 	mpNavigateMenu->AddItem(pCommands->Find("Navigate.GoToLine"));
 	mpNavigateMenu->AddSeparator();
 	mpNavigateMenu->AddItem(pCommands->Find("Navigate.GoToSource"));
@@ -197,6 +320,7 @@ void CIDENavigator::AddCommands(Ptr<CCommandSet> pCommands)
 	pCommands->Add("Navigate.GoToClass", "Class...", "Control+N", Ptr<CImageCel>(), this, &CIDENavigator::GoToClass);
 	pCommands->Add("Navigate.GoToFile", "File...", "Control+Shift+N", Ptr<CImageCel>(), this, &CIDENavigator::GoToFile);
 	pCommands->Add("Navigate.GoToSymbol", "Symbol...", "Control+Alt+Shift+N", Ptr<CImageCel>(), this, &CIDENavigator::GoToSymbol);
+	pCommands->Add("Navigate.GoToAction", "Action...", "Control+Shift+A", Ptr<CImageCel>(), this, &CIDENavigator::GoToAction);
 	pCommands->Add("Navigate.GoToSource", "Go to Source", "Control+B", Ptr<CImageCel>(), this, &CIDENavigator::GoToSource)->SetEnabledCheck(this, &CIDENavigator::CanGoToSource);
 	pCommands->Add("Navigate.SwitchHeaderSource", "Switch Header/Source", "Alt+O", Ptr<CImageCel>(), this, &CIDENavigator::SwitchHeaderSource);
 	pCommands->Add("Navigate.GoToImplementation", "Go to Implementation(s)", "Control+Alt+B", Ptr<CImageCel>(), this, &CIDENavigator::GoToImplementation)->SetEnabledCheck(this, &CIDENavigator::CanGoToImplementation);
@@ -209,6 +333,7 @@ void CIDENavigator::AddCommands(Ptr<CCommandSet> pCommands)
 void CIDENavigator::GoToClass(void) { QueueGoTo(IDE_GO_TO_CLASS); }
 void CIDENavigator::GoToFile(void) { QueueGoTo(IDE_GO_TO_FILE); }
 void CIDENavigator::GoToSymbol(void) { QueueGoTo(IDE_GO_TO_SYMBOL); }
+void CIDENavigator::GoToAction(void) { QueueGoTo(IDE_GO_TO_ACTION); }
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -236,8 +361,145 @@ bool CIDENavigator::ShowGoTo(size uiTab)
 	}
 	mszGoToPattern.Set(mpGoTo->GetPattern());
 	mpcContent->GetScript()->StopWatchingDialog();
-	mpGoTo = NULL;
+	ReleaseGoTo();
 	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The dialog is let go of: its preview first, which the edits thread may
+// still have a file to colour for.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDENavigator::ReleaseGoTo(void)
+{
+	if (mpGoTo.IsNotNull())
+	{
+		mpGoTo->GetSelectedEvent()->Remove(this);
+	}
+	if (mpGoToPreview.IsNotNull())
+	{
+		mpGoToPreview->Detach();
+		mpGoToPreview = NULL;
+	}
+	mpGoTo = NULL;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Another result is selected in the dialog: its place's code is
+// previewed.  A file's is its start (or the line typed after a colon), a
+// symbol's where it is defined or declared; an action has none.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDENavigator::GoToSelected(void)
+{
+	SGoToItem*		psItem;
+	SIDELocation	sLocation;
+	bool			bPlace;
+
+	if (mpGoTo.IsNull() || mpGoToPreview.IsNull())
+	{
+		return;
+	}
+	psItem = mpGoTo->GetSelectedItem();
+	bPlace = false;
+	memset(&sLocation, 0, sizeof(SIDELocation));
+	sLocation.iContainer = -1;
+	if (psItem && (mpGoTo->GetTab() == IDE_GO_TO_FILE))
+	{
+		if (psItem->uiData < mpcContent->GetCodeModel()->NumProjectFiles())
+		{
+			sLocation.szFileName.Init(mpcContent->GetCodeModel()->GetProjectFile(psItem->uiData));
+			bPlace = true;
+		}
+	}
+	else if (psItem && (mpGoTo->GetTab() != IDE_GO_TO_ACTION))
+	{
+		bPlace = mpcContent->GetCodeModel()->GetSymbolLocation(psItem->uiData, &sLocation);
+	}
+	if (bPlace)
+	{
+		if (mpGoTo->GetLine() > 0)
+		{
+			sLocation.iLine = mpGoTo->GetLine() - 1;
+			sLocation.iColumn = 0;
+			sLocation.iLength = 0;
+		}
+		mpGoToPreview->ShowLocation(&sLocation);
+		sLocation.szFileName.Kill();
+	}
+	else
+	{
+		mpGoToPreview->Clear();
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Go to Class or Symbol went to the index's symbol uiSymbol: it is the
+// last of that tab's recent ones (their keys, the most recent last), of
+// which thirty are kept, for the session.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDENavigator::RememberGoTo(size uiTab, size uiSymbol)
+{
+	CArrayChars*	paszRecent;
+	CChars			szKey;
+	uint8			uiKind;
+
+	paszRecent = (uiTab == IDE_GO_TO_CLASS) ? &maszRecentClasses : &maszRecentSymbols;
+	szKey.Init();
+	if (mpcContent->GetCodeModel()->GetSymbolKey((int32)uiSymbol, &szKey, &uiKind))
+	{
+		if (paszRecent->Contains(szKey.Text()))
+		{
+			paszRecent->Remove(szKey.Text());
+		}
+		paszRecent->Add(szKey.Text());
+		while (paszRecent->NumElements() > IDE_GO_TO_RECENT)
+		{
+			paszRecent->Remove((size)0);
+		}
+	}
+	szKey.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The command Go to Action chose is run, at the tick after the dialog has
+// closed: it may show a dialog of its own.  One that can't be run where
+// the caret is says so.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDENavigator::RunQueuedAction(void)
+{
+	Ptr<CCommand>	pCommand;
+	CChars			szStatus;
+
+	pCommand = mpcContent->GetCommands()->Find(mszQueuedAction.Text());
+	mszQueuedAction.Clear();
+	if (pCommand.IsNull())
+	{
+		return;
+	}
+	if (!pCommand->IsEnabled())
+	{
+		szStatus.Init(pCommand->GetCaption());
+		if (szStatus.EndsWith("..."))
+		{
+			szStatus.SetLength(szStatus.Length() - 3);
+		}
+		szStatus.Append(" isn't available here.");
+		mpcContent->ShowStatus(szStatus.Text());
+		szStatus.Kill();
+		return;
+	}
+	pCommand->Run();
 }
 
 
@@ -277,6 +539,12 @@ bool CIDENavigator::CreateGoTo(size uiTab)
 	mpGoTo->AddTab("Classes", mpcContent->GetCommands()->Find("Navigate.GoToClass"));
 	mpGoTo->AddTab("Files", mpcContent->GetCommands()->Find("Navigate.GoToFile"));
 	mpGoTo->AddTab("Symbols", mpcContent->GetCommands()->Find("Navigate.GoToSymbol"));
+	mpGoTo->AddTab("Actions", mpcContent->GetCommands()->Find("Navigate.GoToAction"));
+
+	//The selected result's code under the results, as a chooser previews its places.
+	mpGoTo->AddPreview(mpcContent->GetDimFont(), mpcContent->GetCodeFamily());
+	mpGoToPreview = OMalloc<CIDELocationPreview>(mpcContent, mpGoTo->GetPreview());
+	mpGoTo->GetSelectedEvent()->Add(this, &CIDENavigator::GoToSelected);
 	miGoToFileIcon = -1;
 	for (i = 0; i < mpcContent->NumFileTypeIcons(); i++)
 	{
@@ -316,6 +584,16 @@ bool CIDENavigator::OpenGoToChoice(void)
 		return false;
 	}
 	iLine = mpGoTo->GetLine();
+	if (mpGoTo->GetTab() == IDE_GO_TO_ACTION)
+	{
+		if (psItem->uiData >= mpcContent->GetCommands()->NumCommands())
+		{
+			return false;
+		}
+		mszQueuedAction.Set(mpcContent->GetCommands()->GetCommand(psItem->uiData)->GetName());
+		mpcContent->GetWindow()->Post(this, &CIDENavigator::RunQueuedAction);
+		return true;
+	}
 	if (mpGoTo->GetTab() == IDE_GO_TO_FILE)
 	{
 		if (psItem->uiData >= mpcContent->GetCodeModel()->NumProjectFiles())
@@ -334,6 +612,7 @@ bool CIDENavigator::OpenGoToChoice(void)
 	{
 		return false;
 	}
+	RememberGoTo(mpGoTo->GetTab(), psItem->uiData);
 	if (iLine > 0)
 	{
 		sLocation.iLine = iLine - 1;

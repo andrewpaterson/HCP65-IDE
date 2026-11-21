@@ -140,6 +140,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define IDE_GO_TO_CLASS			0
 #define IDE_GO_TO_FILE			1
 #define IDE_GO_TO_SYMBOL		2
+#define IDE_GO_TO_ACTION		3
 
 
 //The IDE's window's content: the menu bar and toolbar along the top, and under them Visual Studio's docking (see

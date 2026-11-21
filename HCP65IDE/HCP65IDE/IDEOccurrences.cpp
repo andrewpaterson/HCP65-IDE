@@ -32,6 +32,8 @@ void CIDEOccurrences::Init(CIDEContent* pcContent)
 {
 	PreInit();
 	mpcContent = pcContent;
+	mszAutoscrollFile.Init();
+	miAutoscrollLine = -1;
 	PostInit();
 }
 
@@ -43,6 +45,8 @@ void CIDEOccurrences::Init(CIDEContent* pcContent)
 void CIDEOccurrences::Class(void)
 {
 	U_Pointer(mpcContent);
+	U_String(mszAutoscrollFile);
+	U_Int32(miAutoscrollLine);
 }
 
 
@@ -52,6 +56,7 @@ void CIDEOccurrences::Class(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDEOccurrences::Free(void)
 {
+	mszAutoscrollFile.Kill();
 }
 
 
@@ -185,6 +190,45 @@ CIDESteppable* CIDEOccurrences::FindFocussedSteppable(void)
 bool CIDEOccurrences::CanStep(void)
 {
 	return (FindFocussedSteppable() != NULL) || IsInSourceEditor(mpcContent->GetWindow()->GetFocus()->GetFocussedComponent());
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Each window tick: when the active editor's caret is on another line, or
+// another editor is the active one, each results window's pane is told,
+// for Autoscroll from Source (CIDEResultsPane::AutoscrollFromSource: only
+// those with it on do anything).
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEOccurrences::Poll(void)
+{
+	Ptr<CIDEResultsPane>	apPanes[5];
+	Ptr<CIDEEditorTab>		pTab;
+	size					i;
+	int						iLine;
+	int						iColumn;
+
+	pTab = mpcContent->GetDocuments()->GetActiveTab();
+	if (pTab.IsNull() || !pTab->GetCaretPlace(&iLine, &iColumn) || ((iLine == miAutoscrollLine) && mszAutoscrollFile.Equals(pTab->GetFileName())))
+	{
+		return;
+	}
+	mszAutoscrollFile.Set(pTab->GetFileName());
+	miAutoscrollLine = iLine;
+
+	apPanes[0] = mpcContent->GetUsages()->GetResultsPane();
+	apPanes[1] = mpcContent->GetFindInFiles()->GetResultsPane();
+	apPanes[2] = mpcContent->GetDuplicates()->GetResultsPane();
+	apPanes[3] = mpcContent->GetBookmarks()->GetResultsPane();
+	apPanes[4] = mpcContent->GetHierarchy()->GetResultsPane();
+	for (i = 0; i < 5; i++)
+	{
+		if (apPanes[i].IsNotNull() && apPanes[i]->IsAutoscrollFromSource())
+		{
+			apPanes[i]->AutoscrollFromSource(pTab->GetFileName(), iLine);
+		}
+	}
 }
 
 
