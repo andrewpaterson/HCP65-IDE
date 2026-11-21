@@ -91,7 +91,7 @@ void CIDEStructure::AddCommands(Ptr<CCommandSet> pCommands)
 	pCommands->Add("Navigate.FileStructure", "File Structure", "Control+F12", Ptr<CImageCel>(), this, &CIDEStructure::ShowFileStructure)->SetEnabledCheck(this, &CIDEStructure::HasEditor);
 	pCommands->Add("Navigate.NextMethod", "Next Method", "Alt+Cursor Down", Ptr<CImageCel>(), this, &CIDEStructure::NextMethod)->SetEnabledCheck(this, &CIDEStructure::HasEditor);
 	pCommands->Add("Navigate.PreviousMethod", "Previous Method", "Alt+Cursor Up", Ptr<CImageCel>(), this, &CIDEStructure::PreviousMethod)->SetEnabledCheck(this, &CIDEStructure::HasEditor);
-	pCommands->Add("View.Structure", "Structure", "Alt+7", Ptr<CImageCel>(), this, &CIDEStructure::ShowStructureWindow);
+	pCommands->Add("View.Structure", "Structure", "Alt+7", Ptr<CImageCel>(), this, &CIDEStructure::ToggleStructureWindow);
 }
 
 
@@ -109,19 +109,31 @@ void CIDEStructure::CreatePane(SDockPlace* psPlace)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Alt+7, as IntelliJ IDEA's Structure tool window: it is shown, as the
-// active editor's outline is now, and its tree has the keys.  Pressed
-// while it has them, it is hidden (CIDEToolWindows).
+// Alt+7, as IntelliJ IDEA's Structure tool window: it is shown (see
+// ShowStructureWindow); pressed while it has the keys, it is hidden
+// (CIDEToolWindows).
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEStructure::ToggleStructureWindow(void)
+{
+	if (mpcContent->GetToolWindows()->HideWithKeys(IDE_STRUCTURE_ID))
+	{
+		return true;
+	}
+	return ShowStructureWindow();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The Structure tool window is shown, as the active editor's outline is
+// now, and its tree has the keys.  Select In's too.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEStructure::ShowStructureWindow(void)
 {
 	Ptr<CIDEEditorTab>	pTab;
 
-	if (mpcContent->GetToolWindows()->HideWithKeys(IDE_STRUCTURE_ID))
-	{
-		return true;
-	}
 	pTab = mpcContent->GetDocuments()->GetActiveTab();
 	if (pTab.IsNotNull())
 	{

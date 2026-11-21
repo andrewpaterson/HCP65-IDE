@@ -49,6 +49,9 @@ void CIDERecent::Init(CIDEContent* pcContent)
 	meChooser = IRC_None;
 	maiChoices.Init();
 	mbChangedOnly = false;
+	mbEditedOnly = false;
+	mszSwitcherClose.Init();
+	muiSwitcherRow = 0;
 	mbDirty = false;
 	miDirty = 0;
 	mbLettingGo = false;
@@ -71,6 +74,9 @@ void CIDERecent::Class(void)
 	U_Enum(meChooser);
 	U_Unknown(CArrayInt, maiChoices);
 	U_Bool(mbChangedOnly);
+	U_Bool(mbEditedOnly);
+	U_String(mszSwitcherClose);
+	U_Size(muiSwitcherRow);
 	U_Bool(mbDirty);
 	U_Int64(miDirty);
 	U_Bool(mbLettingGo);
@@ -97,6 +103,7 @@ void CIDERecent::Free(void)
 	{
 		masEdits.Get(i)->Kill();
 	}
+	mszSwitcherClose.Kill();
 	maiChoices.Kill();
 	masEdits.Kill();
 	maszClosed.Kill();
@@ -490,7 +497,9 @@ void CIDERecent::AddFilePlace(const char* szFile, int32 iLine, int32 iColumn)
 // Recent Files (Control+E): the files shown in editors but the active
 // one, the open ones first, each most recent first; the first is the
 // file shown before this one.  Typing filters.  Choosing one opens it
-// where its caret was.  False, the status line saying so, with none.
+// where its caret was.  With Show Edited Only, its button, only the files
+// that have a place edited this session.  False, the status line saying
+// so, with none.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDERecent::ShowRecentFiles(void)
@@ -505,7 +514,7 @@ bool CIDERecent::ShowRecentFiles(void)
 	int					iColumn;
 
 	pActive = mpcContent->GetDocuments()->GetActiveTab();
-	BeginChooser(IRC_Files, "Recent Files", true, false, NULL);
+	BeginChooser(IRC_Files, mbEditedOnly ? "Recent Files: Edited" : "Recent Files", true, false, mbEditedOnly ? "Show All" : "Show Edited Only");
 	uiAdded = 0;
 	for (uiPass = 0; uiPass < 2; uiPass++)
 	{
@@ -514,6 +523,10 @@ bool CIDERecent::ShowRecentFiles(void)
 			psFile = masFiles.Get(i);
 			pTab = mpcContent->GetDocuments()->FindTab(psFile->szFile.Text());
 			if ((pTab.IsNotNull() != (uiPass == 0)) || (pTab.IsNotNull() && (pTab == pActive)))
+			{
+				continue;
+			}
+			if (mbEditedOnly && !IsEdited(psFile->szFile.Text()))
 			{
 				continue;
 			}
@@ -529,10 +542,40 @@ bool CIDERecent::ShowRecentFiles(void)
 	}
 	if (uiAdded == 0)
 	{
+		if (mbEditedOnly)
+		{
+			//None of the others was edited: all of them are listed instead, if there are any.
+			mbEditedOnly = false;
+			mpcContent->ShowStatus("No other recent file has been edited: every recent file is listed.");
+			if (ShowRecentFiles())
+			{
+				return true;
+			}
+		}
 		mpcContent->ShowStatus("There are no other recent files.");
 		return false;
 	}
 	return OpenChooser(0);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether a place edited this session is in the file.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDERecent::IsEdited(const char* szFile)
+{
+	size	i;
+
+	for (i = 0; i < masEdits.NumElements(); i++)
+	{
+		if (masEdits.Get(i)->szFile.Equals(szFile))
+		{
+			return true;
+		}
+	}
+	return false;
 }
 
 
@@ -623,8 +666,8 @@ bool CIDERecent::ShowRecentLocations(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Recent Locations' button: the other list, at the next tick, once the
-// chooser that was clicked has closed.
+// Recent Locations' button, and Recent Files': the other list, at the
+// next tick, once the chooser that was clicked has closed.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDERecent::ButtonClicked(void)
@@ -633,6 +676,11 @@ void CIDERecent::ButtonClicked(void)
 	{
 		mbChangedOnly = !mbChangedOnly;
 		mpcContent->GetWindow()->Post(this, &CIDERecent::ReopenLocations);
+	}
+	else if (meChooser == IRC_Files)
+	{
+		mbEditedOnly = !mbEditedOnly;
+		mpcContent->GetWindow()->Post(this, &CIDERecent::ReopenFiles);
 	}
 }
 
@@ -643,6 +691,12 @@ void CIDERecent::ReopenLocations(void)
 }
 
 
+void CIDERecent::ReopenFiles(void)
+{
+	ShowRecentFiles();
+}
+
+
 //////////////////////////////////////////////////////////////////////////
 //
 // The Switcher (Control+Tab, and with Shift backwards): the open files,
@@ -650,10 +704,11 @@ void CIDERecent::ReopenLocations(void)
 // stays open with the file before this one selected (or the last row,
 // backwards), each Control+Tab moving on, and letting Control go chooses.
 // Not held, as a quick Control+Tab is by the time it gets here, it goes
-// straight to the file before this one.
+// straight to the file before this one.  uiSelected is the row's place to
+// select instead (the last, if there are fewer), MAX_SIZE for those.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDERecent::OpenSwitcher(bool bBackward, bool bHeld)
+bool CIDERecent::OpenSwitcher(bool bBackward, bool bHeld, size uiSelected)
 {
 	Ptr<CIDEEditorTab>	pTab;
 	Ptr<CDockPane>		pPane;
@@ -711,7 +766,15 @@ bool CIDERecent::OpenSwitcher(bool bBackward, bool bHeld)
 	{
 		return false;
 	}
-	if (!OpenChooser(bBackward ? uiPlaces - 1 : ((uiFiles > 1) ? 1 : 0)))
+	if (uiSelected == MAX_SIZE)
+	{
+		uiSelected = bBackward ? uiPlaces - 1 : ((uiFiles > 1) ? 1 : 0);
+	}
+	else if (uiSelected >= uiPlaces)
+	{
+		uiSelected = uiPlaces - 1;
+	}
+	if (!OpenChooser(uiSelected))
 	{
 		return false;
 	}
@@ -726,7 +789,65 @@ bool CIDERecent::OpenSwitcher(bool bBackward, bool bHeld)
 	mpChooser->GetPopup()->GetList()->AddInputAction(IAF_KeyUp, "Right Control", this, &CIDERecent::SwitcherReleased);
 	mpChooser->GetPopup()->GetList()->AddInputAction(IAF_Chord, "Control+Cursor Up", this, &CIDERecent::SwitcherUp);
 	mpChooser->GetPopup()->GetList()->AddInputAction(IAF_Chord, "Control+Cursor Down", this, &CIDERecent::SwitcherDown);
+
+	//Delete and Backspace close the selected file, with Control held as it is and without.
+	mpChooser->GetPopup()->GetList()->AddInputAction(IAF_Chord, "Control+Delete", this, &CIDERecent::SwitcherClose);
+	mpChooser->GetPopup()->GetList()->AddInputAction(IAF_Chord, "Control+Backspace", this, &CIDERecent::SwitcherClose);
+	mpChooser->GetPopup()->GetList()->AddInputAction(IAF_KeyDown, "Delete", this, &CIDERecent::SwitcherClose);
+	mpChooser->GetPopup()->GetList()->AddInputAction(IAF_KeyDown, "Backspace", this, &CIDERecent::SwitcherClose);
 	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Delete or Backspace in the Switcher: the selected row's file is closed
+// and the Switcher is left open, the row that took its place selected.  A
+// tool window's row does nothing.  The Switcher closes first and the file
+// at the next tick, as its popup may be over the editor that goes; it is
+// opened again then, held.  A file with changes is asked about as any
+// closing is, and the Switcher isn't opened again over the question.
+// False if the Switcher isn't open on a file.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDERecent::CloseSwitcherFile(void)
+{
+	Ptr<CChooserPopup>	pPopup;
+	SGoToItem*			psItem;
+
+	if ((meChooser != IRC_Switcher) || mpChooser.IsNull() || !mpChooser->IsOpen())
+	{
+		return false;
+	}
+	pPopup = mpChooser->GetPopup();
+	psItem = pPopup->GetSelectedItem();
+	if ((psItem == NULL) || (psItem->uiData >= maiChoices.NumElements()) || (maiChoices.GetValue(psItem->uiData) != IDE_RECENT_NOT_TOOL))
+	{
+		return false;
+	}
+	mszSwitcherClose.Set(mpChooser->GetPlace(psItem->uiData)->szFileName.Text());
+	muiSwitcherRow = psItem->uiData;
+	mpChooser->Close();
+	mpcContent->GetWindow()->Post(this, &CIDERecent::CloseSwitcherFileAndReopen);
+	return true;
+}
+
+
+void CIDERecent::SwitcherClose(SComponentInputEvent* psEvent) { CloseSwitcherFile(); }
+
+
+void CIDERecent::CloseSwitcherFileAndReopen(void)
+{
+	if (mszSwitcherClose.Empty())
+	{
+		return;
+	}
+	mpcContent->GetDocuments()->CloseFile(mszSwitcherClose.Text());
+	if (mpcContent->GetDocuments()->FindTab(mszSwitcherClose.Text()).IsNull())
+	{
+		OpenSwitcher(false, true, muiSwitcherRow);
+	}
+	mszSwitcherClose.Clear();
 }
 
 

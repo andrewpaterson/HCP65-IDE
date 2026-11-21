@@ -3715,6 +3715,15 @@ void CIDEScript::RunViewStep(const char* szStep)
 		//The Switcher as Control+Tab with Control held: it stays open (command:Window.Switcher then steps it on).
 		mpcContent->GetRecent()->OpenSwitcher(false, true);
 	}
+	else if (strcmp(szStep, "switcher:close") == 0)
+	{
+		//Delete in the Switcher: the selected row's file is closed (at the next tick) and the Switcher stays open.
+		if (!mpcContent->GetRecent()->CloseSwitcherFile())
+		{
+			printf("Switcher: nothing to close\n");
+			fflush(stdout);
+		}
+	}
 	else if (strcmp(szStep, "switcher:release") == 0)
 	{
 		//Control let go: the Switcher's selected row is chosen.

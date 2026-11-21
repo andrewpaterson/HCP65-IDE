@@ -4578,6 +4578,31 @@ CHECKS = [
 		[r'^Chooser: Switcher$', r'^  >Shapes\.h \| ', r'^Chooser: none$', r'^Tabs: Shapes\.cpp >Shapes\.h Main\.cpp$', r'Shapes\.h \(focus\) line 1: ',
 		 r'^Tabs: Shapes\.cpp Shapes\.h >Main\.cpp$', r'^Chooser: Switcher$', r'^  >Run \| $', r'^Tabs: Shapes\.cpp Shapes\.h >Main\.cpp$', r'^Tabs: Shapes\.cpp >Shapes\.h Main\.cpp$',
 		 r'^Chooser: Recent Files$', r'^  >Main\.cpp \| ', r'^   Shapes\.cpp \| ', r'Main\.cpp \(focus\) line 1: '], [r'ERROR']),
+	('switcher-close', {
+		#Delete in the Switcher closes the selected file and leaves the Switcher open, the row that took its place
+		#selected; on a tool window's row it does nothing.  With real keys: Control+Tab, Delete, and letting Control go
+		#chooses the row that is selected then.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Shapes.cpp', 'CARET': '12:5',
+		'DEBUG': 'edit:open:Shapes.h,edit:open:Shape.h,edit:open:Main.cpp,edit:switcher:hold,edit:printchooser,edit:switcher:close,edit:printchooser,printtabs,'
+		         'command:Window.Switcher,command:Window.Switcher,command:Window.Switcher,edit:switcher:close,edit:printchooser,edit:switcher:release,printtabs,'
+		         'edit:press:Left Control,edit:tap:Tab,edit:printchooser,edit:tap:Delete,edit:printchooser,edit:release:Left Control,printtabs,edit:print'},
+		[r'^Chooser: Switcher$', r'^   Main\.cpp \| ', r'^  >Shape\.h \| ', r'^   Shapes\.h \| ', r'^   Shapes\.cpp \| ',
+		 r'^Chooser: Switcher$', r'^   Main\.cpp \| ', r'^  >Shapes\.h \| ', r'^   Shapes\.cpp \| ', r'^   \[Tool Windows\]$', r'^Tabs: Shapes\.cpp Shapes\.h >Main\.cpp$',
+		 r'^Switcher: nothing to close$', r'^Chooser: Switcher$', r'^  >Structure \| $', r'^Tabs: Shapes\.cpp Shapes\.h >Main\.cpp$',
+		 r'^Chooser: Switcher$', r'^  >Shapes\.h \| ', r'^Chooser: Switcher$', r'^   Main\.cpp \| ', r'^  >Shapes\.cpp \| ', r'^   \[Tool Windows\]$',
+		 r'^Tabs: >Shapes\.cpp Main\.cpp$', r'Shapes\.cpp \(focus\) line 12: '], [r'ERROR']),
+	('recent-files-edited', {
+		#Recent Files' button, Show Edited Only, lists only the files edited this session, and Show All every one
+		#again.  When none of the others was edited, all are listed and the status line says so.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Shapes.cpp', 'CARET': '12:5',
+		'DEBUG': 'edit:open:Shape.h,edit:open:Shapes.cpp,edit:caret:12:5,edit:type:x,edit:open:Shapes.h,edit:open:Main.cpp,command:Navigate.RecentFiles,edit:printchooser,'
+		         'edit:chooserbutton,edit:printchooser,edit:chooserbutton,edit:printchooser,edit:key:escape,'
+		         'edit:open:Shapes.cpp,command:Navigate.RecentFiles,edit:chooserbutton,edit:printchooser,printstatus'},
+		[r'^Chooser: Recent Files$', r'^  >Shapes\.h \| ', r'^   Shapes\.cpp \| ', r'^   Shape\.h \| ',
+		 r'^Chooser: Recent Files: Edited$', r'^  >Shapes\.cpp \| ', r'^Chooser filter: \[\]$',
+		 r'^Chooser: Recent Files$', r'^  >Shapes\.h \| ', r'^   Shapes\.cpp \| ', r'^   Shape\.h \| ',
+		 r'^Chooser: Recent Files$', r'^  >Main\.cpp \| ', r'^   Shapes\.h \| ', r'^Status line: No other recent file has been edited: every recent file is listed\.$'],
+		[r'ERROR']),
 	('select-in', {
 		#Select In (Alt+F1): a chooser of where the active file can be shown selected.  Solution Explorer selects it
 		#in the tree, which gets the keys; Structure shows the file's outline with the caret's entry selected.

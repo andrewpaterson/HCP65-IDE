@@ -68,12 +68,14 @@ enum EIDERecentChooser
 //tab is chosen or closed), and the places the text was edited (heard from the documents).
 //
 //  - Recent Files (Control+E): a chooser of them, the open ones first, the file shown before this one selected so
-//    Control+E then Enter goes back to it; typing filters.  A closed one opens where its caret was.
+//    Control+E then Enter goes back to it; typing filters.  A closed one opens where its caret was.  Its button
+//    lists only the files edited this session (those the places edited are in), and back.
 //  - Recent Locations (Control+Shift+E): a chooser of the places Back has, the newest first, each its line's text
 //    with its file and line and a preview of the code; its button lists only the places edited, and back.
 //  - The Switcher (Control+Tab, with Shift backwards): the open files, most recent first, then the tool windows.
 //    Held open while Control is down, each Tab (or Down, Up) moving on; letting go chooses.  A quick Control+Tab
-//    so goes straight to the file before this one.
+//    so goes straight to the file before this one.  Delete or Backspace closes the selected file and the Switcher
+//    stays, with the row that took its place selected.
 //  - Select Next Tab and Select Previous Tab (Alt+Right, Alt+Left): the tab beside the active one, round the ends.
 //  - Reopen Closed Tab: the tab closed last, where its caret was.
 //  - Last Edit Location (Control+Shift+Backspace) goes back through the places edited, Next Edit Location forward.
@@ -95,6 +97,9 @@ protected:
 	EIDERecentChooser			meChooser;
 	CArrayInt					maiChoices;  //For the Switcher: a place's tool window (the dock's pane), -1 for a file.
 	bool						mbChangedOnly;  //Recent Locations lists the places edited.
+	bool						mbEditedOnly;  //Recent Files lists the files edited.
+	CChars						mszSwitcherClose;  //The Switcher's file to close at the next tick, and the row it was.
+	size						muiSwitcherRow;
 	bool						mbDirty;  //The recent files have changed since the user's file was written, at miDirty.
 	int64						miDirty;
 	bool						mbLettingGo;  //The workspace is closing: its tabs' closing isn't the user's.
@@ -122,7 +127,8 @@ public:
 	bool	ShowRecentLocations(void);
 	bool	ShowSwitcher(void);
 	bool	ShowSwitcherBackward(void);
-	bool	OpenSwitcher(bool bBackward, bool bHeld);
+	bool	OpenSwitcher(bool bBackward, bool bHeld, size uiSelected = MAX_SIZE);
+	bool	CloseSwitcherFile(void);
 	bool	SelectNextTab(void);
 	bool	SelectPreviousTab(void);
 	bool	ReopenClosedTab(void);
@@ -152,6 +158,10 @@ protected:
 	void	Chosen(void);
 	void	ButtonClicked(void);
 	void	ReopenLocations(void);
+	void	ReopenFiles(void);
+	bool	IsEdited(const char* szFile);
+	void	SwitcherClose(SComponentInputEvent* psEvent);
+	void	CloseSwitcherFileAndReopen(void);
 	void	SwitcherReleased(SComponentInputEvent* psEvent);
 	void	SwitcherUp(SComponentInputEvent* psEvent);
 	void	SwitcherDown(SComponentInputEvent* psEvent);

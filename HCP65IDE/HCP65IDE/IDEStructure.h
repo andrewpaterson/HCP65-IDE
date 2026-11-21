@@ -72,6 +72,7 @@ public:
 	void	AddCommands(Ptr<CCommandSet> pCommands);
 	void	CreatePane(SDockPlace* psPlace);
 	bool	ShowStructureWindow(void);
+	bool	ToggleStructureWindow(void);
 	void	SetStructureSettings(bool bSortByName, bool bShowFields);
 	Ptr<CIDEStructurePane>	GetStructurePane(void) const;
 	Ptr<CDockPane>	GetTool(void) const;
