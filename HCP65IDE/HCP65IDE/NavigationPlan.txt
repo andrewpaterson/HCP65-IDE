@@ -195,7 +195,7 @@ Stage G, hierarchies: built 2026-11-21.
     (CIDEHierarchy, CIDECodeModel::FindCallers and FindCallees, CIDEResultsPane::AddSymbol).  Checks
     hierarchy-type, hierarchy-method, hierarchy-calls.
     As built it differs from the plan in these:
-      - One Hierarchy tool window (Alt+8, IntelliJ's key) on CIDEResultsTabs, as decided; a tab is a
+      - One Hierarchy tool window (Alt+8, IntelliJ's key in its older keymaps) on CIDEResultsTabs, as decided; a tab is a
         CIDEHierarchySearch that keeps its rows (SIDEHierarchyNode) and makes its pane's tree from them, in the
         order they are seen.  A row is a results pane's result (AddSymbol: a name, its kind's icon, what is said of
         it dim), so the preview, enter, Rerun and Next and Previous Occurrence are the pane's.  Enter doesn't
@@ -243,7 +243,7 @@ Stage H, the dialogs and the results: built 2026-11-21.
         characters, numbers and keywords), in C and C++ files only, with the theme font in the editor's colours
         (CFontColours); the text found keeps the match font.  A line inside a block comment that started on
         another line isn't known to be one.
-      - S12: Find Usages still has its own tabs code, not CIDEResultsTabs.
+      - S12: Find Usages was left on its own tabs code then; it is on CIDEResultsTabs since follow-up 1.
 
 
 What is left
@@ -257,8 +257,8 @@ Every stage is built.  What wasn't, and why:
     on.  Read as both being put off; the user hasn't been asked again.
   - Decision 2 was read as: Build on Control+F9, so Go to Type Declaration has Control+Shift+B.  Not confirmed.
   - Not moved onto shared code, as decision 17 allows: the refactorings' own "function the caret is in" and unit
-    caches; Find Usages' tabs (S12); the lists of who follows edits, who is stepped through and who has settings
-    (S11), which are still named where they are called.
+    caches; the lists of who follows edits, who is stepped through and who has settings (S11), which are still
+    named where they are called.  (Find Usages' tabs, S12, were: follow-up 1.)
   - Checked at the end, beyond the IDE's checks, TestWindowLib and TestBaseLib (64 bit Debug): BaseLib and
     WindowLib compile with MinGW, 32 and 64 bit, with no warnings (the 557 files their projects list);
     TestBaseLib passes in the 16 bit size host build (BASELIB_SIZE16); and TestBaseLib's text and regex tests
@@ -272,11 +272,13 @@ Every stage is built.  What wasn't, and why:
   Navigation.txt's Gaps has what is short in what was built.
 
 
-Follow-ups: planned 2026-11-21, not built
------------------------------------------
+Follow-ups: planned 2026-11-21; 1, 2, 3a, 3b and 3e built that day
+------------------------------------------------------------------
 
-The user asked for these three to be planned ("plan out the 3 optionals"), not built: nothing here has a go-ahead.
-Each says what there is, what would be done, how it would be checked, and what the user would have to decide.
+The user asked for these three to be planned ("plan out the 3 optionals"), then decided 3a, 3b and 3e, then asked
+for 1, 2, 3a, 3b and 3e to be built ("all of them", of that list).  3c, 3d, 3f and 3g have no go-ahead.
+Each says what there was, what was to be done, how it was to be checked, and what the user had to decide; "Built"
+at the end of this section says what was done and where it differs.
 
 1. Find Usages on the shared results tabs (S12's last part).  No change to what the user sees.
    What there is: CIDEUsages has its own tabs (mpTabs, a CTabbedContainer; maSearches; mpSearch; AddSearch,
@@ -370,6 +372,47 @@ Each says what there is, what would be done, how it would be checked, and what t
    file); and what was ruled out or put off (the plan's "What is left").
 
 Order suggested: 1 (it changes nothing seen, and is checked by what there is), 2, then 3a to 3g as wanted.
+
+Built (2026-11-21), in that order:
+  1. Find Usages on CIDEResultsTabs (HCP65-IDE f60b0e7).  As planned: CIDEUsagesSearch is a CIDEResultsSearch,
+     CIDEUsages a CIDEResultsTabsOwner.  The pin is the shared Results.PinTab.  One change to the shared class:
+     RemoveSearch tells the owner which search is chosen after it makes the one that is always kept, as Find
+     Usages keeps a typed pointer to it.  Checked by the usages, find, results and hierarchy checks, unchanged.
+  2. The hand (CommonLibraries 0ec091482, HCP65-IDE 8d50f9e).  NC_Hand (XC_hand2, IDC_HAND); ShowLinkAt keeps the
+     editor's shape and gives it the hand, ClearLink puts it back if it is still the hand.  printinfo says the
+     pointer's shape ("Pointer: hand"); quick-link-pointer checks it.  With the I-beam (10b5b10b3) before it.
+  3a. Call Hierarchy's callers through what a function overrides (HCP65-IDE a8951bb).  As decided.  One thing
+     found building it: a call that names its class (CSquare::Draw()) is not virtual, so it is left out of the
+     "via" rows (RemoveQualifiedCalls looks for "::" before the name on the call's line).  Check hierarchy-calls-via.
+  3b. Type Hierarchy's "also:" (HCP65-IDE b28890d).  NoteOtherBases, for the class asked about and each class over
+     it; in the row's detail, so as dim as the file's name beside it.  Method Hierarchy's rows are the class
+     view's and say it too.  The classes under the one asked about don't.  Check hierarchy-other-bases, with a
+     new input (Checks/Input/Bases), as Navigation's has no class with two base classes.
+  3e. Tool windows (HCP65-IDE dc7d8c8, CommonLibraries 23dde75ce).  CIDEToolWindows.  As decided, and:
+       - "Has the keys" is: in front, and the window's focus is in the pane (a floating one: it is the dock's
+         active pane).  A window in front without the keys is given them, not hidden.  A pane slid out from the
+         edge slides back and stays on its edge.
+       - View's items show a window, as before; they don't hide one.  Their keys are what the keymap has now.
+       - Hide All hides the docked tool windows only.  A floating one and one auto hidden to the edge are left:
+         neither takes the editor's room, and the dock keeps a restore place for a docked pane only, so a
+         floating one hidden would come back docked.  (The decision said "every tool pane".)
+       - What it hid is kept until it is put back, each with where it was docked (SIDEHiddenToolWindow keeps the
+         pane's SDockRestore).  So windows shown by their keys in between, and hidden again by the command, don't
+         replace the list or lose their places: the next press with none docked puts the whole layout back, the
+         groups as large, the tabs in their order, the same tabs in front.
+       - The last tool window is found as the content ticks (Poll: the dock's active pane, if it is a tool and
+         has the keys), and before anything that asks.  The dock's ActivePaneChanged isn't used: as a pane is
+         hidden, the tab that comes to the front after it is the active pane for a moment.
+       - Found building it, in WindowLib's docking: a pane shown again by itself after its whole group was hidden
+         follows its hidden neighbours back at most DOCK_RESTORE_DEPTH (4) to find the group's place.  One
+         further along the tabs went to its default place in a group with a new ID, and the next one shown made
+         a second group beside it.  CDockRestorer::DockDefault now gives that group the ID the pane remembers.
+         TestDockingHiddenGroupShownApart.
+       - The script: edit:printtoolwindows; its keyboard has 2, 7 and F12.  Checks tool-window-keys,
+         tool-window-real-keys (the keys pressed, in the editor and in the tool window), tool-windows-hide-all
+         and tool-windows-jump-to-last.
+     "No tool windows are docked" on the status line is only reached with every tool window hidden by other
+     means and nothing of Hide All's to put back; no check reaches it.
 
 
 How work is done here

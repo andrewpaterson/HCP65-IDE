@@ -46,8 +46,14 @@ while nothing is typed, and has an Actions tab (Control+Shift+A); every results 
 file or the clipboard) and Autoscroll from Source, and its rows' code is coloured.
 
 Hierarchies: the Hierarchy tool window (Alt+8), with tabs and a pin: Type Hierarchy (Control+H; class, supertypes
-or subtypes), Method Hierarchy (Control+Shift+H) and Call Hierarchy (Control+Alt+H; callers or callees, found as
-each row is opened).
+or subtypes; a class with more base classes than the one it is under names them, "also: CNamed"), Method Hierarchy
+(Control+Shift+H) and Call Hierarchy (Control+Alt+H; callers or callees, found as each row is opened; a function's
+callers have after them the callers of what it overrides, each marked "via CShape::Draw").
+
+Tool windows: a key for most (Alt+1 Solution Explorer, Alt+2 Bookmarks, Alt+3 Find Usages, Alt+4 Run, Alt+5 Debug,
+Alt+6 Build, Alt+7 Structure, Alt+8 Hierarchy, Alt+9 Find), which shows the window with the keys in it and, all but
+Alt+1, pressed there hides it; View has them with their keys; Hide All Tool Windows (Control+Shift+F12, and again
+to put them back as they were) and Jump to Last Tool Window (no key).  CIDEToolWindows.
 
 Between files: Recent Files (Control+E, kept in the workspace's .hcp65user), Recent Locations (Control+Shift+E, with
 the places edited alone), the Switcher (Control+Tab, held), Select Next and Previous Tab (Alt+Right, Alt+Left), Reopen
@@ -75,17 +81,19 @@ Between files
   - Splitting the editor and moving between the splits as commands: docking puts documents side by side, by hand.
 
 Symbols
-  - The pointer isn't a hand over a name with Control held (the name is underlined and its declaration shown), and
-    a macro's name has no declaration to show: the index has no macros.  (A middle click was ruled out.)
+  - A macro's name has no declaration to show with Control held: the index has no macros.  (A middle click was
+    ruled out.)
   - Go to Type Declaration from an expression with no name of its own (a call's result, pcA->GetB()): it goes from a
     declared name's type only.
-  - The Type Hierarchy's class view follows only a class's first base class upwards (Supertypes shows them all);
-    the Call Hierarchy has the calls of the function itself, not those made through a function it overrides, and
-    no scope to keep it to.
+  - Method Hierarchy's classes are the class view's, which goes up by a class's first base class: a function that
+    overrides one of another base class doesn't have that class among its rows (the class is named on the row,
+    "also:").  The Call Hierarchy has no scope to keep it to, and its "via" callers are those of the functions the
+    function overrides, not of what else overrides them (by decision).
   - Quick Documentation (Control+Q), and a tool tip for a name the pointer rests on: put off, "later if at all".
-  - Parameter Info lists only the functions of the name that the called one's class (or file) declares beside it,
-    not a base class's; Type Info gives a name's declared type as it is written, and an expression's only when it
-    is selected.
+  - Parameter Info lists the functions of the name that the called one's class (or file) declares beside it.  A
+    base class's of that name are hidden by them in C++, so they aren't ways the call could go: only one brought in
+    by a using-declaration (using CBase::Set;) is missed.  Type Info gives a name's declared type as it is written,
+    and an expression's only when it is selected.
   - The count of a declaration's usages shown above it.
   - Go to Test (ruled out, 2026-11-20).
 
@@ -102,9 +110,10 @@ Go to dialogs
   - No "include non-solution items", no All tab, no Shift Shift (ruled out when it was built).
 
 Tool windows
-  - A key for each (Alt+1 to Alt+9): Solution Explorer (Alt+1), Structure (Alt+7) and Hierarchy (Alt+8) have one;
-    the rest are on View without keys.
-  - Jump to Last Tool Window (F12, which is Go to Definition here) and Hide All Tool Windows (Control+Shift+F12).
+  - Duplicates, Indexing and Claude have no keys: they are on View.  Jump to Last Tool Window has none either
+    (IntelliJ's F12 is Go to Definition here); the keymap can give it one.
+  - Hide All Tool Windows leaves a floating tool window and one auto hidden to an edge, and what it hid is the
+    session's: after a restart the hidden ones are shown from View, by their keys or by Reset Window Layout.
   - TODO and Problems tool windows.
 
 

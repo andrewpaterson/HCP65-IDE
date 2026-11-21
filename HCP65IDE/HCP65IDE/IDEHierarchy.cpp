@@ -214,9 +214,9 @@ void CIDEHierarchy::AddCommands(Ptr<CCommandSet> pCommands)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Alt+8, as IntelliJ IDEA's: the Hierarchy tool window is shown and its
-// tree has the keys.  Pressed while it has them, it is hidden
-// (CIDEToolWindows).
+// Alt+8, as IntelliJ IDEA's older keymaps have it (Alt+8 is Services in
+// its newer ones): the Hierarchy tool window is shown and its tree has
+// the keys.  Pressed while it has them, it is hidden (CIDEToolWindows).
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEHierarchy::ShowHierarchyWindow(void)
