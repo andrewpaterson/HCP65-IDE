@@ -272,8 +272,8 @@ Every stage is built.  What wasn't, and why:
   Navigation.txt's Gaps has what is short in what was built.
 
 
-Follow-ups: planned 2026-11-21; all built that day but 3f, which its own rule kept out
---------------------------------------------------------------------------------------
+Follow-ups: planned 2026-11-21; all built that day
+--------------------------------------------------
 
 The user asked for these three to be planned ("plan out the 3 optionals"), then decided 3a, 3b and 3e, then asked
 for 1, 2, 3a, 3b and 3e to be built ("all of them", of that list), then for the rest ("Please continue with all
@@ -429,17 +429,18 @@ Built (2026-11-21), in that order:
      commands Go to Action ran, the last fifteen, are the settings' (<GoTo> with a <RecentAction Name=""/> each):
      they are the IDE's, not a workspace's.  With nothing typed the Actions tab lists them first.  A key or a
      name that is no longer there puts nothing first.  Checks goto-recent-kept and goto-recent-read.
-  3f. NOT built: measured, and its own rule keeps it out.  It was written as planned
-     (CIDEIntroduceVariable::FindCaretExpressionType: the checked parse, the innermost expression at the caret
-     that FindType gives a type, and its class's key through pointers and references; Type Info and Go to Type
-     Declaration falling back to it only where the symbol at the caret gives nothing) and it works: CCircle* on
-     the & of &cCircle, int on a + and on a call's bracket.  The checked parse took 47 ms for BaseLib's
-     CalculatorParser.cpp and 1.7 s for this IDE's IDEUsages.cpp, each press (nothing keeps the parse).  The
-     plan's rule is about 100 ms from the key, "and if it is too slow Type Info stays as it is"; the files worked
-     on here are the large kind, so it stays.  For comparison, Go to Type Declaration from a variable takes 0.3 s
-     in that file (an unchecked parse).  The change was taken out again and isn't kept.  What would make it fit:
-     the parse on a thread with the popup filled when it is done, or a parse kept between presses (the first
-     still waits), or the user accepting the wait where today's answer is "No type is known".  Not decided.
+  3f. Type Info and Go to Type Declaration for the expression at the caret (HCP65-IDE 21b5a91).  Built as planned, on the user's
+     word.  CIDEIntroduceVariable::FindCaretExpressionType: the checked parse, the innermost expression at the
+     caret that FindType gives a type (a function's name has none: the call it is in has), and its class's key
+     through pointers, references and arrays.  Both commands use it only where the symbol at the caret gives
+     nothing, so no answer there was before is slower.  Go to Type Declaration is enabled anywhere in an editor
+     (it was on a symbol only), and says when an expression's type has no declaration (int).
+     Measured first, as the plan asked: the checked parse took 47 ms for BaseLib's CalculatorParser.cpp and 1.7 s
+     for this IDE's IDEUsages.cpp, each press (nothing keeps the parse); Go to Type Declaration from a variable
+     takes 0.3 s in that file (an unchecked parse).  That is over the plan's rule (about 100 ms from the key,
+     else Type Info stays as it is), so it was left out and put to the user, who chose "2. accept the wait"
+     (2026-11-21) over leaving it out or parsing on a thread.  The thread, or a parse kept between presses, is
+     what would take the wait away.  Check type-of-expression.
   3g. A macro's #define (HCP65-IDE 7567e03).  CIDEConvertMacro::FindDefine: from the files' text, no parse; a
      place the name is written is its #define's if "# define" is all before it on its line; the last name asked is
      kept while the index is as it was.  Measured as the plan asked: 2 to 3 ms for a name that isn't a macro's

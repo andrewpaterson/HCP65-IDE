@@ -85,9 +85,9 @@ Symbols
   - A macro is no symbol of the index's: its #define is shown with Control held and gone to (the first #define
     of its name), but it has no usages, hierarchy or rename through the navigation.  (A middle click was ruled
     out.)
-  - Go to Type Declaration from an expression with no name of its own (a call's result, pcA->GetB()): it goes from a
-    declared name's type only.  Written and measured 2026-11-21, and left out: the checked parse it needs took
-    1.7 s in a large file (NavigationPlan.txt's follow-up 3f).
+  - Type Info and Go to Type Declaration from an expression with no name at the caret (a call's bracket, an
+    operator) parse and check the file each press: 1.7 s in a file as large as IDEUsages.cpp, 47 ms in a small
+    one.  The user accepted the wait (NavigationPlan.txt's follow-up 3f); a parse on a thread would take it away.
   - Method Hierarchy's classes are the class view's, which goes up by a class's first base class: a function that
     overrides one of another base class doesn't have that class among its rows (the class is named on the row,
     "also:").  The Call Hierarchy has no scope to keep it to, and its "via" callers are those of the functions the
@@ -95,8 +95,7 @@ Symbols
   - Quick Documentation (Control+Q), and a tool tip for a name the pointer rests on: put off, "later if at all".
   - Parameter Info lists the functions of the name that the called one's class (or file) declares beside it.  A
     base class's of that name are hidden by them in C++, so they aren't ways the call could go: only one brought in
-    by a using-declaration (using CBase::Set;) is missed.  Type Info gives a name's declared type as it is written,
-    and an expression's only when it is selected (the same follow-up 3f).
+    by a using-declaration (using CBase::Set;) is missed.  Type Info gives a name's declared type as it is written.
   - The count of a declaration's usages shown above it.
   - Go to Test (ruled out, 2026-11-20).
 
