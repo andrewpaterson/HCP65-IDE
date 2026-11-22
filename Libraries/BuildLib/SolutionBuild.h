@@ -40,7 +40,7 @@ public:
 	void			Init(void);
 	void			Kill(void);
 
-	bool			Start(CVcxSolution* pcSolution, CBuildConfiguration* pcConfiguration, const char* szRoot, const char* szLibc65Directory, CArrayChars* paszLines, const char* szStartupProject = NULL);
+	bool			Start(CVcxSolution* pcSolution, CBuildConfiguration* pcConfiguration, const char* szRoot, const char* szLibc65Directory, CArrayChars* paszLines, const char* szStartupProject = NULL, const char* szLayoutsFile = NULL);
 	bool			Poll(CArrayChars* paszLines);
 	void			Cancel(void);
 

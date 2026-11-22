@@ -100,6 +100,7 @@ bool CHCP65Build::Start(CArrayChars* paszLines)
 	cFileUtil.TouchDir(szListings.Text());
 	mcBuilder.SetListingDirectory(szListings.Text());
 	szListings.Kill();
+	mcBuilder.SetLayoutsFile(mszLayoutsFile.Text());
 	if (!mszLibc65.Empty())
 	{
 		mcBuilder.AddIncludeDirectory(mszLibc65.Text(), false, true);

@@ -215,6 +215,13 @@ void TestBuildCommandLineRun(void)
 	AssertTrue(cCommandLine.HasLine("Tiny: Debug|Win32"));
 	AssertString("Debug|W65C816 build succeeded.", cCommandLine.GetLastLine());
 	AssertTrue(cFileUtil.Exists(TEST_COMMAND_LINE_OUTPUT _FS_ "Tiny" _FS_ "Listing" _FS_ "W65C816" _FS_ "Debug" _FS_ "Maths.lst"));
+	AssertString("", cCommandLine.GetLayouts());
+	cCommandLine.Kill();
+
+	const char* aszNoLayouts[] = { "hcp65build", TEST_COMMAND_LINE_OUTPUT _FS_ "Tiny" _FS_ "Tiny.vcxproj", "-layouts" };
+	cCommandLine.Init();
+	AssertFalse(cCommandLine.Parse(3, aszNoLayouts));
+	AssertString("Option -layouts needs a value.", cCommandLine.GetLastLine());
 	cCommandLine.Kill();
 
 	//No -libc65 and a tool directory without Libc65 above it: it is found above the file.
@@ -785,6 +792,69 @@ void TestBuildCommandLinePlainEntry(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// -layouts <file>: each class the build lays out, a line each and in order,
+// as the build's target lays it out, from a plain command line and from a
+// solution.
+//
+//////////////////////////////////////////////////////////////////////////
+void TestBuildCommandLineLayouts(void)
+{
+	static const char*		aszTargets[] = { "W65C816", "65C64" };
+	static const char*		aszExpected[] =
+	{
+		"SInner Shapes.cpp(1) size 6 align 2 alignas 0 c@0 l@2\nSOuter Shapes.cpp(2) size 16 align 2 alignas 0 base SInner@0 d@6 s@14\n",
+		"SInner Shapes.cpp(1) size 8 align 4 alignas 0 c@0 l@4\nSOuter Shapes.cpp(2) size 24 align 8 alignas 0 base SInner@0 d@8 s@16\n",
+	};
+	CTestBuildCommandLine	cCommandLine;
+	CFileUtil				cFileUtil;
+	CTextFile				cFile;
+	CChars					szSource;
+	size					ui;
+
+	cFileUtil.TouchDir(TEST_COMMAND_LINE_OUTPUT _FS_ "Shapes");
+	cFile.Init("struct SInner { char c; long l; };\nstruct SOuter : SInner { double d; short s; };\nint Size(void)\n{\n\tSOuter s;\n\treturn sizeof(s);\n}\n");
+	AssertTrue(cFile.Write(TEST_COMMAND_LINE_OUTPUT _FS_ "Shapes" _FS_ "Shapes.cpp"));
+	cFile.Kill();
+	szSource.Init(TEST_COMMAND_LINE_OUTPUT _FS_ "Shapes" _FS_ "Shapes.cpp");
+	cFileUtil.FullPath(&szSource);
+
+	for (ui = 0; ui < 2; ui++)
+	{
+		const char* aszBuild[] = { "hcp65build", "-quiet", "-libc65", TEST_COMMAND_LINE_LIBC65, "-target", aszTargets[ui], "-program", "Shapes", szSource.Text(),
+								   "-o", TEST_COMMAND_LINE_OUTPUT _FS_ "Shapes" _FS_ "Out", "-listings", TEST_COMMAND_LINE_OUTPUT _FS_ "Shapes" _FS_ "Listing", "-layouts", TEST_COMMAND_LINE_OUTPUT _FS_ "Shapes" _FS_ "Layouts.txt" };
+		cCommandLine.Init();
+		AssertTrue(cCommandLine.Parse(15, aszBuild));
+		AssertInt(BUILD_EXIT_SUCCEEDED, cCommandLine.Run(NULL));
+		cCommandLine.Kill();
+		cFile.Init();
+		AssertTrue(cFile.Read(TEST_COMMAND_LINE_OUTPUT _FS_ "Shapes" _FS_ "Layouts.txt"));
+		AssertString(aszExpected[ui], cFile.Text());
+		cFile.Kill();
+	}
+	szSource.Kill();
+
+	//A solution's build writes it too: Tiny with a class added.
+	AssertTrue(cFileUtil.CopyDir("Input" _FS_ "Tiny", TEST_COMMAND_LINE_OUTPUT _FS_ "Shapes" _FS_ "Tiny"));
+	cFile.Init();
+	AssertTrue(cFile.Read(TEST_COMMAND_LINE_OUTPUT _FS_ "Shapes" _FS_ "Tiny" _FS_ "Maths.cpp"));
+	cFile.mcText.Append("struct SAdded { char c; long l; };\nint Added(void)\n{\n\tSAdded s;\n\treturn sizeof(s);\n}\n");
+	AssertTrue(cFile.Write(TEST_COMMAND_LINE_OUTPUT _FS_ "Shapes" _FS_ "Tiny" _FS_ "Maths.cpp"));
+	cFile.Kill();
+	const char* aszSolution[] = { "hcp65build", TEST_COMMAND_LINE_OUTPUT _FS_ "Shapes" _FS_ "Tiny" _FS_ "Tiny.vcxproj", "-libc65", TEST_COMMAND_LINE_LIBC65, "-layouts", TEST_COMMAND_LINE_OUTPUT _FS_ "Shapes" _FS_ "Tiny.txt" };
+	cCommandLine.Init();
+	AssertTrue(cCommandLine.Parse(6, aszSolution));
+	AssertString(TEST_COMMAND_LINE_OUTPUT _FS_ "Shapes" _FS_ "Tiny.txt", cCommandLine.GetLayouts());
+	AssertInt(BUILD_EXIT_SUCCEEDED, cCommandLine.Run(NULL));
+	cCommandLine.Kill();
+	cFile.Init();
+	AssertTrue(cFile.Read(TEST_COMMAND_LINE_OUTPUT _FS_ "Shapes" _FS_ "Tiny.txt"));
+	AssertString("SAdded Maths.cpp(8) size 6 align 2 alignas 0 c@0 l@2\n", cFile.Text());
+	cFile.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 //
 //////////////////////////////////////////////////////////////////////////
 void TestBuildCommandLine(void)
@@ -801,6 +871,7 @@ void TestBuildCommandLine(void)
 	TestBuildCommandLinePlainParse();
 	TestBuildCommandLinePlainSameAsProject();
 	TestBuildCommandLinePlainEntry();
+	TestBuildCommandLineLayouts();
 
 	TestStatistics();
 }

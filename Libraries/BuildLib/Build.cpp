@@ -39,6 +39,7 @@ void CBuild::Init(CVcxSolution* pcSolution, CBuildConfiguration* pcConfiguration
 	mszRoot.Init(szRoot ? szRoot : pcSolution->GetDirectory());
 	mszOutputDirectory.Init();
 	mszListingDirectory.Init();
+	mszLayoutsFile.Init();
 	mszStartupProject.Init();
 	meState = BS_NotStarted;
 	mszProgress.Init();
@@ -55,6 +56,7 @@ void CBuild::Kill(void)
 {
 	mszProgress.Kill();
 	mszStartupProject.Kill();
+	mszLayoutsFile.Kill();
 	mszListingDirectory.Kill();
 	mszOutputDirectory.Kill();
 	mszRoot.Kill();
@@ -238,11 +240,13 @@ float CBuild::GetFraction(void) const
 //////////////////////////////////////////////////////////////////////////
 //
 // Where the build writes its program (and line table) and its listings,
-// in place of Root\Output\... and Root\Listing\...; empty for those.
+// in place of Root\Output\... and Root\Listing\...; empty for those.  And
+// the file an HCP65 build writes its classes' layouts to, if any.
 //
 //////////////////////////////////////////////////////////////////////////
 void CBuild::SetOutputDirectory(const char* szDirectory) { mszOutputDirectory.Set(szDirectory ? szDirectory : ""); }
 void CBuild::SetListingDirectory(const char* szDirectory) { mszListingDirectory.Set(szDirectory ? szDirectory : ""); }
+void CBuild::SetLayoutsFile(const char* szFile) { mszLayoutsFile.Set(szFile ? szFile : ""); }
 
 
 //////////////////////////////////////////////////////////////////////////

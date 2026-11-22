@@ -67,6 +67,7 @@ protected:
 	CChars					mszRoot;
 	CChars					mszOutputDirectory;		//In place of Root\Output\<toolchain>\<configuration>, if not empty.
 	CChars					mszListingDirectory;	//In place of Root\Listing\<toolchain>\<configuration>, if not empty.
+	CChars					mszLayoutsFile;			//Where an HCP65 build writes its classes' layouts (CCPP65Builder::SetLayoutsFile), if not empty.
 	CChars					mszStartupProject;		//The solution's startup project's name, empty if it hasn't been said.
 	EBuildState				meState;
 	CChars					mszProgress;
@@ -87,6 +88,7 @@ public:
 			float		GetFraction(void) const;
 			void		SetOutputDirectory(const char* szDirectory);
 			void		SetListingDirectory(const char* szDirectory);
+			void		SetLayoutsFile(const char* szFile);
 			void		GetOutputDirectory(CChars* pszDest);
 			void		GetListingDirectory(CChars* pszDest);
 			bool		GetProgramPath(CChars* pszDest);

@@ -40,7 +40,7 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 //else the .vcxproj.
 //
 //	hcp65build <file> [-config "Release|W65C816"] [-startup <project>] [-card] [-libc65 <directory>] [-quiet]
-//	           [-show-plain <file>]
+//	           [-show-plain <file>] [-layouts <file>]
 //	hcp65build -program <name> [-dir <dir>] [-D <define>]... <source>... [-lib ...]... [options]
 //
 //The second is a plain command line (CBuildPlain): what to compile and link given as options, with no solution.  It is
@@ -61,6 +61,7 @@ protected:
 	CChars				mszFile;
 	CChars				mszConfiguration;
 	CChars				mszLibc65;
+	CChars				mszLayouts;
 	CChars				mszShowPlain;
 	CChars				mszStartupProject;
 	bool				mbCard;
@@ -82,6 +83,7 @@ public:
 			char*	GetConfiguration(void);
 			char*	GetStartupProject(void);
 			char*	GetLibc65(void);
+			char*	GetLayouts(void);
 			bool	IsCard(void) const;
 			bool	IsQuiet(void) const;
 			bool	IsHelp(void) const;

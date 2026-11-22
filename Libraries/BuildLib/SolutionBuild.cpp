@@ -66,7 +66,7 @@ void CSolutionBuild::End(void)
 // paszLines.  False if it couldn't start or a build is running.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CSolutionBuild::Start(CVcxSolution* pcSolution, CBuildConfiguration* pcConfiguration, const char* szRoot, const char* szLibc65Directory, CArrayChars* paszLines, const char* szStartupProject)
+bool CSolutionBuild::Start(CVcxSolution* pcSolution, CBuildConfiguration* pcConfiguration, const char* szRoot, const char* szLibc65Directory, CArrayChars* paszLines, const char* szStartupProject, const char* szLayoutsFile)
 {
 	if (IsRunning())
 	{
@@ -91,6 +91,7 @@ bool CSolutionBuild::Start(CVcxSolution* pcSolution, CBuildConfiguration* pcConf
 		mpcBuild = &mcGCC;
 	}
 	mpcBuild->SetStartupProject(szStartupProject);
+	mpcBuild->SetLayoutsFile(szLayoutsFile);
 	return mpcBuild->Start(paszLines);
 }
 

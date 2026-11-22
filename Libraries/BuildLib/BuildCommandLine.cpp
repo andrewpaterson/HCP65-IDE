@@ -46,6 +46,7 @@ void CBuildCommandLine::Init(void)
 	mszFile.Init();
 	mszConfiguration.Init();
 	mszLibc65.Init();
+	mszLayouts.Init();
 	mszShowPlain.Init();
 	mszStartupProject.Init();
 	mbCard = false;
@@ -69,6 +70,7 @@ void CBuildCommandLine::Kill(void)
 	mcPlain.Kill();
 	mszStartupProject.Kill();
 	mszShowPlain.Kill();
+	mszLayouts.Kill();
 	mszLibc65.Kill();
 	mszConfiguration.Kill();
 	mszFile.Kill();
@@ -225,7 +227,7 @@ bool CBuildCommandLine::Parse(int iArgc, const char* const* aszArgv)
 				(IsOption(szArgument, "config") ? &mszConfiguration : (IsOption(szArgument, "startup") ? &mszStartupProject : &mszShowPlain))->Set(aszArguments.GetText(i));
 			}
 		}
-		else if (IsOption(szArgument, "libc65"))
+		else if (IsOption(szArgument, "libc65") || IsOption(szArgument, "layouts"))
 		{
 			if (i + 1 >= aszArguments.NumElements())
 			{
@@ -237,7 +239,7 @@ bool CBuildCommandLine::Parse(int iArgc, const char* const* aszArgv)
 			else
 			{
 				i++;
-				mszLibc65.Set(aszArguments.GetText(i));
+				(IsOption(szArgument, "libc65") ? &mszLibc65 : &mszLayouts)->Set(aszArguments.GetText(i));
 			}
 		}
 		else if (BuildLooksLikeOption(szArgument))
@@ -378,7 +380,8 @@ bool CBuildCommandLine::ResolveLibc65(const char* szToolDirectory, const char* s
 // BUILD_EXIT_USAGE.  szToolDirectory is where Libc65 is looked for above,
 // when -libc65 didn't say (NULL for the current directory), then above the
 // file.  With -show-plain the solution's build is written as a plain
-// command line instead.
+// command line instead.  With -layouts an HCP65 build writes its classes'
+// layouts to that file (CBuild::SetLayoutsFile).
 //
 //////////////////////////////////////////////////////////////////////////
 int CBuildCommandLine::Run(const char* szToolDirectory)
@@ -394,6 +397,10 @@ int CBuildCommandLine::Run(const char* szToolDirectory)
 	{
 		WriteUsage();
 		return BUILD_EXIT_SUCCEEDED;
+	}
+	if (!mszLayouts.Empty())
+	{
+		cFileUtil.FullPath(&mszLayouts);
 	}
 	if (mbPlain)
 	{
@@ -526,6 +533,7 @@ int CBuildCommandLine::RunPlain(const char* szToolDirectory)
 		cFileUtil.FullPath(&szPath);
 		cBuild.SetListingDirectory(szPath.Text());
 	}
+	cBuild.SetLayoutsFile(mszLayouts.Text());
 	szPath.Kill();
 	mcPlain.MakeDescription(cBuild.GetDescription());
 
@@ -813,7 +821,7 @@ bool CBuildCommandLine::BuildSolution(size uiSolution, bool bHeading)
 	}
 
 	aszLines.Init();
-	bRunning = mcBuild.Start(&pcSolution->mcSolution, pcConfiguration, NULL, mszLibc65.Text(), &aszLines, pcSolution->GetStartupProjectName());
+	bRunning = mcBuild.Start(&pcSolution->mcSolution, pcConfiguration, NULL, mszLibc65.Text(), &aszLines, pcSolution->GetStartupProjectName(), mszLayouts.Text());
 	WriteLines(&aszLines);
 	while (bRunning)
 	{
@@ -1040,6 +1048,9 @@ void CBuildCommandLine::WriteUsage(void)
 	WriteLine("");
 	WriteLine("  -libc65 <directory>        Libc65 (default: HCP65\\Libraries\\Libc65 above the tool or the file).");
 	WriteLine("  -quiet                     Leave out the progress lines (each unit compiled, project, segment).");
+	WriteLine("  -layouts <file>            Write each class as it is laid out to the file: its size, its alignment and");
+	WriteLine("                             its bases' and fields' offsets, a line a class, in order (to compare two");
+	WriteLine("                             builds').  Several solutions built at once: the last one's.");
 	WriteLine("  @<file>                    Arguments from a file, one a line (# starts a comment line).");
 	WriteLine("  -help                      This.");
 	WriteLine("");
@@ -1122,6 +1133,7 @@ char* CBuildCommandLine::GetFile(void) { return mszFile.Text(); }
 char* CBuildCommandLine::GetConfiguration(void) { return mszConfiguration.Text(); }
 char* CBuildCommandLine::GetStartupProject(void) { return mszStartupProject.Text(); }
 char* CBuildCommandLine::GetLibc65(void) { return mszLibc65.Text(); }
+char* CBuildCommandLine::GetLayouts(void) { return mszLayouts.Text(); }
 bool CBuildCommandLine::IsCard(void) const { return mbCard; }
 bool CBuildCommandLine::IsQuiet(void) const { return mbQuiet; }
 bool CBuildCommandLine::IsHelp(void) const { return mbHelp; }
