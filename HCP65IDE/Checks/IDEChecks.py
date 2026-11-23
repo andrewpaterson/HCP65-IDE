@@ -5079,18 +5079,18 @@ CHECKS = [
 		         'command:View.HideAllToolWindows,edit:printtoolwindows,command:View.HideAllToolWindows,command:View.Find,edit:printtoolwindows,command:View.Find,'
 		         'command:View.Run,command:View.Bookmarks,edit:printtoolwindows,command:View.HideAllToolWindows,edit:printtoolwindows,command:View.HideAllToolWindows,edit:printtoolwindows'},
 		[r'^Tool windows: Solution Explorer 1, Structure 2 \(front\), Find Usages 1, Find 2, Duplicates 3, Bookmarks 4, Hierarchy 5, Build 6 \(front, keys\), Indexing 7, Problems 8, Run 9, Debug 10, Claude 11$',
-		 r'^Tool window areas: Structure 0,67 320x709, Build 324,596 956x180$', r'^Hidden by Hide All: none$',
+		 r'^Tool window areas: Structure 5,72 320x699, Build 330,591 945x180$', r'^Hidden by Hide All: none$',
 		 r'^Tool windows: Solution Explorer \(hidden\), Structure \(hidden\), Find Usages \(hidden\), Find \(hidden\), Duplicates \(hidden\), Bookmarks \(hidden\), Hierarchy \(hidden\), Build \(hidden\), Indexing \(hidden\), Problems \(hidden\), Run \(hidden\), Debug \(hidden\), Claude \(hidden\)$',
 		 r'^Tool window areas: none$', r'^Last tool window: Build$', r'^Hidden by Hide All: Structure, Solution Explorer, Claude, Debug, Run, Problems, Indexing, Build, Hierarchy, Bookmarks, Duplicates, Find, Find Usages$',
 		 r'Main\.cpp \(focus\) line 6: ',
 		 r'^Tool windows: Solution Explorer 1, Structure 2 \(front\), Find Usages 1, Find 2, Duplicates 3, Bookmarks 4, Hierarchy 5, Build 6 \(front\), Indexing 7, Problems 8, Run 9, Debug 10, Claude 11$',
-		 r'^Tool window areas: Structure 0,67 320x709, Build 324,596 956x180$', r'^Hidden by Hide All: none$',
-		 r'^Tool windows: Solution Explorer \(hidden\), .*Find \(front, keys\), Duplicates \(hidden\), ', r'^Tool window areas: Find 0,596 1280x180$',
+		 r'^Tool window areas: Structure 5,72 320x699, Build 330,591 945x180$', r'^Hidden by Hide All: none$',
+		 r'^Tool windows: Solution Explorer \(hidden\), .*Find \(front, keys\), Duplicates \(hidden\), ', r'^Tool window areas: Find 5,591 1270x180$',
 		 r'^Tool windows: .*Find \(hidden\), Duplicates \(hidden\), Bookmarks 2 \(front, keys\), Hierarchy \(hidden\), Build \(hidden\), Indexing \(hidden\), Problems \(hidden\), Run 1, ',
 		 r'^Hidden by Hide All: Structure, Solution Explorer, Claude, Debug, Run, Problems, Indexing, Build, Hierarchy, Bookmarks, Duplicates, Find, Find Usages$',
 		 r'^Tool window areas: none$', r'^Hidden by Hide All: Structure, Solution Explorer, Claude, Debug, Run, Problems, Indexing, Build, Hierarchy, Bookmarks, Duplicates, Find, Find Usages$',
 		 r'^Tool windows: Solution Explorer 1, Structure 2 \(front\), Find Usages 1, Find 2, Duplicates 3, Bookmarks 4, Hierarchy 5, Build 6 \(front\), Indexing 7, Problems 8, Run 9, Debug 10, Claude 11$',
-		 r'^Tool window areas: Structure 0,67 320x709, Build 324,596 956x180$', r'^Last tool window: Bookmarks$', r'^Hidden by Hide All: none$'], [r'ERROR']),
+		 r'^Tool window areas: Structure 5,72 320x699, Build 330,591 945x180$', r'^Last tool window: Bookmarks$', r'^Hidden by Hide All: none$'], [r'ERROR']),
 	('tool-windows-jump-to-last', {
 		#Jump to Last Tool Window does nothing until a tool window has had the keys.  Then it shows the last that had
 		#them and gives them back: one hidden by its own key, and one hidden with the rest by Hide All Tool Windows,
@@ -5101,7 +5101,7 @@ CHECKS = [
 		[r'^Command \[View\.JumpToLastToolWindow\] not found, not enabled or did nothing\.$', r'^Last tool window: none$',
 		 r'^Tool windows: .*Bookmarks 4, Hierarchy 5, Build \(hidden\), Indexing 6 \(front\), Problems 7, ', r'^Last tool window: Build$', r'Main\.cpp \(focus\) line 6: ',
 		 r'^Tool windows: .*Bookmarks 4, Hierarchy 5, Build 6 \(front, keys\), ', r'^Tool windows: .*Build \(hidden\), ', r'^Last tool window: Build$',
-		 r'^Tool windows: .*Hierarchy \(hidden\), Build \(front, keys\), Indexing \(hidden\), Problems \(hidden\), ', r'^Tool window areas: Build 0,596 1280x180$'], [r'ERROR']),
+		 r'^Tool windows: .*Hierarchy \(hidden\), Build \(front, keys\), Indexing \(hidden\), Problems \(hidden\), ', r'^Tool window areas: Build 5,591 1270x180$'], [r'ERROR']),
 	('macro-define-link', dict(MakeMacrosCopy(), **{
 		#A macro's name is no symbol of the index's, and its #define is its declaration: with Control held over it the
 		#name is a link, the pointer a hand, and the #define's first line is shown with where it is; Quick Definition
