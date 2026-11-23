@@ -35,14 +35,21 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define IDE_INDEX_THREADS	8
 
 
-//The Windows SDK and MSVC library headers aren't on Linux; the MinGW ones stand in for them: these in the folder of the
-//newest MinGW GCC installed, then its C library's.
+//The Windows SDK and MSVC library headers aren't on Linux; the MinGW ones stand in for them: the C++ library's in the
+//folder of the newest MinGW GCC installed, then its C library's, then GCC's own.  GCC's own come last, unlike GCC's
+//order: they expect __GNUC__, which the code model (being MSVC) doesn't define, and found first their stdarg.h defines
+//va_start again differently to the _mingw_stdarg.h it includes.  Last, only those the C library hasn't are found there
+//(stdbool.h, the intrinsics), as MSVC's own are.
 #define IDE_MINGW_GCC_DIRECTORY		"/usr/lib/gcc/x86_64-w64-mingw32"
 #define IDE_MINGW_INCLUDE_DIRECTORY	"/usr/share/mingw-w64/include"
-const char* gaszMinGWGCCDirectories[] =
+const char* gaszMinGWGCCLibraryDirectories[] =
 {
 	"include/c++",
 	"include/c++/x86_64-w64-mingw32",
+	NULL
+};
+const char* gaszMinGWGCCOwnDirectories[] =
+{
 	"include",
 	NULL
 };
@@ -527,6 +534,40 @@ static bool FindVisualStudioInclude(CChars* pszDest)
 #endif
 
 
+#ifdef LINUX_GNU
+//////////////////////////////////////////////////////////////////////////
+//
+// The folders called paszDirectories (to NULL) in the MinGW GCC folder
+// szGCC, as system directories; those that aren't there are logged.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDECodeModel::AddMinGWSystemDirectories(const char* szGCC, const char** paszDirectories)
+{
+	CFileUtil	cFileUtil;
+	CChars		szName;
+	size		i;
+
+	szName.Init();
+	for (i = 0; paszDirectories[i] != NULL; i++)
+	{
+		szName.Set(szGCC);
+		szName.Append('/');
+		szName.Append(paszDirectories[i]);
+		if (cFileUtil.IsDirectory(szName.Text()))
+		{
+			AddSystemDirectory(szName.Text());
+		}
+		else
+		{
+			mbSystemDirectoriesMissing = true;
+			gcLogger.Info2(__METHOD__, " System headers [", szName.Text(), "] aren't there.", NULL);
+		}
+	}
+	szName.Kill();
+}
+#endif
+
+
 //////////////////////////////////////////////////////////////////////////
 //
 // The compiler's own headers on this machine, those that exist; those that
@@ -572,24 +613,13 @@ void CIDECodeModel::AddDefaultSystemDirectories(void)
 			szNewest.Set(szName);
 		}
 	}
-	for (i = 0; !szNewest.Empty() && (gaszMinGWGCCDirectories[i] != NULL); i++)
+	if (!szNewest.Empty())
 	{
-		szName.Set(szPath);
-		szName.Append('/');
-		szName.Append(szNewest);
-		szName.Append('/');
-		szName.Append(gaszMinGWGCCDirectories[i]);
-		if (cFileUtil.IsDirectory(szName.Text()))
-		{
-			AddSystemDirectory(szName.Text());
-		}
-		else
-		{
-			mbSystemDirectoriesMissing = true;
-			gcLogger.Info2(__METHOD__, " System headers [", szName.Text(), "] aren't there.", NULL);
-		}
+		szPath.Append('/');
+		szPath.Append(szNewest);
+		AddMinGWSystemDirectories(szPath.Text(), gaszMinGWGCCLibraryDirectories);
 	}
-	if (szNewest.Empty())
+	else
 	{
 		mbSystemDirectoriesMissing = true;
 		gcLogger.Info2(__METHOD__, " No MinGW GCC is in [", szPath.Text(), "].", NULL);
@@ -604,6 +634,10 @@ void CIDECodeModel::AddDefaultSystemDirectories(void)
 	{
 		mbSystemDirectoriesMissing = true;
 		gcLogger.Info2(__METHOD__, " System headers [", szName.Text(), "] aren't there.", NULL);
+	}
+	if (!szNewest.Empty())
+	{
+		AddMinGWSystemDirectories(szPath.Text(), gaszMinGWGCCOwnDirectories);
 	}
 	aszFound.Kill();
 	szNewest.Kill();

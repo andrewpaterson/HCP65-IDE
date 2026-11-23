@@ -296,6 +296,9 @@ public:
 	char*	GetConfiguration(void);
 	void	AddSystemDirectory(const char* szDirectory);
 	void	AddDefaultSystemDirectories(void);
+#ifdef LINUX_GNU
+	void	AddMinGWSystemDirectories(const char* szGCC, const char** paszDirectories);
+#endif
 	CArrayChars*	GetSystemDirectories(void);
 	bool	IsMissingSystemDirectories(void) const;
 

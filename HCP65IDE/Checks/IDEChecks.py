@@ -3741,7 +3741,7 @@ CHECKS = [
 	('system-directories-newest', {
 		#The newest MinGW GCC by its number, not its name, and not a folder that isn't a version.
 		'SYSTEM_ROOT': MakeSystemRoot(['9-win32', '13-win32', 'notes']), 'DEBUG': 'printsystem'},
-		[r'^System directories: \S*/13-win32/include/c\+\+, \S*/13-win32/include/c\+\+/x86_64-w64-mingw32, \S*/13-win32/include, \S*/usr/share/mingw-w64/include,$'], [r'/9-win32', r'/notes']),
+		[r'^System directories: \S*/13-win32/include/c\+\+, \S*/13-win32/include/c\+\+/x86_64-w64-mingw32, \S*/usr/share/mingw-w64/include, \S*/13-win32/include,$'], [r'/9-win32', r'/notes']),
 	('system-directories-threads', {
 		#Of one version win32 threads, as the MSVC headers these stand in for have, but a newer version over them.
 		'SYSTEM_ROOT': MakeSystemRoot(['13-posix', '13-win32']), 'DEBUG': 'printsystem'},
