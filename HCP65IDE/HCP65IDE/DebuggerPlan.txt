@@ -77,6 +77,49 @@ M. Measure first
   M2. The debug file's size for the kernal and ModPlay.
   M3. Stop to Locals filled, over the shared memory channel: under 50 ms.
 
+M's results (2026-11-23)
+  How: a private copy (git archive of the three repos, HEAD), its hcp65build and TestHCP65Lib built with three
+  switches read from the environment: HCP65_M1_NOOPT (no IR optimiser, no inliner, no interprocedural passes) and
+  HCP65_M1_FRAMES (no DropFrame, AlignFrame or forwarders).  The two together are the nearest thing to A2 that
+  exists without building it; A2 would also stop temporaries sharing named locals' slots, which changes frame sizes
+  more than code.  Release|W65C816, the code's size the sum of the link's segments.
+
+  M1, size:
+                      optimised          no optimiser       + frames kept         fits?
+    kernal OS.SYS     186,537 bytes      220,466 (+18%)     218,431 (+17%)        no: runs to $0457C7, past the
+                      ends $03DBDB                                                image's region end $040000
+    boot loader ROM    96,001                                                     no: bss past its limit $060000
+    modplay.exe       768,615            822,565 (+7%)      815,328 (+6%)         yes
+    init                1,571              1,961                1,961             yes
+    shell              30,735             19,149 (-38%)       18,783              yes (the inliner makes it bigger)
+  The optimised kernal has only about 9 KB left before $040000.  Which part of the 18% is the kernal's own code and
+  which BaseLib's wasn't found: listings hold every function a unit compiled, not what was linked, so they can't say.
+
+  M1, speed (TestHCP65Lib's Boot test, kernal optimised, modplay.exe built each way; user mode cycles sampled every
+  2,000 cycles; the difference between 4 seconds of audio and 1 second, divided by 3, takes start-up out):
+    modplay.exe optimised      8.9 M cycles per second of audio   (36% of the 25 MHz board)
+    modplay.exe unoptimised   34.6 M cycles per second of audio   (138%: it can't keep the sound board fed)
+    start-up before the first sound: about 23.5 M user cycles optimised, about 66 M unoptimised.
+  Both played exactly what the host renders (the test compares every frame), so the unoptimised code is right.
+  Found on the way, not this plan's: at TEST_HCP65_CLOCK=25000000 the Boot test never finishes even optimised
+  (modplay keeps playing past its seconds, the kernal at $0107D7, state 6); with the test's own 4 GHz clock it
+  passes (1,647 passed).
+
+  M2, the debug file: kernal 936 classes with 2,493 bases and fields, its .lines already 448 KB; modplay 1,943
+  classes, 5,422 bases and fields, .lines 977 KB.  Frames, variables and types estimated at about the size of the
+  line table again: about 1 MB for the kernal and 2 MB for modplay, on the host only (never on the card).
+
+  M3, stop to Locals: read from the code, not timed.  The emulator answers every waiting message about once a
+  millisecond while stopped (HCP65EmulatorRunner::RunDue, HCP65_EMULATOR_IDLE_MS 1), but the IDE only looks every
+  20 ms (IDE_DEBUG_POLL).  A walk that waits a tick for each frame's bytes would take 20 ms a frame.  So: the
+  stack is read in one request (S to the stack's top, under DEBUG_MAX_MEMORY), and while replies are awaited the
+  IDE polls the client in a short loop (or asks for a tick in 1 ms); then a stop fills Locals in about two round
+  trips after it is seen.
+
+  So decision 1 is open again (the user's): the kernal and the boot loader don't fit unoptimised, and modplay
+  unoptimised can't play in time at 25 MHz.
+
+
 A. The compiler writes debug information (CppCompilerLib, Assembler65Lib; W65C816 first, decision 4)
   A1. Frames.  Each function's frame shape goes out beside its code as an assembler directive, made in FinishUnit
       before FreeWritten, from SIRW65C816Frame as the frame finally is (after DropFrame / AlignFrame):
