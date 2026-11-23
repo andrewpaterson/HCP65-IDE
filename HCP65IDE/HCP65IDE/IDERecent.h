@@ -91,7 +91,7 @@ protected:
 	CIDEContent*				mpcContent;  //Not held: the content holds it.
 	CArrayIDERecentFiles		masFiles;  //The most recently shown first.
 	CArrayChars					maszClosed;  //The files of tabs that were closed, the last closed last.
-	CArrayIDENavigationPlaces	masEdits;  //Where the text was edited, the last last.
+	CQueueIDENavigationPlaces	masEdits;  //Where the text was edited, the last last.
 	size						muiEdit;  //The place Last Edit Location is at: their number when it hasn't gone back.
 	Ptr<CIDEChooser>			mpChooser;
 	EIDERecentChooser			meChooser;

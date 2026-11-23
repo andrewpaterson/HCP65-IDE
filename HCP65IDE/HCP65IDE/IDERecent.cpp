@@ -68,7 +68,7 @@ void CIDERecent::Class(void)
 	U_Pointer(mpcContent);
 	U_Unknown(CArrayIDERecentFiles, masFiles);
 	U_Unknown(CArrayChars, maszClosed);
-	U_Unknown(CArrayIDENavigationPlaces, masEdits);
+	U_Unknown(CQueueIDENavigationPlaces, masEdits);
 	U_Size(muiEdit);
 	M_Pointer(mpChooser);
 	U_Enum(meChooser);
@@ -314,15 +314,15 @@ void CIDERecent::FileEdited(const char* szFile, SIDEPlaceChange* psChange)
 		iLine = (int32)psChange->psChange->LastLine();
 		iColumn = psChange->iLastLength;
 	}
-	psPlace = (masEdits.NumElements() > 0) ? masEdits.Tail() : NULL;
+	psPlace = (masEdits.NumElements() > 0) ? masEdits.Back() : NULL;
 	if ((psPlace == NULL) || !psPlace->szFile.Equals(szFile) || (psPlace->iLine > iLine + IDE_RECENT_EDIT_LINES) || (iLine > psPlace->iLine + IDE_RECENT_EDIT_LINES))
 	{
 		if (masEdits.NumElements() >= IDE_RECENT_EDITS)
 		{
-			masEdits.Get(0)->Kill();
-			masEdits.RemoveAt(0);
+			masEdits.Front()->Kill();
+			masEdits.Pop();
 		}
-		psPlace = masEdits.Add();
+		psPlace = masEdits.Push();
 		psPlace->Init();
 		psPlace->szFile.Set(szFile);
 		psPlace->uiProject = mpcContent->GetCodeModel()->FindProjectOfFile(szFile);

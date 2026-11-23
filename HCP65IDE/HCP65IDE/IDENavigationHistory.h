@@ -21,6 +21,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __IDE_NAVIGATION_HISTORY_H__
 #define __IDE_NAVIGATION_HISTORY_H__
 #include "BaseLib/Chars.h"
+#include "BaseLib/QueueTemplate.h"
 #include "BaseLib/ArrayTemplate.h"
 #include "StandardLib/Object.h"
 #include "StandardLib/Pointer.h"
@@ -48,7 +49,7 @@ struct SIDENavigationPlace
 };
 
 
-typedef CArrayTemplate<SIDENavigationPlace>	CArrayIDENavigationPlaces;
+typedef CQueueTemplate<SIDENavigationPlace>	CQueueIDENavigationPlaces;
 
 
 class CIDEContent;
@@ -64,8 +65,8 @@ CONSTRUCTABLE(CIDENavigationHistory);
 DESTRUCTABLE(CIDENavigationHistory);
 protected:
 	CIDEContent*				mpcContent;  //Not held: the content holds it.
-	CArrayIDENavigationPlaces	masBack;  //The oldest first.
-	CArrayIDENavigationPlaces	masForward;  //The nearest last.
+	CQueueIDENavigationPlaces	masBack;  //The oldest first.
+	CQueueIDENavigationPlaces	masForward;  //The nearest last.
 	SIDENavigationPlace			msSettled;  //Where the caret last stayed put, if mbSettled.
 	bool						mbSettled;
 	SIDENavigationPlace			msLast;  //Where it was when last looked at, since miLastChange, if mbLast.
@@ -110,8 +111,8 @@ protected:
 	bool			Go(SIDENavigationPlace* psPlace);
 	void			Arrived(void);
 	void			AdjustPlace(SIDENavigationPlace* psPlace, const char* szFile, SIDEPlaceChange* psChange);
-	void			KillPlaces(CArrayIDENavigationPlaces* pasPlaces);
-	void			PrintPlaces(CArrayIDENavigationPlaces* pasPlaces, CChars* pszDest);
+	void			KillPlaces(CQueueIDENavigationPlaces* pasPlaces);
+	void			PrintPlaces(CQueueIDENavigationPlaces* pasPlaces, CChars* pszDest);
 };
 
 

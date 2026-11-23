@@ -90,8 +90,8 @@ void CIDENavigationHistory::Init(CIDEContent* pcContent)
 void CIDENavigationHistory::Class(void)
 {
 	U_Pointer(mpcContent);
-	U_Unknown(CArrayIDENavigationPlaces, masBack);
-	U_Unknown(CArrayIDENavigationPlaces, masForward);
+	U_Unknown(CQueueIDENavigationPlaces, masBack);
+	U_Unknown(CQueueIDENavigationPlaces, masForward);
 	U_Unknown(SIDENavigationPlace, msSettled);
 	U_Bool(mbSettled);
 	U_Unknown(SIDENavigationPlace, msLast);
@@ -289,13 +289,13 @@ bool CIDENavigationHistory::GoBack(void)
 	{
 		return false;
 	}
-	sPlace.Init(masBack.Tail());
-	masBack.Tail()->Kill();
-	masBack.RemoveTail();
+	sPlace.Init(masBack.Back());
+	masBack.Back()->Kill();
+	masBack.RemoveBack();
 	sNow.Init();
 	if (GetCurrentPlace(&sNow))
 	{
-		masForward.Add()->Init(&sNow);
+		masForward.Push()->Init(&sNow);
 	}
 	sNow.Kill();
 	bResult = Go(&sPlace);
@@ -320,9 +320,9 @@ bool CIDENavigationHistory::GoForward(void)
 	{
 		return false;
 	}
-	sPlace.Init(masForward.Tail());
-	masForward.Tail()->Kill();
-	masForward.RemoveTail();
+	sPlace.Init(masForward.Back());
+	masForward.Back()->Kill();
+	masForward.RemoveBack();
 	sNow.Init();
 	if (GetCurrentPlace(&sNow))
 	{
@@ -449,17 +449,17 @@ void CIDENavigationHistory::Push(SIDENavigationPlace* psPlace, bool bClearForwar
 		KillPlaces(&masForward);
 		masForward.Init();
 	}
-	psTail = masBack.Tail();
+	psTail = masBack.Back();
 	if (psTail && psTail->szFile.EqualsIgnoreCase(psPlace->szFile) && (psTail->iLine == psPlace->iLine))
 	{
 		return;
 	}
 	if (masBack.NumElements() >= IDE_NAVIGATION_MAXIMUM)
 	{
-		masBack.Get(0)->Kill();
-		masBack.RemoveAt(0);
+		masBack.Front()->Kill();
+		masBack.Pop();
 	}
-	masBack.Add()->Init(psPlace);
+	masBack.Push()->Init(psPlace);
 }
 
 
@@ -499,7 +499,7 @@ void CIDENavigationHistory::AdjustPlace(SIDENavigationPlace* psPlace, const char
 //
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDENavigationHistory::KillPlaces(CArrayIDENavigationPlaces* pasPlaces)
+void CIDENavigationHistory::KillPlaces(CQueueIDENavigationPlaces* pasPlaces)
 {
 	size	i;
 
@@ -527,7 +527,7 @@ void CIDENavigationHistory::Print(CChars* pszDest)
 }
 
 
-void CIDENavigationHistory::PrintPlaces(CArrayIDENavigationPlaces* pasPlaces, CChars* pszDest)
+void CIDENavigationHistory::PrintPlaces(CQueueIDENavigationPlaces* pasPlaces, CChars* pszDest)
 {
 	CFileUtil	cFileUtil;
 	CChars		szName;
