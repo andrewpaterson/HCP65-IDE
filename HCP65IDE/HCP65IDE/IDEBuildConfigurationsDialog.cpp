@@ -113,6 +113,8 @@ void CIDEBuildConfigurationsDialog::Class(void)
 	M_Pointer(mpWarnStringToPointer);
 	M_Pointer(mpMultiWordCasts);
 	M_Pointer(mpCConversions);
+	M_Pointer(mpDebug);
+	M_Pointer(mpUnoptimised);
 	M_Pointer(mpCard);
 	M_Pointer(mpCardPath);
 	M_Pointer(mpContents);
@@ -255,6 +257,9 @@ Ptr<CComponent> CIDEBuildConfigurationsDialog::CreateBody(void)
 	mpWarnStringToPointer->SetAlignment(CSH_Left, CSV_Center);
 	mpMultiWordCasts->SetAlignment(CSH_Left, CSV_Center);
 	mpCConversions->SetAlignment(CSH_Left, CSV_Center);
+	mpDebug = OMalloc<CCheckBox>(pWindow, psLook->pcTheme, "Built for the debugger");
+	mpDebug->SetAlignment(CSH_Left, CSV_Center);
+	mpUnoptimised = CreateField();
 	mpCard = CreateField();
 	mpCardPath = CreateField();
 	mpContents = OMalloc<CLabel>(pWindow, psLook->pcDimFont, "");
@@ -278,6 +283,8 @@ Ptr<CComponent> CIDEBuildConfigurationsDialog::CreateBody(void)
 	AddFormRow(pForm, &iRow, "", mpWarnStringToPointer);
 	AddFormRow(pForm, &iRow, "", mpMultiWordCasts);
 	AddFormRow(pForm, &iRow, "", mpCConversions);
+	AddFormRow(pForm, &iRow, "", mpDebug);
+	AddFormRow(pForm, &iRow, "Projects not optimised", mpUnoptimised);
 	AddFormRow(pForm, &iRow, "Card", mpCard);
 	AddFormRow(pForm, &iRow, "Path on card", mpCardPath);
 	AddFormRow(pForm, &iRow, NULL, mpContents);
@@ -398,6 +405,8 @@ void CIDEBuildConfigurationsDialog::ShowSelected(void)
 	mpWarnStringToPointer->SetTicked(pcEdit ? pcEdit->mbWarnStringToPointer : false);
 	mpMultiWordCasts->SetTicked(pcEdit ? pcEdit->mbMultiWordCasts : false);
 	mpCConversions->SetTicked(pcEdit ? pcEdit->mbCConversions : false);
+	mpDebug->SetTicked(pcEdit ? pcEdit->mbDebug : false);
+	mpUnoptimised->SetText(pcEdit ? pcEdit->mszUnoptimised.Text() : "");
 	if (pcEdit)
 	{
 		SelectItem(mpToolchain, CBuildConfiguration::GetToolchainName(pcEdit->meToolchain));
@@ -502,6 +511,8 @@ void CIDEBuildConfigurationsDialog::Keep(void)
 	pcEdit->mbWarnStringToPointer = mpWarnStringToPointer->IsTicked();
 	pcEdit->mbMultiWordCasts = mpMultiWordCasts->IsTicked();
 	pcEdit->mbCConversions = mpCConversions->IsTicked();
+	pcEdit->mbDebug = mpDebug->IsTicked();
+	pcEdit->mszUnoptimised.Set(mpUnoptimised->GetText());
 	pcEdit->mszCard.Set(mpCard->GetText());
 	pcEdit->mszCardPath.Set(mpCardPath->GetText());
 }
@@ -663,9 +674,9 @@ const char* CIDEBuildConfigurationsDialog::FindProblem(CBuildConfigurationEdit* 
 		return "A card and a path on it go together.";
 	}
 	bHCP65 = (pcEdit->meToolchain == BT_W65C816) || (pcEdit->meToolchain == BT_65C64);
-	if (!bHCP65 && (pcEdit->mbNeedsHCP65 || !pcEdit->mszCard.Empty()))
+	if (!bHCP65 && (pcEdit->mbNeedsHCP65 || !pcEdit->mszCard.Empty() || pcEdit->mbDebug || !pcEdit->mszUnoptimised.Empty()))
 	{
-		return "Only an HCP65 toolchain can link a program, load files or use a card.";
+		return "Only an HCP65 toolchain can link a program, load files, use a card or build for its debugger.";
 	}
 	return NULL;
 }
@@ -706,8 +717,8 @@ bool CIDEBuildConfigurationsDialog::Approve(void)
 // semicolons: add, remove, select:<row>, name:<text>, toolchain:<text>,
 // solution:<text>, breakpoint:<text>, nofloats:<0 or 1>, mathtables:<0 or
 // 1>, prefersize:<0 or 1>, overridewarning:<0 or 1>, exceptions:<0 or
-// 1>, keepunused:<0 or 1>, stringwarning:<0 or 1>, multiwordcasts:<0 or 1>, cconversions:<0 or 1>, card:<text>,
-// cardpath:<text>, and check,
+// 1>, keepunused:<0 or 1>, stringwarning:<0 or 1>, multiwordcasts:<0 or 1>, cconversions:<0 or 1>, debug:<0 or 1>,
+// unoptimised:<text>, card:<text>, cardpath:<text>, and check,
 // which prints whether OK
 // would close it and why not.
 //
@@ -787,6 +798,14 @@ void CIDEBuildConfigurationsDialog::ApplyEdits(const char* szEdits)
 		else if (strncmp(sz, "cconversions:", 13) == 0)
 		{
 			mpCConversions->SetTicked(sz[13] == '1');
+		}
+		else if (strncmp(sz, "debug:", 6) == 0)
+		{
+			mpDebug->SetTicked(sz[6] == '1');
+		}
+		else if (strncmp(sz, "unoptimised:", 12) == 0)
+		{
+			mpUnoptimised->SetText(&sz[12]);
 		}
 		else if (strncmp(sz, "card:", 5) == 0)
 		{

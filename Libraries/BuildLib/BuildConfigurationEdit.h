@@ -47,6 +47,8 @@ public:
 	bool			mbWarnStringToPointer;
 	bool			mbMultiWordCasts;
 	bool			mbCConversions;
+	bool			mbDebug;
+	CChars			mszUnoptimised;
 	CChars			mszCard;
 	CChars			mszCardPath;
 

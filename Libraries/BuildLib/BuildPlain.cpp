@@ -138,6 +138,8 @@ void CBuildPlain::Init(void)
 	mbWarnStringToPointer = false;
 	mbMultiWordCasts = false;
 	mbCConversions = false;
+	mbDebug = false;
+	mszUnoptimised.Init();
 	mszOutput.Init();
 	mszListings.Init();
 	mszExecutable.Init();
@@ -172,6 +174,7 @@ void CBuildPlain::Kill(void)
 	mszEntry.Kill();
 	mszExecutable.Kill();
 	mszListings.Kill();
+	mszUnoptimised.Kill();
 	mszOutput.Kill();
 	mcDescription.Kill();
 }
@@ -340,6 +343,24 @@ int CBuildPlain::ParseOption(CArrayChars* paszArguments, size* puiIndex, CChars*
 	if (BuildIsOption(szOption, "c-conversions"))
 	{
 		mbCConversions = true;
+		return 1;
+	}
+	if (BuildIsOption(szOption, "debug"))
+	{
+		mbDebug = true;
+		return 1;
+	}
+	if (BuildIsOption(szOption, "unoptimised"))
+	{
+		if (!NeedValue(paszArguments, puiIndex, szOption, pszError))
+		{
+			return -1;
+		}
+		if (!mszUnoptimised.Empty())
+		{
+			mszUnoptimised.Append(", ");
+		}
+		mszUnoptimised.Append(paszArguments->GetText(*puiIndex));
 		return 1;
 	}
 	if (BuildIsOption(szOption, "o") || BuildIsOption(szOption, "listings") || BuildIsOption(szOption, "exe") || BuildIsOption(szOption, "entry") || BuildIsOption(szOption, "image") ||
@@ -612,6 +633,8 @@ bool CBuildPlain::MakeConfiguration(CBuildConfiguration* pcConfiguration, CChars
 	pcConfiguration->SetWarnStringToPointer(mbWarnStringToPointer);
 	pcConfiguration->SetMultiWordCasts(mbMultiWordCasts);
 	pcConfiguration->SetCConversions(mbCConversions);
+	pcConfiguration->SetDebug(mbDebug);
+	pcConfiguration->SetUnoptimised(mszUnoptimised.Text());
 	if (!mszExecutable.Empty())
 	{
 		pcExecutable = pcConfiguration->SetExecutable(mszExecutable.Text(), mszEntry.Text(), muiLimit);
@@ -707,6 +730,7 @@ bool CBuildPlain::Describe(CArrayChars* paszArguments, const char* szUnitsDirect
 	CChars					szUnitsText;
 	CChars					szPath;
 	CChars					szArgument;
+	CArrayChars				aszUnoptimised;
 	CHCP65BuildProject*		pcProject;
 	CAsm65Executable*		pcExecutable;
 	CAsm65Image*			pcImage;
@@ -759,6 +783,18 @@ bool CBuildPlain::Describe(CArrayChars* paszArguments, const char* szUnitsDirect
 	{
 		paszArguments->Add("-c-conversions");
 	}
+	if (pcConfiguration->IsDebug())
+	{
+		paszArguments->Add("-debug");
+	}
+	aszUnoptimised.Init();
+	pcConfiguration->GetUnoptimisedProjects(&aszUnoptimised);
+	for (i = 0; i < aszUnoptimised.NumElements(); i++)
+	{
+		paszArguments->Add("-unoptimised");
+		paszArguments->Add(aszUnoptimised.GetText(i));
+	}
+	aszUnoptimised.Kill();
 	for (i = 0; i < pcDescription->mcIncludes.NumIncludes(); i++)
 	{
 		MakeWrittenPath(pcDescription->mcIncludes.GetDirectory(i), &szPath);

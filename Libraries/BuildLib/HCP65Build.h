@@ -63,6 +63,7 @@ public:
 protected:
 	static void	CompileThread(void* pvBuild);
 	void		AddDescription(CArrayChars* paszLines);
+	void		SetUnoptimised(void);
 	bool		WriteProgram(CArrayChars* paszLines);
 	bool		MakeProgram(CChars* pszErrors);
 	bool		WriteProgramFile(const char* szPath, size* puiSize);

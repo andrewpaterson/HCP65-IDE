@@ -3944,7 +3944,7 @@ CHECKS = [
 		[r'^Build dialog: refused \[Another build configuration has this name\.\]$',
 		 r'^Build dialog: refused \[A build configuration needs a name\.\]$',
 		 r'^Build dialog: refused \[A card and a path on it go together\.\]$',
-		 r'^Build dialog: refused \[Only an HCP65 toolchain can link a program, load files or use a card\.\]$',
+		 r'^Build dialog: refused \[Only an HCP65 toolchain can link a program, load files, use a card or build for its debugger\.\]$',
 		 r'^Build dialog: OK \[\]$', r'^Dialog \[Build Configurations: HCP65Kernal\] answered OK$',
 		 r"^Status: A scripted run doesn't save build configurations\.$",
 		 r'^Configuration: \[Debug\|W65C816\] \[Debug\|W65C816\]:'], []),
@@ -3966,6 +3966,12 @@ CHECKS = [
 		'DIALOG_ANSWER': 'OK', 'BUILD_EDITS': 'exceptions:1',
 		'DEBUG': 'command:Build.EditConfigurations,answered:1,printbuildfile'}),
 		[r'<Configuration Name="[^"]*" Toolchain="W65C816" [^>]*Exceptions="true"'], [r'ERROR', r'Exceptions="false"']),
+	('build-configuration-debug', dict(MakeSolutionCopy(), **{
+		#Built for the debugger, and projects compiled without the optimiser: only an HCP65 toolchain's, and written when set.
+		'DIALOG_ANSWER': 'OK', 'BUILD_EDITS': 'debug:1;unoptimised:Init, Shell;toolchain:GCC;check;toolchain:W65C816;check',
+		'DEBUG': 'command:Build.EditConfigurations,answered:1,printbuildfile'}),
+		[r'^Build dialog: refused \[Only an HCP65 toolchain can link a program, load files, use a card or build for its debugger\.\]$', r'^Build dialog: OK \[\]$',
+		 r'<Configuration Name="[^"]*" Toolchain="W65C816" [^>]*Debug="true" Unoptimised="Init, Shell"'], [r'ERROR']),
 	('build-configuration-cancel', dict(MakeSolutionCopy(), **{
 		#Cancel changes nothing.
 		'DIALOG_ANSWER': 'Cancel', 'BUILD_EDITS': 'name:Gone;remove',

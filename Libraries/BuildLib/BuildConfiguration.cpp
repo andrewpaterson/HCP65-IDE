@@ -51,6 +51,8 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 #define BUILD_CONFIGURATION_WARN_STRING_TO_POINTER	"WarnStringToPointer"
 #define BUILD_CONFIGURATION_MULTI_WORD_CASTS	"MultiWordCasts"
 #define BUILD_CONFIGURATION_C_CONVERSIONS	"CConversions"
+#define BUILD_CONFIGURATION_DEBUG	"Debug"
+#define BUILD_CONFIGURATION_UNOPTIMISED	"Unoptimised"
 
 
 //The toolchains' names, as saved, by EBuildToolchain.
@@ -76,6 +78,8 @@ void CBuildConfiguration::Init(const char* szName, EBuildToolchain eToolchain, c
 	mbWarnStringToPointer = false;
 	mbMultiWordCasts = false;
 	mbCConversions = false;
+	mbDebug = false;
+	mszUnoptimised.Init();
 	meProgram = BP_None;
 	mcImage.Init();
 	mcExecutable.Init();
@@ -117,6 +121,7 @@ void CBuildConfiguration::Kill(void)
 	mcModule.Kill();
 	mcExecutable.Kill();
 	mcImage.Kill();
+	mszUnoptimised.Kill();
 	mszBreakpointSpace.Kill();
 	mszSolutionConfiguration.Kill();
 	mszName.Kill();
@@ -176,6 +181,14 @@ void CBuildConfiguration::SaveXML(CXMLWriter* pcWriter)
 	if (mbCConversions)
 	{
 		pcWriter->Attribute(BUILD_CONFIGURATION_C_CONVERSIONS, "true");
+	}
+	if (mbDebug)
+	{
+		pcWriter->Attribute(BUILD_CONFIGURATION_DEBUG, "true");
+	}
+	if (!mszUnoptimised.Empty())
+	{
+		pcWriter->Attribute(BUILD_CONFIGURATION_UNOPTIMISED, mszUnoptimised.Text());
 	}
 	if (HasCard())
 	{
@@ -242,6 +255,7 @@ bool CBuildConfiguration::LoadXML(CMarkupTag* pcTag)
 	char*			szWarnStringToPointer;
 	char*			szMultiWordCasts;
 	char*			szCConversions;
+	char*			szDebug;
 	EBuildToolchain	eToolchain;
 	CMarkupTag*		pcImage;
 	CMarkupTag*		pcExecutable;
@@ -285,6 +299,9 @@ bool CBuildConfiguration::LoadXML(CMarkupTag* pcTag)
 	SetWarnStringToPointer((szWarnStringToPointer != NULL) && (strcmp(szWarnStringToPointer, "true") == 0));
 	SetMultiWordCasts((szMultiWordCasts != NULL) && (strcmp(szMultiWordCasts, "true") == 0));
 	SetCConversions((szCConversions != NULL) && (strcmp(szCConversions, "true") == 0));
+	szDebug = pcTag->GetAttribute((char*)BUILD_CONFIGURATION_DEBUG);
+	SetDebug((szDebug != NULL) && (strcmp(szDebug, "true") == 0));
+	SetUnoptimised(pcTag->GetAttribute((char*)BUILD_CONFIGURATION_UNOPTIMISED));
 
 	pcImage = pcTag->GetTag(BUILD_CONFIGURATION_IMAGE);
 	if (pcImage)
@@ -713,6 +730,77 @@ bool CBuildConfiguration::IsCConversions(void) const
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Whether it is built for a debugger (false unless set; CCPPCompileOptions
+// ::mbDebuggable): a Debug build.
+//
+//////////////////////////////////////////////////////////////////////////
+void CBuildConfiguration::SetDebug(bool bDebug)
+{
+	mbDebug = bDebug;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+bool CBuildConfiguration::IsDebug(void) const
+{
+	return mbDebug;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The projects compiled without the optimiser, for a debugger, separated
+// by commas ("Init, Shell"); NULL or "" for none.
+//
+//////////////////////////////////////////////////////////////////////////
+void CBuildConfiguration::SetUnoptimised(const char* szProjects)
+{
+	mszUnoptimised.Set(szProjects ? szProjects : "");
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+char* CBuildConfiguration::GetUnoptimised(void)
+{
+	return mszUnoptimised.Text();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The projects SetUnoptimised names, each added to paszDest without the
+// spaces round it.
+//
+//////////////////////////////////////////////////////////////////////////
+void CBuildConfiguration::GetUnoptimisedProjects(CArrayChars* paszDest)
+{
+	CArrayChars	aszSplit;
+	size		ui;
+	CChars*		psz;
+
+	aszSplit.Init();
+	mszUnoptimised.Split(&aszSplit, ',');
+	for (ui = 0; ui < aszSplit.NumElements(); ui++)
+	{
+		psz = aszSplit.Get(ui);
+		psz->StripWhitespace();
+		if (!psz->Empty())
+		{
+			paszDest->Add(psz->Text());
+		}
+	}
+	aszSplit.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // The compiler's options for what this configuration chooses, set into
 // pcDest (what it doesn't choose is left as it was).  The build and the
 // IDE's code model both take them from here, so the code model reads a
@@ -728,6 +816,7 @@ void CBuildConfiguration::SetCompileOptions(CCPPCompileOptions* pcDest) const
 	pcDest->mbWarnStringToPointer = mbWarnStringToPointer;
 	pcDest->mbMultiWordCasts = mbMultiWordCasts;
 	pcDest->mbCConversions = mbCConversions;
+	pcDest->mbDebuggable = mbDebug;
 }
 
 

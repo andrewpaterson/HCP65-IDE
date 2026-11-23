@@ -64,6 +64,8 @@ protected:
 	Ptr<CCheckBox>					mpWarnStringToPointer;
 	Ptr<CCheckBox>					mpMultiWordCasts;
 	Ptr<CCheckBox>					mpCConversions;
+	Ptr<CCheckBox>					mpDebug;
+	Ptr<CTextField>					mpUnoptimised;
 	Ptr<CTextField>					mpCard;
 	Ptr<CTextField>					mpCardPath;
 	Ptr<CLabel>						mpContents;

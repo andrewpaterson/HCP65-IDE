@@ -72,6 +72,8 @@ void TestBuildConfigurationsFile(void)
 	CFileUtil				cFileUtil;
 	CTextFile				cFile;
 	CChars					szFileName;
+	CArrayChars				aszProjects;
+	CCPPCompileOptions		cCompileOptions;
 
 	cFileUtil.MakeDir("Output");
 	cConfigurations.Init();
@@ -86,6 +88,8 @@ void TestBuildConfigurationsFile(void)
 	cConfigurations.GetConfiguration(0)->SetWarnStringToPointer(true);
 	cConfigurations.GetConfiguration(0)->SetMultiWordCasts(true);
 	cConfigurations.GetConfiguration(0)->SetCConversions(true);
+	cConfigurations.GetConfiguration(0)->SetDebug(true);
+	cConfigurations.GetConfiguration(0)->SetUnoptimised(" Init ,Shell,  ");
 	cConfigurations.Add("Fast GCC", BT_GCC, "Release|x64");
 	AssertTrue(cConfigurations.Write("Output" _FS_ "Test.hcp65build"));
 
@@ -118,6 +122,26 @@ void TestBuildConfigurationsFile(void)
 	AssertFalse(cRead.GetConfiguration(1)->IsWarnStringToPointer());
 	AssertFalse(cRead.GetConfiguration(1)->IsMultiWordCasts());
 	AssertFalse(cRead.GetConfiguration(1)->IsCConversions());
+
+	//Debug and the projects compiled without the optimiser: the projects' names without the spaces round them.
+	AssertTrue(cRead.GetConfiguration(0)->IsDebug());
+	AssertFalse(cRead.GetConfiguration(1)->IsDebug());
+	AssertString(" Init ,Shell,  ", cRead.GetConfiguration(0)->GetUnoptimised());
+	AssertString("", cRead.GetConfiguration(1)->GetUnoptimised());
+	aszProjects.Init();
+	cRead.GetConfiguration(0)->GetUnoptimisedProjects(&aszProjects);
+	AssertSize(2, aszProjects.NumElements());
+	AssertString("Init", aszProjects.GetText(0));
+	AssertString("Shell", aszProjects.GetText(1));
+	aszProjects.ReInit();
+	cRead.GetConfiguration(1)->GetUnoptimisedProjects(&aszProjects);
+	AssertSize(0, aszProjects.NumElements());
+	aszProjects.Kill();
+	cCompileOptions.Init();
+	cRead.GetConfiguration(0)->SetCompileOptions(&cCompileOptions);
+	AssertTrue(cCompileOptions.mbDebuggable);
+	cRead.GetConfiguration(1)->SetCompileOptions(&cCompileOptions);
+	AssertFalse(cCompileOptions.mbDebuggable);
 	AssertString("W65C816", cRead.GetConfiguration(0)->GetProcessorName());
 	AssertTrue(cRead.GetConfiguration(1)->GetProcessorName() == NULL);
 

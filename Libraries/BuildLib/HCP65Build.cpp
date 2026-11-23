@@ -89,6 +89,7 @@ bool CHCP65Build::Start(CArrayChars* paszLines)
 	mbCancel = false;
 	mcBuilder.SetTarget((mpcConfiguration->GetToolchain() == BT_W65C816) ? CPPT_W65C816 : CPPT_65C64);
 	mpcConfiguration->SetCompileOptions(mcBuilder.GetOptions());
+	SetUnoptimised();
 	mcBuilder.SetJobs(&mcJobs);
 	mcBuilder.SetHeaderCache(true);
 	mcBuilder.SetLineTable(true);
@@ -273,6 +274,26 @@ void CHCP65Build::AddDescription(CArrayChars* paszLines)
 			mcBuilder.AddDefine(pcProject->mszName.Text(), pcProject->maszDefines.GetText(j));
 		}
 	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The projects the configuration compiles without the optimiser.
+//
+//////////////////////////////////////////////////////////////////////////
+void CHCP65Build::SetUnoptimised(void)
+{
+	CArrayChars	aszProjects;
+	size		ui;
+
+	aszProjects.Init();
+	mpcConfiguration->GetUnoptimisedProjects(&aszProjects);
+	for (ui = 0; ui < aszProjects.NumElements(); ui++)
+	{
+		mcBuilder.SetUnoptimised(aszProjects.GetText(ui));
+	}
+	aszProjects.Kill();
 }
 
 

@@ -70,6 +70,8 @@ void CBuildConfigurationEdit::Init(const char* szName, EBuildToolchain eToolchai
 	mbWarnStringToPointer = false;
 	mbMultiWordCasts = false;
 	mbCConversions = false;
+	mbDebug = false;
+	mszUnoptimised.Init();
 	mszCard.Init();
 	mszCardPath.Init();
 }
@@ -96,6 +98,8 @@ void CBuildConfigurationEdit::Init(CBuildConfiguration* pcConfiguration, size ui
 	mbWarnStringToPointer = pcConfiguration->IsWarnStringToPointer();
 	mbMultiWordCasts = pcConfiguration->IsMultiWordCasts();
 	mbCConversions = pcConfiguration->IsCConversions();
+	mbDebug = pcConfiguration->IsDebug();
+	mszUnoptimised.Set(pcConfiguration->GetUnoptimised());
 	if (pcConfiguration->HasCard())
 	{
 		mszCard.Set(pcConfiguration->GetCard());
@@ -124,6 +128,8 @@ void CBuildConfigurationEdit::Init(CBuildConfigurationEdit* pcCopied, const char
 	mbWarnStringToPointer = pcCopied->mbWarnStringToPointer;
 	mbMultiWordCasts = pcCopied->mbMultiWordCasts;
 	mbCConversions = pcCopied->mbCConversions;
+	mbDebug = pcCopied->mbDebug;
+	mszUnoptimised.Set(pcCopied->mszUnoptimised);
 	mszCard.Set(pcCopied->mszCard);
 	mszCardPath.Set(pcCopied->mszCardPath);
 }
@@ -137,6 +143,7 @@ void CBuildConfigurationEdit::Kill(void)
 {
 	mszCardPath.Kill();
 	mszCard.Kill();
+	mszUnoptimised.Kill();
 	mszBreakpointSpace.Kill();
 	mszSolution.Kill();
 	mszName.Kill();
@@ -462,6 +469,14 @@ static void SetEditAttributes(CChars* pszTag, CBuildConfigurationEdit* pcEdit, C
 	if ((pcSource == NULL) || (pcEdit->mbCConversions != pcSource->IsCConversions()))
 	{
 		SetEditAttribute(pszTag, "CConversions", pcEdit->mbCConversions ? "true" : NULL);
+	}
+	if ((pcSource == NULL) || (pcEdit->mbDebug != pcSource->IsDebug()))
+	{
+		SetEditAttribute(pszTag, "Debug", pcEdit->mbDebug ? "true" : NULL);
+	}
+	if ((pcSource == NULL) || !pcEdit->mszUnoptimised.Equals(pcSource->GetUnoptimised()))
+	{
+		SetEditAttribute(pszTag, "Unoptimised", pcEdit->mszUnoptimised.Empty() ? NULL : pcEdit->mszUnoptimised.Text());
 	}
 	if ((pcSource == NULL) || !pcEdit->mszCard.Equals(pcSource->GetCard()))
 	{

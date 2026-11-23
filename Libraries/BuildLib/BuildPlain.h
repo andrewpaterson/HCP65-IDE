@@ -61,6 +61,8 @@ bool	BuildParseUint32(const char* szNumber, uint32* puiValue);
 //	-warn-string-to-pointer				As a configuration's WarnStringToPointer="true".
 //	-multi-word-casts					As a configuration's MultiWordCasts="true": unsigned int(3) is accepted.
 //	-c-conversions						As a configuration's CConversions="true": the sources are C.
+//	-debug								As a configuration's Debug="true": built for a debugger.
+//	-unoptimised <project>				As a configuration's Unoptimised: the project isn't optimised (again for each).
 //	-exe <file> -entry <symbol> [-limit <n>] [-symbol <name>=<value>]...
 //										Link an executable, as an <Executable>.
 //	-image <file> -size <n> [-fill <n>] [-limit <n>] [-load <n>] -region <start>,<end>,<offset> [-region ...]
@@ -86,6 +88,8 @@ protected:
 	bool					mbWarnStringToPointer;
 	bool					mbMultiWordCasts;
 	bool					mbCConversions;
+	bool					mbDebug;
+	CChars					mszUnoptimised;		//Comma separated, as a configuration's Unoptimised.
 	CChars					mszOutput;
 	CChars					mszListings;
 	CChars					mszExecutable;

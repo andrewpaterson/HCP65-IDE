@@ -76,7 +76,10 @@ enum EBuildProgram
 //(CCPPCompileOptions::mbWarnStringToPointer).  MultiWordCasts="true" accepts unsigned int(3), a cast written as a
 //type of more than one word and brackets, which is an error without it (CCPPCompileOptions::mbMultiWordCasts).
 //CConversions="true" says the sources are C: a void* becomes any object's pointer and a number an enum's value with
-//no cast (CCPPCompileOptions::mbCConversions).  Its BreakpointSpace is the emulator's space ("Kernel", "User") that debugging puts breakpoints in; without
+//no cast (CCPPCompileOptions::mbCConversions).  Debug="true" builds it for a debugger: each variable is kept where a
+//debugger reads it, nothing is inlined and every frame keeps its shape, the rest still optimised
+//(CCPPCompileOptions::mbDebuggable).  Unoptimised="Init, Shell" names projects compiled for a debugger without the
+//optimiser at all, whose every line steps as written (CCPP65Builder::SetUnoptimised).  Its BreakpointSpace is the emulator's space ("Kernel", "User") that debugging puts breakpoints in; without
 //one they stop in every space.
 //
 //Debugging loads each <Load File Address/> into the waiting emulator first (a kernal for a program to run on), and
@@ -101,6 +104,8 @@ protected:
 	bool			mbWarnStringToPointer;
 	bool			mbMultiWordCasts;
 	bool			mbCConversions;
+	bool			mbDebug;
+	CChars			mszUnoptimised;		//The projects compiled without the optimiser, separated by commas.
 	EBuildProgram	meProgram;
 	CAsm65Image		mcImage;
 	CAsm65Executable	mcExecutable;
@@ -147,6 +152,11 @@ public:
 	bool			IsWarnStringToPointer(void) const;
 	bool			IsMultiWordCasts(void) const;
 	bool			IsCConversions(void) const;
+	void			SetDebug(bool bDebug);
+	bool			IsDebug(void) const;
+	void			SetUnoptimised(const char* szProjects);
+	char*			GetUnoptimised(void);
+	void			GetUnoptimisedProjects(CArrayChars* paszDest);
 	void			SetCompileOptions(CCPPCompileOptions* pcDest) const;
 
 	bool			HasImage(void) const;
