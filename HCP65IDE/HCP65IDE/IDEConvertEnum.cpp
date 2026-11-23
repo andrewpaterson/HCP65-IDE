@@ -573,6 +573,27 @@ bool CIDEConvertEnum::AddCast(CIDERefactorUnit* pcUnit, const char* szText, cons
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Whether eOperator is one of aeCompound's uiNumCompound assignments, as
+// |= is.
+//
+//////////////////////////////////////////////////////////////////////////
+static bool IsCompoundAssignment(ECppTokens eOperator, const ECppTokens* aeCompound, size uiNumCompound)
+{
+	size	i;
+
+	for (i = 0; i < uiNumCompound; i++)
+	{
+		if (eOperator == aeCompound[i])
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // The casts one file needs: it is checked with the enum taken as an enum
 // class, and each place the check records is given its cast (see the
 // class's comment).  Only the file's own text: a header's are found when
@@ -599,7 +620,6 @@ void CIDEConvertEnum::FindFileCasts(const char* szFileName, SIDEEnumConversion* 
 	size						uiStart;
 	size						uiEnd;
 	size						i;
-	size						j;
 	bool						bCompound;
 
 	cFile.Init();
@@ -642,7 +662,12 @@ void CIDEConvertEnum::FindFileCasts(const char* szFileName, SIDEEnumConversion* 
 			szCast.Kill();
 			break;
 		case CPPEC_TO_ENUM:
-			AddCast(&cUnit, szText, szFileName, pcNode, szEnum.Text(), psDest);
+			//"e |= x" written out (below, as its operator) is "e = (E)((int)e | x)": its own cast to the enum, not another
+			//round it.
+			if (!(pcBinary && IsCompoundAssignment(pcBinary->meOperator, aeCompound, sizeof(aeCompound) / sizeof(ECppTokens)) && pcPass->IsRecordedEnum(pcPass->GetType(pcBinary->mpcLeft))))
+			{
+				AddCast(&cUnit, szText, szFileName, pcNode, szEnum.Text(), psDest);
+			}
 			break;
 		case CPPEC_CONDITION:
 			AddCast(&cUnit, szText, szFileName, pcNode, "(int)", psDest);
@@ -652,11 +677,7 @@ void CIDEConvertEnum::FindFileCasts(const char* szFileName, SIDEEnumConversion* 
 			break;
 		default:
 			//An operator: each operand that is the enum's value.
-			bCompound = false;
-			for (j = 0; pcBinary && (j < sizeof(aeCompound) / sizeof(ECppTokens)); j++)
-			{
-				bCompound = bCompound || (pcBinary->meOperator == aeCompound[j]);
-			}
+			bCompound = pcBinary && IsCompoundAssignment(pcBinary->meOperator, aeCompound, sizeof(aeCompound) / sizeof(ECppTokens));
 			if (bCompound && pcPass->IsRecordedEnum(pcPass->GetType(pcBinary->mpcLeft)) && cUnit.GetRange(pcBinary->mpcLeft, &sLeft) &&
 				cUnit.GetTokensRange(pcBinary->mpcLeft->miLastToken + 1, pcBinary->mpcLeft->miLastToken + 1, &sRange))
 			{
