@@ -1188,7 +1188,7 @@ void CIDEDebugging::CheckCardImages(const char* szCard, CArrayChars* paszLines)
 //////////////////////////////////////////////////////////////////////////
 //
 // The line tables beside what the chosen configuration builds and loads
-// (<program>.lines) bind the source breakpoints: its own program's in its
+// (<program>.debug) bind the source breakpoints: its own program's in its
 // breakpoint space, a load's (a kernal) in every space.  The programs of
 // the workspace's other solutions that the kernal runs (on a card) bind
 // theirs too, each in its own space and process, and the drivers it

@@ -30,7 +30,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "ThreadLib/NetworkConnection.h"
 #include "ThreadLib/SharedMemoryChannel.h"
 #include "EmulatorDebugLib/DebugClient.h"
-#include "Assembler65Lib/Asm65LineTable.h"
+#include "Assembler65Lib/Asm65DebugInfo.h"
 
 
 #define IDE_USER_SETTINGS_TAG	"UserSettings"	//The root of the per-user file beside the solution (<solution>.hcp65user).
@@ -117,7 +117,7 @@ struct SIDELineTableTarget
 //space if it is empty or the emulator has none of that name.
 //
 //Source breakpoints are by file and line (ToggleSourceBreakpoint).  The programs' line tables (AddLineTable, the
-//<program>.lines a build writes beside it) bind them to addresses: a table of the configuration's own program puts
+//<program>.debug a build writes beside it) bind them to addresses: a table of the configuration's own program puts
 //them in the breakpoint space, one of what is loaded with it (a kernal) in every space.  Another program's table (one
 //of the workspace's other solutions, AddProcessLineTable) puts them in its own space and process, waiting while it
 //isn't running, as the own program's do.  Both kinds of breakpoint are kept when not debugging, and all of them are
@@ -163,7 +163,7 @@ protected:
 	size					muiSeenErrors;
 	CArrayIDEBreakpoints	masBreakpoints;
 	CArrayIDESourceBreakpoints	masSourceBreakpoints;
-	CAsm65LineTable			macLineTables[IDE_DEBUG_LINE_TABLES];
+	CAsm65DebugInfo			macDebugInfos[IDE_DEBUG_LINE_TABLES];	//Each program's line table and debug records (<program>.debug).
 	SIDELineTableTarget		masTableTargets[IDE_DEBUG_LINE_TABLES];	//Whose each table's breakpoints are.
 	size					muiLineTables;
 	CChars					mszStatus;
@@ -207,6 +207,7 @@ public:
 	bool					AddModuleLineTable(const char* szProgram, const char* szSpace, const char* szModule);
 	size					NumLineTables(void) const;
 	CAsm65LineTable*		GetLineTable(size uiIndex);
+	CAsm65DebugInfo*		GetDebugInfo(size uiIndex);
 	bool					FindSourceLine(uint32 uiAddress, CChars* pszFile, uint32* puiLine);
 	bool					ToggleSourceBreakpoint(const char* szFile, uint32 uiLine);
 	SIDESourceBreakpoint*	AddSourceBreakpoint(const char* szFile, uint32 uiLine, bool bEnabled);

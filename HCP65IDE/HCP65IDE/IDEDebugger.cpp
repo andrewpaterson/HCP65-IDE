@@ -124,7 +124,7 @@ void CIDEDebugger::Init(void)
 	masSourceBreakpoints.Init();
 	for (muiLineTables = 0; muiLineTables < IDE_DEBUG_LINE_TABLES; muiLineTables++)
 	{
-		macLineTables[muiLineTables].Init();
+		macDebugInfos[muiLineTables].Init();
 		IDEInitTableTarget(&masTableTargets[muiLineTables]);
 	}
 	muiLineTables = 0;
@@ -146,7 +146,7 @@ void CIDEDebugger::Kill(void)
 	mszStatus.Kill();
 	for (ui = 0; ui < IDE_DEBUG_LINE_TABLES; ui++)
 	{
-		macLineTables[ui].Kill();
+		macDebugInfos[ui].Kill();
 	}
 	while (masSourceBreakpoints.NumElements() > 0)
 	{
@@ -533,7 +533,7 @@ bool CIDEDebugger::StepOnInto(uint32 uiAddress)
 
 	for (ui = 0; ui < muiLineTables; ui++)
 	{
-		if (IsTableLoaded(ui) && macLineTables[ui].FindNextLine(uiAddress, &uiNext) && (uiNext - uiAddress <= IDE_DEBUG_ENTRY_CODE))
+		if (IsTableLoaded(ui) && macDebugInfos[ui].GetLines()->FindNextLine(uiAddress, &uiNext) && (uiNext - uiAddress <= IDE_DEBUG_ENTRY_CODE))
 		{
 			sRange.uiStart = uiAddress;
 			sRange.uiEnd = uiNext;
@@ -662,7 +662,7 @@ bool CIDEDebugger::StepLineRanges(bool bOver)
 	{
 		if (IsTableLoaded(ui))
 		{
-			macLineTables[ui].FindLineRanges(GetProgramAddress(), &auiRanges);
+			macDebugInfos[ui].GetLines()->FindLineRanges(GetProgramAddress(), &auiRanges);
 		}
 	}
 	uiRanges = auiRanges.NumElements() / 2;
@@ -889,7 +889,7 @@ void CIDEDebugger::ClearLineTables(void)
 
 	for (ui = 0; ui < muiLineTables; ui++)
 	{
-		macLineTables[ui].Clear();
+		macDebugInfos[ui].Clear();
 		IDEClearTableTarget(&masTableTargets[ui]);
 	}
 	muiLineTables = 0;
@@ -899,7 +899,7 @@ void CIDEDebugger::ClearLineTables(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The line table a build wrote beside szProgram (<program>.lines) binds
+// The line table a build wrote beside szProgram (<program>.debug) binds
 // the source breakpoints too.  bOwnSpace: it is the configuration's own
 // program, whose breakpoints are in the breakpoint space; otherwise
 // (what is loaded with it, a kernal) they are in every space.  False if
@@ -971,7 +971,7 @@ bool CIDEDebugger::AddModuleLineTable(const char* szProgram, const char* szSpace
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The next table read from beside szProgram (<program>.lines), not yet
+// The next table read from beside szProgram (<program>.debug), not yet
 // counted.  False if there is none or there are too many.
 //
 //////////////////////////////////////////////////////////////////////////
@@ -985,8 +985,8 @@ bool CIDEDebugger::ReadLineTable(const char* szProgram)
 		return false;
 	}
 	szFile.Init(szProgram);
-	szFile.Append(".lines");
-	bResult = macLineTables[muiLineTables].ReadFile(szFile.Text());
+	szFile.Append(ASM65_DEBUG_INFO_EXTENSION);
+	bResult = macDebugInfos[muiLineTables].ReadFile(szFile.Text());
 	szFile.Kill();
 	return bResult;
 }
@@ -1091,7 +1091,7 @@ void CIDEDebugger::MoveModuleTables(void)
 		{
 			if (!psTarget->bModuleLoaded || (psTarget->uiModuleAddress != psModule->uiAddress))
 			{
-				macLineTables[ui].Move((int64)psModule->uiAddress - (int64)psTarget->uiModuleAddress);
+				macDebugInfos[ui].Move((int64)psModule->uiAddress - (int64)psTarget->uiModuleAddress);
 				psTarget->uiModuleAddress = psModule->uiAddress;
 				psTarget->bModuleLoaded = true;
 				bChanged = true;
@@ -1132,10 +1132,10 @@ bool CIDEDebugger::FindSourceLine(uint32 uiAddress, CChars* pszFile, uint32* pui
 			{
 				continue;
 			}
-			psLine = macLineTables[ui].FindLine(uiAddress);
+			psLine = macDebugInfos[ui].GetLines()->FindLine(uiAddress);
 			if (psLine)
 			{
-				pszFile->Set(macLineTables[ui].GetFile(psLine->uiFile));
+				pszFile->Set(macDebugInfos[ui].GetLines()->GetFile(psLine->uiFile));
 				*puiLine = psLine->uiLine;
 				return true;
 			}
@@ -1319,7 +1319,7 @@ void CIDEDebugger::BindSourceBreakpoint(SIDESourceBreakpoint* psBreakpoint)
 	for (ui = 0; ui < muiLineTables; ui++)
 	{
 		uiAddresses = psBreakpoint->auiAddresses.NumElements();
-		uiLine = macLineTables[ui].FindLineAddresses(psBreakpoint->szFile.Text(), (psBreakpoint->uiBoundLine != 0) ? psBreakpoint->uiBoundLine : psBreakpoint->uiLine, &psBreakpoint->auiAddresses);
+		uiLine = macDebugInfos[ui].GetLines()->FindLineAddresses(psBreakpoint->szFile.Text(), (psBreakpoint->uiBoundLine != 0) ? psBreakpoint->uiBoundLine : psBreakpoint->uiLine, &psBreakpoint->auiAddresses);
 		if ((uiLine != 0) && (psBreakpoint->uiBoundLine != 0) && (uiLine != psBreakpoint->uiBoundLine))
 		{
 			//Another table moved it to a different line: only the first table's line is the breakpoint's.
@@ -1339,7 +1339,8 @@ void CIDEDebugger::BindSourceBreakpoint(SIDESourceBreakpoint* psBreakpoint)
 
 
 size CIDEDebugger::NumLineTables(void) const { return muiLineTables; }
-CAsm65LineTable* CIDEDebugger::GetLineTable(size uiIndex) { return (uiIndex < muiLineTables) ? &macLineTables[uiIndex] : NULL; }
+CAsm65LineTable* CIDEDebugger::GetLineTable(size uiIndex) { return (uiIndex < muiLineTables) ? macDebugInfos[uiIndex].GetLines() : NULL; }
+CAsm65DebugInfo* CIDEDebugger::GetDebugInfo(size uiIndex) { return (uiIndex < muiLineTables) ? &macDebugInfos[uiIndex] : NULL; }
 size CIDEDebugger::NumSourceBreakpoints(void) const { return masSourceBreakpoints.NumElements(); }
 SIDESourceBreakpoint* CIDEDebugger::GetSourceBreakpoint(size uiIndex) { return masSourceBreakpoints.SafeGet(uiIndex); }
 

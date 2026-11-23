@@ -98,7 +98,6 @@ public:
 
 	static	void		GetDirectory(const char* szRoot, CBuildConfiguration* pcConfiguration, const char* szKind, CChars* pszDest);
 	static	bool		GetProgramPath(const char* szRoot, CBuildConfiguration* pcConfiguration, CChars* pszDest);
-	static	bool		GetLineTablePath(const char* szRoot, CBuildConfiguration* pcConfiguration, CChars* pszDest);
 
 protected:
 			void		GetDirectory(const char* szKind, CChars* pszDest);

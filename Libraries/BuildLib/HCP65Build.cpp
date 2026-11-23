@@ -463,17 +463,18 @@ bool CHCP65Build::WriteProgram(CArrayChars* paszLines)
 	paszLines->Add(szErrors.Text());
 	szErrors.Kill();
 
-	//Beside it, which source line each address is for, so a debugger can stop at a line.
+	//Beside it, what a debugger needs: which source line each address is for, its functions' frames and variables, its
+	//globals and their types.
 	if (bResult)
 	{
 		if (mpcConfiguration->HasModule())
 		{
-			mcBuilder.GetLineTable()->Move(-(int64)mpcConfiguration->GetModule()->GetBase());
+			mcBuilder.GetDebugInfo()->Move(-(int64)mpcConfiguration->GetModule()->GetBase());
 		}
 		GetProgramPath(&szPath);
-		szPath.Append(".lines");
-		bResult = mcBuilder.GetLineTable()->WriteFile(szPath.Text());
-		szErrors.Init(bResult ? "Wrote its line table to " : "Could not write its line table to ");
+		szPath.Append(ASM65_DEBUG_INFO_EXTENSION);
+		bResult = mcBuilder.GetDebugInfo()->WriteFile(szPath.Text());
+		szErrors.Init(bResult ? "Wrote its debug info to " : "Could not write its debug info to ");
 		szErrors.Append(szPath);
 		szErrors.Append(".");
 		paszLines->Add(szErrors.Text());

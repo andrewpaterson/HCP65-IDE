@@ -308,24 +308,6 @@ bool CBuild::GetProgramPath(const char* szRoot, CBuildConfiguration* pcConfigura
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Where the build writes its program's line table (CAsm65LineTable, which
-// source line each address is for): beside the image, executable or
-// module, as <program>.lines.  False if it doesn't link.
-//
-//////////////////////////////////////////////////////////////////////////
-bool CBuild::GetLineTablePath(const char* szRoot, CBuildConfiguration* pcConfiguration, CChars* pszDest)
-{
-	if (!GetProgramPath(szRoot, pcConfiguration, pszDest))
-	{
-		return false;
-	}
-	pszDest->Append(".lines");
-	return true;
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
 //
 //////////////////////////////////////////////////////////////////////////
 void CBuild::GetListingDirectory(CChars* pszDest)
