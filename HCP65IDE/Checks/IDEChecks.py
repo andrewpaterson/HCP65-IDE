@@ -697,6 +697,12 @@ CHECKS = [
 		'DEBUG': 'wait:6000,edit:outputmenu:build:build failed,edit:outputmenuclick:Select All,edit:outputmenu:build:build failed,'
 		         'edit:outputmenuclick:Copy,edit:printclipboard'}),
 		[r'^Tab window: floated$', r'^Menu Text: Cut \[[^]]*\]\(disabled\), Copy', r'^Menu Text: Cut', r'^Clipboard:$', r'^Kernel: '], [r'Menu Text: none', r'Tab window: main']),
+	('edit-menu-floated', dict(MakeBrokenKernel(), **{
+		#With the Build tab floated and its text selected by its keys, the main menu's Edit > Copy copies it there: the
+		#Edit commands act on what the keys last went to in a tool window too, and the editor doesn't take the keys.
+		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp', 'BUILD': '1', 'DOCK': 'float:Build',
+		'DEBUG': 'wait:6000,edit:outputcaret:build:build failed,edit:keys:Control+A,clickmenu:Edit/Copy,edit:printclipboard,edit:print'}),
+		[r'^Clipboard:$', r'^Kernel: ', r'Kernel\.cpp line 1: '], [r'Kernel\.cpp \(focus\)']),
 	('indexing-text-menu', dict(MakeIndexingProblemsKernel(), **{
 		#The Indexing tab has the text menu too; the editor keeps its own menu.
 		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp',
