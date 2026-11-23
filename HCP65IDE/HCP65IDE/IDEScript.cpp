@@ -3326,7 +3326,7 @@ void CIDEScript::RunUsagesStep(const char* szStep)
 	}
 	else if (strncmp(szStep, "focus:", 6) == 0)
 	{
-		//The keys given to the Build output, Claude's request, Solution Explorer or the active document.
+		//The keys given to the Build or Indexing output, Claude's request, Solution Explorer or the active document.
 		if (strcmp(&szStep[6], "explorer") == 0)
 		{
 			mpcContent->GetWindow()->GetFocus()->SetFocus(mpcContent->GetSolutions()->GetExplorer()->GetTree());
@@ -3335,6 +3335,11 @@ void CIDEScript::RunUsagesStep(const char* szStep)
 		{
 			mpcContent->GetDock()->Show(mpcContent->GetBuilding()->GetBuildTool());
 			mpcContent->GetWindow()->GetFocus()->SetFocus(mpcContent->GetBuilding()->GetBuildPane()->GetOutputArea());
+		}
+		else if (strcmp(&szStep[6], "indexing") == 0)
+		{
+			mpcContent->GetDock()->Show(mpcContent->GetIndexing()->GetTool());
+			mpcContent->GetWindow()->GetFocus()->SetFocus(mpcContent->GetIndexing()->GetPane()->GetOutputArea());
 		}
 		else if (strcmp(&szStep[6], "claude") == 0)
 		{
@@ -3351,10 +3356,165 @@ void CIDEScript::RunUsagesStep(const char* szStep)
 			mpcContent->GetDocuments()->FocusActiveEditor();
 		}
 	}
-	else
+	else if (!RunOutputStep(szStep))
 	{
 		RunViewStep(szStep);
 	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The Build and Indexing tabs' messages (CIDEMessageOutput), the tab
+// named build or indexing, which is shown first:
+//   outputcaret:<tab>:<line>, the caret put at the start of the tab's
+//     line, as a click there would: the line is its number (from 1), or
+//     else the first that has the text (a build's lines come in the order
+//     its units compile in);
+//   outputdoubleclick:<tab>:<line>, the line scrolled into view and button
+//     one pressed and released twice over its second character, through
+//     the window, as a person would;
+//   printoutputcolours:<tab>, "Output colour: error [<its text>]" (or
+//     warning) for each line coloured as one, then "Output colours:
+//     <count>";
+//   outputappend:<tab>:<text>, the line appended to the tab as a build's
+//     or an indexing's would be, each ';' in it a ',' (which ends a step).
+// False if szStep isn't one of them.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEScript::RunOutputStep(const char* szStep)
+{
+	Ptr<CIDEBuildPane>	pPane;
+	Ptr<CDockPane>		pTool;
+	Ptr<CTextArea>		pOutput;
+	CInt32Rect			cLine;
+	STextStyle			sStyle;
+	CArrayChars			aszLines;
+	CChars				szText;
+	const char*			szTab;
+	const char*			szPlace;
+	const char*			szFound;
+	const char*			szKind;
+	size				uiLine;
+	size				uiColoured;
+	int32				x;
+	int32				y;
+
+	if (strncmp(szStep, "outputcaret:", 12) == 0)
+	{
+		szTab = &szStep[12];
+	}
+	else if (strncmp(szStep, "outputdoubleclick:", 18) == 0)
+	{
+		szTab = &szStep[18];
+	}
+	else if (strncmp(szStep, "printoutputcolours:", 19) == 0)
+	{
+		szTab = &szStep[19];
+	}
+	else if (strncmp(szStep, "outputappend:", 13) == 0)
+	{
+		szTab = &szStep[13];
+	}
+	else
+	{
+		return false;
+	}
+	if (strncmp(szTab, "indexing", 8) == 0)
+	{
+		pPane = mpcContent->GetIndexing()->GetPane();
+		pTool = mpcContent->GetIndexing()->GetTool();
+	}
+	else
+	{
+		pPane = mpcContent->GetBuilding()->GetBuildPane();
+		pTool = mpcContent->GetBuilding()->GetBuildTool();
+	}
+	mpcContent->GetDock()->Show(pTool);
+	mpcContent->GetWindow()->Layout();
+	pOutput = pPane->GetOutputArea();
+	uiLine = 0;
+	szPlace = (strchr(szTab, ':') != NULL) ? strchr(szTab, ':') + 1 : "";
+	if ((szPlace[0] >= '0') && (szPlace[0] <= '9'))
+	{
+		uiLine = (size)(atoi(szPlace) - 1);
+	}
+	else if (szPlace[0] != '\0')
+	{
+		szFound = strstr(pOutput->GetText(), szPlace);
+		uiLine = (szFound != NULL) ? pOutput->FindLine((size)(szFound - pOutput->GetText())) : MAX_SIZE;
+	}
+
+	if (strncmp(szStep, "outputappend:", 13) == 0)
+	{
+		aszLines.Init();
+		szText.Init((strchr(szTab, ':') != NULL) ? strchr(szTab, ':') + 1 : "");
+		szText.Replace(';', ',');
+		aszLines.Add(szText.Text());
+		pPane->AppendLines(&aszLines);
+		szText.Kill();
+		aszLines.Kill();
+	}
+	else if (strncmp(szStep, "outputcaret:", 12) == 0)
+	{
+		if (uiLine < pOutput->NumLines())
+		{
+			mpcContent->GetWindow()->GetFocus()->SetFocus(pOutput);
+			pOutput->SetCaretPosition(pOutput->GetLineStart(uiLine));
+		}
+	}
+	else if (strncmp(szStep, "outputdoubleclick:", 18) == 0)
+	{
+		if (uiLine < pOutput->NumLines())
+		{
+			//Scrolled into view, as the tab follows its output's end.
+			pOutput->SetCaretPosition(pOutput->GetLineStart(uiLine));
+			pOutput->ShowCaret();
+			mpcContent->GetWindow()->Layout();
+		}
+		if ((uiLine < pOutput->NumLines()) && pOutput->GetLineBounds(uiLine, &cLine))
+		{
+			x = pOutput->GetPosition().x + pOutput->GetPositionX(pOutput->GetLineStart(uiLine) + 1, false) + 1;
+			y = pOutput->GetPosition().y + (cLine.GetTop() + cLine.GetBottom()) / 2;
+			mpcContent->GetWindow()->PointerMoved(x, y);
+			mpcContent->GetWindow()->InputCommand(CIC_ActivateComponent, true);
+			mpcContent->GetWindow()->InputCommand(CIC_ExecuteComponent, true);
+			mpcContent->GetWindow()->InputCommand(CIC_ActivateComponent, true);
+			mpcContent->GetWindow()->InputCommand(CIC_ExecuteComponent, true);
+		}
+	}
+	else
+	{
+		uiColoured = 0;
+		for (uiLine = 0; uiLine < pOutput->NumLines(); uiLine++)
+		{
+			if (pOutput->GetLineEnd(uiLine) == pOutput->GetLineStart(uiLine))
+			{
+				continue;
+			}
+			sStyle.Init();
+			pOutput->GetStyleAt(pOutput->GetLineStart(uiLine), &sStyle);
+			szKind = NULL;
+			if (sStyle.sColour == mpcContent->GetTheme()->GetColour(TC_Failure))
+			{
+				szKind = "error";
+			}
+			else if (sStyle.sColour == mpcContent->GetTheme()->GetColour(TC_Warning))
+			{
+				szKind = "warning";
+			}
+			if (szKind)
+			{
+				szText.Init();
+				szText.AppendSubString(pOutput->GetText(), pOutput->GetLineStart(uiLine), pOutput->GetLineEnd(uiLine));
+				printf("Output colour: %s [%s]\n", szKind, szText.Text());
+				szText.Kill();
+				uiColoured++;
+			}
+		}
+		printf("Output colours: %d\n", (int)uiColoured);
+	}
+	return true;
 }
 
 

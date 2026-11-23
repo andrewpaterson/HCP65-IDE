@@ -965,6 +965,7 @@ CProject* CIDECodeModel::GetProject(size uiProject)
 
 	//A header that can't be found (as the compiler's own often can't) costs only what it would have added.
 	pcProject->SetSkipFailedDirectives(true);
+	pcProject->SetFullPathErrors(true);  //The Indexing tab opens the header a problem is in, of those with its name.
 	pcSolutionProject = mpcWorkspace->GetSolutionProject(uiProject);
 	pcConfiguration = GetProjectConfiguration(uiProject);
 	aszDirectories.Init();

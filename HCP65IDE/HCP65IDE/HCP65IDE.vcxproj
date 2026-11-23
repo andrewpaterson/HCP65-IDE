@@ -392,6 +392,7 @@
     <ClCompile Include="IDEEditorTab.cpp" />
     <ClCompile Include="IDEListingSource.cpp" />
     <ClCompile Include="IDEBuildPane.cpp" />
+    <ClCompile Include="IDEMessageOutput.cpp" />
     <ClCompile Include="IDEClaudePane.cpp" />
     <ClCompile Include="IDEIcons.cpp" />
     <ClCompile Include="IDEApp.cpp" />
@@ -485,6 +486,7 @@
     <ClInclude Include="IDEEditorTab.h" />
     <ClInclude Include="IDEListingSource.h" />
     <ClInclude Include="IDEBuildPane.h" />
+    <ClInclude Include="IDEMessageOutput.h" />
     <ClInclude Include="IDEClaudePane.h" />
     <ClInclude Include="IDEIcons.h" />
     <ClInclude Include="IDEGit.h" />

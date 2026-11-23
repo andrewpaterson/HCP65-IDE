@@ -220,6 +220,7 @@ set(IDE_SOURCES
 	"${IDE_DIR}/IDEEditorTab.cpp"
 	"${IDE_DIR}/IDEListingSource.cpp"
 	"${IDE_DIR}/IDEBuildPane.cpp"
+	"${IDE_DIR}/IDEMessageOutput.cpp"
 	"${IDE_DIR}/IDEClaudePane.cpp"
 	"${IDE_DIR}/IDEIcons.cpp"
 	"${IDE_DIR}/IDEWindowTick.cpp"

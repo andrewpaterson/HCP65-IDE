@@ -24,6 +24,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "StandardLib/Pointer.h"
 #include "WindowLib/DockManager.h"
 #include "IDEBuildPane.h"
+#include "IDEMessageOutput.h"
+#include "IDESteppable.h"
 
 
 class CIDEContent;
@@ -31,14 +33,16 @@ class CIDEContent;
 
 //The Indexing tab beside Build: how far the code model's index has got, on a bar as the build's (blue while it is
 //built, then green, or red if some units had problems), over what they couldn't include, each once, and how long
-//it took.  It follows each indexing the code model starts.
-class CIDEIndexing : public CObject
+//it took.  It follows each indexing the code model starts.  Its problems name files by their full paths, and are gone
+//to as the Build tab's messages are (CIDEMessageOutput).
+class CIDEIndexing : public CObject, public CIDESteppable
 {
 CONSTRUCTABLE(CIDEIndexing);
 DESTRUCTABLE(CIDEIndexing);
 protected:
 	CIDEContent*		mpcContent;  //Not held: the content holds it.
 	Ptr<CIDEBuildPane>	mpPane;
+	Ptr<CIDEMessageOutput>	mpMessages;  //Its problems.
 	Ptr<CDockPane>		mpTool;
 	size				muiShown;		//The code model's indexing shown (CIDECodeModel::NumIndexings), 0 for none.
 	bool				mbFinished;		//Its end has been written.
@@ -55,6 +59,12 @@ public:
 
 	Ptr<CIDEBuildPane>	GetPane(void) const;
 	Ptr<CDockPane>		GetTool(void) const;
+	Ptr<CIDEMessageOutput>	GetMessages(void) const;
+
+	Ptr<CDockPane>		GetSteppablePane(void) const override;
+	const char*			GetSteppableName(void) override;
+	bool				HasSteps(void) override;
+	bool				Step(bool bNext, bool bKeepKeys) override;
 };
 
 

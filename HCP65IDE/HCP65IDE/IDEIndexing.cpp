@@ -46,6 +46,7 @@ void CIDEIndexing::Class(void)
 {
 	U_Pointer(mpcContent);
 	M_Pointer(mpPane);
+	M_Pointer(mpMessages);
 	M_Pointer(mpTool);
 	U_Size(muiShown);
 	U_Bool(mbFinished);
@@ -78,6 +79,8 @@ bool CIDEIndexing::Load(CObjectReader* pcFile) { return false; }
 void CIDEIndexing::CreatePane(SDockPlace* psPlace)
 {
 	mpPane = OMalloc<CIDEBuildPane>(mpcContent->GetWindow(), mpcContent->GetTheme(), mpcContent->GetCodeFamily(), mpcContent->GetTheme()->GetColour(TC_Text));
+	mpPane->SetMessageColours(mpcContent->GetTheme()->GetColour(TC_Failure), mpcContent->GetTheme()->GetColour(TC_Warning));
+	mpMessages = OMalloc<CIDEMessageOutput>(mpcContent, mpPane, "indexing problems");
 	mpTool = mpcContent->GetDock()->AddPane(IDE_INDEXING_ID, "Indexing", NULL, mpPane->GetComponent(), DPK_Tool, psPlace);
 }
 
@@ -110,6 +113,7 @@ bool CIDEIndexing::Update(void)
 		muiShown = pcModel->NumIndexings();
 		mbFinished = false;
 		mpPane->Clear();
+		mpMessages->Clear();
 		szLine.Init("Indexing ");
 		szLine.Append((uint32)uiToIndex);
 		szLine.Append(uiToIndex == 1 ? " file" : " files");
@@ -164,4 +168,17 @@ bool CIDEIndexing::Update(void)
 
 Ptr<CIDEBuildPane> CIDEIndexing::GetPane(void) const { return mpPane; }
 Ptr<CDockPane> CIDEIndexing::GetTool(void) const { return mpTool; }
+Ptr<CIDEMessageOutput> CIDEIndexing::GetMessages(void) const { return mpMessages; }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// What Next and Previous Occurrence need of a tool window (CIDEOccurrences):
+// the Indexing tab, and whether it has a problem with a place to go to.
+//
+//////////////////////////////////////////////////////////////////////////
+Ptr<CDockPane> CIDEIndexing::GetSteppablePane(void) const { return mpTool; }
+const char* CIDEIndexing::GetSteppableName(void) { return "Indexing"; }
+bool CIDEIndexing::HasSteps(void) { return mpMessages.IsNotNull() && mpMessages->HasMessages(); }
+bool CIDEIndexing::Step(bool bNext, bool bKeepKeys) { return mpMessages->Step(bNext, bKeepKeys); }
 

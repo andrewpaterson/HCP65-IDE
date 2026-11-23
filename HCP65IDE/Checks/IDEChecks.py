@@ -174,6 +174,19 @@ def MakeBrokenKernel():
 	return {'SOLUTION': os.path.join(szKernel, 'Kernel.sln'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
 
 
+def MakeIndexingProblemsKernel():
+	#A copy of the test solution whose kernel's indexing has problems: Kernel.cpp includes Defs.h, which defines V again
+	#differently on its line 2, and Gone.h, which isn't there, on its line 2.  Its recent solutions are apart from the
+	#user's.
+	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
+	atexit.register(shutil.rmtree, szRoot, True)
+	szKernel = os.path.join(szRoot, 'Workspace', 'Kernel')
+	shutil.copytree(os.path.join(ROOT, 'HCP65-IDE', 'Tests', 'TestBuildLib', 'TestBuildLib', 'Input', 'Workspace'), os.path.join(szRoot, 'Workspace'))
+	open(os.path.join(szKernel, 'Kernel.cpp'), 'w', newline='').write('#include "Defs.h"\n#include "Gone.h"\nint main(void) { return V; }\n')
+	open(os.path.join(szKernel, 'Defs.h'), 'w', newline='').write('#define V 1\n#define V 2\n')
+	return {'SOLUTION': os.path.join(szKernel, 'Kernel.sln'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
+
+
 USAGES_KERNEL = ('int F(void) { return 0; }\n'
                  'class CA { public: int M(void) { return F(); } int N(void); };\n'
                  'int G(void) { return F(); }\n'
@@ -621,6 +634,74 @@ CHECKS = [
 		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp', 'BUILD': '1',
 		'DEBUG': 'wait:6000,edit:focus:build,command:Navigate.NextOccurrence,edit:print'}),
 		[r'Kernel\.cpp line 2: '], [r'not enabled', r'\(focus\)']),
+	('build-message-double-click', dict(MakeBrokenKernel(), **{
+		#Built, a double click on a message in the Build tab opens its place, its word selected, and the editor has the
+		#keys, as IntelliJ IDEA's Build window does.
+		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp', 'BUILD': '1',
+		'DEBUG': 'wait:6000,edit:outputdoubleclick:build:giAlsoMissing,edit:printselection,edit:print'}),
+		[r'^Selection: \[giAlsoMissing\] on line 5, caret line 5$', r'Kernel\.cpp \(focus\) line 5: '], [r'not enabled']),
+	('build-message-enter', dict(MakeBrokenKernel(), **{
+		#Enter on a message in the Build tab opens it, and so does Jump to Source (F4).
+		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp', 'BUILD': '1',
+		'DEBUG': 'wait:6000,edit:outputcaret:build:giMissing],edit:key:enter,edit:print,edit:outputcaret:build:giAlsoMissing,edit:key:f4,edit:print'}),
+		[r'Kernel\.cpp \(focus\) line 2: ', r'Kernel\.cpp \(focus\) line 5: '], [r'not enabled']),
+	('build-message-not-a-message', dict(MakeBrokenKernel(), **{
+		#A double click on a line that isn't a message (the kernel's unit's, before its messages) opens nothing: the Build
+		#tab keeps the keys.
+		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp', 'BUILD': '1',
+		'DEBUG': 'wait:6000,edit:outputdoubleclick:build:Kernel.cpp (,edit:print'}),
+		[r'Kernel\.cpp line 1: '], [r'\(focus\)']),
+	('build-message-step-after-open', dict(MakeBrokenKernel(), **{
+		#A message opened is the current one: Next Occurrence in the Build tab goes on from it.
+		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp', 'BUILD': '1',
+		'DEBUG': 'wait:6000,edit:outputdoubleclick:build:giMissing],edit:focus:build,command:Navigate.NextOccurrence,edit:print'}),
+		[r'Kernel\.cpp line 5: '], [r'not enabled', r'\(focus\)']),
+	('build-message-colours', dict(MakeBrokenKernel(), **{
+		#Built, the Build tab's errors' lines are in the theme's failure colour; units' and the rest aren't coloured.  (The
+		#units compile in parallel, so only the kernel's two errors, under its unit, are in a known order.)
+		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp', 'BUILD': '1',
+		'DEBUG': 'wait:6000,edit:printoutputcolours:build'}),
+		[r'^Output colour: error \[Kernel\.cpp \(2, 22\): .*giMissing\]\]$', r'^Output colour: error \[Kernel\.cpp \(5, 15\): .*giAlsoMissing\]\]$',
+		 r'^Output colours: 3$'], [r'Output colour: .*\(\d+/13\)']),
+	('build-message-formats', dict(MakeBrokenKernel(), **{
+		#The compilers' messages: GCC's ("file:line:column: warning:"), MSVC's ("file(line,column): error C2065:", and
+		#"file(line): warning C4100:") and the HCP65 compiler's ("file (line, column): Warning:").  Warnings are in the
+		#warning colour, errors in the failure colour; GCC's notes aren't coloured but can be gone to, and its other
+		#lines aren't messages.  A double click on one goes to it.
+		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp',
+		'DEBUG': 'edit:outputappend:build:Kernel.cpp:5:9: warning: unused value,'
+		         'edit:outputappend:build:Kernel.cpp(2;22): error C2065: giMissing: undeclared identifier,'
+		         'edit:outputappend:build:Kernel.cpp(5): warning C4100: unreferenced parameter,'
+		         'edit:outputappend:build:Kernel.cpp (5; 15): Warning: Only variables are supported,'
+		         'edit:outputappend:build:Kernel.cpp:2:1: note: declared here,'
+		         'edit:outputappend:build:In file included from Kernel.cpp:3:,'
+		         'edit:outputappend:build:Kernel.cpp: In function int F(),'
+		         'edit:printoutputcolours:build,edit:outputdoubleclick:build:unused value,edit:print,edit:outputdoubleclick:build:C2065,edit:print,'
+		         'edit:outputdoubleclick:build:declared here,edit:printselection'}),
+		[r'^Output colour: warning \[Kernel\.cpp:5:9: warning: unused value\]$', r'^Output colour: error \[Kernel\.cpp\(2,22\): error C2065: ',
+		 r'^Output colour: warning \[Kernel\.cpp\(5\): warning C4100: ', r'^Output colour: warning \[Kernel\.cpp \(5, 15\): Warning: ',
+		 r'^Output colours: 4$', r'Kernel\.cpp \(focus\) line 5: ', r'Kernel\.cpp \(focus\) line 2: ', r'^Selection: \[int\] on line 2, caret line 2$'],
+		[r'not enabled']),
+	('indexing-full-paths', dict(MakeIndexingProblemsKernel(), **{
+		#The Indexing tab's problems name the files they are in by their full paths (a header's name can be in more than
+		#one include directory), in the failure colour.
+		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp',
+		'DEBUG': 'wait:1500,printindexing,edit:printoutputcolours:indexing'}),
+		[r'^Indexing: \d+ ms, 1 units with problems$', r'^/\S*/Workspace/Kernel/Defs\.h \(2, 9\): The macro is defined again differently',
+		 r'^/\S*/Workspace/Kernel/Kernel\.cpp \(2, 10\): Could not include file "Gone\.h"$', r'^Output colour: error \[/\S*/Defs\.h ',
+		 r'^Output colour: error \[/\S*/Kernel\.cpp ', r'^Output colours: 2$'], []),
+	('indexing-step-in-pane', dict(MakeIndexingProblemsKernel(), **{
+		#In the Indexing tab, Next Occurrence steps through its problems, the tab keeping the keys, to the last.
+		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp',
+		'DEBUG': 'wait:1500,edit:focus:indexing,command:Navigate.NextOccurrence,edit:print,command:Navigate.NextOccurrence,edit:print,'
+		         'command:Navigate.NextOccurrence,printstatus'}),
+		[r'Defs\.h line 2: \[#define V 2\]', r'Kernel\.cpp line 2: \[#include "Gone\.h"\]',
+		 r'^Status line: No indexing problems after this one\.$'], [r'not enabled', r'\(focus\)']),
+	('indexing-double-click', dict(MakeIndexingProblemsKernel(), **{
+		#A double click on a problem in the Indexing tab opens the header it is in, and the editor has the keys.
+		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp',
+		'DEBUG': 'wait:1500,edit:outputdoubleclick:indexing:Defs.h,edit:print'}),
+		[r'Defs\.h \(focus\) line 2: \[#define V 2\]'], [r'not enabled']),
 	('steps-ambiguous', dict(MakeBrokenKernel(), **{
 		#Find Usages floated beside the Build tab, both seen with something to step to: from the editor neither steps.
 		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp', 'CARET': '2:6', 'BUILD': '1', 'DOCK': 'float:FindUsages', 'EDIT': 'usages',

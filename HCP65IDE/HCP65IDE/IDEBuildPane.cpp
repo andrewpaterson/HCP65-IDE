@@ -21,7 +21,20 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include <string.h>
 #include "StandardLib/Objects.h"
 #include "StandardLib/ClassDefines.h"
+#include "IDEMessageOutput.h"
 #include "IDEBuildPane.h"
+
+
+//A line to colour, as it is appended.
+struct SIDEColourSpan
+{
+	size	uiStart;
+	size	uiEnd;
+	ARGB32	sColour;
+};
+
+
+typedef CArrayTemplate<SIDEColourSpan>	CArrayIDEColourSpans;
 
 
 #define IDE_BUILD_PROGRESS_HEIGHT	6
@@ -45,6 +58,9 @@ void CIDEBuildPane::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CFo
 	mpPane->SetContent(mpOutput);
 	mpPane->SetAlignment(CSH_Stretch, CSV_Stretch);
 	msProgress = pTheme->GetColour(TC_Accent);
+	mbMessageColours = false;
+	msError = 0;
+	msWarning = 0;
 	mpProgress = OMalloc<CProgressBar>(pWindow, pTheme->GetColour(TC_Separator), msProgress, IDE_BUILD_PROGRESS_HEIGHT);
 	mpProgress->SetAlignment(CSH_Stretch, CSV_Bottom);
 	mpPanel = OMalloc<CGridContainer>(pWindow);
@@ -63,6 +79,9 @@ void CIDEBuildPane::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CFo
 void CIDEBuildPane::Class(void)
 {
 	U_UInt32(msProgress);
+	U_Bool(mbMessageColours);
+	U_UInt32(msError);
+	U_UInt32(msWarning);
 	M_Pointer(mpPanel);
 	M_Pointer(mpOutput);
 	M_Pointer(mpProgress);
@@ -127,6 +146,20 @@ void CIDEBuildPane::SetProgress(float fFraction, ARGB32 sColour)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// The lines appended from now on that are errors (CIDEMessageOutput::
+// ParseMessageLine) are in sError, and warnings in sWarning.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEBuildPane::SetMessageColours(ARGB32 sError, ARGB32 sWarning)
+{
+	mbMessageColours = true;
+	msError = sError;
+	msWarning = sWarning;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // The lines go after the output there is, together so the text is laid
 // out once.  A caret at the end of the output (with nothing selected)
 // follows it, scrolling the end into view; one put anywhere else stays
@@ -135,11 +168,18 @@ void CIDEBuildPane::SetProgress(float fFraction, ARGB32 sColour)
 //////////////////////////////////////////////////////////////////////////
 void CIDEBuildPane::AppendLines(CArrayChars* paszLines)
 {
-	CChars	szText;
-	size	i;
-	size	uiStart;
-	size	uiEnd;
-	bool	bFollow;
+	CChars					szText;
+	CChars					szFile;
+	CArrayIDEColourSpans	asSpans;
+	SIDEColourSpan*			psSpan;
+	size					i;
+	size					uiStart;
+	size					uiEnd;
+	size					uiOutput;
+	int32					iLine;
+	int32					iColumn;
+	EIDEMessageKind			eKind;
+	bool					bFollow;
 
 	if (paszLines->NumElements() == 0)
 	{
@@ -147,16 +187,37 @@ void CIDEBuildPane::AppendLines(CArrayChars* paszLines)
 	}
 	bFollow = (mpOutput->GetCaretPosition() == strlen(mpOutput->GetText())) && !mpOutput->GetSelection(&uiStart, &uiEnd);
 
+	uiOutput = strlen(mpOutput->GetText());
 	szText.Init();
+	asSpans.Init();
 	for (i = 0; i < paszLines->NumElements(); i++)
 	{
-		if ((i > 0) || (mpOutput->GetText()[0] != '\0'))
+		if ((i > 0) || (uiOutput > 0))
 		{
 			szText.Append('\n');
+		}
+		if (mbMessageColours && (paszLines->GetText(i)[0] != '\0'))
+		{
+			//An error's or a warning's line is coloured once it is there.
+			szFile.Init();
+			if (CIDEMessageOutput::ParseMessageLine(paszLines->GetText(i), &szFile, &iLine, &iColumn, &eKind) && (eKind != IMK_Note))
+			{
+				psSpan = asSpans.Add();
+				psSpan->uiStart = uiOutput + szText.Length();
+				psSpan->uiEnd = psSpan->uiStart + strlen(paszLines->GetText(i));
+				psSpan->sColour = (eKind == IMK_Warning) ? msWarning : msError;
+			}
+			szFile.Kill();
 		}
 		szText.Append(paszLines->GetText(i));
 	}
 	mpOutput->AppendText(szText.Text(), mpOutput->GetColour());
+	for (i = 0; i < asSpans.NumElements(); i++)
+	{
+		psSpan = asSpans.Get(i);
+		mpOutput->AddSpan(psSpan->uiStart, psSpan->uiEnd - psSpan->uiStart, psSpan->sColour);
+	}
+	asSpans.Kill();
 	szText.Kill();
 	if (bFollow)
 	{

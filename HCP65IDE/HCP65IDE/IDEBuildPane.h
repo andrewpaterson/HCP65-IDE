@@ -33,7 +33,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 //The Build tab under the editor: what the build wrote, which is kept scrolled to its end as lines are added, over a
 //bar showing how far the build has got: blue while it runs, green when it has succeeded and red when it hasn't.  The
-//Run and Indexing tabs are ones too (CIDEIndexing).
+//Run and Indexing tabs are ones too (CIDEIndexing).  The Build and Indexing tabs colour their errors' and warnings'
+//lines (SetMessageColours), which CIDEMessageOutput goes to.
 class CIDEBuildPane : public CObject
 {
 CONSTRUCTABLE(CIDEBuildPane);
@@ -43,6 +44,9 @@ protected:
 	Ptr<CTextArea>		mpOutput;
 	Ptr<CProgressBar>	mpProgress;
 	ARGB32				msProgress;  //A build's progress while it runs.
+	bool				mbMessageColours;  //Errors' and warnings' lines are coloured (SetMessageColours).
+	ARGB32				msError;
+	ARGB32				msWarning;
 	Ptr<CScrollPane>	mpPane;
 
 public:
@@ -56,6 +60,7 @@ public:
 	void				Clear(void);
 	void				AppendLines(CArrayChars* paszLines);
 	void				SetProgress(float fFraction, ARGB32 sColour);
+	void				SetMessageColours(ARGB32 sError, ARGB32 sWarning);
 
 	Ptr<CComponent>		GetComponent(void) const;
 	const char*			GetOutput(void);

@@ -285,6 +285,9 @@
     <ClCompile Include="IDEBuildPane.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="IDEMessageOutput.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="IDEIcons.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -555,6 +558,9 @@
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDEBuildPane.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDEMessageOutput.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDEClaudePane.h">

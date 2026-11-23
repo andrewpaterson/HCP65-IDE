@@ -245,17 +245,20 @@ size CIDEOccurrences::GetSteppables(CIDESteppable** apcDest)
 	Ptr<CIDEFindInFiles>	pFind;
 	Ptr<CIDEDuplicates>		pDuplicates;
 	Ptr<CIDEHierarchy>		pHierarchy;
+	Ptr<CIDEIndexing>		pIndexing;
 
 	pUsages = mpcContent->GetUsages();
 	pBuilding = mpcContent->GetBuilding();
 	pFind = mpcContent->GetFindInFiles();
 	pDuplicates = mpcContent->GetDuplicates();
 	pHierarchy = mpcContent->GetHierarchy();
+	pIndexing = mpcContent->GetIndexing();
 	apcDest[0] = &pUsages;
 	apcDest[1] = &pBuilding;
 	apcDest[2] = &pFind;
 	apcDest[3] = &pDuplicates;
 	apcDest[4] = &pHierarchy;
+	apcDest[5] = &pIndexing;
 	return IDE_NUM_STEPPABLES;
 }
 
