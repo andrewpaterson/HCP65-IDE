@@ -26,6 +26,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "StandardLib/Objects.h"
 #include "StandardLib/ClassDefines.h"
 #include "IDEContent.h"
+#include "IDEMarks.h"
 #include "IDEEditorTab.h"
 
 
@@ -92,6 +93,11 @@ void CIDEEditorTab::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CFo
 	muiSyntaxChanges = MAX_SIZE;
 	mcOutline.Init();
 	muiOutlineChanges = MAX_SIZE;
+	mcProblems.Init();
+	muiProblemChanges = MAX_SIZE;
+	muiProblemsSet = 0;
+	muiErrorLayer = MAX_SIZE;
+	muiWarningLayer = MAX_SIZE;
 	muiKeptUsagesLayer = MAX_SIZE;
 	muiLinkLayer = MAX_SIZE;
 	mcSyntaxBehind.Init();
@@ -144,6 +150,11 @@ void CIDEEditorTab::Class(void)
 	U_Size(muiKeptUsagesLayer);
 	U_Size(muiLinkLayer);
 	U_Size(muiOutlineChanges);
+	U_Unknown(CIDEProblemList, mcProblems);
+	U_Size(muiProblemChanges);
+	U_Size(muiProblemsSet);
+	U_Size(muiErrorLayer);
+	U_Size(muiWarningLayer);
 	U_Unknown(CComponentEvent<CIDEEditorTab>, mcSyntaxBehind);
 	M_Pointer(mpZones);
 	U_Unknown(CIDEListingSource, mcListings);
@@ -169,6 +180,7 @@ void CIDEEditorTab::Free(void)
 		mpEditor->SetSelectionRanges(NULL);
 	}
 	mcSyntaxBehind.Kill();
+	mcProblems.Kill();
 	mcOutline.Kill();
 	masSyntaxRanges.Kill();
 	mszBaseHead.Kill();
@@ -254,6 +266,110 @@ void CIDEEditorTab::SetOutline(CIDEOutline* pcOutline, size uiChanges)
 	mcOutline.TakeFrom(pcOutline);
 	muiOutlineChanges = uiChanges;
 }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// What the code model's check of the file found when its editor's change
+// count was uiChanges (CIDECodeModel::CheckEditedFile): pcProblems' are
+// taken.  The Problems pane shows them while it is the active file, and
+// the editor underlines them and marks their lines beside its scroll
+// bar, errors in sError and warnings in sWarning.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEEditorTab::SetProblems(CIDEProblemList* pcProblems, size uiChanges, ARGB32 sError, ARGB32 sWarning)
+{
+	mcProblems.TakeFrom(pcProblems);
+	muiProblemChanges = uiChanges;
+	muiProblemsSet++;
+	ShowProblemMarks(false, sError);
+	ShowProblemMarks(true, sWarning);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The errors (or with bWarnings the warnings) underlined in sColour, each
+// the word at its place (or the character there, if it isn't in one), and
+// their lines marked beside the scroll bar, as IntelliJ IDEA marks them.
+// The underlines move with the text until it is checked again.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEEditorTab::ShowProblemMarks(bool bWarnings, ARGB32 sColour)
+{
+	CArrayTemplate<STextRange>	asRanges;
+	CArrayTemplate<SInt32Vec2>	asMarks;
+	SIDEProblem*				psProblem;
+	STextRange*					psRange;
+	CInt32Rect					cLine;
+	const char*					szText;
+	size						uiLayer;
+	size						uiStart;
+	size						uiEnd;
+	size						uiLineEnd;
+	size						i;
+	int32						iLastLine;
+	char						c;
+
+	if (bWarnings && (muiWarningLayer == MAX_SIZE))
+	{
+		muiWarningLayer = mpEditor->AddUnderlineLayer(sColour);
+	}
+	else if (!bWarnings && (muiErrorLayer == MAX_SIZE))
+	{
+		muiErrorLayer = mpEditor->AddUnderlineLayer(sColour);
+	}
+	uiLayer = bWarnings ? muiWarningLayer : muiErrorLayer;
+
+	szText = mpEditor->GetText();
+	asRanges.Init();
+	asMarks.Init();
+	iLastLine = -1;
+	for (i = 0; i < mcProblems.NumProblems(); i++)
+	{
+		psProblem = mcProblems.Get(i);
+		if ((psProblem->bWarning != bWarnings) || (psProblem->iLine < 0) || ((size)psProblem->iLine >= mpEditor->NumLines()))
+		{
+			continue;
+		}
+		uiLineEnd = mpEditor->GetLineEnd((size)psProblem->iLine);
+		uiStart = mpEditor->GetLineStart((size)psProblem->iLine) + (size)psProblem->iColumn;
+		uiStart = (uiStart > uiLineEnd) ? uiLineEnd : uiStart;
+		for (uiEnd = uiStart; uiEnd < uiLineEnd; uiEnd++)
+		{
+			c = szText[uiEnd];
+			if (!(((c >= 'a') && (c <= 'z')) || ((c >= 'A') && (c <= 'Z')) || ((c >= '0') && (c <= '9')) || (c == '_')))
+			{
+				break;
+			}
+		}
+		if ((uiEnd == uiStart) && (uiStart < uiLineEnd))
+		{
+			uiEnd = uiStart + 1;
+		}
+		if ((uiEnd > uiStart) && ((asRanges.NumElements() == 0) || (asRanges.Tail()->uiEnd <= uiStart)))
+		{
+			psRange = asRanges.Add();
+			psRange->uiStart = uiStart;
+			psRange->uiEnd = uiEnd;
+		}
+		if ((psProblem->iLine != iLastLine) && mpEditor->GetLineBounds((size)psProblem->iLine, &cLine))
+		{
+			asMarks.Add()->Init(cLine.GetTop(), cLine.GetHeight());
+			iLastLine = psProblem->iLine;
+		}
+	}
+	mpEditor->SetHighlightRanges(uiLayer, asRanges.NumElements() ? asRanges.Get(0) : NULL, asRanges.NumElements());
+	mpPane->GetScrollBar(SBO_Vertical)->SetMarks(bWarnings ? IDE_PROBLEM_WARNING_MARKS : IDE_PROBLEM_ERROR_MARKS, asMarks.NumElements() ? asMarks.Get(0) : NULL, asMarks.NumElements(), sColour);
+	asMarks.Kill();
+	asRanges.Kill();
+}
+
+
+CIDEProblemList* CIDEEditorTab::GetProblems(void) { return &mcProblems; }
+bool CIDEEditorTab::HasProblems(void) { return muiProblemChanges != MAX_SIZE; }  //It has been checked.
+size CIDEEditorTab::GetProblemsSet(void) const { return muiProblemsSet; }
+size CIDEEditorTab::GetProblemLayer(bool bWarnings) const { return bWarnings ? muiWarningLayer : muiErrorLayer; }  //MAX_SIZE until problems were first shown.
 
 
 //////////////////////////////////////////////////////////////////////////

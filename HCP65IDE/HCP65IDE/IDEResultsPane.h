@@ -133,6 +133,7 @@ public:
 	int32				AddGroup(int32 iParent, const char* szName, const char* szDetail, const char* szFileName = NULL);
 	int32				AddResult(int32 iParent, CIDEFileLines* pcLines, const char* szFileName, int32 iLine, int32 iColumn, int32 iLength, const char* szNote, int64 iData);
 	int32				AddSymbol(int32 iParent, const char* szName, const char* szDetail, uint8 uiKind, int64 iData);
+	int32				AddMessage(int32 iParent, const char* szText, const char* szDetail, Ptr<CImageCel> pIcon, int64 iData);
 	int32				FindResultNode(int64 iData);
 	int64				GetResultData(int32 iNode);
 	bool				HasResults(void);

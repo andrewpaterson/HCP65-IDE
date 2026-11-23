@@ -20,6 +20,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 ** ------------------------------------------------------------------------ **/
 #ifndef __IDE_EDITOR_TAB_H__
 #define __IDE_EDITOR_TAB_H__
+#include "IDEProblemList.h"
 #include "IDEOutline.h"
 #include "IDEBreadcrumbs.h"
 
@@ -105,6 +106,11 @@ protected:
 	CArrayTextRange		masSyntaxRanges;	//What each node of the text's syntax was parsed from, by start then end, for Extend Selection.
 	size				muiSyntaxChanges;	//The editor's change count they were parsed at, MAX_SIZE for none.
 	CIDEOutline			mcOutline;			//What the text declares, as it was last parsed.
+	CIDEProblemList			mcProblems;  //What a build of its file would say of it, when it last was checked (SetProblems).
+	size				muiProblemChanges;  //Its editor's change count when it was, MAX_SIZE before.
+	size				muiProblemsSet;  //How many times they have been set: the Problems pane shows them again when it changes.
+	size				muiErrorLayer;  //The editor's underline layers for the problems, MAX_SIZE until first used.
+	size				muiWarningLayer;
 	size				muiOutlineChanges;	//The editor's change count it was parsed at, MAX_SIZE for none.
 	CComponentEvent<CIDEEditorTab>	mcSyntaxBehind;	//Extend Selection wants the syntax and the ranges are behind the text.
 
@@ -120,6 +126,12 @@ public:
 	void				SetHighlights(CArrayHighlights* pacHighlights);
 	void				SetSyntaxRanges(CArrayCPPSyntaxRanges* pasRanges, size uiChanges);
 	void				SetOutline(CIDEOutline* pcOutline, size uiChanges);
+	void				SetProblems(CIDEProblemList* pcProblems, size uiChanges, ARGB32 sError, ARGB32 sWarning);
+	CIDEProblemList*	GetProblems(void);
+	bool				HasProblems(void);
+	size				GetProblemsSet(void) const;
+	void				ShowProblemMarks(bool bWarnings, ARGB32 sColour);
+	size				GetProblemLayer(bool bWarnings) const;
 	CIDEOutline*		GetOutline(void);
 	CIDEOutline*		GetLastOutline(void);
 	bool				IsOutlineCurrent(void);

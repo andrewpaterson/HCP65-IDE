@@ -492,6 +492,59 @@ void CIDEIcons::AddLine(CVectorPath* pcPath, float64 x1, float64 y1, float64 x2,
 
 //////////////////////////////////////////////////////////////////////////
 //
+// A problem's 16 x 16 icon, as IntelliJ IDEA's: an error a red circle, a
+// warning an amber triangle, each with an exclamation mark.
+//
+//////////////////////////////////////////////////////////////////////////
+Ptr<CImageCel> CIDEIcons::CreateProblemIcon(bool bWarning, Ptr<CWindowTheme> pTheme, CColourFormatHelper* pcFormat)
+{
+	Ptr<CImage>		pImage;
+	CImageDraw		cDraw;
+	CVectorPath		cPath;
+	SFloat64Vec2	asShape[24];
+	size			i;
+	float64			fAngle;
+
+	pImage = OMalloc<CImage>(16, 16, PT_uint8, IMAGE_DIFFUSE_RED, IMAGE_DIFFUSE_GREEN, IMAGE_DIFFUSE_BLUE, IMAGE_OPACITY, CHANNEL_STOP);
+	pImage->Black();
+	cDraw.Init(&pImage);
+
+	cPath.Init();
+	cPath.BeginPart(true);
+	if (bWarning)
+	{
+		asShape[0].Init(8.0, 1.0);
+		asShape[1].Init(15.0, 14.5);
+		asShape[2].Init(1.0, 14.5);
+		cPath.AddPolygon(asShape, 3, false);
+	}
+	else
+	{
+		for (i = 0; i < 24; i++)
+		{
+			fAngle = (float64)i * 2.0 * 3.14159265358979 / 24.0;
+			asShape[i].Init(8.0 + 7.0 * cos(fAngle), 8.0 + 7.0 * sin(fAngle));
+		}
+		cPath.AddPolygon(asShape, 24, false);
+	}
+	Fill(&cDraw, &cPath, pTheme->GetColour(bWarning ? TC_Warning : TC_Failure));
+	cPath.Kill();
+
+	cPath.Init();
+	cPath.BeginPart(true);
+	AddLine(&cPath, 8.0, bWarning ? 5.5 : 4.0, 8.0, bWarning ? 10.0 : 9.0);
+	AddLine(&cPath, 8.0, bWarning ? 12.0 : 11.5, 8.0, bWarning ? 12.5 : 12.0);
+	Fill(&cDraw, &cPath, bWarning ? pTheme->GetColour(TC_Panel) : pTheme->GetColour(TC_BrightText));
+	cPath.Kill();
+	cDraw.Kill();
+
+	pImage = CImageColourConverter::ConvertColour(pImage, pcFormat->meOrder);
+	return OMalloc<CImageCel>(pImage);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // A circle of the kind's colour with its letter in white.
 //
 //////////////////////////////////////////////////////////////////////////

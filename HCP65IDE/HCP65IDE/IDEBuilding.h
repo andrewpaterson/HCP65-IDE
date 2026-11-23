@@ -60,6 +60,7 @@ protected:
 	size						muiBuildStep;		//The one being built.
 	CChars						mszLibc65;			//The HCP65 compiler's system headers.
 	size						muiListingToShow;	//The line to show the code of after the next build, MAX_SIZE for none.
+	size						muiBuilds;			//How many builds have started (the Problems pane's Project tab follows it).
 public:
 	void	Init(CIDEContent* pcContent);
 	void	Class(void) override;
@@ -87,6 +88,7 @@ public:
 	bool				HasSteps(void) override;
 	bool				Step(bool bNext, bool bKeepKeys) override;
 	Ptr<CIDEMessageOutput>	GetMessages(void) const;
+	size				NumBuilds(void) const;
 
 protected:
 	void				RequestEditDialog(void);

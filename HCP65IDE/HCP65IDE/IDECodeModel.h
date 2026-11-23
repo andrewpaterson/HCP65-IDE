@@ -39,6 +39,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BuildLib/BuildWorkspace.h"
 #include "WindowLib/GoToDialog.h"
 #include "IDEIcons.h"
+#include "IDEProblemList.h"
 #include "IDERenameAssembly.h"
 #include "IDEOutline.h"
 
@@ -234,6 +235,9 @@ struct SIDEEditedFile
 	CArrayCPPSyntaxRanges	asSyntaxRanges;	//Made with the highlights: what each node of its syntax was parsed from.
 	CIDEOutline				cOutline;		//Made with the highlights: what the file declares.
 	bool				bIndexed;		//Made: the index has the file from szText (or the file's own text).
+	bool				bCheck;			//Its problems are wanted (an editor's, not a preview's).
+	CIDEProblemList		cProblems;		//Made, if bChecked: what a build of it would say of it (the Problems pane's).
+	bool				bChecked;
 
 	void	Init(size uiProject, const char* szFileName, const char* szText, size uiChanges, bool bHighlight, bool bIndex);
 	void	SetUnit(size uiProject, const char* szUnit, const char* szText);
@@ -384,6 +388,7 @@ protected:
 	void				KillJobs(void);
 	void				WaitForEditedFiles(void);
 	void				ProcessEditedFile(SIDEEditedFile* psFile);
+	void				CheckEditedFile(CIDEParsedUnit* pcUnit, const char* szErrors, SIDEEditedFile* psFile);
 	void				HighlightFile(CIDEParsedUnit* pcUnit, CSourceFile* pcFile, CArrayHighlights* pacDest, CArrayCPPSyntaxRanges* pasRanges);
 	void				GatherUnit(CIDEParsedUnit* pcUnit, CCPPIndexUnit* pcDest, CCPPIndexedFiles* pcIndexed);
 	void				CopyLocation(SCPPIndexLocation* psLocation, SIDELocation* psDest);

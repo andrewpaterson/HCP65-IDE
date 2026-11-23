@@ -219,6 +219,21 @@ def MakeUsagesKernel(szKernel=USAGES_KERNEL, asFiles={}):
 	return {'SOLUTION': os.path.join(szFolder, 'Kernel.sln'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
 
 
+#The Problems tool window's checks' kernel: line 3's override isn't declared override (a warning), line 4 uses a name
+#not declared and line 5 is missing an expression (errors); Problems.h, which it includes, uses a name not declared too.
+PROBLEMS_KERNEL = ('#include "Problems.h"\n'
+                   'class CBase { public: virtual int Get(void) { return 1; } };\n'
+                   'class CDerived : public CBase { public: int Get(void) { return 2; } };\n'
+                   'int F(void) { return giMissing; }\n'
+                   'int G(void) { return 1 +; }\n'
+                   'int main(void) { return F() + G() + H(); }\n')
+PROBLEMS_HEADER = 'int H(void) { return giMissingInHeader; }\n'
+
+
+def MakeProblemsKernel():
+	return MakeUsagesKernel(PROBLEMS_KERNEL, {'Problems.h': PROBLEMS_HEADER})
+
+
 def MakeNavigationCopy(szUser=None):
 	#A copy of the navigation checks' project (Input/Navigation), for checks that write beside the solution: its
 	#user's file (bookmarks, recent files).  Its recent solutions are apart from the user's.  szUser is what its user's
@@ -3719,6 +3734,40 @@ CHECKS = [
 		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp', 'CARET': '1:8', 'EDIT': 'usagegroups:t,usages,printusages'}),
 		[r'^Usages of CFoo  9 usages$', r'^  Usage in local variable declaration  1 usage$', r'^  Usage in template argument  8 usages$',
 		 r'^      4: template<class M = CFoo> class CDefault', r'^      5: CHolder<CFoo> gcHolder;$'], [r'Unclassified usage']),
+	('problems-current-file', dict(MakeProblemsKernel(), **{
+		#The Problems tool window's Current File: what the code model's check of the active editor's file found, errors
+		#then warnings, each in its line's order with its place; its header's problem isn't the file's.  The editor
+		#underlines each and marks its line beside the scroll bar, errors red and warnings amber.
+		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp',
+		'DEBUG': 'wait:1500,edit:problems:file,edit:printproblemmarks'}),
+		[r'^Problems tab: Current File$', r'^Kernel\.cpp  2 errors, 1 warning$', r'^  Only variables are supported by the compiler here yet \[giMissing\]  4:22$',
+		 r'^  Expected an expression\. \[;\]  5:25$', r"^  The function overrides a virtual function of a base class but isn't declared override \[Get\]  3:45$",
+		 r'^Problem marks: 2 error, 1 warning scroll marks$', r'^Underlined errors: \[giMissing\] \[;\]$', r'^Underlined warnings: \[Get\]$'],
+		[r'giMissingInHeader', r'Problems\.h  ']),
+	('problems-open-step', dict(MakeProblemsKernel(), **{
+		#A problem opened goes to its place with the editor having the keys; Next Occurrence goes on from it, from the
+		#editor, Problems being the tool window seen with something to step to.
+		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp',
+		'DEBUG': 'wait:1500,edit:problems:file,edit:problemsopen:file:2,edit:print,command:Navigate.NextOccurrence,edit:print'}),
+		[r'Kernel\.cpp \(focus\) line 5: \[int G\(void\) \{ return 1 \+; \}\]', r'Kernel\.cpp \(focus\) line 3: \[class CDerived'], [r'Nothing to step through']),
+	('problems-fixed', dict(MakeProblemsKernel(), **{
+		#Fixed in the editor, a problem goes once its edit has been checked, after a pause.
+		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp',
+		'DEBUG': 'wait:1500,edit:problems:file,edit:replace:4|giMissing|0,wait:1500,edit:problems:file,edit:printproblemmarks'}),
+		[r'^Kernel\.cpp  2 errors, 1 warning$', r'^Kernel\.cpp  1 error, 1 warning$', r'^Underlined errors: \[;\]$'], []),
+	('problems-header', dict(MakeProblemsKernel(), **{
+		#Another file made active, the tab shows its problems: the header's, checked in the unit that includes it.
+		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp',
+		'DEBUG': 'wait:1500,edit:open:Problems.h,wait:1500,edit:problems:file'}),
+		[r'^Problems tab: Current File$', r'^Problems\.h  1 error$', r'^  Only variables are supported by the compiler here yet \[giMissingInHeader\]  1:22$'],
+		[r'^Kernel\.cpp  ']),
+	('problems-project', dict(MakeProblemsKernel(), **{
+		#The Project tab: nothing until something is built; then the last build's errors and warnings by file (the
+		#W65C816's, which can be more than the check's), and one opened goes to its place.
+		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp',
+		'DEBUG': 'edit:problems:project,command:Build.Build,wait:6000,edit:problems:project,edit:problemsopen:project:1,edit:print'}),
+		[r'^Problems tab: Project$', r'^Nothing has been built yet$', r'^Problems tab: Project$', r'^Kernel\.cpp  \d+ errors, 1 warning$',
+		 r"isn't declared override \[Get\]  3:45$", r'^Problems\.h  1 error$', r'Kernel\.cpp \(focus\) line \d+: '], [r'^Nothing has been built yet$.*\n.*Kernel']),
 	('usages-access-filters', {
 		#Show Read Access and Show Write Access, both on to start with: off, a field's usages that read it, or write it, are
 		#left out of the tree, whose first row says how many are hidden.
@@ -4016,7 +4065,7 @@ CHECKS = [
 		 r'^Menu File/Recent Solutions: 1 ',
 		 r'^Menu Edit: Undo \[Ctrl\+Z\](\(disabled\))?, Redo \[Ctrl\+Shift\+Z\](\(disabled\))?, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\], Select All \[Ctrl\+A\], Extend Selection \[Ctrl\+W\], Shrink Selection \[Ctrl\+Shift\+W\], Find\.\.\. \[Ctrl\+F\], Replace\.\.\. \[Ctrl\+R\], Find Next \[F3\], Find Previous \[Shift\+F3\], Find Word at Caret \[Ctrl\+F3\], Find in Files\.\.\. \[Ctrl\+Shift\+F\], Replace in Files\.\.\. \[Ctrl\+Shift\+R\], Find Duplicates\.\.\. \[Ctrl\+Alt\+Shift\+D\]$',
 		 r'^Menu Navigate: Back \[Ctrl\+Alt\+Left\](\(disabled\))?, Forward \[Ctrl\+Alt\+Right\](\(disabled\))?, Class\.\.\. \[Ctrl\+N\], File\.\.\. \[Ctrl\+Shift\+N\], Symbol\.\.\. \[Ctrl\+Alt\+Shift\+N\], Action\.\.\. \[Ctrl\+Shift\+A\], Line:Column\.\.\. \[Ctrl\+G\], Go to Source \[Ctrl\+B\], Go to Definition \[F12\], Go to Implementation\(s\) \[Ctrl\+Alt\+B\], Go to Type Declaration \[Ctrl\+Shift\+B\], Go to Super Method \[Ctrl\+U\], Go to Related Symbol \[Ctrl\+Alt\+Home\], Switch Header/Source \[Alt\+O\], File Structure \[Ctrl\+F12\], Next Method \[Alt\+Down\], Previous Method \[Alt\+Up\], Toggle Bookmark \[Ctrl\+F11\], Toggle Bookmark with Mnemonic\.\.\. \[Ctrl\+Shift\+F11\], Next Bookmark \[F2\], Previous Bookmark \[Shift\+F2\], Next Change \[Ctrl\+Alt\+Shift\+Down\], Previous Change \[Ctrl\+Alt\+Shift\+Up\], Highlight Usages in File \[Ctrl\+Shift\+F7\], Recent Files \[Ctrl\+E\], Recent Locations \[Ctrl\+Shift\+E\], Last Edit Location \[Ctrl\+Shift\+Backspace\], Next Edit Location, Select In\.\.\. \[Alt\+F1\], Type Hierarchy \[Ctrl\+H\], Method Hierarchy \[Ctrl\+Shift\+H\], Call Hierarchy \[Ctrl\+Alt\+H\], Find Usages \[Alt\+F7\], Show Usages \[Ctrl\+Alt\+F7\], Find All References \[Shift\+F12\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Next Occurrence \[Ctrl\+Alt\+Down\], Previous Occurrence \[Ctrl\+Alt\+Up\]$',
-		 r'^Menu View: Solution Explorer \[Alt\+1\], Structure \[Alt\+7\], Find Usages \[Alt\+3\], Find \[Alt\+9\], Duplicates, Bookmarks \[Alt\+2\], Hierarchy \[Alt\+8\], Build \[Alt\+6\], Indexing, Run \[Alt\+4\], Debug \[Alt\+5\], Claude, Hide All Tool Windows \[Ctrl\+Shift\+F12\], Jump to Last Tool Window(\(disabled\))?, Quick Definition \[Ctrl\+Shift\+I\], Parameter Info \[Ctrl\+P\], Type Info \[Ctrl\+Shift\+P\]$',
+		 r'^Menu View: Solution Explorer \[Alt\+1\], Structure \[Alt\+7\], Find Usages \[Alt\+3\], Find \[Alt\+9\], Duplicates, Bookmarks \[Alt\+2\], Hierarchy \[Alt\+8\], Build \[Alt\+6\], Indexing, Problems, Run \[Alt\+4\], Debug \[Alt\+5\], Claude, Hide All Tool Windows \[Ctrl\+Shift\+F12\], Jump to Last Tool Window(\(disabled\))?, Quick Definition \[Ctrl\+Shift\+I\], Parameter Info \[Ctrl\+P\], Type Info \[Ctrl\+Shift\+P\]$',
 		 r'^Menu Git: Compare with HEAD, Compare with Branch\.\.\., Compare with Revision\.\.\.$',
 		 r'^Menu Build: Build \[Ctrl\+F9\], Edit Build Configurations\.\.\.$',
 		 r'^Menu Debug: Start Debugging \[F5\], Start Without Debugging \[Ctrl\+F5\], Stop Debugging \[Shift\+F5\], Stop Running(\(disabled\))?, Restart \[Ctrl\+Shift\+F5\], Break All \[Ctrl\+Pause/Break\], Attach to Emulator\.\.\., Step Into \[F11\], Step Over \[F10\], Step Out \[Shift\+F11\], Toggle Breakpoint \[F9\], New Breakpoint at Address\.\.\., Delete All Breakpoints, Edit Configurations\.\.\.$',
@@ -4994,7 +5043,7 @@ CHECKS = [
 		         'command:View.Structure,edit:printtoolwindows,command:View.Structure,edit:printtoolwindows,edit:print,command:View.JumpToLastToolWindow,edit:printtoolwindows,'
 		         'command:Navigate.TypeHierarchy,edit:printtoolwindows,command:View.Hierarchy,edit:printtoolwindows,command:View.Hierarchy,edit:printtoolwindows,'
 		         'command:View.Run,command:View.Debug,command:View.Find,edit:printtoolwindows,printmenus'},
-		[r'^Tool windows: Solution Explorer 1 \(front\), Structure 2, Find Usages 1 \(front\), Find 2, Duplicates 3, Bookmarks 4, Hierarchy 5, Build 6, Indexing 7, Run 8, Debug 9, Claude 10$', r'^Last tool window: none$',
+		[r'^Tool windows: Solution Explorer 1 \(front\), Structure 2, Find Usages 1 \(front\), Find 2, Duplicates 3, Bookmarks 4, Hierarchy 5, Build 6, Indexing 7, Problems 8, Run 9, Debug 10, Claude 11$', r'^Last tool window: none$',
 		 r'^Tool windows: .*Find Usages 1, .*Bookmarks 4 \(front, keys\), ', r'^Last tool window: Bookmarks$',
 		 r'^Tool windows: .*Bookmarks \(hidden\), Hierarchy 4 \(front\), ', r'^Last tool window: Bookmarks$', r'Main\.cpp \(focus\) line 6: ',
 		 r'^Tool windows: .*Find Usages 1 \(front, keys\), .*Build 5, ', r'^Tool windows: .*Find Usages 1, .*Build 5 \(front, keys\), ', r'^Last tool window: Build$',
@@ -5002,7 +5051,7 @@ CHECKS = [
 		 r'^Tool windows: Solution Explorer 1, Structure 2 \(front, keys\), ',
 		 r'^Tool windows: .*Hierarchy 4 \(front, keys\), ', r'^Tool windows: .*Hierarchy \(hidden\), ', r'^Tool windows: .*Hierarchy 4 \(front, keys\), ',
 		 r'^Tool windows: .*Find 2 \(front, keys\), ', r'^Last tool window: Find$',
-		 r'^Menu View: Solution Explorer \[Alt\+1\], Structure \[Alt\+7\], Find Usages \[Alt\+3\], Find \[Alt\+9\], Duplicates, Bookmarks \[Alt\+2\], Hierarchy \[Alt\+8\], Build \[Alt\+6\], Indexing, Run \[Alt\+4\], Debug \[Alt\+5\], Claude, '
+		 r'^Menu View: Solution Explorer \[Alt\+1\], Structure \[Alt\+7\], Find Usages \[Alt\+3\], Find \[Alt\+9\], Duplicates, Bookmarks \[Alt\+2\], Hierarchy \[Alt\+8\], Build \[Alt\+6\], Indexing, Problems, Run \[Alt\+4\], Debug \[Alt\+5\], Claude, '
 		 r'Hide All Tool Windows \[Ctrl\+Shift\+F12\], Jump to Last Tool Window, Quick Definition'], [r'ERROR']),
 	('tool-window-real-keys', {
 		#The tool windows' keys as a keyboard's presses: Alt+2 from the editor shows Bookmarks with the keys, and Alt+2
@@ -5016,8 +5065,8 @@ CHECKS = [
 		[r'^Tool windows: .*Bookmarks 4 \(front, keys\), ', r'^Tool windows: .*Bookmarks \(hidden\), ', r'Main\.cpp \(focus\) line 6: ',
 		 r'^Tool windows: Solution Explorer 1, Structure 2 \(front, keys\), ', r'^Tool windows: Solution Explorer \(front\), Structure \(hidden\), ',
 		 r'^Tool windows: Solution Explorer \(hidden\), Structure \(hidden\), Find Usages \(hidden\), .*Claude \(hidden\)$',
-		 r'^Hidden by Hide All: Solution Explorer, Claude, Debug, Run, Indexing, Build, Hierarchy, Duplicates, Find, Find Usages$',
-		 r'^Tool windows: Solution Explorer \(front\), Structure \(hidden\), Find Usages 1, Find 2, Duplicates 3, Bookmarks \(hidden\), Hierarchy 4 \(front\), Build 5, Indexing 6, Run 7, Debug 8, Claude 9$',
+		 r'^Hidden by Hide All: Solution Explorer, Claude, Debug, Run, Problems, Indexing, Build, Hierarchy, Duplicates, Find, Find Usages$',
+		 r'^Tool windows: Solution Explorer \(front\), Structure \(hidden\), Find Usages 1, Find 2, Duplicates 3, Bookmarks \(hidden\), Hierarchy 4 \(front\), Build 5, Indexing 6, Problems 7, Run 8, Debug 9, Claude 10$',
 		 r'^Hidden by Hide All: none$', r'Main\.cpp \(focus\) line 6: '], [r'ERROR']),
 	('tool-windows-hide-all', {
 		#Hide All Tool Windows: every docked tool window is hidden and the editor has the keys; again, they are back
@@ -5029,18 +5078,18 @@ CHECKS = [
 		'DEBUG': 'command:View.Structure,command:View.Build,edit:printtoolwindows,command:View.HideAllToolWindows,edit:printtoolwindows,edit:print,'
 		         'command:View.HideAllToolWindows,edit:printtoolwindows,command:View.HideAllToolWindows,command:View.Find,edit:printtoolwindows,command:View.Find,'
 		         'command:View.Run,command:View.Bookmarks,edit:printtoolwindows,command:View.HideAllToolWindows,edit:printtoolwindows,command:View.HideAllToolWindows,edit:printtoolwindows'},
-		[r'^Tool windows: Solution Explorer 1, Structure 2 \(front\), Find Usages 1, Find 2, Duplicates 3, Bookmarks 4, Hierarchy 5, Build 6 \(front, keys\), Indexing 7, Run 8, Debug 9, Claude 10$',
+		[r'^Tool windows: Solution Explorer 1, Structure 2 \(front\), Find Usages 1, Find 2, Duplicates 3, Bookmarks 4, Hierarchy 5, Build 6 \(front, keys\), Indexing 7, Problems 8, Run 9, Debug 10, Claude 11$',
 		 r'^Tool window areas: Structure 0,67 320x709, Build 324,596 956x180$', r'^Hidden by Hide All: none$',
-		 r'^Tool windows: Solution Explorer \(hidden\), Structure \(hidden\), Find Usages \(hidden\), Find \(hidden\), Duplicates \(hidden\), Bookmarks \(hidden\), Hierarchy \(hidden\), Build \(hidden\), Indexing \(hidden\), Run \(hidden\), Debug \(hidden\), Claude \(hidden\)$',
-		 r'^Tool window areas: none$', r'^Last tool window: Build$', r'^Hidden by Hide All: Structure, Solution Explorer, Claude, Debug, Run, Indexing, Build, Hierarchy, Bookmarks, Duplicates, Find, Find Usages$',
+		 r'^Tool windows: Solution Explorer \(hidden\), Structure \(hidden\), Find Usages \(hidden\), Find \(hidden\), Duplicates \(hidden\), Bookmarks \(hidden\), Hierarchy \(hidden\), Build \(hidden\), Indexing \(hidden\), Problems \(hidden\), Run \(hidden\), Debug \(hidden\), Claude \(hidden\)$',
+		 r'^Tool window areas: none$', r'^Last tool window: Build$', r'^Hidden by Hide All: Structure, Solution Explorer, Claude, Debug, Run, Problems, Indexing, Build, Hierarchy, Bookmarks, Duplicates, Find, Find Usages$',
 		 r'Main\.cpp \(focus\) line 6: ',
-		 r'^Tool windows: Solution Explorer 1, Structure 2 \(front\), Find Usages 1, Find 2, Duplicates 3, Bookmarks 4, Hierarchy 5, Build 6 \(front\), Indexing 7, Run 8, Debug 9, Claude 10$',
+		 r'^Tool windows: Solution Explorer 1, Structure 2 \(front\), Find Usages 1, Find 2, Duplicates 3, Bookmarks 4, Hierarchy 5, Build 6 \(front\), Indexing 7, Problems 8, Run 9, Debug 10, Claude 11$',
 		 r'^Tool window areas: Structure 0,67 320x709, Build 324,596 956x180$', r'^Hidden by Hide All: none$',
 		 r'^Tool windows: Solution Explorer \(hidden\), .*Find \(front, keys\), Duplicates \(hidden\), ', r'^Tool window areas: Find 0,596 1280x180$',
-		 r'^Tool windows: .*Find \(hidden\), Duplicates \(hidden\), Bookmarks 2 \(front, keys\), Hierarchy \(hidden\), Build \(hidden\), Indexing \(hidden\), Run 1, ',
-		 r'^Hidden by Hide All: Structure, Solution Explorer, Claude, Debug, Run, Indexing, Build, Hierarchy, Bookmarks, Duplicates, Find, Find Usages$',
-		 r'^Tool window areas: none$', r'^Hidden by Hide All: Structure, Solution Explorer, Claude, Debug, Run, Indexing, Build, Hierarchy, Bookmarks, Duplicates, Find, Find Usages$',
-		 r'^Tool windows: Solution Explorer 1, Structure 2 \(front\), Find Usages 1, Find 2, Duplicates 3, Bookmarks 4, Hierarchy 5, Build 6 \(front\), Indexing 7, Run 8, Debug 9, Claude 10$',
+		 r'^Tool windows: .*Find \(hidden\), Duplicates \(hidden\), Bookmarks 2 \(front, keys\), Hierarchy \(hidden\), Build \(hidden\), Indexing \(hidden\), Problems \(hidden\), Run 1, ',
+		 r'^Hidden by Hide All: Structure, Solution Explorer, Claude, Debug, Run, Problems, Indexing, Build, Hierarchy, Bookmarks, Duplicates, Find, Find Usages$',
+		 r'^Tool window areas: none$', r'^Hidden by Hide All: Structure, Solution Explorer, Claude, Debug, Run, Problems, Indexing, Build, Hierarchy, Bookmarks, Duplicates, Find, Find Usages$',
+		 r'^Tool windows: Solution Explorer 1, Structure 2 \(front\), Find Usages 1, Find 2, Duplicates 3, Bookmarks 4, Hierarchy 5, Build 6 \(front\), Indexing 7, Problems 8, Run 9, Debug 10, Claude 11$',
 		 r'^Tool window areas: Structure 0,67 320x709, Build 324,596 956x180$', r'^Last tool window: Bookmarks$', r'^Hidden by Hide All: none$'], [r'ERROR']),
 	('tool-windows-jump-to-last', {
 		#Jump to Last Tool Window does nothing until a tool window has had the keys.  Then it shows the last that had
@@ -5050,9 +5099,9 @@ CHECKS = [
 		'DEBUG': 'command:View.JumpToLastToolWindow,edit:printtoolwindows,command:View.Bookmarks,command:View.Build,command:View.Build,edit:printtoolwindows,edit:print,'
 		         'command:View.JumpToLastToolWindow,edit:printtoolwindows,command:View.HideAllToolWindows,edit:printtoolwindows,command:View.JumpToLastToolWindow,edit:printtoolwindows'},
 		[r'^Command \[View\.JumpToLastToolWindow\] not found, not enabled or did nothing\.$', r'^Last tool window: none$',
-		 r'^Tool windows: .*Bookmarks 4, Hierarchy 5, Build \(hidden\), Indexing 6 \(front\), ', r'^Last tool window: Build$', r'Main\.cpp \(focus\) line 6: ',
+		 r'^Tool windows: .*Bookmarks 4, Hierarchy 5, Build \(hidden\), Indexing 6 \(front\), Problems 7, ', r'^Last tool window: Build$', r'Main\.cpp \(focus\) line 6: ',
 		 r'^Tool windows: .*Bookmarks 4, Hierarchy 5, Build 6 \(front, keys\), ', r'^Tool windows: .*Build \(hidden\), ', r'^Last tool window: Build$',
-		 r'^Tool windows: .*Hierarchy \(hidden\), Build \(front, keys\), Indexing \(hidden\), ', r'^Tool window areas: Build 0,596 1280x180$'], [r'ERROR']),
+		 r'^Tool windows: .*Hierarchy \(hidden\), Build \(front, keys\), Indexing \(hidden\), Problems \(hidden\), ', r'^Tool window areas: Build 0,596 1280x180$'], [r'ERROR']),
 	('macro-define-link', dict(MakeMacrosCopy(), **{
 		#A macro's name is no symbol of the index's, and its #define is its declaration: with Control held over it the
 		#name is a link, the pointer a hand, and the #define's first line is shown with where it is; Quick Definition

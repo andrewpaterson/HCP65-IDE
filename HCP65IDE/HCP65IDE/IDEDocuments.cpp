@@ -551,6 +551,7 @@ int64 CIDEDocuments::GiveEditedTabs(int64 iNow, bool bNow)
 	bool					bIndex;
 	int64					iWait;
 	int64					iSoonest;
+	size					uiGiven;
 	CArrayIDEEditedFiles	apsFiles;
 
 	if (!TakeEditedFiles(bNow))
@@ -574,7 +575,13 @@ int64 CIDEDocuments::GiveEditedTabs(int64 iNow, bool bNow)
 		pTab = maTabs.Get(i);
 		if (pTab->TakeEdits(iNow, bNow, bCanIndex, &bHighlight, &bIndex, &iWait))
 		{
+			uiGiven = apsFiles.NumElements();
 			AddEditedFile(pTab->GetProject(), pTab->GetFileName(), pTab->GetEditor()->GetText(), pTab->GetEditor()->GetChangeCount(), bHighlight, bIndex, pTab->IsEdited(), &apsFiles);
+			if (apsFiles.NumElements() > uiGiven)
+			{
+				//An editor's file highlighted is checked too, for the Problems pane; a preview's isn't.
+				apsFiles.GetPtr(uiGiven)->bCheck = bHighlight;
+			}
 		}
 		else if ((iWait >= 0) && ((iSoonest < 0) || (iWait < iSoonest)))
 		{
@@ -703,7 +710,7 @@ bool CIDEDocuments::TakeEditedFiles(bool bWait)
 		{
 			continue;
 		}
-		pTab = (psFile->bHighlighted || psFile->bIndexed) ? FindTab(psFile->szFileName.Text()) : Ptr<CIDEEditorTab>();
+		pTab = (psFile->bHighlighted || psFile->bIndexed || psFile->bChecked) ? FindTab(psFile->szFileName.Text()) : Ptr<CIDEEditorTab>();
 		if (pTab.IsNotNull() && psFile->bIndexed && psFile->bText)
 		{
 			pTab->Indexed(psFile->uiChanges);
@@ -713,6 +720,10 @@ bool CIDEDocuments::TakeEditedFiles(bool bWait)
 			pTab->SetHighlights(&psFile->acHighlights);
 			pTab->SetSyntaxRanges(&psFile->asSyntaxRanges, psFile->uiChanges);
 			pTab->SetOutline(&psFile->cOutline, psFile->uiChanges);
+		}
+		if (pTab.IsNotNull() && psFile->bChecked && (pTab->GetEditor()->GetChangeCount() == psFile->uiChanges))
+		{
+			pTab->SetProblems(&psFile->cProblems, psFile->uiChanges, mpcContent->GetTheme()->GetColour(TC_Failure), mpcContent->GetTheme()->GetColour(TC_Warning));
 		}
 	}
 	KillIDEEditedFiles(&apsFiles);

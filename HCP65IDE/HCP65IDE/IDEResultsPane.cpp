@@ -294,6 +294,29 @@ int32 CIDEResultsPane::AddSymbol(int32 iParent, const char* szName, const char* 
 }
 
 
+//////////////////////////////////////////////////////////////////////////
+//
+// A result that is a message (the Problems pane's): pIcon, its text, then
+// szDetail dim (where it is).
+//
+//////////////////////////////////////////////////////////////////////////
+int32 CIDEResultsPane::AddMessage(int32 iParent, const char* szText, const char* szDetail, Ptr<CImageCel> pIcon, int64 iData)
+{
+	CChars	szRow;
+	int32	iNode;
+
+	szRow.Init(szText);
+	szRow.Append(szDetail ? szDetail : "");
+	iNode = mpTree->AddNode(iParent, szRow.Text(), pIcon, iData);
+	if (szRow.Length() > strlen(szText))
+	{
+		mpTree->AddNodeRange(iNode, strlen(szText), szRow.Length() - strlen(szText), mpcContent->GetDimFont());
+	}
+	szRow.Kill();
+	return iNode;
+}
+
+
 //A part of a line of code that has a colour of its own: where it is in the line and what it is.
 struct SIDELineColour
 {

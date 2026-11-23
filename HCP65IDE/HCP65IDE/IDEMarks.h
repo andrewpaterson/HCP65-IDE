@@ -38,6 +38,8 @@ class CIDEEditorTab;
 #define IDE_CHANGE_MODIFIED_MARKS	4
 #define IDE_CHANGE_REMOVED_MARKS	5
 #define IDE_USAGES_MARKS			6
+#define IDE_PROBLEM_ERROR_MARKS		7	//The active check's errors (CIDEEditorTab::SetProblems).
+#define IDE_PROBLEM_WARNING_MARKS	8	//And its warnings.
 
 #define IDE_OVERRIDE_ENTRIES		2000	//The most of a file's functions and classes looked up for override marks.
 #define IDE_OVERRIDES_UP			'^'		//The gutter's mark of a function that overrides.

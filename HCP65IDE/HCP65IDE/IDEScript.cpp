@@ -42,7 +42,7 @@ static bool			gbIDEScriptRenameSaves = false;  //rename: saves what it edited (r
 static bool			gbIDEScriptClassFiles = false;  //rename: renames a type's files too (renamesearch's f), never from the settings.
 
 
-static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printfindpreview", "printfindtoolbar", "findtool:", "replace:", "findoptions:", "findselect:", "printstartup", "printworkspace", "printuserfile", "rename", "safedelete", "introducevariable", "introducefield", "introduceconstant", "introduceparameter", "changesignature", "pullmembersup", "pushmembersdown", "moveclass", "copyclass", "inlinevariable", "introducetypedef", "extractmethod", "extractsuperclass", "extractinterface", "extractclass", "encapsulatefield", "convertmacro", "extracttemplateparameter", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printkeyrepeat", "printsettings", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printprojectfiles", "printdiskfile:", "printdisklines:", "printedits", "printspans", "configuration:", "waitindex", "indextemplates:" };
+static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printfindpreview", "printfindtoolbar", "findtool:", "replace:", "findoptions:", "findselect:", "printstartup", "printworkspace", "printuserfile", "rename", "safedelete", "introducevariable", "introducefield", "introduceconstant", "introduceparameter", "changesignature", "pullmembersup", "pushmembersdown", "moveclass", "copyclass", "inlinevariable", "introducetypedef", "extractmethod", "extractsuperclass", "extractinterface", "extractclass", "encapsulatefield", "convertmacro", "extracttemplateparameter", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printkeyrepeat", "printsettings", "printproblems", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printprojectfiles", "printdiskfile:", "printdisklines:", "printedits", "printspans", "configuration:", "waitindex", "indextemplates:" };
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -667,6 +667,32 @@ void CIDEScript::RunCommand(const char* szCommand)
 		printf("Keymap file:\n%s\n", cFile.Read(mpcContent->GetSettings()->GetKeymapFile()) ? cFile.Text() : "(none)");
 		fflush(stdout);
 		cFile.Kill();
+	}
+	else if (strcmp(szCommand, "printproblems") == 0)
+	{
+		//The active editor's problems, as the code model's check last found them: "Problems: <file name> 2 errors, 1
+		//warning", then each "  <line>:<column> error|warning: <message>"; "Problems: not checked" before it was.
+		Ptr<CIDEEditorTab>	pProblemsTab;
+		CIDEProblemList*	pcProblems;
+		SIDEProblem*		psProblem;
+		size				i;
+
+		pProblemsTab = mpcContent->GetDocuments()->GetActiveTab();
+		if (pProblemsTab.IsNull() || !pProblemsTab->HasProblems())
+		{
+			printf("Problems: not checked\n");
+		}
+		else
+		{
+			pcProblems = pProblemsTab->GetProblems();
+			printf("Problems: %s %d errors, %d warnings\n", GetIDEFileNamePart(pProblemsTab->GetFileName()), (int)pcProblems->NumErrors(), (int)pcProblems->NumWarnings());
+			for (i = 0; i < pcProblems->NumProblems(); i++)
+			{
+				psProblem = pcProblems->Get(i);
+				printf("  %d:%d %s: %s\n", (int)psProblem->iLine + 1, (int)psProblem->iColumn + 1, psProblem->bWarning ? "warning" : "error", psProblem->szMessage.Text());
+			}
+		}
+		fflush(stdout);
 	}
 	else if (strcmp(szCommand, "printindexing") == 0)
 	{
@@ -3378,6 +3404,62 @@ void CIDEScript::RunUsagesStep(const char* szStep)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// The Problems tool window's tabs (file: Current File, project:
+// Project), each shown first:
+//   problems:<tab>, its tree printed, each row indented by its depth, after
+//     "Problems tab: <tab>";
+//   problemsopen:<tab>:<n>, its nth problem (from 1) selected and opened,
+//     as a double click does.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEScript::RunProblemsStep(const char* szStep)
+{
+	Ptr<CIDEProblems>		pProblems;
+	Ptr<CIDEResultsPane>	pPane;
+	Ptr<CTreeContainer>		pTree;
+	CChars					szNode;
+	const char*				szTab;
+	int32					iNode;
+	int32					iDepth;
+	bool					bFile;
+
+	pProblems = mpcContent->GetProblems();
+	szTab = strchr(szStep, ':') + 1;
+	bFile = strncmp(szTab, "file", 4) == 0;
+	mpcContent->GetDock()->Show(pProblems->GetTool());
+	pProblems->ShowFileTab(bFile);
+	pProblems->Update();
+	mpcContent->GetWindow()->Layout();
+	pPane = bFile ? pProblems->GetFilePane() : pProblems->GetProjectPane();
+	pTree = pPane->GetTree();
+	if (strncmp(szStep, "problemsopen:", 13) == 0)
+	{
+		iNode = (strchr(szTab, ':') != NULL) ? pPane->FindResultNode((int64)atoi(strchr(szTab, ':') + 1)) : -1;
+		if (iNode >= 0)
+		{
+			pTree->SelectNode(iNode);  //A double click's first press selects the row.
+			pPane->OpenResult(iNode, true);
+		}
+		return;
+	}
+	printf("Problems tab: %s\n", bFile ? "Current File" : "Project");
+	for (iNode = 0; iNode < pTree->NumNodes(); iNode++)
+	{
+		szNode.Init();
+		pTree->GetNodeText(iNode, &szNode);
+		for (iDepth = pTree->GetNodeDepth(iNode); iDepth > 0; iDepth--)
+		{
+			printf("  ");
+		}
+		printf("%s\n", szNode.Text());
+		szNode.Kill();
+	}
+	fflush(stdout);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // The Build and Indexing tabs' messages (CIDEMessageOutput), the tab
 // named build or indexing, which is shown first:
 //   outputcaret:<tab>:<line>, the caret put at the start of the tab's
@@ -3403,6 +3485,12 @@ void CIDEScript::RunUsagesStep(const char* szStep)
 //////////////////////////////////////////////////////////////////////////
 bool CIDEScript::RunOutputStep(const char* szStep)
 {
+	if ((strncmp(szStep, "problems:", 9) == 0) || (strncmp(szStep, "problemsopen:", 13) == 0))
+	{
+		RunProblemsStep(szStep);
+		return true;
+	}
+
 	Ptr<CIDEBuildPane>	pPane;
 	Ptr<CDockPane>		pTool;
 	Ptr<CTextArea>		pOutput;
@@ -3793,6 +3881,35 @@ void CIDEScript::RunViewStep(const char* szStep)
 			}
 		}
 		printf(", %d scroll marks\n", (int)(CountScrollMarks(pTab, IDE_USAGES_MARKS) + CountScrollMarks(pTab, IDE_CHANGE_ADDED_MARKS) + CountScrollMarks(pTab, IDE_CHANGE_MODIFIED_MARKS) + CountScrollMarks(pTab, IDE_CHANGE_REMOVED_MARKS)));
+		fflush(stdout);
+	}
+	else if ((strcmp(szStep, "printproblemmarks") == 0) && pTab.IsNotNull())
+	{
+		//The active editor's problems' marks: "Problem marks: 2 error, 1 warning scroll marks", then "Underlined
+		//errors: [giMissing] [;]" and "Underlined warnings: [Get]", the text each underline is under.
+		Ptr<CTextArea>	pProblemEditor;
+		STextRange*		psRange;
+		CChars			szUnder;
+		size			uiLayer;
+		size			j;
+		int				k;
+
+		pProblemEditor = pTab->GetEditor();
+		printf("Problem marks: %d error, %d warning scroll marks\n", (int)CountScrollMarks(pTab, IDE_PROBLEM_ERROR_MARKS), (int)CountScrollMarks(pTab, IDE_PROBLEM_WARNING_MARKS));
+		for (k = 0; k < 2; k++)
+		{
+			printf("Underlined %s:", (k == 0) ? "errors" : "warnings");
+			uiLayer = pTab->GetProblemLayer(k == 1);
+			for (j = 0; (uiLayer != MAX_SIZE) && (j < pProblemEditor->NumHighlightRanges(uiLayer)); j++)
+			{
+				psRange = pProblemEditor->GetHighlightRange(uiLayer, j);
+				szUnder.Init();
+				szUnder.AppendSubString(pProblemEditor->GetText(), psRange->uiStart, psRange->uiEnd);
+				printf(" [%s]", szUnder.Text());
+				szUnder.Kill();
+			}
+			printf("\n");
+		}
 		fflush(stdout);
 	}
 	else if ((strncmp(szStep, "overrideclick:", 14) == 0) && pTab.IsNotNull())

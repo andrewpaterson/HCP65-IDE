@@ -19,6 +19,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 ** ------------------------------------------------------------------------ **/
 #include "BaseLib/NativeThread.h"
+#include "CppCompilerLib/CPPSemanticPass.h"
 #include "IDECodeModel.h"
 
 
@@ -48,6 +49,9 @@ void SIDEEditedFile::Init(size uiProject, const char* szFileName, const char* sz
 	bHighlighted = false;
 	asSyntaxRanges.Init();
 	cOutline.Init();
+	bCheck = false;
+	cProblems.Init();
+	bChecked = false;
 }
 
 
@@ -73,6 +77,7 @@ void SIDEEditedFile::SetUnit(size uiProject, const char* szUnit, const char* szT
 //////////////////////////////////////////////////////////////////////////
 void SIDEEditedFile::Kill(void)
 {
+	cProblems.Kill();
 	cOutline.Kill();
 	asSyntaxRanges.Kill();
 	acHighlights.Kill();
@@ -242,6 +247,32 @@ void CIDECodeModel::WaitForEditedFiles(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// The problems a build of psFile would give, from pcUnit (its unit,
+// parsed as its project builds it): the preprocessor's (szErrors), the
+// parser's and a check's, errors and warnings, those in the file only.
+// The check is the refactorings' (CIDERefactorUnit): the host's.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDECodeModel::CheckEditedFile(CIDEParsedUnit* pcUnit, const char* szErrors, SIDEEditedFile* psFile)
+{
+	CCPPSemanticPass	cPass;
+
+	psFile->cProblems.Clear();
+	psFile->cProblems.AddMessages(szErrors, psFile->szFileName.Text(), false);
+	psFile->cProblems.AddErrors(pcUnit->mcTree.GetErrors(), psFile->szFileName.Text(), false);
+	cPass.Init();
+	cPass.SetOptions(&pcUnit->mcOptions);
+	cPass.Check(&pcUnit->mcTree, CPPT_Host, false);
+	psFile->cProblems.AddErrors(cPass.GetErrors(), psFile->szFileName.Text(), false);
+	psFile->cProblems.AddErrors(cPass.GetWarnings(), psFile->szFileName.Text(), true);
+	cPass.Kill();
+	psFile->cProblems.Sort();
+	psFile->bChecked = true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // One edited file parsed once, then highlighted and indexed again from
 // that parse.  A header is parsed in its unit, with what comes before it
 // there, and the unit's and the header's old places are forgotten; one
@@ -292,6 +323,10 @@ void CIDECodeModel::ProcessEditedFile(SIDEEditedFile* psFile)
 		mcIndex.Merge(&cGathered);
 		mcIndexMutex.Unlock();
 		psFile->bIndexed = true;
+	}
+	if (bParsed && psFile->bCheck)
+	{
+		CheckEditedFile(&cUnit, szErrors.Text(), psFile);
 	}
 	cUnit.Kill();
 

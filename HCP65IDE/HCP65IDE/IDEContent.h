@@ -105,6 +105,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDEQuickInfo.h"
 #include "IDEHierarchy.h"
 #include "IDEIndexing.h"
+#include "IDEProblems.h"
 #include "IDEDocuments.h"
 #include "IDESolutions.h"
 #include "IDEBuilding.h"
@@ -131,6 +132,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define IDE_FIND_ID				"Find"
 #define IDE_DUPLICATES_ID		"Duplicates"
 #define IDE_INDEXING_ID			"Indexing"
+#define IDE_PROBLEMS_ID			"Problems"
 
 
 #define IDE_DOCUMENT_PREFIX		"Document:"
@@ -193,6 +195,7 @@ protected:
 	Ptr<CImageCel>				mpFileIcon;
 	CArray<CImageCel>			maFileIcons;		//By EIDEFileType.
 	CArray<CImageCel>			maSymbolIcons;		//By EIDESymbolType.
+	CArray<CImageCel>			maProblemIcons;		//An error's, then a warning's.
 	CArray<CImageCel>			maToolIcons;		//By EIDEToolIcon, then each again dim for a button that can't be used.
 
 	Ptr<CFont>					mpMatchFont;		//What Go to's pattern matched.
@@ -246,6 +249,7 @@ protected:
 	Ptr<CIDECaretUsages>		mpCaretUsages;			//The usages of the symbol at the caret, highlighted.
 	Ptr<CIDEPasteHistory>		mpPasteHistory;			//Paste from History: what the clipboard's history chooses with.
 	Ptr<CIDEIndexing>			mpIndexing;			//The Indexing tab.
+	Ptr<CIDEProblems>			mpProblems;			//The Problems tab.
 	Ptr<CIDEDocuments>			mpDocuments;		//The open files' tabs.
 	Ptr<CIDESolutions>			mpSolutions;		//Opening, adding and removing solutions, and the recent ones.
 	Ptr<CIDEBuilding>			mpBuilding;			//Build, its menu and tab, and the listings.
@@ -319,6 +323,7 @@ public:
 	size				NumFileTypeIcons(void);
 	Ptr<CImageCel>		GetFileTypeIcon(size uiType);
 	Ptr<CImageCel>		GetSymbolIcon(size uiType);
+	Ptr<CImageCel>		GetProblemIcon(bool bWarning);
 	Ptr<CImageCel>		GetToolIcon(size uiIcon, bool bDim = false);
 	Ptr<CMenuBar>		GetMenuBar(void) const;
 	Ptr<CCommandSet>	GetCommands(void) const;
@@ -354,6 +359,7 @@ public:
 	Ptr<CIDEHierarchy>		GetHierarchy(void) const;
 	Ptr<CIDEDuplicates>		GetDuplicates(void) const;
 	Ptr<CIDEIndexing>		GetIndexing(void) const;
+	Ptr<CIDEProblems>		GetProblems(void) const;
 	Ptr<CIDERename>			GetRename(void) const;
 	Ptr<CIDEFileRename>		GetFileRename(void) const;
 	Ptr<CIDESafeDelete>		GetSafeDelete(void) const;

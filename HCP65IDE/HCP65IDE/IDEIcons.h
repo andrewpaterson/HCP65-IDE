@@ -92,6 +92,7 @@ public:
 	static Ptr<CImageCel>	CreateFileIcon(EIDEFileType eType, Ptr<CWindowTheme> pTheme, CColourFormatHelper* pcFormat);
 	static Ptr<CImageCel>	CreateSymbolIcon(EIDESymbolType eType, Ptr<CWindowTheme> pTheme, CColourFormatHelper* pcFormat);
 	static Ptr<CImageCel>	CreateToolIcon(EIDEToolIcon eIcon, ARGB32 sColour, CColourFormatHelper* pcFormat);
+	static Ptr<CImageCel>	CreateProblemIcon(bool bWarning, Ptr<CWindowTheme> pTheme, CColourFormatHelper* pcFormat);
 
 protected:
 	static void				Fill(CImageDraw* pcDraw, CVectorPath* pcPath, ARGB32 sColour);

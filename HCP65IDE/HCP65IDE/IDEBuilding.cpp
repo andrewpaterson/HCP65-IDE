@@ -62,6 +62,7 @@ void CIDEBuilding::Init(CIDEContent* pcContent)
 	muiBuildStep = 0;
 	mszLibc65.Init();
 	muiListingToShow = MAX_SIZE;
+	muiBuilds = 0;
 	PostInit();
 }
 
@@ -83,6 +84,7 @@ void CIDEBuilding::Class(void)
 	U_Size(muiBuildStep);
 	U_String(mszLibc65);
 	U_Size(muiListingToShow);
+	U_Size(muiBuilds);
 }
 
 
@@ -163,6 +165,7 @@ bool CIDEBuilding::Build(void)
 	}
 
 	//The listings of every solution built are read, in place of the last build's.
+	muiBuilds++;
 	SetListings(false);
 	muiBuildStep = 0;
 	ClearBuildTab();
@@ -820,5 +823,6 @@ const char* CIDEBuilding::GetSteppableName(void) { return "Build"; }
 bool CIDEBuilding::HasSteps(void) { return mpMessages.IsNotNull() && mpMessages->HasMessages(); }
 bool CIDEBuilding::Step(bool bNext, bool bKeepKeys) { return mpMessages->Step(bNext, bKeepKeys); }
 Ptr<CIDEMessageOutput> CIDEBuilding::GetMessages(void) const { return mpMessages; }
+size CIDEBuilding::NumBuilds(void) const { return muiBuilds; }
 
 

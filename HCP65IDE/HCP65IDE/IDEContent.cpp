@@ -174,6 +174,7 @@ void CIDEContent::Init(void)
 	memset(&msDialogLook, 0, sizeof(msDialogLook));
 	maFileIcons.Init();
 	maSymbolIcons.Init();
+	maProblemIcons.Init();
 	maToolIcons.Init();
 	mpMatchFont = NULL;
 	mbKeepSettings = true;
@@ -208,6 +209,7 @@ void CIDEContent::Class(void)
 	M_Pointer(mpFileIcon);
 	M_Embedded(maFileIcons);
 	M_Embedded(maSymbolIcons);
+	M_Embedded(maProblemIcons);
 	M_Embedded(maToolIcons);
 	M_Pointer(mpMatchFont);
 	M_Pointer(mpScript);
@@ -257,6 +259,7 @@ void CIDEContent::Class(void)
 	M_Pointer(mpCaretUsages);
 	M_Pointer(mpPasteHistory);
 	M_Pointer(mpIndexing);
+	M_Pointer(mpProblems);
 	M_Pointer(mpDocuments);
 	M_Pointer(mpSolutions);
 	M_Pointer(mpBuilding);
@@ -439,6 +442,8 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	{
 		maSymbolIcons.Add(CIDEIcons::CreateSymbolIcon((EIDESymbolType)i, mpTheme, &cFormat));
 	}
+	maProblemIcons.Add(CIDEIcons::CreateProblemIcon(false, mpTheme, &cFormat));
+	maProblemIcons.Add(CIDEIcons::CreateProblemIcon(true, mpTheme, &cFormat));
 	for (i = 0; i < 2 * ITI_Count; i++)
 	{
 		maToolIcons.Add(CIDEIcons::CreateToolIcon((EIDEToolIcon)(i % ITI_Count), mpTheme->GetColour((i < ITI_Count) ? TC_Icon : TC_DimText), &cFormat));
@@ -494,6 +499,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpCaretUsages = OMalloc<CIDECaretUsages>(this);
 	mpPasteHistory = OMalloc<CIDEPasteHistory>(this);
 	mpIndexing = OMalloc<CIDEIndexing>(this);
+	mpProblems = OMalloc<CIDEProblems>(this);
 	mpDocuments = OMalloc<CIDEDocuments>(this);
 	mpSolutions = OMalloc<CIDESolutions>(this);
 	mpBuilding = OMalloc<CIDEBuilding>(this);
@@ -537,6 +543,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpHierarchy->CreatePane(&sPlace);
 	mpBuilding->CreatePane(&sPlace);
 	mpIndexing->CreatePane(&sPlace);
+	mpProblems->CreatePane(&sPlace);
 	mpRunning->CreatePane(&sPlace);
 
 	mpDebugging->CreatePane(&sPlace);
@@ -863,6 +870,12 @@ int64 CIDEContent::UpdateStatusLine(int64 iNow)
 
 	//The Indexing tab follows it too, and is looked at again until it has shown the end.
 	if (mpIndexing->Update())
+	{
+		iWait = ((iWait < 0) || (iWait > IDE_PROGRESS_POLL)) ? IDE_PROGRESS_POLL : iWait;
+	}
+
+	//The Problems tab follows the active editor's check and the last build.
+	if (mpProblems->Update())
 	{
 		iWait = ((iWait < 0) || (iWait > IDE_PROGRESS_POLL)) ? IDE_PROGRESS_POLL : iWait;
 	}
@@ -1306,6 +1319,8 @@ Ptr<CIDEDuplicates> CIDEContent::GetDuplicates(void) const { return mpDuplicates
 Ptr<CIDEOccurrences> CIDEContent::GetOccurrences(void) const { return mpOccurrences; }
 Ptr<CIDENavigationHistory> CIDEContent::GetNavigationHistory(void) const { return mpNavigationHistory; }
 Ptr<CIDEIndexing> CIDEContent::GetIndexing(void) const { return mpIndexing; }
+Ptr<CIDEProblems> CIDEContent::GetProblems(void) const { return mpProblems; }
+Ptr<CImageCel> CIDEContent::GetProblemIcon(bool bWarning) { return maProblemIcons.Get(bWarning ? 1 : 0); }
 Ptr<CIDERename> CIDEContent::GetRename(void) const { return mpRename; }
 Ptr<CIDEFileRename> CIDEContent::GetFileRename(void) const { return mpFileRename; }
 Ptr<CIDESafeDelete> CIDEContent::GetSafeDelete(void) const { return mpSafeDelete; }
