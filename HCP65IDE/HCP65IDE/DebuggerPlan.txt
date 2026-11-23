@@ -67,7 +67,27 @@ What the compiler knows and throws away (CommonLibraries/Libraries/CppCompilerLi
 What is to be built
 -------------------
 
-Stages in order; each builds, is checked and committed on its own.  M is done (its results below).
+Stages in order; each builds, is checked and committed on its own.  M is done (its results below), then A and B2.
+
+What is built (2026-11-23), where it differs from the steps below
+  A1-A5. The records are the assembler's .dfunction, .dframe (none | frame | saved, an offset: how the caller's D
+      and return address are found, placed where the prologue ends), .dvariable, .dglobal, .dstatic, .dtype and
+      .dmember, kept by CAsm65DebugRecords (Assembler65Lib) in the object and linked into <program>.debug
+      (CAsm65DebugInfo: the line table and the records).  A Debug build has no DropFrame, AlignFrame or
+      forwarders; Release records its frames too (all three shapes).  Objects compiled for the HCP65's own loader
+      carry none (ASM65_DEBUG_RECORDS).
+  A6 and B2. CAsm65StackWalker (Assembler65Lib, beside the records): from PC, S, D, A, X, Y and P, each frame's
+      function, PC (a caller's is where its call returns to), S before its call and D.  A frame not yet made (or
+      none) is found by following the instructions from the function's start (S, and A, X and Y copied from S, so
+      an aligned prologue's "and" loses nothing); one being taken apart, by those to its rtl after pld; any other
+      by its link.  An indirect call (phk, per, the target pushed, rtl) is a call, not a return
+      (AsmW65C816IsIndirectCall).  It stops at code with no records (the start-up, Libc65's assembly); Locate
+      gives a variable's address.  CAsmW65C816FrameCheck follows indirect calls too and says whether a walk is the
+      calls being run (WrongFrame).  Tests: TestAsm65StackWalker (hand written frames, every step checked),
+      TestCPPW65C816Debug (a program run Release, Debug and unoptimised, its walk checked at every step; stopped
+      at a line in a recursion, each frame's locals read).  Every TestCPPW65C816 program was also walked at every
+      step, once, in Debug (52 M walks) and unoptimised (64 M): none wrong.  Kernal stubs (decision 6) are still
+      to do.
 
 M. Measure first
   M1. A Debug compile (A2) of the kernal, boot.exe and ModPlay: code size against the kernal's limit (OS.SYS's
