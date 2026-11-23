@@ -3880,9 +3880,10 @@ CHECKS = [
 		[r"^Status: MinGW's headers weren't found", r'^System directories: \S*/13-win32/include/c\+\+,'], []),
 	('build-configuration-rules', dict(OpenedForCheck([os.path.join(KERNAL, 'HCP65Kernal.sln')]), **{
 		#OK is refused for what the file couldn't have, and the real file isn't written by a scripted run.  The kernal's
-		#configurations: an image, and no card.
+		#configurations have an image, and a card with a path on it (the boot loader's \OS\OS.SYS): a card given with
+		#the path cleared is refused, then one with a path is fine.
 		'DIALOG_ANSWER': 'OK',
-		'BUILD_EDITS': 'name:Release|W65C816;check;name:;check;name:Fine;solution:Debug|Win32;card:Card.img;check;cardpath:\\\\boot.exe;toolchain:GCC;check;toolchain:W65C816;check',
+		'BUILD_EDITS': 'name:Release|W65C816;check;name:;check;name:Fine;solution:Debug|Win32;card:Card.img;cardpath:;check;cardpath:\\\\boot.exe;toolchain:GCC;check;toolchain:W65C816;check',
 		'DEBUG': 'command:Build.EditConfigurations,answered:1,printconfig'}),
 		[r'^Build dialog: refused \[Another build configuration has this name\.\]$',
 		 r'^Build dialog: refused \[A build configuration needs a name\.\]$',
