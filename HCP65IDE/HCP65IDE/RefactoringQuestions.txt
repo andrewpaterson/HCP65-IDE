@@ -75,7 +75,7 @@ Answered
     Answered 2026-11-16: qualify by default, as it is.
 
 62. A block of the new namespace that is made is written as the file's other namespace blocks are, or, in a file
-    with none, as Aardvark.cpp writes them: namespace Name, { on the next line, the body a tab in (plan item 21,
+    with none, in the house style: namespace Name, { on the next line, the body a tab in (plan item 21,
     b).  Is that your style for namespaces?
     Answered 2026-11-16: that style, as it is.
 

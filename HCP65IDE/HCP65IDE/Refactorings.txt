@@ -331,8 +331,8 @@ IntelliJ has none of these for Java.
           before it and opened again after it, and the new namespace's is opened round it (namespace A { namespace B
           { for A::B, as C++14 writes it); next to a block of the new namespace it goes into that block instead, and
           a block left empty goes.  A definition written outside its namespace (int Old::F(void) { }) only has its
-          name's qualifier changed.  A block made is written as the file's other blocks are, or as the house style
-          (Aardvark.cpp): the brace on a line of its own, the body a tab in.  What moves is indented as its new block
+          name's qualifier changed.  A block made is written as the file's other blocks are, or in the house style:
+          the brace on a line of its own, the body a tab in.  What moves is indented as its new block
           is.
        c. Every use is made to name it from where it is (the index's references, as Rename finds them): a use in the
           new namespace or one inside it, or where a using-directive of it is, is unqualified; any other is written
