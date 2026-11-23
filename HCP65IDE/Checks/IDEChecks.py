@@ -3697,6 +3697,22 @@ CHECKS = [
 		 r'^References to IsParentheses and 1 override in CalcParentheses\.h  1 reference$',
 		 r'^Scope menu \(open\): Solution, Startup Solution, Project, Current File  \(shown\), Open Files, Directory$',
 		 r'^References to IsParentheses and 1 override  7 references$'], [r'ERROR']),
+	('usages-template-arguments', dict(MakeUsagesKernel(
+		'class CFoo { public: int miX; };\n'
+		'template<class M> class CHolder { public: M* mp; };\n'
+		'template<class M> M* New(void) { return 0; }\n'
+		'template<class M = CFoo> class CDefault { };\n'
+		'CHolder<CFoo> gcHolder;\n'
+		'CHolder<CHolder<CFoo> > gcNested;\n'
+		'class CDerived : public CHolder<CFoo> { };\n'
+		'typedef CHolder<CFoo> HFoo;\n'
+		'int main(void) { CFoo* p = New<CFoo>(); CHolder<CFoo*> c; return (int)sizeof(CHolder<CFoo>); }\n'), **{
+		#Grouped by usage type, a class used in templates' arguments (a variable's type, nested, a base class's, a
+		#typedef's, a function template's call, sizeof) and as a type parameter's default is in Usage in template
+		#argument; the local it is the type of isn't.
+		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp', 'CARET': '1:8', 'EDIT': 'usagegroups:t,usages,printusages'}),
+		[r'^Usages of CFoo  9 usages$', r'^  Usage in local variable declaration  1 usage$', r'^  Usage in template argument  8 usages$',
+		 r'^      4: template<class M = CFoo> class CDefault', r'^      5: CHolder<CFoo> gcHolder;$'], [r'Unclassified usage']),
 	('usages-access-filters', {
 		#Show Read Access and Show Write Access, both on to start with: off, a field's usages that read it, or write it, are
 		#left out of the tree, whose first row says how many are hidden.
