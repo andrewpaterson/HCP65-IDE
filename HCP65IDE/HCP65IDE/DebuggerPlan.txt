@@ -132,6 +132,14 @@ M's results (2026-11-23)
   modplay.exe in the middle mode: 22.1 M cycles per second of audio (88% of 25 MHz: it keeps up, just), about 53 M
   user cycles before the first sound; it played exactly what the host renders.
 
+  DECISION 1 RE-DECIDED 2026-11-23 (the user, from these numbers): "Middle + per-project -O0".  A2 changes:
+  Debug configurations compile in the middle mode (the optimiser on; every named local and parameter kept in its
+  frame slot, its loads and stores never removed, moved or merged; no inliner; frames kept, so no DropFrame,
+  AlignFrame or forwarders).  A project can also be ticked for no optimisation at all (the per-project setting, as
+  Visual Studio's C/C++ > Optimization), for a program that fits and needn't be fast, where stepping follows every
+  line.  Release stays as it is (frames recorded, variables only where they stayed in memory).  The kernal's
+  2.3 KB to spare in the middle mode is tight: A2's checks include the kernal's Debug build fitting.
+
 
 A. The compiler writes debug information (CppCompilerLib, Assembler65Lib; W65C816 first, decision 4)
   A1. Frames.  Each function's frame shape goes out beside its code as an assembler directive, made in FinishUnit
