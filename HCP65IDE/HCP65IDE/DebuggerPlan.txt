@@ -119,6 +119,19 @@ M's results (2026-11-23)
   So decision 1 is open again (the user's): the kernal and the boot loader don't fit unoptimised, and modplay
   unoptimised can't play in time at 25 MHz.
 
+  M1 again, a middle mode, as GCC's -Og: the optimiser on, but slots kept (no SplitSlots, PromoteSlots,
+  RemoveRedundantLoads, SinkLoads or HoistInvariants: HCP65_M1_KEEPSLOTS), so every local stays in its frame slot
+  and memory always holds its value; no inliner (HCP65_M1_NOINLINE); frames kept.  (Which passes to leave out
+  was my estimate of what keeps memory true; A2 would settle it.)
+                      size                                    fits?
+    kernal OS.SYS     194,259 (+4%), ends $03F6EF             yes, 2.3 KB to spare
+    boot loader ROM   102,774 (+7%)                           yes
+    modplay.exe       727,830 (-5%)                           yes
+    the same with the inliner on: kernal 271,832 (+46%) and the boot loader don't fit, modplay 1,176,642 (+53%):
+    every inlined copy keeps its own slots.
+  modplay.exe in the middle mode: 22.1 M cycles per second of audio (88% of 25 MHz: it keeps up, just), about 53 M
+  user cycles before the first sound; it played exactly what the host renders.
+
 
 A. The compiler writes debug information (CppCompilerLib, Assembler65Lib; W65C816 first, decision 4)
   A1. Frames.  Each function's frame shape goes out beside its code as an assembler directive, made in FinishUnit
