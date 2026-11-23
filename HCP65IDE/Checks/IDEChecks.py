@@ -4124,7 +4124,7 @@ CHECKS = [
 		#the start of line 39's "void", where it stays selected.  Real presses through the window.
 		'OPEN': 'CalcParentheses.h', 'CARET': '38:1',
 		'DEBUG': 'wait:1500,edit:doubleclick:38:10,wait:1000,edit:dragtext:38:12:39:2,edit:printselection,edit:print'},
-		[r'^Selection: \[IsParentheses\] on line 39, caret line 39$', r'CalcParentheses\.h \* \(focus\) line 39: \[\tIsParenthesesvoid\t\tPrint\(CChars\* psz\);\]$'], []),
+		[r'^Selection: \[IsParentheses\] on line 39, caret line 39$', r'CalcParentheses\.h \* \(focus\) line 39: \[\tIsParenthesesvoid\t\tPrint\(CChars\* psz\) override;\]$'], []),
 	('editor-occurrences', {
 		#The selected text's other occurrences in the file are highlighted: void, selected by a double click on line
 		#38, is in the header six more times (case and all).  They are found at a tick after the selection changes.
@@ -4162,8 +4162,8 @@ CHECKS = [
 		'DEBUG': 'wait:1500,edit:keys:Alt+Shift+Cursor Down,edit:keys:Alt+Shift+Cursor Down,edit:keys:Alt+Shift+Cursor Right,'
 		         'edit:keys:Alt+Shift+Cursor Right,edit:keys:Alt+Shift+Cursor Right,edit:keys:Alt+Shift+Cursor Right,edit:printbox,'
 		         'edit:key:type:X,edit:printbox,edit:print,command:Edit.Undo,edit:printbox,edit:print'},
-		[r'^Box: \[void\] \[bool\] \[void\]$', r'^Box: \[\] \[\] \[\]$', r'CalcParentheses\.h \* \(focus\) line 39: \[\tX\t\tPrint\(CChars\* psz\);\]$',
-		 r'^Box: none$', r'CalcParentheses\.h \(focus\) line 39: \[\tvoid\t\tPrint\(CChars\* psz\);\]$'], []),
+		[r'^Box: \[void\] \[bool\] \[void\]$', r'^Box: \[\] \[\] \[\]$', r'CalcParentheses\.h \* \(focus\) line 39: \[\tX\t\tPrint\(CChars\* psz\) override;\]$',
+		 r'^Box: none$', r'CalcParentheses\.h \(focus\) line 39: \[\tvoid\t\tPrint\(CChars\* psz\) override;\]$'], []),
 	('editor-gutter-select', {
 		#Pressing a line's number in the gutter selects the line with its line feed; a shift press on line 36's number
 		#then selects from where that selection started (line 38's start) up to line 36's start.  Real presses through
