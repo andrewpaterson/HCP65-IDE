@@ -86,8 +86,28 @@ What is built (2026-11-23), where it differs from the steps below
       calls being run (WrongFrame).  Tests: TestAsm65StackWalker (hand written frames, every step checked),
       TestCPPW65C816Debug (a program run Release, Debug and unoptimised, its walk checked at every step; stopped
       at a line in a recursion, each frame's locals read).  Every TestCPPW65C816 program was also walked at every
-      step, once, in Debug (52 M walks) and unoptimised (64 M): none wrong.  Kernal stubs (decision 6) are still
-      to do.
+      step, once, in Debug (52 M walks) and unoptimised (64 M): none wrong.
+  Decision 6 (2026-11-24). A function is got to by jsl, jsr or an interrupt (.dfunction "name", short|interrupt),
+      which says what is above its entry S; .dframe user, n is a kernel's interrupt from user mode on the kernel's
+      stack, the process's D and S at S + n + 1 and + 3; .dend ends a function before code with no records.  Each
+      frame has a space (EAsm65StackSpace: kernel or user mode's memory, CAsm65StackMemory::Read), and a program's
+      records are added for one (AddRecords).  Start.asm's KernalCop and KernalIrqFromUser push the process's S and D
+      on the kernal's stack before their jsl ("[Kernal call]", "[Interrupt]"), KernalIrq from kernel mode is walked
+      from its pushes, and KernalInterrupts.asm's dispatch, UserLib's UserCalls.asm and Libc65's heap call are
+      described too, so a walk from a handler or a kernal call goes on into the process.  Stopped in the few
+      instructions where a stub has moved S to the kernal's stack but not yet pushed the process's, the walk ends at
+      the stub.  CAsmW65C816FrameCheck counts cop and brk as calls.  Tests: TestAsm65StackWalkerInterrupts (a cop
+      from a process to a kernel on its own stack, brk, jsr, every step checked), TestAsm65LinkerDebugRecords
+      (entries, user, .dend), TestHCP65Kernal's Walk (stopped at each of excepts.exe's kernal calls, the walk goes
+      through "[Kernal call]" to the program's cop and up to main, from Kernal.debug and excepts.debug).
+  B1 (2026-11-24). Protocol 7: DM_ReadMemory reads a list of ranges, each in a space (DEBUG_SPACE_ANY for the mode
+      the processor is in, so a stop in a kernal call can read the process's stack: CDebugTarget::PeekSpaceMemory),
+      and a stop says whose memory user mode's is (SDebugStopped::uiUserProcess).  Instead of replies kept by request
+      ID, CDebugClient keeps the memory read since the last stop a page at a time (CDebugMemoryCache): ReadMemory reads
+      from it and is false for what hasn't come, FetchMemory asks for all of that in one request, NumMemoryReplies
+      says it came.  So the windows each read without waiting on the others, a page is read once a stop, and a stack
+      walk reads through it, walking again when what it missed has come.  Tests: TestDebugServer (one request for
+      two pages, read again without one, forgotten at a stop and on a write, memory's end), TestHCP65Debugger.
 
 M. Measure first
   M1. A Debug compile (A2) of the kernal, boot.exe and ModPlay: code size against the kernal's limit (OS.SYS's
