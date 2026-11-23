@@ -728,9 +728,9 @@ CHECKS = [
 		#one include directory), in the failure colour.
 		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp',
 		'DEBUG': 'wait:1500,printindexing,edit:printoutputcolours:indexing'}),
-		[r'^Indexing: \d+ ms, 1 units with problems$', r'^/\S*/Workspace/Kernel/Defs\.h \(2, 9\): The macro is defined again differently',
-		 r'^/\S*/Workspace/Kernel/Kernel\.cpp \(2, 10\): Could not include file "Gone\.h"$', r'^Output colour: error \[/\S*/Defs\.h ',
-		 r'^Output colour: error \[/\S*/Kernel\.cpp ', r'^Output colours: 2$'], []),
+		[r'^Indexing: \d+ ms, 1 units with problems$', r'^(/|[A-Za-z]:\\)\S*[/\\]Workspace[/\\]Kernel[/\\]Defs\.h \(2, 9\): The macro is defined again differently',
+		 r'^(/|[A-Za-z]:\\)\S*[/\\]Workspace[/\\]Kernel[/\\]Kernel\.cpp \(2, 10\): Could not include file "Gone\.h"$', r'^Output colour: error \[(/|[A-Za-z]:\\)\S*[/\\]Defs\.h ',
+		 r'^Output colour: error \[(/|[A-Za-z]:\\)\S*[/\\]Kernel\.cpp ', r'^Output colours: 2$'], []),
 	('indexing-step-in-pane', dict(MakeIndexingProblemsKernel(), **{
 		#In the Indexing tab, Next Occurrence steps through its problems, the tab keeping the keys, to the last.
 		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp',
@@ -4732,8 +4732,8 @@ CHECKS = [
 		 r'^Chooser: Recent Files$', r'^  >Shapes\.cpp \| ', r'^   Shapes\.h \| ', r'^Chooser: Recent Files$', r'^  >Shapes\.cpp \| ', r'^   Shapes\.h \| ', r'^Chooser filter: \[sha\]$',
 		 r'Shapes\.h \(focus\) line 6: ', r'^Tabs: Shapes\.cpp Main\.cpp >Shapes\.h$', r'^Command \[Window\.ReopenClosedTab\] not found, not enabled or did nothing\.$',
 		 r'^Recent files: Shapes\.h, Main\.cpp, Shapes\.cpp$',
-		 r'^  <RecentFile File=".*Navigation/Shapes\.h" Line="6" Column="2"/>$', r'^  <RecentFile File=".*Navigation/Main\.cpp" Line="1" Column="1"/>$',
-		 r'^  <RecentFile File=".*Navigation/Shapes\.cpp" Line="12" Column="5"/>$'], [r'ERROR']),
+		 r'^  <RecentFile File=".*Navigation[/\\]Shapes\.h" Line="6" Column="2"/>$', r'^  <RecentFile File=".*Navigation[/\\]Main\.cpp" Line="1" Column="1"/>$',
+		 r'^  <RecentFile File=".*Navigation[/\\]Shapes\.cpp" Line="12" Column="5"/>$'], [r'ERROR']),
 	('recent-files-read', dict(MakeNavigationCopy('  <RecentFile File="{folder}/Shapes.h" Line="6" Column="2"/>\n  <RecentFile File="{folder}/Shapes.cpp" Line="12" Column="5"/>\n  <RecentFile File="{folder}/Main.cpp" Line="2" Column="1"/>\n'), **{
 		#A workspace's recent files are read from its user's file when it opens: with no file open Recent Files lists
 		#them all, and one chosen opens where its caret was.
