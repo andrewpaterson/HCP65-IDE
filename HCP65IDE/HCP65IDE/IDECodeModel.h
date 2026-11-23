@@ -21,6 +21,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __IDE_CODE_MODEL_H__
 #define __IDE_CODE_MODEL_H__
 #include "BaseLib/Chars.h"
+#include "BaseLib/HashMapString.h"
 #include "BaseLib/ArrayChars.h"
 #include "BaseLib/ArrayTemplate.h"
 #include "BaseLib/ArrayTemplatePtr.h"
@@ -274,9 +275,9 @@ protected:
 	size				muiIndexed;
 	size				muiIndexings;			//How many times the index has been started (StartIndexing).
 	bool				mbCancelled;			//The jobs not started yet do nothing (KillJobs).
-	CMapStringInt		mcIncluders;			//A file to the first indexed unit that included it (the job's index).
+	CHashMapString<int32>	mcIncluders;		//A file to the first indexed unit that included it (the job's index).
 	CArrayChars			maszProblems;			//What the units indexed couldn't include, each once, until taken (TakeIndexingProblems).
-	CMapStringInt		mcProblems;				//Every one found since the index was started.
+	CHashMapString<bool>	mcProblems;			//Every one found since the index was started.
 	size				muiProblemUnits;		//How many units had any.
 	int64				miIndexStart;			//When the index was started (GetDebugTickCount),
 	int64				miIndexEnd;				//and when its last unit was done, -1 until then.

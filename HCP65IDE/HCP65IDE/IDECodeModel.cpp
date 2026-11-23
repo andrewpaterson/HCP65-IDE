@@ -826,10 +826,12 @@ bool CIDECodeModel::ParseUnit(size uiProject, const char* szFileName, const char
 //////////////////////////////////////////////////////////////////////////
 SIDEIndexJob* CIDECodeModel::FindIncluder(const char* szFileName)
 {
-	int	iJob;
+	int32*	piJob;
+	int32	iJob;
 
 	mcIndexMutex.Lock();
-	iJob = mcIncluders.Get(szFileName, -1);
+	piJob = mcIncluders.Get(szFileName);
+	iJob = piJob ? *piJob : -1;
 	mcIndexMutex.Unlock();
 	return (iJob >= 0) ? mapsJobs.GetPtr((size)iJob) : NULL;
 }
@@ -1009,12 +1011,10 @@ void CIDECodeModel::StartIndexing(void)
 	mcIndexMutex.Lock();
 	mcIndex.Kill();
 	mcIndex.Init();
-	mcIncluders.Kill();
-	mcIncluders.Init();
+	mcIncluders.ReInit();
 	maszProblems.Kill();
 	maszProblems.Init();
-	mcProblems.Kill();
-	mcProblems.Init();
+	mcProblems.ReInit();
 	muiProblemUnits = 0;
 	miIndexStart = GetDebugTickCount();
 	miIndexEnd = -1;
@@ -1078,13 +1078,13 @@ class CIDEIndexedFiles : public CCPPIndexedFiles
 public:
 	CIDECodeModel*			mpcModel;
 	size					muiJob;
-	CMapLongTemplate<bool>	mcAsked;
+	CHashMapTemplate<CSourceFile*, bool>	mcAsked;
 
 	void	Init(CIDECodeModel* pcModel, size uiJob)
 	{
 		mpcModel = pcModel;
 		muiJob = uiJob;
-		mcAsked.Init(true);
+		mcAsked.Init();
 	}
 
 	void	Kill(void)
@@ -1097,13 +1097,13 @@ public:
 		bool*	pbAsked;
 		bool	bIndexed;
 
-		pbAsked = mcAsked.Get((int64)(size)pcFile);
+		pbAsked = mcAsked.Get(&pcFile);
 		if (pbAsked)
 		{
 			return *pbAsked;
 		}
 		bIndexed = mpcModel->IsIndexedByAnother(pcFile->FullName(), muiJob);
-		mcAsked.Put((int64)(size)pcFile, &bIndexed);
+		*mcAsked.Put(&pcFile) = bIndexed;
 		return bIndexed;
 	}
 };
@@ -1116,10 +1116,12 @@ public:
 //////////////////////////////////////////////////////////////////////////
 bool CIDECodeModel::IsIndexedByAnother(const char* szFileName, size uiJob)
 {
-	int	iJob;
+	int32*	piJob;
+	int32	iJob;
 
 	mcIndexMutex.Lock();
-	iJob = mcIncluders.Get(szFileName, -1);
+	piJob = mcIncluders.Get(szFileName);
+	iJob = piJob ? *piJob : -1;
 	mcIndexMutex.Unlock();
 	return (iJob >= 0) && ((size)iJob != uiJob);
 }
@@ -1140,6 +1142,8 @@ void CIDECodeModel::IndexUnit(SIDEIndexJob* psJob)
 	CArrayChars			aszErrors;
 	bool				bCancelled;
 	size				i;
+	int32*				piJob;
+	bool				bAdded;
 
 	mcIndexMutex.Lock();
 	bCancelled = mbCancelled;
@@ -1169,9 +1173,10 @@ void CIDECodeModel::IndexUnit(SIDEIndexJob* psJob)
 	mcIndex.Merge(&cGathered);
 	for (i = 0; i < cGathered.maszFiles.NumElements(); i++)
 	{
-		if (mcIncluders.Get(cGathered.maszFiles.GetText(i), -1) < 0)
+		piJob = mcIncluders.FindOrAdd(cGathered.maszFiles.GetText(i), (size)strlen(cGathered.maszFiles.GetText(i)), &bAdded);
+		if (bAdded)
 		{
-			mcIncluders.Put(cGathered.maszFiles.GetText(i), (int)psJob->uiIndex);
+			*piJob = (int32)psJob->uiIndex;
 		}
 	}
 
@@ -1182,10 +1187,13 @@ void CIDECodeModel::IndexUnit(SIDEIndexJob* psJob)
 	}
 	for (i = 0; i < aszErrors.NumElements(); i++)
 	{
-		if ((aszErrors.GetText(i)[0] != '\0') && (mcProblems.Get(aszErrors.GetText(i), -1) < 0))
+		if (aszErrors.GetText(i)[0] != '\0')
 		{
-			mcProblems.Put(aszErrors.GetText(i), 0);
-			maszProblems.Add(aszErrors.GetText(i));
+			mcProblems.FindOrAdd(aszErrors.GetText(i), (size)strlen(aszErrors.GetText(i)), &bAdded);
+			if (bAdded)
+			{
+				maszProblems.Add(aszErrors.GetText(i));
+			}
 		}
 	}
 	muiIndexed++;
@@ -2905,7 +2913,7 @@ void CIDECodeModel::FindNamespaces(CArrayChars* paszDest)
 //////////////////////////////////////////////////////////////////////////
 size CIDECodeModel::FindSymbolsIn(CArrayIDEFileRanges* pasRanges, CArrayChars* paszKeys, bool bUsed)
 {
-	CMapStringInt		cKeys;
+	CHashMapString<bool>	cKeys;
 	CArrayInt			aiRangeFiles;
 	CCPPIndexSymbol*	pcSymbol;
 	SCPPIndexLocation*	psLocation;
@@ -2916,11 +2924,12 @@ size CIDECodeModel::FindSymbolsIn(CArrayIDEFileRanges* pasRanges, CArrayChars* p
 	size				uiAdded;
 	int					iFile;
 	bool				bIn;
+	bool				bAdded;
 
 	cKeys.Init();
 	for (i = 0; i < paszKeys->NumElements(); i++)
 	{
-		cKeys.Put(paszKeys->GetText(i), 1);
+		cKeys.Put(paszKeys->GetText(i));
 	}
 
 	mcIndexMutex.Lock();
@@ -2963,11 +2972,14 @@ size CIDECodeModel::FindSymbolsIn(CArrayIDEFileRanges* pasRanges, CArrayChars* p
 						(psLocation->iLine > psRange->iEndLine) || ((psLocation->iLine == psRange->iEndLine) && (psLocation->iColumn >= psRange->iEndColumn)));
 			}
 		}
-		if (bIn && (cKeys.Get(pcSymbol->mszKey.Text(), -1) < 0))
+		if (bIn)
 		{
-			paszKeys->Add(pcSymbol->mszKey.Text());
-			cKeys.Put(pcSymbol->mszKey.Text(), 1);
-			uiAdded++;
+			cKeys.FindOrAdd(pcSymbol->mszKey.Text(), (size)pcSymbol->mszKey.Length(), &bAdded);
+			if (bAdded)
+			{
+				paszKeys->Add(pcSymbol->mszKey.Text());
+				uiAdded++;
+			}
 		}
 	}
 	aiRangeFiles.Kill();
