@@ -3391,7 +3391,13 @@ void CIDEScript::RunUsagesStep(const char* szStep)
 //     warning) for each line coloured as one, then "Output colours:
 //     <count>";
 //   outputappend:<tab>:<text>, the line appended to the tab as a build's
-//     or an indexing's would be, each ';' in it a ',' (which ends a step).
+//     or an indexing's would be, each ';' in it a ',' (which ends a step);
+//   outputmenu:<tab>:<line>, the line scrolled into view and the right
+//     button pressed over its second character, then "Tab window: main"
+//     (or floated) and the window's text menu printed as it opened ("Menu Text: Cut [Control+X](disabled),
+//     Copy [Control+C], ..."), "Menu Text: none" if it didn't;
+//   outputmenuclick:<item>, the text menu's item clicked, as the pointer
+//     would.
 // False if szStep isn't one of them.
 //
 //////////////////////////////////////////////////////////////////////////
@@ -3404,6 +3410,10 @@ bool CIDEScript::RunOutputStep(const char* szStep)
 	STextStyle			sStyle;
 	CArrayChars			aszLines;
 	CChars				szText;
+	Ptr<CMenuContainer>	pMenu;
+	size				i;
+	size				uiStart;
+	size				uiEnd;
 	const char*			szTab;
 	const char*			szPlace;
 	const char*			szFound;
@@ -3413,9 +3423,38 @@ bool CIDEScript::RunOutputStep(const char* szStep)
 	int32				x;
 	int32				y;
 
+	if (strncmp(szStep, "outputmenuclick:", 16) == 0)
+	{
+		//The text menu open in the main window or in the window the Build or Indexing tab is floated in.
+		pMenu = mpcContent->GetWindow()->GetTextMenu();
+		if ((pMenu.IsNull() || !pMenu->IsOpen()) && mpcContent->GetBuilding()->GetBuildPane()->GetOutputArea()->GetWindow().IsNotNull())
+		{
+			pMenu = mpcContent->GetBuilding()->GetBuildPane()->GetOutputArea()->GetWindow()->GetTextMenu();
+		}
+		if ((pMenu.IsNull() || !pMenu->IsOpen()) && mpcContent->GetIndexing()->GetPane()->GetOutputArea()->GetWindow().IsNotNull())
+		{
+			pMenu = mpcContent->GetIndexing()->GetPane()->GetOutputArea()->GetWindow()->GetTextMenu();
+		}
+		if (pMenu.IsNotNull() && pMenu->IsOpen())
+		{
+			for (i = 0; i < pMenu->NumItems(); i++)
+			{
+				if ((pMenu->GetItem(i).IsNotNull()) && (strcmp(pMenu->GetItem(i)->GetText(), &szStep[16]) == 0) && pMenu->GetItem(i)->IsEnabled())
+				{
+					pMenu->Click(pMenu->GetItem(i));
+					break;
+				}
+			}
+		}
+		return true;
+	}
 	if (strncmp(szStep, "outputcaret:", 12) == 0)
 	{
 		szTab = &szStep[12];
+	}
+	else if (strncmp(szStep, "outputmenu:", 11) == 0)
+	{
+		szTab = &szStep[11];
 	}
 	else if (strncmp(szStep, "outputdoubleclick:", 18) == 0)
 	{
@@ -3446,6 +3485,7 @@ bool CIDEScript::RunOutputStep(const char* szStep)
 	mpcContent->GetDock()->Show(pTool);
 	mpcContent->GetWindow()->Layout();
 	pOutput = pPane->GetOutputArea();
+	pOutput->GetWindow()->Layout();  //Its own, if the tab is floated.
 	uiLine = 0;
 	szPlace = (strchr(szTab, ':') != NULL) ? strchr(szTab, ':') + 1 : "";
 	if ((szPlace[0] >= '0') && (szPlace[0] <= '9'))
@@ -3476,24 +3516,46 @@ bool CIDEScript::RunOutputStep(const char* szStep)
 			pOutput->SetCaretPosition(pOutput->GetLineStart(uiLine));
 		}
 	}
-	else if (strncmp(szStep, "outputdoubleclick:", 18) == 0)
+	else if ((strncmp(szStep, "outputdoubleclick:", 18) == 0) || (strncmp(szStep, "outputmenu:", 11) == 0))
 	{
-		if (uiLine < pOutput->NumLines())
+		if ((uiLine < pOutput->NumLines()) && !((strncmp(szStep, "outputmenu:", 11) == 0) && pOutput->GetSelection(&uiStart, &uiEnd)))
 		{
-			//Scrolled into view, as the tab follows its output's end.
+			//Scrolled into view, as the tab follows its output's end; not for the menu while there's a selection, which
+			//putting the caret would lose.
 			pOutput->SetCaretPosition(pOutput->GetLineStart(uiLine));
 			pOutput->ShowCaret();
-			mpcContent->GetWindow()->Layout();
+			pOutput->GetWindow()->Layout();
 		}
 		if ((uiLine < pOutput->NumLines()) && pOutput->GetLineBounds(uiLine, &cLine))
 		{
 			x = pOutput->GetPosition().x + pOutput->GetPositionX(pOutput->GetLineStart(uiLine) + 1, false) + 1;
 			y = pOutput->GetPosition().y + (cLine.GetTop() + cLine.GetBottom()) / 2;
-			mpcContent->GetWindow()->PointerMoved(x, y);
-			mpcContent->GetWindow()->InputCommand(CIC_ActivateComponent, true);
-			mpcContent->GetWindow()->InputCommand(CIC_ExecuteComponent, true);
-			mpcContent->GetWindow()->InputCommand(CIC_ActivateComponent, true);
-			mpcContent->GetWindow()->InputCommand(CIC_ExecuteComponent, true);
+			pOutput->GetWindow()->PointerMoved(x, y);
+			if (strncmp(szStep, "outputmenu:", 11) == 0)
+			{
+				pOutput->GetWindow()->InputCommand(CIC_ContextMenu, true);
+			}
+			else
+			{
+				pOutput->GetWindow()->InputCommand(CIC_ActivateComponent, true);
+				pOutput->GetWindow()->InputCommand(CIC_ExecuteComponent, true);
+				pOutput->GetWindow()->InputCommand(CIC_ActivateComponent, true);
+				pOutput->GetWindow()->InputCommand(CIC_ExecuteComponent, true);
+			}
+		}
+		if (strncmp(szStep, "outputmenu:", 11) == 0)
+		{
+			printf("Tab window: %s\n", (pOutput->GetWindow() == mpcContent->GetWindow()) ? "main" : "floated");
+			pMenu = pOutput->GetWindow()->GetTextMenu();
+			if (pMenu.IsNotNull() && pMenu->IsOpen())
+			{
+				PrintMenu("Text", pMenu);
+			}
+			else
+			{
+				printf("Menu Text: none\n");
+				fflush(stdout);
+			}
 		}
 	}
 	else

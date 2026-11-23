@@ -682,6 +682,26 @@ CHECKS = [
 		 r'^Output colour: warning \[Kernel\.cpp\(5\): warning C4100: ', r'^Output colour: warning \[Kernel\.cpp \(5, 15\): Warning: ',
 		 r'^Output colours: 4$', r'Kernel\.cpp \(focus\) line 5: ', r'Kernel\.cpp \(focus\) line 2: ', r'^Selection: \[int\] on line 2, caret line 2$'],
 		[r'not enabled']),
+	('build-text-menu', dict(MakeBrokenKernel(), **{
+		#The right button in the Build tab opens the window's text menu (it has none of its own): Cut and Paste greyed out,
+		#as it can't be edited.  Select All then Copy (the right button in the selection, on its last line, which is in
+		#view) puts its text on the clipboard, and the tab keeps the keys.
+		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp', 'BUILD': '1',
+		'DEBUG': 'wait:6000,edit:outputmenu:build:giMissing],edit:outputmenuclick:Select All,edit:outputmenu:build:build failed,'
+		         'edit:outputmenuclick:Copy,edit:printclipboard,edit:print'}),
+		[r'^Tab window: main$', r'^Menu Text: Cut \[[^]]*\]\(disabled\), Copy \[[^]]*\], Paste \[[^]]*\]\(disabled\), Select All \[[^]]*\]$', r'^Menu Text: Cut',
+		 r'^Clipboard:$', r'^Kernel: ', r'^Kernel\.cpp \(2, 22\): .*giMissing'], [r'\(focus\)', r'Menu Text: none']),
+	('build-text-menu-floated', dict(MakeBrokenKernel(), **{
+		#Floated in a tool window of its own, the Build tab has the text menu too, and its Copy copies there.
+		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp', 'BUILD': '1', 'DOCK': 'float:Build',
+		'DEBUG': 'wait:6000,edit:outputmenu:build:build failed,edit:outputmenuclick:Select All,edit:outputmenu:build:build failed,'
+		         'edit:outputmenuclick:Copy,edit:printclipboard'}),
+		[r'^Tab window: floated$', r'^Menu Text: Cut \[[^]]*\]\(disabled\), Copy', r'^Menu Text: Cut', r'^Clipboard:$', r'^Kernel: '], [r'Menu Text: none', r'Tab window: main']),
+	('indexing-text-menu', dict(MakeIndexingProblemsKernel(), **{
+		#The Indexing tab has the text menu too; the editor keeps its own menu.
+		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp',
+		'DEBUG': 'wait:1500,edit:outputmenu:indexing:Defs.h,edit:outputmenuclick:Copy'}),
+		[r'^Menu Text: Cut \[[^]]*\]\(disabled\), Copy \[[^]]*\], Paste \[[^]]*\]\(disabled\), Select All \[[^]]*\]$'], [r'Menu Text: none']),
 	('indexing-full-paths', dict(MakeIndexingProblemsKernel(), **{
 		#The Indexing tab's problems name the files they are in by their full paths (a header's name can be in more than
 		#one include directory), in the failure colour.

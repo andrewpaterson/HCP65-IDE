@@ -555,6 +555,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	pMain = OMalloc<CGridContainer>(pWindow);
 	pMain->AddComponent(CreateMenuBar(), 0, 0, 1, 1, 1, 0);
 	CreateEditorMenu();
+	pWindow->SetTextMenu(mpTheme);  //Cut, Copy, Paste and Select All on text without a menu of its own: Build's, Indexing's.
 	pMain->AddComponent(pToolbar, 0, 1, 1, 1, 1, 0);
 	pMain->AddComponent(mpDock->GetArea(), 0, 2, 1, 1, 1, 1);
 
