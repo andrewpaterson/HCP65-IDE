@@ -22,7 +22,7 @@ along with Codaphela GitLib.  If not, see <http://www.gnu.org/licenses/>.
 #define __GIT_STATUS_H__
 #include "BaseLib/ArrayTemplate.h"
 #include "BaseLib/Chars.h"
-#include "BaseLib/MapStringInt.h"
+#include "BaseLib/HashMapString.h"
 
 
 //What has happened to a file since the last commit, as IntelliJ IDEA colours it.  A file git doesn't list is unmodified.
@@ -63,7 +63,7 @@ class CGitStatus
 protected:
 	CChars				mszPaths;		//Each path ended by '\0'.
 	CArrayGitFileStatus	masFiles;
-	CMapStringInt		mcFiles;		//Each path's index in masFiles.
+	CHashMapString<int32>	mcFiles;		//Each path's index in masFiles.
 	CChars				mszBranch;		//Empty when the head is detached.
 	CChars				mszHead;		//The commit checked out, empty if there are none yet.
 	CChars				mszUpstream;	//Empty if the branch has none.

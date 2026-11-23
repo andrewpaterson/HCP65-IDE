@@ -62,8 +62,7 @@ void CGitRepositories::RemoveAll(void)
 		SafeKill(pcRepository);
 	}
 	mapcRepositories.ReInit();
-	mcFolders.Kill();
-	mcFolders.Init();
+	mcFolders.ReInit();
 }
 
 
@@ -80,6 +79,7 @@ CGitRepository* CGitRepositories::FindRepository(const char* szFileName)
 	CGitRepository*	pcRepository;
 	size			uiSlash;
 	int32			iIndex;
+	int32*			piIndex;
 
 	szFolder.Init(szFileName);
 	MakeFullGitPath(&szFolder);
@@ -89,8 +89,12 @@ CGitRepository* CGitRepositories::FindRepository(const char* szFileName)
 		szFolder.SetLength(uiSlash);
 	}
 
-	iIndex = mcFolders.Get(szFolder.Text(), -2);
-	if (iIndex == -2)
+	piIndex = mcFolders.Get(szFolder.Text(), (size)szFolder.Length());
+	if (piIndex != NULL)
+	{
+		iIndex = *piIndex;
+	}
+	else
 	{
 		szRoot.Init();
 		pcRepository = NULL;
@@ -99,7 +103,7 @@ CGitRepository* CGitRepositories::FindRepository(const char* szFileName)
 			pcRepository = AddRepository(szRoot.Text());
 		}
 		iIndex = pcRepository ? (int32)mapcRepositories.Find(pcRepository) : -1;
-		mcFolders.Put(szFolder.Text(), iIndex);
+		mcFolders.Put(szFolder.Text(), &iIndex);
 		szRoot.Kill();
 	}
 	szFolder.Kill();

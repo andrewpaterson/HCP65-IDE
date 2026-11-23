@@ -86,8 +86,7 @@ void CGitStatus::Clear(void)
 {
 	mszPaths.Clear();
 	masFiles.ReInit();
-	mcFiles.Kill();
-	mcFiles.Init();
+	mcFiles.ReInit();
 	mszBranch.Clear();
 	mszHead.Clear();
 	mszUpstream.Clear();
@@ -293,8 +292,10 @@ const char* CGitStatus::SkipFields(const char* szLine, int iFields)
 void CGitStatus::AddFile(const char* szPath, EGitFileState eState, char cIndex, char cWorkTree, const char* szOriginalPath)
 {
 	SGitFileStatus*	psFile;
+	int32			iIndex;
 
-	mcFiles.Put(szPath, (int32)masFiles.NumElements());
+	iIndex = (int32)masFiles.NumElements();
+	mcFiles.Put(szPath, &iIndex);
 	psFile = masFiles.Add();
 	psFile->eState = eState;
 	psFile->cIndex = cIndex;
@@ -318,10 +319,10 @@ void CGitStatus::AddFile(const char* szPath, EGitFileState eState, char cIndex, 
 //////////////////////////////////////////////////////////////////////////
 SGitFileStatus* CGitStatus::FindFile(const char* szPath)
 {
-	int32	iIndex;
+	int32*	piIndex;
 
-	iIndex = mcFiles.Get(szPath, -1);
-	return (iIndex >= 0) ? masFiles.Get(iIndex) : NULL;
+	piIndex = mcFiles.Get(szPath);
+	return (piIndex != NULL) ? masFiles.Get(*piIndex) : NULL;
 }
 
 

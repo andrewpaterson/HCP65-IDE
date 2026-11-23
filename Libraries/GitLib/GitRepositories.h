@@ -21,7 +21,7 @@ along with Codaphela GitLib.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __GIT_REPOSITORIES_H__
 #define __GIT_REPOSITORIES_H__
 #include "BaseLib/ArrayTemplatePtr.h"
-#include "BaseLib/MapStringInt.h"
+#include "BaseLib/HashMapString.h"
 #include "GitRepository.h"
 
 
@@ -36,7 +36,7 @@ class CGitRepositories
 {
 protected:
 	CArrayGitRepositoryPtr	mapcRepositories;
-	CMapStringInt			mcFolders;		//Each folder looked up, and its repository's index, -1 for none.
+	CHashMapString<int32>	mcFolders;		//Each folder looked up, and its repository's index, -1 for none.
 
 public:
 	void			Init(void);
