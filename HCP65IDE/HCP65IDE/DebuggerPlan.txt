@@ -1,0 +1,215 @@
+The debugger's Locals, Watch and Call Stack (plan, 2026-11-23)
+================================================================
+
+The user (2026-11-23): "Plan the debugger: locals, watches and call stack".  Nothing here is a go-ahead to build:
+the decisions at the end are the user's, and each stage is brought up before it is started.
+
+Today the IDE debugs at the instruction level only (debugging.md): breakpoints on lines through the line tables,
+stepping by line or instruction, the registers and the disassembly.  It knows nothing of functions' frames,
+variables or types, so it can't show where it was called from or what a variable holds.  Visual Studio's Locals,
+Autos, Watch and Call Stack windows are the reference, as the Debug menu and its keys already are (decision 2).
+
+
+What there is to build on (surveyed 2026-11-23)
+-----------------------------------------------
+
+The emulator's side is nearly enough already:
+  - EmulatorDebugLib's protocol (CommonLibraries/Libraries/EmulatorDebugLib/DebugProtocol.h, version 6) has
+    DM_ReadMemory and DM_WriteMemory (up to DEBUG_MAX_MEMORY = 32 KB a message, each request with its own id),
+    DM_ReadRegisters/DM_WriteRegister, and the stop's address, space and process.  CHCP65DebugTarget::PeekMemory
+    (HCP65/HCP65-Emulator/HCP65Lib/HCP65DebugTarget.cpp) reads through CHCP65::MemoryAt, the CPU's own mapping, so
+    a stopped process's stack and bank 0 read as that process sees them.
+  - CDebugTarget::GetStackPointer exists; Step Out counts calls and returns by decoding (CDebugServer::StepOutStep).
+  - CDebugClient keeps one memory reply at a time (GetMemory, NumMemoryReplies): a Locals window wants many small
+    reads per stop, so either batch them (step B1) or read the frame's bytes in one request and decode locally.
+
+The IDE's side (HCP65-IDE/HCP65IDE/HCP65IDE):
+  - CIDEDebugger (IDEDebugger.h): the client, breakpoints by address and by line, up to 8 line tables
+    (CAsm65LineTable, <program>.lines, written by CHCP65Build::WriteProgram in BuildLib/HCP65Build.cpp), which
+    table an address belongs to (process, space, module moved to where it was loaded).
+  - CIDEDebugging (IDEDebugging.h): the Debug menu, the stopped line in the editor, the Debug tab (CIDEDebugView:
+    registers + disassembly, two text areas).
+  - WindowLib: CTreeContainer (only the rows in view have components; one column), CTable (columns, a cell edited
+    in a text field).  No tree with columns.
+  - The code model's parser and semantic pass (CCPPSemanticPass on CCPP65TypeChecker) parse and type expressions,
+    but for the host (CPPT_Host), not the W65C816's sizes.
+
+What the compiler knows and throws away (CommonLibraries/Libraries/CppCompilerLib, HCP65/Libraries/Assembler65Lib):
+  - Lines: each IR instruction's uiSource token -> ;@N markers -> `.line "file", n` (CCPP65IRFrontEnd::
+    SourceComments) -> CAsm65BaseAssembler::SourceLine -> CAsm65Linker::BuildLineTable -> <program>.lines.  This
+    is the one route from the compiler to the debugger, and the route the rest of the debug information takes.
+  - Functions: each has its own text.<label> section, so the linker knows its start and size (its map lists them,
+    but the map isn't written to disk by the IDE).  .fingerprint carries a label, a hash and a time, no address.
+  - W65C816 frames (IRW65C816Frames.cpp, IRW65C816Backend.h): `phd; tsc; sec; sbc #N; tcs; tcd`; frame bytes
+    D+1..D+N, the caller's D at D+N+1, the 3 byte return address (jsl/rtl) at D+N+3, arguments from D+N+6.  So the
+    caller's frame can be found from D, given N.  Other shapes: DropFrame (D = S, or no frame and D still the
+    caller's), AlignFrame (D on a page boundary, the old S saved at [D+Link()] or iSavedS), a forwarder (a jump with
+    no frame), the register entry `.axy` (registers pushed at the frame's top, iRegisterBase), runtime routines that
+    run on the caller's D.  SIRW65C816Frame holds N and the shape until CCPP65IRFrontEnd's FinishUnit calls
+    FreeWritten: nothing is written out.
+  - 65C64 frames (IR65Backend.cpp Prologue): jsr pushes 4 bytes; `psh V; sub S,N; cpy V,S`; frameless functions,
+    V used as a value register (bHomeV) and pseudo registers pushed after the frame break the V chain.
+  - Locals: the front end makes one unnamed IR slot per C++ local (Locals, CPP65IRFrontEnd.cpp), linked to its
+    CCPPVariable only by the front end's mcAddresses.  PromoteSlots (mem2reg) then makes scalars SSA temporaries
+    and the name is gone; the back ends pack temporaries that don't overlap into one frame offset, keep some in X
+    or A, or fold them away.  Nothing maps a variable to where it is at an address once code is written.
+  - Optimisation: CCompileOptions mbOptimise and mbInline (both on; the IDE never turns them off) only gate the IR
+    optimiser and the inliner.  The back ends always pack, allocate and reshape frames.  There is no debug mode.
+  - Types: CCPPVariable has its symbol, SCPP65Type and storage; SCPPField has its name, type, offset and bits.
+    CCPPUnit::AddLayout writes the -layouts file (class, size, bases, vptr, fields at offsets, not their types);
+    CCPPTypeWriter can print a type.
+  - Inlining keeps the callee's lines (same unit) but records no inlined frame.
+  - Interrupts and kernal calls: no C++ interrupt handlers; the kernal's stubs (HCP65/Kernal/Start.asm,
+    KernalIrqFromUser, KernalCop) save registers to globals, move S to the kernal's stack, set D = 0 and jsl into
+    C++.  start-up sets D = 0 before jsl _main.  A stack walk ends at D = 0 or at a stub.
+
+
+What is to be built
+-------------------
+
+Stages in order; each builds, is checked and committed on its own.  M is measured before A3 is decided for good.
+
+M. Measure first
+  M1. A Debug compile (A2) of the kernal, boot.exe and ModPlay: code size against the kernal's link limit ($040000,
+      ROM banks 0-3) and each program's banks, and speed (ModPlay's mixer must still keep up at 25 MHz, or Debug
+      is for stepping, not for listening).  If the kernal doesn't fit, the kernal is debugged optimised (frames
+      only, decision 1) or its Debug configuration keeps the optimiser for chosen units.
+  M2. The debug file's size for the kernal and ModPlay.
+  M3. Stop to Locals filled, over the shared memory channel: under 50 ms.
+
+A. The compiler writes debug information (CppCompilerLib, Assembler65Lib; W65C816 first, decision 4)
+  A1. Frames.  Each function's frame shape goes out beside its code as an assembler directive, made in FinishUnit
+      before FreeWritten, from SIRW65C816Frame as the frame finally is (after DropFrame / AlignFrame):
+          .frame <label>, <shape>, <frame bytes>, <saved S place>, <register base>, <argument bytes>
+      shape = normal | dropped (D = S) | none (D is the caller's) | aligned | forwarder | runtime (the caller's D).
+      Also the prologue's length, so a stop inside the prologue or epilogue knows the frame isn't made yet (walk by
+      S there).  The assembler keeps it in the object with the function's section; the linker relocates it.
+  A2. A Debug compile.  mbOptimise false becomes a real debug mode on both back ends: no PromoteSlots, no inliner,
+      each named local and parameter in a frame slot of its own for the whole function (no packing with another),
+      register arguments stored to their slots in the prologue, no DropFrame or AlignFrame, no forwarders.  The
+      temporaries in between are still the back end's.  CBuildConfiguration gets the option (the configuration's
+      "Optimise" on its page; Debug configurations off, Release on) and passes it to SetCompileOptions.
+      TestCPPW65C816 runs its programs in both modes (same results).
+  A3. Variables.  For each function, its parameters and locals: name, type (A4), and where it is - a frame offset
+      in Debug; in an optimised compile the same when the slot survived (an address taken, an array, a class), and
+      "not available" otherwise (decision 1).  The front end knows the variable (mcAddresses) and its block; the
+      block's first and last tokens become an address range through the line markers, so a local is only listed
+      where it is in scope (Visual Studio shows only those in scope).  Globals and statics: label and type.  `this`
+      as a parameter.
+  A4. Types.  One record per type a variable or field uses: integers with size and signedness (int is 16 bits on
+      the W65C816), bool, char, float/double (the soft float's format), enums with their enumerators, pointers
+      (32 bits, the top byte ignored, decision of 2026-10-25), references, arrays, classes (size, bases at offsets,
+      vptr, fields with their types and bit fields), typedefs.  Keyed by the CCPPSymbolKey-style qualified name so
+      the linker merges a class every unit describes into one.  The -layouts writer and CCPPTypeWriter are the
+      start.
+  A5. The file.  The linker writes <program>.debug: CAsm65DebugInfo, a chunk file holding what CAsm65LineTable
+      holds now (lines, fingerprints) plus functions (start, end, frame), variables and types.  It takes over from
+      .lines (CIDEDebugger reads it where it reads a line table now; modules are moved the same way, Move).
+      ASM65_LINE_TABLE_VERSION's readers and CHCP65Build::WriteProgram change with it.
+  A6. Tests: TestAssembler65Lib (.frame through object and link, Move), TestCppCompilerLib (the records for a small
+      program in each shape), and one that runs a compiled program on CFastW65C816 to a break and walks its stack
+      and reads its locals from the file alone (the IDE's code in B/C is a library so the test can use it).
+
+B. Reading the target (EmulatorDebugLib, the IDE's debugger)
+  B1. DM_ReadMemoryList: several ranges in one request, one reply (protocol version 7).  CDebugClient keeps the
+      replies by request id so the Locals, Watch and Call Stack windows can each ask without waiting on the others.
+  B2. CDebugStackWalker (a plain class beside CAsm65DebugInfo, so A6 tests it): from the stop's PC, S and D, a
+      frame per function: its function, PC (a caller's is its return address - 1, for the line), D, and the frame's
+      bytes.  Each shape steps to the caller differently (A1).  It stops at D = 0 under a kernal stub, at a
+      function with no record (shown "[External code]" with its label from the map, as Visual Studio does), or at
+      64 frames.  Kernal calls and interrupts: decision 6.
+
+C. Values and expressions (the IDE)
+  C1. CIDEValue: reads a variable's bytes and formats them by its type - integers in decimal (hexadecimal when
+      Hexadecimal Display is ticked, as Visual Studio's), char as 'c' 99, bool, enum by enumerator name (or
+      A | B for flags), float by the soft float's format, a pointer as its address (far 24 bit) and, for char*, the
+      string it points at (up to 256 characters), arrays and classes as {...} with their members as children read
+      only when opened.  A class with a vptr shows its dynamic class by the vtable's label ("CDerived" beside the
+      static type), as Visual Studio does.
+  C2. Editing a value: an integer, enum, bool, char, float or pointer typed in its Value cell and written with
+      DM_WriteMemory (a variable "not available" can't be).
+  C3. Watch expressions: a C++ expression evaluated in the selected frame, with the debug types, not the host's.
+      Names (locals, then the class's members through this, then globals), . -> [] unary * &, casts to a type the
+      debug file has, + - * / % comparisons && || ! on integers and pointers, sizeof.  Parsed by CppCompilerLib's
+      expression parser (CCPPParser on the text alone), bound by C3's own small binder against CAsm65DebugInfo's
+      types, since the type checker's host sizes are wrong for the target.  Format suffixes as Visual Studio's:
+      ",x" hexadecimal, ",d" decimal, ",s" string, ",<n>" an array of n from a pointer (p,10).  No function calls,
+      no assignments but through C2 (decision 3).
+
+D. A tree with columns (WindowLib)
+  D1. CTreeTable: CTreeContainer's nodes and rows (still only rows in view have components), with CTable's header
+      (Name | Value | Type, columns dragged wider) and its cell editing on the Value column.  A changed value is
+      drawn in red after a step, as Visual Studio does.  TestWindowLib tests.
+
+E. The windows (decision 2: Visual Studio's)
+  E1. Call Stack (Visual Studio's Ctrl+Alt+C, if the keymap has it free; Debug > Windows): a row per frame,
+      "Module!Function(int a = 3, char* p = 0x012345) Line 42", the current one with a yellow arrow; double click
+      selects that frame: the editor opens at its line with a green arrow in the gutter, and Locals, Autos and
+      Watch show that frame.  Copy, Show External Code.
+  E2. Locals: the selected frame's parameters and locals in scope, in declaration order, `this` first.
+  E3. Autos: the variables used on the current line and the line before (Visual Studio's rule), and a function's
+      return value just after stepping out of it ("Fn returned").
+  E4. Watch 1-4: rows typed in, kept per workspace in the .hcp65user with the breakpoints; added from the editor's
+      menu (Add Watch) and by dragging a selection in.  QuickWatch (Visual Studio's Shift+F9, if free): a dialog with the expression at the
+      caret, Reevaluate, Add Watch.
+  E5. Data tips (decision 5): the pointer resting on a name while stopped shows its value, opened like a Locals row.
+  E6. The Debug menu gets Windows > Call Stack, Locals, Autos, Watch 1-4, Hexadecimal Display; the windows are
+      docked tool windows like the others (CIDEToolWindows), each updated at every stop and empty while running.
+      The Debug tab's registers and disassembly stay as they are.
+  E7. Checks (Checks/Input/Debugging: a small program with a class, a recursive function, an array, a char*, an
+      enum, a float): stop, walk, values, edit a value and step, watch expressions, frame selection, Debug and
+      optimised builds.  The website's debugging.md gets each window.
+
+F. After the first version (each its own item, if asked for)
+  F1. Optimised code's variables everywhere: location lists (where a variable is, register or frame offset, over
+      each address range), written by the back ends' allocators.  Large: every pass that moves a value keeps them.
+  F2. Inlined functions as frames of their own in the Call Stack.
+  F3. The 65C64 target (decision 4).
+  F4. Function calls in watch expressions (decision 3).
+  F5. Data breakpoints (break when a variable is written), which the emulator can do cheaply.
+
+
+What is the user's to decide
+----------------------------
+
+All six DECIDED 2026-11-23, each as recommended: 1 a Debug mode (A2) with optimised code showing frames and only
+the variables still in memory (still hangs on M1: if the kernal doesn't fit unoptimised, bring it back to the user);
+2 Visual Studio's windows; 3 no function calls in watches; 4 W65C816 first; 5 data tips as a late step; 6 the call
+stack goes through the kernal's stubs in the first version.  Not a go-ahead to build: the user says when, and each
+stage is brought up before it starts.
+
+Asked one at a time, with my recommendation first.
+  1. Optimised code.  The Debug configuration compiles without the optimiser (A2) so every variable is in the
+     frame and can be shown; Release code shows its call stack but its variables only where they stayed in memory,
+     others "not available in optimised code" (as Visual Studio's Release builds).  Full information for
+     optimised code (F1) later, if at all.  Depends on M1: the kernal might not fit unoptimised.
+  2. Which debugger to follow for the windows.  Visual Studio's: separate Call Stack, Locals, Autos and Watch 1-4
+     windows, Name | Value | Type columns, values edited in place.  IntelliJ's puts frames and variables side by
+     side in one Debug window with watches among the variables.  The Debug menu and keys already follow Visual
+     Studio's.
+  3. Watch expressions don't call functions (F4).  Calling one runs the program from inside a stop: it can hit a
+     breakpoint, change memory, or never come back, and needs the calling convention's register entries.
+  4. W65C816 first, the 65C64 after (F3): the HCP65 is a W65C816 machine; the 65C64's frames are different enough
+     (bHomeV breaks its chain) to be a stage of their own.
+  5. Data tips on hover (E5): yes, as a late step.  (This is not the name tool tip put off in NavigationPlan.txt's
+     decision 11: it is only while stopped, and shows a value.)
+  6. The call stack through the kernal: when stopped in the kernal during a kernal call (COP) or an interrupt, the
+     kernal's frames, a "[Kernal call]" row, then the program's frames found from the S the stub saved.  Needs
+     each stub to describe what it saved (a .frame of shape "stub").  Recommended as part of B2, since debugging
+     the kernal and a program together is how the HCP65 is debugged now.
+
+My own choices, not asked: the file is <program>.debug and replaces .lines (A5); values can be edited (C2); format
+suffixes and Hexadecimal Display as Visual Studio's (C1, C3); watches kept per workspace beside the breakpoints (E4).
+
+
+Things to watch for
+-------------------
+
+  - CppCompilerLib and its back ends have other sessions working in them: ListAgents and git log before A1-A4,
+    and tell them before changing FinishUnit, the frames code or CCompileOptions.
+  - BaseLib/StandardLib code is compiled for the W65C816 and the 65C64 too; CAsm65DebugInfo lives in
+    Assembler65Lib (host only), so it can use host sizes, but anything put in BaseLib runs in the size16 build.
+  - The line tables' readers (breakpoint binding, StepLine, the stopped line) must keep working unchanged when
+    .lines becomes .debug: the breakpoint and stepping checks are the proof.
+  - Packed temporaries mean an optimised frame offset can hold another variable's value at a given address: never
+    show a variable from an offset the compiler didn't say holds it there.
