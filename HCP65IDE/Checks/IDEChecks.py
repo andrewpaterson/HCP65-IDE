@@ -4029,12 +4029,12 @@ CHECKS = [
 		 r'^Tabs: .*>CalculatorParser\.h$', r'^Tabs: .*>CalculatorParser\.h$'], [r'not found', r'disabled']),
 	('hierarchy-after-edits', {
 		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'CalcParentheses.h', 'CARET': '38:14',
-		'EDIT': 'edit:renamable,replace:29| : public CCalcExpression|,renamable'},
+		'EDIT': 'renamable,replace:29| : public CCalcExpression|,renamable'},
 		[r'^Rename: IsParentheses \[CCalcParentheses::IsParentheses\(\) const\] at 7 places, 1 overrides$',
 		 r'^Rename: IsParentheses \[CCalcParentheses::IsParentheses\(\) const\] at 2 places, 0 overrides$'], []),
 	('virtual-after-edits', {
 		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'CalcExpression.h', 'CARET': '37:18',
-		'EDIT': 'edit:renamable,replace:37|virtual |,caret:37:9,renamable'},
+		'EDIT': 'renamable,replace:37|virtual |,caret:37:9,renamable'},
 		[r'^Rename: IsParentheses \[CCalcExpression::IsParentheses\(\) const\] at 7 places, 1 overrides$',
 		 r'^Rename: IsParentheses \[CCalcExpression::IsParentheses\(\) const\] at 5 places, 0 overrides$'], []),
 	('settings-templates', dict(MakeDefinitionsCopy(), **{
