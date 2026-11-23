@@ -58,6 +58,9 @@ void CIDESettings::Init(CIDEContent* pcContent)
 	mpcContent = pcContent;
 	mszKeymapFile.Init();
 	mszSettingsFile.Init();
+	mbKeyRepeat = true;
+	muiKeyRepeatDelay = IDE_KEY_REPEAT_DELAY;
+	muiKeyRepeatRate = IDE_KEY_REPEAT_RATE;
 	PostInit();
 }
 
@@ -71,6 +74,9 @@ void CIDESettings::Class(void)
 	U_Pointer(mpcContent);
 	U_String(mszKeymapFile);
 	U_String(mszSettingsFile);
+	U_Bool(mbKeyRepeat);
+	U_UInt32(muiKeyRepeatDelay);
+	U_UInt32(muiKeyRepeatRate);
 	M_Pointer(mpDialog);
 	M_Pointer(mpKeymapPage);
 	M_Pointer(mpTemplatesPage);
@@ -183,6 +189,7 @@ void CIDESettings::ReadSettings(const char* szFile)
 		mpcContent->GetFind()->ReadSettings(pcRoot);
 		mpcContent->GetSolutions()->ReadSettings(pcRoot);
 		mpcContent->GetNavigator()->ReadSettings(pcRoot);
+		ReadKeyRepeat(pcRoot);
 	}
 	else
 	{
@@ -224,6 +231,11 @@ bool CIDESettings::WriteSettings(void)
 	mpcContent->GetFind()->WriteSettings(&cWriter);
 	mpcContent->GetSolutions()->WriteSettings(&cWriter);
 	mpcContent->GetNavigator()->WriteSettings(&cWriter);
+	cWriter.Begin("KeyRepeat");
+	cWriter.Attribute("On", mbKeyRepeat);
+	cWriter.Attribute("Delay", (int32)muiKeyRepeatDelay);
+	cWriter.Attribute("Rate", (int32)muiKeyRepeatRate);
+	cWriter.End();
 	cWriter.End();
 	bResult = cWriter.Write(mszSettingsFile.Text());
 	cWriter.Kill();
@@ -232,6 +244,75 @@ bool CIDESettings::WriteSettings(void)
 
 
 char* CIDESettings::GetSettingsFile(void) { return mszSettingsFile.Text(); }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// <KeyRepeat On="true" Delay="500" Rate="30"/> in the settings: whether
+// held keys repeat, after how many milliseconds and how many times a
+// second.  Without it, or with a number out of range, they repeat as
+// Windows' defaults do.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDESettings::ReadKeyRepeat(CMarkupTag* pcSettings)
+{
+	CMarkupTag*	pcTag;
+	char*		szValue;
+	int			iValue;
+
+	pcTag = pcSettings->GetTag("KeyRepeat");
+	if (pcTag == NULL)
+	{
+		return;
+	}
+	szValue = pcTag->GetStringAttribute("On");
+	mbKeyRepeat = (szValue == NULL) || (StringCompare(szValue, "false") != 0);
+	szValue = pcTag->GetStringAttribute("Delay");
+	iValue = (szValue != NULL) ? atoi(szValue) : 0;
+	muiKeyRepeatDelay = ((iValue >= IDE_KEY_REPEAT_MIN_DELAY) && (iValue <= IDE_KEY_REPEAT_MAX_DELAY)) ? (uint32)iValue : IDE_KEY_REPEAT_DELAY;
+	szValue = pcTag->GetStringAttribute("Rate");
+	iValue = (szValue != NULL) ? atoi(szValue) : 0;
+	muiKeyRepeatRate = ((iValue >= IDE_KEY_REPEAT_MIN_RATE) && (iValue <= IDE_KEY_REPEAT_MAX_RATE)) ? (uint32)iValue : IDE_KEY_REPEAT_RATE;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The Editor page's: held keys repeat (bRepeat) after uiDelay
+// milliseconds, uiRate times a second, from now on.  Written with the
+// settings.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDESettings::SetKeyRepeat(bool bRepeat, uint32 uiDelay, uint32 uiRate)
+{
+	mbKeyRepeat = bRepeat;
+	muiKeyRepeatDelay = uiDelay;
+	muiKeyRepeatRate = uiRate;
+	ApplyKeyRepeat();
+	WriteSettings();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The window's input is given the key repeat, once it has one.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDESettings::ApplyKeyRepeat(void)
+{
+	CComponentInput*	pcInput;
+
+	pcInput = mpcContent->GetWindow().IsNotNull() ? mpcContent->GetWindow()->GetComponentInput() : NULL;
+	if (pcInput)
+	{
+		pcInput->SetRepeat(mbKeyRepeat ? muiKeyRepeatDelay : 0, 1000 / muiKeyRepeatRate);
+	}
+}
+
+
+bool CIDESettings::IsKeyRepeat(void) const { return mbKeyRepeat; }
+uint32 CIDESettings::GetKeyRepeatDelay(void) const { return muiKeyRepeatDelay; }
+uint32 CIDESettings::GetKeyRepeatRate(void) const { return muiKeyRepeatRate; }
 
 
 //////////////////////////////////////////////////////////////////////////

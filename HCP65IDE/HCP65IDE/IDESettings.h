@@ -33,9 +33,16 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 
 class CIDEContent;
+class CMarkupTag;
 
 
 #define IDE_SETTINGS_TAG	"Settings"	//The root of the file how the IDE was left is kept in.
+#define IDE_KEY_REPEAT_DELAY		500	//Milliseconds a key is held before it repeats, as Windows' default.
+#define IDE_KEY_REPEAT_RATE			30	//Its repeats a second.
+#define IDE_KEY_REPEAT_MIN_DELAY	100
+#define IDE_KEY_REPEAT_MAX_DELAY	2000
+#define IDE_KEY_REPEAT_MIN_RATE		1
+#define IDE_KEY_REPEAT_MAX_RATE		60
 
 
 //File, Settings, and the keys a user has changed, which are read from a file of theirs as the IDE starts and written to
@@ -56,6 +63,9 @@ protected:
 	Ptr<CIDEDuplicatesPage>		mpDuplicatesPage;
 	Ptr<CIDEClaudePage>			mpClaudePage;
 	Ptr<CIDEEditorPage>			mpEditorPage;
+	bool						mbKeyRepeat;  //Held keys repeat (CComponentInput::SetRepeat), Settings' Editor page's.
+	uint32						muiKeyRepeatDelay;
+	uint32						muiKeyRepeatRate;
 
 public:
 	void	Init(CIDEContent* pcContent);
@@ -70,6 +80,11 @@ public:
 	void	ReadSettings(const char* szFile);
 	bool	WriteSettings(void);
 	char*	GetSettingsFile(void);
+	void	SetKeyRepeat(bool bRepeat, uint32 uiDelay, uint32 uiRate);
+	void	ApplyKeyRepeat(void);
+	bool	IsKeyRepeat(void) const;
+	uint32	GetKeyRepeatDelay(void) const;
+	uint32	GetKeyRepeatRate(void) const;
 
 	void	WatchDialog(Ptr<CDialog> pDialog) override;
 	void	StopWatchingDialog(void) override;
@@ -78,6 +93,7 @@ public:
 protected:
 	void	RequestDialog(void);
 	void	ShowDialog(void);
+	void	ReadKeyRepeat(CMarkupTag* pcSettings);
 };
 
 

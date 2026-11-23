@@ -609,6 +609,7 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 		szPath.Kill();
 		mpWindow->GetCommands()->BindKeys(&mcComponentInput);  //The IDE's keys, F5 and so on.
 		mpWindow->SetComponentInput(&mcComponentInput);
+		mpContent->GetSettings()->ApplyKeyRepeat();  //As the settings read before the input was made say.
 
 		//The open editor has the keys, as IntelliJ's; Solution Explorer does with no file open.
 		if (!mpContent->GetDocuments()->FocusActiveEditor())

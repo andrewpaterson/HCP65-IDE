@@ -21,6 +21,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __IDE_EDITOR_PAGE_H__
 #define __IDE_EDITOR_PAGE_H__
 #include "WindowLib/CheckBox.h"
+#include "WindowLib/Label.h"
+#include "WindowLib/TextField.h"
 #include "WindowLib/GridContainer.h"
 #include "WindowLib/SettingsDialog.h"
 
@@ -29,8 +31,9 @@ class CIDEContent;
 
 
 //Settings' Editor page: whether an editor shows its breadcrumbs (what the caret is in, under the code) and its sticky
-//lines (the first lines of what the top of the view is in, kept over the code).  OK keeps them (CIDEStructure has
-//them), and they are written with the IDE's settings.
+//lines (the first lines of what the top of the view is in, kept over the code), and whether held keys repeat, after how
+//long and how fast.  OK keeps them (CIDEStructure has the editors', CIDESettings the keys'), and they are written with
+//the IDE's settings.
 class CIDEEditorPage : public CSettingsPage
 {
 CONSTRUCTABLE(CIDEEditorPage);
@@ -39,6 +42,10 @@ protected:
 	CIDEContent*		mpcContent;  //Not held.
 	Ptr<CCheckBox>		mpBreadcrumbs;
 	Ptr<CCheckBox>		mpStickyLines;
+	Ptr<CCheckBox>		mpKeyRepeat;
+	Ptr<CTextField>		mpRepeatDelay;
+	Ptr<CTextField>		mpRepeatRate;
+	Ptr<CDialog>		mpDialog;
 	Ptr<CGridContainer>	mpBody;
 
 public:
@@ -54,6 +61,11 @@ public:
 	void			Keep(void) override;
 
 	void			ApplyEdits(const char* szEdits);
+
+protected:
+	Ptr<CLabel>		CreateLabel(const char* szText);
+	Ptr<CTextField>	CreateNumberField(uint32 uiNumber);
+	static uint32	ReadNumber(const char* szText, uint32 uiMinimum, uint32 uiMaximum, uint32 uiWas);
 };
 
 

@@ -4375,6 +4375,29 @@ CHECKS = [
 		'SETTINGS': MakeSettingsFile('<?xml version="1.0" encoding="UTF-8"?>\n<Settings>\n  <Editor Breadcrumbs="false" StickyLines="true"/>\n</Settings>\n'),
 		'DEBUG': 'edit:scroll:30,edit:printcrumbs,edit:printsticky'},
 		[r'^Breadcrumbs: off$', r'^Sticky lines: \[namespace Deep\] \[class CLadder\] \[\tint Climb\(int iSteps\)\]$'], []),
+	('key-repeat-default', {
+		#Held keys repeat in the IDE (CComponentInput::SetRepeat) as Windows' defaults do: after half a second, thirty
+		#times a second.
+		'SOLUTION': NAVIGATION, 'SETTINGS': MakeSettingsFile(),
+		'DEBUG': 'printkeyrepeat'},
+		[r'^Key repeat: 500 ms, every 33 ms$'], []),
+	('key-repeat-settings', {
+		#Settings' Editor page: the delay and rate typed are kept by OK, given to the window's input straight away, and
+		#written with the settings.
+		'SOLUTION': NAVIGATION, 'SETTINGS': MakeSettingsFile(), 'EDITOR_EDITS': 'repeat:true;delay:300;rate:20', 'DIALOG_ANSWER': 'OK',
+		'DEBUG': 'clickmenu:File/Settings...,answered:1,printkeyrepeat,printsettings'},
+		[r'^Dialog \[Settings\] answered OK$', r'^Key repeat: 300 ms, every 50 ms$', r'<KeyRepeat On="true" Delay="300" Rate="20"/>'], []),
+	('key-repeat-off', {
+		#Unticked, held keys don't repeat; a number out of range keeps what there was.
+		'SOLUTION': NAVIGATION, 'SETTINGS': MakeSettingsFile(), 'EDITOR_EDITS': 'repeat:false;delay:5;rate:500', 'DIALOG_ANSWER': 'OK',
+		'DEBUG': 'clickmenu:File/Settings...,answered:1,printkeyrepeat,printsettings'},
+		[r'^Key repeat: off$', r'<KeyRepeat On="false" Delay="500" Rate="30"/>'], []),
+	('key-repeat-read', {
+		#The settings as they were written.
+		'SOLUTION': NAVIGATION,
+		'SETTINGS': MakeSettingsFile('<?xml version="1.0" encoding="UTF-8"?>\n<Settings>\n  <KeyRepeat On="true" Delay="250" Rate="40"/>\n</Settings>\n'),
+		'DEBUG': 'printkeyrepeat'},
+		[r'^Key repeat: 250 ms, every 25 ms$'], []),
 	('nav-structure-window', {
 		#The Structure tool window: the active file's outline as a tree, the entry the caret is in selected as the
 		#caret moves.  A click on a row puts the caret on its entry.  Its menu's Hide Fields leaves fields out (a caret

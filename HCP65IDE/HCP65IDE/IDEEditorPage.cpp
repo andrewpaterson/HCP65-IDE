@@ -19,9 +19,14 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 ** ------------------------------------------------------------------------ **/
 #include <string.h>
+#include <stdlib.h>
 #include "BaseLib/ArrayChars.h"
+#include "WindowLib/FillContainer.h"
 #include "IDEContent.h"
 #include "IDEEditorPage.h"
+
+
+#define IDE_EDITOR_PAGE_GAP		8
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -31,12 +36,16 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 //////////////////////////////////////////////////////////////////////////
 void CIDEEditorPage::Init(CIDEContent* pcContent, Ptr<CDialog> pDialog)
 {
-	Ptr<CWindow>	pWindow;
-	SDialogLook*	psLook;
+	Ptr<CWindow>		pWindow;
+	SDialogLook*		psLook;
+	Ptr<CFillContainer>	pGap;
+	Ptr<CIDESettings>	pSettings;
 
 	PreInit();
 	CSettingsPage::Init();
 	mpcContent = pcContent;
+	mpDialog = pDialog;
+	pSettings = pcContent->GetSettings();
 	pWindow = pDialog->GetWindow();
 	psLook = pDialog->GetLook();
 
@@ -44,11 +53,23 @@ void CIDEEditorPage::Init(CIDEContent* pcContent, Ptr<CDialog> pDialog)
 	mpBreadcrumbs->SetAlignment(CSH_Left, CSV_Center);
 	mpStickyLines = OMalloc<CCheckBox>(pWindow, psLook->pcTheme, "Show sticky lines: the first lines of what the top of the view is in", pcContent->GetStructure()->IsStickyLines());
 	mpStickyLines->SetAlignment(CSH_Left, CSV_Center);
+	mpKeyRepeat = OMalloc<CCheckBox>(pWindow, psLook->pcTheme, "Repeat held keys: the caret's moves, Page Up and Down, deleting and typing", pSettings->IsKeyRepeat());
+	mpKeyRepeat->SetAlignment(CSH_Left, CSV_Center);
+	mpRepeatDelay = CreateNumberField(pSettings->GetKeyRepeatDelay());
+	mpRepeatRate = CreateNumberField(pSettings->GetKeyRepeatRate());
 
 	mpBody = OMalloc<CGridContainer>(pWindow);
 	mpBody->SetAlignment(CSH_Stretch, CSV_Top);
-	mpBody->AddComponent(mpBreadcrumbs, 0, 0, 1, 1, 1, 0);
-	mpBody->AddComponent(mpStickyLines, 0, 1, 1, 1, 1, 0);
+	mpBody->AddComponent(mpBreadcrumbs, 0, 0, 3, 1, 1, 0);
+	mpBody->AddComponent(mpStickyLines, 0, 1, 3, 1, 1, 0);
+	mpBody->AddComponent(mpKeyRepeat, 0, 2, 3, 1, 1, 0);
+	mpBody->AddComponent(CreateLabel("Held before repeating (milliseconds):"), 0, 3);
+	pGap = OMalloc<CFillContainer>(pWindow);
+	pGap->SetDesiredSize(IDE_EDITOR_PAGE_GAP, 1);
+	mpBody->AddComponent(pGap, 1, 3);
+	mpBody->AddComponent(mpRepeatDelay, 2, 3, 1, 1, 1, 0);
+	mpBody->AddComponent(CreateLabel("Repeats a second:"), 0, 4);
+	mpBody->AddComponent(mpRepeatRate, 2, 4, 1, 1, 1, 0);
 	PostInit();
 }
 
@@ -63,6 +84,10 @@ void CIDEEditorPage::Class(void)
 	U_Pointer(mpcContent);
 	M_Pointer(mpBreadcrumbs);
 	M_Pointer(mpStickyLines);
+	M_Pointer(mpKeyRepeat);
+	M_Pointer(mpRepeatDelay);
+	M_Pointer(mpRepeatRate);
+	M_Pointer(mpDialog);
 	M_Pointer(mpBody);
 }
 
@@ -79,19 +104,73 @@ void CIDEEditorPage::Free(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// OK: what is ticked.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEEditorPage::Keep(void)
+Ptr<CLabel> CIDEEditorPage::CreateLabel(const char* szText)
 {
-	mpcContent->GetStructure()->SetEditorSettings(mpBreadcrumbs->IsTicked(), mpStickyLines->IsTicked());
+	Ptr<CLabel>	pLabel;
+
+	pLabel = OMalloc<CLabel>(mpDialog->GetWindow(), mpDialog->GetLook()->pcTheme->GetFont(), szText);
+	pLabel->SetAlignment(CSH_Left, CSV_Center);
+	return pLabel;
+}
+
+
+Ptr<CTextField> CIDEEditorPage::CreateNumberField(uint32 uiNumber)
+{
+	Ptr<CTextField>	pField;
+	CChars			szNumber;
+
+	szNumber.Init();
+	szNumber.Append(uiNumber);
+	pField = OMalloc<CTextField>(mpDialog->GetWindow(), mpDialog->GetLook()->pcTheme, szNumber.Text());
+	pField->SetAlignment(CSH_Stretch, CSV_Center);
+	szNumber.Kill();
+	return pField;
 }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The IDE's checks' edits, as if ticked (HCP65_IDE_EDITOR_EDITS):
-// "breadcrumbs:false;sticky:true".
+// The number in szText if it is from uiMinimum to uiMaximum, otherwise
+// uiWas.
+//
+//////////////////////////////////////////////////////////////////////////
+uint32 CIDEEditorPage::ReadNumber(const char* szText, uint32 uiMinimum, uint32 uiMaximum, uint32 uiWas)
+{
+	int	iNumber;
+
+	iNumber = atoi(szText);
+	if ((iNumber < (int)uiMinimum) || (iNumber > (int)uiMaximum))
+	{
+		return uiWas;
+	}
+	return (uint32)iNumber;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// OK: what is ticked, and the key repeat's numbers (one out of range
+// keeps what there was).
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEEditorPage::Keep(void)
+{
+	Ptr<CIDESettings>	pSettings;
+
+	pSettings = mpcContent->GetSettings();
+	mpcContent->GetStructure()->SetEditorSettings(mpBreadcrumbs->IsTicked(), mpStickyLines->IsTicked());
+	pSettings->SetKeyRepeat(mpKeyRepeat->IsTicked(),
+							ReadNumber(mpRepeatDelay->GetText(), IDE_KEY_REPEAT_MIN_DELAY, IDE_KEY_REPEAT_MAX_DELAY, pSettings->GetKeyRepeatDelay()),
+							ReadNumber(mpRepeatRate->GetText(), IDE_KEY_REPEAT_MIN_RATE, IDE_KEY_REPEAT_MAX_RATE, pSettings->GetKeyRepeatRate()));
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The IDE's checks' edits, as if ticked or typed (HCP65_IDE_EDITOR_EDITS):
+// "breadcrumbs:false;sticky:true;repeat:true;delay:300;rate:20".
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEEditorPage::ApplyEdits(const char* szEdits)
@@ -112,6 +191,18 @@ void CIDEEditorPage::ApplyEdits(const char* szEdits)
 		else if (strncmp(sz, "sticky:", 7) == 0)
 		{
 			mpStickyLines->SetTicked(strcmp(&sz[7], "true") == 0);
+		}
+		else if (strncmp(sz, "repeat:", 7) == 0)
+		{
+			mpKeyRepeat->SetTicked(strcmp(&sz[7], "true") == 0);
+		}
+		else if (strncmp(sz, "delay:", 6) == 0)
+		{
+			mpRepeatDelay->SetText(&sz[6]);
+		}
+		else if (strncmp(sz, "rate:", 5) == 0)
+		{
+			mpRepeatRate->SetText(&sz[5]);
 		}
 	}
 	aszEdits.Kill();

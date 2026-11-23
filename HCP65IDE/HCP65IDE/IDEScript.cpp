@@ -42,7 +42,7 @@ static bool			gbIDEScriptRenameSaves = false;  //rename: saves what it edited (r
 static bool			gbIDEScriptClassFiles = false;  //rename: renames a type's files too (renamesearch's f), never from the settings.
 
 
-static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printfindpreview", "printfindtoolbar", "findtool:", "replace:", "findoptions:", "findselect:", "printstartup", "printworkspace", "printuserfile", "rename", "safedelete", "introducevariable", "introducefield", "introduceconstant", "introduceparameter", "changesignature", "pullmembersup", "pushmembersdown", "moveclass", "copyclass", "inlinevariable", "introducetypedef", "extractmethod", "extractsuperclass", "extractinterface", "extractclass", "encapsulatefield", "convertmacro", "extracttemplateparameter", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printsettings", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printprojectfiles", "printdiskfile:", "printdisklines:", "printedits", "printspans", "configuration:", "waitindex", "indextemplates:" };
+static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printfindpreview", "printfindtoolbar", "findtool:", "replace:", "findoptions:", "findselect:", "printstartup", "printworkspace", "printuserfile", "rename", "safedelete", "introducevariable", "introducefield", "introduceconstant", "introduceparameter", "changesignature", "pullmembersup", "pushmembersdown", "moveclass", "copyclass", "inlinevariable", "introducetypedef", "extractmethod", "extractsuperclass", "extractinterface", "extractclass", "encapsulatefield", "convertmacro", "extracttemplateparameter", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printkeyrepeat", "printsettings", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printprojectfiles", "printdiskfile:", "printdisklines:", "printedits", "printspans", "configuration:", "waitindex", "indextemplates:" };
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -674,6 +674,19 @@ void CIDEScript::RunCommand(const char* szCommand)
 		//with problems", -1 ms while it is still being built; then the Indexing tab's text, which says what they were.
 		printf("Indexing: %d ms, %d units with problems\n", (int)mpcContent->GetCodeModel()->GetIndexingMilliseconds(), (int)mpcContent->GetCodeModel()->NumIndexingProblemUnits());
 		printf("Indexing pane:\n%s\n", mpcContent->GetIndexing()->GetPane()->GetOutputArea()->GetText());
+		fflush(stdout);
+	}
+	else if (strcmp(szCommand, "printkeyrepeat") == 0)
+	{
+		//What the window's input repeats held keys as: "Key repeat: 500 ms, every 33 ms", or "Key repeat: off".
+		if ((mpcContent->GetWindow()->GetComponentInput() == NULL) || (mpcContent->GetWindow()->GetComponentInput()->GetRepeatDelay() == 0))
+		{
+			printf("Key repeat: off\n");
+		}
+		else
+		{
+			printf("Key repeat: %d ms, every %d ms\n", (int)mpcContent->GetWindow()->GetComponentInput()->GetRepeatDelay(), (int)mpcContent->GetWindow()->GetComponentInput()->GetRepeatPeriod());
+		}
 		fflush(stdout);
 	}
 	else if (strcmp(szCommand, "printsettings") == 0)
