@@ -32,8 +32,8 @@ class CIDEContent;
 
 //Settings' Editor page: whether an editor shows its breadcrumbs (what the caret is in, under the code) and its sticky
 //lines (the first lines of what the top of the view is in, kept over the code), and whether held keys repeat, after how
-//long and how fast.  OK keeps them (CIDEStructure has the editors', CIDESettings the keys'), and they are written with
-//the IDE's settings.
+//long and how fast, and the code's font size and whether Control and the wheel zoom it.  OK keeps them (CIDEStructure
+//has the editors', CIDESettings the keys' and the font's), and they are written with the IDE's settings.
 class CIDEEditorPage : public CSettingsPage
 {
 CONSTRUCTABLE(CIDEEditorPage);
@@ -45,6 +45,8 @@ protected:
 	Ptr<CCheckBox>		mpKeyRepeat;
 	Ptr<CTextField>		mpRepeatDelay;
 	Ptr<CTextField>		mpRepeatRate;
+	Ptr<CTextField>		mpFontSize;
+	Ptr<CCheckBox>		mpWheelZoom;
 	Ptr<CDialog>		mpDialog;
 	Ptr<CGridContainer>	mpBody;
 

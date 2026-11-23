@@ -61,6 +61,8 @@ void CIDESettings::Init(CIDEContent* pcContent)
 	mbKeyRepeat = true;
 	muiKeyRepeatDelay = IDE_KEY_REPEAT_DELAY;
 	muiKeyRepeatRate = IDE_KEY_REPEAT_RATE;
+	muiCodeFontSize = IDE_CODE_FONT_SIZE;
+	mbWheelZoom = true;
 	PostInit();
 }
 
@@ -77,6 +79,8 @@ void CIDESettings::Class(void)
 	U_Bool(mbKeyRepeat);
 	U_UInt32(muiKeyRepeatDelay);
 	U_UInt32(muiKeyRepeatRate);
+	U_UInt32(muiCodeFontSize);
+	U_Bool(mbWheelZoom);
 	M_Pointer(mpDialog);
 	M_Pointer(mpKeymapPage);
 	M_Pointer(mpTemplatesPage);
@@ -120,6 +124,9 @@ bool CIDESettings::Load(CObjectReader* pcFile) { return false; }
 void CIDESettings::AddCommands(Ptr<CCommandSet> pCommands)
 {
 	pCommands->Add("File.Settings", "Settings...", "Control+Alt+S", Ptr<CImageCel>(), this, &CIDESettings::RequestDialog);
+	pCommands->Add("View.IncreaseFontSize", "Increase Font Size", "Control+=", Ptr<CImageCel>(), this, &CIDESettings::IncreaseFontSize);
+	pCommands->Add("View.DecreaseFontSize", "Decrease Font Size", "Control+-", Ptr<CImageCel>(), this, &CIDESettings::DecreaseFontSize);
+	pCommands->Add("View.ResetFontSize", "Reset Font Size", "Control+0", Ptr<CImageCel>(), this, &CIDESettings::ResetFontSize);
 }
 
 
@@ -190,6 +197,7 @@ void CIDESettings::ReadSettings(const char* szFile)
 		mpcContent->GetSolutions()->ReadSettings(pcRoot);
 		mpcContent->GetNavigator()->ReadSettings(pcRoot);
 		ReadKeyRepeat(pcRoot);
+		ReadCodeFont(pcRoot);
 	}
 	else
 	{
@@ -235,6 +243,10 @@ bool CIDESettings::WriteSettings(void)
 	cWriter.Attribute("On", mbKeyRepeat);
 	cWriter.Attribute("Delay", (int32)muiKeyRepeatDelay);
 	cWriter.Attribute("Rate", (int32)muiKeyRepeatRate);
+	cWriter.End();
+	cWriter.Begin("CodeFont");
+	cWriter.Attribute("Size", (int32)muiCodeFontSize);
+	cWriter.Attribute("WheelZoom", mbWheelZoom);
 	cWriter.End();
 	cWriter.End();
 	bResult = cWriter.Write(mszSettingsFile.Text());
@@ -310,9 +322,175 @@ void CIDESettings::ApplyKeyRepeat(void)
 }
 
 
+//////////////////////////////////////////////////////////////////////////
+//
+// <CodeFont Size="13" WheelZoom="true"/> in the settings: the code's font
+// size, as it was last zoomed, and whether Control and the wheel zoom it.
+// A size out of range is the default's.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDESettings::ReadCodeFont(CMarkupTag* pcSettings)
+{
+	CMarkupTag*	pcTag;
+	char*		szValue;
+	int			iValue;
+
+	pcTag = pcSettings->GetTag("CodeFont");
+	if (pcTag == NULL)
+	{
+		return;
+	}
+	szValue = pcTag->GetStringAttribute("Size");
+	iValue = (szValue != NULL) ? atoi(szValue) : 0;
+	muiCodeFontSize = ((iValue >= IDE_CODE_FONT_MIN_SIZE) && (iValue <= IDE_CODE_FONT_MAX_SIZE)) ? (uint32)iValue : IDE_CODE_FONT_SIZE;
+	szValue = pcTag->GetStringAttribute("WheelZoom");
+	mbWheelZoom = (szValue == NULL) || (StringCompare(szValue, "false") != 0);
+	ApplyCodeFontSize();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The Editor page's: the code's font size, and whether Control and the
+// wheel zoom it.  Written with the settings.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDESettings::SetCodeFont(uint32 uiSize, bool bWheelZoom)
+{
+	mbWheelZoom = bWheelZoom;
+	ZoomCodeFont(uiSize);
+	WriteSettings();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Every code view (editors, previews, the Build, Run and Indexing tool
+// windows' text, diffs) is in the code font family's default size: each
+// text area in it is laid out again in the new size as the window is
+// (CTextArea::SeeFamilySize).
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDESettings::ApplyCodeFontSize(void)
+{
+	if (mpcContent->GetCodeFamily().IsNotNull())
+	{
+		mpcContent->GetCodeFamily()->SetDefaultPixelSize((float32)muiCodeFontSize);
+		if (mpcContent->GetWindow().IsNotNull())
+		{
+			mpcContent->GetWindow()->InvalidateLayout();
+		}
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The code zoomed to uiSize (kept in range), as IntelliJ's Increase and
+// Decrease Font Size zoom all its editors: the active editor's caret is
+// kept in view and the size is shown.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDESettings::ZoomCodeFont(uint32 uiSize)
+{
+	Ptr<CIDEEditorTab>	pTab;
+	char				szStatus[64];
+
+	uiSize = (uiSize < IDE_CODE_FONT_MIN_SIZE) ? IDE_CODE_FONT_MIN_SIZE : ((uiSize > IDE_CODE_FONT_MAX_SIZE) ? IDE_CODE_FONT_MAX_SIZE : uiSize);
+	if (uiSize == muiCodeFontSize)
+	{
+		return;
+	}
+	muiCodeFontSize = uiSize;
+	ApplyCodeFontSize();
+	pTab = mpcContent->GetDocuments()->GetActiveTab();
+	if (pTab.IsNotNull())
+	{
+		mpcContent->GetWindow()->Layout();
+		pTab->GetEditor()->ShowCaret();
+	}
+	snprintf(szStatus, sizeof(szStatus), "Font size: %d", (int)muiCodeFontSize);
+	mpcContent->ShowStatus(szStatus);
+}
+
+
+void CIDESettings::IncreaseFontSize(void) { ZoomCodeFont(muiCodeFontSize + 1); WriteSettings(); }
+void CIDESettings::DecreaseFontSize(void) { ZoomCodeFont(muiCodeFontSize - 1); WriteSettings(); }
+void CIDESettings::ResetFontSize(void) { ZoomCodeFont(IDE_CODE_FONT_SIZE); WriteSettings(); }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// After View's other items: the code's zoom.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDESettings::AddViewItems(Ptr<CMenuContainer> pMenu)
+{
+	pMenu->AddSeparator();
+	pMenu->AddItem(mpcContent->GetCommands()->Find("View.IncreaseFontSize"));
+	pMenu->AddItem(mpcContent->GetCommands()->Find("View.DecreaseFontSize"));
+	pMenu->AddItem(mpcContent->GetCommands()->Find("View.ResetFontSize"));
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Scroll panes pass Control and the wheel on (CScrollPane::WheelAction):
+// pRoot, the window's container, gets it from whatever it was over.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDESettings::AddZoomWheel(Ptr<CComponent> pRoot)
+{
+	pRoot->AddInputAction(IAF_Wheel, NULL, this, &CIDESettings::ZoomWheel);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Control and the wheel: over code (a text area in the code font) it
+// zooms one size a notch, up bigger, unless the Editor page turned that
+// off; anywhere else, or then, it scrolls what it is over as the wheel
+// alone does.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDESettings::ZoomWheel(SComponentInputEvent* psEvent)
+{
+	Ptr<CComponent>		pComponent;
+	Ptr<CTextArea>		pText;
+	Ptr<CScrollPane>	pPane;
+
+	if (!psEvent->bControl)
+	{
+		psEvent->bPass = true;
+		return;
+	}
+	for (pComponent = mpcContent->GetWindow()->GetFocus()->GetMouseOverComponent(); pComponent.IsNotNull(); pComponent = pComponent->GetParent())
+	{
+		pText = pComponent;
+		if (mbWheelZoom && pText.IsNotNull() && pText.IsInstanceOfTemplateClass() && (pText->GetFontFamily() == mpcContent->GetCodeFamily()))
+		{
+			if (psEvent->iDown != 0)
+			{
+				ZoomCodeFont((uint32)((int32)muiCodeFontSize - psEvent->iDown));
+				WriteSettings();
+			}
+			return;
+		}
+		pPane = pComponent;
+		if (pPane.IsNotNull() && pPane.IsInstanceOfTemplateClass() && pPane->Wheel(psEvent->iRight, psEvent->iDown))
+		{
+			return;
+		}
+	}
+	psEvent->bPass = true;
+}
+
+
 bool CIDESettings::IsKeyRepeat(void) const { return mbKeyRepeat; }
 uint32 CIDESettings::GetKeyRepeatDelay(void) const { return muiKeyRepeatDelay; }
 uint32 CIDESettings::GetKeyRepeatRate(void) const { return muiKeyRepeatRate; }
+uint32 CIDESettings::GetCodeFontSize(void) const { return muiCodeFontSize; }
+bool CIDESettings::IsWheelZoom(void) const { return mbWheelZoom; }
 
 
 //////////////////////////////////////////////////////////////////////////

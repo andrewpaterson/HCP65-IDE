@@ -57,6 +57,9 @@ void CIDEEditorPage::Init(CIDEContent* pcContent, Ptr<CDialog> pDialog)
 	mpKeyRepeat->SetAlignment(CSH_Left, CSV_Center);
 	mpRepeatDelay = CreateNumberField(pSettings->GetKeyRepeatDelay());
 	mpRepeatRate = CreateNumberField(pSettings->GetKeyRepeatRate());
+	mpFontSize = CreateNumberField(pSettings->GetCodeFontSize());
+	mpWheelZoom = OMalloc<CCheckBox>(pWindow, psLook->pcTheme, "Change the font size with Control+Mouse Wheel", pSettings->IsWheelZoom());
+	mpWheelZoom->SetAlignment(CSH_Left, CSV_Center);
 
 	mpBody = OMalloc<CGridContainer>(pWindow);
 	mpBody->SetAlignment(CSH_Stretch, CSV_Top);
@@ -70,6 +73,9 @@ void CIDEEditorPage::Init(CIDEContent* pcContent, Ptr<CDialog> pDialog)
 	mpBody->AddComponent(mpRepeatDelay, 2, 3, 1, 1, 1, 0);
 	mpBody->AddComponent(CreateLabel("Repeats a second:"), 0, 4);
 	mpBody->AddComponent(mpRepeatRate, 2, 4, 1, 1, 1, 0);
+	mpBody->AddComponent(CreateLabel("Code font size (pixels):"), 0, 5);
+	mpBody->AddComponent(mpFontSize, 2, 5, 1, 1, 1, 0);
+	mpBody->AddComponent(mpWheelZoom, 0, 6, 3, 1, 1, 0);
 	PostInit();
 }
 
@@ -87,6 +93,8 @@ void CIDEEditorPage::Class(void)
 	M_Pointer(mpKeyRepeat);
 	M_Pointer(mpRepeatDelay);
 	M_Pointer(mpRepeatRate);
+	M_Pointer(mpFontSize);
+	M_Pointer(mpWheelZoom);
 	M_Pointer(mpDialog);
 	M_Pointer(mpBody);
 }
@@ -164,6 +172,7 @@ void CIDEEditorPage::Keep(void)
 	pSettings->SetKeyRepeat(mpKeyRepeat->IsTicked(),
 							ReadNumber(mpRepeatDelay->GetText(), IDE_KEY_REPEAT_MIN_DELAY, IDE_KEY_REPEAT_MAX_DELAY, pSettings->GetKeyRepeatDelay()),
 							ReadNumber(mpRepeatRate->GetText(), IDE_KEY_REPEAT_MIN_RATE, IDE_KEY_REPEAT_MAX_RATE, pSettings->GetKeyRepeatRate()));
+	pSettings->SetCodeFont(ReadNumber(mpFontSize->GetText(), IDE_CODE_FONT_MIN_SIZE, IDE_CODE_FONT_MAX_SIZE, pSettings->GetCodeFontSize()), mpWheelZoom->IsTicked());
 }
 
 
@@ -203,6 +212,14 @@ void CIDEEditorPage::ApplyEdits(const char* szEdits)
 		else if (strncmp(sz, "rate:", 5) == 0)
 		{
 			mpRepeatRate->SetText(&sz[5]);
+		}
+		else if (strncmp(sz, "fontsize:", 9) == 0)
+		{
+			mpFontSize->SetText(&sz[9]);
+		}
+		else if (strncmp(sz, "wheelzoom:", 10) == 0)
+		{
+			mpWheelZoom->SetTicked(strcmp(&sz[10], "true") == 0);
 		}
 	}
 	aszEdits.Kill();

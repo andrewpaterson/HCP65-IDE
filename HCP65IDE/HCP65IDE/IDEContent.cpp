@@ -43,7 +43,6 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 #define IDE_FONT_CHARACTERS		" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
 #define IDE_EXPLORER_WIDTH		320
-#define IDE_CODE_PIXEL_SIZE		13.0f
 #define IDE_BOLD_WEIGHT			700.0f	//Inter's bold.
 #define IDE_BOTTOM_HEIGHT		180
 #define IDE_STATUS_SHOWN		10000	//How long (ms) a status message stays.
@@ -416,7 +415,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpFolderIcon = CJewelImageGenerator::CreateFolder(mpTheme->GetColour(TC_Icon), &cFormat);
 	mpFileIcon = CJewelImageGenerator::CreateFile(mpTheme->GetColour(TC_Icon), &cFormat);
 
-	mpCodeFamily = OMalloc<CFontFamily>("JetBrains Mono", IDE_FONT_CHARACTERS, IDE_CODE_PIXEL_SIZE, pWindow->GetColourOrder());
+	mpCodeFamily = OMalloc<CFontFamily>("JetBrains Mono", IDE_FONT_CHARACTERS, (float32)IDE_CODE_FONT_SIZE, pWindow->GetColourOrder());
 	if (!mpCodeFamily->SetFace(FS_Regular, szCodeFont))
 	{
 		return gcLogger.Error2(__METHOD__, " Could not load the code font [", szCodeFont, "].", NULL);
@@ -571,6 +570,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpStatusBar->AddMessageField();
 	mpProgressLabel = mpStatusBar->AddField(-1);
 	pMain->AddComponent(mpStatusBar, 0, 3, 1, 1, 1, 0);
+	mpSettings->AddZoomWheel(pMain);
 	pWindow->SetContainer(pMain);
 	pWindow->SetToolTips(OMalloc<CToolTips>(pWindow, mpTheme));
 	pWindow->GetActivationEvent()->Add(&mpGitStatus, &CIDEGitStatus::WindowActivated);
@@ -676,6 +676,7 @@ void CIDEContent::ViewMenuOpening(CMenuContainer* pcMenu)
 	}
 	mpToolWindows->AddViewItems(mpViewMenu);
 	mpQuickInfo->AddViewItems(mpViewMenu);
+	mpSettings->AddViewItems(mpViewMenu);
 }
 
 

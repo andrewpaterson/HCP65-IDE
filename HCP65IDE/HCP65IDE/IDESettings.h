@@ -43,6 +43,9 @@ class CMarkupTag;
 #define IDE_KEY_REPEAT_MAX_DELAY	2000
 #define IDE_KEY_REPEAT_MIN_RATE		1
 #define IDE_KEY_REPEAT_MAX_RATE		60
+#define IDE_CODE_FONT_SIZE			13	//The code font's pixels, as IntelliJ's editor font is 13, until it is zoomed.
+#define IDE_CODE_FONT_MIN_SIZE		8
+#define IDE_CODE_FONT_MAX_SIZE		32
 
 
 //File, Settings, and the keys a user has changed, which are read from a file of theirs as the IDE starts and written to
@@ -66,6 +69,8 @@ protected:
 	bool						mbKeyRepeat;  //Held keys repeat (CComponentInput::SetRepeat), Settings' Editor page's.
 	uint32						muiKeyRepeatDelay;
 	uint32						muiKeyRepeatRate;
+	uint32						muiCodeFontSize;  //Every code view's font (the code font family's default size), zoomed.
+	bool						mbWheelZoom;  //Control and the wheel over code zoom it.
 
 public:
 	void	Init(CIDEContent* pcContent);
@@ -85,6 +90,15 @@ public:
 	bool	IsKeyRepeat(void) const;
 	uint32	GetKeyRepeatDelay(void) const;
 	uint32	GetKeyRepeatRate(void) const;
+	void	SetCodeFont(uint32 uiSize, bool bWheelZoom);
+	void	ApplyCodeFontSize(void);
+	uint32	GetCodeFontSize(void) const;
+	bool	IsWheelZoom(void) const;
+	void	AddViewItems(Ptr<CMenuContainer> pMenu);
+	void	AddZoomWheel(Ptr<CComponent> pRoot);
+	void	IncreaseFontSize(void);
+	void	DecreaseFontSize(void);
+	void	ResetFontSize(void);
 
 	void	WatchDialog(Ptr<CDialog> pDialog) override;
 	void	StopWatchingDialog(void) override;
@@ -94,6 +108,9 @@ protected:
 	void	RequestDialog(void);
 	void	ShowDialog(void);
 	void	ReadKeyRepeat(CMarkupTag* pcSettings);
+	void	ReadCodeFont(CMarkupTag* pcSettings);
+	void	ZoomCodeFont(uint32 uiSize);
+	void	ZoomWheel(SComponentInputEvent* psEvent);
 };
 
 

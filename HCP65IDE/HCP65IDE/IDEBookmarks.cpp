@@ -102,7 +102,7 @@ void CIDEBookmarks::AddCommands(Ptr<CCommandSet> pCommands)
 	pCommands->Add("Bookmarks.ToggleMnemonic", "Toggle Bookmark with Mnemonic...", "Control+Shift+F11", Ptr<CImageCel>(), this, &CIDEBookmarks::ToggleMnemonicBookmark)->SetEnabledCheck(this, &CIDEBookmarks::HasEditor);
 	pCommands->Add("Bookmarks.Next", "Next Bookmark", "F2", Ptr<CImageCel>(), this, &CIDEBookmarks::NextBookmark)->SetEnabledCheck(this, &CIDEBookmarks::HasEditor);
 	pCommands->Add("Bookmarks.Previous", "Previous Bookmark", "Shift+F2", Ptr<CImageCel>(), this, &CIDEBookmarks::PreviousBookmark)->SetEnabledCheck(this, &CIDEBookmarks::HasEditor);
-	pCommands->Add("Bookmarks.GoTo0", "Go to Bookmark 0", "Control+0", Ptr<CImageCel>(), this, &CIDEBookmarks::GoToBookmark0);
+	pCommands->Add("Bookmarks.GoTo0", "Go to Bookmark 0", "", Ptr<CImageCel>(), this, &CIDEBookmarks::GoToBookmark0);
 	pCommands->Add("Bookmarks.GoTo1", "Go to Bookmark 1", "Control+1", Ptr<CImageCel>(), this, &CIDEBookmarks::GoToBookmark1);
 	pCommands->Add("Bookmarks.GoTo2", "Go to Bookmark 2", "Control+2", Ptr<CImageCel>(), this, &CIDEBookmarks::GoToBookmark2);
 	pCommands->Add("Bookmarks.GoTo3", "Go to Bookmark 3", "Control+3", Ptr<CImageCel>(), this, &CIDEBookmarks::GoToBookmark3);

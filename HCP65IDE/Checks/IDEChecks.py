@@ -3884,13 +3884,14 @@ CHECKS = [
 		[r'^Tabs: .*>Kernal\.cpp', r'^Tabs:\s*$', r'^Command \[No\.Such\] not found'], []),
 	('keys-and-buttons', {
 		'DEBUG': 'printkeys,printbuttons'},
-		[r'^Keys: Navigate\.GoToDefinition F12 bound$', r'^Keys: Navigate\.GoToClass Control\+N bound$', r'^Keys: Navigate\.GoToAction Control\+Shift\+A bound$',
+		[r'^Keys: Navigate\.GoToDefinition F12 bound$',
+		 r'^Keys: View\.IncreaseFontSize Control\+= bound$', r'^Keys: View\.DecreaseFontSize Control\+- bound$', r'^Keys: View\.ResetFontSize Control\+0 bound$', r'^Keys: Navigate\.GoToClass Control\+N bound$', r'^Keys: Navigate\.GoToAction Control\+Shift\+A bound$',
 		 r'^Keys: Navigate\.GoToImplementation Control\+Alt\+B bound$', r'^Keys: Navigate\.GoToSuperMethod Control\+U bound$',
 		 r'^Keys: Navigate\.GoToTypeDeclaration Control\+Shift\+B bound$', r'^Keys: Navigate\.GoToRelatedSymbol Control\+Alt\+Home bound$',
 		 r'^Keys: Navigate\.GoToLine Control\+G bound$', r'^Keys: Navigate\.FileStructure Control\+F12 bound$', r'^Keys: Navigate\.NextMethod Alt\+Cursor Down bound$',
 		 r'^Keys: Navigate\.PreviousMethod Alt\+Cursor Up bound$', r'^Keys: View\.Structure Alt\+7 bound$',
 		 r'^Keys: Bookmarks\.Toggle Control\+F11 bound$', r'^Keys: Bookmarks\.ToggleMnemonic Control\+Shift\+F11 bound$', r'^Keys: Bookmarks\.Next F2 bound$',
-		 r'^Keys: Bookmarks\.Previous Shift\+F2 bound$', r'^Keys: Bookmarks\.GoTo0 Control\+0 bound$', r'^Keys: Bookmarks\.GoTo9 Control\+9 bound$',
+		 r'^Keys: Bookmarks\.Previous Shift\+F2 bound$', r'^Keys: Bookmarks\.GoTo1 Control\+1 bound$', r'^Keys: Bookmarks\.GoTo9 Control\+9 bound$',
 		 r'^Keys: Navigate\.NextChange Control\+Alt\+Shift\+Cursor Down bound$', r'^Keys: Navigate\.PreviousChange Control\+Alt\+Shift\+Cursor Up bound$',
 		 r'^Keys: Navigate\.HighlightUsages Control\+Shift\+F7 bound$',
 		 r'^Keys: Navigate\.RecentFiles Control\+E bound$', r'^Keys: Navigate\.RecentLocations Control\+Shift\+E bound$',
@@ -4065,7 +4066,7 @@ CHECKS = [
 		 r'^Menu File/Recent Solutions: 1 ',
 		 r'^Menu Edit: Undo \[Ctrl\+Z\](\(disabled\))?, Redo \[Ctrl\+Shift\+Z\](\(disabled\))?, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\], Select All \[Ctrl\+A\], Extend Selection \[Ctrl\+W\], Shrink Selection \[Ctrl\+Shift\+W\], Find\.\.\. \[Ctrl\+F\], Replace\.\.\. \[Ctrl\+R\], Find Next \[F3\], Find Previous \[Shift\+F3\], Find Word at Caret \[Ctrl\+F3\], Find in Files\.\.\. \[Ctrl\+Shift\+F\], Replace in Files\.\.\. \[Ctrl\+Shift\+R\], Find Duplicates\.\.\. \[Ctrl\+Alt\+Shift\+D\]$',
 		 r'^Menu Navigate: Back \[Ctrl\+Alt\+Left\](\(disabled\))?, Forward \[Ctrl\+Alt\+Right\](\(disabled\))?, Class\.\.\. \[Ctrl\+N\], File\.\.\. \[Ctrl\+Shift\+N\], Symbol\.\.\. \[Ctrl\+Alt\+Shift\+N\], Action\.\.\. \[Ctrl\+Shift\+A\], Line:Column\.\.\. \[Ctrl\+G\], Go to Source \[Ctrl\+B\], Go to Definition \[F12\], Go to Implementation\(s\) \[Ctrl\+Alt\+B\], Go to Type Declaration \[Ctrl\+Shift\+B\], Go to Super Method \[Ctrl\+U\], Go to Related Symbol \[Ctrl\+Alt\+Home\], Switch Header/Source \[Alt\+O\], File Structure \[Ctrl\+F12\], Next Method \[Alt\+Down\], Previous Method \[Alt\+Up\], Toggle Bookmark \[Ctrl\+F11\], Toggle Bookmark with Mnemonic\.\.\. \[Ctrl\+Shift\+F11\], Next Bookmark \[F2\], Previous Bookmark \[Shift\+F2\], Next Change \[Ctrl\+Alt\+Shift\+Down\], Previous Change \[Ctrl\+Alt\+Shift\+Up\], Highlight Usages in File \[Ctrl\+Shift\+F7\], Recent Files \[Ctrl\+E\], Recent Locations \[Ctrl\+Shift\+E\], Last Edit Location \[Ctrl\+Shift\+Backspace\], Next Edit Location, Select In\.\.\. \[Alt\+F1\], Type Hierarchy \[Ctrl\+H\], Method Hierarchy \[Ctrl\+Shift\+H\], Call Hierarchy \[Ctrl\+Alt\+H\], Find Usages \[Alt\+F7\], Show Usages \[Ctrl\+Alt\+F7\], Find All References \[Shift\+F12\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Next Occurrence \[Ctrl\+Alt\+Down\], Previous Occurrence \[Ctrl\+Alt\+Up\]$',
-		 r'^Menu View: Solution Explorer \[Alt\+1\], Structure \[Alt\+7\], Find Usages \[Alt\+3\], Find \[Alt\+9\], Duplicates, Bookmarks \[Alt\+2\], Hierarchy \[Alt\+8\], Build \[Alt\+6\], Indexing, Problems, Run \[Alt\+4\], Debug \[Alt\+5\], Claude, Hide All Tool Windows \[Ctrl\+Shift\+F12\], Jump to Last Tool Window(\(disabled\))?, Quick Definition \[Ctrl\+Shift\+I\], Parameter Info \[Ctrl\+P\], Type Info \[Ctrl\+Shift\+P\]$',
+		 r'^Menu View: Solution Explorer \[Alt\+1\], Structure \[Alt\+7\], Find Usages \[Alt\+3\], Find \[Alt\+9\], Duplicates, Bookmarks \[Alt\+2\], Hierarchy \[Alt\+8\], Build \[Alt\+6\], Indexing, Problems, Run \[Alt\+4\], Debug \[Alt\+5\], Claude, Hide All Tool Windows \[Ctrl\+Shift\+F12\], Jump to Last Tool Window(\(disabled\))?, Quick Definition \[Ctrl\+Shift\+I\], Parameter Info \[Ctrl\+P\], Type Info \[Ctrl\+Shift\+P\], Increase Font Size \[Ctrl\+=\], Decrease Font Size \[Ctrl\+-\], Reset Font Size \[Ctrl\+0\]$',
 		 r'^Menu Git: Compare with HEAD, Compare with Branch\.\.\., Compare with Revision\.\.\.$',
 		 r'^Menu Build: Build \[Ctrl\+F9\], Edit Build Configurations\.\.\.$',
 		 r'^Menu Debug: Start Debugging \[F5\], Start Without Debugging \[Ctrl\+F5\], Stop Debugging \[Shift\+F5\], Stop Running(\(disabled\))?, Restart \[Ctrl\+Shift\+F5\], Break All \[Ctrl\+Pause/Break\], Attach to Emulator\.\.\., Step Into \[F11\], Step Over \[F10\], Step Out \[Shift\+F11\], Toggle Breakpoint \[F9\], New Breakpoint at Address\.\.\., Delete All Breakpoints, Edit Configurations\.\.\.$',
@@ -4491,6 +4492,31 @@ CHECKS = [
 		'SETTINGS': MakeSettingsFile('<?xml version="1.0" encoding="UTF-8"?>\n<Settings>\n  <KeyRepeat On="true" Delay="250" Rate="40"/>\n</Settings>\n'),
 		'DEBUG': 'printkeyrepeat'},
 		[r'^Key repeat: 250 ms, every 25 ms$'], []),
+	('font-zoom-keys', {
+		#View's Increase and Decrease Font Size (Control+= and Control+-) zoom every code view a pixel at a time, the
+		#active editor's lines with it; Reset Font Size (Control+0) goes back to 13.  Each is shown and written.
+		'SOLUTION': NAVIGATION, 'OPEN': 'Main.cpp', 'SETTINGS': MakeSettingsFile(),
+		'DEBUG': 'printfontsize,command:View.IncreaseFontSize,command:View.IncreaseFontSize,printfontsize,command:View.DecreaseFontSize,printfontsize,'
+		         'printsettings,command:View.ResetFontSize,printfontsize'},
+		[r'^Font size: 13, editor lines 18 pixels, wheel zoom on$', r'^Status: Font size: 14$', r'^Status: Font size: 15$',
+		 r'^Font size: 15, editor lines 21 pixels, wheel zoom on$', r'^Status: Font size: 14$', r'^Font size: 14, editor lines \d+ pixels',
+		 r'<CodeFont Size="14" WheelZoom="true"/>', r'^Status: Font size: 13$', r'^Font size: 13, editor lines \d+ pixels'], []),
+	('font-zoom-settings', {
+		#Settings' Editor page: the size typed and the wheel's zoom unticked are kept by OK and written.
+		'SOLUTION': NAVIGATION, 'OPEN': 'Main.cpp', 'SETTINGS': MakeSettingsFile(), 'EDITOR_EDITS': 'fontsize:18;wheelzoom:false', 'DIALOG_ANSWER': 'OK',
+		'DEBUG': 'clickmenu:File/Settings...,answered:1,printfontsize,printsettings'},
+		[r'^Dialog \[Settings\] answered OK$', r'^Font size: 18, editor lines \d+ pixels, wheel zoom off$', r'<CodeFont Size="18" WheelZoom="false"/>'], []),
+	('font-zoom-range', {
+		#A size out of range typed keeps what there was; zoomed, the size stops at 8 and 32.
+		'SOLUTION': NAVIGATION, 'OPEN': 'Main.cpp', 'SETTINGS': MakeSettingsFile(), 'EDITOR_EDITS': 'fontsize:99', 'DIALOG_ANSWER': 'OK',
+		'DEBUG': 'clickmenu:File/Settings...,answered:1,printfontsize,' + ','.join(['command:View.DecreaseFontSize'] * 7) + ',printfontsize'},
+		[r'^Font size: 13, ', r'^Font size: 8, '], [r'^Font size: 7']),
+	('font-zoom-read', {
+		#The settings as they were written: the code opens in that size.
+		'SOLUTION': NAVIGATION, 'OPEN': 'Main.cpp',
+		'SETTINGS': MakeSettingsFile('<?xml version="1.0" encoding="UTF-8"?>\n<Settings>\n  <CodeFont Size="20" WheelZoom="false"/>\n</Settings>\n'),
+		'DEBUG': 'printfontsize'},
+		[r'^Font size: 20, editor lines \d+ pixels, wheel zoom off$'], []),
 	('nav-structure-window', {
 		#The Structure tool window: the active file's outline as a tree, the entry the caret is in selected as the
 		#caret moves.  A click on a row puts the caret on its entry.  Its menu's Hide Fields leaves fields out (a caret

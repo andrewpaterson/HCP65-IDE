@@ -42,7 +42,7 @@ static bool			gbIDEScriptRenameSaves = false;  //rename: saves what it edited (r
 static bool			gbIDEScriptClassFiles = false;  //rename: renames a type's files too (renamesearch's f), never from the settings.
 
 
-static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printfindpreview", "printfindtoolbar", "findtool:", "replace:", "findoptions:", "findselect:", "printstartup", "printworkspace", "printuserfile", "rename", "safedelete", "introducevariable", "introducefield", "introduceconstant", "introduceparameter", "changesignature", "pullmembersup", "pushmembersdown", "moveclass", "copyclass", "inlinevariable", "introducetypedef", "extractmethod", "extractsuperclass", "extractinterface", "extractclass", "encapsulatefield", "convertmacro", "extracttemplateparameter", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printkeyrepeat", "printsettings", "printproblems", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printprojectfiles", "printdiskfile:", "printdisklines:", "printedits", "printspans", "configuration:", "waitindex", "indextemplates:" };
+static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printfindpreview", "printfindtoolbar", "findtool:", "replace:", "findoptions:", "findselect:", "printstartup", "printworkspace", "printuserfile", "rename", "safedelete", "introducevariable", "introducefield", "introduceconstant", "introduceparameter", "changesignature", "pullmembersup", "pushmembersdown", "moveclass", "copyclass", "inlinevariable", "introducetypedef", "extractmethod", "extractsuperclass", "extractinterface", "extractclass", "encapsulatefield", "convertmacro", "extracttemplateparameter", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printkeyrepeat", "printfontsize", "printsettings", "printproblems", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printprojectfiles", "printdiskfile:", "printdisklines:", "printedits", "printspans", "configuration:", "waitindex", "indextemplates:" };
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -700,6 +700,22 @@ void CIDEScript::RunCommand(const char* szCommand)
 		//with problems", -1 ms while it is still being built; then the Indexing tab's text, which says what they were.
 		printf("Indexing: %d ms, %d units with problems\n", (int)mpcContent->GetCodeModel()->GetIndexingMilliseconds(), (int)mpcContent->GetCodeModel()->NumIndexingProblemUnits());
 		printf("Indexing pane:\n%s\n", mpcContent->GetIndexing()->GetPane()->GetOutputArea()->GetText());
+		fflush(stdout);
+	}
+	else if (strcmp(szCommand, "printfontsize") == 0)
+	{
+		//The code's font, once the window has laid it out: "Font size: 14, editor lines 17 pixels, wheel zoom on".
+		Ptr<CIDEEditorTab>	pSizeTab;
+		CInt32Rect			cLine;
+
+		mpcContent->GetWindow()->Layout();
+		pSizeTab = mpcContent->GetDocuments()->GetActiveTab();
+		cLine.Init(0, 0, 0, 0);
+		if (pSizeTab.IsNotNull())
+		{
+			pSizeTab->GetEditor()->GetLineBounds(0, &cLine);
+		}
+		printf("Font size: %d, editor lines %d pixels, wheel zoom %s\n", (int)mpcContent->GetSettings()->GetCodeFontSize(), (int)cLine.GetHeight(), mpcContent->GetSettings()->IsWheelZoom() ? "on" : "off");
 		fflush(stdout);
 	}
 	else if (strcmp(szCommand, "printkeyrepeat") == 0)
