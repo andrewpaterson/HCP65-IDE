@@ -3983,13 +3983,14 @@ CHECKS = [
 		[r'^Run: not running \[Start\]$', r'^No tool is set for Nothing: give it one in Edit Configurations\.$'], []),
 	('run-configuration-rules', {
 		#OK is refused for a name used twice or none; Cancel changes nothing, and removing them all gives the defaults.
+		#Which of them is chosen is whatever the user's ModPlay workspace last chose, so either is.
 		'DIALOG_ANSWER': 'Cancel',
 		'RUN_EDITS': 'add;name:Debug|W65C816;check;name:;check;name:Fine;check;remove;remove;remove;check',
 		'DEBUG': 'command:Run.EditConfigurations,answered:1,printconfig'},
 		[r'^Run dialog: refused \[Another run configuration has this name\.\]$',
 		 r'^Run dialog: refused \[A run configuration needs a name\.\]$',
 		 r'^Run dialog: OK \[\]$', r'^Run dialog: OK \[\]$',
-		 r'^Configuration: \[Debug\|W65C816\] \[Debug\|W65C816\]: Debug\|W65C816, Release\|W65C816, Edit Configurations\.\.\.,$'], []),
+		 r'^Configuration: \[(Debug|Release)\|W65C816\] \[\1\|W65C816\]: Debug\|W65C816, Release\|W65C816, Edit Configurations\.\.\.,$'], []),
 	('run-configuration-no-tool', {
 		#A tool that isn't there says so when it starts.
 		'DIALOG_ANSWER': 'OK', 'RUN_EDITS': 'add;name:Missing;tool:/no/such/tool',
