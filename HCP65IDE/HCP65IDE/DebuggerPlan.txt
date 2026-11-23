@@ -67,12 +67,12 @@ What the compiler knows and throws away (CommonLibraries/Libraries/CppCompilerLi
 What is to be built
 -------------------
 
-Stages in order; each builds, is checked and committed on its own.  M is measured before A3 is decided for good.
+Stages in order; each builds, is checked and committed on its own.  M is done (its results below).
 
 M. Measure first
-  M1. A Debug compile (A2) of the kernal, boot.exe and ModPlay: code size against the kernal's link limit ($040000,
-      ROM banks 0-3) and each program's banks, and speed (ModPlay's mixer must still keep up at 25 MHz, or Debug
-      is for stepping, not for listening).  If the kernal doesn't fit, the kernal is debugged optimised (frames
+  M1. A Debug compile (A2) of the kernal, boot.exe and ModPlay: code size against the kernal's limit (OS.SYS's
+      region $00FF00-$040000) and each program's banks, and speed (ModPlay's mixer must still keep up at 25 MHz,
+      or Debug is for stepping, not for listening).  If the kernal doesn't fit, the kernal is debugged optimised (frames
       only, decision 1) or its Debug configuration keeps the optimiser for chosen units.
   M2. The debug file's size for the kernal and ModPlay.
   M3. Stop to Locals filled, over the shared memory channel: under 50 ms.
@@ -148,12 +148,17 @@ A. The compiler writes debug information (CppCompilerLib, Assembler65Lib; W65C81
       shape = normal | dropped (D = S) | none (D is the caller's) | aligned | forwarder | runtime (the caller's D).
       Also the prologue's length, so a stop inside the prologue or epilogue knows the frame isn't made yet (walk by
       S there).  The assembler keeps it in the object with the function's section; the linker relocates it.
-  A2. A Debug compile.  mbOptimise false becomes a real debug mode on both back ends: no PromoteSlots, no inliner,
-      each named local and parameter in a frame slot of its own for the whole function (no packing with another),
-      register arguments stored to their slots in the prologue, no DropFrame or AlignFrame, no forwarders.  The
-      temporaries in between are still the back end's.  CBuildConfiguration gets the option (the configuration's
-      "Optimise" on its page; Debug configurations off, Release on) and passes it to SetCompileOptions.
-      TestCPPW65C816 runs its programs in both modes (same results).
+  A2. Debug compiles (decision 1, re-decided after M).  Two modes besides Release, as compile options:
+        - Debug (the middle mode, as GCC's -Og): the IR optimiser on, but each named local and parameter in a frame
+          slot of its own for the whole function (not promoted, split or packed with another), its loads and stores
+          never removed, moved or merged; register arguments stored to their slots in the prologue; no inliner; no
+          DropFrame, AlignFrame or forwarders.  Which optimiser passes must leave slots alone is settled here (M's
+          list was an estimate: SplitSlots, PromoteSlots, RemoveRedundantLoads, SinkLoads, HoistInvariants).
+        - No optimisation (-O0): no IR optimiser either, so stepping follows every line.  A per-project tick.
+      The temporaries in between are still the back end's.  CBuildConfiguration gets the mode (Release, Debug) and
+      each project the no-optimisation tick, passed to SetCompileOptions.  TestCPPW65C816 runs its programs in all
+      three (same results).  Checks: the kernal's and the boot loader's Debug builds still fit (2.3 KB to spare in M),
+      and modplay.exe in Debug still keeps the sound board fed at 25 MHz (88% in M).
   A3. Variables.  For each function, its parameters and locals: name, type (A4), and where it is - a frame offset
       in Debug; in an optimised compile the same when the slot survived (an address taken, an array, a class), and
       "not available" otherwise (decision 1).  The front end knows the variable (mcAddresses) and its block; the
@@ -214,8 +219,8 @@ E. The windows (decision 2: Visual Studio's)
   E3. Autos: the variables used on the current line and the line before (Visual Studio's rule), and a function's
       return value just after stepping out of it ("Fn returned").
   E4. Watch 1-4: rows typed in, kept per workspace in the .hcp65user with the breakpoints; added from the editor's
-      menu (Add Watch) and by dragging a selection in.  QuickWatch (Visual Studio's Shift+F9, if free): a dialog with the expression at the
-      caret, Reevaluate, Add Watch.
+      menu (Add Watch) and by dragging a selection in.  QuickWatch (Visual Studio's Shift+F9, if free): a dialog
+      with the expression at the caret, Reevaluate, Add Watch.
   E5. Data tips (decision 5): the pointer resting on a name while stopped shows its value, opened like a Locals row.
   E6. The Debug menu gets Windows > Call Stack, Locals, Autos, Watch 1-4, Hexadecimal Display; the windows are
       docked tool windows like the others (CIDEToolWindows), each updated at every stop and empty while running.
@@ -236,11 +241,11 @@ F. After the first version (each its own item, if asked for)
 What is the user's to decide
 ----------------------------
 
-All six DECIDED 2026-11-23, each as recommended: 1 a Debug mode (A2) with optimised code showing frames and only
-the variables still in memory (still hangs on M1: if the kernal doesn't fit unoptimised, bring it back to the user);
-2 Visual Studio's windows; 3 no function calls in watches; 4 W65C816 first; 5 data tips as a late step; 6 the call
-stack goes through the kernal's stubs in the first version.  Not a go-ahead to build: the user says when, and each
-stage is brought up before it starts.
+All six DECIDED 2026-11-23: 1 first as recommended (an unoptimised Debug mode), then RE-DECIDED after M showed the
+kernal and boot loader don't fit unoptimised: "Middle + per-project -O0" (see M's results and A2); Release shows
+frames and only the variables still in memory; 2 Visual Studio's windows; 3 no function calls in watches;
+4 W65C816 first; 5 data tips as a late step; 6 the call stack goes through the kernal's stubs in the first version.
+Not a go-ahead to build: the user says when, and each stage is brought up before it starts.
 
 Asked one at a time, with my recommendation first.
   1. Optimised code.  The Debug configuration compiles without the optimiser (A2) so every variable is in the
