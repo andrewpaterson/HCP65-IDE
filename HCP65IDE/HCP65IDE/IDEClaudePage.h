@@ -20,7 +20,9 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 ** ------------------------------------------------------------------------ **/
 #ifndef __IDE_CLAUDE_PAGE_H__
 #define __IDE_CLAUDE_PAGE_H__
+#include "WindowLib/Button.h"
 #include "WindowLib/ComboBox.h"
+#include "WindowLib/FileChooser.h"
 #include "WindowLib/GridContainer.h"
 #include "WindowLib/Label.h"
 #include "WindowLib/SettingsDialog.h"
@@ -32,7 +34,8 @@ class CIDEContent;
 
 //Settings' Claude page: the folder Claude Code is started in for the Claude tab's requests (CIDEAskClaude), which is
 //where it looks for its CLAUDE.md and keeps its conversations: the startup solution's folder, the repository that
-//folder is in, or a folder typed here.  OK keeps it, and it is written with the IDE's settings.
+//folder is in, or a folder typed here or chosen with the button beside it.  OK keeps it, and it is written with the
+//IDE's settings.
 class CIDEClaudePage : public CSettingsPage
 {
 CONSTRUCTABLE(CIDEClaudePage);
@@ -42,6 +45,8 @@ protected:
 	Ptr<CDialog>		mpDialog;  //The settings dialog's.
 	Ptr<CComboBox>		mpDirectory;  //Its items are in EIDEClaudeDirectory's order.
 	Ptr<CTextField>		mpFolder;
+	Ptr<CButton>		mpBrowse;  //Beside the folder: chooses it.
+	Ptr<CFileChooser>	mpChooser;  //While the folder is being chosen.
 	Ptr<CGridContainer>	mpBody;
 
 public:
@@ -57,6 +62,9 @@ public:
 	void			Keep(void) override;
 
 	void			ApplyEdits(const char* szEdits);
+	void			BrowseClicked(void);
+	void			ChooseFolder(void);
+	Ptr<CButton>	GetBrowseButton(void) const;
 
 protected:
 	Ptr<CLabel>		CreateLabel(const char* szText);

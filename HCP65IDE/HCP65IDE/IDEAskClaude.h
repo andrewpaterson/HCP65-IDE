@@ -91,10 +91,10 @@ public:
 	void					SetDirectorySettings(EIDEClaudeDirectory eDirectory, const char* szFolder);
 	void					ReadSettings(CMarkupTag* pcSettings);
 	void					WriteSettings(CXMLWriter* pcWriter);
+	bool					GetSolutionDirectory(CChars* pszDirectory);
 
 protected:
 	bool					GetClaudeDirectory(CChars* pszDirectory);
-	bool					GetSolutionDirectory(CChars* pszDirectory);
 	void					AddClaudeDirectories(const char* szDirectory);
 	void					AddClaudeDirectory(const char* szFolder, const char* szDirectory);
 	void					AppendClaudeContext(CChars* pszRequest);

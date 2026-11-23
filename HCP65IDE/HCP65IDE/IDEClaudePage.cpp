@@ -20,6 +20,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 ** ------------------------------------------------------------------------ **/
 #include <string.h>
 #include "BaseLib/ArrayChars.h"
+#include "BaseLib/FileUtil.h"
 #include "WindowLib/FillContainer.h"
 #include "IDEContent.h"
 #include "IDEClaudePage.h"
@@ -37,6 +38,7 @@ void CIDEClaudePage::Init(CIDEContent* pcContent, Ptr<CDialog> pDialog)
 {
 	Ptr<CWindow>		pWindow;
 	Ptr<CFillContainer>	pGap;
+	Ptr<CGridContainer>	pFolderRow;
 	Ptr<CIDEAskClaude>	pAskClaude;
 	SDialogLook*		psLook;
 	size				i;
@@ -58,6 +60,17 @@ void CIDEClaudePage::Init(CIDEContent* pcContent, Ptr<CDialog> pDialog)
 	mpDirectory->SetAlignment(CSH_Stretch, CSV_Center);
 	mpFolder = OMalloc<CTextField>(pWindow, psLook->pcTheme, pAskClaude->GetFolderSetting());
 	mpFolder->SetAlignment(CSH_Stretch, CSV_Center);
+	mpBrowse = OMalloc<CButton>(pWindow, psLook->pcTheme, "...");
+	mpBrowse->SetAlignment(CSH_Right, CSV_Center);
+	mpBrowse->GetClickEvent()->Add(this, &CIDEClaudePage::BrowseClicked);
+	mpChooser = NULL;
+	pFolderRow = OMalloc<CGridContainer>(pWindow);
+	pFolderRow->SetAlignment(CSH_Stretch, CSV_Center);
+	pFolderRow->AddComponent(mpFolder, 0, 0, 1, 1, 1, 0);
+	pGap = OMalloc<CFillContainer>(pWindow);
+	pGap->SetDesiredSize(IDE_CLAUDE_PAGE_GAP, 1);
+	pFolderRow->AddComponent(pGap, 1, 0);
+	pFolderRow->AddComponent(mpBrowse, 2, 0);
 
 	mpBody = OMalloc<CGridContainer>(pWindow);
 	mpBody->SetAlignment(CSH_Stretch, CSV_Top);
@@ -67,7 +80,7 @@ void CIDEClaudePage::Init(CIDEContent* pcContent, Ptr<CDialog> pDialog)
 	mpBody->AddComponent(pGap, 1, 0);
 	mpBody->AddComponent(mpDirectory, 2, 0, 1, 1, 1, 0);
 	mpBody->AddComponent(CreateLabel("Folder:"), 0, 1);
-	mpBody->AddComponent(mpFolder, 2, 1, 1, 1, 1, 0);
+	mpBody->AddComponent(pFolderRow, 2, 1, 1, 1, 1, 0);
 	mpBody->AddComponent(CreateLabel("Folder is for \"The folder below\"; one that isn't a full path is from the startup solution's folder."), 0, 2, 3, 1, 1, 0);
 	mpBody->AddComponent(CreateLabel("Wherever it is started, Claude can also work in the repositories of the open solutions' projects."), 0, 3, 3, 1, 1, 0);
 	PostInit();
@@ -85,6 +98,8 @@ void CIDEClaudePage::Class(void)
 	M_Pointer(mpDialog);
 	M_Pointer(mpDirectory);
 	M_Pointer(mpFolder);
+	M_Pointer(mpBrowse);
+	M_Pointer(mpChooser);
 	M_Pointer(mpBody);
 }
 
@@ -95,6 +110,10 @@ void CIDEClaudePage::Class(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDEClaudePage::Free(void)
 {
+	if (mpBrowse.IsNotNull())
+	{
+		mpBrowse->GetClickEvent()->Remove(this);
+	}
 	CSettingsPage::Free();
 }
 
@@ -166,6 +185,70 @@ void CIDEClaudePage::ApplyEdits(const char* szEdits)
 }
 
 
+//////////////////////////////////////////////////////////////////////////
+//
+// The button beside the folder: it is chosen at the next tick (a dialog
+// can't be shown from the click).
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEClaudePage::BrowseClicked(void)
+{
+	mpDialog->GetWindow()->Post(this, &CIDEClaudePage::ChooseFolder);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A chooser of folders over the settings dialog, starting in the folder
+// typed (one that isn't a full path is from the startup solution's
+// folder), or the startup solution's folder if that isn't one.  The
+// folder chosen goes in the field, and Claude is to be started in it.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEClaudePage::ChooseFolder(void)
+{
+	CFileUtil	cFileUtil;
+	CChars		szSolution;
+	CChars		szStart;
+	const char*	szTyped;
+
+	szSolution.Init();
+	mpcContent->GetAskClaude()->GetSolutionDirectory(&szSolution);
+	szStart.Init();
+	szTyped = mpFolder->GetText();
+	if ((szTyped != NULL) && (szTyped[0] != '\0'))
+	{
+		if (cFileUtil.IsAbsolutePath(szTyped))
+		{
+			szStart.Set(szTyped);
+		}
+		else
+		{
+			szStart.Set(szSolution.Text());
+			cFileUtil.AppendToPath(&szStart, szTyped);
+		}
+	}
+	if (szStart.Empty() || !cFileUtil.IsDirectory(szStart.Text()))
+	{
+		szStart.Set(szSolution.Text());
+	}
+	szSolution.Kill();
+
+	//The chooser starts in the folder of the file it is given.
+	cFileUtil.AppendToPath(&szStart, "x");
+	mpChooser = OMalloc<CFileChooser>(mpDialog->GetWindow(), mpcContent->GetDialogLook(), "Choose Folder", false, szStart.Text(), (SFileChooserType*)NULL, 0, mpcContent->GetFolderIcon(), mpcContent->GetFileIcon());
+	szStart.Kill();
+	mpChooser->SetChoosesFolder();
+	if (mpChooser->Show())
+	{
+		mpFolder->SetText(mpChooser->GetChosen());
+		mpDirectory->Select((int32)ICD_Folder);
+	}
+	mpChooser = NULL;
+}
+
+
+Ptr<CButton> CIDEClaudePage::GetBrowseButton(void) const { return mpBrowse; }
 bool CIDEClaudePage::Save(CObjectWriter* pcFile) { return false; }
 bool CIDEClaudePage::Load(CObjectReader* pcFile) { return false; }
 const char* CIDEClaudePage::GetTitle(void) const { return "Claude"; }
