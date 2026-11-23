@@ -43,7 +43,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 #define IDE_FONT_CHARACTERS		" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
 #define IDE_EXPLORER_WIDTH		320
-#define IDE_CODE_PIXEL_SIZE		15.0f
+#define IDE_CODE_PIXEL_SIZE		13.0f
 #define IDE_BOLD_WEIGHT			700.0f	//Inter's bold.
 #define IDE_BOTTOM_HEIGHT		180
 #define IDE_STATUS_SHOWN		10000	//How long (ms) a status message stays.
