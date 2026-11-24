@@ -116,6 +116,27 @@ programs, markers on and off (CCPPCompileOptions::mbDebugMarkers), Release x64, 
 Question 3.
 
 
+F1-M's results (2026-11-24)
+---------------------------
+
+Measured: two private copies of the commit at G3 (git archive), one with CCPPCompileOptions::mbDebugMarkers' default
+false, each with its own hcp65build (Release x64), building Release|W65C816 (line tables, listings) from clean.
+
+                         markers on       markers off      cost
+  Kernal instructions    571.7 G          449.4 G          +27.2%   (callgrind; perf isn't allowed here)
+  Kernal clock           13.47-13.74 s    10.30-10.64 s    +29%     (three runs each, alternating)
+  ModPlay clock          31.63-32.23 s    25.72-26.26 s    +24%
+  Kernal .debug          1,258,747        1,069,877        +17.7%
+  ModPlay .debug         4,909,268        4,092,610        +20.0%
+
+Where the 122 G go (callgrind, inclusive): the place markers' own CIRSourceMarkers Take and Put (the line matching
+done again: Put 97 G against 47 G, Take 25 G against 12 G), about 63 G; CIRBackend::DebugPlaces, 33 G (a place
+string made for every variable before every instruction run); the rest, mostly the extra CIRLiveness.
+
+The user (2026-11-24) chose to speed them up first: one marker pass for both kinds, places made only when a variable's
+value changes, the 65C64's liveness used again; measured again the same way.
+
+
 Order and size
 --------------
 

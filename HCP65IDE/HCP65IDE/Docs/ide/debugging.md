@@ -71,9 +71,10 @@ debugger (a configuration's Debug, see [Building](building.md)) to show everythi
 its calls and the variables it keeps in memory (objects, arrays and anything whose address is taken), the
 parameters that stay where they were passed (an object passed by value, a parameter whose address is taken),
 and, wherever the optimiser keeps their values, its other variables, parameters and `this`: in a register,
-a pseudo register or the frame, as Visual Studio shows optimised code.  A variable is `(optimised away)`,
-in the Call Stack too, where it has no value kept anywhere: before its first value, after its value's last
-use, folded into a constant, or in a register a call it made didn't save.  A variable in a register can be
+a pseudo register or the frame, as Visual Studio shows optimised code, and a value the optimiser knows (a
+constant, the address of a variable in the frame) as that value.  A variable is `(optimised away)`, in the
+Call Stack too, where it has no value kept anywhere: before its first value, after its value's last use, or
+in a register a call it made didn't save.  A variable in a register can be
 edited in the innermost call (the register is written), but has no address and can't be watched.
 
 ### Call Stack

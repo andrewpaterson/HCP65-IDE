@@ -293,15 +293,16 @@ def DebuggingChecks(P):
 		[r'^Stopped: yes, .*Debugging\.cpp:40$', r'^Stopped: yes, .*Debugging\.cpp:41$', r'^Call Stack:$', r'^=> ' + P['MODULE'] + r'!Sum\(.*\) Line 41 \[inlined\]$',
 		 r'^   ' + P['MODULE'] + r'!main\(\) Line 53$'],
 		[r'\?\?\?', r'Debugging\.cpp:2[78]$']),
-	('debug-optimised' + P['SUFFIX'], MakeDebugging(P, 'line:39,start,stopped,wait:1500,printcallstack,continue,stopped,wait:1500,printcallstack,line:39,line:54,continue,stopped,wait:1500,printstopped,print:Locals', P['RELEASE']),
-		#Built optimised, Sum's first call inlined into main (which the optimiser may choose otherwise): it is a row of
-		#its own in the Call Stack (DebuggerFPlan.txt F2), main's below it at the call.  Sum's parameters are where
-		#their values are (registers or the frame, F1): the second stop is Sum(&cCounter, 3), called from the inlined
-		#Sum.  Back in main, what stays in memory (the object whose address went to Sum) is shown, and so is iTotal where
-		#the optimiser kept it: 3 + 1 + 4 + 1.
-		[r'^Call Stack:$', r'^=> ' + P['MODULE'] + r'!(main\(\)|Sum\(.*\)) Line 39( \[inlined\])?$', r'^   \[External Code\]$',
+	('debug-optimised' + P['SUFFIX'], MakeDebugging(P, 'line:39,start,stopped,wait:1500,printcallstack,print:Locals,continue,stopped,wait:1500,printcallstack,line:39,line:54,continue,stopped,wait:1500,printstopped,print:Locals', P['RELEASE']),
+		#Built optimised, Sum's first call inlined into main: it is a row of its own in the Call Stack (DebuggerFPlan.txt
+		#F2), main's below it at the call, its parameters what the optimiser knows them to be (cCounter's address and 4,
+		#DebuggerFixesPlan.txt G4).  The second stop is Sum(&cCounter, 3), called from the inlined Sum, its parameters
+		#where their values are (F1).  Back in main, what stays in memory (the object whose address went to Sum) is shown,
+		#and so is iTotal where the optimiser kept it: 3 + 1 + 4 + 1.
+		[r'^Call Stack:$', r'^=> ' + P['MODULE'] + r'!Sum\(CCounter\* pcCounter = 0x[0-9a-f]+, int iDepth = 4\) Line 39 \[inlined\]$',
+		 r'^   ' + P['MODULE'] + r'!main\(\) Line 53$', r'^   \[External Code\]$', r'^Locals:$', r'^pcCounter = 0x[0-9a-f]+ \[CCounter\*\]$', r'^iDepth = 4 \[int\]$',
 		 r'^Call Stack:$', r'^=> ' + P['MODULE'] + r'!Sum\(CCounter\* pcCounter = 0x[0-9a-f]+, int iDepth = 3\) Line 39$',
-		 r'^   ' + P['MODULE'] + r'!(main\(\)|Sum\(.*\)) Line [0-9]+( \[inlined\])?$', r'^   \[External Code\]$',
+		 r'^   ' + P['MODULE'] + r'!Sum\(CCounter\* pcCounter = 0x[0-9a-f]+, int iDepth = 4\) Line 39 \[inlined\]$', r'^   ' + P['MODULE'] + r'!main\(\) Line 53$',
 		 r'^Stopped: yes, .*Debugging\.cpp:54$', r'^Locals:$', r'^cCounter = \{\.\.\.\} \[CCounter\]$', r'^iTotal = 9 \[int\]$'], [r'\?\?\?'])]
 
 
