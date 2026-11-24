@@ -129,7 +129,10 @@ Questions
 ---------
 
   1. G4: show the values the optimiser knows (constants, and addresses in the frame), as Visual Studio does?
-     Recommendation: yes; the alternative leaves them (optimised away).
+     Recommendation: yes; the alternative leaves them (optimised away).  DECIDED (the user, 2026-11-24): show them.
   2. G5: Step Into at an inlined call's line steps into it without running anything (Visual Studio's), or runs one
-     instruction?  Recommendation: Visual Studio's.
-  3. F1-M: measure markers' cost now?  Recommendation: yes, before G4 (which adds more debug records).
+     instruction?  Recommendation: Visual Studio's.  DECIDED: enter, run nothing.
+  3. F1-M: measure markers' cost now?  Recommendation: yes, before G4 (which adds more debug records).  DECIDED:
+     measure first.
+
+Every question is decided.  Nothing is built until the user says so.
