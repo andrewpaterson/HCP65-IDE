@@ -67,8 +67,8 @@ What the compiler knows and throws away (CommonLibraries/Libraries/CppCompilerLi
 What is to be built
 -------------------
 
-Stages in order; each builds, is checked and committed on its own.  M, A, B, C and D are done (2026-11-24): E, the
-windows, is next.
+Stages in order; each builds, is checked and committed on its own.  M and A to E are done (2026-11-24): F's items are
+each the user's to ask for.
 
 What is built (2026-11-23 and 24), where it differs from the steps below
   A1-A5. The records are the assembler's .dfunction, .dframe (none | frame | saved, an offset: how the caller's D
@@ -127,6 +127,25 @@ What is built (2026-11-23 and 24), where it differs from the steps below
       field CTable edited in, now shared) over an editable cell.  Its edit event gives the node, column and text: the
       owner changes the cell, or doesn't (a write the target refused).  Values changed since the last stop are drawn
       red by the owner (E2), with a font from CFontColours.  TestTreeTable, and TREE_TABLE_PICTURE=file to see it.
+  E1-E7 (2026-11-24). The windows are docked together beside the editors on the right (not with the Debug tab, which
+      comes to the front at every stop), hidden until Debug > Windows shows them; Call Stack and Locals are shown as
+      debugging starts.  CIDEDebugStop (IDEDebugStop.h) is the stop: the walk (CIDEDebugger::AddStackRecords: a
+      kernal's records in kernel mode's memory, the process whose user mode memory it is in user mode's), each call's
+      line, the chosen call, and the roots each window shows, read through CIDEDebugMemory (the client's page cache);
+      after each showing what was missed is fetched, and every window shows again when it comes.  CIDEValuesPane is
+      the one tree of values Locals, Autos, Watch 1-4, QuickWatch and a data tip share: children read when opened (an
+      empty child until then), open values and the selection kept by path, red against the stop before.  CTreeTable's
+      names can be edited now (a Watch's expressions).  Autos' rule and a call's text are CppCompilerLib's
+      (CCPP65DebugWatch::Autos, CCPP65DebugValues::AppendCall); "Fn returned" needs the function's result type, which
+      .dfunction now carries (records version 3), read from A and X (up to 32 bits, not an object).  Locals and
+      watches share the records' FindVariable (the innermost of a name in scope).  Call Stack has no keys
+      (Control+Alt+C is Introduce Constant); QuickWatch is Shift+F9.  Not built: dragging a selection into a Watch
+      (Add Watch and QuickWatch take the selection instead), and a value written isn't red until the next stop.  Checks:
+      Checks/Input/Debugging (a class, a recursive Sum, an array, a char*, an enum, a float) built and debugged in
+      HCP65EmulatorRef (the emulator on the reference screen, no display or sound; Linux only) on a sparse copy of
+      TestHCP65Lib's boot card as its start up program: debug-call-stack, -frames, -watch, -autos, -data-tip,
+      -quick-watch, -optimised.  TestCPPW65C816Debug's windows test, TestAsm65LinkerDebugVisible,
+      TestTreeTableNameEditing.  The website's debugging.md has each window.
 
 M. Measure first
   M1. A Debug compile (A2) of the kernal, boot.exe and ModPlay: code size against the kernal's limit (OS.SYS's
