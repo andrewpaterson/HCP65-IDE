@@ -1,0 +1,266 @@
+The debugger's later items, F (plan, 2026-11-24)
+================================================
+
+The user (2026-11-24): "Plan F in detail please".  F is DebuggerPlan.txt's list of items after the first version: F1
+optimised code's variables everywhere, F2 inlined frames, F3 the 65C64 (built: Debugger65C64Plan.txt), F4 function
+calls in watches, F5 data breakpoints.  This plans F1, F2, F4 and F5.  Nothing here is a go-ahead: the questions at
+the end are the user's, asked one at a time, and each item is built only when the user says so.
+
+Paths: CCL = CommonLibraries/Libraries/CppCompilerLib, A65 = HCP65/Libraries/Assembler65Lib, EDL =
+CommonLibraries/Libraries/EmulatorDebugLib, MPL = CommonLibraries/Libraries/MicroprocessorLib, HL =
+HCP65/HCP65-Emulator/HCP65Lib, IDE = HCP65-IDE/HCP65IDE/HCP65IDE.
+
+
+What there is (surveyed 2026-11-24)
+-----------------------------------
+
+Variables in optimised code (F1)
+  - A variable is described only where it is a named slot (dbg<n>, NameVariableSlots) that survives to the back end
+    (.dvariable ... frame|indirect|none, CPP65IRFrontEnd.cpp DescribeVariables), or a parameter's argaddr (Release
+    parameters).  Release has no this (CPP65IRFrontEnd.cpp:1381, a Debug copy only).
+  - Promotion (IROptimiserPromotion.cpp PromoteSlots/RemovePromoted) deletes the slot and keeps no link from the SSA
+    values and phis it makes to the variable.  There is no debug opcode; SIRInstruction (IRBlock.h:41) has only
+    uiSource, and its 8 flag bits are all used (IROpcode.h:130).  SIRTemporary::uiName is only for slots.
+  - Records v4 (A65/Asm65DebugRecords.h): a variable is ADW_None, ADW_Frame (base + offset) or ADW_Indirect; its scope
+    is a line range.  There are no address ranges and no register locations.
+  - Homes: the W65C816 gives each temporary one direct page offset for its life (PackTemporaries shares offsets
+    between temporaries that aren't live together; AllocateX keeps some in X), and text passes may delete stores to
+    them.  The 65C64 gives each phi class one home (frame, argument, X/Y/V/W/B, pseudo [off + W]) with its live
+    ranges (SIR65Home), no spills or splits; SIR65Chunk ties liveness positions to text for CheckHomeB.
+  - The only tie from code text back to the IR is the source marker (";@<token+1>", CIRSourceMarkers), taken out
+    before the text passes and put back after.
+  - The walker knows every register in the innermost frame; in a caller only V (65C64) or D (W65C816) and what
+    ReadSaved recovers from register saves (memory saves, the 65C64's [$80 + W] units, are skipped).
+  - SCPP65DebugValue can already hold a value that isn't in memory (bInMemory false, auiBytes): return values use it.
+    Autos, editing and & take only values in memory.
+
+Inlined code (F2)
+  - Nothing records inlining.  The inliner copies the callee's instructions whole (CIRBlockCopier), so same-unit
+    code keeps the callee's uiSource (its file and lines); an imported callee's code gets the call's uiSource.  The
+    callee's name and the call site are not kept.  CopyValue makes nameless temporaries, so the callee's slots lose
+    their dbg<n> names: an inlined callee's variables are never described.  Debug builds never inline.
+  - Lines: .line "file", n from the markers; SAsm65LineEntry is address, file, line.  A frame's function is the
+    .dfunction around its PC (FindFunction), so inlined code shows as its host: an inlined Sum shows "main() Line 39".
+  - Stepping: Step Over a line holding an inlined call stops in the callee's lines (it acts as Step Into); Step Out
+    of inlined code runs until the host returns (the emulator counts calls and returns); a line's ranges include
+    every inlined copy of it (FindLineRanges).
+
+Calls in watches (F4)
+  - Decision 3 (2026-11-23): no function calls in watches; CCPP65DebugWatch says "Functions aren't called".
+  - Protocol 7 can write one register (DM_WriteRegister), write memory, set the program address, continue, step,
+    step a range, step out.  There is no "run until this address" and no temporary breakpoint.
+  - Records: a function's name (unmangled), entry kind (the return address's shape), result type, parameters in
+    declaration order with their places.  Nothing says how it is called: .dfunction is written after the plain label
+    (every argument pushed) and again after each register body entry, with nothing marking which is which.  There
+    is no lookup by name, and overloads share one.
+  - Conventions: W65C816.txt:116-150 (pushed in 16 bit units, result in A or A:X, hidden result pointer for objects
+    and 64 bit, D DBR S kept); CCPP65Generator.txt:251-325 (pushed at their own size, jsr pushes 4, result in A, this
+    in X, register arguments in A, B, Y).  The plain label takes every argument pushed on both.
+  - The HCP65: the mode is a latch on the interrupt depth; a COP call saves to one global (gsKernalCall), so a user
+    function called from inside a COP that makes a COP itself breaks the call in progress; NMI (the 32.768 kHz timer)
+    can't be masked; there is no way to hold devices or interrupts while a call runs.
+
+Data breakpoints (F5)
+  - Breakpoints are execution only: SDebugBreakpoint {address, enabled, space, process}; CBreakpoints is a bitmap per
+    64KB bank, checked before each instruction in a second copy of each simulator's Run loop.
+  - Every CPU write goes through one function: CFastW65C816::Write (FastW65C816.cpp:641) and CFast65C64::WriteValue
+    (Fast65C64.cpp:904), each a direct write for plain memory and a callback otherwise.  The HCP65 writes kernel
+    memory directly and user memory through CHCP65::Write (the remap at $70000).
+  - Writes that aren't the CPU's: CAsm65Memory's drive and host file commands, the HCP65's SD card DMA, the blitter,
+    the video chips' watched banks, the debugger's own pokes.
+  - Stop reasons (EDebugStop) have no data breakpoint; the IDE has no Breakpoints window, only the menu, New
+    Breakpoint at Address and the gutter.
+
+
+Rules for all of F
+------------------
+
+  - Debug information never changes code.  A program built with F's records is byte for byte the program built
+    without them (the listings compared, as B's walks keep their records apart); a check in the tests says so.
+  - Never show a wrong value.  Where the debugger can't be sure where a variable is (outside a value's live range, two
+    values of one variable live at once, a register a caller's frame doesn't know), it says "(optimised away)" or
+    "(not known here)", as now.
+  - Both processors, each step, as the earlier plans: tests in TestCppCompilerLib / TestAssembler65Lib /
+    TestEmulatorDebugLib / TestHCP65Lib, the IDE's debug-* checks on both (DebuggingChecks(P)), and the every-step walk
+    check (DebuggerGapsPlan.txt B) extended to check each described variable's place at each step (F1 V below).
+  - Records version 5 for F1 and F2 together if both are built; the reader still refuses other versions.
+
+
+F1. Optimised code's variables everywhere
+-----------------------------------------
+
+The idea: the optimiser marks where each variable takes a value (a debug value marker), the back end turns each
+marker's value into its home over the address ranges where that value is still the variable's and still in its home,
+and the walker reads registers as it reads frames.
+
+  F1-M. Measure first: compile time and debug file size of the kernal's, ModPlay's and TestCPP65IR's programs, and
+     the IR instruction count, before and after M1-1 with markers on (Release).  If markers cost more than ~5% of
+     compile time the user is told before going on.
+
+  F1-1. Debug value markers in the IR.  A new opcode, dbgvalue <variable>, <value> (no result), written where a named
+     slot is stored when promotion removes the slot (and at a parameter's entry, and for this: its value is the
+     parameter value, so this in Release comes from here).  The variable is an index into the function's debug
+     variables (SCPP65IRDebugVariable).  Rules every pass keeps, as LLVM's dbg.value: a marker is not a use (liveness,
+     dead code, use counts and the interpreter skip it, so it changes no code); replacing a value's uses replaces the
+     marker's too (the one replace routine); a value deleted with uses left makes the marker's value undef (the
+     variable shows "(optimised away)" from there); moving code doesn't move markers; the inliner copies markers with
+     its own variables (F2-2).  Release only: Debug keeps its slots as now.
+  F1-2. The back ends carry markers through to the text as marker lines (";@v<variable> <temporary>"), as source
+     markers are carried (CIRSourceMarkers), so the text passes keep their place.
+  F1-3. Where a value is, per back end:
+     - 65C64: the home of the value's class (IR65Places: frame, argument, X, Y, V, W, B, pseudo unit) and its live
+       ranges.  From a marker the variable is in that home until the next marker for it or the end of the value's
+       range, cut where a range ends (SIR65Chunk ties ranges to text).  A value left in A (IR65P_None, bInA) is not
+       described.
+     - W65C816: the temporary's offset (or X) over its live range, the same way; where a text pass deleted the store
+       that would have put it there (RemoveUnreadStores and the rest) the range starts at the next store (the pass
+       says which stores it removed, as KeepSlots tells it which to keep).
+     The back end writes labels at range ends (local, never jumped to, removed by nothing) and records the ranges.
+  F1-4. Records (v5): .dvariable gains "ranges": then .drange <variable>, <from label>, <to label>, <place> lines,
+     place being frame offset, a register by name (the walker's register names), or a pseudo unit [$80 + off].  A
+     variable with ranges is read from the range holding the frame's PC (PC - 1 for callers, GetLineAddress); with
+     none, "(optimised away)".  The assembler checks each range lies inside its function.
+  F1-5. The walker reads a variable in a register from the frame's registers: the innermost frame knows them all; a
+     caller's only if preserved or saved (ReadSaved, now reading memory saves too: DebuggerGapsPlan.txt E2's units).
+     Not known: "(not known here)".  Locate returns a register place; CCPP65DebugValues builds a value out of memory
+     (SCPP65DebugValue's auiBytes).
+  F1-6. Editing a register variable writes the register (DM_WriteRegister), only in the innermost frame; & of it is
+     refused ("in a register"), as Visual Studio does.  Autos list values out of memory too.
+  F1-7. Tests: TestCPP65DebugRelease's (optimised away) expectations become places (iTotal, iCount, Area's ps, this
+     in a member function); a variable assigned twice reads each value at each line; a value whose home is reused
+     shows (optimised away) after its last use; a caller's variable in a register its callee saved (the 65C64's V; a
+     unit once the back end keeps units); every-step check: at each step, each variable with a range is read and
+     compared with the interpreter's or Debug build's value at the same source line where one exists (the frame check
+     keeps the expected values).  The code-unchanged check (listings with and without markers).  IDE: debug-optimised
+     expects Sum's parameters and iTotal shown, on both processors.
+  F1-8. Docs: debugging.md's Release section.  DebuggerGapsPlan.txt's A (this in Release) closes with F1-1.
+
+
+F2. Inlined functions as frames of their own
+--------------------------------------------
+
+  F2-1. Where an instruction was inlined: uiSource becomes a location: a source token as now, or (high bit set) an
+     index into the function's inline location table {token, the call's location}, so a chain of inlining is a chain
+     of locations.  No instruction grows.  The inliner writes the call's location for each copied instruction's
+     source; the imported callee case (call's token today) gets {callee token if its unit's tokens are readable, else
+     the call's}.  Every pass that copies or makes instructions copies the location as it copies uiSource now.
+  F2-2. The callee's variables: the inliner names the copies of the callee's slots (dbg<n> of the host, with the
+     inline location as their scope) and copies its debug variables, so they are described as the host's are (and
+     with F1, its markers).  Without F1 only the callee's variables still in memory show.
+  F2-3. Records (v5): .dinline <from label>, <to label>, "callee", "call file", call line, <parent inline> ranges,
+     written from the markers as .line is (SourceComments), nested by depth.  A variable's scope gains its inline
+     index, so a caller's variable never matches the callee's lines (today's line-only scope can).
+  F2-4. The walker and the Call Stack: a physical frame whose PC is in inline ranges is shown as a row per inline
+     level, innermost first: "Sum(...) Line 39 [inlined]", then main at the call's line.  Each row is a frame of its
+     own for Locals, Autos and watches (the same registers and memory; its own variables by scope).  The
+     every-step check accepts inline rows (they are not calls).
+  F2-5. Stepping: Step Over at a line with inlined calls steps over their ranges too (StepLineRanges adds the ranges
+     of inlines whose call is at this line); Step Out of an inline level runs until the PC leaves that inline's
+     ranges (a step range, not the emulator's call counting); Step Into stops at the callee's first line as now.
+  F2-6. Tests: TestCPP65DebugReleaseInlined asserts Bump, Sum, Area, Taken as inline rows at each step of the walk;
+     stepping over a line with an inlined call; stepping out of an inlined callee; a callee's variable in memory
+     shown in its row.  IDE: debug-optimised expects "Sum(...) Line 39 [inlined]" then main.
+
+
+F4. Function calls in watch expressions
+---------------------------------------
+
+Only if the user reverses decision 3 (question 5).  Visual Studio's model: a call is made when an expression is
+evaluated after a stop, in the stopped thread, with its side effects kept; data tips and Autos never call.
+
+  F4-1. Records: .dfunction says which entry takes every argument pushed (the plain label; "pushed"), and each
+     parameter's size and order are its variables'.  A lookup by name (a sorted index of function names); overloads
+     picked by the number of arguments, then refused as ambiguous.  Member functions by the object's class (its
+     dynamic class for a virtual one, from the vtable type info the values already read).
+  F4-2. Protocol 8: DM_Call {entry address, entry kind, the stack bytes to push (arguments, hidden result pointer, this
+     where the convention pushes it), registers to set (65C64 this in X), the most steps}.  The target saves every
+     register, pushes a return address to a word of its own (a return trap it owns, outside the program), runs with
+     breakpoints off until the trap or the step limit, then answers {result registers, finished | step limit |
+     stopped (stp, bad access)} and restores every register.  Memory the call wrote stays written (its side
+     effects), as Visual Studio keeps them; the stack below S is the call's.
+  F4-3. Where calls are allowed: the flat emulators always; the HCP65 only stopped in user mode with no kernal call
+     in progress (interrupt depth 0, not inside a COP), with I set for the call; NMI still runs (its handler saves
+     and restores).  Elsewhere: "Functions can't be called here (in the kernal)".
+  F4-4. The watch grammar takes calls (name(args), p->F(args), o.F(args)); arguments are evaluated first, converted
+     to the parameters' types; a call is evaluated only by Watch and Quick Watch, once per stop: its answer is kept
+     for the stop (keyed by the expression's text), as a memory read is pending until the reply comes (the windows
+     already re-evaluate on replies).  After a call the memory cache is forgotten and every window refreshes.
+  F4-5. Tests: TestEmulatorDebugLib (DM_Call on both flat targets: a result, a step limit, a stp inside, registers
+     restored); TestCPP65Debug (a watch calling a function, a member function, a virtual one, an overload refused);
+     TestHCP65Lib (refused in the kernal, made in a user program); IDE: debug-watch-call on both processors.
+
+
+F5. Data breakpoints
+--------------------
+
+  F5-M. Measure first: the simulators' speed (ModPlay's cycles per second, the kernal's boot, TestCPP65IR's run) with
+     the write check in and no data breakpoints set.  Budget: under 2%; if more, a third Run loop variant (as
+     breakpoints have) keeps the check out of the plain loop.
+  F5-1. The simulators: a write watch set (CBreakpoints' bitmap per 64KB bank, so any number of watches) checked in
+     CFastW65C816::Write and CFast65C64::WriteValue (each byte of a wider write); a hit sets a flag the Run loop
+     reads after the instruction, so the stop comes after the write, with the instruction finished, as Visual
+     Studio's.  The HCP65 checks user writes after the remap (physical addresses) and kernel writes directly, so a
+     watch is held as a physical address: the target translates a user address through the process's remap when it
+     is set.
+  F5-2. Writes that aren't the CPU's (question 8): CAsm65Memory's drive and host commands check the watch set too;
+     the HCP65's SD DMA and blitter as decided.
+  F5-3. Protocol 8: SDebugBreakpoint gains a kind (execute, write) and a byte count; EDebugStop gains
+     DS_DataBreakpoint with the address written; the welcome says whether data breakpoints are supported.
+  F5-4. The IDE: "Break When Value Changes" on a Locals/Watch row (a variable in memory; one in a register is
+     refused), and "New Data Breakpoint..." (an address and 1, 2, 4 or 8 bytes) in the Debug menu.  A stop on one
+     says so in the status line and the Debug tab: "Data breakpoint: iTotal changed from 3 to 4 (at Debugging.cpp
+     line 40)".  Data breakpoints aren't saved; they go when debugging stops (question 9).
+  F5-5. Tests: MPL (each simulator: a write hits, a write beside it doesn't, a 4 byte write over a watched byte, the
+     stop after the instruction); TestEmulatorDebugLib (protocol 8 on both flat targets); TestHCP65Lib (a user
+     process's variable, a kernal write into it); IDE: debug-data-breakpoint on both processors.
+
+
+Order and size
+--------------
+
+  F5 is the smallest (the simulators, the protocol, the IDE), touches no compiler code, and is what the emulator does cheaply.  F1 is the largest: an IR opcode every pass must respect, both back
+  ends, the records, the walker; it closes DebuggerGapsPlan.txt's A.  F2 rests on F1 for its callee variables (F2-2)
+  and on the same records version.  F4 reverses decision 3 and carries the most risk (the kernal).  Suggested
+  order: F5, F1, F2, then F4 if wanted.
+
+
+What is the user's to decide
+----------------------------
+
+Asked one at a time, with my recommendation first.
+
+  1. Which items to build, and in what order.  Recommendation: F5, F1, F2; F4 only if question 5 is yes.
+  2. F1's extent.  (a) Location ranges from debug value markers (above): right values wherever a variable is in a
+     home, "(optimised away)" elsewhere; large.  (b) A cut-down F1: only variables whose every value has the same home
+     for the whole function (this, parameters never assigned, many locals), described with no ranges; small, but it
+     shows the home's contents even before the variable's first value and after its last use, which can be another
+     value's (wrong values, breaking the rule above).  Recommendation (a), with (b)'s cases its first test.
+  3. F1: a caller's variable in a register its callee didn't save (most of the 65C64's X/Y/B, the W65C816's X).
+     Recommendation: "(not known here)", as Visual Studio's "unavailable"; no guessing from the callee's code.
+  4. F2: inline rows in the Call Stack marked "[inlined]" and selectable as frames (Visual Studio's "[Inline Frame]").
+     Recommendation: yes, as described; the alternative is one row per physical frame with the inlined callee's name
+     in brackets.
+  5. F4: reverse decision 3 and allow calls in Watch and Quick Watch.  Recommendation: not now (no program needs it;
+     the kernal's single COP save area makes it unsafe there); if yes, as F4-3 limits it.
+  6. F4 (if yes): a breakpoint hit inside the called function.  Recommendation: breakpoints are off during the call
+     (it runs to its end or the step limit), as Visual Studio's default "evaluation doesn't stop at breakpoints".
+  7. F5: writes only, or reads too.  Recommendation: writes only (Visual Studio's data breakpoints are writes only;
+     reads would put a check in every read path, ReadWord included).
+  8. F5: writes that aren't the CPU's.  Recommendation: the flat emulators' drive and host commands (cheap, one
+     place); the HCP65's SD DMA and blitter after, if a program needs them.
+  9. F5: a data breakpoint on a local variable when its frame returns.  Recommendation: it stays set until removed or
+     debugging stops (Visual Studio's behaviour), and the stop message names the address as well as the variable.
+
+
+Things to watch for
+-------------------
+
+  - F1-1 touches every optimiser pass: the rule "a marker is not a use" is enforced in one place (the use iterator)
+    and a test runs the whole optimiser with markers and compares the code with markers stripped (the listings).
+  - The every-step walk check (DebuggerGapsPlan.txt B) is the oracle for F1's ranges and F2's rows: keep it fast.
+  - Other sessions keep listing baselines (SemanticLayerPlan.txt, HashMapPlan.txt): F1 and F2 change no code, so the
+    baselines must not move; if one moves, the rule is broken.
+  - F5 adds a branch to every simulated write: F5-M first, and the kernal's ROM timing tests (TestHCP65Lib) must keep
+    their cycle counts (the check costs host time, not simulated cycles).
+  - F4 can leave the target changed (memory written by the call): Visual Studio does the same, and the IDE says
+    "Evaluating this expression may change the program's state" the first time.
