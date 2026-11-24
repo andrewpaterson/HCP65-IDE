@@ -272,10 +272,12 @@ def DebuggingChecks(P):
 		[r'^Dialog \[QuickWatch\] answered Reevaluate$', r'^Dialog \[QuickWatch\] answered OK$', r'^Watch1:$', r'^gaiValues = \{\.\.\.\} \[int\[4\]\]$'], []),
 	('debug-optimised' + P['SUFFIX'], MakeDebugging(P, 'line:39,start,stopped,wait:1500,printcallstack,continue,stopped,wait:1500,printcallstack,line:39,line:54,continue,stopped,wait:1500,printstopped,print:Locals', P['RELEASE']),
 		#Built optimised (Sum's first call inlined into main, which the optimiser may choose otherwise): the calls are
-		#still walked, without the parameters a Release build doesn't describe; back in main, what stays in memory (the
-		#object whose address went to Sum) is shown, and what the optimiser kept in registers isn't.
-		[r'^Call Stack:$', r'^=> ' + P['MODULE'] + r'!(main|Sum)\(\) Line 39$', r'^   \[External Code\]$',
-		 r'^Call Stack:$', r'^=> ' + P['MODULE'] + r'!Sum\(\) Line 39$', r'^   ' + P['MODULE'] + r'!(main|Sum)\(\) Line [0-9]+$', r'^   \[External Code\]$',
+		#still walked, Sum's parameters optimised away (values in registers, not where they were passed); back in main,
+		#what stays in memory (the object whose address went to Sum) is shown, and what the optimiser kept in registers
+		#isn't.
+		[r'^Call Stack:$', r'^=> ' + P['MODULE'] + r'!(main\(\)|Sum\(.*\)) Line 39$', r'^   \[External Code\]$',
+		 r'^Call Stack:$', r'^=> ' + P['MODULE'] + r'!Sum\(CCounter\* pcCounter = \(optimised away\), int iDepth = \(optimised away\)\) Line 39$',
+		 r'^   ' + P['MODULE'] + r'!(main\(\)|Sum\(.*\)) Line [0-9]+$', r'^   \[External Code\]$',
 		 r'^Stopped: yes, .*Debugging\.cpp:54$', r'^Locals:$', r'^cCounter = \{\.\.\.\} \[CCounter\]$', r'^iTotal = \(optimised away\) \[\]$'], [r'\?\?\?'])]
 
 

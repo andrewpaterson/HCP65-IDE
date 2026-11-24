@@ -402,7 +402,7 @@ void CIDEDebugStop::GetLocals(CIDEDebugRoots* pcRoots)
 		psRoot->bValue = mcValues.Variable(mpcWalker, psFrame, psVariable, &psRoot->sValue);
 		if (!psRoot->bValue)
 		{
-			psRoot->szError.Set("(optimised away)");
+			psRoot->szError.Set(CPP65_DEBUG_OPTIMISED_AWAY);
 		}
 	}
 	auiVisible.Kill();

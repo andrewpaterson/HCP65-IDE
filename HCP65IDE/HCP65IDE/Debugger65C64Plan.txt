@@ -283,6 +283,12 @@ What is built
     once and run on both (the 65C64's with a -65C64 suffix); debug-optimised stops in main in Release and shows the
     object it keeps and the int it doesn't.
   - E2: the website's ide/debugging.md: the two emulators, what a Release build shows, and Debugging a 65C64 program.
+  - After E (the user, 2026-11-24: "describe parameters that were already passed in memory, which needs no copy"):
+    Release describes a parameter where it was passed, its argaddr named as a variable's slot (DebugParameter): it is
+    the parameter's own while the argaddr survives (the W65C816 shares no parameter's place in a function with one; the
+    65C64 gives it a frame slot or the caller's pushed bytes, from SIR65Frame::iArguments), and isn't kept once the
+    optimiser makes the parameter a value.  An object passed by address has no place of its own.  The Call Stack shows
+    a parameter kept nowhere as (optimised away) (CPP65_DEBUG_OPTIMISED_AWAY, which Locals shares).
 
 Things to watch for
 -------------------
