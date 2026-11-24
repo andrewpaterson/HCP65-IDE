@@ -1363,7 +1363,7 @@ bool CIDEDebugger::FindFrameLine(SAsm65StackFrame* psFrame, bool bInnermost, CCh
 	{
 		return bInnermost && FindSourceLine(psFrame->uiPC, pszFile, puiLine);
 	}
-	psLine = macDebugInfos[uiTable].GetLines()->FindLine(psFrame->GetLineAddress(bInnermost));
+	psLine = macDebugInfos[uiTable].GetLines()->FindLine(psFrame->GetLineAddress());
 	if (!psLine)
 	{
 		return false;
