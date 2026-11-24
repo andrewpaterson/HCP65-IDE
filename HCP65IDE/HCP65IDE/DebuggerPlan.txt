@@ -67,9 +67,10 @@ What the compiler knows and throws away (CommonLibraries/Libraries/CppCompilerLi
 What is to be built
 -------------------
 
-Stages in order; each builds, is checked and committed on its own.  M is done (its results below), then A and B2.
+Stages in order; each builds, is checked and committed on its own.  M, A, B, C and D are done (2026-11-24): E, the
+windows, is next.
 
-What is built (2026-11-23), where it differs from the steps below
+What is built (2026-11-23 and 24), where it differs from the steps below
   A1-A5. The records are the assembler's .dfunction, .dframe (none | frame | saved, an offset: how the caller's D
       and return address are found, placed where the prologue ends), .dvariable, .dglobal, .dstatic, .dtype and
       .dmember, kept by CAsm65DebugRecords (Assembler65Lib) in the object and linked into <program>.debug
@@ -120,6 +121,12 @@ What is built (2026-11-23), where it differs from the steps below
       (CAsm65DebugRecords::FindTypeIndex).  Tests: TestCPPW65C816Debug's values test (built Debug and unoptimised,
       stopped in a call: each kind shown, hexadecimal, children, a derived object through a base pointer, watches
       with ,x ,s ,n, errors; edits the program then uses) and stack test (watches in a recursion).
+  D1 (2026-11-24). WindowLib's CTreeTable: a CTreeContainer with columns after the names (each node a cell in each,
+      in a font of its own for a changed value; each row in view a label per cell, cut off at its column), captions
+      over them with a CSash between each two (one sash class now for splits, docking and these), and a CCellField (the
+      field CTable edited in, now shared) over an editable cell.  Its edit event gives the node, column and text: the
+      owner changes the cell, or doesn't (a write the target refused).  Values changed since the last stop are drawn
+      red by the owner (E2), with a font from CFontColours.  TestTreeTable, and TREE_TABLE_PICTURE=file to see it.
 
 M. Measure first
   M1. A Debug compile (A2) of the kernal, boot.exe and ModPlay: code size against the kernal's limit (OS.SYS's
