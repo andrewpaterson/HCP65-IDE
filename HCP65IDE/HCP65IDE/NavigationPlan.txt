@@ -472,7 +472,7 @@ How work is done here
     Checks/Input) and, for what goes in a library, that library's tests.  Checks/Input/MoveMembers (Vessel, Drum,
     Rack, Pair, Crate) already has base and derived classes with overridden functions: use it for the symbol stages
     rather than writing another.
-  - Each stage ends with the website's pages brought up to date from what the code does (HCP65/Website/docs/ide:
+  - Each stage ends with the website's pages brought up to date from what the code does (HCP65IDE/HCP65IDE/Docs/ide:
     navigation.md, editor.md's "Not there yet", settings.md's keys) and its gaps taken out of Navigation.txt.
   - The user decides what isn't IntelliJ's to decide.  Ask one question at a time, with what it means for them.
     The questions known now are under "For the user to decide".

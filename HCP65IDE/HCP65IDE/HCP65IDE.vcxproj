@@ -562,6 +562,33 @@
       <Project>{195e10aa-f7af-4785-b8b4-44fceb3433a6}</Project>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Docs\ide\building.md" />
+    <None Include="Docs\ide\checks.md" />
+    <None Include="Docs\ide\claude-tab.md" />
+    <None Include="Docs\ide\debugging.md" />
+    <None Include="Docs\ide\editor.md" />
+    <None Include="Docs\ide\git.md" />
+    <None Include="Docs\ide\index.md" />
+    <None Include="Docs\ide\navigation.md" />
+    <None Include="Docs\ide\refactoring\change-signature.md" />
+    <None Include="Docs\ide\refactoring\convert.md" />
+    <None Include="Docs\ide\refactoring\definitions.md" />
+    <None Include="Docs\ide\refactoring\extract.md" />
+    <None Include="Docs\ide\refactoring\includes.md" />
+    <None Include="Docs\ide\refactoring\index.md" />
+    <None Include="Docs\ide\refactoring\inline.md" />
+    <None Include="Docs\ide\refactoring\introduce.md" />
+    <None Include="Docs\ide\refactoring\members.md" />
+    <None Include="Docs\ide\refactoring\move.md" />
+    <None Include="Docs\ide\refactoring\namespaces.md" />
+    <None Include="Docs\ide\refactoring\rename.md" />
+    <None Include="Docs\ide\refactoring\safe-delete.md" />
+    <None Include="Docs\ide\refactoring\templates.md" />
+    <None Include="Docs\ide\settings.md" />
+    <None Include="Docs\ide\solutions.md" />
+    <None Include="Docs\ide\templates.md" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

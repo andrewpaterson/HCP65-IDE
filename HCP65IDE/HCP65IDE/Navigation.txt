@@ -3,7 +3,7 @@ Navigation in the HCP65 IDE against IntelliJ IDEA
 
 Written 2026-11-12 from the IDE's commands and the Find Usages, Go to and Find in Files code; the gaps brought up to
 date 2026-11-20 against IntelliJ's Navigate menu and its editor's navigation, from the commands, the code and the
-website's pages (HCP65\Website\docs\ide), not by trying each one.  The gaps are a list to choose from, not a list to
+website's pages (HCP65IDE\HCP65IDE\Docs\ide), not by trying each one.  The gaps are a list to choose from, not a list to
 finish: only what is planned is to be built.  "Planned" below is an item of NextIDEWork.txt, which says how the user
 wants it; the plan further down, the Find Usages tool window's, is all built.  NavigationPlan.txt (2026-11-20) planned
 the gaps In a file, Between files, Symbols and those of the search dialogs and results, by what they can share; the

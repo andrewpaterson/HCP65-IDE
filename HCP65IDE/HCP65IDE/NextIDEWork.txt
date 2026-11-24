@@ -8,7 +8,7 @@ has left open, in the order the user chose, so another session can take them on.
 go on when they say.  The user's rule for the IDE: build the whole feature, as IntelliJ IDEA has it, not a cut-down
 version, and don't order the work by what is cheapest.
 
-The website documents the IDE (HCP65\Website\docs\ide, MkDocs) and is how the user learns it: each item here ends
+The website documents the IDE (HCP65IDE\HCP65IDE\Docs\ide, MkDocs) and is how the user learns it: each item here ends
 with its pages brought up to date, written from what the code does, and editor.md's "Not there yet" and
 navigation.md's last paragraph lose what was built.
 
@@ -25,7 +25,7 @@ How work is done here
     A build in the master tree compiles anything uncommitted there, so say before leaving edits in a shared library
     (BaseLib, WindowLib...) uncommitted, or work in a worktree.
   - Ask 3c which library it is in before editing one in CommonLibraries, and rebase onto its commits.
-  - The keys are IntelliJ's where the IDE has the command (Settings and Keys, docs/ide/settings.md, lists them all),
+  - The keys are IntelliJ's where the IDE has the command (Settings and Keys, Docs/ide/settings.md, lists them all),
     added to the keymap (Keymap.xml, CIDEKeymap) so the user can change them.  Check a key isn't taken first: F11 is
     Step Into.
   - Each feature gets IDE checks (Checks/IDEChecks.py, on a small solution of its own under Checks/Input) and, for
