@@ -207,11 +207,37 @@ Decided (2026-11-24, the user's):
     CAsm65C64StackWalker), not composition ("Those choices are fine").
   - 5. The machine is a flat 65C64 as the tests have (memory and the host file device), a console emulator the IDE
     starts (X65C64-Emulator).
-  Every question is decided: the plan waits for the user to say when to build it.
+  Every question is decided.  Go-ahead (2026-11-24): "Go for it, the whole plan from A to E.  Clean up and commit as you
+  go.  Ensure there are tests.  Try and keep the code elegant and don't repeat code."
 
 My own choices, not asked: the records say their processor (A1); the tests are made generic over both processors
 (C2, E1); no measuring stage first, since the 65C64 has no ROM or memory limit a Debug build must fit.
 
+
+What is built
+-------------
+
+  - A1, B1, B2 (2026-11-24): records version 4 and the frame model; the walker split into CAsm65StackWalker and
+    CAsmW65C816StackWalker (HCP65 2eb8ef4, CommonLibraries 0f53e5129, HCP65-IDE 1542d04).  The W65C816's walks are
+    unchanged frame for frame.
+  - A2 (CommonLibraries c95b0fd20): the 65C64 back end's DescribeFrame reads the prologue after the body's label: a
+    framed function's `.dframe V, n` and `.dbase V`, a frameless or bHomeV one's `.dframe none`, the caller's V and each
+    kept [$80 + W] unit as .dsaved.  A register function's body is an entry of its own (a .dfunction after its label),
+    since its stub pushes and calls it.  CIRBackend::AddVariableSlots serves both back ends (VariableSlotPlace each).
+    Kept pseudo-register units can't be produced from C++ yet: TestIR65Backend's DescribeFrame test covers them.
+  - A3 (CommonLibraries 167ebe50c): Release variables, both processors.  The front end records each variable whenever
+    the unit has a line table (DescribesVariables), Debug or Release, and names its slot dbg<n> after the function's
+    fingerprint is taken (NameVariableSlots: a profile measured with a line table matches the build without one); the
+    slot is only kept (volatile) in Debug.  The back ends report named slots (CIRBackend::VariableSlotName), and the W65C816's keeps their stores.
+    The optimiser audit: no IR pass removes or moves a store (HoistCommon, HoistInvariants and SinkLoads only take
+    what has no effect, or loads; RemoveDeadCode keeps stores; ReplaceLoopIdioms' memset does the same stores);
+    promotion removes the slots it takes; the inliner gives a callee's slots no names; SplitSlots forgets the split
+    slot's name (CIRFunction::ForgetTemporaryName).  The 65C64 back end removes no stores, and every slot has frame
+    bytes of its own on both.  Parameters stay Debug only (copying them to a slot costs Release code).  Tests:
+    TestCPP816DebugRelease (main's array, object and address taken int read right from a callee's stop, a folded
+    int "isn't kept"), the 65C64's Release records in TestCPP65C64DebugFrames (a split array not kept; the same
+    program's memory variables in the frame), TestIROptimiserSplitSlotNames.
+  - A4: every register a function saves is described (A1's W65C816 records; A2's 65C64 V and kept units).
 
 Things to watch for
 -------------------
