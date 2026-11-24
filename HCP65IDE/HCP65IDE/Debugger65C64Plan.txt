@@ -4,6 +4,8 @@ Debugging 65C64 programs (DebuggerPlan.txt F3, plan, 2026-11-24)
 The user (2026-11-24): "Plan out how to debug 65C64 programs".  Nothing here is a go-ahead to build: the decisions at
 the end are the user's, and each stage is brought up before it is started.
 
+Every decision made 2026-11-24 (see the end): waiting for the user to say when to build.
+
 Today the IDE debugs W65C816 programs on the HCP65 in its emulator (DebuggerPlan.txt A to E): Call Stack, Locals,
 Autos, Watch, QuickWatch and data tips.  The goal is the same windows, unchanged, for a program built by a 65C64
 configuration, Debug or Release.
@@ -201,13 +203,11 @@ Decided (2026-11-24, the user's):
     Proposal document, its pictures) was renamed HCP65/X65C64-Proposal and HCP65/Kicad/W65C64 (its board)
     HCP65/Kicad/X65C64, with the paths naming them.
 
-Open:
-  4. The walker as a base that interprets the rules, with a part per processor (a derived class), or one walker
-     holding a processor part it calls (composition).  I recommend the derived class: the processor's part is a few
-     virtual functions either way, and a separate object adds nothing.
-  5. The machine to debug on.  There is no 65C64 computer in the emulator.  I recommend a flat 65C64 machine as the
-     tests have (memory and the host file device, so printf works), as a small console emulator the IDE starts.
-     The other way is to wait for a 65C64 computer to be modelled, with its own boards, which nothing plans yet.
+  - 4. The walker is a base interpreting the rules with a derived class per processor (CAsmW65C816StackWalker,
+    CAsm65C64StackWalker), not composition ("Those choices are fine").
+  - 5. The machine is a flat 65C64 as the tests have (memory and the host file device), a console emulator the IDE
+    starts (X65C64-Emulator).
+  Every question is decided: the plan waits for the user to say when to build it.
 
 My own choices, not asked: the records say their processor (A1); the tests are made generic over both processors
 (C2, E1); no measuring stage first, since the 65C64 has no ROM or memory limit a Debug build must fit.
