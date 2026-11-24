@@ -2777,7 +2777,7 @@ void CIDEMoveClass::HeaderTyped(CTextField* pcField)
 	CFileUtil		cFileUtil;
 	CChars			szName;
 	CChars			szFolder;
-	char*			szPath;
+	const char*		szPath;
 	size			uiBest;
 	size			i;
 

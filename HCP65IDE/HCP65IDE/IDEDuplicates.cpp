@@ -691,7 +691,7 @@ bool CIDEDuplicates::Start(bool bRerun, bool bWait)
 {
 	CIDECodeModel*	pcModel;
 	CChars			szWhyNot;
-	char*			szFile;
+	const char*		szFile;
 	size			i;
 
 	if (mbSearching)

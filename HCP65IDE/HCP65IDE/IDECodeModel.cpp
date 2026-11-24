@@ -238,8 +238,7 @@ void CIDECodeModel::Init(CBuildWorkspace* pcWorkspace)
 	muiProblemUnits = 0;
 	miIndexStart = 0;
 	miIndexEnd = -1;
-	mcProjectFiles.Init(false);
-	maszProjectFiles.Init();
+	mcProjectFiles.Init();
 	mbProjectFiles = false;
 
 	mbEdits = false;
@@ -263,7 +262,6 @@ void CIDECodeModel::Kill(void)
 		mbEdits = false;
 	}
 	mapsEdited.Kill();
-	maszProjectFiles.Kill();
 	mcProjectFiles.Kill();
 	mcProblems.Kill();
 	maszProblems.Kill();
@@ -1171,9 +1169,9 @@ void CIDECodeModel::IndexUnit(SIDEIndexJob* psJob)
 
 	mcIndexMutex.Lock();
 	mcIndex.Merge(&cGathered);
-	for (i = 0; i < cGathered.maszFiles.NumElements(); i++)
+	for (i = 0; i < cGathered.mcFiles.NumElements(); i++)
 	{
-		piJob = mcIncluders.FindOrAdd(cGathered.maszFiles.GetText(i), (size)strlen(cGathered.maszFiles.GetText(i)), &bAdded);
+		piJob = mcIncluders.FindOrAdd(cGathered.mcFiles.GetKey(i), cGathered.mcFiles.GetKeyLength(i), &bAdded);
 		if (bAdded)
 		{
 			*piJob = (int32)psJob->uiIndex;
@@ -1189,7 +1187,7 @@ void CIDECodeModel::IndexUnit(SIDEIndexJob* psJob)
 	{
 		if (aszErrors.GetText(i)[0] != '\0')
 		{
-			mcProblems.FindOrAdd(aszErrors.GetText(i), (size)strlen(aszErrors.GetText(i)), &bAdded);
+			mcProblems.FindOrAddIndex(aszErrors.GetText(i), &bAdded);
 			if (bAdded)
 			{
 				maszProblems.Add(aszErrors.GetText(i));
@@ -1648,11 +1646,11 @@ void CIDECodeModel::FindOverrides(CCPPIndexSymbol* pcSymbol, CArrayInt* paiDest)
 //////////////////////////////////////////////////////////////////////////
 size CIDECodeModel::FindProjectOfFile(const char* szFileName)
 {
-	int32	iProject;
+	int32*	piProject;
 
 	FindProjectFiles();
-	iProject = mcProjectFiles.Get(szFileName, -1);
-	return (iProject >= 0) ? (size)iProject : MAX_SIZE;
+	piProject = mcProjectFiles.Get(szFileName);
+	return piProject ? (size)*piProject : MAX_SIZE;
 }
 
 
@@ -1666,14 +1664,14 @@ size CIDECodeModel::FindProjectOfFile(const char* szFileName)
 size CIDECodeModel::NumProjectFiles(void)
 {
 	FindProjectFiles();
-	return maszProjectFiles.NumElements();
+	return mcProjectFiles.NumElements();
 }
 
 
-char* CIDECodeModel::GetProjectFile(size uiIndex)
+const char* CIDECodeModel::GetProjectFile(size uiIndex)
 {
 	FindProjectFiles();
-	return maszProjectFiles.GetText(uiIndex);
+	return mcProjectFiles.GetKey(uiIndex);
 }
 
 
@@ -1695,7 +1693,7 @@ size CIDECodeModel::FindFilesNamed(const char* szName, CArrayChars* paszDest)
 	bool		bHave;
 	bool		bPath;
 	bool		bFound;
-	char*		szPath;
+	const char*	szPath;
 
 	//A name with some of its path ("Sub/User.h", or all of it) is the files whose paths end with it.
 	bPath = (strchr(szName, '/') != NULL) || (strchr(szName, '\\') != NULL);
@@ -1704,9 +1702,9 @@ size CIDECodeModel::FindFilesNamed(const char* szName, CArrayChars* paszDest)
 	FindProjectFiles();
 	uiFound = 0;
 	mcIndexMutex.Lock();
-	for (i = 0; i < maszProjectFiles.NumElements() + mcIndex.NumFiles(); i++)
+	for (i = 0; i < mcProjectFiles.NumElements() + mcIndex.NumFiles(); i++)
 	{
-		szPath = (i < maszProjectFiles.NumElements()) ? maszProjectFiles.GetText(i) : mcIndex.GetFileName(i - maszProjectFiles.NumElements());
+		szPath = (i < mcProjectFiles.NumElements()) ? mcProjectFiles.GetKey(i) : mcIndex.GetFileName(i - mcProjectFiles.NumElements());
 		szFile.Init();
 		if (bPath)
 		{
@@ -1754,15 +1752,15 @@ void CIDECodeModel::FindProjectFiles(void)
 	size			j;
 	CVcxProject*	pcProject;
 	CChars			szPath;
+	int32*			piProject;
+	bool			bAdded;
 
 	if (mbProjectFiles)
 	{
 		return;
 	}
 	mbProjectFiles = true;
-	mcProjectFiles.Kill();
-	mcProjectFiles.Init(false);
-	maszProjectFiles.ReInit();
+	mcProjectFiles.ReInit();
 	for (i = 0; i < mpcWorkspace->NumProjects(); i++)
 	{
 		pcProject = mpcWorkspace->GetSolutionProject(i)->GetProject();
@@ -1774,10 +1772,10 @@ void CIDECodeModel::FindProjectFiles(void)
 		{
 			szPath.Init();
 			pcProject->GetFullPath(pcProject->GetItem(j), &szPath);
-			if (mcProjectFiles.Get(szPath.Text(), -1) < 0)
+			piProject = mcProjectFiles.FindOrAdd(szPath.Text(), szPath.Length(), &bAdded);
+			if (bAdded && piProject)
 			{
-				mcProjectFiles.Put(szPath.Text(), (int32)i);
-				maszProjectFiles.Add(szPath.Text());
+				*piProject = (int32)i;
 			}
 			szPath.Kill();
 		}
@@ -2103,7 +2101,7 @@ void CIDECodeModel::FindGoToSymbols(CNameMatcher* pcMatcher, bool bClasses, int3
 	CChars				szParameters;
 	CChars				szLocation;
 	SNameMatch			sMatch;
-	char*				szFile;
+	const char*			szFile;
 
 	FindProjectFiles();
 	mcIndexMutex.Lock();
@@ -2121,7 +2119,7 @@ void CIDECodeModel::FindGoToSymbols(CNameMatcher* pcMatcher, bool bClasses, int3
 			continue;
 		}
 		szFile = mcIndex.GetFileName(psLocation->uiFile);
-		if (mcProjectFiles.Get(szFile, -1) < 0)
+		if (!mcProjectFiles.HasKey(szFile))
 		{
 			continue;
 		}
@@ -2251,7 +2249,7 @@ void GetIDESymbolName(const char* szKey, CChars* pszDest)
 // overload.
 //
 //////////////////////////////////////////////////////////////////////////
-static const char* GetIDERenameProblem(CCPPIndex* pcIndex, CCPPIndexSymbol* pcSymbol, CMapStringInt* pcFiles)
+static const char* GetIDERenameProblem(CCPPIndex* pcIndex, CCPPIndexSymbol* pcSymbol, CIDEProjectFiles* pcFiles)
 {
 	size				i;
 	SCPPIndexLocation*	psLocation;
@@ -2259,7 +2257,7 @@ static const char* GetIDERenameProblem(CCPPIndex* pcIndex, CCPPIndexSymbol* pcSy
 	for (i = 0; i < pcSymbol->NumLocations(); i++)
 	{
 		psLocation = pcSymbol->GetLocation(i);
-		if (pcFiles->Get(pcIndex->GetFileName(psLocation->uiFile), -1) < 0)
+		if (!pcFiles->HasKey(pcIndex->GetFileName(psLocation->uiFile)))
 		{
 			return "it is declared or used in a file that isn't in the solution";
 		}
@@ -2913,7 +2911,7 @@ void CIDECodeModel::FindNamespaces(CArrayChars* paszDest)
 //////////////////////////////////////////////////////////////////////////
 size CIDECodeModel::FindSymbolsIn(CArrayIDEFileRanges* pasRanges, CArrayChars* paszKeys, bool bUsed)
 {
-	CHashMapString<bool>	cKeys;
+	CHashSetString<>	cKeys;
 	CArrayInt			aiRangeFiles;
 	CCPPIndexSymbol*	pcSymbol;
 	SCPPIndexLocation*	psLocation;
@@ -2929,7 +2927,7 @@ size CIDECodeModel::FindSymbolsIn(CArrayIDEFileRanges* pasRanges, CArrayChars* p
 	cKeys.Init();
 	for (i = 0; i < paszKeys->NumElements(); i++)
 	{
-		cKeys.Put(paszKeys->GetText(i));
+		cKeys.FindOrAddIndex(paszKeys->GetText(i));
 	}
 
 	mcIndexMutex.Lock();
@@ -2974,7 +2972,7 @@ size CIDECodeModel::FindSymbolsIn(CArrayIDEFileRanges* pasRanges, CArrayChars* p
 		}
 		if (bIn)
 		{
-			cKeys.FindOrAdd(pcSymbol->mszKey.Text(), (size)pcSymbol->mszKey.Length(), &bAdded);
+			cKeys.FindOrAddIndex(pcSymbol->mszKey.Text(), (size)pcSymbol->mszKey.Length(), &bAdded);
 			if (bAdded)
 			{
 				paszKeys->Add(pcSymbol->mszKey.Text());
@@ -3851,7 +3849,7 @@ size CIDECodeModel::FindIncludesOf(const char* szFileName, CIDEFileTexts* pcText
 	SIDEIncludeDirective*		psDirective;
 	SIDELocation*				psLocation;
 	EIDEFileType				eType;
-	char*						szIncluder;
+	const char*					szIncluder;
 	const char*					szText;
 	size						uiLength;
 	size						uiProject;
@@ -3865,9 +3863,9 @@ size CIDECodeModel::FindIncludesOf(const char* szFileName, CIDEFileTexts* pcText
 	szTargetDirectory.Init();
 	cFileUtil.SplitPath(szFileName, &szTargetName, &szTargetDirectory);
 	uiFound = 0;
-	for (i = 0; i < maszProjectFiles.NumElements(); i++)
+	for (i = 0; i < mcProjectFiles.NumElements(); i++)
 	{
-		szIncluder = maszProjectFiles.GetText(i);
+		szIncluder = mcProjectFiles.GetKey(i);
 		eType = CIDEIcons::GetFileType(szIncluder);
 		if ((eType != IFT_CPP) && (eType != IFT_C) && (eType != IFT_Header))
 		{

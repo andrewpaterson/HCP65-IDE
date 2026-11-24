@@ -22,6 +22,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define __IDE_CODE_MODEL_H__
 #include "BaseLib/Chars.h"
 #include "BaseLib/HashMapString.h"
+#include "BaseLib/HashSetString.h"
 #include "BaseLib/ArrayChars.h"
 #include "BaseLib/ArrayTemplate.h"
 #include "BaseLib/ArrayTemplatePtr.h"
@@ -104,6 +105,10 @@ struct SIDECallRelation
 
 
 typedef CArrayTemplate<SIDECallRelation>	CArrayIDECallRelations;
+
+
+//Full paths, whatever their case, to a project's index.
+typedef CHashMapString<int32, SArrayNaturalSize, SHashOfTextIgnoreCase>	CIDEProjectFiles;
 
 
 //An #include a file writes (CIDECodeModel::FindIncludesIn), where it is in the file's text.
@@ -277,12 +282,11 @@ protected:
 	bool				mbCancelled;			//The jobs not started yet do nothing (KillJobs).
 	CHashMapString<int32>	mcIncluders;		//A file to the first indexed unit that included it (the job's index).
 	CArrayChars			maszProblems;			//What the units indexed couldn't include, each once, until taken (TakeIndexingProblems).
-	CHashMapString<bool>	mcProblems;			//Every one found since the index was started.
+	CHashSetString<>	mcProblems;				//Every one found since the index was started.
 	size				muiProblemUnits;		//How many units had any.
 	int64				miIndexStart;			//When the index was started (GetDebugTickCount),
 	int64				miIndexEnd;				//and when its last unit was done, -1 until then.
-	CMapStringInt		mcProjectFiles;			//Each project item's full path, in any case, to its project's index (FindProjectOfFile).
-	CArrayChars			maszProjectFiles;		//The same full paths, in the projects' order.
+	CIDEProjectFiles	mcProjectFiles;			//Each project item's full path, in any case, to its project's index (FindProjectOfFile), in the projects' order.
 	bool				mbProjectFiles;			//They have been found since the workspace last changed (FindProjectFiles).
 
 	CWorkerThreadJobs	mcEdits;				//The edits thread: one, working out the edited files away from the UI thread.
@@ -333,7 +337,7 @@ public:
 	bool	FindFileReferences(const char* szFileName, int iLine, int iColumn, CArrayIDELocations* pasDest);
 	size	FindProjectOfFile(const char* szFileName);
 	size	NumProjectFiles(void);
-	char*	GetProjectFile(size uiIndex);
+	const char*	GetProjectFile(size uiIndex);
 	void	ForgetProjectFiles(void);
 	size	FindFilesNamed(const char* szName, CArrayChars* paszDest);
 	void	FindGoToSymbols(CNameMatcher* pcMatcher, bool bClasses, int32* aiIcons, CGoToItems* pcDest);

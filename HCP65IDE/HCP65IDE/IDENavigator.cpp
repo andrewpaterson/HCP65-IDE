@@ -119,7 +119,7 @@ void CIDENavigator::GoToSearch(size uiTab, CNameMatcher* pcMatcher, CGoToItems* 
 	size		j;
 	size		uiRank;
 	SNameMatch	sMatch;
-	char*		szPath;
+	const char*	szPath;
 	CChars		szFolder;
 	CChars		szName;
 	CFileUtil	cFileUtil;

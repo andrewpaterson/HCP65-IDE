@@ -756,7 +756,7 @@ void CIDEConvertEnum::FindCasts(SIDEEnumConversion* psDest)
 	CIDECodeModel*		pcModel;
 	CIDEIncludeGraph	cGraph;
 	CArrayChars			aszSeen;
-	char*				szFileName;
+	const char*			szFileName;
 	size				i;
 	size				j;
 

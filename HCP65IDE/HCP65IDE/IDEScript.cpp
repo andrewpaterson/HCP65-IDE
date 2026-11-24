@@ -500,7 +500,7 @@ void CIDEScript::RunCommand(const char* szCommand)
 		CTextFile	cFile;
 		CChars		szDirectory;
 		CChars		szPath;
-		char*		szFile;
+		const char*	szFile;
 		size		i;
 
 		szDirectory.Init();

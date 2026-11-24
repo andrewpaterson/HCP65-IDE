@@ -2728,7 +2728,7 @@ size CIDEChangeSignature::ChangeLabels(SIDESignature* psSignature, CArrayChars* 
 	Ptr<CIDEEditorTab>	pTab;
 	CArrayChars*		paszFrom;
 	CArrayChars*		paszTo;
-	char*				szFileName;
+	const char*			szFileName;
 	const char*			szText;
 	const char*			szFound;
 	const char*			szOld;

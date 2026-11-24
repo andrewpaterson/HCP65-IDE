@@ -650,7 +650,7 @@ void CIDEIntroduceTypedef::FindIncluders(SIDETypedef* psTypedef)
 	CArrayChars			aszSeen;
 	CTextFile			cFile;
 	SCPPSyntaxRange		sRange;
-	char*				szFileName;
+	const char*			szFileName;
 	const char*			szText;
 	size				uiLength;
 	size				i;

@@ -172,7 +172,7 @@ void CIDEFileRename::FindRelatedFiles(const char* szFileName, CArrayChars* paszD
 	CChars			szDirectory;
 	CChars			szOtherName;
 	CChars			szOtherDirectory;
-	char*			szOther;
+	const char*		szOther;
 	EIDEFileType	eType;
 	size			uiStem;
 	size			uiOtherStem;
@@ -573,7 +573,7 @@ bool CIDEFileRename::SearchFiles(CArrayChars* paszOldNames, bool bComments, bool
 {
 	CIDECodeModel*				pcModel;
 	size						uiProjectFile;
-	char*						szFileName;
+	const char*					szFileName;
 	EIDEFileType				eType;
 	bool						bCpp;
 	CTextFile					cFile;

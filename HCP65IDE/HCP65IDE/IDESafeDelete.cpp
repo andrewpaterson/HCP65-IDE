@@ -878,7 +878,7 @@ void CIDESafeDelete::SearchFiles(SIDESafeDeletion* psDeletion)
 	SIDELocation				sLocation;
 	CTextFile					cFile;
 	CChars						szName;
-	char*						szFileName;
+	const char*					szFileName;
 	const char*					szText;
 	size						uiLength;
 	EIDEFileType				eType;
