@@ -1,0 +1,135 @@
+The debugger's bugs after F (plan, 2026-11-24)
+==============================================
+
+The user (2026-11-24): "Please plan fixes for the bugs".  The bugs are those left when DebuggerFPlan.txt's F1 and F2
+were built ("Not done" in its What is built), and two more found since: one F2 brought in (G1) and one older (G2).
+Nothing here is a go-ahead: the questions at the end are the user's, asked one at a time, and each item is built only
+when the user says so.
+
+Paths: CCL = CommonLibraries/Libraries/CppCompilerLib, A65 = HCP65/Libraries/Assembler65Lib, EDL =
+CommonLibraries/Libraries/EmulatorDebugLib, IDE = HCP65-IDE/HCP65IDE/HCP65IDE.
+
+
+G1. A walk loses each call's frame address (a regression of F2-4)
+------------------------------------------------------------------
+
+Bug: since HCP65 4a8b153 CAsm65StackWalker::Walk (A65/Asm65StackWalker.cpp) puts a call in the walk (AddFrame) before
+Caller works out its frame address, so no walked call has bFrame.  Before, Caller was given the walk's own element.
+Anything found from a function's frame address can't be read: a function with no frame (.dframe none, the 65C64's
+frameless functions) has its variables from its frame address (ASM65_DEBUG_FRAME), so its parameters where they were
+passed, and its Release "frame" places, show (optimised away).  The tests didn't see it: their programs' functions
+with variables keep a frame (V or D).
+
+  G1-1. Walk works out a call's caller (so its frame address) before it adds the call and its inline rows.
+  G1-2. Tests: TestAsm65StackWalkerRun asserts every walked call but the last has bFrame; TestCPP65Debug stops in a
+     65C64 frameless function with a parameter where its caller pushed it (more than the register arguments) and
+     reads it, Debug and Release.
+
+
+G2. Step Over in a recursive function stops in a deeper call
+-------------------------------------------------------------
+
+Bug (older than F; seen in debug-inlined-step-over): CDebugServer::StepRange (EDL/DebugServer.cpp) steps over calls by
+the stack: each instruction in the ranges sets the depth (muiDepth = S), and out of them it stops once S is back at
+that depth.  A line's ranges are its code in every place it is, so a recursive call runs the same line again deeper
+down, the depth becomes the deeper call's, and the step stops in it (Step Over at Sum's line 39 stopped at line 40 of
+the call three deeper).
+
+  G2-1. Stepping over counts calls as Step Out does (StepOutStep: DI_Call and DI_Return): the ranges only count with
+     no call open, and the step stops out of them with no call open.  The stack still decides a return past the
+     start (a function returning, an exception unwinding): S above the start's closes every count.  Interrupts that
+     arrive while stepping are calls of their own (they end with rti, a DI_Return).
+  G2-2. Tests: TestEmulatorDebugLib, a recursive function stepped over at its recursive call's line on both flat
+     targets: it stops at the next line of the same call.  IDE: debug-inlined-step-over expects line 40 of the call
+     it started in (its comment and its looser pattern go).
+
+
+G3. A Debug build's frame variables read the caller's frame in an epilogue
+---------------------------------------------------------------------------
+
+Bug: a variable's base is its function's base register (.dbase: the W65C816's D, the 65C64's V), read from the
+registers.  An epilogue gives the caller's D or V back before it returns (pld, pul V), and from there the variables
+read the caller's frame: wrong values in Locals, the Call Stack and watches, Debug or Release (Release's places end
+before the epilogue since F1, its frame variables don't).
+
+  G3-1. When the function's frame rule is its base register plus an offset (.dframe R, k with R the .dbase), the
+     walker takes the base from the frame address instead (frame address - k), which it finds from the rule in the
+     body and by following the code in the prologue and the epilogue.  Needs G1.  Other rules (memory, none) keep the
+     register.
+  G3-2. Tests: TestCPP65Debug steps a Debug program to each of a function's instructions from its last line to its
+     return (rtl, ret) and reads a local there: the value it had at the last line, on both processors.
+
+
+G4. A variable holding a constant shows (optimised away)
+--------------------------------------------------------
+
+Limit of F1: a debug value marker whose value is a constant (int i = 0; a parameter the call gave a constant once
+inlined; F2's Sum(&cCounter, 4)) has no home, so it is described nowhere.  Visual Studio shows such a value.
+
+  G4-1. CIRDebugPlaces gives a constant to the back end as it gives a temporary, without liveness (a constant is the
+     variable's until its next marker); CIRBackend::DebugPlace writes it itself, for both back ends: "value, n" (the
+     constant's bits, an integer, a float's bit pattern).  A slot address (an argaddr's ptradd, &cCounter) is a
+     constant too where the back end knows it (the 65C64's IR65P_FrameAddress: frame base + offset), "frame-address,
+     n": the address of base + n.
+  G4-2. Records v8: a range's place ADW_Value (iValue, 64 bits) and ADW_FrameAddress; .drange from, to, value, n and
+     frame-address, n.  Locate returns a value (bAddress false, no register); it can't be edited or watched, and has
+     no address ("A value the optimiser knows has no address").
+  G4-3. Tests: TestCPP65DebugRelease's iFolded shows 3 where it is in scope; Area's ps the address of main's s; the
+     every-step check reads constants too; IDE debug-optimised expects Sum(CCounter* pcCounter = 0x..., int iDepth =
+     4) [inlined] at the first stop.
+
+
+G5. Step Over at a line whose only code is an inlined call stops inside it
+---------------------------------------------------------------------------
+
+Limit of F2: Step Over from line 52 of the check's program goes into Sum's code inlined at line 53, because line 53 has
+no code of its own: the step stops at the inline's first instruction, shown as Sum [inlined] at line 35.  Visual Studio
+stops at the call (line 53), and the next Step Over steps over the inlined call.
+
+  G5-1. A stop at the first address of an inline's first span that the step didn't start in is "at the call": the
+     IDE's walk hides that inline's rows (and any inside it that start there too), so the Call Stack, the editor's
+     arrow and Locals are main's at line 53.  CIDEDebugStop keeps which inlines it hides.
+  G5-2. Step Over from there: the line is the call's (53), so AddInlinedCalls steps over the inline as it does now.
+     Step Into from there runs nothing: the hidden rows come back (question 2).  Step Out is the caller's.
+  G5-3. IDE check: debug-inlined-step-over gains Step Over from line 52 (stops at 53, main's row, no [inlined]) and
+     again (stops at 54); debug-inlined-step-into: from 52, over, then into (Sum [inlined] at line 35, nothing run).
+
+
+G6. An inlined callee's statics aren't found by watches
+--------------------------------------------------------
+
+Bug of F2: a static local is a global of its function (.dstatic, SAsm65DebugGlobal::uiFunction); a watch in an inline
+row looks in the physical function's, so a callee's statics are "undefined" there.
+
+  G6-1. The front end describes each inlined callee's statics in the function it was inlined into too, of the inline:
+     .dstatic "name", type, label[, inline], the callee's (SCPP65IRWritten::szStatics) again with the inline.
+  G6-2. Records v8 (with G4): a global's iInline; FindGlobal(szName, psFunction, iInline).  A watch passes its row's.
+  G6-3. Tests: TestCPP65DebugReleaseInlined: a static counter in Pick read from Pick's row, not from main's.
+
+
+Not a bug: F1-M (measuring)
+---------------------------
+
+F1 was built without F1-M's measurements (compile time, debug file size, with markers and without, Release).  They
+are worth having before anyone builds big programs Release with line tables: the kernal's, ModPlay's and TestCPP65IR's
+programs, markers on and off (CCPPCompileOptions::mbDebugMarkers), Release x64, instruction counts and the clock.
+Question 3.
+
+
+Order and size
+--------------
+
+  G1 first (small; G3 needs it), then G2 (small, EDL only), G3, G4 (records v8 with G6), G6, G5 (IDE only).  Each
+  is its own commit with its tests; the full TestCppCompilerLib (and with TEST_CPP65_SAME_CODE), TestAssembler65Lib,
+  TestEmulatorDebugLib and the IDE debug-* checks on both processors pass after each.  Records and protocol changes:
+  rebuild build/HCP65EmulatorRelease and build/X65C64Emulator before the IDE checks.
+
+
+Questions
+---------
+
+  1. G4: show the values the optimiser knows (constants, and addresses in the frame), as Visual Studio does?
+     Recommendation: yes; the alternative leaves them (optimised away).
+  2. G5: Step Into at an inlined call's line steps into it without running anything (Visual Studio's), or runs one
+     instruction?  Recommendation: Visual Studio's.
+  3. F1-M: measure markers' cost now?  Recommendation: yes, before G4 (which adds more debug records).
