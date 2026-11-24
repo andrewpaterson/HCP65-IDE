@@ -1,0 +1,123 @@
+The debugger's smaller gaps (plan, 2026-11-24)
+=============================================
+
+The user (2026-11-24): "Plan out fixes for the smaller gaps (include showing this in Release)".  The gaps are the ones
+left after Debugger65C64Plan.txt and Release parameters were built; F1 (every variable in optimised code), F2 (inlined
+frames), F4 (calls in watches) and F5 (data breakpoints) are DebuggerPlan.txt's and not here.  Nothing here is a
+go-ahead: the questions at the end are the user's, asked one at a time (all four decided 2026-11-24).
+
+
+What there is (surveyed 2026-11-24)
+-----------------------------------
+
+  - this: a member function's this is a parameter value (CCPP65IRFrontEnd: msThis = AddParameter), not read through
+    an argaddr, so Release parameters' rule (describe the argaddr while it survives) never applies to it.  Debug copies
+    it into a kept slot (AddDebugVariable(NULL, VariableSlot(4, 4)) and a store).  Where it really is in Release:
+    - the W65C816: in the bytes its caller pushed, but a function with no argaddr shares its parameters' places with
+      other values (IRW65C816Places: bShare), so those bytes may hold something else once this is read;
+    - the 65C64: in a register (thiscall's first argument), then wherever the allocator keeps it (a register, a
+      pseudo-register home, V when V is a home); its frame slot (iThisOffset) only exists if something takes its
+      address.
+    So there is no place a debugger can read without either a copy or a record of where the allocator kept it.
+  - The every-step walk check: TEST_CPP65_WALK=1 walks every 65C64 test program at every step (TestCPP65RunWalking), off
+    by default.  The only walks run every time are TestCPP65Debug's modes program (both processors, four builds) and
+    TestAsm65StackWalker's hand written programs.  A sweep with it on took about the same wall time as the normal run
+    (RunParallel, 12 jobs: 70 s against 75 s), though it was never measured group by group, and the code-text tests
+    fail under it because the programs are built with line tables.
+  - Saved pseudo-register units: the 65C64's [$80 + W] units a function keeps are described (.dsaved [unit]) and
+    walked through (TestAsm65StackWalker65C64's Framed pushes one), but nothing reads them back: CAsm65StackWalker::
+    ReadSaved skips memory saves, as only F1 would use a caller's value kept there.  The C++ back end doesn't keep units
+    across calls yet, so no compiled program has one.
+  - The X65C64 Emulator: CAsm65Memory's console (00FF:0100) is output only; Libc65's stdin is FILE_CLOSED on the 65C64.
+    There are no interrupts or timers in CAsm65Memory, and no 65C64 kernal, so no processes or breakpoint spaces.
+  - Missing functions: CCPP65Builder stubs a label no object defines by default (SetStubMissing(true)): the program
+    links, and stops if it calls one.  BuildLib never asks the builder what it stubbed (GetMissingNames), so the IDE and
+    hcp65build say "build succeeded".  The tests' builds check GetMissingNames themselves.
+  - The stopped address: only IDEDebugging's printstopped script command prints $%06X (the checks' output); the Debug
+    tab, the disassembly and New Breakpoint at Address use the target's address format already.
+
+
+What is to be built
+-------------------
+
+Stages in order; each built, checked and committed on its own.
+
+A. this in Release: NOT BUILT (question 1, decided: left to F1).  Kept below for the record.
+  A1. A copy, as Debug has: Release keeps this in a slot of its own, stored once at the start (one store, 4 bytes of
+      frame), named and described as Debug's is (AddDebugVariable(NULL, ...)); not volatile, so the optimiser may still
+      read this from its register, but nothing removes the store (a named slot's stores are kept, A3).  Cost: one store
+      per member function, and on the 65C64 a frame for a member function that had none.  Measured first (A0) on
+      the kernal, BaseLib and ModPlay: code bytes and cycles, Release before and after.
+  A2. Instead (question 1's other answer): only where it is already in memory, as parameters are: the 65C64's this
+      slot when something takes this's address, and nothing more.  Free, but this is shown in few functions.
+  A3. Tests: TestCPP65DebugRelease stops in a member function (both processors) and reads this's members through the
+      Locals' this and a watch (this->miCount); a member function's call in the Call Stack; the IDE's debug-optimised
+      check reads this in Release on both processors.
+
+B. The every-step walk check in the normal run
+  B1. Measure: each TestCppCompilerLib group's time with TEST_CPP65_WALK and without, and which tests fail under it
+      for reasons that aren't walks (code text compared, cycle counts).
+  B2. Then, as question 2 decides: on for every 65C64 program run by the tests that don't compare code (the walk keeps
+      its records apart, so a program run is still the program the test built), or on for a fixed sample (TestCPP65IR's
+      programs and the conformance programs), and the full sweep kept as TEST_CPP65_WALK.  A wrong walk fails the
+      test it is in, saying where (as TestCPP65RunWalking does now).
+  B3. The W65C816's test programs the same way (TestCPP816RunChecked already follows their calls: it would walk too),
+      so a back end change to either processor's frames fails a test.
+
+C. Missing functions are reported
+  C1. BuildLib asks the builder what it stubbed (GetMissingNames) after linking and says it in the Build tab and on
+      hcp65build's output: "<name> is called but no unit defines it: the program stops if it calls it".  Whether that
+      is a warning (the build succeeds) or an error is question 3; the recommendation is an error, with a
+      configuration attribute (StubMissing="true") for a build that wants stubs.
+  C2. First a survey of the solutions that build now (the kernal, ModPlay, the shell, the drivers, the checks' inputs,
+      Libc65's and BaseLib's test projects): which stub something today, and why.  An error must not break one of them
+      without its configuration saying so.
+  C3. Tests: TestBuildLib (a plain build missing a function: the message, the exit code); the IDE's build checks.
+
+D. Console input on the X65C64 Emulator
+  D1. CAsm65Memory's console gains input: a status register (a byte waiting) and a data register beside the output at
+      00FF:0100, fed from a CChars or a callback (SetConsoleInput).  The X65C64 Emulator feeds it from its standard
+      input; the tests from a string.
+  D2. Libc65's stdin on the 65C64 reads it (FILE_CONSOLE for reading: getchar, fgets, scanf's input), waiting while
+      nothing is there; EOF when the input ends.
+  D3. The IDE starts the emulator with no input (EOF), as question 4 decided: an input line in the Build tab is not
+      planned.
+  D4. Tests: TestLibc65 (getchar and fgets on the 65C64 from a given input), TestAssembler65Lib's memory (the
+      registers).  Interrupts, timers, a 65C64 kernal and processes are not planned: they wait for a 65C64 computer.
+
+E. The small ones
+  E1. printstopped prints the address in the target's format (CIDEDebugger's address format), so a 65C64 address is 8
+      digits; the checks' patterns change with it.
+  E2. Saved pseudo-register units: nothing to build until F1 reads a caller's value from one.  Kept as a test that
+      already runs (TestAsm65StackWalker65C64's Framed), and noted in DebuggerPlan.txt's F1.
+
+
+What is the user's to decide
+----------------------------
+
+Asked one at a time, with my recommendation first.
+
+Decided (2026-11-24, the user's):
+  1. this in Release is left to F1 ("Leave it until F1"): no copy, no Release code added.  this arrives in a register
+     and usually keeps one home for the whole function, so F1 (or a cut-down F1 describing values with one home for
+     the whole body: a register, a pseudo-register or V) shows it for nothing.  Until then Release shows no this.
+  2. The every-step walk check is on for every test program that doesn't compare generated code ("On for every test
+     program that doesn't compare generated code"), both processors (B2, B3).  B1 still measures it first; if it
+     turns out expensive the user is asked again before falling back to a sample.
+  3. A missing function is an error ("Your recommendation"): the build fails naming each one; a configuration that
+     wants stubs says StubMissing="true".  C2's survey of what builds today comes first, so none breaks without its
+     configuration saying so.
+  4. No console input in the IDE for now ("none for now"): a 65C64 program the IDE starts reads EOF on stdin.  An
+     input line in the Build tab can come when a program needs it.
+
+Every question is decided; the plan waits for the user to say when to build it (B, C, D, E; A is left to F1).
+
+
+Things to watch for
+-------------------
+
+  - A1 changes Release code: the kernal's ROM space (DebuggerPlan.txt M: about 9 KB spare optimised) and the listing
+    baselines other sessions keep (SemanticLayerPlan.txt, HashMapPlan.txt) move with it.
+  - B's walks must not change what a test measures: cycle counts and code text are taken from a program built without
+    the walk's line tables, or those tests are left out.
+  - C may turn builds that succeed today into failures: C2's survey first.
