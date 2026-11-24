@@ -37,7 +37,7 @@ caret, the script of steps, the answers to dialogs), the lines it must print in 
 	[r'Problems Detected']),
 ```
 
-The script's steps (`HCP65_IDE_DEBUG`, `CIDEScript` in `IDEScript.cpp`) move the caret, select text, run commands and
+The script's steps (`HCP65_IDE_DEBUG`, [`CIDEScript`] in `IDEScript.cpp`) move the caret, select text, run commands and
 refactorings, press keys, and print the IDE's state: menus, keys, tabs, files on disk, the status line.  A dialog the IDE
 shows is answered with the button named in `DIALOG_ANSWER`, and can be typed into first with `DIALOG_KEYS`.
 

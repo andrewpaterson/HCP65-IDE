@@ -59,7 +59,7 @@ rest of its name, its **stem** (`Preprocessor`), in the directory of the file th
 - `Preprocessor_<anything>.cpp`, the house style's parts for each platform (`Preprocessor_Linux.cpp`).
 
 The index must have the type declared in one of them, so a file that only shares the name is never taken.
-Renamed `CCPPPreprocessor`, its files become `CPPPreprocessor.h`, `CPPPreprocessor_Linux.cpp` and so on, by
+Renamed [`CCPPPreprocessor`], its files become `CPPPreprocessor.h`, `CPPPreprocessor_Linux.cpp` and so on, by
 [Rename File](#rename-file), with all that changes.  `PreprocessorHeaderCache.cpp` isn't one of its files,
 whatever is in it.
 

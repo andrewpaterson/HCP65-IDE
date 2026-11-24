@@ -213,7 +213,7 @@ writes `Listing/Sum.lst`.  [Listings, Profiling and Testing](testing.md#listings
 
 ## From C++
 
-`hcp65build` and the IDE drive `CCPP65Builder`, which any program can use: the test suites do.
+`hcp65build` and the IDE drive [`CCPP65Builder`], which any program can use: the test suites do.
 
 ```cpp
 CCPP65Builder	cBuilder;
@@ -232,7 +232,7 @@ cBuilder.Kill();
 | Method | Does |
 |---|---|
 | `SetTarget` | The processor.  It picks the predefined macros, the back end, the assembler and the linker's bank size. |
-| `GetOptions` | The `CCPPCompileOptions`: speed or size, the optimiser, inlining, register arguments, the assembly units. |
+| `GetOptions` | The [`CCPPCompileOptions`]: speed or size, the optimiser, inlining, register arguments, the assembly units. |
 | `AddUnit`, `AddVisualStudioProject`, `AddProjectSources` | The units to compile.  `.asm` units are assembled. |
 | `AddLibc65`, `AddRuntime`, `AddMathTables` | Libc65's units, the W65C816 runtime, and the maths tables, as libraries. |
 | `SetNoFloats`, `SetMathTables`, `SetLimit`, `SetStubMissing`, `SetRemoveUnused` | As the options above. |

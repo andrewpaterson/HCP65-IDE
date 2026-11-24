@@ -191,9 +191,9 @@ Debugging the kernal's own configuration once puts the one built on the card.
 ## Debugging a 65C64 program
 
 A 65C64 program runs from reset in the X65C64 Emulator (`HCP65/X65C64-Emulator`): a 65C64 with 2MB of
-memory, a console at `00FF:0100` and the host file device at `00FF:0200` (so `printf` and `fopen` work), as
+memory, a console at `00FF:0100` and the host file device at `00FF:0200` (so [`printf`] and [`fopen`] work), as
 the compiler's own tests run their programs.  It is a console program, with no window: what the program
-prints goes in the Build tab.  The IDE gives it no input, so `getchar` and `fgets` on `stdin` read `EOF`.  It stops when the program does (`stp`), or when the debugger goes.
+prints goes in the Build tab.  The IDE gives it no input, so [`getchar`] and [`fgets`] on [`stdin`] read `EOF`.  It stops when the program does (`stp`), or when the debugger goes.
 
 The program is an image the IDE loads at its address, and reset starts it there: the emulator's reset
 vector is the load address, `$10000`.  As a W65C816 program lists `UserStart.asm`, a 65C64 project lists

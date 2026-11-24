@@ -31,7 +31,7 @@ and to learn its keys.  Enter runs it.  If it can't be run where the caret is, t
 What you type is matched as IntelliJ IDEA matches it:
 
 - The characters are found in the name in order, whatever their case, each straight after the one before
-  or at the start of a word of the name.  `CTA` and `TeArea` both find `CTextArea`; `tarea` finds
+  or at the start of a word of the name.  `CTA` and `TeArea` both find [`CTextArea`]; `tarea` finds
   `TextArea`.  Words start at capitals, digits, and after underscores and dots.
 - A `*` or a space lets the next character be anywhere further on.
 - In Go to File, `/` separates folders: `wl/tf` finds `WindowLib/TextField.h`.

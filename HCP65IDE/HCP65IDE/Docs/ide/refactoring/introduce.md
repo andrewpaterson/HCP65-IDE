@@ -20,7 +20,7 @@ occurrences may not all be the same value.
 **Ctrl+Alt+V.**  The expression becomes a local variable.
 
 - Its type is written as its declaration wrote it, where the expression is one thing with a declared type (a
-  call's function's return type, a variable's or a field's): `uint32` stays `uint32`.  Otherwise it is the type
+  call's function's return type, a variable's or a field's): `#!text uint32` stays `#!text uint32`.  Otherwise it is the type
   the compiler worked out.  In a template it is in the template's own words (`M*`), and it is refused where only
   the template's arguments decide it.
 - As the house style has locals, it is declared with the function's other declarations at the top of its body,
