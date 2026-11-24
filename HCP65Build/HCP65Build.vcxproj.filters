@@ -3,4 +3,17 @@
   <ItemGroup>
     <ClCompile Include="HCP65Build.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Docs">
+      <UniqueIdentifier>{a45f0688-9ccf-4982-8ff9-84647d72bc0d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Docs\compiler">
+      <UniqueIdentifier>{9878b4cd-2d6f-4c29-a1b4-ba31a0c5d91d}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Docs\compiler\building.md">
+      <Filter>Docs\compiler</Filter>
+    </None>
+  </ItemGroup>
 </Project>

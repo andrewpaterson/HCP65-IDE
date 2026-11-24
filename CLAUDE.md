@@ -17,8 +17,8 @@ CommonLibraries and HCP65 checked out beside it (`../CommonLibraries`, `../HCP65
 
 ## Documentation
 
-- User documentation: `../HCP65/Website/docs/ide` (to move to `HCP65IDE/Docs`, see
-  `../HCP65/Website/DocsPlan.txt`).
+- User documentation: `HCP65IDE/HCP65IDE/Docs/ide`, items of `HCP65IDE.vcxproj`; the website gathers it
+  (`../HCP65/Website/mkdocs.yml`, `extra.sources`).  `hcp65build`'s page is `HCP65Build/Docs/compiler/building.md`.
 - Plans beside the code in `HCP65IDE/HCP65IDE`: `NextIDEWork.txt` (what's missing), `Navigation.txt` (the
   IntelliJ navigation gap list) and `NavigationPlan.txt`, `Selection.txt`, `RenameFile.txt`,
   `Refactorings.txt`, `RefactoringQuestions.txt`, `DebuggerPlan.txt`, `Debugger65C64Plan.txt`,
