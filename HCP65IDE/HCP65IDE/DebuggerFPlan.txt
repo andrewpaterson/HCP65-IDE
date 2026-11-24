@@ -248,8 +248,36 @@ Decided (2026-11-24, the user's):
   9. A data breakpoint on a local stays set until removed or debugging stops, after its frame returns too ("Stays until
      removed (Recommended)"); the stop message gives the address as well as the variable.
 
-Every question is decided (5 and 6 aren't asked: F4 isn't built).  The plan waits for the user to say when to build
-it: F5, then F1, then F2.
+Every question is decided (5 and 6 aren't asked: F4 isn't built).  The user said to build it on 2026-11-24 ("Go for
+it, the whole plan F.  Clean-up and commit as you go.  Keep things neat and tidy.").
+
+
+What is built
+-------------
+
+F5 (2026-11-24): CommonLibraries 661b7550c and 09fd4942d, HCP65-IDE 1a7a6e2, HCP65 7fbbe93.
+  - The simulators: CDataWatches (a read set and a write set of CBreakpoints) and SDataWatchHit, kept by the
+    processor.  The W65C816's reads and writes have bank tables of their own without the banks a watch is in; the
+    65C64's ReadValue and WriteValue fast paths have limits that drop to 0 while that kind is watched.  Fetches use
+    their own paths and are never watched.  CFastW65C816::UseWatches for a machine with a set per mode.
+  - F5-M: no cost.  A load/store loop on each processor before and after (Release x64, three runs): the W65C816 170 to
+    178 M instructions/s, the 65C64 107 to 111 (faster after, within noise or layout).  No third Run loop was needed.
+  - Protocol 8: SDebugBreakpoint's uiKind and uiBytes (SDebugBreakpoint::Init), DS_DataBreakpoint with the address,
+    whether it was written and the breakpoint's bytes, DEBUG_CAN_WATCH.  The server keeps the data breakpoints and
+    fills each space's watches from them, with each byte's alias in another space (CDebugTarget::GetWatchAlias: the
+    HCP65's process address seen by kernel mode through the remap table); a watched access that isn't one of its
+    breakpoints' (another process's) only ends the run early.  Detach and SetBreakpoints clear them.
+  - The HCP65: a data watch set per mode (GetModeDataWatches), used with the mode's breakpoints.
+  - The IDE: Break When Value Changes / Remove Data Breakpoint on a values pane's row; New Data Breakpoint... takes an
+    expression (evaluated in the frame shown) or $address with its bytes, and "Stop when read too".  The Debug tab:
+    "Data breakpoint: cCounter.miCount changed from 0 to 3 at $01:0141".  Gone when debugging stops.  printstopped
+    prints the Debug tab's status as its second line.
+  - Tests: TestMicroprocessorLib (TestFastW65C816Watches, TestFast65C64Watches), TestEmulatorDebugLib
+    (TestDebugServerDataBreakpoints, the 65C64's jsr push), TestHCP65Lib (TestHCP65DebugDataWatches, kernel and user
+    space data breakpoints on the stack), IDE checks debug-data-breakpoint and debug-new-data-breakpoint on both
+    processors.
+  - Found on the way and fixed: CDebugClient::SetBreakpoints sent its 65th and later breakpoints without their space
+    or process.
 
   1. Which items to build, and in what order.  Recommendation: F5, F1, F2; F4 only if question 5 is yes.
   2. F1's extent.  (a) Location ranges from debug value markers (above): right values wherever a variable is in a
