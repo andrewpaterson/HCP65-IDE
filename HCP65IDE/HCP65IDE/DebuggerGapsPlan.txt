@@ -117,7 +117,7 @@ built (below); A is left to F1.
 What is built (2026-11-24)
 --------------------------
 
-Commits: HCP65 d521ca9 (B), 8adf176 (D), 655feb7 (docs); CommonLibraries dba73ffcc (B), f2f64cd7a (the W65C816 fix);
+Commits: HCP65 d521ca9 (B), 8adf176 (D), 655feb7 (docs); CommonLibraries 03b2c4af0 (B), c7eb0341e (the W65C816 fix);
 HCP65-IDE 5b13051 (C), 66a91d2 (E1).
 
 B. The every-step walk check.  CAsm65FrameCheck::RunWalking (GetRegisters per processor) walks before every step and
