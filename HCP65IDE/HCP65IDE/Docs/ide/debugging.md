@@ -18,8 +18,8 @@ runs the emulator with a shared memory channel to it, or attaches to one already
 | Break All | Ctrl+Pause | Stops it where it is. |
 | Attach to Emulator... | | Connects to an emulator already running, by the port it printed (started with `--debug-tcp`). |
 | Step Into | F11 | One step, into a call.  Not debugging, starts the emulator stopped at its first instruction. |
-| Step Over | F10 | One step, over a call.  Not debugging, as F11. |
-| Step Out | Shift+F11 | Runs until the function returns. |
+| Step Over | F10 | One step, over a call (and over a call the optimiser inlined there).  Not debugging, as F11. |
+| Step Out | Shift+F11 | Runs until the function returns; in a call the optimiser inlined, until its code is left. |
 | Toggle Breakpoint | F9 | A breakpoint on the caret's line, or at the disassembly's instruction under the caret. |
 | New Breakpoint at Address... | | A breakpoint at an address typed in hexadecimal (a leading `$` is allowed). |
 | New Data Breakpoint... | | A [data breakpoint](#data-breakpoints) on an expression's value or at an address. |
@@ -84,9 +84,15 @@ type, name and value and the line it is at:
 
     modplay.exe!Scale(SPoint* psPoint = 0x00eff5, int iBy = 2) Line 5
 
-The innermost has a yellow arrow; code with no debug records (the start up) is `[External Code]`.  Enter
-or a double click on a call chooses it: its line is shown in its editor, with a green arrow in the gutter,
-and Locals, Autos and the Watches show that call.
+The innermost has a yellow arrow; code with no debug records (the start up) is `[External Code]`.  A call
+the optimiser inlined (a Release build) has a row of its own, as Visual Studio's inline frames, above the
+function it was inlined into, which is at the call's line:
+
+    modplay.exe!Area(SPoint* ps = 0x00eff5) Line 9 [inlined]
+    modplay.exe!main() Line 25
+
+Enter or a double click on a call chooses it: its line is shown in its editor, with a green arrow in the
+gutter, and Locals, Autos and the Watches show that call (an inlined call's own variables).
 
 ### Locals, Autos and Watch
 

@@ -313,6 +313,34 @@ HCP65 fae6d7c and d11b45c, HCP65-IDE (register variables written; the check).
     is "(optimised away)"); in an epilogue a Debug build's frame variables still read the caller's frame once D or V
     is restored (as before F1).
 
+F2 (2026-11-24): CommonLibraries 6a9bddd84 (F2-1), afeb0026d, d727563a1, 4ecf316be; HCP65 4a8b153,
+d891227; HCP65-IDE 69efb70.
+  - F2-1: an inlined instruction's uiSource is a location (IR_INLINE_LOCATION | index into CIRFunction's inline
+    locations: its token in the callee and its inline; masInlines: the callee and the call's location).  The inliner
+    makes an inline per call it inlines and maps the callee's locations into it, the callee's own inlines becoming
+    inlines in it (MapLocation, MapInline); another unit's callee is all at the call's token.  SourceToken resolves a
+    location for what reads tokens.
+  - F2-2: the inliner copies the callee's debug value markers onto new debug slots of the caller (CopyDebugSlot,
+    muiDebugSlots, masInlineVariables) and names the copies of its kept slots; the front end describes them as the
+    callee's variables of the inline.  Records v7: a variable's iInline; FindVariable/FindVisible per inline.
+  - F2-3: SourceComments follows the inlines each source marker's location is in (InlineSpans): .dinline for every
+    inline, parents first, with its .dinspan code; records v6 (FindInline: the innermost at an address).
+  - F2-4: Walk(..., bInlines) adds a row per inline the code is in before its function's (iInline, iCalled,
+    GetName, GetCalled); AppendCall names the row and lists its parameters; a ranged variable with no value is
+    (optimised away).  The IDE: rows marked [inlined], a row's line is the call of the inline inside it, Locals and
+    watches per row.
+  - F2-5: Step Over adds the spans of the inlines at the line (AddInlinedCalls); Step Out of an inline steps over its
+    spans.
+  - Also: CIRDebugPlaces only describes a value live through all the code written for a run of fused instructions
+    (found by the inline test: a value's home taken after its last use inside one).
+  - Tests: TestIRInlineLocations, TestAsm65LinkerDebugInlines, TestAsm65StackWalkerInlines,
+    TestCPP65DebugReleaseInlined (Pick inlined into a loop: rows, lines, variables),
+    TestCPP65DebugValuesEverywhere with inlining; IDE debug-optimised, debug-inlined-step-out,
+    debug-inlined-step-over on both processors.
+  - Not done: stepping over a line with no code of its own before an inlined call stops at the inline's first line
+    (Visual Studio stops at the call); an inlined callee's statics aren't found by watches; the walk without inlines
+    (the frame checks) is unchanged.
+
   1. Which items to build, and in what order.  Recommendation: F5, F1, F2; F4 only if question 5 is yes.
   2. F1's extent.  (a) Location ranges from debug value markers (above): right values wherever a variable is in a
      home, "(optimised away)" elsewhere; large.  (b) A cut-down F1: only variables whose every value has the same home
