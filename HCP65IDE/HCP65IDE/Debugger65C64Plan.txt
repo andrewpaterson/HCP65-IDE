@@ -53,31 +53,39 @@ What is to be built
 Stages in order; each builds, is checked and committed on its own.
 
 A. The compiler describes 65C64 frames and variables (CppCompilerLib's 65C64 back end)
-  A1. Debug mode on the 65C64 (decision 2): every function makes its V frame (no frameless functions, no bHomeV),
-      as the W65C816's Debug mode has no dropped or aligned frames; the kept slots stay in the frame; no inliner (the
-      front end's already).  Release keeps all of them.
-  A2. Where each kept slot is (AddSlot, as IRW65C816Backend does), so .dvariable gives a frame offset from V.
-  A3. CIR65Backend::DescribeFrame: .dframe frame, n after the prologue (the caller's V and the return address at
-      V + n + 1); a frameless function's or a bHomeV function's link is found from S (.dframe none, or a link kind
-      for "saved V at S + k" if A's first test shows the walker needs one).  The pushed pseudo registers come after
-      the frame and don't move the link.
-  A4. The records say whose they are (records version 4: the processor, from the object's assembler), so values,
+  The debugger finds each frame from whatever register has it (the user, 2026-11-24): the compiler describes the
+  frames it makes, and doesn't make different ones for the debugger.  Debug and Release frames are made the same way
+  (frameless functions and bHomeV stay in both); Debug mode only keeps the slots (the front end's, and no inliner).
+  A frameless or bHomeV function never has frame bytes, so no kept variable is lost to it.
+  A1. Where each kept slot is (AddSlot, as IRW65C816Backend does), so .dvariable gives a frame offset from V.
+  A2. CIR65Backend::DescribeFrame says, for each function, which register its frame is in and where its caller's V
+      is: .dframe frame, n after a framed prologue (the caller's V and the return address at V + n + 1); for a
+      bHomeV function, the caller's V pushed at entry (a link kind for "saved at entry S + k", Asm65DebugRecords'
+      EAsm65DebugLink, if none of the W65C816's fits); for a frameless one that leaves V alone, none (the caller's V
+      is the V running).  The pushed pseudo registers come after the frame and don't move the link.  Where S is
+      within the function is the walker's to follow (B2), not described.
+  A3. The records say whose they are (records version 4: the processor, from the object's assembler), so values,
       watches and the walker need no option: pointers are 32 bits on the 65C64, 24 on the W65C816.
-  A5. Tests: TestAssembler65Lib (a 65C64 object's records linked and read back), TestCppCompilerLib (each frame
-      shape's .dframe).
+  A4. Tests: TestAssembler65Lib (a 65C64 object's records linked and read back), TestCppCompilerLib (each frame
+      shape's .dframe: framed, bHomeV, frameless).
 
 B. Walking a 65C64 stack (Assembler65Lib)
-  B1. CAsm65StackWalker is split (decision 3): what isn't the processor's stays (the records added for a space,
+  B1. CAsm65StackWalker is split (decision 2): what isn't the processor's stays (the records added for a space,
       finding a function, the Walk loop, Locate), and each processor's walker gives its caller from its registers
       and memory: CAsmW65C816StackWalker (today's code, moved) and CAsm65C64StackWalker.  The registers it starts
       from become the processor's too (SAsm65StackRegisters holds both, or each walker its own).
-  B2. CAsm65C64StackWalker: a linked frame by V; while the prologue makes it, or the epilogue takes it apart, by
-      following the instructions (as the W65C816's Entering and Returning do); a frameless or bHomeV function from S
-      (Release).  jsr's 4 byte return address; brk and interrupts as 65C64Simulator.txt says they push.
+  B2. CAsm65C64StackWalker, the same way in Debug and Release: a framed function's caller by its link from V; one
+      whose frame isn't made yet (or that makes none, or keeps V as a value) by following its instructions from its
+      start to its PC, S's distance below its entry S and the copies of S in registers, as the W65C816's Entering
+      does; one taking its frame apart by its instructions to its rts, as Returning does.  That relies on S being
+      the same at an instruction whichever way the code got there (pushes only round calls), which the frame check
+      (B3) proves.  jsr's 4 byte return address; brk and interrupts as 65C64Simulator.txt says they push.
   B3. CAsm65C64FrameCheck: the oracle, as CAsmW65C816FrameCheck is, following jsr and rts (and interrupts).
-  B4. Tests: TestAsm65StackWalker65C64 (hand written frames, every step checked), and once, every TestCPP65C64
-      program walked at every step in Debug and Release against the frame check, as the W65C816's were (none may
-      be wrong).
+  B4. Tests: TestAsm65StackWalker65C64 (hand written frames of each shape, every step checked); and every
+      TestCPP65C64 program walked at every step in Debug and Release against the frame check, as the W65C816's were
+      once (none may be wrong).  Kept as a test that runs (TEST_CPP65_WALK_ALL or a part of the suite), not a one
+      off: other sessions change the 65C64 back end's registers, and a change that saves V somewhere new or leaves S
+      uneven across a branch must fail a test, not a debugging session.
 
 C. Values and watches on the 65C64 (CppCompilerLib)
   C1. CCPP65DebugValues takes the address width and the vtable layout from the records' processor; Result reads A
@@ -106,15 +114,15 @@ What is the user's to decide
 ----------------------------
 
 Asked one at a time, with my recommendation first.
+DECIDED 2026-11-24: the debugger finds each frame from whatever register has it; Debug builds don't change frames
+for it (A, B2).  It replaced the first draft's question 2 (Debug builds keeping the V chain).
+
   1. The machine to debug on.  There is no 65C64 computer in the emulator.  I recommend a flat 65C64 machine as the
      tests have (memory and the host file device, so printf works), as a small console emulator the IDE starts.
      The other way is to wait for a 65C64 computer to be modelled, with its own boards, which nothing plans yet.
-  2. Debug builds give up V as a value register and frameless functions, so every frame is linked through V, as the
-     W65C816's Debug builds give up dropped and aligned frames.  Release keeps them and is walked from S where it
-     must.  I recommend it: walking without the V chain everywhere is the hard and fragile part.
-  3. One walker split by processor (a shared base, each processor's caller finding its own) rather than a second
+  2. One walker split by processor (a shared base, each processor's caller finding its own) rather than a second
      walker beside the first.  I recommend the split: records, Locate and the walk loop are the same for both.
-  4. Where the emulator lives: the HCP65 repository beside HCP65-Emulator (it needs Assembler65Lib's host file
+  3. Where the emulator lives: the HCP65 repository beside HCP65-Emulator (it needs Assembler65Lib's host file
      device, which is there), or CommonLibraries beside EmulatorDebugLib.  I recommend HCP65.
 
 My own choices, not asked: the records say their processor (A4); the 65C64's tests are the W65C816's made generic
@@ -126,7 +134,7 @@ Things to watch for
 -------------------
 
   - Other sessions work in the 65C64 back end (IR65Backend, its registers V, W and B): ListAgents and git log before
-    A1-A3, and tell them before changing the prologue or SIR65Frame.
+    A1-A2, and tell them before changing the prologue or SIR65Frame.
   - The W65C816 walker's tests (TestAsm65StackWalker, TestAsm65StackWalkerInterrupts, TestCPPW65C816Debug, the
     kernal's Walk) must pass unchanged through B1's split: the split moves code, it doesn't change it.
   - Records version 4 makes every .debug file stale: the kernal's and programs' are rebuilt by their builds.
