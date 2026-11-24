@@ -164,15 +164,19 @@ def MakeToolsCopy():
 
 
 #The debugger's windows are checked on a program of their own (Input/Debugging: a class, a recursive Sum, an array, a
-#char*, an enum and a float), built and run on the HCP65 in the emulator drawn on the reference screen (HCP65EmulatorRef,
-#built beside HCP65Emulator), as the start up program of a copy of TestHCP65Lib's boot card.  TestHCP65Lib must have
-#been run: the card, the boot loader and OS.SYS are its.
+#char*, an enum and a float), on both processors.  The W65C816's (Debugging.sln) is built and run on the HCP65 in the
+#emulator drawn on the reference screen (HCP65EmulatorRef, built beside HCP65Emulator), as the start up program of a copy
+#of TestHCP65Lib's boot card: TestHCP65Lib must have been run, as the card, the boot loader and OS.SYS are its.  The
+#65C64's (Debugging65C64.sln, the same Debugging.cpp with Libc65's Start65C64.asm) is an image run from reset in the X65C64
+#Emulator, a console program (build/X65C64Emulator).
 DEBUGGING = os.path.join(HERE, 'Input', 'Debugging')
 DEBUGGING_CARD = os.path.join(ROOT, 'HCP65', 'HCP65-Emulator', 'TestHCP65Lib', 'TestHCP65Lib', 'Output', 'BootCard.img')
 if os.name == 'nt':
 	REFERENCE_EMULATOR = os.path.join(ROOT, 'HCP65', 'HCP65-Emulator', 'x64', 'Release', 'HCP65EmulatorRef.exe')
+	X65C64_EMULATOR = os.path.join(ROOT, 'HCP65', 'X65C64-Emulator', 'x64', 'Release', 'X65C64Emulator.exe')
 else:
 	REFERENCE_EMULATOR = os.path.join(ROOT, 'build', 'HCP65EmulatorRelease', 'HCP65EmulatorRef')
+	X65C64_EMULATOR = os.path.join(ROOT, 'build', 'X65C64Emulator', 'X65C64Emulator')
 
 
 def CleanDebugging():
@@ -196,26 +200,83 @@ def PrepareDebugging():
 		subprocess.run(['cp', '--sparse=always', DEBUGGING_CARD, szCard], check=True)
 
 
-def MakeDebugging(szDebug, szConfiguration=None):
-	#A run debugging Input/Debugging, built first, on the reference emulator, with the debugger's script szDebug (after
-	#choosing szConfiguration, if given).  Each run starts from nothing (PREPARE), and what it leaves goes at the end.
+#What the debugging checks differ in on each processor: the check names' suffix, the solution, the emulator (the
+#HCP65_IDE_ variable naming it) and what makes a run's start, then what is printed: the program's module, a pointer
+#into its data and into its text, a stopped address, an int in hexadecimal, and its Release configuration.
+DEBUGGING_W65C816 = {'SUFFIX': '', 'SOLUTION': 'Debugging.sln', 'EMULATOR_VARIABLE': 'EMULATOR', 'EMULATOR': REFERENCE_EMULATOR,
+	'PREPARE': PrepareDebugging, 'MODULE': r'debugging\.exe', 'POINTER': r'0x00[0-9a-f]{4}', 'TEXT_POINTER': r'0x[0-9a-f]{6}',
+	'ADDRESS': r'\$[0-9A-F]{6}', 'HEX_INT': '0x0000', 'RELEASE': 'Release|W65C816'}
+DEBUGGING_65C64 = {'SUFFIX': '-65C64', 'SOLUTION': 'Debugging65C64.sln', 'EMULATOR_VARIABLE': '65C64_EMULATOR', 'EMULATOR': X65C64_EMULATOR,
+	'PREPARE': CleanDebugging, 'MODULE': r'debugging\.bin', 'POINTER': r'0x[0-9a-f]{8}', 'TEXT_POINTER': r'0x[0-9a-f]{8}',
+	'ADDRESS': r'\$[0-9A-F]{6,8}', 'HEX_INT': '0x00000000', 'RELEASE': 'Release|65C64'}
+
+
+def MakeDebugging(asProcessor, szDebug, szConfiguration=None):
+	#A run debugging Input/Debugging for asProcessor, built first, in its emulator, with the debugger's script szDebug
+	#(after choosing szConfiguration, if given).  Each run starts from nothing (PREPARE), and what it leaves goes at the end.
 	atexit.register(CleanDebugging)
 	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
 	atexit.register(shutil.rmtree, szRoot, True)
 	if szConfiguration:
 		#The build at the start is of the configuration chosen then: the one asked for is built after it.
 		szDebug = 'configuration:' + szConfiguration + ',command:Build.Build,wait:300,built,' + szDebug
-	return {'SOLUTION': os.path.join(DEBUGGING, 'Debugging.sln'), 'RECENT': os.path.join(szRoot, 'Recent.xml'), 'OPEN': 'Debugging.cpp', 'BUILD': '1',
-			'EMULATOR': REFERENCE_EMULATOR, 'DEBUG': 'built,' + szDebug, 'PREPARE': PrepareDebugging}
+	return {'SOLUTION': os.path.join(DEBUGGING, asProcessor['SOLUTION']), 'RECENT': os.path.join(szRoot, 'Recent.xml'), 'OPEN': 'Debugging.cpp', 'BUILD': '1',
+			asProcessor['EMULATOR_VARIABLE']: asProcessor['EMULATOR'], 'DEBUG': 'built,' + szDebug, 'PREPARE': asProcessor['PREPARE']}
 
 
-#Sum's recursion stopped at its end (line 37, iDepth 0): each call with its parameters and line, main's, and the start
-#up's, which has no records.
-DEBUG_CALL_STACK = [r'^Call Stack:$',
-	r'^=> debugging\.exe!Sum\(CCounter\* pcCounter = 0x00[0-9a-f]{4}, int iDepth = 0\) Line 37$',
-	r'^   debugging\.exe!Sum\(CCounter\* pcCounter = 0x00[0-9a-f]{4}, int iDepth = 1\) Line 39$',
-	r'^   debugging\.exe!Sum\(CCounter\* pcCounter = 0x00[0-9a-f]{4}, int iDepth = 4\) Line 39$',
-	r'^   debugging\.exe!main\(\) Line 53$', r'^   \[External Code\]$']
+def DebugCallStack(asProcessor):
+	#Sum's recursion stopped at its end (line 37, iDepth 0): each call with its parameters and line, main's, and the
+	#start up's code, which has no debug records.
+	szSum = '^   ' + asProcessor['MODULE'] + r'!Sum\(CCounter\* pcCounter = ' + asProcessor['POINTER']
+	return [r'^Call Stack:$', '^=> ' + asProcessor['MODULE'] + r'!Sum\(CCounter\* pcCounter = ' + asProcessor['POINTER'] + r', int iDepth = 0\) Line 37$',
+		szSum + r', int iDepth = 1\) Line 39$', szSum + r', int iDepth = 4\) Line 39$',
+		'^   ' + asProcessor['MODULE'] + r'!main\(\) Line 53$', r'^   \[External Code\]$']
+
+
+
+def DebuggingChecks(P):
+	#The debugger's checks on Input/Debugging built for processor P (DEBUGGING_W65C816, DEBUGGING_65C64): written once,
+	#run on each.
+	return [
+	('debug-call-stack' + P['SUFFIX'], MakeDebugging(P, 'line:37,start,stopped,wait:1500,printstopped,printcallstack,print:Locals,stop'),
+		#Stopped at a breakpoint: Call Stack's calls, Locals the innermost's parameters and locals.
+		['^Stopped: yes, ' + P['ADDRESS'] + r', .*Debugging\.cpp:37$'] + DebugCallStack(P) +
+		[r'^Locals:$', r'^pcCounter = ' + P['POINTER'] + r' \[CCounter\*\]$', r'^iDepth = 0 \[int\]$', r'^iBelow = 0 \[int\]$'], [r'\?\?\?', r' \*$']),
+	('debug-frames' + P['SUFFIX'], MakeDebugging(P, 'line:37,start,stopped,wait:1500,frame:5,wait:500,printcallstack,print:Locals,open:Locals:cCounter,wait:300,print:Locals,'
+		'frame:3,wait:500,print:Locals,print:Autos'),
+		#A call chosen in Call Stack: its arrow, its locals, an object opened (an enum, a float); Autos of its line.
+		[r'^Call Stack:$', r'^=> ' + P['MODULE'] + r'!Sum\(.*iDepth = 0\) Line 37$', r'^-> ' + P['MODULE'] + r'!main\(\) Line 53$',
+		 r'^Locals:$', r'^cCounter = \{\.\.\.\} \[CCounter\]$', r'^iTotal = 0 \[int\]$',
+		 r'^Locals:$', r'^cCounter = \{\.\.\.\} \[CCounter\]$', r'^  miCount = 0 \[int\]$', r'^  meColour = EC_Green \[EColour\]$', r'^  mfScale = 1\.5 \[float\]$',
+		 r'^Locals:$', r'^pcCounter = ', r'^iDepth = 3 \[int\]$', r'^Autos:$', r'^iBelow = ', r'^pcCounter = ', r'^iDepth = 3 \[int\]$'], [r'\?\?\?']),
+	('debug-watch' + P['SUFFIX'], MakeDebugging(P, 'line:37,start,stopped,wait:1500,watch:1:gaiValues,watch:1:gszName,watch:1:pcCounter->meColour,watch:1:gaiValues[iDepth + 2] + 1,'
+		'watch:1:nope,watch:2:gfScale,wait:500,open:Watch1:gaiValues,wait:300,print:Watch1,print:Watch2,hex,wait:300,print:Locals,hex,'
+		'set:Watch1:gaiValues/[3]:9,set:Watch1:gaiValues/[2]:x,wait:500,print:Watch1,printuserfile'),
+		#Watches typed in: values, an array opened, errors; Hexadecimal Display; a value written; kept in the .hcp65user.
+		[r'^Watch1:$', r'^gaiValues = \{\.\.\.\} \[int\[4\]\]$', r'^  \[0\] = 3 \[int\]$', r'^  \[3\] = 1 \[int\]$', r'^gszName = ' + P['TEXT_POINTER'] + r' "Debugging" \[const char\*\]$',
+		 r'^pcCounter->meColour = EC_Green \[EColour\]$', r'^gaiValues\[iDepth \+ 2\] \+ 1 = 5 \[int\]$', r'^nope = nope is undefined \[\]$', r'^ =  \[\]$',
+		 r'^Watch2:$', r'^gfScale = 1\.5 \[float\]$', r'^Locals:$', r'^iDepth = ' + P['HEX_INT'] + r' \[int\]$', r'^Not written: gaiValues/\[2\] = x$',
+		 r'^Watch1:$', r'^  \[3\] = 9 \[int\]$', r'<Watch Window="1" Expression="gaiValues"/>', r'<Watch Window="2" Expression="gfScale"/>'], [r'\?\?\?']),
+	('debug-autos' + P['SUFFIX'], MakeDebugging(P, 'line:37,start,stopped,wait:1500,out,stopped,wait:1500,printstopped,printcallstack,print:Autos,over,stopped,wait:1000,print:Locals'),
+		#Stepped out: what Sum returned in Autos, with what its caller's line and the line before use; then a step over,
+		#and the value it changed red.
+		[r'^Stopped: yes, .*Debugging\.cpp:39$', r'^=> ' + P['MODULE'] + r'!Sum\(.*iDepth = 1\) Line 39$', r'^Autos:$', r'^Sum returned = 0 \[int\]$', r'^iBelow = 0 \[int\]$',
+		 r'^pcCounter = ', r'^iDepth = 1 \[int\]$', r'^Locals:$', r'^iDepth = 1 \[int\]$'], [r'\?\?\?']),
+	('debug-data-tip' + P['SUFFIX'], MakeDebugging(P, 'line:37,start,stopped,wait:1500,datatip:40:18,wait:300,print:DataTip,open:DataTip:gaiValues,wait:300,print:DataTip,'
+		'datatip:40:5,print:DataTip,datatip:31:1'),
+		#The data tip of a name in the editor, opened; one of a member chain (pcCounter->Add's pcCounter); none on a keyword.
+		[r'^DataTip:$', r'^gaiValues = \{\.\.\.\} \[int\[4\]\]$', r'^DataTip:$', r'^gaiValues = ', r'^  \[0\] = 3 \[int\]$', r'^  \[3\] = 1 \[int\]$',
+		 r'^DataTip:$', r'^pcCounter = ' + P['POINTER'] + r' \[CCounter\*\]$', r'^No data tip at 31:1$'], []),
+	('debug-quick-watch' + P['SUFFIX'], dict(MakeDebugging(P, 'line:37,start,stopped,wait:1500,edit:caret:40:18,command:Debug.QuickWatch,answered:2,print:Watch1'), **{'DIALOG_ANSWER': 'Reevaluate|OK'}),
+		#QuickWatch of the expression at the caret: Reevaluate shows it again; Add Watch (its OK) puts it in Watch 1.
+		[r'^Dialog \[QuickWatch\] answered Reevaluate$', r'^Dialog \[QuickWatch\] answered OK$', r'^Watch1:$', r'^gaiValues = \{\.\.\.\} \[int\[4\]\]$'], []),
+	('debug-optimised' + P['SUFFIX'], MakeDebugging(P, 'line:39,start,stopped,wait:1500,printcallstack,continue,stopped,wait:1500,printcallstack,line:39,line:54,continue,stopped,wait:1500,printstopped,print:Locals', P['RELEASE']),
+		#Built optimised (Sum's first call inlined into main, which the optimiser may choose otherwise): the calls are
+		#still walked, without the parameters a Release build doesn't describe; back in main, what stays in memory (the
+		#object whose address went to Sum) is shown, and what the optimiser kept in registers isn't.
+		[r'^Call Stack:$', r'^=> ' + P['MODULE'] + r'!(main|Sum)\(\) Line 39$', r'^   \[External Code\]$',
+		 r'^Call Stack:$', r'^=> ' + P['MODULE'] + r'!Sum\(\) Line 39$', r'^   ' + P['MODULE'] + r'!(main|Sum)\(\) Line [0-9]+$', r'^   \[External Code\]$',
+		 r'^Stopped: yes, .*Debugging\.cpp:54$', r'^Locals:$', r'^cCounter = \{\.\.\.\} \[CCounter\]$', r'^iTotal = \(optimised away\) \[\]$'], [r'\?\?\?'])]
 
 
 def MakeBrokenKernel():
@@ -4120,43 +4181,7 @@ CHECKS = [
 	('breakpoint', {
 		'OPEN': 'Kernal.cpp', 'DEBUG': 'line:20,buildtab,wait:300,printtabs'},
 		[r'^Tabs: .*>Kernal\.cpp'], []),
-	('debug-call-stack', MakeDebugging('line:37,start,stopped,wait:1500,printstopped,printcallstack,print:Locals,stop'),
-		#Stopped at a breakpoint: Call Stack's calls, Locals the innermost's parameters and locals.
-		[r'^Stopped: yes, \$[0-9A-F]{6}, .*Debugging\.cpp:37$'] + DEBUG_CALL_STACK +
-		[r'^Locals:$', r'^pcCounter = 0x00[0-9a-f]{4} \[CCounter\*\]$', r'^iDepth = 0 \[int\]$', r'^iBelow = 0 \[int\]$'], [r'\?\?\?', r' \*$']),
-	('debug-frames', MakeDebugging('line:37,start,stopped,wait:1500,frame:5,wait:500,printcallstack,print:Locals,open:Locals:cCounter,wait:300,print:Locals,'
-		'frame:3,wait:500,print:Locals,print:Autos'),
-		#A call chosen in Call Stack: its arrow, its locals, an object opened (an enum, a float); Autos of its line.
-		[r'^Call Stack:$', r'^=> debugging\.exe!Sum\(.*iDepth = 0\) Line 37$', r'^-> debugging\.exe!main\(\) Line 53$',
-		 r'^Locals:$', r'^cCounter = \{\.\.\.\} \[CCounter\]$', r'^iTotal = 0 \[int\]$',
-		 r'^Locals:$', r'^cCounter = \{\.\.\.\} \[CCounter\]$', r'^  miCount = 0 \[int\]$', r'^  meColour = EC_Green \[EColour\]$', r'^  mfScale = 1\.5 \[float\]$',
-		 r'^Locals:$', r'^pcCounter = ', r'^iDepth = 3 \[int\]$', r'^Autos:$', r'^iBelow = ', r'^pcCounter = ', r'^iDepth = 3 \[int\]$'], [r'\?\?\?']),
-	('debug-watch', MakeDebugging('line:37,start,stopped,wait:1500,watch:1:gaiValues,watch:1:gszName,watch:1:pcCounter->meColour,watch:1:gaiValues[iDepth + 2] + 1,'
-		'watch:1:nope,watch:2:gfScale,wait:500,open:Watch1:gaiValues,wait:300,print:Watch1,print:Watch2,hex,wait:300,print:Locals,hex,'
-		'set:Watch1:gaiValues/[3]:9,set:Watch1:gaiValues/[2]:x,wait:500,print:Watch1,printuserfile'),
-		#Watches typed in: values, an array opened, errors; Hexadecimal Display; a value written; kept in the .hcp65user.
-		[r'^Watch1:$', r'^gaiValues = \{\.\.\.\} \[int\[4\]\]$', r'^  \[0\] = 3 \[int\]$', r'^  \[3\] = 1 \[int\]$', r'^gszName = 0x[0-9a-f]{6} "Debugging" \[const char\*\]$',
-		 r'^pcCounter->meColour = EC_Green \[EColour\]$', r'^gaiValues\[iDepth \+ 2\] \+ 1 = 5 \[int\]$', r'^nope = nope is undefined \[\]$', r'^ =  \[\]$',
-		 r'^Watch2:$', r'^gfScale = 1\.5 \[float\]$', r'^Locals:$', r'^iDepth = 0x0000 \[int\]$', r'^Not written: gaiValues/\[2\] = x$',
-		 r'^Watch1:$', r'^  \[3\] = 9 \[int\]$', r'<Watch Window="1" Expression="gaiValues"/>', r'<Watch Window="2" Expression="gfScale"/>'], [r'\?\?\?']),
-	('debug-autos', MakeDebugging('line:37,start,stopped,wait:1500,out,stopped,wait:1500,printstopped,printcallstack,print:Autos,over,stopped,wait:1000,print:Locals'),
-		#Stepped out: what Sum returned in Autos, with what its caller's line and the line before use; then a step over,
-		#and the value it changed red.
-		[r'^Stopped: yes, .*Debugging\.cpp:39$', r'^=> debugging\.exe!Sum\(.*iDepth = 1\) Line 39$', r'^Autos:$', r'^Sum returned = 0 \[int\]$', r'^iBelow = 0 \[int\]$',
-		 r'^pcCounter = ', r'^iDepth = 1 \[int\]$', r'^Locals:$', r'^iDepth = 1 \[int\]$'], [r'\?\?\?']),
-	('debug-data-tip', MakeDebugging('line:37,start,stopped,wait:1500,datatip:40:18,wait:300,print:DataTip,open:DataTip:gaiValues,wait:300,print:DataTip,'
-		'datatip:40:5,print:DataTip,datatip:31:1'),
-		#The data tip of a name in the editor, opened; one of a member chain (pcCounter->Add's pcCounter); none on a keyword.
-		[r'^DataTip:$', r'^gaiValues = \{\.\.\.\} \[int\[4\]\]$', r'^DataTip:$', r'^gaiValues = ', r'^  \[0\] = 3 \[int\]$', r'^  \[3\] = 1 \[int\]$',
-		 r'^DataTip:$', r'^pcCounter = 0x00[0-9a-f]{4} \[CCounter\*\]$', r'^No data tip at 31:1$'], []),
-	('debug-quick-watch', dict(MakeDebugging('line:37,start,stopped,wait:1500,edit:caret:40:18,command:Debug.QuickWatch,answered:2,print:Watch1'), **{'DIALOG_ANSWER': 'Reevaluate|OK'}),
-		#QuickWatch of the expression at the caret: Reevaluate shows it again; Add Watch (its OK) puts it in Watch 1.
-		[r'^Dialog \[QuickWatch\] answered Reevaluate$', r'^Dialog \[QuickWatch\] answered OK$', r'^Watch1:$', r'^gaiValues = \{\.\.\.\} \[int\[4\]\]$'], []),
-	('debug-optimised', MakeDebugging('line:39,start,stopped,wait:1500,printcallstack,continue,stopped,wait:1500,printcallstack', 'Release|W65C816'),
-		#Built optimised (Sum's first call inlined into main, which the optimiser may choose otherwise): the calls are
-		#still walked, without the parameters a Release build doesn't describe.
-		[r'^Call Stack:$', r'^=> debugging\.exe!(main|Sum)\(\) Line 39$', r'^   \[External Code\]$',
-		 r'^Call Stack:$', r'^=> debugging\.exe!Sum\(\) Line 39$', r'^   debugging\.exe!(main|Sum)\(\) Line [0-9]+$', r'^   \[External Code\]$'], [r'\?\?\?']),
+] + DebuggingChecks(DEBUGGING_W65C816) + DebuggingChecks(DEBUGGING_65C64) + [
 	('menus', {
 		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'CARET': '36:4', 'DEBUG': 'printmenus,clickmenu:View/Nope'},
 		[r'^Menu File: New>, Save File as Template\.\.\., Open Project/Solution\.\.\., Add Solution\.\.\., Close Solution, Recent Solutions>, Clear Recent Solutions, Save \[Ctrl\+S\], Save All \[Ctrl\+Shift\+S\], Compare with File\.\.\., Settings\.\.\. \[Ctrl\+Alt\+S\], Exit$',

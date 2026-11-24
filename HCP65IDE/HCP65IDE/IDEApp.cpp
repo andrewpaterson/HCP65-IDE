@@ -110,8 +110,10 @@ static bool IsIDEScripted(void)
 }
 
 
-//The HCP65 emulator a W65C816 configuration is debugged in when its configuration doesn't name one, in the HCP65
-//repository beside the IDE's, built as the IDE is (HCP65_IDE_EMULATOR is another).
+//The emulators a configuration is debugged in when its run configuration doesn't name one, in the HCP65 repository
+//beside the IDE's, built as the IDE is: a W65C816 configuration's the HCP65 Emulator (HCP65_IDE_EMULATOR names
+//another), a 65C64 configuration's the X65C64 Emulator (HCP65_IDE_65C64_EMULATOR).  IDE_EMULATOR(Solution, Project)
+//is where Solution's build puts Project.
 #ifdef _WIN32
 #ifdef _WIN64
 #define IDE_EMULATOR_PLATFORM		"x64/"
@@ -119,14 +121,14 @@ static bool IsIDEScripted(void)
 #define IDE_EMULATOR_PLATFORM		""
 #endif
 #ifdef _DEBUG
-#define IDE_EMULATOR				"../../../HCP65/HCP65-Emulator/" IDE_EMULATOR_PLATFORM "Debug/HCP65Emulator.exe"
+#define IDE_EMULATOR(SOLUTION, PROJECT)	"../../../HCP65/" SOLUTION "/" IDE_EMULATOR_PLATFORM "Debug/" PROJECT ".exe"
 #else
-#define IDE_EMULATOR				"../../../HCP65/HCP65-Emulator/" IDE_EMULATOR_PLATFORM "Release/HCP65Emulator.exe"
+#define IDE_EMULATOR(SOLUTION, PROJECT)	"../../../HCP65/" SOLUTION "/" IDE_EMULATOR_PLATFORM "Release/" PROJECT ".exe"
 #endif
 #else
-#define IDE_EMULATOR				"../../../build/HCP65Emulator/HCP65Emulator"	//The shared build directories, beside the repositories.
+#define IDE_EMULATOR(SOLUTION, PROJECT)	"../../../build/" PROJECT "/" PROJECT	//The shared build directories, beside the repositories.
 #endif
-#define IDE_EMULATOR_DIRECTORY		"../../../HCP65/HCP65-Emulator/HCP65Emulator"
+#define IDE_EMULATOR_DIRECTORY(SOLUTION, PROJECT)	"../../../HCP65/" SOLUTION "/" PROJECT
 
 
 //The user's recent solutions (GetIDERecentFile).
@@ -330,7 +332,8 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 		pBackground->SetColour(mpContent->GetTheme()->GetColour(TC_Panel));
 		//The HCP65 repository is beside the IDE's.
 		mpContent->GetBuilding()->SetLibc65Directory("../../../HCP65/Libraries/Libc65");
-		mpContent->GetDebugging()->SetDefaultEmulator((getenv("HCP65_IDE_EMULATOR") != NULL) ? getenv("HCP65_IDE_EMULATOR") : IDE_EMULATOR, IDE_EMULATOR_DIRECTORY);
+		SetDefaultEmulator(BT_W65C816, "HCP65_IDE_EMULATOR", IDE_EMULATOR("HCP65-Emulator", "HCP65Emulator"), IDE_EMULATOR_DIRECTORY("HCP65-Emulator", "HCP65Emulator"));
+		SetDefaultEmulator(BT_65C64, "HCP65_IDE_65C64_EMULATOR", IDE_EMULATOR("X65C64-Emulator", "X65C64Emulator"), IDE_EMULATOR_DIRECTORY("X65C64-Emulator", "X65C64Emulator"));
 		GetIDERecentFile(&szPath);
 		mpContent->GetSolutions()->SetRecentFile(szPath.Text());
 		szPath.Kill();
@@ -646,6 +649,19 @@ void CIDEApp::AddScriptKeyboard(void)
 	mpInput->AddProgramInput();
 	mcComponentInput.AddKeyboard(mpInput->GetDevices()->GetDevice(pcKeyboard->miUniqueID));
 	mpContent->GetScript()->SetKeyboard(pcKeyboard, &mcComponentInput);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The emulator eToolchain's configurations are debugged in when theirs
+// don't say: szExecutable in szDirectory, or the one the environment
+// variable szVariable names.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEApp::SetDefaultEmulator(EBuildToolchain eToolchain, const char* szVariable, const char* szExecutable, const char* szDirectory)
+{
+	mpContent->GetDebugging()->SetDefaultEmulator(eToolchain, (getenv(szVariable) != NULL) ? getenv(szVariable) : szExecutable, szDirectory);
 }
 
 

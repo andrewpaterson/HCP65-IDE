@@ -55,14 +55,21 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 //////////////////////////////////////////////////////////////////////////
 void CIDEDebugging::Init(CIDEContent* pcContent)
 {
+	size	i;
+
 	PreInit();
 	mpcContent = pcContent;
 	mpDebugMenu = NULL;
 	mpDialog = NULL;
 	mcDebugger.Init();
 	mpWindows = OMalloc<CIDEDebugWindows>(pcContent, &mcDebugger);
-	mszDefaultEmulator.Init();
-	mszDefaultEmulatorDirectory.Init();
+	maszDefaultEmulators.Init();
+	maszDefaultEmulatorDirectories.Init();
+	for (i = 0; i < BT_NumToolchains; i++)
+	{
+		maszDefaultEmulators.Add("");
+		maszDefaultEmulatorDirectories.Add("");
+	}
 	mszStoppedFile.Init();
 	muiStoppedLine = 0;
 	maszDebugScript.Init();
@@ -87,8 +94,8 @@ void CIDEDebugging::Class(void)
 	M_Pointer(mpDebugTool);
 	M_Pointer(mpWindows);
 	U_Unknown(CIDEDebugger, mcDebugger);
-	U_String(mszDefaultEmulator);
-	U_String(mszDefaultEmulatorDirectory);
+	U_Unknown(CArrayChars, maszDefaultEmulators);
+	U_Unknown(CArrayChars, maszDefaultEmulatorDirectories);
 	U_String(mszStoppedFile);
 	U_UInt32(muiStoppedLine);
 	U_Unknown(CArrayChars, maszDebugScript);
@@ -110,8 +117,8 @@ void CIDEDebugging::Free(void)
 	//An emulator being debugged is quit (or detached from).
 	mszStoppedFile.Kill();
 	mcDebugger.Kill();
-	mszDefaultEmulatorDirectory.Kill();
-	mszDefaultEmulator.Kill();
+	maszDefaultEmulatorDirectories.Kill();
+	maszDefaultEmulators.Kill();
 	maszDebugScript.Kill();
 	maszImageCardPaths.Kill();
 	maszImageFiles.Kill();
@@ -282,16 +289,16 @@ bool CIDEDebugging::ChooseTool(CChars* pszExecutable, CChars* pszDirectory, CCha
 		}
 		pszArguments->Set(pcRun->GetArguments());
 	}
-	else if ((pcConfiguration != NULL) && (pcConfiguration->GetToolchain() == BT_W65C816) && !mszDefaultEmulator.Empty())
+	else if ((pcConfiguration != NULL) && (maszDefaultEmulators.Get(pcConfiguration->GetToolchain())->Length() > 0))
 	{
-		pszExecutable->Set(mszDefaultEmulator);
+		pszExecutable->Set(maszDefaultEmulators.GetText(pcConfiguration->GetToolchain()));
 		if ((pcRun != NULL) && (pcRun->GetDirectory()[0] != '\0'))
 		{
 			ResolveRunPath(pcRun->GetDirectory(), pszDirectory);
 		}
 		else
 		{
-			pszDirectory->Set(mszDefaultEmulatorDirectory);
+			pszDirectory->Set(maszDefaultEmulatorDirectories.GetText(pcConfiguration->GetToolchain()));
 		}
 		pszArguments->Set((pcRun != NULL) ? pcRun->GetArguments() : "");
 	}
@@ -1574,14 +1581,15 @@ void CIDEDebugging::ShowStoppedLine(bool bWasStopped)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The emulator a W65C816 configuration is debugged in when it doesn't say
-// (its Emulator in the .hcp65build), and the folder it runs in.
+// The emulator a configuration of eToolchain (the W65C816's, the 65C64's)
+// is debugged in when it doesn't say (its run configuration's tool), and
+// the folder it runs in.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEDebugging::SetDefaultEmulator(const char* szExecutable, const char* szDirectory)
+void CIDEDebugging::SetDefaultEmulator(EBuildToolchain eToolchain, const char* szExecutable, const char* szDirectory)
 {
-	mszDefaultEmulator.Set(szExecutable);
-	mszDefaultEmulatorDirectory.Set(szDirectory);
+	maszDefaultEmulators.Get(eToolchain)->Set(szExecutable);
+	maszDefaultEmulatorDirectories.Get(eToolchain)->Set(szDirectory);
 }
 
 

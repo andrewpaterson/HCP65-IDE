@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Debugging.cpp built for the 65C64 (Debugging65C64.sln), run from reset in the X65C64 Emulator: the image is loaded at
+     $10000, where Libc65's Start65C64.asm starts it. -->
+<BuildConfigurations>
+	<Configuration Name="Debug|65C64" Toolchain="65C64" Solution="Debug|Win32" Debug="true">
+		<Image File="debugging.bin" Size="0x100000" Load="0x10000">
+			<Region Start="0x10000" End="0x110000" Offset="0x0"/>
+		</Image>
+	</Configuration>
+	<Configuration Name="Release|65C64" Toolchain="65C64" Solution="Release|Win32">
+		<Image File="debugging.bin" Size="0x100000" Load="0x10000">
+			<Region Start="0x10000" End="0x110000" Offset="0x0"/>
+		</Image>
+	</Configuration>
+</BuildConfigurations>

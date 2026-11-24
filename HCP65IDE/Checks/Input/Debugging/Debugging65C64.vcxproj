@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!-- The debugger's checks' program (Debugging.cpp, Debugging.vcxproj's) built for the 65C64 by the IDE's 65C64
+       configurations (Debugging65C64.hcp65build): a Makefile project with no commands.  The ClCompile items, .asm
+       included, are the units in link order: Libc65's start up first, as the W65C816's project has UserStart.asm. -->
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{64ED09F9-128E-42BA-859A-C6C5D1D83E49}</ProjectGuid>
+    <RootNamespace>Debugging65C64</RootNamespace>
+    <Keyword>MakeFileProj</Keyword>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>..\..\..\..\..\HCP65\Libraries\UserLib;..\..\..\..\..\CommonLibraries\Libraries;..\..\..\..\..\HCP65\Libraries;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>..\..\..\..\..\HCP65\Libraries\UserLib;..\..\..\..\..\CommonLibraries\Libraries;..\..\..\..\..\HCP65\Libraries;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\..\..\HCP65\Libraries\Libc65\Start65C64.asm" />
+    <ClCompile Include="Debugging.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\..\..\HCP65\Libraries\UserLib\HCP65User.h" />
+  </ItemGroup>
+</Project>

@@ -56,8 +56,8 @@ protected:
 	Ptr<CDockPane>				mpDebugTool;  //and its tool window.
 	Ptr<CIDEDebugWindows>		mpWindows;  //Call Stack, Locals, Autos and the Watches.
 	CIDEDebugger				mcDebugger;
-	CChars						mszDefaultEmulator;	//A W65C816 run configuration's tool when it hasn't one.
-	CChars						mszDefaultEmulatorDirectory;
+	CArrayChars					maszDefaultEmulators;		//By EBuildToolchain: a run configuration's tool when it hasn't one ("" for none).
+	CArrayChars					maszDefaultEmulatorDirectories;
 	CChars						mszStoppedFile;		//The source file the debugger is stopped in, and its line
 	uint32						muiStoppedLine;		//(1 based), 0 if it isn't stopped in one.
 	CArrayChars					maszDebugScript;	//HCP65_IDE_DEBUG's commands still to do, for checking.
@@ -72,7 +72,7 @@ public:
 	bool	Save(CObjectWriter* pcFile) override;
 	bool	Load(CObjectReader* pcFile) override;
 
-	void				SetDefaultEmulator(const char* szExecutable, const char* szDirectory);
+	void				SetDefaultEmulator(EBuildToolchain eToolchain, const char* szExecutable, const char* szDirectory);
 	bool				StopDebugging(void);
 	bool				StepOver(void);
 	bool				StepOut(void);

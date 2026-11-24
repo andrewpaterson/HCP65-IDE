@@ -255,6 +255,35 @@ What is built
     a walk at every step is too slow to run each time.  Not built: TestAsm65StackWalkerBase's made up processor, as
     the two processors' tests exercise every part of the base.
 
+  - C1, C2 (CommonLibraries 3e526d01d): values and watches take an address's bits, a pointer's digits and an int's
+    bytes from the records' processor (CPP65DebugAddressMask, CPP65DebugIntBytes; ptrdiff_t is int on the 65C64).
+    TestCPPW65C816Debug became TestCPP65Debug: the stack, values (edits, watches), windows and Release tests run on
+    both processors.
+  - Release builds inline, which A3 missed: a function written again once calls are inlined into it lost its variable
+    records.  The front end now keeps each function's variables with it (RecordVariables) and describes them in the
+    unit's write phase from what the back end kept last (DescribeVariables, beside DescribeFrame); a copy a constant
+    argument specialises (CIRInterprocedural) has its original's (CopyVariables).  TestCPP65DebugReleaseInlined, and
+    the modes program walked inlined too.
+  - The 65C64's start up (decided 2026-11-24, as the HCP65 does it): a program project lists it as a source, as a
+    W65C816 program lists UserLib's UserStart.asm; BuildLib adds nothing.  It is Libc65's Start65C64.asm, the compiler's
+    own start up (CCPPTarget65C64::AppendStartUp, which is now one start up with exceptions and without: R_Exceptions,
+    weak, as UserStart.asm has it); TestCPP65GeneratorStartUpFile keeps the two the same.
+  - D1: HCP65/X65C64-Emulator (X65C64Emulator.sln, its .vcxproj and a Linux CMake build in build/X65C64Emulator): a
+    console program, CX65C64Emulator, a 65C64 on Assembler65Lib's CAsm65Memory (2MB, the vector page, the console to
+    standard output, the host file device) through CFlat65C64DebugTarget (which now runs on its caller's memory).  It
+    loads a program given on its command line (--load, $10000 if not given), points reset at it, and exits with main's
+    result.  The debugger's end of the connection (CHCP65EmulatorDebugger) moved to EmulatorDebugLib as
+    CEmulatorDebugger, for any target: the HCP65 emulator and this one share it.  vcxproj_sources is in
+    CommonLibraries/CMake/VcxprojSources.cmake for the two emulators' CMake builds (the other 39 copies remain).
+  - D2: the IDE's default emulator is per toolchain (CIDEDebugging::SetDefaultEmulator): the HCP65 Emulator for the
+    W65C816 (HCP65_IDE_EMULATOR names another), the X65C64 Emulator for the 65C64 (HCP65_IDE_65C64_EMULATOR).  The
+    registers by name and the walker by processor were already the frame model's (1542d04).
+  - E1: Input/Debugging builds for the 65C64 too (Debugging65C64.sln: the same Debugging.cpp with Start65C64.asm,
+    Debugging65C64.hcp65build's image at $10000).  IDEChecks.py's debug checks are DebuggingChecks(processor), written
+    once and run on both (the 65C64's with a -65C64 suffix); debug-optimised stops in main in Release and shows the
+    object it keeps and the int it doesn't.
+  - E2: the website's ide/debugging.md: the two emulators, what a Release build shows, and Debugging a 65C64 program.
+
 Things to watch for
 -------------------
 

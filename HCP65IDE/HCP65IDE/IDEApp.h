@@ -59,6 +59,7 @@ public:
 
 protected:
 	void	AddScriptKeyboard(void);
+	void	SetDefaultEmulator(EBuildToolchain eToolchain, const char* szVariable, const char* szExecutable, const char* szDirectory);
 };
 
 
