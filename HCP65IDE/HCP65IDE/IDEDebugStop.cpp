@@ -174,6 +174,7 @@ void CIDEDebugStop::Init(CIDEDebugger* pcDebugger)
 	muiStops = 0;
 	muiReplies = 0;
 	muiRegisterReplies = 0;
+	muiViews = 0;
 	memset(&msLeaving, 0, sizeof(msLeaving));
 	memset(&msReturned, 0, sizeof(msReturned));
 	msResult.Init((uint32)0, ASS_Kernel);
@@ -218,7 +219,7 @@ bool CIDEDebugStop::Update(void)
 		Clear();
 		return true;
 	}
-	if ((pcClient->NumStops() == muiStops) && (pcClient->NumMemoryReplies() == muiReplies) && (pcClient->NumRegisterReplies() == muiRegisterReplies))
+	if ((pcClient->NumStops() == muiStops) && (pcClient->NumMemoryReplies() == muiReplies) && (pcClient->NumRegisterReplies() == muiRegisterReplies) && (mpcDebugger->NumViews() == muiViews))
 	{
 		return false;
 	}
@@ -234,6 +235,7 @@ bool CIDEDebugStop::Update(void)
 	muiStops = pcClient->NumStops();
 	muiReplies = pcClient->NumMemoryReplies();
 	muiRegisterReplies = pcClient->NumRegisterReplies();
+	muiViews = mpcDebugger->NumViews();
 	Walk(&sRegisters);
 	if (muiSelected >= masFrames.NumElements())
 	{
@@ -287,6 +289,7 @@ void CIDEDebugStop::Clear(void)
 	muiStops = 0;
 	muiReplies = 0;
 	muiRegisterReplies = 0;
+	muiViews = 0;
 	msReturned.psFunction = NULL;
 }
 
@@ -294,8 +297,8 @@ void CIDEDebugStop::Clear(void)
 //////////////////////////////////////////////////////////////////////////
 //
 // The calls from the registers, through the records of the programs
-// running where it stopped (a row for each inlined call too), and each
-// one's source line.
+// running where it stopped (a row for each inlined call too, but those of
+// one stopped at its call: HideAtCall), and each one's source line.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEDebugStop::Walk(SAsm65StackRegisters* psRegisters)
@@ -315,6 +318,7 @@ void CIDEDebugStop::Walk(SAsm65StackRegisters* psRegisters)
 	mpcWalker->ClearRecords();
 	mpcDebugger->AddStackRecords(mpcWalker);
 	mpcWalker->Walk(psRegisters, &masFrames, IDE_DEBUG_MOST_FRAMES, true);
+	HideAtCall();
 	szFile.Init();
 	for (ui = 0; ui < masFrames.NumElements(); ui++)
 	{
@@ -328,6 +332,32 @@ void CIDEDebugStop::Walk(SAsm65StackRegisters* psRegisters)
 		mauiLines.Add(uiLine);
 	}
 	szFile.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Stopped at an inlined call none of whose code has run (CIDEDebugger::
+// GetAtCall), its row and those inside it go: the row it was inlined into
+// is the innermost, at the call.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDebugStop::HideAtCall(void)
+{
+	SAsm65StackFrame*	psFrame;
+	int32				iAtCall;
+	size				ui;
+
+	psFrame = masFrames.SafeGet(0);
+	iAtCall = (psFrame && psFrame->psFunction) ? mpcDebugger->GetAtCall(psFrame->psFunction) : -1;
+	for (ui = 0; (iAtCall >= 0) && (ui < masFrames.NumElements()) && masFrames.Get(ui)->IsInline(); ui++)
+	{
+		if (masFrames.Get(ui)->iInline == iAtCall)
+		{
+			masFrames.RemoveRange(0, ui + 1);
+			return;
+		}
+	}
 }
 
 

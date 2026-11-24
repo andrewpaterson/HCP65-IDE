@@ -72,6 +72,7 @@ void CIDEDebugging::Init(CIDEContent* pcContent)
 	}
 	mszStoppedFile.Init();
 	muiStoppedLine = 0;
+	muiShownViews = 0;
 	maszDebugScript.Init();
 	maszImageFiles.Init();
 	maszImageCardPaths.Init();
@@ -98,6 +99,7 @@ void CIDEDebugging::Class(void)
 	U_Unknown(CArrayChars, maszDefaultEmulatorDirectories);
 	U_String(mszStoppedFile);
 	U_UInt32(muiStoppedLine);
+	U_Size(muiShownViews);
 	U_Unknown(CArrayChars, maszDebugScript);
 	U_Unknown(CArrayChars, maszImageFiles);
 	U_Unknown(CArrayChars, maszImageCardPaths);
@@ -1663,13 +1665,14 @@ void CIDEDebugging::ShowStoppedLine(bool bWasStopped)
 		}
 		return;
 	}
-	if (bWasStopped)
+	if (bWasStopped && (mcDebugger.NumViews() == muiShownViews))
 	{
 		return;
 	}
 
 	muiStoppedLine = 0;
-	bShown = mcDebugger.FindSourceLine(mcDebugger.GetProgramAddress(), &mszStoppedFile, &uiLine);
+	muiShownViews = mcDebugger.NumViews();
+	bShown = mcDebugger.GetStoppedLine(&mszStoppedFile, &uiLine);
 	if (bShown && mpcContent->GetDocuments()->OpenFile(mszStoppedFile.Text()))
 	{
 		muiStoppedLine = uiLine;

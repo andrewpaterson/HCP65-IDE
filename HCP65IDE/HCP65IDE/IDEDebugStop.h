@@ -95,7 +95,8 @@ protected:
 	size					muiSelected;	//The frame the windows show.
 	size					muiStops;		//The client's stops when the frames were walked, 0 when not stopped.
 	size					muiReplies;		//Its memory replies then,
-	size					muiRegisterReplies;	//and its register replies (an edited register variable read back).
+	size					muiRegisterReplies;	//and its register replies (an edited register variable read back),
+	size					muiViews;		//and the debugger's views (CIDEDebugger::NumViews).
 	SAsm65StackFrame		msLeaving;		//The call a Step Out is leaving (psFunction NULL when none is),
 	SAsm65StackFrame		msReturned;		//and the one it left, at the stop after.
 	SAsm65StackRegisters	msResult;		//The registers at that stop: what it returned.
@@ -137,6 +138,7 @@ protected:
 	void				Clear(void);
 	void				Walk(SAsm65StackRegisters* psRegisters);
 	bool				UseWalker(EAsm65DebugProcessor eProcessor);
+	void				HideAtCall(void);
 	SAsm65StackFrame*	GetSelected(void);
 };
 

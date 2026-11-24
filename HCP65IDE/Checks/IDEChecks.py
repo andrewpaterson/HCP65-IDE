@@ -293,6 +293,16 @@ def DebuggingChecks(P):
 		[r'^Stopped: yes, .*Debugging\.cpp:40$', r'^Stopped: yes, .*Debugging\.cpp:41$', r'^Call Stack:$', r'^=> ' + P['MODULE'] + r'!Sum\(.*\) Line 41 \[inlined\]$',
 		 r'^   ' + P['MODULE'] + r'!main\(\) Line 53$'],
 		[r'\?\?\?', r'Debugging\.cpp:2[78]$']),
+	('debug-inlined-at-call' + P['SUFFIX'], MakeDebugging(P, 'line:52,start,stopped,wait:1500,line:52,over,stopped,wait:1500,printstopped,printcallstack,over,stopped,wait:1500,printstopped,printcallstack', P['RELEASE']),
+		#Built optimised: line 53's only code is Sum's call, inlined.  Step Over from line 52 stops at the call, none of it
+		#run, shown at line 53 in main (DebuggerFixesPlan.txt G5); Step Over again steps over the inlined call to line 54.
+		[r'^Stopped: yes, .*Debugging\.cpp:53$', r'^Call Stack:$', r'^=> ' + P['MODULE'] + r'!main\(\) Line 53$',
+		 r'^Stopped: yes, .*Debugging\.cpp:54$', r'^Call Stack:$', r'^=> ' + P['MODULE'] + r'!main\(\) Line 54$'], [r'\?\?\?', r'\[inlined\]']),
+	('debug-inlined-step-into' + P['SUFFIX'], MakeDebugging(P, 'line:52,start,stopped,wait:1500,line:52,over,stopped,wait:1500,printstopped,into,stopped,wait:1500,printstopped,printcallstack', P['RELEASE']),
+		#Built optimised: stopped at Sum's inlined call (line 53), Step Into enters it without running anything (Visual
+		#Studio's): Sum's row at its first line.
+		[r'^Stopped: yes, ' + P['ADDRESS'] + r', .*Debugging\.cpp:53$', r'^Stopped: yes, ' + P['ADDRESS'] + r', .*Debugging\.cpp:3[5-9]$', r'^Call Stack:$',
+		 r'^=> ' + P['MODULE'] + r'!Sum\(.*\) Line 3[5-9] \[inlined\]$', r'^   ' + P['MODULE'] + r'!main\(\) Line 53$'], [r'\?\?\?']),
 	('debug-optimised' + P['SUFFIX'], MakeDebugging(P, 'line:39,start,stopped,wait:1500,printcallstack,print:Locals,continue,stopped,wait:1500,printcallstack,line:39,line:54,continue,stopped,wait:1500,printstopped,print:Locals', P['RELEASE']),
 		#Built optimised, Sum's first call inlined into main: it is a row of its own in the Call Stack (DebuggerFPlan.txt
 		#F2), main's below it at the call, its parameters what the optimiser knows them to be (cCounter's address and 4,

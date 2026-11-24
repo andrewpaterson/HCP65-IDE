@@ -59,7 +59,8 @@ protected:
 	CArrayChars					maszDefaultEmulators;		//By EBuildToolchain: a run configuration's tool when it hasn't one ("" for none).
 	CArrayChars					maszDefaultEmulatorDirectories;
 	CChars						mszStoppedFile;		//The source file the debugger is stopped in, and its line
-	uint32						muiStoppedLine;		//(1 based), 0 if it isn't stopped in one.
+	uint32						muiStoppedLine;		//(1 based), 0 if it isn't stopped in one,
+	size						muiShownViews;		//as the debugger's views were then (CIDEDebugger::NumViews).
 	CArrayChars					maszDebugScript;	//HCP65_IDE_DEBUG's commands still to do, for checking.
 	CArrayChars					maszImageFiles;		//The images whose line tables were read as they are (the kernal,
 	CArrayChars					maszImageCardPaths;	//OS.SYS), and each one's file on the card, "" if not checked.

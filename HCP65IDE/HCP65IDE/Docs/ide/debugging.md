@@ -17,8 +17,8 @@ runs the emulator with a shared memory channel to it, or attaches to one already
 | Restart | Ctrl+Shift+F5 | Starts it again from the beginning. |
 | Break All | Ctrl+Pause | Stops it where it is. |
 | Attach to Emulator... | | Connects to an emulator already running, by the port it printed (started with `--debug-tcp`). |
-| Step Into | F11 | One step, into a call.  Not debugging, starts the emulator stopped at its first instruction. |
-| Step Over | F10 | One step, over a call (and over a call the optimiser inlined there).  Not debugging, as F11. |
+| Step Into | F11 | One step, into a call (stopped at an inlined call, into it without running anything).  Not debugging, starts the emulator stopped at its first instruction. |
+| Step Over | F10 | One step, over a call (and over a call the optimiser inlined there; a step that comes to an inlined call stops at the call, before any of it runs).  Not debugging, as F11. |
 | Step Out | Shift+F11 | Runs until the function returns; in a call the optimiser inlined, until its code is left. |
 | Toggle Breakpoint | F9 | A breakpoint on the caret's line, or at the disassembly's instruction under the caret. |
 | New Breakpoint at Address... | | A breakpoint at an address typed in hexadecimal (a leading `$` is allowed). |

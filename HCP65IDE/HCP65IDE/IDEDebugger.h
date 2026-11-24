@@ -188,6 +188,13 @@ protected:
 	CChars					mszStepFile;			//The line a StepLine started from.
 	uint32					muiStepLine;
 	size					muiAutoSteps;			//The steps StepOnInto has taken on its own.
+	bool					mbLineStep;				//A StepLine is under way, from muiStepFrom...
+	uint32					muiStepFrom;
+	CAsm65DebugRecords*		mpcAtCallRecords;		//...and it stopped at a call that was inlined, none of its code run:
+	SAsm65DebugFunction*	mpsAtCallFunction;		//the windows show it as at the call (Visual Studio's), the inline
+	int32					miAtCall;				//miAtCall of the function and those inside it hidden, -1 for none.
+	size					muiViews;				//Changes to what is shown with no stop (Step Into at a call).
+	size					muiSeenViews;
 	size					muiSeenStops;
 	size					muiSeenDisassemblies;
 	size					muiSeenErrors;
@@ -248,6 +255,9 @@ public:
 	CAsm65LineTable*		GetLineTable(size uiIndex);
 	CAsm65DebugInfo*		GetDebugInfo(size uiIndex);
 	bool					FindSourceLine(uint32 uiAddress, CChars* pszFile, uint32* puiLine);
+	bool					GetStoppedLine(CChars* pszFile, uint32* puiLine);
+	int32					GetAtCall(SAsm65DebugFunction* psFunction);
+	size					NumViews(void) const;
 	void					AddStackRecords(CAsm65StackWalker* pcWalker);
 	bool					GetStackRegisters(SAsm65StackRegisters* psRegisters);
 	bool					WriteStackRegister(size uiRegister, uint64 uiValue);
@@ -299,6 +309,9 @@ protected:
 	bool					CanMove(void);
 	bool					StepOnInto(uint32 uiAddress);
 	bool					StepLineRanges(bool bOver);
+	bool					StepRanges(CArrayUint32* pauiRanges, bool bOver);
+	void					FindAtCall(uint32 uiAddress);
+	bool					IsInInline(SAsm65DebugFunction* psFunction, uint32 uiAddress, int32 iInline);
 	bool					FindInlineAt(uint32 uiAddress, CAsm65DebugRecords** ppcRecords, SAsm65DebugFunction** ppsFunction, int32* piInline);
 	void					AddInlineSpans(CAsm65DebugRecords* pcRecords, SAsm65DebugFunction* psFunction, int32 iInline, CArrayUint32* pauiRanges);
 	void					AddInlinedCalls(uint32 uiAddress, CArrayUint32* pauiRanges);

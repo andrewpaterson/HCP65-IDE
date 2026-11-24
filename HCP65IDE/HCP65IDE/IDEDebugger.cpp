@@ -121,6 +121,13 @@ void CIDEDebugger::Init(void)
 	mszStepFile.Init();
 	muiStepLine = 0;
 	muiAutoSteps = 0;
+	mbLineStep = false;
+	muiStepFrom = 0;
+	mpcAtCallRecords = NULL;
+	mpsAtCallFunction = NULL;
+	miAtCall = -1;
+	muiViews = 0;
+	muiSeenViews = 0;
 	muiSeenStops = 0;
 	muiSeenDisassemblies = 0;
 	muiSeenErrors = 0;
@@ -634,16 +641,45 @@ bool CIDEDebugger::StepOver(void)
 // bOver, into the first one otherwise, as Visual Studio's F10 and F11.
 // Stepping in, a function with no lines is stepped over (StepOnInto).
 // Stopped where no line table has a line, one instruction is stepped.
+// Stopped at a call that was inlined (FindAtCall), into it runs nothing
+// (the windows show it entered) and over it steps over its code.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEDebugger::StepLine(bool bOver)
 {
+	CArrayUint32	auiRanges;
+	bool			bResult;
+	int32			iInner;
+
 	if (!CanMove() || !mcClient.IsStopped())
 	{
 		return false;
 	}
 	muiAutoSteps = 0;
-	if (!FindSourceLine(GetProgramAddress(), &mszStepFile, &muiStepLine))
+	mbLineStep = true;
+	muiStepFrom = GetProgramAddress();
+	if (miAtCall >= 0)
+	{
+		if (!bOver)
+		{
+			//Into the inlined call: nothing runs, the inline just inside it (if it starts here too) is the next shown.
+			for (iInner = mpcAtCallRecords->FindInline(mpsAtCallFunction, muiStepFrom); (iInner >= 0) && (mpcAtCallRecords->GetInline(mpsAtCallFunction, (size)iInner)->iParent != miAtCall); iInner = mpcAtCallRecords->GetInline(mpsAtCallFunction, (size)iInner)->iParent)
+			{
+			}
+			miAtCall = iInner;
+			mbLineStep = false;
+			muiViews++;
+			return true;
+		}
+
+		//Over the inlined call.
+		auiRanges.Init();
+		AddInlineSpans(mpcAtCallRecords, mpsAtCallFunction, miAtCall, &auiRanges);
+		bResult = StepRanges(&auiRanges, true);
+		auiRanges.Kill();
+		return bResult;
+	}
+	if (!FindSourceLine(muiStepFrom, &mszStepFile, &muiStepLine))
 	{
 		return bOver ? StepOver() : StepInto();
 	}
@@ -660,9 +696,7 @@ bool CIDEDebugger::StepLine(bool bOver)
 bool CIDEDebugger::StepLineRanges(bool bOver)
 {
 	CArrayUint32	auiRanges;
-	SDebugRange*	asRanges;
 	size			ui;
-	size			uiRanges;
 	bool			bResult;
 
 	auiRanges.Init();
@@ -677,23 +711,39 @@ bool CIDEDebugger::StepLineRanges(bool bOver)
 	{
 		AddInlinedCalls(GetProgramAddress(), &auiRanges);
 	}
-	uiRanges = auiRanges.NumElements() / 2;
+	bResult = StepRanges(&auiRanges, bOver);
+	mbIntoLine = bResult && !bOver;
+	auiRanges.Kill();
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// DM_StepRange over pauiRanges (each a start and an end), over calls with
+// bOver; with none (or too many to send) one step.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEDebugger::StepRanges(CArrayUint32* pauiRanges, bool bOver)
+{
+	SDebugRange*	asRanges;
+	size			ui;
+	size			uiRanges;
+	bool			bResult;
+
+	uiRanges = pauiRanges->NumElements() / 2;
 	if ((uiRanges == 0) || (uiRanges > DEBUG_MAX_LIST))
 	{
-		auiRanges.Kill();
 		return bOver ? StepOver() : StepInto();
 	}
-
 	asRanges = (SDebugRange*)malloc(uiRanges * sizeof(SDebugRange));
 	for (ui = 0; ui < uiRanges; ui++)
 	{
-		asRanges[ui].uiStart = auiRanges.GetValue(ui * 2);
-		asRanges[ui].uiEnd = auiRanges.GetValue(ui * 2 + 1);
+		asRanges[ui].uiStart = pauiRanges->GetValue(ui * 2);
+		asRanges[ui].uiEnd = pauiRanges->GetValue(ui * 2 + 1);
 	}
 	bResult = mcClient.StepRange(asRanges, uiRanges, bOver) != 0;
-	mbIntoLine = bResult && !bOver;
 	free(asRanges);
-	auiRanges.Kill();
 	return bResult;
 }
 
@@ -702,6 +752,7 @@ bool CIDEDebugger::StepLineRanges(bool bOver)
 //
 // Until the function it is in returns; in an inlined call's code, until
 // it leaves it (DM_StepRange over its spans, its calls stepped over).
+// Shown at an inlined call (FindAtCall), out of what the call is in.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEDebugger::StepOut(void)
@@ -709,9 +760,6 @@ bool CIDEDebugger::StepOut(void)
 	CAsm65DebugRecords*		pcRecords;
 	SAsm65DebugFunction*	psFunction;
 	CArrayUint32			auiRanges;
-	SDebugRange*			asRanges;
-	size					ui;
-	size					uiRanges;
 	int32					iInline;
 	bool					bResult;
 
@@ -719,30 +767,135 @@ bool CIDEDebugger::StepOut(void)
 	{
 		return false;
 	}
-	if (!FindInlineAt(GetProgramAddress(), &pcRecords, &psFunction, &iInline) || (iInline < 0))
+	mbLineStep = false;
+	if (!FindInlineAt(GetProgramAddress(), &pcRecords, &psFunction, &iInline))
+	{
+		return mcClient.StepOut() != 0;
+	}
+	if (miAtCall >= 0)
+	{
+		//Shown at the call: out of what the call is in.
+		iInline = pcRecords->GetInline(psFunction, (size)miAtCall)->iParent;
+	}
+	if (iInline < 0)
 	{
 		return mcClient.StepOut() != 0;
 	}
 
 	auiRanges.Init();
 	AddInlineSpans(pcRecords, psFunction, iInline, &auiRanges);
-	uiRanges = auiRanges.NumElements() / 2;
-	if ((uiRanges == 0) || (uiRanges > DEBUG_MAX_LIST))
-	{
-		auiRanges.Kill();
-		return mcClient.StepOut() != 0;
-	}
-	asRanges = (SDebugRange*)malloc(uiRanges * sizeof(SDebugRange));
-	for (ui = 0; ui < uiRanges; ui++)
-	{
-		asRanges[ui].uiStart = auiRanges.GetValue(ui * 2);
-		asRanges[ui].uiEnd = auiRanges.GetValue(ui * 2 + 1);
-	}
-	bResult = mcClient.StepRange(asRanges, uiRanges, true) != 0;
-	free(asRanges);
+	bResult = StepRanges(&auiRanges, true);
 	auiRanges.Kill();
 	return bResult;
 }
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A StepLine that stopped at the first instruction of an inlined call's
+// code, from outside it, is at the call (DebuggerFixesPlan.txt G5): none of
+// the call is run yet.  The outermost such inline (miAtCall), with any
+// inside it that start there too, isn't shown; the windows and the editor
+// show the call.  Any other stop shows where it is.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDebugger::FindAtCall(uint32 uiAddress)
+{
+	CAsm65DebugRecords*		pcRecords;
+	SAsm65DebugFunction*	psFunction;
+	SAsm65DebugInline*		psInline;
+	int32					iInline;
+	bool					bLineStep;
+
+	bLineStep = mbLineStep && (mcClient.GetStopReason() == DS_Step);
+	mbLineStep = false;
+	if (miAtCall >= 0)
+	{
+		muiViews++;
+	}
+	miAtCall = -1;
+	if (!bLineStep || !FindInlineAt(uiAddress, &pcRecords, &psFunction, &iInline))
+	{
+		return;
+	}
+	for (; iInline >= 0; iInline = psInline->iParent)
+	{
+		psInline = pcRecords->GetInline(psFunction, (size)iInline);
+		if ((psInline->uiNumSpans == 0) || (pcRecords->GetSpan(psInline, 0)->uiFrom != uiAddress) || IsInInline(psFunction, muiStepFrom, iInline))
+		{
+			break;
+		}
+		mpcAtCallRecords = pcRecords;
+		mpsAtCallFunction = psFunction;
+		miAtCall = iInline;
+	}
+	if (miAtCall >= 0)
+	{
+		muiViews++;
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether code at uiAddress is in psFunction's inline iInline (or one
+// inside it).
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEDebugger::IsInInline(SAsm65DebugFunction* psFunction, uint32 uiAddress, int32 iInline)
+{
+	CAsm65DebugRecords*		pcRecords;
+	SAsm65DebugFunction*	psAt;
+	int32					iAt;
+
+	if (!FindInlineAt(uiAddress, &pcRecords, &psAt, &iAt) || (psAt != psFunction))
+	{
+		return false;
+	}
+	for (; iAt >= 0; iAt = pcRecords->GetInline(psAt, (size)iAt)->iParent)
+	{
+		if (iAt == iInline)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The source line the program is shown stopped at: where it is, or, at
+// an inlined call (FindAtCall), the call.  False if it has none.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEDebugger::GetStoppedLine(CChars* pszFile, uint32* puiLine)
+{
+	SAsm65DebugInline*	psInline;
+
+	if (miAtCall >= 0)
+	{
+		psInline = mpcAtCallRecords->GetInline(mpsAtCallFunction, (size)miAtCall);
+		pszFile->Set(psInline->szFile);
+		*puiLine = psInline->uiLine;
+		return true;
+	}
+	return FindSourceLine(GetProgramAddress(), pszFile, puiLine);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The inline of psFunction (the innermost call's) the windows show as at
+// its call, -1 for none.
+//
+//////////////////////////////////////////////////////////////////////////
+int32 CIDEDebugger::GetAtCall(SAsm65DebugFunction* psFunction)
+{
+	return ((miAtCall >= 0) && (psFunction == mpsAtCallFunction)) ? miAtCall : -1;
+}
+
+
+size CIDEDebugger::NumViews(void) const { return muiViews; }
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -1869,6 +2022,11 @@ bool CIDEDebugger::Poll(CArrayChars* paszOutput)
 		paszOutput->Add("Debugger: ")->Append(mcClient.GetError());
 	}
 
+	if (muiViews != muiSeenViews)
+	{
+		muiSeenViews = muiViews;
+		return true;
+	}
 	return (GetState() != eOldState) || (muiSeenDisassemblies != uiOldDisassemblies);
 }
 
@@ -2071,6 +2229,7 @@ void CIDEDebugger::Stopped(void)
 	{
 		return;
 	}
+	FindAtCall(uiAddress);
 	switch (mcClient.GetStopReason())
 	{
 	case DS_Start:		mszStatus.Set("Stopped before the first instruction at ");	break;
