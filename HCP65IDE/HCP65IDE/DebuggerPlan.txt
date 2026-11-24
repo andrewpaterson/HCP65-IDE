@@ -108,6 +108,18 @@ What is built (2026-11-23), where it differs from the steps below
       says it came.  So the windows each read without waiting on the others, a page is read once a stop, and a stack
       walk reads through it, walking again when what it missed has come.  Tests: TestDebugServer (one request for
       two pages, read again without one, forgotten at a stop and on a write, memory's end), TestHCP65Debugger.
+  C1-C3 (2026-11-24). In CppCompilerLib (it has the vtable layout, and is beside the records' reader), read through a
+      CAsm65StackMemory so the IDE and the tests share them.  CCPP65DebugValues: a value (SCPP65DebugValue: a type in
+      a program's records, in memory in a space or worked out) formatted as Visual Studio's Locals show it, its Type
+      with the object's class from its vtable's type info ("CShape* {CSquare}", no records needed), its children (a
+      base by its class's name, fields, bit fields, [n], * for what a pointer points at), Member by name, and Edit:
+      what typing into Value writes (SCPP65DebugWrite, its space; a bit field merged into its bytes).  CCPP65DebugWatch:
+      not CCPPParser, which needs a unit's declarations to tell a cast from an expression, but a small grammar of its
+      own binding names as it goes (locals in scope at the line, this's members, statics, globals, enumerators); the
+      types it needs and the records haven't (bool, a pointer to a class) are added to them
+      (CAsm65DebugRecords::FindTypeIndex).  Tests: TestCPPW65C816Debug's values test (built Debug and unoptimised,
+      stopped in a call: each kind shown, hexadecimal, children, a derived object through a base pointer, watches
+      with ,x ,s ,n, errors; edits the program then uses) and stack test (watches in a recursion).
 
 M. Measure first
   M1. A Debug compile (A2) of the kernal, boot.exe and ModPlay: code size against the kernal's limit (OS.SYS's
