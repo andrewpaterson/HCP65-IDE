@@ -352,3 +352,9 @@ target_link_libraries(HCP65IDERef PRIVATE HCP65IDELib WinRefLib)
 #   cmake --build build/HCP65IDE --target hcp65build
 add_executable(hcp65build "${IDE_ROOT}/HCP65Build/HCP65Build.cpp")
 target_link_libraries(hcp65build PRIVATE BuildLib VisualStudioLib CppCompilerLib Assembler65Lib MicroprocessorLib ThreadLib StandardLib BaseLib)
+
+# hcp65index, the symbol table for the website's references to code (HCP65/Website/DocsPlan.txt D1): indexes
+# solutions with IndexLib, no window.  Build only it with
+#   cmake --build build/HCP65IDE --target hcp65index
+add_executable(hcp65index "${IDE_ROOT}/HCP65Index/HCP65Index.cpp")
+target_link_libraries(hcp65index PRIVATE IndexLib BuildLib VisualStudioLib CppCompilerLib Assembler65Lib MicroprocessorLib ThreadLib StandardLib BaseLib)

@@ -58,6 +58,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TestVisualStudioLib", "..\T
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "HCP65Build", "..\HCP65Build\HCP65Build.vcxproj", "{96060CAE-FE62-47EF-A366-C9354F9C4732}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "HCP65Index", "..\HCP65Index\HCP65Index.vcxproj", "{032F91F6-ED1D-4954-9AE4-6795C236702A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -403,6 +405,18 @@ Global
 		{96060CAE-FE62-47EF-A366-C9354F9C4732}.Release|Win32.Build.0 = Release|Win32
 		{96060CAE-FE62-47EF-A366-C9354F9C4732}.Release|x64.ActiveCfg = Release|x64
 		{96060CAE-FE62-47EF-A366-C9354F9C4732}.Release|x64.Build.0 = Release|x64
+		{032F91F6-ED1D-4954-9AE4-6795C236702A}.Debug|Win32.ActiveCfg = Debug|Win32
+		{032F91F6-ED1D-4954-9AE4-6795C236702A}.Debug|Win32.Build.0 = Debug|Win32
+		{032F91F6-ED1D-4954-9AE4-6795C236702A}.Debug|x64.ActiveCfg = Debug|x64
+		{032F91F6-ED1D-4954-9AE4-6795C236702A}.Debug|x64.Build.0 = Debug|x64
+		{032F91F6-ED1D-4954-9AE4-6795C236702A}.Reference|Win32.ActiveCfg = Release|Win32
+		{032F91F6-ED1D-4954-9AE4-6795C236702A}.Reference|Win32.Build.0 = Release|Win32
+		{032F91F6-ED1D-4954-9AE4-6795C236702A}.Reference|x64.ActiveCfg = Release|x64
+		{032F91F6-ED1D-4954-9AE4-6795C236702A}.Reference|x64.Build.0 = Release|x64
+		{032F91F6-ED1D-4954-9AE4-6795C236702A}.Release|Win32.ActiveCfg = Release|Win32
+		{032F91F6-ED1D-4954-9AE4-6795C236702A}.Release|Win32.Build.0 = Release|Win32
+		{032F91F6-ED1D-4954-9AE4-6795C236702A}.Release|x64.ActiveCfg = Release|x64
+		{032F91F6-ED1D-4954-9AE4-6795C236702A}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
