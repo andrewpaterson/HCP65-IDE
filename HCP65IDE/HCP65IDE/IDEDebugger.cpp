@@ -30,6 +30,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/XMLWriter.h"
 #include "EmulatorDebugLib/DebugLaunch.h"
 #include "IDEDebugger.h"
+#include "IDEDebugStop.h"
 
 
 #define IDE_DEBUG_QUIT_WAIT		2000		//Milliseconds the emulator has to quit before it is ended.
@@ -124,6 +125,7 @@ void CIDEDebugger::Init(void)
 	muiSeenDisassemblies = 0;
 	muiSeenErrors = 0;
 	masBreakpoints.Init();
+	masDataBreakpoints.Init();
 	masSourceBreakpoints.Init();
 	for (muiLineTables = 0; muiLineTables < IDE_DEBUG_LINE_TABLES; muiLineTables++)
 	{
@@ -160,6 +162,7 @@ void CIDEDebugger::Kill(void)
 	{
 		IDEKillTableTarget(&masTableTargets[ui]);
 	}
+	masDataBreakpoints.Kill();
 	masBreakpoints.Kill();
 	mcNetwork.Kill();
 	mcShared.Kill();
@@ -484,6 +487,7 @@ void CIDEDebugger::End(const char* szStatus)
 	mcNetwork.Init();
 	mbLaunched = false;
 	mbStarting = false;
+	masDataBreakpoints.RemoveAll();
 	mszStatus.Set(szStatus);
 }
 
@@ -770,11 +774,97 @@ void CIDEDebugger::DeleteAllBreakpoints(void)
 {
 	masBreakpoints.Kill();
 	masBreakpoints.Init();
+	masDataBreakpoints.RemoveAll();
 	while (masSourceBreakpoints.NumElements() > 0)
 	{
 		RemoveSourceBreakpointAt(masSourceBreakpoints.NumElements() - 1);
 	}
 	BreakpointsChanged();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A data breakpoint over uiBytes at uiAddress in the emulator's space
+// uiSpace (and the process uiProcess there): the program stops after
+// writing them, or reading too (bReads).  The caller may give it its
+// value's type and bytes.
+//
+//////////////////////////////////////////////////////////////////////////
+SIDEDataBreakpoint* CIDEDebugger::AddDataBreakpoint(const char* szName, uint32 uiAddress, uint32 uiBytes, uint32 uiSpace, uint32 uiProcess, bool bReads)
+{
+	SIDEDataBreakpoint*	psBreakpoint;
+
+	psBreakpoint = masDataBreakpoints.Add();
+	memset(psBreakpoint, 0, sizeof(SIDEDataBreakpoint));
+	psBreakpoint->uiAddress = uiAddress;
+	psBreakpoint->uiBytes = uiBytes;
+	psBreakpoint->uiSpace = uiSpace;
+	psBreakpoint->uiProcess = uiProcess;
+	psBreakpoint->bReads = bReads;
+	strncpy(psBreakpoint->szName, szName, IDE_DATA_BREAKPOINT_NAME - 1);
+	BreakpointsChanged();
+	return psBreakpoint;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+SIDEDataBreakpoint* CIDEDebugger::FindDataBreakpoint(uint32 uiAddress, uint32 uiSpace)
+{
+	SIDEDataBreakpoint*	psBreakpoint;
+	size				i;
+
+	for (i = 0; i < masDataBreakpoints.NumElements(); i++)
+	{
+		psBreakpoint = masDataBreakpoints.Get(i);
+		if ((psBreakpoint->uiAddress == uiAddress) && (psBreakpoint->uiSpace == uiSpace))
+		{
+			return psBreakpoint;
+		}
+	}
+	return NULL;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDebugger::RemoveDataBreakpoint(SIDEDataBreakpoint* psBreakpoint)
+{
+	masDataBreakpoints.Remove(psBreakpoint);
+	BreakpointsChanged();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The emulator takes data breakpoints.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEDebugger::CanWatch(void)
+{
+	return mbClient && mcClient.CanWatch();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whose memory a value in eSpace is at the stop: user mode's is the
+// process the stop names; kernel mode's (and a target with one memory) is
+// every process's.
+//
+//////////////////////////////////////////////////////////////////////////
+uint32 CIDEDebugger::GetSpaceProcess(EAsm65StackSpace eSpace)
+{
+	if ((eSpace == ASS_User) && (GetStackSpace(ASS_User) != GetStackSpace(ASS_Kernel)))
+	{
+		return mcClient.GetStopUserProcess();
+	}
+	return DEBUG_PROCESS_ANY;
 }
 
 
@@ -808,6 +898,7 @@ void CIDEDebugger::SendBreakpoints(void)
 	CArrayTemplate<SDebugBreakpoint>	asBreakpoints;
 	SDebugBreakpoint*					psBreakpoint;
 	SIDESourceBreakpoint*				psSource;
+	SIDEDataBreakpoint*					psData;
 	size								i;
 	size								j;
 	size								k;
@@ -822,11 +913,7 @@ void CIDEDebugger::SendBreakpoints(void)
 	psBreakpoint = NULL;
 	for (i = 0; bOwnRunning && (i < masBreakpoints.NumElements()); i++)
 	{
-		psBreakpoint = asBreakpoints.Add();
-		psBreakpoint->uiAddress = masBreakpoints.Get(i)->uiAddress;
-		psBreakpoint->uiEnabled = masBreakpoints.Get(i)->bEnabled;
-		psBreakpoint->uiSpace = muiBreakpointSpace;
-		psBreakpoint->uiProcess = uiOwnProcess;
+		asBreakpoints.Add()->Init(masBreakpoints.Get(i)->uiAddress, masBreakpoints.Get(i)->bEnabled, muiBreakpointSpace, uiOwnProcess);
 	}
 
 	//Each place a source breakpoint's line starts, once.
@@ -849,17 +936,18 @@ void CIDEDebugger::SendBreakpoints(void)
 			}
 			if (k == asBreakpoints.NumElements())
 			{
-				psBreakpoint = asBreakpoints.Add();
-				psBreakpoint->uiAddress = psSource->auiAddresses.GetValue(j);
-				psBreakpoint->uiEnabled = psSource->bEnabled;
-				psBreakpoint->uiSpace = uiSpace;
-				psBreakpoint->uiProcess = uiProcess;
+				asBreakpoints.Add()->Init(psSource->auiAddresses.GetValue(j), psSource->bEnabled, uiSpace, uiProcess);
 			}
 			else if (psSource->bEnabled)
 			{
 				psBreakpoint->uiEnabled = true;
 			}
 		}
+	}
+	for (i = 0; i < masDataBreakpoints.NumElements(); i++)
+	{
+		psData = masDataBreakpoints.Get(i);
+		asBreakpoints.Add()->Init(psData->uiAddress, true, psData->uiSpace, psData->uiProcess, psData->bReads ? DBK_ReadWrite : DBK_Write, psData->uiBytes);
 	}
 	mcClient.SetBreakpoints(asBreakpoints.GetData(), asBreakpoints.NumElements());
 	asBreakpoints.Kill();
@@ -1837,6 +1925,13 @@ void CIDEDebugger::Stopped(void)
 	case DS_Pause:		mszStatus.Set("Broke in at ");								break;
 	case DS_Stopped:	mszStatus.Set("The processor stopped itself at ");			break;
 	case DS_Reset:		mszStatus.Set("Reset, stopped at ");						break;
+	case DS_Process:	mszStatus.Set("A process started, stopped at ");			break;
+	case DS_Module:		mszStatus.Set("A module was loaded, stopped at ");			break;
+	case DS_DataBreakpoint:
+		mszStatus.Set("Data breakpoint: ");
+		AppendDataStop(&mszStatus);
+		mszStatus.Append(" at ");
+		break;
 	}
 	mcClient.AppendAddress(&mszStatus, uiAddress);
 	mszStatus.Append('.');
@@ -1856,6 +1951,93 @@ void CIDEDebugger::Stopped(void)
 		}
 	}
 	mcClient.Disassemble(uiStart, IDE_DEBUG_DISASSEMBLY, uiAddress);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// What a data breakpoint's stop was: "iTotal changed from 3 to 4", "...
+// written (still 4)" or "... read" (as its type shows it, or a number of
+// its bytes), and its bytes kept for the next.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDebugger::AppendDataStop(CChars* pszDest)
+{
+	SIDEDataBreakpoint*	psBreakpoint;
+	uint8				auiNow[DEBUG_MAX_WATCH_BYTES];
+	size				uiBytes;
+	bool				bChanged;
+
+	psBreakpoint = FindDataBreakpoint(mcClient.GetStopDataBreakpoint(), mcClient.GetStopSpace());
+	if (psBreakpoint == NULL)
+	{
+		psBreakpoint = FindDataBreakpoint(mcClient.GetStopDataBreakpoint(), DEBUG_SPACE_ANY);
+	}
+	if (psBreakpoint == NULL)
+	{
+		mcClient.AppendAddress(pszDest, mcClient.GetStopDataAddress());
+		pszDest->Append(mcClient.IsStopDataWrite() ? " written" : " read");
+		return;
+	}
+
+	pszDest->Append(psBreakpoint->szName);
+	memset(auiNow, 0, sizeof(auiNow));
+	uiBytes = mcClient.GetStopData(auiNow, psBreakpoint->uiBytes);
+	if (!mcClient.IsStopDataWrite() || (uiBytes != psBreakpoint->uiBytes))
+	{
+		pszDest->Append(mcClient.IsStopDataWrite() ? " written" : " read");
+		return;
+	}
+	bChanged = !psBreakpoint->bKnown || (memcmp(psBreakpoint->auiLast, auiNow, uiBytes) != 0);
+	if (bChanged && psBreakpoint->bKnown)
+	{
+		pszDest->Append(" changed from ");
+		AppendDataValue(psBreakpoint, psBreakpoint->auiLast, pszDest);
+		pszDest->Append(" to ");
+	}
+	else
+	{
+		pszDest->Append(bChanged ? " written (now " : " written (still ");
+	}
+	AppendDataValue(psBreakpoint, auiNow, pszDest);
+	if (!bChanged || !psBreakpoint->bKnown)
+	{
+		pszDest->Append(')');
+	}
+	memcpy(psBreakpoint->auiLast, auiNow, uiBytes);
+	psBreakpoint->bKnown = true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A data breakpoint's bytes as its value's type shows them (Locals' way),
+// or as an unsigned number.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDebugger::AppendDataValue(SIDEDataBreakpoint* psBreakpoint, uint8* auiBytes, CChars* pszDest)
+{
+	CIDEDebugMemory		cMemory;
+	CCPP65DebugValues	cValues;
+	SCPP65DebugValue	sValue;
+	uint64				uiValue;
+	size				i;
+
+	uiValue = 0;
+	for (i = 0; i < psBreakpoint->uiBytes; i++)
+	{
+		uiValue |= (uint64)auiBytes[i] << (8 * i);
+	}
+	if (psBreakpoint->pcRecords == NULL)
+	{
+		pszDest->Append(uiValue);
+		return;
+	}
+	cMemory.Init(this);
+	cValues.Init(&cMemory);
+	sValue.Init(psBreakpoint->pcRecords, psBreakpoint->uiType, uiValue);
+	cValues.Format(&sValue, pszDest);
+	cValues.Kill();
 }
 
 
@@ -1930,6 +2112,9 @@ CDebugClient* CIDEDebugger::GetClient(void) { return mbClient ? &mcClient : NULL
 char* CIDEDebugger::GetEmulator(void) { return mszEmulator.Text(); }
 size CIDEDebugger::NumBreakpoints(void) const { return masBreakpoints.NumElements(); }
 SIDEBreakpoint* CIDEDebugger::GetBreakpoint(size uiIndex) { return masBreakpoints.Get(uiIndex); }
+size CIDEDebugger::NumDataBreakpoints(void) const { return masDataBreakpoints.NumElements(); }
+uint32 CIDEDebugger::GetBreakpointSpace(void) const { return muiBreakpointSpace; }
+SIDEDataBreakpoint* CIDEDebugger::GetDataBreakpoint(size uiIndex) { return masDataBreakpoints.Get(uiIndex); }
 
 
 //////////////////////////////////////////////////////////////////////////

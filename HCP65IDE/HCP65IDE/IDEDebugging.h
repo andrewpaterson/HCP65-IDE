@@ -120,6 +120,9 @@ protected:
 	void				ShowStoppedLine(bool bWasStopped);
 	bool				IsDisassemblyFocussed(void);
 	bool				ShowNewBreakpointDialog(void);
+	bool				ShowNewDataBreakpointDialog(void);
+	bool				AddDataBreakpoint(const char* szWhere, uint32 uiBytes, bool bReads);
+	bool				CanWatch(void);
 	bool				ShowAttachDialog(void);
 	Ptr<CIDEDebugView>	GetDebugView(void) const;
 	void				DeleteAllBreakpoints(void);

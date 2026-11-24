@@ -73,6 +73,30 @@ struct SIDEBreakpoint
 typedef CArrayTemplate<SIDEBreakpoint>	CArrayIDEBreakpoints;
 
 
+#define IDE_DATA_BREAKPOINT_NAME	64
+
+//A data breakpoint (Break When Value Changes, New Data Breakpoint...): bytes the program stops after writing, or
+//reading too (bReads), in one of the emulator's spaces (and a process's there, or every one).  Kept until it is removed
+//or debugging stops.  Its value's type (pcRecords and uiType; NULL for a bare address) and its bytes when last known
+//(set, or at its last stop) say what changed.
+struct SIDEDataBreakpoint
+{
+	uint32				uiAddress;
+	uint32				uiBytes;
+	uint32				uiSpace;
+	uint32				uiProcess;
+	bool				bReads;
+	bool				bKnown;
+	uint8				auiLast[DEBUG_MAX_WATCH_BYTES];
+	CAsm65DebugRecords*	pcRecords;
+	uint32				uiType;
+	char				szName[IDE_DATA_BREAKPOINT_NAME];
+};
+
+
+typedef CArrayTemplate<SIDEDataBreakpoint>	CArrayIDEDataBreakpoints;
+
+
 //A breakpoint on a line of a source file (F9 in the editor), bound to where the line's code starts in the programs'
 //line tables: each place, or the next line's with code.  Until it is bound it has no addresses (uiBoundLine is 0).
 struct SIDESourceBreakpoint
@@ -168,6 +192,7 @@ protected:
 	size					muiSeenDisassemblies;
 	size					muiSeenErrors;
 	CArrayIDEBreakpoints	masBreakpoints;
+	CArrayIDEDataBreakpoints	masDataBreakpoints;
 	CArrayIDESourceBreakpoints	masSourceBreakpoints;
 	CAsm65DebugInfo			macDebugInfos[IDE_DEBUG_LINE_TABLES];	//Each program's line table and debug records (<program>.debug).
 	SIDELineTableTarget		masTableTargets[IDE_DEBUG_LINE_TABLES];	//Whose each table's breakpoints are.
@@ -206,6 +231,14 @@ public:
 	size					NumBreakpoints(void) const;
 	SIDEBreakpoint*			GetBreakpoint(size uiIndex);
 	SIDEBreakpoint*			FindBreakpoint(uint32 uiAddress);
+	SIDEDataBreakpoint*		AddDataBreakpoint(const char* szName, uint32 uiAddress, uint32 uiBytes, uint32 uiSpace, uint32 uiProcess, bool bReads);
+	SIDEDataBreakpoint*		FindDataBreakpoint(uint32 uiAddress, uint32 uiSpace);
+	void					RemoveDataBreakpoint(SIDEDataBreakpoint* psBreakpoint);
+	size					NumDataBreakpoints(void) const;
+	SIDEDataBreakpoint*		GetDataBreakpoint(size uiIndex);
+	bool					CanWatch(void);
+	uint32					GetSpaceProcess(EAsm65StackSpace eSpace);
+	uint32					GetBreakpointSpace(void) const;
 
 	void					ClearLineTables(void);
 	bool					AddLineTable(const char* szProgram, bool bOwnSpace);
@@ -253,6 +286,8 @@ protected:
 	void					Welcomed(void);
 	bool					LoadFile(const char* szFile, uint32 uiAddress);
 	void					Stopped(void);
+	void					AppendDataStop(CChars* pszDest);
+	void					AppendDataValue(SIDEDataBreakpoint* psBreakpoint, uint8* auiBytes, CChars* pszDest);
 	void					SendBreakpoints(void);
 	void					TellProcesses(CArrayChars* paszOutput);
 	void					TellModules(CArrayChars* paszOutput);

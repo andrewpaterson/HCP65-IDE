@@ -25,6 +25,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/MapStringString.h"
 #include "StandardLib/Object.h"
 #include "WindowLib/TreeTable.h"
+#include "WindowLib/MenuContainer.h"
 #include "IDEDebugStop.h"
 
 
@@ -38,7 +39,8 @@ typedef CArrayTemplate<SCPP65DebugValue>	CArrayIDEDebugValues;
 //down) from one showing to the next, and a value that isn't what it was at the stop before is red.
 //
 //A value typed into its Value cell is written (CIDEDebugStop::Write), and the owner told (the written event) to show
-//every window again.  A Watch's names are typed too (bWatch): a new expression in its empty last row, or one changed or
+//every window again.  Its context menu's Break When Value Changes puts a data breakpoint on the selected value, or
+//takes it off (CIDEDebugger::AddDataBreakpoint): a value in memory of 1 to 8 bytes.  A Watch's names are typed too (bWatch): a new expression in its empty last row, or one changed or
 //emptied (the renamed event: GetEditedRoot, GetEditedName), for its owner to keep.
 class CIDEValuesPane : public CObject
 {
@@ -46,6 +48,7 @@ CONSTRUCTABLE(CIDEValuesPane);
 DESTRUCTABLE(CIDEValuesPane);
 protected:
 	Ptr<CTreeTable>						mpTable;
+	Ptr<CMenuContainer>					mpMenu;
 	Ptr<CFont>							mpChangedFont;
 	CIDEDebugStop*						mpcStop;		//Not held: the debugger's.
 	bool								mbWatch;
@@ -75,6 +78,7 @@ public:
 	void								Poll(void);
 	bool								Open(const char* szPath);
 	bool								WriteValue(const char* szPath, const char* szText);
+	bool								ToggleDataBreakpoint(const char* szPath);
 	void								Print(CChars* pszDest);
 
 	Ptr<CComponent>						GetComponent(void) const;
@@ -92,6 +96,11 @@ protected:
 	int32								FindPath(const char* szPath);
 	void								Edited(CTreeTable* pcTable);
 	void								Expanded(CTreeContainer* pcTree, int32 iNode);
+	void								MenuOpening(CMenuContainer* pcMenu);
+	void								MenuItemClicked(CMenuItem* pcItem);
+	SCPP65DebugValue*					GetWatchable(int32 iNode);
+	bool								ToggleDataBreakpoint(int32 iNode);
+	void								AppendExpression(int32 iNode, CChars* pszDest);
 	void								PrintNode(int32 iNode, size uiDepth, CChars* pszDest);
 };
 

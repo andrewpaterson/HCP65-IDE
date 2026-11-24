@@ -122,11 +122,15 @@ public:
 	bool				IsHexadecimal(void);
 	CCPP65DebugValues*	GetValues(void);
 	CIDEDebugMemory*	GetMemory(void);
+	CIDEDebugger*		GetDebugger(void);
 
 	void				GetLocals(CIDEDebugRoots* pcRoots);
 	void				GetAutos(const char* szSource, CIDEDebugRoots* pcRoots);
 	void				Evaluate(const char* szExpression, SIDEDebugRoot* psRoot);
 	bool				Write(SCPP65DebugValue* psValue, const char* szText);
+	bool				CanWatch(SCPP65DebugValue* psValue);
+	SIDEDataBreakpoint*	FindDataBreakpoint(SCPP65DebugValue* psValue);
+	bool				AddDataBreakpoint(const char* szName, SCPP65DebugValue* psValue, bool bReads);
 
 protected:
 	void				Clear(void);

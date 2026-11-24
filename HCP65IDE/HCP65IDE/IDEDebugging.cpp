@@ -135,7 +135,7 @@ bool CIDEDebugging::Load(CObjectReader* pcFile) { return false; }
 
 //Debug's items, in order.
 const char*	gaszDebugMenu[] = { "Debug.Start", "Run.Start", "Debug.Stop", "Run.Stop", "Debug.Restart", "Debug.BreakAll", "Debug.Attach", "Debug.StepInto", "Debug.StepOver",
-							"Debug.StepOut", "Debug.ToggleBreakpoint", "Debug.NewBreakpoint", "Debug.DeleteBreakpoints", "Run.EditConfigurations", NULL };
+							"Debug.StepOut", "Debug.ToggleBreakpoint", "Debug.NewBreakpoint", "Debug.NewDataBreakpoint", "Debug.DeleteBreakpoints", "Run.EditConfigurations", NULL };
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -157,6 +157,7 @@ void CIDEDebugging::AddCommands(Ptr<CCommandSet> pCommands)
 	pCommands->Add("Debug.StepOut", "Step Out", "Shift+F11", pNoIcon, this, &CIDEDebugging::StepOut);
 	pCommands->Add("Debug.ToggleBreakpoint", "Toggle Breakpoint", "F9", pNoIcon, this, &CIDEDebugging::ToggleBreakpoint);
 	pCommands->Add("Debug.NewBreakpoint", "New Breakpoint at Address...", "", pNoIcon, this, &CIDEDebugging::ShowNewBreakpointDialog);
+	pCommands->Add("Debug.NewDataBreakpoint", "New Data Breakpoint...", "", pNoIcon, this, &CIDEDebugging::ShowNewDataBreakpointDialog)->SetEnabledCheck(this, &CIDEDebugging::CanWatch);
 	pCommands->Add("Debug.DeleteBreakpoints", "Delete All Breakpoints", "", pNoIcon, this, &CIDEDebugging::DeleteAllBreakpoints);
 	mpWindows->AddCommands(pCommands);
 }
@@ -767,6 +768,95 @@ bool CIDEDebugging::ShowNewBreakpointDialog(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// A data breakpoint, as Visual Studio's New Data Breakpoint: on what an
+// expression is in the frame shown ("gaiValues[2]", its own bytes), or at
+// an address ("$12:3400", the bytes chosen, in the breakpoints' space);
+// written, or read too.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEDebugging::ShowNewDataBreakpointDialog(void)
+{
+	static const char*	aszBytes[] = { "1", "2", "4", "8" };
+	Ptr<CComboBox>		pBytes;
+	Ptr<CCheckBox>		pReads;
+	CTextField*			pcWhere;
+	CChars				szWhere;
+	bool				bResult;
+
+	bResult = false;
+	mpDialog = OMalloc<CDialog>(mpcContent->GetWindow(), mpcContent->GetDialogLook(), "New Data Breakpoint");
+	pcWhere = &mpDialog->AddTextField("Address or expression", "");
+	pBytes = mpDialog->AddComboBox("Bytes at an address", aszBytes, 4, 0);
+	pReads = mpDialog->AddCheckBox("Stop when read too", false);
+	mpcContent->GetScript()->WatchDialog(mpDialog);
+	if (mpDialog->Show(IDE_DEBUG_DIALOG_WIDTH))
+	{
+		szWhere.Init(pcWhere->GetText());
+		szWhere.StripWhitespace();
+		bResult = AddDataBreakpoint(szWhere.Text(), (uint32)atoi(aszBytes[pBytes->GetSelected()]), pReads->IsTicked());
+		szWhere.Kill();
+	}
+	mpDialog = NULL;
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// New Data Breakpoint's work: at an address ("$" then hexadecimal, uiBytes
+// of it) or on an expression's value.  False, said in the status, if it
+// isn't one a data breakpoint can watch.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEDebugging::AddDataBreakpoint(const char* szWhere, uint32 uiBytes, bool bReads)
+{
+	SIDEDebugRoot	sRoot;
+	uint32			uiAddress;
+	char*			szEnd;
+	bool			bResult;
+	CChars			szName;
+
+	if (szWhere[0] == '$')
+	{
+		uiAddress = (uint32)strtoul(&szWhere[1], &szEnd, 16);
+		if ((szWhere[1] == '\0') || (*szEnd != '\0'))
+		{
+			mpcContent->ShowStatus("A data breakpoint's address is $ and hexadecimal.");
+			return false;
+		}
+		szName.Init();
+		mcDebugger.GetClient()->AppendAddress(&szName, uiAddress);
+		mcDebugger.AddDataBreakpoint(szName.Text(), uiAddress, uiBytes, mcDebugger.GetBreakpointSpace(), DEBUG_PROCESS_ANY, bReads);
+		szName.Kill();
+		return true;
+	}
+
+	sRoot.szName.Init(szWhere);
+	sRoot.szError.Init();
+	mpWindows->GetStop()->Evaluate(szWhere, &sRoot);
+	bResult = sRoot.bValue && mpWindows->GetStop()->AddDataBreakpoint(szWhere, &sRoot.sValue, bReads);
+	if (!bResult)
+	{
+		mpcContent->ShowStatus("A data breakpoint watches 1 to 8 bytes in memory: not that.");
+	}
+	sRoot.szError.Kill();
+	sRoot.szName.Kill();
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEDebugging::CanWatch(void)
+{
+	return mcDebugger.CanWatch();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Asks for the port an emulator started with --debug-tcp printed.
 //
 //////////////////////////////////////////////////////////////////////////
@@ -877,9 +967,10 @@ void CIDEDebugging::UpdateDebugView(bool bKeepCaret)
 // wait:<milliseconds>, printbreakpoints (each source breakpoint, the line
 // it is bound to and its addresses), printstopped (whether it is
 // stopped, the program address as the target writes it and the source
-// line shown), and the debugger's windows' (RunWindowsScript).  Each but
-// bp, buildtab, line, built, answered, wait, the prints and the windows'
-// waits for the debugger to be stopped (or not debugging, for start).
+// line shown, then the Debug tab's status), and the debugger's windows'
+// (RunWindowsScript).  Each but bp, buildtab, line, built, answered,
+// wait, the prints and the windows' waits for the debugger to be stopped
+// (or not debugging, for start).
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEDebugging::SetDebugScript(const char* szCommands)
@@ -998,6 +1089,14 @@ bool CIDEDebugging::RunWindowsScript(const char* szCommand)
 			printf("Not written: %s = %s\n", aszParts.GetText(2), aszParts.GetText(3));
 		}
 	}
+	else if ((aszParts.NumElements() == 3) && (strcmp(aszParts.GetText(0), "databreak") == 0))
+	{
+		pPane = mpWindows->GetPane(aszParts.GetText(1));
+		if (pPane.IsNull() || !pPane->ToggleDataBreakpoint(aszParts.GetText(2)))
+		{
+			printf("No data breakpoint: %s\n", aszParts.GetText(2));
+		}
+	}
 	else if (strcmp(szCommand, "hex") == 0)
 	{
 		mpWindows->ToggleHexadecimal();
@@ -1104,6 +1203,7 @@ void CIDEDebugging::RunDebugScript(void)
 		szAddress.Init();
 		mcDebugger.AppendAddress(&szAddress, mcDebugger.GetProgramAddress());
 		printf("Stopped: %s, %s, %s:%u\n", mcDebugger.IsStopped() ? "yes" : "no", szAddress.Text(), mszStoppedFile.Text(), (unsigned int)muiStoppedLine);
+		printf("Debug status: %s\n", mcDebugger.GetStatus());
 		fflush(stdout);
 		szAddress.Kill();
 		bDone = true;

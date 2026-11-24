@@ -27,6 +27,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define IDE_VALUES_TYPE_WIDTH	140
 #define IDE_VALUES_COLUMNS		3		//Name, Value and Type.
 #define IDE_VALUES_SEPARATOR	'/'		//Between the names of a value's path.
+#define IDE_VALUES_BREAK_WHEN_CHANGED	1	//The context menu's item.
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -62,6 +63,10 @@ void CIDEValuesPane::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CF
 	mpTable->AddColumn("Type", IDE_VALUES_TYPE_WIDTH);
 	mpTable->GetEditEvent()->Add(this, &CIDEValuesPane::Edited);
 	mpTable->GetTree()->GetExpandedEvent()->Add(this, &CIDEValuesPane::Expanded);
+	mpMenu = OMalloc<CMenuContainer>(pWindow, pTheme);
+	mpMenu->GetOpeningEvent()->Add(this, &CIDEValuesPane::MenuOpening);
+	mpMenu->GetItemClickEvent()->Add(this, &CIDEValuesPane::MenuItemClicked);
+	mpTable->SetContextMenu(mpMenu);
 	if (mbWatch)
 	{
 		Rebuild();
@@ -77,6 +82,7 @@ void CIDEValuesPane::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CF
 void CIDEValuesPane::Class(void)
 {
 	M_Pointer(mpTable);
+	M_Pointer(mpMenu);
 	M_Pointer(mpChangedFont);
 	U_Pointer(mpcStop);
 	U_Bool(mbWatch);
@@ -108,6 +114,8 @@ void CIDEValuesPane::Free(void)
 {
 	mpTable->GetEditEvent()->Remove(this);
 	mpTable->GetTree()->GetExpandedEvent()->Remove(this);
+	mpMenu->GetOpeningEvent()->Remove(this);
+	mpMenu->GetItemClickEvent()->Remove(this);
 	mcRenamed.Kill();
 	mcWritten.Kill();
 	mszEditedName.Kill();
@@ -198,6 +206,128 @@ bool CIDEValuesPane::WriteValue(const char* szPath, const char* szText)
 	}
 	mcWritten.Call(this);
 	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Break When Value Changes on the value at szPath, as its context menu
+// does: a data breakpoint put on it, or taken off.  False if it can't be.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEValuesPane::ToggleDataBreakpoint(const char* szPath)
+{
+	return ToggleDataBreakpoint(FindPath(szPath));
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The node's value if a data breakpoint can watch it, NULL if not.
+//
+//////////////////////////////////////////////////////////////////////////
+SCPP65DebugValue* CIDEValuesPane::GetWatchable(int32 iNode)
+{
+	if ((iNode < 0) || ((size)iNode >= masValues.NumElements()) || !mpcStop->CanWatch(masValues.Get(iNode)))
+	{
+		return NULL;
+	}
+	return masValues.Get(iNode);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A data breakpoint on the node's value, named as C++ writes it; or the
+// one there taken off.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEValuesPane::ToggleDataBreakpoint(int32 iNode)
+{
+	SCPP65DebugValue*	psValue;
+	SIDEDataBreakpoint*	psBreakpoint;
+	CChars				szName;
+	bool				bResult;
+
+	psValue = GetWatchable(iNode);
+	if (psValue == NULL)
+	{
+		return false;
+	}
+	psBreakpoint = mpcStop->FindDataBreakpoint(psValue);
+	if (psBreakpoint)
+	{
+		mpcStop->GetDebugger()->RemoveDataBreakpoint(psBreakpoint);
+		return true;
+	}
+	szName.Init();
+	AppendExpression(iNode, &szName);
+	bResult = mpcStop->AddDataBreakpoint(szName.Text(), psValue, false);
+	szName.Kill();
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The node's value as an expression: its path's names joined as C++ joins
+// a member ("cCounter.miCount") or an element ("gaiValues[2]").
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEValuesPane::AppendExpression(int32 iNode, CChars* pszDest)
+{
+	const char*	szPath;
+
+	szPath = maszPaths.GetText(iNode);
+	while (*szPath != '\0')
+	{
+		if (*szPath == IDE_VALUES_SEPARATOR)
+		{
+			if (szPath[1] != '[')
+			{
+				pszDest->Append('.');
+			}
+		}
+		else
+		{
+			pszDest->Append(*szPath);
+		}
+		szPath++;
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Break When Value Changes, for the selected value if it can be watched;
+// Remove Data Breakpoint if it has one.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEValuesPane::MenuOpening(CMenuContainer* pcMenu)
+{
+	SCPP65DebugValue*	psValue;
+	bool				bWatched;
+	Ptr<CMenuItem>		pItem;
+
+	psValue = GetWatchable(mpTable->GetTree()->GetSelectedNode());
+	bWatched = psValue && mpcStop->FindDataBreakpoint(psValue);
+	mpMenu->RemoveAllItems();
+	pItem = mpMenu->AddItem(bWatched ? "Remove Data Breakpoint" : "Break When Value Changes");
+	pItem->SetTag(IDE_VALUES_BREAK_WHEN_CHANGED);
+	pItem->SetEnabled(psValue != NULL);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEValuesPane::MenuItemClicked(CMenuItem* pcItem)
+{
+	if (pcItem->GetTag() == IDE_VALUES_BREAK_WHEN_CHANGED)
+	{
+		ToggleDataBreakpoint(mpTable->GetTree()->GetSelectedNode());
+	}
 }
 
 

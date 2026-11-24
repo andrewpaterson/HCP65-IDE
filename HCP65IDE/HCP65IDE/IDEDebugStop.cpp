@@ -475,6 +475,71 @@ void CIDEDebugStop::Evaluate(const char* szExpression, SIDEDebugRoot* psRoot)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Whether a data breakpoint can watch the value: in memory, 1 to 8 bytes,
+// and the emulator takes data breakpoints.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEDebugStop::CanWatch(SCPP65DebugValue* psValue)
+{
+	SAsm65DebugType*	psType;
+
+	if (!psValue->pcRecords || !psValue->bInMemory || (psValue->uiArrayCount != 0) || !mpcDebugger->CanWatch())
+	{
+		return false;
+	}
+	psType = psValue->pcRecords->GetType(psValue->uiType);
+	return psType && (psType->uiBytes != 0) && (psType->uiBytes <= DEBUG_MAX_WATCH_BYTES);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The data breakpoint on the value, NULL if none.
+//
+//////////////////////////////////////////////////////////////////////////
+SIDEDataBreakpoint* CIDEDebugStop::FindDataBreakpoint(SCPP65DebugValue* psValue)
+{
+	return mpcDebugger->FindDataBreakpoint(psValue->uiAddress, mpcDebugger->GetStackSpace((EAsm65StackSpace)psValue->uiSpace));
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A data breakpoint on the value (CanWatch), named szName, in its space
+// and its process there, with its type and its bytes as they are now (if
+// they have been read).
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEDebugStop::AddDataBreakpoint(const char* szName, SCPP65DebugValue* psValue, bool bReads)
+{
+	SIDEDataBreakpoint*	psBreakpoint;
+	EAsm65StackSpace	eSpace;
+	uint64				uiNow;
+	size				i;
+
+	if (!CanWatch(psValue))
+	{
+		return false;
+	}
+	eSpace = (EAsm65StackSpace)psValue->uiSpace;
+	psBreakpoint = mpcDebugger->AddDataBreakpoint(szName, psValue->uiAddress, psValue->pcRecords->GetType(psValue->uiType)->uiBytes, mpcDebugger->GetStackSpace(eSpace),
+												  mpcDebugger->GetSpaceProcess(eSpace), bReads);
+	psBreakpoint->pcRecords = psValue->pcRecords;
+	psBreakpoint->uiType = psValue->uiType;
+	if (mcValues.Read(psValue, &uiNow))
+	{
+		for (i = 0; i < psBreakpoint->uiBytes; i++)
+		{
+			psBreakpoint->auiLast[i] = (uint8)(uiNow >> (8 * i));
+		}
+		psBreakpoint->bKnown = true;
+	}
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // szText typed into the value's Value: written, if it is one it can be.
 // The windows show what is read back.
 //
@@ -525,3 +590,4 @@ SAsm65StackFrame* CIDEDebugStop::GetSelected(void) { return masFrames.SafeGet(mu
 bool CIDEDebugStop::IsHexadecimal(void) { return mbHexadecimal; }
 CCPP65DebugValues* CIDEDebugStop::GetValues(void) { return &mcValues; }
 CIDEDebugMemory* CIDEDebugStop::GetMemory(void) { return &mcMemory; }
+CIDEDebugger* CIDEDebugStop::GetDebugger(void) { return mpcDebugger; }
