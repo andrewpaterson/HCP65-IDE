@@ -287,10 +287,11 @@ def DebuggingChecks(P):
 		[r'^Call Stack:$', r'^=> ' + P['MODULE'] + r'!Sum\(.*\) Line 39 \[inlined\]$', r'^   ' + P['MODULE'] + r'!main\(\) Line 53$',
 		 r'^Stopped: yes, .*Debugging\.cpp:5[34]$', r'^Call Stack:$', r'^=> ' + P['MODULE'] + r'!main\(\) Line 5[34]$'], [r'\?\?\?']),
 	('debug-inlined-step-over' + P['SUFFIX'], MakeDebugging(P, 'line:39,start,stopped,wait:1500,line:39,over,stopped,wait:1500,printstopped,over,stopped,wait:1500,printstopped,printcallstack', P['RELEASE']),
-		#Built optimised, stopped in Sum's first call, inlined into main: Step Over to line 40 (a Sum the recursion is in,
-		#as line ranges in every place a line is step), then over line 40 with CCounter::Add inlined into it
-		#(DebuggerFPlan.txt F2-5), to line 41: never in Add.
-		[r'^Stopped: yes, .*Debugging\.cpp:40$', r'^Stopped: yes, .*Debugging\.cpp:41$', r'^Call Stack:$', r'^=> ' + P['MODULE'] + r'!Sum\(.*\) Line 41( \[inlined\])?$'],
+		#Built optimised, stopped in Sum's first call, inlined into main: Step Over line 39, its call of Sum run to its end
+		#(the recursion runs line 39 again: DebuggerFixesPlan.txt G2), then over line 40 with CCounter::Add inlined into
+		#it (DebuggerFPlan.txt F2-5), to line 41 of the same inlined call: never in Add.
+		[r'^Stopped: yes, .*Debugging\.cpp:40$', r'^Stopped: yes, .*Debugging\.cpp:41$', r'^Call Stack:$', r'^=> ' + P['MODULE'] + r'!Sum\(.*\) Line 41 \[inlined\]$',
+		 r'^   ' + P['MODULE'] + r'!main\(\) Line 53$'],
 		[r'\?\?\?', r'Debugging\.cpp:2[78]$']),
 	('debug-optimised' + P['SUFFIX'], MakeDebugging(P, 'line:39,start,stopped,wait:1500,printcallstack,continue,stopped,wait:1500,printcallstack,line:39,line:54,continue,stopped,wait:1500,printstopped,print:Locals', P['RELEASE']),
 		#Built optimised, Sum's first call inlined into main (which the optimiser may choose otherwise): it is a row of
