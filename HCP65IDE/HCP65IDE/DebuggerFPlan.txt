@@ -248,6 +248,11 @@ Decided (2026-11-24, the user's):
   9. A data breakpoint on a local stays set until removed or debugging stops, after its frame returns too ("Stays until
      removed (Recommended)"); the stop message gives the address as well as the variable.
 
+  10. F1 is built with full debug value markers in the IR (2026-11-24, "We're going to do full markers"), not only the
+      single-value subset (parameters, this, locals assigned once, kept by a side table the replacements update).
+      Found before deciding: the passes read instruction arguments directly in about 40 files (938 places), so the
+      marker's "not a use" rule must hold in each, with the code unchanged by a byte (the listings compared).
+
 Every question is decided (5 and 6 aren't asked: F4 isn't built).  The user said to build it on 2026-11-24 ("Go for
 it, the whole plan F.  Clean-up and commit as you go.  Keep things neat and tidy.").
 
