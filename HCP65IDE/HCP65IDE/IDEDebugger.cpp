@@ -28,6 +28,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/StringHelper.h"
 #include "BaseLib/XMLFile.h"
 #include "BaseLib/XMLWriter.h"
+#include "EmulatorDebugLib/W65C816DebugRegisters.h"
 #include "EmulatorDebugLib/DebugLaunch.h"
 #include "IDEDebugger.h"
 
@@ -49,6 +50,7 @@ static size	guiIDEDebugChannels = 0;
 //////////////////////////////////////////////////////////////////////////
 static void IDEInitTableTarget(SIDELineTableTarget* psTarget)
 {
+	psTarget->szProgram.Init();
 	psTarget->bOwn = false;
 	psTarget->szSpace.Init();
 	psTarget->szProcess.Init();
@@ -64,6 +66,7 @@ static void IDEInitTableTarget(SIDELineTableTarget* psTarget)
 //////////////////////////////////////////////////////////////////////////
 static void IDEClearTableTarget(SIDELineTableTarget* psTarget)
 {
+	psTarget->szProgram.Clear();
 	psTarget->bOwn = false;
 	psTarget->szSpace.Clear();
 	psTarget->szProcess.Clear();
@@ -82,6 +85,7 @@ static void IDEKillTableTarget(SIDELineTableTarget* psTarget)
 	psTarget->szModule.Kill();
 	psTarget->szProcess.Kill();
 	psTarget->szSpace.Kill();
+	psTarget->szProgram.Kill();
 }
 
 
@@ -959,7 +963,6 @@ bool CIDEDebugger::AddModuleLineTable(const char* szProgram, const char* szSpace
 	{
 		return false;
 	}
-	IDEClearTableTarget(&masTableTargets[muiLineTables]);
 	masTableTargets[muiLineTables].szSpace.Set(szSpace ? szSpace : "");
 	masTableTargets[muiLineTables].szModule.Set(szModule);
 	muiLineTables++;
@@ -972,13 +975,16 @@ bool CIDEDebugger::AddModuleLineTable(const char* szProgram, const char* szSpace
 //////////////////////////////////////////////////////////////////////////
 //
 // The next table read from beside szProgram (<program>.debug), not yet
-// counted.  False if there is none or there are too many.
+// counted, its target cleared but for the program's name.  False if
+// there is none or there are too many.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEDebugger::ReadLineTable(const char* szProgram)
 {
-	CChars	szFile;
-	bool	bResult;
+	CFileUtil	cFileUtil;
+	CChars		szFile;
+	CChars		szDirectory;
+	bool		bResult;
 
 	if (muiLineTables >= IDE_DEBUG_LINE_TABLES)
 	{
@@ -987,6 +993,10 @@ bool CIDEDebugger::ReadLineTable(const char* szProgram)
 	szFile.Init(szProgram);
 	szFile.Append(ASM65_DEBUG_INFO_EXTENSION);
 	bResult = macDebugInfos[muiLineTables].ReadFile(szFile.Text());
+	IDEClearTableTarget(&masTableTargets[muiLineTables]);
+	szDirectory.Init();
+	cFileUtil.SplitPath(szProgram, &masTableTargets[muiLineTables].szProgram, &szDirectory);
+	szDirectory.Kill();
 	szFile.Kill();
 	return bResult;
 }
@@ -1142,6 +1152,149 @@ bool CIDEDebugger::FindSourceLine(uint32 uiAddress, CChars* pszFile, uint32* pui
 		}
 	}
 	return false;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The debug records of the programs running where the emulator stopped,
+// each in the memory it runs in, for a stack walk: a kernal's (every
+// space's, or kernel mode's) in kernel mode's, and in user mode's those of
+// the process whose memory that is now (SDebugStopped::uiUserProcess), as
+// a walk from a kernal call goes on into the process that made it.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDebugger::AddStackRecords(CAsm65StackWalker* pcWalker)
+{
+	size	ui;
+	uint32	uiOwnProcess;
+	uint32	uiSpace;
+	uint32	uiProcess;
+	bool	bOwnRunning;
+
+	bOwnRunning = GetOwnProcess(&uiOwnProcess);
+	for (ui = 0; mbClient && (ui < muiLineTables); ui++)
+	{
+		if (!IsTableLoaded(ui) || !GetTableTarget(ui, bOwnRunning, uiOwnProcess, &uiSpace, &uiProcess))
+		{
+			continue;
+		}
+		if ((uiSpace == DEBUG_SPACE_ANY) || (uiSpace != GetStackSpace(ASS_User)))
+		{
+			pcWalker->AddRecords(macDebugInfos[ui].GetRecords(), ASS_Kernel);
+		}
+		else if ((uiProcess == DEBUG_PROCESS_ANY) || (mcClient.GetStopUserProcess() == DEBUG_PROCESS_ANY) || (uiProcess == mcClient.GetStopUserProcess()))
+		{
+			pcWalker->AddRecords(macDebugInfos[ui].GetRecords(), ASS_User);
+		}
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The W65C816's registers at the stop, and the memory it was running in,
+// for a stack walk.  False if it isn't stopped, or isn't a W65C816.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEDebugger::GetStackRegisters(SAsm65StackRegisters* psRegisters)
+{
+	if (!IsStopped() || (StringCompare(mcClient.GetProcessorName(), "W65C816") != 0) || (mcClient.NumRegisters() < DW65C816R_NumRegisters))
+	{
+		return false;
+	}
+	psRegisters->uiPC = (uint32)((mcClient.GetRegisterValue(DW65C816R_PBR) << 16) | mcClient.GetRegisterValue(DW65C816R_PC));
+	psRegisters->uiS = (uint16)mcClient.GetRegisterValue(DW65C816R_S);
+	psRegisters->uiD = (uint16)mcClient.GetRegisterValue(DW65C816R_D);
+	psRegisters->uiC = (uint16)mcClient.GetRegisterValue(DW65C816R_C);
+	psRegisters->uiX = (uint16)mcClient.GetRegisterValue(DW65C816R_X);
+	psRegisters->uiY = (uint16)mcClient.GetRegisterValue(DW65C816R_Y);
+	psRegisters->uiP = (uint8)mcClient.GetRegisterValue(DW65C816R_P);
+	psRegisters->uiSpace = (uint8)(((mcClient.GetStopSpace() != DEBUG_SPACE_ANY) && (mcClient.GetStopSpace() == GetStackSpace(ASS_User))) ? ASS_User : ASS_Kernel);
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The emulator's space (its index plus one) that is a stack walk's
+// kernel or user mode memory: the one named "Kernel" or "User", as the
+// HCP65 names them; DEBUG_SPACE_ANY if it hasn't one (a computer without
+// a user mode).
+//
+//////////////////////////////////////////////////////////////////////////
+uint32 CIDEDebugger::GetStackSpace(EAsm65StackSpace eSpace)
+{
+	uint32	uiSpace;
+
+	if (!mbClient || !mcClient.FindBreakpointSpace((eSpace == ASS_User) ? IDE_USER_SPACE : IDE_KERNEL_SPACE, &uiSpace))
+	{
+		return DEBUG_SPACE_ANY;
+	}
+	return uiSpace;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The source line a frame of a stack walk is at (the first frame,
+// bInnermost, where it stopped; a caller, its call), from its program's
+// line table.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEDebugger::FindFrameLine(SAsm65StackFrame* psFrame, bool bInnermost, CChars* pszFile, uint32* puiLine)
+{
+	size				uiTable;
+	SAsm65LineEntry*	psLine;
+
+	uiTable = FindRecordsTable(psFrame->pcRecords);
+	if (uiTable == muiLineTables)
+	{
+		return bInnermost && FindSourceLine(psFrame->uiPC, pszFile, puiLine);
+	}
+	psLine = macDebugInfos[uiTable].GetLines()->FindLine(psFrame->GetLineAddress(bInnermost));
+	if (!psLine)
+	{
+		return false;
+	}
+	pszFile->Set(macDebugInfos[uiTable].GetLines()->GetFile(psLine->uiFile));
+	*puiLine = psLine->uiLine;
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The file name of the program whose records these are ("modplay.exe"),
+// "" if they aren't a line table's.
+//
+//////////////////////////////////////////////////////////////////////////
+const char* CIDEDebugger::GetProgramName(CAsm65DebugRecords* pcRecords)
+{
+	size	uiTable;
+
+	uiTable = FindRecordsTable(pcRecords);
+	return (uiTable < muiLineTables) ? masTableTargets[uiTable].szProgram.Text() : "";
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The line table whose debug records these are, muiLineTables if none.
+//
+//////////////////////////////////////////////////////////////////////////
+size CIDEDebugger::FindRecordsTable(CAsm65DebugRecords* pcRecords)
+{
+	size	ui;
+
+	for (ui = 0; ui < muiLineTables; ui++)
+	{
+		if (pcRecords && (macDebugInfos[ui].GetRecords() == pcRecords))
+		{
+			return ui;
+		}
+	}
+	return muiLineTables;
 }
 
 

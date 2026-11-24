@@ -31,10 +31,15 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "ThreadLib/SharedMemoryChannel.h"
 #include "EmulatorDebugLib/DebugClient.h"
 #include "Assembler65Lib/Asm65DebugInfo.h"
+#include "Assembler65Lib/Asm65StackWalker.h"
 
 
 #define IDE_USER_SETTINGS_TAG	"UserSettings"	//The root of the per-user file beside the solution (<solution>.hcp65user).
 #define IDE_BREAKPOINT_TAG		"Breakpoint"
+
+//The emulator's spaces that are a stack walk's kernel and user mode memory (EAsm65StackSpace), as the HCP65 names them.
+#define IDE_KERNEL_SPACE		"Kernel"
+#define IDE_USER_SPACE			"User"
 
 
 #define IDE_DEBUG_DISASSEMBLY	24		//The instructions shown from the program address.
@@ -91,6 +96,7 @@ typedef CArrayTemplate<SIDESourceBreakpoint>	CArrayIDESourceBreakpoints;
 //loaded with the program).
 struct SIDELineTableTarget
 {
+	CChars	szProgram;		//The program's file name ("modplay.exe"), as the Call Stack names it.
 	bool	bOwn;
 	CChars	szSpace;
 	CChars	szProcess;
@@ -209,6 +215,11 @@ public:
 	CAsm65LineTable*		GetLineTable(size uiIndex);
 	CAsm65DebugInfo*		GetDebugInfo(size uiIndex);
 	bool					FindSourceLine(uint32 uiAddress, CChars* pszFile, uint32* puiLine);
+	void					AddStackRecords(CAsm65StackWalker* pcWalker);
+	bool					GetStackRegisters(SAsm65StackRegisters* psRegisters);
+	uint32					GetStackSpace(EAsm65StackSpace eSpace);
+	bool					FindFrameLine(SAsm65StackFrame* psFrame, bool bInnermost, CChars* pszFile, uint32* puiLine);
+	const char*				GetProgramName(CAsm65DebugRecords* pcRecords);
 	bool					ToggleSourceBreakpoint(const char* szFile, uint32 uiLine);
 	SIDESourceBreakpoint*	AddSourceBreakpoint(const char* szFile, uint32 uiLine, bool bEnabled);
 	SIDESourceBreakpoint*	FindSourceBreakpoint(const char* szFile, uint32 uiLine);
@@ -237,6 +248,7 @@ protected:
 	bool					IsTableLoaded(size uiTable);
 	void					MoveModuleTables(void);
 	size					GetTableRank(size uiTable);
+	size					FindRecordsTable(CAsm65DebugRecords* pcRecords);
 	void					Welcomed(void);
 	bool					LoadFile(const char* szFile, uint32 uiAddress);
 	void					Stopped(void);
