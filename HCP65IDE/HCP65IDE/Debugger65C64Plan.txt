@@ -70,10 +70,7 @@ A. The compiler describes 65C64 frames and variables (CppCompilerLib's 65C64 bac
       shape's .dframe: framed, bHomeV, frameless).
 
 B. Walking a 65C64 stack (Assembler65Lib)
-  B1. CAsm65StackWalker is split (decision 2): what isn't the processor's stays (the records added for a space,
-      finding a function, the Walk loop, Locate), and each processor's walker gives its caller from its registers
-      and memory: CAsmW65C816StackWalker (today's code, moved) and CAsm65C64StackWalker.  The registers it starts
-      from become the processor's too (SAsm65StackRegisters holds both, or each walker its own).
+  B1. The walker split by processor (decision 2; planned in detail below, "The stack walker split").
   B2. CAsm65C64StackWalker, the same way in Debug and Release: a framed function's caller by its link from V; one
       whose frame isn't made yet (or that makes none, or keeps V as a value) by following its instructions from its
       start to its PC, S's distance below its entry S and the copies of S in registers, as the W65C816's Entering
@@ -86,6 +83,49 @@ B. Walking a 65C64 stack (Assembler65Lib)
       once (none may be wrong).  Kept as a test that runs (TEST_CPP65_WALK_ALL or a part of the suite), not a one
       off: other sessions change the 65C64 back end's registers, and a change that saves V somewhere new or leaves S
       uneven across a branch must fail a test, not a debugging session.
+
+The stack walker split (B1, planned 2026-11-24)
+  What it is now (HCP65/Libraries/Assembler65Lib/Asm65StackWalker.cpp, 713 lines): CAsm65StackWalker holds the
+  records added for each space (AddRecords), finds a PC's function (Find), runs the walk (Walk: the innermost frame,
+  then each caller until one isn't found or isn't above its callee on the same stack), and finds a variable (Locate).
+  Those know nothing of the W65C816 but two things: Locate's frame place is 16 bits (bank 0) and an indirect
+  variable's pointer is 3 bytes.  The rest is the W65C816's: Caller and its three ways (Entering, the sweep from the
+  start; Returning, the sweep to the rtl; Linked, by .dframe from D), ReturnTo (jsl, jsr or an interrupt, P pushed),
+  the indirect call rule, and its instruction decoding (opcode defines, widths).  SAsm65StackFrame and
+  SAsm65StackRegisters are 16 bit (uiS, uiD) and the registers are the W65C816's (C, X, Y, P; Init from a
+  CFastW65C816).  CAsmW65C816FrameCheck, the oracle, is the W65C816's and compares a walk's PC, S and D.
+  Its users: CCPP65DebugValues and CCPP65DebugWatch (through the base: Locate only), CIDEDebugStop (embeds one),
+  TestAsm65StackWalker(Interrupts), TestCPPW65C816Debug and TestHCP65Kernal's Walk (each embeds one and its
+  registers).
+
+  S1. The frame and registers become any processor's, and nothing else changes: SAsm65StackFrame's uiS is 32 bits and
+      uiD becomes uiFrame, the frame register's value (D on the W65C816, V on the 65C64); SAsm65StackRegisters keeps
+      uiPC, uiS, uiFrame and uiSpace, and the registers the processor's sweep follows go in an array by the
+      processor's own names (EAsmW65C816StackRegister: C, X, Y, P; the 65C64's later: A, B, X, Y, W, P), with an
+      Init for each processor's fast core.  EAsm65DebugLink's words say "frame register" for D.  The users change
+      their uiD to uiFrame; CAsmW65C816FrameCheck::WrongFrame compares uiFrame.
+  S2. The split: CAsm65StackWalker keeps Init, Kill, AddRecords, Walk, Find and Locate, and asks the processor's walker
+      for its caller (Caller, pure virtual) and for the two things Locate needs (the frame place's address, wrapped
+      as its processor wraps it, and a pointer's bytes: virtual FramePlace and PointerBytes).  The W65C816's code
+      moves unchanged to CAsmW65C816StackWalker (AsmW65C816StackWalker.h/.cpp, beside CAsmW65C816FrameCheck, as the
+      Assembler65Lib's W65C816 classes are named): Caller, Entering, Returning, Linked, ReturnTo, IsIndirectCall,
+      ReadWord, Instruction and the opcode defines.  A move, not a rewrite: the diff of the moved functions is empty
+      but for their class name.
+  S3. Who makes which: each user names the class it needs (the tests and the kernal's Walk test are the
+      W65C816's); CIDEDebugStop holds a pointer made for the processor the emulator says it is (the name
+      CIDEDebugger::GetStackRegisters already checks), by one function in Assembler65Lib that maps a processor's name
+      to its walker (NewAsm65StackWalker: "W65C816" now, "65C64" in B2), NULL for one without.  CCPP65DebugValues
+      and CCPP65DebugWatch keep taking the base.
+  S4. A test that the base is no processor's: TestAsm65StackWalkerBase walks a made up processor's stack (frames
+      linked by a frame register, its Caller a few lines in the test), with Locate's place and pointer from it.
+  S5. Checked: TestAssembler65Lib (TestAsm65StackWalker, TestAsm65StackWalkerInterrupts, the new base test),
+      TestCPPW65C816Debug, TestHCP65Kernal's Walk, the IDE's debug-* checks; the IDE and the emulator build.  The
+      W65C816's walks are the same frame for frame.
+  The frame check is split when the 65C64's is written (B3), not before: a base for the calls followed, WrongFrame and
+  the writes reported, and each processor's decoding of calls and returns.  Splitting it now would make a base with
+  one user.
+  Can be built before the machine is chosen (decision 1): it touches no emulator, and changes no walk.
+
 
 C. Values and watches on the 65C64 (CppCompilerLib)
   C1. CCPP65DebugValues takes the address width and the vtable layout from the records' processor; Result reads A
@@ -121,7 +161,14 @@ for it (A, B2).  It replaced the first draft's question 2 (Debug builds keeping 
      tests have (memory and the host file device, so printf works), as a small console emulator the IDE starts.
      The other way is to wait for a 65C64 computer to be modelled, with its own boards, which nothing plans yet.
   2. One walker split by processor (a shared base, each processor's caller finding its own) rather than a second
-     walker beside the first.  I recommend the split: records, Locate and the walk loop are the same for both.
+     walker beside the first.  I recommend the split (planned in "The stack walker split"): records, Locate and the
+     walk loop are the same for both.
+  2a. The split as a base class with a walker per processor (S2), or one walker holding a processor part it calls
+     (composition).  I recommend the base class: only Caller and two small facts of Locate differ, and a
+     processor part would be the same virtual functions behind one more object.
+  2b. When to build the split: now, on its own (it changes no walk, S4 proves the base needs no processor), or as
+     the first step of B once the machine is chosen.  I recommend with B: on its own it only moves code, and the
+     65C64 walker is what shows whether the base is right.
   3. Where the emulator lives: the HCP65 repository beside HCP65-Emulator (it needs Assembler65Lib's host file
      device, which is there), or CommonLibraries beside EmulatorDebugLib.  I recommend HCP65.
 
