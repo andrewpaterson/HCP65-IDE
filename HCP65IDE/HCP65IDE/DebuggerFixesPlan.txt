@@ -136,6 +136,15 @@ string made for every variable before every instruction run); the rest, mostly t
 The user (2026-11-24) chose to speed them up first: one marker pass for both kinds, places made only when a variable's
 value changes, the 65C64's liveness used again; measured again the same way.
 
+After the speed-up (CommonLibraries 74f3583a0, with G4 and G6 in), measured the same way:
+
+                         markers on       markers off      cost
+  Kernal instructions    483.2 G          447.4 G          +8.0%
+  Kernal clock           10.68-10.89 s    10.02-10.17 s    +6.5%
+  ModPlay clock          26.61-26.80 s    25.00-25.39 s    +5.3%
+  Kernal .debug          1,306,045        1,071,965        +21.8%   (G4's values are in it now)
+  ModPlay .debug         5,081,712        4,102,950        +23.9%
+
 
 Order and size
 --------------
@@ -156,4 +165,17 @@ Questions
   3. F1-M: measure markers' cost now?  Recommendation: yes, before G4 (which adds more debug records).  DECIDED:
      measure first.
 
-Every question is decided.  Nothing is built until the user says so.
+Every question is decided.
+
+
+What is built (2026-11-24)
+--------------------------
+
+All of it.  G1: HCP65 6b54a84, CommonLibraries fc8ed392d.  G2: CommonLibraries f3fb1feee, HCP65-IDE 19155f2.  G3: HCP65
+f35bafe, CommonLibraries 2de17e0cb.  F1-M: above (the speed-up CommonLibraries 74f3583a0).  G4 and G6: HCP65 241a5ad,
+CommonLibraries de27ae984, HCP65-IDE f63e712.  G5: HCP65-IDE 1363f12.
+  - Each fix's test fails without it (checked by building the test against the old code): G1's walk check (111 calls
+    without a frame address), G2's recursion (stopped three calls deep), G3's epilogue (read main's local).
+  - Differences from the plan: G4's address place is "frameaddress" (a word: the assembler reads frame-address as
+    three tokens); a value's address error stays "Only something in memory has an address"; G5's Step Over at the
+    call steps over the inline's spans alone (the call's line has no code of its own there).
