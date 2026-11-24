@@ -94,7 +94,8 @@ protected:
 	CArrayUint32			mauiLines;		//and its line there.
 	size					muiSelected;	//The frame the windows show.
 	size					muiStops;		//The client's stops when the frames were walked, 0 when not stopped.
-	size					muiReplies;		//Its memory replies then.
+	size					muiReplies;		//Its memory replies then,
+	size					muiRegisterReplies;	//and its register replies (an edited register variable read back).
 	SAsm65StackFrame		msLeaving;		//The call a Step Out is leaving (psFunction NULL when none is),
 	SAsm65StackFrame		msReturned;		//and the one it left, at the stop after.
 	SAsm65StackRegisters	msResult;		//The registers at that stop: what it returned.

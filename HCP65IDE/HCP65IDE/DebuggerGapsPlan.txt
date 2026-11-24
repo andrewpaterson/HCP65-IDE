@@ -42,7 +42,9 @@ What is to be built
 
 Stages in order; each built, checked and committed on its own.
 
-A. this in Release: NOT BUILT (question 1, decided: left to F1).  Kept below for the record.
+A. this in Release: BUILT by F1 (2026-11-24, DebuggerFPlan.txt): optimised code's this has a debug value marker at the
+   function's start and is where its value is (TestCPP65DebugReleaseThis).  Neither A1 nor A2 was built; kept below for
+   the record.
   A1. A copy, as Debug has: Release keeps this in a slot of its own, stored once at the start (one store, 4 bytes of
       frame), named and described as Debug's is (AddDebugVariable(NULL, ...)); not volatile, so the optimiser may still
       read this from its register, but nothing removes the store (a named slot's stores are kept, A3).  Cost: one store

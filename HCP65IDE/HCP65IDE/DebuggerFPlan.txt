@@ -284,6 +284,35 @@ F5 (2026-11-24): CommonLibraries 661b7550c and 09fd4942d, HCP65-IDE 1a7a6e2, HCP
   - Found on the way and fixed: CDebugClient::SetBreakpoints sent its 65th and later breakpoints without their space
     or process.
 
+F1 (2026-11-24): CommonLibraries 710ecb1af (F1-1), 7492012a4 and abfcb6907,
+HCP65 fae6d7c and d11b45c, HCP65-IDE (register variables written; the check).
+  - F1-1: debug value markers beside each block's instructions (CIRBlock::masDebugValues, not in the instruction
+    list: that changed code), made by promotion; the code-unchanged check (CCPP65Builder::SetCheckDebugCode, env
+    TEST_CPP65_SAME_CODE) passes over the whole suite.
+  - F1-2/F1-3: CIRDebugPlaces works out which value each variable holds before each instruction (a block's start
+    from its predecessors' ends, or the phi taking each one's; a value only while live, CIRLiveness).  The back ends
+    write a place marker (IR_PLACE_MARKER) where a variable's place changes (CIRBackend::DebugPlaces, DebugPlace per
+    back end): the 65C64's register, pseudo register (an address: they are $00-$FF whatever W holds) or frame or
+    argument place; the W65C816's X or frame place.  CIRSourceMarkers carries them through the text passes (a prefix
+    and keep-all; taken out first and put back last, so source markers land as they would without).  The W65C816's
+    FinishFunction says none for a place with a word nothing reads in the finished code (RemoveUnreadStores took its
+    store).  An epilogue ends every place (the frame register becomes the caller's).  The front end makes them
+    __dbg labels and .drange lines (DebugRanges, DescribeVariables).
+  - F1-4: records v5, .dvariable ... ranges and .drange from, to, frame|register|memory|address.
+  - F1-5/F1-6: Locate returns a place (an address, or a register's value and which register); a caller's register
+    not saved is "(optimised away)".  Editing a register variable writes the register (SCPP65DebugWrite::uiRegister,
+    CIDEDebugger::WriteStackRegister, innermost call only); its address is refused ("A variable in a register has no
+    address"); Autos lists it.
+  - this in Release (DebuggerGapsPlan.txt A): a marker at the function's start, added after the fingerprint.
+  - Tests: TestAssembler65Lib (TestAsm65LinkerDebugRanges, TestAsm65StackWalkerLocate, the errors);
+    TestCPP65DebugRelease (iTotal, iCount, Area's ps now places); TestCPP65DebugValuesEverywhere (the every-step
+    check: every value Release shows for a variable is one it held in the Debug run, both processors);
+    TestCPP65DebugRegisterVariables; TestCPP65DebugReleaseThis; IDE debug-optimised on both processors (Sum's
+    parameters and main's iTotal = 9).
+  - Not done: F1-M (measuring) wasn't run before building; constants aren't described (a variable holding a constant
+    is "(optimised away)"); in an epilogue a Debug build's frame variables still read the caller's frame once D or V
+    is restored (as before F1).
+
   1. Which items to build, and in what order.  Recommendation: F5, F1, F2; F4 only if question 5 is yes.
   2. F1's extent.  (a) Location ranges from debug value markers (above): right values wherever a variable is in a
      home, "(optimised away)" elsewhere; large.  (b) A cut-down F1: only variables whose every value has the same home

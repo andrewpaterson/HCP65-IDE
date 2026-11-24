@@ -283,13 +283,13 @@ def DebuggingChecks(P):
 		[r'^Dialog \[New Data Breakpoint\] answered OK$', r'^Debug status: Data breakpoint: cCounter\.miCount changed from 0 to 3 at '], [r'\?\?\?']),
 	('debug-optimised' + P['SUFFIX'], MakeDebugging(P, 'line:39,start,stopped,wait:1500,printcallstack,continue,stopped,wait:1500,printcallstack,line:39,line:54,continue,stopped,wait:1500,printstopped,print:Locals', P['RELEASE']),
 		#Built optimised (Sum's first call inlined into main, which the optimiser may choose otherwise): the calls are
-		#still walked, Sum's parameters optimised away (values in registers, not where they were passed); back in main,
-		#what stays in memory (the object whose address went to Sum) is shown, and what the optimiser kept in registers
-		#isn't.
+		#still walked, and Sum's parameters are where their values are (registers or the frame, DebuggerFPlan.txt F1):
+		#the second stop is Sum(&cCounter, 3).  Back in main, what stays in memory (the object whose address went to Sum)
+		#is shown, and so is iTotal where the optimiser kept it: 3 + 1 + 4 + 1.
 		[r'^Call Stack:$', r'^=> ' + P['MODULE'] + r'!(main\(\)|Sum\(.*\)) Line 39$', r'^   \[External Code\]$',
-		 r'^Call Stack:$', r'^=> ' + P['MODULE'] + r'!Sum\(CCounter\* pcCounter = \(optimised away\), int iDepth = \(optimised away\)\) Line 39$',
+		 r'^Call Stack:$', r'^=> ' + P['MODULE'] + r'!Sum\(CCounter\* pcCounter = 0x[0-9a-f]+, int iDepth = 3\) Line 39$',
 		 r'^   ' + P['MODULE'] + r'!(main\(\)|Sum\(.*\)) Line [0-9]+$', r'^   \[External Code\]$',
-		 r'^Stopped: yes, .*Debugging\.cpp:54$', r'^Locals:$', r'^cCounter = \{\.\.\.\} \[CCounter\]$', r'^iTotal = \(optimised away\) \[\]$'], [r'\?\?\?'])]
+		 r'^Stopped: yes, .*Debugging\.cpp:54$', r'^Locals:$', r'^cCounter = \{\.\.\.\} \[CCounter\]$', r'^iTotal = 9 \[int\]$'], [r'\?\?\?', r'optimised away'])]
 
 
 def MakeBrokenKernel():

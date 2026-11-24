@@ -49,16 +49,27 @@ bool CIDEDebugMemory::Read(EAsm65StackSpace eSpace, uint32 uiAddress, void* pvDe
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Writes what editing a value made, in its space.  The client forgets
-// what it had read: it is read again for the windows to show.
+// Writes what editing a value made, in its space, or to the register it
+// is in.  The client forgets what it had read: it is read again for the
+// windows to show.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEDebugMemory::Write(SCPP65DebugWrite* psWrite)
 {
 	CDebugClient*	pcClient;
+	uint64			uiValue;
 
 	pcClient = mpcDebugger->GetClient();
-	return pcClient && (pcClient->WriteMemory(psWrite->uiAddress, psWrite->auiBytes, psWrite->uiSize, mpcDebugger->GetStackSpace((EAsm65StackSpace)psWrite->uiSpace)) != 0);
+	if (!pcClient)
+	{
+		return false;
+	}
+	if (psWrite->uiRegister != CPP65_DEBUG_NO_REGISTER)
+	{
+		memcpy(&uiValue, psWrite->auiBytes, sizeof(uiValue));
+		return mpcDebugger->WriteStackRegister(psWrite->uiRegister, uiValue);
+	}
+	return pcClient->WriteMemory(psWrite->uiAddress, psWrite->auiBytes, psWrite->uiSize, mpcDebugger->GetStackSpace((EAsm65StackSpace)psWrite->uiSpace)) != 0;
 }
 
 
@@ -162,6 +173,7 @@ void CIDEDebugStop::Init(CIDEDebugger* pcDebugger)
 	muiSelected = 0;
 	muiStops = 0;
 	muiReplies = 0;
+	muiRegisterReplies = 0;
 	memset(&msLeaving, 0, sizeof(msLeaving));
 	memset(&msReturned, 0, sizeof(msReturned));
 	msResult.Init((uint32)0, ASS_Kernel);
@@ -187,8 +199,8 @@ void CIDEDebugStop::Kill(void)
 //////////////////////////////////////////////////////////////////////////
 //
 // Called each time the debugger is looked at: true when what the windows
-// show has changed, because the emulator stopped, or memory they waited
-// for came, or it isn't stopped any more.
+// show has changed, because the emulator stopped, or memory or registers
+// they waited for came, or it isn't stopped any more.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEDebugStop::Update(void)
@@ -206,7 +218,7 @@ bool CIDEDebugStop::Update(void)
 		Clear();
 		return true;
 	}
-	if ((pcClient->NumStops() == muiStops) && (pcClient->NumMemoryReplies() == muiReplies))
+	if ((pcClient->NumStops() == muiStops) && (pcClient->NumMemoryReplies() == muiReplies) && (pcClient->NumRegisterReplies() == muiRegisterReplies))
 	{
 		return false;
 	}
@@ -221,6 +233,7 @@ bool CIDEDebugStop::Update(void)
 	}
 	muiStops = pcClient->NumStops();
 	muiReplies = pcClient->NumMemoryReplies();
+	muiRegisterReplies = pcClient->NumRegisterReplies();
 	Walk(&sRegisters);
 	if (muiSelected >= masFrames.NumElements())
 	{
@@ -273,6 +286,7 @@ void CIDEDebugStop::Clear(void)
 	muiSelected = 0;
 	muiStops = 0;
 	muiReplies = 0;
+	muiRegisterReplies = 0;
 	msReturned.psFunction = NULL;
 }
 
@@ -541,6 +555,8 @@ bool CIDEDebugStop::AddDataBreakpoint(const char* szName, SCPP65DebugValue* psVa
 //////////////////////////////////////////////////////////////////////////
 //
 // szText typed into the value's Value: written, if it is one it can be.
+// A variable in a register only in the innermost call (a caller's
+// register is where its callee saved it, or nowhere), as Visual Studio.
 // The windows show what is read back.
 //
 //////////////////////////////////////////////////////////////////////////
@@ -548,7 +564,11 @@ bool CIDEDebugStop::Write(SCPP65DebugValue* psValue, const char* szText)
 {
 	SCPP65DebugWrite	sWrite;
 
-	return IsStopped() && mcValues.Edit(psValue, szText, &sWrite) && mcMemory.Write(&sWrite);
+	if (!IsStopped() || ((psValue->uiRegister != CPP65_DEBUG_NO_REGISTER) && (muiSelected != 0)))
+	{
+		return false;
+	}
+	return mcValues.Edit(psValue, szText, &sWrite) && mcMemory.Write(&sWrite);
 }
 
 

@@ -1316,6 +1316,34 @@ bool CIDEDebugger::GetStackRegisters(SAsm65StackRegisters* psRegisters)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Writes a register (the debug records' numbering, as GetStackRegisters
+// matches them by name) and asks for the registers again, for the windows
+// to show what is read back.  False if the emulator has none of its name.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEDebugger::WriteStackRegister(size uiRegister, uint64 uiValue)
+{
+	EAsm65DebugProcessor	eProcessor;
+	size					uiClient;
+
+	eProcessor = GetStackProcessor();
+	if (!IsStopped() || (eProcessor == ADP_None) || (uiRegister >= Asm65DebugNumRegisters(eProcessor)))
+	{
+		return false;
+	}
+	for (uiClient = 0; uiClient < mcClient.NumRegisters(); uiClient++)
+	{
+		if (StringCompare(mcClient.GetRegister(uiClient)->szName, Asm65DebugRegisterName(eProcessor, uiRegister)) == 0)
+		{
+			return (mcClient.WriteRegister(uiClient, uiValue) != 0) && (mcClient.ReadRegisters() != 0);
+		}
+	}
+	return false;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // The processor the emulator is, as debug records know it (ADP_None for
 // none, or one they don't).
 //
