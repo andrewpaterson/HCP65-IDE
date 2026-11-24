@@ -10,10 +10,13 @@ CommonLibraries and HCP65 checked out beside it (`../CommonLibraries`, `../HCP65
   Commands are named strings (`"Refactor.Rename"`, `"Navigate.FindUsages"`).
 - `HCP65IDE/Checks`: the IDE checks (`IDEChecks.py`) and their fixtures (`Input/`).
 - `HCP65Build`: `hcp65build`, the command-line builder for HCP65 programs.
-- `Libraries/`: VisualStudioLib (reads `.sln`/`.vcxproj`), BuildLib, GitLib (the git command line),
+- `Libraries/`: VisualStudioLib (reads `.sln`/`.vcxproj`), BuildLib, IndexLib, GitLib (the git command line),
   ClaudeLib (the Claude tab), TemplateLib; `Tests/Test<Lib>` for each.
-- The C++ front end and the symbol index are CommonLibraries' CppCompilerLib (`CCPPIndex`); the IDE drives
-  them and shows the results.
+- The C++ front end and the symbol index are CommonLibraries' CppCompilerLib (`CCPPIndex`).  IndexLib's
+  `CWorkspaceIndex` indexes a workspace with them as its build configuration compiles it (configuration,
+  include folders, defines, the system headers: MinGW's on Linux); the IDE's code model (`CIDECodeModel`) derives
+  from it and adds the edits thread and the queries its features make, and a program without a window can index
+  a workspace the same way.
 
 ## Documentation
 
