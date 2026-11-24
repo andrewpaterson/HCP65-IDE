@@ -311,7 +311,7 @@ F. After the first version (each its own item, if asked for)
   F1. Optimised code's variables everywhere: location lists (where a variable is, register or frame offset, over
       each address range), written by the back ends' allocators.  Large: every pass that moves a value keeps them.
   F2. Inlined functions as frames of their own in the Call Stack.
-  F3. The 65C64 target (decision 4).
+  F3. The 65C64 target (decision 4): planned in Debugger65C64Plan.txt (2026-11-24).
   F4. Function calls in watch expressions (decision 3).
   F5. Data breakpoints (break when a variable is written), which the emulator can do cheaply.
 
