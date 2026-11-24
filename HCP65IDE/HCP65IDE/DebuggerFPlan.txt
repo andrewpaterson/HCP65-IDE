@@ -78,8 +78,7 @@ Rules for all of F
   - Debug information never changes code.  A program built with F's records is byte for byte the program built
     without them (the listings compared, as B's walks keep their records apart); a check in the tests says so.
   - Never show a wrong value.  Where the debugger can't be sure where a variable is (outside a value's live range, two
-    values of one variable live at once, a register a caller's frame doesn't know), it says "(optimised away)" or
-    "(not known here)", as now.
+    values of one variable live at once, a register a caller's frame doesn't know), it says "(optimised away)", as now.
   - Both processors, each step, as the earlier plans: tests in TestCppCompilerLib / TestAssembler65Lib /
     TestEmulatorDebugLib / TestHCP65Lib, the IDE's debug-* checks on both (DebuggingChecks(P)), and the every-step walk
     check (DebuggerGapsPlan.txt B) extended to check each described variable's place at each step (F1 V below).
@@ -122,7 +121,7 @@ and the walker reads registers as it reads frames.
      none, "(optimised away)".  The assembler checks each range lies inside its function.
   F1-5. The walker reads a variable in a register from the frame's registers: the innermost frame knows them all; a
      caller's only if preserved or saved (ReadSaved, now reading memory saves too: DebuggerGapsPlan.txt E2's units).
-     Not known: "(not known here)".  Locate returns a register place; CCPP65DebugValues builds a value out of memory
+     Not known: "(optimised away)" (question 3).  Locate returns a register place; CCPP65DebugValues builds a value out of memory
      (SCPP65DebugValue's auiBytes).
   F1-6. Editing a register variable writes the register (DM_WriteRegister), only in the innermost frame; & of it is
      refused ("in a register"), as Visual Studio does.  Autos list values out of memory too.
@@ -202,16 +201,21 @@ F5. Data breakpoints
      Studio's.  The HCP65 checks user writes after the remap (physical addresses) and kernel writes directly, so a
      watch is held as a physical address: the target translates a user address through the process's remap when it
      is set.
-  F5-2. Writes that aren't the CPU's (question 8): CAsm65Memory's drive and host commands check the watch set too;
-     the HCP65's SD DMA and blitter as decided.
-  F5-3. Protocol 8: SDebugBreakpoint gains a kind (execute, write) and a byte count; EDebugStop gains
+     Reads (decision 7): a read watch set beside the write one.  Reads have many paths (the W65C816's Read and
+     ReadWord, the 65C64's ReadValue and its fast loads; instruction fetches are never watched), so while any read
+     watch is set each simulator runs a Run loop variant whose reads check it, and the plain loops are untouched:
+     no read watch, no cost.  F5-M measures the read variant too.
+  F5-2. Writes that aren't the CPU's: NOT BUILT (decision 8: the CPU's only).  A device's write to a watched address
+     doesn't stop the program; the docs say so.
+  F5-3. Protocol 8: SDebugBreakpoint gains a kind (execute, write, read or write) and a byte count; EDebugStop gains
      DS_DataBreakpoint with the address written; the welcome says whether data breakpoints are supported.
   F5-4. The IDE: "Break When Value Changes" on a Locals/Watch row (a variable in memory; one in a register is
-     refused), and "New Data Breakpoint..." (an address and 1, 2, 4 or 8 bytes) in the Debug menu.  A stop on one
+     refused), and "New Data Breakpoint..." (an address, 1, 2, 4 or 8 bytes, and "when written" or "when read or
+     written") in the Debug menu.  A stop on one
      says so in the status line and the Debug tab: "Data breakpoint: iTotal changed from 3 to 4 (at Debugging.cpp
      line 40)".  Data breakpoints aren't saved; they go when debugging stops (question 9).
   F5-5. Tests: MPL (each simulator: a write hits, a write beside it doesn't, a 4 byte write over a watched byte, the
-     stop after the instruction); TestEmulatorDebugLib (protocol 8 on both flat targets); TestHCP65Lib (a user
+     stop after the instruction; a read watch hit by a load and by a read-modify-write, not by an instruction fetch); TestEmulatorDebugLib (protocol 8 on both flat targets); TestHCP65Lib (a user
      process's variable, a kernal write into it); IDE: debug-data-breakpoint on both processors.
 
 
@@ -228,6 +232,24 @@ What is the user's to decide
 ----------------------------
 
 Asked one at a time, with my recommendation first.
+
+Decided (2026-11-24, the user's):
+  1. F5, F1, F2, in that order ("F5, F1, F2 (Recommended)").  F4 is not built: questions 5 and 6 are left unasked.
+  2. F1 is location ranges from debug value markers ("Location ranges (Recommended)"); the cut-down cases (one home
+     for the whole function) are its first test.
+  3. A caller's variable in a register its callee didn't save shows "(optimised away)", the same text as a variable
+     that is nowhere ("(optimised away)"); no new wording, and no guessing.
+  4. F2 shows a Call Stack row per inlined level, "[inlined]", each selectable as a frame ("A row per inlined
+     level (Recommended)").
+  7. F5 stops on writes, with reads as an option ("Writes and an option for reads."): each data breakpoint is
+     "when written" or "when read or written".  Read watches must cost nothing while none is set (F5-1).
+  8. F5 catches the CPU's reads and writes only ("CPU writes only"): no device writes (the drive and host commands, the
+     HCP65's SD DMA and blitter); F5-2 is not built.
+  9. A data breakpoint on a local stays set until removed or debugging stops, after its frame returns too ("Stays until
+     removed (Recommended)"); the stop message gives the address as well as the variable.
+
+Every question is decided (5 and 6 aren't asked: F4 isn't built).  The plan waits for the user to say when to build
+it: F5, then F1, then F2.
 
   1. Which items to build, and in what order.  Recommendation: F5, F1, F2; F4 only if question 5 is yes.
   2. F1's extent.  (a) Location ranges from debug value markers (above): right values wherever a variable is in a
