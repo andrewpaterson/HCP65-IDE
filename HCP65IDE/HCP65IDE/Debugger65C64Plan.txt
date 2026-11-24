@@ -156,8 +156,9 @@ C. Values and watches on the 65C64 (CppCompilerLib)
   C2. TestCPP65C64Debug: TestCPPW65C816Debug's tests (frames, stack, values, edits, watches, windows) made generic
       and run on both processors, Debug and Release (Release's: the frames, and the variables A3 keeps).
 
-D. An emulator to debug 65C64 programs in (decision 5)
-  D1. A 65C64 emulator: CFlat65C64DebugTarget with the host file device (stdio to its console), loading the image a
+D. An emulator to debug 65C64 programs in (decision 5): HCP65/X65C64-Emulator (the user, 2026-11-24)
+  D1. A 65C64 emulator, the HCP65 repository's X65C64-Emulator project (beside HCP65-Emulator, with its Visual Studio
+      project and a Linux CMake build as HCP65-Emulator has): CFlat65C64DebugTarget with the host file device (stdio to its console), loading the image a
       65C64 configuration builds at its address and running it from its entry; debuggable by EmulatorDebugLib's
       launch arguments (--debug-shm, --debug-tcp, --debug-wait), quitting when the program stops (stp) or the
       debugger goes.  A console program: no window, so the checks need no reference screen.
@@ -195,8 +196,12 @@ for it.  Then (the user, 2026-11-24) not V alone either: the frame model below r
   5. The machine to debug on.  There is no 65C64 computer in the emulator.  I recommend a flat 65C64 machine as the
      tests have (memory and the host file device, so printf works), as a small console emulator the IDE starts.
      The other way is to wait for a 65C64 computer to be modelled, with its own boards, which nothing plans yet.
-  6. Where the emulator lives: the HCP65 repository beside HCP65-Emulator (it needs Assembler65Lib's host file
-     device, which is there), or CommonLibraries beside EmulatorDebugLib.  I recommend HCP65.
+DECIDED 2026-11-24 (the user): the emulator lives in the HCP65 repository, in a project called X65C64-Emulator.
+  The user noted too that HCP65/W65C64 (the 65C64's proposal: the Instruction Architecture spreadsheet, the
+  Proposal document, its pictures) should really be called X65C64-Proposal.  Renaming it is its own small item (git
+  mv, and the paths that name it: Assembler65Lib's Assembler65C64Syntax.txt, the website's tools/sheet_to_html.py and
+  README.md, MicroprocessorLib's 65C64Simulator.txt, TestMicroprocessorLib's Test65C64.cpp); HCP65/Kicad/W65C64 (the
+  processor's board) is left as it is unless the user says.
 
 My own choices, not asked: the records say their processor (A1); the tests are made generic over both processors
 (C2, E1); no measuring stage first, since the 65C64 has no ROM or memory limit a Debug build must fit.
