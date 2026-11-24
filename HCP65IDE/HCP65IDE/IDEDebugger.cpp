@@ -653,7 +653,8 @@ bool CIDEDebugger::StepLine(bool bOver)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// DM_StepRange over the code of the line the program address is on.
+// DM_StepRange over the code of the line the program address is on; with
+// bOver, and over the code of the calls inlined at it (AddInlinedCalls).
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEDebugger::StepLineRanges(bool bOver)
@@ -671,6 +672,10 @@ bool CIDEDebugger::StepLineRanges(bool bOver)
 		{
 			macDebugInfos[ui].GetLines()->FindLineRanges(GetProgramAddress(), &auiRanges);
 		}
+	}
+	if (bOver && (auiRanges.NumElements() > 0))
+	{
+		AddInlinedCalls(GetProgramAddress(), &auiRanges);
 	}
 	uiRanges = auiRanges.NumElements() / 2;
 	if ((uiRanges == 0) || (uiRanges > DEBUG_MAX_LIST))
@@ -695,16 +700,129 @@ bool CIDEDebugger::StepLineRanges(bool bOver)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Until the function it is in returns.
+// Until the function it is in returns; in an inlined call's code, until
+// it leaves it (DM_StepRange over its spans, its calls stepped over).
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEDebugger::StepOut(void)
 {
+	CAsm65DebugRecords*		pcRecords;
+	SAsm65DebugFunction*	psFunction;
+	CArrayUint32			auiRanges;
+	SDebugRange*			asRanges;
+	size					ui;
+	size					uiRanges;
+	int32					iInline;
+	bool					bResult;
+
 	if (!CanMove() || !mcClient.IsStopped())
 	{
 		return false;
 	}
-	return mcClient.StepOut() != 0;
+	if (!FindInlineAt(GetProgramAddress(), &pcRecords, &psFunction, &iInline) || (iInline < 0))
+	{
+		return mcClient.StepOut() != 0;
+	}
+
+	auiRanges.Init();
+	AddInlineSpans(pcRecords, psFunction, iInline, &auiRanges);
+	uiRanges = auiRanges.NumElements() / 2;
+	if ((uiRanges == 0) || (uiRanges > DEBUG_MAX_LIST))
+	{
+		auiRanges.Kill();
+		return mcClient.StepOut() != 0;
+	}
+	asRanges = (SDebugRange*)malloc(uiRanges * sizeof(SDebugRange));
+	for (ui = 0; ui < uiRanges; ui++)
+	{
+		asRanges[ui].uiStart = auiRanges.GetValue(ui * 2);
+		asRanges[ui].uiEnd = auiRanges.GetValue(ui * 2 + 1);
+	}
+	bResult = mcClient.StepRange(asRanges, uiRanges, true) != 0;
+	free(asRanges);
+	auiRanges.Kill();
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The function of a loaded program's records that uiAddress is in, and
+// the innermost of its inlined calls the code there is of (-1 for none).
+// False if no records have it.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEDebugger::FindInlineAt(uint32 uiAddress, CAsm65DebugRecords** ppcRecords, SAsm65DebugFunction** ppsFunction, int32* piInline)
+{
+	size	ui;
+
+	for (ui = 0; ui < muiLineTables; ui++)
+	{
+		if (!IsTableLoaded(ui))
+		{
+			continue;
+		}
+		*ppcRecords = macDebugInfos[ui].GetRecords();
+		*ppsFunction = (*ppcRecords)->FindFunction(uiAddress);
+		if (*ppsFunction)
+		{
+			*piInline = (*ppcRecords)->FindInline(*ppsFunction, uiAddress);
+			return true;
+		}
+	}
+	return false;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The spans of psFunction's inline iInline appended to pauiRanges, each
+// its start and end.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDebugger::AddInlineSpans(CAsm65DebugRecords* pcRecords, SAsm65DebugFunction* psFunction, int32 iInline, CArrayUint32* pauiRanges)
+{
+	SAsm65DebugInline*	psInline;
+	SAsm65DebugSpan*	psSpan;
+	size				ui;
+
+	psInline = pcRecords->GetInline(psFunction, (size)iInline);
+	for (ui = 0; psInline && (ui < psInline->uiNumSpans); ui++)
+	{
+		psSpan = pcRecords->GetSpan(psInline, ui);
+		pauiRanges->Add(psSpan->uiFrom);
+		pauiRanges->Add(psSpan->uiTo);
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Stepping over the line being stepped (mszStepFile, muiStepLine) at
+// uiAddress steps over the calls inlined at it too: the spans of the
+// inlines directly in the code there whose call is that line.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDebugger::AddInlinedCalls(uint32 uiAddress, CArrayUint32* pauiRanges)
+{
+	CAsm65DebugRecords*		pcRecords;
+	SAsm65DebugFunction*	psFunction;
+	SAsm65DebugInline*		psInline;
+	size					ui;
+	int32					iInline;
+
+	if (!FindInlineAt(uiAddress, &pcRecords, &psFunction, &iInline))
+	{
+		return;
+	}
+	for (ui = 0; ui < psFunction->uiNumInlines; ui++)
+	{
+		psInline = pcRecords->GetInline(psFunction, ui);
+		if ((psInline->iParent == iInline) && (psInline->uiLine == muiStepLine) && psInline->szFile.EqualsIgnoreCase(mszStepFile.Text()))
+		{
+			AddInlineSpans(pcRecords, psFunction, (int32)ui, pauiRanges);
+		}
+	}
 }
 
 
@@ -1376,20 +1494,28 @@ uint32 CIDEDebugger::GetStackSpace(EAsm65StackSpace eSpace)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The source line a frame of a stack walk is at (the first frame,
-// bInnermost, where it stopped; a caller, its call), from its program's
-// line table.
+// The source line a frame of a stack walk is at (the innermost call where
+// it stopped; a caller, its call), from its program's line table; a row
+// with an inlined call inside it, that inline's call.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEDebugger::FindFrameLine(SAsm65StackFrame* psFrame, bool bInnermost, CChars* pszFile, uint32* puiLine)
+bool CIDEDebugger::FindFrameLine(SAsm65StackFrame* psFrame, CChars* pszFile, uint32* puiLine)
 {
 	size				uiTable;
 	SAsm65LineEntry*	psLine;
+	SAsm65DebugInline*	psCalled;
 
+	psCalled = psFrame->GetCalled();
+	if (psCalled)
+	{
+		pszFile->Set(psCalled->szFile);
+		*puiLine = psCalled->uiLine;
+		return true;
+	}
 	uiTable = FindRecordsTable(psFrame->pcRecords);
 	if (uiTable == muiLineTables)
 	{
-		return bInnermost && FindSourceLine(psFrame->uiPC, pszFile, puiLine);
+		return psFrame->bInnermost && FindSourceLine(psFrame->uiPC, pszFile, puiLine);
 	}
 	psLine = macDebugInfos[uiTable].GetLines()->FindLine(psFrame->GetLineAddress());
 	if (!psLine)

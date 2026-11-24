@@ -253,7 +253,7 @@ public:
 	bool					WriteStackRegister(size uiRegister, uint64 uiValue);
 	EAsm65DebugProcessor	GetStackProcessor(void);
 	uint32					GetStackSpace(EAsm65StackSpace eSpace);
-	bool					FindFrameLine(SAsm65StackFrame* psFrame, bool bInnermost, CChars* pszFile, uint32* puiLine);
+	bool					FindFrameLine(SAsm65StackFrame* psFrame, CChars* pszFile, uint32* puiLine);
 	const char*				GetProgramName(CAsm65DebugRecords* pcRecords);
 	bool					ToggleSourceBreakpoint(const char* szFile, uint32 uiLine);
 	SIDESourceBreakpoint*	AddSourceBreakpoint(const char* szFile, uint32 uiLine, bool bEnabled);
@@ -299,6 +299,9 @@ protected:
 	bool					CanMove(void);
 	bool					StepOnInto(uint32 uiAddress);
 	bool					StepLineRanges(bool bOver);
+	bool					FindInlineAt(uint32 uiAddress, CAsm65DebugRecords** ppcRecords, SAsm65DebugFunction** ppsFunction, int32* piInline);
+	void					AddInlineSpans(CAsm65DebugRecords* pcRecords, SAsm65DebugFunction* psFunction, int32 iInline, CArrayUint32* pauiRanges);
+	void					AddInlinedCalls(uint32 uiAddress, CArrayUint32* pauiRanges);
 	void					End(const char* szStatus);
 };
 

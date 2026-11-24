@@ -281,15 +281,27 @@ def DebuggingChecks(P):
 		**{'DIALOG_KEYS': 'type:cCounter.miCount', 'DIALOG_ANSWER': 'OK'}),
 		#New Data Breakpoint on an expression's value, in the frame shown.
 		[r'^Dialog \[New Data Breakpoint\] answered OK$', r'^Debug status: Data breakpoint: cCounter\.miCount changed from 0 to 3 at '], [r'\?\?\?']),
+	('debug-inlined-step-out' + P['SUFFIX'], MakeDebugging(P, 'line:39,start,stopped,wait:1500,printcallstack,line:39,out,stopped,wait:1500,printstopped,printcallstack', P['RELEASE']),
+		#Built optimised, stopped in Sum's first call, inlined into main (DebuggerFPlan.txt F2-5): Step Out leaves the
+		#inlined call's code, its own call of Sum stepped over, back in main.
+		[r'^Call Stack:$', r'^=> ' + P['MODULE'] + r'!Sum\(.*\) Line 39 \[inlined\]$', r'^   ' + P['MODULE'] + r'!main\(\) Line 53$',
+		 r'^Stopped: yes, .*Debugging\.cpp:5[34]$', r'^Call Stack:$', r'^=> ' + P['MODULE'] + r'!main\(\) Line 5[34]$'], [r'\?\?\?']),
+	('debug-inlined-step-over' + P['SUFFIX'], MakeDebugging(P, 'line:39,start,stopped,wait:1500,line:39,over,stopped,wait:1500,printstopped,over,stopped,wait:1500,printstopped,printcallstack', P['RELEASE']),
+		#Built optimised, stopped in Sum's first call, inlined into main: Step Over to line 40 (a Sum the recursion is in,
+		#as line ranges in every place a line is step), then over line 40 with CCounter::Add inlined into it
+		#(DebuggerFPlan.txt F2-5), to line 41: never in Add.
+		[r'^Stopped: yes, .*Debugging\.cpp:40$', r'^Stopped: yes, .*Debugging\.cpp:41$', r'^Call Stack:$', r'^=> ' + P['MODULE'] + r'!Sum\(.*\) Line 41( \[inlined\])?$'],
+		[r'\?\?\?', r'Debugging\.cpp:2[78]$']),
 	('debug-optimised' + P['SUFFIX'], MakeDebugging(P, 'line:39,start,stopped,wait:1500,printcallstack,continue,stopped,wait:1500,printcallstack,line:39,line:54,continue,stopped,wait:1500,printstopped,print:Locals', P['RELEASE']),
-		#Built optimised (Sum's first call inlined into main, which the optimiser may choose otherwise): the calls are
-		#still walked, and Sum's parameters are where their values are (registers or the frame, DebuggerFPlan.txt F1):
-		#the second stop is Sum(&cCounter, 3).  Back in main, what stays in memory (the object whose address went to Sum)
-		#is shown, and so is iTotal where the optimiser kept it: 3 + 1 + 4 + 1.
-		[r'^Call Stack:$', r'^=> ' + P['MODULE'] + r'!(main\(\)|Sum\(.*\)) Line 39$', r'^   \[External Code\]$',
+		#Built optimised, Sum's first call inlined into main (which the optimiser may choose otherwise): it is a row of
+		#its own in the Call Stack (DebuggerFPlan.txt F2), main's below it at the call.  Sum's parameters are where
+		#their values are (registers or the frame, F1): the second stop is Sum(&cCounter, 3), called from the inlined
+		#Sum.  Back in main, what stays in memory (the object whose address went to Sum) is shown, and so is iTotal where
+		#the optimiser kept it: 3 + 1 + 4 + 1.
+		[r'^Call Stack:$', r'^=> ' + P['MODULE'] + r'!(main\(\)|Sum\(.*\)) Line 39( \[inlined\])?$', r'^   \[External Code\]$',
 		 r'^Call Stack:$', r'^=> ' + P['MODULE'] + r'!Sum\(CCounter\* pcCounter = 0x[0-9a-f]+, int iDepth = 3\) Line 39$',
-		 r'^   ' + P['MODULE'] + r'!(main\(\)|Sum\(.*\)) Line [0-9]+$', r'^   \[External Code\]$',
-		 r'^Stopped: yes, .*Debugging\.cpp:54$', r'^Locals:$', r'^cCounter = \{\.\.\.\} \[CCounter\]$', r'^iTotal = 9 \[int\]$'], [r'\?\?\?', r'optimised away'])]
+		 r'^   ' + P['MODULE'] + r'!(main\(\)|Sum\(.*\)) Line [0-9]+( \[inlined\])?$', r'^   \[External Code\]$',
+		 r'^Stopped: yes, .*Debugging\.cpp:54$', r'^Locals:$', r'^cCounter = \{\.\.\.\} \[CCounter\]$', r'^iTotal = 9 \[int\]$'], [r'\?\?\?'])]
 
 
 def MakeBrokenKernel():

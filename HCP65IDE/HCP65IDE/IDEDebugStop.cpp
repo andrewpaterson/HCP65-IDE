@@ -294,7 +294,8 @@ void CIDEDebugStop::Clear(void)
 //////////////////////////////////////////////////////////////////////////
 //
 // The calls from the registers, through the records of the programs
-// running where it stopped, and each one's source line.
+// running where it stopped (a row for each inlined call too), and each
+// one's source line.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEDebugStop::Walk(SAsm65StackRegisters* psRegisters)
@@ -313,12 +314,12 @@ void CIDEDebugStop::Walk(SAsm65StackRegisters* psRegisters)
 	}
 	mpcWalker->ClearRecords();
 	mpcDebugger->AddStackRecords(mpcWalker);
-	mpcWalker->Walk(psRegisters, &masFrames, IDE_DEBUG_MOST_FRAMES);
+	mpcWalker->Walk(psRegisters, &masFrames, IDE_DEBUG_MOST_FRAMES, true);
 	szFile.Init();
 	for (ui = 0; ui < masFrames.NumElements(); ui++)
 	{
 		psFrame = masFrames.Get(ui);
-		if (!mpcDebugger->FindFrameLine(psFrame, ui == 0, &szFile, &uiLine))
+		if (!mpcDebugger->FindFrameLine(psFrame, &szFile, &uiLine))
 		{
 			szFile.Clear();
 			uiLine = 0;
@@ -354,9 +355,9 @@ bool CIDEDebugStop::UseWalker(EAsm65DebugProcessor eProcessor)
 //////////////////////////////////////////////////////////////////////////
 //
 // The Call Stack's text for a call, as Visual Studio's:
-// "modplay.exe!Scale(SPoint* psPoint = 0x012345, int iBy = 2) Line 5";
-// a kernal's stub by its name alone ("[Kernal call]"); code the records
-// don't describe "[External Code]".
+// "modplay.exe!Scale(SPoint* psPoint = 0x012345, int iBy = 2) Line 5",
+// an inlined call's with " [inlined]"; a kernal's stub by its name alone
+// ("[Kernal call]"); code the records don't describe "[External Code]".
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEDebugStop::AppendFrame(size uiFrame, CChars* pszDest)
@@ -385,6 +386,10 @@ void CIDEDebugStop::AppendFrame(size uiFrame, CChars* pszDest)
 	{
 		pszDest->Append(" Line ")->Append(GetFrameLine(uiFrame));
 	}
+	if (psFrame->IsInline())
+	{
+		pszDest->Append(" [inlined]");
+	}
 }
 
 
@@ -408,7 +413,7 @@ void CIDEDebugStop::GetLocals(CIDEDebugRoots* pcRoots)
 		return;
 	}
 	auiVisible.Init();
-	psFrame->pcRecords->FindVisible(psFrame->psFunction, GetFrameLine(muiSelected), &auiVisible);
+	psFrame->pcRecords->FindVisible(psFrame->psFunction, GetFrameLine(muiSelected), &auiVisible, psFrame->iInline);
 	for (ui = 0; ui < auiVisible.NumElements(); ui++)
 	{
 		psVariable = psFrame->pcRecords->GetVariable(psFrame->psFunction, auiVisible.GetValue(ui));
@@ -564,7 +569,7 @@ bool CIDEDebugStop::Write(SCPP65DebugValue* psValue, const char* szText)
 {
 	SCPP65DebugWrite	sWrite;
 
-	if (!IsStopped() || ((psValue->uiRegister != CPP65_DEBUG_NO_REGISTER) && (muiSelected != 0)))
+	if (!IsStopped() || ((psValue->uiRegister != CPP65_DEBUG_NO_REGISTER) && (!GetSelected() || !GetSelected()->bInnermost)))
 	{
 		return false;
 	}
