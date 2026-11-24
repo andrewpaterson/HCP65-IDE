@@ -63,7 +63,7 @@ The debugger (Assembler65Lib, CppCompilerLib, the IDE):
   - CIDEDebugger::GetStackRegisters gives a walk the W65C816's registers only.  The IDE's windows need nothing.
 
 
-The frame model (decision 1)
+The frame model (decided 2026-11-24, both processors)
 ----------------------------
 
   A call's frame address is S as its caller had it just before the call: the return address is the bytes just below
@@ -179,11 +179,9 @@ Asked one at a time, with my recommendation first.
 DECIDED 2026-11-24: the debugger finds each frame from whatever register has it; Debug builds don't change frames
 for it.  Then (the user, 2026-11-24) not V alone either: the frame model below replaces describing frames by V.
 
-  1. The frame model: frames described from their frame address, the register (any, S included) or memory place that
-     finds it given per function, saved registers at their places, variables at offsets from it; and the
-     W65C816's records moved onto it (records version 4, its walks unchanged), so one walker interprets both.  I
-     recommend it, the W65C816 included: two models would mean two walkers' worth of rules, and the W65C816's four
-     link kinds are each one of its rules.
+DECIDED 2026-11-24 (the user: "That sounds good, move both to it please"): question 1, the frame model, for both
+  processors: the 65C64's records and the W65C816's (its link kinds rewritten as rules, records version 4, its walks
+  unchanged frame for frame), one walker interpreting both.
   2. Release variables, on both processors: describe the variables whose slot is their own for the whole function
      (an address taken, an array, an object), leave out the rest.  I recommend it: it is what DebuggerPlan.txt's
      decision 1 said Release shows, and a Release build's Locals are empty today.
