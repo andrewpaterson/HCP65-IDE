@@ -1,10 +1,10 @@
 Debugging 65C64 programs (DebuggerPlan.txt F3, plan, 2026-11-24)
 =================================================================
 
-The user (2026-11-24): "Plan out how to debug 65C64 programs".  Nothing here is a go-ahead to build: the decisions at
-the end are the user's, and each stage is brought up before it is started.
+The user (2026-11-24): "Plan out how to debug 65C64 programs".  The decisions at the end are the user's.
 
-Every decision made 2026-11-24 (see the end): waiting for the user to say when to build.
+Every decision made 2026-11-24, and the go-ahead given the same day for A to E (see the end); "What is built" says how
+far it has got.
 
 Today the IDE debugs W65C816 programs on the HCP65 in its emulator (DebuggerPlan.txt A to E): Call Stack, Locals,
 Autos, Watch, QuickWatch and data tips.  The goal is the same windows, unchanged, for a program built by a 65C64
@@ -238,6 +238,22 @@ What is built
     int "isn't kept"), the 65C64's Release records in TestCPP65C64DebugFrames (a split array not kept; the same
     program's memory variables in the frame), TestIROptimiserSplitSlotNames.
   - A4: every register a function saves is described (A1's W65C816 records; A2's 65C64 V and kept units).
+  - B3: CAsm65C64StackWalker.  Follow tracks how far S, and each register copied from it, is below the entry S
+    through psh and pul on any stack register (A, B, X and Y at the widths wth set, 32 bits from a function's start
+    as the back end leaves them), add and sub of a constant and cpy; it notes where psh V put the caller's V.  After a
+    bra the code goes on as its forward branches left it (A's width differs from path to path where the back end
+    sets it before a bra), after a ret or rti as the stack was before that exit's pulls (an exit before the last).
+    Returning reads forward through an epilogue's pulls, add S, cmp and wth to its ret or rti.  Calls (and mul, div)
+    keep S and V.  jsr pushes 4 bytes; brk and interrupts 4 then P.  Asm65NewStackWalker makes it (HCP65 6df270e).
+  - B4: CAsm65FrameCheck is the base (the calls followed, their ends, WrongFrame comparing the register calls keep);
+    CAsmW65C816FrameCheck keeps its direct page writes on top; CAsm65C64FrameCheck follows jsr, brsr, brk, ret and
+    rti.
+  - B5: TestAsm65StackWalker65C64 (hand written: a frameless caller with a narrow push, a framed function with a kept
+    unit, a leaf, V as a home with an exit before its last, brk's handler; every step checked).  TestCPP816DebugModes
+    runs its program on both processors, Release, Debug and Unoptimised, walked at every step.  Every TestCPP65C64
+    program walked at every step is an opt-in sweep (TEST_CPP65_WALK=1 on TestCppCompilerLib, TestCPP65RunWalking):
+    a walk at every step is too slow to run each time.  Not built: TestAsm65StackWalkerBase's made up processor, as
+    the two processors' tests exercise every part of the base.
 
 Things to watch for
 -------------------
