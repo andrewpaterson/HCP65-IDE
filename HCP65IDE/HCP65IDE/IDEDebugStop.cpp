@@ -18,6 +18,7 @@ You should have received a copy of the GNU Lesser General Public License
 along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 ** ------------------------------------------------------------------------ **/
+#include "BaseLib/PointerFunctions.h"
 #include "IDEDebugStop.h"
 
 
@@ -152,9 +153,9 @@ void CIDEDebugStop::Init(CIDEDebugger* pcDebugger)
 {
 	mpcDebugger = pcDebugger;
 	mcMemory.Init(pcDebugger);
-	mcWalker.Init(&mcMemory);
+	mpcWalker = NULL;
 	mcValues.Init(&mcMemory);
-	mcWatch.Init(&mcValues, &mcWalker);
+	mcWatch.Init(&mcValues, NULL);
 	masFrames.Init();
 	maszFiles.Init();
 	mauiLines.Init();
@@ -163,8 +164,7 @@ void CIDEDebugStop::Init(CIDEDebugger* pcDebugger)
 	muiReplies = 0;
 	memset(&msLeaving, 0, sizeof(msLeaving));
 	memset(&msReturned, 0, sizeof(msReturned));
-	muiResultA = 0;
-	muiResultX = 0;
+	msResult.Init((uint32)0, ASS_Kernel);
 	mbHexadecimal = false;
 }
 
@@ -180,7 +180,7 @@ void CIDEDebugStop::Kill(void)
 	masFrames.Kill();
 	mcWatch.Kill();
 	mcValues.Kill();
-	mcWalker.Kill();
+	SafeKill(mpcWalker);
 }
 
 
@@ -217,8 +217,7 @@ bool CIDEDebugStop::Update(void)
 		muiSelected = 0;
 		msReturned = msLeaving;
 		msLeaving.psFunction = NULL;
-		muiResultA = sRegisters.uiC;
-		muiResultX = sRegisters.uiX;
+		msResult = sRegisters;
 	}
 	muiStops = pcClient->NumStops();
 	muiReplies = pcClient->NumMemoryReplies();
@@ -291,13 +290,16 @@ void CIDEDebugStop::Walk(SAsm65StackRegisters* psRegisters)
 	uint32				uiLine;
 	size				ui;
 
-	mcWalker.Kill();
-	mcWalker.Init(&mcMemory);
-	mpcDebugger->AddStackRecords(&mcWalker);
 	masFrames.ReInit();
 	maszFiles.ReInit();
 	mauiLines.ReInit();
-	mcWalker.Walk(psRegisters, &masFrames, IDE_DEBUG_MOST_FRAMES);
+	if (!UseWalker(mpcDebugger->GetStackProcessor()))
+	{
+		return;
+	}
+	mpcWalker->ClearRecords();
+	mpcDebugger->AddStackRecords(mpcWalker);
+	mpcWalker->Walk(psRegisters, &masFrames, IDE_DEBUG_MOST_FRAMES);
 	szFile.Init();
 	for (ui = 0; ui < masFrames.NumElements(); ui++)
 	{
@@ -311,6 +313,27 @@ void CIDEDebugStop::Walk(SAsm65StackRegisters* psRegisters)
 		mauiLines.Add(uiLine);
 	}
 	szFile.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The walker for eProcessor's stacks, made (and the watches given it) when
+// the processor isn't the one walked last.  False for a processor with no
+// walker.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEDebugStop::UseWalker(EAsm65DebugProcessor eProcessor)
+{
+	if (mpcWalker && (mpcWalker->GetProcessor() == eProcessor))
+	{
+		return true;
+	}
+	SafeKill(mpcWalker);
+	mpcWalker = Asm65NewStackWalker(eProcessor, &mcMemory);
+	mcWatch.Kill();
+	mcWatch.Init(&mcValues, mpcWalker);
+	return mpcWalker != NULL;
 }
 
 
@@ -343,7 +366,7 @@ void CIDEDebugStop::AppendFrame(size uiFrame, CChars* pszDest)
 	{
 		pszDest->Append(szProgram)->Append('!');
 	}
-	mcValues.AppendCall(&mcWalker, psFrame, pszDest);
+	mcValues.AppendCall(mpcWalker, psFrame, pszDest);
 	if (GetFrameLine(uiFrame) != 0)
 	{
 		pszDest->Append(" Line ")->Append(GetFrameLine(uiFrame));
@@ -376,7 +399,7 @@ void CIDEDebugStop::GetLocals(CIDEDebugRoots* pcRoots)
 	{
 		psVariable = psFrame->pcRecords->GetVariable(psFrame->psFunction, auiVisible.GetValue(ui));
 		psRoot = pcRoots->Add(psVariable->szName.Text());
-		psRoot->bValue = mcValues.Variable(&mcWalker, psFrame, psVariable, &psRoot->sValue);
+		psRoot->bValue = mcValues.Variable(mpcWalker, psFrame, psVariable, &psRoot->sValue);
 		if (!psRoot->bValue)
 		{
 			psRoot->szError.Set("(optimised away)");
@@ -407,7 +430,7 @@ void CIDEDebugStop::GetAutos(const char* szSource, CIDEDebugRoots* pcRoots)
 	{
 		return;
 	}
-	if ((muiSelected == 0) && msReturned.psFunction && mcValues.Result(msReturned.pcRecords, msReturned.psFunction, muiResultA, muiResultX, &sResult))
+	if ((muiSelected == 0) && msReturned.psFunction && mcValues.Result(msReturned.pcRecords, msReturned.psFunction, &msResult, &sResult))
 	{
 		szName.Init(msReturned.psFunction->szName)->Append(" returned");
 		psRoot = pcRoots->Add(szName.Text());

@@ -217,6 +217,7 @@ public:
 	bool					FindSourceLine(uint32 uiAddress, CChars* pszFile, uint32* puiLine);
 	void					AddStackRecords(CAsm65StackWalker* pcWalker);
 	bool					GetStackRegisters(SAsm65StackRegisters* psRegisters);
+	EAsm65DebugProcessor	GetStackProcessor(void);
 	uint32					GetStackSpace(EAsm65StackSpace eSpace);
 	bool					FindFrameLine(SAsm65StackFrame* psFrame, bool bInnermost, CChars* pszFile, uint32* puiLine);
 	const char*				GetProgramName(CAsm65DebugRecords* pcRecords);

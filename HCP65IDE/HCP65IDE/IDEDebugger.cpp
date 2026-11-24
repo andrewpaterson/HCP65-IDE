@@ -28,7 +28,6 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/StringHelper.h"
 #include "BaseLib/XMLFile.h"
 #include "BaseLib/XMLWriter.h"
-#include "EmulatorDebugLib/W65C816DebugRegisters.h"
 #include "EmulatorDebugLib/DebugLaunch.h"
 #include "IDEDebugger.h"
 
@@ -1193,25 +1192,49 @@ void CIDEDebugger::AddStackRecords(CAsm65StackWalker* pcWalker)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The W65C816's registers at the stop, and the memory it was running in,
-// for a stack walk.  False if it isn't stopped, or isn't a W65C816.
+// The processor's registers at the stop for a stack walk, matched by name
+// to the ones its debug records name (Asm65DebugRegisterName), with the
+// program address and the memory it was running in.  False if it isn't
+// stopped, or is a processor with no debug records.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEDebugger::GetStackRegisters(SAsm65StackRegisters* psRegisters)
 {
-	if (!IsStopped() || (StringCompare(mcClient.GetProcessorName(), "W65C816") != 0) || (mcClient.NumRegisters() < DW65C816R_NumRegisters))
+	EAsm65DebugProcessor	eProcessor;
+	size					ui;
+	size					uiClient;
+	EAsm65StackSpace		eSpace;
+
+	eProcessor = GetStackProcessor();
+	if (!IsStopped() || (eProcessor == ADP_None))
 	{
 		return false;
 	}
-	psRegisters->uiPC = (uint32)((mcClient.GetRegisterValue(DW65C816R_PBR) << 16) | mcClient.GetRegisterValue(DW65C816R_PC));
-	psRegisters->uiS = (uint16)mcClient.GetRegisterValue(DW65C816R_S);
-	psRegisters->uiD = (uint16)mcClient.GetRegisterValue(DW65C816R_D);
-	psRegisters->uiC = (uint16)mcClient.GetRegisterValue(DW65C816R_C);
-	psRegisters->uiX = (uint16)mcClient.GetRegisterValue(DW65C816R_X);
-	psRegisters->uiY = (uint16)mcClient.GetRegisterValue(DW65C816R_Y);
-	psRegisters->uiP = (uint8)mcClient.GetRegisterValue(DW65C816R_P);
-	psRegisters->uiSpace = (uint8)(((mcClient.GetStopSpace() != DEBUG_SPACE_ANY) && (mcClient.GetStopSpace() == GetStackSpace(ASS_User))) ? ASS_User : ASS_Kernel);
+	eSpace = ((mcClient.GetStopSpace() != DEBUG_SPACE_ANY) && (mcClient.GetStopSpace() == GetStackSpace(ASS_User))) ? ASS_User : ASS_Kernel;
+	psRegisters->Init(mcClient.GetStopAddress(), eSpace);
+	for (ui = 0; ui < Asm65DebugNumRegisters(eProcessor); ui++)
+	{
+		for (uiClient = 0; uiClient < mcClient.NumRegisters(); uiClient++)
+		{
+			if (StringCompare(mcClient.GetRegister(uiClient)->szName, Asm65DebugRegisterName(eProcessor, ui)) == 0)
+			{
+				psRegisters->Set(ui, mcClient.GetRegisterValue(uiClient));
+			}
+		}
+	}
 	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The processor the emulator is, as debug records know it (ADP_None for
+// none, or one they don't).
+//
+//////////////////////////////////////////////////////////////////////////
+EAsm65DebugProcessor CIDEDebugger::GetStackProcessor(void)
+{
+	return mbClient ? Asm65DebugProcessorNamed(mcClient.GetProcessorName()) : ADP_None;
 }
 
 

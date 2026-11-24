@@ -86,7 +86,7 @@ class CIDEDebugStop
 protected:
 	CIDEDebugger*			mpcDebugger;
 	CIDEDebugMemory			mcMemory;
-	CAsm65StackWalker		mcWalker;
+	CAsm65StackWalker*		mpcWalker;		//The processor's, made when it is first walked (NULL until then).
 	CCPP65DebugValues		mcValues;
 	CCPP65DebugWatch		mcWatch;
 	CArrayAsm65StackFrames	masFrames;
@@ -97,8 +97,7 @@ protected:
 	size					muiReplies;		//Its memory replies then.
 	SAsm65StackFrame		msLeaving;		//The call a Step Out is leaving (psFunction NULL when none is),
 	SAsm65StackFrame		msReturned;		//and the one it left, at the stop after.
-	uint16					muiResultA;		//A and X at that stop: what it returned.
-	uint16					muiResultX;
+	SAsm65StackRegisters	msResult;		//The registers at that stop: what it returned.
 	bool					mbHexadecimal;	//Integers are shown in hexadecimal (Visual Studio's Hexadecimal Display).
 
 public:
@@ -132,6 +131,7 @@ public:
 protected:
 	void				Clear(void);
 	void				Walk(SAsm65StackRegisters* psRegisters);
+	bool				UseWalker(EAsm65DebugProcessor eProcessor);
 	SAsm65StackFrame*	GetSelected(void);
 };
 
