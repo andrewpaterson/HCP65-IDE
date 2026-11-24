@@ -1,5 +1,5 @@
-# Linux build of the HCP65 IDE (BaseLib + StandardLib + SupportLib + InputLib +
-# WindowLib + X11Lib + VisualStudioLib + BuildLib + GitLib + ClaudeLib + TemplateLib + the IDE's window sources).
+# Linux build of the HCP65 IDE (BaseLib + StandardLib + SupportLib + InputLib + WindowLib + X11Lib +
+# VisualStudioLib + BuildLib + IndexLib + GitLib + ClaudeLib + TemplateLib + the IDE's window sources).
 # HCP65IDE shows its window on the X display; HCP65IDERef draws it on WinRefLib's reference screen, in
 # memory, for the checks (Checks/IDEChecks.py) to run without a display.
 #
@@ -49,6 +49,7 @@ set(HCP65_LIBRARIES_DIR "${CODAPHELA_ROOT}/HCP65/Libraries")
 set(ASSEMBLER65LIB_DIR "${HCP65_LIBRARIES_DIR}/Assembler65Lib")
 set(VISUALSTUDIOLIB_DIR "${IDE_ROOT}/Libraries/VisualStudioLib")
 set(BUILDLIB_DIR "${IDE_ROOT}/Libraries/BuildLib")
+set(INDEXLIB_DIR "${IDE_ROOT}/Libraries/IndexLib")
 set(GITLIB_DIR "${IDE_ROOT}/Libraries/GitLib")
 set(CLAUDELIB_DIR "${IDE_ROOT}/Libraries/ClaudeLib")
 set(TEMPLATELIB_DIR "${IDE_ROOT}/Libraries/TemplateLib")
@@ -121,6 +122,8 @@ vcxproj_sources(CPPCOMPILERLIB_SOURCES "${CPPCOMPILERLIB_DIR}/CppCompilerLib.vcx
 vcxproj_sources(VISUALSTUDIOLIB_SOURCES "${VISUALSTUDIOLIB_DIR}/VisualStudioLib.vcxproj")
 
 vcxproj_sources(BUILDLIB_SOURCES "${BUILDLIB_DIR}/BuildLib.vcxproj")
+
+vcxproj_sources(INDEXLIB_SOURCES "${INDEXLIB_DIR}/IndexLib.vcxproj")
 
 vcxproj_sources(GITLIB_SOURCES "${GITLIB_DIR}/GitLib.vcxproj")
 
@@ -314,6 +317,11 @@ target_link_libraries(VisualStudioLib PUBLIC BaseLib)
 add_library(BuildLib STATIC ${BUILDLIB_SOURCES})
 target_link_libraries(BuildLib PUBLIC VisualStudioLib CppCompilerLib ThreadLib BaseLib)
 
+# IndexLib indexes a workspace's C++ as its build configuration compiles it: the IDE's code model is one, and a
+# program without a window can index a workspace the same way.
+add_library(IndexLib STATIC ${INDEXLIB_SOURCES})
+target_link_libraries(IndexLib PUBLIC BuildLib VisualStudioLib CppCompilerLib ThreadLib BaseLib)
+
 # GitLib runs git for the files' statuses and their text in the last commit.
 add_library(GitLib STATIC ${GITLIB_SOURCES})
 target_link_libraries(GitLib PUBLIC StandardLib ThreadLib BaseLib)
@@ -332,7 +340,7 @@ target_link_libraries(WinRefLib PUBLIC WindowLib InputLib SupportLib StandardLib
 # The IDE, whichever window it is shown in.
 add_library(HCP65IDELib STATIC ${IDE_SOURCES})
 target_include_directories(HCP65IDELib PUBLIC "${IDE_DIR}")
-target_link_libraries(HCP65IDELib PUBLIC WindowLib InputLib BuildLib GitLib ClaudeLib TemplateLib VisualStudioLib CppCompilerLib Assembler65Lib EmulatorDebugLib MicroprocessorLib ThreadLib SupportLib StandardLib BaseLib)
+target_link_libraries(HCP65IDELib PUBLIC WindowLib InputLib IndexLib BuildLib GitLib ClaudeLib TemplateLib VisualStudioLib CppCompilerLib Assembler65Lib EmulatorDebugLib MicroprocessorLib ThreadLib SupportLib StandardLib BaseLib)
 
 add_executable(HCP65IDE "${IDE_DIR}/HCP65IDELinux.cpp")
 target_link_libraries(HCP65IDE PRIVATE HCP65IDELib X11Lib)

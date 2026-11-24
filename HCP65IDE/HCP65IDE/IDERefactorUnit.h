@@ -74,7 +74,7 @@ class CIDERefactorUnit
 {
 protected:
 	CIDECodeModel*		mpcModel;
-	CIDEParsedUnit		mcUnit;
+	CParsedUnit			mcUnit;
 	CCPPSemanticPass	mcPass;
 	CCPPHighlighter		mcHighlighter;	//For its source ranges.
 	CSourceFile*		mpcFile;		//The file, in the unit parsed.

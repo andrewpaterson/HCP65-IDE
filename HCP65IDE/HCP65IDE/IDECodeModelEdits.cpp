@@ -253,7 +253,7 @@ void CIDECodeModel::WaitForEditedFiles(void)
 // The check is the refactorings' (CIDERefactorUnit): the host's.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDECodeModel::CheckEditedFile(CIDEParsedUnit* pcUnit, const char* szErrors, SIDEEditedFile* psFile)
+void CIDECodeModel::CheckEditedFile(CParsedUnit* pcUnit, const char* szErrors, SIDEEditedFile* psFile)
 {
 	CCPPSemanticPass	cPass;
 
@@ -281,7 +281,7 @@ void CIDECodeModel::CheckEditedFile(CIDEParsedUnit* pcUnit, const char* szErrors
 //////////////////////////////////////////////////////////////////////////
 void CIDECodeModel::ProcessEditedFile(SIDEEditedFile* psFile)
 {
-	CIDEParsedUnit	cUnit;
+	CParsedUnit		cUnit;
 	CCPPIndexUnit	cGathered;
 	CChars			szErrors;
 	CSourceFile*	pcFile;
