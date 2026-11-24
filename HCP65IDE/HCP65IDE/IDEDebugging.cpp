@@ -876,10 +876,10 @@ void CIDEDebugging::UpdateDebugView(bool bKeepCaret)
 // answered:<n> (until the script has answered n dialogs),
 // wait:<milliseconds>, printbreakpoints (each source breakpoint, the line
 // it is bound to and its addresses), printstopped (whether it is
-// stopped, the program address and the source line shown), and the
-// debugger's windows' (RunWindowsScript).  Each but bp, buildtab, line,
-// built, answered, wait, the prints and the windows' waits for the
-// debugger to be stopped (or not debugging, for start).
+// stopped, the program address as the target writes it and the source
+// line shown), and the debugger's windows' (RunWindowsScript).  Each but
+// bp, buildtab, line, built, answered, wait, the prints and the windows'
+// waits for the debugger to be stopped (or not debugging, for start).
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEDebugging::SetDebugScript(const char* szCommands)
@@ -1030,6 +1030,7 @@ void CIDEDebugging::RunDebugScript(void)
 	char*	szCommand;
 	bool	bDone;
 	CChars	szScriptCommand;
+	CChars	szAddress;
 
 	if (maszDebugScript.NumElements() == 0)
 	{
@@ -1100,8 +1101,11 @@ void CIDEDebugging::RunDebugScript(void)
 	}
 	else if (strcmp(szCommand, "printstopped") == 0)
 	{
-		printf("Stopped: %s, $%06X, %s:%u\n", mcDebugger.IsStopped() ? "yes" : "no", (unsigned int)mcDebugger.GetProgramAddress(), mszStoppedFile.Text(), (unsigned int)muiStoppedLine);
+		szAddress.Init();
+		mcDebugger.AppendAddress(&szAddress, mcDebugger.GetProgramAddress());
+		printf("Stopped: %s, %s, %s:%u\n", mcDebugger.IsStopped() ? "yes" : "no", szAddress.Text(), mszStoppedFile.Text(), (unsigned int)muiStoppedLine);
 		fflush(stdout);
+		szAddress.Kill();
 		bDone = true;
 	}
 	else if (RunWindowsScript(szCommand))

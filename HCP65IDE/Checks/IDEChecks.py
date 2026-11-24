@@ -205,10 +205,10 @@ def PrepareDebugging():
 #into its data and into its text, a stopped address, an int in hexadecimal, and its Release configuration.
 DEBUGGING_W65C816 = {'SUFFIX': '', 'SOLUTION': 'Debugging.sln', 'EMULATOR_VARIABLE': 'EMULATOR', 'EMULATOR': REFERENCE_EMULATOR,
 	'PREPARE': PrepareDebugging, 'MODULE': r'debugging\.exe', 'POINTER': r'0x00[0-9a-f]{4}', 'TEXT_POINTER': r'0x[0-9a-f]{6}',
-	'ADDRESS': r'\$[0-9A-F]{6}', 'HEX_INT': '0x0000', 'RELEASE': 'Release|W65C816'}
+	'ADDRESS': r'\$[0-9A-F]{2}:[0-9A-F]{4}', 'HEX_INT': '0x0000', 'RELEASE': 'Release|W65C816'}
 DEBUGGING_65C64 = {'SUFFIX': '-65C64', 'SOLUTION': 'Debugging65C64.sln', 'EMULATOR_VARIABLE': '65C64_EMULATOR', 'EMULATOR': X65C64_EMULATOR,
 	'PREPARE': CleanDebugging, 'MODULE': r'debugging\.bin', 'POINTER': r'0x[0-9a-f]{8}', 'TEXT_POINTER': r'0x[0-9a-f]{8}',
-	'ADDRESS': r'\$[0-9A-F]{6,8}', 'HEX_INT': '0x00000000', 'RELEASE': 'Release|65C64'}
+	'ADDRESS': r'\$[0-9A-F]{8}', 'HEX_INT': '0x00000000', 'RELEASE': 'Release|65C64'}
 
 
 def MakeDebugging(asProcessor, szDebug, szConfiguration=None):
