@@ -138,6 +138,7 @@ void CBuildPlain::Init(void)
 	mbWarnStringToPointer = false;
 	mbMultiWordCasts = false;
 	mbCConversions = false;
+	mbStubMissing = false;
 	mbDebug = false;
 	mszUnoptimised.Init();
 	mszOutput.Init();
@@ -343,6 +344,11 @@ int CBuildPlain::ParseOption(CArrayChars* paszArguments, size* puiIndex, CChars*
 	if (BuildIsOption(szOption, "c-conversions"))
 	{
 		mbCConversions = true;
+		return 1;
+	}
+	if (BuildIsOption(szOption, "stub-missing"))
+	{
+		mbStubMissing = true;
 		return 1;
 	}
 	if (BuildIsOption(szOption, "debug"))
@@ -633,6 +639,7 @@ bool CBuildPlain::MakeConfiguration(CBuildConfiguration* pcConfiguration, CChars
 	pcConfiguration->SetWarnStringToPointer(mbWarnStringToPointer);
 	pcConfiguration->SetMultiWordCasts(mbMultiWordCasts);
 	pcConfiguration->SetCConversions(mbCConversions);
+	pcConfiguration->SetStubMissing(mbStubMissing);
 	pcConfiguration->SetDebug(mbDebug);
 	pcConfiguration->SetUnoptimised(mszUnoptimised.Text());
 	if (!mszExecutable.Empty())
@@ -782,6 +789,10 @@ bool CBuildPlain::Describe(CArrayChars* paszArguments, const char* szUnitsDirect
 	if (pcConfiguration->IsCConversions())
 	{
 		paszArguments->Add("-c-conversions");
+	}
+	if (pcConfiguration->IsStubMissing())
+	{
+		paszArguments->Add("-stub-missing");
 	}
 	if (pcConfiguration->IsDebug())
 	{

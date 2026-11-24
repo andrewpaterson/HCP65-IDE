@@ -70,6 +70,7 @@ void CBuildConfigurationEdit::Init(const char* szName, EBuildToolchain eToolchai
 	mbWarnStringToPointer = false;
 	mbMultiWordCasts = false;
 	mbCConversions = false;
+	mbStubMissing = false;
 	mbDebug = false;
 	mszUnoptimised.Init();
 	mszCard.Init();
@@ -98,6 +99,7 @@ void CBuildConfigurationEdit::Init(CBuildConfiguration* pcConfiguration, size ui
 	mbWarnStringToPointer = pcConfiguration->IsWarnStringToPointer();
 	mbMultiWordCasts = pcConfiguration->IsMultiWordCasts();
 	mbCConversions = pcConfiguration->IsCConversions();
+	mbStubMissing = pcConfiguration->IsStubMissing();
 	mbDebug = pcConfiguration->IsDebug();
 	mszUnoptimised.Set(pcConfiguration->GetUnoptimised());
 	if (pcConfiguration->HasCard())
@@ -128,6 +130,7 @@ void CBuildConfigurationEdit::Init(CBuildConfigurationEdit* pcCopied, const char
 	mbWarnStringToPointer = pcCopied->mbWarnStringToPointer;
 	mbMultiWordCasts = pcCopied->mbMultiWordCasts;
 	mbCConversions = pcCopied->mbCConversions;
+	mbStubMissing = pcCopied->mbStubMissing;
 	mbDebug = pcCopied->mbDebug;
 	mszUnoptimised.Set(pcCopied->mszUnoptimised);
 	mszCard.Set(pcCopied->mszCard);
@@ -469,6 +472,10 @@ static void SetEditAttributes(CChars* pszTag, CBuildConfigurationEdit* pcEdit, C
 	if ((pcSource == NULL) || (pcEdit->mbCConversions != pcSource->IsCConversions()))
 	{
 		SetEditAttribute(pszTag, "CConversions", pcEdit->mbCConversions ? "true" : NULL);
+	}
+	if ((pcSource == NULL) || (pcEdit->mbStubMissing != pcSource->IsStubMissing()))
+	{
+		SetEditAttribute(pszTag, "StubMissing", pcEdit->mbStubMissing ? "true" : NULL);
 	}
 	if ((pcSource == NULL) || (pcEdit->mbDebug != pcSource->IsDebug()))
 	{

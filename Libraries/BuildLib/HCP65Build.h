@@ -65,6 +65,7 @@ protected:
 	void		AddDescription(CArrayChars* paszLines);
 	void		SetUnoptimised(void);
 	bool		WriteProgram(CArrayChars* paszLines);
+	bool		CheckMissing(CArrayChars* paszLines);
 	bool		MakeProgram(CChars* pszErrors);
 	bool		WriteProgramFile(const char* szPath, size* puiSize);
 	void		AddLines(const char* szText, CArrayChars* paszLines);

@@ -377,10 +377,38 @@ bool CHCP65Build::Poll(CArrayChars* paszLines)
 	AddLines(mcBuilder.GetErrors(), paszLines);
 	if (mbResult && !mbCancel && mpcConfiguration->IsLinked())
 	{
-		mbResult = WriteProgram(paszLines);
+		mbResult = CheckMissing(paszLines) && WriteProgram(paszLines);
 	}
 	Finish(mbCancel ? BS_Cancelled : (mbResult ? BS_Succeeded : BS_Failed), paszLines);
 	return false;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Each function the program calls and no unit defines, which the linker
+// made a stub that stops the program, told in the Build tab: an error, so
+// the build fails, unless the configuration wants stubs (StubMissing).  A
+// module's are its imports, which the kernal's loader finds (CAsm65Module).
+//
+//////////////////////////////////////////////////////////////////////////
+bool CHCP65Build::CheckMissing(CArrayChars* paszLines)
+{
+	CAsm65Linker*	pcLinker;
+	CChars*			pszLine;
+	size			ui;
+
+	if (mpcConfiguration->GetProgram() == BP_Module)
+	{
+		return true;
+	}
+	pcLinker = mcBuilder.GetLinker();
+	for (ui = 0; ui < pcLinker->NumMissing(); ui++)
+	{
+		pszLine = paszLines->Add(mpcConfiguration->IsStubMissing() ? "warning: " : "error: ");
+		pszLine->Append(pcLinker->GetMissing(ui))->Append(" is used but no unit defines it: the program stops if it gets there.");
+	}
+	return mpcConfiguration->IsStubMissing() || (pcLinker->NumMissing() == 0);
 }
 
 

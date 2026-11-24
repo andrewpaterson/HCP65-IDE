@@ -4084,6 +4084,11 @@ CHECKS = [
 		'DIALOG_ANSWER': 'OK', 'BUILD_EDITS': 'exceptions:1',
 		'DEBUG': 'command:Build.EditConfigurations,answered:1,printbuildfile'}),
 		[r'<Configuration Name="[^"]*" Toolchain="W65C816" [^>]*Exceptions="true"'], [r'ERROR', r'Exceptions="false"']),
+	('build-configuration-stub-missing', dict(MakeSolutionCopy(), **{
+		#A missing function is a build error unless ticked, which is all that is written.
+		'DIALOG_ANSWER': 'OK', 'BUILD_EDITS': 'stubmissing:1',
+		'DEBUG': 'command:Build.EditConfigurations,answered:1,printbuildfile'}),
+		[r'<Configuration Name="[^"]*" Toolchain="W65C816" [^>]*StubMissing="true"'], [r'ERROR', r'StubMissing="false"']),
 	('build-configuration-debug', dict(MakeSolutionCopy(), **{
 		#Built for the debugger, and projects compiled without the optimiser: only an HCP65 toolchain's, and written when set.
 		'DIALOG_ANSWER': 'OK', 'BUILD_EDITS': 'debug:1;unoptimised:Init, Shell;toolchain:GCC;check;toolchain:W65C816;check',

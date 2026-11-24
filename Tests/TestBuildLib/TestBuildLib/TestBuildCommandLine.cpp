@@ -796,6 +796,48 @@ void TestBuildCommandLinePlainEntry(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// A program that calls a function no unit defines doesn't build: the
+// Build tab names it (CHCP65Build::CheckMissing).  With -stub-missing (a
+// configuration's StubMissing="true") it builds, the function a stub that
+// stops the program, and the line is a warning.
+//
+//////////////////////////////////////////////////////////////////////////
+void TestBuildCommandLinePlainMissing(void)
+{
+	CTestBuildCommandLine	cCommandLine;
+	CFileUtil				cFileUtil;
+	CTextFile				cFile;
+	CChars					szSource;
+
+	cFileUtil.TouchDir(TEST_COMMAND_LINE_OUTPUT _FS_ "Missing");
+	cFile.Init("int Elsewhere(int i);\nextern \"C\" int Start(void)\n{\n\treturn Elsewhere(3);\n}\n");
+	AssertTrue(cFile.Write(TEST_COMMAND_LINE_OUTPUT _FS_ "Missing" _FS_ "Missing.cpp"));
+	cFile.Kill();
+	szSource.Init(TEST_COMMAND_LINE_OUTPUT _FS_ "Missing" _FS_ "Missing.cpp");
+	cFileUtil.FullPath(&szSource);
+
+	const char* aszMissing[] = { "hcp65build", "-quiet", "-libc65", TEST_COMMAND_LINE_LIBC65, "-I", TEST_COMMAND_LINE_LIBRARIES, "-program", "Missing", szSource.Text(),
+								 "-exe", "missing.exe", "-entry", "_Start", "-o", TEST_COMMAND_LINE_OUTPUT _FS_ "Missing" _FS_ "Out", "-listings", TEST_COMMAND_LINE_OUTPUT _FS_ "Missing" _FS_ "Listing", "-stub-missing" };
+	cCommandLine.Init();
+	AssertTrue(cCommandLine.Parse(17, aszMissing));
+	AssertInt(BUILD_EXIT_FAILED, cCommandLine.Run(NULL));
+	AssertTrue(cCommandLine.HasLine("error: _Elsewhere__Fi.a is used but no unit defines it: the program stops if it gets there."));
+	AssertString("Plain|W65C816 build failed.", cCommandLine.GetLastLine());
+	cCommandLine.Kill();
+
+	cCommandLine.Init();
+	AssertTrue(cCommandLine.Parse(18, aszMissing));
+	AssertInt(BUILD_EXIT_SUCCEEDED, cCommandLine.Run(NULL));
+	AssertTrue(cCommandLine.HasLine("warning: _Elsewhere__Fi.a is used but no unit defines it: the program stops if it gets there."));
+	AssertString("Plain|W65C816 build succeeded.", cCommandLine.GetLastLine());
+	cCommandLine.Kill();
+
+	szSource.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // -layouts <file>: each class the build lays out, a line each and in order,
 // as the build's target lays it out, from a plain command line and from a
 // solution.
@@ -875,6 +917,7 @@ void TestBuildCommandLine(void)
 	TestBuildCommandLinePlainParse();
 	TestBuildCommandLinePlainSameAsProject();
 	TestBuildCommandLinePlainEntry();
+	TestBuildCommandLinePlainMissing();
 	TestBuildCommandLineLayouts();
 
 	TestStatistics();

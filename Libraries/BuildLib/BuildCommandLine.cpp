@@ -1034,6 +1034,8 @@ void CBuildCommandLine::WriteUsage(void)
 	WriteLine("  -warn-string-to-pointer       Warn when a string literal, which is const, becomes a char*.");
 	WriteLine("  -multi-word-casts             Accept unsigned int(3), a cast whose type is more than one word.");
 	WriteLine("  -c-conversions                The sources are C: a void* and a number convert as C has them.");
+	WriteLine("  -stub-missing                 A function called and defined by no unit is a stub that stops the program,");
+	WriteLine("                                not an error.");
 	WriteLine("  -debug                        Built for a debugger: each variable kept where a debugger reads it,");
 	WriteLine("                                nothing inlined, every frame its own shape; the rest still optimised.");
 	WriteLine("  -unoptimised <project>        The project built for a debugger without the optimiser (again for each).");

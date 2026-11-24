@@ -51,6 +51,7 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 #define BUILD_CONFIGURATION_WARN_STRING_TO_POINTER	"WarnStringToPointer"
 #define BUILD_CONFIGURATION_MULTI_WORD_CASTS	"MultiWordCasts"
 #define BUILD_CONFIGURATION_C_CONVERSIONS	"CConversions"
+#define BUILD_CONFIGURATION_STUB_MISSING	"StubMissing"
 #define BUILD_CONFIGURATION_DEBUG	"Debug"
 #define BUILD_CONFIGURATION_UNOPTIMISED	"Unoptimised"
 
@@ -78,6 +79,7 @@ void CBuildConfiguration::Init(const char* szName, EBuildToolchain eToolchain, c
 	mbWarnStringToPointer = false;
 	mbMultiWordCasts = false;
 	mbCConversions = false;
+	mbStubMissing = false;
 	mbDebug = false;
 	mszUnoptimised.Init();
 	meProgram = BP_None;
@@ -182,6 +184,10 @@ void CBuildConfiguration::SaveXML(CXMLWriter* pcWriter)
 	{
 		pcWriter->Attribute(BUILD_CONFIGURATION_C_CONVERSIONS, "true");
 	}
+	if (mbStubMissing)
+	{
+		pcWriter->Attribute(BUILD_CONFIGURATION_STUB_MISSING, "true");
+	}
 	if (mbDebug)
 	{
 		pcWriter->Attribute(BUILD_CONFIGURATION_DEBUG, "true");
@@ -255,6 +261,7 @@ bool CBuildConfiguration::LoadXML(CMarkupTag* pcTag)
 	char*			szWarnStringToPointer;
 	char*			szMultiWordCasts;
 	char*			szCConversions;
+	char*			szStubMissing;
 	char*			szDebug;
 	EBuildToolchain	eToolchain;
 	CMarkupTag*		pcImage;
@@ -299,6 +306,8 @@ bool CBuildConfiguration::LoadXML(CMarkupTag* pcTag)
 	SetWarnStringToPointer((szWarnStringToPointer != NULL) && (strcmp(szWarnStringToPointer, "true") == 0));
 	SetMultiWordCasts((szMultiWordCasts != NULL) && (strcmp(szMultiWordCasts, "true") == 0));
 	SetCConversions((szCConversions != NULL) && (strcmp(szCConversions, "true") == 0));
+	szStubMissing = pcTag->GetAttribute((char*)BUILD_CONFIGURATION_STUB_MISSING);
+	SetStubMissing((szStubMissing != NULL) && (strcmp(szStubMissing, "true") == 0));
 	szDebug = pcTag->GetAttribute((char*)BUILD_CONFIGURATION_DEBUG);
 	SetDebug((szDebug != NULL) && (strcmp(szDebug, "true") == 0));
 	SetUnoptimised(pcTag->GetAttribute((char*)BUILD_CONFIGURATION_UNOPTIMISED));
@@ -725,6 +734,29 @@ void CBuildConfiguration::SetCConversions(bool bCConversions)
 bool CBuildConfiguration::IsCConversions(void) const
 {
 	return mbCConversions;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether a function the program calls and no unit defines is a stub that
+// stops it (the build succeeds) rather than an error (false unless set;
+// CHCP65Build::CheckMissing).
+//
+//////////////////////////////////////////////////////////////////////////
+void CBuildConfiguration::SetStubMissing(bool bStubMissing)
+{
+	mbStubMissing = bStubMissing;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+bool CBuildConfiguration::IsStubMissing(void) const
+{
+	return mbStubMissing;
 }
 
 

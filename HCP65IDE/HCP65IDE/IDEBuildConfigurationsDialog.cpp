@@ -113,6 +113,7 @@ void CIDEBuildConfigurationsDialog::Class(void)
 	M_Pointer(mpWarnStringToPointer);
 	M_Pointer(mpMultiWordCasts);
 	M_Pointer(mpCConversions);
+	M_Pointer(mpStubMissing);
 	M_Pointer(mpDebug);
 	M_Pointer(mpUnoptimised);
 	M_Pointer(mpCard);
@@ -253,10 +254,12 @@ Ptr<CComponent> CIDEBuildConfigurationsDialog::CreateBody(void)
 	mpWarnStringToPointer = OMalloc<CCheckBox>(pWindow, psLook->pcTheme, "Warn when a string literal becomes a char*");
 	mpMultiWordCasts = OMalloc<CCheckBox>(pWindow, psLook->pcTheme, "Accept casts like unsigned int(3)");
 	mpCConversions = OMalloc<CCheckBox>(pWindow, psLook->pcTheme, "C sources: void* and numbers convert as in C");
+	mpStubMissing = OMalloc<CCheckBox>(pWindow, psLook->pcTheme, "A missing function stops the program instead of failing the build");
 	mpKeepUnusedObjects->SetAlignment(CSH_Left, CSV_Center);
 	mpWarnStringToPointer->SetAlignment(CSH_Left, CSV_Center);
 	mpMultiWordCasts->SetAlignment(CSH_Left, CSV_Center);
 	mpCConversions->SetAlignment(CSH_Left, CSV_Center);
+	mpStubMissing->SetAlignment(CSH_Left, CSV_Center);
 	mpDebug = OMalloc<CCheckBox>(pWindow, psLook->pcTheme, "Built for the debugger");
 	mpDebug->SetAlignment(CSH_Left, CSV_Center);
 	mpUnoptimised = CreateField();
@@ -283,6 +286,7 @@ Ptr<CComponent> CIDEBuildConfigurationsDialog::CreateBody(void)
 	AddFormRow(pForm, &iRow, "", mpWarnStringToPointer);
 	AddFormRow(pForm, &iRow, "", mpMultiWordCasts);
 	AddFormRow(pForm, &iRow, "", mpCConversions);
+	AddFormRow(pForm, &iRow, "", mpStubMissing);
 	AddFormRow(pForm, &iRow, "", mpDebug);
 	AddFormRow(pForm, &iRow, "Projects not optimised", mpUnoptimised);
 	AddFormRow(pForm, &iRow, "Card", mpCard);
@@ -405,6 +409,7 @@ void CIDEBuildConfigurationsDialog::ShowSelected(void)
 	mpWarnStringToPointer->SetTicked(pcEdit ? pcEdit->mbWarnStringToPointer : false);
 	mpMultiWordCasts->SetTicked(pcEdit ? pcEdit->mbMultiWordCasts : false);
 	mpCConversions->SetTicked(pcEdit ? pcEdit->mbCConversions : false);
+	mpStubMissing->SetTicked(pcEdit ? pcEdit->mbStubMissing : false);
 	mpDebug->SetTicked(pcEdit ? pcEdit->mbDebug : false);
 	mpUnoptimised->SetText(pcEdit ? pcEdit->mszUnoptimised.Text() : "");
 	if (pcEdit)
@@ -511,6 +516,7 @@ void CIDEBuildConfigurationsDialog::Keep(void)
 	pcEdit->mbWarnStringToPointer = mpWarnStringToPointer->IsTicked();
 	pcEdit->mbMultiWordCasts = mpMultiWordCasts->IsTicked();
 	pcEdit->mbCConversions = mpCConversions->IsTicked();
+	pcEdit->mbStubMissing = mpStubMissing->IsTicked();
 	pcEdit->mbDebug = mpDebug->IsTicked();
 	pcEdit->mszUnoptimised.Set(mpUnoptimised->GetText());
 	pcEdit->mszCard.Set(mpCard->GetText());
@@ -717,7 +723,7 @@ bool CIDEBuildConfigurationsDialog::Approve(void)
 // semicolons: add, remove, select:<row>, name:<text>, toolchain:<text>,
 // solution:<text>, breakpoint:<text>, nofloats:<0 or 1>, mathtables:<0 or
 // 1>, prefersize:<0 or 1>, overridewarning:<0 or 1>, exceptions:<0 or
-// 1>, keepunused:<0 or 1>, stringwarning:<0 or 1>, multiwordcasts:<0 or 1>, cconversions:<0 or 1>, debug:<0 or 1>,
+// 1>, keepunused:<0 or 1>, stringwarning:<0 or 1>, multiwordcasts:<0 or 1>, cconversions:<0 or 1>, stubmissing:<0 or 1>, debug:<0 or 1>,
 // unoptimised:<text>, card:<text>, cardpath:<text>, and check,
 // which prints whether OK
 // would close it and why not.
@@ -798,6 +804,10 @@ void CIDEBuildConfigurationsDialog::ApplyEdits(const char* szEdits)
 		else if (strncmp(sz, "cconversions:", 13) == 0)
 		{
 			mpCConversions->SetTicked(sz[13] == '1');
+		}
+		else if (strncmp(sz, "stubmissing:", 12) == 0)
+		{
+			mpStubMissing->SetTicked(sz[12] == '1');
 		}
 		else if (strncmp(sz, "debug:", 6) == 0)
 		{
