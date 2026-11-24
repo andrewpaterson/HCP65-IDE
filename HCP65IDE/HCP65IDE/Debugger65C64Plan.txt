@@ -197,11 +197,9 @@ for it.  Then (the user, 2026-11-24) not V alone either: the frame model below r
      tests have (memory and the host file device, so printf works), as a small console emulator the IDE starts.
      The other way is to wait for a 65C64 computer to be modelled, with its own boards, which nothing plans yet.
 DECIDED 2026-11-24 (the user): the emulator lives in the HCP65 repository, in a project called X65C64-Emulator.
-  The user noted too that HCP65/W65C64 (the 65C64's proposal: the Instruction Architecture spreadsheet, the
-  Proposal document, its pictures) should really be called X65C64-Proposal.  Renaming it is its own small item (git
-  mv, and the paths that name it: Assembler65Lib's Assembler65C64Syntax.txt, the website's tools/sheet_to_html.py and
-  README.md, MicroprocessorLib's 65C64Simulator.txt, TestMicroprocessorLib's Test65C64.cpp); HCP65/Kicad/W65C64 (the
-  processor's board) is left as it is unless the user says.
+  Renamed the same day (the user: "to keep the 65C64 near the end alphabetically"): HCP65/W65C64 (the proposal: the
+  Instruction Architecture spreadsheet, the Proposal document, its pictures) is HCP65/X65C64-Proposal, and
+  HCP65/Kicad/W65C64 (its board) is HCP65/Kicad/X65C64; the paths naming them were changed with them.
 
 My own choices, not asked: the records say their processor (A1); the tests are made generic over both processors
 (C2, E1); no measuring stage first, since the 65C64 has no ROM or memory limit a Debug build must fit.
