@@ -1235,7 +1235,8 @@ CSolutionExplorer* CIDEContent::GetExplorer(void) { return &mpSolutions->GetExpl
 // The editors' context menu, as IntelliJ's: Go to Source (Control+B, an
 // #include's file or a definition), Find Usages (Alt+F7), Rename
 // (Shift+F6) and Refactor, each added (and enabled as it opens) by the
-// class that does it, then Cut, Copy, Paste and Paste from History.
+// class that does it, the debugger's Add Watch and QuickWatch, then Cut,
+// Copy, Paste and Paste from History.
 //
 //////////////////////////////////////////////////////////////////////////
 Ptr<CMenuContainer> CIDEContent::CreateEditorMenu(void)
@@ -1245,6 +1246,8 @@ Ptr<CMenuContainer> CIDEContent::CreateEditorMenu(void)
 	mpUsages->AddEditorItems(mpEditorMenu);
 	mpEditorMenu->AddSeparator();
 	mpRename->AddEditorItems(mpEditorMenu);
+	mpEditorMenu->AddSeparator();
+	mpDebugging->AddEditorItems(mpEditorMenu);
 	mpEditorMenu->AddSeparator();
 	mpEditorMenu->AddItem(mpCommands->Find("Edit.Cut"));
 	mpEditorMenu->AddItem(mpCommands->Find("Edit.Copy"));

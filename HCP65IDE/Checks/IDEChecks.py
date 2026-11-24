@@ -163,6 +163,61 @@ def MakeToolsCopy():
 	return asCopy
 
 
+#The debugger's windows are checked on a program of their own (Input/Debugging: a class, a recursive Sum, an array, a
+#char*, an enum and a float), built and run on the HCP65 in the emulator drawn on the reference screen (HCP65EmulatorRef,
+#built beside HCP65Emulator), as the start up program of a copy of TestHCP65Lib's boot card.  TestHCP65Lib must have
+#been run: the card, the boot loader and OS.SYS are its.
+DEBUGGING = os.path.join(HERE, 'Input', 'Debugging')
+DEBUGGING_CARD = os.path.join(ROOT, 'HCP65', 'HCP65-Emulator', 'TestHCP65Lib', 'TestHCP65Lib', 'Output', 'BootCard.img')
+if os.name == 'nt':
+	REFERENCE_EMULATOR = os.path.join(ROOT, 'HCP65', 'HCP65-Emulator', 'x64', 'Release', 'HCP65EmulatorRef.exe')
+else:
+	REFERENCE_EMULATOR = os.path.join(ROOT, 'build', 'HCP65EmulatorRelease', 'HCP65EmulatorRef')
+
+
+def CleanDebugging():
+	#What building and debugging Input/Debugging leaves: its build, the card, and the breakpoints and watches it saved.
+	for szName in ['Output', 'Listing']:
+		shutil.rmtree(os.path.join(DEBUGGING, szName), True)
+	for szName in os.listdir(DEBUGGING):
+		if szName.endswith('.hcp65user') or szName.endswith('.layout.user'):
+			os.remove(os.path.join(DEBUGGING, szName))
+
+
+def PrepareDebugging():
+	#Input/Debugging as from nothing, before each run: no build, no breakpoints or watches saved, and its card a fresh
+	#copy of the boot card (a sparse file: copied sparsely, it is small).
+	CleanDebugging()
+	os.makedirs(os.path.join(DEBUGGING, 'Output'))
+	szCard = os.path.join(DEBUGGING, 'Output', 'Debugging.img')
+	if os.name == 'nt':
+		shutil.copyfile(DEBUGGING_CARD, szCard)
+	else:
+		subprocess.run(['cp', '--sparse=always', DEBUGGING_CARD, szCard], check=True)
+
+
+def MakeDebugging(szDebug, szConfiguration=None):
+	#A run debugging Input/Debugging, built first, on the reference emulator, with the debugger's script szDebug (after
+	#choosing szConfiguration, if given).  Each run starts from nothing (PREPARE), and what it leaves goes at the end.
+	atexit.register(CleanDebugging)
+	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
+	atexit.register(shutil.rmtree, szRoot, True)
+	if szConfiguration:
+		#The build at the start is of the configuration chosen then: the one asked for is built after it.
+		szDebug = 'configuration:' + szConfiguration + ',command:Build.Build,wait:300,built,' + szDebug
+	return {'SOLUTION': os.path.join(DEBUGGING, 'Debugging.sln'), 'RECENT': os.path.join(szRoot, 'Recent.xml'), 'OPEN': 'Debugging.cpp', 'BUILD': '1',
+			'EMULATOR': REFERENCE_EMULATOR, 'DEBUG': 'built,' + szDebug, 'PREPARE': PrepareDebugging}
+
+
+#Sum's recursion stopped at its end (line 37, iDepth 0): each call with its parameters and line, main's, and the start
+#up's, which has no records.
+DEBUG_CALL_STACK = [r'^Call Stack:$',
+	r'^=> debugging\.exe!Sum\(CCounter\* pcCounter = 0x00[0-9a-f]{4}, int iDepth = 0\) Line 37$',
+	r'^   debugging\.exe!Sum\(CCounter\* pcCounter = 0x00[0-9a-f]{4}, int iDepth = 1\) Line 39$',
+	r'^   debugging\.exe!Sum\(CCounter\* pcCounter = 0x00[0-9a-f]{4}, int iDepth = 4\) Line 39$',
+	r'^   debugging\.exe!main\(\) Line 53$', r'^   \[External Code\]$']
+
+
 def MakeBrokenKernel():
 	#A copy of the test solution whose kernel doesn't compile: two errors in Kernel.cpp, on lines 2 and 5, and a usage of
 	#F on line 5.  Its recent solutions are apart from the user's.
@@ -4065,6 +4120,43 @@ CHECKS = [
 	('breakpoint', {
 		'OPEN': 'Kernal.cpp', 'DEBUG': 'line:20,buildtab,wait:300,printtabs'},
 		[r'^Tabs: .*>Kernal\.cpp'], []),
+	('debug-call-stack', MakeDebugging('line:37,start,stopped,wait:1500,printstopped,printcallstack,print:Locals,stop'),
+		#Stopped at a breakpoint: Call Stack's calls, Locals the innermost's parameters and locals.
+		[r'^Stopped: yes, \$[0-9A-F]{6}, .*Debugging\.cpp:37$'] + DEBUG_CALL_STACK +
+		[r'^Locals:$', r'^pcCounter = 0x00[0-9a-f]{4} \[CCounter\*\]$', r'^iDepth = 0 \[int\]$', r'^iBelow = 0 \[int\]$'], [r'\?\?\?', r' \*$']),
+	('debug-frames', MakeDebugging('line:37,start,stopped,wait:1500,frame:5,wait:500,printcallstack,print:Locals,open:Locals:cCounter,wait:300,print:Locals,'
+		'frame:3,wait:500,print:Locals,print:Autos'),
+		#A call chosen in Call Stack: its arrow, its locals, an object opened (an enum, a float); Autos of its line.
+		[r'^Call Stack:$', r'^=> debugging\.exe!Sum\(.*iDepth = 0\) Line 37$', r'^-> debugging\.exe!main\(\) Line 53$',
+		 r'^Locals:$', r'^cCounter = \{\.\.\.\} \[CCounter\]$', r'^iTotal = 0 \[int\]$',
+		 r'^Locals:$', r'^cCounter = \{\.\.\.\} \[CCounter\]$', r'^  miCount = 0 \[int\]$', r'^  meColour = EC_Green \[EColour\]$', r'^  mfScale = 1\.5 \[float\]$',
+		 r'^Locals:$', r'^pcCounter = ', r'^iDepth = 3 \[int\]$', r'^Autos:$', r'^iBelow = ', r'^pcCounter = ', r'^iDepth = 3 \[int\]$'], [r'\?\?\?']),
+	('debug-watch', MakeDebugging('line:37,start,stopped,wait:1500,watch:1:gaiValues,watch:1:gszName,watch:1:pcCounter->meColour,watch:1:gaiValues[iDepth + 2] + 1,'
+		'watch:1:nope,watch:2:gfScale,wait:500,open:Watch1:gaiValues,wait:300,print:Watch1,print:Watch2,hex,wait:300,print:Locals,hex,'
+		'set:Watch1:gaiValues/[3]:9,set:Watch1:gaiValues/[2]:x,wait:500,print:Watch1,printuserfile'),
+		#Watches typed in: values, an array opened, errors; Hexadecimal Display; a value written; kept in the .hcp65user.
+		[r'^Watch1:$', r'^gaiValues = \{\.\.\.\} \[int\[4\]\]$', r'^  \[0\] = 3 \[int\]$', r'^  \[3\] = 1 \[int\]$', r'^gszName = 0x[0-9a-f]{6} "Debugging" \[const char\*\]$',
+		 r'^pcCounter->meColour = EC_Green \[EColour\]$', r'^gaiValues\[iDepth \+ 2\] \+ 1 = 5 \[int\]$', r'^nope = nope is undefined \[\]$', r'^ =  \[\]$',
+		 r'^Watch2:$', r'^gfScale = 1\.5 \[float\]$', r'^Locals:$', r'^iDepth = 0x0000 \[int\]$', r'^Not written: gaiValues/\[2\] = x$',
+		 r'^Watch1:$', r'^  \[3\] = 9 \[int\]$', r'<Watch Window="1" Expression="gaiValues"/>', r'<Watch Window="2" Expression="gfScale"/>'], [r'\?\?\?']),
+	('debug-autos', MakeDebugging('line:37,start,stopped,wait:1500,out,stopped,wait:1500,printstopped,printcallstack,print:Autos,over,stopped,wait:1000,print:Locals'),
+		#Stepped out: what Sum returned in Autos, with what its caller's line and the line before use; then a step over,
+		#and the value it changed red.
+		[r'^Stopped: yes, .*Debugging\.cpp:39$', r'^=> debugging\.exe!Sum\(.*iDepth = 1\) Line 39$', r'^Autos:$', r'^Sum returned = 0 \[int\]$', r'^iBelow = 0 \[int\]$',
+		 r'^pcCounter = ', r'^iDepth = 1 \[int\]$', r'^Locals:$', r'^iDepth = 1 \[int\]$'], [r'\?\?\?']),
+	('debug-data-tip', MakeDebugging('line:37,start,stopped,wait:1500,datatip:40:18,wait:300,print:DataTip,open:DataTip:gaiValues,wait:300,print:DataTip,'
+		'datatip:40:5,print:DataTip,datatip:31:1'),
+		#The data tip of a name in the editor, opened; one of a member chain (pcCounter->Add's pcCounter); none on a keyword.
+		[r'^DataTip:$', r'^gaiValues = \{\.\.\.\} \[int\[4\]\]$', r'^DataTip:$', r'^gaiValues = ', r'^  \[0\] = 3 \[int\]$', r'^  \[3\] = 1 \[int\]$',
+		 r'^DataTip:$', r'^pcCounter = 0x00[0-9a-f]{4} \[CCounter\*\]$', r'^No data tip at 31:1$'], []),
+	('debug-quick-watch', dict(MakeDebugging('line:37,start,stopped,wait:1500,edit:caret:40:18,command:Debug.QuickWatch,answered:2,print:Watch1'), **{'DIALOG_ANSWER': 'Reevaluate|OK'}),
+		#QuickWatch of the expression at the caret: Reevaluate shows it again; Add Watch (its OK) puts it in Watch 1.
+		[r'^Dialog \[QuickWatch\] answered Reevaluate$', r'^Dialog \[QuickWatch\] answered OK$', r'^Watch1:$', r'^gaiValues = \{\.\.\.\} \[int\[4\]\]$'], []),
+	('debug-optimised', MakeDebugging('line:39,start,stopped,wait:1500,printcallstack,continue,stopped,wait:1500,printcallstack', 'Release|W65C816'),
+		#Built optimised (Sum's first call inlined into main, which the optimiser may choose otherwise): the calls are
+		#still walked, without the parameters a Release build doesn't describe.
+		[r'^Call Stack:$', r'^=> debugging\.exe!(main|Sum)\(\) Line 39$', r'^   \[External Code\]$',
+		 r'^Call Stack:$', r'^=> debugging\.exe!Sum\(\) Line 39$', r'^   debugging\.exe!(main|Sum)\(\) Line [0-9]+$', r'^   \[External Code\]$'], [r'\?\?\?']),
 	('menus', {
 		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'CARET': '36:4', 'DEBUG': 'printmenus,clickmenu:View/Nope'},
 		[r'^Menu File: New>, Save File as Template\.\.\., Open Project/Solution\.\.\., Add Solution\.\.\., Close Solution, Recent Solutions>, Clear Recent Solutions, Save \[Ctrl\+S\], Save All \[Ctrl\+Shift\+S\], Compare with File\.\.\., Settings\.\.\. \[Ctrl\+Alt\+S\], Exit$',
@@ -4072,12 +4164,12 @@ CHECKS = [
 		 r'^Menu File/Recent Solutions: 1 ',
 		 r'^Menu Edit: Undo \[Ctrl\+Z\](\(disabled\))?, Redo \[Ctrl\+Shift\+Z\](\(disabled\))?, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\], Select All \[Ctrl\+A\], Extend Selection \[Ctrl\+W\], Shrink Selection \[Ctrl\+Shift\+W\], Find\.\.\. \[Ctrl\+F\], Replace\.\.\. \[Ctrl\+R\], Find Next \[F3\], Find Previous \[Shift\+F3\], Find Word at Caret \[Ctrl\+F3\], Find in Files\.\.\. \[Ctrl\+Shift\+F\], Replace in Files\.\.\. \[Ctrl\+Shift\+R\], Find Duplicates\.\.\. \[Ctrl\+Alt\+Shift\+D\]$',
 		 r'^Menu Navigate: Back \[Ctrl\+Alt\+Left\](\(disabled\))?, Forward \[Ctrl\+Alt\+Right\](\(disabled\))?, Class\.\.\. \[Ctrl\+N\], File\.\.\. \[Ctrl\+Shift\+N\], Symbol\.\.\. \[Ctrl\+Alt\+Shift\+N\], Action\.\.\. \[Ctrl\+Shift\+A\], Line:Column\.\.\. \[Ctrl\+G\], Go to Source \[Ctrl\+B\], Go to Definition \[F12\], Go to Implementation\(s\) \[Ctrl\+Alt\+B\], Go to Type Declaration \[Ctrl\+Shift\+B\], Go to Super Method \[Ctrl\+U\], Go to Related Symbol \[Ctrl\+Alt\+Home\], Switch Header/Source \[Alt\+O\], File Structure \[Ctrl\+F12\], Next Method \[Alt\+Down\], Previous Method \[Alt\+Up\], Toggle Bookmark \[Ctrl\+F11\], Toggle Bookmark with Mnemonic\.\.\. \[Ctrl\+Shift\+F11\], Next Bookmark \[F2\], Previous Bookmark \[Shift\+F2\], Next Change \[Ctrl\+Alt\+Shift\+Down\], Previous Change \[Ctrl\+Alt\+Shift\+Up\], Highlight Usages in File \[Ctrl\+Shift\+F7\], Recent Files \[Ctrl\+E\], Recent Locations \[Ctrl\+Shift\+E\], Last Edit Location \[Ctrl\+Shift\+Backspace\], Next Edit Location, Select In\.\.\. \[Alt\+F1\], Type Hierarchy \[Ctrl\+H\], Method Hierarchy \[Ctrl\+Shift\+H\], Call Hierarchy \[Ctrl\+Alt\+H\], Find Usages \[Alt\+F7\], Show Usages \[Ctrl\+Alt\+F7\], Find All References \[Shift\+F12\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Next Occurrence \[Ctrl\+Alt\+Down\], Previous Occurrence \[Ctrl\+Alt\+Up\]$',
-		 r'^Menu View: Solution Explorer \[Alt\+1\], Structure \[Alt\+7\], Find Usages \[Alt\+3\], Find \[Alt\+9\], Duplicates, Bookmarks \[Alt\+2\], Hierarchy \[Alt\+8\], Build \[Alt\+6\], Indexing, Problems, Run \[Alt\+4\], Debug \[Alt\+5\], Claude, Hide All Tool Windows \[Ctrl\+Shift\+F12\], Jump to Last Tool Window(\(disabled\))?, Quick Definition \[Ctrl\+Shift\+I\], Parameter Info \[Ctrl\+P\], Type Info \[Ctrl\+Shift\+P\], Increase Font Size \[Ctrl\+=\], Decrease Font Size \[Ctrl\+-\], Reset Font Size \[Ctrl\+0\]$',
+		 r'^Menu View: Solution Explorer \[Alt\+1\], Structure \[Alt\+7\], Find Usages \[Alt\+3\], Find \[Alt\+9\], Duplicates, Bookmarks \[Alt\+2\], Hierarchy \[Alt\+8\], Build \[Alt\+6\], Indexing, Problems, Run \[Alt\+4\], Debug \[Alt\+5\], Locals, Call Stack, Autos, Watch 1, Watch 2, Watch 3, Watch 4, Claude, Hide All Tool Windows \[Ctrl\+Shift\+F12\], Jump to Last Tool Window(\(disabled\))?, Quick Definition \[Ctrl\+Shift\+I\], Parameter Info \[Ctrl\+P\], Type Info \[Ctrl\+Shift\+P\], Increase Font Size \[Ctrl\+=\], Decrease Font Size \[Ctrl\+-\], Reset Font Size \[Ctrl\+0\]$',
 		 r'^Menu Git: Compare with HEAD, Compare with Branch\.\.\., Compare with Revision\.\.\.$',
 		 r'^Menu Build: Build \[Ctrl\+F9\], Edit Build Configurations\.\.\.$',
-		 r'^Menu Debug: Start Debugging \[F5\], Start Without Debugging \[Ctrl\+F5\], Stop Debugging \[Shift\+F5\], Stop Running(\(disabled\))?, Restart \[Ctrl\+Shift\+F5\], Break All \[Ctrl\+Pause/Break\], Attach to Emulator\.\.\., Step Into \[F11\], Step Over \[F10\], Step Out \[Shift\+F11\], Toggle Breakpoint \[F9\], New Breakpoint at Address\.\.\., Delete All Breakpoints, Edit Configurations\.\.\.$',
+		 r'^Menu Debug: Start Debugging \[F5\], Start Without Debugging \[Ctrl\+F5\], Stop Debugging \[Shift\+F5\], Stop Running(\(disabled\))?, Restart \[Ctrl\+Shift\+F5\], Break All \[Ctrl\+Pause/Break\], Attach to Emulator\.\.\., Step Into \[F11\], Step Over \[F10\], Step Out \[Shift\+F11\], Toggle Breakpoint \[F9\], New Breakpoint at Address\.\.\., Delete All Breakpoints, Edit Configurations\.\.\., Windows>, QuickWatch\.\.\. \[Shift\+F9\](\(disabled\))?$',
 		 r'^Menu Window: Reset Window Layout, Close All Documents, Switcher \[Ctrl\+Tab\], Select Next Tab \[Alt\+Right\], Select Previous Tab \[Alt\+Left\], Reopen Closed Tab(\(disabled\))?$',
-		 r'^Menu Editor: Go to Source \[Ctrl\+B\], Find Usages \[Alt\+F7\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Show Context Actions \[Alt\+Enter\], Rename\.\.\. \[Shift\+F6\], Refactor>, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\]$',
+		 r'^Menu Editor: Go to Source \[Ctrl\+B\], Find Usages \[Alt\+F7\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Show Context Actions \[Alt\+Enter\], Rename\.\.\. \[Shift\+F6\], Refactor>, Add Watch, QuickWatch\.\.\. \[Shift\+F9\](\(disabled\))?, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\]$',
 		 r"^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\], Introduce Field\.\.\. \[Ctrl\+Alt\+F\], Introduce Constant\.\.\. \[Ctrl\+Alt\+C\], Introduce Parameter\.\.\. \[Ctrl\+Alt\+P\], Introduce Typedef\.\.\. \[Ctrl\+Alt\+K\](\(disabled\))?, Inline\.\.\. \[Ctrl\+Alt\+N\], Change Signature\.\.\. \[Ctrl\+F6\], Unify Parameter Names, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\., Push Members Down\.\.\., Move\.\.\. \[F6\], Copy Class\.\.\., Move to Namespace\.\.\., Extract Method\.\.\. \[Ctrl\+Alt\+M\](\(disabled\))?, Extract Superclass\.\.\., Extract Interface\.\.\., Extract Class\.\.\., Encapsulate Field\.\.\., Optimise \#includes \[Ctrl\+Alt\+O\], Convert Macro\.\.\., Convert Pointer to Reference, Convert Reference to Pointer, Convert Enum to Enum Class\.\.\., Write Template's Interface\.\.\., Make Member Function const, Make Member Function static, Convert Function to Member Function, Convert Member Function to Function, Extract Template Parameter\.\.\., Remove Template Parameter$",
 		 r'^Menu Explorer: Set as Startup Solution, Set as Startup Project(\(disabled\))?, Remove Solution, Rename\.\.\., Properties\.\.\.(\(disabled\))?, Always Select Opened File, Open Files with Single Click$',
 		 r'^Menu New: C\+\+ Class\.\.\., C\+\+ Header\.\.\., C\+\+ Source\.\.\., Copy Class\.\.\.$',
@@ -4805,7 +4897,7 @@ CHECKS = [
 		         'edit:press:Left Control,edit:tap:Tab,edit:release:Left Control,printtabs,edit:press:Left Control,edit:press:Left Shift,edit:tap:Tab,edit:release:Left Shift,edit:tap:Cursor Up,edit:tap:Cursor Up,edit:printchooser,'
 		         'edit:release:Left Control,printtabs,edit:press:Left Alt,edit:tap:Cursor Left,edit:release:Left Alt,printtabs,edit:press:Left Control,edit:tap:E,edit:release:Left Control,edit:printchooser,edit:tap:Enter,edit:print'},
 		[r'^Chooser: Switcher$', r'^  >Shapes\.h \| ', r'^Chooser: none$', r'^Tabs: Shapes\.cpp >Shapes\.h Main\.cpp$', r'Shapes\.h \(focus\) line 1: ',
-		 r'^Tabs: Shapes\.cpp Shapes\.h >Main\.cpp$', r'^Chooser: Switcher$', r'^  >Run \| $', r'^Tabs: Shapes\.cpp Shapes\.h >Main\.cpp$', r'^Tabs: Shapes\.cpp >Shapes\.h Main\.cpp$',
+		 r'^Tabs: Shapes\.cpp Shapes\.h >Main\.cpp$', r'^Chooser: Switcher$', r'^  >Watch 3 \| $', r'^Tabs: Shapes\.cpp Shapes\.h >Main\.cpp$', r'^Tabs: Shapes\.cpp >Shapes\.h Main\.cpp$',
 		 r'^Chooser: Recent Files$', r'^  >Main\.cpp \| ', r'^   Shapes\.cpp \| ', r'Main\.cpp \(focus\) line 1: '], [r'ERROR']),
 	('switcher-close', {
 		#Delete in the Switcher closes the selected file and leaves the Switcher open, the row that took its place
@@ -5075,7 +5167,7 @@ CHECKS = [
 		         'command:View.Structure,edit:printtoolwindows,command:View.Structure,edit:printtoolwindows,edit:print,command:View.JumpToLastToolWindow,edit:printtoolwindows,'
 		         'command:Navigate.TypeHierarchy,edit:printtoolwindows,command:View.Hierarchy,edit:printtoolwindows,command:View.Hierarchy,edit:printtoolwindows,'
 		         'command:View.Run,command:View.Debug,command:View.Find,edit:printtoolwindows,printmenus'},
-		[r'^Tool windows: Solution Explorer 1 \(front\), Structure 2, Find Usages 1 \(front\), Find 2, Duplicates 3, Bookmarks 4, Hierarchy 5, Build 6, Indexing 7, Problems 8, Run 9, Debug 10, Claude 11$', r'^Last tool window: none$',
+		[r'^Tool windows: Solution Explorer 1 \(front\), Structure 2, Find Usages 1 \(front\), Find 2, Duplicates 3, Bookmarks 4, Hierarchy 5, Build 6, Indexing 7, Problems 8, Run 9, Debug 10, Locals \(hidden\), Call Stack \(hidden\), Autos \(hidden\), Watch 1 \(hidden\), Watch 2 \(hidden\), Watch 3 \(hidden\), Watch 4 \(hidden\), Claude 11$', r'^Last tool window: none$',
 		 r'^Tool windows: .*Find Usages 1, .*Bookmarks 4 \(front, keys\), ', r'^Last tool window: Bookmarks$',
 		 r'^Tool windows: .*Bookmarks \(hidden\), Hierarchy 4 \(front\), ', r'^Last tool window: Bookmarks$', r'Main\.cpp \(focus\) line 6: ',
 		 r'^Tool windows: .*Find Usages 1 \(front, keys\), .*Build 5, ', r'^Tool windows: .*Find Usages 1, .*Build 5 \(front, keys\), ', r'^Last tool window: Build$',
@@ -5083,7 +5175,7 @@ CHECKS = [
 		 r'^Tool windows: Solution Explorer 1, Structure 2 \(front, keys\), ',
 		 r'^Tool windows: .*Hierarchy 4 \(front, keys\), ', r'^Tool windows: .*Hierarchy \(hidden\), ', r'^Tool windows: .*Hierarchy 4 \(front, keys\), ',
 		 r'^Tool windows: .*Find 2 \(front, keys\), ', r'^Last tool window: Find$',
-		 r'^Menu View: Solution Explorer \[Alt\+1\], Structure \[Alt\+7\], Find Usages \[Alt\+3\], Find \[Alt\+9\], Duplicates, Bookmarks \[Alt\+2\], Hierarchy \[Alt\+8\], Build \[Alt\+6\], Indexing, Problems, Run \[Alt\+4\], Debug \[Alt\+5\], Claude, '
+		 r'^Menu View: Solution Explorer \[Alt\+1\], Structure \[Alt\+7\], Find Usages \[Alt\+3\], Find \[Alt\+9\], Duplicates, Bookmarks \[Alt\+2\], Hierarchy \[Alt\+8\], Build \[Alt\+6\], Indexing, Problems, Run \[Alt\+4\], Debug \[Alt\+5\], Locals, Call Stack, Autos, Watch 1, Watch 2, Watch 3, Watch 4, Claude, '
 		 r'Hide All Tool Windows \[Ctrl\+Shift\+F12\], Jump to Last Tool Window, Quick Definition'], [r'ERROR']),
 	('tool-window-real-keys', {
 		#The tool windows' keys as a keyboard's presses: Alt+2 from the editor shows Bookmarks with the keys, and Alt+2
@@ -5098,7 +5190,7 @@ CHECKS = [
 		 r'^Tool windows: Solution Explorer 1, Structure 2 \(front, keys\), ', r'^Tool windows: Solution Explorer \(front\), Structure \(hidden\), ',
 		 r'^Tool windows: Solution Explorer \(hidden\), Structure \(hidden\), Find Usages \(hidden\), .*Claude \(hidden\)$',
 		 r'^Hidden by Hide All: Solution Explorer, Claude, Debug, Run, Problems, Indexing, Build, Hierarchy, Duplicates, Find, Find Usages$',
-		 r'^Tool windows: Solution Explorer \(front\), Structure \(hidden\), Find Usages 1, Find 2, Duplicates 3, Bookmarks \(hidden\), Hierarchy 4 \(front\), Build 5, Indexing 6, Problems 7, Run 8, Debug 9, Claude 10$',
+		 r'^Tool windows: Solution Explorer \(front\), Structure \(hidden\), Find Usages 1, Find 2, Duplicates 3, Bookmarks \(hidden\), Hierarchy 4 \(front\), Build 5, Indexing 6, Problems 7, Run 8, Debug 9, Locals \(hidden\), Call Stack \(hidden\), Autos \(hidden\), Watch 1 \(hidden\), Watch 2 \(hidden\), Watch 3 \(hidden\), Watch 4 \(hidden\), Claude 10$',
 		 r'^Hidden by Hide All: none$', r'Main\.cpp \(focus\) line 6: '], [r'ERROR']),
 	('tool-windows-hide-all', {
 		#Hide All Tool Windows: every docked tool window is hidden and the editor has the keys; again, they are back
@@ -5110,18 +5202,18 @@ CHECKS = [
 		'DEBUG': 'command:View.Structure,command:View.Build,edit:printtoolwindows,command:View.HideAllToolWindows,edit:printtoolwindows,edit:print,'
 		         'command:View.HideAllToolWindows,edit:printtoolwindows,command:View.HideAllToolWindows,command:View.Find,edit:printtoolwindows,command:View.Find,'
 		         'command:View.Run,command:View.Bookmarks,edit:printtoolwindows,command:View.HideAllToolWindows,edit:printtoolwindows,command:View.HideAllToolWindows,edit:printtoolwindows'},
-		[r'^Tool windows: Solution Explorer 1, Structure 2 \(front\), Find Usages 1, Find 2, Duplicates 3, Bookmarks 4, Hierarchy 5, Build 6 \(front, keys\), Indexing 7, Problems 8, Run 9, Debug 10, Claude 11$',
+		[r'^Tool windows: Solution Explorer 1, Structure 2 \(front\), Find Usages 1, Find 2, Duplicates 3, Bookmarks 4, Hierarchy 5, Build 6 \(front, keys\), Indexing 7, Problems 8, Run 9, Debug 10, Locals \(hidden\), Call Stack \(hidden\), Autos \(hidden\), Watch 1 \(hidden\), Watch 2 \(hidden\), Watch 3 \(hidden\), Watch 4 \(hidden\), Claude 11$',
 		 r'^Tool window areas: Structure 5,72 320x699, Build 330,591 945x180$', r'^Hidden by Hide All: none$',
-		 r'^Tool windows: Solution Explorer \(hidden\), Structure \(hidden\), Find Usages \(hidden\), Find \(hidden\), Duplicates \(hidden\), Bookmarks \(hidden\), Hierarchy \(hidden\), Build \(hidden\), Indexing \(hidden\), Problems \(hidden\), Run \(hidden\), Debug \(hidden\), Claude \(hidden\)$',
+		 r'^Tool windows: Solution Explorer \(hidden\), Structure \(hidden\), Find Usages \(hidden\), Find \(hidden\), Duplicates \(hidden\), Bookmarks \(hidden\), Hierarchy \(hidden\), Build \(hidden\), Indexing \(hidden\), Problems \(hidden\), Run \(hidden\), Debug \(hidden\), Locals \(hidden\), Call Stack \(hidden\), Autos \(hidden\), Watch 1 \(hidden\), Watch 2 \(hidden\), Watch 3 \(hidden\), Watch 4 \(hidden\), Claude \(hidden\)$',
 		 r'^Tool window areas: none$', r'^Last tool window: Build$', r'^Hidden by Hide All: Structure, Solution Explorer, Claude, Debug, Run, Problems, Indexing, Build, Hierarchy, Bookmarks, Duplicates, Find, Find Usages$',
 		 r'Main\.cpp \(focus\) line 6: ',
-		 r'^Tool windows: Solution Explorer 1, Structure 2 \(front\), Find Usages 1, Find 2, Duplicates 3, Bookmarks 4, Hierarchy 5, Build 6 \(front\), Indexing 7, Problems 8, Run 9, Debug 10, Claude 11$',
+		 r'^Tool windows: Solution Explorer 1, Structure 2 \(front\), Find Usages 1, Find 2, Duplicates 3, Bookmarks 4, Hierarchy 5, Build 6 \(front\), Indexing 7, Problems 8, Run 9, Debug 10, Locals \(hidden\), Call Stack \(hidden\), Autos \(hidden\), Watch 1 \(hidden\), Watch 2 \(hidden\), Watch 3 \(hidden\), Watch 4 \(hidden\), Claude 11$',
 		 r'^Tool window areas: Structure 5,72 320x699, Build 330,591 945x180$', r'^Hidden by Hide All: none$',
 		 r'^Tool windows: Solution Explorer \(hidden\), .*Find \(front, keys\), Duplicates \(hidden\), ', r'^Tool window areas: Find 5,591 1270x180$',
 		 r'^Tool windows: .*Find \(hidden\), Duplicates \(hidden\), Bookmarks 2 \(front, keys\), Hierarchy \(hidden\), Build \(hidden\), Indexing \(hidden\), Problems \(hidden\), Run 1, ',
 		 r'^Hidden by Hide All: Structure, Solution Explorer, Claude, Debug, Run, Problems, Indexing, Build, Hierarchy, Bookmarks, Duplicates, Find, Find Usages$',
 		 r'^Tool window areas: none$', r'^Hidden by Hide All: Structure, Solution Explorer, Claude, Debug, Run, Problems, Indexing, Build, Hierarchy, Bookmarks, Duplicates, Find, Find Usages$',
-		 r'^Tool windows: Solution Explorer 1, Structure 2 \(front\), Find Usages 1, Find 2, Duplicates 3, Bookmarks 4, Hierarchy 5, Build 6 \(front\), Indexing 7, Problems 8, Run 9, Debug 10, Claude 11$',
+		 r'^Tool windows: Solution Explorer 1, Structure 2 \(front\), Find Usages 1, Find 2, Duplicates 3, Bookmarks 4, Hierarchy 5, Build 6 \(front\), Indexing 7, Problems 8, Run 9, Debug 10, Locals \(hidden\), Call Stack \(hidden\), Autos \(hidden\), Watch 1 \(hidden\), Watch 2 \(hidden\), Watch 3 \(hidden\), Watch 4 \(hidden\), Claude 11$',
 		 r'^Tool window areas: Structure 5,72 320x699, Build 330,591 945x180$', r'^Last tool window: Bookmarks$', r'^Hidden by Hide All: none$'], [r'ERROR']),
 	('tool-windows-jump-to-last', {
 		#Jump to Last Tool Window does nothing until a tool window has had the keys.  Then it shows the last that had
@@ -5247,7 +5339,10 @@ def Run(szExecutable, szName, asVariables):
 		asEnv['HCP65_IDE_RECENT'] = CHECKS_RECENT
 	aszArguments = []
 	for szKey, szValue in asVariables.items():
-		if szKey == 'SOLUTION':
+		if szKey == 'PREPARE':
+			#What the run needs made first, not a variable.
+			szValue()
+		elif szKey == 'SOLUTION':
 			aszArguments = [szValue]
 		elif szValue is None:
 			asEnv.pop('HCP65_IDE_' + szKey, None)

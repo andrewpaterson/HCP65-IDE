@@ -35,7 +35,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define IDE_DEBUG_DIALOG_WIDTH		360
 #define IDE_USER_SETTINGS_EXTENSION	".hcp65user"	//The per-user file beside the solution: its breakpoints.
 #define IDE_BREAKPOINT_COLOUR		Set32BitColour((uint8)0xE5, (uint8)0x51, (uint8)0x4F)	//Visual Studio's breakpoint red.
-#define IDE_STOPPED_LINE_COLOUR		Set32BitColour((uint8)0xFF, (uint8)0xD8, (uint8)0x00)	//Its yellow arrow at the current line.
+#define IDE_STOPPED_LINE_COLOUR		Set32BitColour((uint8)0xFF, (uint8)0xD8, (uint8)0x00)	//Its yellow arrow at the current line,
+#define IDE_CHOSEN_LINE_COLOUR		Set32BitColour((uint8)0x6A, (uint8)0xBF, (uint8)0x5A)	//and its green one at the line of the call chosen in Call Stack.
 
 
 //The Debug menu's items, as Visual Studio has them.
@@ -59,6 +60,7 @@ void CIDEDebugging::Init(CIDEContent* pcContent)
 	mpDebugMenu = NULL;
 	mpDialog = NULL;
 	mcDebugger.Init();
+	mpWindows = OMalloc<CIDEDebugWindows>(pcContent, &mcDebugger);
 	mszDefaultEmulator.Init();
 	mszDefaultEmulatorDirectory.Init();
 	mszStoppedFile.Init();
@@ -83,6 +85,7 @@ void CIDEDebugging::Class(void)
 	M_Pointer(mpDialog);
 	M_Pointer(mpDebugView);
 	M_Pointer(mpDebugTool);
+	M_Pointer(mpWindows);
 	U_Unknown(CIDEDebugger, mcDebugger);
 	U_String(mszDefaultEmulator);
 	U_String(mszDefaultEmulatorDirectory);
@@ -148,6 +151,7 @@ void CIDEDebugging::AddCommands(Ptr<CCommandSet> pCommands)
 	pCommands->Add("Debug.ToggleBreakpoint", "Toggle Breakpoint", "F9", pNoIcon, this, &CIDEDebugging::ToggleBreakpoint);
 	pCommands->Add("Debug.NewBreakpoint", "New Breakpoint at Address...", "", pNoIcon, this, &CIDEDebugging::ShowNewBreakpointDialog);
 	pCommands->Add("Debug.DeleteBreakpoints", "Delete All Breakpoints", "", pNoIcon, this, &CIDEDebugging::DeleteAllBreakpoints);
+	mpWindows->AddCommands(pCommands);
 }
 
 
@@ -166,6 +170,7 @@ Ptr<CMenuContainer> CIDEDebugging::CreateDebugMenu(void)
 	{
 		mpDebugMenu->AddItem(pCommands->Find(gaszDebugMenu[i]));
 	}
+	mpWindows->AddDebugItems(mpDebugMenu);
 	return mpDebugMenu;
 }
 
@@ -537,6 +542,7 @@ bool CIDEDebugging::StartDebugging(void)
 		return false;
 	}
 	mpcContent->GetDock()->Show(mpDebugTool);
+	mpWindows->DebuggingStarted();
 	UpdateDebugView(false);
 	mpcContent->GetWindow()->RequestTick(IDE_DEBUG_POLL);
 	return bResult;
@@ -603,6 +609,7 @@ bool CIDEDebugging::StepInto(void)
 		bResult = mcDebugger.Start(true);
 		ShowDebugMessages();
 		mpcContent->GetDock()->Show(mpDebugTool);
+		mpWindows->DebuggingStarted();
 		mpcContent->GetWindow()->RequestTick(IDE_DEBUG_POLL);
 	}
 	else if (IsDisassemblyFocussed())
@@ -656,6 +663,7 @@ bool CIDEDebugging::StepOut(void)
 {
 	bool	bResult;
 
+	mpWindows->SteppingOut();
 	bResult = mcDebugger.StepOut();
 	UpdateDebugView(false);
 	return bResult;
@@ -783,6 +791,7 @@ bool CIDEDebugging::AttachDebugger(int iPort)
 	bResult = mcDebugger.Attach(iPort);
 	ShowDebugMessages();
 	mpcContent->GetDock()->Show(mpDebugTool);
+	mpWindows->DebuggingStarted();
 	UpdateDebugView(false);
 	mpcContent->GetWindow()->RequestTick(IDE_DEBUG_POLL);
 	return bResult;
@@ -801,6 +810,7 @@ void CIDEDebugging::PollDebugger(Ptr<CWindow> pWindow)
 	bool		bChanged;
 	bool		bStopped;
 
+	mpWindows->Poll(GetDebugTickCount());
 	if (!mcDebugger.IsDebugging())
 	{
 		ShowStoppedLine(false);
@@ -826,6 +836,7 @@ void CIDEDebugging::PollDebugger(Ptr<CWindow> pWindow)
 		}
 		ShowStoppedLine(bStopped);
 	}
+	mpWindows->Poll(GetDebugTickCount());
 
 	RunDebugScript();
 	if (mcDebugger.IsDebugging() || (maszDebugScript.NumElements() != 0))
@@ -851,14 +862,16 @@ void CIDEDebugging::UpdateDebugView(bool bKeepCaret)
 // HCP65_IDE_DEBUG's comma separated commands, for checking the debugger:
 // start (F5), into (F11), over (F10), out (Shift+F11), break (Break All,
 // once it has run a little), restart, stop, bp:<hex address> and
-// toggle (F9 at the disassembly's caret), buildtab (the Build tab shown),
+// toggle (F9 at the disassembly's caret), stopped (until it is stopped),
+// buildtab (the Build tab shown),
 // line:<line> (a source breakpoint toggled on the open file's line, 1
 // based), built (until HCP65_IDE_BUILD's build has finished),
 // answered:<n> (until the script has answered n dialogs),
 // wait:<milliseconds>, printbreakpoints (each source breakpoint, the line
-// it is bound to and its addresses) and printstopped (whether it is
-// stopped, the program address and the source line shown).  Each but bp,
-// buildtab, line, built, answered, wait and the prints waits for the
+// it is bound to and its addresses), printstopped (whether it is
+// stopped, the program address and the source line shown), and the
+// debugger's windows' (RunWindowsScript).  Each but bp, buildtab, line,
+// built, answered, wait, the prints and the windows' waits for the
 // debugger to be stopped (or not debugging, for start).
 //
 //////////////////////////////////////////////////////////////////////////
@@ -913,6 +926,91 @@ void CIDEDebugging::PrintSourceBreakpoints(void)
 		szName.Kill();
 	}
 	fflush(stdout);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The debugger's windows' script commands, done at once: printcallstack;
+// print:<window> (Locals, Autos, Watch1-4, QuickWatch, DataTip: each value
+// shown, CIDEValuesPane::Print); watch:<n>:<expression> (added to Watch
+// n); frame:<n> (the call chosen in Call Stack, 0 the innermost);
+// open:<window>:<path> (a value opened, "cSquare/CShape"); set:<window>:
+// <path>:<text> (typed into its Value); hex (Hexadecimal Display
+// toggled); datatip:<line>:<column> (the data tip there in the active
+// editor, 1 based).  False if szCommand isn't one.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEDebugging::RunWindowsScript(const char* szCommand)
+{
+	Ptr<CIDEValuesPane>	pPane;
+	Ptr<CIDEEditorTab>	pTab;
+	CArrayChars			aszParts;
+	CChars				sz;
+	bool				bResult;
+
+	aszParts.Init();
+	aszParts.Split(szCommand, ':');
+	bResult = true;
+	sz.Init();
+	if (strcmp(szCommand, "printcallstack") == 0)
+	{
+		mpWindows->PrintCallStack(&sz);
+		printf("Call Stack:\n%s", sz.Text());
+	}
+	else if ((aszParts.NumElements() == 2) && (strcmp(aszParts.GetText(0), "print") == 0))
+	{
+		pPane = mpWindows->GetPane(aszParts.GetText(1));
+		if (pPane.IsNotNull())
+		{
+			pPane->Print(&sz);
+		}
+		printf("%s:\n%s", aszParts.GetText(1), sz.Text());
+	}
+	else if ((aszParts.NumElements() >= 3) && (strcmp(aszParts.GetText(0), "watch") == 0))
+	{
+		mpWindows->AddWatch((size)(atoi(aszParts.GetText(1)) - 1), strchr(&szCommand[6], ':') + 1);
+	}
+	else if ((aszParts.NumElements() == 2) && (strcmp(aszParts.GetText(0), "frame") == 0))
+	{
+		mpWindows->ChooseFrame((size)atoi(aszParts.GetText(1)));
+	}
+	else if ((aszParts.NumElements() == 3) && (strcmp(aszParts.GetText(0), "open") == 0))
+	{
+		pPane = mpWindows->GetPane(aszParts.GetText(1));
+		if (pPane.IsNull() || !pPane->Open(aszParts.GetText(2)))
+		{
+			printf("Not opened: %s\n", aszParts.GetText(2));
+		}
+	}
+	else if ((aszParts.NumElements() == 4) && (strcmp(aszParts.GetText(0), "set") == 0))
+	{
+		pPane = mpWindows->GetPane(aszParts.GetText(1));
+		if (pPane.IsNull() || !pPane->WriteValue(aszParts.GetText(2), aszParts.GetText(3)))
+		{
+			printf("Not written: %s = %s\n", aszParts.GetText(2), aszParts.GetText(3));
+		}
+	}
+	else if (strcmp(szCommand, "hex") == 0)
+	{
+		mpWindows->ToggleHexadecimal();
+	}
+	else if ((aszParts.NumElements() == 3) && (strcmp(aszParts.GetText(0), "datatip") == 0))
+	{
+		pTab = mpcContent->GetDocuments()->GetActiveTab();
+		if (pTab.IsNull() || !mpWindows->ShowDataTip(pTab, pTab->FindPosition(atoi(aszParts.GetText(1)) - 1, atoi(aszParts.GetText(2)) - 1)))
+		{
+			printf("No data tip at %s:%s\n", aszParts.GetText(1), aszParts.GetText(2));
+		}
+	}
+	else
+	{
+		bResult = false;
+	}
+	fflush(stdout);
+	sz.Kill();
+	aszParts.Kill();
+	return bResult;
 }
 
 
@@ -980,6 +1078,10 @@ void CIDEDebugging::RunDebugScript(void)
 		}
 		bDone = true;
 	}
+	else if (strcmp(szCommand, "stopped") == 0)
+	{
+		bDone = mcDebugger.IsStopped();
+	}
 	else if (strcmp(szCommand, "built") == 0)
 	{
 		bDone = !mpcContent->GetBuilding()->IsBuilding();
@@ -993,6 +1095,10 @@ void CIDEDebugging::RunDebugScript(void)
 	{
 		printf("Stopped: %s, $%06X, %s:%u\n", mcDebugger.IsStopped() ? "yes" : "no", (unsigned int)mcDebugger.GetProgramAddress(), mszStoppedFile.Text(), (unsigned int)muiStoppedLine);
 		fflush(stdout);
+		bDone = true;
+	}
+	else if (RunWindowsScript(szCommand))
+	{
 		bDone = true;
 	}
 	else if (strncmp(szCommand, "answered:", 9) == 0)
@@ -1055,6 +1161,7 @@ void CIDEDebugging::RunDebugScript(void)
 
 
 CIDEDebugger* CIDEDebugging::GetDebugger(void) { return &mcDebugger; }
+Ptr<CIDEDebugWindows> CIDEDebugging::GetWindows(void) const { return mpWindows; }
 Ptr<CIDEDebugView> CIDEDebugging::GetDebugView(void) const { return mpDebugView; }
 Ptr<CDockPane> CIDEDebugging::GetTool(void) const { return mpDebugTool; }
 
@@ -1062,13 +1169,25 @@ Ptr<CDockPane> CIDEDebugging::GetTool(void) const { return mpDebugTool; }
 //////////////////////////////////////////////////////////////////////////
 //
 // The Debug tab, the emulator's disassembly and registers, put at
-// psPlace.
+// psPlace, and the debugger's windows (their own place).
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEDebugging::CreatePane(SDockPlace* psPlace)
 {
 	mpDebugView = OMalloc<CIDEDebugView>(mpcContent->GetWindow(), mpcContent->GetTheme(), mpcContent->GetCodeFamily(), mpcContent->GetTheme()->GetColour(TC_Text));
 	mpDebugTool = mpcContent->GetDock()->AddPane(IDE_DEBUG_ID, "Debug", NULL, mpDebugView->GetComponent(), DPK_Tool, psPlace);
+	mpWindows->CreatePanes(psPlace);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The editors' menu's Add Watch and QuickWatch.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDebugging::AddEditorItems(Ptr<CMenuContainer> pMenu)
+{
+	mpWindows->AddEditorItems(pMenu);
 }
 
 
@@ -1287,6 +1406,8 @@ void CIDEDebugging::ShowBreakpoints(Ptr<CIDEEditorTab> pTab)
 {
 	Ptr<CCodeEditor>		pEditor;
 	SIDESourceBreakpoint*	psBreakpoint;
+	CChars					szFile;
+	uint32					uiLine;
 	size					i;
 
 	pEditor = pTab->GetCodeEditor();
@@ -1308,17 +1429,36 @@ void CIDEDebugging::ShowBreakpoints(Ptr<CIDEEditorTab> pTab)
 		}
 	}
 
-	//Where the debugger is stopped: a yellow '>', on the breakpoint's red if it has one.
+	//Where the debugger is stopped: a yellow '>', on the breakpoint's red if it has one; and the line of the call chosen
+	//in Call Stack a green one.
 	if ((muiStoppedLine != 0) && mszStoppedFile.EqualsIgnoreCase(pTab->GetFileName()))
 	{
-		if (pEditor->GetLineGlyph(muiStoppedLine - 1) && pEditor->GetLineGlyph(muiStoppedLine - 1)->bBackground)
-		{
-			pEditor->SetLineGlyph(muiStoppedLine - 1, '>', IDE_STOPPED_LINE_COLOUR, IDE_BREAKPOINT_COLOUR);
-		}
-		else
-		{
-			pEditor->SetLineGlyph(muiStoppedLine - 1, '>', IDE_STOPPED_LINE_COLOUR);
-		}
+		ShowLineArrow(pEditor, muiStoppedLine, IDE_STOPPED_LINE_COLOUR);
+	}
+	szFile.Init();
+	if (mpWindows->GetChosenLine(&szFile, &uiLine) && szFile.EqualsIgnoreCase(pTab->GetFileName()))
+	{
+		ShowLineArrow(pEditor, uiLine, IDE_CHOSEN_LINE_COLOUR);
+	}
+	szFile.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// An arrow in line uiLine's (1 based) glyph cell, on its breakpoint's red
+// if it has one.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDebugging::ShowLineArrow(Ptr<CCodeEditor> pEditor, uint32 uiLine, ARGB32 sColour)
+{
+	if (pEditor->GetLineGlyph(uiLine - 1) && pEditor->GetLineGlyph(uiLine - 1)->bBackground)
+	{
+		pEditor->SetLineGlyph(uiLine - 1, '>', sColour, IDE_BREAKPOINT_COLOUR);
+	}
+	else
+	{
+		pEditor->SetLineGlyph(uiLine - 1, '>', sColour);
 	}
 }
 
@@ -1379,12 +1519,14 @@ void CIDEDebugging::SaveBreakpoints(void)
 void CIDEDebugging::WriteUser(CXMLWriter* pcWriter)
 {
 	mcDebugger.WriteSourceBreakpoints(pcWriter);
+	mpWindows->WriteUser(pcWriter);
 }
 
 
 void CIDEDebugging::ReadUser(CMarkupTag* pcRoot)
 {
 	mcDebugger.ReadSourceBreakpoints(pcRoot);
+	mpWindows->ReadUser(pcRoot);
 }
 
 

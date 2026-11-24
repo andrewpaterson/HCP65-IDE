@@ -31,6 +31,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BuildLib/BuildConfiguration.h"
 #include "IDEDebugger.h"
 #include "IDEDebugView.h"
+#include "IDEDebugWindows.h"
 #include "WindowLib/Button.h"
 #include "WindowLib/DockManager.h"
 #include "IDEEditorTab.h"
@@ -53,6 +54,7 @@ protected:
 	Ptr<CDialog>				mpDialog;  //The address or port asked for, while it's shown.
 	Ptr<CIDEDebugView>			mpDebugView;  //The Debug tab,
 	Ptr<CDockPane>				mpDebugTool;  //and its tool window.
+	Ptr<CIDEDebugWindows>		mpWindows;  //Call Stack, Locals, Autos and the Watches.
 	CIDEDebugger				mcDebugger;
 	CChars						mszDefaultEmulator;	//A W65C816 run configuration's tool when it hasn't one.
 	CChars						mszDefaultEmulatorDirectory;
@@ -77,6 +79,9 @@ public:
 	void				GlyphClicked(CCodeEditor* pcEditor, size uiLine);
 	void				ReadLineTables(void);
 	void				ShowBreakpoints(Ptr<CIDEEditorTab> pTab);
+	void				ShowAllBreakpoints(void);
+	void				AddEditorItems(Ptr<CMenuContainer> pMenu);
+	Ptr<CIDEDebugWindows>	GetWindows(void) const;
 	bool				AttachDebugger(int iPort);
 	void				SetDebugScript(const char* szCommands);
 	bool				IsDebugScriptRunning(void) const;
@@ -110,7 +115,8 @@ protected:
 	bool				StepInto(void);
 	bool				ToggleBreakpoint(void);
 	bool				ToggleSourceBreakpoint(Ptr<CIDEEditorTab> pTab, size uiLine);
-	void				ShowAllBreakpoints(void);
+	bool				RunWindowsScript(const char* szCommand);
+	void				ShowLineArrow(Ptr<CCodeEditor> pEditor, uint32 uiLine, ARGB32 sColour);
 	void				ShowStoppedLine(bool bWasStopped);
 	bool				IsDisassemblyFocussed(void);
 	bool				ShowNewBreakpointDialog(void);

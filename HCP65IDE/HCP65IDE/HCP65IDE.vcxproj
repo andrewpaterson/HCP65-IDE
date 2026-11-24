@@ -389,6 +389,9 @@
     <ClCompile Include="IDEGit.cpp" />
     <ClCompile Include="IDEDebugger.cpp" />
     <ClCompile Include="IDEDebugView.cpp" />
+    <ClCompile Include="IDEDebugStop.cpp" />
+    <ClCompile Include="IDEDebugWindows.cpp" />
+    <ClCompile Include="IDEValuesPane.cpp" />
     <ClCompile Include="IDEEditorTab.cpp" />
     <ClCompile Include="IDEListingSource.cpp" />
     <ClCompile Include="IDEBuildPane.cpp" />
@@ -485,6 +488,9 @@
     <ClInclude Include="IDESteppable.h" />
     <ClInclude Include="IDEDebugger.h" />
     <ClInclude Include="IDEDebugView.h" />
+    <ClInclude Include="IDEDebugStop.h" />
+    <ClInclude Include="IDEDebugWindows.h" />
+    <ClInclude Include="IDEValuesPane.h" />
     <ClInclude Include="IDEEditorTab.h" />
     <ClInclude Include="IDEListingSource.h" />
     <ClInclude Include="IDEBuildPane.h" />

@@ -20,6 +20,8 @@ Log.txt
 # Files the IDE and the tests write
 /HCP65IDE/HCP65IDE/Output/
 /Tests/*/*/Output/
+/HCP65IDE/Checks/Input/Debugging/Output/
+/HCP65IDE/Checks/Input/Debugging/Listing/
 /Tests/*/*/Post/
 *.layout.user
 *.hcp65workspace

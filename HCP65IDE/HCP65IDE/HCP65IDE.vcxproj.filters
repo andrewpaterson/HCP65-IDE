@@ -276,6 +276,15 @@
     <ClCompile Include="IDEDebugView.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="IDEDebugStop.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="IDEDebugWindows.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="IDEValuesPane.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="IDEEditorTab.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -555,6 +564,15 @@
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDEDebugView.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDEDebugStop.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDEDebugWindows.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDEValuesPane.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDEEditorTab.h">
