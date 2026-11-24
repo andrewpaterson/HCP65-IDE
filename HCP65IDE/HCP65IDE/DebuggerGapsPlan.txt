@@ -110,7 +110,39 @@ Decided (2026-11-24, the user's):
   4. No console input in the IDE for now ("none for now"): a 65C64 program the IDE starts reads EOF on stdin.  An
      input line in the Build tab can come when a program needs it.
 
-Every question is decided; the plan waits for the user to say when to build it (B, C, D, E; A is left to F1).
+Every question is decided; the user said to build it on 2026-11-24 ("Go ahead, all the stages"): B, C, D and E are
+built (below); A is left to F1.
+
+
+What is built (2026-11-24)
+--------------------------
+
+Commits: HCP65 d521ca9 (B), 8adf176 (D), 655feb7 (docs); CommonLibraries dba73ffcc (B), f2f64cd7a (the W65C816 fix);
+HCP65-IDE 5b13051 (C), 66a91d2 (E1).
+
+B. The every-step walk check.  CAsm65FrameCheck::RunWalking (GetRegisters per processor) walks before every step and
+   says the first four wrong walks.  Every 65C64 and W65C816 test program built with debug records is walked
+   (TestCPP65RunWalking, TestCPP816RunChecked): the programs are built with line tables, and those that compare code
+   or cycles build without.  TEST_CPP65_WALK is gone.  Measured: the suite went from about 75 s to 84 s (12 jobs).
+   It found two W65C816 bugs, both fixed: the walker didn't know tdc (it forgot X), and DescribeFrame's saved S
+   didn't match AlignFrame's (SIRW65C816Frame::SavedS for both).
+C. Missing functions.  C2's survey: every solution that builds today has none, once modules (drivers) are left out:
+   a module's missing names are its imports, which the kernal's loader resolves, so CheckMissing skips BP_Module.
+   CHCP65Build::CheckMissing writes "error: <name> is used but no unit defines it: the program stops if it gets
+   there." and fails the build; StubMissing="true" (the configuration, the Build Configurations dialog's tick box,
+   hcp65build's -stub-missing) makes it a warning.  Tests: TestBuildLib's TestBuildCommandLinePlainMissing, the IDE
+   check build-configuration-stub-missing.
+D. Console input.  CAsm65Memory's ASM65_CONSOLE_INPUT at 00FF:0104: writing it takes the next byte, then the status
+   (00FF:0105) is 1 with the byte in the data register (00FF:0106), or 0 at the end.  Taking is a write, so reads
+   (a debugger's) change nothing; the block is 4 bytes so a word read of the data register is good.  The input is a
+   CChars or a callback (SetConsoleInput); none is the end.  The X65C64 Emulator reads its standard input, showing
+   the console first.  Libc65's stdin is FILE_CONSOLE: fread, fgetc, and the new getchar and fgets (scanf doesn't
+   exist in Libc65).  D3 needed nothing: CProcess starts the emulator with stdin from /dev/null, so it reads EOF.
+   Building stdio.cpp for the W65C816 found a back end bug, fixed: a volatile byte load through a constant address
+   set m to 8 bits before making the pointer (TestCPP816VolatileByteAtAddress).  Tests: TestAsm65C64Console,
+   TestLibc65StdioConsoleInput (both processors).
+E. printstopped prints the address as the target writes it ($12:3456 on the W65C816, $0001ABCD on the 65C64); the
+   checks' ADDRESS patterns changed with it.  E2 needed nothing.
 
 
 Things to watch for
