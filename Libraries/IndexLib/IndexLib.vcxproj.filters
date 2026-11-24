@@ -12,12 +12,18 @@
     <ClCompile Include="SystemHeaders.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="SymbolTable.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="WorkspaceIndex.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="SystemHeaders.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="SymbolTable.h">
       <Filter>Source</Filter>
     </ClInclude>
   </ItemGroup>

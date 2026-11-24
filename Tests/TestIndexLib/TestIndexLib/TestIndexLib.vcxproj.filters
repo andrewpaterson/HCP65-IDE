@@ -12,5 +12,8 @@
     <ClCompile Include="TestWorkspaceIndex.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="TestSymbolTable.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

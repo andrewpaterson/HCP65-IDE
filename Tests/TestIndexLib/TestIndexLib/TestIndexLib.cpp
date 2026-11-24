@@ -6,6 +6,7 @@
 
 
 void TestWorkspaceIndex(void);
+void TestSymbolTable(void);
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -23,6 +24,7 @@ int __cdecl main(void)
 	MemoryInit();
 
 	TestWorkspaceIndex();
+	TestSymbolTable();
 
 	MemoryKill();
 	TypeConverterKill();

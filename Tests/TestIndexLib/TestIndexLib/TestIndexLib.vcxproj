@@ -223,6 +223,7 @@
   <ItemGroup>
     <ClCompile Include="TestIndexLib.cpp" />
     <ClCompile Include="TestWorkspaceIndex.cpp" />
+    <ClCompile Include="TestSymbolTable.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\CommonLibraries\Libraries\BaseLib\BaseLib.vcxproj">
