@@ -2,7 +2,8 @@
 # A stand-in for Claude Code, for the IDE's checks (HCP65_IDE_CLAUDE_EXECUTABLE): it answers as
 # "claude -p <request> --output-format stream-json" does, without asking Claude anything.  It reads
 # Engine.h in the folder it is run in, says which folder that is (its name), whether the conversation
-# is new or carried on (--resume) and which folders it was also given (--add-dir, their names), then
+# is new or carried on (--resume), which folders it was also given (--add-dir, their names) and
+# whether their CLAUDE.md files would be read (CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD), then
 # answers with the first line of the request.
 REQUEST=$(printf '%s' "$2" | head -n 1 | tr -d '"\\')
 FOLDER=$(basename "$(pwd)")
@@ -21,5 +22,7 @@ echo '{"type":"system","subtype":"init","session_id":"stand-in","model":"stand-i
 echo '{"type":"assistant","message":{"content":[{"type":"tool_use","id":"tool1","name":"Read","input":{"file_path":"'"$(pwd)"'/Engine.h"}}]}}'
 echo '{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"tool1","content":"class CEngine"}]}}'
 echo '{"type":"assistant","message":{"content":[{"type":"text","text":"Started in '"$FOLDER"' ('"$CONVERSATION"'), also given:'"$GIVEN"'"}]}}'
+if [ "$CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD" = "1" ]; then CLAUDEMD="read"; else CLAUDEMD="not read"; fi
+echo '{"type":"assistant","message":{"content":[{"type":"text","text":"Their CLAUDE.md files: '"$CLAUDEMD"'"}]}}'
 echo '{"type":"assistant","message":{"content":[{"type":"text","text":"Asked: '"$REQUEST"'"}]}}'
 echo '{"type":"result","subtype":"success","is_error":false,"result":"Asked: '"$REQUEST"'","total_cost_usd":0.01,"session_id":"stand-in"}'

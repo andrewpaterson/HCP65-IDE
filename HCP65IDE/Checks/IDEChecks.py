@@ -5323,6 +5323,8 @@ if os.name != 'nt':
 		#Send sends it: the request, the tool's line (the file named from Claude's folder) and the answer are in the
 		#conversation, the box is empty and has the keys again, so the next request is typed without another press.
 		#Shift+Enter, pressed on the script's keyboard, starts a line in the request and Enter sends it, both lines.
+		#Claude Code is started with CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1, so the CLAUDE.md files of the
+		#folders it is also given are read.
 		'SOLUTION': RENAME_FILE, 'OPEN': 'Engine.h', 'CLAUDE_EXECUTABLE': os.path.join(HERE, 'Input', 'Claude', 'claude'),
 		'DEBUG': 'wait:500,clickmenu:View/Claude,edit:claudeclick:request,edit:printclaude,edit:claudetype:Hello there,edit:printclaude,'
 		         'edit:claudeclick:send,wait:1500,edit:printclaude,edit:claudetype:Second,edit:press:Left Shift,edit:tap:Enter,'
@@ -5330,7 +5332,7 @@ if os.name != 'nt':
 		[r'^Claude: .* keys request$', r'^Claude request: \[\]$', r'^Claude request: \[Hello there\]$',
 		 r'^Claude: .* keys request$', r'^Claude status: \[Done, \$0\.01\.\]$', r'^Claude request: \[\]$',
 		 r'^Claude conversation: \[> Hello there$', r'^  Read Engine\.h$', r'^Started in RenameFile \(new\), also given: HCP65-IDE$',
-		 r'^Asked: Hello there\]$', r'^Claude request: \[Second$', r'^line\]$',
+		 r'^Their CLAUDE\.md files: read$', r'^Asked: Hello there\]$', r'^Claude request: \[Second$', r'^line\]$',
 		 r'^Claude: .* keys request$', r'^Claude request: \[\]$', r'^> Second$', r'^> line$',
 		 r'^Started in RenameFile \(carried on\), also given: HCP65-IDE$', r'^Asked: Second\]$'],
 		[r'^Claude: .* keys nothing$']))
@@ -5375,6 +5377,8 @@ def Hashes():
 
 def Run(szExecutable, szName, asVariables):
 	asEnv = dict(os.environ)
+	#The IDE sets it for Claude Code itself (claude-request); one inherited from here would hide that it didn't.
+	asEnv.pop('CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD', None)
 	szSnapshot = os.path.join(tempfile.gettempdir(), 'IDEChecks-%d.png' % os.getpid())
 	asEnv['HCP65_IDE_SNAPSHOT'] = szSnapshot
 	asEnv['HCP65_IDE_SNAPSHOT_TICKS'] = '3'

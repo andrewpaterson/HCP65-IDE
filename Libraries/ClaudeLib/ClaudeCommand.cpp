@@ -19,6 +19,10 @@ along with Codaphela ClaudeLib.  If not, see <http://www.gnu.org/licenses/>.
 
 ** ------------------------------------------------------------------------ **/
 #include <string.h>
+#include <stdlib.h>
+#ifdef _WIN32
+#include "BaseLib/WindowsHeaders.h"
+#endif
 #include "ClaudeCommand.h"
 
 
@@ -182,6 +186,25 @@ void CClaudeCommand::GetArguments(const char* szRequest, CArrayChars* paszArgume
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Claude Code reads the CLAUDE.md files of the folders it is given with
+// --add-dir only when CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD is set:
+// each repository's CLAUDE.md says where its documentation and plans are
+// and how it is built.  Set in the IDE's own environment, which the
+// programs it starts inherit (CProcess passes it on, on both platforms).
+//
+//////////////////////////////////////////////////////////////////////////
+static void SetClaudeEnvironment(void)
+{
+#ifdef _WIN32
+	SetEnvironmentVariableA("CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD", "1");
+#else
+	setenv("CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD", "1", 1);
+#endif
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Starts Claude Code in szDirectory with szRequest, carrying the
 // conversation on if there is one.  The last request's events, changed
 // files and errors are cleared.  False if it couldn't be started or the
@@ -204,6 +227,7 @@ bool CClaudeCommand::Start(const char* szDirectory, const char* szRequest)
 	mszOutput.Clear();
 	mszErrors.Clear();
 	mcStream.Restart();
+	SetClaudeEnvironment();
 	bResult = mcProcess.StartCapture(gszClaudeExecutable, &aszArguments, szDirectory);
 	aszArguments.Kill();
 	mbStarted = bResult;
