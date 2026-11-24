@@ -64,7 +64,7 @@ The debugger (Assembler65Lib, CppCompilerLib, the IDE):
 
 
 The frame model (decided 2026-11-24, both processors)
-----------------------------
+-----------------------------------------------------
 
   A call's frame address is S as its caller had it just before the call: the return address is the bytes just below
   it, and it is the caller's S once the call returns.  It doesn't move while the call runs, so everything a debugger
@@ -169,8 +169,8 @@ C. Values and watches on the 65C64 (CppCompilerLib)
 
 D. An emulator to debug 65C64 programs in (decision 5): HCP65/X65C64-Emulator (the user, 2026-11-24)
   D1. A 65C64 emulator, the HCP65 repository's X65C64-Emulator project (beside HCP65-Emulator, with its Visual Studio
-      project and a Linux CMake build as HCP65-Emulator has): CFlat65C64DebugTarget with the host file device (stdio to its console), loading the image a
-      65C64 configuration builds at its address and running it from its entry; debuggable by EmulatorDebugLib's
+      project and a Linux CMake build as HCP65-Emulator has): CFlat65C64DebugTarget with the host file device (stdio to
+      its console), loading the image a 65C64 configuration builds at its address and running it from its entry; debuggable by EmulatorDebugLib's
       launch arguments (--debug-shm, --debug-tcp, --debug-wait), quitting when the program stops (stp) or the
       debugger goes.  A console program: no window, so the checks need no reference screen.
   D2. The IDE: a 65C64 configuration's default emulator is it; CIDEDebugger::GetStackRegisters gives the processor's
@@ -187,24 +187,27 @@ What is the user's to decide
 ----------------------------
 
 Asked one at a time, with my recommendation first.
-DECIDED 2026-11-24: the debugger finds each frame from whatever register has it; Debug builds don't change frames
-for it.  Then (the user, 2026-11-24) not V alone either: the frame model below replaces describing frames by V.
 
-DECIDED 2026-11-24 (the user: "That sounds good, move both to it please"): question 1, the frame model, for both
-  processors: the 65C64's records and the W65C816's (its link kinds rewritten as rules, records version 4, its walks
-  unchanged frame for frame), one walker interpreting both.
-DECIDED 2026-11-24 (the user: "yes"): question 2, Release variables on both processors (A3).
-DECIDED 2026-11-24 (the user: "yes"): question 3, every register a function saves is described (A4).
+Decided (2026-11-24, the user's):
+  - The debugger finds each frame from whatever register has it; Debug builds don't change frames for it.  Then not V
+    alone either ("Reconsider this plan in terms of release builds"): the frame model above.
+  - 1. The frame model, for both processors ("That sounds good, move both to it please"): the 65C64's records and the
+    W65C816's (its link kinds rewritten as rules, records version 4, its walks unchanged frame for frame), one walker
+    interpreting both.
+  - 2. Release variables on both processors (A3).
+  - 3. Every register a function saves is described (A4).
+  - 6. The emulator lives in the HCP65 repository, in a project called X65C64-Emulator.  The same day, "to keep the
+    65C64 near the end alphabetically", HCP65/W65C64 (the proposal: the Instruction Architecture spreadsheet, the
+    Proposal document, its pictures) was renamed HCP65/X65C64-Proposal and HCP65/Kicad/W65C64 (its board)
+    HCP65/Kicad/X65C64, with the paths naming them.
+
+Open:
   4. The walker as a base that interprets the rules, with a part per processor (a derived class), or one walker
      holding a processor part it calls (composition).  I recommend the derived class: the processor's part is a few
      virtual functions either way, and a separate object adds nothing.
   5. The machine to debug on.  There is no 65C64 computer in the emulator.  I recommend a flat 65C64 machine as the
      tests have (memory and the host file device, so printf works), as a small console emulator the IDE starts.
      The other way is to wait for a 65C64 computer to be modelled, with its own boards, which nothing plans yet.
-DECIDED 2026-11-24 (the user): the emulator lives in the HCP65 repository, in a project called X65C64-Emulator.
-  Renamed the same day (the user: "to keep the 65C64 near the end alphabetically"): HCP65/W65C64 (the proposal: the
-  Instruction Architecture spreadsheet, the Proposal document, its pictures) is HCP65/X65C64-Proposal, and
-  HCP65/Kicad/W65C64 (its board) is HCP65/Kicad/X65C64; the paths naming them were changed with them.
 
 My own choices, not asked: the records say their processor (A1); the tests are made generic over both processors
 (C2, E1); no measuring stage first, since the 65C64 has no ROM or memory limit a Debug build must fit.
