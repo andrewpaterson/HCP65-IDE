@@ -23,6 +23,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/FileUtil.h"
 #include "BaseLib/StringHelper.h"
 #include "BaseLib/PointerFunctions.h"
+#include "CppCompilerLib/CPP65Type.h"
 #include "IDEContent.h"
 #include "IDEDefinitions.h"
 #include "IDERename.h"

@@ -22,6 +22,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include <string.h>
 #include "BaseLib/ConstructorCall.h"
 #include "BaseLib/TextFile.h"
+#include "CppCompilerLib/CPP65Type.h"
 #include "CppCompilerLib/CPPIndex.h"
 #include "CppCompilerLib/CPPSyntaxMemberExpression.h"
 #include "WindowLib/ComboBox.h"
