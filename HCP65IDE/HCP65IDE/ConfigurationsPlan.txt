@@ -1,0 +1,372 @@
+The projects as the one place configurations are kept (plan, 2026-11-25)
+=========================================================================
+
+The user (2026-11-25): "How do I make the projects (and solution) files the one source of truth for configurations for
+MSVC, GCC and the HCP65 compiler?", then "Write it up as a plan please".  It started from a Release|GCC build of
+TestBaseLib in the IDE failing in BaseLib/ArrayEmbeddedInt.cpp: 'EngineOutput' was not declared in this scope.
+Nothing here is a go-ahead: the questions at the end are the user's, asked one at a time, and each stage is built
+only when the user says so.
+
+Paths: VSL = HCP65-IDE/Libraries/VisualStudioLib, BL = HCP65-IDE/Libraries/BuildLib, IXL =
+HCP65-IDE/Libraries/IndexLib, IDE = HCP65-IDE/HCP65IDE/HCP65IDE, CL = CommonLibraries.
+
+
+Where a configuration's settings are now
+----------------------------------------
+
+- MSVC: each .vcxproj, an <ItemDefinitionGroup> for each Configuration|Platform in its <ProjectConfigurations>.  No
+  project imports a shared .props, so what every project has (/arch:AVX2, /fp:fast, /GS- and the rest) is written
+  out in each of the 101 real .vcxproj files, for each configuration (CommonLibraries 47, HCP65 34, HCP65-IDE 15,
+  LogiCim 5).  Of the 188 on disk, 35 are tests' Output copies (gitignored) and 52 are test fixtures (the IDE checks'
+  Input, TestBuildLib's, TestIndexLib's and TestVisualStudioLib's Input), kept byte for byte and moved only where a
+  test is about configurations.
+- GCC from CMake: each test folder's CMakeLists.txt (37 of them).  They read their sources from the .vcxproj files
+  (vcxproj_sources, a copy in each of 35 of them) and nothing else: their defines (LINUX_GNU, NDEBUG) and options
+  (-fno-strict-aliasing, -fno-lifetime-dse, -m64/-m32, -march=haswell, the Release options) are written by hand, in
+  baselib_options, in each copy.
+- GCC from the IDE: CGCCBuild (BL/GCCBuild.cpp) compiles with the Release|x64 or Debug|x64 configuration's include
+  directories and defines and nothing else.  The defines are MSVC's (_LIB, _CRT_SECURE_NO_DEPRECATE), LINUX_GNU isn't
+  among them, and none of the options above are passed.  That is the EngineOutput failure (BaseLib/DebugOutput.h
+  defines EngineOutput only for _MSC_VER, WIN_GNU_32, LINUX_GNU or __LIBC65__); with LINUX_GNU alone the code would
+  build but could break when it runs (strict aliasing, lifetime DSE: see TestBaseLib's CMakeLists.txt).
+- The HCP65 compiler: the solution's .hcp65build file (CBuildConfigurations, BL/BuildConfiguration.h): its toolchain,
+  the solution configuration it takes includes and defines from (Solution="Release|Win32"), its compile options
+  (NoFloats, MathTables, PreferSize, Debug, Unoptimised and the rest), what it links (<Image>, <Executable>, <Module>)
+  and what debugging loads (<Load>, <Lines>, Card, CardPath, BreakpointSpace).  A solution without one gets
+  configurations made up from its own (CBuildConfigurations::AddDefault, BL/BuildConfigurations.cpp: Debug|Win32
+  gives Debug|W65C816, Debug|65C64 and Debug|GCC).
+- The code index (IXL/WorkspaceIndex.cpp): the build configuration's solution configuration's defines, and
+  AddCompilerDefines pretends to be MSVC (_MSC_VER, _WIN32, _M_IX86 or _M_X64) whatever the toolchain is.
+
+So one configuration's settings are in up to four places, and the GCC ones are in a place (CMakeLists.txt) the IDE
+never reads.
+
+
+The idea
+--------
+
+Each .vcxproj also holds its GCC and HCP65 configurations, as ItemDefinitionGroups for their own
+Configuration|Platform, the platform naming the toolchain and the target (GCC-x64, HCP65C816, HCP65C64: question 1):
+
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|GCC-x64'">
+    <ClCompile>
+      <PreprocessorDefinitions>NDEBUG;LINUX_GNU;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>-O3 -m64 -march=haswell -fno-strict-aliasing -fno-lifetime-dse %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|HCP65C816'">
+    <ClCompile>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <HCP65Compile>
+      <NoFloats>true</NoFloats>
+      <PreferSize>true</PreferSize>
+    </HCP65Compile>
+  </ItemDefinitionGroup>
+
+- Visual Studio and MSBuild use only the groups whose condition is true for what they build, and no Visual Studio
+  configuration is Release|GCC, so these groups change nothing there.  They are not added to <ProjectConfigurations>
+  or to the .sln: Visual Studio would list configurations it can't build.
+- What MSVC and GCC both have keeps MSVC's name: ClCompile's PreprocessorDefinitions, AdditionalIncludeDirectories
+  and AdditionalOptions (for g++, its own arguments), Link's AdditionalOptions and AdditionalDependencies.  Only the
+  HCP65 compiler's own options get tags of their own (HCP65Compile, named as the .hcp65build attributes are).
+- What every project has goes in one shared property sheet, imported by each .vcxproj (<Import Project=
+  "$(SolutionDir)..\Common.props"/> or Directory.Build.props, which MSBuild imports by itself from a folder above the
+  project).  LINUX_GNU and the g++ options are written once, and MSVC's shared settings can move there too.
+- The .hcp65build file goes (question 3).  What a program links into (<Image>, <Executable>, <Module>) moves into
+  its project, an HCP65Link group as MSVC's projects have Link.  What debugging needs (<Load>, <Lines>, Card,
+  CardPath, BreakpointSpace) moves into run configurations, which can be shared (committed) as IntelliJ IDEA's are.
+  Build configurations are then only names mapped to the projects' groups: the projects say what is built, run
+  configurations how it is run.
+
+
+What the projects share (surveyed 2026-11-25)
+----------------------------------------------
+
+The 101 real projects: 78 C++ projects (37 static libraries, 41 applications), 21 HCP65 Makefile projects (built by
+hcp65build: Boot, Kernal, Init, Shell, Libc65, the 8 drivers and the test programs), Website and X65C64-Proposal (no
+sources) and ExceptionsTest (no configurations).  98 have Debug and Release for Win32 and x64; HCP65IDE has
+Reference|x64 too.  The survey script: each setting per configuration, how many projects set it, to what.
+
+Every C++ project has these, the same in each (to Common.props, by configuration):
+  - Configuration: PlatformToolset v142, CharacterSet NotSet.
+  - ClCompile, all: WarningLevel Level3, TreatWarningAsError, CallingConvention VectorCall, EnableEnhancedInstructionSet
+    AVX2, FloatingPointModel Fast, MultiProcessorCompilation, OpenMPSupport, EnableParallelCodeGeneration,
+    PrecompiledHeader NotUsing, FunctionLevelLinking.
+  - ClCompile, Debug: Optimization Disabled, InlineFunctionExpansion Disabled, BasicRuntimeChecks EnableFastChecks,
+    BrowseInformation, DebugInformationFormat EditAndContinue, RuntimeLibrary MultiThreadedDebugDLL, SDLCheck true,
+    StringPooling false.
+  - ClCompile, Release: InlineFunctionExpansion AnySuitable, IntrinsicFunctions, FavorSizeOrSpeed Speed,
+    WholeProgramOptimization, BufferSecurityCheck false, DebugInformationFormat ProgramDatabase, RuntimeLibrary
+    MultiThreadedDLL, SDLCheck false, StringPooling true.
+  - _ProjectFileVersion.
+
+Every application has these (Link; a static library ignores Link, so they can go in Common.props too):
+  GenerateDebugInformation, ImageHasSafeExceptionHandlers false (Debug), EnableCOMDATFolding and OptimizeReferences
+  (false Debug, true Release), LinkTimeCodeGeneration (Release), TargetMachine (MachineX86, MachineX64),
+  LinkIncremental (true Debug, false Release), IgnoreSpecificDefaultLibraries empty, SubSystem Console (37; the 4
+  window programs, HCP65Emulator, HCP65Tester, HCP65IDE and LogiCim, are Windows and keep it), AdditionalDependencies
+  shlwapi.lib (all 41; ws2_32, winmm, dinput8, dxguid and xinput added by the 7 that need them).
+
+Most share, the rest add to it:
+  - PreprocessorDefinitions: Debug _DEBUG;_LIB;_CRT_SECURE_NO_DEPRECATE;DEBUG;BREAK_ON_WARNING;BREAK_ON_ERROR (63-67
+    of 78), Release NDEBUG;_LIB;_CRT_SECURE_NO_DEPRECATE (69-73).  The window libraries and programs add
+    WIN32;_WINDOWS (and D3D_DEBUG_INFO in Debug); StandardLib adds DEBUG_POINTER; EmulatorDebugLib, KicadLib and
+    ThreadLib leave out DEBUG; WinRefLib leaves out _LIB and BREAK_ON_*.  Applications define _LIB too.
+  - IncludePath: 16 different values, but all are the same roots at different depths (CommonLibraries\Libraries,
+    HCP65\Libraries, the repository's Libraries) and a few extras ($(VULKAN_SDK)\Include, $(SolutionDir)).  The
+    sheets define $(CommonLibrariesDir) and $(HCP65Dir) from $(MSBuildThisFileDirectory), each repository's sheet
+    sets the IncludePath its projects have, and a project keeps only its extras.
+  - The HCP65 Makefile projects share only NMakeIncludeSearchPath (and its copy in ClCompile's
+    AdditionalIncludeDirectories): 5 values, the same roots at different depths.  Programs:
+    UserLib;CommonLibraries\Libraries;HCP65\Libraries; drivers: Kernal;CommonLibraries\Libraries;HCP65\Libraries.
+    Into HCP65.props as two properties.  Their compile options are the .hcp65build file's (C4).
+
+Settings that differ for no reason seen (drift).  A sheet makes them one; each is the user's (question 8):
+  - ExceptionHandling: false in most, unset (so /EHsc, exceptions on) in 4 to 19 projects depending on the
+    configuration, and sometimes only in some of a project's configurations (EmulatorDebugLib, KicadLib, ThreadLib:
+    false in Debug, unset in Release).  Turning it off where it is on breaks a project that uses try or throw.
+  - DisableSpecificWarnings (code analysis's C26xxx warnings only): 26440;26447;26455;26476, 26440;26447;26455, or
+    unset, varying by project and configuration.
+  - FloatingPointExceptions false in 21-42 projects; the rest unset (the default is the same, off).
+  - Optimization MaxSpeed set in 16 Release projects; unset in the rest (Release's default is MaxSpeed: the same).
+  - Configuration's WholeProgramOptimization true in 35 Release projects; the others have only ClCompile's.
+  - EnableASAN false in 21-30, Bscmake PreserveSbr in 26-31, CodeAnalysisRuleSet AllRules.ruleset in 64-68.
+  - TestInputLib's Release is Unicode (CharacterSet), its Debug NotSet.
+  - TestBaseLib, TestEmulatorDebugLib and TestThreadLib link incrementally in Release.
+  - 43 projects import Microsoft.CPP.UpgradeFromVC70.props (left from converting a Visual Studio 2003 project); the
+    others don't.
+  - Win32 OutDir/IntDir set in 22 projects ($(SolutionDir)$(Configuration)\), x64's in 9.
+
+So a typical C++ project's four ItemDefinitionGroups (about 25 settings each) and its configuration PropertyGroups
+come down to its include extras, its added defines and libraries, its SubSystem if Windows, and ConfigurationType.
+
+Stages
+------
+
+C0. A stopgap: CGCCBuild adds the Linux options itself (question 7)
+  C0-1. On Linux, CGCCBuild::AddCompile adds -DLINUX_GNU and baselib_options' compile options (-m64, -march=haswell,
+     -fno-strict-aliasing, -Wno-ignored-attributes and the other -Wno- options; Release: -O3, -ffunction-sections,
+     -fdata-sections, -fno-stack-protector, -U_FORTIFY_SOURCE, -fno-lifetime-dse, -fno-math-errno,
+     -fno-trapping-math; Debug: -g) after the project's defines; the link adds -m64 (and Release --gc-sections).
+     One list in GCCBuild.cpp, its comment naming TestBaseLib's CMakeLists.txt as where it came from.
+  C0-2. Tests: TestBuildLib's GCC command test expects them; the IDE builds TestBaseLib's Release|GCC and it runs and
+     passes.  C3-2 removes the list when the projects have their GCC-x64 groups.
+
+C1. VisualStudioLib reads the GCC and HCP65 groups
+  C1-1. CVcxProject (VSL/VcxProject.cpp) keeps a configuration for each group whose platform is a toolchain's name,
+     as well as those in <ProjectConfigurations>.  Now SetProperty drops a group for a configuration that isn't
+     listed.  Such a configuration is marked as not Visual Studio's (MSVC never builds it).
+  C1-2. Per tool reads: AdditionalOptions (ClCompile and Link) as an argument list, split as a command line is
+     (quotes kept), %(AdditionalOptions) as PreprocessorDefinitions' %(...) is now; the HCP65Compile tags as named
+     properties.
+  C1-3. Tests: TestVisualStudioLib reads a project with Release|GCC and Release|W65C816 groups and none in
+     <ProjectConfigurations>: their defines, options and HCP65 properties, and that Release|Win32 is unchanged.
+
+C2. VisualStudioLib follows imports
+  C2-1. <Import Project="..."/> of a .props file: its PropertyGroups and ItemDefinitionGroups are read where the
+     import is, so a project's own group after it adds to or replaces what the sheet set, as MSBuild has it.  Paths
+     with $(SolutionDir), $(ProjectDir) and $(MSBuildThisFileDirectory); an import whose Condition is
+     Exists('...').  Directory.Build.props found as MSBuild finds it (the nearest one in a folder above the project).
+     Microsoft's own imports ($(VCTargetsPath), $(UserRootDir)) are skipped as now.
+  C2-2. Opening a solution watches the imported sheets as it watches its projects: a changed sheet reloads the
+     projects that import it.
+  C2-3. Tests: a project importing a sheet that sets defines and options for Release|GCC, and adding its own;
+     Directory.Build.props two folders up.
+
+C3. GCC builds with the project's GCC configuration
+  C3-1. A GCC build configuration's solution configuration is the GCC one (Solution="Release|GCC") when the projects
+     have it; CBuildConfigurations::AddDefault prefers it to Release|x64.  A project without a GCC group builds as now
+     (x64's include directories and defines), and the build says once which projects those are.
+  C3-2. CGCCBuild::AddCompile passes ClCompile's AdditionalOptions after the -D arguments; the link passes Link's
+     AdditionalOptions and AdditionalDependencies.  A GCC configuration with its own -O level or -m64 doesn't get a
+     second from CGCCBuild (it adds none of its own).
+  C3-3. Tests: TestBuildLib's GCC build test project gets a GCC group with a define only it has and an option
+     (-fno-strict-aliasing); the test asserts both are in the compile command.  IDE: a check builds TestBaseLib's
+     Release|GCC and runs it.
+
+C4. HCP65 compiles with the project's HCP65 configuration
+  C4-1. An HCP65 build configuration's defines and include directories come from the project's W65C816 or 65C64
+     group when it has one (Solution="Release|W65C816"), from Win32 as now when it hasn't.
+  C4-2. Its compile options (NoFloats, MathTables, PreferSize, WarnMissingOverride, Exceptions, KeepUnusedObjects,
+     WarnStringToPointer, MultiWordCasts, CConversions, StubMissing, Debug) come from HCP65Compile, a project's own
+     overriding the sheet's.  Some are per program now, not per project (NoFloats is the whole kernal); per project
+     they are each project's (question 4).  Unoptimised="Init, Shell" becomes Debug="true" with no optimiser on
+     those projects (an Optimise tag, question 4).
+  C4-3. Linking: a program's <Image>, <Executable> or <Module> (with its Region and Symbol rows) is read from its
+     project's HCP65Link group (the startup project's, as CHCP65Build links now), in a group with no condition or a
+     configuration's.  Debug and Release share it instead of repeating it.
+  C4-4. Edit Build Configurations (IDE/IDEBuildConfigurationsDialog.cpp) shows the compile and link options read from
+     the projects, and edits them (question 5, C9).  Its card, load, lines and breakpoint fields go to Run Configurations
+     (C8).
+  C4-5. The 20 HCP65 solutions' .hcp65build files (HCP65/**/HCP65*.hcp65build) are moved: compile options into
+     their projects' HCP65Compile groups, linking into HCP65Link, debugging into shared run configurations (C8).  An
+     old .hcp65build is still read for a while, as now, when a project has no HCP65 groups.  hcp65build (the command
+     line) reads the same.
+  C4-6. Tests: TestBuildLib builds an HCP65 test solution whose options are only in its projects and gets the same
+     output as before the move; the IDE checks that build HCP65 programs pass unchanged.
+
+C5. The code index reads with the configuration's toolchain
+  C5-1. WorkspaceIndex reads a GCC configuration's defines with GCC's own (__GNUC__, __linux__, __x86_64__) and
+     Linux's headers, not MinGW's, and not AddCompilerDefines' MSVC ones; an HCP65 configuration with the HCP65
+     compiler's (__LIBC65__ and its own) and Libc65's headers.  MSVC configurations as now.
+  C5-2. So the index follows the build configuration chosen (an #ifdef LINUX_GNU block is live in Release|GCC, dim
+     in Release|x64).  Tests: TestIndexLib indexes one file in Release|GCC and Release|x64 and finds a symbol defined
+     only under LINUX_GNU in the first.
+
+C6. CMake reads the projects too
+  C6-1. One CMake module (CL/CMake/Vcxproj.cmake) instead of the 35 copies of vcxproj_sources: it reads a project's
+     sources and its GCC group's defines and options (following its imports, as C2), for CMAKE_BUILD_TYPE's
+     configuration (Release|GCC-x64, Debug|GCC-x64; a 32-bit build reads GCC-x64's and swaps -m64 for its own).  The CMakeLists.txt files keep only their targets and what is CMake's
+     own (BASELIB_ASAN, BASELIB_SIZE16, BASELIB_64's -m32 or -m64, LTO).
+  C6-2. baselib_options is made from the sheet's GCC options, so a change to them is one edit for CMake and the IDE.
+  C6-3. The linux test builds (32-bit Release and 64-bit) build and pass as before: TestBaseLib, TestBaseLib65 both
+     ways (no argument and "816"), and every other test project; their command lines compared before and after.
+
+C7. The projects move to the shared sheets
+  C7-1. CL/Common.props holds the GCC groups and MSVC's settings every project shares (What the projects share);
+     HCP65.props, the HCP65-IDE and LogiCim sheets import it and add their own (question 2).  Each .vcxproj imports
+     its repository's sheet in its PropertySheets ImportGroup and keeps only what is its own.
+  C7-2. Done a repository at a time (CommonLibraries, HCP65, HCP65-IDE, LogiCim), each its own commit, by a script
+     that removes from a project only what equals the sheet.  MSVC's settings for each project are compared, before
+     and after, by MSBuild's /pp (the evaluated project) on Windows.
+  C7-3. Windows: each solution opens in Visual Studio with no new warnings, lists only its Win32 and x64
+     configurations, and builds and passes its tests in each.  Only the user can do this (no Windows here).
+
+C8. Shared run configurations hold how a program is debugged
+  C8-1. A run configuration has a type: Program (today's: a tool, folder and arguments, or what a GCC build linked)
+     or HCP65 Emulator.  An HCP65 Emulator one holds the build configuration it builds first and debugs as, the
+     emulator (the default, or a tool and arguments, as now), the files loaded first (<Load>), the card image and
+     each program put on it and where (<Card File><Program Path/></Card>: the startup solution's and the workspace's
+     other programs, which CBuildWorkspace::GetCardPrograms now finds from every solution's build configuration),
+     other programs' line tables (<Lines>) and, only to override what is worked out, BreakpointSpace (question 10).
+  C8-2. Shared run configurations are committed files, one each, beside the solution (question 9), as IntelliJ
+     IDEA's "Store as project file" keeps them in .run/<Name>.run.xml.  Private ones stay in the .hcp65workspace file
+     as now.  The workspace reads both; a shared and a private one of the same name: the private one is renamed.
+  C8-3. Run Configurations (IDE/IDERunConfigurationsDialog.cpp) gets the HCP65 Emulator fields and IntelliJ's "Store
+     as project file" check box, which moves one between the two.
+  C8-4. Debugging (IDE/IDEDebugging.cpp, IDEDebugger.cpp, IDEListingSource.cpp) reads the card, loads, lines and
+     breakpoint space from the run configuration being run, not the build configuration.  A run configuration names
+     its build configuration once: one build can be run several ways (the VIA driver on VIACard.img and on
+     SDCard.img), and Release is a second run configuration, not a copy of the whole setup.
+  C8-5. hcp65build -card takes a run configuration (-run "VIA on VIACard") whose card it writes (building.md).
+  C8-6. Moved: the 20 HCP65 .hcp65build files' debugging, the IDE checks' fixtures (Checks/Input/Debugging and the
+     rest with a .hcp65build), TestBuildLib's Input; debugging.md and building.md.
+  C8-7. Tests: TestBuildLib reads shared and private run configurations, the same name in both, and a card's program
+     list; the IDE's debugging checks pass with their setup only in shared run configurations; hcp65build -run writes
+     the same card as -card did.
+
+C9. Edit Build Configurations writes the projects and sheets
+  C9-1. VisualStudioLib sets a property in a project's or a sheet's group for a configuration, as RenameItem edits
+     an item now: only that element's text changes (or one element is added, or removed), the rest of the file kept
+     byte for byte (CRLF, BOM, indentation, attribute order).  A missing group for the configuration is added after
+     the project's last ItemDefinitionGroup.
+  C9-2. Where an edit goes: to where the value comes from now (the project's own group, or the sheet that set it).
+     The dialog shows which (the project, HCP65.props, Common.props), and lets an option be set in the project to
+     override its sheet, or removed from the project to take the sheet's again, as Visual Studio's property pages'
+     "inherit from parent or project defaults" does.  A sheet change says how many projects it changes.
+  C9-3. Whole-program options (question 4) are written to the startup project's group; per-code options to the
+     project chosen in the dialog.
+  C9-4. After a write the projects are read again (C2-2 watches the sheets), and an open solution in Visual Studio
+     reloads them as it does any outside change.
+  C9-5. Tests: TestVisualStudioLib sets, overrides and removes a property in a project and a sheet, and compares the
+     files with Expected copies byte for byte (as RenameItem's test does); the IDE's checks edit an option in the
+     dialog and build with it.
+
+
+The order: C0, then C1, C2, C3 (that alone fixes the Release|GCC build), then C7 for CommonLibraries' projects, then C4, C5,
+C6, C8 and C9 in any order (C8 after C4-3, C9 after C4-4, so a program's link settings are in its project).  C7-3 before each
+repository's C7 commit.
+
+
+Questions (the user's, one at a time)
+-------------------------------------
+
+1. Decided (the user, 2026-11-25): "Release|X64 should be Release|MSVC-x64 and Release|GCC should be Release|GCC-x64
+   and the W65C816 should be Release|HCP65C816 (and Release|HCP65C64 for the 65C64)".
+   - GCC-x64, HCP65C816 and HCP65C64 are the platforms of the projects' own groups.  Visual Studio never evaluates
+     those groups, so any name works there.
+   - MSVC-x64 can't be a project's platform: Visual Studio builds only the platforms it has installed (x64, Win32),
+     and a project with Release|MSVC-x64 fails to build (MSB8006) or to load.  It is the solution's platform
+     instead.  A .sln's configurations are names of its own, each mapped to a configuration of each project
+     (Release|MSVC-x64 = Release|MSVC-x64 in the solution, its projects' .ActiveCfg = Release|x64), so Visual Studio
+     shows Release|MSVC-x64 and the projects keep x64.
+   - The IDE's build configurations take the same names, and the solutions' GCC-x64, HCP65C816 and HCP65C64 entries
+     map to the projects' groups of those names.  Whether the .sln lists them too (Visual Studio would show them,
+     greyed out as not buildable, or fail) is to be tried on Windows; if not, the IDE makes them up as now.
+   - Existing names move: Debug|W65C816, Debug|65C64 and Debug|GCC in the .hcp65build, .hcp65workspace and
+     .hcp65user files, the IDE checks' fixtures, hcp65build's documentation (building.md) and the IDE's toolchain
+     names (BL/BuildConfiguration.cpp gaszBuildToolchainNames).  A file with an old name is read as the new one.
+   - Release|Win32 (the 32-bit MSVC build) is Release|MSVC-x86, a solution name mapped to the projects' Win32 as
+     MSVC-x64 is to x64 (the user, 2026-11-25: "I would prefer Release|MSVC-x86").  A GCC-x86 would sit beside it
+     if the 32-bit Linux test builds move into the IDE.
+   - The rename is done in each .sln (or Visual Studio's Configuration Manager, <Edit...>, Rename): the
+     SolutionConfigurationPlatforms names and the left side of each ActiveCfg and Build.0, the right side kept.
+     Inside a project $(Platform) stays x64 or Win32 (output folders keep their names); $(SolutionPlatform) is the
+     new name.  MSBuild is given the solution's name (/p:Platform=MSVC-x64: MSVCBuild.cpp).  C1's tests check
+     VisualStudioLib follows the mapping (a solution configuration whose projects' configurations are named
+     otherwise).
+2. Decided (the user, 2026-11-25: "let's go with your recommendation: C, done as E"): layered property sheets in
+   Visual Studio's slot for them.  CommonLibraries/Common.props holds what every project has (MSVC's shared
+   settings, the GCC-x64 groups' LINUX_GNU and g++ correctness options); HCP65, HCP65-IDE and LogiCim each have
+   their own sheet (HCP65.props and so on) that imports ../CommonLibraries/Common.props and adds their own (the
+   HCP65 options).  A project imports its repository's sheet in <ImportGroup Label="PropertySheets">, by path, once
+   per configuration as Visual Studio writes it, so Visual Studio's Property Manager shows and edits it and a
+   project's own groups after it override it.  Splitting by toolchain or kind (MSVC.props, Library.props) can come
+   later without changing how projects import.  Also asked: what of the projects' settings now can move to a sheet
+   (see What the projects share).
+3. Decided (the user, 2026-11-25: "D for question 3"): the .hcp65build file goes.  Linking moves into the projects
+   (HCP65Link, C4-3) and debugging into run configurations, which can be shared as IntelliJ IDEA's are (C8).  The
+   others considered: keep the file for linking and debugging; move linking only and keep the file for debugging;
+   move debugging into the projects too (it names test cards, so the same driver on another card would mean editing
+   its project).  Run configurations are kept in the gitignored .hcp65workspace now, so sharing them is new (C8-2).
+4. Decided (the user, 2026-11-25: "Split"): the whole program's options (NoFloats, MathTables, StubMissing,
+   KeepUnusedObjects, Exceptions) are the startup project's HCP65Compile group's and apply to everything linked into
+   it, as now (BaseLib has no floats in the kernal and floats in ModPlay).  The options about one project's code
+   (Debug, not optimised, WarnStringToPointer, MultiWordCasts, CConversions) are each project's own, from its group
+   or its sheet; Unoptimised="Init, Shell" becomes those projects' own setting.
+5. Decided (the user, 2026-11-25: "Editable now"): Edit Build Configurations edits the projects' compile and link
+   options, writing each to the project or sheet it comes from (C9).  VisualStudioLib already edits .vcxproj files in
+   place, byte for byte but the change (CVcxProject::RenameItem, RenameIncludes and adding files), so C9 extends that.
+6. Decided (the user, 2026-11-25: "Read the projects"): C6 as written.  One CMake module reads each project's
+   sources and its GCC-x64 group's defines and options, following the sheets; the CMakeLists.txt files keep their
+   targets and CMake's own switches (BASELIB_ASAN, BASELIB_SIZE16, BASELIB_64, LTO).  Not replaced by hcp65build.
+7. Decided (the user, 2026-11-25: "Stopgap now"): C0, before C1, and taken out by C3.
+8. The drift (What the projects share): for each, the sheet's value, and which projects keep their own.
+   - ExceptionHandling, decided (the user, 2026-11-25: "Off everywhere"): Common.props sets it false for every
+     configuration and no project overrides it.  A project that uses try, throw or catch stops compiling and is
+     fixed then (C7-3 builds every solution).
+   - Settings unset in some projects with the same result (FloatingPointExceptions false, Release's Optimization
+     MaxSpeed, EnableASAN false, PreserveSbr, CodeAnalysisRuleSet AllRules.ruleset, Configuration's
+     WholeProgramOptimization, OutDir and IntDir), decided (the user, 2026-11-25: "Set once in the sheet"):
+     Common.props sets each explicitly and the projects' copies go.  OutDir and IntDir: one layout for all, chosen
+     after comparing the 31 projects that set them with Visual Studio's default, so no project's output moves
+     without it being said.
+   - DisableSpecificWarnings, decided (the user, 2026-11-25: "All four"): Common.props disables
+     26440;26447;26455;26476 (the Core Guidelines checks /analyze runs: noexcept and naked unions) everywhere.
+   - TestInputLib's Release CharacterSet Unicode, decided (the user, 2026-11-25: "NotSet like the rest"): it takes the
+     sheet's NotSet in every configuration, as its Debug has.
+   - Release LinkIncremental in TestBaseLib, TestEmulatorDebugLib and TestThreadLib, decided (the user, 2026-11-25:
+     "Off like the rest"): they take the sheet's false (/LTCG already made the linker ignore it).
+   - Microsoft.CPP.UpgradeFromVC70.props, decided (the user, 2026-11-25: "Drop it"): the 43 projects stop importing it;
+     every project's PropertySheets slot holds only its repository's sheet.  C7-2's /pp comparison shows any setting
+     it changes.
+   - _LIB, decided (the user, 2026-11-25: "Drop it everywhere"): no project or sheet defines it (no source tests it).
+   - The other defines, decided (the user, 2026-11-25: "One shared set"): Common.props defines, Debug,
+     _DEBUG;DEBUG;_CRT_SECURE_NO_DEPRECATE;BREAK_ON_WARNING;BREAK_ON_ERROR and, Release, NDEBUG;_CRT_SECURE_NO_DEPRECATE.
+     WIN32, _WINDOWS, _CONSOLE and D3D_DEBUG_INFO go (nothing tests them: the code tests _WIN32, the compiler's).
+     EmulatorDebugLib, KicadLib and ThreadLib gain DEBUG in Debug (it changes CPPToken's layout, CppCompilerLib/
+     PPToken.h).  BREAK_ON_* is tested only in BaseLib/Logger.cpp, so only BaseLib's matters; the window projects'
+     Release BREAK_ON_* go with the rest.  StandardLib keeps DEBUG_POINTER as its own (PointerObject.h's logging).
+9. Decided (the user, 2026-11-25: ".run folder per solution"): each shared run configuration is its own file in a
+   .run folder beside its .sln (HCP65/Drivers/VIABoard/.run/VIA on VIACard.hcp65run), as IntelliJ IDEA's .run
+   folder; private ones stay in the .hcp65workspace file.
+10. Decided (the user, 2026-11-25: "Derive, allow override"): the breakpoint space is worked out from what is
+   debugged: an executable's is User, a module's or an image's Kernel, and on a processor without spaces (the flat
+   65C64) breakpoints stop everywhere.  A run configuration may still set BreakpointSpace to override it.  Every
+   build file now fits the rule (12 executables User, 9 modules and 4 images Kernel, the 65C64 image none), so none
+   is written when they move.
+11. Decided (the user, 2026-11-25: "In the run configuration"): a run configuration lists its card image and each
+   program written onto it with its path (the kernal, drivers, Init, the program debugged), so the same driver goes
+   on VIACard.img in one and SDCard.img in another.  Projects name no card; CBuildWorkspace::GetCardPrograms reads
+   the run configuration's list instead of every solution's build configuration.
