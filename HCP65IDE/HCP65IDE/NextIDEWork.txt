@@ -1,8 +1,8 @@
 The IDE's next work (planned 2026-11-17, checked against the code and planned again 2026-11-26)
 ============================================================================================
 
-Ten items, in the order the user chose on 2026-11-17, and an eleventh added on 2026-11-26.  Seven are built (1, 2, 3,
-4, 5, 7 and 11); four are open (6, 8, 9 and 10), and are planned below from what the code has now.  The user's
+Ten items, in the order the user chose on 2026-11-17, and an eleventh added on 2026-11-26.  Eight are built (1, 2, 3,
+4, 5, 6, 7 and 11); three are open (8, 9 and 10), and are planned below from what the code has now.  The user's
 answers of 2026-11-17 are at the end and still hold.  Bring each open item up with the user before starting it,
 with how you mean to do it, and go on when they say.  The user's rule for the IDE: build the whole feature, as
 IntelliJ IDEA has it, not a cut-down version, and don't order the work by what is cheapest.
@@ -12,9 +12,9 @@ IntelliJ IDEA has it, not a cut-down version, and don't order the work by what i
   3   Find in Files: regex, file mask, Replace         built 2026-11-21
   4   Go to Line                                       built 2026-11-20
   5   Code completion, basic and smart                 built 2026-11-26
-  6   Automatic indenting, Tab, the line commands      OPEN: next; part there; decided 2026-11-26
+  6   Automatic indenting, Tab, the line commands      built 2026-11-26
   7   Bookmarks                                        built 2026-11-21
-  8   Context menus                                    OPEN: part there (see the item)
+  8   Context menus                                    OPEN: next; part there (see the item)
   9   Smaller things left open                         OPEN: a, b and c to build; b decided 2026-11-26
   10  Reformat Code                                    OPEN: last of the ten
   11  Quick Documentation and the name's tool tip      built 2026-11-26
@@ -160,44 +160,48 @@ popup's own rows not timed): the members of a CModPlayer* 15 ms (19 entries); wh
 index was asked only for the names wanted (it copied every global symbol first) the member list took 385 ms.
 The parse's time is the file's check's: not measured again (47 ms to 1.7 s, item 11's numbers).
 
-Checked: TestWindowLib Debug x64 (24074 pass), from a private copy; the IDE's 566 checks on a private Release
-build, all passing but enum-to-class, which failed before this work; the pages build with no warning of their own (the site's build stops at another
-session's unfinished pages).  Not checked: an MSVC build; Windows; a real keyboard and pointer in a real window
-(the checks type through the script, a tick after each character as a person's keys have); the parse path in a
-header (its unit's text is given, and the header's own given back to the code model after: by reading only); a
-large file's parse while typing goes on.
+Checked: TestWindowLib Debug x64 (24074 pass), from a private copy; the IDE's 566 checks on a private Release build,
+all passing but enum-to-class, which failed before this work; the pages build with no warning of their own (the
+site's build stops at another session's unfinished pages).  Not checked: an MSVC build; Windows; a real keyboard and
+pointer in a real window (the checks type through the script, a tick after each character as a person's keys have);
+the parse path in a header (its unit's text is given, and the header's own given back to the code model after: by
+reading only); a large file's parse while typing goes on.
 
 
-6. Automatic indenting, Tab, and the editor's other line commands: OPEN
------------------------------------------------------------------------
+6. Automatic indenting, Tab, and the editor's other line commands: built 2026-11-26
+---------------------------------------------------------------------------------
 
-What there is now (BaseLib's CTextEditing, so every text area; the keys in WindowLib's EditCommands.cpp):
-  - Tab types spaces to the next tab stop; with lines selected it indents them (IndentLines), with spaces; in a box
-    selection it types spaces.  Shift+Tab (BackTab) unindents the selected lines or the caret's: a tab, or up to a
-    tab's worth of spaces.
-  - Enter puts in a line feed and nothing else.
-  - Duplicate (Control+D) and Delete Line (Control+Y) exist.  Control+Cursor Up and Down scroll.
-  - There are no comment commands and nothing moves a line.
+The user's decisions: Tab types a tab, and spaces are no longer typed by Tab anywhere (2026-11-17); on each row of a
+box selection too, and in the documentation pages too (2026-11-26).
 
-What to build (the user: Tab types a tab; spaces are no longer typed by Tab anywhere):
-  1. Tab types a tab character, and IndentLines puts a tab at the start of each line.  BackTab is right already.
-  2. Enter keeps the line's indent (its leading tabs and spaces, as they are); in a code editor, one tab more after
-     a line that ends in "{", and a "}" typed on a line of only white space goes back one.  The first part in
-     CTextEditing; the brace part in CCodeEditor or the IDE, as it is about C++.
-  3. Comment with Line Comment (Control+/): the caret's line or the selected lines, // put in or taken out, the
-     caret moving down a line when nothing is selected, as IntelliJ's.  Comment with Block Comment
-     (Control+Shift+/): the selection.
-  4. Move Line Up and Down.  IntelliJ's keys are Alt+Shift+Cursor Up and Down, which are taken here; its
-     Control+Shift+Cursor Up and Down (Move Statement) are free, and are what this file planned.
-  5. TestBaseLib (TestTextEditing) for 1 to 4, on the 65 targets too; the IDE's checks for the keys; editor.md.
+CommonLibraries 6b0e13db3; HCP65-IDE: the commit after 58dc302 named "Indenting".  Checks editor-indent,
+editor-line-commands and editor-comment-page; menus has the Edit menu's four new items.
 
-DECIDED by the user, 2026-11-26: Tab in a box selection types a tab on each row, as everywhere else.  (Rows that
-reach the box's left edge have the caret at one column, so a tab takes them all to the same stop; a shorter row
-gets it at its end, as it gets spaces now.)
+What was built (Docs/ide/editor.md's "Moving and typing", "Indenting" and "Comments" say it for the user):
+  - BaseLib's CTextEditing, so every text area: Tab types a tab, on each row of a box, and indents selected lines
+    with one; Enter, Enter at Line Start and Enter at Line End keep the line's indent as it is written.
+  - In code (CTextEditing::SetBraceIndent; a CCodeEditor's text is, and the IDE says by the file's kind,
+    SetIDEEditorCode): a tab more after a "{"; Enter between a "{" and its "}" puts the "}" on its own line; a "}"
+    typed on a line of its own goes under the line of the "{" it closes.
+  - Move Line Up and Down (Control+Shift+Up and Down), Comment with Line Comment (Control+/) and with Block Comment
+    (Control+Shift+/), in the keymap and the Edit menu.  The comment marks are the file's: C and C++ "//" and
+    "/* */", assembly ";", a documentation page "<!-- -->".
 
-DECIDED by the user, 2026-11-26: Tab types a tab in the documentation pages (.md) too: one rule, no setting by
-file type.  (The pages' space-led lines are nearly all the two spaces of a list item's later lines, which Tab
-couldn't type anyway and which Enter keeping the indent carries on; their code samples are tab-led already.)
+Where it differs from the plan, or wasn't said:
+  - A "}" goes under the line of its own "{", found by matching brackets, not just back one tab.
+  - Enter between "{" and "}" splitting them is IntelliJ's and wasn't in the plan.
+  - Indenting selected lines leaves lines with nothing on them alone, as IntelliJ does.
+  - Comment with Line Comment puts the mark at the line's start (IntelliJ's default), not at its indent; taking
+    it off finds it after the indent too.  Lines with nothing on them aren't commented.
+  - Braces in a string or a comment count as braces (the text code doesn't know what is code).
+  - Move Line is IntelliJ's Move Line, on Control+Shift+Up and Down as planned: IntelliJ has Move Statement on
+    those and Move Line on Alt+Shift+Up and Down, which are the box selection's here.  Move Statement isn't built.
+  - Existing files indented with spaces stay so: Shift+Tab takes spaces off, and Enter copies them.
+
+Checked: TestBaseLib 64 bit Debug (326902) and the 16 bit size build (327123); TestTextEditing on the 65C64 and the
+W65C816 (TestBaseLib65, 590 asserts each); TestWindowLib 64 bit Debug (24094); the IDE's 569 checks on a private
+Release build, all passing but enum-to-class, which failed before this work.  Not checked: an MSVC build; Windows;
+LogiCim's and Sculpt's own text areas by hand (they take the same Tab).
 
 
 7. Bookmarks: built 2026-11-21
@@ -381,7 +385,7 @@ For the user to decide (2026-11-26)
 
   Item 5   DECIDED and built: the light path and the kept parse both, with the six points as the item says.
            Still to answer: "->" on a class template (Ptr<CGauge>) reaching its first argument at once.
-  Item 6   DECIDED: Tab types a tab on each row of a box selection, and in the documentation pages too.
+  Item 6   DECIDED and built: Tab types a tab on each row of a box selection, and in the documentation pages too.
   Item 9b  DECIDED: a 65 configuration is indexed as it is built: no host headers, the target's defines.
   Item 9d  CONFIRMED: Build on Control+F9, Go to Type Declaration on Control+Shift+B.
   Item 11  DECIDED and built: Quick Documentation and the name's tool tip (NavigationPlan.txt's decision 11 changed).
