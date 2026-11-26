@@ -25,6 +25,7 @@
     <ClCompile Include="SymbolTable.cpp" />
     <ClCompile Include="MarkdownSpans.cpp" />
     <ClCompile Include="ReferenceResolver.cpp" />
+    <ClCompile Include="DocsSite.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="WorkspaceIndex.h" />
@@ -32,6 +33,7 @@
     <ClInclude Include="SymbolTable.h" />
     <ClInclude Include="MarkdownSpans.h" />
     <ClInclude Include="ReferenceResolver.h" />
+    <ClInclude Include="DocsSite.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{B474CBEE-A34B-4F12-8944-8283752EB887}</ProjectGuid>

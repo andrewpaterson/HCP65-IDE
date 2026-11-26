@@ -128,6 +128,7 @@ protected:
 	CArrayChars					maszSiteFiles;			//the files its references can name,
 	CChars						mszSiteRoot;			//the folder they are relative to (ending in a separator),
 	bool						mbSiteSymbols;			//and whether it was read (SetSiteSymbols).
+	CChars						mszDocsSite;			//The website's mkdocs.yml (SetDocsSite), empty if there is none.
 
 public:
 	void			Init(CBuildWorkspace* pcWorkspace);
@@ -161,11 +162,13 @@ public:
 
 	bool			SetSiteSymbols(const char* szTable, const char* szFiles, const char* szRoot);
 	bool			SetDocsSite(const char* szMkdocsFile);
+	char*			GetDocsSite(void);
 	virtual bool	FindDocsSite(CChars* pszMkdocsFile);
 	bool			HasSiteSymbols(void) const;
 	void			IndexPages(void);
 	bool			IndexPage(const char* szFileName, const char* szText);
 	size			NumPages(void);
+	void			GetPageFiles(CArrayChars* paszDest);
 	bool			IsPage(const char* szFileName);
 	size			GetPageReferences(const char* szFileName, CArrayPageReferences* pasDest);
 	bool			FindPageReference(const char* szFileName, int iLine, int iColumn, CChars* pszFile, int* piLine);

@@ -21,5 +21,8 @@
     <ClCompile Include="TestWorkspacePages.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="TestDocsSite.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

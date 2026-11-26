@@ -24,6 +24,9 @@
     <ClCompile Include="ReferenceResolver.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="DocsSite.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="WorkspaceIndex.h">
@@ -39,6 +42,9 @@
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="ReferenceResolver.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="DocsSite.h">
       <Filter>Source</Filter>
     </ClInclude>
   </ItemGroup>

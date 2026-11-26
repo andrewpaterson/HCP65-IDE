@@ -48,13 +48,29 @@ struct SMarkdownSpan
 typedef CArrayTemplate<SMarkdownSpan>	CArrayMarkdownSpans;
 
 
+//Where a page names a file: a link's or an image's target, [text](../ide/editor.md#tabs), or a snippet's path,
+//--8<-- "examples/hello.asm" (pymdownx.snippets, in a fence too).
+struct SMarkdownLink
+{
+	int		iLine;		//0 based.
+	int		iColumn;	//0 based, in bytes: where szTarget starts.
+	bool	bSnippet;
+	CChars	szTarget;	//As written, with any #anchor.
+};
+
+
+typedef CArrayTemplate<SMarkdownLink>	CArrayMarkdownLinks;
+
+
 //A Markdown page's code spans, outside fenced code blocks (``` and ~~~) and HTML comments, each with what its
 //brackets make it.  A span is a run of backticks, what follows, and the next run of as many; a run with no such
-//closing run is text.  Spans don't cross lines.
+//closing run is text.  Spans don't cross lines.  And the files it names: its links' targets (outside code) and its
+//snippets' paths.
 class CMarkdownSpans
 {
 protected:
 	CArrayMarkdownSpans		masSpans;
+	CArrayMarkdownLinks		masLinks;
 
 public:
 	void					Init(void);
@@ -63,9 +79,14 @@ public:
 	void					Scan(const char* szText);
 	size					NumSpans(void) const;
 	SMarkdownSpan*			Get(size uiIndex);
+	size					NumLinks(void) const;
+	SMarkdownLink*			GetLink(size uiIndex);
 
 protected:
 	void					ScanLine(int iLine, const char* szLine, const char* szVisible, int iLength);
+	void					ScanLinks(int iLine, const char* szVisible, int iLength, size uiFirstSpan);
+	void					ScanSnippet(int iLine, const char* szLine, int iLength);
+	void					AddLink(int iLine, const char* szLine, int iStart, int iEnd, bool bSnippet);
 	static int				FindFence(const char* szLine, int iLength, char* pcFence, int* piAfter);
 	static EMarkdownSpanKind	GetKind(const char* szLine, int iLength, int iStart, int iEnd);
 };

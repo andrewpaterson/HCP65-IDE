@@ -145,6 +145,7 @@ void CWorkspaceIndex::Init(CBuildWorkspace* pcWorkspace)
 	maszSiteFiles.Init();
 	mszSiteRoot.Init();
 	mbSiteSymbols = false;
+	mszDocsSite.Init();
 }
 
 
@@ -159,6 +160,7 @@ void CWorkspaceIndex::Kill(void)
 	StopJobs();
 	KillPages();
 	mapsPages.Kill();
+	mszDocsSite.Kill();
 	mszSiteRoot.Kill();
 	maszSiteFiles.Kill();
 	mcSiteTable.Kill();

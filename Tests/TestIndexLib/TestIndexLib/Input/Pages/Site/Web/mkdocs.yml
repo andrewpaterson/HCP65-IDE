@@ -1,1 +1,15 @@
 site_name: A website
+extra:
+  sources:
+    - folder: Site/Web/docs
+      site: ""
+      branch: main
+    - folder: Docs
+      site: shapes
+      branch: main
+markdown_extensions:
+  - admonition
+  - pymdownx.snippets:
+      base_path:
+        - ../Other
+      check_paths: true

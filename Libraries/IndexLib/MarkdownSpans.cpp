@@ -82,6 +82,7 @@ static int FindMarkdownText(const char* szText, int iLength, int iStart, const c
 void CMarkdownSpans::Init(void)
 {
 	masSpans.Init();
+	masLinks.Init();
 }
 
 
@@ -98,6 +99,11 @@ void CMarkdownSpans::Kill(void)
 		masSpans.Get(i)->szText.Kill();
 	}
 	masSpans.Kill();
+	for (i = 0; i < masLinks.NumElements(); i++)
+	{
+		masLinks.Get(i)->szTarget.Kill();
+	}
+	masLinks.Kill();
 }
 
 
@@ -123,6 +129,7 @@ void CMarkdownSpans::Scan(const char* szText)
 	int			iAfter;
 	bool		bComment;
 	bool		bInComment;
+	size		uiFirstSpan;
 	CChars		szVisible;
 	int			iStart;
 	int			iClose;
@@ -138,6 +145,7 @@ void CMarkdownSpans::Scan(const char* szText)
 		iLength = szEnd ? (int)(szEnd - szLine) : (int)strlen(szLine);
 
 		iRun = FindFence(szLine, iLength, &cRun, &iAfter);
+		ScanSnippet(iLine, szLine, iLength);
 		if (iFence > 0)
 		{
 			if ((iRun > 0) && (cRun == cFence) && (iRun >= iFence) && IsMarkdownBlank(szLine, iAfter, iLength))
@@ -179,7 +187,9 @@ void CMarkdownSpans::Scan(const char* szText)
 					}
 					memset(&szVisible.Text()[iStart], ' ', iClose + 3 - iStart);
 				}
+				uiFirstSpan = masSpans.NumElements();
 				ScanLine(iLine, szLine, szVisible.Text(), iLength);
+				ScanLinks(iLine, szVisible.Text(), iLength, uiFirstSpan);
 			}
 		}
 
@@ -325,6 +335,104 @@ EMarkdownSpanKind CMarkdownSpans::GetKind(const char* szLine, int iLength, int i
 }
 
 
+//////////////////////////////////////////////////////////////////////////
+//
+// The targets of the line's links and images, ](target), outside its code
+// spans (from uiFirstSpan): up to the first space (a title may follow) or
+// the closing parenthesis.
+//
+//////////////////////////////////////////////////////////////////////////
+void CMarkdownSpans::ScanLinks(int iLine, const char* szVisible, int iLength, size uiFirstSpan)
+{
+	int				i;
+	int				iEnd;
+	size			j;
+	bool			bInSpan;
+	SMarkdownSpan*	psSpan;
+
+	for (i = 0; i + 1 < iLength; i++)
+	{
+		if ((szVisible[i] != ']') || (szVisible[i + 1] != '('))
+		{
+			continue;
+		}
+		bInSpan = false;
+		for (j = uiFirstSpan; (j < masSpans.NumElements()) && !bInSpan; j++)
+		{
+			psSpan = masSpans.Get(j);
+			bInSpan = (i > psSpan->iColumn) && (i < psSpan->iEnd - 1);
+		}
+		if (bInSpan)
+		{
+			continue;
+		}
+		for (iEnd = i + 2; (iEnd < iLength) && (szVisible[iEnd] != ')') && !IsMarkdownSpace(szVisible[iEnd]); iEnd++)
+		{
+		}
+		if ((iEnd < iLength) && (iEnd > i + 2))
+		{
+			AddLink(iLine, szVisible, i + 2, iEnd, false);
+		}
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A snippet's path: a line that is --8<-- and a quoted path (after white
+// space), in a fence or not.
+//
+//////////////////////////////////////////////////////////////////////////
+void CMarkdownSpans::ScanSnippet(int iLine, const char* szLine, int iLength)
+{
+	int		i;
+	int		iEnd;
+	char	cQuote;
+
+	for (i = 0; (i < iLength) && IsMarkdownSpace(szLine[i]); i++)
+	{
+	}
+	if ((i + 6 > iLength) || (memcmp(&szLine[i], "--8<--", 6) != 0))
+	{
+		return;
+	}
+	for (i += 6; (i < iLength) && IsMarkdownSpace(szLine[i]); i++)
+	{
+	}
+	if ((i >= iLength) || ((szLine[i] != '"') && (szLine[i] != '\'')))
+	{
+		return;
+	}
+	cQuote = szLine[i];
+	for (iEnd = i + 1; (iEnd < iLength) && (szLine[iEnd] != cQuote); iEnd++)
+	{
+	}
+	if ((iEnd < iLength) && (iEnd > i + 1))
+	{
+		AddLink(iLine, szLine, i + 1, iEnd, true);
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CMarkdownSpans::AddLink(int iLine, const char* szLine, int iStart, int iEnd, bool bSnippet)
+{
+	SMarkdownLink*	psLink;
+
+	psLink = masLinks.Add();
+	psLink->iLine = iLine;
+	psLink->iColumn = iStart;
+	psLink->bSnippet = bSnippet;
+	psLink->szTarget.Init();
+	psLink->szTarget.AppendSubString(&szLine[iStart], iEnd - iStart);
+}
+
+
 size CMarkdownSpans::NumSpans(void) const { return masSpans.NumElements(); }
 SMarkdownSpan* CMarkdownSpans::Get(size uiIndex) { return masSpans.Get(uiIndex); }
+size CMarkdownSpans::NumLinks(void) const { return masLinks.NumElements(); }
+SMarkdownLink* CMarkdownSpans::GetLink(size uiIndex) { return masLinks.Get(uiIndex); }
 

@@ -93,6 +93,8 @@ bool CWorkspaceIndex::SetDocsSite(const char* szMkdocsFile)
 
 	szFolder.Init();
 	szName.Init();
+	mszDocsSite.Set(szMkdocsFile);
+	cFileUtil.FullPath(&mszDocsSite);
 	cFileUtil.SplitPath(szMkdocsFile, &szName, &szFolder);
 	cFileUtil.FullPath(&szFolder);
 	szTable.Init(szFolder);
@@ -647,5 +649,24 @@ bool CWorkspaceIndex::FindPageReference(const char* szFileName, int iLine, int i
 }
 
 
+//////////////////////////////////////////////////////////////////////////
+//
+// Each of the workspace's pages, added to paszDest.
+//
+//////////////////////////////////////////////////////////////////////////
+void CWorkspaceIndex::GetPageFiles(CArrayChars* paszDest)
+{
+	size	i;
+
+	mcIndexMutex.Lock();
+	for (i = 0; i < mapsPages.NumElements(); i++)
+	{
+		paszDest->Add(mapsPages.GetPtr(i)->szFile.Text());
+	}
+	mcIndexMutex.Unlock();
+}
+
+
 bool CWorkspaceIndex::HasSiteSymbols(void) const { return mbSiteSymbols; }
+char* CWorkspaceIndex::GetDocsSite(void) { return mszDocsSite.Text(); }
 
