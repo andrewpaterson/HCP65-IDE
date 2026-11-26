@@ -634,7 +634,7 @@ bool CIDEApp::Setup(CNativeWindowFactory* pcNativeFactory, CNativeInput* pcNativ
 //////////////////////////////////////////////////////////////////////////
 void CIDEApp::AddScriptKeyboard(void)
 {
-	static const char*		aszKeys[] = { "Left Control", "Left Shift", "Left Alt", "Home", "End", "Page Up", "Page Down", "Cursor Up", "Cursor Down", "Cursor Left", "Cursor Right", "Enter", "Escape", "Tab", "Backspace", "Delete", "Space", "A", "C", "E", "V", "X", "W", "Z", "2", "7", "F12" };
+	static const char*		aszKeys[] = { "Left Control", "Left Shift", "Left Alt", "Home", "End", "Page Up", "Page Down", "Cursor Up", "Cursor Down", "Cursor Left", "Cursor Right", "Enter", "Escape", "Tab", "Backspace", "Delete", "Space", "A", "C", "E", "K", "U", "V", "X", "W", "Z", "2", "7", "F12" };
 	CProgramInput*			pcProgram;
 	CProgramDeviceDetail*	pcKeyboard;
 	size					i;

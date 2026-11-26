@@ -29,11 +29,12 @@ Over text you can edit or select (an editor, a text field, a preview) the pointe
 | Ctrl+D | Duplicates the selection, the copy selected after it; with nothing selected, the caret's line. |
 | Ctrl+Y | Deletes the caret's line. |
 | Ctrl+Shift+Up, Ctrl+Shift+Down | **Move Line Up** and **Down**: the caret's line, or the selected lines, change places with the line beside them. |
-| Ctrl+/ | **Comment with Line Comment**: comments out the caret's line, or the selected lines; uncomments them if they are all comments already. |
+| Ctrl+K then C | **Comment Selection**: comments out the caret's line, or the selected lines. |
+| Ctrl+K then U | **Uncomment Selection**: takes the comment marks off them. |
 | Ctrl+Shift+/ | **Comment with Block Comment**: makes the selection a comment, or stops it being one. |
 | Insert | Overwrite on or off. |
 
-The last four are in the Edit menu too.
+The last five are in the Edit menu too.
 
 ### Indenting
 
@@ -52,9 +53,11 @@ Braces in a string or a comment count as braces.
 
 ### Comments
 
-Ctrl+/ puts the comment mark at the start of each line that has anything on it, and with nothing selected
-moves the caret down a line, so pressing it again does the next.  If every one of the lines is a comment
-already (after its indent) it takes the marks off instead.  Ctrl+Shift+/ puts the block marks round the
+Ctrl+K then C puts the comment mark at the indent of each line that has anything on it, as the house style
+writes a comment; on several lines the marks go in one column, that of the line indented least, so the code
+keeps its shape.  Doing it again adds another mark.  Ctrl+K then U takes one mark off each line that starts
+with one after its indent.  The second key works with Ctrl still held or let go.  The caret and the
+selection stay where they are.  Ctrl+Shift+/ puts the block marks round the
 selection, which stays selected, or takes them off a selection that has them; with nothing selected it
 puts both at the caret and the caret between them.
 

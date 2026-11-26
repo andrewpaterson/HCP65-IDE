@@ -115,7 +115,8 @@ Workspaces](solutions.md#files-kept-beside-the-solution).
 | Ctrl+D | Duplicate |
 | Ctrl+Y | Delete Line |
 | Ctrl+Shift+Up, Ctrl+Shift+Down | Move Line Up, Move Line Down |
-| Ctrl+/ | Comment with Line Comment |
+| Ctrl+K then C | Comment Selection |
+| Ctrl+K then U | Uncomment Selection |
 | Ctrl+Shift+/ | Comment with Block Comment |
 | Insert | Toggle Overwrite |
 | Escape | Clear the selection, end a box |

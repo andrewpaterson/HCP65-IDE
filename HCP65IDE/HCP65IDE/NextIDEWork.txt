@@ -186,16 +186,20 @@ What was built (Docs/ide/editor.md's "Moving and typing", "Indenting" and "Comme
   - In code (CTextEditing::SetBraceIndent; a CCodeEditor's text is, and the IDE says by the file's kind,
     SetIDEEditorCode): a tab more after a "{"; Enter between a "{" and its "}" puts the "}" on its own line; a "}"
     typed on a line of its own goes under the line of the "{" it closes.
-  - Move Line Up and Down (Control+Shift+Up and Down), Comment with Line Comment (Control+/) and with Block Comment
-    (Control+Shift+/), in the keymap and the Edit menu.  The comment marks are the file's: C and C++ "//" and
-    "/* */", assembly ";", a documentation page "<!-- -->".
+  - Move Line Up and Down (Control+Shift+Up and Down), Comment Selection (Control+K then C), Uncomment Selection
+    (Control+K then U) and Comment with Block Comment (Control+Shift+/), in the keymap and the Edit menu.  The
+    comment marks are the file's: C and C++ "//" and "/* */", assembly ";", a documentation page "<!-- -->".
 
 Where it differs from the plan, or wasn't said:
   - A "}" goes under the line of its own "{", found by matching brackets, not just back one tab.
   - Enter between "{" and "}" splitting them is IntelliJ's and wasn't in the plan.
   - Indenting selected lines leaves lines with nothing on them alone, as IntelliJ does.
-  - Comment with Line Comment puts the mark at the line's start (IntelliJ's default), not at its indent; taking
-    it off finds it after the indent too.  Lines with nothing on them aren't commented.
+  - Line comments are Visual Studio's, not IntelliJ's (the user, 2026-11-26: "chords ctrl+k, C for comment and
+    ctrl+k, U for uncomment", and the "//" "indented as the house style writes comments"): two commands in place
+    of the Control+/ toggle first built, which has no key now.  The mark goes at the indent, on several lines in
+    the column of the line indented least; Uncomment takes one mark off each line that has one after its indent.
+    The caret doesn't move down a line after.  Lines with nothing on them aren't commented.  For it a key
+    sequence may start with Control alone (WindowLib's CComponentInput: "Control+K, C").
   - Braces in a string or a comment count as braces (the text code doesn't know what is code).
   - Move Line is IntelliJ's Move Line, on Control+Shift+Up and Down as planned: IntelliJ has Move Statement on
     those and Move Line on Alt+Shift+Up and Down, which are the box selection's here.  Move Statement isn't built.
@@ -205,6 +209,9 @@ Checked: TestBaseLib 64 bit Debug (326902) and the 16 bit size build (327123); T
 W65C816 (TestBaseLib65, 590 asserts each); TestWindowLib 64 bit Debug (24094); the IDE's 569 checks on a private
 Release build, all passing but enum-to-class, which failed before this work.  Not checked: an MSVC build; Windows;
 LogiCim's and Sculpt's own text areas by hand (they take the same Tab).
+The comment commands as they are now (CommonLibraries: the commit named "Comment Selection"): TestBaseLib 64 bit
+Debug (326908) and the 16 bit size build; TestTextEditing on the 65C64 and the W65C816 (596 asserts each);
+TestWindowLib 64 bit Debug (24116); the IDE's 569 checks again, all but enum-to-class.
 
 
 7. Bookmarks: built 2026-11-21
