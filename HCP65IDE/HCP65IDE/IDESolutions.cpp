@@ -22,6 +22,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdlib.h>
 #ifdef _WIN32
 #include "BaseLib/WindowsHeaders.h"
+#include <shellapi.h>
 #else
 #include <unistd.h>
 #include <sys/wait.h>
