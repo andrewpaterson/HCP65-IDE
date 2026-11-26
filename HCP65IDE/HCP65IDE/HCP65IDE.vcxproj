@@ -570,6 +570,7 @@
     <None Include="Docs\ide\checks.md" />
     <None Include="Docs\ide\claude-tab.md" />
     <None Include="Docs\ide\debugging.md" />
+    <None Include="Docs\ide\documentation.md" />
     <None Include="Docs\ide\editor.md" />
     <None Include="Docs\ide\git.md" />
     <None Include="Docs\ide\index.md" />

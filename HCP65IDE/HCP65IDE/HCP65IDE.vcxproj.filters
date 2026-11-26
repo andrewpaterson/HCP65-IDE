@@ -642,6 +642,9 @@
     <None Include="Docs\ide\debugging.md">
       <Filter>Docs\ide</Filter>
     </None>
+    <None Include="Docs\ide\documentation.md">
+      <Filter>Docs\ide</Filter>
+    </None>
     <None Include="Docs\ide\editor.md">
       <Filter>Docs\ide</Filter>
     </None>
