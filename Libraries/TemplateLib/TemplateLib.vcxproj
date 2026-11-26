@@ -19,11 +19,13 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="CodeFormatter.cpp" />
     <ClCompile Include="TemplateStrings.cpp" />
     <ClCompile Include="TemplateText.cpp" />
     <ClCompile Include="TemplateValues.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CodeFormatter.h" />
     <ClInclude Include="TemplateStrings.h" />
     <ClInclude Include="TemplateText.h" />
     <ClInclude Include="TemplateValues.h" />

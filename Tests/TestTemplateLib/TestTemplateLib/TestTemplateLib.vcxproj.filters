@@ -6,6 +6,9 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="TestCodeFormatter.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="TestTemplateLib.cpp">
       <Filter>Source</Filter>
     </ClCompile>

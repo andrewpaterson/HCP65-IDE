@@ -6,6 +6,7 @@
 
 
 void TestTemplateText(void);
+void TestCodeFormatter(void);
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -23,6 +24,7 @@ int __cdecl main(void)
 	MemoryInit();
 
 	TestTemplateText();
+	TestCodeFormatter();
 
 	MemoryKill();
 	TypeConverterKill();

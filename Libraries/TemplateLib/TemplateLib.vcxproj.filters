@@ -6,6 +6,9 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="CodeFormatter.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="TemplateStrings.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -17,6 +20,9 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CodeFormatter.h">
+      <Filter>Source</Filter>
+    </ClInclude>
     <ClInclude Include="TemplateStrings.h">
       <Filter>Source</Filter>
     </ClInclude>

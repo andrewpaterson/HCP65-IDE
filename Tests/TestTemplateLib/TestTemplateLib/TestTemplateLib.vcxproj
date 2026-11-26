@@ -221,6 +221,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="TestCodeFormatter.cpp" />
     <ClCompile Include="TestTemplateLib.cpp" />
     <ClCompile Include="TestTemplateText.cpp" />
   </ItemGroup>
