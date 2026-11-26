@@ -38,6 +38,37 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 //////////////////////////////////////////////////////////////////////////
 //
+// How a file's text is indented and commented, by what the file is: C
+// and C++ by their braces, with "//" and "/* */"; a documentation page
+// with "<!-- -->"; assembly with ";"; anything else with nothing.
+//
+//////////////////////////////////////////////////////////////////////////
+void SetIDEEditorCode(Ptr<CTextArea> pEditor, const char* szFileName)
+{
+	CChars	szName;
+
+	szName.Fake(szFileName);
+	if (CIDEIcons::GetFileType(szFileName) != IFT_Other)
+	{
+		pEditor->SetCode(true, "//", "/*", "*/");
+	}
+	else if (CWorkspaceIndex::IsPageFile(szFileName))
+	{
+		pEditor->SetCode(false, NULL, "<!--", "-->");
+	}
+	else if (szName.EndsWithIgnoreCase(".asm") || szName.EndsWithIgnoreCase(".inc") || szName.EndsWithIgnoreCase(".s"))
+	{
+		pEditor->SetCode(false, ";", NULL, NULL);
+	}
+	else
+	{
+		pEditor->SetCode(false, NULL, NULL, NULL);
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // The file's text (szText, already read) in a code editor of tiles.  A
 // line's code is shown under it with pTitleFont over it.
 //
@@ -56,6 +87,7 @@ void CIDEEditorTab::Init(Ptr<CWindow> pWindow, Ptr<CWindowTheme> pTheme, Ptr<CFo
 	mpCodeEditor->SetAlignment(CSH_Stretch, CSV_Stretch);
 	mpZones = OMalloc<CLineZones>(mpCodeEditor, pTheme, pTitleFont, pFamily, IDE_LISTING_BACKGROUND, IDE_LISTING_TEXT);
 	mpEditor = mpCodeEditor->GetTextArea();
+	SetIDEEditorCode(mpEditor, szFileName);
 	mpEditor->SetTiledText(true);
 	mpEditor->SetColour(sColour);
 	//The caret's line is highlighted, as IntelliJ's caret row, so where a step or a jump went shows without the keys.

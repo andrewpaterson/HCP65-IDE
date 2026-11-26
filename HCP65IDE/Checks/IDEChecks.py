@@ -4286,7 +4286,7 @@ CHECKS = [
 		[r'^Menu File: New>, Save File as Template\.\.\., Open Project/Solution\.\.\., Add Solution\.\.\., Close Solution, Recent Solutions>, Clear Recent Solutions, Save \[Ctrl\+S\], Save All \[Ctrl\+Shift\+S\], Compare with File\.\.\., Settings\.\.\. \[Ctrl\+Alt\+S\], Exit$',
 		 r'^Menu File/New: C\+\+ Class\.\.\., C\+\+ Header\.\.\., C\+\+ Source\.\.\.$',
 		 r'^Menu File/Recent Solutions: 1 ',
-		 r'^Menu Edit: Undo \[Ctrl\+Z\](\(disabled\))?, Redo \[Ctrl\+Shift\+Z\](\(disabled\))?, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\], Select All \[Ctrl\+A\], Extend Selection \[Ctrl\+W\], Shrink Selection \[Ctrl\+Shift\+W\], Find\.\.\. \[Ctrl\+F\], Replace\.\.\. \[Ctrl\+R\], Find Next \[F3\], Find Previous \[Shift\+F3\], Find Word at Caret \[Ctrl\+F3\], Find in Files\.\.\. \[Ctrl\+Shift\+F\], Replace in Files\.\.\. \[Ctrl\+Shift\+R\], Find Duplicates\.\.\. \[Ctrl\+Alt\+Shift\+D\], Complete Code \[Ctrl\+Space\], Complete Code by Type \[Ctrl\+Shift\+Space\]$',
+		 r'^Menu Edit: Undo \[Ctrl\+Z\](\(disabled\))?, Redo \[Ctrl\+Shift\+Z\](\(disabled\))?, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\], Select All \[Ctrl\+A\], Extend Selection \[Ctrl\+W\], Shrink Selection \[Ctrl\+Shift\+W\], Comment with Line Comment \[Ctrl\+/\], Comment with Block Comment \[Ctrl\+Shift\+/\], Move Line Up \[Ctrl\+Shift\+Up\], Move Line Down \[Ctrl\+Shift\+Down\], Find\.\.\. \[Ctrl\+F\], Replace\.\.\. \[Ctrl\+R\], Find Next \[F3\], Find Previous \[Shift\+F3\], Find Word at Caret \[Ctrl\+F3\], Find in Files\.\.\. \[Ctrl\+Shift\+F\], Replace in Files\.\.\. \[Ctrl\+Shift\+R\], Find Duplicates\.\.\. \[Ctrl\+Alt\+Shift\+D\], Complete Code \[Ctrl\+Space\], Complete Code by Type \[Ctrl\+Shift\+Space\]$',
 		 r'^Menu Navigate: Back \[Ctrl\+Alt\+Left\](\(disabled\))?, Forward \[Ctrl\+Alt\+Right\](\(disabled\))?, Class\.\.\. \[Ctrl\+N\], File\.\.\. \[Ctrl\+Shift\+N\], Symbol\.\.\. \[Ctrl\+Alt\+Shift\+N\], Action\.\.\. \[Ctrl\+Shift\+A\], Line:Column\.\.\. \[Ctrl\+G\], Go to Source \[Ctrl\+B\], Go to Definition \[F12\], Go to Implementation\(s\) \[Ctrl\+Alt\+B\], Go to Type Declaration \[Ctrl\+Shift\+B\], Go to Super Method \[Ctrl\+U\], Go to Related Symbol \[Ctrl\+Alt\+Home\], Switch Header/Source \[Alt\+O\], File Structure \[Ctrl\+F12\], Next Method \[Alt\+Down\], Previous Method \[Alt\+Up\], Toggle Bookmark \[Ctrl\+F11\], Toggle Bookmark with Mnemonic\.\.\. \[Ctrl\+Shift\+F11\], Next Bookmark \[F2\], Previous Bookmark \[Shift\+F2\], Next Change \[Ctrl\+Alt\+Shift\+Down\], Previous Change \[Ctrl\+Alt\+Shift\+Up\], Highlight Usages in File \[Ctrl\+Shift\+F7\], Recent Files \[Ctrl\+E\], Recent Locations \[Ctrl\+Shift\+E\], Last Edit Location \[Ctrl\+Shift\+Backspace\], Next Edit Location, Select In\.\.\. \[Alt\+F1\], Type Hierarchy \[Ctrl\+H\], Method Hierarchy \[Ctrl\+Shift\+H\], Call Hierarchy \[Ctrl\+Alt\+H\], Find Usages \[Alt\+F7\], Show Usages \[Ctrl\+Alt\+F7\], Find All References \[Shift\+F12\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Next Occurrence \[Ctrl\+Alt\+Down\], Previous Occurrence \[Ctrl\+Alt\+Up\]$',
 		 r'^Menu View: Solution Explorer \[Alt\+1\], Structure \[Alt\+7\], Find Usages \[Alt\+3\], Find \[Alt\+9\], Duplicates, Bookmarks \[Alt\+2\], Hierarchy \[Alt\+8\], Build \[Alt\+6\], Indexing, Problems, Run \[Alt\+4\], Debug \[Alt\+5\], Locals, Call Stack, Autos, Watch 1, Watch 2, Watch 3, Watch 4, Claude, Hide All Tool Windows \[Ctrl\+Shift\+F12\], Jump to Last Tool Window(\(disabled\))?, Quick Definition \[Ctrl\+Shift\+I\], Parameter Info \[Ctrl\+P\], Type Info \[Ctrl\+Shift\+P\], Quick Documentation \[Ctrl\+Q\], Increase Font Size \[Ctrl\+=\], Decrease Font Size \[Ctrl\+-\], Reset Font Size \[Ctrl\+0\]$',
 		 r'^Menu Git: Compare with HEAD, Compare with Branch\.\.\., Compare with Revision\.\.\.$',
@@ -5340,6 +5340,37 @@ CHECKS = [
 		         'edit:caret:77:1,edit:selectto:77:200,edit:key:type:\ti,command:Edit.CompleteCode,edit:tap:Cursor Down,command:View.QuickDocumentation,printstatus,'
 		         'edit:printinfo,edit:key:escape'},
 		[r'^Documentation: \[meKind\]$', r'^  EVehicleKind meKind$', r'^  CVehicle, \[Vehicle\.h:41\]$', r'^Documentation: \[SetSpeed\]$', r'^  void SetSpeed\(int iSpeed\)$', r'^  CVehicle, \[Vehicle\.h:45\]$', r'^Completion: member \[\] 8 rows$', r'^Documentation: none$', r'^Status line: Nothing is known about the entry selected\.$', r'^Documentation: none$'], [r'ERROR']),
+	('editor-indent', {
+		#Enter starts the new line with the indent of the line it leaves; after a "{" with a tab more; a "}" typed on
+		#a line of its own goes under its "{"'s line; Enter between a "{" and its "}" puts the "}" on its own line
+		#with the caret on the line between.  Tab types a tab.  Shift+Enter starts a line after the caret's with its
+		#indent, and an undo takes each back.
+		'SOLUTION': COMPLETION, 'WAIT_INDEX': '1', 'OPEN': 'Vehicle.cpp', 'CARET': '77:1',
+		'DEBUG': 'edit:printcrumbs,edit:caret:76:35,edit:tap:Enter,edit:key:type:if (iDistance),edit:tap:Enter,edit:key:type:{,edit:tap:Enter,edit:key:type:iDistance++;,'
+		         'edit:tap:Enter,edit:key:type:},edit:printline:77,edit:printline:78,edit:printline:79,edit:printline:80,edit:tap:Enter,edit:key:type:while (1) {},'
+		         'edit:tap:Cursor Left,edit:tap:Enter,edit:key:type:x,edit:printline:81,edit:printline:82,edit:printline:83,edit:tap:Tab,edit:key:type:y,'
+		         'edit:printline:82,edit:press:Left Shift,edit:tap:Enter,edit:release:Left Shift,edit:key:type:z,edit:printline:83,command:Edit.Undo,command:Edit.Undo,'
+		         'edit:printline:82,edit:printline:83'},
+		[r'^Line 77: \[\tif \(iDistance\)\]$', r'^Line 78: \[\t\{\]$', r'^Line 79: \[\t\tiDistance\+\+;\]$', r'^Line 80: \[\t\}\]$', r'^Line 81: \[\twhile \(1\) \{\]$', r'^Line 82: \[\t\tx\]$', r'^Line 83: \[\t\}\]$', r'^Line 82: \[\t\tx\ty\]$', r'^Line 83: \[\t\tz\]$', r'^Line 82: \[\t\tx\ty\]$', r'^Line 83: \[\t\}\]$'], [r'ERROR']),
+	('editor-line-commands', {
+		#Comment with Line Comment comments the caret's line and goes down one, so twice is two lines; on selected
+		#lines that are all comments it uncomments them.  Tab indents the selected lines by a tab and Shift+Tab takes
+		#it off.  Control+Shift+Down moves the caret's line down and the caret with it, and Move Line Up back.
+		#Comment with Block Comment wraps the selection and unwraps it, each one undo.
+		'SOLUTION': COMPLETION, 'WAIT_INDEX': '1', 'OPEN': 'Vehicle.cpp', 'CARET': '77:1',
+		'DEBUG': 'edit:printcrumbs,edit:caret:75:5,command:Editor.CommentLines,command:Editor.CommentLines,edit:printline:75,edit:printline:76,edit:print,'
+		         'edit:caret:75:1,edit:selectto:77:1,command:Editor.CommentLines,edit:printline:75,edit:printline:76,edit:tap:Tab,edit:printline:75,edit:printline:76,'
+		         'edit:press:Left Shift,edit:tap:Tab,edit:release:Left Shift,edit:printline:75,edit:printline:76,edit:caret:75:5,edit:press:Left Control,'
+		         'edit:press:Left Shift,edit:tap:Cursor Down,edit:release:Left Shift,edit:release:Left Control,edit:printline:75,edit:printline:76,edit:print,'
+		         'command:Editor.MoveLinesUp,edit:printline:75,edit:printline:76,edit:caret:75:2,edit:selectto:75:11,command:Editor.CommentBlock,edit:printline:75,'
+		         'command:Editor.CommentBlock,edit:printline:75,command:Edit.Undo,edit:printline:75'},
+		[r'^Line 75: \[//\tiDistance = 0;\]$', r'^Line 76: \[//\tpcWheel = pcVehicle->GetWheel\(0\);\]$', r'^Line 75: \[\tiDistance = 0;\]$', r'^Line 76: \[\tpcWheel = pcVehicle->GetWheel\(0\);\]$', r'^Line 75: \[\t\tiDistance = 0;\]$', r'^Line 76: \[\t\tpcWheel = pcVehicle->GetWheel\(0\);\]$', r'^Line 75: \[\tiDistance = 0;\]$', r'^Line 76: \[\tpcWheel = pcVehicle->GetWheel\(0\);\]$', r'^Line 75: \[\tpcWheel = pcVehicle->GetWheel\(0\);\]$', r'^Line 76: \[\tiDistance = 0;\]$', r'^Line 75: \[\tiDistance = 0;\]$', r'^Line 76: \[\tpcWheel = pcVehicle->GetWheel\(0\);\]$', r'^Line 75: \[\t/\*iDistance\*/ = 0;\]$', r'^Line 75: \[\tiDistance = 0;\]$', r'^Line 75: \[\t/\*iDistance\*/ = 0;\]$'], [r'ERROR']),
+	('editor-comment-page', {
+		#A documentation page has no line comment, and its block comment is HTML's; Enter keeps its indent and a brace
+		#means nothing in it.
+		'SOLUTION': DOCUMENTATION, 'WAIT_INDEX': '1', 'OPEN': 'Docs/gauges.md', 'CARET': '3:3',
+		'DEBUG': 'command:Editor.CommentLines,edit:printline:3,edit:caret:3:3,edit:selectto:3:13,command:Editor.CommentBlock,edit:printline:3,edit:caret:5:35,edit:key:type: {,edit:tap:Enter,edit:key:type:x,edit:printline:6'},
+		[r'^Line 3: \[A \[`CGauge`\] is set with ', r'^Line 3: \[A <!--\[`CGauge`\]--> is set with ', r'^Line 6: \[x\]$'], [r'ERROR']),
 	('quick-definition', {
 		#Quick Definition (Control+Shift+I): the definition of the symbol at the caret in a chooser that previews its
 		#code; Enter goes to it.  With no symbol there the status line says so.

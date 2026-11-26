@@ -198,5 +198,8 @@ bool UsesIDECarriageReturns(const char* szText);
 void ApplyIDEHighlights(Ptr<CTextArea> pTextArea, CArrayHighlights* pacHighlights);
 
 
+void SetIDEEditorCode(Ptr<CTextArea> pEditor, const char* szFileName);
+
+
 #endif // __IDE_EDITOR_TAB_H__
 

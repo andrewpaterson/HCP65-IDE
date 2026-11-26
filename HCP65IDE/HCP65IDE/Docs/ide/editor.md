@@ -19,19 +19,50 @@ Over text you can edit or select (an editor, a text field, a preview) the pointe
 | Ctrl+Left, Ctrl+Right | The previous or next word. |
 | Ctrl+Home, Ctrl+End | The start or end of the file. |
 | Ctrl+Up, Ctrl+Down | Scroll the view a line without moving the caret. |
-| Enter | A new line.  It isn't indented: type the indent, or Tab. |
+| Enter | A new line, indented as the line it leaves.  See [Indenting](#indenting). |
 | Shift+Enter | A new line after the caret's line, wherever the caret is in it; the caret goes to it. |
 | Ctrl+Shift+Enter | A new line before the caret's line. |
-| Tab | Spaces to the next tab stop.  With lines selected, indents them all. |
-| Shift+Tab | Outdents the caret's line, or the selected lines, by a tab's worth. |
+| Tab | A tab.  With lines selected, indents them all by one. |
+| Shift+Tab | Outdents the caret's line, or the selected lines: a tab, or a tab's worth of spaces. |
 | Backspace, Delete | The character before or after the caret, or the selection. |
 | Ctrl+Backspace, Ctrl+Delete | The word before or after the caret. |
 | Ctrl+D | Duplicates the selection, the copy selected after it; with nothing selected, the caret's line. |
 | Ctrl+Y | Deletes the caret's line. |
+| Ctrl+Shift+Up, Ctrl+Shift+Down | **Move Line Up** and **Down**: the caret's line, or the selected lines, change places with the line beside them. |
+| Ctrl+/ | **Comment with Line Comment**: comments out the caret's line, or the selected lines; uncomments them if they are all comments already. |
+| Ctrl+Shift+/ | **Comment with Block Comment**: makes the selection a comment, or stops it being one. |
 | Insert | Overwrite on or off. |
 
-Tab types spaces.  The refactorings write the house style's tabs, so code they write lines up with
-the code round it.
+The last four are in the Edit menu too.
+
+### Indenting
+
+Tab types a tab character, in every kind of file and on every row of a box selection, as the house style
+and the refactorings write them.
+
+Enter starts the new line with the indent of the line it leaves, tabs and spaces as they are.  Shift+Enter
+and Ctrl+Shift+Enter do the same.  In C and C++:
+
+- after a line that ends with `{` the new line has a tab more;
+- Enter between a `{` and its `}` puts the `}` on a line of its own, under the line of its `{`, and leaves
+  the caret on the line between;
+- a `}` typed on a line of its own goes under the line of the `{` it closes.
+
+Braces in a string or a comment count as braces.
+
+### Comments
+
+Ctrl+/ puts the comment mark at the start of each line that has anything on it, and with nothing selected
+moves the caret down a line, so pressing it again does the next.  If every one of the lines is a comment
+already (after its indent) it takes the marks off instead.  Ctrl+Shift+/ puts the block marks round the
+selection, which stays selected, or takes them off a selection that has them; with nothing selected it
+puts both at the caret and the caret between them.
+
+| File | Line comment | Block comment |
+|---|---|---|
+| C and C++ | `//` | `/* */` |
+| Assembly (`.asm`, `.inc`, `.s`) | `;` | none |
+| Documentation pages (`.md`) | none | `<!-- -->` |
 
 ## Selecting
 
@@ -186,8 +217,3 @@ for its type.  Where no type is known to be wanted, or nothing has it, the statu
   [Bookmarks](navigation.md#bookmarks) and [overrides](navigation.md#changes-usages-and-overrides).
 - **Marks on the scroll bar.**  Find's matches, bookmarks, changed lines and usages kept highlighted
   each mark where they are in the file; press the scroll bar at one to go there.
-
-## Not there yet
-
-There is no automatic indenting.  Find and Replace are in
-[Finding Your Way](navigation.md#find-and-replace-in-the-file).
