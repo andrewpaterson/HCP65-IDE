@@ -619,6 +619,22 @@
     <None Include="Docs\ide\design\git.md" />
     <None Include="Docs\ide\design\checks.md" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="CodeTemplates.txt" />
+    <None Include="Debugger65C64Plan.txt" />
+    <None Include="DebuggerFPlan.txt" />
+    <None Include="DebuggerFixesPlan.txt" />
+    <None Include="DebuggerGapsPlan.txt" />
+    <None Include="DebuggerPlan.txt" />
+    <None Include="EndOfPlanTasks.txt" />
+    <None Include="GettersNotConst.txt" />
+    <None Include="Navigation.txt" />
+    <None Include="NavigationPlan.txt" />
+    <None Include="NextIDEWork.txt" />
+    <None Include="RefactoringQuestions.txt" />
+    <None Include="Refactorings.txt" />
+    <None Include="RenameFile.txt" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
