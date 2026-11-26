@@ -15,5 +15,8 @@
     <ClCompile Include="TestSymbolTable.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="TestReferences.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

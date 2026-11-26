@@ -18,6 +18,8 @@ You should have received a copy of the GNU Lesser General Public License
 along with Codaphela IndexLib.  If not, see <http://www.gnu.org/licenses/>.
 
 ** ------------------------------------------------------------------------ **/
+#include <stdlib.h>
+#include <string.h>
 #include "BaseLib/ArrayChars.h"
 #include "BaseLib/FileUtil.h"
 #include "BaseLib/StringHelper.h"
@@ -340,6 +342,114 @@ const char* CSymbolTable::GetKindName(ECPPSymbolKind eKind)
 	case CPPSK_VariableTemplate:	return "variable-template";
 	default:						return "other";
 	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The kind GetKindName names, false if it names none.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CSymbolTable::GetKind(const char* szName, ECPPSymbolKind* peKind)
+{
+	int		i;
+
+	for (i = 0; i <= CPPSK_TemplateTemplateParameter; i++)
+	{
+		if ((StringCompare(GetKindName((ECPPSymbolKind)i), szName) == 0) && (StringCompare(szName, "other") != 0))
+		{
+			*peKind = (ECPPSymbolKind)i;
+			return true;
+		}
+	}
+	return false;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Adds what a table Write wrote.  False (with what was read before the
+// line kept) if a line isn't one; a key already in the table keeps its
+// place.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CSymbolTable::Read(const char* szFileName)
+{
+	CTextFile			cFile;
+	const char*			szLine;
+	const char*			szEnd;
+	const char*			aszFields[4];
+	size				auiLengths[4];
+	const char*			sz;
+	size				uiField;
+	SSymbolTableEntry	sEntry;
+	CChars				szKind;
+	size				uiIndex;
+	bool				bRead;
+
+	cFile.Init();
+	if (!cFile.Read(szFileName))
+	{
+		cFile.Kill();
+		return false;
+	}
+
+	bRead = true;
+	szKind.Init();
+	for (szLine = cFile.Text(); bRead && (*szLine != '\0'); szLine = (*szEnd == '\0') ? szEnd : szEnd + 1)
+	{
+		szEnd = strchr(szLine, '\n');
+		if (szEnd == NULL)
+		{
+			szEnd = &szLine[strlen(szLine)];
+		}
+		uiField = 0;
+		aszFields[0] = szLine;
+		for (sz = szLine; (sz < szEnd) && (uiField < 4); sz++)
+		{
+			if (*sz == '\t')
+			{
+				auiLengths[uiField] = sz - aszFields[uiField];
+				uiField++;
+				if (uiField < 4)
+				{
+					aszFields[uiField] = sz + 1;
+				}
+			}
+		}
+		if (uiField != 3)
+		{
+			bRead = false;
+			break;
+		}
+		auiLengths[3] = szEnd - aszFields[3];
+		if ((auiLengths[3] > 0) && (aszFields[3][auiLengths[3] - 1] == '\r'))
+		{
+			auiLengths[3]--;
+		}
+
+		szKind.Clear();
+		szKind.AppendSubString(aszFields[1], auiLengths[1]);
+		if ((auiLengths[3] == 0) || !GetKind(szKind.Text(), &sEntry.eKind))
+		{
+			bRead = false;
+			break;
+		}
+		sEntry.iLine = atoi(aszFields[3]);
+		sEntry.szKey.Init();
+		sEntry.szKey.AppendSubString(aszFields[0], auiLengths[0]);
+		if (masEntries.FindInSorted(&sEntry, CompareSymbolTableEntries, &uiIndex))
+		{
+			sEntry.szKey.Kill();
+			continue;
+		}
+		sEntry.szFile.Init();
+		sEntry.szFile.AppendSubString(aszFields[2], auiLengths[2]);
+		masEntries.InsertAt(&sEntry, uiIndex);
+	}
+	szKind.Kill();
+	cFile.Kill();
+	return bRead;
 }
 
 

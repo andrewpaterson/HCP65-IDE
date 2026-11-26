@@ -43,7 +43,7 @@ typedef CArrayTemplate<SSymbolTableEntry>	CArraySymbolTableEntries;
 //declaration in a header.  A class's or an enum's is its definition, a function's its declaration (where its
 //comment and signature are); a symbol declared only in a .cpp file links there.  Only symbols declared in files
 //under the root are kept: not the system headers', nor parameters, labels and the names inside functions.
-//Written as text for the website build (Write), sorted by key, one symbol a line:
+//Written as text for the website build (Write, Read), sorted by key, one symbol a line:
 //	<key> TAB <kind> TAB <file> TAB <line>
 class CSymbolTable
 {
@@ -61,8 +61,10 @@ public:
 	SSymbolTableEntry*	Find(const char* szKey);
 	char*				Print(CChars* pszDest);
 	bool				Write(const char* szFileName);
+	bool				Read(const char* szFileName);
 
 	static const char*	GetKindName(ECPPSymbolKind eKind);
+	static bool			GetKind(const char* szName, ECPPSymbolKind* peKind);
 
 protected:
 	bool				IsTabled(CCPPIndexSymbol* pcSymbol);

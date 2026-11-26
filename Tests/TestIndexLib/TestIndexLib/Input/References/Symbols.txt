@@ -1,0 +1,8 @@
+CShape	class	Lib/Shapes/Shape.h	5
+CShape::GetSides() const	function	Lib/Shapes/Shape.h	13
+CShape::Init(char const*, int)	function	Lib/Shapes/Shape.h	12
+CShape::Init(int)	function	Lib/Shapes/Shape.h	11
+EKind::EK_Square	enumerator	Lib/Shapes/Shape.h	20
+X()	function	Lib/Shapes/Shape.h	30
+abs(int)	function	Lib/Shapes/Shape.h	31
+main(int, char*[])	function	Lib/Tools/Main.cpp	3
