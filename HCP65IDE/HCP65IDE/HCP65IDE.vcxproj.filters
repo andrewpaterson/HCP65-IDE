@@ -321,6 +321,9 @@
     <ClCompile Include="IDEMessageOutput.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="IDEOutputMenu.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="IDEProblemList.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -627,6 +630,9 @@
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDEMessageOutput.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDEOutputMenu.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDEProblemList.h">

@@ -51,6 +51,13 @@ void CIDEMessageOutput::Init(CIDEContent* pcContent, Ptr<CIDEBuildPane> pPane, c
 	pOutput->SetDoubleClickEvent(true);
 	pOutput->GetDoubleClickEvent()->Add(this, &CIDEMessageOutput::DoubleClicked);
 	mpJumpAction = pOutput->AddInputAction(CIC_JumpToSource, this, &CIDEMessageOutput::JumpToSource);
+
+	mpMenu = OMalloc<CIDEOutputMenu>(mpcContent, pOutput);
+	mpMenu->AddSeparator();
+	mpMenu->AddCommand(mpMenu->GetCommands()->Add("Output.JumpToSource", "Jump to Source", "F4", Ptr<CImageCel>(), this, &CIDEMessageOutput::JumpToSource));
+	mpMenu->GetCommands()->Find("Output.JumpToSource")->SetEnabledCheck(this, &CIDEMessageOutput::IsOnMessage);
+	mpMenu->AddSeparator();
+	mpMenu->AddCommand(mpMenu->GetCommands()->Add("Output.ClearAll", "Clear All", "", Ptr<CImageCel>(), this, &CIDEMessageOutput::ClearOutput));
 	PostInit();
 }
 
@@ -64,6 +71,7 @@ void CIDEMessageOutput::Class(void)
 	U_Pointer(mpcContent);
 	M_Pointer(mpPane);
 	M_Pointer(mpJumpAction);
+	M_Pointer(mpMenu);
 	U_String(mszNoun);
 	U_Size(muiStepLine);
 }
@@ -290,6 +298,50 @@ void CIDEMessageOutput::JumpToSource(void)
 {
 	EnterPressed();
 }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether the caret's line is a message that says a place: the menu's
+// Jump to Source is dim on any other.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEMessageOutput::IsOnMessage(void)
+{
+	Ptr<CTextArea>	pOutput;
+	CChars			szLine;
+	CChars			szFile;
+	size			uiLine;
+	int32			iLine;
+	int32			iColumn;
+	EIDEMessageKind	eKind;
+	bool			bResult;
+
+	pOutput = mpPane->GetOutputArea();
+	uiLine = pOutput->FindLine(pOutput->GetCaretPosition());
+	szLine.Init();
+	szLine.AppendSubString(pOutput->GetText(), pOutput->GetLineStart(uiLine), pOutput->GetLineEnd(uiLine));
+	szFile.Init();
+	bResult = ParseMessageLine(szLine.Text(), &szFile, &iLine, &iColumn, &eKind);
+	szFile.Kill();
+	szLine.Kill();
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The menu's Clear All: the tab's text goes, and its messages with it.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEMessageOutput::ClearOutput(void)
+{
+	mpPane->Clear();
+	Clear();
+}
+
+
+Ptr<CIDEOutputMenu> CIDEMessageOutput::GetMenu(void) const { return mpMenu; }
 
 
 //////////////////////////////////////////////////////////////////////////

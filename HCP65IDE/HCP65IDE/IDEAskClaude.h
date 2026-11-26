@@ -23,6 +23,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "StandardLib/Object.h"
 #include "StandardLib/Pointer.h"
 #include "WindowLib/Window.h"
+#include "IDEOutputMenu.h"
 #include "ClaudeLib/ClaudeCommand.h"
 #include "IDEEditorTab.h"
 #include "IDEClaudePane.h"
@@ -65,6 +66,7 @@ protected:
 	CIDEContent*	mpcContent;  //Not held: the content holds it.
 	Ptr<CIDEClaudePane>	mpClaudePane;  //The Claude tab,
 	Ptr<CDockPane>		mpClaudeTool;  //and its tool window.
+	Ptr<CIDEOutputMenu>	mpClaudeMenu;  //The conversation's context menu.
 	CClaudeCommand				mcClaude;			//The request Claude is working on, or the last.
 	size						muiClaudeReloaded;	//How many of the files Claude changed have been looked at.
 	size						muiClaudeTools;		//How many tools Claude has used on the request.
@@ -82,6 +84,7 @@ public:
 	bool					IsClaudeRunning(void);
 	Ptr<CIDEClaudePane>		GetClaudePane(void) const;
 	Ptr<CDockPane>			GetTool(void) const;
+	Ptr<CIDEOutputMenu>		GetClaudeMenu(void) const;
 	void					CreatePane(SDockPlace* psPlace);
 	void					ScrollToEnd(void);
 	void					PollClaude(Ptr<CWindow> pWindow);

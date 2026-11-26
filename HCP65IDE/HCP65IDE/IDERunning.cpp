@@ -52,6 +52,7 @@ void CIDERunning::Class(void)
 	U_Unknown(CProcess, mcProcess);
 	M_Pointer(mpRunPane);
 	M_Pointer(mpRunTool);
+	M_Pointer(mpRunMenu);
 	M_Pointer(mpStartButton);
 }
 
@@ -77,12 +78,19 @@ bool CIDERunning::Load(CObjectReader* pcFile) { return false; }
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The Run tab, put at psPlace.
+// The Run tab, put at psPlace.  Its context menu has Clear All, Start
+// Without Debugging and Stop Running after its Copies.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDERunning::CreatePane(SDockPlace* psPlace)
 {
 	mpRunPane = OMalloc<CIDEBuildPane>(mpcContent->GetWindow(), mpcContent->GetTheme(), mpcContent->GetCodeFamily(), mpcContent->GetTheme()->GetColour(TC_Text));
+	mpRunMenu = OMalloc<CIDEOutputMenu>(mpcContent, mpRunPane->GetOutputArea());
+	mpRunMenu->AddSeparator();
+	mpRunMenu->AddCommand(mpRunMenu->GetCommands()->Add("Output.ClearAll", "Clear All", "", Ptr<CImageCel>(), this, &CIDERunning::ClearOutput));
+	mpRunMenu->AddSeparator();
+	mpRunMenu->AddCommand(mpcContent->GetCommands()->Find("Run.Start"));
+	mpRunMenu->AddCommand(mpcContent->GetCommands()->Find("Run.Stop"));
 	mpRunTool = mpcContent->GetDock()->AddPane(IDE_RUN_ID, "Run", NULL, mpRunPane->GetComponent(), DPK_Tool, psPlace);
 }
 
@@ -283,5 +291,8 @@ void CIDERunning::ShowMessage(const char* szMessage)
 
 Ptr<CButton> CIDERunning::GetStartButton(void) const { return mpStartButton; }
 Ptr<CIDEBuildPane> CIDERunning::GetRunPane(void) const { return mpRunPane; }
+Ptr<CIDEOutputMenu> CIDERunning::GetRunMenu(void) const { return mpRunMenu; }
+void CIDERunning::ClearOutput(void) { mpRunPane->Clear(); }
+Ptr<CDockPane> CIDERunning::GetRunTool(void) const { return mpRunTool; }
 bool CIDERunning::IsRunning(void) { return mcProcess.IsRunning(); }
 

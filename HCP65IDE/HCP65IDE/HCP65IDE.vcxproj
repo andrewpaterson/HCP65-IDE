@@ -403,6 +403,7 @@
     <ClCompile Include="IDEListingSource.cpp" />
     <ClCompile Include="IDEBuildPane.cpp" />
     <ClCompile Include="IDEMessageOutput.cpp" />
+    <ClCompile Include="IDEOutputMenu.cpp" />
     <ClCompile Include="IDEProblemList.cpp" />
     <ClCompile Include="IDEProblems.cpp" />
     <ClCompile Include="IDEClaudePane.cpp" />
@@ -508,6 +509,7 @@
     <ClInclude Include="IDEListingSource.h" />
     <ClInclude Include="IDEBuildPane.h" />
     <ClInclude Include="IDEMessageOutput.h" />
+    <ClInclude Include="IDEOutputMenu.h" />
     <ClInclude Include="IDEProblemList.h" />
     <ClInclude Include="IDEProblems.h" />
     <ClInclude Include="IDEClaudePane.h" />

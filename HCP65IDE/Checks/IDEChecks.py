@@ -869,20 +869,28 @@ CHECKS = [
 		 r'^Output colours: 4$', r'Kernel\.cpp \(focus\) line 5: ', r'Kernel\.cpp \(focus\) line 2: ', r'^Selection: \[int\] on line 2, caret line 2$'],
 		[r'not enabled']),
 	('build-text-menu', dict(MakeBrokenKernel(), **{
-		#The right button in the Build tab opens the window's text menu (it has none of its own): Cut and Paste greyed out,
-		#as it can't be edited.  Select All then Copy (the right button in the selection, on its last line, which is in
-		#view) puts its text on the clipboard, and the tab keeps the keys.
+		#The right button in the Build tab opens the tab's own menu: Copy, Copy All, Select All, Jump to Source (dim on
+		#a line that isn't a message) and Clear All.  Select All then Copy (the right button in the selection, on its
+		#last line, which is in view) puts its text on the clipboard, and the tab keeps the keys.  Jump to Source on a
+		#message's line opens its place, as F4 does.
 		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp', 'BUILD': '1',
 		'DEBUG': 'wait:6000,edit:outputmenu:build:giMissing],edit:outputmenuclick:Select All,edit:outputmenu:build:build failed,'
-		         'edit:outputmenuclick:Copy,edit:printclipboard,edit:print'}),
-		[r'^Tab window: main$', r'^Menu Text: Cut \[[^]]*\]\(disabled\), Copy \[[^]]*\], Paste \[[^]]*\]\(disabled\), Select All \[[^]]*\]$', r'^Menu Text: Cut',
-		 r'^Clipboard:$', r'^Kernel: ', r'^Kernel\.cpp \(2, 22\): .*giMissing'], [r'\(focus\)', r'Menu Text: none']),
+		         'edit:outputmenuclick:Copy,edit:printclipboard,edit:print,edit:tap:Cursor Up,edit:outputmenu:build:giMissing],edit:outputmenuclick:Jump to Source,edit:print'}),
+		[r'^Tab window: main$', r'^Menu Output: Copy \[Ctrl\+C\], Copy All, Select All \[Ctrl\+A\], Jump to Source \[F4\], Clear All$', r'^Menu Output: Copy \[Ctrl\+C\], Copy All, Select All \[Ctrl\+A\], Jump to Source \[F4\]\(disabled\), Clear All$',
+		 r'^Clipboard:$', r'^Kernel: ', r'^Kernel\.cpp \(2, 22\): .*giMissing', r'Kernel\.cpp line 1: ', r'^Menu Output: Copy \[Ctrl\+C\], Copy All, Select All \[Ctrl\+A\], Jump to Source \[F4\], Clear All$', r'Kernel\.cpp \(focus\) line 2: '], [r'Menu Output: none']),
 	('build-text-menu-floated', dict(MakeBrokenKernel(), **{
-		#Floated in a tool window of its own, the Build tab has the text menu too, and its Copy copies there.
+		#Floated in a tool window of its own, the Build tab has its menu too, and its Copy copies there.
 		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp', 'BUILD': '1', 'DOCK': 'float:Build',
 		'DEBUG': 'wait:6000,edit:outputmenu:build:build failed,edit:outputmenuclick:Select All,edit:outputmenu:build:build failed,'
 		         'edit:outputmenuclick:Copy,edit:printclipboard'}),
-		[r'^Tab window: floated$', r'^Menu Text: Cut \[[^]]*\]\(disabled\), Copy', r'^Menu Text: Cut', r'^Clipboard:$', r'^Kernel: '], [r'Menu Text: none', r'Tab window: main']),
+		[r'^Tab window: floated$', r'^Menu Output: Copy \[Ctrl\+C\], Copy All, Select All \[Ctrl\+A\], Jump to Source \[F4\]\(disabled\), Clear All$', r'^Menu Output: Copy \[Ctrl\+C\], Copy All, Select All \[Ctrl\+A\], Jump to Source \[F4\]\(disabled\), Clear All$', r'^Clipboard:$', r'^Kernel: '], [r'Menu Output: none', r'Tab window: main']),
+	('build-menu-copy-clear', dict(MakeBrokenKernel(), **{
+		#Copy All in the Build tab's menu copies the whole output with nothing selected, and Clear All empties the
+		#tab.
+		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp', 'BUILD': '1',
+		'DEBUG': 'wait:6000,edit:outputmenu:build:build failed,edit:outputmenuclick:Copy All,edit:printclipboard,printbuild,edit:outputmenu:build:build failed,edit:outputmenuclick:Clear All,printbuild'}),
+		[r'^Menu Output: Copy \[Ctrl\+C\], Copy All, Select All', r'^Clipboard:$', r'^Kernel: ', r'^Kernel\.cpp \(2, 22\): .*giMissing', r'^Build tab:$', r'^Kernel: ',
+		 r'^Menu Output: Copy', r'^Build tab:$'], [r'ERROR', r'Menu Output: none', r'(?s)Build tab:.*Build tab:.*Kernel: ']),
 	('edit-menu-floated', dict(MakeBrokenKernel(), **{
 		#With the Build tab floated and its text selected by its keys, the main menu's Edit > Copy copies it there: the
 		#Edit commands act on what the keys last went to in a tool window too, and the editor doesn't take the keys.
@@ -890,10 +898,10 @@ CHECKS = [
 		'DEBUG': 'wait:6000,edit:outputcaret:build:build failed,edit:keys:Control+A,clickmenu:Edit/Copy,edit:printclipboard,edit:print'}),
 		[r'^Clipboard:$', r'^Kernel: ', r'Kernel\.cpp line 1: '], [r'Kernel\.cpp \(focus\)']),
 	('indexing-text-menu', dict(MakeIndexingProblemsKernel(), **{
-		#The Indexing tab has the text menu too; the editor keeps its own menu.
+		#The Indexing tab has the menu the Build tab has; the editor keeps its own menu.
 		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp',
-		'DEBUG': 'wait:1500,edit:outputmenu:indexing:Defs.h,edit:outputmenuclick:Copy'}),
-		[r'^Menu Text: Cut \[[^]]*\]\(disabled\), Copy \[[^]]*\], Paste \[[^]]*\]\(disabled\), Select All \[[^]]*\]$'], [r'Menu Text: none']),
+		'DEBUG': 'wait:1500,edit:outputmenu:indexing:Defs.h,edit:outputmenuclick:Copy All,edit:printclipboard'}),
+		[r'^Menu Output: Copy \[Ctrl\+C\], Copy All, Select All \[Ctrl\+A\], Jump to Source \[F4\], Clear All$', r'^Clipboard:$', r'Defs\.h'], [r'Menu Output: none']),
 	('indexing-full-paths', dict(MakeIndexingProblemsKernel(), **{
 		#The Indexing tab's problems name the files they are in by their full paths (a header's name can be in more than
 		#one include directory), in the failure colour.
@@ -4205,6 +4213,15 @@ CHECKS = [
 		[r'^Dialog \[Run Configurations\] answered OK$',
 		 r'^Configuration: \[Echo\] \[Release\|W65C816\]: Debug\|W65C816, Release\|W65C816, Echo, Edit Configurations\.\.\.,$',
 		 r'^Run: not running \[Start\]$', r'^Running: /bin/sh -c pwd$', r'^/tmp$', r'^Exited with code 0\.$'], []),
+	('run-menu', {
+		#The Run tab's menu: Copy, Copy All and Select All, Clear All, and Start Without Debugging and Stop Running
+		#(dim while nothing runs).  Copy All copies what the tool wrote; Clear All empties the tab.
+		'DIALOG_ANSWER': 'OK',
+		'RUN_EDITS': 'add;name:Echo;build:Release|W65C816;tool:/bin/sh;directory:/tmp;arguments:-c pwd',
+		'DEBUG': 'command:Run.EditConfigurations,answered:1,command:Run.Start,wait:500,edit:outputmenu:run:Exited,edit:outputmenuclick:Copy All,edit:printclipboard,'
+		         'edit:outputmenu:run:Exited,edit:outputmenuclick:Clear All,printrun'},
+		[r'^Menu Output: Copy \[Ctrl\+C\], Copy All, Select All \[Ctrl\+A\], Clear All, Start Without Debugging \[Ctrl\+F5\], Stop Running\(disabled\)$',
+		 r'^Clipboard:$', r'^Running: /bin/sh -c pwd$', r'^/tmp$', r'^Exited with code 0\.$', r'^Run: not running \[Start\]$'], [r'ERROR', r'(?s)Run: not running.*Exited with code']),
 	('run-configuration-stop', {
 		#Start again while it runs stops it, and the button says Stop until then.
 		'DIALOG_ANSWER': 'OK', 'RUN_EDITS': 'add;name:Sleep;tool:/bin/sleep;arguments:30',
@@ -5666,6 +5683,15 @@ CHECKS = [
 
 if os.name != 'nt':
 	#The stand-in for Claude Code is a shell script, which Windows can't start as a program.
+	CHECKS.append(('claude-menu', {
+		#The Claude tab's conversation has a menu of its own: Copy, Copy All and Select All, Stop (dim while Claude
+		#isn't working) and New Conversation.  Copy All copies the conversation; New Conversation empties it, as the
+		#tab's button does.
+		'SOLUTION': RENAME_FILE, 'OPEN': 'Engine.h', 'CLAUDE_EXECUTABLE': os.path.join(HERE, 'Input', 'Claude', 'claude'),
+		'DEBUG': 'wait:500,clickmenu:View/Claude,edit:claudeclick:request,edit:claudetype:Hello there,edit:claudeclick:send,wait:1500,'
+		         'edit:claudemenu,edit:outputmenuclick:Copy All,edit:printclipboard,edit:claudemenu,edit:outputmenuclick:New Conversation,edit:printclaude'},
+		[r'^Menu Claude: Copy \[Ctrl\+C\], Copy All, Select All \[Ctrl\+A\], Stop\(disabled\), New Conversation$', r'^Clipboard:$', r'^> Hello there$',
+		 r'^Menu Claude: Copy', r'^Claude status: \[New conversation\.\]$', r'^Claude conversation: \[\]$'], [r'ERROR', r'Menu Claude: none']))
 	CHECKS.append(('claude-request', {
 		#The Claude tab used as it is by hand, with a stand-in for Claude Code (Input/Claude/claude) that reads Engine.h
 		#and answers with what it was asked.  A press in the request's empty box gives it the keys (sized by its text it

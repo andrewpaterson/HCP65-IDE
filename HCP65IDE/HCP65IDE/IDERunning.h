@@ -28,6 +28,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/DockManager.h"
 #include "WindowLib/Window.h"
 #include "IDEBuildPane.h"
+#include "IDEOutputMenu.h"
 
 
 class CIDEContent;
@@ -46,6 +47,7 @@ protected:
 	CProcess			mcProcess;
 	Ptr<CIDEBuildPane>	mpRunPane;
 	Ptr<CDockPane>		mpRunTool;
+	Ptr<CIDEOutputMenu>	mpRunMenu;  //The Run tab's context menu.
 	Ptr<CButton>		mpStartButton;
 
 public:
@@ -60,6 +62,9 @@ public:
 	Ptr<CButton>	CreateStartButton(void);
 	Ptr<CButton>	GetStartButton(void) const;
 	Ptr<CIDEBuildPane>	GetRunPane(void) const;
+	Ptr<CIDEOutputMenu>	GetRunMenu(void) const;
+	Ptr<CDockPane>		GetRunTool(void) const;
+	void				ClearOutput(void);
 	bool			IsRunning(void);
 	void			PollRun(Ptr<CWindow> pWindow);
 

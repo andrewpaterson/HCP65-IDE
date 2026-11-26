@@ -42,7 +42,7 @@ static bool			gbIDEScriptRenameSaves = false;  //rename: saves what it edited (r
 static bool			gbIDEScriptClassFiles = false;  //rename: renames a type's files too (renamesearch's f), never from the settings.
 
 
-static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printfindpreview", "printfindtoolbar", "findtool:", "resultsmenu:", "resultsmenuclick:", "resultsselect:", "replace:", "findoptions:", "findselect:", "printstartup", "printworkspace", "printuserfile", "rename", "safedelete", "introducevariable", "introducefield", "introduceconstant", "introduceparameter", "changesignature", "pullmembersup", "pushmembersdown", "moveclass", "copyclass", "inlinevariable", "introducetypedef", "extractmethod", "extractsuperclass", "extractinterface", "extractclass", "encapsulatefield", "convertmacro", "extracttemplateparameter", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printkeyrepeat", "printfontsize", "printsettings", "printproblems", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printprojectfiles", "printdiskfile:", "printdisklines:", "printedits", "printspans", "configuration:", "waitindex", "indextemplates:" };
+static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printfindpreview", "printfindtoolbar", "findtool:", "resultsmenu:", "resultsmenuclick:", "resultsselect:", "claudemenu", "replace:", "findoptions:", "findselect:", "printstartup", "printworkspace", "printuserfile", "rename", "safedelete", "introducevariable", "introducefield", "introduceconstant", "introduceparameter", "changesignature", "pullmembersup", "pushmembersdown", "moveclass", "copyclass", "inlinevariable", "introducetypedef", "extractmethod", "extractsuperclass", "extractinterface", "extractclass", "encapsulatefield", "convertmacro", "extracttemplateparameter", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printkeyrepeat", "printfontsize", "printsettings", "printproblems", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printprojectfiles", "printdiskfile:", "printdisklines:", "printedits", "printspans", "configuration:", "waitindex", "indextemplates:" };
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -3611,10 +3611,13 @@ void CIDEScript::RunProblemsStep(const char* szStep)
 //     or an indexing's would be, each ';' in it a ',' (which ends a step);
 //   outputmenu:<tab>:<line>, the line scrolled into view and the right
 //     button pressed over its second character, then "Tab window: main"
-//     (or floated) and the window's text menu printed as it opened ("Menu Text: Cut [Control+X](disabled),
-//     Copy [Control+C], ..."), "Menu Text: none" if it didn't;
-//   outputmenuclick:<item>, the text menu's item clicked, as the pointer
-//     would.
+//     (or floated) and the tab's menu printed as it opened ("Menu Output:
+//     Copy [Ctrl+C], Copy All, ..."), "Menu Output: none" if it didn't;
+//   outputmenuclick:<item>, the open tab menu's item clicked, as the
+//     pointer would;
+//   claudemenu, the Claude tab's conversation's menu opened as the Menu
+//     key opens it, and printed ("Menu Claude: ...").
+// A tab is build, indexing or run.
 // False if szStep isn't one of them.
 //
 //////////////////////////////////////////////////////////////////////////
@@ -3647,17 +3650,25 @@ bool CIDEScript::RunOutputStep(const char* szStep)
 
 	if (strncmp(szStep, "outputmenuclick:", 16) == 0)
 	{
-		//The text menu open in the main window or in the window the Build or Indexing tab is floated in.
-		pMenu = mpcContent->GetWindow()->GetTextMenu();
-		if ((pMenu.IsNull() || !pMenu->IsOpen()) && mpcContent->GetBuilding()->GetBuildPane()->GetOutputArea()->GetWindow().IsNotNull())
+		//Whichever tab's menu is open.
+		if (!ClickMenuItem(mpcContent->GetBuilding()->GetMessages()->GetMenu()->GetMenu(), &szStep[16]) && !ClickMenuItem(mpcContent->GetIndexing()->GetMessages()->GetMenu()->GetMenu(), &szStep[16]) &&
+			!ClickMenuItem(mpcContent->GetRunning()->GetRunMenu()->GetMenu(), &szStep[16]))
 		{
-			pMenu = mpcContent->GetBuilding()->GetBuildPane()->GetOutputArea()->GetWindow()->GetTextMenu();
+			ClickMenuItem(mpcContent->GetAskClaude()->GetClaudeMenu()->GetMenu(), &szStep[16]);
 		}
-		if ((pMenu.IsNull() || !pMenu->IsOpen()) && mpcContent->GetIndexing()->GetPane()->GetOutputArea()->GetWindow().IsNotNull())
-		{
-			pMenu = mpcContent->GetIndexing()->GetPane()->GetOutputArea()->GetWindow()->GetTextMenu();
-		}
-		ClickMenuItem(pMenu, &szStep[16]);
+		return true;
+	}
+	if (strcmp(szStep, "claudemenu") == 0)
+	{
+		//The Claude tab's conversation's context menu opened as the Menu key opens it, and printed.
+		Ptr<CTextArea>	pConversation;
+
+		pConversation = mpcContent->GetAskClaude()->GetClaudePane()->GetConversationArea();
+		mpcContent->GetDock()->Show(mpcContent->GetAskClaude()->GetTool());
+		mpcContent->GetWindow()->Layout();
+		mpcContent->GetWindow()->GetFocus()->SetFocus(pConversation);
+		pConversation->OpenContextMenu(pConversation->GetContextMenuPosition());
+		PrintOpenMenu("Claude", pConversation->GetContextMenu());
 		return true;
 	}
 	if (strncmp(szStep, "outputcaret:", 12) == 0)
@@ -3688,6 +3699,11 @@ bool CIDEScript::RunOutputStep(const char* szStep)
 	{
 		pPane = mpcContent->GetIndexing()->GetPane();
 		pTool = mpcContent->GetIndexing()->GetTool();
+	}
+	else if (strncmp(szTab, "run", 3) == 0)
+	{
+		pPane = mpcContent->GetRunning()->GetRunPane();
+		pTool = mpcContent->GetRunning()->GetRunTool();
 	}
 	else
 	{
@@ -3758,7 +3774,7 @@ bool CIDEScript::RunOutputStep(const char* szStep)
 		if (strncmp(szStep, "outputmenu:", 11) == 0)
 		{
 			printf("Tab window: %s\n", (pOutput->GetWindow() == mpcContent->GetWindow()) ? "main" : "floated");
-			PrintOpenMenu("Text", pOutput->GetWindow()->GetTextMenu());
+			PrintOpenMenu("Output", pOutput->GetContextMenu());
 		}
 	}
 	else

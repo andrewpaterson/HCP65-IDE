@@ -67,6 +67,7 @@ void CIDEAskClaude::Class(void)
 	U_Pointer(mpcContent);
 	M_Pointer(mpClaudePane);
 	M_Pointer(mpClaudeTool);
+	M_Pointer(mpClaudeMenu);
 	U_Unknown(CClaudeCommand, mcClaude);
 	U_Size(muiClaudeReloaded);
 	U_Size(muiClaudeTools);
@@ -754,12 +755,15 @@ const char* CIDEAskClaude::GetFolderSetting(void) const { return mszFolder.Text(
 const CClaudeCommand* CIDEAskClaude::GetClaude(void) const { return &mcClaude; }
 Ptr<CIDEClaudePane> CIDEAskClaude::GetClaudePane(void) const { return mpClaudePane; }
 Ptr<CDockPane> CIDEAskClaude::GetTool(void) const { return mpClaudeTool; }
+Ptr<CIDEOutputMenu> CIDEAskClaude::GetClaudeMenu(void) const { return mpClaudeMenu; }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
 // The Claude tab, with its Send, Stop and New Conversation buttons, put
-// at psPlace.
+// at psPlace.  The conversation's context menu has Stop and New
+// Conversation after its Copies; the box a request is typed in keeps the
+// window's text menu (Cut, Copy, Paste, Select All).
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEAskClaude::CreatePane(SDockPlace* psPlace)
@@ -771,6 +775,11 @@ void CIDEAskClaude::CreatePane(SDockPlace* psPlace)
 	//Enter sends the request as Send does, and Shift+Enter starts a line in it, as IntelliJ IDEA's chat.
 	mpClaudePane->GetRequestArea()->SetEnterEvent(true);
 	mpClaudePane->GetRequestArea()->GetEnterEvent()->Add(this, &CIDEAskClaude::ClaudeSendClicked);
+	mpClaudeMenu = OMalloc<CIDEOutputMenu>(mpcContent, mpClaudePane->GetConversationArea());
+	mpClaudeMenu->AddSeparator();
+	mpClaudeMenu->AddCommand(mpClaudeMenu->GetCommands()->Add("Claude.Stop", "Stop", "", Ptr<CImageCel>(), this, &CIDEAskClaude::ClaudeStopClicked));
+	mpClaudeMenu->GetCommands()->Find("Claude.Stop")->SetEnabledCheck(this, &CIDEAskClaude::IsClaudeRunning);
+	mpClaudeMenu->AddCommand(mpClaudeMenu->GetCommands()->Add("Claude.NewConversation", "New Conversation", "", Ptr<CImageCel>(), this, &CIDEAskClaude::ClaudeNewClicked));
 	mpClaudeTool = mpcContent->GetDock()->AddPane(IDE_CLAUDE_ID, "Claude", NULL, mpClaudePane->GetComponent(), DPK_Tool, psPlace);
 }
 

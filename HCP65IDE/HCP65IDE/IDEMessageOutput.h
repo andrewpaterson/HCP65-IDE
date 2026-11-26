@@ -26,6 +26,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "StandardLib/Pointer.h"
 #include "WindowLib/TextArea.h"
 #include "IDEBuildPane.h"
+#include "IDEOutputMenu.h"
 
 
 class CIDEContent;
@@ -56,7 +57,7 @@ typedef CArrayTemplate<SIDEOutputMessage>	CArrayIDEOutputMessages;
 
 //An output tab's messages, as IntelliJ IDEA's Build window's: Next and Previous Occurrence (Control+Alt+Down and Up)
 //step through them, and Enter, a double click or Jump to Source (F4) on one opens its place in its editor, which has
-//the keys.  A message is "<file> (<line>, <column>): ...", the HCP65 compiler's and the code model's,
+//the keys.  The tab's context menu (CIDEOutputMenu) has Jump to Source and Clear All after its Copies.  A message is "<file> (<line>, <column>): ...", the HCP65 compiler's and the code model's,
 //"<file>(<line>,<column>): ..." or "<file>(<line>): ...", MSVC's, or "<file>:<line>:<column>: error: ...", GCC's.
 //Its file is a full path, or a name found in the code model's files (the one next to the unit being compiled, as
 //"Kernel.cpp (1/12)" says, if more than one has it).  The Build and Indexing tabs have one each.
@@ -68,6 +69,7 @@ protected:
 	CIDEContent*		mpcContent;  //Not held: the content holds it.
 	Ptr<CIDEBuildPane>	mpPane;
 	Ptr<CInputAction>	mpJumpAction;  //F4 in the tab opens the message the caret is on.
+	Ptr<CIDEOutputMenu>	mpMenu;  //The tab's context menu.
 	CChars				mszNoun;  //What its messages are called on the status line: "build messages".
 	size				muiStepLine;  //The tab's line of the message last gone to, MAX_SIZE for none.
 
@@ -84,6 +86,8 @@ public:
 	bool			OpenLine(size uiLine, bool bKeepKeys);
 	size			FindMessages(CArrayIDEOutputMessages* pasDest);
 
+	Ptr<CIDEOutputMenu>	GetMenu(void) const;
+
 	static void		KillMessages(CArrayIDEOutputMessages* pasMessages);
 	static bool		ParseMessageLine(const char* szLine, CChars* pszFile, int32* piLine, int32* piColumn, EIDEMessageKind* peKind);
 	static bool		ParseUnitLine(const char* szLine, CChars* pszName);
@@ -92,6 +96,8 @@ protected:
 	void			Open(SIDEOutputMessage* psMessage, bool bKeepKeys);
 	bool			FindMessageFile(const char* szName, const char* szUnit, CChars* pszDest);
 	void			JumpToSource(void);
+	bool			IsOnMessage(void);
+	void			ClearOutput(void);
 	void			EnterPressed(void);
 	void			DoubleClicked(CTextArea* pcTextArea, size uiPosition);
 
