@@ -136,9 +136,12 @@ The six points, as built:
   4. The kept parse a few keys old: this is the index, which the edits thread keeps up to date and the light
      path reads; and the file's last outline, for what function and class the caret is in.  No syntax tree is
      kept between keys.
-  5. The light path offers only what it is sure of.  One exception, told to the user 2026-11-26 and not answered:
-     "->" on a class template that isn't a pointer (Ptr<CGauge>) is taken to reach its first argument, at once,
-     rather than waiting for the parse.  The parse is still asked.
+  5. The light path offers only what it is sure of, with one exception the user DECIDED 2026-11-26 ("members appear
+     at once"): "->" on a class template that isn't a pointer (Ptr<CGauge>) is taken to reach its first argument, at
+     once, rather than waiting for the parse.  Ptr<M> is the only template in CommonLibraries, the IDE and LogiCim
+     that defines operator->, and it returns M*, so the rule is right for all of today's code; a template whose
+     operator-> returns something else would list the wrong class until the parse added the right one.  The parse
+     is still asked.
   6. Smart completion doesn't wait: it uses the light path only, and the checked parse isn't asked for it.  So
      there is no "working" row to show; where the light path can't say what is wanted, the status line says so.
 
@@ -383,8 +386,8 @@ The user's answers (2026-11-17)
 For the user to decide (2026-11-26)
 -----------------------------------
 
-  Item 5   DECIDED and built: the light path and the kept parse both, with the six points as the item says.
-           Still to answer: "->" on a class template (Ptr<CGauge>) reaching its first argument at once.
+  Item 5   DECIDED and built: the light path and the kept parse both, with the six points as the item says; and
+           "->" on a class template (Ptr<CGauge>) lists its first argument's members at once (as built).
   Item 6   DECIDED and built: Tab types a tab on each row of a box selection, and in the documentation pages too.
   Item 9b  DECIDED: a 65 configuration is indexed as it is built: no host headers, the target's defines.
   Item 9d  CONFIRMED: Build on Control+F9, Go to Type Declaration on Control+Shift+B.
