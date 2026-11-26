@@ -664,7 +664,8 @@ def MakeDocsCopy():
 	atexit.register(shutil.rmtree, szRoot, True)
 	szFolder = os.path.join(szRoot, 'Docs')
 	shutil.copytree(os.path.join(HERE, 'Input', 'Docs'), szFolder)
-	return {'SOLUTION': os.path.join(szFolder, 'Docs.sln'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
+	#Open.sh stands in for the system's program that opens a file (Open with System Program).
+	return {'SOLUTION': os.path.join(szFolder, 'Docs.sln'), 'RECENT': os.path.join(szRoot, 'Recent.xml'), 'SYSTEM_OPEN': os.path.join(szFolder, 'Open.sh')}
 
 
 def MakeTemplateInterfaceCopy():
@@ -4265,6 +4266,11 @@ CHECKS = [
 		#A page is coloured as Markdown (CMarkdownHighlighter), its references as what they name; it was plain before.
 		'WAIT_INDEX': '1', 'OPEN': 'Docs/shapes.md', 'DEBUG': 'wait:900,printspans'}),
 		[r'^Spans: changed$'], []),
+	('docs-open-with-system', dict(MakeDocsCopy(), **{
+		#Open with System Program, in Solution Explorer's menu, starts the system's program on the selected file (here
+		#the checks' stand-in, which writes the file it was given in Opened.txt).
+		'WAIT_INDEX': '1', 'DEBUG': 'edit:explorerselect:shapes.md,command:Explorer.OpenWithSystemProgram,wait:500,printstatus,printdiskfile:Opened.txt'}),
+		[r"^Status line: Opened shapes\.md with the system's program\.$", r'Docs[/\\]shapes\.md$'], [r"Couldn't open"]),
 	('docs-build', dict(MakeDocsCopy(), **{
 		#A Makefile project is built by its build command, its output the build's: Site's prints a problem as GCC would.
 		'WAIT_INDEX': '1', 'CONFIGURATION': 'Debug|GCC', 'DEBUG': 'command:Build.Build,wait:200,printbuild'}),

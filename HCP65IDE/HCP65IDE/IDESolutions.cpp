@@ -19,6 +19,13 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 ** ------------------------------------------------------------------------ **/
 #include <string.h>
+#include <stdlib.h>
+#ifdef _WIN32
+#include "BaseLib/WindowsHeaders.h"
+#else
+#include <unistd.h>
+#include <sys/wait.h>
+#endif
 #include "BaseLib/FileUtil.h"
 #include "BaseLib/Logger.h"
 #include "BaseLib/Timer.h"
@@ -1050,6 +1057,7 @@ Ptr<CMenuContainer> CIDESolutions::CreateExplorerMenu(void)
 	mpExplorerMenu->AddItem(mpcContent->GetCommands()->Find("Explorer.RemoveSolution"));
 	mpExplorerMenu->AddSeparator();
 	mpExplorerMenu->AddItem(mpcContent->GetCommands()->Find("Explorer.RenameFile"));
+	mpExplorerMenu->AddItem(mpcContent->GetCommands()->Find("Explorer.OpenWithSystemProgram"));
 	mpExplorerMenu->AddSeparator();
 	mpExplorerMenu->AddItem(mpcContent->GetCommands()->Find("Explorer.ProjectProperties"));
 	mpExplorerMenu->AddSeparator();
@@ -1093,6 +1101,7 @@ void CIDESolutions::AddCommands(Ptr<CCommandSet> pCommands)
 	pCommands->Add("Explorer.SetStartupProject", "Set as Startup Project", "", Ptr<CImageCel>(), this, &CIDESolutions::QueueCommand)->SetEnabledCheck(this, &CIDESolutions::CanSetStartupProject);
 	pCommands->Add("Explorer.RemoveSolution", "Remove Solution", "", Ptr<CImageCel>(), this, &CIDESolutions::QueueCommand);
 	pCommands->Add("Explorer.ProjectProperties", "Properties...", "", Ptr<CImageCel>(), this, &CIDESolutions::QueueCommand)->SetEnabledCheck(this, &CIDESolutions::CanShowProjectProperties);
+	pCommands->Add("Explorer.OpenWithSystemProgram", "Open with System Program", "", Ptr<CImageCel>(), this, &CIDESolutions::QueueCommand)->SetEnabledCheck(this, &CIDESolutions::CanOpenWithSystemProgram);
 	pCommands->Add("View.SolutionExplorer", "Solution Explorer", "Alt+1", Ptr<CImageCel>(), this, &CIDESolutions::ShowActiveFileInExplorer);
 	pCommands->Add("Explorer.AlwaysSelectOpenedFile", "Always Select Opened File", "", Ptr<CImageCel>(), this, &CIDESolutions::ToggleAlwaysSelect)->SetCheckedCheck(this, &CIDESolutions::IsAlwaysSelect);
 	pCommands->Add("Explorer.OpenFilesWithSingleClick", "Open Files with Single Click", "", Ptr<CImageCel>(), this, &CIDESolutions::ToggleSingleClick)->SetCheckedCheck(this, &CIDESolutions::IsSingleClick);
@@ -1340,4 +1349,84 @@ void CIDESolutions::RunQueuedCommand(void)
 	{
 		ShowProjectProperties();
 	}
+	else if (mszQueuedCommand.Equals("Explorer.OpenWithSystemProgram"))
+	{
+		OpenWithSystemProgram();
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Open with System Program is for a file selected in Solution Explorer.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDESolutions::CanOpenWithSystemProgram(void)
+{
+	CChars	szFile;
+	bool	bFile;
+
+	szFile.Init();
+	bFile = mpExplorer.IsNotNull() && mpExplorer->GetSelectedFilePath(&szFile);
+	szFile.Kill();
+	return bFile;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Solution Explorer's selected file opened in the program the system has
+// for it, a PDF's, a spreadsheet's, a KiCad board's (HCP65/Website/
+// DocsPlan.txt E6): xdg-open on Linux, ShellExecute on Windows, or the
+// program HCP65_IDE_SYSTEM_OPEN names (the checks' stand-in).  It runs on
+// its own; the IDE doesn't wait for it.  False if it couldn't be started.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDESolutions::OpenWithSystemProgram(void)
+{
+	CChars		szFile;
+	CChars		szStatus;
+	const char*	szProgram;
+	bool		bStarted;
+
+	szFile.Init();
+	if (!CanOpenWithSystemProgram() || !mpExplorer->GetSelectedFilePath(&szFile))
+	{
+		szFile.Kill();
+		mpcContent->ShowStatus("Select a file in Solution Explorer to open it with the system's program.");
+		return false;
+	}
+	szProgram = getenv("HCP65_IDE_SYSTEM_OPEN");
+#ifdef _WIN32
+	bStarted = (INT_PTR)ShellExecuteA(NULL, "open", szProgram ? szProgram : szFile.Text(), szProgram ? szFile.Text() : NULL, NULL, SW_SHOWNORMAL) > 32;
+#else
+	pid_t	iChild;
+	int		iStatus;
+
+	//Started from a child that ends at once, so it is no child of the IDE's left to wait for.
+	if (szProgram == NULL)
+	{
+		szProgram = "xdg-open";
+	}
+	iChild = fork();
+	if (iChild == 0)
+	{
+		if (fork() == 0)
+		{
+			setsid();
+			execlp(szProgram, szProgram, szFile.Text(), (char*)NULL);
+			_exit(127);
+		}
+		_exit(0);
+	}
+	bStarted = (iChild > 0) && (waitpid(iChild, &iStatus, 0) == iChild) && WIFEXITED(iStatus) && (WEXITSTATUS(iStatus) == 0);
+#endif
+
+	szStatus.Init(bStarted ? "Opened " : "Couldn't open ");
+	szStatus.Append(GetIDEFileNamePart(szFile.Text()));
+	szStatus.Append(" with the system's program.");
+	mpcContent->ShowStatus(szStatus.Text());
+	szStatus.Kill();
+	szFile.Kill();
+	return bStarted;
 }

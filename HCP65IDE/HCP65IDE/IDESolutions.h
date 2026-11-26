@@ -113,6 +113,8 @@ protected:
 	void				ReadFileTemplates(const char* szFileName);
 	bool				CanShowProjectProperties(void);
 	bool				ShowProjectProperties(void);
+	bool				CanOpenWithSystemProgram(void);
+	bool				OpenWithSystemProgram(void);
 	void				LetGoOfWorkspace(void);
 	CRecentFiles*		GetRecent(void);
 	void				OpenQueuedSolution(void);
