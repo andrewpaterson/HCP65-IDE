@@ -1,242 +1,361 @@
-The IDE's next work, for another session (2026-11-17)
-====================================================
+The IDE's next work (planned 2026-11-17, checked against the code and planned again 2026-11-26)
+============================================================================================
 
-The refactoring plan (Refactorings.txt) is done, and so are its end-of-plan tasks (EndOfPlanTasks.txt) but b, the
-getters const, which gameengine-3c took over from gameengine-d1 on 2026-11-17.  These are what the IDE is missing or
-has left open, in the order the user chose, so another session can take them on.  The user answered every question on
-2026-11-17 (at the end).  Still bring each item up with the user before starting it, with how you mean to do it, and
-go on when they say.  The user's rule for the IDE: build the whole feature, as IntelliJ IDEA has it, not a cut-down
-version, and don't order the work by what is cheapest.
+Ten items, in the order the user chose on 2026-11-17, and an eleventh added on 2026-11-26.  Five are built (1, 2, 3,
+4 and 7); six are open (5, 6, 8, 9, 10 and 11), and are planned below from what the code has now.  The user's
+answers of 2026-11-17 are at the end and still hold.  Bring each open item up with the user before starting it,
+with how you mean to do it, and go on when they say.  The user's rule for the IDE: build the whole feature, as
+IntelliJ IDEA has it, not a cut-down version, and don't order the work by what is cheapest.
 
-The website documents the IDE (HCP65IDE\HCP65IDE\Docs\ide, MkDocs) and is how the user learns it: each item here ends
-with its pages brought up to date, written from what the code does, and editor.md's "Not there yet" and
-navigation.md's last paragraph lose what was built.
+  1   The tree's rows in view                          built 2026-11-17
+  2   Find and Replace in the file, CRegex             built 2026-11-20
+  3   Find in Files: regex, file mask, Replace         built 2026-11-21
+  4   Go to Line                                       built 2026-11-20
+  5   Code completion, basic and smart                 OPEN: next, how decided 2026-11-26
+  6   Automatic indenting, Tab, the line commands      OPEN: part there; decided 2026-11-26
+  7   Bookmarks                                        built 2026-11-21
+  8   Context menus                                    OPEN: part there (see the item)
+  9   Smaller things left open                         OPEN: a, b and c to build; b decided 2026-11-26
+  10  Reformat Code                                    OPEN: last of the ten
+  11  Quick Documentation and the name's tool tip      OPEN: added 2026-11-26, "build both now"
+
+How this was checked (2026-11-26): each item against the IDE's sources, WindowLib's and BaseLib's, the commits since
+2026-11-17 and NavigationPlan.txt's "What is built".  Nothing was built or run for it: "built" below means the code,
+its commands and its checks are in the tree, as their commits say.  What no one has run since those commits: an MSVC
+build, and the IDE on Windows.
 
 
 How work is done here
 ---------------------
 
-  - Everything in EndOfPlanTasks.txt's "How work is done here" holds (Release|x64, commits through a temporary index
-    with no Co-Authored-By, scripts written to files, LF sources, house style, the IDE's checks).
-  - Other sessions share the tree: gameengine-3c (CppCompilerLib, in D:\gameengine\CommonLibrariesPartB, and since
-    2026-11-17 the getters const, a library at a time in the worktree D:\gameengine\CommonLibrariesGetters; WindowLib's
-    are on master as 468a2bc70).  Find them with ListAgents.  Tell each before a Release x64 build, a test run or a
-    run of the IDE's checks (they run x64\Release\HCP65IDE.exe), and again when it is done.  Debug x64 never clashes.
-    A build in the master tree compiles anything uncommitted there, so say before leaving edits in a shared library
-    (BaseLib, WindowLib...) uncommitted, or work in a worktree.
-  - Ask 3c which library it is in before editing one in CommonLibraries, and rebase onto its commits.
-  - The keys are IntelliJ's where the IDE has the command (Settings and Keys, Docs/ide/settings.md, lists them all),
-    added to the keymap (Keymap.xml, CIDEKeymap) so the user can change them.  Check a key isn't taken first: F11 is
-    Step Into.
-  - Each feature gets IDE checks (Checks/IDEChecks.py, on a small solution of its own under Checks/Input) and, for
-    what is in a library, that library's tests (TestWindowLib for WindowLib, TestBaseLib for BaseLib).
+  - HCP65-IDE's CLAUDE.md, and CommonLibraries', have the rules (sessions sharing the checkouts, commits by path with
+    no Co-Authored-By, LF sources, Release x64, the checks).  The 2026-11-17 text here (D:\gameengine paths, the
+    sessions gameengine-3c and gameengine-37, the getters const) was of the Windows machine and is out of date.
+  - Other sessions: find them with ListAgents before changing a shared library, and whoever is in CppCompilerLib
+    before changing the binder or CPPIndex.
+  - The keys are IntelliJ's where the IDE has the command (Docs/ide/settings.md lists them all), added to the keymap
+    so the user can change them.  Check a key isn't taken first.  Taken since 2026-11-17, among others: Control+0
+    (Reset Font Size, which Go to Bookmark 0 gave up), Control+P (Parameter Info), Control+W, Control+Shift+Enter,
+    Alt+Shift+Cursor Up and Down, Control+Cursor Up and Down (scroll), Control+D, Control+Y.
+  - Each feature gets IDE checks (Checks/IDEChecks.py, on a small solution of its own under Checks/Input, a copy of
+    it when the check writes there) and, for what is in a library, that library's tests (TestWindowLib,
+    TestBaseLib).  New BaseLib code also runs in the 16 bit size host build (BASELIB_SIZE16) and on the 65C64 and
+    the W65C816 (TestBaseLib65): CRegex passed everywhere but the 816.
+  - Each item ends with its pages brought up to date (HCP65IDE/HCP65IDE/Docs/ide, where the documentation has lived
+    since 2026-11-24), written from what the code does, code named by reference ([`CTextArea`]), and editor.md's
+    "Not there yet" loses what was built.  It now says only: no automatic indenting and no code completion.
 
 
-1. A tree that makes components only for the rows in view (WindowLib)
---------------------------------------------------------------------
+1. A tree that makes components only for the rows in view (WindowLib): built 2026-11-17
+---------------------------------------------------------------------------------------
 
-DONE 2026-11-17 (gameengine-37): CommonLibraries 9d972b678 and a344c2175; HCP65-IDE e635fc9, 1054cc8 and 51ca843;
-HCP65 6525229 (the website's navigation page).
+CommonLibraries 9d972b678 and a344c2175; HCP65-IDE e635fc9, 1054cc8 and 51ca843; HCP65 6525229.
 
-What was wrong: CTreeContainer::AddNodeRow made a grid, indent, chevron, icon and label for every row that could be
-seen, and UpdateRows made them all again when a node opened or closed, so Find Usages' files started closed past
-1000 usages (IDE_USAGES_OPEN_FILES_MAXIMUM), and Find in Files' the same (IDE_FIND_OPEN_FILES_MAXIMUM).
-
-What was built, the design the user agreed on 2026-11-10 with the three differences the user accepted 2026-11-17:
-  - rows are worked out, not laid out: one row height, row i at i x height;
-  - CListContainer's selection, keys, hover, highlights, ShowRow, page and context menu's place ask through two
-    virtuals, GetRowBounds (where row i is) and FindRowAtY (which row is at y), not three: how many rows there are
-    stays in the list's bit arrays (SetNumRows); menus, combo boxes, dialog lists and tables keep the grid;
-  - the tree keeps a CTreeRow (TreeRow.h: chevron, icon, the name's labels) for each row in view, as many as the
-    scroll pane's view, the window and the tree's own area show (not a fixed 50), made eight at a time; row i's is
-    the one at i modulo how many there are, so scrolling only changes those of the rows that come into view;
-  - a row's width from CFont::CalculateWidth over the node's pieces, kept per node;
-  - the tree's public functions are as they were (GetRowComponent and NumRowComponents are new, for tests); TestTree
-    and TestMenu ask a tree for its rows with GetRowBounds, not the grid's GetTrackBounds.
-Both rules are gone: every file starts open.
-
-Measured in Release x64, 20,004 usages (20,000 in one file), from every node closed (the script's edit step
-timeusagetree; Checks' usages-thousands-open keeps each under a second):
-                         before      after
-  opening every node     4800 ms     1-3 ms
-  laying the window out   240 ms     3-5 ms
-  painting                157 ms     1 ms
-  scrolling to the end    377 ms     3-5 ms
-
-Checked: TestWindowLib Release and Debug x64 (21211, TestTree 82 to 181: the rows' components, the tree's width
-against what its labels need, 100,000 open nodes in a scroll pane); the IDE's 69 checks whose names have usage,
-explorer, find, duplicat, git, gotosource, result, step, solution or workspace on Reference|x64, all passing once
-five stale expectations were put right (CalcParentheses.h's lines are declared override since CommonLibraries
-72445027c: 51ca843); HCP65IDE, LogiCim, WindowInputTester, HCP65Emulator and HCP65Tester build in Release x64.  Not
-run: the IDE's other 323 checks, LogiCim's own tests, and Linux.
+CTreeContainer's rows are worked out, not laid out (one row height; CListContainer asks GetRowBounds and
+FindRowAtY), with a CTreeRow only for each row in view.  Every file starts open in Find Usages and Find in Files:
+both 1000-result rules are gone.  20,004 usages in Release x64: opening every node 4800 ms to 1-3 ms, layout 240 to
+3-5, painting 157 to 1, scrolling to the end 377 to 3-5.  The design and what was checked are in this file's history
+(851c3ba).
 
 
-2. Find and Replace in the file, and the regular expression engine
------------------------------------------------------------------
+2. Find and Replace in the file, and the regular expression engine: built 2026-11-20
+------------------------------------------------------------------------------------
 
-What is missing: there is no Find or Replace within a file.  The only search is Find in Files (Ctrl+Shift+F,
-CIDEFindInFiles) with its Current File scope.  Nothing in the code has a regular expression engine: BaseLib has none,
-and std::regex isn't used.
+CommonLibraries b7ce1b83a (CRegex), 08d3d8700 (CTextSearch), 719464229 (highlight layers), 918ac99b1 (the scroll
+bar's marks), ce5c3df65 (ReplaceRanges with a text each), a3c499857 (CRegex within a 16 bit size); HCP65-IDE 5c22333.
+Checks find-bar, find-bar-replace, find-next.
 
-The engine (the user: write it in BaseLib): CRegex, on CTextParser where it parses (use BaseLib's text parser, not
-hand scanning).  The syntax IntelliJ's find takes (Java's, the same as ECMAScript's for what is used): classes and
-ranges, groups and non-capturing groups, alternation, * + ? {n,m} greedy and lazy, ^ $ \b, \d \w \s and their
-capitals, escapes; $1 and $0 in replacements; case-insensitive matching.  Compiled once to a backtracking matcher.
-BaseLib is compiled for the W65C816 too, so keep to what BaseLib's own code does (no standard library, the narrowest
-integers that fit).  Tested in TestBaseLib.
-
-Find, as IntelliJ's: Ctrl+F opens a search bar over the editor (not a dialog), filled from the selection or the word
-at the caret.  As the text is typed every match in the file is highlighted (CTextArea already highlights occurrences:
-FindOccurrences, and the gutter's marks), the nearest is selected, and the bar says "3 of 17".  Enter or F3 goes to
-the next, Shift+Enter or Shift+F3 to the previous, wrapping round.  Ticks for Match Case, Words and Regex, remembered
-in Settings.  Escape closes it and leaves the caret on the match.  Ctrl+R opens it with a Replace field: Replace and
-Replace All, each one undo (CTextArea::ReplaceRanges), with Regex's $1 groups.  "In selection" when the selection is
-more than a line.
-
-Where: a bar component above CIDEEditorTab's editor; the search itself on CTextDocument so other text areas can use
-it.  Ctrl+F, Ctrl+R, F3 and Shift+F3 are free in the keymap.
+As planned: the Find bar (Control+F, CIDEFindBar) over the editor with "3 of 17", Match Case, Words, Regex and In
+Selection; Replace (Control+R) with Replace and Replace All and $1 groups; F3, Shift+F3, and Find Word at Caret
+(Control+F3).  Where it differs from this file's plan:
+  - the search is BaseLib's CTextSearch, given a text, not a function of CTextDocument;
+  - the bar searches again after an edit by polling at each tick;
+  - CRegex has no look-ahead or look-behind, no named groups and no Unicode classes.
 
 
-3. Find in Files: regular expressions, file masks and Replace in Files
----------------------------------------------------------------------
+3. Find in Files: regular expressions, file masks and Replace in Files: built 2026-11-21
+----------------------------------------------------------------------------------------
 
-What is missing: Find in Files has Match Case and Whole Words only ("There are no regular expressions, file masks or
-Replace in Files yet", navigation.md).
+CommonLibraries 97a0b759c, 06b8e1046 and 79d3d166d; HCP65-IDE 526686a.  Checks find-regex-mask, find-regex-problem,
+replace-in-files, replace-in-files-dialog, find-tabs.
+
+As planned, with these differences:
+  - Replace in Files' results have no tick each: Replace Selected replaces the selected result, or every result
+    under the selected file; Replace All the lot;
+  - the files changed are opened in editors and left unsaved for Save All, as Rename leaves its files; the edits are
+    one undo group;
+  - the file mask is matched against a file's name, not its path.
+
+
+4. Go to Line: built 2026-11-20
+-------------------------------
+
+HCP65-IDE 3f7deda (WindowLib's CPromptPopup: CommonLibraries 39e33708e).  Check nav-go-to-line.  Control+G,
+"Line[:column]", on Back's history, as planned.
+
+
+5. Code completion, basic and smart: OPEN
+-----------------------------------------
+
+Nothing of it is built: no completion command, no popup, Control+Space and Control+Shift+Space free.
+
+What the user decided (2026-11-17): it opens by itself only straight after "." "->" and "::"; otherwise on
+Control+Space (basic) or Control+Shift+Space (smart), not as an identifier is typed; smart is built with basic.
+
+What to build is as it was planned:
+  - Basic: a popup list of what can be written there, filtered as more is typed (camel humps: "GSN" finds
+    GetSelectedNode), each with its icon, its type or signature, and its class or namespace; Enter or Tab writes it
+    (Tab replaces the rest of the word), a function with its "(" and the caret between the brackets when it takes
+    arguments, and parameter info after it.  After "x." or "x->", the members of x's type, inherited ones too, by
+    access from where the caret is; after "N::", what N declares; otherwise what is in scope (locals and
+    parameters, the class's members, then the namespaces' and the globals'); #include "..." completes paths from
+    the include directories; keywords too.
+  - Smart: only what has the type expected where the caret is, ranked by how close the type is: an argument (the
+    parameter's type, from the call's overloads), the right of "=", a return, an initialiser, a case label (the
+    switch's enum's enumerators); with what converts (a derived class's pointer for a base's).
+
+What has changed since it was planned, and what that does to the plan:
+  - Built since, to use and not write again: the chooser popup with its rows found as typed (CChooserPopup),
+    CNameMatcher (camel humps, Go to's), Parameter Info (View.ParameterInfo, Control+P, CIDEQuickInfo), the file's
+    outline from the edits thread (CIDEOutline), the symbol's info and icon (Quick Definition, Type Info), the
+    caret's context (SIDECaretContext), class bases (FindClassBases).
+  - The question this file left open is answered by a measurement.  The type of the expression at the caret from a
+    checked parse of the file (Type Info's follow-up 3f, HCP65-IDE 21b5a91) took 47 ms in a BaseLib file and 1.7 s
+    in IDEUsages.cpp, each press.  That is too slow for a key: completion can't parse the file when asked.
+  - Two ways to the type of what is before the "." were weighed:
+      a. a light path: the name's declaration from the function's own syntax tree (the edits thread already has
+         it) and the index, then member by member along a "name.member->member" chain, with no binder.  Covers
+         names, members, calls by their result, casts; not operators that are overloaded, nor templates'
+         arguments unless the index has them (not looked at);
+      b. the checked parse on the edits thread, kept up to date after each edit, so a key only reads what is
+         there.
+
+DECIDED by the user, 2026-11-26: both from the start, a answering at once and b adding to the list when it arrives,
+made friendly to use by these, which are part of the item:
+  1. The list only grows.  What the parse brings is merged in; the selected row stays selected and where it is on
+     the screen.  A list the user hasn't touched yet may be sorted again.
+  2. The popup opens at once.  If the light path can't type the expression it opens with one greyed row saying it
+     is working, filled in when the parse lands; typing goes on, Escape closes it.
+  3. The parse is given a finished line: a copy of the text with a dummy name at the caret ("x." as
+     "x.__caret__"), as IntelliJ does.  Not tried on this parser yet.
+  4. The kept parse is used when it is a few keys old: the declarations above the statement being typed are read
+     from the last good parse, their places moved by the edits (as CIDEDocumentAnchor moves places); the statement
+     itself is the light path's.
+  5. The light path offers only what it is sure of: at an overload it can't pick or a template it can't see
+     through it stops and leaves the answer to the parse.
+  6. Smart completion shows the same "working" row while it waits for the expected type.
+A follow-up to measure, not promised: parsing only the function being edited against what is kept of the rest, to
+shorten the 1.7 s.  It is CppCompilerLib's binder; look before planning it.
+
+Steps:
+  1. Measure: the light path's cost and what it can't type, over a few hundred "." and "->" in the workspace; and
+     try the parser on a text with the dummy name (3 above).
+  2. The list and its popup (WindowLib: a chooser at the caret that the editor keeps typing through, whose rows can
+     be added to while it is open, with a greyed "working" row), with keywords and the file's own names, so the
+     keys, filtering, Enter and Tab can be checked before types are.
+  3. The light path: what is in scope; members after ".", "->" and "::", with access; #include paths.
+  4. The kept parse on the edits thread, the dummy name, and its results merged into an open list.
+  5. Writing a function's brackets, and Parameter Info after it.
+  6. Smart: the expected type at the caret, the ranking, what converts.
+  7. Checks on a solution of its own (Checks/Input/Completion), TestWindowLib for the popup, the pages.
+
+
+6. Automatic indenting, Tab, and the editor's other line commands: OPEN
+-----------------------------------------------------------------------
+
+What there is now (BaseLib's CTextEditing, so every text area; the keys in WindowLib's EditCommands.cpp):
+  - Tab types spaces to the next tab stop; with lines selected it indents them (IndentLines), with spaces; in a box
+    selection it types spaces.  Shift+Tab (BackTab) unindents the selected lines or the caret's: a tab, or up to a
+    tab's worth of spaces.
+  - Enter puts in a line feed and nothing else.
+  - Duplicate (Control+D) and Delete Line (Control+Y) exist.  Control+Cursor Up and Down scroll.
+  - There are no comment commands and nothing moves a line.
+
+What to build (the user: Tab types a tab; spaces are no longer typed by Tab anywhere):
+  1. Tab types a tab character, and IndentLines puts a tab at the start of each line.  BackTab is right already.
+  2. Enter keeps the line's indent (its leading tabs and spaces, as they are); in a code editor, one tab more after
+     a line that ends in "{", and a "}" typed on a line of only white space goes back one.  The first part in
+     CTextEditing; the brace part in CCodeEditor or the IDE, as it is about C++.
+  3. Comment with Line Comment (Control+/): the caret's line or the selected lines, // put in or taken out, the
+     caret moving down a line when nothing is selected, as IntelliJ's.  Comment with Block Comment
+     (Control+Shift+/): the selection.
+  4. Move Line Up and Down.  IntelliJ's keys are Alt+Shift+Cursor Up and Down, which are taken here; its
+     Control+Shift+Cursor Up and Down (Move Statement) are free, and are what this file planned.
+  5. TestBaseLib (TestTextEditing) for 1 to 4, on the 65 targets too; the IDE's checks for the keys; editor.md.
+
+DECIDED by the user, 2026-11-26: Tab in a box selection types a tab on each row, as everywhere else.  (Rows that
+reach the box's left edge have the caret at one column, so a tab takes them all to the same stop; a shorter row
+gets it at its end, as it gets spaces now.)
+
+DECIDED by the user, 2026-11-26: Tab types a tab in the documentation pages (.md) too: one rule, no setting by
+file type.  (The pages' space-led lines are nearly all the two spaces of a list item's later lines, which Tab
+couldn't type anyway and which Enter keeping the indent carries on; their code samples are tab-led already.)
+
+
+7. Bookmarks: built 2026-11-21
+------------------------------
+
+CommonLibraries 4a2a6275c (CCodeEditor's icon columns); HCP65-IDE 1584745.  Checks bookmarks, bookmarks-read.
+
+As planned, with the user's keys (Control+F11, Control+Shift+F11, F2, Shift+F2), the Bookmarks tool window, kept in
+the .hcp65user (CIDEUserFile) and moved by edits.  Where it differs:
+  - F2 and Shift+F2 stay in the active file, round its ends;
+  - Control+1 to 9 go to a mnemonic bookmark; Control+0 doesn't since 2026-11-23 (HCP65-IDE e1ad157: it is Reset
+    Font Size), so bookmark 0 has no key; letters have none either;
+  - the gutter's mark is a character, not an image, and has no tool tip.
+
+
+8. Context menus: OPEN
+----------------------
+
+What there is now (CComponent::SetContextMenu; the Menu key and Shift+F10 too):
+  - the editor: the navigation items, Find Usages and its settings, Rename and Refactor, the debugger's items, Cut,
+    Copy, Paste, Paste from History;
+  - Solution Explorer; the Structure tree (sorting, Hide Fields); the debugger's values tables;
+  - a document's tab (WindowLib's dock): Float, Dock, Close, and Close Multiple with Close All, Close Others,
+    Close Unmodified, Close to the Left and to the Right.
+What has none: the results trees (CIDEResultsPane), the Build tab, the Run and Debug tabs' output, the Claude tab,
+a diff tab.
+
+What has changed: Find Usages, Find, Duplicates, Hierarchy, Bookmarks and Problems are all CIDEResultsPane now (and
+the tabbed ones CIDEResultsTabs), so one menu written there serves six windows; this file planned two of them one
+at a time.
 
 What to build:
-  - a Regex tick (item 2's CRegex), and a File mask field ("*.cpp, *.h", with ! to leave out), both remembered;
-  - Replace in Files (Ctrl+Shift+R): the Find tab's results with a Replace field and a preview of each line changed;
-    Replace All, or the ticked ones, as one undo across every file changed (the refactorings' undo already does
-    this), open and closed files both.
+  1. The results panes' menu, once, in CIDEResultsPane: Go to (Jump to Source), Copy, Expand All, Collapse All, and
+     what the pane's owner adds: Exclude and Remove (Find Usages, Duplicates), Replace Selected and Replace All
+     (Find, when replacing), Remove Bookmark (Bookmarks).
+  2. The Build tab: Copy, Copy All, Go to the message's line, Clear.
+  3. The Run and Debug tabs' output, and the Find tab's own: Copy, Clear, and what each tab's toolbar does.
+  4. The Claude tab: Copy, Clear, Stop.
+  5. A diff tab: Next and Previous Difference (F7, Shift+F7), Copy.
+  6. A document's tab, added to the dock's menu by the IDE: Copy Path, and Select in Solution Explorer
+     (Navigate.SelectIn does it).  The dock needs a way for its owner to add items.
+  7. The editor's, added to: Toggle Bookmark, Compare with Clipboard (a new command: the diff view on the
+     selection and the clipboard), Ask Claude about the selection; Toggle Breakpoint and Go to Definition if the
+     items there now don't already have them (look at CIDEDebugWindows::AddEditorItems and
+     CIDENavigator::AddEditorItems first).
+  8. The checks' printmenu for each, menus in the checks, on Linux (X11) as it is the machine; the pages.
+Rules: a PopupClosed override calls its base; the menu goes on the page or container.
 
 
-4. Go to Line
--------------
+9. Smaller things left open: OPEN
+---------------------------------
 
-What is missing: no Go to Line.
-
-What to build: Ctrl+G opens a small box over the editor, "Line[:column]" with the caret's place in it to begin with,
-that moves the caret there (one place in Navigate, Back's history, CIDENavigation).  Ctrl+G is free.
-
-
-5. Code completion, basic and smart
------------------------------------
-
-What is missing: no completion while typing.
-
-When it opens (the user): by itself only straight after "." "->" and "::"; otherwise on Ctrl+Space (basic) or
-Ctrl+Shift+Space (smart).  Not as an identifier is typed.
-
-Basic, as IntelliJ's: a popup list of what can be written there, filtered as more is typed (camel humps: "GSN" finds
-GetSelectedNode), each with its icon, its type or signature, and its class or namespace; Enter or Tab writes it (Tab
-replaces the rest of the word), a function with its "(" and the caret between ")" when it takes arguments; parameter
-info (Ctrl+P) after it.  What can be written comes from the code model (CCPPIndex, CIDECodeModel):
-  - after "x." or "x->", the members of x's type, inherited ones too, by access from where the caret is;
-  - after "N::", what N declares;
-  - otherwise what is in scope: locals and parameters (the function's own syntax tree), the class's members, then
-    the namespaces' and the globals';
-  - #include "..." completes paths from the include directories; keywords too.
-
-Smart (the user: build it with basic): only what has the type expected where the caret is, ranked first by how
-close the type is: an argument (the parameter's type, from the call's overloads), the right of "=" (the left's type),
-a return (the function's result), an initialiser (the variable's type), a case label (the switch's enum's
-enumerators); with what converts (a derived class's pointer for a base's, an enum's enumerators for the enum).
-
-The type of an expression is the hard part, and both need it: the index knows declarations, not expressions.  The
-compiler's binder (CCPPBinder) works types out; Introduce Variable already asks the compiler for an expression's type
-(compile check): see how, and whether it is quick enough for a keypress, or whether a lighter path through the index
-is needed for "name.member" chains.  Measure on the ModPlay workspace: under about 100ms from the key to the popup.
-CppCompilerLib is 3c's: ask it before changing the binder.
+  a. A modified tab closed without saving.  The index part is done: the file is indexed again as it is on disk
+     (CIDEDocuments::ReindexDiscarded).  Still open: Find Usages' results and Back's places for that file stay
+     where the thrown-away edits moved them (CIDEDocumentAnchor).  To build: on such a close, each holder of places
+     in that file puts them back as they were when the file was last saved or opened.  The plain way is for the
+     anchor to keep the file's changes since then and run them backwards over the places.
+  b. The index for a 65 configuration.  Since 2026-11-24 the index (IndexLib's CWorkspaceIndex) takes the chosen
+     configuration's include folders and defines, and choosing another indexes again (CIDEConfigurations).  But for
+     every configuration, a W65C816 or 65C64 one too, it adds this machine's compiler headers after the project's
+     (AddDefaultSystemDirectories, GetProject: "until a build configuration says which it has") and MSVC's own
+     defines (AddCompilerDefines: _MSC_VER, _WIN32...).  So with a 65 configuration chosen, code in #ifdef _WIN32
+     is indexed as live and the 65 branch beside it isn't (Find Usages and Rename can miss what is built), and an
+     #include of a header the 65 hasn't finds the host's.
+     DECIDED by the user, 2026-11-26: a 65 configuration is indexed as hcp65build compiles it: none of the host's
+     headers, none of MSVC's defines, and the target's own from the code the build uses, so the two can't drift:
+     CCPPTargetW65C816::AddDefines (__W65C816__, __LIBC65__, __W65C816_ASSEMBLY__ with assembly units) and
+     CCPPTarget65C64::AddDefines (__65C64__, __LIBC65__).
+     Steps: see what the index gives a 65 configuration's units now (ParseUnit has the build configuration's
+     compile options; whether its target's AddDefines already runs wasn't looked at); the target's defines in
+     place of AddCompilerDefines, and no system directories, when the configuration's processor is a 65; a check
+     on Checks/Input/Debugging (an #ifdef _WIN32 and an #ifdef __W65C816__ branch, which is live under each
+     configuration); TestIndexLib; expect names that only the host's headers resolved to show in the Indexing tab,
+     and list them for the user rather than hide them.
+  c. The `breakpoint` check opens Kernal.cpp in the real HCP65 Kernal solution.  The checks now put their own
+     recent solutions in place and remove HCP65Kernal.hcp65user afterwards if the run made it, so nothing is left
+     behind, but it still isn't on a solution of its own: move it onto a copy of Checks/Input/Debugging or
+     Navigation, as bookmarks-read is.
+  d. NavigationPlan.txt's two readings that the user hadn't confirmed.
+     Decision 2, CONFIRMED by the user 2026-11-26: Build stays on Control+F9 and Go to Type Declaration on
+     Control+Shift+B, IntelliJ's keys both.  Nothing to build.
+     Decision 11 (Quick Documentation and the name's tool tip, "later if at all"), CHANGED by the user
+     2026-11-26: build both now, as item 11.
 
 
-6. Automatic indenting, Tab, and the editor's other line commands
-----------------------------------------------------------------
+10. Reformat Code: OPEN
+-----------------------
 
-What is missing: Enter starts the new line at the margin ("no automatic indenting"); Tab types spaces while the
-refactorings and the house style use tabs.
+Nothing of it is built; Control+Alt+L is free.  The user: wanted, as an item of its own after the others.
 
-What to build:
-  - Tab types a tab (the user).  Spaces are no longer typed by Tab anywhere.
-  - Enter keeps the line's indent, one more after "{", and a "}" typed on a line of its own goes back one, all in
-    tabs.
-  - IntelliJ's line commands that aren't there: Ctrl+/ comments or uncomments the line or the selected lines (//),
-    Ctrl+Shift+/ the selection (/* */); Tab and Shift+Tab indent and unindent the selected lines; Ctrl+Shift+Up/Down
-    move the line or the selection.  Check which exist in the keymap (Ctrl+D Duplicate does) before writing them.
-
-
-7. Bookmarks
-------------
-
-What is missing: no bookmarks.
-
-What to build, as IntelliJ's: a toggle on the line (a mark in the gutter, beside breakpoints and listings), mnemonic
-bookmarks 0-9 and A-Z, next and previous, and a Bookmarks tool window listing them by file; saved with the workspace
-(.hcp65user, as breakpoints are) and moved by edits as the usages' places are (CIDEDocumentAnchor).
-
-The keys (the user): Ctrl+F11 toggles a bookmark, Ctrl+Shift+F11 toggles a mnemonic one (a box asks for its 0-9 or
-A-Z), F2 and Shift+F2 go to the next and previous.  IntelliJ's Ctrl+0..9 goes to a mnemonic one: check those are free.
-
-
-8. Context menus
-----------------
-
-What exists: the editor (Go to Source, Find Usages, Show Context Actions, Rename, Refactor, Cut, Copy, Paste) and
-Solution Explorer have right-click menus (WindowLib's CComponent::SetContextMenu, the Menu key and Shift+F10 too).
-
-What to build: menus on the rest, each with what that place does and what its keys do:
-  - the Build tab: Copy, Copy All, Go to the message's line, Clear;
-  - the Find Usages and Duplicates trees: Go to, Exclude, Remove, Expand All, Collapse All, Copy;
-  - the Find (Find in Files) tab and the Run and Debug tabs: Copy, Clear, and what each tab's own toolbar does;
-  - the Claude tab: Copy, Clear, Stop;
-  - a diff tab: Next and Previous Difference (F7, Shift+F7), Copy;
-  - the document tabs (they have one from WindowLib's dock: check it has Close, Close Others, Close All, Copy Path,
-    Show in Solution Explorer);
-  - the editor's, added to: Go to Definition, Ask Claude about the selection, Toggle Breakpoint, Toggle Bookmark,
-    Compare with Clipboard.
-Rules (memory): a PopupClosed override calls its base; the menu goes on the page or container.  Check on Linux (X11)
-too.
-
-
-9. Smaller things left open
----------------------------
-
-  - A modified tab closed without saving leaves Find Usages' and Back's places moved by the edits thrown away
-    (CIDEDocuments, CIDEDocumentAnchor): put them back as the file on disk has them.
-  - The headers the IDE indexes with should follow the build configuration chosen (the user's "long term"): the index
-    now uses one set for every configuration.
-  - The `breakpoint` check runs on the user's last solution and leaves Tests\TestBaseLib\TestBaseLib.hcp65user
-    behind: give it a solution of its own under Checks\Input.
-
-
-10. Reformat Code
------------------
-
-The user: wanted, as an item of its own after the others (2026-11-17).
-
-What to build, as IntelliJ's Reformat Code (Ctrl+Alt+L, on the file or the selection, and from Solution Explorer on
-a folder or project, with Optimise #includes as a tick): the code laid out in the house style.  The rules are what the
-code already does; write them down from it before coding, and show them to the user:
+What to build is as it was planned: IntelliJ's Reformat Code (Control+Alt+L, on the file or the selection, and from
+Solution Explorer on a folder or project, with Optimise #includes as a tick: Refactor.OptimiseIncludes exists), the
+code laid out in the house style:
   - indents in tabs; braces on lines of their own; one statement a line;
   - a function's locals declared at its top, their names lined up in a column with tabs; a class's fields and its
     member functions' names lined up the same way, a block at a time;
   - a ////// banner over each function in a .cpp, made if it is missing (the templates' Function Banner);
   - spaces round binary operators and after commas, none inside brackets;
   - comments and blank lines kept where they are; a line longer than it was is never made.
-The proof: reformat each library of CommonLibraries in a scratch copy and look at the diff, which should be close to
-nothing; each difference is either a rule to fix or a file that breaks the house style (list those for the user, and
-don't commit a reformatted library without asking).  Settings: a page with the rules' few choices (the tab width for
-lining up, the column banners go to) if the code turns out to vary.
+
+Steps:
+  1. Write the rules down from the code (CommonLibraries' CLAUDE.md has the house style in words; the libraries are
+     the evidence) and show them to the user before any code.
+  2. The formatter on the syntax tree and the tokens the edits thread has, giving edits (ReplaceRanges, one undo),
+     not a new text: what it doesn't understand it leaves alone.  It comes after item 6 so Tab and indenting
+     already agree with it.
+  3. The proof: reformat each library of CommonLibraries in a scratch copy and look at the diff, which should be
+     close to nothing; each difference is a rule to fix or a file that breaks the house style (list those for the
+     user; don't commit a reformatted library without asking).
+  4. The commands, the folder and project forms, a Settings page if the code turns out to vary (the tab width for
+     lining up, the column banners go to), checks on a solution of its own, the page.
+
+
+11. Quick Documentation and the tool tip over a name: OPEN
+----------------------------------------------------------
+
+Added by the user 2026-11-26 ("Build both now, as a new item 11"); until then NavigationPlan.txt's decision 11 had
+them put off.  Neither is built; Control+Q is free.
+
+What there is to build on: CIDEQuickInfo has the popups (CInfoPopup: Type Info's, and the declaration shown with
+Control held over a name, ShowLinkAt) and finds the symbol under a place; Quick Definition previews code
+(CCodePreview); FindIDECommentStart finds where the comment over a declaration starts (the refactorings move it);
+the index has the documentation pages' references to a symbol (usage CPPUT_Documentation, since 2026-11-24).
+
+What to build, as IntelliJ's:
+  - Quick Documentation (Control+Q) for the symbol at the caret: its declaration, coloured; the comment over it, as
+    it is written (no markup read from it: the question decision 11 began with); where it is declared (class or
+    namespace, file); and the documentation pages that name it, each a link that opens the page there.  The keys
+    scroll it, Escape closes it, Control+Q again (IntelliJ's) keeps it open while the caret moves.
+  - The comment: the one over the definition (the house style's banner is there), else the one over the
+    declaration; lines that are only slashes are left out, so an empty banner shows nothing.
+  - The tool tip: the same content, shorter (the declaration, the comment's first lines, the place), when the
+    pointer rests on a name in an editor; gone when the pointer leaves or a key is pressed.  Settings' Editor page
+    has a tick to turn it off, and it isn't shown while a popup or a menu is open.
+  - In completion's list (item 5), Control+Q shows it for the selected entry: built with whichever comes second.
+
+Steps:
+  1. The symbol's documentation as data, in one place (the comment, the declaration's text, the place, the pages):
+     for both popups and, later, completion.  Measure reading the comment from a file that isn't open.
+  2. Quick Documentation's popup and command; the page links.
+  3. WindowLib: the pointer resting at a point of a text area (TestWindowLib); the tool tip; its setting.
+  4. Checks on Checks/Input/QuickInfo and Docs (a symbol with a comment, with a banner only, with a page);
+     navigation.md, settings.md; Navigation.txt's gap and NavigationPlan.txt's decision 11 brought up to date.
+
+For the user: whether it is built before items 5 to 10 ("now") or in its place after them.
 
 
 The user's answers (2026-11-17)
 -------------------------------
 
-  Q1  A regular expression engine: written, CRegex in BaseLib (not std::regex).                   Item 2.
+  Q1  A regular expression engine: written, CRegex in BaseLib (not std::regex).                   Item 2, built.
   Q2  Completion opens by itself only after . -> and ::; otherwise on Ctrl+Space.                  Item 5.
   Q3  Smart completion (Ctrl+Shift+Space): built with basic completion.                           Item 5.
   Q4  Tab types a tab.                                                                            Item 6.
   Q5  Reformat Code: wanted, as a new item after the others.                                      Item 10.
-  Q6  Bookmarks: Ctrl+F11 toggle, Ctrl+Shift+F11 mnemonic, F2 and Shift+F2 next and previous.     Item 7.
-  Q7  The tree's visible rows: start, and do it first.                                            Item 1.
+  Q6  Bookmarks: Ctrl+F11 toggle, Ctrl+Shift+F11 mnemonic, F2 and Shift+F2 next and previous.     Item 7, built.
+  Q7  The tree's visible rows: start, and do it first.                                            Item 1, built.
   Q8  The order: as above (the tree, Find and the engine, Find in Files, Go to Line, completion,
       indenting, bookmarks, context menus, the small things, Reformat Code).
+
+
+For the user to decide (2026-11-26)
+-----------------------------------
+
+  Item 5   DECIDED: the light path and the kept parse both, from the start, with the six points in the item.
+  Item 6   DECIDED: Tab types a tab on each row of a box selection, and in the documentation pages too.
+  Item 9b  DECIDED: a 65 configuration is indexed as it is built: no host headers, the target's defines.
+  Item 9d  CONFIRMED: Build on Control+F9, Go to Type Declaration on Control+Shift+B.
+  Item 11  DECIDED: Quick Documentation and the name's tool tip are built (NavigationPlan.txt's decision 11 changed).

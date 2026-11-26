@@ -254,8 +254,9 @@ Every stage is built.  What wasn't, and why:
     usages over a declaration, a key or a popup for Show Bookmarks, the navigation bar, commands that split the
     editor, an All tab and Shift Shift in Go to.
   - Put off, "later if at all" (decision 11): Quick Documentation, and the tool tip for a name the pointer rests
-    on.  Read as both being put off; the user hasn't been asked again.
-  - Decision 2 was read as: Build on Control+F9, so Go to Type Declaration has Control+Shift+B.  Not confirmed.
+    on.  Changed by the user 2026-11-26: both are to be built, as NextIDEWork.txt's item 11.
+  - Decision 2 was read as: Build on Control+F9, so Go to Type Declaration has Control+Shift+B.  Confirmed by
+    the user 2026-11-26: both stay as they are.
   - Not moved onto shared code, as decision 17 allows: the refactorings' own "function the caret is in" and unit
     caches; the lists of who follows edits, who is stepped through and who has settings (S11), which are still
     named where they are called.  (Find Usages' tabs, S12, were: follow-up 1.)
