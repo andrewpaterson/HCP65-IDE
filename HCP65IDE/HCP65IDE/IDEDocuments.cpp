@@ -26,6 +26,8 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/Timer.h"
 #include "BaseLib/StringHelper.h"
 #include "BaseLib/TextFile.h"
+#include "StandardLib/SimpleTextDiff.h"
+#include "StandardLib/TextDiffProducer.h"
 #include "StandardLib/Objects.h"
 #include "StandardLib/ObjectReader.h"
 #include "StandardLib/ObjectWriter.h"
@@ -1419,19 +1421,120 @@ void CIDEDocuments::DocumentChanged(const char* szFileName, STextDocumentChange*
 		return;
 	}
 	sChange.psChange = psChange;
+	sChange.paiLines = NULL;
 	sChange.iColumn = (int32)(psChange->uiStart - pTab->GetEditor()->GetLineStart(psChange->uiLine));
 	sChange.iLastLength = 0;
 	if (psChange->eChange == TDC_Inserted)
 	{
 		sChange.iLastLength = (int32)(psChange->uiEnd - pTab->GetEditor()->GetLineStart(psChange->LastLine()));
 	}
-	mpcContent->GetNavigationHistory()->AdjustPlaces(szFileName, &sChange);
-	mpcContent->GetUsages()->AdjustPlaces(szFileName, &sChange);
-	mpcContent->GetFindInFiles()->AdjustPlaces(szFileName, &sChange);
-	mpcContent->GetDuplicates()->AdjustPlaces(szFileName, &sChange);
-	mpcContent->GetBookmarks()->AdjustPlaces(szFileName, &sChange);
-	mpcContent->GetRecent()->AdjustPlaces(szFileName, &sChange);
+	AdjustPlaces(szFileName, &sChange);
 	mpcContent->GetRecent()->FileEdited(szFileName, &sChange);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Everything that keeps places in szFileName moves them as psChange
+// says.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDocuments::AdjustPlaces(const char* szFileName, SIDEPlaceChange* psChange)
+{
+	mpcContent->GetNavigationHistory()->AdjustPlaces(szFileName, psChange);
+	mpcContent->GetUsages()->AdjustPlaces(szFileName, psChange);
+	mpcContent->GetFindInFiles()->AdjustPlaces(szFileName, psChange);
+	mpcContent->GetDuplicates()->AdjustPlaces(szFileName, psChange);
+	mpcContent->GetBookmarks()->AdjustPlaces(szFileName, psChange);
+	mpcContent->GetRecent()->AdjustPlaces(szFileName, psChange);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A file's tab is closing with edits that weren't saved: the places kept
+// in it, which followed those edits, go back to where they are in the
+// file as it is on the disk.  A place on a line the edits changed goes to
+// the start of what that line was; one on a line they added goes to the
+// line it was added at.  Nothing moves if the file can't be read.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDocuments::RestorePlaces(Ptr<CIDEEditorTab> pTab)
+{
+	CTextFile		cFile;
+	CArrayInt		aiLines;
+	SIDEPlaceChange	sChange;
+
+	cFile.Init();
+	if (cFile.Read(pTab->GetFileName()))
+	{
+		aiLines.Init();
+		MakeIDESavedLines(pTab->GetEditor()->GetText(), cFile.Text(), &aiLines);
+		memset(&sChange, 0, sizeof(SIDEPlaceChange));
+		sChange.paiLines = &aiLines;
+		AdjustPlaces(pTab->GetFileName(), &sChange);
+		aiLines.Kill();
+	}
+	cFile.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// For each line of szEdited, the line of szSaved it is (from 0), or -1
+// less that line for one that was changed: by a diff of the two.  A line
+// the edits added has the saved line it was added before, as changed.
+//
+//////////////////////////////////////////////////////////////////////////
+void MakeIDESavedLines(const char* szEdited, const char* szSaved, CArrayInt* paiLines)
+{
+	CTextDiffProducer	cProducer;
+	CSimpleTextDiff		cDiff;
+	STextDiffBlock*		psBlock;
+	const char*			sz;
+	lsize				uiBlock;
+	int32				iEditedLines;
+	int32				iEdited;
+	int32				iSaved;
+	int32				iChanged;
+
+	cDiff.Init("");
+	cProducer.Init();
+	cProducer.ProduceFromText(&cDiff, "", szEdited, "", szSaved);
+
+	iEditedLines = 1;
+	for (sz = szEdited; *sz != '\0'; sz++)
+	{
+		iEditedLines += (*sz == '\n') ? 1 : 0;
+	}
+	iEdited = 0;
+	iSaved = 0;
+	for (uiBlock = 0; uiBlock <= cDiff.NumBlocks(); uiBlock++)
+	{
+		//The lines before the block (or after the last) are the same in both.
+		psBlock = (uiBlock < cDiff.NumBlocks()) ? cDiff.GetBlock(uiBlock) : NULL;
+		while (iEdited < (psBlock ? (int32)psBlock->uiStartLine1 : iEditedLines))
+		{
+			paiLines->Add(iSaved);
+			iEdited++;
+			iSaved++;
+		}
+		if (psBlock)
+		{
+			for (; iEdited < (int32)psBlock->uiEndLine1; iEdited++)
+			{
+				iChanged = (int32)psBlock->uiStartLine2 + (iEdited - (int32)psBlock->uiStartLine1);
+				if ((iChanged >= (int32)psBlock->uiEndLine2) && (psBlock->uiEndLine2 > psBlock->uiStartLine2))
+				{
+					iChanged = (int32)psBlock->uiEndLine2 - 1;
+				}
+				paiLines->Add(-iChanged - 1);
+			}
+			iSaved = (int32)psBlock->uiEndLine2;
+		}
+	}
+	cProducer.Kill();
+	cDiff.Kill();
 }
 
 
@@ -1458,8 +1561,9 @@ void CIDEDocuments::ReloadTab(Ptr<CIDEEditorTab> pTab, const char* szText)
 // lines put in above it move it down.  Text taken out before it moves it
 // back; a place in what was taken out goes to where that was.  (Lines
 // taken out up to the middle of its line leave its column that much too
-// far along: the edit doesn't say how much of that line went.)  True if
-// it moved.
+// far along: the edit doesn't say how much of that line went.)  A change
+// with no edit puts it back where it was saved (see SIDEPlaceChange).
+// True if it moved.
 //
 //////////////////////////////////////////////////////////////////////////
 bool AdjustIDEPlace(int32* piLine, int32* piColumn, SIDEPlaceChange* psChange)
@@ -1472,6 +1576,27 @@ bool AdjustIDEPlace(int32* piLine, int32* piColumn, SIDEPlaceChange* psChange)
 
 	iLine = *piLine;
 	iColumn = *piColumn;
+	if (psChange->psChange == NULL)
+	{
+		//Put back where it is in the file as it was saved.
+		if ((psChange->paiLines->NumElements() == 0) || (iLine < 0))
+		{
+			return false;
+		}
+		iLine = psChange->paiLines->GetValue((iLine < (int32)psChange->paiLines->NumElements()) ? iLine : (int32)psChange->paiLines->NumElements() - 1);
+		if (iLine < 0)
+		{
+			iLine = -iLine - 1;
+			iColumn = 0;
+		}
+		if ((iLine == *piLine) && (iColumn == *piColumn))
+		{
+			return false;
+		}
+		*piLine = iLine;
+		*piColumn = iColumn;
+		return true;
+	}
 	iChangeLine = (int32)psChange->psChange->uiLine;
 	iLines = (int32)psChange->psChange->uiLines;
 	iLength = (int32)psChange->psChange->Length();

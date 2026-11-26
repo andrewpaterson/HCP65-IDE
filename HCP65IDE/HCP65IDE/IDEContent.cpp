@@ -1132,6 +1132,7 @@ void CIDEContent::PaneClosed(CDockPane* pcPane)
 	mpEdit->FileClosed(pTab->GetFileName());
 	if (pTab->IsModified())
 	{
+		mpDocuments->RestorePlaces(pTab);
 		mpDocuments->ReindexDiscarded(pTab);
 	}
 	mpDocuments->RemoveTab(pTab);

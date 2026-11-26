@@ -63,11 +63,16 @@ protected:
 
 //An edit of an open file, as the places kept in the file are moved by it (AdjustIDEPlace): the edit, the column it
 //starts at on its line and, for text put in, how much of it is on its last line.
+//
+//Or, with no edit (psChange NULL), a file's edits thrown away, which puts the places back: paiLines has, for each line
+//the file had as it was edited, the line it is in the file as it was saved (MakeIDESavedLines), or -1 less that line
+//(-1 for line 0) if the line was changed, whose places go to its start.
 struct SIDEPlaceChange
 {
 	STextDocumentChange*	psChange;
 	int32					iColumn;
 	int32					iLastLength;
+	CArrayInt*				paiLines;
 };
 
 
@@ -156,6 +161,7 @@ public:
 	void				UpdateEditedTabsNow(void);
 	void				ReindexAll(void);
 	void				ReindexDiscarded(Ptr<CIDEEditorTab> pTab);
+	void				RestorePlaces(Ptr<CIDEEditorTab> pTab);
 	bool				CloseFile(const char* szFileName);
 	Ptr<CTextArea>		GetEditor(void);
 	Ptr<CScrollPane>	GetEditorPane(void);
@@ -186,6 +192,7 @@ public:
 protected:
 	void				AddAnchor(Ptr<CIDEEditorTab> pTab);
 	void				RemoveAnchor(Ptr<CIDEEditorTab> pTab);
+	void				AdjustPlaces(const char* szFileName, SIDEPlaceChange* psChange);
 	int64				GiveEditedTabs(int64 iNow, bool bNow);
 	void				AddEditedFile(size uiProject, const char* szFileName, const char* szText, size uiChanges, bool bHighlight, bool bIndex, bool bEdited, CArrayIDEEditedFiles* papsFiles);
 	bool				TakeEditedFiles(bool bWait);
@@ -196,6 +203,7 @@ protected:
 
 
 bool AdjustIDEPlace(int32* piLine, int32* piColumn, SIDEPlaceChange* psChange);
+void MakeIDESavedLines(const char* szEdited, const char* szSaved, CArrayInt* paiLines);
 
 
 #endif // __IDE_DOCUMENTS_H__

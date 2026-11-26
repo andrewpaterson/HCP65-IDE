@@ -53,7 +53,10 @@ tell [`CIDENavigationHistory`], so every jump is on Back.  Back and Forward are 
 move of ten lines or more from where the caret had stayed for a second counting as one.  Places kept by the
 history, Find Usages, Find in Files, Duplicates, the bookmarks and the recent places follow their files' edits:
 [`CIDEDocuments::DocumentChanged`] calls each one's `#!text AdjustPlaces` by name, and each moves its places with
-[`AdjustIDEPlace`].
+[`AdjustIDEPlace`].  When a tab is closed with edits that weren't saved, the places go back to
+where they are in the file on the disk ([`CIDEDocuments::RestorePlaces`]): the edited text and the file are diffed
+([`MakeIDESavedLines`]) and each place's line is looked up, since an edit that took lines out doesn't say enough to
+be run backwards.  The file is indexed again from the disk too ([`CIDEDocuments::ReindexDiscarded`]).
 
 Control+click is the text area's link press ([`CTextArea::SetLinkEvent`]): Control and button one, which used to
 start a selection drag, is the link's, and [`CIDENavigator::LinkPressed`] puts the caret on the name and goes where

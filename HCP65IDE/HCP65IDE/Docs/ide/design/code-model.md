@@ -197,7 +197,4 @@ is on.
   builds is only text.  Macros aren't in the index at all: what needs them reads the files' texts.
 - A partial specialisation isn't checked as itself, and a template's value parameter is 1 in the check
   (`M maItems[N]` is an array of 1).
-- After a modified tab is closed without saving the file is indexed again from the disk
-  ([`CIDEDocuments::ReindexDiscarded`]), but places others keep in it (Find Usages' results, Back's) stay where the
-  discarded edits moved them ([`HCP65IDE/NextIDEWork.txt`], 9a).
 - The index over MCP for Claude (`DocsPlan.txt` H4).

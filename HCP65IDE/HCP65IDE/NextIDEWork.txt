@@ -15,7 +15,7 @@ IntelliJ IDEA has it, not a cut-down version, and don't order the work by what i
   6   Automatic indenting, Tab, the line commands      built 2026-11-26
   7   Bookmarks                                        built 2026-11-21
   8   Context menus                                    built 2026-11-26
-  9   Smaller things left open                         OPEN: a, b and c to build; b decided 2026-11-26
+  9   Smaller things left open                         built 2026-11-26
   10  Reformat Code                                    OPEN: last of the ten
   11  Quick Documentation and the name's tool tip      built 2026-11-26
 
@@ -275,40 +275,38 @@ pointer in a real window; the menus of a results pane or the Run tab floated in 
 tab floated is checked).
 
 
-9. Smaller things left open: OPEN
----------------------------------
+9. Smaller things left open: built 2026-11-26
+---------------------------------------------
 
-  a. A modified tab closed without saving.  The index part is done: the file is indexed again as it is on disk
-     (CIDEDocuments::ReindexDiscarded).  Still open: Find Usages' results and Back's places for that file stay
-     where the thrown-away edits moved them (CIDEDocumentAnchor).  To build: on such a close, each holder of places
-     in that file puts them back as they were when the file was last saved or opened.  The plain way is for the
-     anchor to keep the file's changes since then and run them backwards over the places.
-  b. The index for a 65 configuration.  Since 2026-11-24 the index (IndexLib's CWorkspaceIndex) takes the chosen
-     configuration's include folders and defines, and choosing another indexes again (CIDEConfigurations).  But for
-     every configuration, a W65C816 or 65C64 one too, it adds this machine's compiler headers after the project's
-     (AddDefaultSystemDirectories, GetProject: "until a build configuration says which it has") and MSVC's own
-     defines (AddCompilerDefines: _MSC_VER, _WIN32...).  So with a 65 configuration chosen, code in #ifdef _WIN32
-     is indexed as live and the 65 branch beside it isn't (Find Usages and Rename can miss what is built), and an
-     #include of a header the 65 hasn't finds the host's.
-     DECIDED by the user, 2026-11-26: a 65 configuration is indexed as hcp65build compiles it: none of the host's
-     headers, none of MSVC's defines, and the target's own from the code the build uses, so the two can't drift:
-     CCPPTargetW65C816::AddDefines (__W65C816__, __LIBC65__, __W65C816_ASSEMBLY__ with assembly units) and
-     CCPPTarget65C64::AddDefines (__65C64__, __LIBC65__).
-     Steps: see what the index gives a 65 configuration's units now (ParseUnit has the build configuration's
-     compile options; whether its target's AddDefines already runs wasn't looked at); the target's defines in
-     place of AddCompilerDefines, and no system directories, when the configuration's processor is a 65; a check
-     on Checks/Input/Debugging (an #ifdef _WIN32 and an #ifdef __W65C816__ branch, which is live under each
-     configuration); TestIndexLib; expect names that only the host's headers resolved to show in the Indexing tab,
-     and list them for the user rather than hide them.
-  c. The `breakpoint` check opens Kernal.cpp in the real HCP65 Kernal solution.  The checks now put their own
-     recent solutions in place and remove HCP65Kernal.hcp65user afterwards if the run made it, so nothing is left
-     behind, but it still isn't on a solution of its own: move it onto a copy of Checks/Input/Debugging or
-     Navigation, as bookmarks-read is.
-  d. NavigationPlan.txt's two readings that the user hadn't confirmed.
-     Decision 2, CONFIRMED by the user 2026-11-26: Build stays on Control+F9 and Go to Type Declaration on
-     Control+Shift+B, IntelliJ's keys both.  Nothing to build.
-     Decision 11 (Quick Documentation and the name's tool tip, "later if at all"), CHANGED by the user
-     2026-11-26: build both now, as item 11.  Built that day.
+HCP65-IDE: the commit named "A 65 configuration is indexed as hcp65build compiles it" (b and c) and the one after
+it named "Places kept in a file go back" (a).  Checks index-target, index-target-65c64, discard-restores-places
+and breakpoint; TestIndexLib's TestWorkspaceIndexTarget.
+
+  a. A modified tab closed without saving: the places kept in the file (Find Usages' and Find's results,
+     Duplicates', bookmarks, Back's and the recent places) go back to where they are in the file on the disk
+     (CIDEDocuments::RestorePlaces).  Not as planned: nothing keeps the edits to run backwards, because an edit
+     that takes lines out doesn't say enough to undo it (AdjustIDEPlace's own note).  The edited text and the
+     file are diffed instead (MakeIDESavedLines) and each place's line is looked up: a place on a line the edits
+     changed goes to the start of what that line was.
+  b. A 65 configuration is indexed as hcp65build compiles it (the user, 2026-11-26): the target's own defines from
+     the code the build uses (CCPPTarget::AddDefines, through CWorkspaceIndex::AddTargetDefines), Libc65's headers
+     in place of this machine's (CWorkspaceIndex::SetLibc65Directory; the IDE's is the build's, hcp65index has
+     -libc65 or finds it above the first solution), and, which wasn't said, the type check is for the target too
+     (CParsedUnit::meTarget), so an int is 16 bits there: the index, the edited file's problems and the
+     refactorings' units all use it.  CBuildConfiguration::GetTarget says which, in place of the three places that
+     worked it out.
+     What the host's headers alone had resolved: nothing.  HCP65's Kernal, ModPlay and Shell solutions index with
+     no unit unable to include what it names (25712, 34617 and 24932 symbols, the same tables as before the type
+     check changed).
+     For the user to know: the website's symbol table is made by hcp65index from solutions whose first
+     configuration is a 65's, so it is now made this way too.  The site build wasn't run (another session's pages
+     stop it).
+  c. The `breakpoint` check is on a copy of Checks/Input/Navigation.
+  d. NavigationPlan.txt's two readings: settled 2026-11-26 (decision 2 confirmed; decision 11 built as item 11).
+
+Checked: TestIndexLib 64 bit Release; the IDE's 579 checks on a private Release build, all passing but
+enum-to-class, which failed before this work.  Not checked: an MSVC build; Windows; a 65 configuration's units
+that only compile with assembly units off.
 
 
 10. Reformat Code: OPEN

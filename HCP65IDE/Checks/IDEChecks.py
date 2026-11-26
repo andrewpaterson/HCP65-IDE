@@ -4287,6 +4287,15 @@ CHECKS = [
 		#On a copy of the navigation checks' project, as it writes the breakpoint beside the solution.
 		'OPEN': 'Shapes.cpp', 'DEBUG': 'line:12,buildtab,wait:300,printtabs'}),
 		[r'^Tabs: .*>Shapes\.cpp'], []),
+	('discard-restores-places', dict(MakeNavigationCopy(), **{
+		#A file's kept places follow its edits: two lines put in above them move Find Usages' results from line 12 to
+		#14 and a bookmark from 23 to 25.  Closed without saving, the edits are gone and the places go back to where
+		#they are in the file on the disk (NextIDEWork.txt 9a).
+		'WAIT_INDEX': '1', 'OPEN': 'Shapes.cpp', 'CARET': '12:14', 'DIALOG_ANSWER': "Don't Save",
+		'DEBUG': 'edit:usages,edit:printusages,edit:focus:editor,edit:caret:23:1,command:Bookmarks.Toggle,edit:caret:1:1,edit:key:enter,edit:key:enter,edit:caret:9:1,edit:type:x,wait:900,edit:printusages,edit:printbookmarks,'
+		         'closetab,answered:1,printtabs,wait:900,edit:printusages,edit:printbookmarks'}),
+		[r'^          12: return 3 \* miRadius \* miRadius;$', r'^          14: return 3 \* miRadius \* miRadius;$', r'^  Shapes\.cpp:25$',
+		 r"^Dialog \[Save Changes\] answered Don't Save$", r'^Tabs:$', r'^          12: return 3 \* miRadius \* miRadius;$', r'^  Shapes\.cpp:23$'], [r'ERROR']),
 	('index-target', MakeIndexTarget('Debugging.sln'),
 		#A solution read with an HCP65 configuration is indexed as hcp65build compiles it: the W65C816's defines and
 		#none of MSVC's, so the function in #ifdef __W65C816__ is found and the ones in #ifdef _WIN32 and __65C64__
