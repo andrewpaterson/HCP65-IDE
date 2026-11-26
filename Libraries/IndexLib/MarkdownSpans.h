@@ -82,12 +82,13 @@ public:
 	size					NumLinks(void) const;
 	SMarkdownLink*			GetLink(size uiIndex);
 
+	static int				FindFence(const char* szLine, int iLength, char* pcFence, int* piAfter);
+
 protected:
 	void					ScanLine(int iLine, const char* szLine, const char* szVisible, int iLength);
 	void					ScanLinks(int iLine, const char* szVisible, int iLength, size uiFirstSpan);
 	void					ScanSnippet(int iLine, const char* szLine, int iLength);
 	void					AddLink(int iLine, const char* szLine, int iStart, int iEnd, bool bSnippet);
-	static int				FindFence(const char* szLine, int iLength, char* pcFence, int* piAfter);
 	static EMarkdownSpanKind	GetKind(const char* szLine, int iLength, int iStart, int iEnd);
 };
 

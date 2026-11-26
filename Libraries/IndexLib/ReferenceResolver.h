@@ -55,6 +55,7 @@ struct SPageReference
 	int					iText;		//Where szText starts.
 	CChars				szText;		//What its backticks hold, without the white space around it.
 	SSymbolTableEntry*	psSymbol;	//What a link names, NULL for a file (or once the table it is in has gone).
+	int					iSymbolKind;	//Its ECPPSymbolKind, -1 for a file or nothing.
 	CChars				szFile;		//A link's file, relative to the table's root.
 	int					iTargetLine;	//1 based, 0 for a file.
 	CChars				szMessage;	//An error's or a warning's.

@@ -27,6 +27,9 @@
     <ClCompile Include="DocsSite.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="MarkdownHighlighter.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="WorkspaceIndex.h">
@@ -45,6 +48,9 @@
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="DocsSite.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="MarkdownHighlighter.h">
       <Filter>Source</Filter>
     </ClInclude>
   </ItemGroup>

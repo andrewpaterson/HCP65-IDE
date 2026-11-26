@@ -403,6 +403,7 @@ void CReferenceResolver::ResolvePage(const char* szPage, CArrayPageReferences* p
 				psReference->iText = psSpan->iText;
 				psReference->szText.Init(psSpan->szText.Text());
 				psReference->psSymbol = psEntry;
+				psReference->iSymbolKind = psEntry->eKind;
 				psReference->szFile.Init(psEntry->szFile.Text());
 				psReference->iTargetLine = psEntry->iLine;
 				psReference->szMessage.Init();
@@ -440,6 +441,7 @@ void CReferenceResolver::ResolveReference(const char* szText, SPageReference* ps
 
 	psDest->eKind = PRK_Error;
 	psDest->psSymbol = NULL;
+	psDest->iSymbolKind = -1;
 	psDest->iTargetLine = 0;
 	if (IsFileReference(szText))
 	{
@@ -486,6 +488,7 @@ void CReferenceResolver::ResolveReference(const char* szText, SPageReference* ps
 	{
 		psDest->eKind = PRK_Link;
 		psDest->psSymbol = psEntry;
+		psDest->iSymbolKind = psEntry->eKind;
 		psDest->szFile.Set(psEntry->szFile.Text());
 		psDest->iTargetLine = psEntry->iLine;
 	}
