@@ -257,6 +257,7 @@ void CMarkdownSpans::ScanLine(int iLine, const char* szLine, const char* szVisib
 		psSpan->iLine = iLine;
 		psSpan->iColumn = i;
 		psSpan->iEnd = iClose + iRun;
+		psSpan->iText = iFirst;
 		psSpan->eKind = GetKind(szLine, iLength, psSpan->iColumn, psSpan->iEnd);
 		psSpan->szText.Init();
 		psSpan->szText.AppendSubString(&szVisible[iFirst], iLast - iFirst);

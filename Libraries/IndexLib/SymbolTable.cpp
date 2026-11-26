@@ -41,18 +41,23 @@ static int CompareSymbolTableEntries(const void* pvLeft, const void* pvRight)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// szRoot is the folder the table's file names are relative to.
+// szRoot is the folder the table's file names are relative to; NULL
+// keeps every file, by its full path (the IDE's).
 //
 //////////////////////////////////////////////////////////////////////////
 void CSymbolTable::Init(const char* szRoot)
 {
 	CFileUtil	cFileUtil;
 
-	mszRoot.Init(szRoot);
-	cFileUtil.FullPath(&mszRoot);
-	if (!mszRoot.EndsWith(FILE_SEPARATOR))
+	mszRoot.Init();
+	if (szRoot)
 	{
-		mszRoot.Append(FILE_SEPARATOR);
+		mszRoot.Set(szRoot);
+		cFileUtil.FullPath(&mszRoot);
+		if (!mszRoot.EndsWith(FILE_SEPARATOR))
+		{
+			mszRoot.Append(FILE_SEPARATOR);
+		}
 	}
 	masEntries.Init();
 }
@@ -248,7 +253,8 @@ int CSymbolTable::ComparePlaces(CArrayChars* paszFiles, ECPPSymbolKind eKind, SC
 //////////////////////////////////////////////////////////////////////////
 //
 // szFileName relative to the root with '/' between folders, false (and
-// pszDest empty) if it isn't under the root.
+// pszDest empty) if it isn't under the root.  Without a root, its full
+// path.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CSymbolTable::GetRelativeFile(const char* szFileName, CChars* pszDest)
@@ -258,6 +264,10 @@ bool CSymbolTable::GetRelativeFile(const char* szFileName, CChars* pszDest)
 
 	pszDest->Set(szFileName);
 	cFileUtil.FullPath(pszDest);
+	if (mszRoot.Empty())
+	{
+		return true;
+	}
 #ifdef _WIN32
 	bUnder = pszDest->StartsWithIgnoreCase(mszRoot.Text());
 #else

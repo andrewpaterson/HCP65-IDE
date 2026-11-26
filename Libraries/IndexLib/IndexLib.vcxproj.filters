@@ -9,6 +9,9 @@
     <ClCompile Include="WorkspaceIndex.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="WorkspaceIndexPages.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="SystemHeaders.cpp">
       <Filter>Source</Filter>
     </ClCompile>

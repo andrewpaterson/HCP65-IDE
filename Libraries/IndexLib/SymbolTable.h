@@ -42,13 +42,14 @@ typedef CArrayTemplate<SSymbolTableEntry>	CArraySymbolTableEntries;
 //Each symbol an index (CCPPIndex) has that a page can name, with the one place a reference to it links to: its
 //declaration in a header.  A class's or an enum's is its definition, a function's its declaration (where its
 //comment and signature are); a symbol declared only in a .cpp file links there.  Only symbols declared in files
-//under the root are kept: not the system headers', nor parameters, labels and the names inside functions.
+//under the root are kept (without one, every file's, as a full path): not the system headers', nor parameters, labels
+//and the names inside functions.
 //Written as text for the website build (Write, Read), sorted by key, one symbol a line:
 //	<key> TAB <kind> TAB <file> TAB <line>
 class CSymbolTable
 {
 protected:
-	CChars						mszRoot;		//Full path, ending in a separator.
+	CChars						mszRoot;		//Full path, ending in a separator; empty to keep files' full paths.
 	CArraySymbolTableEntries	masEntries;		//Sorted by key.
 
 public:

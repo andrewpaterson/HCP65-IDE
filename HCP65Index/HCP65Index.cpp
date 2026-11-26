@@ -144,7 +144,7 @@ static int ResolvePages(const char* szTable, const char* szFiles, CArrayChars* p
 	int						iResult;
 
 	iResult = HCP65_INDEX_EXIT_OK;
-	cTable.Init("");
+	cTable.Init(NULL);
 	aszFiles.Init();
 	if (!cTable.Read(szTable))
 	{

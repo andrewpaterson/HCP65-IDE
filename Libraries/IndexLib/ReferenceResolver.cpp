@@ -383,9 +383,11 @@ void CReferenceResolver::ResolvePage(const char* szPage, CArrayPageReferences* p
 			psReference = pasDest->Add();
 			psReference->szFile.Init();
 			psReference->szMessage.Init();
+			psReference->szText.Init(psSpan->szText.Text());
 			psReference->iLine = psSpan->iLine;
 			psReference->iColumn = psSpan->iColumn - 1;
 			psReference->iEnd = psSpan->iEnd + 1;
+			psReference->iText = psSpan->iText;
 			ResolveReference(psSpan->szText.Text(), psReference);
 		}
 		else if ((psSpan->eKind == MSK_Plain) && CouldBeReference(psSpan->szText.Text()))
@@ -398,6 +400,8 @@ void CReferenceResolver::ResolvePage(const char* szPage, CArrayPageReferences* p
 				psReference->iLine = psSpan->iLine;
 				psReference->iColumn = psSpan->iColumn;
 				psReference->iEnd = psSpan->iEnd;
+				psReference->iText = psSpan->iText;
+				psReference->szText.Init(psSpan->szText.Text());
 				psReference->psSymbol = psEntry;
 				psReference->szFile.Init(psEntry->szFile.Text());
 				psReference->iTargetLine = psEntry->iLine;
@@ -802,6 +806,7 @@ void CReferenceResolver::KillPageReferences(CArrayPageReferences* pasReferences)
 	{
 		pasReferences->Get(i)->szMessage.Kill();
 		pasReferences->Get(i)->szFile.Kill();
+		pasReferences->Get(i)->szText.Kill();
 	}
 	pasReferences->Kill();
 }

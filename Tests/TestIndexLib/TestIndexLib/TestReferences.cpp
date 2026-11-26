@@ -27,7 +27,7 @@ void TestReferencesPage(void)
 	CArrayPageReferences	asReferences;
 	CChars					szPrinted;
 
-	cTable.Init("");
+	cTable.Init(NULL);
 	AssertTrue(cTable.Read(TEST_REFERENCES_FOLDER "Symbols.txt"));
 	AssertSize(8, cTable.NumEntries());
 	aszFiles.Init();
@@ -84,7 +84,7 @@ void TestReferencesResolve(void)
 	CChars				szName;
 	CChars				szRest;
 
-	cTable.Init("");
+	cTable.Init(NULL);
 	AssertTrue(cTable.Read(TEST_REFERENCES_FOLDER "Symbols.txt"));
 	cResolver.Init(&cTable, NULL);
 
@@ -153,7 +153,7 @@ void TestReferencesTable(void)
 	CTextFile		cFile;
 	CChars			szPrinted;
 
-	cTable.Init("");
+	cTable.Init(NULL);
 	AssertTrue(cTable.Read(TEST_REFERENCES_FOLDER "Symbols.txt"));
 	cFile.Init();
 	AssertTrue(cFile.Read(TEST_REFERENCES_FOLDER "Symbols.txt"));

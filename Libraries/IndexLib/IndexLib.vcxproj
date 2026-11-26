@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="WorkspaceIndex.cpp" />
+    <ClCompile Include="WorkspaceIndexPages.cpp" />
     <ClCompile Include="SystemHeaders.cpp" />
     <ClCompile Include="SymbolTable.cpp" />
     <ClCompile Include="MarkdownSpans.cpp" />

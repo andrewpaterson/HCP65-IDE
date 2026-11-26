@@ -138,6 +138,13 @@ void CWorkspaceIndex::Init(CBuildWorkspace* pcWorkspace)
 	muiProblemUnits = 0;
 	miIndexStart = 0;
 	miIndexEnd = -1;
+
+	mapsPages.Init();
+	mbPagesIndexed = true;
+	mcSiteTable.Init(NULL);
+	maszSiteFiles.Init();
+	mszSiteRoot.Init();
+	mbSiteSymbols = false;
 }
 
 
@@ -150,6 +157,11 @@ void CWorkspaceIndex::Init(CBuildWorkspace* pcWorkspace)
 void CWorkspaceIndex::Kill(void)
 {
 	StopJobs();
+	KillPages();
+	mapsPages.Kill();
+	mszSiteRoot.Kill();
+	maszSiteFiles.Kill();
+	mcSiteTable.Kill();
 	mcProblems.Kill();
 	maszProblems.Kill();
 	mcIncluders.Kill();
@@ -451,9 +463,10 @@ CProject* CWorkspaceIndex::GetProject(size uiProject)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Every .cpp and .c of every loaded project is indexed on worker threads.
-// The index can be asked while it is being built; it is what has been
-// added so far.
+// Every .cpp and .c of every loaded project is indexed on worker threads,
+// then (on the thread that indexed the last) the references in the
+// projects' pages (IndexPages).  The index can be asked while it is being
+// built; it is what has been added so far.
 //
 //////////////////////////////////////////////////////////////////////////
 void CWorkspaceIndex::StartIndexing(void)
@@ -463,6 +476,7 @@ void CWorkspaceIndex::StartIndexing(void)
 	CVcxProject*		pcProject;
 	CVcxItem*			pcItem;
 	SWorkspaceIndexJob*	psJob;
+	CChars				szMkdocsFile;
 
 	KillJobs();
 	mcIndexMutex.Lock();
@@ -477,7 +491,15 @@ void CWorkspaceIndex::StartIndexing(void)
 	miIndexEnd = -1;
 	muiIndexed = 0;
 	muiIndexings++;
+	mbPagesIndexed = false;
 	mcIndexMutex.Unlock();
+	szMkdocsFile.Init();
+	if (FindDocsSite(&szMkdocsFile))
+	{
+		SetDocsSite(szMkdocsFile.Text());
+	}
+	szMkdocsFile.Kill();
+	AddPages();
 
 	for (i = 0; i < mpcWorkspace->NumProjects(); i++)
 	{
@@ -511,11 +533,13 @@ void CWorkspaceIndex::StartIndexing(void)
 		}
 	}
 
-	//With nothing to index it is done already.
+	//With no C++ to index only the pages are.
 	if (mapsJobs.NumElements() == 0)
 	{
+		IndexPages();
 		mcIndexMutex.Lock();
-		miIndexEnd = miIndexStart;
+		mbPagesIndexed = true;
+		miIndexEnd = GetDebugTickCount();
 		mcIndexMutex.Unlock();
 	}
 
@@ -601,6 +625,7 @@ void CWorkspaceIndex::IndexUnit(SWorkspaceIndexJob* psJob)
 	size					i;
 	int32*					piJob;
 	bool					bAdded;
+	bool					bLast;
 
 	mcIndexMutex.Lock();
 	bCancelled = mbCancelled;
@@ -654,11 +679,18 @@ void CWorkspaceIndex::IndexUnit(SWorkspaceIndexJob* psJob)
 		}
 	}
 	muiIndexed++;
-	if (muiIndexed == mapsJobs.NumElements())
-	{
-		miIndexEnd = GetDebugTickCount();
-	}
+	bLast = muiIndexed == mapsJobs.NumElements();
 	mcIndexMutex.Unlock();
+
+	//The last unit's thread resolves the pages' references, with all the C++ indexed.
+	if (bLast)
+	{
+		IndexPages();
+		mcIndexMutex.Lock();
+		mbPagesIndexed = true;
+		miIndexEnd = GetDebugTickCount();
+		mcIndexMutex.Unlock();
+	}
 
 	aszErrors.Kill();
 	cGathered.Kill();
@@ -785,16 +817,18 @@ bool CWorkspaceIndex::IsIndexingTemplates(void) const { return mbIndexTemplates;
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Whether the index is still being built (StartIndexing).
+// Whether the index is still being built (StartIndexing): its units, then
+// its pages.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CWorkspaceIndex::IsIndexing(void)
 {
-	size	uiIndexed;
-	size	uiToIndex;
+	bool	bIndexing;
 
-	GetIndexingProgress(&uiIndexed, &uiToIndex);
-	return uiIndexed < uiToIndex;
+	mcIndexMutex.Lock();
+	bIndexing = (muiIndexed < mapsJobs.NumElements()) || !mbPagesIndexed;
+	mcIndexMutex.Unlock();
+	return bIndexing;
 }
 
 
@@ -1029,6 +1063,10 @@ void CWorkspaceIndex::Reset(void)
 	mcProjectsMutex.Lock();
 	KillProjects();
 	mcProjectsMutex.Unlock();
+	mcIndexMutex.Lock();
+	KillPages();
+	mbPagesIndexed = true;
+	mcIndexMutex.Unlock();
 }
 
 

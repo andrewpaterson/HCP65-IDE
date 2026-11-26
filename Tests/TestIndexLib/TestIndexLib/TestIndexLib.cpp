@@ -8,6 +8,7 @@
 void TestWorkspaceIndex(void);
 void TestSymbolTable(void);
 void TestReferences(void);
+void TestWorkspacePages(void);
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -27,6 +28,7 @@ int __cdecl main(void)
 	TestWorkspaceIndex();
 	TestSymbolTable();
 	TestReferences();
+	TestWorkspacePages();
 
 	MemoryKill();
 	TypeConverterKill();

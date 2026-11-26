@@ -52,7 +52,9 @@ struct SPageReference
 	int					iLine;		//0 based.
 	int					iColumn;	//0 based, in bytes: a reference's '[', a plain span's first backtick.
 	int					iEnd;		//After a reference's ']': where its link goes.
-	SSymbolTableEntry*	psSymbol;	//What a link names, NULL for a file.
+	int					iText;		//Where szText starts.
+	CChars				szText;		//What its backticks hold, without the white space around it.
+	SSymbolTableEntry*	psSymbol;	//What a link names, NULL for a file (or once the table it is in has gone).
 	CChars				szFile;		//A link's file, relative to the table's root.
 	int					iTargetLine;	//1 based, 0 for a file.
 	CChars				szMessage;	//An error's or a warning's.
@@ -85,6 +87,7 @@ public:
 	SSymbolTableEntry*	ResolveSymbol(const char* szText);
 	size				ResolveFiles(const char* szText, CArrayChars* paszDest);
 	void				ResolvePage(const char* szPage, CArrayPageReferences* pasDest);
+	void				ResolveReference(const char* szText, SPageReference* psDest);
 
 	static bool			IsFileReference(const char* szText);
 	static bool			CouldBeReference(const char* szText);
@@ -100,7 +103,6 @@ public:
 protected:
 	void				AddName(const char* szName, SSymbolTableEntry* psEntry);
 	size				FindFirstName(const char* szName);
-	void				ResolveReference(const char* szText, SPageReference* psDest);
 };
 
 

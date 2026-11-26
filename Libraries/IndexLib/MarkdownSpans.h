@@ -39,6 +39,7 @@ struct SMarkdownSpan
 	int					iLine;		//0 based.
 	int					iColumn;	//0 based, in bytes: its first backtick.
 	int					iEnd;		//After its last backtick.
+	int					iText;		//Where szText starts.
 	EMarkdownSpanKind	eKind;
 	CChars				szText;		//Between the backticks, without the white space around it.
 };

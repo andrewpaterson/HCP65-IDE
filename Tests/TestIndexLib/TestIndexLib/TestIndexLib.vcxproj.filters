@@ -18,5 +18,8 @@
     <ClCompile Include="TestReferences.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="TestWorkspacePages.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
