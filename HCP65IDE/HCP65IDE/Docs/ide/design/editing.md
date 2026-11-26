@@ -209,8 +209,7 @@ copy it is tested in TestWindowLib, not by the checks.
   isn't checked; Alt+drag isn't checked in the IDE (the window manager may take it), only in TestWindowLib.
 - Caret usages: an edited tab after the index is rebuilt from the files isn't checked.
 - No automatic indenting, comment commands or Move Line, and Tab types spaces: [`HCP65IDE/NextIDEWork.txt`]'s item
-  6, decided (Tab types a tab, in a box and in the pages too) and not built.  No code completion (item 5) or
-  Reformat Code (item 10).
+  6, decided (Tab types a tab, in a box and in the pages too) and not built.  No Reformat Code (item 10).
 - Templates: Overriding Function Body and Forward Declaration were planned and not made, as nothing writes them;
   `${NAMESPACES_OPEN}` and `${NAMESPACES_CLOSE}` are empty; of the variables the plan listed, `${SOLUTION_NAME}`,
   `${BASE_CLASS}`, `${BASE_INCLUDE}` and `${FORWARD_DECLARATIONS}` aren't set (a refactoring hands a template only

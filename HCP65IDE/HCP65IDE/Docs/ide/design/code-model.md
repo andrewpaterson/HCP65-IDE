@@ -106,6 +106,28 @@ find an `#include` as the compiler would ([`CIDECodeModel::FindIncludeFile`]: be
 the project's directories, then the system's), so Rename File and Optimise #includes change only the `#include`s
 that find the file.
 
+## Code completion
+
+Completion needs the type of the expression before a `.`, `->` or `::` in the time of a key, and a checked parse of
+the file takes 47 ms in a BaseLib file and 1.7 s in `IDEUsages.cpp` (2026-11-21).  So it has two paths, both asked
+at once (built 2026-11-26, [`HCP65IDE/NextIDEWork.txt`]'s item 5; the user page is
+[the editor's](../editor.md#code-completion)):
+
+- The light path ([`CIDELightTyper`]) works out the expression from the text and the index alone, with no parse:
+  names, members, calls by what they return, indexings, `this`, casts, typedefs.  It answers only what it is sure
+  of, so the list opens at once when it can.
+- The kept parse ([`CIDEExpressionTyper`]) checks the file on the edits thread ([`CIDECodeModel::RunEditsJob`]) with
+  the expression put in brackets where it was written and the line finished, so nothing unfinished is left for the
+  parser: IntelliJ's dummy name done the other way round.  Where the light path had nothing, the list opens empty
+  with a note that it is working, and closes if the parse has nothing either.
+
+The list ([`CIDECompletion`]) is WindowLib's [`CChooserPopup`] driven by the editor, which keeps the keys; it only
+grows ([`CChooserPopup::ItemsChanged`] keeps the selection).  The index has no access, so [`CIDEClassAccess`] reads
+a class's from its text.  Complete Code by Type ([`CIDEExpectedTypes`]) uses the light path only and doesn't wait.
+Members of a `CModPlayer*` took 15 ms from the key and the names in scope starting `C` (21,709) 33 ms (Release x64,
+the ModPlay workspace, 2026-11-26); before the index was asked only for the names wanted, the member list took
+385 ms.
+
 ## Documentation pages
 
 A project's Markdown items are documentation pages ([Documentation Pages](../documentation.md)).  Once the C++ is
@@ -172,8 +194,4 @@ is on.
 - After a modified tab is closed without saving the file is indexed again from the disk
   ([`CIDEDocuments::ReindexDiscarded`]), but places others keep in it (Find Usages' results, Back's) stay where the
   discarded edits moved them ([`HCP65IDE/NextIDEWork.txt`], 9a).
-- Code completion needs the type of the expression at the caret in the time of a key: a checked parse of the file
-  took 47 ms in a BaseLib file and 1.7 s in `IDEUsages.cpp` (2026-11-21, Type Info), too slow.  The decided way, a
-  light path from the syntax tree and the index with a kept parse behind it, is [`HCP65IDE/NextIDEWork.txt`]'s item
-  5.
 - The index over MCP for Claude (`DocsPlan.txt` H4).
