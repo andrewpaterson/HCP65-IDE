@@ -109,10 +109,11 @@ void CMarkdownSpans::Kill(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The page's code spans, line by line.  A fence opens with three or more
-// backticks or tildes at the start of a line (after white space) and
-// closes with as many or more of the same and nothing after them.  An
-// HTML comment can cross lines; what it covers is skipped as spaces, so
+// The page's code spans and links, line by line, and its snippets'
+// paths.  A fence opens with three or more backticks or tildes at the
+// start of a line (after white space) and closes with as many or more of
+// the same and nothing after them; a snippet line counts in a fence too.
+// An HTML comment can cross lines; what it covers is skipped as spaces, so
 // columns don't move.
 //
 //////////////////////////////////////////////////////////////////////////
