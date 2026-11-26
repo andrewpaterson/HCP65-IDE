@@ -43,6 +43,8 @@ CommonLibraries and HCP65 checked out beside it (`../CommonLibraries`, `../HCP65
   argument opens that.  Any `HCP65_IDE_*` environment variable makes a run scripted (no native input).
 - Checks: `cd HCP65IDE/Checks && python3 IDEChecks.py [check names]`.  They run `HCP65IDERef` and restore
   the user's recent-files and layout files.  Delete `Checks/__pycache__` if a run leaves it.
+- A test run from a private copy of its folder needs its siblings linked beside it (TestBuildLib reads
+  `../../TestVisualStudioLib`) and an `Output` folder.
 - Library tests build with CMake as in CommonLibraries (`cmake -S Tests/TestBuildLib -B
   ../build/TestBuildLib64Release -DCMAKE_BUILD_TYPE=Release -DBASELIB_64=ON`).
 
