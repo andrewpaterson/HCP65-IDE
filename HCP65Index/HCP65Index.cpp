@@ -27,6 +27,8 @@ along with Codaphela HCP65Index.  If not, see <http://www.gnu.org/licenses/>.
 #include "BuildLib/BuildWorkspace.h"
 #include "IndexLib/WorkspaceIndex.h"
 #include "IndexLib/SymbolTable.h"
+#include "IndexLib/ReferenceResolver.h"
+#include "BaseLib/TextFile.h"
 
 
 #define HCP65_INDEX_EXIT_OK			0
@@ -44,6 +46,10 @@ static void PrintUsage(void)
 	printf("  Indexes the solutions' C++ together, as the IDE does (each solution's first configuration), and writes the\n");
 	printf("  symbol table: one line a symbol, <key> TAB <kind> TAB <file> TAB <line>, the file relative to -root.\n");
 	printf("  Only symbols declared under -root are written.  -problems lists what the units couldn't include.\n");
+	printf("hcp65index -resolve <table> -files <list> <page.md>...\n");
+	printf("  Resolves the pages' references to code ([`Name`]) against a written table and a list of files (one a line,\n");
+	printf("  relative to the table's root), and prints each reference's link or error and each plain span's warning\n");
+	printf("  (CReferenceResolver::PrintPageReferences).\n");
 }
 
 
@@ -121,14 +127,80 @@ static int IndexSolutions(const char* szRoot, const char* szOut, CArrayChars* pa
 
 //////////////////////////////////////////////////////////////////////////
 //
+// The pages' references to code resolved against a written table, for the
+// website's build (HCP65/Website/DocsPlan.txt E1): the same code the IDE
+// resolves them with.
+//
+//////////////////////////////////////////////////////////////////////////
+static int ResolvePages(const char* szTable, const char* szFiles, CArrayChars* paszPages)
+{
+	CSymbolTable			cTable;
+	CArrayChars				aszFiles;
+	CReferenceResolver		cResolver;
+	CTextFile				cPage;
+	CArrayPageReferences	asReferences;
+	CChars					szPrinted;
+	size					i;
+	int						iResult;
+
+	iResult = HCP65_INDEX_EXIT_OK;
+	cTable.Init("");
+	aszFiles.Init();
+	if (!cTable.Read(szTable))
+	{
+		fprintf(stderr, "%s:1:1: error: hcp65index can't read the symbol table.\n", szTable);
+		iResult = HCP65_INDEX_EXIT_FAILED;
+	}
+	else if (!CReferenceResolver::ReadFiles(szFiles, &aszFiles))
+	{
+		fprintf(stderr, "%s:1:1: error: hcp65index can't read the list of files.\n", szFiles);
+		iResult = HCP65_INDEX_EXIT_FAILED;
+	}
+	else
+	{
+		cResolver.Init(&cTable, &aszFiles);
+		szPrinted.Init();
+		for (i = 0; i < paszPages->NumElements(); i++)
+		{
+			cPage.Init();
+			if (!cPage.Read(paszPages->GetText(i)))
+			{
+				fprintf(stderr, "%s:1:1: error: hcp65index can't read the page.\n", paszPages->GetText(i));
+				iResult = HCP65_INDEX_EXIT_FAILED;
+			}
+			else
+			{
+				asReferences.Init();
+				cResolver.ResolvePage(cPage.Text(), &asReferences);
+				szPrinted.Clear();
+				CReferenceResolver::PrintPageReferences(paszPages->GetText(i), &asReferences, &szPrinted);
+				fputs(szPrinted.Text(), stdout);
+				CReferenceResolver::KillPageReferences(&asReferences);
+			}
+			cPage.Kill();
+		}
+		szPrinted.Kill();
+		cResolver.Kill();
+	}
+	aszFiles.Kill();
+	cTable.Kill();
+	return iResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // hcp65index -root <folder> -out <file> [-problems] <solution.sln>...
+// hcp65index -resolve <table> -files <list> <page.md>...
 //
 //////////////////////////////////////////////////////////////////////////
 int __cdecl main(int argc, char* argv[])
 {
-	CArrayChars		aszSolutions;
+	CArrayChars		aszArguments;	//The solutions, or with -resolve the pages.
 	const char*		szRoot;
 	const char*		szOut;
+	const char*		szTable;
+	const char*		szFiles;
 	bool			bProblems;
 	bool			bUsage;
 	int				i;
@@ -140,9 +212,11 @@ int __cdecl main(int argc, char* argv[])
 
 	szRoot = NULL;
 	szOut = NULL;
+	szTable = NULL;
+	szFiles = NULL;
 	bProblems = false;
 	bUsage = false;
-	aszSolutions.Init();
+	aszArguments.Init();
 	for (i = 1; i < argc; i++)
 	{
 		if ((StringCompare(argv[i], "-root") == 0) && (i + 1 < argc))
@@ -152,6 +226,14 @@ int __cdecl main(int argc, char* argv[])
 		else if ((StringCompare(argv[i], "-out") == 0) && (i + 1 < argc))
 		{
 			szOut = argv[++i];
+		}
+		else if ((StringCompare(argv[i], "-resolve") == 0) && (i + 1 < argc))
+		{
+			szTable = argv[++i];
+		}
+		else if ((StringCompare(argv[i], "-files") == 0) && (i + 1 < argc))
+		{
+			szFiles = argv[++i];
 		}
 		else if (StringCompare(argv[i], "-problems") == 0)
 		{
@@ -163,20 +245,24 @@ int __cdecl main(int argc, char* argv[])
 		}
 		else
 		{
-			aszSolutions.Add(argv[i]);
+			aszArguments.Add(argv[i]);
 		}
 	}
 
-	if (bUsage || (szRoot == NULL) || (szOut == NULL) || (aszSolutions.NumElements() == 0))
+	if (!bUsage && (szTable != NULL) && (szFiles != NULL) && (szRoot == NULL) && (szOut == NULL))
+	{
+		iResult = ResolvePages(szTable, szFiles, &aszArguments);
+	}
+	else if (!bUsage && (szTable == NULL) && (szFiles == NULL) && (szRoot != NULL) && (szOut != NULL) && (aszArguments.NumElements() > 0))
+	{
+		iResult = IndexSolutions(szRoot, szOut, &aszArguments, bProblems);
+	}
+	else
 	{
 		PrintUsage();
 		iResult = HCP65_INDEX_EXIT_USAGE;
 	}
-	else
-	{
-		iResult = IndexSolutions(szRoot, szOut, &aszSolutions, bProblems);
-	}
-	aszSolutions.Kill();
+	aszArguments.Kill();
 
 	MemoryKill();
 	TypeConverterKill();
