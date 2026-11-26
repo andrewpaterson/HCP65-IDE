@@ -99,6 +99,7 @@ bool CIDEClassAccess::Read(CIDEContent* pcContent, const char* szClass)
 	maiLineStarts.ReInit();
 	asLocations.Init();
 	psDefinition = NULL;
+	szText = NULL;
 	if (pcContent->GetCodeModel()->GetSymbolLocations(szClass, &asLocations, &uiKind) && ((uiKind == CPPSK_Class) || (uiKind == CPPSK_ClassTemplate)))
 	{
 		for (i = 0; (psDefinition == NULL) && (i < asLocations.NumElements()); i++)
