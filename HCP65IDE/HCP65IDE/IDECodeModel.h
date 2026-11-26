@@ -245,6 +245,7 @@ public:
 	void	Init(CBuildWorkspace* pcWorkspace);
 	void	Kill(void);
 	void	Reset(void) override;
+	bool	FindDocsSite(CChars* pszMkdocsFile) override;
 
 
 	bool	Highlight(size uiProject, const char* szFileName, const char* szContents, CArrayHighlights* pacDest, CChars* pszErrors);
@@ -304,6 +305,7 @@ protected:
 	void				FindProjectFiles(void);
 	void				WaitForEditedFiles(void);
 	void				ProcessEditedFile(SIDEEditedFile* psFile);
+	void				ProcessEditedPage(SIDEEditedFile* psFile);
 	void				CheckEditedFile(CParsedUnit* pcUnit, const char* szErrors, SIDEEditedFile* psFile);
 	void				HighlightFile(CParsedUnit* pcUnit, CSourceFile* pcFile, CArrayHighlights* pacDest, CArrayCPPSyntaxRanges* pasRanges);
 	void				CopyLocation(SCPPIndexLocation* psLocation, SIDELocation* psDest);

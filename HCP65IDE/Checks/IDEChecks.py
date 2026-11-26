@@ -655,6 +655,18 @@ def MakeEnumsCopy():
 	return {'SOLUTION': os.path.join(szFolder, 'Enums.vcxproj'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
 
 
+def MakeDocsCopy():
+	#A copy of Input/Docs (HCP65/Website/DocsPlan.txt E): the library Docs, CShape in Shapes.h and Shapes.cpp, and its
+	#page Docs/shapes.md, which names CShape, CShape::Init and CShape::GetSides with references to code, one that
+	#names nothing, and a plain code span naming CShape; Site is a Makefile project whose build command prints a
+	#problem as GCC would.
+	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
+	atexit.register(shutil.rmtree, szRoot, True)
+	szFolder = os.path.join(szRoot, 'Docs')
+	shutil.copytree(os.path.join(HERE, 'Input', 'Docs'), szFolder)
+	return {'SOLUTION': os.path.join(szFolder, 'Docs.sln'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
+
+
 def MakeTemplateInterfaceCopy():
 	#A copy of Input/TemplateInterface: CRunner<M>, which calls three functions of M (one in a function defined
 	#outside it, where the parameter is T), used with CDiesel; and Poke<M>, which nothing uses.
@@ -4223,6 +4235,31 @@ CHECKS = [
 	('breakpoint', {
 		'OPEN': 'Kernal.cpp', 'DEBUG': 'line:20,buildtab,wait:300,printtabs'},
 		[r'^Tabs: .*>Kernal\.cpp'], []),
+	('docs-go-to-source', dict(MakeDocsCopy(), **{
+		#Control+B on a page's reference to code goes where the website's link goes: CShape::Init's declaration in its
+		#header (not its definition in Shapes.cpp).
+		'WAIT_INDEX': '1', 'OPEN': 'Docs/shapes.md', 'CARET': '3:36', 'DEBUG': 'gotosource,edit:print'}),
+		[r'Shapes\.h \(focus\) line 11: \[\tvoid\tInit\(int iSides\);\]$'], [r'Shapes\.cpp \(focus\)']),
+	('docs-find-usages', dict(MakeDocsCopy(), **{
+		#A page's references are usages of what they name, in their own group: CShape is named by three of them.
+		'WAIT_INDEX': '1', 'OPEN': 'Shapes.h', 'CARET': '5:8', 'EDIT': 'usages'}),
+		[r'^Usages of CShape  5 usages$', r'^  Usage in documentation  3 usages$', r'^      shapes\.md  3$', r'^        3: A \[`CShape`\]'], []),
+	('docs-rename', dict(MakeDocsCopy(), **{
+		#Rename changes a page's references exactly: CShape::Init's, and not CShape::GetSides's.  With the search for
+		#text occurrences on, the page's reference isn't changed twice.
+		'WAIT_INDEX': '1', 'OPEN': 'Shapes.h', 'CARET': '11:7',
+		'DEBUG': 'edit:renamesearch:-t-s,edit:rename:Start,printdisklines:Docs/shapes.md'}),
+		[r'^3\|A \[`CShape`\] is made by \[`CShape::Start`\] and asked \[`CShape::GetSides`\]\.$'], [r'StartStart', r'Rename stopped']),
+	('docs-problems', dict(MakeDocsCopy(), **{
+		#A page's problems are what the website's build would say: a reference that names nothing is an error, a plain
+		#code span naming a class a warning.
+		'WAIT_INDEX': '1', 'OPEN': 'Docs/shapes.md', 'DEBUG': 'wait:900,printproblems'}),
+		[r'^Problems: shapes\.md 1 errors, 1 warnings$', r'^  4:9 error: \[`CShape::Kill`\] names nothing the indexed solutions declare$',
+		 r'^  4:35 warning: `CShape` names class CShape \(\S*Shapes\.h:5\): write \[`CShape`\] to link to it$'], []),
+	('docs-build', dict(MakeDocsCopy(), **{
+		#A Makefile project is built by its build command, its output the build's: Site's prints a problem as GCC would.
+		'WAIT_INDEX': '1', 'CONFIGURATION': 'Debug|GCC', 'DEBUG': 'command:Build.Build,wait:200,printbuild'}),
+		[r'Building Site: echo', r'^\.\./Docs/shapes\.md:4:9: error: a problem the website build found$', r'build succeeded'], [r'MSVC builds need Windows']),
 ] + DebuggingChecks(DEBUGGING_W65C816) + DebuggingChecks(DEBUGGING_65C64) + [
 	('menus', {
 		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'CARET': '36:4', 'DEBUG': 'printmenus,clickmenu:View/Nope'},

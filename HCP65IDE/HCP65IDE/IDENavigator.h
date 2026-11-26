@@ -111,6 +111,7 @@ public:
 	bool				OpenGoToChoice(void);
 	Ptr<CGoToDialog>	GetGoTo(void) const;
 	bool				GoToSource(void);
+	bool				GoToPageReference(bool bGo);
 	bool				CanGoToSource(void);
 	bool				SwitchHeaderSource(void);
 	bool				GoToImplementation(void);

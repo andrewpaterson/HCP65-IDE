@@ -70,6 +70,7 @@ static const SIDEUsageType	gasIDEUsageTypes[] =
 	{ 6,	"Usage in parameter declaration" },			//CPPUT_Parameter
 	{ 9,	"Usage in function declaration" },			//CPPUT_Function
 	{ 13,	"Usage in type alias" },					//CPPUT_Alias
+	{ 15,	"Usage in documentation" },					//CPPUT_Documentation
 };
 static_assert(sizeof(gasIDEUsageTypes) / sizeof(SIDEUsageType) == CPPUT_NumUsageTypes, "Each ECPPUsageType needs its group in gasIDEUsageTypes.");
 
@@ -115,7 +116,7 @@ static const SIDEUsageType* GetIDEUsageType(SIDELocation* psLocation)
 	{
 		return &gsIDEUsageTypeDeclaration;
 	}
-	return &gasIDEUsageTypes[(psLocation->uiUsage < CPPUT_NumUsageTypes) ? psLocation->uiUsage : CPPUT_Other];
+	return &gasIDEUsageTypes[(psLocation->uiUsage < CPPUT_NumUsageTypes) ? psLocation->uiUsage : (uint8)CPPUT_Other];
 }
 
 

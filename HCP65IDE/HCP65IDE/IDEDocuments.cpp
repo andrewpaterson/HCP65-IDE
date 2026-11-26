@@ -652,8 +652,9 @@ void CIDEDocuments::AddEditedFile(size uiProject, const char* szFileName, const 
 	CChars				szUnit;
 	Ptr<CIDEEditorTab>	pUnitTab;
 
+	//C and C++, and the documentation pages, whose references to code are resolved (CIDECodeModel::ProcessEditedPage).
 	eType = CIDEIcons::GetFileType(szFileName);
-	if (eType == IFT_Other)
+	if ((eType == IFT_Other) && !CWorkspaceIndex::IsPageFile(szFileName))
 	{
 		return;
 	}

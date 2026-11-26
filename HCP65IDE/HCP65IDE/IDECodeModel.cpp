@@ -28,6 +28,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/StringHelper.h"
 #include "BaseLib/Timer.h"
 #include "CppCompilerLib/CppParser.h"
+#include "IDETemplateVariables.h"
 #include "IDECodeModel.h"
 
 
@@ -671,6 +672,49 @@ void CIDECodeModel::Reset(void)
 {
 	CWorkspaceIndex::Reset();
 	ForgetProjectFiles();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The website the workspace's pages are part of: an mkdocs.yml item of a
+// project (CWorkspaceIndex::FindDocsSite), else the first a project's
+// properties name (Properties... in Solution Explorer) that is there.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDECodeModel::FindDocsSite(CChars* pszMkdocsFile)
+{
+	size			i;
+	CVcxProject*	pcProject;
+	CFileUtil		cFileUtil;
+	CChars			szSite;
+	bool			bFound;
+
+	if (CWorkspaceIndex::FindDocsSite(pszMkdocsFile))
+	{
+		return true;
+	}
+	bFound = false;
+	szSite.Init();
+	for (i = 0; (i < mpcWorkspace->NumProjects()) && !bFound; i++)
+	{
+		pcProject = mpcWorkspace->GetSolutionProject(i)->GetProject();
+		szSite.Clear();
+		if ((pcProject != NULL) && (ReadIDEProjectDocsSite(pcProject->GetFileName(), &szSite)[0] != '\0'))
+		{
+			pszMkdocsFile->Set(pcProject->GetDirectory());
+			cFileUtil.AppendToPath(pszMkdocsFile, szSite.Text());
+			cFileUtil.FixSeparators(pszMkdocsFile);
+			cFileUtil.FullPath(pszMkdocsFile);
+			bFound = cFileUtil.Exists(pszMkdocsFile->Text());
+		}
+	}
+	szSite.Kill();
+	if (!bFound)
+	{
+		pszMkdocsFile->Clear();
+	}
+	return bFound;
 }
 
 

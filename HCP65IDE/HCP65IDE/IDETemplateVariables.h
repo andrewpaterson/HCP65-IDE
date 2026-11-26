@@ -43,7 +43,8 @@ void	SetIDETemplateFileVariables(CIDEContent* pcContent, const char* szFileName,
 void	SetIDETemplateFileVariables(CIDEContent* pcContent, const char* szFileName, CVcxProject* pcProject, const char* szClassName, CTemplateValues* pcDest);
 void	SetIDETemplateDateVariables(CTemplateValues* pcDest);
 char*	ReadIDEProjectLicence(const char* szProjectFile, CChars* pszDest);
-bool	WriteIDEProjectLicence(const char* szProjectFile, const char* szLicence);
+char*	ReadIDEProjectDocsSite(const char* szProjectFile, CChars* pszDest);
+bool	WriteIDEProjectProperties(const char* szProjectFile, const char* szLicence, const char* szDocsSite);
 char*	AppendIDEProjectPropertiesFile(const char* szProjectFile, CChars* pszDest);
 
 

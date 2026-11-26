@@ -950,8 +950,50 @@ bool CIDENavigator::FindIncludedFile(CChars* pszDest)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// On a documentation page, where the reference to code at the caret links
+// to, as the website's link does (HCP65/Website/DocsPlan.txt E4): its
+// symbol's declaration in its header, or a file, the website's symbol
+// table saying where for what the workspace doesn't have.  With bGo it is
+// gone to.  False if the caret isn't on a reference that links.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDENavigator::GoToPageReference(bool bGo)
+{
+	Ptr<CIDEEditorTab>	pTab;
+	SIDELocation		sLocation;
+	int					iLine;
+	int					iColumn;
+	int					iTarget;
+	bool				bFound;
+
+	pTab = mpcContent->GetDocuments()->GetActiveTab();
+	if (pTab.IsNull() || !CWorkspaceIndex::IsPageFile(pTab->GetFileName()) || !mpcContent->GetDocuments()->GetCaretPlace(&iLine, &iColumn))
+	{
+		return false;
+	}
+	sLocation.szFileName.Init();
+	bFound = mpcContent->GetCodeModel()->FindPageReference(pTab->GetFileName(), iLine, iColumn, &sLocation.szFileName, &iTarget);
+	if (bFound && bGo)
+	{
+		sLocation.iLine = (iTarget > 0) ? iTarget - 1 : 0;
+		sLocation.iColumn = 0;
+		sLocation.iLength = 0;
+		sLocation.uiRole = CPPIR_Declaration;
+		sLocation.uiFlags = 0;
+		sLocation.uiUsage = CPPUT_Other;
+		sLocation.iContainer = -1;
+		bFound = mpcContent->GetDocuments()->OpenLocation(&sLocation);
+	}
+	sLocation.szFileName.Kill();
+	return bFound;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Control+B, as IntelliJ's: on an #include the file it names is opened;
 // on a symbol's own declaration or definition, a popup of its usages;
+// on a documentation page's reference to code, where it links to;
 // anywhere else, the definition of what is at the caret (as F12), which
 // for a macro's name is its #define.  False if there's nothing to go to.
 //
@@ -964,6 +1006,10 @@ bool CIDENavigator::GoToSource(void)
 	if (mpcContent->GetDocuments()->GetActiveTab().IsNull())
 	{
 		return false;
+	}
+	if (GoToPageReference(true))
+	{
+		return true;
 	}
 	szFile.Init();
 	if (FindIncludedFile(&szFile))
@@ -985,8 +1031,9 @@ bool CIDENavigator::GoToSource(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Whether Go to Source has somewhere to go: an #include's file, a symbol
-// at the caret, or a macro's name there (its #define).
+// Whether Go to Source has somewhere to go: an #include's file, a page's
+// reference to code, a symbol at the caret, or a macro's name there (its
+// #define).
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDENavigator::CanGoToSource(void)
@@ -1003,7 +1050,7 @@ bool CIDENavigator::CanGoToSource(void)
 		return false;
 	}
 	szFile.Init();
-	bResult = FindIncludedFile(&szFile) || mpcContent->GetDocuments()->FindSymbolPlace(&iLine, &iColumn, &uiRole);
+	bResult = GoToPageReference(false) || FindIncludedFile(&szFile) || mpcContent->GetDocuments()->FindSymbolPlace(&iLine, &iColumn, &uiRole);
 	if (!bResult && mpcContent->GetConvertMacro()->FindDefineAtCaret(&szFile, &sDefine))
 	{
 		sDefine.szFileName.Kill();

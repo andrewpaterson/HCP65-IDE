@@ -19,6 +19,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 
 ** ------------------------------------------------------------------------ **/
 #include "BaseLib/NativeThread.h"
+#include "BaseLib/TextFile.h"
 #include "CppCompilerLib/CPPSemanticPass.h"
 #include "IDECodeModel.h"
 
@@ -247,6 +248,54 @@ void CIDECodeModel::WaitForEditedFiles(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// An edited documentation page: its references to code resolved again
+// from its editor's text (CWorkspaceIndex::IndexPage), so its places in
+// the index are where they are now, and its problems what the website's
+// build would say of them: a reference that names nothing is an error, a
+// plain code span naming a symbol a warning.  It isn't C++: nothing is
+// parsed, and it has no colours yet.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDECodeModel::ProcessEditedPage(SIDEEditedFile* psFile)
+{
+	CTextFile				cFile;
+	const char*				szText;
+	CArrayPageReferences	asReferences;
+	SPageReference*			psReference;
+	size					i;
+
+	cFile.Init();
+	szText = psFile->bText ? psFile->szText.Text() : (cFile.Read(psFile->szFileName.Text()) ? cFile.Text() : NULL);
+	if (psFile->bIndex && szText)
+	{
+		IndexPage(psFile->szFileName.Text(), szText);
+	}
+	cFile.Kill();
+	psFile->bIndexed = psFile->bIndex;
+	psFile->bHighlighted = psFile->bHighlight;
+
+	if (psFile->bCheck)
+	{
+		psFile->cProblems.Clear();
+		asReferences.Init();
+		GetPageReferences(psFile->szFileName.Text(), &asReferences);
+		for (i = 0; i < asReferences.NumElements(); i++)
+		{
+			psReference = asReferences.Get(i);
+			if (psReference->eKind != PRK_Link)
+			{
+				psFile->cProblems.Add(psReference->iLine, psReference->iColumn, psReference->eKind == PRK_Warning, psReference->szMessage.Text());
+			}
+		}
+		CReferenceResolver::KillPageReferences(&asReferences);
+		psFile->cProblems.Sort();
+		psFile->bChecked = true;
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // The problems a build of psFile would give, from pcUnit (its unit,
 // parsed as its project builds it): the preprocessor's (szErrors), the
 // parser's and a check's, errors and warnings, those in the file only.
@@ -287,6 +336,12 @@ void CIDECodeModel::ProcessEditedFile(SIDEEditedFile* psFile)
 	CSourceFile*	pcFile;
 	const char*		szText;
 	bool			bParsed;
+
+	if (IsPageFile(psFile->szFileName.Text()))
+	{
+		ProcessEditedPage(psFile);
+		return;
+	}
 
 	szText = psFile->bText ? psFile->szText.Text() : NULL;
 	szErrors.Init();

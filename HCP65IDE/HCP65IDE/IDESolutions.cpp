@@ -563,9 +563,12 @@ bool CIDESolutions::CanShowProjectProperties(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The selected project's properties: its licence, what the File Header
-// template writes at the top of the files made in it (LGPL 3, AGPL 3 or
-// None), kept in its .hcp65project.  False if nothing was changed.
+// The selected project's properties, kept in its .hcp65project: its
+// licence, what the File Header template writes at the top of the files
+// made in it (LGPL 3, AGPL 3 or None), and the mkdocs.yml of the website
+// its pages are part of, for a workspace without one as an item
+// (relative to the project's folder, HCP65/Website/DocsPlan.txt E3).
+// False if nothing was changed.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDESolutions::ShowProjectProperties(void)
@@ -576,8 +579,10 @@ bool CIDESolutions::ShowProjectProperties(void)
 	CVcxProject*			pcProject;
 	Ptr<CDialog>			pDialog;
 	Ptr<CComboBox>			pLicence;
+	Ptr<CTextField>			pDocsSite;
 	CChars					szFile;
 	CChars					szLicence;
+	CChars					szDocsSite;
 	CChars					szText;
 	int32					iSelected;
 	size					i;
@@ -599,6 +604,8 @@ bool CIDESolutions::ShowProjectProperties(void)
 	szFile.Init(pcProject->GetFileName());
 	szLicence.Init();
 	ReadIDEProjectLicence(szFile.Text(), &szLicence);
+	szDocsSite.Init();
+	ReadIDEProjectDocsSite(szFile.Text(), &szDocsSite);
 	iSelected = 0;
 	for (i = 0; i < 3; i++)
 	{
@@ -609,29 +616,42 @@ bool CIDESolutions::ShowProjectProperties(void)
 	szText.Append(" Properties");
 	pDialog = OMalloc<CDialog>(mpcContent->GetWindow(), mpcContent->GetDialogLook(), szText.Text());
 	pLicence = pDialog->AddComboBox("Licence of its new files:", aszLicences, 3, iSelected);
+	pDocsSite = pDialog->AddTextField("Its pages' website (mkdocs.yml):", szDocsSite.Text());
 	mpcContent->GetScript()->WatchDialog(pDialog);
 	bResult = pDialog->Show(420);
 	mpcContent->GetScript()->StopWatchingDialog();
 	iSelected = pLicence->GetSelected();
+	szText.Set(pDocsSite->GetText());
+	pDocsSite = NULL;
 	pLicence = NULL;
 	pDialog = NULL;
 
-	bResult = bResult && (iSelected >= 0) && !szLicence.Equals(aszLicences[iSelected]);
+	bResult = bResult && (iSelected >= 0) && (!szLicence.Equals(aszLicences[iSelected]) || !szDocsSite.Equals(szText.Text()));
 	if (bResult)
 	{
+		szDocsSite.Set(szText.Text());
 		szText.Set(pcProject->GetName());
-		if (WriteIDEProjectLicence(szFile.Text(), aszLicences[iSelected]))
+		if (WriteIDEProjectProperties(szFile.Text(), aszLicences[iSelected], szDocsSite.Text()))
 		{
-			szText.Append("'s new files are written with the licence ")->Append(aszLicences[iSelected])->Append('.');
+			szText.Append("'s new files are written with the licence ")->Append(aszLicences[iSelected]);
+			if (szDocsSite.Empty())
+			{
+				szText.Append('.');
+			}
+			else
+			{
+				szText.Append("; its pages are part of ")->Append(szDocsSite)->Append('.');
+			}
 		}
 		else
 		{
-			szText.Append("'s licence couldn't be written.");
+			szText.Append("'s properties couldn't be written.");
 			bResult = false;
 		}
 		mpcContent->ShowStatus(szText.Text());
 	}
 	szText.Kill();
+	szDocsSite.Kill();
 	szLicence.Kill();
 	szFile.Kill();
 	return bResult;

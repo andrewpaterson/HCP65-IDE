@@ -30,9 +30,10 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDETemplateVariables.h"
 
 
-//The properties file's root and its licence.
+//The properties file's root, its licence and the website its pages are part of.
 #define IDE_PROJECT_PROPERTIES_TAG		"HCP65Project"
 #define IDE_PROJECT_LICENCE_ATTRIBUTE	"Licence"
+#define IDE_PROJECT_DOCS_SITE_ATTRIBUTE	"DocsSite"
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -62,11 +63,11 @@ char* AppendIDEProjectPropertiesFile(const char* szProjectFile, CChars* pszDest)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The licence a project's files are written with: its properties file's
-// (<HCP65Project Licence="None"/>), or LGPL 3 if it has none.
+// One of a project's properties (an attribute of its properties file's
+// root), added to pszDest; false if it hasn't it.
 //
 //////////////////////////////////////////////////////////////////////////
-char* ReadIDEProjectLicence(const char* szProjectFile, CChars* pszDest)
+static bool ReadIDEProjectProperty(const char* szProjectFile, const char* szAttribute, CChars* pszDest)
 {
 	CXMLFile	cFile;
 	CFileUtil	cFileUtil;
@@ -74,12 +75,12 @@ char* ReadIDEProjectLicence(const char* szProjectFile, CChars* pszDest)
 	CChars		szName;
 	CChars		szDirectory;
 	CMarkupTag*	pcRoot;
-	char*		szLicence;
+	char*		szValue;
 
 	szPath.Init();
 	szName.Init();
 	szDirectory.Init();
-	szLicence = NULL;
+	szValue = NULL;
 	AppendIDEProjectPropertiesFile(szProjectFile, &szPath);
 	cFileUtil.SplitPath(szPath.Text(), &szName, &szDirectory);
 	cFile.Init();
@@ -88,25 +89,60 @@ char* ReadIDEProjectLicence(const char* szProjectFile, CChars* pszDest)
 		pcRoot = cFile.mcMarkup.mpcDoc->GetRootTag();
 		if (pcRoot && (strcmp(pcRoot->GetName(), IDE_PROJECT_PROPERTIES_TAG) == 0))
 		{
-			szLicence = pcRoot->GetAttribute(IDE_PROJECT_LICENCE_ATTRIBUTE);
+			szValue = pcRoot->GetAttribute(szAttribute);
 		}
 	}
-	pszDest->Append((szLicence && (szLicence[0] != '\0')) ? szLicence : IDE_LICENCE_DEFAULT);
+	if (szValue && (szValue[0] != '\0'))
+	{
+		pszDest->Append(szValue);
+	}
 	cFile.Kill();
 	szDirectory.Kill();
 	szName.Kill();
 	szPath.Kill();
+	return szValue && (szValue[0] != '\0');
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The licence a project's files are written with: its properties file's
+// (<HCP65Project Licence="None"/>), or LGPL 3 if it has none.
+//
+//////////////////////////////////////////////////////////////////////////
+char* ReadIDEProjectLicence(const char* szProjectFile, CChars* pszDest)
+{
+	if (!ReadIDEProjectProperty(szProjectFile, IDE_PROJECT_LICENCE_ATTRIBUTE, pszDest))
+	{
+		pszDest->Append(IDE_LICENCE_DEFAULT);
+	}
 	return pszDest->Text();
 }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// A project's licence written to its properties file (Properties... in
-// Solution Explorer).  False if it couldn't be.
+// The mkdocs.yml of the website a project's pages are part of, as its
+// properties file says (DocsSite, relative to the project's folder), for
+// a workspace without one as an item (CIDECodeModel::FindDocsSite).
+// Nothing is added if it says none.
 //
 //////////////////////////////////////////////////////////////////////////
-bool WriteIDEProjectLicence(const char* szProjectFile, const char* szLicence)
+char* ReadIDEProjectDocsSite(const char* szProjectFile, CChars* pszDest)
+{
+	ReadIDEProjectProperty(szProjectFile, IDE_PROJECT_DOCS_SITE_ATTRIBUTE, pszDest);
+	return pszDest->Text();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A project's properties written to its properties file (Properties... in
+// Solution Explorer): its licence, and the website its pages are part of
+// (empty for none).  False if they couldn't be.
+//
+//////////////////////////////////////////////////////////////////////////
+bool WriteIDEProjectProperties(const char* szProjectFile, const char* szLicence, const char* szDocsSite)
 {
 	CXMLWriter	cWriter;
 	CChars		szPath;
@@ -117,6 +153,10 @@ bool WriteIDEProjectLicence(const char* szProjectFile, const char* szLicence)
 	cWriter.Init();
 	cWriter.Begin(IDE_PROJECT_PROPERTIES_TAG);
 	cWriter.Attribute(IDE_PROJECT_LICENCE_ATTRIBUTE, szLicence);
+	if (szDocsSite && (szDocsSite[0] != '\0'))
+	{
+		cWriter.Attribute(IDE_PROJECT_DOCS_SITE_ATTRIBUTE, szDocsSite);
+	}
 	cWriter.End();
 	bResult = cWriter.Write(szPath.Text());
 	cWriter.Kill();

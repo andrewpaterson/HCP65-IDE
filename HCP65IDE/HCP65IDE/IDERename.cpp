@@ -742,7 +742,8 @@ bool CIDERename::SearchRenameFiles(const char* szName, bool bComments, bool bTex
 		for (i = 0; i < asFound.NumElements(); i++)
 		{
 			psFound = asFound.Get(i);
-			if (bCpp && !psFound->bComment && pModel->FindRoleAt(szFileName, psFound->iLine, psFound->iColumn, &uiRole))
+			//A name the index has a place of (in code, or a page's reference to code) is a place already, or another symbol's.
+			if (!psFound->bComment && pModel->FindRoleAt(szFileName, psFound->iLine, psFound->iColumn, &uiRole))
 			{
 				continue;
 			}
