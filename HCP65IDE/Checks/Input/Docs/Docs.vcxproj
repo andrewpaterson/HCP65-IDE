@@ -13,6 +13,7 @@
     <ClInclude Include="Shapes.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Docs\index.md" />
     <None Include="Docs\shapes.md" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

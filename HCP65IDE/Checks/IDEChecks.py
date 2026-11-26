@@ -658,8 +658,8 @@ def MakeEnumsCopy():
 def MakeDocsCopy():
 	#A copy of Input/Docs (HCP65/Website/DocsPlan.txt E): the library Docs, CShape in Shapes.h and Shapes.cpp, and its
 	#page Docs/shapes.md, which names CShape, CShape::Init and CShape::GetSides with references to code, one that
-	#names nothing, and a plain code span naming CShape; Site is a Makefile project whose build command prints a
-	#problem as GCC would.
+	#names nothing, and a plain code span naming CShape, and Docs/index.md, which links to it; Site is a Makefile
+	#project whose build command prints a problem as GCC would.
 	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
 	atexit.register(shutil.rmtree, szRoot, True)
 	szFolder = os.path.join(szRoot, 'Docs')
@@ -4250,6 +4250,11 @@ CHECKS = [
 		'WAIT_INDEX': '1', 'OPEN': 'Shapes.h', 'CARET': '11:7',
 		'DEBUG': 'edit:renamesearch:-t-s,edit:rename:Start,printdisklines:Docs/shapes.md'}),
 		[r'^3\|A \[`CShape`\] is made by \[`CShape::Start`\] and asked \[`CShape::GetSides`\]\.$'], [r'StartStart', r'Rename stopped']),
+	('docs-rename-file', dict(MakeDocsCopy(), **{
+		#Rename File on a page changes the links to it in the other pages: index.md's, its #anchor kept.
+		'WAIT_INDEX': '1', 'OPEN': 'Docs/shapes.md', 'DEBUG': 'edit:renamefile:figures.md,printdiskfile:Docs/index.md'}),
+		[r'^Status: Renamed shapes\.md to figures\.md: 0 #includes, 1 link in 1 file, 1 project\.$', r'^See \[the shapes\]\(figures\.md#making\)\.$'],
+		[r'shapes\.md#making']),
 	('docs-problems', dict(MakeDocsCopy(), **{
 		#A page's problems are what the website's build would say: a reference that names nothing is an error, a plain
 		#code span naming a class a warning.

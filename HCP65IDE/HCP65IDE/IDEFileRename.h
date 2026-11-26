@@ -62,6 +62,7 @@ enum EIDEFileRenameEdit
 	IFRE_Include,
 	IFRE_Comment,
 	IFRE_Text,
+	IFRE_Link,		//A documentation page's link, or snippet path, that names the file.
 	IFRE_NumKinds
 };
 
@@ -70,7 +71,8 @@ struct SIDEFileEdit;
 typedef CArrayTemplate<SIDEFileEdit>	CArrayIDEFileEdits;
 
 
-//Rename File (RenameFile.txt): files renamed in their directories, with every #include that finds them, the items of
+//Rename File (RenameFile.txt): files renamed in their directories, with every #include that finds them, every link and
+//snippet path of the workspace's documentation pages that names them (HCP65/Website/DocsPlan.txt E4), the items of
 //every project that has them, their editor tabs and the undo log, as IntelliJ's rename of a file.  A tracked file is
 //renamed with git mv.  The #includes' edits are one undo group, and the files edited are saved.  A file's related
 //files are the ones a class's Rename takes with it: the same stem in the same directory, or the stem and an _ part
@@ -124,6 +126,7 @@ protected:
 	void	ShowRenameStatus(CChars* pszMessage, CChars* pszStatus);
 	bool	AddEdit(CArrayChars* paszFiles, CArrayIDEFileEdits* pasEdits, const char* szFileName, size uiStart, const char* szOldName, size uiRename, uint8 uiKind, CChars* pszChanged);
 	bool	SearchFiles(CArrayChars* paszOldNames, bool bComments, bool bText, CArrayChars* paszFiles, CArrayIDEFileEdits* pasEdits, CChars* pszChanged);
+	bool	AddLinkEdits(CArrayIDEFileRenames* pasRenames, CArrayChars* paszOldNames, CArrayChars* paszFiles, CArrayIDEFileEdits* pasEdits, CChars* pszChanged);
 	void	ShowQueuedRenameFile(void);
 	bool	ApproveRenameFile(void);
 	void	RenameActiveFile(void);

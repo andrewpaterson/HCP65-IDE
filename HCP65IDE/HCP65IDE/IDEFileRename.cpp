@@ -22,6 +22,9 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/FileUtil.h"
 #include "BaseLib/StringHelper.h"
 #include "BaseLib/ArrayInt.h"
+#include "BaseLib/TextFile.h"
+#include "IndexLib/DocsSite.h"
+#include "IndexLib/MarkdownSpans.h"
 #include "StandardLib/ClassDefines.h"
 #include "IDEContent.h"
 #include "IDEFileRename.h"
@@ -562,6 +565,105 @@ bool CIDEFileRename::AddEdit(CArrayChars* paszFiles, CArrayIDEFileEdits* pasEdit
 
 //////////////////////////////////////////////////////////////////////////
 //
+// The links and snippet paths in the workspace's documentation pages that
+// name a file renamed: the file name at the end of each, added to
+// pasEdits.  A link between pages is resolved through the website's map
+// (mkdocs.yml's extra.sources, CDocsSite), a snippet's path through its
+// snippets' folders; without a website a link is relative to its page.
+// False, with the file in pszChanged, if a page's editor doesn't have the
+// text that was read.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEFileRename::AddLinkEdits(CArrayIDEFileRenames* pasRenames, CArrayChars* paszOldNames, CArrayChars* paszFiles, CArrayIDEFileEdits* pasEdits, CChars* pszChanged)
+{
+	CArrayChars			aszPages;
+	CDocsSite			cSite;
+	CTextFile			cFile;
+	const char*			szText;
+	size				uiLength;
+	CMarkdownSpans		cSpans;
+	SMarkdownLink*		psLink;
+	CChars				szFile;
+	CChars				szPath;
+	CFileUtil			cFileUtil;
+	size				uiFile;
+	size				uiName;
+	size				uiSlash;
+	size				i;
+	size				j;
+	size				k;
+	bool				bFound;
+	bool				bResult;
+	Ptr<CTextArea>		pEditor;
+
+	aszPages.Init();
+	mpcContent->GetCodeModel()->GetPageFiles(&aszPages);
+	cSite.Init();
+	if (mpcContent->GetCodeModel()->GetDocsSite()[0] != '\0')
+	{
+		cSite.Read(mpcContent->GetCodeModel()->GetDocsSite());
+	}
+	szFile.Init();
+	szPath.Init();
+	bResult = true;
+	for (i = 0; (i < aszPages.NumElements()) && bResult; i++)
+	{
+		cFile.Init();
+		if (!mpcContent->GetFindInFiles()->GetFileText(aszPages.GetText(i), &cFile, &szText, &uiLength))
+		{
+			cFile.Kill();
+			continue;
+		}
+		cSpans.Init();
+		cSpans.Scan(szText);
+		cFile.Kill();
+		for (j = 0; (j < cSpans.NumLinks()) && bResult; j++)
+		{
+			psLink = cSpans.GetLink(j);
+			bFound = psLink->bSnippet ? cSite.ResolveSnippet(aszPages.GetText(i), psLink->szTarget.Text(), &szFile) : cSite.ResolveLink(aszPages.GetText(i), psLink->szTarget.Text(), &szFile);
+			if (!bFound)
+			{
+				continue;
+			}
+			for (k = 0; (k < pasRenames->NumElements()) && bResult; k++)
+			{
+				szPath.Set(pasRenames->Get(k)->szOldPath);
+				cFileUtil.FullPath(&szPath);
+				if (!szPath.Equals(szFile.Text()))
+				{
+					continue;
+				}
+
+				//The file's name ends the link's path (before any #anchor).
+				CDocsSite::GetLinkPath(psLink->szTarget.Text(), &szPath);
+				uiSlash = szPath.FindFromEnd('/');
+				uiName = (uiSlash == ARRAY_ELEMENT_NOT_FOUND) ? 0 : uiSlash + 1;
+				uiFile = FindEditedFile(paszFiles, aszPages.GetText(i));
+				bResult = uiFile != MAX_SIZE;
+				if (bResult)
+				{
+					pEditor = mpcContent->GetDocuments()->FindTab(paszFiles->GetText(uiFile))->GetEditor();
+					bResult = ((size)psLink->iLine < pEditor->NumLines()) &&
+							  AddEdit(paszFiles, pasEdits, aszPages.GetText(i), pEditor->GetLineStart((size)psLink->iLine) + (size)psLink->iColumn + uiName, paszOldNames->GetText(k), k, IFRE_Link, pszChanged);
+				}
+				if (!bResult)
+				{
+					pszChanged->Set(aszPages.GetText(i));
+				}
+			}
+		}
+		cSpans.Kill();
+	}
+	szPath.Kill();
+	szFile.Kill();
+	cSite.Kill();
+	aszPages.Kill();
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Rename File's searches: each of the solution's C and C++ files looked
 // in for the old names in comments and strings (bComments, not on an
 // #include's line), and the projects' text files for them as words
@@ -843,6 +945,10 @@ bool CIDEFileRename::RenameFiles(CArrayIDEFileRenames* pasRenames, bool bComment
 			szChanged.Set(psInclude->szFileName);
 		}
 	}
+	if (bResult)
+	{
+		bResult = AddLinkEdits(pasRenames, &aszOldNames, &aszEdited, &asEdits, &szChanged);
+	}
 	if (bResult && (bComments || bText))
 	{
 		bResult = SearchFiles(&aszOldNames, bComments, bText, &aszEdited, &asEdits, &szChanged);
@@ -868,6 +974,7 @@ bool CIDEFileRename::RenameFiles(CArrayIDEFileRenames* pasRenames, bool bComment
 	auiKinds[IFRE_Include] = 0;
 	auiKinds[IFRE_Comment] = 0;
 	auiKinds[IFRE_Text] = 0;
+	auiKinds[IFRE_Link] = 0;
 	mpcContent->GetEdit()->BeginUndoGroup();
 	for (uiFile = 0; uiFile < aszEdited.NumElements(); uiFile++)
 	{
@@ -955,6 +1062,12 @@ bool CIDEFileRename::RenameFiles(CArrayIDEFileRenames* pasRenames, bool bComment
 		{
 			szMessage.Append((int)auiKinds[IFRE_Include]);
 			szMessage.Append(auiKinds[IFRE_Include] == 1 ? " #include" : " #includes");
+			if (auiKinds[IFRE_Link] > 0)
+			{
+				szMessage.Append(", ");
+				szMessage.Append((int)auiKinds[IFRE_Link]);
+				szMessage.Append(auiKinds[IFRE_Link] == 1 ? " link" : " links");
+			}
 			if (auiKinds[IFRE_Comment] > 0)
 			{
 				szMessage.Append(", ");
