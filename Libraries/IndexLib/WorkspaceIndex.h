@@ -168,6 +168,8 @@ public:
 	void			IndexPages(void);
 	bool			IndexPage(const char* szFileName, const char* szText);
 	size			NumPages(void);
+	size			FindItemProject(const char* szFileName);
+	bool			ParseUnit(size uiProject, const char* szFileName, const char* szContents, CParsedUnit* pcDest, CChars* pszErrors);
 	void			GetPageFiles(CArrayChars* paszDest);
 	bool			IsPage(const char* szFileName);
 	size			GetPageReferences(const char* szFileName, CArrayPageReferences* pasDest);
@@ -176,7 +178,6 @@ public:
 
 protected:
 	virtual void			WaitForProjectUsers(bool bForget);
-	bool					ParseUnit(size uiProject, const char* szFileName, const char* szContents, CParsedUnit* pcDest, CChars* pszErrors);
 	void					GatherUnit(CParsedUnit* pcUnit, CCPPIndexUnit* pcDest, CCPPIndexedFiles* pcIndexed);
 	SWorkspaceIndexJob*		FindIncluder(const char* szFileName);
 	CTranslationUnit*		AddUnit(size uiProject, const char* szFileName);

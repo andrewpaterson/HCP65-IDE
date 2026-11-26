@@ -27,6 +27,7 @@
     <ClCompile Include="ReferenceResolver.cpp" />
     <ClCompile Include="DocsSite.cpp" />
     <ClCompile Include="MarkdownHighlighter.cpp" />
+    <ClCompile Include="PageExamples.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="WorkspaceIndex.h" />
@@ -36,6 +37,7 @@
     <ClInclude Include="ReferenceResolver.h" />
     <ClInclude Include="DocsSite.h" />
     <ClInclude Include="MarkdownHighlighter.h" />
+    <ClInclude Include="PageExamples.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{B474CBEE-A34B-4F12-8944-8283752EB887}</ProjectGuid>

@@ -161,6 +161,44 @@ bool CWorkspaceIndex::FindDocsSite(CChars* pszMkdocsFile)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// The workspace's project that szFileName (a full path) is an item of,
+// the first if more than one has it; MAX_SIZE if none has.  Needs no
+// indexing.
+//
+//////////////////////////////////////////////////////////////////////////
+size CWorkspaceIndex::FindItemProject(const char* szFileName)
+{
+	size			i;
+	size			j;
+	CVcxProject*	pcProject;
+	CChars			szFile;
+	CFileUtil		cFileUtil;
+	size			uiProject;
+
+	uiProject = MAX_SIZE;
+	szFile.Init();
+	for (i = 0; (uiProject == MAX_SIZE) && (i < mpcWorkspace->NumProjects()); i++)
+	{
+		pcProject = mpcWorkspace->GetSolutionProject(i)->GetProject();
+		for (j = 0; (pcProject != NULL) && (j < pcProject->NumItems()); j++)
+		{
+			szFile.Clear();
+			pcProject->GetFullPath(pcProject->GetItem(j), &szFile);
+			cFileUtil.FullPath(&szFile);
+			if (szFile.EqualsIgnoreCase(szFileName))
+			{
+				uiProject = i;
+				break;
+			}
+		}
+	}
+	szFile.Kill();
+	return uiProject;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // The workspace's Markdown items, none resolved yet (StartIndexing).
 //
 //////////////////////////////////////////////////////////////////////////

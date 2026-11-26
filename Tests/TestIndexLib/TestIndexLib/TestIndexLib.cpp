@@ -10,6 +10,7 @@ void TestSymbolTable(void);
 void TestReferences(void);
 void TestWorkspacePages(void);
 void TestDocsSite(void);
+void TestPageExamples(void);
 void TestMarkdownHighlighter(void);
 
 
@@ -32,6 +33,7 @@ int __cdecl main(void)
 	TestReferences();
 	TestWorkspacePages();
 	TestDocsSite();
+	TestPageExamples();
 	TestMarkdownHighlighter();
 
 	MemoryKill();

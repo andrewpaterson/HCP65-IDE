@@ -24,6 +24,9 @@
     <ClCompile Include="TestDocsSite.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="TestPageExamples.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="TestMarkdownHighlighter.cpp">
       <Filter>Source</Filter>
     </ClCompile>
