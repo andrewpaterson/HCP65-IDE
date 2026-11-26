@@ -962,3 +962,7 @@ To find out before building
   - Before changing CCPPIndex (the outline's ranges, the type link, a file's places): who is working in
     CppCompilerLib, and whether the index's saved form or its tests (TestCppCompilerLib's TestCppIndex*) pin
     its layout.
+
+Finished (2026-11-26, HCP65/Website/DocsPlan.txt G4).  Its design, decisions and open items are now the design
+page Docs/ide/design/navigation.md; this file is kept only as the record code, tests and other plans cite.  Don't add to it:
+change the page.

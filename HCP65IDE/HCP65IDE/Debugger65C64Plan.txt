@@ -302,3 +302,7 @@ Things to watch for
   - Records version 4 makes every .debug file stale: the kernal's and programs' are rebuilt by their builds.
   - Release variables (A3) must never show a slot that holds another value at the stop (DebuggerPlan.txt's "Things
     to watch for"): only slots the back end says are the variable's own for the whole function.
+
+Finished (2026-11-26, HCP65/Website/DocsPlan.txt G4).  Its design, decisions and open items are now the design
+page Docs/ide/design/debugger.md; this file is kept only as the record code, tests and other plans cite.  Don't add to it:
+change the page.

@@ -1,6 +1,9 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
+    <Filter Include="Docs\ide\design">
+      <UniqueIdentifier>{ed46985c-f211-4783-880f-7ead15b3e202}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source">
       <UniqueIdentifier>{7090dbe9-f2c6-4afe-b4fc-db55521e4c8f}</UniqueIdentifier>
     </Filter>
@@ -707,6 +710,35 @@
     </None>
     <None Include="Docs\ide\templates.md">
       <Filter>Docs\ide</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Docs\ide\design\index.md">
+      <Filter>Docs\ide\design</Filter>
+    </None>
+    <None Include="Docs\ide\design\architecture.md">
+      <Filter>Docs\ide\design</Filter>
+    </None>
+    <None Include="Docs\ide\design\code-model.md">
+      <Filter>Docs\ide\design</Filter>
+    </None>
+    <None Include="Docs\ide\design\refactoring.md">
+      <Filter>Docs\ide\design</Filter>
+    </None>
+    <None Include="Docs\ide\design\navigation.md">
+      <Filter>Docs\ide\design</Filter>
+    </None>
+    <None Include="Docs\ide\design\editing.md">
+      <Filter>Docs\ide\design</Filter>
+    </None>
+    <None Include="Docs\ide\design\debugger.md">
+      <Filter>Docs\ide\design</Filter>
+    </None>
+    <None Include="Docs\ide\design\git.md">
+      <Filter>Docs\ide\design</Filter>
+    </None>
+    <None Include="Docs\ide\design\checks.md">
+      <Filter>Docs\ide\design</Filter>
     </None>
   </ItemGroup>
 </Project>

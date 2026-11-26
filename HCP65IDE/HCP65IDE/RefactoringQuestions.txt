@@ -570,3 +570,7 @@ Answered
     nothing but the constructors it hands on, the template takes the name again (CTank) and the name's class
     goes.  To do in Remove Template Parameter.
     Done 2026-11-15 (CIDETemplateParameter::FoldNameClass).
+
+Finished (2026-11-26, HCP65/Website/DocsPlan.txt G4).  Its design, decisions and open items are now the design
+page Docs/ide/design/refactoring.md; this file is kept only as the record code, tests and other plans cite.  Don't add to it:
+change the page.

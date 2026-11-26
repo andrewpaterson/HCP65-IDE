@@ -582,3 +582,6 @@ finished, not started before.  Written up for another session to take over on 20
      contributor).  What says AGPL now: HCP65-IDE's LICENSE and the GNU Affero notice in its sources (about 200
      files), HCP65's LICENSE and HCP65-Emulator's and HCP65-Tester's, LogiCim's LICENSE; and each repository's
      licence on GitHub, which is his to change.  The notices become the LGPL's, as CommonLibraries' are.
+
+The design as built, its decisions and what is still open (T5 and each item's leftovers) are on the design page
+Docs/ide/design/refactoring.md (2026-11-26, HCP65/Website/DocsPlan.txt G4).

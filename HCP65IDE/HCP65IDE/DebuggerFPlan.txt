@@ -376,3 +376,7 @@ Things to watch for
     their cycle counts (the check costs host time, not simulated cycles).
   - F4 can leave the target changed (memory written by the call): Visual Studio does the same, and the IDE says
     "Evaluating this expression may change the program's state" the first time.
+
+Finished (2026-11-26, HCP65/Website/DocsPlan.txt G4).  Its design, decisions and open items are now the design
+page Docs/ide/design/debugger.md; this file is kept only as the record code, tests and other plans cite.  Don't add to it:
+change the page.

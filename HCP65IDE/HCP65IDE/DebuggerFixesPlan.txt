@@ -179,3 +179,7 @@ CommonLibraries de27ae984, HCP65-IDE f63e712.  G5: HCP65-IDE 1363f12.
   - Differences from the plan: G4's address place is "frameaddress" (a word: the assembler reads frame-address as
     three tokens); a value's address error stays "Only something in memory has an address"; G5's Step Over at the
     call steps over the inline's spans alone (the call's line has no code of its own there).
+
+Finished (2026-11-26, HCP65/Website/DocsPlan.txt G4).  Its design, decisions and open items are now the design
+page Docs/ide/design/debugger.md; this file is kept only as the record code, tests and other plans cite.  Don't add to it:
+change the page.

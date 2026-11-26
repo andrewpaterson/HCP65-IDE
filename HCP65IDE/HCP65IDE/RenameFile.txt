@@ -135,3 +135,7 @@ Decided 2026-11-13
      the class declared in one); PreprocessorHeaderCache.cpp keeps its name.
 
 Nothing is left to decide.
+
+Finished (2026-11-26, HCP65/Website/DocsPlan.txt G4).  Its design, decisions and open items are now the design
+page Docs/ide/design/refactoring.md; this file is kept only as the record code, tests and other plans cite.  Don't add to it:
+change the page.

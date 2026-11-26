@@ -178,3 +178,7 @@ were the GPL 3's text, not the AGPL's, and the notices were in 212 files (IDEFil
 template's AGPL choice, which stays, as does TestTemplateText.cpp's test of it).  BaseLib's gpl.txt and lgpl.txt are
 older copies (http links) and gpl.txt was caught by a short-to-int16 rename ("output a int16"): the user had them
 deleted (CommonLibraries ccf25e2bb added the root's two files).
+
+Finished (2026-11-26, HCP65/Website/DocsPlan.txt G4).  Its design, decisions and open items are now the design
+pages Docs/ide/design/navigation.md (a, Find Duplicates) and refactoring.md, and the compiler's front-end.md (d); b's open getters are GettersNotConst.txt; this file is kept only as the record code, tests and other plans cite.  Don't add to it:
+change the page.

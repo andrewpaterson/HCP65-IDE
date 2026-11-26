@@ -255,3 +255,7 @@ Questions (answered 2026-11-16)
   T5. Keys: IntelliJ's New is Alt+Insert in the Project window.  Visual Studio's Add New Item is Ctrl+Shift+A.
       Which, or both?
       Answered: Alt+Insert.
+
+Finished (2026-11-26, HCP65/Website/DocsPlan.txt G4).  Its design, decisions and open items are now the design
+page Docs/ide/design/editing.md; this file is kept only as the record code, tests and other plans cite.  Don't add to it:
+change the page.

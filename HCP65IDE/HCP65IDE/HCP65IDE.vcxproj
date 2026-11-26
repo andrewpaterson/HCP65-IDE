@@ -593,6 +593,17 @@
     <None Include="Docs\ide\solutions.md" />
     <None Include="Docs\ide\templates.md" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Docs\ide\design\index.md" />
+    <None Include="Docs\ide\design\architecture.md" />
+    <None Include="Docs\ide\design\code-model.md" />
+    <None Include="Docs\ide\design\refactoring.md" />
+    <None Include="Docs\ide\design\navigation.md" />
+    <None Include="Docs\ide\design\editing.md" />
+    <None Include="Docs\ide\design\debugger.md" />
+    <None Include="Docs\ide\design\git.md" />
+    <None Include="Docs\ide\design\checks.md" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

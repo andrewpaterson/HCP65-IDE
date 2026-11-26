@@ -360,3 +360,7 @@ Things to watch for
     .lines becomes .debug: the breakpoint and stepping checks are the proof.
   - Packed temporaries mean an optimised frame offset can hold another variable's value at a given address: never
     show a variable from an offset the compiler didn't say holds it there.
+
+Finished (2026-11-26, HCP65/Website/DocsPlan.txt G4).  Its design, decisions and open items are now the design
+page Docs/ide/design/debugger.md; this file is kept only as the record code, tests and other plans cite.  Don't add to it:
+change the page.
