@@ -4261,6 +4261,10 @@ CHECKS = [
 		'WAIT_INDEX': '1', 'OPEN': 'Docs/shapes.md', 'DEBUG': 'wait:900,printproblems'}),
 		[r'^Problems: shapes\.md 1 errors, 1 warnings$', r'^  4:9 error: \[`CShape::Kill`\] names nothing the indexed solutions declare$',
 		 r'^  4:35 warning: `CShape` names class CShape \(\S*Shapes\.h:5\): write \[`CShape`\] to link to it$'], []),
+	('docs-colours', dict(MakeDocsCopy(), **{
+		#A page is coloured as Markdown (CMarkdownHighlighter), its references as what they name; it was plain before.
+		'WAIT_INDEX': '1', 'OPEN': 'Docs/shapes.md', 'DEBUG': 'wait:900,printspans'}),
+		[r'^Spans: changed$'], []),
 	('docs-build', dict(MakeDocsCopy(), **{
 		#A Makefile project is built by its build command, its output the build's: Site's prints a problem as GCC would.
 		'WAIT_INDEX': '1', 'CONFIGURATION': 'Debug|GCC', 'DEBUG': 'command:Build.Build,wait:200,printbuild'}),
