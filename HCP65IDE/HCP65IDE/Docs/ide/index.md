@@ -62,7 +62,7 @@ The layout and the files that were open are kept beside the solution, in
 |---|---|
 | [Solutions and Workspaces](solutions.md) | Opening solutions and projects, several solutions at once, Solution Explorer, the startup solution and project, the files kept beside a solution. |
 | [The Editor](editor.md) | Typing, moving and selecting, box selection, Extend Selection, drag and drop, undo across files, paste history, the highlights and the gutter. |
-| [Finding Your Way](navigation.md) | Go to Class, File, Symbol and Action; Go to Source, Implementation and Super Method; what a name is (its declaration, Quick Definition, Parameter Info, Type Info); the Type, Method and Call Hierarchies; Recent Files, the Switcher and edit locations; File Structure, breadcrumbs, bookmarks; Find and Replace, in the file and in files; Find Usages; Next and Previous Occurrence. |
+| [Finding Your Way](navigation.md) | Go to Class, File, Symbol and Action; Go to Source, Implementation and Super Method; what a name is (its declaration, Quick Definition, Parameter Info, Type Info, Quick Documentation, its tool tip); the Type, Method and Call Hierarchies; Recent Files, the Switcher and edit locations; File Structure, breadcrumbs, bookmarks; Find and Replace, in the file and in files; Find Usages; Next and Previous Occurrence. |
 | [Building and Running](building.md) | Build configurations and toolchains, the Build and Indexing tabs, listings in the gutter, run configurations and the Run tab. |
 | [Debugging](debugging.md) | Debugging in the HCP65 emulator: breakpoints, stepping, the Debug tab, loading a kernal, attaching. |
 | [Git](git.md) | File colours, change bars, Rollback, and diffs against HEAD, a branch, a revision or another file. |

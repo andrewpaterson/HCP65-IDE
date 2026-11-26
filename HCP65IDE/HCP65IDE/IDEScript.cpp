@@ -4014,10 +4014,12 @@ void CIDEScript::RunViewStep(const char* szStep)
 	else if (strcmp(szStep, "printinfo") == 0)
 	{
 		//The name underlined as a link with its declaration, and the popup over the caret's line: "Link: [Area] ...",
-		//"Info: parameters" and its rows, what is bold in square brackets.
+		//"Info: parameters" and its rows, what is bold in square brackets; then Quick Documentation
+		//("Documentation: [Area]" and its lines, what goes somewhere in square brackets) and the tool tip of the name
+		//the pointer rests on ("Tip: [Area] ...").
 		CChars	szShown;
 
-		mpcContent->GetQuickInfo()->Poll();
+		mpcContent->GetQuickInfo()->Poll(GetDebugTickCount());
 		szShown.Init();
 		mpcContent->GetQuickInfo()->Print(&szShown);
 		printf("%s", szShown.Text());
@@ -4053,6 +4055,38 @@ void CIDEScript::RunViewStep(const char* szStep)
 				mpcContent->GetQuickInfo()->ShowLinkAt(pTab, pEditor->GetLineStart(uiLine) + (size)(atoi(strchr(&szStep[10], ':') + 1) - 1));
 			}
 		}
+	}
+	else if ((strncmp(szStep, "tiphover:", 9) == 0) && pTab.IsNotNull())
+	{
+		//tiphover:<line>:<column>, from 1: as the pointer resting on that character; tiphover:off takes it away.
+		if (strcmp(&szStep[9], "off") == 0)
+		{
+			mpcContent->GetQuickInfo()->HoldTip(false);
+		}
+		else if (strchr(&szStep[9], ':') != NULL)
+		{
+			pEditor = pTab->GetEditor();
+			uiLine = (size)(atoi(&szStep[9]) - 1);
+			if (uiLine < pEditor->NumLines())
+			{
+				mpcContent->GetQuickInfo()->HoldTip(true);
+				mpcContent->GetQuickInfo()->ShowTipAt(pTab, pEditor->GetLineStart(uiLine) + (size)(atoi(strchr(&szStep[9], ':') + 1) - 1));
+			}
+		}
+	}
+	else if (strncmp(szStep, "docpress:", 9) == 0)
+	{
+		//docpress:<n>: as a press on the nth part of Quick Documentation that goes somewhere, from 0 (where the
+		//symbol is declared; the pages follow).  It is acted on at the next tick, as a press is.
+		if (!mpcContent->GetQuickInfo()->PressDocumentationLink((size)atoi(&szStep[9])))
+		{
+			printf("Quick Documentation has no part %s to press\n", &szStep[9]);
+		}
+		else
+		{
+			mpcContent->GetQuickInfo()->Poll(GetDebugTickCount());
+		}
+		fflush(stdout);
 	}
 	else if (strcmp(szStep, "printtoolwindows") == 0)
 	{

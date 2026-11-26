@@ -86,8 +86,10 @@ a file if it was closed since.  The history is kept for the session only.
 | Ctrl+Shift+I | **Quick Definition**: the definition's code, without leaving where you are |
 | Ctrl+P | **Parameter Info**: the parameters of the call the caret is in |
 | Ctrl+Shift+P | **Type Info**: the type of what is at the caret (a name, or the expression it is in), or of the selection |
+| Ctrl+Q | **Quick Documentation**: what is written about the name at the caret |
+| Pointer resting on a name | A tool tip: the name's declaration and the start of its comment |
 
-The three commands are in the View menu.
+The four commands are in the View menu.
 
 - **The declaration under the pointer.**  Hold Ctrl and point at a name: it is underlined, and a small
   box under it shows the declaration as it is written (`virtual int Area(void) = 0`, `CShape* pcFirst`,
@@ -112,6 +114,41 @@ The three commands are in the View menu.
   no name (a call's bracket, an operator, the `&` of `&cCircle`, a number) it shows the type of the
   expression the caret is in.  That last one checks the whole file first, which is quick in a small
   file and takes a second or two in a large one.  It goes when the caret moves.
+- **Quick Documentation** shows, under the caret's line, what is written about the name at the caret:
+  its declaration, where it is, the comment over it and the documentation pages that name it.  See
+  [below](#quick-documentation).
+- **The tool tip.**  Rest the pointer on a name for a little over half a second and a box under it
+  shows the same, shorter: the declaration, where it is, and the first three lines of the comment
+  (three dots after them if there is more).  It goes when the pointer leaves the name, when you type or
+  move the caret, on Escape and on a click, and it doesn't come back until the pointer is on another
+  name.  It isn't shown while Ctrl is held (the declaration under the pointer is), while another popup
+  or a menu is open, or while the editor hasn't the keys.  File, Settings..., **Editor** turns it off.
+
+### Quick Documentation
+
+Ctrl+Q on a name shows, under the caret's line:
+
+- its declaration, in the code's colours, as the box under the pointer shows it;
+- where it is declared, dimmer: its class if it has one, its file and its line;
+- the comment over it, as it is written;
+- **Documentation:** and the [documentation pages](documentation.md) that name it with a reference to
+  code, each once, at the first place in it (`shapes.md:3`), at most eight.
+
+The comment is the `//` lines directly over the name's definition (the banner over a function in its
+`.cpp`), or, with none there, the `//` comment after it on its line, as a field has.  If the definition has
+neither, the declaration's is shown.  The slashes are left out, and so are a banner's rules of slashes, so
+an empty banner shows nothing.  Nothing in the comment is read as markup.  A macro's name shows its
+`#define` and the comment over that.
+
+The file and line the name is declared at, and each page, are in the link colour: click one to go there.
+
+It shows sixteen lines.  With more, the mouse wheel over it, Page Up and Page Down, and Ctrl+Up and
+Ctrl+Down scroll it, and the caret stays where it is.
+
+It goes when the caret moves, on Escape, or on a click elsewhere.  Press Ctrl+Q again while it is showing
+and it stays: it then follows the caret, showing each name the caret comes to and keeping the last where
+there is none, until Ctrl+Q once more or Escape.  Where the caret is on nothing with a declaration, the
+status line says so.
 
 ## Hierarchies
 

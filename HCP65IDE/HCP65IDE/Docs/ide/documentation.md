@@ -20,6 +20,7 @@ declaration; an enumerator can leave out its enum; a file is named by the end of
 |---|---|
 | Ctrl+B on a reference | Opens what it names where the website's link goes: a function's declaration in its header, a class's definition, a file. |
 | Find Usages on a symbol | Lists the pages that name it in their own group, *Usage in documentation*. |
+| Ctrl+Q on a symbol | [Quick Documentation](navigation.md#quick-documentation) lists the pages that name it; click one to open it at the reference. |
 | Rename a symbol | Changes the references to it in the pages of the open solutions, as it changes code. |
 | Rename File | Changes the links to the file in the pages, and the snippet paths (`--8<--`) that name it. |
 | Edit a page | Its references are resolved again as you type. |

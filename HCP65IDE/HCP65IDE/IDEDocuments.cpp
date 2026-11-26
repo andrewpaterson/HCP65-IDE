@@ -215,6 +215,12 @@ Ptr<CIDEEditorTab> CIDEDocuments::OpenFileTab(const char* szFileName, size uiPro
 	pTab->GetCodeEditor()->GetIconClickEvent()->Add(&mpcContent->GetMarks(), &CIDEMarks::IconClicked);
 	pTab->GetEditor()->AddInputAction(CIC_ClearSelection, &mpcContent->GetMarks(), &CIDEMarks::EscapeAction);
 	pTab->GetEditor()->AddInputAction(CIC_ClearSelection, &mpcContent->GetQuickInfo(), &CIDEQuickInfo::EscapeAction);
+	//Page Up and Down, and Control with Up and Down, scroll Quick Documentation while it shows more than fits: its
+	//actions go before the editor's own, which don't get what they take.
+	pTab->GetEditor()->AddInputAction(CIC_PageUp, &mpcContent->GetQuickInfo(), &CIDEQuickInfo::ScrollAction)->SetGoesFirst(true);
+	pTab->GetEditor()->AddInputAction(CIC_PageDown, &mpcContent->GetQuickInfo(), &CIDEQuickInfo::ScrollAction)->SetGoesFirst(true);
+	pTab->GetEditor()->AddInputAction(CIC_LineUp, &mpcContent->GetQuickInfo(), &CIDEQuickInfo::ScrollAction)->SetGoesFirst(true);
+	pTab->GetEditor()->AddInputAction(CIC_LineDown, &mpcContent->GetQuickInfo(), &CIDEQuickInfo::ScrollAction)->SetGoesFirst(true);
 	mpcContent->GetDebugging()->ShowBreakpoints(pTab);
 	mpcContent->GetBookmarks()->ShowBookmarks(pTab);
 	mpcContent->GetGitStatus()->ReadGitBase(pTab);

@@ -38,6 +38,8 @@ RENAME_FILE = os.path.join(HERE, 'Input', 'RenameFile', 'RenameFile.sln')
 #changed in it.
 NAVIGATION = os.path.join(HERE, 'Input', 'Navigation', 'Navigation.vcxproj')
 QUICK_INFO = os.path.join(HERE, 'Input', 'QuickInfo', 'QuickInfo.vcxproj')
+#CGauge with comments of every kind over and beside what it declares, and two pages that name it (Input/Documentation).
+DOCUMENTATION = os.path.join(HERE, 'Input', 'Documentation', 'Documentation.vcxproj')
 BASES = os.path.join(HERE, 'Input', 'Bases', 'Bases.vcxproj')
 #A unit including <windows.h> (Input/WindowsHeaders), with Win32 and x64 configurations.
 WINDOWS_HEADERS = os.path.join(HERE, 'Input', 'WindowsHeaders', 'WindowsHeaders.vcxproj')
@@ -4283,7 +4285,7 @@ CHECKS = [
 		 r'^Menu File/Recent Solutions: 1 ',
 		 r'^Menu Edit: Undo \[Ctrl\+Z\](\(disabled\))?, Redo \[Ctrl\+Shift\+Z\](\(disabled\))?, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\], Select All \[Ctrl\+A\], Extend Selection \[Ctrl\+W\], Shrink Selection \[Ctrl\+Shift\+W\], Find\.\.\. \[Ctrl\+F\], Replace\.\.\. \[Ctrl\+R\], Find Next \[F3\], Find Previous \[Shift\+F3\], Find Word at Caret \[Ctrl\+F3\], Find in Files\.\.\. \[Ctrl\+Shift\+F\], Replace in Files\.\.\. \[Ctrl\+Shift\+R\], Find Duplicates\.\.\. \[Ctrl\+Alt\+Shift\+D\]$',
 		 r'^Menu Navigate: Back \[Ctrl\+Alt\+Left\](\(disabled\))?, Forward \[Ctrl\+Alt\+Right\](\(disabled\))?, Class\.\.\. \[Ctrl\+N\], File\.\.\. \[Ctrl\+Shift\+N\], Symbol\.\.\. \[Ctrl\+Alt\+Shift\+N\], Action\.\.\. \[Ctrl\+Shift\+A\], Line:Column\.\.\. \[Ctrl\+G\], Go to Source \[Ctrl\+B\], Go to Definition \[F12\], Go to Implementation\(s\) \[Ctrl\+Alt\+B\], Go to Type Declaration \[Ctrl\+Shift\+B\], Go to Super Method \[Ctrl\+U\], Go to Related Symbol \[Ctrl\+Alt\+Home\], Switch Header/Source \[Alt\+O\], File Structure \[Ctrl\+F12\], Next Method \[Alt\+Down\], Previous Method \[Alt\+Up\], Toggle Bookmark \[Ctrl\+F11\], Toggle Bookmark with Mnemonic\.\.\. \[Ctrl\+Shift\+F11\], Next Bookmark \[F2\], Previous Bookmark \[Shift\+F2\], Next Change \[Ctrl\+Alt\+Shift\+Down\], Previous Change \[Ctrl\+Alt\+Shift\+Up\], Highlight Usages in File \[Ctrl\+Shift\+F7\], Recent Files \[Ctrl\+E\], Recent Locations \[Ctrl\+Shift\+E\], Last Edit Location \[Ctrl\+Shift\+Backspace\], Next Edit Location, Select In\.\.\. \[Alt\+F1\], Type Hierarchy \[Ctrl\+H\], Method Hierarchy \[Ctrl\+Shift\+H\], Call Hierarchy \[Ctrl\+Alt\+H\], Find Usages \[Alt\+F7\], Show Usages \[Ctrl\+Alt\+F7\], Find All References \[Shift\+F12\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Next Occurrence \[Ctrl\+Alt\+Down\], Previous Occurrence \[Ctrl\+Alt\+Up\]$',
-		 r'^Menu View: Solution Explorer \[Alt\+1\], Structure \[Alt\+7\], Find Usages \[Alt\+3\], Find \[Alt\+9\], Duplicates, Bookmarks \[Alt\+2\], Hierarchy \[Alt\+8\], Build \[Alt\+6\], Indexing, Problems, Run \[Alt\+4\], Debug \[Alt\+5\], Locals, Call Stack, Autos, Watch 1, Watch 2, Watch 3, Watch 4, Claude, Hide All Tool Windows \[Ctrl\+Shift\+F12\], Jump to Last Tool Window(\(disabled\))?, Quick Definition \[Ctrl\+Shift\+I\], Parameter Info \[Ctrl\+P\], Type Info \[Ctrl\+Shift\+P\], Increase Font Size \[Ctrl\+=\], Decrease Font Size \[Ctrl\+-\], Reset Font Size \[Ctrl\+0\]$',
+		 r'^Menu View: Solution Explorer \[Alt\+1\], Structure \[Alt\+7\], Find Usages \[Alt\+3\], Find \[Alt\+9\], Duplicates, Bookmarks \[Alt\+2\], Hierarchy \[Alt\+8\], Build \[Alt\+6\], Indexing, Problems, Run \[Alt\+4\], Debug \[Alt\+5\], Locals, Call Stack, Autos, Watch 1, Watch 2, Watch 3, Watch 4, Claude, Hide All Tool Windows \[Ctrl\+Shift\+F12\], Jump to Last Tool Window(\(disabled\))?, Quick Definition \[Ctrl\+Shift\+I\], Parameter Info \[Ctrl\+P\], Type Info \[Ctrl\+Shift\+P\], Quick Documentation \[Ctrl\+Q\], Increase Font Size \[Ctrl\+=\], Decrease Font Size \[Ctrl\+-\], Reset Font Size \[Ctrl\+0\]$',
 		 r'^Menu Git: Compare with HEAD, Compare with Branch\.\.\., Compare with Revision\.\.\.$',
 		 r'^Menu Build: Build \[Ctrl\+F9\], Edit Build Configurations\.\.\.$',
 		 r'^Menu Debug: Start Debugging \[F5\], Start Without Debugging \[Ctrl\+F5\], Stop Debugging \[Shift\+F5\], Stop Running(\(disabled\))?, Restart \[Ctrl\+Shift\+F5\], Break All \[Ctrl\+Pause/Break\], Attach to Emulator\.\.\., Step Into \[F11\], Step Over \[F10\], Step Out \[Shift\+F11\], Toggle Breakpoint \[F9\], New Breakpoint at Address\.\.\., New Data Breakpoint\.\.\.(\(disabled\))?, Delete All Breakpoints, Edit Configurations\.\.\., Windows>, QuickWatch\.\.\. \[Shift\+F9\](\(disabled\))?$',
@@ -5124,6 +5126,92 @@ CHECKS = [
 		         'edit:caret:47:1,command:View.TypeInfo,printstatus,edit:printinfo'},
 		[r'^Info: type$', r'^  int$', r'^Info: none$', r'^Info: type$', r'^  CPainter\*$', r'^Info: type$', r'^  int$', r'^Info: type$', r'^  int\[PAINT_MAXIMUM\]$', r'^Info: type$', r'^  CPainter\*$',
 		 r'^Info: type$', r'^  int$', r'^Info: type$', r'^  class CPainter$', r'^Status line: No type is known for what is at the caret\.$', r'^Info: none$'], [r'ERROR', r'^Link: \[']),
+	('quick-documentation', {
+		#Quick Documentation (Control+Q): what is written about the symbol at the caret, under its line: its
+		#declaration, where it is declared, the comment over its definition without its slashes or its banner's rules
+		#(over its declaration where its definition has none, after it on its line for a field and a local variable,
+		#none for an empty banner or a // inside a string), and the pages that name it, each once at its first place.
+		#A macro has its #define and the comment over it.  It goes when the caret moves; where there is no name the
+		#status line says so.
+		'SOLUTION': DOCUMENTATION, 'WAIT_INDEX': '1', 'OPEN': 'Gauge.cpp', 'CARET': '95:12',
+		'DEBUG': 'edit:printinfo,command:View.QuickDocumentation,edit:printinfo,edit:caret:96:20,edit:printinfo,command:View.QuickDocumentation,edit:printinfo,'
+		         'edit:caret:89:17,command:View.QuickDocumentation,edit:printinfo,edit:caret:11:3,command:View.QuickDocumentation,edit:printinfo,edit:caret:12:3,command:View.QuickDocumentation,edit:printinfo,'
+		         'edit:caret:98:10,command:View.QuickDocumentation,edit:printinfo,edit:caret:98:28,command:View.QuickDocumentation,edit:printinfo,edit:caret:96:3,command:View.QuickDocumentation,edit:printinfo,'
+		         'edit:caret:92:9,command:View.QuickDocumentation,edit:printinfo,edit:caret:93:1,command:View.QuickDocumentation,printstatus,edit:printinfo'},
+		[r'^Documentation: none$', r'^Tip: none$',
+		 r'^Documentation: \[SetValue\]$', r'^  bool SetValue\(int iValue\)$', r'^  CGauge, \[Gauge\.h:20\]$', r'^  $', r'^  The needle goes to iValue, or to the limit if that is less\.$', r'^  $',
+		 r'^  False if it was past the limit\.$', r'^  A value under nothing is nothing\.$', r'^  The machine is not told\.$', r'^  $', r'^  Documentation:$', r'^    \[gauges\.md:3\]$',
+		 r'^Documentation: none$',
+		 r'^Documentation: \[GetValue\]$', r'^  int GetValue\(void\)$', r'^  CGauge, \[Gauge\.h:19\]$', r'^  $', r'^  Documentation:$', r'^    \[gauges\.md:3\]$',
+		 r'^Documentation: \[CGauge\]$', r'^  class CGauge$', r'^  \[Gauge\.h:11\]$', r'^  $', r'^  A gauge shows one value of its machine as a needle on a dial\.$', r'^  Its machine reads it each tick\.$', r'^  $',
+		 r'^  Documentation:$', r'^    \[dials\.md:5\]$', r'^    \[gauges\.md:3\]$',
+		 r'^Documentation: \[miValue\]$', r'^  int miValue$', r'^  CGauge, \[Gauge\.h:14\]$', r'^  $', r'^  What the needle points at\.$',
+		 r'^Documentation: \[miLimit\]$', r'^  int miLimit$', r'^  CGauge, \[Gauge\.h:15\]$', r'^Tip: none$',
+		 r'^Documentation: \[ClampGauge\]$', r'^  int ClampGauge\(int iValue, int iLimit\)$', r'^  \[Gauge\.h:25\]$', r'^  $', r'^  iValue, kept from nothing to iLimit\.$',
+		 r'^Documentation: \[GAUGE_MAXIMUM\]$', r'^  #define GAUGE_MAXIMUM 100$', r'^  \[Gauge\.h:6\]$', r'^  $', r'^  The most a gauge reads\.$',
+		 r'^Documentation: \[iTotal\]$', r'^  int iTotal$', r'^  \[Gauge\.cpp:91\]$', r'^  $', r'^  Of every value read: "one // two" is a string\.$',
+		 r'^Documentation: \[szName\]$', r'^  char\* szName = \(char\*\)"one // two"$', r'^  \[Gauge\.cpp:92\]$', r'^Tip: none$',
+		 r'^Status line: Nothing is known about what is at the caret\.$', r'^Documentation: none$'], [r'ERROR', r'////', r'^  //']),
+	('quick-documentation-keep', {
+		#Control+Q again while it shows keeps it: it follows the caret to each symbol it comes to and stays as it is
+		#where there is none; once more and it goes with the caret again.  Escape closes it kept or not.
+		'SOLUTION': DOCUMENTATION, 'WAIT_INDEX': '1', 'OPEN': 'Gauge.cpp', 'CARET': '95:12',
+		'DEBUG': 'command:View.QuickDocumentation,command:View.QuickDocumentation,printstatus,edit:printinfo,edit:caret:96:20,edit:printinfo,edit:caret:93:1,edit:printinfo,'
+		         'command:View.QuickDocumentation,printstatus,edit:printinfo,edit:caret:94:12,edit:printinfo,'
+		         'command:View.QuickDocumentation,command:View.QuickDocumentation,edit:printinfo,edit:key:escape,edit:printinfo,command:View.QuickDocumentation,edit:printinfo,edit:key:escape,edit:printinfo,edit:print'},
+		[r'^Status line: Quick Documentation follows the caret until Escape\.$', r'^Documentation: \[SetValue\], kept$', r'^Documentation: \[GetValue\], kept$', r'^  int GetValue\(void\)$',
+		 r'^Documentation: \[GetValue\], kept$', r'^Status line: Quick Documentation goes when the caret moves\.$', r'^Documentation: \[GetValue\]$', r'^Documentation: none$',
+		 r'^Documentation: \[Init\], kept$', r'^  The gauge reads nothing, and its needle stops at iLimit\.$', r'^Documentation: none$', r'^Documentation: \[Init\]$', r'^Documentation: none$',
+		 r'Gauge\.cpp \(focus\) line 94: '], [r'ERROR']),
+	('quick-documentation-scroll', {
+		#More than it shows at once scrolls: Page Down and Page Up by a page, Control with Down and Up by a line, and
+		#no further than its ends; the caret stays where it is, so it stays open.  One that fits leaves the keys to
+		#the editor: Page Down moves the caret and it goes.
+		'SOLUTION': DOCUMENTATION, 'WAIT_INDEX': '1', 'OPEN': 'Gauge.cpp', 'CARET': '97:12',
+		'DEBUG': 'command:View.QuickDocumentation,edit:printinfo,edit:tap:Page Down,edit:printinfo,edit:press:Left Control,edit:tap:Cursor Down,edit:release:Left Control,edit:printinfo,'
+		         'edit:tap:Page Down,edit:tap:Page Down,edit:printinfo,edit:press:Left Control,edit:tap:Cursor Up,edit:release:Left Control,edit:printinfo,edit:tap:Page Up,edit:tap:Page Up,edit:printinfo,edit:print,'
+		         'edit:caret:95:12,command:View.QuickDocumentation,edit:printinfo,edit:tap:Page Up,edit:printinfo,edit:print'},
+		[r'^Documentation: \[Reset\]$', r'^  void Reset\(void\)$', r'^  CGauge, \[Gauge\.h:21\]$', r'^  The needle goes back to nothing, a step at a time\.$', r'^  Step 20: the needle is moved a little nearer to nothing\.$',
+		 r'^Documentation: \[Reset\], scrolled \d+$', r'^Documentation: \[Reset\], scrolled \d+$', r'^Documentation: \[Reset\], scrolled 9$', r'^Documentation: \[Reset\], scrolled 8$', r'^Documentation: \[Reset\]$',
+		 r'Gauge\.cpp \(focus\) line 97: ', r'^Documentation: \[SetValue\]$', r'^Documentation: none$', r'Gauge\.cpp \(focus\) line \d+: '], [r'ERROR', r'Gauge\.cpp \(focus\) line 95: ']),
+	('quick-documentation-press', {
+		#A press on a page it lists opens the page at the reference, where Quick Documentation is of what the
+		#reference names; a press on where the symbol is declared goes there.  It has closed either way.
+		'SOLUTION': DOCUMENTATION, 'WAIT_INDEX': '1', 'OPEN': 'Gauge.cpp', 'CARET': '89:17',
+		'DEBUG': 'command:View.QuickDocumentation,edit:docpress:2,edit:printinfo,edit:print,command:View.QuickDocumentation,edit:printinfo,'
+		         'edit:open:Gauge.cpp,edit:caret:95:12,command:View.QuickDocumentation,edit:docpress:0,edit:printinfo,edit:print,edit:docpress:0'},
+		[r'^Documentation: none$', r'gauges\.md \(focus\) line 3: ', r'^Documentation: \[CGauge\]$', r'^  class CGauge$', r'^    \[dials\.md:5\]$',
+		 r'^Documentation: none$', r'Gauge\.h \(focus\) line 20: \[\tbool\tSetValue\(int iValue\);\]$', r'^Quick Documentation has no part 0 to press$'], [r'ERROR']),
+	('quick-tip', {
+		#The tool tip of a name: its declaration, where it is declared and the first three lines of its comment, with
+		#three dots when there is more; without a comment, the first two.  Nothing for what is no name.  The pointer
+		#itself: nothing until it has rested on the name, then its tip, which goes when the pointer is on another
+		#name and comes for that one after the wait; a key that moves the caret takes it away for that name, and
+		#Control held shows the link instead.
+		'SOLUTION': DOCUMENTATION, 'WAIT_INDEX': '1', 'OPEN': 'Gauge.cpp', 'CARET': '94:1',
+		'DEBUG': 'edit:tiphover:95:12,edit:printinfo,edit:tiphover:96:20,edit:printinfo,edit:tiphover:89:17,edit:printinfo,edit:tiphover:93:1,edit:printinfo,edit:tiphover:off,edit:printinfo,'
+		         'edit:printcrumbs,edit:pointer:95:12,edit:printinfo,wait:900,edit:printinfo,edit:pointer:96:20,edit:printinfo,wait:900,edit:printinfo,edit:tap:Cursor Down,edit:printinfo,wait:900,edit:printinfo,'
+		         'edit:pointer:98:10,wait:900,edit:printinfo,edit:press:Left Control,edit:printinfo,edit:release:Left Control,edit:printinfo'},
+		[r'^Tip: \[SetValue\] bool SetValue\(int iValue\) \| CGauge, Gauge\.h:20 \|  \| The needle goes to iValue, or to the limit if that is less\. \|  \| False if it was past the limit\. \| \.\.\.$',
+		 r'^Tip: \[GetValue\] int GetValue\(void\) \| CGauge, Gauge\.h:19$',
+		 r'^Tip: \[CGauge\] class CGauge \| Gauge\.h:11 \|  \| A gauge shows one value of its machine as a needle on a dial\. \| Its machine reads it each tick\.$',
+		 r'^Tip: none$', r'^Tip: none$',
+		 r'^Tip: none$', r'^Tip: \[SetValue\] bool SetValue\(int iValue\) \| CGauge, Gauge\.h:20 \| ', r'^Tip: none$', r'^Tip: \[GetValue\] int GetValue\(void\) \| CGauge, Gauge\.h:19$',
+		 r'^Tip: none$', r'^Tip: none$', r'^Tip: \[ClampGauge\] int ClampGauge\(int iValue, int iLimit\) \| Gauge\.h:25 \|  \| iValue, kept from nothing to iLimit\.$',
+		 r'^Link: \[ClampGauge\] int ClampGauge\(int iValue, int iLimit\) \| Gauge\.h:25$', r'^Tip: none$', r'^Link: none$'], [r'ERROR', r'^Documentation: \[']),
+	('quick-tip-off', {
+		#Settings' Editor page: the tick for a name's tool tip, unticked and kept by OK, is written with the settings
+		#and no tip is shown however long the pointer rests; Quick Documentation is as it was.
+		'SOLUTION': DOCUMENTATION, 'WAIT_INDEX': '1', 'OPEN': 'Gauge.cpp', 'CARET': '95:12',
+		'SETTINGS': MakeSettingsFile(), 'EDITOR_EDITS': 'tooltips:false', 'DIALOG_ANSWER': 'OK',
+		'DEBUG': 'edit:printcrumbs,edit:pointer:95:12,wait:900,edit:printinfo,clickmenu:File/Settings...,answered:1,printsettings,edit:pointer:96:20,wait:900,edit:printinfo,command:View.QuickDocumentation,edit:printinfo'},
+		[r'^Tip: \[SetValue\] ', r'^Dialog \[Settings\] answered OK$', r'<Editor Breadcrumbs="true" StickyLines="true" NameToolTips="false"/>', r'^Tip: none$', r'^Documentation: \[SetValue\]$', r'^Tip: none$'], [r'ERROR', r'^Tip: \[GetValue\]']),
+	('quick-tip-off-read', {
+		#The settings as they were written: no tool tips for names.
+		'SOLUTION': DOCUMENTATION, 'WAIT_INDEX': '1', 'OPEN': 'Gauge.cpp', 'CARET': '94:1',
+		'SETTINGS': MakeSettingsFile('<?xml version="1.0" encoding="UTF-8"?>\n<Settings>\n  <Editor Breadcrumbs="true" StickyLines="true" NameToolTips="false"/>\n</Settings>\n'),
+		'DEBUG': 'edit:printcrumbs,edit:pointer:95:12,wait:900,edit:printinfo'},
+		[r'^Tip: none$'], [r'ERROR', r'^Tip: \[']),
 	('quick-definition', {
 		#Quick Definition (Control+Shift+I): the definition of the symbol at the caret in a chooser that previews its
 		#code; Enter goes to it.  With no symbol there the status line says so.

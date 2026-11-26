@@ -29,6 +29,8 @@ class CIDEContent;
 
 
 #define IDE_DECLARATION_MAXIMUM	240		//The most of a declaration's text shown.
+#define IDE_COMMENT_MAXIMUM		4000	//The most of a comment's.
+#define IDE_DOCUMENTED_MAXIMUM	8		//The most documentation pages listed for a symbol.
 
 
 //What a symbol is, in words (NavigationPlan.txt's S6): its declaration as it is written, on one line, where its name
@@ -54,11 +56,32 @@ struct SIDESymbolInfo
 typedef CArrayTemplate<SIDESymbolInfo>	CArrayIDESymbolInfos;
 
 
+//What is written about a symbol, for Quick Documentation and the tool tip over a name: what it is (above), the
+//comment over it as it is written, and the documentation pages that name it (a place in each, the first, in the
+//order of the pages' names).
+//
+//The comment is the // lines directly over the symbol's definition, or failing that the one after it on its line (as
+//a field has); if its definition has neither, its declaration's.  Their slashes and the space after them are left
+//out, and so is a line that is nothing but slashes, so a banner's rules don't show and an empty banner is no
+//comment.  No markup is read from it.
+struct SIDESymbolDocumentation
+{
+	SIDESymbolInfo		sInfo;
+	CChars				szComment;	//Its lines parted by line feeds; empty for none.
+	CArrayIDELocations	asPages;
+
+	void	Init(void);
+	void	Kill(void);
+};
+
+
 //They read the text, not a parse of it: a symbol's declaration is the statement its name is in (from the end of the
 //statement or block before it to the body or semicolon after it), a parameter's what is between the commas round it.
 //That is quick enough to do as the pointer moves, and needs nothing of the file but its text.
 bool	ReadIDEDeclaration(const char* szText, size uiLength, size uiName, size uiNameLength, uint8 uiKind, CChars* pszDest, size* puiNameInDest, CArrayChars* paszParameters);
 bool	ReadIDESymbolInfo(CIDEContent* pcContent, const char* szKey, SIDESymbolInfo* psDest);
+bool	ReadIDESymbolDocumentation(CIDEContent* pcContent, const char* szKey, SIDESymbolDocumentation* psDest);
+void	ReadIDEComment(const char* szText, size uiLength, size uiName, CChars* pszDest);
 void	AppendIDEDeclaredType(SIDESymbolInfo* psInfo, CChars* pszDest);
 bool	FindIDECall(const char* szText, size uiCaret, size* puiNameStart, size* puiNameEnd, size* puiOpen, size* puiArgument);
 bool	FindIDENameAt(const char* szText, size uiPosition, size* puiStart, size* puiEnd);

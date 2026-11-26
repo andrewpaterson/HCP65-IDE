@@ -33,9 +33,10 @@ what the Find Duplicates dialog's tick starts as.
 
 ## Editor
 
-Two ticks, both on to begin with: **Show breadcrumbs** (what the caret is in, under the code) and **Show
-sticky lines** (the first lines of what the top of the view is in, kept over the code).  See
-[Moving in a file](navigation.md#breadcrumbs).
+Three ticks, all on to begin with: **Show breadcrumbs** (what the caret is in, under the code), **Show
+sticky lines** (the first lines of what the top of the view is in, kept over the code) and **Show what a
+name is when the pointer rests on it** (the tool tip over a name).  See
+[Moving in a file](navigation.md#breadcrumbs) and [What a name is](navigation.md#what-a-name-is).
 
 ## Where settings are kept
 
@@ -70,6 +71,7 @@ Workspaces](solutions.md#files-kept-beside-the-solution).
 | Ctrl+Shift+I | Quick Definition |
 | Ctrl+P | Parameter Info |
 | Ctrl+Shift+P | Type Info |
+| Ctrl+Q | Quick Documentation |
 | Alt+Right, Alt+Left | Select Next Tab and Select Previous Tab |
 | Menu, Shift+F10 | The context menu |
 | F4 | Jump to Source (from a tool window) |

@@ -317,15 +317,6 @@ int32 CIDEResultsPane::AddMessage(int32 iParent, const char* szText, const char*
 }
 
 
-//A part of a line of code that has a colour of its own: where it is in the line and what it is.
-struct SIDELineColour
-{
-	size			uiStart;
-	size			uiLength;
-	ECPPHighlight	eKind;
-};
-
-
 //A part of a result's row in a font of its own.
 struct SIDERowRange
 {
@@ -344,7 +335,7 @@ struct SIDERowRange
 // most uiMaximum are found; how many.
 //
 //////////////////////////////////////////////////////////////////////////
-static size FindIDELineColours(const char* szLine, size uiLength, SIDELineColour* asDest, size uiMaximum)
+size FindIDELineColours(const char* szLine, size uiLength, SIDELineColour* asDest, size uiMaximum)
 {
 	static const char*	aszKeywords[] = { "alignas", "alignof", "auto", "bool", "break", "case", "catch", "char", "char16_t", "char32_t", "class", "const", "const_cast", "constexpr",
 										  "continue", "decltype", "default", "delete", "do", "double", "dynamic_cast", "else", "enum", "explicit", "extern", "false", "final", "float",

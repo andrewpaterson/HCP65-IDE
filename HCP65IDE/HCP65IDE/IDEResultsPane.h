@@ -38,6 +38,19 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/MessageDialog.h"
 
 
+
+//A part of a line of code that has a colour of its own: where it is in the line and what it is.
+struct SIDELineColour
+{
+	size			uiStart;
+	size			uiLength;
+	ECPPHighlight	eKind;
+};
+
+
+size	FindIDELineColours(const char* szLine, size uiLength, SIDELineColour* asDest, size uiMaximum);
+
+
 class CIDEContent;
 class CIDEResultsPane;
 

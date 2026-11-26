@@ -31,7 +31,8 @@ class CIDEContent;
 
 
 //Settings' Editor page: whether an editor shows its breadcrumbs (what the caret is in, under the code) and its sticky
-//lines (the first lines of what the top of the view is in, kept over the code), and whether held keys repeat, after how
+//lines (the first lines of what the top of the view is in, kept over the code), whether a name the pointer rests on has
+//a tool tip saying what it is (CIDEQuickInfo has that), and whether held keys repeat, after how
 //long and how fast, and the code's font size and whether Control and the wheel zoom it.  OK keeps them (CIDEStructure
 //has the editors', CIDESettings the keys' and the font's), and they are written with the IDE's settings.
 class CIDEEditorPage : public CSettingsPage
@@ -42,6 +43,7 @@ protected:
 	CIDEContent*		mpcContent;  //Not held.
 	Ptr<CCheckBox>		mpBreadcrumbs;
 	Ptr<CCheckBox>		mpStickyLines;
+	Ptr<CCheckBox>		mpToolTips;
 	Ptr<CCheckBox>		mpKeyRepeat;
 	Ptr<CTextField>		mpRepeatDelay;
 	Ptr<CTextField>		mpRepeatRate;

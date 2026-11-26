@@ -943,8 +943,13 @@ void CIDEContent::Tick(Ptr<CWindow> pWindow)
 	//The active editor's changed lines' marks, kept usages and override marks keep up with it.
 	mpMarks->Poll();
 
-	//The name Control is held over, and the popup over the caret's line.
-	mpQuickInfo->Poll();
+	//The name Control is held over, the popup over the caret's line, Quick Documentation, and the tool tip of the
+	//name the pointer rests on, which is due a while after the pointer stops.
+	iWait = mpQuickInfo->Poll(iNow);
+	if ((iWait >= 0) && ((iSoonest < 0) || (iWait < iSoonest)))
+	{
+		iSoonest = iWait;
+	}
 
 	//The tool window that has the keys is the one Jump to Last Tool Window goes back to.
 	mpToolWindows->Poll();

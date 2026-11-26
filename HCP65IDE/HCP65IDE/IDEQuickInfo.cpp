@@ -24,13 +24,19 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "StandardLib/Objects.h"
 #include "CppCompilerLib/CPPIndex.h"
 #include "IDEContent.h"
+#include "BaseLib/TextFile.h"
+#include "BaseLib/Timer.h"
 #include "IDEIntroduceVariable.h"
+#include "IDELocationPreview.h"
+#include "IDEResultsPane.h"
 #include "IDEQuickInfo.h"
 
 
 #define IDE_LINK_COLOUR			Set32BitColour((uint8)0x58, (uint8)0x9D, (uint8)0xF6)
 #define IDE_QUICK_OVERLOADS		12		//The most functions of one name Parameter Info lists.
 #define IDE_NO_PARAMETERS		"<no parameters>"
+#define IDE_QUICK_COLOURS		64		//The most coloured parts of a declaration.
+#define IDE_DOCUMENTED_IN		"Documentation:"
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -59,6 +65,26 @@ void CIDEQuickInfo::Init(CIDEContent* pcContent)
 	maiBold.Init();
 	mpLinkPopup = OMalloc<CInfoPopup>(pcContent->GetWindow(), pcContent->GetTheme(), pcContent->GetCodeFamily());
 	mpInfoPopup = OMalloc<CInfoPopup>(pcContent->GetWindow(), pcContent->GetTheme(), pcContent->GetCodeFamily());
+	muiDocumentationCaret = 0;
+	muiDocumentationChanges = 0;
+	mbDocumentationPinned = false;
+	mszDocumentationName.Init();
+	masDocumentationLinks.Init();
+	mbDocumentationPressed = false;
+	muiDocumentationPressed = MAX_SIZE;
+	mszTipName.Init();
+	mbToolTips = true;
+	mbTipHeld = false;
+	muiRestStart = 0;
+	muiRestChanges = 0;
+	muiRestCaret = 0;
+	msRestPointer.Init(0, 0);
+	miRestTime = 0;
+	mbRestDone = false;
+	mpDocumentation = OMalloc<CInfoPopup>(pcContent->GetWindow(), pcContent->GetTheme(), pcContent->GetCodeFamily());
+	mpDocumentation->SetTakesPointer(true);
+	mpDocumentation->GetPressEvent()->Add(this, &CIDEQuickInfo::DocumentationPressed);
+	mpTip = OMalloc<CInfoPopup>(pcContent->GetWindow(), pcContent->GetTheme(), pcContent->GetCodeFamily());
 	PostInit();
 }
 
@@ -92,6 +118,27 @@ void CIDEQuickInfo::Class(void)
 	U_Size(muiInfoArgument);
 	U_Unknown(CArrayIDESymbolInfos, masOverloads);
 	U_Unknown(CArrayInt, maiBold);
+	M_Pointer(mpDocumentation);
+	M_Pointer(mpDocumentationTab);
+	U_Size(muiDocumentationCaret);
+	U_Size(muiDocumentationChanges);
+	U_Bool(mbDocumentationPinned);
+	U_String(mszDocumentationName);
+	U_Unknown(CArrayIDEDocumentationLinks, masDocumentationLinks);
+	U_Bool(mbDocumentationPressed);
+	U_Size(muiDocumentationPressed);
+	M_Pointer(mpTip);
+	M_Pointer(mpTipTab);
+	U_String(mszTipName);
+	U_Bool(mbToolTips);
+	U_Bool(mbTipHeld);
+	M_Pointer(mpRestTab);
+	U_Size(muiRestStart);
+	U_Size(muiRestChanges);
+	U_Size(muiRestCaret);
+	U_Data(SInt32Vec2, msRestPointer);
+	U_Data(int64, miRestTime);
+	U_Bool(mbRestDone);
 }
 
 
@@ -101,6 +148,14 @@ void CIDEQuickInfo::Class(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDEQuickInfo::Free(void)
 {
+	if (mpDocumentation.IsNotNull())
+	{
+		mpDocumentation->GetPressEvent()->Remove(this);
+	}
+	mszTipName.Kill();
+	KillDocumentationLinks();
+	masDocumentationLinks.Kill();
+	mszDocumentationName.Kill();
 	maiBold.Kill();
 	KillIDESymbolInfos(&masOverloads);
 	mszInfoName.Kill();
@@ -136,6 +191,7 @@ void CIDEQuickInfo::AddCommands(Ptr<CCommandSet> pCommands)
 	pCommands->Add("View.QuickDefinition", "Quick Definition", "Control+Shift+I", Ptr<CImageCel>(), this, &CIDEQuickInfo::ShowQuickDefinition)->SetEnabledCheck(this, &CIDEQuickInfo::HasEditor);
 	pCommands->Add("View.ParameterInfo", "Parameter Info", "Control+P", Ptr<CImageCel>(), this, &CIDEQuickInfo::ShowParameterInfo)->SetEnabledCheck(this, &CIDEQuickInfo::HasEditor);
 	pCommands->Add("View.TypeInfo", "Type Info", "Control+Shift+P", Ptr<CImageCel>(), this, &CIDEQuickInfo::ShowTypeInfo)->SetEnabledCheck(this, &CIDEQuickInfo::HasEditor);
+	pCommands->Add("View.QuickDocumentation", "Quick Documentation", "Control+Q", Ptr<CImageCel>(), this, &CIDEQuickInfo::ShowQuickDocumentation)->SetEnabledCheck(this, &CIDEQuickInfo::HasEditor);
 }
 
 
@@ -145,6 +201,7 @@ void CIDEQuickInfo::AddViewItems(Ptr<CMenuContainer> pMenu)
 	pMenu->AddItem(mpcContent->GetCommands()->Find("View.QuickDefinition"));
 	pMenu->AddItem(mpcContent->GetCommands()->Find("View.ParameterInfo"));
 	pMenu->AddItem(mpcContent->GetCommands()->Find("View.TypeInfo"));
+	pMenu->AddItem(mpcContent->GetCommands()->Find("View.QuickDocumentation"));
 }
 
 
@@ -153,14 +210,18 @@ bool CIDEQuickInfo::HasEditor(void) { return mpcContent->GetDocuments()->GetActi
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Each window tick: the name under the pointer while Control is held, and
-// the popup over the caret's line as the caret moves.
+// Each window tick: the name under the pointer while Control is held, the
+// popup over the caret's line and Quick Documentation as the caret moves,
+// and the tool tip of the name the pointer rests on.  How long until the
+// tip is due, -1 if none is waited for.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEQuickInfo::Poll(void)
+int64 CIDEQuickInfo::Poll(int64 iNow)
 {
 	PollLink();
 	PollInfo();
+	PollDocumentation();
+	return PollTip(iNow);
 }
 
 
@@ -369,18 +430,36 @@ void CIDEQuickInfo::TabClosed(Ptr<CIDEEditorTab> pTab)
 	{
 		HideInfo();
 	}
+	if (mpDocumentationTab == pTab)
+	{
+		HideDocumentation();
+	}
+	if (mpTipTab == pTab)
+	{
+		HideTip();
+	}
+	if (mpRestTab == pTab)
+	{
+		mpRestTab = NULL;
+	}
 }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Escape in an editor: the popup over the caret goes.  It is the editor's
-// own too (the selection cleared) when there is none.
+// Escape in an editor: a name's tool tip, Quick Documentation and the
+// popup over the caret go.  It is the editor's own too (the selection
+// cleared) when there is none of them.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEQuickInfo::EscapeAction(SComponentInputEvent* psEvent)
 {
-	if (!HideInfo())
+	bool	bHidden;
+
+	bHidden = HideTip();
+	bHidden |= HideDocumentation();
+	bHidden |= HideInfo();
+	if (!bHidden)
 	{
 		psEvent->bPass = true;
 	}
@@ -886,14 +965,607 @@ static const char* GetIDECursorName(ENativeCursor eCursor)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// What is written about the name at uiPosition of pTab's text (or ending
+// there, as a name the caret is after), set as pPopup's text and
+// coloured: its declaration in the code's colours, where it is declared,
+// dim, the comment over it, and (not for a tip) the documentation pages
+// that name it.  A tip has only the first IDE_TIP_COMMENT_LINES of the
+// comment.  Not a tip, the places that can be gone to are kept
+// (masDocumentationLinks): where it is declared, and each page.  A
+// macro's name has its #define and the comment over that.  False, the
+// popup left as it was, if the name is neither or there is none there.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEQuickInfo::WriteDocumentation(Ptr<CIDEEditorTab> pTab, size uiPosition, bool bTip, Ptr<CInfoPopup> pPopup, CChars* pszName, size* puiStart)
+{
+	Ptr<CTextArea>				pEditor;
+	SIDESymbolDocumentation		sDocumentation;
+	SIDEDocumentationLink*		psLink;
+	SIDELocation				sDefine;
+	SIDELocation*				psPage;
+	SIDELineColour				asColours[IDE_QUICK_COLOURS];
+	CTextFile					cFile;
+	CChars						szKey;
+	CChars						szText;
+	CChars						szName;
+	const char*					szFileText;
+	const char*					szComment;
+	const char*					szFile;
+	size						uiFileLength;
+	size						uiStart;
+	size						uiEnd;
+	size						uiCommentEnd;
+	size						uiLine;
+	size						uiColours;
+	size						uiWhere;
+	size						uiHeading;
+	size						uiLines;
+	size						uiPlace;
+	size						i;
+	uint8						uiKind;
+	bool						bResult;
+	bool						bMore;
+
+	pEditor = pTab->GetEditor();
+	if (!FindIDENameAt(pEditor->GetText(), uiPosition, &uiStart, &uiEnd) && ((uiPosition == 0) || !FindIDENameAt(pEditor->GetText(), uiPosition - 1, &uiStart, &uiEnd)))
+	{
+		return false;
+	}
+	mpcContent->GetDocuments()->UpdateEditedTabsNow();
+	uiLine = pEditor->FindLine(uiStart);
+	szKey.Init();
+	sDocumentation.Init();
+	bResult = mpcContent->GetCodeModel()->GetSymbolAt(pTab->GetFileName(), (int)uiLine, (int)(uiStart - pEditor->GetLineStart(uiLine)), &szKey, &uiKind) &&
+			  ReadIDESymbolDocumentation(mpcContent, szKey.Text(), &sDocumentation);
+	szKey.Kill();
+	if (!bResult)
+	{
+		//Not a symbol: a macro, perhaps, whose #define is its declaration, with the comment over it.
+		szName.Init();
+		szName.Append(&pEditor->GetText()[uiStart], uiEnd - uiStart);
+		if (mpcContent->GetConvertMacro()->FindDefine(szName.Text(), &sDefine))
+		{
+			sDocumentation.sInfo.szDeclaration.Clear();
+			sDocumentation.sInfo.szWhere.Clear();
+			bResult = mpcContent->GetConvertMacro()->ReadDefineInfo(&sDefine, &sDocumentation.sInfo.szDeclaration, &sDocumentation.sInfo.szWhere);
+			if (bResult)
+			{
+				sDocumentation.sInfo.sPlace.szFileName.Set(sDefine.szFileName);
+				sDocumentation.sInfo.sPlace.iLine = sDefine.iLine;
+				sDocumentation.sInfo.sPlace.iColumn = sDefine.iColumn;
+				sDocumentation.sInfo.sPlace.iLength = sDefine.iLength;
+				cFile.Init();
+				if (mpcContent->GetFindInFiles()->GetFileText(sDefine.szFileName.Text(), &cFile, &szFileText, &uiFileLength))
+				{
+					ReadIDEComment(szFileText, uiFileLength, FindIDETextPosition(szFileText, uiFileLength, sDefine.iLine, sDefine.iColumn), &sDocumentation.szComment);
+				}
+				cFile.Kill();
+			}
+			sDefine.szFileName.Kill();
+		}
+		szName.Kill();
+	}
+	if (!bResult)
+	{
+		sDocumentation.Kill();
+		return false;
+	}
+
+	//The declaration, where it is, the comment (a tip's cut to its first lines), the pages.
+	szText.Init(sDocumentation.sInfo.szDeclaration);
+	szText.Append('\n');
+	uiWhere = szText.Length();
+	szText.Append(sDocumentation.sInfo.szWhere);
+	bMore = false;
+	if (!sDocumentation.szComment.Empty())
+	{
+		szText.Append("\n\n");
+		szComment = sDocumentation.szComment.Text();
+		uiCommentEnd = sDocumentation.szComment.Length();
+		if (bTip)
+		{
+			uiLines = 0;
+			for (i = 0; i < uiCommentEnd; i++)
+			{
+				if (szComment[i] == '\n')
+				{
+					uiLines++;
+					if (uiLines == IDE_TIP_COMMENT_LINES)
+					{
+						uiCommentEnd = i;
+						bMore = true;
+					}
+				}
+			}
+		}
+		szText.Append(szComment, uiCommentEnd);
+		if (bMore)
+		{
+			szText.Append("\n...");
+		}
+	}
+	if (!bTip)
+	{
+		KillDocumentationLinks();
+		//Where it is declared goes there: its file and line, after its scope.
+		szFile = strrchr(sDocumentation.sInfo.szWhere.Text(), ' ');
+		uiPlace = (szFile != NULL) ? (size)(szFile + 1 - sDocumentation.sInfo.szWhere.Text()) : 0;
+		psLink = masDocumentationLinks.Add();
+		psLink->uiStart = uiWhere + uiPlace;
+		psLink->uiLength = sDocumentation.sInfo.szWhere.Length() - uiPlace;
+		psLink->sPlace = sDocumentation.sInfo.sPlace;
+		psLink->sPlace.szFileName.Init(sDocumentation.sInfo.sPlace.szFileName);
+	}
+	uiHeading = 0;
+	if (!bTip && (sDocumentation.asPages.NumElements() > 0))
+	{
+		szText.Append("\n\n");
+		uiHeading = szText.Length();
+		szText.Append(IDE_DOCUMENTED_IN);
+		for (i = 0; i < sDocumentation.asPages.NumElements(); i++)
+		{
+			psPage = sDocumentation.asPages.Get(i);
+			szText.Append("\n  ");
+			psLink = masDocumentationLinks.Add();
+			psLink->uiStart = szText.Length();
+			szText.Append(GetIDEFileNamePart(psPage->szFileName.Text()));
+			szText.Append(':');
+			szText.Append((int32)(psPage->iLine + 1));
+			psLink->uiLength = szText.Length() - psLink->uiStart;
+			psLink->sPlace = *psPage;
+			psLink->sPlace.szFileName.Init(psPage->szFileName);
+		}
+	}
+
+	pPopup->SetText(szText.Text());
+	uiColours = FindIDELineColours(szText.Text(), sDocumentation.sInfo.szDeclaration.Length(), asColours, IDE_QUICK_COLOURS);
+	for (i = 0; i < uiColours; i++)
+	{
+		pPopup->AddSpan(asColours[i].uiStart, asColours[i].uiLength, GetHighlightColour(asColours[i].eKind));
+	}
+	pPopup->AddSpan(uiWhere, sDocumentation.sInfo.szWhere.Length(), mpcContent->GetTheme()->GetColour(TC_DimText));
+	if (bMore)
+	{
+		pPopup->AddSpan(szText.Length() - 3, 3, mpcContent->GetTheme()->GetColour(TC_DimText));
+	}
+	if (uiHeading > 0)
+	{
+		pPopup->AddSpan(uiHeading, strlen(IDE_DOCUMENTED_IN), mpcContent->GetTheme()->GetColour(TC_DimText));
+	}
+	if (!bTip)
+	{
+		for (i = 0; i < masDocumentationLinks.NumElements(); i++)
+		{
+			psLink = masDocumentationLinks.Get(i);
+			pPopup->AddSpan(psLink->uiStart, psLink->uiLength, IDE_LINK_COLOUR);
+		}
+	}
+	szText.Kill();
+
+	pszName->Set("");
+	pszName->Append(&pEditor->GetText()[uiStart], uiEnd - uiStart);
+	*puiStart = uiStart;
+	sDocumentation.Kill();
+	return true;
+}
+
+
+void CIDEQuickInfo::KillDocumentationLinks(void)
+{
+	size	i;
+
+	for (i = 0; i < masDocumentationLinks.NumElements(); i++)
+	{
+		masDocumentationLinks.Get(i)->sPlace.szFileName.Kill();
+	}
+	masDocumentationLinks.ReInit();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Quick Documentation (Control+Q): what is written about the symbol at
+// the caret, under the caret's line.  While it shows for where the caret
+// is, the command again keeps it: it follows the caret from then, and the
+// command once more lets it go with the caret again.  False, the status
+// line saying so, if nothing at the caret has a declaration the index or
+// a #define gives.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEQuickInfo::ShowQuickDocumentation(void)
+{
+	Ptr<CIDEEditorTab>	pTab;
+
+	pTab = mpcContent->GetDocuments()->GetActiveTab();
+	if (pTab.IsNull())
+	{
+		return false;
+	}
+	if (IsDocumentationShown() && (mpDocumentationTab == pTab) && (pTab->GetEditor()->GetCaretPosition() == muiDocumentationCaret) && (pTab->GetEditor()->GetChangeCount() == muiDocumentationChanges))
+	{
+		mbDocumentationPinned = !mbDocumentationPinned;
+		mpcContent->ShowStatus(mbDocumentationPinned ? "Quick Documentation follows the caret until Escape." : "Quick Documentation goes when the caret moves.");
+		return true;
+	}
+	mbDocumentationPinned = false;
+	if (!ShowDocumentationAt(pTab, pTab->GetEditor()->GetCaretPosition()))
+	{
+		HideDocumentation();
+		mpcContent->ShowStatus("Nothing is known about what is at the caret.");
+		return false;
+	}
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Quick Documentation of the name at uiPosition of pTab's text, shown
+// under the caret's line, its left at the name.  False, with what was
+// shown left, if there is nothing to show for it.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEQuickInfo::ShowDocumentationAt(Ptr<CIDEEditorTab> pTab, size uiPosition)
+{
+	Ptr<CTextArea>	pEditor;
+	CInt32Rect		cBounds;
+	CInt32Rect		cLine;
+	SInt32Vec2		sPoint;
+	size			uiStart;
+
+	if (!WriteDocumentation(pTab, uiPosition, false, mpDocumentation, &mszDocumentationName, &uiStart))
+	{
+		return false;
+	}
+	HideTip();
+	pEditor = pTab->GetEditor();
+	mpDocumentationTab = pTab;
+	muiDocumentationCaret = pEditor->GetCaretPosition();
+	muiDocumentationChanges = pEditor->GetChangeCount();
+	mbDocumentationPressed = false;
+
+	mpcContent->GetWindow()->Layout();
+	pEditor->GetActualBounds(&cBounds);
+	pEditor->GetLineBounds(pEditor->FindLine(uiStart), &cLine);
+	mpDocumentation->SetMaximumHeight(IDE_DOCUMENTATION_LINES * cLine.GetHeight());
+	sPoint.Init(cBounds.GetLeft() + pEditor->GetPositionX(uiStart, false), cBounds.GetTop() + cLine.GetBottom());
+	mpDocumentation->Show(sPoint, false);
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Quick Documentation follows the caret: it goes when the caret moves or
+// the text changes, or once kept (Control+Q again) it shows what the
+// caret has come to, staying as it is where that is nothing.  It goes
+// with its tab, when the editor hasn't the keys, and is forgotten if a
+// press closed it.  A press on it, seen here a tick later so that the
+// press isn't the editor's too, goes where the part pressed goes, or
+// gives the editor back the keys the press took.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEQuickInfo::PollDocumentation(void)
+{
+	Ptr<CIDEEditorTab>		pTab;
+	Ptr<CTextArea>			pEditor;
+	SIDEDocumentationLink*	psLink;
+	SIDELocation			sPlace;
+	size					i;
+
+	if (mpDocumentationTab.IsNull())
+	{
+		return;
+	}
+	pTab = mpcContent->GetDocuments()->GetActiveTab();
+	if (mbDocumentationPressed)
+	{
+		mbDocumentationPressed = false;
+		for (i = 0; i < masDocumentationLinks.NumElements(); i++)
+		{
+			psLink = masDocumentationLinks.Get(i);
+			if ((muiDocumentationPressed >= psLink->uiStart) && (muiDocumentationPressed < psLink->uiStart + psLink->uiLength))
+			{
+				sPlace = psLink->sPlace;
+				sPlace.szFileName.Init(psLink->sPlace.szFileName);
+				HideDocumentation();
+				mpcContent->GetDocuments()->OpenLocation(&sPlace);
+				sPlace.szFileName.Kill();
+				return;
+			}
+		}
+		if ((pTab == mpDocumentationTab) && mpDocumentation->IsShown())
+		{
+			mpcContent->GetWindow()->GetFocus()->SetFocus(pTab->GetEditor());
+		}
+	}
+	if (!mpDocumentation->IsShown() || (pTab != mpDocumentationTab) || (mpcContent->GetWindow()->GetFocus()->GetFocussedComponent() != pTab->GetEditor()))
+	{
+		HideDocumentation();
+		return;
+	}
+	pEditor = pTab->GetEditor();
+	if ((pEditor->GetCaretPosition() == muiDocumentationCaret) && (pEditor->GetChangeCount() == muiDocumentationChanges))
+	{
+		return;
+	}
+	if (!mbDocumentationPinned)
+	{
+		HideDocumentation();
+		return;
+	}
+	if (!ShowDocumentationAt(pTab, pEditor->GetCaretPosition()))
+	{
+		muiDocumentationCaret = pEditor->GetCaretPosition();
+		muiDocumentationChanges = pEditor->GetChangeCount();
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A press on Quick Documentation, told before the press is given to
+// anything: kept for the next tick (PollDocumentation).
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEQuickInfo::DocumentationPressed(CInfoPopup* pcPopup, size uiPosition)
+{
+	mbDocumentationPressed = true;
+	muiDocumentationPressed = uiPosition;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// For a check's script: as a press on the uiLink'th part of Quick
+// Documentation that goes somewhere (0 is where the symbol is declared,
+// the pages follow).  False if it isn't shown or has no such part.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEQuickInfo::PressDocumentationLink(size uiLink)
+{
+	if (!IsDocumentationShown() || (uiLink >= masDocumentationLinks.NumElements()))
+	{
+		return false;
+	}
+	DocumentationPressed(&mpDocumentation, masDocumentationLinks.Get(uiLink)->uiStart);
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Quick Documentation is taken away.  False if it wasn't shown.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEQuickInfo::HideDocumentation(void)
+{
+	bool	bShown;
+
+	bShown = IsDocumentationShown();
+	mpDocumentationTab = NULL;
+	mbDocumentationPinned = false;
+	mbDocumentationPressed = false;
+	mpDocumentation->Hide();
+	KillDocumentationLinks();
+	return bShown;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Page Up, Page Down, and Control with Up and Down in an editor: Quick
+// Documentation is scrolled if it is shown with more than it shows at
+// once.  Otherwise they are the editor's own.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEQuickInfo::ScrollAction(SComponentInputEvent* psEvent)
+{
+	bool	bScrolled;
+
+	bScrolled = false;
+	if (IsDocumentationShown())
+	{
+		switch (psEvent->eCommand)
+		{
+		case CIC_PageUp:	bScrolled = mpDocumentation->ScrollPages(-1);	break;
+		case CIC_PageDown:	bScrolled = mpDocumentation->ScrollPages(1);	break;
+		case CIC_LineUp:	bScrolled = mpDocumentation->Scroll(-1);		break;
+		case CIC_LineDown:	bScrolled = mpDocumentation->Scroll(1);			break;
+		default:															break;
+		}
+	}
+	if (!bScrolled)
+	{
+		psEvent->bPass = true;
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The tool tip of the name the pointer rests on.  With the settings'
+// tick, and the pointer on a name of the active editor, which has the
+// keys, with no modifier held and no other popup open: once the pointer
+// has stayed still on the name for IDE_TIP_DELAY its tip is shown, and
+// stays while the pointer is on the name.  The caret moving or the text
+// changing takes it away, and it isn't shown again (nor looked for again,
+// where the name had none) until the pointer is on another name.  How
+// long until it is due, -1 if nothing is waited for.
+//
+//////////////////////////////////////////////////////////////////////////
+int64 CIDEQuickInfo::PollTip(int64 iNow)
+{
+	Ptr<CIDEEditorTab>	pTab;
+	Ptr<CTextArea>		pEditor;
+	CComponentInput*	pcInput;
+	Ptr<CFocus>			pFocus;
+	CInt32Rect			cBounds;
+	SInt32Vec2			sPointer;
+	size				uiPosition;
+	size				uiStart;
+	size				uiEnd;
+	bool				bOver;
+
+	if (mbTipHeld)
+	{
+		return -1;
+	}
+	pTab = mpcContent->GetDocuments()->GetActiveTab();
+	pcInput = mpcContent->GetWindow()->GetComponentInput();
+	pFocus = mpcContent->GetWindow()->GetFocus();
+	uiPosition = 0;
+	uiStart = 0;
+	sPointer.Init(0, 0);
+	bOver = mbToolTips && pTab.IsNotNull() && !pcInput->IsControl() && !pcInput->IsShift() && !pcInput->IsAlt() && pFocus->IsPointerIn() &&
+			(mpcContent->GetWindow()->NumPopups() == (size)(mpTip->IsShown() ? 1 : 0));
+	if (bOver)
+	{
+		pEditor = pTab->GetEditor();
+		bOver = (pFocus->GetMouseOverComponent() == pEditor) && (pFocus->GetFocussedComponent() == pEditor);
+	}
+	if (bOver)
+	{
+		pEditor->GetActualBounds(&cBounds);
+		sPointer = pFocus->GetPointer();
+		bOver = pEditor->FindCharacterAt(sPointer.x - cBounds.GetLeft(), sPointer.y - cBounds.GetTop(), &uiPosition) && FindIDENameAt(pEditor->GetText(), uiPosition, &uiStart, &uiEnd);
+	}
+	if (!bOver)
+	{
+		HideTip();
+		mpRestTab = NULL;
+		return -1;
+	}
+
+	if ((mpRestTab != pTab) || (muiRestStart != uiStart) || (muiRestChanges != pEditor->GetChangeCount()))
+	{
+		//Another name (or the text has changed under this one): the wait starts again.
+		HideTip();
+		mpRestTab = pTab;
+		muiRestStart = uiStart;
+		muiRestChanges = pEditor->GetChangeCount();
+		muiRestCaret = pEditor->GetCaretPosition();
+		msRestPointer = sPointer;
+		miRestTime = iNow;
+		mbRestDone = false;
+	}
+	else if (muiRestCaret != pEditor->GetCaretPosition())
+	{
+		//A key or a press moved the caret: not again on this name.
+		HideTip();
+		muiRestCaret = pEditor->GetCaretPosition();
+		mbRestDone = true;
+	}
+	else if (!mbRestDone && ((msRestPointer.x != sPointer.x) || (msRestPointer.y != sPointer.y)))
+	{
+		msRestPointer = sPointer;
+		miRestTime = iNow;
+	}
+	if (mbRestDone)
+	{
+		return -1;
+	}
+	if (iNow - miRestTime < IDE_TIP_DELAY)
+	{
+		return IDE_TIP_DELAY - (iNow - miRestTime);
+	}
+	mbRestDone = true;
+	ShowTipAt(pTab, uiPosition);
+	return -1;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The tool tip of the name at uiPosition of pTab's text, shown under the
+// name: its declaration, where it is declared and the first lines of the
+// comment over it.  False, with no tip shown, if the name is no symbol
+// the index has declared and no macro.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEQuickInfo::ShowTipAt(Ptr<CIDEEditorTab> pTab, size uiPosition)
+{
+	Ptr<CTextArea>	pEditor;
+	CInt32Rect		cBounds;
+	CInt32Rect		cLine;
+	SInt32Vec2		sPoint;
+	size			uiStart;
+
+	HideTip();
+	if (!WriteDocumentation(pTab, uiPosition, true, mpTip, &mszTipName, &uiStart))
+	{
+		return false;
+	}
+	pEditor = pTab->GetEditor();
+	mpTipTab = pTab;
+	mpcContent->GetWindow()->Layout();
+	pEditor->GetActualBounds(&cBounds);
+	pEditor->GetLineBounds(pEditor->FindLine(uiStart), &cLine);
+	sPoint.Init(cBounds.GetLeft() + pEditor->GetPositionX(uiStart, false), cBounds.GetTop() + cLine.GetBottom());
+	mpTip->Show(sPoint, false);
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// For a check's script: what ShowTipAt showed stays wherever the pointer
+// is, until it is let go.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEQuickInfo::HoldTip(bool bHeld)
+{
+	mbTipHeld = bHeld;
+	if (!bHeld)
+	{
+		HideTip();
+	}
+}
+
+
+bool CIDEQuickInfo::HideTip(void)
+{
+	bool	bShown;
+
+	bShown = IsTipShown();
+	mpTipTab = NULL;
+	mpTip->Hide();
+	return bShown;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The Settings page's: whether a name the pointer rests on has a tool
+// tip.  Written with the settings by whoever sets it (CIDEStructure's
+// <Editor>).
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEQuickInfo::SetToolTips(bool bToolTips)
+{
+	mbToolTips = bToolTips;
+	if (!bToolTips)
+	{
+		HideTip();
+		mpRestTab = NULL;
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // For checking: "Link: [Area] virtual int Area(void) = 0 | CShape,
 // Shape.h:15" and "Info: parameters" with its rows under it, the caret's
-// parameter in square brackets; "none" for each that isn't shown.
+// parameter in square brackets; "Documentation: [Area]" (", kept" once
+// it follows the caret, ", scrolled 3" by its lines) with its lines under
+// it, what goes somewhere in square brackets; "Tip: [Area] ..." on one
+// line; "none" for each that isn't shown.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEQuickInfo::Print(CChars* pszDest)
 {
 	Ptr<CIDEEditorTab>	pTab;
+	CInt32Rect			cLine;
 	CChars				szText;
 	size				i;
 
@@ -944,10 +1616,58 @@ void CIDEQuickInfo::Print(CChars* pszDest)
 	{
 		pszDest->Append("none");
 	}
+	//"Documentation: [Area]" (", kept" once it follows the caret) with its lines under it, the parts that go
+	//somewhere in square brackets; "Tip: [Area] ..." on one line.
+	pszDest->Append("\nDocumentation: ");
+	if (IsDocumentationShown())
+	{
+		pszDest->Append('[');
+		pszDest->Append(mszDocumentationName);
+		pszDest->Append(mbDocumentationPinned ? "], kept" : "]");
+		if ((mpDocumentation->GetScrollPosition() > 0) && mpDocumentation->GetTextArea()->GetLineBounds(0, &cLine))
+		{
+			pszDest->Append(", scrolled ");
+			pszDest->Append((int32)(mpDocumentation->GetScrollPosition() / cLine.GetHeight()));
+		}
+		szText.Init(mpDocumentation->GetText());
+		for (i = masDocumentationLinks.NumElements(); i >= 1; i--)
+		{
+			szText.Insert(masDocumentationLinks.Get(i - 1)->uiStart + masDocumentationLinks.Get(i - 1)->uiLength, "]");
+			szText.Insert(masDocumentationLinks.Get(i - 1)->uiStart, "[");
+		}
+		szText.Replace("\n", "\n  ");
+		pszDest->Append("\n  ");
+		pszDest->Append(szText);
+		szText.Kill();
+	}
+	else
+	{
+		pszDest->Append("none");
+	}
+	pszDest->Append("\nTip: ");
+	if (IsTipShown())
+	{
+		szText.Init(mpTip->GetText());
+		szText.Replace("\n", " | ");
+		pszDest->Append('[');
+		pszDest->Append(mszTipName);
+		pszDest->Append("] ");
+		pszDest->Append(szText);
+		szText.Kill();
+	}
+	else
+	{
+		pszDest->Append("none");
+	}
 	pszDest->Append('\n');
 }
 
 
+bool CIDEQuickInfo::IsDocumentationShown(void) { return mpDocumentationTab.IsNotNull() && mpDocumentation->IsShown(); }
+bool CIDEQuickInfo::IsDocumentationPinned(void) const { return mbDocumentationPinned; }
+size CIDEQuickInfo::NumDocumentationLinks(void) const { return masDocumentationLinks.NumElements(); }
+bool CIDEQuickInfo::IsTipShown(void) { return mpTipTab.IsNotNull() && mpTip->IsShown(); }
+bool CIDEQuickInfo::IsToolTips(void) const { return mbToolTips; }
 bool CIDEQuickInfo::IsLinkShown(void) { return mpLinkTab.IsNotNull() && mpLinkPopup->IsShown(); }
 bool CIDEQuickInfo::IsInfoShown(void) { return (meInfo != IQI_None) && mpInfoPopup->IsShown(); }
 Ptr<CIDEChooser> CIDEQuickInfo::GetDefinitionsChooser(void) const { return mpDefinitions; }

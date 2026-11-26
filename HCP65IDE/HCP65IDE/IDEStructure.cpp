@@ -715,7 +715,9 @@ void CIDEStructure::SetEditorSettings(bool bBreadcrumbs, bool bStickyLines)
 //////////////////////////////////////////////////////////////////////////
 //
 // <Editor Breadcrumbs="true" StickyLines="true"/> in the settings.
-// Without it editors show both.
+// Without it editors show both.  NameToolTips="false" on it is the quick
+// info's (CIDEQuickInfo::SetToolTips): written only when names have no
+// tool tips, which they have without it.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEStructure::ReadSettings(CMarkupTag* pcSettings)
@@ -730,6 +732,8 @@ void CIDEStructure::ReadSettings(CMarkupTag* pcSettings)
 		mbBreadcrumbs = (szValue == NULL) || (StringCompare(szValue, "false") != 0);
 		szValue = pcTag->GetStringAttribute("StickyLines");
 		mbStickyLines = (szValue == NULL) || (StringCompare(szValue, "false") != 0);
+		szValue = pcTag->GetStringAttribute("NameToolTips");
+		mpcContent->GetQuickInfo()->SetToolTips((szValue == NULL) || (StringCompare(szValue, "false") != 0));
 	}
 
 	//<Structure SortByName="false" ShowFields="true"/>: the Structure tree's menu's choices.
@@ -749,6 +753,10 @@ void CIDEStructure::WriteSettings(CXMLWriter* pcWriter)
 	pcWriter->Begin("Editor");
 	pcWriter->Attribute("Breadcrumbs", mbBreadcrumbs);
 	pcWriter->Attribute("StickyLines", mbStickyLines);
+	if (!mpcContent->GetQuickInfo()->IsToolTips())
+	{
+		pcWriter->Attribute("NameToolTips", false);
+	}
 	pcWriter->End();
 	if (mpPane.IsNotNull() && (mpPane->IsSortByName() || !mpPane->IsShowFields()))
 	{

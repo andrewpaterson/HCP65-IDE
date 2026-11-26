@@ -53,6 +53,8 @@ void CIDEEditorPage::Init(CIDEContent* pcContent, Ptr<CDialog> pDialog)
 	mpBreadcrumbs->SetAlignment(CSH_Left, CSV_Center);
 	mpStickyLines = OMalloc<CCheckBox>(pWindow, psLook->pcTheme, "Show sticky lines: the first lines of what the top of the view is in", pcContent->GetStructure()->IsStickyLines());
 	mpStickyLines->SetAlignment(CSH_Left, CSV_Center);
+	mpToolTips = OMalloc<CCheckBox>(pWindow, psLook->pcTheme, "Show what a name is when the pointer rests on it", pcContent->GetQuickInfo()->IsToolTips());
+	mpToolTips->SetAlignment(CSH_Left, CSV_Center);
 	mpKeyRepeat = OMalloc<CCheckBox>(pWindow, psLook->pcTheme, "Repeat held keys: the caret's moves, Page Up and Down, deleting and typing", pSettings->IsKeyRepeat());
 	mpKeyRepeat->SetAlignment(CSH_Left, CSV_Center);
 	mpRepeatDelay = CreateNumberField(pSettings->GetKeyRepeatDelay());
@@ -65,17 +67,18 @@ void CIDEEditorPage::Init(CIDEContent* pcContent, Ptr<CDialog> pDialog)
 	mpBody->SetAlignment(CSH_Stretch, CSV_Top);
 	mpBody->AddComponent(mpBreadcrumbs, 0, 0, 3, 1, 1, 0);
 	mpBody->AddComponent(mpStickyLines, 0, 1, 3, 1, 1, 0);
-	mpBody->AddComponent(mpKeyRepeat, 0, 2, 3, 1, 1, 0);
-	mpBody->AddComponent(CreateLabel("Held before repeating (milliseconds):"), 0, 3);
+	mpBody->AddComponent(mpToolTips, 0, 2, 3, 1, 1, 0);
+	mpBody->AddComponent(mpKeyRepeat, 0, 3, 3, 1, 1, 0);
+	mpBody->AddComponent(CreateLabel("Held before repeating (milliseconds):"), 0, 4);
 	pGap = OMalloc<CFillContainer>(pWindow);
 	pGap->SetDesiredSize(IDE_EDITOR_PAGE_GAP, 1);
-	mpBody->AddComponent(pGap, 1, 3);
-	mpBody->AddComponent(mpRepeatDelay, 2, 3, 1, 1, 1, 0);
-	mpBody->AddComponent(CreateLabel("Repeats a second:"), 0, 4);
-	mpBody->AddComponent(mpRepeatRate, 2, 4, 1, 1, 1, 0);
-	mpBody->AddComponent(CreateLabel("Code font size (pixels):"), 0, 5);
-	mpBody->AddComponent(mpFontSize, 2, 5, 1, 1, 1, 0);
-	mpBody->AddComponent(mpWheelZoom, 0, 6, 3, 1, 1, 0);
+	mpBody->AddComponent(pGap, 1, 4);
+	mpBody->AddComponent(mpRepeatDelay, 2, 4, 1, 1, 1, 0);
+	mpBody->AddComponent(CreateLabel("Repeats a second:"), 0, 5);
+	mpBody->AddComponent(mpRepeatRate, 2, 5, 1, 1, 1, 0);
+	mpBody->AddComponent(CreateLabel("Code font size (pixels):"), 0, 6);
+	mpBody->AddComponent(mpFontSize, 2, 6, 1, 1, 1, 0);
+	mpBody->AddComponent(mpWheelZoom, 0, 7, 3, 1, 1, 0);
 	PostInit();
 }
 
@@ -90,6 +93,7 @@ void CIDEEditorPage::Class(void)
 	U_Pointer(mpcContent);
 	M_Pointer(mpBreadcrumbs);
 	M_Pointer(mpStickyLines);
+	M_Pointer(mpToolTips);
 	M_Pointer(mpKeyRepeat);
 	M_Pointer(mpRepeatDelay);
 	M_Pointer(mpRepeatRate);
@@ -168,6 +172,7 @@ void CIDEEditorPage::Keep(void)
 	Ptr<CIDESettings>	pSettings;
 
 	pSettings = mpcContent->GetSettings();
+	mpcContent->GetQuickInfo()->SetToolTips(mpToolTips->IsTicked());  //Written with the editors' settings, next.
 	mpcContent->GetStructure()->SetEditorSettings(mpBreadcrumbs->IsTicked(), mpStickyLines->IsTicked());
 	pSettings->SetKeyRepeat(mpKeyRepeat->IsTicked(),
 							ReadNumber(mpRepeatDelay->GetText(), IDE_KEY_REPEAT_MIN_DELAY, IDE_KEY_REPEAT_MAX_DELAY, pSettings->GetKeyRepeatDelay()),
@@ -179,7 +184,8 @@ void CIDEEditorPage::Keep(void)
 //////////////////////////////////////////////////////////////////////////
 //
 // The IDE's checks' edits, as if ticked or typed (HCP65_IDE_EDITOR_EDITS):
-// "breadcrumbs:false;sticky:true;repeat:true;delay:300;rate:20".
+// "breadcrumbs:false;sticky:true;tooltips:false;repeat:true;delay:300;
+// rate:20".
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEEditorPage::ApplyEdits(const char* szEdits)
@@ -200,6 +206,10 @@ void CIDEEditorPage::ApplyEdits(const char* szEdits)
 		else if (strncmp(sz, "sticky:", 7) == 0)
 		{
 			mpStickyLines->SetTicked(strcmp(&sz[7], "true") == 0);
+		}
+		else if (strncmp(sz, "tooltips:", 9) == 0)
+		{
+			mpToolTips->SetTicked(strcmp(&sz[9], "true") == 0);
 		}
 		else if (strncmp(sz, "repeat:", 7) == 0)
 		{

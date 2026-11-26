@@ -25,6 +25,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "CppCompilerLib/CPPIndex.h"
 #include "IDEContent.h"
 #include "IDELocationPreview.h"
+#include "IDEMoveMembers.h"
 #include "IDESymbolInfo.h"
 
 
@@ -82,6 +83,22 @@ void SIDESymbolInfo::Kill(void)
 	szWhere.Kill();
 	szDeclaration.Kill();
 	szKey.Kill();
+}
+
+
+void SIDESymbolDocumentation::Init(void)
+{
+	sInfo.Init();
+	szComment.Init();
+	asPages.Init();
+}
+
+
+void SIDESymbolDocumentation::Kill(void)
+{
+	KillIDELocations(&asPages);
+	szComment.Kill();
+	sInfo.Kill();
 }
 
 
@@ -152,7 +169,7 @@ static int SkipIDENonCode(const char* szText, size uiLength, size* pui)
 //
 // szText from uiStart to uiEnd appended on one line: its comments left
 // out and each run of spaces, tabs and line ends one space, none at its
-// start or end.  If puiMark is given, *puiMark (a place in the text) is
+// start or end.  Strings and characters are as they are written.  If puiMark is given, *puiMark (a place in the text) is
 // made that place in pszDest.
 //
 //////////////////////////////////////////////////////////////////////////
@@ -161,6 +178,7 @@ static void AppendIDEOneLine(const char* szText, size uiStart, size uiEnd, CChar
 	size	i;
 	size	uiMark;
 	size	uiFirst;
+	size	uiLiteral;
 	bool	bSpace;
 	bool	bMarked;
 
@@ -197,6 +215,15 @@ static void AppendIDEOneLine(const char* szText, size uiStart, size uiEnd, CChar
 			pszDest->Append(' ');
 		}
 		bSpace = false;
+
+		//A string or a character is as it is written: its spaces are its own, and a // in it starts no comment.
+		uiLiteral = i;
+		if (((szText[i] == '"') || (szText[i] == '\'')) && (SkipIDENonCode(szText, uiEnd, &uiLiteral) == IDE_SKIPPED_LITERAL))
+		{
+			pszDest->Append(&szText[i], uiLiteral - i);
+			i = uiLiteral;
+			continue;
+		}
 		pszDest->Append(szText[i]);
 		i++;
 	}
@@ -624,6 +651,9 @@ bool ReadIDEDeclaration(const char* szText, size uiLength, size uiName, size uiN
 }
 
 
+static bool ReadIDESymbolInfoAt(CIDEContent* pcContent, const char* szKey, CArrayIDELocations* pasLocations, uint8 uiKind, SIDESymbolInfo* psDest);
+
+
 //////////////////////////////////////////////////////////////////////////
 //
 // The symbol szKey's declaration read from where the index says it is
@@ -636,6 +666,25 @@ bool ReadIDEDeclaration(const char* szText, size uiLength, size uiName, size uiN
 bool ReadIDESymbolInfo(CIDEContent* pcContent, const char* szKey, SIDESymbolInfo* psDest)
 {
 	CArrayIDELocations	asLocations;
+	uint8				uiKind;
+	bool				bResult;
+
+	asLocations.Init();
+	uiKind = 0;
+	bResult = pcContent->GetCodeModel()->GetSymbolLocations(szKey, &asLocations, &uiKind) && ReadIDESymbolInfoAt(pcContent, szKey, &asLocations, uiKind, psDest);
+	KillIDELocations(&asLocations);
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The same, of a symbol whose places (pasLocations) and kind the index
+// has given already.
+//
+//////////////////////////////////////////////////////////////////////////
+static bool ReadIDESymbolInfoAt(CIDEContent* pcContent, const char* szKey, CArrayIDELocations* pasLocations, uint8 uiKind, SIDESymbolInfo* psDest)
+{
 	SIDELocation*		psLocation;
 	SIDELocation*		psBest;
 	CTextFile			cFile;
@@ -645,23 +694,15 @@ bool ReadIDESymbolInfo(CIDEContent* pcContent, const char* szKey, SIDESymbolInfo
 	size				uiLength;
 	size				uiName;
 	size				i;
-	uint8				uiKind;
 	uint8				uiWanted;
 	bool				bResult;
 
-	asLocations.Init();
-	uiKind = 0;
-	if (!pcContent->GetCodeModel()->GetSymbolLocations(szKey, &asLocations, &uiKind))
-	{
-		KillIDELocations(&asLocations);
-		return false;
-	}
 	psDest->bFunction = (uiKind == CPPSK_Function) || (uiKind == CPPSK_FunctionTemplate);
 	uiWanted = psDest->bFunction ? (uint8)CPPIR_Declaration : (uint8)CPPIR_Definition;
 	psBest = NULL;
-	for (i = 0; i < asLocations.NumElements(); i++)
+	for (i = 0; i < pasLocations->NumElements(); i++)
 	{
-		psLocation = asLocations.Get(i);
+		psLocation = pasLocations->Get(i);
 		if (((psLocation->uiRole == CPPIR_Declaration) || (psLocation->uiRole == CPPIR_Definition)) && ((psBest == NULL) || ((psBest->uiRole != uiWanted) && (psLocation->uiRole == uiWanted))))
 		{
 			psBest = psLocation;
@@ -709,6 +750,233 @@ bool ReadIDESymbolInfo(CIDEContent* pcContent, const char* szKey, SIDESymbolInfo
 		psDest->szWhere.Append(GetIDEFileNamePart(psBest->szFileName.Text()));
 		psDest->szWhere.Append(':');
 		psDest->szWhere.Append((int32)(psBest->iLine + 1));
+	}
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The comment over what is named at uiName of szText, appended: the //
+// lines directly over its line (FindIDECommentStart), or with none of
+// those the // comment after it on its line.  Each line is given without
+// its slashes and the space after them; a line of nothing but slashes is
+// left out, and so are the empty lines at its start and its end.  At most
+// IDE_COMMENT_MAXIMUM characters are.
+//
+//////////////////////////////////////////////////////////////////////////
+void ReadIDEComment(const char* szText, size uiLength, size uiName, CChars* pszDest)
+{
+	CChars	szLines;
+	size	uiLineStart;
+	size	uiStart;
+	size	uiEnd;
+	size	uiLineEnd;
+	size	uiBlank;
+	size	i;
+	char	cQuote;
+	bool	bText;
+
+	if (uiName > uiLength)
+	{
+		return;
+	}
+	for (uiLineStart = uiName; (uiLineStart > 0) && (szText[uiLineStart - 1] != '\n'); uiLineStart--)
+	{
+	}
+	uiStart = FindIDECommentStart(szText, uiName);
+	uiEnd = uiLineStart;
+	if (uiStart == uiLineStart)
+	{
+		//None over it: the one after it on its line, if a // there is outside its strings and characters.
+		cQuote = 0;
+		uiEnd = uiLineStart;
+		for (i = uiName; (i < uiLength) && (szText[i] != '\n'); i++)
+		{
+			if (cQuote != 0)
+			{
+				if ((szText[i] == '\\') && (i + 1 < uiLength) && (szText[i + 1] != '\n'))
+				{
+					i++;
+				}
+				else if (szText[i] == cQuote)
+				{
+					cQuote = 0;
+				}
+			}
+			else if ((szText[i] == '"') || (szText[i] == '\''))
+			{
+				cQuote = szText[i];
+			}
+			else if ((szText[i] == '/') && (i + 1 < uiLength) && (szText[i + 1] == '/'))
+			{
+				uiStart = i;
+				for (uiEnd = i; (uiEnd < uiLength) && (szText[uiEnd] != '\n'); uiEnd++)
+				{
+				}
+				break;
+			}
+		}
+		if (uiEnd == uiLineStart)
+		{
+			return;
+		}
+	}
+
+	//A line at a time: from after its slashes to its end, without the white space there.
+	szLines.Init();
+	uiBlank = 0;
+	bText = false;
+	i = uiStart;
+	while ((i < uiEnd) && (szLines.Length() < IDE_COMMENT_MAXIMUM))
+	{
+		for (; (i < uiEnd) && ((szText[i] == ' ') || (szText[i] == '\t')); i++)
+		{
+		}
+		for (; (i < uiEnd) && (szText[i] == '/'); i++)
+		{
+		}
+		uiStart = i;
+		for (; (i < uiEnd) && (szText[i] != '\n'); i++)
+		{
+		}
+		for (uiLineEnd = i; (uiLineEnd > uiStart) && ((szText[uiLineEnd - 1] == ' ') || (szText[uiLineEnd - 1] == '\t') || (szText[uiLineEnd - 1] == '\r')); uiLineEnd--)
+		{
+		}
+		if ((uiStart < uiLineEnd) && (szText[uiStart] == ' '))
+		{
+			uiStart++;
+		}
+		if (uiStart == uiLineEnd)
+		{
+			//An empty line, or a rule: kept only between lines that say something.
+			uiBlank += bText ? 1 : 0;
+		}
+		else
+		{
+			for (; uiBlank > 0; uiBlank--)
+			{
+				szLines.Append('\n');
+			}
+			if (bText)
+			{
+				szLines.Append('\n');
+			}
+			szLines.Append(&szText[uiStart], uiLineEnd - uiStart);
+			bText = true;
+		}
+		if (i < uiEnd)
+		{
+			i++;
+		}
+	}
+	pszDest->Append(szLines);
+	szLines.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The comment of the symbol's place of role uiRole, the first the index
+// gives, appended.  False if it has no such place, its file can't be
+// read, or nothing is written there.
+//
+//////////////////////////////////////////////////////////////////////////
+static bool ReadIDECommentOf(CIDEContent* pcContent, CArrayIDELocations* pasLocations, uint8 uiRole, CChars* pszDest)
+{
+	SIDELocation*	psLocation;
+	CTextFile		cFile;
+	const char*		szText;
+	size			uiLength;
+	size			uiWas;
+	size			i;
+
+	uiWas = pszDest->Length();
+	for (i = 0; i < pasLocations->NumElements(); i++)
+	{
+		psLocation = pasLocations->Get(i);
+		if (psLocation->uiRole == uiRole)
+		{
+			cFile.Init();
+			if (pcContent->GetFindInFiles()->GetFileText(psLocation->szFileName.Text(), &cFile, &szText, &uiLength))
+			{
+				ReadIDEComment(szText, uiLength, FindIDETextPosition(szText, uiLength, psLocation->iLine, psLocation->iColumn), pszDest);
+			}
+			cFile.Kill();
+			break;
+		}
+	}
+	return pszDest->Length() > uiWas;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// What is written about the symbol szKey: what it is (ReadIDESymbolInfo),
+// the comment over its definition or else its declaration, and a place in
+// each documentation page that names it, at most IDE_DOCUMENTED_MAXIMUM
+// of them.  False if the index hasn't it declared anywhere.
+//
+//////////////////////////////////////////////////////////////////////////
+bool ReadIDESymbolDocumentation(CIDEContent* pcContent, const char* szKey, SIDESymbolDocumentation* psDest)
+{
+	CArrayIDELocations	asLocations;
+	SIDELocation*		psLocation;
+	SIDELocation*		psPage;
+	size				i;
+	size				j;
+	uint8				uiKind;
+	bool				bResult;
+
+	asLocations.Init();
+	uiKind = 0;
+	bResult = pcContent->GetCodeModel()->GetSymbolLocations(szKey, &asLocations, &uiKind) && ReadIDESymbolInfoAt(pcContent, szKey, &asLocations, uiKind, &psDest->sInfo);
+	if (bResult)
+	{
+		if (!ReadIDECommentOf(pcContent, &asLocations, CPPIR_Definition, &psDest->szComment))
+		{
+			ReadIDECommentOf(pcContent, &asLocations, CPPIR_Declaration, &psDest->szComment);
+		}
+		for (i = 0; i < asLocations.NumElements(); i++)
+		{
+			psLocation = asLocations.Get(i);
+			if (psLocation->uiUsage != CPPUT_Documentation)
+			{
+				continue;
+			}
+			//One place a page, the first in it.
+			psPage = NULL;
+			for (j = 0; j < psDest->asPages.NumElements(); j++)
+			{
+				if (psDest->asPages.Get(j)->szFileName.Equals(psLocation->szFileName))
+				{
+					psPage = psDest->asPages.Get(j);
+					break;
+				}
+			}
+			if (psPage == NULL)
+			{
+				if (psDest->asPages.NumElements() == IDE_DOCUMENTED_MAXIMUM)
+				{
+					continue;
+				}
+				psPage = psDest->asPages.Add();
+				memset(psPage, 0, sizeof(SIDELocation));
+				psPage->szFileName.Init(psLocation->szFileName);
+				psPage->iLine = -1;
+			}
+			if ((psPage->iLine < 0) || (psLocation->iLine < psPage->iLine) || ((psLocation->iLine == psPage->iLine) && (psLocation->iColumn < psPage->iColumn)))
+			{
+				psPage->iLine = psLocation->iLine;
+				psPage->iColumn = psLocation->iColumn;
+				psPage->iLength = psLocation->iLength;
+				psPage->uiRole = psLocation->uiRole;
+				psPage->uiFlags = psLocation->uiFlags;
+				psPage->uiUsage = psLocation->uiUsage;
+				psPage->iContainer = psLocation->iContainer;
+			}
+		}
+		SortIDELocations(&psDest->asPages);
 	}
 	KillIDELocations(&asLocations);
 	return bResult;
