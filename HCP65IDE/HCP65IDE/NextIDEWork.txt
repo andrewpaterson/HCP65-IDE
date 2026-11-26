@@ -1,11 +1,11 @@
 The IDE's next work (planned 2026-11-17, checked against the code and planned again 2026-11-26)
 ============================================================================================
 
-Ten items, in the order the user chose on 2026-11-17, and an eleventh added on 2026-11-26.  Eight are built (1, 2, 3,
-4, 5, 6, 7 and 11); three are open (8, 9 and 10), and are planned below from what the code has now.  The user's
-answers of 2026-11-17 are at the end and still hold.  Bring each open item up with the user before starting it,
-with how you mean to do it, and go on when they say.  The user's rule for the IDE: build the whole feature, as
-IntelliJ IDEA has it, not a cut-down version, and don't order the work by what is cheapest.
+Ten items, in the order the user chose on 2026-11-17, and an eleventh added on 2026-11-26.  All eleven are built;
+each item below says what was built, where it differs from what was planned, what was checked and what wasn't, and
+what is left for the user to rule on.  The user's answers of 2026-11-17 are at the end and still hold.  The user's
+rule for the IDE: build the whole feature, as IntelliJ IDEA has it, not a cut-down version, and don't order the
+work by what is cheapest.
 
   1   The tree's rows in view                          built 2026-11-17
   2   Find and Replace in the file, CRegex             built 2026-11-20
