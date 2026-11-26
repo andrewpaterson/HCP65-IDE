@@ -33,7 +33,7 @@ class CIDEContent;
 //The context menu of a tab's text that isn't typed in (the Build, Indexing and Run tabs' output, the Claude tab's
 //conversation), in place of the window's text menu, whose Cut and Paste it can't do: Copy and Select All (the
 //application's, which act on the text with the keys), Copy All (the whole text, whatever is selected), then what its
-//owner adds: commands of the menu's own (GetCommands, which have no keys: any given are only shown) or the
+//owner adds: commands of the menu's own (AddOwnCommand: they have no keys, any given are only shown) or the
 //application's (AddCommand), such as Jump to Source, Clear All and Stop.
 class CIDEOutputMenu : public CObject
 {
@@ -52,9 +52,10 @@ public:
 	bool				Save(CObjectWriter* pcFile) override;
 	bool				Load(CObjectReader* pcFile) override;
 
-	Ptr<CCommandSet>	GetCommands(void) const;
 	Ptr<CMenuContainer>	GetMenu(void) const;
 	void				AddCommand(Ptr<CCommand> pCommand);
+	template<class O, class M>
+	Ptr<CCommand>		AddOwnCommand(const char* szName, const char* szCaption, const char* szKeys, O* pcObject, void(M::*fRun)(void));
 	void				AddSeparator(void);
 	bool				CopyAll(void);
 
@@ -62,6 +63,23 @@ protected:
 	void				CopyAllClicked(void);
 	bool				HasText(void);
 };
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// An item for a command of the menu's own that runs pcObject's fRun,
+// after those there are.  The command, for an enabled check.
+//
+//////////////////////////////////////////////////////////////////////////
+template<class O, class M>
+Ptr<CCommand> CIDEOutputMenu::AddOwnCommand(const char* szName, const char* szCaption, const char* szKeys, O* pcObject, void(M::*fRun)(void))
+{
+	Ptr<CCommand>	pCommand;
+
+	pCommand = mpCommands->Add(szName, szCaption, szKeys, Ptr<CImageCel>(), pcObject, fRun);
+	mpMenu->AddItem(pCommand);
+	return pCommand;
+}
 
 
 #endif // __IDE_OUTPUT_MENU_H__

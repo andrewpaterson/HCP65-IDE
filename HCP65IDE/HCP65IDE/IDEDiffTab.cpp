@@ -38,6 +38,9 @@ void CIDEDiffSide::Init(const char* szFile, const char* szRevision, size uiProje
 	mszHead.Init();
 	muiProject = uiProject;
 	muiSeenChanges = IDE_DIFF_NO_CHANGES;
+	mbFixed = false;
+	mszName.Init();
+	mszText.Init();
 }
 
 
@@ -47,13 +50,31 @@ void CIDEDiffSide::Init(const char* szFile, const char* szRevision, size uiProje
 //////////////////////////////////////////////////////////////////////////
 void CIDEDiffSide::Kill(void)
 {
+	mszText.Kill();
+	mszName.Kill();
 	mszHead.Kill();
 	mszRevision.Kill();
 	mszFile.Kill();
 }
 
 
-bool CIDEDiffSide::IsWorkingCopy(void) const { return mszRevision.Empty(); }
+//////////////////////////////////////////////////////////////////////////
+//
+// The side's text is szText from now on, and its title szName.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDiffSide::SetFixed(const char* szName, const char* szText)
+{
+	mbFixed = true;
+	mszRevision.Clear();
+	mszName.Set(szName);
+	mszText.Set(szText);
+}
+
+
+bool CIDEDiffSide::IsWorkingCopy(void) const { return !mbFixed && mszRevision.Empty(); }
+bool CIDEDiffSide::IsRevision(void) const { return !mbFixed && !mszRevision.Empty(); }
+bool CIDEDiffSide::IsFixed(void) const { return mbFixed; }
 
 
 //////////////////////////////////////////////////////////////////////////

@@ -85,6 +85,9 @@ public:
 	Ptr<CIDEClaudePane>		GetClaudePane(void) const;
 	Ptr<CDockPane>			GetTool(void) const;
 	Ptr<CIDEOutputMenu>		GetClaudeMenu(void) const;
+	void					AddCommands(Ptr<CCommandSet> pCommands);
+	void					AddEditorItems(Ptr<CMenuContainer> pMenu);
+	void					ShowRequest(void);
 	void					CreatePane(SDockPlace* psPlace);
 	void					ScrollToEnd(void);
 	void					PollClaude(Ptr<CWindow> pWindow);

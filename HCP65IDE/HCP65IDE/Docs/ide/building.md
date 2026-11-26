@@ -70,7 +70,10 @@ how far it has got: blue while it runs, green when it has succeeded, red when it
 one solution, a line says which is being built.
 
 Next and Previous Occurrence (Ctrl+Alt+Down and Up) step through the build's errors and warnings,
-opening each in the editor.
+opening each in the editor.  Enter, a double click or F4 on a message's line opens it too.
+
+Right-clicking in the tab gives Copy, Copy All (the whole output, whatever is selected), Select All, Jump
+to Source (what F4 does) and Clear All, which empties the tab.  The Indexing tab has the same menu.
 
 ### The Indexing tab
 
@@ -109,6 +112,7 @@ It works on copies, so Cancel changes nothing; OK isn't allowed while a name is 
 Start Without Debugging (Ctrl+F5, or the toolbar's Start) runs the chosen run configuration's tool without
 the debugger.  The **Run** tab shows what the tool writes and, along its bottom, that it is running (blue)
 or has finished well (green) or not (red).  Stop Running (the toolbar's Stop) ends it, and it is stopped
-when the IDE closes.
+when the IDE closes.  Right-clicking in the tab gives Copy, Copy All, Select All, Clear All, Start Without
+Debugging and Stop Running.
 
 To run and debug in the emulator, see [Debugging](debugging.md).

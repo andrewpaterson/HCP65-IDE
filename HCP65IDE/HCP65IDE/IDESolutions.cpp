@@ -1240,24 +1240,41 @@ void CIDESolutions::WriteSettings(CXMLWriter* pcWriter)
 //////////////////////////////////////////////////////////////////////////
 bool CIDESolutions::ShowActiveFileInExplorer(void)
 {
+	mpcContent->GetDock()->Activate(mpExplorerTool);
+	if (mpcContent->GetDocuments()->GetActiveTab().IsNull())
+	{
+		mpcContent->GetWindow()->GetFocus()->SetFocus(mpExplorer->GetTree());
+		return false;
+	}
+	return ShowFileInExplorer(mpcContent->GetDocuments()->GetActiveTab());
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Solution Explorer is shown with pTab's file selected, its folders
+// opened and the row scrolled into view; the active editor keeps the
+// keys.  False if the explorer hasn't the file.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDESolutions::ShowFileInExplorer(Ptr<CIDEEditorTab> pTab)
+{
 	Ptr<CTreeContainer>	pTree;
 	int32				iNode;
 
 	pTree = mpExplorer->GetTree();
 	mpcContent->GetDock()->Activate(mpExplorerTool);
-	if (mpcContent->GetDocuments()->GetActiveTab().IsNull())
-	{
-		mpcContent->GetWindow()->GetFocus()->SetFocus(pTree);
-		return false;
-	}
-	iNode = mpExplorer->FindFilePathNode(mpcContent->GetDocuments()->GetActiveTab()->GetFileName(), mpcContent->GetDocuments()->GetActiveTab()->GetProject());
+	iNode = mpExplorer->FindFilePathNode(pTab->GetFileName(), pTab->GetProject());
 	if (iNode != TREE_NO_NODE)
 	{
 		pTree->SelectNode(iNode);
 		mpcContent->GetWindow()->Layout();
 		pTree->ShowRow(pTree->FindNodeRow(iNode));
 	}
-	mpcContent->GetDock()->Activate(mpcContent->GetDocuments()->GetActiveTab()->GetDockPane());
+	if (mpcContent->GetDocuments()->GetActiveTab().IsNotNull())
+	{
+		mpcContent->GetDock()->Activate(mpcContent->GetDocuments()->GetActiveTab()->GetDockPane());
+	}
 	return iNode != TREE_NO_NODE;
 }
 

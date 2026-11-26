@@ -92,6 +92,7 @@ public:
 
 	void	AddCommands(Ptr<CCommandSet> pCommands);
 	void	AddNavigateItems(Ptr<CMenuContainer> pMenu);
+	void	AddEditorItems(Ptr<CMenuContainer> pMenu);
 	void	CreatePane(SDockPlace* psPlace);
 
 	bool	ToggleBookmark(void);

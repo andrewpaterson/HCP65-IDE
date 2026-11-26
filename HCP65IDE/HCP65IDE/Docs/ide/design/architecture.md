@@ -35,9 +35,12 @@ code knowing.
 Each feature also puts its own items in the menus: the menu bar's menus are made by their owners
 ([`CIDEEdit::CreateEditMenu`], [`CIDENavigator::CreateNavigateMenu`], [`CIDEBuilding::CreateBuildMenu`] ...), the
 editor's right-click menu by each feature's `AddEditorItems`, and Show Context Actions by each refactoring's
-`AddContextActions` ([`CIDEContextActions`]).  A menu item has its own click event ([`CMenuItem::GetClickEvent`]),
-so nothing in the content dispatches on which item was clicked.  View is made each time it opens, from the dock's
-tool windows ([`CIDEContent::ViewMenuOpening`]).
+`AddContextActions` ([`CIDEContextActions`]).  The other context menus are their owners' too: a results tree's is its
+pane's ([`CIDEResultsPane`], which Find and Bookmarks add commands to), a tab of output's is a [`CIDEOutputMenu`]
+that its owner adds commands to, the diff tabs share one ([`CIDEDiffs::GetDiffMenu`]), and a document tab's is the
+dock's with the IDE's items added ([`CIDEContent::DocumentMenuCreated`]).  A menu item has its own click event
+([`CMenuItem::GetClickEvent`]), so nothing in the content dispatches on which item was clicked.  View is made each
+time it opens, from the dock's tool windows ([`CIDEContent::ViewMenuOpening`]).
 
 A command that shows a dialog doesn't show it from the key press: it posts itself to the window ([`CWindow::Post`],
 as [`CIDERename::QueueRename`] does) and shows it after the input has been handled.
@@ -156,9 +159,9 @@ the startup solution's folder, its repository, or a folder chosen).  That folder
 
 ## Not done
 
-- Most context menus: the results trees, the Build tab, the Run and Debug output, the Claude tab and a diff tab
-  have none, and a document tab's menu has only the dock's items and Rename File (added through
-  [`CDockManagerListener::DocumentMenuCreated`]); [`HCP65IDE/NextIDEWork.txt`], item 8.
+- Exclude and Remove in the Find Usages and Duplicates trees' menus (IntelliJ's): the results are kept by
+  their index, the tree can't lose a node, and nothing here reads an exclusion as IntelliJ's refactoring
+  previews do; [`HCP65IDE/NextIDEWork.txt`], item 8.
 - No MSVC build or Windows run has been tried since 2026-11-17 ([`HCP65IDE/NextIDEWork.txt`]).
 - On Windows Claude Code is started with `CreateProcess` and the name `claude`, which finds only a `claude.exe` on
   the path, not the `claude.cmd` an npm install makes.  Not tried.

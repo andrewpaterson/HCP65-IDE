@@ -87,7 +87,7 @@ void CIDERunning::CreatePane(SDockPlace* psPlace)
 	mpRunPane = OMalloc<CIDEBuildPane>(mpcContent->GetWindow(), mpcContent->GetTheme(), mpcContent->GetCodeFamily(), mpcContent->GetTheme()->GetColour(TC_Text));
 	mpRunMenu = OMalloc<CIDEOutputMenu>(mpcContent, mpRunPane->GetOutputArea());
 	mpRunMenu->AddSeparator();
-	mpRunMenu->AddCommand(mpRunMenu->GetCommands()->Add("Output.ClearAll", "Clear All", "", Ptr<CImageCel>(), this, &CIDERunning::ClearOutput));
+	mpRunMenu->AddOwnCommand("Output.ClearAll", "Clear All", "", this, &CIDERunning::ClearOutput);
 	mpRunMenu->AddSeparator();
 	mpRunMenu->AddCommand(mpcContent->GetCommands()->Find("Run.Start"));
 	mpRunMenu->AddCommand(mpcContent->GetCommands()->Find("Run.Stop"));

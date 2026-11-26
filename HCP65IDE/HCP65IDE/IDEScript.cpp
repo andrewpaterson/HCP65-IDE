@@ -42,7 +42,7 @@ static bool			gbIDEScriptRenameSaves = false;  //rename: saves what it edited (r
 static bool			gbIDEScriptClassFiles = false;  //rename: renames a type's files too (renamesearch's f), never from the settings.
 
 
-static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printfindpreview", "printfindtoolbar", "findtool:", "resultsmenu:", "resultsmenuclick:", "resultsselect:", "claudemenu", "replace:", "findoptions:", "findselect:", "printstartup", "printworkspace", "printuserfile", "rename", "safedelete", "introducevariable", "introducefield", "introduceconstant", "introduceparameter", "changesignature", "pullmembersup", "pushmembersdown", "moveclass", "copyclass", "inlinevariable", "introducetypedef", "extractmethod", "extractsuperclass", "extractinterface", "extractclass", "encapsulatefield", "convertmacro", "extracttemplateparameter", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printkeyrepeat", "printfontsize", "printsettings", "printproblems", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printprojectfiles", "printdiskfile:", "printdisklines:", "printedits", "printspans", "configuration:", "waitindex", "indextemplates:" };
+static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printfindpreview", "printfindtoolbar", "findtool:", "resultsmenu:", "resultsmenuclick:", "resultsselect:", "claudemenu", "diffmenu", "printdifftext", "replace:", "findoptions:", "findselect:", "printstartup", "printworkspace", "printuserfile", "rename", "safedelete", "introducevariable", "introducefield", "introduceconstant", "introduceparameter", "changesignature", "pullmembersup", "pushmembersdown", "moveclass", "copyclass", "inlinevariable", "introducetypedef", "extractmethod", "extractsuperclass", "extractinterface", "extractclass", "encapsulatefield", "convertmacro", "extracttemplateparameter", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printkeyrepeat", "printfontsize", "printsettings", "printproblems", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printprojectfiles", "printdiskfile:", "printdisklines:", "printedits", "printspans", "configuration:", "waitindex", "indextemplates:" };
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -532,6 +532,20 @@ void CIDEScript::RunCommand(const char* szCommand)
 		printf("\n");
 		fflush(stdout);
 	}
+	else if (strcmp(szCommand, "printdifftext") == 0)
+	{
+		//The active diff's sides: each one's title, then its text, and which of its blocks the view is at.
+		if (mpcContent->GetDiffs()->GetActiveDiff().IsNotNull())
+		{
+			Ptr<CDiffView>	pView;
+
+			pView = mpcContent->GetDiffs()->GetActiveDiff()->GetView();
+			printf("Diff left [%s]:\n%s\n", pView->GetTitle(TDS_Left)->GetText(), pView->GetDiff()->GetContent1()->Text());
+			printf("Diff right [%s]:\n%s\n", pView->GetTitle(TDS_Right)->GetText(), pView->GetDiff()->GetContent2()->Text());
+			printf("Diff block: %d of %d\n", (int)pView->GetCurrentBlock() + 1, (int)pView->GetDiff()->NumBlocks());
+		}
+		fflush(stdout);
+	}
 	else if ((strcmp(szCommand, "printprojectfiles") == 0) || (strncmp(szCommand, "printdiskfile:", 14) == 0))
 	{
 		//The projects' files, or one file's text as it is on the disk, named from the first solution's directory.
@@ -872,6 +886,19 @@ void CIDEScript::RunCommand(const char* szCommand)
 					pMenu->OpenSubMenu(pMenu->GetItemRow(pMenu->GetItem(i)), false);
 				}
 			}
+		}
+	}
+	else if (strcmp(szCommand, "diffmenu") == 0)
+	{
+		//The active diff tab's context menu opened as the Menu key opens it, and printed.
+		if (mpcContent->GetDiffs()->GetActiveDiff().IsNotNull())
+		{
+			Ptr<CDiffView>	pView;
+
+			pView = mpcContent->GetDiffs()->GetActiveDiff()->GetView();
+			mpcContent->GetWindow()->Layout();
+			pView->OpenContextMenu(pView->GetContextMenuPosition());
+			PrintOpenMenu("Diff", pView->GetContextMenu());
 		}
 	}
 	else if (strcmp(szCommand, "contextmenu") == 0)
@@ -3614,7 +3641,7 @@ void CIDEScript::RunProblemsStep(const char* szStep)
 //     (or floated) and the tab's menu printed as it opened ("Menu Output:
 //     Copy [Ctrl+C], Copy All, ..."), "Menu Output: none" if it didn't;
 //   outputmenuclick:<item>, the open tab menu's item clicked, as the
-//     pointer would;
+//     pointer would (an output tab's, the Claude tab's or a diff's);
 //   claudemenu, the Claude tab's conversation's menu opened as the Menu
 //     key opens it, and printed ("Menu Claude: ...").
 // A tab is build, indexing or run.
@@ -3650,11 +3677,21 @@ bool CIDEScript::RunOutputStep(const char* szStep)
 
 	if (strncmp(szStep, "outputmenuclick:", 16) == 0)
 	{
-		//Whichever tab's menu is open.
-		if (!ClickMenuItem(mpcContent->GetBuilding()->GetMessages()->GetMenu()->GetMenu(), &szStep[16]) && !ClickMenuItem(mpcContent->GetIndexing()->GetMessages()->GetMenu()->GetMenu(), &szStep[16]) &&
-			!ClickMenuItem(mpcContent->GetRunning()->GetRunMenu()->GetMenu(), &szStep[16]))
+		//Whichever tab's menu is open: an output tab's, the Claude tab's or a diff's.
+		Ptr<CMenuContainer>	apMenus[5];
+		size				i;
+
+		apMenus[0] = mpcContent->GetBuilding()->GetMessages()->GetMenu()->GetMenu();
+		apMenus[1] = mpcContent->GetIndexing()->GetMessages()->GetMenu()->GetMenu();
+		apMenus[2] = mpcContent->GetRunning()->GetRunMenu()->GetMenu();
+		apMenus[3] = mpcContent->GetAskClaude()->GetClaudeMenu()->GetMenu();
+		apMenus[4] = mpcContent->GetDiffs()->GetDiffMenu();
+		for (i = 0; i < 5; i++)
 		{
-			ClickMenuItem(mpcContent->GetAskClaude()->GetClaudeMenu()->GetMenu(), &szStep[16]);
+			if (ClickMenuItem(apMenus[i], &szStep[16]))
+			{
+				break;
+			}
 		}
 		return true;
 	}

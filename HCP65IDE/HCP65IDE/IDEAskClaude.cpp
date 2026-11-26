@@ -760,6 +760,31 @@ Ptr<CIDEOutputMenu> CIDEAskClaude::GetClaudeMenu(void) const { return mpClaudeMe
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Ask Claude, in the editors' menu: the Claude tab is shown and the box a
+// request is typed in has the keys.  The request sent says where the
+// caret and the selection are (AppendClaudeContext), so "explain this"
+// is about what was selected.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEAskClaude::AddCommands(Ptr<CCommandSet> pCommands)
+{
+	pCommands->Add("Claude.Ask", "Ask Claude...", "", Ptr<CImageCel>(), this, &CIDEAskClaude::ShowRequest);
+}
+
+
+void CIDEAskClaude::AddEditorItems(Ptr<CMenuContainer> pMenu) { pMenu->AddItem(mpcContent->GetCommands()->Find("Claude.Ask")); }
+
+
+void CIDEAskClaude::ShowRequest(void)
+{
+	mpcContent->GetDock()->Activate(mpClaudeTool);
+	mpcContent->GetWindow()->Layout();
+	mpcContent->GetWindow()->GetFocus()->SetFocus(mpClaudePane->GetRequestArea());
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // The Claude tab, with its Send, Stop and New Conversation buttons, put
 // at psPlace.  The conversation's context menu has Stop and New
 // Conversation after its Copies; the box a request is typed in keeps the
@@ -777,9 +802,8 @@ void CIDEAskClaude::CreatePane(SDockPlace* psPlace)
 	mpClaudePane->GetRequestArea()->GetEnterEvent()->Add(this, &CIDEAskClaude::ClaudeSendClicked);
 	mpClaudeMenu = OMalloc<CIDEOutputMenu>(mpcContent, mpClaudePane->GetConversationArea());
 	mpClaudeMenu->AddSeparator();
-	mpClaudeMenu->AddCommand(mpClaudeMenu->GetCommands()->Add("Claude.Stop", "Stop", "", Ptr<CImageCel>(), this, &CIDEAskClaude::ClaudeStopClicked));
-	mpClaudeMenu->GetCommands()->Find("Claude.Stop")->SetEnabledCheck(this, &CIDEAskClaude::IsClaudeRunning);
-	mpClaudeMenu->AddCommand(mpClaudeMenu->GetCommands()->Add("Claude.NewConversation", "New Conversation", "", Ptr<CImageCel>(), this, &CIDEAskClaude::ClaudeNewClicked));
+	mpClaudeMenu->AddOwnCommand("Claude.Stop", "Stop", "", this, &CIDEAskClaude::ClaudeStopClicked)->SetEnabledCheck(this, &CIDEAskClaude::IsClaudeRunning);
+	mpClaudeMenu->AddOwnCommand("Claude.NewConversation", "New Conversation", "", this, &CIDEAskClaude::ClaudeNewClicked);
 	mpClaudeTool = mpcContent->GetDock()->AddPane(IDE_CLAUDE_ID, "Claude", NULL, mpClaudePane->GetComponent(), DPK_Tool, psPlace);
 }
 

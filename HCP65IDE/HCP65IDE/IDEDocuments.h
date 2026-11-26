@@ -136,6 +136,11 @@ public:
 	bool	Load(CObjectReader* pcFile) override;
 
 	void				AddCommands(Ptr<CCommandSet> pCommands);
+	void				AddDocumentItems(Ptr<CMenuContainer> pMenu);
+	const char*			GetMenuFile(void);
+	bool				HasMenuFile(void);
+	void				CopyMenuFilePath(void);
+	void				SelectMenuFileInExplorer(void);
 	void				AddFileItems(Ptr<CMenuContainer> pFile);
 	void				AddWindowItems(Ptr<CMenuContainer> pWindowMenu);
 	void				SetActiveTab(Ptr<CIDEEditorTab> pTab);

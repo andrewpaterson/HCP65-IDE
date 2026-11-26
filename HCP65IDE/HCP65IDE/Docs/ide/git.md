@@ -41,6 +41,7 @@ The bars follow your edits as you type.
 | Git, Compare with Branch... | With the file on a branch chosen from a list. |
 | Git, Compare with Revision... | With the file at any revision git understands (`HEAD~1` to begin with, a commit, a tag). |
 | File, Compare with File... | With another file chosen from the disk. |
+| Compare with Clipboard (the editor's right-click menu) | The clipboard's text, on the left, with the selection; with nothing selected, with the whole file. |
 
 A diff opens in a document tab of its own, as IntelliJ IDEA's diff viewer shows one: the old text on the
 left, the new on the right, each with its line numbers, and a band behind each changed block in the colour
@@ -51,7 +52,8 @@ only, but its text can be selected and copied.
 Its toolbar has Previous and Next Difference (Shift+F7 and F7), how whitespace is compared, how changes are
 highlighted, and how many differences there are.  A diff follows its files: edit a side in its editor and
 the diff is shown again a moment later, and a revision is read again when its repository gets a new
-commit.
+commit.  The clipboard's side and a selection's stay as they were when the diff was opened.  Right-clicking
+in a diff gives Next and Previous Difference, Copy and Select All.
 
 ## What the IDE does to git
 

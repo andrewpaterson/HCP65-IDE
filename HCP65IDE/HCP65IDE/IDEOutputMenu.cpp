@@ -31,17 +31,13 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 //////////////////////////////////////////////////////////////////////////
 void CIDEOutputMenu::Init(CIDEContent* pcContent, Ptr<CTextArea> pText)
 {
-	Ptr<CCommand>	pCommand;
-
 	PreInit();
 	mpcContent = pcContent;
 	mpText = pText;
 	mpCommands = OMalloc<CCommandSet>();
 	mpMenu = OMalloc<CMenuContainer>(mpcContent->GetWindow(), mpcContent->GetTheme());
 	mpMenu->AddItem(mpcContent->GetCommands()->Find("Edit.Copy"));
-	pCommand = mpCommands->Add("Output.CopyAll", "Copy All", "", Ptr<CImageCel>(), this, &CIDEOutputMenu::CopyAllClicked);
-	pCommand->SetEnabledCheck(this, &CIDEOutputMenu::HasText);
-	mpMenu->AddItem(pCommand);
+	AddOwnCommand("Output.CopyAll", "Copy All", "", this, &CIDEOutputMenu::CopyAllClicked)->SetEnabledCheck(this, &CIDEOutputMenu::HasText);
 	mpMenu->AddItem(mpcContent->GetCommands()->Find("Edit.SelectAll"));
 	mpText->SetContextMenu(mpMenu);
 	PostInit();
@@ -73,7 +69,6 @@ bool CIDEOutputMenu::Load(CObjectReader* pcFile) { return false; }
 //////////////////////////////////////////////////////////////////////////
 void CIDEOutputMenu::AddCommand(Ptr<CCommand> pCommand) { mpMenu->AddItem(pCommand); }
 void CIDEOutputMenu::AddSeparator(void) { mpMenu->AddSeparator(); }
-Ptr<CCommandSet> CIDEOutputMenu::GetCommands(void) const { return mpCommands; }
 Ptr<CMenuContainer> CIDEOutputMenu::GetMenu(void) const { return mpMenu; }
 
 

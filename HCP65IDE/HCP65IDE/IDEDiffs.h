@@ -44,6 +44,7 @@ DESTRUCTABLE(CIDEDiffs);
 protected:
 	CIDEContent*	mpcContent;  //Not held: the content holds it.
 	Ptr<CMenuContainer>	mpGitMenu;
+	Ptr<CMenuContainer>	mpDiffMenu;  //The diff tabs' context menu, NULL until one is opened.
 	CChars			mszQueuedCommand;  //The name of the command to run at the next tick.
 	Ptr<CDialog>	mpDialog;  //The branch or revision asked for, while it's shown.
 	Ptr<CFileChooser>	mpFileChooser;  //The file to compare with, while it's shown.
@@ -59,6 +60,8 @@ public:
 
 	Ptr<CMenuContainer>	CreateGitMenu(void);
 	void				AddFileItems(Ptr<CMenuContainer> pFile);
+	void				AddEditorItems(Ptr<CMenuContainer> pMenu);
+	Ptr<CMenuContainer>	GetDiffMenu(void);
 	void				AddCommands(Ptr<CCommandSet> pCommands);
 	bool				CompareWithHead(void);
 	bool				CompareWithRevision(const char* szRevision);
@@ -67,6 +70,8 @@ public:
 	bool				ShowCompareWithRevisionDialog(void);
 	bool				ShowCompareWithFileDialog(void);
 	bool				OpenDiff(const char* szLeftFile, const char* szLeftRevision, const char* szRightFile, const char* szRightRevision);
+	bool				CompareWithClipboard(void);
+	bool				CanCompareWithClipboard(void);
 	Ptr<CIDEDiffTab>	GetActiveDiff(void) const;
 	void				SetActiveDiff(Ptr<CIDEDiffTab> pDiff);
 	size				NumDiffs(void);
@@ -82,6 +87,8 @@ public:
 protected:
 	void				HighlightDiffSide(Ptr<CDiffView> pView, ETextDiffSide eSide, size uiProject, const char* szFileName, const char* szText);
 	Ptr<CIDEEditorTab>	GetComparedTab(void);
+	Ptr<CIDEDiffTab>	CreateDiffTab(const char* szLeftFile, const char* szLeftRevision, const char* szRightFile, const char* szRightRevision);
+	bool				ShowDiffTab(Ptr<CIDEDiffTab> pDiff);
 	bool				ReadDiffSide(CIDEDiffSide* pcSide, CChars* pszDest);
 	void				MakeDiffTitle(CIDEDiffSide* pcSide, CIDEDiffSide* pcOther, CChars* pszDest);
 	void				QueueCommand(CCommand* pcCommand);

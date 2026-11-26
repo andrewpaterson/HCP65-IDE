@@ -765,6 +765,7 @@ void CIDEContent::AddCommands(void)
 	mpBuildConfigurations->AddCommands(mpCommands);
 	mpRunning->AddCommands(mpCommands);
 	mpDebugging->AddCommands(mpCommands);
+	mpAskClaude->AddCommands(mpCommands);
 }
 
 
@@ -1065,11 +1066,13 @@ bool CIDEContent::PaneClosing(CDockPane* pcPane)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The documents' tab menu gets Rename File.
+// The documents' tab menu gets Copy Path, Select in Solution Explorer and
+// Rename File.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEContent::DocumentMenuCreated(Ptr<CMenuContainer> pMenu)
 {
+	mpDocuments->AddDocumentItems(pMenu);
 	mpFileRename->AddDocumentItems(pMenu);
 }
 
@@ -1257,8 +1260,9 @@ CSolutionExplorer* CIDEContent::GetExplorer(void) { return &mpSolutions->GetExpl
 // The editors' context menu, as IntelliJ's: Go to Source (Control+B, an
 // #include's file or a definition), Find Usages (Alt+F7), Rename
 // (Shift+F6) and Refactor, each added (and enabled as it opens) by the
-// class that does it, the debugger's Add Watch and QuickWatch, then Cut,
-// Copy, Paste and Paste from History.
+// class that does it, Toggle Bookmark, the debugger's Toggle Breakpoint,
+// Add Watch and QuickWatch, then Cut, Copy, Paste and Paste from History,
+// Compare with Clipboard and Ask Claude.
 //
 //////////////////////////////////////////////////////////////////////////
 Ptr<CMenuContainer> CIDEContent::CreateEditorMenu(void)
@@ -1269,12 +1273,16 @@ Ptr<CMenuContainer> CIDEContent::CreateEditorMenu(void)
 	mpEditorMenu->AddSeparator();
 	mpRename->AddEditorItems(mpEditorMenu);
 	mpEditorMenu->AddSeparator();
+	mpBookmarks->AddEditorItems(mpEditorMenu);
 	mpDebugging->AddEditorItems(mpEditorMenu);
 	mpEditorMenu->AddSeparator();
 	mpEditorMenu->AddItem(mpCommands->Find("Edit.Cut"));
 	mpEditorMenu->AddItem(mpCommands->Find("Edit.Copy"));
 	mpEditorMenu->AddItem(mpCommands->Find("Edit.Paste"));
 	mpEditorMenu->AddItem(mpCommands->Find("Edit.PasteFromHistory"));
+	mpEditorMenu->AddSeparator();
+	mpDiffs->AddEditorItems(mpEditorMenu);
+	mpAskClaude->AddEditorItems(mpEditorMenu);
 	return mpEditorMenu;
 }
 

@@ -1295,11 +1295,12 @@ void CIDEDebugging::CreatePane(SDockPlace* psPlace)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The editors' menu's Add Watch and QuickWatch.
+// The editors' menu's Toggle Breakpoint, Add Watch and QuickWatch.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEDebugging::AddEditorItems(Ptr<CMenuContainer> pMenu)
 {
+	pMenu->AddItem(mpcContent->GetCommands()->Find("Debug.ToggleBreakpoint"));
 	mpWindows->AddEditorItems(pMenu);
 }
 

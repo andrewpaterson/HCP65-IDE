@@ -305,7 +305,8 @@ the scroll bar.  A press on the cell takes the bookmark off.  A mnemonic belongs
 to another takes it from the first.
 
 The **Bookmarks** tool window (View, Bookmarks) lists them by file, each with its line's text and a
-preview; Enter or a double click goes to one.
+preview; Enter or a double click goes to one, and Delete (Remove Bookmark in its right-click menu) takes
+the selected one away.
 
 Bookmarks move with their lines as you edit, and are kept with the workspace, in your own
 [`.hcp65user`](solutions.md#files-kept-beside-the-solution) file beside it.
@@ -437,6 +438,9 @@ Its toolbar, down the left:
 | Navigate with Single Click | Open each usage as it is selected, by a click or the arrows. |
 | Autoscroll from Source | As the caret moves in the editor, the usage nearest it in that file is selected here: the last at or before its line, or the first after.  The editor keeps the keys. |
 | Export... | The rows as they are shown, indented, saved as a text file or copied to the clipboard. |
+
+Right-clicking in the tree gives Jump to Source, Copy (Ctrl+C: the selected row's text), Expand All and
+Collapse All.  The Find, Duplicates, Hierarchy, Bookmarks and Problems trees have the same menu.
 
 A usage's line is coloured as code where its own text says how (keywords, numbers, strings, comments),
 with the name found bold; what each name is, is only coloured in the preview.  Preview, Navigate with

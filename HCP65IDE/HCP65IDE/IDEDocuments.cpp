@@ -1523,6 +1523,68 @@ void CIDEDocuments::AddCommands(Ptr<CCommandSet> pCommands)
 	pCommands->Add("File.Save", "Save", "Control+S", Ptr<CImageCel>(), this, &CIDEDocuments::SaveActiveFile);
 	pCommands->Add("File.SaveAll", "Save All", "Control+Shift+S", Ptr<CImageCel>(), this, &CIDEDocuments::SaveAllFiles);
 	pCommands->Add("Window.CloseAllDocuments", "Close All Documents", NULL, Ptr<CImageCel>(), this, &CIDEDocuments::CloseAllFiles);
+	pCommands->Add("Document.CopyPath", "Copy Path", NULL, Ptr<CImageCel>(), this, &CIDEDocuments::CopyMenuFilePath)->SetEnabledCheck(this, &CIDEDocuments::HasMenuFile);
+	pCommands->Add("Document.SelectInExplorer", "Select in Solution Explorer", NULL, Ptr<CImageCel>(), this, &CIDEDocuments::SelectMenuFileInExplorer)->SetEnabledCheck(this, &CIDEDocuments::HasMenuFile);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The documents' tab menu's Copy Path and Select in Solution Explorer
+// (see CDockManagerListener::DocumentMenuCreated), of the file whose
+// tab's menu it is; dim on a tab that isn't a file's (a diff).
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDocuments::AddDocumentItems(Ptr<CMenuContainer> pMenu)
+{
+	pMenu->AddSeparator();
+	pMenu->AddItem(mpcContent->GetCommands()->Find("Document.CopyPath"));
+	pMenu->AddItem(mpcContent->GetCommands()->Find("Document.SelectInExplorer"));
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The file of the document whose tab menu was opened last, NULL if that
+// tab isn't a file's.
+//
+//////////////////////////////////////////////////////////////////////////
+const char* CIDEDocuments::GetMenuFile(void)
+{
+	Ptr<CDockPane>	pPane;
+	size			uiPrefix;
+
+	pPane = mpcContent->GetDock()->GetMenuPane();
+	uiPrefix = strlen(IDE_DOCUMENT_PREFIX);
+	if (pPane.IsNull() || (strncmp(pPane->GetID(), IDE_DOCUMENT_PREFIX, uiPrefix) != 0))
+	{
+		return NULL;
+	}
+	return pPane->GetID() + uiPrefix;
+}
+
+
+bool CIDEDocuments::HasMenuFile(void) { return GetMenuFile() != NULL; }
+
+
+void CIDEDocuments::CopyMenuFilePath(void)
+{
+	if (HasMenuFile())
+	{
+		mpcContent->GetWindow()->GetClipboard()->SetText(GetMenuFile());
+	}
+}
+
+
+void CIDEDocuments::SelectMenuFileInExplorer(void)
+{
+	Ptr<CIDEEditorTab>	pTab;
+
+	pTab = HasMenuFile() ? FindTab(GetMenuFile()) : Ptr<CIDEEditorTab>();
+	if (pTab.IsNull() || !mpcContent->GetSolutions()->ShowFileInExplorer(pTab))
+	{
+		mpcContent->ShowStatus("Solution Explorer doesn't list that file.");
+	}
 }
 
 

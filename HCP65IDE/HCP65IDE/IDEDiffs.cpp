@@ -61,6 +61,7 @@ void CIDEDiffs::Class(void)
 {
 	U_Pointer(mpcContent);
 	M_Pointer(mpGitMenu);
+	M_Pointer(mpDiffMenu);
 	U_String(mszQueuedCommand);
 	M_Pointer(mpDialog);
 	M_Pointer(mpFileChooser);
@@ -299,8 +300,67 @@ bool CIDEDiffs::ShowCompareWithFileDialog(void)
 //////////////////////////////////////////////////////////////////////////
 bool CIDEDiffs::OpenDiff(const char* szLeftFile, const char* szLeftRevision, const char* szRightFile, const char* szRightRevision)
 {
+	return ShowDiffTab(CreateDiffTab(szLeftFile, szLeftRevision, szRightFile, szRightRevision));
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A diff tab of those sides with its view, not yet shown (ShowDiffTab):
+// a side can be given a text of its own first (CIDEDiffSide::SetFixed).
+//
+//////////////////////////////////////////////////////////////////////////
+Ptr<CIDEDiffTab> CIDEDiffs::CreateDiffTab(const char* szLeftFile, const char* szLeftRevision, const char* szRightFile, const char* szRightRevision)
+{
+	Ptr<CDiffView>	pView;
+	int				iSide;
+
+	pView = OMalloc<CDiffView>(mpcContent->GetWindow(), mpcContent->GetTheme(), mpcContent->GetFontColours()->GetFont(mpcContent->GetTheme()->GetColour(TC_Icon)), mpcContent->GetCodeFamily());
+	pView->SetAlignment(CSH_Stretch, CSV_Stretch);
+	for (iSide = 0; iSide < 2; iSide++)
+	{
+		pView->GetEditor((ETextDiffSide)iSide)->GetTextArea()->SetTiledText(true);
+		pView->GetEditor((ETextDiffSide)iSide)->GetTextArea()->SetColour(mpcContent->GetTheme()->GetColour(TC_Text));
+	}
+	pView->SetContextMenu(GetDiffMenu());
+	return OMalloc<CIDEDiffTab>(pView, szLeftFile, szLeftRevision, mpcContent->GetSolutions()->GetExplorer()->FindFileProject(szLeftFile), szRightFile, szRightRevision, mpcContent->GetSolutions()->GetExplorer()->FindFileProject(szRightFile));
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A diff tab's context menu, the same for them all: Next and Previous
+// Difference (F7, Shift+F7), then Copy and Select All of the side with
+// the keys.
+//
+//////////////////////////////////////////////////////////////////////////
+Ptr<CMenuContainer> CIDEDiffs::GetDiffMenu(void)
+{
+	Ptr<CCommandSet>	pCommands;
+
+	if (mpDiffMenu.IsNull())
+	{
+		pCommands = mpcContent->GetCommands();
+		mpDiffMenu = OMalloc<CMenuContainer>(mpcContent->GetWindow(), mpcContent->GetTheme());
+		mpDiffMenu->AddItem(pCommands->Find("Window.NextDifference"));
+		mpDiffMenu->AddItem(pCommands->Find("Window.PreviousDifference"));
+		mpDiffMenu->AddSeparator();
+		mpDiffMenu->AddItem(pCommands->Find("Edit.Copy"));
+		mpDiffMenu->AddItem(pCommands->Find("Edit.SelectAll"));
+	}
+	return mpDiffMenu;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The tab is shown in the document pane, selected.  False if a side
+// couldn't be read: it isn't shown then.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEDiffs::ShowDiffTab(Ptr<CIDEDiffTab> pDiff)
+{
 	Ptr<CDiffView>		pView;
-	Ptr<CIDEDiffTab>	pDiff;
 	Ptr<CDockPane>		pPane;
 	CChars				szID;
 	CIDEDiffSide*		pcLeft;
@@ -313,13 +373,7 @@ bool CIDEDiffs::OpenDiff(const char* szLeftFile, const char* szLeftRevision, con
 	CFileUtil			cFileUtil;
 	bool				bResult;
 
-	pView = OMalloc<CDiffView>(mpcContent->GetWindow(), mpcContent->GetTheme(), mpcContent->GetFontColours()->GetFont(mpcContent->GetTheme()->GetColour(TC_Icon)), mpcContent->GetCodeFamily());
-	pView->SetAlignment(CSH_Stretch, CSV_Stretch);
-	pView->GetEditor(TDS_Left)->GetTextArea()->SetTiledText(true);
-	pView->GetEditor(TDS_Left)->GetTextArea()->SetColour(mpcContent->GetTheme()->GetColour(TC_Text));
-	pView->GetEditor(TDS_Right)->GetTextArea()->SetTiledText(true);
-	pView->GetEditor(TDS_Right)->GetTextArea()->SetColour(mpcContent->GetTheme()->GetColour(TC_Text));
-	pDiff = OMalloc<CIDEDiffTab>(pView, szLeftFile, szLeftRevision, mpcContent->GetSolutions()->GetExplorer()->FindFileProject(szLeftFile), szRightFile, szRightRevision, mpcContent->GetSolutions()->GetExplorer()->FindFileProject(szRightFile));
+	pView = pDiff->GetView();
 	pcLeft = pDiff->GetSide(TDS_Left);
 	pcRight = pDiff->GetSide(TDS_Right);
 
@@ -338,7 +392,7 @@ bool CIDEDiffs::OpenDiff(const char* szLeftFile, const char* szLeftRevision, con
 
 		//The tab is named as IntelliJ IDEA names it: "Main.cpp (HEAD vs. Your version)", or "Old.cpp vs. New.cpp".
 		szTabTitle.Init();
-		if (pcLeft->mszFile.Equals(pcRight->mszFile))
+		if (pcLeft->mszFile.Equals(pcRight->mszFile) && !pcLeft->IsFixed() && !pcRight->IsFixed())
 		{
 			cFileUtil.GetFileName(&szTabTitle, pcLeft->mszFile.Text());
 			szTabTitle.Append(" (");
@@ -357,7 +411,7 @@ bool CIDEDiffs::OpenDiff(const char* szLeftFile, const char* szLeftRevision, con
 		szID.Init(IDE_DIFF_PREFIX);
 		szID.Append((uint64)muiNextDiff);
 		muiNextDiff++;
-		pPane = mpcContent->GetDock()->AddPane(szID.Text(), szTabTitle.Text(), mpcContent->GetFileTypeIcon(CIDEIcons::GetFileType(szRightFile)), pView, DPK_Document);
+		pPane = mpcContent->GetDock()->AddPane(szID.Text(), szTabTitle.Text(), mpcContent->GetFileTypeIcon(CIDEIcons::GetFileType(pcRight->mszFile.Text())), pView, DPK_Document);
 		szID.Kill();
 		pDiff->SetDockPane(pPane);
 		mpcContent->GetDock()->Show(pPane);
@@ -372,6 +426,51 @@ bool CIDEDiffs::OpenDiff(const char* szLeftFile, const char* szLeftRevision, con
 	szLeftText.Kill();
 	return bResult;
 }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Compare with Clipboard, as IntelliJ's: the clipboard's text on the left
+// and the active editor's selection on the right, each as it is now and
+// staying so; with nothing selected the right is the whole file, which
+// follows its editor as any diff's file does.  False if there is no
+// editor or the clipboard has no text.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEDiffs::CompareWithClipboard(void)
+{
+	Ptr<CIDEEditorTab>	pTab;
+	Ptr<CIDEDiffTab>	pDiff;
+	CChars				szText;
+	CChars				szName;
+	size				uiStart;
+	size				uiEnd;
+
+	pTab = mpcContent->GetDocuments()->GetActiveTab();
+	szText.Init();
+	if (pTab.IsNull() || !mpcContent->GetWindow()->GetClipboard()->GetText(&szText) || szText.Empty())
+	{
+		szText.Kill();
+		mpcContent->ShowStatus(pTab.IsNull() ? "Compare with Clipboard compares a file's text: open one first." : "The clipboard has no text to compare with.");
+		return false;
+	}
+	pDiff = CreateDiffTab(pTab->GetFileName(), "", pTab->GetFileName(), "");
+	pDiff->GetSide(TDS_Left)->SetFixed("Clipboard", szText.Text());
+	if (pTab->GetEditor()->GetSelection(&uiStart, &uiEnd))
+	{
+		szText.Clear();
+		szText.AppendSubString(pTab->GetEditor()->GetText(), uiStart, uiEnd);
+		szName.Init("Selection from ");
+		szName.Append(GetIDEFileNamePart(pTab->GetFileName()));
+		pDiff->GetSide(TDS_Right)->SetFixed(szName.Text(), szText.Text());
+		szName.Kill();
+	}
+	szText.Kill();
+	return ShowDiffTab(pDiff);
+}
+
+
+bool CIDEDiffs::CanCompareWithClipboard(void) { return mpcContent->GetDocuments()->GetActiveTab().IsNotNull(); }
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -391,7 +490,12 @@ bool CIDEDiffs::ReadDiffSide(CIDEDiffSide* pcSide, CChars* pszDest)
 	bool				bResult;
 
 	pszDest->Clear();
-	if (!pcSide->IsWorkingCopy())
+	if (pcSide->IsFixed())
+	{
+		pszDest->Append(pcSide->mszText);
+		return true;
+	}
+	if (pcSide->IsRevision())
 	{
 		pcRepository = mpcContent->GetGitStatus()->GetGit()->FindRepository(pcSide->mszFile.Text());
 		if (pcRepository == NULL)
@@ -437,21 +541,27 @@ bool CIDEDiffs::ReadDiffSide(CIDEDiffSide* pcSide, CChars* pszDest)
 //////////////////////////////////////////////////////////////////////////
 //
 // A side's title: its file's name, with its revision, or "Your version"
-// when the other side is the same file at a revision.
+// when the other side is the same file at a revision; a fixed side's is
+// its name.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEDiffs::MakeDiffTitle(CIDEDiffSide* pcSide, CIDEDiffSide* pcOther, CChars* pszDest)
 {
 	CFileUtil	cFileUtil;
 
+	if (pcSide->IsFixed())
+	{
+		pszDest->Append(pcSide->mszName);
+		return;
+	}
 	cFileUtil.GetFileName(pszDest, pcSide->mszFile.Text());
-	if (!pcSide->IsWorkingCopy())
+	if (pcSide->IsRevision())
 	{
 		pszDest->Append(" (");
 		pszDest->Append(pcSide->mszRevision);
 		pszDest->Append(")");
 	}
-	else if (pcSide->mszFile.Equals(pcOther->mszFile))
+	else if (pcSide->mszFile.Equals(pcOther->mszFile) && !pcOther->IsFixed())
 	{
 		pszDest->Append(" (Your version)");
 	}
@@ -571,7 +681,7 @@ void CIDEDiffs::RefreshMovedDiffs(void)
 		for (iSide = 0; iSide < 2; iSide++)
 		{
 			pcSide = pDiff->GetSide((ETextDiffSide)iSide);
-			if (!pcSide->IsWorkingCopy())
+			if (pcSide->IsRevision())
 			{
 				pcRepository = mpcContent->GetGitStatus()->GetGit()->FindRepository(pcSide->mszFile.Text());
 				if (pcRepository && !pcSide->mszHead.Equals(pcRepository->GetStatus()->GetHead()))
@@ -768,6 +878,18 @@ void CIDEDiffs::AddCommands(Ptr<CCommandSet> pCommands)
 	pCommands->Add("Git.CompareWithBranch", "Compare with Branch...", "", Ptr<CImageCel>(), this, &CIDEDiffs::QueueCommand);
 	pCommands->Add("Git.CompareWithRevision", "Compare with Revision...", "", Ptr<CImageCel>(), this, &CIDEDiffs::QueueCommand);
 	pCommands->Add("File.CompareWithFile", "Compare with File...", "", Ptr<CImageCel>(), this, &CIDEDiffs::QueueCommand);
+	pCommands->Add("Edit.CompareWithClipboard", "Compare with Clipboard", "", Ptr<CImageCel>(), this, &CIDEDiffs::QueueCommand)->SetEnabledCheck(this, &CIDEDiffs::CanCompareWithClipboard);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The editors' menu's Compare with Clipboard.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEDiffs::AddEditorItems(Ptr<CMenuContainer> pMenu)
+{
+	pMenu->AddItem(mpcContent->GetCommands()->Find("Edit.CompareWithClipboard"));
 }
 
 
@@ -805,5 +927,9 @@ void CIDEDiffs::RunQueuedCommand(void)
 	else if (mszQueuedCommand.Equals("File.CompareWithFile"))
 	{
 		ShowCompareWithFileDialog();
+	}
+	else if (mszQueuedCommand.Equals("Edit.CompareWithClipboard"))
+	{
+		CompareWithClipboard();
 	}
 }

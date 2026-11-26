@@ -115,6 +115,9 @@ void CIDEBookmarks::AddCommands(Ptr<CCommandSet> pCommands)
 }
 
 
+void CIDEBookmarks::AddEditorItems(Ptr<CMenuContainer> pMenu) { pMenu->AddItem(mpcContent->GetCommands()->Find("Bookmarks.Toggle")); }
+
+
 void CIDEBookmarks::AddNavigateItems(Ptr<CMenuContainer> pMenu)
 {
 	pMenu->AddItem(mpcContent->GetCommands()->Find("Bookmarks.Toggle"));

@@ -14,7 +14,7 @@ IntelliJ IDEA has it, not a cut-down version, and don't order the work by what i
   5   Code completion, basic and smart                 built 2026-11-26
   6   Automatic indenting, Tab, the line commands      built 2026-11-26
   7   Bookmarks                                        built 2026-11-21
-  8   Context menus                                    OPEN: next; part there (see the item)
+  8   Context menus                                    built 2026-11-26
   9   Smaller things left open                         OPEN: a, b and c to build; b decided 2026-11-26
   10  Reformat Code                                    OPEN: last of the ten
   11  Quick Documentation and the name's tool tip      built 2026-11-26
@@ -227,38 +227,52 @@ the .hcp65user (CIDEUserFile) and moved by edits.  Where it differs:
   - the gutter's mark is a character, not an image, and has no tool tip.
 
 
-8. Context menus: OPEN
-----------------------
+8. Context menus: built 2026-11-26
+----------------------------------
 
-What there is now (CComponent::SetContextMenu; the Menu key and Shift+F10 too):
-  - the editor: the navigation items, Find Usages and its settings, Rename and Refactor, the debugger's items, Cut,
-    Copy, Paste, Paste from History;
-  - Solution Explorer; the Structure tree (sorting, Hide Fields); the debugger's values tables;
-  - a document's tab (WindowLib's dock): Float, Dock, Close, and Close Multiple with Close All, Close Others,
-    Close Unmodified, Close to the Left and to the Right.
-What has none: the results trees (CIDEResultsPane), the Build tab, the Run and Debug tabs' output, the Claude tab,
-a diff tab.
+HCP65-IDE b7571e2 (the results trees), 808a58f (the output tabs) and the commit after them named "The diff tabs'
+context menu".  Checks results-menu, results-menu-replace, build-text-menu, build-text-menu-floated,
+build-menu-copy-clear, indexing-text-menu, run-menu, claude-menu, compare-with-clipboard and tab-menu-path; menus
+has the editor's new items.  Docs/ide/index.md's "Right-click menus" lists every menu for the user.
 
-What has changed: Find Usages, Find, Duplicates, Hierarchy, Bookmarks and Problems are all CIDEResultsPane now (and
-the tabbed ones CIDEResultsTabs), so one menu written there serves six windows; this file planned two of them one
-at a time.
+What was built:
+  - The results trees' menu, once, in CIDEResultsPane (so Find Usages, Find, Duplicates, Hierarchy, Bookmarks and
+    Problems have it): Jump to Source (F4), Copy (Control+C in the tree too: the selected row's text), Expand All
+    and Collapse All.  A pane's owner adds to it: Find's Replace All and Replace Selected (AddMenuCommand),
+    Bookmarks' Remove Bookmark, which Delete runs in the tree too (SetDeleteCommand).
+  - The output tabs' menu, CIDEOutputMenu, on the tab's text in place of the window's text menu: Copy, Copy All and
+    Select All, then its owner's: Jump to Source and Clear All in the Build and Indexing tabs (CIDEMessageOutput),
+    Clear All, Start Without Debugging and Stop Running in the Run tab, Stop and New Conversation in the Claude
+    tab's conversation.
+  - A diff tab's menu (one for them all, CIDEDiffs::GetDiffMenu): Next and Previous Difference, Copy, Select All.
+  - A document tab's menu, added to through the dock's DocumentMenuCreated, which was there already: Copy Path
+    and Select in Solution Explorer, before Rename File.
+  - The editor's menu, added to: Toggle Bookmark, Toggle Breakpoint, Compare with Clipboard and Ask Claude.
+    Compare with Clipboard is new (CIDEDiffs::CompareWithClipboard): a diff tab of the clipboard's text and the
+    selection, or the whole file with nothing selected; a diff's side can now be a text that stays as it was
+    given (CIDEDiffSide::SetFixed).  Ask Claude shows the Claude tab with the keys in its request: a request
+    already says where the selection is.
 
-What to build:
-  1. The results panes' menu, once, in CIDEResultsPane: Go to (Jump to Source), Copy, Expand All, Collapse All, and
-     what the pane's owner adds: Exclude and Remove (Find Usages, Duplicates), Replace Selected and Replace All
-     (Find, when replacing), Remove Bookmark (Bookmarks).
-  2. The Build tab: Copy, Copy All, Go to the message's line, Clear.
-  3. The Run and Debug tabs' output, and the Find tab's own: Copy, Clear, and what each tab's toolbar does.
-  4. The Claude tab: Copy, Clear, Stop.
-  5. A diff tab: Next and Previous Difference (F7, Shift+F7), Copy.
-  6. A document's tab, added to the dock's menu by the IDE: Copy Path, and Select in Solution Explorer
-     (Navigate.SelectIn does it).  The dock needs a way for its owner to add items.
-  7. The editor's, added to: Toggle Bookmark, Compare with Clipboard (a new command: the diff view on the
-     selection and the clipboard), Ask Claude about the selection; Toggle Breakpoint and Go to Definition if the
-     items there now don't already have them (look at CIDEDebugWindows::AddEditorItems and
-     CIDENavigator::AddEditorItems first).
-  8. The checks' printmenu for each, menus in the checks, on Linux (X11) as it is the machine; the pages.
-Rules: a PopupClosed override calls its base; the menu goes on the page or container.
+Where it differs from the plan, or wasn't said:
+  - Exclude and Remove in the Find Usages and Duplicates trees aren't built.  The results are kept by their index
+    and WindowLib's tree can't lose a node, so Remove means each owner making its list again without the row; and
+    Exclude in IntelliJ is read by its refactoring previews, which this IDE hasn't, so here it would only grey a
+    row.  For the user to decide whether either is wanted.
+  - The Claude tab has no Clear: New Conversation is what empties it, as its button does.  Emptying the text and
+    keeping the conversation would hide what Claude still remembers.
+  - The Build tab keeps Select All beside Copy All.
+  - The Debug tab (the disassembly and the registers) keeps the window's text menu: it has no output to clear,
+    and its toolbar's commands are the Debug menu's.
+  - "The Find tab's own" output is the Find window's results tree, which has the results menu.
+  - Go to Definition was in the editor's menu already (Go to Source); Toggle Breakpoint wasn't.
+  - The checks' script has a step for each menu (resultsmenu:, outputmenu:, claudemenu, diffmenu) rather than one
+    printmenu.
+
+Checked: the IDE's 576 checks on a private Release build, all passing but enum-to-class, which failed before
+this work; the menu checks again after the last tidy-up.  Each menu was opened as the Menu key opens it or by the
+right button through the window (the Build, Indexing and Run tabs).  Not checked: an MSVC build; Windows; a real
+pointer in a real window; the menus of a results pane or the Run tab floated in a window of its own (the Build
+tab floated is checked).
 
 
 9. Smaller things left open: OPEN

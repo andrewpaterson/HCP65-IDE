@@ -30,8 +30,9 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define IDE_DIFF_NO_CHANGES		MAX_SIZE
 
 
-//Where one side of a diff tab's text comes from: a file at a revision git knows (HEAD, a branch, a commit), or the file
-//as it is (its editor's text if it is open, else what is on disk).
+//Where one side of a diff tab's text comes from: a file at a revision git knows (HEAD, a branch, a commit), the file
+//as it is (its editor's text if it is open, else what is on disk), or a text that stays as it was given (SetFixed:
+//the clipboard's, a selection's), named for its title and coloured as its file's code is.
 class CIDEDiffSide
 {
 public:
@@ -40,11 +41,17 @@ public:
 	CChars	mszHead;			//The repository's last commit when the revision's text was read.
 	size	muiProject;			//The workspace's project it is in, SOLUTION_EXPLORER_NO_PROJECT if none.
 	size	muiSeenChanges;		//Its editor's change count when its text was read, IDE_DIFF_NO_CHANGES if not from one.
+	bool	mbFixed;			//Its text is mszText, whatever its file becomes.
+	CChars	mszName;			//A fixed side's title.
+	CChars	mszText;
 
 	void	Init(const char* szFile, const char* szRevision, size uiProject);
 	void	Kill(void);
 
+	void	SetFixed(const char* szName, const char* szText);
 	bool	IsWorkingCopy(void) const;
+	bool	IsRevision(void) const;
+	bool	IsFixed(void) const;
 };
 
 

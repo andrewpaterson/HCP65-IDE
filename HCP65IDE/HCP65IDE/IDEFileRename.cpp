@@ -1160,21 +1160,20 @@ bool CIDEFileRename::GetExplorerFile(CChars* pszDest)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The file of the document whose tab menu was opened last.
+// The file of the document whose tab menu was opened last, if it is one
+// Rename File can rename.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEFileRename::GetMenuFile(CChars* pszDest)
 {
-	Ptr<CDockPane>	pPane;
-	size			uiPrefix;
+	const char*	szFile;
 
-	pPane = mpcContent->GetDock()->GetMenuPane();
-	uiPrefix = strlen(IDE_DOCUMENT_PREFIX);
-	if (pPane.IsNull() || (strncmp(pPane->GetID(), IDE_DOCUMENT_PREFIX, uiPrefix) != 0) || !IsRenamable(pPane->GetID() + uiPrefix))
+	szFile = mpcContent->GetDocuments()->GetMenuFile();
+	if (!IsRenamable(szFile))
 	{
 		return false;
 	}
-	pszDest->Init(pPane->GetID() + uiPrefix);
+	pszDest->Init(szFile);
 	return true;
 }
 

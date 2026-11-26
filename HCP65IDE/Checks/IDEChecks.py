@@ -1204,6 +1204,25 @@ CHECKS = [
 		'DEBUG': 'tabmenu,command:Document.RenameFile,answered:1,printprojectfiles'}),
 		[r'^Status: Renamed Engine\.h to Motor\.h and 2 more files: ', r'^Project files: Commented\.cpp Motor\.cpp Motor_Linux\.cpp '],
 		[r'Rename stopped']),
+	('tab-menu-path', dict(MakeRenameFileCopy(), **{
+		#A document tab's menu has Copy Path, which puts the full path of the tab's file on the clipboard, and Select
+		#in Solution Explorer, which selects it there.
+		'WAIT_INDEX': '1', 'OPEN': 'Engine.h', 'SETTINGS': MakeSettingsFile(),
+		'DEBUG': 'tabmenu,command:Document.CopyPath,edit:printclipboard,tabmenu,command:Document.SelectInExplorer,printexplorer,printstatus'}),
+		[r'^Clipboard:$', r'^/.*/RenameFile/Engine\.h$', r'^Explorer: \[/.*/RenameFile/Engine\.h\]$', r'^Status line: $'], [r'ERROR']),
+	('compare-with-clipboard', {
+		#The editor's menu has Toggle Bookmark, Toggle Breakpoint, Compare with Clipboard and Ask Claude.  Compare with
+		#Clipboard opens a diff tab of the clipboard's text (left) and the selection (right); with nothing selected the
+		#right is the whole file.  The diff tab's own menu has Next and Previous Difference, which step as F7 and
+		#Shift+F7 do, and Copy and Select All.  Ask Claude shows the Claude tab with the keys in its request.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'OPEN': 'Shapes.cpp', 'CARET': '12:1',
+		'DEBUG': 'contextmenu,printmenus,edit:selectto:13:1,command:Edit.Copy,edit:caret:23:1,edit:selectto:24:1,command:Edit.CompareWithClipboard,wait:100,printdiffs,printdifftext,'
+		         'printtabs,edit:open:Shapes.cpp,edit:caret:10:1,edit:selectto:15:1,command:Edit.Copy,edit:caret:1:1,command:Edit.CompareWithClipboard,wait:100,printdiffs,printdifftext,diffmenu,edit:outputmenuclick:Next Difference,printdifftext,'
+		         'diffmenu,edit:outputmenuclick:Next Difference,printdifftext,diffmenu,edit:outputmenuclick:Previous Difference,printdifftext,command:Claude.Ask,edit:printclaude'},
+		[r'^Menu Editor: Go to Source \[Ctrl\+B\](\(disabled\))?, Find Usages \[Alt\+F7\](\(disabled\))?, Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\](\(disabled\))?, Show Context Actions \[Alt\+Enter\], Rename\.\.\. \[Shift\+F6\](\(disabled\))?, Refactor>, Toggle Bookmark \[Ctrl\+F11\], Toggle Breakpoint \[F9\], Add Watch, QuickWatch\.\.\. \[Shift\+F9\](\(disabled\))?, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\], Compare with Clipboard, Ask Claude\.\.\.$', r'^Diffs: \[>Clipboard vs\. Selection from Shapes\.cpp\]$', r'^Diff left \[Clipboard\]:$', r'^\treturn 3 \* miRadius \* miRadius;$',
+		 r'^Diff right \[Selection from Shapes\.cpp\]:$', r'^\treturn miSide \* miSide;$', r'^Diff block: 1 of 1$',
+		 r'^Diffs: \[Clipboard vs\. Selection from Shapes\.cpp\] \[>Clipboard vs\. Shapes\.cpp\]$', r'^Diff left \[Clipboard\]:$', r'^Diff right \[Shapes\.cpp\]:$', r'^Diff block: 1 of 3$',
+		 r'^Menu Diff: Next Difference \[F7\], Previous Difference \[Shift\+F7\], Copy \[Ctrl\+C\], Select All \[Ctrl\+A\]$', r'^Diff block: 2 of 3$', r'^Menu Diff: Next Difference \[F7\], Previous Difference \[Shift\+F7\], Copy \[Ctrl\+C\], Select All \[Ctrl\+A\]$', r'^Diff block: 3 of 3$', r'^Menu Diff: Next Difference \[F7\], Previous Difference \[Shift\+F7\], Copy \[Ctrl\+C\], Select All \[Ctrl\+A\]$', r'^Diff block: 2 of 3$', r'^Claude: .* keys request$'], [r'ERROR', r'Menu Diff: none']),
 	('rename-file-explorer', dict(MakeRenameFileCopy(), **{
 		#Shift+F6 (Rename) with Solution Explorer's keys renames its selected file, as IntelliJ's Project view does.
 		'WAIT_INDEX': '1', 'OPEN': 'Sub/User.cpp', 'SETTINGS': MakeSettingsFile(), 'DIALOG_KEYS': 'type:Customer', 'DIALOG_ANSWER': 'OK',
@@ -4310,7 +4329,7 @@ CHECKS = [
 		 r'^Menu Build: Build \[Ctrl\+F9\], Edit Build Configurations\.\.\.$',
 		 r'^Menu Debug: Start Debugging \[F5\], Start Without Debugging \[Ctrl\+F5\], Stop Debugging \[Shift\+F5\], Stop Running(\(disabled\))?, Restart \[Ctrl\+Shift\+F5\], Break All \[Ctrl\+Pause/Break\], Attach to Emulator\.\.\., Step Into \[F11\], Step Over \[F10\], Step Out \[Shift\+F11\], Toggle Breakpoint \[F9\], New Breakpoint at Address\.\.\., New Data Breakpoint\.\.\.(\(disabled\))?, Delete All Breakpoints, Edit Configurations\.\.\., Windows>, QuickWatch\.\.\. \[Shift\+F9\](\(disabled\))?$',
 		 r'^Menu Window: Reset Window Layout, Close All Documents, Switcher \[Ctrl\+Tab\], Select Next Tab \[Alt\+Right\], Select Previous Tab \[Alt\+Left\], Reopen Closed Tab(\(disabled\))?$',
-		 r'^Menu Editor: Go to Source \[Ctrl\+B\], Find Usages \[Alt\+F7\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Show Context Actions \[Alt\+Enter\], Rename\.\.\. \[Shift\+F6\], Refactor>, Add Watch, QuickWatch\.\.\. \[Shift\+F9\](\(disabled\))?, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\]$',
+		 r'^Menu Editor: Go to Source \[Ctrl\+B\], Find Usages \[Alt\+F7\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Show Context Actions \[Alt\+Enter\], Rename\.\.\. \[Shift\+F6\], Refactor>, Toggle Bookmark \[Ctrl\+F11\], Toggle Breakpoint \[F9\], Add Watch, QuickWatch\.\.\. \[Shift\+F9\](\(disabled\))?, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\], Compare with Clipboard, Ask Claude\.\.\.$',
 		 r"^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\], Introduce Field\.\.\. \[Ctrl\+Alt\+F\], Introduce Constant\.\.\. \[Ctrl\+Alt\+C\], Introduce Parameter\.\.\. \[Ctrl\+Alt\+P\], Introduce Typedef\.\.\. \[Ctrl\+Alt\+K\](\(disabled\))?, Inline\.\.\. \[Ctrl\+Alt\+N\], Change Signature\.\.\. \[Ctrl\+F6\], Unify Parameter Names, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\., Push Members Down\.\.\., Move\.\.\. \[F6\], Copy Class\.\.\., Move to Namespace\.\.\., Extract Method\.\.\. \[Ctrl\+Alt\+M\](\(disabled\))?, Extract Superclass\.\.\., Extract Interface\.\.\., Extract Class\.\.\., Encapsulate Field\.\.\., Optimise \#includes \[Ctrl\+Alt\+O\], Convert Macro\.\.\., Convert Pointer to Reference, Convert Reference to Pointer, Convert Enum to Enum Class\.\.\., Write Template's Interface\.\.\., Make Member Function const, Make Member Function static, Convert Function to Member Function, Convert Member Function to Function, Extract Template Parameter\.\.\., Remove Template Parameter$",
 		 r'^Menu Explorer: Set as Startup Solution, Set as Startup Project(\(disabled\))?, Remove Solution, Rename\.\.\., Open with System Program(\(disabled\))?, Properties\.\.\.(\(disabled\))?, Always Select Opened File, Open Files with Single Click$',
 		 r'^Menu New: C\+\+ Class\.\.\., C\+\+ Header\.\.\., C\+\+ Source\.\.\., Copy Class\.\.\.$',

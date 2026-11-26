@@ -54,10 +54,9 @@ void CIDEMessageOutput::Init(CIDEContent* pcContent, Ptr<CIDEBuildPane> pPane, c
 
 	mpMenu = OMalloc<CIDEOutputMenu>(mpcContent, pOutput);
 	mpMenu->AddSeparator();
-	mpMenu->AddCommand(mpMenu->GetCommands()->Add("Output.JumpToSource", "Jump to Source", "F4", Ptr<CImageCel>(), this, &CIDEMessageOutput::JumpToSource));
-	mpMenu->GetCommands()->Find("Output.JumpToSource")->SetEnabledCheck(this, &CIDEMessageOutput::IsOnMessage);
+	mpMenu->AddOwnCommand("Output.JumpToSource", "Jump to Source", "F4", this, &CIDEMessageOutput::JumpToSource)->SetEnabledCheck(this, &CIDEMessageOutput::IsOnMessage);
 	mpMenu->AddSeparator();
-	mpMenu->AddCommand(mpMenu->GetCommands()->Add("Output.ClearAll", "Clear All", "", Ptr<CImageCel>(), this, &CIDEMessageOutput::ClearOutput));
+	mpMenu->AddOwnCommand("Output.ClearAll", "Clear All", "", this, &CIDEMessageOutput::ClearOutput);
 	PostInit();
 }
 

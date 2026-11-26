@@ -70,6 +70,7 @@ public:
 	void					CreateExplorerPane(SDockPlace* psPlace);
 	void					ExplorerActivated(void);
 	bool					ShowActiveFileInExplorer(void);
+	bool					ShowFileInExplorer(Ptr<CIDEEditorTab> pTab);
 	void					FileShown(void);
 	void					SelectActiveFile(void);
 	void					ToggleAlwaysSelect(void);

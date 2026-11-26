@@ -18,6 +18,10 @@ fails.  A line under the conversation says how the request is going.  **Stop** e
 The conversation carries on from one request to the next, as a conversation with Claude Code does.
 **New Conversation** starts a fresh one.
 
+**Ask Claude...**, in the editor's right-click menu, shows the tab and puts the keys in the request box,
+so a selection can be asked about without reaching for the tab.  Right-clicking in the conversation gives
+Copy, Copy All, Select All, Stop and New Conversation.
+
 ## What Claude may do
 
 No one can answer a question from a request run this way, so Claude may read and change files in the

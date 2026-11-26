@@ -39,9 +39,8 @@ It runs on Windows (`HCP65IDE.exe`) and Linux (`HCP65IDE`).  The source is in
 
 - **The menu bar and toolbar.**  The toolbar has the [run
   configuration](building.md#run-configurations) chosen, Start beside it (Stop while it runs),
-  and at its right the git branch that is checked out.  Right-clicking in the editor gives the
-  editor's menu (Go to Source, Find Usages, Show Context Actions, Rename, Refactor, Cut, Copy,
-  Paste); right-clicking in Solution Explorer gives its own.
+  and at its right the git branch that is checked out.  Most parts of the window have a
+  [right-click menu](#right-click-menus) of their own.
 - **The documents.**  Each open file is a tab in the editor, a [diff](git.md#diffs) is a tab of its
   own, and a tab's name ends with `*` while it has changes that aren't saved.
 - **The tool windows.**  Solution Explorer and Structure on the left; Find Usages, Find, Duplicates,
@@ -55,6 +54,25 @@ It runs on Windows (`HCP65IDE.exe`) and Linux (`HCP65IDE`).  The source is in
 
 The layout and the files that were open are kept beside the solution, in
 `<solution>.layout.user`, and come back when the solution is opened again.
+
+## Right-click menus
+
+The right button opens the menu of what is under the pointer; the Menu key and Shift+F10 open the
+menu of what has the keys.  An item that can't be used where the menu was opened is dim.
+
+| Where | Its menu |
+|---|---|
+| The editor | Go to Source, Find Usages, Find Usages Settings, Show Context Actions, Rename, Refactor, Toggle Bookmark, Toggle Breakpoint, Add Watch, QuickWatch, Cut, Copy, Paste, Paste from History, [Compare with Clipboard](git.md#diffs), [Ask Claude](claude-tab.md#asking). |
+| A file's tab | Float, Dock, Close, Close Multiple (All, Others, Unmodified, to the Left, to the Right), Copy Path (the file's full path, to the clipboard), Select in Solution Explorer, Rename File. |
+| Solution Explorer | [Its own](solutions.md), by what is selected. |
+| Structure | [Sorting and Hide Fields](navigation.md#moving-in-a-file). |
+| The trees of Find Usages, Find, Duplicates, Hierarchy, Bookmarks and Problems | Jump to Source (F4), Copy (Ctrl+C: the selected row's text), Expand All, Collapse All.  Find adds Replace All and Replace Selected to a replace's results; Bookmarks adds Remove Bookmark (Delete). |
+| The Build and Indexing tabs | Copy, Copy All (the whole text, whatever is selected), Select All, Jump to Source (F4: opens the message the caret is on), Clear All. |
+| The Run tab | Copy, Copy All, Select All, Clear All, Start Without Debugging, Stop Running. |
+| The Claude tab's conversation | Copy, Copy All, Select All, Stop, New Conversation. |
+| A diff | Next Difference (F7), Previous Difference (Shift+F7), Copy, Select All. |
+| The debugger's [values](debugging.md) | Its own, for the row. |
+| Any other text (a dialog's box, the Claude tab's request, the Debug tab) | Cut, Copy, Paste, Select All. |
 
 ## The pages
 
