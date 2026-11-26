@@ -42,7 +42,7 @@ static bool			gbIDEScriptRenameSaves = false;  //rename: saves what it edited (r
 static bool			gbIDEScriptClassFiles = false;  //rename: renames a type's files too (renamesearch's f), never from the settings.
 
 
-static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printfindpreview", "printfindtoolbar", "findtool:", "replace:", "findoptions:", "findselect:", "printstartup", "printworkspace", "printuserfile", "rename", "safedelete", "introducevariable", "introducefield", "introduceconstant", "introduceparameter", "changesignature", "pullmembersup", "pushmembersdown", "moveclass", "copyclass", "inlinevariable", "introducetypedef", "extractmethod", "extractsuperclass", "extractinterface", "extractclass", "encapsulatefield", "convertmacro", "extracttemplateparameter", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printkeyrepeat", "printfontsize", "printsettings", "printproblems", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printprojectfiles", "printdiskfile:", "printdisklines:", "printedits", "printspans", "configuration:", "waitindex", "indextemplates:" };
+static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printfindpreview", "printfindtoolbar", "findtool:", "resultsmenu:", "resultsmenuclick:", "resultsselect:", "replace:", "findoptions:", "findselect:", "printstartup", "printworkspace", "printuserfile", "rename", "safedelete", "introducevariable", "introducefield", "introduceconstant", "introduceparameter", "changesignature", "pullmembersup", "pushmembersdown", "moveclass", "copyclass", "inlinevariable", "introducetypedef", "extractmethod", "extractsuperclass", "extractinterface", "extractclass", "encapsulatefield", "convertmacro", "extracttemplateparameter", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printkeyrepeat", "printfontsize", "printsettings", "printproblems", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printprojectfiles", "printdiskfile:", "printdisklines:", "printedits", "printspans", "configuration:", "waitindex", "indextemplates:" };
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -309,6 +309,44 @@ void CIDEScript::RunCommand(const char* szCommand)
 	{
 		//findtool:<caption>: that button of the Find tool window's toolbar clicked.
 		ClickPaneTool(mpcContent->GetFindInFiles()->GetResultsPane(), &szCommand[9]);
+	}
+	else if (strncmp(szCommand, "resultsmenu:", 12) == 0)
+	{
+		//resultsmenu:<window>: the context menu of that tool window's results tree (usages, find, duplicates, hierarchy,
+		//bookmarks, problems) opened at its selected row, as the Menu key opens it, and printed.
+		Ptr<CIDEResultsPane>	pPane;
+
+		pPane = FindResultsPane(&szCommand[12]);
+		if (pPane.IsNotNull())
+		{
+			mpcContent->GetWindow()->Layout();
+			pPane->GetTree()->OpenContextMenu(pPane->GetTree()->GetContextMenuPosition());
+			PrintOpenMenu("Results", pPane->GetMenu());
+		}
+	}
+	else if (strncmp(szCommand, "resultsselect:", 14) == 0)
+	{
+		//resultsselect:<window>:<row>: that row (from 0) of the window's results tree selected, the keys in the tree.
+		Ptr<CIDEResultsPane>	pPane;
+
+		pPane = FindResultsPane(&szCommand[14]);
+		if (pPane.IsNotNull() && (strchr(&szCommand[14], ':') != NULL))
+		{
+			pPane->Focus();
+			pPane->GetTree()->UpdateRows();
+			pPane->GetTree()->SelectNode(pPane->GetTree()->GetRowNode(atoi(strchr(&szCommand[14], ':') + 1)));
+		}
+	}
+	else if (strncmp(szCommand, "resultsmenuclick:", 17) == 0)
+	{
+		//resultsmenuclick:<window>:<item>: that item of the window's open results menu clicked.
+		Ptr<CIDEResultsPane>	pPane;
+
+		pPane = FindResultsPane(&szCommand[17]);
+		if (pPane.IsNotNull() && (strchr(&szCommand[17], ':') != NULL))
+		{
+			ClickMenuItem(pPane->GetMenu(), strchr(&szCommand[17], ':') + 1);
+		}
 	}
 	else if (strcmp(szCommand, "printfindparts") == 0)
 	{
@@ -846,6 +884,87 @@ void CIDEScript::RunCommand(const char* szCommand)
 	}
 }
 
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A menu that should be open, printed as PrintMenu prints it; "Menu
+// <szName>: none" if it isn't.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEScript::PrintOpenMenu(const char* szName, Ptr<CMenuContainer> pMenu)
+{
+	if (pMenu.IsNotNull() && pMenu->IsOpen())
+	{
+		PrintMenu(szName, pMenu);
+	}
+	else
+	{
+		printf("Menu %s: none\n", szName);
+	}
+	fflush(stdout);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The item called szItem of an open menu clicked, if it is enabled.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEScript::ClickMenuItem(Ptr<CMenuContainer> pMenu, const char* szItem)
+{
+	size	i;
+
+	if (pMenu.IsNull() || !pMenu->IsOpen())
+	{
+		return false;
+	}
+	for (i = 0; i < pMenu->NumItems(); i++)
+	{
+		if (pMenu->GetItem(i).IsNotNull() && (strcmp(pMenu->GetItem(i)->GetText(), szItem) == 0) && pMenu->GetItem(i)->IsEnabled())
+		{
+			pMenu->Click(pMenu->GetItem(i));
+			return true;
+		}
+	}
+	return false;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The results pane of the tool window a step names before its ':' or its
+// end: usages, find, duplicates, hierarchy, bookmarks or problems.
+//
+//////////////////////////////////////////////////////////////////////////
+Ptr<CIDEResultsPane> CIDEScript::FindResultsPane(const char* szWindow)
+{
+	if (strncmp(szWindow, "usages", 6) == 0)
+	{
+		return mpcContent->GetUsages()->GetResultsPane();
+	}
+	if (strncmp(szWindow, "find", 4) == 0)
+	{
+		return mpcContent->GetFindInFiles()->GetResultsPane();
+	}
+	if (strncmp(szWindow, "duplicates", 10) == 0)
+	{
+		return mpcContent->GetDuplicates()->GetResultsPane();
+	}
+	if (strncmp(szWindow, "hierarchy", 9) == 0)
+	{
+		return mpcContent->GetHierarchy()->GetResultsPane();
+	}
+	if (strncmp(szWindow, "bookmarks", 9) == 0)
+	{
+		return mpcContent->GetBookmarks()->GetResultsPane();
+	}
+	if (strncmp(szWindow, "problems", 8) == 0)
+	{
+		return mpcContent->GetProblems()->GetFilePane();
+	}
+	return NULL;
+}
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -3515,7 +3634,6 @@ bool CIDEScript::RunOutputStep(const char* szStep)
 	CArrayChars			aszLines;
 	CChars				szText;
 	Ptr<CMenuContainer>	pMenu;
-	size				i;
 	size				uiStart;
 	size				uiEnd;
 	const char*			szTab;
@@ -3539,17 +3657,7 @@ bool CIDEScript::RunOutputStep(const char* szStep)
 		{
 			pMenu = mpcContent->GetIndexing()->GetPane()->GetOutputArea()->GetWindow()->GetTextMenu();
 		}
-		if (pMenu.IsNotNull() && pMenu->IsOpen())
-		{
-			for (i = 0; i < pMenu->NumItems(); i++)
-			{
-				if ((pMenu->GetItem(i).IsNotNull()) && (strcmp(pMenu->GetItem(i)->GetText(), &szStep[16]) == 0) && pMenu->GetItem(i)->IsEnabled())
-				{
-					pMenu->Click(pMenu->GetItem(i));
-					break;
-				}
-			}
-		}
+		ClickMenuItem(pMenu, &szStep[16]);
 		return true;
 	}
 	if (strncmp(szStep, "outputcaret:", 12) == 0)
@@ -3650,16 +3758,7 @@ bool CIDEScript::RunOutputStep(const char* szStep)
 		if (strncmp(szStep, "outputmenu:", 11) == 0)
 		{
 			printf("Tab window: %s\n", (pOutput->GetWindow() == mpcContent->GetWindow()) ? "main" : "floated");
-			pMenu = pOutput->GetWindow()->GetTextMenu();
-			if (pMenu.IsNotNull() && pMenu->IsOpen())
-			{
-				PrintMenu("Text", pMenu);
-			}
-			else
-			{
-				printf("Menu Text: none\n");
-				fflush(stdout);
-			}
+			PrintOpenMenu("Text", pOutput->GetWindow()->GetTextMenu());
 		}
 	}
 	else

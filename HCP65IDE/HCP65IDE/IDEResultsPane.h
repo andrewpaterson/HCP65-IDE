@@ -104,6 +104,10 @@ public:
 //(GetCommands), not the application's: they have no keys.  A button is on while what it turns on is, and dim while it
 //can't be used.
 //
+//The tree's context menu, as IntelliJ's: Jump to Source (F4), Copy (Control+C: the selected row's text, as it is
+//shown), Expand All and Collapse All, then whatever its source adds (AddMenuCommand: Find's Replace Selected), and
+//the command that Delete runs in the tree too (SetDeleteCommand: Bookmarks' Remove Bookmark).
+//
 //Whatever lets go of a pane before the IDE closes calls Detach first.
 class CIDEResultsPane : public CObject
 {
@@ -116,6 +120,10 @@ protected:
 	Ptr<CScrollPane>	mpScrollPane;
 	Ptr<CInputAction>	mpEscapeAction;  //Escape in the tree goes back to the editor.
 	Ptr<CInputAction>	mpJumpAction;  //F4 in it goes to the declaration.
+	Ptr<CInputAction>	mpCopyAction;  //Control+C in it copies the selected row.
+	Ptr<CInputAction>	mpDeleteAction;  //Delete in it runs its source's command (SetDeleteCommand), NULL for none.
+	Ptr<CCommand>		mpDeleteCommand;
+	Ptr<CMenuContainer>	mpMenu;  //The tree's context menu.
 	Ptr<CGridContainer>	mpPanel;  //The toolbar and, right of it, the split.
 	Ptr<CToolbar>		mpToolbar;
 	Ptr<CCommandSet>	mpCommands;  //The toolbar's.
@@ -165,6 +173,11 @@ public:
 	Ptr<CToolbar>		GetToolbar(void) const;
 	void				AddToolbarCommand(Ptr<CCommand> pCommand, EIDEToolIcon eIcon);
 	void				AddToolbarSeparator(void);
+	void				AddMenuCommand(Ptr<CCommand> pCommand);
+	void				AddMenuSeparator(void);
+	void				SetDeleteCommand(Ptr<CCommand> pCommand);
+	Ptr<CMenuContainer>	GetMenu(void) const;
+	bool				CopySelected(void);
 	void				AddViewCommands(void);
 	void				RefreshToolbar(void);
 	bool				CanStep(bool bNext);
@@ -184,6 +197,7 @@ protected:
 	void				ResultActivated(void);
 	void				ResultSelected(void);
 	void				ShareChanged(void);
+	Ptr<CCommand>		CreateCommand(const char* szName, const char* szCaption, const char* szKeys, EIDEToolIcon eIcon, void(CIDEResultsPane::*fRun)(void), bool(CIDEResultsPane::*fEnabled)(void), bool(CIDEResultsPane::*fChecked)(void));
 	void				AddCommand(const char* szName, const char* szCaption, EIDEToolIcon eIcon, void(CIDEResultsPane::*fRun)(void), bool(CIDEResultsPane::*fEnabled)(void), bool(CIDEResultsPane::*fChecked)(void));
 	void				Rerun(void);
 	bool				CanRerun(void);
@@ -201,6 +215,9 @@ protected:
 	bool				CanExport(void);
 	void				ReturnToEditor(void);
 	void				JumpToSource(void);
+	void				CopySelectedRow(void);
+	void				DeleteSelectedRow(void);
+	bool				HasSelectedRow(void);
 };
 
 

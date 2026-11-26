@@ -81,6 +81,9 @@ public:
 	void		WarnUnsaved(void);
 	void		PrintConflict(const char* szConflict);
 	void		PrintMenu(const char* szName, Ptr<CMenuContainer> pMenu);
+	void		PrintOpenMenu(const char* szName, Ptr<CMenuContainer> pMenu);
+	bool		ClickMenuItem(Ptr<CMenuContainer> pMenu, const char* szItem);
+	Ptr<CIDEResultsPane>	FindResultsPane(const char* szWindow);
 	const char*	GetCommandName(Ptr<CButton> pButton);
 	void		ClickMenu(const char* szPath);
 	void		RunEditStep(const char* szStep);

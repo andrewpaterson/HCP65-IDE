@@ -95,6 +95,9 @@ public:
 	void	CreatePane(SDockPlace* psPlace);
 
 	bool	ToggleBookmark(void);
+	int32	GetSelectedBookmark(void);
+	bool	CanRemoveSelectedBookmark(void);
+	void	RemoveSelectedBookmark(void);
 	bool	ToggleMnemonicBookmark(void);
 	bool	SetMnemonicBookmark(char cMnemonic);
 	bool	NextBookmark(void);

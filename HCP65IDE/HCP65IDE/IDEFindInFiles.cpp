@@ -257,7 +257,8 @@ void CIDEFindInFiles::CreatePane(SDockPlace* psPlace)
 //
 // The tabs' owner: a new, empty search with its results pane.  Its
 // toolbar has, after the pane's own, Replace All and Replace Selected
-// (for Replace in Files' results), the pane's view commands and Pin Tab.
+// (for Replace in Files' results), the pane's view commands and Pin Tab;
+// its tree's menu has the two Replaces too.
 //
 //////////////////////////////////////////////////////////////////////////
 Ptr<CIDEResultsSearch> CIDEFindInFiles::CreateResultsSearch(void)
@@ -270,9 +271,12 @@ Ptr<CIDEResultsSearch> CIDEFindInFiles::CreateResultsSearch(void)
 	pCommand = pPane->GetCommands()->Add("Find.ReplaceAll", "Replace All", "", mpcContent->GetToolIcon(ITI_ReplaceAll), this, &CIDEFindInFiles::ReplaceAllClicked);
 	pCommand->SetEnabledCheck(this, &CIDEFindInFiles::CanReplaceFound);
 	pPane->AddToolbarCommand(pCommand, ITI_ReplaceAll);
+	pPane->AddMenuSeparator();
+	pPane->AddMenuCommand(pCommand);
 	pCommand = pPane->GetCommands()->Add("Find.ReplaceSelected", "Replace Selected", "", mpcContent->GetToolIcon(ITI_Replace), this, &CIDEFindInFiles::ReplaceSelectedClicked);
 	pCommand->SetEnabledCheck(this, &CIDEFindInFiles::CanReplaceFound);
 	pPane->AddToolbarCommand(pCommand, ITI_Replace);
+	pPane->AddMenuCommand(pCommand);
 	pPane->AddToolbarSeparator();
 	pPane->AddViewCommands();
 	mpTabs->AddPinCommand(pPane);

@@ -4893,6 +4893,29 @@ CHECKS = [
 		 r'^Bookmarks: 3$', r'^  Shapes\.cpp:5$', r'^  Shapes\.cpp:13$', r'^  Shapes\.cpp:24 \[3\]$', r'^Bookmark gutter: 5\[ \] 13\[ \] 24\[3\], 3 marks$',
 		 r'^Bookmarks: 2$', r'^Bookmark gutter: 13\[ \] 24\[3\], 2 marks$',
 		 r'^  <Bookmark File=".*Navigation/Shapes\.cpp" Line="13"/>$', r'^  <Bookmark File=".*Navigation/Shapes\.cpp" Line="24" Mnemonic="3"/>$'], []),
+	('results-menu', dict(MakeNavigationCopy(), **{
+		#The context menu of a results tree (here the Bookmarks window's), opened as the Menu key opens it: Jump to
+		#Source, Copy, Expand All and Collapse All, then its window's own: Remove Bookmark, dim on a file's row.  Copy
+		#(Control+C in the tree too) puts the selected row's text on the clipboard; Remove Bookmark (Delete too) takes
+		#the selected bookmark away; Jump to Source opens it.  With nothing listed every item is dim.
+		'WAIT_INDEX': '1', 'OPEN': 'Shapes.cpp', 'CARET': '12:5',
+		'DEBUG': 'command:Bookmarks.Toggle,edit:caret:23:3,command:Bookmarks.Toggle,edit:printbookmarks,resultsselect:bookmarks:1,resultsmenu:bookmarks,resultsmenuclick:bookmarks:Copy,edit:printclipboard,'
+		         'resultsselect:bookmarks:2,resultsmenu:bookmarks,resultsmenuclick:bookmarks:Copy,edit:printclipboard,'
+		         'resultsmenu:bookmarks,resultsmenuclick:bookmarks:Remove Bookmark,edit:printbookmarks,'
+		         'resultsselect:bookmarks:2,edit:press:Left Control,edit:tap:C,edit:release:Left Control,edit:printclipboard,resultsmenu:bookmarks,resultsmenuclick:bookmarks:Jump to Source,edit:print,'
+		         'resultsselect:bookmarks:2,edit:tap:Delete,edit:printbookmarks,resultsmenu:bookmarks'}),
+		[r'^Bookmarks: 2$', r'^Menu Results: Jump to Source \[F4\], Copy \[Ctrl\+C\], Expand All, Collapse All, Remove Bookmark \[Delete\]\(disabled\)$', r'^Shapes\.cpp  2$',
+		 r'^Menu Results: Jump to Source \[F4\], Copy \[Ctrl\+C\], Expand All, Collapse All, Remove Bookmark \[Delete\]$', r'^12: return 3 \* miRadius \* miRadius;$', r'^Menu Results: Jump to Source \[F4\], Copy \[Ctrl\+C\], Expand All, Collapse All, Remove Bookmark \[Delete\]$',
+		 r'^Bookmarks: 1$', r'^  Shapes\.cpp:23$', r'^23: return miSide \* miSide;$', r'^Menu Results: Jump to Source \[F4\], Copy \[Ctrl\+C\], Expand All, Collapse All, Remove Bookmark \[Delete\]$',
+		 r'Shapes\.cpp \(focus\) line 23: ', r'^Bookmarks: 0$', r'^Menu Results: Jump to Source \[F4\]\(disabled\), Copy \[Ctrl\+C\]\(disabled\), Expand All\(disabled\), Collapse All\(disabled\), Remove Bookmark \[Delete\]\(disabled\)$'], [r'ERROR']),
+	('results-menu-replace', {
+		#The Find window's results menu has Replace All and Replace Selected after the items every results tree has,
+		#while it lists Replace in Files' results; Replace Selected there does what its toolbar's button does.  The
+		#Find Usages, Hierarchy and Duplicates windows have the menu too, dim with nothing listed, and Problems.
+		'SOLUTION': NAVIGATION, 'WAIT_INDEX': '1', 'FIND': '0:cw:Area', 'FIND_REPLACE': 'Size', 'FIND_MASK': '*.h',
+		'DEBUG': 'findselect:3,resultsmenu:find,resultsmenuclick:find:Replace Selected,printstatus,printfind,resultsmenu:usages,resultsmenu:hierarchy,resultsmenu:duplicates,resultsmenu:problems'},
+		[r'^Menu Results: Jump to Source \[F4\], Copy \[Ctrl\+C\], Expand All, Collapse All, Replace All, Replace Selected$', r'^Status line: Replaced 2 occurrences in 1 file\.  Save All keeps them\.$',
+		 r"^Replace 'Area' with 'Size' in the solution  1 match in 1 file$", r'^Menu Results: Jump to Source \[F4\]\(disabled\), Copy \[Ctrl\+C\]\(disabled\), Expand All\(disabled\), Collapse All\(disabled\)$', r'^Menu Results: Jump to Source \[F4\]\(disabled\), Copy \[Ctrl\+C\]\(disabled\), Expand All\(disabled\), Collapse All\(disabled\)$', r'^Menu Results: Jump to Source \[F4\]\(disabled\), Copy \[Ctrl\+C\]\(disabled\), Expand All\(disabled\), Collapse All\(disabled\)$', r'^Menu Results: Jump to Source \[F4\], Copy \[Ctrl\+C\], Expand All, Collapse All$'], [r'ERROR']),
 	('bookmarks-read', dict(MakeNavigationCopy('  <Breakpoint File="{folder}/Start.asm" Line="42" Enabled="true"/>\n  <Bookmark File="{folder}/Shapes.cpp" Line="16" Mnemonic="A"/>\n  <Bookmark File="{folder}/Shapes.h" Line="6"/>\n'), **{
 		#A workspace's bookmarks are read from its user's file when it opens, beside the breakpoints that are there;
 		#a mnemonic given to another line leaves the line that had it, and both parts are written again.

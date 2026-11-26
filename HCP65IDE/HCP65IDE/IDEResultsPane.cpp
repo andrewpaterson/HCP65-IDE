@@ -75,6 +75,7 @@ void CIDEResultsPane::Init(CIDEContent* pcContent, CIDEResultsSource* pcSource, 
 	mpTree->SetInputActionsEnabled(CIC_JumpToSource, false);
 	mpEscapeAction = mpTree->AddInputAction(CIC_ClearSelection, this, &CIDEResultsPane::ReturnToEditor);
 	mpJumpAction = mpTree->AddInputAction(CIC_JumpToSource, this, &CIDEResultsPane::JumpToSource);
+	mpCopyAction = mpTree->AddInputAction(CIC_Copy, this, &CIDEResultsPane::CopySelectedRow);
 
 	//Typing finds a row, as in every tree.  Asked for after the escape action above is added, so that one is called
 	//first and can leave the keys here when escape only ends a find (ReturnToEditor).
@@ -103,6 +104,15 @@ void CIDEResultsPane::Init(CIDEContent* pcContent, CIDEResultsSource* pcSource, 
 	AddCommand("Results.ExpandAll", "Expand All", ITI_ExpandAll, &CIDEResultsPane::ExpandAll, &CIDEResultsPane::HasResults, NULL);
 	AddCommand("Results.CollapseAll", "Collapse All", ITI_CollapseAll, &CIDEResultsPane::CollapseAll, &CIDEResultsPane::HasResults, NULL);
 
+	//The tree's context menu.  Its keys are the tree's own actions above: the commands only show them.
+	mpMenu = OMalloc<CMenuContainer>(mpcContent->GetWindow(), mpcContent->GetTheme());
+	mpMenu->AddItem(CreateCommand("Results.JumpToSource", "Jump to Source", "F4", ITI_Count, &CIDEResultsPane::JumpToSource, &CIDEResultsPane::HasSelectedRow, NULL));
+	mpMenu->AddItem(CreateCommand("Results.Copy", "Copy", "Control+C", ITI_Count, &CIDEResultsPane::CopySelectedRow, &CIDEResultsPane::HasSelectedRow, NULL));
+	mpMenu->AddSeparator();
+	mpMenu->AddItem(mpCommands->Find("Results.ExpandAll"));
+	mpMenu->AddItem(mpCommands->Find("Results.CollapseAll"));
+	mpTree->SetContextMenu(mpMenu);
+
 	mpPanel = OMalloc<CGridContainer>(mpcContent->GetWindow());
 	mpPanel->SetAlignment(CSH_Stretch, CSV_Stretch);
 	mpPanel->AddComponent(mpToolbar, 0, 0, 1, 1, 0, 1);
@@ -124,6 +134,10 @@ void CIDEResultsPane::Class(void)
 	M_Pointer(mpScrollPane);
 	M_Pointer(mpEscapeAction);
 	M_Pointer(mpJumpAction);
+	M_Pointer(mpCopyAction);
+	M_Pointer(mpDeleteAction);
+	M_Pointer(mpDeleteCommand);
+	M_Pointer(mpMenu);
 	M_Pointer(mpPanel);
 	M_Pointer(mpToolbar);
 	M_Pointer(mpCommands);
@@ -160,8 +174,15 @@ void CIDEResultsPane::Free(void)
 		{
 			mpTree->RemoveInputAction(mpEscapeAction);
 			mpTree->RemoveInputAction(mpJumpAction);
+			mpTree->RemoveInputAction(mpCopyAction);
+			if (mpDeleteAction.IsNotNull())
+			{
+				mpTree->RemoveInputAction(mpDeleteAction);
+				mpDeleteAction = NULL;
+			}
 			mpEscapeAction = NULL;
 			mpJumpAction = NULL;
+			mpCopyAction = NULL;
 		}
 	}
 	mszNoun.Kill();
@@ -899,15 +920,16 @@ void CIDEResultsPane::WriteSettings(CXMLWriter* pcWriter)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// One of the pane's own commands, and its button on the toolbar with its
-// icon, dim while it can't be used.  fEnabled and fChecked can be NULL.
+// One of the pane's own commands: szKeys are shown beside it in a menu
+// (the pane's commands aren't bound to keys), ITI_Count is no icon,
+// and fEnabled and fChecked can be NULL.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEResultsPane::AddCommand(const char* szName, const char* szCaption, EIDEToolIcon eIcon, void(CIDEResultsPane::*fRun)(void), bool(CIDEResultsPane::*fEnabled)(void), bool(CIDEResultsPane::*fChecked)(void))
+Ptr<CCommand> CIDEResultsPane::CreateCommand(const char* szName, const char* szCaption, const char* szKeys, EIDEToolIcon eIcon, void(CIDEResultsPane::*fRun)(void), bool(CIDEResultsPane::*fEnabled)(void), bool(CIDEResultsPane::*fChecked)(void))
 {
 	Ptr<CCommand>	pCommand;
 
-	pCommand = mpCommands->Add(szName, szCaption, "", mpcContent->GetToolIcon(eIcon), this, fRun);
+	pCommand = mpCommands->Add(szName, szCaption, szKeys, (eIcon != ITI_Count) ? mpcContent->GetToolIcon(eIcon) : Ptr<CImageCel>(), this, fRun);
 	if (fEnabled)
 	{
 		pCommand->SetEnabledCheck(this, fEnabled);
@@ -916,8 +938,85 @@ void CIDEResultsPane::AddCommand(const char* szName, const char* szCaption, EIDE
 	{
 		pCommand->SetCheckedCheck(this, fChecked);
 	}
-	AddToolbarCommand(pCommand, eIcon);
+	return pCommand;
 }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// One of them with its button on the toolbar, its icon dim while it can't
+// be used.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEResultsPane::AddCommand(const char* szName, const char* szCaption, EIDEToolIcon eIcon, void(CIDEResultsPane::*fRun)(void), bool(CIDEResultsPane::*fEnabled)(void), bool(CIDEResultsPane::*fChecked)(void))
+{
+	AddToolbarCommand(CreateCommand(szName, szCaption, "", eIcon, fRun, fEnabled, fChecked), eIcon);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// An item of the tree's context menu for a command of the pane's that its
+// source made, after those there are.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEResultsPane::AddMenuCommand(Ptr<CCommand> pCommand) { mpMenu->AddItem(pCommand); }
+void CIDEResultsPane::AddMenuSeparator(void) { mpMenu->AddSeparator(); }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A command of the pane's that its source made for taking the selected
+// row out (Bookmarks' Remove Bookmark): an item of the menu, and Delete
+// in the tree runs it while it can be.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEResultsPane::SetDeleteCommand(Ptr<CCommand> pCommand)
+{
+	mpDeleteCommand = pCommand;
+	mpMenu->AddSeparator();
+	mpMenu->AddItem(pCommand);
+	mpDeleteAction = mpTree->AddInputAction(CIC_Delete, this, &CIDEResultsPane::DeleteSelectedRow);
+}
+
+
+void CIDEResultsPane::DeleteSelectedRow(void)
+{
+	if (mpDeleteCommand->IsEnabled())
+	{
+		mpDeleteCommand->Run();
+	}
+}
+
+
+Ptr<CMenuContainer> CIDEResultsPane::GetMenu(void) const { return mpMenu; }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Copy, in the tree's menu and on Control+C: the selected row's text, as
+// it is shown, goes to the clipboard.  False if no row is selected.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEResultsPane::CopySelected(void)
+{
+	CChars	szText;
+	bool	bResult;
+
+	if (!HasSelectedRow())
+	{
+		return false;
+	}
+	szText.Init();
+	mpTree->GetNodeText(mpTree->GetSelectedNode(), &szText);
+	bResult = mpcContent->GetWindow()->GetClipboard()->SetText(szText.Text());
+	szText.Kill();
+	return bResult;
+}
+
+
+void CIDEResultsPane::CopySelectedRow(void) { CopySelected(); }
+bool CIDEResultsPane::HasSelectedRow(void) { return mpTree->GetSelectedNode() != TREE_NO_NODE; }
 
 
 //////////////////////////////////////////////////////////////////////////

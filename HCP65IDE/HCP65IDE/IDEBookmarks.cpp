@@ -124,19 +124,62 @@ void CIDEBookmarks::AddNavigateItems(Ptr<CMenuContainer> pMenu)
 }
 
 
+//////////////////////////////////////////////////////////////////////////
+//
+// The bookmark selected in the list, -1 if a file's row or none is.
+//
+//////////////////////////////////////////////////////////////////////////
+int32 CIDEBookmarks::GetSelectedBookmark(void)
+{
+	int64	iData;
+
+	iData = mpPane->GetResultData(mpPane->GetTree()->GetSelectedNode());
+	if ((iData <= 0) || ((size)iData > maiListed.NumElements()))
+	{
+		return -1;
+	}
+	return (int32)maiListed.GetValue((size)iData - 1);
+}
+
+
+bool CIDEBookmarks::CanRemoveSelectedBookmark(void) { return GetSelectedBookmark() >= 0; }
+
+
+void CIDEBookmarks::RemoveSelectedBookmark(void)
+{
+	CChars	szFile;
+	int32	iBookmark;
+
+	iBookmark = GetSelectedBookmark();
+	if (iBookmark >= 0)
+	{
+		szFile.Init(masBookmarks.Get((size)iBookmark)->szFile);
+		RemoveBookmark((size)iBookmark);
+		Changed(szFile.Text(), NULL);
+		szFile.Kill();
+	}
+}
+
+
 bool CIDEBookmarks::HasEditor(void) { return mpcContent->GetDocuments()->GetActiveTab().IsNotNull(); }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
 // The Bookmarks tool window, put at psPlace: a results pane, as the Find
-// tool window's.
+// tool window's.  Remove Bookmark, in its tree's menu and on Delete,
+// takes the selected bookmark away, as IntelliJ's.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEBookmarks::CreatePane(SDockPlace* psPlace)
 {
+	Ptr<CCommand>	pCommand;
+
 	mpPane = OMalloc<CIDEResultsPane>(mpcContent, this, "bookmarks", false);
 	mpPane->AddViewCommands();
+	pCommand = mpPane->GetCommands()->Add("Bookmarks.Remove", "Remove Bookmark", "Delete", Ptr<CImageCel>(), this, &CIDEBookmarks::RemoveSelectedBookmark);
+	pCommand->SetEnabledCheck(this, &CIDEBookmarks::CanRemoveSelectedBookmark);
+	mpPane->SetDeleteCommand(pCommand);
 	mpTool = mpcContent->GetDock()->AddPane(IDE_BOOKMARKS_ID, "Bookmarks", NULL, mpPane->GetComponent(), DPK_Tool, psPlace);
 }
 
