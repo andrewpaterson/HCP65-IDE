@@ -253,8 +253,10 @@ void CIDERefactorUnit::Kill(void)
 // that unit's text from pcTexts too.  With bCheck its expressions are
 // typed, in a check that is kept.  False if it isn't in a project, its
 // text can't be had, or nothing of it is in the unit (the unit no longer
-// includes it).  The check is for eTarget: the host's sizes, or a
-// processor's for the labels its functions have there.
+// includes it).  The check is for what the file's build configuration
+// compiles it for (the host's sizes unless it is an HCP65 one), or for
+// eTarget if one is given: a processor's, for the labels its functions
+// have there.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDERefactorUnit::Parse(CIDECodeModel* pcModel, CIDEFileTexts* pcTexts, const char* szFileName, bool bCheck, ECPPTarget eTarget)
@@ -304,7 +306,7 @@ bool CIDERefactorUnit::Parse(CIDECodeModel* pcModel, CIDEFileTexts* pcTexts, con
 	if (mbParsed && bCheck)
 	{
 		mcPass.SetOptions(&mcUnit.mcOptions);
-		mcPass.Check(&mcUnit.mcTree, eTarget, true);
+		mcPass.Check(&mcUnit.mcTree, (eTarget != CPPT_NumTargets) ? eTarget : mcUnit.meTarget, true);
 		mbChecked = true;
 	}
 	return mbParsed;

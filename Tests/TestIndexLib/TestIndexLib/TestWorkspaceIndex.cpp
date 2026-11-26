@@ -6,6 +6,8 @@
 
 
 #define TEST_WORKSPACE_INDEX_SAMPLE		"Input" _FS_ "Sample" _FS_ "Sample.sln"
+#define TEST_WORKSPACE_INDEX_TARGET		"Input" _FS_ "Target" _FS_ "Target.sln"
+#define TEST_WORKSPACE_INDEX_LIBC65		"Input" _FS_ "Target" _FS_ "Libc65"
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -166,6 +168,70 @@ void TestWorkspaceIndexConfiguration(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// The workspace indexed with szConfiguration, with no problems.
+//
+//////////////////////////////////////////////////////////////////////////
+static void TestWorkspaceIndexTargetIndex(CWorkspaceIndex* pcIndex, const char* szConfiguration)
+{
+	CArrayChars	aszProblems;
+
+	pcIndex->SetConfiguration(szConfiguration);
+	pcIndex->StartIndexing();
+	pcIndex->WaitForIndexing();
+	aszProblems.Init();
+	pcIndex->TakeIndexingProblems(&aszProblems);
+	AssertSize(0, aszProblems.NumElements());
+	aszProblems.Kill();
+	AssertNotNull(pcIndex->GetIndex()->FindSymbol("Always()"));
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A solution read with an HCP65 build configuration is indexed as
+// hcp65build compiles it: the target's defines and none of MSVC's, and
+// Libc65's headers for the system's.  Read with MSVC's it is as before.
+//
+//////////////////////////////////////////////////////////////////////////
+void TestWorkspaceIndexTarget(void)
+{
+	CBuildWorkspace		cWorkspace;
+	CWorkspaceIndex		cIndex;
+	CCPPIndex*			pcIndex;
+
+	cWorkspace.Init();
+	AssertTrue(cWorkspace.Open(TEST_WORKSPACE_INDEX_TARGET));
+	cIndex.Init(&cWorkspace);
+	cIndex.SetLibc65Directory(TEST_WORKSPACE_INDEX_LIBC65);
+	pcIndex = cIndex.GetIndex();
+
+	TestWorkspaceIndexTargetIndex(&cIndex, "Debug|Win32");
+	AssertNotNull(pcIndex->FindSymbol("OnHost()"));
+	AssertNull(pcIndex->FindSymbol("OnW65C816()"));
+	AssertNull(pcIndex->FindSymbol("On65C64()"));
+	AssertNull(pcIndex->FindSymbol("SOnly65"));
+
+	TestWorkspaceIndexTargetIndex(&cIndex, "Debug|W65C816");
+	AssertNull(pcIndex->FindSymbol("OnHost()"));
+	AssertNotNull(pcIndex->FindSymbol("OnW65C816()"));
+	AssertNotNull(pcIndex->FindSymbol("WithAssembly()"));
+	AssertNull(pcIndex->FindSymbol("On65C64()"));
+	AssertNotNull(pcIndex->FindSymbol("SOnly65"));
+
+	TestWorkspaceIndexTargetIndex(&cIndex, "Debug|65C64");
+	AssertNull(pcIndex->FindSymbol("OnHost()"));
+	AssertNull(pcIndex->FindSymbol("OnW65C816()"));
+	AssertNull(pcIndex->FindSymbol("WithAssembly()"));
+	AssertNotNull(pcIndex->FindSymbol("On65C64()"));
+	AssertNotNull(pcIndex->FindSymbol("SOnly65"));
+
+	cIndex.Kill();
+	cWorkspace.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Which files are indexed: C and C++, whatever the case of the extension.
 //
 //////////////////////////////////////////////////////////////////////////
@@ -193,6 +259,7 @@ void TestWorkspaceIndex(void)
 	TestWorkspaceIndexSourceFiles();
 	TestWorkspaceIndexSample();
 	TestWorkspaceIndexConfiguration();
+	TestWorkspaceIndexTarget();
 
 	TestStatistics();
 }

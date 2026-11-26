@@ -46,6 +46,7 @@ void CParsedUnit::Init(void)
 	mbTree = false;
 	mbContents = false;
 	mcOptions = *GetDefaultCPPCompileOptions();
+	meTarget = CPPT_Host;
 }
 
 
@@ -120,6 +121,7 @@ void CWorkspaceIndex::Init(CBuildWorkspace* pcWorkspace)
 	mszConfiguration.Init();
 	maszSystemDirectories.Init();
 	mbSystemDirectoriesMissing = false;
+	mszLibc65.Init();
 
 	mapcProjects.Init();
 	mcHeaderCache.Init();
@@ -175,6 +177,7 @@ void CWorkspaceIndex::Kill(void)
 	mcHeaderCache.Kill();
 	mapcProjects.Kill();
 
+	mszLibc65.Kill();
 	maszSystemDirectories.Kill();
 	mszConfiguration.Kill();
 	mpcWorkspace = NULL;
@@ -258,9 +261,9 @@ void CWorkspaceIndex::StopJobs(void)
 //
 // The compiler's own headers on this machine (FindSystemHeaderDirectories),
 // those that exist; those that don't are logged, as without them almost
-// nothing can be parsed (see IsMissingSystemDirectories).  Every
-// configuration has them, after its own include directories, until a
-// build configuration says which it has.
+// nothing can be parsed (see IsMissingSystemDirectories).  A project has
+// them after its own include directories, unless its solution is being
+// read with an HCP65 configuration (see SetLibc65Directory).
 //
 //////////////////////////////////////////////////////////////////////////
 void CWorkspaceIndex::AddDefaultSystemDirectories(void)
@@ -274,10 +277,34 @@ void CWorkspaceIndex::AddDefaultSystemDirectories(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Where the HCP65 compiler's own headers are: Libc65 (<stdint.h>).  A
+// project whose solution is read with an HCP65 configuration (a W65C816's
+// or a 65C64's) is indexed as hcp65build compiles it: these are its
+// system headers, not this machine's, and it has the target's defines,
+// not MSVC's (AddTargetDefines).  So the code in #ifdef __W65C816__ is
+// what is indexed, the #ifdef _WIN32 beside it isn't, and a header the
+// 65 hasn't isn't found on the host.  Said before anything is indexed.
+//
+//////////////////////////////////////////////////////////////////////////
+void CWorkspaceIndex::SetLibc65Directory(const char* szDirectory)
+{
+	CFileUtil	cFileUtil;
+
+	mszLibc65.Set(szDirectory);
+	if (!mszLibc65.Empty())
+	{
+		cFileUtil.FullPath(&mszLibc65);
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // The file (or szContents as it, if they aren't NULL) preprocessed with
 // its project's include directories and defines, and parsed into pcDest,
 // with the compile options its build configuration has (CBuildConfiguration
-// ::SetCompileOptions) for checking it.  False if the project isn't
+// ::SetCompileOptions) and its target (an int is 16 bits to the W65C816)
+// for checking it.  False if the project isn't
 // loaded.
 //
 //////////////////////////////////////////////////////////////////////////
@@ -304,6 +331,7 @@ bool CWorkspaceIndex::ParseUnit(size uiProject, const char* szFileName, const ch
 	if (pcConfiguration != NULL)
 	{
 		pcConfiguration->SetCompileOptions(&pcDest->mcOptions);
+		pcDest->meTarget = pcConfiguration->GetTarget();
 	}
 	mcProjectsMutex.Unlock();
 	pcProject->ProcessUnit(pcDest->mpcUnit, mszConfiguration.Text(), pszErrors);
@@ -385,7 +413,7 @@ CTranslationUnit* CWorkspaceIndex::AddUnit(size uiProject, const char* szFileNam
 		pcConfig = pcLibrary->AddConfiguration(mszConfiguration.Text());
 		pcConfig->mbHostDefines = false;
 		pcConfiguration = GetProjectConfiguration(uiProject);
-		AddCompilerDefines(pcConfiguration, pcConfig);
+		AddTargetDefines(uiProject, pcConfiguration, pcConfig);
 		aszDefines.Init();
 		if (pcConfiguration != NULL)
 		{
@@ -410,7 +438,8 @@ CTranslationUnit* CWorkspaceIndex::AddUnit(size uiProject, const char* szFileNam
 //
 // The CppCompilerLib project for the workspace's project uiProject, made
 // the first time: the project's include directories, then the
-// compiler's.  Call it with the projects' mutex held.
+// compiler's: this machine's, or Libc65 for a project read with an HCP65
+// configuration.  Call it with the projects' mutex held.
 //
 //////////////////////////////////////////////////////////////////////////
 CProject* CWorkspaceIndex::GetProject(size uiProject)
@@ -454,9 +483,19 @@ CProject* CWorkspaceIndex::GetProject(size uiProject)
 		}
 	}
 	aszDirectories.Kill();
-	for (i = 0; i < maszSystemDirectories.NumElements(); i++)
+	if (FindHCP65Configuration(uiProject) != NULL)
 	{
-		pcProject->AddIncludeDirectory(maszSystemDirectories.GetText(i), true, true);
+		if (!mszLibc65.Empty())
+		{
+			pcProject->AddIncludeDirectory(mszLibc65.Text(), false, true);
+		}
+	}
+	else
+	{
+		for (i = 0; i < maszSystemDirectories.NumElements(); i++)
+		{
+			pcProject->AddIncludeDirectory(maszSystemDirectories.GetText(i), true, true);
+		}
 	}
 	mapcProjects.SetPtr(uiProject, pcProject);
 	return pcProject;
@@ -714,7 +753,7 @@ void CWorkspaceIndex::GatherUnit(CParsedUnit* pcUnit, CCPPIndexUnit* pcDest, CCP
 	cPass.Init();
 	cPass.SetTemplatesAsThemselves(mbIndexTemplates);
 	cPass.SetOptions(&pcUnit->mcOptions);
-	cPass.Check(&pcUnit->mcTree);
+	cPass.Check(&pcUnit->mcTree, pcUnit->meTarget);
 	CCPPIndex::Gather(&pcUnit->mcTokeniser, &pcUnit->mcTree, pcDest, &cPass, pcIndexed);
 	cPass.Kill();
 }
@@ -991,6 +1030,46 @@ CBuildConfiguration* CWorkspaceIndex::FindBuildConfiguration(size uiSolution)
 		pcConfiguration = pcSolution->mcConfigurations.GetConfiguration(0);
 	}
 	return pcConfiguration;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The build configuration the project's solution is read with, if it is
+// an HCP65 one (the W65C816's or the 65C64's); NULL if it is the host's.
+//
+//////////////////////////////////////////////////////////////////////////
+CBuildConfiguration* CWorkspaceIndex::FindHCP65Configuration(size uiProject)
+{
+	CBuildConfiguration*	pcConfiguration;
+
+	pcConfiguration = FindBuildConfiguration(mpcWorkspace->GetProject(uiProject)->uiSolution);
+	return ((pcConfiguration != NULL) && pcConfiguration->IsHCP65()) ? pcConfiguration : NULL;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// What the compiler that builds the project defines itself: the target's
+// own for an HCP65 configuration, from the code the build uses
+// (CCPPTarget::AddDefines, with the configuration's compile options), so
+// the two can't differ; MSVC's for any other.
+//
+//////////////////////////////////////////////////////////////////////////
+void CWorkspaceIndex::AddTargetDefines(size uiProject, CVcxConfiguration* pcConfiguration, CConfig* pcConfig)
+{
+	CBuildConfiguration*	pcBuild;
+	CCPPCompileOptions		cOptions;
+
+	pcBuild = FindHCP65Configuration(uiProject);
+	if (pcBuild == NULL)
+	{
+		AddCompilerDefines(pcConfiguration, pcConfig);
+		return;
+	}
+	cOptions = *GetDefaultCPPCompileOptions();
+	pcBuild->SetCompileOptions(&cOptions);
+	GetCPPTarget(pcBuild->GetTarget())->AddDefines(pcConfig, &cOptions);
 }
 
 

@@ -74,6 +74,7 @@ public:
 	Ptr<CDockPane>		GetBuildTool(void) const;
 	Ptr<CIDEBuildPane>	GetBuildPane(void) const;
 	void				SetLibc65Directory(const char* szDirectory);
+	const char*			GetLibc65Directory(void);
 	bool				Build(void);
 	void				StopBuild(void);
 	bool				IsBuilding(void);

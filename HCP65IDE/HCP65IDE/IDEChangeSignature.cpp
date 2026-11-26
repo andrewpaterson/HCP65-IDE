@@ -2559,11 +2559,11 @@ bool CIDEChangeSignature::GetAssemblyTarget(ECPPTarget* peTarget)
 	CBuildConfiguration*	pcConfiguration;
 
 	pcConfiguration = mpcContent->GetBuildConfigurations()->HasConfiguration() ? mpcContent->GetBuildConfigurations()->GetConfiguration() : NULL;
-	if (!pcConfiguration || ((pcConfiguration->GetToolchain() != BT_W65C816) && (pcConfiguration->GetToolchain() != BT_65C64)))
+	if (!pcConfiguration || !pcConfiguration->IsHCP65())
 	{
 		return false;
 	}
-	*peTarget = (pcConfiguration->GetToolchain() == BT_W65C816) ? CPPT_W65C816 : CPPT_65C64;
+	*peTarget = pcConfiguration->GetTarget();
 	return HasAssembly();
 }
 

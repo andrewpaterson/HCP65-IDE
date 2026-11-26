@@ -71,6 +71,7 @@ public:
 	void					ExplorerActivated(void);
 	bool					ShowActiveFileInExplorer(void);
 	bool					ShowFileInExplorer(Ptr<CIDEEditorTab> pTab);
+	void					ShowNewWorkspace(void);
 	void					FileShown(void);
 	void					SelectActiveFile(void);
 	void					ToggleAlwaysSelect(void);

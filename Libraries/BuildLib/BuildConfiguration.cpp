@@ -393,6 +393,22 @@ const char* CBuildConfiguration::GetProcessorName(void) const
 
 //////////////////////////////////////////////////////////////////////////
 //
+// What the HCP65 compiler compiles an HCP65 configuration for; the host
+// for any other, which it only checks.
+//
+//////////////////////////////////////////////////////////////////////////
+ECPPTarget CBuildConfiguration::GetTarget(void) const
+{
+	if (!IsHCP65())
+	{
+		return CPPT_Host;
+	}
+	return (meToolchain == BT_W65C816) ? CPPT_W65C816 : CPPT_65C64;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // The name's configuration: Debug of Debug|W65C816, all of a name without
 // a |.
 //

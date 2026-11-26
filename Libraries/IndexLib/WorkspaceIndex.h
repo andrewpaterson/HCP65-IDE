@@ -48,7 +48,8 @@ public:
 	CCPPSyntaxTree		mcTree;
 	bool				mbTree;		//The tree is made once the unit is tokenised.
 	bool				mbContents;	//Its contents were given, not read from its file.
-	CCPPCompileOptions	mcOptions;	//How its project's build configuration compiles it: a check of it is made with them.
+	CCPPCompileOptions	mcOptions;	//How its project's build configuration compiles it: a check of it is made with them,
+	ECPPTarget			meTarget;	//and for what it compiles it for (the host unless it is an HCP65 configuration).
 
 	void	Init(void);
 	void	Kill(void);
@@ -101,6 +102,7 @@ protected:
 	CChars						mszConfiguration;		//The build configuration, "Release|W65C816"; each solution builds its own solution configuration for it.
 	CArrayChars					maszSystemDirectories;	//Where the compiler's own headers are ($(IncludePath)).
 	bool						mbSystemDirectoriesMissing;	//Some that are needed aren't on this machine.
+	CChars						mszLibc65;				//The HCP65 compiler's own headers (SetLibc65Directory), empty if it wasn't said.
 
 	CArrayWorkspaceProjects		mapcProjects;			//A CppCompilerLib project for each of the workspace's, NULL until used.
 	CPPHeaderCache				mcHeaderCache;			//Headers' preprocessed output, kept for all the units.
@@ -139,6 +141,7 @@ public:
 	char*			GetConfiguration(void);
 	void			AddSystemDirectory(const char* szDirectory);
 	void			AddDefaultSystemDirectories(void);
+	void			SetLibc65Directory(const char* szDirectory);
 	CArrayChars*	GetSystemDirectories(void);
 	bool			IsMissingSystemDirectories(void) const;
 
@@ -186,6 +189,8 @@ protected:
 	const char*				GetSolutionConfiguration(size uiSolution);
 	CBuildConfiguration*	FindBuildConfiguration(size uiSolution);
 	void					AddCompilerDefines(CVcxConfiguration* pcConfiguration, CConfig* pcConfig);
+	void					AddTargetDefines(size uiProject, CVcxConfiguration* pcConfiguration, CConfig* pcConfig);
+	CBuildConfiguration*	FindHCP65Configuration(size uiProject);
 	void					KillProjects(void);
 	void					KillJobs(void);
 	void					StopJobs(void);

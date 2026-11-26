@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- TestWorkspaceIndexTarget: one solution configuration built three ways, by MSVC, for the W65C816 and for the 65C64. -->
+<BuildConfigurations>
+	<Configuration Name="Debug|Win32" Toolchain="MSVC" Solution="Debug|Win32">
+	</Configuration>
+	<Configuration Name="Debug|W65C816" Toolchain="W65C816" Solution="Debug|Win32">
+	</Configuration>
+	<Configuration Name="Debug|65C64" Toolchain="65C64" Solution="Debug|Win32">
+	</Configuration>
+</BuildConfigurations>

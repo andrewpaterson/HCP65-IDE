@@ -42,7 +42,8 @@ the same in every unit that includes it, so a unit skips the names of a file ano
 only in the units that instantiate it.
 
 The parser alone can't say what `o.Init()` names or which overload `f(x)` calls.  [`CCPPSemanticPass`] runs the
-compiler's own type checker over the unit, checking only (target [`CPPT_Host`], no code made) and going on past
+compiler's own type checker over the unit, checking only (no code made; for [`CPPT_Host`] unless the
+configuration is a 65's) and going on past
 what it can't type, and gives each such name the symbol and overload it resolved to.  A name in a template's body
 can resolve to something different in each instance, and each is kept.  The index also checks each template as
 itself ([`CCPPSemanticPass::SetTemplatesAsThemselves`]), so what a template nothing instantiates names is in it
@@ -61,8 +62,16 @@ too.
   itself (`_MSC_VER`, `_WIN32`, `_WIN64` for x64, `_DEBUG` for Debug).  The build configuration's compile options
   ([`CBuildConfiguration::SetCompileOptions`]: exceptions, the conversions allowed) go to the type checker, so a
   file is checked as it is built.
-- **The system headers.**  The compiler's own headers on this machine come after the project's directories
-  ([`CWorkspaceIndex::AddDefaultSystemDirectories`], [`FindSystemHeaderDirectories`]).  On Linux MinGW's headers
+- **A 65 configuration.**  A project whose solution is read with an HCP65 build configuration (the W65C816's or
+  the 65C64's) is indexed as `hcp65build` compiles it.  It has the target's own defines in place of MSVC's, made
+  by the code the build uses ([`CCPPTarget::AddDefines`]: `__W65C816__` or `__65C64__`, `__LIBC65__`), so the two
+  can't differ.  Its system headers are Libc65's ([`CWorkspaceIndex::SetLibc65Directory`]), not this machine's.
+  And it is type checked for its target ([`CBuildConfiguration::GetTarget`]), so an `int` is the size it is
+  there.  The code in `#ifdef __W65C816__` is what Find Usages and Rename see; the `#ifdef _WIN32` beside it
+  isn't indexed.
+- **The system headers.**  For any other configuration the compiler's own headers on this machine come after the
+  project's directories ([`CWorkspaceIndex::AddDefaultSystemDirectories`], [`FindSystemHeaderDirectories`]).  On
+  Linux MinGW's headers
   stand in for the Windows SDK's, so the index also defines GCC's names for the target (`__x86_64__`, `__i386__`),
   without which MinGW's `winnt.h` stops with an `#error`.  If they aren't installed, almost nothing parses, and
   [`CWorkspaceIndex::IsMissingSystemDirectories`] says so.
@@ -175,8 +184,8 @@ is on.
 - Templates are checked as themselves in the index: 6% more time (above), turned on (the user, 2026-11-15, having
   asked for it to be measured).
 - 8 indexing threads, not 16 (2026-11-06, above).
-- A 65 configuration is to be indexed as `hcp65build` compiles it: none of the host's headers or MSVC's defines,
-  the target's own defines from the code the build uses (the user, 2026-11-26).  Not built yet.
+- A 65 configuration is indexed as `hcp65build` compiles it: none of the host's headers or MSVC's defines, the
+  target's own defines from the code the build uses (the user, 2026-11-26).
 - Claude's tools on the index (find definition, find usages, the pages that cover a symbol) are to be served by the
   running IDE only, whose index is live and has the unsaved edits (the user, 2026-11-24; `DocsPlan.txt` decision
   18).  Not built yet.
@@ -184,9 +193,6 @@ is on.
 ## Not done
 
 - A cache of parsed headers across units, the one large cut left in indexing time.
-- A 65 configuration is indexed with the host's system headers and MSVC's defines, so code in `#ifdef _WIN32` is
-  indexed as live and the 65 branch beside it isn't, and Find Usages and Rename can miss what is built
-  ([`HCP65IDE/NextIDEWork.txt`], 9b).
 - Code an `#if` leaves out in the chosen configuration isn't in the index, and a file only another configuration
   builds is only text.  Macros aren't in the index at all: what needs them reads the files' texts.
 - A partial specialisation isn't checked as itself, and a template's value parameter is 1 in the check

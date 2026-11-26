@@ -29,6 +29,7 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/ArrayChars.h"
 #include "BaseLib/ArrayUint32.h"
 #include "CppCompilerLib/CPPCompileOptions.h"
+#include "CppCompilerLib/CPPTarget.h"
 
 
 //What a configuration is built with: the HCP65 compiler for one of its processors, or a compiler for this computer.
@@ -133,6 +134,7 @@ public:
 	char*			GetSolutionConfiguration(void);
 	bool			IsHCP65(void) const;
 	const char*		GetProcessorName(void) const;
+	ECPPTarget		GetTarget(void) const;
 
 	void			SetBreakpointSpace(const char* szSpace);
 	char*			GetBreakpointSpace(void);

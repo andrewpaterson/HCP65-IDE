@@ -87,7 +87,7 @@ bool CHCP65Build::Start(CArrayChars* paszLines)
 	meState = BS_Running;
 	mbCompiled = false;
 	mbCancel = false;
-	mcBuilder.SetTarget((mpcConfiguration->GetToolchain() == BT_W65C816) ? CPPT_W65C816 : CPPT_65C64);
+	mcBuilder.SetTarget(mpcConfiguration->GetTarget());
 	mpcConfiguration->SetCompileOptions(mcBuilder.GetOptions());
 	SetUnoptimised();
 	mcBuilder.SetJobs(&mcJobs);

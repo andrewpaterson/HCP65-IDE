@@ -384,7 +384,8 @@ void CIDECodeModel::ProcessEditedPage(SIDEEditedFile* psFile)
 // The problems a build of psFile would give, from pcUnit (its unit,
 // parsed as its project builds it): the preprocessor's (szErrors), the
 // parser's and a check's, errors and warnings, those in the file only.
-// The check is the refactorings' (CIDERefactorUnit): the host's.
+// The check is the refactorings' (CIDERefactorUnit): for what the file's
+// build configuration compiles it for.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDECodeModel::CheckEditedFile(CParsedUnit* pcUnit, const char* szErrors, SIDEEditedFile* psFile)
@@ -396,7 +397,7 @@ void CIDECodeModel::CheckEditedFile(CParsedUnit* pcUnit, const char* szErrors, S
 	psFile->cProblems.AddErrors(pcUnit->mcTree.GetErrors(), psFile->szFileName.Text(), false);
 	cPass.Init();
 	cPass.SetOptions(&pcUnit->mcOptions);
-	cPass.Check(&pcUnit->mcTree, CPPT_Host, false);
+	cPass.Check(&pcUnit->mcTree, pcUnit->meTarget, false);
 	psFile->cProblems.AddErrors(cPass.GetErrors(), psFile->szFileName.Text(), false);
 	psFile->cProblems.AddErrors(cPass.GetWarnings(), psFile->szFileName.Text(), true);
 	cPass.Kill();

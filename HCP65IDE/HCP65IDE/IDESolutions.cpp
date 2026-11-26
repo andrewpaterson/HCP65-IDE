@@ -232,10 +232,7 @@ bool CIDESolutions::OpenSolution(const char* szFileName)
 		bResult = mpcContent->GetWorkspace()->Open(szFileName);
 	}
 	szFile.Kill();
-	mpcContent->GetCodeModel()->Init(mpcContent->GetWorkspace());
-	mpcContent->GetCodeModel()->AddDefaultSystemDirectories();
-	mpExplorer->ShowWorkspace(mpcContent->GetWorkspace());
-	mpcContent->GetCodeModel()->ForgetProjectFiles();
+	ShowNewWorkspace();
 	if (!bResult || !IsSolutionOpen())
 	{
 		//One that isn't there any more isn't recent.
@@ -460,10 +457,7 @@ bool CIDESolutions::CloseSolution(size uiSolution)
 	if (mpcContent->GetWorkspace()->NumSolutions() == 1)
 	{
 		LetGoOfWorkspace();
-		mpcContent->GetCodeModel()->Init(mpcContent->GetWorkspace());
-		mpcContent->GetCodeModel()->AddDefaultSystemDirectories();
-		mpExplorer->ShowWorkspace(mpcContent->GetWorkspace());
-		mpcContent->GetCodeModel()->ForgetProjectFiles();
+		ShowNewWorkspace();
 		mpcContent->GetBuildConfigurations()->ShowConfigurations();
 		return true;
 	}
@@ -1276,6 +1270,23 @@ bool CIDESolutions::ShowFileInExplorer(Ptr<CIDEEditorTab> pTab)
 		mpcContent->GetDock()->Activate(mpcContent->GetDocuments()->GetActiveTab()->GetDockPane());
 	}
 	return iNode != TREE_NO_NODE;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The workspace was let go of and is another now: the code model is made
+// again for it, with this machine's compiler's headers and, for what an
+// HCP65 configuration builds, Libc65's; Solution Explorer shows it.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDESolutions::ShowNewWorkspace(void)
+{
+	mpcContent->GetCodeModel()->Init(mpcContent->GetWorkspace());
+	mpcContent->GetCodeModel()->AddDefaultSystemDirectories();
+	mpcContent->GetCodeModel()->SetLibc65Directory(mpcContent->GetBuilding()->GetLibc65Directory());
+	mpExplorer->ShowWorkspace(mpcContent->GetWorkspace());
+	mpcContent->GetCodeModel()->ForgetProjectFiles();
 }
 
 

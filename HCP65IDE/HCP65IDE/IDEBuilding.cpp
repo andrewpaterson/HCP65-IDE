@@ -125,6 +125,8 @@ void CIDEBuilding::ShowBuildTab(void)
 //////////////////////////////////////////////////////////////////////////
 //
 // Where the HCP65 compiler's system headers (<stdint.h>) are: Libc65.
+// The code model is told too, which indexes what an HCP65 configuration
+// builds with them (CWorkspaceIndex::SetLibc65Directory).
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEBuilding::SetLibc65Directory(const char* szDirectory)
@@ -133,7 +135,11 @@ void CIDEBuilding::SetLibc65Directory(const char* szDirectory)
 
 	mszLibc65.Set(szDirectory);
 	cFileUtil.FullPath(&mszLibc65);
+	mpcContent->GetCodeModel()->SetLibc65Directory(mszLibc65.Text());
 }
+
+
+const char* CIDEBuilding::GetLibc65Directory(void) { return mszLibc65.Text(); }
 
 
 //////////////////////////////////////////////////////////////////////////

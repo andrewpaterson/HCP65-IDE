@@ -193,6 +193,15 @@ def CleanDebugging():
 			os.remove(os.path.join(DEBUGGING, szName))
 
 
+def MakeIndexTarget(szSolution):
+	#Input/Debugging's solution for a processor opened and indexed, not built, and Go to asked for the functions it
+	#has one of for each compiler.  What opening it leaves beside it goes at the end.
+	atexit.register(CleanDebugging)
+	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
+	atexit.register(shutil.rmtree, szRoot, True)
+	return {'SOLUTION': os.path.join(DEBUGGING, szSolution), 'RECENT': os.path.join(szRoot, 'Recent.xml'), 'WAIT_INDEX': '1', 'GOTO': '2:OnlyOn', 'DEBUG': 'printindexing'}
+
+
 def PrepareDebugging():
 	#Input/Debugging as from nothing, before each run: no build, no breakpoints or watches saved, and its card a fresh
 	#copy of the boot card (a sparse file: copied sparsely, it is small).
@@ -4274,9 +4283,17 @@ CHECKS = [
 	('explorer', {
 		'OPEN': 'CalculatorParser.cpp', 'EDIT': 'explorer', 'DEBUG': 'printexplorer'},
 		[r'^Explorer: \[.*[/\\]BaseLib[/\\]CalculatorParser\.cpp\]$'], []),
-	('breakpoint', {
-		'OPEN': 'Kernal.cpp', 'DEBUG': 'line:20,buildtab,wait:300,printtabs'},
-		[r'^Tabs: .*>Kernal\.cpp'], []),
+	('breakpoint', dict(MakeNavigationCopy(), **{
+		#On a copy of the navigation checks' project, as it writes the breakpoint beside the solution.
+		'OPEN': 'Shapes.cpp', 'DEBUG': 'line:12,buildtab,wait:300,printtabs'}),
+		[r'^Tabs: .*>Shapes\.cpp'], []),
+	('index-target', MakeIndexTarget('Debugging.sln'),
+		#A solution read with an HCP65 configuration is indexed as hcp65build compiles it: the W65C816's defines and
+		#none of MSVC's, so the function in #ifdef __W65C816__ is found and the ones in #ifdef _WIN32 and __65C64__
+		#aren't; and Libc65's headers, so nothing is missing.
+		[r'^Go to \[OnlyOn\]: 1 result', r'^  OnlyOnW65C816'], [r'OnlyOnWindows', r'OnlyOn65C64']),
+	('index-target-65c64', MakeIndexTarget('Debugging65C64.sln'),
+		[r'^Go to \[OnlyOn\]: 1 result', r'^  OnlyOn65C64'], [r'OnlyOnWindows', r'OnlyOnW65C816']),
 	('docs-go-to-source', dict(MakeDocsCopy(), **{
 		#Control+B on a page's reference to code goes where the website's link goes: CShape::Init's declaration in its
 		#header (not its definition in Shapes.cpp).

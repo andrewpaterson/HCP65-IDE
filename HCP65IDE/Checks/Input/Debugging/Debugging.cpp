@@ -53,3 +53,20 @@ int main(void)
 	iTotal = Sum(&cCounter, 4);
 	return iTotal + gszName[0] - 'D';
 }
+
+
+//What the index-target check looks for: the code model indexes this file as the configuration's compiler compiles
+//it, so only the W65C816's or the 65C64's is there.  Nothing calls them.
+#ifdef _WIN32
+int OnlyOnWindows(void) { return 1; }
+#endif
+
+
+#ifdef __W65C816__
+int OnlyOnW65C816(void) { return 2; }
+#endif
+
+
+#ifdef __65C64__
+int OnlyOn65C64(void) { return 3; }
+#endif
