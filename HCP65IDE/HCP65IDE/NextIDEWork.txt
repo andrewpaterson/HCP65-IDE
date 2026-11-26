@@ -366,7 +366,19 @@ come out as they went in.  In the other 1071:
   - Functions with no banner: MicroprocessorLib's W65C816InstructionCycleFactory.cpp (74),
     W65InstructionCycleBuilder.cpp (49) and W65C02InstructionCycleFactory.cpp (47), SupportLib's ColourARGB32.cpp
     (35), BaseLib's Number.cpp (14) and MD5.cpp (13).
-  Nothing was reformatted on disk or committed.
+  Nothing was reformatted on disk or committed then.
+
+CommonLibraries reformatted (the user, 2026-11-26: "Please reformat those libraries using the new reformatter
+code"): its libraries' 3819 sources through CCodeFormatter, 1058 of them changed, one commit a library
+(CommonLibraries cfac9e494 to c4dcb0829).  Each file was checked to differ only in white space and banner lines
+and to keep its first bytes, and a second pass changes nothing.  Doing it found three faults in the formatter,
+fixed before the libraries were committed: runs of one class pulled to different columns (ArrayChars.h), a tie
+between columns moving a block that was right (TextLayout.h), and a byte order mark read as a name
+(IndexTreeFile.cpp, which then didn't compile).  Checked after: TestBaseLib, TestStandardLib, TestSupportLib,
+TestWindowLib, TestThreadLib, TestInputLib, TestMicroprocessorLib, TestGerberLib, TestProceduralLib,
+TestRasterLib, TestSceneViewLib, TestEmulatorDebugLib, TestOldDragonLib, TestJavaParserLib and
+TestCppCompilerLib, 64 bit Release, all passing; the IDE's window program built (X11Lib).  Not compiled here:
+WinGdiLib, WinInputLib and the other Windows-only files; the 65 suites and a 32 bit build weren't run.
 
 Checked: TestTemplateLib 64 bit Debug (293 asserts); the formatter against the prototype as above, and that its
 edits, made to each source, give its text; the IDE's 582 checks on a private Release build, all passing but
