@@ -138,7 +138,7 @@ and C++ file in it; the files it changes are left changed, for Save All.
 | Spaces | One after a comma and a `for`'s `;`, between `if`, `for`, `while`, `switch` or `return` and its bracket, and each side of `=`, `==`, `!=`, `<=`, `>=`, `||`, `+=` and the like, and of a binary `+ - / % | ^` written with none. |
 | Columns | A run of declarations (a function's locals, a class's fields and member functions) has its names in one column, reached with tabs: the column they share already, or with none the commonest first tab stop after a type.  A type too long for the column has one tab after it.  A `*` goes against its type: `char* sz`. |
 | Banners | In a source file, a function of several lines with no comment over it gets the [Definition Banner](templates.md) template's, two blank lines above. |
-| Line ends | White space at a line's end goes. |
+| Line ends | White space at a line's end goes, but for a line comment's after a backslash, which would otherwise make the next line part of the comment. |
 
 What it leaves alone, because it can't tell from the words alone or because the house's own code has it:
 

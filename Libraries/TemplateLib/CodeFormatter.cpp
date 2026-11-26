@@ -1681,7 +1681,10 @@ void CCodeFormatter::AddBanners(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// White space at a line's end goes, a comment's too.
+// White space at a line's end goes, a comment's too, but for a line
+// comment that ends in a backslash and then white space: without the white
+// space the backslash would make the next line part of the comment (as g++
+// already reads it, and MSVC doesn't), which the formatter mustn't decide.
 //
 //////////////////////////////////////////////////////////////////////////
 void CCodeFormatter::RemoveTrailing(void)
@@ -1689,6 +1692,7 @@ void CCodeFormatter::RemoveTrailing(void)
 	SCodeToken*	psToken;
 	const char*	szText;
 	int32		i;
+	size		uiLength;
 	bool		bEnd;
 
 	for (i = (int32)masTokens.NumElements() - 1; i >= 0; i--)
@@ -1703,12 +1707,14 @@ void CCodeFormatter::RemoveTrailing(void)
 		else if (bEnd && (psToken->eKind == CTK_Comment))
 		{
 			szText = GetTokenText(i);
-			if ((szText[psToken->uiLength - 1] == ' ') || (szText[psToken->uiLength - 1] == '\t'))
+			uiLength = psToken->uiLength;
+			while ((uiLength > 0) && ((szText[uiLength - 1] == ' ') || (szText[uiLength - 1] == '\t')))
 			{
-				while ((psToken->uiLength > 0) && ((szText[psToken->uiLength - 1] == ' ') || (szText[psToken->uiLength - 1] == '\t')))
-				{
-					psToken->uiLength--;
-				}
+				uiLength--;
+			}
+			if ((uiLength < psToken->uiLength) && (szText[uiLength - 1] != '\\'))
+			{
+				psToken->uiLength = uiLength;
 				mauiCounts[CFC_Trailing]++;
 			}
 		}

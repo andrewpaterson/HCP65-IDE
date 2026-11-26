@@ -221,13 +221,17 @@ void TestCodeFormatterBanners(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// White space at a line's end goes, a comment's too; the line ends stay
-// as the file has them, and a new line has the same.
+// White space at a line's end goes, a comment's too, but for a line
+// comment's after a backslash (taking it would make the next line part of
+// the comment); the line ends stay as the file has them, and a new line has
+// the same.
 //
 //////////////////////////////////////////////////////////////////////////
 void TestCodeFormatterLines(void)
 {
 	TestCodeFormat("int\tgi;  \n\t\n//Said.\t\nint\tgj;", "int\tgi;\n\n//Said.\nint\tgj;", false);
+	TestCodeFormat("void F(void)\n{\n\tG(4); // Remove the \\??\\ \n\tH('#', '\\\\');\n}\n", "void F(void)\n{\n\tG(4); // Remove the \\??\\ \n\tH('#', '\\\\');\n}\n", false);
+	TestCodeFormat("//a \\\t \n//b\\  \n", "//a \\\t \n//b\\  \n", false);
 	TestCodeFormat("void F(void) {\r\n\tG();\r\n}\r\n", "void F(void)\r\n{\r\n\tG();\r\n}\r\n", false);
 	TestCodeFormat("", "", true);
 
