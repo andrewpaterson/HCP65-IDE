@@ -179,7 +179,14 @@ void CCodeFormatter::Tokenise(void)
 
 	sz = mszSource;
 	bLineStart = true;
-	for (i = 0; i < muiLength; i = j)
+	i = 0;
+	if ((muiLength >= 3) && (memcmp(sz, "\xEF\xBB\xBF", 3) == 0))
+	{
+		//A byte order mark stays where it is, and the first line still starts after it.
+		AddToken(CTK_BlockComment, 0, 3);
+		i = 3;
+	}
+	for (; i < muiLength; i = j)
 	{
 		c = sz[i];
 		if (IsCodeLineEnd(&sz[i]))

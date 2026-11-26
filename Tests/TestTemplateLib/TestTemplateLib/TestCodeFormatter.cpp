@@ -231,6 +231,11 @@ void TestCodeFormatterLines(void)
 	TestCodeFormat("void F(void) {\r\n\tG();\r\n}\r\n", "void F(void)\r\n{\r\n\tG();\r\n}\r\n", false);
 	TestCodeFormat("", "", true);
 
+	//A byte order mark stays first, and the directive after it is still one.
+	TestCodeFormat("\xEF\xBB\xBF#include \"A.h\"\nvoid F(void)\n{\n    G();\n}\n",
+		"\xEF\xBB\xBF#include \"A.h\"\n\n\n//////////////////////////////////////////////////////////////////////////\n//\n//\n"
+		"//////////////////////////////////////////////////////////////////////////\nvoid F(void)\n{\n\tG();\n}\n", true);
+
 	//What isn't finished is left: a string and a comment that don't end, a brace that isn't closed.
 	TestCodeFormat("void F(void)\n{\n\tsz = \"abc;\n", "void F(void)\n{\n\tsz = \"abc;\n", false);
 	TestCodeFormat("/* a=b\n  c=d", "/* a=b\n  c=d", false);
