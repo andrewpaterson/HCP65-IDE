@@ -1,8 +1,8 @@
 The IDE's next work (planned 2026-11-17, checked against the code and planned again 2026-11-26)
 ============================================================================================
 
-Ten items, in the order the user chose on 2026-11-17, and an eleventh added on 2026-11-26.  Six are built (1, 2, 3,
-4, 7 and 11); five are open (5, 6, 8, 9 and 10), and are planned below from what the code has now.  The user's
+Ten items, in the order the user chose on 2026-11-17, and an eleventh added on 2026-11-26.  Seven are built (1, 2, 3,
+4, 5, 7 and 11); four are open (6, 8, 9 and 10), and are planned below from what the code has now.  The user's
 answers of 2026-11-17 are at the end and still hold.  Bring each open item up with the user before starting it,
 with how you mean to do it, and go on when they say.  The user's rule for the IDE: build the whole feature, as
 IntelliJ IDEA has it, not a cut-down version, and don't order the work by what is cheapest.
@@ -11,8 +11,8 @@ IntelliJ IDEA has it, not a cut-down version, and don't order the work by what i
   2   Find and Replace in the file, CRegex             built 2026-11-20
   3   Find in Files: regex, file mask, Replace         built 2026-11-21
   4   Go to Line                                       built 2026-11-20
-  5   Code completion, basic and smart                 OPEN: next, how decided 2026-11-26
-  6   Automatic indenting, Tab, the line commands      OPEN: part there; decided 2026-11-26
+  5   Code completion, basic and smart                 built 2026-11-26
+  6   Automatic indenting, Tab, the line commands      OPEN: next; part there; decided 2026-11-26
   7   Bookmarks                                        built 2026-11-21
   8   Context menus                                    OPEN: part there (see the item)
   9   Smaller things left open                         OPEN: a, b and c to build; b decided 2026-11-26
@@ -94,70 +94,78 @@ HCP65-IDE 3f7deda (WindowLib's CPromptPopup: CommonLibraries 39e33708e).  Check 
 "Line[:column]", on Back's history, as planned.
 
 
-5. Code completion, basic and smart: OPEN
------------------------------------------
+5. Code completion, basic and smart: built 2026-11-26
+-----------------------------------------------------
 
-Nothing of it is built: no completion command, no popup, Control+Space and Control+Shift+Space free.
+The user's decisions: it opens by itself only straight after "." "->" and "::", otherwise on Control+Space (basic)
+or Control+Shift+Space (smart), not as an identifier is typed; smart is built with basic (2026-11-17).  The light
+path and the kept parse both, from the start, with six points that make it friendly (2026-11-26, below).
 
-What the user decided (2026-11-17): it opens by itself only straight after "." "->" and "::"; otherwise on
-Control+Space (basic) or Control+Shift+Space (smart), not as an identifier is typed; smart is built with basic.
+CommonLibraries 70b41db52 (a driven chooser popup), 56a78ce5f (matches as good in the order added), 98d4890ec (a
+row matched by its name only), bbe747140 (its page); HCP65-IDE: the commits after a8b0c3b named "Code completion".
+Checks completion-member, -scope, -access, -name, -keys, -include, -parse, -by-type and -documentation, on
+Checks/Input/Completion (CVehicle and CTruck with members of every access, a namespace, an enum, a typedef, a
+template that holds, a header in a folder).
 
-What to build is as it was planned:
-  - Basic: a popup list of what can be written there, filtered as more is typed (camel humps: "GSN" finds
-    GetSelectedNode), each with its icon, its type or signature, and its class or namespace; Enter or Tab writes it
-    (Tab replaces the rest of the word), a function with its "(" and the caret between the brackets when it takes
-    arguments, and parameter info after it.  After "x." or "x->", the members of x's type, inherited ones too, by
-    access from where the caret is; after "N::", what N declares; otherwise what is in scope (locals and
-    parameters, the class's members, then the namespaces' and the globals'); #include "..." completes paths from
-    the include directories; keywords too.
-  - Smart: only what has the type expected where the caret is, ranked by how close the type is: an argument (the
-    parameter's type, from the call's overloads), the right of "=", a return, an initialiser, a case label (the
-    switch's enum's enumerators); with what converts (a derived class's pointer for a base's).
+What was built (Docs/ide/editor.md's "Code completion" says it for the user):
+  - The list (CIDECompletion): WindowLib's chooser popup, driven by the editor, which keeps the keys.  Complete Code
+    (Control+Space) and by itself after "." "->" "::".  Members after "x." and "x->", base classes' too, by access
+    from where the caret is (CIDEClassAccess reads a class's access from its text: the index hasn't it); what
+    "N::" declares; what is in scope on a name by itself, the function's own first, then the language's words;
+    #include's folders and headers.  Filtered as the name is typed, capitals matching.  Enter writes the entry, Tab
+    in place of the whole name; a function with its brackets and Parameter Info (CIDEQuickInfo::ShowParameterInfoOf:
+    the index hasn't seen the call yet); with one entry Complete Code writes it at once.
+  - The light path (CIDELightTyper, IDECompletionContext): what is before the "." from the text and the index,
+    with no parse: names, members, calls by what they return, indexings, "this", a cast in brackets, typedefs,
+    "NS::CGauge".  It answers only what it is sure of.
+  - The kept parse (CIDEExpressionTyper): the file checked on the edits thread (CIDECodeModel::RunEditsJob, one
+    thing at a time with the edited files) with the expression in brackets where it was written, which is
+    IntelliJ's dummy name done the other way round: nothing unfinished is left for the parser.  If "->" follows a
+    class it is checked again as a call of its operator->.
+  - Complete Code by Type (Control+Shift+Space, CIDEExpectedTypes): an argument's parameter, the left of "=", "=="
+    and "!=", what the function returns, what a switch switches on; what is exactly the type first, then pointers
+    to derived classes.
+  - Control+Q with the list open: Quick Documentation of the selected entry, beside the list, following the
+    selection (item 11's leftover).
 
-What has changed since it was planned, and what that does to the plan:
-  - Built since, to use and not write again: the chooser popup with its rows found as typed (CChooserPopup),
-    CNameMatcher (camel humps, Go to's), Parameter Info (View.ParameterInfo, Control+P, CIDEQuickInfo), the file's
-    outline from the edits thread (CIDEOutline), the symbol's info and icon (Quick Definition, Type Info), the
-    caret's context (SIDECaretContext), class bases (FindClassBases).
-  - The question this file left open is answered by a measurement.  The type of the expression at the caret from a
-    checked parse of the file (Type Info's follow-up 3f, HCP65-IDE 21b5a91) took 47 ms in a BaseLib file and 1.7 s
-    in IDEUsages.cpp, each press.  That is too slow for a key: completion can't parse the file when asked.
-  - Two ways to the type of what is before the "." were weighed:
-      a. a light path: the name's declaration from the function's own syntax tree (the edits thread already has
-         it) and the index, then member by member along a "name.member->member" chain, with no binder.  Covers
-         names, members, calls by their result, casts; not operators that are overloaded, nor templates'
-         arguments unless the index has them (not looked at);
-      b. the checked parse on the edits thread, kept up to date after each edit, so a key only reads what is
-         there.
+The six points, as built:
+  1. The list only grows: CChooserPopup::ItemsChanged keeps the selected item selected.  Built as said.
+  2. The popup opens at once: where the light path has nothing it opens empty with "Working out what this is..."
+     under its rows (a note, not a greyed row), and closes if the parse has nothing either.
+  3. The parse is given a finished line: the expression in brackets, with a ";" if the line ends there.
+  4. The kept parse a few keys old: this is the index, which the edits thread keeps up to date and the light
+     path reads; and the file's last outline, for what function and class the caret is in.  No syntax tree is
+     kept between keys.
+  5. The light path offers only what it is sure of.  One exception, told to the user 2026-11-26 and not answered:
+     "->" on a class template that isn't a pointer (Ptr<CGauge>) is taken to reach its first argument, at once,
+     rather than waiting for the parse.  The parse is still asked.
+  6. Smart completion doesn't wait: it uses the light path only, and the checked parse isn't asked for it.  So
+     there is no "working" row to show; where the light path can't say what is wanted, the status line says so.
 
-DECIDED by the user, 2026-11-26: both from the start, a answering at once and b adding to the list when it arrives,
-made friendly to use by these, which are part of the item:
-  1. The list only grows.  What the parse brings is merged in; the selected row stays selected and where it is on
-     the screen.  A list the user hasn't touched yet may be sorted again.
-  2. The popup opens at once.  If the light path can't type the expression it opens with one greyed row saying it
-     is working, filled in when the parse lands; typing goes on, Escape closes it.
-  3. The parse is given a finished line: a copy of the text with a dummy name at the caret ("x." as
-     "x.__caret__"), as IntelliJ does.  Not tried on this parser yet.
-  4. The kept parse is used when it is a few keys old: the declarations above the statement being typed are read
-     from the last good parse, their places moved by the edits (as CIDEDocumentAnchor moves places); the statement
-     itself is the light path's.
-  5. The light path offers only what it is sure of: at an overload it can't pick or a template it can't see
-     through it stops and leaves the answer to the parse.
-  6. Smart completion shows the same "working" row while it waits for the expected type.
-A follow-up to measure, not promised: parsing only the function being edited against what is kept of the rest, to
-shorten the 1.7 s.  It is CppCompilerLib's binder; look before planning it.
+Where it differs from the plan:
+  - The parse is asked after every "." and "->", whether the light path answered or not, as decided.  It costs a
+    check of the file on the edits thread each time, behind which the file's highlighting waits.
+  - Completion doesn't open by itself in an #include (the user's rule); Control+Space there.
+  - Access: friends aren't known, so a friend's private members aren't offered to it.
+  - A local variable is offered from the start of its function (the index has no block scopes); using directives
+    aren't followed; macros aren't listed (the index has none).
+  - Smart looks at the nearest 250 symbols in scope only (IDE_COMPLETION_SMART): each one's declaration is read
+    for its type.
+  - A list of what is in scope is of the names with a word starting with the first character typed, and is made
+    again when that changes; before anything is typed, the nearest 500.
 
-Steps:
-  1. Measure: the light path's cost and what it can't type, over a few hundred "." and "->" in the workspace; and
-     try the parser on a text with the dummy name (3 above).
-  2. The list and its popup (WindowLib: a chooser at the caret that the editor keeps typing through, whose rows can
-     be added to while it is open, with a greyed "working" row), with keywords and the file's own names, so the
-     keys, filtering, Enter and Tab can be checked before types are.
-  3. The light path: what is in scope; members after ".", "->" and "::", with access; #include paths.
-  4. The kept parse on the edits thread, the dummy name, and its results merged into an open list.
-  5. Writing a function's brackets, and Parameter Info after it.
-  6. Smart: the expected type at the caret, the ranking, what converts.
-  7. Checks on a solution of its own (Checks/Input/Completion), TestWindowLib for the popup, the pages.
+Measured (step 1), Release x64, the ModPlay workspace, in ModPlay.cpp, from the key to the list's entries (the
+popup's own rows not timed): the members of a CModPlayer* 15 ms (19 entries); what is in scope starting "ui" 16 ms
+(2,032 entries) and "C" 33 ms (21,709 entries); everything outside any scope, the first 500, 12 ms.  Before the
+index was asked only for the names wanted (it copied every global symbol first) the member list took 385 ms.
+The parse's time is the file's check's: not measured again (47 ms to 1.7 s, item 11's numbers).
+
+Checked: TestWindowLib Debug x64 (24074 pass), from a private copy; the IDE's 566 checks on a private Release
+build, all passing but enum-to-class, which failed before this work; the pages build with no warning of their own (the site's build stops at another
+session's unfinished pages).  Not checked: an MSVC build; Windows; a real keyboard and pointer in a real window
+(the checks type through the script, a tick after each character as a person's keys have); the parse path in a
+header (its unit's text is given, and the header's own given back to the code model after: by reading only); a
+large file's parse while typing goes on.
 
 
 6. Automatic indenting, Tab, and the editor's other line commands: OPEN
@@ -371,7 +379,8 @@ The user's answers (2026-11-17)
 For the user to decide (2026-11-26)
 -----------------------------------
 
-  Item 5   DECIDED: the light path and the kept parse both, from the start, with the six points in the item.
+  Item 5   DECIDED and built: the light path and the kept parse both, with the six points as the item says.
+           Still to answer: "->" on a class template (Ptr<CGauge>) reaching its first argument at once.
   Item 6   DECIDED: Tab types a tab on each row of a box selection, and in the documentation pages too.
   Item 9b  DECIDED: a 65 configuration is indexed as it is built: no host headers, the target's defines.
   Item 9d  CONFIRMED: Build on Control+F9, Go to Type Declaration on Control+Shift+B.
