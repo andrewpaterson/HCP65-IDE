@@ -92,8 +92,8 @@ Symbols
     overrides one of another base class doesn't have that class among its rows (the class is named on the row,
     "also:").  The Call Hierarchy has no scope to keep it to, and its "via" callers are those of the functions the
     function overrides, not of what else overrides them (by decision).
-  - Quick Documentation (Control+Q), and a tool tip for a name the pointer rests on: to be built, NextIDEWork.txt's
-    item 11 (the user, 2026-11-26; put off until then).
+  - Quick Documentation (Control+Q), and a tool tip for a name the pointer rests on: built 2026-11-26
+    (NextIDEWork.txt's item 11).  Short of IntelliJ's: no markup is read from a comment, and /* */ comments aren't read.
   - Parameter Info lists the functions of the name that the called one's class (or file) declares beside it.  A
     base class's of that name are hidden by them in C++, so they aren't ways the call could go: only one brought in
     by a using-declaration (using CBase::Set;) is missed.  Type Info gives a name's declared type as it is written.

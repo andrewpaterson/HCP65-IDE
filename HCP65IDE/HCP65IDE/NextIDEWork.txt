@@ -1,8 +1,8 @@
 The IDE's next work (planned 2026-11-17, checked against the code and planned again 2026-11-26)
 ============================================================================================
 
-Ten items, in the order the user chose on 2026-11-17, and an eleventh added on 2026-11-26.  Five are built (1, 2, 3,
-4 and 7); six are open (5, 6, 8, 9, 10 and 11), and are planned below from what the code has now.  The user's
+Ten items, in the order the user chose on 2026-11-17, and an eleventh added on 2026-11-26.  Six are built (1, 2, 3,
+4, 7 and 11); five are open (5, 6, 8, 9 and 10), and are planned below from what the code has now.  The user's
 answers of 2026-11-17 are at the end and still hold.  Bring each open item up with the user before starting it,
 with how you mean to do it, and go on when they say.  The user's rule for the IDE: build the whole feature, as
 IntelliJ IDEA has it, not a cut-down version, and don't order the work by what is cheapest.
@@ -17,7 +17,7 @@ IntelliJ IDEA has it, not a cut-down version, and don't order the work by what i
   8   Context menus                                    OPEN: part there (see the item)
   9   Smaller things left open                         OPEN: a, b and c to build; b decided 2026-11-26
   10  Reformat Code                                    OPEN: last of the ten
-  11  Quick Documentation and the name's tool tip      OPEN: added 2026-11-26, "build both now"
+  11  Quick Documentation and the name's tool tip      built 2026-11-26
 
 How this was checked (2026-11-26): each item against the IDE's sources, WindowLib's and BaseLib's, the commits since
 2026-11-17 and NavigationPlan.txt's "What is built".  Nothing was built or run for it: "built" below means the code,
@@ -272,7 +272,7 @@ Rules: a PopupClosed override calls its base; the menu goes on the page or conta
      Decision 2, CONFIRMED by the user 2026-11-26: Build stays on Control+F9 and Go to Type Declaration on
      Control+Shift+B, IntelliJ's keys both.  Nothing to build.
      Decision 11 (Quick Documentation and the name's tool tip, "later if at all"), CHANGED by the user
-     2026-11-26: build both now, as item 11.
+     2026-11-26: build both now, as item 11.  Built that day.
 
 
 10. Reformat Code: OPEN
@@ -303,38 +303,55 @@ Steps:
      lining up, the column banners go to), checks on a solution of its own, the page.
 
 
-11. Quick Documentation and the tool tip over a name: OPEN
-----------------------------------------------------------
+11. Quick Documentation and the tool tip over a name: built 2026-11-26
+----------------------------------------------------------------------
 
-Added by the user 2026-11-26 ("Build both now, as a new item 11"); until then NavigationPlan.txt's decision 11 had
-them put off.  Neither is built; Control+Q is free.
+Added by the user 2026-11-26 ("Build both now, as a new item 11", then "Yes, build item 11 now"); until then
+NavigationPlan.txt's decision 11 had them put off.
 
-What there is to build on: CIDEQuickInfo has the popups (CInfoPopup: Type Info's, and the declaration shown with
-Control held over a name, ShowLinkAt) and finds the symbol under a place; Quick Definition previews code
-(CCodePreview); FindIDECommentStart finds where the comment over a declaration starts (the refactorings move it);
-the index has the documentation pages' references to a symbol (usage CPPUT_Documentation, since 2026-11-24).
+CommonLibraries 567be6eeb (an input action that goes first) and 57e0a0ba8 (CInfoPopup: a maximum height and
+scrolling, taking the pointer, its press event); HCP65-IDE 1232369.  Nothing is pushed.  Checks quick-documentation,
+quick-documentation-keep, -scroll and -press, quick-tip, quick-tip-off and -off-read, on Checks/Input/Documentation
+(CGauge with comments of every kind, two pages that name it).
 
-What to build, as IntelliJ's:
-  - Quick Documentation (Control+Q) for the symbol at the caret: its declaration, coloured; the comment over it, as
-    it is written (no markup read from it: the question decision 11 began with); where it is declared (class or
-    namespace, file); and the documentation pages that name it, each a link that opens the page there.  The keys
-    scroll it, Escape closes it, Control+Q again (IntelliJ's) keeps it open while the caret moves.
-  - The comment: the one over the definition (the house style's banner is there), else the one over the
-    declaration; lines that are only slashes are left out, so an empty banner shows nothing.
-  - The tool tip: the same content, shorter (the declaration, the comment's first lines, the place), when the
-    pointer rests on a name in an editor; gone when the pointer leaves or a key is pressed.  Settings' Editor page
-    has a tick to turn it off, and it isn't shown while a popup or a menu is open.
-  - In completion's list (item 5), Control+Q shows it for the selected entry: built with whichever comes second.
+What was built:
+  - Quick Documentation (Control+Q, View's; CIDEQuickInfo::ShowQuickDocumentation) under the caret's line: the
+    declaration in the code's colours, where it is declared, the comment, and "Documentation:" with the pages that
+    name it, each once at its first place, at most eight.  A press on where it is declared, or on a page, goes
+    there.  Sixteen lines; the wheel over it, Page Up and Down, and Control with Up and Down scroll more.  It goes
+    when the caret moves, on Escape or a press elsewhere.  Control+Q again keeps it and it follows the caret;
+    Control+Q once more lets it go with the caret again.
+  - The comment (ReadIDEComment, ReadIDESymbolDocumentation in IDESymbolInfo): the // lines over the definition,
+    or the // after it on its line; the declaration's if the definition has neither; without slashes or a banner's
+    rules.  A macro: its #define and the comment over it.
+  - The tool tip (CIDEQuickInfo::PollTip, ShowTipAt): the pointer resting 600 ms on a name shows the declaration,
+    where, and the comment's first three lines.  Settings' Editor page has its tick (<Editor
+    NameToolTips="false"/>).
+  - WindowLib: CInputAction::SetGoesFirst (a component calls all its matching actions, so the editor's own Page
+    Down could not be kept from it otherwise); CInfoPopup::SetMaximumHeight, Scroll, ScrollPages,
+    SetTakesPointer and GetPressEvent.
 
-Steps:
-  1. The symbol's documentation as data, in one place (the comment, the declaration's text, the place, the pages):
-     for both popups and, later, completion.  Measure reading the comment from a file that isn't open.
-  2. Quick Documentation's popup and command; the page links.
-  3. WindowLib: the pointer resting at a point of a text area (TestWindowLib); the tool tip; its setting.
-  4. Checks on Checks/Input/QuickInfo and Docs (a symbol with a comment, with a banner only, with a page);
-     navigation.md, settings.md; Navigation.txt's gap and NavigationPlan.txt's decision 11 brought up to date.
+Where it differs from what the user was told:
+  - "Gone when a key is pressed" is: gone when the caret moves or the text changes, and on Escape.  A key that
+    does neither (Control+C) leaves the tip.
+  - Control+Q a third time lets it go with the caret again; it wasn't said.
+  - Only // comments are read, not /* */ ones.
+  - A press on Quick Documentation is acted on at the next tick, not in the press: a press on a popup that can't
+    have the keys takes them from the editor (CFocus::Request), and the press would be the editor's too.
+  - A plain press never reaches a text that can't have the keys, so the popup hears the window's press event
+    (CFocus::GetPressEvent), not an action of its own.
+  - Found on the way and fixed: a declaration with a string that has // in it was cut there (AppendIDEOneLine).
 
-For the user: whether it is built before items 5 to 10 ("now") or in its place after them.
+Measured (step 1), Release x64, the ModPlay workspace: twenty lookups each of uint16's, CModPlayer's and
+KernalDeviceControl's documentation took 3 to 6 ms together, files not open.  Nothing is cached.
+
+Checked: TestWindowLib Debug x64 (23972 pass), run from a private copy; the IDE's 557 checks on a private Release
+build (build/HCP65IDEItem11), all passing but enum-to-class, which failed before this work (NavigationPlan.txt's
+last run lists it); the website builds strict with the pages.  Not checked: an MSVC build; Windows; a real pointer
+and wheel in a real window (the checks press through the script and move the script's pointer; the press on the
+popup itself is TestWindowLib's); the native smoke check.
+
+Left: Control+Q for the selected entry of completion's list, with item 5.
 
 
 The user's answers (2026-11-17)
@@ -358,4 +375,4 @@ For the user to decide (2026-11-26)
   Item 6   DECIDED: Tab types a tab on each row of a box selection, and in the documentation pages too.
   Item 9b  DECIDED: a 65 configuration is indexed as it is built: no host headers, the target's defines.
   Item 9d  CONFIRMED: Build on Control+F9, Go to Type Declaration on Control+Shift+B.
-  Item 11  DECIDED: Quick Documentation and the name's tool tip are built (NavigationPlan.txt's decision 11 changed).
+  Item 11  DECIDED and built: Quick Documentation and the name's tool tip (NavigationPlan.txt's decision 11 changed).

@@ -164,8 +164,8 @@ Stage F, what a name is: built 2026-11-21.
     2a55e45 (IDESymbolInfo, CIDEQuickInfo).  Checks quick-link, quick-link-pointer (the pointer and the Control key
     themselves), quick-parameters, quick-type, quick-definition, quick-definition-several, on a project of their
     own, Checks/Input/QuickInfo (CPainter with two Rects, an enum, a typedef, a macro).
-    Quick Documentation and the tool tip for a name the pointer rests on are not built: put off, "later if at all"
-    (decision 11), as read.
+    Quick Documentation and the tool tip for a name the pointer rests on weren't built then: put off, "later if at
+    all" (decision 11), as read.  Built 2026-11-26, when the user asked: NextIDEWork.txt's item 11.
     As built it differs from the plan in these:
       - S6: a symbol's declaration is read from its file's text, not from a parse (ReadIDEDeclaration: the
         statement its name is in, from the ; { or } before it to its body or semicolon; a parameter's between the
@@ -254,7 +254,7 @@ Every stage is built.  What wasn't, and why:
     usages over a declaration, a key or a popup for Show Bookmarks, the navigation bar, commands that split the
     editor, an All tab and Shift Shift in Go to.
   - Put off, "later if at all" (decision 11): Quick Documentation, and the tool tip for a name the pointer rests
-    on.  Changed by the user 2026-11-26: both are to be built, as NextIDEWork.txt's item 11.
+    on.  Changed by the user 2026-11-26, and built that day: NextIDEWork.txt's item 11 (HCP65-IDE 1232369).
   - Decision 2 was read as: Build on Control+F9, so Go to Type Declaration has Control+Shift+B.  Confirmed by
     the user 2026-11-26: both stay as they are.
   - Not moved onto shared code, as decision 17 allows: the refactorings' own "function the caret is in" and unit
