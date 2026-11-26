@@ -136,7 +136,7 @@ and C++ file in it; the files it changes are left changed, for Save All.
 | Indenting | A tab for each brace a line is in.  `case` and `public:` are level with their `switch` and `class`; a `#` line is at the margin. |
 | Braces | A `{` that ends a line of code goes on a line of its own.  A body on one line, `{ return mi; }`, stays. |
 | Spaces | One after a comma and a `for`'s `;`, between `if`, `for`, `while`, `switch` or `return` and its bracket, and each side of `=`, `==`, `!=`, `<=`, `>=`, `||`, `+=` and the like, and of a binary `+ - / % | ^` written with none. |
-| Columns | A run of declarations (a function's locals, a class's fields and member functions) has its names in one column, reached with tabs: the column most are in already, or the first tab stop after the longest type.  A `*` goes against its type: `char* sz`. |
+| Columns | A run of declarations (a function's locals, a class's fields and member functions) has its names in one column, reached with tabs: the column they share already, or with none the commonest first tab stop after a type.  A type too long for the column has one tab after it.  A `*` goes against its type: `char* sz`. |
 | Banners | In a source file, a function of several lines with no comment over it gets the [Definition Banner](templates.md) template's, two blank lines above. |
 | Line ends | White space at a line's end goes. |
 

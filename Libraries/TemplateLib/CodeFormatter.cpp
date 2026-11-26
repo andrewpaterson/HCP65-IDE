@@ -927,6 +927,11 @@ void CCodeFormatter::Indent(void)
 					szLead.Clear();
 					szLead.Append('\t', (size)iDepth);
 				}
+				if ((iNext < (int32)masTokens.NumElements()) && bOnlyComments && IsInRecord(iNext) && szOld.StartsWith(szLead.Text()) && (strspn(szOld.Text(), "\t") == szOld.Length()))
+				{
+					//Over a class's member that is written further in, as far in as it is.
+					szLead.Set(szOld);
+				}
 				bLead = true;
 			}
 		}
@@ -1377,12 +1382,35 @@ void CCodeFormatter::AlignDeclarations(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// A run's names are put in one column: the commonest of the columns that
-// its names reached with tabs are in already, or with none the first tab
-// stop after its longest type.  A type that reaches the column has one tab
-// after it; if most then end up in another column, that is the column.
-// The changes are added to paiStarts, paiEnds (the tokens between a type
-// and its name) and paszTexts (the white space they become).
+// One more name in iColumn.
+//
+//////////////////////////////////////////////////////////////////////////
+void CCodeFormatter::AddVote(CArrayInt* paiColumns, CArrayInt* paiCounts, int32 iColumn)
+{
+	int32	iIndex;
+
+	iIndex = paiColumns->Find(iColumn);
+	if (iIndex < 0)
+	{
+		paiColumns->Add(iColumn);
+		paiCounts->Add(0);
+		iIndex = (int32)paiColumns->NumElements() - 1;
+	}
+	paiCounts->SetValue((size)iIndex, paiCounts->GetValue((size)iIndex) + 1);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A run's names are put in one column.  A name that a tab takes further
+// than the first tab stop after its type was put there, and the commonest
+// column of those is the run's; with none it is the commonest of the first
+// tab stops after the types (the furthest of equals).  A type that reaches
+// the column has one tab after it.  So a class's short types keep the
+// column they share and a long one sticks out, and formatting again
+// changes nothing.  One declaration on its own with no tab is left.  The
+// changes are added to paiStarts, paiEnds (the tokens between a type and
+// its name) and paszTexts (the white space they become).
 //
 //////////////////////////////////////////////////////////////////////////
 void CCodeFormatter::AlignRun(CArrayCodeDeclarations* pasRun, CArrayInt* paiStarts, CArrayInt* paiEnds, CArrayChars* paszTexts)
@@ -1400,18 +1428,17 @@ void CCodeFormatter::AlignRun(CArrayCodeDeclarations* pasRun, CArrayInt* paiStar
 	int32				iNameColumn;
 	int32				iColumn;
 	int32				iWant;
-	int32				iSettled;
 	int32				iBest;
-	int32				iIndex;
 	size				i;
 	size				j;
-	bool				bSettled;
+	bool				bTabbed;
 
 	aiTypeEnds.Init();
 	aiColumns.Init();
 	aiCounts.Init();
 	iWant = CODE_FORMAT_NONE;
 	iBest = 0;
+	bTabbed = false;
 	for (i = 0; i < pasRun->NumElements(); i++)
 	{
 		psDeclaration = pasRun->Get(i);
@@ -1428,22 +1455,25 @@ void CCodeFormatter::AlignRun(CArrayCodeDeclarations* pasRun, CArrayInt* paiStar
 		aiTypeEnds.Add(iTypeEnd);
 		szStars.Kill();
 
-		//A name reached with tabs votes for the column it is in.
+		//A name a tab takes to a tab stop further than it need go was put there: it votes for that column.
 		szSeparator.Init();
 		AppendTokens(psDeclaration->iTypeEnd + 1, psDeclaration->iName, true, &szSeparator);
 		iNameColumn = FindWidth(iLineStart, psDeclaration->iName, 0);
-		if (!szSeparator.Empty() && (strspn(szSeparator.Text(), "\t") == szSeparator.Length()) && (iNameColumn % CODE_FORMAT_TAB_WIDTH == 0))
+		iColumn = (iTypeEnd / CODE_FORMAT_TAB_WIDTH + 1) * CODE_FORMAT_TAB_WIDTH;
+		if (szSeparator.EndsWith('\t') && (iNameColumn % CODE_FORMAT_TAB_WIDTH == 0) && (iNameColumn > iColumn))
 		{
-			iIndex = aiColumns.Find(iNameColumn);
-			if (iIndex < 0)
-			{
-				aiColumns.Add(iNameColumn);
-				aiCounts.Add(0);
-				iIndex = (int32)aiColumns.NumElements() - 1;
-			}
-			aiCounts.SetValue((size)iIndex, aiCounts.GetValue((size)iIndex) + 1);
+			AddVote(&aiColumns, &aiCounts, iNameColumn);
 		}
+		bTabbed = bTabbed || (strchr(szSeparator.Text(), '\t') != NULL);
 		szSeparator.Kill();
+	}
+	if ((aiColumns.NumElements() == 0) && ((pasRun->NumElements() > 1) || bTabbed))
+	{
+		//None was: the column is the commonest of the first tab stops after their types.
+		for (i = 0; i < aiTypeEnds.NumElements(); i++)
+		{
+			AddVote(&aiColumns, &aiCounts, (aiTypeEnds.GetValue(i) / CODE_FORMAT_TAB_WIDTH + 1) * CODE_FORMAT_TAB_WIDTH);
+		}
 	}
 	for (i = 0; i < aiColumns.NumElements(); i++)
 	{
@@ -1452,46 +1482,6 @@ void CCodeFormatter::AlignRun(CArrayCodeDeclarations* pasRun, CArrayInt* paiStar
 			iBest = aiCounts.GetValue(i);
 			iWant = aiColumns.GetValue(i);
 		}
-	}
-	if ((iWant == CODE_FORMAT_NONE) && (pasRun->NumElements() > 1))
-	{
-		for (i = 0; i < aiTypeEnds.NumElements(); i++)
-		{
-			iColumn = (aiTypeEnds.GetValue(i) / CODE_FORMAT_TAB_WIDTH + 1) * CODE_FORMAT_TAB_WIDTH;
-			iWant = (iColumn > iWant) ? iColumn : iWant;
-		}
-	}
-
-	//Lined up there, the commonest column must still be that one, or formatting again would move them again.
-	bSettled = (iWant == CODE_FORMAT_NONE);
-	while (!bSettled)
-	{
-		aiColumns.ReInit();
-		aiCounts.ReInit();
-		iSettled = CODE_FORMAT_NONE;
-		iBest = 0;
-		for (i = 0; i < aiTypeEnds.NumElements(); i++)
-		{
-			iColumn = (aiTypeEnds.GetValue(i) < iWant) ? iWant : (aiTypeEnds.GetValue(i) / CODE_FORMAT_TAB_WIDTH + 1) * CODE_FORMAT_TAB_WIDTH;
-			iIndex = aiColumns.Find(iColumn);
-			if (iIndex < 0)
-			{
-				aiColumns.Add(iColumn);
-				aiCounts.Add(0);
-				iIndex = (int32)aiColumns.NumElements() - 1;
-			}
-			aiCounts.SetValue((size)iIndex, aiCounts.GetValue((size)iIndex) + 1);
-		}
-		for (i = 0; i < aiColumns.NumElements(); i++)
-		{
-			if ((aiCounts.GetValue(i) > iBest) || ((aiCounts.GetValue(i) == iBest) && (aiColumns.GetValue(i) > iSettled)))
-			{
-				iBest = aiCounts.GetValue(i);
-				iSettled = aiColumns.GetValue(i);
-			}
-		}
-		bSettled = (iSettled == iWant);
-		iWant = iSettled;
 	}
 
 	for (i = 0; i < pasRun->NumElements(); i++)

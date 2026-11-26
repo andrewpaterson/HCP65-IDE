@@ -336,8 +336,10 @@ Where it differs from the plan:
   - One statement a line isn't done: nearly all of the 120 lines with two are matrix code laid out as tables
     (Float4x4.cpp).  For the same reason white space is only added, never taken out, and nothing inside brackets
     is closed up.
-  - A run keeps the column most of its names are in (half the headers' runs are further right than they need
-    be); only a run with none lined up gets the first tab stop after its longest type.
+  - A run keeps the column its names were put in (half the headers' runs are further right than they need be):
+    a name with room to spare votes for its column, and only a run with none gets the commonest first tab stop
+    after a type.  A type too long for the column has one tab and doesn't move the others (changed when
+    CommonLibraries was reformatted: the first rule pulled ArrayChars.h's and TextLayout.h's blocks apart).
   - Left as written, being the house's own: a body on one line; a class's friends and macros at the margin; its
     members indented further so their types line up after "virtual"; a pure function's "=0"; a declaration on
     its own written with one space.

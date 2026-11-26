@@ -161,6 +161,20 @@ void TestCodeFormatterColumns(void)
 		"class CThing\n{\n\tvoid \t\tInit(void);\n\tconst char*\tGetName(void) const;\n\tCThing* \tGetNext(void);\n};\n",
 		"class CThing\n{\n\tvoid\t\tInit(void);\n\tconst char*\tGetName(void) const;\n\tCThing*\t\tGetNext(void);\n};\n", false);
 
+	//A space and then tabs keeps the column the tabs took it to, though it is further right than it need be.
+	TestCodeFormat(
+		"class CThing\n{\n\tvoid \t\t\tInit(void);\n\tvoid \t\t\tKill(void);\n\n\tCThing*\t\t\tGetNext(void);\n};\n",
+		"class CThing\n{\n\tvoid\t\t\tInit(void);\n\tvoid\t\t\tKill(void);\n\n\tCThing*\t\t\tGetNext(void);\n};\n", false);
+
+	//Short types keep the column they share; a type too long for it has one tab and doesn't move them.  A comment
+	//over a member written further in stays over it.
+	TestCodeFormat(
+		"class CThing\n{\n\tsize\t\t\tNumStops(void);\n\tSTextLayoutStop*\tGetStop(size ui);\n\tsize\t\t\tNumLines(void);\n\tSTextLayoutLine*\tGetLine(size ui);\n};\n",
+		"class CThing\n{\n\tsize\t\t\tNumStops(void);\n\tSTextLayoutStop*\tGetStop(size ui);\n\tsize\t\t\tNumLines(void);\n\tSTextLayoutLine*\tGetLine(size ui);\n};\n", false);
+	TestCodeFormat(
+		"class CThing\n{\n\tvirtual void\tA(void);\n\t\t\t//Over B.\n\t\t\tvoid\tB(void);\n};\n",
+		"class CThing\n{\n\tvirtual void\tA(void);\n\t\t\t//Over B.\n\t\t\tvoid\tB(void);\n};\n", false);
+
 	//One on its own written with a space is left; statements that aren't declarations aren't touched; a blank line
 	//ends a run.
 	TestCodeFormat(

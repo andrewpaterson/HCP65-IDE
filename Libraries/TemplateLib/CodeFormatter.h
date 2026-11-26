@@ -140,8 +140,8 @@ typedef CArrayTemplate<SCodeDeclaration>	CArrayCodeDeclarations;
 //    are left: a pointer or a template's can't be told from an operator's.  White space that is there is never
 //    taken out or made one space, as code laid out in a table has more.
 //  - A run of declaration lines (a function's locals, a class's fields and its member functions) has its names in
-//    one column, reached with tabs: the column most of them are in already, else the first tab stop after the
-//    longest type.  A declaration too long for it has one tab.  A star is put against its type (char* sz).  A
+//    one column, reached with tabs: the column most of those put further right than they need be are in, else the
+//    commonest first tab stop after a type (see AlignRun).  A declaration too long for it has one tab.  A star is put against its type (char* sz).  A
 //    declaration on its own, written with one space, is left.
 //  - In a source file (bSourceFile) a function defined over several lines at the top level, with no comment over
 //    it, has the banner put over it (SetBanner), two blank lines above.
@@ -211,6 +211,7 @@ protected:
 	bool		IsValue(int32 iToken);
 	bool		FindDeclaration(int32 iLineStart, int32 iLineEnd, SCodeDeclaration* psDest);
 	void		AlignDeclarations(void);
+	void		AddVote(CArrayInt* paiColumns, CArrayInt* paiCounts, int32 iColumn);
 	void		AlignRun(CArrayCodeDeclarations* pasRun, CArrayInt* paiStarts, CArrayInt* paiEnds, CArrayChars* paszTexts);
 	void		AddBanners(void);
 	void		RemoveTrailing(void);

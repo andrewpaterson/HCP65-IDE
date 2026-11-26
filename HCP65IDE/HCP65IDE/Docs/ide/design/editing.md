@@ -162,14 +162,16 @@ kernal).  What the measuring settled:
 - `case` and access labels level with their `switch` and `class` (3,406 of 3,739 cases), directives at the margin
   (all 20,829), braces on their own lines (68,840 to 10), `char* p` (59,907 to 351).
 - A run's column isn't always the least it could be: half the headers' runs are lined up further right.  So a run
-  keeps the column most of its names are in, and only with none is it the first tab stop after the longest type.
+  keeps the column its names were put in: a name a tab takes further than it need go votes for its column, and
+  only with no such name is it the commonest first tab stop after a type.  A type too long for the column has
+  one tab, and doesn't move the others.
 - One statement a line isn't a rule: nearly all of the 120 lines with two are matrix code laid out as tables
   (`Float4x4.cpp`).  For the same reason white space is only ever added, never taken out or made one space.
 - A class's friends and macros (`CONSTRUCTABLE`) are at the margin, and its members can be written further in so
   their types line up after `virtual`: both are left.
 
-Formatting twice changes nothing: a run's column is chosen so that the names put in it still make it the
-commonest ([`CCodeFormatter::AlignRun`]).
+Formatting twice changes nothing: only names with room to spare vote for a run's column, and the names put in
+it have ([`CCodeFormatter::AlignRun`]).
 
 ## The startup project
 
