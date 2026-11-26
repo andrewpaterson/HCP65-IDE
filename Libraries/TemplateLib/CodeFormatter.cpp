@@ -1394,16 +1394,16 @@ void CCodeFormatter::AlignDeclarations(void)
 //////////////////////////////////////////////////////////////////////////
 void CCodeFormatter::AddVote(CArrayInt* paiColumns, CArrayInt* paiCounts, int32 iColumn)
 {
-	int32	iIndex;
+	size	uiIndex;
 
-	iIndex = paiColumns->Find(iColumn);
-	if (iIndex < 0)
+	uiIndex = paiColumns->Find(iColumn);
+	if (uiIndex == ARRAY_ELEMENT_NOT_FOUND)
 	{
 		paiColumns->Add(iColumn);
 		paiCounts->Add(0);
-		iIndex = (int32)paiColumns->NumElements() - 1;
+		uiIndex = paiColumns->NumElements() - 1;
 	}
-	paiCounts->SetValue((size)iIndex, paiCounts->GetValue((size)iIndex) + 1);
+	paiCounts->SetValue(uiIndex, paiCounts->GetValue(uiIndex) + 1);
 }
 
 
