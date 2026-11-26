@@ -34,6 +34,23 @@ open) is looked up in the website's symbol table, which its build keeps in `.sym
 Ctrl+B still works, but Rename and Find Usages only cover the open solutions.  A page outside them that names an
 old name fails the website's next build, with its line.
 
+## Examples
+
+A page's ```` ```cpp ```` blocks are examples that compile: the website's build compiles each as the project the page
+is an item of compiles it, and fails on an error with its line.  The page names what they need once, in a hidden
+comment under its title:
+
+```text
+<!-- cpp
+#include "Assembler65Lib/Asm65C64Assembler.h"
+char*	szSource;
+-->
+```
+
+A block of statements is compiled as the body of a function; one that declares (a function written out, a class) as
+it is.  A block that shows an edit rather than code that compiles, as the refactoring pages do, is written
+```` ```{.cpp .no-check} ````.  The IDE colours both as C++.
+
 ## Which website
 
 The website is the `mkdocs.yml` that is an item of a project in the workspace (`Website.vcxproj` has it).

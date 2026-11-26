@@ -30,6 +30,10 @@ CommonLibraries and HCP65 checked out beside it (`../CommonLibraries`, `../HCP65
 - Name code in a page with a reference: [`CTextArea`], [`CTextArea::ReplaceRanges`], [`CShape::Init(int)`] or
   [`BaseLib/Chars.h`].  The site build links it to its line on GitHub and fails on one that names nothing; a plain
   `CTextArea` naming a real class is a warning.  A span that isn't C++ but looks it is written `#!text abs`.
+- A ```` ```cpp ```` block in a page compiles (the site build checks it, `hcp65index -examples`, as the project the
+  page is an item of compiles): a hidden comment under the page's title, `<!-- cpp`, then the `#include`s and the
+  declarations its examples use without declaring, then `-->`, goes before each block; a block of statements is
+  compiled in a function.  ```` ```{.cpp .no-check} ```` is for one that shows an edit, not an API.
 - Design pages (how it is built and why, its decisions and what isn't done): `HCP65IDE/HCP65IDE/Docs/ide/design`
   (architecture, the code model, refactoring, navigation, editing, the debugger, git, the checks).  Read the page
   before changing what it covers.

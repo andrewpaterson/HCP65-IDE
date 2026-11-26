@@ -19,7 +19,7 @@ They are declared at the end of the class's public part and defined on one line 
 `.cpp`, where the one-line functions are, the getter `const`; in the class itself where it has no `.cpp` or is a
 template.  Their bodies come from the [Getter Body and Setter Body templates](../templates.md#the-templates).
 
-```cpp
+```{.cpp .no-check}
 int CTank::GetLevel(void) const { return miLevel; }
 void CTank::SetLevel(int iLevel) { miLevel = iLevel; }
 ```
@@ -79,7 +79,7 @@ An enum class's value isn't an integer.  With **Write casts where its values are
 with), each place that uses its value as one is given the cast it needs, found by checking every file that includes the
 enum with the enum taken as an enum class:
 
-```cpp
+```{.cpp .no-check}
 (int)eLevel + 1
 aiCounts[(int)eLevel]
 if ((int)eMode)

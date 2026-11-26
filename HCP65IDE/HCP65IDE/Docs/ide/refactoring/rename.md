@@ -30,7 +30,7 @@ The dialog:
 The two searches are remembered, separately for types and for everything else.  Nothing is changed if a
 file has changed since it was indexed.  The changes are one undo.
 
-```cpp
+```{.cpp .no-check}
 // Before: Shift+F6 on Fill, renamed Top
 class CTank
 {

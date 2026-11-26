@@ -59,7 +59,7 @@ The function's body is written where it is called, at every call or at the one a
   becomes the object, and a type or constant of the class gets the class's name.  A class template's member
   inlined outside the template has the template's parameters replaced by the instance's arguments.
 
-```cpp
+```{.cpp .no-check}
 // Before: Ctrl+Alt+N on Scaled, all calls
 int CPump::Scaled(int i)
 {

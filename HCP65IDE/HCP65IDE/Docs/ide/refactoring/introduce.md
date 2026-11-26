@@ -27,7 +27,7 @@ occurrences may not all be the same value.
   its name lined up with theirs (they are moved over if its type is longer), and assigned on a line before the
   statement that first uses it.  A statement that is only the expression becomes the assignment.
 
-```cpp
+```{.cpp .no-check}
 // Before: Ctrl+Alt+V on pcTank->GetLevel() * 2, named iLevel, both occurrences replaced
 int CPump::Rate(CTank* pcTank)
 {
@@ -80,7 +80,7 @@ It can use the function's **parameters**.  Each call then passes the expression 
 in for them, in brackets if they are more than a name.  A parameter the replaced occurrences were all the uses
 of is taken out, with **Remove the parameters only it uses** (ticked to begin with), as IntelliJ does.
 
-```cpp
+```{.cpp .no-check}
 // Before: Ctrl+Alt+P on pcCalc->miScale + 7, named iScale
 int Area(CCalc* pcCalc, int iWidth)
 {

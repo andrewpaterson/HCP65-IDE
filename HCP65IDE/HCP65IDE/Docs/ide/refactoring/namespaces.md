@@ -42,7 +42,7 @@ Every use is made to name it from where it is (the index's uses, as Rename finds
 What moves names things of the namespace it leaves without their namespace (it found them by being in it): those are
 qualified, unless the new namespace is inside the old one.
 
-```cpp
+```{.cpp .no-check}
 // Before: Move to Namespace on Area, to Shapes
 namespace Geometry
 {

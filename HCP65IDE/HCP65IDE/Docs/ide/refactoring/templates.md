@@ -30,7 +30,7 @@ constructor or a destructor.
 
 On the type of a field, the class becomes a class template, as "Refactoring Towards Seams in C++" has it:
 
-```cpp
+```{.cpp .no-check}
 // Before: on CGauge, the template named CTankTemplate
 class CTank
 {

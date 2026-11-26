@@ -47,7 +47,7 @@ changes nothing.
   member.  The compiler is asked for each changed function's label before and after, for each processor (an
   `int` is 2 bytes on one and 4 on the other), and the labels are changed from one to the other.
 
-```cpp
+```{.cpp .no-check}
 // Before                                    // After: iAmount and bForce swapped, pcGauge added (NULL in calls)
 int CTank::Fill(int iAmount, bool bForce)    int CTank::Fill(bool bForce, int iAmount, CGauge* pcGauge)
 

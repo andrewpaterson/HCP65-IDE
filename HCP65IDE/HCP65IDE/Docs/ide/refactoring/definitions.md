@@ -11,7 +11,7 @@ before it), under a [banner](../templates.md#the-templates) like theirs, two bla
 class's functions is defined outside it, it goes at the end of its header's `.cpp`.  A class template's member goes
 under its `template<...>` in the header, before its `#endif`.
 
-```cpp
+```{.cpp .no-check}
 // Tank.h: Ctrl+Shift+D on Drain
 class CTank
 {

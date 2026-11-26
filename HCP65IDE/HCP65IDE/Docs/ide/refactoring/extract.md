@@ -50,7 +50,7 @@ After you give the name, the other places in the file where the same statements 
 comparison not minding what their variables are called.  **Duplicates Detected** lists them, each ticked to be
 replaced by a call; Refactor replaces those ticked.
 
-```cpp
+```{.cpp .no-check}
 // Before: Ctrl+Alt+M on the two lines, named Total, by pointer
 void CPump::Run(void)
 {
@@ -114,7 +114,7 @@ The functions chosen are declared pure virtual in the new class, the class keeps
 The members move to the new class, all public, and the class gets a field of it where the first of them was.  Every
 place one of them is named outside what moved gets the field before the name:
 
-```cpp
+```{.cpp .no-check}
 miLevel            // becomes mcGauge.miLevel
 pcTank->Fill()     // becomes pcTank->mcGauge.Fill()
 ```

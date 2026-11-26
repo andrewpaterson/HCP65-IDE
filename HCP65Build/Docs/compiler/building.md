@@ -1,5 +1,12 @@
 # Building Programs
 
+<!-- cpp
+#include "CppCompilerLib/CPP65Builder.h"
+char*	szLibc65;
+char*	szCommonLibraries;
+char*	szDirectory;
+-->
+
 `hcp65build` compiles and links HCP65 programs from the command line, the same way the HCP65
 IDE does.  It builds in one of two ways:
 
@@ -225,7 +232,7 @@ cBuilder.AddIncludeDirectory(szCommonLibraries, true, false);
 cBuilder.AddUnit("Hello", szDirectory, "Hello.cpp");
 cBuilder.AddLibc65(szLibc65);					//Libc65 and the runtime, linked as libraries.
 cBuilder.SetRemoveUnused(true);
-...
+//...
 cBuilder.Kill();
 ```
 
