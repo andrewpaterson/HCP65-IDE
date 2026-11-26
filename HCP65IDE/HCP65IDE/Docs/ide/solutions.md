@@ -69,6 +69,7 @@ Double-click a file, or press Enter on it, to open it.  Its right-click menu has
 | Set as Startup Project | Makes the selected application the solution's startup project: the one an HCP65 build links into the solution's program, and the one a GCC build's run starts. |
 | Remove Solution | Takes the solution out of the workspace.  Its files aren't touched. |
 | Rename... | [Rename File](refactoring/rename.md#rename-file) on the selected file. |
+| Reformat Code | [Reformat Code](editor.md#reformat-code) on the selected file, or on every C and C++ file of the selected folder, project or solution. |
 | Properties... | On a project: the licence its new files are written with (LGPL 3, AGPL 3 or None), kept in `<project>.hcp65project` beside the `.vcxproj`.  See [New Files and Templates](templates.md#a-projects-licence). |
 | Always Select Opened File | Ticked, the tree selects the file of whichever editor is shown as you go from tab to tab, without Alt+1. |
 | Open Files with Single Click | Ticked, one click on a file opens it. |

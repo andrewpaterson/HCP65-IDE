@@ -16,7 +16,7 @@ IntelliJ IDEA has it, not a cut-down version, and don't order the work by what i
   7   Bookmarks                                        built 2026-11-21
   8   Context menus                                    built 2026-11-26
   9   Smaller things left open                         built 2026-11-26
-  10  Reformat Code                                    OPEN: last of the ten
+  10  Reformat Code                                    built 2026-11-26
   11  Quick Documentation and the name's tool tip      built 2026-11-26
 
 How this was checked (2026-11-26): each item against the IDE's sources, WindowLib's and BaseLib's, the commits since
@@ -309,32 +309,68 @@ enum-to-class, which failed before this work.  Not checked: an MSVC build; Windo
 that only compile with assembly units off.
 
 
-10. Reformat Code: OPEN
------------------------
+10. Reformat Code: built 2026-11-26
+-----------------------------------
 
-Nothing of it is built; Control+Alt+L is free.  The user: wanted, as an item of its own after the others.
+HCP65-IDE: the commit named "Reformat Code".  The formatter is TemplateLib's CCodeFormatter (its header says the
+rules; TestTemplateLib's TestCodeFormatter, 219 asserts); the command is CIDEReformat.  Checks reformat-code,
+reformat-selection and reformat-explorer.  Docs/ide/editor.md's "Reformat Code" says it for the user and
+Docs/ide/design/editing.md how it is made.
 
-What to build is as it was planned: IntelliJ's Reformat Code (Control+Alt+L, on the file or the selection, and from
-Solution Explorer on a folder or project, with Optimise #includes as a tick: Refactor.OptimiseIncludes exists), the
-code laid out in the house style:
-  - indents in tabs; braces on lines of their own; one statement a line;
-  - a function's locals declared at its top, their names lined up in a column with tabs; a class's fields and its
-    member functions' names lined up the same way, a block at a time;
-  - a ////// banner over each function in a .cpp, made if it is missing (the templates' Function Banner);
-  - spaces round binary operators and after commas, none inside brackets;
-  - comments and blank lines kept where they are; a line longer than it was is never made.
+What was built: Reformat Code (Control+Alt+L, Edit menu) on the active file, or on the lines its selection is on;
+and in Solution Explorer's menu on the selected file, or every C and C++ file of the selected folder, project or
+solution.  One undo; the files are left changed, as a refactoring leaves them.  The status line says what changed.
 
-Steps:
-  1. Write the rules down from the code (CommonLibraries' CLAUDE.md has the house style in words; the libraries are
-     the evidence) and show them to the user before any code.
-  2. The formatter on the syntax tree and the tokens the edits thread has, giving edits (ReplaceRanges, one undo),
-     not a new text: what it doesn't understand it leaves alone.  It comes after item 6 so Tab and indenting
-     already agree with it.
-  3. The proof: reformat each library of CommonLibraries in a scratch copy and look at the diff, which should be
-     close to nothing; each difference is a rule to fix or a file that breaks the house style (list those for the
-     user; don't commit a reformatted library without asking).
-  4. The commands, the folder and project forms, a Settings page if the code turns out to vary (the tab width for
-     lining up, the column banners go to), checks on a solution of its own, the page.
+The rules, each measured from CommonLibraries' 3819 sources first and shown to the user before the code:
+  - a tab for each brace; case and access labels level with their switch and class; directives at the margin;
+  - a block's brace that ends a line goes on its own line;
+  - a space after a comma, a for's ';' and if, for, while, switch, return, and beside = == != <= >= || += ... and
+    a binary + - / % | ^ written with none;
+  - a run of declarations has its names in one column, reached with tabs, and its stars against their types;
+  - a banner (the Definition Banner template's) over a function of several lines with no comment, in a .cpp;
+  - no white space at a line's end.
+
+Where it differs from the plan:
+  - It reads the file's text, not the parsed tree: code an #if leaves out is laid out too, and a file that
+    doesn't parse.  So it knows no types, and * & < > are left as written.
+  - One statement a line isn't done: nearly all of the 120 lines with two are matrix code laid out as tables
+    (Float4x4.cpp).  For the same reason white space is only added, never taken out, and nothing inside brackets
+    is closed up.
+  - A run keeps the column most of its names are in (half the headers' runs are further right than they need
+    be); only a run with none lined up gets the first tab stop after its longest type.
+  - Left as written, being the house's own: a body on one line; a class's friends and macros at the margin; its
+    members indented further so their types line up after "virtual"; a pure function's "=0"; a declaration on
+    its own written with one space.
+  - No Optimise #includes tick: Optimise #includes works on the active file only.  No Settings page: nothing
+    varied but the banner, which is a template already.
+  - A prototype in Python settled the rules against the libraries; the C++ gives the prototype's text on all
+    8231 files of CommonLibraries, HCP65-IDE and HCP65's libraries and kernal.  The prototype isn't kept.
+
+The proof (step 3): CommonLibraries' libraries reformatted in memory, nothing written.  2748 of the 3819 files
+come out as they went in.  In the other 1071:
+    6463 lines indented again, in 196 files      3071 declarations lined up, in 711 files
+     851 line ends trimmed, in 340 files          357 operators spaced, in 76 files
+     304 banners added, in 47 files                97 commas spaced, in 13 files
+      11 keywords spaced, in 6 files               10 braces moved, in 1 file
+       7 stars put against their types, in 2 files
+  What those are, for the user to rule on (none is a rule to fix that I could see):
+  - Files indented with four spaces, the bulk of the lines: X11Lib (X11Window, X11Input, X11Clipboard, X11Canvas,
+    X11WindowFactory), WinGdiLib (WinGDIWindow, WinGDICanvas, WinGDIClipboard), ThreadLib's
+    ResizableSharedMemory.cpp, MicroprocessorLib's W65CCore.cpp and W65C816InstructionFactory.cpp, BaseLib's
+    UTF16.cpp and QuickSort.cpp.
+  - Files whose case labels are a tab in from their switch (236 labels): BaseLib's TypeParser.cpp is the largest.
+  - Declarations in class bodies written "void <space><tabs>Init" or with one space, and locals whose names
+    aren't in their run's column: the 711 files, a few lines each.
+  - Functions with no banner: MicroprocessorLib's W65C816InstructionCycleFactory.cpp (74),
+    W65InstructionCycleBuilder.cpp (49) and W65C02InstructionCycleFactory.cpp (47), SupportLib's ColourARGB32.cpp
+    (35), BaseLib's Number.cpp (14) and MD5.cpp (13).
+  Nothing was reformatted on disk or committed.
+
+Checked: TestTemplateLib 64 bit Debug (293 asserts); the formatter against the prototype as above, and that its
+edits, made to each source, give its text; the IDE's 582 checks on a private Release build, all passing but
+enum-to-class, which failed before this work (reformat-explorer's own expectation was corrected and run again).
+Not checked: an MSVC build; Windows; a file with CRLF line ends in the IDE (the formatter's test has one);
+Reformat Code on a large project from Solution Explorer, which opens every file it changes.
 
 
 11. Quick Documentation and the tool tip over a name: built 2026-11-26

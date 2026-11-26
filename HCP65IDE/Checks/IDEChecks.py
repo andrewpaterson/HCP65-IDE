@@ -193,6 +193,14 @@ def CleanDebugging():
 			os.remove(os.path.join(DEBUGGING, szName))
 
 
+def MakeReformatCopy():
+	#A copy of the navigation checks' project whose Shapes.cpp is Input/Reformat/Messy.cpp: the same functions, laid
+	#out against the house style.
+	asCopy = MakeNavigationCopy()
+	shutil.copyfile(os.path.join(HERE, 'Input', 'Reformat', 'Messy.cpp'), os.path.join(os.path.dirname(asCopy['SOLUTION']), 'Shapes.cpp'))
+	return asCopy
+
+
 def MakeIndexTarget(szSolution):
 	#Input/Debugging's solution for a processor opened and indexed, not built, and Go to asked for the functions it
 	#has one of for each compiler.  What opening it leaves beside it goes at the end.
@@ -1196,7 +1204,7 @@ CHECKS = [
 		#Engine.h's (Other/OtherUser.cpp's) or in a comment (Commented.cpp's /* */).
 		'WAIT_INDEX': '1', 'OPEN': 'Engine.h', 'SETTINGS': MakeSettingsFile(), 'DIALOG_KEYS': 'type:CPPEngine', 'DIALOG_ANSWER': 'OK',
 		'DEBUG': 'printmenus,command:Refactor.RenameFile,answered:1,printprojectfiles,printdiskfile:Commented.cpp,printdiskfile:Other/OtherUser.cpp'}),
-		[r'^Menu Editor/Refactor: Rename File\.\.\., .*Extract Method', r'^Menu Explorer: .*, Rename\.\.\.(\(disabled\))?, Open with System Program(\(disabled\))?, Properties\.\.\.(\(disabled\))?, Always Select Opened File, Open Files with Single Click$',
+		[r'^Menu Editor/Refactor: Rename File\.\.\., .*Extract Method', r'^Menu Explorer: .*, Rename\.\.\.(\(disabled\))?, Open with System Program(\(disabled\))?, Reformat Code(\(disabled\))?, Properties\.\.\.(\(disabled\))?, Always Select Opened File, Open Files with Single Click$',
 		 r'^Dialog \[Rename File\] answered OK$',
 		 r'^Status: Renamed Engine\.h to CPPEngine\.h and 2 more files: 7 #includes, 1 in comments and strings in 7 files, 2 projects\.$',
 		 r'^Project files: Commented\.cpp CPPEngine\.cpp CPPEngine_Linux\.cpp ', r'^//#include "CPPEngine\.h"$', r'^#include "Engine\.h"$'],
@@ -4296,6 +4304,32 @@ CHECKS = [
 		         'closetab,answered:1,printtabs,wait:900,edit:printusages,edit:printbookmarks'}),
 		[r'^          12: return 3 \* miRadius \* miRadius;$', r'^          14: return 3 \* miRadius \* miRadius;$', r'^  Shapes\.cpp:25$',
 		 r"^Dialog \[Save Changes\] answered Don't Save$", r'^Tabs:$', r'^          12: return 3 \* miRadius \* miRadius;$', r'^  Shapes\.cpp:23$'], [r'ERROR']),
+	('reformat-code', dict(MakeReformatCopy(), **{
+		#Reformat Code (Control+Alt+L) lays the file out in the house style, as one undo: a banner over a function with
+		#no comment (two blank lines above it), the brace on its own line, tabs for the indent, the locals' names in a
+		#column with the star against its type, and spaces after a keyword, a comma, a for's ';' and beside '='.  The
+		#status line says what was changed; a second time there is nothing to change.
+		'WAIT_INDEX': '1', 'OPEN': 'Shapes.cpp', 'CARET': '1:1',
+		'DEBUG': 'command:Edit.ReformatCode,wait:100,printstatus,edit:printline:1,edit:printline:2,edit:printline:3,edit:printline:4,edit:printline:5,edit:printline:6,edit:printline:7,edit:printline:8,edit:printline:9,edit:printline:10,edit:printline:11,edit:printline:12,edit:printline:13,edit:printline:14,printtabs,command:Edit.ReformatCode,wait:100,printstatus,command:Edit.Undo,edit:printline:2,edit:printline:3'}),
+		[r'^Status line: Reformatted Shapes\.cpp: 3 lines indented, 1 brace moved, 3 commas spaced, 1 keyword spaced, 1 operator spaced, 2 declarations lined up, 1 star put against its type, 2 banners added, 1 line end trimmed\.$',
+		 r'^Line 1: \[#include "Shapes\.h"\]$', r'^Line 2: \[\]$', r'^Line 3: \[\]$', r'^Line 4: \[//////////////////////////////////////////////////////////////////////////\]$', r'^Line 5: \[//\]$', r'^Line 6: \[//\]$', r'^Line 7: \[//////////////////////////////////////////////////////////////////////////\]$',
+		 r'^Line 8: \[void CCircle::Draw\(void\)\]$', r'^Line 9: \[\{\]$', r'^Line 10: \[\tint\t\ti;\]$', r'^Line 11: \[\tint\*\tpi;\]$', r'^Line 12: \[\tfor \(i = 0; i<3; i\+\+\)\]$',
+		 r'^Line 13: \[\t\{\]$', r'^Line 14: \[\t\tMove\(i, 0\);\]$', r'^Tabs: >Shapes\.cpp\*$', r'^Status line: Shapes\.cpp is in the house style already\.$',
+		 r'^Line 2: \[void CCircle::Draw\(void\) \{\]$', r'^Line 3: \[    int i;\]$'], [r'ERROR']),
+	('reformat-selection', dict(MakeReformatCopy(), **{
+		#With lines selected only they are laid out: the lines above keep their brace and their spaces.
+		'WAIT_INDEX': '1', 'OPEN': 'Shapes.cpp', 'CARET': '5:3',
+		'DEBUG': 'edit:selectto:7:4,command:Edit.ReformatCode,wait:100,printstatus,edit:printline:2,edit:printline:3,edit:printline:5,edit:printline:6,edit:printline:7,edit:printline:8'}),
+		[r'^Status line: Reformatted the selected lines of Shapes\.cpp\.$', r'^Line 2: \[void CCircle::Draw\(void\) \{\]$', r'^Line 3: \[    int i;\]$',
+		 r'^Line 5: \[\tfor \(i = 0; i<3; i\+\+\)\]$', r'^Line 6: \[\t\{\]$', r'^Line 7: \[\t\tMove\(i, 0\);\]$'], [r'ERROR']),
+	('reformat-explorer', dict(MakeReformatCopy(), **{
+		#Solution Explorer's Reformat Code on a project lays out every C and C++ file of it that isn't in the style
+		#already: those are opened, not shown, and left changed, and one undo (asked for twice, as it is of changes
+		#elsewhere) takes it all back.
+		'WAIT_INDEX': '1', 'OPEN': 'Shapes.h', 'CARET': '1:1',
+		'DEBUG': 'edit:explorerselect:Navigation,command:Explorer.ReformatCode,wait:300,printstatus,printtabs,edit:open:Shapes.cpp,edit:printline:9,edit:printline:10,edit:undoall,edit:undoall,printtabs'}),
+		[r'^Status line: Reformatted 4 of 6 files: .* 2 declarations lined up, 1 star put against its type, 9 banners added, 1 line end trimmed\.  Save All keeps them\.$',
+		 r'^Tabs: >Shapes\.h Long\.cpp\* Main\.cpp\* Shape\.cpp\* Shapes\.cpp\*$', r'^Line 9: \[\{\]$', r'^Line 10: \[\tint\t\ti;\]$', r'^Tabs: Shapes\.h >Long\.cpp Main\.cpp Shape\.cpp Shapes\.cpp$'], [r'ERROR']),
 	('index-target', MakeIndexTarget('Debugging.sln'),
 		#A solution read with an HCP65 configuration is indexed as hcp65build compiles it: the W65C816's defines and
 		#none of MSVC's, so the function in #ifdef __W65C816__ is found and the ones in #ifdef _WIN32 and __65C64__
@@ -4348,7 +4382,7 @@ CHECKS = [
 		[r'^Menu File: New>, Save File as Template\.\.\., Open Project/Solution\.\.\., Add Solution\.\.\., Close Solution, Recent Solutions>, Clear Recent Solutions, Save \[Ctrl\+S\], Save All \[Ctrl\+Shift\+S\], Compare with File\.\.\., Settings\.\.\. \[Ctrl\+Alt\+S\], Exit$',
 		 r'^Menu File/New: C\+\+ Class\.\.\., C\+\+ Header\.\.\., C\+\+ Source\.\.\.$',
 		 r'^Menu File/Recent Solutions: 1 ',
-		 r'^Menu Edit: Undo \[Ctrl\+Z\](\(disabled\))?, Redo \[Ctrl\+Shift\+Z\](\(disabled\))?, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\], Select All \[Ctrl\+A\], Extend Selection \[Ctrl\+W\], Shrink Selection \[Ctrl\+Shift\+W\], Comment Selection \[Ctrl\+K, C\], Uncomment Selection \[Ctrl\+K, U\], Comment with Block Comment \[Ctrl\+Shift\+/\], Move Line Up \[Ctrl\+Shift\+Up\], Move Line Down \[Ctrl\+Shift\+Down\], Find\.\.\. \[Ctrl\+F\], Replace\.\.\. \[Ctrl\+R\], Find Next \[F3\], Find Previous \[Shift\+F3\], Find Word at Caret \[Ctrl\+F3\], Find in Files\.\.\. \[Ctrl\+Shift\+F\], Replace in Files\.\.\. \[Ctrl\+Shift\+R\], Find Duplicates\.\.\. \[Ctrl\+Alt\+Shift\+D\], Complete Code \[Ctrl\+Space\], Complete Code by Type \[Ctrl\+Shift\+Space\]$',
+		 r'^Menu Edit: Undo \[Ctrl\+Z\](\(disabled\))?, Redo \[Ctrl\+Shift\+Z\](\(disabled\))?, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\], Select All \[Ctrl\+A\], Extend Selection \[Ctrl\+W\], Shrink Selection \[Ctrl\+Shift\+W\], Comment Selection \[Ctrl\+K, C\], Uncomment Selection \[Ctrl\+K, U\], Comment with Block Comment \[Ctrl\+Shift\+/\], Move Line Up \[Ctrl\+Shift\+Up\], Move Line Down \[Ctrl\+Shift\+Down\], Reformat Code \[Ctrl\+Alt\+L\], Find\.\.\. \[Ctrl\+F\], Replace\.\.\. \[Ctrl\+R\], Find Next \[F3\], Find Previous \[Shift\+F3\], Find Word at Caret \[Ctrl\+F3\], Find in Files\.\.\. \[Ctrl\+Shift\+F\], Replace in Files\.\.\. \[Ctrl\+Shift\+R\], Find Duplicates\.\.\. \[Ctrl\+Alt\+Shift\+D\], Complete Code \[Ctrl\+Space\], Complete Code by Type \[Ctrl\+Shift\+Space\]$',
 		 r'^Menu Navigate: Back \[Ctrl\+Alt\+Left\](\(disabled\))?, Forward \[Ctrl\+Alt\+Right\](\(disabled\))?, Class\.\.\. \[Ctrl\+N\], File\.\.\. \[Ctrl\+Shift\+N\], Symbol\.\.\. \[Ctrl\+Alt\+Shift\+N\], Action\.\.\. \[Ctrl\+Shift\+A\], Line:Column\.\.\. \[Ctrl\+G\], Go to Source \[Ctrl\+B\], Go to Definition \[F12\], Go to Implementation\(s\) \[Ctrl\+Alt\+B\], Go to Type Declaration \[Ctrl\+Shift\+B\], Go to Super Method \[Ctrl\+U\], Go to Related Symbol \[Ctrl\+Alt\+Home\], Switch Header/Source \[Alt\+O\], File Structure \[Ctrl\+F12\], Next Method \[Alt\+Down\], Previous Method \[Alt\+Up\], Toggle Bookmark \[Ctrl\+F11\], Toggle Bookmark with Mnemonic\.\.\. \[Ctrl\+Shift\+F11\], Next Bookmark \[F2\], Previous Bookmark \[Shift\+F2\], Next Change \[Ctrl\+Alt\+Shift\+Down\], Previous Change \[Ctrl\+Alt\+Shift\+Up\], Highlight Usages in File \[Ctrl\+Shift\+F7\], Recent Files \[Ctrl\+E\], Recent Locations \[Ctrl\+Shift\+E\], Last Edit Location \[Ctrl\+Shift\+Backspace\], Next Edit Location, Select In\.\.\. \[Alt\+F1\], Type Hierarchy \[Ctrl\+H\], Method Hierarchy \[Ctrl\+Shift\+H\], Call Hierarchy \[Ctrl\+Alt\+H\], Find Usages \[Alt\+F7\], Show Usages \[Ctrl\+Alt\+F7\], Find All References \[Shift\+F12\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Next Occurrence \[Ctrl\+Alt\+Down\], Previous Occurrence \[Ctrl\+Alt\+Up\]$',
 		 r'^Menu View: Solution Explorer \[Alt\+1\], Structure \[Alt\+7\], Find Usages \[Alt\+3\], Find \[Alt\+9\], Duplicates, Bookmarks \[Alt\+2\], Hierarchy \[Alt\+8\], Build \[Alt\+6\], Indexing, Problems, Run \[Alt\+4\], Debug \[Alt\+5\], Locals, Call Stack, Autos, Watch 1, Watch 2, Watch 3, Watch 4, Claude, Hide All Tool Windows \[Ctrl\+Shift\+F12\], Jump to Last Tool Window(\(disabled\))?, Quick Definition \[Ctrl\+Shift\+I\], Parameter Info \[Ctrl\+P\], Type Info \[Ctrl\+Shift\+P\], Quick Documentation \[Ctrl\+Q\], Increase Font Size \[Ctrl\+=\], Decrease Font Size \[Ctrl\+-\], Reset Font Size \[Ctrl\+0\]$',
 		 r'^Menu Git: Compare with HEAD, Compare with Branch\.\.\., Compare with Revision\.\.\.$',
@@ -4357,7 +4391,7 @@ CHECKS = [
 		 r'^Menu Window: Reset Window Layout, Close All Documents, Switcher \[Ctrl\+Tab\], Select Next Tab \[Alt\+Right\], Select Previous Tab \[Alt\+Left\], Reopen Closed Tab(\(disabled\))?$',
 		 r'^Menu Editor: Go to Source \[Ctrl\+B\], Find Usages \[Alt\+F7\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Show Context Actions \[Alt\+Enter\], Rename\.\.\. \[Shift\+F6\], Refactor>, Toggle Bookmark \[Ctrl\+F11\], Toggle Breakpoint \[F9\], Add Watch, QuickWatch\.\.\. \[Shift\+F9\](\(disabled\))?, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\], Compare with Clipboard, Ask Claude\.\.\.$',
 		 r"^Menu Editor/Refactor: Rename File\.\.\., Safe Delete\.\.\. \[Alt\+Delete\], Introduce Variable\.\.\. \[Ctrl\+Alt\+V\], Introduce Field\.\.\. \[Ctrl\+Alt\+F\], Introduce Constant\.\.\. \[Ctrl\+Alt\+C\], Introduce Parameter\.\.\. \[Ctrl\+Alt\+P\], Introduce Typedef\.\.\. \[Ctrl\+Alt\+K\](\(disabled\))?, Inline\.\.\. \[Ctrl\+Alt\+N\], Change Signature\.\.\. \[Ctrl\+F6\], Unify Parameter Names, Generate Definition \[Ctrl\+Shift\+D\], Generate Declaration, Move Definition out of Class, Move Definition into Class, Pull Members Up\.\.\., Push Members Down\.\.\., Move\.\.\. \[F6\], Copy Class\.\.\., Move to Namespace\.\.\., Extract Method\.\.\. \[Ctrl\+Alt\+M\](\(disabled\))?, Extract Superclass\.\.\., Extract Interface\.\.\., Extract Class\.\.\., Encapsulate Field\.\.\., Optimise \#includes \[Ctrl\+Alt\+O\], Convert Macro\.\.\., Convert Pointer to Reference, Convert Reference to Pointer, Convert Enum to Enum Class\.\.\., Write Template's Interface\.\.\., Make Member Function const, Make Member Function static, Convert Function to Member Function, Convert Member Function to Function, Extract Template Parameter\.\.\., Remove Template Parameter$",
-		 r'^Menu Explorer: Set as Startup Solution, Set as Startup Project(\(disabled\))?, Remove Solution, Rename\.\.\., Open with System Program(\(disabled\))?, Properties\.\.\.(\(disabled\))?, Always Select Opened File, Open Files with Single Click$',
+		 r'^Menu Explorer: Set as Startup Solution, Set as Startup Project(\(disabled\))?, Remove Solution, Rename\.\.\., Open with System Program(\(disabled\))?, Reformat Code(\(disabled\))?, Properties\.\.\.(\(disabled\))?, Always Select Opened File, Open Files with Single Click$',
 		 r'^Menu New: C\+\+ Class\.\.\., C\+\+ Header\.\.\., C\+\+ Source\.\.\., Copy Class\.\.\.$',
 		 r'^Menu item \[View/Nope\] not found$'], []),
 	('menu-clicks', {

@@ -117,6 +117,7 @@ Ptr<CMenuContainer> CIDEEdit::CreateEditMenu(void)
 	mpEditMenu->AddItem(pCommands->Find("Editor.CommentBlock"));
 	mpEditMenu->AddItem(pCommands->Find("Editor.MoveLinesUp"));
 	mpEditMenu->AddItem(pCommands->Find("Editor.MoveLinesDown"));
+	mpcContent->GetReformat()->AddEditItems(mpEditMenu);
 	mpEditMenu->AddSeparator();
 	mpcContent->GetFind()->AddEditItems(mpEditMenu);
 	mpcContent->GetFindInFiles()->AddEditItems(mpEditMenu);

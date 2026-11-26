@@ -254,6 +254,7 @@ void CIDEContent::Class(void)
 	M_Pointer(mpHierarchy);
 	M_Pointer(mpToolWindows);
 	M_Pointer(mpDuplicates);
+	M_Pointer(mpReformat);
 	M_Pointer(mpOccurrences);
 	M_Pointer(mpNavigationHistory);
 	M_Pointer(mpCaretUsages);
@@ -318,6 +319,7 @@ void CIDEContent::Free(void)
 		mpWindow->CancelPosted(&mpNavigator);
 		mpWindow->CancelPosted(&mpFindInFiles);
 		mpWindow->CancelPosted(&mpDuplicates);
+		mpWindow->CancelPosted(&mpReformat);
 		mpWindow->CancelPosted(&mpUsages);
 		mpWindow->CancelPosted(&mpRename);
 		mpWindow->CancelPosted(&mpFileRename);
@@ -500,6 +502,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpHierarchy = OMalloc<CIDEHierarchy>(this);
 	mpToolWindows = OMalloc<CIDEToolWindows>(this);
 	mpDuplicates = OMalloc<CIDEDuplicates>(this);
+	mpReformat = OMalloc<CIDEReformat>(this);
 	mpOccurrences = OMalloc<CIDEOccurrences>(this);
 	mpNavigationHistory = OMalloc<CIDENavigationHistory>(this);
 	mpCaretUsages = OMalloc<CIDECaretUsages>(this);
@@ -759,6 +762,7 @@ void CIDEContent::AddCommands(void)
 	mpFind->AddCommands(mpCommands);
 	mpFindInFiles->AddCommands(mpCommands);
 	mpDuplicates->AddCommands(mpCommands);
+	mpReformat->AddCommands(mpCommands);
 	mpOccurrences->AddCommands(mpCommands);
 	mpNavigationHistory->AddCommands(mpCommands);
 	mpBuilding->AddCommands(mpCommands);
@@ -1352,6 +1356,7 @@ Ptr<CIDEQuickInfo> CIDEContent::GetQuickInfo(void) const { return mpQuickInfo; }
 Ptr<CIDECompletion> CIDEContent::GetCompletion(void) const { return mpCompletion; }
 Ptr<CIDEHierarchy> CIDEContent::GetHierarchy(void) const { return mpHierarchy; }
 Ptr<CIDEDuplicates> CIDEContent::GetDuplicates(void) const { return mpDuplicates; }
+Ptr<CIDEReformat> CIDEContent::GetReformat(void) const { return mpReformat; }
 Ptr<CIDEOccurrences> CIDEContent::GetOccurrences(void) const { return mpOccurrences; }
 Ptr<CIDENavigationHistory> CIDEContent::GetNavigationHistory(void) const { return mpNavigationHistory; }
 Ptr<CIDEIndexing> CIDEContent::GetIndexing(void) const { return mpIndexing; }

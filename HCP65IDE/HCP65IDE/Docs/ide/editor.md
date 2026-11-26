@@ -123,6 +123,33 @@ Undo won't undo what you can't see.  If the next change to undo is in a file tha
 its editor is scrolled away from, the first Ctrl+Z shows it (the status line saying to press again) and
 the second undoes it.
 
+## Reformat Code
+
+Ctrl+Alt+L (Edit, **Reformat Code**) lays the file out in the house style, as one undo.  With lines selected
+only they are laid out.  It changes only the white space between the code's words, so the code means what
+it meant, and it says on the status line what it changed ("3 lines indented, 2 declarations lined up").
+In [Solution Explorer](solutions.md) the same command on a folder, a project or a solution lays out every C
+and C++ file in it; the files it changes are left changed, for Save All.
+
+| What | How it is laid out |
+|---|---|
+| Indenting | A tab for each brace a line is in.  `case` and `public:` are level with their `switch` and `class`; a `#` line is at the margin. |
+| Braces | A `{` that ends a line of code goes on a line of its own.  A body on one line, `{ return mi; }`, stays. |
+| Spaces | One after a comma and a `for`'s `;`, between `if`, `for`, `while`, `switch` or `return` and its bracket, and each side of `=`, `==`, `!=`, `<=`, `>=`, `||`, `+=` and the like, and of a binary `+ - / % | ^` written with none. |
+| Columns | A run of declarations (a function's locals, a class's fields and member functions) has its names in one column, reached with tabs: the column most are in already, or the first tab stop after the longest type.  A `*` goes against its type: `char* sz`. |
+| Banners | In a source file, a function of several lines with no comment over it gets the [Definition Banner](templates.md) template's, two blank lines above. |
+| Line ends | White space at a line's end goes. |
+
+What it leaves alone, because it can't tell from the words alone or because the house's own code has it:
+
+- `*`, `&`, `<` and `>`: a pointer's or a template's can't be told from an operator's.
+- White space that is there: it adds a space where there is none, and never takes spaces out, so code
+  laid out as a table (a matrix's rows) keeps its shape.
+- Two statements on one line, long lines, blank lines, comments and strings.
+- A statement's second and later lines, which move with its first.
+- A declaration on its own written with one space, and a class's members written further in so their
+  types line up after `virtual`.
+
 ## Code completion
 
 A list under the caret of what can be written there.  It opens by itself straight after you type `.`,

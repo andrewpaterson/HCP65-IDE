@@ -144,6 +144,33 @@ a scheme's away ([`CIDEFileTemplates::Remove`]) gives the one under it back, as 
   CMakeLists.txt that lists the files beside them, staged in git and opened, and one undo takes them away
   ([`CIDEMoveClass::BeginCreating`]'s machinery: the undo log keeps where New put them, for the redo).
 
+## Reformat Code
+
+[`CCodeFormatter`] (TemplateLib) lays a text out in the house style and [`CIDEReformat`] is its command.  The
+formatter reads the file's own text, not the parsed unit: code an `#if` leaves out is laid out too, and a file
+that doesn't parse still is.  It cuts the text into tokens (white space, line ends, comments, directives,
+literals, names, punctuators), works out each brace's kind and each statement's start
+([`CCodeFormatter::FindStructure`]), and then only changes, adds or removes white space tokens, but for a banner's
+comment lines.  So the code's own tokens are never touched, and what it can't tell from tokens alone it leaves.
+Its result is edits ([`SCodeEdit`]), each only the white space that differs, which the IDE makes as one edit of
+each file ([`CIDETextEdits`]) and one undo of them all ([`CIDEFileEdits`]).
+
+The rules were measured from CommonLibraries' 3,819 sources before any were written (a prototype, then the C++,
+which gives the prototype's text on all 8,231 files of CommonLibraries, HCP65-IDE and HCP65's libraries and
+kernal).  What the measuring settled:
+
+- `case` and access labels level with their `switch` and `class` (3,406 of 3,739 cases), directives at the margin
+  (all 20,829), braces on their own lines (68,840 to 10), `char* p` (59,907 to 351).
+- A run's column isn't always the least it could be: half the headers' runs are lined up further right.  So a run
+  keeps the column most of its names are in, and only with none is it the first tab stop after the longest type.
+- One statement a line isn't a rule: nearly all of the 120 lines with two are matrix code laid out as tables
+  (`Float4x4.cpp`).  For the same reason white space is only ever added, never taken out or made one space.
+- A class's friends and macros (`CONSTRUCTABLE`) are at the margin, and its members can be written further in so
+  their types line up after `virtual`: both are left.
+
+Formatting twice changes nothing: a run's column is chosen so that the names put in it still make it the
+commonest ([`CCodeFormatter::AlignRun`]).
+
 ## The startup project
 
 A solution can have several applications, its projects that aren't static libraries (an HCP65 program's projects
@@ -208,8 +235,10 @@ copy it is tested in TestWindowLib, not by the checks.
   would only show after it); the guard for ranges still behind after that parse (a tab whose project has gone)
   isn't checked; Alt+drag isn't checked in the IDE (the window manager may take it), only in TestWindowLib.
 - Caret usages: an edited tab after the index is rebuilt from the files isn't checked.
-- No automatic indenting, comment commands or Move Line, and Tab types spaces: [`HCP65IDE/NextIDEWork.txt`]'s item
-  6, decided (Tab types a tab, in a box and in the pages too) and not built.  No Reformat Code (item 10).
+- Reformat Code: no Optimise #includes with it (IntelliJ's tick), as [`CIDEIncludes`] works on the active file
+  only; no Settings page (nothing in the house style turned out to vary but the banner, which is a template); it
+  doesn't split two statements on a line or wrap a long one; and `*`, `&`, `<`, `>` aren't spaced, which needs the
+  types.
 - Templates: Overriding Function Body and Forward Declaration were planned and not made, as nothing writes them;
   `${NAMESPACES_OPEN}` and `${NAMESPACES_CLOSE}` are empty; of the variables the plan listed, `${SOLUTION_NAME}`,
   `${BASE_CLASS}`, `${BASE_INCLUDE}` and `${FORWARD_DECLARATIONS}` aren't set (a refactoring hands a template only

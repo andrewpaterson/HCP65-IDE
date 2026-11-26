@@ -1052,6 +1052,7 @@ Ptr<CMenuContainer> CIDESolutions::CreateExplorerMenu(void)
 	mpExplorerMenu->AddSeparator();
 	mpExplorerMenu->AddItem(mpcContent->GetCommands()->Find("Explorer.RenameFile"));
 	mpExplorerMenu->AddItem(mpcContent->GetCommands()->Find("Explorer.OpenWithSystemProgram"));
+	mpcContent->GetReformat()->AddExplorerItems(mpExplorerMenu);
 	mpExplorerMenu->AddSeparator();
 	mpExplorerMenu->AddItem(mpcContent->GetCommands()->Find("Explorer.ProjectProperties"));
 	mpExplorerMenu->AddSeparator();

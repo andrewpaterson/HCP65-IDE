@@ -234,6 +234,7 @@ set(IDE_SOURCES
 	"${IDE_DIR}/IDEListingSource.cpp"
 	"${IDE_DIR}/IDEBuildPane.cpp"
 	"${IDE_DIR}/IDEMessageOutput.cpp"
+	"${IDE_DIR}/IDEReformat.cpp"
 	"${IDE_DIR}/IDEOutputMenu.cpp"
 	"${IDE_DIR}/IDEProblemList.cpp"
 	"${IDE_DIR}/IDEProblems.cpp"

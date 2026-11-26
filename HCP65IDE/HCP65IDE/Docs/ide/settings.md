@@ -118,6 +118,7 @@ Workspaces](solutions.md#files-kept-beside-the-solution).
 | Ctrl+K then C | Comment Selection |
 | Ctrl+K then U | Uncomment Selection |
 | Ctrl+Shift+/ | Comment with Block Comment |
+| Ctrl+Alt+L | Reformat Code |
 | Insert | Toggle Overwrite |
 | Escape | Clear the selection, end a box |
 

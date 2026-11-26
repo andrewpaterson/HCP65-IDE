@@ -93,6 +93,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "IDEUsages.h"
 #include "IDEFindInFiles.h"
 #include "IDEDuplicates.h"
+#include "IDEReformat.h"
 #include "IDEOccurrences.h"
 #include "IDENavigationHistory.h"
 #include "IDECaretUsages.h"
@@ -246,6 +247,7 @@ protected:
 	Ptr<CIDEHierarchy>			mpHierarchy;		//The Hierarchy tool window: type, method and call hierarchies.
 	Ptr<CIDEToolWindows>		mpToolWindows;		//The tool windows' keys, Hide All and Jump to Last.
 	Ptr<CIDEDuplicates>			mpDuplicates;		//Find Duplicates and the Duplicates tool window.
+	Ptr<CIDEReformat>			mpReformat;			//Reformat Code.
 	Ptr<CIDEOccurrences>		mpOccurrences;		//Next and Previous Occurrence through Find Usages or Build.
 	Ptr<CIDENavigationHistory>	mpNavigationHistory;	//Back and Forward.
 	Ptr<CIDECaretUsages>		mpCaretUsages;			//The usages of the symbol at the caret, highlighted.
@@ -361,6 +363,7 @@ public:
 	Ptr<CIDECompletion>		GetCompletion(void) const;
 	Ptr<CIDEHierarchy>		GetHierarchy(void) const;
 	Ptr<CIDEDuplicates>		GetDuplicates(void) const;
+	Ptr<CIDEReformat>		GetReformat(void) const;
 	Ptr<CIDEIndexing>		GetIndexing(void) const;
 	Ptr<CIDEProblems>		GetProblems(void) const;
 	Ptr<CIDERename>			GetRename(void) const;
