@@ -231,11 +231,54 @@ void CPageExamples::Scan(const char* szPage)
 		szLine = szEnd + 1;
 	}
 
-	for (iLine = 0; iLine < (int)masExamples.NumElements(); iLine++)
+	for (iLine = (int)masExamples.NumElements() - 1; iLine >= 0; iLine--)
 	{
 		psExample = masExamples.Get(iLine);
-		psExample->bDeclares = IsDeclaring(psExample->szCode.Text());
+		if (IsIncluded(psExample->szCode.Text()))
+		{
+			psExample->szCode.Kill();
+			masExamples.RemoveAt(iLine);
+		}
+		else
+		{
+			psExample->bDeclares = IsDeclaring(psExample->szCode.Text());
+		}
 	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether a block is only snippets (--8<-- "Test.cpp:section" lines,
+// pymdownx.snippets): its code is compiled where it comes from, a test.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CPageExamples::IsIncluded(const char* szCode)
+{
+	CArrayChars		aszLines;
+	const char*		szLine;
+	size			i;
+	bool			bIncluded;
+
+	aszLines.Init();
+	aszLines.Split(szCode, '\n');
+	bIncluded = false;
+	for (i = 0; i < aszLines.NumElements(); i++)
+	{
+		szLine = aszLines.GetText(i);
+		if (IsPageExampleBlank(szLine, 0, (int)strlen(szLine)))
+		{
+			continue;
+		}
+		if (strncmp(szLine, "--8<--", 6) != 0)
+		{
+			bIncluded = false;
+			break;
+		}
+		bIncluded = true;
+	}
+	aszLines.Kill();
+	return bIncluded;
 }
 
 

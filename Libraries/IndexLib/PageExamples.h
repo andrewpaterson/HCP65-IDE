@@ -53,10 +53,11 @@ typedef CArrayTemplate<SPageExampleProblem>	CArrayPageExampleProblems;
 class CWorkspaceIndex;
 //A page's ```cpp blocks and the C++ its hidden comment puts before each: "<!-- cpp" on a line of its own, then its
 //#includes and the declarations of the names its examples use without declaring, then "-->".  A ```cpp block is
-//checked; a ```{.cpp .no-check} block (or any other) isn't.  Each is compiled as a unit of the project the page is
-//an item of, as its build configuration compiles it, and checked as the IDE checks an edited file: the hidden
-//lines, then the block, at file scope if it declares (a function written out, a class...) or else as the body of a
-//function.  Its problems are given at their lines in the page.
+//checked; a ```{.cpp .no-check} block (or any other) isn't, nor is one of only snippets (--8<-- "Test.cpp:name"), whose
+//code is compiled where it comes from.  Each is compiled as a unit of the project the page is an item of, as its build
+//configuration compiles it, and checked as the IDE checks an edited file: the hidden lines, then the block, at file
+//scope if it declares (a function written out, a class...) or else as the body of a function.  Its problems are given
+//at their lines in the page.
 class CPageExamples
 {
 protected:
@@ -81,6 +82,7 @@ public:
 	bool					Check(CWorkspaceIndex* pcIndex, size uiProject, const char* szPageFile, CArrayPageExampleProblems* pasDest);
 
 	static bool				IsDeclaring(const char* szCode);
+	static bool				IsIncluded(const char* szCode);
 	static bool				IsCheckedFence(const char* szInfo, int iLength);
 	static void				KillProblems(CArrayPageExampleProblems* pasProblems);
 	static void				PrintProblems(const char* szPageFile, CArrayPageExampleProblems* pasProblems, CChars* pszDest);

@@ -45,3 +45,9 @@ A mistake:
 cShape.Init(EK_Square);
 cShape.Draw();
 ```
+
+Taken from a test, so compiled there:
+
+```cpp
+--8<-- "Test.cpp:example"
+```

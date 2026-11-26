@@ -45,13 +45,17 @@ void TestPageExamplesDeclaring(void)
 	AssertFalse(CPageExamples::IsDeclaring("classes = 1;\n"));
 	AssertFalse(CPageExamples::IsDeclaring("\tclass CTank;\n"));
 	AssertFalse(CPageExamples::IsDeclaring(""));
+	AssertTrue(CPageExamples::IsIncluded("--8<-- \"Test.cpp:example\"\n\n--8<-- \"Test.cpp:kill\"\n"));
+	AssertFalse(CPageExamples::IsIncluded("--8<-- \"Test.cpp:example\"\nx = 1;\n"));
+	AssertFalse(CPageExamples::IsIncluded("\n"));
 }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
 // The fixture page's hidden comment and its four ```cpp blocks (not its
-// no-check or text blocks), and where each unit's lines are in the page.
+// no-check, text or snippet blocks), and where each unit's lines are in
+// the page.
 //
 //////////////////////////////////////////////////////////////////////////
 void TestPageExamplesScan(void)
