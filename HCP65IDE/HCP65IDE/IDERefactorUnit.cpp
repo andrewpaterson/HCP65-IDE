@@ -32,6 +32,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "CppCompilerLib/CPPSyntaxDeclarator.h"
 #include "CppCompilerLib/CPPSyntaxName.h"
 #include "IDERename.h"
+#include "CppCompilerLib/CPP65Type.h"
 #include "IDERefactorUnit.h"
 #include "IDEOutline.h"
 
@@ -624,6 +625,45 @@ bool CIDERefactorUnit::FindSpelledTokens(int iLine, int iColumn, int iEndLine, i
 		}
 	}
 	return *piFirstToken >= 0;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// What an expression's type is of, appended as the index keys it: the
+// class or enum a reference, a pointer or an array of it is to, however
+// many levels of pointer and array (*piLevels, if asked for).  The file
+// must have been checked.  False if the expression has no type, or one
+// with no name of its own (an int).
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDERefactorUnit::AppendTypeKey(CCPPSyntax* pcExpression, CChars* pszDest, int32* piLevels)
+{
+	SCPP65Type*	psType;
+	CChars		szKey;
+	int32		iLevels;
+	bool		bResult;
+
+	iLevels = 0;
+	psType = mbChecked ? mcPass.GetType(pcExpression) : NULL;
+	while (psType && (psType->IsReference() || psType->IsPointer() || psType->IsArray()) && psType->psBase)
+	{
+		iLevels += psType->IsReference() ? 0 : 1;
+		psType = psType->psBase;
+	}
+	szKey.Init();
+	bResult = psType && (psType->IsClass() || (psType->pcEnum != NULL)) && mcPass.AppendType(psType->Unqualified(), &szKey);
+	if (bResult)
+	{
+		szKey.StripWhitespace();
+		pszDest->Append(szKey);
+		if (piLevels)
+		{
+			*piLevels = iLevels;
+		}
+	}
+	szKey.Kill();
+	return bResult;
 }
 
 

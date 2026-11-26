@@ -69,6 +69,7 @@ void CIDEQuickInfo::Init(CIDEContent* pcContent)
 	muiDocumentationChanges = 0;
 	mbDocumentationPinned = false;
 	mszDocumentationName.Init();
+	mszDocumentationEntry.Init();
 	masDocumentationLinks.Init();
 	mbDocumentationPressed = false;
 	muiDocumentationPressed = MAX_SIZE;
@@ -124,6 +125,7 @@ void CIDEQuickInfo::Class(void)
 	U_Size(muiDocumentationChanges);
 	U_Bool(mbDocumentationPinned);
 	U_String(mszDocumentationName);
+	U_String(mszDocumentationEntry);
 	U_Unknown(CArrayIDEDocumentationLinks, masDocumentationLinks);
 	U_Bool(mbDocumentationPressed);
 	U_Size(muiDocumentationPressed);
@@ -155,6 +157,7 @@ void CIDEQuickInfo::Free(void)
 	mszTipName.Kill();
 	KillDocumentationLinks();
 	masDocumentationLinks.Kill();
+	mszDocumentationEntry.Kill();
 	mszDocumentationName.Kill();
 	maiBold.Kill();
 	KillIDESymbolInfos(&masOverloads);
@@ -575,6 +578,28 @@ bool CIDEQuickInfo::ShowParameterInfo(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Parameter Info for the call the caret is in, which is known to be of
+// the function szKey: as completion knows of the one it has just written,
+// whose call the index hasn't seen yet.  Nothing is said if it can't be
+// shown.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEQuickInfo::ShowParameterInfoOf(const char* szKey)
+{
+	if (!HasEditor())
+	{
+		return false;
+	}
+	if (meInfo != IQI_None)
+	{
+		HideInfo();
+	}
+	return UpdateParameterInfo(false, szKey);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // The call the caret is in is found from the text; if it is the call
 // shown already (its bracket where it was, the same name before it) only
 // the caret's argument is looked at again, so typing an argument doesn't
@@ -582,11 +607,11 @@ bool CIDEQuickInfo::ShowParameterInfo(void)
 // its name is, with the others of that name beside it.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEQuickInfo::UpdateParameterInfo(bool bSay)
+bool CIDEQuickInfo::UpdateParameterInfo(bool bSay, const char* szKey)
 {
 	Ptr<CIDEEditorTab>	pTab;
 	Ptr<CTextArea>		pEditor;
-	CChars				szKey;
+	CChars				szFound;
 	CChars				szName;
 	const char*			szText;
 	size				uiNameStart;
@@ -615,17 +640,24 @@ bool CIDEQuickInfo::UpdateParameterInfo(bool bSay)
 	if ((meInfo != IQI_Parameters) || (mpInfoTab != pTab) || (uiOpen != muiInfoOpen) || !mszInfoName.Equals(szName))
 	{
 		KillOverloads();
-		mpcContent->GetDocuments()->UpdateEditedTabsNow();
-		uiLine = pEditor->FindLine(uiNameStart);
-		szKey.Init();
-		uiKind = 0;
-		bFound = mpcContent->GetCodeModel()->GetSymbolAt(pTab->GetFileName(), (int)uiLine, (int)(uiNameStart - pEditor->GetLineStart(uiLine)), &szKey, &uiKind) &&
-				 ((uiKind == CPPSK_Function) || (uiKind == CPPSK_FunctionTemplate));
-		if (bFound)
+		if (szKey != NULL)
 		{
-			FindOverloads(szKey.Text());
+			FindOverloads(szKey);
 		}
-		szKey.Kill();
+		else
+		{
+			mpcContent->GetDocuments()->UpdateEditedTabsNow();
+			uiLine = pEditor->FindLine(uiNameStart);
+			szFound.Init();
+			uiKind = 0;
+			bFound = mpcContent->GetCodeModel()->GetSymbolAt(pTab->GetFileName(), (int)uiLine, (int)(uiNameStart - pEditor->GetLineStart(uiLine)), &szFound, &uiKind) &&
+					 ((uiKind == CPPSK_Function) || (uiKind == CPPSK_FunctionTemplate));
+			if (bFound)
+			{
+				FindOverloads(szFound.Text());
+			}
+			szFound.Kill();
+		}
 		if (masOverloads.NumElements() == 0)
 		{
 			HideInfo();
@@ -966,45 +998,26 @@ static const char* GetIDECursorName(ENativeCursor eCursor)
 //////////////////////////////////////////////////////////////////////////
 //
 // What is written about the name at uiPosition of pTab's text (or ending
-// there, as a name the caret is after), set as pPopup's text and
-// coloured: its declaration in the code's colours, where it is declared,
-// dim, the comment over it, and (not for a tip) the documentation pages
-// that name it.  A tip has only the first IDE_TIP_COMMENT_LINES of the
-// comment.  Not a tip, the places that can be gone to are kept
-// (masDocumentationLinks): where it is declared, and each page.  A
-// macro's name has its #define and the comment over that.  False, the
-// popup left as it was, if the name is neither or there is none there.
+// there, as a name the caret is after): the symbol the index has there,
+// or a macro's #define and the comment over that.  The name and where it
+// starts are given too.  False if it is neither, or there is no name
+// there.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEQuickInfo::WriteDocumentation(Ptr<CIDEEditorTab> pTab, size uiPosition, bool bTip, Ptr<CInfoPopup> pPopup, CChars* pszName, size* puiStart)
+bool CIDEQuickInfo::FindDocumented(Ptr<CIDEEditorTab> pTab, size uiPosition, SIDESymbolDocumentation* psDest, CChars* pszName, size* puiStart)
 {
-	Ptr<CTextArea>				pEditor;
-	SIDESymbolDocumentation		sDocumentation;
-	SIDEDocumentationLink*		psLink;
-	SIDELocation				sDefine;
-	SIDELocation*				psPage;
-	SIDELineColour				asColours[IDE_QUICK_COLOURS];
-	CTextFile					cFile;
-	CChars						szKey;
-	CChars						szText;
-	CChars						szName;
-	const char*					szFileText;
-	const char*					szComment;
-	const char*					szFile;
-	size						uiFileLength;
-	size						uiStart;
-	size						uiEnd;
-	size						uiCommentEnd;
-	size						uiLine;
-	size						uiColours;
-	size						uiWhere;
-	size						uiHeading;
-	size						uiLines;
-	size						uiPlace;
-	size						i;
-	uint8						uiKind;
-	bool						bResult;
-	bool						bMore;
+	Ptr<CTextArea>	pEditor;
+	SIDELocation	sDefine;
+	CTextFile		cFile;
+	CChars			szKey;
+	CChars			szName;
+	const char*		szFileText;
+	size			uiFileLength;
+	size			uiStart;
+	size			uiEnd;
+	size			uiLine;
+	uint8			uiKind;
+	bool			bResult;
 
 	pEditor = pTab->GetEditor();
 	if (!FindIDENameAt(pEditor->GetText(), uiPosition, &uiStart, &uiEnd) && ((uiPosition == 0) || !FindIDENameAt(pEditor->GetText(), uiPosition - 1, &uiStart, &uiEnd)))
@@ -1014,9 +1027,8 @@ bool CIDEQuickInfo::WriteDocumentation(Ptr<CIDEEditorTab> pTab, size uiPosition,
 	mpcContent->GetDocuments()->UpdateEditedTabsNow();
 	uiLine = pEditor->FindLine(uiStart);
 	szKey.Init();
-	sDocumentation.Init();
 	bResult = mpcContent->GetCodeModel()->GetSymbolAt(pTab->GetFileName(), (int)uiLine, (int)(uiStart - pEditor->GetLineStart(uiLine)), &szKey, &uiKind) &&
-			  ReadIDESymbolDocumentation(mpcContent, szKey.Text(), &sDocumentation);
+			  ReadIDESymbolDocumentation(mpcContent, szKey.Text(), psDest);
 	szKey.Kill();
 	if (!bResult)
 	{
@@ -1025,19 +1037,19 @@ bool CIDEQuickInfo::WriteDocumentation(Ptr<CIDEEditorTab> pTab, size uiPosition,
 		szName.Append(&pEditor->GetText()[uiStart], uiEnd - uiStart);
 		if (mpcContent->GetConvertMacro()->FindDefine(szName.Text(), &sDefine))
 		{
-			sDocumentation.sInfo.szDeclaration.Clear();
-			sDocumentation.sInfo.szWhere.Clear();
-			bResult = mpcContent->GetConvertMacro()->ReadDefineInfo(&sDefine, &sDocumentation.sInfo.szDeclaration, &sDocumentation.sInfo.szWhere);
+			psDest->sInfo.szDeclaration.Clear();
+			psDest->sInfo.szWhere.Clear();
+			bResult = mpcContent->GetConvertMacro()->ReadDefineInfo(&sDefine, &psDest->sInfo.szDeclaration, &psDest->sInfo.szWhere);
 			if (bResult)
 			{
-				sDocumentation.sInfo.sPlace.szFileName.Set(sDefine.szFileName);
-				sDocumentation.sInfo.sPlace.iLine = sDefine.iLine;
-				sDocumentation.sInfo.sPlace.iColumn = sDefine.iColumn;
-				sDocumentation.sInfo.sPlace.iLength = sDefine.iLength;
+				psDest->sInfo.sPlace.szFileName.Set(sDefine.szFileName);
+				psDest->sInfo.sPlace.iLine = sDefine.iLine;
+				psDest->sInfo.sPlace.iColumn = sDefine.iColumn;
+				psDest->sInfo.sPlace.iLength = sDefine.iLength;
 				cFile.Init();
 				if (mpcContent->GetFindInFiles()->GetFileText(sDefine.szFileName.Text(), &cFile, &szFileText, &uiFileLength))
 				{
-					ReadIDEComment(szFileText, uiFileLength, FindIDETextPosition(szFileText, uiFileLength, sDefine.iLine, sDefine.iColumn), &sDocumentation.szComment);
+					ReadIDEComment(szFileText, uiFileLength, FindIDETextPosition(szFileText, uiFileLength, sDefine.iLine, sDefine.iColumn), &psDest->szComment);
 				}
 				cFile.Kill();
 			}
@@ -1045,23 +1057,54 @@ bool CIDEQuickInfo::WriteDocumentation(Ptr<CIDEEditorTab> pTab, size uiPosition,
 		}
 		szName.Kill();
 	}
-	if (!bResult)
+	if (bResult)
 	{
-		sDocumentation.Kill();
-		return false;
+		pszName->Set("");
+		pszName->Append(&pEditor->GetText()[uiStart], uiEnd - uiStart);
+		*puiStart = uiStart;
 	}
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// What is written about a symbol (psDocumented) set as pPopup's text and
+// coloured: its declaration in the code's colours, where it is declared,
+// dim, the comment over it, and (not for a tip) the documentation pages
+// that name it.  A tip has only the first IDE_TIP_COMMENT_LINES of the
+// comment.  Not a tip, the places that can be gone to are kept
+// (masDocumentationLinks): where it is declared, and each page.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEQuickInfo::WriteDocumented(SIDESymbolDocumentation* psDocumented, bool bTip, Ptr<CInfoPopup> pPopup)
+{
+	SIDEDocumentationLink*	psLink;
+	SIDELocation*			psPage;
+	SIDELineColour			asColours[IDE_QUICK_COLOURS];
+	CChars					szText;
+	const char*				szComment;
+	const char*				szFile;
+	size					uiCommentEnd;
+	size					uiColours;
+	size					uiWhere;
+	size					uiHeading;
+	size					uiLines;
+	size					uiPlace;
+	size					i;
+	bool					bMore;
 
 	//The declaration, where it is, the comment (a tip's cut to its first lines), the pages.
-	szText.Init(sDocumentation.sInfo.szDeclaration);
+	szText.Init(psDocumented->sInfo.szDeclaration);
 	szText.Append('\n');
 	uiWhere = szText.Length();
-	szText.Append(sDocumentation.sInfo.szWhere);
+	szText.Append(psDocumented->sInfo.szWhere);
 	bMore = false;
-	if (!sDocumentation.szComment.Empty())
+	if (!psDocumented->szComment.Empty())
 	{
 		szText.Append("\n\n");
-		szComment = sDocumentation.szComment.Text();
-		uiCommentEnd = sDocumentation.szComment.Length();
+		szComment = psDocumented->szComment.Text();
+		uiCommentEnd = psDocumented->szComment.Length();
 		if (bTip)
 		{
 			uiLines = 0;
@@ -1088,23 +1131,23 @@ bool CIDEQuickInfo::WriteDocumentation(Ptr<CIDEEditorTab> pTab, size uiPosition,
 	{
 		KillDocumentationLinks();
 		//Where it is declared goes there: its file and line, after its scope.
-		szFile = strrchr(sDocumentation.sInfo.szWhere.Text(), ' ');
-		uiPlace = (szFile != NULL) ? (size)(szFile + 1 - sDocumentation.sInfo.szWhere.Text()) : 0;
+		szFile = strrchr(psDocumented->sInfo.szWhere.Text(), ' ');
+		uiPlace = (szFile != NULL) ? (size)(szFile + 1 - psDocumented->sInfo.szWhere.Text()) : 0;
 		psLink = masDocumentationLinks.Add();
 		psLink->uiStart = uiWhere + uiPlace;
-		psLink->uiLength = sDocumentation.sInfo.szWhere.Length() - uiPlace;
-		psLink->sPlace = sDocumentation.sInfo.sPlace;
-		psLink->sPlace.szFileName.Init(sDocumentation.sInfo.sPlace.szFileName);
+		psLink->uiLength = psDocumented->sInfo.szWhere.Length() - uiPlace;
+		psLink->sPlace = psDocumented->sInfo.sPlace;
+		psLink->sPlace.szFileName.Init(psDocumented->sInfo.sPlace.szFileName);
 	}
 	uiHeading = 0;
-	if (!bTip && (sDocumentation.asPages.NumElements() > 0))
+	if (!bTip && (psDocumented->asPages.NumElements() > 0))
 	{
 		szText.Append("\n\n");
 		uiHeading = szText.Length();
 		szText.Append(IDE_DOCUMENTED_IN);
-		for (i = 0; i < sDocumentation.asPages.NumElements(); i++)
+		for (i = 0; i < psDocumented->asPages.NumElements(); i++)
 		{
-			psPage = sDocumentation.asPages.Get(i);
+			psPage = psDocumented->asPages.Get(i);
 			szText.Append("\n  ");
 			psLink = masDocumentationLinks.Add();
 			psLink->uiStart = szText.Length();
@@ -1118,12 +1161,12 @@ bool CIDEQuickInfo::WriteDocumentation(Ptr<CIDEEditorTab> pTab, size uiPosition,
 	}
 
 	pPopup->SetText(szText.Text());
-	uiColours = FindIDELineColours(szText.Text(), sDocumentation.sInfo.szDeclaration.Length(), asColours, IDE_QUICK_COLOURS);
+	uiColours = FindIDELineColours(szText.Text(), psDocumented->sInfo.szDeclaration.Length(), asColours, IDE_QUICK_COLOURS);
 	for (i = 0; i < uiColours; i++)
 	{
 		pPopup->AddSpan(asColours[i].uiStart, asColours[i].uiLength, GetHighlightColour(asColours[i].eKind));
 	}
-	pPopup->AddSpan(uiWhere, sDocumentation.sInfo.szWhere.Length(), mpcContent->GetTheme()->GetColour(TC_DimText));
+	pPopup->AddSpan(uiWhere, psDocumented->sInfo.szWhere.Length(), mpcContent->GetTheme()->GetColour(TC_DimText));
 	if (bMore)
 	{
 		pPopup->AddSpan(szText.Length() - 3, 3, mpcContent->GetTheme()->GetColour(TC_DimText));
@@ -1141,12 +1184,6 @@ bool CIDEQuickInfo::WriteDocumentation(Ptr<CIDEEditorTab> pTab, size uiPosition,
 		}
 	}
 	szText.Kill();
-
-	pszName->Set("");
-	pszName->Append(&pEditor->GetText()[uiStart], uiEnd - uiStart);
-	*puiStart = uiStart;
-	sDocumentation.Kill();
-	return true;
 }
 
 
@@ -1181,6 +1218,17 @@ bool CIDEQuickInfo::ShowQuickDocumentation(void)
 	{
 		return false;
 	}
+	if (mpcContent->GetCompletion()->IsOpen())
+	{
+		//Of the entry selected in completion's list, beside the list.
+		if (!ShowEntryDocumentation())
+		{
+			HideDocumentation();
+			mpcContent->ShowStatus("Nothing is known about the entry selected.");
+			return false;
+		}
+		return true;
+	}
 	if (IsDocumentationShown() && (mpDocumentationTab == pTab) && (pTab->GetEditor()->GetCaretPosition() == muiDocumentationCaret) && (pTab->GetEditor()->GetChangeCount() == muiDocumentationChanges))
 	{
 		mbDocumentationPinned = !mbDocumentationPinned;
@@ -1200,6 +1248,51 @@ bool CIDEQuickInfo::ShowQuickDocumentation(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Quick Documentation of the entry selected in completion's list, shown
+// beside the list; it follows the selection from then (PollDocumentation)
+// and goes with the list.  False if the entry is no symbol (a word of the
+// language, a file) or nothing is known of it.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEQuickInfo::ShowEntryDocumentation(void)
+{
+	SIDESymbolDocumentation	sDocumented;
+	Ptr<CIDEEditorTab>		pTab;
+	Ptr<CTextArea>			pEditor;
+	CInt32Rect				cLine;
+	CChars					szKey;
+	SInt32Vec2				sPoint;
+	bool					bResult;
+
+	pTab = mpcContent->GetDocuments()->GetActiveTab();
+	szKey.Init();
+	sDocumented.Init();
+	bResult = pTab.IsNotNull() && mpcContent->GetCompletion()->GetSelectedSymbol(&szKey, &sPoint) && ReadIDESymbolDocumentation(mpcContent, szKey.Text(), &sDocumented);
+	if (bResult)
+	{
+		WriteDocumented(&sDocumented, false, mpDocumentation);
+		mszDocumentationName.Kill();
+		GetIDESymbolName(szKey.Text(), &mszDocumentationName);
+		mszDocumentationEntry.Set(szKey);
+		HideTip();
+		pEditor = pTab->GetEditor();
+		mpDocumentationTab = pTab;
+		muiDocumentationCaret = pEditor->GetCaretPosition();
+		muiDocumentationChanges = pEditor->GetChangeCount();
+		mbDocumentationPinned = false;
+		mbDocumentationPressed = false;
+		pEditor->GetLineBounds(0, &cLine);
+		mpDocumentation->SetMaximumHeight(IDE_DOCUMENTATION_LINES * cLine.GetHeight());
+		mpDocumentation->Show(sPoint, false);
+	}
+	sDocumented.Kill();
+	szKey.Kill();
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Quick Documentation of the name at uiPosition of pTab's text, shown
 // under the caret's line, its left at the name.  False, with what was
 // shown left, if there is nothing to show for it.
@@ -1207,16 +1300,22 @@ bool CIDEQuickInfo::ShowQuickDocumentation(void)
 //////////////////////////////////////////////////////////////////////////
 bool CIDEQuickInfo::ShowDocumentationAt(Ptr<CIDEEditorTab> pTab, size uiPosition)
 {
+	SIDESymbolDocumentation	sDocumented;
 	Ptr<CTextArea>	pEditor;
 	CInt32Rect		cBounds;
 	CInt32Rect		cLine;
 	SInt32Vec2		sPoint;
 	size			uiStart;
 
-	if (!WriteDocumentation(pTab, uiPosition, false, mpDocumentation, &mszDocumentationName, &uiStart))
+	sDocumented.Init();
+	if (!FindDocumented(pTab, uiPosition, &sDocumented, &mszDocumentationName, &uiStart))
 	{
+		sDocumented.Kill();
 		return false;
 	}
+	WriteDocumented(&sDocumented, false, mpDocumentation);
+	sDocumented.Kill();
+	mszDocumentationEntry.Set("");
 	HideTip();
 	pEditor = pTab->GetEditor();
 	mpDocumentationTab = pTab;
@@ -1251,6 +1350,8 @@ void CIDEQuickInfo::PollDocumentation(void)
 	Ptr<CTextArea>			pEditor;
 	SIDEDocumentationLink*	psLink;
 	SIDELocation			sPlace;
+	SInt32Vec2				sPoint;
+	CChars					szKey;
 	size					i;
 
 	if (mpDocumentationTab.IsNull())
@@ -1282,6 +1383,17 @@ void CIDEQuickInfo::PollDocumentation(void)
 	if (!mpDocumentation->IsShown() || (pTab != mpDocumentationTab) || (mpcContent->GetWindow()->GetFocus()->GetFocussedComponent() != pTab->GetEditor()))
 	{
 		HideDocumentation();
+		return;
+	}
+	if (!mszDocumentationEntry.Empty())
+	{
+		//Of an entry of completion's list: it follows the selection there, and goes with the list.
+		szKey.Init();
+		if (!mpcContent->GetCompletion()->IsOpen() || !mpcContent->GetCompletion()->GetSelectedSymbol(&szKey, &sPoint) || (!szKey.Equals(mszDocumentationEntry) && !ShowEntryDocumentation()))
+		{
+			HideDocumentation();
+		}
+		szKey.Kill();
 		return;
 	}
 	pEditor = pTab->GetEditor();
@@ -1344,6 +1456,7 @@ bool CIDEQuickInfo::HideDocumentation(void)
 
 	bShown = IsDocumentationShown();
 	mpDocumentationTab = NULL;
+	mszDocumentationEntry.Set("");
 	mbDocumentationPinned = false;
 	mbDocumentationPressed = false;
 	mpDocumentation->Hide();
@@ -1485,6 +1598,7 @@ int64 CIDEQuickInfo::PollTip(int64 iNow)
 //////////////////////////////////////////////////////////////////////////
 bool CIDEQuickInfo::ShowTipAt(Ptr<CIDEEditorTab> pTab, size uiPosition)
 {
+	SIDESymbolDocumentation	sDocumented;
 	Ptr<CTextArea>	pEditor;
 	CInt32Rect		cBounds;
 	CInt32Rect		cLine;
@@ -1492,10 +1606,14 @@ bool CIDEQuickInfo::ShowTipAt(Ptr<CIDEEditorTab> pTab, size uiPosition)
 	size			uiStart;
 
 	HideTip();
-	if (!WriteDocumentation(pTab, uiPosition, true, mpTip, &mszTipName, &uiStart))
+	sDocumented.Init();
+	if (!FindDocumented(pTab, uiPosition, &sDocumented, &mszTipName, &uiStart))
 	{
+		sDocumented.Kill();
 		return false;
 	}
+	WriteDocumented(&sDocumented, true, mpTip);
+	sDocumented.Kill();
 	pEditor = pTab->GetEditor();
 	mpTipTab = pTab;
 	mpcContent->GetWindow()->Layout();

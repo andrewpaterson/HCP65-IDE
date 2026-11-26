@@ -143,6 +143,10 @@ void CIDECodeModel::Init(CBuildWorkspace* pcWorkspace)
 	mbEdits = false;
 	mapsEdited.Init();
 	mbEditsBusy = false;
+	mfEditsJob = NULL;
+	mpvEditsJobData = NULL;
+	muiEditsJobs = 0;
+	muiEditsJobsDone = 0;
 	miEditsDelay = 0;
 }
 
@@ -291,7 +295,7 @@ CSourceFile* CIDECodeModel::FindFileInUnit(CParsedUnit* pcUnit, const char* szFi
 // defines it.  NULL if it is only used.
 //
 //////////////////////////////////////////////////////////////////////////
-static SCPPIndexLocation* GetIDESymbolPlace(CCPPIndexSymbol* pcSymbol)
+SCPPIndexLocation* GetIDESymbolPlace(CCPPIndexSymbol* pcSymbol)
 {
 	SCPPIndexLocation*	psLocation;
 
@@ -776,7 +780,7 @@ int GetIDESymbolIconType(uint8 uiKind)
 // parameters ("(char const*)", "" if it isn't a function).
 //
 //////////////////////////////////////////////////////////////////////////
-static void SplitIDESymbolKey(const char* szKey, CChars* pszScope, CChars* pszName, CChars* pszParameters)
+void SplitIDESymbolKey(const char* szKey, CChars* pszScope, CChars* pszName, CChars* pszParameters)
 {
 	size	uiLength;
 	size	uiClose;

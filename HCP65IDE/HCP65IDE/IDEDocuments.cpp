@@ -221,6 +221,7 @@ Ptr<CIDEEditorTab> CIDEDocuments::OpenFileTab(const char* szFileName, size uiPro
 	pTab->GetEditor()->AddInputAction(CIC_PageDown, &mpcContent->GetQuickInfo(), &CIDEQuickInfo::ScrollAction)->SetGoesFirst(true);
 	pTab->GetEditor()->AddInputAction(CIC_LineUp, &mpcContent->GetQuickInfo(), &CIDEQuickInfo::ScrollAction)->SetGoesFirst(true);
 	pTab->GetEditor()->AddInputAction(CIC_LineDown, &mpcContent->GetQuickInfo(), &CIDEQuickInfo::ScrollAction)->SetGoesFirst(true);
+	mpcContent->GetCompletion()->AddEditorActions(pTab->GetEditor());
 	mpcContent->GetDebugging()->ShowBreakpoints(pTab);
 	mpcContent->GetBookmarks()->ShowBookmarks(pTab);
 	mpcContent->GetGitStatus()->ReadGitBase(pTab);

@@ -27,6 +27,9 @@
     <ClCompile Include="IDECodeModelEdits.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="IDECodeModelCompletion.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="IDEContent.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -142,6 +145,24 @@
       <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="IDEQuickInfo.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="IDECompletion.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="IDECompletionContext.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="IDELightTyper.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="IDEClassAccess.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="IDEExpressionTyper.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="IDEExpectedType.cpp">
       <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="IDESymbolInfo.cpp">
@@ -465,6 +486,24 @@
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDEQuickInfo.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDECompletion.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDECompletionContext.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDELightTyper.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDEClassAccess.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDEExpressionTyper.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="IDEExpectedType.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="IDESymbolInfo.h">

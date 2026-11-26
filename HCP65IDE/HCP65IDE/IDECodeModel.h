@@ -92,6 +92,51 @@ struct SIDECallRelation
 typedef CArrayTemplate<SIDECallRelation>	CArrayIDECallRelations;
 
 
+//A symbol a scope declares (CIDECodeModel::FindScopeSymbols): its key in parts ("CChars", "Append", "(char const*)"),
+//its kind, where it is (its definition, or else its declaration) and where it is declared (its first declaration, as
+//a class's member's is in the class; its definition if it has no other).  A local variable or a parameter has no
+//scope and no parameters.
+struct SIDEScopeSymbol
+{
+	CChars			szKey;
+	CChars			szScope;
+	CChars			szName;
+	CChars			szParameters;
+	uint8			uiKind;		//ECPPSymbolKind.
+	SIDELocation	sPlace;
+	SIDELocation	sDeclared;
+};
+
+
+typedef CArrayTemplate<SIDEScopeSymbol>	CArrayIDEScopeSymbols;
+
+
+//What CIDECodeModel::FindScopeSymbols is asked for: what the scopes paszScopes declare themselves (a class's or an
+//enum's members, what a namespace has; "" is what is outside any), in the scopes' order and then the index's.  With a
+//function (the place of its name in szFunctionFile, lines and columns from 0; NULL for none) its parameters and
+//local variables come first: those whose declaration the index has inside it.  With bEnumerators the enumerators of
+//the enums the scopes declare come last, as they are written without their enum.
+//
+//Fewer can be asked for, so that a large workspace's are found on a key: only those of one name (szName, NULL for
+//any), only those with a word of their name starting with a character whatever its case (cWordStart, 0 for any: the
+//first character of what is typed, which the name matcher wants at a word's start), and no more than uiMaximum of
+//them (0 for all).
+struct SIDEScopeQuery
+{
+	CArrayChars*	paszScopes;
+	const char*		szFunctionFile;
+	int32			iFunctionLine;
+	int32			iFunctionColumn;
+	bool			bEnumerators;
+	const char*		szName;
+	size			uiNameLength;
+	char			cWordStart;
+	size			uiMaximum;
+
+	void	Init(CArrayChars* paszInScopes);
+};
+
+
 //Full paths, whatever their case, to a project's index.
 typedef CHashMapString<int32, SArrayNaturalSize, SHashOfTextIgnoreCase>	CIDEProjectFiles;
 
@@ -240,6 +285,10 @@ protected:
 	CArrayIDEEditedFiles	mapsEdited;			//The files given it, until they are taken.
 	bool				mbEditsBusy;			//Under the index mutex.
 	int					miEditsDelay;			//Milliseconds the edits thread waits before it starts, for checking.
+	JobFunction			mfEditsJob;				//Something else the edits thread is doing (RunEditsJob), with its data,
+	void*				mpvEditsJobData;
+	size				muiEditsJobs;			//how many such it has been given, and how many it has finished: under the index mutex.
+	size				muiEditsJobsDone;
 
 public:
 	void	Init(CBuildWorkspace* pcWorkspace);
@@ -254,6 +303,10 @@ public:
 	bool	TakeEditedFiles(CArrayIDEEditedFiles* papsDest, bool bWait);
 	bool	IsProcessingEditedFiles(void);
 	void	RunEditsThread(void);
+	size	RunEditsJob(JobFunction fJob, void* pvData);
+	bool	IsEditsJobDone(size uiJob);
+	void	RunEditsThreadJob(void);
+	void	WaitForEditsThread(void);
 	void	SetEditsDelay(int iMilliseconds);
 	bool	FindDefinition(const char* szFileName, int iLine, int iColumn, SIDELocation* psDest);
 	bool	FindReferences(const char* szFileName, int iLine, int iColumn, CArrayIDELocations* pasDest, CChars* pszKey);
@@ -295,6 +348,9 @@ public:
 	bool	MakeIncludeName(const char* szIncluder, const char* szTarget, CChars* pszDest);
 	size	FindNeeds(const char* szUser, CArrayChars* paszDeclared, CArrayIDENeeds* pasDest);
 	size	FindHeadersDeclaring(const char* szName, CArrayChars* paszDest);
+	size	FindScopeSymbols(SIDEScopeQuery* psQuery, CArrayIDEScopeSymbols* pasDest);
+	bool	FindTypeSymbol(const char* szName, CArrayChars* paszScopes, CChars* pszKey, uint8* puiKind);
+	size	FindIncludeNames(const char* szIncluder, const char* szFolder, bool bSystem, CArrayChars* paszFiles, CArrayChars* paszFolders);
 
 protected:
 	void				WaitForProjectUsers(bool bForget) override;
@@ -327,6 +383,10 @@ int GetIDESymbolIconType(uint8 uiKind);
 void KillIDEIncludes(CArrayIDEIncludes* pasIncludes);
 void KillIDENeeds(CArrayIDENeeds* pasNeeds);
 void KillIDEFileRanges(CArrayIDEFileRanges* pasRanges);
+void KillIDEScopeSymbols(CArrayIDEScopeSymbols* pasSymbols);
+void SplitIDESymbolKey(const char* szKey, CChars* pszScope, CChars* pszName, CChars* pszParameters);
+SCPPIndexLocation* GetIDESymbolPlace(CCPPIndexSymbol* pcSymbol);
+bool FindIDEKeyName(const char* szKey, const char* szScope, size uiScopeLength, size* puiName);
 void MoveIDELocation(SIDELocation* psDest, SIDELocation* psSource);
 const char* GetIDEFileNamePart(const char* szPath);
 void KillIDEEditedFiles(CArrayIDEEditedFiles* papsFiles);

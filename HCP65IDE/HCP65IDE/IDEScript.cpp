@@ -4056,6 +4056,19 @@ void CIDEScript::RunViewStep(const char* szStep)
 			}
 		}
 	}
+	else if (strcmp(szStep, "printcompletion") == 0)
+	{
+		//Completion's list: "Completion: member [Get] 2 rows" and its rows, the selected one marked
+		//(CIDECompletion::Print), as it is once it has followed what was typed.
+		CChars	szShown;
+
+		mpcContent->GetCompletion()->Poll();
+		szShown.Init();
+		mpcContent->GetCompletion()->Print(&szShown);
+		printf("%s", szShown.Text());
+		szShown.Kill();
+		fflush(stdout);
+	}
 	else if ((strncmp(szStep, "tiphover:", 9) == 0) && pTab.IsNotNull())
 	{
 		//tiphover:<line>:<column>, from 1: as the pointer resting on that character; tiphover:off takes it away.
@@ -4536,9 +4549,11 @@ void CIDEScript::RunViewStep(const char* szStep)
 		else if (strncmp(&szStep[4], "type:", 5) == 0)
 		{
 			//key:type:<characters>, each typed as its key would.
+			//Completion sees each, as it does at the tick after each key.
 			for (i = 9; szStep[i] != '\0'; i++)
 			{
 				mpcContent->GetWindow()->InputPrintable(szStep[i], true);
+				mpcContent->GetCompletion()->Poll();
 			}
 		}
 		else if (strcmp(&szStep[4], "space") == 0)

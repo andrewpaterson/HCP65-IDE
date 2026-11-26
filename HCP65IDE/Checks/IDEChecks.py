@@ -38,6 +38,9 @@ RENAME_FILE = os.path.join(HERE, 'Input', 'RenameFile', 'RenameFile.sln')
 #changed in it.
 NAVIGATION = os.path.join(HERE, 'Input', 'Navigation', 'Navigation.vcxproj')
 QUICK_INFO = os.path.join(HERE, 'Input', 'QuickInfo', 'QuickInfo.vcxproj')
+#CVehicle and CTruck with members of every access, a namespace, an enum, a typedef and a template that holds, and a
+#header in a folder (Input/Completion): what code completion lists.
+COMPLETION = os.path.join(HERE, 'Input', 'Completion', 'Completion.vcxproj')
 #CGauge with comments of every kind over and beside what it declares, and two pages that name it (Input/Documentation).
 DOCUMENTATION = os.path.join(HERE, 'Input', 'Documentation', 'Documentation.vcxproj')
 BASES = os.path.join(HERE, 'Input', 'Bases', 'Bases.vcxproj')
@@ -4283,7 +4286,7 @@ CHECKS = [
 		[r'^Menu File: New>, Save File as Template\.\.\., Open Project/Solution\.\.\., Add Solution\.\.\., Close Solution, Recent Solutions>, Clear Recent Solutions, Save \[Ctrl\+S\], Save All \[Ctrl\+Shift\+S\], Compare with File\.\.\., Settings\.\.\. \[Ctrl\+Alt\+S\], Exit$',
 		 r'^Menu File/New: C\+\+ Class\.\.\., C\+\+ Header\.\.\., C\+\+ Source\.\.\.$',
 		 r'^Menu File/Recent Solutions: 1 ',
-		 r'^Menu Edit: Undo \[Ctrl\+Z\](\(disabled\))?, Redo \[Ctrl\+Shift\+Z\](\(disabled\))?, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\], Select All \[Ctrl\+A\], Extend Selection \[Ctrl\+W\], Shrink Selection \[Ctrl\+Shift\+W\], Find\.\.\. \[Ctrl\+F\], Replace\.\.\. \[Ctrl\+R\], Find Next \[F3\], Find Previous \[Shift\+F3\], Find Word at Caret \[Ctrl\+F3\], Find in Files\.\.\. \[Ctrl\+Shift\+F\], Replace in Files\.\.\. \[Ctrl\+Shift\+R\], Find Duplicates\.\.\. \[Ctrl\+Alt\+Shift\+D\]$',
+		 r'^Menu Edit: Undo \[Ctrl\+Z\](\(disabled\))?, Redo \[Ctrl\+Shift\+Z\](\(disabled\))?, Cut \[Ctrl\+X\], Copy \[Ctrl\+C\], Paste \[Ctrl\+V\], Paste from History\.\.\. \[Ctrl\+Shift\+V\], Select All \[Ctrl\+A\], Extend Selection \[Ctrl\+W\], Shrink Selection \[Ctrl\+Shift\+W\], Find\.\.\. \[Ctrl\+F\], Replace\.\.\. \[Ctrl\+R\], Find Next \[F3\], Find Previous \[Shift\+F3\], Find Word at Caret \[Ctrl\+F3\], Find in Files\.\.\. \[Ctrl\+Shift\+F\], Replace in Files\.\.\. \[Ctrl\+Shift\+R\], Find Duplicates\.\.\. \[Ctrl\+Alt\+Shift\+D\], Complete Code \[Ctrl\+Space\], Complete Code by Type \[Ctrl\+Shift\+Space\]$',
 		 r'^Menu Navigate: Back \[Ctrl\+Alt\+Left\](\(disabled\))?, Forward \[Ctrl\+Alt\+Right\](\(disabled\))?, Class\.\.\. \[Ctrl\+N\], File\.\.\. \[Ctrl\+Shift\+N\], Symbol\.\.\. \[Ctrl\+Alt\+Shift\+N\], Action\.\.\. \[Ctrl\+Shift\+A\], Line:Column\.\.\. \[Ctrl\+G\], Go to Source \[Ctrl\+B\], Go to Definition \[F12\], Go to Implementation\(s\) \[Ctrl\+Alt\+B\], Go to Type Declaration \[Ctrl\+Shift\+B\], Go to Super Method \[Ctrl\+U\], Go to Related Symbol \[Ctrl\+Alt\+Home\], Switch Header/Source \[Alt\+O\], File Structure \[Ctrl\+F12\], Next Method \[Alt\+Down\], Previous Method \[Alt\+Up\], Toggle Bookmark \[Ctrl\+F11\], Toggle Bookmark with Mnemonic\.\.\. \[Ctrl\+Shift\+F11\], Next Bookmark \[F2\], Previous Bookmark \[Shift\+F2\], Next Change \[Ctrl\+Alt\+Shift\+Down\], Previous Change \[Ctrl\+Alt\+Shift\+Up\], Highlight Usages in File \[Ctrl\+Shift\+F7\], Recent Files \[Ctrl\+E\], Recent Locations \[Ctrl\+Shift\+E\], Last Edit Location \[Ctrl\+Shift\+Backspace\], Next Edit Location, Select In\.\.\. \[Alt\+F1\], Type Hierarchy \[Ctrl\+H\], Method Hierarchy \[Ctrl\+Shift\+H\], Call Hierarchy \[Ctrl\+Alt\+H\], Find Usages \[Alt\+F7\], Show Usages \[Ctrl\+Alt\+F7\], Find All References \[Shift\+F12\], Find Usages Settings\.\.\. \[Ctrl\+Alt\+Shift\+F7\], Next Occurrence \[Ctrl\+Alt\+Down\], Previous Occurrence \[Ctrl\+Alt\+Up\]$',
 		 r'^Menu View: Solution Explorer \[Alt\+1\], Structure \[Alt\+7\], Find Usages \[Alt\+3\], Find \[Alt\+9\], Duplicates, Bookmarks \[Alt\+2\], Hierarchy \[Alt\+8\], Build \[Alt\+6\], Indexing, Problems, Run \[Alt\+4\], Debug \[Alt\+5\], Locals, Call Stack, Autos, Watch 1, Watch 2, Watch 3, Watch 4, Claude, Hide All Tool Windows \[Ctrl\+Shift\+F12\], Jump to Last Tool Window(\(disabled\))?, Quick Definition \[Ctrl\+Shift\+I\], Parameter Info \[Ctrl\+P\], Type Info \[Ctrl\+Shift\+P\], Quick Documentation \[Ctrl\+Q\], Increase Font Size \[Ctrl\+=\], Decrease Font Size \[Ctrl\+-\], Reset Font Size \[Ctrl\+0\]$',
 		 r'^Menu Git: Compare with HEAD, Compare with Branch\.\.\., Compare with Revision\.\.\.$',
@@ -5212,6 +5215,131 @@ CHECKS = [
 		'SETTINGS': MakeSettingsFile('<?xml version="1.0" encoding="UTF-8"?>\n<Settings>\n  <Editor Breadcrumbs="true" StickyLines="true" NameToolTips="false"/>\n</Settings>\n'),
 		'DEBUG': 'edit:printcrumbs,edit:pointer:95:12,wait:900,edit:printinfo'},
 		[r'^Tip: none$'], [r'ERROR', r'^Tip: \[']),
+	('completion-member', {
+		#After "." and "->" the list opens by itself with the fields and functions of what is before them, its base
+		#classes' after its own, and only what can be used there (CVehicle's private and protected members aren't):
+		#a parameter's class; what a call returns, a typedef of a pointer too; a class by value; a template that
+		#holds one, by "->" what it holds and by "." its own; a cast in brackets; an indexed pointer.  Nothing
+		#where what is before them is no class: "this" outside a class, an int, a void.
+		'SOLUTION': COMPLETION, 'WAIT_INDEX': '1', 'OPEN': 'Vehicle.cpp', 'CARET': '77:1',
+		'DEBUG': 'edit:printcrumbs,edit:key:escape,edit:caret:77:1,edit:selectto:77:200,edit:key:type:\tpcVehicle->,edit:printline:77,edit:printcompletion,'
+		         'edit:key:escape,edit:caret:77:1,edit:selectto:77:200,edit:key:type:\tpcVehicle->GetWheel(1)->,edit:printline:77,edit:printcompletion,edit:key:escape,'
+		         'edit:caret:77:1,edit:selectto:77:200,edit:key:type:\tpcVehicle->GetSpare()->,edit:printline:77,edit:printcompletion,edit:key:escape,edit:caret:77:1,'
+		         'edit:selectto:77:200,edit:key:type:\tcTruck.,edit:printline:77,edit:printcompletion,edit:key:escape,edit:caret:77:1,edit:selectto:77:200,'
+		         'edit:key:type:\tcHeld->,edit:printline:77,edit:printcompletion,edit:key:escape,edit:caret:77:1,edit:selectto:77:200,edit:key:type:\tcHeld.,'
+		         'edit:printline:77,edit:printcompletion,edit:key:escape,edit:caret:77:1,edit:selectto:77:200,edit:key:type:\t((CTruck*)pcVehicle)->,edit:printline:77,'
+		         'edit:printcompletion,edit:key:escape,edit:caret:77:1,edit:selectto:77:200,edit:key:type:\tpcWheel[0].,edit:printline:77,edit:printcompletion,'
+		         'edit:key:escape,edit:caret:77:1,edit:selectto:77:200,edit:key:type:\tthis->,edit:printline:77,edit:printcompletion,edit:key:escape,edit:caret:77:1,'
+		         'edit:selectto:77:200,edit:key:type:\tpcVehicle->GetSpeed().,edit:printline:77,edit:printcompletion,edit:key:escape,edit:caret:77:1,'
+		         'edit:selectto:77:200,edit:key:type:\tpcVehicle->SetSpeed(1).,edit:printline:77,edit:printcompletion,edit:key:escape'},
+		[r'^Completion: member \[\] 8 rows$', r'^  > meKind \| EVehicleKind$', r'^    Init\(EVehicleKind eKind\) \| void$', r'^    GetSpeed\(\) \| int$', r'^    SetSpeed\(int iSpeed\) \| void$', r'^    SetSpeed\(int iSpeed, int iGear\) \| void$', r'^    GetWheel\(int iIndex\) \| CWheel\*$', r'^    GetSpare\(\) \| WheelPointer$', r'^    Count\(\) \| int$', r'^Completion: member \[\] 3 rows$', r'^  > miPressure \| int$', r'^    Inflate\(int iPressure\) \| void$', r'^    GetPressure\(\) \| int$', r'^Line 77: \[\	pcVehicle->GetSpare\(\)->\]$', r'^Completion: member \[\] 3 rows$', r'^  > miPressure \| int$', r'^    Inflate\(int iPressure\) \| void$', r'^    GetPressure\(\) \| int$', r'^Completion: member \[\] 11 rows$', r'^  > miLoad \| int$', r'^    Load\(int iWeight\) \| void$', r'^    GetLoad\(\) \| int$', r'^    meKind \| EVehicleKind$', r'^    Init\(EVehicleKind eKind\) \| void$', r'^    GetSpeed\(\) \| int$', r'^    SetSpeed\(int iSpeed\) \| void$', r'^    SetSpeed\(int iSpeed, int iGear\) \| void$', r'^    GetWheel\(int iIndex\) \| CWheel\*$', r'^    GetSpare\(\) \| WheelPointer$', r'^    Count\(\) \| int$', r'^Line 77: \[\	cHeld->\]$', r'^Completion: member \[\] 8 rows$', r'^  > meKind \| EVehicleKind$', r'^    Init\(EVehicleKind eKind\) \| void$', r'^    GetSpeed\(\) \| int$', r'^    SetSpeed\(int iSpeed\) \| void$', r'^    SetSpeed\(int iSpeed, int iGear\) \| void$', r'^    GetWheel\(int iIndex\) \| CWheel\*$', r'^    GetSpare\(\) \| WheelPointer$', r'^    Count\(\) \| int$', r'^Completion: member \[\] 2 rows$', r'^  > mpHeld \| M\*$', r'^    Get\(\) \| M\*$', r'^Completion: member \[\] 11 rows$', r'^  > miLoad \| int$', r'^    Load\(int iWeight\) \| void$', r'^    GetLoad\(\) \| int$', r'^    meKind \| EVehicleKind$', r'^    Init\(EVehicleKind eKind\) \| void$', r'^    GetSpeed\(\) \| int$', r'^    SetSpeed\(int iSpeed\) \| void$', r'^    SetSpeed\(int iSpeed, int iGear\) \| void$', r'^    GetWheel\(int iIndex\) \| CWheel\*$', r'^    GetSpare\(\) \| WheelPointer$', r'^    Count\(\) \| int$', r'^Line 77: \[\	pcWheel\[0\]\.\]$', r'^Completion: member \[\] 3 rows$', r'^  > miPressure \| int$', r'^    Inflate\(int iPressure\) \| void$', r'^    GetPressure\(\) \| int$', r'^Line 77: \[\	this->\]$', r'^Completion: none$', r'^Completion: none$', r'^Completion: none$'], [r'ERROR', r'miSerial', r'macWheels', r'Service', r'Scrap', r'operator']),
+	('completion-scope', {
+		#After "::" the list opens by itself with what the namespace or class before it declares, and with nothing
+		#before it what is outside any scope; a call through a namespace is typed as any other.
+		'SOLUTION': COMPLETION, 'WAIT_INDEX': '1', 'OPEN': 'Vehicle.cpp', 'CARET': '77:1',
+		'DEBUG': 'edit:printcrumbs,edit:key:escape,edit:caret:77:1,edit:selectto:77:200,edit:key:type:\tGarage::,edit:printline:77,edit:printcompletion,edit:key:escape,'
+		         'edit:caret:77:1,edit:selectto:77:200,edit:key:type:\tGarage::Find(1)->,edit:printline:77,edit:printcompletion,edit:key:escape,edit:caret:77:1,'
+		         'edit:selectto:77:200,edit:key:type:\tCVehicle::,edit:printline:77,edit:printcompletion,edit:key:escape,edit:caret:77:1,edit:selectto:77:200,'
+		         'edit:key:type:\t::,edit:printline:77,edit:printcompletion,edit:key:escape'},
+		[r'^Completion: scope \[\] 3 rows$', r'^  > Park\(CVehicle\* pcVehicle\) \| int$', r'^    Find\(int iSerial\) \| CVehicle\*$', r'^    giSpaces \| int$', r'^Completion: member \[\] 8 rows$', r'^  > meKind \| EVehicleKind$', r'^    Init\(EVehicleKind eKind\) \| void$', r'^    GetSpeed\(\) \| int$', r'^    SetSpeed\(int iSpeed\) \| void$', r'^    SetSpeed\(int iSpeed, int iGear\) \| void$', r'^    GetWheel\(int iIndex\) \| CWheel\*$', r'^    GetSpare\(\) \| WheelPointer$', r'^    Count\(\) \| int$', r'^Completion: scope \[\] 8 rows$', r'^  > meKind \| EVehicleKind$', r'^    Init\(EVehicleKind eKind\) \| void$', r'^    GetSpeed\(\) \| int$', r'^    SetSpeed\(int iSpeed\) \| void$', r'^    SetSpeed\(int iSpeed, int iGear\) \| void$', r'^    GetWheel\(int iIndex\) \| CWheel\*$', r'^    GetSpare\(\) \| WheelPointer$', r'^    Count\(\) \| int$', r'^Completion: scope \[\] 8 rows$', r'^  > CTruck$', r'^    CVehicle$', r'^    CWheel$', r'^    EVehicleKind$', r'^    WheelPointer$', r'^    CHolder$', r'^    Garage$', r'^    Drive\(CVehicle\* pcVehicle, CTruck cTruck, CHolder<CVehicle> cHeld\) \| int$'], [r'ERROR', r'miSerial']),
+	('completion-access', {
+		#In a member function of CTruck, which CVehicle is a base of: its own members and CVehicle's public and
+		#protected ones, by name and through "this", and never CVehicle's private ones.  Names that start with what
+		#is typed come before those that only have it in them, the nearest in scope first, the language's words
+		#after what is declared.
+		'SOLUTION': COMPLETION, 'WAIT_INDEX': '1', 'OPEN': 'Vehicle.cpp', 'CARET': '77:1',
+		'DEBUG': 'edit:printcrumbs,edit:key:escape,edit:caret:56:1,edit:selectto:56:200,edit:key:type:\tmi,command:Edit.CompleteCode,edit:printline:56,'
+		         'edit:printcompletion,edit:key:escape,edit:caret:56:1,edit:selectto:56:200,edit:key:type:\tthis->,edit:printline:56,edit:printcompletion,'
+		         'edit:key:escape,edit:caret:56:1,edit:selectto:56:200,edit:key:type:\tS,command:Edit.CompleteCode,edit:printline:56,edit:printcompletion,'
+		         'edit:key:escape'},
+		[r'^Completion: name \[mi\] 2 rows$', r'^  > miLoad \| int$', r'^    miSpeed \| int$', r'^Completion: member \[\] 14 rows$', r'^  > miLoad \| int$', r'^    Load\(int iWeight\) \| void$', r'^    GetLoad\(\) \| int$', r'^    macWheels \| CWheel\[VEHICLE_WHEELS\]$', r'^    miSpeed \| int$', r'^    meKind \| EVehicleKind$', r'^    Init\(EVehicleKind eKind\) \| void$', r'^    GetSpeed\(\) \| int$', r'^    SetSpeed\(int iSpeed\) \| void$', r'^    SetSpeed\(int iSpeed, int iGear\) \| void$', r'^    GetWheel\(int iIndex\) \| CWheel\*$', r'^    GetSpare\(\) \| WheelPointer$', r'^    Count\(\) \| int$', r'^    Service\(\) \| void$', r'^Completion: name \[S\] 14 rows$', r'^  > SetSpeed\(int iSpeed\) \| void$', r'^    SetSpeed\(int iSpeed, int iGear\) \| void$', r'^    Service\(\) \| void$', r'^    short$', r'^    switch$', r'^    miSpeed \| int$', r'^    GetSpeed\(\) \| int$', r'^    GetSpare\(\) \| WheelPointer$'], [r'ERROR', r'miSerial', r'Scrap']),
+	('completion-name', {
+		#Complete Code (Control+Space) on a name: what is in scope that it matches, the function's parameters and
+		#locals first, then what is outside (an enum's enumerators by themselves), then the language's words.  With
+		#one match it is written at once; a function is written with its brackets, the caret between them, and its
+		#parameters shown.  Where nothing matches the status line says so.
+		'SOLUTION': COMPLETION, 'WAIT_INDEX': '1', 'OPEN': 'Vehicle.cpp', 'CARET': '77:1',
+		'DEBUG': 'edit:printcrumbs,edit:key:escape,edit:caret:77:1,edit:selectto:77:200,edit:key:type:\ti,command:Edit.CompleteCode,edit:printline:77,'
+		         'edit:printcompletion,edit:key:escape,edit:caret:77:1,edit:selectto:77:200,edit:key:type:\tpc,command:Edit.CompleteCode,edit:printline:77,'
+		         'edit:printcompletion,edit:key:escape,edit:caret:77:1,edit:selectto:77:200,edit:key:type:\tVK,command:Edit.CompleteCode,edit:printline:77,'
+		         'edit:printcompletion,edit:key:escape,edit:caret:77:1,edit:selectto:77:200,edit:key:type:\tiDi,command:Edit.CompleteCode,edit:printline:77,'
+		         'edit:printcompletion,edit:key:escape,edit:caret:77:1,edit:selectto:77:200,edit:key:type:\tGarage::Pa,command:Edit.CompleteCode,edit:printline:77,'
+		         'edit:printcompletion,edit:printinfo,edit:key:escape,edit:caret:77:1,edit:selectto:77:200,edit:key:type:\tzq,command:Edit.CompleteCode,'
+		         'edit:printline:77,edit:printcompletion,printstatus,edit:key:escape'},
+		[r'^Completion: name \[i\] 4 rows$', r'^  > iDistance \| int$', r'^    if$', r'^    inline$', r'^    int$', r'^Completion: name \[pc\] 2 rows$', r'^  > pcVehicle \| CVehicle\*$', r'^    pcWheel \| CWheel\*$', r'^Completion: name \[VK\] 3 rows$', r'^  > VK_Car \| EVehicleKind$', r'^    VK_Truck \| EVehicleKind$', r'^    EVehicleKind$', r'^Line 77: \[\	iDistance\]$', r'^Completion: none$', r'^Line 77: \[\	Garage::Park\(\)\]$', r'^Completion: none$', r'^Info: parameters$', r'^  \[CVehicle\* pcVehicle\]$', r'^Line 77: \[\	zq\]$', r'^Completion: none$', r'^Status line: Nothing is known to complete what is at the caret\.$'], [r'ERROR']),
+	('completion-keys', {
+		#The editor keeps the keys.  What is typed after the list opens filters it; Up and Down move through it,
+		#round its ends, and Page Down goes to its end; the caret moving back inside the name filters by less, and
+		#out of the name closes it, as typing what nothing matches does, and Escape, which leaves what was typed.
+		#Nothing opens in a comment or a string.  Enter writes the selected entry in place of what was typed of it
+		#(a function with its brackets and its parameters shown); Tab in place of the whole name the caret is in,
+		#whose bracket is kept.
+		'SOLUTION': COMPLETION, 'WAIT_INDEX': '1', 'OPEN': 'Vehicle.cpp', 'CARET': '77:1',
+		'DEBUG': 'edit:printcrumbs,edit:key:escape,edit:caret:77:1,edit:selectto:77:200,edit:key:type:\tpcVehicle->Ge,edit:printcompletion,edit:tap:Cursor Up,'
+		         'edit:printcompletion,edit:tap:Cursor Down,edit:tap:Cursor Down,edit:printcompletion,edit:tap:Page Down,edit:printcompletion,edit:tap:Cursor Left,'
+		         'edit:printcompletion,edit:tap:Cursor Left,edit:tap:Cursor Left,edit:tap:Cursor Left,edit:printcompletion,edit:key:escape,edit:caret:77:1,'
+		         'edit:selectto:77:200,edit:key:type:\tpcVehicle->Gezz,edit:printcompletion,edit:key:escape,edit:caret:77:1,edit:selectto:77:200,'
+		         'edit:key:type:\tpcVehicle->Get,edit:printcompletion,edit:key:escape,edit:printcompletion,edit:printline:77,edit:key:escape,edit:caret:77:1,'
+		         'edit:selectto:77:200,edit:key:type:\t//pcVehicle->,edit:printcompletion,command:Edit.CompleteCode,printstatus,edit:key:escape,edit:caret:77:1,'
+		         'edit:selectto:77:200,edit:key:type:\tszName = "pcVehicle->,edit:printcompletion,edit:key:escape,edit:caret:77:1,edit:selectto:77:200,'
+		         'edit:key:type:\tpcVehicle->GetW,edit:tap:Enter,edit:printline:77,edit:printinfo,edit:printcompletion,edit:key:escape,edit:caret:77:1,'
+		         'edit:selectto:77:200,edit:key:type:\t,edit:caret:76:26,command:Edit.CompleteCode,edit:printcompletion,edit:tap:Cursor Down,edit:tap:Cursor Down,'
+		         'edit:tap:Tab,edit:printline:76,edit:printcompletion,edit:caret:76:26,command:Edit.CompleteCode,edit:tap:Enter,edit:printline:76,edit:print'},
+		[r'^Completion: member \[Ge\] 3 rows$', r'^  > GetSpeed\(\) \| int$', r'^    GetWheel\(int iIndex\) \| CWheel\*$', r'^    GetSpare\(\) \| WheelPointer$', r'^Completion: member \[Ge\] 3 rows$', r'^    GetSpeed\(\) \| int$', r'^    GetWheel\(int iIndex\) \| CWheel\*$', r'^  > GetSpare\(\) \| WheelPointer$', r'^Completion: member \[Ge\] 3 rows$', r'^    GetSpeed\(\) \| int$', r'^  > GetWheel\(int iIndex\) \| CWheel\*$', r'^    GetSpare\(\) \| WheelPointer$', r'^Completion: member \[Ge\] 3 rows$', r'^    GetSpeed\(\) \| int$', r'^    GetWheel\(int iIndex\) \| CWheel\*$', r'^  > GetSpare\(\) \| WheelPointer$', r'^Completion: member \[G\] 3 rows$', r'^Completion: none$', r'^Completion: none$', r'^Completion: member \[Get\] 3 rows$', r'^Completion: none$', r'^Line 77: \[\	pcVehicle->Get\]$', r'^Completion: none$', r'^Status line: Nothing is known to complete what is at the caret\.$', r'^Completion: none$', r'^Line 77: \[\	pcVehicle->GetWheel\(\)\]$', r'^Info: parameters$', r'^  \[int iIndex\]$', r'^Completion: none$', r'^Completion: member \[Get\] 3 rows$', r'^Line 76: \[\	pcWheel = pcVehicle->GetSpare\(0\);\]$', r'^Completion: none$', r'^Line 76: \[\	pcWheel = pcVehicle->GetSpeed\(\)Spare\(0\);\]$'], [r'ERROR']),
+	('completion-include', {
+		#In an #include's name: the folders and headers of the directories it is looked for in.  A folder is written
+		#with its slash and the list opens again for what it has; a header ends the name with its quote.  After the
+		#name is closed there is nothing to complete.
+		'SOLUTION': COMPLETION, 'WAIT_INDEX': '1', 'OPEN': 'Vehicle.cpp', 'CARET': '77:1',
+		'DEBUG': 'edit:printcrumbs,edit:key:escape,edit:caret:2:1,edit:selectto:2:200,edit:key:type:#include "Pa,command:Edit.CompleteCode,edit:printcompletion,'
+		         'edit:tap:Enter,edit:printline:2,edit:printcompletion,edit:tap:Enter,edit:printline:2,edit:printcompletion,edit:key:escape,edit:caret:2:1,'
+		         'edit:selectto:2:200,edit:key:type:#include "Vehic,command:Edit.CompleteCode,edit:printline:2,edit:printcompletion,edit:key:escape,edit:caret:2:1,'
+		         'edit:selectto:2:200,edit:key:type:#include "Parts/Wheel.h",command:Edit.CompleteCode,printstatus,edit:print'},
+		[r'^  > Parts \| folder$', r'^Line 2: \[\#include "Parts/\]$', r'^Completion: include \[\] 1 rows$', r'^  > Wheel\.h$', r'^Line 2: \[\#include "Parts/Wheel\.h"\]$', r'^Completion: none$', r'^Line 2: \[\#include "Vehicle\.h"\]$', r'^Completion: none$', r'^Status line: Nothing is known to complete what is at the caret\.$'], [r'ERROR']),
+	('completion-parse', {
+		#What the light typer can't say, the compiler's type checker does, on the edits thread (slowed here so that
+		#the wait is seen): what a template's function returns, and a pointer with a star before it.  The list
+		#opens with nothing and says it is working, then has what the parse found; it closes where the parse finds
+		#no class either.  Where the light typer did say, the list is there at once and the parse adds nothing to
+		#it.  What is typed while it works filters what comes.
+		'SOLUTION': COMPLETION, 'WAIT_INDEX': '1', 'OPEN': 'Vehicle.cpp', 'CARET': '77:1', 'EDITS_DELAY': '600', 
+		'DEBUG': 'edit:printcrumbs,edit:key:escape,edit:caret:77:1,edit:selectto:77:200,edit:key:type:\tcHeld.Get()->,edit:printline:77,edit:printcompletion,wait:2500,'
+		         'edit:printcompletion,edit:key:escape,edit:caret:77:1,edit:selectto:77:200,edit:key:type:\t(*pcVehicle).,edit:printline:77,edit:printcompletion,'
+		         'wait:2500,edit:printcompletion,edit:key:escape,edit:caret:77:1,edit:selectto:77:200,edit:key:type:\tpcVehicle->GetSpeed().,edit:printline:77,'
+		         'edit:printcompletion,wait:2500,edit:printcompletion,edit:key:escape,edit:caret:77:1,edit:selectto:77:200,edit:key:type:\tpcVehicle->,edit:printline:77,'
+		         'edit:printcompletion,wait:2500,edit:printcompletion,edit:key:escape,edit:caret:77:1,edit:selectto:77:200,edit:key:type:\tcHeld.Get()->,'
+		         'edit:key:type:Ge,edit:printcompletion,wait:2500,edit:printcompletion,edit:key:escape'},
+		[r'^Line 77: \[\	cHeld\.Get\(\)->\]$', r'^Completion: member \[\] 0 rows, working$', r'^Completion: member \[\] 8 rows$', r'^  > meKind \| EVehicleKind$', r'^    Init\(EVehicleKind eKind\) \| void$', r'^    GetSpeed\(\) \| int$', r'^    SetSpeed\(int iSpeed\) \| void$', r'^    SetSpeed\(int iSpeed, int iGear\) \| void$', r'^    GetWheel\(int iIndex\) \| CWheel\*$', r'^    GetSpare\(\) \| WheelPointer$', r'^    Count\(\) \| int$', r'^Line 77: \[\	\(\*pcVehicle\)\.\]$', r'^Completion: member \[\] 0 rows, working$', r'^Completion: member \[\] 8 rows$', r'^  > meKind \| EVehicleKind$', r'^    Init\(EVehicleKind eKind\) \| void$', r'^    GetSpeed\(\) \| int$', r'^    SetSpeed\(int iSpeed\) \| void$', r'^    SetSpeed\(int iSpeed, int iGear\) \| void$', r'^    GetWheel\(int iIndex\) \| CWheel\*$', r'^    GetSpare\(\) \| WheelPointer$', r'^    Count\(\) \| int$', r'^Line 77: \[\	pcVehicle->GetSpeed\(\)\.\]$', r'^Completion: member \[\] 0 rows, working$', r'^Completion: none$', r'^Line 77: \[\	pcVehicle->\]$', r'^Completion: member \[\] 8 rows, working$', r'^  > meKind \| EVehicleKind$', r'^    Init\(EVehicleKind eKind\) \| void$', r'^    GetSpeed\(\) \| int$', r'^    SetSpeed\(int iSpeed\) \| void$', r'^    SetSpeed\(int iSpeed, int iGear\) \| void$', r'^    GetWheel\(int iIndex\) \| CWheel\*$', r'^    GetSpare\(\) \| WheelPointer$', r'^    Count\(\) \| int$', r'^Completion: member \[\] 8 rows$', r'^  > meKind \| EVehicleKind$', r'^    Init\(EVehicleKind eKind\) \| void$', r'^    GetSpeed\(\) \| int$', r'^    SetSpeed\(int iSpeed\) \| void$', r'^    SetSpeed\(int iSpeed, int iGear\) \| void$', r'^    GetWheel\(int iIndex\) \| CWheel\*$', r'^    GetSpare\(\) \| WheelPointer$', r'^    Count\(\) \| int$', r'^Completion: member \[Ge\] 0 rows, working$', r'^Completion: member \[Ge\] 3 rows$', r'^  > GetSpeed\(\) \| int$', r'^    GetWheel\(int iIndex\) \| CWheel\*$', r'^    GetSpare\(\) \| WheelPointer$'], [r'ERROR', r'miSerial']),
+	('completion-by-type', {
+		#Complete Code by Type (Control+Shift+Space): only what has the type wanted where the caret is.  The right of
+		#an "=" wants what the left is (a variable being declared, its type); an argument, its parameter's type, of
+		#every function of the name; "return", what the function returns; "==", what the left is, and an enum's
+		#enumerators are of it.  After "->" it is the members that are filtered, a typedef of the pointer wanted
+		#fitting it.  Where nothing says what is wanted, or nothing has it, the status line says so; with one entry
+		#for what is typed it is written at once.
+		'SOLUTION': COMPLETION, 'WAIT_INDEX': '1', 'OPEN': 'Vehicle.cpp', 'CARET': '77:1', 
+		'DEBUG': 'edit:printcrumbs,edit:key:escape,edit:caret:77:1,edit:selectto:77:200,edit:key:type:\tpcWheel = ,command:Edit.CompleteCodeByType,edit:printline:77,'
+		         'edit:printcompletion,edit:key:escape,edit:caret:77:1,edit:selectto:77:200,edit:key:type:\tpcVehicle->SetSpeed(,command:Edit.CompleteCodeByType,'
+		         'edit:printline:77,edit:printcompletion,edit:key:escape,edit:caret:77:1,edit:selectto:77:200,edit:key:type:\treturn ,command:Edit.CompleteCodeByType,'
+		         'edit:printline:77,edit:printcompletion,edit:key:escape,edit:caret:77:1,edit:selectto:77:200,edit:key:type:\tpcVehicle->Init(,'
+		         'command:Edit.CompleteCodeByType,edit:printline:77,edit:printcompletion,edit:key:escape,edit:caret:77:1,edit:selectto:77:200,'
+		         'edit:key:type:\tCVehicle* pcOther = ,command:Edit.CompleteCodeByType,edit:printline:77,edit:printcompletion,edit:key:escape,edit:caret:77:1,'
+		         'edit:selectto:77:200,edit:key:type:\tiDistance = pcVehicle->,command:Edit.CompleteCodeByType,edit:printline:77,edit:printcompletion,edit:key:escape,'
+		         'edit:caret:77:1,edit:selectto:77:200,edit:key:type:\tif (pcVehicle->meKind == ,command:Edit.CompleteCodeByType,edit:printline:77,edit:printcompletion,'
+		         'edit:key:escape,edit:caret:77:1,edit:selectto:77:200,edit:key:type:\tpcWheel = pcVehicle->,command:Edit.CompleteCodeByType,edit:printline:77,'
+		         'edit:printcompletion,edit:key:escape,edit:caret:77:1,edit:selectto:77:200,edit:key:type:\tx + ,command:Edit.CompleteCodeByType,printstatus,'
+		         'edit:key:escape,edit:caret:77:1,edit:selectto:77:200,edit:key:type:\tpcWheel = pc,command:Edit.CompleteCodeByType,edit:printline:77,edit:key:escape,'
+		         'edit:caret:77:1,edit:selectto:77:200,edit:key:type:\tCTruck* pcBig = ,command:Edit.CompleteCodeByType,printstatus,edit:print'},
+		[r'^Completion: name of CWheel\* \[\] 1 rows$', r'^  > pcWheel \| CWheel\*$', r'^Line 77: \[\	pcVehicle->SetSpeed\(\]$', r'^Completion: name of int \[\] 2 rows$', r'^  > iDistance \| int$', r'^    Drive\(CVehicle\* pcVehicle, CTruck cTruck, CHolder<CVehicle> cHeld\) \| int$', r'^Line 77: \[\	return \]$', r'^Completion: name of int \[\] 2 rows$', r'^  > iDistance \| int$', r'^    Drive\(CVehicle\* pcVehicle, CTruck cTruck, CHolder<CVehicle> cHeld\) \| int$', r'^Completion: name of EVehicleKind \[\] 2 rows$', r'^  > VK_Car \| EVehicleKind$', r'^    VK_Truck \| EVehicleKind$', r'^Completion: name of CVehicle\* \[\] 1 rows$', r'^  > pcVehicle \| CVehicle\*$', r'^Line 77: \[\	iDistance = pcVehicle->\]$', r'^Completion: member of int \[\] 2 rows$', r'^  > GetSpeed\(\) \| int$', r'^    Count\(\) \| int$', r'^Completion: name of EVehicleKind \[\] 2 rows$', r'^  > VK_Car \| EVehicleKind$', r'^    VK_Truck \| EVehicleKind$', r'^Line 77: \[\	pcWheel = pcVehicle->\]$', r'^Completion: member of CWheel\* \[\] 2 rows$', r'^  > GetWheel\(int iIndex\) \| CWheel\*$', r'^    GetSpare\(\) \| WheelPointer$', r'^Status line: No type is known to be wanted at the caret\.$', r'^Line 77: \[\	pcWheel = pcWheel\]$', r'^Status line: Nothing known here has the type wanted at the caret\.$'], [r'ERROR']),
+	('completion-documentation', {
+		#Quick Documentation (Control+Q) while the list is open is of the entry selected, follows the selection, and
+		#goes with the list, which stays open under it.  An entry that is a word of the language has none.
+		'SOLUTION': COMPLETION, 'WAIT_INDEX': '1', 'OPEN': 'Vehicle.cpp', 'CARET': '77:1', 
+		'DEBUG': 'edit:printcrumbs,edit:key:escape,edit:caret:77:1,edit:selectto:77:200,edit:key:type:\tpcVehicle->,command:View.QuickDocumentation,edit:printinfo,'
+		         'edit:tap:Cursor Down,edit:tap:Cursor Down,edit:tap:Cursor Down,edit:printinfo,edit:printcompletion,edit:key:escape,edit:printinfo,edit:key:escape,'
+		         'edit:caret:77:1,edit:selectto:77:200,edit:key:type:\ti,command:Edit.CompleteCode,edit:tap:Cursor Down,command:View.QuickDocumentation,printstatus,'
+		         'edit:printinfo,edit:key:escape'},
+		[r'^Documentation: \[meKind\]$', r'^  EVehicleKind meKind$', r'^  CVehicle, \[Vehicle\.h:41\]$', r'^Documentation: \[SetSpeed\]$', r'^  void SetSpeed\(int iSpeed\)$', r'^  CVehicle, \[Vehicle\.h:45\]$', r'^Completion: member \[\] 8 rows$', r'^Documentation: none$', r'^Status line: Nothing is known about the entry selected\.$', r'^Documentation: none$'], [r'ERROR']),
 	('quick-definition', {
 		#Quick Definition (Control+Shift+I): the definition of the symbol at the caret in a chooser that previews its
 		#code; Enter goes to it.  With no symbol there the status line says so.

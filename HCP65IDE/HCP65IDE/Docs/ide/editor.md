@@ -89,6 +89,85 @@ Undo won't undo what you can't see.  If the next change to undo is in a file tha
 its editor is scrolled away from, the first Ctrl+Z shows it (the status line saying to press again) and
 the second undoes it.
 
+## Code completion
+
+A list under the caret of what can be written there.  It opens by itself straight after you type `.`,
+`->` or `::`, and anywhere else on **Complete Code** (Ctrl+Space, in the Edit menu).  It does not open as
+you type a name.  **Complete Code by Type** (Ctrl+Shift+Space) is the same list with only what has the
+type wanted where the caret is.
+
+| Where the caret is | What is listed |
+|---|---|
+| After `x.` or `x->` | The fields and functions of what `x` is, its base classes' after its own. |
+| After `N::` | What the class, enum or namespace `N` declares; after `::` alone, what is outside any scope. |
+| On a name by itself | What is in scope: the function's parameters and local variables, the class's members, what the namespaces round the caret and the scope outside any declare, an enum's enumerators, then the language's words. |
+| In an `#include`'s name | The folders and headers of the directories it is looked for in. |
+
+Each row is an icon for what it is, its name (a function's with its parameters) and, dimmer, its type or
+what a function returns; where that wasn't read, the scope it is in.  A class's member is listed only
+where it can be used: a private one inside its own class's functions, a protected one there and in the
+classes derived from it.
+
+Go on typing and the list is filtered by the name so far.  The capitals of a name match too: `GSN` finds
+`GetSelectedNode`.  Names that start with what is typed come first, the nearest in scope before the rest.
+
+| Key | What it does |
+|---|---|
+| Up, Down, Page Up, Page Down | Move through the list, round its ends. |
+| Enter | Writes the selected entry in place of what was typed of it. |
+| Tab | Writes it in place of the whole name the caret is in. |
+| Escape | Closes the list and leaves what was typed. |
+
+A click on a row writes it too.  A function is written with its brackets: the caret goes between them if
+it takes anything, and [Parameter Info](navigation.md#what-a-name-is) shows what; if a bracket follows
+already, none is added.  A folder of an `#include` is written with its slash and the list opens again for
+what is in it; a header ends the name with its quote or bracket.  Complete Code with only one entry for
+what is typed writes it at once.
+
+The list closes when the caret leaves the name, when nothing matches what is typed, and on a click
+elsewhere.  Nothing is listed in a comment, a string or a number.
+
+Ctrl+Q while the list is open shows [Quick Documentation](navigation.md#quick-documentation) of the
+selected entry beside the list; it follows the selection and goes with the list.
+
+### How the list is found
+
+What `x` is, is worked out twice.
+
+- **At once**, from the index and the text, without parsing the file, so that the list is there on the
+  key in a large workspace too.  That covers names, members, calls (by what the function returns),
+  indexing, `this`, a cast written in brackets (`((CTruck*)pcVehicle)->`), typedefs, and `->` on a class
+  template that holds something (`Ptr<CGauge>`), which is taken to reach what it holds.  It does not
+  cover an expression with an operator in it, a function whose overloads return different things, or a
+  template's own parameters.  Using directives aren't followed, and a local variable is offered from the
+  start of its function, not only after its declaration.
+- **By the compiler's own type checker**, after `.` and `->`: the file is parsed and checked on another
+  thread, as it is for the Problems tab, which takes as long as that does (little for a small file, a
+  second or two for a large one).  What it finds that isn't listed yet is added when it comes.  The list
+  only grows, and the row you have selected stays selected.  Where the first way found nothing the list
+  opens empty with *Working out what this is...* under it, and closes if the type checker finds nothing
+  either.
+
+So that the list is quick in a large workspace, a list of what is in scope (or of what a namespace has) is
+of the names with a word starting with the first character you typed, which are the only ones that can
+match.  Before you type anything it is the first five hundred, the nearest in scope.
+
+### Complete Code by Type
+
+Ctrl+Shift+Space lists only what has the type wanted where the caret is, what is exactly that type first
+and then pointers to classes derived from it.  The type wanted is:
+
+| Where the caret is | The type wanted |
+|---|---|
+| An argument of a call | The parameter it is given to, of each function of that name. |
+| The right of `=`, `==` or `!=` | What the left is; for a variable being declared, its type. |
+| After `return` | What the function returns. |
+| After `case` | What the `switch` it is in switches on: an enum's enumerators. |
+
+A function is listed by what it returns.  Of what is in scope it looks at the nearest two hundred and
+fifty (the function's own, then its class's, then what is round it), as each one's declaration is read
+for its type.  Where no type is known to be wanted, or nothing has it, the status line says so.
+
 ## What the editor shows
 
 - **The selection's other occurrences.**  Select some text on one line and its other occurrences in the
@@ -110,5 +189,5 @@ the second undoes it.
 
 ## Not there yet
 
-There is no automatic indenting and no code completion.  Find and Replace are in
+There is no automatic indenting.  Find and Replace are in
 [Finding Your Way](navigation.md#find-and-replace-in-the-file).

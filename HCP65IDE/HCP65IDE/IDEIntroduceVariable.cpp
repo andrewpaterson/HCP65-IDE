@@ -461,7 +461,6 @@ bool CIDEIntroduceVariable::FindCaretExpressionType(CChars* pszExpression, CChar
 	Ptr<CTextArea>		pEditor;
 	SIDEIntroduction	sIntroduction;
 	CCPPSyntax*			pcNode;
-	SCPP65Type*			psType;
 	SCPPSyntaxRange		sRange;
 	CChars				szKey;
 	size				uiCaret;
@@ -521,19 +520,10 @@ bool CIDEIntroduceVariable::FindCaretExpressionType(CChars* pszExpression, CChar
 				}
 
 				//What the type is of: the class a pointer to it points at.
-				psType = cUnit.GetPass()->GetType(pcNode);
-				while (psType && (psType->IsReference() || psType->IsPointer() || psType->IsArray()) && psType->psBase)
-				{
-					psType = psType->psBase;
-				}
 				szKey.Init();
-				if (psType && cUnit.GetPass()->AppendType(psType->Unqualified(), &szKey))
+				if (cUnit.AppendTypeKey(pcNode, &szKey) && (mpcContent->GetCodeModel()->FindSymbolIndex(szKey.Text()) >= 0))
 				{
-					szKey.StripWhitespace();
-					if (mpcContent->GetCodeModel()->FindSymbolIndex(szKey.Text()) >= 0)
-					{
-						pszTypeKey->Append(szKey);
-					}
+					pszTypeKey->Append(szKey);
 				}
 				szKey.Kill();
 			}

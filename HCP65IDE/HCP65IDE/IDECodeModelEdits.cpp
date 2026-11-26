@@ -192,6 +192,86 @@ void CIDECodeModel::RunEditsThread(void)
 }
 
 
+static void IDEEditsOtherJob(void* pvData)
+{
+	((CIDECodeModel*)pvData)->RunEditsThreadJob();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Something else for the edits thread, which parses one thing at a time:
+// fJob is called on it with pvData, and no edited files are worked out
+// meanwhile (they wait, as they do for each other).  It is only taken
+// while the thread is idle and nothing is being indexed.  The job's
+// number, which IsEditsJobDone is asked with; 0 if it wasn't taken.
+//
+//////////////////////////////////////////////////////////////////////////
+size CIDECodeModel::RunEditsJob(JobFunction fJob, void* pvData)
+{
+	size	uiJob;
+
+	if (IsIndexing() || IsProcessingEditedFiles())
+	{
+		return 0;
+	}
+	WaitForEditedFiles();
+	if (!mbEdits)
+	{
+		mcEdits.Init(1);
+		mbEdits = true;
+	}
+	mfEditsJob = fJob;
+	mpvEditsJobData = pvData;
+	mcIndexMutex.Lock();
+	mbEditsBusy = true;
+	muiEditsJobs++;
+	uiJob = muiEditsJobs;
+	mcIndexMutex.Unlock();
+	mcEdits.Run(&IDEEditsOtherJob, this);
+	return uiJob;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// On the edits thread: the job RunEditsJob was given.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDECodeModel::RunEditsThreadJob(void)
+{
+	if (miEditsDelay > 0)
+	{
+		ThreadSleep(miEditsDelay);
+	}
+	mfEditsJob(mpvEditsJobData);
+	mcIndexMutex.Lock();
+	mbEditsBusy = false;
+	muiEditsJobsDone++;
+	mcIndexMutex.Unlock();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether the edits thread has finished the job RunEditsJob numbered
+// uiJob: one at a time, so every job up to it.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDECodeModel::IsEditsJobDone(size uiJob)
+{
+	bool	bDone;
+
+	mcIndexMutex.Lock();
+	bDone = muiEditsJobsDone >= uiJob;
+	mcIndexMutex.Unlock();
+	return bDone;
+}
+
+
+void CIDECodeModel::WaitForEditsThread(void) { WaitForEditedFiles(); }
+
+
 //////////////////////////////////////////////////////////////////////////
 //
 // The files given to ProcessEditedFiles, worked out, added to papsDest

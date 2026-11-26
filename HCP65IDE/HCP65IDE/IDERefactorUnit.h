@@ -105,6 +105,7 @@ public:
 	bool			IsExpression(CCPPSyntax* pcNode);
 	void			AppendTokens(int32 iFirstToken, int32 iLastToken, CChars* pszDest);
 	bool			AppendDeclaredType(CCPPSyntax* pcExpression, CChars* pszDest);
+	bool			AppendTypeKey(CCPPSyntax* pcExpression, CChars* pszDest, int32* piLevels = NULL);
 	bool			FindDeclaredTypeName(int iLine, int iColumn, SCPPSyntaxRange* psDest);
 	bool			AppendFunctionLabel(int iLine, int iColumn, CChars* pszDest);
 	CCPPSyntax*		FindNodeOfTokens(int32 iFirstToken, int32 iLastToken);

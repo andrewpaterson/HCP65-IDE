@@ -250,6 +250,7 @@ void CIDEContent::Class(void)
 	M_Pointer(mpMarks);
 	M_Pointer(mpRecent);
 	M_Pointer(mpQuickInfo);
+	M_Pointer(mpCompletion);
 	M_Pointer(mpHierarchy);
 	M_Pointer(mpToolWindows);
 	M_Pointer(mpDuplicates);
@@ -350,6 +351,11 @@ void CIDEContent::Free(void)
 	if (mpBuilding.IsNotNull())
 	{
 		mpBuilding->StopBuild();
+	}
+	//The edits thread finishes what completion asked of it before the code model that has the thread goes.
+	if (mpCompletion.IsNotNull())
+	{
+		mpCompletion->Detach();
 	}
 	mcFileTemplates.Kill();
 	mcCodeModel.Kill();
@@ -490,6 +496,7 @@ bool CIDEContent::Setup(Ptr<CWindow> pWindow, const char* szUIFont, const char* 
 	mpMarks = OMalloc<CIDEMarks>(this);
 	mpRecent = OMalloc<CIDERecent>(this);
 	mpQuickInfo = OMalloc<CIDEQuickInfo>(this);
+	mpCompletion = OMalloc<CIDECompletion>(this);
 	mpHierarchy = OMalloc<CIDEHierarchy>(this);
 	mpToolWindows = OMalloc<CIDEToolWindows>(this);
 	mpDuplicates = OMalloc<CIDEDuplicates>(this);
@@ -721,6 +728,7 @@ void CIDEContent::AddCommands(void)
 	mpMarks->AddCommands(mpCommands);
 	mpRecent->AddCommands(mpCommands);
 	mpQuickInfo->AddCommands(mpCommands);
+	mpCompletion->AddCommands(mpCommands);
 	mpHierarchy->AddCommands(mpCommands);
 	mpToolWindows->AddCommands(mpCommands);
 	mpRename->AddCommands(mpCommands);
@@ -951,6 +959,14 @@ void CIDEContent::Tick(Ptr<CWindow> pWindow)
 		iSoonest = iWait;
 	}
 
+	//Completion's list follows what is typed, opens by itself after "." "->" and "::", and takes what the edits
+	//thread's parse says when that comes.
+	iWait = mpCompletion->Poll();
+	if ((iWait >= 0) && ((iSoonest < 0) || (iWait < iSoonest)))
+	{
+		iSoonest = iWait;
+	}
+
 	//The tool window that has the keys is the one Jump to Last Tool Window goes back to.
 	mpToolWindows->Poll();
 
@@ -1106,6 +1122,7 @@ void CIDEContent::PaneClosed(CDockPane* pcPane)
 	pTab->GetCodeEditor()->GetIconClickEvent()->Remove(&mpMarks);
 	mpMarks->TabClosed(pTab);
 	mpQuickInfo->TabClosed(pTab);
+	mpCompletion->TabClosed(pTab);
 	mpRecent->FileClosed(pTab);
 	pTab->GetEditor()->GetUndoEvent()->Remove(&mpEdit);
 	pTab->GetEditor()->GetLinkEvent()->Remove(&mpNavigator);
@@ -1323,6 +1340,7 @@ Ptr<CIDEMarks> CIDEContent::GetMarks(void) const { return mpMarks; }
 Ptr<CIDEToolWindows> CIDEContent::GetToolWindows(void) const { return mpToolWindows; }
 Ptr<CIDERecent> CIDEContent::GetRecent(void) const { return mpRecent; }
 Ptr<CIDEQuickInfo> CIDEContent::GetQuickInfo(void) const { return mpQuickInfo; }
+Ptr<CIDECompletion> CIDEContent::GetCompletion(void) const { return mpCompletion; }
 Ptr<CIDEHierarchy> CIDEContent::GetHierarchy(void) const { return mpHierarchy; }
 Ptr<CIDEDuplicates> CIDEContent::GetDuplicates(void) const { return mpDuplicates; }
 Ptr<CIDEOccurrences> CIDEContent::GetOccurrences(void) const { return mpOccurrences; }

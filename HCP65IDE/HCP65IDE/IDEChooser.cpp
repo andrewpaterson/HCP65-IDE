@@ -142,8 +142,6 @@ void CIDEChooser::Detach(void)
 //////////////////////////////////////////////////////////////////////////
 void CIDEChooser::Begin(const char* szTitle, bool bFilter, bool bPreview, const char* szButton)
 {
-	size	i;
-
 	ReleasePopup();
 	Detach();
 	mpPreview = NULL;
@@ -174,22 +172,35 @@ void CIDEChooser::Begin(const char* szTitle, bool bFilter, bool bPreview, const 
 	mpPopup->GetButtonClickEvent()->Add(this, &CIDEChooser::ButtonClicked);
 	mpPopup->GetClosedEvent()->Add(this, &CIDEChooser::PopupClosed);
 
-	//The icons a Go to dialog has, in its order: the kinds of file, then the kinds of symbol.
-	miFileIcon = -1;
-	for (i = 0; i < mpcContent->NumFileTypeIcons(); i++)
+	AddIDEChooserIcons(mpcContent, mpPopup, &miFileIcon, maiSymbolIcons);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A chooser popup given the icons a Go to dialog has, in its order: the
+// kinds of file (the first's index to *piFileIcon, the rest by
+// EIDEFileType from it), then the kinds of symbol (aiSymbolIcons, by
+// EIDESymbolType).
+//
+//////////////////////////////////////////////////////////////////////////
+void AddIDEChooserIcons(CIDEContent* pcContent, Ptr<CChooserPopup> pPopup, int32* piFileIcon, int32* aiSymbolIcons)
+{
+	size	i;
+	int32	iIcon;
+
+	*piFileIcon = -1;
+	for (i = 0; i < pcContent->NumFileTypeIcons(); i++)
 	{
+		iIcon = pPopup->AddIcon(pcContent->GetFileTypeIcon(i));
 		if (i == 0)
 		{
-			miFileIcon = mpPopup->AddIcon(mpcContent->GetFileTypeIcon(i));
-		}
-		else
-		{
-			mpPopup->AddIcon(mpcContent->GetFileTypeIcon(i));
+			*piFileIcon = iIcon;
 		}
 	}
 	for (i = 0; i < IST_Count; i++)
 	{
-		maiSymbolIcons[i] = mpPopup->AddIcon(mpcContent->GetSymbolIcon(i));
+		aiSymbolIcons[i] = pPopup->AddIcon(pcContent->GetSymbolIcon(i));
 	}
 }
 

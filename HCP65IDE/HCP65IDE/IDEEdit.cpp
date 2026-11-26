@@ -115,6 +115,7 @@ Ptr<CMenuContainer> CIDEEdit::CreateEditMenu(void)
 	mpcContent->GetFind()->AddEditItems(mpEditMenu);
 	mpcContent->GetFindInFiles()->AddEditItems(mpEditMenu);
 	mpcContent->GetDuplicates()->AddEditItems(mpEditMenu);
+	mpcContent->GetCompletion()->AddEditItems(mpEditMenu);
 	return mpEditMenu;
 }
 

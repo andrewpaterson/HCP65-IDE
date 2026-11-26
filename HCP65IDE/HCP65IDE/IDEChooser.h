@@ -100,6 +100,7 @@ protected:
 
 
 void AppendIDEPlaceName(SIDELocation* psLocation, CChars* pszDest);
+void AddIDEChooserIcons(CIDEContent* pcContent, Ptr<CChooserPopup> pPopup, int32* piFileIcon, int32* aiSymbolIcons);
 
 
 #endif // __IDE_CHOOSER_H__

@@ -306,6 +306,7 @@
     <ClCompile Include="IDEMain.cpp" />
     <ClCompile Include="IDECodeModel.cpp" />
     <ClCompile Include="IDECodeModelEdits.cpp" />
+    <ClCompile Include="IDECodeModelCompletion.cpp" />
     <ClCompile Include="IDEContent.cpp" />
     <ClCompile Include="IDEDebugging.cpp" />
     <ClCompile Include="IDEGitStatus.cpp" />
@@ -347,6 +348,12 @@
     <ClCompile Include="IDEMarks.cpp" />
     <ClCompile Include="IDERecent.cpp" />
     <ClCompile Include="IDEQuickInfo.cpp" />
+    <ClCompile Include="IDECompletion.cpp" />
+    <ClCompile Include="IDECompletionContext.cpp" />
+    <ClCompile Include="IDELightTyper.cpp" />
+    <ClCompile Include="IDEClassAccess.cpp" />
+    <ClCompile Include="IDEExpressionTyper.cpp" />
+    <ClCompile Include="IDEExpectedType.cpp" />
     <ClCompile Include="IDEHierarchy.cpp" />
     <ClCompile Include="IDEToolWindows.cpp" />
     <ClCompile Include="IDESymbolInfo.cpp" />
@@ -456,6 +463,12 @@
     <ClInclude Include="IDEMarks.h" />
     <ClInclude Include="IDERecent.h" />
     <ClInclude Include="IDEQuickInfo.h" />
+    <ClInclude Include="IDECompletion.h" />
+    <ClInclude Include="IDECompletionContext.h" />
+    <ClInclude Include="IDELightTyper.h" />
+    <ClInclude Include="IDEClassAccess.h" />
+    <ClInclude Include="IDEExpressionTyper.h" />
+    <ClInclude Include="IDEExpectedType.h" />
     <ClInclude Include="IDEHierarchy.h" />
     <ClInclude Include="IDEToolWindows.h" />
     <ClInclude Include="IDESymbolInfo.h" />

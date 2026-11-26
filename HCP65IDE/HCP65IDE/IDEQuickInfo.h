@@ -76,7 +76,8 @@ enum EIDEQuickInfo
 //    that name it (ReadIDESymbolDocumentation).  A press on where it is declared, or on a page, goes there.  It is
 //    no taller than IDE_DOCUMENTATION_LINES lines: the wheel over it, Page Up and Page Down, and Control with Up and
 //    Down scroll it.  It goes when the caret moves, on Escape or a press elsewhere; Control+Q again while it shows
-//    keeps it, and then it follows the caret to each symbol it comes to, until Control+Q once more or Escape.
+//    keeps it, and then it follows the caret to each symbol it comes to, until Control+Q once more or Escape.  While
+//    completion's list is open it is of the entry selected there, beside the list, and follows the selection.
 //  - The tool tip over a name: the pointer resting on a name of the active editor for IDE_TIP_DELAY shows the same,
 //    shorter (the declaration, where, and the first lines of the comment), under the name.  It goes when the pointer
 //    leaves the name, the caret moves or the text changes, on Escape or a press, and isn't shown while Control is
@@ -121,6 +122,7 @@ protected:
 	size					muiDocumentationChanges;
 	bool					mbDocumentationPinned;  //It follows the caret rather than going when it moves.
 	CChars					mszDocumentationName;  //The name it is about.
+	CChars					mszDocumentationEntry;  //The key of the entry of completion's list it is about; empty when it is about the caret's name.
 	CArrayIDEDocumentationLinks	masDocumentationLinks;
 	bool					mbDocumentationPressed;  //A press on it waits for the next tick,
 	size					muiDocumentationPressed;  //on this character of its text, or MAX_SIZE.
@@ -155,6 +157,7 @@ public:
 
 	bool	ShowQuickDefinition(void);
 	bool	ShowParameterInfo(void);
+	bool	ShowParameterInfoOf(const char* szKey);
 	bool	ShowTypeInfo(void);
 	bool	ShowQuickDocumentation(void);
 	bool	HasEditor(void);
@@ -186,10 +189,12 @@ protected:
 	void	PollDocumentation(void);
 	int64	PollTip(int64 iNow);
 	bool	ShowDocumentationAt(Ptr<CIDEEditorTab> pTab, size uiPosition);
-	bool	WriteDocumentation(Ptr<CIDEEditorTab> pTab, size uiPosition, bool bTip, Ptr<CInfoPopup> pPopup, CChars* pszName, size* puiStart);
+	bool	ShowEntryDocumentation(void);
+	bool	FindDocumented(Ptr<CIDEEditorTab> pTab, size uiPosition, SIDESymbolDocumentation* psDest, CChars* pszName, size* puiStart);
+	void	WriteDocumented(SIDESymbolDocumentation* psDocumented, bool bTip, Ptr<CInfoPopup> pPopup);
 	void	DocumentationPressed(CInfoPopup* pcPopup, size uiPosition);
 	void	KillDocumentationLinks(void);
-	bool	UpdateParameterInfo(bool bSay);
+	bool	UpdateParameterInfo(bool bSay, const char* szKey = NULL);
 	void	FindOverloads(const char* szKey);
 	void	ShowParameters(void);
 	void	ShowOverCaret(void);

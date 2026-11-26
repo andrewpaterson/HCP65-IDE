@@ -86,6 +86,8 @@ Workspaces](solutions.md#files-kept-beside-the-solution).
 | Ctrl+C, Ctrl+Insert | Copy |
 | Ctrl+V, Shift+Insert | Paste |
 | Ctrl+Shift+V | Paste from History |
+| Ctrl+Space | Complete Code |
+| Ctrl+Shift+Space | Complete Code by Type |
 | Ctrl+A | Select All |
 | Ctrl+W, Ctrl+Shift+W | Extend Selection, Shrink Selection |
 | Ctrl+F, Ctrl+R | Find and Replace in the file |
