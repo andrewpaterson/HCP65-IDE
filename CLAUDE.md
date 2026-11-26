@@ -53,6 +53,9 @@ CommonLibraries and HCP65 checked out beside it (`../CommonLibraries`, `../HCP65
 - Commit IDE changes before trialling a refactoring on real code.
 - A scripted check whose input intermittently "does nothing": another window took the focus (scripted runs keep the
   window active with `CWindow::SetKeepsActive`); log `GetFocus()->IsActive()` first.
+- Screenshots of a real window: `xwd -id` on the IDE's own window only, never the root window (it shows the user's
+  other programs), and with nothing over it (an overlapping window's pixels are captured too); delete it at once if
+  it caught anything else.
 - Real input: run the IDE unscripted in `Xephyr :5` (ask the user first; close it after) and drive it with XTest
   from Python ctypes; set `HOME` to a scratch folder so the user's recent files are untouched.  Often a scripted
   run's keyboard steps (`edit:press:`, `edit:tap:`) are enough.
