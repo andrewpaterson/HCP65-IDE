@@ -43,6 +43,8 @@ struct SBuildProject
 	CVcxProject*		pcProject;
 	CVcxConfiguration*	pcConfiguration;
 	bool				bLibrary;	//A static library; otherwise an application.
+	bool				bCommand;	//A Makefile project with a build command line (NMakeBuildCommandLine): the command builds it,
+									//not a compiler.  HCP65 programs and Libc65 are Makefile projects without one.
 };
 
 

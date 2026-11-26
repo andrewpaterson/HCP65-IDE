@@ -51,7 +51,9 @@ void CGCCBuild::GetExecutablePath(const char* szRoot, CBuildConfiguration* pcCon
 //////////////////////////////////////////////////////////////////////////
 //
 // The compiles, then the archives, then the links: an application can use
-// any of the solution's libraries.
+// any of the solution's libraries.  A Makefile project's build command
+// runs among the compiles, in the project's turn (one without a command is
+// compiled as any other).
 //
 //////////////////////////////////////////////////////////////////////////
 bool CGCCBuild::AddCommands(CArrayChars* paszLines)
@@ -74,6 +76,7 @@ bool CGCCBuild::AddCommands(CArrayChars* paszLines)
 	size				j;
 	size				uiFirstObject;
 	int					iPass;
+	bool				bFolder;
 
 	asProjects.Init();
 	GetProjects(&asProjects);
@@ -87,12 +90,21 @@ bool CGCCBuild::AddCommands(CArrayChars* paszLines)
 		for (i = 0; i < asProjects.NumElements(); i++)
 		{
 			psProject = asProjects.Get(i);
+			if (psProject->bCommand)
+			{
+				//Built by its own command, in its turn with the others' compiles.
+				if (iPass == 0)
+				{
+					AddMakefileCommand(psProject);
+				}
+				continue;
+			}
 			szProjectOutput.Init(szOutput);
 			cFileUtil.AppendToPath(&szProjectOutput, psProject->pcProject->GetName());
 			if (iPass == 0)
 			{
-				//Compile: Output\GCC\Debug\Project\Source.o.
-				cFileUtil.TouchDir(szProjectOutput.Text());
+				//Compile: Output\GCC\Debug\Project\Source.o, the folder made for the first.
+				bFolder = false;
 				aszIncludes.Init();
 				aszDefines.Init();
 				psProject->pcProject->GetIncludeDirectories(psProject->pcConfiguration, mpcSolution->GetDirectory(), &aszIncludes);
@@ -109,6 +121,11 @@ bool CGCCBuild::AddCommands(CArrayChars* paszLines)
 						szSource.Init();
 						psProject->pcProject->GetFullPath(pcItem, &szSource);
 						cFileUtil.FullPath(&szSource);
+						if (!bFolder)
+						{
+							cFileUtil.TouchDir(szProjectOutput.Text());
+							bFolder = true;
+						}
 						szObject.Init();
 						GetObjectName(szProjectOutput.Text(), szSource.Text(), &szObject);
 						AddCompile(psProject, szSource.Text(), szObject.Text(), &aszIncludes, &aszDefines);

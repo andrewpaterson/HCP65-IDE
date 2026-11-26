@@ -91,6 +91,42 @@ SBuildCommand* CCommandBuild::AddCommand(const char* szExecutable, const char* s
 
 //////////////////////////////////////////////////////////////////////////
 //
+// A Makefile project's build command (its configuration's
+// NMakeBuildCommandLine), run by the shell in the project's directory as
+// Visual Studio runs it; its output is the build's like a compiler's.
+// NULL, adding nothing, if the project has no build command.
+//
+//////////////////////////////////////////////////////////////////////////
+SBuildCommand* CCommandBuild::AddMakefileCommand(SBuildProject* psProject)
+{
+	char*			szCommandLine;
+	CChars			szDescription;
+	SBuildCommand*	psCommand;
+
+	szCommandLine = psProject->pcConfiguration->GetProperty("NMakeBuildCommandLine");
+	if ((szCommandLine == NULL) || (szCommandLine[0] == '\0'))
+	{
+		return NULL;
+	}
+	szDescription.Init("Building ");
+	szDescription.Append(psProject->pcProject->GetName());
+	szDescription.Append(": ");
+	szDescription.Append(szCommandLine);
+#ifdef _WIN32
+	psCommand = AddCommand("cmd.exe", psProject->pcProject->GetDirectory(), szDescription.Text());
+	psCommand->aszArguments.Add("/c");
+#else
+	psCommand = AddCommand("/bin/sh", psProject->pcProject->GetDirectory(), szDescription.Text());
+	psCommand->aszArguments.Add("-c");
+#endif
+	psCommand->aszArguments.Add(szCommandLine);
+	szDescription.Kill();
+	return psCommand;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Works out what to run and runs the first.  False, with why in
 // paszLines, if the build couldn't start.
 //

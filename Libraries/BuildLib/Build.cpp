@@ -113,7 +113,8 @@ void CBuild::GetDirectory(const char* szRoot, CBuildConfiguration* pcConfigurati
 // solution's order, with the configuration it builds each in.  A project
 // that isn't loaded, or hasn't that configuration, isn't built.  With
 // bOneApplication, for a build that links them all into one program, nor
-// is an application that isn't the startup project, if there is one.
+// is an application that isn't the startup project, if there is one (a
+// project built by its own command isn't an application: it is built).
 //
 //////////////////////////////////////////////////////////////////////////
 void CBuild::GetProjects(CArrayBuildProjects* pasDest, bool bOneApplication)
@@ -126,6 +127,8 @@ void CBuild::GetProjects(CArrayBuildProjects* pasDest, bool bOneApplication)
 	SBuildProject*						psProject;
 	char*								szType;
 	bool								bLibrary;
+	bool								bCommand;
+	char*								szCommand;
 
 	pasDest->ReInit();
 	for (i = 0; mpcSolution && (i < mpcSolution->NumProjects()); i++)
@@ -156,7 +159,9 @@ void CBuild::GetProjects(CArrayBuildProjects* pasDest, bool bOneApplication)
 
 		szType = pcConfiguration->GetProperty("ConfigurationType");
 		bLibrary = szType && (StringInsensitiveCompare(szType, "StaticLibrary") == 0);
-		if (bOneApplication && !bLibrary && !mszStartupProject.Empty() && !mszStartupProject.EqualsIgnoreCase(pcProject->GetName()))
+		szCommand = pcConfiguration->GetProperty("NMakeBuildCommandLine");
+		bCommand = szType && (StringInsensitiveCompare(szType, "Makefile") == 0) && szCommand && (szCommand[0] != '\0');
+		if (bOneApplication && !bLibrary && !bCommand && !mszStartupProject.Empty() && !mszStartupProject.EqualsIgnoreCase(pcProject->GetName()))
 		{
 			continue;
 		}
@@ -164,6 +169,7 @@ void CBuild::GetProjects(CArrayBuildProjects* pasDest, bool bOneApplication)
 		psProject->pcProject = pcProject;
 		psProject->pcConfiguration = pcConfiguration;
 		psProject->bLibrary = bLibrary;
+		psProject->bCommand = bCommand;
 	}
 }
 

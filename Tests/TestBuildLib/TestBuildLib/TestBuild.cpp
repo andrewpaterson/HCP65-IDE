@@ -229,6 +229,70 @@ void TestBuildGCC(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// A Makefile project with GCC: its build command, run by the shell in its
+// folder, and its output the build's.  One without a command is built as
+// before (it has nothing to compile); one whose command fails fails the
+// build.
+//
+//////////////////////////////////////////////////////////////////////////
+void TestBuildMakefile(void)
+{
+	CVcxSolution			cSolution;
+	CBuildConfiguration		cConfiguration;
+	CSolutionBuild			cBuild;
+	CArrayChars				aszLines;
+	CCommandBuild*			pcCommands;
+	SBuildCommand*			psCommand;
+	EBuildState				eState;
+
+	cConfiguration.Init("Debug|GCC", BT_GCC, "Debug|Win32");
+
+	cSolution.Init();
+	AssertTrue(cSolution.ReadProject("Input" _FS_ "Makefile" _FS_ "Made.vcxproj"));
+	cBuild.Init();
+	aszLines.Init();
+	eState = TestBuildProject(&cBuild, &cSolution, &cConfiguration, "Makefile", &aszLines);
+	pcCommands = (CCommandBuild*)cBuild.GetBuild();
+	AssertSize(1, pcCommands->NumCommands());
+	psCommand = pcCommands->GetCommand(0);
+	AssertString("Building Made: echo Page.md:1:1: warning: made in the project folder", psCommand->szDescription.Text());
+	AssertTrue(TestBuildEndsWith(psCommand->szDirectory.Text(), "Makefile"));
+	AssertString("echo Page.md:1:1: warning: made in the project folder", psCommand->aszArguments.GetText(psCommand->aszArguments.NumElements() - 1));
+	AssertInt(BS_Succeeded, eState);
+	AssertTrue(TestBuildHasLine(&aszLines, "Page.md:1:1: warning: made in the project folder"));
+	aszLines.Kill();
+	cBuild.Kill();
+	cSolution.Kill();
+
+	cSolution.Init();
+	AssertTrue(cSolution.ReadProject("Input" _FS_ "Makefile" _FS_ "Unmade.vcxproj"));
+	cBuild.Init();
+	aszLines.Init();
+	eState = TestBuildProject(&cBuild, &cSolution, &cConfiguration, "Makefile", &aszLines);
+	AssertSize(0, ((CCommandBuild*)cBuild.GetBuild())->NumCommands());
+	AssertInt(BS_Succeeded, eState);
+	AssertTrue(TestBuildHasLine(&aszLines, "Nothing to build."));
+	aszLines.Kill();
+	cBuild.Kill();
+	cSolution.Kill();
+
+	cSolution.Init();
+	AssertTrue(cSolution.ReadProject("Input" _FS_ "Makefile" _FS_ "Failing.vcxproj"));
+	cBuild.Init();
+	aszLines.Init();
+	eState = TestBuildProject(&cBuild, &cSolution, &cConfiguration, "Makefile", &aszLines);
+	AssertSize(1, ((CCommandBuild*)cBuild.GetBuild())->NumCommands());
+	AssertInt(BS_Failed, eState);
+	aszLines.Kill();
+	cBuild.Kill();
+	cSolution.Kill();
+
+	cConfiguration.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Tools has two applications and a library.  An HCP65 build, which links
 // the solution into one program, builds the startup project and the
 // library and leaves the other application out; told of none it builds
@@ -328,6 +392,7 @@ void TestBuild(void)
 	TestBuildMSVC();
 #endif // _WIN32
 	TestBuildGCC();
+	TestBuildMakefile();
 
 	TestStatistics();
 }

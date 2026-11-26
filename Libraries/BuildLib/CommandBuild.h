@@ -55,6 +55,7 @@ public:
 			void			Cancel(void) override;
 
 			SBuildCommand*	AddCommand(const char* szExecutable, const char* szDirectory, const char* szDescription);
+			SBuildCommand*	AddMakefileCommand(SBuildProject* psProject);
 			size			NumCommands(void) const;
 			SBuildCommand*	GetCommand(size uiIndex);
 
