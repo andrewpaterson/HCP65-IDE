@@ -332,6 +332,22 @@ C7. The projects move to the shared sheets
      TestBuildGCCRelease expect the groups' options instead.  A project still without a GCC-x64 group is then built
      with x64's include directories and defines and no more, and the build names it (C3-1).
 
+  The pilot, built 2026-11-27 (CommonLibraries 8b41a5d68): CommonLibraries/Common.props, and BaseLib, TestLib and
+  TestBaseLib moved onto it by CommonLibraries/project_sheets.py.
+  - Checked as C7-2 says but under Wine: MSBuild's command lines for cl, lib and link (its .command.1.tlog files)
+    before and after, in the four configurations.  The same but for question 8's: no _LIB, /wd26476 everywhere,
+    TestBaseLib's Release link not incremental, and no _VC80_UPGRADE, which UpgradeFromVC70.props defined and
+    nothing tests.  The IDE's GCC build takes the sheet's groups (no project "built as x64"), TestBaseLib passes in
+    Release and Debug; the Kernal and ModPlay, which compile BaseLib for the HCP65, still build.
+  - Not as planned: a project's Configuration groups stay (ConfigurationType, PlatformToolset, CharacterSet,
+    WholeProgramOptimization, EnableASAN).  They are read before Microsoft.Cpp.props and a sheet after it, so
+    question 8's "set once in the sheet" can't reach them; it is also what question 15 B leaves in the projects.
+  - The sheet's Visual Studio groups have no platform in their conditions ('$(Configuration)'=='Debug'), so the IDE
+    reads them for Debug|GCC-x64 too: its defines are question 20's (_DEBUG, DEBUG, BREAK_ON_WARNING and
+    BREAK_ON_ERROR) and LINUX_GNU.  The GCC-x64 group's Link AdditionalDependencies (pthread;dl) replace shlwapi.lib.
+  - The 22 projects' OutDir and IntDir are Visual Studio's defaults, so they go and nothing moves.
+  - To do: CommonLibraries' other 45 projects, then the other repositories' sheets.
+
 C8. Shared run configurations hold how a program is debugged
   C8-1. A run configuration has a type: Program (today's: a tool, folder and arguments, or what a GCC build linked)
      or HCP65 Emulator.  An HCP65 Emulator one holds the build configuration it builds first and debugs as, the
