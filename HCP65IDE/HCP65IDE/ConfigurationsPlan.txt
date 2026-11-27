@@ -694,7 +694,8 @@ Questions (the user's, one at a time)
    program written onto it with its path (the kernal, drivers, Init, the program debugged), so the same driver goes
    on VIACard.img in one and SDCard.img in another.  Projects name no card; CBuildWorkspace::GetCardPrograms reads
    the run configuration's list instead of every solution's build configuration.
-12. Decided; whole projects are D, trial W1's build having passed under Wine 2026-11-27 (C10-2): how a project or a file says it isn't built for a toolchain.
+12. Decided; whole projects are D, trial W1's build having passed under Wine 2026-11-27 (C10-2): how a project or a
+   file says it isn't built for a toolchain.
    Files, decided (the user, 2026-11-27: "for 12 let's ExcludedFromBuild on each file for GCC"): a file that one
    toolchain doesn't build says so on its own item, ExcludedFromBuild for that toolchain's configurations, as
    HCP65IDERef.cpp has for MSVC's: HCP65Tester's six board files (AddressDecodeBoard, BoardPins, CommonBoard,
@@ -727,7 +728,8 @@ Questions (the user's, one at a time)
       solution builds, but said in each solution a library is in (WinGdiLib is in seven), and only for whole
       projects: a file still needs A.
 13. Decided (the user, 2026-11-27: "tick design if W1 passes"): D if trial W1 passes, A if it doesn't (see question
-   12); D, its build having passed under Wine.  (C10-3) How X11Lib and PulseAudioLib come into the solutions Visual Studio made.
+   12); D, its build having passed under Wine.  (C10-3) How X11Lib and PulseAudioLib come into the solutions Visual
+   Studio made.
    A. Recommended: listed in each .sln, with an .ActiveCfg but no .Build.0 for its Windows configurations, so
       Visual Studio shows them in Solution Explorer and doesn't build them (Configuration Manager, Build unticked), and
       MSBuild, which the IDE's MSVC build runs, leaves them out too.  A GCC build reads the project's own GCC-x64
@@ -787,7 +789,8 @@ Questions (the user's, one at a time)
    C. Six more ImportGroups in each project, one for each toolchain configuration.  Visual Studio never evaluates
       them.
 17. Decided (the user, 2026-11-27: "tick design if W1 passes"): C if trial W1 passes, A if it doesn't (see question
-   12); C, its build having passed under Wine.  (C4-5 and C9-6) Where a solution's build configurations are kept once the .hcp65build file has
+   12); C, its build having passed under Wine.  (C4-5 and C9-6) Where a solution's build configurations are kept once
+   the .hcp65build file has
    gone.  The file lists them now: with names of their own (TestBuildLib's "Fast GCC" over Release|x64), several over
    one solution configuration, added and removed in Edit Build Configurations.
    A. Recommended: nowhere of their own: they are the projects' configurations.  A solution's build configurations are
