@@ -511,6 +511,35 @@ Windows trials (the user's: there is no Windows here; gathered 2026-11-27)
 
 Each is a small experiment on one project or solution, wanted before the stage or answer that leans on it.
 
+The trials' builds, run 2026-11-27 with MSBuild 16.11 and MSVC 19.29 (Visual Studio 2019's) under Wine, the Windows
+machine being dead (the user: "can you get MSVC going with wine?"; how it is set up is in the session's notes, and
+~/msvc/bin/x64/msbuild160 builds a .sln).  Each in a copy of LogiCim and the ten CommonLibraries projects its
+solution names:
+  - W1, the build passes.  LogiCim-W1.sln as Release|GCC-x64: MSBuild takes the name, builds the ten libraries its
+    rows build and leaves WinGdiLib and WinInputLib out; LogiCim's link then fails for want of WinInputLib.lib
+    (LNK1181), as foreseen for a row mapped to x64.  As Release|x64: all twelve libraries and LogiCim.exe, as
+    LogiCim.sln.
+  - W5, the build passes.  LogiCim-W5.sln (LogiCim 2461326), its platforms renamed MSVC-x86 and MSVC-x64, builds as
+    Release|MSVC-x64 exactly as LogiCim.sln does as Release|x64, and Release|x64 is refused (MSB4126: "The specified
+    solution configuration ... is invalid").
+  - W3 and W4, the build passes.  LogiCim-W3.sln builds in Release|x64 with the groups for Debug|GCC-x64,
+    Release|GCC-x64 and Release|HCP65C816, the HCP65Compile and HCP65Link tags and the GCC ExcludedFromBuild lines
+    in its project, none of them reaching the compiler.  The sheet imported with no condition does: cl is given
+    W3_SHEET_ALL in Release and Debug and W3_SHEET_DEBUG in Debug only, so MSBuild reads the '$(Configuration)'=='Debug'
+    and no-condition groups C1-1 names, and a '$(Platform)'=='GCC-x64' group gives MSVC nothing.
+  - Not shown by a build, and waiting for Visual Studio itself: what its configuration boxes, Configuration Manager
+    and Property Manager show for these files, and whether it keeps the groups and rows when it saves (W3's other
+    half; its contingency stands).  The three trial solutions and the W3 project stay in LogiCim for that.
+  - So, for planning, W1 and W5 are taken as passed: questions 12 (whole projects), 13 and 17 are D, D and C, the
+    solution's rows, and questions 22 and 23 with them; C11-2's rename builds.  Stages that change real projects
+    and solutions (C7, C10, C11-2, C13) can be checked by an MSVC build under Wine where they say Windows, the look
+    of them in Visual Studio left until there is one.
+  - Found on the way: KicadImporterLib didn't build with MSVC (three float64 arguments to IsVoltage, C4244 as an
+    error, and M_PI), fixed in LogiCim 2926a96; this morning's _Windows mains build and link with MSVC (LogiCim).
+    A Debug build stops in BSCMAKE (BK1506, the browse information), Wine's doing; TestBaseLib.sln builds clean and
+    its MSVC build runs under Wine to TestFileUtil.cpp line 914 (a read then a write of an "r+b" file with no seek
+    between), 65653 asserts passed.  A program under Wine runs on Wine's own C runtime, not Microsoft's.
+
 What Microsoft's pages say (read 2026-11-27, the Windows machine not starting; a trial still settles each):
   - W1 and W5, likely to pass.  A solution's configurations and platforms are names of its own ("you can create your
     own custom solution-level platforms / configurations with whatever names you choose", Hallberg's Solution
@@ -665,7 +694,7 @@ Questions (the user's, one at a time)
    program written onto it with its path (the kernal, drivers, Init, the program debugged), so the same driver goes
    on VIACard.img in one and SDCard.img in another.  Projects name no card; CBuildWorkspace::GetCardPrograms reads
    the run configuration's list instead of every solution's build configuration.
-12. Decided, whole projects by trial W1's result (C10-2): how a project or a file says it isn't built for a toolchain.
+12. Decided; whole projects are D, trial W1's build having passed under Wine 2026-11-27 (C10-2): how a project or a file says it isn't built for a toolchain.
    Files, decided (the user, 2026-11-27: "for 12 let's ExcludedFromBuild on each file for GCC"): a file that one
    toolchain doesn't build says so on its own item, ExcludedFromBuild for that toolchain's configurations, as
    HCP65IDERef.cpp has for MSVC's: HCP65Tester's six board files (AddressDecodeBoard, BoardPins, CommonBoard,
@@ -698,7 +727,7 @@ Questions (the user's, one at a time)
       solution builds, but said in each solution a library is in (WinGdiLib is in seven), and only for whole
       projects: a file still needs A.
 13. Decided (the user, 2026-11-27: "tick design if W1 passes"): D if trial W1 passes, A if it doesn't (see question
-   12).  (C10-3) How X11Lib and PulseAudioLib come into the solutions Visual Studio made.
+   12); D, its build having passed under Wine.  (C10-3) How X11Lib and PulseAudioLib come into the solutions Visual Studio made.
    A. Recommended: listed in each .sln, with an .ActiveCfg but no .Build.0 for its Windows configurations, so
       Visual Studio shows them in Solution Explorer and doesn't build them (Configuration Manager, Build unticked), and
       MSBuild, which the IDE's MSVC build runs, leaves them out too.  A GCC build reads the project's own GCC-x64
@@ -758,7 +787,7 @@ Questions (the user's, one at a time)
    C. Six more ImportGroups in each project, one for each toolchain configuration.  Visual Studio never evaluates
       them.
 17. Decided (the user, 2026-11-27: "tick design if W1 passes"): C if trial W1 passes, A if it doesn't (see question
-   12).  (C4-5 and C9-6) Where a solution's build configurations are kept once the .hcp65build file has
+   12); C, its build having passed under Wine.  (C4-5 and C9-6) Where a solution's build configurations are kept once the .hcp65build file has
    gone.  The file lists them now: with names of their own (TestBuildLib's "Fast GCC" over Release|x64), several over
    one solution configuration, added and removed in Edit Build Configurations.
    A. Recommended: nowhere of their own: they are the projects' configurations.  A solution's build configurations are
