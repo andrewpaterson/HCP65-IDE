@@ -168,6 +168,9 @@ C0. A stopgap: CGCCBuild adds the Linux options itself (question 7)
      One list in GCCBuild.cpp, its comment naming TestBaseLib's CMakeLists.txt as where it came from.
   C0-2. Tests: TestBuildLib's GCC command test expects them; the IDE builds TestBaseLib's Release|GCC and it runs and
      passes.  C7-4 removes the list when every repository's projects have their GCC-x64 groups (2026-11-27: not C3-2).
+  C0-3. (2026-11-27, question 21; not built) -fno-exceptions joins C0's list in GCCBuild.cpp and baselib_options in the
+     40 CMakeLists.txt files, every configuration's, until C6 and C7 take both from the sheet's GCC-x64 groups.
+     TestBuildGCC expects it; the suites build and pass with it.
   Built 2026-11-27 (the user: "add C0 too"): the lists are in GCCBuild.cpp under LINUX_GNU, Debug being a solution
   configuration named Debug|...; TestBuildGCC (Debug) and TestBuildGCCRelease (Tools, compiles and links) check them.
   Not -Wall -Wextra or -flto, which CMake also passes.  On the way: a GCC application was linked to
@@ -271,8 +274,8 @@ C6. CMake reads the projects too
      ways (no argument and "816"), and every other test project; their command lines compared before and after.
 
 C7. The projects move to the shared sheets
-  C7-1. CL/Common.props holds the GCC groups (their options C0's lists, their defines question 20's, exceptions
-     question 21's) and MSVC's settings every project shares (What the projects share);
+  C7-1. CL/Common.props holds the GCC groups (their options C0's lists with question 21's -fno-exceptions, their
+     defines question 20's) and MSVC's settings every project shares (What the projects share);
      HCP65.props, the HCP65-IDE and LogiCim sheets import it and add their own (question 2).  Each .vcxproj imports
      its repository's sheet in its PropertySheets ImportGroup and keeps only what is its own.
   C7-2. Done a repository at a time (CommonLibraries, HCP65, HCP65-IDE, LogiCim, then HCP65-Sculpt, WindowInputTester
@@ -681,9 +684,15 @@ Questions (the user's, one at a time)
    configuration whose group leaves the defines out (no new code, but everything built twice to have both, a sweep's
    builds being 9 GB each, and nothing for the asserts' break); breaking only when a debugger is attached (TracerPid
    in /proc/self/status, IsDebuggerPresent: nothing to set, but a run without a debugger never signals an error).
-21. Open (C7-1, 2026-11-27): g++ and exceptions.  Question 8 turned MSVC's off everywhere; neither CMake nor C0 passes
-   -fno-exceptions, so g++ compiles with them on.
-   A. Recommended: left on, as now, and recorded here.  No tested Linux build changes; a try or throw compiles on
-      Linux and fails on Windows.
-   B. -fno-exceptions in the GCC-x64 groups, as MSVC.  A try or throw is an error on both; every Linux build's code
-      changes, and its tests are run again to find what leans on them.
+21. Decided (the user, 2026-11-27: "I thought exceptions were off everywhere except for tests that test the HCP
+   compiler exceptions?", then "turn them off for g++ too"): -fno-exceptions in the GCC-x64 groups, as MSVC's
+   ExceptionHandling false (question 8), so a try or throw is an error on both.
+   How it stood (surveyed 2026-11-27).  No code g++ or MSVC compiles has a try, a catch or a throw: they are only in
+   what the HCP65 compiler compiles (Libc65's exception.cpp and new.cpp, TestHCP65Lib's ExceptionsTest program) and in
+   source text TestCppCompilerLib gives that compiler.  MSVC: 62 projects have ExceptionHandling false in all four
+   configurations and 20 in two of the four (CppCompilerLib, EmulatorDebugLib, JavaParserLib and others), which
+   question 8 makes false everywhere.  g++: no CMakeLists.txt and nothing in C0's list passes -fno-exceptions, so
+   every Linux build compiled with exceptions on, g++'s default.  The HCP65 compiler's own Exceptions option
+   (question 4, the whole program's) is another thing and stays.
+   The recommendation was to leave g++'s on, until the survey showed nothing uses them.  The other considered: left
+   on and the difference recorded (no Linux build changes, but a try or throw compiles on Linux and fails on Windows).
