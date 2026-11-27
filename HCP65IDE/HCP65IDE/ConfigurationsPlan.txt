@@ -356,8 +356,12 @@ C7. The projects move to the shared sheets
     BREAK_ON_WARNING and BREAK_ON_ERROR; TestInputLib's Release is NotSet (question 8).
   - Until the other repositories' projects move, their Debug builds mix libraries that define DEBUG (all of
     CommonLibraries' now) with projects of their own that may not: they move next.
-  - To do: the other repositories' sheets (HCP65, HCP65-IDE, LogiCim, HCP65-Sculpt, WindowInputTester,
-    StarControlRedux), then the solutions' rows (question 25).
+  The other six repositories, built 2026-11-27: each has its sheet (<Repository>.props, importing Common.props and
+  adding its include directories) and its 37 C++ projects are on it, checked as CommonLibraries' were: cl's command
+  lines differ only by question 8's decisions and all 15 solutions build and link with MSVC in Release x64.  Found on
+  the way and fixed, in code only g++ had compiled: X65C64Emulator's main and an uninitialised pointer,
+  KicadImporterLib's and its test's.  HCP65's 21 Makefile projects have nothing of Visual Studio's to move.  So C7 is
+  done but C7-4.
 
 C8. Shared run configurations hold how a program is debugged
   C8-1. A run configuration has a type: Program (today's: a tool, folder and arguments, or what a GCC build linked)
@@ -523,6 +527,21 @@ configuration whose platform is a toolchain's that toolchain's build configurati
 is given no others; CBuild::GetProjects already left out a project whose row isn't built and FindProjectConfiguration
 takes the project's own configuration of the toolchain's platform when the row maps to x64.
 TestBuildConfigurationsListed.  The solutions themselves are question 25's.
+The solutions, built 2026-11-27 (question 25; CommonLibraries/solution_rows.py): the 38 solutions with no
+.hcp65build beside them have Debug|GCC-x64 and Release|GCC-x64, each project's row mapped to its x64 one and built
+if that is, WinGdiLib, WinInputLib and WinWaveoutLib not built; the seven window programs' have X11Lib (HCP65Emulator's
+PulseAudioLib too), built in GCC-x64 alone.  Only lines added.  The programs' projects have their X11;Xext (question
+14), HCP65Tester's six board files and HCP65IDERef.cpp their GCC exclusion (question 12).  StarControlRedux's Battle
+was a seventh program with the old mains, renamed as the others.
+- Checked: the IDE's GCC build builds LogiCim, HCP65Tester, WindowInputTester, HCP65Emulator, HCP65Sculpt, Battle,
+  TestWindowLib, TestInputLib and HCP65IDE with its tests in Release|GCC-x64 (they aren't run: each opens a window);
+  MSVC under Wine builds LogiCim, HCP65Tester and HCP65Emulator in Release|x64 as before, X11Lib left out.
+- Two things it found in the IDE's build: a toolchain's configuration takes its base's include directories whatever
+  its own (a sheet gives every configuration some, so a project's own, written for Visual Studio's, were lost), and
+  a library's objects are named from the file on disk when archived, as when compiled (a project's spelling of a
+  name can differ in case).
+- Not done: the HCP65 configurations' rows (with C4), Reference|GCC-x64 (C13), the MSVC-x64 rename (question 25).
+  LogiCim-W1.sln is deleted, LogiCim.sln being what it tried.
 Trial W1 failing, none of this is built: questions 12 A, 13 A and 17 A stand, and questions 22 and 23 are asked
 again for them.
 

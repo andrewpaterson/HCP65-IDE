@@ -37,8 +37,8 @@ along with Codaphela VisualStudioLib.  If not, see <http://www.gnu.org/licenses/
 //name ("ConfigurationType", "IncludePath") and those of its item definition groups by tool and name
 //("ClCompile.PreprocessorDefinitions", "Link.SubSystem").  A toolchain's configuration ("Debug|GCC-x64") has its own
 //item definitions (its defines and options), and what a project says once for Visual Studio's configurations it takes
-//from its base, the Visual Studio configuration of the same name it is built like ("Debug|x64"): the property groups'
-//properties and the include directories.
+//from its base, the Visual Studio configuration of the same name it is built like ("Debug|x64"): its include
+//directories, and the property groups' properties it hasn't itself.
 class CVcxConfiguration
 {
 protected:

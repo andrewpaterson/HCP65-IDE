@@ -117,7 +117,7 @@ A project is read as MSBuild reads it, as far as the IDE needs ([`CVcxProject::R
   makes the project a configuration Visual Studio never sees, since it isn't in `<ProjectConfigurations>`
   ([`CVcxConfiguration::IsToolchain`]).  It has its own defines, options and HCP65 settings, and takes what a
   project says once per Visual Studio configuration, its type and include directories, from the configuration it is
-  built like: `Release|x64` for `Release|GCC-x64`, `Release|Win32` for the HCP65's.
+  built like (the include directories always, since a project adds its own to Visual Studio's configurations): `Release|x64` for `Release|GCC-x64`, `Release|Win32` for the HCP65's.
 - **Files left out.**  `ExcludedFromBuild` on an item, or on every source through an item definition
   ([`CVcxProject::IsCompiled`]).
 

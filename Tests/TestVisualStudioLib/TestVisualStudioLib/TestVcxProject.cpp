@@ -811,8 +811,8 @@ void TestVcxProjectSheets(void)
 	AssertString("X11", aszValues.GetText(0));
 	AssertString("Xext", aszValues.GetText(1));
 
-	//What Release|x64 says once, Release|GCC-x64 has too: its type, and (having no IncludePath but the sheet's
-	//own) the sheet's include directory, named from the sheet's folder.
+	//What Release|x64 says once, Release|GCC-x64 has too: its type, and its include directories, the project's
+	//own before the sheet's, which is named from the sheet's folder.
 	AssertString("StaticLibrary", pcConfiguration->GetProperty("ConfigurationType"));
 	AssertNull(pcConfiguration->GetOwnProperty("ConfigurationType"));
 	AssertNull(cProject.FindConfiguration("Debug|GCC-x64")->GetProperty("ConfigurationType"));
@@ -820,6 +820,11 @@ void TestVcxProjectSheets(void)
 	cFileUtil.FullPath(&szCommon);
 	aszValues.ReInit();
 	cProject.GetIncludeDirectories(pcConfiguration, ".", &aszValues);
+	AssertSize(2, aszValues.NumElements());
+	AssertTrue(TestVcxProjectEndsWith(aszValues.GetText(0), "Extra"));
+	AssertString(szCommon.Text(), aszValues.GetText(1));
+	aszValues.ReInit();
+	cProject.GetIncludeDirectories(cProject.FindConfiguration("Debug|GCC-x64"), ".", &aszValues);
 	AssertSize(1, aszValues.NumElements());
 	AssertString(szCommon.Text(), aszValues.GetText(0));
 	aszValues.ReInit();

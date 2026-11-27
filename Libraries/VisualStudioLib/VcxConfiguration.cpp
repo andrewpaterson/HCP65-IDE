@@ -74,18 +74,26 @@ void CVcxConfiguration::SetProperty(const char* szName, const char* szValue)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// NULL if the project doesn't set it for this configuration, nor, for a
-// toolchain's configuration, for its base where the base's is taken: a
-// property group's property (ConfigurationType, IncludePath) and the
-// compiler's include directories.
+// NULL if the project doesn't set it for this configuration.  A toolchain's
+// configuration takes from its base what a project says for each of Visual
+// Studio's configurations and not for a toolchain's: its include
+// directories, which are the base's whatever its own (a sheet gives every
+// configuration some, and a project adds its own to Visual Studio's), and
+// any other property group's property it hasn't (ConfigurationType).
 //
 //////////////////////////////////////////////////////////////////////////
 char* CVcxConfiguration::GetProperty(const char* szName)
 {
 	char*	szValue;
+	bool	bIncludes;
 
-	szValue = mcProperties.Get(szName);
-	if ((szValue == NULL) && (mpcBase != NULL) && (!strchr(szName, '.') || (strcmp(szName, "ClCompile.AdditionalIncludeDirectories") == 0)))
+	bIncludes = (strcmp(szName, "IncludePath") == 0) || (strcmp(szName, "ClCompile.AdditionalIncludeDirectories") == 0);
+	szValue = (bIncludes && mpcBase) ? mpcBase->GetProperty(szName) : NULL;
+	if (szValue == NULL)
+	{
+		szValue = mcProperties.Get(szName);
+	}
+	if ((szValue == NULL) && (mpcBase != NULL) && !strchr(szName, '.'))
 	{
 		szValue = mpcBase->GetProperty(szName);
 	}

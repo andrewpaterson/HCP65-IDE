@@ -181,10 +181,15 @@ bool CGCCBuild::AddCommands(CArrayChars* paszLines)
 					pcItem = psProject->pcProject->GetItem(j);
 					if (psProject->pcProject->IsCompiled(pcItem, psProject->pcConfiguration))
 					{
+						//Named from the file as it is on disk, as its compile named it: a project's spelling of a
+						//name can differ in case.
+						szSource.Init();
+						psProject->pcProject->GetFullPath(pcItem, &szSource);
 						szObject.Init();
-						GetObjectName(szProjectOutput.Text(), pcItem->GetFileName(), &szObject);
+						GetObjectName(szProjectOutput.Text(), szSource.Text(), &szObject);
 						psCommand->aszArguments.Add(szObject.Text());
 						szObject.Kill();
+						szSource.Kill();
 					}
 				}
 				if (psCommand->aszArguments.NumElements() == uiFirstObject)
