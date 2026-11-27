@@ -567,7 +567,9 @@ Questions (the user's, one at a time)
       project with nothing compiled is neither archived nor linked (CGCCBuild already skips one).  A file: the
       item's own ExcludedFromBuild for the toolchain, as HCP65IDERef.cpp has.  Visual Studio shows it (Excluded From
       Build: Yes) and MSBuild does it; that an ItemDefinitionGroup's default is honoured is trial W2, else every item
-      says it.  Costs C10-1's reading and needs C1 for the GCC-x64 groups.
+      says it.  Costs C10-1's reading and needs C1 for the GCC-x64 groups.  (2026-11-27: with question 13 A nothing
+      is excluded from an MSVC configuration, only from GCC-x64's, which Visual Studio never evaluates: the IDE and
+      CMake's module are their only readers, so W2 isn't needed and this can be decided without Windows.)
    B. Guards in the sources, as the mains and the libraries' _Windows/_Linux files: WinGdiLib's, WinInputLib's and
       WinWaveoutLib's in #ifdef _WIN32, X11Lib's and PulseAudioLib's in #ifdef LINUX_GNU, the board files in _WIN32.
       Works with today's GCC build at once, no reading needed; but every platform compiles the other's libraries to
@@ -620,9 +622,11 @@ Questions (the user's, one at a time)
 16. Open (C2-1, 2026-11-27): how a toolchain's configuration comes to import the sheet.  A project imports it in
    <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">, one for each MSVC
    configuration (question 2: as Visual Studio writes it), and none is true for Release|GCC-x64.
-   A. Recommended: one ImportGroup Label="PropertySheets" with no condition in place of the four.  Every
-      configuration imports the sheet by MSBuild's own rules, and the sheet's groups' own conditions choose what
-      applies.  Whether Property Manager shows it and Visual Studio keeps it so is trial W4; if not, B.
+   A. Recommended: one ImportGroup Label="PropertySheets" with no condition for the repository's sheet, beside the
+      four Visual Studio wrote, which keep their own import (Microsoft.Cpp.$(Platform).user.props) and nothing else
+      (2026-11-27: "in place of the four" stood here).  Every configuration imports the sheet by MSBuild's own
+      rules, and the sheet's groups' own conditions choose what applies.  It changes question 2's "once per
+      configuration" to once.  Whether Property Manager shows it and Visual Studio keeps it so is trial W4; if not, B.
    B. The reader takes an import in any configuration's ImportGroup as imported for every configuration.  Right while
       a project imports the same sheet in all of them (true after C7), wrong for a sheet meant for one; a rule MSBuild
       hasn't, written again in CMake's reader.
@@ -694,5 +698,9 @@ Questions (the user's, one at a time)
    question 8 makes false everywhere.  g++: no CMakeLists.txt and nothing in C0's list passes -fno-exceptions, so
    every Linux build compiled with exceptions on, g++'s default.  The HCP65 compiler's own Exceptions option
    (question 4, the whole program's) is another thing and stays.
+   Tried 2026-11-27, CMake Release x64 with -fno-exceptions added (CMAKE_CXX_FLAGS): TestBaseLib builds and passes
+   (326894 passed, 0 failed), and all of HCP65IDE's CMake build compiles and links (1851 steps: BaseLib, StandardLib,
+   SupportLib, WindowLib, X11Lib, WinRefLib, ThreadLib, CppCompilerLib, MicroprocessorLib, the IDE's libraries, its
+   programs and hcp65build).
    The recommendation was to leave g++'s on, until the survey showed nothing uses them.  The other considered: left
    on and the difference recorded (no Linux build changes, but a try or throw compiles on Linux and fails on Windows).
