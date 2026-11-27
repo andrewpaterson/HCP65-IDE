@@ -944,3 +944,8 @@ Questions (the user's, one at a time)
    (hcp65build's plain command line, -program and -lib) still names the directory, having no rows to read.  A
    solution with an HCP65 configuration and no Libc65 built in it is an error the build names.
    C4 gains this as C4-7; TestBuildLib's HCP65 fixtures get Libc65 rows.
+24. Decided (the user, 2026-11-27: "1. A - in the .vcxproj, as the plan says"): a project's own settings for a toolchain
+   (a program's X11 link line, a file's ExcludedFromBuild, later its HCP65 options) are written in its .vcxproj, though
+   whether Visual Studio keeps them when it saves the project can't be tried until there is one (trial W3).  If it
+   drops them, git shows it and they move to a sheet beside the project (W3's contingency).  The other considered:
+   that sheet from the start, which can't hold a file's exclusion anyway.
