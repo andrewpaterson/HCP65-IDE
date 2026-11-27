@@ -510,6 +510,29 @@ Windows trials (the user's: there is no Windows here; gathered 2026-11-27)
 
 Each is a small experiment on one project or solution, wanted before the stage or answer that leans on it.
 
+What Microsoft's pages say (read 2026-11-27, the Windows machine not starting; a trial still settles each):
+  - W1 and W5, likely to pass.  A solution's configurations and platforms are names of its own ("you can create your
+    own custom solution-level platforms / configurations with whatever names you choose", Hallberg's Solution
+    Configurations, 2007), each "just a collection of project-level platforms", with other names than the projects'
+    ("When you choose x86 as the solution configuration, Visual Studio selects the Win32 platform for C++
+    projects"), and "The solution configuration determines which projects are included in the build" (Understand
+    build configurations).  MSBuild takes the solution's names: msbuild X.sln /p:"Platform=Mixed Platforms".  W1's
+    file maps every row to a configuration the projects have, which is this.  Not said anywhere: what Visual Studio
+    does on load or save with a row mapped to a configuration a project hasn't.
+  - Question 1's MSB8006 is right: "The Platform for project ... is invalid", when a project names a platform that
+    isn't installed.
+  - W2, likely to pass: an ItemDefinitionGroup "add[s] default metadata values to all items in the named item type"
+    and can be conditioned (MSBuild item definitions).
+  - W3, not said: nothing on whether groups for configurations a project doesn't list are kept when it is saved.
+    "The ProjectConfigurations item group isn't used at build time.  The Visual Studio IDE requires it to load the
+    project."  Manual edits are warned against in general.
+  - W4, doubtful for ConfigurationType (question 15 A): "A Configuration property group has an attached configuration
+    condition ... and comes in multiple copies, one per configuration", "the file must contain separate groups for
+    each project configuration" for the Project Properties dialog to edit them, and "we strongly recommend you don't
+    deviate from the structure" (.vcxproj and .props file structure).  Better for the sheet's import (question 16 A):
+    the page's own PropertySheets ImportGroup has no condition, though a project "normally contains multiple
+    instances of this kind of import group, one for each project configuration".
+
   W1. (Prepared 2026-11-27: LogiCim/LogiCim/LogiCim-W1.sln, LogiCim b6736f5, with Debug|GCC-x64 and Release|GCC-x64,
      each project's row mapped to its x64 configuration and WinGdiLib and WinInputLib not built in them; deleted
      after.)  A .sln that also lists Release|GCC-x64, mapped to a project configuration Visual Studio can't build
