@@ -353,7 +353,7 @@ C10. What a GCC build on Linux builds: the platforms' own projects and files (ad
     Reference|GCC-x64 the IDE builds hasn't been asked for.
   - What Linux links that Windows doesn't: X11 and Xext (X11Lib), dl (PulseAudioLib loads libpulse-simple when it
     runs) and pthread (BaseLib), each in a CMakeLists.txt's target_link_libraries, PUBLIC so a program linking the
-    library gets them.
+    library gets them.  dl and pthread are in libc since glibc 2.34 (question 14).
   - The build already takes note of the solution: a project whose solution configuration has no .Build.0 isn't built,
     and a solution configuration the .sln hasn't (Release|GCC-x64, question 1) falls back to the project's own
     configuration of that name (BL/Build.cpp, CBuild::GetProjects).  So after C1 and C3-1 a project without a GCC-x64
@@ -370,15 +370,18 @@ C10. What a GCC build on Linux builds: the platforms' own projects and files (ad
      Windows needs nothing more).
   C10-3. X11Lib and PulseAudioLib join the solutions that need them (question 13): the six programs' (PulseAudioLib only
      HCP65Emulator's).  TestInputLib's and TestWindowLib's gain nothing.
-  C10-4. The system libraries come from where question 14 says; CGCCBuild links them.
+  C10-4. The system libraries (question 14): X11;Xext in the six window programs' GCC-x64 Link groups, pthread;dl in
+     the shared sheet's.  CGCCBuild links them by C3-2, with nothing more of its own.
   C10-5. C6 reads the same: CMake leaves out what a project or file isn't built for, so the hand-written source lists
-     (LogiCim's, HCP65IDE's and HCP65Tester's) and WindowInputTester's EXCLUDE go, and the libraries' link libraries
-     come from the projects.  A program with a reference build (HCP65IDE, HCP65Emulator, HCP65Sculpt) still names its
-     mains in its CMakeLists.txt: its other sources are a library the two programs share, each adding its own main
-     (corrected 2026-11-27: their EXCLUDE lists don't go).
+     (LogiCim's, HCP65IDE's and HCP65Tester's) and WindowInputTester's EXCLUDE go, and a program's system libraries
+     come from its project (question 14) in place of X11Lib's, PulseAudioLib's and BaseLib's PUBLIC
+     target_link_libraries; a reference build, a target of CMake's own, doesn't take the program's X11.  A program
+     with a reference build (HCP65IDE, HCP65Emulator, HCP65Sculpt) still names its mains in its CMakeLists.txt: its
+     other sources are a library the two programs share, each adding its own main (corrected 2026-11-27: their
+     EXCLUDE lists don't go).
   C10-6. Tests: TestVisualStudioLib reads ExcludedFromBuild per configuration, as an item's and as a group's default;
      TestBuildLib's GCC build of a solution with a Windows-only library, a Linux-only one and an excluded file builds
-     only what Linux builds and links the Linux one's system libraries.  The IDE builds LogiCim, HCP65IDE,
+     only what Linux builds and links the program's own system libraries.  The IDE builds LogiCim, HCP65IDE,
      HCP65Emulator, HCP65Tester, HCP65Sculpt and WindowInputTester in Release|GCC-x64 and each starts.  Windows (the
      user): each of the eight solutions opens and builds in Visual Studio with no new warnings.
 
@@ -562,15 +565,22 @@ Questions (the user's, one at a time)
       the IDE loads them.  Visual Studio never shows them; a second place the solution's projects are listed.
    D. (2026-11-27) Only if trial W1 shows a .sln can list the GCC configurations: listed in each .sln and built
       (.Build.0) only in its GCC configurations.  As A, without leaning on the fallback.
-14. Open (C10-4): where the system libraries a library needs on Linux are written (X11, Xext, dl, pthread).
-   A. Recommended: in the library's own GCC-x64 group, Link's AdditionalDependencies (a static library ignores Link
-      in Visual Studio, so it is free to say what a program linking it needs), and CGCCBuild adds every library's to
-      each application's link, as CMake's PUBLIC target_link_libraries does.  Written once each: X11Lib X11;Xext,
-      PulseAudioLib dl, BaseLib pthread.
-   B. In each application's GCC-x64 Link group (LogiCim X11;Xext;pthread and so on).  What Visual Studio means by it,
-      but written in every program that links X11Lib (six, and their reference builds).
-   C. In the shared sheet's GCC-x64 Link group: every Linux program links X11, Xext and dl, and every Linux build
-      needs libx11-dev, the console tests too.
+14. Decided (the user, 2026-11-27: "14 -> B, update the plan"): the system libraries a Linux program links are written
+   in the program's own GCC-x64 Link group, AdditionalDependencies, which C3-2 already passes to the link: X11;Xext in
+   the six window programs (LogiCim, HCP65IDE, HCP65Emulator, HCP65Tester, HCP65Sculpt, WindowInputTester).  pthread
+   and dl are in the shared sheet's GCC-x64 Link group, as shlwapi.lib is every Windows program's, so HCP65Emulator
+   needs no line of its own for PulseAudioLib's dl.  What Visual Studio means by the setting, no rule of the IDE's
+   own, and how Windows has it now: LogiCim's project lists dinput8.lib, dxguid.lib and xinput.lib, which WinInputLib
+   needs, and WinInputLib's lists nothing.
+   Checked 2026-11-27: only the six programs need X11 (HCP65IDE needs libX11 and libXext; HCP65IDERef, on WinRefLib,
+   neither: "six, and their reference builds" stood here and was wrong).  pthread and dl are in libc since glibc 2.34
+   (2.39 here): TestBaseLib linked by the IDE's build with neither runs and passes, so the sheet's two are for older
+   systems only.
+   The recommendation was A until then.  The others considered: A, each library's own GCC-x64 Link group (X11Lib
+   X11;Xext, PulseAudioLib dl, BaseLib pthread) with CGCCBuild adding every library's to each program's link, as
+   CMake's PUBLIC target_link_libraries: written once each and a new program gets them, but a rule MSBuild hasn't,
+   written twice (CGCCBuild and CMake's module), and not how Windows has it; C, all in the shared sheet, every Linux
+   program linking X11 and every Linux build needing libx11-dev, the console tests too.
 15. Open (C1-4, 2026-11-27): where a GCC or HCP65 configuration gets its ConfigurationType and include directories.
    A. Recommended: written once, with no condition.  C7 moves each project's ConfigurationType into one PropertyGroup
       Label="Configuration" with no condition, and IncludePath comes from the repository's sheet with no condition (a
