@@ -178,6 +178,34 @@ void TestBuildMSVC(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// A GCC-x64 configuration is Linux's: anywhere else its build doesn't
+// start, and says so.
+//
+//////////////////////////////////////////////////////////////////////////
+void TestBuildGCCNotLinux(void)
+{
+	CVcxSolution			cSolution;
+	CBuildConfiguration		cConfiguration;
+	CSolutionBuild			cBuild;
+	CArrayChars				aszLines;
+
+	cSolution.Init();
+	AssertTrue(cSolution.ReadProject("Input" _FS_ "Tiny" _FS_ "Tiny.vcxproj"));
+	cConfiguration.Init("Debug|GCC-x64", BT_GCC, "Debug|Win32");
+	cBuild.Init();
+	aszLines.Init();
+	AssertInt(BS_Failed, TestBuildProject(&cBuild, &cSolution, &cConfiguration, "GCC", &aszLines));
+	AssertTrue(TestBuildHasLine(&aszLines, "A GCC-x64 configuration is built on Linux."));
+	AssertSize(0, ((CCommandBuild*)cBuild.GetBuild())->NumCommands());
+	aszLines.Kill();
+	cBuild.Kill();
+	cSolution.Kill();
+	cConfiguration.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Tiny with GCC: g++ -c with its include directory and define, then ar.
 // Without g++ on the path the build fails saying so.
 //
@@ -207,8 +235,9 @@ void TestBuildGCC(void)
 	AssertString("-c", psCompile->aszArguments.GetText(0));
 	AssertTrue(psCompile->aszArguments.Contains("-DTINY_DEBUG"));
 	AssertTrue(TestBuildEndsWith(psCompile->aszArguments.GetText(psCompile->aszArguments.NumElements() - 1), "Maths.o"));
-#ifdef LINUX_GNU
-	//The Linux options after the project's defines, and a Debug configuration's.
+	//Tiny has no GCC-x64 configuration: it is built as its Win32 one, with the options every such project is given
+	//after its defines, and a Debug configuration's.
+	AssertTrue(TestBuildHasLine(&aszLines, "No GCC-x64 configuration, built as Win32: Tiny."));
 	AssertSize(psCompile->aszArguments.GetIndex("-DTINY_DEBUG") + 1, psCompile->aszArguments.GetIndex("-DLINUX_GNU"));
 	AssertTrue(psCompile->aszArguments.Contains("-m64"));
 	AssertTrue(psCompile->aszArguments.Contains("-fno-strict-aliasing"));
@@ -216,9 +245,6 @@ void TestBuildGCC(void)
 	AssertTrue(psCompile->aszArguments.Contains("-g"));
 	AssertFalse(psCompile->aszArguments.Contains("-O3"));
 	AssertFalse(psCompile->aszArguments.Contains("-fno-lifetime-dse"));
-#else
-	AssertFalse(psCompile->aszArguments.Contains("-DLINUX_GNU"));
-#endif // LINUX_GNU
 	AssertString("ar", pcCommands->GetCommand(1)->szExecutable.Text());
 	AssertTrue(TestBuildEndsWith(pcCommands->GetCommand(1)->aszArguments.GetText(1), "libTiny.a"));
 
@@ -241,9 +267,9 @@ void TestBuildGCC(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Tools with GCC in Release: on Linux each compile has the Release
-// options and each link -m64 and --gc-sections (ConfigurationsPlan.txt
-// C0).  Two applications linked, the library archived.
+// Tools with GCC in Release: each compile has the Release options and each
+// link -m64 and --gc-sections (ConfigurationsPlan.txt C0).  Two
+// applications linked, the library archived.
 //
 //////////////////////////////////////////////////////////////////////////
 void TestBuildGCCRelease(void)
@@ -278,22 +304,16 @@ void TestBuildGCCRelease(void)
 		if (psCommand->aszArguments.Contains("-c"))
 		{
 			iCompiles++;
-#ifdef LINUX_GNU
 			AssertTrue(psCommand->aszArguments.Contains("-DLINUX_GNU"));
 			AssertTrue(psCommand->aszArguments.Contains("-O3"));
 			AssertTrue(psCommand->aszArguments.Contains("-fno-lifetime-dse"));
 			AssertFalse(psCommand->aszArguments.Contains("-g"));
-#endif // LINUX_GNU
 		}
 		else if (psCommand->szDescription.StartsWith("Linking "))
 		{
 			iLinks++;
-#ifdef LINUX_GNU
 			AssertTrue(psCommand->aszArguments.Contains("-m64"));
 			AssertTrue(psCommand->aszArguments.Contains("-Wl,--gc-sections"));
-#else
-			AssertFalse(psCommand->aszArguments.Contains("-Wl,--gc-sections"));
-#endif // LINUX_GNU
 		}
 	}
 	AssertInt(3, iCompiles);
@@ -313,6 +333,103 @@ void TestBuildGCCRelease(void)
 	cBuild.Kill();
 	cSolution.Kill();
 	cConfiguration.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A project with a GCC-x64 configuration of its own is built with it,
+// whichever solution configuration the build names (Debug|x64 here): its
+// defines and its ClCompile AdditionalOptions, and none of the options a
+// project without one is given; its type and include directory are its
+// x64 configuration's.  Its link has its Link AdditionalOptions and its
+// AdditionalDependencies, a bare name as -l<name>.
+//
+//////////////////////////////////////////////////////////////////////////
+void TestBuildGCCConfiguration(void)
+{
+	CVcxSolution			cSolution;
+	CBuildConfiguration		cConfiguration;
+	CSolutionBuild			cBuild;
+	CArrayChars				aszLines;
+	CCommandBuild*			pcCommands;
+	SBuildCommand*			psCommand;
+	EBuildState				eState;
+	CFileUtil				cFileUtil;
+	CTextFile				cFile;
+	size					uiDefine;
+
+	cFileUtil.RemoveDir("Output" _FS_ "Grouped");
+	cFileUtil.TouchDir("Output" _FS_ "Grouped" _FS_ "Include");
+	cFile.Init("<Project>\n"
+		"  <ItemGroup Label=\"ProjectConfigurations\">\n"
+		"    <ProjectConfiguration Include=\"Debug|x64\"/>\n"
+		"  </ItemGroup>\n"
+		"  <PropertyGroup Condition=\"'$(Configuration)|$(Platform)'=='Debug|x64'\">\n"
+		"    <ConfigurationType>Application</ConfigurationType>\n"
+		"    <IncludePath>$(ProjectDir)Include;$(IncludePath)</IncludePath>\n"
+		"  </PropertyGroup>\n"
+		"  <ItemDefinitionGroup Condition=\"'$(Configuration)|$(Platform)'=='Debug|x64'\">\n"
+		"    <ClCompile><PreprocessorDefinitions>GROUPED_MSVC</PreprocessorDefinitions></ClCompile>\n"
+		"  </ItemDefinitionGroup>\n"
+		"  <ItemDefinitionGroup Condition=\"'$(Configuration)|$(Platform)'=='Debug|GCC-x64'\">\n"
+		"    <ClCompile>\n"
+		"      <PreprocessorDefinitions>GROUPED_GCC=7;%(PreprocessorDefinitions)</PreprocessorDefinitions>\n"
+		"      <AdditionalOptions>-O1 -fno-strict-aliasing %(AdditionalOptions)</AdditionalOptions>\n"
+		"    </ClCompile>\n"
+		"    <Link>\n"
+		"      <AdditionalOptions>-s</AdditionalOptions>\n"
+		"      <AdditionalDependencies>m;%(AdditionalDependencies)</AdditionalDependencies>\n"
+		"    </Link>\n"
+		"  </ItemDefinitionGroup>\n"
+		"  <ItemGroup>\n"
+		"    <ClCompile Include=\"Main.cpp\"/>\n"
+		"  </ItemGroup>\n"
+		"</Project>\n");
+	AssertTrue(cFile.Write("Output" _FS_ "Grouped" _FS_ "Grouped.vcxproj"));
+	cFile.Kill();
+	cFile.Init("#include \"Grouped.h\"\n#include <math.h>\n\nint main(int argc, char* argv[])\n{\n\treturn (int)floor((double)argc) + GROUPED_GCC - GROUPED_HEADER - 1;\n}\n");
+	AssertTrue(cFile.Write("Output" _FS_ "Grouped" _FS_ "Main.cpp"));
+	cFile.Kill();
+	cFile.Init("#define GROUPED_HEADER 7\n");
+	AssertTrue(cFile.Write("Output" _FS_ "Grouped" _FS_ "Include" _FS_ "Grouped.h"));
+	cFile.Kill();
+
+	cSolution.Init();
+	AssertTrue(cSolution.ReadProject("Output" _FS_ "Grouped" _FS_ "Grouped.vcxproj"));
+	cConfiguration.Init("Debug|GCC-x64", BT_GCC, "Debug|x64");
+	cBuild.Init();
+	aszLines.Init();
+	eState = TestBuildProject(&cBuild, &cSolution, &cConfiguration, "Grouped" _FS_ "Build", &aszLines);
+	AssertFalse(TestBuildHasLine(&aszLines, "No GCC-x64 configuration, built as x64: Grouped."));
+
+	pcCommands = (CCommandBuild*)cBuild.GetBuild();
+	AssertSize(2, pcCommands->NumCommands());
+	psCommand = pcCommands->GetCommand(0);
+	AssertString("Main.cpp", psCommand->szDescription.Text());
+	uiDefine = psCommand->aszArguments.GetIndex("-DGROUPED_GCC=7");
+	AssertTrue(uiDefine != ARRAY_ELEMENT_NOT_FOUND);
+	AssertString("-O1", psCommand->aszArguments.GetText(uiDefine + 1));
+	AssertString("-fno-strict-aliasing", psCommand->aszArguments.GetText(uiDefine + 2));
+	AssertFalse(psCommand->aszArguments.Contains("-DGROUPED_MSVC"));
+	AssertFalse(psCommand->aszArguments.Contains("-DLINUX_GNU"));
+	AssertFalse(psCommand->aszArguments.Contains("-g"));
+	AssertFalse(psCommand->aszArguments.Contains("-march=haswell"));
+	AssertTrue(TestBuildEndsWith(psCommand->aszArguments.GetText(2), "Include"));
+
+	psCommand = pcCommands->GetCommand(1);
+	AssertString("Linking Grouped", psCommand->szDescription.Text());
+	AssertString("-s", psCommand->aszArguments.GetText(0));
+	AssertString("-o", psCommand->aszArguments.GetText(1));
+	AssertString("-lm", psCommand->aszArguments.GetText(psCommand->aszArguments.NumElements() - 1));
+	AssertFalse(psCommand->aszArguments.Contains("-m64"));
+	AssertTrue((eState == BS_Succeeded) || TestBuildHasLine(&aszLines, "Could not run g++."));
+
+	aszLines.Kill();
+	cBuild.Kill();
+	cConfiguration.Kill();
+	cSolution.Kill();
+	cFileUtil.RemoveDir("Output" _FS_ "Grouped");
 }
 
 
@@ -510,9 +627,6 @@ void TestBuildStartupProject(void)
 	CBuild::GetDirectory("Output" _FS_ "Root", &cGCC, "Output", &szExpected);
 	cFileUtil.FullPath(&szExpected);
 	cFileUtil.AppendToPath(&szExpected, "Second");
-#ifdef _WIN32
-	szExpected.Append(".exe");
-#endif
 	szPath.Init();
 	CGCCBuild::GetExecutablePath("Output" _FS_ "Root", &cGCC, "Second", &szPath);
 	AssertString(szExpected.Text(), szPath.Text());
@@ -541,10 +655,15 @@ void TestBuild(void)
 #ifdef _WIN32
 	TestBuildMSVC();
 #endif // _WIN32
+#ifdef LINUX_GNU
 	TestBuildGCC();
 	TestBuildGCCRelease();
+	TestBuildGCCConfiguration();
 	TestBuildExcludedFromBuild();
 	TestBuildMakefile();
+#else
+	TestBuildGCCNotLinux();
+#endif // LINUX_GNU
 
 	TestStatistics();
 }

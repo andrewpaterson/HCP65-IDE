@@ -23,16 +23,10 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 #include "GCCBuild.h"
 
 
-#ifdef _WIN32
-#define GCC_EXECUTABLE_EXTENSION	".exe"
-#else
-#define GCC_EXECUTABLE_EXTENSION	""
-#endif
-
-
-#ifdef LINUX_GNU
-//A stopgap until the projects have GCC-x64 groups of their own (ConfigurationsPlan.txt C0; C3-2 removes these):
-//what CommonLibraries/Tests/TestBaseLib/CMakeLists.txt's baselib_options gives a 64-bit build, which explains each.
+//For a project with no GCC-x64 configuration of its own, built as its x64 one (ConfigurationsPlan.txt C0, until C7-4,
+//when every project has one from its property sheet): what CommonLibraries/Tests/TestBaseLib/CMakeLists.txt's
+//baselib_options gives a 64-bit build, which explains each.  A project with the configuration gets none of these: its
+//options are its own.
 //Every compile, after the project's own defines.
 static const char* gaszGCCCompileOptions[] = { "-DLINUX_GNU", "-m64", "-march=haswell", "-fno-strict-aliasing", "-fno-exceptions", "-Wno-ignored-attributes", "-Wno-write-strings", "-Wno-multichar", "-Wno-class-memaccess", "-Wno-overloaded-virtual", "-Wno-comment", "-Wno-unused-parameter", NULL };
 //Then a Debug configuration's, or any other's.
@@ -41,34 +35,12 @@ static const char* gaszGCCReleaseCompileOptions[] = { "-O3", "-ffunction-section
 //Every link, then a Release link's.
 static const char* gaszGCCLinkOptions[] = { "-m64", NULL };
 static const char* gaszGCCReleaseLinkOptions[] = { "-Wl,--gc-sections", NULL };
-#else
-static const char* gaszGCCCompileOptions[] = { NULL };
-static const char* gaszGCCDebugCompileOptions[] = { NULL };
-static const char* gaszGCCReleaseCompileOptions[] = { NULL };
-static const char* gaszGCCLinkOptions[] = { NULL };
-static const char* gaszGCCReleaseLinkOptions[] = { NULL };
-#endif
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-//
-//////////////////////////////////////////////////////////////////////////
-static void AddGCCOptions(CArrayChars* paszArguments, const char** paszOptions)
-{
-	size	i;
-
-	for (i = 0; paszOptions[i] != NULL; i++)
-	{
-		paszArguments->Add(paszOptions[i]);
-	}
-}
 
 
 //////////////////////////////////////////////////////////////////////////
 //
 // Where a build of the solution in szRoot links the application szProject
-// (<project>[.exe] in the configuration's Output folder): what a run
+// (<project> in the configuration's Output folder): what a run
 // configuration without a tool runs for the startup project.
 //
 //////////////////////////////////////////////////////////////////////////
@@ -79,7 +51,6 @@ void CGCCBuild::GetExecutablePath(const char* szRoot, CBuildConfiguration* pcCon
 	GetDirectory(szRoot, pcConfiguration, "Output", pszDest);
 	cFileUtil.FullPath(pszDest);
 	cFileUtil.AppendToPath(pszDest, szProject);
-	pszDest->Append(GCC_EXECUTABLE_EXTENSION);
 }
 
 
@@ -113,8 +84,15 @@ bool CGCCBuild::AddCommands(CArrayChars* paszLines)
 	int					iPass;
 	bool				bFolder;
 
+#ifndef LINUX_GNU
+	//GCC-x64 is g++ for 64-bit Linux (ConfigurationsPlan.txt question 19).
+	paszLines->Add("A GCC-x64 configuration is built on Linux.");
+	return false;
+#endif // LINUX_GNU
+
 	asProjects.Init();
 	GetProjects(&asProjects);
+	AddWithoutConfiguration(&asProjects, paszLines);
 	//Full paths: the commands run in the project's (or solution's) directory, not this program's.
 	szOutput.Init();
 	GetOutputDirectory(&szOutput);
@@ -135,7 +113,7 @@ bool CGCCBuild::AddCommands(CArrayChars* paszLines)
 				continue;
 			}
 			//Objects in a folder of their own: an application is linked beside them as Output\GCC-x64\Debug\Project, which
-			//without Windows' .exe would be the project's objects' folder.
+			//would be the project's objects' folder.
 			szProjectOutput.Init(szOutput);
 			cFileUtil.AppendToPath(&szProjectOutput, "Objects");
 			cFileUtil.AppendToPath(&szProjectOutput, psProject->pcProject->GetName());
@@ -176,7 +154,7 @@ bool CGCCBuild::AddCommands(CArrayChars* paszLines)
 			}
 			else if ((iPass == 1) == psProject->bLibrary)
 			{
-				//Archive a library (lib<Project>.a) or link an application (<Project>[.exe]) from its objects.
+				//Archive a library (lib<Project>.a) or link an application (<Project>) from its objects.
 				szTarget.Init(szOutput);
 				szDescription.Init(psProject->bLibrary ? "Archiving " : "Linking ");
 				if (psProject->bLibrary)
@@ -192,13 +170,8 @@ bool CGCCBuild::AddCommands(CArrayChars* paszLines)
 				else
 				{
 					cFileUtil.AppendToPath(&szTarget, psProject->pcProject->GetName());
-					szTarget.Append(GCC_EXECUTABLE_EXTENSION);
 					psCommand = AddCommand("g++", mpcSolution->GetDirectory(), szDescription.Append(psProject->pcProject->GetName())->Text());
-					AddGCCOptions(&psCommand->aszArguments, gaszGCCLinkOptions);
-					if (!IsDebugConfiguration())
-					{
-						AddGCCOptions(&psCommand->aszArguments, gaszGCCReleaseLinkOptions);
-					}
+					AddOptions(psProject, "Link", gaszGCCLinkOptions, NULL, gaszGCCReleaseLinkOptions, &psCommand->aszArguments);
 					psCommand->aszArguments.Add("-o");
 					psCommand->aszArguments.Add(szTarget.Text());
 				}
@@ -236,6 +209,10 @@ bool CGCCBuild::AddCommands(CArrayChars* paszLines)
 						psCommand->aszArguments.Add(aszLibraries.GetText(j));
 					}
 					psCommand->aszArguments.Add("-Wl,--end-group");
+				}
+				if (!psProject->bLibrary && (psCommand->aszArguments.NumElements() != uiFirstObject))
+				{
+					AddDependencies(psProject, &psCommand->aszArguments);
 				}
 				szDescription.Kill();
 				szTarget.Kill();
@@ -284,11 +261,113 @@ void CGCCBuild::AddCompile(SBuildProject* psProject, const char* szSource, const
 		psCommand->aszArguments.Add(szArgument.Text());
 		szArgument.Kill();
 	}
-	AddGCCOptions(&psCommand->aszArguments, gaszGCCCompileOptions);
-	AddGCCOptions(&psCommand->aszArguments, IsDebugConfiguration() ? gaszGCCDebugCompileOptions : gaszGCCReleaseCompileOptions);
+	AddOptions(psProject, "ClCompile", gaszGCCCompileOptions, gaszGCCDebugCompileOptions, gaszGCCReleaseCompileOptions, &psCommand->aszArguments);
 	psCommand->aszArguments.Add(szSource);
 	psCommand->aszArguments.Add("-o");
 	psCommand->aszArguments.Add(szObject);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A tool's options for a project (szTool is "ClCompile" or "Link"): its
+// GCC-x64 configuration's own AdditionalOptions, or for a project built as
+// its x64 one the lists above, every configuration's and then Debug's or
+// any other's.
+//
+//////////////////////////////////////////////////////////////////////////
+void CGCCBuild::AddOptions(SBuildProject* psProject, const char* szTool, const char** paszAll, const char** paszDebug, const char** paszRelease, CArrayChars* paszArguments)
+{
+	const char**	paszConfiguration;
+	size			i;
+
+	if (psProject->pcConfiguration->IsToolchain())
+	{
+		psProject->pcProject->GetAdditionalOptions(szTool, psProject->pcConfiguration, mpcSolution->GetDirectory(), paszArguments);
+		return;
+	}
+	paszConfiguration = IsDebugConfiguration() ? paszDebug : paszRelease;
+	for (i = 0; paszAll[i] != NULL; i++)
+	{
+		paszArguments->Add(paszAll[i]);
+	}
+	for (i = 0; paszConfiguration && (paszConfiguration[i] != NULL); i++)
+	{
+		paszArguments->Add(paszConfiguration[i]);
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// What a program is linked with besides the solution's libraries: its
+// GCC-x64 configuration's AdditionalDependencies, a name with no path or
+// extension as -l<name> (X11 is -lX11) and any other as written.
+//
+//////////////////////////////////////////////////////////////////////////
+void CGCCBuild::AddDependencies(SBuildProject* psProject, CArrayChars* paszArguments)
+{
+	CArrayChars	aszLibraries;
+	CChars		szArgument;
+	char*		szLibrary;
+	size		i;
+
+	if (!psProject->pcConfiguration->IsToolchain())
+	{
+		return;
+	}
+	aszLibraries.Init();
+	psProject->pcProject->GetAdditionalDependencies(psProject->pcConfiguration, mpcSolution->GetDirectory(), &aszLibraries);
+	for (i = 0; i < aszLibraries.NumElements(); i++)
+	{
+		szLibrary = aszLibraries.GetText(i);
+		if (strpbrk(szLibrary, "./\\") || (szLibrary[0] == '-'))
+		{
+			paszArguments->Add(szLibrary);
+		}
+		else
+		{
+			szArgument.Init("-l");
+			szArgument.Append(szLibrary);
+			paszArguments->Add(szArgument.Text());
+			szArgument.Kill();
+		}
+	}
+	aszLibraries.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Says once which projects have no GCC-x64 configuration and are built as
+// their x64 one, with the options every such project is given.
+//
+//////////////////////////////////////////////////////////////////////////
+void CGCCBuild::AddWithoutConfiguration(CArrayBuildProjects* pasProjects, CArrayChars* paszLines)
+{
+	CChars	szLine;
+	size	i;
+
+	szLine.Init();
+	for (i = 0; i < pasProjects->NumElements(); i++)
+	{
+		if (!pasProjects->Get(i)->bCommand && !pasProjects->Get(i)->pcConfiguration->IsToolchain())
+		{
+			szLine.Append(szLine.Empty() ? "No " VCX_PLATFORM_GCC_X64 " configuration, built as " : ", ");
+			if (szLine.EndsWith(" as "))
+			{
+				szLine.Append(pasProjects->Get(i)->pcConfiguration->GetPlatform());
+				szLine.Append(": ");
+			}
+			szLine.Append(pasProjects->Get(i)->pcProject->GetName());
+		}
+	}
+	if (!szLine.Empty())
+	{
+		szLine.Append('.');
+		paszLines->Add(szLine.Text());
+	}
+	szLine.Kill();
 }
 
 

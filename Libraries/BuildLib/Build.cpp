@@ -109,6 +109,50 @@ void CBuild::GetDirectory(const char* szRoot, CBuildConfiguration* pcConfigurati
 
 //////////////////////////////////////////////////////////////////////////
 //
+// The configuration of a project that this build builds, given the one its
+// solution configuration asks for (szName, "Release|x64").  A toolchain
+// with a platform of its own builds the project's configuration of that
+// name on its platform (Release|GCC-x64) if the project has one, whichever
+// was asked for; else the one asked for; else, asked for its own that the
+// project hasn't, the one it would be built like.  NULL if there is none.
+//
+//////////////////////////////////////////////////////////////////////////
+CVcxConfiguration* CBuild::FindProjectConfiguration(CVcxProject* pcProject, const char* szName)
+{
+	CVcxConfiguration*	pcConfiguration;
+	const char*			szPlatform;
+	const char*			szBar;
+	CChars				szOther;
+
+	pcConfiguration = pcProject->FindConfiguration(szName);
+	szPlatform = CBuildConfiguration::GetToolchainPlatform(mpcConfiguration->GetToolchain());
+	szBar = strchr(szName, '|');
+	if (!szPlatform || !szBar || (pcConfiguration && pcConfiguration->IsToolchain()))
+	{
+		return pcConfiguration;
+	}
+
+	szOther.Init();
+	szOther.Append(szName, (size)(szBar + 1 - szName));
+	szOther.Append(szPlatform);
+	if (pcProject->FindConfiguration(szOther.Text()))
+	{
+		pcConfiguration = pcProject->FindConfiguration(szOther.Text());
+	}
+	else if (!pcConfiguration && GetVcxToolchainBasePlatform(szBar + 1))
+	{
+		szOther.Clear();
+		szOther.Append(szName, (size)(szBar + 1 - szName));
+		szOther.Append(GetVcxToolchainBasePlatform(szBar + 1));
+		pcConfiguration = pcProject->FindConfiguration(szOther.Text());
+	}
+	szOther.Kill();
+	return pcConfiguration;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // The projects the configuration's solution configuration builds, in the
 // solution's order, with the configuration it builds each in.  A project
 // that isn't loaded, or hasn't that configuration, isn't built.  With
@@ -146,11 +190,11 @@ void CBuild::GetProjects(CArrayBuildProjects* pasDest, bool bOneApplication)
 			{
 				continue;
 			}
-			pcConfiguration = pcProject->FindConfiguration(pcSolutionConfiguration->GetProjectConfiguration());
+			pcConfiguration = FindProjectConfiguration(pcProject, pcSolutionConfiguration->GetProjectConfiguration());
 		}
 		else
 		{
-			pcConfiguration = pcProject->FindConfiguration(mpcConfiguration->GetSolutionConfiguration());
+			pcConfiguration = FindProjectConfiguration(pcProject, mpcConfiguration->GetSolutionConfiguration());
 		}
 		if (!pcConfiguration)
 		{

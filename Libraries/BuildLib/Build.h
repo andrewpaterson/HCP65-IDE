@@ -98,6 +98,7 @@ public:
 			char*		GetStartupProject(void);
 			void		GetProjects(CArrayBuildProjects* pasDest, bool bOneApplication = false);
 
+	CVcxConfiguration*	FindProjectConfiguration(CVcxProject* pcProject, const char* szName);
 	static	void		GetDirectory(const char* szRoot, CBuildConfiguration* pcConfiguration, const char* szKind, CChars* pszDest);
 	static	bool		GetProgramPath(const char* szRoot, CBuildConfiguration* pcConfiguration, CChars* pszDest);
 

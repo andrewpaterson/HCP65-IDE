@@ -23,7 +23,19 @@ workspace file and `hcp65build -config`.  A configuration's files are in folders
 | W65C816 | The [HCP65 C++ compiler](../compiler/index.md), for the HCP65's own processor. |
 | 65C64 | The HCP65 C++ compiler, for the [65C64](../65c64/index.md). |
 | MSVC | MSBuild, as Visual Studio builds the solution configuration (Windows only; the newest Visual Studio's MSBuild, found with vswhere, or the one on the path). |
-| GCC | `g++` and `ar` from the path: each project compiled into `Output\GCC-x64\<configuration>\Objects\<project>\`, each static library archived (`lib<project>.a`), each application linked with all of the solution's libraries into `Output\GCC-x64\<configuration>\<project>`. On Linux each compile also has `-DLINUX_GNU` and the options CommonLibraries' CMake builds use (`-m64`, `-march=haswell`, `-fno-strict-aliasing`, `-fno-exceptions` and, in a configuration other than Debug, `-O3` and the rest), each link `-m64`. |
+| GCC | `g++` and `ar` from the path, on Linux: each project compiled into `Output\GCC-x64\<configuration>\Objects\<project>\`, each static library archived (`lib<project>.a`), each application linked with all of the solution's libraries into `Output\GCC-x64\<configuration>\<project>`. |
+
+A project can have a configuration of its own for a toolchain, a group in it or in a property sheet it imports for
+the toolchain's platform (`Release|GCC-x64`), which Visual Studio never sees.  A GCC or HCP65 build uses it when the
+project has it, whichever solution configuration the build configuration names:
+
+- GCC is given the configuration's defines, then its `ClCompile` `AdditionalOptions` as `g++`'s own arguments; the
+  link its `Link` `AdditionalOptions` and its `AdditionalDependencies`, a bare name as `-l<name>` (`X11` is `-lX11`).
+  The configuration's type (library or application) and include directories are those of the project's x64
+  configuration of the same name.
+- A project without one is built as its x64 configuration, with `-DLINUX_GNU` and the options CommonLibraries' CMake
+  builds use (`-m64`, `-march=haswell`, `-fno-strict-aliasing`, `-fno-exceptions` and, in a configuration other than
+  Debug, `-O3` and the rest), and the build says which projects those are.
 
 The HCP65 compiler and GCC compile a project's source files but those excluded from the solution configuration built
 (Visual Studio's Excluded From Build, on the file or on every file of a project), as MSBuild does.

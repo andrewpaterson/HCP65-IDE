@@ -255,6 +255,17 @@ C3. GCC builds with the project's GCC configuration
      g++." without one).  CGCCBuild's .exe for Windows goes with it.  TestBuildGCC and TestBuildGCCRelease expect
      that line on Windows.
 
+  Built 2026-11-27, differently in C3-1.  No build configuration changes its solution configuration and AddDefault
+  is as it was: CBuild::FindProjectConfiguration gives a toolchain's build the project's own configuration on the
+  toolchain's platform when the project has one, whichever solution configuration is named (Release|x64, as the
+  defaults have it, or Release|GCC-x64), and the one asked for when it hasn't.  So a project with a GCC-x64 group is
+  built with it and the rest as before, with nothing to choose.  It is CBuild's, so the HCP65 build takes a
+  project's HCP65C816 or HCP65C64 configuration the same way (C4-1's first half).  C3-2 as planned
+  (CGCCBuild::AddOptions, AddDependencies); the build names the projects with no GCC-x64 configuration in one line.
+  C3-4 as planned, and CGCCBuild's .exe is gone.  TestBuildGCCConfiguration is C3-3's test (a project it writes, with
+  a GCC-x64 group, built and linked); the IDE check of TestBaseLib isn't added, there being no project with a group
+  yet.  The solutions' rows for a toolchain (The solution's rows) aren't read differently yet: that is with C10.
+
 C4. HCP65 compiles with the project's HCP65 configuration
   C4-1. An HCP65 build configuration's defines and include directories come from the project's HCP65C816 or
      HCP65C64 group when it has one (Solution="Release|HCP65C816"), from Win32 as now when it hasn't.
