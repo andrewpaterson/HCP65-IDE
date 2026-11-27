@@ -9,7 +9,7 @@ only when the user says so.
 
 Reviewed 2026-11-27 (the user: "Please go through the ConfigurationsPlan.txt and check it for issues", then "Yes,
 write them into the plan"): 20 issues.  Corrections are made where they stood and say (2026-11-27) where they change
-what a stage does; what needs deciding is questions 4b and 15 to 21 (and 12 D and 13 D); new are C1-4, C7-4, C9-6,
+what a stage does; what needed deciding is questions 4b and 15 to 21 (and 12 D and 13 D); new are C1-4, C7-4, C9-6,
 C11 and the Windows trials.
 
 Paths: VSL = HCP65-IDE/Libraries/VisualStudioLib, BL = HCP65-IDE/Libraries/BuildLib, IXL =
@@ -230,8 +230,8 @@ C4. HCP65 compiles with the project's HCP65 configuration
   C4-2. Its compile options (NoFloats, MathTables, PreferSize, WarnMissingOverride, Exceptions, KeepUnusedObjects,
      WarnStringToPointer, MultiWordCasts, CConversions, StubMissing, Debug) come from HCP65Compile, a project's own
      overriding the sheet's: the whole program's from the startup project's group, each project's code's from its own
-     (question 4's two lists; PreferSize and WarnMissingOverride are in neither: question 4b).  Unoptimised="Init,
-     Shell" becomes those projects' own setting.
+     (question 4's two lists, with question 4b's PreferSize the program's and WarnMissingOverride the project's).
+     Unoptimised="Init, Shell" becomes those projects' own setting.
   C4-3. Linking: a program's <Image>, <Executable> or <Module> (with its Region and Symbol rows) is read from its
      project's HCP65Link group (the startup project's, as CHCP65Build links now), in a group with no condition or a
      configuration's.  Debug and Release share it instead of repeating it.
@@ -475,12 +475,12 @@ Questions (the user's, one at a time)
    it, as now (BaseLib has no floats in the kernal and floats in ModPlay).  The options about one project's code
    (Debug, not optimised, WarnStringToPointer, MultiWordCasts, CConversions) are each project's own, from its group
    or its sheet; Unoptimised="Init, Shell" becomes those projects' own setting.
-4b. Open (2026-11-27): PreferSize and WarnMissingOverride are in neither of question 4's lists.
-   A. Recommended: PreferSize is the whole program's (the startup project's), as NoFloats: a ROM's kernal wants the
-      BaseLib linked into it small too, and the same BaseLib fast in a program on a card.  WarnMissingOverride is
-      each project's own: it is about how one project's code is written.
-   B. Both each project's own.  BaseLib would then be small or fast everywhere it is linked.
-   C. Both the whole program's, as every option is now.
+4b. Decided (the user, 2026-11-27: "4b -> A as recommended"): PreferSize and WarnMissingOverride, which were in
+   neither of question 4's lists.  PreferSize is the whole program's (the startup project's HCP65Compile group's), as
+   NoFloats: a ROM's kernal wants the BaseLib linked into it small too, and the same BaseLib fast in a program on a
+   card.  WarnMissingOverride is each project's own, from its group or its sheet: it is about how one project's code
+   is written.  The others considered: both each project's own (BaseLib would then be small or fast everywhere it is
+   linked); both the whole program's, as every option is now.
 5. Decided (the user, 2026-11-25: "Editable now"): Edit Build Configurations edits the projects' compile and link
    options, writing each to the project or sheet it comes from (C9).  VisualStudioLib already edits .vcxproj files in
    place, byte for byte but the change (CVcxProject::RenameItem, RenameIncludes and adding files), so C9 extends that.
