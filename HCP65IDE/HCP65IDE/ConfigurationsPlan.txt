@@ -346,7 +346,18 @@ C7. The projects move to the shared sheets
     reads them for Debug|GCC-x64 too: its defines are question 20's (_DEBUG, DEBUG, BREAK_ON_WARNING and
     BREAK_ON_ERROR) and LINUX_GNU.  The GCC-x64 group's Link AdditionalDependencies (pthread;dl) replace shlwapi.lib.
   - The 22 projects' OutDir and IntDir are Visual Studio's defaults, so they go and nothing moves.
-  - To do: CommonLibraries' other 45 projects, then the other repositories' sheets.
+  CommonLibraries' other 45 projects, built 2026-11-27 (CommonLibraries b77554384): all 48 are on the sheet.
+  - Checked under Wine: cl's command lines for each project in the four configurations, before and after, differ
+    only by question 8's decisions; all 19 test solutions and the three tools build and link in Release x64 (PNGToSFT
+    after its main was made __cdecl, which MSVC had refused before the move too).  X11Lib and PulseAudioLib don't
+    compile with MSVC, being Linux's.  The IDE's GCC build takes the sheet's groups for the three more solutions
+    tried.
+  - The sheet gained AllRules.ruleset and Bscmake's PreserveSbr; the script drops a Release configuration's
+    BREAK_ON_WARNING and BREAK_ON_ERROR; TestInputLib's Release is NotSet (question 8).
+  - Until the other repositories' projects move, their Debug builds mix libraries that define DEBUG (all of
+    CommonLibraries' now) with projects of their own that may not: they move next.
+  - To do: the other repositories' sheets (HCP65, HCP65-IDE, LogiCim, HCP65-Sculpt, WindowInputTester,
+    StarControlRedux), then the solutions' rows (question 25).
 
 C8. Shared run configurations hold how a program is debugged
   C8-1. A run configuration has a type: Program (today's: a tool, folder and arguments, or what a GCC build linked)
