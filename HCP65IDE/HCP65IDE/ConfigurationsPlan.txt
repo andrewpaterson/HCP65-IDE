@@ -197,8 +197,9 @@ C1. VisualStudioLib reads the GCC and HCP65 groups
      same in all four configurations of each of the 109 projects) and its include directories.  Both are written in
      groups conditioned for each MSVC configuration now, so a configuration made from a GCC-x64 group alone has
      neither, and CBuild::GetProjects takes a project with no ConfigurationType for an application: every library
-     would be linked as a program.  Question 15: written once with no condition (C7 moves them), and until a
-     project has moved, or if trial W4 fails, taken from its x64 configuration (HCP65: Win32).
+     would be linked as a program.  Question 15: taken from the project's x64 configuration (HCP65: Win32), by the
+     IDE's reader and CMake's module alike; the projects keep their four Configuration groups as Visual Studio
+     writes them.
 
 C2. VisualStudioLib follows imports
   C2-1. <Import Project="..."/> of a .props file: its PropertyGroups and ItemDefinitionGroups are read where the
@@ -541,12 +542,25 @@ What Microsoft's pages say (read 2026-11-27, the Windows machine not starting; a
      questions 12 D, 13 D and 17 C are open at all.
   W2. An ItemDefinitionGroup giving ClCompile ExcludedFromBuild true for one configuration: is every file left out of
      that build, and shown as excluded?  Question 12 A.
+  W3 and W4, prepared 2026-11-27 (LogiCim/LogiCim/LogiCim-W3.sln, with LogiCim/LogiCim-W3.vcxproj, its .filters and
+     LogiCim-W3.props; deleted after): LogiCim's project with ItemDefinitionGroups for Debug|GCC-x64, Release|GCC-x64
+     and Release|HCP65C816 (defines, AdditionalOptions, Link's AdditionalDependencies, HCP65Compile and HCP65Link
+     tags), LogiCim_Windows.cpp's ExcludedFromBuild for the two GCC configurations, and the sheet imported in one
+     ImportGroup Label="PropertySheets" with no condition beside the four; the sheet has a group with no condition
+     (W3_SHEET_ALL), one for '$(Configuration)'=='Debug' (W3_SHEET_DEBUG) and one for '$(Platform)'=='GCC-x64'.
+     To check: it loads with no warning; Property Manager shows the sheet under each configuration; C/C++,
+     Preprocessor shows W3_SHEET_ALL in all four and W3_SHEET_DEBUG in the Debug two; Release|x64 builds; and after
+     a property is changed and a file added in Visual Studio and all is saved, a diff shows only those changes.
+     If W3 fails (the groups are dropped or rewritten): a project's toolchain settings go in a sheet of its own
+     beside it (<Project>.props, imported as question 16 has it), which saving the project doesn't rewrite; most
+     are the shared sheets' anyway (C7).
   W3. A project with groups for configurations it doesn't list (a Release|GCC-x64 ItemDefinitionGroup, HCP65Compile
      and HCP65Link tags): after a file is added and a property changed in Visual Studio, and the project saved, are
      they still there, byte for byte?  The idea, C1 and C7 all lean on it.
-  W4. A project whose ConfigurationType is in one PropertyGroup Label="Configuration" with no condition, and whose
-     sheet is imported in one ImportGroup Label="PropertySheets" with no condition: does it load, build each
-     configuration, show the sheet in Property Manager, and keep both when saved?  Questions 15 A and 16 A.
+  W4. (Its ConfigurationType half isn't wanted since question 15 became B.)  A project whose ConfigurationType is in
+     one PropertyGroup Label="Configuration" with no condition, and whose sheet is imported in one ImportGroup
+     Label="PropertySheets" with no condition: does it load, build each configuration, show the sheet in Property
+     Manager, and keep both when saved?  Questions 15 A and 16 A.
   W5. A .sln whose platforms are renamed MSVC-x64 and MSVC-x86, its ActiveCfg lines still x64 and Win32: Visual
      Studio's lists, a build from it, and MSBuild Solution.sln /p:Platform=MSVC-x64.  C11-2.  Also what a project
      itself named Release|MSVC-x64 does: question 1 says it fails with MSB8006, which nobody has checked.
@@ -711,8 +725,14 @@ Questions (the user's, one at a time)
    CMake's PUBLIC target_link_libraries: written once each and a new program gets them, but a rule MSBuild hasn't,
    written twice (CGCCBuild and CMake's module), and not how Windows has it; C, all in the shared sheet, every Linux
    program linking X11 and every Linux build needing libx11-dev, the console tests too.
-15. Decided (the user, 2026-11-27: "15 and 16, your recommendation"): A, and B if trial W4 fails.  (C1-4) Where a GCC
-   or HCP65 configuration gets its ConfigurationType and include directories.
+15. Decided: B (the user, 2026-11-27: "15 and 16, your recommendation", which was A with B if trial W4 failed; then,
+   Microsoft's page read and B advised without waiting for the trial, "Yes").  A toolchain's configuration takes its
+   ConfigurationType and include directories from the project's x64 configuration (HCP65: Win32), its defines and
+   options from its own group.  The page (.vcxproj and .props file structure) has a Configuration group "in
+   multiple copies, one per configuration", needed "to add, remove, or modify project properties correctly" in the
+   Project Properties dialog, and "strongly recommend[s] you don't deviate from the structure": A's one group with
+   no condition deviates.  The cost stands: a rule MSBuild hasn't, in the IDE's reader and CMake's module both.
+   (C1-4) Where a GCC or HCP65 configuration gets its ConfigurationType and include directories.
    A. Recommended: written once, with no condition.  C7 moves each project's ConfigurationType into one PropertyGroup
       Label="Configuration" with no condition, and IncludePath comes from the repository's sheet with no condition (a
       project's extras likewise), so every configuration has them, MSVC's and the toolchains', by MSBuild's own rules,
