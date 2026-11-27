@@ -23,20 +23,6 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 #include "GCCBuild.h"
 
 
-//For a project with no GCC-x64 configuration of its own, built as its x64 one (ConfigurationsPlan.txt C0, until C7-4,
-//when every project has one from its property sheet): what CommonLibraries/Tests/TestBaseLib/CMakeLists.txt's
-//baselib_options gives a 64-bit build, which explains each.  A project with the configuration gets none of these: its
-//options are its own.
-//Every compile, after the project's own defines.
-static const char* gaszGCCCompileOptions[] = { "-DLINUX_GNU", "-m64", "-march=haswell", "-fno-strict-aliasing", "-fno-exceptions", "-Wno-ignored-attributes", "-Wno-write-strings", "-Wno-multichar", "-Wno-class-memaccess", "-Wno-overloaded-virtual", "-Wno-comment", "-Wno-unused-parameter", NULL };
-//Then a Debug configuration's, or any other's.
-static const char* gaszGCCDebugCompileOptions[] = { "-g", NULL };
-static const char* gaszGCCReleaseCompileOptions[] = { "-O3", "-ffunction-sections", "-fdata-sections", "-fno-stack-protector", "-U_FORTIFY_SOURCE", "-fno-lifetime-dse", "-fno-math-errno", "-fno-trapping-math", NULL };
-//Every link, then a Release link's.
-static const char* gaszGCCLinkOptions[] = { "-m64", NULL };
-static const char* gaszGCCReleaseLinkOptions[] = { "-Wl,--gc-sections", NULL };
-
-
 //////////////////////////////////////////////////////////////////////////
 //
 // Where a build of the solution in szRoot links the application szProject
@@ -171,7 +157,7 @@ bool CGCCBuild::AddCommands(CArrayChars* paszLines)
 				{
 					cFileUtil.AppendToPath(&szTarget, psProject->pcProject->GetName());
 					psCommand = AddCommand("g++", mpcSolution->GetDirectory(), szDescription.Append(psProject->pcProject->GetName())->Text());
-					AddOptions(psProject, "Link", gaszGCCLinkOptions, NULL, gaszGCCReleaseLinkOptions, &psCommand->aszArguments);
+					AddOptions(psProject, "Link", &psCommand->aszArguments);
 					psCommand->aszArguments.Add("-o");
 					psCommand->aszArguments.Add(szTarget.Text());
 				}
@@ -266,7 +252,7 @@ void CGCCBuild::AddCompile(SBuildProject* psProject, const char* szSource, const
 		psCommand->aszArguments.Add(szArgument.Text());
 		szArgument.Kill();
 	}
-	AddOptions(psProject, "ClCompile", gaszGCCCompileOptions, gaszGCCDebugCompileOptions, gaszGCCReleaseCompileOptions, &psCommand->aszArguments);
+	AddOptions(psProject, "ClCompile", &psCommand->aszArguments);
 	psCommand->aszArguments.Add(szSource);
 	psCommand->aszArguments.Add("-o");
 	psCommand->aszArguments.Add(szObject);
@@ -276,29 +262,15 @@ void CGCCBuild::AddCompile(SBuildProject* psProject, const char* szSource, const
 //////////////////////////////////////////////////////////////////////////
 //
 // A tool's options for a project (szTool is "ClCompile" or "Link"): its
-// GCC-x64 configuration's own AdditionalOptions, or for a project built as
-// its x64 one the lists above, every configuration's and then Debug's or
-// any other's.
+// GCC-x64 configuration's AdditionalOptions.  A project built as its x64
+// configuration has none (AddWithoutConfiguration names it).
 //
 //////////////////////////////////////////////////////////////////////////
-void CGCCBuild::AddOptions(SBuildProject* psProject, const char* szTool, const char** paszAll, const char** paszDebug, const char** paszRelease, CArrayChars* paszArguments)
+void CGCCBuild::AddOptions(SBuildProject* psProject, const char* szTool, CArrayChars* paszArguments)
 {
-	const char**	paszConfiguration;
-	size			i;
-
 	if (psProject->pcConfiguration->IsToolchain())
 	{
 		psProject->pcProject->GetAdditionalOptions(szTool, psProject->pcConfiguration, mpcSolution->GetDirectory(), paszArguments);
-		return;
-	}
-	paszConfiguration = IsDebugConfiguration() ? paszDebug : paszRelease;
-	for (i = 0; paszAll[i] != NULL; i++)
-	{
-		paszArguments->Add(paszAll[i]);
-	}
-	for (i = 0; paszConfiguration && (paszConfiguration[i] != NULL); i++)
-	{
-		paszArguments->Add(paszConfiguration[i]);
 	}
 }
 
@@ -345,7 +317,7 @@ void CGCCBuild::AddDependencies(SBuildProject* psProject, CArrayChars* paszArgum
 //////////////////////////////////////////////////////////////////////////
 //
 // Says once which projects have no GCC-x64 configuration and are built as
-// their x64 one, with the options every such project is given.
+// their x64 one: with its include directories and defines, and no options.
 //
 //////////////////////////////////////////////////////////////////////////
 void CGCCBuild::AddWithoutConfiguration(CArrayBuildProjects* pasProjects, CArrayChars* paszLines)

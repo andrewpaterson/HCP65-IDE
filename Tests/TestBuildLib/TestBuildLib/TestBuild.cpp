@@ -235,16 +235,12 @@ void TestBuildGCC(void)
 	AssertString("-c", psCompile->aszArguments.GetText(0));
 	AssertTrue(psCompile->aszArguments.Contains("-DTINY_DEBUG"));
 	AssertTrue(TestBuildEndsWith(psCompile->aszArguments.GetText(psCompile->aszArguments.NumElements() - 1), "Maths.o"));
-	//Tiny has no GCC-x64 configuration: it is built as its Win32 one, with the options every such project is given
-	//after its defines, and a Debug configuration's.
+	//Tiny has no GCC-x64 configuration: it is built as its Win32 one, with that one's defines and no options (they
+	//are a GCC-x64 configuration's: TestBuildGCCConfiguration).
 	AssertTrue(TestBuildHasLine(&aszLines, "No GCC-x64 configuration, built as Win32: Tiny."));
-	AssertSize(psCompile->aszArguments.GetIndex("-DTINY_DEBUG") + 1, psCompile->aszArguments.GetIndex("-DLINUX_GNU"));
-	AssertTrue(psCompile->aszArguments.Contains("-m64"));
-	AssertTrue(psCompile->aszArguments.Contains("-fno-strict-aliasing"));
-	AssertTrue(psCompile->aszArguments.Contains("-fno-exceptions"));
-	AssertTrue(psCompile->aszArguments.Contains("-g"));
-	AssertFalse(psCompile->aszArguments.Contains("-O3"));
-	AssertFalse(psCompile->aszArguments.Contains("-fno-lifetime-dse"));
+	AssertFalse(psCompile->aszArguments.Contains("-DLINUX_GNU"));
+	AssertFalse(psCompile->aszArguments.Contains("-m64"));
+	AssertFalse(psCompile->aszArguments.Contains("-g"));
 	AssertString("ar", pcCommands->GetCommand(1)->szExecutable.Text());
 	AssertTrue(TestBuildEndsWith(pcCommands->GetCommand(1)->aszArguments.GetText(1), "libTiny.a"));
 
@@ -267,9 +263,9 @@ void TestBuildGCC(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Tools with GCC in Release: each compile has the Release options and each
-// link -m64 and --gc-sections (ConfigurationsPlan.txt C0).  Two
-// applications linked, the library archived.
+// Tools with GCC in Release: two applications linked, the library
+// archived.  Its projects have no GCC-x64 configuration, so no compile or
+// link has an option of the build's own (ConfigurationsPlan.txt C7-4).
 //
 //////////////////////////////////////////////////////////////////////////
 void TestBuildGCCRelease(void)
@@ -304,16 +300,14 @@ void TestBuildGCCRelease(void)
 		if (psCommand->aszArguments.Contains("-c"))
 		{
 			iCompiles++;
-			AssertTrue(psCommand->aszArguments.Contains("-DLINUX_GNU"));
-			AssertTrue(psCommand->aszArguments.Contains("-O3"));
-			AssertTrue(psCommand->aszArguments.Contains("-fno-lifetime-dse"));
-			AssertFalse(psCommand->aszArguments.Contains("-g"));
+			AssertFalse(psCommand->aszArguments.Contains("-DLINUX_GNU"));
+			AssertFalse(psCommand->aszArguments.Contains("-O3"));
 		}
 		else if (psCommand->szDescription.StartsWith("Linking "))
 		{
 			iLinks++;
-			AssertTrue(psCommand->aszArguments.Contains("-m64"));
-			AssertTrue(psCommand->aszArguments.Contains("-Wl,--gc-sections"));
+			AssertFalse(psCommand->aszArguments.Contains("-m64"));
+			AssertFalse(psCommand->aszArguments.Contains("-Wl,--gc-sections"));
 		}
 	}
 	AssertInt(3, iCompiles);

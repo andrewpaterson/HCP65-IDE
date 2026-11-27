@@ -343,6 +343,8 @@ C7. The projects move to the shared sheets
   C7-4. (2026-11-27) When the last repository has moved, C0's lists go from GCCBuild.cpp, and TestBuildGCC and
      TestBuildGCCRelease expect the groups' options instead.  A project still without a GCC-x64 group is then built
      with x64's include directories and defines and no more, and the build names it (C3-1).
+     Built 2026-11-27: the lists are gone.  The fixtures (Tiny, Tools) have no GCC-x64 group, so the two tests expect
+     no options; TestBuildGCCConfiguration is the one that expects a group's.
 
   The pilot, built 2026-11-27 (CommonLibraries 8b41a5d68): CommonLibraries/Common.props, and BaseLib, TestLib and
   TestBaseLib moved onto it by CommonLibraries/project_sheets.py.
@@ -373,7 +375,7 @@ C7. The projects move to the shared sheets
   lines differ only by question 8's decisions and all 15 solutions build and link with MSVC in Release x64.  Found on
   the way and fixed, in code only g++ had compiled: X65C64Emulator's main and an uninitialised pointer,
   KicadImporterLib's and its test's.  HCP65's 21 Makefile projects have nothing of Visual Studio's to move.  So C7 is
-  done but C7-4.
+  done.
 
 C8. Shared run configurations hold how a program is debugged
   C8-1. A run configuration has a type: Program (today's: a tool, folder and arguments, or what a GCC build linked)

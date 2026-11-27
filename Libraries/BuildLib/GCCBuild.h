@@ -36,7 +36,7 @@ protected:
 	void	AddCompile(SBuildProject* psProject, const char* szSource, const char* szObject, CArrayChars* paszIncludes, CArrayChars* paszDefines);
 	void	GetObjectName(const char* szProjectOutput, const char* szSource, CChars* pszDest);
 	bool	IsDebugConfiguration(void);
-	void	AddOptions(SBuildProject* psProject, const char* szTool, const char** paszAll, const char** paszDebug, const char** paszRelease, CArrayChars* paszArguments);
+	void	AddOptions(SBuildProject* psProject, const char* szTool, CArrayChars* paszArguments);
 	void	AddDependencies(SBuildProject* psProject, CArrayChars* paszArguments);
 	void	AddWithoutConfiguration(CArrayBuildProjects* pasProjects, CArrayChars* paszLines);
 };

@@ -33,9 +33,9 @@ project has it, whichever solution configuration the build configuration names:
   link its `Link` `AdditionalOptions` and its `AdditionalDependencies`, a bare name as `-l<name>` (`X11` is `-lX11`).
   The configuration's type (library or application) and include directories are those of the project's x64
   configuration of the same name.
-- A project without one is built as its x64 configuration, with `-DLINUX_GNU` and the options CommonLibraries' CMake
-  builds use (`-m64`, `-march=haswell`, `-fno-strict-aliasing`, `-fno-exceptions` and, in a configuration other than
-  Debug, `-O3` and the rest), and the build says which projects those are.
+- A project without one is built as its x64 configuration, with that one's include directories and defines and no
+  options, and the build says which projects those are.  The Codaphela projects get theirs from a property sheet
+  (`CommonLibraries/Common.props`), which CommonLibraries' CMake builds read too.
 
 The HCP65 compiler and GCC compile a project's source files but those excluded from the solution configuration built
 (Visual Studio's Excluded From Build, on the file or on every file of a project), as MSBuild does.
