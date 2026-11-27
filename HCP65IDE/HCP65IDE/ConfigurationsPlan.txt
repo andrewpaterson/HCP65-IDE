@@ -369,9 +369,9 @@ C10. What a GCC build on Linux builds: the platforms' own projects and files (ad
      ClCompile default for all of a project's items), and CGCCBuild and the HCP65 build leave such an item out, as
      MSBuild does.  WindowInputTester's mains renamed (_Windows, _Linux).
   C10-2. How a project or file says it isn't built for a toolchain (question 12) is written into the projects:
-     WinGdiLib, WinInputLib and WinWaveoutLib not for GCC-x64; HCP65Tester's six board files and HCP65IDERef.cpp not
-     for GCC-x64; X11Lib and PulseAudioLib not for MSVC, unless question 13 is A (a solution that doesn't build them on
-     Windows needs nothing more).
+     WinGdiLib, WinInputLib and WinWaveoutLib not for GCC-x64 (open); HCP65Tester's six board files and
+     HCP65IDERef.cpp not for GCC-x64, each by its own ExcludedFromBuild (decided); X11Lib and PulseAudioLib not for
+     MSVC, unless question 13 is A (a solution that doesn't build them on Windows needs nothing more).
   C10-3. X11Lib and PulseAudioLib join the solutions that need them (question 13): the six programs' (PulseAudioLib only
      HCP65Emulator's).  TestInputLib's and TestWindowLib's gain nothing.
   C10-4. The system libraries (question 14): X11;Xext in the six window programs' GCC-x64 Link groups, pthread;dl in
@@ -445,9 +445,12 @@ Windows trials (the user's: there is no Windows here; gathered 2026-11-27)
 
 Each is a small experiment on one project or solution, wanted before the stage or answer that leans on it.
 
-  W1. A .sln that also lists Release|GCC-x64, mapped to a project configuration Visual Studio can't build: does it
-     load, what do its configuration lists show, does building another configuration still work?  Decides question
-     1's third point, and whether questions 12 D, 13 D and 17 C are open at all.
+  W1. (Prepared 2026-11-27: LogiCim/LogiCim/LogiCim-W1.sln, LogiCim b6736f5, with Debug|GCC-x64 and Release|GCC-x64,
+     each project's row mapped to its x64 configuration and WinGdiLib and WinInputLib not built in them; deleted
+     after.)  A .sln that also lists Release|GCC-x64, mapped to a project configuration Visual Studio can't build
+     (or, as prepared, to x64): does it load, what do its configuration lists show, does building another
+     configuration still work, and are the rows kept when it saves?  Decides question 1's third point, and whether
+     questions 12 D, 13 D and 17 C are open at all.
   W2. An ItemDefinitionGroup giving ClCompile ExcludedFromBuild true for one configuration: is every file left out of
      that build, and shown as excluded?  Question 12 A.
   W3. A project with groups for configurations it doesn't list (a Release|GCC-x64 ItemDefinitionGroup, HCP65Compile
@@ -560,7 +563,17 @@ Questions (the user's, one at a time)
    program written onto it with its path (the kernal, drivers, Init, the program debugged), so the same driver goes
    on VIACard.img in one and SDCard.img in another.  Projects name no card; CBuildWorkspace::GetCardPrograms reads
    the run configuration's list instead of every solution's build configuration.
-12. Open (C10-2): how a project or a file says it isn't built for a toolchain.
+12. Part decided, part open (C10-2): how a project or a file says it isn't built for a toolchain.
+   Files, decided (the user, 2026-11-27: "for 12 let's ExcludedFromBuild on each file for GCC"): a file that one
+   toolchain doesn't build says so on its own item, ExcludedFromBuild for that toolchain's configurations, as
+   HCP65IDERef.cpp has for MSVC's: HCP65Tester's six board files (AddressDecodeBoard, BoardPins, CommonBoard,
+   TestBoard, UART, WindowsCOM) and HCP65IDERef.cpp for GCC-x64.  Whatever trial W1 shows, the solution's ticks are
+   for whole projects only, so files needed their own answer; the other considered was #ifdef _WIN32 in the board
+   files.  C10-1's reading is needed either way.
+   Whole projects, open (WinGdiLib, WinInputLib and WinWaveoutLib for GCC-x64): the options below.  The user
+   (2026-11-27): "13 A looks like it plays best with 12 D?", which it does: D here with 13 D and 17 C is one design,
+   the solution's rows saying what each configuration builds, if trial W1 passes (LogiCim/LogiCim/LogiCim-W1.sln,
+   pushed for it), and A here with 13 A and 17 A if it doesn't.  Not decided.
    A. Recommended: ExcludedFromBuild, Visual Studio's own.  A whole project: an ItemDefinitionGroup for the toolchain's
       configurations giving ClCompile ExcludedFromBuild true (WinGdiLib's for GCC-x64; X11Lib's for x64 and Win32 only
       if question 13 isn't A, which already keeps Windows from building it), so it compiles nothing there and a
