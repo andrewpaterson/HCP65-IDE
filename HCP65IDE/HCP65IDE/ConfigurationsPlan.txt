@@ -159,7 +159,7 @@ C0. A stopgap: CGCCBuild adds the Linux options itself (question 7)
   on Linux; objects are now in Output\GCC\<configuration>\Objects\<project>\.  The five programs' mains became
   <App>_Windows.cpp and <App>_Linux.cpp at the same time, each guarded (_WIN32, LINUX_GNU) and both in the .vcxproj,
   as the libraries' platform files are; their solutions still list the Windows window libraries (WinGdiLib,
-  WinInputLib) and not X11Lib, which a GCC build on Linux needs (a later stage's question).
+  WinInputLib) and not X11Lib, which a GCC build on Linux needs (C10).
 
 C1. VisualStudioLib reads the GCC and HCP65 groups
   C1-1. CVcxProject (VSL/VcxProject.cpp) keeps a configuration for each group whose platform is a toolchain's name,
@@ -282,9 +282,58 @@ C9. Edit Build Configurations writes the projects and sheets
      dialog and build with it.
 
 
+C10. What a GCC build on Linux builds: the platforms' own projects and files (added 2026-11-27)
+  The user (2026-11-27), after C0: "Does ConfigurationsPlan cover: lists WinGdiLib and WinInputLib, whose sources have
+  no guards, and doesn't list X11Lib?", then "Yes, write it up as a new stage".  It started from LogiCim's Release|GCC
+  build in the IDE failing in LogiCim.cpp on windows.h; the mains are guarded since (C0's note), the rest is here.
+  Where it stands (surveyed 2026-11-27):
+  - Windows only: WinGdiLib (5 sources), WinInputLib (4) and WinWaveoutLib (2), none guarded and none in any
+    CMakeLists.txt.  Linux only: X11Lib (5) and PulseAudioLib (2), not guarded, in no .sln.  WinRefLib and VulkanLib
+    build on both (CMake builds them on Linux).
+  - The solutions that list a Windows-only library, each with its Linux build (CMake) beside it: LogiCim, HCP65IDE,
+    HCP65Emulator (also WinWaveoutLib; its CMake adds PulseAudioLib and WinRefLib), HCP65Tester, HCP65Sculpt,
+    WindowInputTester, TestInputLib and TestWindowLib.  Each CMake build adds X11Lib (TestInputLib's and TestWindowLib's
+    only leave the Windows one out).
+  - Files of a shared project that are one platform's: HCP65Tester's board code (AddressDecodeBoard, BoardPins,
+    CommonBoard, TestBoard, UART and WindowsCOM: UART.h includes windows.h), which its CMakeLists.txt leaves out by
+    listing the other three sources by hand; HCP65IDERef.cpp, the reference screen's main, an item of HCP65IDE.vcxproj
+    with ExcludedFromBuild in every configuration but Reference|x64.  ExcludedFromBuild is in no other real project.
+    VisualStudioLib keeps it as an item's text and CGCCBuild compiles every ClCompile, so a GCC build of HCP65IDE
+    would compile two mains.
+  - What Linux links that Windows doesn't: X11 and Xext (X11Lib), dl (PulseAudioLib loads libpulse-simple when it
+    runs) and pthread (BaseLib), each in a CMakeLists.txt's target_link_libraries, PUBLIC so a program linking the
+    library gets them.
+  - The build already takes note of the solution: a project whose solution configuration has no .Build.0 isn't built,
+    and a solution configuration the .sln hasn't (Release|GCC-x64, question 1) falls back to the project's own
+    configuration of that name (BL/Build.cpp, CBuild::GetProjects).  So after C1 and C3-1 a project without a GCC-x64
+    configuration isn't built by GCC, except that C3-1 builds such a project as x64, and C7's sheet gives every project a
+    GCC-x64 group: a project has to say it isn't built for a toolchain (question 12).
+  - WindowInputTester still has WindowInputTester.cpp (WinMain) and WindowInputTesterLinux.cpp, as the five programs
+    had before C0's note: it is renamed and guarded the same way in C10-1.
+  C10-1. VisualStudioLib reads ExcludedFromBuild for the configuration (an item's metadata, or an ItemDefinitionGroup's
+     ClCompile default for all of a project's items), and CGCCBuild and the HCP65 build leave such an item out, as
+     MSBuild does.  HCP65IDERef.cpp then isn't compiled by a GCC build.  WindowInputTester's mains renamed (_Windows,
+     _Linux).
+  C10-2. How a project or file says it isn't built for a toolchain (question 12) is written into the projects:
+     WinGdiLib, WinInputLib and WinWaveoutLib not for GCC-x64; X11Lib and PulseAudioLib not for MSVC; HCP65Tester's six
+     board files not for GCC-x64.
+  C10-3. X11Lib and PulseAudioLib join the solutions that need them (question 13): the eight solutions above (PulseAudioLib
+     only HCP65Emulator's).
+  C10-4. The system libraries come from where question 14 says; CGCCBuild links them.
+  C10-5. C6 reads the same: CMake leaves out what a project or file isn't built for, so the hand-written source lists
+     (LogiCim's, HCP65IDE's and HCP65Tester's) and the EXCLUDE lists (HCP65Emulator's, HCP65Sculpt's, WindowInputTester's
+     mains) go, and the libraries' link libraries come from the projects.
+  C10-6. Tests: TestVisualStudioLib reads ExcludedFromBuild per configuration, as an item's and as a group's default;
+     TestBuildLib's GCC build of a solution with a Windows-only library, a Linux-only one and an excluded file builds
+     only what Linux builds and links the Linux one's system libraries.  The IDE builds LogiCim, HCP65IDE,
+     HCP65Emulator, HCP65Tester, HCP65Sculpt and WindowInputTester in Release|GCC-x64 and each starts.  Windows (the
+     user): each of the eight solutions opens and builds in Visual Studio with no new warnings.
+
+
 The order: C0, then C1, C2, C3 (that alone fixes the Release|GCC build), then C7 for CommonLibraries' projects, then C4, C5,
 C6, C8 and C9 in any order (C8 after C4-3, C9 after C4-4, so a program's link settings are in its project).  C7-3 before each
-repository's C7 commit.
+repository's C7 commit.  C10 after C3 (C10-1 can come first: it is VisualStudioLib's alone), and before C7 for the
+window programs' repositories, so the sheet's GCC-x64 group doesn't reach a Windows-only library unopposed; C10-5 with C6.
 
 
 Questions (the user's, one at a time)
@@ -378,3 +427,35 @@ Questions (the user's, one at a time)
    program written onto it with its path (the kernal, drivers, Init, the program debugged), so the same driver goes
    on VIACard.img in one and SDCard.img in another.  Projects name no card; CBuildWorkspace::GetCardPrograms reads
    the run configuration's list instead of every solution's build configuration.
+12. Open (C10-2): how a project or a file says it isn't built for a toolchain.
+   A. Recommended: ExcludedFromBuild, Visual Studio's own.  A whole project: an ItemDefinitionGroup for the toolchain's
+      configurations giving ClCompile ExcludedFromBuild true (WinGdiLib's for GCC-x64; X11Lib's for x64 and Win32), so
+      it compiles nothing there and a project with nothing compiled is neither archived nor linked (CGCCBuild already
+      skips one).  A file: the item's own ExcludedFromBuild for the toolchain, as HCP65IDERef.cpp has.  Visual Studio
+      shows it (Excluded From Build: Yes) and MSBuild does it; that an ItemDefinitionGroup's default is honoured is to
+      be tried on Windows, else every item says it.  Costs C10-1's reading and needs C1 for the GCC-x64 groups.
+   B. Guards in the sources, as the mains and the libraries' _Windows/_Linux files: WinGdiLib's, WinInputLib's and
+      WinWaveoutLib's in #ifdef _WIN32, X11Lib's and PulseAudioLib's in #ifdef LINUX_GNU, the board files in _WIN32.
+      Works with today's GCC build at once, no reading needed; but every platform compiles the other's libraries to
+      empty objects (Visual Studio builds an empty X11Lib), and the projects don't say it, the code does.
+      HCP65IDERef.cpp still needs C10-1.
+   C. A property of the IDE's own in the project (<BuildFor>MSVC</BuildFor>).  Not Visual Studio's, which builds the
+      project anyway.
+13. Open (C10-3): how X11Lib and PulseAudioLib come into the solutions Visual Studio made.
+   A. Recommended: listed in each .sln, with an .ActiveCfg but no .Build.0 for its Windows configurations, so
+      Visual Studio shows them in Solution Explorer and doesn't build them (Configuration Manager, Build unticked), and
+      the IDE's MSVC build skips them as it skips any unticked project.  A GCC build reads the project's own GCC-x64
+      configuration (the fallback in CBuild::GetProjects).  Edited in each of the eight .sln files.
+   B. Listed and built on Windows too, empty (with 12 B's guards).  Nothing unticked, but a Windows build makes an
+      empty library for nothing.
+   C. Not in the .sln: a window program's project names its GCC-x64 extra projects (a property of the IDE's own) and
+      the IDE loads them.  Visual Studio never shows them; a second place the solution's projects are listed.
+14. Open (C10-4): where the system libraries a library needs on Linux are written (X11, Xext, dl, pthread).
+   A. Recommended: in the library's own GCC-x64 group, Link's AdditionalDependencies (a static library ignores Link
+      in Visual Studio, so it is free to say what a program linking it needs), and CGCCBuild adds every library's to
+      each application's link, as CMake's PUBLIC target_link_libraries does.  Written once each: X11Lib X11;Xext,
+      PulseAudioLib dl, BaseLib pthread.
+   B. In each application's GCC-x64 Link group (LogiCim X11;Xext;pthread and so on).  What Visual Studio means by it,
+      but written in every program that links X11Lib (six, and their reference builds).
+   C. In the shared sheet's GCC-x64 Link group: every Linux program links X11, Xext and dl, and every Linux build
+      needs libx11-dev, the console tests too.
