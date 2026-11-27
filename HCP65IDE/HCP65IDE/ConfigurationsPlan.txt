@@ -252,6 +252,9 @@ C4. HCP65 compiles with the project's HCP65 configuration
      question 17 (2026-11-27).
   C4-6. Tests: TestBuildLib builds an HCP65 test solution whose options are only in its projects and gets the same
      output as before the move; the IDE checks that build HCP65 programs pass unchanged.
+  C4-7. (2026-11-27, question 23; only with the solution's rows) Libc65 comes from the solution: the project its HCP65
+     configuration's rows build gives the runtime and the system headers' directory, in place of the directory
+     CSolutionBuild::Start is handed.  hcp65build's plain command line keeps naming it.
 
 C5. The code index reads with the configuration's toolchain
   C5-1. WorkspaceIndex reads a GCC configuration's defines with GCC's own (__GNUC__, __linux__, __x86_64__) and
@@ -759,3 +762,16 @@ Questions (the user's, one at a time)
    C13-4); the CMake targets stay, since the checks run them; two projects gain a configuration they haven't on any
    system; more configurations in the lists and the solutions' rows.  The other considered: the three programs left
    as targets only CMake has, their mains and libraries by hand.
+23. Decided (the user, 2026-11-27: "Libc65's ticks, yes"), if the solution's rows go ahead (trial W1; questions 12, 13
+   and 17): Libc65 is built in a solution's HCP65 configurations and in no other, by its rows.
+   How it stands: each of the 21 HCP65 solutions lists Libc65 with no .Build.0 in any configuration, so Visual Studio
+   doesn't build it, and the HCP65 build doesn't find it there either: it is given Libc65's directory beside the
+   solution (CSolutionBuild::Start's szLibc65Directory, CHCP65Build::SetLibc65Directory), which it uses twice, as
+   the system headers' directory of every unit (<stdint.h>) and as the runtime it compiles and links
+   (CCPPBuilder::AddLibc65).
+   What changes: with HCP65C816 and HCP65C64 solution configurations, Libc65's rows have a .Build.0 in those and none
+   in MSVC's and GCC's.  A solution build then takes the runtime and the system headers' directory from the Libc65
+   project its rows build, and the directory is no longer handed in beside the solution.  A build with no solution
+   (hcp65build's plain command line, -program and -lib) still names the directory, having no rows to read.  A
+   solution with an HCP65 configuration and no Libc65 built in it is an error the build names.
+   C4 gains this as C4-7; TestBuildLib's HCP65 fixtures get Libc65 rows.
