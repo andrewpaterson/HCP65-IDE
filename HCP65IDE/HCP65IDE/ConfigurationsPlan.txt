@@ -406,6 +406,26 @@ C11. Question 1's names (added 2026-11-27: the decision had no stage)
      shows Release|MSVC-x64 and builds.
 
 
+C12. The break switch (added 2026-11-27, question 20)
+  C12-1. CLogger::Init (CL/Libraries/BaseLib/Logger.cpp) reads BASELIB_BREAK after the build's BREAK_ON_ERROR and
+     BREAK_ON_WARNING have set its config: 0 clears bBreakOnError and bBreakOnWarning, 1 sets them, anything else or
+     nothing leaves them as built.  SetBreakOnError, SetBreakOnWarning and SetSilent go on working as now, so a test
+     that turns the break on itself still gets it.  Not read in an HCP65 build (__LIBC65__), which has no environment.
+  C12-2. Validate (BaseLib/Validation.h) breaks only when a flag read once from the same variable allows it: with
+     BASELIB_BREAK=0 a failed assert is counted (TestLib has already printed and counted it) and the run goes on.
+     Unset or 1, it breaks as now.
+  C12-3. Debug|GCC-x64 defines BREAK_ON_ERROR and BREAK_ON_WARNING (C7-1's group), so after C6 the CMake Debug builds
+     do too: the comment "Matches the Visual Studio configurations, except BREAK_ON_ERROR and BREAK_ON_WARNING" goes
+     from the CMakeLists.txt files, and a run that has to get through its errors sets BASELIB_BREAK=0 (ctest's runs,
+     through the tests' ENVIRONMENT property, so a suite run by hand still signals).
+  C12-4. The recipes say so: CommonLibraries/CLAUDE.md's sweep runs suites with BASELIB_BREAK=0 instead of under gdb
+     with "handle SIGTRAP nostop noprint nopass" (gdb stays for crashes), and the libraries' testing pages name the
+     variable.
+  C12-5. Tests: TestBaseLib runs a small program of its own three ways (unset, 0, 1) and checks which end with
+     SIGTRAP after a logged error and after a failed assert; the Debug suites pass with BASELIB_BREAK=0 from ctest
+     and, as the IDE's Debug|GCC builds do now, by hand without it.
+
+
 The order (2026-11-27): C0 (built: it fixed the Release|GCC build), then C11-1 (the names C1 reads groups by), C1, C2
 and C3 (a project's own GCC group then wins over C0's list, which stays for the rest until C7-4), then C10 and C7 for
 CommonLibraries' projects, then C4, C5, C6, C8 and C9 in any order (C8 after C4-3, C9 after C4-4, so a program's link
@@ -413,7 +433,8 @@ settings are in its project).  C7-3 before each repository's C7 commit; C7-4 aft
 come first: it needs no GCC group) and before C7 for CommonLibraries, whose projects the Windows-only and Linux-only
 libraries are, so the sheet's GCC-x64 group doesn't reach a Windows-only library unopposed (corrected 2026-11-27: not
 "the window programs' repositories"); C10-5 with C6.  C11-2 with a Windows session (trial W5).  Each Windows trial
-before the stage that leans on it.
+before the stage that leans on it.  C12-1, C12-2 and C12-5 at any time (they are BaseLib's alone); C12-3 with C7-1 and
+C6, and not before C12-1: a CMake Debug run with the defines and no switch ends at its first unexpected error.
 
 
 Windows trials (the user's: there is no Windows here; gathered 2026-11-27)
@@ -634,7 +655,9 @@ Questions (the user's, one at a time)
    Windows libraries in it.  The others considered: GCC-x64 as g++ on whichever system the IDE runs on, the system's
    define added by CGCCBuild and C10's exclusions by system (one name for two targets whose sources and libraries
    differ); renaming it GCC-Linux-x64, which would reopen question 1.
-20. Open (C7-1, 2026-11-27): BREAK_ON_ERROR and BREAK_ON_WARNING in Debug|GCC-x64.  Asked as in or out; the user
+20. Decided (the user, 2026-11-27: "20: the new A, as recommended"): a switch read when a program starts, the
+   environment variable BASELIB_BREAK, the builds the same for both (C12).  First asked as BREAK_ON_ERROR and
+   BREAK_ON_WARNING in or out of Debug|GCC-x64; the user
    (2026-11-27): "There needs to be an easy optional way to allow you to run builds that don't stop on an error but
    also to allow me to run builds that do signal an error."  So a switch, not one answer for every run.
    How it stands.  Two things break:
@@ -647,19 +670,17 @@ Questions (the user's, one at a time)
    - The tests' asserts.  Validate(test) is "if (!test) BREAK();" (BaseLib/Validation.h) in every build, Release
      too, with no define to turn it off: a failed assert ends a run that has no debugger with SIGTRAP.  So the
      sweeps run under gdb with "handle SIGTRAP nostop noprint nopass" (CommonLibraries/CLAUDE.md).
-   A. Recommended: one switch read when a program starts, an environment variable (BASELIB_BREAK), the builds the
-      same for both.  Debug|GCC-x64 defines BREAK_ON_ERROR and BREAK_ON_WARNING as MSVC's Debug does (question 8's
-      one shared set; after C6 the CMake Debug builds too).  Unset, a program breaks as it was built to: the user's
-      runs signal an error, on its line in a debugger and by ending without one.  BASELIB_BREAK=0 turns both breaks
-      off for that run: the logger's starts off, and a failed assert is counted and the run goes on to its totals, so
-      a run gets through its errors without gdb.  BASELIB_BREAK=1 turns the logger's on in a build without the
-      defines (Release).  Costs: a getenv in CLogger::Init, as TestLib reads TESTLIB_LOG (not in the HCP65 builds,
-      which have no environment), and Validate becomes a test of a flag before its BREAK().
-   B. A build's choice: a CMake option (BASELIB_BREAK, as BASELIB_ASAN is) and a second IDE configuration whose group
-      leaves the defines out.  No new code, but everything is built twice to have both (a sweep's builds are 9 GB
-      each), and it does nothing for the asserts' break.
-   C. By itself: break only when a debugger is attached (TracerPid in /proc/self/status, IsDebuggerPresent).  Nothing
-      to set, but a run without a debugger never signals an error, and something is still wanted to overrule it.
+   What was chosen.  Debug|GCC-x64 defines BREAK_ON_ERROR and BREAK_ON_WARNING as MSVC's Debug does (question 8's
+   one shared set; after C6 the CMake Debug builds too).  Unset, a program breaks as it was built to: the user's
+   runs signal an error, on its line in a debugger and by ending without one.  BASELIB_BREAK=0 turns both breaks off
+   for that run: the logger's starts off, and a failed assert is counted and the run goes on to its totals, so a run
+   gets through its errors without gdb.  BASELIB_BREAK=1 turns the logger's on in a build without the defines
+   (Release).  Costs: a getenv in CLogger::Init, as TestLib reads TESTLIB_LOG (not in the HCP65 builds, which have
+   no environment), and Validate becomes a test of a flag before its BREAK().
+   The others considered: a build's choice, a CMake option (BASELIB_BREAK, as BASELIB_ASAN is) and a second IDE
+   configuration whose group leaves the defines out (no new code, but everything built twice to have both, a sweep's
+   builds being 9 GB each, and nothing for the asserts' break); breaking only when a debugger is attached (TracerPid
+   in /proc/self/status, IsDebuggerPresent: nothing to set, but a run without a debugger never signals an error).
 21. Open (C7-1, 2026-11-27): g++ and exceptions.  Question 8 turned MSVC's off everywhere; neither CMake nor C0 passes
    -fno-exceptions, so g++ compiles with them on.
    A. Recommended: left on, as now, and recorded here.  No tested Linux build changes; a try or throw compiles on
