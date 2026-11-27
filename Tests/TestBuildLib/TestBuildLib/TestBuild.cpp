@@ -71,7 +71,7 @@ bool TestBuildEndsWith(const char* szText, const char* szEnd)
 //////////////////////////////////////////////////////////////////////////
 //
 // Tiny compiled for the W65C816 with its include directory and define:
-// its listing is in Listing\W65C816\Debug, indexed by Maths.cpp's lines.
+// its listing is in Listing\HCP65C816\Debug, indexed by Maths.cpp's lines.
 // Broken doesn't compile.
 //
 //////////////////////////////////////////////////////////////////////////
@@ -89,19 +89,19 @@ void TestBuildHCP65(void)
 
 	cSolution.Init();
 	AssertTrue(cSolution.ReadProject("Input" _FS_ "Tiny" _FS_ "Tiny.vcxproj"));
-	cConfiguration.Init("Debug|W65C816", BT_W65C816, "Debug|Win32");
+	cConfiguration.Init("Debug|HCP65C816", BT_W65C816, "Debug|Win32");
 	cBuild.Init();
 	aszLines.Init();
 	AssertInt(BS_NotStarted, cBuild.GetState());
 	AssertInt(BS_Succeeded, TestBuildProject(&cBuild, &cSolution, &cConfiguration, "HCP65", &aszLines));
 	AssertTrue(TestBuildHasLine(&aszLines, "Tiny: Debug|Win32"));
-	AssertString("Debug|W65C816 build succeeded.", aszLines.GetText(aszLines.NumElements() - 1));
-	AssertString("Debug|W65C816 build succeeded.", cBuild.GetProgress());
+	AssertString("Debug|HCP65C816 build succeeded.", aszLines.GetText(aszLines.NumElements() - 1));
+	AssertString("Debug|HCP65C816 build succeeded.", cBuild.GetProgress());
 	AssertFalse(cBuild.IsRunning());
 
 	szListing.Init();
 	cBuild.GetBuild()->GetListingDirectory(&szListing);
-	AssertString("Output" _FS_ "HCP65" _FS_ "Listing" _FS_ "W65C816" _FS_ "Debug", szListing.Text());
+	AssertString("Output" _FS_ "HCP65" _FS_ "Listing" _FS_ "HCP65C816" _FS_ "Debug", szListing.Text());
 	cFileUtil.AppendToPath(&szListing, "Maths.lst");
 	cIndex.Init();
 	AssertTrue(cIndex.ReadListing(szListing.Text()));
@@ -121,7 +121,7 @@ void TestBuildHCP65(void)
 	AssertTrue(cSolution.ReadProject("Input" _FS_ "Broken" _FS_ "Broken.vcxproj"));
 	AssertInt(BS_Failed, TestBuildProject(&cBuild, &cSolution, &cConfiguration, "HCP65Broken", &aszLines));
 	AssertTrue(TestBuildHasLine(&aszLines, "Broken.cpp"));
-	AssertString("Debug|W65C816 build failed.", aszLines.GetText(aszLines.NumElements() - 1));
+	AssertString("Debug|HCP65C816 build failed.", aszLines.GetText(aszLines.NumElements() - 1));
 	cSolution.Kill();
 
 	aszLines.Kill();
@@ -194,7 +194,7 @@ void TestBuildGCC(void)
 
 	cSolution.Init();
 	AssertTrue(cSolution.ReadProject("Input" _FS_ "Tiny" _FS_ "Tiny.vcxproj"));
-	cConfiguration.Init("Debug|GCC", BT_GCC, "Debug|Win32");
+	cConfiguration.Init("Debug|GCC-x64", BT_GCC, "Debug|Win32");
 	cBuild.Init();
 	aszLines.Init();
 	eState = TestBuildProject(&cBuild, &cSolution, &cConfiguration, "GCC", &aszLines);
@@ -264,7 +264,7 @@ void TestBuildGCCRelease(void)
 	cFileUtil.RemoveDir("Output" _FS_ "GCCRelease");
 	cSolution.Init();
 	AssertTrue(cSolution.Read("Input" _FS_ "Workspace" _FS_ "Tools" _FS_ "Tools.sln"));
-	cConfiguration.Init("Release|GCC", BT_GCC, "Release|Win32");
+	cConfiguration.Init("Release|GCC-x64", BT_GCC, "Release|Win32");
 	cBuild.Init();
 	aszLines.Init();
 	eState = TestBuildProject(&cBuild, &cSolution, &cConfiguration, "GCCRelease", &aszLines);
@@ -334,7 +334,7 @@ void TestBuildMakefile(void)
 	SBuildCommand*			psCommand;
 	EBuildState				eState;
 
-	cConfiguration.Init("Debug|GCC", BT_GCC, "Debug|Win32");
+	cConfiguration.Init("Debug|GCC-x64", BT_GCC, "Debug|Win32");
 
 	cSolution.Init();
 	AssertTrue(cSolution.ReadProject("Input" _FS_ "Makefile" _FS_ "Made.vcxproj"));
@@ -404,7 +404,7 @@ void TestBuildStartupProject(void)
 
 	cSolution.Init();
 	AssertTrue(cSolution.Read("Input" _FS_ "Workspace" _FS_ "Tools" _FS_ "Tools.sln"));
-	cConfiguration.Init("Release|W65C816", BT_W65C816, "Release|Win32");
+	cConfiguration.Init("Release|HCP65C816", BT_W65C816, "Release|Win32");
 	cBuild.Init();
 	aszLines.Init();
 
@@ -444,7 +444,7 @@ void TestBuildStartupProject(void)
 	AssertTrue(TestBuildHasLine(&aszLines, "Second: Release|Win32"));
 
 	//Where GCC links an application.
-	cGCC.Init("Release|GCC", BT_GCC, "Release|Win32");
+	cGCC.Init("Release|GCC-x64", BT_GCC, "Release|Win32");
 	szExpected.Init();
 	CBuild::GetDirectory("Output" _FS_ "Root", &cGCC, "Output", &szExpected);
 	cFileUtil.FullPath(&szExpected);

@@ -134,14 +134,14 @@ bool CGCCBuild::AddCommands(CArrayChars* paszLines)
 				}
 				continue;
 			}
-			//Objects in a folder of their own: an application is linked beside them as Output\GCC\Debug\Project, which
+			//Objects in a folder of their own: an application is linked beside them as Output\GCC-x64\Debug\Project, which
 			//without Windows' .exe would be the project's objects' folder.
 			szProjectOutput.Init(szOutput);
 			cFileUtil.AppendToPath(&szProjectOutput, "Objects");
 			cFileUtil.AppendToPath(&szProjectOutput, psProject->pcProject->GetName());
 			if (iPass == 0)
 			{
-				//Compile: Output\GCC\Debug\Objects\Project\Source.o, the folder made for the first.
+				//Compile: Output\GCC-x64\Debug\Objects\Project\Source.o, the folder made for the first.
 				bFolder = false;
 				aszIncludes.Init();
 				aszDefines.Init();

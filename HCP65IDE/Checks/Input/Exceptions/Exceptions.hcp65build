@@ -1,4 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <BuildConfigurations>
-	<Configuration Name="Release|W65C816" Toolchain="W65C816" Solution="Release|Win32" Exceptions="true"/>
+	<Configuration Name="Release|HCP65C816" Toolchain="W65C816" Solution="Release|Win32" Exceptions="true"/>
 </BuildConfigurations>

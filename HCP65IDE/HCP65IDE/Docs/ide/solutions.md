@@ -30,10 +30,10 @@ own.  Add Solution opens both together, as a **workspace**.  The workspace is wr
 again opens the whole workspace, with the solutions it was open with last time.
 
 ```xml
-<Workspace RunConfiguration="ModPlay" Configuration="Release|W65C816">
+<Workspace RunConfiguration="ModPlay" Configuration="Release|HCP65C816">
 	<Solution File="ModPlay\HCP65ModPlay.sln" Startup="true" StartupProject="HCP65ModPlay"/>
 	<Solution File="..\HCP65Lib\Kernal\HCP65Kernal.sln"/>
-	<RunConfiguration Name="ModPlay" Configuration="Release|W65C816" Tool="..\Emulator.exe" Arguments="--fill"/>
+	<RunConfiguration Name="ModPlay" Configuration="Release|HCP65C816" Tool="..\Emulator.exe" Arguments="--fill"/>
 </Workspace>
 ```
 
@@ -47,7 +47,7 @@ Paths in it are relative to the workspace file.  It keeps:
 A project two solutions both have (BaseLib, say) is one project to the IDE: indexed once, searched
 once, renamed once.
 
-One configuration name is chosen for the whole workspace ("Release|W65C816"), and each solution
+One configuration name is chosen for the whole workspace ("Release|HCP65C816"), and each solution
 builds its configuration of that name.  Build builds every solution, in an order where a solution
 whose program another loads (a kernal) is built first.
 

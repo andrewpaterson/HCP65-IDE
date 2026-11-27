@@ -53,7 +53,7 @@ too.
 
 [`CWorkspaceIndex`] indexes the workspace the way its build compiles it:
 
-- **The configuration.**  One name for the workspace ("Release|W65C816"); each solution builds its own solution
+- **The configuration.**  One name for the workspace ("Release|HCP65C816"); each solution builds its own solution
   configuration of that name, and each project the project configuration the solution maps it to, else its first.
   Choosing another configuration indexes again ([`CIDEConfigurations`]).
 - **The projects.**  A CppCompilerLib project ([`CProject`]) for each of the workspace's, once however many
@@ -166,7 +166,7 @@ the semantic pass about 45%).  Only a cache of headers across units would cut th
 8's 13.6 s on the same run, for 700 MB more: not worth it.
 
 Checking each template as itself in the index was measured on 2026-11-15 on HCP65ModPlay.sln (793 files,
-Debug|W65C816, a Release x64 IDE, three runs each): 25.1 to 25.3 s without, 26.7 to 27.0 s with, about 6% more.  It
+Debug|HCP65C816, a Release x64 IDE, three runs each): 25.1 to 25.3 s without, 26.7 to 27.0 s with, about 6% more.  It
 is on.
 
 ## Decisions

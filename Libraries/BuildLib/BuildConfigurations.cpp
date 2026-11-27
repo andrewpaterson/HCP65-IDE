@@ -69,7 +69,7 @@ void CBuildConfigurations::Clear(void)
 //
 // Each solution configuration ("Debug|Win32") built with MSVC under its
 // own name, then for each configuration name ("Debug"), in the order they
-// first come: the W65C816 and the 65C64 ("Debug|W65C816") from its Win32
+// first come: the W65C816 and the 65C64 ("Debug|HCP65C816") from its Win32
 // platform, and GCC from its x64 one (or its first, if it hasn't those).
 //
 //////////////////////////////////////////////////////////////////////////
@@ -113,7 +113,7 @@ void CBuildConfigurations::AddDefaults(CVcxSolution* pcSolution)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// szConfiguration|<toolchain> ("Debug|W65C816") built from the solution
+// szConfiguration|<toolchain> ("Debug|HCP65C816") built from the solution
 // configuration szConfiguration|szPlatform if it has it, otherwise its
 // first with szConfiguration.
 //
@@ -150,7 +150,7 @@ void CBuildConfigurations::AddDefault(CVcxSolution* pcSolution, const char* szCo
 
 	szName.Init(szConfiguration);
 	szName.Append('|');
-	szName.Append(CBuildConfiguration::GetToolchainName(eToolchain));
+	szName.Append(CBuildConfiguration::GetToolchainPlatform(eToolchain));
 	Add(szName.Text(), eToolchain, szBase ? szBase : szWanted.Text());
 	szName.Kill();
 	szWanted.Kill();
@@ -273,16 +273,22 @@ bool CBuildConfigurations::Write(const char* szFileName)
 //////////////////////////////////////////////////////////////////////////
 CBuildConfiguration* CBuildConfigurations::FindConfiguration(const char* szName)
 {
-	size	i;
+	size					i;
+	CChars					szCurrent;
+	CBuildConfiguration*	pcFound;
 
-	for (i = 0; i < masConfigurations.NumElements(); i++)
+	szCurrent.Init();
+	CBuildConfiguration::CurrentName(szName, &szCurrent);
+	pcFound = NULL;
+	for (i = 0; (i < masConfigurations.NumElements()) && !pcFound; i++)
 	{
-		if (StringCompare(masConfigurations.Get(i)->GetName(), szName) == 0)
+		if (StringCompare(masConfigurations.Get(i)->GetName(), szCurrent.Text()) == 0)
 		{
-			return masConfigurations.Get(i);
+			pcFound = masConfigurations.Get(i);
 		}
 	}
-	return NULL;
+	szCurrent.Kill();
+	return pcFound;
 }
 
 

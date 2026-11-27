@@ -171,7 +171,7 @@ C0. A stopgap: CGCCBuild adds the Linux options itself (question 7)
   C0-3. (2026-11-27, question 21) -fno-exceptions joins C0's list in GCCBuild.cpp and baselib_options in the
      CMakeLists.txt files, every configuration's, until C6 and C7 take both from the sheet's GCC-x64 groups.
      TestBuildGCC expects it.  Built 2026-11-27 in 42 CMakeLists.txt files (the 40, X65C64Emulator's and one more
-     with baselib_options and no vcxproj_sources): the 20 build folders there were build with it, and the 12 test
+     with baselib_options and no vcxproj_sources): the 20 build folders there were built with it, and the 12 test
      suites among them pass (Release x64 but TestSupportLib, TestThreadLib, TestProceduralLib and TestVulkanLib,
      which are Debug folders).
   Built 2026-11-27 (the user: "add C0 too"): the lists are in GCCBuild.cpp under LINUX_GNU, Debug being a solution
@@ -411,6 +411,15 @@ C11. Question 1's names (added 2026-11-27: the decision had no stage)
      hcp65build's -config and its page (building.md) and the IDE's pages.  A file with an old name is read as the
      new one and written with the new.  hcp65build's -target W65C816|65C64 names a processor, not a configuration,
      and keeps its values.
+  Built 2026-11-27.  CBuildConfiguration has each toolchain's platform beside its name (the name, W65C816, 65C64, GCC,
+  is still the Toolchain a file says and what -target takes) and CurrentName, which Init, Read,
+  CBuildConfigurations::FindConfiguration, the run configurations and the workspace's two chosen names go through:
+  so a name with an old platform is read anywhere and written new.  A configuration's Output and Listing folders are
+  named from its name, so they moved with it (Output\HCP65C816\Release): the paths HCP65's 20 .hcp65build files
+  have into each other's folders, the tests' and checks' fixtures and the pages were moved by one script, and the old
+  folders deleted.  Checked: TestBuildLib (TestBuildConfigurationsOldNames is the old names' test); every HCP65
+  solution builds as Release|HCP65C816 and still as Release|W65C816; the IDE checks pass but enum-to-class, which
+  fails without this change too.  A plain build is Plain|HCP65C816.
   C11-2. The solutions' names.  Each .sln's platforms become MSVC-x86 and MSVC-x64 (58 solutions: CommonLibraries 22,
      HCP65 27, HCP65-IDE 1, LogiCim 3, and question 18's HCP65-Sculpt 2, WindowInputTester 1 and StarControlRedux
      2): its SolutionConfigurationPlatforms and the left side of each ActiveCfg and Build.0, the projects' Win32 and x64

@@ -69,11 +69,11 @@ void TestBuildCommandLineParse(void)
 {
 	CTestBuildCommandLine	cCommandLine;
 
-	const char* aszGood[] = { "hcp65build", "--CONFIG", "Release|W65C816", "Program.sln", "-card", "-quiet", "-libc65", "Lib" };
+	const char* aszGood[] = { "hcp65build", "--CONFIG", "Release|HCP65C816", "Program.sln", "-card", "-quiet", "-libc65", "Lib" };
 	cCommandLine.Init();
 	AssertTrue(cCommandLine.Parse(8, aszGood));
 	AssertString("Program.sln", cCommandLine.GetFile());
-	AssertString("Release|W65C816", cCommandLine.GetConfiguration());
+	AssertString("Release|HCP65C816", cCommandLine.GetConfiguration());
 	AssertString("Lib", cCommandLine.GetLibc65());
 	AssertTrue(cCommandLine.IsCard());
 	AssertTrue(cCommandLine.IsQuiet());
@@ -115,11 +115,11 @@ void TestBuildCommandLineParse(void)
 	AssertString("Unknown option -fast.", cCommandLine.GetLastLine());
 	cCommandLine.Kill();
 
-	const char* aszStartup[] = { "hcp65build", "A.sln", "-startup", "Second", "-config", "Release|W65C816" };
+	const char* aszStartup[] = { "hcp65build", "A.sln", "-startup", "Second", "-config", "Release|HCP65C816" };
 	cCommandLine.Init();
 	AssertTrue(cCommandLine.Parse(6, aszStartup));
 	AssertString("Second", cCommandLine.GetStartupProject());
-	AssertString("Release|W65C816", cCommandLine.GetConfiguration());
+	AssertString("Release|HCP65C816", cCommandLine.GetConfiguration());
 	cCommandLine.Kill();
 
 	const char* aszNoStartup[] = { "hcp65build", "A.sln", "-startup" };
@@ -159,8 +159,8 @@ void TestBuildCommandLineProgress(void)
 
 	AssertFalse(CBuildCommandLine::IsProgressLine("stdlib.cpp (8, 10): Could not include file \"BaseLib/TrueMallocator.h\""));
 	AssertFalse(CBuildCommandLine::IsProgressLine("Objects.cpp (606, 26): Warning: Loop counter narrower than its bound. [i]"));
-	AssertFalse(CBuildCommandLine::IsProgressLine("Debug|W65C816 build failed."));
-	AssertFalse(CBuildCommandLine::IsProgressLine("Wrote 512 bytes to Output\\W65C816\\Debug\\p.exe."));
+	AssertFalse(CBuildCommandLine::IsProgressLine("Debug|HCP65C816 build failed."));
+	AssertFalse(CBuildCommandLine::IsProgressLine("Wrote 512 bytes to Output\\HCP65C816\\Debug\\p.exe."));
 	AssertFalse(CBuildCommandLine::IsProgressLine("Missing symbol (in Main.cpp)"));
 	AssertFalse(CBuildCommandLine::IsProgressLine("Ratio (1/)"));
 	AssertFalse(CBuildCommandLine::IsProgressLine(""));
@@ -191,7 +191,7 @@ void TestBuildCommandLineFindLibc65(void)
 //////////////////////////////////////////////////////////////////////////
 //
 // Tiny (copied, so its output goes in Output) built from the command
-// line: its first HCP65 configuration (it has no .hcp65build, so Debug|W65C816
+// line: its first HCP65 configuration (it has no .hcp65build, so Debug|HCP65C816
 // of the defaults) without -config, or the one named; Broken fails; a
 // file or configuration that isn't there is a usage error.
 //
@@ -211,10 +211,10 @@ void TestBuildCommandLineRun(void)
 	cCommandLine.Init();
 	AssertTrue(cCommandLine.Parse(4, aszDefault));
 	AssertInt(BUILD_EXIT_SUCCEEDED, cCommandLine.Run(NULL));
-	AssertString("Debug|W65C816", cCommandLine.GetConfiguration());
+	AssertString("Debug|HCP65C816", cCommandLine.GetConfiguration());
 	AssertTrue(cCommandLine.HasLine("Tiny: Debug|Win32"));
-	AssertString("Debug|W65C816 build succeeded.", cCommandLine.GetLastLine());
-	AssertTrue(cFileUtil.Exists(TEST_COMMAND_LINE_OUTPUT _FS_ "Tiny" _FS_ "Listing" _FS_ "W65C816" _FS_ "Debug" _FS_ "Maths.lst"));
+	AssertString("Debug|HCP65C816 build succeeded.", cCommandLine.GetLastLine());
+	AssertTrue(cFileUtil.Exists(TEST_COMMAND_LINE_OUTPUT _FS_ "Tiny" _FS_ "Listing" _FS_ "HCP65C816" _FS_ "Debug" _FS_ "Maths.lst"));
 	AssertString("", cCommandLine.GetLayouts());
 	cCommandLine.Kill();
 
@@ -239,12 +239,12 @@ void TestBuildCommandLineRun(void)
 	szLibc65.Kill();
 	cCommandLine.Kill();
 
-	const char* aszQuiet[] = { "hcp65build", TEST_COMMAND_LINE_OUTPUT _FS_ "Tiny" _FS_ "Tiny.vcxproj", "-config", "Debug|65C64", "-quiet", "-libc65", TEST_COMMAND_LINE_LIBC65 };
+	const char* aszQuiet[] = { "hcp65build", TEST_COMMAND_LINE_OUTPUT _FS_ "Tiny" _FS_ "Tiny.vcxproj", "-config", "Debug|HCP65C64", "-quiet", "-libc65", TEST_COMMAND_LINE_LIBC65 };
 	cCommandLine.Init();
 	AssertTrue(cCommandLine.Parse(7, aszQuiet));
 	AssertInt(BUILD_EXIT_SUCCEEDED, cCommandLine.Run(NULL));
 	AssertFalse(cCommandLine.HasLine("Tiny: Debug|Win32"));
-	AssertString("Debug|65C64 build succeeded.", cCommandLine.GetLastLine());
+	AssertString("Debug|HCP65C64 build succeeded.", cCommandLine.GetLastLine());
 	cCommandLine.Kill();
 
 	const char* aszBroken[] = { "hcp65build", TEST_COMMAND_LINE_OUTPUT _FS_ "Broken" _FS_ "Broken.vcxproj", "-quiet", "-libc65", TEST_COMMAND_LINE_LIBC65 };
@@ -252,14 +252,14 @@ void TestBuildCommandLineRun(void)
 	AssertTrue(cCommandLine.Parse(5, aszBroken));
 	AssertInt(BUILD_EXIT_FAILED, cCommandLine.Run(NULL));
 	AssertTrue(cCommandLine.HasLine("Broken.cpp"));
-	AssertString("Debug|W65C816 build failed.", cCommandLine.GetLastLine());
+	AssertString("Debug|HCP65C816 build failed.", cCommandLine.GetLastLine());
 	cCommandLine.Kill();
 
-	const char* aszConfiguration[] = { "hcp65build", TEST_COMMAND_LINE_OUTPUT _FS_ "Tiny" _FS_ "Tiny.vcxproj", "-config", "Fast|W65C816", "-libc65", TEST_COMMAND_LINE_LIBC65 };
+	const char* aszConfiguration[] = { "hcp65build", TEST_COMMAND_LINE_OUTPUT _FS_ "Tiny" _FS_ "Tiny.vcxproj", "-config", "Fast|HCP65C816", "-libc65", TEST_COMMAND_LINE_LIBC65 };
 	cCommandLine.Init();
 	AssertTrue(cCommandLine.Parse(6, aszConfiguration));
 	AssertInt(BUILD_EXIT_USAGE, cCommandLine.Run(NULL));
-	AssertTrue(cCommandLine.HasLine("No configuration Fast|W65C816. There are: \"Debug|Win32\""));
+	AssertTrue(cCommandLine.HasLine("No configuration Fast|HCP65C816. There are: \"Debug|Win32\""));
 	cCommandLine.Kill();
 
 	const char* aszMissing[] = { "hcp65build", "Nothing.sln" };
@@ -301,7 +301,7 @@ void TestBuildCommandLineConfigurationsFile(void)
 	AssertString("", szFound.Text());
 	szFound.Kill();
 
-	cFile.Init("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<BuildConfigurations>\n\t<Configuration Name=\"Lean|W65C816\" Toolchain=\"W65C816\" Solution=\"Debug|Win32\"/>\n</BuildConfigurations>\n");
+	cFile.Init("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<BuildConfigurations>\n\t<Configuration Name=\"Lean|HCP65C816\" Toolchain=\"W65C816\" Solution=\"Debug|Win32\"/>\n</BuildConfigurations>\n");
 	AssertTrue(cFile.Write(TEST_COMMAND_LINE_OUTPUT _FS_ "Tiny" _FS_ "Tiny.hcp65build"));
 	AssertTrue(cFile.Write(TEST_COMMAND_LINE_OUTPUT _FS_ "Alone.hcp65build"));
 	cFile.Kill();
@@ -311,8 +311,8 @@ void TestBuildCommandLineConfigurationsFile(void)
 	AssertTrue(cCommandLine.Parse(4, aszTiny));
 	AssertInt(BUILD_EXIT_SUCCEEDED, cCommandLine.Run(NULL));
 	AssertTrue(TestBuildEndsWith(cCommandLine.GetFile(), "Tiny" _FS_ "Tiny.vcxproj"));
-	AssertString("Lean|W65C816", cCommandLine.GetConfiguration());
-	AssertString("Lean|W65C816 build succeeded.", cCommandLine.GetLastLine());
+	AssertString("Lean|HCP65C816", cCommandLine.GetConfiguration());
+	AssertString("Lean|HCP65C816 build succeeded.", cCommandLine.GetLastLine());
 	cCommandLine.Kill();
 
 	const char* aszAlone[] = { "hcp65build", TEST_COMMAND_LINE_OUTPUT _FS_ "Alone.hcp65build" };
@@ -504,7 +504,7 @@ void TestBuildCommandLinePlainParse(void)
 
 	szError.Init();
 	AssertTrue(cCommandLine.GetPlain()->MakeConfiguration(&cConfiguration, &szError));
-	AssertString("Plain|W65C816", cConfiguration.GetName());
+	AssertString("Plain|HCP65C816", cConfiguration.GetName());
 	AssertTrue(cConfiguration.IsNoFloats());
 	AssertTrue(cConfiguration.IsMathTables());
 	AssertFalse(cConfiguration.IsPreferSize());
@@ -534,7 +534,7 @@ void TestBuildCommandLinePlainParse(void)
 	AssertTrue(cCommandLine.Parse(33, aszImage));
 	szError.Init();
 	AssertTrue(cCommandLine.GetPlain()->MakeConfiguration(&cConfiguration, &szError));
-	AssertString("Plain|65C64", cConfiguration.GetName());
+	AssertString("Plain|HCP65C64", cConfiguration.GetName());
 	AssertFalse(cConfiguration.IsMathTables());
 	AssertTrue(cConfiguration.IsPreferSize());
 	AssertFalse(cConfiguration.IsWarnMissingOverride());
@@ -667,7 +667,7 @@ void TestBuildCommandLinePlainParse(void)
 	AssertFalse(TestBuildCommandLineParses(6, aszBadTarget, &szLine));
 	AssertString("Unknown target GCC: W65C816 or 65C64.", szLine.Text());
 
-	const char* aszConfig[] = { "hcp65build", "-program", "P", "A.cpp", "-config", "Release|W65C816" };
+	const char* aszConfig[] = { "hcp65build", "-program", "P", "A.cpp", "-config", "Release|HCP65C816" };
 	AssertFalse(TestBuildCommandLineParses(6, aszConfig, &szLine));
 	AssertString("-config is for a solution, not a plain command line (-program, -lib).", szLine.Text());
 
@@ -740,12 +740,12 @@ void TestBuildCommandLinePlainSameAsProject(void)
 	AssertTrue(cCommandLine.Parse(4, aszPlain));
 	AssertTrue(cCommandLine.IsPlain());
 	AssertInt(BUILD_EXIT_SUCCEEDED, cCommandLine.Run(NULL));
-	AssertTrue(cCommandLine.HasLine("Tiny: Plain|W65C816"));
-	AssertString("Plain|W65C816 build succeeded.", cCommandLine.GetLastLine());
+	AssertTrue(cCommandLine.HasLine("Tiny: Plain|HCP65C816"));
+	AssertString("Plain|HCP65C816 build succeeded.", cCommandLine.GetLastLine());
 	cCommandLine.Kill();
 
-	AssertTrue(TestBuildSameListing(TEST_COMMAND_LINE_OUTPUT _FS_ "Split" _FS_ "Tiny" _FS_ "Listing" _FS_ "W65C816" _FS_ "Debug" _FS_ "Maths.lst", TEST_COMMAND_LINE_OUTPUT _FS_ "SplitPlain" _FS_ "Maths.lst"));
-	AssertTrue(TestBuildSameListing(TEST_COMMAND_LINE_OUTPUT _FS_ "Split" _FS_ "Tiny" _FS_ "Listing" _FS_ "W65C816" _FS_ "Debug" _FS_ "Extra.lst", TEST_COMMAND_LINE_OUTPUT _FS_ "SplitPlain" _FS_ "Extra.lst"));
+	AssertTrue(TestBuildSameListing(TEST_COMMAND_LINE_OUTPUT _FS_ "Split" _FS_ "Tiny" _FS_ "Listing" _FS_ "HCP65C816" _FS_ "Debug" _FS_ "Maths.lst", TEST_COMMAND_LINE_OUTPUT _FS_ "SplitPlain" _FS_ "Maths.lst"));
+	AssertTrue(TestBuildSameListing(TEST_COMMAND_LINE_OUTPUT _FS_ "Split" _FS_ "Tiny" _FS_ "Listing" _FS_ "HCP65C816" _FS_ "Debug" _FS_ "Extra.lst", TEST_COMMAND_LINE_OUTPUT _FS_ "SplitPlain" _FS_ "Extra.lst"));
 
 }
 
@@ -777,7 +777,7 @@ void TestBuildCommandLinePlainEntry(void)
 	cCommandLine.Init();
 	AssertTrue(cCommandLine.Parse(17, aszKept));
 	AssertInt(BUILD_EXIT_SUCCEEDED, cCommandLine.Run(NULL));
-	AssertString("Plain|W65C816 build succeeded.", cCommandLine.GetLastLine());
+	AssertString("Plain|HCP65C816 build succeeded.", cCommandLine.GetLastLine());
 	AssertTrue(cFileUtil.Exists(TEST_COMMAND_LINE_OUTPUT _FS_ "Entry" _FS_ "Out" _FS_ "entry.exe"));
 	cCommandLine.Kill();
 
@@ -787,7 +787,7 @@ void TestBuildCommandLinePlainEntry(void)
 	AssertTrue(cCommandLine.Parse(17, aszUndefined));
 	AssertInt(BUILD_EXIT_FAILED, cCommandLine.Run(NULL));
 	AssertTrue(cCommandLine.HasLine("The entry _Nowhere is not defined."));
-	AssertString("Plain|W65C816 build failed.", cCommandLine.GetLastLine());
+	AssertString("Plain|HCP65C816 build failed.", cCommandLine.GetLastLine());
 	cCommandLine.Kill();
 
 	szSource.Kill();
@@ -822,14 +822,14 @@ void TestBuildCommandLinePlainMissing(void)
 	AssertTrue(cCommandLine.Parse(17, aszMissing));
 	AssertInt(BUILD_EXIT_FAILED, cCommandLine.Run(NULL));
 	AssertTrue(cCommandLine.HasLine("error: _Elsewhere__Fi.a is used but no unit defines it: the program stops if it gets there."));
-	AssertString("Plain|W65C816 build failed.", cCommandLine.GetLastLine());
+	AssertString("Plain|HCP65C816 build failed.", cCommandLine.GetLastLine());
 	cCommandLine.Kill();
 
 	cCommandLine.Init();
 	AssertTrue(cCommandLine.Parse(18, aszMissing));
 	AssertInt(BUILD_EXIT_SUCCEEDED, cCommandLine.Run(NULL));
 	AssertTrue(cCommandLine.HasLine("warning: _Elsewhere__Fi.a is used but no unit defines it: the program stops if it gets there."));
-	AssertString("Plain|W65C816 build succeeded.", cCommandLine.GetLastLine());
+	AssertString("Plain|HCP65C816 build succeeded.", cCommandLine.GetLastLine());
 	cCommandLine.Kill();
 
 	szSource.Kill();

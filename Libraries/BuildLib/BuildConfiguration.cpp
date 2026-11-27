@@ -59,6 +59,11 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 //The toolchains' names, as saved, by EBuildToolchain.
 static const char* gaszBuildToolchainNames[BT_NumToolchains] = { "W65C816", "65C64", "MSVC", "GCC" };
 
+//The platform of each toolchain's configurations ("Release|HCP65C816"), by EBuildToolchain; NULL for MSVC, whose
+//configurations are the solution's own.  Until ConfigurationsPlan.txt's question 1 a toolchain's platform was its name
+//("Release|HCP65C816", "Release|GCC-x64"), and such a name is still read (CurrentName).
+static const char* gaszBuildToolchainPlatforms[BT_NumToolchains] = { "HCP65C816", "HCP65C64", NULL, "GCC-x64" };
+
 
 //////////////////////////////////////////////////////////////////////////
 //
@@ -66,7 +71,8 @@ static const char* gaszBuildToolchainNames[BT_NumToolchains] = { "W65C816", "65C
 //////////////////////////////////////////////////////////////////////////
 void CBuildConfiguration::Init(const char* szName, EBuildToolchain eToolchain, const char* szSolutionConfiguration)
 {
-	mszName.Init(szName);
+	mszName.Init();
+	CurrentName(szName, &mszName);
 	meToolchain = eToolchain;
 	mszSolutionConfiguration.Init(szSolutionConfiguration);
 	mszBreakpointSpace.Init();
@@ -132,7 +138,7 @@ void CBuildConfiguration::Kill(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// <Configuration Name="Debug|W65C816" Toolchain="W65C816" Solution="Debug|Win32"/>, with its <Image>, <Executable> or
+// <Configuration Name="Debug|HCP65C816" Toolchain="W65C816" Solution="Debug|Win32"/>, with its <Image>, <Executable> or
 // <Module> inside it if it has one.
 //
 //////////////////////////////////////////////////////////////////////////
@@ -284,7 +290,8 @@ bool CBuildConfiguration::LoadXML(CMarkupTag* pcTag)
 		return false;
 	}
 
-	mszName.Set(szName);
+	mszName.Set("");
+	CurrentName(szName, &mszName);
 	meToolchain = eToolchain;
 	mszSolutionConfiguration.Set(szSolution);
 	SetBreakpointSpace(pcTag->GetAttribute((char*)BUILD_CONFIGURATION_BREAKPOINT_SPACE));
@@ -409,7 +416,7 @@ ECPPTarget CBuildConfiguration::GetTarget(void) const
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The name's configuration: Debug of Debug|W65C816, all of a name without
+// The name's configuration: Debug of Debug|HCP65C816, all of a name without
 // a |.
 //
 //////////////////////////////////////////////////////////////////////////
@@ -431,8 +438,8 @@ void CBuildConfiguration::GetConfigurationName(CChars* pszDest)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The name's platform: W65C816 of Debug|W65C816, the toolchain's name for
-// a name without a |.
+// The name's platform: HCP65C816 of Debug|HCP65C816, and for a name
+// without a | its toolchain's platform (MSVC has none: its name).
 //
 //////////////////////////////////////////////////////////////////////////
 void CBuildConfiguration::GetPlatformName(CChars* pszDest)
@@ -440,7 +447,14 @@ void CBuildConfiguration::GetPlatformName(CChars* pszDest)
 	const char*	szBar;
 
 	szBar = strchr(mszName.Text(), '|');
-	pszDest->Append(szBar ? szBar + 1 : GetToolchainName(meToolchain));
+	if (szBar)
+	{
+		pszDest->Append(szBar + 1);
+	}
+	else
+	{
+		pszDest->Append(GetToolchainPlatform(meToolchain) ? GetToolchainPlatform(meToolchain) : GetToolchainName(meToolchain));
+	}
 }
 
 
@@ -474,6 +488,48 @@ bool CBuildConfiguration::Is(const char* szConfiguration, const char* szPlatform
 const char* CBuildConfiguration::GetToolchainName(EBuildToolchain eToolchain)
 {
 	return ((eToolchain >= 0) && (eToolchain < BT_NumToolchains)) ? gaszBuildToolchainNames[eToolchain] : "";
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The platform of the toolchain's configurations, NULL for MSVC.
+//
+//////////////////////////////////////////////////////////////////////////
+const char* CBuildConfiguration::GetToolchainPlatform(EBuildToolchain eToolchain)
+{
+	return ((eToolchain >= 0) && (eToolchain < BT_NumToolchains)) ? gaszBuildToolchainPlatforms[eToolchain] : NULL;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// szName as a configuration is called now, appended to pszDest: a name
+// whose platform is a toolchain's old one (Debug|HCP65C816, Release|GCC-x64)
+// has the toolchain's platform (Debug|HCP65C816, Release|GCC-x64), and any
+// other name is itself.  So files written before the names changed are
+// read, and written with the new.
+//
+//////////////////////////////////////////////////////////////////////////
+void CBuildConfiguration::CurrentName(const char* szName, CChars* pszDest)
+{
+	const char*	szBar;
+	int			i;
+
+	szBar = szName ? strchr(szName, '|') : NULL;
+	if (szBar)
+	{
+		for (i = 0; i < BT_NumToolchains; i++)
+		{
+			if (gaszBuildToolchainPlatforms[i] && (StringInsensitiveCompare(szBar + 1, gaszBuildToolchainNames[i]) == 0))
+			{
+				pszDest->Append(szName, (size)(szBar + 1 - szName));
+				pszDest->Append(gaszBuildToolchainPlatforms[i]);
+				return;
+			}
+		}
+	}
+	pszDest->Append(szName ? szName : "");
 }
 
 

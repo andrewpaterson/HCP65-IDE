@@ -77,10 +77,10 @@ typedef CArrayTemplate<SBuildWorkspaceProject>		CArrayBuildWorkspaceProjects;
 //debugged.  The workspace file (.hcp65workspace) lists them and which is the startup one, their paths relative to
 //it, its run configurations, and the run configuration and build configuration chosen last:
 //
-//	<Workspace RunConfiguration="ModPlay" Configuration="Release|W65C816">
+//	<Workspace RunConfiguration="ModPlay" Configuration="Release|HCP65C816">
 //		<Solution File="ModPlay\HCP65ModPlay.sln" Startup="true" StartupProject="HCP65ModPlay"/>
 //		<Solution File="..\HCP65Lib\Kernal\HCP65Kernal.sln"/>
-//		<RunConfiguration Name="ModPlay" Configuration="Release|W65C816" Tool="..\Emulator.exe" Arguments="--fill"/>
+//		<RunConfiguration Name="ModPlay" Configuration="Release|HCP65C816" Tool="..\Emulator.exe" Arguments="--fill"/>
 //	</Workspace>
 //
 //A solution's StartupProject is the application of its that was chosen as its startup project (see

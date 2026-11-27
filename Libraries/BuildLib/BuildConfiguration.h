@@ -56,7 +56,7 @@ enum EBuildProgram
 
 //A way the solution is built: a name to choose it by, its toolchain, and the solution configuration ("Debug|Win32")
 //whose projects' files, include directories and defines it builds with.  MSVC builds that configuration as Visual
-//Studio does.  The name is chosen as its configuration and platform, either side of a | ("Debug|W65C816").
+//Studio does.  The name is chosen as its configuration and platform, either side of a | ("Debug|HCP65C816").
 //
 //What it is run in isn't here: that is a run configuration's (CRunConfiguration).  An emulator that debugs what an
 //HCP65 configuration builds must be the configuration's processor (GetProcessorName).
@@ -199,6 +199,8 @@ public:
 
 	static const char*	GetToolchainName(EBuildToolchain eToolchain);
 	static bool			FindToolchain(const char* szName, EBuildToolchain* peToolchain);
+	static const char*	GetToolchainPlatform(EBuildToolchain eToolchain);
+	static void			CurrentName(const char* szName, CChars* pszDest);
 
 protected:
 	void			ClearProgram(void);

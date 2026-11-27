@@ -3,14 +3,14 @@
      Output\Debugging.img): its STARTUP.TXT runs \boottest.exe, which debugging puts there.  The boot loader and OS.SYS
      are the ones TestHCP65Lib built. -->
 <BuildConfigurations>
-	<Configuration Name="Debug|W65C816" Toolchain="W65C816" Solution="Debug|Win32" Debug="true" BreakpointSpace="User" MathTables="false" Card="Output\Debugging.img" CardPath="\boottest.exe">
+	<Configuration Name="Debug|HCP65C816" Toolchain="W65C816" Solution="Debug|Win32" Debug="true" BreakpointSpace="User" MathTables="false" Card="Output\Debugging.img" CardPath="\boottest.exe">
 		<Executable File="debugging.exe" Entry="UserStart" Limit="0x200000">
 			<Symbol Name="UserHeapSize" Value="0x20000"/>
 		</Executable>
 		<Load File="..\..\..\..\..\HCP65\HCP65-Emulator\TestHCP65Lib\TestHCP65Lib\Output\Boot.rom" Address="0x0"/>
 		<Lines File="..\..\..\..\..\HCP65\HCP65-Emulator\TestHCP65Lib\TestHCP65Lib\Output\OS.SYS" CardPath="\OS\OS.SYS"/>
 	</Configuration>
-	<Configuration Name="Release|W65C816" Toolchain="W65C816" Solution="Release|Win32" BreakpointSpace="User" MathTables="false" Card="Output\Debugging.img" CardPath="\boottest.exe">
+	<Configuration Name="Release|HCP65C816" Toolchain="W65C816" Solution="Release|Win32" BreakpointSpace="User" MathTables="false" Card="Output\Debugging.img" CardPath="\boottest.exe">
 		<Executable File="debugging.exe" Entry="UserStart" Limit="0x200000">
 			<Symbol Name="UserHeapSize" Value="0x20000"/>
 		</Executable>

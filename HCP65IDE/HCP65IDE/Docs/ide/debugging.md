@@ -202,7 +202,7 @@ Libc65's `Start65C64.asm` first: it sets the stack and the registers' widths, ru
 initialisers, calls `main` and stops with its result in A.  A configuration for it:
 
 ```xml
-<Configuration Name="Debug|65C64" Toolchain="65C64" Solution="Debug|Win32" Debug="true">
+<Configuration Name="Debug|HCP65C64" Toolchain="65C64" Solution="Debug|Win32" Debug="true">
 	<Image File="program.bin" Size="0x100000" Load="0x10000">
 		<Region Start="0x10000" End="0x110000" Offset="0x0"/>
 	</Image>

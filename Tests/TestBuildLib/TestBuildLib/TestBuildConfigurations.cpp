@@ -2,6 +2,7 @@
 #include "BaseLib/FileUtil.h"
 #include "BaseLib/TextFile.h"
 #include "BuildLib/BuildConfigurations.h"
+#include "BuildLib/RunConfiguration.h"
 #include "TestLib/Assert.h"
 
 
@@ -40,14 +41,14 @@ void TestBuildConfigurationsDefaults(void)
 	AssertSize(8, cConfigurations.NumConfigurations());
 	AssertBuildConfiguration("Debug|Win32", BT_MSVC, "Debug|Win32", cConfigurations.GetConfiguration(0));
 	AssertBuildConfiguration("Release|x64", BT_MSVC, "Release|x64", cConfigurations.GetConfiguration(1));
-	AssertBuildConfiguration("Debug|W65C816", BT_W65C816, "Debug|Win32", cConfigurations.GetConfiguration(2));
-	AssertBuildConfiguration("Debug|65C64", BT_65C64, "Debug|Win32", cConfigurations.GetConfiguration(3));
-	AssertBuildConfiguration("Debug|GCC", BT_GCC, "Debug|Win32", cConfigurations.GetConfiguration(4));
-	AssertBuildConfiguration("Release|W65C816", BT_W65C816, "Release|x64", cConfigurations.GetConfiguration(5));
-	AssertBuildConfiguration("Release|65C64", BT_65C64, "Release|x64", cConfigurations.GetConfiguration(6));
-	AssertBuildConfiguration("Release|GCC", BT_GCC, "Release|x64", cConfigurations.GetConfiguration(7));
+	AssertBuildConfiguration("Debug|HCP65C816", BT_W65C816, "Debug|Win32", cConfigurations.GetConfiguration(2));
+	AssertBuildConfiguration("Debug|HCP65C64", BT_65C64, "Debug|Win32", cConfigurations.GetConfiguration(3));
+	AssertBuildConfiguration("Debug|GCC-x64", BT_GCC, "Debug|Win32", cConfigurations.GetConfiguration(4));
+	AssertBuildConfiguration("Release|HCP65C816", BT_W65C816, "Release|x64", cConfigurations.GetConfiguration(5));
+	AssertBuildConfiguration("Release|HCP65C64", BT_65C64, "Release|x64", cConfigurations.GetConfiguration(6));
+	AssertBuildConfiguration("Release|GCC-x64", BT_GCC, "Release|x64", cConfigurations.GetConfiguration(7));
 
-	AssertTrue(cConfigurations.FindConfiguration("Debug|65C64") == cConfigurations.GetConfiguration(3));
+	AssertTrue(cConfigurations.FindConfiguration("Debug|HCP65C64") == cConfigurations.GetConfiguration(3));
 	AssertTrue(cConfigurations.FindConfiguration("Debug|Z80") == NULL);
 	AssertTrue(cConfigurations.GetConfiguration(2)->IsHCP65());
 	AssertTrue(cConfigurations.GetConfiguration(3)->IsHCP65());
@@ -77,7 +78,7 @@ void TestBuildConfigurationsFile(void)
 
 	cFileUtil.MakeDir("Output");
 	cConfigurations.Init();
-	cConfigurations.Add("Debug|W65C816", BT_W65C816, "Debug|Win32");
+	cConfigurations.Add("Debug|HCP65C816", BT_W65C816, "Debug|Win32");
 	cConfigurations.GetConfiguration(0)->SetBreakpointSpace("User");
 	cConfigurations.GetConfiguration(0)->SetNoFloats(true);
 	cConfigurations.GetConfiguration(0)->SetMathTables(false);
@@ -96,7 +97,7 @@ void TestBuildConfigurationsFile(void)
 	cRead.Init();
 	AssertTrue(cRead.Read("Output" _FS_ "Test.hcp65build"));
 	AssertSize(2, cRead.NumConfigurations());
-	AssertBuildConfiguration("Debug|W65C816", BT_W65C816, "Debug|Win32", cRead.GetConfiguration(0));
+	AssertBuildConfiguration("Debug|HCP65C816", BT_W65C816, "Debug|Win32", cRead.GetConfiguration(0));
 	AssertBuildConfiguration("Fast GCC", BT_GCC, "Release|x64", cRead.GetConfiguration(1));
 
 	AssertString("User", cRead.GetConfiguration(0)->GetBreakpointSpace());
@@ -191,14 +192,14 @@ void TestBuildConfigurationsImage(void)
 
 	cFileUtil.MakeDir("Output");
 	cConfigurations.Init();
-	cConfigurations.Add("Debug|W65C816", BT_W65C816, "Debug|Win32");
+	cConfigurations.Add("Debug|HCP65C816", BT_W65C816, "Debug|Win32");
 	AssertFalse(cConfigurations.GetConfiguration(0)->HasImage());
 	AssertTrue(cConfigurations.Write("Output" _FS_ "NoImage.hcp65build"));
 	cRead.Init();
 	AssertTrue(cRead.Read("Output" _FS_ "NoImage.hcp65build"));
 	AssertFalse(cRead.GetConfiguration(0)->HasImage());
 
-	cFile.Init("<BuildConfigurations>\n\t<Configuration Name=\"Release|W65C816\" Toolchain=\"W65C816\" Solution=\"Release|Win32\">\n\t\t<Image File=\"Kernal.rom\" Size=\"0x80000\" Limit=\"523264\">\n\t\t\t<Region Start=\"0x0\" End=\"0x40000\" Offset=\"0x0\"/>\n\t\t\t<Region Start=\"0x400000\" End=\"0x440000\" Offset=\"0x40000\"/>\n\t\t</Image>\n\t</Configuration>\n</BuildConfigurations>\n");
+	cFile.Init("<BuildConfigurations>\n\t<Configuration Name=\"Release|HCP65C816\" Toolchain=\"W65C816\" Solution=\"Release|Win32\">\n\t\t<Image File=\"Kernal.rom\" Size=\"0x80000\" Limit=\"523264\">\n\t\t\t<Region Start=\"0x0\" End=\"0x40000\" Offset=\"0x0\"/>\n\t\t\t<Region Start=\"0x400000\" End=\"0x440000\" Offset=\"0x40000\"/>\n\t\t</Image>\n\t</Configuration>\n</BuildConfigurations>\n");
 	AssertTrue(cFile.Write("Output" _FS_ "Image.hcp65build"));
 	cFile.Kill();
 	AssertTrue(cRead.Read("Output" _FS_ "Image.hcp65build"));
@@ -232,7 +233,7 @@ void TestBuildConfigurationsImage(void)
 	AssertSize(2, pcImage->NumRegions());
 
 	//An image that runs from elsewhere (Text, where its code starts), written back the same.
-	cFile.Init("<BuildConfigurations>\n\t<Configuration Name=\"Release|W65C816\" Toolchain=\"W65C816\" Solution=\"Release|Win32\">\n\t\t<Image File=\"Boot.rom\" Size=\"0x80000\" Limit=\"0x60000\" Text=\"0x40000\">\n\t\t\t<Region Start=\"0x40000\" End=\"0x60000\" Offset=\"0x40000\"/>\n\t\t</Image>\n\t</Configuration>\n</BuildConfigurations>\n");
+	cFile.Init("<BuildConfigurations>\n\t<Configuration Name=\"Release|HCP65C816\" Toolchain=\"W65C816\" Solution=\"Release|Win32\">\n\t\t<Image File=\"Boot.rom\" Size=\"0x80000\" Limit=\"0x60000\" Text=\"0x40000\">\n\t\t\t<Region Start=\"0x40000\" End=\"0x60000\" Offset=\"0x40000\"/>\n\t\t</Image>\n\t</Configuration>\n</BuildConfigurations>\n");
 	AssertTrue(cFile.Write("Output" _FS_ "TextImage.hcp65build"));
 	cFile.Kill();
 	cConfigurations.Kill();
@@ -247,7 +248,7 @@ void TestBuildConfigurationsImage(void)
 
 	//Line tables to read without loading them: the kernal OS.SYS, in Kernel space (the default) and checked against the
 	//card; another in User space, not checked.  Written back the same, the default space left out.
-	cFile.Init("<BuildConfigurations>\n\t<Configuration Name=\"Release|W65C816\" Toolchain=\"W65C816\" Solution=\"Release|Win32\" BreakpointSpace=\"User\">\n\t\t<Executable File=\"p.exe\" Entry=\"UserStart\"/>\n\t\t<Lines File=\"..\\Kernal\\OS.SYS\" CardPath=\"\\OS\\OS.SYS\"/>\n\t\t<Lines File=\"Other.exe\" Space=\"User\"/>\n\t</Configuration>\n</BuildConfigurations>\n");
+	cFile.Init("<BuildConfigurations>\n\t<Configuration Name=\"Release|HCP65C816\" Toolchain=\"W65C816\" Solution=\"Release|Win32\" BreakpointSpace=\"User\">\n\t\t<Executable File=\"p.exe\" Entry=\"UserStart\"/>\n\t\t<Lines File=\"..\\Kernal\\OS.SYS\" CardPath=\"\\OS\\OS.SYS\"/>\n\t\t<Lines File=\"Other.exe\" Space=\"User\"/>\n\t</Configuration>\n</BuildConfigurations>\n");
 	AssertTrue(cFile.Write("Output" _FS_ "Lines.hcp65build"));
 	cFile.Kill();
 	cConfigurations.Kill();
@@ -270,15 +271,15 @@ void TestBuildConfigurationsImage(void)
 	cFile.Kill();
 
 	//No regions; a region past the image's end; not a number; MSVC.
-	cFile.Init("<BuildConfigurations>\n\t<Configuration Name=\"Debug|W65C816\" Toolchain=\"W65C816\" Solution=\"Debug|Win32\">\n\t\t<Image File=\"A.rom\" Size=\"0x100\"/>\n\t</Configuration>\n</BuildConfigurations>\n");
+	cFile.Init("<BuildConfigurations>\n\t<Configuration Name=\"Debug|HCP65C816\" Toolchain=\"W65C816\" Solution=\"Debug|Win32\">\n\t\t<Image File=\"A.rom\" Size=\"0x100\"/>\n\t</Configuration>\n</BuildConfigurations>\n");
 	AssertTrue(cFile.Write("Output" _FS_ "BadImage.hcp65build"));
 	cFile.Kill();
 	AssertFalse(cRead.Read("Output" _FS_ "BadImage.hcp65build"));
-	cFile.Init("<BuildConfigurations>\n\t<Configuration Name=\"Debug|W65C816\" Toolchain=\"W65C816\" Solution=\"Debug|Win32\">\n\t\t<Image File=\"A.rom\" Size=\"0x100\">\n\t\t\t<Region Start=\"0x0\" End=\"0x100\" Offset=\"0x10\"/>\n\t\t</Image>\n\t</Configuration>\n</BuildConfigurations>\n");
+	cFile.Init("<BuildConfigurations>\n\t<Configuration Name=\"Debug|HCP65C816\" Toolchain=\"W65C816\" Solution=\"Debug|Win32\">\n\t\t<Image File=\"A.rom\" Size=\"0x100\">\n\t\t\t<Region Start=\"0x0\" End=\"0x100\" Offset=\"0x10\"/>\n\t\t</Image>\n\t</Configuration>\n</BuildConfigurations>\n");
 	AssertTrue(cFile.Write("Output" _FS_ "BadImage.hcp65build"));
 	cFile.Kill();
 	AssertFalse(cRead.Read("Output" _FS_ "BadImage.hcp65build"));
-	cFile.Init("<BuildConfigurations>\n\t<Configuration Name=\"Debug|W65C816\" Toolchain=\"W65C816\" Solution=\"Debug|Win32\">\n\t\t<Image File=\"A.rom\" Size=\"big\">\n\t\t\t<Region Start=\"0x0\" End=\"0x100\" Offset=\"0x0\"/>\n\t\t</Image>\n\t</Configuration>\n</BuildConfigurations>\n");
+	cFile.Init("<BuildConfigurations>\n\t<Configuration Name=\"Debug|HCP65C816\" Toolchain=\"W65C816\" Solution=\"Debug|Win32\">\n\t\t<Image File=\"A.rom\" Size=\"big\">\n\t\t\t<Region Start=\"0x0\" End=\"0x100\" Offset=\"0x0\"/>\n\t\t</Image>\n\t</Configuration>\n</BuildConfigurations>\n");
 	AssertTrue(cFile.Write("Output" _FS_ "BadImage.hcp65build"));
 	cFile.Kill();
 	AssertFalse(cRead.Read("Output" _FS_ "BadImage.hcp65build"));
@@ -310,7 +311,7 @@ void TestBuildConfigurationsExecutable(void)
 	CFileUtil				cFileUtil;
 
 	cFileUtil.MakeDir("Output");
-	cFile.Init("<BuildConfigurations>\n\t<Configuration Name=\"Debug|W65C816\" Toolchain=\"W65C816\" Solution=\"Debug|Win32\" BreakpointSpace=\"User\" Card=\"Card.img\" CardPath=\"\\boot.exe\">\n\t\t<Executable File=\"boot.exe\" Entry=\"UserStart\" Limit=\"0x200000\">\n\t\t\t<Symbol Name=\"UserHeapSize\" Value=\"0x20000\"/>\n\t\t</Executable>\n\t\t<Load File=\"Kernal.rom\" Address=\"0x0\"/>\n\t\t<Load File=\"Tables.bin\" Address=\"4194304\"/>\n\t</Configuration>\n</BuildConfigurations>\n");
+	cFile.Init("<BuildConfigurations>\n\t<Configuration Name=\"Debug|HCP65C816\" Toolchain=\"W65C816\" Solution=\"Debug|Win32\" BreakpointSpace=\"User\" Card=\"Card.img\" CardPath=\"\\boot.exe\">\n\t\t<Executable File=\"boot.exe\" Entry=\"UserStart\" Limit=\"0x200000\">\n\t\t\t<Symbol Name=\"UserHeapSize\" Value=\"0x20000\"/>\n\t\t</Executable>\n\t\t<Load File=\"Kernal.rom\" Address=\"0x0\"/>\n\t\t<Load File=\"Tables.bin\" Address=\"4194304\"/>\n\t</Configuration>\n</BuildConfigurations>\n");
 	AssertTrue(cFile.Write("Output" _FS_ "Program.hcp65build"));
 	cFile.Kill();
 
@@ -348,11 +349,11 @@ void TestBuildConfigurationsExecutable(void)
 	AssertString("\\boot.exe", pcConfiguration->GetCardPath());
 	cAgain.Kill();
 
-	cFile.Init("<BuildConfigurations>\n\t<Configuration Name=\"Debug|W65C816\" Toolchain=\"W65C816\" Solution=\"Debug|Win32\">\n\t\t<Image File=\"A.rom\" Size=\"0x100\">\n\t\t\t<Region Start=\"0x0\" End=\"0x100\" Offset=\"0x0\"/>\n\t\t</Image>\n\t\t<Executable File=\"boot.exe\" Entry=\"UserStart\"/>\n\t</Configuration>\n</BuildConfigurations>\n");
+	cFile.Init("<BuildConfigurations>\n\t<Configuration Name=\"Debug|HCP65C816\" Toolchain=\"W65C816\" Solution=\"Debug|Win32\">\n\t\t<Image File=\"A.rom\" Size=\"0x100\">\n\t\t\t<Region Start=\"0x0\" End=\"0x100\" Offset=\"0x0\"/>\n\t\t</Image>\n\t\t<Executable File=\"boot.exe\" Entry=\"UserStart\"/>\n\t</Configuration>\n</BuildConfigurations>\n");
 	AssertTrue(cFile.Write("Output" _FS_ "BadProgram.hcp65build"));
 	cFile.Kill();
 	AssertFalse(cRead.Read("Output" _FS_ "BadProgram.hcp65build"));
-	cFile.Init("<BuildConfigurations>\n\t<Configuration Name=\"Debug|W65C816\" Toolchain=\"W65C816\" Solution=\"Debug|Win32\" Card=\"Card.img\">\n\t\t<Executable File=\"boot.exe\" Entry=\"UserStart\"/>\n\t</Configuration>\n</BuildConfigurations>\n");
+	cFile.Init("<BuildConfigurations>\n\t<Configuration Name=\"Debug|HCP65C816\" Toolchain=\"W65C816\" Solution=\"Debug|Win32\" Card=\"Card.img\">\n\t\t<Executable File=\"boot.exe\" Entry=\"UserStart\"/>\n\t</Configuration>\n</BuildConfigurations>\n");
 	AssertTrue(cFile.Write("Output" _FS_ "BadProgram.hcp65build"));
 	cFile.Kill();
 	AssertFalse(cRead.Read("Output" _FS_ "BadProgram.hcp65build"));
@@ -381,7 +382,7 @@ void TestBuildConfigurationsModule(void)
 	CFileUtil				cFileUtil;
 
 	cFileUtil.MakeDir("Output");
-	cFile.Init("<BuildConfigurations>\n\t<Configuration Name=\"Debug|W65C816\" Toolchain=\"W65C816\" Solution=\"Debug|Win32\" BreakpointSpace=\"Kernel\" NoFloats=\"true\" MathTables=\"false\" Card=\"Card.img\" CardPath=\"\\OS\\Drivers\\UART.DRV\">\n\t\t<Module File=\"UART.DRV\" Entry=\"_KernalCreateDriver\" Limit=\"0x20000\"/>\n\t\t<Load File=\"Kernal.rom\" Address=\"0x0\"/>\n\t</Configuration>\n</BuildConfigurations>\n");
+	cFile.Init("<BuildConfigurations>\n\t<Configuration Name=\"Debug|HCP65C816\" Toolchain=\"W65C816\" Solution=\"Debug|Win32\" BreakpointSpace=\"Kernel\" NoFloats=\"true\" MathTables=\"false\" Card=\"Card.img\" CardPath=\"\\OS\\Drivers\\UART.DRV\">\n\t\t<Module File=\"UART.DRV\" Entry=\"_KernalCreateDriver\" Limit=\"0x20000\"/>\n\t\t<Load File=\"Kernal.rom\" Address=\"0x0\"/>\n\t</Configuration>\n</BuildConfigurations>\n");
 	AssertTrue(cFile.Write("Output" _FS_ "Driver.hcp65build"));
 	cFile.Kill();
 
@@ -410,11 +411,11 @@ void TestBuildConfigurationsModule(void)
 	AssertIntHex(0x20000, pcConfiguration->GetModule()->GetLimit());
 	cAgain.Kill();
 
-	cFile.Init("<BuildConfigurations>\n\t<Configuration Name=\"Debug|W65C816\" Toolchain=\"W65C816\" Solution=\"Debug|Win32\">\n\t\t<Executable File=\"boot.exe\" Entry=\"UserStart\"/>\n\t\t<Module File=\"UART.DRV\" Entry=\"_KernalCreateDriver\"/>\n\t</Configuration>\n</BuildConfigurations>\n");
+	cFile.Init("<BuildConfigurations>\n\t<Configuration Name=\"Debug|HCP65C816\" Toolchain=\"W65C816\" Solution=\"Debug|Win32\">\n\t\t<Executable File=\"boot.exe\" Entry=\"UserStart\"/>\n\t\t<Module File=\"UART.DRV\" Entry=\"_KernalCreateDriver\"/>\n\t</Configuration>\n</BuildConfigurations>\n");
 	AssertTrue(cFile.Write("Output" _FS_ "BadDriver.hcp65build"));
 	cFile.Kill();
 	AssertFalse(cRead.Read("Output" _FS_ "BadDriver.hcp65build"));
-	cFile.Init("<BuildConfigurations>\n\t<Configuration Name=\"Debug|W65C816\" Toolchain=\"W65C816\" Solution=\"Debug|Win32\">\n\t\t<Module File=\"UART.DRV\"/>\n\t</Configuration>\n</BuildConfigurations>\n");
+	cFile.Init("<BuildConfigurations>\n\t<Configuration Name=\"Debug|HCP65C816\" Toolchain=\"W65C816\" Solution=\"Debug|Win32\">\n\t\t<Module File=\"UART.DRV\"/>\n\t</Configuration>\n</BuildConfigurations>\n");
 	AssertTrue(cFile.Write("Output" _FS_ "BadDriver.hcp65build"));
 	cFile.Kill();
 	AssertFalse(cRead.Read("Output" _FS_ "BadDriver.hcp65build"));
@@ -439,8 +440,8 @@ void TestBuildConfigurationsPlatforms(void)
 	cConfigurations.Init();
 	cConfigurations.Add("Debug|Win32", BT_MSVC, "Debug|Win32");
 	cConfigurations.Add("Release|x64", BT_MSVC, "Release|x64");
-	cConfigurations.Add("Debug|W65C816", BT_W65C816, "Debug|Win32");
-	cConfigurations.Add("Release|W65C816", BT_W65C816, "Release|x64");
+	cConfigurations.Add("Debug|HCP65C816", BT_W65C816, "Debug|Win32");
+	cConfigurations.Add("Release|HCP65C816", BT_W65C816, "Release|x64");
 	cConfigurations.Add("Fast GCC", BT_GCC, "Release|x64");
 
 	szName.Init();
@@ -448,13 +449,13 @@ void TestBuildConfigurationsPlatforms(void)
 	AssertString("Debug", szName.Text());
 	szName.Clear();
 	cConfigurations.GetConfiguration(2)->GetPlatformName(&szName);
-	AssertString("W65C816", szName.Text());
+	AssertString("HCP65C816", szName.Text());
 	szName.Clear();
 	cConfigurations.GetConfiguration(4)->GetConfigurationName(&szName);
 	AssertString("Fast GCC", szName.Text());
 	szName.Clear();
 	cConfigurations.GetConfiguration(4)->GetPlatformName(&szName);
-	AssertString("GCC", szName.Text());
+	AssertString("GCC-x64", szName.Text());
 	szName.Kill();
 
 	//Each once, in the order they first come.
@@ -469,16 +470,16 @@ void TestBuildConfigurationsPlatforms(void)
 	AssertSize(4, aszNames.NumElements());
 	AssertString("Win32", aszNames.GetText(0));
 	AssertString("x64", aszNames.GetText(1));
-	AssertString("W65C816", aszNames.GetText(2));
-	AssertString("GCC", aszNames.GetText(3));
+	AssertString("HCP65C816", aszNames.GetText(2));
+	AssertString("GCC-x64", aszNames.GetText(3));
 	aszNames.Kill();
 
 	//NULL is any.
-	AssertTrue(cConfigurations.FindConfiguration("Release", "W65C816") == cConfigurations.GetConfiguration(3));
+	AssertTrue(cConfigurations.FindConfiguration("Release", "HCP65C816") == cConfigurations.GetConfiguration(3));
 	AssertTrue(cConfigurations.FindConfiguration("Release", "Win32") == NULL);
 	AssertTrue(cConfigurations.FindConfiguration("Release", NULL) == cConfigurations.GetConfiguration(1));
-	AssertTrue(cConfigurations.FindConfiguration(NULL, "W65C816") == cConfigurations.GetConfiguration(2));
-	AssertTrue(cConfigurations.FindConfiguration("Fast GCC", "GCC") == cConfigurations.GetConfiguration(4));
+	AssertTrue(cConfigurations.FindConfiguration(NULL, "HCP65C816") == cConfigurations.GetConfiguration(2));
+	AssertTrue(cConfigurations.FindConfiguration("Fast GCC", "GCC-x64") == cConfigurations.GetConfiguration(4));
 
 	cConfigurations.Kill();
 }
@@ -553,7 +554,7 @@ static void AssertEditFile(const char* szExpected, CArrayBuildConfigurationEdits
 
 
 #define TEST_EDIT_HEADER	"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!-- A comment about <Configuration Name=\"Old\"/> to keep. -->\n<BuildConfigurations>\n"
-#define TEST_EDIT_KERNEL	"\t<!-- The first. -->\n\t<Configuration Name=\"Debug|W65C816\" Toolchain=\"W65C816\" Solution=\"Debug|Win32\" BreakpointSpace=\"Kernel\" NoFloats=\"true\">\n\t\t<Image File=\"Kernal.rom\" Size=\"0x80000\" Fill=\"0xFF\" Limit=\"0x7FC00\" Load=\"0x0\">\n\t\t\t<!-- Inside. -->\n\t\t\t<Region Start=\"0x0\" End=\"0x40000\" Offset=\"0x0\"/>\n\t\t</Image>\n\t</Configuration>\n"
+#define TEST_EDIT_KERNEL	"\t<!-- The first. -->\n\t<Configuration Name=\"Debug|HCP65C816\" Toolchain=\"W65C816\" Solution=\"Debug|Win32\" BreakpointSpace=\"Kernel\" NoFloats=\"true\">\n\t\t<Image File=\"Kernal.rom\" Size=\"0x80000\" Fill=\"0xFF\" Limit=\"0x7FC00\" Load=\"0x0\">\n\t\t\t<!-- Inside. -->\n\t\t\t<Region Start=\"0x0\" End=\"0x40000\" Offset=\"0x0\"/>\n\t\t</Image>\n\t</Configuration>\n"
 #define TEST_EDIT_GCC		"\t<Configuration Toolchain=\"GCC\" Name=\"Fast\" Solution=\"Release|x64\"/>\n"
 #define TEST_EDIT_FOOTER	"</BuildConfigurations>\n"
 #define TEST_EDIT_TEXT		TEST_EDIT_HEADER TEST_EDIT_KERNEL TEST_EDIT_GCC TEST_EDIT_FOOTER
@@ -595,7 +596,7 @@ void TestBuildConfigurationsEdits(void)
 	pcEdit->mbWarnMissingOverride = false;
 	pcEdit->mszBreakpointSpace.Set("");
 	AssertTrue(cConfigurations.ApplyEdits(TEST_EDIT_FILE, &asEdits));
-	AssertEditFile(TEST_EDIT_HEADER "\t<!-- The first. -->\n\t<Configuration Name=\"Debug|W65C816\" Toolchain=\"W65C816\" Solution=\"Debug|Win32\" MathTables=\"false\" WarnMissingOverride=\"false\">\n\t\t<Image File=\"Kernal.rom\" Size=\"0x80000\" Fill=\"0xFF\" Limit=\"0x7FC00\" Load=\"0x0\">\n\t\t\t<!-- Inside. -->\n\t\t\t<Region Start=\"0x0\" End=\"0x40000\" Offset=\"0x0\"/>\n\t\t</Image>\n\t</Configuration>\n\t<Configuration Toolchain=\"GCC\" Name=\"Faster\" Solution=\"Release|x64\" BreakpointSpace=\"A&amp;B\"/>\n" TEST_EDIT_FOOTER, &asEdits);
+	AssertEditFile(TEST_EDIT_HEADER "\t<!-- The first. -->\n\t<Configuration Name=\"Debug|HCP65C816\" Toolchain=\"W65C816\" Solution=\"Debug|Win32\" MathTables=\"false\" WarnMissingOverride=\"false\">\n\t\t<Image File=\"Kernal.rom\" Size=\"0x80000\" Fill=\"0xFF\" Limit=\"0x7FC00\" Load=\"0x0\">\n\t\t\t<!-- Inside. -->\n\t\t\t<Region Start=\"0x0\" End=\"0x40000\" Offset=\"0x0\"/>\n\t\t</Image>\n\t</Configuration>\n\t<Configuration Toolchain=\"GCC\" Name=\"Faster\" Solution=\"Release|x64\" BreakpointSpace=\"A&amp;B\"/>\n" TEST_EDIT_FOOTER, &asEdits);
 
 	//And it is what is read back.
 	AssertString("Faster", cConfigurations.GetConfiguration(1)->GetName());
@@ -610,7 +611,7 @@ void TestBuildConfigurationsEdits(void)
 	asEdits.Get(0)->mszCard.Set("Card.img");
 	asEdits.Get(0)->mszCardPath.Set("\\boot.exe");
 	AssertTrue(cConfigurations.ApplyEdits(TEST_EDIT_FILE, &asEdits));
-	AssertEditFile(TEST_EDIT_HEADER "\t<!-- The first. -->\n\t<Configuration Name=\"Debug|W65C816\" Toolchain=\"W65C816\" Solution=\"Debug|Win32\" BreakpointSpace=\"Kernel\" NoFloats=\"true\" Card=\"Card.img\" CardPath=\"\\boot.exe\">\n\t\t<Image File=\"Kernal.rom\" Size=\"0x80000\" Fill=\"0xFF\" Limit=\"0x7FC00\" Load=\"0x0\">\n\t\t\t<!-- Inside. -->\n\t\t\t<Region Start=\"0x0\" End=\"0x40000\" Offset=\"0x0\"/>\n\t\t</Image>\n\t</Configuration>\n" TEST_EDIT_GCC TEST_EDIT_FOOTER, &asEdits);
+	AssertEditFile(TEST_EDIT_HEADER "\t<!-- The first. -->\n\t<Configuration Name=\"Debug|HCP65C816\" Toolchain=\"W65C816\" Solution=\"Debug|Win32\" BreakpointSpace=\"Kernel\" NoFloats=\"true\" Card=\"Card.img\" CardPath=\"\\boot.exe\">\n\t\t<Image File=\"Kernal.rom\" Size=\"0x80000\" Fill=\"0xFF\" Limit=\"0x7FC00\" Load=\"0x0\">\n\t\t\t<!-- Inside. -->\n\t\t\t<Region Start=\"0x0\" End=\"0x40000\" Offset=\"0x0\"/>\n\t\t</Image>\n\t</Configuration>\n" TEST_EDIT_GCC TEST_EDIT_FOOTER, &asEdits);
 	AssertString("Card.img", cConfigurations.GetConfiguration(0)->GetCard());
 
 	//One removed goes with its line; the comment before it isn't its.
@@ -689,6 +690,76 @@ void TestBuildConfigurationsEdits(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// A configuration named with a toolchain's old platform (Debug|W65C816,
+// Debug|65C64, Release|GCC) is read as the name it has now, where it is
+// made, where it is read from a .hcp65build file and where it is looked
+// for; any other name is itself.
+//
+//////////////////////////////////////////////////////////////////////////
+void TestBuildConfigurationsOldNames(void)
+{
+	CBuildConfigurations	cConfigurations;
+	CBuildConfigurations	cRead;
+	CRunConfiguration		cRun;
+	CChars					szName;
+	CFileUtil				cFileUtil;
+	CTextFile				cFile;
+
+	szName.Init();
+	CBuildConfiguration::CurrentName("Debug|W65C816", &szName);
+	AssertString("Debug|HCP65C816", szName.Text());
+	szName.Clear();
+	CBuildConfiguration::CurrentName("Debug|65c64", &szName);
+	AssertString("Debug|HCP65C64", szName.Text());
+	szName.Clear();
+	CBuildConfiguration::CurrentName("Release|GCC", &szName);
+	AssertString("Release|GCC-x64", szName.Text());
+	szName.Clear();
+	CBuildConfiguration::CurrentName("Release|GCC-x64", &szName);
+	AssertString("Release|GCC-x64", szName.Text());
+	szName.Clear();
+	CBuildConfiguration::CurrentName("Release|x64", &szName);
+	AssertString("Release|x64", szName.Text());
+	szName.Clear();
+	CBuildConfiguration::CurrentName("Fast GCC", &szName);
+	AssertString("Fast GCC", szName.Text());
+	szName.Clear();
+	CBuildConfiguration::CurrentName(NULL, &szName);
+	AssertString("", szName.Text());
+	szName.Kill();
+
+	cConfigurations.Init();
+	cConfigurations.Add("Release|W65C816", BT_W65C816, "Release|Win32");
+	AssertString("Release|HCP65C816", cConfigurations.GetConfiguration(0)->GetName());
+	AssertTrue(cConfigurations.FindConfiguration("Release|W65C816") == cConfigurations.GetConfiguration(0));
+	AssertTrue(cConfigurations.FindConfiguration("Release|HCP65C816") == cConfigurations.GetConfiguration(0));
+	cConfigurations.Kill();
+
+	cFileUtil.TouchDir("Output" _FS_ "OldNames");
+	cFile.Init("<BuildConfigurations>\n"
+		"\t<Configuration Name=\"Debug|65C64\" Toolchain=\"65C64\" Solution=\"Debug|Win32\"/>\n"
+		"\t<Configuration Name=\"Release|GCC\" Toolchain=\"GCC\" Solution=\"Release|x64\"/>\n"
+		"</BuildConfigurations>\n");
+	AssertTrue(cFile.Write("Output" _FS_ "OldNames" _FS_ "Old.hcp65build"));
+	cFile.Kill();
+	cRead.Init();
+	AssertTrue(cRead.Read("Output" _FS_ "OldNames" _FS_ "Old.hcp65build"));
+	AssertSize(2, cRead.NumConfigurations());
+	AssertBuildConfiguration("Debug|HCP65C64", BT_65C64, "Debug|Win32", cRead.GetConfiguration(0));
+	AssertBuildConfiguration("Release|GCC-x64", BT_GCC, "Release|x64", cRead.GetConfiguration(1));
+	cRead.Kill();
+	cFileUtil.RemoveDir("Output" _FS_ "OldNames");
+
+	//A run configuration is named after its build configuration, so its name moves with it.
+	cRun.Init("Debug|W65C816", "Debug|W65C816");
+	AssertString("Debug|HCP65C816", cRun.GetName());
+	AssertString("Debug|HCP65C816", cRun.GetConfiguration());
+	cRun.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 //
 //////////////////////////////////////////////////////////////////////////
 void TestBuildConfigurations(void)
@@ -696,6 +767,7 @@ void TestBuildConfigurations(void)
 	BeginTests();
 
 	TestBuildConfigurationsDefaults();
+	TestBuildConfigurationsOldNames();
 	TestBuildConfigurationsFile();
 	TestBuildConfigurationsImage();
 	TestBuildConfigurationsExecutable();

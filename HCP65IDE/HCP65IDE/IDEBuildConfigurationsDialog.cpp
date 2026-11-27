@@ -35,7 +35,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define IDE_BUILD_DIALOG_HEIGHT		500
 #define IDE_BUILD_DIALOG_LIST_WIDTH	220
 #define IDE_BUILD_DIALOG_GAP		12
-#define IDE_BUILD_DIALOG_NEW_NAME	"New|W65C816"
+#define IDE_BUILD_DIALOG_NEW_NAME	"New|HCP65C816"
 
 
 //////////////////////////////////////////////////////////////////////////

@@ -148,7 +148,7 @@ def MakeSystemRoot(aszVersions, bLibrary=True):
 def MakeSolutionCopy(bOther=False):
 	#A copy of a test solution with a comment in its build configurations, to save them to: a scripted run told to keep
 	#its settings with SAVE_LAYOUT, and its recent solutions apart, writes only beside the copy.  It can have a second
-	#build configuration (bOther), Other|W65C816, for when one of them is removed.
+	#build configuration (bOther), Other|HCP65C816, for when one of them is removed.
 	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
 	atexit.register(shutil.rmtree, szRoot, True)
 	szKernel = os.path.join(szRoot, 'Workspace', 'Kernel')
@@ -156,7 +156,7 @@ def MakeSolutionCopy(bOther=False):
 	szFile = os.path.join(szKernel, 'Kernel.hcp65build')
 	szText = open(szFile, newline='').read().replace('<BuildConfigurations>', '<!-- A comment to keep. -->\n<BuildConfigurations>', 1)
 	if bOther:
-		szText = szText.replace('</BuildConfigurations>', '\t<Configuration Name="Other|W65C816" Toolchain="W65C816" Solution="Release|Win32"/>\n</BuildConfigurations>', 1)
+		szText = szText.replace('</BuildConfigurations>', '\t<Configuration Name="Other|HCP65C816" Toolchain="W65C816" Solution="Release|Win32"/>\n</BuildConfigurations>', 1)
 	open(szFile, 'w', newline='').write(szText)
 	return {'SOLUTION': os.path.join(szKernel, 'Kernel.sln'), 'SAVE_LAYOUT': '1', 'RECENT': os.path.join(szRoot, 'Recent.xml')}
 
@@ -227,10 +227,10 @@ def PrepareDebugging():
 #into its data and into its text, a stopped address, an int in hexadecimal, and its Release configuration.
 DEBUGGING_W65C816 = {'SUFFIX': '', 'SOLUTION': 'Debugging.sln', 'EMULATOR_VARIABLE': 'EMULATOR', 'EMULATOR': REFERENCE_EMULATOR,
 	'PREPARE': PrepareDebugging, 'MODULE': r'debugging\.exe', 'POINTER': r'0x00[0-9a-f]{4}', 'TEXT_POINTER': r'0x[0-9a-f]{6}',
-	'ADDRESS': r'\$[0-9A-F]{2}:[0-9A-F]{4}', 'HEX_INT': '0x0000', 'RELEASE': 'Release|W65C816'}
+	'ADDRESS': r'\$[0-9A-F]{2}:[0-9A-F]{4}', 'HEX_INT': '0x0000', 'RELEASE': 'Release|HCP65C816'}
 DEBUGGING_65C64 = {'SUFFIX': '-65C64', 'SOLUTION': 'Debugging65C64.sln', 'EMULATOR_VARIABLE': '65C64_EMULATOR', 'EMULATOR': X65C64_EMULATOR,
 	'PREPARE': CleanDebugging, 'MODULE': r'debugging\.bin', 'POINTER': r'0x[0-9a-f]{8}', 'TEXT_POINTER': r'0x[0-9a-f]{8}',
-	'ADDRESS': r'\$[0-9A-F]{8}', 'HEX_INT': '0x00000000', 'RELEASE': 'Release|65C64'}
+	'ADDRESS': r'\$[0-9A-F]{8}', 'HEX_INT': '0x00000000', 'RELEASE': 'Release|HCP65C64'}
 
 
 def MakeDebugging(asProcessor, szDebug, szConfiguration=None):
@@ -996,7 +996,7 @@ CHECKS = [
 		 r'^Popup: none$', r'Calculator\.cpp \(focus\) line 367: '], []),
 	('gotosource-popup-scrolls', {
 		#CCodabase's many usages: the chooser's rows are no taller than the theme's most rows, and scroll.
-		'WAIT_INDEX': '1', 'OPEN': 'Codabase.h', 'CARET': '27:8',
+		'WAIT_INDEX': '1', 'OPEN': 'Codabase.h', 'CARET': '28:8',
 		'DEBUG': 'gotosource,edit:printpopup'},
 		[r'^Popup: Usages of CCodabase  \d\d+ usages \| ', r'^Popup height: \d+ scrolling, the rows \d+$'], [r'all shown']),
 	('gotosource-on-usage', {
@@ -1815,7 +1815,7 @@ CHECKS = [
 		#isn't a member or is overloaded: with a W65C816 configuration the labels are asked of the compiler (printlabel
 		#prints one) before and after, and the assembly's are changed.  Blend(int, int)'s becomes _Blend__Fiic and
 		#Blend(int, int, int)'s is left; a member that isn't overloaded keeps its label whatever its parameters.
-		'WAIT_INDEX': '1', 'OPEN': 'Paint.h', 'CONFIGURATION': 'Debug|W65C816',
+		'WAIT_INDEX': '1', 'OPEN': 'Paint.h', 'CONFIGURATION': 'Debug|HCP65C816',
 		'DEBUG': 'edit:renamesearch:---s,edit:caret:24:7,edit:printlabel,edit:changesignature:0;1;+char|cMode|\'a\'|,edit:caret:24:7,edit:printlabel,'
 		         'edit:caret:11:9,edit:changesignature:2;0;1,printdisklines:PaintW65C816.asm,printdisklines:Main.cpp'}),
 		[r'^Label: _Blend__Fii$', r"^Status: Changed Blend's signature: 2 declarations and definitions, 1 call in 3 files\.  2 labels in assembly\.$", r'^Label: _Blend__Fiic$',
@@ -3821,7 +3821,7 @@ CHECKS = [
 	('edits-kept-after-configuration', {
 		#The index built again for another configuration has the open files' edits, not just their files.
 		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'CARET': '36:2', 'TYPE': 'int iTypedName; ',
-		'DEBUG': 'wait:1500,configuration:Debug|W65C816,waitindex,edit:caret:36:7,edit:renamable'},
+		'DEBUG': 'wait:1500,configuration:Debug|HCP65C816,waitindex,edit:caret:36:7,edit:renamable'},
 		[r'^Rename: iTypedName \[.*CalculatorParser\.cpp:36:6:iTypedName\] at 1 places'], []),
 	('nothing-at-caret', {
 		'RECENT': CALCULATOR_RECENT, 'WAIT_INDEX': '1', 'OPEN': 'CalculatorParser.cpp', 'CARET': '1:1', 'EDIT': 'usages,renamable'},
@@ -4011,9 +4011,9 @@ CHECKS = [
 		[r'^Startup project of Tools: \[First\] of 2 applications$', r'^Bold project: First$'], [r'chosen', r'Bold project: Second', r'ERROR']),
 	('startup-project-set', dict(MakeToolsCopy(), **{
 		#Set as Startup Project: kept in the workspace file, and what GCC links of it is what Start runs, in its folder.
-		'STARTUP_PROJECT': '0:Second', 'CONFIGURATION': 'Release|GCC', 'DEBUG': 'printstartup,printworkspace'}),
+		'STARTUP_PROJECT': '0:Second', 'CONFIGURATION': 'Release|GCC-x64', 'DEBUG': 'printstartup,printworkspace'}),
 		[r'^Set startup project 0:Second: done$', r'^Startup project of Tools: \[Second\] of 2 applications \(chosen\)$', r'^Bold project: Second$',
-		 r'^Start runs: .*Output[/\\]GCC[/\\]Release[/\\]Second(\.exe)? in .*Tools$', r'Tools\.sln" Startup="true" StartupProject="Second"/>'],
+		 r'^Start runs: .*Output[/\\]GCC-x64[/\\]Release[/\\]Second(\.exe)? in .*Tools$', r'Tools\.sln" Startup="true" StartupProject="Second"/>'],
 		[r'Bold project: First', r'ERROR']),
 	('startup-project-library', dict(MakeToolsCopy(), **{
 		#A library can't be a startup project.
@@ -4021,7 +4021,7 @@ CHECKS = [
 		[r'^Set startup project 0:Shared: refused$', r'^Startup project of Tools: \[First\] of 2 applications$'], [r'chosen', r'ERROR']),
 	('startup-project-build', dict(MakeToolsCopy(), **{
 		#An HCP65 build builds the startup project and the library, not the other application.
-		'STARTUP_PROJECT': '0:Second', 'CONFIGURATION': 'Release|W65C816', 'DEBUG': 'command:Build.Build,wait:200,printbuild'}),
+		'STARTUP_PROJECT': '0:Second', 'CONFIGURATION': 'Release|HCP65C816', 'DEBUG': 'command:Build.Build,wait:200,printbuild'}),
 		[r'Second: Release\|Win32', r'Shared: Release\|Win32', r'build succeeded'], [r'First: Release\|Win32', r'ERROR']),
 	('find-in-solution', {
 		#Find in Files, whatever the case: the first results with where the text is in each, the first previewed and
@@ -4124,8 +4124,8 @@ CHECKS = [
 		 r'^Keys: Debug\.BreakAll Control\+Pause/Break bound$',
 		 r'^Buttons: Start \[Run\.Start\]$'], [r'NOT BOUND', r'\[none\]']),
 	('configuration', {
-		'CONFIGURATION': 'Debug|W65C816', 'DEBUG': 'printconfig'},
-		[r'^Configuration: \[Debug\|W65C816\] \[Debug\|W65C816\]: Debug\|W65C816, Release\|W65C816, Edit Configurations\.\.\.,$'], []),
+		'CONFIGURATION': 'Debug|HCP65C816', 'DEBUG': 'printconfig'},
+		[r'^Configuration: \[Debug\|HCP65C816\] \[Debug\|HCP65C816\]: Debug\|HCP65C816, Release\|HCP65C816, Edit Configurations\.\.\.,$'], []),
 	('system-directories-newest', {
 		#The newest MinGW GCC by its number, not its name, and not a folder that isn't a version.
 		'SYSTEM_ROOT': MakeSystemRoot(['9-win32', '13-win32', 'notes']), 'DEBUG': 'printsystem'},
@@ -4154,7 +4154,7 @@ CHECKS = [
 		#configurations have an image, and a card with a path on it (the boot loader's \OS\OS.SYS): a card given with
 		#the path cleared is refused, then one with a path is fine.
 		'DIALOG_ANSWER': 'OK',
-		'BUILD_EDITS': 'name:Release|W65C816;check;name:;check;name:Fine;solution:Debug|Win32;card:Card.img;cardpath:;check;cardpath:\\\\boot.exe;toolchain:GCC;check;toolchain:W65C816;check',
+		'BUILD_EDITS': 'name:Release|HCP65C816;check;name:;check;name:Fine;solution:Debug|Win32;card:Card.img;cardpath:;check;cardpath:\\\\boot.exe;toolchain:GCC;check;toolchain:W65C816;check',
 		'DEBUG': 'command:Build.EditConfigurations,answered:1,printconfig'}),
 		[r'^Build dialog: refused \[Another build configuration has this name\.\]$',
 		 r'^Build dialog: refused \[A build configuration needs a name\.\]$',
@@ -4162,15 +4162,15 @@ CHECKS = [
 		 r'^Build dialog: refused \[Only an HCP65 toolchain can link a program, load files, use a card or build for its debugger\.\]$',
 		 r'^Build dialog: OK \[\]$', r'^Dialog \[Build Configurations: HCP65Kernal\] answered OK$',
 		 r"^Status: A scripted run doesn't save build configurations\.$",
-		 r'^Configuration: \[Debug\|W65C816\] \[Debug\|W65C816\]:'], []),
+		 r'^Configuration: \[Debug\|HCP65C816\] \[Debug\|HCP65C816\]:'], []),
 	('build-configuration-save', dict(MakeSolutionCopy(), **{
 		#What is changed goes in the file; its comment stays; the run configuration follows the rename, and the copy gets one.
-		'DIALOG_ANSWER': 'OK', 'BUILD_EDITS': 'name:Renamed|W65C816;breakpoint:Kernal;nofloats:1;add;name:Copied|W65C816',
+		'DIALOG_ANSWER': 'OK', 'BUILD_EDITS': 'name:Renamed|HCP65C816;breakpoint:Kernal;nofloats:1;add;name:Copied|HCP65C816',
 		'DEBUG': 'command:Build.EditConfigurations,answered:1,printconfig,printbuildfile'}),
-		[r'^Configuration: \[.*\] \[Renamed\|W65C816\]: .*Copied\|W65C816, Edit Configurations\.\.\.,$',
+		[r'^Configuration: \[.*\] \[Renamed\|HCP65C816\]: .*Copied\|HCP65C816, Edit Configurations\.\.\.,$',
 		 r'^<!-- A comment to keep\. -->$',
-		 r'<Configuration Name="Renamed\|W65C816" Toolchain="W65C816" .*BreakpointSpace="Kernal" NoFloats="true"',
-		 r'<Configuration Name="Copied\|W65C816" Toolchain="W65C816"'], [r'ERROR']),
+		 r'<Configuration Name="Renamed\|HCP65C816" Toolchain="W65C816" .*BreakpointSpace="Kernal" NoFloats="true"',
+		 r'<Configuration Name="Copied\|HCP65C816" Toolchain="W65C816"'], [r'ERROR']),
 	('build-configuration-override-warning', dict(MakeSolutionCopy(), **{
 		#The override warning is on unless unticked, which is all that is written.
 		'DIALOG_ANSWER': 'OK', 'BUILD_EDITS': 'overridewarning:0',
@@ -4196,38 +4196,38 @@ CHECKS = [
 		#Cancel changes nothing.
 		'DIALOG_ANSWER': 'Cancel', 'BUILD_EDITS': 'name:Gone;remove',
 		'DEBUG': 'command:Build.EditConfigurations,answered:1,printbuildfile'}),
-		[r'^<!-- A comment to keep\. -->$', r'<Configuration Name="Release\|W65C816"'], [r'Gone']),
+		[r'^<!-- A comment to keep\. -->$', r'<Configuration Name="Release\|HCP65C816"'], [r'Gone']),
 	('build-configuration-open-file', dict(MakeSolutionCopy(), **{
 		#Open File opens the file instead of saving.
 		'DIALOG_ANSWER': 'Open File', 'BUILD_EDITS': 'name:Gone',
 		'DEBUG': 'command:Build.EditConfigurations,answered:1,printtabs,printbuildfile'}),
-		[r'^Tabs: .*>Kernel\.hcp65build', r'<Configuration Name="Release\|W65C816"'], [r'Gone']),
+		[r'^Tabs: .*>Kernel\.hcp65build', r'<Configuration Name="Release\|HCP65C816"'], [r'Gone']),
 	('build-configuration-swap', dict(MakeSolutionCopy(True), **{
 		#Swapping two names: each run configuration follows what it built, not the name another has just been given, and
 		#the old names still being in the solution saved isn't another solution having them.
-		'DIALOG_ANSWER': 'OK', 'RUN_EDITS': 'add;name:Fast;build:Release|W65C816;add;name:Small;build:Other|W65C816',
-		'BUILD_EDITS': 'select:0;name:Other|W65C816;select:1;name:Release|W65C816',
+		'DIALOG_ANSWER': 'OK', 'RUN_EDITS': 'add;name:Fast;build:Release|HCP65C816;add;name:Small;build:Other|HCP65C816',
+		'BUILD_EDITS': 'select:0;name:Other|HCP65C816;select:1;name:Release|HCP65C816',
 		'DEBUG': 'command:Run.EditConfigurations,answered:1,command:Build.EditConfigurations,answered:2,printstatus,printconfig,printrunconfigurations,printbuildfile'}),
 		[r'^Status line: Saved the build configurations\.$',
-		 r'^Configuration: \[Small\] \[Release\|W65C816\]:',
-		 r'^Run configuration: Fast builds Other\|W65C816$',
-		 r'^Run configuration: Small builds Release\|W65C816$',
-		 r'<Configuration Name="Other\|W65C816" Toolchain="W65C816" Solution="Release\|Win32" BreakpointSpace="Kernel">',
-		 r'<Configuration Name="Release\|W65C816" Toolchain="W65C816" Solution="Release\|Win32"/>'], [r'ERROR']),
+		 r'^Configuration: \[Small\] \[Release\|HCP65C816\]:',
+		 r'^Run configuration: Fast builds Other\|HCP65C816$',
+		 r'^Run configuration: Small builds Release\|HCP65C816$',
+		 r'<Configuration Name="Other\|HCP65C816" Toolchain="W65C816" Solution="Release\|Win32" BreakpointSpace="Kernel">',
+		 r'<Configuration Name="Release\|HCP65C816" Toolchain="W65C816" Solution="Release\|Win32"/>'], [r'ERROR']),
 	('build-configuration-remove', dict(MakeSolutionCopy(True), **{
 		#The run configuration that was only for the one removed goes with it, and one that is left is chosen.
 		'DIALOG_ANSWER': 'OK', 'BUILD_EDITS': 'remove',
 		'DEBUG': 'command:Build.EditConfigurations,answered:1,printstatus,printconfig,printbuildfile'}),
 		[r'^Status line: Saved the build configurations\.$',
-		 r'^Configuration: \[Other\|W65C816\] \[Other\|W65C816\]: Other\|W65C816, Edit Configurations\.\.\.,$',
-		 r'<Configuration Name="Other\|W65C816"'], [r'Name="Release\|W65C816"', r'ERROR']),
+		 r'^Configuration: \[Other\|HCP65C816\] \[Other\|HCP65C816\]: Other\|HCP65C816, Edit Configurations\.\.\.,$',
+		 r'<Configuration Name="Other\|HCP65C816"'], [r'Name="Release\|HCP65C816"', r'ERROR']),
 	('build-configuration-remove-kept', dict(MakeSolutionCopy(True), **{
 		#One with a tool is kept and stays chosen, as it says.  It builds nothing, as Build says, but its tool still runs.
 		'DIALOG_ANSWER': 'OK', 'RUN_EDITS': 'add;name:Emu;tool:/bin/sh;arguments:-c true', 'BUILD_EDITS': 'remove',
 		'DEBUG': 'command:Run.EditConfigurations,answered:1,command:Build.EditConfigurations,answered:2,printstatus,printconfig,command:Build.Build,wait:200,printbuild,command:Run.Start,wait:500,printrun'}),
 		[r'^Status line: Saved, but run configuration Emu builds a build configuration you removed: choose another for it in Edit Configurations\.$',
-		 r'^Configuration: \[Emu\] \[\]: Other\|W65C816, Emu, Edit Configurations\.\.\.,$',
-		 r'^Emu builds Release\|W65C816, which no open solution has: choose another build configuration in Edit Configurations\.$',
+		 r'^Configuration: \[Emu\] \[\]: Other\|HCP65C816, Emu, Edit Configurations\.\.\.,$',
+		 r'^Emu builds Release\|HCP65C816, which no open solution has: choose another build configuration in Edit Configurations\.$',
 		 r'^Running: /bin/sh -c true$', r'^Exited with code 0\.$'], [r'ERROR']),
 	('build-configuration-remove-last', dict(MakeSolutionCopy(), **{
 		#With none left there is nothing to choose, and Build says so.
@@ -4244,16 +4244,16 @@ CHECKS = [
 		#A run configuration made in the dialog is chosen with its build configuration, and Start runs its tool with its
 		#arguments and working directory, without the debugger, and says how it exited.
 		'DIALOG_ANSWER': 'OK',
-		'RUN_EDITS': 'add;name:Echo;build:Release|W65C816;tool:/bin/sh;directory:/tmp;arguments:-c pwd',
+		'RUN_EDITS': 'add;name:Echo;build:Release|HCP65C816;tool:/bin/sh;directory:/tmp;arguments:-c pwd',
 		'DEBUG': 'command:Run.EditConfigurations,answered:1,printconfig,command:Run.Start,wait:500,printrun'},
 		[r'^Dialog \[Run Configurations\] answered OK$',
-		 r'^Configuration: \[Echo\] \[Release\|W65C816\]: Debug\|W65C816, Release\|W65C816, Echo, Edit Configurations\.\.\.,$',
+		 r'^Configuration: \[Echo\] \[Release\|HCP65C816\]: Debug\|HCP65C816, Release\|HCP65C816, Echo, Edit Configurations\.\.\.,$',
 		 r'^Run: not running \[Start\]$', r'^Running: /bin/sh -c pwd$', r'^/tmp$', r'^Exited with code 0\.$'], []),
 	('run-menu', {
 		#The Run tab's menu: Copy, Copy All and Select All, Clear All, and Start Without Debugging and Stop Running
 		#(dim while nothing runs).  Copy All copies what the tool wrote; Clear All empties the tab.
 		'DIALOG_ANSWER': 'OK',
-		'RUN_EDITS': 'add;name:Echo;build:Release|W65C816;tool:/bin/sh;directory:/tmp;arguments:-c pwd',
+		'RUN_EDITS': 'add;name:Echo;build:Release|HCP65C816;tool:/bin/sh;directory:/tmp;arguments:-c pwd',
 		'DEBUG': 'command:Run.EditConfigurations,answered:1,command:Run.Start,wait:500,edit:outputmenu:run:Exited,edit:outputmenuclick:Copy All,edit:printclipboard,'
 		         'edit:outputmenu:run:Exited,edit:outputmenuclick:Clear All,printrun'},
 		[r'^Menu Output: Copy \[Ctrl\+C\], Copy All, Select All \[Ctrl\+A\], Clear All, Start Without Debugging \[Ctrl\+F5\], Stop Running\(disabled\)$',
@@ -4277,12 +4277,12 @@ CHECKS = [
 		#OK is refused for a name used twice or none; Cancel changes nothing, and removing them all gives the defaults.
 		#Which of them is chosen is whatever the user's ModPlay workspace last chose, so either is.
 		'DIALOG_ANSWER': 'Cancel',
-		'RUN_EDITS': 'add;name:Debug|W65C816;check;name:;check;name:Fine;check;remove;remove;remove;check',
+		'RUN_EDITS': 'add;name:Debug|HCP65C816;check;name:;check;name:Fine;check;remove;remove;remove;check',
 		'DEBUG': 'command:Run.EditConfigurations,answered:1,printconfig'},
 		[r'^Run dialog: refused \[Another run configuration has this name\.\]$',
 		 r'^Run dialog: refused \[A run configuration needs a name\.\]$',
 		 r'^Run dialog: OK \[\]$', r'^Run dialog: OK \[\]$',
-		 r'^Configuration: \[(Debug|Release)\|W65C816\] \[\1\|W65C816\]: Debug\|W65C816, Release\|W65C816, Edit Configurations\.\.\.,$'], []),
+		 r'^Configuration: \[(Debug|Release)\|HCP65C816\] \[\1\|HCP65C816\]: Debug\|HCP65C816, Release\|HCP65C816, Edit Configurations\.\.\.,$'], []),
 	('run-configuration-no-tool', {
 		#A tool that isn't there says so when it starts.
 		'DIALOG_ANSWER': 'OK', 'RUN_EDITS': 'add;name:Missing;tool:/no/such/tool',
@@ -4374,7 +4374,7 @@ CHECKS = [
 		[r"^Status line: Opened shapes\.md with the system's program\.$", r'Docs[/\\]shapes\.md$'], [r"Couldn't open"]),
 	('docs-build', dict(MakeDocsCopy(), **{
 		#A Makefile project is built by its build command, its output the build's: Site's prints a problem as GCC would.
-		'WAIT_INDEX': '1', 'CONFIGURATION': 'Debug|GCC', 'DEBUG': 'command:Build.Build,wait:200,printbuild'}),
+		'WAIT_INDEX': '1', 'CONFIGURATION': 'Debug|GCC-x64', 'DEBUG': 'command:Build.Build,wait:200,printbuild'}),
 		[r'Building Site: echo', r'^\.\./Docs/shapes\.md:4:9: error: a problem the website build found$', r'build succeeded'], [r'MSVC builds need Windows']),
 ] + DebuggingChecks(DEBUGGING_W65C816) + DebuggingChecks(DEBUGGING_65C64) + [
 	('menus', {

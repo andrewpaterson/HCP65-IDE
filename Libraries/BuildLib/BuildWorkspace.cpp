@@ -399,7 +399,6 @@ bool CBuildWorkspace::Read(const char* szFile)
 	STagIterator	sIterator;
 	char*			szPath;
 	char*			szStartup;
-	char*			szConfiguration;
 	size			uiSolution;
 	bool			bResult;
 	CRunConfiguration	cRun;
@@ -420,10 +419,8 @@ bool CBuildWorkspace::Read(const char* szFile)
 	szSolution.Init();
 	if (bResult)
 	{
-		szConfiguration = pcRoot->GetStringAttribute(BUILD_WORKSPACE_CONFIGURATION);
-		mszConfiguration.Set(szConfiguration ? szConfiguration : "");
-		szConfiguration = pcRoot->GetStringAttribute(BUILD_WORKSPACE_RUN_CONFIGURATION);
-		mszRunConfiguration.Set(szConfiguration ? szConfiguration : "");
+		SetConfiguration(pcRoot->GetStringAttribute(BUILD_WORKSPACE_CONFIGURATION));
+		SetRunConfigurationName(pcRoot->GetStringAttribute(BUILD_WORKSPACE_RUN_CONFIGURATION));
 		for (pcTag = pcRoot->GetTag(RUN_CONFIGURATION_TAG, &sIterator); pcTag; pcTag = pcRoot->GetNextTag(&sIterator))
 		{
 			cRun.Init();
@@ -800,9 +797,9 @@ const char* CBuildWorkspace::GetStartupProjectName(size uiSolution)
 {
 	return (uiSolution < mapcSolutions.NumElements()) ? GetSolution(uiSolution)->GetStartupProjectName() : (char*)"";
 }
-void CBuildWorkspace::SetConfiguration(const char* szConfiguration)		{ mszConfiguration.Set(szConfiguration ? szConfiguration : ""); }
+void CBuildWorkspace::SetConfiguration(const char* szConfiguration)		{ mszConfiguration.Set(""); CBuildConfiguration::CurrentName(szConfiguration, &mszConfiguration); }
 char* CBuildWorkspace::GetConfiguration(void)								{ return mszConfiguration.Text(); }
-void CBuildWorkspace::SetRunConfigurationName(const char* szName)			{ mszRunConfiguration.Set(szName ? szName : ""); }
+void CBuildWorkspace::SetRunConfigurationName(const char* szName)			{ mszRunConfiguration.Set(""); CBuildConfiguration::CurrentName(szName, &mszRunConfiguration); }
 char* CBuildWorkspace::GetRunConfigurationName(void)						{ return mszRunConfiguration.Text(); }
 size CBuildWorkspace::NumRunConfigurations(void) const							{ return masRunConfigurations.NumElements(); }
 CRunConfiguration* CBuildWorkspace::GetRunConfiguration(size uiIndex)		{ return masRunConfigurations.SafeGet(uiIndex); }
@@ -916,7 +913,7 @@ size CBuildWorkspace::FindProject(size uiSolution, size uiProject)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Every solution's configuration names ("Release|W65C816"), each once, in
+// Every solution's configuration names ("Release|HCP65C816"), each once, in
 // the order the solutions (the startup one first) have them.
 //
 //////////////////////////////////////////////////////////////////////////

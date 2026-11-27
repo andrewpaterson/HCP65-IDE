@@ -1005,7 +1005,7 @@ void CBuildCommandLine::WriteUsage(void)
 	WriteLine("");
 	WriteLine("A .hcp65build builds the .sln of the same name beside it (else the .vcxproj).");
 	WriteLine("");
-	WriteLine("  -config \"Release|W65C816\"  The build configuration (from the .hcp65build beside the solution).");
+	WriteLine("  -config \"Release|HCP65C816\"  The build configuration (from the .hcp65build beside the solution).");
 	WriteLine("                             Default: the workspace's last one, else the first HCP65 one.");
 	WriteLine("  -startup <project>         The application built into its solution's program (the solution's startup");
 	WriteLine("                             project).  Default: the one its workspace says, else its first.");

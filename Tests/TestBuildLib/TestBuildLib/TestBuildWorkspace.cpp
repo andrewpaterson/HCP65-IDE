@@ -87,11 +87,11 @@ void TestBuildWorkspaceSolutions(void)
 	aszNames.Init();
 	cWorkspace.GetConfigurationNames(&aszNames);
 	AssertSize(2, aszNames.NumElements());
-	AssertString("Release|W65C816", aszNames.GetText(0));
-	AssertString("Debug|W65C816", aszNames.GetText(1));
+	AssertString("Release|HCP65C816", aszNames.GetText(0));
+	AssertString("Debug|HCP65C816", aszNames.GetText(1));
 	aszNames.Kill();
-	AssertTrue(cWorkspace.FindConfiguration(uiKernel, "Release|W65C816")->HasImage());
-	AssertTrue(cWorkspace.FindConfiguration(uiKernel, "Debug|W65C816") == NULL);
+	AssertTrue(cWorkspace.FindConfiguration(uiKernel, "Release|HCP65C816")->HasImage());
+	AssertTrue(cWorkspace.FindConfiguration(uiKernel, "Debug|HCP65C816") == NULL);
 
 	//The toolbar's: the names' parts, and either solution's configuration by name, the startup solution's first.
 	aszNames.Init();
@@ -102,53 +102,53 @@ void TestBuildWorkspaceSolutions(void)
 	aszNames.ReInit();
 	cWorkspace.GetConfigurationNames(&aszNames, true);
 	AssertSize(1, aszNames.NumElements());
-	AssertString("W65C816", aszNames.GetText(0));
+	AssertString("HCP65C816", aszNames.GetText(0));
 	aszNames.Kill();
-	AssertTrue(cWorkspace.FindAnyConfiguration("Release|W65C816") == cWorkspace.FindConfiguration(0, "Release|W65C816"));
-	AssertTrue(cWorkspace.FindAnyConfiguration(NULL, "W65C816") == cWorkspace.FindConfiguration(0, "Release|W65C816"));
+	AssertTrue(cWorkspace.FindAnyConfiguration("Release|HCP65C816") == cWorkspace.FindConfiguration(0, "Release|HCP65C816"));
+	AssertTrue(cWorkspace.FindAnyConfiguration(NULL, "HCP65C816") == cWorkspace.FindConfiguration(0, "Release|HCP65C816"));
 	cWorkspace.SetStartup(uiKernel);
 	AssertSize(uiKernel, cWorkspace.GetStartup());
-	AssertTrue(cWorkspace.FindAnyConfiguration("Release|W65C816") == cWorkspace.FindConfiguration(uiKernel, "Release|W65C816"));
-	AssertTrue(cWorkspace.FindAnyConfiguration(NULL, "W65C816") == cWorkspace.FindConfiguration(uiKernel, "Release|W65C816"));
-	AssertTrue(cWorkspace.FindAnyConfiguration("Debug|W65C816") == cWorkspace.FindConfiguration(0, "Debug|W65C816"));
-	AssertTrue(cWorkspace.FindAnyConfiguration("Debug", NULL) == cWorkspace.FindConfiguration(0, "Debug|W65C816"));
-	AssertTrue(cWorkspace.FindAnyConfiguration("Profile|W65C816") == NULL);
+	AssertTrue(cWorkspace.FindAnyConfiguration("Release|HCP65C816") == cWorkspace.FindConfiguration(uiKernel, "Release|HCP65C816"));
+	AssertTrue(cWorkspace.FindAnyConfiguration(NULL, "HCP65C816") == cWorkspace.FindConfiguration(uiKernel, "Release|HCP65C816"));
+	AssertTrue(cWorkspace.FindAnyConfiguration("Debug|HCP65C816") == cWorkspace.FindConfiguration(0, "Debug|HCP65C816"));
+	AssertTrue(cWorkspace.FindAnyConfiguration("Debug", NULL) == cWorkspace.FindConfiguration(0, "Debug|HCP65C816"));
+	AssertTrue(cWorkspace.FindAnyConfiguration("Profile|HCP65C816") == NULL);
 	AssertTrue(cWorkspace.FindAnyConfiguration("Release", "x64") == NULL);
 	aszNames.Init();
 	cWorkspace.GetConfigurationNames(&aszNames);
-	AssertString("Release|W65C816", aszNames.GetText(0));
+	AssertString("Release|HCP65C816", aszNames.GetText(0));
 	aszNames.Kill();
 	cWorkspace.SetStartup(0);
 
 	//The program loads the kernal's ROM: the kernal is built first.  Debug is only the program's.
-	AssertTrue(cWorkspace.Loads(0, uiKernel, "Release|W65C816"));
-	AssertFalse(cWorkspace.Loads(uiKernel, 0, "Release|W65C816"));
+	AssertTrue(cWorkspace.Loads(0, uiKernel, "Release|HCP65C816"));
+	AssertFalse(cWorkspace.Loads(uiKernel, 0, "Release|HCP65C816"));
 	aiOrder.Init();
-	cWorkspace.GetBuildOrder("Release|W65C816", &aiOrder);
+	cWorkspace.GetBuildOrder("Release|HCP65C816", &aiOrder);
 	AssertSize(2, aiOrder.NumElements());
 	AssertInt((int)uiKernel, aiOrder.GetValue(0));
 	AssertInt(0, aiOrder.GetValue(1));
 	aiOrder.ReInit();
-	cWorkspace.GetBuildOrder("Debug|W65C816", &aiOrder);
+	cWorkspace.GetBuildOrder("Debug|HCP65C816", &aiOrder);
 	AssertSize(1, aiOrder.NumElements());
 	AssertInt(0, aiOrder.GetValue(0));
 
 	//Debugging the program, the kernal is what it loads, not a process.  Debugging the kernal, the program on its
 	//card is one; without a card (Debug) it isn't.
 	aiOrder.ReInit();
-	cWorkspace.GetProcessPrograms("Release|W65C816", &aiOrder);
+	cWorkspace.GetProcessPrograms("Release|HCP65C816", &aiOrder);
 	AssertSize(0, aiOrder.NumElements());
 	cWorkspace.SetStartup(uiKernel);
-	cWorkspace.GetProcessPrograms("Release|W65C816", &aiOrder);
+	cWorkspace.GetProcessPrograms("Release|HCP65C816", &aiOrder);
 	AssertSize(1, aiOrder.NumElements());
 	AssertInt(0, aiOrder.GetValue(0));
-	AssertString("\\p.exe", cWorkspace.FindConfiguration(0, "Release|W65C816")->GetCardPath());
-	AssertString("User", cWorkspace.FindConfiguration(0, "Release|W65C816")->GetBreakpointSpace());
+	AssertString("\\p.exe", cWorkspace.FindConfiguration(0, "Release|HCP65C816")->GetCardPath());
+	AssertString("User", cWorkspace.FindConfiguration(0, "Release|HCP65C816")->GetBreakpointSpace());
 	aiOrder.ReInit();
-	cWorkspace.GetProcessPrograms("Debug|W65C816", &aiOrder);
+	cWorkspace.GetProcessPrograms("Debug|HCP65C816", &aiOrder);
 	AssertSize(0, aiOrder.NumElements());
 	//Neither builds a driver, a module the kernal loads.
-	cWorkspace.GetModulePrograms("Release|W65C816", &aiOrder);
+	cWorkspace.GetModulePrograms("Release|HCP65C816", &aiOrder);
 	AssertSize(0, aiOrder.NumElements());
 	cWorkspace.SetStartup(0);
 	aiOrder.Kill();
@@ -189,7 +189,7 @@ void TestBuildWorkspaceModules(void)
 	AssertSize(2, uiDriver);
 	AssertSize(4, cWorkspace.NumProjects());
 
-	pcDriver = cWorkspace.FindConfiguration(uiDriver, "Release|W65C816");
+	pcDriver = cWorkspace.FindConfiguration(uiDriver, "Release|HCP65C816");
 	AssertTrue(pcDriver->HasModule());
 	AssertInt(BP_Module, pcDriver->GetProgram());
 	AssertString("d.drv", pcDriver->GetProgramFile());
@@ -198,47 +198,47 @@ void TestBuildWorkspaceModules(void)
 	AssertString("\\d.drv", pcDriver->GetCardPath());
 	AssertString("Kernel", pcDriver->GetBreakpointSpace());
 	AssertTrue(pcDriver->IsOnCard());
-	AssertTrue(cWorkspace.FindConfiguration(uiDriver, "Debug|W65C816")->HasModule());
-	AssertFalse(cWorkspace.FindConfiguration(uiDriver, "Debug|W65C816")->IsOnCard());
+	AssertTrue(cWorkspace.FindConfiguration(uiDriver, "Debug|HCP65C816")->HasModule());
+	AssertFalse(cWorkspace.FindConfiguration(uiDriver, "Debug|HCP65C816")->IsOnCard());
 
 	//The driver loads the kernal's ROM, as the program does: the kernal is built first.
-	AssertTrue(cWorkspace.Loads(uiDriver, uiKernel, "Release|W65C816"));
-	AssertFalse(cWorkspace.Loads(uiKernel, uiDriver, "Release|W65C816"));
+	AssertTrue(cWorkspace.Loads(uiDriver, uiKernel, "Release|HCP65C816"));
+	AssertFalse(cWorkspace.Loads(uiKernel, uiDriver, "Release|HCP65C816"));
 	aiOrder.Init();
-	cWorkspace.GetBuildOrder("Release|W65C816", &aiOrder);
+	cWorkspace.GetBuildOrder("Release|HCP65C816", &aiOrder);
 	AssertSize(3, aiOrder.NumElements());
 	AssertInt((int)uiKernel, aiOrder.GetValue(0));
 
 	//Debugging the kernal: the driver is its module and the program its process.
 	cWorkspace.SetStartup(uiKernel);
 	aiOrder.ReInit();
-	cWorkspace.GetModulePrograms("Release|W65C816", &aiOrder);
+	cWorkspace.GetModulePrograms("Release|HCP65C816", &aiOrder);
 	AssertSize(1, aiOrder.NumElements());
 	AssertInt((int)uiDriver, aiOrder.GetValue(0));
 	aiOrder.ReInit();
-	cWorkspace.GetProcessPrograms("Release|W65C816", &aiOrder);
+	cWorkspace.GetProcessPrograms("Release|HCP65C816", &aiOrder);
 	AssertSize(1, aiOrder.NumElements());
 	AssertInt(0, aiOrder.GetValue(0));
 
 	//Debug's driver isn't on a card, so the kernal has nothing to load.
 	aiOrder.ReInit();
-	cWorkspace.GetModulePrograms("Debug|W65C816", &aiOrder);
+	cWorkspace.GetModulePrograms("Debug|HCP65C816", &aiOrder);
 	AssertSize(0, aiOrder.NumElements());
 
 	//Debugging the program, the driver is still a module (the program doesn't load it).
 	cWorkspace.SetStartup(0);
 	aiOrder.ReInit();
-	cWorkspace.GetModulePrograms("Release|W65C816", &aiOrder);
+	cWorkspace.GetModulePrograms("Release|HCP65C816", &aiOrder);
 	AssertSize(1, aiOrder.NumElements());
 	AssertInt((int)uiDriver, aiOrder.GetValue(0));
 
 	//The startup solution's own driver isn't one of the others.
 	cWorkspace.SetStartup(uiDriver);
 	aiOrder.ReInit();
-	cWorkspace.GetModulePrograms("Release|W65C816", &aiOrder);
+	cWorkspace.GetModulePrograms("Release|HCP65C816", &aiOrder);
 	AssertSize(0, aiOrder.NumElements());
 	aiOrder.ReInit();
-	cWorkspace.GetProcessPrograms("Release|W65C816", &aiOrder);
+	cWorkspace.GetProcessPrograms("Release|HCP65C816", &aiOrder);
 	AssertSize(1, aiOrder.NumElements());
 	AssertInt(0, aiOrder.GetValue(0));
 	aiOrder.Kill();
@@ -269,34 +269,34 @@ void TestBuildWorkspaceImages(void)
 	uiOS = cWorkspace.AddSolution(TEST_WORKSPACE_OS);
 	AssertSize(2, uiOS);
 
-	pcOS = cWorkspace.FindConfiguration(uiOS, "Release|W65C816");
+	pcOS = cWorkspace.FindConfiguration(uiOS, "Release|HCP65C816");
 	AssertTrue(pcOS->HasImage());
 	AssertInt(BP_Image, pcOS->GetProgram());
 	AssertString("\\OS\\OS.SYS", pcOS->GetCardPath());
 	AssertTrue(pcOS->IsOnCard());
-	AssertFalse(cWorkspace.FindConfiguration(uiOS, "Debug|W65C816")->IsOnCard());
+	AssertFalse(cWorkspace.FindConfiguration(uiOS, "Debug|HCP65C816")->IsOnCard());
 
 	//Debugging the program: OS.SYS is an image, not a module; the ROM isn't on a card.
 	aiImages.Init();
-	cWorkspace.GetImagePrograms("Release|W65C816", &aiImages);
+	cWorkspace.GetImagePrograms("Release|HCP65C816", &aiImages);
 	AssertSize(1, aiImages.NumElements());
 	AssertInt((int)uiOS, aiImages.GetValue(0));
 	aiImages.ReInit();
-	cWorkspace.GetModulePrograms("Release|W65C816", &aiImages);
+	cWorkspace.GetModulePrograms("Release|HCP65C816", &aiImages);
 	AssertSize(0, aiImages.NumElements());
 	aiImages.ReInit();
-	cWorkspace.GetImagePrograms("Debug|W65C816", &aiImages);
+	cWorkspace.GetImagePrograms("Debug|HCP65C816", &aiImages);
 	AssertSize(0, aiImages.NumElements());
 
 	//Debugging the ROM it is too; debugging OS.SYS itself, it isn't one of the others.
 	cWorkspace.SetStartup(uiKernel);
 	aiImages.ReInit();
-	cWorkspace.GetImagePrograms("Release|W65C816", &aiImages);
+	cWorkspace.GetImagePrograms("Release|HCP65C816", &aiImages);
 	AssertSize(1, aiImages.NumElements());
 	AssertInt((int)uiOS, aiImages.GetValue(0));
 	cWorkspace.SetStartup(uiOS);
 	aiImages.ReInit();
-	cWorkspace.GetImagePrograms("Release|W65C816", &aiImages);
+	cWorkspace.GetImagePrograms("Release|HCP65C816", &aiImages);
 	AssertSize(0, aiImages.NumElements());
 	aiImages.Kill();
 
@@ -326,7 +326,7 @@ void TestBuildWorkspaceFile(void)
 	AssertSize(1, cWorkspace.AddSolution(TEST_WORKSPACE_KERNEL));
 	cWorkspace.SetStartup(1);
 	AssertString("", cWorkspace.GetConfiguration());
-	cWorkspace.SetConfiguration("Debug|W65C816");
+	cWorkspace.SetConfiguration("Debug|HCP65C816");
 	AssertTrue(cWorkspace.Write(TEST_WORKSPACE_FILE));
 	szFull.Init(TEST_WORKSPACE_FILE);
 	cFileUtil.FullPath(&szFull);
@@ -335,7 +335,7 @@ void TestBuildWorkspaceFile(void)
 
 	cFile.Init();
 	AssertTrue(cFile.Read(TEST_WORKSPACE_FILE));
-	AssertTrue(strstr(cFile.Text(), "<Workspace Configuration=\"Debug|W65C816\">") != NULL);
+	AssertTrue(strstr(cFile.Text(), "<Workspace Configuration=\"Debug|HCP65C816\">") != NULL);
 	AssertTrue(strstr(cFile.Text(), "File=\".." _FS_ "Input" _FS_ "Workspace" _FS_ "Program" _FS_ "Program.sln\"") != NULL);
 	AssertTrue(strstr(cFile.Text(), "File=\".." _FS_ "Input" _FS_ "Workspace" _FS_ "Kernel" _FS_ "Kernel.sln\" Startup=\"true\"") != NULL);
 	cFile.Kill();
@@ -344,7 +344,7 @@ void TestBuildWorkspaceFile(void)
 	AssertTrue(cRead.Open(TEST_WORKSPACE_FILE));
 	AssertSize(2, cRead.NumSolutions());
 	AssertSize(1, cRead.GetStartup());
-	AssertString("Debug|W65C816", cRead.GetConfiguration());
+	AssertString("Debug|HCP65C816", cRead.GetConfiguration());
 	AssertTrue(cRead.GetStartupSolution()->mszFile.EndsWith("Kernel.sln"));
 	AssertSize(3, cRead.NumProjects());
 
@@ -452,15 +452,15 @@ void TestBuildWorkspaceRunConfigurations(void)
 	AssertString("Only", cRead.GetRunConfiguration(0)->GetName());
 	AssertString("--fill --other", cRead.GetRunConfiguration(0)->GetArguments());
 
-	cFile.Init("<Workspace Configuration=\"Debug|W65C816\">\n\t<Solution File=\".." _FS_ "Input" _FS_ "Workspace" _FS_ "Program" _FS_ "Program.sln\"/>\n</Workspace>\n");
+	cFile.Init("<Workspace Configuration=\"Debug|HCP65C816\">\n\t<Solution File=\".." _FS_ "Input" _FS_ "Workspace" _FS_ "Program" _FS_ "Program.sln\"/>\n</Workspace>\n");
 	AssertTrue(cFile.Write("Output" _FS_ "Old" BUILD_WORKSPACE_EXTENSION));
 	cFile.Kill();
 	AssertTrue(cRead.Open("Output" _FS_ "Old" BUILD_WORKSPACE_EXTENSION));
-	AssertString("Debug|W65C816", cRead.GetConfiguration());
+	AssertString("Debug|HCP65C816", cRead.GetConfiguration());
 	AssertString("", cRead.GetRunConfigurationName());
 	AssertSize(0, cRead.NumRunConfigurations());
 
-	cFile.Init("<Workspace>\n\t<Solution File=\".." _FS_ "Input" _FS_ "Workspace" _FS_ "Program" _FS_ "Program.sln\"/>\n\t<RunConfiguration Configuration=\"Debug|W65C816\"/>\n</Workspace>\n");
+	cFile.Init("<Workspace>\n\t<Solution File=\".." _FS_ "Input" _FS_ "Workspace" _FS_ "Program" _FS_ "Program.sln\"/>\n\t<RunConfiguration Configuration=\"Debug|HCP65C816\"/>\n</Workspace>\n");
 	AssertTrue(cFile.Write("Output" _FS_ "Bad" BUILD_WORKSPACE_EXTENSION));
 	cFile.Kill();
 	sLogConfig = gcLogger.SetSilent();

@@ -179,7 +179,7 @@ and nothing tied a variable to where it was.  A build configuration's `Debug="tr
 | Release | On | Where the optimiser left them: in memory, in a register, or a constant, over address ranges | Inlined calls are rows of their own |
 
 Debug is a middle mode, as GCC's `-Og`, because an unoptimised kernal doesn't fit.  Measured 2026-11-23
-(Release|W65C816 builds of HCP65 at the time): the kernal's `OS.SYS` is 186,537 bytes optimised, ending at $03DBDB
+(Release|HCP65C816 builds of HCP65 at the time): the kernal's `OS.SYS` is 186,537 bytes optimised, ending at $03DBDB
 of its region's $040000; with no optimiser it grows 18% and runs past the region, and so does the boot loader ROM.
 ModPlay optimised needs 8.9 M cycles a second of audio; unoptimised, 34.6 M, more than the board's 25 MHz.  The
 middle mode (optimiser on, slots kept, no inliner) made the kernal 4% bigger, 2.3 KB to spare, and ModPlay 22.1 M
@@ -200,7 +200,7 @@ Two rules hold for all of it:
   value is live in it; a caller's register only if its callee saved it.  Anything else is "(optimised away)".
 
 The markers' cost was measured before more was built on them (2026-11-24, `hcp65build` Release x64 from clean
-copies, the kernal built Release|W65C816, callgrind): 27% more instructions to compile the kernal, mostly the place
+copies, the kernal built Release|HCP65C816, callgrind): 27% more instructions to compile the kernal, mostly the place
 markers taken out and put back as source markers are, and a place string made for every variable before every
 instruction.  One marker pass for both kinds and places made only where a value changes brought it to 8.0% (483.2 G
 instructions against 447.4 G; the clock 6.5%), and the debug file 22% bigger.

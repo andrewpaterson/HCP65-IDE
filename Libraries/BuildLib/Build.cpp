@@ -65,8 +65,8 @@ void CBuild::Kill(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Root\Output\<toolchain>\<configuration>: Output\W65C816\Debug for
-// Debug|W65C816.  A configuration without a | is Root\Output\<name>.
+// Root\Output\<toolchain>\<configuration>: Output\HCP65C816\Debug for
+// Debug|HCP65C816.  A configuration without a | is Root\Output\<name>.
 //
 //////////////////////////////////////////////////////////////////////////
 void CBuild::GetDirectory(const char* szKind, CChars* pszDest)

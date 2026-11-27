@@ -211,14 +211,14 @@ void TestWorkspaceIndexTarget(void)
 	AssertNull(pcIndex->FindSymbol("On65C64()"));
 	AssertNull(pcIndex->FindSymbol("SOnly65"));
 
-	TestWorkspaceIndexTargetIndex(&cIndex, "Debug|W65C816");
+	TestWorkspaceIndexTargetIndex(&cIndex, "Debug|HCP65C816");
 	AssertNull(pcIndex->FindSymbol("OnHost()"));
 	AssertNotNull(pcIndex->FindSymbol("OnW65C816()"));
 	AssertNotNull(pcIndex->FindSymbol("WithAssembly()"));
 	AssertNull(pcIndex->FindSymbol("On65C64()"));
 	AssertNotNull(pcIndex->FindSymbol("SOnly65"));
 
-	TestWorkspaceIndexTargetIndex(&cIndex, "Debug|65C64");
+	TestWorkspaceIndexTargetIndex(&cIndex, "Debug|HCP65C64");
 	AssertNull(pcIndex->FindSymbol("OnHost()"));
 	AssertNull(pcIndex->FindSymbol("OnW65C816()"));
 	AssertNull(pcIndex->FindSymbol("WithAssembly()"));

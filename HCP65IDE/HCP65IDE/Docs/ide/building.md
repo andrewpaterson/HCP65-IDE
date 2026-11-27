@@ -12,14 +12,18 @@ parses the files as that build configuration's solution configuration builds the
 A build configuration is one way a solution is built: a name, a **toolchain**, and the Visual Studio
 solution configuration ("Release|Win32") whose projects' files, include directories and defines it builds
 with.  Its name is its configuration and platform either side of a `|`, as Visual Studio names them:
-`Release|W65C816`.
+`Release|HCP65C816`.  Each toolchain has a platform of its own: `HCP65C816` and `HCP65C64` for the HCP65 compiler,
+`GCC-x64` for GCC; an MSVC configuration has the solution's (`Release|x64`).  A name with a platform these once had
+(`Release|W65C816`, `Release|65C64`, `Release|GCC`) is still read, as the name it has now, in a `.hcp65build` file, a
+workspace file and `hcp65build -config`.  A configuration's files are in folders named for it:
+`Output\HCP65C816\Release\`.
 
 | Toolchain | What builds it |
 |---|---|
 | W65C816 | The [HCP65 C++ compiler](../compiler/index.md), for the HCP65's own processor. |
 | 65C64 | The HCP65 C++ compiler, for the [65C64](../65c64/index.md). |
 | MSVC | MSBuild, as Visual Studio builds the solution configuration (Windows only; the newest Visual Studio's MSBuild, found with vswhere, or the one on the path). |
-| GCC | `g++` and `ar` from the path: each project compiled into `Output\GCC\<configuration>\Objects\<project>\`, each static library archived (`lib<project>.a`), each application linked with all of the solution's libraries into `Output\GCC\<configuration>\<project>`. On Linux each compile also has `-DLINUX_GNU` and the options CommonLibraries' CMake builds use (`-m64`, `-march=haswell`, `-fno-strict-aliasing`, `-fno-exceptions` and, in a configuration other than Debug, `-O3` and the rest), each link `-m64`. |
+| GCC | `g++` and `ar` from the path: each project compiled into `Output\GCC-x64\<configuration>\Objects\<project>\`, each static library archived (`lib<project>.a`), each application linked with all of the solution's libraries into `Output\GCC-x64\<configuration>\<project>`. On Linux each compile also has `-DLINUX_GNU` and the options CommonLibraries' CMake builds use (`-m64`, `-march=haswell`, `-fno-strict-aliasing`, `-fno-exceptions` and, in a configuration other than Debug, `-O3` and the rest), each link `-m64`. |
 
 A solution's build configurations are in its `.hcp65build` file, beside the `.sln`.  Its format, and the
 command line tool `hcp65build` that builds the same way outside the IDE, are on [Building
@@ -97,7 +101,7 @@ shows the run configurations on the left, Add and Remove under them, and the one
 | Field | Meaning |
 |---|---|
 | Name | What the toolbar shows. |
-| Build configuration | The build configuration it builds and debugs ("Release&#124;W65C816"). |
+| Build configuration | The build configuration it builds and debugs ("Release&#124;HCP65C816"). |
 | Tool | The program Start runs.  Empty for the default (below). |
 | Working directory | The folder it runs in. |
 | Arguments | Given to the tool, split at spaces. |

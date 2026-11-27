@@ -99,7 +99,7 @@ class CWorkspaceIndex
 {
 protected:
 	CBuildWorkspace*			mpcWorkspace;
-	CChars						mszConfiguration;		//The build configuration, "Release|W65C816"; each solution builds its own solution configuration for it.
+	CChars						mszConfiguration;		//The build configuration, "Release|HCP65C816"; each solution builds its own solution configuration for it.
 	CArrayChars					maszSystemDirectories;	//Where the compiler's own headers are ($(IncludePath)).
 	bool						mbSystemDirectoriesMissing;	//Some that are needed aren't on this machine.
 	CChars						mszLibc65;				//The HCP65 compiler's own headers (SetLibc65Directory), empty if it wasn't said.

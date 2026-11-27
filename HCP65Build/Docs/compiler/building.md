@@ -30,7 +30,7 @@ no solution.
 
 | Option | Meaning |
 |---|---|
-| <code>-config "Release&#124;W65C816"</code> | The configuration to build, from the `.hcp65build` file.  Default: the workspace's last one, else the first HCP65 one. |
+| <code>-config "Release&#124;HCP65C816"</code> | The configuration to build, from the `.hcp65build` file.  Default: the workspace's last one, else the first HCP65 one. |
 | `-startup <project>` | The project whose program is built.  Default: the one the workspace names, else the first. |
 | `-card` | Also copy each executable, module and carded image (such as `OS.SYS`) onto the configuration's SD card image (`Card`, `CardPath`). |
 | `-show-plain <file>` | Write the build as a [plain command line](#a-plain-command-line) instead of building.  `hcp65build @<file>` then builds the same thing. |
@@ -39,7 +39,7 @@ The program goes in `Output/<toolchain>/<configuration>` and the listings in `Li
 the solution.  For example, from `HCP65/ModPlay`:
 
 ```text
-hcp65build HCP65ModPlay.hcp65build -config "Release|W65C816"
+hcp65build HCP65ModPlay.hcp65build -config "Release|HCP65C816"
 ```
 
 ### The .hcp65build file
@@ -51,14 +51,14 @@ configuration whose files and settings it builds, and what to link.  This is
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
 <BuildConfigurations>
-	<Configuration Name="Release|W65C816" Toolchain="W65C816" Solution="Release|Win32"
+	<Configuration Name="Release|HCP65C816" Toolchain="W65C816" Solution="Release|Win32"
 	               BreakpointSpace="User" Card="..\HCP65-Emulator\TestHCP65Lib\TestHCP65Lib\Output\BootCard.img"
 	               CardPath="\modplay.exe">
 		<Executable File="modplay.exe" Entry="UserStart" Limit="0x200000">
 			<Symbol Name="UserHeapSize" Value="0x180000"/>
 		</Executable>
-		<Load File="..\Boot\Output\W65C816\Release\Boot.rom" Address="0x0"/>
-		<Lines File="..\Kernal\Output\W65C816\Release\OS.SYS" CardPath="\OS\OS.SYS"/>
+		<Load File="..\Boot\Output\HCP65C816\Release\Boot.rom" Address="0x0"/>
+		<Lines File="..\Kernal\Output\HCP65C816\Release\OS.SYS" CardPath="\OS\OS.SYS"/>
 	</Configuration>
 </BuildConfigurations>
 ```
@@ -78,7 +78,7 @@ configuration whose files and settings it builds, and what to link.  This is
 | `MultiWordCasts="true"` | Accept `unsigned int(3)`, a cast written as a type of more than one word and brackets, as the Microsoft compiler does.  Without it that is an error, as C++14 has it: write `unsigned(3)` or `(unsigned int)3`. |
 | `CConversions="true"` | The sources are C: a `void*` becomes a pointer to any object and a number an enum's value with no cast, an enum is incremented, and a pointer is compared with `0` by `<` and `>`.  C++ refuses each of these. |
 | `StubMissing="true"` | A function used but defined by no unit is a warning, and the program stops if it gets there.  Without it the build fails naming each one.  A module (a driver) is never checked: what it doesn't define is imported from the kernal when it is loaded. |
-| `Debug="true"` | Built for the debugger: each variable, parameters too, is kept in its frame where the debugger reads it, nothing is inlined, and every function has a frame of its own.  The rest is still optimised, so the kernal still fits.  Usually set on the `Debug\|W65C816` configuration. |
+| `Debug="true"` | Built for the debugger: each variable, parameters too, is kept in its frame where the debugger reads it, nothing is inlined, and every function has a frame of its own.  The rest is still optimised, so the kernal still fits.  Usually set on the `Debug\|HCP65C816` configuration. |
 | `Unoptimised="Init, Shell"` | These projects (by name, separated by commas) are built for the debugger without the optimiser at all, so stepping follows every line as it is written: for a program that fits and needn't be fast. |
 | `BreakpointSpace` | The emulator's address space (`Kernel` or `User`) that the IDE's breakpoints go in. |
 | `Card`, `CardPath` | An SD card image, and the path on its FAT volume, that `-card` and the IDE's debugger copy the program to. |
@@ -195,9 +195,9 @@ with `Hello.cpp` a `printf("Hello\n")` in `main`, writes
 Process (Hello.cpp)
 Process (ctype.cpp)
 ...
-Wrote 65788 bytes to Output/W65C816/Plain/hello.exe.
-Wrote its debug info to Output/W65C816/Plain/hello.exe.debug.
-Plain|W65C816 build succeeded.
+Wrote 65788 bytes to Output/HCP65C816/Plain/hello.exe.
+Wrote its debug info to Output/HCP65C816/Plain/hello.exe.debug.
+Plain|HCP65C816 build succeeded.
 ```
 
 The `Process (...)` lines are each unit being preprocessed, Libc65's among them.  The easiest

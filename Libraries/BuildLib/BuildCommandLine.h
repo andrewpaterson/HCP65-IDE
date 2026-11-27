@@ -39,7 +39,7 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 //solution's configurations (.hcp65build) it builds the solution they are for: the .sln of the same name beside them,
 //else the .vcxproj.
 //
-//	hcp65build <file> [-config "Release|W65C816"] [-startup <project>] [-card] [-libc65 <directory>] [-quiet]
+//	hcp65build <file> [-config "Release|HCP65C816"] [-startup <project>] [-card] [-libc65 <directory>] [-quiet]
 //	           [-show-plain <file>] [-layouts <file>]
 //	hcp65build -program <name> [-dir <dir>] [-D <define>]... <source>... [-lib ...]... [options]
 //

@@ -627,7 +627,7 @@ bool CBuildPlain::MakeConfiguration(CBuildConfiguration* pcConfiguration, CChars
 	size				uiEquals;
 
 	szName.Init(BUILD_PLAIN_CONFIGURATION "|");
-	szName.Append(CBuildConfiguration::GetToolchainName(meToolchain));
+	szName.Append(CBuildConfiguration::GetToolchainPlatform(meToolchain));
 	pcConfiguration->Init(szName.Text(), meToolchain, BUILD_PLAIN_CONFIGURATION);
 	szName.Kill();
 	pcConfiguration->SetNoFloats(mbNoFloats);
@@ -693,7 +693,7 @@ void CBuildPlain::MakeDescription(CHCP65BuildDescription* pcDest)
 	size				j;
 
 	szLabel.Init(BUILD_PLAIN_CONFIGURATION "|");
-	szLabel.Append(CBuildConfiguration::GetToolchainName(meToolchain));
+	szLabel.Append(CBuildConfiguration::GetToolchainPlatform(meToolchain));
 	pcDest->Clear();
 	szPath.Init();
 	for (i = 0; i < mcDescription.mcIncludes.NumIncludes(); i++)
