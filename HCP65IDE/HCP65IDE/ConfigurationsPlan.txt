@@ -353,8 +353,8 @@ C10. What a GCC build on Linux builds: the platforms' own projects and files (ad
     isn't enough: it needs one for each GCC-x64 configuration too (C10-2).
   - The reference builds: only HCP65IDE's is a configuration of its project (Reference|x64).  HCP65EmulatorRef.cpp
     and HCP65SculptRef.cpp are items of no project: only CMake builds them, from the project's sources but its mains.
-    This stage leaves all three reference programs CMake's (the IDE checks run CMake's HCP65IDERef); a
-    Reference|GCC-x64 the IDE builds hasn't been asked for.
+    This stage leaves all three reference programs CMake's (the IDE checks run CMake's HCP65IDERef); since question
+    22 (2026-11-27) they become a configuration, Reference|GCC-x64, in C13.
   - What Linux links that Windows doesn't: X11 and Xext (X11Lib), dl (PulseAudioLib loads libpulse-simple when it
     runs) and pthread (BaseLib), each in a CMakeLists.txt's target_link_libraries, PUBLIC so a program linking the
     library gets them.  dl and pthread are in libc since glibc 2.34 (question 14).
@@ -382,7 +382,7 @@ C10. What a GCC build on Linux builds: the platforms' own projects and files (ad
      target_link_libraries; a reference build, a target of CMake's own, doesn't take the program's X11.  A program
      with a reference build (HCP65IDE, HCP65Emulator, HCP65Sculpt) still names its mains in its CMakeLists.txt: its
      other sources are a library the two programs share, each adding its own main (corrected 2026-11-27: their
-     EXCLUDE lists don't go).
+     EXCLUDE lists don't go), until C13 takes the mains from the projects' configurations too.
   C10-6. Tests: TestVisualStudioLib reads ExcludedFromBuild per configuration, as an item's and as a group's default;
      TestBuildLib's GCC build of a solution with a Windows-only library, a Linux-only one and an excluded file builds
      only what Linux builds and links the program's own system libraries.  The IDE builds LogiCim, HCP65IDE,
@@ -407,6 +407,36 @@ C11. Question 1's names (added 2026-11-27: the decision had no stage)
      (question 1's mapping); TestBuildConfigurations' defaults for a solution named the old way and the new; a
      workspace, a user file and a build file with the old names read as the new.  Windows (the user): each solution
      shows Release|MSVC-x64 and builds.
+
+
+C13. The reference programs as a configuration, read by both builders (added 2026-11-27, question 22)
+  How it stands: HCP65IDERef, HCP65EmulatorRef and HCP65SculptRef draw into memory on WinRefLib and are what the
+  checks run.  Only HCP65IDE's is in its project (Reference|x64 and Reference|Win32, MSVC's: HCP65IDE.sln's Reference
+  rows map three projects to a Reference configuration and the other 28 to Release).  On Linux all three are targets
+  only CMake has, their mains and libraries written by hand in the CMakeLists.txt files.
+  C13-1. HCP65IDE first.  HCP65IDE.vcxproj's Reference configuration for GCC-x64: HCP65IDERef.cpp built in it and
+     HCP65IDE_Linux.cpp not, the other way round in Debug and Release (each file's own ExcludedFromBuild, question
+     12).  Which libraries it takes follows questions 12 and 13: with the solution's rows (trial W1), X11Lib not
+     built and WinRefLib built in Reference|GCC-x64, the other projects mapped to their Release configuration as
+     MSVC's rows do.
+  C13-2. CMake's module (C6) takes a configuration by name, not only CMAKE_BUILD_TYPE's: HCP65IDERef is HCP65IDE's
+     project read as Reference|GCC-x64 and HCP65IDE the same project as Release|GCC-x64.  The module compiles the
+     sources two configurations of a project share once, as a library, and each program adds what differs, which is
+     what the CMakeLists.txt files do by hand now.  No CMakeLists.txt then names a main (C10-5's exception goes).
+  C13-3. With the solution's rows (only if trial W1 passes), the module reads the .sln as well: the projects a
+     configuration builds and the libraries a program links come from its rows, and a program's CMakeLists.txt keeps
+     its solution, its targets and CMake's own switches (BASELIB_ASAN, LTO, 32 or 64 bit).
+  C13-4. CGCCBuild shares objects too: a project's objects go in a folder named for the project's own configuration,
+     not the build configuration's, so Reference|GCC-x64 compiles only what it doesn't share with Release|GCC-x64
+     (all but HCP65IDE's own project, by the rows) where now it would compile every file again.
+  C13-5. HCP65Emulator and HCP65Sculpt after: each project gets a Reference configuration, HCP65EmulatorRef.cpp and
+     HCP65SculptRef.cpp become items of their projects, excluded from Debug and Release, their _Linux mains excluded
+     from Reference.  Whether Windows gets those configurations too (HCP65IDE has them) is asked then.
+  C13-6. Tests: the module's source lists for a project in two configurations, and the library they share; a
+     comparison of the compile and link lines CGCCBuild and CMake make for the same configuration (as C6-3 compares
+     before and after); the IDE checks pass on CMake's HCP65IDERef built this way.  The two builders still put the
+     program in different places (build/<folder>/HCP65IDERef, Output\GCC\Reference\HCP65IDE): the checks keep
+     CMake's.
 
 
 C12. The break switch (added 2026-11-27, question 20)
@@ -438,6 +468,7 @@ libraries are, so the sheet's GCC-x64 group doesn't reach a Windows-only library
 "the window programs' repositories"); C10-5 with C6.  C11-2 with a Windows session (trial W5).  Each Windows trial
 before the stage that leans on it.  C12-1, C12-2 and C12-5 at any time (they are BaseLib's alone); C12-3 with C7-1 and
 C6, and not before C12-1: a CMake Debug run with the defines and no switch ends at its first unexpected error.
+C13 after C6 and C10 (C13-3 only with the solution's rows); C13-5 after C13-1 to C13-4 have worked for HCP65IDE.
 
 
 Windows trials (the user's: there is no Windows here; gathered 2026-11-27)
@@ -717,3 +748,14 @@ Questions (the user's, one at a time)
    programs and hcp65build).
    The recommendation was to leave g++'s on, until the survey showed nothing uses them.  The other considered: left
    on and the difference recorded (no Linux build changes, but a try or throw compiles on Linux and fails on Windows).
+22. Decided (the user, 2026-11-27: "The alternative is a Reference|GCC-x64 configuration; that sounds better", "How
+   could it be made buildable one way only?  Could cmake be taught to use / respect it?", then "Yes please"): the
+   reference programs are a configuration, Reference|GCC-x64, described once in the projects (and the solution's rows,
+   if trial W1 passes) and read by both builders, the IDE's GCC build and CMake (C13).  HCP65IDE first, which has the
+   configuration for MSVC already; HCP65Emulator and HCP65Sculpt after.
+   One way means one description, not one builder: the IDE's GCC build and CMake both stay (question 6 kept CMake,
+   for its sanitizer builds, LTO and Ninja), neither with a list of its own, so they can't differ in what they
+   build.  The costs set out before it was chosen: every file compiled twice unless objects are shared (C13-2 and
+   C13-4); the CMake targets stay, since the checks run them; two projects gain a configuration they haven't on any
+   system; more configurations in the lists and the solutions' rows.  The other considered: the three programs left
+   as targets only CMake has, their mains and libraries by hand.
