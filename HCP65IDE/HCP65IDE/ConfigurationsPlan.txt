@@ -260,11 +260,12 @@ C5. The code index reads with the configuration's toolchain
 
 C6. CMake reads the projects too
   C6-1. One CMake module (CL/CMake/Vcxproj.cmake) instead of the 35 copies of vcxproj_sources (40 with question 18's
-     three repositories): it reads a project's sources and its GCC group's defines and options (following its
-     imports, as C2), for CMAKE_BUILD_TYPE's
-     configuration (Release|GCC-x64, Debug|GCC-x64; a 32-bit build reads GCC-x64's and swaps -m64 for its own).  The
-     CMakeLists.txt files keep only their targets and what is CMake's own (BASELIB_ASAN, BASELIB_SIZE16, BASELIB_64's
-     -m32 or -m64, LTO).
+     three repositories; CL/CMake/VcxprojSources.cmake, the function alone, is there already and no CMakeLists.txt
+     includes it, whatever CommonLibraries/CLAUDE.md says: the module starts from it, found 2026-11-27).  It reads a
+     project's sources and its GCC group's defines and options (following its imports, as C2), for
+     CMAKE_BUILD_TYPE's configuration (Release|GCC-x64, Debug|GCC-x64; a 32-bit build reads GCC-x64's and swaps -m64
+     for its own).  The CMakeLists.txt files keep only their targets and what is CMake's own (BASELIB_ASAN,
+     BASELIB_SIZE16, BASELIB_64's -m32 or -m64, LTO).
   C6-2. baselib_options is made from the sheet's GCC options, so a change to them is one edit for CMake and the IDE.
   C6-3. The linux test builds (32-bit Release and 64-bit) build and pass as before: TestBaseLib, TestBaseLib65 both
      ways (no argument and "816"), and every other test project; their command lines compared before and after.
@@ -633,14 +634,32 @@ Questions (the user's, one at a time)
    Windows libraries in it.  The others considered: GCC-x64 as g++ on whichever system the IDE runs on, the system's
    define added by CGCCBuild and C10's exclusions by system (one name for two targets whose sources and libraries
    differ); renaming it GCC-Linux-x64, which would reopen question 1.
-20. Open (C7-1, 2026-11-27): BREAK_ON_ERROR and BREAK_ON_WARNING in Debug|GCC-x64.  MSVC's Debug defines them (question
-   8).  The CMake builds leave them out ("on Linux BREAK() raises SIGTRAP, which kills the test run when no debugger
-   is attached").  The IDE's Debug|GCC build has them now, from x64's defines, and TestBaseLib built that way passes
-   (2026-11-27).  After C6 the CMake builds read the same group.
-   A. Recommended: left out, as CMake now.  Debug|GCC-x64 defines _DEBUG;DEBUG;LINUX_GNU and Release|GCC-x64
-      NDEBUG;LINUX_GNU, what baselib_options defines, so the 37 CMake test builds don't change.
-   B. In, as MSVC's Debug.  A logged error stops in a debugger and, without one, ends the run with SIGTRAP; the CMake
-      Debug test runs change.
+20. Open (C7-1, 2026-11-27): BREAK_ON_ERROR and BREAK_ON_WARNING in Debug|GCC-x64.  Asked as in or out; the user
+   (2026-11-27): "There needs to be an easy optional way to allow you to run builds that don't stop on an error but
+   also to allow me to run builds that do signal an error."  So a switch, not one answer for every run.
+   How it stands.  Two things break:
+   - The logger.  CLogger::Break runs BREAK() (int3: SIGTRAP on Linux, a breakpoint on Windows) when its bBreakOnError
+     is set, which Init sets from the build's BREAK_ON_ERROR and BREAK_ON_WARNING.  It is a field, changed while a
+     program runs (SetBreakOnError, SetSilent): a test that expects an error turns it off itself (971 places).
+     MSVC's Debug defines them (question 8); the CMake builds leave them out ("on Linux BREAK() raises SIGTRAP, which
+     kills the test run when no debugger is attached"); the IDE's Debug|GCC build has them now, from x64's defines,
+     and TestBaseLib built that way passes (2026-11-27).  After C6 the CMake builds read the same group.
+   - The tests' asserts.  Validate(test) is "if (!test) BREAK();" (BaseLib/Validation.h) in every build, Release
+     too, with no define to turn it off: a failed assert ends a run that has no debugger with SIGTRAP.  So the
+     sweeps run under gdb with "handle SIGTRAP nostop noprint nopass" (CommonLibraries/CLAUDE.md).
+   A. Recommended: one switch read when a program starts, an environment variable (BASELIB_BREAK), the builds the
+      same for both.  Debug|GCC-x64 defines BREAK_ON_ERROR and BREAK_ON_WARNING as MSVC's Debug does (question 8's
+      one shared set; after C6 the CMake Debug builds too).  Unset, a program breaks as it was built to: the user's
+      runs signal an error, on its line in a debugger and by ending without one.  BASELIB_BREAK=0 turns both breaks
+      off for that run: the logger's starts off, and a failed assert is counted and the run goes on to its totals, so
+      a run gets through its errors without gdb.  BASELIB_BREAK=1 turns the logger's on in a build without the
+      defines (Release).  Costs: a getenv in CLogger::Init, as TestLib reads TESTLIB_LOG (not in the HCP65 builds,
+      which have no environment), and Validate becomes a test of a flag before its BREAK().
+   B. A build's choice: a CMake option (BASELIB_BREAK, as BASELIB_ASAN is) and a second IDE configuration whose group
+      leaves the defines out.  No new code, but everything is built twice to have both (a sweep's builds are 9 GB
+      each), and it does nothing for the asserts' break.
+   C. By itself: break only when a debugger is attached (TracerPid in /proc/self/status, IsDebuggerPresent).  Nothing
+      to set, but a run without a debugger never signals an error, and something is still wanted to overrule it.
 21. Open (C7-1, 2026-11-27): g++ and exceptions.  Question 8 turned MSVC's off everywhere; neither CMake nor C0 passes
    -fno-exceptions, so g++ compiles with them on.
    A. Recommended: left on, as now, and recorded here.  No tested Linux build changes; a try or throw compiles on
