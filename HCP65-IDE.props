@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  What every HCP65-IDE project is built with: CommonLibraries' Common.props, which says how a sheet is used, and
+  the include directories below.
+-->
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildThisFileDirectory)..\CommonLibraries\Common.props" />
+  <PropertyGroup>
+    <IncludePath>$(MSBuildThisFileDirectory)Libraries\;$(MSBuildThisFileDirectory)..\HCP65\Libraries\;$(IncludePath)</IncludePath>
+  </PropertyGroup>
+</Project>
