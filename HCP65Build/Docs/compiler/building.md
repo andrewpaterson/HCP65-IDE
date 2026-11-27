@@ -11,8 +11,8 @@ char*	szDirectory;
 IDE does.  It builds in one of two ways:
 
 - **From a solution.**  A Visual Studio `.sln` or `.vcxproj` says which files and include
-  directories each project has, and an `.hcp65build` file beside it says how to build them for
-  the HCP65.  The same solution still builds natively in Visual Studio.
+  directories each project has, and the projects' HCP65 settings say how to build them for the
+  HCP65.  The same solution still builds natively in Visual Studio.
 - **From a plain command line.**  The sources, include directories and output are all given as
   arguments, with no solution.
 
@@ -30,16 +30,17 @@ no solution.
 
 | Option | Meaning |
 |---|---|
-| <code>-config "Release&#124;HCP65C816"</code> | The configuration to build, from the `.hcp65build` file.  Default: the workspace's last one, else the first HCP65 one. |
+| <code>-config "Release&#124;HCP65C816"</code> | The configuration to build: one the solution lists, or its `.hcp65build` file.  Default: the workspace's last one, else the first HCP65 one. |
+| `-run "ModPlay Debug"` | The [run configuration](../ide/building.md#run-configurations): it names the configuration to build, and its card file says which card `-card` writes.  Default: the first run configuration that builds the configuration. |
 | `-startup <project>` | The project whose program is built.  Default: the one the workspace names, else the first. |
-| `-card` | Also copy each executable, module and carded image (such as `OS.SYS`) onto the configuration's SD card image (`Card`, `CardPath`). |
+| `-card` | Also copy each executable, module and carded image (such as `OS.SYS`) onto the run configuration's SD card image, at the path its card file gives. |
 | `-show-plain <file>` | Write the build as a [plain command line](#a-plain-command-line) instead of building.  `hcp65build @<file>` then builds the same thing. |
 
 The program goes in `Output/<toolchain>/<configuration>` and the listings in `Listing/`, beside
 the solution.  For example, from `HCP65/ModPlay`:
 
 ```text
-hcp65build HCP65ModPlay.hcp65build -config "Release|HCP65C816"
+hcp65build HCP65ModPlay.sln -config "Release|HCP65C816"
 ```
 
 ### The project's HCP65 settings
@@ -78,7 +79,8 @@ They are of two kinds:
 file, as the elements below do, with `Entry`, `Limit`, `Size`, `Fill`, `Load` and `Text` as their attributes.  An
 executable's `Symbols` are `Name=Value` and an image's `Regions` `Start-End@Offset`, each separated by semicolons.
 
-What a project doesn't say is as the `.hcp65build` file has it.
+What a project doesn't say is as the `.hcp65build` file has it, if the solution has one.  How a program is
+debugged (its card, the boot ROM loaded first) is its [run configuration](../ide/building.md#run-configurations)'s.
 
 ### The .hcp65build file
 

@@ -435,6 +435,24 @@ C8. Shared run configurations hold how a program is debugged
      list; the IDE's debugging checks pass with their setup only in shared run configurations; hcp65build -run writes
      the same card as -card did.
 
+  Built 2026-11-27 (the user: "Let's go with 3", "Go with 1 please"): C8-1, C8-2, C8-4, C8-5 and C8-6's HCP65 half.
+  - BL/BuildCard (a card file, question 27), CRunConfiguration's Card, <Load>s, BreakpointSpace and its shared
+    folder; CBuildWorkspace reads each solution's .run/*.hcp65run with the solution and writes them back.
+  - Not as C8-4 is written: debugging still reads the build configuration.  CBuildWorkspace::ApplyRunConfiguration
+    gives the build configurations what the chosen run configuration says (the card and each solution's path on it,
+    the loads, the kernal's line table), so IDEDebugging, GetCardPrograms and hcp65build -card are as they were and
+    a solution that still has a .hcp65build debugs as before.  The breakpoint space is worked out (question 10).
+  - Question 28: a shared run configuration brings its solution as the startup solution and the other way about;
+    a default private one goes when a shared one builds its configuration.
+  - hcp65build -run names the run configuration; without it the first that builds the configuration is applied.
+  - CL/hcp65_runs.py made HCP65/Cards (six card files) and two shared run configurations beside each of the 20
+    solutions ("ModPlay Debug", "ModPlay Release"), and removed the 20 .hcp65build files; CL/solution_rows.py
+    --platform HCP65C816 gave their solutions Debug|HCP65C816 and Release|HCP65C816, rows as Win32's, so each
+    lists what it builds (question 17 C).  The 40 builds were compared with those before again.
+  - Left: C8-3 (the dialog shows and edits none of the new fields, and has no "Store as project file": they are
+    written in the files), the fixtures' and IDE checks' .hcp65build files (C8-6's other half, C8-7's checks), and
+    a check of the IDE with a shared run configuration.
+
 C9. Edit Build Configurations writes the projects and sheets
   C9-1. VisualStudioLib sets a property in a project's or a sheet's group for a configuration, as RenameItem edits
      an item now: only that element's text changes (or one element is added, or removed), the rest of the file kept

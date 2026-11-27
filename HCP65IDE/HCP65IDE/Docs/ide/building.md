@@ -45,9 +45,10 @@ A solution can list a toolchain's configurations itself: a solution configuratio
 for Visual Studio's.  A solution that lists none, and has no `.hcp65build` file, is given each toolchain's for each
 of its configuration names.
 
-A solution's build configurations are in its `.hcp65build` file, beside the `.sln`.  Its format, and the
-command line tool `hcp65build` that builds the same way outside the IDE, are on [Building
-Programs](../compiler/building.md).
+How an HCP65 configuration compiles and links is in the projects (their `HCP65Compile` and `HCP65Link` groups).
+A solution may still have a `.hcp65build` file beside it, which lists build configurations under names of its
+own and says what its projects don't.  Both, and the command line tool `hcp65build` that builds the same way
+outside the IDE, are on [Building Programs](../compiler/building.md).
 
 ### Edit Build Configurations
 
@@ -128,8 +129,60 @@ shows the run configurations on the left, Add and Remove under them, and the one
 
 Paths may be relative to the workspace's file.  Without a tool, one that builds for the W65C816 starts the
 emulator, and one that builds with GCC starts what it linked of the startup solution's startup project, in
-the project's folder.  The run configurations are kept in the [workspace file](solutions.md#workspaces-several-solutions-at-once).
-It works on copies, so Cancel changes nothing; OK isn't allowed while a name is empty or used twice.
+the project's folder.  It works on copies, so Cancel changes nothing; OK isn't allowed while a name is empty or
+used twice.
+
+### Private and shared
+
+A private run configuration is kept in the [workspace file](solutions.md#workspaces-several-solutions-at-once),
+which is yours alone.  A shared one is a file of its own, `<Name>.hcp65run` in the `.run` folder beside a solution,
+committed with the solution so everyone has it, as IntelliJ IDEA's "Store as project file" does.  It is read with
+its solution, and its paths are relative to the solution's folder.
+
+A shared run configuration says how its solution's program is debugged, so choosing one in the toolbar also makes
+its solution the startup solution; making a solution the startup solution chooses its run configuration for the
+configuration being built (Debug stays Debug).  A private one belongs to no solution and leaves the startup
+solution as it is.  If a private one has the name of a shared one, the private one is renamed (`ModPlay
+(private)`).  A private one that is nothing but a build configuration's name, as each build configuration is given
+when there are no others, goes once a shared one builds that configuration.
+
+### Debugging an HCP65 program
+
+A run configuration for an HCP65 program also says how it is debugged.  This is
+`HCP65/ModPlay/.run/ModPlay Debug.hcp65run`:
+
+```xml
+<RunConfiguration Name="ModPlay Debug" Configuration="Debug|HCP65C816" Card="..\Cards\BootCard.hcp65card">
+	<Load File="..\Boot\Output\HCP65C816\Release\Boot.rom" Address="0x0"/>
+</RunConfiguration>
+```
+
+| | Meaning |
+|---|---|
+| `Card` | The card it runs on: a card file (below). |
+| `<Load File Address/>` | A file the debugger loads into the emulator first: the boot loader's ROM. |
+| `BreakpointSpace` | The emulator's address space the breakpoints go in (`Kernel` or `User`).  Left out, it is worked out: `User` for an executable, `Kernel` for a module or an image. |
+
+These aren't in the dialog yet: they are written in the file.
+
+A **card file** (`BootCard.hcp65card`) says what is on one SD card image, once, for every run configuration that
+debugs on it.  This is `HCP65/Cards/VIACard.hcp65card`:
+
+```xml
+<Card Image="..\HCP65-Emulator\TestHCP65Lib\TestHCP65Lib\Output\VIACard.img">
+	<Program File="..\Drivers\VIABoard\Output\$(Platform)\$(Configuration)\VIA.DRV" Path="\OS\Drivers\VIA.DRV"/>
+	<Program File="..\Kernal\Output\HCP65C816\Release\OS.SYS" Path="\OS\OS.SYS" Lines="Kernel"/>
+	<Program File="..\VIATest\Output\$(Platform)\$(Configuration)\viatest.exe" Path="\viatest.exe"/>
+</Card>
+```
+
+Each `<Program>` is a file a build makes and its path on the card's FAT volume; paths are relative to the card
+file.  `$(Configuration)` and `$(Platform)` are those of the build configuration being debugged, so one line
+serves Debug and Release.  When debugging starts, each solution of the workspace whose program the card lists is
+built and written to the card at its path, and its line table is read as the kernal starts or loads it.  `Lines`
+marks a program that runs where it is linked, the kernal: when the workspace hasn't its solution, its line table
+is read from the file as it is, its breakpoints in that breakpoint space, and the Build tab says if the card's
+copy isn't the one built.
 
 ## Running
 

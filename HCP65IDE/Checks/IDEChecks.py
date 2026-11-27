@@ -4126,7 +4126,9 @@ CHECKS = [
 		 r'^Buttons: Start \[Run\.Start\]$'], [r'NOT BOUND', r'\[none\]']),
 	('configuration', {
 		'CONFIGURATION': 'Debug|HCP65C816', 'DEBUG': 'printconfig'},
-		[r'^Configuration: \[Debug\|HCP65C816\] \[Debug\|HCP65C816\]: Debug\|HCP65C816, Release\|HCP65C816, Edit Configurations\.\.\.,$'], []),
+		#The toolbar lists run configurations: ModPlay's shared ones (HCP65/ModPlay/.run), then those of whatever other
+		#solutions the user's ModPlay workspace has.  The one that builds the configuration asked for is chosen.
+		[r'^Configuration: \[ModPlay Debug\] \[Debug\|HCP65C816\]: ModPlay Debug, ModPlay Release, .*Edit Configurations\.\.\.,$'], []),
 	('system-directories-newest', {
 		#The newest MinGW GCC by its number, not its name, and not a folder that isn't a version.
 		'SYSTEM_ROOT': MakeSystemRoot(['9-win32', '13-win32', 'notes']), 'DEBUG': 'printsystem'},
@@ -4163,7 +4165,7 @@ CHECKS = [
 		 r'^Build dialog: refused \[Only an HCP65 toolchain can link a program, load files, use a card or build for its debugger\.\]$',
 		 r'^Build dialog: OK \[\]$', r'^Dialog \[Build Configurations: HCP65Kernal\] answered OK$',
 		 r"^Status: A scripted run doesn't save build configurations\.$",
-		 r'^Configuration: \[Debug\|HCP65C816\] \[Debug\|HCP65C816\]:'], []),
+		 r'^Configuration: \[Kernal Debug\] \[Debug\|HCP65C816\]:'], []),
 	('build-configuration-save', dict(MakeSolutionCopy(), **{
 		#What is changed goes in the file; its comment stays; the run configuration follows the rename, and the copy gets one.
 		'DIALOG_ANSWER': 'OK', 'BUILD_EDITS': 'name:Renamed|HCP65C816;breakpoint:Kernal;nofloats:1;add;name:Copied|HCP65C816',
@@ -4248,7 +4250,7 @@ CHECKS = [
 		'RUN_EDITS': 'add;name:Echo;build:Release|HCP65C816;tool:/bin/sh;directory:/tmp;arguments:-c pwd',
 		'DEBUG': 'command:Run.EditConfigurations,answered:1,printconfig,command:Run.Start,wait:500,printrun'},
 		[r'^Dialog \[Run Configurations\] answered OK$',
-		 r'^Configuration: \[Echo\] \[Release\|HCP65C816\]: Debug\|HCP65C816, Release\|HCP65C816, Echo, Edit Configurations\.\.\.,$',
+		 r'^Configuration: \[Echo\] \[Release\|HCP65C816\]: ModPlay Debug, ModPlay Release, .*Echo, Edit Configurations\.\.\.,$',
 		 r'^Run: not running \[Start\]$', r'^Running: /bin/sh -c pwd$', r'^/tmp$', r'^Exited with code 0\.$'], []),
 	('run-menu', {
 		#The Run tab's menu: Copy, Copy All and Select All, Clear All, and Start Without Debugging and Stop Running
@@ -4275,15 +4277,15 @@ CHECKS = [
 		'DEBUG': 'command:Run.EditConfigurations,answered:1,command:Run.Start,wait:200,printrun'},
 		[r'^Run: not running \[Start\]$', r'^No tool is set for Nothing: give it one in Edit Configurations\.$'], []),
 	('run-configuration-rules', {
-		#OK is refused for a name used twice or none; Cancel changes nothing, and removing them all gives the defaults.
-		#Which of them is chosen is whatever the user's ModPlay workspace last chose, so either is.
+		#OK is refused for a name used twice or none; Cancel changes nothing.  Which of ModPlay's is chosen is whatever
+		#the user's ModPlay workspace last chose, so either is.
 		'DIALOG_ANSWER': 'Cancel',
-		'RUN_EDITS': 'add;name:Debug|HCP65C816;check;name:;check;name:Fine;check;remove;remove;remove;check',
+		'RUN_EDITS': 'add;name:ModPlay Debug;check;name:;check;name:Fine;check;remove;remove;remove;check',
 		'DEBUG': 'command:Run.EditConfigurations,answered:1,printconfig'},
 		[r'^Run dialog: refused \[Another run configuration has this name\.\]$',
 		 r'^Run dialog: refused \[A run configuration needs a name\.\]$',
 		 r'^Run dialog: OK \[\]$', r'^Run dialog: OK \[\]$',
-		 r'^Configuration: \[(Debug|Release)\|HCP65C816\] \[\1\|HCP65C816\]: Debug\|HCP65C816, Release\|HCP65C816, Edit Configurations\.\.\.,$'], []),
+		 r'^Configuration: \[ModPlay (Debug|Release)\] \[\1\|HCP65C816\]: ModPlay Debug, ModPlay Release, .*Edit Configurations\.\.\.,$'], []),
 	('run-configuration-no-tool', {
 		#A tool that isn't there says so when it starts.
 		'DIALOG_ANSWER': 'OK', 'RUN_EDITS': 'add;name:Missing;tool:/no/such/tool',
