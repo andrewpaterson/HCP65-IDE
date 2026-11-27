@@ -223,6 +223,10 @@ C3. GCC builds with the project's GCC configuration
   C3-3. Tests: TestBuildLib's GCC build test project gets a GCC group with a define only it has and an option
      (-fno-strict-aliasing); the test asserts both are in the compile command.  IDE: a check builds TestBaseLib's
      Release|GCC-x64 and runs it.
+  C3-4. (2026-11-27, question 19) GCC-x64 is Linux's.  On Windows a GCC-x64 build doesn't start: it says the
+     configuration is built on Linux, where now it runs whatever g++ is on the path (and fails with "Could not run
+     g++." without one).  CGCCBuild's .exe for Windows goes with it.  TestBuildGCC and TestBuildGCCRelease expect
+     that line on Windows.
 
 C4. HCP65 compiles with the project's HCP65 configuration
   C4-1. An HCP65 build configuration's defines and include directories come from the project's HCP65C816 or
@@ -611,16 +615,14 @@ Questions (the user's, one at a time)
    what they share with the sheet and what is their own is known.  The others considered: HCP65-Sculpt and
    WindowInputTester only, StarControlRedux's three projects and two CMakeLists.txt kept by hand; none, with C0's list
    kept for them.
-19. Open (2026-11-27): what GCC-x64 is on Windows.  The sheet's GCC-x64 group defines LINUX_GNU and C10 leaves the
-   Windows libraries out of it, but the IDE's GCC toolchain is "g++ and ar from the path" on either system
-   (GCCBuild.cpp links <project>.exe on Windows), and BaseLib has a define for MinGW (WIN_GNU_32, Define.h).
-   A. Recommended: GCC-x64 is g++ for 64-bit Linux, as the plan has assumed.  On Windows the IDE lists it but doesn't
-      build it, and says why.  MinGW, if it is wanted, is a platform of its own later (with WIN_GNU_32 and the Windows
-      libraries in it).
-   B. GCC-x64 is g++ on whichever system the IDE runs on: the group has no LINUX_GNU, CGCCBuild adds the system's
-      define as C0 does now, and what C10 leaves out is by system, not by toolchain.  One name for two targets whose
-      sources and libraries differ.
-   C. It is renamed to say so (GCC-Linux-x64), which reopens question 1.
+19. Decided (the user, 2026-11-27: "19 -> A as recommended"): GCC-x64 is g++ for 64-bit Linux, as the plan had
+   assumed: the sheet's GCC-x64 group defines LINUX_GNU and C10 leaves the Windows libraries out of it.  The IDE's GCC
+   toolchain is "g++ and ar from the path" on either system now (GCCBuild.cpp links <project>.exe on Windows), so on
+   Windows the IDE lists a GCC-x64 configuration but doesn't build it, and says why (C3-4).  MinGW, for which BaseLib
+   has a define (WIN_GNU_32, Define.h), is a platform of its own later if it is wanted, with that define and the
+   Windows libraries in it.  The others considered: GCC-x64 as g++ on whichever system the IDE runs on, the system's
+   define added by CGCCBuild and C10's exclusions by system (one name for two targets whose sources and libraries
+   differ); renaming it GCC-Linux-x64, which would reopen question 1.
 20. Open (C7-1, 2026-11-27): BREAK_ON_ERROR and BREAK_ON_WARNING in Debug|GCC-x64.  MSVC's Debug defines them (question
    8).  The CMake builds leave them out ("on Linux BREAK() raises SIGTRAP, which kills the test run when no debugger
    is attached").  The IDE's Debug|GCC build has them now, from x64's defines, and TestBaseLib built that way passes
