@@ -11,6 +11,7 @@
 #define TEST_WORKSPACE_DRIVER		"Input" _FS_ "Workspace" _FS_ "Driver" _FS_ "Driver.sln"
 #define TEST_WORKSPACE_TOOLS		"Input" _FS_ "Workspace" _FS_ "Tools" _FS_ "Tools.sln"
 #define TEST_WORKSPACE_OS			"Input" _FS_ "Workspace" _FS_ "OS" _FS_ "OS.sln"
+#define TEST_WORKSPACE_MODPLAY_RUN	".." _FS_ ".." _FS_ ".." _FS_ ".." _FS_ "HCP65" _FS_ "ModPlay" _FS_ ".run" _FS_ "ModPlay Debug.hcp65run"
 #define TEST_WORKSPACE_FILE			"Output" _FS_ "Test" BUILD_WORKSPACE_EXTENSION
 
 
@@ -775,6 +776,21 @@ void TestBuildWorkspaceSharedRunConfigurations(void)
 	AssertNull(cRead.FindRunConfiguration("Release|HCP65C816"));
 	AssertNotNull(cRead.FindRunConfiguration("Debug|HCP65C816"));
 	AssertNotNull(cRead.FindRunConfiguration("Mine (private)"));
+
+	//A file as the HCP65's solutions have them is written back as it is: saving the workspace changes no committed file.
+	AssertTrue(cFileUtil.Copy(TEST_WORKSPACE_MODPLAY_RUN, "Output" _FS_ "Shared" _FS_ "Program" _FS_ ".run" _FS_ "ModPlay Debug.hcp65run"));
+	cRead.Kill();
+	cRead.Init();
+	AssertTrue(cRead.Read("Output" _FS_ "Shared" _FS_ "Defaults" BUILD_WORKSPACE_EXTENSION));
+	AssertNotNull(cRead.FindRunConfiguration("ModPlay Debug"));
+	AssertTrue(cFileUtil.Delete("Output" _FS_ "Shared" _FS_ "Program" _FS_ ".run" _FS_ "ModPlay Debug.hcp65run"));
+	cRead.FindRunConfiguration("Mine")->SetTool("Changed", "", "");
+	AssertTrue(cRead.Write("Output" _FS_ "Shared" _FS_ "Defaults" BUILD_WORKSPACE_EXTENSION));
+	AssertTrue(cFileUtil.Compare("Output" _FS_ "Shared" _FS_ "Program" _FS_ ".run" _FS_ "ModPlay Debug.hcp65run", TEST_WORKSPACE_MODPLAY_RUN));
+	cFile.Init();
+	AssertTrue(cFile.Read("Output" _FS_ "Shared" _FS_ "Program" _FS_ ".run" _FS_ "Mine.hcp65run"));
+	AssertTrue(strstr(cFile.Text(), "Tool=\"Changed\"") != NULL);
+	cFile.Kill();
 
 	//Made private, its file goes and the workspace file has it.
 	cRead.FindRunConfiguration("On Card")->SetShared(NULL);

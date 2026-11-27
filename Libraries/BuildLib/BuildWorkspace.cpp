@@ -24,6 +24,7 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/StringHelper.h"
 #include "BaseLib/XMLFile.h"
 #include "BaseLib/XMLWriter.h"
+#include "BaseLib/TextFile.h"
 #include "VisualStudioLib/VcxSolutionProject.h"
 #include "Build.h"
 #include "BuildWorkspace.h"
@@ -549,9 +550,10 @@ CRunConfiguration* CBuildWorkspace::FindSolutionRunConfiguration(size uiSolution
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Each shared run configuration written to its own file, and the files of
-// those that have gone, been renamed or made private deleted.  False if
-// one can't be written.
+// Each shared run configuration written to its own file, unless the file
+// says it already (they are committed files), and the files of those that
+// have gone, been renamed or made private deleted.  False if one can't be
+// written.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CBuildWorkspace::WriteSharedRunConfigurations(void)
@@ -559,6 +561,7 @@ bool CBuildWorkspace::WriteSharedRunConfigurations(void)
 	CFileUtil			cFileUtil;
 	CRunConfiguration*	pcRun;
 	CXMLWriter			cWriter;
+	CTextFile			cOld;
 	CArrayChars			aszWritten;
 	CChars				szFile;
 	CChars				szFolder;
@@ -581,7 +584,12 @@ bool CBuildWorkspace::WriteSharedRunConfigurations(void)
 			cFileUtil.TouchDir(szFolder.Text());
 			cWriter.Init();
 			pcRun->SaveXML(&cWriter);
-			bResult &= cWriter.Write(szFile.Text());
+			cOld.Init();
+			if (!cFileUtil.Exists(szFile.Text()) || !cOld.Read(szFile.Text()) || (StringCompare(cOld.Text(), cWriter.GetText()) != 0))
+			{
+				bResult &= cWriter.Write(szFile.Text());
+			}
+			cOld.Kill();
 			cWriter.Kill();
 		}
 	}
