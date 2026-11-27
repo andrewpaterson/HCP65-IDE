@@ -96,9 +96,9 @@ hcp65build: Boot, Kernal, Init, Shell, Libc65, the 8 drivers and the test progra
 sources) and ExceptionsTest (no configurations).  98 have Debug and Release for Win32 and x64; HCP65IDE has
 Reference|x64 too.  The survey script: each setting per configuration, how many projects set it, to what.
 
-Not surveyed (found 2026-11-27, question 18): HCP65-Sculpt (3 projects, and 2 CMakeLists.txt with their own copies of
+Not surveyed (found 2026-11-27): HCP65-Sculpt (3 projects, and 2 CMakeLists.txt with their own copies of
 vcxproj_sources and baselib_options), WindowInputTester (1 and 1) and StarControlRedux (3 and 2) build CommonLibraries'
-projects too.
+projects too.  They join the plan (question 18) and are surveyed before their C7.
 
 Every C++ project has these, the same in each (to Common.props, by configuration):
   - Configuration: PlatformToolset v142, CharacterSet NotSet.
@@ -255,8 +255,9 @@ C5. The code index reads with the configuration's toolchain
      a symbol defined only under LINUX_GNU in the first.
 
 C6. CMake reads the projects too
-  C6-1. One CMake module (CL/CMake/Vcxproj.cmake) instead of the 35 copies of vcxproj_sources: it reads a project's
-     sources and its GCC group's defines and options (following its imports, as C2), for CMAKE_BUILD_TYPE's
+  C6-1. One CMake module (CL/CMake/Vcxproj.cmake) instead of the 35 copies of vcxproj_sources (40 with question 18's
+     three repositories): it reads a project's sources and its GCC group's defines and options (following its
+     imports, as C2), for CMAKE_BUILD_TYPE's
      configuration (Release|GCC-x64, Debug|GCC-x64; a 32-bit build reads GCC-x64's and swaps -m64 for its own).  The
      CMakeLists.txt files keep only their targets and what is CMake's own (BASELIB_ASAN, BASELIB_SIZE16, BASELIB_64's
      -m32 or -m64, LTO).
@@ -269,8 +270,8 @@ C7. The projects move to the shared sheets
      question 21's) and MSVC's settings every project shares (What the projects share);
      HCP65.props, the HCP65-IDE and LogiCim sheets import it and add their own (question 2).  Each .vcxproj imports
      its repository's sheet in its PropertySheets ImportGroup and keeps only what is its own.
-  C7-2. Done a repository at a time (CommonLibraries, HCP65, HCP65-IDE, LogiCim, then those question 18 adds), each
-     its own commit, by a script
+  C7-2. Done a repository at a time (CommonLibraries, HCP65, HCP65-IDE, LogiCim, then HCP65-Sculpt, WindowInputTester
+     and StarControlRedux: question 18), each its own commit, by a script
      that removes from a project only what equals the sheet.  MSVC's settings for each project are compared, before
      and after, by MSBuild's /pp (the evaluated project) on Windows.
   C7-3. Windows: each solution opens in Visual Studio with no new warnings, lists only its MSVC configurations
@@ -385,9 +386,9 @@ C11. Question 1's names (added 2026-11-27: the decision had no stage)
      hcp65build's -config and its page (building.md) and the IDE's pages.  A file with an old name is read as the
      new one and written with the new.  hcp65build's -target W65C816|65C64 names a processor, not a configuration,
      and keeps its values.
-  C11-2. The solutions' names.  Each .sln's platforms become MSVC-x86 and MSVC-x64 (53 solutions: CommonLibraries 22,
-     HCP65 27, HCP65-IDE 1, LogiCim 3; question 18's three repositories have 5 more): its
-     SolutionConfigurationPlatforms and the left side of each ActiveCfg and Build.0, the projects' Win32 and x64
+  C11-2. The solutions' names.  Each .sln's platforms become MSVC-x86 and MSVC-x64 (58 solutions: CommonLibraries 22,
+     HCP65 27, HCP65-IDE 1, LogiCim 3, and question 18's HCP65-Sculpt 2, WindowInputTester 1 and StarControlRedux
+     2): its SolutionConfigurationPlatforms and the left side of each ActiveCfg and Build.0, the projects' Win32 and x64
      kept.  AddDefaults then finds the configuration a toolchain starts from by the projects' platform a solution
      configuration maps to (the ActiveCfg's right side): now it looks for solution platforms named Win32 and x64,
      which the rename takes away.  MSVCBuild passes the solution's name (/p:Platform=MSVC-x64).  After trial W5.
@@ -601,15 +602,15 @@ Questions (the user's, one at a time)
       and several over one group; but a file again where question 3 took one away.
    C. In the .sln, as solution configurations mapped to the projects' (only if trial W1 shows Visual Studio accepts
       them).  The native place, and Visual Studio lists them.
-18. Open (C6 and C7-2, 2026-11-27): HCP65-Sculpt, WindowInputTester and StarControlRedux, which the survey missed.
-   Their own 7 projects and 5 CMakeLists.txt build CommonLibraries' projects, which change under them whatever is
-   chosen (_LIB gone, exceptions off, the shared defines).
-   A. Recommended: all three join.  Each gets a sheet importing ../CommonLibraries/Common.props, its projects move in
-      C7-2 after LogiCim, its CMakeLists.txt use C6's module, and its solutions are in C7-3's and C11-2's Windows
-      sessions.
-   B. HCP65-Sculpt and WindowInputTester join; StarControlRedux stays as it is, its three projects' settings and its
-      two CMakeLists.txt's copies of vcxproj_sources and baselib_options kept by hand.
-   C. None joins.  Their copies stay, and C7-4 can't take C0's list out while the IDE builds them with GCC.
+18. Decided (the user, 2026-11-27: "18 -> A all three join"): HCP65-Sculpt, WindowInputTester and StarControlRedux,
+   which the survey missed, join.  Their own 7 projects and 5 CMakeLists.txt build CommonLibraries' projects, which
+   change under them whatever was chosen (_LIB gone, exceptions off, the shared defines).  Each gets a sheet of its own
+   importing ../CommonLibraries/Common.props, as question 2 gave HCP65, HCP65-IDE and LogiCim; its projects move in C7-2
+   after LogiCim's; its CMakeLists.txt use C6's module; and its solutions are in C7-3's and C11-2's Windows sessions.
+   Their settings are surveyed as the other four repositories' were (What the projects share) before their C7, so
+   what they share with the sheet and what is their own is known.  The others considered: HCP65-Sculpt and
+   WindowInputTester only, StarControlRedux's three projects and two CMakeLists.txt kept by hand; none, with C0's list
+   kept for them.
 19. Open (2026-11-27): what GCC-x64 is on Windows.  The sheet's GCC-x64 group defines LINUX_GNU and C10 leaves the
    Windows libraries out of it, but the IDE's GCC toolchain is "g++ and ar from the path" on either system
    (GCCBuild.cpp links <project>.exe on Windows), and BaseLib has a define for MinGW (WIN_GNU_32, Define.h).
