@@ -415,8 +415,9 @@ C8. Shared run configurations hold how a program is debugged
   C8-1. A run configuration has a type: Program (today's: a tool, folder and arguments, or what a GCC build linked)
      or HCP65 Emulator.  An HCP65 Emulator one holds the build configuration it builds first and debugs as, the
      emulator (the default, or a tool and arguments, as now), the files loaded first (<Load>), the card image and
-     each program put on it and where (<Card File><Program Path/></Card>: the startup solution's and the workspace's
-     other programs, which CBuildWorkspace::GetCardPrograms now finds from every solution's build configuration),
+     each program put on it and where (2026-11-27, question 27: in a card file the run configuration names, not a
+     list of its own; CBuildWorkspace::GetCardPrograms, which now finds them from every solution's build
+     configuration, reads the card file),
      other programs' line tables (<Lines>) and, only to override what is worked out, BreakpointSpace (question 10).
   C8-2. Shared run configurations are committed files, one each, beside the solution (question 9), as IntelliJ
      IDEA's "Store as project file" keeps them in .run/<Name>.run.xml.  Private ones stay in the .hcp65workspace file
@@ -1061,3 +1062,15 @@ Questions (the user's, one at a time)
    pointed at them for the builds under Wine, so the projects that include them (VulkanLib and what is built on it)
    are checked as the others are.  The others considered: no build of those, only the script's own comparison; the
    user installing LunarG's SDK.
+27. Decided (the user, 2026-11-27: "Cool, I'm sold.  Let's go with 3"): a card is a file of its own.  A card file
+   (BootCard.hcp65card, committed, beside what owns the card) names the card's image and each program on it with
+   its path on the card; a program's file may have $(Configuration) and $(Platform) in it, which are the run
+   configuration's build configuration's.  A run configuration names its card file and what it debugs, and lists no
+   programs.  This is question 11's answer in another place: the same driver on VIACard.img and on SDCard.img is two
+   run configurations naming two card files.  Why: 18 of the 20 HCP65 solutions put their program on one of two
+   images (BootCard.img, SDCard.img), so a list in each run configuration would be written about forty times, and
+   a driver added to the boot card would be forty edits.  The others considered: the list in each run configuration,
+   its files' paths written out or with the same macros; the programs named by their solutions' paths (only on the
+   card when the solution is in the workspace); each solution's run configuration saying its own program's card and
+   path, the workspace gathering them (which can't tell which of a driver's two run configurations counts).
+   Costs: another kind of file, and the Run Configurations dialog needs to choose and open one.
