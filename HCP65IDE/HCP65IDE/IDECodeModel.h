@@ -273,6 +273,7 @@ typedef CArrayTemplatePtr<SIDEEditedFile>	CArrayIDEEditedFiles;
 //What the IDE knows of the workspace's code: the workspace's index (CWorkspaceIndex: each file preprocessed and parsed as
 //its solution's configuration builds it, and an index of every name the solutions' .cpp files declare and use), and
 //what the IDE asks of it: highlights, edited files worked out on the edits thread, and the queries its features make.
+//Design page: Docs/ide/design/code-model.md
 class CIDECodeModel : public CWorkspaceIndex
 {
 friend class CIDERefactorUnit;

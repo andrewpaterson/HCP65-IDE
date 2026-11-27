@@ -172,6 +172,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 //The Claude tab under the editor sends requests, such as refactorings, to Claude Code run headless in the solution's
 //folder (see CClaudeCommand), saying where the caret and selection are.  Files are saved before a request, and the
 //open files Claude changes are read again as it changes them.
+//Design page: Docs/ide/design/architecture.md
 class CIDEContent : public CObject, public CDockManagerListener
 {
 friend class CIDEScript;

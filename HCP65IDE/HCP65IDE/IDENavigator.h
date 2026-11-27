@@ -59,6 +59,7 @@ class CIDEContent;
 #define IDE_RECENT_SYMBOL_TAG	"RecentSymbol"	//and Go to Symbol.
 
 
+//Design page: Docs/ide/design/navigation.md
 class CIDENavigator : public CObject, public CGoToSearcher, public CIDEUserPart
 {
 friend class CIDEScript;

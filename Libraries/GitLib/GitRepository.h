@@ -28,6 +28,7 @@ along with Codaphela GitLib.  If not, see <http://www.gnu.org/licenses/>.
 //A git repository on disk, found from its top folder (where its .git is), and what is known of it: its status, read
 //again whenever asked (StartStatus then PollStatus, or ReadStatus to wait), and the last commit's text of its files.
 //Files are named by their paths, made full (MakeFullGitPath); GetRelativePath gives the path git knows a file by.
+//Design page: HCP65IDE/HCP65IDE/Docs/ide/design/git.md
 class CGitRepository
 {
 protected:

@@ -36,6 +36,7 @@ class CIDEContent;
 //Git, as IntelliJ IDEA shows it: the branch on the toolbar, the files' statuses coloured in Solution Explorer, and
 //change bars in the editors' gutters, a click on which shows the change's old lines with Rollback and Show Diff.
 //The statuses are read again now and then, and when the window is activated.
+//Design page: Docs/ide/design/git.md
 class CIDEGitStatus : public CObject
 {
 friend class CIDEScript;

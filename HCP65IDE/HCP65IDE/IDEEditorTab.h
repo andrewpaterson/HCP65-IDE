@@ -62,6 +62,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 //
 //SaveFile writes the text back with the file's line ends: lines typed into a file whose lines end with carriage returns
 //and line feeds get them too.  The tab's name ends with a '*' while the text has changed since it was opened or saved.
+//Design page: Docs/ide/design/editing.md
 class CIDEEditorTab : public CObject, public CTextSelectionRanges
 {
 CONSTRUCTABLE(CIDEEditorTab);

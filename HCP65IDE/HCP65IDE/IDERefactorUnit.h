@@ -70,6 +70,7 @@ public:
 //
 //Places are lines and columns from 0, as the index's; a range's end is exclusive.  A node a macro made, or that is
 //another file's, has no range here: what a refactoring can't see the text of, it can't change.
+//Design page: Docs/ide/design/refactoring.md
 class CIDERefactorUnit
 {
 protected:

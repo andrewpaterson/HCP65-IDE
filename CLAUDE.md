@@ -37,6 +37,8 @@ CommonLibraries and HCP65 checked out beside it (`../CommonLibraries`, `../HCP65
 - Design pages (how it is built and why, its decisions and what isn't done): `HCP65IDE/HCP65IDE/Docs/ide/design`
   (architecture, the code model, refactoring, navigation, editing, the debugger, git, the checks).  Read the page
   before changing what it covers.
+- A design page's main classes name it in their headers, one line above the class, `//Design page: Docs/...`
+  (`DocsPlan.txt` G1); a new design page adds it to its own.
 - Plans beside the code in `HCP65IDE/HCP65IDE`, still being built from: `NextIDEWork.txt` (what's missing),
   `Navigation.txt` (the IntelliJ navigation gap list), `Refactorings.txt`, `GettersNotConst.txt` (questions for the
   user).  Finished and kept only as the record the code cites (a note at the end names the page; don't add to them):

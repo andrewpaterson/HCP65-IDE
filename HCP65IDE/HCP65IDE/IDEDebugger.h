@@ -158,6 +158,7 @@ struct SIDELineTableTarget
 //The own program's breakpoints (the disassembly's, and its line table's) stop only in its process, and wait unbound
 //while it isn't running.  A process started stops the emulator before it runs: its breakpoints are given and it goes
 //on (the stop isn't shown).
+//Design page: Docs/ide/design/debugger.md
 class CIDEDebugger
 {
 protected:

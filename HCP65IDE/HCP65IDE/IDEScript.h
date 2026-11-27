@@ -52,6 +52,7 @@ class CComponentInput;
 //A dialog the IDE shows (Go to, Rename, Save Changes) is watched (WatchDialog): with HCP65_IDE_DIALOG_SNAPSHOT set it is
 //saved to that PNG once drawn, and with HCP65_IDE_DIALOG_ANSWER (or the snapshot) it is answered with that button's
 //caption, Cancel if none is given.
+//Design page: Docs/ide/design/checks.md
 class CIDEScript : public CObject
 {
 CONSTRUCTABLE(CIDEScript);
