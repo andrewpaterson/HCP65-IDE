@@ -270,7 +270,12 @@ C5. The code index reads with the configuration's toolchain
 C6. CMake reads the projects too
   C6-1. One CMake module (CL/CMake/Vcxproj.cmake) instead of the 35 copies of vcxproj_sources (40 with question 18's
      three repositories; CL/CMake/VcxprojSources.cmake, the function alone, is there already and no CMakeLists.txt
-     includes it, whatever CommonLibraries/CLAUDE.md says: the module starts from it, found 2026-11-27).  It reads a
+     includes it, whatever CommonLibraries/CLAUDE.md says: the module starts from it, found 2026-11-27).  The copies
+     aren't alike (2026-11-27): 4 variants of vcxproj_sources and 17 of baselib_options in the 40 files.  Beyond
+     each one's include directories and the switches it offers (BASELIB_SIZE16, BASELIB_MALLOC, BASELIB_TSAN), the
+     programs' and X65C64Emulator's are 64-bit only; HCP65Tester, HCP65IDE, LogiCim, DeviceROM and TestAssembler65Lib
+     have no -march=haswell and none of the Release options, and HCP65Sculpt, WindowInputTester and Battle no Release
+     options.  One module gives them all the same, which changes those builds: said when C6 is built.  It reads a
      project's sources and its GCC group's defines and options (following its imports, as C2), for
      CMAKE_BUILD_TYPE's configuration (Release|GCC-x64, Debug|GCC-x64; a 32-bit build reads GCC-x64's and swaps -m64
      for its own).  The CMakeLists.txt files keep only their targets and what is CMake's own (BASELIB_ASAN,
@@ -492,6 +497,13 @@ C12. The break switch (added 2026-11-27, question 20)
   C12-5. Tests: TestBaseLib runs a small program of its own three ways (unset, 0, 1) and checks which end with
      SIGTRAP after a logged error and after a failed assert; the Debug suites pass with BASELIB_BREAK=0 from ctest
      and, as the IDE's Debug|GCC builds do now, by hand without it.
+  Built 2026-11-27 (the user: "Carry on with the plan in your suggested order"): C12-1, C12-2, C12-4 and C12-5
+  (CommonLibraries 514fadadc).  GetBreakSwitch (BaseLib/Validation.cpp) reads the variable once, CLogger::Init applies
+  it (ApplyBreakSwitch) and Validate asks it.  C12-5 as built: TestLoggerBreakSwitch tests the values and what each
+  does to the logger's configuration; the three-ways run was done once by hand, not kept as a test (a failed assert
+  ends with SIGTRAP unset and with 1 and goes on with 0; a logged error ends with SIGTRAP only with 1 in a Release
+  build).  It compiles for the W65C816 and the 65C64.  BaseLib's index page (Stopping on an error) is where it is
+  said; the recipes point there.  C12-3 waits for C6 and C7-1.
 
 
 The order (2026-11-27): C0 (built: it fixed the Release|GCC build), then C11-1 (the names C1 reads groups by), C1, C2
