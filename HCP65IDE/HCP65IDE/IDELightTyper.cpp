@@ -840,6 +840,7 @@ bool CIDELightTyper::TypeOfFunction(SIDELightType* psDest, CChars* pszText)
 	bResult = mbFunction && mpcContent->GetCodeModel()->GetSymbolAt(mszFunctionFile.Text(), miFunctionLine, miFunctionColumn, &szKey, &uiKind) && ReadDeclaredType(szKey.Text(), pszText);
 	if (bResult)
 	{
+		szScope.Init();
 		GetIDESymbolScope(szKey.Text(), &szScope);
 		TypeOfText(pszText->Text(), szScope.Text(), psDest);
 		szScope.Kill();
