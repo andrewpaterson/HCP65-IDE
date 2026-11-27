@@ -27,6 +27,7 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 #include "VisualStudioLib/VcxSolution.h"
 #include "BuildConfigurations.h"
 #include "RunConfiguration.h"
+#include "BuildCard.h"
 
 
 #define BUILD_WORKSPACE_EXTENSION	".hcp65workspace"
@@ -99,6 +100,7 @@ protected:
 	CChars							mszConfiguration;	//The configuration chosen last, empty if none.
 	CChars							mszRunConfiguration;	//The run configuration chosen last, empty if none.
 	CArrayRunConfigurations			masRunConfigurations;
+	CArrayChars						maszSharedFiles;	//The shared run configurations' files read or written: one whose run configuration has gone is deleted (Write).
 	CArrayBuildWorkspaceProjects	masProjects;
 
 public:
@@ -132,6 +134,7 @@ public:
 	void					RemoveRunConfiguration(size uiIndex);
 	void					SetRunConfigurations(CArrayRunConfigurations* pasConfigurations);
 	void					AddDefaultRunConfigurations(void);
+	bool					ApplyRunConfiguration(CRunConfiguration* pcRun, CChars* pszError);
 
 	size					NumSolutions(void) const;
 	CBuildWorkspaceSolution*	GetSolution(size uiSolution);
@@ -159,6 +162,9 @@ protected:
 	size					GetSolutionInOrder(size uiIndex);
 	void					GetCardPrograms(const char* szConfiguration, EBuildProgram eProgram, CArrayInt* paiDest);
 	void					ClearRunConfigurations(void);
+	void					ReadSharedRunConfigurations(const char* szDirectory);
+	bool					WriteSharedRunConfigurations(void);
+	void					GetRunConfigurationDirectory(CRunConfiguration* pcRun, CChars* pszDest);
 };
 
 

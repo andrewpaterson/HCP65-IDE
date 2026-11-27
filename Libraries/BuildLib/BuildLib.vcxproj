@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="BuildCard.cpp" />
     <ClCompile Include="BuildConfiguration.cpp" />
     <ClCompile Include="BuildConfigurationProject.cpp" />
     <ClCompile Include="BuildConfigurations.cpp" />
@@ -36,6 +37,7 @@
     <ClCompile Include="BuildPlain.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="BuildCard.h" />
     <ClInclude Include="BuildConfiguration.h" />
     <ClInclude Include="BuildConfigurations.h" />
     <ClInclude Include="BuildWorkspace.h" />

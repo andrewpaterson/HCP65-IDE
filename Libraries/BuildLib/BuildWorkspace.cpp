@@ -216,6 +216,7 @@ void CBuildWorkspace::Init(void)
 	mszConfiguration.Init();
 	mszRunConfiguration.Init();
 	masRunConfigurations.Init();
+	maszSharedFiles.Init();
 	masProjects.Init();
 }
 
@@ -228,6 +229,7 @@ void CBuildWorkspace::Kill(void)
 {
 	Clear();
 	masProjects.Kill();
+	maszSharedFiles.Kill();
 	masRunConfigurations.Kill();
 	mszRunConfiguration.Kill();
 	mszConfiguration.Kill();
@@ -369,6 +371,270 @@ void CBuildWorkspace::AddDefaultRunConfigurations(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// The shared run configurations of the solution in szDirectory: each
+// .hcp65run file in its .run folder, in name order.  A private one of the
+// same name is renamed ("ModPlay (private)"), as the shared one is what
+// everyone else has; one that can't be read, or a second shared one of a
+// name, is left out.
+//
+//////////////////////////////////////////////////////////////////////////
+void CBuildWorkspace::ReadSharedRunConfigurations(const char* szDirectory)
+{
+	CFileUtil			cFileUtil;
+	CArrayChars			aszFiles;
+	CChars				szFolder;
+	CChars				szName;
+	CChars				szFileDirectory;
+	CXMLFile			cFile;
+	CMarkupTag*			pcRoot;
+	CRunConfiguration	cRun;
+	CRunConfiguration*	pcPrivate;
+	size				i;
+
+	szFolder.Init(szDirectory);
+	cFileUtil.AppendToPath(&szFolder, RUN_CONFIGURATION_FOLDER);
+	aszFiles.Init();
+	if (cFileUtil.IsDirectory(szFolder.Text()))
+	{
+		cFileUtil.FindFilesWithExtension(szFolder.Text(), &RUN_CONFIGURATION_EXTENSION[1], &aszFiles);
+	}
+	aszFiles.QuickSort();
+	szName.Init();
+	szFileDirectory.Init();
+	for (i = 0; i < aszFiles.NumElements(); i++)
+	{
+		szName.Set("");
+		szFileDirectory.Set("");
+		cFileUtil.SplitPath(aszFiles.GetText(i), &szName, &szFileDirectory);
+		cFile.Init();
+		pcRoot = (cFile.Read(szName.Text(), szFileDirectory.Text()) && cFile.mcMarkup.mpcDoc) ? cFile.mcMarkup.mpcDoc->GetRootTag() : NULL;
+		cRun.Init();
+		if (pcRoot && (StringCompare(pcRoot->GetName(), RUN_CONFIGURATION_TAG) == 0) && cRun.LoadXML(pcRoot))
+		{
+			pcPrivate = FindRunConfiguration(cRun.GetName());
+			if ((pcPrivate != NULL) && !pcPrivate->IsShared())
+			{
+				szName.Set(cRun.GetName());
+				do
+				{
+					szName.Append(" (private)");
+				}
+				while (FindRunConfiguration(szName.Text()) != NULL);
+				if (StringCompare(mszRunConfiguration.Text(), pcPrivate->GetName()) == 0)
+				{
+					mszRunConfiguration.Set(szName);
+				}
+				pcPrivate->SetName(szName.Text());
+				pcPrivate = NULL;
+			}
+			if (pcPrivate == NULL)
+			{
+				cRun.SetShared(szDirectory);
+				masRunConfigurations.Add()->Init(&cRun);
+				maszSharedFiles.AddIfUnique(aszFiles.GetText(i));
+			}
+		}
+		cRun.Kill();
+		cFile.Kill();
+	}
+	szFileDirectory.Kill();
+	szName.Kill();
+	aszFiles.Kill();
+	szFolder.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Each shared run configuration written to its own file, and the files of
+// those that have gone, been renamed or made private deleted.  False if
+// one can't be written.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CBuildWorkspace::WriteSharedRunConfigurations(void)
+{
+	CFileUtil			cFileUtil;
+	CRunConfiguration*	pcRun;
+	CXMLWriter			cWriter;
+	CArrayChars			aszWritten;
+	CChars				szFile;
+	CChars				szFolder;
+	size				i;
+	bool				bResult;
+
+	bResult = true;
+	aszWritten.Init();
+	szFile.Init();
+	szFolder.Init();
+	for (i = 0; i < masRunConfigurations.NumElements(); i++)
+	{
+		pcRun = masRunConfigurations.Get(i);
+		if (pcRun->IsShared())
+		{
+			pcRun->GetSharedFile(&szFile);
+			aszWritten.Add(szFile.Text());
+			szFolder.Set(pcRun->GetShared());
+			cFileUtil.AppendToPath(&szFolder, RUN_CONFIGURATION_FOLDER);
+			cFileUtil.TouchDir(szFolder.Text());
+			cWriter.Init();
+			pcRun->SaveXML(&cWriter);
+			bResult &= cWriter.Write(szFile.Text());
+			cWriter.Kill();
+		}
+	}
+	for (i = 0; i < maszSharedFiles.NumElements(); i++)
+	{
+		if (!aszWritten.Contains(maszSharedFiles.GetText(i)))
+		{
+			cFileUtil.Delete(maszSharedFiles.GetText(i));
+		}
+	}
+	maszSharedFiles.ReInit();
+	for (i = 0; i < aszWritten.NumElements(); i++)
+	{
+		maszSharedFiles.Add(aszWritten.GetText(i));
+	}
+	szFolder.Kill();
+	szFile.Kill();
+	aszWritten.Kill();
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The folder a run configuration's paths are relative to: its solution's
+// if it is shared, else the workspace file's (the startup solution's if
+// the workspace has no file yet).
+//
+//////////////////////////////////////////////////////////////////////////
+void CBuildWorkspace::GetRunConfigurationDirectory(CRunConfiguration* pcRun, CChars* pszDest)
+{
+	CFileUtil	cFileUtil;
+	CChars		szName;
+
+	if (pcRun->IsShared())
+	{
+		pszDest->Set(pcRun->GetShared());
+	}
+	else if (!mszFile.Empty())
+	{
+		szName.Init();
+		pszDest->Set("");
+		cFileUtil.SplitPath(mszFile.Text(), &szName, pszDest);
+		szName.Kill();
+	}
+	else
+	{
+		pszDest->Set((muiStartup != MAX_SIZE) ? GetStartupSolution()->mcSolution.GetDirectory() : "");
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// How pcRun says its build configuration is debugged, given to that build
+// configuration of every solution, where debugging and hcp65build -card
+// read it (ConfigurationsPlan.txt C8): each solution whose program is on
+// the run configuration's card is on it at the card's path for it; the
+// startup solution's also has the run configuration's loads and breakpoint
+// space, and reads as they are linked the line tables of the card's
+// programs that say so (Lines) and that no solution here builds.
+//
+// A run configuration that says nothing of debugging changes nothing: the
+// build configurations keep what a configurations file gave them.  False,
+// with why in pszError, if its card file can't be read.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CBuildWorkspace::ApplyRunConfiguration(CRunConfiguration* pcRun, CChars* pszError)
+{
+	CBuildConfiguration*	pcConfiguration;
+	CBuildCard				cCard;
+	CArrayInt				aiBuilt;
+	CChars					szDirectory;
+	CChars					szFile;
+	CChars					szImage;
+	const char*				szConfiguration;
+	size					uiProgram;
+	size					i;
+	bool					bCard;
+
+	if ((pcRun == NULL) || !pcRun->HasDebugging())
+	{
+		return true;
+	}
+	szConfiguration = pcRun->GetConfiguration();
+	szDirectory.Init();
+	GetRunConfigurationDirectory(pcRun, &szDirectory);
+	szFile.Init();
+	szImage.Init();
+	cCard.Init();
+	bCard = pcRun->GetCard()[0] != '\0';
+	if (bCard)
+	{
+		FullPathFrom(szDirectory.Text(), pcRun->GetCard(), &szFile);
+		if (!cCard.Read(szFile.Text()))
+		{
+			pszError->Set("The card file [");
+			pszError->Append(szFile)->Append("] of the run configuration ")->Append(pcRun->GetName())->Append(" can't be read.");
+			cCard.Kill();
+			szImage.Kill();
+			szFile.Kill();
+			szDirectory.Kill();
+			return false;
+		}
+		cCard.GetImage(&szImage);
+	}
+
+	aiBuilt.Init();
+	for (i = 0; i < mapcSolutions.NumElements(); i++)
+	{
+		pcConfiguration = FindConfiguration(i, szConfiguration);
+		if ((pcConfiguration == NULL) || !pcConfiguration->IsHCP65())
+		{
+			continue;
+		}
+		pcConfiguration->ClearDebugging();
+		if (bCard && CBuild::GetProgramPath(GetSolution(i)->mcSolution.GetDirectory(), pcConfiguration, &szFile))
+		{
+			uiProgram = cCard.FindProgram(szFile.Text(), szConfiguration);
+			if (uiProgram != ARRAY_ELEMENT_NOT_FOUND)
+			{
+				pcConfiguration->SetCard(szImage.Text(), cCard.GetProgramPath(uiProgram));
+				aiBuilt.Add((int)uiProgram);
+			}
+		}
+	}
+
+	pcConfiguration = (muiStartup != MAX_SIZE) ? FindConfiguration(muiStartup, szConfiguration) : NULL;
+	if ((pcConfiguration != NULL) && pcConfiguration->IsHCP65())
+	{
+		pcConfiguration->SetBreakpointSpace(pcRun->GetBreakpointSpace());
+		for (i = 0; i < pcRun->NumLoads(); i++)
+		{
+			FullPathFrom(szDirectory.Text(), pcRun->GetLoadFile(i), &szFile);
+			pcConfiguration->AddLoad(szFile.Text(), pcRun->GetLoadAddress(i));
+		}
+		for (i = 0; i < cCard.NumPrograms(); i++)
+		{
+			if ((cCard.GetProgramLines(i)[0] != '\0') && (aiBuilt.Find((int)i) == ARRAY_ELEMENT_NOT_FOUND))
+			{
+				cCard.GetProgramFile(i, szConfiguration, &szFile);
+				pcConfiguration->AddLines(szFile.Text(), cCard.GetProgramLines(i), cCard.GetProgramPath(i));
+			}
+		}
+	}
+	aiBuilt.Kill();
+	cCard.Kill();
+	szImage.Kill();
+	szFile.Kill();
+	szDirectory.Kill();
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // No solutions, and no workspace file.
 //
 //////////////////////////////////////////////////////////////////////////
@@ -387,6 +653,7 @@ void CBuildWorkspace::Clear(void)
 	mszConfiguration.Set("");
 	mszRunConfiguration.Set("");
 	ClearRunConfigurations();
+	maszSharedFiles.ReInit();
 	mszFile.Set("");
 }
 
@@ -464,6 +731,7 @@ bool CBuildWorkspace::Read(const char* szFile)
 			cRun.Init();
 			if (cRun.LoadXML(pcTag) && (FindRunConfiguration(cRun.GetName()) == NULL))
 			{
+				cRun.SetShared(NULL);
 				masRunConfigurations.Add()->Init(&cRun);
 			}
 			else
@@ -558,11 +826,15 @@ bool CBuildWorkspace::Write(const char* szFile)
 	}
 	for (i = 0; i < masRunConfigurations.NumElements(); i++)
 	{
-		masRunConfigurations.Get(i)->SaveXML(&cWriter);
+		if (!masRunConfigurations.Get(i)->IsShared())
+		{
+			masRunConfigurations.Get(i)->SaveXML(&cWriter);
+		}
 	}
 	cWriter.End();
 	bResult = cWriter.Write(szFull.Text());
 	cWriter.Kill();
+	bResult &= WriteSharedRunConfigurations();
 	if (bResult)
 	{
 		mszFile.Set(szFull);
@@ -731,6 +1003,7 @@ size CBuildWorkspace::AddSolution(const char* szFile)
 	pcSolution->Open(szFull.Text());
 	szFull.Kill();
 	*mapcSolutions.Add() = pcSolution;
+	ReadSharedRunConfigurations(pcSolution->mcSolution.GetDirectory());
 	if (muiStartup == MAX_SIZE)
 	{
 		muiStartup = 0;

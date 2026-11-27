@@ -621,6 +621,157 @@ void TestBuildWorkspaceProjectLinked(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// A shared run configuration is a file of its own in the .run folder of a
+// solution, read with the solution; a private one of its name is renamed.
+// It says how its build configuration is debugged: the card, a card file
+// listing the programs on it, and what is loaded first.  Applied, each
+// solution whose program the card lists is on the card at its path, and
+// the startup solution's reads the line table of the card's kernal, which
+// no solution here builds (ConfigurationsPlan.txt C8, question 27).
+//
+//////////////////////////////////////////////////////////////////////////
+void TestBuildWorkspaceSharedRunConfigurations(void)
+{
+	CBuildWorkspace			cWorkspace;
+	CBuildWorkspace			cRead;
+	CBuildConfiguration*	pcProgram;
+	CBuildConfiguration*	pcDriver;
+	CRunConfiguration*		pcRun;
+	CBuildCard				cCard;
+	CTextFile				cFile;
+	CFileUtil				cFileUtil;
+	CChars					szFull;
+	CChars					szError;
+	size					uiDriver;
+
+	cFileUtil.RemoveDir("Output" _FS_ "Shared");
+	AssertTrue(cFileUtil.CopyDir("Input" _FS_ "Workspace", "Output" _FS_ "Shared"));
+	AssertTrue(cFileUtil.TouchDir("Output" _FS_ "Shared" _FS_ "Cards"));
+	cCard.Init();
+	cCard.SetImage("..\\Card.img");
+	cCard.AddProgram("..\\OS\\Output\\$(Platform)\\$(Configuration)\\os.sys", "\\OS\\OS.SYS", "Kernel");
+	cCard.AddProgram("..\\Driver\\Output\\$(Platform)\\$(Configuration)\\d.drv", "\\OS\\D.DRV", NULL);
+	cCard.AddProgram("..\\Program\\Output\\$(Platform)\\$(Configuration)\\p.exe", "\\run.exe", NULL);
+	AssertTrue(cCard.Write("Output" _FS_ "Shared" _FS_ "Cards" _FS_ "Test.hcp65card"));
+	cCard.Kill();
+	cCard.Init();
+	AssertTrue(cCard.Read("Output" _FS_ "Shared" _FS_ "Cards" _FS_ "Test.hcp65card"));
+	AssertSize(3, cCard.NumPrograms());
+	AssertString("Kernel", cCard.GetProgramLines(0));
+	AssertString("", cCard.GetProgramLines(2));
+	szFull.Init("Output" _FS_ "Shared" _FS_ "Program" _FS_ "Output" _FS_ "HCP65C816" _FS_ "Debug" _FS_ "p.exe");
+	cFileUtil.FullPath(&szFull);
+	AssertSize(2, cCard.FindProgram(szFull.Text(), "Debug|HCP65C816"));
+	AssertSize(ARRAY_ELEMENT_NOT_FOUND, cCard.FindProgram(szFull.Text(), "Release|HCP65C816"));
+	cCard.Kill();
+	AssertFalse(cCard.Read("Output" _FS_ "Shared" _FS_ "Cards" _FS_ "None.hcp65card"));
+	cCard.Kill();
+
+	cWorkspace.Init();
+	AssertTrue(cWorkspace.Open("Output" _FS_ "Shared" _FS_ "Program" _FS_ "Program.sln"));
+	uiDriver = cWorkspace.AddSolution("Output" _FS_ "Shared" _FS_ "Driver" _FS_ "Driver.sln");
+	AssertSize(1, uiDriver);
+	AssertSize(0, cWorkspace.NumRunConfigurations());
+	pcRun = cWorkspace.AddRunConfiguration("On Card", "Release|HCP65C816");
+	AssertFalse(pcRun->HasDebugging());
+	AssertFalse(pcRun->IsShared());
+	pcRun->SetShared(cWorkspace.GetSolution(0)->mcSolution.GetDirectory());
+	pcRun->SetCard("..\\Cards\\Test.hcp65card");
+	pcRun->AddLoad("..\\Kernel\\Output\\HCP65C816\\Release\\k.rom", 0x8000);
+	AssertTrue(pcRun->HasDebugging());
+	AssertFalse(pcRun->IsDefault());
+	cWorkspace.AddRunConfiguration("Mine", "Debug|HCP65C816")->SetTool("Emulator", "", "");
+	pcRun = cWorkspace.FindRunConfiguration("On Card");
+	AssertTrue(cWorkspace.Write("Output" _FS_ "Shared" _FS_ "Test" BUILD_WORKSPACE_EXTENSION));
+
+	//The shared one is its own file, written as the run configuration is; the workspace file has the private one.
+	cFile.Init();
+	AssertTrue(cFile.Read("Output" _FS_ "Shared" _FS_ "Program" _FS_ ".run" _FS_ "On Card.hcp65run"));
+	AssertTrue(strstr(cFile.Text(), "<RunConfiguration Name=\"On Card\" Configuration=\"Release|HCP65C816\" Card=\"..\\Cards\\Test.hcp65card\">") != NULL);
+	AssertTrue(strstr(cFile.Text(), "<Load File=\"..\\Kernel\\Output\\HCP65C816\\Release\\k.rom\" Address=\"0x8000\"/>") != NULL);
+	cFile.Kill();
+	cFile.Init();
+	AssertTrue(cFile.Read("Output" _FS_ "Shared" _FS_ "Test" BUILD_WORKSPACE_EXTENSION));
+	AssertTrue(strstr(cFile.Text(), "Mine") != NULL);
+	AssertTrue(strstr(cFile.Text(), "On Card") == NULL);
+	cFile.Kill();
+
+	//Applied: the program and the driver are on the card where it says, in place of what their files said.
+	pcProgram = cWorkspace.FindConfiguration(0, "Release|HCP65C816");
+	pcDriver = cWorkspace.FindConfiguration(uiDriver, "Release|HCP65C816");
+	AssertString("\\p.exe", pcProgram->GetCardPath());
+	szError.Init();
+	AssertTrue(cWorkspace.ApplyRunConfiguration(pcRun, &szError));
+	AssertString("\\run.exe", pcProgram->GetCardPath());
+	szFull.Set("Output" _FS_ "Shared" _FS_ "Card.img");
+	cFileUtil.FullPath(&szFull);
+	AssertString(szFull.Text(), pcProgram->GetCard());
+	AssertTrue(pcProgram->IsOnCard());
+	AssertString("User", pcProgram->GetBreakpointSpace());
+	AssertSize(1, pcProgram->NumLoads());
+	szFull.Set("Output" _FS_ "Shared" _FS_ "Kernel" _FS_ "Output" _FS_ "HCP65C816" _FS_ "Release" _FS_ "k.rom");
+	cFileUtil.FullPath(&szFull);
+	AssertString(szFull.Text(), pcProgram->GetLoadFile(0));
+	AssertInt(0x8000, pcProgram->GetLoadAddress(0));
+	AssertSize(1, pcProgram->NumLines());
+	szFull.Set("Output" _FS_ "Shared" _FS_ "OS" _FS_ "Output" _FS_ "HCP65C816" _FS_ "Release" _FS_ "os.sys");
+	cFileUtil.FullPath(&szFull);
+	AssertString(szFull.Text(), pcProgram->GetLinesFile(0));
+	AssertString("Kernel", pcProgram->GetLinesSpace(0));
+	AssertString("\\OS\\OS.SYS", pcProgram->GetLinesCardPath(0));
+	AssertString("\\OS\\D.DRV", pcDriver->GetCardPath());
+	AssertTrue(pcDriver->IsOnCard());
+	AssertSize(0, pcDriver->NumLoads());
+	AssertString("Kernel", pcDriver->GetBreakpointSpace());
+	//Debug's weren't touched, and a run configuration that says nothing of debugging changes nothing.
+	AssertFalse(cWorkspace.FindConfiguration(0, "Debug|HCP65C816")->IsOnCard());
+	AssertTrue(cWorkspace.ApplyRunConfiguration(cWorkspace.FindRunConfiguration("Mine"), &szError));
+	AssertFalse(cWorkspace.FindConfiguration(0, "Debug|HCP65C816")->IsOnCard());
+
+	//With the kernal's solution here its line table is the workspace's to read, as an image on the card.
+	cWorkspace.AddSolution("Output" _FS_ "Shared" _FS_ "OS" _FS_ "OS.sln");
+	AssertTrue(cWorkspace.ApplyRunConfiguration(pcRun, &szError));
+	AssertSize(0, pcProgram->NumLines());
+	AssertString("\\OS\\OS.SYS", cWorkspace.FindConfiguration(2, "Release|HCP65C816")->GetCardPath());
+
+	//A card file that isn't there.
+	pcRun->SetCard("..\\Cards\\None.hcp65card");
+	AssertFalse(cWorkspace.ApplyRunConfiguration(pcRun, &szError));
+	AssertTrue(szError.Contains("None.hcp65card] of the run configuration On Card can't be read."));
+	szError.Kill();
+	cWorkspace.Kill();
+
+	//Read with its solution.  A private one of a shared one's name is renamed.
+	cFile.Init("<RunConfiguration Name=\"Mine\" Configuration=\"Release|HCP65C816\"/>\n");
+	AssertTrue(cFile.Write("Output" _FS_ "Shared" _FS_ "Program" _FS_ ".run" _FS_ "Mine.hcp65run"));
+	cFile.Kill();
+	cRead.Init();
+	AssertTrue(cRead.Read("Output" _FS_ "Shared" _FS_ "Test" BUILD_WORKSPACE_EXTENSION));
+	AssertSize(3, cRead.NumRunConfigurations());
+	AssertTrue(cRead.FindRunConfiguration("On Card")->IsShared());
+	AssertString("..\\Cards\\Test.hcp65card", cRead.FindRunConfiguration("On Card")->GetCard());
+	AssertSize(1, cRead.FindRunConfiguration("On Card")->NumLoads());
+	AssertTrue(cRead.FindRunConfiguration("Mine")->IsShared());
+	AssertString("Release|HCP65C816", cRead.FindRunConfiguration("Mine")->GetConfiguration());
+	AssertFalse(cRead.FindRunConfiguration("Mine (private)")->IsShared());
+	AssertString("Emulator", cRead.FindRunConfiguration("Mine (private)")->GetTool());
+
+	//Made private, its file goes and the workspace file has it.
+	cRead.FindRunConfiguration("On Card")->SetShared(NULL);
+	AssertTrue(cRead.Write("Output" _FS_ "Shared" _FS_ "Test" BUILD_WORKSPACE_EXTENSION));
+	AssertFalse(cFileUtil.Exists("Output" _FS_ "Shared" _FS_ "Program" _FS_ ".run" _FS_ "On Card.hcp65run"));
+	AssertTrue(cFileUtil.Exists("Output" _FS_ "Shared" _FS_ "Program" _FS_ ".run" _FS_ "Mine.hcp65run"));
+	cFile.Init();
+	AssertTrue(cFile.Read("Output" _FS_ "Shared" _FS_ "Test" BUILD_WORKSPACE_EXTENSION));
+	AssertTrue(strstr(cFile.Text(), "On Card") != NULL);
+	cFile.Kill();
+	cRead.Kill();
+	szFull.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 //
 //////////////////////////////////////////////////////////////////////////
 void TestBuildWorkspace(void)
@@ -635,6 +786,7 @@ void TestBuildWorkspace(void)
 	TestBuildWorkspaceRunConfigurations();
 	TestBuildWorkspaceStartupProject();
 	TestBuildWorkspaceProjectLinked();
+	TestBuildWorkspaceSharedRunConfigurations();
 
 	TestStatistics();
 }

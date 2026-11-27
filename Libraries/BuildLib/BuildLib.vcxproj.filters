@@ -12,6 +12,9 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="BuildCard.cpp">
+      <Filter>Source\Configuration</Filter>
+    </ClCompile>
     <ClCompile Include="BuildConfiguration.cpp">
       <Filter>Source\Configuration</Filter>
     </ClCompile>
@@ -59,6 +62,9 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="BuildCard.h">
+      <Filter>Source\Configuration</Filter>
+    </ClInclude>
     <ClInclude Include="BuildConfiguration.h">
       <Filter>Source\Configuration</Filter>
     </ClInclude>

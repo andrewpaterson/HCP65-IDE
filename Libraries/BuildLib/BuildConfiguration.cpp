@@ -584,7 +584,8 @@ CAsm65Image* CBuildConfiguration::GetImage(void)
 //////////////////////////////////////////////////////////////////////////
 //
 // The emulator's breakpoint space ("Kernel", "User") debugging puts the
-// breakpoints in; NULL or "" for every space.
+// breakpoints in, in place of the one worked out; NULL or "" to work it
+// out.
 //
 //////////////////////////////////////////////////////////////////////////
 void CBuildConfiguration::SetBreakpointSpace(const char* szSpace)
@@ -595,11 +596,43 @@ void CBuildConfiguration::SetBreakpointSpace(const char* szSpace)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// The breakpoint space: the one set, or else worked out from what is
+// debugged (ConfigurationsPlan.txt question 10).  On the W65C816 an
+// executable's is "User" and a module's or an image's "Kernel"; "" is
+// every space, as on the 65C64, which has none.
 //
 //////////////////////////////////////////////////////////////////////////
 char* CBuildConfiguration::GetBreakpointSpace(void)
 {
-	return mszBreakpointSpace.Text();
+	if (!mszBreakpointSpace.Empty() || (meToolchain != BT_W65C816))
+	{
+		return mszBreakpointSpace.Text();
+	}
+	if (meProgram == BP_Executable)
+	{
+		return (char*)"User";
+	}
+	return ((meProgram == BP_Module) || (meProgram == BP_Image)) ? (char*)"Kernel" : mszBreakpointSpace.Text();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Nothing of how it is debugged: no card, nothing loaded first, no other
+// programs' line tables and no breakpoint space set.  A run configuration
+// then says each (CBuildWorkspace::ApplyRunConfiguration).
+//
+//////////////////////////////////////////////////////////////////////////
+void CBuildConfiguration::ClearDebugging(void)
+{
+	mszBreakpointSpace.Set("");
+	mszCard.Set("");
+	mszCardPath.Set("");
+	maszLoadFiles.ReInit();
+	mauiLoadAddresses.ReInit();
+	maszLinesFiles.ReInit();
+	maszLinesSpaces.ReInit();
+	maszLinesCardPaths.ReInit();
 }
 
 

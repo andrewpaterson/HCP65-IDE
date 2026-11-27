@@ -181,6 +181,7 @@ public:
 
 	void			SetBreakpointSpace(const char* szSpace);
 	char*			GetBreakpointSpace(void);
+	void			ClearDebugging(void);
 	void			SetNoFloats(bool bNoFloats);
 	bool			IsNoFloats(void) const;
 	void			SetMathTables(bool bMathTables);
