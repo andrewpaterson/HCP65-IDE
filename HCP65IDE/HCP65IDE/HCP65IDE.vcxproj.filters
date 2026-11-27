@@ -799,6 +799,9 @@
     <None Include="CodeTemplates.txt">
       <Filter>Plans</Filter>
     </None>
+    <None Include="ConfigurationsPlan.txt">
+      <Filter>Plans</Filter>
+    </None>
     <None Include="Debugger65C64Plan.txt">
       <Filter>Plans</Filter>
     </None>
