@@ -3413,13 +3413,14 @@ CHECKS = [
 	('enum-to-class', dict(MakeEnumsCopy(), **{
 		#Convert Enum to Enum Class: EMode's enum becomes enum class and its enumerators get its name wherever they
 		#are named without it (not in its own list, nor where it is written already); from an enumerator, CMotor's
-		#EState, whose enumerators are named in the class and with the class's name.  ELevel's value is added to, used
+		#EState, whose enumerators are named in the class and with the class's name.  EM_Fast = EM_Slow * 2 in EMode's
+		#own list needs no cast: there an enumerator has the underlying type [dcl.enum] 5.  ELevel's value is added to, used
 		#as an index and as a condition, and given to an int: each gets its cast.  EFlag's are or-ed and and-ed, and
 		#|= is written out.  EStep's is stepped with ++: refused.
 		'WAIT_INDEX': '1', 'OPEN': 'Modes.h',
 		'DEBUG': 'edit:renamesearch:---s,edit:caret:5:7,edit:enumtoclass,edit:caret:25:4,edit:enumtoclass,edit:caret:13:7,edit:enumtoclass,edit:caret:39:7,edit:enumtoclass,edit:caret:20:8,edit:convertableenum,'
 				 'edit:open:Use.cpp,edit:caret:41:7,edit:enumtoclass,printdisklines:Modes.h,printdisklines:Modes.cpp,printdisklines:Use.cpp'}),
-		[r'^Convert Enum: EMode, 3 enumerators, 1 declaration, 4 uses in 3 files, casts at 1 place$', r'^Status: Made EMode an enum class: 4 uses of its enumerators given its name, in 3 files; casts written at 1 place\.$',
+		[r'^Convert Enum: EMode, 3 enumerators, 1 declaration, 4 uses in 3 files$', r'^Status: Made EMode an enum class: 4 uses of its enumerators given its name, in 3 files\.$',
 		 r'^Convert Enum: EState, 2 enumerators, 1 declaration, 3 uses in 2 files$', r'^Status: Made EState an enum class: 3 uses of its enumerators given its name, in 3 files\.$',
 		 r'^Convert Enum: ELevel, 2 enumerators, 1 declaration, 5 uses in 2 files, casts at 5 places$',
 		 r'^Status: Made ELevel an enum class: 5 uses of its enumerators given its name, in 3 files; casts written at 5 places\.$',
@@ -3428,7 +3429,7 @@ CHECKS = [
 		 r'^Convert Enum: no enum at the caret$',
 		 r"^Convert Enum: EStep can't be: its value is stepped with \+\+ or --, which an enum class's can't be \(Use\.cpp line 57\)$",
 		 r"^Status: Can't make EStep an enum class: its value is stepped with \+\+ or --, which an enum class's can't be \(Use\.cpp line 57\)\.$",
-		 r'^5\|enum class EMode$', r'^9\|\tEM_Fast = \(int\)EM_Slow \* 2,$', r'^13\|enum class ELevel$', r'^23\|\tenum class EState$', r'^34\|\tbool\tIsFast\(void\) \{ return meMode == EMode::EM_Fast; \}$',
+		 r'^5\|enum class EMode$', r'^9\|\tEM_Fast = EM_Slow \* 2,$', r'^13\|enum class ELevel$', r'^23\|\tenum class EState$', r'^34\|\tbool\tIsFast\(void\) \{ return meMode == EMode::EM_Fast; \}$',
 		 r'^39\|enum class EFlag$', r'^46 lines$',
 		 r'^10\|\tmeMode = EMode::EM_Off;$', r'^11\|\tmeState = EState::ES_Idle;$', r'^12\|\tmeLevel = ELevel::EL_Low;$', r'^24\|\tcase EMode::EM_Slow:$', r'^26\|\tcase EMode::EM_Fast:$',
 		 r'^29\|\t\treturn \(meState == EState::ES_Running\) \? 3 : 0;$', r'^31 lines$',
