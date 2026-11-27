@@ -12,6 +12,17 @@ int OnHost(void) { return 1; }
 #endif
 
 
+#ifdef __linux__
+int OnLinux(void) { return 5; }
+#endif
+
+
+//The project's own, in its GCC-x64 configuration alone.
+#ifdef LINUX_GNU
+int WithLinuxDefine(void) { return 6; }
+#endif
+
+
 #ifdef __W65C816__
 int OnW65C816(void) { return 2; }
 #endif

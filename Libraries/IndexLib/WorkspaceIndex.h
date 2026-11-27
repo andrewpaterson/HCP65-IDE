@@ -102,6 +102,7 @@ protected:
 	CChars						mszConfiguration;		//The build configuration, "Release|HCP65C816"; each solution builds its own solution configuration for it.
 	CArrayChars					maszSystemDirectories;	//Where the compiler's own headers are ($(IncludePath)).
 	bool						mbSystemDirectoriesMissing;	//Some that are needed aren't on this machine.
+	CArrayChars					maszGCCDirectories;		//GCC's own headers for Linux, a GCC configuration's (none on Windows).
 	CChars						mszLibc65;				//The HCP65 compiler's own headers (SetLibc65Directory), empty if it wasn't said.
 
 	CArrayWorkspaceProjects		mapcProjects;			//A CppCompilerLib project for each of the workspace's, NULL until used.
@@ -189,8 +190,9 @@ protected:
 	const char*				GetSolutionConfiguration(size uiSolution);
 	CBuildConfiguration*	FindBuildConfiguration(size uiSolution);
 	void					AddCompilerDefines(CVcxConfiguration* pcConfiguration, CConfig* pcConfig);
+	void					AddGCCDefines(CConfig* pcConfig);
 	void					AddTargetDefines(size uiProject, CVcxConfiguration* pcConfiguration, CConfig* pcConfig);
-	CBuildConfiguration*	FindHCP65Configuration(size uiProject);
+	CBuildConfiguration*	FindProjectBuildConfiguration(size uiProject);
 	void					KillProjects(void);
 	void					KillJobs(void);
 	void					StopJobs(void);

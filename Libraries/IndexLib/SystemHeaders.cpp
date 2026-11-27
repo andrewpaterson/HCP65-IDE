@@ -47,6 +47,19 @@ const char* gaszMinGWGCCOwnDirectories[] =
 };
 
 
+//A GCC configuration is read with Linux's headers, where g++ looks for them (% is the newest GCC's version).
+#define LINUX_GCC_DIRECTORY		"/usr/lib/gcc/x86_64-linux-gnu"
+const char* gaszLinuxGCCDirectories[] =
+{
+	"/usr/include/c++/%",
+	"/usr/include/x86_64-linux-gnu/c++/%",
+	"/usr/lib/gcc/x86_64-linux-gnu/%/include",
+	"/usr/include/x86_64-linux-gnu",
+	"/usr/include",
+	NULL
+};
+
+
 //////////////////////////////////////////////////////////////////////////
 //
 // Whether the MinGW GCC folder called szName ("13-win32") is newer than
@@ -413,3 +426,77 @@ bool FindSystemHeaderDirectories(CArrayChars* paszDest)
 	return bFound;
 }
 
+
+//////////////////////////////////////////////////////////////////////////
+//
+// GCC's own headers for Linux on this machine, added to paszDest in g++'s
+// order: the newest GCC's C++ library, GCC's own, then the C library's.
+// False if GCC isn't here (as on Windows, where a GCC configuration isn't
+// built) or one of them isn't.  HCP65_IDE_SYSTEM_ROOT is where they are
+// looked for in place of the root folder.
+//
+//////////////////////////////////////////////////////////////////////////
+bool FindGCCHeaderDirectories(CArrayChars* paszDest)
+{
+#ifdef LINUX_GNU
+	CFileUtil	cFileUtil;
+	CArrayChars	aszFound;
+	CChars		szRoot;
+	CChars		szName;
+	CChars		szParent;  //Then the version.
+	CChars		szPath;
+	int			iNewest;
+	size		i;
+	bool		bFound;
+
+	szRoot.Init((getenv("HCP65_IDE_SYSTEM_ROOT") != NULL) ? getenv("HCP65_IDE_SYSTEM_ROOT") : "");
+	szPath.Init(szRoot);
+	szPath.Append(LINUX_GCC_DIRECTORY);
+	szName.Init();
+	szParent.Init();
+	aszFound.Init();
+	if (cFileUtil.IsDirectory(szPath.Text()))
+	{
+		cFileUtil.FindAllDirectories(szPath.Text(), &aszFound);
+	}
+	iNewest = 0;
+	for (i = 0; i < aszFound.NumElements(); i++)
+	{
+		szName.Set("");
+		szParent.Set("");
+		cFileUtil.SplitPath(aszFound.GetText(i), &szName, &szParent);
+		if (atoi(szName.Text()) > iNewest)
+		{
+			iNewest = atoi(szName.Text());
+		}
+	}
+	aszFound.Kill();
+	szParent.Set("");
+	szParent.Append(iNewest);
+
+	bFound = iNewest > 0;
+	for (i = 0; bFound && (gaszLinuxGCCDirectories[i] != NULL); i++)
+	{
+		szName.Set(gaszLinuxGCCDirectories[i]);
+		szName.Replace("%", szParent.Text());
+		szName.Insert(0, szRoot.Text());
+		if (cFileUtil.IsDirectory(szName.Text()))
+		{
+			paszDest->Add(szName.Text());
+		}
+		else
+		{
+			bFound = false;
+			gcLogger.Info2(__METHOD__, " GCC's headers [", szName.Text(), "] aren't there.", NULL);
+		}
+	}
+	szParent.Kill();
+	szName.Kill();
+	szPath.Kill();
+	szRoot.Kill();
+	return bFound;
+#else
+	(void)paszDest;
+	return false;
+#endif
+}

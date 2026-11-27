@@ -24,6 +24,7 @@ along with Codaphela IndexLib.  If not, see <http://www.gnu.org/licenses/>.
 
 
 bool FindSystemHeaderDirectories(CArrayChars* paszDest);
+bool FindGCCHeaderDirectories(CArrayChars* paszDest);
 
 
 #endif // __SYSTEM_HEADERS_H__

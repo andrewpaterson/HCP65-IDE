@@ -35,6 +35,10 @@ along with Codaphela IndexLib.  If not, see <http://www.gnu.org/licenses/>.
 #define WORKSPACE_INDEX_THREADS	8
 
 
+//What g++ defines itself for 64-bit Linux, those code and the system's headers ask about (AddGCCDefines).
+static const char* gaszGCCDefines[] = { "__GNUC__=13", "__GNUC_MINOR__=3", "__GNUG__=13", "__linux__=1", "__linux=1", "__gnu_linux__=1", "__unix__=1", "__unix=1", "__ELF__=1", "__x86_64__=1", "__x86_64=1", "__amd64__=1", "__amd64=1", "__LP64__=1", "_LP64=1", "_GNU_SOURCE=1", NULL };
+
+
 //////////////////////////////////////////////////////////////////////////
 //
 //
@@ -120,6 +124,7 @@ void CWorkspaceIndex::Init(CBuildWorkspace* pcWorkspace)
 	mpcWorkspace = pcWorkspace;
 	mszConfiguration.Init();
 	maszSystemDirectories.Init();
+	maszGCCDirectories.Init();
 	mbSystemDirectoriesMissing = false;
 	mszLibc65.Init();
 
@@ -178,6 +183,7 @@ void CWorkspaceIndex::Kill(void)
 	mapcProjects.Kill();
 
 	mszLibc65.Kill();
+	maszGCCDirectories.Kill();
 	maszSystemDirectories.Kill();
 	mszConfiguration.Kill();
 	mpcWorkspace = NULL;
@@ -263,7 +269,9 @@ void CWorkspaceIndex::StopJobs(void)
 // those that exist; those that don't are logged, as without them almost
 // nothing can be parsed (see IsMissingSystemDirectories).  A project has
 // them after its own include directories, unless its solution is being
-// read with an HCP65 configuration (see SetLibc65Directory).
+// read with an HCP65 configuration (see SetLibc65Directory) or a GCC one,
+// which has Linux's (FindGCCHeaderDirectories; on a machine without them
+// it has none).
 //
 //////////////////////////////////////////////////////////////////////////
 void CWorkspaceIndex::AddDefaultSystemDirectories(void)
@@ -272,6 +280,7 @@ void CWorkspaceIndex::AddDefaultSystemDirectories(void)
 	{
 		mbSystemDirectoriesMissing = true;
 	}
+	FindGCCHeaderDirectories(&maszGCCDirectories);
 }
 
 
@@ -438,8 +447,9 @@ CTranslationUnit* CWorkspaceIndex::AddUnit(size uiProject, const char* szFileNam
 //
 // The CppCompilerLib project for the workspace's project uiProject, made
 // the first time: the project's include directories, then the
-// compiler's: this machine's, or Libc65 for a project read with an HCP65
-// configuration.  Call it with the projects' mutex held.
+// compiler's: Libc65 for a project read with an HCP65 configuration,
+// Linux's for one read with a GCC configuration, else this machine's
+// stand-ins for MSVC's.  Call it with the projects' mutex held.
 //
 //////////////////////////////////////////////////////////////////////////
 CProject* CWorkspaceIndex::GetProject(size uiProject)
@@ -447,6 +457,8 @@ CProject* CWorkspaceIndex::GetProject(size uiProject)
 	CProject*				pcProject;
 	CVcxSolutionProject*	pcSolutionProject;
 	CVcxConfiguration*		pcConfiguration;
+	CBuildConfiguration*	pcBuild;
+	CArrayChars*			paszSystem;
 	CArrayChars				aszDirectories;
 	CFileUtil				cFileUtil;
 	size					i;
@@ -483,7 +495,8 @@ CProject* CWorkspaceIndex::GetProject(size uiProject)
 		}
 	}
 	aszDirectories.Kill();
-	if (FindHCP65Configuration(uiProject) != NULL)
+	pcBuild = FindProjectBuildConfiguration(uiProject);
+	if ((pcBuild != NULL) && pcBuild->IsHCP65())
 	{
 		if (!mszLibc65.Empty())
 		{
@@ -492,9 +505,10 @@ CProject* CWorkspaceIndex::GetProject(size uiProject)
 	}
 	else
 	{
-		for (i = 0; i < maszSystemDirectories.NumElements(); i++)
+		paszSystem = ((pcBuild != NULL) && pcBuild->IsGCC()) ? &maszGCCDirectories : &maszSystemDirectories;
+		for (i = 0; i < paszSystem->NumElements(); i++)
 		{
-			pcProject->AddIncludeDirectory(maszSystemDirectories.GetText(i), true, true);
+			pcProject->AddIncludeDirectory(paszSystem->GetText(i), true, true);
 		}
 	}
 	mapcProjects.SetPtr(uiProject, pcProject);
@@ -966,6 +980,7 @@ CVcxConfiguration* CWorkspaceIndex::GetProjectConfiguration(size uiProject)
 	CVcxConfiguration*					pcConfiguration;
 	CVcxSolutionProject*				pcProject;
 	CVcxProject*						pcVcxProject;
+	CBuildConfiguration*				pcBuild;
 	const char*							szSolutionConfiguration;
 
 	pcProject = mpcWorkspace->GetSolutionProject(uiProject);
@@ -974,7 +989,10 @@ CVcxConfiguration* CWorkspaceIndex::GetProjectConfiguration(size uiProject)
 	pcSolutionConfiguration = (szSolutionConfiguration != NULL) ? pcProject->FindConfiguration(szSolutionConfiguration) : NULL;
 	if (pcSolutionConfiguration != NULL)
 	{
-		pcConfiguration = pcVcxProject->FindConfiguration(pcSolutionConfiguration->GetProjectConfiguration());
+		//As the build finds it: a toolchain's own configuration of the project (Release|GCC-x64) if it has one.
+		pcBuild = FindProjectBuildConfiguration(uiProject);
+		pcConfiguration = (pcBuild != NULL) ? pcBuild->FindProjectConfiguration(pcVcxProject, pcSolutionConfiguration->GetProjectConfiguration())
+											: pcVcxProject->FindConfiguration(pcSolutionConfiguration->GetProjectConfiguration());
 		if (pcConfiguration != NULL)
 		{
 			return pcConfiguration;
@@ -1035,16 +1053,13 @@ CBuildConfiguration* CWorkspaceIndex::FindBuildConfiguration(size uiSolution)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The build configuration the project's solution is read with, if it is
-// an HCP65 one (the W65C816's or the 65C64's); NULL if it is the host's.
+// The build configuration the project's solution is read with; NULL if it
+// has none.
 //
 //////////////////////////////////////////////////////////////////////////
-CBuildConfiguration* CWorkspaceIndex::FindHCP65Configuration(size uiProject)
+CBuildConfiguration* CWorkspaceIndex::FindProjectBuildConfiguration(size uiProject)
 {
-	CBuildConfiguration*	pcConfiguration;
-
-	pcConfiguration = FindBuildConfiguration(mpcWorkspace->GetProject(uiProject)->uiSolution);
-	return ((pcConfiguration != NULL) && pcConfiguration->IsHCP65()) ? pcConfiguration : NULL;
+	return FindBuildConfiguration(mpcWorkspace->GetProject(uiProject)->uiSolution);
 }
 
 
@@ -1053,7 +1068,8 @@ CBuildConfiguration* CWorkspaceIndex::FindHCP65Configuration(size uiProject)
 // What the compiler that builds the project defines itself: the target's
 // own for an HCP65 configuration, from the code the build uses
 // (CCPPTarget::AddDefines, with the configuration's compile options), so
-// the two can't differ; MSVC's for any other.
+// the two can't differ; GCC's for a GCC configuration; MSVC's for any
+// other.
 //
 //////////////////////////////////////////////////////////////////////////
 void CWorkspaceIndex::AddTargetDefines(size uiProject, CVcxConfiguration* pcConfiguration, CConfig* pcConfig)
@@ -1061,8 +1077,13 @@ void CWorkspaceIndex::AddTargetDefines(size uiProject, CVcxConfiguration* pcConf
 	CBuildConfiguration*	pcBuild;
 	CCPPCompileOptions		cOptions;
 
-	pcBuild = FindHCP65Configuration(uiProject);
-	if (pcBuild == NULL)
+	pcBuild = FindProjectBuildConfiguration(uiProject);
+	if ((pcBuild != NULL) && pcBuild->IsGCC())
+	{
+		AddGCCDefines(pcConfig);
+		return;
+	}
+	if ((pcBuild == NULL) || !pcBuild->IsHCP65())
 	{
 		AddCompilerDefines(pcConfiguration, pcConfig);
 		return;
@@ -1113,6 +1134,24 @@ void CWorkspaceIndex::AddCompilerDefines(CVcxConfiguration* pcConfiguration, CCo
 	if ((pcConfiguration != NULL) && (StringInsensitiveCompare(pcConfiguration->GetConfiguration(), "Debug") == 0))
 	{
 		pcConfig->AddDefine("_DEBUG=1");
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// What g++ defines itself for 64-bit Linux, those code asks about: the
+// compiler, the system and the processor.  The configuration's own
+// (LINUX_GNU, NDEBUG) are the project's.
+//
+//////////////////////////////////////////////////////////////////////////
+void CWorkspaceIndex::AddGCCDefines(CConfig* pcConfig)
+{
+	size	i;
+
+	for (i = 0; gaszGCCDefines[i] != NULL; i++)
+	{
+		pcConfig->AddDefine(gaszGCCDefines[i]);
 	}
 }
 

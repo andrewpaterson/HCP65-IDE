@@ -32,6 +32,10 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 #include "CppCompilerLib/CPPTarget.h"
 
 
+class CVcxProject;
+class CVcxConfiguration;
+
+
 //What a configuration is built with: the HCP65 compiler for one of its processors, or a compiler for this computer.
 enum EBuildToolchain
 {
@@ -135,6 +139,8 @@ public:
 	bool			IsHCP65(void) const;
 	const char*		GetProcessorName(void) const;
 	ECPPTarget		GetTarget(void) const;
+	bool			IsGCC(void) const;
+	CVcxConfiguration*	FindProjectConfiguration(CVcxProject* pcProject, const char* szName) const;
 
 	void			SetBreakpointSpace(const char* szSpace);
 	char*			GetBreakpointSpace(void);

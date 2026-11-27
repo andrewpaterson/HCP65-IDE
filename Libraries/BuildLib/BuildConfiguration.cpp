@@ -21,7 +21,7 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 #include <string.h>
 #include "BaseLib/StringHelper.h"
 #include "Assembler65Lib/Asm65Attributes.h"
-#include "VisualStudioLib/VcxConfiguration.h"
+#include "VisualStudioLib/VcxProject.h"
 #include "BuildConfiguration.h"
 
 
@@ -384,6 +384,17 @@ bool CBuildConfiguration::LoadXML(CMarkupTag* pcTag)
 bool CBuildConfiguration::IsHCP65(void) const
 {
 	return (meToolchain == BT_W65C816) || (meToolchain == BT_65C64);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether it is built by GCC, for Linux.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CBuildConfiguration::IsGCC(void) const
+{
+	return meToolchain == BT_GCC;
 }
 
 
@@ -1193,5 +1204,49 @@ char* CBuildConfiguration::GetCardPath(void)	{ return mszCardPath.Text(); }
 bool CBuildConfiguration::IsOnCard(void) const
 {
 	return ((meProgram == BP_Executable) || (meProgram == BP_Module) || (meProgram == BP_Image)) && HasCard();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The configuration of a project that this one builds, given the one its
+// solution configuration asks for (szName, "Release|x64").  A toolchain
+// with a platform of its own builds the project's configuration of that
+// name on its platform (Release|GCC-x64) if the project has one, whichever
+// was asked for; else the one asked for; else, asked for its own that the
+// project hasn't, the one it would be built like.  NULL if there is none.
+//
+//////////////////////////////////////////////////////////////////////////
+CVcxConfiguration* CBuildConfiguration::FindProjectConfiguration(CVcxProject* pcProject, const char* szName) const
+{
+	CVcxConfiguration*	pcConfiguration;
+	const char*			szPlatform;
+	const char*			szBar;
+	CChars				szOther;
+
+	pcConfiguration = pcProject->FindConfiguration(szName);
+	szPlatform = GetToolchainPlatform(meToolchain);
+	szBar = strchr(szName, '|');
+	if (!szPlatform || !szBar || (pcConfiguration && pcConfiguration->IsToolchain()))
+	{
+		return pcConfiguration;
+	}
+
+	szOther.Init();
+	szOther.Append(szName, (size)(szBar + 1 - szName));
+	szOther.Append(szPlatform);
+	if (pcProject->FindConfiguration(szOther.Text()))
+	{
+		pcConfiguration = pcProject->FindConfiguration(szOther.Text());
+	}
+	else if (!pcConfiguration && GetVcxToolchainBasePlatform(szBar + 1))
+	{
+		szOther.Clear();
+		szOther.Append(szName, (size)(szBar + 1 - szName));
+		szOther.Append(GetVcxToolchainBasePlatform(szBar + 1));
+		pcConfiguration = pcProject->FindConfiguration(szOther.Text());
+	}
+	szOther.Kill();
+	return pcConfiguration;
 }
 

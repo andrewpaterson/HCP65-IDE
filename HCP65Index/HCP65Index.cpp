@@ -45,8 +45,9 @@ along with Codaphela HCP65Index.  If not, see <http://www.gnu.org/licenses/>.
 //////////////////////////////////////////////////////////////////////////
 static void PrintUsage(void)
 {
-	printf("hcp65index -root <folder> -out <file> [-problems] [-libc65 <directory>] <solution.sln>...\n");
-	printf("  Indexes the solutions' C++ together, as the IDE does (each solution's first configuration), and writes the\n");
+	printf("hcp65index -root <folder> -out <file> [-problems] [-config <name>] [-libc65 <directory>] <solution.sln>...\n");
+	printf("  Indexes the solutions' C++ together, as the IDE does (in the build configuration -config names, \"Release|GCC-x64\",\n");
+	printf("  else each solution's first), and writes the\n");
 	printf("  symbol table: one line a symbol, <key> TAB <kind> TAB <file> TAB <line>, the file relative to -root.\n");
 	printf("  Only symbols declared under -root are written.  -problems lists what the units couldn't include.\n");
 	printf("  A solution whose configuration is the W65C816's or the 65C64's is indexed as hcp65build compiles it, with\n");
@@ -91,18 +92,23 @@ static int OpenSolutions(CBuildWorkspace* pcWorkspace, CArrayChars* paszSolution
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The workspace's index, with this machine's compiler's headers and, for
+// The workspace's index, read in szConfiguration (each solution's first
+// if NULL), with this machine's compiler's headers and, for
 // the solutions read with an HCP65 configuration, Libc65's: szLibc65 if
 // it isn't NULL, else the one found above the first solution.
 //
 //////////////////////////////////////////////////////////////////////////
-static void InitIndex(CWorkspaceIndex* pcIndex, CBuildWorkspace* pcWorkspace, const char* szLibc65, CArrayChars* paszSolutions)
+static void InitIndex(CWorkspaceIndex* pcIndex, CBuildWorkspace* pcWorkspace, const char* szConfiguration, const char* szLibc65, CArrayChars* paszSolutions)
 {
 	CFileUtil	cFileUtil;
 	CChars		szDirectory;
 	CChars		szFound;
 
 	pcIndex->Init(pcWorkspace);
+	if (szConfiguration != NULL)
+	{
+		pcIndex->SetConfiguration(szConfiguration);
+	}
 	pcIndex->AddDefaultSystemDirectories();
 	if (szLibc65 != NULL)
 	{
@@ -128,7 +134,7 @@ static void InitIndex(CWorkspaceIndex* pcIndex, CBuildWorkspace* pcWorkspace, co
 // references to code (HCP65/Website/DocsPlan.txt D1).
 //
 //////////////////////////////////////////////////////////////////////////
-static int IndexSolutions(const char* szRoot, const char* szOut, const char* szLibc65, CArrayChars* paszSolutions, bool bProblems)
+static int IndexSolutions(const char* szRoot, const char* szOut, const char* szConfiguration, const char* szLibc65, CArrayChars* paszSolutions, bool bProblems)
 {
 	CBuildWorkspace		cWorkspace;
 	CWorkspaceIndex		cIndex;
@@ -143,7 +149,7 @@ static int IndexSolutions(const char* szRoot, const char* szOut, const char* szL
 
 	if (iResult == HCP65_INDEX_EXIT_OK)
 	{
-		InitIndex(&cIndex, &cWorkspace, szLibc65, paszSolutions);
+		InitIndex(&cIndex, &cWorkspace, szConfiguration, szLibc65, paszSolutions);
 		if (cIndex.IsMissingSystemDirectories())
 		{
 			fprintf(stderr, "hcp65index: warning: some of the compiler's own headers aren't on this machine.\n");
@@ -252,7 +258,7 @@ static int ResolvePages(const char* szTable, const char* szFiles, CArrayChars* p
 // solutions' projects are read, not indexed.
 //
 //////////////////////////////////////////////////////////////////////////
-static int CheckExamples(const char* szLibc65, CArrayChars* paszSolutions, CArrayChars* paszPages)
+static int CheckExamples(const char* szConfiguration, const char* szLibc65, CArrayChars* paszSolutions, CArrayChars* paszPages)
 {
 	CBuildWorkspace				cWorkspace;
 	CWorkspaceIndex				cIndex;
@@ -270,7 +276,7 @@ static int CheckExamples(const char* szLibc65, CArrayChars* paszSolutions, CArra
 
 	if (iResult == HCP65_INDEX_EXIT_OK)
 	{
-		InitIndex(&cIndex, &cWorkspace, szLibc65, paszSolutions);
+		InitIndex(&cIndex, &cWorkspace, szConfiguration, szLibc65, paszSolutions);
 		szPrinted.Init();
 		for (i = 0; i < paszPages->NumElements(); i++)
 		{
@@ -312,7 +318,7 @@ static int CheckExamples(const char* szLibc65, CArrayChars* paszSolutions, CArra
 
 //////////////////////////////////////////////////////////////////////////
 //
-// hcp65index -root <folder> -out <file> [-problems] [-libc65 <directory>] <solution.sln>...
+// hcp65index -root <folder> -out <file> [-problems] [-config <name>] [-libc65 <directory>] <solution.sln>...
 // hcp65index -resolve <table> -files <list> <page.md>...
 // hcp65index -examples [-libc65 <directory>] <solution.sln>... -pages <page.md>...
 //
@@ -328,6 +334,7 @@ int __cdecl main(int argc, char* argv[])
 	const char*		szTable;
 	const char*		szFiles;
 	const char*		szLibc65;
+	const char*		szConfiguration;
 	bool			bProblems;
 	bool			bUsage;
 	int				i;
@@ -342,6 +349,7 @@ int __cdecl main(int argc, char* argv[])
 	szTable = NULL;
 	szFiles = NULL;
 	szLibc65 = NULL;
+	szConfiguration = NULL;
 	bProblems = false;
 	bUsage = false;
 	bExamples = false;
@@ -369,6 +377,10 @@ int __cdecl main(int argc, char* argv[])
 		else if ((StringCompare(argv[i], "-libc65") == 0) && (i + 1 < argc))
 		{
 			szLibc65 = argv[++i];
+		}
+		else if ((StringCompare(argv[i], "-config") == 0) && (i + 1 < argc))
+		{
+			szConfiguration = argv[++i];
 		}
 		else if (StringCompare(argv[i], "-problems") == 0)
 		{
@@ -398,7 +410,7 @@ int __cdecl main(int argc, char* argv[])
 
 	if (!bUsage && bExamples && bPages && (szTable == NULL) && (szFiles == NULL) && (szRoot == NULL) && (szOut == NULL) && (aszArguments.NumElements() > 0))
 	{
-		iResult = CheckExamples(szLibc65, &aszArguments, &aszPages);
+		iResult = CheckExamples(szConfiguration, szLibc65, &aszArguments, &aszPages);
 	}
 	else if (!bUsage && !bExamples && !bPages && (szTable != NULL) && (szFiles != NULL) && (szRoot == NULL) && (szOut == NULL))
 	{
@@ -406,7 +418,7 @@ int __cdecl main(int argc, char* argv[])
 	}
 	else if (!bUsage && !bExamples && !bPages && (szTable == NULL) && (szFiles == NULL) && (szRoot != NULL) && (szOut != NULL) && (aszArguments.NumElements() > 0))
 	{
-		iResult = IndexSolutions(szRoot, szOut, szLibc65, &aszArguments, bProblems);
+		iResult = IndexSolutions(szRoot, szOut, szConfiguration, szLibc65, &aszArguments, bProblems);
 	}
 	else
 	{

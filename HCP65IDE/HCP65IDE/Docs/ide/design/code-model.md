@@ -69,6 +69,13 @@ too.
   And it is type checked for its target ([`CBuildConfiguration::GetTarget`]), so an `int` is the size it is
   there.  The code in `#ifdef __W65C816__` is what Find Usages and Rename see; the `#ifdef _WIN32` beside it
   isn't indexed.
+- **A GCC configuration.**  A project whose solution is read with a GCC build configuration (`Release|GCC-x64`) is
+  indexed as `g++` compiles it on Linux: with the defines of the project's own GCC-x64 configuration
+  ([`CBuildConfiguration::FindProjectConfiguration`], which the build finds it with too), `g++`'s for 64-bit Linux
+  in place of MSVC's (`__GNUC__`, `__linux__`, `__x86_64__`), and Linux's headers in `g++`'s order
+  ([`FindGCCHeaderDirectories`]) for the system's.  So an `#ifdef LINUX_GNU` block is what is indexed and the
+  `#ifdef _WIN32` beside it isn't.  On Windows, where the headers aren't, it has none.  Its types are still the
+  host model's (a `long` isn't made 64 bits).
 - **The system headers.**  For any other configuration the compiler's own headers on this machine come after the
   project's directories ([`CWorkspaceIndex::AddDefaultSystemDirectories`], [`FindSystemHeaderDirectories`]).  On
   Linux MinGW's headers
@@ -82,7 +89,8 @@ too.
 - **Problems.**  What a unit couldn't include is kept once and shown on the Indexing tab ([`CIDEIndexing`]), with
   the time the whole index took.
 
-`hcp65index` makes a [`CWorkspaceIndex`] the same way, without a window, for the website's symbol table.
+`hcp65index` makes a [`CWorkspaceIndex`] the same way, without a window, for the website's symbol table; its `-config`
+names the build configuration, else each solution is read with its first.
 
 ## The edits thread
 

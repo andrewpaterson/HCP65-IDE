@@ -190,7 +190,9 @@ static void TestWorkspaceIndexTargetIndex(CWorkspaceIndex* pcIndex, const char* 
 //
 // A solution read with an HCP65 build configuration is indexed as
 // hcp65build compiles it: the target's defines and none of MSVC's, and
-// Libc65's headers for the system's.  Read with MSVC's it is as before.
+// Libc65's headers for the system's.  Read with a GCC one it has GCC's
+// defines for Linux and those of the project's GCC-x64 configuration
+// (ConfigurationsPlan.txt C5).  Read with MSVC's it is as before.
 //
 //////////////////////////////////////////////////////////////////////////
 void TestWorkspaceIndexTarget(void)
@@ -210,6 +212,15 @@ void TestWorkspaceIndexTarget(void)
 	AssertNull(pcIndex->FindSymbol("OnW65C816()"));
 	AssertNull(pcIndex->FindSymbol("On65C64()"));
 	AssertNull(pcIndex->FindSymbol("SOnly65"));
+	AssertNull(pcIndex->FindSymbol("OnLinux()"));
+	AssertNull(pcIndex->FindSymbol("WithLinuxDefine()"));
+
+	TestWorkspaceIndexTargetIndex(&cIndex, "Debug|GCC-x64");
+	AssertNull(pcIndex->FindSymbol("OnHost()"));
+	AssertNotNull(pcIndex->FindSymbol("OnLinux()"));
+	AssertNotNull(pcIndex->FindSymbol("WithLinuxDefine()"));
+	AssertNull(pcIndex->FindSymbol("OnW65C816()"));
+	AssertNull(pcIndex->FindSymbol("SOnly65"));
 
 	TestWorkspaceIndexTargetIndex(&cIndex, "Debug|HCP65C816");
 	AssertNull(pcIndex->FindSymbol("OnHost()"));
@@ -217,6 +228,8 @@ void TestWorkspaceIndexTarget(void)
 	AssertNotNull(pcIndex->FindSymbol("WithAssembly()"));
 	AssertNull(pcIndex->FindSymbol("On65C64()"));
 	AssertNotNull(pcIndex->FindSymbol("SOnly65"));
+	AssertNull(pcIndex->FindSymbol("OnLinux()"));
+	AssertNull(pcIndex->FindSymbol("WithLinuxDefine()"));
 
 	TestWorkspaceIndexTargetIndex(&cIndex, "Debug|HCP65C64");
 	AssertNull(pcIndex->FindSymbol("OnHost()"));

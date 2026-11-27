@@ -16,9 +16,10 @@ CommonLibraries and HCP65 checked out beside it (`../CommonLibraries`, `../HCP65
   ClaudeLib (the Claude tab), TemplateLib; `Tests/Test<Lib>` for each.
 - The C++ front end and the symbol index are CommonLibraries' CppCompilerLib (`CCPPIndex`).  IndexLib's
   `CWorkspaceIndex` indexes a workspace with them as its build configuration compiles it (configuration,
-  include folders, defines, the system headers: MinGW's on Linux); the IDE's code model (`CIDECodeModel`) derives
-  from it and adds the edits thread and the queries its features make, and a program without a window can index
-  a workspace the same way.  It also reads the projects' Markdown pages: their references to code ([`Name`]) are
+  include folders, defines, the system headers: MinGW's on Linux, Linux's own for a GCC configuration); the IDE's
+  code model (`CIDECodeModel`) derives from it and adds the edits thread and the queries its features make, and a
+  program without a window can index a workspace the same way.  It also reads the projects' Markdown pages:
+  their references to code ([`Name`]) are
   resolved by `CReferenceResolver`, the same code the website's build uses through `hcp65index -resolve`, and
   become index places of usage `CPPUT_Documentation` (`../HCP65/Website/DocsPlan.txt` E; the IDE's
   `Docs/ide/documentation.md`).

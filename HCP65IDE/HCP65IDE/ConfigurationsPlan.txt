@@ -298,6 +298,12 @@ C5. The code index reads with the configuration's toolchain
   C5-2. So the index follows the build configuration chosen (an #ifdef LINUX_GNU block is live in Release|GCC-x64,
      dim in Release|MSVC-x64).  Tests: TestIndexLib indexes one file in Release|GCC-x64 and Release|MSVC-x64 and finds
      a symbol defined only under LINUX_GNU in the first.
+  Built 2026-11-27: the HCP65 half was there already (Debugger65C64Plan).  A GCC configuration is read with the
+  project's GCC-x64 configuration (CBuildConfiguration::FindProjectConfiguration, moved from CBuild so the build and
+  the index find it alike), g++'s defines (AddGCCDefines) and Linux's headers (FindGCCHeaderDirectories).  The test
+  is TestWorkspaceIndexTarget's fixture read a fourth way.  hcp65index -config names the configuration: TestBaseLib's
+  solution in Release|GCC-x64 indexes its 642 units with nothing it can't include, and has the _Linux.cpp files'
+  symbols where Release|x64 has the _Windows.cpp files'.  Not done: the type model stays the host's (LLP64).
 
 C6. CMake reads the projects too
   C6-1. One CMake module (CL/CMake/Vcxproj.cmake) instead of the 35 copies of vcxproj_sources (40 with question 18's
