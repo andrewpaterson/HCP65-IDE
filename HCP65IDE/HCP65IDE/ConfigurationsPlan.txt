@@ -197,14 +197,16 @@ C1. VisualStudioLib reads the GCC and HCP65 groups
      same in all four configurations of each of the 109 projects) and its include directories.  Both are written in
      groups conditioned for each MSVC configuration now, so a configuration made from a GCC-x64 group alone has
      neither, and CBuild::GetProjects takes a project with no ConfigurationType for an application: every library
-     would be linked as a program.  Where they come from is question 15.
+     would be linked as a program.  Question 15: written once with no condition (C7 moves them), and until a
+     project has moved, or if trial W4 fails, taken from its x64 configuration (HCP65: Win32).
 
 C2. VisualStudioLib follows imports
   C2-1. <Import Project="..."/> of a .props file: its PropertyGroups and ItemDefinitionGroups are read where the
      import is, so a project's own group after it adds to or replaces what the sheet set, as MSBuild has it.  The
      projects import in an ImportGroup conditioned for one MSVC configuration (question 2: once per configuration),
-     which is never true for Release|GCC-x64: how a toolchain's configuration imports the sheet is question 16
-     (2026-11-27).  Paths
+     which is never true for Release|GCC-x64.  Question 16 (2026-11-27): the sheet is imported in one ImportGroup with
+     no condition, beside Visual Studio's four; if trial W4 fails, an import in any configuration's ImportGroup is
+     read as every configuration's.  Paths
      with $(SolutionDir), $(ProjectDir) and $(MSBuildThisFileDirectory); an import whose Condition is
      Exists('...').  Directory.Build.props isn't read: question 2 chose imports by path, and nothing would use it
      (2026-11-27).  Microsoft's own imports ($(VCTargetsPath), $(UserRootDir)) are skipped as now.
@@ -686,7 +688,8 @@ Questions (the user's, one at a time)
    CMake's PUBLIC target_link_libraries: written once each and a new program gets them, but a rule MSBuild hasn't,
    written twice (CGCCBuild and CMake's module), and not how Windows has it; C, all in the shared sheet, every Linux
    program linking X11 and every Linux build needing libx11-dev, the console tests too.
-15. Open (C1-4, 2026-11-27): where a GCC or HCP65 configuration gets its ConfigurationType and include directories.
+15. Decided (the user, 2026-11-27: "15 and 16, your recommendation"): A, and B if trial W4 fails.  (C1-4) Where a GCC
+   or HCP65 configuration gets its ConfigurationType and include directories.
    A. Recommended: written once, with no condition.  C7 moves each project's ConfigurationType into one PropertyGroup
       Label="Configuration" with no condition, and IncludePath comes from the repository's sheet with no condition (a
       project's extras likewise), so every configuration has them, MSVC's and the toolchains', by MSBuild's own rules,
@@ -697,7 +700,8 @@ Questions (the user's, one at a time)
       reader, and the MSVC groups stay the hidden source of a GCC build's include directories.
    C. Repeated in each toolchain's group: six more copies in each project (Debug and Release for GCC-x64, HCP65C816
       and HCP65C64).  What the plan exists to stop.
-16. Open (C2-1, 2026-11-27): how a toolchain's configuration comes to import the sheet.  A project imports it in
+16. Decided (the user, 2026-11-27: "15 and 16, your recommendation"): A, and B if trial W4 fails.  (C2-1) How a
+   toolchain's configuration comes to import the sheet.  A project imports it in
    <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">, one for each MSVC
    configuration (question 2: as Visual Studio writes it), and none is true for Release|GCC-x64.
    A. Recommended: one ImportGroup Label="PropertySheets" with no condition for the repository's sheet, beside the
