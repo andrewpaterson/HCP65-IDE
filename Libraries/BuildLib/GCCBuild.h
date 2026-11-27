@@ -24,7 +24,7 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 
 
 //Builds the solution with GCC (g++ and ar on the path): each project's sources compiled with its include directories
-//and defines into Output\GCC\<configuration>\<project>\, each static library archived (lib<project>.a), then each
+//and defines into Output\GCC\<configuration>\Objects\<project>\, each static library archived (lib<project>.a), then each
 //application linked with all the solution's libraries.
 class CGCCBuild : public CCommandBuild
 {
@@ -35,6 +35,7 @@ protected:
 	bool	AddCommands(CArrayChars* paszLines) override;
 	void	AddCompile(SBuildProject* psProject, const char* szSource, const char* szObject, CArrayChars* paszIncludes, CArrayChars* paszDefines);
 	void	GetObjectName(const char* szProjectOutput, const char* szSource, CChars* pszDest);
+	bool	IsDebugConfiguration(void);
 };
 
 

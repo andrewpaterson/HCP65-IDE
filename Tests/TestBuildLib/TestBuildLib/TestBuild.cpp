@@ -207,8 +207,96 @@ void TestBuildGCC(void)
 	AssertString("-c", psCompile->aszArguments.GetText(0));
 	AssertTrue(psCompile->aszArguments.Contains("-DTINY_DEBUG"));
 	AssertTrue(TestBuildEndsWith(psCompile->aszArguments.GetText(psCompile->aszArguments.NumElements() - 1), "Maths.o"));
+#ifdef LINUX_GNU
+	//The Linux options after the project's defines, and a Debug configuration's.
+	AssertSize(psCompile->aszArguments.GetIndex("-DTINY_DEBUG") + 1, psCompile->aszArguments.GetIndex("-DLINUX_GNU"));
+	AssertTrue(psCompile->aszArguments.Contains("-m64"));
+	AssertTrue(psCompile->aszArguments.Contains("-fno-strict-aliasing"));
+	AssertTrue(psCompile->aszArguments.Contains("-g"));
+	AssertFalse(psCompile->aszArguments.Contains("-O3"));
+	AssertFalse(psCompile->aszArguments.Contains("-fno-lifetime-dse"));
+#else
+	AssertFalse(psCompile->aszArguments.Contains("-DLINUX_GNU"));
+#endif // LINUX_GNU
 	AssertString("ar", pcCommands->GetCommand(1)->szExecutable.Text());
 	AssertTrue(TestBuildEndsWith(pcCommands->GetCommand(1)->aszArguments.GetText(1), "libTiny.a"));
+
+	if (eState == BS_Failed)
+	{
+		//No GCC here.
+		AssertTrue(TestBuildHasLine(&aszLines, "Could not run g++."));
+	}
+	else
+	{
+		AssertInt(BS_Succeeded, eState);
+	}
+
+	aszLines.Kill();
+	cBuild.Kill();
+	cSolution.Kill();
+	cConfiguration.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Tools with GCC in Release: on Linux each compile has the Release
+// options and each link -m64 and --gc-sections (ConfigurationsPlan.txt
+// C0).  Two applications linked, the library archived.
+//
+//////////////////////////////////////////////////////////////////////////
+void TestBuildGCCRelease(void)
+{
+	CVcxSolution			cSolution;
+	CBuildConfiguration		cConfiguration;
+	CSolutionBuild			cBuild;
+	CArrayChars				aszLines;
+	CCommandBuild*			pcCommands;
+	SBuildCommand*			psCommand;
+	EBuildState				eState;
+	size					i;
+	int						iCompiles;
+	int						iLinks;
+	CFileUtil				cFileUtil;
+
+	//An application is linked where an older build put its objects' folder.
+	cFileUtil.RemoveDir("Output" _FS_ "GCCRelease");
+	cSolution.Init();
+	AssertTrue(cSolution.Read("Input" _FS_ "Workspace" _FS_ "Tools" _FS_ "Tools.sln"));
+	cConfiguration.Init("Release|GCC", BT_GCC, "Release|Win32");
+	cBuild.Init();
+	aszLines.Init();
+	eState = TestBuildProject(&cBuild, &cSolution, &cConfiguration, "GCCRelease", &aszLines);
+
+	pcCommands = (CCommandBuild*)cBuild.GetBuild();
+	iCompiles = 0;
+	iLinks = 0;
+	for (i = 0; i < pcCommands->NumCommands(); i++)
+	{
+		psCommand = pcCommands->GetCommand(i);
+		if (psCommand->aszArguments.Contains("-c"))
+		{
+			iCompiles++;
+#ifdef LINUX_GNU
+			AssertTrue(psCommand->aszArguments.Contains("-DLINUX_GNU"));
+			AssertTrue(psCommand->aszArguments.Contains("-O3"));
+			AssertTrue(psCommand->aszArguments.Contains("-fno-lifetime-dse"));
+			AssertFalse(psCommand->aszArguments.Contains("-g"));
+#endif // LINUX_GNU
+		}
+		else if (psCommand->szDescription.StartsWith("Linking "))
+		{
+			iLinks++;
+#ifdef LINUX_GNU
+			AssertTrue(psCommand->aszArguments.Contains("-m64"));
+			AssertTrue(psCommand->aszArguments.Contains("-Wl,--gc-sections"));
+#else
+			AssertFalse(psCommand->aszArguments.Contains("-Wl,--gc-sections"));
+#endif // LINUX_GNU
+		}
+	}
+	AssertInt(3, iCompiles);
+	AssertInt(2, iLinks);
 
 	if (eState == BS_Failed)
 	{
@@ -392,6 +480,7 @@ void TestBuild(void)
 	TestBuildMSVC();
 #endif // _WIN32
 	TestBuildGCC();
+	TestBuildGCCRelease();
 	TestBuildMakefile();
 
 	TestStatistics();

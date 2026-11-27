@@ -152,6 +152,14 @@ C0. A stopgap: CGCCBuild adds the Linux options itself (question 7)
      One list in GCCBuild.cpp, its comment naming TestBaseLib's CMakeLists.txt as where it came from.
   C0-2. Tests: TestBuildLib's GCC command test expects them; the IDE builds TestBaseLib's Release|GCC and it runs and
      passes.  C3-2 removes the list when the projects have their GCC-x64 groups.
+  Built 2026-11-27 (the user: "add C0 too"): the lists are in GCCBuild.cpp under LINUX_GNU, Debug being a solution
+  configuration named Debug|...; TestBuildGCC (Debug) and TestBuildGCCRelease (Tools, compiles and links) check them.
+  Not -Wall -Wextra or -flto, which CMake also passes.  On the way: a GCC application was linked to
+  Output\GCC\<configuration>\<project>, its own objects' folder without Windows' .exe, so no GCC application linked
+  on Linux; objects are now in Output\GCC\<configuration>\Objects\<project>\.  The five programs' mains became
+  <App>_Windows.cpp and <App>_Linux.cpp at the same time, each guarded (_WIN32, LINUX_GNU) and both in the .vcxproj,
+  as the libraries' platform files are; their solutions still list the Windows window libraries (WinGdiLib,
+  WinInputLib) and not X11Lib, which a GCC build on Linux needs (a later stage's question).
 
 C1. VisualStudioLib reads the GCC and HCP65 groups
   C1-1. CVcxProject (VSL/VcxProject.cpp) keeps a configuration for each group whose platform is a toolchain's name,

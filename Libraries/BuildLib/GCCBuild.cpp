@@ -30,6 +30,41 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 #endif
 
 
+#ifdef LINUX_GNU
+//A stopgap until the projects have GCC-x64 groups of their own (ConfigurationsPlan.txt C0; C3-2 removes these):
+//what CommonLibraries/Tests/TestBaseLib/CMakeLists.txt's baselib_options gives a 64-bit build, which explains each.
+//Every compile, after the project's own defines.
+static const char* gaszGCCCompileOptions[] = { "-DLINUX_GNU", "-m64", "-march=haswell", "-fno-strict-aliasing", "-Wno-ignored-attributes", "-Wno-write-strings", "-Wno-multichar", "-Wno-class-memaccess", "-Wno-overloaded-virtual", "-Wno-comment", "-Wno-unused-parameter", NULL };
+//Then a Debug configuration's, or any other's.
+static const char* gaszGCCDebugCompileOptions[] = { "-g", NULL };
+static const char* gaszGCCReleaseCompileOptions[] = { "-O3", "-ffunction-sections", "-fdata-sections", "-fno-stack-protector", "-U_FORTIFY_SOURCE", "-fno-lifetime-dse", "-fno-math-errno", "-fno-trapping-math", NULL };
+//Every link, then a Release link's.
+static const char* gaszGCCLinkOptions[] = { "-m64", NULL };
+static const char* gaszGCCReleaseLinkOptions[] = { "-Wl,--gc-sections", NULL };
+#else
+static const char* gaszGCCCompileOptions[] = { NULL };
+static const char* gaszGCCDebugCompileOptions[] = { NULL };
+static const char* gaszGCCReleaseCompileOptions[] = { NULL };
+static const char* gaszGCCLinkOptions[] = { NULL };
+static const char* gaszGCCReleaseLinkOptions[] = { NULL };
+#endif
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+static void AddGCCOptions(CArrayChars* paszArguments, const char** paszOptions)
+{
+	size	i;
+
+	for (i = 0; paszOptions[i] != NULL; i++)
+	{
+		paszArguments->Add(paszOptions[i]);
+	}
+}
+
+
 //////////////////////////////////////////////////////////////////////////
 //
 // Where a build of the solution in szRoot links the application szProject
@@ -99,11 +134,14 @@ bool CGCCBuild::AddCommands(CArrayChars* paszLines)
 				}
 				continue;
 			}
+			//Objects in a folder of their own: an application is linked beside them as Output\GCC\Debug\Project, which
+			//without Windows' .exe would be the project's objects' folder.
 			szProjectOutput.Init(szOutput);
+			cFileUtil.AppendToPath(&szProjectOutput, "Objects");
 			cFileUtil.AppendToPath(&szProjectOutput, psProject->pcProject->GetName());
 			if (iPass == 0)
 			{
-				//Compile: Output\GCC\Debug\Project\Source.o, the folder made for the first.
+				//Compile: Output\GCC\Debug\Objects\Project\Source.o, the folder made for the first.
 				bFolder = false;
 				aszIncludes.Init();
 				aszDefines.Init();
@@ -156,6 +194,11 @@ bool CGCCBuild::AddCommands(CArrayChars* paszLines)
 					cFileUtil.AppendToPath(&szTarget, psProject->pcProject->GetName());
 					szTarget.Append(GCC_EXECUTABLE_EXTENSION);
 					psCommand = AddCommand("g++", mpcSolution->GetDirectory(), szDescription.Append(psProject->pcProject->GetName())->Text());
+					AddGCCOptions(&psCommand->aszArguments, gaszGCCLinkOptions);
+					if (!IsDebugConfiguration())
+					{
+						AddGCCOptions(&psCommand->aszArguments, gaszGCCReleaseLinkOptions);
+					}
 					psCommand->aszArguments.Add("-o");
 					psCommand->aszArguments.Add(szTarget.Text());
 				}
@@ -241,9 +284,29 @@ void CGCCBuild::AddCompile(SBuildProject* psProject, const char* szSource, const
 		psCommand->aszArguments.Add(szArgument.Text());
 		szArgument.Kill();
 	}
+	AddGCCOptions(&psCommand->aszArguments, gaszGCCCompileOptions);
+	AddGCCOptions(&psCommand->aszArguments, IsDebugConfiguration() ? gaszGCCDebugCompileOptions : gaszGCCReleaseCompileOptions);
 	psCommand->aszArguments.Add(szSource);
 	psCommand->aszArguments.Add("-o");
 	psCommand->aszArguments.Add(szObject);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether the solution configuration built is a Debug one ("Debug|x64"),
+// as CMake's CONFIG:Debug: any other is built as Release.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CGCCBuild::IsDebugConfiguration(void)
+{
+	CChars	szSolution;
+	bool	bDebug;
+
+	szSolution.Init(mpcConfiguration->GetSolutionConfiguration());
+	bDebug = szSolution.StartsWith("Debug|");
+	szSolution.Kill();
+	return bDebug;
 }
 
 
