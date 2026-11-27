@@ -67,28 +67,42 @@ void CBuildConfigurations::Clear(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Each solution configuration ("Debug|Win32") built with MSVC under its
-// own name, then for each configuration name ("Debug"), in the order they
-// first come: the W65C816 and the 65C64 ("Debug|HCP65C816") from its Win32
-// platform, and GCC from its x64 one (or its first, if it hasn't those).
+// Each solution configuration under its own name: one whose platform is a
+// toolchain's ("Release|GCC-x64") is that toolchain's, and any other
+// ("Debug|Win32") MSVC's.  A solution that lists a toolchain's has said
+// what it builds, and that is all.  One that lists none is given each
+// toolchain's for each configuration name ("Debug"), in the order they
+// first come: the W65C816's and the 65C64's ("Debug|HCP65C816") from its
+// Win32 platform, and GCC's from its x64 one (or its first, if it hasn't
+// those).
 //
 //////////////////////////////////////////////////////////////////////////
 void CBuildConfigurations::AddDefaults(CVcxSolution* pcSolution)
 {
 	size		i;
 	size		j;
-	char*		szSolutionConfiguration;
-	CChars		szConfiguration;
-	CChars		szEarlier;
-	bool		bSeen;
+	char*			szSolutionConfiguration;
+	const char*		szBar;
+	EBuildToolchain	eToolchain;
+	CChars			szConfiguration;
+	CChars			szEarlier;
+	bool			bSeen;
+	bool			bListed;
 
+	bListed = false;
 	for (i = 0; i < pcSolution->NumConfigurations(); i++)
 	{
 		szSolutionConfiguration = pcSolution->GetConfiguration(i);
-		Add(szSolutionConfiguration, BT_MSVC, szSolutionConfiguration);
+		eToolchain = BT_MSVC;
+		szBar = strchr(szSolutionConfiguration, '|');
+		if (szBar && CBuildConfiguration::FindToolchainOfPlatform(szBar + 1, &eToolchain))
+		{
+			bListed = true;
+		}
+		Add(szSolutionConfiguration, eToolchain, szSolutionConfiguration);
 	}
 
-	for (i = 0; i < pcSolution->NumConfigurations(); i++)
+	for (i = 0; !bListed && (i < pcSolution->NumConfigurations()); i++)
 	{
 		szConfiguration.Init();
 		GetConfigurationName(pcSolution->GetConfiguration(i), &szConfiguration);

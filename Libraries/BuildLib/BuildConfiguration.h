@@ -200,6 +200,7 @@ public:
 	static const char*	GetToolchainName(EBuildToolchain eToolchain);
 	static bool			FindToolchain(const char* szName, EBuildToolchain* peToolchain);
 	static const char*	GetToolchainPlatform(EBuildToolchain eToolchain);
+	static bool			FindToolchainOfPlatform(const char* szPlatform, EBuildToolchain* peToolchain);
 	static void			CurrentName(const char* szName, CChars* pszDest);
 
 protected:

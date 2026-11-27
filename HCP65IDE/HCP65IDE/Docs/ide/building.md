@@ -40,6 +40,11 @@ project has it, whichever solution configuration the build configuration names:
 The HCP65 compiler and GCC compile a project's source files but those excluded from the solution configuration built
 (Visual Studio's Excluded From Build, on the file or on every file of a project), as MSBuild does.
 
+A solution can list a toolchain's configurations itself: a solution configuration whose platform is a toolchain's
+(`Release|GCC-x64`) is that toolchain's build configuration, and its rows say which projects it builds, as they do
+for Visual Studio's.  A solution that lists none, and has no `.hcp65build` file, is given each toolchain's for each
+of its configuration names.
+
 A solution's build configurations are in its `.hcp65build` file, beside the `.sln`.  Its format, and the
 command line tool `hcp65build` that builds the same way outside the IDE, are on [Building
 Programs](../compiler/building.md).

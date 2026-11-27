@@ -505,6 +505,27 @@ const char* CBuildConfiguration::GetToolchainPlatform(EBuildToolchain eToolchain
 
 //////////////////////////////////////////////////////////////////////////
 //
+// The toolchain whose configurations' platform is szPlatform ("GCC-x64").
+//
+//////////////////////////////////////////////////////////////////////////
+bool CBuildConfiguration::FindToolchainOfPlatform(const char* szPlatform, EBuildToolchain* peToolchain)
+{
+	int	i;
+
+	for (i = 0; i < BT_NumToolchains; i++)
+	{
+		if (gaszBuildToolchainPlatforms[i] && (StringCompare(szPlatform, gaszBuildToolchainPlatforms[i]) == 0))
+		{
+			*peToolchain = (EBuildToolchain)i;
+			return true;
+		}
+	}
+	return false;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // szName as a configuration is called now, appended to pszDest: a name
 // whose platform is a toolchain's old one (Debug|HCP65C816, Release|GCC-x64)
 // has the toolchain's platform (Debug|HCP65C816, Release|GCC-x64), and any

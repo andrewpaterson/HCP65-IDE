@@ -3,6 +3,7 @@
 #include "BaseLib/TextFile.h"
 #include "BuildLib/BuildConfigurations.h"
 #include "BuildLib/RunConfiguration.h"
+#include "BuildLib/GCCBuild.h"
 #include "TestLib/Assert.h"
 
 
@@ -690,6 +691,72 @@ void TestBuildConfigurationsEdits(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// A solution that lists a toolchain's configuration (Debug|GCC-x64, its
+// project's row mapped to Debug|Win32 and built; Release|HCP65C816, its row
+// not built) has said what it builds: each of its configurations is its
+// platform's toolchain's, MSVC's for the rest, and none is made up.  A GCC
+// build of Debug|GCC-x64 builds the project its row builds.
+//
+//////////////////////////////////////////////////////////////////////////
+void TestBuildConfigurationsListed(void)
+{
+	CVcxSolution			cSolution;
+	CBuildConfigurations	cConfigurations;
+	CGCCBuild				cBuild;
+	CArrayBuildProjects		asProjects;
+	CFileUtil				cFileUtil;
+	CTextFile				cFile;
+
+	cFileUtil.TouchDir("Output" _FS_ "Listed");
+	cFile.Init("Microsoft Visual Studio Solution File, Format Version 12.00\n"
+		"Project(\"{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}\") = \"Tiny\", \"..\\..\\Input\\Tiny\\Tiny.vcxproj\", \"{1F3C5A7E-2B4D-4E6F-8A9C-0D1E2F3A4B5C}\"\n"
+		"EndProject\n"
+		"Global\n"
+		"\tGlobalSection(SolutionConfigurationPlatforms) = preSolution\n"
+		"\t\tDebug|GCC-x64 = Debug|GCC-x64\n"
+		"\t\tDebug|Win32 = Debug|Win32\n"
+		"\t\tRelease|HCP65C816 = Release|HCP65C816\n"
+		"\tEndGlobalSection\n"
+		"\tGlobalSection(ProjectConfigurationPlatforms) = postSolution\n"
+		"\t\t{1F3C5A7E-2B4D-4E6F-8A9C-0D1E2F3A4B5C}.Debug|GCC-x64.ActiveCfg = Debug|Win32\n"
+		"\t\t{1F3C5A7E-2B4D-4E6F-8A9C-0D1E2F3A4B5C}.Debug|GCC-x64.Build.0 = Debug|Win32\n"
+		"\t\t{1F3C5A7E-2B4D-4E6F-8A9C-0D1E2F3A4B5C}.Debug|Win32.ActiveCfg = Debug|Win32\n"
+		"\t\t{1F3C5A7E-2B4D-4E6F-8A9C-0D1E2F3A4B5C}.Debug|Win32.Build.0 = Debug|Win32\n"
+		"\t\t{1F3C5A7E-2B4D-4E6F-8A9C-0D1E2F3A4B5C}.Release|HCP65C816.ActiveCfg = Debug|Win32\n"
+		"\tEndGlobalSection\n"
+		"EndGlobal\n");
+	AssertTrue(cFile.Write("Output" _FS_ "Listed" _FS_ "Listed.sln"));
+	cFile.Kill();
+
+	cSolution.Init();
+	AssertTrue(cSolution.Read("Output" _FS_ "Listed" _FS_ "Listed.sln"));
+	cConfigurations.Init();
+	cConfigurations.AddDefaults(&cSolution);
+	AssertSize(3, cConfigurations.NumConfigurations());
+	AssertBuildConfiguration("Debug|GCC-x64", BT_GCC, "Debug|GCC-x64", cConfigurations.GetConfiguration(0));
+	AssertBuildConfiguration("Debug|Win32", BT_MSVC, "Debug|Win32", cConfigurations.GetConfiguration(1));
+	AssertBuildConfiguration("Release|HCP65C816", BT_W65C816, "Release|HCP65C816", cConfigurations.GetConfiguration(2));
+
+	cBuild.Init(&cSolution, cConfigurations.GetConfiguration(0), "Output" _FS_ "Listed");
+	asProjects.Init();
+	cBuild.GetProjects(&asProjects);
+	AssertSize(1, asProjects.NumElements());
+	AssertString("Debug|Win32", asProjects.Get(0)->pcConfiguration->GetName());
+	cBuild.Kill();
+	cBuild.Init(&cSolution, cConfigurations.GetConfiguration(2), "Output" _FS_ "Listed");
+	cBuild.GetProjects(&asProjects);
+	AssertSize(0, asProjects.NumElements());
+	cBuild.Kill();
+	asProjects.Kill();
+
+	cConfigurations.Kill();
+	cSolution.Kill();
+	cFileUtil.RemoveDir("Output" _FS_ "Listed");
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // A configuration named with a toolchain's old platform (Debug|W65C816,
 // Debug|65C64, Release|GCC) is read as the name it has now, where it is
 // made, where it is read from a .hcp65build file and where it is looked
@@ -768,6 +835,7 @@ void TestBuildConfigurations(void)
 
 	TestBuildConfigurationsDefaults();
 	TestBuildConfigurationsOldNames();
+	TestBuildConfigurationsListed();
 	TestBuildConfigurationsFile();
 	TestBuildConfigurationsImage();
 	TestBuildConfigurationsExecutable();

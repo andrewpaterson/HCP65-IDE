@@ -507,6 +507,11 @@ A project's row for a GCC or HCP65 configuration maps to a configuration Visual 
 W1's file has it; the IDE goes by the solution configuration's platform and reads the project's group of that name.
 Known from the start: Visual Studio then lists GCC-x64 in its own boxes, and choosing it there builds the ticked
 projects with MSVC.
+Built 2026-11-27, the IDE's reading of the first two: CBuildConfigurations::AddDefaults makes a solution
+configuration whose platform is a toolchain's that toolchain's build configuration, and a solution that lists any
+is given no others; CBuild::GetProjects already left out a project whose row isn't built and FindProjectConfiguration
+takes the project's own configuration of the toolchain's platform when the row maps to x64.
+TestBuildConfigurationsListed.  The solutions themselves are question 25's.
 Trial W1 failing, none of this is built: questions 12 A, 13 A and 17 A stand, and questions 22 and 23 are asked
 again for them.
 
