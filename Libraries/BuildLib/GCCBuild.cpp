@@ -154,7 +154,7 @@ bool CGCCBuild::AddCommands(CArrayChars* paszLines)
 				for (j = 0; j < psProject->pcProject->NumItems(); j++)
 				{
 					pcItem = psProject->pcProject->GetItem(j);
-					if (pcItem->GetType() == VIT_ClCompile)
+					if (psProject->pcProject->IsCompiled(pcItem, psProject->pcConfiguration))
 					{
 						szSource.Init();
 						psProject->pcProject->GetFullPath(pcItem, &szSource);
@@ -206,7 +206,7 @@ bool CGCCBuild::AddCommands(CArrayChars* paszLines)
 				for (j = 0; j < psProject->pcProject->NumItems(); j++)
 				{
 					pcItem = psProject->pcProject->GetItem(j);
-					if (pcItem->GetType() == VIT_ClCompile)
+					if (psProject->pcProject->IsCompiled(pcItem, psProject->pcConfiguration))
 					{
 						szObject.Init();
 						GetObjectName(szProjectOutput.Text(), pcItem->GetFileName(), &szObject);

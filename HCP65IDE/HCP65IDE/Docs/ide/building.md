@@ -25,6 +25,9 @@ workspace file and `hcp65build -config`.  A configuration's files are in folders
 | MSVC | MSBuild, as Visual Studio builds the solution configuration (Windows only; the newest Visual Studio's MSBuild, found with vswhere, or the one on the path). |
 | GCC | `g++` and `ar` from the path: each project compiled into `Output\GCC-x64\<configuration>\Objects\<project>\`, each static library archived (`lib<project>.a`), each application linked with all of the solution's libraries into `Output\GCC-x64\<configuration>\<project>`. On Linux each compile also has `-DLINUX_GNU` and the options CommonLibraries' CMake builds use (`-m64`, `-march=haswell`, `-fno-strict-aliasing`, `-fno-exceptions` and, in a configuration other than Debug, `-O3` and the rest), each link `-m64`. |
 
+The HCP65 compiler and GCC compile a project's source files but those excluded from the solution configuration built
+(Visual Studio's Excluded From Build, on the file or on every file of a project), as MSBuild does.
+
 A solution's build configurations are in its `.hcp65build` file, beside the `.sln`.  Its format, and the
 command line tool `hcp65build` that builds the same way outside the IDE, are on [Building
 Programs](../compiler/building.md).

@@ -21,6 +21,7 @@ along with Codaphela VisualStudioLib.  If not, see <http://www.gnu.org/licenses/
 #ifndef __VCX_ITEM_H__
 #define __VCX_ITEM_H__
 #include "BaseLib/Chars.h"
+#include "BaseLib/ArrayChars.h"
 #include "BaseLib/ArrayTemplate.h"
 
 
@@ -40,7 +41,9 @@ enum EVcxItemType
 
 
 //A file in a project: <ClCompile Include="Source\Main.cpp" />.  Its filter is the folder Solution Explorer shows it in,
-//from the .vcxproj.filters file (empty if it is in none).
+//from the .vcxproj.filters file (empty if it is in none).  Its ExcludedFromBuild elements say which configurations
+//leave it out of a build, or keep it in one whose item definitions leave its kind out: each for the configuration its
+//Condition names, or for every configuration ("") with none.
 class CVcxItem
 {
 protected:
@@ -48,6 +51,8 @@ protected:
 	CChars			mszElement;
 	CChars			mszInclude;
 	CChars			mszFilter;
+	CArrayChars		maszExcluded;
+	CArrayChars		maszNotExcluded;
 
 public:
 	void				Init(const char* szElement, const char* szInclude);
@@ -58,6 +63,8 @@ public:
 	const char*			GetInclude(void) const;
 	const char*			GetFilter(void) const;
 	void				SetFilter(const char* szFilter);
+	void				SetExcludedFromBuild(const char* szConfiguration, bool bExcluded);
+	bool				GetExcludedFromBuild(const char* szConfiguration, bool* pbExcluded);
 	const char*			GetFileName(void) const;
 	bool				Is(const char* szElement, const char* szInclude);
 

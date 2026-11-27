@@ -22,6 +22,7 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 #include <string.h>
 #include "BaseLib/FileUtil.h"
 #include "CppCompilerLib/VisualStudioProject.h"
+#include "VisualStudioLib/VcxItem.h"
 #include "HCP65Build.h"
 
 
@@ -163,6 +164,36 @@ bool CHCP65Build::Start(CArrayChars* paszLines)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Whether the project's configuration compiles its uiSource'th source, as
+// CVisualStudioProject lists them: the uiSource'th ClCompile item of the
+// project isn't excluded from its build (CVcxProject::IsCompiled).
+//
+//////////////////////////////////////////////////////////////////////////
+bool CHCP65Build::IsCompiled(SBuildProject* psProject, size uiSource)
+{
+	CVcxItem*	pcItem;
+	size		i;
+	size		uiCompile;
+
+	uiCompile = 0;
+	for (i = 0; i < psProject->pcProject->NumItems(); i++)
+	{
+		pcItem = psProject->pcProject->GetItem(i);
+		if (pcItem->GetType() == VIT_ClCompile)
+		{
+			if (uiCompile == uiSource)
+			{
+				return psProject->pcProject->IsCompiled(pcItem, psProject->pcConfiguration);
+			}
+			uiCompile++;
+		}
+	}
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // The solution's projects that the configuration builds, in order, as the
 // build's description: each project's own directory and its include
 // directories that are there (with their sub directories, which includes
@@ -199,7 +230,10 @@ void CHCP65Build::Describe(void)
 			pcProject = mcDescription.AddProject(psProject->pcProject->GetName(), cProject.GetDirectory(), psProject->pcConfiguration->GetName(), psProject->bLibrary);
 			for (j = 0; j < cProject.NumSources(); j++)
 			{
-				pcProject->maszSources.Add(cProject.GetSource(j));
+				if (IsCompiled(psProject, j))
+				{
+					pcProject->maszSources.Add(cProject.GetSource(j));
+				}
 			}
 		}
 		cProject.Kill();

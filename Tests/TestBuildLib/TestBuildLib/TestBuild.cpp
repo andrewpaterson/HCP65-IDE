@@ -318,6 +318,67 @@ void TestBuildGCCRelease(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Excluded has three sources: Kept.cpp, NotInDebug.cpp (ExcludedFromBuild
+// for Debug|Win32) and Never.cpp (for every configuration); the two stop a
+// build that compiles them where they are excluded.  GCC compiles one in
+// Debug and two in Release, and the HCP65 build of Debug succeeds.
+//
+//////////////////////////////////////////////////////////////////////////
+void TestBuildExcludedFromBuild(void)
+{
+	CVcxSolution			cSolution;
+	CBuildConfiguration		cConfiguration;
+	CSolutionBuild			cBuild;
+	CArrayChars				aszLines;
+	CCommandBuild*			pcCommands;
+	EBuildState				eState;
+	CFileUtil				cFileUtil;
+
+	cFileUtil.RemoveDir("Output" _FS_ "Excluded");
+	cSolution.Init();
+	AssertTrue(cSolution.ReadProject("Input" _FS_ "Excluded" _FS_ "Excluded.vcxproj"));
+	aszLines.Init();
+
+	cConfiguration.Init("Debug|GCC-x64", BT_GCC, "Debug|Win32");
+	cBuild.Init();
+	eState = TestBuildProject(&cBuild, &cSolution, &cConfiguration, "Excluded", &aszLines);
+	pcCommands = (CCommandBuild*)cBuild.GetBuild();
+	AssertSize(2, pcCommands->NumCommands());
+	AssertString("Kept.cpp", pcCommands->GetCommand(0)->szDescription.Text());
+	AssertString("ar", pcCommands->GetCommand(1)->szExecutable.Text());
+	AssertSize(3, pcCommands->GetCommand(1)->aszArguments.NumElements());
+	AssertTrue((eState == BS_Succeeded) || TestBuildHasLine(&aszLines, "Could not run g++."));
+	cBuild.Kill();
+	cConfiguration.Kill();
+
+	aszLines.ReInit();
+	cConfiguration.Init("Release|GCC-x64", BT_GCC, "Release|Win32");
+	cBuild.Init();
+	eState = TestBuildProject(&cBuild, &cSolution, &cConfiguration, "Excluded", &aszLines);
+	pcCommands = (CCommandBuild*)cBuild.GetBuild();
+	AssertSize(3, pcCommands->NumCommands());
+	AssertString("Kept.cpp", pcCommands->GetCommand(0)->szDescription.Text());
+	AssertString("NotInDebug.cpp", pcCommands->GetCommand(1)->szDescription.Text());
+	AssertSize(4, pcCommands->GetCommand(2)->aszArguments.NumElements());
+	AssertTrue((eState == BS_Succeeded) || TestBuildHasLine(&aszLines, "Could not run g++."));
+	cBuild.Kill();
+	cConfiguration.Kill();
+
+	aszLines.ReInit();
+	cConfiguration.Init("Debug|HCP65C816", BT_W65C816, "Debug|Win32");
+	cBuild.Init();
+	AssertInt(BS_Succeeded, TestBuildProject(&cBuild, &cSolution, &cConfiguration, "Excluded", &aszLines));
+	AssertTrue(TestBuildHasLine(&aszLines, "Kept.cpp (1/1)"));
+	cBuild.Kill();
+	cConfiguration.Kill();
+
+	aszLines.Kill();
+	cSolution.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // A Makefile project with GCC: its build command, run by the shell in its
 // folder, and its output the build's.  One without a command is built as
 // before (it has nothing to compile); one whose command fails fails the
@@ -482,6 +543,7 @@ void TestBuild(void)
 #endif // _WIN32
 	TestBuildGCC();
 	TestBuildGCCRelease();
+	TestBuildExcludedFromBuild();
 	TestBuildMakefile();
 
 	TestStatistics();

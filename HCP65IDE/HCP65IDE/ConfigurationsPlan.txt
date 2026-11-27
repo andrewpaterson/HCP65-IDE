@@ -382,6 +382,11 @@ C10. What a GCC build on Linux builds: the platforms' own projects and files (ad
   C10-1. VisualStudioLib reads ExcludedFromBuild for the configuration (an item's metadata, or an ItemDefinitionGroup's
      ClCompile default for all of a project's items), and CGCCBuild and the HCP65 build leave such an item out, as
      MSBuild does.  WindowInputTester's mains renamed (_Windows, _Linux).
+  Built 2026-11-27, C10-1 but WindowInputTester's mains: CVcxItem keeps its ExcludedFromBuild elements and
+  CVcxProject::IsCompiled answers for a configuration, the item's own word before its item definition's; CGCCBuild
+  asks it, and CHCP65Build for each source CppCompilerLib's CVisualStudioProject lists (a second reader of the
+  project, which it still uses for the sources' paths).  Only the condition C1 reads now, a configuration's whole
+  name; the index still reads every source.  TestVcxProjectExcludedFromBuild and TestBuildExcludedFromBuild.
   C10-2. How a project or file says it isn't built for a toolchain (question 12) is written into the projects:
      WinGdiLib, WinInputLib and WinWaveoutLib not for GCC-x64 (open); HCP65Tester's six board files and
      HCP65IDERef.cpp not for GCC-x64, each by its own ExcludedFromBuild (decided); X11Lib and PulseAudioLib not for

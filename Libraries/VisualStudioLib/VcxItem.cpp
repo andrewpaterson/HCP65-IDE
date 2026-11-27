@@ -32,6 +32,8 @@ void CVcxItem::Init(const char* szElement, const char* szInclude)
 	mszElement.Init(szElement);
 	mszInclude.Init(szInclude);
 	mszFilter.Init();
+	maszExcluded.Init();
+	maszNotExcluded.Init();
 }
 
 
@@ -41,9 +43,47 @@ void CVcxItem::Init(const char* szElement, const char* szInclude)
 //////////////////////////////////////////////////////////////////////////
 void CVcxItem::Kill(void)
 {
+	maszNotExcluded.Kill();
+	maszExcluded.Kill();
 	mszFilter.Kill();
 	mszInclude.Kill();
 	mszElement.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// An <ExcludedFromBuild> of the item: for szConfiguration, or for every
+// configuration if it is "".
+//
+//////////////////////////////////////////////////////////////////////////
+void CVcxItem::SetExcludedFromBuild(const char* szConfiguration, bool bExcluded)
+{
+	(bExcluded ? &maszExcluded : &maszNotExcluded)->Add(szConfiguration);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// What the item says of a build of szConfiguration: what it says for that
+// configuration, else what it says for every one.  False if it says
+// nothing (its kind's item definition then decides).
+//
+//////////////////////////////////////////////////////////////////////////
+bool CVcxItem::GetExcludedFromBuild(const char* szConfiguration, bool* pbExcluded)
+{
+	const char*	aszNames[2] = { szConfiguration, "" };
+	int			i;
+
+	for (i = 0; i < 2; i++)
+	{
+		if (maszExcluded.Contains(aszNames[i]) || maszNotExcluded.Contains(aszNames[i]))
+		{
+			*pbExcluded = maszExcluded.Contains(aszNames[i]);
+			return true;
+		}
+	}
+	return false;
 }
 
 

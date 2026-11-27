@@ -537,6 +537,90 @@ void TestVcxProjectAddItem(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// What each configuration compiles: a ClCompile item, unless its own
+// ExcludedFromBuild leaves it out (for the configuration its condition
+// names, or for all with none) or, the item saying nothing, the
+// configuration's item definition leaves every source out.  An item's own
+// false keeps it in such a configuration.  RenameLib's Engine_Linux.cpp is
+// excluded from its one configuration.
+//
+//////////////////////////////////////////////////////////////////////////
+void TestVcxProjectExcludedFromBuild(void)
+{
+	CVcxProject			cProject;
+	CVcxConfiguration*	pcDebug;
+	CVcxConfiguration*	pcRelease;
+	CTextFile			cFile;
+	CFileUtil			cFileUtil;
+
+	cFileUtil.RemoveDir("Output" _FS_ "Excluded");
+	AssertTrue(cFileUtil.TouchDir("Output" _FS_ "Excluded"));
+	cFile.Init("<Project>\n"
+		"  <ItemGroup Label=\"ProjectConfigurations\">\n"
+		"    <ProjectConfiguration Include=\"Debug|x64\"/>\n"
+		"    <ProjectConfiguration Include=\"Release|x64\"/>\n"
+		"  </ItemGroup>\n"
+		"  <ItemDefinitionGroup Condition=\"'$(Configuration)|$(Platform)'=='Release|x64'\">\n"
+		"    <ClCompile>\n"
+		"      <ExcludedFromBuild>true</ExcludedFromBuild>\n"
+		"    </ClCompile>\n"
+		"  </ItemDefinitionGroup>\n"
+		"  <ItemGroup>\n"
+		"    <ClCompile Include=\"Plain.cpp\"/>\n"
+		"    <ClCompile Include=\"NotInDebug.cpp\">\n"
+		"      <ExcludedFromBuild Condition=\"'$(Configuration)|$(Platform)'=='Debug|x64'\">true</ExcludedFromBuild>\n"
+		"    </ClCompile>\n"
+		"    <ClCompile Include=\"Never.cpp\">\n"
+		"      <ExcludedFromBuild> True </ExcludedFromBuild>\n"
+		"    </ClCompile>\n"
+		"    <ClCompile Include=\"InRelease.cpp\">\n"
+		"      <ExcludedFromBuild Condition=\"'$(Configuration)|$(Platform)'=='Release|x64'\">false</ExcludedFromBuild>\n"
+		"    </ClCompile>\n"
+		"    <ClCompile Include=\"Other.cpp\">\n"
+		"      <ExcludedFromBuild Condition=\"'$(Platform)'=='ARM'\">true</ExcludedFromBuild>\n"
+		"    </ClCompile>\n"
+		"    <ClInclude Include=\"Plain.h\"/>\n"
+		"  </ItemGroup>\n"
+		"</Project>\n");
+	AssertTrue(cFile.Write("Output" _FS_ "Excluded" _FS_ "Excluded.vcxproj"));
+	cFile.Kill();
+
+	cProject.Init();
+	AssertTrue(cProject.Read("Output" _FS_ "Excluded" _FS_ "Excluded.vcxproj"));
+	pcDebug = cProject.FindConfiguration("Debug|x64");
+	pcRelease = cProject.FindConfiguration("Release|x64");
+	AssertNotNull(pcDebug);
+	AssertNotNull(pcRelease);
+
+	AssertTrue(cProject.IsCompiled(cProject.FindItem("ClCompile", "Plain.cpp"), pcDebug));
+	AssertFalse(cProject.IsCompiled(cProject.FindItem("ClCompile", "NotInDebug.cpp"), pcDebug));
+	AssertFalse(cProject.IsCompiled(cProject.FindItem("ClCompile", "Never.cpp"), pcDebug));
+	AssertTrue(cProject.IsCompiled(cProject.FindItem("ClCompile", "InRelease.cpp"), pcDebug));
+	AssertTrue(cProject.IsCompiled(cProject.FindItem("ClCompile", "Other.cpp"), pcDebug));
+	AssertFalse(cProject.IsCompiled(cProject.FindItem("ClInclude", "Plain.h"), pcDebug));
+
+	//Release's item definition leaves every source out, but the one that says it is built.
+	AssertFalse(cProject.IsCompiled(cProject.FindItem("ClCompile", "Plain.cpp"), pcRelease));
+	AssertFalse(cProject.IsCompiled(cProject.FindItem("ClCompile", "NotInDebug.cpp"), pcRelease));
+	AssertFalse(cProject.IsCompiled(cProject.FindItem("ClCompile", "Never.cpp"), pcRelease));
+	AssertTrue(cProject.IsCompiled(cProject.FindItem("ClCompile", "InRelease.cpp"), pcRelease));
+
+	//No configuration: every source.
+	AssertTrue(cProject.IsCompiled(cProject.FindItem("ClCompile", "Never.cpp"), NULL));
+	cProject.Kill();
+	cFileUtil.RemoveDir("Output" _FS_ "Excluded");
+
+	cProject.Init();
+	AssertTrue(cProject.Read("Input" _FS_ "RenameItem" _FS_ "Before" _FS_ "RenameLib" _FS_ "RenameLib.vcxproj"));
+	pcDebug = cProject.FindConfiguration("Debug|Win32");
+	AssertTrue(cProject.IsCompiled(cProject.FindItem("ClCompile", "Engine.cpp"), pcDebug));
+	AssertFalse(cProject.IsCompiled(cProject.FindItem("ClCompile", "Source\\Engine\\Engine_Linux.cpp"), pcDebug));
+	cProject.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 //
 //////////////////////////////////////////////////////////////////////////
 void TestVcxProject(void)
@@ -550,6 +634,7 @@ void TestVcxProject(void)
 	TestVcxProjectRenameItem();
 	TestVcxProjectAddItemBeside();
 	TestVcxProjectAddItem();
+	TestVcxProjectExcludedFromBuild();
 
 	TestStatistics();
 }

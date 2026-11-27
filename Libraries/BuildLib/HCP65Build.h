@@ -54,6 +54,7 @@ public:
 
 	void		SetLibc65Directory(const char* szDirectory);
 	void		Describe(void);
+	bool		IsCompiled(SBuildProject* psProject, size uiSource);
 	CHCP65BuildDescription*	GetDescription(void);
 
 	bool		Start(CArrayChars* paszLines) override;

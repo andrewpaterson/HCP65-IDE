@@ -271,6 +271,7 @@ void CVcxProject::ReadItemGroup(CMarkupTag* pcItemGroup)
 	STagIterator			sIter;
 	char*					szInclude;
 	CVcxProjectReference*	pcReference;
+	CVcxItem*				pcItem;
 	CChars					szProject;
 
 	pcTag = pcItemGroup->GetTag(&sIter);
@@ -296,11 +297,75 @@ void CVcxProject::ReadItemGroup(CMarkupTag* pcItemGroup)
 			}
 			else
 			{
-				masItems.Add()->Init(pcTag->GetName(), szInclude);
+				pcItem = masItems.Add();
+				pcItem->Init(pcTag->GetName(), szInclude);
+				ReadItemExclusions(pcTag, pcItem);
 			}
 		}
 		pcTag = pcItemGroup->GetNextTag(&sIter);
 	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// An item's <ExcludedFromBuild Condition="...">true</ExcludedFromBuild>
+// elements.  One whose condition isn't a configuration's says nothing.
+//
+//////////////////////////////////////////////////////////////////////////
+void CVcxProject::ReadItemExclusions(CMarkupTag* pcItemTag, CVcxItem* pcItem)
+{
+	CMarkupTag*		pcTag;
+	STagIterator	sIter;
+	char*			szCondition;
+	CChars			szConfiguration;
+	CChars			szValue;
+
+	for (pcTag = pcItemTag->GetTag("ExcludedFromBuild", &sIter); pcTag; pcTag = pcItemTag->GetNextTag(&sIter))
+	{
+		szCondition = pcTag->GetStringAttribute("Condition");
+		szConfiguration.Init();
+		if ((szCondition == NULL) || GetVcxConditionConfiguration(szCondition, &szConfiguration))
+		{
+			szValue.Init();
+			pcTag->GetText(&szValue);
+			szValue.StripWhitespace(true);
+			pcItem->SetExcludedFromBuild(szConfiguration.Text(), szValue.EqualsIgnoreCase("true"));
+			szValue.Kill();
+		}
+		szConfiguration.Kill();
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether a build of pcConfiguration compiles the item: a ClCompile that
+// isn't excluded from it, by its own ExcludedFromBuild or, if it has none
+// for the configuration, by the configuration's item definition
+// (<ItemDefinitionGroup><ClCompile><ExcludedFromBuild>, which leaves out
+// every source of a project).
+//
+//////////////////////////////////////////////////////////////////////////
+bool CVcxProject::IsCompiled(CVcxItem* pcItem, CVcxConfiguration* pcConfiguration)
+{
+	bool	bExcluded;
+	char*	szDefault;
+
+	if (pcItem->GetType() != VIT_ClCompile)
+	{
+		return false;
+	}
+	if (pcConfiguration == NULL)
+	{
+		return true;
+	}
+	if (!pcItem->GetExcludedFromBuild(pcConfiguration->GetName(), &bExcluded))
+	{
+		szDefault = pcConfiguration->GetProperty("ClCompile.ExcludedFromBuild");
+		bExcluded = szDefault && (StringInsensitiveCompare(szDefault, "true") == 0);
+	}
+	return !bExcluded;
 }
 
 

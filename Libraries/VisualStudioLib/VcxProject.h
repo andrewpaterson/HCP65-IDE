@@ -68,6 +68,7 @@ public:
 	CVcxItem*				FindItem(const char* szElement, const char* szInclude);
 	void					GetItemsInFilter(const char* szFilter, CArrayInt* paiItems);
 	void					GetFullPath(CVcxItem* pcItem, CChars* pszDest);
+	bool					IsCompiled(CVcxItem* pcItem, CVcxConfiguration* pcConfiguration);
 	bool					RenameItem(const char* szOldPath, const char* szNewName);
 	bool					AddItemBeside(const char* szExistingPath, const char* szNewName);
 	bool					AddItem(const char* szPath, const char* szFilter);
@@ -94,6 +95,7 @@ protected:
 	bool					AddElement(const char* szFileName, const char* szElement, const char* szInclude, const char* szFilter);
 	bool					RemoveIncludes(const char* szFileName, CArrayChars* paszIncludes);
 	void					ReadItemGroup(CMarkupTag* pcItemGroup);
+	void					ReadItemExclusions(CMarkupTag* pcItemTag, CVcxItem* pcItem);
 	void					ReadPropertyGroup(CMarkupTag* pcPropertyGroup);
 	void					ReadItemDefinitionGroup(CMarkupTag* pcItemDefinitionGroup);
 	void					ReadFilterItemGroup(CMarkupTag* pcItemGroup);
