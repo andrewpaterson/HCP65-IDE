@@ -965,3 +965,12 @@ Questions (the user's, one at a time)
    whether Visual Studio keeps them when it saves the project can't be tried until there is one (trial W3).  If it
    drops them, git shows it and they move to a sheet beside the project (W3's contingency).  The other considered:
    that sheet from the start, which can't hold a file's exclusion anyway.
+25. Decided (the user, 2026-11-27: "1 A"): the solutions get what adds to them now, before there is a Visual Studio to
+   show it (MSBuild under Wine builds it): the GCC-x64 and HCP65 solution configurations with their rows, and X11Lib
+   and PulseAudioLib (The solution's rows).  Their x64 and Win32 configurations aren't touched.  C11-2's rename to
+   MSVC-x64 and MSVC-x86 waits for a Visual Studio: it changes what every user of one sees and types, and Linux gains
+   nothing by it.  The others considered: both now; nothing in the solutions until then.
+26. Decided (the user, 2026-11-27: "2 A"): the Vulkan headers are fetched from Khronos's repository and VULKAN_SDK
+   pointed at them for the builds under Wine, so the projects that include them (VulkanLib and what is built on it)
+   are checked as the others are.  The others considered: no build of those, only the script's own comparison; the
+   user installing LunarG's SDK.
