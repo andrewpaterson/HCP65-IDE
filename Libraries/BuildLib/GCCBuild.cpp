@@ -34,7 +34,7 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 //A stopgap until the projects have GCC-x64 groups of their own (ConfigurationsPlan.txt C0; C3-2 removes these):
 //what CommonLibraries/Tests/TestBaseLib/CMakeLists.txt's baselib_options gives a 64-bit build, which explains each.
 //Every compile, after the project's own defines.
-static const char* gaszGCCCompileOptions[] = { "-DLINUX_GNU", "-m64", "-march=haswell", "-fno-strict-aliasing", "-Wno-ignored-attributes", "-Wno-write-strings", "-Wno-multichar", "-Wno-class-memaccess", "-Wno-overloaded-virtual", "-Wno-comment", "-Wno-unused-parameter", NULL };
+static const char* gaszGCCCompileOptions[] = { "-DLINUX_GNU", "-m64", "-march=haswell", "-fno-strict-aliasing", "-fno-exceptions", "-Wno-ignored-attributes", "-Wno-write-strings", "-Wno-multichar", "-Wno-class-memaccess", "-Wno-overloaded-virtual", "-Wno-comment", "-Wno-unused-parameter", NULL };
 //Then a Debug configuration's, or any other's.
 static const char* gaszGCCDebugCompileOptions[] = { "-g", NULL };
 static const char* gaszGCCReleaseCompileOptions[] = { "-O3", "-ffunction-sections", "-fdata-sections", "-fno-stack-protector", "-U_FORTIFY_SOURCE", "-fno-lifetime-dse", "-fno-math-errno", "-fno-trapping-math", NULL };

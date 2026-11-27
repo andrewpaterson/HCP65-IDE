@@ -212,6 +212,7 @@ void TestBuildGCC(void)
 	AssertSize(psCompile->aszArguments.GetIndex("-DTINY_DEBUG") + 1, psCompile->aszArguments.GetIndex("-DLINUX_GNU"));
 	AssertTrue(psCompile->aszArguments.Contains("-m64"));
 	AssertTrue(psCompile->aszArguments.Contains("-fno-strict-aliasing"));
+	AssertTrue(psCompile->aszArguments.Contains("-fno-exceptions"));
 	AssertTrue(psCompile->aszArguments.Contains("-g"));
 	AssertFalse(psCompile->aszArguments.Contains("-O3"));
 	AssertFalse(psCompile->aszArguments.Contains("-fno-lifetime-dse"));

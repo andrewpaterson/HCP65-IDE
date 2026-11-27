@@ -259,6 +259,7 @@ target_compile_definitions(baselib_options INTERFACE
 )
 # -fno-strict-aliasing: MSVC never optimises on the strict aliasing rule and the
 # code relies on that (e.g. (CUnknown**)&pcTyped), so optimised builds break without it.
+# -fno-exceptions: /EHs-c-, as the Visual Studio configurations have it.  Nothing built here throws or catches.
 # -Wno-ignored-attributes: g++ drops ALIGN_64 when int64/uint64/float64 is a
 # template argument.  Templates that store such a type by value use MSVC_ALIGN
 # instead (see PrimitiveTypes.h), so the warning only reports the drop.
@@ -269,7 +270,7 @@ target_compile_definitions(baselib_options INTERFACE
 # (e.g. Save(CObjectWriter*) hides CUnknown::Save(CFileWriter*)) on purpose.
 # -Wno-comment: ASCII diagrams in comments end lines with a backslash.
 # -Wno-unused-parameter: virtual overrides and callbacks often ignore parameters.
-target_compile_options(baselib_options INTERFACE -m64 -fno-strict-aliasing -Wall -Wextra -Wno-ignored-attributes -Wno-write-strings -Wno-multichar -Wno-class-memaccess -Wno-overloaded-virtual -Wno-comment -Wno-unused-parameter)
+target_compile_options(baselib_options INTERFACE -m64 -fno-strict-aliasing -fno-exceptions -Wall -Wextra -Wno-ignored-attributes -Wno-write-strings -Wno-multichar -Wno-class-memaccess -Wno-overloaded-virtual -Wno-comment -Wno-unused-parameter)
 target_link_options(baselib_options INTERFACE -m64)
 if(BASELIB_ASAN)
 	target_compile_options(baselib_options INTERFACE -fsanitize=address -fno-omit-frame-pointer)
