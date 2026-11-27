@@ -7,12 +7,17 @@ TestBaseLib in the IDE failing in BaseLib/ArrayEmbeddedInt.cpp: 'EngineOutput' w
 Nothing here is a go-ahead: the questions at the end are the user's, asked one at a time, and each stage is built
 only when the user says so.
 
+Reviewed 2026-11-27 (the user: "Please go through the ConfigurationsPlan.txt and check it for issues", then "Yes,
+write them into the plan"): 20 issues.  Corrections are made where they stood and say (2026-11-27) where they change
+what a stage does; what needs deciding is questions 4b and 15 to 21 (and 12 D and 13 D); new are C1-4, C7-4, C9-6,
+C11 and the Windows trials.
+
 Paths: VSL = HCP65-IDE/Libraries/VisualStudioLib, BL = HCP65-IDE/Libraries/BuildLib, IXL =
 HCP65-IDE/Libraries/IndexLib, IDE = HCP65-IDE/HCP65IDE/HCP65IDE, CL = CommonLibraries.
 
 
-Where a configuration's settings are now
-----------------------------------------
+Where a configuration's settings are now (2026-11-25, before C0)
+----------------------------------------------------------------
 
 - MSVC: each .vcxproj, an <ItemDefinitionGroup> for each Configuration|Platform in its <ProjectConfigurations>.  No
   project imports a shared .props, so what every project has (/arch:AVX2, /fp:fast, /GS- and the rest) is written
@@ -28,7 +33,8 @@ Where a configuration's settings are now
   directories and defines and nothing else.  The defines are MSVC's (_LIB, _CRT_SECURE_NO_DEPRECATE), LINUX_GNU isn't
   among them, and none of the options above are passed.  That is the EngineOutput failure (BaseLib/DebugOutput.h
   defines EngineOutput only for _MSC_VER, WIN_GNU_32, LINUX_GNU or __LIBC65__); with LINUX_GNU alone the code would
-  build but could break when it runs (strict aliasing, lifetime DSE: see TestBaseLib's CMakeLists.txt).
+  build but could break when it runs (strict aliasing, lifetime DSE: see TestBaseLib's CMakeLists.txt).  Since C0
+  (2026-11-27) CGCCBuild adds LINUX_GNU and those options itself on Linux.
 - The HCP65 compiler: the solution's .hcp65build file (CBuildConfigurations, BL/BuildConfiguration.h): its toolchain,
   the solution configuration it takes includes and defines from (Solution="Release|Win32"), its compile options
   (NoFloats, MathTables, PreferSize, Debug, Unoptimised and the rest), what it links (<Image>, <Executable>, <Module>)
@@ -65,14 +71,16 @@ Configuration|Platform, the platform naming the toolchain and the target (GCC-x6
   </ItemDefinitionGroup>
 
 - Visual Studio and MSBuild use only the groups whose condition is true for what they build, and no Visual Studio
-  configuration is Release|GCC, so these groups change nothing there.  They are not added to <ProjectConfigurations>
-  or to the .sln: Visual Studio would list configurations it can't build.
+  configuration is Release|GCC-x64, so these groups change nothing there.  They are not added to
+  <ProjectConfigurations>: Visual Studio would list configurations it can't build.  Whether a .sln can list them is
+  to be tried on Windows (question 1, trial W1); until then they aren't in it.
 - What MSVC and GCC both have keeps MSVC's name: ClCompile's PreprocessorDefinitions, AdditionalIncludeDirectories
   and AdditionalOptions (for g++, its own arguments), Link's AdditionalOptions and AdditionalDependencies.  Only the
   HCP65 compiler's own options get tags of their own (HCP65Compile, named as the .hcp65build attributes are).
-- What every project has goes in one shared property sheet, imported by each .vcxproj (<Import Project=
-  "$(SolutionDir)..\Common.props"/> or Directory.Build.props, which MSBuild imports by itself from a folder above the
-  project).  LINUX_GNU and the g++ options are written once, and MSVC's shared settings can move there too.
+- What every project has goes in shared property sheets, each project importing its repository's by a path from
+  the project (question 2; not from $(SolutionDir), which differs between the solutions a shared project like BaseLib
+  is in, and not Directory.Build.props).  LINUX_GNU and the g++ options are written once, and MSVC's shared settings
+  move there too.
 - The .hcp65build file goes (question 3).  What a program links into (<Image>, <Executable>, <Module>) moves into
   its project, an HCP65Link group as MSVC's projects have Link.  What debugging needs (<Load>, <Lines>, Card,
   CardPath, BreakpointSpace) moves into run configurations, which can be shared (committed) as IntelliJ IDEA's are.
@@ -87,6 +95,10 @@ The 101 real projects: 78 C++ projects (37 static libraries, 41 applications), 2
 hcp65build: Boot, Kernal, Init, Shell, Libc65, the 8 drivers and the test programs), Website and X65C64-Proposal (no
 sources) and ExceptionsTest (no configurations).  98 have Debug and Release for Win32 and x64; HCP65IDE has
 Reference|x64 too.  The survey script: each setting per configuration, how many projects set it, to what.
+
+Not surveyed (found 2026-11-27, question 18): HCP65-Sculpt (3 projects, and 2 CMakeLists.txt with their own copies of
+vcxproj_sources and baselib_options), WindowInputTester (1 and 1) and StarControlRedux (3 and 2) build CommonLibraries'
+projects too.
 
 Every C++ project has these, the same in each (to Common.props, by configuration):
   - Configuration: PlatformToolset v142, CharacterSet NotSet.
@@ -136,13 +148,17 @@ Settings that differ for no reason seen (drift).  A sheet makes them one; each i
   - TestBaseLib, TestEmulatorDebugLib and TestThreadLib link incrementally in Release.
   - 43 projects import Microsoft.CPP.UpgradeFromVC70.props (left from converting a Visual Studio 2003 project); the
     others don't.
-  - Win32 OutDir/IntDir set in 22 projects ($(SolutionDir)$(Configuration)\), x64's in 9.
+  - Win32 OutDir/IntDir set in 22 projects ($(SolutionDir)$(Configuration)\), x64's in 9 of those 22.
 
 So a typical C++ project's four ItemDefinitionGroups (about 25 settings each) and its configuration PropertyGroups
 come down to its include extras, its added defines and libraries, its SubSystem if Windows, and ConfigurationType.
 
 Stages
 ------
+
+The names are question 1's (Release|GCC-x64, Release|HCP65C816, Release|HCP65C64, and the solutions' Release|MSVC-x64),
+which C11 brings in; until it is built the build configurations are still Release|GCC, Release|W65C816 and
+Release|65C64, as C0's text has them.
 
 C0. A stopgap: CGCCBuild adds the Linux options itself (question 7)
   C0-1. On Linux, CGCCBuild::AddCompile adds -DLINUX_GNU and baselib_options' compile options (-m64, -march=haswell,
@@ -151,7 +167,7 @@ C0. A stopgap: CGCCBuild adds the Linux options itself (question 7)
      -fno-trapping-math; Debug: -g) after the project's defines; the link adds -m64 (and Release --gc-sections).
      One list in GCCBuild.cpp, its comment naming TestBaseLib's CMakeLists.txt as where it came from.
   C0-2. Tests: TestBuildLib's GCC command test expects them; the IDE builds TestBaseLib's Release|GCC and it runs and
-     passes.  C3-2 removes the list when the projects have their GCC-x64 groups.
+     passes.  C7-4 removes the list when every repository's projects have their GCC-x64 groups (2026-11-27: not C3-2).
   Built 2026-11-27 (the user: "add C0 too"): the lists are in GCCBuild.cpp under LINUX_GNU, Debug being a solution
   configuration named Debug|...; TestBuildGCC (Debug) and TestBuildGCCRelease (Tools, compiles and links) check them.
   Not -Wall -Wextra or -flto, which CMake also passes.  On the way: a GCC application was linked to
@@ -164,43 +180,58 @@ C0. A stopgap: CGCCBuild adds the Linux options itself (question 7)
 C1. VisualStudioLib reads the GCC and HCP65 groups
   C1-1. CVcxProject (VSL/VcxProject.cpp) keeps a configuration for each group whose platform is a toolchain's name,
      as well as those in <ProjectConfigurations>.  Now SetProperty drops a group for a configuration that isn't
-     listed.  Such a configuration is marked as not Visual Studio's (MSVC never builds it).
+     listed.  Such a configuration is marked as not Visual Studio's (MSVC never builds it).  The conditions read
+     (2026-11-27): '$(Configuration)|$(Platform)'=='X|Y' as now, and '$(Configuration)'=='X' or '$(Platform)'=='Y'
+     alone, each setting every configuration it is true of.  Any other condition is false, and the sheets are written
+     with these three only.  (GetVcxConditionConfiguration now takes whatever follows ==' for a whole name, so a
+     sheet's '$(Configuration)'=='Debug' would set nothing.)
   C1-2. Per tool reads: AdditionalOptions (ClCompile and Link) as an argument list, split as a command line is
      (quotes kept), %(AdditionalOptions) as PreprocessorDefinitions' %(...) is now; the HCP65Compile tags as named
      properties.
-  C1-3. Tests: TestVisualStudioLib reads a project with Release|GCC and Release|W65C816 groups and none in
+  C1-3. Tests: TestVisualStudioLib reads a project with Release|GCC-x64 and Release|HCP65C816 groups and none in
      <ProjectConfigurations>: their defines, options and HCP65 properties, and that Release|Win32 is unchanged.
+  C1-4. (2026-11-27) What a toolchain's configuration takes from the project as a whole: its ConfigurationType (the
+     same in all four configurations of each of the 109 projects) and its include directories.  Both are written in
+     groups conditioned for each MSVC configuration now, so a configuration made from a GCC-x64 group alone has
+     neither, and CBuild::GetProjects takes a project with no ConfigurationType for an application: every library
+     would be linked as a program.  Where they come from is question 15.
 
 C2. VisualStudioLib follows imports
   C2-1. <Import Project="..."/> of a .props file: its PropertyGroups and ItemDefinitionGroups are read where the
-     import is, so a project's own group after it adds to or replaces what the sheet set, as MSBuild has it.  Paths
+     import is, so a project's own group after it adds to or replaces what the sheet set, as MSBuild has it.  The
+     projects import in an ImportGroup conditioned for one MSVC configuration (question 2: once per configuration),
+     which is never true for Release|GCC-x64: how a toolchain's configuration imports the sheet is question 16
+     (2026-11-27).  Paths
      with $(SolutionDir), $(ProjectDir) and $(MSBuildThisFileDirectory); an import whose Condition is
-     Exists('...').  Directory.Build.props found as MSBuild finds it (the nearest one in a folder above the project).
-     Microsoft's own imports ($(VCTargetsPath), $(UserRootDir)) are skipped as now.
+     Exists('...').  Directory.Build.props isn't read: question 2 chose imports by path, and nothing would use it
+     (2026-11-27).  Microsoft's own imports ($(VCTargetsPath), $(UserRootDir)) are skipped as now.
   C2-2. Opening a solution watches the imported sheets as it watches its projects: a changed sheet reloads the
      projects that import it.
-  C2-3. Tests: a project importing a sheet that sets defines and options for Release|GCC, and adding its own;
-     Directory.Build.props two folders up.
+  C2-3. Tests: a project importing a sheet that sets defines and options for Release|GCC-x64, and adding its own; a
+     sheet importing another; each condition C2-1 reads, and one it doesn't.
 
 C3. GCC builds with the project's GCC configuration
-  C3-1. A GCC build configuration's solution configuration is the GCC one (Solution="Release|GCC") when the projects
+  C3-1. A GCC build configuration's solution configuration is the GCC one (Solution="Release|GCC-x64") when the projects
      have it; CBuildConfigurations::AddDefault prefers it to Release|x64.  A project without a GCC group builds as now
-     (x64's include directories and defines), and the build says once which projects those are.
+     (x64's include directories and defines, and C0's list), and the build says once which projects those are.
   C3-2. CGCCBuild::AddCompile passes ClCompile's AdditionalOptions after the -D arguments; the link passes Link's
-     AdditionalOptions and AdditionalDependencies.  A GCC configuration with its own -O level or -m64 doesn't get a
-     second from CGCCBuild (it adds none of its own).
+     AdditionalOptions and AdditionalDependencies, a name with no path or extension as -l<name> (X11 is -lX11), any
+     other as written.  A project with a GCC-x64 group gets none of C0's list, so its own -O level or -m64 isn't
+     given twice; one without keeps the list until C7-4.  (2026-11-27: this step used to take C0's list out, but no
+     real project has a GCC group before its repository's C7, so every GCC build would have lost LINUX_GNU again in
+     between.)
   C3-3. Tests: TestBuildLib's GCC build test project gets a GCC group with a define only it has and an option
      (-fno-strict-aliasing); the test asserts both are in the compile command.  IDE: a check builds TestBaseLib's
-     Release|GCC and runs it.
+     Release|GCC-x64 and runs it.
 
 C4. HCP65 compiles with the project's HCP65 configuration
-  C4-1. An HCP65 build configuration's defines and include directories come from the project's W65C816 or 65C64
-     group when it has one (Solution="Release|W65C816"), from Win32 as now when it hasn't.
+  C4-1. An HCP65 build configuration's defines and include directories come from the project's HCP65C816 or
+     HCP65C64 group when it has one (Solution="Release|HCP65C816"), from Win32 as now when it hasn't.
   C4-2. Its compile options (NoFloats, MathTables, PreferSize, WarnMissingOverride, Exceptions, KeepUnusedObjects,
      WarnStringToPointer, MultiWordCasts, CConversions, StubMissing, Debug) come from HCP65Compile, a project's own
-     overriding the sheet's.  Some are per program now, not per project (NoFloats is the whole kernal); per project
-     they are each project's (question 4).  Unoptimised="Init, Shell" becomes Debug="true" with no optimiser on
-     those projects (an Optimise tag, question 4).
+     overriding the sheet's: the whole program's from the startup project's group, each project's code's from its own
+     (question 4's two lists; PreferSize and WarnMissingOverride are in neither: question 4b).  Unoptimised="Init,
+     Shell" becomes those projects' own setting.
   C4-3. Linking: a program's <Image>, <Executable> or <Module> (with its Region and Symbol rows) is read from its
      project's HCP65Link group (the startup project's, as CHCP65Build links now), in a group with no condition or a
      configuration's.  Debug and Release share it instead of repeating it.
@@ -210,7 +241,8 @@ C4. HCP65 compiles with the project's HCP65 configuration
   C4-5. The 20 HCP65 solutions' .hcp65build files (HCP65/**/HCP65*.hcp65build) are moved: compile options into
      their projects' HCP65Compile groups, linking into HCP65Link, debugging into shared run configurations (C8).  An
      old .hcp65build is still read for a while, as now, when a project has no HCP65 groups.  hcp65build (the command
-     line) reads the same.
+     line) reads the same.  Where the list of a solution's build configurations is then (the file holds it now) is
+     question 17 (2026-11-27).
   C4-6. Tests: TestBuildLib builds an HCP65 test solution whose options are only in its projects and gets the same
      output as before the move; the IDE checks that build HCP65 programs pass unchanged.
 
@@ -218,28 +250,35 @@ C5. The code index reads with the configuration's toolchain
   C5-1. WorkspaceIndex reads a GCC configuration's defines with GCC's own (__GNUC__, __linux__, __x86_64__) and
      Linux's headers, not MinGW's, and not AddCompilerDefines' MSVC ones; an HCP65 configuration with the HCP65
      compiler's (__LIBC65__ and its own) and Libc65's headers.  MSVC configurations as now.
-  C5-2. So the index follows the build configuration chosen (an #ifdef LINUX_GNU block is live in Release|GCC, dim
-     in Release|x64).  Tests: TestIndexLib indexes one file in Release|GCC and Release|x64 and finds a symbol defined
-     only under LINUX_GNU in the first.
+  C5-2. So the index follows the build configuration chosen (an #ifdef LINUX_GNU block is live in Release|GCC-x64,
+     dim in Release|MSVC-x64).  Tests: TestIndexLib indexes one file in Release|GCC-x64 and Release|MSVC-x64 and finds
+     a symbol defined only under LINUX_GNU in the first.
 
 C6. CMake reads the projects too
   C6-1. One CMake module (CL/CMake/Vcxproj.cmake) instead of the 35 copies of vcxproj_sources: it reads a project's
      sources and its GCC group's defines and options (following its imports, as C2), for CMAKE_BUILD_TYPE's
-     configuration (Release|GCC-x64, Debug|GCC-x64; a 32-bit build reads GCC-x64's and swaps -m64 for its own).  The CMakeLists.txt files keep only their targets and what is CMake's
-     own (BASELIB_ASAN, BASELIB_SIZE16, BASELIB_64's -m32 or -m64, LTO).
+     configuration (Release|GCC-x64, Debug|GCC-x64; a 32-bit build reads GCC-x64's and swaps -m64 for its own).  The
+     CMakeLists.txt files keep only their targets and what is CMake's own (BASELIB_ASAN, BASELIB_SIZE16, BASELIB_64's
+     -m32 or -m64, LTO).
   C6-2. baselib_options is made from the sheet's GCC options, so a change to them is one edit for CMake and the IDE.
   C6-3. The linux test builds (32-bit Release and 64-bit) build and pass as before: TestBaseLib, TestBaseLib65 both
      ways (no argument and "816"), and every other test project; their command lines compared before and after.
 
 C7. The projects move to the shared sheets
-  C7-1. CL/Common.props holds the GCC groups and MSVC's settings every project shares (What the projects share);
+  C7-1. CL/Common.props holds the GCC groups (their options C0's lists, their defines question 20's, exceptions
+     question 21's) and MSVC's settings every project shares (What the projects share);
      HCP65.props, the HCP65-IDE and LogiCim sheets import it and add their own (question 2).  Each .vcxproj imports
      its repository's sheet in its PropertySheets ImportGroup and keeps only what is its own.
-  C7-2. Done a repository at a time (CommonLibraries, HCP65, HCP65-IDE, LogiCim), each its own commit, by a script
+  C7-2. Done a repository at a time (CommonLibraries, HCP65, HCP65-IDE, LogiCim, then those question 18 adds), each
+     its own commit, by a script
      that removes from a project only what equals the sheet.  MSVC's settings for each project are compared, before
      and after, by MSBuild's /pp (the evaluated project) on Windows.
-  C7-3. Windows: each solution opens in Visual Studio with no new warnings, lists only its Win32 and x64
-     configurations, and builds and passes its tests in each.  Only the user can do this (no Windows here).
+  C7-3. Windows: each solution opens in Visual Studio with no new warnings, lists only its MSVC configurations
+     (Win32 and x64, or MSVC-x86 and MSVC-x64 once C11-2 is done), and builds and passes its tests in each.  Only the
+     user can do this (no Windows here).
+  C7-4. (2026-11-27) When the last repository has moved, C0's lists go from GCCBuild.cpp, and TestBuildGCC and
+     TestBuildGCCRelease expect the groups' options instead.  A project still without a GCC-x64 group is then built
+     with x64's include directories and defines and no more, and the build names it (C3-1).
 
 C8. Shared run configurations hold how a program is debugged
   C8-1. A run configuration has a type: Program (today's: a tool, folder and arguments, or what a GCC build linked)
@@ -280,6 +319,8 @@ C9. Edit Build Configurations writes the projects and sheets
   C9-5. Tests: TestVisualStudioLib sets, overrides and removes a property in a project and a sheet, and compares the
      files with Expected copies byte for byte (as RenameItem's test does); the IDE's checks edit an option in the
      dialog and build with it.
+  C9-6. (2026-11-27) Adding, removing and renaming a build configuration, which the dialog does in the .hcp65build
+     file now, as question 17 decides.
 
 
 C10. What a GCC build on Linux builds: the platforms' own projects and files (added 2026-11-27)
@@ -292,37 +333,44 @@ C10. What a GCC build on Linux builds: the platforms' own projects and files (ad
     build on both (CMake builds them on Linux).
   - The solutions that list a Windows-only library, each with its Linux build (CMake) beside it: LogiCim, HCP65IDE,
     HCP65Emulator (also WinWaveoutLib; its CMake adds PulseAudioLib and WinRefLib), HCP65Tester, HCP65Sculpt,
-    WindowInputTester, TestInputLib and TestWindowLib.  Each CMake build adds X11Lib (TestInputLib's and TestWindowLib's
-    only leave the Windows one out).
+    WindowInputTester, TestInputLib and TestWindowLib.  The six programs' CMake builds add X11Lib; TestInputLib's and
+    TestWindowLib's only leave the Windows library out.
   - Files of a shared project that are one platform's: HCP65Tester's board code (AddressDecodeBoard, BoardPins,
     CommonBoard, TestBoard, UART and WindowsCOM: UART.h includes windows.h), which its CMakeLists.txt leaves out by
     listing the other three sources by hand; HCP65IDERef.cpp, the reference screen's main, an item of HCP65IDE.vcxproj
     with ExcludedFromBuild in every configuration but Reference|x64.  ExcludedFromBuild is in no other real project.
     VisualStudioLib keeps it as an item's text and CGCCBuild compiles every ClCompile, so a GCC build of HCP65IDE
-    would compile two mains.
+    would compile two mains.  Its ExcludedFromBuild lines name the four MSVC configurations, so reading them (C10-1)
+    isn't enough: it needs one for each GCC-x64 configuration too (C10-2).
+  - The reference builds: only HCP65IDE's is a configuration of its project (Reference|x64).  HCP65EmulatorRef.cpp
+    and HCP65SculptRef.cpp are items of no project: only CMake builds them, from the project's sources but its mains.
+    This stage leaves all three reference programs CMake's (the IDE checks run CMake's HCP65IDERef); a
+    Reference|GCC-x64 the IDE builds hasn't been asked for.
   - What Linux links that Windows doesn't: X11 and Xext (X11Lib), dl (PulseAudioLib loads libpulse-simple when it
     runs) and pthread (BaseLib), each in a CMakeLists.txt's target_link_libraries, PUBLIC so a program linking the
     library gets them.
   - The build already takes note of the solution: a project whose solution configuration has no .Build.0 isn't built,
     and a solution configuration the .sln hasn't (Release|GCC-x64, question 1) falls back to the project's own
     configuration of that name (BL/Build.cpp, CBuild::GetProjects).  So after C1 and C3-1 a project without a GCC-x64
-    configuration isn't built by GCC, except that C3-1 builds such a project as x64, and C7's sheet gives every project a
-    GCC-x64 group: a project has to say it isn't built for a toolchain (question 12).
+    configuration isn't built by GCC, except that C3-1 builds such a project as x64, and C7's sheet gives every
+    project a GCC-x64 group: a project has to say it isn't built for a toolchain (question 12).
   - WindowInputTester still has WindowInputTester.cpp (WinMain) and WindowInputTesterLinux.cpp, as the five programs
     had before C0's note: it is renamed and guarded the same way in C10-1.
   C10-1. VisualStudioLib reads ExcludedFromBuild for the configuration (an item's metadata, or an ItemDefinitionGroup's
      ClCompile default for all of a project's items), and CGCCBuild and the HCP65 build leave such an item out, as
-     MSBuild does.  HCP65IDERef.cpp then isn't compiled by a GCC build.  WindowInputTester's mains renamed (_Windows,
-     _Linux).
+     MSBuild does.  WindowInputTester's mains renamed (_Windows, _Linux).
   C10-2. How a project or file says it isn't built for a toolchain (question 12) is written into the projects:
-     WinGdiLib, WinInputLib and WinWaveoutLib not for GCC-x64; X11Lib and PulseAudioLib not for MSVC; HCP65Tester's six
-     board files not for GCC-x64.
-  C10-3. X11Lib and PulseAudioLib join the solutions that need them (question 13): the eight solutions above (PulseAudioLib
-     only HCP65Emulator's).
+     WinGdiLib, WinInputLib and WinWaveoutLib not for GCC-x64; HCP65Tester's six board files and HCP65IDERef.cpp not
+     for GCC-x64; X11Lib and PulseAudioLib not for MSVC, unless question 13 is A (a solution that doesn't build them on
+     Windows needs nothing more).
+  C10-3. X11Lib and PulseAudioLib join the solutions that need them (question 13): the six programs' (PulseAudioLib only
+     HCP65Emulator's).  TestInputLib's and TestWindowLib's gain nothing.
   C10-4. The system libraries come from where question 14 says; CGCCBuild links them.
   C10-5. C6 reads the same: CMake leaves out what a project or file isn't built for, so the hand-written source lists
-     (LogiCim's, HCP65IDE's and HCP65Tester's) and the EXCLUDE lists (HCP65Emulator's, HCP65Sculpt's, WindowInputTester's
-     mains) go, and the libraries' link libraries come from the projects.
+     (LogiCim's, HCP65IDE's and HCP65Tester's) and WindowInputTester's EXCLUDE go, and the libraries' link libraries
+     come from the projects.  A program with a reference build (HCP65IDE, HCP65Emulator, HCP65Sculpt) still names its
+     mains in its CMakeLists.txt: its other sources are a library the two programs share, each adding its own main
+     (corrected 2026-11-27: their EXCLUDE lists don't go).
   C10-6. Tests: TestVisualStudioLib reads ExcludedFromBuild per configuration, as an item's and as a group's default;
      TestBuildLib's GCC build of a solution with a Windows-only library, a Linux-only one and an excluded file builds
      only what Linux builds and links the Linux one's system libraries.  The IDE builds LogiCim, HCP65IDE,
@@ -330,10 +378,54 @@ C10. What a GCC build on Linux builds: the platforms' own projects and files (ad
      user): each of the eight solutions opens and builds in Visual Studio with no new warnings.
 
 
-The order: C0, then C1, C2, C3 (that alone fixes the Release|GCC build), then C7 for CommonLibraries' projects, then C4, C5,
-C6, C8 and C9 in any order (C8 after C4-3, C9 after C4-4, so a program's link settings are in its project).  C7-3 before each
-repository's C7 commit.  C10 after C3 (C10-1 can come first: it is VisualStudioLib's alone), and before C7 for the
-window programs' repositories, so the sheet's GCC-x64 group doesn't reach a Windows-only library unopposed; C10-5 with C6.
+C11. Question 1's names (added 2026-11-27: the decision had no stage)
+  C11-1. The IDE's names.  The toolchains' platforms are GCC-x64, HCP65C816 and HCP65C64 (gaszBuildToolchainNames has
+     "W65C816", "65C64" and "GCC" now): in the build configurations AddDefaults makes up, the .hcp65build,
+     .hcp65workspace and .hcp65user files, TestBuildLib's and the IDE checks' fixtures and what they expect,
+     hcp65build's -config and its page (building.md) and the IDE's pages.  A file with an old name is read as the
+     new one and written with the new.  hcp65build's -target W65C816|65C64 names a processor, not a configuration,
+     and keeps its values.
+  C11-2. The solutions' names.  Each .sln's platforms become MSVC-x86 and MSVC-x64 (53 solutions: CommonLibraries 22,
+     HCP65 27, HCP65-IDE 1, LogiCim 3; question 18's three repositories have 5 more): its
+     SolutionConfigurationPlatforms and the left side of each ActiveCfg and Build.0, the projects' Win32 and x64
+     kept.  AddDefaults then finds the configuration a toolchain starts from by the projects' platform a solution
+     configuration maps to (the ActiveCfg's right side): now it looks for solution platforms named Win32 and x64,
+     which the rename takes away.  MSVCBuild passes the solution's name (/p:Platform=MSVC-x64).  After trial W5.
+  C11-3. Tests: TestVisualStudioLib reads a solution whose configurations are named otherwise than its projects'
+     (question 1's mapping); TestBuildConfigurations' defaults for a solution named the old way and the new; a
+     workspace, a user file and a build file with the old names read as the new.  Windows (the user): each solution
+     shows Release|MSVC-x64 and builds.
+
+
+The order (2026-11-27): C0 (built: it fixed the Release|GCC build), then C11-1 (the names C1 reads groups by), C1, C2
+and C3 (a project's own GCC group then wins over C0's list, which stays for the rest until C7-4), then C10 and C7 for
+CommonLibraries' projects, then C4, C5, C6, C8 and C9 in any order (C8 after C4-3, C9 after C4-4, so a program's link
+settings are in its project).  C7-3 before each repository's C7 commit; C7-4 after the last.  C10 after C3 (C10-1 can
+come first: it needs no GCC group) and before C7 for CommonLibraries, whose projects the Windows-only and Linux-only
+libraries are, so the sheet's GCC-x64 group doesn't reach a Windows-only library unopposed (corrected 2026-11-27: not
+"the window programs' repositories"); C10-5 with C6.  C11-2 with a Windows session (trial W5).  Each Windows trial
+before the stage that leans on it.
+
+
+Windows trials (the user's: there is no Windows here; gathered 2026-11-27)
+---------------------------------------------------------------------------
+
+Each is a small experiment on one project or solution, wanted before the stage or answer that leans on it.
+
+  W1. A .sln that also lists Release|GCC-x64, mapped to a project configuration Visual Studio can't build: does it
+     load, what do its configuration lists show, does building another configuration still work?  Decides question
+     1's third point, and whether questions 12 D, 13 D and 17 C are open at all.
+  W2. An ItemDefinitionGroup giving ClCompile ExcludedFromBuild true for one configuration: is every file left out of
+     that build, and shown as excluded?  Question 12 A.
+  W3. A project with groups for configurations it doesn't list (a Release|GCC-x64 ItemDefinitionGroup, HCP65Compile
+     and HCP65Link tags): after a file is added and a property changed in Visual Studio, and the project saved, are
+     they still there, byte for byte?  The idea, C1 and C7 all lean on it.
+  W4. A project whose ConfigurationType is in one PropertyGroup Label="Configuration" with no condition, and whose
+     sheet is imported in one ImportGroup Label="PropertySheets" with no condition: does it load, build each
+     configuration, show the sheet in Property Manager, and keep both when saved?  Questions 15 A and 16 A.
+  W5. A .sln whose platforms are renamed MSVC-x64 and MSVC-x86, its ActiveCfg lines still x64 and Win32: Visual
+     Studio's lists, a build from it, and MSBuild Solution.sln /p:Platform=MSVC-x64.  C11-2.  Also what a project
+     itself named Release|MSVC-x64 does: question 1 says it fails with MSB8006, which nobody has checked.
 
 
 Questions (the user's, one at a time)
@@ -359,10 +451,11 @@ Questions (the user's, one at a time)
      if the 32-bit Linux test builds move into the IDE.
    - The rename is done in each .sln (or Visual Studio's Configuration Manager, <Edit...>, Rename): the
      SolutionConfigurationPlatforms names and the left side of each ActiveCfg and Build.0, the right side kept.
-     Inside a project $(Platform) stays x64 or Win32 (output folders keep their names); $(SolutionPlatform) is the
-     new name.  MSBuild is given the solution's name (/p:Platform=MSVC-x64: MSVCBuild.cpp).  C1's tests check
-     VisualStudioLib follows the mapping (a solution configuration whose projects' configurations are named
-     otherwise).
+     Inside a project $(Platform) stays x64 or Win32 (output folders keep their names), and the projects never see
+     the solution's name (2026-11-27: "$(SolutionPlatform) is the new name" stood here, but MSBuild isn't known to
+     define such a property, and nothing needs it).  MSBuild is given the solution's name (/p:Platform=MSVC-x64:
+     MSVCBuild.cpp).  C11 builds this, and C11-3's tests check VisualStudioLib follows the mapping (a solution
+     configuration whose projects' configurations are named otherwise).
 2. Decided (the user, 2026-11-25: "let's go with your recommendation: C, done as E"): layered property sheets in
    Visual Studio's slot for them.  CommonLibraries/Common.props holds what every project has (MSVC's shared
    settings, the GCC-x64 groups' LINUX_GNU and g++ correctness options); HCP65, HCP65-IDE and LogiCim each have
@@ -382,13 +475,20 @@ Questions (the user's, one at a time)
    it, as now (BaseLib has no floats in the kernal and floats in ModPlay).  The options about one project's code
    (Debug, not optimised, WarnStringToPointer, MultiWordCasts, CConversions) are each project's own, from its group
    or its sheet; Unoptimised="Init, Shell" becomes those projects' own setting.
+4b. Open (2026-11-27): PreferSize and WarnMissingOverride are in neither of question 4's lists.
+   A. Recommended: PreferSize is the whole program's (the startup project's), as NoFloats: a ROM's kernal wants the
+      BaseLib linked into it small too, and the same BaseLib fast in a program on a card.  WarnMissingOverride is
+      each project's own: it is about how one project's code is written.
+   B. Both each project's own.  BaseLib would then be small or fast everywhere it is linked.
+   C. Both the whole program's, as every option is now.
 5. Decided (the user, 2026-11-25: "Editable now"): Edit Build Configurations edits the projects' compile and link
    options, writing each to the project or sheet it comes from (C9).  VisualStudioLib already edits .vcxproj files in
    place, byte for byte but the change (CVcxProject::RenameItem, RenameIncludes and adding files), so C9 extends that.
 6. Decided (the user, 2026-11-25: "Read the projects"): C6 as written.  One CMake module reads each project's
    sources and its GCC-x64 group's defines and options, following the sheets; the CMakeLists.txt files keep their
    targets and CMake's own switches (BASELIB_ASAN, BASELIB_SIZE16, BASELIB_64, LTO).  Not replaced by hcp65build.
-7. Decided (the user, 2026-11-25: "Stopgap now"): C0, before C1, and taken out by C3.
+7. Decided (the user, 2026-11-25: "Stopgap now"): C0, before C1, and taken out by C3.  (2026-11-27: taken out by
+   C7-4 instead, for the reason C3-2 gives.)
 8. The drift (What the projects share): for each, the sheet's value, and which projects keep their own.
    - ExceptionHandling, decided (the user, 2026-11-25: "Off everywhere"): Common.props sets it false for every
      configuration and no project overrides it.  A project that uses try, throw or catch stops compiling and is
@@ -397,8 +497,8 @@ Questions (the user's, one at a time)
      MaxSpeed, EnableASAN false, PreserveSbr, CodeAnalysisRuleSet AllRules.ruleset, Configuration's
      WholeProgramOptimization, OutDir and IntDir), decided (the user, 2026-11-25: "Set once in the sheet"):
      Common.props sets each explicitly and the projects' copies go.  OutDir and IntDir: one layout for all, chosen
-     after comparing the 31 projects that set them with Visual Studio's default, so no project's output moves
-     without it being said.
+     after comparing the 22 projects that set them (9 of them x64's too; "31 projects" stood here until 2026-11-27)
+     with Visual Studio's default, so no project's output moves without it being said.
    - DisableSpecificWarnings, decided (the user, 2026-11-25: "All four"): Common.props disables
      26440;26447;26455;26476 (the Core Guidelines checks /analyze runs: noexcept and naked unions) everywhere.
    - TestInputLib's Release CharacterSet Unicode, decided (the user, 2026-11-25: "NotSet like the rest"): it takes the
@@ -429,11 +529,12 @@ Questions (the user's, one at a time)
    the run configuration's list instead of every solution's build configuration.
 12. Open (C10-2): how a project or a file says it isn't built for a toolchain.
    A. Recommended: ExcludedFromBuild, Visual Studio's own.  A whole project: an ItemDefinitionGroup for the toolchain's
-      configurations giving ClCompile ExcludedFromBuild true (WinGdiLib's for GCC-x64; X11Lib's for x64 and Win32), so
-      it compiles nothing there and a project with nothing compiled is neither archived nor linked (CGCCBuild already
-      skips one).  A file: the item's own ExcludedFromBuild for the toolchain, as HCP65IDERef.cpp has.  Visual Studio
-      shows it (Excluded From Build: Yes) and MSBuild does it; that an ItemDefinitionGroup's default is honoured is to
-      be tried on Windows, else every item says it.  Costs C10-1's reading and needs C1 for the GCC-x64 groups.
+      configurations giving ClCompile ExcludedFromBuild true (WinGdiLib's for GCC-x64; X11Lib's for x64 and Win32 only
+      if question 13 isn't A, which already keeps Windows from building it), so it compiles nothing there and a
+      project with nothing compiled is neither archived nor linked (CGCCBuild already skips one).  A file: the
+      item's own ExcludedFromBuild for the toolchain, as HCP65IDERef.cpp has.  Visual Studio shows it (Excluded From
+      Build: Yes) and MSBuild does it; that an ItemDefinitionGroup's default is honoured is trial W2, else every item
+      says it.  Costs C10-1's reading and needs C1 for the GCC-x64 groups.
    B. Guards in the sources, as the mains and the libraries' _Windows/_Linux files: WinGdiLib's, WinInputLib's and
       WinWaveoutLib's in #ifdef _WIN32, X11Lib's and PulseAudioLib's in #ifdef LINUX_GNU, the board files in _WIN32.
       Works with today's GCC build at once, no reading needed; but every platform compiles the other's libraries to
@@ -441,15 +542,21 @@ Questions (the user's, one at a time)
       HCP65IDERef.cpp still needs C10-1.
    C. A property of the IDE's own in the project (<BuildFor>MSVC</BuildFor>).  Not Visual Studio's, which builds the
       project anyway.
+   D. (2026-11-27) Only if trial W1 shows a .sln can list the GCC configurations: a whole project is left out there,
+      by having no .Build.0 for Release|GCC-x64, as Configuration Manager unticks one.  The native place for what a
+      solution builds, but said in each solution a library is in (WinGdiLib is in seven), and only for whole
+      projects: a file still needs A.
 13. Open (C10-3): how X11Lib and PulseAudioLib come into the solutions Visual Studio made.
    A. Recommended: listed in each .sln, with an .ActiveCfg but no .Build.0 for its Windows configurations, so
       Visual Studio shows them in Solution Explorer and doesn't build them (Configuration Manager, Build unticked), and
-      the IDE's MSVC build skips them as it skips any unticked project.  A GCC build reads the project's own GCC-x64
-      configuration (the fallback in CBuild::GetProjects).  Edited in each of the eight .sln files.
+      MSBuild, which the IDE's MSVC build runs, leaves them out too.  A GCC build reads the project's own GCC-x64
+      configuration (the fallback in CBuild::GetProjects).  Edited in each of the six programs' .sln files.
    B. Listed and built on Windows too, empty (with 12 B's guards).  Nothing unticked, but a Windows build makes an
       empty library for nothing.
    C. Not in the .sln: a window program's project names its GCC-x64 extra projects (a property of the IDE's own) and
       the IDE loads them.  Visual Studio never shows them; a second place the solution's projects are listed.
+   D. (2026-11-27) Only if trial W1 shows a .sln can list the GCC configurations: listed in each .sln and built
+      (.Build.0) only in its GCC configurations.  As A, without leaning on the fallback.
 14. Open (C10-4): where the system libraries a library needs on Linux are written (X11, Xext, dl, pthread).
    A. Recommended: in the library's own GCC-x64 group, Link's AdditionalDependencies (a static library ignores Link
       in Visual Studio, so it is free to say what a program linking it needs), and CGCCBuild adds every library's to
@@ -459,3 +566,71 @@ Questions (the user's, one at a time)
       but written in every program that links X11Lib (six, and their reference builds).
    C. In the shared sheet's GCC-x64 Link group: every Linux program links X11, Xext and dl, and every Linux build
       needs libx11-dev, the console tests too.
+15. Open (C1-4, 2026-11-27): where a GCC or HCP65 configuration gets its ConfigurationType and include directories.
+   A. Recommended: written once, with no condition.  C7 moves each project's ConfigurationType into one PropertyGroup
+      Label="Configuration" with no condition, and IncludePath comes from the repository's sheet with no condition (a
+      project's extras likewise), so every configuration has them, MSVC's and the toolchains', by MSBuild's own rules,
+      and CMake's reader (C6) needs no rule of its own.  Until a project has moved (C3 to its C7) its toolchain
+      configurations take them from x64 (HCP65: Win32), as C3-1 and C4-1 fall back now.  Needs trial W4.
+   B. Always taken from an MSVC configuration: what a toolchain's configuration hasn't is its x64 one's (HCP65:
+      Win32's), defines and options excepted.  No project changes, but a rule MSBuild hasn't, written again in CMake's
+      reader, and the MSVC groups stay the hidden source of a GCC build's include directories.
+   C. Repeated in each toolchain's group: six more copies in each project (Debug and Release for GCC-x64, HCP65C816
+      and HCP65C64).  What the plan exists to stop.
+16. Open (C2-1, 2026-11-27): how a toolchain's configuration comes to import the sheet.  A project imports it in
+   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">, one for each MSVC
+   configuration (question 2: as Visual Studio writes it), and none is true for Release|GCC-x64.
+   A. Recommended: one ImportGroup Label="PropertySheets" with no condition in place of the four.  Every
+      configuration imports the sheet by MSBuild's own rules, and the sheet's groups' own conditions choose what
+      applies.  Whether Property Manager shows it and Visual Studio keeps it so is trial W4; if not, B.
+   B. The reader takes an import in any configuration's ImportGroup as imported for every configuration.  Right while
+      a project imports the same sheet in all of them (true after C7), wrong for a sheet meant for one; a rule MSBuild
+      hasn't, written again in CMake's reader.
+   C. Six more ImportGroups in each project, one for each toolchain configuration.  Visual Studio never evaluates
+      them.
+17. Open (C4-5 and C9-6, 2026-11-27): where a solution's build configurations are kept once the .hcp65build file has
+   gone.  The file lists them now: with names of their own (TestBuildLib's "Fast GCC" over Release|x64), several over
+   one solution configuration, added and removed in Edit Build Configurations.
+   A. Recommended: nowhere of their own: they are the projects' configurations.  A solution's build configurations are
+      its solution configurations (MSVC) and, for each toolchain, each configuration its projects have a group for
+      (Release|GCC-x64), found when the solution is read, as AddDefaults makes them up now.  A variant is a
+      configuration with its own name (Fast|GCC-x64) and its groups in the projects or a sheet; Add and Remove in the
+      dialog write and take away those groups (C9-6).  Costs: a name is always Configuration|Platform, and two names
+      can't share one group.
+   B. A list beside the .sln, of names only: each a toolchain and the projects' configuration it builds.  Any name,
+      and several over one group; but a file again where question 3 took one away.
+   C. In the .sln, as solution configurations mapped to the projects' (only if trial W1 shows Visual Studio accepts
+      them).  The native place, and Visual Studio lists them.
+18. Open (C6 and C7-2, 2026-11-27): HCP65-Sculpt, WindowInputTester and StarControlRedux, which the survey missed.
+   Their own 7 projects and 5 CMakeLists.txt build CommonLibraries' projects, which change under them whatever is
+   chosen (_LIB gone, exceptions off, the shared defines).
+   A. Recommended: all three join.  Each gets a sheet importing ../CommonLibraries/Common.props, its projects move in
+      C7-2 after LogiCim, its CMakeLists.txt use C6's module, and its solutions are in C7-3's and C11-2's Windows
+      sessions.
+   B. HCP65-Sculpt and WindowInputTester join; StarControlRedux stays as it is, its three projects' settings and its
+      two CMakeLists.txt's copies of vcxproj_sources and baselib_options kept by hand.
+   C. None joins.  Their copies stay, and C7-4 can't take C0's list out while the IDE builds them with GCC.
+19. Open (2026-11-27): what GCC-x64 is on Windows.  The sheet's GCC-x64 group defines LINUX_GNU and C10 leaves the
+   Windows libraries out of it, but the IDE's GCC toolchain is "g++ and ar from the path" on either system
+   (GCCBuild.cpp links <project>.exe on Windows), and BaseLib has a define for MinGW (WIN_GNU_32, Define.h).
+   A. Recommended: GCC-x64 is g++ for 64-bit Linux, as the plan has assumed.  On Windows the IDE lists it but doesn't
+      build it, and says why.  MinGW, if it is wanted, is a platform of its own later (with WIN_GNU_32 and the Windows
+      libraries in it).
+   B. GCC-x64 is g++ on whichever system the IDE runs on: the group has no LINUX_GNU, CGCCBuild adds the system's
+      define as C0 does now, and what C10 leaves out is by system, not by toolchain.  One name for two targets whose
+      sources and libraries differ.
+   C. It is renamed to say so (GCC-Linux-x64), which reopens question 1.
+20. Open (C7-1, 2026-11-27): BREAK_ON_ERROR and BREAK_ON_WARNING in Debug|GCC-x64.  MSVC's Debug defines them (question
+   8).  The CMake builds leave them out ("on Linux BREAK() raises SIGTRAP, which kills the test run when no debugger
+   is attached").  The IDE's Debug|GCC build has them now, from x64's defines, and TestBaseLib built that way passes
+   (2026-11-27).  After C6 the CMake builds read the same group.
+   A. Recommended: left out, as CMake now.  Debug|GCC-x64 defines _DEBUG;DEBUG;LINUX_GNU and Release|GCC-x64
+      NDEBUG;LINUX_GNU, what baselib_options defines, so the 37 CMake test builds don't change.
+   B. In, as MSVC's Debug.  A logged error stops in a debugger and, without one, ends the run with SIGTRAP; the CMake
+      Debug test runs change.
+21. Open (C7-1, 2026-11-27): g++ and exceptions.  Question 8 turned MSVC's off everywhere; neither CMake nor C0 passes
+   -fno-exceptions, so g++ compiles with them on.
+   A. Recommended: left on, as now, and recorded here.  No tested Linux build changes; a try or throw compiles on
+      Linux and fails on Windows.
+   B. -fno-exceptions in the GCC-x64 groups, as MSVC.  A try or throw is an error on both; every Linux build's code
+      changes, and its tests are run again to find what leans on them.
