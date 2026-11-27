@@ -315,6 +315,18 @@ C6. CMake reads the projects too
   C6-2. baselib_options is made from the sheet's GCC options, so a change to them is one edit for CMake and the IDE.
   C6-3. The linux test builds (32-bit Release and 64-bit) build and pass as before: TestBaseLib, TestBaseLib65 both
      ways (no argument and "816"), and every other test project; their command lines compared before and after.
+  Built 2026-11-27 (the user: "Carry on with the rest of C in your suggested order"): CL/CMake/Codaphela.cmake, which
+  the 42 CMakeLists.txt include in place of their copies (VcxprojSources.cmake, which the two emulators' did include,
+  became it).  codaphela_options(<include directories>) makes baselib_options from Common.props' GCC-x64 groups
+  (project_sheets.py --cmake prints them as CMake lists), with CMake's own beside them: -m32 for -m64 in a 32-bit
+  build, -Wall -Wextra, link time optimisation, the switches.  ONLY_64 is the programs'.  vcxproj_sources leaves out a
+  file the project excludes from GCC-x64.  Not as written: the options are the sheet's, not each project's (no
+  project has GCC options of its own yet; C13-2 reads a configuration by name, and that reader does).  Every
+  CMakeLists.txt's flags before and after, three configurations each: Debug gains BREAK_ON_ERROR, BREAK_ON_WARNING
+  (C12-3) and every build _CRT_SECURE_NO_DEPRECATE; HCP65Tester, HCP65IDE, LogiCim, DeviceROM and TestAssembler65Lib
+  gain -march=haswell, and they, HCP65Sculpt, WindowInputTester and Battle the Release options, LTO and
+  --gc-sections; nothing else moved.  33 build folders rebuilt; the 20 native suites pass (Debug and Release 64-bit,
+  TestBaseLib and TestStandardLib 32-bit too); the 65 suites and TestCppCompilerLib were built, not run.
 
 C7. The projects move to the shared sheets
   C7-1. CL/Common.props holds the GCC groups (their options C0's lists with question 21's -fno-exceptions, their
@@ -462,6 +474,9 @@ C10. What a GCC build on Linux builds: the platforms' own projects and files (ad
      with a reference build (HCP65IDE, HCP65Emulator, HCP65Sculpt) still names its mains in its CMakeLists.txt: its
      other sources are a library the two programs share, each adding its own main (corrected 2026-11-27: their
      EXCLUDE lists don't go), until C13 takes the mains from the projects' configurations too.
+     (2026-11-27, with C6: the three hand-written lists are gone, vcxproj_sources reading ExcludedFromBuild;
+     WindowInputTester's EXCLUDE went with its guarded mains.  Still CMake's own: the system libraries, found by
+     find_package(X11) and Threads, and the EXCLUDE of a program's mains where it has a reference build.)
   C10-6. Tests: TestVisualStudioLib reads ExcludedFromBuild per configuration, as an item's and as a group's default;
      TestBuildLib's GCC build of a solution with a Windows-only library, a Linux-only one and an excluded file builds
      only what Linux builds and links the program's own system libraries.  The IDE builds LogiCim, HCP65IDE,
@@ -600,7 +615,8 @@ C12. The break switch (added 2026-11-27, question 20)
   does to the logger's configuration; the three-ways run was done once by hand, not kept as a test (a failed assert
   ends with SIGTRAP unset and with 1 and goes on with 0; a logged error ends with SIGTRAP only with 1 in a Release
   build).  It compiles for the W65C816 and the 65C64.  BaseLib's index page (Stopping on an error) is where it is
-  said; the recipes point there.  C12-3 waits for C6 and C7-1.
+  said; the recipes point there.  C12-3 was built with C6 (2026-11-27): the module gives every test of a
+  CMakeLists.txt BASELIB_BREAK=0 in its ENVIRONMENT, and the Debug suites pass under ctest with the defines.
 
 
 The order (2026-11-27): C0 (built: it fixed the Release|GCC build), then C11-1 (the names C1 reads groups by), C1, C2

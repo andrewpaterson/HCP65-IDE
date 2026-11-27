@@ -274,7 +274,8 @@ What is built
     loads a program given on its command line (--load, $10000 if not given), points reset at it, and exits with main's
     result.  The debugger's end of the connection (CHCP65EmulatorDebugger) moved to EmulatorDebugLib as
     CEmulatorDebugger, for any target: the HCP65 emulator and this one share it.  vcxproj_sources is in
-    CommonLibraries/CMake/VcxprojSources.cmake for the two emulators' CMake builds (the other 39 copies remain).
+    CommonLibraries/CMake/VcxprojSources.cmake for the two emulators' CMake builds (since ConfigurationsPlan.txt's
+    C6, CMake/Codaphela.cmake, every build's).
   - D2: the IDE's default emulator is per toolchain (CIDEDebugging::SetDefaultEmulator): the HCP65 Emulator for the
     W65C816 (HCP65_IDE_EMULATOR names another), the X65C64 Emulator for the 65C64 (HCP65_IDE_65C64_EMULATOR).  The
     registers by name and the walker by processor were already the frame model's (1542d04).

@@ -16,18 +16,9 @@
 # Library source lists are read from the .vcxproj files so Visual Studio stays
 # the source of truth.
 
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.19)
 project(HCP65IDE CXX)
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
-
-if(NOT CMAKE_BUILD_TYPE)
-	set(CMAKE_BUILD_TYPE Debug)
-endif()
-
-option(BASELIB_ASAN "Build with AddressSanitizer and LeakSanitizer" OFF)
 
 # The IDE is in the HCP65-IDE repository (with VisualStudioLib), which is beside CommonLibraries.
 get_filename_component(IDE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/.." ABSOLUTE)
@@ -55,47 +46,7 @@ set(CLAUDELIB_DIR "${IDE_ROOT}/Libraries/ClaudeLib")
 set(TEMPLATELIB_DIR "${IDE_ROOT}/Libraries/TemplateLib")
 set(IDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/HCP65IDE")
 
-
-# Reads <ClCompile Include="..."/> entries from a .vcxproj and resolves them
-# against the files on disk case-insensitively (Windows paths are not
-# case-sensitive).  Files named in EXCLUDE (paths relative to the project,
-# any case) are left out.
-function(vcxproj_sources OUT_VAR VCXPROJ)
-	cmake_parse_arguments(ARG "" "" "EXCLUDE" ${ARGN})
-	get_filename_component(PROJ_DIR "${VCXPROJ}" DIRECTORY)
-
-	# Re-run the configure step when Visual Studio adds or removes files.
-	set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${VCXPROJ}")
-
-	file(GLOB_RECURSE DISK_FILES RELATIVE "${PROJ_DIR}" "${PROJ_DIR}/*.cpp" "${PROJ_DIR}/*.c")
-	foreach(DISK_FILE ${DISK_FILES})
-		string(TOLOWER "${DISK_FILE}" KEY)
-		set("DISK_${KEY}" "${DISK_FILE}")
-	endforeach()
-
-	set(EXCLUDED "")
-	foreach(EXCLUDE_FILE ${ARG_EXCLUDE})
-		string(TOLOWER "${EXCLUDE_FILE}" KEY)
-		list(APPEND EXCLUDED "${KEY}")
-	endforeach()
-
-	file(STRINGS "${VCXPROJ}" LINES REGEX "<ClCompile Include=\"[^\"]+\"")
-	set(SOURCES "")
-	foreach(LINE ${LINES})
-		string(REGEX REPLACE ".*<ClCompile Include=\"([^\"]+)\".*" "\\1" SOURCE "${LINE}")
-		string(REPLACE "\\" "/" SOURCE "${SOURCE}")
-		string(TOLOWER "${SOURCE}" KEY)
-		if(KEY IN_LIST EXCLUDED)
-			continue()
-		endif()
-		if(NOT DEFINED "DISK_${KEY}")
-			message(FATAL_ERROR "${VCXPROJ} lists ${SOURCE} but it was not found on disk")
-		endif()
-		list(APPEND SOURCES "${PROJ_DIR}/${DISK_${KEY}}")
-	endforeach()
-
-	set(${OUT_VAR} ${SOURCES} PARENT_SCOPE)
-endfunction()
+include("${COMMON_DIR}/../CMake/Codaphela.cmake")
 
 
 vcxproj_sources(BASELIB_SOURCES "${BASELIB_DIR}/BaseLib.vcxproj")
@@ -132,150 +83,11 @@ vcxproj_sources(CLAUDELIB_SOURCES "${CLAUDELIB_DIR}/ClaudeLib.vcxproj")
 vcxproj_sources(TEMPLATELIB_SOURCES "${TEMPLATELIB_DIR}/TemplateLib.vcxproj")
 
 # Everything but a main: HCP65IDE_Windows.cpp (WinMain) is Windows only, HCP65IDE_Linux.cpp is the X11 IDE's and
-# HCP65IDERef.cpp the reference screen's.
-set(IDE_SOURCES
-	"${IDE_DIR}/IDEMain.cpp"
-	"${IDE_DIR}/IDECodeModel.cpp"
-	"${IDE_DIR}/IDECodeModelEdits.cpp"
-	"${IDE_DIR}/IDECodeModelCompletion.cpp"
-	"${IDE_DIR}/IDEContent.cpp"
-	"${IDE_DIR}/IDEDocuments.cpp"
-	"${IDE_DIR}/IDESolutions.cpp"
-	"${IDE_DIR}/IDEBuildConfigurationsDialog.cpp"
-	"${IDE_DIR}/IDEBuilding.cpp"
-	"${IDE_DIR}/IDEConfigurations.cpp"
-	"${IDE_DIR}/IDERunConfigurationsDialog.cpp"
-	"${IDE_DIR}/IDESettings.cpp"
-	"${IDE_DIR}/IDERunning.cpp"
-	"${IDE_DIR}/IDEDebugging.cpp"
-	"${IDE_DIR}/IDEGitStatus.cpp"
-	"${IDE_DIR}/IDEDiffs.cpp"
-	"${IDE_DIR}/IDEDiffTab.cpp"
-	"${IDE_DIR}/IDEAskClaude.cpp"
-	"${IDE_DIR}/IDEEdit.cpp"
-	"${IDE_DIR}/IDENavigator.cpp"
-	"${IDE_DIR}/IDERename.cpp"
-	"${IDE_DIR}/IDEMoveNamespace.cpp"
-	"${IDE_DIR}/IDENewFile.cpp"
-	"${IDE_DIR}/IDEFileTemplatesPage.cpp"
-	"${IDE_DIR}/IDETemplateVariables.cpp"
-	"${IDE_DIR}/IDEFileTemplates.cpp"
-	"${IDE_DIR}/IDETemplateInterface.cpp"
-	"${IDE_DIR}/IDEConvertEnum.cpp"
-	"${IDE_DIR}/IDESolutionFileChooser.cpp"
-	"${IDE_DIR}/IDEContextActions.cpp"
-	"${IDE_DIR}/IDETemplateParameter.cpp"
-	"${IDE_DIR}/IDEConvertMember.cpp"
-	"${IDE_DIR}/IDEMemberQualifier.cpp"
-	"${IDE_DIR}/IDEConvertPointer.cpp"
-	"${IDE_DIR}/IDEConvertMacro.cpp"
-	"${IDE_DIR}/IDEIncludes.cpp"
-	"${IDE_DIR}/IDEEncapsulateField.cpp"
-	"${IDE_DIR}/IDEExtractClass.cpp"
-	"${IDE_DIR}/IDEInlineFunction.cpp"
-	"${IDE_DIR}/IDEExtractMethod.cpp"
-	"${IDE_DIR}/IDEDuplicateMatcher.cpp"
-	"${IDE_DIR}/IDEDuplicates.cpp"
-	"${IDE_DIR}/IDEDuplicatesPage.cpp"
-	"${IDE_DIR}/IDELocationPreview.cpp"
-	"${IDE_DIR}/IDEChooser.cpp"
-	"${IDE_DIR}/IDEOutline.cpp"
-	"${IDE_DIR}/IDEStructure.cpp"
-	"${IDE_DIR}/IDEStructurePane.cpp"
-	"${IDE_DIR}/IDEBreadcrumbs.cpp"
-	"${IDE_DIR}/IDEBookmarks.cpp"
-	"${IDE_DIR}/IDEMarks.cpp"
-	"${IDE_DIR}/IDERecent.cpp"
-	"${IDE_DIR}/IDEQuickInfo.cpp"
-	"${IDE_DIR}/IDECompletion.cpp"
-	"${IDE_DIR}/IDECompletionContext.cpp"
-	"${IDE_DIR}/IDELightTyper.cpp"
-	"${IDE_DIR}/IDEClassAccess.cpp"
-	"${IDE_DIR}/IDEExpressionTyper.cpp"
-	"${IDE_DIR}/IDEExpectedType.cpp"
-	"${IDE_DIR}/IDEHierarchy.cpp"
-	"${IDE_DIR}/IDEToolWindows.cpp"
-	"${IDE_DIR}/IDESymbolInfo.cpp"
-	"${IDE_DIR}/IDEUserFile.cpp"
-	"${IDE_DIR}/IDEClaudePage.cpp"
-	"${IDE_DIR}/IDEEditorPage.cpp"
-	"${IDE_DIR}/IDEIntroduceTypedef.cpp"
-	"${IDE_DIR}/IDEInlineVariable.cpp"
-	"${IDE_DIR}/IDEMoveClass.cpp"
-	"${IDE_DIR}/IDEMoveMembers.cpp"
-	"${IDE_DIR}/IDEDefinitions.cpp"
-	"${IDE_DIR}/IDEChangeSignatureDialog.cpp"
-	"${IDE_DIR}/IDEChangeSignature.cpp"
-	"${IDE_DIR}/IDEIntroduceVariable.cpp"
-	"${IDE_DIR}/IDESafeDelete.cpp"
-	"${IDE_DIR}/IDERefactorUnit.cpp"
-	"${IDE_DIR}/IDEFileRename.cpp"
-	"${IDE_DIR}/IDERenameAssembly.cpp"
-	"${IDE_DIR}/IDEUsages.cpp"
-	"${IDE_DIR}/IDEScope.cpp"
-	"${IDE_DIR}/IDEResultsPane.cpp"
-	"${IDE_DIR}/IDEResultsTabs.cpp"
-	"${IDE_DIR}/IDEFind.cpp"
-	"${IDE_DIR}/IDEFindInFiles.cpp"
-	"${IDE_DIR}/IDEIndexing.cpp"
-	"${IDE_DIR}/IDENavigationHistory.cpp"
-	"${IDE_DIR}/IDECaretUsages.cpp"
-	"${IDE_DIR}/IDEPasteHistory.cpp"
-	"${IDE_DIR}/IDEOccurrences.cpp"
-	"${IDE_DIR}/IDECloseGuard.cpp"
-	"${IDE_DIR}/IDEScript.cpp"
-	"${IDE_DIR}/IDEGit.cpp"
-	"${IDE_DIR}/IDEDebugger.cpp"
-	"${IDE_DIR}/IDEDebugView.cpp"
-	"${IDE_DIR}/IDEDebugStop.cpp"
-	"${IDE_DIR}/IDEDebugWindows.cpp"
-	"${IDE_DIR}/IDEValuesPane.cpp"
-	"${IDE_DIR}/IDEEditorTab.cpp"
-	"${IDE_DIR}/IDEListingSource.cpp"
-	"${IDE_DIR}/IDEBuildPane.cpp"
-	"${IDE_DIR}/IDEMessageOutput.cpp"
-	"${IDE_DIR}/IDEReformat.cpp"
-	"${IDE_DIR}/IDEOutputMenu.cpp"
-	"${IDE_DIR}/IDEProblemList.cpp"
-	"${IDE_DIR}/IDEProblems.cpp"
-	"${IDE_DIR}/IDEClaudePane.cpp"
-	"${IDE_DIR}/IDEIcons.cpp"
-	"${IDE_DIR}/IDEWindowTick.cpp"
-	"${IDE_DIR}/IDEApp.cpp"
-	"${IDE_DIR}/SolutionExplorer.cpp"
-)
+# HCP65IDERef.cpp the reference screen's (which the project keeps out of a GCC-x64 build).
+vcxproj_sources(IDE_SOURCES "${IDE_DIR}/HCP65IDE.vcxproj" EXCLUDE "HCP65IDE_Windows.cpp" "HCP65IDE_Linux.cpp")
 
 
-# Matches the Visual Studio configurations, except BREAK_ON_ERROR and
-# BREAK_ON_WARNING: on Linux BREAK() raises SIGTRAP, which kills the test run
-# when no debugger is attached.
-add_library(baselib_options INTERFACE)
-target_include_directories(baselib_options INTERFACE "${COMMON_DIR}" "${HCP65_LIBRARIES_DIR}" "${IDE_ROOT}/Libraries")
-target_compile_definitions(baselib_options INTERFACE
-	LINUX_GNU
-	$<$<CONFIG:Debug>:_DEBUG>
-	$<$<CONFIG:Debug>:DEBUG>
-	$<$<NOT:$<CONFIG:Debug>>:NDEBUG>
-)
-# -fno-strict-aliasing: MSVC never optimises on the strict aliasing rule and the
-# code relies on that (e.g. (CUnknown**)&pcTyped), so optimised builds break without it.
-# -fno-exceptions: /EHs-c-, as the Visual Studio configurations have it.  Nothing built here throws or catches.
-# -Wno-ignored-attributes: g++ drops ALIGN_64 when int64/uint64/float64 is a
-# template argument.  Templates that store such a type by value use MSVC_ALIGN
-# instead (see PrimitiveTypes.h), so the warning only reports the drop.
-# -Wno-write-strings: string literals are passed as char* throughout; MSVC allows it.
-# -Wno-multichar: chunk and file IDs are multi-character constants like 'ABCD'.
-# -Wno-class-memaccess: the containers memcpy objects with constructors on purpose.
-# -Wno-overloaded-virtual: subclasses overload virtuals with other argument types
-# (e.g. Save(CObjectWriter*) hides CUnknown::Save(CFileWriter*)) on purpose.
-# -Wno-comment: ASCII diagrams in comments end lines with a backslash.
-# -Wno-unused-parameter: virtual overrides and callbacks often ignore parameters.
-target_compile_options(baselib_options INTERFACE -m64 -fno-strict-aliasing -fno-exceptions -Wall -Wextra -Wno-ignored-attributes -Wno-write-strings -Wno-multichar -Wno-class-memaccess -Wno-overloaded-virtual -Wno-comment -Wno-unused-parameter)
-target_link_options(baselib_options INTERFACE -m64)
-if(BASELIB_ASAN)
-	target_compile_options(baselib_options INTERFACE -fsanitize=address -fno-omit-frame-pointer)
-	target_link_options(baselib_options INTERFACE -fsanitize=address)
-endif()
+codaphela_options(ONLY_64 "${COMMON_DIR}" "${HCP65_LIBRARIES_DIR}" "${IDE_ROOT}/Libraries")
 
 
 # CMutex uses pthreads on Linux.
