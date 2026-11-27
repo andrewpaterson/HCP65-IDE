@@ -21,6 +21,7 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 #include <string.h>
 #include "BaseLib/StringHelper.h"
 #include "Assembler65Lib/Asm65Attributes.h"
+#include "VisualStudioLib/VcxConfiguration.h"
 #include "BuildConfiguration.h"
 
 
@@ -62,7 +63,7 @@ static const char* gaszBuildToolchainNames[BT_NumToolchains] = { "W65C816", "65C
 //The platform of each toolchain's configurations ("Release|HCP65C816"), by EBuildToolchain; NULL for MSVC, whose
 //configurations are the solution's own.  Until ConfigurationsPlan.txt's question 1 a toolchain's platform was its name
 //("Release|HCP65C816", "Release|GCC-x64"), and such a name is still read (CurrentName).
-static const char* gaszBuildToolchainPlatforms[BT_NumToolchains] = { "HCP65C816", "HCP65C64", NULL, "GCC-x64" };
+static const char* gaszBuildToolchainPlatforms[BT_NumToolchains] = { VCX_PLATFORM_HCP65C816, VCX_PLATFORM_HCP65C64, NULL, VCX_PLATFORM_GCC_X64 };
 
 
 //////////////////////////////////////////////////////////////////////////

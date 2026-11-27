@@ -204,6 +204,18 @@ C1. VisualStudioLib reads the GCC and HCP65 groups
      IDE's reader and CMake's module alike; the projects keep their four Configuration groups as Visual Studio
      writes them.
 
+  Built 2026-11-27, C1 with C2 (one reader: CVcxProject::ReadProject finds the configurations first, the project's
+  and its sheets' conditions together, then reads the groups in order).  As planned, and:
+  - A condition on a toolchain's platform alone makes its configuration for each configuration name the project
+    lists (Debug|GCC-x64 and Release|GCC-x64).
+  - Question 15 B: CVcxConfiguration has a base, the listed configuration of its name on x64 (HCP65: Win32), or
+    the first listed of its name; GetProperty takes a property group's property and the compiler's include
+    directories from it where its own are missing.
+  - The platform names are VisualStudioLib's (VCX_PLATFORM_GCC_X64 and the two HCP65 ones); BuildLib's table of
+    C11-1 uses them.
+  - A lone project's toolchain configurations aren't its solution's.
+  - TestVcxProjectSheets is C1-3's and C2-3's test.
+
 C2. VisualStudioLib follows imports
   C2-1. <Import Project="..."/> of a .props file: its PropertyGroups and ItemDefinitionGroups are read where the
      import is, so a project's own group after it adds to or replaces what the sheet set, as MSBuild has it.  The
@@ -218,6 +230,12 @@ C2. VisualStudioLib follows imports
      projects that import it.
   C2-3. Tests: a project importing a sheet that sets defines and options for Release|GCC-x64, and adding its own; a
      sheet importing another; each condition C2-1 reads, and one it doesn't.
+  Built 2026-11-27 with C1.  Different from the plan: an import with $(SolutionDir) isn't read (a project read by
+  itself has no solution; question 2 imports by a path from the project anyway), and $(MSBuildThisFileDirectory) in
+  a sheet's values is put in as the sheet is read, so a sheet can name its own folder.  An import's or its
+  ImportGroup's condition on the configuration limits the sheet's groups to those configurations, MSBuild's own
+  rule, so question 16 A needs none of the IDE's.  C2-2 isn't built: the IDE doesn't watch its projects for
+  changes either (nothing to add the sheets to); CVcxProject::NumSheets and GetSheet are there for when it does.
 
 C3. GCC builds with the project's GCC configuration
   C3-1. A GCC build configuration's solution configuration is the GCC one (Solution="Release|GCC-x64") when the projects

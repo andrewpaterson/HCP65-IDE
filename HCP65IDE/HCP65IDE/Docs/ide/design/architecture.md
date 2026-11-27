@@ -104,6 +104,26 @@ something, as text, changing only the `Include` values it means to: an item rena
 or added beside another ([`CVcxProject::AddItemBeside`]).  The rest of the file stays as Visual Studio wrote it.
 This isn't optional: the Linux CMake builds read their sources from the `.vcxproj` items.
 
+A project is read as MSBuild reads it, as far as the IDE needs ([`CVcxProject::ReadProject`]):
+
+- **Property sheets.**  An `<Import>` of a sheet is read where it stands, so a group after it replaces what the
+  sheet set, or adds to it where its value names itself (`%(PreprocessorDefinitions)`, `$(IncludePath)`).  A
+  sheet's path is from the file that imports it, or uses `$(ProjectDir)` or `$(MSBuildThisFileDirectory)`;
+  Microsoft's own imports, and one that needs `$(SolutionDir)`, are skipped.  [`CVcxProject::GetSheet`] lists them.
+- **Conditions.**  Three are understood: on a whole configuration (`'$(Configuration)|$(Platform)'=='Debug|x64'`),
+  on a configuration name and on a platform ([`ParseVcxCondition`]).  Any other is false.  A condition on an
+  `<Import>` or its `<ImportGroup>` limits which configurations the sheet's groups are for.
+- **Toolchains' configurations.**  A group for a platform that is a toolchain's (`GCC-x64`, `HCP65C816`, `HCP65C64`)
+  makes the project a configuration Visual Studio never sees, since it isn't in `<ProjectConfigurations>`
+  ([`CVcxConfiguration::IsToolchain`]).  It has its own defines, options and HCP65 settings, and takes what a
+  project says once per Visual Studio configuration, its type and include directories, from the configuration it is
+  built like: `Release|x64` for `Release|GCC-x64`, `Release|Win32` for the HCP65's.
+- **Files left out.**  `ExcludedFromBuild` on an item, or on every source through an item definition
+  ([`CVcxProject::IsCompiled`]).
+
+A build's own arguments for a toolchain are a tool's `AdditionalOptions` ([`CVcxProject::GetAdditionalOptions`]),
+and what it links, `Link`'s `AdditionalDependencies`.  The plan they come from is `ConfigurationsPlan.txt`.
+
 Several solutions open together are a workspace ([`CBuildWorkspace`]), a program with the kernal it runs on.  A
 project two solutions both have is one project to the IDE: indexed, searched and renamed once.  One configuration
 name is chosen for the workspace, and each solution builds its own solution configuration of that name.  What the

@@ -23,6 +23,7 @@ along with Codaphela VisualStudioLib.  If not, see <http://www.gnu.org/licenses/
 #include "BaseLib/Chars.h"
 #include "BaseLib/ArrayInt.h"
 #include "BaseLib/ArrayChars.h"
+#include "BaseLib/ArrayTemplatePtr.h"
 #include "BaseLib/XMLFile.h"
 #include "VcxItem.h"
 #include "VcxFilter.h"
@@ -30,8 +31,28 @@ along with Codaphela VisualStudioLib.  If not, see <http://www.gnu.org/licenses/
 #include "VcxProjectReference.h"
 
 
+//The directory of the file it is written in, with its last separator: a property sheet's own.
+#define VCX_THIS_FILE_DIRECTORY	"$(MSBuildThisFileDirectory)"
+
+
+//How deep one property sheet may import another.
+#define VCX_MAX_IMPORT_DEPTH	8
+
+
+//What a Condition is on (ParseVcxCondition).
+enum EVcxCondition
+{
+	VCC_Configuration,
+	VCC_Platform,
+	VCC_Both,
+	VCC_Other,
+};
+
+
 //A Visual Studio C++ project, read from its .vcxproj and (when it has one) its .vcxproj.filters: its configurations and
 //their properties, the files it lists, the filters Solution Explorer shows them in and the projects it references.
+//The property sheets it imports are read where it imports them, as MSBuild reads them.  Its configurations are those
+//it lists and, for each toolchain a group of it or of a sheet is for, that toolchain's (CVcxConfiguration).
 class CVcxProject
 {
 protected:
@@ -45,6 +66,10 @@ protected:
 	CArrayVcxItem				masItems;
 	CArrayVcxFilter				masFilters;
 	CArrayVcxProjectReference	masReferences;
+	CArrayChars					maszSheets;			//The property sheets it imports, each's full path once.
+	CArrayTemplatePtr<CXMLFile>	mapcSheetFiles;		//Their files, while the project is read.
+	CArrayChars					maszScope;			//The conditions of the imports being read.
+	const char*					mszReadingDirectory;	//The directory of the file being read.
 
 public:
 	void					Init(void);
@@ -83,9 +108,14 @@ public:
 	size					NumReferences(void) const;
 	CVcxProjectReference*	GetReference(size uiIndex);
 
+	size					NumSheets(void) const;
+	const char*				GetSheet(size uiIndex);
+
 	void					ExpandMacros(const char* szValue, CVcxConfiguration* pcConfiguration, const char* szSolutionDirectory, CChars* pszDest);
 	void					GetIncludeDirectories(CVcxConfiguration* pcConfiguration, const char* szSolutionDirectory, CArrayChars* paszDirectories);
 	void					GetPreprocessorDefinitions(CVcxConfiguration* pcConfiguration, const char* szSolutionDirectory, CArrayChars* paszDefines);
+	void					GetAdditionalOptions(const char* szTool, CVcxConfiguration* pcConfiguration, const char* szSolutionDirectory, CArrayChars* paszOptions);
+	void					GetAdditionalDependencies(CVcxConfiguration* pcConfiguration, const char* szSolutionDirectory, CArrayChars* paszLibraries);
 
 protected:
 	bool					ReadProject(CMarkupTag* pcProject);
@@ -94,6 +124,17 @@ protected:
 	bool					AddIncludesBeside(const char* szFileName, CArrayChars* paszIncludes, const char* szNewName, bool bWhole);
 	bool					AddElement(const char* szFileName, const char* szElement, const char* szInclude, const char* szFilter);
 	bool					RemoveIncludes(const char* szFileName, CArrayChars* paszIncludes);
+	void					ReadProjectConfigurations(CMarkupTag* pcProject);
+	void					ReadGroups(CMarkupTag* pcRoot, const char* szDirectory, CArrayChars* paszPlatforms, int iDepth);
+	void					ReadImport(CMarkupTag* pcImport, const char* szDirectory, CArrayChars* paszPlatforms, int iDepth);
+	bool					ResolveImport(const char* szProject, const char* szDirectory, CChars* pszDest);
+	CXMLFile*				GetSheetFile(const char* szFileName);
+	bool					PushScope(CMarkupTag* pcTag);
+	void					PopScope(bool bScoped);
+	void					FindToolchainConditions(CMarkupTag* pcTag, CArrayChars* paszPlatforms);
+	void					AddToolchainConfigurations(CArrayChars* paszPlatforms);
+	void					SetToolchainBases(void);
+	bool					IsConditionFor(const char* szCondition, CVcxConfiguration* pcConfiguration);
 	void					ReadItemGroup(CMarkupTag* pcItemGroup);
 	void					ReadItemExclusions(CMarkupTag* pcItemTag, CVcxItem* pcItem);
 	void					ReadPropertyGroup(CMarkupTag* pcPropertyGroup);
@@ -109,7 +150,8 @@ protected:
 
 bool ReadVcxXMLFile(CXMLFile* pcFile, const char* szFileName);
 bool GetVcxTagText(CMarkupTag* pcTag, const char* szChild, CChars* pszDest);
-bool GetVcxConditionConfiguration(const char* szCondition, CChars* pszDest);
+EVcxCondition ParseVcxCondition(const char* szCondition, CChars* pszValue);
+bool FindVcxConditionProperty(const char* szCondition, const char* szEquals, const char* szProperty);
 
 
 #endif // __VCX_PROJECT_H__

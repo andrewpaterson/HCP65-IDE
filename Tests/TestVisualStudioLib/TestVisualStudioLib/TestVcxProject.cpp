@@ -1,3 +1,4 @@
+#include <string.h>
 #include "BaseLib/FileUtil.h"
 #include "BaseLib/ArrayInt.h"
 #include "BaseLib/ArrayChars.h"
@@ -623,6 +624,231 @@ void TestVcxProjectExcludedFromBuild(void)
 //
 //
 //////////////////////////////////////////////////////////////////////////
+static bool TestVcxProjectEndsWith(const char* szText, const char* szEnd)
+{
+	size	uiText;
+	size	uiEnd;
+
+	uiText = strlen(szText);
+	uiEnd = strlen(szEnd);
+	return (uiText >= uiEnd) && (strcmp(szText + uiText - uiEnd, szEnd) == 0);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Writes szText as Output\Sheets\<szName>.
+//
+//////////////////////////////////////////////////////////////////////////
+void TestVcxProjectWriteSheet(const char* szName, const char* szText)
+{
+	CTextFile	cFile;
+	CFileUtil	cFileUtil;
+	CChars		szFileName;
+
+	szFileName.Init("Output" _FS_ "Sheets");
+	cFileUtil.AppendToPath(&szFileName, szName);
+	cFileUtil.TouchDir(szFileName.Text(), true);
+	cFile.Init(szText);
+	AssertTrue(cFile.Write(szFileName.Text()));
+	cFile.Kill();
+	szFileName.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A project with groups for toolchains' configurations it doesn't list,
+// and property sheets: one imported for every configuration, which
+// imports another from its own folder, and one imported for Release|x64
+// only.  The toolchains' configurations are found (a whole name, or every
+// listed configuration name for a condition on the platform alone); the
+// sheets' groups are read where they are imported, for the configurations
+// their conditions and their import's are for; a value naming itself adds
+// to what was set before; and a toolchain's configuration takes its
+// ConfigurationType from the configuration it is built like.
+//
+//////////////////////////////////////////////////////////////////////////
+void TestVcxProjectSheets(void)
+{
+	CVcxProject			cProject;
+	CVcxConfiguration*	pcConfiguration;
+	CArrayChars			aszValues;
+	CFileUtil			cFileUtil;
+	CChars				szCommon;
+
+	cFileUtil.RemoveDir("Output" _FS_ "Sheets");
+	TestVcxProjectWriteSheet("Common" _FS_ "Common.props",
+		"<Project>\n"
+		"  <PropertyGroup>\n"
+		"    <CommonDir>$(MSBuildThisFileDirectory)</CommonDir>\n"
+		"    <IncludePath>$(CommonDir)Include;$(IncludePath)</IncludePath>\n"
+		"  </PropertyGroup>\n"
+		"  <ItemDefinitionGroup>\n"
+		"    <ClCompile><PreprocessorDefinitions>ALL;%(PreprocessorDefinitions)</PreprocessorDefinitions></ClCompile>\n"
+		"  </ItemDefinitionGroup>\n"
+		"  <ItemDefinitionGroup Condition=\"'$(Configuration)'=='Debug'\">\n"
+		"    <ClCompile><PreprocessorDefinitions>DBG;%(PreprocessorDefinitions)</PreprocessorDefinitions></ClCompile>\n"
+		"  </ItemDefinitionGroup>\n"
+		"  <ItemDefinitionGroup Condition=\"'$(Platform)'=='GCC-x64'\">\n"
+		"    <ClCompile>\n"
+		"      <PreprocessorDefinitions>LINUX_GNU;%(PreprocessorDefinitions)</PreprocessorDefinitions>\n"
+		"      <AdditionalOptions>-m64  -DNAME=\"a b\" %(AdditionalOptions)</AdditionalOptions>\n"
+		"    </ClCompile>\n"
+		"  </ItemDefinitionGroup>\n"
+		"  <ItemDefinitionGroup Condition=\"exists('Nothing')\">\n"
+		"    <ClCompile><PreprocessorDefinitions>NEVER</PreprocessorDefinitions></ClCompile>\n"
+		"  </ItemDefinitionGroup>\n"
+		"</Project>\n");
+	TestVcxProjectWriteSheet("Repository.props",
+		"<Project>\n"
+		"  <Import Project=\"$(MSBuildThisFileDirectory)Common\\common.props\"/>\n"
+		"  <Import Project=\"$(VCTargetsPath)\\Microsoft.Cpp.props\"/>\n"
+		"  <Import Project=\"Missing.props\"/>\n"
+		"</Project>\n");
+	TestVcxProjectWriteSheet("ReleaseOnly.props",
+		"<Project>\n"
+		"  <ItemDefinitionGroup>\n"
+		"    <ClCompile><PreprocessorDefinitions>RELEASE_ONLY;%(PreprocessorDefinitions)</PreprocessorDefinitions></ClCompile>\n"
+		"  </ItemDefinitionGroup>\n"
+		"</Project>\n");
+	TestVcxProjectWriteSheet("Project" _FS_ "Sheets.vcxproj",
+		"<Project>\n"
+		"  <ItemGroup Label=\"ProjectConfigurations\">\n"
+		"    <ProjectConfiguration Include=\"Debug|Win32\"/>\n"
+		"    <ProjectConfiguration Include=\"Debug|x64\"/>\n"
+		"    <ProjectConfiguration Include=\"Release|x64\"/>\n"
+		"  </ItemGroup>\n"
+		"  <PropertyGroup Condition=\"'$(Configuration)|$(Platform)'=='Release|x64'\" Label=\"Configuration\">\n"
+		"    <ConfigurationType>StaticLibrary</ConfigurationType>\n"
+		"  </PropertyGroup>\n"
+		"  <ImportGroup Label=\"PropertySheets\">\n"
+		"    <Import Project=\"..\\Repository.props\"/>\n"
+		"  </ImportGroup>\n"
+		"  <ImportGroup Condition=\"'$(Configuration)|$(Platform)'=='Release|x64'\" Label=\"PropertySheets\">\n"
+		"    <Import Project=\"$(ProjectDir)..\\ReleaseOnly.props\"/>\n"
+		"    <Import Project=\"$(SolutionDir)Unknown.props\"/>\n"
+		"  </ImportGroup>\n"
+		"  <PropertyGroup Condition=\"'$(Configuration)|$(Platform)'=='Release|x64'\">\n"
+		"    <IncludePath>$(ProjectDir)Extra;$(IncludePath)</IncludePath>\n"
+		"  </PropertyGroup>\n"
+		"  <ItemDefinitionGroup Condition=\"'$(Configuration)|$(Platform)'=='Release|GCC-x64'\">\n"
+		"    <ClCompile>\n"
+		"      <PreprocessorDefinitions>MINE;%(PreprocessorDefinitions)</PreprocessorDefinitions>\n"
+		"      <AdditionalOptions>-O3 %(AdditionalOptions)</AdditionalOptions>\n"
+		"    </ClCompile>\n"
+		"    <Link><AdditionalDependencies>X11;Xext;%(AdditionalDependencies)</AdditionalDependencies></Link>\n"
+		"  </ItemDefinitionGroup>\n"
+		"  <ItemDefinitionGroup Condition=\"'$(Configuration)|$(Platform)'=='Release|HCP65C816'\">\n"
+		"    <HCP65Compile><NoFloats>true</NoFloats></HCP65Compile>\n"
+		"  </ItemDefinitionGroup>\n"
+		"  <ItemGroup>\n"
+		"    <ClCompile Include=\"Windows.cpp\">\n"
+		"      <ExcludedFromBuild Condition=\"'$(Platform)'=='GCC-x64'\">true</ExcludedFromBuild>\n"
+		"    </ClCompile>\n"
+		"  </ItemGroup>\n"
+		"</Project>\n");
+
+	cProject.Init();
+	AssertTrue(cProject.Read("Output" _FS_ "Sheets" _FS_ "Project" _FS_ "Sheets.vcxproj"));
+
+	//The three it lists, then the toolchains': GCC-x64's for Debug and Release, and the HCP65's one.
+	AssertSize(6, cProject.NumConfigurations());
+	AssertString("Debug|Win32", cProject.GetConfiguration(0)->GetName());
+	AssertString("Debug|x64", cProject.GetConfiguration(1)->GetName());
+	AssertString("Release|x64", cProject.GetConfiguration(2)->GetName());
+	AssertFalse(cProject.GetConfiguration(2)->IsToolchain());
+	AssertNotNull(cProject.FindConfiguration("Release|GCC-x64"));
+	AssertNotNull(cProject.FindConfiguration("Debug|GCC-x64"));
+	AssertNotNull(cProject.FindConfiguration("Release|HCP65C816"));
+	AssertNull(cProject.FindConfiguration("Debug|HCP65C816"));
+	AssertTrue(cProject.FindConfiguration("Release|GCC-x64")->IsToolchain());
+
+	//The sheets, each once: the one every configuration imports, the one it imports, and Release|x64's.
+	AssertSize(3, cProject.NumSheets());
+	AssertTrue(TestVcxProjectEndsWith(cProject.GetSheet(0), "Repository.props"));
+	AssertTrue(TestVcxProjectEndsWith(cProject.GetSheet(1), "Common.props"));
+	AssertTrue(TestVcxProjectEndsWith(cProject.GetSheet(2), "ReleaseOnly.props"));
+
+	aszValues.Init();
+	cProject.GetPreprocessorDefinitions(cProject.FindConfiguration("Debug|Win32"), ".", &aszValues);
+	AssertSize(2, aszValues.NumElements());
+	AssertString("DBG", aszValues.GetText(0));
+	AssertString("ALL", aszValues.GetText(1));
+
+	aszValues.ReInit();
+	cProject.GetPreprocessorDefinitions(cProject.FindConfiguration("Release|x64"), ".", &aszValues);
+	AssertSize(2, aszValues.NumElements());
+	AssertString("RELEASE_ONLY", aszValues.GetText(0));
+	AssertString("ALL", aszValues.GetText(1));
+
+	aszValues.ReInit();
+	cProject.GetPreprocessorDefinitions(cProject.FindConfiguration("Debug|GCC-x64"), ".", &aszValues);
+	AssertSize(3, aszValues.NumElements());
+	AssertString("LINUX_GNU", aszValues.GetText(0));
+	AssertString("DBG", aszValues.GetText(1));
+	AssertString("ALL", aszValues.GetText(2));
+
+	//The project's own group adds to the sheets'.
+	pcConfiguration = cProject.FindConfiguration("Release|GCC-x64");
+	aszValues.ReInit();
+	cProject.GetPreprocessorDefinitions(pcConfiguration, ".", &aszValues);
+	AssertSize(3, aszValues.NumElements());
+	AssertString("MINE", aszValues.GetText(0));
+	AssertString("LINUX_GNU", aszValues.GetText(1));
+	AssertString("ALL", aszValues.GetText(2));
+	aszValues.ReInit();
+	cProject.GetAdditionalOptions("ClCompile", pcConfiguration, ".", &aszValues);
+	AssertSize(3, aszValues.NumElements());
+	AssertString("-O3", aszValues.GetText(0));
+	AssertString("-m64", aszValues.GetText(1));
+	AssertString("-DNAME=\"a b\"", aszValues.GetText(2));
+	aszValues.ReInit();
+	cProject.GetAdditionalOptions("Link", pcConfiguration, ".", &aszValues);
+	AssertSize(0, aszValues.NumElements());
+	cProject.GetAdditionalDependencies(pcConfiguration, ".", &aszValues);
+	AssertSize(2, aszValues.NumElements());
+	AssertString("X11", aszValues.GetText(0));
+	AssertString("Xext", aszValues.GetText(1));
+
+	//What Release|x64 says once, Release|GCC-x64 has too: its type, and (having no IncludePath but the sheet's
+	//own) the sheet's include directory, named from the sheet's folder.
+	AssertString("StaticLibrary", pcConfiguration->GetProperty("ConfigurationType"));
+	AssertNull(pcConfiguration->GetOwnProperty("ConfigurationType"));
+	AssertNull(cProject.FindConfiguration("Debug|GCC-x64")->GetProperty("ConfigurationType"));
+	szCommon.Init("Output" _FS_ "Sheets" _FS_ "Common" _FS_ "Include");
+	cFileUtil.FullPath(&szCommon);
+	aszValues.ReInit();
+	cProject.GetIncludeDirectories(pcConfiguration, ".", &aszValues);
+	AssertSize(1, aszValues.NumElements());
+	AssertString(szCommon.Text(), aszValues.GetText(0));
+	aszValues.ReInit();
+	cProject.GetIncludeDirectories(cProject.FindConfiguration("Release|x64"), ".", &aszValues);
+	AssertSize(2, aszValues.NumElements());
+	AssertTrue(TestVcxProjectEndsWith(aszValues.GetText(0), "Extra"));
+	AssertString(szCommon.Text(), aszValues.GetText(1));
+	szCommon.Kill();
+	aszValues.Kill();
+
+	//The HCP65's: its own tags, and its type from Release's first listed configuration (there is no Release|Win32).
+	pcConfiguration = cProject.FindConfiguration("Release|HCP65C816");
+	AssertString("true", pcConfiguration->GetProperty("HCP65Compile.NoFloats"));
+	AssertString("StaticLibrary", pcConfiguration->GetProperty("ConfigurationType"));
+
+	//A file excluded from a platform is excluded from each of its configurations.
+	AssertFalse(cProject.IsCompiled(cProject.FindItem("ClCompile", "Windows.cpp"), cProject.FindConfiguration("Debug|GCC-x64")));
+	AssertFalse(cProject.IsCompiled(cProject.FindItem("ClCompile", "Windows.cpp"), cProject.FindConfiguration("Release|GCC-x64")));
+	AssertTrue(cProject.IsCompiled(cProject.FindItem("ClCompile", "Windows.cpp"), cProject.FindConfiguration("Release|x64")));
+
+	cProject.Kill();
+	cFileUtil.RemoveDir("Output" _FS_ "Sheets");
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
 void TestVcxProject(void)
 {
 	BeginTests();
@@ -635,6 +861,7 @@ void TestVcxProject(void)
 	TestVcxProjectAddItemBeside();
 	TestVcxProjectAddItem();
 	TestVcxProjectExcludedFromBuild();
+	TestVcxProjectSheets();
 
 	TestStatistics();
 }

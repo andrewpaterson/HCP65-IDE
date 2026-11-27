@@ -200,12 +200,17 @@ bool CVcxSolution::ReadProject(const char* szProjectFile)
 		return false;
 	}
 
-	//Its configurations are the solution's, each building itself.
+	//The configurations it lists are the solution's, each building itself.  A toolchain's isn't a solution
+	//configuration: a build finds it in the project by its name.
 	pcVcxProject = pcProject->GetProject();
 	pcProject->SetGuid(pcVcxProject->GetGuid());
 	for (i = 0; i < pcVcxProject->NumConfigurations(); i++)
 	{
 		pcConfiguration = pcVcxProject->GetConfiguration(i);
+		if (pcConfiguration->IsToolchain())
+		{
+			continue;
+		}
 		maszConfigurations.Add(pcConfiguration->GetName());
 		pcSolutionConfiguration = pcProject->GetOrAddConfiguration(pcConfiguration->GetName());
 		pcSolutionConfiguration->SetProjectConfiguration(pcConfiguration->GetName());

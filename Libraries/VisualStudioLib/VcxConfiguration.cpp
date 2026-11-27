@@ -44,6 +44,7 @@ void CVcxConfiguration::Init(const char* szName)
 		mszConfiguration.Append(szName);
 	}
 	mcProperties.Init();
+	mpcBase = NULL;
 }
 
 
@@ -73,13 +74,56 @@ void CVcxConfiguration::SetProperty(const char* szName, const char* szValue)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// NULL if the project doesn't set it for this configuration.
+// NULL if the project doesn't set it for this configuration, nor, for a
+// toolchain's configuration, for its base where the base's is taken: a
+// property group's property (ConfigurationType, IncludePath) and the
+// compiler's include directories.
 //
 //////////////////////////////////////////////////////////////////////////
 char* CVcxConfiguration::GetProperty(const char* szName)
 {
+	char*	szValue;
+
+	szValue = mcProperties.Get(szName);
+	if ((szValue == NULL) && (mpcBase != NULL) && (!strchr(szName, '.') || (strcmp(szName, "ClCompile.AdditionalIncludeDirectories") == 0)))
+	{
+		szValue = mpcBase->GetProperty(szName);
+	}
+	return szValue;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// What the configuration itself was given, NULL if nothing.
+//
+//////////////////////////////////////////////////////////////////////////
+char* CVcxConfiguration::GetOwnProperty(const char* szName)
+{
 	return mcProperties.Get(szName);
 }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+const char* GetVcxToolchainBasePlatform(const char* szPlatform)
+{
+	if (strcmp(szPlatform, VCX_PLATFORM_GCC_X64) == 0)
+	{
+		return "x64";
+	}
+	if ((strcmp(szPlatform, VCX_PLATFORM_HCP65C816) == 0) || (strcmp(szPlatform, VCX_PLATFORM_HCP65C64) == 0))
+	{
+		return "Win32";
+	}
+	return NULL;
+}
+
+
+bool CVcxConfiguration::IsToolchain(void) const { return GetVcxToolchainBasePlatform(mszPlatform.Text()) != NULL; }
+void CVcxConfiguration::SetBase(CVcxConfiguration* pcBase) { mpcBase = pcBase; }
 
 
 const char* CVcxConfiguration::GetName(void) const { return mszName.Text(); }

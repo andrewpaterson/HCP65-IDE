@@ -81,33 +81,51 @@ bool GetVcxTagText(CMarkupTag* pcTag, const char* szChild, CChars* pszDest)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The configuration a condition on '$(Configuration)|$(Platform)' is
-// for: Debug|Win32 from '$(Configuration)|$(Platform)'=='Debug|Win32'.
-// False for any other condition.
+// What a condition is on, and the value it wants appended to pszValue:
+// '$(Configuration)|$(Platform)'=='Debug|Win32' a whole configuration,
+// '$(Configuration)'=='Debug' every platform's Debug and
+// '$(Platform)'=='GCC-x64' every configuration of a platform.  Anything
+// else (exists('...'), a condition on another property) is VCC_Other, which
+// is true of no configuration.
 //
 //////////////////////////////////////////////////////////////////////////
-bool GetVcxConditionConfiguration(const char* szCondition, CChars* pszDest)
+EVcxCondition ParseVcxCondition(const char* szCondition, CChars* pszValue)
 {
-	const char*	szStart;
-	const char*	szEnd;
+	const char*		szEquals;
+	const char*		szStart;
+	const char*		szEnd;
+	bool			bConfiguration;
+	bool			bPlatform;
 
-	if (strstr(szCondition, "$(Configuration)") == NULL)
-	{
-		return false;
-	}
-	szStart = strstr(szCondition, "=='");
-	if (szStart == NULL)
-	{
-		return false;
-	}
-	szStart += 3;
-	szEnd = strchr(szStart, '\'');
+	szEquals = strstr(szCondition, "==");
+	szStart = szEquals ? strchr(szEquals, '\'') : NULL;
+	szEnd = szStart ? strchr(szStart + 1, '\'') : NULL;
 	if (szEnd == NULL)
 	{
-		return false;
+		return VCC_Other;
 	}
-	pszDest->Append(szStart, (int)(szEnd - szStart));
-	return true;
+	bConfiguration = FindVcxConditionProperty(szCondition, szEquals, "$(Configuration)");
+	bPlatform = FindVcxConditionProperty(szCondition, szEquals, "$(Platform)");
+	if (!bConfiguration && !bPlatform)
+	{
+		return VCC_Other;
+	}
+	pszValue->Append(szStart + 1, (size)(szEnd - szStart - 1));
+	return bConfiguration ? (bPlatform ? VCC_Both : VCC_Configuration) : VCC_Platform;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Whether szProperty is on the left of a condition's ==.
+//
+//////////////////////////////////////////////////////////////////////////
+bool FindVcxConditionProperty(const char* szCondition, const char* szEquals, const char* szProperty)
+{
+	const char*	szFound;
+
+	szFound = strstr(szCondition, szProperty);
+	return (szFound != NULL) && (szFound < szEquals);
 }
 
 
@@ -127,6 +145,8 @@ void CVcxProject::Init(void)
 	masItems.Init();
 	masFilters.Init();
 	masReferences.Init();
+	maszSheets.Init();
+	mszReadingDirectory = NULL;
 }
 
 
@@ -158,6 +178,7 @@ void CVcxProject::Kill(void)
 		masConfigurations.Get(i)->Kill();
 	}
 	masConfigurations.Kill();
+	maszSheets.Kill();
 	mszRootNamespace.Kill();
 	mszGuid.Kill();
 	mszName.Kill();
@@ -222,27 +243,117 @@ bool CVcxProject::Read(const char* szFileName)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The <Project> of a .vcxproj.  Its configurations come first (in the
-// <ItemGroup Label="ProjectConfigurations">) so the property groups
-// after them set properties on them.
+// The <Project> of a .vcxproj, read twice over, its property sheets with
+// it.  First for its configurations: those it lists and those of the
+// toolchains that a condition anywhere is for.  Then for what each group
+// gives them, in the order MSBuild reads them, so a later group replaces
+// or adds to an earlier one's.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CVcxProject::ReadProject(CMarkupTag* pcProject)
 {
-	CMarkupTag*		pcTag;
-	STagIterator	sIter;
+	CArrayChars	aszPlatforms;
+	size		i;
 
 	if (!pcProject->Is("Project"))
 	{
 		return gcLogger.Error2(__METHOD__, " Expected a <Project> in [", mszFileName.Text(), "], not <", pcProject->GetName(), ">.", NULL);
 	}
 
-	pcTag = pcProject->GetTag(&sIter);
-	while (pcTag != NULL)
+	maszScope.Init();
+	mapcSheetFiles.Init();
+	mszReadingDirectory = NULL;
+	aszPlatforms.Init();
+	ReadProjectConfigurations(pcProject);
+	ReadGroups(pcProject, mszDirectory.Text(), &aszPlatforms, 0);
+	AddToolchainConfigurations(&aszPlatforms);
+	ReadGroups(pcProject, mszDirectory.Text(), NULL, 0);
+	SetToolchainBases();
+	aszPlatforms.Kill();
+	for (i = 0; i < mapcSheetFiles.NumElements(); i++)
 	{
-		if (pcTag->Is("ItemGroup"))
+		mapcSheetFiles.GetPtr(i)->Kill();
+		free(mapcSheetFiles.GetPtr(i));
+	}
+	mapcSheetFiles.Kill();
+	maszScope.Kill();
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The configurations the project lists, <ItemGroup
+// Label="ProjectConfigurations">: Visual Studio's.
+//
+//////////////////////////////////////////////////////////////////////////
+void CVcxProject::ReadProjectConfigurations(CMarkupTag* pcProject)
+{
+	CMarkupTag*		pcGroup;
+	CMarkupTag*		pcTag;
+	STagIterator	sGroupIter;
+	STagIterator	sIter;
+	char*			szInclude;
+
+	for (pcGroup = pcProject->GetTag("ItemGroup", &sGroupIter); pcGroup; pcGroup = pcProject->GetNextTag(&sGroupIter))
+	{
+		for (pcTag = pcGroup->GetTag("ProjectConfiguration", &sIter); pcTag; pcTag = pcGroup->GetNextTag(&sIter))
 		{
-			ReadItemGroup(pcTag);
+			szInclude = pcTag->GetStringAttribute("Include");
+			if (szInclude != NULL)
+			{
+				AddConfiguration(szInclude);
+			}
+		}
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The groups of a project or a property sheet (pcRoot, in szDirectory), and
+// those of the sheets it imports where it imports them.  With paszPlatforms
+// it only looks for the toolchains' configurations (FindToolchainConditions);
+// without, it reads the groups.  A sheet has no items: only the project's
+// item groups are read.
+//
+//////////////////////////////////////////////////////////////////////////
+void CVcxProject::ReadGroups(CMarkupTag* pcRoot, const char* szDirectory, CArrayChars* paszPlatforms, int iDepth)
+{
+	CMarkupTag*		pcTag;
+	CMarkupTag*		pcImport;
+	STagIterator	sIter;
+	STagIterator	sImportIter;
+	bool			bScoped;
+	const char*		szOuterDirectory;
+
+	szOuterDirectory = mszReadingDirectory;
+	mszReadingDirectory = szDirectory;
+	for (pcTag = pcRoot->GetTag(&sIter); pcTag; pcTag = pcRoot->GetNextTag(&sIter))
+	{
+		if (pcTag->Is("Import"))
+		{
+			ReadImport(pcTag, szDirectory, paszPlatforms, iDepth);
+		}
+		else if (pcTag->Is("ImportGroup"))
+		{
+			bScoped = PushScope(pcTag);
+			for (pcImport = pcTag->GetTag("Import", &sImportIter); pcImport; pcImport = pcTag->GetNextTag(&sImportIter))
+			{
+				ReadImport(pcImport, szDirectory, paszPlatforms, iDepth);
+			}
+			PopScope(bScoped);
+		}
+		else if (paszPlatforms != NULL)
+		{
+			FindToolchainConditions(pcTag, paszPlatforms);
+		}
+		else if (pcTag->Is("ItemGroup"))
+		{
+			if (iDepth == 0)
+			{
+				ReadItemGroup(pcTag);
+			}
 		}
 		else if (pcTag->Is("PropertyGroup"))
 		{
@@ -252,17 +363,295 @@ bool CVcxProject::ReadProject(CMarkupTag* pcProject)
 		{
 			ReadItemDefinitionGroup(pcTag);
 		}
-		pcTag = pcProject->GetNextTag(&sIter);
 	}
+	mszReadingDirectory = szOuterDirectory;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// An <Import Project="..\Common.props"/>: the sheet's groups, read here.
+// Its path is from the file that imports it, or from the project with
+// $(ProjectDir) or $(MSBuildProjectDirectory), or from the importing file
+// with $(MSBuildThisFileDirectory).  One with any other macro (Microsoft's
+// own, $(VCTargetsPath) and $(UserRootDir); $(SolutionDir), which a project
+// read by itself hasn't) or that isn't there is skipped.  The import's and
+// its group's conditions, if they are on the configuration, are the only
+// configurations the sheet's groups are for.
+//
+//////////////////////////////////////////////////////////////////////////
+void CVcxProject::ReadImport(CMarkupTag* pcImport, const char* szDirectory, CArrayChars* paszPlatforms, int iDepth)
+{
+	CChars		szFileName;
+	CChars		szFullPath;
+	CChars		szSheetDirectory;
+	CChars		szName;
+	CXMLFile*	pcFile;
+	bool		bScoped;
+
+	szFileName.Init();
+	if ((iDepth < VCX_MAX_IMPORT_DEPTH) && ResolveImport(pcImport->GetStringAttribute("Project"), szDirectory, &szFileName))
+	{
+		pcFile = GetSheetFile(szFileName.Text());
+		if ((pcFile != NULL) && pcFile->mcMarkup.mpcDoc->GetRootTag()->Is("Project"))
+		{
+			szFullPath.Init();
+			szSheetDirectory.Init();
+			szName.Init();
+			SplitVcxFileName(szFileName.Text(), &szFullPath, &szSheetDirectory, &szName);
+			bScoped = PushScope(pcImport);
+			ReadGroups(pcFile->mcMarkup.mpcDoc->GetRootTag(), szSheetDirectory.Text(), paszPlatforms, iDepth + 1);
+			PopScope(bScoped);
+			szName.Kill();
+			szSheetDirectory.Kill();
+			szFullPath.Kill();
+		}
+	}
+	szFileName.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The file an import names, appended to pszDest.  False if it has a macro
+// that isn't one of the three read, or there is no such file.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CVcxProject::ResolveImport(const char* szProject, const char* szDirectory, CChars* pszDest)
+{
+	static const char*	aszProjectMacros[] = { "$(ProjectDir)", "$(MSBuildProjectDirectory)\\", "$(MSBuildProjectDirectory)/", NULL };
+	static const char*	szThisMacro = VCX_THIS_FILE_DIRECTORY;
+	const char*			szFrom;
+	int					i;
+
+	if (szProject == NULL)
+	{
+		return false;
+	}
+	szFrom = szDirectory;
+	if (strncmp(szProject, szThisMacro, strlen(szThisMacro)) == 0)
+	{
+		szProject += strlen(szThisMacro);
+	}
+	else
+	{
+		for (i = 0; aszProjectMacros[i] != NULL; i++)
+		{
+			if (strncmp(szProject, aszProjectMacros[i], strlen(aszProjectMacros[i])) == 0)
+			{
+				szProject += strlen(aszProjectMacros[i]);
+				szFrom = mszDirectory.Text();
+				break;
+			}
+		}
+	}
+	return (strstr(szProject, "$(") == NULL) && ResolveVcxPath(szFrom, szProject, pszDest);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A sheet's file, read the first time it is imported and kept until the
+// project has been read (ReadProject reads each twice).  NULL if it can't
+// be read.
+//
+//////////////////////////////////////////////////////////////////////////
+CXMLFile* CVcxProject::GetSheetFile(const char* szFileName)
+{
+	size		uiIndex;
+	CXMLFile*	pcFile;
+
+	uiIndex = maszSheets.GetIndex(szFileName);
+	if (uiIndex != ARRAY_ELEMENT_NOT_FOUND)
+	{
+		return mapcSheetFiles.GetPtr(uiIndex);
+	}
+	pcFile = (CXMLFile*)malloc(sizeof(CXMLFile));
+	new(pcFile) CXMLFile();
+	pcFile->Init();
+	if (!ReadVcxXMLFile(pcFile, szFileName))
+	{
+		gcLogger.Error2(__METHOD__, " Could not read property sheet [", szFileName, "] of [", mszFileName.Text(), "].", NULL);
+		pcFile->Kill();
+		free(pcFile);
+		return NULL;
+	}
+	maszSheets.Add(szFileName);
+	mapcSheetFiles.Add(pcFile);
+	return pcFile;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A tag's condition becomes one more that every group read inside it must
+// meet, if it is on the configuration.  True if it was (PopScope takes it
+// off again).
+//
+//////////////////////////////////////////////////////////////////////////
+bool CVcxProject::PushScope(CMarkupTag* pcTag)
+{
+	char*			szCondition;
+	CChars			szValue;
+	EVcxCondition	eCondition;
+
+	szCondition = pcTag->GetStringAttribute("Condition");
+	if (szCondition == NULL)
+	{
+		return false;
+	}
+	szValue.Init();
+	eCondition = ParseVcxCondition(szCondition, &szValue);
+	szValue.Kill();
+	if (eCondition == VCC_Other)
+	{
+		return false;
+	}
+	maszScope.Add(szCondition);
 	return true;
 }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Configurations, project references and items.  An item is any element
-// with an Include, its kind its element's name (ClCompile, ClInclude,
-// None...).
+//
+//////////////////////////////////////////////////////////////////////////
+void CVcxProject::PopScope(bool bScoped)
+{
+	if (bScoped)
+	{
+		maszScope.RemoveTail();
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The toolchains' configurations that the conditions of pcTag and of what
+// is in it are for: one on a whole configuration (Release|GCC-x64) adds it;
+// one on a toolchain's platform alone adds the platform to paszPlatforms,
+// for AddToolchainConfigurations.
+//
+//////////////////////////////////////////////////////////////////////////
+void CVcxProject::FindToolchainConditions(CMarkupTag* pcTag, CArrayChars* paszPlatforms)
+{
+	CMarkupTag*		pcChild;
+	STagIterator	sIter;
+	char*			szCondition;
+	CChars			szValue;
+	EVcxCondition	eCondition;
+	const char*		szBar;
+
+	szCondition = pcTag->GetStringAttribute("Condition");
+	if (szCondition != NULL)
+	{
+		szValue.Init();
+		eCondition = ParseVcxCondition(szCondition, &szValue);
+		szBar = strchr(szValue.Text(), '|');
+		if ((eCondition == VCC_Both) && szBar && GetVcxToolchainBasePlatform(szBar + 1))
+		{
+			AddConfiguration(szValue.Text());
+		}
+		else if ((eCondition == VCC_Platform) && GetVcxToolchainBasePlatform(szValue.Text()) && !paszPlatforms->Contains(szValue.Text()))
+		{
+			paszPlatforms->Add(szValue.Text());
+		}
+		szValue.Kill();
+	}
+	for (pcChild = pcTag->GetTag(&sIter); pcChild; pcChild = pcTag->GetNextTag(&sIter))
+	{
+		FindToolchainConditions(pcChild, paszPlatforms);
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A toolchain's platform a condition names by itself has a configuration
+// for each configuration name the project lists: Debug|GCC-x64 and
+// Release|GCC-x64 of a project with Debug and Release.
+//
+//////////////////////////////////////////////////////////////////////////
+void CVcxProject::AddToolchainConfigurations(CArrayChars* paszPlatforms)
+{
+	CArrayChars	aszNames;
+	CChars		szName;
+	size		i;
+	size		j;
+
+	aszNames.Init();
+	for (i = 0; i < masConfigurations.NumElements(); i++)
+	{
+		if (!masConfigurations.Get(i)->IsToolchain() && !aszNames.Contains(masConfigurations.Get(i)->GetConfiguration()))
+		{
+			aszNames.Add(masConfigurations.Get(i)->GetConfiguration());
+		}
+	}
+	for (i = 0; i < paszPlatforms->NumElements(); i++)
+	{
+		for (j = 0; j < aszNames.NumElements(); j++)
+		{
+			szName.Init(aszNames.GetText(j));
+			szName.Append('|');
+			szName.Append(paszPlatforms->GetText(i));
+			AddConfiguration(szName.Text());
+			szName.Kill();
+		}
+	}
+	aszNames.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Each toolchain's configuration gets its base: the listed configuration
+// of its name on its base platform (Debug|x64 for Debug|GCC-x64), or the
+// first listed of its name if there is none.
+//
+//////////////////////////////////////////////////////////////////////////
+void CVcxProject::SetToolchainBases(void)
+{
+	CVcxConfiguration*	pcConfiguration;
+	CVcxConfiguration*	pcOther;
+	CVcxConfiguration*	pcBase;
+	const char*			szBasePlatform;
+	size				i;
+	size				j;
+
+	for (i = 0; i < masConfigurations.NumElements(); i++)
+	{
+		pcConfiguration = masConfigurations.Get(i);
+		szBasePlatform = GetVcxToolchainBasePlatform(pcConfiguration->GetPlatform());
+		if (szBasePlatform == NULL)
+		{
+			continue;
+		}
+		pcBase = NULL;
+		for (j = 0; j < masConfigurations.NumElements(); j++)
+		{
+			pcOther = masConfigurations.Get(j);
+			if (!pcOther->IsToolchain() && (strcmp(pcOther->GetConfiguration(), pcConfiguration->GetConfiguration()) == 0))
+			{
+				if (strcmp(pcOther->GetPlatform(), szBasePlatform) == 0)
+				{
+					pcBase = pcOther;
+					break;
+				}
+				if (pcBase == NULL)
+				{
+					pcBase = pcOther;
+				}
+			}
+		}
+		pcConfiguration->SetBase(pcBase);
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Project references and items.  An item is any element with an Include,
+// its kind its element's name (ClCompile, ClInclude, None...).
 //
 //////////////////////////////////////////////////////////////////////////
 void CVcxProject::ReadItemGroup(CMarkupTag* pcItemGroup)
@@ -282,7 +671,7 @@ void CVcxProject::ReadItemGroup(CMarkupTag* pcItemGroup)
 		{
 			if (pcTag->Is("ProjectConfiguration"))
 			{
-				AddConfiguration(szInclude);
+				//Read first of all (ReadProjectConfigurations).
 			}
 			else if (pcTag->Is("ProjectReference"))
 			{
@@ -310,7 +699,8 @@ void CVcxProject::ReadItemGroup(CMarkupTag* pcItemGroup)
 //////////////////////////////////////////////////////////////////////////
 //
 // An item's <ExcludedFromBuild Condition="...">true</ExcludedFromBuild>
-// elements.  One whose condition isn't a configuration's says nothing.
+// elements: each for the configurations its condition is for, or for
+// every one with none.
 //
 //////////////////////////////////////////////////////////////////////////
 void CVcxProject::ReadItemExclusions(CMarkupTag* pcItemTag, CVcxItem* pcItem)
@@ -318,22 +708,30 @@ void CVcxProject::ReadItemExclusions(CMarkupTag* pcItemTag, CVcxItem* pcItem)
 	CMarkupTag*		pcTag;
 	STagIterator	sIter;
 	char*			szCondition;
-	CChars			szConfiguration;
 	CChars			szValue;
+	bool			bExcluded;
+	size			i;
 
 	for (pcTag = pcItemTag->GetTag("ExcludedFromBuild", &sIter); pcTag; pcTag = pcItemTag->GetNextTag(&sIter))
 	{
+		szValue.Init();
+		pcTag->GetText(&szValue);
+		szValue.StripWhitespace(true);
+		bExcluded = szValue.EqualsIgnoreCase("true");
+		szValue.Kill();
 		szCondition = pcTag->GetStringAttribute("Condition");
-		szConfiguration.Init();
-		if ((szCondition == NULL) || GetVcxConditionConfiguration(szCondition, &szConfiguration))
+		if (szCondition == NULL)
 		{
-			szValue.Init();
-			pcTag->GetText(&szValue);
-			szValue.StripWhitespace(true);
-			pcItem->SetExcludedFromBuild(szConfiguration.Text(), szValue.EqualsIgnoreCase("true"));
-			szValue.Kill();
+			pcItem->SetExcludedFromBuild("", bExcluded);
+			continue;
 		}
-		szConfiguration.Kill();
+		for (i = 0; i < masConfigurations.NumElements(); i++)
+		{
+			if (IsConditionFor(szCondition, masConfigurations.Get(i)))
+			{
+				pcItem->SetExcludedFromBuild(masConfigurations.Get(i)->GetName(), bExcluded);
+			}
+		}
 	}
 }
 
@@ -453,36 +851,92 @@ void CVcxProject::ReadItemDefinitionGroup(CMarkupTag* pcItemDefinitionGroup)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Sets a property on the configuration szCondition is for, or on every
-// configuration if szCondition is NULL.  A condition that isn't on the
-// configuration is ignored.
+// Whether a condition is true of a configuration.  No condition is true of
+// every one.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CVcxProject::IsConditionFor(const char* szCondition, CVcxConfiguration* pcConfiguration)
+{
+	CChars			szValue;
+	EVcxCondition	eCondition;
+	bool			bResult;
+
+	if (szCondition == NULL)
+	{
+		return true;
+	}
+	szValue.Init();
+	eCondition = ParseVcxCondition(szCondition, &szValue);
+	bResult = ((eCondition == VCC_Both) && szValue.Equals(pcConfiguration->GetName())) ||
+			  ((eCondition == VCC_Configuration) && szValue.Equals(pcConfiguration->GetConfiguration())) ||
+			  ((eCondition == VCC_Platform) && szValue.Equals(pcConfiguration->GetPlatform()));
+	szValue.Kill();
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Sets a property on the configurations szCondition is for that are also
+// those of the imports being read (maszScope).  A value that names itself,
+// %(PreprocessorDefinitions) in an item definition's or $(IncludePath) in
+// a property's, has what the configuration was given before in its place,
+// so a project adds to its sheet's; one that doesn't replaces it.
+// $(MSBuildThisFileDirectory) is the directory of the file being read, so
+// it is put in now: a sheet names its own folder with it.
 //
 //////////////////////////////////////////////////////////////////////////
 void CVcxProject::SetProperty(const char* szCondition, const char* szName, const char* szValue)
 {
-	CChars				szConfiguration;
 	CVcxConfiguration*	pcConfiguration;
+	CChars				szSelf;
+	CChars				szNew;
+	CChars				szHere;
+	const char*			szDot;
+	char*				szOld;
 	size				i;
+	size				j;
+	bool				bInScope;
 
-	if (szCondition == NULL)
+	szHere.Init(szValue);
+	if (mszReadingDirectory && szHere.Contains(VCX_THIS_FILE_DIRECTORY))
 	{
-		for (i = 0; i < masConfigurations.NumElements(); i++)
-		{
-			masConfigurations.Get(i)->SetProperty(szName, szValue);
-		}
-		return;
+		szNew.Init(mszReadingDirectory);
+		szNew.Append(FILE_SEPARATOR[0]);
+		szHere.Replace(VCX_THIS_FILE_DIRECTORY, szNew.Text());
+		szNew.Kill();
 	}
-
-	szConfiguration.Init();
-	if (GetVcxConditionConfiguration(szCondition, &szConfiguration))
+	szValue = szHere.Text();
+	szDot = strchr(szName, '.');
+	szSelf.Init(szDot ? "%(" : "$(");
+	szSelf.Append(szDot ? szDot + 1 : szName);
+	szSelf.Append(')');
+	for (i = 0; i < masConfigurations.NumElements(); i++)
 	{
-		pcConfiguration = FindConfiguration(szConfiguration.Text());
-		if (pcConfiguration != NULL)
+		pcConfiguration = masConfigurations.Get(i);
+		bInScope = IsConditionFor(szCondition, pcConfiguration);
+		for (j = 0; bInScope && (j < maszScope.NumElements()); j++)
 		{
-			pcConfiguration->SetProperty(szName, szValue);
+			bInScope = IsConditionFor(maszScope.GetText(j), pcConfiguration);
+		}
+		if (bInScope)
+		{
+			szOld = pcConfiguration->GetOwnProperty(szName);
+			if ((szOld != NULL) && (strstr(szValue, szSelf.Text()) != NULL))
+			{
+				szNew.Init(szValue);
+				szNew.Replace(szSelf.Text(), szOld);
+				pcConfiguration->SetProperty(szName, szNew.Text());
+				szNew.Kill();
+			}
+			else
+			{
+				pcConfiguration->SetProperty(szName, szValue);
+			}
 		}
 	}
-	szConfiguration.Kill();
+	szSelf.Kill();
+	szHere.Kill();
 }
 
 
@@ -1606,6 +2060,72 @@ void CVcxProject::GetPreprocessorDefinitions(CVcxConfiguration* pcConfiguration,
 
 //////////////////////////////////////////////////////////////////////////
 //
+// A tool's AdditionalOptions ("ClCompile", "Link"): the arguments it is
+// given as written, split where a command line is, at the white space
+// outside quotes, which are kept.  For g++ they are its own arguments.
+//
+//////////////////////////////////////////////////////////////////////////
+void CVcxProject::GetAdditionalOptions(const char* szTool, CVcxConfiguration* pcConfiguration, const char* szSolutionDirectory, CArrayChars* paszOptions)
+{
+	CChars		szProperty;
+	CChars		szExpanded;
+	CChars		szOption;
+	char*		szValue;
+	const char*	sz;
+	bool		bQuoted;
+
+	szProperty.Init(szTool);
+	szProperty.Append(".AdditionalOptions");
+	szValue = pcConfiguration->GetProperty(szProperty.Text());
+	szProperty.Kill();
+	if (szValue == NULL)
+	{
+		return;
+	}
+
+	szExpanded.Init();
+	ExpandMacros(szValue, pcConfiguration, szSolutionDirectory, &szExpanded);
+	szOption.Init();
+	bQuoted = false;
+	for (sz = szExpanded.Text(); ; sz++)
+	{
+		if ((*sz == '\0') || (!bQuoted && ((*sz == ' ') || (*sz == '\t') || (*sz == '\r') || (*sz == '\n'))))
+		{
+			if (!szOption.Empty())
+			{
+				paszOptions->Add(szOption.Text());
+				szOption.Clear();
+			}
+			if (*sz == '\0')
+			{
+				break;
+			}
+		}
+		else
+		{
+			bQuoted = (*sz == '"') ? !bQuoted : bQuoted;
+			szOption.Append(*sz);
+		}
+	}
+	szOption.Kill();
+	szExpanded.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// What the linker is given besides the project's objects: Link's
+// AdditionalDependencies.
+//
+//////////////////////////////////////////////////////////////////////////
+void CVcxProject::GetAdditionalDependencies(CVcxConfiguration* pcConfiguration, const char* szSolutionDirectory, CArrayChars* paszLibraries)
+{
+	GetPropertyList("Link.AdditionalDependencies", pcConfiguration, szSolutionDirectory, paszLibraries);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // A ';' separated property with its macros expanded, each part trimmed;
 // empty parts are left out.  Appended to paszDest.
 //
@@ -1655,5 +2175,7 @@ CVcxItem* CVcxProject::GetItem(size uiIndex) { return masItems.Get(uiIndex); }
 size CVcxProject::NumFilters(void) const { return masFilters.NumElements(); }
 CVcxFilter* CVcxProject::GetFilter(size uiIndex) { return masFilters.Get(uiIndex); }
 size CVcxProject::NumReferences(void) const { return masReferences.NumElements(); }
+size CVcxProject::NumSheets(void) const { return maszSheets.NumElements(); }
+const char* CVcxProject::GetSheet(size uiIndex) { return maszSheets.GetText(uiIndex); }
 CVcxProjectReference* CVcxProject::GetReference(size uiIndex) { return masReferences.Get(uiIndex); }
 
