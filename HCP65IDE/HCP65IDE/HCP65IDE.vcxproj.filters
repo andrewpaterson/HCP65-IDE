@@ -15,7 +15,10 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="HCP65IDE.cpp">
+    <ClCompile Include="HCP65IDE_Windows.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="HCP65IDE_Linux.cpp">
       <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="HCP65IDERef.cpp">

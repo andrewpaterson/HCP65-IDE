@@ -6,7 +6,7 @@ each reaches the others, and what they share, through the content's getters.
 
 ## The content and its features
 
-[`CIDEApp`] makes the window and its content and runs it (`HCP65IDELinux.cpp` and `HCP65IDE.cpp` are the two
+[`CIDEApp`] makes the window and its content and runs it (`HCP65IDE_Linux.cpp` and `HCP65IDE_Windows.cpp` are the two
 `main`s; `HCP65IDERef.cpp` is the reference build, drawn into memory for the [checks](checks.md)).  The content is
 a StandardLib [`CObject`]; so is each feature, held by the content in a [`Ptr`].  A feature is given the content
 when it is made (`Init(CIDEContent*)`) and keeps it as a plain pointer, not held: the content holds it.

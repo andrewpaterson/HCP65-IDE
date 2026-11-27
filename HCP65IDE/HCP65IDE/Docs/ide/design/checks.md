@@ -20,7 +20,7 @@ readable and its failure explained: the last 40 lines of what the IDE printed co
 The checks run on `HCP65IDERef` ([`HCP65IDE/HCP65IDERef.cpp`]): the same IDE, its window on WinRefLib's reference
 screen instead of X11 or Windows (see
 [Backends](../../libraries/windowlib/backends.md#the-reference-screen-winreflib)).  The three programs,
-`HCP65IDE.cpp` (Windows), `HCP65IDELinux.cpp` (X11) and `HCP65IDERef.cpp`, only make their window factory and
+`HCP65IDE_Windows.cpp` (Windows), `HCP65IDE_Linux.cpp` (X11) and `HCP65IDERef.cpp`, only make their window factory and
 native input and call the shared [`StartIDE`], [`RunIDE`] and [`StopIDE`] ([`HCP65IDE/IDEMain.cpp`]); the CMake
 build makes them from one library, `HCP65IDELib`, and the Visual Studio solution has a Reference|x64 configuration
 for it.  So the checks:

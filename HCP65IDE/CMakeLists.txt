@@ -131,7 +131,7 @@ vcxproj_sources(CLAUDELIB_SOURCES "${CLAUDELIB_DIR}/ClaudeLib.vcxproj")
 
 vcxproj_sources(TEMPLATELIB_SOURCES "${TEMPLATELIB_DIR}/TemplateLib.vcxproj")
 
-# Everything but a main: HCP65IDE.cpp (WinMain) is Windows only, HCP65IDELinux.cpp is the X11 IDE's and
+# Everything but a main: HCP65IDE_Windows.cpp (WinMain) is Windows only, HCP65IDE_Linux.cpp is the X11 IDE's and
 # HCP65IDERef.cpp the reference screen's.
 set(IDE_SOURCES
 	"${IDE_DIR}/IDEMain.cpp"
@@ -351,7 +351,7 @@ add_library(HCP65IDELib STATIC ${IDE_SOURCES})
 target_include_directories(HCP65IDELib PUBLIC "${IDE_DIR}")
 target_link_libraries(HCP65IDELib PUBLIC WindowLib InputLib IndexLib BuildLib GitLib ClaudeLib TemplateLib VisualStudioLib CppCompilerLib Assembler65Lib EmulatorDebugLib MicroprocessorLib ThreadLib SupportLib StandardLib BaseLib)
 
-add_executable(HCP65IDE "${IDE_DIR}/HCP65IDELinux.cpp")
+add_executable(HCP65IDE "${IDE_DIR}/HCP65IDE_Linux.cpp")
 target_link_libraries(HCP65IDE PRIVATE HCP65IDELib X11Lib)
 
 add_executable(HCP65IDERef "${IDE_DIR}/HCP65IDERef.cpp")
