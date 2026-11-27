@@ -756,6 +756,26 @@ void TestBuildWorkspaceSharedRunConfigurations(void)
 	AssertFalse(cRead.FindRunConfiguration("Mine (private)")->IsShared());
 	AssertString("Emulator", cRead.FindRunConfiguration("Mine (private)")->GetTool());
 
+	//A shared one is its solution's: choosing it makes that the startup solution, and making a solution the startup
+	//one chooses its own for the configuration built, or failing that the configuration's name, or its first.
+	AssertSize(0, cRead.FindRunConfigurationSolution(cRead.FindRunConfiguration("On Card")));
+	AssertSize(MAX_SIZE, cRead.FindRunConfigurationSolution(cRead.FindRunConfiguration("Mine (private)")));
+	AssertString("Mine", cRead.FindSolutionRunConfiguration(0, "Release|HCP65C816")->GetName());
+	AssertString("Mine", cRead.FindSolutionRunConfiguration(0, "Release|HCP65C64")->GetName());
+	AssertString("Mine", cRead.FindSolutionRunConfiguration(0, "Debug|HCP65C816")->GetName());
+	AssertNull(cRead.FindSolutionRunConfiguration(1, "Release|HCP65C816"));
+
+	//A private one that is only a build configuration's default goes when a shared one builds the configuration.
+	cRead.AddRunConfiguration("Release|HCP65C816", "Release|HCP65C816");
+	cRead.AddRunConfiguration("Debug|HCP65C816", "Debug|HCP65C816");
+	AssertTrue(cRead.Write("Output" _FS_ "Shared" _FS_ "Defaults" BUILD_WORKSPACE_EXTENSION));
+	cRead.Kill();
+	cRead.Init();
+	AssertTrue(cRead.Read("Output" _FS_ "Shared" _FS_ "Defaults" BUILD_WORKSPACE_EXTENSION));
+	AssertNull(cRead.FindRunConfiguration("Release|HCP65C816"));
+	AssertNotNull(cRead.FindRunConfiguration("Debug|HCP65C816"));
+	AssertNotNull(cRead.FindRunConfiguration("Mine (private)"));
+
 	//Made private, its file goes and the workspace file has it.
 	cRead.FindRunConfiguration("On Card")->SetShared(NULL);
 	AssertTrue(cRead.Write("Output" _FS_ "Shared" _FS_ "Test" BUILD_WORKSPACE_EXTENSION));

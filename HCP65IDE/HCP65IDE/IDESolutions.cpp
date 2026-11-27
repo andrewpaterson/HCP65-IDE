@@ -499,21 +499,36 @@ bool CIDESolutions::IsSolutionFile(size uiSolution, size uiProject)
 //////////////////////////////////////////////////////////////////////////
 //
 // The solution debugged (F5), and whose configuration the toolbar shows
-// first.  The workspace file is written.
+// first.  If it has shared run configurations, which say how its program
+// is debugged, its one for the configuration being built is chosen
+// (Debug stays Debug), unless one of its own is chosen already.  The
+// workspace file is written.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDESolutions::SetStartupSolution(size uiSolution)
 {
-	if (uiSolution >= mpcContent->GetWorkspace()->NumSolutions())
+	CBuildWorkspace*	pcWorkspace;
+	CRunConfiguration*	pcRun;
+
+	pcWorkspace = mpcContent->GetWorkspace();
+	if (uiSolution >= pcWorkspace->NumSolutions())
 	{
 		return false;
 	}
-	if (uiSolution == mpcContent->GetWorkspace()->GetStartup())
+	if (uiSolution == pcWorkspace->GetStartup())
 	{
 		return true;
 	}
-	mpcContent->GetWorkspace()->SetStartup(uiSolution);
+	pcWorkspace->SetStartup(uiSolution);
 	WorkspaceChanged(false);
+	if (pcWorkspace->FindRunConfigurationSolution(mpcContent->GetBuildConfigurations()->GetRunConfiguration()) != uiSolution)
+	{
+		pcRun = pcWorkspace->FindSolutionRunConfiguration(uiSolution, mpcContent->GetBuildConfigurations()->GetConfigurationName());
+		if (pcRun != NULL)
+		{
+			mpcContent->GetBuildConfigurations()->SetRunConfiguration(pcRun->GetName());
+		}
+	}
 	return true;
 }
 

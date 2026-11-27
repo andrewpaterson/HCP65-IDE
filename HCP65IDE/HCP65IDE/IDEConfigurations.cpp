@@ -187,14 +187,23 @@ void CIDEConfigurations::RunConfigurationChosen(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The chosen run configuration selected in the toolbar, and its
-// programs' line tables bind the source breakpoints.
+// The chosen run configuration selected in the toolbar and applied
+// (CBuildWorkspace::ApplyRunConfiguration), and its programs' line tables
+// bind the source breakpoints.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEConfigurations::ShowConfiguration(void)
 {
+	CChars	szError;
 	size	i;
 
+	//How it is debugged (its card, what is loaded first) is the build configurations' to hand on from here.
+	szError.Init();
+	if (!mpcContent->GetWorkspace()->ApplyRunConfiguration(mpcContent->GetWorkspace()->FindRunConfiguration(mszRunConfiguration.Text()), &szError))
+	{
+		mpcContent->ShowStatus(szError.Text());
+	}
+	szError.Kill();
 	for (i = 0; i < mpcContent->GetWorkspace()->NumRunConfigurations(); i++)
 	{
 		if (StringCompare(mpRunConfigurations->GetItemText(i), mszRunConfiguration.Text()) == 0)
@@ -212,14 +221,18 @@ void CIDEConfigurations::ShowConfiguration(void)
 //////////////////////////////////////////////////////////////////////////
 //
 // The run configuration szName is chosen, and with it its build
-// configuration.  The code is parsed as that builds it: if it changed the
-// solutions are indexed again and the open files are highlighted again.
-// False if there's no such run configuration.
+// configuration and, if it is a shared one, the solution it is beside as
+// the startup solution: it says how that solution's program is debugged
+// (ConfigurationsPlan.txt question 28).  The code is parsed as that
+// builds it: if it changed the solutions are indexed again and the open
+// files are highlighted again.  False if there's no such run
+// configuration.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CIDEConfigurations::SetRunConfiguration(const char* szName)
 {
 	CRunConfiguration*	pcRun;
+	size				uiSolution;
 	size				i;
 
 	pcRun = mpcContent->GetWorkspace()->FindRunConfiguration(szName);
@@ -229,6 +242,11 @@ bool CIDEConfigurations::SetRunConfiguration(const char* szName)
 	}
 	mszRunConfiguration.Set(pcRun->GetName());
 	mszConfiguration.Set(mpcContent->GetWorkspace()->FindAnyConfiguration(pcRun->GetConfiguration()) ? pcRun->GetConfiguration() : "");
+	uiSolution = mpcContent->GetWorkspace()->FindRunConfigurationSolution(pcRun);
+	if (uiSolution != MAX_SIZE)
+	{
+		mpcContent->GetSolutions()->SetStartupSolution(uiSolution);
+	}
 	if ((StringCompare(mpcContent->GetWorkspace()->GetConfiguration(), mszConfiguration.Text()) != 0) || (StringCompare(mpcContent->GetWorkspace()->GetRunConfigurationName(), mszRunConfiguration.Text()) != 0))
 	{
 		//Remembered in the workspace file for next time.

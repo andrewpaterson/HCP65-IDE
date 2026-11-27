@@ -60,6 +60,7 @@ class CBuildCommandLine
 protected:
 	CChars				mszFile;
 	CChars				mszConfiguration;
+	CChars				mszRun;				//-run's run configuration, empty if not given.
 	CChars				mszLibc65;
 	CChars				mszLayouts;
 	CChars				mszShowPlain;
@@ -101,6 +102,7 @@ protected:
 			bool	ExpandArguments(const char* szArgument, CArrayChars* paszDest, size uiDepth);
 			bool	ResolveLibc65(const char* szToolDirectory, const char* szFile);
 			bool	ChooseConfiguration(void);
+			bool	ChooseRunConfiguration(void);
 			bool	ChooseStartupProject(void);
 			bool	BuildSolution(size uiSolution, bool bHeading);
 			bool	PutOnCard(size uiSolution, CBuildConfiguration* pcConfiguration);

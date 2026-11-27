@@ -1074,3 +1074,18 @@ Questions (the user's, one at a time)
    card when the solution is in the workspace); each solution's run configuration saying its own program's card and
    path, the workspace gathering them (which can't tell which of a driver's two run configurations counts).
    Costs: another kind of file, and the Run Configurations dialog needs to choose and open one.
+   Corrected the same day, before anything was moved: the 20 solutions use six card images, not two (SDCard.img
+   with 8 programs, BootCard.img 3, and PS2Card, UARTCard, VIACard and VideoCard a driver and its test program
+   each).  Six card files still stand for the lists of 38 run configurations; the user was told and the answer stood.
+28. Decided (the user, 2026-11-27: "Right, that makes sense.  Go with 1 please"): choosing a shared run configuration
+   also makes its solution the startup solution, as an IntelliJ IDEA run configuration names what it runs.  A shared
+   run configuration is beside one solution and says how that solution's program is debugged (its card, its boot
+   ROM), so with several solutions open most choices wouldn't fit the startup solution, and one that doesn't
+   debugs with the wrong card and line tables and says nothing.  Making a solution the startup one by hand chooses
+   its run configuration of the configuration being built (Debug stays Debug).  A private run configuration belongs
+   to no solution and leaves the startup solution alone.  And a private one that is only a build configuration's
+   default (its name, nothing else) goes when a shared one builds that configuration: the workspaces saved before
+   have Debug|HCP65C816 and Release|HCP65C816, which would debug with no card once the .hcp65build files are gone.
+   The others considered: the two left independent (easy to get wrong); only the startup solution's shared ones
+   listed (nothing to get wrong, but what is debugged couldn't be changed from the toolbar); independent, the IDE
+   refusing to start when the card hasn't the startup program.

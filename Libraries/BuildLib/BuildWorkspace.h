@@ -100,6 +100,7 @@ protected:
 	CChars							mszConfiguration;	//The configuration chosen last, empty if none.
 	CChars							mszRunConfiguration;	//The run configuration chosen last, empty if none.
 	CArrayRunConfigurations			masRunConfigurations;
+	bool							mbRunConfigurationApplied;	//One that says how to debug has been applied: the next is too, though it says nothing.
 	CArrayChars						maszSharedFiles;	//The shared run configurations' files read or written: one whose run configuration has gone is deleted (Write).
 	CArrayBuildWorkspaceProjects	masProjects;
 
@@ -135,6 +136,8 @@ public:
 	void					SetRunConfigurations(CArrayRunConfigurations* pasConfigurations);
 	void					AddDefaultRunConfigurations(void);
 	bool					ApplyRunConfiguration(CRunConfiguration* pcRun, CChars* pszError);
+	size					FindRunConfigurationSolution(CRunConfiguration* pcRun);
+	CRunConfiguration*		FindSolutionRunConfiguration(size uiSolution, const char* szConfiguration);
 
 	size					NumSolutions(void) const;
 	CBuildWorkspaceSolution*	GetSolution(size uiSolution);
@@ -164,6 +167,7 @@ protected:
 	void					ClearRunConfigurations(void);
 	void					ReadSharedRunConfigurations(const char* szDirectory);
 	bool					WriteSharedRunConfigurations(void);
+	void					RemoveSupersededRunConfigurations(void);
 	void					GetRunConfigurationDirectory(CRunConfiguration* pcRun, CChars* pszDest);
 };
 

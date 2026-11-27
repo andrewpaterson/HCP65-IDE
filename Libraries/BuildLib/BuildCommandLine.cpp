@@ -48,6 +48,7 @@ void CBuildCommandLine::Init(void)
 	mszLibc65.Init();
 	mszLayouts.Init();
 	mszShowPlain.Init();
+	mszRun.Init();
 	mszStartupProject.Init();
 	mbCard = false;
 	mbQuiet = false;
@@ -69,6 +70,7 @@ void CBuildCommandLine::Kill(void)
 	mcWorkspace.Kill();
 	mcPlain.Kill();
 	mszStartupProject.Kill();
+	mszRun.Kill();
 	mszShowPlain.Kill();
 	mszLayouts.Kill();
 	mszLibc65.Kill();
@@ -202,7 +204,7 @@ bool CBuildCommandLine::Parse(int iArgc, const char* const* aszArgv)
 		{
 			mbQuiet = true;
 		}
-		else if (IsOption(szArgument, "card") || IsOption(szArgument, "config") || IsOption(szArgument, "show-plain") || IsOption(szArgument, "startup"))
+		else if (IsOption(szArgument, "card") || IsOption(szArgument, "config") || IsOption(szArgument, "show-plain") || IsOption(szArgument, "startup") || IsOption(szArgument, "run"))
 		{
 			if (mbPlain)
 			{
@@ -224,7 +226,7 @@ bool CBuildCommandLine::Parse(int iArgc, const char* const* aszArgv)
 			else
 			{
 				i++;
-				(IsOption(szArgument, "config") ? &mszConfiguration : (IsOption(szArgument, "startup") ? &mszStartupProject : &mszShowPlain))->Set(aszArguments.GetText(i));
+				(IsOption(szArgument, "config") ? &mszConfiguration : (IsOption(szArgument, "startup") ? &mszStartupProject : (IsOption(szArgument, "run") ? &mszRun : &mszShowPlain)))->Set(aszArguments.GetText(i));
 			}
 		}
 		else if (IsOption(szArgument, "libc65") || IsOption(szArgument, "layouts"))
@@ -452,10 +454,20 @@ int CBuildCommandLine::Run(const char* szToolDirectory)
 		return BUILD_EXIT_USAGE;
 	}
 
-	if (!ChooseConfiguration() || !ChooseStartupProject())
+	if (!ChooseRunConfiguration() || !ChooseConfiguration() || !ChooseStartupProject())
 	{
 		return BUILD_EXIT_USAGE;
 	}
+
+	//How the configuration is debugged, its card among it, is its run configuration's: -run's, or the first that builds it.
+	szLine.Init();
+	if (!mcWorkspace.ApplyRunConfiguration(mszRun.Empty() ? mcWorkspace.FindRunConfigurationBuilding(mszConfiguration.Text()) : mcWorkspace.FindRunConfiguration(mszRun.Text()), &szLine))
+	{
+		WriteLine(szLine.Text());
+		szLine.Kill();
+		return BUILD_EXIT_USAGE;
+	}
+	szLine.Kill();
 
 	aiOrder.Init();
 	mcWorkspace.GetBuildOrder(mszConfiguration.Text(), &aiOrder);
@@ -727,8 +739,59 @@ bool CBuildCommandLine::ChooseStartupProject(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The configuration -config named (it must be one of the workspace's),
-// else the workspace's last chosen one, else the first HCP65
+// -run's run configuration (it must be one of the workspace's) names the
+// configuration built; -config, if given too, must name the same.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CBuildCommandLine::ChooseRunConfiguration(void)
+{
+	CRunConfiguration*	pcRun;
+	CChars				szLine;
+	size				i;
+
+	if (mszRun.Empty())
+	{
+		return true;
+	}
+	pcRun = mcWorkspace.FindRunConfiguration(mszRun.Text());
+	if (pcRun == NULL)
+	{
+		szLine.Init("No run configuration ");
+		szLine.Append(mszRun);
+		szLine.Append(". There are:");
+		for (i = 0; i < mcWorkspace.NumRunConfigurations(); i++)
+		{
+			szLine.Append(" \"");
+			szLine.Append(mcWorkspace.GetRunConfiguration(i)->GetName());
+			szLine.Append('"');
+		}
+		szLine.Append('.');
+		WriteLine(szLine.Text());
+		szLine.Kill();
+		return false;
+	}
+	if (!mszConfiguration.Empty() && (StringCompare(mszConfiguration.Text(), pcRun->GetConfiguration()) != 0))
+	{
+		szLine.Init("The run configuration ");
+		szLine.Append(mszRun);
+		szLine.Append(" builds ");
+		szLine.Append(pcRun->GetConfiguration());
+		szLine.Append(", not -config's ");
+		szLine.Append(mszConfiguration);
+		szLine.Append('.');
+		WriteLine(szLine.Text());
+		szLine.Kill();
+		return false;
+	}
+	mszConfiguration.Set(pcRun->GetConfiguration());
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The configuration -config or -run named (it must be one of the
+// workspace's), else the workspace's last chosen one, else the first HCP65
 // configuration (the first of any if none is HCP65).
 //
 //////////////////////////////////////////////////////////////////////////
@@ -1009,6 +1072,8 @@ void CBuildCommandLine::WriteUsage(void)
 	WriteLine("                             Default: the workspace's last one, else the first HCP65 one.");
 	WriteLine("  -startup <project>         The application built into its solution's program (the solution's startup");
 	WriteLine("                             project).  Default: the one its workspace says, else its first.");
+	WriteLine("  -run \"ModPlay\"             The run configuration: it names the build configuration, and its card file says");
+	WriteLine("                             which card -card writes.  Default: the first that builds the configuration.");
 	WriteLine("  -card                      Also put each executable and module on its configuration's card (Card,");
 	WriteLine("                             CardPath).");
 	WriteLine("  -show-plain <file>         Write the build as a plain command line (and a .units file per project)");

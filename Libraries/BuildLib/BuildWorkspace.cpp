@@ -217,6 +217,7 @@ void CBuildWorkspace::Init(void)
 	mszRunConfiguration.Init();
 	masRunConfigurations.Init();
 	maszSharedFiles.Init();
+	mbRunConfigurationApplied = false;
 	masProjects.Init();
 }
 
@@ -441,6 +442,108 @@ void CBuildWorkspace::ReadSharedRunConfigurations(const char* szDirectory)
 	szName.Kill();
 	aszFiles.Kill();
 	szFolder.Kill();
+	RemoveSupersededRunConfigurations();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A private run configuration that is only a build configuration's
+// default (its name and nothing more: AddDefaultRunConfigurations) goes
+// when a shared one builds that configuration: it was there because
+// nothing else was, and says nothing of how to debug
+// (ConfigurationsPlan.txt question 28).
+//
+//////////////////////////////////////////////////////////////////////////
+void CBuildWorkspace::RemoveSupersededRunConfigurations(void)
+{
+	CRunConfiguration*	pcRun;
+	size				i;
+	size				j;
+	bool				bShared;
+
+	for (i = masRunConfigurations.NumElements(); i-- > 0; )
+	{
+		pcRun = masRunConfigurations.Get(i);
+		if (pcRun->IsDefault())
+		{
+			bShared = false;
+			for (j = 0; !bShared && (j < masRunConfigurations.NumElements()); j++)
+			{
+				bShared = masRunConfigurations.Get(j)->IsShared() && (StringCompare(masRunConfigurations.Get(j)->GetConfiguration(), pcRun->GetConfiguration()) == 0);
+			}
+			if (bShared)
+			{
+				RemoveRunConfiguration(i);
+			}
+		}
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The solution a shared run configuration is beside, whose program it
+// says how to debug: choosing it makes that the startup solution.
+// MAX_SIZE for a private one, which belongs to none.
+//
+//////////////////////////////////////////////////////////////////////////
+size CBuildWorkspace::FindRunConfigurationSolution(CRunConfiguration* pcRun)
+{
+	size	i;
+
+	for (i = 0; pcRun && pcRun->IsShared() && (i < mapcSolutions.NumElements()); i++)
+	{
+		if (StringCompare(GetSolution(i)->mcSolution.GetDirectory(), pcRun->GetShared()) == 0)
+		{
+			return i;
+		}
+	}
+	return MAX_SIZE;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The first shared run configuration beside the solution uiSolution that
+// builds szConfiguration, or with the same configuration name (Debug of
+// "Debug|HCP65C816"), or its first; NULL if it has none.  It is chosen
+// when the solution is made the startup one.
+//
+//////////////////////////////////////////////////////////////////////////
+CRunConfiguration* CBuildWorkspace::FindSolutionRunConfiguration(size uiSolution, const char* szConfiguration)
+{
+	CRunConfiguration*	pcRun;
+	CRunConfiguration*	pcNamed;
+	CRunConfiguration*	pcFirst;
+	const char*			szBar;
+	size				uiName;
+	size				i;
+
+	szBar = strchr(szConfiguration, '|');
+	uiName = szBar ? (size)(szBar - szConfiguration) : strlen(szConfiguration);
+	pcNamed = NULL;
+	pcFirst = NULL;
+	for (i = 0; i < masRunConfigurations.NumElements(); i++)
+	{
+		pcRun = masRunConfigurations.Get(i);
+		if (FindRunConfigurationSolution(pcRun) == uiSolution)
+		{
+			if (StringCompare(pcRun->GetConfiguration(), szConfiguration) == 0)
+			{
+				return pcRun;
+			}
+			if (!pcNamed && (strncmp(pcRun->GetConfiguration(), szConfiguration, uiName) == 0) && (pcRun->GetConfiguration()[uiName] == '|'))
+			{
+				pcNamed = pcRun;
+			}
+			if (!pcFirst)
+			{
+				pcFirst = pcRun;
+			}
+		}
+	}
+	return pcNamed ? pcNamed : pcFirst;
 }
 
 
@@ -539,11 +642,15 @@ void CBuildWorkspace::GetRunConfigurationDirectory(CRunConfiguration* pcRun, CCh
 // the run configuration's card is on it at the card's path for it; the
 // startup solution's also has the run configuration's loads and breakpoint
 // space, and reads as they are linked the line tables of the card's
-// programs that say so (Lines) and that no solution here builds.
+// programs that say so (Lines), but for one no solution here builds, nor
+// builds another file for the same path on the card (the kernal's own
+// solution, building Debug, where the card's line says Release's).
 //
 // A run configuration that says nothing of debugging changes nothing: the
-// build configurations keep what a configurations file gave them.  False,
-// with why in pszError, if its card file can't be read.
+// build configurations keep what a configurations file gave them.  But
+// once one that says something has been applied, the next is whatever it
+// says, so nothing is left of the one before.  False, with why in
+// pszError, if its card file can't be read.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CBuildWorkspace::ApplyRunConfiguration(CRunConfiguration* pcRun, CChars* pszError)
@@ -559,10 +666,11 @@ bool CBuildWorkspace::ApplyRunConfiguration(CRunConfiguration* pcRun, CChars* ps
 	size					i;
 	bool					bCard;
 
-	if ((pcRun == NULL) || !pcRun->HasDebugging())
+	if ((pcRun == NULL) || (!pcRun->HasDebugging() && !mbRunConfigurationApplied))
 	{
 		return true;
 	}
+	mbRunConfigurationApplied = true;
 	szConfiguration = pcRun->GetConfiguration();
 	szDirectory.Init();
 	GetRunConfigurationDirectory(pcRun, &szDirectory);
@@ -617,7 +725,13 @@ bool CBuildWorkspace::ApplyRunConfiguration(CRunConfiguration* pcRun, CChars* ps
 		}
 		for (i = 0; i < cCard.NumPrograms(); i++)
 		{
-			if ((cCard.GetProgramLines(i)[0] != '\0') && (aiBuilt.Find((int)i) == ARRAY_ELEMENT_NOT_FOUND))
+			//Not what a solution here builds, nor another file for the same place on the card as one it does.
+			bCard = cCard.GetProgramLines(i)[0] != '\0';
+			for (uiProgram = 0; bCard && (uiProgram < aiBuilt.NumElements()); uiProgram++)
+			{
+				bCard = StringInsensitiveCompare(cCard.GetProgramPath((size)aiBuilt.GetValue(uiProgram)), cCard.GetProgramPath(i)) != 0;
+			}
+			if (bCard)
 			{
 				cCard.GetProgramFile(i, szConfiguration, &szFile);
 				pcConfiguration->AddLines(szFile.Text(), cCard.GetProgramLines(i), cCard.GetProgramPath(i));
@@ -654,6 +768,7 @@ void CBuildWorkspace::Clear(void)
 	mszRunConfiguration.Set("");
 	ClearRunConfigurations();
 	maszSharedFiles.ReInit();
+	mbRunConfigurationApplied = false;
 	mszFile.Set("");
 }
 
