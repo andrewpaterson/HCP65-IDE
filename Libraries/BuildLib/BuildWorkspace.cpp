@@ -88,7 +88,45 @@ bool CBuildWorkspaceSolution::Open(const char* szFile)
 		mcConfigurations.AddDefaults(&mcSolution);
 	}
 	szName.Kill();
+	ReadStartupProject();
 	return mbRead;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Each HCP65 build configuration takes what the startup project says of
+// the whole program and its linking in the configuration it is built in
+// (CBuildConfiguration::ReadProject), so what it links is known before it
+// is built.  A setting that is wrong is the build's to say.
+//
+//////////////////////////////////////////////////////////////////////////
+void CBuildWorkspaceSolution::ReadStartupProject(void)
+{
+	CVcxSolutionProjectConfiguration*	pcSolutionConfiguration;
+	CVcxSolutionProject*				pcSolutionProject;
+	CBuildConfiguration*				pcConfiguration;
+	CChars								szError;
+	size								uiProject;
+	size								i;
+
+	uiProject = GetStartupProject();
+	if (uiProject == MAX_SIZE)
+	{
+		return;
+	}
+	pcSolutionProject = mcSolution.GetProject(uiProject);
+	for (i = 0; i < mcConfigurations.NumConfigurations(); i++)
+	{
+		pcConfiguration = mcConfigurations.GetConfiguration(i);
+		if (pcConfiguration->IsHCP65())
+		{
+			pcSolutionConfiguration = pcSolutionProject->FindConfiguration(pcConfiguration->GetSolutionConfiguration());
+			szError.Init();
+			pcConfiguration->ReadProject(pcConfiguration->FindProjectConfiguration(pcSolutionProject->GetProject(), pcSolutionConfiguration ? pcSolutionConfiguration->GetProjectConfiguration() : pcConfiguration->GetSolutionConfiguration()), &szError);
+			szError.Kill();
+		}
+	}
 }
 
 
@@ -454,6 +492,7 @@ bool CBuildWorkspace::Read(const char* szFile)
 			if ((uiSolution != MAX_SIZE) && szStartup)
 			{
 				GetSolution(uiSolution)->mszStartupProject.Set(szStartup);
+				GetSolution(uiSolution)->ReadStartupProject();
 			}
 		}
 	}
@@ -664,6 +703,7 @@ bool CBuildWorkspaceSolution::SetStartupProject(size uiProject)
 		return false;
 	}
 	mszStartupProject.Set(mcSolution.GetProject(uiProject)->GetName());
+	ReadStartupProject();
 	return true;
 }
 

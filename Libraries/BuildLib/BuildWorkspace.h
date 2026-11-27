@@ -58,6 +58,7 @@ public:
 	size		GetStartupProject(void);
 	const char*	GetStartupProjectName(void);
 	bool		SetStartupProject(size uiProject);
+	void		ReadStartupProject(void);
 };
 
 

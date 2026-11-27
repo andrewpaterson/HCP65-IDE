@@ -65,6 +65,8 @@ protected:
 	static void	CompileThread(void* pvBuild);
 	void		AddDescription(CArrayChars* paszLines);
 	void		SetUnoptimised(void);
+	void		SetOwnOptions(CHCP65BuildProject* pcProject);
+	bool		ReadStartupProject(CArrayChars* paszLines);
 	bool		WriteProgram(CArrayChars* paszLines);
 	bool		CheckMissing(CArrayChars* paszLines);
 	bool		MakeProgram(CChars* pszErrors);

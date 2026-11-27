@@ -222,6 +222,8 @@ int CBuildPlain::ParseOption(CArrayChars* paszArguments, size* puiIndex, CChars*
 	const char*				szEquals;
 	bool					bHCP65;
 	bool					bSubDirectories;
+	CCPPCompileOptions		cOptions;
+	bool					bUnoptimised;
 
 	szOption = paszArguments->GetText(*puiIndex);
 	if (BuildIsOption(szOption, "program") || BuildIsOption(szOption, "lib"))
@@ -234,7 +236,7 @@ int CBuildPlain::ParseOption(CArrayChars* paszArguments, size* puiIndex, CChars*
 		mcDescription.AddProject(szValue, ".", NULL, BuildIsOption(szOption, "lib"));
 		return 1;
 	}
-	if (BuildIsOption(szOption, "dir") || BuildIsOption(szOption, "D"))
+	if (BuildIsOption(szOption, "dir") || BuildIsOption(szOption, "D") || BuildIsOption(szOption, "own"))
 	{
 		pcProject = mcDescription.GetLastProject();
 		if (!pcProject)
@@ -251,6 +253,18 @@ int CBuildPlain::ParseOption(CArrayChars* paszArguments, size* puiIndex, CChars*
 		if (BuildIsOption(szOption, "dir"))
 		{
 			pcProject->mszDirectory.Set(szValue);
+		}
+		else if (BuildIsOption(szOption, "own"))
+		{
+			cOptions.Init();
+			if (!CBuildConfiguration::SetOwnOption(szValue, &cOptions, &bUnoptimised))
+			{
+				pszError->Set("-own takes Debug, Unoptimised, WarnMissingOverride, WarnStringToPointer, MultiWordCasts or CConversions, =true or =false, not ");
+				pszError->Append(szValue);
+				pszError->Append('.');
+				return -1;
+			}
+			pcProject->maszOptions.Add(szValue);
 		}
 		else
 		{
@@ -713,6 +727,7 @@ void CBuildPlain::MakeDescription(CHCP65BuildDescription* pcDest)
 		}
 		pcCopy->maszSources.Copy(&pcProject->maszSources);
 		pcCopy->maszDefines.Copy(&pcProject->maszDefines);
+		pcCopy->maszOptions.Copy(&pcProject->maszOptions);
 	}
 	szPath.Kill();
 	szLabel.Kill();
@@ -832,6 +847,11 @@ bool CBuildPlain::Describe(CArrayChars* paszArguments, const char* szUnitsDirect
 		{
 			paszArguments->Add("-D");
 			paszArguments->Add(pcProject->maszDefines.GetText(j));
+		}
+		for (j = 0; j < pcProject->maszOptions.NumElements(); j++)
+		{
+			paszArguments->Add("-own");
+			paszArguments->Add(pcProject->maszOptions.GetText(j));
 		}
 
 		szUnits.Init(szUnitsDirectory);

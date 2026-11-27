@@ -15,6 +15,9 @@
     <ClCompile Include="BuildConfiguration.cpp">
       <Filter>Source\Configuration</Filter>
     </ClCompile>
+    <ClCompile Include="BuildConfigurationProject.cpp">
+      <Filter>Source\Configuration</Filter>
+    </ClCompile>
     <ClCompile Include="BuildConfigurations.cpp">
       <Filter>Source\Configuration</Filter>
     </ClCompile>

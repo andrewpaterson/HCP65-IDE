@@ -42,11 +42,49 @@ the solution.  For example, from `HCP65/ModPlay`:
 hcp65build HCP65ModPlay.hcp65build -config "Release|HCP65C816"
 ```
 
+### The project's HCP65 settings
+
+How a program is compiled and what it is linked into are in its project, the `.vcxproj`, in groups for the HCP65
+platforms `HCP65C816` and `HCP65C64`.  Visual Studio has no such platform and reads none of them.  This is
+`HCP65/ModPlay/HCP65ModPlay.vcxproj`'s:
+
+```xml
+<ItemDefinitionGroup Condition="'$(Platform)'=='HCP65C816'">
+  <HCP65Link>
+    <Executable>modplay.exe</Executable>
+    <Entry>UserStart</Entry>
+    <Limit>0x200000</Limit>
+    <Symbols>UserHeapSize=0x180000</Symbols>
+  </HCP65Link>
+</ItemDefinitionGroup>
+```
+
+A group for a platform is every configuration's of it; one for
+<code>'$(Configuration)&#124;$(Platform)'=='Debug&#124;HCP65C816'</code> is that configuration's alone.  A group can
+be in a property sheet the project imports: `CommonLibraries/HCP65Compile.props`, which every project the HCP65
+compiler builds imports, has `Debug` for the Debug configurations.
+
+`HCP65Compile` has the compile options, each named as its attribute in the table below with `true` or `false`.
+They are of two kinds:
+
+- **The whole program's**: `NoFloats`, `MathTables`, `PreferSize`, `Exceptions`, `KeepUnusedObjects` and
+  `StubMissing`.  They are read from the program's own project (the solution's startup project) and apply to every
+  library linked into it, so one BaseLib is built without floats in the kernal and with them in a program.
+- **A project's own**: `Debug`, `Unoptimised`, `WarnMissingOverride`, `WarnStringToPointer`, `MultiWordCasts` and
+  `CConversions`.  Each project's are its own code's.  A project that says nothing of one, and the runtime, have
+  what the program's project says.
+
+`HCP65Link`, in the program's project, says what is linked: one of `Executable`, `Module` or `Image` names the
+file, as the elements below do, with `Entry`, `Limit`, `Size`, `Fill`, `Load` and `Text` as their attributes.  An
+executable's `Symbols` are `Name=Value` and an image's `Regions` `Start-End@Offset`, each separated by semicolons.
+
+What a project doesn't say is as the `.hcp65build` file has it.
+
 ### The .hcp65build file
 
 An `.hcp65build` file is XML: a list of configurations, each naming a toolchain, the Visual Studio
-configuration whose files and settings it builds, and what to link.  This is
-`HCP65/ModPlay/HCP65ModPlay.hcp65build`:
+configuration whose files and settings it builds, and how it is debugged.  It can say how to compile and
+what to link too, as the HCP65's own solutions did before their projects said it; this is such a file:
 
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
@@ -124,6 +162,7 @@ units are linked only when something uses them.  Sources can be `.cpp` or `.asm`
 | `-program <name>`, `-lib <name>` | Start a project.  Its sources follow. |
 | `-dir <dir>` | The project's directory.  Its sources are relative to it (default: the current directory). |
 | `-D <name>[=<value>]` | A define for the project's units. |
+| <code>-own &lt;option&gt;=true&#124;false</code> | One of the project's own compile options (`Debug`, `Unoptimised`, `WarnMissingOverride`, `WarnStringToPointer`, `MultiWordCasts`, `CConversions`), whatever the program's is. |
 | `-I <dir>`, `-I+ <dir>` | An include directory; `-I+` lists all the headers in its sub directories when the build starts.  Before the first `-program` or `-lib` it's every unit's; after, that project's. |
 | <code>-target W65C816&#124;65C64</code> | The processor (default `W65C816`). |
 | `-nofloats` | Floating point is an error. |

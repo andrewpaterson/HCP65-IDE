@@ -291,6 +291,34 @@ C4. HCP65 compiles with the project's HCP65 configuration
      configuration's rows build gives the runtime and the system headers' directory, in place of the directory
      CSolutionBuild::Start is handed.  hcp65build's plain command line keeps naming it.
 
+  Built 2026-11-27 (the user: "Carry on with the rest of C in your suggested order"): C4-1 was C3's (a project's
+  HCP65C816 configuration is the one built when it has one); C4-2, C4-3, C4-6 and the compile and link half of C4-5.
+  - The settings' form, chosen when built (MSBuild's item metadata can't hold elements, so <Region> and <Symbol> rows
+    can't be kept as they were): HCP65Link has one of Executable, Module or Image naming the file, then Entry, Limit,
+    Size, Fill, Load and Text as the attributes were, Symbols as Name=Value;... and Regions as Start-End@Offset;...
+    HCP65Compile's are the attributes' names with true or false.  BL/BuildConfigurationProject.cpp reads them
+    (CBuildConfiguration::ReadProject, ReadOwnOptions); HCP65Build's Docs/compiler/building.md is where they are said.
+  - The whole program's are read from the startup project when a build starts (CHCP65Build::ReadStartupProject) and
+    when a workspace opens a solution or its startup project changes (CBuildWorkspaceSolution::ReadStartupProject),
+    so what a program links into is known before it is built.  A setting no group has is as the .hcp65build has it.
+  - A project's own (question 4's second list, with Unoptimised and question 4b's WarnMissingOverride) are each
+    project's: CCPPBuild::SetLibraryOptions gives the compiler a library's own beside the program's, and the plain
+    command line says them after the project (-own Debug=true).  The startup project's are also the program's: what
+    the runtime, and a project that says nothing, are compiled with.  (Not as written: Unoptimised="Init, Shell" in
+    a file still works and no real file has one, so none was moved.)
+  - Debug: CL/HCP65Compile.props has it for Debug|HCP65C816 and Debug|HCP65C64.  Common.props imports the sheet (the
+    libraries) and each HCP65 program's project imports it itself (a Makefile project has nothing of Common.props').
+  - CL/hcp65_groups.py moved the 20 HCP65 solutions' compile options and linking into their projects, one group for
+    the platform where Debug and Release say the same (all but the kernal's and the boot loader's options do).  Each
+    .hcp65build keeps its configurations' names and what debugging needs, until C8.  Every program was built in every
+    configuration before and after (40 builds) and the files compared.
+  - Tests: TestBuildWorkspaceProjectLinked (a program with no .hcp65build: an executable and an image from its
+    project, a wrong HCP65Link said) and TestBuildCommandLineOwnOptions (a library warned of what its program isn't).
+  - Left: C4-4 (the dialog still edits the file: an option changed there that a project also says is the project's,
+    until C9 writes projects), C4-7 (Libc65 from the solution's rows), the fixtures' and the IDE checks' .hcp65build
+    files (they test the file, which is still read), and the index, which still type checks with the configuration's
+    options and not each project's own.
+
 C5. The code index reads with the configuration's toolchain
   C5-1. WorkspaceIndex reads a GCC configuration's defines with GCC's own (__GNUC__, __linux__, __x86_64__) and
      Linux's headers, not MinGW's, and not AddCompilerDefines' MSVC ones; an HCP65 configuration with the HCP65

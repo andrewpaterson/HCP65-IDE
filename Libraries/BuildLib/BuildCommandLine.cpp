@@ -1023,6 +1023,8 @@ void CBuildCommandLine::WriteUsage(void)
 	WriteLine("  -program <name>, -lib <name>  A project: its sources follow.  A library's units are linked only when used.");
 	WriteLine("  -dir <dir>                    The project's directory, its sources relative to it (default: current).");
 	WriteLine("  -D <name>[=<value>]           A define for the project's units.");
+	WriteLine("  -own <option>=true|false      A compile option that is the project's own, whatever the program's is: Debug,");
+	WriteLine("                                Unoptimised, WarnMissingOverride, WarnStringToPointer, MultiWordCasts, CConversions.");
 	WriteLine("  -I <dir>, -I+ <dir>           An include directory, -I+ with its sub directories.  Before the first");
 	WriteLine("                                -program or -lib it is every unit's; after, that project's.");
 	WriteLine("  -target W65C816|65C64         The toolchain (default W65C816).");

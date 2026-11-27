@@ -752,6 +752,43 @@ void TestBuildCommandLinePlainSameAsProject(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// A project's own compile options (its HCP65Compile group's) are its
+// code's alone: Own is warned of a string literal converted to a char*,
+// and Linked, which does the same and is the program, isn't.  The plain
+// command line says them after the project (-own) and builds the same.
+//
+//////////////////////////////////////////////////////////////////////////
+void TestBuildCommandLineOwnOptions(void)
+{
+	CTestBuildCommandLine	cCommandLine;
+
+	const char* aszShow[] = { "hcp65build", "Input" _FS_ "Workspace" _FS_ "Linked" _FS_ "Linked.sln", "-config", "Release|HCP65C816", "-libc65", TEST_COMMAND_LINE_LIBC65, "-show-plain", TEST_COMMAND_LINE_OUTPUT _FS_ "Own.plain" };
+	cCommandLine.Init();
+	AssertTrue(cCommandLine.Parse(8, aszShow));
+	AssertInt(BUILD_EXIT_SUCCEEDED, cCommandLine.Run(NULL));
+	AssertTrue(strstr(cCommandLine.GetLastLine(), " -own Debug=true -own WarnStringToPointer=true ") != NULL);
+	AssertTrue(strstr(cCommandLine.GetLastLine(), " -nofloats -no-mathtables -prefer-size ") != NULL);
+	AssertTrue(strstr(cCommandLine.GetLastLine(), " -exe l.exe -entry UserStart -limit 0x8000 -symbol UserHeapSize=0x100 -symbol UserStack=0x40") != NULL);
+	cCommandLine.Kill();
+
+	const char* aszPlain[] = { "hcp65build", "@" TEST_COMMAND_LINE_OUTPUT _FS_ "Own.plain", "-listings", TEST_COMMAND_LINE_OUTPUT _FS_ "OwnPlain" };
+	cCommandLine.Init();
+	AssertTrue(cCommandLine.Parse(4, aszPlain));
+	cCommandLine.Run(NULL);
+	AssertTrue(cCommandLine.HasLine("Own.cpp (1, 30): Warning: A string literal is const"));
+	AssertFalse(cCommandLine.HasLine("Linked.cpp (2, "));
+	cCommandLine.Kill();
+
+	const char* aszBad[] = { "hcp65build", "-lib", "Own", "-own", "Fast=true", "Own.cpp" };
+	cCommandLine.Init();
+	AssertFalse(cCommandLine.Parse(6, aszBad));
+	AssertTrue(cCommandLine.HasLine("-own takes Debug"));
+	cCommandLine.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // A plain command line linking an executable whose entry nothing in the
 // program calls keeps it (an extern "C" Start).  Its source is given as a
 // full path, and CommonLibraries without its sub directories (-I): Libc65's
@@ -916,6 +953,7 @@ void TestBuildCommandLine(void)
 	TestBuildCommandLinePlainPowerShell();
 	TestBuildCommandLinePlainParse();
 	TestBuildCommandLinePlainSameAsProject();
+	TestBuildCommandLineOwnOptions();
 	TestBuildCommandLinePlainEntry();
 	TestBuildCommandLinePlainMissing();
 	TestBuildCommandLineLayouts();

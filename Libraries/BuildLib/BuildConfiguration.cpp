@@ -25,38 +25,6 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 #include "BuildConfiguration.h"
 
 
-#define BUILD_CONFIGURATION_TAG			"Configuration"
-#define BUILD_CONFIGURATION_NAME		"Name"
-#define BUILD_CONFIGURATION_TOOLCHAIN	"Toolchain"
-#define BUILD_CONFIGURATION_SOLUTION	"Solution"
-#define BUILD_CONFIGURATION_IMAGE		"Image"
-#define BUILD_CONFIGURATION_EXECUTABLE	"Executable"
-#define BUILD_CONFIGURATION_MODULE		"Module"
-#define BUILD_CONFIGURATION_LOAD		"Load"
-#define BUILD_CONFIGURATION_LOAD_FILE	"File"
-#define BUILD_CONFIGURATION_LOAD_ADDRESS	"Address"
-#define BUILD_CONFIGURATION_LINES		"Lines"
-#define BUILD_CONFIGURATION_LINES_FILE	"File"
-#define BUILD_CONFIGURATION_LINES_SPACE	"Space"
-#define BUILD_CONFIGURATION_LINES_CARD_PATH	"CardPath"
-#define BUILD_CONFIGURATION_LINES_DEFAULT_SPACE	"Kernel"
-#define BUILD_CONFIGURATION_CARD		"Card"
-#define BUILD_CONFIGURATION_CARD_PATH	"CardPath"
-#define BUILD_CONFIGURATION_BREAKPOINT_SPACE	"BreakpointSpace"
-#define BUILD_CONFIGURATION_NO_FLOATS	"NoFloats"
-#define BUILD_CONFIGURATION_MATH_TABLES	"MathTables"
-#define BUILD_CONFIGURATION_PREFER_SIZE	"PreferSize"
-#define BUILD_CONFIGURATION_WARN_MISSING_OVERRIDE	"WarnMissingOverride"
-#define BUILD_CONFIGURATION_EXCEPTIONS	"Exceptions"
-#define BUILD_CONFIGURATION_KEEP_UNUSED_OBJECTS	"KeepUnusedObjects"
-#define BUILD_CONFIGURATION_WARN_STRING_TO_POINTER	"WarnStringToPointer"
-#define BUILD_CONFIGURATION_MULTI_WORD_CASTS	"MultiWordCasts"
-#define BUILD_CONFIGURATION_C_CONVERSIONS	"CConversions"
-#define BUILD_CONFIGURATION_STUB_MISSING	"StubMissing"
-#define BUILD_CONFIGURATION_DEBUG	"Debug"
-#define BUILD_CONFIGURATION_UNOPTIMISED	"Unoptimised"
-
-
 //The toolchains' names, as saved, by EBuildToolchain.
 static const char* gaszBuildToolchainNames[BT_NumToolchains] = { "W65C816", "65C64", "MSVC", "GCC" };
 

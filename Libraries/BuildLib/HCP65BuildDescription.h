@@ -45,7 +45,8 @@ public:
 
 
 //A project of an HCP65 build: its include directories (added just before its units), its sources (relative to its
-//directory, a full path) as a library of the compiler (CCPP65Builder::AddProjectSources), and its defines.  A library
+//directory, a full path) as a library of the compiler (CCPP65Builder::AddProjectSources), its defines, and the compile
+//options that are its own where the program's others differ.  A library
 //project's units are linked only when something uses them; a program's always are.  Its line in the build's output
 //is "Name: Label" (the project's configuration, from a solution).  A solution's project that couldn't be read has no
 //sources and its project file in mszUnreadable, so the build says so.
@@ -59,6 +60,7 @@ public:
 	CHCP65BuildIncludes	mcIncludes;
 	CArrayChars			maszSources;
 	CArrayChars			maszDefines;
+	CArrayChars			maszOptions;	//Its own compile options, those it has ("Debug=true": CBuildConfiguration::ReadOwnOptions).
 	bool				mbLibrary;
 
 	void	Init(const char* szName, const char* szDirectory, const char* szLabel, bool bLibrary);

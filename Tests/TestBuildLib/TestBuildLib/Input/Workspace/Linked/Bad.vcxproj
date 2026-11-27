@@ -1,0 +1,27 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!-- TestBuildWorkspaceProjectLinked: an HCP65Link that can't be read. -->
+<Project DefaultTargets="Build" ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{BF607182-93A4-45B6-87D8-E9FA0B1C2D3E}</ProjectGuid>
+    <RootNamespace>Bad</RootNamespace>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Platform)'=='HCP65C816'">
+    <HCP65Link>
+      <Image>b.rom</Image>
+      <Size>0x100</Size>
+      <Regions>0xFF00-0x10000</Regions>
+    </HCP65Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="Bad.cpp" />
+  </ItemGroup>
+</Project>

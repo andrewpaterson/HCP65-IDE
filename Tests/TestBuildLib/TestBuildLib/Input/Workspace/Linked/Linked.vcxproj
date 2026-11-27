@@ -1,0 +1,47 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!-- TestBuildWorkspaceProjectLinked: a program whose compile options and linking are its project's alone (no .hcp65build), for each processor. -->
+<Project DefaultTargets="Build" ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{9D4E5F60-7182-4394-A5B6-C7D8E9FA0B1C}</ProjectGuid>
+    <RootNamespace>Linked</RootNamespace>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Platform)'=='HCP65C816'">
+    <HCP65Compile>
+      <NoFloats>true</NoFloats>
+      <MathTables>false</MathTables>
+    </HCP65Compile>
+    <HCP65Link>
+      <Executable>l.exe</Executable>
+      <Entry>UserStart</Entry>
+      <Limit>0x8000</Limit>
+      <Symbols>UserHeapSize=0x100;UserStack=64</Symbols>
+    </HCP65Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|HCP65C816'">
+    <HCP65Compile>
+      <PreferSize>true</PreferSize>
+    </HCP65Compile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Platform)'=='HCP65C64'">
+    <HCP65Link>
+      <Image>l.rom</Image>
+      <Size>0x110</Size>
+      <Fill>0xEA</Fill>
+      <Load>0xFF00</Load>
+      <Text>0x40000</Text>
+      <Regions>0xFF00-0x10000@0x0;0x10000-0x10010@0x100</Regions>
+    </HCP65Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="Linked.cpp" />
+  </ItemGroup>
+</Project>

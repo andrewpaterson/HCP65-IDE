@@ -72,6 +72,7 @@ void CHCP65BuildProject::Init(const char* szName, const char* szDirectory, const
 	mcIncludes.Init();
 	maszSources.Init();
 	maszDefines.Init();
+	maszOptions.Init();
 	mbLibrary = bLibrary;
 }
 
@@ -82,6 +83,7 @@ void CHCP65BuildProject::Init(const char* szName, const char* szDirectory, const
 //////////////////////////////////////////////////////////////////////////
 void CHCP65BuildProject::Kill(void)
 {
+	maszOptions.Kill();
 	maszDefines.Kill();
 	maszSources.Kill();
 	mcIncludes.Kill();

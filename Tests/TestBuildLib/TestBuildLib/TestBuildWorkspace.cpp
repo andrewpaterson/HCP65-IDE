@@ -551,6 +551,76 @@ void TestBuildWorkspaceStartupProject(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// A program with no configurations file: what it is linked into and the
+// whole program's compile options are its project's, read from the HCP65
+// groups of the configuration each build configuration builds it in
+// (ConfigurationsPlan.txt C4).  A group for the platform alone is every
+// configuration's of it; a setting no group has is as it was.
+//
+//////////////////////////////////////////////////////////////////////////
+void TestBuildWorkspaceProjectLinked(void)
+{
+	CBuildWorkspace			cWorkspace;
+	CBuildConfiguration*	pcConfiguration;
+	CBuildConfiguration		cBad;
+	CVcxSolution			cSolution;
+	CChars					szError;
+
+	cWorkspace.Init();
+	AssertTrue(cWorkspace.Open("Input" _FS_ "Workspace" _FS_ "Linked" _FS_ "Linked.sln"));
+
+	pcConfiguration = cWorkspace.FindConfiguration(0, "Release|HCP65C816");
+	AssertNotNull(pcConfiguration);
+	AssertTrue(pcConfiguration->HasExecutable());
+	AssertString("l.exe", pcConfiguration->GetProgramFile());
+	AssertString("UserStart", pcConfiguration->GetExecutable()->GetEntry());
+	AssertInt(0x8000, pcConfiguration->GetProgramLimit());
+	AssertSize(2, pcConfiguration->GetExecutable()->NumSymbols());
+	AssertString("UserHeapSize", pcConfiguration->GetExecutable()->GetSymbolName(0));
+	AssertLong(0x100, pcConfiguration->GetExecutable()->GetSymbolValue(0));
+	AssertString("UserStack", pcConfiguration->GetExecutable()->GetSymbolName(1));
+	AssertLong(64, pcConfiguration->GetExecutable()->GetSymbolValue(1));
+	AssertTrue(pcConfiguration->IsNoFloats());
+	AssertFalse(pcConfiguration->IsMathTables());
+	AssertTrue(pcConfiguration->IsPreferSize());
+	AssertFalse(pcConfiguration->IsExceptions());
+
+	pcConfiguration = cWorkspace.FindConfiguration(0, "Release|HCP65C64");
+	AssertNotNull(pcConfiguration);
+	AssertTrue(pcConfiguration->HasImage());
+	AssertString("l.rom", pcConfiguration->GetProgramFile());
+	AssertInt(0x110, pcConfiguration->GetImage()->GetSize());
+	AssertInt(0xEA, pcConfiguration->GetImage()->GetFill());
+	AssertInt(0xFF00, pcConfiguration->GetImage()->GetLoad());
+	AssertInt(0x40000, pcConfiguration->GetImage()->GetText());
+	AssertSize(2, pcConfiguration->GetImage()->NumRegions());
+	AssertInt(0x10000, pcConfiguration->GetImage()->GetRegion(1)->uiStart);
+	AssertInt(0x10010, pcConfiguration->GetImage()->GetRegion(1)->uiEnd);
+	AssertInt(0x100, pcConfiguration->GetImage()->GetRegion(1)->uiOffset);
+	AssertFalse(pcConfiguration->IsNoFloats());
+	AssertTrue(pcConfiguration->IsMathTables());
+	AssertFalse(pcConfiguration->IsPreferSize());
+	cWorkspace.Kill();
+
+	//An HCP65Link that can't be read says which setting, and a host's configuration reads none.
+	cSolution.Init();
+	AssertTrue(cSolution.ReadProject("Input" _FS_ "Workspace" _FS_ "Linked" _FS_ "Bad.vcxproj"));
+	szError.Init();
+	cBad.Init("Release|HCP65C816", BT_W65C816, "Release|Win32");
+	AssertFalse(cBad.ReadProject(cBad.FindProjectConfiguration(cSolution.GetProject(0)->GetProject(), "Release|Win32"), &szError));
+	AssertString("HCP65Link's Regions are Start-End@Offset, separated by semicolons.", szError.Text());
+	cBad.Kill();
+	cBad.Init("Release|GCC-x64", BT_GCC, "Release|Win32");
+	AssertTrue(cBad.ReadProject(cBad.FindProjectConfiguration(cSolution.GetProject(0)->GetProject(), "Release|Win32"), &szError));
+	AssertFalse(cBad.IsLinked());
+	cBad.Kill();
+	szError.Kill();
+	cSolution.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 //
 //////////////////////////////////////////////////////////////////////////
 void TestBuildWorkspace(void)
@@ -564,6 +634,7 @@ void TestBuildWorkspace(void)
 	TestBuildWorkspaceFile();
 	TestBuildWorkspaceRunConfigurations();
 	TestBuildWorkspaceStartupProject();
+	TestBuildWorkspaceProjectLinked();
 
 	TestStatistics();
 }

@@ -88,6 +88,11 @@ bool CHCP65Build::Start(CArrayChars* paszLines)
 	meState = BS_Running;
 	mbCompiled = false;
 	mbCancel = false;
+	if ((mcDescription.NumProjects() == 0) && !ReadStartupProject(paszLines))
+	{
+		Finish(BS_Failed, paszLines);
+		return false;
+	}
 	mcBuilder.SetTarget(mpcConfiguration->GetTarget());
 	mpcConfiguration->SetCompileOptions(mcBuilder.GetOptions());
 	SetUnoptimised();
@@ -164,6 +169,47 @@ bool CHCP65Build::Start(CArrayChars* paszLines)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// The configuration takes what the program's project says of the whole
+// program and its linking (CBuildConfiguration::ReadProject): the
+// application the solution builds into it, the startup project.  False,
+// with a line saying what, if its HCP65Link is wrong.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CHCP65Build::ReadStartupProject(CArrayChars* paszLines)
+{
+	CArrayBuildProjects		asProjects;
+	SBuildProject*			psProject;
+	CChars					szError;
+	size					i;
+	bool					bResult;
+
+	bResult = true;
+	asProjects.Init();
+	GetProjects(&asProjects, true);
+	for (i = 0; bResult && (i < asProjects.NumElements()); i++)
+	{
+		psProject = asProjects.Get(i);
+		if (!psProject->bLibrary && !psProject->bCommand)
+		{
+			szError.Init();
+			bResult = mpcConfiguration->ReadProject(psProject->pcConfiguration, &szError);
+			if (!bResult)
+			{
+				szError.Insert(0, ": ");
+				szError.Insert(0, psProject->pcProject->GetName());
+				paszLines->Add(szError.Text());
+			}
+			szError.Kill();
+			break;
+		}
+	}
+	asProjects.Kill();
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Whether the project's configuration compiles its uiSource'th source, as
 // CVisualStudioProject lists them: the uiSource'th ClCompile item of the
 // project isn't excluded from its build (CVcxProject::IsCompiled).
@@ -198,7 +244,8 @@ bool CHCP65Build::IsCompiled(SBuildProject* psProject, size uiSource)
 // build's description: each project's own directory and its include
 // directories that are there (with their sub directories, which includes
 // like "BaseLib/Chars.h" are in), its sources as its Visual Studio project
-// lists them, and its defines.  A project that can't be read is kept with
+// lists them, its defines and its own compile options (its HCP65Compile
+// group's).  A project that can't be read is kept with
 // no sources, to say so when it is added.
 //
 //////////////////////////////////////////////////////////////////////////
@@ -252,6 +299,7 @@ void CHCP65Build::Describe(void)
 		aszIncludes.Kill();
 
 		psProject->pcProject->GetPreprocessorDefinitions(psProject->pcConfiguration, mpcSolution->GetDirectory(), &pcProject->maszDefines);
+		CBuildConfiguration::ReadOwnOptions(psProject->pcConfiguration, &pcProject->maszOptions);
 	}
 	asProjects.Kill();
 }
@@ -262,7 +310,7 @@ void CHCP65Build::Describe(void)
 // The build's description added to the builder: its include directories,
 // then each project's include directories, a line saying which project
 // ("Tiny: Debug|Win32"), its sources as a library of the builder
-// (CCPP65Builder::AddProjectSources) and its defines.
+// (CCPP65Builder::AddProjectSources), its defines and its own options.
 //
 //////////////////////////////////////////////////////////////////////////
 void CHCP65Build::AddDescription(CArrayChars* paszLines)
@@ -307,6 +355,37 @@ void CHCP65Build::AddDescription(CArrayChars* paszLines)
 		{
 			mcBuilder.AddDefine(pcProject->mszName.Text(), pcProject->maszDefines.GetText(j));
 		}
+		SetOwnOptions(pcProject);
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A project's own compile options given to the builder, if it has any:
+// the configuration's with the project's in place of them.
+//
+//////////////////////////////////////////////////////////////////////////
+void CHCP65Build::SetOwnOptions(CHCP65BuildProject* pcProject)
+{
+	CCPPCompileOptions	cOptions;
+	bool				bUnoptimised;
+	size				i;
+
+	if (pcProject->maszOptions.NumElements() == 0)
+	{
+		return;
+	}
+	cOptions = *mcBuilder.GetOptions();
+	bUnoptimised = false;
+	for (i = 0; i < pcProject->maszOptions.NumElements(); i++)
+	{
+		CBuildConfiguration::SetOwnOption(pcProject->maszOptions.GetText(i), &cOptions, &bUnoptimised);
+	}
+	mcBuilder.SetLibraryOptions(pcProject->mszName.Text(), &cOptions);
+	if (bUnoptimised)
+	{
+		mcBuilder.SetUnoptimised(pcProject->mszName.Text());
 	}
 }
 
