@@ -109,27 +109,32 @@ An HCP65 or a GCC configuration is read beside one of Visual Studio's (Release|H
 and its include directories are that one's.  So those rows show that configuration's lines, and their drop-down
 says so: "This project, every Win32 configuration".
 
-An MSVC configuration's are the settings of Visual Studio's own property pages for the compiler, the linker and
-the librarian, two hundred of them, under the names and with the values Visual Studio gives them.  Most have
-values to choose from; **(not set)** is one of them, and choosing it takes the setting's line away where its value
-was from.  The lists (the defines, the include and library directories, the libraries, the warnings turned off)
-and the other options add up as g++'s do.
+An MSVC configuration's are the settings of Visual Studio's own property pages, some three hundred and forty of
+them, under the names and with the values Visual Studio gives them.  Most have values to choose from; **(not
+set)** is one of them, and choosing it takes the setting's line away where its value was from.  The lists (the
+defines, the include and library directories, the libraries, the warnings turned off) and the other options add
+up as g++'s do.
 
-The page is in sections, which are the property pages' own: **Linker: General**, **Input**, **Manifest File**,
-**Debugging**, **System**, **Optimization**, **Embedded IDL**, **Windows Metadata**, **Advanced** and **Command
-Line** for the program; **C/C++: General**, **Optimization**, **Preprocessor**, **Code Generation**,
-**Language**, **Precompiled Headers**, **Output Files**, **Browse Information**, **External Includes**,
-**Advanced** and **Command Line**, and **Librarian**, for the project.  Each is under a heading that opens it and
-folds it away again.  They start folded, and a heading says how many of its settings something says
-("C/C++: Optimization (3 set)"), so what a project sets can be found without opening every one.
+The page is in sections, which are the property pages' own, each under a heading that opens it and folds it away
+again.  They start folded, and a heading says how many of its settings something says ("C/C++: Optimization
+(3 set)"), so what a project sets can be found without opening every one.
 
-The last section, **Project**, has the project's properties, which are no tool's: its configuration type,
-platform toolset, character set and whole program optimisation, which are kept in each configuration's own group
-and so can be said for one configuration only; and its target name, output and intermediate directories,
-incremental linking, and its include, library and executable directories.  The directories add up, a line naming
-itself as `$(IncludePath)`.
+| Sections | What they have |
+|---|---|
+| Linker: General, Input, Manifest File, Debugging, System, Optimization, Embedded IDL, Windows Metadata, Advanced, Command Line | The program's linking. |
+| Project, Project: Advanced, Directories | The project's properties, which are no tool's: its configuration type, toolset and character set, its target name and output directories, and its include, library and executable directories. |
+| C/C++: General, Optimization, Preprocessor, Code Generation, Language, Precompiled Headers, Output Files, Browse Information, External Includes, Advanced, Command Line | The compiler. |
+| Librarian | A static library's. |
+| Resources; MIDL; Manifest Tool; Browse Information; XML Document Generator | The other tools. |
+| Build Events, Custom Build Step | The commands run before the build, before linking and after it, and the project's own step. |
 
-A setting the dialog doesn't show is left as it is in the files.
+A property of the project is written as a property, not in a tool's group.  One that is a configuration's own
+(its type, its toolset, its character set) is kept in that configuration's group, so it can be said for one
+configuration only; the directories add up, a line naming itself as `$(IncludePath)`.
+
+A setting the dialog doesn't show is left as it is in the files.  The few it doesn't show are the project's
+globals (its Windows SDK version), which aren't a configuration's, and what is kept on each reference to another
+project.
 
 Beside each option is a drop-down that says where its value comes from:
 

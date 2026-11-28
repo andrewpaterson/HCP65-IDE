@@ -74,23 +74,10 @@ static const SBuildOption gasBuildOptions[] =
 	{ BUILD_OPTION_PROPERTY, "IncludePath", "Include directories", false, false, "", BOK_GCC, true, ';' },
 	{ "ClCompile", "AdditionalOptions", "Compiler options", false, false, "", BOK_GCC, true, ' ' },
 
-	//MSVC's (stages 2 and 3): every setting of Visual Studio's compiler, linker and librarian pages, from its own
-	//descriptions of them (MakeMSVCOptions.py writes the file).
+	//MSVC's (stages 2 and 3): every setting of Visual Studio's property pages, the project's own and each tool's,
+	//from its own descriptions of them (MakeMSVCOptions.py writes the file).  One whose tool is "" is a property of
+	//the project and one whose tool is "Configuration" a property of a configuration's own (IsBuildProperty).
 	#include "BuildOptionsMSVC.inc"
-
-	//The project's properties, which are no tool's (stage 3): its configurations' own, and its directories.  By
-	//general.xml's and directories.xml's names for them.
-	{ BUILD_OPTION_CONFIGURATION, "ConfigurationType", "Configuration Type", false, false, "", BOK_MSVC, false, 0, "Makefile;Application;DynamicLibrary;StaticLibrary;Utility", "Project" },
-	{ BUILD_OPTION_CONFIGURATION, "PlatformToolset", "Platform Toolset", false, false, "", BOK_MSVC, false, 0, NULL, "Project" },
-	{ BUILD_OPTION_CONFIGURATION, "CharacterSet", "Character Set", false, false, "", BOK_MSVC, false, 0, "NotSet;Unicode;MultiByte", "Project" },
-	{ BUILD_OPTION_CONFIGURATION, "WholeProgramOptimization", "Whole Program Optimization", false, false, "", BOK_MSVC, false, 0, "false;true", "Project" },
-	{ BUILD_OPTION_PROPERTY, "TargetName", "Target Name", false, false, "", BOK_MSVC, false, 0, NULL, "Project" },
-	{ BUILD_OPTION_PROPERTY, "OutDir", "Output Directory", false, false, "", BOK_MSVC, false, 0, NULL, "Project" },
-	{ BUILD_OPTION_PROPERTY, "IntDir", "Intermediate Directory", false, false, "", BOK_MSVC, false, 0, NULL, "Project" },
-	{ BUILD_OPTION_PROPERTY, "LinkIncremental", "Enable Incremental Linking", false, false, "", BOK_MSVC, false, 0, "false;true", "Project" },
-	{ BUILD_OPTION_PROPERTY, "IncludePath", "Include Directories", false, false, "", BOK_MSVC, true, ';', NULL, "Project" },
-	{ BUILD_OPTION_PROPERTY, "LibraryPath", "Library Directories", false, false, "", BOK_MSVC, true, ';', NULL, "Project" },
-	{ BUILD_OPTION_PROPERTY, "ExecutablePath", "Executable Directories", false, false, "", BOK_MSVC, true, ';', NULL, "Project" },
 };
 
 
