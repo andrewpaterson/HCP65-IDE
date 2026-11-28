@@ -914,6 +914,7 @@ V3. MSBuild reading what Edit Build Configurations wrote (C9, stages 2 and 3).  
     Studio's own and the writers are tested byte for byte, but no MSVC build has been given a file the dialog
     changed: the fixtures aren't projects MSBuild builds.  To do: a copy of a real solution, a setting and a property
     changed through the dialog (a scripted run), built by MSBuild under Wine.
+V4, run 2026-11-28: 2,824 passed, none failed.  As it was put:
 V4. TestHCP65Lib after C5 and C9's stages.  It ran once after the CMakeLists.txt conversions (2,824 passed).
     Nothing since touches what it compiles but VisualStudioLib and BuildLib, which it doesn't link; it wasn't run
     again.
