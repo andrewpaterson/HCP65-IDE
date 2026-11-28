@@ -712,6 +712,31 @@ C11. Question 1's names (added 2026-11-27: the decision had no stage)
      (question 1's mapping); TestBuildConfigurations' defaults for a solution named the old way and the new; a
      workspace, a user file and a build file with the old names read as the new.  Windows (the user): each solution
      shows Release|MSVC-x64 and builds.
+  C11-2 and C11-3, built 2026-11-28 (the user: "go ahead with C11-2 and C11-3").  CL/solution_platforms.py renamed
+  the 58 solutions' own platforms, Win32 to MSVC-x86 and x64 to MSVC-x64: each line of SolutionConfigurationPlatforms
+  and the left side of each project's row, in place, 3,590 lines, nothing else (LogiCim-W3.sln and LogiCim-W5.sln, the
+  trials', are left).  The projects' Win32 and x64 are as they were.
+  - The IDE.  A toolchain's default starts from the solution configuration that builds its projects' Win32 or x64,
+    by the row, not by the solution's name for it (CBuildConfigurations::AddDefault); a name written before the
+    rename finds the one it became (FindConfiguration: Release|x64 finds Release|MSVC-x64 in a solution that hasn't
+    Release|x64), and a workspace then has the new names for its chosen configuration and its private run
+    configurations, none repeated, and is written with them (CBuildWorkspace::UseCurrentConfigurationNames).  Edit
+    Build Configurations writes a project's lines for the project's own platform, x64, whatever the solution calls
+    it (CBuildProjectOptionEdits::mszPlatform).  MSVCBuild passed the solution's name already.  A solution named the
+    old way, as Visual Studio names them itself, is read as before.
+  - The tools.  solution_rows.py and reference_configuration.py read a solution's rows by Visual Studio's names:
+    they work on it as it was named and write it as it is (solution_platforms.to_old, to_new).  CL/Tests/Sweep.py
+    gives MSBuild the solutions' names; the folders the programs are built in are the projects' still.
+  - Tests: TestVcxSolutionOwnPlatforms; TestBuildConfigurationsOwnPlatforms (the defaults, and a name of either
+    kind in a solution of either kind); TestBuildWorkspaceRenamedPlatforms (a workspace written before, read
+    after); TestBuildOptionEditsMSVC's last part.  There is no build file any more to read (question 36).
+  - Checked: MSBuild under Wine builds TestBaseLib.sln as Release|MSVC-x64 and Release|MSVC-x86 and refuses
+    Release|x64 (MSB4126), as trial W5 found; HCP65IDE.sln as Release|MSVC-x64 and Reference|MSVC-x64, and
+    LogiCim.sln as Release|MSVC-x64, each with no errors.  HCP65Kernal.sln as Release|MSVC-x86 stops where it did
+    as Release|Win32 (MSB3644, the .NET reference assemblies Wine's install hasn't).  CMake configures from the
+    renamed solutions (it reads their GCC-x64 rows), its module's test passes, and the IDE's checks pass.
+  - Not checked, and waiting for Visual Studio itself: what its configuration boxes show, and that each of the 58
+    builds there.  Only four were built by MSBuild here.
 
 
 The solution's rows (2026-11-27; what questions 12 D, 13 D, 17 C, 22 and 23 come to, if trial W1 passes)
