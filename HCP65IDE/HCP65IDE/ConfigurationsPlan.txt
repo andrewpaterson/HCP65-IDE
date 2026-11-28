@@ -327,7 +327,10 @@ C4. HCP65 compiles with the project's HCP65 configuration
   configurations are made up from Visual Studio's.  CL/solution_rows.py --platform HCP65C816 --build Libc65 gave
   the 20 HCP65 solutions' Libc65 rows their Build.0 (40 lines); every program was built in Debug and Release before
   and after and the outputs compared.  TestBuildHCP65Runtime (Input/Runtime: a solution that builds it, handed no
-  directory, and one that doesn't).  Not done: the 65C64's configurations, which none of the 20 solutions lists.
+  directory, and one that doesn't).  The 65C64's configurations: none of the 20 solutions lists one, so there was
+  nothing of theirs to give rows; the mechanism is the same code for both processors and is run for the 65C64 by
+  the IDE's checks, whose fixture (Checks/Input/Debugging65C64) lists Debug|HCP65C64 and Release|HCP65C64, builds
+  Libc65 in their rows and is built and debugged by the debug-...-65C64 checks (noted 2026-11-28).
   The index, built 2026-11-28 (the user: "carry on with C5 then C9"): a project read with an HCP65 configuration
   has the system headers of the Libc65 project its solution's configuration builds, and that project's include
   directories (CWorkspaceIndex::AddLibc65, as CHCP65Build::FindLibc65); the directory the index is handed is for a
