@@ -327,8 +327,12 @@ C4. HCP65 compiles with the project's HCP65 configuration
   configurations are made up from Visual Studio's.  CL/solution_rows.py --platform HCP65C816 --build Libc65 gave
   the 20 HCP65 solutions' Libc65 rows their Build.0 (40 lines); every program was built in Debug and Release before
   and after and the outputs compared.  TestBuildHCP65Runtime (Input/Runtime: a solution that builds it, handed no
-  directory, and one that doesn't).  Not done: the index is still given the directory (CWorkspaceIndex), and the
-  65C64's configurations, which none of the 20 solutions lists.
+  directory, and one that doesn't).  Not done: the 65C64's configurations, which none of the 20 solutions lists.
+  The index, built 2026-11-28 (the user: "carry on with C5 then C9"): a project read with an HCP65 configuration
+  has the system headers of the Libc65 project its solution's configuration builds, and that project's include
+  directories (CWorkspaceIndex::AddLibc65, as CHCP65Build::FindLibc65); the directory the index is handed is for a
+  solution that builds none.  HCP65VIABoard.sln indexed with a directory that isn't there: 389 of its 430 units
+  couldn't include everything before, none now, and the 24,962 symbols it has with the right one.
 
 C5. The code index reads with the configuration's toolchain
   C5-1. WorkspaceIndex reads a GCC configuration's defines with GCC's own (__GNUC__, __linux__, __x86_64__) and
@@ -343,6 +347,11 @@ C5. The code index reads with the configuration's toolchain
   is TestWorkspaceIndexTarget's fixture read a fourth way.  hcp65index -config names the configuration: TestBaseLib's
   solution in Release|GCC-x64 indexes its 642 units with nothing it can't include, and has the _Linux.cpp files'
   symbols where Release|x64 has the _Windows.cpp files'.  Not done: the type model stays the host's (LLP64).
+  Each project's own options, built 2026-11-28: a unit of an HCP65 configuration is checked with its project's own
+  compile options in place of the program's where it has any (CWorkspaceIndex::SetOwnOptions, as
+  CHCP65Build::SetOwnOptions), so the editor warns of what the build warns of.  TestWorkspaceIndexRuntime
+  (Input/Runtime: a program, a library with WarnStringToPointer of its own and a stand-in Libc65 the rows build, and
+  the same solution with it not built).
 
 C6. CMake reads the projects too
   C6-1. One CMake module (CL/CMake/Vcxproj.cmake) instead of the 35 copies of vcxproj_sources (40 with question 18's
@@ -538,9 +547,46 @@ C9. Edit Build Configurations writes the projects and sheets
     Python tools' rules); TestBuildLib (TestBuildOptionEdits: read, apply against Expected files, a project's own
     configuration, the solution's configurations); thirteen IDE checks (build-configuration-*, build-options-*) on a
     copy of TestVisualStudioLib's Input/Configurations.
-  - Left: GCC's and MSVC's options aren't in the dialog (it shows the HCP65 compiler's, as it always did); no IDE
-    check builds a program after an option is edited in the dialog (C9-5's second half: TestBuildLib builds from
-    projects' options, and the checks compare the files written).
+  - C9-5's second half, built 2026-11-28: the IDE check build-options-built gives a program's image another name and
+    twice the size in the dialog, builds, and the build writes that file, that long, with nothing opened again.
+  - A complete settings editor, in stages (the user, 2026-11-28: "Can we not start building out to the complete
+    settings editor eventually?", then "Yes, build stage 1 and record stages 2 and 3").  The dialog is driven by a
+    table of options (SBuildOption: its tool, its tag, its label, whether it is the whole program's, its kind), so the
+    editor grows by rows.  Throughout: a setting the dialog doesn't know is left alone, since only the lines it
+    changes are written; and a toolchain whose settings aren't all shown says so.
+    Stage 1, built 2026-11-28: each row has its toolchain's kind (EBuildOptionKind) and the dialog a page for each,
+    the selected configuration's in its scroll pane, with the name, toolchain and project above it.  g++'s four are
+    in (Link.AdditionalDependencies and Link.AdditionalOptions, the program's; ClCompile.PreprocessorDefinitions and
+    ClCompile.AdditionalOptions, each project's): everything CGCCBuild reads of a project's groups, so GCC is
+    complete.  They add up (SBuildOption::bAdds): each place has its own line, a sheet up to three (BOP_Sheet,
+    BOP_Sheet2, BOP_Sheet3: Common.props has one for the platform and one for the configuration), the drop-down
+    chooses whose line shows and moves nothing, and "In all" under the field says what they come to
+    (CBuildOptionEdits::GetEffective).  A project's line is written naming the setting itself so it adds, options
+    after the sheet's and lists before; an emptied one is taken away.  An MSVC configuration's note says Visual
+    Studio's property pages edit it.  TestBuildOptionEditsGCC (Input/OptionsGCC); the IDE checks build-options-gcc
+    and build-options-gcc-built.
+    - Not as said when it was put: the include directories aren't a row.  The projects say them as IncludePath, a
+      property of the project for every toolchain, MSVC's too, not one of g++'s settings: it goes with stage 2.
+      And the page's sections don't fold: g++'s page is eight lines; folding goes with stage 2's longer one.
+    Stage 2, built 2026-11-28 (the user: "Carry on with stage 2"): MSVC's settings.  The survey: the 118 real
+    projects and sheets set 29 ClCompile tags and 11 Link tags outside their GCC and HCP65 groups, and each is a
+    row (BOK_MSVC, any platform that is no toolchain's own), with ClCompile's and Link's AdditionalOptions: 42 rows.
+    One with values has them from Visual Studio's property pages (SBuildOption::szChoices) and is a drop-down whose
+    first row is "(not set)", which takes its line away; a true-or-false one is such a row too, since nothing saying
+    it isn't false.  The lists add up as g++'s.  The page is in sections (SBuildOption::szSection: Link, General,
+    Optimisation, Code generation, Checks and warnings), each a grid of its own under a heading that takes it off the
+    page and puts it back.  The HCP65 page has the defines and additional include directories an HCP65 build reads,
+    and g++'s the additional include directories.  An option is found by its name and kind (FindBuildOption: the
+    three toolchains each have a ClCompile.PreprocessorDefinitions).  TestBuildOptionEditsMSVC; the IDE check
+    build-options-msvc.
+    - Not done: IncludePath.  It is a property (a PropertyGroup's), which SetVcxSetting doesn't write and
+      CVcxConfiguration keeps no sources of: it goes with the project's other properties in stage 3.
+    - Not checked by a build: that MSBuild reads a value the dialog wrote.  The tags and values are Visual Studio's
+      own and the writer is the one the HCP65 lines use, but the fixtures aren't projects MSBuild builds.
+    Stage 3, to do: the project's properties (IncludePath, LibraryPath, ConfigurationType, CharacterSet,
+    PlatformToolset, WholeProgramOptimization, LinkIncremental, TargetName), which need VisualStudioLib to write a
+    PropertyGroup's property in place and keep where each came from; then the rest of MSVC's property pages, a section
+    at a time (Language, Advanced, Linker Input, ...), as rows of the table.
 
 
 C10. What a GCC build on Linux builds: the platforms' own projects and files (added 2026-11-27)

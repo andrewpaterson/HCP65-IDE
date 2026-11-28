@@ -57,6 +57,65 @@ static const SBuildOption gasBuildOptions[] =
 	{ BUILD_OPTION_LINK, "Load", "Image's load address", true, false, "" },
 	{ BUILD_OPTION_LINK, "Text", "Image's text address", true, false, "" },
 	{ BUILD_OPTION_LINK, "Regions", "Image's regions", true, false, "" },
+
+	//The defines and include directories an HCP65 build compiles a project with (CHCP65Build: ClCompile's).
+	{ "ClCompile", "PreprocessorDefinitions", "Defines", false, false, "", BOK_HCP65, true, ';' },
+	{ "ClCompile", "AdditionalIncludeDirectories", "Additional include directories", false, false, "", BOK_HCP65, true, ';' },
+
+	//g++'s (ConfigurationsPlan.txt C9, stage 1): what CGCCBuild reads of a project's GCC-x64 configuration.
+	{ "Link", "AdditionalDependencies", "Libraries linked", true, false, "", BOK_GCC, true, ';' },
+	{ "Link", "AdditionalOptions", "Linker options", true, false, "", BOK_GCC, true, ' ' },
+	{ "ClCompile", "PreprocessorDefinitions", "Defines", false, false, "", BOK_GCC, true, ';' },
+	{ "ClCompile", "AdditionalIncludeDirectories", "Additional include directories", false, false, "", BOK_GCC, true, ';' },
+	{ "ClCompile", "AdditionalOptions", "Compiler options", false, false, "", BOK_GCC, true, ' ' },
+
+	//MSVC's (stage 2): every ClCompile and Link setting the projects and their sheets set, by Visual Studio's pages.
+	{ "Link", "SubSystem", "Subsystem", true, false, "", BOK_MSVC, false, 0, "Console;Windows", "Link" },
+	{ "Link", "AdditionalDependencies", "Libraries linked", true, false, "", BOK_MSVC, true, ';', NULL, "Link" },
+	{ "Link", "AdditionalLibraryDirectories", "Library directories", true, false, "", BOK_MSVC, true, ';', NULL, "Link" },
+	{ "Link", "IgnoreSpecificDefaultLibraries", "Default libraries ignored", true, false, "", BOK_MSVC, true, ';', NULL, "Link" },
+	{ "Link", "GenerateDebugInformation", "Debug information", true, false, "", BOK_MSVC, false, 0, "false;true;DebugFastLink;DebugFull", "Link" },
+	{ "Link", "LinkTimeCodeGeneration", "Link time code generation", true, false, "", BOK_MSVC, false, 0, "Default;UseFastLinkTimeCodeGeneration;UseLinkTimeCodeGeneration;PGInstrument;PGOptimization;PGUpdate", "Link" },
+	{ "Link", "OptimizeReferences", "Leave out what nothing refers to", true, false, "", BOK_MSVC, false, 0, "false;true", "Link" },
+	{ "Link", "EnableCOMDATFolding", "Fold identical functions", true, false, "", BOK_MSVC, false, 0, "false;true", "Link" },
+	{ "Link", "LargeAddressAware", "Addresses above 2 GB", true, false, "", BOK_MSVC, false, 0, "false;true", "Link" },
+	{ "Link", "ImageHasSafeExceptionHandlers", "Safe exception handlers", true, false, "", BOK_MSVC, false, 0, "false;true", "Link" },
+	{ "Link", "TargetMachine", "Target machine", true, false, "", BOK_MSVC, false, 0, "MachineX86;MachineX64", "Link" },
+	{ "Link", "AdditionalOptions", "Other linker options", true, false, "", BOK_MSVC, true, ' ', NULL, "Link" },
+
+	{ "ClCompile", "PreprocessorDefinitions", "Defines", false, false, "", BOK_MSVC, true, ';', NULL, "General" },
+	{ "ClCompile", "AdditionalIncludeDirectories", "Additional include directories", false, false, "", BOK_MSVC, true, ';', NULL, "General" },
+	{ "ClCompile", "DebugInformationFormat", "Debug information", false, false, "", BOK_MSVC, false, 0, "None;OldStyle;ProgramDatabase;EditAndContinue", "General" },
+	{ "ClCompile", "MultiProcessorCompilation", "Compile on every processor", false, false, "", BOK_MSVC, false, 0, "false;true", "General" },
+	{ "ClCompile", "PrecompiledHeader", "Precompiled header", false, false, "", BOK_MSVC, false, 0, "NotUsing;Create;Use", "General" },
+	{ "ClCompile", "BrowseInformation", "Browse information", false, false, "", BOK_MSVC, false, 0, "false;true", "General" },
+	{ "ClCompile", "AdditionalOptions", "Other compiler options", false, false, "", BOK_MSVC, true, ' ', NULL, "General" },
+
+	{ "ClCompile", "Optimization", "Optimisation", false, false, "", BOK_MSVC, false, 0, "Disabled;MinSpace;MaxSpeed;Full", "Optimisation" },
+	{ "ClCompile", "InlineFunctionExpansion", "Inlining", false, false, "", BOK_MSVC, false, 0, "Default;Disabled;OnlyExplicitInline;AnySuitable", "Optimisation" },
+	{ "ClCompile", "IntrinsicFunctions", "Intrinsic functions", false, false, "", BOK_MSVC, false, 0, "false;true", "Optimisation" },
+	{ "ClCompile", "FavorSizeOrSpeed", "Favour", false, false, "", BOK_MSVC, false, 0, "Neither;Size;Speed", "Optimisation" },
+	{ "ClCompile", "WholeProgramOptimization", "Whole program optimisation", false, false, "", BOK_MSVC, false, 0, "false;true", "Optimisation" },
+	{ "ClCompile", "EnableParallelCodeGeneration", "Parallel code generation", false, false, "", BOK_MSVC, false, 0, "false;true", "Optimisation" },
+
+	{ "ClCompile", "RuntimeLibrary", "Runtime library", false, false, "", BOK_MSVC, false, 0, "MultiThreaded;MultiThreadedDebug;MultiThreadedDLL;MultiThreadedDebugDLL", "Code generation" },
+	{ "ClCompile", "ExceptionHandling", "C++ exceptions", false, false, "", BOK_MSVC, false, 0, "false;Sync;Async;SyncCThrow", "Code generation" },
+	{ "ClCompile", "CallingConvention", "Calling convention", false, false, "", BOK_MSVC, false, 0, "Cdecl;FastCall;StdCall;VectorCall", "Code generation" },
+	{ "ClCompile", "EnableEnhancedInstructionSet", "Instruction set", false, false, "", BOK_MSVC, false, 0, "NotSet;NoExtensions;StreamingSIMDExtensions;StreamingSIMDExtensions2;AdvancedVectorExtensions;AdvancedVectorExtensions2;AdvancedVectorExtensions512", "Code generation" },
+	{ "ClCompile", "FloatingPointModel", "Floating point", false, false, "", BOK_MSVC, false, 0, "Precise;Strict;Fast", "Code generation" },
+	{ "ClCompile", "FloatingPointExceptions", "Floating point exceptions", false, false, "", BOK_MSVC, false, 0, "false;true", "Code generation" },
+	{ "ClCompile", "StringPooling", "Pool string literals", false, false, "", BOK_MSVC, false, 0, "false;true", "Code generation" },
+	{ "ClCompile", "FunctionLevelLinking", "A section for each function", false, false, "", BOK_MSVC, false, 0, "false;true", "Code generation" },
+	{ "ClCompile", "RemoveUnreferencedCodeData", "Leave out what nothing refers to", false, false, "", BOK_MSVC, false, 0, "false;true", "Code generation" },
+	{ "ClCompile", "OpenMPSupport", "OpenMP", false, false, "", BOK_MSVC, false, 0, "false;true", "Code generation" },
+
+	{ "ClCompile", "BasicRuntimeChecks", "Runtime checks", false, false, "", BOK_MSVC, false, 0, "Default;StackFrameRuntimeCheck;UninitializedLocalUsageCheck;EnableFastChecks", "Checks and warnings" },
+	{ "ClCompile", "BufferSecurityCheck", "Buffer security check", false, false, "", BOK_MSVC, false, 0, "false;true", "Checks and warnings" },
+	{ "ClCompile", "SDLCheck", "SDL checks", false, false, "", BOK_MSVC, false, 0, "false;true", "Checks and warnings" },
+	{ "ClCompile", "GuardEHContMetadata", "EH continuation metadata", false, false, "", BOK_MSVC, false, 0, "false;true", "Checks and warnings" },
+	{ "ClCompile", "WarningLevel", "Warning level", false, false, "", BOK_MSVC, false, 0, "TurnOffAllWarnings;Level1;Level2;Level3;Level4;EnableAllWarnings", "Checks and warnings" },
+	{ "ClCompile", "TreatWarningAsError", "Warnings are errors", false, false, "", BOK_MSVC, false, 0, "false;true", "Checks and warnings" },
+	{ "ClCompile", "DisableSpecificWarnings", "Warnings turned off", false, false, "", BOK_MSVC, true, ';', NULL, "Checks and warnings" },
 };
 
 
@@ -66,21 +125,95 @@ const SBuildOption* GetBuildOption(size uiIndex) { return &gasBuildOptions[uiInd
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The option called szName ("NoFloats"); MAX_SIZE if none is.
+// The option called szName ("NoFloats", or with its tool,
+// "ClCompile.Optimization": GetBuildOptionKey), of a kind's if one is
+// given: the toolchains each have a ClCompile.PreprocessorDefinitions.
+// Without a kind the first of that name.  MAX_SIZE if none is.
 //
 //////////////////////////////////////////////////////////////////////////
-size FindBuildOption(const char* szName)
+size FindBuildOption(const char* szName, EBuildOptionKind eKind)
 {
-	size	i;
+	const char*	szDot;
+	size		i;
 
+	szDot = strchr(szName, '.');
 	for (i = 0; i < NumBuildOptions(); i++)
 	{
-		if (strcmp(gasBuildOptions[i].szName, szName) == 0)
+		if ((eKind != BOK_NumKinds) && (gasBuildOptions[i].eKind != eKind))
+		{
+			continue;
+		}
+		if (szDot)
+		{
+			if ((strlen(gasBuildOptions[i].szTool) == (size)(szDot - szName)) && (strncmp(gasBuildOptions[i].szTool, szName, szDot - szName) == 0) && (strcmp(gasBuildOptions[i].szName, szDot + 1) == 0))
+			{
+				return i;
+			}
+		}
+		else if (strcmp(gasBuildOptions[i].szName, szName) == 0)
 		{
 			return i;
 		}
 	}
 	return MAX_SIZE;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// What an option is called where one name must say which of its kind it
+// is: an HCP65 compiler's or linker's own by its name, which no other has
+// ("NoFloats"), and any other by its tool and name
+// ("ClCompile.AdditionalOptions": Link has one too).  FindBuildOption
+// finds either.
+//
+//////////////////////////////////////////////////////////////////////////
+void GetBuildOptionKey(size uiIndex, CChars* pszDest)
+{
+	pszDest->Set("");
+	if ((strcmp(gasBuildOptions[uiIndex].szTool, BUILD_OPTION_COMPILE) != 0) && (strcmp(gasBuildOptions[uiIndex].szTool, BUILD_OPTION_LINK) != 0))
+	{
+		pszDest->Append(gasBuildOptions[uiIndex].szTool)->Append('.');
+	}
+	pszDest->Append(gasBuildOptions[uiIndex].szName);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The kind of options a platform's configurations have ("HCP65C816",
+// "GCC-x64"; any other, "x64", is MSVC's); false with no platform.
+//
+//////////////////////////////////////////////////////////////////////////
+bool GetBuildOptionKind(const char* szPlatform, EBuildOptionKind* peKind)
+{
+	EBuildToolchain	eToolchain;
+
+	if (szPlatform[0] == '\0')
+	{
+		return false;
+	}
+	if (!CBuildConfiguration::FindToolchainOfPlatform(szPlatform, &eToolchain))
+	{
+		//Any other platform is Visual Studio's own (Win32, x64).
+		eToolchain = BT_MSVC;
+	}
+	if ((eToolchain == BT_W65C816) || (eToolchain == BT_65C64))
+	{
+		*peKind = BOK_HCP65;
+		return true;
+	}
+	if (eToolchain == BT_GCC)
+	{
+		*peKind = BOK_GCC;
+		return true;
+	}
+	if (eToolchain == BT_MSVC)
+	{
+		*peKind = BOK_MSVC;
+		return true;
+	}
+	return false;
 }
 
 
@@ -95,6 +228,7 @@ void CBuildOptionEdit::Init(void)
 	for (i = 0; i < BOP_NumPlaces; i++)
 	{
 		mabSet[i] = false;
+		mabEdited[i] = false;
 		maszValues[i].Init();
 		maszFiles[i].Init();
 		maszConditions[i].Init();
@@ -234,8 +368,8 @@ static void GetConfigurationPart(const char* szName, CChars* pszDest)
 //
 // The solution configuration szName, its projects read as szSource's rows
 // build them (szName itself, or the one a new configuration copies).
-// Only an HCP65 configuration has projects: the options are that
-// compiler's.  Returns its index.
+// The options are its toolchain's (GetBuildOptionKind).  Returns its
+// index.
 //
 //////////////////////////////////////////////////////////////////////////
 size CBuildOptionEdits::Add(const char* szName, const char* szSource)
@@ -244,6 +378,7 @@ size CBuildOptionEdits::Add(const char* szName, const char* szSource)
 	CVcxSolutionProject*				pcSolutionProject;
 	CVcxSolutionProjectConfiguration*	pcRow;
 	EBuildToolchain						eToolchain;
+	EBuildOptionKind					eKind;
 	const char*							szBar;
 	size								i;
 
@@ -256,8 +391,10 @@ size CBuildOptionEdits::Add(const char* szName, const char* szSource)
 	pcConfiguration->mszPlatform.Set(szBar ? szBar + 1 : "");
 	mapcConfigurations.Add(pcConfiguration);
 
-	if (szBar && CBuildConfiguration::FindToolchainOfPlatform(szBar + 1, &eToolchain) && ((eToolchain == BT_W65C816) || (eToolchain == BT_65C64)))
+	if (szBar && GetBuildOptionKind(szBar + 1, &eKind))
 	{
+		eToolchain = BT_MSVC;
+		CBuildConfiguration::FindToolchainOfPlatform(szBar + 1, &eToolchain);
 		for (i = 0; i < mpcSolution->NumProjects(); i++)
 		{
 			pcSolutionProject = mpcSolution->GetProject(i);
@@ -330,6 +467,7 @@ void CBuildOptionEdits::ReadProject(CBuildConfigurationOptionEdits* pcConfigurat
 	CBuildProjectOptionEdits*	pcProject;
 	CBuildConfiguration			cBuilt;
 	CVcxConfiguration*			pcProjectConfiguration;
+	EBuildOptionKind			eKind;
 	const char*					szRow;
 	size						i;
 
@@ -357,10 +495,15 @@ void CBuildOptionEdits::ReadProject(CBuildConfigurationOptionEdits* pcConfigurat
 	{
 		pcConfiguration->muiStartup = pcConfiguration->masProjects.NumElements() - 1;
 	}
+	//Every option has an edit, at its index; those of another toolchain are left as nothing says them.
+	GetBuildOptionKind(pcConfiguration->mszPlatform.Text(), &eKind);
 	for (i = 0; i < NumBuildOptions(); i++)
 	{
 		pcProject->masOptions.Add()->Init();
-		ReadOption(pcConfiguration, pcProject, pcProjectConfiguration, i);
+		if (GetBuildOption(i)->eKind == eKind)
+		{
+			ReadOption(pcConfiguration, pcProject, pcProjectConfiguration, i);
+		}
 	}
 }
 
@@ -385,6 +528,7 @@ void CBuildOptionEdits::ReadOption(CBuildConfigurationOptionEdits* pcConfigurati
 	EVcxCondition							eCondition;
 	EBuildOptionPlace						ePlace;
 	size									i;
+	int										j;
 
 	psOption = GetBuildOption(uiOption);
 	pcEdit = pcProject->masOptions.Get(uiOption);
@@ -428,6 +572,17 @@ void CBuildOptionEdits::ReadOption(CBuildConfigurationOptionEdits* pcConfigurati
 			}
 			szValue.Kill();
 		}
+		if ((ePlace == BOP_Sheet) && psOption->bAdds && pcEdit->mabSet[BOP_Sheet])
+		{
+			//Another line of the sheets': the ones read before it move down a place, the first forgotten after three.
+			for (j = BOP_Sheet3; j > BOP_Sheet; j--)
+			{
+				pcEdit->mabSet[j] = pcEdit->mabSet[j - 1];
+				pcEdit->maszValues[j].Set(pcEdit->maszValues[j - 1]);
+				pcEdit->maszFiles[j].Set(pcEdit->maszFiles[j - 1]);
+				pcEdit->maszConditions[j].Set(pcEdit->maszConditions[j - 1]);
+			}
+		}
 		pcEdit->mabSet[ePlace] = true;
 		pcEdit->maszValues[ePlace].Set(pcSource->mszValue);
 		pcEdit->maszFiles[ePlace].Set(pcSource->mszFile);
@@ -439,7 +594,21 @@ void CBuildOptionEdits::ReadOption(CBuildConfigurationOptionEdits* pcConfigurati
 		pcEdit->muiSheetProjects = CountSheetProjects(pcEdit->maszFiles[BOP_Sheet].Text());
 	}
 	pcEdit->mbConfigurationRead = pcEdit->mabSet[BOP_Configuration];
-	if (apcSources.NumElements() > 0)
+	if (psOption->bAdds)
+	{
+		//The line shown first is the project's own, the most particular it has, or its line for the platform though
+		//it has none yet: what is typed is then the project's, and a sheet's line is changed only by choosing it.
+		pcEdit->mePlace = BOP_Platform;
+		for (j = BOP_Project; j >= BOP_Configuration; j--)
+		{
+			if (pcEdit->mabSet[j])
+			{
+				pcEdit->mePlace = (EBuildOptionPlace)j;
+			}
+		}
+		pcEdit->mszValue.Set(pcEdit->mabSet[pcEdit->mePlace] ? pcEdit->maszValues[pcEdit->mePlace].Text() : "");
+	}
+	else if (apcSources.NumElements() > 0)
 	{
 		pcEdit->mszValue.Set(pcEdit->maszValues[pcEdit->mePlace]);
 	}
@@ -496,7 +665,8 @@ EBuildOptionPlace CBuildOptionEdits::GetBasePlace(CBuildConfigurationOptionEdits
 	{
 		return BOP_Sheet;
 	}
-	return ((pcConfiguration->muiStartup != MAX_SIZE) && !pcProject->mbStartup && !GetBuildOption(uiOption)->bProgram) ? BOP_Program : BOP_Default;
+	//Only the HCP65 compiler gives a project that says nothing of its own code what the program has.
+	return ((pcConfiguration->muiStartup != MAX_SIZE) && !pcProject->mbStartup && !GetBuildOption(uiOption)->bProgram && (GetBuildOption(uiOption)->eKind == BOK_HCP65)) ? BOP_Program : BOP_Default;
 }
 
 
@@ -518,7 +688,7 @@ void CBuildOptionEdits::SetWhereSet(CBuildConfigurationOptionEdits* pcConfigurat
 		for (i = 0; i < pcProject->masOptions.NumElements(); i++)
 		{
 			pcEdit = pcProject->masOptions.Get(i);
-			if (!pcEdit->mbEdited && !pcEdit->mabSet[BOP_Configuration] && !pcEdit->mabSet[BOP_Platform] && !pcEdit->mabSet[BOP_Project])
+			if (!GetBuildOption(i)->bAdds && !pcEdit->mbEdited && !pcEdit->mabSet[BOP_Configuration] && !pcEdit->mabSet[BOP_Platform] && !pcEdit->mabSet[BOP_Project])
 			{
 				SetWhereSet(pcConfiguration, pcProject, pcEdit, i);
 			}
@@ -568,7 +738,8 @@ EBuildOptionPlace CBuildOptionEdits::GetPlace(size uiConfiguration, size uiProje
 // The places an option's value can be from, the most particular first:
 // the project's own for the one configuration and for the platform, a
 // line of the project's with another condition if it has one, and its
-// base (GetBasePlace).  paePlaces has room for BOP_NumPlaces.
+// base (GetBasePlace); then, of an option that adds up, the sheets' other
+// lines.  paePlaces has room for BOP_NumPlaces.
 //
 //////////////////////////////////////////////////////////////////////////
 size CBuildOptionEdits::GetPlaces(size uiConfiguration, size uiProject, size uiOption, EBuildOptionPlace* paePlaces)
@@ -585,6 +756,14 @@ size CBuildOptionEdits::GetPlaces(size uiConfiguration, size uiProject, size uiO
 		paePlaces[uiCount++] = BOP_Project;
 	}
 	paePlaces[uiCount++] = GetBasePlace(mapcConfigurations.GetPtr(uiConfiguration), GetProject(uiConfiguration, uiProject), pcEdit, uiOption);
+	if (pcEdit->mabSet[BOP_Sheet2])
+	{
+		paePlaces[uiCount++] = BOP_Sheet2;
+	}
+	if (pcEdit->mabSet[BOP_Sheet3])
+	{
+		paePlaces[uiCount++] = BOP_Sheet3;
+	}
 	return uiCount;
 }
 
@@ -603,6 +782,7 @@ void CBuildOptionEdits::GetPlaceText(size uiConfiguration, size uiProject, size 
 	const char*						szSeparator;
 	CChars							szValue;
 	EVcxCondition					eCondition;
+	size							uiProjects;
 
 	pcConfiguration = mapcConfigurations.GetPtr(uiConfiguration);
 	pcEdit = GetEdit(uiConfiguration, uiProject, uiOption);
@@ -627,7 +807,7 @@ void CBuildOptionEdits::GetPlaceText(size uiConfiguration, size uiProject, size 
 	{
 		pszDest->Append("This project, every ")->Append(pcConfiguration->mszPlatform)->Append(" configuration");
 	}
-	else if ((ePlace == BOP_Project) || (ePlace == BOP_Sheet))
+	else if ((ePlace == BOP_Project) || ((ePlace >= BOP_Sheet) && (ePlace <= BOP_Sheet3)))
 	{
 		eCondition = pcEdit->maszConditions[ePlace].Empty() ? VCC_Other : ParseVcxCondition(pcEdit->maszConditions[ePlace].Text(), &szValue);
 		if (ePlace == BOP_Project)
@@ -638,7 +818,8 @@ void CBuildOptionEdits::GetPlaceText(size uiConfiguration, size uiProject, size 
 		{
 			szSeparator = strrchr(pcEdit->maszFiles[ePlace].Text(), FILE_SEPARATOR[0]);
 			pszDest->Append(szSeparator ? szSeparator + 1 : pcEdit->maszFiles[ePlace].Text());
-			pszDest->Append(", ")->Append((uint32)pcEdit->muiSheetProjects)->Append((pcEdit->muiSheetProjects == 1) ? " project" : " projects");
+			uiProjects = (ePlace == BOP_Sheet) ? pcEdit->muiSheetProjects : CountSheetProjects(pcEdit->maszFiles[ePlace].Text());
+			pszDest->Append(", ")->Append((uint32)uiProjects)->Append((uiProjects == 1) ? " project" : " projects");
 		}
 		if (pcEdit->maszConditions[ePlace].Empty())
 		{
@@ -684,7 +865,7 @@ void CBuildOptionEdits::GetPlaceText(size uiConfiguration, size uiProject, size 
 //////////////////////////////////////////////////////////////////////////
 void CBuildOptionEdits::Changed(CBuildOptionEdit* pcOrigin, size uiOption, EBuildOptionPlace ePlace, bool bSet, const char* szValue)
 {
-	static const EBuildOptionPlace	aePlaces[] = { BOP_Configuration, BOP_Platform, BOP_Project, BOP_Sheet };
+	static const EBuildOptionPlace	aePlaces[] = { BOP_Configuration, BOP_Platform, BOP_Project, BOP_Sheet, BOP_Sheet2, BOP_Sheet3 };
 	CBuildProjectOptionEdits*		pcProject;
 	CBuildOptionEdit*				pcEdit;
 	size							i;
@@ -699,7 +880,7 @@ void CBuildOptionEdits::Changed(CBuildOptionEdit* pcOrigin, size uiOption, EBuil
 			pcProject = mapcConfigurations.GetPtr(i)->masProjects.Get(j);
 			pcEdit = pcProject->masOptions.Get(uiOption);
 			bSame = false;
-			for (k = 0; (pcEdit != pcOrigin) && (k < 4); k++)
+			for (k = 0; (pcEdit != pcOrigin) && (k < 6); k++)
 			{
 				if (pcEdit->maszFiles[aePlaces[k]].Equals(pcOrigin->maszFiles[ePlace]) && pcEdit->maszConditions[aePlaces[k]].Equals(pcOrigin->maszConditions[ePlace]) && !pcEdit->maszFiles[aePlaces[k]].Empty())
 				{
@@ -713,9 +894,17 @@ void CBuildOptionEdits::Changed(CBuildOptionEdit* pcOrigin, size uiOption, EBuil
 							pcEdit->mszValue.Set(szValue);
 						}
 					}
+					else if (GetBuildOption(uiOption)->bAdds)
+					{
+						pcEdit->maszValues[aePlaces[k]].Set("");
+						if (pcEdit->mePlace == aePlaces[k])
+						{
+							pcEdit->mszValue.Set("");
+						}
+					}
 				}
 			}
-			if (bSame && !pcEdit->mbEdited)
+			if (bSame && !pcEdit->mbEdited && !GetBuildOption(uiOption)->bAdds)
 			{
 				SetWhereSet(mapcConfigurations.GetPtr(i), pcProject, pcEdit, uiOption);
 			}
@@ -739,6 +928,11 @@ void CBuildOptionEdits::SetValue(size uiConfiguration, size uiProject, size uiOp
 	{
 		return;
 	}
+	if (GetBuildOption(uiOption)->bAdds)
+	{
+		SetAddedValue(uiConfiguration, uiProject, uiOption, szValue);
+		return;
+	}
 	pcEdit = GetEdit(uiConfiguration, uiProject, uiOption);
 	if ((pcEdit->mePlace == BOP_Program) || (pcEdit->mePlace == BOP_Default))
 	{
@@ -752,6 +946,140 @@ void CBuildOptionEdits::SetValue(size uiConfiguration, size uiProject, size uiOp
 	{
 		Changed(pcEdit, uiOption, pcEdit->mePlace, true, szValue);
 	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A place's line of an option that adds up, as it is written.  One of the
+// project's own that doesn't name the setting itself is given the name, so
+// it adds to what the sheets say and takes nothing of theirs away: before
+// it for options ("-g" is written "%(AdditionalOptions) -g": the project's
+// come after the sheets', where one can undo one of theirs), after it for
+// a list ("EXTRA;%(PreprocessorDefinitions)").  A sheet's is written as
+// it is typed.
+//
+//////////////////////////////////////////////////////////////////////////
+static void GetAddedLine(const SBuildOption* psOption, EBuildOptionPlace ePlace, const char* szValue, CChars* pszDest)
+{
+	CChars	szItself;
+
+	pszDest->Set(szValue);
+	pszDest->StripWhitespace();
+	szItself.Init("%(");
+	szItself.Append(psOption->szName)->Append(')');
+	if ((ePlace <= BOP_Project) && !pszDest->Empty() && !pszDest->Contains(szItself.Text()))
+	{
+		if (psOption->cSeparator == ' ')
+		{
+			pszDest->Insert(0, ' ');
+			pszDest->Insert(0, szItself.Text());
+		}
+		else
+		{
+			pszDest->Append(psOption->cSeparator)->Append(szItself);
+		}
+	}
+	szItself.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A new line for the place looked at, of an option that adds up; with
+// nothing in it the place's line is taken away.  It is kept as typed, and
+// written as GetAddedLine has it.  With no line anywhere the place is the
+// project's own for the platform.
+//
+//////////////////////////////////////////////////////////////////////////
+void CBuildOptionEdits::SetAddedValue(size uiConfiguration, size uiProject, size uiOption, const char* szValue)
+{
+	CBuildOptionEdit*	pcEdit;
+	CChars				szLine;
+
+	pcEdit = GetEdit(uiConfiguration, uiProject, uiOption);
+	if (pcEdit->mePlace >= BOP_Program)
+	{
+		pcEdit->mePlace = BOP_Platform;
+	}
+	szLine.Init(szValue);
+	szLine.StripWhitespace();
+	pcEdit->mszValue.Set(szValue);
+	pcEdit->mabSet[pcEdit->mePlace] = !szLine.Empty();
+	pcEdit->maszValues[pcEdit->mePlace].Set(szValue);
+	pcEdit->mabEdited[pcEdit->mePlace] = true;
+	pcEdit->mbEdited = true;
+	if ((pcEdit->mePlace != BOP_Configuration) || !NeedsOwnConfiguration(uiConfiguration, uiProject))
+	{
+		Changed(pcEdit, uiOption, pcEdit->mePlace, !szLine.Empty(), szValue);
+	}
+	szLine.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// All an option that adds up comes to: each place's line from the least
+// particular to the most, one that names the setting itself having what
+// the ones before it came to where it names it, and one that doesn't
+// taking their place.  A macro is left as it is written ($(GccOptimised)).
+// Of any other option, its value.
+//
+//////////////////////////////////////////////////////////////////////////
+void CBuildOptionEdits::GetEffective(size uiConfiguration, size uiProject, size uiOption, CChars* pszDest)
+{
+	static const EBuildOptionPlace	aePlaces[] = { BOP_Sheet3, BOP_Sheet2, BOP_Sheet, BOP_Project, BOP_Platform, BOP_Configuration };
+	const SBuildOption*				psOption;
+	CBuildOptionEdit*				pcEdit;
+	CChars							szItself;
+	CChars							szLine;
+	CArrayChars						aszParts;
+	char							szSeparator[2];
+	int								i;
+	size							j;
+
+	psOption = GetBuildOption(uiOption);
+	if (!psOption->bAdds)
+	{
+		pszDest->Set(GetValue(uiConfiguration, uiProject, uiOption));
+		return;
+	}
+	pcEdit = GetEdit(uiConfiguration, uiProject, uiOption);
+	szItself.Init("%(");
+	szItself.Append(psOption->szName)->Append(')');
+	pszDest->Set("");
+	for (i = 0; i < 6; i++)
+	{
+		if (pcEdit->mabSet[aePlaces[i]])
+		{
+			szLine.Init();
+			GetAddedLine(psOption, aePlaces[i], pcEdit->maszValues[aePlaces[i]].Text(), &szLine);
+			szLine.Replace(szItself.Text(), pszDest->Text());
+			pszDest->Set(szLine);
+			szLine.Kill();
+		}
+	}
+	szItself.Kill();
+
+	//Its parts, with nothing between two separators.
+	szSeparator[0] = psOption->cSeparator;
+	szSeparator[1] = '\0';
+	aszParts.Init();
+	pszDest->Split(&aszParts, psOption->cSeparator);
+	pszDest->Set("");
+	for (j = 0; j < aszParts.NumElements(); j++)
+	{
+		aszParts.Get(j)->StripWhitespace();
+		if (!aszParts.Get(j)->Empty())
+		{
+			if (!pszDest->Empty())
+			{
+				pszDest->Append(szSeparator);
+			}
+			pszDest->Append(aszParts.Get(j));
+		}
+	}
+	aszParts.Kill();
 }
 
 
@@ -773,6 +1101,13 @@ void CBuildOptionEdits::SetPlace(size uiConfiguration, size uiProject, size uiOp
 	pcEdit = GetEdit(uiConfiguration, uiProject, uiOption);
 	if (pcEdit->mePlace == ePlace)
 	{
+		return;
+	}
+	if (GetBuildOption(uiOption)->bAdds)
+	{
+		//The place whose line is looked at: nothing moves.
+		pcEdit->mePlace = ePlace;
+		pcEdit->mszValue.Set(pcEdit->mabSet[ePlace] ? pcEdit->maszValues[ePlace].Text() : "");
 		return;
 	}
 	szValue.Init(GetValue(uiConfiguration, uiProject, uiOption));
@@ -863,7 +1198,15 @@ bool CBuildOptionEdits::NeedsOwnConfiguration(size uiConfiguration, size uiProje
 		for (i = 0; i < pcProject->masOptions.NumElements(); i++)
 		{
 			pcEdit = pcProject->masOptions.Get(i);
-			bResult |= pcEdit->mbEdited && ((pcEdit->mePlace == BOP_Configuration) || pcEdit->mbConfigurationRead);
+			if (GetBuildOption(i)->bAdds)
+			{
+				//One that adds up is edited a place at a time.
+				bResult |= pcEdit->mabEdited[BOP_Configuration];
+			}
+			else
+			{
+				bResult |= pcEdit->mbEdited && ((pcEdit->mePlace == BOP_Configuration) || pcEdit->mbConfigurationRead);
+			}
 		}
 	}
 	szOwn.Kill();
@@ -923,7 +1266,7 @@ bool CBuildOptionEdits::Check(size uiConfiguration, CChars* pszError)
 	bool							bResult;
 
 	pcConfiguration = mapcConfigurations.GetPtr(uiConfiguration);
-	if ((pcConfiguration->muiStartup == MAX_SIZE) || !CBuildConfiguration::FindToolchainOfPlatform(pcConfiguration->mszPlatform.Text(), &eToolchain))
+	if ((pcConfiguration->muiStartup == MAX_SIZE) || !CBuildConfiguration::FindToolchainOfPlatform(pcConfiguration->mszPlatform.Text(), &eToolchain) || ((eToolchain != BT_W65C816) && (eToolchain != BT_65C64)))
 	{
 		return true;
 	}
@@ -931,7 +1274,7 @@ bool CBuildOptionEdits::Check(size uiConfiguration, CChars* pszError)
 	for (i = 0; i < NumBuildOptions(); i++)
 	{
 		szValue = GetValue(uiConfiguration, pcConfiguration->muiStartup, i);
-		if ((strcmp(GetBuildOption(i)->szTool, BUILD_OPTION_LINK) == 0) && (szValue[0] != '\0'))
+		if ((GetBuildOption(i)->eKind == BOK_HCP65) && (strcmp(GetBuildOption(i)->szTool, BUILD_OPTION_LINK) == 0) && (szValue[0] != '\0'))
 		{
 			szName.Init(BUILD_OPTION_LINK ".");
 			szName.Append(GetBuildOption(i)->szName);
@@ -960,7 +1303,7 @@ static const char* GetWritten(CBuildOptionEdit* pcEdit, EBuildOptionPlace ePlace
 	bool	bUnder;
 
 	bUnder = false;
-	for (i = ePlace + 1; i <= BOP_Sheet; i++)
+	for (i = ePlace + 1; i < BOP_Program; i++)
 	{
 		bUnder |= pcEdit->mabSet[i];
 	}
@@ -986,9 +1329,11 @@ bool CBuildOptionEdits::ApplyProject(const char* szSolutionFile, size uiConfigur
 	CChars				szOwn;
 	CChars				szRow;
 	CChars				szCondition;
+	CChars				szLine;
 	const char*			szFile;
 	const char*			szBar;
 	size				i;
+	int					j;
 	bool				bResult;
 
 	bResult = true;
@@ -1031,6 +1376,22 @@ bool CBuildOptionEdits::ApplyProject(const char* szSolutionFile, size uiConfigur
 		if (szOwn.Empty())
 		{
 			szCondition.Set(pcEdit->maszConditions[BOP_Configuration]);
+		}
+		if (psOption->bAdds)
+		{
+			//Each place's line that was set or taken away, in the project's file or the sheet's.
+			for (j = BOP_Configuration; bResult && (j < BOP_Program); j++)
+			{
+				if (pcEdit->mabEdited[j])
+				{
+					szLine.Init();
+					GetAddedLine(psOption, (EBuildOptionPlace)j, pcEdit->maszValues[j].Text(), &szLine);
+					bResult = SetVcxSetting((j <= BOP_Project) ? szFile : pcEdit->maszFiles[j].Text(), (j == BOP_Configuration) ? szCondition.Text() : pcEdit->maszConditions[j].Text(),
+											psOption->szTool, psOption->szName, pcEdit->mabSet[j] ? szLine.Text() : NULL);
+					szLine.Kill();
+				}
+			}
+			continue;
 		}
 		if (pcEdit->mePlace == BOP_Configuration)
 		{

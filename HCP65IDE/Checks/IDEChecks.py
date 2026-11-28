@@ -184,6 +184,17 @@ def MakeOptionsCopy(bSave=True, bUnbuilt=False):
 	return asCopy
 
 
+def MakeGCCOptionsCopy():
+	#A copy of the solution g++'s options are checked on (TestBuildLib's Input/OptionsGCC): a program, the startup
+	#project, and a library, which share a sheet, built as Debug and Release for GCC-x64 and for x64.  The sheet says
+	#the platform's defines, options and libraries and adds -g for Debug; the library has a define of its own for Debug
+	#and the program a library it is linked with.  The run saves to the copy.
+	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
+	atexit.register(shutil.rmtree, szRoot, True)
+	shutil.copytree(os.path.join(ROOT, 'HCP65-IDE', 'Tests', 'TestBuildLib', 'TestBuildLib', 'Input', 'OptionsGCC'), os.path.join(szRoot, 'Program'))
+	return {'SOLUTION': os.path.join(szRoot, 'Program', 'Program.sln'), 'RECENT': os.path.join(szRoot, 'Recent.xml'), 'SAVE_LAYOUT': '1'}
+
+
 def MakeCardCopy():
 	#MakeSolutionCopy's Program solution with a card file beside the solutions (Workspace/Cards/Test.hcp65card), to make
 	#a shared run configuration for in the dialog.
@@ -962,8 +973,8 @@ CHECKS = [
 		#one include directory), in the failure colour.
 		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp',
 		'DEBUG': 'wait:1500,printindexing,edit:printoutputcolours:indexing'}),
-		[r'^Indexing: \d+ ms, 1 units with problems$', r'^(/|[A-Za-z]:\\)\S*[/\\]Workspace[/\\]Kernel[/\\]Defs\.h \(2, 9\): The macro is defined again differently',
-		 r'^(/|[A-Za-z]:\\)\S*[/\\]Workspace[/\\]Kernel[/\\]Kernel\.cpp \(2, 10\): Could not include file "Gone\.h"$', r'^Output colour: error \[(/|[A-Za-z]:\\)\S*[/\\]Defs\.h ',
+		[r'^Indexing: \d+ ms, 1 units with problems$', r'^(/|[A-Za-z]:\\)\S*[/\\]Kernel[/\\]Defs\.h \(2, 9\): The macro is defined again differently',
+		 r'^(/|[A-Za-z]:\\)\S*[/\\]Kernel[/\\]Kernel\.cpp \(2, 10\): Could not include file "Gone\.h"$', r'^Output colour: error \[(/|[A-Za-z]:\\)\S*[/\\]Defs\.h ',
 		 r'^Output colour: error \[(/|[A-Za-z]:\\)\S*[/\\]Kernel\.cpp ', r'^Output colours: 2$'], []),
 	('indexing-step-in-pane', dict(MakeIndexingProblemsKernel(), **{
 		#In the Indexing tab, Next Occurrence steps through its problems, the tab keeping the keys, to the last.
@@ -4207,7 +4218,8 @@ CHECKS = [
 	('build-options-shown', dict(MakeOptionsCopy(), **{
 		#Each option with where its value comes from (ConfigurationsPlan question 30): the whole program's are the startup
 		#project's, from its own line for the platform or for the one configuration, the sheet's or the default; a
-		#library's own code has the sheet's, or else what the program has.  A configuration that isn't an HCP65 one has none.
+		#library's own code has the sheet's, or else what the program has.  An MSVC configuration has MSVC's settings, in
+		#sections, and none of the HCP65 compiler's.
 		'DIALOG_ANSWER': 'Cancel', 'BUILD_EDITS': 'select:2;print;project:Library;print;select:3;print',
 		'DEBUG': 'command:Build.EditConfigurations,answered:1'}),
 		[r'^Build dialog: Release\|HCP65C816, project Program$',
@@ -4221,8 +4233,9 @@ CHECKS = [
 		 r'^Build option: NoFloats \[true\] from \[This project, every HCP65C816 configuration\]$',
 		 r"^Build option: WarnMissingOverride \[true\] from \[The program's \(Program\)\]$",
 		 r'^Build option: WarnStringToPointer \[true\] from \[Shared\.props, 2 projects, every HCP65C816 configuration\]$',
-		 r'^Build dialog: Release\|Win32, project \(none\)$',
-		 r"^Build note: \[These are the HCP65 compiler's options: only an HCP65 configuration has them\.\]$"], [r'ERROR']),
+		 r'^Build dialog: Release\|Win32, project Library$',
+		 r'^Build option: ClCompile\.Optimization \[\] from \[Default\]$',
+		 r'^Build section: Link \[open\], page \d+ high$', r'^Build note: \[\]$'], [r'ERROR']),
 	('build-options-save', dict(MakeOptionsCopy(), **{
 		#An option's value is written where it comes from, and its place is what the drop-down is made (questions 33 and
 		#34): the program's line for the platform changed; one configuration's own made the platform's; a default made
@@ -4306,6 +4319,76 @@ CHECKS = [
 		'DEBUG': 'command:Build.EditConfigurations,answered:2,printstatus,printdiskfile:Program.vcxproj'}),
 		[r'^Clean up: Program\.vcxproj: Fast$', r'^Status line: Removed 0 configurations from their projects\.$',
 		 r'^    <ProjectConfiguration Include="Fast\|Win32">'], [r'ERROR']),
+	('build-options-built', dict(MakeSolutionCopy(), **{
+		#What the dialog writes is what the next build builds, with nothing opened again by hand (ConfigurationsPlan C9):
+		#the program's image given another name and twice the size, and the build writes that file, that long.
+		'DIALOG_ANSWER': 'OK', 'CONFIGURATION': 'Release|HCP65C816',
+		'BUILD_EDITS': 'select:0;set:Image=edited.rom;set:Size=0x200;set:Regions=0x0-0x200@0x0;print',
+		'DEBUG': 'command:Build.EditConfigurations,answered:1,printstatus,command:Build.Build,wait:300,printbuild,printdiskfile:Kernel.vcxproj'}),
+		[r'^Build dialog: Release\|HCP65C816, project Kernel$',
+		 r'^Build option: Image \[edited\.rom\] from \[This project, every HCP65C816 configuration\]$',
+		 r'^Status line: Saved the build configurations\.$',
+		 r'^Wrote 512 bytes to .*[/\\]Kernel[/\\]Output[/\\]HCP65C816[/\\]Release[/\\]edited\.rom\.$',
+		 r'^Release\|HCP65C816 build succeeded\.$',
+		 r'^      <Image>edited\.rom</Image>', r'^      <Size>0x200</Size>'], [r'ERROR', r'k\.rom', r'^Wrote 256 bytes']),
+	('build-options-gcc', dict(MakeGCCOptionsCopy(), **{
+		#A GCC configuration has g++'s options (ConfigurationsPlan C9, stage 1), which add up: the line shown is one
+		#place's, the project's own to begin with, and "In all" what every place's comes to.  Choosing another place shows
+		#its line and moves nothing; a line typed for the project is written so that it adds, after the sheet's.
+		'DIALOG_ANSWER': 'OK',
+		'BUILD_EDITS': 'select:0;print;project:Library;print;place:ClCompile.AdditionalOptions=sheet2;print;'
+		               'place:ClCompile.AdditionalOptions=platform;set:ClCompile.AdditionalOptions=-Wshadow;print',
+		'DEBUG': 'command:Build.EditConfigurations,answered:1,printstatus,printdiskfile:Library.vcxproj,printdiskfile:Shared.props'}),
+		[r'^Build dialog: Debug\|GCC-x64, project Program$',
+		 r'^Build option: Link\.AdditionalDependencies \[m;%\(AdditionalDependencies\)\] from \[This project, every GCC-x64 configuration\]$',
+		 r'^Build option: Link\.AdditionalDependencies In all: m;pthread;dl$',
+		 r'^Build option: Link\.AdditionalOptions In all: -m64$',
+		 r'^Build option: ClCompile\.PreprocessorDefinitions In all: LINUX_GNU;_DEBUG$',
+		 r'^Build option: ClCompile\.AdditionalOptions \[\] from \[This project, every GCC-x64 configuration\]$',
+		 r'^Build option: ClCompile\.AdditionalOptions In all: -m64 -fno-exceptions -g$',
+		 r'^Build dialog: Debug\|GCC-x64, project Library$',
+		 r'^Build option: ClCompile\.PreprocessorDefinitions \[LIB_DEBUG;%\(PreprocessorDefinitions\)\] from \[This project, Debug only\]$',
+		 r'^Build option: ClCompile\.PreprocessorDefinitions In all: LIB_DEBUG;LINUX_GNU;_DEBUG$',
+		 r'^Build option: ClCompile\.AdditionalOptions \[-m64 -fno-exceptions %\(AdditionalOptions\)\] from \[Shared\.props, 2 projects, every GCC-x64 configuration\]$',
+		 r'^Build option: ClCompile\.AdditionalOptions In all: -m64 -fno-exceptions -g$',
+		 r'^Build option: ClCompile\.AdditionalOptions \[-Wshadow\] from \[This project, every GCC-x64 configuration\]$',
+		 r'^Build option: ClCompile\.AdditionalOptions In all: -m64 -fno-exceptions -g -Wshadow$',
+		 r'^Status line: Saved the build configurations\.$',
+		 r"^  <ItemDefinitionGroup Condition=\"'\$\(Platform\)'=='GCC-x64'\">", r'^      <AdditionalOptions>%\(AdditionalOptions\) -Wshadow</AdditionalOptions>',
+		 r'^      <AdditionalOptions>-m64 -fno-exceptions %\(AdditionalOptions\)</AdditionalOptions>'], [r'ERROR', r'NoFloats']),
+	('build-options-gcc-built', dict(MakeGCCOptionsCopy(), **{
+		#What the dialog writes of g++'s is what the next GCC build compiles with: the program given a define, under
+		#which its source says so with an error.
+		'DIALOG_ANSWER': 'OK', 'CONFIGURATION': 'Debug|GCC-x64',
+		'BUILD_EDITS': 'select:0;set:ClCompile.PreprocessorDefinitions=FAIL_ON_PURPOSE;print',
+		'DEBUG': 'command:Build.EditConfigurations,answered:1,command:Build.Build,wait:600,printbuild,printdiskfile:Program.vcxproj'}),
+		[r'^Build option: ClCompile\.PreprocessorDefinitions In all: FAIL_ON_PURPOSE;LINUX_GNU;_DEBUG$',
+		 r'error: #error The define reached the compiler', r'^Debug\|GCC-x64 build failed',
+		 r'^      <PreprocessorDefinitions>FAIL_ON_PURPOSE;%\(PreprocessorDefinitions\)</PreprocessorDefinitions>'], [r'build succeeded']),
+	('build-options-msvc', dict(MakeGCCOptionsCopy(), **{
+		#An MSVC configuration has the settings the projects and sheets set (ConfigurationsPlan C9, stage 2), in sections
+		#that fold.  One with values to choose from has one value, from the most particular place that says it: made the
+		#project's own for Release it is written there, one nothing said becomes the project's for the platform, and one
+		#given no value has its line taken away.  A folded section's rows are off the page, which is shorter for it.
+		'DIALOG_ANSWER': 'OK',
+		'BUILD_EDITS': 'select:3;print;place:ClCompile.Optimization=configuration;set:ClCompile.Optimization=Full;'
+		               'set:ClCompile.RuntimeLibrary=MultiThreadedDLL;set:Link.SubSystem=;fold:Link;fold:Optimisation;print;fold:Link;print',
+		'DEBUG': 'command:Build.EditConfigurations,answered:1,printstatus,printdiskfile:Program.vcxproj'}),
+		[r'^Build dialog: Release\|x64, project Program$',
+		 r'^Build option: Link\.SubSystem \[Console\] from \[This project, Release only\]$',
+		 r'^Build option: ClCompile\.PreprocessorDefinitions \[PROGRAM;%\(PreprocessorDefinitions\)\] from \[This project, Release only\]$',
+		 r'^Build option: ClCompile\.PreprocessorDefinitions In all: PROGRAM$',
+		 r'^Build option: ClCompile\.Optimization \[MaxSpeed\] from \[Shared\.props, 2 projects, every configuration but Debug\]$',
+		 r'^Build option: ClCompile\.WarningLevel \[Level3\] from \[Shared\.props, 2 projects, every configuration\]$',
+		 r'^Build section: Link \[open\], page \d+ high$',
+		 r'^Build option: Link\.SubSystem \[\] from \[This project, Release only\]$',
+		 r'^Build option: ClCompile\.Optimization \[Full\] from \[This project, Release only\]$',
+		 r'^Build option: ClCompile\.RuntimeLibrary \[MultiThreadedDLL\] from \[This project, every x64 configuration\]$',
+		 r'^Build section: Link \[folded\], page \d+ high$', r'^Build section: Optimisation \[folded\], page \d+ high$',
+		 r'^Build section: Link \[open\], page \d+ high$', r'^Build section: Optimisation \[folded\], page \d+ high$',
+		 r'^Status line: Saved the build configurations\.$',
+		 r'^      <PreprocessorDefinitions>PROGRAM;%\(PreprocessorDefinitions\)</PreprocessorDefinitions>', r'^      <Optimization>Full</Optimization>',
+		 r'^      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>'], [r'ERROR', r'<SubSystem>', r'NoFloats']),
 	('build-configuration-clean-up-nothing', dict(MakeOptionsCopy(), **{
 		#With nothing left over there is nothing to offer.
 		'DIALOG_ANSWER': 'Clean Up', 'BUILD_EDITS': 'select:2',

@@ -36,9 +36,11 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #define IDE_BUILD_DIALOG_LIST_WIDTH		240
 #define IDE_BUILD_DIALOG_PLACE_WIDTH	370
 #define IDE_BUILD_DIALOG_GAP			12
+#define IDE_BUILD_DIALOG_LABEL_WIDTH	240		//An option's label: the same in every section of a page, so their fields line up.
+#define IDE_BUILD_DIALOG_NOT_SET		"(not set)"
 
 
-static const char*	gaszIDEBuildPlaces[BOP_NumPlaces] = { "configuration", "platform", "project", "sheet", "program", "default" };
+static const char*	gaszIDEBuildPlaces[BOP_NumPlaces] = { "configuration", "platform", "project", "sheet", "sheet2", "sheet3", "program", "default" };
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -79,6 +81,18 @@ void CIDEBuildConfigurationsDialog::Init(Ptr<CWindow> pOwner, SDialogLook* psLoo
 	mcOptions.Init(pcSolution, szStartupProject);
 	masEntries.Init();
 	maiEditors.Init();
+	maiTotals.Init();
+	maForms.Init();
+	maPrograms.Init();
+	maOwns.Init();
+	maTotals.Init();
+	maChoices.Init();
+	maSectionButtons.Init();
+	maSections.Init();
+	maiSectionPages.Init();
+	maiSectionRows.Init();
+	maiSectionOptions.Init();
+	maiSectionOpen.Init();
 	maChecks.Init();
 	maFields.Init();
 	maPlaces.Init();
@@ -123,6 +137,14 @@ void CIDEBuildConfigurationsDialog::Init(Ptr<CWindow> pOwner, SDialogLook* psLoo
 	{
 		maPlaces.Get(i)->GetSelectionEvent()->Add(this, &CIDEBuildConfigurationsDialog::PlaceChanged);
 	}
+	for (i = 0; i < maChoices.NumElements(); i++)
+	{
+		maChoices.Get(i)->GetSelectionEvent()->Add(this, &CIDEBuildConfigurationsDialog::ChoiceChanged);
+	}
+	for (i = 0; i < maSectionButtons.NumElements(); i++)
+	{
+		maSectionButtons.Get(i)->GetClickEvent()->Add(this, &CIDEBuildConfigurationsDialog::SectionClicked);
+	}
 
 	ShowList();
 	ShowSelected();
@@ -146,14 +168,25 @@ void CIDEBuildConfigurationsDialog::Class(void)
 	M_Pointer(mpCleanUp);
 	M_Pointer(mpName);
 	M_Pointer(mpToolchain);
-	M_Pointer(mpProgram);
 	M_Pointer(mpProject);
+	M_Embedded(maForms);
+	M_Embedded(maPrograms);
+	M_Embedded(maOwns);
+	M_Embedded(maTotals);
+	M_Embedded(maChoices);
+	M_Embedded(maSectionButtons);
+	M_Embedded(maSections);
 	M_Embedded(maChecks);
 	M_Embedded(maFields);
 	M_Embedded(maPlaces);
 	M_Pointer(mpNote);
 	M_Pointer(mpError);
 	U_Unknown(CArrayInt, maiEditors);
+	U_Unknown(CArrayInt, maiTotals);
+	U_Unknown(CArrayInt, maiSectionPages);
+	U_Unknown(CArrayInt, maiSectionRows);
+	U_Unknown(CArrayInt, maiSectionOptions);
+	U_Unknown(CArrayInt, maiSectionOpen);
 	U_Pointer(mpcSolution);
 	U_Unknown(CBuildOptionEdits, mcOptions);
 	U_Unknown(CArrayIDEBuildDialogEntries, masEntries);
@@ -213,11 +246,24 @@ void CIDEBuildConfigurationsDialog::Free(void)
 	{
 		maPlaces.Get(i)->GetSelectionEvent()->Remove(this);
 	}
+	for (i = 0; i < maChoices.NumElements(); i++)
+	{
+		maChoices.Get(i)->GetSelectionEvent()->Remove(this);
+	}
+	for (i = 0; i < maSectionButtons.NumElements(); i++)
+	{
+		maSectionButtons.Get(i)->GetClickEvent()->Remove(this);
+	}
 	for (i = 0; i < masEntries.NumElements(); i++)
 	{
 		masEntries.Get(i)->Kill();
 	}
 	masEntries.Kill();
+	maiSectionOpen.Kill();
+	maiSectionOptions.Kill();
+	maiSectionRows.Kill();
+	maiSectionPages.Kill();
+	maiTotals.Kill();
 	maiEditors.Kill();
 	mcOptions.Kill();
 }
@@ -233,9 +279,11 @@ bool CIDEBuildConfigurationsDialog::Load(CObjectReader* pcFile) { return false; 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The list and its buttons on the left; on the right the page, which
-// scrolls: the name, the whole program's options, the project and its own
-// options, and what is to be said under them.
+// The list and its buttons on the left; on the right the name, the
+// toolchain and the project whose own options show, then the page, which
+// scrolls: the whole program's options and the project's own, of the
+// toolchain's kind (ShowSelected puts that kind's page in the pane), and
+// under it what is to be said.
 //
 //////////////////////////////////////////////////////////////////////////
 Ptr<CComponent> CIDEBuildConfigurationsDialog::CreateBody(void)
@@ -246,9 +294,13 @@ Ptr<CComponent> CIDEBuildConfigurationsDialog::CreateBody(void)
 	Ptr<CGridContainer>		pLeft;
 	Ptr<CGridContainer>		pButtons;
 	Ptr<CGridContainer>		pForm;
+	Ptr<CGridContainer>		pHead;
+	Ptr<CGridContainer>		pRight;
+	Ptr<CLabel>				pLabel;
 	Ptr<CFillContainer>		pGap;
 	SInsets					sInsets;
 	int32					iRow;
+	int						iKind;
 
 	pWindow = mpDialog->GetWindow();
 	psLook = mpDialog->GetLook();
@@ -292,8 +344,6 @@ Ptr<CComponent> CIDEBuildConfigurationsDialog::CreateBody(void)
 	mpName = CreateField();
 	mpToolchain = OMalloc<CLabel>(pWindow, psLook->pcTheme->GetFont(), "");
 	mpToolchain->SetAlignment(CSH_Left, CSV_Center);
-	mpProgram = OMalloc<CLabel>(pWindow, psLook->pcDimFont, "");
-	mpProgram->SetAlignment(CSH_Left, CSV_Center);
 	mpProject = OMalloc<CComboBox>(pWindow, psLook->pcTheme);
 	mpProject->SetAlignment(CSH_Stretch, CSV_Center);
 	mpNote = OMalloc<CLabel>(pWindow, psLook->pcDimFont, "");
@@ -301,87 +351,300 @@ Ptr<CComponent> CIDEBuildConfigurationsDialog::CreateBody(void)
 	mpError = OMalloc<CLabel>(pWindow, psLook->pcTheme->GetFont(), "");
 	mpError->SetAlignment(CSH_Left, CSV_Center);
 
-	pForm = OMalloc<CGridContainer>(pWindow);
-	pForm->SetAlignment(CSH_Stretch, CSV_Top);
+	pHead = OMalloc<CGridContainer>(pWindow);
+	pHead->SetAlignment(CSH_Stretch, CSV_Top);
 	iRow = 0;
-	AddFormRow(pForm, &iRow, "Name", mpName, NULL);
-	AddFormRow(pForm, &iRow, "Toolchain", mpToolchain, NULL);
-	AddFormRow(pForm, &iRow, NULL, mpProgram, NULL);
-	AddOptionRows(pForm, &iRow, true);
-	AddFormRow(pForm, &iRow, "One project's own code", mpProject, NULL);
-	AddOptionRows(pForm, &iRow, false);
-	AddFormRow(pForm, &iRow, NULL, mpNote, NULL);
-	AddFormRow(pForm, &iRow, NULL, mpError, NULL);
+	AddFormRow(pHead, &iRow, "Name", mpName, NULL);
+	AddFormRow(pHead, &iRow, "Toolchain", mpToolchain, NULL);
+	AddFormRow(pHead, &iRow, "Project", mpProject, NULL);
 
-	//The page is as high as its rows need, however high the dialog is: a scroll pane lays its content out at the
-	//view's size on an axis it has no desired size on.
-	pForm->SetRequiredSize();
-	pForm->SetDesiredSize(-1, pForm->GetRequiredSize().y);
+	//A page for each kind of options, as high as its rows need however high the dialog is (a scroll pane lays its
+	//content out at the view's size on an axis it has no desired size on), and an empty one for a configuration
+	//with none.
+	for (iKind = 0; iKind <= BOK_NumKinds; iKind++)
+	{
+		pForm = OMalloc<CGridContainer>(pWindow);
+		pForm->SetAlignment(CSH_Stretch, CSV_Top);
+		maForms.Add(pForm);
+		if (iKind < BOK_NumKinds)
+		{
+			//A page is a column: a heading, the program's options, a heading, the project's own.  The options are in
+			//grids of their own, a section's under the heading that folds it.
+			iRow = 0;
+			pLabel = OMalloc<CLabel>(pWindow, psLook->pcDimFont, "");
+			pLabel->SetAlignment(CSH_Left, CSV_Center);
+			maPrograms.Add(pLabel);
+			AddPageRow(pForm, &iRow, pLabel, 0);
+			AddOptionRows(pForm, &iRow, true, (EBuildOptionKind)iKind);
+			pLabel = OMalloc<CLabel>(pWindow, psLook->pcDimFont, "");
+			pLabel->SetAlignment(CSH_Left, CSV_Center);
+			maOwns.Add(pLabel);
+			AddPageRow(pForm, &iRow, pLabel, IDE_BUILD_DIALOG_GAP);
+			AddOptionRows(pForm, &iRow, false, (EBuildOptionKind)iKind);
+			pForm->SetRequiredSize();
+			pForm->SetDesiredSize(-1, pForm->GetRequiredSize().y);
+		}
+	}
 	mpFormPane = OMalloc<CScrollPane>(pWindow, psLook->pcTheme);
-	mpFormPane->SetContent(pForm);
+	mpFormPane->SetContent(maForms.Get(BOK_NumKinds));
 	mpFormPane->SetAlignment(CSH_Stretch, CSV_Stretch);
+
+	pRight = OMalloc<CGridContainer>(pWindow);
+	pRight->SetAlignment(CSH_Stretch, CSV_Stretch);
+	pRight->AddComponent(pHead, 0, 0, 1, 1, 1, 0);
+	pGap = OMalloc<CFillContainer>(pWindow);
+	pGap->SetDesiredSize(1, IDE_BUILD_DIALOG_GAP);
+	pRight->AddComponent(pGap, 0, 1);
+	pRight->AddComponent(mpFormPane, 0, 2, 1, 1, 1, 1);
+	pGap = OMalloc<CFillContainer>(pWindow);
+	pGap->SetDesiredSize(1, IDE_BUILD_DIALOG_GAP / 2);
+	pRight->AddComponent(pGap, 0, 3);
+	pRight->AddComponent(mpNote, 0, 4, 1, 1, 1, 0);
+	pRight->AddComponent(mpError, 0, 5, 1, 1, 1, 0);
 
 	pBody = OMalloc<CGridContainer>(pWindow);
 	pBody->AddComponent(pLeft, 0, 0, 1, 1, 0, 1);
 	pGap = OMalloc<CFillContainer>(pWindow);
 	pGap->SetDesiredSize(IDE_BUILD_DIALOG_GAP, 1);
 	pBody->AddComponent(pGap, 1, 0);
-	pBody->AddComponent(mpFormPane, 2, 0, 1, 1, 1, 1);
+	pBody->AddComponent(pRight, 2, 0, 1, 1, 1, 1);
 	return pBody;
 }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// A row for each option of the whole program (bProgram) or of a project's
-// own code: a box to tick, or a label and a field, and beside it the
-// drop-down of where its value comes from.  The widgets are kept by the
-// option's index.
+// A component in a page's next row, across it, a gap above it if iGap
+// isn't 0.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEBuildConfigurationsDialog::AddOptionRows(Ptr<CGridContainer> pForm, int32* piRow, bool bProgram)
+void CIDEBuildConfigurationsDialog::AddPageRow(Ptr<CGridContainer> pPage, int32* piPageRow, Ptr<CComponent> pComponent, int32 iGap)
+{
+	Ptr<CFillContainer>	pGap;
+
+	if (iGap > 0)
+	{
+		pGap = OMalloc<CFillContainer>(mpDialog->GetWindow());
+		pGap->SetDesiredSize(1, iGap);
+		pPage->AddComponent(pGap, 0, *piPageRow);
+		(*piPageRow)++;
+	}
+	pPage->AddComponent(pComponent, 0, *piPageRow, 1, 1, 1, 0);
+	(*piPageRow)++;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The options of a kind, of the whole program (bProgram) or of a project's
+// own code, in the page's next rows: a grid of rows (AddOptionRow) for
+// each run of options in one section, and above a named section's its
+// heading, a button that folds it (ToggleSection).
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEBuildConfigurationsDialog::AddOptionRows(Ptr<CGridContainer> pPage, int32* piPageRow, bool bProgram, EBuildOptionKind eKind)
 {
 	Ptr<CWindow>		pWindow;
 	SDialogLook*		psLook;
 	const SBuildOption*	psOption;
-	Ptr<CCheckBox>		pCheck;
-	Ptr<CTextField>		pField;
+	Ptr<CGridContainer>	pSection;
+	Ptr<CButton>		pButton;
 	Ptr<CComboBox>		pPlace;
+	const char*			szSection;
 	size				i;
+	int32				iRow;
+	bool				bFirst;
 
 	pWindow = mpDialog->GetWindow();
 	psLook = mpDialog->GetLook();
 	while (maiEditors.NumElements() < NumBuildOptions())
 	{
 		maiEditors.Add(-1);
+		maiTotals.Add(-1);
 		pPlace = OMalloc<CComboBox>(pWindow, psLook->pcTheme);
 		pPlace->SetAlignment(CSH_Stretch, CSV_Center);
 		pPlace->SetDesiredSize(IDE_BUILD_DIALOG_PLACE_WIDTH, -1);
 		maPlaces.Add(pPlace);
 	}
+	szSection = NULL;
+	bFirst = true;
+	iRow = 0;
 	for (i = 0; i < NumBuildOptions(); i++)
 	{
 		psOption = GetBuildOption(i);
-		if (psOption->bProgram != bProgram)
+		if ((psOption->bProgram != bProgram) || (psOption->eKind != eKind))
 		{
 			continue;
 		}
-		if (psOption->bBoolean)
+		if (bFirst || (psOption->szSection != szSection))
 		{
-			pCheck = OMalloc<CCheckBox>(pWindow, psLook->pcTheme, psOption->szLabel);
-			pCheck->SetAlignment(CSH_Left, CSV_Center);
-			maiEditors.SetValue(i, (int)maChecks.NumElements());
-			maChecks.Add(pCheck);
-			AddFormRow(pForm, piRow, NULL, pCheck, maPlaces.Get(i));
+			szSection = psOption->szSection;
+			if (szSection != NULL)
+			{
+				pButton = OMalloc<CButton>(pWindow, psLook->pcTheme, szSection);
+				pButton->SetAlignment(CSH_Left, CSV_Center);
+				AddPageRow(pPage, piPageRow, pButton, psLook->pcTheme->GetMetric(TM_DialogRowGap));
+				maSectionButtons.Add(pButton);
+			}
+			pSection = OMalloc<CGridContainer>(pWindow);
+			pSection->SetAlignment(CSH_Stretch, CSV_Top);
+			if (szSection != NULL)
+			{
+				maSections.Add(pSection);
+				maiSectionPages.Add((int)eKind);
+				maiSectionRows.Add(*piPageRow + 1);  //After its gap.
+				maiSectionOptions.Add((int)i);
+				maiSectionOpen.Add(1);
+			}
+			AddPageRow(pPage, piPageRow, pSection, psLook->pcTheme->GetMetric(TM_DialogRowGap));
+			bFirst = false;
+			iRow = 0;
 		}
-		else
+		AddOptionRow(pSection, &iRow, i);
+	}
+	for (i = 0; i < maSections.NumElements(); i++)
+	{
+		ShowSection(i);
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// An option's row: a box to tick, or a label and a field or a drop-down
+// of the values it may have, and beside it the drop-down of where its
+// value comes from.  One that adds up has a line under it for what it
+// comes to.  The widgets are kept by the option's index.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEBuildConfigurationsDialog::AddOptionRow(Ptr<CGridContainer> pForm, int32* piRow, size uiOption)
+{
+	Ptr<CWindow>		pWindow;
+	SDialogLook*		psLook;
+	const SBuildOption*	psOption;
+	Ptr<CCheckBox>		pCheck;
+	Ptr<CTextField>		pField;
+	Ptr<CComboBox>		pChoice;
+	Ptr<CLabel>			pTotal;
+
+	pWindow = mpDialog->GetWindow();
+	psLook = mpDialog->GetLook();
+	psOption = GetBuildOption(uiOption);
+	if (psOption->bBoolean)
+	{
+		pCheck = OMalloc<CCheckBox>(pWindow, psLook->pcTheme, psOption->szLabel);
+		pCheck->SetAlignment(CSH_Left, CSV_Center);
+		maiEditors.SetValue(uiOption, (int)maChecks.NumElements());
+		maChecks.Add(pCheck);
+		AddFormRow(pForm, piRow, NULL, pCheck, maPlaces.Get(uiOption));
+	}
+	else if (psOption->szChoices != NULL)
+	{
+		pChoice = OMalloc<CComboBox>(pWindow, psLook->pcTheme);
+		pChoice->SetAlignment(CSH_Stretch, CSV_Center);
+		maiEditors.SetValue(uiOption, (int)maChoices.NumElements());
+		maChoices.Add(pChoice);
+		AddFormRow(pForm, piRow, psOption->szLabel, pChoice, maPlaces.Get(uiOption), IDE_BUILD_DIALOG_LABEL_WIDTH);
+	}
+	else
+	{
+		pField = CreateField();
+		maiEditors.SetValue(uiOption, (int)maFields.NumElements());
+		maFields.Add(pField);
+		AddFormRow(pForm, piRow, psOption->szLabel, pField, maPlaces.Get(uiOption), IDE_BUILD_DIALOG_LABEL_WIDTH);
+	}
+	if (psOption->bAdds)
+	{
+		pTotal = OMalloc<CLabel>(pWindow, psLook->pcDimFont, "");
+		pTotal->SetAlignment(CSH_Left, CSV_Center);
+		maiTotals.SetValue(uiOption, (int)maTotals.NumElements());
+		maTotals.Add(pTotal);
+		AddFormRow(pForm, piRow, NULL, pTotal, NULL);
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A section's heading as it is now: "- Link" open, "+ Link" folded.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEBuildConfigurationsDialog::ShowSection(size uiSection)
+{
+	CChars	szText;
+
+	szText.Init(maiSectionOpen.GetValue(uiSection) ? "-  " : "+  ");
+	szText.Append(GetBuildOption(maiSectionOptions.GetValue(uiSection))->szSection);
+	maSectionButtons.Get(uiSection)->SetCaption(szText.Text());
+	szText.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A section folded, its rows taken off its page, or opened again, its
+// rows put back where they were; the page is then as high as what is left
+// on it needs.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEBuildConfigurationsDialog::ToggleSection(size uiSection)
+{
+	Ptr<CGridContainer>	pPage;
+
+	pPage = maForms.Get(maiSectionPages.GetValue(uiSection));
+	if (maiSectionOpen.GetValue(uiSection))
+	{
+		pPage->RemoveComponent(maSections.Get(uiSection));
+		maiSectionOpen.SetValue(uiSection, 0);
+	}
+	else
+	{
+		pPage->AddComponent(maSections.Get(uiSection), 0, maiSectionRows.GetValue(uiSection), 1, 1, 1, 0);
+		maiSectionOpen.SetValue(uiSection, 1);
+	}
+	ShowSection(uiSection);
+	pPage->SetRequiredSize();
+	pPage->SetDesiredSize(-1, pPage->GetRequiredSize().y);
+	mpFormPane->InvalidateLayout();
+}
+
+
+void CIDEBuildConfigurationsDialog::SectionClicked(CButton* pcButton)
+{
+	size	i;
+
+	for (i = 0; i < maSectionButtons.NumElements(); i++)
+	{
+		if (&maSectionButtons.Get(i) == pcButton)
 		{
-			pField = CreateField();
-			maiEditors.SetValue(i, (int)maFields.NumElements());
-			maFields.Add(pField);
-			AddFormRow(pForm, piRow, psOption->szLabel, pField, maPlaces.Get(i));
+			ToggleSection(i);
+			return;
 		}
 	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The kind of options the selected configuration has, by its platform;
+// BOK_NumKinds if it has none, or nothing is selected.
+//
+//////////////////////////////////////////////////////////////////////////
+size CIDEBuildConfigurationsDialog::GetKind(void)
+{
+	EBuildOptionKind	eKind;
+	CChars				szPlatform;
+	bool				bKind;
+
+	if (miSelected < 0)
+	{
+		return BOK_NumKinds;
+	}
+	szPlatform.Init();
+	GetPlatform(masEntries.Get(miSelected)->mszName.Text(), &szPlatform);
+	bKind = GetBuildOptionKind(szPlatform.Text(), &eKind);
+	szPlatform.Kill();
+	return bKind ? (size)eKind : (size)BOK_NumKinds;
 }
 
 
@@ -389,10 +652,11 @@ void CIDEBuildConfigurationsDialog::AddOptionRows(Ptr<CGridContainer> pForm, int
 //
 // A label and its editor, as CDialog's own rows are, and what goes on the
 // right of them if anything does.  Without a label the editor is across
-// both its columns.
+// both its columns.  The label is as wide as its text needs, or
+// iLabelWidth.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEBuildConfigurationsDialog::AddFormRow(Ptr<CGridContainer> pForm, int32* piRow, const char* szLabel, Ptr<CComponent> pEditor, Ptr<CComponent> pPlace)
+void CIDEBuildConfigurationsDialog::AddFormRow(Ptr<CGridContainer> pForm, int32* piRow, const char* szLabel, Ptr<CComponent> pEditor, Ptr<CComponent> pPlace, int32 iLabelWidth)
 {
 	Ptr<CWindow>		pWindow;
 	SDialogLook*		psLook;
@@ -411,7 +675,7 @@ void CIDEBuildConfigurationsDialog::AddFormRow(Ptr<CGridContainer> pForm, int32*
 	if (szLabel)
 	{
 		pLabel = OMalloc<CLabel>(pWindow, psLook->pcTheme->GetFont(), szLabel);
-		pLabel->SetDesiredSize(pLabel->GetRequiredSize().x + psLook->pcTheme->GetMetric(TM_DialogLabelGap), -1);
+		pLabel->SetDesiredSize((iLabelWidth > 0) ? iLabelWidth : pLabel->GetRequiredSize().x + psLook->pcTheme->GetMetric(TM_DialogLabelGap), -1);
 		pLabel->SetAlignment(CSH_Left, CSV_Center);
 		pForm->AddComponent(pLabel, 0, *piRow);
 		pForm->AddComponent(pEditor, 1, *piRow, 1, 1, 1, 0);
@@ -499,9 +763,15 @@ void CIDEBuildConfigurationsDialog::ShowSelected(void)
 	CChars					szText;
 	CChars					szPlatform;
 	size					uiStartup;
+	size					uiKind;
 	size					i;
 
 	mbUpdating = true;
+	uiKind = GetKind();
+	if (mpFormPane->GetContent() != maForms.Get(uiKind))
+	{
+		mpFormPane->SetContent(maForms.Get(uiKind));
+	}
 	pcEntry = (miSelected >= 0) ? masEntries.Get(miSelected) : NULL;
 	szText.Init(pcEntry ? pcEntry->mszName.Text() : "");
 	szPlatform.Init();
@@ -548,7 +818,10 @@ void CIDEBuildConfigurationsDialog::ShowSelected(void)
 	{
 		szText.Append(": the options of the startup project, ")->Append(mcOptions.GetProject(miSelected, uiStartup)->mszName);
 	}
-	mpProgram->SetText(szText.Text());
+	if (uiKind < BOK_NumKinds)
+	{
+		maPrograms.Get(uiKind)->SetText(szText.Text());
+	}
 	mpError->SetText("");
 	szPlatform.Kill();
 	szText.Kill();
@@ -560,12 +833,13 @@ void CIDEBuildConfigurationsDialog::ShowSelected(void)
 //////////////////////////////////////////////////////////////////////////
 //
 // The project an option is shown for: the startup project for one of the
-// whole program's, else the one chosen.  MAX_SIZE if there is none.
+// whole program's, else the one chosen.  MAX_SIZE if there is none, or the
+// option isn't one of the selected configuration's kind.
 //
 //////////////////////////////////////////////////////////////////////////
 size CIDEBuildConfigurationsDialog::GetOptionProject(size uiOption)
 {
-	if (miSelected < 0)
+	if ((miSelected < 0) || ((size)GetBuildOption(uiOption)->eKind != GetKind()))
 	{
 		return MAX_SIZE;
 	}
@@ -585,23 +859,60 @@ void CIDEBuildConfigurationsDialog::ShowOptions(void)
 	EBuildOptionPlace	aePlaces[BOP_NumPlaces];
 	const SBuildOption*	psOption;
 	Ptr<CComboBox>		pPlace;
+	Ptr<CComboBox>		pChoice;
+	CArrayChars			aszChoices;
 	CChars				szText;
 	const char*			szValue;
 	size				uiProject;
 	size				uiPlaces;
+	size				uiKind;
 	size				i;
 	size				j;
 
 	mbUpdating = true;
 	szText.Init();
+	uiKind = GetKind();
+	if (uiKind < BOK_NumKinds)
+	{
+		szText.Set((muiProject != MAX_SIZE) ? mcOptions.GetProject(miSelected, muiProject)->mszName.Text() : "A project");
+		szText.Append("'s own code");
+		maOwns.Get(uiKind)->SetText(szText.Text());
+	}
 	for (i = 0; i < NumBuildOptions(); i++)
 	{
 		psOption = GetBuildOption(i);
+		if ((size)psOption->eKind != uiKind)
+		{
+			continue;
+		}
 		uiProject = GetOptionProject(i);
 		szValue = (uiProject != MAX_SIZE) ? mcOptions.GetValue(miSelected, uiProject, i) : "";
 		if (psOption->bBoolean)
 		{
 			maChecks.Get(maiEditors.GetValue(i))->SetTicked(strcmp(szValue, "true") == 0);
+		}
+		else if (psOption->szChoices != NULL)
+		{
+			//"(not set)", then the values it may have, then the one it has if that is none of them (a macro).
+			pChoice = maChoices.Get(maiEditors.GetValue(i));
+			pChoice->RemoveAllItems();
+			pChoice->AddItem(IDE_BUILD_DIALOG_NOT_SET);
+			aszChoices.Init();
+			aszChoices.Split(psOption->szChoices, ';');
+			if ((szValue[0] != '\0') && !aszChoices.Contains(szValue))
+			{
+				aszChoices.Add(szValue);
+			}
+			pChoice->Select(0);
+			for (j = 0; j < aszChoices.NumElements(); j++)
+			{
+				pChoice->AddItem(aszChoices.GetText(j));
+				if (strcmp(aszChoices.GetText(j), szValue) == 0)
+				{
+					pChoice->Select((int32)j + 1);
+				}
+			}
+			aszChoices.Kill();
 		}
 		else if (strcmp(maFields.Get(maiEditors.GetValue(i))->GetText(), szValue) != 0)
 		{
@@ -622,6 +933,16 @@ void CIDEBuildConfigurationsDialog::ShowOptions(void)
 				}
 			}
 		}
+		if (psOption->bAdds)
+		{
+			szText.Set("");
+			if (uiProject != MAX_SIZE)
+			{
+				mcOptions.GetEffective(miSelected, uiProject, i, &szText);
+				szText.Insert(0, szText.Empty() ? "In all: nothing" : "In all: ");
+			}
+			maTotals.Get(maiTotals.GetValue(i))->SetText(szText.Text());
+		}
 	}
 
 	szText.Set("");
@@ -630,7 +951,7 @@ void CIDEBuildConfigurationsDialog::ShowOptions(void)
 		mcOptions.GetNote(miSelected, &szText);
 		if (mcOptions.NumProjects(miSelected) == 0)
 		{
-			szText.Set("These are the HCP65 compiler's options: only an HCP65 configuration has them.");
+			szText.Set("This configuration builds no project.");
 		}
 		else if (mcOptions.GetStartupProject(miSelected) == MAX_SIZE)
 		{
@@ -718,9 +1039,32 @@ void CIDEBuildConfigurationsDialog::FieldChanged(CTextField* pcField)
 
 	for (i = 0; !mbUpdating && (i < NumBuildOptions()); i++)
 	{
-		if (!GetBuildOption(i)->bBoolean && (&maFields.Get(maiEditors.GetValue(i)) == pcField))
+		if (!GetBuildOption(i)->bBoolean && (GetBuildOption(i)->szChoices == NULL) && (&maFields.Get(maiEditors.GetValue(i)) == pcField))
 		{
 			SetOptionValue(i, pcField->GetText());
+			return;
+		}
+	}
+}
+
+
+//A value chosen: the first row is none, which takes the line away where the value was from.
+void CIDEBuildConfigurationsDialog::ChoiceChanged(CComboBox* pcComboBox)
+{
+	CChars	szValue;
+	size	i;
+
+	for (i = 0; !mbUpdating && (i < NumBuildOptions()); i++)
+	{
+		if ((GetBuildOption(i)->szChoices != NULL) && (&maChoices.Get(maiEditors.GetValue(i)) == pcComboBox))
+		{
+			if ((pcComboBox->GetSelected() >= 0) && (GetOptionProject(i) != MAX_SIZE))
+			{
+				szValue.Init((pcComboBox->GetSelected() == 0) ? "" : pcComboBox->GetSelectedText());
+				mcOptions.SetValue(miSelected, GetOptionProject(i), i, szValue.Text());
+				szValue.Kill();
+				mpDialog->GetWindow()->Post(this, &CIDEBuildConfigurationsDialog::ShowOptions);
+			}
 			return;
 		}
 	}
@@ -1063,22 +1407,37 @@ bool CIDEBuildConfigurationsDialog::IsEdited(void)
 void CIDEBuildConfigurationsDialog::PrintOptions(void)
 {
 	CChars	szPlace;
+	CChars	szKey;
 	size	uiProject;
 	size	i;
 
 	szPlace.Init();
+	szKey.Init();
 	printf("Build dialog: %s, project %s\n", (miSelected >= 0) ? masEntries.Get(miSelected)->mszName.Text() : "(none)", (muiProject != MAX_SIZE) ? mcOptions.GetProject(miSelected, muiProject)->mszName.Text() : "(none)");
 	for (i = 0; i < NumBuildOptions(); i++)
 	{
 		uiProject = GetOptionProject(i);
 		if (uiProject != MAX_SIZE)
 		{
+			GetBuildOptionKey(i, &szKey);
 			mcOptions.GetPlaceText(miSelected, uiProject, i, mcOptions.GetPlace(miSelected, uiProject, i), &szPlace);
-			printf("Build option: %s [%s] from [%s]\n", GetBuildOption(i)->szName, mcOptions.GetValue(miSelected, uiProject, i), szPlace.Text());
+			printf("Build option: %s [%s] from [%s]\n", szKey.Text(), mcOptions.GetValue(miSelected, uiProject, i), szPlace.Text());
+			if (GetBuildOption(i)->bAdds)
+			{
+				printf("Build option: %s %s\n", szKey.Text(), maTotals.Get(maiTotals.GetValue(i))->GetText());
+			}
+		}
+	}
+	for (i = 0; i < maSections.NumElements(); i++)
+	{
+		if ((size)maiSectionPages.GetValue(i) == GetKind())
+		{
+			printf("Build section: %s [%s], page %d high\n", GetBuildOption(maiSectionOptions.GetValue(i))->szSection, maiSectionOpen.GetValue(i) ? "open" : "folded", (int)maForms.Get(GetKind())->GetRequiredSize().y);
 		}
 	}
 	printf("Build note: [%s]\n", mpNote->GetText());
 	fflush(stdout);
+	szKey.Kill();
 	szPlace.Kill();
 }
 
@@ -1088,7 +1447,9 @@ void CIDEBuildConfigurationsDialog::PrintOptions(void)
 // For checking, what a user would do in the dialog, separated by
 // semicolons: add, remove, select:<row>, name:<text>, project:<name>,
 // set:<Option>=<value> (NoFloats=true, Entry=Start), place:<Option>=<place>
-// (configuration, platform, project, sheet, program or default), print,
+// (configuration, platform, project, sheet, sheet2, sheet3, program or
+// default; a GCC or MSVC option by its tool too, ClCompile.AdditionalOptions),
+// fold:<Section>, which folds a section of the page or opens it again, print,
 // which prints the options (PrintOptions), check, which prints whether OK
 // would close it and why not, and cleanup, which clicks Clean Up.
 //
@@ -1098,6 +1459,7 @@ void CIDEBuildConfigurationsDialog::ApplyEdits(const char* szEdits)
 	CArrayChars	aszEdits;
 	CChars		szOption;
 	size		i;
+	size		j;
 	size		uiOption;
 	char*		sz;
 	char*		szEquals;
@@ -1115,7 +1477,7 @@ void CIDEBuildConfigurationsDialog::ApplyEdits(const char* szEdits)
 		{
 			szOption.Init();
 			szOption.AppendSubString(strchr(sz, ':') + 1, szEquals);
-			uiOption = FindBuildOption(szOption.Text());
+			uiOption = (GetKind() < BOK_NumKinds) ? FindBuildOption(szOption.Text(), (EBuildOptionKind)GetKind()) : MAX_SIZE;
 			szOption.Kill();
 		}
 		if (strcmp(sz, "add") == 0)
@@ -1149,6 +1511,16 @@ void CIDEBuildConfigurationsDialog::ApplyEdits(const char* szEdits)
 				if (strcmp(gaszIDEBuildPlaces[iPlace], szEquals + 1) == 0)
 				{
 					SetOptionPlace(uiOption, (EBuildOptionPlace)iPlace);
+				}
+			}
+		}
+		else if (strncmp(sz, "fold:", 5) == 0)
+		{
+			for (j = 0; j < maSections.NumElements(); j++)
+			{
+				if (((size)maiSectionPages.GetValue(j) == GetKind()) && (strcmp(GetBuildOption(maiSectionOptions.GetValue(j))->szSection, &sz[5]) == 0))
+				{
+					ToggleSection(j);
 				}
 			}
 		}

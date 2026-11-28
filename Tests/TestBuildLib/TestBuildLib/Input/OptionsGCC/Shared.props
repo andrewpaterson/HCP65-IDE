@@ -1,0 +1,35 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!-- TestBuildOptionEditsGCC: what both projects have, as CommonLibraries' Common.props says g++'s. -->
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
+    <ClCompile>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <Optimization>Disabled</Optimization>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)'!='Debug'">
+    <ClCompile>
+      <Optimization>MaxSpeed</Optimization>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Platform)'=='GCC-x64'">
+    <ClCompile>
+      <PreprocessorDefinitions>LINUX_GNU;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>-m64 -fno-exceptions %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <AdditionalOptions>-m64 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalDependencies>pthread;dl</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|GCC-x64'">
+    <ClCompile>
+      <AdditionalOptions>%(AdditionalOptions) -g</AdditionalOptions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+</Project>

@@ -31,35 +31,67 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 //("'$(Configuration)|$(Platform)'=='Release|HCP65C816'"), one for every configuration of the platform
 //("'$(Platform)'=='HCP65C816'"), one of the project's with another condition, a property sheet the project imports,
 //the program (what the startup project says is what a project that says nothing of its own code is compiled with),
-//or nothing: the option's default.
+//or nothing: the option's default.  An option whose lines add up (SBuildOption::bAdds) may have a line in more than
+//one group of the sheets: the last read is BOP_Sheet's, the one before it BOP_Sheet2's and the one before that
+//BOP_Sheet3's.
 enum EBuildOptionPlace
 {
 	BOP_Configuration,
 	BOP_Platform,
 	BOP_Project,
 	BOP_Sheet,
+	BOP_Sheet2,
+	BOP_Sheet3,
 	BOP_Program,
 	BOP_Default,
 	BOP_NumPlaces
 };
 
 
-//An option of the HCP65 compiler or linker that a project's HCP65Compile or HCP65Link says (BuildConfigurationProject.cpp).
+//The toolchain an option is of: the dialog shows a configuration the options of its own.
+enum EBuildOptionKind
+{
+	BOK_HCP65,
+	BOK_GCC,
+	BOK_MSVC,
+	BOK_NumKinds
+};
+
+
+//An option a project says for a toolchain.  The HCP65 compiler's and linker's are in a project's HCP65Compile or
+//HCP65Link (BuildConfigurationProject.cpp); g++'s are the ClCompile and Link settings a GCC build reads
+//(CGCCBuild: the defines, the options, and what a program is linked with); MSVC's are the ClCompile and Link
+//settings the projects and their sheets set (ConfigurationsPlan.txt C9, stage 2's survey), each with the values
+//Visual Studio's property pages give it.
 //One of the whole program's is read from the startup project alone; the others are each project's own.
+//
+//An HCP65 option has one value, the most particular place's that says it.  One of g++'s adds up (bAdds): each place
+//has a line of its own, and a line that names the setting itself ("-g %(AdditionalOptions)") adds to what the less
+//particular say, so the option's value is all of them (CBuildOptionEdits::GetEffective).  The value and the place
+//the dialog shows are then one place's line, and choosing another place shows that one's, moving nothing.  It starts
+//on the project's own, so what is typed is the project's and a sheet's line is changed only by choosing it.
 struct SBuildOption
 {
-	const char*	szTool;
-	const char*	szName;
-	const char*	szLabel;
-	bool		bProgram;
-	bool		bBoolean;		//"true" or "false"; text if not.
-	const char*	szDefault;
+	const char*			szTool;
+	const char*			szName;
+	const char*			szLabel;
+	bool				bProgram;
+	bool				bBoolean;		//"true" or "false"; text if not.
+	const char*			szDefault;
+	EBuildOptionKind	eKind;
+	bool				bAdds;
+	char				cSeparator;		//Between the parts of one that adds up: ';' or ' '.
+	const char*			szChoices;		//The values it may have, separated by semicolons; NULL if it is typed.  It may also
+										//have none: nothing says it.
+	const char*			szSection;		//The section of its page it is in ("Optimisation"); NULL for the page's own two.
 };
 
 
 size				NumBuildOptions(void);
 const SBuildOption*	GetBuildOption(size uiIndex);
-size				FindBuildOption(const char* szName);
+size				FindBuildOption(const char* szName, EBuildOptionKind eKind = BOK_NumKinds);
+void				GetBuildOptionKey(size uiIndex, CChars* pszDest);
+bool				GetBuildOptionKind(const char* szPlatform, EBuildOptionKind* peKind);
 
 
 //One option of one project as one solution configuration builds it: what each place says in the files, and its value
@@ -68,6 +100,7 @@ class CBuildOptionEdit
 {
 public:
 	bool				mabSet[BOP_NumPlaces];
+	bool				mabEdited[BOP_NumPlaces];		//Of one that adds up: the place's line was set or taken away.
 	CChars				maszValues[BOP_NumPlaces];
 	CChars				maszFiles[BOP_NumPlaces];		//The project's or the sheet's.
 	CChars				maszConditions[BOP_NumPlaces];	//As the file writes it.
@@ -124,7 +157,7 @@ public:
 typedef CArrayTemplatePtr<CBuildConfigurationOptionEdits>	CArrayBuildConfigurationOptionEdits;
 
 
-//The options of a solution's HCP65 configurations, edited where they are kept: in its projects and the property
+//The options of a solution's HCP65 and GCC configurations, edited where they are kept: in its projects and the property
 //sheets they import (ConfigurationsPlan.txt C9, questions 33 to 35).  Each option of each project has a value and
 //the place it is from.  SetValue changes the value where it is from, so a sheet's changes every project that takes
 //it; SetPlace makes it the project's own, for one configuration or the platform, or takes its own lines away again so
@@ -169,6 +202,7 @@ public:
 	void				GetPlaceText(size uiConfiguration, size uiProject, size uiOption, EBuildOptionPlace ePlace, CChars* pszDest);
 	void				SetValue(size uiConfiguration, size uiProject, size uiOption, const char* szValue);
 	void				SetPlace(size uiConfiguration, size uiProject, size uiOption, EBuildOptionPlace ePlace);
+	void				GetEffective(size uiConfiguration, size uiProject, size uiOption, CChars* pszDest);
 
 	bool		IsEdited(void);
 	bool		NeedsOwnConfiguration(size uiConfiguration, size uiProject);
@@ -184,6 +218,7 @@ protected:
 	void		SetWhereSet(CBuildConfigurationOptionEdits* pcConfiguration, CBuildProjectOptionEdits* pcProject, CBuildOptionEdit* pcEdit, size uiOption);
 	void		Changed(CBuildOptionEdit* pcOrigin, size uiOption, EBuildOptionPlace ePlace, bool bSet, const char* szValue);
 	size		CountSheetProjects(const char* szSheet);
+	void		SetAddedValue(size uiConfiguration, size uiProject, size uiOption, const char* szValue);
 	void		GetOwnCondition(CBuildConfigurationOptionEdits* pcConfiguration, const char* szConfiguration, CChars* pszDest);
 	bool		ApplyConfigurations(const char* szSolutionFile);
 	bool		ApplyProject(const char* szSolutionFile, size uiConfiguration, size uiProject, CChars* pszNote);

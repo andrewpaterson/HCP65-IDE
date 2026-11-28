@@ -57,13 +57,23 @@ typedef CArrayTemplate<CIDEBuildDialogEntry>	CArrayIDEBuildDialogEntries;
 
 
 //Edit Build Configurations (ConfigurationsPlan.txt C9): a solution's build configurations, which are its solution
-//configurations, on the left, and the one selected on the right in one page of two sections (question 30).  The
+//configurations, on the left, and the one selected on the right: its name, its toolchain and the project whose own
+//code's options show, then one page of two sections (question 30).  The
 //first has the whole program's options, which are the startup project's: what it is compiled with and what it is
-//linked into.  The second has the options of one project's own code, the project chosen from a drop-down.  Beside
+//linked into.  The second has the options of the chosen project's own code.  Beside
 //each option is where its value comes from, a drop-down (questions 33 and 34): the project's own for the one
 //configuration or for every configuration of the platform, a property sheet the project imports with how many
 //projects share it, the program, or the default.  Changing a value writes it where the drop-down says; choosing
-//another place moves it.  The options are the HCP65 compiler's, so only an HCP65 configuration has them.
+//another place moves it.
+//
+//The page is its toolchain's (ConfigurationsPlan.txt C9, stage 1): the HCP65 compiler's options for an HCP65
+//configuration, g++'s for a GCC one and MSVC's for any other.  One of g++'s adds up: each
+//place has a line of its own, the drop-down chooses whose line the field shows and moves nothing, and the line under
+//the field says what all of them come to (CBuildOptionEdits::GetEffective).
+//
+//An MSVC configuration has the settings the projects and their sheets set (stage 2), most with values to choose
+//from, of which "(not set)" is one: nothing says it then.  Its page is in sections (Link, General, Optimisation,
+//Code generation, Checks and warnings), each under a heading that folds it away and brings it back.
 //
 //Add copies the configuration selected under a new name on the same toolchain, Remove takes one away and the name
 //renames it: all three change the solution's rows alone (question 35).  A project is given a configuration of its own
@@ -87,12 +97,23 @@ protected:
 	Ptr<CButton>					mpCleanUp;
 	Ptr<CTextField>					mpName;
 	Ptr<CLabel>						mpToolchain;
-	Ptr<CLabel>						mpProgram;
 	Ptr<CComboBox>					mpProject;
+	CArray<CGridContainer>			maForms;	//A page for each kind of options (EBuildOptionKind), then an empty one.
+	CArray<CLabel>					maPrograms;	//Each page's heading of the whole program's options...
+	CArray<CLabel>					maOwns;		//...and of the chosen project's own.
 	CArray<CCheckBox>				maChecks;	//The options that are on or off...
-	CArray<CTextField>				maFields;	//...and those that are text,
-	CArrayInt						maiEditors;	//each option's index in its one of those two,
+	CArray<CTextField>				maFields;	//...those that are text...
+	CArray<CComboBox>				maChoices;	//...and those with values to choose from, the first of them "(not set)",
+	CArrayInt						maiEditors;	//each option's index in its one of those three,
 	CArray<CComboBox>				maPlaces;	//and where each option's value is from, by the option's index.
+	CArray<CLabel>					maTotals;	//What an option that adds up comes to, under its field,
+	CArrayInt						maiTotals;	//by the option's index in this; -1 for one that doesn't.
+	CArray<CButton>					maSectionButtons;	//A page's named sections (SBuildOption::szSection): each one's heading, which
+	CArray<CGridContainer>			maSections;			//folds it, and its rows, which are taken off the page while it is folded;
+	CArrayInt						maiSectionPages;	//the page it is on, the page's row its rows go back in,
+	CArrayInt						maiSectionRows;
+	CArrayInt						maiSectionOptions;	//its first option, which names it,
+	CArrayInt						maiSectionOpen;		//and whether it is open.
 	Ptr<CLabel>						mpNote;
 	Ptr<CLabel>						mpError;
 	CVcxSolution*					mpcSolution;  //Not held.
@@ -121,8 +142,15 @@ public:
 
 protected:
 	Ptr<CComponent>		CreateBody(void);
-	void				AddFormRow(Ptr<CGridContainer> pForm, int32* piRow, const char* szLabel, Ptr<CComponent> pEditor, Ptr<CComponent> pPlace);
-	void				AddOptionRows(Ptr<CGridContainer> pForm, int32* piRow, bool bProgram);
+	void				AddFormRow(Ptr<CGridContainer> pForm, int32* piRow, const char* szLabel, Ptr<CComponent> pEditor, Ptr<CComponent> pPlace, int32 iLabelWidth = -1);
+	void				AddOptionRows(Ptr<CGridContainer> pPage, int32* piPageRow, bool bProgram, EBuildOptionKind eKind);
+	void				AddOptionRow(Ptr<CGridContainer> pForm, int32* piRow, size uiOption);
+	void				AddPageRow(Ptr<CGridContainer> pPage, int32* piPageRow, Ptr<CComponent> pComponent, int32 iGap);
+	void				ShowSection(size uiSection);
+	void				ToggleSection(size uiSection);
+	void				SectionClicked(CButton* pcButton);
+	void				ChoiceChanged(CComboBox* pcComboBox);
+	size				GetKind(void);
 	Ptr<CTextField>		CreateField(void);
 	void				ShowList(void);
 	void				ShowSelected(void);

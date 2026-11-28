@@ -14,6 +14,7 @@
 #define TEST_OPTIONS_PROGRAM	TEST_OPTIONS_DIRECTORY _FS_ "Program.vcxproj"
 #define TEST_OPTIONS_LIBRARY	TEST_OPTIONS_DIRECTORY _FS_ "Library.vcxproj"
 #define TEST_OPTIONS_SHEET		TEST_OPTIONS_DIRECTORY _FS_ "Shared.props"
+#define TEST_OPTIONS_GCC			"Input" _FS_ "OptionsGCC"
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -33,12 +34,16 @@ static void CopyOptionsSolution(void)
 }
 
 
+//The kind of the options the helpers below find by name: the toolchains each have a ClCompile.PreprocessorDefinitions.
+static EBuildOptionKind	geTestOptionKind = BOK_HCP65;
+
+
 static void AssertPlaceText(const char* szExpected, CBuildOptionEdits* pcEdits, size uiConfiguration, size uiProject, const char* szOption, EBuildOptionPlace ePlace)
 {
 	CChars	szText;
 
 	szText.Init();
-	pcEdits->GetPlaceText(uiConfiguration, uiProject, FindBuildOption(szOption), ePlace, &szText);
+	pcEdits->GetPlaceText(uiConfiguration, uiProject, FindBuildOption(szOption, geTestOptionKind), ePlace, &szText);
 	AssertString(szExpected, szText.Text());
 	szText.Kill();
 }
@@ -67,7 +72,7 @@ void TestBuildOptionEditsRead(void)
 	AssertSize(1, cEdits.Add("Debug|HCP65C816", "Debug|HCP65C816"));
 	AssertSize(2, cEdits.Add("Release|Win32", "Release|Win32"));
 	AssertSize(2, cEdits.NumProjects(0));
-	AssertSize(0, cEdits.NumProjects(2));	//Not an HCP65 configuration: the options aren't its.
+	AssertSize(2, cEdits.NumProjects(2));	//An MSVC configuration, which has options of its own kind.
 	AssertSize(0, cEdits.GetStartupProject(0));
 	AssertString("Program", cEdits.GetProject(0, 0)->mszName.Text());
 	AssertString("Library", cEdits.GetProject(0, 1)->mszName.Text());
@@ -371,6 +376,269 @@ void TestBuildOptionEditsConfigurations(void)
 }
 
 
+static void AssertEffective(const char* szExpected, CBuildOptionEdits* pcEdits, size uiConfiguration, size uiProject, const char* szOption)
+{
+	CChars	szText;
+
+	szText.Init();
+	pcEdits->GetEffective(uiConfiguration, uiProject, FindBuildOption(szOption, geTestOptionKind), &szText);
+	AssertString(szExpected, szText.Text());
+	szText.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A GCC configuration has g++'s options (ConfigurationsPlan.txt C9, stage
+// 1), whose lines add up: each place has its own, a sheet may have more
+// than one, and the option comes to all of them.  The line shown is one
+// place's; choosing another place shows that one's and moves nothing.  A
+// line of the project's own is written naming the setting itself, so it
+// adds; an empty one is taken away; a sheet's changes for every project
+// that has it.  An MSVC configuration has no options here.
+//
+//////////////////////////////////////////////////////////////////////////
+void TestBuildOptionEditsGCC(void)
+{
+	CVcxSolution		cSolution;
+	CBuildOptionEdits	cEdits;
+	CFileUtil			cFileUtil;
+	CChars				szNote;
+	EBuildOptionPlace	aePlaces[BOP_NumPlaces];
+	EBuildOptionKind	eKind;
+	size				uiDefines;
+	size				uiOptions;
+	size				uiLibraries;
+	size				uiPass;
+
+	cFileUtil.RemoveDir(TEST_OPTIONS_DIRECTORY);
+	AssertTrue(cFileUtil.TouchDir(TEST_OPTIONS_DIRECTORY));
+	AssertTrue(cFileUtil.CopyDir(TEST_OPTIONS_GCC, TEST_OPTIONS_DIRECTORY));
+
+	AssertTrue(GetBuildOptionKind("GCC-x64", &eKind));
+	AssertInt(BOK_GCC, eKind);
+	AssertTrue(GetBuildOptionKind("HCP65C816", &eKind));
+	AssertInt(BOK_HCP65, eKind);
+	AssertTrue(GetBuildOptionKind("x64", &eKind));
+	AssertInt(BOK_MSVC, eKind);
+	AssertFalse(GetBuildOptionKind("", &eKind));
+	geTestOptionKind = BOK_GCC;
+	uiDefines = FindBuildOption("ClCompile.PreprocessorDefinitions", BOK_GCC);
+	uiOptions = FindBuildOption("ClCompile.AdditionalOptions", BOK_GCC);
+	uiLibraries = FindBuildOption("Link.AdditionalDependencies", BOK_GCC);
+	AssertTrue((uiDefines != MAX_SIZE) && (uiOptions != MAX_SIZE) && (uiLibraries != MAX_SIZE));
+	AssertTrue(uiOptions != FindBuildOption("Link.AdditionalOptions", BOK_GCC));
+	AssertTrue(uiDefines != FindBuildOption("ClCompile.PreprocessorDefinitions", BOK_MSVC));
+	AssertTrue(uiDefines != FindBuildOption("ClCompile.PreprocessorDefinitions", BOK_HCP65));
+	AssertSize(MAX_SIZE, FindBuildOption("ClCompile.NoSuch", BOK_GCC));
+	AssertSize(MAX_SIZE, FindBuildOption("NoFloats", BOK_GCC));
+
+	//Read, then read again after the edits are written: uiPass 1 has what uiPass 0 left.
+	for (uiPass = 0; uiPass < 2; uiPass++)
+	{
+		cSolution.Init();
+		AssertTrue(cSolution.Read(TEST_OPTIONS_SOLUTION));
+		cEdits.Init(&cSolution, "Program");
+		cEdits.Add("Debug|GCC-x64", "Debug|GCC-x64");
+		cEdits.Add("Release|GCC-x64", "Release|GCC-x64");
+		cEdits.Add("Debug|x64", "Debug|x64");
+		AssertSize(2, cEdits.NumProjects(0));
+		AssertSize(2, cEdits.NumProjects(2));
+		AssertSize(0, cEdits.GetStartupProject(0));
+
+		if (uiPass == 0)
+		{
+			//The library's defines: its own line for Debug, and the sheet's two, the last read first.
+			AssertInt(BOP_Configuration, cEdits.GetPlace(0, 1, uiDefines));
+			AssertString("LIB_DEBUG;%(PreprocessorDefinitions)", cEdits.GetValue(0, 1, uiDefines));
+			AssertSize(4, cEdits.GetPlaces(0, 1, uiDefines, aePlaces));
+			AssertInt(BOP_Configuration, aePlaces[0]);
+			AssertInt(BOP_Platform, aePlaces[1]);
+			AssertInt(BOP_Sheet, aePlaces[2]);
+			AssertInt(BOP_Sheet2, aePlaces[3]);
+			AssertPlaceText("This project, Debug only", &cEdits, 0, 1, "ClCompile.PreprocessorDefinitions", BOP_Configuration);
+			AssertPlaceText("Shared.props, 2 projects, every GCC-x64 configuration", &cEdits, 0, 1, "ClCompile.PreprocessorDefinitions", BOP_Sheet);
+			AssertPlaceText("Shared.props, 2 projects, Debug only", &cEdits, 0, 1, "ClCompile.PreprocessorDefinitions", BOP_Sheet2);
+			AssertEffective("LIB_DEBUG;LINUX_GNU;_DEBUG", &cEdits, 0, 1, "ClCompile.PreprocessorDefinitions");
+			AssertEffective("LINUX_GNU", &cEdits, 1, 1, "ClCompile.PreprocessorDefinitions");
+
+			//The program's: the sheet's alone, so its own line for the platform shows, empty; the sheet's is Debug's,
+			//the last read.  And what it is linked with, its own added.
+			AssertInt(BOP_Platform, cEdits.GetPlace(0, 0, uiOptions));
+			AssertString("", cEdits.GetValue(0, 0, uiOptions));
+			cEdits.SetPlace(0, 0, uiOptions, BOP_Sheet);
+			AssertString("%(AdditionalOptions) -g", cEdits.GetValue(0, 0, uiOptions));
+			AssertPlaceText("Shared.props, 2 projects, Debug only", &cEdits, 0, 0, "ClCompile.AdditionalOptions", BOP_Sheet);
+			AssertEffective("-m64 -fno-exceptions -g", &cEdits, 0, 0, "ClCompile.AdditionalOptions");
+			AssertEffective("-m64 -fno-exceptions", &cEdits, 1, 0, "ClCompile.AdditionalOptions");
+			AssertInt(BOP_Platform, cEdits.GetPlace(0, 0, uiLibraries));
+			AssertEffective("m;pthread;dl", &cEdits, 0, 0, "Link.AdditionalDependencies");
+			AssertEffective("-m64", &cEdits, 0, 0, "Link.AdditionalOptions");
+			AssertFalse(cEdits.IsEdited());
+
+			//Looking at another place moves nothing and is no edit.
+			cEdits.SetPlace(0, 1, uiDefines, BOP_Sheet);
+			AssertString("LINUX_GNU;%(PreprocessorDefinitions)", cEdits.GetValue(0, 1, uiDefines));
+			AssertEffective("LIB_DEBUG;LINUX_GNU;_DEBUG", &cEdits, 0, 1, "ClCompile.PreprocessorDefinitions");
+			cEdits.SetPlace(0, 1, uiDefines, BOP_Platform);
+			AssertString("", cEdits.GetValue(0, 1, uiDefines));
+			AssertFalse(cEdits.IsEdited());
+
+			//The library's own line for Debug changed: it is kept as typed, and still adds, as it is written to.
+			cEdits.SetPlace(0, 1, uiDefines, BOP_Configuration);
+			cEdits.SetValue(0, 1, uiDefines, "LIB_DEBUG;EXTRA");
+			AssertString("LIB_DEBUG;EXTRA", cEdits.GetValue(0, 1, uiDefines));
+			AssertEffective("LIB_DEBUG;EXTRA;LINUX_GNU;_DEBUG", &cEdits, 0, 1, "ClCompile.PreprocessorDefinitions");
+			AssertEffective("LINUX_GNU", &cEdits, 1, 1, "ClCompile.PreprocessorDefinitions");
+
+			//The program given an option of its own for the platform: both its configurations have it.
+			cEdits.SetPlace(0, 0, uiOptions, BOP_Platform);
+			cEdits.SetValue(0, 0, uiOptions, "-Wshadow");
+			AssertString("-Wshadow", cEdits.GetValue(0, 0, uiOptions));
+			AssertEffective("-m64 -fno-exceptions -g -Wshadow", &cEdits, 0, 0, "ClCompile.AdditionalOptions");
+			AssertEffective("-m64 -fno-exceptions -Wshadow", &cEdits, 1, 0, "ClCompile.AdditionalOptions");
+			AssertEffective("-m64 -fno-exceptions -g", &cEdits, 0, 1, "ClCompile.AdditionalOptions");
+
+			//The sheet's line for the platform changed from the library: the program has it too.
+			cEdits.SetPlace(0, 1, uiOptions, BOP_Sheet2);
+			AssertString("-m64 -fno-exceptions %(AdditionalOptions)", cEdits.GetValue(0, 1, uiOptions));
+			cEdits.SetValue(0, 1, uiOptions, "-m64 -fno-exceptions -Wall %(AdditionalOptions)");
+			AssertEffective("-m64 -fno-exceptions -Wall -g", &cEdits, 0, 1, "ClCompile.AdditionalOptions");
+			AssertEffective("-m64 -fno-exceptions -Wall -g -Wshadow", &cEdits, 0, 0, "ClCompile.AdditionalOptions");
+			AssertEffective("-m64 -fno-exceptions -Wall", &cEdits, 1, 1, "ClCompile.AdditionalOptions");
+
+			//The program's own libraries emptied: the line goes, and the sheet's are what it links.
+			cEdits.SetValue(0, 0, uiLibraries, "");
+			AssertEffective("pthread;dl", &cEdits, 0, 0, "Link.AdditionalDependencies");
+			AssertEffective("pthread;dl", &cEdits, 1, 0, "Link.AdditionalDependencies");
+
+			AssertTrue(cEdits.IsEdited());
+			AssertFalse(cEdits.NeedsOwnConfiguration(0, 0));
+			AssertFalse(cEdits.NeedsOwnConfiguration(0, 1));
+			szNote.Init();
+			AssertTrue(cEdits.Check(0, &szNote));
+			AssertTrue(cEdits.Apply(TEST_OPTIONS_SOLUTION, &szNote));
+			AssertString("", szNote.Text());
+			szNote.Kill();
+		}
+		else
+		{
+			AssertString("LIB_DEBUG;EXTRA;%(PreprocessorDefinitions)", cEdits.GetValue(0, 1, uiDefines));
+			AssertEffective("LIB_DEBUG;EXTRA;LINUX_GNU;_DEBUG", &cEdits, 0, 1, "ClCompile.PreprocessorDefinitions");
+			AssertInt(BOP_Platform, cEdits.GetPlace(0, 0, uiOptions));
+			AssertString("%(AdditionalOptions) -Wshadow", cEdits.GetValue(0, 0, uiOptions));
+			AssertEffective("-m64 -fno-exceptions -Wall -g -Wshadow", &cEdits, 0, 0, "ClCompile.AdditionalOptions");
+			AssertEffective("-m64 -fno-exceptions -Wall -Wshadow", &cEdits, 1, 0, "ClCompile.AdditionalOptions");
+			AssertEffective("-m64 -fno-exceptions -Wall", &cEdits, 1, 1, "ClCompile.AdditionalOptions");
+			AssertInt(BOP_Platform, cEdits.GetPlace(0, 0, uiLibraries));
+			AssertString("", cEdits.GetValue(0, 0, uiLibraries));
+			AssertEffective("pthread;dl", &cEdits, 0, 0, "Link.AdditionalDependencies");
+			AssertEffective("-m64", &cEdits, 0, 0, "Link.AdditionalOptions");
+			AssertFalse(cEdits.IsEdited());
+		}
+		cEdits.Kill();
+		cSolution.Kill();
+	}
+	geTestOptionKind = BOK_HCP65;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// An MSVC configuration has the settings the projects and sheets set
+// (ConfigurationsPlan.txt C9, stage 2).  One with values to choose from
+// has one value, the most particular place's, as the HCP65 options have:
+// changed it is written where it is from, made the project's own it is
+// the project's, and given no value its line is taken away.  Its lists add
+// up as g++'s do.  Nothing of g++'s is among them.
+//
+//////////////////////////////////////////////////////////////////////////
+void TestBuildOptionEditsMSVC(void)
+{
+	CVcxSolution		cSolution;
+	CBuildOptionEdits	cEdits;
+	CVcxProject			cProject;
+	CFileUtil			cFileUtil;
+	CChars				szNote;
+	size				uiOptimisation;
+	size				uiRuntime;
+	size				uiSubSystem;
+	size				uiDefines;
+
+	cFileUtil.RemoveDir(TEST_OPTIONS_DIRECTORY);
+	AssertTrue(cFileUtil.TouchDir(TEST_OPTIONS_DIRECTORY));
+	AssertTrue(cFileUtil.CopyDir(TEST_OPTIONS_GCC, TEST_OPTIONS_DIRECTORY));
+	geTestOptionKind = BOK_MSVC;
+	uiOptimisation = FindBuildOption("ClCompile.Optimization", BOK_MSVC);
+	uiRuntime = FindBuildOption("ClCompile.RuntimeLibrary", BOK_MSVC);
+	uiSubSystem = FindBuildOption("Link.SubSystem", BOK_MSVC);
+	uiDefines = FindBuildOption("ClCompile.PreprocessorDefinitions", BOK_MSVC);
+	AssertTrue((uiOptimisation != MAX_SIZE) && (uiRuntime != MAX_SIZE) && (uiSubSystem != MAX_SIZE) && (uiDefines != MAX_SIZE));
+	AssertString("Disabled;MinSpace;MaxSpeed;Full", GetBuildOption(uiOptimisation)->szChoices);
+	AssertString("Optimisation", GetBuildOption(uiOptimisation)->szSection);
+	AssertNull(GetBuildOption(uiDefines)->szChoices);
+
+	cSolution.Init();
+	AssertTrue(cSolution.Read(TEST_OPTIONS_SOLUTION));
+	cEdits.Init(&cSolution, "Program");
+	cEdits.Add("Release|x64", "Release|x64");
+	cEdits.Add("Debug|x64", "Debug|x64");
+	AssertSize(2, cEdits.NumProjects(0));
+
+	//The sheet's, by each group's condition; the program's own; and one that nothing says.
+	AssertString("MaxSpeed", cEdits.GetValue(0, 0, uiOptimisation));
+	AssertInt(BOP_Sheet, cEdits.GetPlace(0, 0, uiOptimisation));
+	AssertPlaceText("Shared.props, 2 projects, every configuration but Debug", &cEdits, 0, 0, "ClCompile.Optimization", BOP_Sheet);
+	AssertString("Disabled", cEdits.GetValue(1, 0, uiOptimisation));
+	AssertPlaceText("Shared.props, 2 projects, Debug only", &cEdits, 1, 0, "ClCompile.Optimization", BOP_Sheet);
+	AssertString("Level3", cEdits.GetValue(0, 1, FindBuildOption("ClCompile.WarningLevel", BOK_MSVC)));
+	AssertPlaceText("Shared.props, 2 projects, every configuration", &cEdits, 0, 1, "ClCompile.WarningLevel", BOP_Sheet);
+	AssertString("Console", cEdits.GetValue(0, 0, uiSubSystem));
+	AssertInt(BOP_Configuration, cEdits.GetPlace(0, 0, uiSubSystem));
+	AssertString("", cEdits.GetValue(1, 0, uiSubSystem));
+	AssertString("", cEdits.GetValue(0, 0, uiRuntime));
+	AssertInt(BOP_Default, cEdits.GetPlace(0, 0, uiRuntime));
+
+	//Its defines add up, and g++'s lines aren't among them.
+	AssertString("PROGRAM;%(PreprocessorDefinitions)", cEdits.GetValue(0, 0, uiDefines));
+	AssertEffective("PROGRAM", &cEdits, 0, 0, "ClCompile.PreprocessorDefinitions");
+	AssertEffective("_DEBUG", &cEdits, 1, 1, "ClCompile.PreprocessorDefinitions");
+	AssertEffective("", &cEdits, 0, 1, "ClCompile.PreprocessorDefinitions");
+
+	//The optimisation made the program's own for Release; a runtime library chosen, which is its own for the platform;
+	//and the subsystem given no value.
+	cEdits.SetPlace(0, 0, uiOptimisation, BOP_Configuration);
+	cEdits.SetValue(0, 0, uiOptimisation, "Full");
+	cEdits.SetValue(0, 0, uiRuntime, "MultiThreadedDLL");
+	AssertInt(BOP_Platform, cEdits.GetPlace(0, 0, uiRuntime));
+	AssertString("MultiThreadedDLL", cEdits.GetValue(1, 0, uiRuntime));
+	cEdits.SetValue(0, 0, uiSubSystem, "");
+	AssertString("MaxSpeed", cEdits.GetValue(0, 1, uiOptimisation));
+	szNote.Init();
+	AssertTrue(cEdits.Check(0, &szNote));
+	AssertTrue(cEdits.Apply(TEST_OPTIONS_SOLUTION, &szNote));
+	AssertString("", szNote.Text());
+	szNote.Kill();
+	cEdits.Kill();
+	cSolution.Kill();
+
+	cProject.Init();
+	AssertTrue(cProject.Read(TEST_OPTIONS_PROGRAM));
+	AssertString("Full", cProject.FindConfiguration("Release|x64")->GetProperty("ClCompile.Optimization"));
+	AssertString("Disabled", cProject.FindConfiguration("Debug|x64")->GetProperty("ClCompile.Optimization"));
+	AssertString("MultiThreadedDLL", cProject.FindConfiguration("Release|x64")->GetProperty("ClCompile.RuntimeLibrary"));
+	AssertString("MultiThreadedDLL", cProject.FindConfiguration("Debug|x64")->GetProperty("ClCompile.RuntimeLibrary"));
+	AssertNull(cProject.FindConfiguration("Release|x64")->GetProperty("Link.SubSystem"));
+	cProject.Kill();
+	cProject.Init();
+	AssertTrue(cProject.Read(TEST_OPTIONS_LIBRARY));
+	AssertString("MaxSpeed", cProject.FindConfiguration("Release|x64")->GetProperty("ClCompile.Optimization"));
+	AssertNull(cProject.FindConfiguration("Release|x64")->GetProperty("ClCompile.RuntimeLibrary"));
+	cProject.Kill();
+	geTestOptionKind = BOK_HCP65;
+}
+
+
 //////////////////////////////////////////////////////////////////////////
 //
 //
@@ -383,6 +651,8 @@ void TestBuildOptionEdits(void)
 	TestBuildOptionEditsApply();
 	TestBuildOptionEditsOwnConfiguration();
 	TestBuildOptionEditsConfigurations();
+	TestBuildOptionEditsGCC();
+	TestBuildOptionEditsMSVC();
 
 	TestStatistics();
 }

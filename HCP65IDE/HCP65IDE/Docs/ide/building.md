@@ -56,11 +56,15 @@ its solution configurations, and the one selected on the right.  What it edits i
 and the property sheets they import, each file changed only in the lines meant, so Visual Studio and git see an
 ordinary edit.
 
-The options are the HCP65 compiler's, so only an HCP65 configuration has them.  They are in two sections:
+Above the options are the configuration's name, its toolchain and the project whose own code's options show.
+The options are its toolchain's: the HCP65 compiler's for an HCP65 configuration, g++'s for a GCC one, and
+MSVC's for any other.  They are in two parts:
 
 - **The whole program**: the startup project's options, which everything linked into the program is compiled
   with, and what the program is linked into.
-- **One project's own code**: the options of the project chosen in the drop-down.
+- **The project's own code**: the options of the project chosen in the Project drop-down.
+
+An HCP65 configuration's:
 
 | Option | Meaning |
 |---|---|
@@ -80,6 +84,44 @@ The options are the HCP65 compiler's, so only an HCP65 configuration has them.  
 | Warn when a string literal becomes a char* | Each string literal given to a `char*` is a warning in the Build tab. |
 | Accept casts like unsigned int(3) | A cast written as a type of more than one word and brackets is accepted, as the Microsoft compiler accepts it; without it, it is an error. |
 | C sources: void* and numbers convert as in C | For a project written in C: a `void*` becomes any object's pointer and a number an enum's value with no cast. |
+| Defines, Additional include directories | The project's defines and include directories, separated by semicolons.  They add up, as g++'s do (below). |
+
+A GCC configuration's:
+
+| Option | Meaning |
+|---|---|
+| Libraries linked | What the program is linked with besides the solution's libraries, separated by semicolons: a plain name is `-l<name>` (`X11` is `-lX11`). |
+| Linker options | g++'s options when it links, separated by spaces. |
+| Defines | The project's defines, separated by semicolons. |
+| Additional include directories | The project's include directories, separated by semicolons, besides its `IncludePath`. |
+| Compiler options | g++'s options when it compiles the project, separated by spaces. |
+
+These add up.  Each place has a line of its own, and a line that names the setting itself
+(`%(AdditionalOptions) -g`) adds to what the less particular places say, so the option is all of them: the line
+under the field, **In all**, says what they come to.  The field shows one place's line and the drop-down chooses
+whose, moving nothing.  It starts on the project's own line, so what is typed is the project's: a sheet's line,
+which every project that imports it has, is changed only by choosing the sheet first.  A line typed for the project is written so that it adds (its options after the sheet's,
+where one can undo one of theirs); a field emptied takes that place's line away.  A sheet has a line for the
+platform and may have one for the configuration too: each is its own place in the drop-down, and changing either
+changes it for every project that imports the sheet.
+
+An MSVC configuration's are the compiler and linker settings the projects and their property sheets set, under
+the names Visual Studio's property pages give their values.  Most have values to choose from; **(not set)** is one
+of them, and choosing it takes the setting's line away where its value was from.  The lists (the defines, the
+include and library directories, the libraries, the warnings turned off) and the other options add up as g++'s
+do.  The page is in sections, each under a heading that folds it away and opens it again:
+
+| Section | Settings |
+|---|---|
+| Link | The program's: subsystem, libraries linked, library directories, default libraries ignored, debug information, link time code generation, leaving out what nothing refers to, folding identical functions, addresses above 2 GB, safe exception handlers, target machine, other linker options. |
+| General | Defines, additional include directories, debug information, compiling on every processor, precompiled header, browse information, other compiler options. |
+| Optimisation | Optimisation, inlining, intrinsic functions, favouring size or speed, whole program optimisation, parallel code generation. |
+| Code generation | Runtime library, C++ exceptions, calling convention, instruction set, floating point and its exceptions, pooling string literals, a section for each function, leaving out what nothing refers to, OpenMP. |
+| Checks and warnings | Runtime checks, buffer security check, SDL checks, EH continuation metadata, warning level, warnings as errors, warnings turned off. |
+
+A setting the dialog doesn't show is left as it is in the files.  Not shown yet: the project's `IncludePath` and
+its other properties (its type, character set and toolset), and the settings of Visual Studio's property pages
+that no project here sets.
 
 Beside each option is a drop-down that says where its value comes from:
 
