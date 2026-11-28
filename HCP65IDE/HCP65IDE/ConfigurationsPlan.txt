@@ -904,6 +904,11 @@ V1. The 65 suites' second pass.  TestBaseLib65, TestStandardLib65, TestSupportLi
     their solutions (C13-3, The other CMakeLists.txt) ctest ran the first pass only: all four passed.  Their compile
     commands are as they were and they link the libraries they did, so the second pass is expected to pass; it
     wasn't run.
+V2, run 2026-11-28: HCP65IDE, HCP65Emulator and HCP65Sculpt each built in Debug in a folder of its own, with
+    -DDEBUG_POINTER on StandardLib's 133 sources.  52 of the IDE's checks (every twelfth, and the build options')
+    run on the Debug HCP65IDERef with BASELIB_BREAK=0: 51 pass.  The other, build-options-built, waits 300 ticks for
+    an HCP65 build that the unoptimised compiler hadn't finished (6 of its 13 units): the dialog had written what it
+    should.  The check's wait is for the Release program, which the checks are run on.  As it was put:
 V2. The three programs' Debug builds.  HCP65IDE, HCP65Emulator and HCP65Sculpt were configured in Debug and Release
     with the module as it is now, not built: their Release commands are unchanged, and in Debug StandardLib's 133
     sources gain DEBUG_POINTER, which the projects' Debug|GCC-x64 group now says (C13-3, DEBUG_POINTER).  A Debug
