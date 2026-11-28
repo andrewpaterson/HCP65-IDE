@@ -1188,3 +1188,17 @@ Questions (the user's, one at a time)
    an option Debug and Release share stays written once.  The others considered: Visual Studio's "All
    Configurations" in the dialog's list of configurations (an option whose values differ can only show that they
    do, and an edit made in Release always writes a line for Release); always the one configuration shown.
+35. Decided (the user, 2026-11-28: "35 -> A with a dialog note on the hidden step and a clean up configurations
+   option somewhere meaningful"): what Add, Remove and Rename of a build configuration do (C9-6).  They change the
+   solution's rows only.  Add copies the configuration selected under a new name, on its toolchain, each project's
+   row as the copied one's, so only the .sln changes and the new one builds what the old one does.  A project is
+   given a configuration of that name (and the x64 one its row must name, question 32) when an option of it is first
+   changed under the new configuration, and its row then names it; the dialog says so when it does, naming the
+   project and the solution it wrote.  Remove takes the rows away and Rename renames them; the projects keep their
+   own configurations, which another solution may build.  What that leaves, a project's configuration no solution
+   builds, is taken away by a clean up the user asks for.  Where the clean up is, chosen when the plan was written
+   and not the user's words: a Clean Up button in the dialog beside Add and Remove, which lists each project's
+   configurations that no row of the workspace's solutions names, ticked to remove, and removes nothing until
+   confirmed; it can only know the solutions the workspace has, and says so.  The others considered: Visual Studio's
+   "create new project configurations" (every project of the solution, the shared libraries too, given the
+   configuration at once); no Add, Remove or Rename in the dialog.
