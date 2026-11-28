@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- TestVcxConfigurations: what the program and the library share. -->
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|HCP65C816'">
+    <HCP65Compile>
+      <Debug>true</Debug>
+    </HCP65Compile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Platform)'=='HCP65C816'">
+    <HCP65Compile>
+      <NoFloats>false</NoFloats>
+      <WarnStringToPointer>false</WarnStringToPointer>
+    </HCP65Compile>
+  </ItemDefinitionGroup>
+</Project>

@@ -7,6 +7,7 @@
 
 void TestBuildConfigurations(void);
 void TestBuildWorkspace(void);
+void TestBuildOptionEdits(void);
 void TestBuild(void);
 void TestBuildCommandLine(void);
 
@@ -27,6 +28,7 @@ int __cdecl main(void)
 
 	TestBuildConfigurations();
 	TestBuildWorkspace();
+	TestBuildOptionEdits();
 	TestBuild();
 	TestBuildCommandLine();
 

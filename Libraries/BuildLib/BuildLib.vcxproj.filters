@@ -42,6 +42,9 @@
     <ClCompile Include="BuildUpToDate.cpp">
       <Filter>Source\Build</Filter>
     </ClCompile>
+    <ClCompile Include="BuildOptionEdits.cpp">
+      <Filter>Source\Build</Filter>
+    </ClCompile>
     <ClCompile Include="MSVCBuild.cpp">
       <Filter>Source\Build</Filter>
     </ClCompile>
@@ -90,6 +93,9 @@
       <Filter>Source\Build</Filter>
     </ClInclude>
     <ClInclude Include="BuildUpToDate.h">
+      <Filter>Source\Build</Filter>
+    </ClInclude>
+    <ClInclude Include="BuildOptionEdits.h">
       <Filter>Source\Build</Filter>
     </ClInclude>
     <ClInclude Include="MSVCBuild.h">

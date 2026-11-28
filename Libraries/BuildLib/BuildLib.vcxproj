@@ -24,6 +24,7 @@
     <ClCompile Include="BuildConfigurationProject.cpp" />
     <ClCompile Include="BuildConfigurations.cpp" />
     <ClCompile Include="BuildUpToDate.cpp" />
+    <ClCompile Include="BuildOptionEdits.cpp" />
     <ClCompile Include="BuildWorkspace.cpp" />
     <ClCompile Include="RunConfiguration.cpp" />
     <ClCompile Include="BuildConfigurationEdit.cpp" />
@@ -42,6 +43,7 @@
     <ClInclude Include="BuildConfiguration.h" />
     <ClInclude Include="BuildConfigurations.h" />
     <ClInclude Include="BuildUpToDate.h" />
+    <ClInclude Include="BuildOptionEdits.h" />
     <ClInclude Include="BuildWorkspace.h" />
     <ClInclude Include="RunConfiguration.h" />
     <ClInclude Include="BuildConfigurationEdit.h" />
