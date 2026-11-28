@@ -350,6 +350,11 @@ C5. The code index reads with the configuration's toolchain
   is TestWorkspaceIndexTarget's fixture read a fourth way.  hcp65index -config names the configuration: TestBaseLib's
   solution in Release|GCC-x64 indexes its 642 units with nothing it can't include, and has the _Linux.cpp files'
   symbols where Release|x64 has the _Windows.cpp files'.  Not done: the type model stays the host's (LLP64).
+  Decided (the user, 2026-11-28: "Leave it, recorded"): it is left.  A GCC configuration's code is checked with
+  long as 4 bytes where g++ on Linux has 8; that is only what the editor's checks take sizeof(long) to be, and
+  builds aren't affected, g++ compiling them.  CppCompilerLib has long's size as 4 in its type model, its mangler,
+  its constant folder, its overload resolution and its literals' types (a target says only its int's and its
+  pointer's size), so changing it is the compiler library's own work, not this plan's.
   Each project's own options, built 2026-11-28: a unit of an HCP65 configuration is checked with its project's own
   compile options in place of the program's where it has any (CWorkspaceIndex::SetOwnOptions, as
   CHCP65Build::SetOwnOptions), so the editor warns of what the build warns of.  TestWorkspaceIndexRuntime
