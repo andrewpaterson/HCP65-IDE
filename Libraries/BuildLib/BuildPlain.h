@@ -37,12 +37,12 @@ bool	BuildIsOption(const char* szArgument, const char* szName);
 //Whether szArgument looks like an option at all.
 bool	BuildLooksLikeOption(const char* szArgument);
 
-//A number as hcp65build and .hcp65build files take them: decimal, 0x hexadecimal or $ hexadecimal.  False if it isn't one.
+//A number as hcp65build takes them: decimal, 0x hexadecimal or $ hexadecimal.  False if it isn't one.
 bool	BuildParseNumber(const char* szNumber, int64* piValue);
 bool	BuildParseUint32(const char* szNumber, uint32* puiValue);
 
 
-//hcp65build's plain command line: what to compile and link given as options, with no solution or .hcp65build.
+//hcp65build's plain command line: what to compile and link given as options, with no solution.
 //
 //	-target W65C816|65C64				The toolchain (W65C816 by default).
 //	-I <dir>, -I+ <dir>					An include directory, without or with its sub directories.  Before the first

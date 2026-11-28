@@ -569,16 +569,12 @@ void CIDEBuilding::RequestEditDialog(void)
 //
 // The startup solution's build configurations edited, the chosen one
 // selected (ConfigurationsPlan.txt C9).  OK saves them; Clean Up saves
-// them and then offers the configurations no solution builds.  A solution
-// whose build configurations are still in a file beside it has that
-// opened instead: the dialog edits what the projects say.
+// them and then offers the configurations no solution builds.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEBuilding::ShowEditDialog(void)
 {
 	CBuildWorkspaceSolution*	pcSolution;
-	CFileUtil					cFileUtil;
-	CChars						szFile;
 	bool						bOK;
 	bool						bCleanUp;
 
@@ -591,17 +587,6 @@ void CIDEBuilding::ShowEditDialog(void)
 	{
 		return;
 	}
-	szFile.Init();
-	CBuildConfigurations::GetFileName(pcSolution->mszFile.Text(), &szFile);
-	if (cFileUtil.Exists(szFile.Text()))
-	{
-		mpcContent->GetDocuments()->OpenFile(szFile.Text());
-		mpcContent->ShowStatus("This solution's build configurations are in the file beside it, which is open to edit.");
-		szFile.Kill();
-		return;
-	}
-	szFile.Kill();
-
 	mpDialog = OMalloc<CIDEBuildConfigurationsDialog>(mpcContent->GetWindow(), mpcContent->GetDialogLook(), &pcSolution->mcSolution, pcSolution->GetStartupProjectName(), mpcContent->GetBuildConfigurations()->GetConfigurationName());
 	if (getenv("HCP65_IDE_BUILD_EDITS") != NULL)
 	{

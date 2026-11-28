@@ -424,29 +424,19 @@ int CBuildCommandLine::Run(const char* szToolDirectory)
 		return BUILD_EXIT_USAGE;
 	}
 	cFileUtil.FullPath(&mszFile);
-	if (mszFile.EndsWithIgnoreCase(BUILD_CONFIGURATIONS_EXTENSION))
+	if (mszFile.EndsWithIgnoreCase(BUILD_CONFIGURATIONS_OLD_EXTENSION))
 	{
-		//A solution's configurations: the solution (or project) beside them is built.
-		szLine.Init();
-		if (!FindSolutionFile(mszFile.Text(), &szLine))
-		{
-			szLine.Set("Could not find the .sln or .vcxproj that ");
-			szLine.Append(mszFile);
-			szLine.Append(" is for (the same name beside it).");
-			WriteLine(szLine.Text());
-			szLine.Kill();
-			return BUILD_EXIT_USAGE;
-		}
-		mszFile.Set(szLine);
+		szLine.Init(mszFile);
+		szLine.Append(" isn't read any more: a solution's build configurations are its own, and its projects say how each compiles and links.  Give the .sln.");
+		WriteLine(szLine.Text());
 		szLine.Kill();
+		return BUILD_EXIT_USAGE;
 	}
 	if (!mcWorkspace.Open(mszFile.Text()) || (mcWorkspace.NumSolutions() == 0))
 	{
 		szLine.Init("Could not read ");
 		szLine.Append(mszFile);
-		szLine.Append(" (a .sln, .vcxproj, ");
-		szLine.Append(BUILD_CONFIGURATIONS_EXTENSION);
-		szLine.Append(" or ");
+		szLine.Append(" (a .sln, .vcxproj or ");
 		szLine.Append(BUILD_WORKSPACE_EXTENSION);
 		szLine.Append(").");
 		WriteLine(szLine.Text());
@@ -915,7 +905,7 @@ bool CBuildCommandLine::BuildSolution(size uiSolution, bool bHeading)
 //////////////////////////////////////////////////////////////////////////
 //
 // The built executable or module onto the configuration's card (an SD
-// card image, relative to the solution's .hcp65build) as its CardPath, as
+// card image, relative to the solution's folder) as its CardPath, as
 // the IDE does before debugging.
 //
 //////////////////////////////////////////////////////////////////////////
@@ -942,7 +932,7 @@ bool CBuildCommandLine::PutOnCard(size uiSolution, CBuildConfiguration* pcConfig
 	{
 		szLine.Init();
 		szName.Init();
-		CBuildConfigurations::GetFileName(pcSolution->mszFile.Text(), &szLine);
+		szLine.Set(pcSolution->mszFile);
 		cFileUtil.SplitPath(szLine.Text(), &szName, &szCard);
 		cFileUtil.AppendToPath(&szCard, pcConfiguration->GetCard());
 		cFileUtil.FullPath(&szCard);
@@ -1070,11 +1060,10 @@ void CBuildCommandLine::WriteUsage(void)
 {
 	WriteLine("hcp65build: compiles and links HCP65 programs from the command line, as HCP65-IDE does.");
 	WriteLine("");
-	WriteLine("  hcp65build <file.sln | file.vcxproj | file.hcp65build | file.hcp65workspace> [options]");
+	WriteLine("  hcp65build <file.sln | file.vcxproj | file.hcp65workspace> [options]");
 	WriteLine("");
-	WriteLine("A .hcp65build builds the .sln of the same name beside it (else the .vcxproj).");
 	WriteLine("");
-	WriteLine("  -config \"Release|HCP65C816\"  The build configuration (from the .hcp65build beside the solution).");
+	WriteLine("  -config \"Release|HCP65C816\"  The build configuration: one of the solution's.");
 	WriteLine("                             Default: the workspace's last one, else the first HCP65 one.");
 	WriteLine("  -startup <project>         The application built into its solution's program (the solution's startup");
 	WriteLine("                             project).  Default: the one its workspace says, else its first.");
@@ -1176,36 +1165,6 @@ bool CBuildCommandLine::FindLibc65(const char* szDirectory, CChars* pszDest)
 			return false;
 		}
 	}
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// The solution a configurations file (szConfigurations, .hcp65build) is
-// for: the .sln of the same name beside it, else the .vcxproj (a project
-// opened as its own solution), as CBuildConfigurations::GetFileName names
-// them.  False if neither is there.
-//
-//////////////////////////////////////////////////////////////////////////
-bool CBuildCommandLine::FindSolutionFile(const char* szConfigurations, CChars* pszDest)
-{
-	CFileUtil	cFileUtil;
-
-	pszDest->Set(szConfigurations);
-	cFileUtil.RemoveExtension(pszDest);
-	pszDest->Append(".sln");
-	if (cFileUtil.Exists(pszDest->Text()))
-	{
-		return true;
-	}
-	cFileUtil.RemoveExtension(pszDest);
-	pszDest->Append(".vcxproj");
-	if (cFileUtil.Exists(pszDest->Text()))
-	{
-		return true;
-	}
-	pszDest->Set("");
-	return false;
 }
 
 

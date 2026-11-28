@@ -89,7 +89,7 @@ typedef CArrayTemplate<SBuildWorkspaceProject>		CArrayBuildWorkspaceProjects;
 //A solution's StartupProject is the application of its that was chosen as its startup project (see
 //CBuildWorkspaceSolution); it is only written for a solution one was chosen for.
 //
-//Each solution has its own configurations (its .hcp65build); a configuration is chosen by name for all of them.
+//Each solution has its own configurations (its solution configurations); one is chosen by name for all of them.
 //Its projects are numbered once across the solutions (NumProjects), so a shared project is one project.  Built by a
 //configuration name, a solution whose program another loads (a <Load> of the program's file) is built before it.
 class CBuildWorkspace

@@ -209,79 +209,6 @@ CBuildConfiguration* CBuildConfigurations::Add(const char* szName, EBuildToolcha
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Replaces the configurations with szFileName's.  False, and none, if it
-// can't be read or one of its configurations isn't right.
-//
-//////////////////////////////////////////////////////////////////////////
-bool CBuildConfigurations::Read(const char* szFileName)
-{
-	CXMLFile				cFile;
-	CFileUtil				cFileUtil;
-	CChars					szName;
-	CChars					szDirectory;
-	CMarkupTag*				pcRoot;
-	CMarkupTag*				pcTag;
-	STagIterator			sIterator;
-	CBuildConfiguration*	pcConfiguration;
-	bool					bResult;
-
-	Clear();
-	szName.Init();
-	szDirectory.Init();
-	cFileUtil.SplitPath(szFileName, &szName, &szDirectory);
-	if (szDirectory.Empty())
-	{
-		szDirectory.Set(".");
-	}
-	cFile.Init();
-	bResult = cFileUtil.Exists(szFileName) && cFile.Read(szName.Text(), szDirectory.Text()) && cFile.mcMarkup.mpcDoc;
-	pcRoot = bResult ? cFile.mcMarkup.mpcDoc->GetRootTag() : NULL;
-	bResult = pcRoot && (StringCompare(pcRoot->GetName(), BUILD_CONFIGURATIONS_TAG) == 0);
-	if (bResult)
-	{
-		for (pcTag = pcRoot->GetTag(&sIterator); pcTag && bResult; pcTag = pcRoot->GetNextTag(&sIterator))
-		{
-			pcConfiguration = masConfigurations.Add();
-			pcConfiguration->Init();
-			bResult = pcConfiguration->LoadXML(pcTag);
-		}
-	}
-	cFile.Kill();
-	szDirectory.Kill();
-	szName.Kill();
-	if (!bResult)
-	{
-		Clear();
-	}
-	return bResult;
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-//
-//////////////////////////////////////////////////////////////////////////
-bool CBuildConfigurations::Write(const char* szFileName)
-{
-	CXMLWriter	cWriter;
-	size		i;
-	bool		bResult;
-
-	cWriter.Init();
-	cWriter.Begin(BUILD_CONFIGURATIONS_TAG);
-	for (i = 0; i < masConfigurations.NumElements(); i++)
-	{
-		masConfigurations.Get(i)->SaveXML(&cWriter);
-	}
-	cWriter.End();
-	bResult = cWriter.Write(szFileName);
-	cWriter.Kill();
-	return bResult;
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
 // The configuration called szName, NULL if there is none.
 //
 //////////////////////////////////////////////////////////////////////////
@@ -377,22 +304,6 @@ void CBuildConfigurations::GetNames(CArrayChars* paszDest, bool bPlatforms)
 		}
 		szName.Kill();
 	}
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-//
-// The configurations file of the solution (or project) szSolutionFile:
-// its name with .hcp65build for its extension.
-//
-//////////////////////////////////////////////////////////////////////////
-void CBuildConfigurations::GetFileName(const char* szSolutionFile, CChars* pszDest)
-{
-	CFileUtil	cFileUtil;
-
-	pszDest->Set(szSolutionFile);
-	cFileUtil.RemoveExtension(pszDest);
-	pszDest->Append(BUILD_CONFIGURATIONS_EXTENSION);
 }
 
 

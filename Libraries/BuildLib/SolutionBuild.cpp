@@ -18,6 +18,8 @@ You should have received a copy of the GNU Lesser General Public License
 along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 
 ** ------------------------------------------------------------------------ **/
+#include "BaseLib/FileUtil.h"
+#include "BuildConfigurations.h"
 #include "SolutionBuild.h"
 
 
@@ -61,6 +63,30 @@ void CSolutionBuild::End(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// A solution's build configurations were once in a file beside it, which
+// isn't read any more (ConfigurationsPlan.txt question 36): a build says
+// so when one is there, as what it said no longer happens.
+//
+//////////////////////////////////////////////////////////////////////////
+void CSolutionBuild::AddOldFileLine(CVcxSolution* pcSolution, CArrayChars* paszLines)
+{
+	CFileUtil	cFileUtil;
+	CChars		szFile;
+
+	szFile.Init(pcSolution->GetFileName());
+	cFileUtil.RemoveExtension(&szFile);
+	szFile.Append(BUILD_CONFIGURATIONS_OLD_EXTENSION);
+	if (cFileUtil.Exists(szFile.Text()))
+	{
+		szFile.Append(" isn't read any more: a solution's build configurations are its own, its projects say how each compiles and links, and a run configuration how it is debugged.");
+		paszLines->Add(szFile.Text());
+	}
+	szFile.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Starts building pcSolution in pcConfiguration, its output and listings
 // in szRoot (NULL for beside the solution); an HCP65 build's system
 // headers are szLibc65Directory's.  The lines written so far are added to
@@ -74,6 +100,7 @@ bool CSolutionBuild::Start(CVcxSolution* pcSolution, CBuildConfiguration* pcConf
 		return false;
 	}
 	End();
+	AddOldFileLine(pcSolution, paszLines);
 
 	if (pcConfiguration->IsHCP65())
 	{

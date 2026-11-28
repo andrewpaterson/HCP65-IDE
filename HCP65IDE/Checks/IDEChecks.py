@@ -63,8 +63,8 @@ NATIVE_SMOKE = ['explorer']
 
 #Files the checks edit in the IDE (never saving them) and the user's files a scripted run mustn't write.
 WATCHED = [os.path.join(BASELIB, f) for f in ['CalculatorParser.cpp', 'CalculatorParser.h', 'CalculatorSymbols.cpp', 'CalcParentheses.h', 'CalcExpression.h']] + \
-          [os.path.join(KERNAL, 'HCP65Kernal.layout.user'), os.path.join(KERNAL, 'HCP65Kernal.hcp65workspace'), os.path.join(KERNAL, 'HCP65Kernal.hcp65build'),
-           os.path.join(MODPLAY, 'HCP65ModPlay.layout.user'), os.path.join(MODPLAY, 'HCP65ModPlay.hcp65workspace'), os.path.join(MODPLAY, 'HCP65ModPlay.hcp65build'),
+          [os.path.join(KERNAL, 'HCP65Kernal.layout.user'), os.path.join(KERNAL, 'HCP65Kernal.hcp65workspace'),
+           os.path.join(MODPLAY, 'HCP65ModPlay.layout.user'), os.path.join(MODPLAY, 'HCP65ModPlay.hcp65workspace'),
            USER_RECENT, os.path.expanduser('~/.config/HCP65IDE/Keymap.xml')]
 #The user's files that are put back as they were when the checks end, if anything changed them.
 RESTORED = [USER_RECENT] + [f for f in WATCHED if f.endswith('.layout.user') or f.endswith('.hcp65workspace')]

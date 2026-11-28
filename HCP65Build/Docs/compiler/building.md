@@ -22,15 +22,12 @@ It is built with the HCP65 IDE (`HCP65-IDE/HCP65Build`).  On Linux it's `hcp65bu
 ## Building a solution
 
 ```text
-hcp65build <file.sln | file.vcxproj | file.hcp65build | file.hcp65workspace> [options]
+hcp65build <file.sln | file.vcxproj | file.hcp65workspace> [options]
 ```
-
-An `.hcp65build` file builds the `.sln` of the same name beside it, or the `.vcxproj` if there is
-no solution.
 
 | Option | Meaning |
 |---|---|
-| <code>-config "Release&#124;HCP65C816"</code> | The configuration to build: one the solution lists, or its `.hcp65build` file.  Default: the workspace's last one, else the first HCP65 one. |
+| <code>-config "Release&#124;HCP65C816"</code> | The configuration to build: one the solution lists.  Default: the workspace's last one, else the first HCP65 one. |
 | `-run "ModPlay Debug"` | The [run configuration](../ide/building.md#run-configurations): it names the configuration to build, and its card file says which card `-card` writes.  Default: the first run configuration that builds the configuration. |
 | `-rebuild` | Build everything.  Without it a GCC or MSVC build leaves what is up to date; an HCP65 build compiles everything either way. |
 | `-startup <project>` | The project whose program is built.  Default: the one the workspace names, else the first. |
@@ -66,7 +63,7 @@ A group for a platform is every configuration's of it; one for
 be in a property sheet the project imports: `CommonLibraries/HCP65Compile.props`, which every project the HCP65
 compiler builds imports, has `Debug` for the Debug configurations.
 
-`HCP65Compile` has the compile options, each named as its attribute in the table below with `true` or `false`.
+`HCP65Compile` has the compile options, each named as in the table below with `true` or `false`.
 They are of two kinds:
 
 - **The whole program's**: `NoFloats`, `MathTables`, `PreferSize`, `Exceptions`, `KeepUnusedObjects` and
@@ -76,78 +73,44 @@ They are of two kinds:
   `CConversions`.  Each project's are its own code's.  A project that says nothing of one, and the runtime, have
   what the program's project says.
 
-`HCP65Link`, in the program's project, says what is linked: one of `Executable`, `Module` or `Image` names the
-file, as the elements below do, with `Entry`, `Limit`, `Size`, `Fill`, `Load` and `Text` as their attributes.  An
-executable's `Symbols` are `Name=Value` and an image's `Regions` `Start-End@Offset`, each separated by semicolons.
-
-What a project doesn't say is as the `.hcp65build` file has it, if the solution has one.  How a program is
-debugged (its card, the boot ROM loaded first) is its [run configuration](../ide/building.md#run-configurations)'s.
-
-### The .hcp65build file
-
-An `.hcp65build` file is XML: a list of configurations, each naming a toolchain, the Visual Studio
-configuration whose files and settings it builds, and how it is debugged.  It can say how to compile and
-what to link too, as the HCP65's own solutions did before their projects said it; this is such a file:
-
-```xml
-<?xml version="1.0" encoding="utf-8"?>
-<BuildConfigurations>
-	<Configuration Name="Release|HCP65C816" Toolchain="W65C816" Solution="Release|Win32"
-	               BreakpointSpace="User" Card="..\HCP65-Emulator\TestHCP65Lib\TestHCP65Lib\Output\BootCard.img"
-	               CardPath="\modplay.exe">
-		<Executable File="modplay.exe" Entry="UserStart" Limit="0x200000">
-			<Symbol Name="UserHeapSize" Value="0x180000"/>
-		</Executable>
-		<Load File="..\Boot\Output\HCP65C816\Release\Boot.rom" Address="0x0"/>
-		<Lines File="..\Kernal\Output\HCP65C816\Release\OS.SYS" CardPath="\OS\OS.SYS"/>
-	</Configuration>
-</BuildConfigurations>
-```
-
-| Attribute of `Configuration` | Meaning |
+| Setting of `HCP65Compile` | Meaning |
 |---|---|
-| `Name` | What the configuration is chosen by: its configuration and platform either side of a <code>&#124;</code>. |
-| `Toolchain` | `W65C816` or `65C64`.  A configuration can also name a native toolchain (MSVC or GCC), which the IDE uses to build for the host. |
-| `Solution` | The Visual Studio configuration whose projects, files, include directories and defines are built (<code>Debug&#124;Win32</code>). |
-| `NoFloats="true"` | Floating point is an error.  The kernal is built this way. |
-| `MathTables="false"` | Build to run without the maths tables in memory: the multiplies use the table-free runtime.  For the kernal, its drivers and the operating system, which run before the tables are loaded. |
-| `PreferSize="true"` | Prefer smaller code to faster where the compiler has the choice. |
-| `Exceptions="true"` | Compiles the program with C++ exceptions: `throw`, `try` and `catch`.  Without it they are errors, and no code pays for them; with it a program is a few percent bigger and slower.  See [Exceptions](language.md#exceptions). |
-| `WarnMissingOverride="false"` | No warning for a function that overrides a base class's virtual function without being declared `override` (or `final`).  The warning is on unless a configuration says this. |
-| `KeepUnusedObjects="true"` | Link a global whose making or destroying runs code (a constructor, a destructor, an initialiser that isn't a constant) though nothing refers to it, so it is made and destroyed as the standard says.  Without it such a global goes with the rest of what nothing uses. |
-| `WarnStringToPointer="true"` | Warn when a string literal, which is `const`, becomes a `char*`.  C++14 has no such conversion; the compiler still makes it, as code written before is full of it, and says nothing unless a configuration asks. |
-| `MultiWordCasts="true"` | Accept `unsigned int(3)`, a cast written as a type of more than one word and brackets, as the Microsoft compiler does.  Without it that is an error, as C++14 has it: write `unsigned(3)` or `(unsigned int)3`. |
-| `CConversions="true"` | The sources are C: a `void*` becomes a pointer to any object and a number an enum's value with no cast, an enum is incremented, and a pointer is compared with `0` by `<` and `>`.  C++ refuses each of these. |
-| `StubMissing="true"` | A function used but defined by no unit is a warning, and the program stops if it gets there.  Without it the build fails naming each one.  A module (a driver) is never checked: what it doesn't define is imported from the kernal when it is loaded. |
-| `Debug="true"` | Built for the debugger: each variable, parameters too, is kept in its frame where the debugger reads it, nothing is inlined, and every function has a frame of its own.  The rest is still optimised, so the kernal still fits.  Usually set on the `Debug\|HCP65C816` configuration. |
-| `Unoptimised="Init, Shell"` | These projects (by name, separated by commas) are built for the debugger without the optimiser at all, so stepping follows every line as it is written: for a program that fits and needn't be fast. |
-| `BreakpointSpace` | The emulator's address space (`Kernel` or `User`) that the IDE's breakpoints go in. |
-| `Card`, `CardPath` | An SD card image, and the path on its FAT volume, that `-card` and the IDE's debugger copy the program to. |
+| `NoFloats` `true` | Floating point is an error.  The kernal is built this way. |
+| `MathTables` `false` | Build to run without the maths tables in memory: the multiplies use the table-free runtime.  For the kernal, its drivers and the operating system, which run before the tables are loaded. |
+| `PreferSize` `true` | Prefer smaller code to faster where the compiler has the choice. |
+| `Exceptions` `true` | Compiles the program with C++ exceptions: `throw`, `try` and `catch`.  Without it they are errors, and no code pays for them; with it a program is a few percent bigger and slower.  See [Exceptions](language.md#exceptions). |
+| `WarnMissingOverride` `false` | No warning for a function that overrides a base class's virtual function without being declared `override` (or `final`).  The warning is on unless a project says this. |
+| `KeepUnusedObjects` `true` | Link a global whose making or destroying runs code (a constructor, a destructor, an initialiser that isn't a constant) though nothing refers to it, so it is made and destroyed as the standard says.  Without it such a global goes with the rest of what nothing uses. |
+| `WarnStringToPointer` `true` | Warn when a string literal, which is `const`, becomes a `char*`.  C++14 has no such conversion; the compiler still makes it, as code written before is full of it, and says nothing unless a configuration asks. |
+| `MultiWordCasts` `true` | Accept `unsigned int(3)`, a cast written as a type of more than one word and brackets, as the Microsoft compiler does.  Without it that is an error, as C++14 has it: write `unsigned(3)` or `(unsigned int)3`. |
+| `CConversions` `true` | The sources are C: a `void*` becomes a pointer to any object and a number an enum's value with no cast, an enum is incremented, and a pointer is compared with `0` by `<` and `>`.  C++ refuses each of these. |
+| `StubMissing` `true` | A function used but defined by no unit is a warning, and the program stops if it gets there.  Without it the build fails naming each one.  A module (a driver) is never checked: what it doesn't define is imported from the kernal when it is loaded. |
+| `Debug` `true` | Built for the debugger: each variable, parameters too, is kept in its frame where the debugger reads it, nothing is inlined, and every function has a frame of its own.  The rest is still optimised, so the kernal still fits.  Usually set on the `Debug\|HCP65C816` configuration. |
+| `Unoptimised` `true` | The project is built for the debugger without the optimiser at all, so stepping follows every line as it is written: for a program that is being stepped through, at the cost of its size and speed. |
 
-A configuration has at most one of these, which says what the build writes.  Without one the
-units are only compiled.
+`HCP65Link`, in the program's project, says what is linked.  It names one file, which says what the build writes;
+a project with none is only compiled.
 
-| Element | Writes |
+| Setting of `HCP65Link` | Writes |
 |---|---|
-| `<Executable File Entry Limit>` | A program the HCP65 kernal loads and runs.  `<Symbol Name Value/>` children are absolute symbols the loader or the program reads, such as `UserHeapSize`. |
-| `<Image File Size Fill Limit Load Text>` | A file of a fixed size, such as a ROM.  `<Region Start End Offset/>` children say where the code linked at each range of addresses goes in the file; unused bytes are `Fill`.  `Text` (optional) is where the code starts. |
-| `<Module File Entry Limit>` | A relocatable driver the kernal can load anywhere in a bank. |
+| `Executable`, with `Entry`, `Limit` and `Symbols` | A program the HCP65 kernal loads and runs.  `Symbols` are absolute symbols the loader or the program reads, `Name=Value` separated by semicolons, such as `UserHeapSize=0x180000`. |
+| `Image`, with `Size`, `Fill`, `Limit`, `Load`, `Text` and `Regions` | A file of a fixed size, such as a ROM.  `Regions` say where the code linked at each range of addresses goes in the file, `Start-End@Offset` separated by semicolons. |
+| `Module`, with `Entry` and `Limit` | A relocatable driver the kernal can load anywhere in a bank. |
 
-`Limit` is the highest address the linker may place anything at.  `<Load File Address/>` is a
-file the IDE's debugger loads into the emulator first: the boot loader's ROM for a program to run
-on.
+`Limit` is the highest address the linker may place anything at.  Numbers are decimal or `0x` hexadecimal.
 
-`<Lines File Space CardPath/>` is a program whose line table the debugger reads without loading
-it: the kernal, `OS.SYS`, which the boot loader loads from the card where it is linked.  Its
-source breakpoints go in the breakpoint space `Space` (`Kernel` if left out), in every process,
-and stepping into it shows its source.  `CardPath`, if given, is where it should be on the card:
-when debugging starts, the Build tab says if the card's copy isn't the one built, since its lines
-would then be wrong.
+The solution says which configurations there are and what each builds: its solution configurations, a row for
+each project.  The runtime, Libc65, is a project the solution lists and builds in its HCP65 configurations and in
+no other; a build takes the system headers and the runtime from it, and says so if a solution's HCP65
+configuration builds none.
 
-The debugger reads the same for the workspace's other solutions: a program's (an executable on a
-card) when the kernal starts it, a driver's (a module on a card) when the kernal loads it, and an
-image's on a card (`OS.SYS`) as it is.  A `<Lines>` that names one of those is read once.
-Numbers are decimal or `0x` hexadecimal, and paths are relative to the `.hcp65build` file.
+How a program is debugged is its [run configuration](../ide/building.md#run-configurations)'s: the files loaded
+into the emulator first (the boot loader's ROM), and a card file that says which SD card image each program is
+copied onto and where, and which programs' line tables the debugger reads without loading them (the kernal,
+`OS.SYS`, which the boot loader loads from the card).
+
+A solution's build configurations were once kept in a file beside it, `<solution>.hcp65build`.  It isn't read any
+more: a build of a solution that still has one says so.
 
 [Linker and Outputs](linker.md) describes the three kinds of file.
 

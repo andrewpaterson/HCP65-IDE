@@ -90,7 +90,6 @@ with Set as Startup Project, or the solution's first application if none was cho
 
 | File | What is in it |
 |---|---|
-| `<solution>.hcp65build` | The solution's [build configurations](building.md#build-configurations).  Shared, in version control. |
 | `<workspace>.hcp65workspace` | The workspace, as above.  Shared. |
 | `<project>.hcp65project` | A project's licence for new files.  Shared. |
 | `fileTemplates\` | The workspace's [file and code templates](templates.md#schemes), where it has changed any.  Shared. |

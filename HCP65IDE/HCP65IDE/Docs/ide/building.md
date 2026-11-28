@@ -14,7 +14,7 @@ solution configuration ("Release|Win32") whose projects' files, include director
 with.  Its name is its configuration and platform either side of a `|`, as Visual Studio names them:
 `Release|HCP65C816`.  Each toolchain has a platform of its own: `HCP65C816` and `HCP65C64` for the HCP65 compiler,
 `GCC-x64` for GCC; an MSVC configuration has the solution's (`Release|x64`).  A name with a platform these once had
-(`Release|W65C816`, `Release|65C64`, `Release|GCC`) is still read, as the name it has now, in a `.hcp65build` file, a
+(`Release|W65C816`, `Release|65C64`, `Release|GCC`) is still read, as the name it has now, in a
 workspace file and `hcp65build -config`.  A configuration's files are in folders named for it:
 `Output\HCP65C816\Release\`.
 
@@ -42,13 +42,12 @@ The HCP65 compiler and GCC compile a project's source files but those excluded f
 
 A solution can list a toolchain's configurations itself: a solution configuration whose platform is a toolchain's
 (`Release|GCC-x64`) is that toolchain's build configuration, and its rows say which projects it builds, as they do
-for Visual Studio's.  A solution that lists none, and has no `.hcp65build` file, is given each toolchain's for each
-of its configuration names.
+for Visual Studio's.  A solution that lists none is given each toolchain's for each of its configuration
+names.
 
 How an HCP65 configuration compiles and links is in the projects (their `HCP65Compile` and `HCP65Link` groups).
-A solution may still have a `.hcp65build` file beside it, which lists build configurations under names of its
-own and says what its projects don't.  Both, and the command line tool `hcp65build` that builds the same way
-outside the IDE, are on [Building Programs](../compiler/building.md).
+That, and the command line tool `hcp65build` that builds the same way outside the IDE, are on
+[Building Programs](../compiler/building.md).
 
 ### Edit Build Configurations
 
@@ -111,9 +110,6 @@ solution that isn't open may build one.
 It works on a copy, so Cancel changes nothing, and OK isn't allowed while a name is empty, used twice or has a `|`
 in it, or the linking couldn't be read by a build (two files named to link, a number that isn't one).  How a
 program is debugged (its card, what is loaded with it) is a [run configuration's](#run-configurations).
-
-A solution that still has a `.hcp65build` file has that file opened instead: its build configurations are the
-file's.
 
 ## Building
 

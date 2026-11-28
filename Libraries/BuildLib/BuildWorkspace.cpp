@@ -69,8 +69,8 @@ void CBuildWorkspaceSolution::Kill(void)
 //////////////////////////////////////////////////////////////////////////
 //
 // Reads a .sln (and its projects), or a .vcxproj as a solution of its
-// own, and the build configurations beside it (or the defaults).  False
-// if it can't be read.
+// own; its build configurations are its solution configurations
+// (CBuildConfigurations::AddDefaults).  False if it can't be read.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CBuildWorkspaceSolution::Open(const char* szFile)
@@ -82,13 +82,7 @@ bool CBuildWorkspaceSolution::Open(const char* szFile)
 	mbRead = szName.EndsWithIgnoreCase(".sln") ? mcSolution.Read(szFile) : mcSolution.ReadProject(szFile);
 	szName.Kill();
 
-	szName.Init();
-	CBuildConfigurations::GetFileName(szFile, &szName);
-	if (!mcConfigurations.Read(szName.Text()))
-	{
-		mcConfigurations.AddDefaults(&mcSolution);
-	}
-	szName.Kill();
+	mcConfigurations.AddDefaults(&mcSolution);
 	ReadStartupProject();
 	return mbRead;
 }

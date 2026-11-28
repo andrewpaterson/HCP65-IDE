@@ -130,7 +130,7 @@ void TestWorkspaceIndexSample(void)
 //////////////////////////////////////////////////////////////////////////
 //
 // Indexed again as Release|Win32 (a build configuration a solution
-// without an .hcp65build file has for each of its own): the project's
+// that lists no toolchain's has for each of its own): the project's
 // Debug|x64 define is gone, and MSVC's are Win32's and not Debug's.
 //
 //////////////////////////////////////////////////////////////////////////

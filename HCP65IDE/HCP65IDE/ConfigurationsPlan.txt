@@ -1299,3 +1299,12 @@ Questions (the user's, one at a time)
    in place of the dialog, and the file's section of the documentation.  The other considered: keeping it read, two
    ways of saying one thing, with the old way's tests.  Not answered: whether a solution that still has the file is
    told it is no longer read; a line saying so is what is built unless the user says otherwise.
+   Built 2026-11-28, once C8's remainder had moved the last files: CBuildConfigurations::Read, Write and GetFileName
+   and CBuildConfiguration's LoadXML and SaveXML are gone, with the names only they used; a solution's build
+   configurations are its solution configurations (AddDefaults) and nothing else.  hcp65build given a .hcp65build
+   says it isn't read any more and to give the .sln; a build of a solution that still has one beside it says so in
+   its first line and goes on (CSolutionBuild::AddOldFileLine).  Edit Build Configurations no longer opens the file.
+   The tests of the file's form are gone (TestBuildConfigurationsFile, Image, Executable, Module and
+   TestBuildCommandLineConfigurationsFile: what they read is the projects' HCP65Link now, which
+   TestBuildWorkspaceProjectLinked reads, and the run configurations'); building.md says the settings as the
+   projects have them.

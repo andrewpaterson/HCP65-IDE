@@ -43,6 +43,8 @@ public:
 	void			Kill(void);
 
 	bool			Start(CVcxSolution* pcSolution, CBuildConfiguration* pcConfiguration, const char* szRoot, const char* szLibc65Directory, CArrayChars* paszLines, const char* szStartupProject = NULL, const char* szLayoutsFile = NULL);
+
+	static void	AddOldFileLine(CVcxSolution* pcSolution, CArrayChars* paszLines);
 	void			SetRebuild(bool bRebuild);
 	bool			Poll(CArrayChars* paszLines);
 	void			Cancel(void);

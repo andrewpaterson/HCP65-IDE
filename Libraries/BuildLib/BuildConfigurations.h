@@ -26,15 +26,18 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 #include "BuildConfiguration.h"
 
 
-#define BUILD_CONFIGURATIONS_EXTENSION	".hcp65build"
+//The file a solution's build configurations were once kept in, beside it.  It is no longer read: a build says so if
+//one is there (ConfigurationsPlan.txt question 36).
+#define BUILD_CONFIGURATIONS_OLD_EXTENSION	".hcp65build"
 
 
 typedef CArrayTemplate<CBuildConfiguration>	CArrayBuildConfigurations;
 
 
-//A solution's build configurations, kept in a file beside it (GetFileName) so its Visual Studio projects are left as
-//they are.  Without the file each solution configuration is built with MSVC, and each of its configurations (Debug,
-//Release) with the W65C816, the 65C64 and GCC too.
+//A solution's build configurations: its solution configurations (AddDefaults).  One whose platform is a toolchain's
+//(Release|GCC-x64, Debug|HCP65C816) is that toolchain's and the rest are MSVC's; a solution that lists no toolchain's
+//is given each toolchain's for each of its configurations' names (Debug, Release).  How one compiles and links is in
+//the projects it builds (CBuildConfiguration::ReadProject), and how it is debugged in a run configuration.
 class CBuildConfigurations
 {
 protected:
@@ -46,8 +49,6 @@ public:
 
 	void					AddDefaults(CVcxSolution* pcSolution);
 	CBuildConfiguration*	Add(const char* szName, EBuildToolchain eToolchain, const char* szSolutionConfiguration);
-	bool					Read(const char* szFileName);
-	bool					Write(const char* szFileName);
 
 	size					NumConfigurations(void) const;
 	CBuildConfiguration*	GetConfiguration(size uiIndex);
@@ -56,7 +57,6 @@ public:
 	void					GetConfigurationNames(CArrayChars* paszDest);
 	void					GetPlatformNames(CArrayChars* paszDest);
 
-	static void				GetFileName(const char* szSolutionFile, CChars* pszDest);
 
 protected:
 	void					Clear(void);

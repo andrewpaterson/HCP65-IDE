@@ -214,7 +214,7 @@ void CIDEDebugging::ResolveEmulatorPath(const char* szPath, CChars* pszDest)
 	}
 	szFile.Init();
 	szName.Init();
-	CBuildConfigurations::GetFileName(mpcContent->GetSolutions()->GetStartupFile(), &szFile);
+	szFile.Set(mpcContent->GetSolutions()->GetStartupFile());
 	pszDest->Set("");
 	cFileUtil.SplitPath(szFile.Text(), &szName, pszDest);
 	cFileUtil.AppendToPath(pszDest, szPath);

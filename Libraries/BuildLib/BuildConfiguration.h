@@ -36,26 +36,11 @@ class CVcxProject;
 class CVcxConfiguration;
 
 
-//The names of the configurations file's tags and attributes; a project's HCP65Compile and HCP65Link settings have the
-//same (BuildConfigurationProject.cpp).
-#define BUILD_CONFIGURATION_TAG			"Configuration"
-#define BUILD_CONFIGURATION_NAME		"Name"
-#define BUILD_CONFIGURATION_TOOLCHAIN	"Toolchain"
-#define BUILD_CONFIGURATION_SOLUTION	"Solution"
+//The names of a project's HCP65Compile and HCP65Link settings (BuildConfigurationProject.cpp).
 #define BUILD_CONFIGURATION_IMAGE		"Image"
 #define BUILD_CONFIGURATION_EXECUTABLE	"Executable"
 #define BUILD_CONFIGURATION_MODULE		"Module"
-#define BUILD_CONFIGURATION_LOAD		"Load"
-#define BUILD_CONFIGURATION_LOAD_FILE	"File"
-#define BUILD_CONFIGURATION_LOAD_ADDRESS	"Address"
-#define BUILD_CONFIGURATION_LINES		"Lines"
-#define BUILD_CONFIGURATION_LINES_FILE	"File"
-#define BUILD_CONFIGURATION_LINES_SPACE	"Space"
-#define BUILD_CONFIGURATION_LINES_CARD_PATH	"CardPath"
 #define BUILD_CONFIGURATION_LINES_DEFAULT_SPACE	"Kernel"
-#define BUILD_CONFIGURATION_CARD		"Card"
-#define BUILD_CONFIGURATION_CARD_PATH	"CardPath"
-#define BUILD_CONFIGURATION_BREAKPOINT_SPACE	"BreakpointSpace"
 #define BUILD_CONFIGURATION_NO_FLOATS	"NoFloats"
 #define BUILD_CONFIGURATION_MATH_TABLES	"MathTables"
 #define BUILD_CONFIGURATION_PREFER_SIZE	"PreferSize"
@@ -164,8 +149,6 @@ public:
 	void			Init(void);
 	void			Kill(void);
 
-	void			SaveXML(CXMLWriter* pcWriter);
-	bool			LoadXML(CMarkupTag* pcTag);
 
 	char*			GetName(void);
 	EBuildToolchain	GetToolchain(void) const;
