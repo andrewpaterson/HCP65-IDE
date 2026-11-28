@@ -71,6 +71,7 @@ protected:
 	CArrayTemplatePtr<CXMLFile>	mapcSheetFiles;		//Their files, while the project is read.
 	CArrayChars					maszScope;			//The conditions of the imports being read.
 	const char*					mszReadingDirectory;	//The directory of the file being read.
+	const char*					mszReadingFile;			//A property sheet being read; NULL while it is the project.
 
 public:
 	void					Init(void);

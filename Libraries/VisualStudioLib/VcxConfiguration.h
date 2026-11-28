@@ -22,6 +22,7 @@ along with Codaphela VisualStudioLib.  If not, see <http://www.gnu.org/licenses/
 #define __VCX_CONFIGURATION_H__
 #include "BaseLib/Chars.h"
 #include "BaseLib/ArrayTemplate.h"
+#include "BaseLib/ArrayTemplatePtr.h"
 #include "BaseLib/MapStringString.h"
 
 
@@ -33,12 +34,33 @@ along with Codaphela VisualStudioLib.  If not, see <http://www.gnu.org/licenses/
 #define VCX_PLATFORM_HCP65C64	"HCP65C64"
 
 
+//Where a tool's setting was set for a configuration: the file (the project's or a property sheet's, its full path),
+//the Condition of the group it is in as the file writes it (empty for none), and the value written there.
+class CVcxSettingSource
+{
+public:
+	CChars	mszName;		//"HCP65Compile.NoFloats".
+	CChars	mszFile;
+	CChars	mszCondition;
+	CChars	mszValue;
+
+	void	Init(const char* szName, const char* szFile, const char* szCondition, const char* szValue);
+	void	Kill(void);
+};
+
+
+typedef CArrayTemplate<CVcxSettingSource>	CArrayVcxSettingSource;
+
+
 //A project configuration, "Debug|Win32", and the properties the project sets for it: those of its property groups by
 //name ("ConfigurationType", "IncludePath") and those of its item definition groups by tool and name
 //("ClCompile.PreprocessorDefinitions", "Link.SubSystem").  A toolchain's configuration ("Debug|GCC-x64") has its own
 //item definitions (its defines and options), and what a project says once for Visual Studio's configurations it takes
 //from its base, the Visual Studio configuration of the same name it is built like ("Debug|x64"): its include
 //directories, and the property groups' properties it hasn't itself.
+//
+//It keeps where each of its item definition groups' settings was set (its sources), in the order they were read: the
+//last of a setting's is where its value is from, the ones before it what that replaced (a sheet's, under a project's).
 class CVcxConfiguration
 {
 protected:
@@ -47,6 +69,7 @@ protected:
 	CChars				mszPlatform;
 	CMapStringString	mcProperties;
 	CVcxConfiguration*	mpcBase;
+	CArrayVcxSettingSource	masSources;
 
 public:
 	void		Init(const char* szName);
@@ -61,6 +84,10 @@ public:
 	bool		IsToolchain(void) const;
 	void		SetBase(CVcxConfiguration* pcBase);
 	size		NumProperties(void);
+	void		AddSource(const char* szName, const char* szFile, const char* szCondition, const char* szValue);
+	size		NumSources(void) const;
+	CVcxSettingSource*	GetSource(size uiIndex);
+	void		GetSources(const char* szName, CArrayTemplatePtr<CVcxSettingSource>* papcDest);
 };
 
 

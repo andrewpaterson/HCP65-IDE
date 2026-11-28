@@ -26,6 +26,8 @@
     <ClCompile Include="VcxProject.cpp" />
     <ClCompile Include="VcxPath.cpp" />
     <ClCompile Include="VcxSetting.cpp" />
+    <ClCompile Include="VcxSolutionRows.cpp" />
+    <ClCompile Include="VcxProjectConfigurations.cpp" />
     <ClCompile Include="VcxSolutionProject.cpp" />
     <ClCompile Include="VcxSolution.cpp" />
   </ItemGroup>
@@ -37,6 +39,8 @@
     <ClInclude Include="VcxProject.h" />
     <ClInclude Include="VcxPath.h" />
     <ClInclude Include="VcxSetting.h" />
+    <ClInclude Include="VcxSolutionRows.h" />
+    <ClInclude Include="VcxProjectConfigurations.h" />
     <ClInclude Include="VcxSolutionProject.h" />
     <ClInclude Include="VcxSolution.h" />
   </ItemGroup>

@@ -5,7 +5,10 @@
 #include "BaseLib/Logger.h"
 #include "BaseLib/TextFile.h"
 #include "VisualStudioLib/VcxProject.h"
+#include "VisualStudioLib/VcxProjectConfigurations.h"
 #include "VisualStudioLib/VcxSetting.h"
+#include "VisualStudioLib/VcxSolution.h"
+#include "VisualStudioLib/VcxSolutionRows.h"
 #include "TestLib/Assert.h"
 #include "TestLib/AssertFile.h"
 
@@ -934,10 +937,190 @@ void TestVcxSetting(void)
 	AssertNull(cProject.FindConfiguration("Debug|HCP65C816")->GetProperty("ClCompile.Optimization"));
 	cProject.Kill();
 
+	//Two groups with one condition: a setting is changed where it is, in the second, and one neither has goes in the
+	//first that has its tool.
+	AssertTrue(SetVcxSetting(TEST_SETTING_SHEET, NULL, "ClCompile", "WarningLevel", "Level3"));
+	{
+		CTextFile	cFile;
+		CChars		szText;
+
+		cFile.Init();
+		AssertTrue(cFile.Read(TEST_SETTING_SHEET));
+		szText.Init(cFile.Text());
+		cFile.Kill();
+		szText.Replace("</Project>", "  <ItemDefinitionGroup>\n    <Link>\n      <SubSystem>Console</SubSystem>\n    </Link>\n  </ItemDefinitionGroup>\n</Project>");
+		cFile.Init(szText.Text());
+		AssertTrue(cFile.Write(TEST_SETTING_SHEET));
+		cFile.Kill();
+		szText.Kill();
+	}
+	AssertTrue(SetVcxSetting(TEST_SETTING_SHEET, NULL, "Link", "SubSystem", "Windows"));
+	AssertTrue(SetVcxSetting(TEST_SETTING_SHEET, NULL, "Link", "Profile", "true"));
+	AssertTrue(SetVcxSetting(TEST_SETTING_SHEET, NULL, "ClCompile", "Optimization", "Disabled"));
+	AssertTrue(GetVcxSetting(TEST_SETTING_SHEET, NULL, "Link", "SubSystem", &szValue));
+	AssertString("Windows", szValue.Text());
+	{
+		CTextFile	cFile;
+		CChars		szText;
+
+		cFile.Init();
+		AssertTrue(cFile.Read(TEST_SETTING_SHEET));
+		szText.Init(cFile.Text());
+		cFile.Kill();
+		AssertTrue(szText.Contains("    <Link>\n      <SubSystem>Windows</SubSystem>\n      <Profile>true</Profile>\n    </Link>\n"));
+		AssertTrue(szText.Contains("      <WarningLevel>Level3</WarningLevel>\n      <Optimization>Disabled</Optimization>\n    </ClCompile>\n"));
+		szText.Kill();
+	}
+
 	//A file that isn't there, and one that isn't a project.
 	AssertFalse(SetVcxSetting("Output" _FS_ "Setting" _FS_ "None.vcxproj", NULL, "ClCompile", "WarningLevel", "Level3"));
 	AssertFalse(SetVcxSetting("Output" _FS_ "Setting" _FS_ "Program.cpp", NULL, "ClCompile", "WarningLevel", "Level3"));
 	szValue.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Where a configuration's settings were set (ConfigurationsPlan.txt C9-2):
+// each of a setting's sources in the order read, a sheet's before the
+// project's that replaces it, with the file and the condition of its
+// group.  A setting no group has for the configuration has none.
+//
+//////////////////////////////////////////////////////////////////////////
+void TestVcxSettingSources(void)
+{
+	CVcxProject								cProject;
+	CVcxConfiguration*						pcConfiguration;
+	CArrayTemplatePtr<CVcxSettingSource>	apcSources;
+
+#define TEST_CONFIGURATIONS_BEFORE	"Input" _FS_ "Configurations" _FS_ "Before" _FS_
+#define TEST_CONFIGURATIONS_PLATFORM	"'$(Platform)'=='HCP65C816'"
+	cProject.Init();
+	AssertTrue(cProject.Read(TEST_CONFIGURATIONS_BEFORE "Program.vcxproj"));
+	pcConfiguration = cProject.FindConfiguration("Release|HCP65C816");
+	AssertNotNull(pcConfiguration);
+
+	//The sheet's, then the project's own, which is the value.
+	apcSources.Init();
+	pcConfiguration->GetSources("HCP65Compile.NoFloats", &apcSources);
+	AssertSize(2, apcSources.NumElements());
+	AssertTrue(apcSources.GetPtr(0)->mszFile.EndsWith("Shared.props"));
+	AssertString(TEST_CONFIGURATIONS_PLATFORM, apcSources.GetPtr(0)->mszCondition.Text());
+	AssertString("false", apcSources.GetPtr(0)->mszValue.Text());
+	AssertTrue(apcSources.GetPtr(1)->mszFile.Equals(cProject.GetFileName()));
+	AssertString(TEST_CONFIGURATIONS_PLATFORM, apcSources.GetPtr(1)->mszCondition.Text());
+	AssertString("true", apcSources.GetPtr(1)->mszValue.Text());
+	AssertString("true", pcConfiguration->GetProperty("HCP65Compile.NoFloats"));
+
+	//One configuration's own, in the project; the sheet's alone; and Debug's, which Release hasn't.
+	apcSources.ReInit();
+	pcConfiguration->GetSources("HCP65Compile.PreferSize", &apcSources);
+	AssertSize(1, apcSources.NumElements());
+	AssertString("'$(Configuration)|$(Platform)'=='Release|HCP65C816'", apcSources.GetPtr(0)->mszCondition.Text());
+	apcSources.ReInit();
+	pcConfiguration->GetSources("HCP65Compile.WarnStringToPointer", &apcSources);
+	AssertSize(1, apcSources.NumElements());
+	AssertTrue(apcSources.GetPtr(0)->mszFile.EndsWith("Shared.props"));
+	apcSources.ReInit();
+	pcConfiguration->GetSources("HCP65Compile.Debug", &apcSources);
+	AssertSize(0, apcSources.NumElements());
+	cProject.FindConfiguration("Debug|HCP65C816")->GetSources("HCP65Compile.Debug", &apcSources);
+	AssertSize(1, apcSources.NumElements());
+	AssertString("'$(Configuration)|$(Platform)'=='Debug|HCP65C816'", apcSources.GetPtr(0)->mszCondition.Text());
+	apcSources.Kill();
+	cProject.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A solution's configurations and a project's, added, renamed and taken
+// away in copies of their files (Input/Configurations/Before): each file
+// is as it was but for the lines (Input/Configurations/Expected, byte for
+// byte, each row where Visual Studio sorts it among its project's), and
+// taking away what was added gives the file back (ConfigurationsPlan.txt
+// C9-6).
+//
+//////////////////////////////////////////////////////////////////////////
+void TestVcxConfigurations(void)
+{
+	CVcxSolution						cSolution;
+	CVcxSolutionProject*				pcProject;
+	CVcxSolutionProjectConfiguration*	pcRow;
+	CVcxConfiguration*					pcConfiguration;
+	CArrayChars							aszNames;
+	CFileUtil							cFileUtil;
+
+	cFileUtil.RemoveDir("Output" _FS_ "Configurations");
+	AssertTrue(cFileUtil.TouchDir("Output" _FS_ "Configurations"));
+	AssertTrue(cFileUtil.CopyDir("Input" _FS_ "Configurations" _FS_ "Before", "Output" _FS_ "Configurations"));
+#define TEST_CONFIGURATIONS_SOLUTION	"Output" _FS_ "Configurations" _FS_ "Program.sln"
+#define TEST_CONFIGURATIONS_PROJECT		"Output" _FS_ "Configurations" _FS_ "Program.vcxproj"
+#define TEST_CONFIGURATIONS_EXPECTED	"Input" _FS_ "Configurations" _FS_ "Expected" _FS_
+#define TEST_CONFIGURATIONS_GUID		"{11111111-2222-3333-4444-555555555555}"
+
+	//A solution configuration as another's rows, the program's row then naming a configuration of its own, which the
+	//project is given: a copy of each of Release's groups, properties and settings, on every platform.
+	AssertFalse(AddVcxSolutionConfiguration(TEST_CONFIGURATIONS_SOLUTION, "Fast|HCP65C816", "None|HCP65C816"));
+	AssertFalse(AddVcxSolutionConfiguration(TEST_CONFIGURATIONS_SOLUTION, "Debug|HCP65C816", "Release|HCP65C816"));
+	AssertTrue(AddVcxSolutionConfiguration(TEST_CONFIGURATIONS_SOLUTION, "Fast|HCP65C816", "Release|HCP65C816"));
+	AssertFalse(SetVcxSolutionProjectConfiguration(TEST_CONFIGURATIONS_SOLUTION, "{00000000-0000-0000-0000-000000000000}", "Fast|HCP65C816", "Fast|Win32"));
+	AssertTrue(SetVcxSolutionProjectConfiguration(TEST_CONFIGURATIONS_SOLUTION, "{11111111-2222-3333-4444-555555555555}", "Fast|HCP65C816", "Fast|Win32"));
+	AssertTrue(SetVcxSolutionProjectConfiguration(TEST_CONFIGURATIONS_SOLUTION, TEST_CONFIGURATIONS_GUID, "Fast|HCP65C816", "Fast|Win32"));
+	AssertFile(TEST_CONFIGURATIONS_EXPECTED "Program.sln", TEST_CONFIGURATIONS_SOLUTION);
+	AssertFalse(AddVcxProjectConfiguration(TEST_CONFIGURATIONS_PROJECT, "Fast", "None"));
+	AssertFalse(AddVcxProjectConfiguration(TEST_CONFIGURATIONS_PROJECT, "Debug", "Release"));
+	AssertTrue(AddVcxProjectConfiguration(TEST_CONFIGURATIONS_PROJECT, "Fast", "Release"));
+	AssertFile(TEST_CONFIGURATIONS_EXPECTED "Program.vcxproj", TEST_CONFIGURATIONS_PROJECT);
+	aszNames.Init();
+	AssertTrue(GetVcxProjectConfigurationNames(TEST_CONFIGURATIONS_PROJECT, &aszNames));
+	AssertSize(3, aszNames.NumElements());
+	AssertString("Debug", aszNames.GetText(0));
+	AssertString("Release", aszNames.GetText(1));
+	AssertString("Fast", aszNames.GetText(2));
+	aszNames.Kill();
+
+	//Read, the solution has it, its program built as the project's new configuration, which is as Release is.
+	cSolution.Init();
+	AssertTrue(cSolution.Read(TEST_CONFIGURATIONS_SOLUTION));
+	AssertSize(5, cSolution.NumConfigurations());
+	pcProject = cSolution.FindProjectByName("Program");
+	pcRow = pcProject->FindConfiguration("Fast|HCP65C816");
+	AssertNotNull(pcRow);
+	AssertString("Fast|Win32", pcRow->GetProjectConfiguration());
+	AssertTrue(pcRow->IsBuild());
+	AssertString("Release|Win32", cSolution.FindProjectByName("Library")->FindConfiguration("Fast|HCP65C816")->GetProjectConfiguration());
+	pcConfiguration = pcProject->GetProject()->FindConfiguration("Fast|HCP65C816");
+	AssertNotNull(pcConfiguration);
+	AssertString("true", pcConfiguration->GetProperty("HCP65Compile.PreferSize"));
+	AssertString("true", pcConfiguration->GetProperty("HCP65Compile.NoFloats"));
+	AssertString("Makefile", pcConfiguration->GetProperty("ConfigurationType"));
+	cSolution.Kill();
+
+	//Renamed and renamed back, its rows are where they were.
+	AssertFalse(RenameVcxSolutionConfiguration(TEST_CONFIGURATIONS_SOLUTION, "Fast|HCP65C816", "Debug|HCP65C816"));
+	AssertTrue(RenameVcxSolutionConfiguration(TEST_CONFIGURATIONS_SOLUTION, "Fast|HCP65C816", "Zippy|HCP65C816"));
+	cSolution.Init();
+	AssertTrue(cSolution.Read(TEST_CONFIGURATIONS_SOLUTION));
+	AssertSize(5, cSolution.NumConfigurations());
+	AssertString("Zippy|HCP65C816", cSolution.GetConfiguration(4));
+	AssertNull(cSolution.FindProjectByName("Program")->FindConfiguration("Fast|HCP65C816"));
+	AssertString("Fast|Win32", cSolution.FindProjectByName("Program")->FindConfiguration("Zippy|HCP65C816")->GetProjectConfiguration());
+	cSolution.Kill();
+	AssertTrue(RenameVcxSolutionConfiguration(TEST_CONFIGURATIONS_SOLUTION, "Zippy|HCP65C816", "Fast|HCP65C816"));
+	AssertFile(TEST_CONFIGURATIONS_EXPECTED "Program.sln", TEST_CONFIGURATIONS_SOLUTION);
+
+	//Taken away, each file is as it was.
+	AssertFalse(RemoveVcxSolutionConfiguration(TEST_CONFIGURATIONS_SOLUTION, "None|HCP65C816"));
+	AssertTrue(RemoveVcxSolutionConfiguration(TEST_CONFIGURATIONS_SOLUTION, "Fast|HCP65C816"));
+	AssertFile(TEST_CONFIGURATIONS_BEFORE "Program.sln", TEST_CONFIGURATIONS_SOLUTION);
+	AssertFalse(RemoveVcxProjectConfiguration(TEST_CONFIGURATIONS_PROJECT, "None"));
+	AssertTrue(RemoveVcxProjectConfiguration(TEST_CONFIGURATIONS_PROJECT, "Fast"));
+	AssertFile(TEST_CONFIGURATIONS_BEFORE "Program.vcxproj", TEST_CONFIGURATIONS_PROJECT);
+
+	//A file that isn't there.
+	AssertFalse(AddVcxSolutionConfiguration("Output" _FS_ "Configurations" _FS_ "None.sln", "Fast|HCP65C816", "Release|HCP65C816"));
+	AssertFalse(AddVcxProjectConfiguration("Output" _FS_ "Configurations" _FS_ "None.vcxproj", "Fast", "Release"));
 }
 
 
@@ -959,6 +1142,8 @@ void TestVcxProject(void)
 	TestVcxProjectExcludedFromBuild();
 	TestVcxProjectSheets();
 	TestVcxSetting();
+	TestVcxSettingSources();
+	TestVcxConfigurations();
 
 	TestStatistics();
 }

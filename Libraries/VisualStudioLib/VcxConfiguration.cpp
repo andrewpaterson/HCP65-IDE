@@ -45,6 +45,7 @@ void CVcxConfiguration::Init(const char* szName)
 	}
 	mcProperties.Init();
 	mpcBase = NULL;
+	masSources.Init();
 }
 
 
@@ -54,6 +55,13 @@ void CVcxConfiguration::Init(const char* szName)
 //////////////////////////////////////////////////////////////////////////
 void CVcxConfiguration::Kill(void)
 {
+	size	i;
+
+	for (i = 0; i < masSources.NumElements(); i++)
+	{
+		masSources.Get(i)->Kill();
+	}
+	masSources.Kill();
 	mcProperties.Kill();
 	mszPlatform.Kill();
 	mszConfiguration.Kill();
@@ -110,6 +118,68 @@ char* CVcxConfiguration::GetOwnProperty(const char* szName)
 {
 	return mcProperties.Get(szName);
 }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CVcxSettingSource::Init(const char* szName, const char* szFile, const char* szCondition, const char* szValue)
+{
+	mszName.Init(szName);
+	mszFile.Init(szFile);
+	mszCondition.Init(szCondition ? szCondition : "");
+	mszValue.Init(szValue);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CVcxSettingSource::Kill(void)
+{
+	mszValue.Kill();
+	mszCondition.Kill();
+	mszFile.Kill();
+	mszName.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A setting ("HCP65Compile.NoFloats") was set for this configuration by a
+// group of szFile with szCondition (NULL for none).
+//
+//////////////////////////////////////////////////////////////////////////
+void CVcxConfiguration::AddSource(const char* szName, const char* szFile, const char* szCondition, const char* szValue)
+{
+	masSources.Add()->Init(szName, szFile, szCondition, szValue);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Where a setting was set, in the order read: the last is where its value
+// is from.
+//
+//////////////////////////////////////////////////////////////////////////
+void CVcxConfiguration::GetSources(const char* szName, CArrayTemplatePtr<CVcxSettingSource>* papcDest)
+{
+	size	i;
+
+	for (i = 0; i < masSources.NumElements(); i++)
+	{
+		if (masSources.Get(i)->mszName.Equals(szName))
+		{
+			papcDest->Add(masSources.Get(i));
+		}
+	}
+}
+
+
+size CVcxConfiguration::NumSources(void) const { return masSources.NumElements(); }
+CVcxSettingSource* CVcxConfiguration::GetSource(size uiIndex) { return masSources.Get(uiIndex); }
 
 
 //////////////////////////////////////////////////////////////////////////

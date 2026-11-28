@@ -159,6 +159,7 @@ void CVcxProject::Init(void)
 	masReferences.Init();
 	maszSheets.Init();
 	mszReadingDirectory = NULL;
+	mszReadingFile = NULL;
 }
 
 
@@ -399,6 +400,7 @@ void CVcxProject::ReadImport(CMarkupTag* pcImport, const char* szDirectory, CArr
 	CChars		szSheetDirectory;
 	CChars		szName;
 	CXMLFile*	pcFile;
+	const char*	szOuterFile;
 	bool		bScoped;
 
 	szFileName.Init();
@@ -412,7 +414,10 @@ void CVcxProject::ReadImport(CMarkupTag* pcImport, const char* szDirectory, CArr
 			szName.Init();
 			SplitVcxFileName(szFileName.Text(), &szFullPath, &szSheetDirectory, &szName);
 			bScoped = PushScope(pcImport);
+			szOuterFile = mszReadingFile;
+			mszReadingFile = szFileName.Text();
 			ReadGroups(pcFile->mcMarkup.mpcDoc->GetRootTag(), szSheetDirectory.Text(), paszPlatforms, iDepth + 1);
+			mszReadingFile = szOuterFile;
 			PopScope(bScoped);
 			szName.Kill();
 			szSheetDirectory.Kill();
@@ -896,7 +901,9 @@ bool CVcxProject::IsConditionFor(const char* szCondition, CVcxConfiguration* pcC
 // a property's, has what the configuration was given before in its place,
 // so a project adds to its sheet's; one that doesn't replaces it.
 // $(MSBuildThisFileDirectory) is the directory of the file being read, so
-// it is put in now: a sheet names its own folder with it.
+// it is put in now: a sheet names its own folder with it.  Where an item
+// definition's setting was set is kept with the configuration (its
+// sources).
 //
 //////////////////////////////////////////////////////////////////////////
 void CVcxProject::SetProperty(const char* szCondition, const char* szName, const char* szValue)
@@ -934,6 +941,10 @@ void CVcxProject::SetProperty(const char* szCondition, const char* szName, const
 		}
 		if (bInScope)
 		{
+			if (szDot)
+			{
+				pcConfiguration->AddSource(szName, mszReadingFile ? mszReadingFile : mszFileName.Text(), szCondition, szValue);
+			}
 			szOld = pcConfiguration->GetOwnProperty(szName);
 			if ((szOld != NULL) && (strstr(szValue, szSelf.Text()) != NULL))
 			{

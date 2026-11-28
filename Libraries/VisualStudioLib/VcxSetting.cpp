@@ -180,38 +180,20 @@ static bool IsVcxGroup(const char* szText, size uiTag, const char* szCondition)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Where the setting is in the text: its group, its tool in that and
+// Where the setting is in one group (psPlace's): its tool in that and
 // itself in that, as far as each is there.
 //
 //////////////////////////////////////////////////////////////////////////
-static void FindVcxSetting(const char* szText, const char* szCondition, const char* szTool, const char* szName, SVcxSettingPlace* psPlace)
+static void FindVcxSettingInGroup(const char* szText, const char* szTool, const char* szName, SVcxSettingPlace* psPlace)
 {
 	CChars	szOpen;
 	CChars	szClose;
-	size	uiAt;
-	size	uiEnd;
-
-	memset(psPlace, 0, sizeof(SVcxSettingPlace));
-	for (uiAt = FindVcxText(szText, VCX_SETTING_GROUP, 0, MAX_SIZE); uiAt != MAX_SIZE; uiAt = FindVcxText(szText, VCX_SETTING_GROUP, uiAt + 1, MAX_SIZE))
-	{
-		uiEnd = FindVcxText(szText, VCX_SETTING_GROUP_END, uiAt, MAX_SIZE);
-		if ((uiEnd != MAX_SIZE) && IsVcxGroup(szText, uiAt, szCondition))
-		{
-			psPlace->bGroup = true;
-			psPlace->uiGroup = uiAt;
-			psPlace->uiGroupEnd = uiEnd;
-			break;
-		}
-	}
-	if (!psPlace->bGroup)
-	{
-		return;
-	}
 
 	szOpen.Init("<");
 	szOpen.Append(szTool)->Append('>');
 	szClose.Init("</");
 	szClose.Append(szTool)->Append('>');
+	psPlace->bSetting = false;
 	psPlace->uiTool = FindVcxText(szText, szOpen.Text(), psPlace->uiGroup, psPlace->uiGroupEnd);
 	psPlace->uiToolEnd = (psPlace->uiTool != MAX_SIZE) ? FindVcxText(szText, szClose.Text(), psPlace->uiTool, psPlace->uiGroupEnd) : MAX_SIZE;
 	psPlace->bTool = psPlace->uiToolEnd != MAX_SIZE;
@@ -228,6 +210,41 @@ static void FindVcxSetting(const char* szText, const char* szCondition, const ch
 	}
 	szClose.Kill();
 	szOpen.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Where the setting is in the text: its group, its tool in that and
+// itself in that, as far as each is there.  A file can have several
+// groups with one condition (a project's own beside one Visual Studio
+// wrote): the group is the last that has the setting, which is the one
+// read last; else the first that has its tool; else the first.
+//
+//////////////////////////////////////////////////////////////////////////
+static void FindVcxSetting(const char* szText, const char* szCondition, const char* szTool, const char* szName, SVcxSettingPlace* psPlace)
+{
+	SVcxSettingPlace	sGroup;
+	size				uiAt;
+	size				uiEnd;
+
+	memset(psPlace, 0, sizeof(SVcxSettingPlace));
+	for (uiAt = FindVcxText(szText, VCX_SETTING_GROUP, 0, MAX_SIZE); uiAt != MAX_SIZE; uiAt = FindVcxText(szText, VCX_SETTING_GROUP, uiAt + 1, MAX_SIZE))
+	{
+		uiEnd = FindVcxText(szText, VCX_SETTING_GROUP_END, uiAt, MAX_SIZE);
+		if ((uiEnd != MAX_SIZE) && IsVcxGroup(szText, uiAt, szCondition))
+		{
+			memset(&sGroup, 0, sizeof(SVcxSettingPlace));
+			sGroup.bGroup = true;
+			sGroup.uiGroup = uiAt;
+			sGroup.uiGroupEnd = uiEnd;
+			FindVcxSettingInGroup(szText, szTool, szName, &sGroup);
+			if (!psPlace->bGroup || sGroup.bSetting || (sGroup.bTool && !psPlace->bTool))
+			{
+				*psPlace = sGroup;
+			}
+		}
+	}
 }
 
 
