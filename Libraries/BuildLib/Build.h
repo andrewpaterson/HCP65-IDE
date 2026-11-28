@@ -27,6 +27,11 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 #include "BuildConfiguration.h"
 
 
+//The project that is the HCP65's runtime and has its system headers, by name: the one a solution's HCP65 rows build
+//(ConfigurationsPlan.txt C4-7).  It is neither one of a program's projects nor a program.
+#define HCP65_BUILD_LIBC65	"Libc65"
+
+
 enum EBuildState
 {
 	BS_NotStarted,

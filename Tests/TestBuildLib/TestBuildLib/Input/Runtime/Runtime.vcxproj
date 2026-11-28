@@ -1,0 +1,26 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!-- TestBuildHCP65Runtime: a program whose solution's rows say where its runtime, Libc65, is. -->
+<Project DefaultTargets="Build" ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{B0000000-0000-0000-0000-00000000C4C7}</ProjectGuid>
+    <RootNamespace>Runtime</RootNamespace>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Platform)'=='HCP65C816'">
+    <HCP65Link>
+      <Executable>r.exe</Executable>
+      <Entry>_main</Entry>
+    </HCP65Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="Runtime.cpp" />
+  </ItemGroup>
+</Project>

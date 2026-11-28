@@ -39,6 +39,7 @@ class CHCP65Build : public CBuild
 {
 protected:
 	CChars					mszLibc65;
+	CArrayChars				maszLibc65Includes;	//The Libc65 project's include directories, when it is the solution's.
 	CCPP65Builder			mcBuilder;
 	CWorkerThreadJobs		mcJobs;
 	CNativeThread			mcThread;
@@ -67,6 +68,7 @@ protected:
 	void		SetUnoptimised(void);
 	void		SetOwnOptions(CHCP65BuildProject* pcProject);
 	bool		ReadStartupProject(CArrayChars* paszLines);
+	bool		FindLibc65(CArrayChars* paszLines);
 	bool		WriteProgram(CArrayChars* paszLines);
 	bool		CheckMissing(CArrayChars* paszLines);
 	bool		MakeProgram(CChars* pszErrors);

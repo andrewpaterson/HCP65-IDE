@@ -3,6 +3,7 @@
 #include "BaseLib/NativeThread.h"
 #include "CppCompilerLib/CPP65ListingIndex.h"
 #include "BuildLib/SolutionBuild.h"
+#include "BuildLib/BuildWorkspace.h"
 #include "BuildLib/BuildUpToDate.h"
 #include "TestLib/Assert.h"
 
@@ -129,6 +130,62 @@ void TestBuildHCP65(void)
 	aszLines.Kill();
 	cBuild.Kill();
 	cConfiguration.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Libc65 from the solution's rows (ConfigurationsPlan.txt C4-7, question
+// 23).  Runtime.sln lists Release|HCP65C816 and builds Libc65 in it: the
+// build is handed no directory, and the program has its system header and
+// is linked with the runtime, which isn't compiled as a project of the
+// program's.  NoRuntime.sln lists the configuration without it, which the
+// build says and fails for, whatever directory it is handed.
+//
+//////////////////////////////////////////////////////////////////////////
+void TestBuildHCP65Runtime(void)
+{
+	CBuildWorkspaceSolution	cSolution;
+	CBuildConfiguration*	pcConfiguration;
+	CSolutionBuild			cBuild;
+	CArrayChars				aszLines;
+	CFileUtil				cFileUtil;
+	int						i;
+
+	cSolution.Init();
+	AssertTrue(cSolution.Open("Input" _FS_ "Runtime" _FS_ "Runtime.sln"));
+	AssertTrue(cSolution.mcSolution.FindProjectByName("Libc65")->IsLoaded());
+	pcConfiguration = cSolution.mcConfigurations.FindConfiguration("Release|HCP65C816");
+	AssertNotNull(pcConfiguration);
+	AssertTrue(pcConfiguration->HasExecutable());
+	cBuild.Init();
+	aszLines.Init();
+	cFileUtil.RemoveDir("Output" _FS_ "Runtime");
+	cBuild.SetRebuild(true);
+	AssertTrue(cBuild.Start(&cSolution.mcSolution, pcConfiguration, "Output" _FS_ "Runtime", NULL, &aszLines));
+	for (i = 0; (i < 60000) && cBuild.Poll(&aszLines); i++)
+	{
+		ThreadSleep(10);
+	}
+	AssertInt(BS_Succeeded, cBuild.GetState());
+	AssertTrue(TestBuildHasLine(&aszLines, "Runtime: Release|"));
+	AssertFalse(TestBuildHasLine(&aszLines, "Libc65: Release|"));
+	AssertFalse(TestBuildHasLine(&aszLines, "stdint.h"));
+	AssertTrue(cFileUtil.Exists("Output" _FS_ "Runtime" _FS_ "Output" _FS_ "HCP65C816" _FS_ "Release" _FS_ "r.exe"));
+	cSolution.Kill();
+
+	aszLines.ReInit();
+	cSolution.Init();
+	AssertTrue(cSolution.Open("Input" _FS_ "Runtime" _FS_ "NoRuntime.sln"));
+	pcConfiguration = cSolution.mcConfigurations.FindConfiguration("Release|HCP65C816");
+	AssertNotNull(pcConfiguration);
+	AssertFalse(cBuild.Start(&cSolution.mcSolution, pcConfiguration, "Output" _FS_ "NoRuntime", TEST_BUILD_LIBC65, &aszLines));
+	AssertInt(BS_Failed, cBuild.GetState());
+	AssertTrue(TestBuildHasLine(&aszLines, "NoRuntime builds no Libc65 in Release|HCP65C816: the runtime and the system headers are its."));
+	cSolution.Kill();
+
+	aszLines.Kill();
+	cBuild.Kill();
 }
 
 
@@ -765,6 +822,7 @@ void TestBuild(void)
 	BeginTests();
 
 	TestBuildHCP65();
+	TestBuildHCP65Runtime();
 	TestBuildStartupProject();
 #ifdef _WIN32
 	TestBuildMSVC();

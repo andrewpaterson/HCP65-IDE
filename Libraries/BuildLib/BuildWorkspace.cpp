@@ -1019,7 +1019,8 @@ char* CBuildWorkspace::GetFile(void)
 //
 // Whether the solution's project is an application: a project that was
 // read and isn't a static library (as a build tells them apart, see
-// CBuild::GetProjects), by its first configuration.
+// CBuild::GetProjects), by its first configuration.  Libc65, the HCP65's
+// runtime, is no program either: it is linked into one.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CBuildWorkspaceSolution::IsApplication(size uiProject)
@@ -1033,7 +1034,7 @@ bool CBuildWorkspaceSolution::IsApplication(size uiProject)
 		return false;
 	}
 	pcSolutionProject = mcSolution.GetProject(uiProject);
-	if (!pcSolutionProject->IsVcxProject() || !pcSolutionProject->IsLoaded())
+	if (!pcSolutionProject->IsVcxProject() || !pcSolutionProject->IsLoaded() || (StringCompare(pcSolutionProject->GetName(), HCP65_BUILD_LIBC65) == 0))
 	{
 		return false;
 	}

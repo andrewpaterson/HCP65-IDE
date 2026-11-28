@@ -20,6 +20,7 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 ** ------------------------------------------------------------------------ **/
 #include <stdio.h>
 #include <string.h>
+#include "BaseLib/StringHelper.h"
 #include "BaseLib/FileUtil.h"
 #include "CppCompilerLib/VisualStudioProject.h"
 #include "VisualStudioLib/VcxItem.h"
@@ -34,6 +35,7 @@ void CHCP65Build::Init(CVcxSolution* pcSolution, CBuildConfiguration* pcConfigur
 {
 	CBuild::Init(pcSolution, pcConfiguration, szRoot);
 	mszLibc65.Init();
+	maszLibc65Includes.Init();
 	mcBuilder.Init();
 	mcJobs.Init();
 	mcThread.Init();
@@ -57,6 +59,7 @@ void CHCP65Build::Kill(void)
 	mcThread.Kill();
 	mcJobs.Kill();
 	mcBuilder.Kill();
+	maszLibc65Includes.Kill();
 	mszLibc65.Kill();
 	CBuild::Kill();
 }
@@ -75,6 +78,61 @@ void CHCP65Build::SetLibc65Directory(const char* szDirectory)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Libc65 from the solution (ConfigurationsPlan.txt C4-7, question 23): the
+// project called Libc65 that the configuration's rows build gives the
+// system headers' directory and the runtime, in place of the directory
+// the build was handed.  A solution that lists the HCP65 configuration
+// and builds no Libc65 in it has no runtime: an error.  A build with no
+// rows to read keeps the directory it was handed: one described on the
+// command line, a project built by itself, a solution whose HCP65
+// configurations are made up from Visual Studio's.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CHCP65Build::FindLibc65(CArrayChars* paszLines)
+{
+	CArrayBuildProjects	asProjects;
+	EBuildToolchain		eToolchain;
+	CChars				szLine;
+	const char*			szBar;
+	size				i;
+	bool				bFound;
+
+	if (mcDescription.NumProjects() != 0)
+	{
+		return true;
+	}
+	bFound = false;
+	asProjects.Init();
+	GetProjects(&asProjects, false);
+	for (i = 0; i < asProjects.NumElements(); i++)
+	{
+		if (StringCompare(asProjects.Get(i)->pcProject->GetName(), HCP65_BUILD_LIBC65) == 0)
+		{
+			//Its directory, and the include directories its sources are compiled with (BaseLib's, for its allocator).
+			mszLibc65.Set(asProjects.Get(i)->pcProject->GetDirectory());
+			maszLibc65Includes.ReInit();
+			asProjects.Get(i)->pcProject->GetIncludeDirectories(asProjects.Get(i)->pcConfiguration, mpcSolution->GetDirectory(), &maszLibc65Includes);
+			bFound = true;
+		}
+	}
+	asProjects.Kill();
+
+	szBar = strchr(mpcConfiguration->GetSolutionConfiguration(), '|');
+	if (!bFound && szBar && CBuildConfiguration::FindToolchainOfPlatform(szBar + 1, &eToolchain) && ((eToolchain == BT_W65C816) || (eToolchain == BT_65C64)))
+	{
+		szLine.Init(mpcSolution->GetName());
+		szLine.Append(" builds no ")->Append(HCP65_BUILD_LIBC65)->Append(" in ")->Append(mpcConfiguration->GetSolutionConfiguration());
+		szLine.Append(": the runtime and the system headers are its.  Add the project to the solution and build it in that configuration.");
+		paszLines->Add(szLine.Text());
+		szLine.Kill();
+		return false;
+	}
+	return true;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Adds the projects to the builder and starts compiling them on the
 // build's thread.
 //
@@ -84,6 +142,7 @@ bool CHCP65Build::Start(CArrayChars* paszLines)
 	CChars		szListings;
 	CFileUtil	cFileUtil;
 	uint32		uiLimit;
+	size		i;
 
 	meState = BS_Running;
 	mbCompiled = false;
@@ -108,9 +167,22 @@ bool CHCP65Build::Start(CArrayChars* paszLines)
 	mcBuilder.SetListingDirectory(szListings.Text());
 	szListings.Kill();
 	mcBuilder.SetLayoutsFile(mszLayoutsFile.Text());
+	if (!FindLibc65(paszLines))
+	{
+		Finish(BS_Failed, paszLines);
+		return false;
+	}
 	if (!mszLibc65.Empty())
 	{
 		mcBuilder.AddIncludeDirectory(mszLibc65.Text(), false, true);
+	}
+	for (i = 0; i < maszLibc65Includes.NumElements(); i++)
+	{
+		//A directory that isn't there has nothing to include, as Visual Studio has it.
+		if (cFileUtil.IsDirectory(maszLibc65Includes.GetText(i)) && !mszLibc65.Equals(maszLibc65Includes.GetText(i)))
+		{
+			mcBuilder.AddIncludeDirectory(maszLibc65Includes.GetText(i), false, false);
+		}
 	}
 	if (mcDescription.NumProjects() == 0)
 	{
@@ -266,6 +338,11 @@ void CHCP65Build::Describe(void)
 	for (i = 0; i < asProjects.NumElements(); i++)
 	{
 		psProject = asProjects.Get(i);
+		if (StringCompare(psProject->pcProject->GetName(), HCP65_BUILD_LIBC65) == 0)
+		{
+			//The runtime, which the builder adds after the projects (AddLibc65), only what is used kept.
+			continue;
+		}
 		cProject.Init();
 		if (!cProject.Read(psProject->pcProject->GetFileName()))
 		{
