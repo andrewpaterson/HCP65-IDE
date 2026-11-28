@@ -601,9 +601,15 @@ C9. Edit Build Configurations writes the projects and sheets
     configuration's include directories are its base's, so those rows show and write the base's lines
     ("This project, every Win32 configuration").  TestVcxPropertySetting (Input/Property), and in
     TestBuildOptionEditsMSVC and GCC.
-    - Left: the properties general.xml and directories.xml describe that no project here sets (the Windows SDK
-      version, the language standard as a property, the reference and source directories); the other tools' pages
-      (the resource compiler, MIDL, the manifest tool, build events, custom build steps).
+    - The rest of the pages, built 2026-11-28 (the user: "Carry on with what's left of the plan"): the generator
+      reads thirteen of Visual Studio's descriptions, the project's own pages (general.xml, general_advanced.xml,
+      directories.xml) and every tool's (the compiler, linker, librarian, resource compiler, MIDL, manifest tool,
+      browse information, XML documents, build events, custom build step): 341 settings in 39 sections.  Each
+      description says where a setting is kept, which is how a row is a tool's setting, a property or a
+      configuration's own (ConfigurationType, PlatformToolset and EnableASAN are in the Configuration group;
+      LinkIncremental and IncludePath are plain properties; a build event's command is PreBuildEvent's Command).  The
+      eleven property rows written by hand are gone.  Left out are the project's globals (its SDK version), which
+      aren't a configuration's, and what is kept on a reference to another project.
 
 
 C10. What a GCC build on Linux builds: the platforms' own projects and files (added 2026-11-27)
