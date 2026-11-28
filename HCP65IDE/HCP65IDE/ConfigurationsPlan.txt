@@ -837,8 +837,12 @@ C13. The reference programs as a configuration, read by both builders (added 202
     Each program links the libraries it did, and pthread and dl by name.  The IDE's own GCC build of a test solution
     (TestStandardLib.sln, whose rows name the projects' x64 configurations: each is built as its GCC-x64 one, the
     sheet's) against CMake's by compare_builds.py: 640 sources and the link, no differences in Debug or Release.
-  - Left: HCP65IDE.vcxproj's Reference|x64 group is still the old Release settings copied whole (its defines
-    NDEBUG;_LIB;_CRT_SECURE_NO_DEPRECATE;WIN32;_WINDOWS, which question 8 dropped elsewhere); only MSVC reads it.
+  - HCP65IDE.vcxproj's Reference|x64 group, done 2026-11-28 (the user: "Carry on with what's left of the plan"): it
+    was the old Release settings copied whole, 27 compiler and 8 linker lines, from before the sheet.  It has what
+    Release|x64's has now (RemoveUnreferencedCodeData, its SubSystem, Console, and its libraries); the sheet says the
+    rest.  MSBuild's own record of the commands (the .tlog files of a Reference|x64 build under Wine, before and
+    after): the link command is the same, and each of the 111 compile commands lost /D WIN32, /D _LIB and
+    /D _WINDOWS and nothing else, which question 8 dropped everywhere.
   C13-6, built 2026-11-28: CL/CMake/Tests/Solution is the module's test, a solution of a program with a reference
   configuration, a library every configuration builds, one only the window's and one only Reference's (which define
   the same function, so a program linked with the wrong one says so), a program named under another target and one
@@ -894,6 +898,8 @@ C13 after C6 and C10 (C13-3 only with the solution's rows); C13-5 after C13-1 to
 Verification still owed (gathered 2026-11-28; the user: "Please add the verification gaps into the plan")
 --------------------------------------------------------------------------------------------------------
 What was built and reported without one of its checks being run.  Each can be run here; none needs Windows.
+V1, run 2026-11-28: all four pass with "816" (TestBaseLib65 1,215, TestStandardLib65 500, TestSupportLib65 473,
+    TestLibc65 154,963).  As it was put:
 V1. The 65 suites' second pass.  TestBaseLib65, TestStandardLib65, TestSupportLib65 and TestLibc65 are each run
     twice, with no argument (the 65C64) and with "816" (the W65C816).  After their CMakeLists.txt were made to read
     their solutions (C13-3, The other CMakeLists.txt) ctest ran the first pass only: all four passed.  Their compile
