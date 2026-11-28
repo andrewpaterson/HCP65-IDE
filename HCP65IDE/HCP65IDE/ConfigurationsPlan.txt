@@ -579,8 +579,7 @@ C9. Edit Build Configurations writes the projects and sheets
     and g++'s the additional include directories.  An option is found by its name and kind (FindBuildOption: the
     three toolchains each have a ClCompile.PreprocessorDefinitions).  TestBuildOptionEditsMSVC; the IDE check
     build-options-msvc.
-    - Not checked by a build: that MSBuild reads a value the dialog wrote.  The tags and values are Visual Studio's
-      own and the writer is the one the HCP65 lines use, but the fixtures aren't projects MSBuild builds.
+    - Checked by a build since (Verification still owed, V3): MSBuild reads what the dialog writes.
     Stage 3, built 2026-11-28 (the user: "Carry on with stage 3"), its second half first: every setting of Visual
     Studio's compiler, linker and librarian pages.  Visual Studio describes its own pages in cl.xml, link.xml and
     lib.xml (MSBuild/Microsoft/VC/v160/1033), and BuildLib/MakeMSVCOptions.py writes the rows from them
@@ -910,6 +909,12 @@ V2. The three programs' Debug builds.  HCP65IDE, HCP65Emulator and HCP65Sculpt w
     sources gain DEBUG_POINTER, which the projects' Debug|GCC-x64 group now says (C13-3, DEBUG_POINTER).  A Debug
     build of each, and the IDE's checks on a Debug HCP65IDERef, would show PointerObject.h's logging does no harm
     there.
+V3, run 2026-11-28: a copy of TestBaseLib.sln built by MSBuild under Wine, Release|x64; then, in a scripted run of
+    the IDE on the copy, the dialog made TestBaseLib's optimisation MinSpace for Release, gave it the define
+    DIALOG_WROTE_THIS and the target name TestBaseLibEdited (11 lines added to TestBaseLib.vcxproj, nothing else
+    changed); then built again.  No errors; MSBuild's record of its commands has each of the project's 218 compile
+    commands with /O1 where it had /O2 and with /D DIALOG_WROTE_THIS, and the program is TestBaseLibEdited.exe.  So
+    MSBuild reads a tool's setting, a list that adds up and a property as the dialog writes them.  As it was put:
 V3. MSBuild reading what Edit Build Configurations wrote (C9, stages 2 and 3).  The tags and values are Visual
     Studio's own and the writers are tested byte for byte, but no MSVC build has been given a file the dialog
     changed: the fixtures aren't projects MSBuild builds.  To do: a copy of a real solution, a setting and a property
