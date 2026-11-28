@@ -167,13 +167,29 @@ void CVcxConfiguration::AddSource(const char* szName, const char* szFile, const 
 void CVcxConfiguration::GetSources(const char* szName, CArrayTemplatePtr<CVcxSettingSource>* papcDest)
 {
 	size	i;
+	bool	bIncludes;
 
+	//As GetProperty finds a value: a toolchain's configuration has its base's include directories, and its base's
+	//properties where it has none of its own.
+	bIncludes = (strcmp(szName, "IncludePath") == 0) || (strcmp(szName, "ClCompile.AdditionalIncludeDirectories") == 0);
+	if (bIncludes && mpcBase)
+	{
+		mpcBase->GetSources(szName, papcDest);
+		if (papcDest->NumElements() > 0)
+		{
+			return;
+		}
+	}
 	for (i = 0; i < masSources.NumElements(); i++)
 	{
 		if (masSources.Get(i)->mszName.Equals(szName))
 		{
 			papcDest->Add(masSources.Get(i));
 		}
+	}
+	if ((papcDest->NumElements() == 0) && (mpcBase != NULL) && !strchr(szName, '.'))
+	{
+		mpcBase->GetSources(szName, papcDest);
 	}
 }
 

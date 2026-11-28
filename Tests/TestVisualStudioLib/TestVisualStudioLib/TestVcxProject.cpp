@@ -6,6 +6,7 @@
 #include "BaseLib/TextFile.h"
 #include "VisualStudioLib/VcxProject.h"
 #include "VisualStudioLib/VcxProjectConfigurations.h"
+#include "VisualStudioLib/VcxPropertySetting.h"
 #include "VisualStudioLib/VcxSetting.h"
 #include "VisualStudioLib/VcxSolution.h"
 #include "VisualStudioLib/VcxSolutionRows.h"
@@ -1126,6 +1127,108 @@ void TestVcxConfigurations(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// A property set in place (ConfigurationsPlan.txt C9, stage 3): one said
+// by its own Condition or by its group's is changed where it is; one that
+// isn't said is added with a Condition of its own in the file's plain
+// group, or in the configuration's own group if it is one of those (its
+// type, its character set), which must be there; in a file with no plain
+// group one is made before the first ItemDefinitionGroup.  Removing what
+// was added gives each file back byte for byte.  The project read
+// afterwards has what was written, and where each property was said.
+//
+//////////////////////////////////////////////////////////////////////////
+void TestVcxPropertySetting(void)
+{
+	CVcxProject								cProject;
+	CVcxConfiguration*						pcConfiguration;
+	CArrayTemplatePtr<CVcxSettingSource>	apcSources;
+	CFileUtil								cFileUtil;
+	CTextFile								cFile;
+	CChars									szValue;
+
+	cFileUtil.RemoveDir("Output" _FS_ "Property");
+	AssertTrue(cFileUtil.TouchDir("Output" _FS_ "Property"));
+	AssertTrue(cFileUtil.CopyDir("Input" _FS_ "Property", "Output" _FS_ "Property"));
+#define TEST_PROPERTY_BEFORE	"Input" _FS_ "Property" _FS_
+#define TEST_PROPERTY_PROJECT	"Output" _FS_ "Property" _FS_ "Program.vcxproj"
+#define TEST_PROPERTY_SHEET		"Output" _FS_ "Property" _FS_ "Sheet.props"
+#define TEST_PROPERTY_BARE		"Output" _FS_ "Property" _FS_ "Bare.props"
+#define TEST_PROPERTY_DEBUG		"'$(Configuration)|$(Platform)'=='Debug|x64'"
+#define TEST_PROPERTY_RELEASE	"'$(Configuration)|$(Platform)'=='Release|x64'"
+#define TEST_PROPERTY_PLATFORM	"'$(Platform)'=='x64'"
+
+	//What is there, by its own Condition and by its group's; said again nothing is written.
+	szValue.Init();
+	AssertTrue(GetVcxProperty(TEST_PROPERTY_PROJECT, TEST_PROPERTY_DEBUG, "IncludePath", &szValue));
+	AssertString("..\\Libraries;$(IncludePath)", szValue.Text());
+	AssertFalse(GetVcxProperty(TEST_PROPERTY_PROJECT, TEST_PROPERTY_RELEASE, "IncludePath", &szValue));
+	AssertTrue(GetVcxProperty(TEST_PROPERTY_PROJECT, TEST_PROPERTY_RELEASE, "ConfigurationType", &szValue));
+	AssertString("Application", szValue.Text());
+	AssertFalse(GetVcxProperty(TEST_PROPERTY_PROJECT, TEST_PROPERTY_RELEASE, "CharacterSet", &szValue));
+	AssertTrue(GetVcxProperty(TEST_PROPERTY_SHEET, NULL, "IncludePath", &szValue));
+	AssertString("Shared;$(IncludePath)", szValue.Text());
+	AssertTrue(SetVcxProperty(TEST_PROPERTY_PROJECT, TEST_PROPERTY_DEBUG, "IncludePath", "..\\Libraries;$(IncludePath)", false));
+	AssertTrue(SetVcxProperty(TEST_PROPERTY_PROJECT, TEST_PROPERTY_RELEASE, "IncludePath", NULL, false));
+	AssertFile(TEST_PROPERTY_BEFORE "Program.vcxproj", TEST_PROPERTY_PROJECT);
+
+	//Changed where they are; added where each kind goes; a configuration's own with no group to go in is refused.
+	AssertTrue(SetVcxProperty(TEST_PROPERTY_PROJECT, TEST_PROPERTY_DEBUG, "ConfigurationType", "StaticLibrary", true));
+	AssertTrue(SetVcxProperty(TEST_PROPERTY_PROJECT, TEST_PROPERTY_DEBUG, "IncludePath", "..\\Changed;$(IncludePath)", false));
+	AssertTrue(SetVcxProperty(TEST_PROPERTY_PROJECT, TEST_PROPERTY_RELEASE, "IncludePath", "..\\Other;$(IncludePath)", false));
+	AssertTrue(SetVcxProperty(TEST_PROPERTY_PROJECT, TEST_PROPERTY_RELEASE, "CharacterSet", "Unicode", true));
+	AssertTrue(SetVcxProperty(TEST_PROPERTY_PROJECT, TEST_PROPERTY_PLATFORM, "LinkIncremental", "false", false));
+	AssertFalse(SetVcxProperty(TEST_PROPERTY_PROJECT, "'$(Configuration)|$(Platform)'=='Fast|x64'", "CharacterSet", "Unicode", true));
+	AssertTrue(SetVcxProperty(TEST_PROPERTY_SHEET, NULL, "IncludePath", "Shared;Extra;$(IncludePath)", false));
+	AssertTrue(SetVcxProperty(TEST_PROPERTY_BARE, TEST_PROPERTY_PLATFORM, "LinkIncremental", "true", false));
+
+	cFile.Init();
+	AssertTrue(cFile.Read(TEST_PROPERTY_PROJECT));
+	AssertTrue(strstr(cFile.Text(), "    <IncludePath Condition=\"'$(Configuration)|$(Platform)'=='Release|x64'\">..\\Other;$(IncludePath)</IncludePath>\r\n    <LinkIncremental Condition=\"'$(Platform)'=='x64'\">false</LinkIncremental>\r\n  </PropertyGroup>\r\n") != NULL);
+	AssertTrue(strstr(cFile.Text(), "    <ConfigurationType>Application</ConfigurationType>\r\n    <CharacterSet>Unicode</CharacterSet>\r\n  </PropertyGroup>\r\n") != NULL);
+	cFile.Kill();
+	cFile.Init();
+	AssertTrue(cFile.Read(TEST_PROPERTY_BARE));
+	AssertTrue(strstr(cFile.Text(), "  <PropertyGroup>\n    <LinkIncremental Condition=\"'$(Platform)'=='x64'\">true</LinkIncremental>\n  </PropertyGroup>\n  <ItemDefinitionGroup>\n") != NULL);
+	cFile.Kill();
+
+	//Read as a project, with where each was said: the sheet's first, then the project's own.
+	cProject.Init();
+	AssertTrue(cProject.Read(TEST_PROPERTY_PROJECT));
+	pcConfiguration = cProject.FindConfiguration("Debug|x64");
+	AssertString("StaticLibrary", pcConfiguration->GetProperty("ConfigurationType"));
+	AssertString("false", pcConfiguration->GetProperty("LinkIncremental"));
+	apcSources.Init();
+	pcConfiguration->GetSources("IncludePath", &apcSources);
+	AssertSize(2, apcSources.NumElements());
+	AssertTrue(apcSources.GetPtr(0)->mszFile.EndsWith("Sheet.props"));
+	AssertString("", apcSources.GetPtr(0)->mszCondition.Text());
+	AssertString("Shared;Extra;$(IncludePath)", apcSources.GetPtr(0)->mszValue.Text());
+	AssertTrue(apcSources.GetPtr(1)->mszFile.EndsWith("Program.vcxproj"));
+	AssertString(TEST_PROPERTY_DEBUG, apcSources.GetPtr(1)->mszCondition.Text());
+	AssertString("..\\Changed;$(IncludePath)", apcSources.GetPtr(1)->mszValue.Text());
+	apcSources.Kill();
+	pcConfiguration = cProject.FindConfiguration("Release|x64");
+	AssertString("Unicode", pcConfiguration->GetProperty("CharacterSet"));
+	AssertString("false", pcConfiguration->GetProperty("LinkIncremental"));
+	cProject.Kill();
+
+	//Taken away again, each file is as it was.
+	AssertTrue(SetVcxProperty(TEST_PROPERTY_PROJECT, TEST_PROPERTY_DEBUG, "ConfigurationType", "Application", true));
+	AssertTrue(SetVcxProperty(TEST_PROPERTY_PROJECT, TEST_PROPERTY_DEBUG, "IncludePath", "..\\Libraries;$(IncludePath)", false));
+	AssertTrue(SetVcxProperty(TEST_PROPERTY_PROJECT, TEST_PROPERTY_RELEASE, "IncludePath", NULL, false));
+	AssertTrue(SetVcxProperty(TEST_PROPERTY_PROJECT, TEST_PROPERTY_RELEASE, "CharacterSet", NULL, true));
+	AssertTrue(SetVcxProperty(TEST_PROPERTY_PROJECT, TEST_PROPERTY_PLATFORM, "LinkIncremental", NULL, false));
+	AssertTrue(SetVcxProperty(TEST_PROPERTY_SHEET, NULL, "IncludePath", "Shared;$(IncludePath)", false));
+	AssertTrue(SetVcxProperty(TEST_PROPERTY_BARE, TEST_PROPERTY_PLATFORM, "LinkIncremental", NULL, false));
+	AssertFile(TEST_PROPERTY_BEFORE "Program.vcxproj", TEST_PROPERTY_PROJECT);
+	AssertFile(TEST_PROPERTY_BEFORE "Sheet.props", TEST_PROPERTY_SHEET);
+	AssertFile(TEST_PROPERTY_BEFORE "Bare.props", TEST_PROPERTY_BARE);
+	szValue.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 //
 //////////////////////////////////////////////////////////////////////////
 void TestVcxProject(void)
@@ -1142,6 +1245,7 @@ void TestVcxProject(void)
 	TestVcxProjectExcludedFromBuild();
 	TestVcxProjectSheets();
 	TestVcxSetting();
+	TestVcxPropertySetting();
 	TestVcxSettingSources();
 	TestVcxConfigurations();
 

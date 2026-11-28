@@ -30,6 +30,9 @@
     <ClCompile Include="VcxPath.cpp">
       <Filter>Source\Solution</Filter>
     </ClCompile>
+    <ClCompile Include="VcxPropertySetting.cpp">
+      <Filter>Source\Solution</Filter>
+    </ClCompile>
     <ClCompile Include="VcxSetting.cpp">
       <Filter>Source\Solution</Filter>
     </ClCompile>
@@ -63,6 +66,9 @@
       <Filter>Source\Project</Filter>
     </ClInclude>
     <ClInclude Include="VcxPath.h">
+      <Filter>Source\Solution</Filter>
+    </ClInclude>
+    <ClInclude Include="VcxPropertySetting.h">
       <Filter>Source\Solution</Filter>
     </ClInclude>
     <ClInclude Include="VcxSetting.h">

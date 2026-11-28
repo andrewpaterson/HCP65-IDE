@@ -901,9 +901,9 @@ bool CVcxProject::IsConditionFor(const char* szCondition, CVcxConfiguration* pcC
 // a property's, has what the configuration was given before in its place,
 // so a project adds to its sheet's; one that doesn't replaces it.
 // $(MSBuildThisFileDirectory) is the directory of the file being read, so
-// it is put in now: a sheet names its own folder with it.  Where an item
-// definition's setting was set is kept with the configuration (its
-// sources).
+// it is put in now: a sheet names its own folder with it.  Where each was
+// set is kept with the configuration (its sources), with the value as the
+// file writes it.
 //
 //////////////////////////////////////////////////////////////////////////
 void CVcxProject::SetProperty(const char* szCondition, const char* szName, const char* szValue)
@@ -912,12 +912,14 @@ void CVcxProject::SetProperty(const char* szCondition, const char* szName, const
 	CChars				szSelf;
 	CChars				szNew;
 	CChars				szHere;
+	CChars				szRead;
 	const char*			szDot;
 	char*				szOld;
 	size				i;
 	size				j;
 	bool				bInScope;
 
+	szRead.Init(szValue);
 	szHere.Init(szValue);
 	if (mszReadingDirectory && szHere.Contains(VCX_THIS_FILE_DIRECTORY))
 	{
@@ -941,10 +943,7 @@ void CVcxProject::SetProperty(const char* szCondition, const char* szName, const
 		}
 		if (bInScope)
 		{
-			if (szDot)
-			{
-				pcConfiguration->AddSource(szName, mszReadingFile ? mszReadingFile : mszFileName.Text(), szCondition, szValue);
-			}
+			pcConfiguration->AddSource(szName, mszReadingFile ? mszReadingFile : mszFileName.Text(), szCondition, szRead.Text());
 			szOld = pcConfiguration->GetOwnProperty(szName);
 			if ((szOld != NULL) && (strstr(szValue, szSelf.Text()) != NULL))
 			{
@@ -959,6 +958,7 @@ void CVcxProject::SetProperty(const char* szCondition, const char* szName, const
 			}
 		}
 	}
+	szRead.Kill();
 	szSelf.Kill();
 	szHere.Kill();
 }
