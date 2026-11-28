@@ -187,7 +187,7 @@ void MakeRelativePath(const char* szDirectory, const char* szPath, CChars* pszDe
 // absolute path's.
 //
 //////////////////////////////////////////////////////////////////////////
-static void FullPathFrom(const char* szDirectory, const char* szPath, CChars* pszDest)
+void FullPathFrom(const char* szDirectory, const char* szPath, CChars* pszDest)
 {
 	CFileUtil	cFileUtil;
 

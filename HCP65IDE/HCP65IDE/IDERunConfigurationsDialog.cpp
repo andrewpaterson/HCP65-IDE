@@ -22,6 +22,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdlib.h>
 #include <string.h>
 #include "BaseLib/StringHelper.h"
+#include "BaseLib/FileUtil.h"
 #include "StandardLib/ClassDefines.h"
 #include "StandardLib/Objects.h"
 #include "WindowLib/FillContainer.h"
@@ -45,8 +46,9 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 //////////////////////////////////////////////////////////////////////////
 void CIDERunConfigurationsDialog::Init(Ptr<CWindow> pOwner, SDialogLook* psLook, CBuildWorkspace* pcWorkspace, const char* szSelected)
 {
-	Ptr<CComponent>	pBody;
-	size	i;
+	Ptr<CComponent>		pBody;
+	CRunConfiguration	cPrivate;
+	size				i;
 
 	PreInit();
 
@@ -54,7 +56,17 @@ void CIDERunConfigurationsDialog::Init(Ptr<CWindow> pOwner, SDialogLook* psLook,
 	maszBuildConfigurations.Init();
 	miSelected = -1;
 	mbUpdating = false;
+	maszCards.Init();
+	maszSolutions.Init();
+	mszPrivateDirectory.Init();
+	cPrivate.Init();
+	pcWorkspace->GetRunConfigurationDirectory(&cPrivate, &mszPrivateDirectory);
+	cPrivate.Kill();
 	pcWorkspace->GetConfigurationNames(&maszBuildConfigurations);
+	for (i = 0; i < pcWorkspace->NumSolutions(); i++)
+	{
+		maszSolutions.Add(pcWorkspace->GetSolution(i)->mcSolution.GetDirectory());
+	}
 	for (i = 0; i < pcWorkspace->NumRunConfigurations(); i++)
 	{
 		masEdited.Add()->Init(pcWorkspace->GetRunConfiguration(i));
@@ -68,11 +80,18 @@ void CIDERunConfigurationsDialog::Init(Ptr<CWindow> pOwner, SDialogLook* psLook,
 	mpDialog->SetResizable(IDE_RUN_DIALOG_WIDTH / 2, IDE_RUN_DIALOG_HEIGHT / 2);
 	//The body is made first: it makes the component that has the keys when the dialog opens.
 	pBody = CreateBody();
+	for (i = 0; i < pcWorkspace->NumSolutions(); i++)
+	{
+		mpStored->AddItem(pcWorkspace->GetSolution(i)->mcSolution.GetName());
+	}
+	FindCards(pcWorkspace);
 	mpDialog->SetBody(pBody, mpName);
 	mpDialog->SetApprover(this, &CIDERunConfigurationsDialog::Approve);
+	mpDialog->AddExtraButton(IDE_RUN_DIALOG_OPEN_CARD);
 
 	mpList->GetSelectionEvent()->Add(this, &CIDERunConfigurationsDialog::SelectionChanged);
 	mpName->GetChangeEvent()->Add(this, &CIDERunConfigurationsDialog::NameChanged);
+	mpCard->GetSelectionEvent()->Add(this, &CIDERunConfigurationsDialog::CardChanged);
 	mpAdd->GetClickEvent()->Add(this, &CIDERunConfigurationsDialog::AddClicked);
 	mpRemove->GetClickEvent()->Add(this, &CIDERunConfigurationsDialog::RemoveClicked);
 
@@ -99,9 +118,17 @@ void CIDERunConfigurationsDialog::Class(void)
 	M_Pointer(mpTool);
 	M_Pointer(mpDirectory);
 	M_Pointer(mpArguments);
+	M_Pointer(mpLoadFile);
+	M_Pointer(mpLoadAddress);
+	M_Pointer(mpCard);
+	M_Pointer(mpCardPrograms);
+	M_Pointer(mpStored);
 	M_Pointer(mpError);
 	U_Unknown(CArrayRunConfigurations, masEdited);
 	U_Unknown(CArrayChars, maszBuildConfigurations);
+	U_Unknown(CArrayChars, maszCards);
+	U_Unknown(CArrayChars, maszSolutions);
+	U_Unknown(CChars, mszPrivateDirectory);
 	U_Int32(miSelected);
 	U_Bool(mbUpdating);
 }
@@ -127,6 +154,10 @@ void CIDERunConfigurationsDialog::Free(void)
 	{
 		mpName->GetChangeEvent()->Remove(this);
 	}
+	if (mpCard.IsNotNull())
+	{
+		mpCard->GetSelectionEvent()->Remove(this);
+	}
 	if (mpAdd.IsNotNull())
 	{
 		mpAdd->GetClickEvent()->Remove(this);
@@ -138,6 +169,9 @@ void CIDERunConfigurationsDialog::Free(void)
 	KillEdited();
 	masEdited.Kill();
 	maszBuildConfigurations.Kill();
+	maszCards.Kill();
+	maszSolutions.Kill();
+	mszPrivateDirectory.Kill();
 }
 
 
@@ -178,6 +212,8 @@ Ptr<CComponent> CIDERunConfigurationsDialog::CreateBody(void)
 	Ptr<CGridContainer>		pLeft;
 	Ptr<CGridContainer>		pButtons;
 	Ptr<CGridContainer>		pForm;
+	Ptr<CGridContainer>		pLoad;
+	Ptr<CLabel>				pAt;
 	Ptr<CFillContainer>		pGap;
 	SInsets					sInsets;
 	int32					iRow;
@@ -226,6 +262,30 @@ Ptr<CComponent> CIDERunConfigurationsDialog::CreateBody(void)
 	mpTool = CreateField();
 	mpDirectory = CreateField();
 	mpArguments = CreateField();
+
+	//The file loaded first and its address, on one row.
+	mpLoadFile = CreateField();
+	mpLoadAddress = OMalloc<CTextField>(pWindow, psLook->pcTheme, "");
+	mpLoadAddress->SetColumns(8);
+	mpLoadAddress->SetAlignment(CSH_Left, CSV_Center);
+	pAt = OMalloc<CLabel>(pWindow, psLook->pcTheme->GetFont(), " At ");
+	pAt->SetAlignment(CSH_Left, CSV_Center);
+	pLoad = OMalloc<CGridContainer>(pWindow);
+	pLoad->SetAlignment(CSH_Stretch, CSV_Center);
+	pLoad->AddComponent(mpLoadFile, 0, 0, 1, 1, 1, 0);
+	pLoad->AddComponent(pAt, 1, 0);
+	pLoad->AddComponent(mpLoadAddress, 2, 0);
+
+	//The card by name, and under it what its file says.
+	mpCard = OMalloc<CComboBox>(pWindow, psLook->pcTheme);
+	mpCard->SetAlignment(CSH_Stretch, CSV_Center);
+	mpCard->AddItem(IDE_RUN_DIALOG_NO_CARD);
+	mpCardPrograms = OMalloc<CGridContainer>(pWindow);
+	mpCardPrograms->SetAlignment(CSH_Stretch, CSV_Top);
+	mpStored = OMalloc<CComboBox>(pWindow, psLook->pcTheme);
+	mpStored->SetAlignment(CSH_Stretch, CSV_Center);
+	mpStored->AddItem(IDE_RUN_DIALOG_PRIVATE);
+
 	mpError = OMalloc<CLabel>(pWindow, psLook->pcTheme->GetFont(), "");
 	mpError->SetAlignment(CSH_Left, CSV_Center);
 
@@ -237,6 +297,10 @@ Ptr<CComponent> CIDERunConfigurationsDialog::CreateBody(void)
 	AddFormRow(pForm, &iRow, "Tool", mpTool);
 	AddFormRow(pForm, &iRow, "Working directory", mpDirectory);
 	AddFormRow(pForm, &iRow, "Arguments", mpArguments);
+	AddFormRow(pForm, &iRow, "Load first", pLoad);
+	AddFormRow(pForm, &iRow, "Card", mpCard);
+	AddFormRow(pForm, &iRow, "", mpCardPrograms);
+	AddFormRow(pForm, &iRow, "Stored in", mpStored);
 	AddFormRow(pForm, &iRow, NULL, mpError);
 
 	//What is left over goes under the rows, which keeps them at the top.
@@ -339,6 +403,10 @@ void CIDERunConfigurationsDialog::ShowList(void)
 void CIDERunConfigurationsDialog::ShowSelected(void)
 {
 	CRunConfiguration*	pcRun;
+	CChars				szText;
+	CChars				szDirectory;
+	char				szAddress[16];
+	size				i;
 
 	mbUpdating = true;
 	pcRun = (miSelected >= 0) ? masEdited.Get(miSelected) : NULL;
@@ -350,8 +418,262 @@ void CIDERunConfigurationsDialog::ShowSelected(void)
 	{
 		SelectBuildConfiguration(pcRun->GetConfiguration());
 	}
-	mpError->SetText("");
+	szText.Init();
+	if (pcRun && (pcRun->NumLoads() > 0))
+	{
+		snprintf(szAddress, sizeof(szAddress), "0x%X", (unsigned int)pcRun->GetLoadAddress(0));
+		szText.Set(szAddress);
+	}
+	mpLoadFile->SetText((pcRun && (pcRun->NumLoads() > 0)) ? pcRun->GetLoadFile(0) : "");
+	mpLoadAddress->SetText(szText.Text());
+
+	//Its card by its file, which is added if it isn't one of those found, so that it isn't lost by looking at it.
+	mpCard->Select(0);
+	if (pcRun && (pcRun->GetCard()[0] != '\0'))
+	{
+		szDirectory.Init();
+		GetDirectory(pcRun, &szDirectory);
+		FullPathFrom(szDirectory.Text(), pcRun->GetCard(), &szText);
+		szDirectory.Kill();
+		AddCard(szText.Text());
+		mpCard->Select((int32)maszCards.GetIndex(szText.Text()) + 1);
+	}
+	szText.Kill();
+	mpStored->Select(0);
+	for (i = 0; pcRun && pcRun->IsShared() && (i < maszSolutions.NumElements()); i++)
+	{
+		if (StringCompare(maszSolutions.GetText(i), pcRun->GetShared()) == 0)
+		{
+			mpStored->Select((int32)i + 1);
+		}
+	}
+	ShowCard();
+	mpError->SetText((pcRun && (pcRun->NumLoads() > 1)) ? IDE_RUN_DIALOG_SEVERAL_LOADS : "");
 	mbUpdating = false;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The card files a run configuration here might name: those in each
+// solution's folder and the three above it, and in a Cards folder of any
+// of those (HCP65/Cards from HCP65/Drivers/VIABoard), in name order.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDERunConfigurationsDialog::FindCards(CBuildWorkspace* pcWorkspace)
+{
+	CFileUtil	cFileUtil;
+	CChars		szDirectory;
+	size		i;
+	int			iUp;
+
+	szDirectory.Init();
+	for (i = 0; i < pcWorkspace->NumSolutions(); i++)
+	{
+		szDirectory.Set(pcWorkspace->GetSolution(i)->mcSolution.GetDirectory());
+		for (iUp = 0; (iUp <= 3) && !szDirectory.Empty(); iUp++)
+		{
+			AddCardsIn(szDirectory.Text());
+			cFileUtil.RemoveLastFromPath(&szDirectory);
+		}
+	}
+	szDirectory.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The card files in szDirectory and its Cards folder.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDERunConfigurationsDialog::AddCardsIn(const char* szDirectory)
+{
+	CFileUtil	cFileUtil;
+	CArrayChars	aszFiles;
+	CChars		szCards;
+	size		i;
+
+	aszFiles.Init();
+	cFileUtil.FindFilesWithExtension(szDirectory, &BUILD_CARD_EXTENSION[1], &aszFiles);
+	szCards.Init(szDirectory);
+	cFileUtil.AppendToPath(&szCards, "Cards");
+	if (cFileUtil.IsDirectory(szCards.Text()))
+	{
+		cFileUtil.FindFilesWithExtension(szCards.Text(), &BUILD_CARD_EXTENSION[1], &aszFiles);
+	}
+	szCards.Kill();
+	aszFiles.QuickSort();
+	for (i = 0; i < aszFiles.NumElements(); i++)
+	{
+		AddCard(aszFiles.GetText(i));
+	}
+	aszFiles.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A card file (a full path) in the drop-down, by its name without its
+// extension, once.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDERunConfigurationsDialog::AddCard(const char* szFile)
+{
+	CFileUtil	cFileUtil;
+	CChars		szName;
+	CChars		szDirectory;
+
+	if (maszCards.Contains(szFile))
+	{
+		return;
+	}
+	maszCards.Add(szFile);
+	szName.Init();
+	szDirectory.Init();
+	cFileUtil.SplitPath(szFile, &szName, &szDirectory);
+	cFileUtil.RemoveExtension(&szName);
+	mpCard->AddItem(szName.Text());
+	szDirectory.Kill();
+	szName.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Under the card: what its file says, its image and then each program's
+// path on the card and the file that goes there; that it can't be read;
+// or nothing for no card.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDERunConfigurationsDialog::ShowCard(void)
+{
+	CBuildCard		cCard;
+	Ptr<CLabel>		pLabel;
+	CChars			szLine;
+	size			i;
+	int32			iRow;
+
+	mpCardPrograms->RemoveAllComponents();
+	if (mpCard->GetSelected() <= 0)
+	{
+		return;
+	}
+	cCard.Init();
+	szLine.Init();
+	iRow = 0;
+	if (!cCard.Read(maszCards.GetText((size)mpCard->GetSelected() - 1)))
+	{
+		szLine.Set("The card file can't be read.");
+	}
+	else
+	{
+		szLine.Set("Image: ");
+		szLine.Append(cCard.GetImageText());
+	}
+	pLabel = OMalloc<CLabel>(mpDialog->GetWindow(), mpDialog->GetLook()->pcTheme->GetFont(), szLine.Text());
+	pLabel->SetAlignment(CSH_Left, CSV_Center);
+	mpCardPrograms->AddComponent(pLabel, 0, iRow++, 2, 1, 1, 0);
+	for (i = 0; i < cCard.NumPrograms(); i++)
+	{
+		szLine.Set(cCard.GetProgramPath(i));
+		szLine.Append("   ");
+		pLabel = OMalloc<CLabel>(mpDialog->GetWindow(), mpDialog->GetLook()->pcTheme->GetFont(), szLine.Text());
+		pLabel->SetAlignment(CSH_Left, CSV_Center);
+		mpCardPrograms->AddComponent(pLabel, 0, iRow);
+		pLabel = OMalloc<CLabel>(mpDialog->GetWindow(), mpDialog->GetLook()->pcTheme->GetFont(), cCard.GetProgramFileText(i));
+		pLabel->SetAlignment(CSH_Left, CSV_Center);
+		mpCardPrograms->AddComponent(pLabel, 1, iRow++, 1, 1, 1, 0);
+	}
+	szLine.Kill();
+	cCard.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Another card chosen.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDERunConfigurationsDialog::CardChanged(void)
+{
+	if (!mbUpdating)
+	{
+		ShowCard();
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The folder a run configuration's paths are relative to: its solution's
+// if it is shared, else the workspace file's.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDERunConfigurationsDialog::GetDirectory(CRunConfiguration* pcRun, CChars* pszDest)
+{
+	pszDest->Set(pcRun->IsShared() ? pcRun->GetShared() : mszPrivateDirectory.Text());
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// szFull as it is written in a run configuration kept in szDirectory:
+// relative to it, with Windows' separators as the committed ones have.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDERunConfigurationsDialog::MakeRelative(const char* szDirectory, const char* szFull, CChars* pszDest)
+{
+	MakeRelativePath(szDirectory, szFull, pszDest);
+	pszDest->Replace('/', '\\');
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The run configuration is kept beside the solution in szShared, or in
+// the workspace (NULL).  Its paths, which are relative to where it is
+// kept, are written again for there so they name the same files.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDERunConfigurationsDialog::Store(CRunConfiguration* pcRun, const char* szShared)
+{
+	CRunConfiguration	cOld;
+	CChars				szOld;
+	CChars				szNew;
+	CChars				szFull;
+	CChars				szPath;
+	size				i;
+
+	if (StringCompare(pcRun->GetShared(), szShared ? szShared : "") == 0)
+	{
+		return;
+	}
+	szOld.Init();
+	szNew.Init();
+	szFull.Init();
+	szPath.Init();
+	GetDirectory(pcRun, &szOld);
+	cOld.Init(pcRun);
+	pcRun->SetShared(szShared);
+	GetDirectory(pcRun, &szNew);
+	if (cOld.GetCard()[0] != '\0')
+	{
+		FullPathFrom(szOld.Text(), cOld.GetCard(), &szFull);
+		MakeRelative(szNew.Text(), szFull.Text(), &szPath);
+		pcRun->SetCard(szPath.Text());
+	}
+	pcRun->ClearLoads();
+	for (i = 0; i < cOld.NumLoads(); i++)
+	{
+		FullPathFrom(szOld.Text(), cOld.GetLoadFile(i), &szFull);
+		MakeRelative(szNew.Text(), szFull.Text(), &szPath);
+		pcRun->AddLoad(szPath.Text(), cOld.GetLoadAddress(i));
+	}
+	cOld.Kill();
+	szPath.Kill();
+	szFull.Kill();
+	szNew.Kill();
+	szOld.Kill();
 }
 
 
@@ -386,6 +708,8 @@ void CIDERunConfigurationsDialog::SelectBuildConfiguration(const char* szConfigu
 void CIDERunConfigurationsDialog::Keep(void)
 {
 	CRunConfiguration*	pcRun;
+	CChars				szCard;
+	CChars				szDirectory;
 
 	if (miSelected < 0)
 	{
@@ -398,6 +722,26 @@ void CIDERunConfigurationsDialog::Keep(void)
 		pcRun->SetConfiguration(mpBuildConfiguration->GetSelectedText());
 	}
 	pcRun->SetTool(mpTool->GetText(), mpDirectory->GetText(), mpArguments->GetText());
+	if (pcRun->NumLoads() <= 1)
+	{
+		//More than one are its file's to edit: they are kept as they are.
+		pcRun->ClearLoads();
+		if (mpLoadFile->GetText()[0] != '\0')
+		{
+			pcRun->AddLoad(mpLoadFile->GetText(), (uint32)strtoul(mpLoadAddress->GetText(), NULL, 0));
+		}
+	}
+	Store(pcRun, (mpStored->GetSelected() > 0) ? maszSolutions.GetText((size)mpStored->GetSelected() - 1) : NULL);
+	szCard.Init();
+	if (mpCard->GetSelected() > 0)
+	{
+		szDirectory.Init();
+		GetDirectory(pcRun, &szDirectory);
+		MakeRelative(szDirectory.Text(), maszCards.GetText((size)mpCard->GetSelected() - 1), &szCard);
+		szDirectory.Kill();
+	}
+	pcRun->SetCard(szCard.Text());
+	szCard.Kill();
 }
 
 
@@ -532,7 +876,18 @@ bool CIDERunConfigurationsDialog::Approve(void)
 	size		i;
 	size		j;
 	const char*	szProblem;
+	char*		szEnd;
 
+	//The address typed is looked at before it is kept as a number.
+	if ((miSelected >= 0) && (masEdited.Get(miSelected)->NumLoads() <= 1) && (mpLoadFile->GetText()[0] != '\0'))
+	{
+		strtoul(mpLoadAddress->GetText(), &szEnd, 0);
+		if ((szEnd == mpLoadAddress->GetText()) || (*szEnd != '\0'))
+		{
+			mpError->SetText("The address the file is loaded at isn't a number.");
+			return false;
+		}
+	}
 	Keep();
 	mpError->SetText("");
 	szProblem = NULL;
@@ -565,14 +920,17 @@ bool CIDERunConfigurationsDialog::Approve(void)
 //
 // For checking, what a user would do in the dialog, separated by
 // semicolons: add, remove, select:<row>, name:<text>, build:<text>,
-// tool:<text>, directory:<text>, arguments:<text>, and check, which prints
-// whether OK would close it and why not.
+// tool:<text>, directory:<text>, arguments:<text>, load:<file>,
+// at:<address>, card:<name>, stored:<row>, print, which prints the
+// selected one as the form shows it, and check, which prints whether OK
+// would close it and why not.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDERunConfigurationsDialog::ApplyEdits(const char* szEdits)
 {
 	CArrayChars	aszEdits;
 	size		i;
+	size		j;
 	char*		sz;
 	bool		bApproved;
 
@@ -613,6 +971,39 @@ void CIDERunConfigurationsDialog::ApplyEdits(const char* szEdits)
 		{
 			mpArguments->SetText(&sz[10]);
 		}
+		else if (strncmp(sz, "load:", 5) == 0)
+		{
+			mpLoadFile->SetText(&sz[5]);
+		}
+		else if (strncmp(sz, "at:", 3) == 0)
+		{
+			mpLoadAddress->SetText(&sz[3]);
+		}
+		else if (strncmp(sz, "card:", 5) == 0)
+		{
+			for (j = 0; j < mpCard->NumItems(); j++)
+			{
+				if (StringCompare(mpCard->GetItemText(j), &sz[5]) == 0)
+				{
+					mpCard->Select((int32)j);
+				}
+			}
+			ShowCard();
+		}
+		else if (strncmp(sz, "stored:", 7) == 0)
+		{
+			mpStored->Select(atoi(&sz[7]));
+		}
+		else if (strcmp(sz, "print") == 0)
+		{
+			printf("Run form: [%s] load [%s] at [%s] card [%s] stored in [%s] cards:", mpName->GetText(), mpLoadFile->GetText(), mpLoadAddress->GetText(), mpCard->GetSelectedText(), mpStored->GetSelectedText());
+			for (j = 1; j < mpCard->NumItems(); j++)
+			{
+				printf(" %s", mpCard->GetItemText(j));
+			}
+			printf("; on it: %d lines\n", (int)mpCardPrograms->NumComponents());
+			fflush(stdout);
+		}
 		else if (strcmp(sz, "check") == 0)
 		{
 			bApproved = Approve();
@@ -644,5 +1035,18 @@ bool CIDERunConfigurationsDialog::Show(void)
 
 Ptr<CDialog> CIDERunConfigurationsDialog::GetDialog(void) const { return mpDialog; }
 CArrayRunConfigurations* CIDERunConfigurationsDialog::GetEdited(void) { return &masEdited; }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The selected one's card file, a full path; empty if it has none.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDERunConfigurationsDialog::GetSelectedCard(CChars* pszDest)
+{
+	pszDest->Set(((miSelected >= 0) && (mpCard->GetSelected() > 0)) ? maszCards.GetText((size)mpCard->GetSelected() - 1) : "");
+}
+
+
 char* CIDERunConfigurationsDialog::GetSelectedName(void) { return (miSelected >= 0) ? masEdited.Get(miSelected)->GetName() : (char*)""; }
 

@@ -137,6 +137,7 @@ public:
 	void					AddDefaultRunConfigurations(void);
 	bool					ApplyRunConfiguration(CRunConfiguration* pcRun, CChars* pszError);
 	size					FindRunConfigurationSolution(CRunConfiguration* pcRun);
+	void					GetRunConfigurationDirectory(CRunConfiguration* pcRun, CChars* pszDest);
 	CRunConfiguration*		FindSolutionRunConfiguration(size uiSolution, const char* szConfiguration);
 
 	size					NumSolutions(void) const;
@@ -168,11 +169,11 @@ protected:
 	void					ReadSharedRunConfigurations(const char* szDirectory);
 	bool					WriteSharedRunConfigurations(void);
 	void					RemoveSupersededRunConfigurations(void);
-	void					GetRunConfigurationDirectory(CRunConfiguration* pcRun, CChars* pszDest);
 };
 
 
 void MakeRelativePath(const char* szDirectory, const char* szPath, CChars* pszDest);
+void FullPathFrom(const char* szDirectory, const char* szPath, CChars* pszDest);
 
 
 #endif // __BUILD_WORKSPACE_H__

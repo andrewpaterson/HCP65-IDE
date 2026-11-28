@@ -64,6 +64,8 @@ public:
 	size	NumPrograms(void) const;
 	void	GetProgramFile(size uiIndex, const char* szConfiguration, CChars* pszDest);
 	char*	GetProgramPath(size uiIndex);
+	char*	GetProgramFileText(size uiIndex);
+	char*	GetImageText(void);
 	char*	GetProgramLines(size uiIndex);
 	size	FindProgram(const char* szFile, const char* szConfiguration);
 

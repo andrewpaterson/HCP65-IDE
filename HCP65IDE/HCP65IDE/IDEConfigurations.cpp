@@ -301,7 +301,8 @@ void CIDEConfigurations::RequestEditDialog(void)
 //////////////////////////////////////////////////////////////////////////
 //
 // What is edited replaces the workspace's run configurations if OK closes
-// it, and the one selected in it is chosen.
+// it, and the one selected in it is chosen.  Open Card File opens the
+// selected one's card file instead.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEConfigurations::ShowEditDialog(void)
@@ -330,6 +331,17 @@ void CIDEConfigurations::ShowEditDialog(void)
 		ShowConfigurations();
 		SetRunConfiguration(mszRunConfiguration.Text());
 		mpcContent->GetSolutions()->WriteWorkspace();
+	}
+	else if (StringCompare(mpDialog->GetDialog()->GetClicked(), IDE_RUN_DIALOG_OPEN_CARD) == 0)
+	{
+		//The card's programs are edited in its file.
+		szSelected.Init();
+		mpDialog->GetSelectedCard(&szSelected);
+		if (!szSelected.Empty())
+		{
+			mpcContent->GetDocuments()->OpenFile(szSelected.Text());
+		}
+		szSelected.Kill();
 	}
 	mpcContent->GetScript()->StopWatchingDialog();
 	mpDialog = NULL;

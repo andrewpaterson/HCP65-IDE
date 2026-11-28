@@ -449,9 +449,10 @@ C8. Shared run configurations hold how a program is debugged
     solutions ("ModPlay Debug", "ModPlay Release"), and removed the 20 .hcp65build files; CL/solution_rows.py
     --platform HCP65C816 gave their solutions Debug|HCP65C816 and Release|HCP65C816, rows as Win32's, so each
     lists what it builds (question 17 C).  The 40 builds were compared with those before again.
-  - Left: C8-3 (the dialog shows and edits none of the new fields, and has no "Store as project file": they are
-    written in the files), the fixtures' and IDE checks' .hcp65build files (C8-6's other half, C8-7's checks), and
-    a check of the IDE with a shared run configuration.
+  - C8-3, built 2026-11-28 as question 29 has it: Load first and At, the card by name with what its file says under
+    it, Stored in, and Open Card File.  The check run-configuration-shared makes a shared one in the dialog.
+  - Left: the fixtures' and IDE checks' .hcp65build files (C8-6's other half, C8-7's checks), and a debugging check
+    started from a shared run configuration.
 
 C9. Edit Build Configurations writes the projects and sheets
   C9-1. VisualStudioLib sets a property in a project's or a sheet's group for a configuration, as RenameItem edits
@@ -1107,3 +1108,19 @@ Questions (the user's, one at a time)
    The others considered: the two left independent (easy to get wrong); only the startup solution's shared ones
    listed (nothing to get wrong, but what is debugged couldn't be changed from the toolbar); independent, the IDE
    refusing to start when the card hasn't the startup program.
+29. Decided (the user, 2026-11-28: "Go with it for now", then "Use all your recommendations for these questions
+   please"): the Run Configurations dialog's new rows (C8-3).
+   - Load first: the file and its address, two fields on a row (the user's: "What if you split Option A into two
+     fields").  One file is all any run configuration has; one with several shows the first, says so, and keeps them
+     all, to be edited in its file.  The others considered: one field of file @ address; a list with Add and Remove.
+   - Card: a drop-down of the card files found, by name ("BootCard"), "(none)" first, and under it what the card
+     file says, read only: its image and each program with its path.  Open Card File closes the dialog and opens it.
+     The others considered: a path typed, with or without the summary; a Browse button; the card's programs edited
+     in the dialog; a Cards dialog of its own (where to go if cards come to change often).
+   - Stored in: one drop-down, "My workspace (private)" and each open solution, in place of IntelliJ's check box
+     and a second control for which solution.  A shared run configuration decides the startup solution (question
+     28), so which solution it is beside is what there is to say.  The others considered: the check box, beside the
+     startup solution; the check box and a solution drop-down; groups in the list with Share and Make Private.
+   - The breakpoint space isn't in the dialog: none of the 40 run configurations overrides it, and it stays a
+     setting of the file.  The other considered: a drop-down of (worked out), Kernel and User.
+   WindowLib can't grey out or hide a component, so the rows are there for every run configuration.

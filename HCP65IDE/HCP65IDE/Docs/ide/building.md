@@ -126,6 +126,12 @@ shows the run configurations on the left, Add and Remove under them, and the one
 | Tool | The program Start runs.  Empty for the default (below). |
 | Working directory | The folder it runs in. |
 | Arguments | Given to the tool, split at spaces. |
+| Load first, At | For an HCP65 program: a file the debugger loads into the emulator first, and the address it goes at (the boot loader's ROM at `0x0`). |
+| Card | For an HCP65 program: the card it runs on, chosen by name from the card files found in the solutions' folders, the three folders above each, and a `Cards` folder of any of those.  What the card file says is shown under it: its image, then each program's path on the card and the file that goes there. |
+| Stored in | Where the run configuration is kept: your workspace (private) or beside one of the solutions (shared). |
+
+**Open Card File** closes the dialog and opens the selected run configuration's card file, where its programs
+are edited.
 
 Paths may be relative to the workspace's file.  Without a tool, one that builds for the W65C816 starts the
 emulator, and one that builds with GCC starts what it linked of the startup solution's startup project, in
@@ -135,7 +141,7 @@ used twice.
 ### Private and shared
 
 A private run configuration is kept in the [workspace file](solutions.md#workspaces-several-solutions-at-once),
-which is yours alone.  A shared one is a file of its own, `<Name>.hcp65run` in the `.run` folder beside a solution,
+which is yours alone (Stored in: My workspace).  A shared one is a file of its own, `<Name>.hcp65run` in the `.run` folder beside a solution,
 committed with the solution so everyone has it, as IntelliJ IDEA's "Store as project file" does.  It is read with
 its solution, and its paths are relative to the solution's folder.
 
@@ -163,7 +169,9 @@ A run configuration for an HCP65 program also says how it is debugged.  This is
 | `<Load File Address/>` | A file the debugger loads into the emulator first: the boot loader's ROM. |
 | `BreakpointSpace` | The emulator's address space the breakpoints go in (`Kernel` or `User`).  Left out, it is worked out: `User` for an executable, `Kernel` for a module or an image. |
 
-These aren't in the dialog yet: they are written in the file.
+The dialog edits the card and one file loaded first.  A run configuration with more than one `<Load>` shows the
+first and keeps them all, and `BreakpointSpace` isn't in the dialog: both are written in the file.  Moving a run
+configuration with Stored in writes its paths again for where it now is, so they name the same files.
 
 A **card file** (`BootCard.hcp65card`) says what is on one SD card image, once, for every run configuration that
 debugs on it.  This is `HCP65/Cards/VIACard.hcp65card`:

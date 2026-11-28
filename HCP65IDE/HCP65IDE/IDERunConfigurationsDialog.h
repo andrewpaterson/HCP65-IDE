@@ -27,6 +27,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/Button.h"
 #include "WindowLib/ComboBox.h"
 #include "WindowLib/Dialog.h"
+#include "WindowLib/GridContainer.h"
 #include "WindowLib/Label.h"
 #include "WindowLib/ListContainer.h"
 #include "WindowLib/ScrollPane.h"
@@ -36,6 +37,17 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 //Edit Configurations, as IntelliJ IDEA's: the run configurations on the left, added to and removed from with the
 //buttons under them, and the one selected in a form on the right.  It works on copies, so Cancel changes nothing.
 //OK isn't allowed while a name is empty or used twice.
+//
+//How an HCP65 program is debugged is in the form too (ConfigurationsPlan.txt C8-3, question 29): the file loaded first
+//and its address, and its card, chosen by name from the card files found near the solutions, with what the card file
+//says under it.  A run configuration with more than one file loaded first shows the first and says so, and keeps them
+//all: they are edited in its file.  Stored in says where it is kept: the user's workspace (private), or beside one of
+//the solutions (shared, a file of its own: CRunConfiguration::GetShared); its paths are written relative to there.
+//Open Card File closes the dialog and opens the selected one's card file.
+#define IDE_RUN_DIALOG_OPEN_CARD		"Open Card File"
+#define IDE_RUN_DIALOG_NO_CARD			"(none)"
+#define IDE_RUN_DIALOG_PRIVATE			"My workspace (private)"
+#define IDE_RUN_DIALOG_SEVERAL_LOADS	"More than one file is loaded first: the first is shown, and they are edited in its .hcp65run file."
 class CIDERunConfigurationsDialog : public CObject
 {
 CONSTRUCTABLE(CIDERunConfigurationsDialog);
@@ -51,9 +63,17 @@ protected:
 	Ptr<CTextField>			mpTool;
 	Ptr<CTextField>			mpDirectory;
 	Ptr<CTextField>			mpArguments;
+	Ptr<CTextField>			mpLoadFile;
+	Ptr<CTextField>			mpLoadAddress;
+	Ptr<CComboBox>			mpCard;
+	Ptr<CGridContainer>		mpCardPrograms;
+	Ptr<CComboBox>			mpStored;
 	Ptr<CLabel>				mpError;
 	CArrayRunConfigurations	masEdited;
 	CArrayChars				maszBuildConfigurations;
+	CArrayChars				maszCards;				//The card files in mpCard, full paths, after "(none)".
+	CArrayChars				maszSolutions;			//The solutions' folders in mpStored, after the workspace.
+	CChars					mszPrivateDirectory;	//What a private one's paths are relative to: the workspace file's folder.
 	int32					miSelected;  //-1 if there are none.
 	bool					mbUpdating;  //The widgets are being set, not changed by the user.
 
@@ -72,6 +92,7 @@ public:
 	Ptr<CDialog>		GetDialog(void) const;
 	CArrayRunConfigurations*	GetEdited(void);
 	char*				GetSelectedName(void);
+	void				GetSelectedCard(CChars* pszDest);
 
 protected:
 	Ptr<CComponent>		CreateBody(void);
@@ -86,6 +107,14 @@ protected:
 	void				RemoveConfiguration(void);
 	void				SelectionChanged(void);
 	void				NameChanged(void);
+	void				CardChanged(void);
+	void				FindCards(CBuildWorkspace* pcWorkspace);
+	void				AddCard(const char* szFile);
+	void				AddCardsIn(const char* szDirectory);
+	void				ShowCard(void);
+	void				GetDirectory(CRunConfiguration* pcRun, CChars* pszDest);
+	void				MakeRelative(const char* szDirectory, const char* szFull, CChars* pszDest);
+	void				Store(CRunConfiguration* pcRun, const char* szShared);
 	void				KillEdited(void);
 };
 

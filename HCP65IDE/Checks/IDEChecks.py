@@ -161,6 +161,18 @@ def MakeSolutionCopy(bOther=False):
 	return {'SOLUTION': os.path.join(szKernel, 'Kernel.sln'), 'SAVE_LAYOUT': '1', 'RECENT': os.path.join(szRoot, 'Recent.xml')}
 
 
+def MakeCardCopy():
+	#MakeSolutionCopy's Program solution with a card file beside the solutions (Workspace/Cards/Test.hcp65card), to make
+	#a shared run configuration for in the dialog.
+	asCopy = MakeSolutionCopy()
+	szWorkspace = os.path.dirname(os.path.dirname(asCopy['SOLUTION']))
+	os.makedirs(os.path.join(szWorkspace, 'Cards'))
+	open(os.path.join(szWorkspace, 'Cards', 'Test.hcp65card'), 'w').write(
+		'<Card Image="..\\Card.img">\n  <Program File="..\\Program\\Output\\$(Platform)\\$(Configuration)\\p.exe" Path="\\run.exe"/>\n</Card>\n')
+	asCopy['SOLUTION'] = os.path.join(szWorkspace, 'Program', 'Program.sln')
+	return asCopy
+
+
 def MakeToolsCopy():
 	#A copy of the test solutions opened on Tools, which has two applications (First and Second) and a library (Shared).
 	asCopy = MakeSolutionCopy()
@@ -4286,6 +4298,20 @@ CHECKS = [
 		 r'^Run dialog: refused \[A run configuration needs a name\.\]$',
 		 r'^Run dialog: OK \[\]$', r'^Run dialog: OK \[\]$',
 		 r'^Configuration: \[ModPlay (Debug|Release)\] \[\1\|HCP65C816\]: ModPlay Debug, ModPlay Release, .*Edit Configurations\.\.\.,$'], []),
+	('run-configuration-shared', dict(MakeCardCopy(), **{
+		#The form's debugging rows (ConfigurationsPlan.txt question 29): the file loaded first and its address, which
+		#must be a number; the card chosen by name from those found beside the solutions, with its image and its one
+		#program shown under it; and Stored in, which makes it a file of its own beside the solution, its card written
+		#relative to there.  It is the one chosen when OK closes the dialog.
+		'DIALOG_ANSWER': 'OK',
+		'RUN_EDITS': 'add;name:On Card;build:Release|HCP65C816;load:..\\Kernel\\k.rom;at:zz;check;at:0x8000;card:Test;stored:1;print;check',
+		'DEBUG': 'command:Run.EditConfigurations,answered:1,printconfig,printdisklines:.run/On Card.hcp65run'}),
+		[r"^Run dialog: refused \[The address the file is loaded at isn't a number\.\]$",
+		 r'^Run form: \[On Card\] load \[\.\.\\Kernel\\k\.rom\] at \[0x8000\] card \[Test\] stored in \[Program\] cards: Test; on it: 3 lines$',
+		 r'^Run dialog: OK \[\]$', r'^Dialog \[Run Configurations\] answered OK$',
+		 r'^Configuration: \[On Card\] \[Release\|HCP65C816\]: .*On Card, Edit Configurations\.\.\.,$',
+		 r'<RunConfiguration Name="On Card" Configuration="Release\|HCP65C816" Card="\.\.\\Cards\\Test\.hcp65card">$',
+		 r'<Load File="\.\.\\Kernel\\k\.rom" Address="0x8000"/>$'], []),
 	('run-configuration-no-tool', {
 		#A tool that isn't there says so when it starts.
 		'DIALOG_ANSWER': 'OK', 'RUN_EDITS': 'add;name:Missing;tool:/no/such/tool',

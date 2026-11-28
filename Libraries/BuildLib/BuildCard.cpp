@@ -273,5 +273,7 @@ size CBuildCard::FindProgram(const char* szFile, const char* szConfiguration)
 char* CBuildCard::GetFile(void)						{ return mszFile.Text(); }
 size CBuildCard::NumPrograms(void) const			{ return maszFiles.NumElements(); }
 char* CBuildCard::GetProgramPath(size uiIndex)		{ return maszPaths.GetText(uiIndex); }
+char* CBuildCard::GetProgramFileText(size uiIndex)	{ return maszFiles.GetText(uiIndex); }  //As written: relative, its macros in it.
+char* CBuildCard::GetImageText(void)				{ return mszImage.Text(); }
 char* CBuildCard::GetProgramLines(size uiIndex)		{ return maszLines.GetText(uiIndex); }
 
