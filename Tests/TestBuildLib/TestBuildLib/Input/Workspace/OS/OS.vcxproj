@@ -13,6 +13,14 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Makefile</ConfigurationType>
   </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Platform)'=='HCP65C816'">
+    <HCP65Link>
+      <Image>os.sys</Image>
+      <Size>0x100</Size>
+      <Load>0xFF00</Load>
+      <Regions>0xFF00-0x10000@0x0</Regions>
+    </HCP65Link>
+  </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="OS.cpp" />
   </ItemGroup>

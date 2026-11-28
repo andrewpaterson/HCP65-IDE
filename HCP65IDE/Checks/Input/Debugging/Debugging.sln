@@ -4,15 +4,29 @@ VisualStudioVersion = 16.0.29926.136
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Debugging", "Debugging.vcxproj", "{7D3E9A51-2C64-4B8F-A1E0-5F9B6C4D2E81}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Libc65", "..\..\..\..\..\HCP65\Libraries\Libc65\Libc65.vcxproj", "{CA1B1434-5C0B-4861-8B1A-12E7F890C5DF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|HCP65C816 = Debug|HCP65C816
 		Debug|Win32 = Debug|Win32
+		Release|HCP65C816 = Release|HCP65C816
 		Release|Win32 = Release|Win32
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7D3E9A51-2C64-4B8F-A1E0-5F9B6C4D2E81}.Debug|HCP65C816.ActiveCfg = Debug|Win32
+		{7D3E9A51-2C64-4B8F-A1E0-5F9B6C4D2E81}.Debug|HCP65C816.Build.0 = Debug|Win32
 		{7D3E9A51-2C64-4B8F-A1E0-5F9B6C4D2E81}.Debug|Win32.ActiveCfg = Debug|Win32
 		{7D3E9A51-2C64-4B8F-A1E0-5F9B6C4D2E81}.Debug|Win32.Build.0 = Debug|Win32
+		{7D3E9A51-2C64-4B8F-A1E0-5F9B6C4D2E81}.Release|HCP65C816.ActiveCfg = Release|Win32
+		{7D3E9A51-2C64-4B8F-A1E0-5F9B6C4D2E81}.Release|HCP65C816.Build.0 = Release|Win32
 		{7D3E9A51-2C64-4B8F-A1E0-5F9B6C4D2E81}.Release|Win32.ActiveCfg = Release|Win32
 		{7D3E9A51-2C64-4B8F-A1E0-5F9B6C4D2E81}.Release|Win32.Build.0 = Release|Win32
+		{CA1B1434-5C0B-4861-8B1A-12E7F890C5DF}.Debug|HCP65C816.ActiveCfg = Debug|Win32
+		{CA1B1434-5C0B-4861-8B1A-12E7F890C5DF}.Debug|HCP65C816.Build.0 = Debug|Win32
+		{CA1B1434-5C0B-4861-8B1A-12E7F890C5DF}.Debug|Win32.ActiveCfg = Debug|Win32
+		{CA1B1434-5C0B-4861-8B1A-12E7F890C5DF}.Release|HCP65C816.ActiveCfg = Release|Win32
+		{CA1B1434-5C0B-4861-8B1A-12E7F890C5DF}.Release|HCP65C816.Build.0 = Release|Win32
+		{CA1B1434-5C0B-4861-8B1A-12E7F890C5DF}.Release|Win32.ActiveCfg = Release|Win32
 	EndGlobalSection
 EndGlobal

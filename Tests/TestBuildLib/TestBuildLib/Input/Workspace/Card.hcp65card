@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Card Image="Output\Card.img">
+  <Program File="Program\Output\$(Platform)\$(Configuration)\p.exe" Path="\p.exe"/>
+  <Program File="Driver\Output\$(Platform)\$(Configuration)\d.drv" Path="\d.drv"/>
+  <Program File="OS\Output\$(Platform)\$(Configuration)\os.sys" Path="\OS\OS.SYS"/>
+</Card>

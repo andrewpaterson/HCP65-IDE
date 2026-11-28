@@ -318,6 +318,17 @@ C4. HCP65 compiles with the project's HCP65 configuration
     until C9 writes projects), C4-7 (Libc65 from the solution's rows), the fixtures' and the IDE checks' .hcp65build
     files (they test the file, which is still read), and the index, which still type checks with the configuration's
     options and not each project's own.
+  C4-7, built 2026-11-28 (question 23): an HCP65 build takes Libc65 from the solution.  The project called Libc65
+  that the configuration's rows build gives the system headers' directory and the runtime, and its own include
+  directories too (CHCP65Build::FindLibc65: the runtime's sources include BaseLib's allocator, which a program's own
+  include directories happened to supply); it isn't compiled as one of the program's projects.  A solution that
+  lists the HCP65 configuration and builds no Libc65 in it fails, saying so.  A build with no rows to read keeps the
+  directory it is handed: hcp65build's plain command line, a project built by itself, a solution whose HCP65
+  configurations are made up from Visual Studio's.  CL/solution_rows.py --platform HCP65C816 --build Libc65 gave
+  the 20 HCP65 solutions' Libc65 rows their Build.0 (40 lines); every program was built in Debug and Release before
+  and after and the outputs compared.  TestBuildHCP65Runtime (Input/Runtime: a solution that builds it, handed no
+  directory, and one that doesn't).  Not done: the index is still given the directory (CWorkspaceIndex), and the
+  65C64's configurations, which none of the 20 solutions lists.
 
 C5. The code index reads with the configuration's toolchain
   C5-1. WorkspaceIndex reads a GCC configuration's defines with GCC's own (__GNUC__, __linux__, __x86_64__) and
@@ -453,6 +464,26 @@ C8. Shared run configurations hold how a program is debugged
     it, Stored in, and Open Card File.  The check run-configuration-shared makes a shared one in the dialog.
   - Left: the fixtures' and IDE checks' .hcp65build files (C8-6's other half, C8-7's checks), and a debugging check
     started from a shared run configuration.
+  The rest of C8-6 and C8-7, built 2026-11-28: no .hcp65build file is left in any repository.
+  - The IDE checks' fixtures: Input/Debugging's project has its linking and options in its HCP65C816 groups, its
+    solution lists Debug|HCP65C816 and Release|HCP65C816 and builds Libc65 in them, and how it is debugged (the boot
+    ROM loaded, the card and where the program goes on it, OS.SYS's line table) is a card file and two shared run
+    configurations beside it (.run/Debugging Debug, Debugging Release): every debugging check on the W65C816 now
+    starts from a shared run configuration.  The 65C64's solution moved to a folder of its own, Input/Debugging65C64
+    (the same Debugging.cpp): a solution's shared run configurations are its folder's, so two solutions in one
+    folder shared them.  Input/Exceptions' option is its project's.
+  - TestIndexLib's Input/Target needed none: a solution that lists no toolchain's configuration is given each.
+  - TestBuildLib's Input/Workspace (Program, Kernel, Driver, OS, Tools): each project's linking is its HCP65Link
+    group, each solution lists its HCP65 configurations (Debug built as the projects' Release, as the files had it)
+    and builds Libc65 in them, and Card.hcp65card says where each program goes.  The tests that read a card, a load
+    or a line table from a configuration's file now apply a run configuration first
+    (TestBuildWorkspaceDebug), as the IDE does: what a solution loads is known only of the startup solution, so the
+    driver's build order is asserted with it as the startup solution.  A configuration's own breakpoint space is no
+    longer asserted: the files said it, and it is worked out now (question 10).
+  - The IDE checks that copy those solutions copy them into the test's Output folder, as deep as Input, so the
+    solutions' paths to Libc65 hold (MakeSolutionCopy).
+  - Libc65, now a project the fixtures list, is no application (CBuildWorkspaceSolution::IsApplication): it was
+    offered as a startup project in the real solutions too.
 
 C9. Edit Build Configurations writes the projects and sheets
   C9-1. VisualStudioLib sets a property in a project's or a sheet's group for a configuration, as RenameItem edits
@@ -713,7 +744,29 @@ C13. The reference programs as a configuration, read by both builders (added 202
   Release, the readers know a fourth condition, '$(Configuration)'!='Debug' (every configuration but that one), and
   Common.props' Release groups are written with it; MSVC's Release command lines for HCP65IDE are the same before
   and after.  The three programs' CMakeLists.txt name no main.
-  C13-3 and C13-6 are left.
+  C13-3, built 2026-11-28 (the user: "carry on with C4-7, then C13-3 and C13-6"): CL/CMake/Codaphela.cmake's
+  codaphela_solution(<solution> PROGRAMS <Project>[=<Target>]... REFERENCE <Project>=<Target>...) makes a program's
+  targets from its solution's rows, which CL/solution_projects.py reads for it as CGCCBuild does: each static library
+  the build's configuration on GCC-x64 builds is a library target, each program named is linked with all of them in
+  any order and with its Link group's AdditionalDependencies (its sheets' too: pthread and dl are Common.props'), and
+  a reference program is the project as Reference|GCC-x64 builds it, what the two compile alike compiled once.  The
+  solution's other programs (its tests) are no targets unless named.  HCP65IDE's, HCP65Emulator's and HCP65Sculpt's
+  CMakeLists.txt are each their solution and their programs, 17 lines for 130 to 180.
+  - Not as written: the include directories are still the CMakeLists.txt's (codaphela_options), every target's
+    alike, where the IDE's build gives each project its own.  In a Debug build Reference's libraries are Debug's
+    (its rows say Release): one set of libraries for both programs, as before.
+  - Left: the other programs' and the tests' CMakeLists.txt (LogiCim, HCP65Tester, WindowInputTester, Battle,
+    DeviceROM, X65C64Emulator and the 35 test projects) still list their libraries by hand; each can move the same way.
+  C13-6, built 2026-11-28: CL/CMake/Tests/Solution is the module's test, a solution of a program with a reference
+  configuration, a library every configuration builds, one only the window's and one only Reference's (which define
+  the same function, so a program linked with the wrong one says so), a program named under another target and one
+  not named: configuring checks the targets and their sources, ctest runs the programs, Debug and Release.
+  CL/compare_builds.py compares the IDE's GCC build with CMake's for one solution, from the commands each leaves
+  (the .cmd beside each output; compile_commands.json and link.txt): the sources, each one's defines and options,
+  its include directories, and each program's libraries, system libraries and link options, leaving out what is
+  CMake's own (-Wall -Wextra, link time optimisation).  HCP65Sculpt, Release and Reference: 1138 sources and 2 links,
+  no differences (it found the sheet's pthread and dl, which the first reader missed).  The IDE's checks pass on
+  CMake's HCP65IDERef built this way.
 
 
 C12. The break switch (added 2026-11-27, question 20)

@@ -7,14 +7,31 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Program", "Program.vcxproj"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Shared", "..\Shared\Shared.vcxproj", "{5A1B2C3D-4E5F-4061-8273-94A5B6C7D8E9}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Libc65", "..\..\..\..\..\..\..\HCP65\Libraries\Libc65\Libc65.vcxproj", "{CA1B1434-5C0B-4861-8B1A-12E7F890C5DF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|HCP65C816 = Debug|HCP65C816
+		Release|HCP65C816 = Release|HCP65C816
 		Release|Win32 = Release|Win32
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7C3D4E5F-6071-4283-A495-B6C7D8E9FA0B}.Debug|HCP65C816.ActiveCfg = Release|Win32
+		{7C3D4E5F-6071-4283-A495-B6C7D8E9FA0B}.Debug|HCP65C816.Build.0 = Release|Win32
+		{7C3D4E5F-6071-4283-A495-B6C7D8E9FA0B}.Release|HCP65C816.ActiveCfg = Release|Win32
+		{7C3D4E5F-6071-4283-A495-B6C7D8E9FA0B}.Release|HCP65C816.Build.0 = Release|Win32
 		{7C3D4E5F-6071-4283-A495-B6C7D8E9FA0B}.Release|Win32.ActiveCfg = Release|Win32
 		{7C3D4E5F-6071-4283-A495-B6C7D8E9FA0B}.Release|Win32.Build.0 = Release|Win32
+		{5A1B2C3D-4E5F-4061-8273-94A5B6C7D8E9}.Debug|HCP65C816.ActiveCfg = Release|Win32
+		{5A1B2C3D-4E5F-4061-8273-94A5B6C7D8E9}.Debug|HCP65C816.Build.0 = Release|Win32
+		{5A1B2C3D-4E5F-4061-8273-94A5B6C7D8E9}.Release|HCP65C816.ActiveCfg = Release|Win32
+		{5A1B2C3D-4E5F-4061-8273-94A5B6C7D8E9}.Release|HCP65C816.Build.0 = Release|Win32
 		{5A1B2C3D-4E5F-4061-8273-94A5B6C7D8E9}.Release|Win32.ActiveCfg = Release|Win32
 		{5A1B2C3D-4E5F-4061-8273-94A5B6C7D8E9}.Release|Win32.Build.0 = Release|Win32
+		{CA1B1434-5C0B-4861-8B1A-12E7F890C5DF}.Debug|HCP65C816.ActiveCfg = Release|Win32
+		{CA1B1434-5C0B-4861-8B1A-12E7F890C5DF}.Debug|HCP65C816.Build.0 = Release|Win32
+		{CA1B1434-5C0B-4861-8B1A-12E7F890C5DF}.Release|HCP65C816.ActiveCfg = Release|Win32
+		{CA1B1434-5C0B-4861-8B1A-12E7F890C5DF}.Release|HCP65C816.Build.0 = Release|Win32
+		{CA1B1434-5C0B-4861-8B1A-12E7F890C5DF}.Release|Win32.ActiveCfg = Release|Win32
 	EndGlobalSection
 EndGlobal

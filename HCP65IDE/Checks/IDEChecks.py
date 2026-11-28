@@ -145,20 +145,18 @@ def MakeSystemRoot(aszVersions, bLibrary=True):
 	return szRoot
 
 
-def MakeSolutionCopy(bOther=False):
-	#A copy of a test solution with a comment in its build configurations, to save them to: a scripted run told to keep
-	#its settings with SAVE_LAYOUT, and its recent solutions apart, writes only beside the copy.  It can have a second
-	#build configuration (bOther), Other|HCP65C816, for when one of them is removed.
+def MakeSolutionCopy():
+	#A copy of TestBuildLib's test solutions (Input/Workspace), opened on Kernel: a scripted run told to keep its
+	#settings with SAVE_LAYOUT, and its recent solutions apart, writes only beside the copy.  The copy is in the test's
+	#Output folder, as deep as the solutions are: their paths to Libc65, which their HCP65 configurations build, hold.
 	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
 	atexit.register(shutil.rmtree, szRoot, True)
-	szKernel = os.path.join(szRoot, 'Workspace', 'Kernel')
-	shutil.copytree(os.path.join(ROOT, 'HCP65-IDE', 'Tests', 'TestBuildLib', 'TestBuildLib', 'Input', 'Workspace'), os.path.join(szRoot, 'Workspace'))
-	szFile = os.path.join(szKernel, 'Kernel.hcp65build')
-	szText = open(szFile, newline='').read().replace('<BuildConfigurations>', '<!-- A comment to keep. -->\n<BuildConfigurations>', 1)
-	if bOther:
-		szText = szText.replace('</BuildConfigurations>', '\t<Configuration Name="Other|HCP65C816" Toolchain="W65C816" Solution="Release|Win32"/>\n</BuildConfigurations>', 1)
-	open(szFile, 'w', newline='').write(szText)
-	return {'SOLUTION': os.path.join(szKernel, 'Kernel.sln'), 'SAVE_LAYOUT': '1', 'RECENT': os.path.join(szRoot, 'Recent.xml')}
+	szTest = os.path.join(ROOT, 'HCP65-IDE', 'Tests', 'TestBuildLib', 'TestBuildLib')
+	os.makedirs(os.path.join(szTest, 'Output'), exist_ok=True)
+	szWorkspace = tempfile.mkdtemp(prefix='IDEChecks-', dir=os.path.join(szTest, 'Output'))
+	atexit.register(shutil.rmtree, szWorkspace, True)
+	shutil.copytree(os.path.join(szTest, 'Input', 'Workspace'), szWorkspace, dirs_exist_ok=True)
+	return {'SOLUTION': os.path.join(szWorkspace, 'Kernel', 'Kernel.sln'), 'SAVE_LAYOUT': '1', 'RECENT': os.path.join(szRoot, 'Recent.xml')}
 
 
 def MakeOptionsCopy(bSave=True, bUnbuilt=False):
@@ -203,9 +201,11 @@ def MakeToolsCopy():
 #char*, an enum and a float), on both processors.  The W65C816's (Debugging.sln) is built and run on the HCP65 in the
 #emulator drawn on the reference screen (HCP65EmulatorRef, built beside HCP65Emulator), as the start up program of a copy
 #of TestHCP65Lib's boot card: TestHCP65Lib must have been run, as the card, the boot loader and OS.SYS are its.  The
-#65C64's (Debugging65C64.sln, the same Debugging.cpp with Libc65's Start65C64.asm) is an image run from reset in the X65C64
+#65C64's (Input/Debugging65C64, the same Debugging.cpp with Libc65's Start65C64.asm; a folder of its own, as the W65C816's
+#shared run configurations, Input/Debugging/.run, are every solution's in their folder) is an image run from reset in the X65C64
 #Emulator, a console program (build/X65C64Emulator).
 DEBUGGING = os.path.join(HERE, 'Input', 'Debugging')
+DEBUGGING_65C64_FOLDER = os.path.join(HERE, 'Input', 'Debugging65C64')
 DEBUGGING_CARD = os.path.join(ROOT, 'HCP65', 'HCP65-Emulator', 'TestHCP65Lib', 'TestHCP65Lib', 'Output', 'BootCard.img')
 if os.name == 'nt':
 	REFERENCE_EMULATOR = os.path.join(ROOT, 'HCP65', 'HCP65-Emulator', 'x64', 'Release', 'HCP65EmulatorRef.exe')
@@ -217,11 +217,12 @@ else:
 
 def CleanDebugging():
 	#What building and debugging Input/Debugging leaves: its build, the card, and the breakpoints and watches it saved.
-	for szName in ['Output', 'Listing']:
-		shutil.rmtree(os.path.join(DEBUGGING, szName), True)
-	for szName in os.listdir(DEBUGGING):
-		if szName.endswith('.hcp65user') or szName.endswith('.layout.user'):
-			os.remove(os.path.join(DEBUGGING, szName))
+	for szFolder in [DEBUGGING, DEBUGGING_65C64_FOLDER]:
+		for szName in ['Output', 'Listing']:
+			shutil.rmtree(os.path.join(szFolder, szName), True)
+		for szName in os.listdir(szFolder):
+			if szName.endswith('.hcp65user') or szName.endswith('.layout.user'):
+				os.remove(os.path.join(szFolder, szName))
 
 
 def MakeReformatCopy():
@@ -259,7 +260,7 @@ def PrepareDebugging():
 DEBUGGING_W65C816 = {'SUFFIX': '', 'SOLUTION': 'Debugging.sln', 'EMULATOR_VARIABLE': 'EMULATOR', 'EMULATOR': REFERENCE_EMULATOR,
 	'PREPARE': PrepareDebugging, 'MODULE': r'debugging\.exe', 'POINTER': r'0x00[0-9a-f]{4}', 'TEXT_POINTER': r'0x[0-9a-f]{6}',
 	'ADDRESS': r'\$[0-9A-F]{2}:[0-9A-F]{4}', 'HEX_INT': '0x0000', 'RELEASE': 'Release|HCP65C816'}
-DEBUGGING_65C64 = {'SUFFIX': '-65C64', 'SOLUTION': 'Debugging65C64.sln', 'EMULATOR_VARIABLE': '65C64_EMULATOR', 'EMULATOR': X65C64_EMULATOR,
+DEBUGGING_65C64 = {'SUFFIX': '-65C64', 'SOLUTION': os.path.join('..', 'Debugging65C64', 'Debugging65C64.sln'), 'EMULATOR_VARIABLE': '65C64_EMULATOR', 'EMULATOR': X65C64_EMULATOR,
 	'PREPARE': CleanDebugging, 'MODULE': r'debugging\.bin', 'POINTER': r'0x[0-9a-f]{8}', 'TEXT_POINTER': r'0x[0-9a-f]{8}',
 	'ADDRESS': r'\$[0-9A-F]{8}', 'HEX_INT': '0x00000000', 'RELEASE': 'Release|HCP65C64'}
 
@@ -639,16 +640,17 @@ def MakeFindDuplicatesCopy():
 
 
 def MakeExceptionsCopy(bExceptions=True):
-	#A copy of Input/Exceptions (ExceptionsPlan.txt stage 10), a solution whose build configuration has Exceptions="true"
-	#(taken out without bExceptions): CFault is thrown by Check (declared throw(CFault)) and Choose, caught by Guarded,
+	#A copy of Input/Exceptions (ExceptionsPlan.txt stage 10), a solution whose project is compiled with C++ exceptions
+	#(its HCP65Compile group's Exceptions, false without bExceptions): CFault is thrown by Check (declared throw(CFault)) and Choose, caught by Guarded,
 	#Wrapped's body is a function-try-block, Promise is noexcept and calls Check, Safe is noexcept and calls nothing.
 	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
 	atexit.register(shutil.rmtree, szRoot, True)
 	szFolder = os.path.join(szRoot, 'Exceptions')
 	shutil.copytree(os.path.join(HERE, 'Input', 'Exceptions'), szFolder)
 	if not bExceptions:
-		szFile = os.path.join(szFolder, 'Exceptions.hcp65build')
-		open(szFile, 'w', newline='').write(open(szFile, newline='').read().replace(' Exceptions="true"', ''))
+		szFile = os.path.join(szFolder, 'Exceptions.vcxproj')
+		szText = open(szFile, newline='').read().replace('<Exceptions>true</Exceptions>', '<Exceptions>false</Exceptions>')
+		open(szFile, 'w', newline='').write(szText)
 	return {'SOLUTION': os.path.join(szFolder, 'Exceptions.sln'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
 
 
@@ -4304,11 +4306,6 @@ CHECKS = [
 		'DIALOG_ANSWER': 'Clean Up', 'BUILD_EDITS': 'select:2',
 		'DEBUG': 'command:Build.EditConfigurations,answered:1,printstatus'}),
 		[r'^Status line: Nothing to clean up: every configuration of the open solutions. projects is built by one of them\.$'], [r'ERROR', r'^Clean up:']),
-	('build-configuration-file', dict(MakeSolutionCopy(), **{
-		#A solution whose build configurations are still in a file beside it has the file opened to edit: the dialog
-		#edits what the projects say.
-		'DEBUG': 'command:Build.EditConfigurations,wait:100,printtabs,printstatus'}),
-		[r'^Tabs: .*>Kernel\.hcp65build', r"^Status line: This solution's build configurations are in the file beside it, which is open to edit\.$"], [r'ERROR', r'^Dialog']),
 	('build-nothing-to-build', {
 		#However it came to be, a run configuration whose build configuration isn't there says so when built.
 		'DIALOG_ANSWER': 'OK', 'RUN_EDITS': 'add;name:Nothing;build:No|Such',
@@ -4366,7 +4363,7 @@ CHECKS = [
 		'RUN_EDITS': 'add;name:On Card;build:Release|HCP65C816;load:..\\Kernel\\k.rom;at:zz;check;at:0x8000;card:Test;stored:1;print;check',
 		'DEBUG': 'command:Run.EditConfigurations,answered:1,printconfig,printdisklines:.run/On Card.hcp65run'}),
 		[r"^Run dialog: refused \[The address the file is loaded at isn't a number\.\]$",
-		 r'^Run form: \[On Card\] load \[\.\.\\Kernel\\k\.rom\] at \[0x8000\] card \[Test\] stored in \[Program\] cards: Test; on it: 3 lines$',
+		 r'^Run form: \[On Card\] load \[\.\.\\Kernel\\k\.rom\] at \[0x8000\] card \[Test\] stored in \[Program\] cards: Card Test; on it: 3 lines$',
 		 r'^Run dialog: OK \[\]$', r'^Dialog \[Run Configurations\] answered OK$',
 		 r'^Configuration: \[On Card\] \[Release\|HCP65C816\]: .*On Card, Edit Configurations\.\.\.,$',
 		 r'<RunConfiguration Name="On Card" Configuration="Release\|HCP65C816" Card="\.\.\\Cards\\Test\.hcp65card">$',
@@ -4423,7 +4420,7 @@ CHECKS = [
 		#none of MSVC's, so the function in #ifdef __W65C816__ is found and the ones in #ifdef _WIN32 and __65C64__
 		#aren't; and Libc65's headers, so nothing is missing.
 		[r'^Go to \[OnlyOn\]: 1 result', r'^  OnlyOnW65C816'], [r'OnlyOnWindows', r'OnlyOn65C64']),
-	('index-target-65c64', MakeIndexTarget('Debugging65C64.sln'),
+	('index-target-65c64', MakeIndexTarget(os.path.join('..', 'Debugging65C64', 'Debugging65C64.sln')),
 		[r'^Go to \[OnlyOn\]: 1 result', r'^  OnlyOn65C64'], [r'OnlyOnWindows', r'OnlyOnW65C816']),
 	('docs-go-to-source', dict(MakeDocsCopy(), **{
 		#Control+B on a page's reference to code goes where the website's link goes: CShape::Init's declaration in its

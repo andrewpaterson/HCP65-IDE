@@ -9,16 +9,36 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Second", "Second.vcxproj", 
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Shared", "..\Shared\Shared.vcxproj", "{5A1B2C3D-4E5F-4061-8273-94A5B6C7D8E9}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Libc65", "..\..\..\..\..\..\..\HCP65\Libraries\Libc65\Libc65.vcxproj", "{CA1B1434-5C0B-4861-8B1A-12E7F890C5DF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Release|GCC-x64 = Release|GCC-x64
+		Release|HCP65C816 = Release|HCP65C816
 		Release|Win32 = Release|Win32
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1D2E3F40-5162-4374-8596-A7B8C9DAEBF1}.Release|GCC-x64.ActiveCfg = Release|Win32
+		{1D2E3F40-5162-4374-8596-A7B8C9DAEBF1}.Release|GCC-x64.Build.0 = Release|Win32
+		{1D2E3F40-5162-4374-8596-A7B8C9DAEBF1}.Release|HCP65C816.ActiveCfg = Release|Win32
+		{1D2E3F40-5162-4374-8596-A7B8C9DAEBF1}.Release|HCP65C816.Build.0 = Release|Win32
 		{1D2E3F40-5162-4374-8596-A7B8C9DAEBF1}.Release|Win32.ActiveCfg = Release|Win32
 		{1D2E3F40-5162-4374-8596-A7B8C9DAEBF1}.Release|Win32.Build.0 = Release|Win32
+		{2E3F4051-6273-4485-96A7-B8C9DAEBFC02}.Release|GCC-x64.ActiveCfg = Release|Win32
+		{2E3F4051-6273-4485-96A7-B8C9DAEBFC02}.Release|GCC-x64.Build.0 = Release|Win32
+		{2E3F4051-6273-4485-96A7-B8C9DAEBFC02}.Release|HCP65C816.ActiveCfg = Release|Win32
+		{2E3F4051-6273-4485-96A7-B8C9DAEBFC02}.Release|HCP65C816.Build.0 = Release|Win32
 		{2E3F4051-6273-4485-96A7-B8C9DAEBFC02}.Release|Win32.ActiveCfg = Release|Win32
 		{2E3F4051-6273-4485-96A7-B8C9DAEBFC02}.Release|Win32.Build.0 = Release|Win32
+		{5A1B2C3D-4E5F-4061-8273-94A5B6C7D8E9}.Release|GCC-x64.ActiveCfg = Release|Win32
+		{5A1B2C3D-4E5F-4061-8273-94A5B6C7D8E9}.Release|GCC-x64.Build.0 = Release|Win32
+		{5A1B2C3D-4E5F-4061-8273-94A5B6C7D8E9}.Release|HCP65C816.ActiveCfg = Release|Win32
+		{5A1B2C3D-4E5F-4061-8273-94A5B6C7D8E9}.Release|HCP65C816.Build.0 = Release|Win32
 		{5A1B2C3D-4E5F-4061-8273-94A5B6C7D8E9}.Release|Win32.ActiveCfg = Release|Win32
 		{5A1B2C3D-4E5F-4061-8273-94A5B6C7D8E9}.Release|Win32.Build.0 = Release|Win32
+		{CA1B1434-5C0B-4861-8B1A-12E7F890C5DF}.Release|GCC-x64.ActiveCfg = Release|Win32
+		{CA1B1434-5C0B-4861-8B1A-12E7F890C5DF}.Release|HCP65C816.ActiveCfg = Release|Win32
+		{CA1B1434-5C0B-4861-8B1A-12E7F890C5DF}.Release|HCP65C816.Build.0 = Release|Win32
+		{CA1B1434-5C0B-4861-8B1A-12E7F890C5DF}.Release|Win32.ActiveCfg = Release|Win32
 	EndGlobalSection
 EndGlobal

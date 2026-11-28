@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <!-- The debugger's checks' program (Debugging.cpp, Debugging.vcxproj's) built for the 65C64 by the IDE's 65C64
-       configurations (Debugging65C64.hcp65build): a Makefile project with no commands.  The ClCompile items, .asm
+  <!-- The debugger's checks' program (..\Debugging\Debugging.cpp, Debugging.vcxproj's; in a folder of its own, as that solution's shared run configurations are its folder's) built for the 65C64 by the IDE's 65C64
+       configurations (its HCP65C64 groups): a Makefile project with no commands.  The ClCompile items, .asm
        included, are the units in link order: Libc65's start up first, as the W65C816's project has UserStart.asm. -->
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -34,9 +34,22 @@
       <AdditionalIncludeDirectories>..\..\..\..\..\HCP65\Libraries\UserLib;..\..\..\..\..\CommonLibraries\Libraries;..\..\..\..\..\HCP65\Libraries;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Platform)'=='HCP65C64'">
+    <HCP65Link>
+      <Image>debugging.bin</Image>
+      <Size>0x100000</Size>
+      <Load>0x10000</Load>
+      <Regions>0x10000-0x110000@0x0</Regions>
+    </HCP65Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|HCP65C64'">
+    <HCP65Compile>
+      <Debug>true</Debug>
+    </HCP65Compile>
+  </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\..\..\HCP65\Libraries\Libc65\Start65C64.asm" />
-    <ClCompile Include="Debugging.cpp" />
+    <ClCompile Include="..\Debugging\Debugging.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\..\..\HCP65\Libraries\UserLib\HCP65User.h" />

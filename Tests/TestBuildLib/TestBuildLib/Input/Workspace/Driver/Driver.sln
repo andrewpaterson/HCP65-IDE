@@ -5,12 +5,25 @@ VisualStudioVersion = 16.0.29926.136
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Driver", "Driver.vcxproj", "{7C3D4E5F-6071-4283-94A5-B6C7D8E9FA0B}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Libc65", "..\..\..\..\..\..\..\HCP65\Libraries\Libc65\Libc65.vcxproj", "{CA1B1434-5C0B-4861-8B1A-12E7F890C5DF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|HCP65C816 = Debug|HCP65C816
+		Release|HCP65C816 = Release|HCP65C816
 		Release|Win32 = Release|Win32
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7C3D4E5F-6071-4283-94A5-B6C7D8E9FA0B}.Debug|HCP65C816.ActiveCfg = Release|Win32
+		{7C3D4E5F-6071-4283-94A5-B6C7D8E9FA0B}.Debug|HCP65C816.Build.0 = Release|Win32
+		{7C3D4E5F-6071-4283-94A5-B6C7D8E9FA0B}.Release|HCP65C816.ActiveCfg = Release|Win32
+		{7C3D4E5F-6071-4283-94A5-B6C7D8E9FA0B}.Release|HCP65C816.Build.0 = Release|Win32
 		{7C3D4E5F-6071-4283-94A5-B6C7D8E9FA0B}.Release|Win32.ActiveCfg = Release|Win32
 		{7C3D4E5F-6071-4283-94A5-B6C7D8E9FA0B}.Release|Win32.Build.0 = Release|Win32
+		{CA1B1434-5C0B-4861-8B1A-12E7F890C5DF}.Debug|HCP65C816.ActiveCfg = Release|Win32
+		{CA1B1434-5C0B-4861-8B1A-12E7F890C5DF}.Debug|HCP65C816.Build.0 = Release|Win32
+		{CA1B1434-5C0B-4861-8B1A-12E7F890C5DF}.Release|HCP65C816.ActiveCfg = Release|Win32
+		{CA1B1434-5C0B-4861-8B1A-12E7F890C5DF}.Release|HCP65C816.Build.0 = Release|Win32
+		{CA1B1434-5C0B-4861-8B1A-12E7F890C5DF}.Release|Win32.ActiveCfg = Release|Win32
 	EndGlobalSection
 EndGlobal

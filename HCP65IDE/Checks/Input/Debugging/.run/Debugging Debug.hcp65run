@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RunConfiguration Name="Debugging Debug" Configuration="Debug|HCP65C816" Card="Debugging.hcp65card">
+  <Load File="..\..\..\..\..\HCP65\HCP65-Emulator\TestHCP65Lib\TestHCP65Lib\Output\Boot.rom" Address="0x0"/>
+</RunConfiguration>

@@ -13,6 +13,13 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Makefile</ConfigurationType>
   </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Platform)'=='HCP65C816'">
+    <HCP65Link>
+      <Image>k.rom</Image>
+      <Size>0x100</Size>
+      <Regions>0x0-0x100@0x0</Regions>
+    </HCP65Link>
+  </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Kernel.cpp" />
   </ItemGroup>

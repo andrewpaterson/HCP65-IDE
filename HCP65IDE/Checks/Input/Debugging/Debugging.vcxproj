@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <!-- The debugger's checks' program (Debugging.cpp), built by the IDE's W65C816 configurations (Debugging.hcp65build):
+  <!-- The debugger's checks' program (Debugging.cpp), built by the IDE's W65C816 configurations (its HCP65C816 groups; its solution's rows build Libc65, the runtime):
        a Makefile project with no commands.  The ClCompile items, .asm included, are the units in link order. -->
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -32,6 +32,22 @@
     <ClCompile>
       <AdditionalIncludeDirectories>..\..\..\..\..\HCP65\Libraries\UserLib;..\..\..\..\..\CommonLibraries\Libraries;..\..\..\..\..\HCP65\Libraries;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Platform)'=='HCP65C816'">
+    <HCP65Compile>
+      <MathTables>false</MathTables>
+    </HCP65Compile>
+    <HCP65Link>
+      <Executable>debugging.exe</Executable>
+      <Entry>UserStart</Entry>
+      <Limit>0x200000</Limit>
+      <Symbols>UserHeapSize=0x20000</Symbols>
+    </HCP65Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|HCP65C816'">
+    <HCP65Compile>
+      <Debug>true</Debug>
+    </HCP65Compile>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\..\..\HCP65\Libraries\UserLib\UserStart.asm" />

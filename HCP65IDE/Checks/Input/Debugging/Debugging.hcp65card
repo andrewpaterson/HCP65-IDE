@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Card Image="Output\Debugging.img">
+  <Program File="Output\$(Platform)\$(Configuration)\debugging.exe" Path="\boottest.exe"/>
+  <Program File="..\..\..\..\..\HCP65\HCP65-Emulator\TestHCP65Lib\TestHCP65Lib\Output\OS.SYS" Path="\OS\OS.SYS" Lines="Kernel"/>
+</Card>

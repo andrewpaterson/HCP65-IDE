@@ -7,9 +7,12 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Exceptions", "Exceptions.vc
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Release|HCP65C816 = Release|HCP65C816
 		Release|Win32 = Release|Win32
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6B2C3D4E-5F60-4172-9384-A5B6C7D8E9FA}.Release|HCP65C816.ActiveCfg = Release|Win32
+		{6B2C3D4E-5F60-4172-9384-A5B6C7D8E9FA}.Release|HCP65C816.Build.0 = Release|Win32
 		{6B2C3D4E-5F60-4172-9384-A5B6C7D8E9FA}.Release|Win32.ActiveCfg = Release|Win32
 		{6B2C3D4E-5F60-4172-9384-A5B6C7D8E9FA}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
