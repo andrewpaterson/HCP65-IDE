@@ -668,7 +668,14 @@ C13. The reference programs as a configuration, read by both builders (added 202
   Measured with hcp65build: WindowInputTester.sln 2m39s in full, 0.2s with nothing changed, 11.7s after one header
   of WindowLib's was touched (33 of 1082 made again); HCP65IDE.sln 5m22s as Release, then 1m08s as Reference (120 of
   1888 made: HCP65IDE's own files and the programs' links), then 0.4s.  The checks tried run on that Reference.
-  C13-3, C13-5 and C13-6 are left.
+  C13-5, built 2026-11-28: CL/reference_configuration.py gave HCP65Emulator's and HCP65Sculpt's projects
+  Reference|x64 (a copy of what each keeps for Release|x64, SubSystem Console), their reference mains as items kept
+  out of every other configuration, and WinRefLib; and their solutions Reference|x64, the program built as it and
+  the rest as Release.  solution_rows.py then added Reference|GCC-x64.  So that Reference needs nothing copied from
+  Release, the readers know a fourth condition, '$(Configuration)'!='Debug' (every configuration but that one), and
+  Common.props' Release groups are written with it; MSVC's Release command lines for HCP65IDE are the same before
+  and after.  The three programs' CMakeLists.txt name no main.
+  C13-3 and C13-6 are left.
 
 
 C12. The break switch (added 2026-11-27, question 20)
@@ -1161,3 +1168,8 @@ Questions (the user's, one at a time)
 32. Decided (the user, 2026-11-28: "3. -> A"): HCP65Emulator and HCP65Sculpt get Reference|GCC-x64 only (C13-5).
    Their reference programs have only been built on Linux, and a Windows one could be compiled under Wine but not
    run.  Reference|x64 for them waits for a Windows machine.
+   Changed the same day (the user: "Give the two projects Reference|x64 after all"): a solution's row names a project
+   configuration Visual Studio has, so a project with no Reference|x64 could only be named as Release|x64 by its
+   Reference|GCC-x64 row and would be built with its window main.  The two projects get Reference|x64, compiled under
+   Wine and not run.  The others considered: a rule of the IDE's that a project whose own file names the solution
+   configuration on the toolchain's platform is built as that; rows naming Reference|GCC-x64 itself.

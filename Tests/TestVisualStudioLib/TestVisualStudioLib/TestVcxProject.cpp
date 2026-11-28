@@ -924,6 +924,16 @@ void TestVcxSetting(void)
 	AssertTrue(SetVcxSetting(TEST_SETTING_SHEET, TEST_SETTING_DEBUG, "HCP65Compile", "Debug", NULL));
 	AssertFile("Input" _FS_ "Setting" _FS_ "Before" _FS_ "Sheet.props", TEST_SETTING_SHEET);
 
+	//A condition on every configuration but one: the sheet's setting is Release's, on every platform, and not Debug's.
+	AssertTrue(SetVcxSetting(TEST_SETTING_SHEET, "'$(Configuration)'!='Debug'", "ClCompile", "Optimization", "MaxSpeed"));
+	AssertTrue(SetVcxSetting(TEST_SETTING_PROJECT, TEST_SETTING_DEBUG, "HCP65Compile", "Debug", "true"));
+	cProject.Init();
+	AssertTrue(cProject.Read(TEST_SETTING_PROJECT));
+	AssertString("MaxSpeed", cProject.FindConfiguration("Release|Win32")->GetProperty("ClCompile.Optimization"));
+	AssertString("MaxSpeed", cProject.FindConfiguration("Release|HCP65C816")->GetProperty("ClCompile.Optimization"));
+	AssertNull(cProject.FindConfiguration("Debug|HCP65C816")->GetProperty("ClCompile.Optimization"));
+	cProject.Kill();
+
 	//A file that isn't there, and one that isn't a project.
 	AssertFalse(SetVcxSetting("Output" _FS_ "Setting" _FS_ "None.vcxproj", NULL, "ClCompile", "WarningLevel", "Level3"));
 	AssertFalse(SetVcxSetting("Output" _FS_ "Setting" _FS_ "Program.cpp", NULL, "ClCompile", "WarningLevel", "Level3"));

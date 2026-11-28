@@ -45,6 +45,7 @@ enum EVcxCondition
 	VCC_Configuration,
 	VCC_Platform,
 	VCC_Both,
+	VCC_NotConfiguration,
 	VCC_Other,
 };
 

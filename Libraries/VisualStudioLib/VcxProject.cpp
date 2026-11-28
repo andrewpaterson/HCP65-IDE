@@ -84,9 +84,11 @@ bool GetVcxTagText(CMarkupTag* pcTag, const char* szChild, CChars* pszDest)
 // What a condition is on, and the value it wants appended to pszValue:
 // '$(Configuration)|$(Platform)'=='Debug|Win32' a whole configuration,
 // '$(Configuration)'=='Debug' every platform's Debug and
-// '$(Platform)'=='GCC-x64' every configuration of a platform.  Anything
-// else (exists('...'), a condition on another property) is VCC_Other, which
-// is true of no configuration.
+// '$(Platform)'=='GCC-x64' every configuration of a platform.
+// '$(Configuration)'!='Debug' is every configuration not called that
+// (VCC_NotConfiguration): what Release has, a configuration built as it is
+// has too (Reference).  Anything else (exists('...'), a condition on another
+// property) is VCC_Other, which is true of no configuration.
 //
 //////////////////////////////////////////////////////////////////////////
 EVcxCondition ParseVcxCondition(const char* szCondition, CChars* pszValue)
@@ -96,8 +98,14 @@ EVcxCondition ParseVcxCondition(const char* szCondition, CChars* pszValue)
 	const char*		szEnd;
 	bool			bConfiguration;
 	bool			bPlatform;
+	bool			bNot;
 
 	szEquals = strstr(szCondition, "==");
+	bNot = szEquals == NULL;
+	if (bNot)
+	{
+		szEquals = strstr(szCondition, "!=");
+	}
 	szStart = szEquals ? strchr(szEquals, '\'') : NULL;
 	szEnd = szStart ? strchr(szStart + 1, '\'') : NULL;
 	if (szEnd == NULL)
@@ -106,18 +114,22 @@ EVcxCondition ParseVcxCondition(const char* szCondition, CChars* pszValue)
 	}
 	bConfiguration = FindVcxConditionProperty(szCondition, szEquals, "$(Configuration)");
 	bPlatform = FindVcxConditionProperty(szCondition, szEquals, "$(Platform)");
-	if (!bConfiguration && !bPlatform)
+	if ((!bConfiguration && !bPlatform) || (bNot && bPlatform))
 	{
 		return VCC_Other;
 	}
 	pszValue->Append(szStart + 1, (size)(szEnd - szStart - 1));
+	if (bNot)
+	{
+		return VCC_NotConfiguration;
+	}
 	return bConfiguration ? (bPlatform ? VCC_Both : VCC_Configuration) : VCC_Platform;
 }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Whether szProperty is on the left of a condition's ==.
+// Whether szProperty is on the left of a condition's == (or !=).
 //
 //////////////////////////////////////////////////////////////////////////
 bool FindVcxConditionProperty(const char* szCondition, const char* szEquals, const char* szProperty)
@@ -869,6 +881,7 @@ bool CVcxProject::IsConditionFor(const char* szCondition, CVcxConfiguration* pcC
 	eCondition = ParseVcxCondition(szCondition, &szValue);
 	bResult = ((eCondition == VCC_Both) && szValue.Equals(pcConfiguration->GetName())) ||
 			  ((eCondition == VCC_Configuration) && szValue.Equals(pcConfiguration->GetConfiguration())) ||
+			  ((eCondition == VCC_NotConfiguration) && !szValue.Equals(pcConfiguration->GetConfiguration())) ||
 			  ((eCondition == VCC_Platform) && szValue.Equals(pcConfiguration->GetPlatform()));
 	szValue.Kill();
 	return bResult;
