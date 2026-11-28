@@ -82,9 +82,11 @@ vcxproj_sources(CLAUDELIB_SOURCES "${CLAUDELIB_DIR}/ClaudeLib.vcxproj")
 
 vcxproj_sources(TEMPLATELIB_SOURCES "${TEMPLATELIB_DIR}/TemplateLib.vcxproj")
 
-# Everything but a main: HCP65IDE_Windows.cpp (WinMain) is Windows only, HCP65IDE_Linux.cpp is the X11 IDE's and
-# HCP65IDERef.cpp the reference screen's (which the project keeps out of a GCC-x64 build).
-vcxproj_sources(IDE_SOURCES "${IDE_DIR}/HCP65IDE.vcxproj" EXCLUDE "HCP65IDE_Windows.cpp" "HCP65IDE_Linux.cpp")
+# The project's two configurations: the X11 IDE's (HCP65IDE_Linux.cpp) and the reference screen's (HCP65IDERef.cpp).
+# What they share is a library, and each program adds its own.
+vcxproj_sources(IDE_PROGRAM_SOURCES "${IDE_DIR}/HCP65IDE.vcxproj")
+vcxproj_sources(IDE_REFERENCE_SOURCES "${IDE_DIR}/HCP65IDE.vcxproj" CONFIGURATION Reference)
+codaphela_shared_sources(IDE_SOURCES IDE_PROGRAM_OWN IDE_REFERENCE_OWN "${IDE_PROGRAM_SOURCES}" "${IDE_REFERENCE_SOURCES}")
 
 
 codaphela_options(ONLY_64 "${COMMON_DIR}" "${HCP65_LIBRARIES_DIR}" "${IDE_ROOT}/Libraries")
@@ -164,10 +166,10 @@ add_library(HCP65IDELib STATIC ${IDE_SOURCES})
 target_include_directories(HCP65IDELib PUBLIC "${IDE_DIR}")
 target_link_libraries(HCP65IDELib PUBLIC WindowLib InputLib IndexLib BuildLib GitLib ClaudeLib TemplateLib VisualStudioLib CppCompilerLib Assembler65Lib EmulatorDebugLib MicroprocessorLib ThreadLib SupportLib StandardLib BaseLib)
 
-add_executable(HCP65IDE "${IDE_DIR}/HCP65IDE_Linux.cpp")
+add_executable(HCP65IDE ${IDE_PROGRAM_OWN})
 target_link_libraries(HCP65IDE PRIVATE HCP65IDELib X11Lib)
 
-add_executable(HCP65IDERef "${IDE_DIR}/HCP65IDERef.cpp")
+add_executable(HCP65IDERef ${IDE_REFERENCE_OWN})
 target_link_libraries(HCP65IDERef PRIVATE HCP65IDELib WinRefLib)
 
 # hcp65build, the command-line build (BuildCommandLine.h): no window, so no X11.  Build only it with
