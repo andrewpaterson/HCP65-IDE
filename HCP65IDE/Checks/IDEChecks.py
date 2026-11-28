@@ -145,18 +145,24 @@ def MakeSystemRoot(aszVersions, bLibrary=True):
 	return szRoot
 
 
-def MakeSolutionCopy():
-	#A copy of TestBuildLib's test solutions (Input/Workspace), opened on Kernel: a scripted run told to keep its
-	#settings with SAVE_LAYOUT, and its recent solutions apart, writes only beside the copy.  The copy is in the test's
-	#Output folder, as deep as the solutions are: their paths to Libc65, which their HCP65 configurations build, hold.
-	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
-	atexit.register(shutil.rmtree, szRoot, True)
+def CopyWorkspace():
+	#A copy of TestBuildLib's test solutions (Input/Workspace), which goes when the checks end; its folder.  It is in
+	#the test's Output folder, as deep as the solutions are, so their paths to Libc65, which their HCP65 configurations
+	#build, hold.
 	szTest = os.path.join(ROOT, 'HCP65-IDE', 'Tests', 'TestBuildLib', 'TestBuildLib')
 	os.makedirs(os.path.join(szTest, 'Output'), exist_ok=True)
 	szWorkspace = tempfile.mkdtemp(prefix='IDEChecks-', dir=os.path.join(szTest, 'Output'))
 	atexit.register(shutil.rmtree, szWorkspace, True)
 	shutil.copytree(os.path.join(szTest, 'Input', 'Workspace'), szWorkspace, dirs_exist_ok=True)
-	return {'SOLUTION': os.path.join(szWorkspace, 'Kernel', 'Kernel.sln'), 'SAVE_LAYOUT': '1', 'RECENT': os.path.join(szRoot, 'Recent.xml')}
+	return szWorkspace
+
+
+def MakeSolutionCopy():
+	#A copy of the test solutions (CopyWorkspace), opened on Kernel: a scripted run told to keep its settings with
+	#SAVE_LAYOUT, and its recent solutions apart, writes only beside the copy.
+	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
+	atexit.register(shutil.rmtree, szRoot, True)
+	return {'SOLUTION': os.path.join(CopyWorkspace(), 'Kernel', 'Kernel.sln'), 'SAVE_LAYOUT': '1', 'RECENT': os.path.join(szRoot, 'Recent.xml')}
 
 
 def MakeOptionsCopy(bSave=True, bUnbuilt=False):
@@ -375,8 +381,7 @@ def MakeBrokenKernel():
 	#F on line 5.  Its recent solutions are apart from the user's.
 	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
 	atexit.register(shutil.rmtree, szRoot, True)
-	szKernel = os.path.join(szRoot, 'Workspace', 'Kernel')
-	shutil.copytree(os.path.join(ROOT, 'HCP65-IDE', 'Tests', 'TestBuildLib', 'TestBuildLib', 'Input', 'Workspace'), os.path.join(szRoot, 'Workspace'))
+	szKernel = os.path.join(CopyWorkspace(), 'Kernel')
 	open(os.path.join(szKernel, 'Kernel.cpp'), 'w', newline='').write('int main(void) { return 0; }\nint F(void) { return giMissing; }\nint G(void)\n{\n\treturn F() + giAlsoMissing;\n}\n')
 	return {'SOLUTION': os.path.join(szKernel, 'Kernel.sln'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
 
@@ -387,8 +392,7 @@ def MakeIndexingProblemsKernel():
 	#user's.
 	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
 	atexit.register(shutil.rmtree, szRoot, True)
-	szKernel = os.path.join(szRoot, 'Workspace', 'Kernel')
-	shutil.copytree(os.path.join(ROOT, 'HCP65-IDE', 'Tests', 'TestBuildLib', 'TestBuildLib', 'Input', 'Workspace'), os.path.join(szRoot, 'Workspace'))
+	szKernel = os.path.join(CopyWorkspace(), 'Kernel')
 	open(os.path.join(szKernel, 'Kernel.cpp'), 'w', newline='').write('#include "Defs.h"\n#include "Gone.h"\nint main(void) { return V; }\n')
 	open(os.path.join(szKernel, 'Defs.h'), 'w', newline='').write('#define V 1\n#define V 2\n')
 	return {'SOLUTION': os.path.join(szKernel, 'Kernel.sln'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
@@ -412,8 +416,7 @@ def MakeUsagesKernel(szKernel=USAGES_KERNEL, asFiles={}):
 	#solutions are apart from the user's.
 	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
 	atexit.register(shutil.rmtree, szRoot, True)
-	szFolder = os.path.join(szRoot, 'Workspace', 'Kernel')
-	shutil.copytree(os.path.join(ROOT, 'HCP65-IDE', 'Tests', 'TestBuildLib', 'TestBuildLib', 'Input', 'Workspace'), os.path.join(szRoot, 'Workspace'))
+	szFolder = os.path.join(CopyWorkspace(), 'Kernel')
 	open(os.path.join(szFolder, 'Kernel.cpp'), 'w', newline='').write(szKernel)
 	szItems = ''
 	for szName, szText in asFiles.items():
@@ -894,11 +897,13 @@ CHECKS = [
 		[r'Kernel\.cpp line 5: '], [r'not enabled', r'\(focus\)']),
 	('build-message-colours', dict(MakeBrokenKernel(), **{
 		#Built, the Build tab's errors' lines are in the theme's failure colour; units' and the rest aren't coloured.  (The
-		#units compile in parallel, so only the kernel's two errors, under its unit, are in a known order.)
+		#units compile in parallel, so only the kernel's two errors, under its unit, are in a known order.)  They are the
+		#only errors: the runtime, Libc65, is compiled with its own project's include directories, where it once failed to
+		#include BaseLib's allocator from this solution, a third error.
 		'WAIT_INDEX': '1', 'OPEN': 'Kernel.cpp', 'BUILD': '1',
 		'DEBUG': 'wait:6000,edit:printoutputcolours:build'}),
 		[r'^Output colour: error \[Kernel\.cpp \(2, 22\): .*giMissing\]\]$', r'^Output colour: error \[Kernel\.cpp \(5, 15\): .*giAlsoMissing\]\]$',
-		 r'^Output colours: 3$'], [r'Output colour: .*\(\d+/13\)']),
+		 r'^Output colours: 2$'], [r'Output colour: .*\(\d+/13\)']),
 	('build-message-formats', dict(MakeBrokenKernel(), **{
 		#The compilers' messages: GCC's ("file:line:column: warning:"), MSVC's ("file(line,column): error C2065:", and
 		#"file(line): warning C4100:") and the HCP65 compiler's ("file (line, column): Warning:").  Warnings are in the
