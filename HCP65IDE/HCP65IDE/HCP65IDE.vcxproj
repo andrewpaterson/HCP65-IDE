@@ -477,6 +477,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="CodeTemplates.txt" />
+    <None Include="CleanupPlan.txt" />
     <None Include="ConfigurationsPlan.txt" />
     <None Include="Debugger65C64Plan.txt" />
     <None Include="DebuggerFPlan.txt" />

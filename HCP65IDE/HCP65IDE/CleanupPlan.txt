@@ -1,0 +1,258 @@
+Cleaning up the IDE's own code (plan, 2026-11-28)
+=================================================
+
+The user (2026-11-28): "Look through the HCP65-IDE for code that could be better, repetition, smells, large classes,
+long functions.  Anything that is inelegant.", then "Plan 2, 3 and 5 and make sure they really are mechanical.  Record
+the rest".  The review found seven things; 2, 3 and 5 are planned here and the rest are recorded at the end.
+Nothing here is a go-ahead: each step is built only when the user says so, and the questions at the end are the
+user's, asked one at a time.
+
+This is about the IDE's code, not the refactorings it offers (those are Refactorings.txt).
+
+Paths are in HCP65-IDE/HCP65IDE/HCP65IDE unless they say otherwise.  Line numbers are as of 65471cf.
+
+
+What "mechanical" means here, and how it was checked
+-----------------------------------------------------
+
+A step is mechanical if every edit in it is a move of code unchanged, or one fixed substitution made at every site,
+and no function's logic is rewritten.  Each was checked by comparing the code itself, not by reading a sample:
+
+  - "Identical" bodies were compared whole, with only the class's name and the white space evened out.
+  - "Stands alone" was checked by listing every field and member function a body uses, and what those use in turn.
+  - The loops were matched by exact patterns on all three parts of the for; a loop that differs at all is not counted.
+
+Where the check found that something is not mechanical, or was not the problem the review took it for, it is out of
+the plan and says why under "Checked and left out".
+
+
+The steps
+---------
+
+Each step builds and passes the checks by itself, and is one commit.  The order is the safest first.  Every step
+is mechanical but B4, which says so.
+
+T. Text helpers (the review's 5)
+
+T1. One home for the text helpers that exist.  They are declared in whichever feature first needed them:
+    IsIDENameChar and IsIDEIdentifier in IDERename.h (28 other files use the first), FindIDETextOffset,
+    FindIDENextLine and FindIDELineStart in IDESafeDelete.h (20 other files use the first, 289 times),
+    FindIDEWordAt in IDEFind.h, FindIDECommentStart in IDEMoveMembers.h, FindIDETextPosition in
+    IDELocationPreview.h, and SkipIDESpacesBack is static in IDECompletionContext.cpp:205.  IDECodeModel.cpp:2738
+    declares IsIDENameChar itself to avoid including IDERename.h.
+    They move, unchanged, to a new IDEText.h and IDEText.cpp (items of HCP65IDE.vcxproj and its .filters).  The
+    headers they leave include IDEText.h, so no other file changes.
+    With them: FindIDELineColumn, which is static and written twice (IDEConvertMacro.cpp:420,
+    IDEMoveNamespace.cpp:360).  The two differ by one test: the second stops at the text's end.  The second is kept;
+    for a place inside the text they are the same.
+
+T2. The scanning loops that are one of the helpers.  Of the 301 for loops with an empty body, 141 are exactly one of
+    nine forms, in 27 files:
+
+      forwards over spaces and tabs                       43   SkipIDEBlanks (new)
+      back to the line's start                            32   FindIDELineStart (exists)
+      forwards to the line's end                          18   FindIDELineEnd (new)
+      back over spaces and tabs                           12   SkipIDEBlanksBack (new)
+      forwards over a name                                 9   FindIDENameEnd (new)
+      back over a name                                     8   FindIDENameStart (new)
+      forwards over spaces, tabs, returns and new lines    7   SkipIDEWhiteSpace (new)
+      back over spaces, tabs, returns and new lines        6   SkipIDEWhiteSpaceBack (SkipIDESpacesBack, renamed)
+      forwards over spaces, tabs and returns               6   SkipIDEBlanksAndReturns (new; question 3)
+
+    Each "for (x = from; test; x++) { }" becomes "x = Helper(szText, from);": three lines to one.  A script makes
+    the edits from the same patterns that counted them, prints each, and must report 141; its diff is read before
+    it is built.  The new helpers are three lines each, written as FindIDELineStart is.
+
+    The patterns, exactly, so the count can be made again.  A loop counts if it is a "for (start; test; step)" on
+    one line in one of this folder's .cpp files, with "{" alone on the next line and "}" alone on the one after;
+    its step is "x++" (forwards) or "x--" (back) for one variable x; its test is one of these to the letter, T
+    being one expression for the text throughout (szText, szText.Text(), psSite->szText.Text()):
+      forwards over spaces and tabs      (T[x] == ' ') || (T[x] == '\t')
+      ... and returns                    (T[x] == ' ') || (T[x] == '\t') || (T[x] == '\r')
+      ... and new lines                  (T[x] == ' ') || (T[x] == '\t') || (T[x] == '\r') || (T[x] == '\n')
+      to the line's end                  (T[x] != '\0') && (T[x] != '\n')
+      over a name                        IsIDENameChar(T[x])
+      back to the line's start           (x > 0) && (T[x - 1] != '\n')
+      back over spaces and tabs          (x > 0) && ((T[x - 1] == ' ') || (T[x - 1] == '\t'))
+      ... returns and new lines          (x > 0) && ((T[x - 1] == ' ') || (T[x - 1] == '\t') || (T[x - 1] == '\r')
+                                           || (T[x - 1] == '\n'))
+      back over a name                   (x > 0) && IsIDENameChar(T[x - 1])
+    and its start is one of four: "x = from" (105 of the 141; the call is given from), nothing (27; given x),
+    "x++" (7; given x + 1) or "x--" (2; given x - 1).  A test in another order, with another bound than 0, or on
+    a pointer (*sz) doesn't count.
+
+T3. The word at the caret.  IDETemplateParameter.cpp:426 and :1916, IDEConvertMacro.cpp:289 and
+    IDEContextActions.cpp:565 each find the name the caret is in or just after with their own loops.
+    FindIDEWordAt (IDEFind.cpp:910) gives the same start and end in every case, with no name too.  Four sites.
+
+M. Things that are in the wrong class (the review's 3)
+
+M1. Where a file's text comes from.  CIDEFileTexts (IDECodeModel.h:178) is "the editor's text if the file is open,
+    else the disk's".  CIDEFindInFiles implements it (IDEFindInFiles.cpp:904), and its body only asks
+    CIDEDocuments for the file's tab.  So every refactoring that parses a file names Find in Files to do it.
+    CIDEDocuments implements it instead; the body moves unchanged, with its two limits
+    (IDE_FIND_FILE_MAXIMUM, IDE_FIND_BINARY_CHECK).  Sites, each one substitution:
+      69  "&mpcContent->GetFindInFiles()" passed as the texts  ->  "&mpcContent->GetDocuments()"
+      40  "GetFindInFiles()->GetFileText("                     ->  "GetDocuments()->GetFileText("
+       3  Find in Files' own calls of GetFileText              ->  through the documents
+    The other 38 uses of GetFindInFiles() are Find in Files itself and stay.
+
+M2. CIDEFileEdits (the edits to several files, applied as one undo) is declared in IDEDefinitions.h:59 and defined
+    from IDEDefinitions.cpp:96 (about 220 lines), though 33 files use it.  It uses nothing of CIDEDefinitions.  It
+    moves, unchanged, beside CIDETextEdits in IDERefactorUnit.h and .cpp (no new project file).  Of the 23 files that
+    include IDEDefinitions.h, 19 use nothing else of it; they include IDERefactorUnit.h instead.  IDEDefinitions.h
+    also brings in IDEChangeSignature.h, so the compiler says which of the 19 need that named too.
+
+M3. Problems Detected.  CIDEChangeSignature::ShowConflicts (IDEChangeSignature.cpp:509) is the dialog 13 other
+    refactorings show before they change anything.  It uses only the content and its own dialog pointer.  It moves
+    to a class of its own, CIDEConflicts, reached through the content as the features are; 14 call sites change
+    name, and refactoring.md's row for it.  The least of the steps; the user decided it is done (question 1).
+
+B. A base class for the features (the review's 2)
+
+B1. CIDEFeature.  71 classes derive from CObject and hold "CIDEContent* mpcContent"; each also declares and
+    defines Save and Load that return false, and starts Class() with U_Pointer(mpcContent).  A new CIDEFeature
+    (IDEFeature.h and .cpp, built as CIDEResultsSearch is, the base the results searches already share) has the
+    pointer, the two stubs and the registration.  In each of the 71: the base's name changes, the field, the two
+    declarations and the two definitions go, and Class()'s first line becomes CIDEFeature::Class().  Init is left
+    as it is.  About six lines a class.
+    Left as they are: the four settings pages (CSettingsPage is their base), CIDEEditCommands (CEditCommands is),
+    and the four that are not objects (CIDEFileEdits, CIDELightTyper, CIDEExpectedTypes, CIDEExpressionTyper).
+    CIDEScript stays a friend of the classes it is a friend of; a friend reaches what its class inherits.
+
+B2. "Is there a symbol at the caret."  Ten functions have the same body, three locals and one line
+    (CIDEConvertPointer::CanConvert, CIDEMoveMembers::CanMove, CIDESafeDelete::CanSafeDelete and seven more), and
+    five more are "is there an active tab".  CIDEFeature gets IsSymbolAtCaret and HasActiveTab, and the fifteen
+    bodies become one call.  The functions keep their names: commands name them as their enabled checks.
+
+B3. The parsed files a refactoring keeps while it works.  GetUnit is the same 16 lines in seven classes
+    (CIDEConvertPointer, CIDEDefinitions, CIDEMoveMembers, CIDESafeDelete, CIDEMoveNamespace, CIDEChangeSignature,
+    CIDEMoveClass), KillUnits the same nine in six, and each has the array, three of them a typedef of their own
+    for it.  Each touches the array in the same ten places.
+    A class CIDERefactorUnits, beside CIDERefactorUnit in IDERefactorUnit.h and .cpp (no new project file), has the
+    array and what the copies do: Init with the content, Kill, Get (GetUnit's body) and Clear (KillUnits').  It is a
+    member, not a base (question 2): the seven have a cache, they aren't a kind of class.  In each of the seven:
+      - the field becomes "CIDERefactorUnits mcUnits", and its line in Init, Class and Free changes with it (in
+        Free, "KillUnits(); mapcUnits.Kill();" is "mcUnits.Kill();", which does both);
+      - GetUnit, KillUnits and the typedef go;
+      - "GetUnit(" becomes "mcUnits.Get(" and "KillUnits()" becomes "mcUnits.Clear()": 54 calls, by script, which
+        must report 54 (32 and 22).  In the five classes left with no GetUnit a missed call doesn't compile.
+    Two keep functions of those names, each one line, public as they are now, for their 11 callers in other classes:
+    CIDEMoveNamespace (GetUnit, KillUnits) and CIDEMoveMembers (GetUnit).  CIDEMoveMembers::KillUnits stays whole
+    until B4, as it empties a second array too, so its eight calls inside CIDEMoveMembers stay as they are.
+    B3 doesn't need B1: it can be built before it.
+
+B4. Move Members' second cache.  Not mechanical: the one step with new logic in it, and so apart.
+    CIDEMoveMembers::GetCheckedUnit (IDEMoveMembers.cpp:634) is an eighth copy of GetUnit over a second array,
+    mapcChecked.  It differs in two places: it parses with the check, and a file counts only if IsChecked.
+    CIDERefactorUnits is given that as a flag at Init (parsed, or parsed and checked), and CIDEMoveMembers holds a
+    second one, mcChecked.  GetCheckedUnit goes (it has one call, :670) and KillUnits becomes two Clears.
+    Before it is built the checks that reach GetCheckedUnit are found (a line printed there and a run of the
+    checks), so it is known which ones prove the step; if none do, one is written first.
+
+
+How each step is checked
+------------------------
+
+  - Before T1: a Release build of HCP65IDE and HCP65IDERef in a build folder of this work's own, and the whole of
+    IDEChecks.py, kept as the baseline.  A check that fails before the work is named then, not found later.
+  - After each step: the same build and the whole of IDEChecks.py, against the baseline.  Nothing a user sees
+    changes in any step, so any difference is a fault in the step.
+  - T2: the script's count and its diff, before the build.
+  - At the end: the new files are in HCP65IDE.vcxproj and its .filters (edited as bytes, keeping the BOM and the
+    line endings they have: LF on 2026-11-28), and the solution builds with MSBuild; the pages' references to code
+    resolve (hcp65index -resolve, in the capped scope); architecture.md says what CIDEFeature is, and
+    refactoring.md what CIDERefactorUnits is and where Problems Detected is.
+
+
+Checked and left out
+--------------------
+
+  - The Queue functions (52 in 36 files: "QueueMove posts ShowMove", so a menu's popup has gone before the dialog
+    shows).  They are alike but not removable from the IDE's side: each is a command's target.  Taking them away
+    needs a command that posts itself (a flag on CCommand, in WindowLib).  That is a change to CommonLibraries and
+    a design, not a substitution.  Recorded below (R5).
+  - CIDEChangeSignature::ReadSite and FindSignature, which the review called misplaced because 15 and 6 calls come
+    from other refactorings.  They are not: FindSignature and the ten functions under it (ReadSite one of them) are
+    the model of a function's signature, its declarations and its calls, and the other refactorings use it as
+    that.  The review was wrong about these two.  Splitting the model from the dialog and the change would be a
+    real piece of design; recorded (R4).
+  - IsIDEIncludeLine, static in IDEFileRename.cpp:459 and IDEMoveClass.cpp:128: the same name for two different
+    questions with different parameters.  Not a copy.  One could be renamed.
+  - The other 160 empty loops match none of the nine forms: they look for a bracket, stop at a bound that isn't
+    0, climb a syntax node's parents.  Two of them skip spaces, tabs and returns as the ninth form does, but walk a
+    pointer, not an index (IDEExpressionTyper.cpp:259, IDESafeDelete.cpp:1335); the helpers take the text and a
+    place in it, so those two stay.
+  - The libraries' loops (62 more: IndexLib 32, TemplateLib 17, VisualStudioLib 13): IDEText.h is the IDE's, and
+    they can't include it.
+
+
+The rest of the review, recorded (not planned)
+----------------------------------------------
+
+R1. The script runner (IDEScript.cpp).  RunEditStep (:1920) is 1,351 lines with 178 branches, RunViewStep (:3844)
+    998, RunCommand (:197) 699.  Steps are matched by prefix lengths counted by hand ("renamefilesearch:", 17) and
+    read by index (szStep[17]); there are 303 such compares in the code, all correct on 2026-11-28.  "Save all if
+    gbIDEScriptRenameSaves" is written 30 times.  gaszIDEScriptCommands (:45) is a second list of the names, kept
+    in step by hand.  What would mend it: a table of name and handler, a function for each step, the table being
+    the list.  The biggest single gain, and it touches every check.
+
+R2. Refactorings that are one function.  38 functions are over 200 lines and 148 over 100.
+    CIDETemplateParameter::RemoveParameter (IDETemplateParameter.cpp:1844) is 486 lines with 56 locals: five phases
+    joined by "if (bResult)", then the Kill calls.  CIDEExtractClass::Extract (IDEExtractClass.cpp:595) is 412
+    lines with 50 locals.  What would mend one: a function for each phase, the locals in a struct with Init and
+    Kill as the SIDE... structs are.  Each is its own piece of work, done with the function's checks beside it.
+
+R3. The checks' settings in the program's start.  CIDEApp::Setup (IDEApp.cpp:280) is 343 lines, mostly getenv
+    tests.  65 HCP65_IDE_* variables are read in 12 files, 13 of them in more than one.  The features call
+    CIDEScript::WatchDialog and StopWatchingDialog 74 times.  What would mend it: the environment read once into
+    one struct, and dialogs watched from one place.
+
+R4. Change Signature's file (IDEChangeSignature.cpp, 3,255 lines) holds the signature's model, which twenty other
+    refactorings use, and the refactoring itself.  They could be two classes.
+
+R5. Commands that post themselves, so the 52 Queue functions can go (see "Checked and left out").
+
+R6. Smaller repetition:
+      - AddFormRow is in three dialogs (IDEBuildConfigurationsDialog.cpp:691, IDERunConfigurationsDialog.cpp:326,
+        IDEChangeSignatureDialog.cpp:234) and CreateLabel in four settings pages; their comments say "as CDialog's
+        own rows are", so CDialog could have them.
+      - The scope list is filled the same way in IDEDuplicates.cpp:305 and IDEUsages.cpp:1195.
+      - VisualStudioLib/VcxProject.cpp: RemoveIncludes (:1407), AddIncludesBeside (:1731) and RenameIncludes (:1862)
+        each scan for the Include=" element the same way (:1456 and :1780 are the same for 19 lines), and
+        RenameItem, AddItemBeside and RemoveItem again.
+      - BuildLib: CBuildConfiguration (BuildConfiguration.h:123) and CBuildPlain (BuildPlain.h:83) hold the same ten
+        flags, two named the opposite way round (mbMathTables and mbNoMathTables, mbWarnMissingOverride and
+        mbNoOverrideWarning).  CBuildPlain::ParseOption (BuildPlain.cpp:211) is one 286 line chain.
+      - GitLib: CGitRepository::IsTracked builds by hand what RunOnPath does.
+      - Checks/IDEChecks.py is 6,156 lines, 5,200 of them one list of 554 checks; 154 steps wait a fixed time
+        (wait:1500 is 59 of them).
+
+R7. Left on purpose.  CIDEContent has 118 functions and about 70 features, and a new feature is written in five
+    places (the field, Class, Setup, the getter's declaration and its definition).  One class per feature behind the
+    content's getters is the user's design of 2026-11-06 (architecture.md).
+
+
+Questions for the user
+----------------------
+
+1. Decided (the user, 2026-11-28: "Should M3 be done at all?  Yes, as suggested."): Problems Detected moves out of
+   Change Signature to a class of its own, CIDEConflicts (M3).  Thirteen refactorings stop reaching into Change
+   Signature for a dialog; it costs one more feature in the content (five places) and 14 renamed calls.  The other
+   considered: leaving it, as refactoring.md already says it is shared.  Not a go-ahead to build it.
+
+2. Decided (the user, 2026-11-28: "make B3 the member version, with the Move Members second cache as a separate
+   step"): what keeps the parsed files is a class the seven hold, CIDERefactorUnits, not a base they derive from
+   (B3), and Move Members' second cache is a step of its own after it (B4).  It began as the base's name: the user
+   asked "Have you got a better name?  Does it fit what it does?" of CIDEUnitRefactoring.  It didn't: it reads as
+   "a refactoring of a unit", and no base's name was better, because the cache is something the seven have.
+   The other considered: the base.  It changes no calls where the member changes 54, but it can give a class only
+   one cache (Move Members has two), it makes the caches of all seven as public as the two with outside callers
+   need, it parts the refactorings into seven of one base and fourteen of another by how they parse, and it waits
+   for B1.  Not a go-ahead to build it.
+
+3. Decided (the user, 2026-11-28: "Add a ninth helper."): the six loops that skip spaces, tabs and returns but not
+   new lines get a helper of their own, SkipIDEBlanksAndReturns, and are rewritten with the rest (T2: 141 loops,
+   nine forms).  Each of the six goes on to ask whether it has reached the line's end, in a file whose lines may
+   end in a return and a new line.  The name is the plan's, not the user's words.  The other considered: leaving
+   the six as loops.  Not a go-ahead to build it.

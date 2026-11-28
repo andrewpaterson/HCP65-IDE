@@ -802,6 +802,9 @@
     <None Include="CodeTemplates.txt">
       <Filter>Plans</Filter>
     </None>
+    <None Include="CleanupPlan.txt">
+      <Filter>Plans</Filter>
+    </None>
     <None Include="ConfigurationsPlan.txt">
       <Filter>Plans</Filter>
     </None>
