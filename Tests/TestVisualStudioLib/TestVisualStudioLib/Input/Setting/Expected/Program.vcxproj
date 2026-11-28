@@ -1,0 +1,33 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!-- TestVcxSetting: a program whose settings are set, added and removed in place. -->
+<Project DefaultTargets="Build" ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+  </PropertyGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="Sheet.props" />
+  </ImportGroup>
+  <ItemDefinitionGroup Condition="'$(Platform)'=='HCP65C816'">
+    <HCP65Compile>
+      <NoFloats>false</NoFloats>
+      <PreferSize>true</PreferSize>
+    </HCP65Compile>
+    <HCP65Link>
+      <Executable>p&amp;q.exe</Executable>
+    </HCP65Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|HCP65C816'">
+    <HCP65Compile>
+      <Debug>true</Debug>
+    </HCP65Compile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="Program.cpp" />
+  </ItemGroup>
+</Project>

@@ -5,6 +5,7 @@
 #include "BaseLib/Logger.h"
 #include "BaseLib/TextFile.h"
 #include "VisualStudioLib/VcxProject.h"
+#include "VisualStudioLib/VcxSetting.h"
 #include "TestLib/Assert.h"
 #include "TestLib/AssertFile.h"
 
@@ -852,6 +853,86 @@ void TestVcxProjectSheets(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// A tool's setting set, added and removed in copies of a project and a
+// sheet (Input/Setting/Before): each file is as it was but for the
+// setting (Input/Setting/Expected, byte for byte: the project's CRLF and
+// byte order mark, the sheet's LF), and what isn't there is added where
+// it belongs.  Removing what was added gives the file back.  The project
+// read afterwards has what was written (ConfigurationsPlan.txt C9-1).
+//
+//////////////////////////////////////////////////////////////////////////
+void TestVcxSetting(void)
+{
+	CVcxProject			cProject;
+	CVcxConfiguration*	pcConfiguration;
+	CFileUtil			cFileUtil;
+	CChars				szValue;
+
+	cFileUtil.RemoveDir("Output" _FS_ "Setting");
+	AssertTrue(cFileUtil.TouchDir("Output" _FS_ "Setting"));
+	AssertTrue(cFileUtil.CopyDir("Input" _FS_ "Setting" _FS_ "Before", "Output" _FS_ "Setting"));
+#define TEST_SETTING_PROJECT	"Output" _FS_ "Setting" _FS_ "Program.vcxproj"
+#define TEST_SETTING_SHEET		"Output" _FS_ "Setting" _FS_ "Sheet.props"
+#define TEST_SETTING_PLATFORM	"'$(Platform)'=='HCP65C816'"
+#define TEST_SETTING_DEBUG		"'$(Configuration)|$(Platform)'=='Debug|HCP65C816'"
+
+	//What is there already: said again nothing is written, changed only its value is.
+	szValue.Init();
+	AssertTrue(GetVcxSetting(TEST_SETTING_PROJECT, TEST_SETTING_PLATFORM, "HCP65Compile", "NoFloats", &szValue));
+	AssertString("true", szValue.Text());
+	AssertFalse(GetVcxSetting(TEST_SETTING_PROJECT, TEST_SETTING_PLATFORM, "HCP65Compile", "PreferSize", &szValue));
+	AssertFalse(GetVcxSetting(TEST_SETTING_PROJECT, TEST_SETTING_DEBUG, "HCP65Compile", "NoFloats", &szValue));
+	AssertTrue(SetVcxSetting(TEST_SETTING_PROJECT, TEST_SETTING_PLATFORM, "HCP65Compile", "NoFloats", "true"));
+	AssertFile("Input" _FS_ "Setting" _FS_ "Before" _FS_ "Program.vcxproj", TEST_SETTING_PROJECT);
+	AssertTrue(SetVcxSetting(TEST_SETTING_PROJECT, TEST_SETTING_PLATFORM, "HCP65Compile", "NoFloats", "false"));
+
+	//A setting in its tool, a tool in its group, a group in the file, and a value with characters XML has names for.
+	AssertTrue(SetVcxSetting(TEST_SETTING_PROJECT, TEST_SETTING_PLATFORM, "HCP65Compile", "PreferSize", "true"));
+	AssertTrue(SetVcxSetting(TEST_SETTING_PROJECT, TEST_SETTING_PLATFORM, "HCP65Link", "Executable", "p&q.exe"));
+	AssertTrue(SetVcxSetting(TEST_SETTING_PROJECT, TEST_SETTING_DEBUG, "HCP65Compile", "Debug", "true"));
+	AssertFile("Input" _FS_ "Setting" _FS_ "Expected" _FS_ "Program.vcxproj", TEST_SETTING_PROJECT);
+	AssertTrue(GetVcxSetting(TEST_SETTING_PROJECT, TEST_SETTING_PLATFORM, "HCP65Link", "Executable", &szValue));
+	AssertString("p&q.exe", szValue.Text());
+
+	cProject.Init();
+	AssertTrue(cProject.Read(TEST_SETTING_PROJECT));
+	pcConfiguration = cProject.FindConfiguration("Debug|HCP65C816");
+	AssertNotNull(pcConfiguration);
+	AssertString("true", pcConfiguration->GetProperty("HCP65Compile.Debug"));
+	AssertString("false", pcConfiguration->GetProperty("HCP65Compile.NoFloats"));
+	AssertString("p&q.exe", pcConfiguration->GetProperty("HCP65Link.Executable"));
+	AssertNull(cProject.FindConfiguration("Release|HCP65C816")->GetProperty("HCP65Compile.Debug"));
+	cProject.Kill();
+
+	//Removed, each takes with it what it leaves empty: the file is as it was.
+	AssertTrue(SetVcxSetting(TEST_SETTING_PROJECT, TEST_SETTING_DEBUG, "HCP65Compile", "Debug", NULL));
+	AssertTrue(SetVcxSetting(TEST_SETTING_PROJECT, TEST_SETTING_DEBUG, "HCP65Compile", "Debug", NULL));
+	AssertTrue(SetVcxSetting(TEST_SETTING_PROJECT, TEST_SETTING_PLATFORM, "HCP65Link", "Executable", NULL));
+	AssertTrue(SetVcxSetting(TEST_SETTING_PROJECT, TEST_SETTING_PLATFORM, "HCP65Compile", "PreferSize", NULL));
+	AssertTrue(SetVcxSetting(TEST_SETTING_PROJECT, TEST_SETTING_PLATFORM, "HCP65Compile", "NoFloats", "true"));
+	AssertFile("Input" _FS_ "Setting" _FS_ "Before" _FS_ "Program.vcxproj", TEST_SETTING_PROJECT);
+
+	//A sheet with no groups gets its first before its end; the project that imports it has the setting from there.
+	AssertTrue(SetVcxSetting(TEST_SETTING_SHEET, TEST_SETTING_DEBUG, "HCP65Compile", "Debug", "true"));
+	AssertTrue(SetVcxSetting(TEST_SETTING_SHEET, NULL, "ClCompile", "WarningLevel", "Level3"));
+	AssertFile("Input" _FS_ "Setting" _FS_ "Expected" _FS_ "Sheet.props", TEST_SETTING_SHEET);
+	cProject.Init();
+	AssertTrue(cProject.Read(TEST_SETTING_PROJECT));
+	AssertString("true", cProject.FindConfiguration("Debug|HCP65C816")->GetProperty("HCP65Compile.Debug"));
+	cProject.Kill();
+	AssertTrue(SetVcxSetting(TEST_SETTING_SHEET, NULL, "ClCompile", "WarningLevel", NULL));
+	AssertTrue(SetVcxSetting(TEST_SETTING_SHEET, TEST_SETTING_DEBUG, "HCP65Compile", "Debug", NULL));
+	AssertFile("Input" _FS_ "Setting" _FS_ "Before" _FS_ "Sheet.props", TEST_SETTING_SHEET);
+
+	//A file that isn't there, and one that isn't a project.
+	AssertFalse(SetVcxSetting("Output" _FS_ "Setting" _FS_ "None.vcxproj", NULL, "ClCompile", "WarningLevel", "Level3"));
+	AssertFalse(SetVcxSetting("Output" _FS_ "Setting" _FS_ "Program.cpp", NULL, "ClCompile", "WarningLevel", "Level3"));
+	szValue.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 //
 //////////////////////////////////////////////////////////////////////////
 void TestVcxProject(void)
@@ -867,6 +948,7 @@ void TestVcxProject(void)
 	TestVcxProjectAddItem();
 	TestVcxProjectExcludedFromBuild();
 	TestVcxProjectSheets();
+	TestVcxSetting();
 
 	TestStatistics();
 }
