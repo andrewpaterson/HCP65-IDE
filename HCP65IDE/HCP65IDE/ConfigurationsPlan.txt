@@ -1181,3 +1181,10 @@ Questions (the user's, one at a time)
    (an edit is always the project's, a "Use the sheet's" button removes it, a sheet is edited only in its file),
    which takes back part of question 5; a label with two buttons, Override Here and Use the Sheet's, both always
    there as WindowLib can't grey one out.
+34. Decided (the user, 2026-11-28: "34 -> A"): whether an edit is one configuration's or every configuration's of
+   the platform (C9-2).  Question 33's drop-down says it and chooses it: "This project, Release only", "This project,
+   every HCP65C816 configuration", the sheet with its count, and "Default".  An edit is written to what it shows (the
+   configuration's group or the platform's); choosing the platform's again takes the configuration's line away.  So
+   an option Debug and Release share stays written once.  The others considered: Visual Studio's "All
+   Configurations" in the dialog's list of configurations (an option whose values differ can only show that they
+   do, and an edit made in Release always writes a line for Release); always the one configuration shown.
