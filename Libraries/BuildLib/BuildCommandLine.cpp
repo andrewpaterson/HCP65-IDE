@@ -51,6 +51,7 @@ void CBuildCommandLine::Init(void)
 	mszRun.Init();
 	mszStartupProject.Init();
 	mbCard = false;
+	mbRebuild = false;
 	mbQuiet = false;
 	mbHelp = false;
 	mbPlain = false;
@@ -203,6 +204,10 @@ bool CBuildCommandLine::Parse(int iArgc, const char* const* aszArgv)
 		else if (IsOption(szArgument, "quiet"))
 		{
 			mbQuiet = true;
+		}
+		else if (IsOption(szArgument, "rebuild"))
+		{
+			mbRebuild = true;
 		}
 		else if (IsOption(szArgument, "card") || IsOption(szArgument, "config") || IsOption(szArgument, "show-plain") || IsOption(szArgument, "startup") || IsOption(szArgument, "run"))
 		{
@@ -884,6 +889,7 @@ bool CBuildCommandLine::BuildSolution(size uiSolution, bool bHeading)
 	}
 
 	aszLines.Init();
+	mcBuild.SetRebuild(mbRebuild);
 	bRunning = mcBuild.Start(&pcSolution->mcSolution, pcConfiguration, NULL, mszLibc65.Text(), &aszLines, pcSolution->GetStartupProjectName(), mszLayouts.Text());
 	WriteLines(&aszLines);
 	while (bRunning)
@@ -1074,6 +1080,8 @@ void CBuildCommandLine::WriteUsage(void)
 	WriteLine("                             project).  Default: the one its workspace says, else its first.");
 	WriteLine("  -run \"ModPlay\"             The run configuration: it names the build configuration, and its card file says");
 	WriteLine("                             which card -card writes.  Default: the first that builds the configuration.");
+	WriteLine("  -rebuild                   Build everything.  Without it a GCC or MSVC build leaves what is up to date;");
+	WriteLine("                             an HCP65 build compiles everything either way.");
 	WriteLine("  -card                      Also put each executable and module on its configuration's card (Card,");
 	WriteLine("                             CardPath).");
 	WriteLine("  -show-plain <file>         Write the build as a plain command line (and a .units file per project)");

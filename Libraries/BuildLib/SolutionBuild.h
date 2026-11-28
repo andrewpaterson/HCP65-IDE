@@ -27,7 +27,8 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 
 //Builds a solution in a build configuration, with the configuration's toolchain: the HCP65 compiler, MSVC or GCC.
 //Given the solution's startup project, an HCP65 build builds only that application of the solution's (see CBuild).  The
-//last build is kept (its state, progress and listings) until the next starts.
+//last build is kept (its state, progress and listings) until the next starts.  SetRebuild says whether the builds
+//started after it build everything (Rebuild All) or leave what is up to date (CBuild::SetRebuild).
 class CSolutionBuild
 {
 protected:
@@ -35,12 +36,14 @@ protected:
 	CMSVCBuild		mcMSVC;
 	CGCCBuild		mcGCC;
 	CBuild*			mpcBuild;	//The last build started, NULL before the first.
+	bool			mbRebuild;	//The next build started builds everything (SetRebuild).
 
 public:
 	void			Init(void);
 	void			Kill(void);
 
 	bool			Start(CVcxSolution* pcSolution, CBuildConfiguration* pcConfiguration, const char* szRoot, const char* szLibc65Directory, CArrayChars* paszLines, const char* szStartupProject = NULL, const char* szLayoutsFile = NULL);
+	void			SetRebuild(bool bRebuild);
 	bool			Poll(CArrayChars* paszLines);
 	void			Cancel(void);
 

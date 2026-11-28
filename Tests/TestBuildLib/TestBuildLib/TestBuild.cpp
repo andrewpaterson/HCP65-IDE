@@ -3,6 +3,7 @@
 #include "BaseLib/NativeThread.h"
 #include "CppCompilerLib/CPP65ListingIndex.h"
 #include "BuildLib/SolutionBuild.h"
+#include "BuildLib/BuildUpToDate.h"
 #include "TestLib/Assert.h"
 
 
@@ -11,9 +12,9 @@
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Builds a project (a solution of its own) in a configuration, its output
-// in Output\<szRoot>, polling until it has finished.  The lines it wrote
-// are added to paszLines.
+// Builds all of a project (a solution of its own) in a configuration, its
+// output in Output\<szRoot>, polling until it has finished.  The lines it
+// wrote are added to paszLines.
 //
 //////////////////////////////////////////////////////////////////////////
 EBuildState TestBuildProject(CSolutionBuild* pcBuild, CVcxSolution* pcSolution, CBuildConfiguration* pcConfiguration, const char* szRoot, CArrayChars* paszLines)
@@ -23,6 +24,7 @@ EBuildState TestBuildProject(CSolutionBuild* pcBuild, CVcxSolution* pcSolution, 
 
 	szDirectory.Init("Output" _FS_);
 	szDirectory.Append(szRoot);
+	pcBuild->SetRebuild(true);  //Whatever an earlier run left: TestBuildGCCUpToDate is where that is looked at.
 	pcBuild->Start(pcSolution, pcConfiguration, szDirectory.Text(), TEST_BUILD_LIBC65, paszLines);
 	szDirectory.Kill();
 	for (i = 0; (i < 60000) && pcBuild->Poll(paszLines); i++)
@@ -263,6 +265,124 @@ void TestBuildGCC(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Polls a build until it has finished.
+//
+//////////////////////////////////////////////////////////////////////////
+static EBuildState TestBuildWait(CSolutionBuild* pcBuild, CArrayChars* paszLines)
+{
+	int	i;
+
+	for (i = 0; (i < 60000) && pcBuild->Poll(paszLines); i++)
+	{
+		ThreadSleep(10);
+	}
+	return pcBuild->GetState();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A GCC build leaves what is up to date (ConfigurationsPlan.txt question
+// 31).  A copy of Tiny built, then again: nothing is run.  Its header
+// written again, the file that includes it is compiled and its library
+// archived; Rebuild All builds it all whatever is there; and a compile
+// that fails leaves nothing that looks up to date, so the next build
+// compiles it.
+//
+//////////////////////////////////////////////////////////////////////////
+void TestBuildGCCUpToDate(void)
+{
+	CVcxSolution			cSolution;
+	CBuildConfiguration		cConfiguration;
+	CSolutionBuild			cBuild;
+	CArrayChars				aszLines;
+	CArrayChars				aszDependencies;
+	CFileUtil				cFileUtil;
+	CTextFile				cFile;
+	CChars					szSource;
+	CChars					szHeader;
+
+	cFileUtil.RemoveDir("Output" _FS_ "UpToDate");
+	AssertTrue(cFileUtil.CopyDir("Input" _FS_ "Tiny", "Output" _FS_ "UpToDate"));
+	cSolution.Init();
+	AssertTrue(cSolution.ReadProject("Output" _FS_ "UpToDate" _FS_ "Tiny.vcxproj"));
+	cConfiguration.Init("Debug|GCC-x64", BT_GCC, "Debug|Win32");
+	cBuild.Init();
+	aszLines.Init();
+	cBuild.Start(&cSolution, &cConfiguration, NULL, NULL, &aszLines);
+	if (TestBuildWait(&cBuild, &aszLines) == BS_Failed)
+	{
+		//No GCC here.
+		AssertTrue(TestBuildHasLine(&aszLines, "Could not run g++."));
+	}
+	else
+	{
+		AssertSize(2, ((CCommandBuild*)cBuild.GetBuild())->NumCommands());
+		AssertFalse(TestBuildHasLine(&aszLines, "Up to date"));
+
+		//What the compiler says it read: the source and its header.
+		aszDependencies.Init();
+		AssertTrue(ReadBuildDependencies("Output" _FS_ "UpToDate" _FS_ "Output" _FS_ "GCC-x64" _FS_ "Debug" _FS_ "Objects" _FS_ "Tiny" _FS_ "Maths.d", &aszDependencies));
+		AssertSize(2, aszDependencies.NumElements());
+		AssertTrue(TestBuildEndsWith(aszDependencies.GetText(0), "Maths.cpp"));
+		AssertTrue(TestBuildEndsWith(aszDependencies.GetText(1), "Maths.h"));
+		aszDependencies.Kill();
+
+		aszLines.ReInit();
+		cBuild.Start(&cSolution, &cConfiguration, NULL, NULL, &aszLines);
+		AssertInt(BS_Succeeded, TestBuildWait(&cBuild, &aszLines));
+		AssertSize(0, ((CCommandBuild*)cBuild.GetBuild())->NumCommands());
+		AssertTrue(TestBuildHasLine(&aszLines, "Up to date: 2 of 2."));
+		AssertTrue(TestBuildHasLine(&aszLines, "Nothing to build."));
+
+		//The header written again.
+		szHeader.Init("Output" _FS_ "UpToDate" _FS_ "Include" _FS_ "Maths.h");
+		cFile.Init();
+		AssertTrue(cFile.Read(szHeader.Text()));
+		ThreadSleep(20);
+		AssertTrue(cFile.Write(szHeader.Text()));
+		cFile.Kill();
+		szHeader.Kill();
+		aszLines.ReInit();
+		cBuild.Start(&cSolution, &cConfiguration, NULL, NULL, &aszLines);
+		AssertInt(BS_Succeeded, TestBuildWait(&cBuild, &aszLines));
+		AssertSize(2, ((CCommandBuild*)cBuild.GetBuild())->NumCommands());
+		AssertString("Maths.cpp", ((CCommandBuild*)cBuild.GetBuild())->GetCommand(0)->szDescription.Text());
+		AssertString("Archiving Tiny", ((CCommandBuild*)cBuild.GetBuild())->GetCommand(1)->szDescription.Text());
+
+		//Rebuild All.
+		aszLines.ReInit();
+		cBuild.SetRebuild(true);
+		cBuild.Start(&cSolution, &cConfiguration, NULL, NULL, &aszLines);
+		AssertInt(BS_Succeeded, TestBuildWait(&cBuild, &aszLines));
+		AssertSize(2, ((CCommandBuild*)cBuild.GetBuild())->NumCommands());
+		cBuild.SetRebuild(false);
+
+		//A source that doesn't compile, then put right with its old text: its object wasn't left from before.
+		szSource.Init("Output" _FS_ "UpToDate" _FS_ "Maths.cpp");
+		cFile.Init("this isn't C++\n");
+		AssertTrue(cFile.Write(szSource.Text()));
+		cFile.Kill();
+		aszLines.ReInit();
+		cBuild.Start(&cSolution, &cConfiguration, NULL, NULL, &aszLines);
+		AssertInt(BS_Failed, TestBuildWait(&cBuild, &aszLines));
+		AssertTrue(cFileUtil.Copy("Input" _FS_ "Tiny" _FS_ "Maths.cpp", szSource.Text()));
+		szSource.Kill();
+		aszLines.ReInit();
+		cBuild.Start(&cSolution, &cConfiguration, NULL, NULL, &aszLines);
+		AssertInt(BS_Succeeded, TestBuildWait(&cBuild, &aszLines));
+		AssertSize(2, ((CCommandBuild*)cBuild.GetBuild())->NumCommands());
+	}
+
+	aszLines.Kill();
+	cBuild.Kill();
+	cSolution.Kill();
+	cConfiguration.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Tools with GCC in Release: two applications linked, the library
 // archived.  Its projects have no GCC-x64 configuration, so no compile or
 // link has an option of the build's own (ConfigurationsPlan.txt C7-4).
@@ -409,7 +529,7 @@ void TestBuildGCCConfiguration(void)
 	AssertFalse(psCommand->aszArguments.Contains("-DLINUX_GNU"));
 	AssertFalse(psCommand->aszArguments.Contains("-g"));
 	AssertFalse(psCommand->aszArguments.Contains("-march=haswell"));
-	AssertTrue(TestBuildEndsWith(psCommand->aszArguments.GetText(2), "Include"));
+	AssertTrue(TestBuildEndsWith(psCommand->aszArguments.GetText(3), "Include"));
 
 	psCommand = pcCommands->GetCommand(1);
 	AssertString("Linking Grouped", psCommand->szDescription.Text());
@@ -652,6 +772,7 @@ void TestBuild(void)
 #ifdef LINUX_GNU
 	TestBuildGCC();
 	TestBuildGCCRelease();
+	TestBuildGCCUpToDate();
 	TestBuildGCCConfiguration();
 	TestBuildExcludedFromBuild();
 	TestBuildMakefile();

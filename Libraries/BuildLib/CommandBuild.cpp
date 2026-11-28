@@ -236,6 +236,24 @@ bool CCommandBuild::Poll(CArrayChars* paszLines)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// The command added last isn't run after all.
+//
+//////////////////////////////////////////////////////////////////////////
+void CCommandBuild::RemoveLastCommand(void)
+{
+	SBuildCommand*	psCommand;
+
+	psCommand = masCommands.Tail();
+	psCommand->aszArguments.Kill();
+	psCommand->szDescription.Kill();
+	psCommand->szDirectory.Kill();
+	psCommand->szExecutable.Kill();
+	masCommands.RemoveTail();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // The running program is stopped; the build is cancelled.
 //
 //////////////////////////////////////////////////////////////////////////

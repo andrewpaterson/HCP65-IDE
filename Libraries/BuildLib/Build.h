@@ -71,6 +71,7 @@ protected:
 	CChars					mszListingDirectory;	//In place of Root\Listing\<toolchain>\<configuration>, if not empty.
 	CChars					mszLayoutsFile;			//Where an HCP65 build writes its classes' layouts (CCPP65Builder::SetLayoutsFile), if not empty.
 	CChars					mszStartupProject;		//The solution's startup project's name, empty if it hasn't been said.
+	bool					mbRebuild;				//Everything is built, whether or not it is up to date (SetRebuild).
 	EBuildState				meState;
 	CChars					mszProgress;
 	size					muiDone;	//How many of the build's steps (units compiled, commands run) are done,
@@ -95,6 +96,8 @@ public:
 			void		GetListingDirectory(CChars* pszDest);
 			bool		GetProgramPath(CChars* pszDest);
 			void		SetStartupProject(const char* szName);
+			void		SetRebuild(bool bRebuild);
+			bool		IsRebuild(void) const;
 			char*		GetStartupProject(void);
 			void		GetProjects(CArrayBuildProjects* pasDest, bool bOneApplication = false);
 

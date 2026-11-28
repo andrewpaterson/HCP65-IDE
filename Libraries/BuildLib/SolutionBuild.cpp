@@ -27,6 +27,7 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 //////////////////////////////////////////////////////////////////////////
 void CSolutionBuild::Init(void)
 {
+	mbRebuild = false;
 	mpcBuild = NULL;
 }
 
@@ -91,8 +92,19 @@ bool CSolutionBuild::Start(CVcxSolution* pcSolution, CBuildConfiguration* pcConf
 		mpcBuild = &mcGCC;
 	}
 	mpcBuild->SetStartupProject(szStartupProject);
+	mpcBuild->SetRebuild(mbRebuild);
 	mpcBuild->SetLayoutsFile(szLayoutsFile);
 	return mpcBuild->Start(paszLines);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+//
+//////////////////////////////////////////////////////////////////////////
+void CSolutionBuild::SetRebuild(bool bRebuild)
+{
+	mbRebuild = bRebuild;
 }
 
 

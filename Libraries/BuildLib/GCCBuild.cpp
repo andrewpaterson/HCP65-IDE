@@ -20,6 +20,7 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 ** ------------------------------------------------------------------------ **/
 #include "BaseLib/FileUtil.h"
 #include "VisualStudioLib/VcxItem.h"
+#include "BuildUpToDate.h"
 #include "GCCBuild.h"
 
 
@@ -57,6 +58,7 @@ bool CGCCBuild::AddCommands(CArrayChars* paszLines)
 	CArrayChars			aszLibraries;
 	CChars				szOutput;
 	CChars				szProjectOutput;
+	CChars				szLibrary;
 	CChars				szSource;
 	CChars				szObject;
 	CChars				szTarget;
@@ -67,6 +69,9 @@ bool CGCCBuild::AddCommands(CArrayChars* paszLines)
 	size				i;
 	size				j;
 	size				uiFirstObject;
+	size				uiKept;
+	size				uiMade;
+	CArrayChars			aszInputs;
 	int					iPass;
 	bool				bFolder;
 
@@ -84,6 +89,8 @@ bool CGCCBuild::AddCommands(CArrayChars* paszLines)
 	GetOutputDirectory(&szOutput);
 	cFileUtil.FullPath(&szOutput);
 	aszLibraries.Init();
+	uiKept = 0;
+	uiMade = 0;
 	for (iPass = 0; iPass < 3; iPass++)
 	{
 		for (i = 0; i < asProjects.NumElements(); i++)
@@ -99,8 +106,12 @@ bool CGCCBuild::AddCommands(CArrayChars* paszLines)
 				continue;
 			}
 			//Objects in a folder of their own: an application is linked beside them as Output\GCC-x64\Debug\Project, which
-			//would be the project's objects' folder.
-			szProjectOutput.Init(szOutput);
+			//would be the project's objects' folder.  A project's objects and its library are under its own
+			//configuration's name, so the configurations that build it the same way share them: Reference|GCC-x64
+			//builds the libraries as Release|GCC-x64, by the solution's rows, and compiles none of them again.
+			szProjectOutput.Init();
+			GetProjectDirectory(psProject, szOutput.Text(), &szProjectOutput);
+			szLibrary.Init(szProjectOutput);
 			cFileUtil.AppendToPath(&szProjectOutput, "Objects");
 			cFileUtil.AppendToPath(&szProjectOutput, psProject->pcProject->GetName());
 			if (iPass == 0)
@@ -131,6 +142,19 @@ bool CGCCBuild::AddCommands(CArrayChars* paszLines)
 						szObject.Init();
 						GetObjectName(szProjectOutput.Text(), szSource.Text(), &szObject);
 						AddCompile(psProject, szSource.Text(), szObject.Text(), &aszIncludes, &aszDefines);
+						//What it was compiled from last time: its source and the headers that included (Source.d, by -MMD).
+						aszInputs.Init();
+						aszInputs.Add(szSource.Text());
+						szSource.Set(szObject);
+						szSource.RemoveFromEnd(1);
+						szSource.Append('d');
+						if (!ReadBuildDependencies(szSource.Text(), &aszInputs))
+						{
+							//Not compiled yet (or not by this build): the file that isn't there is what makes it out of date.
+							aszInputs.Add(szSource.Text());
+						}
+						KeepOutput(szObject.Text(), &aszInputs) ? uiKept++ : uiMade++;
+						aszInputs.Kill();
 						szObject.Kill();
 						szSource.Kill();
 					}
@@ -141,7 +165,7 @@ bool CGCCBuild::AddCommands(CArrayChars* paszLines)
 			else if ((iPass == 1) == psProject->bLibrary)
 			{
 				//Archive a library (lib<Project>.a) or link an application (<Project>) from its objects.
-				szTarget.Init(szOutput);
+				szTarget.Init(psProject->bLibrary ? szLibrary : szOutput);
 				szDescription.Init(psProject->bLibrary ? "Archiving " : "Linking ");
 				if (psProject->bLibrary)
 				{
@@ -181,11 +205,8 @@ bool CGCCBuild::AddCommands(CArrayChars* paszLines)
 				if (psCommand->aszArguments.NumElements() == uiFirstObject)
 				{
 					//A project with no sources has nothing to archive or link.
-					psCommand->aszArguments.Kill();
-					psCommand->szDescription.Kill();
-					psCommand->szDirectory.Kill();
-					psCommand->szExecutable.Kill();
-					masCommands.RemoveTail();
+					RemoveLastCommand();
+					psCommand = NULL;
 					if (psProject->bLibrary)
 					{
 						aszLibraries.RemoveTail();
@@ -201,15 +222,37 @@ bool CGCCBuild::AddCommands(CArrayChars* paszLines)
 					}
 					psCommand->aszArguments.Add("-Wl,--end-group");
 				}
-				if (!psProject->bLibrary && (psCommand->aszArguments.NumElements() != uiFirstObject))
+				if (psCommand != NULL)
 				{
-					AddDependencies(psProject, &psCommand->aszArguments);
+					//Made from its objects and, for a program, the solution's libraries: the files among its arguments.
+					aszInputs.Init();
+					for (j = uiFirstObject; j < psCommand->aszArguments.NumElements(); j++)
+					{
+						if (cFileUtil.IsAbsolutePath(psCommand->aszArguments.GetText(j)))
+						{
+							aszInputs.Add(psCommand->aszArguments.GetText(j));
+						}
+					}
+					if (!psProject->bLibrary)
+					{
+						AddDependencies(psProject, &psCommand->aszArguments);
+					}
+					KeepOutput(szTarget.Text(), &aszInputs) ? uiKept++ : uiMade++;
+					aszInputs.Kill();
 				}
 				szDescription.Kill();
 				szTarget.Kill();
 			}
+			szLibrary.Kill();
 			szProjectOutput.Kill();
 		}
+	}
+	if (uiKept > 0)
+	{
+		szDescription.Init("Up to date: ");
+		szDescription.Append((uint32)uiKept)->Append(" of ")->Append((uint32)(uiKept + uiMade))->Append('.');
+		paszLines->Add(szDescription.Text());
+		szDescription.Kill();
 	}
 	aszLibraries.Kill();
 	szOutput.Kill();
@@ -220,7 +263,52 @@ bool CGCCBuild::AddCommands(CArrayChars* paszLines)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// g++ -c -std=c++17 -I... -D... Source.cpp -o Source.o
+// Where a project's objects and library go: the output folder of its own
+// configuration if that is a GCC-x64 one (Output\GCC-x64\Release for a
+// library a Reference|GCC-x64 build builds as Release|GCC-x64), else the
+// build's, szOutput.
+//
+//////////////////////////////////////////////////////////////////////////
+void CGCCBuild::GetProjectDirectory(SBuildProject* psProject, const char* szOutput, CChars* pszDest)
+{
+	CFileUtil	cFileUtil;
+
+	pszDest->Set(szOutput);
+	if (psProject->pcConfiguration->IsToolchain())
+	{
+		//Beside the build's own folder, under the project's configuration's name.
+		cFileUtil.RemoveLastFromPath(pszDest);
+		cFileUtil.AppendToPath(pszDest, psProject->pcConfiguration->GetConfiguration());
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The command added last makes szOutput from paszInputs.  If that is up
+// to date and this isn't Rebuild All, the command is taken away again and
+// the result is true; otherwise what it made before is removed for it to
+// make again (BuildUpToDate.h).
+//
+//////////////////////////////////////////////////////////////////////////
+bool CGCCBuild::KeepOutput(const char* szOutput, CArrayChars* paszInputs)
+{
+	SBuildCommand*	psCommand;
+
+	psCommand = masCommands.Tail();
+	if (!mbRebuild && IsBuildOutputUpToDate(psCommand, szOutput, paszInputs))
+	{
+		RemoveLastCommand();
+		return true;
+	}
+	PrepareBuildOutput(psCommand, szOutput);
+	return false;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// g++ -c -std=c++17 -MMD -I... -D... Source.cpp -o Source.o
 //
 //////////////////////////////////////////////////////////////////////////
 void CGCCBuild::AddCompile(SBuildProject* psProject, const char* szSource, const char* szObject, CArrayChars* paszIncludes, CArrayChars* paszDefines)
@@ -238,6 +326,7 @@ void CGCCBuild::AddCompile(SBuildProject* psProject, const char* szSource, const
 
 	psCommand->aszArguments.Add("-c");
 	psCommand->aszArguments.Add("-std=c++17");
+	psCommand->aszArguments.Add("-MMD");  //Source.d beside Source.o: what it included, for the next build to look at.
 	for (i = 0; i < paszIncludes->NumElements(); i++)
 	{
 		szArgument.Init("-I");

@@ -79,6 +79,10 @@ bool CMSVCBuild::AddCommands(CArrayChars* paszLines)
 	}
 	psCommand->aszArguments.Add(szArgument.Text());
 	szArgument.Kill();
+	if (mbRebuild)
+	{
+		psCommand->aszArguments.Add("/t:Rebuild");
+	}
 	psCommand->aszArguments.Add("/m");
 	psCommand->aszArguments.Add("/nologo");
 	psCommand->aszArguments.Add("/v:minimal");

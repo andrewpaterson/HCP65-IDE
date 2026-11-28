@@ -39,6 +39,8 @@ protected:
 	void	AddOptions(SBuildProject* psProject, const char* szTool, CArrayChars* paszArguments);
 	void	AddDependencies(SBuildProject* psProject, CArrayChars* paszArguments);
 	void	AddWithoutConfiguration(CArrayBuildProjects* pasProjects, CArrayChars* paszLines);
+	bool	KeepOutput(const char* szOutput, CArrayChars* paszInputs);
+	void	GetProjectDirectory(SBuildProject* psProject, const char* szOutput, CChars* pszDest);
 };
 
 

@@ -88,6 +88,12 @@ Build, Build (Ctrl+F9) builds every solution of the workspace in the chosen buil
 order, a solution whose program another loads (a kernal) first.  The IDE goes on working while it builds.
 It builds the files as they are on disk, so save first (Ctrl+Shift+S saves them all).
 
+A GCC build leaves what is up to date.  A source is compiled again only if it, a header it includes or the
+command line it is compiled with has changed since its object was made; a library is archived and a program
+linked only if something they are made from was.  The Build tab says how much was left (`Up to date: 41 of
+43.`).  Build, **Rebuild All** builds everything whatever is there.  An MSVC build is MSBuild's, which keeps its
+own account of what is up to date and is told to rebuild; an HCP65 build compiles everything either way.
+
 ### The Build tab
 
 The Build tab under the editor shows what the build writes, kept scrolled to its end, over a bar showing

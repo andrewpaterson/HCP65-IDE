@@ -41,6 +41,7 @@ void CBuild::Init(CVcxSolution* pcSolution, CBuildConfiguration* pcConfiguration
 	mszListingDirectory.Init();
 	mszLayoutsFile.Init();
 	mszStartupProject.Init();
+	mbRebuild = false;
 	meState = BS_NotStarted;
 	mszProgress.Init();
 	muiDone = 0;
@@ -187,6 +188,17 @@ void CBuild::SetStartupProject(const char* szName)
 
 
 char* CBuild::GetStartupProject(void) { return mszStartupProject.Text(); }
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Rebuild All: everything is built again.  Otherwise a build that can
+// tell (GCC's: BuildUpToDate.h) leaves what is up to date.  An HCP65 build
+// compiles everything either way.
+//
+//////////////////////////////////////////////////////////////////////////
+void CBuild::SetRebuild(bool bRebuild) { mbRebuild = bRebuild; }
+bool CBuild::IsRebuild(void) const { return mbRebuild; }
 
 
 //////////////////////////////////////////////////////////////////////////

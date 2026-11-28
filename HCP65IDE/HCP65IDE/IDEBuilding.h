@@ -76,6 +76,7 @@ public:
 	void				SetLibc65Directory(const char* szDirectory);
 	const char*			GetLibc65Directory(void);
 	bool				Build(void);
+	bool				RebuildAll(void);
 	void				StopBuild(void);
 	bool				IsBuilding(void);
 	void				ShowListingAfterBuild(size uiLine);
@@ -99,6 +100,7 @@ protected:
 	void				FindRemovedConfigurations(CBuildConfigurations* pcConfigurations, CArrayBuildConfigurationEdits* pasEdits, CArrayChars* paszRemoved);
 	void				ForgetRemovedConfigurations(CArrayChars* paszRemoved, CArrayChars* paszKept);
 	void				ShowNothingToBuild(void);
+	bool				StartBuild(bool bRebuild);
 	bool				StartBuildStep(CArrayChars* paszLines);
 	void				ShowBuildProgress(void);
 	void				FinishBuildSteps(CArrayChars* paszLines);

@@ -32,6 +32,7 @@ no solution.
 |---|---|
 | <code>-config "Release&#124;HCP65C816"</code> | The configuration to build: one the solution lists, or its `.hcp65build` file.  Default: the workspace's last one, else the first HCP65 one. |
 | `-run "ModPlay Debug"` | The [run configuration](../ide/building.md#run-configurations): it names the configuration to build, and its card file says which card `-card` writes.  Default: the first run configuration that builds the configuration. |
+| `-rebuild` | Build everything.  Without it a GCC or MSVC build leaves what is up to date; an HCP65 build compiles everything either way. |
 | `-startup <project>` | The project whose program is built.  Default: the one the workspace names, else the first. |
 | `-card` | Also copy each executable, module and carded image (such as `OS.SYS`) onto the run configuration's SD card image, at the path its card file gives. |
 | `-show-plain <file>` | Write the build as a [plain command line](#a-plain-command-line) instead of building.  `hcp65build @<file>` then builds the same thing. |

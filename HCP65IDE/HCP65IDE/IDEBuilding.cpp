@@ -144,13 +144,37 @@ const char* CIDEBuilding::GetLibc65Directory(void) { return mszLibc65.Text(); }
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Build: what isn't up to date is built (a GCC or MSVC build can tell; an
+// HCP65 build compiles everything).
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEBuilding::Build(void)
+{
+	return StartBuild(false);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Rebuild All: Build, with everything built whether or not it is up to
+// date (ConfigurationsPlan.txt question 31).
+//
+//////////////////////////////////////////////////////////////////////////
+bool CIDEBuilding::RebuildAll(void)
+{
+	return StartBuild(true);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Starts building the solution in the chosen build configuration, its
 // output in the Build tab.  False if there is no solution or a build is
 // running, or if no solution has the build configuration, as the Build tab
 // says.
 //
 //////////////////////////////////////////////////////////////////////////
-bool CIDEBuilding::Build(void)
+bool CIDEBuilding::StartBuild(bool bRebuild)
 {
 	CArrayChars	aszLines;
 	bool		bResult;
@@ -159,6 +183,7 @@ bool CIDEBuilding::Build(void)
 	{
 		return false;
 	}
+	mcBuild.SetRebuild(bRebuild);
 	maiBuildOrder.ReInit();
 	if (mpcContent->GetBuildConfigurations()->HasConfiguration())
 	{
@@ -491,6 +516,7 @@ void CIDEBuilding::CreatePane(SDockPlace* psPlace)
 void CIDEBuilding::AddCommands(Ptr<CCommandSet> pCommands)
 {
 	pCommands->Add("Build.Build", "Build", "Control+F9", Ptr<CImageCel>(), this, &CIDEBuilding::Build);
+	pCommands->Add("Build.RebuildAll", "Rebuild All", "", Ptr<CImageCel>(), this, &CIDEBuilding::RebuildAll);
 	pCommands->Add("Build.EditConfigurations", "Edit Build Configurations...", "", Ptr<CImageCel>(), this, &CIDEBuilding::RequestEditDialog)->SetEnabledCheck(this, &CIDEBuilding::CanEditConfigurations);
 }
 
@@ -506,6 +532,7 @@ Ptr<CMenuContainer> CIDEBuilding::CreateBuildMenu(void)
 
 	pMenu = OMalloc<CMenuContainer>(mpcContent->GetWindow(), mpcContent->GetTheme());
 	pMenu->AddItem(mpcContent->GetCommands()->Find("Build.Build"));
+	pMenu->AddItem(mpcContent->GetCommands()->Find("Build.RebuildAll"));
 	pMenu->AddItem(mpcContent->GetCommands()->Find("Build.EditConfigurations"));
 	return pMenu;
 }

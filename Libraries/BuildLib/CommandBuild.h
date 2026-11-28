@@ -56,6 +56,7 @@ public:
 
 			SBuildCommand*	AddCommand(const char* szExecutable, const char* szDirectory, const char* szDescription);
 			SBuildCommand*	AddMakefileCommand(SBuildProject* psProject);
+			void			RemoveLastCommand(void);
 			size			NumCommands(void) const;
 			SBuildCommand*	GetCommand(size uiIndex);
 

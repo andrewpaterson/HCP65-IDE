@@ -61,6 +61,7 @@ protected:
 	CChars				mszFile;
 	CChars				mszConfiguration;
 	CChars				mszRun;				//-run's run configuration, empty if not given.
+	bool				mbRebuild;			//-rebuild: everything is built, up to date or not.
 	CChars				mszLibc65;
 	CChars				mszLayouts;
 	CChars				mszShowPlain;
