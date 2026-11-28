@@ -645,6 +645,13 @@ C13. The reference programs as a configuration, read by both builders (added 202
      before and after); the IDE checks pass on CMake's HCP65IDERef built this way.  The two builders still put the
      program in different places (build/<folder>/HCP65IDERef, Output\GCC\Reference\HCP65IDE): the checks keep
      CMake's.
+  C13-1, built 2026-11-28: Common.props has a Reference|GCC-x64 group, Release's options under names of the sheet's
+  own (GccOptimised, GccOptimisedLink) so they are written once; HCP65IDE.vcxproj keeps HCP65IDERef.cpp out of
+  Debug|GCC-x64 and Release|GCC-x64 and HCP65IDE_Linux.cpp out of Reference|GCC-x64; solution_rows.py gave
+  HCP65IDE.sln Reference|GCC-x64, its rows as Reference|x64's with X11Lib not built.  The IDE's GCC build of it
+  (hcp65build HCP65IDE.sln -config "Reference|GCC-x64", 5 minutes) links a program that has nothing of X11's and
+  that the IDE's checks run on.  Its file is Output/GCC-x64/Reference/HCP65IDE: the project's name, where CMake's is
+  HCP65IDERef.  C13-2 to C13-6 are left.
 
 
 C12. The break switch (added 2026-11-27, question 20)

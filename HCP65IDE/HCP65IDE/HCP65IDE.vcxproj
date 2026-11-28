@@ -176,9 +176,12 @@
     <ClCompile Include="HCP65IDE_Windows.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Reference|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="HCP65IDE_Linux.cpp" />
+    <ClCompile Include="HCP65IDE_Linux.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Reference|GCC-x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="HCP65IDERef.cpp">
-      <ExcludedFromBuild Condition="'$(Platform)'=='GCC-x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|GCC-x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|GCC-x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
