@@ -755,8 +755,26 @@ C13. The reference programs as a configuration, read by both builders (added 202
   - Not as written: the include directories are still the CMakeLists.txt's (codaphela_options), every target's
     alike, where the IDE's build gives each project its own.  In a Debug build Reference's libraries are Debug's
     (its rows say Release): one set of libraries for both programs, as before.
-  - Left: the other programs' and the tests' CMakeLists.txt (LogiCim, HCP65Tester, WindowInputTester, Battle,
-    DeviceROM, X65C64Emulator and the 35 test projects) still list their libraries by hand; each can move the same way.
+  - The other CMakeLists.txt, built 2026-11-28 (the user: "Carry on with converting the other CMakeLists.txt
+    files"): the 39 left (LogiCim, HCP65Tester, WindowInputTester, Battle, DeviceROM, X65C64Emulator, PNGToSFT and the
+    32 test projects) name their solution too, 21 to 42 lines for 54 to 154.  The module gained what they needed:
+    TESTS (a program and its ctest test, run in the project's folder); REFERENCED (only the libraries the named
+    programs' projects reference, by their ProjectReference items: the IDE's six tests and TestHCP65Lib are projects
+    of HCP65IDE.sln and HCP65Emulator.sln, which build 19 and 20 libraries); a project's own defines for the
+    configuration it is built as on GCC-x64 (solution_projects.py reads them from the project's own groups); and the
+    shared library named <Project>Shared where a library is <Project>Lib already (Battle's BattleLib).  Battle.sln and
+    Battle.vcxproj got a Reference configuration from reference_configuration.py and solution_rows.py, as C13-5's
+    two; MSVC under Wine builds its Reference|x64 and Release|x64 (BattleRef.cpp's main is __cdecl for it).
+  - DEBUG_POINTER (the user, 2026-11-28: "Add it to the project"): StandardLib.vcxproj said it for Debug|Win32 and
+    Debug|x64 alone, 32 CMakeLists.txt added it by hand and the IDE's GCC build never had it.  The project has a
+    Debug|GCC-x64 group now, so both Linux builds define it, read from the one place.
+  - Checked: every old file's compile commands against its new one's, Release and Debug (72,752 sources): alike but
+    for DEBUG_POINTER in the eight Debug builds that lacked it, and Battle_Windows.cpp, empty off Windows, compiled.
+    Each program links the libraries it did, and pthread and dl by name.  The IDE's own GCC build of a test solution
+    (TestStandardLib.sln, whose rows name the projects' x64 configurations: each is built as its GCC-x64 one, the
+    sheet's) against CMake's by compare_builds.py: 640 sources and the link, no differences in Debug or Release.
+  - Left: HCP65IDE.vcxproj's Reference|x64 group is still the old Release settings copied whole (its defines
+    NDEBUG;_LIB;_CRT_SECURE_NO_DEPRECATE;WIN32;_WINDOWS, which question 8 dropped elsewhere); only MSVC reads it.
   C13-6, built 2026-11-28: CL/CMake/Tests/Solution is the module's test, a solution of a program with a reference
   configuration, a library every configuration builds, one only the window's and one only Reference's (which define
   the same function, so a program linked with the wrong one says so), a program named under another target and one
