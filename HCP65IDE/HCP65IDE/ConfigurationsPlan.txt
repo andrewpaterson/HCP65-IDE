@@ -1240,3 +1240,9 @@ Questions (the user's, one at a time)
    confirmed; it can only know the solutions the workspace has, and says so.  The others considered: Visual Studio's
    "create new project configurations" (every project of the solution, the shared libraries too, given the
    configuration at once); no Add, Remove or Rename in the dialog.
+36. Decided (the user, 2026-11-28: "36 -> A"): once the tests' and the checks' own .hcp65build files are moved into
+   their projects and solutions (C8's remainder), the code that reads the file goes too: the reader and writer
+   (CBuildConfigurations::Read, Write), hcp65build's .hcp65build argument, Edit Build Configurations opening the file
+   in place of the dialog, and the file's section of the documentation.  The other considered: keeping it read, two
+   ways of saying one thing, with the old way's tests.  Not answered: whether a solution that still has the file is
+   told it is no longer read; a line saying so is what is built unless the user says otherwise.
