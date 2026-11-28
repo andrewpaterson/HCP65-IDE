@@ -4235,7 +4235,7 @@ CHECKS = [
 		 r'^Build option: WarnStringToPointer \[true\] from \[Shared\.props, 2 projects, every HCP65C816 configuration\]$',
 		 r'^Build dialog: Release\|Win32, project Library$',
 		 r'^Build option: ClCompile\.Optimization \[\] from \[Default\]$',
-		 r'^Build section: Link \[open\], page \d+ high$', r'^Build note: \[\]$'], [r'ERROR']),
+		 r'^Build section: \[\+  Linker: General\] folded, page \d+ high$', r'^Build note: \[\]$'], [r'ERROR']),
 	('build-options-save', dict(MakeOptionsCopy(), **{
 		#An option's value is written where it comes from, and its place is what the drop-down is made (questions 33 and
 		#34): the program's line for the platform changed; one configuration's own made the platform's; a default made
@@ -4344,6 +4344,8 @@ CHECKS = [
 		 r'^Build option: Link\.AdditionalDependencies In all: m;pthread;dl$',
 		 r'^Build option: Link\.AdditionalOptions In all: -m64$',
 		 r'^Build option: ClCompile\.PreprocessorDefinitions In all: LINUX_GNU;_DEBUG$',
+		 r'^Build option: IncludePath \[\] from \[This project, every x64 configuration\]$',
+		 r'^Build option: IncludePath In all: Shared$',
 		 r'^Build option: ClCompile\.AdditionalOptions \[\] from \[This project, every GCC-x64 configuration\]$',
 		 r'^Build option: ClCompile\.AdditionalOptions In all: -m64 -fno-exceptions -g$',
 		 r'^Build dialog: Debug\|GCC-x64, project Library$',
@@ -4366,27 +4368,39 @@ CHECKS = [
 		 r'error: #error The define reached the compiler', r'^Debug\|GCC-x64 build failed',
 		 r'^      <PreprocessorDefinitions>FAIL_ON_PURPOSE;%\(PreprocessorDefinitions\)</PreprocessorDefinitions>'], [r'build succeeded']),
 	('build-options-msvc', dict(MakeGCCOptionsCopy(), **{
-		#An MSVC configuration has the settings the projects and sheets set (ConfigurationsPlan C9, stage 2), in sections
-		#that fold.  One with values to choose from has one value, from the most particular place that says it: made the
-		#project's own for Release it is written there, one nothing said becomes the project's for the platform, and one
-		#given no value has its line taken away.  A folded section's rows are off the page, which is shorter for it.
+		#An MSVC configuration has the settings of Visual Studio's pages (ConfigurationsPlan C9, stages 2 and 3), in the
+		#pages' sections, which start folded, each heading saying how many of its settings something says.  One with
+		#values to choose from has one value, from the most particular place that says it: made the project's own for
+		#Release it is written there, one nothing said becomes the project's for the platform, and one given no value
+		#has its line taken away.  An open section's rows are on the page, which is longer for it.  The project's properties
+		#are among them: one of a configuration's own goes in its group, any other in the project's plain one.
 		'DIALOG_ANSWER': 'OK',
 		'BUILD_EDITS': 'select:3;print;place:ClCompile.Optimization=configuration;set:ClCompile.Optimization=Full;'
-		               'set:ClCompile.RuntimeLibrary=MultiThreadedDLL;set:Link.SubSystem=;fold:Link;fold:Optimisation;print;fold:Link;print',
+		               'set:ClCompile.RuntimeLibrary=MultiThreadedDLL;set:Link.SubSystem=;set:LinkIncremental=false;set:CharacterSet=Unicode;fold:C/C++: Code Generation;print;'
+		               'fold:C/C++: Code Generation;print',
 		'DEBUG': 'command:Build.EditConfigurations,answered:1,printstatus,printdiskfile:Program.vcxproj'}),
 		[r'^Build dialog: Release\|x64, project Program$',
-		 r'^Build option: Link\.SubSystem \[Console\] from \[This project, Release only\]$',
+		 r'^Build option: ClCompile\.WarningLevel \[Level3\] from \[Shared\.props, 2 projects, every configuration\]$',
+		 r'^Build option: ClCompile\.Optimization \[MaxSpeed\] from \[Shared\.props, 2 projects, every configuration but Debug\]$',
 		 r'^Build option: ClCompile\.PreprocessorDefinitions \[PROGRAM;%\(PreprocessorDefinitions\)\] from \[This project, Release only\]$',
 		 r'^Build option: ClCompile\.PreprocessorDefinitions In all: PROGRAM$',
-		 r'^Build option: ClCompile\.Optimization \[MaxSpeed\] from \[Shared\.props, 2 projects, every configuration but Debug\]$',
-		 r'^Build option: ClCompile\.WarningLevel \[Level3\] from \[Shared\.props, 2 projects, every configuration\]$',
-		 r'^Build section: Link \[open\], page \d+ high$',
-		 r'^Build option: Link\.SubSystem \[\] from \[This project, Release only\]$',
+		 r'^Build option: Link\.SubSystem \[Console\] from \[This project, Release only\]$',
+		 r'^Build option: ConfigurationType \[Application\] from \[This project, Release only\]$',
+		 r'^Build option: IncludePath \[\.\.\\Own;\$\(IncludePath\)\] from \[This project, Release only\]$',
+		 r'^Build option: IncludePath In all: \.\.\\Own;Shared$',
+		 r'^Build section: \[\+  Linker: System  \(1 set\)\] folded, page \d+ high$',
+		 r'^Build section: \[\+  C/C\+\+: Optimization  \(1 set\)\] folded, page \d+ high$',
+		 r'^Build section: \[\+  C/C\+\+: Preprocessor  \(1 set\)\] folded, page \d+ high$',
 		 r'^Build option: ClCompile\.Optimization \[Full\] from \[This project, Release only\]$',
 		 r'^Build option: ClCompile\.RuntimeLibrary \[MultiThreadedDLL\] from \[This project, every x64 configuration\]$',
-		 r'^Build section: Link \[folded\], page \d+ high$', r'^Build section: Optimisation \[folded\], page \d+ high$',
-		 r'^Build section: Link \[open\], page \d+ high$', r'^Build section: Optimisation \[folded\], page \d+ high$',
+		 r'^Build option: Link\.SubSystem \[\] from \[This project, Release only\]$',
+		 r'^Build option: CharacterSet \[Unicode\] from \[This project, Release only\]$',
+		 r'^Build option: LinkIncremental \[false\] from \[This project, every x64 configuration\]$',
+		 r'^Build section: \[\+  Linker: System\] folded, page \d+ high$',
+		 r'^Build section: \[-  C/C\+\+: Code Generation  \(1 set\)\] open, page \d+ high$',
+		 r'^Build section: \[\+  C/C\+\+: Code Generation  \(1 set\)\] folded, page \d+ high$',
 		 r'^Status line: Saved the build configurations\.$',
+		 r'^    <CharacterSet>Unicode</CharacterSet>', r"^    <LinkIncremental Condition=\"'\$\(Platform\)'=='x64'\">false</LinkIncremental>",
 		 r'^      <PreprocessorDefinitions>PROGRAM;%\(PreprocessorDefinitions\)</PreprocessorDefinitions>', r'^      <Optimization>Full</Optimization>',
 		 r'^      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>'], [r'ERROR', r'<SubSystem>', r'NoFloats']),
 	('build-configuration-clean-up-nothing', dict(MakeOptionsCopy(), **{

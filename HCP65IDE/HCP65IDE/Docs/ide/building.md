@@ -84,7 +84,7 @@ An HCP65 configuration's:
 | Warn when a string literal becomes a char* | Each string literal given to a `char*` is a warning in the Build tab. |
 | Accept casts like unsigned int(3) | A cast written as a type of more than one word and brackets is accepted, as the Microsoft compiler accepts it; without it, it is an error. |
 | C sources: void* and numbers convert as in C | For a project written in C: a `void*` becomes any object's pointer and a number an enum's value with no cast. |
-| Defines, Additional include directories | The project's defines and include directories, separated by semicolons.  They add up, as g++'s do (below). |
+| Defines, Additional include directories, Include directories | The project's defines, and its include directories as the compiler's setting and as the project's `IncludePath`, separated by semicolons.  They add up, as g++'s do (below). |
 
 A GCC configuration's:
 
@@ -93,7 +93,7 @@ A GCC configuration's:
 | Libraries linked | What the program is linked with besides the solution's libraries, separated by semicolons: a plain name is `-l<name>` (`X11` is `-lX11`). |
 | Linker options | g++'s options when it links, separated by spaces. |
 | Defines | The project's defines, separated by semicolons. |
-| Additional include directories | The project's include directories, separated by semicolons, besides its `IncludePath`. |
+| Additional include directories, Include directories | The project's include directories, separated by semicolons: the compiler's setting, and the project's `IncludePath`. |
 | Compiler options | g++'s options when it compiles the project, separated by spaces. |
 
 These add up.  Each place has a line of its own, and a line that names the setting itself
@@ -105,23 +105,31 @@ where one can undo one of theirs); a field emptied takes that place's line away.
 platform and may have one for the configuration too: each is its own place in the drop-down, and changing either
 changes it for every project that imports the sheet.
 
-An MSVC configuration's are the compiler and linker settings the projects and their property sheets set, under
-the names Visual Studio's property pages give their values.  Most have values to choose from; **(not set)** is one
-of them, and choosing it takes the setting's line away where its value was from.  The lists (the defines, the
-include and library directories, the libraries, the warnings turned off) and the other options add up as g++'s
-do.  The page is in sections, each under a heading that folds it away and opens it again:
+An HCP65 or a GCC configuration is read beside one of Visual Studio's (Release|HCP65C816 beside Release|Win32),
+and its include directories are that one's.  So those rows show that configuration's lines, and their drop-down
+says so: "This project, every Win32 configuration".
 
-| Section | Settings |
-|---|---|
-| Link | The program's: subsystem, libraries linked, library directories, default libraries ignored, debug information, link time code generation, leaving out what nothing refers to, folding identical functions, addresses above 2 GB, safe exception handlers, target machine, other linker options. |
-| General | Defines, additional include directories, debug information, compiling on every processor, precompiled header, browse information, other compiler options. |
-| Optimisation | Optimisation, inlining, intrinsic functions, favouring size or speed, whole program optimisation, parallel code generation. |
-| Code generation | Runtime library, C++ exceptions, calling convention, instruction set, floating point and its exceptions, pooling string literals, a section for each function, leaving out what nothing refers to, OpenMP. |
-| Checks and warnings | Runtime checks, buffer security check, SDL checks, EH continuation metadata, warning level, warnings as errors, warnings turned off. |
+An MSVC configuration's are the settings of Visual Studio's own property pages for the compiler, the linker and
+the librarian, two hundred of them, under the names and with the values Visual Studio gives them.  Most have
+values to choose from; **(not set)** is one of them, and choosing it takes the setting's line away where its value
+was from.  The lists (the defines, the include and library directories, the libraries, the warnings turned off)
+and the other options add up as g++'s do.
 
-A setting the dialog doesn't show is left as it is in the files.  Not shown yet: the project's `IncludePath` and
-its other properties (its type, character set and toolset), and the settings of Visual Studio's property pages
-that no project here sets.
+The page is in sections, which are the property pages' own: **Linker: General**, **Input**, **Manifest File**,
+**Debugging**, **System**, **Optimization**, **Embedded IDL**, **Windows Metadata**, **Advanced** and **Command
+Line** for the program; **C/C++: General**, **Optimization**, **Preprocessor**, **Code Generation**,
+**Language**, **Precompiled Headers**, **Output Files**, **Browse Information**, **External Includes**,
+**Advanced** and **Command Line**, and **Librarian**, for the project.  Each is under a heading that opens it and
+folds it away again.  They start folded, and a heading says how many of its settings something says
+("C/C++: Optimization (3 set)"), so what a project sets can be found without opening every one.
+
+The last section, **Project**, has the project's properties, which are no tool's: its configuration type,
+platform toolset, character set and whole program optimisation, which are kept in each configuration's own group
+and so can be said for one configuration only; and its target name, output and intermediate directories,
+incremental linking, and its include, library and executable directories.  The directories add up, a line naming
+itself as `$(IncludePath)`.
+
+A setting the dialog doesn't show is left as it is in the files.
 
 Beside each option is a drop-down that says where its value comes from:
 

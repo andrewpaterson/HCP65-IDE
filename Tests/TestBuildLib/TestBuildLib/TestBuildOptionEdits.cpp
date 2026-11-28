@@ -1,6 +1,7 @@
 #include <string.h>
 #include "BaseLib/FileUtil.h"
 #include "BuildLib/BuildOptionEdits.h"
+#include "VisualStudioLib/VcxPropertySetting.h"
 #include "VisualStudioLib/VcxSolutionRows.h"
 #include "TestLib/Assert.h"
 #include "TestLib/AssertFile.h"
@@ -474,6 +475,15 @@ void TestBuildOptionEditsGCC(void)
 			AssertInt(BOP_Platform, cEdits.GetPlace(0, 0, uiLibraries));
 			AssertEffective("m;pthread;dl", &cEdits, 0, 0, "Link.AdditionalDependencies");
 			AssertEffective("-m64", &cEdits, 0, 0, "Link.AdditionalOptions");
+
+			//Its include directories are those of the configuration it is read beside, Release|x64's for
+			//Release|GCC-x64 (CVcxConfiguration::GetProperty): that is the line shown, and the platform's is x64's.
+			AssertInt(BOP_Configuration, cEdits.GetPlace(1, 0, FindBuildOption("IncludePath", BOK_GCC)));
+			AssertString("..\\Own;$(IncludePath)", cEdits.GetValue(1, 0, FindBuildOption("IncludePath", BOK_GCC)));
+			AssertPlaceText("This project, Release only", &cEdits, 1, 0, "IncludePath", BOP_Configuration);
+			AssertPlaceText("This project, every x64 configuration", &cEdits, 1, 0, "IncludePath", BOP_Platform);
+			AssertEffective("..\\Own;Shared", &cEdits, 1, 0, "IncludePath");
+			AssertEffective("Shared", &cEdits, 0, 0, "IncludePath");
 			AssertFalse(cEdits.IsEdited());
 
 			//Looking at another place moves nothing and is no edit.
@@ -560,10 +570,15 @@ void TestBuildOptionEditsMSVC(void)
 	CVcxProject			cProject;
 	CFileUtil			cFileUtil;
 	CChars				szNote;
+	EBuildOptionPlace	aePlaces[BOP_NumPlaces];
 	size				uiOptimisation;
 	size				uiRuntime;
 	size				uiSubSystem;
 	size				uiDefines;
+	size				uiType;
+	size				uiCharacters;
+	size				uiIncremental;
+	size				uiInclude;
 
 	cFileUtil.RemoveDir(TEST_OPTIONS_DIRECTORY);
 	AssertTrue(cFileUtil.TouchDir(TEST_OPTIONS_DIRECTORY));
@@ -574,8 +589,11 @@ void TestBuildOptionEditsMSVC(void)
 	uiSubSystem = FindBuildOption("Link.SubSystem", BOK_MSVC);
 	uiDefines = FindBuildOption("ClCompile.PreprocessorDefinitions", BOK_MSVC);
 	AssertTrue((uiOptimisation != MAX_SIZE) && (uiRuntime != MAX_SIZE) && (uiSubSystem != MAX_SIZE) && (uiDefines != MAX_SIZE));
-	AssertString("Disabled;MinSpace;MaxSpeed;Full", GetBuildOption(uiOptimisation)->szChoices);
-	AssertString("Optimisation", GetBuildOption(uiOptimisation)->szSection);
+	AssertString("Custom;Disabled;MinSpace;MaxSpeed;Full", GetBuildOption(uiOptimisation)->szChoices);
+	AssertString("C/C++: Optimization", GetBuildOption(uiOptimisation)->szSection);
+	AssertString("Linker: System", GetBuildOption(uiSubSystem)->szSection);
+	AssertTrue(FindBuildOption("Lib.SubSystem", BOK_MSVC) != uiSubSystem);
+	AssertTrue(FindBuildOption("ClCompile.LanguageStandard", BOK_MSVC) != MAX_SIZE);
 	AssertNull(GetBuildOption(uiDefines)->szChoices);
 
 	cSolution.Init();
@@ -595,9 +613,38 @@ void TestBuildOptionEditsMSVC(void)
 	AssertPlaceText("Shared.props, 2 projects, every configuration", &cEdits, 0, 1, "ClCompile.WarningLevel", BOP_Sheet);
 	AssertString("Console", cEdits.GetValue(0, 0, uiSubSystem));
 	AssertInt(BOP_Configuration, cEdits.GetPlace(0, 0, uiSubSystem));
+	AssertTrue(cEdits.IsSet(0, 0, uiSubSystem));
+	AssertFalse(cEdits.IsSet(1, 0, uiSubSystem));
+	AssertTrue(cEdits.IsSet(0, 0, uiOptimisation));
+	AssertFalse(cEdits.IsSet(0, 0, uiRuntime));
+	AssertTrue(cEdits.IsSet(0, 0, uiDefines));
+	AssertFalse(cEdits.IsSet(0, 1, uiDefines));
 	AssertString("", cEdits.GetValue(1, 0, uiSubSystem));
 	AssertString("", cEdits.GetValue(0, 0, uiRuntime));
 	AssertInt(BOP_Default, cEdits.GetPlace(0, 0, uiRuntime));
+
+	//The project's properties, which are no tool's: its type, in its configuration's own group, where alone one of
+	//those can be; and its include directories, which add up through the sheet's.
+	uiType = FindBuildOption("ConfigurationType", BOK_MSVC);
+	uiCharacters = FindBuildOption("CharacterSet", BOK_MSVC);
+	uiIncremental = FindBuildOption("LinkIncremental", BOK_MSVC);
+	uiInclude = FindBuildOption("IncludePath", BOK_MSVC);
+	AssertTrue((uiType != MAX_SIZE) && (uiCharacters != MAX_SIZE) && (uiIncremental != MAX_SIZE) && (uiInclude != MAX_SIZE));
+	AssertTrue(FindBuildOption("WholeProgramOptimization", BOK_MSVC) != FindBuildOption("ClCompile.WholeProgramOptimization", BOK_MSVC));
+	AssertString("Application", cEdits.GetValue(0, 0, uiType));
+	AssertString("StaticLibrary", cEdits.GetValue(0, 1, uiType));
+	AssertInt(BOP_Configuration, cEdits.GetPlace(0, 0, uiType));
+	AssertSize(2, cEdits.GetPlaces(0, 0, uiType, aePlaces));
+	AssertInt(BOP_Configuration, aePlaces[0]);
+	AssertInt(BOP_Default, aePlaces[1]);
+	AssertString("..\\Own;$(IncludePath)", cEdits.GetValue(0, 0, uiInclude));
+	AssertInt(BOP_Configuration, cEdits.GetPlace(0, 0, uiInclude));
+	AssertSize(3, cEdits.GetPlaces(0, 0, uiInclude, aePlaces));
+	AssertInt(BOP_Sheet, aePlaces[2]);
+	AssertEffective("..\\Own;Shared", &cEdits, 0, 0, "IncludePath");
+	AssertEffective("Shared", &cEdits, 1, 0, "IncludePath");
+	AssertEffective("Shared", &cEdits, 0, 1, "IncludePath");
+	AssertString("", cEdits.GetValue(0, 0, uiIncremental));
 
 	//Its defines add up, and g++'s lines aren't among them.
 	AssertString("PROGRAM;%(PreprocessorDefinitions)", cEdits.GetValue(0, 0, uiDefines));
@@ -613,6 +660,18 @@ void TestBuildOptionEditsMSVC(void)
 	AssertInt(BOP_Platform, cEdits.GetPlace(0, 0, uiRuntime));
 	AssertString("MultiThreadedDLL", cEdits.GetValue(1, 0, uiRuntime));
 	cEdits.SetValue(0, 0, uiSubSystem, "");
+	AssertFalse(cEdits.IsSet(0, 0, uiSubSystem));
+
+	//Properties: a directory added to the project's own, a property nothing said made the project's for the platform,
+	//and one of a configuration's own given to Release's group.
+	cEdits.SetValue(0, 0, uiInclude, "..\\Own;..\\More");
+	AssertEffective("..\\Own;..\\More;Shared", &cEdits, 0, 0, "IncludePath");
+	cEdits.SetValue(0, 0, uiIncremental, "false");
+	AssertInt(BOP_Platform, cEdits.GetPlace(0, 0, uiIncremental));
+	cEdits.SetValue(0, 0, uiCharacters, "Unicode");
+	AssertInt(BOP_Configuration, cEdits.GetPlace(0, 0, uiCharacters));
+	AssertString("", cEdits.GetValue(1, 0, uiCharacters));
+	AssertTrue(cEdits.IsSet(0, 0, uiRuntime));
 	AssertString("MaxSpeed", cEdits.GetValue(0, 1, uiOptimisation));
 	szNote.Init();
 	AssertTrue(cEdits.Check(0, &szNote));
@@ -629,7 +688,15 @@ void TestBuildOptionEditsMSVC(void)
 	AssertString("MultiThreadedDLL", cProject.FindConfiguration("Release|x64")->GetProperty("ClCompile.RuntimeLibrary"));
 	AssertString("MultiThreadedDLL", cProject.FindConfiguration("Debug|x64")->GetProperty("ClCompile.RuntimeLibrary"));
 	AssertNull(cProject.FindConfiguration("Release|x64")->GetProperty("Link.SubSystem"));
+	AssertString("Unicode", cProject.FindConfiguration("Release|x64")->GetProperty("CharacterSet"));
+	AssertNull(cProject.FindConfiguration("Debug|x64")->GetProperty("CharacterSet"));
+	AssertString("false", cProject.FindConfiguration("Release|x64")->GetProperty("LinkIncremental"));
+	AssertString("false", cProject.FindConfiguration("Debug|x64")->GetProperty("LinkIncremental"));
 	cProject.Kill();
+	szNote.Init();
+	AssertTrue(GetVcxProperty(TEST_OPTIONS_PROGRAM, "'$(Configuration)|$(Platform)'=='Release|x64'", "IncludePath", &szNote));
+	AssertString("..\\Own;..\\More;$(IncludePath)", szNote.Text());
+	szNote.Kill();
 	cProject.Init();
 	AssertTrue(cProject.Read(TEST_OPTIONS_LIBRARY));
 	AssertString("MaxSpeed", cProject.FindConfiguration("Release|x64")->GetProperty("ClCompile.Optimization"));

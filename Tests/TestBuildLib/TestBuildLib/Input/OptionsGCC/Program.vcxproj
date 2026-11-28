@@ -24,6 +24,9 @@
   <ImportGroup Label="PropertySheets">
     <Import Project="Shared.props" />
   </ImportGroup>
+  <PropertyGroup>
+    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\Own;$(IncludePath)</IncludePath>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <PreprocessorDefinitions>PROGRAM;%(PreprocessorDefinitions)</PreprocessorDefinitions>

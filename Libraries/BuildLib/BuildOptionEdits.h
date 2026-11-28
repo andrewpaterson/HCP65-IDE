@@ -203,6 +203,7 @@ public:
 	void				SetValue(size uiConfiguration, size uiProject, size uiOption, const char* szValue);
 	void				SetPlace(size uiConfiguration, size uiProject, size uiOption, EBuildOptionPlace ePlace);
 	void				GetEffective(size uiConfiguration, size uiProject, size uiOption, CChars* pszDest);
+	bool				IsSet(size uiConfiguration, size uiProject, size uiOption);
 
 	bool		IsEdited(void);
 	bool		NeedsOwnConfiguration(size uiConfiguration, size uiProject);

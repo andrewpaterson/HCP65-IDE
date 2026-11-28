@@ -93,6 +93,7 @@ void CIDEBuildConfigurationsDialog::Init(Ptr<CWindow> pOwner, SDialogLook* psLoo
 	maiSectionRows.Init();
 	maiSectionOptions.Init();
 	maiSectionOpen.Init();
+	maiOptionSections.Init();
 	maChecks.Init();
 	maFields.Init();
 	maPlaces.Init();
@@ -187,6 +188,7 @@ void CIDEBuildConfigurationsDialog::Class(void)
 	U_Unknown(CArrayInt, maiSectionRows);
 	U_Unknown(CArrayInt, maiSectionOptions);
 	U_Unknown(CArrayInt, maiSectionOpen);
+	U_Unknown(CArrayInt, maiOptionSections);
 	U_Pointer(mpcSolution);
 	U_Unknown(CBuildOptionEdits, mcOptions);
 	U_Unknown(CArrayIDEBuildDialogEntries, masEntries);
@@ -259,6 +261,7 @@ void CIDEBuildConfigurationsDialog::Free(void)
 		masEntries.Get(i)->Kill();
 	}
 	masEntries.Kill();
+	maiOptionSections.Kill();
 	maiSectionOpen.Kill();
 	maiSectionOptions.Kill();
 	maiSectionRows.Kill();
@@ -461,6 +464,7 @@ void CIDEBuildConfigurationsDialog::AddOptionRows(Ptr<CGridContainer> pPage, int
 	{
 		maiEditors.Add(-1);
 		maiTotals.Add(-1);
+		maiOptionSections.Add(-1);
 		pPlace = OMalloc<CComboBox>(pWindow, psLook->pcTheme);
 		pPlace->SetAlignment(CSH_Stretch, CSV_Center);
 		pPlace->SetDesiredSize(IDE_BUILD_DIALOG_PLACE_WIDTH, -1);
@@ -494,17 +498,23 @@ void CIDEBuildConfigurationsDialog::AddOptionRows(Ptr<CGridContainer> pPage, int
 				maiSectionPages.Add((int)eKind);
 				maiSectionRows.Add(*piPageRow + 1);  //After its gap.
 				maiSectionOptions.Add((int)i);
-				maiSectionOpen.Add(1);
+				maiSectionOpen.Add(0);
+
+				//A section starts folded: its row on the page is kept for it, with the gap above it.
+				(*piPageRow) += 2;
 			}
-			AddPageRow(pPage, piPageRow, pSection, psLook->pcTheme->GetMetric(TM_DialogRowGap));
+			else
+			{
+				AddPageRow(pPage, piPageRow, pSection, psLook->pcTheme->GetMetric(TM_DialogRowGap));
+			}
 			bFirst = false;
 			iRow = 0;
 		}
+		if (szSection != NULL)
+		{
+			maiOptionSections.SetValue(i, (int)maSections.NumElements() - 1);
+		}
 		AddOptionRow(pSection, &iRow, i);
-	}
-	for (i = 0; i < maSections.NumElements(); i++)
-	{
-		ShowSection(i);
 	}
 }
 
@@ -566,16 +576,38 @@ void CIDEBuildConfigurationsDialog::AddOptionRow(Ptr<CGridContainer> pForm, int3
 
 //////////////////////////////////////////////////////////////////////////
 //
-// A section's heading as it is now: "- Link" open, "+ Link" folded.
+// A section's heading as it is now: "- Linker: Input" open, "+ Linker:
+// Input" folded, and after it how many of its settings something says for
+// the project they show for ("(2 set)"), so a folded section says there is
+// something in it.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEBuildConfigurationsDialog::ShowSection(size uiSection)
 {
 	CChars	szText;
+	size	uiProject;
+	size	uiSet;
+	size	i;
 
+	uiSet = 0;
+	for (i = 0; i < NumBuildOptions(); i++)
+	{
+		uiProject = ((size)maiOptionSections.GetValue(i) == uiSection) ? GetOptionProject(i) : MAX_SIZE;
+		if ((uiProject != MAX_SIZE) && mcOptions.IsSet(miSelected, uiProject, i))
+		{
+			uiSet++;
+		}
+	}
 	szText.Init(maiSectionOpen.GetValue(uiSection) ? "-  " : "+  ");
 	szText.Append(GetBuildOption(maiSectionOptions.GetValue(uiSection))->szSection);
-	maSectionButtons.Get(uiSection)->SetCaption(szText.Text());
+	if (uiSet > 0)
+	{
+		szText.Append("  (")->Append((uint32)uiSet)->Append(" set)");
+	}
+	if (strcmp(maSectionButtons.Get(uiSection)->GetCaption(), szText.Text()) != 0)
+	{
+		maSectionButtons.Get(uiSection)->SetCaption(szText.Text());
+	}
 	szText.Kill();
 }
 
@@ -602,10 +634,10 @@ void CIDEBuildConfigurationsDialog::ToggleSection(size uiSection)
 		pPage->AddComponent(maSections.Get(uiSection), 0, maiSectionRows.GetValue(uiSection), 1, 1, 1, 0);
 		maiSectionOpen.SetValue(uiSection, 1);
 	}
-	ShowSection(uiSection);
 	pPage->SetRequiredSize();
 	pPage->SetDesiredSize(-1, pPage->GetRequiredSize().y);
 	mpFormPane->InvalidateLayout();
+	ShowOptions();  //Its rows weren't kept up while it was folded.
 }
 
 
@@ -881,9 +913,9 @@ void CIDEBuildConfigurationsDialog::ShowOptions(void)
 	for (i = 0; i < NumBuildOptions(); i++)
 	{
 		psOption = GetBuildOption(i);
-		if ((size)psOption->eKind != uiKind)
+		if (((size)psOption->eKind != uiKind) || ((maiOptionSections.GetValue(i) >= 0) && !maiSectionOpen.GetValue(maiOptionSections.GetValue(i))))
 		{
-			continue;
+			continue;  //Another toolchain's, or in a folded section: its row is off the page.
 		}
 		uiProject = GetOptionProject(i);
 		szValue = (uiProject != MAX_SIZE) ? mcOptions.GetValue(miSelected, uiProject, i) : "";
@@ -960,6 +992,13 @@ void CIDEBuildConfigurationsDialog::ShowOptions(void)
 	}
 	mpNote->SetText(szText.Text());
 	szText.Kill();
+	for (i = 0; i < maSections.NumElements(); i++)
+	{
+		if ((size)maiSectionPages.GetValue(i) == uiKind)
+		{
+			ShowSection(i);
+		}
+	}
 	mbUpdating = false;
 }
 
@@ -1424,7 +1463,8 @@ void CIDEBuildConfigurationsDialog::PrintOptions(void)
 			printf("Build option: %s [%s] from [%s]\n", szKey.Text(), mcOptions.GetValue(miSelected, uiProject, i), szPlace.Text());
 			if (GetBuildOption(i)->bAdds)
 			{
-				printf("Build option: %s %s\n", szKey.Text(), maTotals.Get(maiTotals.GetValue(i))->GetText());
+				mcOptions.GetEffective(miSelected, uiProject, i, &szPlace);
+				printf("Build option: %s In all: %s\n", szKey.Text(), szPlace.Empty() ? "nothing" : szPlace.Text());
 			}
 		}
 	}
@@ -1432,7 +1472,7 @@ void CIDEBuildConfigurationsDialog::PrintOptions(void)
 	{
 		if ((size)maiSectionPages.GetValue(i) == GetKind())
 		{
-			printf("Build section: %s [%s], page %d high\n", GetBuildOption(maiSectionOptions.GetValue(i))->szSection, maiSectionOpen.GetValue(i) ? "open" : "folded", (int)maForms.Get(GetKind())->GetRequiredSize().y);
+			printf("Build section: [%s] %s, page %d high\n", maSectionButtons.Get(i)->GetCaption(), maiSectionOpen.GetValue(i) ? "open" : "folded", (int)maForms.Get(GetKind())->GetRequiredSize().y);
 		}
 	}
 	printf("Build note: [%s]\n", mpNote->GetText());

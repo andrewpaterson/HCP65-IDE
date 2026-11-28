@@ -71,9 +71,10 @@ typedef CArrayTemplate<CIDEBuildDialogEntry>	CArrayIDEBuildDialogEntries;
 //place has a line of its own, the drop-down chooses whose line the field shows and moves nothing, and the line under
 //the field says what all of them come to (CBuildOptionEdits::GetEffective).
 //
-//An MSVC configuration has the settings the projects and their sheets set (stage 2), most with values to choose
-//from, of which "(not set)" is one: nothing says it then.  Its page is in sections (Link, General, Optimisation,
-//Code generation, Checks and warnings), each under a heading that folds it away and brings it back.
+//An MSVC configuration has the settings of Visual Studio's compiler, linker and librarian pages (stages 2 and 3),
+//most with values to choose from, of which "(not set)" is one: nothing says it then.  Its page is in sections, the
+//pages' own categories ("C/C++: Optimization"), each under a heading that opens it and folds it away again.  They
+//start folded, there being two hundred settings, and a heading says how many of its section's something says.
 //
 //Add copies the configuration selected under a new name on the same toolchain, Remove takes one away and the name
 //renames it: all three change the solution's rows alone (question 35).  A project is given a configuration of its own
@@ -114,6 +115,7 @@ protected:
 	CArrayInt						maiSectionRows;
 	CArrayInt						maiSectionOptions;	//its first option, which names it,
 	CArrayInt						maiSectionOpen;		//and whether it is open.
+	CArrayInt						maiOptionSections;	//Each option's section; -1 for one in none.
 	Ptr<CLabel>						mpNote;
 	Ptr<CLabel>						mpError;
 	CVcxSolution*					mpcSolution;  //Not held.
