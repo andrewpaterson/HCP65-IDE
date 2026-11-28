@@ -38,6 +38,7 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/Label.h"
 #include "WindowLib/JewelTheme.h"
 #include "WindowLib/JewelImageGenerator.h"
+#include "VisualStudioLib/VcxProjectConfigurations.h"
 #include "IDEGit.h"
 #include "StandardLib/ClassDefines.h"
 #include "IDEContent.h"
@@ -59,6 +60,7 @@ void CIDEBuilding::Init(CIDEContent* pcContent)
 	mcBuild.Init();
 	maiBuildOrder.Init();
 	mcListings.Init();
+	maCleanUpBoxes.Init();
 	muiBuildStep = 0;
 	mszLibc65.Init();
 	muiListingToShow = MAX_SIZE;
@@ -81,6 +83,8 @@ void CIDEBuilding::Class(void)
 	M_Pointer(mpMessages);
 	M_Pointer(mpBuildTool);
 	M_Pointer(mpDialog);
+	M_Pointer(mpCleanUp);
+	M_Embedded(maCleanUpBoxes);
 	U_Size(muiBuildStep);
 	U_String(mszLibc65);
 	U_Size(muiListingToShow);
@@ -564,15 +568,19 @@ void CIDEBuilding::RequestEditDialog(void)
 //////////////////////////////////////////////////////////////////////////
 //
 // The startup solution's build configurations edited, the chosen one
-// selected.  OK saves them, and Open File opens their file instead.  A
-// scripted run leaves the file alone, as it does the layout.
+// selected (ConfigurationsPlan.txt C9).  OK saves them; Clean Up saves
+// them and then offers the configurations no solution builds.  A solution
+// whose build configurations are still in a file beside it has that
+// opened instead: the dialog edits what the projects say.
 //
 //////////////////////////////////////////////////////////////////////////
 void CIDEBuilding::ShowEditDialog(void)
 {
 	CBuildWorkspaceSolution*	pcSolution;
+	CFileUtil					cFileUtil;
 	CChars						szFile;
 	bool						bOK;
+	bool						bCleanUp;
 
 	if (!CanEditConfigurations())
 	{
@@ -585,7 +593,16 @@ void CIDEBuilding::ShowEditDialog(void)
 	}
 	szFile.Init();
 	CBuildConfigurations::GetFileName(pcSolution->mszFile.Text(), &szFile);
-	mpDialog = OMalloc<CIDEBuildConfigurationsDialog>(mpcContent->GetWindow(), mpcContent->GetDialogLook(), pcSolution->mcSolution.GetName(), &pcSolution->mcSolution, &pcSolution->mcConfigurations, mpcContent->GetBuildConfigurations()->GetConfigurationName());
+	if (cFileUtil.Exists(szFile.Text()))
+	{
+		mpcContent->GetDocuments()->OpenFile(szFile.Text());
+		mpcContent->ShowStatus("This solution's build configurations are in the file beside it, which is open to edit.");
+		szFile.Kill();
+		return;
+	}
+	szFile.Kill();
+
+	mpDialog = OMalloc<CIDEBuildConfigurationsDialog>(mpcContent->GetWindow(), mpcContent->GetDialogLook(), &pcSolution->mcSolution, pcSolution->GetStartupProjectName(), mpcContent->GetBuildConfigurations()->GetConfigurationName());
 	if (getenv("HCP65_IDE_BUILD_EDITS") != NULL)
 	{
 		mpDialog->ApplyEdits(getenv("HCP65_IDE_BUILD_EDITS"));
@@ -593,71 +610,98 @@ void CIDEBuilding::ShowEditDialog(void)
 	mpcContent->GetScript()->WatchDialog(mpDialog->GetDialog());
 	bOK = mpDialog->Show();
 	mpcContent->GetScript()->StopWatchingDialog();
-	if (bOK)
+	bCleanUp = StringCompare(mpDialog->GetDialog()->GetClicked(), IDE_BUILD_DIALOG_CLEAN_UP) == 0;
+	if (bOK || bCleanUp)
 	{
-		SaveEdits(&mpDialog, pcSolution, szFile.Text());
-	}
-	else if (StringCompare(mpDialog->GetDialog()->GetClicked(), IDE_BUILD_DIALOG_OPEN_FILE) == 0)
-	{
-		mpcContent->GetDocuments()->OpenFile(szFile.Text());
+		SaveEdits(&mpDialog, pcSolution);
 	}
 	mpDialog = NULL;
-	szFile.Kill();
+	if (bCleanUp)
+	{
+		ShowCleanUpDialog();
+	}
 }
 
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The dialog's edits go in the file and are read back.  Run configurations
-// follow a build configuration that was renamed, a new one gets one so it
-// can be chosen, and one removed takes its own with it.  The code is indexed
-// again, as it is parsed as they say, which stops while they change.  The
-// status line says how it went, if another open solution still has the old
+// The dialog's edits go in the solution and its projects and sheets, which
+// are read again.  Run configurations follow a build configuration that
+// was renamed, a new one gets one so it can be chosen, and one removed
+// takes its own with it.  The code is indexed again, as it is parsed as
+// they say, which stops while they change.  The status line says how it
+// went, what was done besides what was asked (a project given a
+// configuration of its own), if another open solution still has the old
 // name, as a build configuration is chosen by its name across them, and if
-// run configurations are left building what was removed.
+// run configurations are left building what was removed.  A scripted run
+// leaves the files alone, as it does the layout.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEBuilding::SaveEdits(CIDEBuildConfigurationsDialog* pcDialog, CBuildWorkspaceSolution* pcSolution, const char* szFile)
+void CIDEBuilding::SaveEdits(CIDEBuildConfigurationsDialog* pcDialog, CBuildWorkspaceSolution* pcSolution)
 {
-	CBuildWorkspace*				pcWorkspace;
-	CArrayBuildConfigurationEdits*	pasEdits;
-	CBuildConfigurationEdit*		pcEdit;
-	CArrayChars						aszOld;
-	CArrayChars						aszNew;
-	CArrayChars						aszRemoved;
-	CArrayChars						aszKept;
-	CChars							szStatus;
-	char*							szRenamed;
-	bool							bResult;
-	bool							bShared;
-	size							i;
-	size							j;
+	CBuildWorkspace*		pcWorkspace;
+	CIDEBuildDialogEntry*	pcEntry;
+	CArrayChars				aszOld;
+	CArrayChars				aszNew;
+	CArrayChars				aszAdded;
+	CArrayChars				aszRemoved;
+	CArrayChars				aszKept;
+	CChars					szStatus;
+	CChars					szNote;
+	char*					szRenamed;
+	bool					bResult;
+	bool					bShared;
+	bool					bFound;
+	size					i;
+	size					j;
 
+	if (!pcDialog->IsEdited())
+	{
+		return;
+	}
 	if (!mpcContent->IsKeepingSettings())
 	{
 		mpcContent->ShowStatus("A scripted run doesn't save build configurations.");
 		return;
 	}
 
+	//What was renamed, added and removed, by name: the solution is read again before they are needed.
 	pcWorkspace = mpcContent->GetWorkspace();
-	pasEdits = pcDialog->GetEdits();
 	aszOld.Init();
 	aszNew.Init();
-	for (i = 0; i < pasEdits->NumElements(); i++)
-	{
-		pcEdit = pasEdits->Get(i);
-		if (!pcEdit->mbNew && !pcEdit->mszName.Equals(pcSolution->mcConfigurations.GetConfiguration(pcEdit->muiSource)->GetName()))
-		{
-			aszOld.Add(pcSolution->mcConfigurations.GetConfiguration(pcEdit->muiSource)->GetName());
-			aszNew.Add(pcEdit->mszName.Text());
-		}
-	}
+	aszAdded.Init();
 	aszRemoved.Init();
 	aszKept.Init();
-	FindRemovedConfigurations(&pcSolution->mcConfigurations, pasEdits, &aszRemoved);
+	for (i = 0; i < pcDialog->NumEntries(); i++)
+	{
+		pcEntry = pcDialog->GetEntry(i);
+		if (pcEntry->mbNew)
+		{
+			aszAdded.Add(pcEntry->mszName.Text());
+		}
+		else if (!pcEntry->mszName.Equals(pcEntry->mszSource))
+		{
+			aszOld.Add(pcEntry->mszSource.Text());
+			aszNew.Add(pcEntry->mszName.Text());
+		}
+	}
+	for (i = 0; i < pcSolution->mcSolution.NumConfigurations(); i++)
+	{
+		bFound = false;
+		for (j = 0; j < pcDialog->NumEntries(); j++)
+		{
+			bFound |= !pcDialog->GetEntry(j)->mbNew && pcDialog->GetEntry(j)->mszSource.Equals(pcSolution->mcSolution.GetConfiguration(i));
+		}
+		if (!bFound)
+		{
+			aszRemoved.Add(pcSolution->mcSolution.GetConfiguration(i));
+		}
+	}
 
 	mpcContent->GetCodeModel()->Reset();
-	bResult = pcSolution->mcConfigurations.ApplyEdits(szFile, pasEdits);
+	szNote.Init();
+	bResult = pcDialog->Write(&szNote);
+	pcSolution->Reopen();
 	bShared = false;
 	szStatus.Init();
 	if (bResult)
@@ -682,12 +726,11 @@ void CIDEBuilding::SaveEdits(CIDEBuildConfigurationsDialog* pcDialog, CBuildWork
 				bShared |= (pcWorkspace->GetSolution(j) != pcSolution) && (pcWorkspace->FindConfiguration(j, aszOld.GetText(i)) != NULL);
 			}
 		}
-		for (i = 0; i < pasEdits->NumElements(); i++)
+		for (i = 0; i < aszAdded.NumElements(); i++)
 		{
-			pcEdit = pasEdits->Get(i);
-			if (pcEdit->mbNew && (pcWorkspace->FindRunConfigurationBuilding(pcEdit->mszName.Text()) == NULL))
+			if (pcWorkspace->FindRunConfigurationBuilding(aszAdded.GetText(i)) == NULL)
 			{
-				pcWorkspace->AddRunConfiguration(pcEdit->mszName.Text(), pcEdit->mszName.Text());
+				pcWorkspace->AddRunConfiguration(aszAdded.GetText(i), aszAdded.GetText(i));
 			}
 		}
 		ForgetRemovedConfigurations(&aszRemoved, &aszKept);
@@ -714,18 +757,22 @@ void CIDEBuilding::SaveEdits(CIDEBuildConfigurationsDialog* pcDialog, CBuildWork
 			szStatus.Append(" the build configurations");
 		}
 		szStatus.Append('.');
+		if (!szNote.Empty())
+		{
+			szStatus.Append("  ")->Append(szNote);
+		}
 	}
 	else
 	{
-		szStatus.Set("Could not save ");
-		szStatus.Append(szFile);
-		szStatus.Append(": it may have changed on disk.  Nothing was changed.");
+		szStatus.Set("Could not save the build configurations: a project, a property sheet or the solution couldn't be written.  What was written before it stays.");
 	}
 	mpcContent->GetSolutions()->WorkspaceChanged(true);
 	mpcContent->ShowStatus(szStatus.Text());
 	szStatus.Kill();
+	szNote.Kill();
 	aszKept.Kill();
 	aszRemoved.Kill();
+	aszAdded.Kill();
 	aszNew.Kill();
 	aszOld.Kill();
 }
@@ -756,30 +803,170 @@ char* CIDEBuilding::FindRename(CArrayChars* paszOld, CArrayChars* paszNew, const
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The names of the build configurations no edit came from: those the
-// dialog removed.  A copy doesn't keep the one it was made from.
+// The configurations of the open solutions' projects that none of those
+// solutions builds, added to paszFiles and paszNames (a project's file and
+// one of its configurations' names).  A solution builds a project as the
+// configuration its row names, or with no row as the one called what the
+// solution configuration is.
 //
 //////////////////////////////////////////////////////////////////////////
-void CIDEBuilding::FindRemovedConfigurations(CBuildConfigurations* pcConfigurations, CArrayBuildConfigurationEdits* pasEdits, CArrayChars* paszRemoved)
+void CIDEBuilding::FindUnbuiltConfigurations(CArrayChars* paszFiles, CArrayChars* paszNames)
 {
-	CBuildConfigurationEdit*	pcEdit;
-	bool						bKept;
-	size						i;
-	size						j;
+	CBuildWorkspace*					pcWorkspace;
+	CVcxSolution*						pcSolution;
+	CVcxSolutionProject*				pcProject;
+	CVcxSolutionProject*				pcOther;
+	CVcxSolutionProjectConfiguration*	pcRow;
+	CArrayChars							aszSeen;
+	CArrayChars							aszBuilt;
+	CArrayChars							aszNames;
+	CChars								szName;
+	size								i;
+	size								j;
+	size								k;
+	size								l;
 
-	for (i = 0; i < pcConfigurations->NumConfigurations(); i++)
+	pcWorkspace = mpcContent->GetWorkspace();
+	aszSeen.Init();
+	for (i = 0; i < pcWorkspace->NumSolutions(); i++)
 	{
-		bKept = false;
-		for (j = 0; j < pasEdits->NumElements(); j++)
+		for (j = 0; j < pcWorkspace->GetSolution(i)->mcSolution.NumProjects(); j++)
 		{
-			pcEdit = pasEdits->Get(j);
-			bKept |= !pcEdit->mbNew && (pcEdit->muiSource == i);
-		}
-		if (!bKept)
-		{
-			paszRemoved->Add(pcConfigurations->GetConfiguration(i)->GetName());
+			pcProject = pcWorkspace->GetSolution(i)->mcSolution.GetProject(j);
+			if (!pcProject->IsVcxProject() || !pcProject->IsLoaded() || aszSeen.Contains(pcProject->GetProject()->GetFileName()))
+			{
+				continue;
+			}
+			aszSeen.Add(pcProject->GetProject()->GetFileName());
+
+			aszBuilt.Init();
+			for (k = 0; k < pcWorkspace->NumSolutions(); k++)
+			{
+				pcSolution = &pcWorkspace->GetSolution(k)->mcSolution;
+				for (l = 0; l < pcSolution->NumProjects(); l++)
+				{
+					pcOther = pcSolution->GetProject(l);
+					if (pcOther->IsLoaded() && (StringCompare(pcOther->GetProject()->GetFileName(), pcProject->GetProject()->GetFileName()) == 0))
+					{
+						break;
+					}
+				}
+				for (size m = 0; (l < pcSolution->NumProjects()) && (m < pcSolution->NumConfigurations()); m++)
+				{
+					pcRow = pcOther->FindConfiguration(pcSolution->GetConfiguration(m));
+					szName.Init(pcRow ? pcRow->GetProjectConfiguration() : pcSolution->GetConfiguration(m));
+					if (szName.Contains('|'))
+					{
+						szName.RemoveEnd(szName.Find('|'));
+					}
+					aszBuilt.AddIfUnique(szName.Text());
+					szName.Kill();
+				}
+			}
+
+			aszNames.Init();
+			GetVcxProjectConfigurationNames(pcProject->GetProject()->GetFileName(), &aszNames);
+			for (k = 0; k < aszNames.NumElements(); k++)
+			{
+				if (!aszBuilt.Contains(aszNames.GetText(k)))
+				{
+					paszFiles->Add(pcProject->GetProject()->GetFileName());
+					paszNames->Add(aszNames.GetText(k));
+				}
+			}
+			aszNames.Kill();
+			aszBuilt.Kill();
 		}
 	}
+	aszSeen.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Clean Up (ConfigurationsPlan.txt question 35): the projects'
+// configurations that no open solution builds, which removing and renaming
+// build configurations leave behind, each a box to tick.  None is ticked:
+// a solution that isn't open may build one (a library's Reference, for a
+// program of another solution), and that can't be known from here.  Remove
+// takes the ticked ones out of their projects, which are read again.  For
+// checking, HCP65_IDE_CLEANUP=all ticks them all and each is printed.
+//
+//////////////////////////////////////////////////////////////////////////
+void CIDEBuilding::ShowCleanUpDialog(void)
+{
+	CBuildWorkspace*	pcWorkspace;
+	CArrayChars			aszFiles;
+	CArrayChars			aszNames;
+	CFileUtil			cFileUtil;
+	CChars				szLabel;
+	CChars				szStatus;
+	size				uiRemoved;
+	size				i;
+	bool				bOK;
+
+	aszFiles.Init();
+	aszNames.Init();
+	FindUnbuiltConfigurations(&aszFiles, &aszNames);
+	if (aszFiles.NumElements() == 0)
+	{
+		mpcContent->ShowStatus("Nothing to clean up: every configuration of the open solutions' projects is built by one of them.");
+		aszNames.Kill();
+		aszFiles.Kill();
+		return;
+	}
+
+	mpCleanUp = OMalloc<CDialog>(mpcContent->GetWindow(), mpcContent->GetDialogLook(), "Clean Up Configurations");
+	mpCleanUp->AddDivider("Not built by any open solution; another solution may build one");
+	szLabel.Init();
+	for (i = 0; i < aszFiles.NumElements(); i++)
+	{
+		szLabel.Set("");
+		cFileUtil.GetFileName(&szLabel, aszFiles.GetText(i));
+		szLabel.Append(": ")->Append(aszNames.GetText(i));
+		maCleanUpBoxes.Add(mpCleanUp->AddCheckBox(szLabel.Text(), (getenv("HCP65_IDE_CLEANUP") != NULL) && (strcmp(getenv("HCP65_IDE_CLEANUP"), "all") == 0)));
+		if (getenv("HCP65_IDE_CLEANUP") != NULL)
+		{
+			printf("Clean up: %s\n", szLabel.Text());
+			fflush(stdout);
+		}
+	}
+	szLabel.Kill();
+	mpCleanUp->SetOKCaption("Remove");
+	mpcContent->GetScript()->WatchDialog(mpCleanUp);
+	bOK = mpCleanUp->Show();
+	mpcContent->GetScript()->StopWatchingDialog();
+
+	uiRemoved = 0;
+	if (bOK && !mpcContent->IsKeepingSettings())
+	{
+		mpcContent->ShowStatus("A scripted run doesn't save build configurations.");
+	}
+	else if (bOK)
+	{
+		mpcContent->GetCodeModel()->Reset();
+		for (i = 0; i < aszFiles.NumElements(); i++)
+		{
+			if (maCleanUpBoxes.Get(i)->IsTicked() && RemoveVcxProjectConfiguration(aszFiles.GetText(i), aszNames.GetText(i)))
+			{
+				uiRemoved++;
+			}
+		}
+		pcWorkspace = mpcContent->GetWorkspace();
+		for (i = 0; (uiRemoved > 0) && (i < pcWorkspace->NumSolutions()); i++)
+		{
+			pcWorkspace->GetSolution(i)->Reopen();
+		}
+		mpcContent->GetSolutions()->WorkspaceChanged(true);
+		szStatus.Init("Removed ");
+		szStatus.Append((uint32)uiRemoved)->Append((uiRemoved == 1) ? " configuration from its project." : " configurations from their projects.");
+		mpcContent->ShowStatus(szStatus.Text());
+		szStatus.Kill();
+	}
+	maCleanUpBoxes.RemoveAll();
+	mpCleanUp = NULL;
+	aszNames.Kill();
+	aszFiles.Kill();
 }
 
 

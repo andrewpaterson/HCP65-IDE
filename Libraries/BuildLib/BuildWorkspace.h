@@ -53,6 +53,7 @@ public:
 	void		Init(void);
 	void		Kill(void);
 	bool		Open(const char* szFile);
+	bool		Reopen(void);
 
 	bool		IsApplication(size uiProject);
 	size		NumApplications(void);

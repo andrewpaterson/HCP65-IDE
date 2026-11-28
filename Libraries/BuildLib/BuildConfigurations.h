@@ -24,7 +24,6 @@ along with Codaphela BuildLib.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/ArrayChars.h"
 #include "VisualStudioLib/VcxSolution.h"
 #include "BuildConfiguration.h"
-#include "BuildConfigurationEdit.h"
 
 
 #define BUILD_CONFIGURATIONS_EXTENSION	".hcp65build"
@@ -49,7 +48,6 @@ public:
 	CBuildConfiguration*	Add(const char* szName, EBuildToolchain eToolchain, const char* szSolutionConfiguration);
 	bool					Read(const char* szFileName);
 	bool					Write(const char* szFileName);
-	bool					ApplyEdits(const char* szFileName, CArrayBuildConfigurationEdits* pasEdits);
 
 	size					NumConfigurations(void) const;
 	CBuildConfiguration*	GetConfiguration(size uiIndex);
@@ -65,7 +63,6 @@ protected:
 	void					AddDefault(CVcxSolution* pcSolution, const char* szConfiguration, EBuildToolchain eToolchain, const char* szPlatform);
 	void					GetConfigurationName(const char* szSolutionConfiguration, CChars* pszDest);
 	void					GetNames(CArrayChars* paszDest, bool bPlatforms);
-	bool					MakeEditedText(const char* szText, CArrayBuildConfigurationEdits* pasEdits, CChars* pszDest);
 };
 
 

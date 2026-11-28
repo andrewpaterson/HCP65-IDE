@@ -42,7 +42,7 @@ static bool			gbIDEScriptRenameSaves = false;  //rename: saves what it edited (r
 static bool			gbIDEScriptClassFiles = false;  //rename: renames a type's files too (renamesearch's f), never from the settings.
 
 
-static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printfindpreview", "printfindtoolbar", "findtool:", "resultsmenu:", "resultsmenuclick:", "resultsselect:", "claudemenu", "diffmenu", "printdifftext", "replace:", "findoptions:", "findselect:", "printstartup", "printworkspace", "printuserfile", "rename", "safedelete", "introducevariable", "introducefield", "introduceconstant", "introduceparameter", "changesignature", "pullmembersup", "pushmembersdown", "moveclass", "copyclass", "inlinevariable", "introducetypedef", "extractmethod", "extractsuperclass", "extractinterface", "extractclass", "encapsulatefield", "convertmacro", "extracttemplateparameter", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printbuildfile", "printkeymap", "printkeyrepeat", "printfontsize", "printsettings", "printproblems", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printprojectfiles", "printdiskfile:", "printdisklines:", "printedits", "printspans", "configuration:", "waitindex", "indextemplates:" };
+static const char*	gaszIDEScriptCommands[] = { "goto:", "find:", "printfind", "printfindparts", "printfindpreview", "printfindtoolbar", "findtool:", "resultsmenu:", "resultsmenuclick:", "resultsselect:", "claudemenu", "diffmenu", "printdifftext", "replace:", "findoptions:", "findselect:", "printstartup", "printworkspace", "printuserfile", "rename", "safedelete", "introducevariable", "introducefield", "introduceconstant", "introduceparameter", "changesignature", "pullmembersup", "pushmembersdown", "moveclass", "copyclass", "inlinevariable", "introducetypedef", "extractmethod", "extractsuperclass", "extractinterface", "extractclass", "encapsulatefield", "convertmacro", "extracttemplateparameter", "closetab", "closeall", "exit", "gotosource", "switchfile", "printtabs", "tabmenu", "contextmenu", "edit:", "printmenus", "clickmenu:", "command:", "printkeys", "printbuttons", "printdiffs", "printgit", "printconfig", "printrun", "printsystem", "printkeymap", "printkeyrepeat", "printfontsize", "printsettings", "printproblems", "printindexing", "printbuild", "printstatus", "printrunconfigurations", "printexplorer", "printprojectfiles", "printdiskfile:", "printdisklines:", "printedits", "printspans", "configuration:", "waitindex", "indextemplates:" };
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -695,20 +695,6 @@ void CIDEScript::RunCommand(const char* szCommand)
 		}
 		printf("\n");
 		fflush(stdout);
-	}
-	else if (strcmp(szCommand, "printbuildfile") == 0)
-	{
-		//The startup solution's build configurations file.
-		CChars		szFile;
-		CTextFile	cFile;
-
-		szFile.Init();
-		CBuildConfigurations::GetFileName(mpcContent->GetWorkspace()->GetStartupSolution()->mszFile.Text(), &szFile);
-		cFile.Init();
-		printf("Build file:\n%s\n", cFile.Read(szFile.Text()) ? cFile.Text() : "(none)");
-		fflush(stdout);
-		cFile.Kill();
-		szFile.Kill();
 	}
 	else if (strcmp(szCommand, "printkeymap") == 0)
 	{

@@ -55,6 +55,8 @@ protected:
 	CCPP65ListingIndex			mcListings;			//The last HCP65 build's listings, given to the open files.
 	Ptr<CDockPane>				mpBuildTool;
 	Ptr<CIDEBuildConfigurationsDialog>	mpDialog;  //While it's shown.
+	Ptr<CDialog>				mpCleanUp;			//Clean Up's, while it's shown...
+	CArray<CCheckBox>			maCleanUpBoxes;		//...and its box for each configuration offered.
 	Ptr<CIDEBuildPane>			mpBuildPane;
 	Ptr<CIDEMessageOutput>		mpMessages;  //The Build tab's messages.
 	size						muiBuildStep;		//The one being built.
@@ -95,9 +97,10 @@ public:
 protected:
 	void				RequestEditDialog(void);
 	void				ShowEditDialog(void);
-	void				SaveEdits(CIDEBuildConfigurationsDialog* pcDialog, CBuildWorkspaceSolution* pcSolution, const char* szFile);
+	void				SaveEdits(CIDEBuildConfigurationsDialog* pcDialog, CBuildWorkspaceSolution* pcSolution);
+	void				FindUnbuiltConfigurations(CArrayChars* paszFiles, CArrayChars* paszNames);
+	void				ShowCleanUpDialog(void);
 	char*				FindRename(CArrayChars* paszOld, CArrayChars* paszNew, const char* szName);
-	void				FindRemovedConfigurations(CBuildConfigurations* pcConfigurations, CArrayBuildConfigurationEdits* pasEdits, CArrayChars* paszRemoved);
 	void				ForgetRemovedConfigurations(CArrayChars* paszRemoved, CArrayChars* paszKept);
 	void				ShowNothingToBuild(void);
 	bool				StartBuild(bool bRebuild);

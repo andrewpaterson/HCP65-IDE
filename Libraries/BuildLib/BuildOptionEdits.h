@@ -131,6 +131,10 @@ typedef CArrayTemplatePtr<CBuildConfigurationOptionEdits>	CArrayBuildConfigurati
 //a sheet's, the program's or the default is its value.  Nothing is written until Apply, which sets each edited
 //setting in its file in place (SetVcxSetting).
 //
+//It has a configuration for each one the solution is to have, whatever its toolchain: Apply first makes the solution's
+//rows say so.  One added under a new name with another's as its source is a copy of it, one whose name is changed is
+//renamed, and a solution configuration that none is for is taken away (question 35); the projects are left alone.
+//
 //A solution configuration builds a project as one of the project's own configurations, which may be called something
 //else (Fast|HCP65C816 built as the project's Release).  A line for one configuration is then that other one's: so an
 //edit that is one configuration's first gives the project a configuration of the solution configuration's name, a
@@ -181,6 +185,7 @@ protected:
 	void		Changed(CBuildOptionEdit* pcOrigin, size uiOption, EBuildOptionPlace ePlace, bool bSet, const char* szValue);
 	size		CountSheetProjects(const char* szSheet);
 	void		GetOwnCondition(CBuildConfigurationOptionEdits* pcConfiguration, const char* szConfiguration, CChars* pszDest);
+	bool		ApplyConfigurations(const char* szSolutionFile);
 	bool		ApplyProject(const char* szSolutionFile, size uiConfiguration, size uiProject, CChars* pszNote);
 };
 

@@ -96,6 +96,32 @@ bool CBuildWorkspaceSolution::Open(const char* szFile)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// The solution, its projects and its build configurations read again from
+// their files, after they were written (Edit Build Configurations), with
+// the startup project it had.  Everything read before is gone: nothing
+// may keep a project or a configuration of it across this.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CBuildWorkspaceSolution::Reopen(void)
+{
+	CChars	szFile;
+	CChars	szStartupProject;
+	bool	bResult;
+
+	szFile.Init(mszFile);
+	szStartupProject.Init(mszStartupProject);
+	Kill();
+	Init();
+	mszStartupProject.Set(szStartupProject);
+	bResult = Open(szFile.Text());
+	szStartupProject.Kill();
+	szFile.Kill();
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Each HCP65 build configuration takes what the startup project says of
 // the whole program and its linking in the configuration it is built in
 // (CBuildConfiguration::ReadProject), so what it links is known before it

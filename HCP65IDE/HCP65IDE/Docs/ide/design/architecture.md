@@ -62,7 +62,7 @@ What a feature keeps between runs it reads and writes itself:
 | Breakpoints, bookmarks, recent files | `<workspace>.hcp65user` beside the workspace | Each a part of [`CIDEUserFile`] (`AddPart`), written whole when one changes. |
 | The layout and the files open | `<solution>.layout.user` | [`CIDEContent::SaveLayout`], [`CIDEContent::LoadLayout`]. |
 | The solutions open together, startup solution, run configurations | `<solution>.hcp65workspace` | [`CBuildWorkspace`]. |
-| Build configurations for the HCP65 | The projects' HCP65 groups; `<solution>.hcp65build` if there is one | [`CBuildConfiguration::ReadProject`], [`CBuildConfigurations`]. |
+| Build configurations for the HCP65 | The solution's rows and the projects' HCP65 groups; `<solution>.hcp65build` if there is one | [`CBuildConfiguration::ReadProject`], [`CBuildConfigurations`]; Edit Build Configurations writes them with [`CBuildOptionEdits`]. |
 | Shared run configurations | `.run/<Name>.hcp65run` beside a solution | [`CRunConfiguration`], [`CBuildWorkspace::ApplyRunConfiguration`]. |
 | Cards | `<Card>.hcp65card` | [`CBuildCard`]. |
 | A project's licence for new files, its website | `<project>.hcp65project` | Solution Explorer's Properties ([Documentation Pages](../documentation.md#which-website)). |

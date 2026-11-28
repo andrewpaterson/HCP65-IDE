@@ -472,6 +472,44 @@ C9. Edit Build Configurations writes the projects and sheets
      dialog and build with it.
   C9-6. (2026-11-27) Adding, removing and renaming a build configuration, which the dialog does in the .hcp65build
      file now, as question 17 decides.
+  Built 2026-11-28 (the user: "Carry on with C9"), all of it, as questions 30 and 33 to 35 decided:
+  - VisualStudioLib: a configuration keeps where each of its item definitions' settings was set (the file, the
+    condition of its group, the value: CVcxConfiguration's sources), which is how the dialog knows where a value comes
+    from.  VcxSolutionRows adds, removes and renames a solution configuration and sets the project configuration a
+    row names; VcxProjectConfigurations gives a project a configuration that is a copy of another (every element whose
+    Condition is on it, on every platform, the toolchains' too) and takes one away.  All in place, as SetVcxSetting:
+    only the lines meant change, a new row where Visual Studio sorts it.  SetVcxSetting, where a file has several
+    groups with one condition, changes the one that has the setting.
+  - BuildLib: CBuildOptionEdits is the dialog's model.  For each solution configuration and each project it builds,
+    each option has a value and the place that is from: the project's own for the one configuration or the platform,
+    a line of the project's with another condition, a sheet, the program (a project that says nothing of its own code
+    has the startup project's) or the default.  SetValue writes where the value is from; SetPlace moves it.  What an
+    edit changes for another configuration of the project or another project with the sheet shows there at once.
+    Apply writes the solution's rows (Add, Remove and Rename; names swapped each keep their rows) and then each
+    edited line.  The options are HCP65Compile's twelve and HCP65Link's eleven; the linking is checked as a build
+    reads it before OK.
+  - The dialog (IDEBuildConfigurationsDialog): one page that scrolls, the whole program's options and one project's
+    own, each with its drop-down.  Add, Remove and the name change the rows alone.  The hidden step: an option made
+    one configuration's own, for a configuration the project is built as another's for, gives the project a
+    configuration of that name first (a copy) and the row names it; the note under the options says so before OK and
+    the status line after.  Until such an option is edited its place reads "This project, Release only, which Fast
+    is built as".  Clean Up, beside Add and Remove, saves as OK does and lists the projects' configurations no open
+    solution builds.  Afterwards the solution is read again (CBuildWorkspaceSolution::Reopen) and the code indexed.
+  - Not as first written: Clean Up's boxes start unticked (question 35's note said ticked): a library's configuration
+    that only a solution that isn't open builds (BaseLib's for another program) would be listed, and removing it by
+    default would break that solution.  A sheet is offered as a place only for an option it already says: one it
+    doesn't is added in the sheet's file.  The program's and the default are no line to write, so a value changed
+    there becomes the project's own for the platform.
+  - A solution that still has a .hcp65build file has the file opened instead of the dialog (only the tests' and the
+    checks' fixtures have one, C8's remainder).  The code that edited that file (CBuildConfigurationEdit,
+    CBuildConfigurations::ApplyEdits) and its tests are gone.
+  - Tests: TestVisualStudioLib (TestVcxSettingSources, TestVcxConfigurations, against Expected files made by the
+    Python tools' rules); TestBuildLib (TestBuildOptionEdits: read, apply against Expected files, a project's own
+    configuration, the solution's configurations); thirteen IDE checks (build-configuration-*, build-options-*) on a
+    copy of TestVisualStudioLib's Input/Configurations.
+  - Left: GCC's and MSVC's options aren't in the dialog (it shows the HCP65 compiler's, as it always did); no IDE
+    check builds a program after an option is edited in the dialog (C9-5's second half: TestBuildLib builds from
+    projects' options, and the checks compare the files written).
 
 
 C10. What a GCC build on Linux builds: the platforms' own projects and files (added 2026-11-27)

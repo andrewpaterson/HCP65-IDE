@@ -150,6 +150,8 @@ void TestBuildOptionEditsApply(void)
 	cEdits.Init(&cSolution, "Program");
 	cEdits.Add("Release|HCP65C816", "Release|HCP65C816");
 	cEdits.Add("Debug|HCP65C816", "Debug|HCP65C816");
+	cEdits.Add("Debug|Win32", "Debug|Win32");
+	cEdits.Add("Release|Win32", "Release|Win32");
 
 	//The platform's line is Debug's too.
 	uiOption = FindBuildOption("NoFloats");
@@ -252,6 +254,10 @@ void TestBuildOptionEditsOwnConfiguration(void)
 	AssertTrue(cSolution.Read(TEST_OPTIONS_SOLUTION));
 	cEdits.Init(&cSolution, "Program");
 	cEdits.Add("Fast|HCP65C816", "Release|HCP65C816");
+	cEdits.Add("Release|HCP65C816", "Release|HCP65C816");
+	cEdits.Add("Debug|HCP65C816", "Debug|HCP65C816");
+	cEdits.Add("Debug|Win32", "Debug|Win32");
+	cEdits.Add("Release|Win32", "Release|Win32");
 	AssertString("Release", cEdits.GetProject(0, 0)->mszConfiguration.Text());
 	szNote.Init();
 
@@ -264,7 +270,10 @@ void TestBuildOptionEditsOwnConfiguration(void)
 	//Release's own line changed for Fast.
 	uiOption = FindBuildOption("PreferSize");
 	AssertInt(BOP_Configuration, cEdits.GetPlace(0, 0, uiOption));
+	AssertPlaceText("This project, Release only, which Fast is built as", &cEdits, 0, 0, "PreferSize", BOP_Configuration);
+	AssertPlaceText("This project, Fast only", &cEdits, 0, 0, "MathTables", BOP_Configuration);
 	cEdits.SetValue(0, 0, uiOption, "false");
+	AssertPlaceText("This project, Fast only", &cEdits, 0, 0, "PreferSize", BOP_Configuration);
 	AssertTrue(cEdits.NeedsOwnConfiguration(0, 0));
 	cEdits.GetNote(0, &szNote);
 	AssertString("OK gives Program a Fast configuration of its own, a copy of its Release, and the solution's Fast|HCP65C816 builds it as that.", szNote.Text());
@@ -276,9 +285,8 @@ void TestBuildOptionEditsOwnConfiguration(void)
 	cEdits.SetValue(0, 0, FindBuildOption("Module"), "");
 	AssertTrue(cEdits.Check(0, &szNote));
 
-	//The solution's own rows are the caller's to add, before the edits are written.
+	//The solution is given the new configuration's rows, as Release's, and then the program's names its own.
 	szNote.Set("");
-	AssertTrue(AddVcxSolutionConfiguration(TEST_OPTIONS_SOLUTION, "Fast|HCP65C816", "Release|HCP65C816"));
 	AssertTrue(cEdits.Apply(TEST_OPTIONS_SOLUTION, &szNote));
 	AssertString("Program has a Fast configuration of its own now, a copy of its Release, which Fast|HCP65C816 builds it as.", szNote.Text());
 	szNote.Kill();
@@ -317,6 +325,54 @@ void TestBuildOptionEditsOwnConfiguration(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// The solution's configurations as the edits have them: two that swap
+// names each keep the rows they were read from, one is removed and its
+// name taken by a copy of another, and the projects aren't touched.
+//
+//////////////////////////////////////////////////////////////////////////
+void TestBuildOptionEditsConfigurations(void)
+{
+	CVcxSolution		cSolution;
+	CBuildOptionEdits	cEdits;
+	CChars				szNote;
+
+	CopyOptionsSolution();
+	//So the two HCP65 configurations' rows can be told apart: the program isn't built in Debug.
+	AssertTrue(SetVcxSolutionProjectConfiguration(TEST_OPTIONS_SOLUTION, "{AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE}", "Debug|HCP65C816", "Other|Win32"));
+	cSolution.Init();
+	AssertTrue(cSolution.Read(TEST_OPTIONS_SOLUTION));
+	cEdits.Init(&cSolution, "Program");
+	cEdits.Add("Release|HCP65C816", "Debug|HCP65C816");		//Swapped...
+	cEdits.Add("Debug|HCP65C816", "Release|HCP65C816");		//...with this.
+	cEdits.Add("Release|Win32", "Debug|Win32");				//Release|Win32 removed, and Debug|Win32 copied under its name.
+	cEdits.Add("Debug|Win32", "Debug|Win32");
+	szNote.Init();
+	AssertTrue(cEdits.Apply(TEST_OPTIONS_SOLUTION, &szNote));
+	AssertString("", szNote.Text());
+	szNote.Kill();
+	cEdits.Kill();
+	cSolution.Kill();
+
+	cSolution.Init();
+	AssertTrue(cSolution.Read(TEST_OPTIONS_SOLUTION));
+	AssertSize(4, cSolution.NumConfigurations());
+	AssertString("Debug|HCP65C816", cSolution.GetConfiguration(0));
+	AssertString("Debug|Win32", cSolution.GetConfiguration(1));
+	AssertString("Release|HCP65C816", cSolution.GetConfiguration(2));
+	AssertString("Release|Win32", cSolution.GetConfiguration(3));
+	AssertString("Other|Win32", cSolution.FindProjectByName("Library")->FindConfiguration("Release|HCP65C816")->GetProjectConfiguration());
+	AssertString("Release|Win32", cSolution.FindProjectByName("Library")->FindConfiguration("Debug|HCP65C816")->GetProjectConfiguration());
+	AssertString("Debug|Win32", cSolution.FindProjectByName("Program")->FindConfiguration("Release|Win32")->GetProjectConfiguration());
+	AssertFalse(cSolution.FindProjectByName("Program")->FindConfiguration("Release|Win32")->IsBuild());
+	AssertTrue(cSolution.FindProjectByName("Library")->FindConfiguration("Release|Win32")->IsBuild());
+	cSolution.Kill();
+	AssertFile(TEST_OPTIONS_BEFORE _FS_ "Program.vcxproj", TEST_OPTIONS_PROGRAM);
+	AssertFile(TEST_OPTIONS_BEFORE _FS_ "Library.vcxproj", TEST_OPTIONS_LIBRARY);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 //
 //////////////////////////////////////////////////////////////////////////
 void TestBuildOptionEdits(void)
@@ -326,6 +382,7 @@ void TestBuildOptionEdits(void)
 	TestBuildOptionEditsRead();
 	TestBuildOptionEditsApply();
 	TestBuildOptionEditsOwnConfiguration();
+	TestBuildOptionEditsConfigurations();
 
 	TestStatistics();
 }

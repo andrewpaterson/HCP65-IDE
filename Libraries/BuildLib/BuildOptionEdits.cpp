@@ -39,7 +39,7 @@ static const SBuildOption gasBuildOptions[] =
 	{ BUILD_OPTION_COMPILE, BUILD_CONFIGURATION_PREFER_SIZE, "Prefer size to speed", true, true, "false" },
 	{ BUILD_OPTION_COMPILE, BUILD_CONFIGURATION_EXCEPTIONS, "C++ exceptions", true, true, "false" },
 	{ BUILD_OPTION_COMPILE, BUILD_CONFIGURATION_KEEP_UNUSED_OBJECTS, "Keep unused globals that are made or destroyed", true, true, "false" },
-	{ BUILD_OPTION_COMPILE, BUILD_CONFIGURATION_STUB_MISSING, "A missing function stops the program instead of failing the build", true, true, "false" },
+	{ BUILD_OPTION_COMPILE, BUILD_CONFIGURATION_STUB_MISSING, "A missing function stops the program, not the build", true, true, "false" },
 	{ BUILD_OPTION_COMPILE, BUILD_CONFIGURATION_DEBUG, "Built for the debugger", false, true, "false" },
 	{ BUILD_OPTION_COMPILE, BUILD_CONFIGURATION_UNOPTIMISED, "Compiled without the optimiser", false, true, "false" },
 	{ BUILD_OPTION_COMPILE, BUILD_CONFIGURATION_WARN_MISSING_OVERRIDE, "Warn about overrides not declared override", false, true, "true" },
@@ -598,6 +598,7 @@ size CBuildOptionEdits::GetPlaces(size uiConfiguration, size uiProject, size uiO
 void CBuildOptionEdits::GetPlaceText(size uiConfiguration, size uiProject, size uiOption, EBuildOptionPlace ePlace, CChars* pszDest)
 {
 	CBuildConfigurationOptionEdits*	pcConfiguration;
+	CBuildProjectOptionEdits*		pcProject;
 	CBuildOptionEdit*				pcEdit;
 	const char*						szSeparator;
 	CChars							szValue;
@@ -609,8 +610,18 @@ void CBuildOptionEdits::GetPlaceText(size uiConfiguration, size uiProject, size 
 	pszDest->Set("");
 	if (ePlace == BOP_Configuration)
 	{
+		//A line the project has for the configuration it is built as, which is called something else and not yet
+		//edited, is that one's: said so, as an edit of it gives the project a configuration of this name first.
 		GetConfigurationPart(pcConfiguration->mszName.Text(), &szValue);
-		pszDest->Append("This project, ")->Append(szValue)->Append(" only");
+		pcProject = GetProject(uiConfiguration, uiProject);
+		if (pcEdit->mabSet[BOP_Configuration] && !pcEdit->mbEdited && !szValue.Equals(pcProject->mszConfiguration))
+		{
+			pszDest->Append("This project, ")->Append(pcProject->mszConfiguration)->Append(" only, which ")->Append(szValue)->Append(" is built as");
+		}
+		else
+		{
+			pszDest->Append("This project, ")->Append(szValue)->Append(" only");
+		}
 	}
 	else if (ePlace == BOP_Platform)
 	{
@@ -1055,10 +1066,71 @@ bool CBuildOptionEdits::ApplyProject(const char* szSolutionFile, size uiConfigur
 
 //////////////////////////////////////////////////////////////////////////
 //
-// Every edit written to its file (the solution's configurations must be
-// in szSolutionFile already, under the names given here).  pszNote says
-// what was done that wasn't asked for in so many words (GetNote).  False
-// if a file couldn't be written; what was written before it stays.
+// The solution's configurations made what the edits' are (question 35),
+// in its rows alone: one that no edit keeps under its own name is taken
+// away, and an edit under another name than its source's (a new one, or
+// one renamed) is given its source's rows.  The new ones are first added
+// under names nothing has, so two that swap names, or one that takes the
+// name of one removed, each get the rows they were read from.  Nothing is
+// written if they are as they were.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CBuildOptionEdits::ApplyConfigurations(const char* szSolutionFile)
+{
+	CBuildConfigurationOptionEdits*	pcConfiguration;
+	CChars							szTemporary;
+	size							i;
+	size							j;
+	bool							bKept;
+	bool							bResult;
+
+	bResult = true;
+	szTemporary.Init();
+	for (i = 0; bResult && (i < mapcConfigurations.NumElements()); i++)
+	{
+		pcConfiguration = mapcConfigurations.GetPtr(i);
+		if (!pcConfiguration->mszName.Equals(pcConfiguration->mszSource))
+		{
+			szTemporary.Set("~");
+			szTemporary.Append((uint32)i)->Append('|')->Append(pcConfiguration->mszPlatform);
+			bResult = AddVcxSolutionConfiguration(szSolutionFile, szTemporary.Text(), pcConfiguration->mszSource.Text());
+		}
+	}
+	for (i = 0; bResult && (i < mpcSolution->NumConfigurations()); i++)
+	{
+		bKept = false;
+		for (j = 0; j < mapcConfigurations.NumElements(); j++)
+		{
+			pcConfiguration = mapcConfigurations.GetPtr(j);
+			bKept |= pcConfiguration->mszName.Equals(pcConfiguration->mszSource) && pcConfiguration->mszName.Equals(mpcSolution->GetConfiguration(i));
+		}
+		if (!bKept)
+		{
+			bResult = RemoveVcxSolutionConfiguration(szSolutionFile, mpcSolution->GetConfiguration(i));
+		}
+	}
+	for (i = 0; bResult && (i < mapcConfigurations.NumElements()); i++)
+	{
+		pcConfiguration = mapcConfigurations.GetPtr(i);
+		if (!pcConfiguration->mszName.Equals(pcConfiguration->mszSource))
+		{
+			szTemporary.Set("~");
+			szTemporary.Append((uint32)i)->Append('|')->Append(pcConfiguration->mszPlatform);
+			bResult = RenameVcxSolutionConfiguration(szSolutionFile, szTemporary.Text(), pcConfiguration->mszName.Text());
+		}
+	}
+	szTemporary.Kill();
+	return bResult;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// Everything written: the solution's configurations (ApplyConfigurations:
+// the edits here are all of them, one for each the solution is to have),
+// then every edited option in its file.  pszNote says what was done that
+// wasn't asked for in so many words (GetNote).  False if a file couldn't
+// be written; what was written before it stays.
 //
 //////////////////////////////////////////////////////////////////////////
 bool CBuildOptionEdits::Apply(const char* szSolutionFile, CChars* pszNote)
@@ -1068,7 +1140,7 @@ bool CBuildOptionEdits::Apply(const char* szSolutionFile, CChars* pszNote)
 	size							j;
 	bool							bResult;
 
-	bResult = true;
+	bResult = ApplyConfigurations(szSolutionFile);
 	for (i = 0; bResult && (i < mapcConfigurations.NumElements()); i++)
 	{
 		pcConfiguration = mapcConfigurations.GetPtr(i);

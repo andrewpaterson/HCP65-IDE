@@ -52,35 +52,68 @@ outside the IDE, are on [Building Programs](../compiler/building.md).
 
 ### Edit Build Configurations
 
-Build, Edit Build Configurations... shows the solution's build configurations on the left and the one
-selected in a form on the right:
+Build, Edit Build Configurations... shows the startup solution's build configurations on the left, which are
+its solution configurations, and the one selected on the right.  What it edits is in the solution, its projects
+and the property sheets they import, each file changed only in the lines meant, so Visual Studio and git see an
+ordinary edit.
 
-| Field | Meaning |
+The options are the HCP65 compiler's, so only an HCP65 configuration has them.  They are in two sections:
+
+- **The whole program**: the startup project's options, which everything linked into the program is compiled
+  with, and what the program is linked into.
+- **One project's own code**: the options of the project chosen in the drop-down.
+
+| Option | Meaning |
 |---|---|
-| Name | <code>Configuration&#124;Platform</code>, which the run configurations choose it by. |
-| Toolchain | W65C816, 65C64, MSVC or GCC. |
-| Solution configuration | The Visual Studio configuration it builds the projects as. |
-| Breakpoint space | The emulator's space breakpoints are put in ("Kernel" or "User"); empty for every space.  See [Debugging](debugging.md#breakpoint-spaces). |
 | No floating point | Floating point is an error (a kernal has none). |
-| Maths tables in memory | Off builds it to run without the maths tables in memory (the kernal, its drivers and the operating system, which loads them). |
+| Maths tables in memory | Ticked to begin with.  Unticked builds it to run without the maths tables in memory (the kernal, its drivers and the operating system, which loads them). |
 | Prefer size to speed | The compiler picks smaller code where it has the choice (a ROM's kernal). |
-| Warn about overrides not declared override | Ticked to begin with: a function that overrides a base class's virtual function without `override` (or `final`) is a warning in the Build tab.  Unticked writes `WarnMissingOverride="false"`. |
-| C++ exceptions | Unticked to begin with.  Ticked writes `Exceptions="true"`: the program is compiled with `throw`, `try` and `catch`, which are errors without it. |
-| Keep unused globals that are made or destroyed | Unticked to begin with: a global nothing refers to is left out with its constructor and destructor.  Ticked writes `KeepUnusedObjects="true"`, and such globals are linked, made and destroyed. |
-| Warn when a string literal becomes a char* | Unticked to begin with.  Ticked writes `WarnStringToPointer="true"`: each string literal given to a `char*` is a warning in the Build tab. |
-| Accept casts like unsigned int(3) | Unticked to begin with: a cast written as a type of more than one word and brackets is an error.  Ticked writes `MultiWordCasts="true"`, and it is accepted as the Microsoft compiler accepts it. |
-| C sources: void* and numbers convert as in C | Unticked to begin with.  Ticked writes `CConversions="true"` for a project written in C: a `void*` becomes any object's pointer and a number an enum's value with no cast. |
-| A missing function stops the program instead of failing the build | Unticked to begin with: a function used but defined by no unit is an error in the Build tab, naming it.  Ticked writes `StubMissing="true"`: it is a warning, and the program stops if it gets there. |
-| Built for the debugger | Unticked to begin with.  Ticked writes `Debug="true"`: every variable is kept where the [debugger](debugging.md) reads it, nothing is inlined and every function has a frame of its own, the rest still optimised. |
-| Projects not optimised | Projects (by name, separated by commas) built for the debugger without the optimiser, so stepping follows every line.  Written as `Unoptimised`. |
-| Card | The emulator's SD card image the program is written onto. |
-| Path on card | Where on the card's FAT volume (`\boot.exe`). |
+| C++ exceptions | The program is compiled with `throw`, `try` and `catch`, which are errors without it. |
+| Keep unused globals that are made or destroyed | A global nothing refers to is linked, made and destroyed; without it, it is left out with its constructor and destructor. |
+| A missing function stops the program, not the build | A function used but defined by no unit is a warning, and the program stops if it gets there; without it, it is an error in the Build tab, naming it. |
+| Executable, Module, Image | The file the program is linked into: one of the three. |
+| Entry, Limit | An executable's or a module's entry, and the address the program must end before. |
+| Executable's symbols | `Name=Value`, separated by semicolons. |
+| Image's size, fill, load address, text address, regions | An image's; its regions are `Start-End@Offset`, separated by semicolons. |
+| Built for the debugger | Every variable is kept where the [debugger](debugging.md) reads it, nothing is inlined and every function has a frame of its own, the rest still optimised. |
+| Compiled without the optimiser | The project is built for the debugger without the optimiser at all, so stepping follows every line. |
+| Warn about overrides not declared override | Ticked to begin with: a function that overrides a base class's virtual function without `override` (or `final`) is a warning in the Build tab. |
+| Warn when a string literal becomes a char* | Each string literal given to a `char*` is a warning in the Build tab. |
+| Accept casts like unsigned int(3) | A cast written as a type of more than one word and brackets is accepted, as the Microsoft compiler accepts it; without it, it is an error. |
+| C sources: void* and numbers convert as in C | For a project written in C: a `void*` becomes any object's pointer and a number an enum's value with no cast. |
 
-It says what the configuration links (an image, an executable or a module) and what it loads with it
-(a kernal), but doesn't edit those: **Open File** closes the dialog and opens the `.hcp65build` file to
-edit them there.  **Add** copies the one selected, with all that is in it; **Remove** takes it away.  It
-works on a copy, so Cancel changes nothing, and OK isn't allowed while a name is empty or used twice, a
-card is given without a path, or an MSVC or GCC configuration has anything only an HCP65 build can do.
+Beside each option is a drop-down that says where its value comes from:
+
+| Comes from | Meaning |
+|---|---|
+| This project, Release only | A line of the project's own for the one configuration. |
+| This project, every HCP65C816 configuration | A line of the project's own for the platform: Debug's too. |
+| Shared.props, 14 projects | A property sheet the project imports, with how many of the solution's projects share it. |
+| The program's (Kernal) | Nothing of the project's says it: its own code is compiled as the startup project's is. |
+| Default | Nothing says it. |
+
+Changing an option's value writes it where the drop-down says, so a sheet's value changes for every project that
+takes it.  The program's and the default are no line to change: the value then becomes the project's own, for the
+platform.  Choosing another place moves the value: one of the project's own makes it the project's, and choosing
+the sheet, the program or the default again takes the project's lines away.  A sheet that doesn't say an option
+isn't offered for it: add it to the sheet's file.
+
+**Add** copies the configuration selected under a new name, on the same toolchain; **Remove** takes one away, and
+the name renames it.  All three change the solution's rows only: a new configuration builds each project as the
+one it copies does, and the projects keep the configurations they have.  A project is given a configuration of
+its own, a copy of the one it was built as, when one of its options is first made to differ for the new one alone;
+the note under the options says so before OK does it, and the status line after.
+
+**Clean Up** saves as OK does and then lists the projects' configurations that no open solution builds, which
+Remove and renaming leave behind, each a box to tick, and removes those ticked.  None is ticked to begin with: a
+solution that isn't open may build one.
+
+It works on a copy, so Cancel changes nothing, and OK isn't allowed while a name is empty, used twice or has a `|`
+in it, or the linking couldn't be read by a build (two files named to link, a number that isn't one).  How a
+program is debugged (its card, what is loaded with it) is a [run configuration's](#run-configurations).
+
+A solution that still has a `.hcp65build` file has that file opened instead: its build configurations are the
+file's.
 
 ## Building
 

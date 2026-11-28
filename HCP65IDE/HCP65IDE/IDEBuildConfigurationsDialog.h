@@ -20,9 +20,11 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 ** ------------------------------------------------------------------------ **/
 #ifndef __IDE_BUILD_CONFIGURATIONS_DIALOG_H__
 #define __IDE_BUILD_CONFIGURATIONS_DIALOG_H__
+#include "BaseLib/ArrayInt.h"
+#include "StandardLib/Array.h"
 #include "StandardLib/Object.h"
 #include "StandardLib/Pointer.h"
-#include "BuildLib/BuildConfigurations.h"
+#include "BuildLib/BuildOptionEdits.h"
 #include "VisualStudioLib/VcxSolution.h"
 #include "WindowLib/Button.h"
 #include "WindowLib/CheckBox.h"
@@ -34,13 +36,43 @@ along with Codaphela HCP65IDE.  If not, see <http://www.gnu.org/licenses/>.
 #include "WindowLib/TextField.h"
 
 
-#define IDE_BUILD_DIALOG_OPEN_FILE	"Open File"
+#define IDE_BUILD_DIALOG_CLEAN_UP	"Clean Up"
 
 
-//Edit Build Configurations: a solution's build configurations on the left, and the one selected in a form on the right.
-//What it has inside it (its image, executable or module, and its loads) is said but not edited: Open File closes the
-//dialog and opens the file for that.  Add copies the one selected, with all that is inside it.  It works on edits
-//(CBuildConfigurationEdit), so Cancel changes nothing, and OK isn't allowed while they couldn't be read back.
+//One of the dialog's build configurations: its name as edited, the solution configuration it was read from (its
+//own, or for a new one the configuration it copies), and whether Add made it.
+class CIDEBuildDialogEntry
+{
+public:
+	CChars	mszName;
+	CChars	mszSource;
+	bool	mbNew;
+
+	void	Init(const char* szName, const char* szSource, bool bNew);
+	void	Kill(void);
+};
+
+
+typedef CArrayTemplate<CIDEBuildDialogEntry>	CArrayIDEBuildDialogEntries;
+
+
+//Edit Build Configurations (ConfigurationsPlan.txt C9): a solution's build configurations, which are its solution
+//configurations, on the left, and the one selected on the right in one page of two sections (question 30).  The
+//first has the whole program's options, which are the startup project's: what it is compiled with and what it is
+//linked into.  The second has the options of one project's own code, the project chosen from a drop-down.  Beside
+//each option is where its value comes from, a drop-down (questions 33 and 34): the project's own for the one
+//configuration or for every configuration of the platform, a property sheet the project imports with how many
+//projects share it, the program, or the default.  Changing a value writes it where the drop-down says; choosing
+//another place moves it.  The options are the HCP65 compiler's, so only an HCP65 configuration has them.
+//
+//Add copies the configuration selected under a new name on the same toolchain, Remove takes one away and the name
+//renames it: all three change the solution's rows alone (question 35).  A project is given a configuration of its own
+//only when one of its options is made to differ for a configuration it is built as another's for, and the note under
+//the options says so before OK does it.  Clean Up closes the dialog as OK does and then offers the projects'
+//configurations that no solution builds (CIDEBuilding::ShowCleanUpDialog).
+//
+//It works on edits (CBuildOptionEdits), so Cancel changes nothing, and OK isn't allowed while what it has can't be
+//written.  Write writes them.
 class CIDEBuildConfigurationsDialog : public CObject
 {
 CONSTRUCTABLE(CIDEBuildConfigurationsDialog);
@@ -49,36 +81,29 @@ protected:
 	Ptr<CDialog>					mpDialog;
 	Ptr<CListContainer>				mpList;
 	Ptr<CScrollPane>				mpScrollPane;
+	Ptr<CScrollPane>				mpFormPane;
 	Ptr<CButton>					mpAdd;
 	Ptr<CButton>					mpRemove;
+	Ptr<CButton>					mpCleanUp;
 	Ptr<CTextField>					mpName;
-	Ptr<CComboBox>					mpToolchain;
-	Ptr<CComboBox>					mpSolution;
-	Ptr<CTextField>					mpBreakpointSpace;
-	Ptr<CCheckBox>					mpNoFloats;
-	Ptr<CCheckBox>					mpMathTables;
-	Ptr<CCheckBox>					mpPreferSize;
-	Ptr<CCheckBox>					mpWarnMissingOverride;
-	Ptr<CCheckBox>					mpExceptions;
-	Ptr<CCheckBox>					mpKeepUnusedObjects;
-	Ptr<CCheckBox>					mpWarnStringToPointer;
-	Ptr<CCheckBox>					mpMultiWordCasts;
-	Ptr<CCheckBox>					mpCConversions;
-	Ptr<CCheckBox>					mpStubMissing;
-	Ptr<CCheckBox>					mpDebug;
-	Ptr<CTextField>					mpUnoptimised;
-	Ptr<CTextField>					mpCard;
-	Ptr<CTextField>					mpCardPath;
-	Ptr<CLabel>						mpContents;
+	Ptr<CLabel>						mpToolchain;
+	Ptr<CLabel>						mpProgram;
+	Ptr<CComboBox>					mpProject;
+	CArray<CCheckBox>				maChecks;	//The options that are on or off...
+	CArray<CTextField>				maFields;	//...and those that are text,
+	CArrayInt						maiEditors;	//each option's index in its one of those two,
+	CArray<CComboBox>				maPlaces;	//and where each option's value is from, by the option's index.
+	Ptr<CLabel>						mpNote;
 	Ptr<CLabel>						mpError;
-	CBuildConfigurations*			mpcConfigurations;  //Not held.
 	CVcxSolution*					mpcSolution;  //Not held.
-	CArrayBuildConfigurationEdits	masEdits;
+	CBuildOptionEdits				mcOptions;	//A configuration for each entry, at its index.
+	CArrayIDEBuildDialogEntries		masEntries;
 	int32							miSelected;  //-1 if there are none.
+	size							muiProject;  //The project whose own options show; MAX_SIZE if there is none.
 	bool							mbUpdating;  //The widgets are being set, not changed by the user.
 
 public:
-	void				Init(Ptr<CWindow> pOwner, SDialogLook* psLook, const char* szSolution, CVcxSolution* pcSolution, CBuildConfigurations* pcConfigurations, const char* szSelected);
+	void				Init(Ptr<CWindow> pOwner, SDialogLook* psLook, CVcxSolution* pcSolution, const char* szStartupProject, const char* szSelected);
 	void				Class(void) override;
 	void				Free(void) override;
 	bool				Save(CObjectWriter* pcFile) override;
@@ -87,26 +112,40 @@ public:
 	bool				Show(void);
 	void				ApplyEdits(const char* szEdits);
 	bool				Approve(void);
+	bool				Write(CChars* pszNote);
 
 	Ptr<CDialog>		GetDialog(void) const;
-	CArrayBuildConfigurationEdits*	GetEdits(void);
+	size				NumEntries(void) const;
+	CIDEBuildDialogEntry*	GetEntry(size uiIndex);
+	bool				IsEdited(void);
 
 protected:
 	Ptr<CComponent>		CreateBody(void);
-	void				AddFormRow(Ptr<CGridContainer> pForm, int32* piRow, const char* szLabel, Ptr<CComponent> pEditor);
+	void				AddFormRow(Ptr<CGridContainer> pForm, int32* piRow, const char* szLabel, Ptr<CComponent> pEditor, Ptr<CComponent> pPlace);
+	void				AddOptionRows(Ptr<CGridContainer> pForm, int32* piRow, bool bProgram);
 	Ptr<CTextField>		CreateField(void);
 	void				ShowList(void);
 	void				ShowSelected(void);
-	void				ShowContents(CBuildConfigurationEdit* pcEdit);
-	void				SelectItem(Ptr<CComboBox> pBox, const char* szText);
-	void				Keep(void);
+	void				ShowOptions(void);
+	void				GetPlatform(const char* szName, CChars* pszDest);
+	size				GetOptionProject(size uiOption);
+	void				SetOptionValue(size uiOption, const char* szValue);
+	void				SetOptionPlace(size uiOption, EBuildOptionPlace ePlace);
+	void				SelectProject(const char* szName);
+	void				SetName(const char* szName);
 	void				AddClicked(CButton* pcButton);
 	void				RemoveClicked(CButton* pcButton);
+	void				CleanUpClicked(CButton* pcButton);
 	void				AddConfiguration(void);
 	void				RemoveConfiguration(void);
 	void				SelectionChanged(void);
 	void				NameChanged(void);
-	const char*			FindProblem(CBuildConfigurationEdit* pcEdit, size uiEdit);
+	void				ProjectChanged(void);
+	void				CheckChanged(CCheckBox* pcCheckBox);
+	void				FieldChanged(CTextField* pcField);
+	void				PlaceChanged(CComboBox* pcComboBox);
+	void				PrintOptions(void);
+	const char*			FindProblem(size uiEntry);
 };
 
 

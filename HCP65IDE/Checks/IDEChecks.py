@@ -161,6 +161,25 @@ def MakeSolutionCopy(bOther=False):
 	return {'SOLUTION': os.path.join(szKernel, 'Kernel.sln'), 'SAVE_LAYOUT': '1', 'RECENT': os.path.join(szRoot, 'Recent.xml')}
 
 
+def MakeOptionsCopy(bSave=True, bUnbuilt=False):
+	#A copy of the solution Edit Build Configurations is checked on (TestVisualStudioLib's Input/Configurations/Before):
+	#a program, the startup project, and a library, which share a sheet, built as Debug and Release for the HCP65C816 and
+	#for Win32.  The program has an option of its own for the platform (NoFloats, over the sheet's), one for Release
+	#alone (PreferSize) and what it is linked into; the sheet says Debug's Debug and WarnStringToPointer.  The run
+	#saves to the copy (bSave) as MakeSolutionCopy's does.  With bUnbuilt the program has a configuration no row of the
+	#solution names, Fast, as removing a build configuration leaves one.
+	szRoot = tempfile.mkdtemp(prefix='IDEChecks-')
+	atexit.register(shutil.rmtree, szRoot, True)
+	szConfigurations = os.path.join(ROOT, 'HCP65-IDE', 'Tests', 'TestVisualStudioLib', 'TestVisualStudioLib', 'Input', 'Configurations')
+	shutil.copytree(os.path.join(szConfigurations, 'Before'), os.path.join(szRoot, 'Program'))
+	if bUnbuilt:
+		shutil.copy(os.path.join(szConfigurations, 'Expected', 'Program.vcxproj'), os.path.join(szRoot, 'Program', 'Program.vcxproj'))
+	asCopy = {'SOLUTION': os.path.join(szRoot, 'Program', 'Program.sln'), 'RECENT': os.path.join(szRoot, 'Recent.xml')}
+	if bSave:
+		asCopy['SAVE_LAYOUT'] = '1'
+	return asCopy
+
+
 def MakeCardCopy():
 	#MakeSolutionCopy's Program solution with a card file beside the solutions (Workspace/Cards/Test.hcp65card), to make
 	#a shared run configuration for in the dialog.
@@ -4164,92 +4183,132 @@ CHECKS = [
 		#The compiler's without the C library's are just as bad.
 		'SYSTEM_ROOT': MakeSystemRoot(['13-win32'], False), 'DEBUG': 'printsystem'},
 		[r"^Status: MinGW's headers weren't found", r'^System directories: \S*/13-win32/include/c\+\+,'], []),
-	('build-configuration-rules', dict(OpenedForCheck([os.path.join(KERNAL, 'HCP65Kernal.sln')]), **{
-		#OK is refused for what the file couldn't have, and the real file isn't written by a scripted run.  The kernal's
-		#configurations have an image, and a card with a path on it (the boot loader's \OS\OS.SYS): a card given with
-		#the path cleared is refused, then one with a path is fine.
+	('build-configuration-rules', dict(MakeOptionsCopy(bSave=False), **{
+		#OK is refused for what the files couldn't have: no name, a name with a | in it, another's name, and linking a
+		#build couldn't read (two files named to link).  Put right it is allowed, and a scripted run writes nothing.
 		'DIALOG_ANSWER': 'OK',
-		'BUILD_EDITS': 'name:Release|HCP65C816;check;name:;check;name:Fine;solution:Debug|Win32;card:Card.img;cardpath:;check;cardpath:\\\\boot.exe;toolchain:GCC;check;toolchain:W65C816;check',
-		'DEBUG': 'command:Build.EditConfigurations,answered:1,printconfig'}),
-		[r'^Build dialog: refused \[Another build configuration has this name\.\]$',
-		 r'^Build dialog: refused \[A build configuration needs a name\.\]$',
-		 r'^Build dialog: refused \[A card and a path on it go together\.\]$',
-		 r'^Build dialog: refused \[Only an HCP65 toolchain can link a program, load files, use a card or build for its debugger\.\]$',
-		 r'^Build dialog: OK \[\]$', r'^Dialog \[Build Configurations: HCP65Kernal\] answered OK$',
+		'BUILD_EDITS': 'select:2;name:;check;name:a|b;check;name:Debug;check;name:Fine;set:Module=p.drv;check;set:Module=;check',
+		'DEBUG': 'command:Build.EditConfigurations,answered:1,printconfig,printdiskfile:Program.sln'}),
+		[r'^Build dialog: refused \[A build configuration needs a name\.\]$',
+		 r"^Build dialog: refused \[A build configuration's name can't have \| or = in it, or start with ~\.\]$",
+		 r'^Build dialog: refused \[Another build configuration has this name\.\]$',
+		 r'^Build dialog: refused \[HCP65Link names more than one of Executable, Module and Image\.\]$',
+		 r'^Build dialog: OK \[\]$', r'^Dialog \[Build Configurations: Program\] answered OK$',
 		 r"^Status: A scripted run doesn't save build configurations\.$",
-		 r'^Configuration: \[Kernal Debug\] \[Debug\|HCP65C816\]:'], []),
-	('build-configuration-save', dict(MakeSolutionCopy(), **{
-		#What is changed goes in the file; its comment stays; the run configuration follows the rename, and the copy gets one.
-		'DIALOG_ANSWER': 'OK', 'BUILD_EDITS': 'name:Renamed|HCP65C816;breakpoint:Kernal;nofloats:1;add;name:Copied|HCP65C816',
-		'DEBUG': 'command:Build.EditConfigurations,answered:1,printconfig,printbuildfile'}),
-		[r'^Configuration: \[.*\] \[Renamed\|HCP65C816\]: .*Copied\|HCP65C816, Edit Configurations\.\.\.,$',
-		 r'^<!-- A comment to keep\. -->$',
-		 r'<Configuration Name="Renamed\|HCP65C816" Toolchain="W65C816" .*BreakpointSpace="Kernal" NoFloats="true"',
-		 r'<Configuration Name="Copied\|HCP65C816" Toolchain="W65C816"'], [r'ERROR']),
-	('build-configuration-override-warning', dict(MakeSolutionCopy(), **{
-		#The override warning is on unless unticked, which is all that is written.
-		'DIALOG_ANSWER': 'OK', 'BUILD_EDITS': 'overridewarning:0',
-		'DEBUG': 'command:Build.EditConfigurations,answered:1,printbuildfile'}),
-		[r'<Configuration Name="[^"]*" Toolchain="W65C816" [^>]*WarnMissingOverride="false"'], [r'ERROR', r'WarnMissingOverride="true"']),
-	('build-configuration-exceptions', dict(MakeSolutionCopy(), **{
-		#C++ exceptions are off unless ticked, which is all that is written.
-		'DIALOG_ANSWER': 'OK', 'BUILD_EDITS': 'exceptions:1',
-		'DEBUG': 'command:Build.EditConfigurations,answered:1,printbuildfile'}),
-		[r'<Configuration Name="[^"]*" Toolchain="W65C816" [^>]*Exceptions="true"'], [r'ERROR', r'Exceptions="false"']),
-	('build-configuration-stub-missing', dict(MakeSolutionCopy(), **{
-		#A missing function is a build error unless ticked, which is all that is written.
-		'DIALOG_ANSWER': 'OK', 'BUILD_EDITS': 'stubmissing:1',
-		'DEBUG': 'command:Build.EditConfigurations,answered:1,printbuildfile'}),
-		[r'<Configuration Name="[^"]*" Toolchain="W65C816" [^>]*StubMissing="true"'], [r'ERROR', r'StubMissing="false"']),
-	('build-configuration-debug', dict(MakeSolutionCopy(), **{
-		#Built for the debugger, and projects compiled without the optimiser: only an HCP65 toolchain's, and written when set.
-		'DIALOG_ANSWER': 'OK', 'BUILD_EDITS': 'debug:1;unoptimised:Init, Shell;toolchain:GCC;check;toolchain:W65C816;check',
-		'DEBUG': 'command:Build.EditConfigurations,answered:1,printbuildfile'}),
-		[r'^Build dialog: refused \[Only an HCP65 toolchain can link a program, load files, use a card or build for its debugger\.\]$', r'^Build dialog: OK \[\]$',
-		 r'<Configuration Name="[^"]*" Toolchain="W65C816" [^>]*Debug="true" Unoptimised="Init, Shell"'], [r'ERROR']),
-	('build-configuration-cancel', dict(MakeSolutionCopy(), **{
+		 r'^Configuration: \[.*\] \[.*\]: Debug\|HCP65C816, Debug\|Win32, Release\|HCP65C816, Release\|Win32, Edit Configurations\.\.\.,$',
+		 r'^\t\tRelease\|HCP65C816 = Release\|HCP65C816'], [r'Fine']),
+	('build-options-shown', dict(MakeOptionsCopy(), **{
+		#Each option with where its value comes from (ConfigurationsPlan question 30): the whole program's are the startup
+		#project's, from its own line for the platform or for the one configuration, the sheet's or the default; a
+		#library's own code has the sheet's, or else what the program has.  A configuration that isn't an HCP65 one has none.
+		'DIALOG_ANSWER': 'Cancel', 'BUILD_EDITS': 'select:2;print;project:Library;print;select:3;print',
+		'DEBUG': 'command:Build.EditConfigurations,answered:1'}),
+		[r'^Build dialog: Release\|HCP65C816, project Program$',
+		 r'^Build option: NoFloats \[true\] from \[This project, every HCP65C816 configuration\]$',
+		 r'^Build option: MathTables \[true\] from \[Default\]$',
+		 r'^Build option: PreferSize \[true\] from \[This project, Release only\]$',
+		 r'^Build option: WarnStringToPointer \[true\] from \[Shared\.props, 2 projects, every HCP65C816 configuration\]$',
+		 r'^Build option: Executable \[program\.exe\] from \[This project, every HCP65C816 configuration\]$',
+		 r'^Build note: \[\]$',
+		 r'^Build dialog: Release\|HCP65C816, project Library$',
+		 r'^Build option: NoFloats \[true\] from \[This project, every HCP65C816 configuration\]$',
+		 r"^Build option: WarnMissingOverride \[true\] from \[The program's \(Program\)\]$",
+		 r'^Build option: WarnStringToPointer \[true\] from \[Shared\.props, 2 projects, every HCP65C816 configuration\]$',
+		 r'^Build dialog: Release\|Win32, project \(none\)$',
+		 r"^Build note: \[These are the HCP65 compiler's options: only an HCP65 configuration has them\.\]$"], [r'ERROR']),
+	('build-options-save', dict(MakeOptionsCopy(), **{
+		#An option's value is written where it comes from, and its place is what the drop-down is made (questions 33 and
+		#34): the program's line for the platform changed; one configuration's own made the platform's; a default made
+		#Release's own; the sheet's changed from the library, which is the program's too; and the program's made the
+		#library's own.  Each file has only those lines changed, and the solution none.
+		'DIALOG_ANSWER': 'OK',
+		'BUILD_EDITS': 'select:2;set:NoFloats=false;place:PreferSize=platform;place:MathTables=configuration;set:MathTables=false;'
+		               'project:Library;set:WarnStringToPointer=false;set:WarnMissingOverride=false;print',
+		'DEBUG': 'command:Build.EditConfigurations,answered:1,printstatus,printdiskfile:Program.vcxproj,printdiskfile:Library.vcxproj,printdiskfile:Shared.props'}),
+		[r'^Build option: PreferSize \[true\] from \[This project, every HCP65C816 configuration\]$',
+		 r'^Build option: WarnMissingOverride \[false\] from \[This project, every HCP65C816 configuration\]$',
+		 r'^Build option: WarnStringToPointer \[false\] from \[Shared\.props, 2 projects, every HCP65C816 configuration\]$',
+		 r'^Build note: \[\]$', r'^Status line: Saved the build configurations\.$',
+		 r"^  <ItemDefinitionGroup Condition=\"'\$\(Platform\)'=='HCP65C816'\">", r'^      <NoFloats>false</NoFloats>', r'^      <PreferSize>true</PreferSize>',
+		 r"^  <ItemDefinitionGroup Condition=\"'\$\(Configuration\)\|\$\(Platform\)'=='Release\|HCP65C816'\">", r'^      <MathTables>false</MathTables>',
+		 r"^  <ItemDefinitionGroup Condition=\"'\$\(Platform\)'=='HCP65C816'\">", r'^      <WarnMissingOverride>false</WarnMissingOverride>',
+		 r'^      <WarnStringToPointer>false</WarnStringToPointer>'], [r'ERROR', r'<NoFloats>true<']),
+	('build-options-cancel', dict(MakeOptionsCopy(), **{
 		#Cancel changes nothing.
-		'DIALOG_ANSWER': 'Cancel', 'BUILD_EDITS': 'name:Gone;remove',
-		'DEBUG': 'command:Build.EditConfigurations,answered:1,printbuildfile'}),
-		[r'^<!-- A comment to keep\. -->$', r'<Configuration Name="Release\|HCP65C816"'], [r'Gone']),
-	('build-configuration-open-file', dict(MakeSolutionCopy(), **{
-		#Open File opens the file instead of saving.
-		'DIALOG_ANSWER': 'Open File', 'BUILD_EDITS': 'name:Gone',
-		'DEBUG': 'command:Build.EditConfigurations,answered:1,printtabs,printbuildfile'}),
-		[r'^Tabs: .*>Kernel\.hcp65build', r'<Configuration Name="Release\|HCP65C816"'], [r'Gone']),
-	('build-configuration-swap', dict(MakeSolutionCopy(True), **{
-		#Swapping two names: each run configuration follows what it built, not the name another has just been given, and
-		#the old names still being in the solution saved isn't another solution having them.
-		'DIALOG_ANSWER': 'OK', 'RUN_EDITS': 'add;name:Fast;build:Release|HCP65C816;add;name:Small;build:Other|HCP65C816',
-		'BUILD_EDITS': 'select:0;name:Other|HCP65C816;select:1;name:Release|HCP65C816',
-		'DEBUG': 'command:Run.EditConfigurations,answered:1,command:Build.EditConfigurations,answered:2,printstatus,printconfig,printrunconfigurations,printbuildfile'}),
+		'DIALOG_ANSWER': 'Cancel', 'BUILD_EDITS': 'select:2;set:NoFloats=false;name:Gone;add',
+		'DEBUG': 'command:Build.EditConfigurations,answered:1,printconfig,printdiskfile:Program.vcxproj,printdiskfile:Program.sln'}),
+		[r'^Configuration: \[.*\] \[.*\]: Debug\|HCP65C816, Debug\|Win32, Release\|HCP65C816, Release\|Win32, Edit Configurations\.\.\.,$',
+		 r'^      <NoFloats>true</NoFloats>', r'^\t\tRelease\|HCP65C816 = Release\|HCP65C816'], [r'Gone', r'<NoFloats>false<']),
+	('build-configuration-add', dict(MakeOptionsCopy(), **{
+		#Add copies the configuration selected, on its toolchain: only the solution's rows are new, each project built as
+		#it was (question 35).  An option made the new configuration's own gives that one project a configuration of its
+		#name, a copy of the one it was built as, and the solution's row then names it: the note says so before OK, and
+		#the status line after.  The library, which nothing was changed in, is built as its Release still.  The new one
+		#gets a run configuration, so it can be chosen.
+		'DIALOG_ANSWER': 'OK', 'BUILD_EDITS': 'select:2;add;name:Fast;print;set:PreferSize=false;print',
+		'DEBUG': 'command:Build.EditConfigurations,answered:1,printstatus,printconfig,printrunconfigurations,printdiskfile:Program.sln,printdiskfile:Program.vcxproj,printdiskfile:Library.vcxproj'}),
+		[r'^Build dialog: Fast\|HCP65C816, project Program$', r'^Build option: PreferSize \[true\] from \[This project, Release only, which Fast is built as\]$', r'^Build note: \[\]$',
+		 r'^Build option: PreferSize \[false\] from \[This project, Fast only\]$',
+		 r"^Build note: \[OK gives Program a Fast configuration of its own, a copy of its Release, and the solution's Fast\|HCP65C816 builds it as that\.\]$",
+		 r'^Status line: Saved the build configurations\.  Program has a Fast configuration of its own now, a copy of its Release, which Fast\|HCP65C816 builds it as\.$',
+		 r'^Configuration: \[.*\] \[.*\]: Debug\|HCP65C816, Debug\|Win32, Release\|HCP65C816, Release\|Win32, Fast\|HCP65C816, Edit Configurations\.\.\.,$',
+		 r'^Run configuration: Fast\|HCP65C816 builds Fast\|HCP65C816$',
+		 r'^\t\tFast\|HCP65C816 = Fast\|HCP65C816', r'^\t\t\{AAAAAAAA-.*\}\.Fast\|HCP65C816\.ActiveCfg = Release\|Win32',
+		 r'^\t\t\{11111111-.*\}\.Fast\|HCP65C816\.ActiveCfg = Fast\|Win32', r'^\t\t\{11111111-.*\}\.Fast\|HCP65C816\.Build\.0 = Fast\|Win32',
+		 r'^    <ProjectConfiguration Include="Fast\|Win32">',
+		 r"^  <ItemDefinitionGroup Condition=\"'\$\(Configuration\)\|\$\(Platform\)'=='Release\|HCP65C816'\">", r'^      <PreferSize>true</PreferSize>',
+		 r"^  <ItemDefinitionGroup Condition=\"'\$\(Configuration\)\|\$\(Platform\)'=='Fast\|HCP65C816'\">", r'^      <PreferSize>false</PreferSize>',
+		 r'^    <ProjectConfiguration Include="Release\|Win32">'], [r'ERROR']),
+	('build-configuration-swap', dict(MakeOptionsCopy(), **{
+		#Swapping two names: each keeps the rows it had (the program is built as its Release by what is now called
+		#Debug), and each run configuration follows what it built, not the name another has just been given.
+		'DIALOG_ANSWER': 'OK', 'BUILD_EDITS': 'select:0;name:Zed;select:2;name:Debug;select:0;name:Release',
+		'DEBUG': 'command:Build.EditConfigurations,answered:1,printstatus,printrunconfigurations,printdiskfile:Program.sln,printdiskfile:Program.vcxproj'}),
 		[r'^Status line: Saved the build configurations\.$',
-		 r'^Configuration: \[Small\] \[Release\|HCP65C816\]:',
-		 r'^Run configuration: Fast builds Other\|HCP65C816$',
-		 r'^Run configuration: Small builds Release\|HCP65C816$',
-		 r'<Configuration Name="Other\|HCP65C816" Toolchain="W65C816" Solution="Release\|Win32" BreakpointSpace="Kernel">',
-		 r'<Configuration Name="Release\|HCP65C816" Toolchain="W65C816" Solution="Release\|Win32"/>'], [r'ERROR']),
-	('build-configuration-remove', dict(MakeSolutionCopy(True), **{
-		#The run configuration that was only for the one removed goes with it, and one that is left is chosen.
-		'DIALOG_ANSWER': 'OK', 'BUILD_EDITS': 'remove',
-		'DEBUG': 'command:Build.EditConfigurations,answered:1,printstatus,printconfig,printbuildfile'}),
+		 r'^Run configuration: Debug\|HCP65C816 builds Release\|HCP65C816$',
+		 r'^Run configuration: Release\|HCP65C816 builds Debug\|HCP65C816$',
+		 r'^\t\t\{11111111-.*\}\.Debug\|HCP65C816\.ActiveCfg = Release\|Win32', r'^\t\t\{11111111-.*\}\.Release\|HCP65C816\.ActiveCfg = Debug\|Win32',
+		 r"^  <ItemDefinitionGroup Condition=\"'\$\(Configuration\)\|\$\(Platform\)'=='Release\|HCP65C816'\">"], [r'ERROR', r'Zed']),
+	('build-configuration-remove', dict(MakeOptionsCopy(), **{
+		#Remove takes the solution's rows away, and the run configuration that was only for it; the project keeps its
+		#configuration, which the solution's Release|Win32 still builds.
+		'DIALOG_ANSWER': 'OK', 'BUILD_EDITS': 'select:2;remove',
+		'DEBUG': 'command:Build.EditConfigurations,answered:1,printstatus,printconfig,printrunconfigurations,printdiskfile:Program.sln,printdiskfile:Program.vcxproj'}),
 		[r'^Status line: Saved the build configurations\.$',
-		 r'^Configuration: \[Other\|HCP65C816\] \[Other\|HCP65C816\]: Other\|HCP65C816, Edit Configurations\.\.\.,$',
-		 r'<Configuration Name="Other\|HCP65C816"'], [r'Name="Release\|HCP65C816"', r'ERROR']),
-	('build-configuration-remove-kept', dict(MakeSolutionCopy(True), **{
-		#One with a tool is kept and stays chosen, as it says.  It builds nothing, as Build says, but its tool still runs.
-		'DIALOG_ANSWER': 'OK', 'RUN_EDITS': 'add;name:Emu;tool:/bin/sh;arguments:-c true', 'BUILD_EDITS': 'remove',
-		'DEBUG': 'command:Run.EditConfigurations,answered:1,command:Build.EditConfigurations,answered:2,printstatus,printconfig,command:Build.Build,wait:200,printbuild,command:Run.Start,wait:500,printrun'}),
+		 r'^Configuration: \[.*\] \[.*\]: Debug\|HCP65C816, Debug\|Win32, Release\|Win32, Edit Configurations\.\.\.,$',
+		 r'^Run configuration: Release\|Win32 builds Release\|Win32$',
+		 r"^  <ItemDefinitionGroup Condition=\"'\$\(Configuration\)\|\$\(Platform\)'=='Release\|HCP65C816'\">"],
+		[r'ERROR', r'Release\|HCP65C816 = ', r'^Run configuration: Release\|HCP65C816']),
+	('build-configuration-remove-kept', dict(MakeOptionsCopy(), **{
+		#A run configuration with a tool of the user's is kept when what it builds is removed, as the status line says.
+		'DIALOG_ANSWER': 'OK', 'RUN_EDITS': 'add;name:Emu;build:Release|HCP65C816;tool:/bin/sh;arguments:-c true', 'BUILD_EDITS': 'select:2;remove',
+		'DEBUG': 'command:Run.EditConfigurations,answered:1,command:Build.EditConfigurations,answered:2,printstatus,printrunconfigurations'}),
 		[r'^Status line: Saved, but run configuration Emu builds a build configuration you removed: choose another for it in Edit Configurations\.$',
-		 r'^Configuration: \[Emu\] \[\]: Other\|HCP65C816, Emu, Edit Configurations\.\.\.,$',
-		 r'^Emu builds Release\|HCP65C816, which no open solution has: choose another build configuration in Edit Configurations\.$',
-		 r'^Running: /bin/sh -c true$', r'^Exited with code 0\.$'], [r'ERROR']),
-	('build-configuration-remove-last', dict(MakeSolutionCopy(), **{
-		#With none left there is nothing to choose, and Build says so.
-		'DIALOG_ANSWER': 'OK', 'BUILD_EDITS': 'remove',
-		'DEBUG': 'command:Build.EditConfigurations,answered:1,printconfig,command:Build.Build,wait:200,printbuild'}),
-		[r'^Configuration: \[.*\] \[\]: Edit Configurations\.\.\.,$',
-		 r'^No run configuration is chosen: add one in Edit Configurations\.$'], [r'ERROR']),
+		 r'^Run configuration: Emu builds Release\|HCP65C816$'], [r'ERROR']),
+	('build-configuration-clean-up', dict(MakeOptionsCopy(bUnbuilt=True), **{
+		#Clean Up saves what the dialog has and then offers the projects' configurations that no open solution builds
+		#(the program's Fast, which no row names), none ticked; ticked and removed, the project is as it was before it had it.
+		'DIALOG_ANSWER': 'Clean Up|OK', 'BUILD_EDITS': 'select:2;set:NoFloats=false', 'CLEANUP': 'all',
+		'DEBUG': 'command:Build.EditConfigurations,answered:2,printstatus,printdiskfile:Program.vcxproj'}),
+		[r'^Dialog \[Build Configurations: Program\] answered Clean Up$', r'^Clean up: Program\.vcxproj: Fast$',
+		 r'^Dialog \[Clean Up Configurations\] answered OK$', r'^Status line: Removed 1 configuration from its project\.$',
+		 r'^      <NoFloats>false</NoFloats>'], [r'ERROR', r'Fast\|']),
+	('build-configuration-clean-up-kept', dict(MakeOptionsCopy(bUnbuilt=True), **{
+		#None is ticked unless the user ticks it: another solution may build one.
+		'DIALOG_ANSWER': 'Clean Up|OK', 'BUILD_EDITS': 'select:2', 'CLEANUP': 'none',
+		'DEBUG': 'command:Build.EditConfigurations,answered:2,printstatus,printdiskfile:Program.vcxproj'}),
+		[r'^Clean up: Program\.vcxproj: Fast$', r'^Status line: Removed 0 configurations from their projects\.$',
+		 r'^    <ProjectConfiguration Include="Fast\|Win32">'], [r'ERROR']),
+	('build-configuration-clean-up-nothing', dict(MakeOptionsCopy(), **{
+		#With nothing left over there is nothing to offer.
+		'DIALOG_ANSWER': 'Clean Up', 'BUILD_EDITS': 'select:2',
+		'DEBUG': 'command:Build.EditConfigurations,answered:1,printstatus'}),
+		[r'^Status line: Nothing to clean up: every configuration of the open solutions. projects is built by one of them\.$'], [r'ERROR', r'^Clean up:']),
+	('build-configuration-file', dict(MakeSolutionCopy(), **{
+		#A solution whose build configurations are still in a file beside it has the file opened to edit: the dialog
+		#edits what the projects say.
+		'DEBUG': 'command:Build.EditConfigurations,wait:100,printtabs,printstatus'}),
+		[r'^Tabs: .*>Kernel\.hcp65build', r"^Status line: This solution's build configurations are in the file beside it, which is open to edit\.$"], [r'ERROR', r'^Dialog']),
 	('build-nothing-to-build', {
 		#However it came to be, a run configuration whose build configuration isn't there says so when built.
 		'DIALOG_ANSWER': 'OK', 'RUN_EDITS': 'add;name:Nothing;build:No|Such',
