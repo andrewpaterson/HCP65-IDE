@@ -690,6 +690,9 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <None Include="Docs\ide\building-the-ide.md">
+      <Filter>Docs\ide</Filter>
+    </None>
     <None Include="Docs\ide\building.md">
       <Filter>Docs\ide</Filter>
     </None>

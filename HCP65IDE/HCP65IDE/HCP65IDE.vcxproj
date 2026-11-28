@@ -437,6 +437,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <None Include="Docs\ide\building-the-ide.md" />
     <None Include="Docs\ide\building.md" />
     <None Include="Docs\ide\checks.md" />
     <None Include="Docs\ide\claude-tab.md" />
