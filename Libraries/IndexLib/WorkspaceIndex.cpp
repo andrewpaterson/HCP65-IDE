@@ -27,6 +27,7 @@ along with Codaphela IndexLib.  If not, see <http://www.gnu.org/licenses/>.
 #include "BaseLib/Timer.h"
 #include "CppCompilerLib/CppParser.h"
 #include "CppCompilerLib/CPPSemanticPass.h"
+#include "BuildLib/Build.h"
 #include "SystemHeaders.h"
 #include "WorkspaceIndex.h"
 
@@ -294,6 +295,10 @@ void CWorkspaceIndex::AddDefaultSystemDirectories(void)
 // what is indexed, the #ifdef _WIN32 beside it isn't, and a header the
 // 65 hasn't isn't found on the host.  Said before anything is indexed.
 //
+// It is what a solution that builds no Libc65 is read with: one whose
+// configuration's rows build the project called Libc65 has that project's
+// directory, as its build has (AddLibc65).
+//
 //////////////////////////////////////////////////////////////////////////
 void CWorkspaceIndex::SetLibc65Directory(const char* szDirectory)
 {
@@ -312,7 +317,8 @@ void CWorkspaceIndex::SetLibc65Directory(const char* szDirectory)
 // The file (or szContents as it, if they aren't NULL) preprocessed with
 // its project's include directories and defines, and parsed into pcDest,
 // with the compile options its build configuration has (CBuildConfiguration
-// ::SetCompileOptions) and its target (an int is 16 bits to the W65C816)
+// ::SetCompileOptions), its project's own in place of them where it has
+// any (SetOwnOptions), and its target (an int is 16 bits to the W65C816)
 // for checking it.  False if the project isn't
 // loaded.
 //
@@ -341,6 +347,10 @@ bool CWorkspaceIndex::ParseUnit(size uiProject, const char* szFileName, const ch
 	{
 		pcConfiguration->SetCompileOptions(&pcDest->mcOptions);
 		pcDest->meTarget = pcConfiguration->GetTarget();
+		if (pcConfiguration->IsHCP65())
+		{
+			SetOwnOptions(uiProject, &pcDest->mcOptions);
+		}
 	}
 	mcProjectsMutex.Unlock();
 	pcProject->ProcessUnit(pcDest->mpcUnit, mszConfiguration.Text(), pszErrors);
@@ -498,7 +508,7 @@ CProject* CWorkspaceIndex::GetProject(size uiProject)
 	pcBuild = FindProjectBuildConfiguration(uiProject);
 	if ((pcBuild != NULL) && pcBuild->IsHCP65())
 	{
-		if (!mszLibc65.Empty())
+		if (!AddLibc65(uiProject, pcBuild, pcProject) && !mszLibc65.Empty())
 		{
 			pcProject->AddIncludeDirectory(mszLibc65.Text(), false, true);
 		}
@@ -513,6 +523,92 @@ CProject* CWorkspaceIndex::GetProject(size uiProject)
 	}
 	mapcProjects.SetPtr(uiProject, pcProject);
 	return pcProject;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// The system headers of a project read with an HCP65 configuration, as
+// its build finds them (CHCP65Build::FindLibc65; ConfigurationsPlan.txt
+// C4-7): the directory of the project called Libc65 that the solution's
+// configuration builds, and that project's own include directories, which
+// the build gives every unit too.  False if the configuration's rows build
+// none: the directory the index was handed is used then.
+//
+//////////////////////////////////////////////////////////////////////////
+bool CWorkspaceIndex::AddLibc65(size uiProject, CBuildConfiguration* pcBuild, CProject* pcProject)
+{
+	CVcxSolution*						pcSolution;
+	CVcxSolutionProject*				pcSolutionProject;
+	CVcxSolutionProjectConfiguration*	pcRow;
+	CVcxConfiguration*					pcConfiguration;
+	CArrayChars							aszDirectories;
+	CFileUtil							cFileUtil;
+	size								i;
+	size								j;
+
+	pcSolution = mpcWorkspace->GetProjectSolution(uiProject);
+	for (i = 0; (pcSolution != NULL) && (i < pcSolution->NumProjects()); i++)
+	{
+		pcSolutionProject = pcSolution->GetProject(i);
+		if (!pcSolutionProject->IsVcxProject() || !pcSolutionProject->IsLoaded() || (StringCompare(pcSolutionProject->GetProject()->GetName(), HCP65_BUILD_LIBC65) != 0))
+		{
+			continue;
+		}
+		pcRow = pcSolutionProject->FindConfiguration(pcBuild->GetSolutionConfiguration());
+		if ((pcRow == NULL) || !pcRow->IsBuild())
+		{
+			continue;
+		}
+		pcProject->AddIncludeDirectory((char*)pcSolutionProject->GetProject()->GetDirectory(), false, true);
+		pcConfiguration = pcBuild->FindProjectConfiguration(pcSolutionProject->GetProject(), pcRow->GetProjectConfiguration());
+		aszDirectories.Init();
+		if (pcConfiguration != NULL)
+		{
+			pcSolutionProject->GetProject()->GetIncludeDirectories(pcConfiguration, pcSolution->GetDirectory(), &aszDirectories);
+		}
+		for (j = 0; j < aszDirectories.NumElements(); j++)
+		{
+			if (cFileUtil.IsDirectory(aszDirectories.GetText(j)) && (StringCompare(aszDirectories.GetText(j), pcSolutionProject->GetProject()->GetDirectory()) != 0))
+			{
+				pcProject->AddIncludeDirectory(aszDirectories.GetText(j), false, false);
+			}
+		}
+		aszDirectories.Kill();
+		return true;
+	}
+	return false;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A project's own compile options in place of its build configuration's,
+// as its build compiles it (CHCP65Build::SetOwnOptions): the options a
+// project may have that differ from the program's, which are the startup
+// project's.
+//
+//////////////////////////////////////////////////////////////////////////
+void CWorkspaceIndex::SetOwnOptions(size uiProject, CCPPCompileOptions* pcOptions)
+{
+	CVcxConfiguration*	pcConfiguration;
+	CArrayChars			aszOptions;
+	bool				bUnoptimised;
+	size				i;
+
+	pcConfiguration = GetProjectConfiguration(uiProject);
+	if (pcConfiguration == NULL)
+	{
+		return;
+	}
+	aszOptions.Init();
+	CBuildConfiguration::ReadOwnOptions(pcConfiguration, &aszOptions);
+	bUnoptimised = false;
+	for (i = 0; i < aszOptions.NumElements(); i++)
+	{
+		CBuildConfiguration::SetOwnOption(aszOptions.GetText(i), pcOptions, &bUnoptimised);
+	}
+	aszOptions.Kill();
 }
 
 

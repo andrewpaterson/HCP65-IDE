@@ -51,7 +51,8 @@ static void PrintUsage(void)
 	printf("  symbol table: one line a symbol, <key> TAB <kind> TAB <file> TAB <line>, the file relative to -root.\n");
 	printf("  Only symbols declared under -root are written.  -problems lists what the units couldn't include.\n");
 	printf("  A solution whose configuration is the W65C816's or the 65C64's is indexed as hcp65build compiles it, with\n");
-	printf("  Libc65's headers: -libc65's, or HCP65\\Libraries\\Libc65 found above the first solution.\n");
+	printf("  Libc65's headers: those of the Libc65 project its configuration builds; if it builds none, -libc65's, or\n");
+	printf("  HCP65\\Libraries\\Libc65 found above the first solution.\n");
 	printf("hcp65index -resolve <table> -files <list> <page.md>...\n");
 	printf("  Resolves the pages' references to code ([`Name`]) against a written table and a list of files (one a line,\n");
 	printf("  relative to the table's root), and prints each reference's link or error and each plain span's warning\n");
@@ -94,8 +95,9 @@ static int OpenSolutions(CBuildWorkspace* pcWorkspace, CArrayChars* paszSolution
 //
 // The workspace's index, read in szConfiguration (each solution's first
 // if NULL), with this machine's compiler's headers and, for
-// the solutions read with an HCP65 configuration, Libc65's: szLibc65 if
-// it isn't NULL, else the one found above the first solution.
+// the solutions read with an HCP65 configuration that build no Libc65
+// project (CWorkspaceIndex::AddLibc65), Libc65's: szLibc65 if it isn't
+// NULL, else the one found above the first solution.
 //
 //////////////////////////////////////////////////////////////////////////
 static void InitIndex(CWorkspaceIndex* pcIndex, CBuildWorkspace* pcWorkspace, const char* szConfiguration, const char* szLibc65, CArrayChars* paszSolutions)

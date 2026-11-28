@@ -65,7 +65,11 @@ too.
 - **A 65 configuration.**  A project whose solution is read with an HCP65 build configuration (the W65C816's or
   the 65C64's) is indexed as `hcp65build` compiles it.  It has the target's own defines in place of MSVC's, made
   by the code the build uses ([`CCPPTarget::AddDefines`]: `__W65C816__` or `__65C64__`, `__LIBC65__`), so the two
-  can't differ.  Its system headers are Libc65's ([`CWorkspaceIndex::SetLibc65Directory`]), not this machine's.
+  can't differ.  Its system headers are Libc65's, not this machine's: those of the project called Libc65 that the
+  solution's configuration builds, with that project's include directories, as the build finds them
+  ([`CWorkspaceIndex::AddLibc65`]); a solution that builds none has the directory the index was handed
+  ([`CWorkspaceIndex::SetLibc65Directory`]).  A project's own compile options take the place of the program's
+  where it has any ([`CWorkspaceIndex::SetOwnOptions`]), as its build compiles it.
   And it is type checked for its target ([`CBuildConfiguration::GetTarget`]), so an `int` is the size it is
   there.  The code in `#ifdef __W65C816__` is what Find Usages and Rename see; the `#ifdef _WIN32` beside it
   isn't indexed.

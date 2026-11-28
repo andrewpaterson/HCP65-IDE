@@ -1,0 +1,25 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!-- TestWorkspaceIndexRuntime: a library with a compile option of its own, which the program hasn't. -->
+<Project DefaultTargets="Build" ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{B0000000-0000-0000-0000-0000000C5002}</ProjectGuid>
+    <RootNamespace>Own</RootNamespace>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Platform)'=='HCP65C816'">
+    <HCP65Compile>
+      <WarnStringToPointer>true</WarnStringToPointer>
+    </HCP65Compile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="Own.cpp" />
+  </ItemGroup>
+</Project>

@@ -1,4 +1,5 @@
 #include <string.h>
+#include "BaseLib/FileUtil.h"
 #include "BaseLib/StringHelper.h"
 #include "BuildLib/BuildWorkspace.h"
 #include "IndexLib/WorkspaceIndex.h"
@@ -8,6 +9,8 @@
 #define TEST_WORKSPACE_INDEX_SAMPLE		"Input" _FS_ "Sample" _FS_ "Sample.sln"
 #define TEST_WORKSPACE_INDEX_TARGET		"Input" _FS_ "Target" _FS_ "Target.sln"
 #define TEST_WORKSPACE_INDEX_LIBC65		"Input" _FS_ "Target" _FS_ "Libc65"
+#define TEST_WORKSPACE_INDEX_RUNTIME		"Input" _FS_ "Runtime" _FS_ "Runtime.sln"
+#define TEST_WORKSPACE_INDEX_NO_RUNTIME	"Input" _FS_ "Runtime" _FS_ "NoRuntime.sln"
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -245,6 +248,89 @@ void TestWorkspaceIndexTarget(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Whether the workspace's unit szFile is checked with the compiler's
+// warning of a string given to a pointer: one of the options a project
+// may have of its own.
+//
+//////////////////////////////////////////////////////////////////////////
+static bool TestWorkspaceIndexWarnsStringToPointer(CWorkspaceIndex* pcIndex, const char* szFile)
+{
+	CParsedUnit	cUnit;
+	CChars		szFileName;
+	CChars		szErrors;
+	CFileUtil	cFileUtil;
+	size		uiProject;
+	bool		bWarns;
+
+	szFileName.Init("Input" _FS_ "Runtime" _FS_);
+	szFileName.Append(szFile);
+	cFileUtil.FullPath(&szFileName);
+	szErrors.Init();
+	cUnit.Init();
+	uiProject = pcIndex->FindItemProject(szFileName.Text());
+	bWarns = (uiProject != MAX_SIZE) && pcIndex->ParseUnit(uiProject, szFileName.Text(), NULL, &cUnit, &szErrors) && cUnit.mcOptions.mbWarnStringToPointer;
+	cUnit.Kill();
+	szErrors.Kill();
+	szFileName.Kill();
+	return bWarns;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A solution read with an HCP65 configuration has the system headers its
+// build has (ConfigurationsPlan.txt C4-7, C5): those of the project
+// called Libc65 that the configuration's rows build, and that project's
+// include directories, with no directory handed to the index.  One whose
+// rows build no Libc65 has the directory handed, or none.  And a unit is
+// checked with its project's own compile options where it has any, not
+// only the program's.
+//
+//////////////////////////////////////////////////////////////////////////
+void TestWorkspaceIndexRuntime(void)
+{
+	CBuildWorkspace		cWorkspace;
+	CWorkspaceIndex		cIndex;
+	CArrayChars			aszProblems;
+
+	cWorkspace.Init();
+	AssertTrue(cWorkspace.Open(TEST_WORKSPACE_INDEX_RUNTIME));
+	cIndex.Init(&cWorkspace);
+	cIndex.SetConfiguration("Release|HCP65C816");
+	cIndex.StartIndexing();
+	cIndex.WaitForIndexing();
+	aszProblems.Init();
+	cIndex.TakeIndexingProblems(&aszProblems);
+	AssertSize(0, aszProblems.NumElements());
+	aszProblems.Kill();
+	AssertNotNull(cIndex.GetIndex()->FindSymbol("SFromRows"));
+	AssertNotNull(cIndex.GetIndex()->FindSymbol("SSharedByRuntime"));
+	AssertNotNull(cIndex.GetIndex()->FindSymbol("UsesRows(SFromRows*, SSharedByRuntime*)"));
+
+	AssertFalse(TestWorkspaceIndexWarnsStringToPointer(&cIndex, "Program.cpp"));
+	AssertTrue(TestWorkspaceIndexWarnsStringToPointer(&cIndex, "Own.cpp"));
+	cIndex.Kill();
+	cWorkspace.Kill();
+
+	//Its rows build no Libc65: nothing says where the system headers are.
+	cWorkspace.Init();
+	AssertTrue(cWorkspace.Open(TEST_WORKSPACE_INDEX_NO_RUNTIME));
+	cIndex.Init(&cWorkspace);
+	cIndex.SetConfiguration("Release|HCP65C816");
+	cIndex.StartIndexing();
+	cIndex.WaitForIndexing();
+	aszProblems.Init();
+	cIndex.TakeIndexingProblems(&aszProblems);
+	AssertTrue(aszProblems.NumElements() > 0);
+	aszProblems.Kill();
+	AssertNull(cIndex.GetIndex()->FindSymbol("SFromRows"));
+	cIndex.Kill();
+	cWorkspace.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // Which files are indexed: C and C++, whatever the case of the extension.
 //
 //////////////////////////////////////////////////////////////////////////
@@ -273,6 +359,7 @@ void TestWorkspaceIndex(void)
 	TestWorkspaceIndexSample();
 	TestWorkspaceIndexConfiguration();
 	TestWorkspaceIndexTarget();
+	TestWorkspaceIndexRuntime();
 
 	TestStatistics();
 }

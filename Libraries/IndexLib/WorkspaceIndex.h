@@ -103,7 +103,7 @@ protected:
 	CArrayChars					maszSystemDirectories;	//Where the compiler's own headers are ($(IncludePath)).
 	bool						mbSystemDirectoriesMissing;	//Some that are needed aren't on this machine.
 	CArrayChars					maszGCCDirectories;		//GCC's own headers for Linux, a GCC configuration's (none on Windows).
-	CChars						mszLibc65;				//The HCP65 compiler's own headers (SetLibc65Directory), empty if it wasn't said.
+	CChars						mszLibc65;				//The HCP65 compiler's own headers (SetLibc65Directory), empty if it wasn't said: for a solution that builds no Libc65.
 
 	CArrayWorkspaceProjects		mapcProjects;			//A CppCompilerLib project for each of the workspace's, NULL until used.
 	CPPHeaderCache				mcHeaderCache;			//Headers' preprocessed output, kept for all the units.
@@ -193,6 +193,8 @@ protected:
 	void					AddGCCDefines(CConfig* pcConfig);
 	void					AddTargetDefines(size uiProject, CVcxConfiguration* pcConfiguration, CConfig* pcConfig);
 	CBuildConfiguration*	FindProjectBuildConfiguration(size uiProject);
+	bool					AddLibc65(size uiProject, CBuildConfiguration* pcBuild, CProject* pcProject);
+	void					SetOwnOptions(size uiProject, CCPPCompileOptions* pcOptions);
 	void					KillProjects(void);
 	void					KillJobs(void);
 	void					StopJobs(void);
