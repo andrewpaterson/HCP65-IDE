@@ -1138,3 +1138,16 @@ Questions (the user's, one at a time)
    - The breakpoint space isn't in the dialog: none of the 40 run configurations overrides it, and it stays a
      setting of the file.  The other considered: a drop-down of (worked out), Kernel and User.
    WindowLib can't grey out or hide a component, so the rows are there for every run configuration.
+30. Decided (the user, 2026-11-28: "1. -> A"): Edit Build Configurations is one page with two sections, the whole
+   program's options (the startup project's) and one project's own, chosen from a drop-down, each option with where
+   its value comes from beside it: the project's file, a sheet's with how many projects share it, or the default.
+   The others considered: two tabs; a table of value, source and "set here".
+31. Decided (the user, 2026-11-28: "Add a Rebuild all and then also Build which does an up to date check"): the IDE's
+   GCC build, which compiled every file every time, checks what is up to date.  Build compiles a file only if it, a
+   header it includes or its command line has changed since its object was made, and archives and links only what
+   that changes; Rebuild All compiles everything, as Build did.  Found when C13-4 (objects shared between Release and
+   Reference) turned out to have nothing to save without it.  The others considered: leaving it and dropping C13-4;
+   only compiling on all the cores (not asked for, and still worth doing later).
+32. Decided (the user, 2026-11-28: "3. -> A"): HCP65Emulator and HCP65Sculpt get Reference|GCC-x64 only (C13-5).
+   Their reference programs have only been built on Linux, and a Windows one could be compiled under Wine but not
+   run.  Reference|x64 for them waits for a Windows machine.
