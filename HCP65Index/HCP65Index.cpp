@@ -39,17 +39,80 @@ along with Codaphela HCP65Index.  If not, see <http://www.gnu.org/licenses/>.
 #define HCP65_INDEX_EXIT_USAGE		2
 
 
+//The solutions' index, which with -progress says on stderr each unit it has indexed, relative to -root.
+class CHCP65Index : public CWorkspaceIndex
+{
+protected:
+	const char*		mszRoot;
+	size			muiRootLength;
+	bool			mbProgress;
+
+public:
+	void			SetProgress(const char* szRoot, bool bProgress);
+
+protected:
+	void			UnitIndexed(const char* szFileName, size uiIndexed, size uiToIndex) override;
+};
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// With bProgress each unit indexed is printed, its file relative to
+// szRoot when it is under it.
+//
+//////////////////////////////////////////////////////////////////////////
+void CHCP65Index::SetProgress(const char* szRoot, bool bProgress)
+{
+	mszRoot = szRoot;
+	muiRootLength = StrLen(szRoot);
+	mbProgress = bProgress;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// "hcp65index: indexed 412 of 1830: CommonLibraries/.../Chars.cpp", on
+// stderr so stdout stays the summary and the problems.
+//
+//////////////////////////////////////////////////////////////////////////
+void CHCP65Index::UnitIndexed(const char* szFileName, size uiIndexed, size uiToIndex)
+{
+	const char*		szShown;
+
+	if (!mbProgress)
+	{
+		return;
+	}
+
+	szShown = szFileName;
+	if ((muiRootLength > 0) && (memcmp(szFileName, mszRoot, muiRootLength) == 0))
+	{
+		if ((szFileName[muiRootLength] == '/') || (szFileName[muiRootLength] == '\\'))
+		{
+			szShown = &szFileName[muiRootLength + 1];
+		}
+		else if ((mszRoot[muiRootLength - 1] == '/') || (mszRoot[muiRootLength - 1] == '\\'))
+		{
+			szShown = &szFileName[muiRootLength];
+		}
+	}
+	fprintf(stderr, "hcp65index: indexed %d of %d: %s\n", (int)uiIndexed, (int)uiToIndex, szShown);
+	fflush(stderr);
+}
+
+
 //////////////////////////////////////////////////////////////////////////
 //
 //
 //////////////////////////////////////////////////////////////////////////
 static void PrintUsage(void)
 {
-	printf("hcp65index -root <folder> -out <file> [-problems] [-config <name>] [-libc65 <directory>] <solution.sln>...\n");
+	printf("hcp65index -root <folder> -out <file> [-problems] [-progress] [-config <name>] [-libc65 <directory>] <solution.sln>...\n");
 	printf("  Indexes the solutions' C++ together, as the IDE does (in the build configuration -config names, \"Release|GCC-x64\",\n");
 	printf("  else each solution's first), and writes the\n");
 	printf("  symbol table: one line a symbol, <key> TAB <kind> TAB <file> TAB <line>, the file relative to -root.\n");
 	printf("  Only symbols declared under -root are written.  -problems lists what the units couldn't include.\n");
+	printf("  -progress prints each unit to stderr as it is indexed: \"hcp65index: indexed 412 of 1830: <file>\".\n");
 	printf("  A solution whose configuration is the W65C816's or the 65C64's is indexed as hcp65build compiles it, with\n");
 	printf("  Libc65's headers: those of the Libc65 project its configuration builds; if it builds none, -libc65's, or\n");
 	printf("  HCP65\\Libraries\\Libc65 found above the first solution.\n");
@@ -136,10 +199,10 @@ static void InitIndex(CWorkspaceIndex* pcIndex, CBuildWorkspace* pcWorkspace, co
 // references to code (HCP65/Website/DocsPlan.txt D1).
 //
 //////////////////////////////////////////////////////////////////////////
-static int IndexSolutions(const char* szRoot, const char* szOut, const char* szConfiguration, const char* szLibc65, CArrayChars* paszSolutions, bool bProblems)
+static int IndexSolutions(const char* szRoot, const char* szOut, const char* szConfiguration, const char* szLibc65, CArrayChars* paszSolutions, bool bProblems, bool bProgress)
 {
 	CBuildWorkspace		cWorkspace;
-	CWorkspaceIndex		cIndex;
+	CHCP65Index			cIndex;
 	CSymbolTable		cTable;
 	CArrayChars			aszProblems;
 	size				i;
@@ -152,6 +215,7 @@ static int IndexSolutions(const char* szRoot, const char* szOut, const char* szC
 	if (iResult == HCP65_INDEX_EXIT_OK)
 	{
 		InitIndex(&cIndex, &cWorkspace, szConfiguration, szLibc65, paszSolutions);
+		cIndex.SetProgress(szRoot, bProgress);
 		if (cIndex.IsMissingSystemDirectories())
 		{
 			fprintf(stderr, "hcp65index: warning: some of the compiler's own headers aren't on this machine.\n");
@@ -338,6 +402,7 @@ int __cdecl main(int argc, char* argv[])
 	const char*		szLibc65;
 	const char*		szConfiguration;
 	bool			bProblems;
+	bool			bProgress;
 	bool			bUsage;
 	int				i;
 	int				iResult;
@@ -353,6 +418,7 @@ int __cdecl main(int argc, char* argv[])
 	szLibc65 = NULL;
 	szConfiguration = NULL;
 	bProblems = false;
+	bProgress = false;
 	bUsage = false;
 	bExamples = false;
 	bPages = false;
@@ -388,6 +454,10 @@ int __cdecl main(int argc, char* argv[])
 		{
 			bProblems = true;
 		}
+		else if (StringCompare(argv[i], "-progress") == 0)
+		{
+			bProgress = true;
+		}
 		else if (StringCompare(argv[i], "-examples") == 0)
 		{
 			bExamples = true;
@@ -420,7 +490,7 @@ int __cdecl main(int argc, char* argv[])
 	}
 	else if (!bUsage && !bExamples && !bPages && (szTable == NULL) && (szFiles == NULL) && (szRoot != NULL) && (szOut != NULL) && (aszArguments.NumElements() > 0))
 	{
-		iResult = IndexSolutions(szRoot, szOut, szConfiguration, szLibc65, &aszArguments, bProblems);
+		iResult = IndexSolutions(szRoot, szOut, szConfiguration, szLibc65, &aszArguments, bProblems, bProgress);
 	}
 	else
 	{

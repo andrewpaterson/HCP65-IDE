@@ -777,6 +777,8 @@ void CWorkspaceIndex::IndexUnit(SWorkspaceIndexJob* psJob)
 	int32*					piJob;
 	bool					bAdded;
 	bool					bLast;
+	size					uiIndexed;
+	size					uiToIndex;
 
 	mcIndexMutex.Lock();
 	bCancelled = mbCancelled;
@@ -830,8 +832,12 @@ void CWorkspaceIndex::IndexUnit(SWorkspaceIndexJob* psJob)
 		}
 	}
 	muiIndexed++;
-	bLast = muiIndexed == mapsJobs.NumElements();
+	uiIndexed = muiIndexed;
+	uiToIndex = mapsJobs.NumElements();
+	bLast = uiIndexed == uiToIndex;
 	mcIndexMutex.Unlock();
+
+	UnitIndexed(psJob->szFileName.Text(), uiIndexed, uiToIndex);
 
 	//The last unit's thread resolves the pages' references, with all the C++ indexed.
 	if (bLast)
@@ -846,6 +852,19 @@ void CWorkspaceIndex::IndexUnit(SWorkspaceIndexJob* psJob)
 	aszErrors.Kill();
 	cGathered.Kill();
 	szErrors.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
+// A unit is indexed, uiIndexed of the uiToIndex being: called on its
+// worker thread, after the index's mutex is released.  Nothing is done
+// with it here; a program can say what is being indexed (hcp65index
+// -progress).
+//
+//////////////////////////////////////////////////////////////////////////
+void CWorkspaceIndex::UnitIndexed(const char* szFileName, size uiIndexed, size uiToIndex)
+{
 }
 
 

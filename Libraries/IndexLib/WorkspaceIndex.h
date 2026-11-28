@@ -182,6 +182,7 @@ public:
 
 protected:
 	virtual void			WaitForProjectUsers(bool bForget);
+	virtual void			UnitIndexed(const char* szFileName, size uiIndexed, size uiToIndex);
 	void					GatherUnit(CParsedUnit* pcUnit, CCPPIndexUnit* pcDest, CCPPIndexedFiles* pcIndexed);
 	SWorkspaceIndexJob*		FindIncluder(const char* szFileName);
 	CTranslationUnit*		AddUnit(size uiProject, const char* szFileName);
