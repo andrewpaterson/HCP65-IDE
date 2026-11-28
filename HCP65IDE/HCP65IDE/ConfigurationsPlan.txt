@@ -891,6 +891,34 @@ C6, and not before C12-1: a CMake Debug run with the defines and no switch ends 
 C13 after C6 and C10 (C13-3 only with the solution's rows); C13-5 after C13-1 to C13-4 have worked for HCP65IDE.
 
 
+Verification still owed (gathered 2026-11-28; the user: "Please add the verification gaps into the plan")
+--------------------------------------------------------------------------------------------------------
+What was built and reported without one of its checks being run.  Each can be run here; none needs Windows.
+V1. The 65 suites' second pass.  TestBaseLib65, TestStandardLib65, TestSupportLib65 and TestLibc65 are each run
+    twice, with no argument (the 65C64) and with "816" (the W65C816).  After their CMakeLists.txt were made to read
+    their solutions (C13-3, The other CMakeLists.txt) ctest ran the first pass only: all four passed.  Their compile
+    commands are as they were and they link the libraries they did, so the second pass is expected to pass; it
+    wasn't run.
+V2. The three programs' Debug builds.  HCP65IDE, HCP65Emulator and HCP65Sculpt were configured in Debug and Release
+    with the module as it is now, not built: their Release commands are unchanged, and in Debug StandardLib's 133
+    sources gain DEBUG_POINTER, which the projects' Debug|GCC-x64 group now says (C13-3, DEBUG_POINTER).  A Debug
+    build of each, and the IDE's checks on a Debug HCP65IDERef, would show PointerObject.h's logging does no harm
+    there.
+V3. MSBuild reading what Edit Build Configurations wrote (C9, stages 2 and 3).  The tags and values are Visual
+    Studio's own and the writers are tested byte for byte, but no MSVC build has been given a file the dialog
+    changed: the fixtures aren't projects MSBuild builds.  To do: a copy of a real solution, a setting and a property
+    changed through the dialog (a scripted run), built by MSBuild under Wine.
+V4. TestHCP65Lib after C5 and C9's stages.  It ran once after the CMakeLists.txt conversions (2,824 passed).
+    Nothing since touches what it compiles but VisualStudioLib and BuildLib, which it doesn't link; it wasn't run
+    again.
+How each was found to be owed: the closing reports of 2026-11-28 listed them as not checked.  One run that was
+reported as passing and hadn't: the IDE check indexing-full-paths, whose expected path still named the fixtures'
+old folder after CopyWorkspace moved them; it is corrected and passes.
+The website build (the pages' references to code) must be run in a memory-capped scope on a machine of this size:
+hcp65index over its five solutions peaks above 5.3 GB, with or without C5's change (each solution alone is 1.1 to
+3.5 GB, measured before and after it).  systemd-run --user --scope -p MemoryMax=5000M -p MemorySwapMax=3000M
+finishes it in three and a half minutes.
+
 Windows trials (the user's: there is no Windows here; gathered 2026-11-27)
 ---------------------------------------------------------------------------
 
