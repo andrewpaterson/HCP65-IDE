@@ -10,12 +10,15 @@ parses the files as that build configuration's solution configuration builds the
 ## Build configurations
 
 A build configuration is one way a solution is built: a name, a **toolchain**, and the Visual Studio
-solution configuration ("Release|Win32") whose projects' files, include directories and defines it builds
+solution configuration ("Release|MSVC-x86") whose projects' files, include directories and defines it builds
 with.  Its name is its configuration and platform either side of a `|`, as Visual Studio names them:
 `Release|HCP65C816`.  Each toolchain has a platform of its own: `HCP65C816` and `HCP65C64` for the HCP65 compiler,
-`GCC-x64` for GCC; an MSVC configuration has the solution's (`Release|x64`).  A name with a platform these once had
-(`Release|W65C816`, `Release|65C64`, `Release|GCC`) is still read, as the name it has now, in a
-workspace file and `hcp65build -config`.  A configuration's files are in folders named for it:
+`GCC-x64` for GCC; an MSVC configuration has the solution's.  A solution's platforms are names of its own, and
+these solutions call Visual Studio's `MSVC-x86` and `MSVC-x64`, each building its projects' `Win32` or `x64`
+configurations, which keep those names; a solution that calls them `Win32` and `x64`, as Visual Studio does
+itself, is read the same.  A name with a platform these once had (`Release|W65C816`, `Release|65C64`,
+`Release|GCC`, and `Release|x64` where the solution now says `Release|MSVC-x64`) is still read, as the name it
+has now, in a workspace file and `hcp65build -config`.  A configuration's files are in folders named for it:
 `Output\HCP65C816\Release\`.
 
 | Toolchain | What builds it |
