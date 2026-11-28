@@ -43,6 +43,7 @@
     <ClInclude Include="BuildConfigurations.h" />
     <ClInclude Include="BuildUpToDate.h" />
     <ClInclude Include="BuildOptionEdits.h" />
+    <ClInclude Include="BuildOptionsMSVC.inc" />
     <ClInclude Include="BuildWorkspace.h" />
     <ClInclude Include="RunConfiguration.h" />
     <ClInclude Include="Build.h" />
@@ -54,6 +55,9 @@
     <ClInclude Include="SolutionBuild.h" />
     <ClInclude Include="BuildCommandLine.h" />
     <ClInclude Include="BuildPlain.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="MakeMSVCOptions.py" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{6B2E1C9A-4D3F-4E5B-9A21-7C8D0E4F1A63}</ProjectGuid>

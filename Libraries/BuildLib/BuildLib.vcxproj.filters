@@ -89,6 +89,9 @@
     <ClInclude Include="BuildUpToDate.h">
       <Filter>Source\Build</Filter>
     </ClInclude>
+    <ClInclude Include="BuildOptionsMSVC.inc">
+      <Filter>Source\Build</Filter>
+    </ClInclude>
     <ClInclude Include="BuildOptionEdits.h">
       <Filter>Source\Build</Filter>
     </ClInclude>
@@ -113,5 +116,10 @@
     <ClInclude Include="BuildPlain.h">
       <Filter>Source\Build</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="MakeMSVCOptions.py">
+      <Filter>Source\Build</Filter>
+    </None>
   </ItemGroup>
 </Project>
