@@ -1173,3 +1173,11 @@ Questions (the user's, one at a time)
    Reference|GCC-x64 row and would be built with its window main.  The two projects get Reference|x64, compiled under
    Wine and not run.  The others considered: a rule of the IDE's that a project whose own file names the solution
    configuration on the toolchain's platform is built as that; rows naming Reference|GCC-x64 itself.
+33. Decided (the user, 2026-11-28: "33 -> A"): how a sheet's value is overridden in one project, and how to go back
+   (C9-2).  Where an option's value comes from, beside it (question 30), is a drop-down: "This project", the sheet
+   with how many projects share it, and "Default".  A changed value is written to what the drop-down shows, so a
+   sheet's changes every project that takes it; choosing "This project" writes the value in the project, over the
+   sheet's, and choosing the sheet again takes the project's line away.  The others considered: Visual Studio's way
+   (an edit is always the project's, a "Use the sheet's" button removes it, a sheet is edited only in its file),
+   which takes back part of question 5; a label with two buttons, Override Here and Use the Sheet's, both always
+   there as WindowLib can't grey one out.
