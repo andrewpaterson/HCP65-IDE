@@ -15,6 +15,38 @@ compiler's own type checking.
 It runs on Windows (`HCP65IDE.exe`) and Linux (`HCP65IDE`).  The source is in
 `HCP65-IDE/HCP65IDE`.
 
+## Building and running it on Linux
+
+Build it as Release with CMake, from the folder that holds `HCP65-IDE`:
+
+```bash
+cmake -S HCP65-IDE/HCP65IDE -B build/HCP65IDERelease -DCMAKE_BUILD_TYPE=Release
+cmake --build build/HCP65IDERelease -j16
+```
+
+That builds `HCP65IDE` (the IDE) and its command line tools, `hcp65build` and `hcp65index`, in
+`build/HCP65IDERelease`.  The IDE is 64 bit only.
+
+Run it from `HCP65-IDE/HCP65IDE/HCP65IDE`, so that the files it finds beside itself are found:
+
+```bash
+cd HCP65-IDE/HCP65IDE/HCP65IDE
+../../../build/HCP65IDERelease/HCP65IDE
+```
+
+With no argument it opens the solution that was open when it was last closed; a `.sln` or `.vcxproj`
+argument opens that instead (see [Solutions](solutions.md)).
+
+The code index needs MinGW's headers, which stand in for the Windows SDK's on Linux.  Install them with:
+
+```bash
+sudo apt install g++-mingw-w64-x86-64-win32 mingw-w64-common
+```
+
+Without them almost nothing parses: Go to Source, Find Usages and Rename are dim or find nothing, and
+when a solution opens the status line says "MinGW's headers weren't found, so code navigation won't
+work".
+
 ## The window
 
 ```text
