@@ -579,14 +579,32 @@ C9. Edit Build Configurations writes the projects and sheets
     and g++'s the additional include directories.  An option is found by its name and kind (FindBuildOption: the
     three toolchains each have a ClCompile.PreprocessorDefinitions).  TestBuildOptionEditsMSVC; the IDE check
     build-options-msvc.
-    - Not done: IncludePath.  It is a property (a PropertyGroup's), which SetVcxSetting doesn't write and
-      CVcxConfiguration keeps no sources of: it goes with the project's other properties in stage 3.
     - Not checked by a build: that MSBuild reads a value the dialog wrote.  The tags and values are Visual Studio's
       own and the writer is the one the HCP65 lines use, but the fixtures aren't projects MSBuild builds.
-    Stage 3, to do: the project's properties (IncludePath, LibraryPath, ConfigurationType, CharacterSet,
-    PlatformToolset, WholeProgramOptimization, LinkIncremental, TargetName), which need VisualStudioLib to write a
-    PropertyGroup's property in place and keep where each came from; then the rest of MSVC's property pages, a section
-    at a time (Language, Advanced, Linker Input, ...), as rows of the table.
+    Stage 3, built 2026-11-28 (the user: "Carry on with stage 3"), its second half first: every setting of Visual
+    Studio's compiler, linker and librarian pages.  Visual Studio describes its own pages in cl.xml, link.xml and
+    lib.xml (MSBuild/Microsoft/VC/v160/1033), and BuildLib/MakeMSVCOptions.py writes the rows from them
+    (BuildOptionsMSVC.inc, committed, 201 settings; stage 2's 42 by hand are replaced): each one's tag, the name and
+    category its page gives it, and its values.  A setting the pages don't show, or keep as a property of the project
+    (LinkIncremental), is left out and listed at the top of the file.  The sections are the pages' categories
+    ("C/C++: Optimization"), 22 of them; they start folded and a heading says how many of its settings something
+    says (CBuildOptionEdits::IsSet), and a folded section's rows aren't kept up.
+    Stage 3's first half, built 2026-11-28: the project's properties.  VSL/VcxPropertySetting sets a PropertyGroup's
+    property in place as SetVcxSetting sets a tool's (SetVcxProperty): one said by its own Condition or its group's
+    is changed where it is, and one that isn't is added with a Condition of its own in the file's plain group, made
+    if there is none, or for a configuration's own (its type, toolset, character set) in the group labelled
+    Configuration for it, which must be there.  A configuration keeps where every property was said, not only a
+    tool's settings (CVcxProject::SetProperty), as the file writes it, and a toolchain's configuration has its base's
+    sources where it has its base's value (CVcxConfiguration::GetSources).  The rows (SBuildOption::szTool "" or
+    "Configuration"), in the MSVC page's Project section: ConfigurationType, PlatformToolset, CharacterSet,
+    WholeProgramOptimization, TargetName, OutDir, IntDir, LinkIncremental, IncludePath, LibraryPath, ExecutablePath;
+    and IncludePath on the HCP65 and GCC pages.  A configuration's own has no line for the platform.  An HCP65 or GCC
+    configuration's include directories are its base's, so those rows show and write the base's lines
+    ("This project, every Win32 configuration").  TestVcxPropertySetting (Input/Property), and in
+    TestBuildOptionEditsMSVC and GCC.
+    - Left: the properties general.xml and directories.xml describe that no project here sets (the Windows SDK
+      version, the language standard as a property, the reference and source directories); the other tools' pages
+      (the resource compiler, MIDL, the manifest tool, build events, custom build steps).
 
 
 C10. What a GCC build on Linux builds: the platforms' own projects and files (added 2026-11-27)
