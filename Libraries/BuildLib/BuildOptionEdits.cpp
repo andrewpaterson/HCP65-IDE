@@ -272,6 +272,7 @@ void CBuildProjectOptionEdits::Init(void)
 	mszGuid.Init();
 	mszRow.Init();
 	mszConfiguration.Init();
+	mszPlatform.Init();
 	mbStartup = false;
 	masOptions.Init();
 }
@@ -286,6 +287,7 @@ void CBuildProjectOptionEdits::Kill(void)
 		masOptions.Get(i)->Kill();
 	}
 	masOptions.Kill();
+	mszPlatform.Kill();
 	mszConfiguration.Kill();
 	mszRow.Kill();
 	mszGuid.Kill();
@@ -491,10 +493,12 @@ void CBuildOptionEdits::ReadProject(CBuildConfigurationOptionEdits* pcConfigurat
 	if (pcProjectConfiguration)
 	{
 		pcProject->mszConfiguration.Set(pcProjectConfiguration->GetConfiguration());
+		pcProject->mszPlatform.Set(pcProjectConfiguration->GetPlatform());
 	}
 	else
 	{
 		GetConfigurationPart(szRow, &pcProject->mszConfiguration);
+		pcProject->mszPlatform.Set(pcConfiguration->mszPlatform);
 	}
 	pcProject->mbStartup = mszStartupProject.Equals(pcSolutionProject->GetName());
 	if (pcProject->mbStartup)
@@ -542,7 +546,7 @@ void CBuildOptionEdits::ReadOption(CBuildConfigurationOptionEdits* pcConfigurati
 
 	//A toolchain's configuration has the include directories of the one it is read beside (CVcxConfiguration::
 	//GetProperty), Release|Win32's for Release|HCP65C816: those lines are the ones to show and to write.
-	szPlatform = pcConfiguration->mszPlatform.Text();
+	szPlatform = pcProject->mszPlatform.Text();
 	if (((strcmp(psOption->szName, "IncludePath") == 0) || (strcmp(psOption->szName, "AdditionalIncludeDirectories") == 0)) && GetVcxToolchainBasePlatform(szPlatform))
 	{
 		szPlatform = GetVcxToolchainBasePlatform(szPlatform);

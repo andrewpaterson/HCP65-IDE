@@ -3,6 +3,7 @@
 #include "BaseLib/TextFile.h"
 #include "BaseLib/Logger.h"
 #include "BuildLib/BuildWorkspace.h"
+#include "VisualStudioLib/VcxSolutionRows.h"
 #include "TestLib/Assert.h"
 
 
@@ -860,6 +861,69 @@ void TestBuildWorkspaceSharedRunConfigurations(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// A workspace written while its solution's platforms were Visual Studio's
+// own (Debug|x64, Release|x64), read after they were renamed MSVC-x64
+// (ConfigurationsPlan.txt C11-2, C11-3): the configuration it had chosen,
+// the run configurations named after the build configurations and the
+// one of the user's own that builds one all have the names the solution
+// has now, none is repeated, and it is written with them.
+//
+//////////////////////////////////////////////////////////////////////////
+void TestBuildWorkspaceRenamedPlatforms(void)
+{
+	CBuildWorkspace		cWorkspace;
+	CBuildWorkspace		cRead;
+	CFileUtil			cFileUtil;
+	CTextFile			cFile;
+	size				uiRuns;
+
+#define TEST_RENAMED_DIRECTORY	"Output" _FS_ "Renamed"
+#define TEST_RENAMED_SOLUTION	TEST_RENAMED_DIRECTORY _FS_ "Program.sln"
+#define TEST_RENAMED_WORKSPACE	TEST_RENAMED_DIRECTORY _FS_ "Renamed" BUILD_WORKSPACE_EXTENSION
+	cFileUtil.RemoveDir(TEST_RENAMED_DIRECTORY);
+	AssertTrue(cFileUtil.TouchDir(TEST_RENAMED_DIRECTORY));
+	AssertTrue(cFileUtil.CopyDir("Input" _FS_ "OptionsGCC", TEST_RENAMED_DIRECTORY));
+
+	cWorkspace.Init();
+	AssertTrue(cWorkspace.Open(TEST_RENAMED_SOLUTION));
+	cWorkspace.AddDefaultRunConfigurations();
+	uiRuns = cWorkspace.NumRunConfigurations();
+	AssertNotNull(cWorkspace.FindRunConfiguration("Release|x64"));
+	cWorkspace.AddRunConfiguration("Mine", "Debug|x64");
+	cWorkspace.SetConfiguration("Release|x64");
+	cWorkspace.SetRunConfigurationName("Release|x64");
+	AssertTrue(cWorkspace.Write(TEST_RENAMED_WORKSPACE));
+	cWorkspace.Kill();
+
+	AssertTrue(RenameVcxSolutionConfiguration(TEST_RENAMED_SOLUTION, "Debug|x64", "Debug|MSVC-x64"));
+	AssertTrue(RenameVcxSolutionConfiguration(TEST_RENAMED_SOLUTION, "Release|x64", "Release|MSVC-x64"));
+
+	cRead.Init();
+	AssertTrue(cRead.Open(TEST_RENAMED_WORKSPACE));
+	cRead.AddDefaultRunConfigurations();
+	AssertString("Release|MSVC-x64", cRead.GetConfiguration());
+	AssertString("Release|MSVC-x64", cRead.GetRunConfigurationName());
+	AssertSize(uiRuns + 1, cRead.NumRunConfigurations());
+	AssertNull(cRead.FindRunConfiguration("Release|x64"));
+	AssertNull(cRead.FindRunConfiguration("Debug|x64"));
+	AssertNotNull(cRead.FindRunConfiguration("Release|MSVC-x64"));
+	AssertString("Release|MSVC-x64", cRead.FindRunConfiguration("Release|MSVC-x64")->GetConfiguration());
+	AssertString("Debug|MSVC-x64", cRead.FindRunConfiguration("Mine")->GetConfiguration());
+	AssertString("Debug|GCC-x64", cRead.FindRunConfiguration("Debug|GCC-x64")->GetConfiguration());
+	AssertTrue(cRead.Write(TEST_RENAMED_WORKSPACE));
+	cRead.Kill();
+
+	cFile.Init();
+	AssertTrue(cFile.Read(TEST_RENAMED_WORKSPACE));
+	AssertTrue(strstr(cFile.Text(), "Release|MSVC-x64") != NULL);
+	AssertTrue(strstr(cFile.Text(), "|x64\"") == NULL);
+	cFile.Kill();
+	cFileUtil.RemoveDir(TEST_RENAMED_DIRECTORY);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 //
 //////////////////////////////////////////////////////////////////////////
 void TestBuildWorkspace(void)
@@ -872,6 +936,7 @@ void TestBuildWorkspace(void)
 	TestBuildWorkspaceImages();
 	TestBuildWorkspaceFile();
 	TestBuildWorkspaceRunConfigurations();
+	TestBuildWorkspaceRenamedPlatforms();
 	TestBuildWorkspaceStartupProject();
 	TestBuildWorkspaceProjectLinked();
 	TestBuildWorkspaceSharedRunConfigurations();

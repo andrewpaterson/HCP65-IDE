@@ -72,9 +72,9 @@ void CBuildConfigurations::Clear(void)
 // ("Debug|Win32") MSVC's.  A solution that lists a toolchain's has said
 // what it builds, and that is all.  One that lists none is given each
 // toolchain's for each configuration name ("Debug"), in the order they
-// first come: the W65C816's and the 65C64's ("Debug|HCP65C816") from its
-// Win32 platform, and GCC's from its x64 one (or its first, if it hasn't
-// those).
+// first come: the W65C816's and the 65C64's ("Debug|HCP65C816") from the
+// one that builds its projects' Win32, and GCC's from the one that builds
+// their x64 (or its first, if it hasn't those).
 //
 //////////////////////////////////////////////////////////////////////////
 void CBuildConfigurations::AddDefaults(CVcxSolution* pcSolution)
@@ -127,9 +127,42 @@ void CBuildConfigurations::AddDefaults(CVcxSolution* pcSolution)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// Whether a solution configuration is szPlatform's ("Win32"): by its own
+// name (Debug|Win32), or, a solution's platforms being names of its own
+// (Debug|MSVC-x86: ConfigurationsPlan.txt C11-2), by the platform of the
+// project configuration its first project's row names (Debug|Win32).
+//
+//////////////////////////////////////////////////////////////////////////
+static bool IsSolutionConfigurationOfPlatform(CVcxSolution* pcSolution, const char* szSolutionConfiguration, const char* szPlatform)
+{
+	CVcxSolutionProjectConfiguration*	pcRow;
+	const char*							szBar;
+	size								i;
+
+	szBar = strchr(szSolutionConfiguration, '|');
+	if (szBar && (StringInsensitiveCompare(szBar + 1, szPlatform) == 0))
+	{
+		return true;
+	}
+	for (i = 0; i < pcSolution->NumProjects(); i++)
+	{
+		pcRow = pcSolution->GetProject(i)->IsVcxProject() ? pcSolution->GetProject(i)->FindConfiguration(szSolutionConfiguration) : NULL;
+		if (pcRow != NULL)
+		{
+			szBar = strchr(pcRow->GetProjectConfiguration(), '|');
+			return szBar && (StringInsensitiveCompare(szBar + 1, szPlatform) == 0);
+		}
+	}
+	return false;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // szConfiguration|<toolchain> ("Debug|HCP65C816") built from the solution
-// configuration szConfiguration|szPlatform if it has it, otherwise its
-// first with szConfiguration.
+// configuration of that configuration that is szPlatform's
+// (IsSolutionConfigurationOfPlatform) if it has one, otherwise its first
+// with szConfiguration.
 //
 //////////////////////////////////////////////////////////////////////////
 void CBuildConfigurations::AddDefault(CVcxSolution* pcSolution, const char* szConfiguration, EBuildToolchain eToolchain, const char* szPlatform)
@@ -148,16 +181,20 @@ void CBuildConfigurations::AddDefault(CVcxSolution* pcSolution, const char* szCo
 	for (i = 0; i < pcSolution->NumConfigurations(); i++)
 	{
 		szSolutionConfiguration = pcSolution->GetConfiguration(i);
-		if (StringInsensitiveCompare(szSolutionConfiguration, szWanted.Text()) == 0)
-		{
-			szBase = szSolutionConfiguration;
-			break;
-		}
 		szOther.Init();
 		GetConfigurationName(szSolutionConfiguration, &szOther);
-		if (!szBase && szOther.Equals(szConfiguration))
+		if (szOther.Equals(szConfiguration))
 		{
-			szBase = szSolutionConfiguration;
+			if (IsSolutionConfigurationOfPlatform(pcSolution, szSolutionConfiguration, szPlatform))
+			{
+				szBase = szSolutionConfiguration;
+				szOther.Kill();
+				break;
+			}
+			if (!szBase)
+			{
+				szBase = szSolutionConfiguration;
+			}
 		}
 		szOther.Kill();
 	}
@@ -209,23 +246,45 @@ CBuildConfiguration* CBuildConfigurations::Add(const char* szName, EBuildToolcha
 
 //////////////////////////////////////////////////////////////////////////
 //
-// The configuration called szName, NULL if there is none.
+// The configuration called szName, NULL if there is none.  A name with
+// one of Visual Studio's own platforms that the solution hasn't
+// (Release|x64, in a workspace written before its solution's platforms were
+// renamed: ConfigurationsPlan.txt C11-2) finds the one of the solution's
+// own name for it (Release|MSVC-x64).
 //
 //////////////////////////////////////////////////////////////////////////
 CBuildConfiguration* CBuildConfigurations::FindConfiguration(const char* szName)
 {
 	size					i;
+	size					uiPass;
 	CChars					szCurrent;
 	CBuildConfiguration*	pcFound;
 
 	szCurrent.Init();
 	CBuildConfiguration::CurrentName(szName, &szCurrent);
 	pcFound = NULL;
-	for (i = 0; (i < masConfigurations.NumElements()) && !pcFound; i++)
+	for (uiPass = 0; (uiPass < 2) && !pcFound; uiPass++)
 	{
-		if (StringCompare(masConfigurations.Get(i)->GetName(), szCurrent.Text()) == 0)
+		for (i = 0; (i < masConfigurations.NumElements()) && !pcFound; i++)
 		{
-			pcFound = masConfigurations.Get(i);
+			if (StringCompare(masConfigurations.Get(i)->GetName(), szCurrent.Text()) == 0)
+			{
+				pcFound = masConfigurations.Get(i);
+			}
+		}
+		if (szCurrent.EndsWith("|Win32"))
+		{
+			szCurrent.RemoveFromEnd(5);
+			szCurrent.Append("MSVC-x86");
+		}
+		else if (szCurrent.EndsWith("|x64"))
+		{
+			szCurrent.RemoveFromEnd(3);
+			szCurrent.Append("MSVC-x64");
+		}
+		else
+		{
+			break;
 		}
 	}
 	szCurrent.Kill();

@@ -2,6 +2,7 @@
 #include "BaseLib/FileUtil.h"
 #include "BuildLib/BuildOptionEdits.h"
 #include "VisualStudioLib/VcxPropertySetting.h"
+#include "VisualStudioLib/VcxSetting.h"
 #include "VisualStudioLib/VcxSolutionRows.h"
 #include "TestLib/Assert.h"
 #include "TestLib/AssertFile.h"
@@ -702,6 +703,27 @@ void TestBuildOptionEditsMSVC(void)
 	AssertString("MaxSpeed", cProject.FindConfiguration("Release|x64")->GetProperty("ClCompile.Optimization"));
 	AssertNull(cProject.FindConfiguration("Release|x64")->GetProperty("ClCompile.RuntimeLibrary"));
 	cProject.Kill();
+
+	//The solution's platform renamed, a name of its own (ConfigurationsPlan.txt C11-2): the project's lines are still
+	//its x64's, in what the places are called and in what is written.
+	AssertTrue(RenameVcxSolutionConfiguration(TEST_OPTIONS_SOLUTION, "Release|x64", "Release|MSVC-x64"));
+	cSolution.Init();
+	AssertTrue(cSolution.Read(TEST_OPTIONS_SOLUTION));
+	cEdits.Init(&cSolution, "Program");
+	cEdits.Add("Release|MSVC-x64", "Release|MSVC-x64");
+	AssertSize(2, cEdits.NumProjects(0));
+	AssertString("x64", cEdits.GetProject(0, 0)->mszPlatform.Text());
+	AssertString("Full", cEdits.GetValue(0, 0, uiOptimisation));
+	AssertInt(BOP_Configuration, cEdits.GetPlace(0, 0, uiOptimisation));
+	AssertPlaceText("This project, every x64 configuration", &cEdits, 0, 0, "ClCompile.RuntimeLibrary", BOP_Platform);
+	cEdits.SetValue(0, 0, FindBuildOption("ClCompile.WarningLevel", BOK_MSVC), "Level4");
+	cEdits.SetPlace(0, 0, FindBuildOption("ClCompile.WarningLevel", BOK_MSVC), BOP_Platform);
+	szNote.Init();
+	AssertTrue(cEdits.Apply(TEST_OPTIONS_SOLUTION, &szNote));
+	AssertTrue(GetVcxSetting(TEST_OPTIONS_PROGRAM, "'$(Platform)'=='x64'", "ClCompile", "WarningLevel", &szNote));
+	szNote.Kill();
+	cEdits.Kill();
+	cSolution.Kill();
 	geTestOptionKind = BOK_HCP65;
 }
 

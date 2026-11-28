@@ -367,6 +367,61 @@ void CBuildWorkspace::RemoveRunConfiguration(size uiIndex)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// What the workspace remembers by a build configuration's name is by the
+// name the solutions have for it now.  A solution's platforms may have
+// been renamed since the workspace was written (Release|x64 is
+// Release|MSVC-x64: CBuildConfigurations::FindConfiguration finds it by
+// either): the chosen configuration, and each private run configuration
+// that builds it, has the new name, and so has a run configuration that
+// was named after it, unless there is one of that name already, which it
+// would only repeat.  Call it once the solutions are open.
+//
+//////////////////////////////////////////////////////////////////////////
+void CBuildWorkspace::UseCurrentConfigurationNames(void)
+{
+	CBuildConfiguration*	pcConfiguration;
+	CRunConfiguration*		pcRun;
+	CChars					szOld;
+	size					i;
+
+	pcConfiguration = mszConfiguration.Empty() ? NULL : FindAnyConfiguration(mszConfiguration.Text());
+	if (pcConfiguration != NULL)
+	{
+		mszConfiguration.Set(pcConfiguration->GetName());
+	}
+	szOld.Init();
+	for (i = masRunConfigurations.NumElements(); i-- > 0;)
+	{
+		pcRun = masRunConfigurations.Get(i);
+		pcConfiguration = pcRun->IsShared() ? NULL : FindAnyConfiguration(pcRun->GetConfiguration());
+		if ((pcConfiguration == NULL) || (StringCompare(pcConfiguration->GetName(), pcRun->GetConfiguration()) == 0))
+		{
+			continue;
+		}
+		szOld.Set(pcRun->GetConfiguration());
+		pcRun->SetConfiguration(pcConfiguration->GetName());
+		if (StringCompare(pcRun->GetName(), szOld.Text()) == 0)
+		{
+			if (mszRunConfiguration.Equals(szOld))
+			{
+				mszRunConfiguration.Set(pcConfiguration->GetName());
+			}
+			if (FindRunConfiguration(pcConfiguration->GetName()) == NULL)
+			{
+				pcRun->SetName(pcConfiguration->GetName());
+			}
+			else
+			{
+				RemoveRunConfiguration(i);
+			}
+		}
+	}
+	szOld.Kill();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 // A workspace with no run configurations (one saved before they existed,
 // or none saved) is given one for each build configuration, named after
 // it.  One that has any is left as it is, so those removed stay removed.
@@ -377,6 +432,7 @@ void CBuildWorkspace::AddDefaultRunConfigurations(void)
 	CArrayChars	aszNames;
 	size		i;
 
+	UseCurrentConfigurationNames();
 	if (masRunConfigurations.NumElements() != 0)
 	{
 		return;

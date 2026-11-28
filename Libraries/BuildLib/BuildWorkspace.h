@@ -155,6 +155,7 @@ public:
 	void					GetConfigurationNames(CArrayChars* paszDest, bool bPlatforms);
 	CBuildConfiguration*	FindConfiguration(size uiSolution, const char* szName);
 	CBuildConfiguration*	FindAnyConfiguration(const char* szName);
+	void					UseCurrentConfigurationNames(void);
 	CBuildConfiguration*	FindAnyConfiguration(const char* szConfiguration, const char* szPlatform);
 	void					GetBuildOrder(const char* szConfiguration, CArrayInt* paiDest);
 	bool					Loads(size uiSolution, size uiOther, const char* szConfiguration);

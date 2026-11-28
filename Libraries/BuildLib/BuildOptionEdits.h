@@ -127,6 +127,8 @@ public:
 	CChars					mszGuid;
 	CChars					mszRow;				//The project configuration the solution's row names: "Release|Win32".
 	CChars					mszConfiguration;	//The name of the configuration its options are read in: "Release".
+	CChars					mszPlatform;		//That configuration's platform, which its lines' conditions name: "HCP65C816", and "x64"
+												//for a solution's Release|MSVC-x64.
 	bool					mbStartup;
 	CArrayBuildOptionEdits	masOptions;
 

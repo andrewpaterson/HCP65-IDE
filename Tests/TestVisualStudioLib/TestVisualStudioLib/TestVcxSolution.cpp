@@ -1,6 +1,7 @@
 #include "BaseLib/FileUtil.h"
 #include "BaseLib/ArrayInt.h"
 #include "BaseLib/Logger.h"
+#include "BaseLib/TextFile.h"
 #include "VisualStudioLib/VcxSolution.h"
 #include "VisualStudioLib/VcxPath.h"
 #include "TestLib/Assert.h"
@@ -247,6 +248,58 @@ void TestVcxPath(void)
 
 //////////////////////////////////////////////////////////////////////////
 //
+// A solution's configurations are names of its own (ConfigurationsPlan.txt
+// C11-2, question 1): Release|MSVC-x64 builds a project as its Release|x64,
+// which the row says, and one platform's row may name another's.
+//
+//////////////////////////////////////////////////////////////////////////
+void TestVcxSolutionOwnPlatforms(void)
+{
+	CVcxSolution			cSolution;
+	CVcxSolutionProject*	pcProject;
+	CFileUtil				cFileUtil;
+	CTextFile				cFile;
+
+	cFileUtil.TouchDir("Output" _FS_ "OwnPlatforms");
+	cFile.Init("Microsoft Visual Studio Solution File, Format Version 12.00\r\n"
+		"Project(\"{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}\") = \"Program\", \"Program.vcxproj\", \"{0A1B2C3D-4E5F-4061-8293-A4B5C6D7E8F9}\"\r\n"
+		"EndProject\r\n"
+		"Global\r\n"
+		"\tGlobalSection(SolutionConfigurationPlatforms) = preSolution\r\n"
+		"\t\tRelease|MSVC-x86 = Release|MSVC-x86\r\n"
+		"\t\tRelease|MSVC-x64 = Release|MSVC-x64\r\n"
+		"\t\tRelease|GCC-x64 = Release|GCC-x64\r\n"
+		"\tEndGlobalSection\r\n"
+		"\tGlobalSection(ProjectConfigurationPlatforms) = postSolution\r\n"
+		"\t\t{0A1B2C3D-4E5F-4061-8293-A4B5C6D7E8F9}.Release|MSVC-x86.ActiveCfg = Release|Win32\r\n"
+		"\t\t{0A1B2C3D-4E5F-4061-8293-A4B5C6D7E8F9}.Release|MSVC-x86.Build.0 = Release|Win32\r\n"
+		"\t\t{0A1B2C3D-4E5F-4061-8293-A4B5C6D7E8F9}.Release|MSVC-x64.ActiveCfg = Release|x64\r\n"
+		"\t\t{0A1B2C3D-4E5F-4061-8293-A4B5C6D7E8F9}.Release|MSVC-x64.Build.0 = Release|x64\r\n"
+		"\t\t{0A1B2C3D-4E5F-4061-8293-A4B5C6D7E8F9}.Release|GCC-x64.ActiveCfg = Release|x64\r\n"
+		"\tEndGlobalSection\r\n"
+		"EndGlobal\r\n");
+	AssertTrue(cFile.Write("Output" _FS_ "OwnPlatforms" _FS_ "OwnPlatforms.sln"));
+	cFile.Kill();
+
+	cSolution.Init();
+	AssertTrue(cSolution.Read("Output" _FS_ "OwnPlatforms" _FS_ "OwnPlatforms.sln", false));
+	AssertSize(3, cSolution.NumConfigurations());
+	AssertString("Release|MSVC-x86", cSolution.GetConfiguration(0));
+	AssertString("Release|MSVC-x64", cSolution.GetConfiguration(1));
+	pcProject = cSolution.GetProject(0);
+	AssertString("Release|Win32", pcProject->FindConfiguration("Release|MSVC-x86")->GetProjectConfiguration());
+	AssertTrue(pcProject->FindConfiguration("Release|MSVC-x86")->IsBuild());
+	AssertString("Release|x64", pcProject->FindConfiguration("Release|MSVC-x64")->GetProjectConfiguration());
+	AssertString("Release|x64", pcProject->FindConfiguration("Release|GCC-x64")->GetProjectConfiguration());
+	AssertFalse(pcProject->FindConfiguration("Release|GCC-x64")->IsBuild());
+	AssertNull(pcProject->FindConfiguration("Release|x64"));
+	cSolution.Kill();
+	cFileUtil.RemoveDir("Output" _FS_ "OwnPlatforms");
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+//
 //
 //////////////////////////////////////////////////////////////////////////
 void TestVcxSolution(void)
@@ -258,6 +311,7 @@ void TestVcxSolution(void)
 	TestVcxSolutionWithoutProjects();
 	TestVcxSolutionFromProject();
 	TestVcxSolutionBad();
+	TestVcxSolutionOwnPlatforms();
 
 	TestStatistics();
 }
